@@ -773,6 +773,7 @@ Include `X-Wallet: 0xYOUR_ADDRESS` in HTTP headers. See [Tokenomics docs](https:
 |--------|------|--------|
 | **Common** | [`src/common/README.md`](src/common/README.md) | ✅ Stable - Single source of truth for constants, protocol, errors |
 | **VSA** | [`src/vsa/README.md`](src/vsa/README.md) | ✅ Stable - Vector Symbolic Architecture (99.5% test pass) |
+| **TTT Data** | [`external/zig-golden-float/`](external/zig-golden-float/) | ✅ Phase B/C Complete - Enum & constants support |
 | **UART/FPGA** | [`fpga/openxc7-synth/UART_README.md`](fpga/openxc7-synth/UART_README.md) | ✅ v6.0 Current - FPGA communication protocol |
 
 ### Quick Reference
@@ -781,7 +782,11 @@ Include `X-Wallet: 0xYOUR_ADDRESS` in HTTP headers. See [Tokenomics docs](https:
 |--------|---------|
 | `src/common/` | Shared constants (φ, TRINITY), protocol definitions, unified errors |
 | `src/vsa/` | Vector Symbolic Architecture: bind, unbind, bundle, similarity |
-| `src/vm.zig` | Ternary Virtual Machine (stack-based bytecode) |
+| `src/vm.zig` | Ternary Virtual Machine (stack-based bytecode) | ✅ Phase 4 complete |
+| `src/needle/` | Semantic search with Brute+SIMD backend (100% exact) | ✅ 98.7% test pass |
+| `src/firebird/` | BitNet LLM inference on CPU (20× memory efficiency) | ✅ v3.0 released |
+| `hardware/rtl-root/` | Loose `.v` modules (historically in root) | ✅ |
+| `external/zig-golden-float/` | GF16/TF3 number formats & TTT data structures | ✅ Phase B/C complete |
 | `src/needle/` | Semantic search with Brute+SIMD backend (100% exact) |
 | `src/firebird/` | BitNet LLM inference on CPU (20x memory efficiency) |
 | `fpga/openxc7-synth/` | FPGA toolchain + UART host (v6 current, v5 legacy) |
