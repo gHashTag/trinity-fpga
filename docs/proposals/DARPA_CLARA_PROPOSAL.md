@@ -331,6 +331,22 @@ const defaultMetaRules = [_]MetaRule{
 - **MLN**: Probabilistic logic but no closed-form inference complexity bounds
 - **Trinity**: Only system with proven O(n) VSA, O(1) MAC, O(1) dispatch, and hardware verification
 
+### 3.4.1 Detailed Performance Comparison (from `src/clara/baselines.zig`)
+
+| System | Inference Time | Accuracy | Memory | Complexity | Speedup vs Baseline |
+|--------|----------------|----------|--------|------------|---------------------|
+| **CLARA (VSA)** | **1.5ms** | 92% | 2.5MB | **O(n) VSA + O(d×|rules|)** | **1× (baseline)** |
+| **DeepProbLog** | 8.5ms | 93% | 45.2MB | O(L×H²) + O(n²) | 5.7× slower |
+| **BLP** | 15.2ms | 88% | 8.5MB | O(n² × \|rules\|) | 10× slower |
+| **ProbLog** | 25.8ms | 91% | 12.3MB | O(2^n) worst case | 17× slower |
+| **MLN** | 32.1ms | 89% | 15.7MB | O(n²) inference | 21× slower |
+
+**Key Findings**:
+- **CLARA achieves 10-20× speedup** over BLP/ProbLog/MLN baselines
+- **VSA O(n) complexity** vs O(n²) or O(2^n) for symbolic baselines
+- **Bounded rationality**: max_depth=10 enforced (others have no depth limits)
+- **Full proof traces** vs partial/no traces in baselines
+
 ### 3.5 Format Efficiency: BENCH-001 Results
 
 **Experiment**: Ternary vs FP16/BF16/GF16 on MNIST (1000 samples, untrained random weights)
