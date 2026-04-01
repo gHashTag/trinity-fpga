@@ -866,6 +866,7 @@ pub fn main() !void {
         .fpga => try tri_register.runFpgaCommand(allocator, cmd_args),
         .train => try tri_train.runTrainCommand(allocator, cmd_args),
         .zenodo => try tri_zenodo.runZenodoCommand(allocator, cmd_args),
+        .clara => try tri_clara.main(allocator, cmd_args), // DARPA CLARA TA1 (PA-25-07-02)
         .kaggle => try tri_kaggle.runKaggleCommand(allocator, cmd_args),
         .cloud => try tri_register.runCommand(allocator, "cloud", cmd_args),
         .farm => try tri_register.runCommand(allocator, "farm", cmd_args),
