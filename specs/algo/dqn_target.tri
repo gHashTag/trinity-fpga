@@ -1,0 +1,122 @@
+# DQN Target Network Update — Source of Truth
+# Soft/hard update for target Q-network stabilization
+# φ² + 1/φ² = 3 | TRINITY
+
+name: dqn_target
+version: "1.0.0"
+module: algo.rl.dqn_target
+description: "Target network update for DQN: hard copy or soft polyak averaging"
+
+types:
+  UpdateMethod:
+    description: "Type of target network update"
+    enum:
+      - HARD
+      - SOFT
+
+  TargetUpdateConfig:
+    description: "Configuration for target network updates"
+    fields:
+      - name: method
+        type: UpdateMethod
+        description: "HARD=copy, SOFT=polyak average"
+      - name: tau
+        type: f32
+        description: "Soft update coefficient (0 to 1)"
+      - name: update_freq
+        type: u32
+        description: "Steps between updates (hard mode)"
+
+constants:
+  DEFAULT_TAU:
+    type: f32
+    value: 0.005
+    description: "Default soft update (slow tracking)"
+
+  DEFAULT_UPDATE_FREQ:
+    type: u32
+    value: 1000
+    description: "Update target every 1000 steps (DQN default)"
+
+functions:
+  hard_update:
+    params:
+      - name: source
+        type: "[]f32"
+        description: "Source network parameters"
+      - name: target
+        type: "[]f32"
+        description: "Target network to overwrite"
+    returns: "void"
+    description: "Complete copy of source to target"
+    formula: |
+      For i in 0..len(source):
+        target[i] = source[i]
+
+  soft_update:
+    params:
+      - name: source
+        type: "[]f32"
+        description: "Source network parameters (online)"
+      - name: target
+        type: "[]f32"
+        description: "Target network to update"
+      - name: tau
+        type: f32
+        description: "Interpolation coefficient"
+    returns: "void"
+    description: "Polyak averaging: θ_target = τ*θ_source + (1-τ)*θ_target"
+    formula: |
+      For i in 0..len(source):
+        target[i] = tau * source[i] + (1 - tau) * target[i]
+
+  should_update:
+    params:
+      - name: step
+        type: u32
+        description: "Current training step"
+      - name: config
+        type: TargetUpdateConfig
+    returns: "bool"
+    description: "Check if update should occur this step"
+    formula: |
+      If config.method == HARD:
+        return (step % config.update_freq == 0)
+      Else:
+        return true  # Soft update every step
+
+behaviors:
+  - name: hard_update_behavior
+    description: "Periodic complete copy (original DQN)"
+    implementation: |
+      Target completely replaced every N steps
+      Creates stable but temporally-delayed target
+      Prevents chasing moving target
+
+  - name: soft_update_behavior
+    description: "Exponential moving average (DDPG/TD3/SAC)"
+    implementation: |
+      Target slowly tracks online network
+      More stable training, smoother convergence
+      Recommended: tau in [0.001, 0.01]
+
+  - name: hybrid_update
+    description: "Soft update + periodic hard reset"
+    implementation: |
+      Use soft update for stability
+      Periodically hard copy to prevent drift
+      Best of both approaches
+
+constraints:
+  - 0 <= tau <= 1
+  - tau << 1 for stability (typically 0.001-0.01)
+  - update_freq >= 1
+
+equations:
+  - name: soft_update_equation
+    latex: "\theta_{target} \leftarrow \tau \theta_{source} + (1 - \tau) \theta_{target}"
+    description: "Polyak averaging formula"
+
+references:
+  - "Mnih et al. (2015) - Human-level control through deep RL"
+  - "Lillicrap et al. (2016) - Continuous control with DDPG (soft update)"

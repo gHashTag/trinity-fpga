@@ -43,6 +43,7 @@ Result: LED steady, no blink
 ## The Solution
 
 **Root Cause:** LED on pin T23 is **ACTIVE-LOW**
+
 - `led = 0` → LED **ON**
 - `led = 1` → LED **OFF**
 
@@ -127,23 +128,26 @@ FPGA configured
 
 ```
 [1/6] Connecting to Platform Cable USB II...
-  Connected.
+ Connected.
 
 [2/6] Resetting JTAG TAP...
-  IDCODE: 0x13631093 (XC7A100T ✓)
 
-[3/6] JPROGRAM — clearing configuration...
-[4/6] CFG_IN — loading configuration data...
-[5/6] Sending bitstream (3825901 bytes = 3.6 MB)...
-  Sending: 100% — done.
+[3/6] IDCODE: 0x13631093 (XC7A100T ✓)
+
+[4/6] JPROGRAM — clearing configuration...
+
+[5/6] CFG_IN — loading configuration data...
+
+[6/6] Sending bitstream (3825901 bytes = 3.6 MB)...
+Sending: 100% — done.
 
 [6/6] JSTART — starting configuration...
 
 ═══════════════════════════════════════════════
- PROGRAMMING COMPLETE — IDCODE: 0x13631093
- LED D6 blinking at 1 Hz (ACTIVE-LOW corrected!)
- φ² + 1/φ² = 3 = TRINITY
-═══════════════════════════════════════════════
+PROGRAMMING COMPLETE — IDCODE: 0x13631093
+LED D6 blinking at 1 Hz (ACTIVE-LOW corrected!)
+φ² + 1/φ² = 3 = TRINITY
+═══════════════════════════════════════════════════
 ```
 
 ---
@@ -184,17 +188,21 @@ endmodule
 ### 1. Always Check Active-Low First
 
 **Symptom:** LED steady despite correct logic
+
 **Cause:** Active-low LED without inversion
+
 **Fix:** Add `~` to output assignment
 
 ### 2. Compare with Working Code
 
 **Strategy:** When stuck, find working similar code and diff
+
 **Discovery:** uart_top.v had the inversion we needed
 
 ### 3. Camera Verification Works
 
 **Method:** ffmpeg + frame size analysis
+
 **Result:** 53.9% variation = definitive proof of blinking
 
 ---
@@ -202,18 +210,22 @@ endmodule
 ## Next Steps
 
 ### Immediate (P0)
+
 - [x] Document active-low finding
 - [x] Update all .xdc files with active-low comment
 - [x] Update README with success story
 - [ ] Create active-low checklist for future designs
 
 ### Sacred Constants FPGA (P1)
+
 - [ ] Synthesize phi_arithmetic.v → check DSP48 usage
 - [ ] Synthesize cordic_sacred.v → verify CF optimization
 - [ ] Synthesize vsa_phi_bind.v → confirm 0 DSP48
 - [ ] Benchmark: standard vs φ-optimized
+- [ ] Patent filing: update with new results
 
 ### Patent Filing (P0)
+
 - [x] Hardware proof complete ✅
 - [ ] Update P2_CLAIM_CHART.md → FILE NOW
 - [ ] Prepare specification figures

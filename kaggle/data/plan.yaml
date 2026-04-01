@@ -1,0 +1,133 @@
+# Trinity Kaggle AGI Hackathon — Master Plan
+# Competition: https://www.kaggle.com/competitions/kaggle-measuring-agi
+# Prize: $200,000 ($25K grand prize × 4, $10K per track × 10)
+# Deadline: 2026-04-16
+
+meta:
+  version: "1.0"
+  updated: "2026-04-01"
+  competition: "kaggle-measuring-agi"
+  deadline: "2026-04-16"
+
+tracks:
+  thlp:
+    id: "track1_learning"
+    name: "Hippocampal Learning Probe"
+    acronym: "THLP"
+    dataset: "trinity-cognitive-probes-thlp"
+    dataset_slug: "playra/trinity-cognitive-probes-thlp"
+    items: 2400
+    brain_zones: ["hippocampus", "amygdala", "accumbens"]
+    sub_probes:
+      - few_shot_induction
+      - belief_update
+      - error_driven_learning
+      - reward_signal_learning
+      - long_context_retention
+    status: "complete"
+    csv: "kaggle/data/thlp_learning.csv"
+    mc_csv: "kaggle/data/converted_mc/thlp_mc.csv"
+    notebooks: "kaggle/notebooks/track1_learning"
+    task_slug: ""  # Fill when Task created
+    public: false
+
+  tmp:
+    id: "track2_metacognition"
+    name: "Trinity Metacognition Probe"
+    acronym: "TMP"
+    dataset: "trinity-cognitive-probes-tmp"
+    dataset_slug: "playra/trinity-cognitive-probes-tmp"
+    items: 2200
+    brain_zones: ["pfc", "acc"]
+    sub_probes:
+      - confidence_calibration
+      - error_detection
+      - information_rejection
+      - knowledge_declration
+    status: "complete"
+    csv: "kaggle/data/tmp_metacognition.csv"
+    mc_csv: "kaggle/data/converted_mc/tmp_mc.csv"
+    notebooks: "kaggle/notebooks/track2_metacognition"
+    task_slug: ""
+    public: false
+
+  tagp:
+    id: "track3_attention"
+    name: "Attentional Gateway Probe"
+    acronym: "TAGP"
+    dataset: "trinity-cognitive-probes-tagp"
+    dataset_slug: "playra/trinity-cognitive-probes-tagp"
+    items: 2200
+    brain_zones: ["acc", "pfc", "parietal"]
+    sub_probes:
+      - long_context_focus
+      - distraction_resistance
+      - multi_target
+      - context_switching
+    status: "complete"
+    csv: "kaggle/data/tagp_attention.csv"
+    mc_csv: "kaggle/data/converted_mc/tagp_mc.csv"
+    notebooks: "kaggle/notebooks/track3_attention"
+    task_slug: ""
+    public: false
+
+  tefb:
+    id: "track4_executive"
+    name: "Executive Function Battery"
+    acronym: "TEFB"
+    dataset: "trinity-cognitive-probes-tefb"
+    dataset_slug: "playra/trinity-cognitive-probes-tefb"
+    items: 2400
+    brain_zones: ["pfc", "acc", "striatum"]
+    sub_probes:
+      - cognitive_flexibility
+      - strategy_switching
+      - response_inhibition
+      - planning
+    status: "complete"
+    csv: "kaggle/data/tefb_executive.csv"
+    mc_csv: "kaggle/data/converted_mc/tefb_mc.csv"
+    notebooks: "kaggle/notebooks/track4_executive"
+    task_slug: ""
+    public: false
+
+  tscp:
+    id: "track5_social"
+    name: "Social Cognition Probe"
+    acronym: "TSCP"
+    dataset: "trinity-cognitive-probes-tscp"
+    dataset_slug: "playra/trinity-cognitive-probes-tscp"
+    items: 2200
+    brain_zones: ["tpj", "mpfc", "amygdala"]
+    sub_probes:
+      - theory_of_mind
+      - social_norms
+      - pragmatic_inference
+      - emotion_recognition
+    status: "complete"
+    csv: "kaggle/data/tscp_social.csv"
+    mc_csv: "kaggle/data/converted_mc/tscp_mc.csv"
+    notebooks: "kaggle/notebooks/track5_social"
+    task_slug: ""
+    public: false
+
+quota:
+  ai_calls_total: 0
+  ai_calls_this_month: 0
+  cost_estimate_usd: 0.0
+  last_updated: "2026-04-01"
+
+baselines:
+  weak_baseline:
+    name: "Weak Baseline"
+    description: "Random/majority class"
+    results: {}
+  strong_baseline:
+    name: "Strong Baseline"
+    description: "Rule-based / heuristic"
+    results: {}
+
+submission:
+  status: "not_started"
+  last_submission: null
+  aggregate_score: null

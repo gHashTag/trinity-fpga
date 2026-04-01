@@ -1,29 +1,29 @@
-# UART Echo — FPGA + FT232RL Тест
+# UART Echo — FPGA + FT232RL Test
 
-## Схема подключения (QMTech XC7A100T)
+## Connection Diagram (QMTech XC7A100T)
 
 ```
 FT232RL        →        FPGA XC7A100T
 ─────────────────────────────────────────
-GND (черный)   →  J2 pin 1
-RXD (зелёный)   →  J2 pin 5  → L20 (FPGA TX)
-TXD (белый)     →  J2 pin 6  → K20 (FPGA RX)
+GND (black)   →  J2 pin 1
+RXD (green)   →  J2 pin 5  → L20 (FPGA TX)
+TXD (white)   →  J2 pin 6  → K20 (FPGA RX)
 ─────────────────────────────────────────
-Xilinx JTAG      →  JTAG header (VCC, GND, TCK, TDO, TDI, TMS)
+Xilinx JTAG    →  JTAG header (VCC, GND, TCK, TDO, TDI, TMS)
 ```
 
-## Рекомендуемый рабочий файл
+## Recommended Working File
 
-**Используйте `uart_echo_top.v` + `uart_echo.xdc`**
+**Use `uart_echo_top.v` + `uart_echo.xdc`**
 
-Этот файл уже содержит исправленную логику:
-- ✅ Правильная обработка START бита
-- ✅ Проверка START бита на LOW (line 56-59)
-- ✅ LSB-first прием данных
-- ✅ Explicit idle HIGH состояние
-- ✅ Echo логика с PONG ответом
+This file already contains corrected logic:
+- ✅ Correct START bit handling
+- ✅ START bit check for LOW (line 56-59)
+- ✅ LSB-first data reception
+- ✅ Explicit idle HIGH state
+- ✅ Echo logic with PONG response
 
-## Синтез (Yosys + NextPNR)
+## Synthesis (Yosys + NextPNR)
 
 ```bash
 cd fpga/openxc7-synth
@@ -37,92 +37,92 @@ nextpnr-xilinx --chipdb /opt/prjxray-db/artix7/device.db \
       --write uart_echo_top_routed.json \
       --write-bitstream uart_echo_top.bit
 
-# Или используя Yosys напрямую
+# Or using Yosys directly
 yosys -p synth_xilinx -d no_iobuf \
       uart_echo_top.v -o uart_echo_top.edif
 ```
 
-## Прошивка через JTAG
+## Flashing via JTAG
 
 ```bash
-# 1. Инициализировать JTAG кабель (обязательно!)
+# 1. Initialize JTAG cable (mandatory!)
 sudo fxload -v -t fx2 -d 03fd:0013 -i xusb_xp2.hex
 
-# 2. Прошить битстрим
+# 2. Flash bitstream
 sudo ./jtag_program uart_echo_top.bit
 
-# Или использовать openFPGALoader
+# Or use openFPGALoader
 openFPGALoader --cable xpc --bit uart_echo_top.bit
 ```
 
-## Тест UART (Python)
+## UART Test (Python)
 
 ```bash
 cd fpga
 python3 test_uart_echo.py
 ```
 
-Тест проверит:
-- Поиск FT232RL устройства
-- Отправку байтов (A, 0x55, 0xAA, "Hello", 0x00, 0xFF)
-- Ожидание эхо ответа
-- Статистику PASS/FAIL
+Test will check:
+- FT232RL device discovery
+- Sending bytes (A, 0x55, 0xAA, "Hello", 0x00, 0xFF)
+- Waiting for echo response
+- PASS/FAIL statistics
 
-## Монитор UART (опционально)
+## UART Monitor (optional)
 
 ```bash
 cd fpga/uart_monitor
 python3 uart_monitor.py /dev/cu.usbserial-* --baudrate 115200
 ```
 
-Интерактивный монитор с:
-- HEX/ASCII отображением
-- Отправкой данных
-- Статистикой
+Interactive monitor with:
+- HEX/ASCII display
+- Data sending
+- Statistics
 
-## Диагностика проблем
+## Troubleshooting
 
-### 1. Нет ответа (0x00/тишина)
+### 1. No response (0x00/silence)
 
-**Проверьте:**
-- [ ] JTAG прошивка прошла успешно?
-- [ ] FT232RL подключен правильно (цвета)?
-- [ ] Правильный порт выбран (`python3 test_uart_echo.py`)?
+**Check:**
+- [ ] JTAG flash completed successfully?
+- [ ] FT232RL connected correctly (colors)?
+- [ ] Correct port selected (`python3 test_uart_echo.py`)?
 
-**Действия:**
-- Подтяните и воткните провода
-- Попробуйте другой USB порт
-- Проверьте LED на плате (должна мигать при приёме)
+**Actions:**
+- Reseat and reconnect wires
+- Try different USB port
+- Check LED on board (should blink when receiving)
 
-### 2. Получаете мусор
+### 2. Getting garbage
 
-**Возможные причины:**
-- Скорость не совпадает (115200)
-- Дробы/эмуляция при подключении
+**Possible causes:**
+- Speed mismatch (115200)
+- Noise/interference when connected
 
-**Действия:**
-- Отключите FT232RL при прошивке
-- Перезагрузите плату (питание)
+**Actions:**
+- Disconnect FT232RL when flashing
+- Power cycle board
 
-### 3. LED не мигает
+### 3. LED not blinking
 
-**Проблема:** FPGA не прошита или неправильные пины
+**Problem:** FPGA not flashed or wrong pins
 
-**Действия:**
-- Перепрошить с `jtag_program`
-- Проверить `.xdc` (L20 = TX, K20 = RX)
+**Actions:**
+- Reflash with `jtag_program`
+- Check `.xdc` (L20 = TX, K20 = RX)
 
-## Версии файлов
+## File Versions
 
-| Файл | Статус |
+| File | Status |
 |-------|---------|
-| `uart_echo_top.v` | ✅ Исправлен (рекомендуется) |
-| `uart_bridge_fixed.v` | ⚠️  Возможны баги (нет tx_busy) |
-| `uart_bridge_v2.v` | 🆕 Новая версия с tx_busy |
+| `uart_echo_top.v` | ✅ Fixed (recommended) |
+| `uart_bridge_fixed.v` | ⚠️  Possible bugs (no tx_busy) |
+| `uart_bridge_v2.v` | 🆕 New version with tx_busy |
 
-## Следующие шаги (если uart_echo не работает)
+## Next Steps (if uart_echo doesn't work)
 
-1. Симуляция в Icarus Verilog
-2. Проверить pin mapping в constraint файле
-3. Использовать осциллограф на пинах L20/K20
-4. Проверить FT232RL с loopback (TX → RX напрямую)
+1. Simulation in Icarus Verilog
+2. Check pin mapping in constraint file
+3. Use oscilloscope on pins L20/K20
+4. Test FT232RL with loopback (TX → RX directly)

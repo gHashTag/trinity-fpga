@@ -1,0 +1,89 @@
+# Tanh — Source of Truth
+# Hyperbolic tangent: (eˣ - e⁻ˣ) / (eˣ + e⁻ˣ)
+# φ² + 1/φ² = 3 | TRINITY
+
+name: tanh
+version: "1.0.0"
+module: algo.activation.tanh
+description: "Hyperbolic tangent activation: outputs in (-1, 1)"
+
+types:
+  TanhConfig:
+    description: "Configuration for Tanh activation"
+    fields:
+      - name: none
+        type: void
+        description: "No parameters needed"
+
+functions:
+  forward:
+    params:
+      - name: x
+        type: f32
+        description: "Input value"
+    returns: "f32"
+    description: "Tanh activation"
+    formula: |
+      exp_x = exp(x)
+      exp_neg_x = exp(-x)
+      return (exp_x - exp_neg_x) / (exp_x + exp_neg_x)
+
+  forward_batch:
+    params:
+      - name: input
+        type: "[]f32"
+        description: "Input tensor"
+    returns: "[]f32"
+    description: "Element-wise tanh on batch"
+    formula: |
+      output = array(len(input))
+      For i in 0..len(input):
+        output[i] = forward(input[i])
+      return output
+
+  derivative:
+    params:
+      - name: x
+        type: f32
+    returns: "f32"
+    description: "Derivative for backpropagation"
+    formula: |
+      tanh_x = forward(x)
+      return 1 - tanh_x * tanh_x
+
+  derivative_from_output:
+    params:
+      - name: tanh_x
+        type: f32
+        description: "Tanh output (for efficiency)"
+    returns: "f32"
+    description: "Derivative computed from output"
+    formula: |
+      return 1 - tanh_x * tanh_x
+
+behaviors:
+  - name: zero_centered
+    description: "Output centered at 0"
+    implementation: |
+      Range: (-1, 1)
+      Zero-centered gradients
+      Better than sigmoid for hidden layers
+
+  - name: saturation
+    description: "Saturates at extreme values"
+    implementation: |
+      Large x → tanh → ±1
+      Small gradients in saturation region
+      Can cause vanishing gradients
+
+equations:
+  - name: tanh_formula
+    latex: "\tanh(x) = \frac{e^x - e^{-x}}{e^x + e^{-x}}"
+    description: "Hyperbolic tangent"
+
+  - name: tanh_derivative
+    latex: "\frac{d}{dx}\tanh(x) = 1 - \tanh^2(x)"
+    description: "Derivative (can compute from output)"
+
+references:
+  - "Standard activation function, widely used in RNNs/LSTMs"

@@ -1,0 +1,207 @@
+# SAC Critic Network — Source of Truth
+# Twin Q-networks Q₁, Q₂ for overestimation bias reduction
+# φ² + 1/φ² = 3 | TRINITY
+
+name: sac_critic
+version: "1.0.0"
+module: algo.rl.sac_critic
+description: "SAC critic: twin Q-networks (Q₁, Q₂) with Clipped Double Q-learning"
+
+types:
+  SACCriticConfig:
+    description: "Configuration for SAC critic network"
+    fields:
+      - name: state_dim
+        type: u32
+        description: "Dimension of state space"
+      - name: action_dim
+        type: u32
+        description: "Dimension of action space"
+      - name: hidden_dims
+        type: "[]u32"
+        description: "Hidden layer sizes"
+      - name: init_weight
+        type: f32
+        description: "Weight initialization scale"
+
+  TwinQOutput:
+    description: "Output from twin Q-networks"
+    fields:
+      - name: q1
+        type: f32
+        description: "Q₁(s, a)"
+      - name: q2
+        type: f32
+        description: "Q₂(s, a)"
+
+  TargetQUpdate:
+    description: "Target Q-network update config"
+    fields:
+      - name: tau
+        type: f32
+        description: "Soft update coefficient"
+      - name: gamma
+        type: f32
+        description: "Discount factor"
+
+constants:
+  DEFAULT_TAU:
+    type: f32
+    value: 0.005
+    description: "Default soft update rate"
+
+  DEFAULT_GAMMA:
+    type: f32
+    value: 0.99
+    description: "Default discount factor"
+
+  DEFAULT_INIT_WEIGHT:
+    type: f32
+    value: 0.003
+    description: "Final layer init (from TD3 paper)"
+
+functions:
+  forward:
+    params:
+      - name: state
+        type: "[]const f32"
+        description: "Input state"
+      - name: action
+        type: "[]const f32"
+        description: "Input action"
+      - name: params_q1
+        type: "[]const f32"
+        description: "Q1 network parameters"
+      - name: params_q2
+        type: "[]const f32"
+        description: "Q2 network parameters"
+      - name: config
+        type: SACCriticConfig
+    returns: "TwinQOutput"
+    description: "Forward pass through both Q-networks"
+    formula: |
+      # Concatenate state and action
+      sa = concat(state, action)
+
+      # Q1 forward
+      hidden1 = activation(sa @ W1_q1 + b1_q1)
+      For i in 1..len(config.hidden_dims)-1:
+        hidden1 = activation(hidden1 @ W[i+1]_q1 + b[i+1]_q1)
+      q1 = hidden1 @ W_final_q1 + b_final_q1
+
+      # Q2 forward
+      hidden2 = activation(sa @ W1_q2 + b1_q2)
+      For i in 1..len(config.hidden_dims)-1:
+        hidden2 = activation(hidden2 @ W[i+1]_q2 + b[i+1]_q2)
+      q2 = hidden2 @ W_final_q2 + b_final_q2
+
+      return TwinQOutput(q1, q2)
+
+  compute_target:
+    params:
+      - name: reward
+        type: f32
+        description: "Immediate reward"
+      - name: next_state
+        type: "[]f32"
+        description: "Next state"
+      - name: done
+        type: bool
+        description: "Episode termination"
+      - name: target_q1_params
+        type: "[]f32"
+        description: "Target Q1 parameters"
+      - name: target_q2_params
+        type: "[]f32"
+        description: "Target Q2 parameters"
+      - name: actor_params
+        type: "[]f32"
+        description: "Actor policy parameters"
+      - name: config
+        type: SACCriticConfig
+      - name: temperature
+        type: f32
+        description: "Entropy temperature α"
+    returns: "f32"
+    description: "Compute SAC target using target networks and policy"
+    formula: |
+      # Sample next action from current policy
+      policy_out = actor_forward(next_state, actor_params)
+      next_action, next_log_prob = sample_squashed_gaussian(policy_out)
+
+      # Q-values for next state-action
+      q1_next = target_q1_forward(next_state, next_action, target_q1_params)
+      q2_next = target_q2_forward(next_state, next_action, target_q2_params)
+      q_next = min(q1_next, q2_next)
+
+      # SAC target: r + γ(Q - α * log π)
+      if done:
+        return reward
+      else:
+        return reward + config.gamma * (q_next - temperature * next_log_prob)
+
+  q_loss:
+    params:
+      - name: q1_pred
+        type: f32
+        description: "Q1 prediction"
+      - name: q2_pred
+        type: f32
+        description: "Q2 prediction"
+      - name: target
+        type: f32
+        description: "Target value"
+    returns: "f32"
+    description: "MSE loss for both Q-networks"
+    formula: |
+      loss1 = (q1_pred - target)^2
+      loss2 = (q2_pred - target)^2
+      return (loss1 + loss2) / 2
+
+  soft_update_target:
+    params:
+      - name: source_params
+        type: "[]f32"
+        description: "Online network parameters"
+      - name: target_params
+        type: "[]f32"
+        description: "Target network parameters"
+      - name: tau
+        type: f32
+    returns: "void"
+    description: "Polyak averaging for both target networks"
+    formula: |
+      For i in 0..len(source_params):
+        target_params[i] = tau * source_params[i] + (1 - tau) * target_params[i]
+
+behaviors:
+  - name: clipped_double_q
+    description: "Use min(Q₁, Q₂) to reduce overestimation"
+    implementation: |
+      TD3 technique: Q = min(Q₁(s', a'), Q₂(s', a'))
+      Reduces positive bias in Q estimates
+      Proven effective for continuous control
+
+  - name: target_networks
+    description: "Separate target networks for stability"
+    implementation: |
+      Soft update: θ_target = τθ_online + (1-τ)θ_target
+      Prevents chasing moving target
+      Standard for off-policy RL
+
+constraints:
+  - 0 < tau << 1 (typically 0.005)
+  - 0 <= gamma <= 1
+
+equations:
+  - name: sac_target
+    latex: "y = r + \gamma (Q_{\text{target}}(s', a') - \alpha \log \pi_\phi(a'|s'))"
+    description: "SAC Bellman target with entropy term"
+
+  - name: clipped_double_q
+    latex: "Q(s', a') = \min(Q_1(s', a'), Q_2(s', a'))"
+    description: "Clipped double Q-learning"
+
+references:
+  - "Fujimoto et al. (2018) - Addressing Function Approximation Error in Actor-Critic Methods (TD3)"
+  - "Haarnoja et al. (2018) - Soft Actor-Critic: Off-Policy Maximum Entropy Deep RL"

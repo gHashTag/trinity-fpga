@@ -21,7 +21,7 @@ pub fn main() !void {
         "gamma",
         477,
         "Implement terminal recording system",
-        &[_][]const u8{ "src/tri/recorder.zig" },
+        &[_][]const u8{"src/tri/recorder.zig"},
     );
 
     // Complete issue

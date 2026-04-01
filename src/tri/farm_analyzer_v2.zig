@@ -28,14 +28,14 @@ const MAGENTA = "\x1b[35m";
 
 /// Категории ошибок для sacred workers
 pub const ErrorCategory = enum(u8) {
-    none,               // Нет ошибки
-    dataset_not_found,  // DatasetNotFound — фатально
-    oom,                // Out of Memory — фатально
-    panic,              // panic/abort — фатально
-    exception,          // exception — фатально
-    timeout,            // timeout — возможно восстановимо
-    network,            // network error — возможно восстановимо
-    unknown,            // неизвестная ошибка
+    none, // Нет ошибки
+    dataset_not_found, // DatasetNotFound — фатально
+    oom, // Out of Memory — фатально
+    panic, // panic/abort — фатально
+    exception, // exception — фатально
+    timeout, // timeout — возможно восстановимо
+    network, // network error — возможно восстановимо
+    unknown, // неизвестная ошибка
 };
 
 /// Результат анализа логов sacred worker
@@ -48,8 +48,8 @@ pub const WorkerAnalysis = struct {
     latest_loss: f32 = 99.0,
     log_age_sec: i64 = 0, // возраст последней строки лога (сек)
     // Статус
-    is_training: bool = false,  // есть свежие step=... строки
-    is_stalled: bool = false,  // step не растёт >10 мин
+    is_training: bool = false, // есть свежие step=... строки
+    is_stalled: bool = false, // step не растёт >10 мин
     error_category: ErrorCategory = .none,
     error_message: []const u8 = "",
     // Рекомендация
@@ -249,9 +249,9 @@ pub fn checkAccountAccess(allocator: Allocator, account_suffix: []const u8) !boo
 
 /// Статус аккаунта для дашборда
 pub const AccountStatus = enum(u8) {
-    monitored,      // API доступен, логи читаются
-    unmonitored,    // API недоступен (токен истёк/нет проекта)
-    api_error,      // API ошибка (error is reserved in Zig 0.15)
+    monitored, // API доступен, логи читаются
+    unmonitored, // API недоступен (токен истёк/нет проекта)
+    api_error, // API ошибка (error is reserved in Zig 0.15)
 };
 
 /// Результат анализа аккаунта

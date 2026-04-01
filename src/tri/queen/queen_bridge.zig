@@ -172,8 +172,8 @@ pub fn logStep(allocator: Allocator, step: AgentStep) !void {
         try w.writeAll("\"");
     }
 
-    try w.writeAll("}");  // Close data object
-    try w.writeAll("}");  // Close episode object
+    try w.writeAll("}"); // Close data object
+    try w.writeAll("}"); // Close episode object
 
     // Open file for append
     const file = try std.fs.cwd().createFile(path, .{ .truncate = false });

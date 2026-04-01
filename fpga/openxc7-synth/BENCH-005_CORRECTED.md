@@ -1,14 +1,14 @@
 # BENCH-005: GF16 FPGA Synthesis — CORRECTED
 
-## Что было исправлено
+## What Was Fixed
 
-**Некорректное сравнение** (ранее):
-- GF16 adder (118 LUT) vs **полный HSLM pipeline** (4,267 LUT)
-- → "2.8% of ternary baseline" — **яблоки vs апельсины**
+**Incorrect comparison** (previously):
+- GF16 adder (118 LUT) vs **full HSLM pipeline** (4,267 LUT)
+- → "2.8% of ternary baseline" — **apples vs oranges**
 
-**Честное сравнение** (сейчас):
+**Honest comparison** (now):
 - GF16 adder (118 LUT) vs **ternary adder** (2 LUT)
-- → **59× overhead** для 16-bit floating-point vs 3-state ternary
+- → **59× overhead** for 16-bit floating-point vs 3-state ternary
 
 ## Unit-level FPGA Cost (Yosys)
 
@@ -27,7 +27,7 @@
 | **FF** | 47 | 2 | **23.5×** | 47 | 2 | **23.5×** |
 | **DSP** | 0 | 0 | — | 1 | 0 | — |
 
-## Почему GF16 дороже
+## Why GF16 Is More Expensive
 
 | Operation | Ternary (2-LUT) | GF16 (94-118 LUT) | Overhead |
 |-----------|-----------------|-------------------|----------|
@@ -37,7 +37,7 @@
 **Ternary**: 3 states {-1, 0, +1} → trivial multiplexers
 **GF16**: 16-bit float (6:9) → full IEEE 754-like pipeline
 
-## System Context (НЕ сравнивать!)
+## System Context (DO NOT compare!)
 
 | System | LUT | FF | DSP | Fmax | Status |
 |---------|-----|----|-----|------|--------|
@@ -78,9 +78,3 @@
 
 | File | Purpose |
 |------|---------|
-| `fpga/openxc7-synth/ternary_add_top.v` | Minimal ternary adder (2 LUT) |
-| `fpga/openxc7-synth/ternary_mul_top.v` | Minimal ternary multiplier (2 LUT) |
-| `fpga/openxc7-synth/ternary_ops_tb.v` | Testbench for both |
-| `fpga/openxc7-synth/ternary_add_top.json` | Yosys synthesis (2 LUT) |
-| `fpga/openxc7-synth/ternary_mul_top.json` | Yosys synthesis (2 LUT) |
-| `docs/research/gf16_vs_literature.md` | Updated with Section 8.6-8.7 |

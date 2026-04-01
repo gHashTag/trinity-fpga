@@ -1,0 +1,98 @@
+# ELU — Exponential Linear Unit — Source of Truth
+# ELU: x if x>0, α(eˣ-1) if x≤0
+# φ² + 1/φ² = 3 | TRINITY
+
+name: elu
+version: "1.0.0"
+module: algo.activation.elu
+description: "Exponential Linear Unit: smooth saturation for negative inputs"
+
+types:
+  ELUConfig:
+    description: "Configuration for ELU activation"
+    fields:
+      - name: alpha
+        type: f32
+        description: "Saturation parameter for negative region"
+
+constants:
+  DEFAULT_ALPHA:
+    type: f32
+    value: 1.0
+    description: "Default α parameter"
+
+functions:
+  forward:
+    params:
+      - name: x
+        type: f32
+        description: "Input value"
+      - name: alpha
+        type: f32
+    returns: "f32"
+    description: "ELU activation"
+    formula: |
+      if x >= 0:
+        return x
+      else:
+        return alpha * (exp(x) - 1)
+
+  forward_batch:
+    params:
+      - name: input
+        type: "[]f32"
+        description: "Input tensor"
+      - name: alpha
+        type: f32
+    returns: "[]f32"
+    description: "Element-wise ELU on batch"
+    formula: |
+      output = array(len(input))
+      For i in 0..len(input):
+        output[i] = forward(input[i], alpha)
+      return output
+
+  derivative:
+    params:
+      - name: x
+        type: f32
+        description: "Input value"
+      - name: alpha
+        type: f32
+    returns: "f32"
+    description: "Derivative for backpropagation"
+    formula: |
+      if x >= 0:
+        return 1.0
+      else:
+        return forward(x, alpha) + alpha
+
+behaviors:
+  - name: smooth_saturation
+    description: "Smoothly saturates to -α for negative inputs"
+    implementation: |
+      Negative: approaches -α smoothly
+      Positive: same as ReLU (identity)
+      Pushes mean activations closer to zero
+
+  - name: zero_mean
+    description: "Produces activations closer to zero mean"
+    implementation: |
+      Unlike ReLU, has negative outputs
+      Helps with learning dynamics
+      Similar effect to batch normalization
+
+constraints:
+  - alpha > 0
+
+equations:
+  - name: elu_formula
+    latex: "f(x) = \begin{cases} x & \text{if } x \geq 0 \\ \alpha(e^x - 1) & \text{if } x < 0 \end{cases}"
+    description: "ELU activation"
+
+  - name: derivative
+    latex: "f'(x) = \begin{cases} 1 & \text{if } x \geq 0 \\ f(x) + \alpha & \text{if } x < 0 \end{cases}"
+    description: "Derivative"
+
+references:
+  - "Clevert et al. (2016) - Fast and Accurate Deep Network Learning by Exponential Linear Units (ELUs)"

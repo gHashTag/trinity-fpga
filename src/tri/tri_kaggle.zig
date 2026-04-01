@@ -134,10 +134,10 @@ fn runParseCommand(allocator: Allocator, args: []const []const u8) !void {
         }
 
         print("{s}═══ PARSER RESULTS ═══{s}\n", .{ DIM, RESET });
-        print("Total Rows: {d}\n", .{ result.stats.total_rows });
-        print("Open-ended: {d}\n", .{ result.stats.open_ended });
-        print("Factual: {d}\n", .{ result.stats.factual });
-        print("Avg Difficulty: {d:.2}\n", .{ result.stats.avg_difficulty });
+        print("Total Rows: {d}\n", .{result.stats.total_rows});
+        print("Open-ended: {d}\n", .{result.stats.open_ended});
+        print("Factual: {d}\n", .{result.stats.factual});
+        print("Avg Difficulty: {d:.2}\n", .{result.stats.avg_difficulty});
 
         if (result.stats.tasks.count() > 0) {
             print("\n{s}Tasks:{s}\n", .{ BOLD, RESET });
@@ -199,7 +199,7 @@ fn runConvertCommand(allocator: Allocator, args: []const []const u8) !void {
             _ = r;
             converted += 1;
             if (converted % 100 == 0) {
-                std.debug.print("  {d}/{d}\n", .{converted, result.stats.open_ended});
+                std.debug.print("  {d}/{d}\n", .{ converted, result.stats.open_ended });
             }
         }
 

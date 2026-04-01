@@ -1,62 +1,63 @@
-# Zig UART Echo Test — Инструкция
+# Zig UART Echo Test — Instructions
 
-## Сборка и запуск
+## Building and Running
 
 ```bash
-# 1. Сборка
+# 1. Build
 zig build uart-echo-test
 
-# 2. Запуск
+# 2. Run
 zig-out/bin/uart-echo-test
 ```
 
-## Что делает тест
+## What Test Does
 
-1. Сканирует `/dev/cu.usbserial-*` (macOS) или `/dev/ttyUSB*` (Linux)
-2. Находит FT232RL устройство
-3. Последовательно отправляет тестовые байты:
+1. Scans `/dev/cu.usbserial-*` (macOS) or `/dev/ttyUSB*` (Linux)
+2. Finds FT232RL device
+3. Sequentially sends test bytes:
    - `'A'` (0x41)
    - `0x55` (alternating 01010101)
    - `0xAA` (alternating 10101010)
-   - `"Hello"` (строка)
+   - `"Hello"` (string)
    - `0x00` (zero)
    - `0xFF` (all ones)
-4. Ожидает эхо ответа (2 секунды)
-5. Проверяет точность совпадения байт
-6. Показывает PASS/FAIL для каждого теста
+4. Waits for echo response (2 seconds)
+5. Verifies byte-by-byte match
+6. Shows PASS/FAIL for each test
 
-## Ожидаемый вывод при рабочем тракте
+## Expected Output When Working
 
 ```
-╔════════════════════════════════════════════════════════╗
+═══════════════════════════════════════════════════╗
 ║           Trinity UART Echo Test v1.0                       ║
 ║    phi² + 1/phi² = 3 = TRINITY                        ║
-╚════════════════════════════════════════════════════════╝
+╚═══════════════════════════════════════════════════╝
 
 [+] Scanning for FT232RL device...
 [+] Found FT232RL: /dev/cu.usbserial-xxx
 
-╔══════════════════════════════════════════════════════╗
+═════════════════════════════════════════════════════╗
 ║  Testing:                                                     ║
-╚════════════════════════════════════════════════════════╝
+╚══════════════════════════════════════════════════════╝
 
-  [→] Test 1/6 Sending 'A' (0x41)
-  [←] Received 41
-  [✓] ECHO SUCCESS!
+[→] Test 1/6 Sending 'A' (0x41)
+[←] Received 41
+[✓] ECHO SUCCESS!
 
-  [→] Test 2/6 Sending 0x55 (alternating) (0x55)
-  [←] Received 55
-  [✓] ECHO SUCCESS!
+[→] Test 2/6 Sending 0x55 (alternating) (0x55)
+[←] Received 55
+[✓] ECHO SUCCESS!
 
-  ...
+...
 
-╔════════════════════════════════════════════════════════╗
+═════════════════════════════════════════════════════════╗
 ║  SUMMARY                                                       ║
-╚════════════════════════════════════════════════════════╝
-  Passed: 6/6
+╚══════════════════════════════════════════════════════╝
+
+Passed: 6/6
 ```
 
-## Если FT232RL не найден
+## If FT232RL Not Found
 
 ```
 [!] FT232RL not found!
@@ -66,26 +67,33 @@ Available serial ports:
   /dev/cu.usbserial-yyy
 ```
 
-**Действия:**
-- Проверьте что FT232RL подключен
-- Проверьте цвета проводов (GND, RXD, TXD)
-- Попробуйте другой USB порт
+**Actions:**
+- Check that FT232RL is connected
+- Check wire colors (GND, RXD, TXD)
+- Try different USB port
 
-## Если TIMEOUT / нет ответа
+## If TIMEOUT / No Response
 
 ```
-  [→] Test 1/6 Sending 'A' (0x41)
-  [←] Received
-  [✗] TIMEOUT - Received 0 bytes, expected 1
+[→] Test 1/6 Sending 'A' (0x41)
+[←] Received
+[✗] TIMEOUT - Received 0 bytes, expected 1
 ```
 
-**Возможные причины:**
-1. ❌ FPGA не прошита → перезапусти прошивку
-2. ❌ Пины перепутаны → проверьте J2: 1=GND, 5=RX, 6=TX
-3. ❌ FT232RL не работает → попробуйте другой адаптер
-4. ❌ Скорость не совпадает → код использует дефолтные настройки
+**Possible causes:**
+1. ❌ FPGA not flashed → reflash firmware
+2. ❌ Pins crossed → check J2: 1=GND, 5=RX, 6=TX
+3. ❌ FT232RL not working → try different adapter
+4. ❌ Speed mismatch → code uses default settings
 
-**Действия:**
-- Перепрошить: `sudo fxload ... && sudo ./jtag_program uart_echo_top.bit`
-- Проверьте LED на плате (должна мигать при приёме)
-- Перезагрузите FT232RL (отключите/подключите)
+**Actions:**
+- Reflash: `sudo fxload ... && sudo ./jtag_program uart_echo_top.bit`
+- Check LED on board (should blink when receiving)
+- Power cycle FT232RL (unplug/replug)
+
+## Debugging Tips
+
+1. Verify pin mapping in constraint file
+2. Use oscilloscope on pins L20/K20
+3. Test FT232RL with loopback (TX → RX directly)
+4. Check DSLogic shows same data on CH0/CH1

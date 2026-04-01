@@ -1,0 +1,185 @@
+# PPO Actor Network — Source of Truth
+# Policy network π(a|s) for Proximal Policy Optimization
+# φ² + 1/φ² = 3 | TRINITY
+
+name: ppo_actor
+version: "1.0.0"
+module: algo.rl.ppo_actor
+description: "Actor network for PPO: stochastic policy π_θ(a|s)"
+
+types:
+  ActorConfig:
+    description: "Configuration for PPO actor network"
+    fields:
+      - name: state_dim
+        type: u32
+        description: "Dimension of state space"
+      - name: action_dim
+        type: u32
+        description: "Dimension of action space (discrete: n_actions, continuous: n_axes)"
+      - name: hidden_dims
+        type: "[]u32"
+        description: "Hidden layer sizes"
+      - name: action_space
+        type: ActionSpace
+        description: "Discrete or continuous actions"
+      - name: init_log_std
+        type: f32
+        description: "Initial log std for continuous actions"
+
+  ActionSpace:
+    description: "Type of action space"
+    enum:
+      - DISCRETE
+      - CONTINUOUS
+
+  PolicyOutput:
+    description: "Output of policy network"
+    fields:
+      - name: logits
+        type: "[]f32"
+        description: "Action logits (discrete) or mean (continuous)"
+      - name: log_std
+        type: "[]f32"
+        description: "Log std dev (continuous only)"
+
+constants:
+  DEFAULT_INIT_LOG_STD:
+    type: f32
+    value: 0.0
+    description: "Initialize with std=1.0 (log(1)=0)"
+
+  MIN_LOG_STD:
+    type: f32
+    value: -20.0
+    description: "Prevent std from collapsing to zero"
+
+  MAX_LOG_STD:
+    type: f32
+    value: 2.0
+    description: "Prevent std from exploding"
+
+functions:
+  forward_discrete:
+    params:
+      - name: state
+        type: "[]const f32"
+        description: "Input state"
+      - name: params
+        type: "[]const f32"
+        description: "Network parameters"
+      - name: config
+        type: ActorConfig
+    returns: "[]f32"
+    description: "Forward pass for discrete actions: returns action logits"
+    formula: |
+      hidden = activation(state @ W1 + b1)
+      logits = hidden @ W2 + b2
+      return logits
+
+  forward_continuous:
+    params:
+      - name: state
+        type: "[]const f32"
+        description: "Input state"
+      - name: params
+        type: "[]const f32"
+        description: "Network parameters"
+      - name: config
+        type: ActorConfig
+    returns: "PolicyOutput"
+    description: "Forward pass for continuous actions: returns mean and log_std"
+    formula: |
+      hidden = activation(state @ W1 + b1)
+      mean = hidden @ W_mean + b_mean
+      log_std = clamp(hidden @ W_logstd + b_logstd, MIN_LOG_STD, MAX_LOG_STD)
+      return PolicyOutput(mean, log_std)
+
+  sample_action:
+    params:
+      - name: policy_output
+        type: PolicyOutput
+      - name: action_space
+        type: ActionSpace
+      - name: deterministic
+        type: bool
+    returns: "[]f32"
+    description: "Sample action from policy distribution"
+    formula: |
+      If action_space == DISCRETE:
+        If deterministic:
+          return argmax(policy_output.logits)
+        Else:
+          return categorical_sample(policy_output.logits)
+      Else:
+        If deterministic:
+          return policy_output.logits  # mean
+        Else:
+          std = exp(policy_output.log_std)
+          return normal_sample(policy_output.logits, std)
+
+  log_prob:
+    params:
+      - name: action
+        type: "[]f32"
+        description: "Action taken"
+      - name: policy_output
+        type: PolicyOutput
+      - name: action_space
+        type: ActionSpace
+    returns: "f32"
+    description: "Compute log probability of action under policy"
+    formula: |
+      If action_space == DISCRETE:
+        return log_softmax(policy_output.logits)[action]
+      Else:
+        return log_normal_pdf(action, policy_output.logits, exp(policy_output.log_std))
+
+  entropy:
+    params:
+      - name: policy_output
+        type: PolicyOutput
+      - name: action_space
+        type: ActionSpace
+    returns: "f32"
+    description: "Compute policy entropy for exploration bonus"
+    formula: |
+      If action_space == DISCRETE:
+        probs = softmax(policy_output.logits)
+        return -sum(probs * log(probs))
+      Else:
+        std = exp(policy_output.log_std)
+        return 0.5 * log(2 * pi * e * std^2)
+
+behaviors:
+  - name: gaussian_policy
+    description: "Continuous actions: diagonal Gaussian"
+    implementation: |
+      Network outputs mean and learned log_std
+      Reparameterization trick for gradient flow
+      Squash actions through tanh if bounded
+
+  - name: categorical_policy
+    description: "Discrete actions: categorical distribution"
+    implementation: |
+      Network outputs logits for each action
+      Softmax for probabilities
+      Gumbel-softmax for differentiable sampling
+
+constraints:
+  - MIN_LOG_STD <= log_std <= MAX_LOG_STD
+  - action_dim >= 1
+  - len(hidden_dims) >= 1
+
+equations:
+  - name: gaussian_log_prob
+    latex: "\log \pi(a|s) = -\frac{1}{2\sigma^2}(a - \mu)^2 - \log \sigma - \frac{1}{2}\log 2\pi"
+    description: "Log probability under Gaussian policy"
+
+  - name: reparameterization
+    latex: "a = \mu + \sigma \odot \epsilon, \quad \epsilon \sim \mathcal{N}(0, I)"
+    description: "Reparameterization for gradient estimation"
+
+references:
+  - "Schulman et al. (2017) - Proximal Policy Optimization"
+  - "Haarnoja et al. (2018) - Soft Actor-Critic"

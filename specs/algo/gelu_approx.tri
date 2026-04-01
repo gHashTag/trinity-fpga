@@ -1,0 +1,97 @@
+# GELU Approximation — Source of Truth
+# Approximate GELU: 0.5x(1 + tanh(√(2/π)(x + 0.044715x³)))
+# φ² + 1/φ² = 3 | TRINITY
+
+name: gelu_approx
+version: "1.0.0"
+module: algo.activation.gelu_approx
+description: "Approximate GELU activation: faster computation than exact GELU"
+
+types:
+  GELUApproxConfig:
+    description: "Configuration for approximate GELU"
+    fields:
+      - name: none
+        type: void
+        description: "No parameters needed"
+
+constants:
+  SQRT_2_OVER_PI:
+    type: f32
+    value: 0.7978845608
+    description: "√(2/π) constant"
+
+  TANH_COEF:
+    type: f32
+    value: 0.044715
+    description: "Cubic coefficient for tanh approximation"
+
+functions:
+  forward:
+    params:
+      - name: x
+        type: f32
+        description: "Input value"
+    returns: "f32"
+    description: "Approximate GELU activation"
+    formula: |
+      tanh_input = SQRT_2_OVER_PI * (x + TANH_COEF * x^3)
+      return 0.5 * x * (1 + tanh(tanh_input))
+
+  forward_batch:
+    params:
+      - name: input
+        type: "[]f32"
+        description: "Input tensor"
+    returns: "[]f32"
+    description: "Element-wise GELU on batch"
+    formula: |
+      output = array(len(input))
+      For i in 0..len(input):
+        output[i] = forward(input[i])
+      return output
+
+  derivative:
+    params:
+      - name: x
+        type: f32
+    returns: "f32"
+    description: "Derivative for backpropagation"
+    formula: |
+      # GELU derivative approximation
+      tanh_input = SQRT_2_OVER_PI * (x + TANH_COEF * x^3)
+      tanh_out = tanh(tanh_input)
+      sech_sq = 1 - tanh_out * tanh_out
+
+      # d/dx of tanh term
+      dtanh = SQRT_2_OVER_PI * (1 + 3 * TANH_COEF * x^2) * sech_sq
+
+      return 0.5 * (1 + tanh_out) + 0.5 * x * dtanh
+
+behaviors:
+  - name: smooth_non_convex
+    description: "Smooth, non-convex activation"
+    implementation: |
+      Smoother than ReLU/GELU
+      Used in Transformer models (BERT, GPT)
+      Better gradient flow than ReLU
+
+  - name: faster_than_exact
+    description: "Avoids expensive erf() computation"
+    implementation: |
+      Exact GELU uses erf() function
+      Approximation uses tanh
+      ~2x faster than exact version
+
+equations:
+  - name: gelu_approx_formula
+    latex: "\text{GELU}(x) \approx 0.5x\left(1 + \tanh\left(\sqrt{\frac{2}{\pi}}(x + 0.044715x^3)\right)\right)"
+    description: "Tanh-based GELU approximation"
+
+  - name: exact_comparison
+    latex: "\text{GELU}(x) = x \cdot \Phi(x) = x \cdot \frac{1}{2}\left[1 + \text{erf}\left(\frac{x}{\sqrt{2}}\right)\right]"
+    description: "Exact GELU using error function"
+
+references:
+  - "Hendrycks & Gimpel (2016) - Gaussian Error Linear Units (GELUs)"
+  - "Used in BERT, GPT-2, GPT-3, and most modern Transformers"

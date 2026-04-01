@@ -51,21 +51,21 @@ pub const GifPalette = struct {
         palette.size = 16;
 
         // Trinity colors: golden ratio inspired
-        palette.colors[0] = .{ .r = 0, .g = 0, .b = 0 };       // Black
-        palette.colors[1] = .{ .r = 255, .g = 215, .b = 0 };   // Gold
-        palette.colors[2] = .{ .r = 0, .g = 255, .b = 255 };    // Cyan
-        palette.colors[3] = .{ .r = 255, .g = 0, .b = 255 };    // Magenta
-        palette.colors[4] = .{ .r = 255, .g = 100, .b = 100 };  // Salmon
-        palette.colors[5] = .{ .r = 100, .g = 255, .b = 100 };  // Light Green
-        palette.colors[6] = .{ .r = 100, .g = 100, .b = 255 };  // Light Blue
-        palette.colors[7] = .{ .r = 255, .g = 255, .b = 100 };  // Yellow
-        palette.colors[8] = .{ .r = 255, .g = 150, .b = 50 };   // Orange
-        palette.colors[9] = .{ .r = 150, .g = 50, .b = 255 };    // Purple
-        palette.colors[10] = .{ .r = 50, .g = 255, .b = 150 };   // Teal
+        palette.colors[0] = .{ .r = 0, .g = 0, .b = 0 }; // Black
+        palette.colors[1] = .{ .r = 255, .g = 215, .b = 0 }; // Gold
+        palette.colors[2] = .{ .r = 0, .g = 255, .b = 255 }; // Cyan
+        palette.colors[3] = .{ .r = 255, .g = 0, .b = 255 }; // Magenta
+        palette.colors[4] = .{ .r = 255, .g = 100, .b = 100 }; // Salmon
+        palette.colors[5] = .{ .r = 100, .g = 255, .b = 100 }; // Light Green
+        palette.colors[6] = .{ .r = 100, .g = 100, .b = 255 }; // Light Blue
+        palette.colors[7] = .{ .r = 255, .g = 255, .b = 100 }; // Yellow
+        palette.colors[8] = .{ .r = 255, .g = 150, .b = 50 }; // Orange
+        palette.colors[9] = .{ .r = 150, .g = 50, .b = 255 }; // Purple
+        palette.colors[10] = .{ .r = 50, .g = 255, .b = 150 }; // Teal
         palette.colors[11] = .{ .r = 200, .g = 200, .b = 200 }; // Silver
-        palette.colors[12] = .{ .r = 100, .g = 50, .b = 50 };    // Maroon
-        palette.colors[13] = .{ .r = 50, .g = 100, .b = 50 };    // Green
-        palette.colors[14] = .{ .r = 50, .g = 50, .b = 100 };    // Navy
+        palette.colors[12] = .{ .r = 100, .g = 50, .b = 50 }; // Maroon
+        palette.colors[13] = .{ .r = 50, .g = 100, .b = 50 }; // Green
+        palette.colors[14] = .{ .r = 50, .g = 50, .b = 100 }; // Navy
         palette.colors[15] = .{ .r = 128, .g = 128, .b = 128 }; // Gray
 
         // Fill rest with grayscale
@@ -135,15 +135,15 @@ pub const GifEncoder = struct {
         // Application Extension for looping
         try w.writeByte(0x21); // Extension introducer
         try w.writeByte(0xFF); // Application extension label
-        try w.writeByte(11);    // Block size
+        try w.writeByte(11); // Block size
 
         try w.writeAll("NETSCAPE");
         try w.writeByte('2');
         try w.writeByte(0);
-        try w.writeByte(1);    // Loop flag
-        try w.writeByte(0);    // Loop count (0 = infinite)
+        try w.writeByte(1); // Loop flag
+        try w.writeByte(0); // Loop count (0 = infinite)
         try w.writeByte(0);
-        try w.writeByte(0);    // Block terminator
+        try w.writeByte(0); // Block terminator
     }
 
     pub fn addFrame(self: *GifEncoder, pixels: []const u8, delay_ms: u16) !void {
@@ -152,18 +152,18 @@ pub const GifEncoder = struct {
         // Graphics Control Extension
         try w.writeByte(0x21); // Extension introducer
         try w.writeByte(0xF9); // Graphics control label
-        try w.writeByte(4);     // Block size
+        try w.writeByte(4); // Block size
 
         const packed_data: u8 = 0; // No disposal method, no user input, no transparency
         try w.writeByte(packed_data);
         try w.writeInt(u16, delay_ms, .little); // Delay in 1/100 seconds
-        try w.writeByte(0);    // Transparent color index
-        try w.writeByte(0);    // Block terminator
+        try w.writeByte(0); // Transparent color index
+        try w.writeByte(0); // Block terminator
 
         // Image Descriptor
         try w.writeByte(0x2C); // Image separator
-        try w.writeInt(u16, 0, .little);  // Left position
-        try w.writeInt(u16, 0, .little);  // Top position
+        try w.writeInt(u16, 0, .little); // Left position
+        try w.writeInt(u16, 0, .little); // Top position
         try w.writeInt(u16, self.width, .little);
         try w.writeInt(u16, self.height, .little);
 
@@ -182,7 +182,7 @@ pub const GifEncoder = struct {
         while (pos < total_pixels) {
             const chunk_size = @min(max_data_len, total_pixels - pos);
             try w.writeByte(@intCast(chunk_size));
-            try w.writeAll(pixels[pos..pos + chunk_size]);
+            try w.writeAll(pixels[pos .. pos + chunk_size]);
             pos += chunk_size;
         }
 

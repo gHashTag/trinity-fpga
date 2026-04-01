@@ -229,8 +229,8 @@ pub fn execute(cpu: *CPUState, inst: Instruction, memory: []align(8) u8) ExecErr
             // Using scaled arithmetic to preserve fractional terms
             // x²/scale maintains precision for x²/2 term
             const x2 = @divTrunc(x_scaled * x_scaled, scale); // x² * 1000
-            const x3 = @divTrunc(x2 * x_scaled, scale);      // x³ * 1000
-            const x4 = @divTrunc(x3 * x_scaled, scale);      // x⁴ * 1000
+            const x3 = @divTrunc(x2 * x_scaled, scale); // x³ * 1000
+            const x4 = @divTrunc(x3 * x_scaled, scale); // x⁴ * 1000
 
             // e^x * scale = scale + x*scale + x²/2 + x³/6 + x⁴/24
             const result_scaled = scale + x_scaled + @divTrunc(x2, 2) + @divTrunc(x3, 6) + @divTrunc(x4, 24);
@@ -256,9 +256,9 @@ pub fn execute(cpu: *CPUState, inst: Instruction, memory: []align(8) u8) ExecErr
             // Compute Taylor series: sin(x) = x - x³/3! + x⁵/5! - x⁷/7!
             // Using scaled arithmetic to preserve fractional terms
             const x2 = @divTrunc(x_scaled * x_scaled, scale); // x² * 1000
-            const x3 = @divTrunc(x2 * x_scaled, scale);      // x³ * 1000
-            const x5 = @divTrunc(x3 * x2, scale);           // x⁵ * 1000
-            const x7 = @divTrunc(x5 * x2, scale);           // x⁷ * 1000
+            const x3 = @divTrunc(x2 * x_scaled, scale); // x³ * 1000
+            const x5 = @divTrunc(x3 * x2, scale); // x⁵ * 1000
+            const x7 = @divTrunc(x5 * x2, scale); // x⁷ * 1000
 
             // sin(x) * scale = x*scale - x³/6 + x⁵/120 - x⁷/5040
             const result_scaled = x_scaled - @divTrunc(x3, 6) + @divTrunc(x5, 120) - @divTrunc(x7, 5040);

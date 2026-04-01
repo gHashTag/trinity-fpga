@@ -81,16 +81,15 @@ pub const PerformanceMetrics = struct {
     max_depth: ?usize,
 
     pub fn format(self: PerformanceMetrics, writer: anytype) !void {
-        try writer.print("{s:25} │ {d:6.2}ms │ {d:4.2}% │ Brier: {d:5.3} │ {d:5.1}MB │ depth: {s:5} │ trace: {}\n",
-            .{
-                self.system.format(),
-                self.inference_time_ms,
-                self.accuracy * 100,
-                self.confidence_calibration,
-                self.memory_usage_mb,
-                if (self.max_depth) |d| try std.fmt.allocPrint(std.heap.page_allocator, "{d}", .{d}) else "∞",
-                self.proof_trace_available,
-            });
+        try writer.print("{s:25} │ {d:6.2}ms │ {d:4.2}% │ Brier: {d:5.3} │ {d:5.1}MB │ depth: {s:5} │ trace: {}\n", .{
+            self.system.format(),
+            self.inference_time_ms,
+            self.accuracy * 100,
+            self.confidence_calibration,
+            self.memory_usage_mb,
+            if (self.max_depth) |d| try std.fmt.allocPrint(std.heap.page_allocator, "{d}", .{d}) else "∞",
+            self.proof_trace_available,
+        });
     }
 };
 
@@ -144,11 +143,11 @@ pub const BLPReference = struct {
     venue: []const u8 = "ILP 2000",
     complexity: []const u8 = "O(n² × |rules|) for inference",
     notes: []const u8 =
-    \\- Combines logic programming with Bayesian networks
-    \\- Requires ground network construction (expensive)
-    \\- No bounded rationality mechanisms
-    \\- No native proof traces for explainability
-    \\
+        \\- Combines logic programming with Bayesian networks
+        \\- Requires ground network construction (expensive)
+        \\- No bounded rationality mechanisms
+        \\- No native proof traces for explainability
+        \\
 };
 
 /// Reference: ProbLog (De Raedt 2007)
@@ -159,11 +158,11 @@ pub const ProbLogReference = struct {
     venue: []const u8 = "IJCAI 2007",
     complexity: []const u8 = "O(2^n) worst case, better with AD/CDs",
     notes: []const u8 =
-    \\- Uses weighted logic programs
-    \\- Inference via conversion to Boolean formulas
-    \\- Can be intractable for complex queries
-    \\- Limited explainability (no proof traces)
-    \\
+        \\- Uses weighted logic programs
+        \\- Inference via conversion to Boolean formulas
+        \\- Can be intractable for complex queries
+        \\- Limited explainability (no proof traces)
+        \\
 };
 
 /// Reference: Markov Logic Networks (Richardson 2006)
@@ -174,11 +173,11 @@ pub const MLNReference = struct {
     venue: []const u8 = "Machine Learning",
     complexity: []const u8 = "O(n²) for inference",
     notes: []const u8 =
-    \\- Soft logic: weights on first-order clauses
-    \\- Inference via MCMC or belief propagation
-    \\- No bounded rationality (runs until convergence)
-    \\- No native proof traces
-    \\
+        \\- Soft logic: weights on first-order clauses
+        \\- Inference via MCMC or belief propagation
+        \\- No bounded rationality (runs until convergence)
+        \\- No native proof traces
+        \\
 };
 
 /// Reference: DeepProbLog (Manhaeve 2018)
@@ -189,12 +188,12 @@ pub const DeepProbLogReference = struct {
     venue: []const u8 = "NeurIPS 2018",
     complexity: []const u8 = "O(L×H²) neural + O(n²) inference",
     notes: []const u8 =
-    \\- Integrates neural networks with ProbLog
-    \\- End-to-end differentiable
-    \\- Attention maps provide some explainability
-    \\- No bounded rationality (no depth limits)
-    \\- Neural complexity O(L×H²) vs VSA O(n)
-    \\
+        \\- Integrates neural networks with ProbLog
+        \\- End-to-end differentiable
+        \\- Attention maps provide some explainability
+        \\- No bounded rationality (no depth limits)
+        \\- Neural complexity O(L×H²) vs VSA O(n)
+        \\
 };
 
 /// Run CLARA with baseline comparison

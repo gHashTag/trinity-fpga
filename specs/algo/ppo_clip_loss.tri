@@ -1,0 +1,194 @@
+# PPO Clip Loss — Source of Truth
+# Clipped surrogate objective L^CLIP for PPO
+# φ² + 1/φ² = 3 | TRINITY
+
+name: ppo_clip_loss
+version: "1.0.0"
+module: algo.rl.ppo_clip_loss
+description: "PPO clipped surrogate objective: prevents large policy updates"
+
+types:
+  PPOClipConfig:
+    description: "Configuration for PPO clip loss"
+    fields:
+      - name: clip_epsilon
+        type: f32
+        description: "Clipping range for ratio"
+      - name: entropy_coef
+        type: f32
+        description: "Entropy bonus coefficient"
+      - name: value_clip_coef
+        type: f32
+        description: "Value loss clipping (optional)"
+
+  PPOBatch:
+    description: "Batch of PPO training data"
+    fields:
+      - name: states
+        type: "[][]f32"
+        description: "States visited"
+      - name: actions
+        type: "[][]f32"
+        description: "Actions taken"
+      - name: old_log_probs
+        type: "[]f32"
+        description: "Log probs under old policy"
+      - name: advantages
+        type: "[]f32"
+        description: "GAE advantages"
+      - name: returns
+        type: "[]f32"
+        description: "Discounted returns"
+      - name: values
+        type: "[]f32"
+        description: "State values"
+
+constants:
+  DEFAULT_CLIP_EPSILON:
+    type: f32
+    value: 0.2
+    description: "Default PPO clip range (±20%)"
+
+  DEFAULT_ENTROPY_COEF:
+    type: f32
+    value: 0.01
+    description: "Default entropy bonus"
+
+functions:
+  compute_ratio:
+    params:
+      - name: new_log_prob
+        type: f32
+        description: "Log prob under current policy"
+      - name: old_log_prob
+        type: f32
+        description: "Log prob under old policy"
+    returns: "f32"
+    description: "Compute probability ratio r_t(θ)"
+    formula: |
+      return exp(new_log_prob - old_log_prob)
+
+  clipped_surrogate:
+    params:
+      - name: ratio
+        type: f32
+        description: "Probability ratio r_t(θ)"
+      - name: advantage
+        type: f32
+        description: "Advantage estimate A_t"
+      - name: clip_epsilon
+        type: f32
+        description: "Clipping parameter ε"
+    returns: "f32"
+    description: "Clipped surrogate objective"
+    formula: |
+      clipped_ratio = clamp(ratio, 1 - clip_epsilon, 1 + clip_epsilon)
+      return min(ratio * advantage, clipped_ratio * advantage)
+
+  policy_loss:
+    params:
+      - name: ratios
+        type: "[]f32"
+        description: "Probability ratios for batch"
+      - name: advantages
+        type: "[]f32"
+        description: "Advantages for batch"
+      - name: clip_epsilon
+        type: f32
+    returns: "f32"
+    description: "PPO policy loss (negative objective)"
+    formula: |
+      # Normalize advantages
+      advantages_norm = (advantages - mean(advantages)) / (std(advantages) + 1e-8)
+
+      loss = 0.0
+      For i in 0..len(ratios):
+        loss += clipped_surrogate(ratios[i], advantages_norm[i], clip_epsilon)
+      return -loss / len(ratios)
+
+  entropy_loss:
+    params:
+      - name: entropies
+        type: "[]f32"
+        description: "Policy entropies for batch"
+      - name: entropy_coef
+        type: f32
+    returns: "f32"
+    description: "Entropy bonus (negated for minimization)"
+    formula: |
+      return -entropy_coef * mean(entropies)
+
+  value_loss:
+    params:
+      - name: predicted_values
+        type: "[]f32"
+        description: "Predicted state values"
+      - name: target_values
+        type: "[]f32"
+        description: "Target values from returns"
+      - name: old_values
+        type: "[]f32"
+        description: "Old value predictions"
+      - name: clip_coef
+        type: f32
+    returns: "f32"
+    description: "Clipped value loss (optional, PPO variant)"
+    formula: |
+      # Unclipped loss
+      loss_unclipped = (predicted_values - target_values)^2
+
+      # Clipped loss
+      clipped_pred = old_values + clip(predicted_values - old_values, -clip_coef, clip_coef)
+      loss_clipped = (clipped_pred - target_values)^2
+
+      return mean(max(loss_unclipped, loss_clipped))
+
+  total_loss:
+    params:
+      - name: policy_loss_value
+        type: f32
+        description: "Policy loss"
+      - name: value_loss_value
+        type: f32
+        description: "Value loss"
+      - name: entropy_loss_value
+        type: f32
+        description: "Entropy loss"
+      - name: value_loss_coef
+        type: f32
+        description: "Value loss coefficient"
+    returns: "f32"
+    description: "Combined PPO loss"
+    formula: |
+      return policy_loss_value + value_loss_coef * value_loss_value + entropy_loss_value
+
+behaviors:
+  - name: ratio_clipping
+    description: "Prevent large policy updates"
+    implementation: |
+      Clip r_t(θ) to [1-ε, 1+ε]
+      Limits change in policy per update
+      Enables multiple epochs on same data
+
+  - name: advantage_normalization
+    description: "Standardize advantages for training"
+    implementation: |
+      Subtract mean, divide by std
+      Reduces variance of gradient estimates
+      Stabilizes training
+
+constraints:
+  - 0 < clip_epsilon <= 1 (typically 0.1-0.3)
+  - entropy_coef >= 0
+
+equations:
+  - name: ppo_objective
+    latex: "L^{CLIP}(\theta) = \hat{E}_t \left[ \min(r_t(\theta) \hat{A}_t, \text{clip}(r_t(\theta), 1-\epsilon, 1+\epsilon) \hat{A}_t) \right]"
+    description: "PPO clipped surrogate objective"
+
+  - name: probability_ratio
+    latex: "r_t(\theta) = \frac{\pi_\theta(a_t|s_t)}{\pi_{\theta_{old}}(a_t|s_t)}"
+    description: "Probability ratio between policies"
+
+references:
+  - "Schulman et al. (2017) - Proximal Policy Optimization Algorithms, arXiv:1707.06347"

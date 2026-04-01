@@ -52,7 +52,7 @@ pub const ConfusionContext = struct {
     pub fn eql(self: ConfusionContext, a: EvalResult.ConfusionKey, b: EvalResult.ConfusionKey) bool {
         _ = self;
         return std.mem.eql(u8, a.expected, b.expected) and
-               std.mem.eql(u8, a.predicted, b.predicted);
+            std.mem.eql(u8, a.predicted, b.predicted);
     }
 };
 
@@ -133,7 +133,7 @@ pub const Evaluator = struct {
 
             if ((i + 1) % 100 == 0) {
                 std.debug.print("  Evaluated {d}/{d} (acc: {d:.2}%)\n", .{
-                    i + 1, rows.len,
+                    i + 1,                                                                                 rows.len,
                     @as(f64, @floatFromInt(result.correct * 100)) / @as(f64, @floatFromInt(result.total)),
                 });
             }
@@ -142,7 +142,7 @@ pub const Evaluator = struct {
         // Calculate final accuracy
         if (result.total > 0) {
             result.accuracy = @as(f64, @floatFromInt(result.correct)) /
-                            @as(f64, @floatFromInt(result.total));
+                @as(f64, @floatFromInt(result.total));
         }
 
         // Calculate per-task accuracies
@@ -150,7 +150,7 @@ pub const Evaluator = struct {
         while (task_iter.next()) |entry| {
             if (entry.value_ptr.total > 0) {
                 entry.value_ptr.accuracy = @as(f64, @floatFromInt(entry.value_ptr.correct)) /
-                                        @as(f64, @floatFromInt(entry.value_ptr.total));
+                    @as(f64, @floatFromInt(entry.value_ptr.total));
             }
         }
 
@@ -173,13 +173,13 @@ pub const Evaluator = struct {
     pub fn printReport(self: *const Evaluator, result: EvalResult) void {
         _ = self;
 
-        std.debug.print("\n{s}═══ EVALUATION REPORT ═══{s}\n", .{"\x1b[1m", "\x1b[0m"});
+        std.debug.print("\n{s}═══ EVALUATION REPORT ═══{s}\n", .{ "\x1b[1m", "\x1b[0m" });
         std.debug.print("Total Items: {d}\n", .{result.total});
         std.debug.print("Correct: {d}\n", .{result.correct});
         std.debug.print("Incorrect: {d}\n", .{result.incorrect});
-        std.debug.print("{s}Accuracy: {d:.2}%{s}\n\n", .{"\x1b[32m", result.accuracy * 100, "\x1b[0m"});
+        std.debug.print("{s}Accuracy: {d:.2}%{s}\n\n", .{ "\x1b[32m", result.accuracy * 100, "\x1b[0m" });
 
-        std.debug.print("{s}Strategy Breakdown:{s}\n", .{"\x1b[1m", "\x1b[0m"});
+        std.debug.print("{s}Strategy Breakdown:{s}\n", .{ "\x1b[1m", "\x1b[0m" });
         const strategy_names = [6][]const u8{
             "StripParenthetical",
             "ExactMatch",
@@ -191,11 +191,11 @@ pub const Evaluator = struct {
 
         for (strategy_names, result.strategy_counts) |name, count| {
             if (count > 0) {
-                std.debug.print("  {s}: {d}\n", .{name, count});
+                std.debug.print("  {s}: {d}\n", .{ name, count });
             }
         }
 
-        std.debug.print("\n{s}Per-Task Breakdown:{s}\n", .{"\x1b[1m", "\x1b[0m"});
+        std.debug.print("\n{s}Per-Task Breakdown:{s}\n", .{ "\x1b[1m", "\x1b[0m" });
         var task_iter = result.per_task.iterator();
         while (task_iter.next()) |entry| {
             std.debug.print("  {s}: {d}/{d} ({d:.2}%)\n", .{
@@ -239,17 +239,17 @@ pub const BatchEvaluator = struct {
     pub fn evaluateAll(self: *BatchEvaluator) !void {
         const evaluator = Evaluator.init(self.allocator);
 
-        std.debug.print("\n{s}═══ BATCH EVALUATION ═══{s}\n", .{"\x1b[1m", "\x1b[0m"});
+        std.debug.print("\n{s}═══ BATCH EVALUATION ═══{s}\n", .{ "\x1b[1m", "\x1b[0m" });
 
         for (TRACKS) |track| {
             const path = try std.fmt.allocPrint(self.allocator, "{s}/{s}", .{ self.base_path, track.file });
             defer self.allocator.free(path);
 
-            std.debug.print("\n{s}Track: {s} — {s}{s}\n", .{"\x1b[36m", track.id, track.name, "\x1b[0m"});
+            std.debug.print("\n{s}Track: {s} — {s}{s}\n", .{ "\x1b[36m", track.id, track.name, "\x1b[0m" });
 
             // Check if file exists
             const file = std.fs.cwd().openFile(path, .{}) catch |err| {
-                std.debug.print("  {s}✗ File not found: {}{s}\n", .{"\x1b[31m", err, "\x1b[0m"});
+                std.debug.print("  {s}✗ File not found: {}{s}\n", .{ "\x1b[31m", err, "\x1b[0m" });
                 continue;
             };
             file.close();

@@ -1,0 +1,185 @@
+# SAC Actor Network — Source of Truth
+# Stochastic policy with reparameterization for Soft Actor-Critic
+# φ² + 1/φ² = 3 | TRINITY
+
+name: sac_actor
+version: "1.0.0"
+module: algo.rl.sac_actor
+description: "SAC actor: stochastic policy with temperature-scaled entropy maximization"
+
+types:
+  SACActorConfig:
+    description: "Configuration for SAC actor network"
+    fields:
+      - name: state_dim
+        type: u32
+        description: "Dimension of state space"
+      - name: action_dim
+        type: u32
+        description: "Dimension of action space"
+      - name: hidden_dims
+        type: "[]u32"
+        description: "Hidden layer sizes"
+      - name: action_range
+        type: "[]f32"
+        description: "Action bounds [low, high] per dimension"
+      - name: log_std_min
+        type: f32
+        description: "Minimum log std"
+      - name: log_std_max
+        type: f32
+        description: "Maximum log std"
+
+  PolicyOutput:
+    description: "Output of SAC policy network"
+    fields:
+      - name: mean
+        type: "[]f32"
+        description: "Action mean μ(s)"
+      - name: log_std
+        type: "[]f32"
+        description: "Log std dev log σ(s)"
+
+  SquashedGaussianSample:
+    description: "Sampled action with squashing"
+    fields:
+      - name: action
+        type: "[]f32"
+        description: "Squashed action in [-1, 1] or custom bounds"
+      - name: log_prob
+        type: f32
+        description: "Corrected log probability"
+
+constants:
+  DEFAULT_LOG_STD_MIN:
+    type: f32
+    value: -20.0
+    description: "Minimum log std (prevents collapse)"
+
+  DEFAULT_LOG_STD_MAX:
+    type: f32
+    value: 2.0
+    description: "Maximum log std (prevents explosion)"
+
+  DEFAULT_ACTION_RANGE:
+    type: "[]f32"
+    value: "[-1.0, 1.0]"
+    description: "Default action bounds"
+
+functions:
+  forward:
+    params:
+      - name: state
+        type: "[]const f32"
+        description: "Input state"
+      - name: params
+        type: "[]const f32"
+        description: "Network parameters"
+      - name: config
+        type: SACActorConfig
+    returns: "PolicyOutput"
+    description: "Forward pass: outputs mean and log_std"
+    formula: |
+      hidden = activation(state @ W1 + b1)
+      For i in 1..len(config.hidden_dims)-1:
+        hidden = activation(hidden @ W[i+1] + b[i+1])
+
+      mean = tanh(hidden @ W_mean + b_mean)
+      log_std = clamp(hidden @ W_logstd + b_logstd,
+                      config.log_std_min,
+                      config.log_std_max)
+      return PolicyOutput(mean, log_std)
+
+  sample:
+    params:
+      - name: policy_output
+        type: PolicyOutput
+      - name: deterministic
+        type: bool
+    returns: "SquashedGaussianSample"
+    description: "Sample action using reparameterization trick"
+    formula: |
+      If deterministic:
+        action = policy_output.mean
+      Else:
+        std = exp(policy_output.log_std)
+        noise = sample_normal(shape=std.shape)
+        action = policy_output.mean + std * noise
+
+      # Squash to [-1, 1]
+      squashed_action = tanh(action)
+
+      # Correct log prob for squashing
+      log_prob = log_normal_pdf(action, policy_output.mean, std)
+      log_prob -= sum(log(1 - squashed_action^2 + 1e-6))
+
+      return SquashedGaussianSample(squashed_action, log_prob)
+
+  scale_action:
+    params:
+      - name: action
+        type: "[]f32"
+        description: "Action in [-1, 1]"
+      - name: action_range
+        type: "[]f32"
+        description: "Target bounds [low, high]"
+    returns: "[]f32"
+    description: "Scale action from [-1, 1] to environment bounds"
+    formula: |
+      low = action_range[0]
+      high = action_range[1]
+      return (action + 1) / 2 * (high - low) + low
+
+  unscale_action:
+    params:
+      - name: action
+        type: "[]f32"
+        description: "Action in environment bounds"
+      - name: action_range
+        type: "[]f32"
+        description: "Environment bounds [low, high]"
+    returns: "[]f32"
+    description: "Unscale action to [-1, 1]"
+    formula: |
+      low = action_range[0]
+      high = action_range[1]
+      return 2 * (action - low) / (high - low) - 1
+
+behaviors:
+  - name: reparameterization
+    description: "Gradient flows through stochastic sampling"
+    implementation: |
+      a = μ + σ ⊙ ε, ε ~ N(0, I)
+      Allows backprop through sampling
+      Key to SAC's efficiency
+
+  - name: tanh_squash
+    description: "Bound actions to [-1, 1]"
+    implementation: |
+      Apply tanh to Gaussian samples
+      Correct log prob for Jacobian of tanh
+      Ensures bounded actions
+
+  - name: entropy_maximization
+    description: "Maximize policy entropy for exploration"
+    implementation: |
+      SAC adds α * H(π) to objective
+      High entropy = more exploration
+      Temperature α controls exploration
+
+constraints:
+  - log_std_min < log_std_max
+  - action_low < action_high
+
+equations:
+  - name: reparameterization
+    latex: "a_t = \mu_\phi(s_t) + \sigma_\phi(s_t) \odot \epsilon, \quad \epsilon \sim \mathcal{N}(0, I)"
+    description: "Reparameterization trick for gradient estimation"
+
+  - name: squashed_correction
+    latex: "\log \pi(u|s) = \log \mathcal{N}(u|\mu, \sigma) - \sum_i \log (1 - \tanh^2(u_i) + \epsilon)"
+    description: "Log probability correction for tanh squashing"
+
+references:
+  - "Haarnoja et al. (2018) - Soft Actor-Critic: Off-Policy Maximum Entropy Deep RL"
+  - "Haarnoja et al. (2019) - Soft Actor-Critic Algorithms and Applications"

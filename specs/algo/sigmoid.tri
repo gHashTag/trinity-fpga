@@ -1,0 +1,81 @@
+# Sigmoid — Source of Truth
+# Logistic sigmoid: 1 / (1 + e⁻ˣ)
+# φ² + 1/φ² = 3 | TRINITY
+
+name: sigmoid
+version: "1.0.0"
+module: algo.activation.sigmoid
+description: "Logistic sigmoid activation: outputs in (0, 1)"
+
+types:
+  SigmoidConfig:
+    description: "Configuration for Sigmoid activation"
+    fields:
+      - name: none
+        type: void
+        description: "No parameters needed"
+
+functions:
+  forward:
+    params:
+      - name: x
+        type: f32
+        description: "Input value"
+    returns: "f32"
+    description: "Sigmoid activation"
+    formula: |
+      if x >= 0:
+        return 1 / (1 + exp(-x))
+      else:
+        exp_x = exp(x)
+        return exp_x / (1 + exp_x)
+
+  forward_batch:
+    params:
+      - name: input
+        type: "[]f32"
+        description: "Input tensor"
+    returns: "[]f32"
+    description: "Element-wise sigmoid on batch"
+    formula: |
+      output = array(len(input))
+      For i in 0..len(input):
+        output[i] = forward(input[i])
+      return output
+
+  derivative:
+    params:
+      - name: sigmoid_x
+        type: f32
+        description: "Sigmoid output (for efficiency)"
+    returns: "f32"
+    description: "Derivative for backpropagation"
+    formula: |
+      return sigmoid_x * (1 - sigmoid_x)
+
+behaviors:
+  - name: probability_output
+    description: "Maps to (0, 1) for probabilities"
+    implementation: |
+      Output interpretable as probability
+      Used in binary classification
+      Also for gates in LSTM/GRU
+
+  - name: saturation
+    description: "Saturates at extreme values"
+    implementation: |
+      Large positive x → 1
+      Large negative x → 0
+      Small gradients in saturation
+
+equations:
+  - name: sigmoid_formula
+    latex: "\sigma(x) = \frac{1}{1 + e^{-x}}"
+    description: "Logistic sigmoid"
+
+  - name: sigmoid_derivative
+    latex: "\frac{d}{dx}\sigma(x) = \sigma(x)(1 - \sigma(x))"
+    description: "Derivative (compute from output)"
+
+references:
+  - "Classic activation function for binary classification"

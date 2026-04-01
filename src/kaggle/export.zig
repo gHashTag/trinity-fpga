@@ -14,9 +14,9 @@ const std = @import("std");
 const Allocator = std.mem.Allocator;
 
 pub const ExportFormat = enum {
-    Csv,       // Standard CSV for Kaggle
-    Json,      // JSON for Python integration
-    Python,    // Python dict literal
+    Csv, // Standard CSV for Kaggle
+    Json, // JSON for Python integration
+    Python, // Python dict literal
 };
 
 pub const SubmissionRow = struct {
@@ -44,7 +44,7 @@ pub const Exporter = struct {
         for (rows) |row| {
             // Escape if necessary
             const needs_escape = std.mem.indexOf(u8, row.answer, ",") != null or
-                                 std.mem.indexOf(u8, row.answer, "\"") != null;
+                std.mem.indexOf(u8, row.answer, "\"") != null;
 
             if (needs_escape) {
                 try file.writeAll(row.id);
@@ -152,7 +152,7 @@ pub const Exporter = struct {
             \\# Save for Kaggle upload
             \\df.to_csv('submission.csv', index=False)
             \\print("Saved to submission.csv")
-        , .{track, track});
+        , .{ track, track });
     }
 };
 

@@ -282,7 +282,8 @@ pub const Matcher = struct {
             var is_match = true;
             for (needle, 0..) |n, j| {
                 if (i + j >= haystack.len or
-                    std.ascii.toLower(haystack[i + j]) != std.ascii.toLower(n)) {
+                    std.ascii.toLower(haystack[i + j]) != std.ascii.toLower(n))
+                {
                     is_match = false;
                     break;
                 }

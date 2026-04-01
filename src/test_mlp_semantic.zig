@@ -291,5 +291,5 @@ pub fn main() !void {
     }
 
     print("\n✅ Semantic Equivalence: .tri spec produces correct output\n", .{});
-    print("✅ Trinity Identity: φ² + 1/φ² = {d:.15} ≈ 3.0\n", .{ 2.618033988749895 + 1.0 / 2.618033988749895 });
+    print("✅ Trinity Identity: φ² + 1/φ² = {d:.15} ≈ 3.0\n", .{2.618033988749895 + 1.0 / 2.618033988749895});
 }

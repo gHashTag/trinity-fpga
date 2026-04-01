@@ -1,0 +1,143 @@
+# PPO Critic Network — Source of Truth
+# Value network V(s) for state value estimation
+# φ² + 1/φ² = 3 | TRINITY
+
+name: ppo_critic
+version: "1.0.0"
+module: algo.rl.ppo_critic
+description: "Critic network for PPO: state value function V_φ(s)"
+
+types:
+  CriticConfig:
+    description: "Configuration for PPO critic network"
+    fields:
+      - name: state_dim
+        type: u32
+        description: "Dimension of state space"
+      - name: hidden_dims
+        type: "[]u32"
+        description: "Hidden layer sizes"
+      - name: activation
+        type: Activation
+        description: "Activation function"
+
+  Activation:
+    description: "Activation function options"
+    enum:
+      - RELU
+      - TANH
+      - GELU
+
+constants:
+  DEFAULT_HIDDEN:
+    type: "[]u32"
+    value: "[64, 64]"
+    description: "Default hidden layers"
+
+functions:
+  forward:
+    params:
+      - name: state
+        type: "[]const f32"
+        description: "Input state"
+      - name: params
+        type: "[]const f32"
+        description: "Network parameters"
+      - name: config
+        type: CriticConfig
+    returns: "f32"
+    description: "Compute state value V(s)"
+    formula: |
+      hidden = activation(state @ W1 + b1)
+      For i in 1..len(config.hidden_dims)-1:
+        hidden = activation(hidden @ W[i+1] + b[i+1])
+      value = hidden @ W_final + b_final
+      return value
+
+  compute_advantage:
+    params:
+      - name: rewards
+        type: "[]f32"
+        description: "Episode rewards [r0, r1, ..., rT]"
+      - name: values
+        type: "[]f32"
+        description: "State values [V(s0), V(s1), ..., V(sT)]"
+      - name: gamma
+        type: f32
+        description: "Discount factor"
+      - name: lambda_
+        type: f32
+        description: "GAE lambda parameter"
+    returns: "[]f32"
+    description: "Compute GAE(λ) advantages"
+    formula: |
+      T = len(rewards)
+      advantages = array(T)
+      gae = 0.0
+      For t from T-1 down to 0:
+        delta = rewards[t] + gamma * values[t+1] - values[t]
+        gae = delta + gamma * lambda_ * gae
+        advantages[t] = gae
+      return advantages
+
+  compute_returns:
+    params:
+      - name: rewards
+        type: "[]f32"
+        description: "Episode rewards"
+      - name: gamma
+        type: f32
+        description: "Discount factor"
+    returns: "[]f32"
+    description: "Compute discounted returns"
+    formula: |
+      T = len(rewards)
+      returns = array(T)
+      G = 0.0
+      For t from T-1 down to 0:
+        G = rewards[t] + gamma * G
+        returns[t] = G
+      return returns
+
+  value_loss:
+    params:
+      - name: predicted_values
+        type: "[]f32"
+        description: "Predicted V(s)"
+      - name: target_values
+        type: "[]f32"
+        description: "Target V(s) from advantages"
+    returns: "f32"
+    description: "MSE loss between predicted and target values"
+    formula: |
+      return mean((predicted_values - target_values)^2)
+
+behaviors:
+  - name: td_residual
+    description: "TD error for advantage estimation"
+    implementation: |
+      δ_t = r_t + γV(s_{t+1}) - V(s_t)
+      Measures surprise at next state value
+
+  - name: value_target_clipping
+    description: "Optional clipping of value targets (PPO-style)"
+    implementation: |
+      Clip value targets to prevent large updates
+      V_target = clip(V_old + A, V_old - clip_range, V_old + clip_range)
+
+constraints:
+  - 0 <= gamma <= 1
+  - 0 <= lambda_ <= 1
+
+equations:
+  - name: gae_formula
+    latex: "A_t^{GAE(\gamma,\lambda)} = \sum_{l=0}^{\infty} (\gamma \lambda)^l \delta_{t+l}^V"
+    description: "Generalized Advantage Estimation"
+
+  - name: td_error
+    latex: "\delta_t^V = r_t + \gamma V(s_{t+1}) - V(s_t)"
+    description: "Temporal difference error"
+
+references:
+  - "Schulman et al. (2016) - High-dimensional continuous control using GAE"
+  - "Schulman et al. (2017) - Proximal Policy Optimization Algorithms"

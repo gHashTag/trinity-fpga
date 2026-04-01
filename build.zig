@@ -169,6 +169,22 @@ pub fn build(b: *std.Build) void {
     const run_mnist = b.addRunArtifact(bench_mnist);
     bench_mnist_step.dependOn(&run_mnist.step);
 
+    // BENCH-001: Ternary vs FP16/BF16/GF16 on MNIST
+    // ═══════════════════════════════════════════════════════════════════════════
+    const bench_001 = b.addExecutable(.{
+        .name = "bench-001",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/bench_001_main.zig"),
+            .target = target,
+            .optimize = .ReleaseFast,
+        }),
+    });
+    b.installArtifact(bench_001);
+
+    const bench_001_step = b.step("bench-001", "Run BENCH-001: Ternary vs FP16/BF16/GF16");
+    const run_001 = b.addRunArtifact(bench_001);
+    bench_001_step.dependOn(&run_001.step);
+
     // Cross-platform libvsa release builds
     const libvsa_release_step = b.step("release-libvsa", "Build libtrinity-vsa for all platforms");
 

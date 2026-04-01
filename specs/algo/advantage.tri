@@ -1,0 +1,193 @@
+# GAE — Generalized Advantage Estimation — Source of Truth
+# GAE(λ) for bias-variance tradeoff in advantage estimation
+# φ² + 1/φ² = 3 | TRINITY
+
+name: advantage
+version: "1.0.0"
+module: algo.rl.advantage
+description: "Generalized Advantage Estimation: balance bias and variance in advantage estimates"
+
+types:
+  GAEConfig:
+    description: "Configuration for GAE computation"
+    fields:
+      - name: gamma
+        type: f32
+        description: "Discount factor (0 to 1)"
+      - name: lambda_
+        type: f32
+        description: "GAE parameter (0 to 1)"
+      - name: normalize
+        type: bool
+        description: "Whether to normalize advantages"
+
+  TrajectoryBatch:
+    description: "Batch of trajectory data"
+    fields:
+      - name: states
+        type: "[][]f32"
+        description: "States [s0, s1, ..., sT]"
+      - name: actions
+        type: "[][]f32"
+        description: "Actions taken"
+      - name: rewards
+        type: "[]f32"
+        description: "Rewards [r0, r1, ..., rT]"
+      - name: values
+        type: "[]f32"
+        description: "State values [V(s0), ..., V(sT)]"
+      - name: dones
+        type: "[]bool"
+        description: "Episode termination flags"
+
+constants:
+  DEFAULT_GAMMA:
+    type: f32
+    value: 0.99
+    description: "Default discount factor"
+
+  DEFAULT_LAMBDA:
+    type: f32
+    value: 0.95
+    description: "Default GAE λ"
+
+functions:
+  compute_td_residual:
+    params:
+      - name: reward
+        type: f32
+        description: "Reward at step t"
+      - name: value
+        type: f32
+        description: "Value V(s_t)"
+      - name: next_value
+        type: f32
+        description: "Value V(s_{t+1})"
+      - name: gamma
+        type: f32
+        description: "Discount factor"
+      - name: done
+        type: bool
+        description: "Episode termination"
+    returns: "f32"
+    description: "Compute TD residual δ_t^V"
+    formula: |
+      if done:
+        return reward - value
+      else:
+        return reward + gamma * next_value - value
+
+  compute_gae:
+    params:
+      - name: rewards
+        type: "[]f32"
+        description: "Rewards [r0, r1, ..., rT]"
+      - name: values
+        type: "[]f32"
+        description: "Values [V(s0), ..., V(sT)]"
+      - name: dones
+        type: "[]bool"
+        description: "Termination flags"
+      - name: gamma
+        type: f32
+        description: "Discount factor"
+      - name: lambda_
+        type: f32
+        description: "GAE parameter"
+    returns: "[]f32"
+    description: "Compute GAE(λ) advantages"
+    formula: |
+      T = len(rewards)
+      advantages = array(T)
+      gae = 0.0
+
+      # Iterate backwards
+      For t from T-1 down to 0:
+        if t == T-1 or dones[t]:
+          next_value = 0.0
+          next_gae = 0.0
+        else:
+          next_value = values[t + 1]
+          next_gae = advantages[t + 1]
+
+        delta = rewards[t] + gamma * next_value - values[t]
+        gae = delta + gamma * lambda_ * next_gae
+        advantages[t] = gae
+
+      return advantages
+
+  compute_returns:
+    params:
+      - name: rewards
+        type: "[]f32"
+        description: "Episode rewards"
+      - name: dones
+        type: "[]bool"
+        description: "Termination flags"
+      - name: last_value
+        type: f32
+        description: "Value of final state (for partial episodes)"
+      - name: gamma
+        type: f32
+    returns: "[]f32"
+    description: "Compute discounted returns"
+    formula: |
+      T = len(rewards)
+      returns = array(T)
+      G = last_value
+
+      For t from T-1 down to 0:
+        G = rewards[t] + gamma * G * (not dones[t])
+        returns[t] = G
+
+      return returns
+
+  normalize_advantages:
+    params:
+      - name: advantages
+        type: "[]f32"
+        description: "Raw advantages"
+    returns: "[]f32"
+    description: "Normalize advantages to zero mean, unit variance"
+    formula: |
+      mean = sum(advantages) / len(advantages)
+      variance = sum((advantages - mean)^2) / len(advantages)
+      std = sqrt(variance + 1e-8)
+      return (advantages - mean) / std
+
+behaviors:
+  - name: lambda_tradeoff
+    description: "λ controls bias-variance tradeoff"
+    implementation: |
+      λ = 0: Monte Carlo (high variance, unbiased)
+      λ = 1: TD(0) (low variance, biased)
+      λ ∈ (0,1): GAE (balance)
+      Typical: λ = 0.95-0.99
+
+  - name: episode_handling
+    description: "Reset GAE at episode boundaries"
+    implementation: |
+      When done[t] = True:
+        Set next_value = 0
+        Reset accumulation
+      Prevents bootstrapping past terminal states
+
+constraints:
+  - 0 <= gamma <= 1
+  - 0 <= lambda_ <= 1
+
+equations:
+  - name: gae_formula
+    latex: "\hat{A}_t^{GAE(\gamma,\lambda)} = \sum_{l=0}^{\infty} (\gamma \lambda)^l \delta_{t+l}^V"
+    description: "GAE recursive computation"
+
+  - name: td_residual
+    latex: "\delta_t^V = r_t + \gamma V(s_{t+1}) - V(s_t)"
+    description: "Temporal difference residual"
+
+  - name: gae_recursive
+    latex: "\hat{A}_t = \delta_t^V + (\gamma \lambda) \hat{A}_{t+1}"
+    description: "Efficient backward recurrence"
+
+references:
+  - "Schulman et al. (2016) - High-Dimensional Continuous Control Using Generalized Advantage Estimation, arXiv:1506.02438"

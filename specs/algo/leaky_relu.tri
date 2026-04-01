@@ -1,0 +1,91 @@
+# Leaky ReLU — Source of Truth
+# Leaky ReLU: max(αx, x) with small negative slope
+# φ² + 1/φ² = 3 | TRINITY
+
+name: leaky_relu
+version: "1.0.0"
+module: algo.activation.leaky_relu
+description: "Leaky ReLU: allows small gradient for negative inputs"
+
+types:
+  LeakyReLUConfig:
+    description: "Configuration for Leaky ReLU"
+    fields:
+      - name: alpha
+        type: f32
+        description: "Negative slope (typically 0.01)"
+
+constants:
+  DEFAULT_ALPHA:
+    type: f32
+    value: 0.01
+    description: "Default negative slope"
+
+functions:
+  forward:
+    params:
+      - name: x
+        type: f32
+        description: "Input value"
+      - name: alpha
+        type: f32
+    returns: "f32"
+    description: "Leaky ReLU activation"
+    formula: |
+      if x >= 0:
+        return x
+      else:
+        return alpha * x
+
+  forward_batch:
+    params:
+      - name: input
+        type: "[]f32"
+        description: "Input tensor"
+      - name: alpha
+        type: f32
+    returns: "[]f32"
+    description: "Element-wise Leaky ReLU on batch"
+    formula: |
+      output = array(len(input))
+      For i in 0..len(input):
+        output[i] = forward(input[i], alpha)
+      return output
+
+  derivative:
+    params:
+      - name: x
+        type: f32
+        description: "Input value"
+      - name: alpha
+        type: f32
+    returns: "f32"
+    description: "Derivative for backpropagation"
+    formula: |
+      if x >= 0:
+        return 1.0
+      else:
+        return alpha
+
+behaviors:
+  - name: no_dead_neurons
+    description: "Non-zero gradient for negative inputs"
+    implementation: |
+      Prevents dead neurons problem
+      Small gradient for negative x
+      Helps with sparse gradients
+
+constraints:
+  - 0 < alpha < 1 (typically 0.01-0.1)
+
+equations:
+  - name: leaky_relu_formula
+    latex: "f(x) = \max(\alpha x, x) = \begin{cases} x & \text{if } x \geq 0 \\ \alpha x & \text{if } x < 0 \end{cases}"
+    description: "Leaky ReLU activation"
+
+  - name: derivative
+    latex: "f'(x) = \begin{cases} 1 & \text{if } x \geq 0 \\ \alpha & \text{if } x < 0 \end{cases}"
+    description: "Piecewise derivative"
+
+references:
+  - "Maas et al. (2013) - Rectifier Nonlinearities Improve Neural Network Acoustic Models"

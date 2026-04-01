@@ -1857,6 +1857,162 @@ pub fn runFpgaUartTestCommand(allocator: std.mem.Allocator, args: []const []cons
     try uartPing(allocator, device);
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// Mac JTAG Commands — Xilinx DLC10 + XC7A100T flashing procedure
+// Discovered 2026-04-01: fxload + replug + fxload + xc3sprog = working JTAG on macOS ARM
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const FXLOAD_PATH = "/Users/playra/trinity-w1/fpga/tools/fxload";
+const FIRMWARE_PATH = "/Users/playra/trinity-w1/fpga/tools/xusb_xp2.hex";
+const XC3SPROG_PATH = "/Users/playra/trinity-w1/fpga/tools/xc3sprog";
+const UART_BRIDGE_BIT = "/Users/playra/trinity-w1/fpga/openxc7-synth/uart_bridge_fixed.bit";
+const UART_TEST_PY = "/Users/playra/trinity-w1/fpga/uart_test.py";
+
+/// Run fxload to load FX2 firmware (switches DLC10 from bootloader to JTAG mode)
+/// Usage: tri fpga fxload
+pub fn runFpgaFxloadCommand(allocator: std.mem.Allocator, args: []const []const u8) !void {
+    _ = args;
+
+    std.debug.print("\x1b[34m═════════════════════════════════════════\x1b[0m\n", .{});
+    std.debug.print("\x1b[34mSTEP: Load FX2 Firmware\x1b[0m\n", .{});
+    std.debug.print("\x1b[34m═════════════════════════════════════════\x1b[0m\n\n", .{});
+
+    const result = try std.process.Child.run(.{
+        .allocator = allocator,
+        .argv = &.{ "sudo", FXLOAD_PATH, "-v", "-t", "fx2", "-d", "03fd:0013", "-i", FIRMWARE_PATH },
+    });
+
+    std.debug.print("{s}\n", .{result.stdout});
+    if (result.stderr.len > 0) std.debug.print("{s}\n", .{result.stderr});
+
+    std.debug.print("\x1b[32m✅ Firmware loaded!\x1b[0m\n", .{});
+    std.debug.print("\n\x1b[33m🔌 PHYSICAL REPLUG REQUIRED!\x1b[0m\n", .{});
+    std.debug.print("   1. UNPLUG DLC10 USB cable\n", .{});
+    std.debug.print("   2. Wait 3 seconds\n", .{});
+    std.debug.print("   3. REPLUG DLC10 USB cable\n", .{});
+    std.debug.print("   4. Run: tri fpga fxload\n\n", .{});
+}
+
+/// Verify DLC10 PID (check if in JTAG mode)
+/// Usage: tri fpga verify-pid
+pub fn runFpgaVerifyPidCommand(allocator: std.mem.Allocator, args: []const []const u8) !void {
+    _ = args;
+
+    std.debug.print("\x1b[34m═════════════════════════════════════════\x1b[0m\n", .{});
+    std.debug.print("\x1b[34mSTEP: Verify DLC10 PID\x1b[0m\n", .{});
+    std.debug.print("\x1b[34m═════════════════════════════════════════\x1b[0m\n\n", .{});
+
+    const result = try std.process.Child.run(.{
+        .allocator = allocator,
+        .argv = &.{ "system_profiler", "SPUSBDataType" },
+    });
+
+    // Parse PID from output
+    const output = result.stdout;
+    const xilinx_idx = std.mem.indexOf(u8, output, "Xilinx Inc.") orelse {
+        std.debug.print("❌ DLC10 NOT found!\n", .{});
+        return error.DeviceNotFound;
+    };
+
+    const pid_idx = std.mem.indexOf(u8, output[xilinx_idx..], "Product ID: ") orelse {
+        std.debug.print("❌ Could not find Product ID\n", .{});
+        return error.ParseError;
+    };
+
+    const pid_start = xilinx_idx + pid_idx + 12;
+    const pid_end = std.mem.indexOfScalar(u8, output[pid_start..], '\n') orelse output.len;
+    const pid = std.mem.trim(u8, output[pid_start..pid_end], &std.ascii.whitespace);
+
+    std.debug.print("DLC10 Product ID: {s}\n\n", .{pid});
+
+    if (std.mem.eql(u8, pid, "0x0008")) {
+        std.debug.print("\x1b[32m✅ JTAG MODE ACTIVE (PID 0x0008)\x1b[0m\n", .{});
+        std.debug.print("   Ready for flashing!\n\n", .{});
+        std.debug.print("Next: tri fpga flash\n\n", .{});
+    } else if (std.mem.eql(u8, pid, "0x0013")) {
+        std.debug.print("\x1b[33m⚠️  BOOTLOADER MODE (PID 0x0013)\x1b[0m\n", .{});
+        std.debug.print("   Need to run fxload again!\n\n", .{});
+        std.debug.print("Next: tri fpga fxload\n\n", .{});
+    } else {
+        std.debug.print("\x1b[31m❌ UNKNOWN PID: {s}\x1b[0m\n", .{pid});
+    }
+}
+
+/// Flash uart_bridge_fixed.bit via xc3sprog (requires PID 0x0008)
+/// Usage: tri fpga flash-bit
+pub fn runFpgaFlashBitCommand(allocator: std.mem.Allocator, args: []const []const u8) !void {
+    _ = args;
+
+    std.debug.print("\x1b[34m═════════════════════════════════════════\x1b[0m\n", .{});
+    std.debug.print("\x1b[34mSTEP: Flash uart_bridge_fixed.bit\x1b[0m\n", .{});
+    std.debug.print("\x1b[34m═════════════════════════════════════════\x1b[0m\n\n", .{});
+
+    const result = try std.process.Child.run(.{
+        .allocator = allocator,
+        .argv = &.{ "sudo", XC3SPROG_PATH, "-c", "xpc", UART_BRIDGE_BIT },
+    });
+
+    std.debug.print("{s}\n", .{result.stdout});
+    if (result.stderr.len > 0) std.debug.print("{s}\n", .{result.stderr});
+
+    // Check if flash was successful
+    const output = result.stdout;
+    if (std.mem.indexOf(u8, output, "done") != null or
+        std.mem.indexOf(u8, output, "VERIFY OK") != null)
+    {
+        std.debug.print("\n\x1b[32m✅ Flash successful!\x1b[0m\n\n", .{});
+
+        // Restore FTDI driver
+        std.debug.print("Restoring FTDI driver...\n", .{});
+        _ = std.process.Child.run(.{
+            .allocator = allocator,
+            .argv = &.{ "sudo", "kextload", "-b", "com.apple.driver.AppleUSBFTDI" },
+        }) catch {};
+
+        // Kill screen processes
+        std.debug.print("Killing screen processes...\n", .{});
+        _ = std.process.Child.run(.{
+            .allocator = allocator,
+            .argv = &.{ "killall", "screen" },
+        }) catch {};
+
+        std.debug.print("\nNext: tri fpga uart-test\n\n", .{});
+    } else {
+        std.debug.print("\n\x1b[31m❌ Flash may have failed\x1b[0m\n", .{});
+    }
+}
+
+/// Test UART bridge via Python script
+/// Usage: tri fpga uart-test
+pub fn runFpgaMacUartTestCommand(allocator: std.mem.Allocator, args: []const []const u8) !void {
+    _ = args;
+
+    std.debug.print("\x1b[34m═════════════════════════════════════════\x1b[0m\n", .{});
+    std.debug.print("\x1b[34mSTEP: UART Bridge Test\x1b[0m\n", .{});
+    std.debug.print("\x1b[34m═════════════════════════════════════════\x1b[0m\n\n", .{});
+
+    std.debug.print("Sending 'aaaa\\r\\n' to /dev/cu.usbserial-2140...\n\n", .{});
+
+    const result = try std.process.Child.run(.{
+        .allocator = allocator,
+        .argv = &.{ "python3", UART_TEST_PY },
+    });
+
+    std.debug.print("{s}\n", .{result.stdout});
+    if (result.stderr.len > 0) std.debug.print("{s}\n", .{result.stderr});
+
+    const output = result.stdout;
+    if (std.mem.indexOf(u8, output, "UART RX: b''") != null) {
+        std.debug.print("\n\x1b[33m⚠️  RX empty - no echo from FPGA\x1b[0m\n", .{});
+        std.debug.print("   Possible issues:\n", .{});
+        std.debug.print("   - Wrong bitstream (hslm_full_top instead of uart_bridge)\n", .{});
+        std.debug.print("   - Pin mapping mismatch\n", .{});
+        std.debug.print("   - UART bridge logic broken\n\n", .{});
+    } else if (std.mem.indexOf(u8, output, "aaaa") != null) {
+        std.debug.print("\n\x1b[32m✅ UART echo working!\x1b[0m\n\n", .{});
+    }
+}
+
 /// Export for tri_register.zig
 pub const runCommand = runFpgaBuildCommand;
 

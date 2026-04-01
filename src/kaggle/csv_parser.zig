@@ -139,7 +139,7 @@ pub const CsvParser = struct {
             // Detect question type
             const answer_words = std.mem.count(u8, row.answer, " ") + 1;
             const has_brackets = std.mem.indexOf(u8, row.answer, "(") != null or
-                                 std.mem.indexOf(u8, row.answer, "[") != null;
+                std.mem.indexOf(u8, row.answer, "[") != null;
 
             if (answer_words > 4 or has_brackets) {
                 stats.open_ended += 1;
@@ -166,8 +166,8 @@ pub const CsvParser = struct {
     fn trimField(allocator: Allocator, field: []const u8) ![]const u8 {
         var trimmed = std.mem.trim(u8, field, " \t\r\n");
         // Remove quotes if present
-        if (trimmed.len >= 2 and trimmed[0] == '"' and trimmed[trimmed.len-1] == '"') {
-            trimmed = trimmed[1 .. trimmed.len-1];
+        if (trimmed.len >= 2 and trimmed[0] == '"' and trimmed[trimmed.len - 1] == '"') {
+            trimmed = trimmed[1 .. trimmed.len - 1];
         }
         return allocator.dupe(u8, trimmed);
     }
@@ -221,8 +221,8 @@ pub const CsvWriter = struct {
 
     fn writeField(writer: anytype, field: []const u8) !void {
         const needs_quotes = std.mem.indexOf(u8, field, ",") != null or
-                            std.mem.indexOf(u8, field, "\"") != null or
-                            std.mem.indexOf(u8, field, "\n") != null;
+            std.mem.indexOf(u8, field, "\"") != null or
+            std.mem.indexOf(u8, field, "\n") != null;
 
         if (needs_quotes) {
             try writer.writeAll("\"");

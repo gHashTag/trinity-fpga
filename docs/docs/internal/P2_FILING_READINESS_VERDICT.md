@@ -9,23 +9,23 @@
 
 ## Executive Summary
 
-**DECISION: HOLD - ФУНКЦИОНАЛЬНАЯ ПРОВЕРКА НУЖНА**
+**DECISION: HOLD - FUNCTIONAL VERIFICATION REQUIRED**
 
 Programming proof complete ✅, functional verification NOT DONE ❌.
 
-**ЧЕСТНЫЙ СТАТУС** (2026-03-08):
-- **Programming proof** ✅: Битстрим загружается через JTAG
-- **Functional proof** ❌: LED НЕ мигал, камера НЕ включалась
+**HONEST STATUS** (2026-03-08):
+- **Programming proof** ✅: Bitstream loads via JTAG
+- **Functional proof** ❌: LED NOT blinking, camera NOT turned on
 
-**Пользователь СВИДЕТЕЛЬСТВУЕТ:**
-- "диод не мигает"
-- "я не видел что видеокамера включается"
+**User TESTIFIES:**
+- "LED not blinking"
+- "I haven't seen video camera turn on"
 
 See `docs/fpga/evidence/REAL_STATUS_LED_NOT_VERIFIED.md` for honest assessment.
 
 | Blocker | Status | Evidence |
 |---------|--------|----------|
-| BLOCKER 1: Hardware Proof | ❌ INCOMPLETE | Programming ✅, Functional ❌ (LED НЕ проверялся) |
+| BLOCKER 1: Hardware Proof | ❌ INCOMPLETE | Programming ✅, Functional ❌ (LED NOT verified) |
 | BLOCKER 2: uart_top.v Hotfix | ✅ COMPLETE | uart_top.bit synthesized (3.6 MB) |
 | BLOCKER 3A: Parser Values | ✅ COMPLETE | NamedValue + parseValues() implemented |
 | BLOCKER 3B: SSOT Import | ✅ COMPLETE | protocol_defines_gen.zig implemented |
@@ -53,7 +53,7 @@ See `docs/fpga/evidence/REAL_STATUS_LED_NOT_VERIFIED.md` for honest assessment.
 
 ## uart_top.v Active-Low LED Bug
 
-**Bug discovered**: 2026-03-08 (user feedback: "не мигает!" - not blinking)
+**Bug discovered**: 2026-03-08 (user feedback: "not blinking!" - not blinking)
 
 **Root cause**: Missing outer `~` inversion for active-low LED
 - LED is active-low: 0 = ON, 1 = OFF

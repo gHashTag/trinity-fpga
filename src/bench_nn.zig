@@ -34,7 +34,7 @@ pub fn main() !void {
         \\Model: Tiny MLP ({d} -> {d} -> {d})
         \\Samples: {d}
         \\
-    , .{config.input_size, config.hidden_size, config.output_size, num_samples});
+    , .{ config.input_size, config.hidden_size, config.output_size, num_samples });
 
     std.debug.print("Generating synthetic data...\n", .{});
 
@@ -85,10 +85,10 @@ pub fn main() !void {
     // Print results
     std.debug.print("Format    | Accuracy | Loss     | Size (bytes/weight)\n", .{});
     std.debug.print("----------|-----------|----------|-------------------\n", .{});
-    std.debug.print("f32       | {d:.2}%     | {d:.4}     | 32\n", .{f32_acc.accuracy, f32_acc.loss});
-    std.debug.print("f16 soft  | {d:.2}%     | {d:.4}     | 16\n", .{f16_acc.accuracy, f16_acc.loss});
-    std.debug.print("GF16 soft  | {d:.2}%     | {d:.4}     | 16\n", .{gf16_acc.accuracy, gf16_acc.loss});
-    std.debug.print("ternary   | {d:.2}%     | {d:.4}     | 2\n\n", .{ternary_acc.accuracy, ternary_acc.loss});
+    std.debug.print("f32       | {d:.2}%     | {d:.4}     | 32\n", .{ f32_acc.accuracy, f32_acc.loss });
+    std.debug.print("f16 soft  | {d:.2}%     | {d:.4}     | 16\n", .{ f16_acc.accuracy, f16_acc.loss });
+    std.debug.print("GF16 soft  | {d:.2}%     | {d:.4}     | 16\n", .{ gf16_acc.accuracy, gf16_acc.loss });
+    std.debug.print("ternary   | {d:.2}%     | {d:.4}     | 2\n\n", .{ ternary_acc.accuracy, ternary_acc.loss });
 
     std.debug.print("Key findings:\n", .{});
     std.debug.print("- GF16 maintains competitive accuracy vs f32 baseline\n", .{});

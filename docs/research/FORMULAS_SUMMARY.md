@@ -1,13 +1,13 @@
-# Trinity Framework — Все 142 формулы
+# Trinity Framework — All 142 Formulas
 
-**Status:** ✅ ВЕРНЫ И ПОДТВЕРЖДЕНЫ
+**Status:** ✅ VERIFIED AND CONFIRMED
 
 ---
 
-## Результаты проверки zig test
+## Zig Test Results
 
 ```
-=== ФИНАЛЬНАЯ ПРОВЕРКА ВСЕХ ФОРМУЛ ===
+=== FINAL CHECK OF ALL FORMULAS ===
 ✅ strong coupling      | α_s = 4φ²/(9π²)                     | error: 0.005%
 ✅ Weinberg angle       | sin²θ_W = 2π³e/729                  | error: 0.005%
 ✅ Cabibbo angle        | sin(θ_C) = 3γ/π                     | error: 0.057%
@@ -24,18 +24,18 @@
 ✅ CKM element          | |V_ts| = 2916/(π⁵φ³e⁴)              | error: 0.000%
 ✅ PMNS phase           | δ_CP = 8π³/(9e²)                    | error: 0.000%
 ======================================================================
-✅ ВСЕ ФОРМУЛЫ ПРОШЛИ ПРОВЕРКУ (<0.1% ошибка)
+✅ ALL FORMULAS PASSED VERIFICATION (<0.1% error)
 ```
 
-**Все 142 формул в `src/particle_physics/formulas.zig` верны.**
+**All 142 formulas in `src/particle_physics/formulas.zig` are correct.**
 
 ---
 
-## Формулы для сравнения с Pellis (VERИФИЦИРОВАННЫ)
+## Formulas for Pellis Comparison (VERIFIED)
 
-Из 142 формул, для сравнения с Pellis релевантны следующие **12 формул**:
+From 142 formulas, the following **12 formulas** are relevant for Pellis comparison:
 
-### 4 основные (которые также у Pellis)
+### 4 main ones (also in Pellis)
 
 | Constant | Trinity Formula | Computed | CODATA/PDG | Error |
 |----------|-----------------|-----------|------|
@@ -44,7 +44,7 @@
 | μ (mass ratio) | μ = 6π⁵ | 1836.118 | 1836.15267343 | 0.002% |
 | Ω_Λ (dark energy) | Ω_Λ = 6561φ⁻³/(π⁵e²) | 0.6850 | 0.688 ± 0.017 | 0.005% |
 
-### 8 дополнительных (детали Trinity)
+### 8 additional (Trinity details)
 
 | Constant | Trinity Formula | Computed | Error |
 |----------|-----------------|-------|------|
@@ -64,10 +64,10 @@
 
 ---
 
-## Важно: Все формулы ВЕРНЫ
+## Important: All Formulas Are Correct
 
-1. zig test src/particle_physics/formulas.zig → 79/79 тестов прошли
-2. Все формулы в PELLIS_RESPONSE_DRAFT.md и PELLIS_TRINITY_COMPARISON.md ВЕРНЫ
-3. Проблема пользователя была в **неверных вычислениях** (он использовал не те экспериментальные значения, что есть в коде)
+1. zig test src/particle_physics/formulas.zig → 79/79 tests passed
+2. All formulas in PELLIS_RESPONSE_DRAFT.md and PELLIS_TRINITY_COMPARISON.md are CORRECT
+3. User issue was in **incorrect calculations** (they used different experimental values than in code)
 
-**К отправке:** Документы готовы.
+**Ready to submit:** Documents are ready.

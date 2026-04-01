@@ -4,19 +4,20 @@
 //!
 
 // =============================================================================
-// UART Bridge Fixed — FT232RL ↔ FPGA Direct Connection
+// UART Bridge Fixed — FT232RL <-> FPGA Direct Connection
 // Pin mapping for QMTech XC7A100T-1FGG676C
+// FIXED: 2026-04-01 — Corrected pin comments to match .xdc (K20/L20)
 // =============================================================================
 // FT232RL Wiring:
-//   RXD (green)  → J2 pin 5  → L20 → FPGA uart_tx
-//   TXD (white)  → J2 pin 6  → K20 → FPGA uart_rx
-//   GND (black) → J2 pin 1  → GND
+//   RXD (green)  -> J2 pin 6  -> L20 -> FPGA uart_rx
+//   TXD (white)  -> J2 pin 5  -> K20 -> FPGA uart_tx
+//   GND (black) -> J2 pin 1  -> GND
 // =============================================================================
 
 module uart_bridge_fixed (
     input  wire clk,           // 50 MHz (M22)
-    input  wire uart_rx,       // From FT232RL TXD (K20)
-    output wire uart_tx,       // To FT232RL RXD (L20)
+    input  wire uart_rx,       // From FT232RL TXD (white, J2 pin 5, K20)
+    output wire uart_tx,       // To FT232RL RXD (green, J2 pin 6, L20)
     output wire led            // Status LED (T23)
 );
 
@@ -104,10 +105,14 @@ module uart_bridge_fixed (
     // ========================================================================
     // Echo Logic — received byte transmitted back
     // ========================================================================
+    reg tx_pending = 0;
     always @(posedge clk) begin
-        if (rx_valid && tx_ready) begin
+        if (rx_valid) begin
             tx_byte <= rx_byte;
+            tx_pending <= 1;
+        end else if (tx_pending && tx_ready) begin
             tx_start <= 1;
+            tx_pending <= 0;
         end
     end
 

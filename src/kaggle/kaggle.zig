@@ -69,19 +69,19 @@ pub const Kaggle = struct {
 
             // Open destination directory
             var dest_dir = std.fs.cwd().openDir(src_path, .{}) catch |err| {
-                std.debug.print("❌ Failed to open dest dir {s}: {}\n", .{src_path, err});
+                std.debug.print("❌ Failed to open dest dir {s}: {}\n", .{ src_path, err });
                 continue;
             };
             defer dest_dir.close();
 
             std.fs.cwd().copyFile(src, dest_dir, file, .{}) catch |err| {
-                std.debug.print("❌ Failed to copy {s}: {}\n", .{file, err});
+                std.debug.print("❌ Failed to copy {s}: {}\n", .{ file, err });
                 continue;
             };
             std.debug.print("✅ Copied {s}\n", .{file});
         }
 
-        std.debug.print("Copied {} files to {s}/src/kaggle/\n", .{files.len, exports_dir});
+        std.debug.print("Copied {} files to {s}/src/kaggle/\n", .{ files.len, exports_dir });
     }
 };
 

@@ -1,13 +1,5 @@
 {
-  "title": "Trinity Cognitive Probes - THLP MC Format",
-  "id": "playra/trinity-cognitive-probes-thlp-mc",
-  "licenses": [{"name": "CC0-1.0"}],
-  "description": "Trinity Hippocampal Learning Probe (THLP) in Multiple Choice format. 1152 open-ended questions converted to MC with 4 options each. Tests pattern learning, belief update, and rule induction.",
-  "keywords": ["agi", "benchmark", "cognitive", "hippocampus", "learning", "multiple-choice"],
-  "resources": [
-    {
-      "path": "thlp_mc.csv",
-      "description": "THLP Multiple Choice - 1152 questions with A/B/C/D options"
-    }
-  ]
+  "title": "Trinity Cognitive Probes MC Format",
+  "id": "playra/trinity-cognitive-probes-mc",
+  "licenses": [{"name": "CC0-1.0"}]
 }

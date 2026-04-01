@@ -145,6 +145,6 @@ pub const Labels = struct {
     }
 
     pub fn deinit(self: Labels) void {
-        self.allocator.free(self.labels[0..8 + self.labels.len]); // Free entire buffer
+        self.allocator.free(self.labels[0 .. 8 + self.labels.len]); // Free entire buffer
     }
 };

@@ -36,10 +36,12 @@ const sacred_v2 = @import("tri_sacred_v2.zig");
 const sacred_fpga = @import("tri_sacred_fpga.zig");
 const tri_train = @import("metabolism.zig");
 const tri_zenodo = @import("tri_zenodo.zig");
+const tri_clara = @import("tri_clara.zig");
 const tri_cloud = @import("tri_cloud.zig");
 const tri_farm = @import("tri_farm.zig");
 const dev_workflow = @import("dev_commands.zig");
 const github_commands = @import("github_commands.zig");
+const railway_build = @import("railway_build.zig");
 
 // Global state pointer (set by main before registration)
 var g_state: ?*utils.CLIState = null;
@@ -1038,6 +1040,19 @@ const execute_map = [_]ExecuteEntry{
             return tri_zenodo.runZenodoCommand(a, args);
         }
     }.f },
+
+    // ── CLARA (DARPA PA-25-07-02) ──
+    .{ .name = "clara", .execute = struct {
+        fn f(a: std.mem.Allocator, args: []const []const u8) !void {
+            return tri_clara.main(a, args);
+        }
+    }.f },
+    .{ .name = "railway", .execute = struct {
+        fn f(a: std.mem.Allocator, args: []const []const u8) !void {
+            return railway_build.runRailwayBuildCommand(a, args);
+        }
+    }.f },
+
     .{ .name = "sacred-full-cycle", .execute = struct {
         fn f(a: std.mem.Allocator, args: []const []const u8) !void {
             _ = args;
@@ -1374,7 +1389,8 @@ pub fn runFpgaCommand(allocator: std.mem.Allocator, args: []const []const u8) !v
         try data_json.append(allocator, '{');
         try data_writer.print("\"subcommands\":[", .{});
         const subcommands = &[_][]const u8{
-            "synth", "flash", "build", "verify", "snap", "status", "gen", "test", "jtag", "uart", "power",
+            "synth",  "flash",      "build",     "verify",        "snap", "status", "gen", "test", "jtag", "uart", "power",
+            "fxload", "verify-pid", "flash-bit", "mac-uart-test",
         };
         for (subcommands, 0..) |sc, i| {
             if (i > 0) try data_json.append(allocator, ',');

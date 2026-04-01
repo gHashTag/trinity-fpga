@@ -1,35 +1,35 @@
-# UART Echo Loop State — Автономный цикл
+# UART Echo Loop State — Autonomous Cycle
 
-## 2026-03-23 19:45 — Статус: v3.7 готов, разрабатываю v3.8
+## 2026-03-23 19:45 — Status: v3.7 ready, developing v3.8
 
-### ✅ Выполнено
+### ✅ Completed
 
-| Задача | Статус |
-|-------|---------|
-| uart_bridge_fixed.bit | ✅ Готов (3.6 MB) |
-| uart_echo_top.v | ✅ Создан с PING протоколом |
-| uart_bridge_fixed.v | ✅ UART мост (L20/K20/M22/T23) |
-| **uart_echo_test.zig** | ✅ **v3.7 -- RTT stats ЗАКОММИЧЕН!** |
-| build.zig | ✅ uart_echo_test активирован |
-| uart_echo_test binary | ✅ v3.7 собран |
-| /dev/cu.usbserial-2140 | ✅ Найден |
-| Git коммит | ✅ `3342511562`: v3.7 |
+| Task | Status |
+|------|--------|
+| uart_bridge_fixed.bit | ✅ Ready (3.6 MB) |
+| uart_echo_top.v | ✅ Created with PING protocol |
+| uart_bridge_fixed.v | ✅ UART bridge (L20/K20/M22/T23) |
+| **uart_echo_test.zig** | ✅ **v3.7 -- RTT stats COMMITTED!** |
+| build.zig | ✅ uart_echo_test activated |
+| uart_echo_test binary | ✅ v3.7 built |
+| /dev/cu.usbserial-2140 | ✅ Found |
+| Git commit | ✅ `3342511562`: v3.7 |
 
-### 🔨 В разработке: v3.8
+### 🔨 In Development: v3.8
 
-**Новая функция:**
-- ⏳ Экспорт результатов в CSV (--output)
+**New feature:**
+- ⏳ Export results to CSV (--output)
 
-**История версий:**
+**Version history:**
 - v3.1: --auto-configure (d6542d376d)
-- v3.3: Исправлен парсинг флагов (7061247e55)
-- v3.4: Добавлен --device (a8472d46b0)
-- v3.5: Добавлен RTT измерение (2fe6777215)
-- v3.6: Добавлен --continuous режим (f638c3f65c)
-- v3.7: Добавлена RTT статистика (3342511562)
-- v3.8: Экспорт в CSV (в разработке)
+- v3.3: Fixed flag parsing (7061247e55)
+- v3.4: Added --device (a8472d46b0)
+- v3.5: Added RTT measurement (2fe6777215)
+- v3.6: Added --continuous mode (f638c3f65c)
+- v3.7: Added RTT statistics (3342511562)
+- v3.8: Export to CSV (in development)
 
-### 📋 Все опции v3.7
+### 📋 All v3.7 options
 
 ```bash
 ./zig-out/bin/uart_echo_test [options]
@@ -46,21 +46,21 @@ Options:
   --help            Show this help message
 ```
 
-### 🎯 Функционал v3.7
+### 🎯 v3.7 functionality
 
-| Функция | Статус |
+| Function | Status |
 |----------|--------|
-| Авто-детекция устройства | ✅ Работает |
-| Ручной выбор устройства | ✅ Работает (--device) |
-| Автонастройка порта | ✅ Работает (--auto-configure) |
-| PING/PONG протокол | ✅ Работает (--ping-mode) |
-| RTT измерение | ✅ Работает |
-| RTT статистика per cycle | ✅ Работает |
-| Непрерывный режим | ✅ Работает (--continuous) |
-| Verbose логирование | ✅ Работает (-v/--verbose) |
-| Экспорт в CSV | ⏳ v3.8 |
+| Auto-detect device | ✅ Works |
+| Manual device selection | ✅ Works (--device) |
+| Auto-configure port | ✅ Works (--auto-configure) |
+| PING/PONG protocol | ✅ Works (--ping-mode) |
+| RTT measurement | ✅ Works |
+| RTT statistics per cycle | ✅ Works |
+| Continuous mode | ✅ Works (--continuous) |
+| Verbose logging | ✅ Works (-v/--verbose) |
+| Export to CSV | ⏳ v3.8 |
 
 ---
 
-**Обновление:** 2026-03-23 19:45
-**Автономный цикл активен** — проверка каждые 10 минут
+**Update:** 2026-03-23 19:45
+**Autonomous cycle active** — checks every 10 minutes

@@ -1,0 +1,89 @@
+# SiLU / Swish — Source of Truth
+# SiLU (Sigmoid Linear Unit) aka Swish: x · σ(x)
+# φ² + 1/φ² = 3 | TRINITY
+
+name: silu_swish
+version: "1.0.0"
+module: algo.activation.silu
+description: "SiLU/Swish activation: f(x) = x · σ(x)"
+
+types:
+  SiLUConfig:
+    description: "Configuration for SiLU activation"
+    fields:
+      - name: beta
+        type: f32
+        description: "Optional scaling parameter (SiLU: β=1, Swish: β=1)"
+
+constants:
+  DEFAULT_BETA:
+    type: f32
+    value: 1.0
+    description: "Default SiLU/Swish parameter"
+
+functions:
+  forward:
+    params:
+      - name: x
+        type: f32
+        description: "Input value"
+      - name: beta
+        type: f32
+    returns: "f32"
+    description: "SiLU activation"
+    formula: |
+      sigmoid_x = 1 / (1 + exp(-beta * x))
+      return x * sigmoid_x
+
+  forward_batch:
+    params:
+      - name: input
+        type: "[]f32"
+        description: "Input tensor"
+      - name: beta
+        type: f32
+    returns: "[]f32"
+    description: "Element-wise SiLU on batch"
+    formula: |
+      output = array(len(input))
+      For i in 0..len(input):
+        output[i] = forward(input[i], beta)
+      return output
+
+  derivative:
+    params:
+      - name: x
+        type: f32
+        description: "Input value"
+      - name: beta
+        type: f32
+    returns: "f32"
+    description: "Derivative for backpropagation"
+    formula: |
+      sigmoid_x = 1 / (1 + exp(-beta * x))
+      sigmoid_derivative = sigmoid_x * (1 - sigmoid_x)
+      return sigmoid_x + x * beta * sigmoid_derivative
+
+behaviors:
+  - name: self_gating
+    description: "Input modulates itself via sigmoid"
+    implementation: |
+      Sigmoid acts as self-gate
+      Smooth, non-monotonic for negative x
+      Outperforms ReLU in deep networks
+
+constraints:
+  - beta > 0
+
+equations:
+  - name: silu_formula
+    latex: "\text{SiLU}(x) = x \cdot \sigma(x) = \frac{x}{1 + e^{-x}}"
+    description: "SiLU activation function"
+
+  - name: derivative
+    latex: "\frac{d}{dx}\text{SiLU}(x) = \sigma(x) + x \cdot \sigma(x)(1 - \sigma(x))"
+    description: "SiLU derivative"
+
+references:
+  - "Elfwing et al. (2017) - Sigmoid-Weighted Linear Units for Neural Network Function Approximation"
+  - "Ramachandran et al. (2017) - Searching for Activation Functions (Swish)"

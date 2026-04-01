@@ -2,9 +2,9 @@
 
 Animated terminal GIFs demonstrating `tri` command functionality.
 
-## 🎬 Демо-страница
+## 🎬 Demo Homepage
 
-**Интерактивная демо-страница с терминальными записями:** https://gHashTag.github.io/trinity/demos/
+**Interactive terminal demos:** https://gHashTag.github.io/trinity/demos/
 
 ## Installation
 
@@ -14,7 +14,7 @@ Animated terminal GIFs demonstrating `tri` command functionality.
 # asciinema 3.0+ (for live recording)
 brew install asciinema
 
-# VHS (declarative tape format) - уже установлен
+# VHS (declarative tape format) - already installed
 # brew install vhs
 
 # agg (GIF generator, uses gifski)
@@ -46,7 +46,7 @@ VHS tapes ensure reproducibility:
 # Render all tapes
 cd tapes
 for tape in *.tape; do
-  vhs < "$tape"
+    vhs < "$tape"
 done
 ```
 
@@ -70,7 +70,7 @@ using hyperdimensional computing mathematics.
 
 **63 tok/s** — Addresses performance objections about Trinity's speed.
 
-Results:
+**Results:**
 - VSA operations: 17x+ speedup via SIMD
 - JIT compilation: 22x+ speedup over interpretation
 - Zero allocation hot path
@@ -178,10 +178,10 @@ trinity/
 
 | Objection | Response | GIF Demo |
 |-----------|-----------|-----------|
-| "Где benchmark?" | `tri benchmark` → 63 tok/s | ![tri-benchmark](https://gHashTag.github.io/trinity/recordings/tri-benchmark.gif) |
-| "Где тесты?" | `tri test` → 74/74 проходят | ![tri-test](https://gHashTag.github.io/trinity/recordings/tri-test.gif) |
-| "Где воспроизводимость?" | `git clone → zig build → tri benchmark` | Все GIF воспроизводимы |
-| "FPGA использует DSP?" | 0% DSP в битстриме | ![tri-fpga-synth](https://gHashTag.github.io/trinity/recordings/tri-fpga-synth.gif) |
-| "Что математическая основа?" | Trinity Identity φ² + φ⁻² = 3 | ![tri-math-demo](https://gHashTag.github.io/trinity/recordings/tri-math-demo.gif) |
+| "Where is benchmark?" | `tri benchmark` → 63 tok/s | ![tri-benchmark](https://gHashTag.github.io/trinity/recordings/tri-benchmark.gif) |
+| "Where are tests?" | `tri test` → 74/74 passing | ![tri-test](https://gHashTag.github.io/trinity/recordings/tri-test.gif) |
+| "Where is reproducibility?" | `git clone → zig build → tri benchmark` | All GIFs reproducible |
+| "FPGA uses DSP?" | 0% DSP in bitstream | ![tri-fpga-synth](https://gHashTag.github.io/trinity/recordings/tri-fpga-synth.gif) |
+| "What is mathematical foundation?" | Trinity Identity φ² + φ⁻² = 3 | ![tri-math-demo](https://gHashTag.github.io/trinity/recordings/tri-math-demo.gif) |
 
-Animated terminal is the most convincing format because it cannot be faked as easily as a screenshot.
+Animated terminal is most convincing format because it cannot be faked as easily as a screenshot.

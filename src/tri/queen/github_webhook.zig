@@ -55,7 +55,7 @@ pub const GithubWebhook = struct {
                     ev.files_changed,
                     ev.duration_sec,
                 );
-                std.debug.print("γ: Issue #{d} closed\n", .{ ev.issue_number });
+                std.debug.print("γ: Issue #{d} closed\n", .{ev.issue_number});
             },
             .unknown => {
                 std.debug.print("γ: Unknown webhook event\n", .{});
@@ -156,7 +156,7 @@ fn parseWebhookEvent(allocator: Allocator, payload: []const u8) !WebhookEvent {
                 .issue_closed = .{
                     .issue_number = issue_number,
                     .files_changed = 0, // TODO: extract from PR
-                    .duration_sec = 0,  // TODO: calculate from opened timestamp
+                    .duration_sec = 0, // TODO: calculate from opened timestamp
                 },
             };
         }

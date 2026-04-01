@@ -22,8 +22,8 @@ pub const McQuestion = struct {
     id: []const u8,
     task: []const u8,
     question: []const u8,
-    choices: []const u8,  // "A) opt1\nB) opt2\nC) opt3\nD) opt4"
-    answer: u8,  // 'A', 'B', 'C', or 'D'
+    choices: []const u8, // "A) opt1\nB) opt2\nC) opt3\nD) opt4"
+    answer: u8, // 'A', 'B', 'C', or 'D'
     difficulty: f64,
     brain_zone: []const u8,
     neural_analog: []const u8,
@@ -95,16 +95,19 @@ pub const McGenerator = struct {
         } else if (std.mem.indexOf(u8, q_lower, "capital") != null) {
             return self.capitalDistractors(question, correct);
         } else if (std.mem.indexOf(u8, q_lower, "sarcas") != null or
-                   std.mem.indexOf(u8, q_lower, "iron") != null) {
+            std.mem.indexOf(u8, q_lower, "iron") != null)
+        {
             return self.sarcasmDistractors();
         } else if (std.mem.indexOf(u8, q_lower, "fair") != null or
-                   std.mem.indexOf(u8, q_lower, "equit") != null or
-                   std.mem.indexOf(u8, q_lower, "negotiat") != null) {
+            std.mem.indexOf(u8, q_lower, "equit") != null or
+            std.mem.indexOf(u8, q_lower, "negotiat") != null)
+        {
             return self.fairnessDistractors();
         } else if (std.mem.indexOf(u8, q_lower, "false belief") != null) {
             return self.falseBeliefDistractors();
         } else if (std.mem.indexOf(u8, q_lower, "apolog") != null or
-                   std.mem.indexOf(u8, q_lower, "late") != null) {
+            std.mem.indexOf(u8, q_lower, "late") != null)
+        {
             return self.normDistractors();
         } else {
             return self.genericDistractors(correct);
@@ -139,8 +142,8 @@ pub const McGenerator = struct {
 
         // Extract country name
         const of_idx = std.mem.indexOf(u8, toLower(q), "of ") orelse
-                      std.mem.indexOf(u8, toLower(q), "for ") orelse
-                      std.mem.indexOf(u8, toLower(q), "in ");
+            std.mem.indexOf(u8, toLower(q), "for ") orelse
+            std.mem.indexOf(u8, toLower(q), "in ");
 
         if (of_idx) |idx| {
             // Skip preposition and get country
@@ -173,7 +176,7 @@ pub const McGenerator = struct {
                     }
                 }
                 if (!already) {
-                try selected.append(self.allocator, idx_rand);
+                    try selected.append(self.allocator, idx_rand);
                 }
             }
 

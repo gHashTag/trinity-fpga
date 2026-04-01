@@ -36,7 +36,7 @@ inline fn strEql(a: [*:0]const u8, b: []const u8) bool {
     while (i < b.len) : (i += 1) {
         if (a[i] != b[i]) return false;
     }
-    return a[i] == 0;  // Also check null terminator
+    return a[i] == 0; // Also check null terminator
 }
 
 // Helper: check if a string starts with a prefix
@@ -51,9 +51,9 @@ inline fn startsWith(s: []const u8, prefix: []const u8) bool {
 
 pub fn main() !void {
     const config = LayerConfig{
-        .input_size = 784,   // 28x28 MNIST images
+        .input_size = 784, // 28x28 MNIST images
         .hidden_size = 128,
-        .output_size = 10,   // Digits 0-9
+        .output_size = 10, // Digits 0-9
     };
 
     const allocator = std.heap.c_allocator;
@@ -150,9 +150,9 @@ pub fn main() !void {
             loaded.output_dim != config.output_size)
         {
             std.debug.print("\nERROR: Weight dimensions mismatch!\n", .{});
-            std.debug.print("  Expected: {}x{}x{}\n", .{config.input_size, config.hidden_size, config.output_size});
-            std.debug.print("  Got: {}x{}x{}\n", .{loaded.input_dim, loaded.hidden_dim, loaded.output_dim});
-            loaded.deinit();  // Free before returning
+            std.debug.print("  Expected: {}x{}x{}\n", .{ config.input_size, config.hidden_size, config.output_size });
+            std.debug.print("  Got: {}x{}x{}\n", .{ loaded.input_dim, loaded.hidden_dim, loaded.output_dim });
+            loaded.deinit(); // Free before returning
             return error.DimensionMismatch;
         }
 
@@ -226,10 +226,10 @@ pub fn main() !void {
     const bf16_gap = result_bf16.accuracy - result_f32.accuracy;
     const gf16_gap = result_gf16.accuracy - result_f32.accuracy;
     const ternary_gap = result_ternary.accuracy - result_f32.accuracy;
-    std.debug.print("  fp16:    {s}{d:.2}%\n", .{if (fp16_gap >= 0) "+" else "", fp16_gap});
-    std.debug.print("  bf16:    {s}{d:.2}%\n", .{if (bf16_gap >= 0) "+" else "", bf16_gap});
-    std.debug.print("  GF16:    {s}{d:.2}%\n", .{if (gf16_gap >= 0) "+" else "", gf16_gap});
-    std.debug.print("  ternary: {s}{d:.2}%\n", .{if (ternary_gap >= 0) "+" else "", ternary_gap});
+    std.debug.print("  fp16:    {s}{d:.2}%\n", .{ if (fp16_gap >= 0) "+" else "", fp16_gap });
+    std.debug.print("  bf16:    {s}{d:.2}%\n", .{ if (bf16_gap >= 0) "+" else "", bf16_gap });
+    std.debug.print("  GF16:    {s}{d:.2}%\n", .{ if (gf16_gap >= 0) "+" else "", gf16_gap });
+    std.debug.print("  ternary: {s}{d:.2}%\n", .{ if (ternary_gap >= 0) "+" else "", ternary_gap });
     std.debug.print("\n", .{});
 
     // Ensure results directory exists
@@ -250,9 +250,7 @@ pub fn main() !void {
         \\gf16,{d:.2},{d:.4},2
         \\ternary,{d:.2},{d:.4},1
         \\
-    , .{ result_f32.accuracy, result_f32.loss, result_fp16.accuracy, result_fp16.loss,
-         result_bf16.accuracy, result_bf16.loss, result_gf16.accuracy, result_gf16.loss,
-         result_ternary.accuracy, result_ternary.loss });
+    , .{ result_f32.accuracy, result_f32.loss, result_fp16.accuracy, result_fp16.loss, result_bf16.accuracy, result_bf16.loss, result_gf16.accuracy, result_gf16.loss, result_ternary.accuracy, result_ternary.loss });
 
     try file.writeAll(csv);
 
@@ -386,9 +384,9 @@ fn quantizeWeights(allocator: std.mem.Allocator, src: []const f32, fmt: formats.
 /// Forward pass with pre-quantized weights (stored as f32 for convenience)
 fn forwardPassQuantized(
     input: []const f32,
-    weights1: []const f32,  // Already quantized
+    weights1: []const f32, // Already quantized
     biases1: []const f32,
-    weights2: []const f32,  // Already quantized
+    weights2: []const f32, // Already quantized
     biases2: []const f32,
     config: LayerConfig,
     hidden: []f32,
