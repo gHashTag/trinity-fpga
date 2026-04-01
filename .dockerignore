@@ -4,7 +4,6 @@
 # Large dirs
 fpga/
 data/
-src/
 .git/
 .github/
 docs/
