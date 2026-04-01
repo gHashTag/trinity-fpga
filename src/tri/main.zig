@@ -302,6 +302,32 @@ pub fn main() !void {
             try commands.runDeployCommand(allocator, deploy_sub, deploy_args);
             return;
         }
+        // Railway namespace: route `tri railway <build|status|logs>` to railway commands
+        if (std.mem.eql(u8, first_arg, "railway")) {
+            const railway_sub = if (arg_idx + 1 < args.len) args[arg_idx + 1] else "";
+            if (railway_sub.len == 0) {
+                // Show railway help
+                std.debug.print("{s}RAILWAY COMMANDS:{s}\n", .{ "\x1b[0;36m", "\x1b[0m" });
+                std.debug.print("  {s}tri railway build{s}   Trigger build via Railway\n", .{ "\x1b[0;36m", "\x1b[0m" });
+                std.debug.print("  {s}tri railway status{s}   Show deployment status\n", .{ "\x1b[0;36m", "\x1b[0m" });
+                std.debug.print("  {s}tri railway logs{s}     Show build/deploy logs\n", .{ "\x1b[0;36m", "\x1b[0m" });
+                std.debug.print("  {s}tri railway up{s}      Alias for 'build'\n", .{ "\x1b[0;36m", "\x1b[0m" });
+                return;
+            }
+            const railway_args = if (arg_idx + 2 < args.len) args[arg_idx + 2 ..] else &[_][]const u8{};
+            logAgentCommand(args[arg_idx..]);
+            const railway_build = @import("railway_build.zig");
+            if (std.mem.eql(u8, railway_sub, "build") or std.mem.eql(u8, railway_sub, "up")) {
+                try railway_build.runRailwayBuildCommand(allocator, railway_args);
+            } else if (std.mem.eql(u8, railway_sub, "status")) {
+                std.debug.print("{s}Railway status:{s} Use 'railway status' CLI for detailed info.\n", .{ "\x1b[0;33m", "\x1b[0m" });
+            } else if (std.mem.eql(u8, railway_sub, "logs")) {
+                std.debug.print("{s}Railway logs:{s} Use 'railway logs' CLI for full logs.\n", .{ "\x1b[0;33m", "\x1b[0m" });
+            } else {
+                std.debug.print("{s}Unknown railway subcommand: {s}{s}\n", .{ "\x1b[0;31m", railway_sub, "\x1b[0m" });
+            }
+            return;
+        }
         // Spec namespace: route `tri spec create <name>` to spec_create, bare `tri spec` → specexec demo
         if (std.mem.eql(u8, first_arg, "spec")) {
             const spec_sub = if (arg_idx + 1 < args.len) args[arg_idx + 1] else "";

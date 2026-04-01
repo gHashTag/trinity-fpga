@@ -1,27 +1,18 @@
-// @origin(spec:railway_build.tri) @regen(manual-impl)
-// Railway CLI wrapper — build, status, logs, download
+// @origin(spec:railway.tri) @regen(manual-impl)
+// Railway CLI wrapper — build, status, logs
 // φ² + 1/φ² = 3 = TRINITY
 
 const std = @import("std");
-
-// Import Railway API module (in src/tri/railway_api.zig)
 const railway_api = @import("railway_api.zig");
-
-pub const RailwayBuildError = error{
-    BuildFailed,
-    CommandNotFound,
-    UnknownExitCode,
-    RailwayBuildFailed,
-};
+const railway_build = @import("railway_build.zig");
 
 const CYAN = "\x1b[0;36m";
 const GREEN = "\x1b[0;32m";
 const RED = "\x1b[0;31m";
+const YELLOW = "\x1b[0;33m";
 const RESET = "\x1b[0m";
 
-const YELLOW = "\x1b[0;33m";
-
-/// Run Railway command — dispatches to build/status/logs subcommands
+/// Run railway command — dispatches to build/status/logs subcommands
 pub fn runRailwayCommand(allocator: std.mem.Allocator, args: []const []const u8) !void {
     if (args.len < 1) {
         return showRailwayHelp(allocator);
@@ -30,12 +21,15 @@ pub fn runRailwayCommand(allocator: std.mem.Allocator, args: []const []const u8)
     const subcommand = args[0];
     const sub_args = args[1..];
 
-    if (std.mem.eql(u8, subcommand, "build") or std.mem.eql(u8, subcommand, "up")) {
-        return runRailwayBuildCommand(allocator, sub_args);
+    if (std.mem.eql(u8, subcommand, "build")) {
+        return railway_build.runRailwayBuildCommand(allocator, sub_args);
     } else if (std.mem.eql(u8, subcommand, "status")) {
         return runRailwayStatusCommand(allocator, sub_args);
     } else if (std.mem.eql(u8, subcommand, "logs")) {
         return runRailwayLogsCommand(allocator, sub_args);
+    } else if (std.mem.eql(u8, subcommand, "up")) {
+        // Alias for build
+        return railway_build.runRailwayBuildCommand(allocator, sub_args);
     } else {
         std.debug.print("{s}Unknown railway subcommand: {s}{s}\n", .{ RED, subcommand, RESET });
         return showRailwayHelp(allocator);
@@ -57,59 +51,18 @@ fn showRailwayHelp(allocator: std.mem.Allocator) !void {
         \\{s}EXAMPLES:{s}
         \\  tri railway build
         \\  tri railway status
-        \\  tri railway logs
+        \\  tri railway logs --tail 50
         \\
     , .{ CYAN, RESET, CYAN, RESET, CYAN, RESET, CYAN, RESET, CYAN, RESET, YELLOW, RESET });
 }
 
-/// Run Railway build command — runs `railway up --detach`
-pub fn runRailwayBuildCommand(allocator: std.mem.Allocator, args: []const []const u8) !void {
-    std.debug.print("{s}Railway:{s} Triggering build via `railway up --detach`...\n", .{ CYAN, RESET });
-
-    // Build command arguments
-    var argv = try std.ArrayList([]const u8).initCapacity(allocator, 8);
-    defer argv.deinit(allocator);
-
-    try argv.append(allocator, "up");
-    try argv.append(allocator, "--detach");
-
-    // If extra args, forward them
-    for (args) |arg| {
-        try argv.append(allocator, arg);
-    }
-
-    // Execute railway CLI via child process
-    var child = std.process.Child.init(&[_][]const u8{"railway"}, allocator);
-    child.argv = argv.items;
-    child.stderr_behavior = .Inherit;
-    child.stdout_behavior = .Inherit;
-
-    const term = child.spawnAndWait() catch |err| {
-        std.debug.print("{s}Railway spawn failed: {s}.{s}\n", .{ RED, @errorName(err), RESET });
-        return RailwayBuildError.BuildFailed;
-    };
-
-    if (term.Exited != 0) {
-        std.debug.print("{s}Railway build failed (exit {d}).{s}\n", .{ RED, term.Exited, RESET });
-        const exit_status = switch (term.Exited) {
-            1 => return RailwayBuildError.BuildFailed,
-            127 => return RailwayBuildError.CommandNotFound,
-            else => return RailwayBuildError.UnknownExitCode,
-        };
-        return exit_status;
-    }
-}
-
-/// Run Railway status command — shows deployment status
+/// Run railway status command — shows deployment status
 fn runRailwayStatusCommand(allocator: std.mem.Allocator, args: []const []const u8) !void {
     _ = args;
 
     std.debug.print("{s}Railway:{s} Fetching deployment status...\n", .{ CYAN, RESET });
 
-    var api = railway_api.RailwayApi.init(allocator) catch |err| {
-        std.debug.print("{s}Failed to init Railway API: {s}{s}\n", .{ RED, @errorName(err), RESET });
-        return err;
-    };
+    var api = try railway_api.RailwayApi.init(allocator);
     defer api.deinit();
 
     // Get project info
@@ -123,9 +76,8 @@ fn runRailwayStatusCommand(allocator: std.mem.Allocator, args: []const []const u
     std.debug.print("{s}Use 'railway status' CLI for detailed info.{s}\n", .{ YELLOW, RESET });
 }
 
-/// Run Railway logs command — shows build/deploy logs
+/// Run railway logs command — shows build/deploy logs
 fn runRailwayLogsCommand(allocator: std.mem.Allocator, args: []const []const u8) !void {
-    _ = allocator;
     _ = args;
 
     std.debug.print("{s}Railway:{s} Fetching logs...\n", .{ CYAN, RESET });
