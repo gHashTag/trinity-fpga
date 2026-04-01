@@ -16,8 +16,8 @@ const std = @import("std");
 // ═══════════════════════════════════════════════════════════════════
 
 pub const SignMask: u16 = 0b1_000000_000000000; // 0x8000
-pub const ExpMask: u16 = 0b0_111111_000000000;  // 0x7E00
-pub const MantMask: u16 = 0b0_000000_111111111;  // 0x01FF
+pub const ExpMask: u16 = 0b0_111111_000000000; // 0x7E00
+pub const MantMask: u16 = 0b0_000000_111111111; // 0x01FF
 
 pub const ExpShift: u5 = 9;
 pub const SignShift: u4 = 15;
@@ -119,8 +119,8 @@ pub fn f32ToGf16(a: f32) u16 {
 // Software fp16 encode/decode (IEEE 754 binary16)
 fn f32ToFp16(a: f32) u16 {
     if (a == 0) return 0;
-    if (std.math.isInf(a)) return 0x7C00;  // Infinity
-    if (std.math.isNan(a)) return 0x7E00;  // NaN
+    if (std.math.isInf(a)) return 0x7C00; // Infinity
+    if (std.math.isNan(a)) return 0x7E00; // NaN
 
     const sign_bit: u16 = if (a < 0) 0x8000 else 0;
     const abs_a = if (a < 0) -a else a;
@@ -135,13 +135,13 @@ fn f32ToFp16(a: f32) u16 {
         return sign_bit;
     }
 
-    const mant_f = (m_val - 1.0) * 1024.0;  // 2^10
+    const mant_f = (m_val - 1.0) * 1024.0; // 2^10
     var mant_i = @as(i32, @intFromFloat(mant_f));
 
     if (mant_i == 1024) {
         mant_i = 1023;
         e += 1;
-        if (e >= 31) return 0x7C00;  // Overflow
+        if (e >= 31) return 0x7C00; // Overflow
     }
     const mant_bits: u16 = @as(u16, @intCast(mant_i)) & 0x03FF;
     const e_bits: u16 = @as(u16, @intCast(e + 15)) << 10;
@@ -174,8 +174,8 @@ fn fp16ToF32(x: u16) f32 {
 // Software bf16 encode/decode (Brain Float 16)
 fn f32ToBf16(a: f32) u16 {
     if (a == 0) return 0;
-    if (std.math.isInf(a)) return 0x7F80;  // Infinity (all ones)
-    if (std.math.isNan(a)) return 0x7FC0;  // NaN
+    if (std.math.isInf(a)) return 0x7F80; // Infinity (all ones)
+    if (std.math.isNan(a)) return 0x7FC0; // NaN
 
     const sign_bit: u16 = if (a < 0) 0x8000 else 0;
     const abs_a = if (a < 0) -a else a;
@@ -191,16 +191,16 @@ fn f32ToBf16(a: f32) u16 {
 
     e = @min(e, 7);
     if (e <= 0 and m_val < 0.5) {
-        return sign_bit;  // Subnormal -> zero
+        return sign_bit; // Subnormal -> zero
     }
 
-    const mant_f = (m_val - 1.0) * 256.0;  // 2^8
+    const mant_f = (m_val - 1.0) * 256.0; // 2^8
     var mant_i = @as(i32, @intFromFloat(mant_f));
 
     if (mant_i == 256) {
         mant_i = 255;
         e += 1;
-        if (e >= 7) return 0x7F80;  // Overflow
+        if (e >= 7) return 0x7F80; // Overflow
     }
 
     const mant_bits: u16 = @as(u16, @intCast(mant_i)) & 0x00FF;
