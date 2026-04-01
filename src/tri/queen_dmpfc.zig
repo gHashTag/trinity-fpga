@@ -550,7 +550,7 @@ test "dmpfc — SelfCheck grade B boundary" {
 
 test "dmpfc — Issue setDescription unicode" {
     var issue = Issue{ .kind = .internal_conflict };
-    const text = "Конфликт обнаружен φ² + 1/φ² = 3";
+    const text = "Conflict detected φ² + 1/φ² = 3";
     issue.setDescription(text);
 
     try std.testing.expectEqualStrings(text, issue.descriptionStr());
