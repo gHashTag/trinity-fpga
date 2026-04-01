@@ -1552,7 +1552,7 @@
     {
       "id": "quantum_sim",
       "name": "Ⲕⲃⲁⲛⲧⲟⲙ Ⲥⲓⲙ",
-      "name_ru": "Квантовый симулятор",
+      "name_ru": "Quantum Simulator",
       "category": "QUANTUM",
       "status": "future",
       "speedup": 100.0,
@@ -1567,7 +1567,7 @@
     {
       "id": "neural_compiler",
       "name": "Ⲛⲉⲩⲣⲟ Ⲕⲟⲙⲡⲓⲗⲉⲣ",
-      "name_ru": "Нейрокомпилятор",
+      "name_ru": "Neural Compiler",
       "category": "AI",
       "status": "future",
       "speedup": 10.0,
@@ -1582,7 +1582,7 @@
     {
       "id": "self_evolve",
       "name": "Ⲁⲩⲧⲟ Ⲉⲃⲟⲗⲩⲧⲓⲟ",
-      "name_ru": "Самоэволюция кода",
+      "name_ru": "Code Self-Evolution",
       "category": "AI",
       "status": "future",
       "speedup": 1000.0,
@@ -1597,7 +1597,7 @@
     {
       "id": "ternary_quantum",
       "name": "Ⲧⲣⲓⲧ Ⲕⲃⲁⲛⲧⲟⲙ",
-      "name_ru": "Троичные квантовые вентили",
+      "name_ru": "Ternary Quantum Gates",
       "category": "QUANTUM",
       "status": "future",
       "speedup": 50.0,
@@ -1612,7 +1612,7 @@
     {
       "id": "holo_memory",
       "name": "Ⲟⲗⲟ Ⲙⲛⲏⲙⲏ",
-      "name_ru": "Голографическая память",
+      "name_ru": "Holographic Memory",
       "category": "RUNTIME",
       "status": "future",
       "speedup": 20.0,

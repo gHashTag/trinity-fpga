@@ -1018,6 +1018,14 @@
     "validationRange_q": "q: -3\u20263",
     "validationPositive": "Enter a positive number"
   },
+  "sacredMathResearch": {
+    "title": "TRINITY RESEARCH LABORATORY",
+    "subtitle": "Sacred mathematics and distributed systems — research from the past month",
+    "constants": "42 Sacred Constants",
+    "trinityIdentity": "Ternary Identity",
+    "gematria": "Coptic Gematria",
+    "predictions": "15 Scientific Predictions"
+  },
   "holographic": {
     "title": "Holographic Renderer v3.1",
     "subtitle": "Generated from: specs/tri/holographic_renderer.vibee",
