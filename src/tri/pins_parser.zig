@@ -183,8 +183,9 @@ pub const Lexer = struct {
                 };
             },
             '0'...'9' => {
-                // Number
-                while (self.pos < self.source.len and (std.ascii.isDigit(self.source[self.pos]) or self.source[self.pos] == '.' or self.source[self.pos] == 'M' or self.source[self.pos] == 'H' or self.source[self.pos] == 'k')) {
+                // Number (may include suffix like Hz, MHz, kHz)
+                while (self.pos < self.source.len and (std.ascii.isDigit(self.source[self.pos]) or
+                    self.source[self.pos] == '.' or std.ascii.isAlphabetic(self.source[self.pos]))) {
                     self.pos += 1;
                     self.col += 1;
                 }
@@ -485,9 +486,9 @@ pub const Parser = struct {
         defer path_parts.deinit(self.allocator);
 
         // Accept identifier or keyword as path component
-        const isPathComponent = self.check(.identifier) or self.check(.kw_board) or
-            self.check(.kw_clock) or self.check(.kw_uart) or self.check(.kw_led) or
-            self.check(.kw_connector);
+        const isPathComponent = self.check(.identifier) or self.check(.kw_fpga) or
+            self.check(.kw_board) or self.check(.kw_clock) or self.check(.kw_uart) or
+            self.check(.kw_led) or self.check(.kw_connector);
 
         if (!isPathComponent) {
             std.debug.print("Expected path component, got: {s} ({s})\n", .{
@@ -501,10 +502,10 @@ pub const Parser = struct {
         // Check for more parts connected by dots
         while (self.check(.dot)) {
             _ = self.advance(); // consume dot
-            const nextIsPathComponent = self.check(.identifier) or self.check(.kw_board) or
-                self.check(.kw_clock) or self.check(.kw_uart) or self.check(.kw_led) or
-                self.check(.kw_connector) or self.check(.kw_txd) or self.check(.kw_rxd) or
-                self.check(.kw_net) or self.check(.kw_gnd);
+            const nextIsPathComponent = self.check(.identifier) or self.check(.kw_fpga) or
+                self.check(.kw_board) or self.check(.kw_clock) or self.check(.kw_uart) or
+                self.check(.kw_led) or self.check(.kw_connector) or self.check(.kw_txd) or
+                self.check(.kw_rxd) or self.check(.kw_net) or self.check(.kw_gnd);
 
             if (!nextIsPathComponent) {
                 std.debug.print("Expected path component after dot, got: {s} ({s})\n", .{
@@ -554,6 +555,10 @@ pub const Parser = struct {
                         pin.role = try self.consumeIdentifier();
                     } else {
                         _ = try self.consumeIdentifier(); // skip value
+                    }
+                    // Consume optional semicolon
+                    if (self.check(.semicolon)) {
+                        _ = self.advance();
                     }
                 }
 
@@ -616,7 +621,7 @@ pub const Parser = struct {
                 _ = try self.consume(.lbrace);
 
                 var conn = SignalDef.init(self.allocator, conn_name, .connector);
-                try self.parseSignalAttributes(&conn);
+                try self.parseConnectorPins(&conn);
 
                 try board.connectors.put(conn_name, conn);
                 _ = try self.consume(.rbrace);
@@ -631,10 +636,13 @@ pub const Parser = struct {
 
     fn parseSignalAttributes(self: *Parser, signal: *SignalDef) !void {
         while (!self.check(.rbrace) and !self.check(.eof)) {
+            std.debug.print("  parseSignalAttributes: current={s} type={s}\n", .{
+                self.current.lexeme, @tagName(self.current.type),
+            });
             const attr_name = try self.consumeIdentifier();
 
             if (std.mem.eql(u8, attr_name, "net")) {
-                const net_path = try self.consumeIdentifier();
+                const net_path = try self.consumePath();
                 var pin = PinDef{
                     .name = attr_name,
                 };
@@ -651,9 +659,9 @@ pub const Parser = struct {
                 }
                 try signal.pins.put(attr_name, pin);
             } else if (std.mem.eql(u8, attr_name, "txd") or std.mem.eql(u8, attr_name, "rxd") or
-                std.mem.eql(u8, attr_name, "gnd") or std.mem.eql(u8, attr_name, "baud"))
+                std.mem.eql(u8, attr_name, "gnd"))
             {
-                const value = try self.consumeIdentifier();
+                const value = try self.consumePath(); // J2.6 is a path
                 const pin = PinDef{
                     .name = attr_name,
                     .loc = value,
@@ -670,6 +678,29 @@ pub const Parser = struct {
                 signal.color = try self.consumeIdentifier();
             } else {
                 _ = try self.consumeIdentifier(); // skip value
+            }
+        }
+    }
+
+    fn parseConnectorPins(self: *Parser, conn: *SignalDef) !void {
+        // Format: pin <number> <signal_name>
+        // Example: pin 1 gnd
+        while (!self.check(.rbrace) and !self.check(.eof)) {
+            if (self.check(.kw_pin)) {
+                _ = try self.consume(.kw_pin);
+                // Pin number (may be numeric identifier)
+                const pin_num_str = try self.consumeIdentifier();
+                // Signal name (may be keyword like gnd, vcc_5v, etc.)
+                const signal_name = try self.consumeIdentifier();
+
+                const pin = PinDef{
+                    .name = pin_num_str,
+                    .loc = signal_name, // Signal name is the "location" (what it connects to)
+                };
+                try conn.pins.put(pin_num_str, pin);
+            } else {
+                // Skip unknown tokens
+                _ = self.advance();
             }
         }
     }
@@ -837,6 +868,11 @@ pub const XdcEmitter = struct {
         errdefer buffer.deinit(self.allocator);
 
         const writer = buffer.writer(self.allocator);
+
+        // Debug: check string pointers before print
+        std.debug.print("DEBUG: design.name={*} len={d}\n", .{ design.name.ptr, design.name.len });
+        std.debug.print("DEBUG: board.name={*} len={d}\n", .{ board.name.ptr, board.name.len });
+        std.debug.print("DEBUG: fpga.name={*} len={d}\n", .{ fpga.name.ptr, fpga.name.len });
 
         // Header
         try writer.print(
