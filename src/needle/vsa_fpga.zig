@@ -38,7 +38,7 @@ pub const DEFAULT_DEVICES = [_][]const u8{
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// KOSCHEI Week 4: UART Protocol
+// TRINITY Week 4: UART Protocol
 // ═══════════════════════════════════════════════════════════════════════════════
 
 // UART configuration
@@ -119,7 +119,7 @@ pub const UARTPacket = struct {
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// KOSCHEI Week 4: Latency Measurement
+// TRINITY Week 4: Latency Measurement
 // ═══════════════════════════════════════════════════════════════════════════════
 
 pub const LatencyReport = struct {
@@ -290,7 +290,7 @@ pub const FPGADevice = struct {
             return error.FPGANotAvailable;
         }
 
-        // KOSCHEI Week 4: New UART protocol
+        // TRINITY Week 4: New UART protocol
         var tx_buf: [132]u8 = undefined; // 4 header + 64 + 64
         const packet = UARTPacket{
             .cmd = .BIND,
@@ -326,7 +326,7 @@ pub const FPGADevice = struct {
         return result;
     }
 
-    /// KOSCHEI Week 4: Full pipeline operation on FPGA
+    /// TRINITY Week 4: Full pipeline operation on FPGA
     pub fn runPipelineFPGA(
         self: *FPGADevice,
         a: FPGAVector,
@@ -380,7 +380,7 @@ pub const FPGADevice = struct {
         };
     }
 
-    /// KOSCHEI Week 4: Ping FPGA to check if it's alive
+    /// TRINITY Week 4: Ping FPGA to check if it's alive
     pub fn ping(self: *FPGADevice) !bool {
         if (!self.available) return false;
 
@@ -392,7 +392,7 @@ pub const FPGADevice = struct {
         return n == 4 and resp[0] == @intFromEnum(CMD.ACK);
     }
 
-    /// KOSCHEI Week 4: Get FPGA status
+    /// TRINITY Week 4: Get FPGA status
     pub const FPGAStatus = struct {
         version_major: u8,
         version_minor: u8,
@@ -418,7 +418,7 @@ pub const FPGADevice = struct {
         };
     }
 
-    /// KOSCHEI Week 4: Measure real roundtrip latency
+    /// TRINITY Week 4: Measure real roundtrip latency
     pub fn measureLatency(self: *FPGADevice) !LatencyReport {
         if (!self.available) return error.FPGANotAvailable;
 
@@ -566,20 +566,20 @@ pub fn similarityCPU(a: FPGAVector, b: FPGAVector) f32 {
     return (dot / mag + 1.0) / 2.0; // Scale to [0, 1]
 }
 
-/// KOSCHEI Week 3: Pipeline result type
+/// TRINITY Week 3: Pipeline result type
 pub const PipelineResult = struct {
     bound: FPGAVector,
     bundled: FPGAVector,
     similarity: f32,
 };
 
-/// KOSCHEI Week 3: Search result type
+/// TRINITY Week 3: Search result type
 pub const SearchResult = struct {
     vector: *const FPGAVector,
     similarity: f32,
 };
 
-/// KOSCHEI Week 3: Full VSA pipeline (bind + bundle + similarity)
+/// TRINITY Week 3: Full VSA pipeline (bind + bundle + similarity)
 pub fn pipelineBindBundleSim(
     a: FPGAVector,
     b: FPGAVector,
@@ -651,7 +651,7 @@ pub const VSAFPGA = struct {
         return results;
     }
 
-    /// KOSCHEI Week 4: Full VSA pipeline with automatic fallback
+    /// TRINITY Week 4: Full VSA pipeline with automatic fallback
     pub fn runPipeline(
         self: *VSAFPGA,
         a: FPGAVector,
@@ -671,7 +671,7 @@ pub const VSAFPGA = struct {
         return pipelineBindBundleSim(a, b, c);
     }
 
-    /// KOSCHEI Week 4: Measure real FPGA latency
+    /// TRINITY Week 4: Measure real FPGA latency
     pub fn measureLatency(self: *VSAFPGA) !LatencyReport {
         if (self.device) |*dev| {
             return dev.measureLatency();
@@ -679,7 +679,7 @@ pub const VSAFPGA = struct {
         return error.FPGANotAvailable;
     }
 
-    /// KOSCHEI Week 4: Ping FPGA to check if it's alive
+    /// TRINITY Week 4: Ping FPGA to check if it's alive
     pub fn ping(self: *VSAFPGA) bool {
         if (self.device) |*dev| {
             return dev.ping() catch false;
@@ -687,7 +687,7 @@ pub const VSAFPGA = struct {
         return false;
     }
 
-    /// KOSCHEI Week 4: Get FPGA status
+    /// TRINITY Week 4: Get FPGA status
     pub fn getStatus(self: *VSAFPGA) ?FPGADevice.FPGAStatus {
         if (self.device) |*dev| {
             return dev.getStatus() catch null;
@@ -695,7 +695,7 @@ pub const VSAFPGA = struct {
         return null;
     }
 
-    /// KOSCHEI Week 3: Pipeline search for multiple vectors
+    /// TRINITY Week 3: Pipeline search for multiple vectors
     pub fn pipelineSearch(
         self: *VSAFPGA,
         vectors: []const FPGAVector,
@@ -933,11 +933,11 @@ test "vsa_fpga.8: pipelineBindBundleSim" {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// KOSCHEI Week 4 TESTS
+// TRINITY Week 4 TESTS
 // ═══════════════════════════════════════════════════════════════════════════════
 
 test "vsa_fpga.9: UART protocol CRC8" {
-    const test_data = "TRINITY VSA FPGA KOSCHEI Week 4";
+    const test_data = "TRINITY VSA FPGA TRINITY Week 4";
     const crc = UARTPacket.crc8(test_data);
     // Known good value for this string (updated to match actual CRC)
     try std.testing.expectEqual(@as(u8, 0x8D), crc);

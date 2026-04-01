@@ -1448,7 +1448,7 @@ pub const PipelineExecutor = struct {
             return LinkMetrics{ .duration_ms = 10 };
         }
 
-        std.debug.print("  [ETERNAL] {s}KOSCHEI IMMORTAL{s} — initiating self-evolution...\n", .{ GOLDEN, RESET });
+        std.debug.print("  [ETERNAL] {s}TRINITY{s} — initiating self-evolution...\n", .{ GOLDEN, RESET });
 
         // Analyze what could be improved
         var improvements: usize = 0;
@@ -1497,7 +1497,7 @@ pub const PipelineExecutor = struct {
             return LinkMetrics{ .duration_ms = 10 };
         }
 
-        std.debug.print("  [SELF-REFERENTIAL] {s}KOSCHEI IMMORTAL{s} — pipeline improving itself...\n", .{ GOLDEN, RESET });
+        std.debug.print("  [SELF-REFERENTIAL] {s}TRINITY{s} — pipeline improving itself...\n", .{ GOLDEN, RESET });
 
         // Use SelfImprovementEngine from self_improving_pipeline.zig
         var engine = self_improving.SelfImprovementEngine.init(

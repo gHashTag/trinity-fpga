@@ -974,7 +974,7 @@ fn runHealthCheck(allocator: std.mem.Allocator, _: []const []const u8) void {
     if (ledger_ok) checks += 1.0;
     const health_score: f64 = checks / 4.0;
 
-    const needle_status: []const u8 = if (health_score >= PHI_INVERSE) "SHARP (KOSCHEI BESSMERTEN!)" else if (health_score > 0) "DULLING (Igla tupitsya)" else "BROKEN (REGRESSIYA!)";
+    const needle_status: []const u8 = if (health_score >= PHI_INVERSE) "SHARP (TRINITY!)" else if (health_score > 0) "DULLING (Igla tupitsya)" else "BROKEN (REGRESSIYA!)";
     const nc = if (health_score >= PHI_INVERSE) GREEN else if (health_score > 0) YELLOW else RED;
 
     std.debug.print("\n{s}═══════════════════════════════════════════════════════{s}\n", .{ YELLOW, RESET });

@@ -39,7 +39,7 @@ pub fn runTimeCommand(allocator: std.mem.Allocator, cmd_args: []const []const u8
         std.debug.print("  {s}engine{s} [--json|--ws|--quantum]  Engine boot / JSON / SSE / Quantum\n", .{ GREEN, RESET });
         std.debug.print("  {s}omega{s} [--json]                  Cosmological predictions\n", .{ GREEN, RESET });
         std.debug.print("  {s}simulate{s} [years]                Universe evolution V(t)\n", .{ GREEN, RESET });
-        std.debug.print("  {s}benchmark{s}                       KOSCHEI 0xD6 phi-timing\n", .{ GREEN, RESET });
+        std.debug.print("  {s}benchmark{s}                       TRINITY 0xD6 phi-timing\n", .{ GREEN, RESET });
         std.debug.print("  {s}eternal-daemon{s}                  Background monitoring\n", .{ GREEN, RESET });
         std.debug.print("  {s}sacred{s}                          Temporal Trinity Theorem\n", .{ GREEN, RESET });
         std.debug.print("  {s}balance{s}                         Show phi^2 + 1/phi^2 = 3\n", .{ GREEN, RESET });
@@ -209,7 +209,7 @@ fn runSimulate(years: f64) void {
 
 fn runBenchmarkKoschei() void {
     std.debug.print("\n{s}╔══════════════════════════════════════════════════════════╗{s}\n", .{ YELLOW, RESET });
-    std.debug.print("{s}║       TEMPORAL BENCHMARK — KOSCHEI 0xD6 phi-TIMING      ║{s}\n", .{ YELLOW, RESET });
+    std.debug.print("{s}║       TEMPORAL BENCHMARK — TRINITY 0xD6 phi-TIMING      ║{s}\n", .{ YELLOW, RESET });
     std.debug.print("{s}╚══════════════════════════════════════════════════════════╝{s}\n\n", .{ YELLOW, RESET });
     std.debug.print("  {s}Operation              Total (ns)  Per-op (ns)    Ops/sec{s}\n", .{ CYAN, RESET });
     std.debug.print("  ──────────────────────────────────────────────────\n", .{});
@@ -496,7 +496,7 @@ pub fn runDeckCommand(allocator: std.mem.Allocator) void {
         \\<div class="metric">Info density: 1.58 bits/trit | Memory: 20x compression | Compute: add-only</div></div>
         \\<div class="slide"><h1>Temporal Engine v1.4</h1><h2>Quantum Phase</h2>
         \\<div class="metric gold">phi = 1.618033988749895</div>
-        \\<div class="metric cyan">KOSCHEI 0xD6: 250M+ ops/sec (verified)</div>
+        \\<div class="metric cyan">TRINITY 0xD6: 250M+ ops/sec (verified)</div>
         \\<div class="metric green">Bell/CHSH = 2*sqrt(2) = 2.8284... > 2 (quantum violation)</div>
         \\<div class="metric">E8 Lattice: 248 dimensions | 3 fermion generations | Neutrino ~0.0057 eV</div></div>
         \\<div class="slide"><h1>Cosmological Predictions</h1>
@@ -1002,7 +1002,7 @@ pub fn runReleaseCosmicCommand(allocator: std.mem.Allocator) void {
     std.debug.print("{s}╠══════════════════════════════════════════════════════════════════════╣{s}\n", .{ YELLOW, RESET });
     std.debug.print("{s}║  Engine:       Temporal Trinity v1.4 + Quantum Phase                 ║{s}\n", .{ YELLOW, RESET });
     std.debug.print("{s}║  Commands:     139+ CLI commands | REST API | GraphQL                ║{s}\n", .{ YELLOW, RESET });
-    std.debug.print("{s}║  VM:           16 opcodes | KOSCHEI 0xD6 | 250M+ ops/sec            ║{s}\n", .{ YELLOW, RESET });
+    std.debug.print("{s}║  VM:           16 opcodes | TRINITY 0xD6 | 250M+ ops/sec            ║{s}\n", .{ YELLOW, RESET });
     std.debug.print("{s}║  VSA:          bind/unbind/bundle | SIMD ARM NEON                    ║{s}\n", .{ YELLOW, RESET });
     std.debug.print("{s}║  Quantum:      E8 lattice | PMNS mixing | Bell/CHSH                  ║{s}\n", .{ YELLOW, RESET });
     std.debug.print("{s}║  FPGA:         FORGE toolchain | iCE40 + Artix-7                    ║{s}\n", .{ YELLOW, RESET });
