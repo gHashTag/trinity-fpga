@@ -1,5 +1,16 @@
 {
-  "last_test": "2026-03-16T17:10:00+07:00",
+  "last_test": "2026-04-01T19:14:00+07:00",
+  "jtag_macos_discovery": {
+    "date": "2026-04-01",
+    "status": "WORKING",
+    "procedure": "fxload + replug + fxload + xc3sprog",
+    "pid_before": "0x0013 (bootloader)",
+    "pid_after": "0x0008 (JTAG mode)",
+    "tool": "xc3sprog (openFPGALoader does NOT support Xilinx DLC10)",
+    "bitstream_tested": "led_fixed.bit",
+    "flash_time": "23.3 seconds for 30.6M bits",
+    "uart_restored": "/dev/cu.usbserial-2140"
+  },
   "test_summary": {
     "write": "SUCCESS — hslm_full_top.bit programmed (FPGA-015)",
     "status": "SUCCESS — DONE=1, MMCM_LOCK=1, CRC_OK, Part NOT Secured",
@@ -12,6 +23,21 @@
     "fx2_firmware": "0x08FC",
     "cpld_version": "0xFFFE",
     "cpld_healthy": false,
+    "jtag_macos_working": {
+      "date": "2026-04-01",
+      "status": "SUCCESS",
+      "procedure": "fxload + replug + fxload + xc3sprog",
+      "pid_before": "0x0013 (bootloader)",
+      "pid_after": "0x0008 (JTAG mode)",
+      "tool": "xc3sprog (openFPGALoader does NOT support Xilinx DLC10)",
+      "bitstream_tested": "uart_bridge_fixed.bit, led_fixed.bit",
+      "flash_time": "23.3 seconds for 30.6M bits",
+      "uart_test": "screen terminates - uart_bridge echo needs verification",
+      "uart_port": "/dev/cu.usbserial-2140",
+      "script_created": "fpga/tools/mac_jtag_procedure_v2.sh",
+      "blocker_resolved": "Mac JTAG flashing - BLOCKED status RESOLVED",
+      "notes": "Physical replug between fxload calls is CRITICAL for PID switch"
+    },
     "cpld_note": "0xFFFE is normal for DLC10 clones — all config reads work despite this value",
     "tdi_path": "WORKING",
     "tdo_path": "WORKING",
@@ -56,14 +82,24 @@
     "model": "U2basic",
     "channels": 16,
     "sample_rate_max": "400M",
-    "connected": false,
-    "last_capture": null,
-    "firmware_version": null,
-    "dsview_path": null,
+    "connected": true,
+    "last_capture": "2026-04-01",
+    "firmware_version": "1.3.2",
+    "dsview_path": "/Applications/DreamSourceLab/DSView",
+    "usb_vendor_id": "0x0212",
+    "usb_location_id": "0x02120000",
+    "power_available": "500mA",
     "channel_mapping": "fpga/dslogic_channels.json",
     "presets": "fpga/dslogic_presets.json",
     "connection_guide": "fpga/DSLOGIC_U2BASIC_CONNECTION.md",
-    "note": "Logic analyzer for full signal analysis (UART + JTAG + SPI + Clock tree)"
+    "test_result": "PASS - CH2 shows 50 MHz clock, CH3 shows 81.25 MHz MMCM output - FPGA is RUNNING! CH0/CH1 stable (no UART data yet)",
+    "channels_verified": {
+      "CH0": "STABLE (no UART TX from FPGA - need uart_bridge bitstream)",
+      "CH1": "STABLE (no FT232RL RX during capture)",
+      "CH2": "ACTIVE - 50 MHz clock detected (M22 oscillator working)",
+      "CH3": "ACTIVE - 81.25 MHz MMCM detected (HSLM configured!)"
+    },
+    "fpga_status": "RUNNING - 50 MHz base clock + 81.25 MHz MMCM visible on DSLogic"
   },
   "blockers": [],
   "resolved_blockers": [

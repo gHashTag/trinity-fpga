@@ -1,12 +1,12 @@
 {
   "state": "COMMITTED",
-  "issue_number": 477,
+  "issue_number": 485,
   "branch": "",
   "issue_title_len": 0,
   "issue_title": "",
-  "files_count": 2,
+  "files_count": 0,
   "tests_passed": true,
   "commit_hash": "",
-  "started_at": 1774849236,
-  "last_updated": 1774849840
+  "started_at": 1775052067,
+  "last_updated": 1775052067
 }

@@ -2568,6 +2568,21 @@ pub fn build(b: *std.Build) void {
     sebo_step.dependOn(&run_sebo.step);
 
     // ═════════════════════════════════════════════════════════════════════════════
+    // FPGA FLASH TOOL — Mac JTAG procedure for Xilinx DLC10 + XC7A100T
+    // ═══════════════════════════════════════════════════════════════════════════════════════
+
+    const fpga_flash_mod = b.createModule(.{
+        .root_source_file = b.path("src/cli/fpga_flash.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    const fpga_flash = b.addExecutable(.{
+        .name = "fpga-flash",
+        .root_module = fpga_flash_mod,
+    });
+    b.installArtifact(fpga_flash);
+
+    // ═════════════════════════════════════════════════════════════════════════════
     // DSLOGIC FPGA DIAGNOSTICS — Logic analyzer control for QMTech XC7A100T
     // ═══════════════════════════════════════════════════════════════════════════════════════
 

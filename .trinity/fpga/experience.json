@@ -93,9 +93,13 @@
       "idcode_expected": "0x13631093",
       "idcode_actual": "0x00000000",
       "cpld_version": "0xFFFE",
-      "required_equipment": ["USB-to-UART adapter (CP2102/CH340)", "FPGA board with working CPLD"]
-    },
-    {
+      "required_equipment": [
+        "USB-to-UART adapter (CP2102/CH340)",
+        "FPGA board with working CPLD"
+      ]
+    }
+  },
+  {
     "id": "FPGA-DSLOGIC-001",
     "date": "2026-04-01",
     "category": "DSLOGIC",
@@ -141,6 +145,118 @@
         "minimal"
       ],
       "note": "Phase 3 (diagnostic workflows) and Phase 4 (CLI integration) complete. Ready for Phase 5 (pin mapping verification via actual DSLogic captures)."
+    }
+  },
+  {
+    "id": "FPGA-DSLOGIC-002",
+    "date": "2026-04-01",
+    "category": "DSLOGIC",
+    "action": "DSLogic U2basic USB detection and DSView path verification",
+    "result": "SUCCESS",
+    "symptom": "DSLogic device detected via system_profiler, DSView application found in /Applications/DreamSourceLab/DSView",
+    "root_cause": "DSLogic U2basic is visible in macOS USB system as DreamSourceLab vendor (VID:0x0212, Location:0x02120000/3). DSView v1.3.2 application is installed and available.",
+    "lesson": "DSLogic U2basic detected successfully. DSView can be launched via /Applications/DreamSourceLab/DSView. Channel mapping and presets are ready for DSView import.",
+    "tags": [
+      "dslogic",
+      "usb-detection",
+      "dsview-path",
+      "verified"
+    ],
+    "data": {
+      "usb_vendor_id": "0x0212",
+      "usb_location_id": "0x02120000",
+      "power_available": "500mA",
+      "dsview_path": "/Applications/DreamSourceLab/DSView",
+      "dmg_available": "/Users/playra/Downloads/DSView-v1.3.2.dmg",
+      "hardware_state_updated": true
+    }
+  },
+  {
+    "id": "FPGA-026",
+    "date": "2026-04-01",
+    "category": "JTAG",
+    "action": "Flash bitstream via xc3sprog on Mac (discovery working procedure)",
+    "result": "SUCCESS",
+    "symptom": "fxload after replug switches DLC10 PID to 0x0008 (JTAG mode). xc3sprog detects FPGA XC7A100T and flashes 30.6M bitstream successfully in 23.3 seconds.",
+    "root_cause": "openFPGALoader does NOT support Xilinx DLC10 cable. xc3sprog DOES support xpc cable (VID:PID 0x03fd:0x0008). Key discovery: replug cable physically after first fxload, then run fxload AGAIN.",
+    "lesson": "JTAG procedure for Mac: (1) fxload → (2) physical replug → (3) fxload again (ensures PID 0x0008) → (4) xc3sprog -c xpc detect → (5) xc3sprog -c xpc <bitstream.bit>",
+    "tags": [
+      "jtag",
+      "macos",
+      "xc3sprog",
+      "procedure-discovery",
+      "success"
+    ],
+    "data": {
+      "bitstream": "led_fixed.bit",
+      "bitstream_size": "30606080 bits (~3.7 MB)",
+      "flash_time_seconds": "23.3",
+      "fpga_idcode": "0x13631093",
+      "cable_vidpid": "0x03fd:0x0008",
+      "tool": "xc3sprog",
+      "working_sequence": "fxload → replug → fxload → xc3sprog",
+      "uart_restored": "/dev/cu.usbserial-2140"
+    }
+  },
+  {
+    "id": "FPGA-027",
+    "date": "2026-04-01",
+    "category": "JTAG-MACOS-DISCOVERY",
+    "action": "Complete Mac JTAG flashing procedure discovery - fxload + replug + fxload + xc3sprog",
+    "result": "SUCCESS",
+    "symptom": "Discovery: fxload twice with physical replug between switches DLC10 PID from 0x0013 to 0x0008. xc3sprog (not openFPGALoader) supports xpc cable. FPGA XC7A100T detected and flashed successfully.",
+    "root_cause": "1) openFPGALoader does NOT support Xilinx DLC10 cable (VID:PID 0x03fd:xxxx). 2) fxload needs physical replug - second call after replug is CRITICAL for PID switch to 0x0008. 3) xc3sprog has native xpc cable support for 0x03fd:0x0008.",
+    "lesson": "Mac JTAG Procedure: (1) fxload → (2) PHYSICAL REPLUG DLC10 → (3) fxload again (CRITICAL!) → (4) Verify PID 0x0008 → (5) xc3sprog -c xpc <bitstream.bit>. Never use openFPGALoader for Xilinx DLC10. Script: fpga/tools/mac_jtag_procedure_v2.sh",
+    "tags": [
+      "jtag",
+      "macos",
+      "discovery",
+      "xc3sprog",
+      "fxload",
+      "replug",
+      "procedure"
+    ],
+    "data": {
+      "discovery_date": "2026-04-01",
+      "cable": "Xilinx DLC10 Platform Cable USB II (clone)",
+      "vidpid_bootloader": "0x03fd:0x0013",
+      "vidpid_jtag": "0x03fd:0x0008",
+      "fxload_size": "7962 bytes",
+      "key_insight": "Physical replug between fxload calls is CRITICAL for PID switch",
+      "tool_working": "xc3sprog (openFPGALoader does NOT support Xilinx DLC10)",
+      "fpga_detected": "XC7A100T-FGG676",
+      "idcode": "0x13631093",
+      "bitstream_tested": "uart_bridge_fixed.bit, led_fixed.bit",
+      "flash_time": "~22-25 seconds for 30.6M bits",
+      "uart_test": "screen terminates immediately - UART echo needs further verification",
+      "uart_port": "/dev/cu.usbserial-2140",
+      "script_created": "fpga/tools/mac_jtag_procedure_v2.sh",
+      "cpld_version": "0xFFFE (normal for DLC10 clones)",
+      "blocker_resolved": "Mac JTAG flashing - was BLOCKED, now WORKING"
+    }
+  },
+  {
+    "id": "FPGA-028",
+    "date": "2026-04-01",
+    "category": "UART-PIN-MAPPING",
+    "action": "UART pin mapping investigation - DSLogic guide vs blink_test.v comments",
+    "result": "DISCOVERED",
+    "symptom": "DSLogic connection guide shows K20/L20 pins measured on PCB. blink_test.v comments mention E21/F21 pins. uart_bridge_fixed.xdc had K20/L20 (correct per DSLogic measurements). uart_bridge_fixed.bit exists but was never reflashed after pin corrections.",
+    "root_cause": "Pin mapping confusion - DSLogic guide based on actual PCB measurements is authoritative. blink_test.v comments may be for different setup or incorrect. uart_bridge_fixed.v and uart_bridge_fixed.xdc had mismatched comments.",
+    "lesson": "Trust physical measurements over comments. When in doubt, verify with multimeter or probe on actual board. uart_bridge_fixed.bit (created 10:27) predates pin fixes - needs reflash.",
+    "tags": [
+      "uart",
+      "pin-mapping",
+      "dslogic",
+      "k20-l20",
+      "discovery"
+    ],
+    "data": {
+      "pins_correct": "K20 (TX) / L20 (RX) per DSLogic measurements",
+      "pins_incorrect_comments": "E21/F21 in blink_test.v comments",
+      "xdc_correct": "uart_bridge_fixed.xdc had K20/L20",
+      "bitstream_status": "uart_bridge_fixed.bit exists but not reflashed",
+      "next_step": "Flash uart_bridge_fixed.bit and test UART echo"
     }
   }
 ]
