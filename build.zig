@@ -47,18 +47,16 @@ pub fn build(b: *std.Build) void {
     // emit_t27: .tri → .t27 code generator
     // Part of VIBEE compiler pipeline
 
-    const emit_mod = b.createModule(.{
-        .root_source_file = b.path("src/tri27/vibee/emit_t27.zig"),
+    const emit_exe = b.addExecutable(.{
+        .name = "emit_t27",
+        .root_source_path = b.path("src/tri/vibee/emit_t27.zig"),
         .target = target,
         .optimize = optimize,
     });
 
-    b.installArtifact(emit_mod);
-
+    const emit_run = b.addRunArtifact(emit_exe);
     const emit_t27_test = b.step("emit-27-test", "Generate .t27 assembly and verify");
-
-    const run_t27 = b.addRunArtifact(emit_mod);
-    emit_t27_test.dependOn(&run_t27.step);
+    emit_t27_test.dependOn(&emit_run.step);
 
     // Generated serve module — replaced by inline .tri spec processing
     // Note: full-serve-v1 moved to src/hslm/serve/ for direct compilation
