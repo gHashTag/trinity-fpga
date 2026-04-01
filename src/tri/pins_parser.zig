@@ -185,7 +185,8 @@ pub const Lexer = struct {
             '0'...'9' => {
                 // Number (may include suffix like Hz, MHz, kHz)
                 while (self.pos < self.source.len and (std.ascii.isDigit(self.source[self.pos]) or
-                    self.source[self.pos] == '.' or std.ascii.isAlphabetic(self.source[self.pos]))) {
+                    self.source[self.pos] == '.' or std.ascii.isAlphabetic(self.source[self.pos])))
+                {
                     self.pos += 1;
                     self.col += 1;
                 }
@@ -636,9 +637,6 @@ pub const Parser = struct {
 
     fn parseSignalAttributes(self: *Parser, signal: *SignalDef) !void {
         while (!self.check(.rbrace) and !self.check(.eof)) {
-            std.debug.print("  parseSignalAttributes: current={s} type={s}\n", .{
-                self.current.lexeme, @tagName(self.current.type),
-            });
             const attr_name = try self.consumeIdentifier();
 
             if (std.mem.eql(u8, attr_name, "net")) {
@@ -869,11 +867,6 @@ pub const XdcEmitter = struct {
 
         const writer = buffer.writer(self.allocator);
 
-        // Debug: check string pointers before print
-        std.debug.print("DEBUG: design.name={*} len={d}\n", .{ design.name.ptr, design.name.len });
-        std.debug.print("DEBUG: board.name={*} len={d}\n", .{ board.name.ptr, board.name.len });
-        std.debug.print("DEBUG: fpga.name={*} len={d}\n", .{ fpga.name.ptr, fpga.name.len });
-
         // Header
         try writer.print(
             \\# ============================================================================
@@ -928,15 +921,21 @@ pub const XdcEmitter = struct {
             };
 
             if (loc) |pin_loc| {
+                // Strip fpga. prefix if present (e.g., "fpga.K20" -> "K20")
+                const clean_loc = if (std.mem.indexOf(u8, pin_loc, "fpga.")) |idx|
+                    pin_loc[idx + 5 ..] // Skip "fpga."
+                else
+                    pin_loc;
+
                 // Check for duplicates
-                if (used_locs.get(pin_loc) != null) {
-                    std.debug.print("Warning: duplicate location {s} for port {s}\n", .{ pin_loc, binding.port });
+                if (used_locs.get(clean_loc) != null) {
+                    std.debug.print("Warning: duplicate location {s} for port {s}\n", .{ clean_loc, binding.port });
                 }
-                try used_locs.put(pin_loc, {});
+                try used_locs.put(clean_loc, {});
 
                 // Get IO standard from FPGA definition
                 const io_standard = blk: {
-                    if (fpga.pins.get(pin_loc)) |pin| {
+                    if (fpga.pins.get(clean_loc)) |pin| {
                         if (pin.io) |io| break :blk io;
                     }
                     break :blk "LVCMOS33";
@@ -944,7 +943,7 @@ pub const XdcEmitter = struct {
 
                 // Emit XDC constraint
                 try writer.print("# {s}\n", .{binding.target});
-                try writer.print("set_property LOC {s} [get_ports {s}]\n", .{ pin_loc, binding.port });
+                try writer.print("set_property LOC {s} [get_ports {s}]\n", .{ clean_loc, binding.port });
                 try writer.print("set_property IOSTANDARD {s} [get_ports {s}]\n", .{ io_standard, binding.port });
                 try writer.writeAll("\n");
             }
@@ -975,7 +974,8 @@ pub fn parseDesignFile(allocator: std.mem.Allocator, path: []const u8) !struct {
         std.debug.print("Failed to read {s}: {}\n", .{ path, err });
         return error.FileNotFound;
     };
-    defer allocator.free(content);
+    // NOTE: Don't free content yet - names point into it
+    // defer allocator.free(content);
 
     var parser = Parser.init(allocator, content);
     var design = try parser.parseDesignDecl();
@@ -1000,7 +1000,8 @@ pub fn parseDesignFile(allocator: std.mem.Allocator, path: []const u8) !struct {
         std.debug.print("Failed to read {s}: {}\n", .{ board_path, err });
         return error.FileNotFound;
     };
-    defer allocator.free(board_content);
+    // NOTE: Don't free board_content yet - names point into it
+    // defer allocator.free(board_content);
     if (base_path.len > 0) allocator.free(board_path);
 
     var board_parser = Parser.init(allocator, board_content);
@@ -1020,7 +1021,8 @@ pub fn parseDesignFile(allocator: std.mem.Allocator, path: []const u8) !struct {
         std.debug.print("Failed to read {s}: {}\n", .{ fpga_path, err });
         return error.FileNotFound;
     };
-    defer allocator.free(fpga_content);
+    // NOTE: Don't free fpga_content yet - names point into it
+    // defer allocator.free(fpga_content);
     if (base_path.len > 0 and board.uses_fpga != null) allocator.free(fpga_path);
 
     var fpga_parser = Parser.init(allocator, fpga_content);
