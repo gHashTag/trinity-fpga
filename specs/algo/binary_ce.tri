@@ -1,0 +1,168 @@
+# Binary Cross Entropy — Source of Truth
+# Binary CE loss: -[y·log(p) + (1-y)·log(1-p)]
+# φ² + 1/φ² = 3 | TRINITY
+
+name: binary_ce
+version: "1.0.0"
+module: algo.loss.binary_ce
+description: "Binary cross entropy loss for binary classification"
+
+types:
+  BinaryCEConfig:
+    description: "Configuration for binary cross entropy"
+    fields:
+      - name: from_logits
+        type: bool
+        description: "If true, apply sigmoid to predictions"
+      - name: epsilon
+        type: f32
+        description: "Small value for numerical stability"
+      - name: reduction
+        type: Reduction
+        description: "How to aggregate loss"
+
+  Reduction:
+    description: "Loss reduction method"
+    enum:
+      - MEAN
+      - SUM
+      - NONE
+
+constants:
+  DEFAULT_EPSILON:
+    type: f32
+    value: 1e-7
+    description: "Default numerical stability term"
+
+functions:
+  sigmoid:
+    params:
+      - name: x
+        type: f32
+    returns: "f32"
+    description: "Sigmoid activation"
+    formula: |
+      if x >= 0:
+        return 1 / (1 + exp(-x))
+      else:
+        exp_x = exp(x)
+        return exp_x / (1 + exp_x)
+
+  forward:
+    params:
+      - name: predictions
+        type: "[]f32"
+        description: "Predicted probabilities p (or logits)"
+      - name: targets
+        type: "[]f32"
+        description: "Target labels y ∈ {0, 1}"
+      - name: config
+        type: "BinaryCEConfig"
+    returns: "f32"
+    description: "Compute binary cross entropy loss"
+    formula: |
+      epsilon = config.epsilon
+
+      # Apply sigmoid if from logits
+      if config.from_logits:
+        probs = sigmoid(predictions)
+      else:
+        probs = predictions
+
+      # Clip for numerical stability
+      probs = clamp(probs, epsilon, 1 - epsilon)
+
+      # Compute BCE
+      loss = 0.0
+      For i in 0..len(predictions):
+        y = targets[i]
+        p = probs[i]
+        loss -= y * log(p) + (1 - y) * log(1 - p)
+
+      # Apply reduction
+      if config.reduction == MEAN:
+        return loss / len(predictions)
+      else if config.reduction == SUM:
+        return loss
+      else:  # NONE
+        return loss
+
+  forward_batch:
+    params:
+      - name: predictions
+        type: "[][]f32"
+        description: "Batch of predictions [batch_size]"
+      - name: targets
+        type: "[]f32"
+        description: "Batch of target labels"
+      - name: config
+        type: "BinaryCEConfig"
+    returns: "f32"
+    description: "Compute BCE for batch"
+    formula: |
+      return forward(predictions, targets, config)
+
+  gradient:
+    params:
+      - name: predictions
+        type: "[]f32"
+        description: "Predicted probabilities"
+      - name: targets
+        type: "[]f32"
+        description: "Target labels"
+      - name: config
+        type: "BinaryCEConfig"
+    returns: "[]f32"
+    description: "Gradient of BCE with respect to predictions"
+    formula: |
+      epsilon = config.epsilon
+      probs = clamp(predictions, epsilon, 1 - epsilon)
+
+      grad = array(len(predictions))
+      For i in 0..len(predictions):
+        grad[i] = (probs[i] - targets[i]) / (probs[i] * (1 - probs[i]))
+
+      if config.reduction == MEAN:
+        For i in 0..len(grad):
+          grad[i] /= len(predictions)
+
+      return grad
+
+behaviors:
+  - name: probabilistic
+    description: "Measures probability divergence"
+    implementation: |
+      Computes cross-entropy between distributions
+      Lower is better: perfect prediction → 0
+      Used in binary classification
+
+  - name: from_logits
+    description: "Can accept logits directly"
+    implementation: |
+      More numerically stable
+      Applies sigmoid internally
+      Combines activation and loss
+
+  - name: class_weighted
+    description: "Supports class weighting"
+    implementation: |
+      Multiply positive class loss by weight_pos
+      Multiply negative class loss by weight_neg
+      Handles imbalanced data
+
+constraints:
+  - targets[i] ∈ {0, 1}
+  - 0 < epsilon << 1
+
+equations:
+  - name: binary_ce
+    latex: "L_{BCE} = -\frac{1}{N} \sum_{i=1}^{N} [y_i \log(p_i) + (1-y_i) \log(1-p_i)]"
+    description: "Binary cross entropy loss"
+
+  - name: gradient
+    latex: "\frac{\partial L}{\partial p_i} = \frac{p_i - y_i}{p_i(1-p_i)}"
+    description: "Gradient w.r.t predictions"
+
+references:
+  - "Bishop (2006) - Pattern Recognition and Machine Learning"
+  - "Goodfellow et al. (2016) - Deep Learning"

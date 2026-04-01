@@ -1,0 +1,127 @@
+# Adagrad — Source of Truth
+# Adaptive Gradient Algorithm: per-parameter adaptive learning rate
+# φ² + 1/φ² = 3 | TRINITY
+
+name: adagrad
+version: "1.0.0"
+module: algo.optim.adagrad
+description: "Adagrad optimizer: per-parameter adaptive learning rates based on historical gradients"
+
+types:
+  AdagradConfig:
+    description: "Configuration for Adagrad optimizer"
+    fields:
+      - name: learning_rate
+        type: f32
+        description: "Initial learning rate"
+      - name: epsilon
+        type: f32
+        description: "Smoothing term for numerical stability"
+      - name: weight_decay
+        type: f32
+        description: "L2 regularization coefficient"
+
+  AdagradState:
+    description: "Per-parameter optimizer state"
+    fields:
+      - name: sum_squared_grad
+        type: "[]f32"
+        description: "Accumulated squared gradients ∑g²"
+
+constants:
+  DEFAULT_LR:
+    type: f32
+    value: 0.01
+    description: "Default learning rate"
+
+  DEFAULT_EPSILON:
+    type: f32
+    value: 1e-8
+    description: "Default smoothing term"
+
+  DEFAULT_WEIGHT_DECAY:
+    type: f32
+    value: 0.0
+    description: "Default weight decay (none)"
+
+functions:
+  init_state:
+    params:
+      - name: num_params
+        type: u32
+        description: "Number of parameters"
+    returns: "AdagradState"
+    description: "Initialize optimizer state"
+    formula: |
+      return AdagradState(sum_squared_grad=array(num_params, 0.0))
+
+  update:
+    params:
+      - name: params
+        type: "[]f32"
+        description: "Model parameters θ"
+      - name: grads
+        type: "[]f32"
+        description: "Gradients ∇θ"
+      - name: state
+        type: "AdagradState"
+        description: "Optimizer state"
+      - name: config
+        type: "AdagradConfig"
+    returns: "AdagradState"
+    description: "Update parameters using Adagrad"
+    formula: |
+      For i in 0..len(params):
+        # Accumulate squared gradient
+        state.sum_squared_grad[i] += grads[i]^2
+
+        # Compute adaptive learning rate
+        adaptive_lr = config.learning_rate / (sqrt(state.sum_squared_grad[i]) + config.epsilon)
+
+        # Update parameter
+        params[i] -= adaptive_lr * grads[i]
+
+        # Optional weight decay
+        if config.weight_decay > 0:
+          params[i] -= config.weight_decay * params[i]
+
+      return state
+
+behaviors:
+  - name: adaptive_lr
+    description: "Per-parameter learning rate adaptation"
+    implementation: |
+      Larger gradient accumulation → smaller step
+      Smaller gradient accumulation → larger step
+      Automatic tuning based on gradient history
+
+  - name: sparse_updates
+    description: "Efficient for sparse gradients"
+    implementation: |
+      Only update parameters with non-zero gradients
+      Suitable for NLP, recommendation systems
+      Better performance on sparse data
+
+  - name: learning_rate_decay
+    description: "Learning rate decreases over time"
+    implementation: |
+      Sum of squares increases monotonically
+      Learning rate shrinks
+      Can cause premature stopping
+
+constraints:
+  - learning_rate > 0
+  - epsilon > 0
+
+equations:
+  - name: adagrad_update
+    latex: "\theta_{t+1,i} = \theta_{t,i} - \frac{\eta}{\sqrt{G_{t,ii} + \epsilon}} g_{t,i}"
+    description: "Adagrad parameter update"
+
+  - name: accumulated_gradients
+    latex: "G_{t,ii} = \sum_{\tau=1}^{t} g_{\tau,i}^2"
+    description: "Sum of squared gradients"
+
+references:
+  - "Duchi et al. (2011) - Adaptive Subgradient Methods for Online Learning and Stochastic Optimization"
+  - "Goodfellow et al. (2016) - Deep Learning (Chapter 8)"

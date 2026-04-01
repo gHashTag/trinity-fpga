@@ -1,0 +1,214 @@
+# Transformer Encoder Block — Source of Truth
+# MHA → Add&Norm → FFN → Add&Norm (single Transformer encoder layer)
+# φ² + 1/φ² = 3 | TRINITY
+
+name: encoder_block
+version: "1.0.0"
+module: algo.transformer.encoder_block
+description: "Transformer encoder block: multi-head attention, residual, feed-forward, normalization"
+
+types:
+  EncoderBlockConfig:
+    description: "Configuration for encoder block"
+    fields:
+      - name: d_model
+        type: u32
+        description: "Model dimension"
+      - name: n_heads
+        type: u32
+        description: "Number of attention heads"
+      - name: d_ff
+        type: u32
+        description: "Feed-forward dimension (typically 4×d_model)"
+      - name: dropout
+        type: f32
+        description: "Dropout rate"
+      - name: use_pre_norm
+        type: bool
+        description: "Apply pre-layer normalization"
+
+  AttentionOutput:
+    description: "Output from multi-head attention"
+    fields:
+      - name: output
+        type: "[]f32"
+        description: "Attention output [batch, seq_len, d_model]"
+      - name: attn_weights
+        type: "[][]f32"
+        description: "Attention weights [batch, n_heads, seq_len, seq_len]"
+
+  FFNOutput:
+    description: "Output from feed-forward network"
+    fields:
+      - name: output
+        type: "[]f32"
+        description: "FFN output [batch, seq_len, d_model]"
+
+  BlockOutput:
+    description: "Final encoder block output"
+    fields:
+      - name: output
+        type: "[]f32"
+        description: "Block output [batch, seq_len, d_model]"
+
+constants:
+  DEFAULT_D_MODEL:
+    type: u32
+    value: 512
+    description: "Default model dimension"
+
+  DEFAULT_N_HEADS:
+    type: u32
+    value: 8
+    description: "Default number of attention heads"
+
+  DEFAULT_D_FF:
+    type: u32
+    value: 2048
+    description: "Default FFN dimension (4×d_model)"
+
+  DEFAULT_DROPOUT:
+    type: f32
+    value: 0.1
+    description: "Default dropout rate"
+
+functions:
+  multi_head_attention:
+    params:
+      - name: query
+        type: "[]f32"
+        description: "Query [batch, seq_len, d_model]"
+      - name: key
+        type: "[]f32"
+        description: "Key [batch, seq_len, d_model]"
+      - name: value
+        type: "[]f32"
+        description: "Value [batch, seq_len, d_model]"
+      - name: n_heads
+        type: u32
+        description: "Number of attention heads"
+      - name: d_model
+        type: u32
+        description: "Model dimension"
+    returns: "AttentionOutput"
+    description: "Compute multi-head attention"
+    formula: |
+      d_k = d_model / n_heads
+
+      # Split into heads
+      # Compute scaled dot-product attention per head
+      # Concatenate heads
+      # Final linear projection to d_model
+      # Use multi_head_attn.tri implementation
+
+  feed_forward:
+    params:
+      - name: input
+        type: "[]f32"
+        description: "Input [batch, seq_len, d_model]"
+      - name: d_model
+        type: u32
+        description: "Model dimension"
+      - name: d_ff
+        type: u32
+        description: "FFN hidden dimension"
+      - name: dropout
+        type: f32
+        description: "Dropout rate"
+    returns: "FFNOutput"
+    description: "Position-wise feed-forward network"
+    formula: |
+      # Linear: d_model → d_ff
+      hidden = activation(input @ W1 + b1)
+
+      # Dropout
+      hidden = dropout(hidden, dropout_rate)
+
+      # Linear: d_ff → d_model
+      output = hidden @ W2 + b2
+
+      return FFNOutput(output)
+
+  forward:
+    params:
+      - name: input
+        type: "[]f32"
+        description: "Input [batch, seq_len, d_model]"
+      - name: config
+        type: "EncoderBlockConfig"
+    returns: "BlockOutput"
+    description: "Full encoder block forward pass"
+    formula: |
+      # Optional pre-norm
+      if config.use_pre_norm:
+        normed_input = layer_norm(input)
+      else:
+        normed_input = input
+
+      # Multi-head attention
+      attn_out = multi_head_attention(
+        query=normed_input,
+        key=normed_input,
+        value=normed_input,
+        n_heads=config.n_heads,
+        d_model=config.d_model
+      )
+
+      # Add&Norm
+      attn_normed = layer_norm(attn_out.output)
+
+      # Feed-forward
+      ffn_out = feed_forward(
+        input=attn_normed,
+        d_model=config.d_model,
+        d_ff=config.d_ff,
+        dropout=config.dropout
+      )
+
+      # Add&Norm
+      ffn_normed = layer_norm(ffn_out.output)
+
+      # Residual
+      output = attn_normed + ffn_normed
+
+      return BlockOutput(output)
+
+behaviors:
+  - name: residual_connection
+    description: "Add input to output for gradient flow"
+    implementation: |
+      Output = MHA + Norm + FFN + Norm + Input
+      Standard Transformer pattern
+      Prevents vanishing gradients
+
+  - name: pre_layer_norm
+    description: "Normalize before attention"
+    implementation: |
+      Stabilizes training
+      Different from post-norm (original Transformer)
+      Optional: can disable
+
+  - name: post_layer_norm
+    description: "Normalize after sub-layers"
+    implementation: |
+      Applied after attention and after FFN
+      Standard in modern Transformers
+
+  - name: dropout_regularization
+    description: "Apply dropout in FFN"
+    implementation: |
+      Prevents overfitting
+      Only during training
+
+constraints:
+  - d_model % n_heads == 0
+  - d_ff >= d_model
+
+equations:
+  - name: encoder_block
+    latex: "y = \text{LayerNorm}(\text{FFN}(\text{LayerNorm}(\text{MHA}(x)) + x)) + x"
+    description: "Standard Transformer encoder block with residual connections"
+
+references:
+  - "Vaswani et al. (2017) - Attention Is All You Need"
+  - "Baevski et al. (2020) - Revisiting the Self-Attention"

@@ -49,9 +49,11 @@ pub fn build(b: *std.Build) void {
 
     const emit_exe = b.addExecutable(.{
         .name = "emit_t27",
-        .root_source_path = b.path("src/tri/vibee/emit_t27.zig"),
-        .target = target,
-        .optimize = optimize,
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/tri/vibee/emit_t27.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
     });
 
     const emit_run = b.addRunArtifact(emit_exe);

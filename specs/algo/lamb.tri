@@ -1,0 +1,197 @@
+# LAMB — Source of Truth
+# Layer-wise Adaptive Moments for Batch training
+# φ² + 1/φ² = 3 | TRINITY
+
+name: lamb
+version: "1.0.0"
+module: algo.optim.lamb
+description: "LAMB optimizer: layer-wise adaptive moments, handles large batch training"
+
+types:
+  LAMBConfig:
+    description: "Configuration for LAMB optimizer"
+    fields:
+      - name: learning_rate
+        type: f32
+        description: "Learning rate"
+      - name: beta1
+        type: f32
+        description: "Exponential decay rate for first moment"
+      - name: beta2
+        type: f32
+        description: "Exponential decay rate for second moment"
+      - name: epsilon
+        type: f32
+        description: "Term for numerical stability"
+      - name: weight_decay
+        type: f32
+        description: "Weight decay coefficient"
+      - name: clip_threshold
+        type: f32
+        description: "Clipping threshold for trust ratio"
+
+  LAMBState:
+    description: "Per-layer optimizer state"
+    fields:
+      - name: m
+        type: "[]f32"
+        description: "First moment estimate (momentum)"
+      - name: v
+        type: "[]f32"
+        description: "Second moment estimate (uncentered variance)"
+      - name: step
+        type: u32
+        description: "Training step counter"
+
+constants:
+  DEFAULT_LR:
+    type: f32
+    value: 0.001
+    description: "Default learning rate"
+
+  DEFAULT_BETA1:
+    type: f32
+    value: 0.9
+    description: "Default β₁ (Adam-like)"
+
+  DEFAULT_BETA2:
+    type: f32
+    value: 0.999
+    description: "Default β₂ (Adam-like)"
+
+  DEFAULT_EPSILON:
+    type: f32
+    value: 1e-6
+    description: "Default epsilon (higher than Adam)"
+
+  DEFAULT_CLIP_THRESHOLD:
+    type: f32
+    value: 10.0
+    description: "Default trust ratio clipping threshold"
+
+functions:
+  init_state:
+    params:
+      - name: num_params
+        type: u32
+        description: "Number of parameters"
+    returns: "LAMBState"
+    description: "Initialize optimizer state"
+    formula: |
+      return LAMBState(
+        m=array(num_params, 0.0),
+        v=array(num_params, 0.0),
+        step=0
+      )
+
+  compute_layer_update:
+    params:
+      - name: params
+        type: "[]f32"
+        description: "Layer parameters"
+      - name: grads
+        type: "[]f32"
+        description: "Layer gradients"
+      - name: state
+        type: "LAMBState"
+      - name: config
+        type: "LAMBConfig"
+    returns: "[]f32"
+    description: "Compute update for single layer"
+    formula: |
+      state.step += 1
+
+      # Bias correction
+      bias_correction1 = 1 - config.beta1^state.step
+      bias_correction2 = 1 - config.beta2^state.step
+
+      # Update moments
+      For i in 0..len(params):
+        state.m[i] = config.beta1 * state.m[i] + (1 - config.beta1) * grads[i]
+        state.v[i] = config.beta2 * state.v[i] + (1 - config.beta2) * grads[i]^2
+
+      # Compute adaptive learning rate per parameter
+      m_hat = state.m / bias_correction1
+      v_hat = state.v / bias_correction2
+
+      # Weight decay
+      if config.weight_decay > 0:
+        params_wd = params * config.weight_decay
+        grads_with_wd = grads + params_wd
+      else:
+        grads_with_wd = grads
+
+      # Compute trust ratio
+      param_norm = l2_norm(params)
+      update_norm = l2_norm(m_hat / (sqrt(v_hat) + config.epsilon))
+
+      # Clip trust ratio
+      trust_ratio = min(param_norm / update_norm, config.clip_threshold)
+
+      # Apply update with trust ratio
+      update = config.learning_rate * trust_ratio * grads_with_wd
+      return params - update
+
+  forward:
+    params:
+      - name: layers
+        type: "[][]f32"
+        description: "Model parameters per layer"
+      - name: grads
+        type: "[][]f32"
+        description: "Gradients per layer"
+      - name: states
+        type: "[]LAMBState"
+        description: "Optimizer states per layer"
+      - name: config
+        type: "LAMBConfig"
+    returns: "[][]f32"
+    description: "Update all layers"
+    formula: |
+      updated_layers = array(len(layers))
+      For i in 0..len(layers):
+        updated_layers[i] = compute_layer_update(
+          layers[i], grads[i], states[i], config
+        )
+      return updated_layers
+
+behaviors:
+  - name: layer_adaptive
+    description: "Different learning rates per layer"
+    implementation: |
+      Trust ratio normalizes by layer weight norm
+      Prevents any layer from dominating updates
+      Essential for large batch training
+
+  - name: large_batch_support
+    description: "Scales to large batch sizes"
+    implementation: |
+      Layer-wise normalization
+      No need to reduce global learning rate
+      Enables BERT-scale training
+
+  - name: trust_ratio_clipping
+    description: "Prevents extreme updates"
+    implementation: |
+      Clip trust ratio to [0, clip_threshold]
+      Prevents step from being too large
+      Stabilizes training
+
+constraints:
+  - 0 < beta1 < 1
+  - 0 < beta2 < 1
+  - epsilon > 0
+  - clip_threshold > 0
+
+equations:
+  - name: trust_ratio
+    latex: "r = \frac{\|w\|}{\| \text{update} \|} = \frac{\|w\|}{\| \hat{m} / (\sqrt{\hat{v}} + \epsilon) \|}"
+    description: "Trust ratio for layer-wise adaptation"
+
+  - name: lamb_update
+    latex: "w_{t+1} = w_t - \eta \cdot \min(r, \lambda) \cdot (\hat{m}_t / (\sqrt{\hat{v}_t} + \epsilon))"
+    description: "LAMB parameter update with trust ratio clipping"
+
+references:
+  - "You et al. (2020) - Large Batch Optimization for Deep Learning: Training BERT in 76 minutes"
+  - "Used in BERT, T5, and other large-scale Transformer training"

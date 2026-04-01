@@ -1,0 +1,35 @@
+# SiLU / Swish Activation — Source of Truth
+# SiLU: f(x) = x · σ(x)
+# φ² + 1/φ² = 3 | TRINITY
+
+name: silu_swish_vbt
+description: SiLU/Swish activation: x · sigmoid(x)
+
+behaviors:
+  - name: forward_silu
+    description: SiLU activation forward pass
+    implementation: |
+      pub fn forward(x: f32) f32 {
+          const sigmoid_x = 1.0 / (1.0 + @exp(-x));
+          return x * sigmoid_x;
+      }
+
+  - name: forward_batch
+    description: Element-wise SiLU on batch
+    implementation: |
+      pub fn forwardBatch(input: []const f32, allocator: std.mem.Allocator) ![]f32 {
+          var output = try allocator.alloc(f32, input.len);
+          for (input, 0..) |x, i| {
+              output[i] = forward(x);
+          }
+          return output;
+      }
+
+  - name: derivative
+    description: Derivative for backpropagation
+    implementation: |
+      pub fn derivative(x: f32) f32 {
+          const sigmoid_x = 1.0 / (1.0 + @exp(-x));
+          const sigmoid_derivative = sigmoid_x * (1.0 - sigmoid_x);
+          return sigmoid_x + x * sigmoid_derivative;
+      }

@@ -1,0 +1,99 @@
+# Flatten — Source of Truth
+# Reshape multi-dimensional tensor to 1D vector
+# φ² + 1/φ² = 3 | TRINITY
+
+name: flatten
+version: "1.0.0"
+module: algo.nn.flatten
+description: "Flatten layer: reshape multi-dimensional tensor to 1D vector"
+
+types:
+  FlattenConfig:
+    description: "Configuration for flatten layer"
+    fields:
+      - name: input_shape
+        type: "[]u32"
+        description: "Input dimensions [d1, d2, ..., dn]"
+
+  InputTensor:
+    description: "Multi-dimensional input tensor"
+    fields:
+      - name: dims
+        type: "[]u32"
+        description: "Dimensions [d1, d2, ..., dn]"
+      - name: data
+        type: "[]f32"
+        description: "Flattened 1D data"
+
+constants:
+  MAX_DIMS:
+    type: u32
+    value: 8
+    description: "Maximum supported dimensions"
+
+functions:
+  calc_output_size:
+    params:
+      - name: input_dims
+        type: "[]u32"
+    returns: "u32"
+    description: "Calculate flattened size"
+    formula: |
+      size = 1
+      For i in 0..len(input_dims):
+        size *= input_dims[i]
+      return size
+
+  forward:
+    params:
+      - name: input
+        type: "[]f32"
+        description: "Multi-dimensional input"
+      - name: config
+        type: "FlattenConfig"
+    returns: "[]f32"
+    description: "Reshape input to 1D vector"
+    formula: |
+      # Output size
+      output_size = calc_output_size(config.input_shape)
+
+      # Flatten: just reshape, no computation
+      # Input is already contiguous in memory
+      # Return same data as 1D view
+
+      return input  # Identity operation, just view change
+
+behaviors:
+  - name: memory_free
+    description: "No additional memory allocated"
+    implementation: |
+      Flatten is a view operation
+      No copy or computation needed
+      Zero runtime cost
+
+  - name: dimension_reduction
+    description: "Prepare data for dense layers"
+    implementation: |
+      Converts CNN features to FCN input
+      Used after convolutional blocks
+      Before final classification head
+
+  - name: preserves_structure
+    description: "Maintains batch dimension"
+    implementation: |
+      Only spatial dimensions collapsed
+      Batch dimension preserved
+      Output: [batch, d1*d2*...*dn]
+
+constraints:
+  - len(input_dims) >= 1
+  - len(input_dims) <= MAX_DIMS
+
+equations:
+  - name: flatten_formula
+    latex: "\text{Flatten}(x) = \text{vec}(x)"
+    description: "Vectorization operation"
+
+references:
+  - "Goodfellow et al. (2016) - Deep Learning"
+  - "Used in CNN → Flatten → Dense → Classification"

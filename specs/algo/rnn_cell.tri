@@ -1,0 +1,135 @@
+# RNN Cell — Source of Truth
+# Basic recurrent cell: h_t = tanh(W_x·x + W_h·h + b)
+# φ² + 1/φ² = 3 | TRINITY
+
+name: rnn_cell
+version: "1.0.0"
+module: algo.rnn.rnn_cell
+description: "Basic RNN cell: simple recurrent unit with tanh activation"
+
+types:
+  RNNCellConfig:
+    description: "Configuration for RNN cell"
+    fields:
+      - name: input_size
+        type: u32
+        description: "Input dimension x_t"
+      - name: hidden_size
+        type: u32
+        description: "Hidden state dimension h_t"
+
+  RNNState:
+    description: "RNN hidden state and optional cell state"
+    fields:
+      - name: hidden
+        type: "[]f32"
+        description: "Hidden state h_t"
+      - name: cell
+        type: "[]f32"
+        description: "Optional cell/GRU-style state"
+
+  RNNParams:
+    description: "RNN cell parameters"
+    fields:
+      - name: w_x
+        type: "[]f32"
+        description: "Input-to-hidden weights [hidden, input]"
+      - name: w_h
+        type: "[]f32"
+        description: "Hidden-to-hidden weights [hidden, hidden]"
+      - name: b
+        type: "[]f32"
+        description: "Bias term [hidden]"
+
+constants:
+  DEFAULT_INPUT_SIZE:
+    type: u32
+    value: 128
+    description: "Default input dimension"
+
+  DEFAULT_HIDDEN_SIZE:
+    type: u32
+    value: 128
+    description: "Default hidden dimension"
+
+functions:
+  forward_step:
+    params:
+      - name: input
+        type: "[]f32"
+        description: "Current input x_t"
+      - name: state
+        type: "RNNState"
+        description: "Previous hidden state h_{t-1}"
+      - name: params
+        type: "RNNParams"
+    returns: "RNNState"
+    description: "Single RNN forward step: compute h_t"
+    formula: |
+      # Pre-activation
+      pre = tanh(matmul(params.w_x, input) + matmul(params.w_h, state.hidden))
+
+      # Post-activation: h_t = tanh(pre + b)
+      return RNNState(hidden=pre + b)
+
+  forward_sequence:
+    params:
+      - name: inputs
+        type: "[][]f32"
+        description: "Input sequence [x_0, x_1, ..., x_T]"
+      - name: initial_state
+        type: "[]f32"
+        description: "Initial hidden state h_0 (zero if not provided)"
+      - name: params
+        type: "RNNParams"
+    returns: "[][]f32"
+    description: "Process entire sequence: return all hidden states"
+    formula: |
+      T = len(inputs)
+      states = array(T)
+      state = initial_state
+
+      For t in 0..T-1:
+        new_state = forward_step(inputs[t], state, params)
+        states[t] = new_state.hidden
+        state = new_state
+
+      return states
+
+  init_state:
+    params:
+      - name: hidden_size
+        type: u32
+    returns: "[]f32"
+    description: "Initialize zero hidden state"
+    formula: |
+      return array(hidden_size, 0.0)
+
+behaviors:
+  - name: vanilla_rnn
+    description: "Simple RNN with tanh"
+    implementation: |
+      Single hidden layer
+      Direct recurrence: h_t depends on h_{t-1}
+      Suffers from vanishing gradients
+      Training via BPTT (backprop through time)
+
+  - name: gradient_issues
+    description: "Vanishing/exploding gradients"
+    implementation: |
+      Long sequences: gradients vanish (tanh saturation)
+      Use ReLU or LSTM/GRU instead
+      Gradient clipping helps
+
+constraints:
+  - input_size >= 1
+  - hidden_size >= 1
+
+equations:
+  - name: rnn_formula
+    latex: "h_t = \tanh(W_x x_t + W_h h_{t-1} + b)"
+    description: "Basic RNN recurrence equation"
+
+references:
+  - "Elman (1990) - Finding Structure in Time"
+  - "Goodfellow et al. (2016) - Sequence Modeling with RNNs and LSTMs"

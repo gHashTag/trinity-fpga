@@ -317,18 +317,7 @@ pub fn main() !void {
             return;
         }
         // CLARA namespace: route `tri clara <command>` to CLARA proposal commands
-        if (std.mem.eql(u8, first_arg, "clara")) {
-            // Route to CLARA explainability module
-            const clara_sub = if (arg_idx + 1 < args.len) args[arg_idx + 1] else "";
-            if (std.mem.eql(u8, clara_sub, "explain")) {
-                std.debug.print("HSLM forward → VSA vector → Datalog rules → Proof trace\n", .{});
-                // TODO: Implement full pipeline
-                return;
-            }
-            // bare 'tri clara' → help
-            std.debug.print("CLARA commands: explain, demo\n", .{});
-            return;
-        }
+        // CLARA command now handled by tri_register.zig execute_map
         // Bench namespace: route `tri bench compare/record/history` to perf_benchmark
         if (std.mem.eql(u8, first_arg, "bench")) {
             const bench_sub = if (arg_idx + 1 < args.len) args[arg_idx + 1] else "";

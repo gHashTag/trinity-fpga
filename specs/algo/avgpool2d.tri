@@ -1,0 +1,164 @@
+# Average Pooling 2D — Source of Truth
+# Spatial average pooling: downsample by taking mean over windows
+# φ² + 1/φ² = 3 | TRINITY
+
+name: avgpool2d
+version: "1.0.0"
+module: algo.nn.avgpool2d
+description: "2D average pooling: downsample spatially by taking mean over kernel windows"
+
+types:
+  PoolConfig:
+    description: "Configuration for 2D average pooling"
+    fields:
+      - name: kernel_size
+        type: "[]u32"
+        description: "Pooling window size [height, width]"
+      - name: stride
+        type: "[]u32"
+        description: "Stride size [height_stride, width_stride]"
+      - name: padding
+        type: "[]u32"
+        description: "Padding [height_pad, width_pad]"
+
+  PoolShape:
+    description: "Input and output shape info"
+    fields:
+      - name: batch
+        type: u32
+        description: "Batch dimension"
+      - name: channels
+        type: u32
+        description: "Channel dimension"
+      - name: height_in
+        type: u32
+        description: "Input height"
+      - name: width_in
+        type: u32
+        description: "Input width"
+      - name: height_out
+        type: u32
+        description: "Output height"
+      - name: width_out
+        type: u32
+        description: "Output width"
+
+constants:
+  DEFAULT_KERNEL:
+    type: "[]u32"
+    value: "[2, 2]"
+    description: "Default 2x2 pooling window"
+
+  DEFAULT_STRIDE:
+    type: "[]u32"
+    value: "[2, 2]"
+    description: "Default stride (no downsampling)"
+
+functions:
+  calc_output_size:
+    params:
+      - name: height_in
+        type: u32
+        description: "Input height"
+      - name: width_in
+        type: u32
+        description: "Input width"
+      - name: kernel_size
+        type: "[]u32"
+        description: "Pooling window [kh, kw]"
+      - name: stride
+        type: "[]u32"
+        description: "Stride [sh, sw]"
+      - name: padding
+        type: "[]u32"
+        description: "Padding [ph, pw]"
+    returns: "PoolShape"
+    description: "Calculate output spatial dimensions"
+    formula: |
+      height_out = floor((height_in + 2 * padding[0] - kernel_size[0]) / stride[0]) + 1
+      width_out = floor((width_in + 2 * padding[1] - kernel_size[1]) / stride[1]) + 1
+      return PoolShape(0, 0, height_out, width_out)
+
+  forward:
+    params:
+      - name: input
+        type: "[]f32"
+        description: "4D input [batch, channels, height, width]"
+      - name: config
+        type: PoolConfig"
+    returns: "[]f32"
+    description: "2D average pooling forward pass"
+    formula: |
+      shape = calc_output_size(height_in, width_in,
+                            config.kernel_size,
+                            config.stride,
+                            config.padding)
+
+      # Initialize output
+      batch_size = len(input) / (channels_in * height_in * width_in)
+      output_size = batch_size * shape.channels * shape.height_out * shape.width_out
+      output = array(output_size)
+
+      # Pool over each spatial position
+      For batch in 0..batch_size-1:
+        For c in 0..shape.channels-1:
+          For h_out in 0..shape.height_out-1:
+            h_in = h_out * config.stride[0] - config.padding[0]
+            For w_out in 0..shape.width_out-1:
+              w_in = w_out * config.stride[1] - config.padding[1]
+
+              # Sum kernel window
+              sum = 0.0
+              For kh in 0..config.kernel_size[0]-1:
+                For kw in 0..config.kernel_size[1]-1:
+                  h_idx = h_in + kh
+                  w_idx = w_in + kw
+                  idx = ((batch * shape.channels + h_in * width_in) +
+                         c * height_in * width_in +
+                         h_idx * width_in + w_idx)
+                  sum += input[idx]
+
+              # Average
+              mean = sum / (config.kernel_size[0] * config.kernel_size[1])
+              out_idx = (batch * shape.channels +
+                         h_out * shape.width_out +
+                         w_out)
+              output[out_idx] = mean
+
+      return output
+
+behaviors:
+  - name: downsampling
+    description: "Reduce spatial resolution"
+    implementation: |
+      Stride > 1: output smaller than input
+      Stride = 1, kernel > 1: output smaller (padding = 0)
+      Stride = 1, kernel = 1: identity (same size)
+
+  - name: translation_invariance
+    description: "Approximately invariant to small translations"
+    implementation: |
+      Average pooling is translation invariant
+      But limited by stride/kernel size
+      More robust than max pooling for small shifts
+
+  - name: channel_wise
+    description: "Operate independently on each channel"
+    implementation: |
+      Pooling applied per channel
+      Channels not mixed in computation
+      Maintains channel information
+
+constraints:
+  - kernel_size[i] >= 1
+  - stride[i] >= 1
+  - stride[i] <= kernel_size[i]
+
+equations:
+  - name: avgpool_formula
+    latex: "y_{i,j} = \frac{1}{K^2} \sum_{m=0}^{K-1} \sum_{n=0}^{K-1} x_{i+m, j+n}"
+    description: "2D average pooling formula"
+
+references:
+  - "Zeiler & Fergus (2014) - Visualizing and Understanding Convolutional Networks"
+  - "He et al. (2016) - Deep Residual Learning for Image Recognition"

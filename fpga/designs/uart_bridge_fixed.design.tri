@@ -1,0 +1,9 @@
+# Trinity Pins DSL — Design Binding
+# uart_bridge_fixed.v pin constraints
+
+design uart_bridge_fixed on qmtech_xc7a100t {
+  bind clk to board.clock.osc50
+  bind uart_rx to board.uart.ft232rl.txd
+  bind uart_tx to board.uart.ft232rl.rxd
+  bind led to board.led.status
+}

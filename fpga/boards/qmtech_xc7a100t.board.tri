@@ -1,0 +1,48 @@
+# Trinity Pins DSL — Board Definition
+# QMTech XC7A100T Core Board
+# This defines how the board routes package pins to physical connectors
+
+board qmtech_xc7a100t {
+  uses xc7a100t_fgg676
+
+  # Clock: 50 MHz oscillator on board
+  clock osc50 {
+    net fpga.M22
+    freq 50MHz
+  }
+
+  # UART connector J2 (per DSLogic PCB measurements)
+  connector J2 {
+    pin 1 gnd
+    pin 2 vcc_5v
+    pin 3 cts
+    pin 4 rts
+    pin 5 txd  # FT232RL TXD (white) → FPGA uart_rx
+    pin 6 rxd  # FT232RL RXD (green) → FPGA uart_tx
+  }
+
+  uart ft232rl {
+    txd J2.6   # FPGA uart_tx → FT232RL RXD
+    rxd J2.5   # FT232RL TXD → FPGA uart_rx
+    gnd J2.1
+    baud 115200
+  }
+
+  # Status LED (D5 on core board)
+  led status {
+    net fpga.T23
+    polarity active_low
+    color red
+  }
+
+  # Debug LEDs (D6, D7, D8)
+  led dbg0 {
+    net fpga.N23
+    polarity active_high
+  }
+
+  led dbg1 {
+    net fpga.M22
+    polarity active_high
+  }
+}

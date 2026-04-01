@@ -1,0 +1,23 @@
+# Trinity Pins DSL — Fabric Definition
+# Xilinx Artix-7 XC7A100T, FGG676 Package
+# This defines the physical FPGA device and its package pins
+
+fpga xc7a100t_fgg676 {
+  # Clock pins (MRCC/SRCC)
+  pin M22 { bank 34; io LVCMOS33; role mrcc; }
+  pin L22 { bank 34; io LVCMOS33; role mrcc; }
+
+  # User I/O (Bank 34)
+  pin K20 { bank 34; io LVCMOS33; }
+  pin L20 { bank 34; io LVCMOS33; }
+  pin T23 { bank 34; io LVCMOS33; }
+  pin J19 { bank 34; io LVCMOS33; }
+  pin N23 { bank 34; io LVCMOS33; }
+  pin M22 { bank 34; io LVCMOS33; }
+
+  # JTAG pins
+  pin T3 { bank 14; io LVCMOS33; role jtag_tms; }
+  pin R3 { bank 14; io LVCMOS33; role jtag_tck; }
+  pin P5 { bank 14; io LVCMOS33; role jtag_tdi; }
+  pin P6 { bank 14; io LVCMOS33; role jtag_tdo; }
+}
