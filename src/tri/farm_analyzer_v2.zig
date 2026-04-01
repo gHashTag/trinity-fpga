@@ -238,23 +238,23 @@ fn parseTrainingLine(line: []const u8) ?TrainingMetrics {
     return .{ .step = step, .loss = loss, .ppl = ppl };
 }
 
-/// Проверяет, доступен ли Railway API для аккаунта
+/// Checks if Railway API is accessible for the account
 pub fn checkAccountAccess(allocator: Allocator, account_suffix: []const u8) !bool {
     _ = allocator;
     _ = account_suffix;
-    // TODO: Выполнить тестовый GraphQL запрос
-    // Для начала возвращаем true (считаем что доступ есть)
+    // TODO: Execute test GraphQL query
+    // For now return true (assume access exists)
     return true;
 }
 
-/// Статус аккаунта для дашборда
+/// Account status for dashboard
 pub const AccountStatus = enum(u8) {
-    monitored, // API доступен, логи читаются
-    unmonitored, // API недоступен (токен истёк/нет проекта)
-    api_error, // API ошибка (error is reserved in Zig 0.15)
+    monitored, // API accessible, logs readable
+    unmonitored, // API unavailable (token expired/no project)
+    api_error, // API error (error is reserved in Zig 0.15)
 };
 
-/// Результат анализа аккаунта
+/// Account analysis result
 pub const AccountAnalysis = struct {
     name: []const u8,
     suffix: []const u8,
