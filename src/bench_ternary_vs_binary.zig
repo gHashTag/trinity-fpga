@@ -27,7 +27,7 @@ fn quantizeFP16(x: f32) u16 {
     const bits = @as(u32, @bitCast(x));
     const sign = @as(u16, @truncate(bits >> 16));
     const exp_all = @as(u16, @truncate(bits >> 23));
-    const mantissa = @as(u16, @truncate(bits >> 13) & 0x3FF;
+    const mantissa = @as(u16, @truncate(bits >> 13)) & 0x3FF;
     return sign | (exp_all << 10) | mantissa;
 }
 
@@ -44,7 +44,7 @@ fn quantizeBF16(x: f32) u16 {
 fn decodeFP16(bits: u16) f32 {
     const sign = if (bits & 0x8000 != 0) @as(u32, 0x80000000) else 0;
     const exp = @as(u32, (bits & 0x7C00) >> 10) << 23;
-    const mant = @as(u32, (bits & 0x3FF) << 13;
+    const mant = @as(u32, (bits & 0x3FF) << 13);
     return @bitCast(f32, sign | exp | mant);
 }
 
@@ -219,6 +219,10 @@ pub fn main() !void {
 
     print("Ternary vs FP32:\n", .{});
     print("  Max difference: {d:.3}\n", .{max_diff});
-    print("  ✅ PASS: difference < 0.5" if (max_diff < 0.5) else "  ❌ FAIL: difference >= 0.5");
-    print("\n✅ Trinity Identity: φ² + 1/φ² = {d:.15} ≈ 3.0\n", .{ 2.618033988749895 + 1.0 / 2.618033988749895 });
+    if (max_diff < 0.5) {
+        print("  ✅ PASS: difference < 0.5\n", .{});
+    } else {
+        print("  ❌ FAIL: difference >= 0.5\n", .{});
+    }
+    print("\n✅ Trinity Identity: φ² + 1/φ² = {d:.15} ≈ 3.0\n", .{2.618033988749895 + 1.0 / 2.618033988749895});
 }
