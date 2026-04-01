@@ -322,3 +322,4 @@ data/cifar-10/
 .ralph/
 .trinity/scholar/state/
 fpga/build-deps/
+fpga-flash

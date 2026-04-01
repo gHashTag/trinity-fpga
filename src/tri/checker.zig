@@ -193,10 +193,10 @@ pub const TypeChecker = struct {
                 if (self.current_function) |*func_decl| {
                     if (ret_stmt.value) |*value_expr| {
                         const ret_type = try self.checkExpression(value_expr);
-                        try self.checkTypeCompat(fn.return_type, ret_type);
+                        try self.checkTypeCompat(func_decl.return_type, ret_type);
                     } else {
                         // No return value - must be void
-                        try self.checkTypeCompat(fn.return_type, Type{ .t_void = {} });
+                        try self.checkTypeCompat(func_decl.return_type, Type{ .t_void = {} });
                     }
                 } else {
                     try self.addError(.return_type_mismatch, "Return statement outside function", "");
@@ -297,7 +297,7 @@ pub const TypeChecker = struct {
 
         // Implicit integer conversions (smaller -> larger)
         // trit < t3 < t9 < t27
-        const int_order = [_]type { void, void, void, void }; // trit, t3, t9, t27
+        const int_order = [_]type{ void, void, void, void }; // trit, t3, t9, t27
 
         return false;
     }

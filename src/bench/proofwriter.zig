@@ -7,9 +7,9 @@ const std = @import("std");
 
 /// Logical operator types
 pub const LogicalOp = enum(u8) {
-    and = 0,
-    or = 1,
-    not = 2,
+    and_op = 0,
+    or_op = 1,
+    not_op = 2,
     implies = 3,
     iff = 4,
     forall = 5,
@@ -62,7 +62,7 @@ pub const ProofWriter = struct {
         // In a full implementation, this would use actual reasoning
         return ProofStatement{
             .statement = "Proof generated for goal",
-            .premises = &[_]LogicalOp{.and},
+            .premises = &[_]LogicalOp{.and_op},
             .conclusion = .implies,
             .is_valid = true,
         };

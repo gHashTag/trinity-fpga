@@ -471,7 +471,7 @@ pub fn runConstantsCommand(args: []const []const u8) void {
     // Parse flags
     var format: constants_table.OutputFormat = .table;
     var category: constants_table.Category = .all;
-    var sort_by: constants_table.SortBy = .error;
+    var sort_by: constants_table.SortBy = .error_pct;
 
     var i: usize = 0;
     while (i < args.len) {
@@ -494,8 +494,7 @@ pub fn runConstantsCommand(args: []const []const u8) void {
             const val = arg["--sort=".len..];
             sort_by = constants_table.parseSort(val);
             i += 1;
-        }
-        else {
+        } else {
             i += 1;
         }
     }
@@ -1290,15 +1289,13 @@ fn runPellisComparison() void {
     std.debug.print("{s}────────────────────────────────────────────────────────────{s}\n", .{ GRAY, RESET });
     std.debug.print("  {s}Pellis:{s}    α⁻¹ = 360·φ⁻² - 2·φ⁻³ + (3·φ)⁻⁵\n", .{ GREEN, RESET });
     std.debug.print("              Computed: {d:.10}  {s}🏆{s}\n", .{ pellis_alpha_inv, GREEN, RESET });
-    std.debug.print("              Error: {d:.8}%\n\n", .{ @abs(pellis_alpha_inv - codata_alpha_inv) / codata_alpha_inv * 100 });
+    std.debug.print("              Error: {d:.8}%\n\n", .{@abs(pellis_alpha_inv - codata_alpha_inv) / codata_alpha_inv * 100});
 
     std.debug.print("  {s}Trinity:{s}   α = 36/(π⁴φ⁴e²) → α⁻¹ = {d:.7}\n", .{ BLUE, RESET, trinity_alpha_inv });
-    std.debug.print("              Error: {d:.4}%\n\n", .{ @abs(trinity_alpha_inv - codata_alpha_inv) / codata_alpha_inv * 100 });
+    std.debug.print("              Error: {d:.4}%\n\n", .{@abs(trinity_alpha_inv - codata_alpha_inv) / codata_alpha_inv * 100});
 
     std.debug.print("  {s}CODATA 2018:{s} α⁻¹ = {d:.10}\n", .{ GRAY, RESET, codata_alpha_inv });
-    std.debug.print("  → Pellis is {d:.0}× more precise on α⁻¹\n\n", .{
-        @abs(trinity_alpha_inv - codata_alpha_inv) / @abs(pellis_alpha_inv - codata_alpha_inv)
-    });
+    std.debug.print("  → Pellis is {d:.0}× more precise on α⁻¹\n\n", .{@abs(trinity_alpha_inv - codata_alpha_inv) / @abs(pellis_alpha_inv - codata_alpha_inv)});
 
     // Mass ratio μ
     const pellis_mu: f64 = 1836.118; // Pellis derives this
@@ -1308,11 +1305,11 @@ fn runPellisComparison() void {
     std.debug.print("{s}2. Proton-to-Electron Mass Ratio μ{s}\n", .{ CYAN, RESET });
     std.debug.print("{s}────────────────────────────────────────────────────────────{s}\n", .{ GRAY, RESET });
     std.debug.print("  {s}Pellis:{s}    μ = derived from α⁻¹\n", .{ GREEN, RESET });
-    std.debug.print("              ~ {d:.3}\n\n", .{ pellis_mu });
+    std.debug.print("              ~ {d:.3}\n\n", .{pellis_mu});
 
     std.debug.print("  {s}Trinity:{s}   μ = 6π⁵\n", .{ BLUE, RESET });
-    std.debug.print("              Computed: {d:.6}\n", .{ trinity_mu });
-    std.debug.print("              Error: {d:.3}%\n\n", .{ @abs(trinity_mu - codata_mu) / codata_mu * 100 });
+    std.debug.print("              Computed: {d:.6}\n", .{trinity_mu});
+    std.debug.print("              Error: {d:.3}%\n\n", .{@abs(trinity_mu - codata_mu) / codata_mu * 100});
 
     std.debug.print("  {s}CODATA 2018:{s} μ = {d:.10}\n", .{ GRAY, RESET, codata_mu });
     std.debug.print("  → {s}IDENTICAL precision (0.002%){s}\n\n", .{ GOLDEN, RESET });
@@ -1327,8 +1324,8 @@ fn runPellisComparison() void {
     std.debug.print("              ~ Planck value\n\n", .{});
 
     std.debug.print("  {s}Trinity:{s}   Ω_Λ = 6561φ⁻³/(π⁵e²)\n", .{ BLUE, RESET });
-    std.debug.print("              Computed: {d:.4}\n", .{ trinity_omega_lambda });
-    std.debug.print("              Error: {d.3}%\n\n", .{ @abs(trinity_omega_lambda - planck_omega_lambda) / planck_omega_lambda * 100 });
+    std.debug.print("              Computed: {d:.4}\n", .{trinity_omega_lambda});
+    std.debug.print("              Error: {d.3}%\n\n", .{@abs(trinity_omega_lambda - planck_omega_lambda) / planck_omega_lambda * 100});
 
     std.debug.print("  {s}Planck 2018:{s} Ω_Λ = {d:.3} ± 0.017\n", .{ GRAY, RESET, planck_omega_lambda });
     std.debug.print("  → {s}CONVERGENCE confirmed{s}\n\n", .{ GOLDEN, RESET });
@@ -1340,8 +1337,8 @@ fn runPellisComparison() void {
     std.debug.print("{s}4. Strong Coupling α_s (Trinity only){s}\n", .{ CYAN, RESET });
     std.debug.print("{s}────────────────────────────────────────────────────────────{s}\n", .{ GRAY, RESET });
     std.debug.print("  {s}Trinity:{s}   α_s = 4φ²/(9π²)\n", .{ BLUE, RESET });
-    std.debug.print("              Computed: {d:.5}\n", .{ trinity_alpha_s });
-    std.debug.print("              Error: {d.3}%\n\n", .{ @abs(trinity_alpha_s - pdg_alpha_s) / pdg_alpha_s * 100 });
+    std.debug.print("              Computed: {d:.5}\n", .{trinity_alpha_s});
+    std.debug.print("              Error: {d.3}%\n\n", .{@abs(trinity_alpha_s - pdg_alpha_s) / pdg_alpha_s * 100});
 
     std.debug.print("  {s}PDG 2024:{s}   α_s(M_Z) = {d:.5}\n", .{ GRAY, RESET, pdg_alpha_s });
 

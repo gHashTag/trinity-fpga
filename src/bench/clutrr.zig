@@ -116,7 +116,9 @@ pub const ClutrrDataset = struct {
 
             // Generate a random family tree
             const context = try self.generateContext(depth, num_entities, rng);
-            const (query, answer) = try self.generateQuery(&context, rng);
+            const query_result = try self.generateQuery(&context, rng);
+            const query = query_result[0];
+            const answer = query_result[1];
 
             const example = try ClutrrExample.init(
                 self.allocator,
@@ -202,7 +204,7 @@ pub const ClutrrEvaluator = struct {
         for (1..MAX_DEPTH + 1) |d| {
             if (self.by_depth[d] > 0) {
                 try writer.print("  Depth {d}: {d:.2}% ({d}/{d})\n", .{
-                    d, self.accuracyByDepth(d) * 100,
+                    d,                        self.accuracyByDepth(d) * 100,
                     self.correct_by_depth[d], self.by_depth[d],
                 });
             }
