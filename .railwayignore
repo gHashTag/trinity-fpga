@@ -1,22 +1,41 @@
-# Large directories
-fpga/prjxray
-fpga/nextpnr-xilinx
-data/tinystories/real_tinystories.txt
-data/checkpoints*
-data/ecdata
-data/zeta
-data/predictions
-data/curves
-docs
-papers
-docsite
-archive
+# Data directories (not needed for Queen build)
+data/
+kaggle/
 
-# Build/cache directories
-.zig-cache
-.cache
-zig-out
-build
+# Build outputs
+zig-out/
+zig-out-linux/
+zig-cache/
+
+# Documentation
+docs/
+
+# FPGA files
+fpga/
+
+# Large test/benchmark files
+*.png
+*.jpg
+*.jpeg
+*.mp4
+*.wav
+
+# Node modules in subdirectories
+**/node_modules/
+
+# Demotapes and recordings
+demotapes/
+recordings/
+
+# External deps with large binaries
+external/
+
+# Git (Railway should skip)
+.git/
+
+# Archive directories
+archive/
+
 
 # Git (Railway should skip, but explicit)
 .git
