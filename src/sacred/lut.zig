@@ -7,7 +7,7 @@ const std = @import("std");
 const sacred_types = @import("sacred_types.zig");
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// GF16 LUT — 65536 записей (16 бит)
+// GF16 LUT — 65536 entries (16 bits)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 pub const GF16LUT = struct {
@@ -29,12 +29,12 @@ pub const GF16LUT = struct {
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// TF3 LUT — 262144 записей (18 бит)
-// ВНИМАНИЕ: большая таблица, может увеличить размер бинарника
+// TF3 LUT — 262144 entries (18 bits)
+// WARNING: Large LUT may increase binary size
 // ═══════════════════════════════════════════════════════════════════════════════
 
 pub const TF3LUT = struct {
-    /// TF3 → f32 конвертация
+    /// TF3 → f32 conversion
     /// NOTE: Large LUT disabled due to comptime quota limits
     /// Use fromF32/toF32 directly instead
     pub fn toF32(tf: sacred_types.TF3) f32 {
