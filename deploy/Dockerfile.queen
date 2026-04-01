@@ -29,7 +29,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Zig 0.14 (latest stable)
-ENV ZIG_VERSION=0.14.0
+ENV ZIG_VERSION=0.15.1
 RUN curl -fsSL https://ziglang.org/download/0.14.0/zig-linux-x86_64-0.14.0.tar.xz | tar xJ
 ENV PATH="/zig-linux-x86_64-${ZIG_VERSION}:${PATH}"
 
