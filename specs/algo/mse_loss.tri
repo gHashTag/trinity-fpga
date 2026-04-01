@@ -1,0 +1,31 @@
+# MSE Loss — Source of Truth
+# Mean Squared Error for regression
+# φ² + 1/φ² = 3 | TRINITY
+
+name: mse_loss
+version: "1.0.0"
+module: algo.loss.mse
+description: "Mean Squared Error loss function"
+
+types:
+  MSELossConfig:
+    fields:
+      - name: reduction
+        type: string
+        description: "mean, sum, or none"
+
+functions:
+  forward:
+    params:
+      - name: predictions
+        type: "[]const f32"
+      - name: targets
+        type: "[]const f32"
+    returns: f32
+    formula: |
+      # loss = mean((predictions - targets)^2)
+      # sum over all elements, divide by count
+
+behaviors:
+  - name: squared_error
+    description: "Penalizes large errors more heavily"

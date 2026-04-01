@@ -1,0 +1,37 @@
+# RMSprop Optimizer — Source of Truth
+# Root Mean Square propagation
+# φ² + 1/φ² = 3 | TRINITY
+
+name: rmsprop
+version: "1.0.0"
+module: algo.optimizer.rmsprop
+description: "RMSprop optimizer with moving average of squared gradients"
+
+types:
+  RMSpropConfig:
+    fields:
+      - name: learning_rate
+        type: f32
+      - name: decay
+        type: f32
+      - name: epsilon
+        type: f32
+
+constants:
+  DEFAULT_DECAY:
+    type: f32
+    value: 0.9
+
+functions:
+  step:
+    params:
+      - name: grad
+        type: "[]const f32"
+      - name: param
+        type: "[]f32"
+      - name: cache
+        type: "[]f32"
+    returns: "void"
+    formula: |
+      # cache = decay * cache + (1 - decay) * grad^2
+      # param -= lr * grad / (sqrt(cache) + epsilon)

@@ -1,0 +1,32 @@
+# Contrastive Loss — Source of Truth
+# Contrastive loss for self-supervised learning
+# φ² + 1/φ² = 3 | TRINITY
+
+name: contrastive_loss
+version: "1.0.0"
+module: algo.loss.contrastive
+description: "Contrastive loss - pulls similar items together, pushes dissimilar apart"
+
+types:
+  ContrastiveLossConfig:
+    fields:
+      - name: margin
+        type: f32
+        description: "Minimum distance for negative pairs"
+
+functions:
+  forward:
+    params:
+      - name: anchor
+        type: "[]const f32"
+      - name: positive
+        type: "[]const f32"
+      - name: negative
+        type: "[]const f32"
+      - name: margin
+        type: f32
+    returns: f32
+    formula: |
+      # positive_loss = distance(anchor, positive)^2
+      # negative_loss = max(0, margin - distance(anchor, negative))^2
+      # loss = positive_loss + negative_loss

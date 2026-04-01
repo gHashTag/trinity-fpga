@@ -1,0 +1,175 @@
+# LSTM (Long Short-Term Memory) — Source of Truth
+# Recurrent neural network cell with gating mechanism
+# φ² + 1/φ² = 3 | TRINITY
+
+name: lstm
+version: "1.0.0"
+module: algo.rnn.lstm
+description: "Long Short-Term Memory cell with forget, input, output gates"
+
+types:
+  LSTMConfig:
+    description: "LSTM configuration"
+    fields:
+      - name: input_size
+        type: u32
+        description: "Dimension of input vector"
+      - name: hidden_size
+        type: u32
+        description: "Dimension of hidden state"
+
+  LSTMState:
+    description: "LSTM cell state (hidden + cell)"
+    fields:
+      - name: h
+        type: "[]f32"
+        description: "Hidden state [hidden_size]"
+      - name: c
+        type: "[]f32"
+        description: "Cell state [hidden_size]"
+
+  LSTMWeights:
+    description: "LSTM parameters"
+    fields:
+      - name: Wf
+        type: "[]f32"
+        description: "Forget gate weights [(input_size + hidden_size) * hidden_size]"
+      - name: bf
+        type: "[]f32"
+        description: "Forget gate bias [hidden_size]"
+      - name: Wi
+        type: "[]f32"
+        description: "Input gate weights"
+      - name: bi
+        type: "[]f32"
+        description: "Input gate bias"
+      - name: Wo
+        type: "[]f32"
+        description: "Output gate weights"
+      - name: bo
+        type: "[]f32"
+        description: "Output gate bias"
+      - name: Wg
+        type: "[]f32"
+        description: "Candidate gate weights"
+      - name: bg
+        type: "[]f32"
+        description: "Candidate gate bias"
+
+constants:
+  LSTM_DEFAULT_HIDDEN:
+    type: u32
+    value: 128
+    description: "Default hidden size for language models"
+
+functions:
+  forward:
+    params:
+      - name: input
+        type: "[]const f32"
+        description: "Input vector [input_size]"
+      - name: state_prev
+        type: LSTMState
+        description: "Previous hidden and cell states"
+      - name: weights
+        type: LSTMWeights
+        description: "LSTM parameters"
+      - name: state_next
+        type: LSTMState
+        description: "Next hidden and cell states (output)"
+      - name: config
+        type: LSTMConfig
+    returns: "void"
+    description: "LSTM forward pass"
+    formula: |
+      # Concatenate [h_prev, x]
+      combined_size = input_size + hidden_size
+
+      # Forget gate: f = sigmoid(Wf @ [h_prev, x] + bf)
+      f_t = sigmoid(Wf @ [state_prev.h, input] + bf)
+
+      # Input gate: i = sigmoid(Wi @ [h_prev, x] + bi)
+      i_t = sigmoid(Wi @ [state_prev.h, input] + bi)
+
+      # Output gate: o = sigmoid(Wo @ [h_prev, x] + bo)
+      o_t = sigmoid(Wo @ [state_prev.h, input] + bo)
+
+      # Candidate: g = tanh(Wg @ [h_prev, x] + bg)
+      g_t = tanh(Wg @ [state_prev.h, input] + bg)
+
+      # Cell state: c_t = f * c_prev + i * g
+      state_next.c = f_t * state_prev.c + i_t * g_t
+
+      # Hidden state: h_t = o * tanh(c_t)
+      state_next.h = o_t * tanh(state_next.c)
+
+  init:
+    params:
+      - name: weights
+        type: LSTMWeights
+        description: "LSTM weights to initialize"
+      - name: config
+        type: LSTMConfig
+    returns: "void"
+    description: "Xavier/Glorot initialization for LSTM weights"
+    formula: |
+      # For each weight matrix (Wf, Wi, Wo, Wg):
+      # Initialize with uniform distribution scaled by sqrt(6 / (fan_in + fan_out))
+      limit = sqrt(6.0 / (input_size + hidden_size))
+      For each weight w in Wf, Wi, Wo, Wg:
+        w = random(-limit, limit)
+
+      # Bias initialized to zeros
+      # Forget gate bias typically initialized to 1.0 for better gradient flow
+      bf = ones[hidden_size]  # Forget bias = 1 (remember by default)
+      bi = zeros[hidden_size]
+      bo = zeros[hidden_size]
+      bg = zeros[hidden_size]
+
+behaviors:
+  - name: forget_gate
+    description: "Forget gate controls what information to discard from cell state"
+    implementation: |
+      f_t = sigmoid(Wf @ [h_prev, x] + bf)
+      Range: [0, 1] where 0 = forget all, 1 = remember all
+
+  - name: input_gate
+    description: "Input gate controls what new information to store in cell state"
+    implementation: |
+      i_t = sigmoid(Wi @ [h_prev, x] + bi)
+      Range: [0, 1] where 0 = ignore, 1 = store
+
+  - name: output_gate
+    description: "Output gate controls what information to expose as hidden state"
+    implementation: |
+      o_t = sigmoid(Wo @ [h_prev, x] + bo)
+      Range: [0, 1] where 0 = suppress, 1 = expose
+
+  - name: cell_state
+    description: "Long-term memory with additive updates"
+    implementation: |
+      c_t = f_t * c_prev + i_t * g_t
+      Additive (not multiplicative) = better gradient flow
+
+  - name: hidden_state
+    description: "Short-term memory exposed to next layer"
+    implementation: |
+      h_t = o_t * tanh(c_t)
+      Gated tanh of cell state
+
+constraints:
+  - input_size > 0
+  - hidden_size > 0
+  - Wf.size() == (input_size + hidden_size) * hidden_size
+  - Wi.size() == (input_size + hidden_size) * hidden_size
+  - Wo.size() == (input_size + hidden_size) * hidden_size
+  - Wg.size() == (input_size + hidden_size) * hidden_size
+  - bf.size() == hidden_size
+  - bi.size() == hidden_size
+  - bo.size() == hidden_size
+  - bg.size() == hidden_size
+
+predictions:
+  - "LSTM should learn long-term dependencies (>100 time steps)"
+  - "Forget gate bias initialization to 1.0 improves convergence"
+  - "Cell state acts as linear information highway"

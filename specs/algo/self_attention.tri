@@ -1,0 +1,98 @@
+# Self-Attention — Source of Truth
+# Multi-head self-attention with query/key/value projections
+# φ² + 1/φ² = 3 | TRINITY
+
+name: self_attention
+version: "1.0.0"
+module: algo.nn.self_attention
+description: "Multi-head self-attention for Transformers"
+
+types:
+  SelfAttentionConfig:
+    description: "Self-attention configuration"
+    fields:
+      - name: hidden_size
+        type: u32
+        description: "Dimension of hidden state"
+      - name: num_heads
+        type: u32
+        description: "Number of attention heads"
+      - name: d_model
+        type: u32
+        description: "Model dimension"
+
+  SelfAttentionWeights:
+    description: "Q, K, V projection matrices"
+    fields:
+      - name: Wq
+        type: "[]f32"
+        description: "Query projection [d_model × hidden_size]"
+      - name: Wk
+        type: "[]f32"
+        description: "Key projection [d_model × hidden_size]"
+      - name: Wv
+        type: "[]f32"
+        description: "Value projection [d_model × hidden_size]"
+      - name: Wo
+        type: "[]f32"
+        description: "Output projection [hidden_size × d_model]"
+
+  SelfAttentionState:
+    description: "Self-attention computation state"
+    fields:
+      - name: q
+        type: "[]f32"
+        description: "Query projection"
+      - name: k
+        type: "[]f32"
+        description: "Key projection"
+      - name: v
+        type: "[]f32"
+        description: "Value projection"
+      - name: attn
+        type: "[]f32"
+        description: "Attention scores"
+
+constants:
+  D_MODEL:
+    type: u32
+    value: 64
+    description: "Model dimension"
+
+functions:
+  forward:
+    params:
+      - name: input
+        type: "[]const f32"
+        description: "Input tensor [batch × seq_len × d_model]"
+      - name: weights
+        type: SelfAttentionWeights
+        description: "Q, K, V projection matrices and Wo"
+      - name: state
+        type: SelfAttentionState
+        description: "Self-attention computation state"
+      - name: config
+        type: SelfAttentionConfig
+      returns: "void"
+    description: "Multi-head self-attention: QK^T / sqrt(d_model)"
+    formula: |
+      # Project input to queries: Q = input @ Wq
+      # Project input to keys: K = input @ Wk
+      # Project input to values: V = input @ Wv
+      # Compute attention scores: attn = Q @ K^T / sqrt(d_model)
+      # Apply attention to values: output = attn @ V
+      # Apply output projection: result = output @ Wo
+
+behaviors:
+  - name: scaled_dot_product
+    description: "Scaled dot-product attention computation"
+    implementation: |
+      # QK^T: matrix multiplication + scaling
+      # Provides stable gradients via normalization
+      # Compatible with causal masking
+
+  - name: multi_head_parallel
+    description: "Multiple attention heads computed independently"
+    implementation: |
+      # Each head processes its slice of hidden dimension
+      # Results concatenated for output projection

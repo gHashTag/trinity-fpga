@@ -1,0 +1,97 @@
+# Seq2Seq (Sequence-to-Sequence) — Source of Truth
+# Encoder-decoder architecture for translation/generation
+# φ² + 1/φ² = 3 | TRINITY
+
+name: seq2seq
+version: "1.0.0"
+module: algo.nn.seq2seq
+description: "Encoder-decoder architecture for sequence-to-sequence tasks"
+
+types:
+  Seq2SeqConfig:
+    description: "Seq2Seq configuration"
+    fields:
+      - name: vocab_size
+        type: u32
+        description: "Vocabulary size"
+      - name: d_model
+        type: u32
+        description: "Model dimension"
+      - name: hidden_size
+        type: u32
+        description: "Hidden state dimension"
+
+  Seq2SeqState:
+    description: "Seq2Seq encoder/decoder states"
+    fields:
+      - name: encoder_hidden
+        type: "[]f32"
+        description: "Encoder final hidden state"
+      - name: encoder_context
+        type: "[]f32"
+        description: "Encoder context vector"
+      - name: decoder_hidden
+        type: "[]f32"
+        description: "Decoder hidden state"
+
+functions:
+  encode:
+    params:
+      - name: input_seq
+        type: "[]const u32"
+        description: "Input sequence (token ids)"
+      - name: state
+        type: Seq2SeqState"
+        description: "Seq2Seq state"
+      - name: config
+        type: Seq2SeqConfig
+    returns: "void"
+    description: "Encode input sequence to context vector"
+    formula: |
+      # Process input sequence through encoder
+      # encoder_hidden, encoder_context = encoder(input_seq)
+
+  decode:
+    params:
+      - name: target_seq
+        type: "[]const u32"
+        description: "Target sequence (token ids)"
+      - name: state
+        type: Seq2SeqState"
+        description: "Seq2Seq state with encoder context"
+      - name: output
+        type: "[]f32"
+        description: "Output logits [vocab_size]"
+      - name: config
+        type: Seq2SeqConfig
+    returns: "void"
+    description: "Decode from context vector"
+    formula: |
+      # Initialize decoder with encoder context
+      # For each token in target_seq:
+        #   decoder_hidden = decoder_step(token, decoder_hidden)
+        #   output[token_index] = decoder_hidden @ output_projection
+
+behaviors:
+  - name: encoder_decoder
+    description: "Two-stage processing"
+    implementation: |
+      # Encoder: compress input sequence to fixed-size context
+      # Decoder: generate output sequence from context
+      # Attention mechanism allows decoder to focus on encoder states
+
+  - name: teacher_forcing
+    description: "Training technique using ground truth tokens"
+    implementation: |
+      # During training: feed previous target token to decoder
+      # Improves convergence compared to using model predictions
+
+constraints:
+  - vocab_size > 0
+  - d_model > 0
+  - hidden_size > 0
+
+predictions:
+  - "Seq2Seq learns alignment between input and output"
+  - "Teacher forcing speeds up training"
+  - "Beam search improves generation quality"

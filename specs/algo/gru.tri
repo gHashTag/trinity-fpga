@@ -1,0 +1,137 @@
+# GRU (Gated Recurrent Unit) — Source of Truth
+# Simplified LSTM with fewer gates
+# φ² + 1/φ² = 3 | TRINITY
+
+name: gru
+version: "1.0.0"
+module: algo.rnn.gru
+description: "Gated Recurrent Unit - simplified LSTM with reset and update gates"
+
+types:
+  GRUConfig:
+    description: "GRU configuration"
+    fields:
+      - name: input_size
+        type: u32
+        description: "Dimension of input vector"
+      - name: hidden_size
+        type: u32
+        description: "Dimension of hidden state"
+
+  GRUState:
+    description: "GRU hidden state"
+    fields:
+      - name: h
+        type: "[]f32"
+        description: "Hidden state [hidden_size]"
+
+  GRUWeights:
+    description: "GRU parameters"
+    fields:
+      - name: Wr
+        type: "[]f32"
+        description: "Reset gate weights [(input_size + hidden_size) * hidden_size]"
+      - name: br
+        type: "[]f32"
+        description: "Reset gate bias [hidden_size]"
+      - name: Wz
+        type: "[]f32"
+        description: "Update gate weights"
+      - name: bz
+        type: "[]f32"
+        description: "Update gate bias"
+      - name: Wh
+        type: "[]f32"
+        description: "Candidate hidden state weights"
+      - name: bh
+        type: "[]f32"
+        description: "Candidate hidden state bias"
+
+functions:
+  forward:
+    params:
+      - name: input
+        type: "[]const f32"
+        description: "Input vector [input_size]"
+      - name: h_prev
+        type: "[]const f32"
+        description: "Previous hidden state [hidden_size]"
+      - name: weights
+        type: GRUWeights
+        description: "GRU parameters"
+      - name: h_next
+        type: "[]f32"
+        description: "Next hidden state (output) [hidden_size]"
+      - name: config
+        type: GRUConfig
+    returns: "void"
+    description: "GRU forward pass"
+    formula: |
+      # Update gate: z = sigmoid(Wz @ [h_prev, x] + bz)
+      z_t = sigmoid(Wz @ [h_prev, input] + bz)
+
+      # Reset gate: r = sigmoid(Wr @ [h_prev, x] + br)
+      r_t = sigmoid(Wr @ [h_prev, input] + br)
+
+      # Candidate hidden: h_hat = tanh(Wh @ [r * h_prev, x] + bh)
+      h_hat = tanh(Wh @ [r_t * h_prev, input] + bh)
+
+      # New hidden state: h = (1 - z) * h_prev + z * h_hat
+      h_next = (1 - z_t) * h_prev + z_t * h_hat
+
+  init:
+    params:
+      - name: weights
+        type: GRUWeights
+        description: "GRU weights to initialize"
+      - name: config
+        type: GRUConfig
+    returns: "void"
+    description: "Xavier initialization for GRU weights"
+    formula: |
+      limit = sqrt(6.0 / (input_size + hidden_size))
+      For each weight w in Wr, Wz, Wh:
+        w = random(-limit, limit)
+      br, bz, bh = zeros
+
+behaviors:
+  - name: reset_gate
+    description: "Controls how much of past state to forget"
+    implementation: |
+      r_t = sigmoid(Wr @ [h_prev, x] + br)
+      When r_t -> 0: forget past, act like feedforward
+      When r_t -> 1: remember past
+
+  - name: update_gate
+    description: "Controls blend between old state and new candidate"
+    implementation: |
+      z_t = sigmoid(Wz @ [h_prev, x] + bz)
+      When z_t -> 0: keep old state
+      When z_t -> 1: use new candidate
+
+  - name: candidate_state
+    description: "Proposed new hidden state (reset-gated)"
+    implementation: |
+      h_hat = tanh(Wh @ [r_t * h_prev, x] + bh)
+      Reset gate applied BEFORE computing candidate
+
+  - name: hidden_update
+    description: "Convex combination of old and new"
+    implementation: |
+      h = (1 - z) * h_prev + z * h_hat
+      No separate cell state (simpler than LSTM)
+
+constraints:
+  - input_size > 0
+  - hidden_size > 0
+  - Wr.size() == (input_size + hidden_size) * hidden_size
+  - Wz.size() == (input_size + hidden_size) * hidden_size
+  - Wh.size() == (input_size + hidden_size) * hidden_size
+  - br.size() == hidden_size
+  - bz.size() == hidden_size
+  - bh.size() == hidden_size
+
+predictions:
+  - "GRU trains faster than LSTM (fewer parameters)"
+  - "GRU performance similar to LSTM on most tasks"
+  - "Reset gate enables adaptive temporal resolution"

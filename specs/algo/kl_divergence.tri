@@ -1,0 +1,20 @@
+# KL Divergence — Source of Truth
+# Kullback-Leibler divergence for probability distributions
+# φ² + 1/φ² = 3 | TRINITY
+
+name: kl_divergence
+version: "1.0.0"
+module: algo.loss.kl
+description: "KL divergence - measure of difference between distributions"
+
+functions:
+  forward:
+    params:
+      - name: p
+        type: "[]const f32"
+      - name: q
+        type: "[]const f32"
+    returns: f32
+    formula: |
+      # KL(p||q) = sum(p * log(p / q))
+      # Measures information lost when q is used to approximate p

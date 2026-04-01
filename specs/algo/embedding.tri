@@ -1,0 +1,88 @@
+# Embedding — Source of Truth
+# Token embedding lookup table
+# φ² + 1/φ² = 3 | TRINITY
+
+name: embedding
+version: "1.0.0"
+module: algo.nn.embedding
+description: "Learned token embedding lookup table"
+
+types:
+  EmbeddingConfig:
+    description: "Embedding layer configuration"
+    fields:
+      - name: vocab_size
+        type: u32
+        description: "Size of vocabulary (number of unique tokens)"
+      - name: d_model
+        type: u32
+        description: "Dimension of embedding vectors"
+
+  EmbeddingWeights:
+    description: "Embedding lookup table"
+    fields:
+      - name: W
+        type: "[]f32"
+        description: "Embedding matrix [vocab_size × d_model]"
+
+constants:
+  DEFAULT_D_MODEL:
+    type: u32
+    value: 64
+    description: "Default embedding dimension"
+
+functions:
+  forward:
+    params:
+      - name: token_ids
+        type: "[]const u32"
+        description: "Token indices [batch × seq_len]"
+      - name: weights
+        type: EmbeddingWeights
+        description: "Embedding lookup table"
+      - name: embeddings
+        type: "[]f32"
+        description: "Output embeddings [batch × seq_len × d_model]"
+      - name: config
+        type: EmbeddingConfig
+    returns: "void"
+    description: "Lookup token embeddings: W[token_id]"
+    formula: |
+      # For each token in token_ids:
+        #   embedding = W[token_id]
+        #   output[token_index] = embedding
+
+  init:
+    params:
+      - name: weights
+        type: EmbeddingWeights
+        description: "Embedding weights to initialize"
+      - name: config
+        type: EmbeddingConfig
+    returns: "void"
+    description: "Xavier initialization for embeddings"
+    formula: |
+      # Initialize embeddings with uniform distribution
+      # Each embedding vector is initialized independently
+      limit = sqrt(3.0 / d_model)
+      For each embedding e in W:
+        e = random(-limit, limit)
+
+behaviors:
+  - name: learned_representation
+    description: "Embeddings are learned parameters"
+    implementation: |
+      # During training, embeddings are updated via backpropagation
+      # Semantically similar tokens tend to have similar embeddings
+      # Distance in embedding space correlates with semantic similarity
+
+constraints:
+  - vocab_size > 0
+  - d_model > 0
+  - W.size() == vocab_size * d_model
+  - token_ids must be in [0, vocab_size)
+
+predictions:
+  - "Embedding dimension affects model capacity"
+  - "Larger vocab requires larger d_model"
+  - "Pre-trained embeddings transfer well"

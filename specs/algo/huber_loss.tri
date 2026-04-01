@@ -1,0 +1,29 @@
+# Huber Loss — Source of Truth
+# Robust loss for regression (less sensitive to outliers)
+# φ² + 1/φ² = 3 | TRINITY
+
+name: huber_loss
+version: "1.0.0"
+module: algo.loss.huber
+description: "Huber loss - quadratic for small errors, linear for large"
+
+types:
+  HuberLossConfig:
+    fields:
+      - name: delta
+        type: f32
+        description: "Threshold where loss changes from quadratic to linear"
+
+functions:
+  forward:
+    params:
+      - name: predictions
+        type: "[]const f32"
+      - name: targets
+        type: "[]const f32"
+      - name: delta
+        type: f32
+    returns: f32
+    formula: |
+      # if |error| <= delta: loss = 0.5 * error^2
+      # else: loss = delta * |error| - 0.5 * delta^2
