@@ -87,7 +87,13 @@ zig build              # All 50+ binaries (only direct zig call allowed)
 tri test               # Run tests
 tri issue list         # See task queue
 tri git status         # Working tree status
-tri git commit "feat(scope): msg"  # Commit (zig fmt auto, format enforced)
+tri git commit "msg"   # Commit (zig fmt auto, format enforced)
+tri railway build      # Trigger Railway deployment
+tri railway status     # Show deployment status
+tri railway logs       # Show build/deploy logs
+tri clara demo         # Run CLARA pipeline demonstration
+tri clara explain      # Proof trace generation
+tri clara status       # Show CLARA proposal progress
 tri faculty            # Agent status dashboard
 tri notify "msg"       # Telegram notification
 tri agent run <N>      # Autonomous issue resolution
