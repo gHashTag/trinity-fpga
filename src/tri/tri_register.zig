@@ -1390,7 +1390,7 @@ pub fn runFpgaCommand(allocator: std.mem.Allocator, args: []const []const u8) !v
         try data_writer.print("\"subcommands\":[", .{});
         const subcommands = &[_][]const u8{
             "synth",  "flash",      "build",     "verify",        "snap", "status", "gen", "test", "jtag", "uart", "power",
-            "fxload", "verify-pid", "flash-bit", "mac-uart-test",
+            "fxload", "verify-pid", "flash-bit", "mac-uart-test", "pins",
         };
         for (subcommands, 0..) |sc, i| {
             if (i > 0) try data_json.append(allocator, ',');
@@ -1467,6 +1467,8 @@ pub fn runFpgaCommand(allocator: std.mem.Allocator, args: []const []const u8) !v
         return runFpgaMountCommand(allocator);
     } else if (std.mem.eql(u8, subcommand, "unmount")) {
         return runFpgaUnmountCommand(allocator);
+    } else if (std.mem.eql(u8, subcommand, "pins")) {
+        return tri_fpga.runFpgaPinsCommand(allocator, sub_args);
     } else {
         // Unknown subcommand - use UnifiedOutput for error
         var output = try unified_mod.UnifiedOutput.init(allocator, "fpga", .forge);
@@ -1482,7 +1484,7 @@ pub fn runFpgaCommand(allocator: std.mem.Allocator, args: []const []const u8) !v
 
         try data_json.append(allocator, '{');
         try data_writer.print("\"subcommand\":\"{s}\",\"valid_subcommands\":[", .{subcommand});
-        const valid_subs = &[_][]const u8{ "gen", "gen-tri", "synth", "verdict", "flash", "test", "verify", "eye", "snap", "status", "build", "read", "experience", "probe", "jtag", "mount", "unmount", "uart", "build-uart", "flash-uart", "uart-test", "power" };
+        const valid_subs = &[_][]const u8{ "gen", "gen-tri", "synth", "verdict", "flash", "test", "verify", "eye", "snap", "status", "build", "read", "experience", "probe", "jtag", "mount", "unmount", "uart", "build-uart", "flash-uart", "uart-test", "power", "pins" };
         for (valid_subs, 0..) |vs, i| {
             if (i > 0) try data_json.append(allocator, ',');
             try data_writer.print("\"{s}\"", .{vs});
