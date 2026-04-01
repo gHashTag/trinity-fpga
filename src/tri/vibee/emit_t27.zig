@@ -6,19 +6,15 @@ const std = @import("std");
 const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayListUnmanaged;
 
-// VIBEE Parser types
-const gen_parser = @import("../vibeec/gen_parser_types.zig");
+// VIBEE Parser types - imported as module
+const vibeec = @import("vibeec");
 
-pub const Constant = gen_parser.Constant;
-pub const TypeDef = gen_parser.TypeDef;
-pub const Field = gen_parser.Field;
-pub const Behavior = gen_parser.Behavior;
-pub const TestCase = gen_parser.TestCase;
-pub const VibeeSpec = gen_parser.VibeeSpec;
-pub const ParseResult = @import("../vibeec/gen_vibee_parser.zig").ParseResult;
-
-const parseFn = @import("../vibeec/gen_vibee_parser.zig").parse;
-const parseFileFn = @import("../vibeec/gen_vibee_parser.zig").parseFile;
+pub const Constant = vibeec.Constant;
+pub const TypeDef = vibeec.TypeDef;
+pub const Field = vibeec.Field;
+pub const Behavior = vibeec.Behavior;
+pub const TestCase = vibeec.TestCase;
+pub const VibeeSpec = vibeec.VibeeSpec;
 
 // ============================================================================
 // TRI-27 ASSEMBLY SPECIFICATION

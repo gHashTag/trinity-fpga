@@ -47,13 +47,22 @@ pub fn build(b: *std.Build) void {
     // emit_t27: .tri → .t27 code generator
     // Part of VIBEE compiler pipeline
 
+    const emit_mod = b.createModule(.{
+        .root_source_file = b.path("src/tri/vibee/emit_t27.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    // Add vibeec as a sub-module
+    const vibeec_mod = b.createModule(.{
+        .root_source_file = b.path("src/vibeec/gen_parser_types.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    emit_mod.addImport("vibeec", vibeec_mod);
+
     const emit_exe = b.addExecutable(.{
         .name = "emit_t27",
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("src/tri/vibee/emit_t27.zig"),
-            .target = target,
-            .optimize = optimize,
-        }),
+        .root_module = emit_mod,
     });
 
     const emit_run = b.addRunArtifact(emit_exe);
