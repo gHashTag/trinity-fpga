@@ -1402,7 +1402,7 @@ fn detectAlerts(state: *QueenState, snap: FacultySnapshot, evo: EvolutionInfo, a
 
     // Build broken (was OK, now broken)
     if (state.prev_build_ok and !snap.build_ok) {
-        addAlert(alerts, count, .build_broken, "zig build failed"); // zig build упал
+        addAlert(alerts, count, .build_broken, "zig build failed");
     }
 
     // New PPL record
@@ -1529,7 +1529,7 @@ fn fmtDaily(buf: []u8, snap: FacultySnapshot, evo: EvolutionInfo, arena: ArenaIn
         qt.E_EYE ++ " Senses: {d}%% tests | {d:.1}GB disk | {d}/{d} keys\n" ++
         qt.E_CYCLE ++ " Ouroboros: {d:.1} | XP: {d}\n" ++
         "\n" ++
-        qt.E_CYCLE ++ " \xd0\xa6\xd0\xb8\xd0\xba\xd0\xbb: {d} | Uptime: {d}h", // Цикл: N | Uptime: Nh
+        qt.E_CYCLE ++ " \xd0\xa6\xd0\xb8\xd0\xba\xd0\xbb: {d} | Uptime: {d}h", // Cycle: N | Uptime: Nh
         .{
             evo.bestNameStr(),
             evo.best_ppl,
