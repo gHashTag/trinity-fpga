@@ -1,0 +1,30 @@
+; brain_amygdala_shouldSkip.t27
+; Amygdala — Check if task should be skipped
+
+; Load task_hash to r0
+
+; Register allocation (TRI-27 has 27 registers r0-r26)
+; r0: input parameters
+; r20: output/return values
+
+; Load constants
+LDI r0, 20     ; LOW_THRESHOLD
+LDI r1, 40     ; MEDIUM_THRESHOLD
+LDI r2, 60     ; HIGH_THRESHOLD
+LDI r3, 80     ; CRITICAL_THRESHOLD
+
+; Load threshold (r12 = threshold parameter)
+MOV r4, r0
+CMP r5, r10      ; Compare with thresholds
+
+; Check if should skip
+LDI r6, r0      ; threshold >= 80 = critical
+RET
+
+; Helper functions
+
+;; shouldSkip(task_hash) bool
+; Returns true if failure_count >= 3
+
+; recordFailure(task_hash, error) !void
+; Adds failure to blacklist (adds to failure_count)

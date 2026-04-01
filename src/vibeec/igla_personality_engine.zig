@@ -9,7 +9,7 @@
 // - Character memory (remembers facts about user)
 // - Style preferences (formality, detail, humor)
 //
-// phi^2 + 1/phi^2 = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// phi^2 + 1/phi^2 = 3 = TRINITY
 // =============================================================================
 
 const std = @import("std");

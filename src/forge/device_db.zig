@@ -1,5 +1,5 @@
 // =============================================================================
-// FORGE OF KOSCHEI v2.0 — Artix-7 Device Database
+// Trinity v2.0 — Artix-7 Device Database
 // =============================================================================
 //
 // Hardcoded device model for Artix-7 FPGAs. Contains:

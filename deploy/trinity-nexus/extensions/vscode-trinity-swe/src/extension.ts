@@ -6,7 +6,7 @@
 // Local Cursor/Claude Code competitor
 // Uses Trinity SWE Agent binary (Zig + IGLA)
 //
-// φ² + 1/φ² = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// φ² + 1/φ² = 3 = TRINITY
 // ═══════════════════════════════════════════════════════════════════════════════
 
 import * as vscode from 'vscode';
@@ -536,7 +536,7 @@ export function activate(context: vscode.ExtensionContext) {
 
     outputChannel.appendLine('═══════════════════════════════════════════════════════════════');
     outputChannel.appendLine('     TRINITY SWE AGENT v1.0 - 100% Local AI                   ');
-    outputChannel.appendLine('     φ² + 1/φ² = 3 = TRINITY | KOSCHEI IS IMMORTAL            ');
+    outputChannel.appendLine('     φ² + 1/φ² = 3 = TRINITY            ');
     outputChannel.appendLine('═══════════════════════════════════════════════════════════════');
     outputChannel.appendLine('');
     outputChannel.appendLine('Commands:');

@@ -21,6 +21,8 @@ pub const Opcode = enum(u8) {
     DIV = 0x13,
     INC = 0x14,
     DEC = 0x15,
+    EXP = 0x16, // e^x (transcendental)
+    SIN = 0x17, // sin(x) (transcendental)
 
     // === LOGIC (0x18-0x1D) ===
     AND = 0x18,
@@ -218,8 +220,8 @@ pub fn formatInstruction(inst: Instruction, writer: anytype) !void {
     if (inst.has_imm) {
         // Immediate instruction
         try writer.print(", {d}", .{inst.immediate});
-    } else if (inst.opcode == .NOT) {
-        // Unary NOT
+    } else if (inst.opcode == .NOT or inst.opcode == .EXP or inst.opcode == .SIN) {
+        // Unary NOT, EXP, SIN (transcendental)
         try writer.print(", t{d}", .{inst.src1});
     } else if (inst.opcode == .MOV) {
         // MOV is two-operand (dst, src1)

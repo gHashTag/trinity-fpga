@@ -2,7 +2,7 @@
 //
 // Purpose: Export benchmark results to CSV format and generate heatmap visualizations
 //
-// phi^2 + 1/phi^2 = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// phi^2 + 1/phi^2 = 3 = TRINITY
 
 const std = @import("std");
 const igla_bench = @import("igla_bench.zig");

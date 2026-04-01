@@ -2,7 +2,7 @@
 // TRINITY REPUTATION CONSENSUS v1.9 - Cross-Node Reputation Verification
 // Byzantine fault tolerant reputation voting to prevent self-reporting fraud
 // V = n * 3^k * pi^m * phi^p * e^q
-// phi^2 + 1/phi^2 = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// phi^2 + 1/phi^2 = 3 = TRINITY
 // =============================================================================
 
 const std = @import("std");

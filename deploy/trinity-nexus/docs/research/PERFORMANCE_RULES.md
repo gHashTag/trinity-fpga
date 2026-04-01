@@ -173,4 +173,4 @@ struct { b: u64, a: u8, c: u8 }  # 16 bytes
 
 ---
 
-*φ² + 1/φ² = 3 = TRINITY | KOSCHEI IS IMMORTAL*
+*φ² + 1/φ² = 3 = TRINITY*

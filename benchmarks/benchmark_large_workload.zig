@@ -1,4 +1,4 @@
-// KOSCHEI AWAKENS v7.0 Phase 4 — Large Workload Benchmark
+// Trinity v7.0 Phase 4 — Large Workload Benchmark
 // Proves JIT + Batch = REAL speedup on 1M+ iterations
 const std = @import("std");
 
@@ -327,7 +327,7 @@ fn benchmarkIdealGasLarge() void {
 pub fn main() !void {
     std.debug.print("\n", .{});
     std.debug.print("╔══════════════════════════════════════════════════════════════════════════╗\n", .{});
-    std.debug.print("║        KOSCHEI AWAKENS v7.0 — LARGE WORKLOAD BENCHMARK               ║\n", .{});
+    std.debug.print("║        Trinity v7.0 — LARGE WORKLOAD BENCHMARK               ║\n", .{});
     std.debug.print("║        Phase 4: JIT + Batch = REAL Speedup                             ║\n", .{});
     std.debug.print("║        φ² + 1/φ² = 3 = TRINITY                                          ║\n", .{});
     std.debug.print("╚══════════════════════════════════════════════════════════════════════════╝\n", .{});

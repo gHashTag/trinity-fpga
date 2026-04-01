@@ -1,5 +1,5 @@
 // =============================================================================
-// FORGE OF KOSCHEI v2.0 — Design Checkpoint Save/Load
+// Trinity v2.0 — Design Checkpoint Save/Load
 // =============================================================================
 //
 // Saves and loads ForgeDB state at any pipeline phase.

@@ -2,7 +2,7 @@
 // TRINITY RS REPAIR v1.8 - Reed-Solomon Enhanced Auto-Repair
 // When peer copy isn't available, reconstruct from RS parity shards
 // V = n * 3^k * pi^m * phi^p * e^q
-// phi^2 + 1/phi^2 = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// phi^2 + 1/phi^2 = 3 = TRINITY
 // =============================================================================
 
 const std = @import("std");

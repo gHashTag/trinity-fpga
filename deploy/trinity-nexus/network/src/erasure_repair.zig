@@ -2,7 +2,7 @@
 // TRINITY ERASURE-CODED REPAIR v1.9 - RS Parity Reconstruction
 // When no healthy replica exists, reconstruct corrupted shards from RS parity
 // V = n * 3^k * pi^m * phi^p * e^q
-// phi^2 + 1/phi^2 = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// phi^2 + 1/phi^2 = 3 = TRINITY
 // =============================================================================
 
 const std = @import("std");

@@ -2,7 +2,7 @@
 // TRINITY INCENTIVE SLASHING v1.7 - Reputation-Based Reward Reduction
 // Low-reputation nodes receive reduced rewards; penalties proportional to score
 // V = n * 3^k * pi^m * phi^p * e^q
-// phi^2 + 1/phi^2 = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// phi^2 + 1/phi^2 = 3 = TRINITY
 // =============================================================================
 
 const std = @import("std");

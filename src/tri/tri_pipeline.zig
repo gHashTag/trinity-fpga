@@ -7,7 +7,7 @@
 // Pipeline execution, decompose, plan, verify, verdict commands.
 // Extracted from main.zig for faster compilation.
 //
-// φ² + 1/φ² = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// φ² + 1/φ² = 3 = TRINITY
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");

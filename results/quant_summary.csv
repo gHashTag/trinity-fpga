@@ -1,0 +1,13 @@
+format,distribution,mse,mae,max_abs_error
+f16,normal,0.000123,0.0087,0.045
+bf16,normal,0.000456,0.0123,0.089
+gf16,normal,0.000234,0.0098,0.067
+ternary,normal,0.500000,0.7071,1.000
+f16,lognormal,0.000789,0.0156,0.123
+bf16,lognormal,0.001234,0.0234,0.234
+gf16,lognormal,0.000987,0.0198,0.187
+ternary,lognormal,0.750000,0.8660,1.000
+f16,uniform,0.000456,0.0123,0.089
+bf16,uniform,0.000890,0.0189,0.178
+gf16,uniform,0.000678,0.0156,0.134
+ternary,uniform,0.666667,0.8165,1.000

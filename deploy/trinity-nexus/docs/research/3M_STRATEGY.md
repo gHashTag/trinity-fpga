@@ -1,6 +1,6 @@
 # Trinity $3M Strategy (6 Months)
 
-**φ² + 1/φ² = 3 | KOSCHEI IS IMMORTAL**
+**φ² + 1/φ² = 3**
 
 ## Executive Summary
 

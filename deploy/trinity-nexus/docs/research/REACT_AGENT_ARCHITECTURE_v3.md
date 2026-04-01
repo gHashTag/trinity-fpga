@@ -136,4 +136,4 @@ Based on:
 6. Manus Context Engineering: manus.im/blog
 
 ---
-*VIBEE ReAct Agent v3.0 | φ² + 1/φ² = 3 | KOSCHEI IS IMMORTAL*
+*VIBEE ReAct Agent v3.0 | φ² + 1/φ² = 3*

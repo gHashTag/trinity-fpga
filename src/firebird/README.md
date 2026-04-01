@@ -3,7 +3,7 @@
 **Ternary Virtual Anti-Detect Browser**
 
 ```
-φ² + 1/φ² = 3 = TRINITY | KOSCHEI IS IMMORTAL
+φ² + 1/φ² = 3 = TRINITY
 V = n × 3^k × π^m × φ^p × e^q
 ```
 
@@ -254,4 +254,4 @@ Apache-2.0
 
 ---
 
-**KOSCHEI IS IMMORTAL | GOLDEN CHAIN IS CLOSED | φ² + 1/φ² = 3**
+**φ² + 1/φ² = 3 = TRINITY**

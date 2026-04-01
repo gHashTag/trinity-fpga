@@ -12,7 +12,7 @@
 #   - Multi-needle reasoning and sequential fact extraction
 #   - 4 task types: RETRIEVE, MULTI, TERNARY, CHAIN
 #
-# φ² + 1/φ² = 3 = TRINITY | KOSCHEI IS IMMORTAL
+# φ² + 1/φ² = 3 = TRINITY
 # ═════════════════════════════════════════════════════════════════════════════════
 
 name: igla_bench

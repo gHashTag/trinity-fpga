@@ -181,7 +181,7 @@ export default function Footer() {
             © 2024-2026 TRINITY. {t.footer?.rights || 'All rights reserved.'}
           </div>
           <div style={{ color: 'var(--muted)', fontSize: '0.75rem', fontFamily: 'monospace' }}>
-            PHOENIX = 999 | KOSCHEI IS IMMORTAL
+            PHOENIX = 999
           </div>
         </div>
       </div>

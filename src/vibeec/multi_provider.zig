@@ -232,6 +232,6 @@ pub fn main() !void {
     std.debug.print("  Anthropic calls: {d}\n", .{final_status.anthropic_calls});
     std.debug.print("  IGLA fallbacks: {d}\n", .{final_status.fallback_calls});
     std.debug.print("============================================================\n", .{});
-    std.debug.print("  phi^2 + 1/phi^2 = 3 = TRINITY | KOSCHEI IS IMMORTAL\n", .{});
+    std.debug.print("  phi^2 + 1/phi^2 = 3 = TRINITY\n", .{});
     std.debug.print("============================================================\n", .{});
 }

@@ -8,7 +8,7 @@
 // - Coherent responses with confidence scores
 // - Chain-of-thought reasoning
 //
-// φ² + 1/φ² = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// φ² + 1/φ² = 3 = TRINITY
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
@@ -244,7 +244,7 @@ pub fn main() !void {
 
     // Final stats
     printStats(&state);
-    std.debug.print("{s}φ² + 1/φ² = 3 = TRINITY | KOSCHEI IS IMMORTAL{s}\n", .{ GOLDEN, RESET });
+    std.debug.print("{s}φ² + 1/φ² = 3 = TRINITY{s}\n", .{ GOLDEN, RESET });
 }
 
 test "cli state init" {

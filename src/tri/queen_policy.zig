@@ -2,7 +2,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 // QUEEN POLICY — Safety levels, guardrails, audit trail, incident memory
 // ═══════════════════════════════════════════════════════════════════════════════
-// φ² + 1/φ² = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// φ² + 1/φ² = 3 = TRINITY
 //
 // Three-tier action safety:
 //   Level 0 (read-only): always allowed — status, leaderboard, dry-run doctor

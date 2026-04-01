@@ -152,7 +152,7 @@ while (iter.next() catch null) |entry| {
 
 Emergent Finder v1.0 successfully transforms file navigation from a utilitarian task into a cosmic experience. By representing the filesystem as orbiting photons around a central wave source, we create an intuitive yet visually stunning interface that embodies Trinity's wave-based computing philosophy.
 
-**phi^2 + 1/phi^2 = 3 = TRINITY | KOSCHEI IS IMMORTAL**
+**phi^2 + 1/phi^2 = 3 = TRINITY**
 
 ---
 

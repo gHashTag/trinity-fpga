@@ -1,4 +1,4 @@
-// Sacred Opcodes Demo - KOSCHEI AWAKENS v7.0
+// Sacred Opcodes Demo - Trinity v7.0
 const std = @import("std");
 const vm_mod = @import("src/vm.zig");
 
@@ -9,7 +9,7 @@ pub fn main() !void {
 
     std.debug.print("\n", .{});
     std.debug.print("╔════════════════════════════════════════════════════════════════╗\n", .{});
-    std.debug.print("║     KOSCHEI AWAKENS v7.0 — SACRED OPCODES DEMO                ║\n", .{});
+    std.debug.print("║     Trinity v7.0 — SACRED OPCODES DEMO                ║\n", .{});
     std.debug.print("║     φ² + 1/φ² = 3 = TRINITY                                   ║\n", .{});
     std.debug.print("╚════════════════════════════════════════════════════════════════╝\n\n", .{});
 

@@ -2,7 +2,7 @@
 // FIREBIRD VSA SIMD - SIMD-Optimized Vector Symbolic Architecture
 // 4-8x faster operations using Zig's @Vector
 // V = n × 3^k × π^m × φ^p × e^q
-// φ² + 1/φ² = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// φ² + 1/φ² = 3 = TRINITY
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");

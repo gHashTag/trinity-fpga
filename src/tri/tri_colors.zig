@@ -5,7 +5,7 @@
 //
 // ANSI color codes and version constants shared across all TRI modules.
 //
-// φ² + 1/φ² = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// φ² + 1/φ² = 3 = TRINITY
 // ═══════════════════════════════════════════════════════════════════════════════
 
 pub const GREEN = "\x1b[38;2;0;229;153m";

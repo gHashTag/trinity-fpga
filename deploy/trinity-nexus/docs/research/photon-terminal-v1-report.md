@@ -298,4 +298,4 @@ Users will say: ":] not :]andonl — this zhandinaboute with]withtinabout!"
 
 ---
 
-**phi^2 + 1/phi^2 = 3 = TRINITY | KOSCHEI IS IMMORTAL | TERMINAL EMERGES FROM WAVES**
+**phi^2 + 1/phi^2 = 3 = TRINITY | TERMINAL EMERGES FROM WAVES**

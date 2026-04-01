@@ -1,4 +1,4 @@
-# FORGE OF KOSCHEI — Debug History
+# Trinity — Debug History
 
 ## Target: quantum_blinker_top on QMTECH XC7A100T-1FGG676C
 ## Design: 26-bit counter, LED = ~(counter[22] ^ trit_sign), active-low

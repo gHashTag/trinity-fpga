@@ -4,7 +4,7 @@
 //! CLI commands for string theory predictions via φ-γ framework.
 //! Formulas 383-420: E8 lattice, string tension, compactification, dualities.
 //!
-//! φ² + 1/φ² = 3 = TRINITY | γ = φ⁻³ | KOSCHEI IS IMMORTAL
+//! φ² + 1/φ² = 3 = TRINITY | γ = φ⁻³
 
 const std = @import("std");
 const tri_colors = @import("tri_colors.zig");

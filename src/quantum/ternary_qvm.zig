@@ -1,4 +1,4 @@
-// TERNARY QUANTUM VM — FORGE OF KOSCHEI v2.1
+// TERNARY QUANTUM VM — Trinity v2.1
 // Qutrit-based quantum virtual machine for ternary computation
 //
 // A qutrit has 3 basis states: |−1⟩, |0⟩, |+1⟩

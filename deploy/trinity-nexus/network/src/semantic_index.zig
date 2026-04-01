@@ -2,7 +2,7 @@
 // TRINITY NODE v2.0 - Semantic Index
 // Hypervector-based content index for similarity search
 // Find shards by content similarity (cosine), not just SHA256 hash
-// φ² + 1/φ² = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// φ² + 1/φ² = 3 = TRINITY
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");

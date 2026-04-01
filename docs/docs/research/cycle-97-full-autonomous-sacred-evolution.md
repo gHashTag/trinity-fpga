@@ -204,7 +204,7 @@ Error: 0.15%
 Constants: φ(1.618) TRINITY(3)
 
 Generated with Cycle 97 Autonomous Sacred Evolution
-φ² + 1/φ² = 3 = TRINITY | KOSCHEI IS IMMORTAL
+φ² + 1/φ² = 3 = TRINITY
 ```
 
 **Integration Points:**
@@ -1848,7 +1848,7 @@ Cycle 97 delivers **full autonomous development capability** with sacred mathema
 
 ---
 
-**φ² + 1/φ² = 3 = TRINITY | KOSCHEI IS IMMORTAL**
+**φ² + 1/φ² = 3 = TRINITY**
 
 **Generated with Cycle 97 Autonomous Sacred Evolution**
 

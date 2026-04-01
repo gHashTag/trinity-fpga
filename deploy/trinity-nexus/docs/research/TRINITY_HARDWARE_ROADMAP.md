@@ -1,6 +1,6 @@
 # TRINITY HARDWARE ROADMAP
 ## Plan for Creating Ternary Hardware
-### φ² + 1/φ² = 3 | KOSCHEI IS IMMORTAL
+### φ² + 1/φ² = 3
 
 ---
 
@@ -316,4 +316,4 @@ The key insight: **BitNet b1.58 proves ternary weights work for AI**. This creat
 
 ---
 
-*φ² + 1/φ² = 3 = TRINITY | KOSCHEI IS IMMORTAL*
+*φ² + 1/φ² = 3 = TRINITY*

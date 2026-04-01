@@ -3,7 +3,7 @@
 // Weighted score: PoS pass rate (40%) + Uptime (30%) + Bandwidth (30%)
 // v1.7: Reputation decay — stale scores fade over time (half-life model)
 // V = n × 3^k × π^m × φ^p × e^q
-// φ² + 1/φ² = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// φ² + 1/φ² = 3 = TRINITY
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");

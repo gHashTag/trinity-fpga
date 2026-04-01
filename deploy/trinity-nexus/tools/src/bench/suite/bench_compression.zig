@@ -1,7 +1,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 // TRINITY COMPRESSION BENCHMARK v1.0
 // TCV1-TCV5 Internal Trit Compression + End-to-End Pipeline Comparison
-// phi^2 + 1/phi^2 = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// phi^2 + 1/phi^2 = 3 = TRINITY
 // ═══════════════════════════════════════════════════════════════════════════════
 //
 // Self-contained benchmark with inline trit packing (same algorithm as vsa.zig).
@@ -576,7 +576,7 @@ pub fn main() !void {
         \\=======================================================================
         \\  TRINITY COMPRESSION BENCHMARK v1.0
         \\  TCV1-TCV5 Internal Trit Compression + End-to-End Pipeline
-        \\  phi^2 + 1/phi^2 = 3 = TRINITY | KOSCHEI IS IMMORTAL
+        \\  phi^2 + 1/phi^2 = 3 = TRINITY
         \\=======================================================================
         \\
         \\

@@ -5,7 +5,7 @@
 // Banner, help, info, version, REPL, parseCommand, and input processing.
 // Extracted from main.zig for faster compilation.
 //
-// phi^2 + 1/phi^2 = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// phi^2 + 1/phi^2 = 3 = TRINITY
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");

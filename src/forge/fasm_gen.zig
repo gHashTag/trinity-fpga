@@ -1,5 +1,5 @@
 // =============================================================================
-// FORGE OF KOSCHEI v2.0 — FASM Generator
+// Trinity v2.0 — FASM Generator
 // =============================================================================
 //
 // Generates FASM (FPGA Assembly) features from a placed and routed design.

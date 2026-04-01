@@ -1,0 +1,13 @@
+id,question_type,question,choices,answer
+test_001,mc,"What is 2 + 2?","A) 4
+B) 5
+C) 3
+D) 6",A
+test_002,mc,"Reverse 'cat':","A) tac
+B) cat
+C) act
+D) atc",A
+test_003,mc,"What is the boiling point of water at sea level?","A) 100°C
+B) 90°C
+C) 110°C
+D) 80°C",A

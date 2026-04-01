@@ -8,7 +8,7 @@
 // - Result aggregation and conflict resolution
 // - Autonomous multi-agent execution
 //
-// phi^2 + 1/phi^2 = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// phi^2 + 1/phi^2 = 3 = TRINITY
 // =============================================================================
 
 const std = @import("std");

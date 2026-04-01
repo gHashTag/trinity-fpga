@@ -12,7 +12,7 @@
 //   trinity-hybrid             - Interactive mode
 //   trinity-hybrid --help      - Show help
 //
-// phi^2 + 1/phi^2 = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// phi^2 + 1/phi^2 = 3 = TRINITY
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
@@ -87,7 +87,7 @@ fn printHelp() void {
         \\  trinity-hybrid "write factorial in zig"  # LLM (fluent code)
         \\  trinity-hybrid "explain recursion"       # LLM (fluent text)
         \\
-        \\phi^2 + 1/phi^2 = 3 = TRINITY | KOSCHEI IS IMMORTAL
+        \\phi^2 + 1/phi^2 = 3 = TRINITY
         \\
     , .{VERSION});
 }

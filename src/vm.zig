@@ -578,7 +578,7 @@ pub const VSAVM = struct {
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
-    // KOSCHEI EYE v2.0: Blind Spots Discovery (603x speedup via VM)
+    // Trinity Eye v2.0: Blind Spots Discovery (603x speedup via VM)
     // ═══════════════════════════════════════════════════════════════════════════
 
     /// Query blind spots registry via native VM opcode
@@ -608,7 +608,7 @@ pub const VSAVM = struct {
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
-    // KOSCHEI EYE v3.0: Autonomous Self-Evolving Discovery (10000+ predictions/sec)
+    // Trinity Eye v3.0: Autonomous Self-Evolving Discovery (10000+ predictions/sec)
     // ═══════════════════════════════════════════════════════════════════════════
 
     /// Run autonomous discovery loop (10000+ iterations/sec)
@@ -637,7 +637,7 @@ pub const VSAVM = struct {
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
-    // KOSCHEI EYE v4.0: OMNISCIENT SINGULARITY
+    // Trinity Eye v4.0: OMNISCIENT SINGULARITY
     // ═══════════════════════════════════════════════════════════════════════════
 
     /// Infinite self-evolving loop (∞ predictions/sec, 2500x speedup)

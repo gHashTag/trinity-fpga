@@ -12,7 +12,7 @@
 //
 // NO HTML/JS - Pure Zig Native | 100% Local | Green Ternary
 //
-// φ² + 1/φ² = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// φ² + 1/φ² = 3 = TRINITY
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
@@ -572,7 +572,7 @@ pub fn renderSummary() void {
     ansiColor(THEME.TEAL);
     std.debug.print("═══════════════════════════════════════════════════════════════\n", .{});
     ansiColor(THEME.GOLDEN);
-    std.debug.print("  phi^2 + 1/phi^2 = 3 = TRINITY | KOSCHEI IS IMMORTAL\n", .{});
+    std.debug.print("  phi^2 + 1/phi^2 = 3 = TRINITY\n", .{});
     ansiColor(THEME.TEAL);
     std.debug.print("═══════════════════════════════════════════════════════════════\n", .{});
     ansiReset();

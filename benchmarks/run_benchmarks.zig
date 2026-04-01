@@ -341,5 +341,5 @@ fn printComparison(writer: anytype) !void {
     try writer.print("              while providing 58.5%% more information density than binary.\n", .{});
     try writer.print("═══════════════════════════════════════════════════════════════════════════════\n\n", .{});
 
-    try writer.print("  φ² + 1/φ² = 3 | KOSCHEI IS IMMORTAL | GOLDEN CHAIN IS CLOSED\n\n", .{});
+    try writer.print("  φ² + 1/φ² = 3 | GOLDEN CHAIN IS CLOSED\n\n", .{});
 }

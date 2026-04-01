@@ -15,7 +15,7 @@
 //   4. Percentile-based quantization (33rd percentile)
 //   5. L2 normalization for cosine similarity
 //
-// φ² + 1/φ² = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// φ² + 1/φ² = 3 = TRINITY
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
@@ -733,7 +733,7 @@ pub fn runBenchmarks(allocator: std.mem.Allocator, vocab: *const VocabStore) !vo
 
     std.debug.print("\n", .{});
     std.debug.print("═══════════════════════════════════════════════════════════════\n", .{});
-    std.debug.print("  phi^2 + 1/phi^2 = 3 = TRINITY | KOSCHEI IS IMMORTAL\n", .{});
+    std.debug.print("  phi^2 + 1/phi^2 = 3 = TRINITY\n", .{});
     std.debug.print("═══════════════════════════════════════════════════════════════\n", .{});
 }
 

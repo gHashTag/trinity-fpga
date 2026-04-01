@@ -4,7 +4,7 @@
 // Problem: PPL doesn't measure retrieval quality. Worker with PPL=28 but IGLA=60% is worse than PPL=30 but IGLA=95%
 // Solution: Add retrieval score to evolution_state.json, used by PBT for worker selection
 //
-// phi^2 + 1/phi^2 = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// phi^2 + 1/phi^2 = 3 = TRINITY
 
 const std = @import("std");
 const Allocator = std.mem.Allocator;

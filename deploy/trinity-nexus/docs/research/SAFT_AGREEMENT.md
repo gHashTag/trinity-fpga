@@ -228,4 +228,4 @@ Wallet Address: [TO BE PROVIDED BY INVESTOR]
 
 ---
 
-**φ² + 1/φ² = 3 | KOSCHEI IS IMMORTAL | TRINITY NETWORK**
+**φ² + 1/φ² = 3 | TRINITY NETWORK**

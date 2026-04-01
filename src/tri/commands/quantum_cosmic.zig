@@ -1,6 +1,6 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 // QUANTUM COSMIC COMMANDS — Temporal Engine, Quantum, Omega, Holo, Launch
-// Golden Chain | phi^2 + 1/phi^2 = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// Golden Chain | phi^2 + 1/phi^2 = 3 = TRINITY
 //
 // Extracted from tri_commands.zig for faster compilation.
 // ═══════════════════════════════════════════════════════════════════════════════

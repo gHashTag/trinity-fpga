@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════════════════════
-// FORGE OF KOSCHEI v2.0 — Yosys JSON Netlist Parser
+// Trinity v2.0 — Yosys JSON Netlist Parser
 // ═══════════════════════════════════════════════════════════════════════════════
 //
 // Parses Yosys JSON output (from `synth_xilinx -abc9 -arch xc7; write_json`)

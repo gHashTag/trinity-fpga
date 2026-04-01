@@ -2,7 +2,7 @@
 // FIREBIRD PARALLEL - Multi-threaded Evolution
 // 4x speedup on 4 cores via parallel fitness evaluation
 // V = n × 3^k × π^m × φ^p × e^q
-// φ² + 1/φ² = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// φ² + 1/φ² = 3 = TRINITY
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");

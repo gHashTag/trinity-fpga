@@ -1,7 +1,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 // OSS API CLIENT - Hybrid IGLA + External LLM Integration
 // Supports: Groq, OpenAI, GPT-OSS-120B compatible endpoints
-// φ² + 1/φ² = 3 | KOSCHEI IS IMMORTAL
+// φ² + 1/φ² = 3
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");

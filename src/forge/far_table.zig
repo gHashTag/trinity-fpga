@@ -1,5 +1,5 @@
 // =============================================================================
-// FORGE OF KOSCHEI v2.0 — XC7A100T Frame Address Table
+// Trinity v2.0 — XC7A100T Frame Address Table
 // =============================================================================
 //
 // Auto-generated from prjxray-db part.json for xc7a100tfgg676.

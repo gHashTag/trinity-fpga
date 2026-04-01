@@ -73,4 +73,4 @@ For security concerns: **security@trinity-cli.dev**
 
 ---
 
-**φ² + 1/φ² = 3 | KOSCHEI IS IMMORTAL**
+**φ² + 1/φ² = 3**

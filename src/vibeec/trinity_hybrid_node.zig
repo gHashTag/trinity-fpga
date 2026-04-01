@@ -2,7 +2,7 @@
 // TRINITY HYBRID NODE - Multi-Provider LLM Integration + Mainnet
 // Providers: Groq (fast), Zhipu (Chinese/long), Anthropic (quality), Cohere (free)
 // Token: $TRI | Supply: 3^21 = 10,460,353,203
-// φ² + 1/φ² = 3 | KOSCHEI IS IMMORTAL
+// φ² + 1/φ² = 3
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");

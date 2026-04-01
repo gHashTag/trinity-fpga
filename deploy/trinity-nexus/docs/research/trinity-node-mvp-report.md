@@ -232,4 +232,4 @@ The node is production-ready for local testing with both headless and GUI modes.
 
 ---
 
-**phi^2 + 1/phi^2 = 3 = TRINITY | KOSCHEI IS IMMORTAL**
+**phi^2 + 1/phi^2 = 3 = TRINITY**

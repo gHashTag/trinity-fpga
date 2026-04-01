@@ -199,4 +199,4 @@ Combine sharding with TCV5 arithmetic coding per shard.
 
 Corpus sharding completes the TCV6 format with parallel-ready chunk processing. The storage stack now offers 6 formats (TCV1-TCV6) covering all use cases from minimal overhead to maximum compression to large-scale parallel processing.
 
-**φ² + 1/φ² = 3 = TRINITY | KOSCHEI IS IMMORTAL | GOLDEN CHAIN ENFORCED**
+**φ² + 1/φ² = 3 = TRINITY | GOLDEN CHAIN ENFORCED**

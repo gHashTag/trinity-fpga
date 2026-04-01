@@ -1,7 +1,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 // BITNET b1.58 FULL MODEL - Complete Inference Pipeline
 // Load all 290 tensors, wire up 24 layers, generate coherent text
-// φ² + 1/φ² = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// φ² + 1/φ² = 3 = TRINITY
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");

@@ -22,7 +22,7 @@
  *   8 — Settings (wave interference config)
  *   9 — Viz     (pure visualization)
  *
- * φ² + 1/φ² = 3 = TRINITY | KOSCHEI IS IMMORTAL
+ * φ² + 1/φ² = 3 = TRINITY
  */
 
 // Web Speech API type declarations

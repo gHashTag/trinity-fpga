@@ -6,7 +6,7 @@
 // Platforms: Raspberry Pi, macOS, Linux
 // Discovery: UDP port 9333
 //
-// φ² + 1/φ² = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// φ² + 1/φ² = 3 = TRINITY
 //
 // ═══════════════════════════════════════════════════════════════════════════════
 

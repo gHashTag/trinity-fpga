@@ -2,7 +2,7 @@
 // TRINITY STORAGE PROVIDER v1.4 - Reed-Solomon + Connection Pooling + Manifest DHT
 // Production storage: in-memory cache + LRU eviction + disk persistence + pinning + RS
 // V = n × 3^k × π^m × φ^p × e^q
-// φ² + 1/φ² = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// φ² + 1/φ² = 3 = TRINITY
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");

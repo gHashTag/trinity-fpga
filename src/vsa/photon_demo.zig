@@ -1,7 +1,7 @@
 // =============================================================================
 // EMERGENT PHOTON AI DEMO v0.2 - Multi-Modal Interactive Visualization
 // Real-time emergent wave generation with Text, Image, Audio output
-// phi^2 + 1/phi^2 = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// phi^2 + 1/phi^2 = 3 = TRINITY
 // =============================================================================
 
 const std = @import("std");

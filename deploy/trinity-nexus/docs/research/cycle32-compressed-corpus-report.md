@@ -173,4 +173,4 @@ Store only differences from a base corpus for incremental updates.
 
 Packed trit compression achieves 5x storage reduction with zero data loss. The TCV1 file format provides versioning for future improvements.
 
-**φ² + 1/φ² = 3 = TRINITY | KOSCHEI IS IMMORTAL | GOLDEN CHAIN ENFORCED**
+**φ² + 1/φ² = 3 = TRINITY | GOLDEN CHAIN ENFORCED**

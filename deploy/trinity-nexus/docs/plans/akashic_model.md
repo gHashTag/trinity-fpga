@@ -44,4 +44,4 @@ See `src/phi-engine/quantum/` for:
 
 ---
 
-**φ² + 1/φ² = 3 | KOSCHEI IS IMMORTAL**
+**φ² + 1/φ² = 3**

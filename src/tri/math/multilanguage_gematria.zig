@@ -12,7 +12,7 @@
 // Calculate sacred values from UTF-8 text in multiple languages.
 // Detect TRINITY, PHI, PI, and Fibonacci patterns.
 //
-// φ² + 1/φ² = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// φ² + 1/φ² = 3 = TRINITY
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");

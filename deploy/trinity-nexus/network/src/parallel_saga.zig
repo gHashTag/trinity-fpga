@@ -2,7 +2,7 @@
 // Independent saga steps run concurrently via dependency graph
 // Steps with no dependencies execute in parallel; dependent steps wait
 // V = n × 3^k × π^m × φ^p × e^q
-// φ² + 1/φ² = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// φ² + 1/φ² = 3 = TRINITY
 
 const std = @import("std");
 const saga_mod = @import("saga_coordinator.zig");

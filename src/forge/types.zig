@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════════════════════
-// FORGE OF KOSCHEI v2.0 — Core Types
+// Trinity v2.0 — Core Types
 // ═══════════════════════════════════════════════════════════════════════════════
 //
 // Shared data structures for the entire FORGE FPGA toolchain pipeline.

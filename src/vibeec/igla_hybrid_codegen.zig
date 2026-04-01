@@ -413,6 +413,6 @@ pub fn main() !void {
     std.debug.print("  Groq calls: {d}\n", .{final_stats.groq_calls});
     std.debug.print("  IGLA fallbacks: {d}\n", .{final_stats.fallback_calls});
     std.debug.print("============================================================\n", .{});
-    std.debug.print("  phi^2 + 1/phi^2 = 3 = TRINITY | KOSCHEI IS IMMORTAL\n", .{});
+    std.debug.print("  phi^2 + 1/phi^2 = 3 = TRINITY\n", .{});
     std.debug.print("============================================================\n", .{});
 }

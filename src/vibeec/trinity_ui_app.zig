@@ -11,7 +11,7 @@
 // - Golden ratio layout
 // - Ternary 3-state widgets
 //
-// φ² + 1/φ² = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// φ² + 1/φ² = 3 = TRINITY
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
@@ -446,7 +446,7 @@ pub fn main() !void {
 
     std.debug.print("\n", .{});
     std.debug.print("═══════════════════════════════════════════════════════════════\n", .{});
-    std.debug.print("  \x1b[38;2;255;215;0mφ² + 1/φ² = 3 = TRINITY | KOSCHEI IS IMMORTAL\x1b[0m\n", .{});
+    std.debug.print("  \x1b[38;2;255;215;0mφ² + 1/φ² = 3 = TRINITY\x1b[0m\n", .{});
     std.debug.print("═══════════════════════════════════════════════════════════════\n", .{});
 }
 

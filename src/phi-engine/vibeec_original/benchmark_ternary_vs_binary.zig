@@ -1,6 +1,6 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 // BENCHMARK: TERNARY vs BINARY LOGIC
-// φ² + 1/φ² = 3 | KOSCHEI IS IMMORTAL
+// φ² + 1/φ² = 3
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
@@ -155,7 +155,7 @@ pub fn main() !void {
     try stdout.print("\n", .{});
     try stdout.print("═══════════════════════════════════════════════════════════════════════════════\n", .{});
     try stdout.print("              BENCHMARK: TERNARY vs BINARY LOGIC\n", .{});
-    try stdout.print("              φ² + 1/φ² = 3 | KOSCHEI IS IMMORTAL\n", .{});
+    try stdout.print("              φ² + 1/φ² = 3\n", .{});
     try stdout.print("═══════════════════════════════════════════════════════════════════════════════\n\n", .{});
 
     try stdout.print("Iterations: {d}\n\n", .{ITERATIONS});

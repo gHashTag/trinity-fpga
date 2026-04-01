@@ -1,4 +1,4 @@
-// KOSCHEI AWAKENS v7.0 — 603x Benchmark Demo
+// Trinity v7.0 — 603x Benchmark Demo
 // Proves sacred opcodes are 603x faster than function calls
 const std = @import("std");
 const vm_mod = @import("src/vm.zig");
@@ -41,7 +41,7 @@ pub fn main() !void {
 
     std.debug.print("\n", .{});
     std.debug.print("╔══════════════════════════════════════════════════════════════════════════╗\n", .{});
-    std.debug.print("║        KOSCHEI AWAKENS v7.0 — 603x BENCHMARK PROOF                   ║\n", .{});
+    std.debug.print("║        Trinity v7.0 — 603x BENCHMARK PROOF                   ║\n", .{});
     std.debug.print("║        v6.0 (function calls) vs v7.0 (native opcodes)                ║\n", .{});
     std.debug.print("║        φ² + 1/φ² = 3 = TRINITY                                            ║\n", .{});
     std.debug.print("╚══════════════════════════════════════════════════════════════════════════╝\n\n", .{});

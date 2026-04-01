@@ -1,7 +1,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 // BITNET GGUF INFERENCE - Native Zig Coherent Text Generation
 // Load BitNet-b1.58-2B-4T GGUF model and generate coherent text
-// φ² + 1/φ² = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// φ² + 1/φ² = 3 = TRINITY
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
@@ -561,7 +561,7 @@ pub fn main() !void {
     std.debug.print("  Time: {d:.2} ms\n", .{@as(f64, @floatFromInt(gen_time)) / 1e6});
     std.debug.print("  Speed: {d:.2} tok/s\n", .{tokens_per_sec});
     std.debug.print("\n", .{});
-    std.debug.print("φ² + 1/φ² = 3 = TRINITY | KOSCHEI IS IMMORTAL\n", .{});
+    std.debug.print("φ² + 1/φ² = 3 = TRINITY\n", .{});
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

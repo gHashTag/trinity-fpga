@@ -187,4 +187,4 @@ Dmitrii
 
 ---
 
-**φ² + 1/φ² = 3 | KOSCHEI IS IMMORTAL | CLOSE THE DEAL**
+**φ² + 1/φ² = 3 | CLOSE THE DEAL**

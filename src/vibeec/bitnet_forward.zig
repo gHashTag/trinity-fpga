@@ -20,7 +20,7 @@
 //
 // For real ternary inference, use src/b2t/ or external BitNet implementations.
 //
-// φ² + 1/φ² = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// φ² + 1/φ² = 3 = TRINITY
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");

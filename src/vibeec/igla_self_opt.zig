@@ -8,7 +8,7 @@
 // - Needle score threshold >0.7 for quality gate
 // - Automatic improvement loop
 //
-// phi^2 + 1/phi^2 = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// phi^2 + 1/phi^2 = 3 = TRINITY
 // =============================================================================
 
 const std = @import("std");

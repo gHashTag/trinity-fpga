@@ -38,7 +38,7 @@ pub fn runKoscheiCommand(allocator: std.mem.Allocator) void {
         \\ - ALL changes go through .tri specs
         \\ - One source of truth = no duplication
         \\
-        \\φ² + 1/φ² = 3 = TRINITY | KOSCHEI IS IMMORTAL
+        \\φ² + 1/φ² = 3 = TRINITY
         \\
     , .{});
 }

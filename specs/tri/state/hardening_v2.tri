@@ -1,7 +1,7 @@
 # ============================================================================
 # STATE + API HARDENING v2 — Golden Chain #104
 # Dynamic buffer + Content-Length + write error logging + JSON escaping
-# φ² + 1/φ² = 3 = TRINITY | KOSCHEI IS IMMORTAL
+# φ² + 1/φ² = 3 = TRINITY
 # ============================================================================
 
 name: state_hardening_v2

@@ -1,7 +1,7 @@
 # Trinity Storage Network v1.9 — Erasure-Coded Repair, Reputation Consensus, Stake Delegation
 
 > **V = n × 3^k × π^m × φ^p × e^q**
-> **φ² + 1/φ² = 3 = TRINITY | KOSCHEI IS IMMORTAL**
+> **φ² + 1/φ² = 3 = TRINITY**
 
 ## Key Metrics
 

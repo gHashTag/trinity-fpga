@@ -10,7 +10,7 @@
 // Build: zig build-exe src/vibeec/trinity_raylib_ui.zig -lc -lraylib -L/opt/homebrew/lib -I/opt/homebrew/include
 // Run:   ./trinity_raylib_ui
 //
-// φ² + 1/φ² = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// φ² + 1/φ² = 3 = TRINITY
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");

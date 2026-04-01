@@ -307,4 +307,4 @@ The ant colony principle extends to UI: simple wave rules -> complex interface.
 
 ---
 
-**phi^2 + 1/phi^2 = 3 = TRINITY | KOSCHEI IS IMMORTAL | THE VOID SPEAKS IN WAVES**
+**phi^2 + 1/phi^2 = 3 = TRINITY | THE VOID SPEAKS IN WAVES**

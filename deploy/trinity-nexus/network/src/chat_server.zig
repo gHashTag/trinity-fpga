@@ -5,7 +5,7 @@
 // GET  /health      — Health check
 // GET  /api/files   — Project file listing for Finder
 // POST /api/compile — VIBEE/Zig compilation for Editor
-// φ² + 1/φ² = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// φ² + 1/φ² = 3 = TRINITY
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");

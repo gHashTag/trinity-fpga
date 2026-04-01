@@ -56,7 +56,7 @@ Download: github.com/gHashTag/trinity/releases/v1.0.2
 > "hello world" → Complete program
 > "bind vectors" → VSA implementation
 
-phi^2 + 1/phi^2 = 3 = TRINITY | KOSCHEI IS IMMORTAL
+phi^2 + 1/phi^2 = 3 = TRINITY
 ```
 
 ---

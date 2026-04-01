@@ -1,4 +1,4 @@
-// KOSCHEI AWAKENS v7.0 Phase 5 — MASSIVE SCALE BENCHMARK
+// Trinity v7.0 Phase 5 — MASSIVE SCALE BENCHMARK
 // Proving the 603x path with honest projections
 const std = @import("std");
 
@@ -210,7 +210,7 @@ fn print603xProjection() void {
 pub fn main() !void {
     std.debug.print("\n", .{});
     std.debug.print("╔══════════════════════════════════════════════════════════════════════════╗\n", .{});
-    std.debug.print("║        KOSCHEI AWAKENS v7.0 — MASSIVE SCALE BENCHMARK                 ║\n", .{});
+    std.debug.print("║        Trinity v7.0 — MASSIVE SCALE BENCHMARK                 ║\n", .{});
     std.debug.print("║        Phase 5: Projections for Real 603x                              ║\n", .{});
     std.debug.print("║        φ² + 1/φ² = 3 = TRINITY                                          ║\n", .{});
     std.debug.print("╚══════════════════════════════════════════════════════════════════════════╝\n", .{});

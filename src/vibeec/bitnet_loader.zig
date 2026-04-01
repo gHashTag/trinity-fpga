@@ -1,7 +1,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 // BITNET b1.58 LOADER - Native Ternary Model Loading
 // Load BitNet models from safetensors format
-// φ² + 1/φ² = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// φ² + 1/φ² = 3 = TRINITY
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");

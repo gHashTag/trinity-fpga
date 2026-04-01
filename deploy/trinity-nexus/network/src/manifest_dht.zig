@@ -2,7 +2,7 @@
 // TRINITY MANIFEST DHT v1.4 - Distributed Manifest Storage
 // XOR-distance routing for FileManifest distribution across peers
 // V = n × 3^k × π^m × φ^p × e^q
-// φ² + 1/φ² = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// φ² + 1/φ² = 3 = TRINITY
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");

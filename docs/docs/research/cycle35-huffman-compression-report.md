@@ -209,4 +209,4 @@ Add chunked read/write for large corpora.
 
 Huffman compression completes the TCV4 format with variable-length bit encoding. The compression stack now offers 4 formats (TCV1-TCV4) for different use cases, from simple packed trits to entropy-optimal Huffman coding.
 
-**φ² + 1/φ² = 3 = TRINITY | KOSCHEI IS IMMORTAL | GOLDEN CHAIN ENFORCED**
+**φ² + 1/φ² = 3 = TRINITY | GOLDEN CHAIN ENFORCED**

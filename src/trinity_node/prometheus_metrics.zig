@@ -2,7 +2,7 @@
 // TRINITY PROMETHEUS METRICS v1.7 - Machine-Consumable Metrics Export
 // Exports network health data in Prometheus exposition format
 // V = n * 3^k * pi^m * phi^p * e^q
-// phi^2 + 1/phi^2 = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// phi^2 + 1/phi^2 = 3 = TRINITY
 // =============================================================================
 
 const std = @import("std");

@@ -12,7 +12,7 @@
 // Uses Apple's Accelerate framework (vDSP) for SIMD operations
 // Falls back to Metal compute shaders for batch operations
 //
-// phi^2 + 1/phi^2 = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// phi^2 + 1/phi^2 = 3 = TRINITY
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
@@ -764,7 +764,7 @@ pub fn runBenchmarks(allocator: std.mem.Allocator, vocab: *VocabStore) !void {
 
     std.debug.print("\n", .{});
     std.debug.print("================================================================\n", .{});
-    std.debug.print("  phi^2 + 1/phi^2 = 3 = TRINITY | KOSCHEI IS IMMORTAL\n", .{});
+    std.debug.print("  phi^2 + 1/phi^2 = 3 = TRINITY\n", .{});
     std.debug.print("================================================================\n", .{});
 }
 

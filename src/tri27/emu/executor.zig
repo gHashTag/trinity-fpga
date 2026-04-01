@@ -216,28 +216,26 @@ pub fn execute(cpu: *CPUState, inst: Instruction, memory: []align(8) u8) ExecErr
         // ═════════════════════════════════════════════════════════════════
         .EXP => {
             // EXP dst, src — Compute e^x using Taylor series with fixed-point
-            // Input: src register (ternary value, interpreted as scaled integer)
-            // Output: dst register (result, scaled by 1000 for precision)
+            // Input: src register value x (unscaled, e.g., x=1 means 1.0)
+            // Output: dst register = e^x * 1000 (scaled result)
             const src_value = cpu.t27[inst.src1];
 
-            // Use fixed-point arithmetic with scale factor 1000
-            // e^x ≈ 1 + x + x²/2 + x³/6 + x⁴/24 for small x
-            // For x in [0, 2], using scaled arithmetic
             const scale = 1000;
-            const x_scaled = @as(i64, @intCast(src_value.trits));
+            // Scale the input for Taylor series precision
+            const x = @as(i64, @intCast(src_value.trits));
+            const x_scaled = x * scale; // x * 1000 for precision
 
-            // Compute x²/scale, x³/scale², x⁴/scale³ with integer arithmetic
-            const x2_scaled = x_scaled * x_scaled / scale;
-            const x3_scaled = x2_scaled * x_scaled / scale;
-            const x4_scaled = x3_scaled * x_scaled / scale;
+            // Compute Taylor series: e^x = 1 + x + x²/2! + x³/3! + x⁴/4!
+            // Using scaled arithmetic to preserve fractional terms
+            // x²/scale maintains precision for x²/2 term
+            const x2 = @divTrunc(x_scaled * x_scaled, scale); // x² * 1000
+            const x3 = @divTrunc(x2 * x_scaled, scale);      // x³ * 1000
+            const x4 = @divTrunc(x3 * x_scaled, scale);      // x⁴ * 1000
 
-            // Taylor series with integer arithmetic (scaled by scale)
-            // e^x * scale = scale + x + x²/2 + x³/6 + x⁴/24
-            const result_scaled = scale + x_scaled + x2_scaled / 2 + x3_scaled / 6 + x4_scaled / 24;
+            // e^x * scale = scale + x*scale + x²/2 + x³/6 + x⁴/24
+            const result_scaled = scale + x_scaled + @divTrunc(x2, 2) + @divTrunc(x3, 6) + @divTrunc(x4, 24);
 
-            // Convert back to ternary (integer)
             const trit_value = Trit27{ .trits = result_scaled };
-
             cpu.t27[inst.dst] = trit_value;
             cpu.flags.Z = result_scaled == 0;
             cpu.flags.N = result_scaled < 0;
@@ -246,28 +244,26 @@ pub fn execute(cpu: *CPUState, inst: Instruction, memory: []align(8) u8) ExecErr
 
         .SIN => {
             // SIN dst, src — Compute sin(x) using Taylor series with fixed-point
-            // Input: src register (ternary value, interpreted as scaled integer)
-            // Output: dst register (result, scaled by 1000 for precision)
+            // Input: src register value x (unscaled, e.g., x=1 means 1.0 radian)
+            // Output: dst register = sin(x) * 1000 (scaled result)
             const src_value = cpu.t27[inst.src1];
 
-            // Use fixed-point arithmetic with scale factor 1000
-            // sin(x) ≈ x - x³/6 + x⁵/120 - x⁷/5040
-            // For x in [0, 2], using scaled arithmetic
             const scale = 1000;
-            const x_scaled = @as(i64, @intCast(src_value.trits));
+            // Scale the input for Taylor series precision
+            const x = @as(i64, @intCast(src_value.trits));
+            const x_scaled = x * scale; // x * 1000 for precision
 
-            // Compute x³/scale², x⁵/scale⁴, x⁷/scale⁶ with integer arithmetic
-            const x3_scaled = x_scaled * x_scaled * x_scaled / (scale * scale);
-            const x5_scaled = x3_scaled * x_scaled * x_scaled / (scale * scale);
-            const x7_scaled = x5_scaled * x_scaled * x_scaled / (scale * scale);
+            // Compute Taylor series: sin(x) = x - x³/3! + x⁵/5! - x⁷/7!
+            // Using scaled arithmetic to preserve fractional terms
+            const x2 = @divTrunc(x_scaled * x_scaled, scale); // x² * 1000
+            const x3 = @divTrunc(x2 * x_scaled, scale);      // x³ * 1000
+            const x5 = @divTrunc(x3 * x2, scale);           // x⁵ * 1000
+            const x7 = @divTrunc(x5 * x2, scale);           // x⁷ * 1000
 
-            // Taylor series with integer arithmetic (scaled by scale)
-            // sin(x) * scale = x - x³/6 + x⁵/120 - x⁷/5040
-            const result_scaled = x_scaled - x3_scaled / 6 + x5_scaled / 120 - x7_scaled / 5040;
+            // sin(x) * scale = x*scale - x³/6 + x⁵/120 - x⁷/5040
+            const result_scaled = x_scaled - @divTrunc(x3, 6) + @divTrunc(x5, 120) - @divTrunc(x7, 5040);
 
-            // Convert back to ternary (integer)
             const trit_value = Trit27{ .trits = result_scaled };
-
             cpu.t27[inst.dst] = trit_value;
             cpu.flags.Z = result_scaled == 0;
             cpu.flags.N = result_scaled < 0;

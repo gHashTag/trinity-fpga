@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════════════════════
-// Real FPGA Benchmark — KOSCHEI Week 4
+// Real FPGA Benchmark
 // ═══════════════════════════════════════════════════════════════════════════════
 //
 // Benchmark: Real VSA pipeline latency on actual FPGA hardware
@@ -21,7 +21,7 @@ pub fn main() !void {
     const allocator = std.heap.page_allocator;
 
     try std.Io.Writer.print(stdout, "╔════════════════════════════════════════════════════════════╗\n", .{});
-    try std.Io.Writer.print(stdout, "║  Real FPGA Benchmark — KOSCHEI Week 4                  ║\n", .{});
+    try std.Io.Writer.print(stdout, "║  Real FPGA Benchmark                  ║\n", .{});
     try std.Io.Writer.print(stdout, "╚════════════════════════════════════════════════════════════╝\n\n", .{});
 
     // Initialize FPGA
@@ -155,7 +155,7 @@ pub fn main() !void {
 
     // Summary
     try std.Io.Writer.print(stdout, "╔════════════════════════════════════════════════════════════╗\n", .{});
-    try std.Io.Writer.print(stdout, "║  KOSCHEI Week 4 — HARDWARE SUMMARY                      ║\n", .{});
+    try std.Io.Writer.print(stdout, "║  TRINITY — HARDWARE SUMMARY                              ║\n", .{});
     try std.Io.Writer.print(stdout, "╠════════════════════════════════════════════════════════════╣\n", .{});
     try std.Io.Writer.print(stdout, "║  Mode:          {s:30}            ║\n", .{if (is_hw) "FPGA HW" else "CPU Fallback"});
     try std.Io.Writer.print(stdout, "║  Pipeline:      {d:.2} µs/op                             ║\n", .{avg_us});

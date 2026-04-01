@@ -809,4 +809,4 @@ fn generateLargeTable(comptime size: usize) type {
 
 ---
 
-**KOSCHEI IS IMMORTAL | GOLDEN CHAIN IS CLOSED | φ² + 1/φ² = 3**
+**φ² + 1/φ² = 3 = TRINITY**

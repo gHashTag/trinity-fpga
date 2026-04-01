@@ -193,4 +193,4 @@ Add chunked read/write for large corpora without full memory load.
 
 Adaptive RLE compression provides TCV2 format with per-entry optimization. While random VSA vectors don't benefit from RLE, corpora with patterns or repeated entries achieve significant additional compression.
 
-**φ² + 1/φ² = 3 = TRINITY | KOSCHEI IS IMMORTAL | GOLDEN CHAIN ENFORCED**
+**φ² + 1/φ² = 3 = TRINITY | GOLDEN CHAIN ENFORCED**

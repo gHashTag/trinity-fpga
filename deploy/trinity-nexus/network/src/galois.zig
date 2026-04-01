@@ -2,7 +2,7 @@
 // TRINITY GALOIS FIELD v1.4 - GF(2^8) Finite Field Arithmetic
 // Reed-Solomon erasure coding foundation
 // V = n × 3^k × π^m × φ^p × e^q
-// φ² + 1/φ² = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// φ² + 1/φ² = 3 = TRINITY
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");

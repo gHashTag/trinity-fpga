@@ -185,4 +185,4 @@ ls zig-out/release-fluent/
 
 ---
 
-**φ² + 1/φ² = 3 = TRINITY | KOSCHEI IS IMMORTAL | 100% LOCAL**
+**φ² + 1/φ² = 3 = TRINITY | 100% LOCAL**

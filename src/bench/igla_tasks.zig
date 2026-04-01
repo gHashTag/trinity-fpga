@@ -6,7 +6,7 @@
 //   - IGLA-TERNARY: Ternary fact verification
 //   - IGLA-CHAIN: Sequential facts
 //
-// phi^2 + 1/phi^2 = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// phi^2 + 1/phi^2 = 3 = TRINITY
 
 const std = @import("std");
 const igla_bench = @import("igla_bench.zig");

@@ -1833,7 +1833,7 @@ pub fn build(b: *std.Build) void {
     phi_loop_step.dependOn(&run_phi_loop.step);
 
     // ═══════════════════════════════════════════════════════════════════════════
-    // FORGE OF KOSCHEI v1.0 — Independent Ternary FPGA Toolchain
+    // Trinity v1.0 — Independent Ternary FPGA Toolchain
     // ═══════════════════════════════════════════════════════════════════════════
 
     const forge = b.addExecutable(.{
@@ -1850,7 +1850,7 @@ pub fn build(b: *std.Build) void {
     if (b.args) |run_args| {
         run_forge.addArgs(run_args);
     }
-    const forge_step = b.step("forge", "Run FORGE OF KOSCHEI — Independent Ternary FPGA Toolchain");
+    const forge_step = b.step("forge", "Run Trinity — Independent Ternary FPGA Toolchain");
     forge_step.dependOn(&run_forge.step);
 
     // ═══════════════════════════════════════════════════════════════════════════
@@ -3397,7 +3397,7 @@ pub fn build(b: *std.Build) void {
         node_gui_step.dependOn(&run_node_gui.step);
 
         // Emergent Photon AI Demo - Interactive wave visualization
-        // phi^2 + 1/phi^2 = 3 = TRINITY | KOSCHEI IS IMMORTAL
+        // phi^2 + 1/phi^2 = 3 = TRINITY
         const photon_demo = b.addExecutable(.{
             .name = "photon-demo",
             .root_module = b.createModule(.{
@@ -3420,7 +3420,7 @@ pub fn build(b: *std.Build) void {
 
     // Emergent Photon AI v0.3 - IMMERSIVE COSMIC CANVAS
     // No UI panels. No buttons. Pure emergent wave intelligence.
-    // phi^2 + 1/phi^2 = 3 = TRINITY | KOSCHEI IS IMMORTAL
+    // phi^2 + 1/phi^2 = 3 = TRINITY
     // Skipped in CI mode (-Dci=true) since raylib is not available
     if (!ci_mode) {
         const photon_immersive = b.addExecutable(.{

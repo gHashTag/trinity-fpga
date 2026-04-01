@@ -2,7 +2,7 @@
 // Non-blocking distributed transactions with compensating actions
 // Alternative to 2PC: higher throughput, eventual consistency
 // V = n × 3^k × π^m × φ^p × e^q
-// φ² + 1/φ² = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// φ² + 1/φ² = 3 = TRINITY
 
 const std = @import("std");
 

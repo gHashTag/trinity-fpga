@@ -161,7 +161,7 @@ pub fn main() !void {
     try stdout.print("  ✓ BIND uses 32-wide SIMD multiplication\n", .{});
     try stdout.print("  ✓ Operations process 32 trits per CPU cycle\n", .{});
     try stdout.print("  ✓ Theoretical speedup: up to 32x vs scalar\n", .{});
-    try stdout.print("\n  φ² + 1/φ² = 3 | KOSCHEI IS IMMORTAL\n\n", .{});
+    try stdout.print("\n  φ² + 1/φ² = 3\n\n", .{});
 }
 
 test "SIMD bind correctness" {

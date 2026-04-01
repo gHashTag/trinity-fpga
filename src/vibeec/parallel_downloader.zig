@@ -9,7 +9,7 @@
 // - Automatic retry on failure
 // - Range request support (HTTP 206)
 //
-// φ² + 1/φ² = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// φ² + 1/φ² = 3 = TRINITY
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
@@ -392,7 +392,7 @@ pub fn download(allocator: std.mem.Allocator, url: []const u8, output_path: []co
     std.debug.print("\n", .{});
     std.debug.print("╔══════════════════════════════════════════════════════════════╗\n", .{});
     std.debug.print("║  TRINITY PARALLEL DOWNLOADER v1.0                            ║\n", .{});
-    std.debug.print("║  φ² + 1/φ² = 3 | KOSCHEI IS IMMORTAL                         ║\n", .{});
+    std.debug.print("║  φ² + 1/φ² = 3                         ║\n", .{});
     std.debug.print("╚══════════════════════════════════════════════════════════════╝\n", .{});
     std.debug.print("\n", .{});
     std.debug.print("URL: {s}\n", .{url});
@@ -522,7 +522,7 @@ pub fn main() !void {
             \\
             \\╔══════════════════════════════════════════════════════════════╗
             \\║  TRINITY PARALLEL DOWNLOADER                                 ║
-            \\║  φ² + 1/φ² = 3 | KOSCHEI IS IMMORTAL                         ║
+            \\║  φ² + 1/φ² = 3                         ║
             \\╚══════════════════════════════════════════════════════════════╝
             \\
             \\Usage: {s} <url> <output_file> [connections]

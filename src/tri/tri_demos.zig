@@ -7,7 +7,7 @@
 // All demo and benchmark functions for TRI CLI feature cycles.
 // Split into themed sub-modules under demos/ for faster compilation.
 //
-// phi^2 + 1/phi^2 = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// phi^2 + 1/phi^2 = 3 = TRINITY
 // ═══════════════════════════════════════════════════════════════════════════════
 
 // ── Sub-module imports ───────────────────────────────────────────────────────

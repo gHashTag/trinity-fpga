@@ -203,5 +203,5 @@ pub fn main() !void {
     try stdout.print("  ✓ SIMD acceleration needed\n", .{});
     try stdout.print("  ✓ Random access patterns\n\n", .{});
 
-    try stdout.print("  φ² + 1/φ² = 3 | KOSCHEI IS IMMORTAL\n\n", .{});
+    try stdout.print("  φ² + 1/φ² = 3\n\n", .{});
 }

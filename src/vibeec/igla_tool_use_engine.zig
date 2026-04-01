@@ -8,7 +8,7 @@
 // - Tool detection from natural language
 // - Result formatting and chaining
 //
-// phi^2 + 1/phi^2 = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// phi^2 + 1/phi^2 = 3 = TRINITY
 // =============================================================================
 
 const std = @import("std");

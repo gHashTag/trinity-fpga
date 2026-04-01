@@ -1,5 +1,5 @@
 // =============================================================================
-// FORGE OF KOSCHEI v2.0 — Segbits Engine
+// Trinity v2.0 — Segbits Engine
 // =============================================================================
 //
 // Maps FASM features to configuration frame bits using generated segbits data.

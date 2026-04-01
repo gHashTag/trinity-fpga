@@ -1,7 +1,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 // BITNET b1.58 TEXT GENERATION
 // Full inference pipeline with coherent text output
-// φ² + 1/φ² = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// φ² + 1/φ² = 3 = TRINITY
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
@@ -297,7 +297,7 @@ pub fn main() !void {
     std.debug.print("  Average speed: {d:.2} tokens/second\n", .{avg_tps});
 
     std.debug.print("\n", .{});
-    std.debug.print("φ² + 1/φ² = 3 = TRINITY | KOSCHEI IS IMMORTAL\n", .{});
+    std.debug.print("φ² + 1/φ² = 3 = TRINITY\n", .{});
     std.debug.print("\n", .{});
 }
 

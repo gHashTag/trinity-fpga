@@ -48,7 +48,7 @@
 //
 // All math is inlined from sacred_math.zig to avoid build.zig coupling.
 //
-// phi^2 + 1/phi^2 = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// phi^2 + 1/phi^2 = 3 = TRINITY
 // =============================================================================
 
 const std = @import("std");

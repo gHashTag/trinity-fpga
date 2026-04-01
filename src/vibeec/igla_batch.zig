@@ -10,7 +10,7 @@
 // Before: 1696 ops/s (hash exclusion, sqrt in loop)
 // Target: 2000+ ops/s (bitmap + squared norms + ILP)
 //
-// phi^2 + 1/phi^2 = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// phi^2 + 1/phi^2 = 3 = TRINITY
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
@@ -536,6 +536,6 @@ pub fn main() !void {
 
     std.debug.print("\n", .{});
     std.debug.print("================================================================\n", .{});
-    std.debug.print("  phi^2 + 1/phi^2 = 3 = TRINITY | KOSCHEI IS IMMORTAL\n", .{});
+    std.debug.print("  phi^2 + 1/phi^2 = 3 = TRINITY\n", .{});
     std.debug.print("================================================================\n", .{});
 }

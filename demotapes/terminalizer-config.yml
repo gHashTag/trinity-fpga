@@ -1,0 +1,12 @@
+# Terminalizer config for Pellis comparison
+command: /Users/playra/trinity-w1/.zig-cache/o/*/tri math compare --pellis
+output: /Users/playra/trinity-w1/demotapes/pellis_comparison.gif
+width: 1200
+height: 675
+fps: 30
+quality: 100
+cursor: true
+echo: true
+env:
+  TERM: xterm-256color
+  COLORTERM: truecolor

@@ -5,7 +5,7 @@
 // Generates Zig/Verilog code from .vibee specifications
 // Single source of truth: .vibee specs -> generated code
 //
-// φ² + 1/φ² = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// φ² + 1/φ² = 3 = TRINITY
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
@@ -78,7 +78,7 @@ fn printUsage() void {
         \\  language: c           -> Generates .h file
         \\  language: sql         -> Generates .sql file
         \\
-        \\φ² + 1/φ² = 3 = TRINITY | KOSCHEI IS IMMORTAL
+        \\φ² + 1/φ² = 3 = TRINITY
         \\
     , .{});
 }
@@ -120,7 +120,7 @@ fn printKoscheiCycle() void {
         \\  - ALL changes go through .vibee specs
         \\  - One source of truth = no duplication
         \\
-        \\φ² + 1/φ² = 3 = TRINITY | KOSCHEI IS IMMORTAL
+        \\φ² + 1/φ² = 3 = TRINITY
         \\
     , .{});
 }

@@ -8,7 +8,7 @@
 // - Pattern weight adjustment based on success
 // - User preference tracking
 //
-// phi^2 + 1/phi^2 = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// phi^2 + 1/phi^2 = 3 = TRINITY
 // =============================================================================
 
 const std = @import("std");

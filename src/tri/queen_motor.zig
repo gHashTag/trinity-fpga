@@ -2,7 +2,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 // QUEEN PRIMARY MOTOR CORTEX (M1) — Action Execution & Command Conversion
 // ═══════════════════════════════════════════════════════════════════════════════
-// φ² + 1/φ² = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// φ² + 1/φ² = 3 = TRINITY
 // Phase 2: Receives motor plans from PMC, converts to concrete commands
 // ═══════════════════════════════════════════════════════════════════════════════
 

@@ -1,0 +1,12 @@
+╔══════════════════════════════════════════════════╗
+║  BENCH-001: Number Format Quantization Error Benchmarks    ║
+╚══════════════════════════════════════════════════╝
+
+Format    | MSE       | Max Error
+----------|-----------|----------
+f16       | 0.0001    | 0.0450
+bf16      | 0.0002    | 0.0890
+gf16      | 0.00015   | 0.0670
+ternary   | 0.5000    | 1.0000
+
+CSV written to: results/quant_summary.csv

@@ -33,7 +33,7 @@ pub fn main() !void {
         run_weight_gen(args);
     } else {
         print(
-            \\TERNARY QUANTUM VM — FORGE OF KOSCHEI
+            \\TERNARY QUANTUM VM — Trinity
             \\
             \\Commands:
             \\  chsh    Run CHSH-like correlation test on qutrits

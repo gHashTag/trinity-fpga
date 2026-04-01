@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════════════════════
-// VSA FPGA Benchmark — KOSCHEI Week 2
+// VSA FPGA Benchmark
 // ═══════════════════════════════════════════════════════════════════════════════
 //
 // Benchmark: Zig roundtrip overhead for VSA FPGA operations
@@ -21,7 +21,7 @@ pub fn main() !void {
     const allocator = std.heap.page_allocator;
 
     try std.Io.Writer.print(stdout, "╔════════════════════════════════════════════════════════════╗\n", .{});
-    try std.Io.Writer.print(stdout, "║  VSA FPGA Roundtrip Benchmark — KOSCHEI Week 2       ║\n", .{});
+    try std.Io.Writer.print(stdout, "║  VSA FPGA Roundtrip Benchmark       ║\n", .{});
     try std.Io.Writer.print(stdout, "╚════════════════════════════════════════════════════════════╝\n\n", .{});
 
     // Initialize FPGA accelerator (with CPU fallback)

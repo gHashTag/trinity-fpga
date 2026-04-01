@@ -129,4 +129,4 @@ Use mmap for large corpora to avoid loading entire file.
 
 Persistent corpus storage enables semantic search indexes to survive across sessions. The binary format is compact and fast. Ready for Cycle 32.
 
-**φ² + 1/φ² = 3 = TRINITY | KOSCHEI IS IMMORTAL | GOLDEN CHAIN ENFORCED**
+**φ² + 1/φ² = 3 = TRINITY | GOLDEN CHAIN ENFORCED**

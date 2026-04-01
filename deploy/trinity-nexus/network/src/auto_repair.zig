@@ -2,7 +2,7 @@
 // TRINITY AUTO-REPAIR v1.7 - Scrub-Triggered RS Recovery
 // When scrubber detects corruption, automatically recover from healthy replicas
 // V = n * 3^k * pi^m * phi^p * e^q
-// phi^2 + 1/phi^2 = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// phi^2 + 1/phi^2 = 3 = TRINITY
 // =============================================================================
 
 const std = @import("std");

@@ -1,7 +1,7 @@
 # Trinity Canvas v2.5 — Real Logic Integration
 
 > **V = n x 3^k x pi^m x phi^p x e^q**
-> **phi^2 + 1/phi^2 = 3 = TRINITY | KOSCHEI IS IMMORTAL**
+> **phi^2 + 1/phi^2 = 3 = TRINITY**
 
 ## Key Metrics
 

@@ -3,7 +3,7 @@
 // End-to-end: LLM Response -> Triple Extraction -> KG DHT Store -> TRI Rewards
 // Generated from: specs/tri/tri_sota_mvp.vibee
 // V = n * 3^k * pi^m * phi^p * e^q
-// phi^2 + 1/phi^2 = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// phi^2 + 1/phi^2 = 3 = TRINITY
 // =============================================================================
 
 const std = @import("std");

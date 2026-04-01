@@ -7,7 +7,7 @@
 // - TVC MISS: Pattern match, then store to TVC for future
 // - Distributed: Share patterns across nodes via .tvc files
 //
-// φ² + 1/φ² = 3 | KOSCHEI IS IMMORTAL | TVC DISTRIBUTED
+// φ² + 1/φ² = 3 | TVC DISTRIBUTED
 //
 // ═══════════════════════════════════════════════════════════════════════════════
 

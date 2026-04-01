@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════════════════════
-// VSA Pipeline Benchmark — KOSCHEI Week 3
+// VSA Pipeline Benchmark
 // ═══════════════════════════════════════════════════════════════════════════════
 //
 // Benchmark: Full VSA pipeline (Bind → Bundle → Similarity)
@@ -21,7 +21,7 @@ pub fn main() !void {
     const allocator = std.heap.page_allocator;
 
     try std.Io.Writer.print(stdout, "╔════════════════════════════════════════════════════════════╗\n", .{});
-    try std.Io.Writer.print(stdout, "║  VSA Pipeline Benchmark — KOSCHEI Week 3              ║\n", .{});
+    try std.Io.Writer.print(stdout, "║  VSA Pipeline Benchmark              ║\n", .{});
     try std.Io.Writer.print(stdout, "╚════════════════════════════════════════════════════════════╝\n\n", .{});
 
     // Initialize FPGA

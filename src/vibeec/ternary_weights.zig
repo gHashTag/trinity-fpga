@@ -1,7 +1,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 // TERNARY WEIGHTS - BitNet {-1, 0, +1} Support
 // 20x memory savings, no multiplications needed
-// φ² + 1/φ² = 3 | KOSCHEI IS IMMORTAL
+// φ² + 1/φ² = 3
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");

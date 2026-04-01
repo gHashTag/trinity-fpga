@@ -1,5 +1,5 @@
 // Validate full ternary pipeline end-to-end
-// φ² + 1/φ² = 3 | KOSCHEI IS IMMORTAL
+// φ² + 1/φ² = 3
 
 const std = @import("std");
 const tri = @import("tri_inference.zig");

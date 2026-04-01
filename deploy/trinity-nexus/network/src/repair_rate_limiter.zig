@@ -2,7 +2,7 @@
 // TRINITY REPAIR RATE LIMITER v1.8 - Throttled Auto-Repair with Circuit Breaker
 // Prevents repair storms by limiting repairs per window + circuit breaker on failures
 // V = n * 3^k * pi^m * phi^p * e^q
-// phi^2 + 1/phi^2 = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// phi^2 + 1/phi^2 = 3 = TRINITY
 // =============================================================================
 
 const std = @import("std");

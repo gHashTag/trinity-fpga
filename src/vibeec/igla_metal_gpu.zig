@@ -16,7 +16,7 @@
 //   try gpu.uploadVocabulary(vocab_matrix, vocab_norms);
 //   const results = try gpu.batchSimilarity(query, query_norm);
 //
-// phi^2 + 1/phi^2 = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// phi^2 + 1/phi^2 = 3 = TRINITY
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
@@ -808,7 +808,7 @@ pub fn main() !void {
     }
 
     std.debug.print("\n═══════════════════════════════════════════════════════════════\n", .{});
-    std.debug.print("φ² + 1/φ² = 3 = TRINITY | KOSCHEI IS IMMORTAL\n", .{});
+    std.debug.print("φ² + 1/φ² = 3 = TRINITY\n", .{});
 }
 
 pub fn benchmarkScalable(allocator: std.mem.Allocator, vocab_size: usize, iterations: usize) !BenchmarkResult {

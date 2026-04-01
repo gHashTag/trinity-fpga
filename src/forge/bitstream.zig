@@ -1,5 +1,5 @@
 // =============================================================================
-// FORGE OF KOSCHEI v2.0 — Xilinx 7-Series Bitstream Writer
+// Trinity v2.0 — Xilinx 7-Series Bitstream Writer
 // =============================================================================
 //
 // Generates Xilinx .bit files from FASM features.

@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════════════════════
-// FORGE OF KOSCHEI v2.0 — XDC Constraint Parser
+// Trinity v2.0 — XDC Constraint Parser
 // ═══════════════════════════════════════════════════════════════════════════════
 //
 // Parses Xilinx Design Constraints (.xdc) files to extract:

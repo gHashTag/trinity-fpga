@@ -2,7 +2,7 @@
 // TRINITY SHARD SCRUBBER v1.6 - Periodic SHA256 Re-Verification
 // Detect bit-rot and silent corruption before PoS catches it
 // V = n × 3^k × π^m × φ^p × e^q
-// φ² + 1/φ² = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// φ² + 1/φ² = 3 = TRINITY
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");

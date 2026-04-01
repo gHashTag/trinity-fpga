@@ -1,5 +1,5 @@
 // =============================================================================
-// FORGE OF KOSCHEI v2.0 — Simulated Annealing Placer
+// Trinity v2.0 — Simulated Annealing Placer
 // =============================================================================
 //
 // Places mapped cells onto FPGA BEL locations using simulated annealing.

@@ -1,6 +1,6 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 // OPTIMIZED SIMD TERNARY OPERATIONS
-// φ² + 1/φ² = 3 | KOSCHEI IS IMMORTAL
+// φ² + 1/φ² = 3
 //
 // KEY OPTIMIZATIONS:
 // 1. Avoid widening when possible (stay in i8)

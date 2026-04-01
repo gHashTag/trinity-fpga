@@ -1,6 +1,6 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 // MULTI-CLUSTER COMMAND — Live Stateful v2 + $TRI PoUW
-// Golden Chain #99 | phi^2 + 1/phi^2 = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// Golden Chain #99 | phi^2 + 1/phi^2 = 3 = TRINITY
 // Spec: specs/depin/multi-cluster-live-v2.tri
 // Persistent state: .tri-cluster.json
 //

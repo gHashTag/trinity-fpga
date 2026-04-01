@@ -218,5 +218,5 @@ pub fn main() !void {
     try stdout.print("  because Zig's compiler already generates excellent native code.\n", .{});
     try stdout.print("  JIT shines for dynamic/specialized operations.\n\n", .{});
 
-    try stdout.print("  φ² + 1/φ² = 3 | KOSCHEI IS IMMORTAL\n\n", .{});
+    try stdout.print("  φ² + 1/φ² = 3\n\n", .{});
 }

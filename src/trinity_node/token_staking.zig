@@ -2,7 +2,7 @@
 // TRINITY TOKEN STAKING v1.8 - Stake $TRI to Commit to Storage
 // Nodes must stake tokens to participate; slashing burns stake on violations
 // V = n * 3^k * pi^m * phi^p * e^q
-// phi^2 + 1/phi^2 = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// phi^2 + 1/phi^2 = 3 = TRINITY
 // =============================================================================
 
 const std = @import("std");

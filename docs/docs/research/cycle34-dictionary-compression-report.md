@@ -194,4 +194,4 @@ Split large corpus into chunks for parallel processing.
 
 Dictionary compression provides TCV3 format with frequency-based encoding. For corpora with non-uniform byte distributions, the dictionary captures common patterns and provides additional compression on top of packed trits.
 
-**φ² + 1/φ² = 3 = TRINITY | KOSCHEI IS IMMORTAL | GOLDEN CHAIN ENFORCED**
+**φ² + 1/φ² = 3 = TRINITY | GOLDEN CHAIN ENFORCED**

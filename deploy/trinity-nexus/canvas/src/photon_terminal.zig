@@ -2,7 +2,7 @@
 // PHOTON TERMINAL v1.0 - TERNARY EMERGENT TUI
 // Not a grid of cells — a living wave field.
 // Text emerges from standing waves. Input perturbs reality.
-// phi^2 + 1/phi^2 = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// phi^2 + 1/phi^2 = 3 = TRINITY
 // =============================================================================
 
 const std = @import("std");

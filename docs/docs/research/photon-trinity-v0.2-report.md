@@ -329,4 +329,4 @@ The ant colony principle scales: simple photon rules → complex multi-modal beh
 
 ---
 
-**phi^2 + 1/phi^2 = 3 = TRINITY | KOSCHEI IS IMMORTAL | GOLDEN CHAIN GOES MULTI-MODAL**
+**phi^2 + 1/phi^2 = 3 = TRINITY | GOLDEN CHAIN GOES MULTI-MODAL**

@@ -126,4 +126,4 @@ VERDICT: KOSCHEI IS IMMORTAL
 
 Cycle 43 successfully implemented adaptive work-stealing with dynamic threshold tuning. The φ⁻¹ threshold provides mathematically elegant policy boundaries, and the improvement rate of 0.69 exceeds the needle threshold, marking this cycle as **IMMORTAL**.
 
-**φ² + 1/φ² = 3 = TRINITY | KOSCHEI IS IMMORTAL | GOLDEN CHAIN ENFORCED**
+**φ² + 1/φ² = 3 = TRINITY | GOLDEN CHAIN ENFORCED**

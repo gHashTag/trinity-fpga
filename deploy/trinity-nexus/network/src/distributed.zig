@@ -20,7 +20,7 @@
 //   send hidden_state                       computeLogits + sample
 //   recv token                              send token
 //
-// φ² + 1/φ² = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// φ² + 1/φ² = 3 = TRINITY
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");

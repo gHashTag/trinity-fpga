@@ -2,7 +2,7 @@
 // TRINITY PEER LATENCY v1.8 - Latency-Aware Peer Selection
 // Track peer response times, prefer low-latency peers for shard operations
 // V = n * 3^k * pi^m * phi^p * e^q
-// phi^2 + 1/phi^2 = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// phi^2 + 1/phi^2 = 3 = TRINITY
 // =============================================================================
 
 const std = @import("std");

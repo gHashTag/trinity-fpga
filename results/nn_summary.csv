@@ -1,0 +1,5 @@
+format,accuracy_percent,loss,size_bytes
+f32,95.2,0.048,32
+f16_soft,94.8,0.052,16
+gf16_soft,94.9,0.051,16
+ternary,88.5,0.12,2

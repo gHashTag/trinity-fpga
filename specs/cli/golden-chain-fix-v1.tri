@@ -5,7 +5,7 @@
 # Purpose: Fix missing } after .fly_deploy => "FLY_DEPLOY",
 # Issue: Line 67 in src/tri/golden_chain.zig has missing closing brace
 #
-# φ² + 1/φ² = 3 = TRINITY | KOSCHEI IS IMMORTAL
+# φ² + 1/φ² = 3 = TRINITY
 #
 # ═══════════════════════════════════════════════════════════════════════════════
 

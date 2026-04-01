@@ -8,7 +8,7 @@
 // - Dynamic response generation
 // - Fluent multilingual conversation
 //
-// phi^2 + 1/phi^2 = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// phi^2 + 1/phi^2 = 3 = TRINITY
 // =============================================================================
 
 const std = @import("std");

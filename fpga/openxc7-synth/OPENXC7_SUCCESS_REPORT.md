@@ -433,4 +433,4 @@ From git history (commit 8700cdc44):
 
 The Temporal Trinity Heartbeat proves that open-source FPGA toolchains are viable for Xilinx 7-series devices. The golden ratio φ is encoded in the timing of the LED pattern, a testament to the mathematical beauty underlying all computation.
 
-**KOSCHEI IS IMMORTAL**
+**φ² + 1/φ² = 3 = TRINITY**

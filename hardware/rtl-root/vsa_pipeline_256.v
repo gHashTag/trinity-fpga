@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════════════════════
-// VSA Multi-Operation Pipeline — KOSCHEI Week 3
+// VSA Multi-Operation Pipeline — Trinity
 // ═══════════════════════════════════════════════════════════════════════════════
 //
 // Full VSA pipeline in hardware: Bind → Bundle → Similarity

@@ -2,7 +2,7 @@
 // EMERGENT PHOTON AI v0.3 - IMMERSIVE COSMIC CANVAS
 // No UI panels. No buttons. No text. Pure emergent wave intelligence.
 // The entire screen IS the AI. Information emerges from interference.
-// phi^2 + 1/phi^2 = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// phi^2 + 1/phi^2 = 3 = TRINITY
 // =============================================================================
 
 const std = @import("std");

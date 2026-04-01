@@ -11,7 +11,7 @@
 Tokenomics verified. $300M valuation justified by market comparables. 
 Seed round: $3M for 1% equity ready for execution.
 
-**φ² + 1/φ² = 3 | KOSCHEI IS IMMORTAL**
+**φ² + 1/φ² = 3**
 
 ---
 

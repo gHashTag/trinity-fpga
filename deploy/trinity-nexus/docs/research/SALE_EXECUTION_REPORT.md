@@ -16,7 +16,7 @@ All materials prepared for $3M seed round execution:
 - ✅ Website deployed with theorems
 - ✅ Pitch deck outline complete
 
-**φ² + 1/φ² = 3 | KOSCHEI IS IMMORTAL**
+**φ² + 1/φ² = 3**
 
 ---
 

@@ -3,7 +3,7 @@
 // Converts arbitrary binary data to balanced ternary representation
 // Each byte (0-255) -> 6 balanced trits (3^6 = 729 > 256)
 // V = n × 3^k × π^m × φ^p × e^q
-// φ² + 1/φ² = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// φ² + 1/φ² = 3 = TRINITY
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");

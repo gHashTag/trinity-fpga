@@ -1,5 +1,5 @@
 // =============================================================================
-// FORGE OF KOSCHEI v2.0 — Independent Ternary FPGA Toolchain
+// Trinity v2.0 — Independent Ternary FPGA Toolchain
 // =============================================================================
 //
 // CLI entry point for the FORGE toolchain.
@@ -36,7 +36,7 @@ const FORGE_VERSION = types.FORGE_VERSION;
 const FORGE_BANNER =
     \\
     \\  ═══════════════════════════════════════════════════════════════
-    \\  ║  FORGE OF KOSCHEI v2.0 — 100% Native Zig FPGA Toolchain    ║
+    \\  ║  Trinity v2.0 — 100% Native Zig FPGA Toolchain    ║
     \\  ║  phi^2 + 1/phi^2 = 3 = TRINITY                             ║
     \\  ║  Target: Xilinx Artix-7 (XC7A35T / XC7A100T)               ║
     \\  ═══════════════════════════════════════════════════════════════
@@ -380,7 +380,7 @@ fn forgeRun(allocator: std.mem.Allocator, args: []const []const u8) !void {
 
     std.debug.print("\n", .{});
     std.debug.print("  ═══════════════════════════════════════════════════════\n", .{});
-    std.debug.print("  FORGE OF KOSCHEI v{s} — COMPLETE\n", .{FORGE_VERSION});
+    std.debug.print("  Trinity v{s} — COMPLETE\n", .{FORGE_VERSION});
     std.debug.print("  phi^2 + 1/phi^2 = 3 = TRINITY\n", .{});
     std.debug.print("  ═══════════════════════════════════════════════════════\n", .{});
     std.debug.print("  Device:     {s} (IDCODE 0x{X:0>8})\n", .{ device.name(), device.idcode() });

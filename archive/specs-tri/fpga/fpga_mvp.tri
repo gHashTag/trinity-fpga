@@ -68,7 +68,7 @@ behaviors:
     then: "Generate hardware sacred opcode decoder"
     notes: |
       Opcodes 0x80-0x96: Sacred Mathematics (phi, fib, lucas, etc.)
-      Opcodes 0xB0-0xC6: KOSCHEI EYE (blind spots, infinite loop)
+      Opcodes 0xB0-0xC6: Trinity Eye (blind spots, infinite loop)
       Opcodes 0xC7-0xD5: QUANTUM TRINITY (ternary qubits, universe sim)
       Hardware lookup tables for φ, π, e constants
       Result: rtl/sacred_opcodes.v
@@ -139,7 +139,7 @@ behaviors:
       RAM: 256 KB
       Clock: 12 MHz + USB
       IO: USB + 4 RGB LEDs
-      Demo: Full KOSCHEI EYE simulation via USB
+      Demo: Full Trinity Eye simulation via USB
 
 # FPGA MVP v1.0 — HARDWARE SPECIFICATION
 # ═══════════════════════════════════════════════════════════════════════════

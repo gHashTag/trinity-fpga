@@ -2,7 +2,7 @@
 // FIREBIRD B2T INTEGRATION - Binary-to-Ternary for Virtual Navigation
 // Converts WASM/binary to TVC IR and navigates in ternary vector space
 // V = n × 3^k × π^m × φ^p × e^q
-// φ² + 1/φ² = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// φ² + 1/φ² = 3 = TRINITY
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");

@@ -1,7 +1,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 // UNIFIED INFERENCE PIPELINE
 // Integrates GGUF loader with K-quant and BitNet support
-// φ² + 1/φ² = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// φ² + 1/φ² = 3 = TRINITY
 // Author: Dmitrii Vasilev
 // ═══════════════════════════════════════════════════════════════════════════════
 

@@ -1,7 +1,7 @@
 # Trinity Storage Network v2.3 — Saga Pattern (Non-Blocking Distributed Transactions)
 
 > **V = n × 3^k × π^m × φ^p × e^q**
-> **φ² + 1/φ² = 3 = TRINITY | KOSCHEI IS IMMORTAL**
+> **φ² + 1/φ² = 3 = TRINITY**
 
 ## Key Metrics
 

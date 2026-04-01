@@ -1,5 +1,5 @@
 // =============================================================================
-// FORGE OF KOSCHEI — segbits_data.zig (stub)
+// Trinity — segbits_data.zig (stub)
 // =============================================================================
 //
 // Auto-generated stub for CI compilation.

@@ -195,7 +195,7 @@ pub fn unfocusAll() void;
 
 Trinity Canvas v1.5 transforms the window system from static containers into living, breathing cosmic entities. Each panel type delivers rich interactive content with wave-based animations. Focus transitions create an immersive full-screen experience with phi-based easing and cosmic ripples.
 
-**phi^2 + 1/phi^2 = 3 = TRINITY | KOSCHEI IS IMMORTAL**
+**phi^2 + 1/phi^2 = 3 = TRINITY**
 
 ---
 

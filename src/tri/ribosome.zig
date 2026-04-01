@@ -7,7 +7,7 @@
 // Eliminates 4 duplicate parsers across tri_cell, tri_cell_dispatch,
 // tri_events, tri_plugin.
 //
-// φ² + 1/φ² = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// φ² + 1/φ² = 3 = TRINITY
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");

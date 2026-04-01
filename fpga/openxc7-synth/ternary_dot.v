@@ -5,7 +5,7 @@
 
 `default_nettype none
 
-// DYNAMIC TERNARY DOT PRODUCT — FORGE OF KOSCHEI v3.0
+// DYNAMIC TERNARY DOT PRODUCT — Trinity v3.0
 // 16-trit dot product with LFSR-generated dynamic inputs
 // Proves REAL ternary {-1, 0, +1} computation on silicon
 //

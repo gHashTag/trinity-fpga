@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════════════════════
-// VSA FPGA Accelerator Interface — KOSCHEI Week 4
+// VSA FPGA Accelerator Interface
 // ═══════════════════════════════════════════════════════════════════════════════
 //
 // Zig FFI bindings for VSA operations on FPGA

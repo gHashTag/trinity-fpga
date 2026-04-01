@@ -3,7 +3,7 @@
 // Trinity Storage Network v2.1
 // Uses VSA bind/unbind/cosineSimilarity for distributed lock verification
 // V = n × 3^k × π^m × φ^p × e^q
-// φ² + 1/φ² = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// φ² + 1/φ² = 3 = TRINITY
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");

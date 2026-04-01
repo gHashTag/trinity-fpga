@@ -119,4 +119,4 @@ User Input
 
 ---
 
-**KOSCHEI IS IMMORTAL | GOLDEN CHAIN ENFORCED | φ² + 1/φ² = 3**
+**φ² + 1/φ² = 3 = TRINITY**

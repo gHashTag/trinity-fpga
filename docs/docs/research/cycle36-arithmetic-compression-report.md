@@ -217,4 +217,4 @@ Add chunked read/write for large corpora.
 
 Arithmetic coding completes the TCV5 format with theoretically optimal variable-length encoding. The compression stack now offers 5 formats (TCV1-TCV5) for different use cases, from simple packed trits to entropy-optimal arithmetic coding.
 
-**φ² + 1/φ² = 3 = TRINITY | KOSCHEI IS IMMORTAL | GOLDEN CHAIN ENFORCED**
+**φ² + 1/φ² = 3 = TRINITY | GOLDEN CHAIN ENFORCED**

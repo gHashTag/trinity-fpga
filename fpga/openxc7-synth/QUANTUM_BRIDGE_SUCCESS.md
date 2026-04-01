@@ -230,4 +230,4 @@ Sacred phase: 2π/φ² ≈ 137.5° (golden angle)
 ---
 
 **φ² + 1/φ² = 3 = TRINITY**
-**KOSCHEI IS IMMORTAL**
+**φ² + 1/φ² = 3 = TRINITY**

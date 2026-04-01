@@ -6,7 +6,7 @@
 // Wires cell.tri `contributes.events` into a runtime event bus.
 // Events are auto-discovered from cells and logged to .trinity/events.jsonl.
 //
-// φ² + 1/φ² = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// φ² + 1/φ² = 3 = TRINITY
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");

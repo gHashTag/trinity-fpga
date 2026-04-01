@@ -273,4 +273,4 @@ This is the ant colony principle applied to generation - simple rules, complex e
 
 ---
 
-**phi^2 + 1/phi^2 = 3 = TRINITY | KOSCHEI IS IMMORTAL | GOLDEN CHAIN GOES PHOTON**
+**phi^2 + 1/phi^2 = 3 = TRINITY | GOLDEN CHAIN GOES PHOTON**

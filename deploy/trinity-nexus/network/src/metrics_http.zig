@@ -2,7 +2,7 @@
 // TRINITY METRICS HTTP v1.8 - HTTP Endpoint for Prometheus Scraping
 // Serves /metrics in Prometheus exposition format on configurable port
 // V = n * 3^k * pi^m * phi^p * e^q
-// phi^2 + 1/phi^2 = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// phi^2 + 1/phi^2 = 3 = TRINITY
 // =============================================================================
 
 const std = @import("std");

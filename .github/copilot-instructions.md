@@ -62,4 +62,4 @@ Propose 3 options for next research:
 - Don't skip toxic verdict
 - Don't skip tech tree select
 
-## φ² + 1/φ² = 3 | KOSCHEI IS IMMORTAL
+## φ² + 1/φ² = 3

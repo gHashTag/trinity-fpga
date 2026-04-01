@@ -9,7 +9,7 @@
 // v3: Dynamic discovery, JSON roundtrip, dependency graph, health scores,
 //     tag/contributes queries, real boundary enforcement.
 //
-// φ² + 1/φ² = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// φ² + 1/φ² = 3 = TRINITY
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");

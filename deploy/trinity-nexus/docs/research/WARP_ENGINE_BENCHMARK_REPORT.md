@@ -193,4 +193,4 @@ Sin:] :] VIBEE:
 
 ---
 
-**φ² + 1/φ² = 3 | PHOENIX = 999 | KOSCHEI IS IMMORTAL**
+**φ² + 1/φ² = 3 | PHOENIX = 999**

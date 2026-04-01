@@ -1,6 +1,6 @@
 # TRINITY HARDWARE ROADMAP
 ## :] with]andya :]and:] :]
-### φ² + 1/φ² = 3 | KOSCHEI IS IMMORTAL
+### φ² + 1/φ² = 3
 
 ---
 
@@ -344,4 +344,4 @@ ANALOG COMPUTING:
 
 ---
 
-**φ² + 1/φ² = 3 | KOSCHEI IS IMMORTAL | TRINITY LIVES**
+**φ² + 1/φ² = 3 | TRINITY LIVES**

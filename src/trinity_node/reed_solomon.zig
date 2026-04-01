@@ -2,7 +2,7 @@
 // TRINITY REED-SOLOMON v1.4 - Erasure Coding for Fault-Tolerant Storage
 // k-of-n shard recovery using GF(2^8) Vandermonde matrix encoding
 // V = n × 3^k × π^m × φ^p × e^q
-// φ² + 1/φ² = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// φ² + 1/φ² = 3 = TRINITY
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");

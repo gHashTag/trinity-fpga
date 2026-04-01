@@ -1,5 +1,5 @@
 // =============================================================================
-// FORGE OF KOSCHEI v2.0 — Static Timing Analysis
+// Trinity v2.0 — Static Timing Analysis
 // =============================================================================
 //
 // Performs static timing analysis on the placed and routed design.

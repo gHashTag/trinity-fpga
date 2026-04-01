@@ -3,7 +3,7 @@
 // Continuous batching integration + benchmarks + production hardening tests
 // Generated from: specs/tri/prefix_caching.tri
 // V = n * 3^k * pi^m * phi^p * e^q
-// phi^2 + 1/phi^2 = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// phi^2 + 1/phi^2 = 3 = TRINITY
 // =============================================================================
 
 const std = @import("std");

@@ -35,9 +35,42 @@ class Question:
     question_type: str  # "factual" or "open-ended"
 
 
-def detect_question_type(question: str, answer: str) -> str:
+def is_thlp_question(question: str, task: str = None) -> bool:
+    """Check if this is a THLP (Hippocampal Learning Probe) question.
+
+    THLP questions test pattern learning, belief update, and rule induction.
+    They require understanding patterns, not just factual recall.
+    """
+    thlp_patterns = [
+        "Water boils at",         # Belief update (boiling point)
+        "boil",                    # Temperature beliefs
+        "Learn the rule",          # Few-shot rule induction
+        "Input:",                  # Pattern completion
+        "Test:",                   # Pattern application
+        "incorrectly stated",      # Error-driven learning
+        "reverse",                 # String transformation
+        "Fibonacci",               # Pattern recognition
+        " -> ",                    # Transformation pattern (cat -> tac)
+    ]
+
+    question_lower = question.lower()
+    if any(p.lower() in question_lower for p in thlp_patterns):
+        return True
+
+    # Check task column if available
+    if task and "thlp" in task.lower():
+        return True
+
+    return False
+
+
+def detect_question_type(question: str, answer: str, task: str = None) -> str:
     """Detect if question is factual short-answer or open-ended."""
     question_lower = question.strip().lower()
+
+    # THLP questions are ALWAYS open-ended (require pattern understanding)
+    if is_thlp_question(question, task):
+        return "open-ended"
 
     # Check for factual short-answer patterns
     factual_patterns = [
@@ -57,6 +90,7 @@ def detect_question_type(question: str, answer: str) -> str:
             return "factual"
 
     # Check answer length - short answers (< 5 words) are usually factual
+    # BUT skip this check for THLP questions (handled above)
     answer_words = len(answer.split())
     if answer_words <= 4 and not any(c in answer for c in ['(', ')', '[', ']', '{', '}']):
         return "factual"
@@ -73,6 +107,39 @@ def generate_distractors_local(question: str, correct_answer: str) -> list:
     # Simple distractor generation based on question type
     question_lower = question.lower()
 
+    # THLP: Temperature/belief questions (Water boils at X°C)
+    if "water boils at" in question_lower or "boil" in question_lower:
+        temp_match = re.search(r'\d+', correct_answer)
+        if temp_match:
+            correct_temp = int(temp_match.group())
+            # Generate plausible wrong temperatures around boiling point
+            offsets = [-10, 10, 20]
+            distractors = [f"{correct_temp + o}°C" for o in offsets]
+            return distractors
+
+    # THLP: String reversal (cat -> tac)
+    if "cat ->" in question or "dog ->" in question or " -> " in question:
+        if correct_answer == "tac":
+            return ["cat", "act", "atc"]
+        elif correct_answer == "god":
+            return ["dog", "gdo", "ogd"]
+        elif correct_answer == "drib":
+            return ["bird", "bdir", "drbi"]
+        # Generic string transformation distractors
+        return ["cat", "dog", "bird"]
+
+    # THLP: Fibonacci/pattern (1,2->3, 3,5->8, 2,7->?)
+    if "fibonacci" in question_lower or "input:" in question_lower:
+        if correct_answer == "9":
+            return ["5", "10", "12"]
+        elif correct_answer == "drib":
+            return ["bird", "bdir", "drbi"]
+        elif correct_answer == "tac":
+            return ["cat", "act", "atc"]
+        # Generic pattern distractors
+        return ["5", "10", "15"]
+
+    # Capital cities
     if "capital" in question_lower:
         country = re.search(r"of (\w+)", question, re.IGNORECASE)
         if country:
@@ -80,6 +147,7 @@ def generate_distractors_local(question: str, correct_answer: str) -> list:
             random.shuffle(wrong_capitals)
             return wrong_capitals[:3]
 
+    # Quantum physics
     elif "quantum" in question_lower and "superposition" in question_lower:
         return [
             "A system transitions between states sequentially",
@@ -87,7 +155,8 @@ def generate_distractors_local(question: str, correct_answer: str) -> list:
             "Multiple systems share a single quantum state"
         ]
 
-    elif "2\^" in question_lower or "2 **" in question_lower:
+    # Math: powers of 2
+    elif r"2^" in question_lower or "2 **" in question_lower:
         return [
             str(2 ** 18),
             str(2 ** 19),
@@ -103,9 +172,9 @@ def generate_distractors_local(question: str, correct_answer: str) -> list:
         ]
 
 
-def create_mc_question(question: str, answer: str) -> dict:
+def create_mc_question(question: str, answer: str, task: str = None) -> dict:
     """Convert a question to MC format."""
-    question_type = detect_question_type(question, answer)
+    question_type = detect_question_type(question, answer, task)
 
     if question_type == "open-ended":
         # Generate distractors
@@ -171,14 +240,17 @@ def process_track(track_key: str, input_path: str, output_path: str) -> dict:
             question = str(row["question"])
             answer = str(row["answer"])
 
-        # Detect question type
-        question_type = detect_question_type(question, answer)
+        # Get task info for THLP detection
+        task = str(row.get("task", ""))
+
+        # Detect question type (pass task for THLP detection)
+        question_type = detect_question_type(question, answer, task)
 
         if question_type == "open-ended":
             stats["open_ended"] += 1
 
-            # Generate MC format
-            mc_result = create_mc_question(question, answer)
+            # Generate MC format (pass task info)
+            mc_result = create_mc_question(question, answer, task)
 
             results.append({
                 "id": row.get("id", f"{track_key}_{idx}"),

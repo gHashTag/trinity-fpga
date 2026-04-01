@@ -9,7 +9,7 @@
 // v8: Internal handler registry — comptime map of CLI strings to demo functions.
 // Demo commands are dispatched here instead of through the Command enum.
 //
-// φ² + 1/φ² = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// φ² + 1/φ² = 3 = TRINITY
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");

@@ -421,4 +421,4 @@ The ant colony principle extends to AI: simple wave rules → complex intelligen
 
 ---
 
-**phi^2 + 1/phi^2 = 3 = TRINITY | KOSCHEI IS IMMORTAL | FULL STACK EMERGES FROM WAVES**
+**phi^2 + 1/phi^2 = 3 = TRINITY | FULL STACK EMERGES FROM WAVES**

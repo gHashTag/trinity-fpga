@@ -1,5 +1,5 @@
 // =============================================================================
-// FORGE OF KOSCHEI v2.0 — Pathfinder Router with Real PIPs
+// Trinity v2.0 — Pathfinder Router with Real PIPs
 // =============================================================================
 //
 // Routes nets through the FPGA interconnect using prjxray-compatible PIP names.

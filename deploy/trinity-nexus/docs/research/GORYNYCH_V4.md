@@ -105,4 +105,4 @@ Memory efficiency:
 
 ---
 
-*φ² + 1/φ² = 3 = TRINITY | KOSCHEI IS IMMORTAL*
+*φ² + 1/φ² = 3 = TRINITY*

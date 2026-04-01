@@ -206,4 +206,4 @@ Use io_uring or similar for non-blocking I/O.
 
 Parallel loading completes the multi-threaded corpus loading capability using Zig's std.Thread API. Combined with TCV6 sharding, this enables efficient loading of large corpora on multi-core systems.
 
-**φ² + 1/φ² = 3 = TRINITY | KOSCHEI IS IMMORTAL | GOLDEN CHAIN ENFORCED**
+**φ² + 1/φ² = 3 = TRINITY | GOLDEN CHAIN ENFORCED**

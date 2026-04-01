@@ -1,7 +1,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 // E2E COHERENT TEXT GENERATION TEST
 // Load GGUF for tokenizer, TRI for inference, generate coherent text
-// φ² + 1/φ² = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// φ² + 1/φ² = 3 = TRINITY
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");

@@ -1,7 +1,7 @@
 // Trinity Storage Network v2.2 — Dynamic Erasure Coding
 // Adaptive RS(k,m) parameters based on real-time network health
 // V = n × 3^k × π^m × φ^p × e^q
-// φ² + 1/φ² = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// φ² + 1/φ² = 3 = TRINITY
 
 const std = @import("std");
 const network_stats_mod = @import("network_stats.zig");

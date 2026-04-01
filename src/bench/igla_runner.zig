@@ -4,7 +4,7 @@
 //   - Full mode: 4 formats × 5 ctxs × 3 needles × 7 depths = 420 configs
 //   - Evolve mode: Reduced matrix for quick evaluation (ctx=81,243; needles=1,3; depths=0.25,0.5,0.75)
 //
-// phi^2 + 1/phi^2 = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// phi^2 + 1/phi^2 = 3 = TRINITY
 
 const std = @import("std");
 const igla_bench = @import("igla_bench.zig");

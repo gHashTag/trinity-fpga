@@ -13,7 +13,7 @@
 //   tri strict status    - Show current mode and enforcement rules
 //   tri strict check     - Validate VIBEE-first compliance
 //
-// φ² + 1/φ² = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// φ² + 1/φ² = 3 = TRINITY
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");

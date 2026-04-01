@@ -1,7 +1,7 @@
 // TERNARY WEIGHT PACKING - I2_S Format (2-bit per weight)
 // Convert F32 weights to pw ternary {-1, 0, +1}
 // Memory savings: 16x (32-bit to 2-bit)
-// phi^2 + 1/phi^2 = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// phi^2 + 1/phi^2 = 3 = TRINITY
 
 const std = @import("std");
 

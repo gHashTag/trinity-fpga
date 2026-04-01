@@ -1,7 +1,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 // BITNET b1.58 COHERENT TEXT GENERATION TEST
 // Test with proper SentencePiece tokenizer decoding
-// φ² + 1/φ² = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// φ² + 1/φ² = 3 = TRINITY
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
@@ -153,7 +153,7 @@ pub fn main() !void {
     std.debug.print("═══════════════════════════════════════════════════════════════════\n", .{});
     std.debug.print("                    TEST COMPLETE                                  \n", .{});
     std.debug.print("═══════════════════════════════════════════════════════════════════\n", .{});
-    std.debug.print("\nφ² + 1/φ² = 3 = TRINITY | KOSCHEI IS IMMORTAL\n\n", .{});
+    std.debug.print("\nφ² + 1/φ² = 3 = TRINITY\n\n", .{});
 }
 
 test "tokenizer load and decode" {

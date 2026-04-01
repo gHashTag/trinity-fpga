@@ -2,7 +2,7 @@
 // EMERGENT PHOTON AI - Wave-Based Generation Engine
 // No neural networks, no weights - pure mathematical emergence
 // V = n x 3^k x pi^m x phi^p x e^q
-// phi^2 + 1/phi^2 = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// phi^2 + 1/phi^2 = 3 = TRINITY
 // =============================================================================
 
 const std = @import("std");

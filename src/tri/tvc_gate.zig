@@ -6,7 +6,7 @@
 // All queries → TVC Gate → Search corpus → HIT? → Return cached
 //                                        → MISS? → Continue pipeline → Store result
 //
-// φ² + 1/φ² = 3 | KOSCHEI IS IMMORTAL | TVC DISTRIBUTED
+// φ² + 1/φ² = 3 | TVC DISTRIBUTED
 //
 // ═══════════════════════════════════════════════════════════════════════════════
 

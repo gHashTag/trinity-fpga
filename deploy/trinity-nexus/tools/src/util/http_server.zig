@@ -1,7 +1,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 // TRINITY HTTP API SERVER
 // OpenAI-compatible /v1/chat/completions endpoint
-// φ² + 1/φ² = 3 | KOSCHEI IS IMMORTAL
+// φ² + 1/φ² = 3
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");

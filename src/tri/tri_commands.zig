@@ -5,7 +5,7 @@
 // Command implementations: gen, convert, serve, bench, evolve, git.
 // Extracted from main.zig for faster compilation.
 //
-// φ² + 1/φ² = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// φ² + 1/φ² = 3 = TRINITY
 // ═══════════════════════════════════════════════════════════════════════════════
 const std = @import("std");
 const colors = @import("tri_colors.zig");

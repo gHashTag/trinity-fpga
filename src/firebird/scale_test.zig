@@ -2,7 +2,7 @@
 // FIREBIRD SCALE TEST - Testing 100K Dimensions
 // Validates orthogonality and evolution at extreme scales
 // V = n × 3^k × π^m × φ^p × e^q
-// φ² + 1/φ² = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// φ² + 1/φ² = 3 = TRINITY
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");

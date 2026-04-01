@@ -1,7 +1,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 // BITNET b1.58 INFERENCE TEST
 // Test coherent text generation with native ternary model
-// φ² + 1/φ² = 3 = TRINITY | KOSCHEI IS IMMORTAL
+// φ² + 1/φ² = 3 = TRINITY
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
@@ -301,7 +301,7 @@ pub fn main() !void {
     std.debug.print("═══════════════════════════════════════════════════════════════════\n", .{});
     std.debug.print("                    TEST COMPLETE                                  \n", .{});
     std.debug.print("═══════════════════════════════════════════════════════════════════\n", .{});
-    std.debug.print("\nφ² + 1/φ² = 3 = TRINITY | KOSCHEI IS IMMORTAL\n\n", .{});
+    std.debug.print("\nφ² + 1/φ² = 3 = TRINITY\n\n", .{});
 }
 
 test "tokenizer load" {
