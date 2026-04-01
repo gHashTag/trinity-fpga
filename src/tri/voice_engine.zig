@@ -211,14 +211,14 @@ fn muVoice(agent: AgentState, snapshot: FacultySnapshot, delta: FacultyDelta, bu
                 } else {
                     break :blk std.fmt.bufPrint(buf, "Wake #{d}. \xd0\xa7\xd0\xb8\xd1\x81\xd1\x82\xd0\xbe. Build{s} Test{s}", .{
                         hb.wake, build_s, test_s,
-                    }) catch "TRI: clean.";
+                    }) catch "IN PROJECT. Errors accumulating.";
                 }
             }
-            break :blk std.fmt.bufPrint(buf, "{d} \xd0\xbf\xd0\xb0\xd1\x82\xd1\x82\xd0\xb5\xd1\x80\xd0\xbd\xd0\xbe\xd0\xb2. \xd0\x9b\xd0\xb5\xd1\x87\xd1\x83 \xd0\xbf\xd0\xb0\xd0\xb9\xd0\xbf\xd0\xbb\xd0\xb0\xd0\xb9\xd0\xbd.", .{
+            break :blk std.fmt.bufPrint(buf, "{d} patterns. Healing patiently.", .{
                 snapshot.mu_patterns,
-            }) catch "TRI лечит.";
+            }) catch "TRI heals.";
         },
-        .tbd => std.fmt.bufPrint(buf, "\xd0\x92 \xd0\x9f\xd0\xa0\xd0\x9e\xd0\x95\xd0\x9a\xd0\xa2\xd0\x95. \xd0\x9e\xd1\x88\xd0\xb8\xd0\xb1\xd0\xba\xd0\xb8 \xd0\xba\xd0\xbe\xd0\xbf\xd1\x8f\xd1\x82\xd1\x81\xd1\x8f.", .{}) catch "TRI TBD.",
+        .tbd => std.fmt.bufPrint(buf, "IN PROJECT. Errors accumulating.", .{}) catch "TRI TBD.",
         .down => std.fmt.bufPrint(buf, "\xd0\xa3\xd0\xbf\xd0\xb0\xd0\xbb. \xd0\x9e\xd1\x88\xd0\xb8\xd0\xb1\xd0\xba\xd0\xb8 \xd0\xbd\xd0\xb5 \xd0\xbb\xd0\xbe\xd0\xb2\xd1\x8f\xd1\x82\xd1\x81\xd1\x8f.", .{}) catch "TRI down.",
     };
 }
@@ -226,32 +226,32 @@ fn muVoice(agent: AgentState, snapshot: FacultySnapshot, delta: FacultyDelta, bu
 fn oracleVoice(snapshot: FacultySnapshot, delta: FacultyDelta, buf: []u8) []const u8 {
     if (delta.has_prev) {
         if (delta.compile_rate_delta > 0) {
-            return std.fmt.bufPrint(buf, "V={d:.2}. \xd0\xa0\xd0\xb0\xd1\x81\xd1\x82\xd1\x91\xd1\x82 (+{d}pp).", .{
+            return std.fmt.bufPrint(buf, "V={d:.2}. Growing (+{d}pp).", .{
                 snapshot.v_number, delta.compile_rate_delta,
-            }) catch "Oracle: рост.";
+            }) catch "Oracle: rising.";
         } else if (delta.compile_rate_delta < 0) {
-            return std.fmt.bufPrint(buf, "V={d:.2}. \xd0\x9f\xd0\xb0\xd0\xb4\xd0\xb0\xd0\xb5\xd1\x82 ({d}pp).", .{
+            return std.fmt.bufPrint(buf, "V={d:.2}. Falling ({d}pp).", .{
                 snapshot.v_number, delta.compile_rate_delta,
-            }) catch "Oracle: падение.";
+            }) catch "Oracle: falling.";
         } else if (delta.compile_frozen) {
-            return std.fmt.bufPrint(buf, "V={d:.2}. \xd0\x97\xd0\xb0\xd0\xbc\xd1\x91\xd1\x80\xd0\xb7.", .{
+            return std.fmt.bufPrint(buf, "V={d:.2}. Frozen.", .{
                 snapshot.v_number,
-            }) catch "Oracle: заморозка.";
+            }) catch "Oracle: frozen.";
         }
     }
     // Default: zone-based
     if (snapshot.v_number > 1.5) {
         return std.fmt.bufPrint(buf, "V={d:.2}. \xCF\x86-\xd0\xb3\xd0\xb0\xd1\x80\xd0\xbc\xd0\xbe\xd0\xbd\xd0\xb8\xd1\x8f \xE2\x9C\xA8", .{
             snapshot.v_number,
-        }) catch "Oracle: золото.";
+        }) catch "Oracle: gold.";
     } else if (snapshot.v_number >= 1.0) {
         return std.fmt.bufPrint(buf, "V={d:.2}. \xCF\x86\xE2\x81\xBB\xE2\x81\xB0\xC2\xB7\xC2\xB3 \xd0\xb7\xd0\xbe\xd0\xbd\xd0\xb0. \xd0\xa1\xd1\x82\xd0\xb0\xd0\xb1\xd0\xb8\xd0\xbb\xd1\x8c\xd0\xbd\xd0\xbe.", .{
             snapshot.v_number,
-        }) catch "Oracle: стабильно.";
+        }) catch "Oracle: stable.";
     } else {
         return std.fmt.bufPrint(buf, "V={d:.2}. \xd0\xa1\xd0\xbf\xd0\xb8\xd1\x80\xd0\xb0\xd0\xbb\xd1\x8c \xd1\x82\xd0\xb5\xd1\x80\xd1\x8f\xd0\xb5\xd1\x82 \xd1\x84\xd0\xbe\xd1\x80\xd0\xbc\xd1\x83.", .{
             snapshot.v_number,
-        }) catch "Oracle: дрифт.";
+        }) catch "Oracle: drift.";
     }
 }
 
@@ -296,39 +296,39 @@ fn linterVoice(agent: AgentState, snapshot: FacultySnapshot, delta: FacultyDelta
             // v2: also check MU test status
             const hb = readMuHeartbeat();
             if (hb.wake > 0 and hb.test_ok) {
-                return std.fmt.bufPrint(buf, "{d}/{d}. \xd0\xa7\xd0\xb8\xd1\x81\xd1\x82\xd0\xbe. \xd0\xa2\xd0\xb5\xd1\x81\xd1\x82\xd1\x8b \xe2\x9c\x85", .{
+                return std.fmt.bufPrint(buf, "{d}/{d}. Clean. Tests ✅", .{
                     snapshot.compile_pass, snapshot.compile_total,
-                }) catch "Linter: чисто.";
+                }) catch "Linter: clean.";
             } else if (hb.wake > 0 and !hb.test_ok) {
                 return std.fmt.bufPrint(buf, "{d}/{d}. Specs OK, \xd1\x82\xd0\xb5\xd1\x81\xd1\x82\xd1\x8b \xe2\x9d\x8c", .{
                     snapshot.compile_pass, snapshot.compile_total,
-                }) catch "Linter: тесты!";
+                }) catch "Linter: tests pass!";
             }
             return std.fmt.bufPrint(buf, "{d}/{d} \xd0\xbf\xd1\x80\xd0\xbe\xd1\x85\xd0\xbe\xd0\xb4\xd1\x8f\xd1\x82. \xd0\xa7\xd0\xb8\xd1\x81\xd1\x82\xd0\xbe.", .{
                 snapshot.compile_pass, snapshot.compile_total,
-            }) catch "Linter: чисто.";
+            }) catch "Linter: clean.";
         }
         if (delta.has_prev) {
             if (delta.compile_frozen and fail > 0) {
                 const hours = @divTrunc(delta.seconds_ago, 3600);
                 return std.fmt.bufPrint(buf, "{d}/{d}. \xd0\x9f\xd0\xbb\xd0\xb0\xd1\x82\xd0\xbe \xe2\x80\x94 \xd1\x82\xd0\xb5 \xd0\xb6\xd0\xb5 {d} \xd1\x81\xd0\xb1\xd0\xbe\xd0\xb5\xd0\xb2 \xd1\x83\xd0\xb6\xd0\xb5 {d}\xd1\x87.", .{
                     snapshot.compile_pass, snapshot.compile_total, fail, hours,
-                }) catch "Linter: плато.";
+                }) catch "Linter: plateau.";
             } else if (delta.compile_rate_delta > 0) {
                 return std.fmt.bufPrint(buf, "{d}/{d} (+{d}pp). {d} \xd0\xbe\xd1\x81\xd1\x82\xd0\xb0\xd0\xbb\xd0\xbe\xd1\x81\xd1\x8c.", .{
                     snapshot.compile_pass, snapshot.compile_total, delta.compile_rate_delta, fail,
-                }) catch "Linter: прогресс.";
+                }) catch "Linter: progress.";
             } else if (delta.compile_rate_delta < 0) {
                 return std.fmt.bufPrint(buf, "{d}/{d} ({d}pp). \xd0\xa0\xd0\xb5\xd0\xb3\xd1\x80\xd0\xb5\xd1\x81\xd1\x81\xd0\xb8\xd1\x8f! {d} \xd1\x81\xd0\xb1\xd0\xbe\xd0\xb5\xd0\xb2.", .{
                     snapshot.compile_pass, snapshot.compile_total, delta.compile_rate_delta, fail,
-                }) catch "Linter: регрессия.";
+                }) catch "Linter: regression.";
             }
         }
         return std.fmt.bufPrint(buf, "{d}/{d} \xd0\xbf\xd1\x80\xd0\xbe\xd1\x85\xd0\xbe\xd0\xb4\xd1\x8f\xd1\x82. {d} \xd1\x81\xd0\xb1\xd0\xbe\xd0\xb5\xd0\xb2.", .{
             snapshot.compile_pass, snapshot.compile_total, fail,
-        }) catch "Linter: есть сбои.";
+        }) catch "Linter: there are failures.";
     } else {
-        return std.fmt.bufPrint(buf, "\xd0\xa1\xd0\xbb\xd0\xb5\xd0\xbf\xd0\xbe\xd0\xb9. \xd0\x9d\xd0\xb5\xd1\x82 \xd0\xb4\xd0\xb0\xd0\xbd\xd0\xbd\xd1\x8b\xd1\x85 \xd0\xb0\xd1\x83\xd0\xb4\xd0\xb8\xd1\x82\xd0\xb0.", .{}) catch "Linter: слепой.";
+        return std.fmt.bufPrint(buf, "\xd0\xa1\xd0\xbb\xd0\xb5\xd0\xbf\xd0\xbe\xd0\xb9. \xd0\x9d\xd0\xb5\xd1\x82 \xd0\xb4\xd0\xb0\xd0\xbd\xd0\xbd\xd1\x8b\xd1\x85 \xd0\xb0\xd1\x83\xd0\xb4\xd0\xb8\xd1\x82\xd0\xb0.", .{}) catch "Linter: sleep.";
     }
 }
 
