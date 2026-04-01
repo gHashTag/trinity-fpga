@@ -7,7 +7,7 @@
 const sacred_math = @import("math.zig");
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// SACRED TYPES — GF16, TF3 (единственный источник правды для форматов)
+// SACRED TYPES — GF16, TF3 (single source of truth for formats)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const sacred_types_mod = @import("sacred_types.zig");
@@ -33,7 +33,7 @@ pub const PowersOf3 = sacred_verify.PowersOf3;
 pub const PowersOfPhi = sacred_verify.PowersOfPhi;
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// SACRED GUARDS — Compile-time guards против anti-patterns
+// SACRED GUARDS — Compile-time guards against anti-patterns
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const sacred_guards = @import("guards.zig");
