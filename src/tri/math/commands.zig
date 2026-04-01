@@ -1537,7 +1537,7 @@ fn runBSDVerifyCommand(allocator: std.mem.Allocator, args: []const []const u8) !
         std.debug.print("  Error: {e:.10}\n", .{bsd_result.error_value});
         std.debug.print("  Period: {e:.10}\n", .{bsd_result.components.period});
         std.debug.print("  Regulator: {e:.10}\n", .{bsd_result.components.regulator});
-        std.debug.print("  |Ш|: {d}\n", .{bsd_result.components.sha_order});
+        std.debug.print("  Order: {d}\n", .{bsd_result.components.sha_order});
     } else {
         std.debug.print("  {s}BSD Formula: NOT VERIFIED{s}\n", .{ RED, RESET });
         std.debug.print("  Error: {e:.10}\n", .{bsd_result.error_value});
@@ -1641,9 +1641,9 @@ fn showBSDHelp() !void {
     std.debug.print("  rank of an elliptic curve to its algebraic rank:\n\n", .{});
     std.debug.print("    ord_{{s=1}} L(E,s) = rank(E(Q))\n\n", .{});
     std.debug.print("  BSD Formula (rank 0):\n", .{});
-    std.debug.print("    L(E,1) / Ω_E = |Ш(E/Q)| / #E(Q)_tors\n\n", .{});
+    std.debug.print("    L(E,1) / Ω_E = order(E, Q) / #E(Q)_tors\n\n", .{});
     std.debug.print("  BSD Formula (rank 1):\n", .{});
-    std.debug.print("    L'(E,1) / Ω_E = |Ш(E/Q)| * R_E / #E(Q)_tors²\n\n", .{});
+    std.debug.print("    L'(E,1) / Ω_E = order(E, Q) * R_E / #E(Q)_tors²\n\n", .{});
 
     std.debug.print("  This scanner extends the verified frontier from conductor ≤ 5000\n", .{});
     std.debug.print("  to ≤ 50,000 using Trinity's SIMD-accelerated implementation.\n\n", .{});
