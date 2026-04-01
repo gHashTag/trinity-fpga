@@ -191,6 +191,7 @@ verify_forward.py
 .nojekyll
 404.html
 index.html
+!/apps/queen-web/index.html
 docs.html
 quantum-runtime.html
 assets/
