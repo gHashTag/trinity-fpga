@@ -4,10 +4,39 @@
 
 CLARA TA1 (DARPA PA-25-07-02) aims to demonstrate Trinity's compositional learning and reasoning capabilities through a clean, reproducible pipeline.
 
+## Building Trinity
+
+### Local Build (Recommended for Development)
+
+```bash
+# Build the tri CLI
+zig build tri
+
+# Verify the build
+./zig-out/bin/tri --version
+./zig-out/bin/tri clara demo
+```
+
+### Docker Build
+
+```bash
+# Build the tri binary inside Docker (requires Docker daemon)
+docker build -f deploy/Dockerfile -t trinity:omega .
+
+# Run the CLARA demo via Docker
+docker run --rm trinity:omega clara demo
+```
+
+**Note:** Docker build assumes `zig build tri` has been run locally first to produce `zig-out/bin/tri`. For a full Docker-based build pipeline (from source), see `deploy/Dockerfile.agent` for a multi-stage build example.
+
 ## Running the Demo
 
 ```bash
+# Local build
 tri clara demo
+
+# Docker (after building image)
+docker run --rm trinity:omega clara demo
 ```
 
 This single command runs the complete CLARA pipeline:
