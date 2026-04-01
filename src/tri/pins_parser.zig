@@ -458,10 +458,24 @@ pub const Parser = struct {
     }
 
     fn consumeIdentifier(self: *Parser) ![]const u8 {
-        if (self.check(.identifier)) {
+        // Accept both identifiers and keywords as identifiers (port names can be keywords)
+        if (self.check(.identifier) or self.isKeyword()) {
             return self.advance().lexeme;
         }
+        std.debug.print("consumeIdentifier error: current={s} type={s}\n", .{
+            self.current.lexeme, @tagName(self.current.type),
+        });
         return ParseError.ExpectedIdentifier;
+    }
+
+    fn isKeyword(self: *const Parser) bool {
+        return self.check(.kw_fpga) or self.check(.kw_board) or self.check(.kw_design) or
+            self.check(.kw_uses) or self.check(.kw_on) or self.check(.kw_to) or self.check(.kw_bind) or
+            self.check(.kw_pin) or self.check(.kw_clock) or self.check(.kw_uart) or self.check(.kw_led) or
+            self.check(.kw_connector) or self.check(.kw_net) or self.check(.kw_bank) or self.check(.kw_io) or
+            self.check(.kw_role) or self.check(.kw_freq) or self.check(.kw_baud) or self.check(.kw_polarity) or
+            self.check(.kw_color) or self.check(.kw_gnd) or self.check(.kw_vcc_5v) or self.check(.kw_cts) or
+            self.check(.kw_rts) or self.check(.kw_txd) or self.check(.kw_rxd);
     }
 
     fn consumePath(self: *Parser) ![]const u8 {
