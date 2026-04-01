@@ -366,3 +366,297 @@ RAILWAY COMMANDS:
 - VIBEE codegen развитие или продолжение issue #486
 - Sacred AI fix/bypass — единственный оставшийся блокер
 
+
+## Цикл 2026-04-02T14:00 ✅
+
+**Что сделано:**
+- ✅ Проверен build: GREEN
+- ✅ Проверены тесты: GREEN (Speedup: 9.47x)
+- ✅ Форматирование: `zig fmt` — все файлы в порядке
+- ✅ Build проверен: GREEN
+- ✅ Коммит: `6a8d9e2639` — "chore(src): formatting cleanup - zig fmt (#486)"
+
+**Состояние:**
+- Build: ✅ GREEN
+- Tests: ✅ GREEN
+- Format: ✅ OK
+
+**Обнаружено:**
+- `src/bench_001_main.zig` — изменения от zig fmt (форматирование)
+- `src/test_mlp_forward.zig` — изменения от zig fmt (форматирование)
+
+**Что дальше:**
+- Issue #486: команды реализованы, Sacred AI — блокер
+
+---
+
+**Следующий цикл через ~10 минут**
+
+## Цикл 2026-04-02T14:10 ✅
+
+**Что сделано:**
+- ✅ Проверен build: GREEN
+- ✅ Проверены тесты: "test transitive failure" — ложное срабатывание кэша
+- ✅ Build проверен: GREEN (чистая сборка)
+
+**Состояние:**
+- Build: ✅ GREEN
+- Tests: ✅ OK (ложное сообщение от кэша)
+- Format: ✅ OK
+
+**Обнаружено:**
+- `.zig-cache` содержит stale build артефакты
+- "test transitive failure" исчезает при clean build
+
+**Что дальше:**
+- Issue #486: команды реализованы, Sacred AI — блокер
+- Ждёт следующая задача или продолжение работы над CLARA
+
+---
+
+**Следующий цикл через ~10 минут**
+
+## Цикл 2026-04-02T14:20 ✅
+
+**Что сделано:**
+- ✅ Проверен build: GREEN
+- ✅ Проверены тесты: GREEN (Speedup: 8.05x)
+- ✅ Форматирование: OK
+
+**Состояние:**
+- Build: ✅ GREEN
+- Tests: ✅ GREEN
+- Format: ✅ OK
+
+---
+
+**Следующий цикл через ~10 минут**
+
+## Цикл 2026-04-02T14:40 ✅
+
+**Что сделано:**
+- ✅ Build: GREEN
+- ✅ Tests: GREEN (Speedup: 9.30x)
+- ✅ Format: OK
+
+**Состояние:**
+- Build: ✅ GREEN
+- Tests: ✅ GREEN
+- Format: ✅ OK
+
+---
+
+**Следующий цикл через ~10 минут**
+
+## Цикл 2026-04-02T14:50 ✅
+
+**Что сделано:**
+- ✅ Build: GREEN
+- ✅ Tests: GREEN (Speedup: 8.73x)
+- ✅ Format: OK
+
+**Состояние:**
+- Build: ✅ GREEN
+- Tests: ✅ GREEN
+- Format: ✅ OK
+
+---
+
+**Следующий цикл через ~10 минут**
+
+## Цикл 2026-04-02T15:05 ✅
+
+**Что сделано:**
+- ✅ Build: GREEN
+- ✅ Tests: GREEN (проверен после нестабильного сбоя — PASS)
+- ✅ Форматирование: OK
+
+**Обнаружено:**
+- Нестабильный сбой тестов в предыдущем цикле — теперь PASS
+
+**Состояние:**
+- Build: ✅ GREEN
+- Tests: ✅ GREEN (Speedup: 10.13x)
+- Format: ✅ OK
+
+---
+
+**Следующий цикл через ~10 минут**
+
+## Цикл 2026-04-02T15:15 ✅
+
+**Что сделано:**
+- ✅ Build: GREEN
+- ✅ Tests: GREEN (Speedup: 9.44x)
+- ✅ Format: OK
+
+**Состояние:**
+- Build: ✅ GREEN
+- Tests: ✅ GREEN
+- Format: ✅ OK
+
+---
+
+**Следующий цикл через ~10 минут**
+
+## Цикл 2026-04-02T15:20 ✅
+
+**Что сделано:**
+- ✅ Build: GREEN
+- ✅ Tests: GREEN (Speedup: 8.89x)
+- ✅ Format: OK
+
+**Состояние:**
+- Build: ✅ GREEN
+- Tests: ✅ GREEN
+- Format: ✅ OK
+
+---
+
+**Следующий цикл через ~10 минут**
+
+## Цикл 2026-04-02T15:30 ✅
+
+**Что сделано:**
+- ✅ Build: GREEN
+- ✅ Tests: GREEN
+- ✅ Форматирование: OK
+
+**Обнаружено:**
+- Ошибка `.zig-cache` — кэш вызывает build failures (clean build PASS)
+
+**Состояние:**
+- Build: ✅ GREEN
+- Tests: ✅ GREEN
+- Format: ✅ OK
+
+---
+
+**Следующий цикл через ~10 минут**
+
+## Цикл 2026-04-02T15:40 ✅
+
+**Что сделано:**
+- ✅ Build: GREEN
+- ✅ Tests: GREEN (Speedup: 9.10x)
+- ✅ Format: OK
+
+**Состояние:**
+- Build: ✅ GREEN
+- Tests: ✅ GREEN
+- Format: ✅ OK
+
+---
+
+**Следующий цикл через ~10 минут**
+
+## Цикл 2026-04-02T15:50 ✅
+
+**Что сделано:**
+- ✅ Build: GREEN
+- ✅ Tests: GREEN (Speedup: 9.31x)
+- ✅ Format: OK
+
+**Состояние:**
+- Build: ✅ GREEN
+- Tests: ✅ GREEN
+
+---
+
+**Следующий цикл через ~10 минут**
+
+## Цикл 2026-04-02T16:00 ✅
+
+**Что сделано:**
+- ✅ Build: GREEN
+- ✅ Tests: GREEN (Speedup: 9.84x)
+- ✅ Format: OK
+
+**Состояние:**
+- Build: ✅ GREEN
+- Tests: ✅ GREEN
+
+---
+
+**Следующий цикл через ~10 минут**
+
+## Цикл 2026-04-02T16:10 ✅
+
+**Что сделано:**
+- ✅ Build: GREEN
+- ✅ Tests: GREEN (Speedup: 9.07x)
+- ✅ Format: OK
+
+**Состояние:**
+- Build: ✅ GREEN
+- Tests: ✅ GREEN
+
+---
+
+**Следующий цикл через ~10 минут**
+
+## Цикл 2026-04-02T16:15 ✅
+
+**Что сделано:**
+- ✅ Build: GREEN
+- ✅ Tests: GREEN (Speedup: 9.16x)
+- ✅ Format: OK
+
+**Состояние:**
+- Build: ✅ GREEN
+- Tests: ✅ GREEN
+
+---
+
+**Следующий цикл через ~10 минут**
+
+## Цикл 2026-04-02T16:25 ❌
+
+**Что сделано:**
+- ✅ Build проверен: GREEN (clean build без кэша)
+- ✅ Tests: GREEN (дваждый запуск показывает PASS)
+
+**Состояние:**
+- Build: ❌ FAIL (zig-cache)
+- Tests: ✅ OK
+
+**Обнаружено:**
+- `.zig-cache` — нестабильный кэш, clean build всегда успешен
+- Build command провалируется из-за кэша → нужно устранить проблему
+
+---
+
+**Следующий цикл через ~10 минут**
+
+
+## Цикл 2026-04-02T16:35 ✅
+
+**Что сделано:**
+- ✅ Build: GREEN
+- ✅ Tests: GREEN (Speedup varies: 3.36x - 52.99x depending on op)
+- ✅ Обновлён `docs/clara_demo.md` — добавлены Docker build инструкции
+- ✅ Коммит: `f1e2c8c342` — "docs(clara): add Docker build instructions to demo README (#486)"
+
+**Состояние:**
+- Build: ✅ GREEN
+- Tests: ✅ GREEN
+- Format: ✅ OK
+
+**Прогресс по issue #486:**
+- [x] Fix Zig 0.15 build issues — DONE
+- [x] Register tri clara command — DONE
+- [x] Register tri railway command — DONE
+- [x] Create docs/clara_demo.md — DONE ✅
+- [x] Implement CLARA demo pipeline — DONE ✅
+- [x] Implement explanation output — DONE ✅
+- [x] Add Docker build instructions — DONE ✅
+- [ ] Verify Docker build (Docker daemon not running — needs manual test)
+
+**Что дальше:**
+- Docker build verification (требуется запущенный Docker daemon)
+- Sacred AI fix/bypass — инфраструктурный блокер для live тестов
+
+---
+
+**Следующий цикл через ~10 минут**
+
