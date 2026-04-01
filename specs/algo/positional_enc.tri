@@ -1,0 +1,42 @@
+# Positional Encoding — Source of Truth
+# Sinusoidal position embeddings for Transformers
+# φ² + 1/φ² = 3 | TRINITY
+
+name: positional_enc
+version: "1.0.0"
+module: algo.transformer.positional_encoding
+description: "Sinusoidal position embeddings for sequence order"
+
+types:
+  PosEncConfig:
+    fields:
+      - name: d_model
+        type: u32
+      - name: max_len
+        type: u32
+
+constants:
+  DEFAULT_MAX_LEN:
+    type: u32
+    value: 2048
+
+functions:
+  forward:
+    params:
+      - name: positions
+        type: "[]const u32"
+      - name: embeddings
+        type: "[]f32"
+      - name: config
+        type: PosEncConfig
+    returns: "void"
+    formula: |
+      # For position pos in [0, max_len):
+      #   For dim i in [0, d_model]:
+      #     if i is even: PE[pos, i] = sin(pos / 10000^(i/d_model))
+      #     if i is odd:  PE[pos, i] = cos(pos / 10000^((i-1)/d_model))
+      # embeddings[pos] = PE[pos]
+
+behaviors:
+  - name: sinusoidal
+    description: "Uses sin/cos at different frequencies for each dimension"

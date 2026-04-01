@@ -1,0 +1,47 @@
+# Feed Forward Network — Source of Truth
+# FFN: Linear → ReLU → Linear (Transformer block)
+# φ² + 1/φ² = 3 | TRINITY
+
+name: feed_forward
+version: "1.0.0"
+module: algo.transformer.feed_forward
+description: "Position-wise feed-forward network"
+
+types:
+  FFNConfig:
+    fields:
+      - name: d_model
+        type: u32
+      - name: d_ff
+        type: u32
+
+constants:
+  DEFAULT_D_FF:
+    type: u32
+    value: 2048
+
+functions:
+  forward:
+    params:
+      - name: input
+        type: "[]const f32"
+      - name: W1
+        type: "[]const f32"
+      - name: b1
+        type: "[]const f32"
+      - name: W2
+        type: "[]const f32"
+      - name: b2
+        type: "[]const f32"
+      - name: output
+        type: "[]f32"
+      - name: config
+        type: FFNConfig
+    returns: "void"
+    formula: |
+      # hidden = relu(input @ W1 + b1)
+      # output = hidden @ W2 + b2
+
+behaviors:
+  - name: position_wise
+    description: "Same FFN applied to each position independently"

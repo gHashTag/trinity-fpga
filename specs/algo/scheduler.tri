@@ -1,0 +1,41 @@
+# Cosine Decay Scheduler — Source of Truth
+# Learning rate scheduling with cosine annealing
+# φ² + 1/φ² = 3 | TRINITY
+
+name: scheduler
+version: "1.0.0"
+module: algo.scheduler.cosine
+description: "Cosine decay learning rate scheduler"
+
+types:
+  SchedulerConfig:
+    fields:
+      - name: max_steps
+        type: u32
+      - name: warmup_steps
+        type: u32
+      - name: min_lr
+        type: f32
+
+functions:
+  get_lr:
+    params:
+      - name: step
+        type: u32
+      - name: max_steps
+        type: u32
+      - name: base_lr
+        type: f32
+      - name: min_lr
+        type: f32
+    returns: f32
+    formula: |
+      # if step < warmup_steps:
+      #   return base_lr * step / warmup_steps
+      # else:
+      #   progress = (step - warmup_steps) / (max_steps - warmup_steps)
+      #   return min_lr + 0.5 * (base_lr - min_lr) * (1 + cos(pi * progress))
+
+behaviors:
+  - name: cosine_annealing
+    description: "Smooth decay following cosine curve"

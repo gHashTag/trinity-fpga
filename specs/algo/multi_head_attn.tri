@@ -1,0 +1,52 @@
+# Multi-Head Attention — Source of Truth
+# Scaled dot-product attention with multiple heads
+# φ² + 1/φ² = 3 | TRINITY
+
+name: multi_head_attn
+version: "1.0.0"
+module: algo.transformer.multi_head_attention
+description: "Multi-head scaled dot-product attention with projection"
+
+types:
+  MHAConfig:
+    fields:
+      - name: d_model
+        type: u32
+        description: "Model dimension"
+      - name: num_heads
+        type: u32
+        description: "Number of attention heads"
+      - name: d_k
+        type: u32
+        description: "Dimension per head (d_model / num_heads)"
+      - name: causal
+        type: bool
+        description: "Apply causal masking"
+
+functions:
+  forward:
+    params:
+      - name: query
+        type: "[]const f32"
+      - name: key
+        type: "[]const f32"
+      - name: value
+        type: "[]const f32"
+      - name: output
+        type: "[]f32"
+      - name: config
+        type: MHAConfig
+    returns: "void"
+    formula: |
+      # For each head h in [0, num_heads):
+        #   Qh = query @ Wq_h
+        #   Kh = key @ Wk_h
+        #   Vh = value @ Wv_h
+        #   attn_h = softmax(Qh @ Kh^T / sqrt(d_k))
+        #   head_h = attn_h @ Vh
+      # concat all heads
+      # output = concat @ Wo
+
+behaviors:
+  - name: parallel_heads
+    description: "Multiple heads compute independently in parallel"

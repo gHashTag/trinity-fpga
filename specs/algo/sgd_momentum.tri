@@ -1,0 +1,48 @@
+# SGD with Momentum — Source of Truth
+# Stochastic Gradient Descent with Nesterov momentum
+# φ² + 1/φ² = 3 | TRINITY
+
+name: sgd_momentum
+version: "1.0.0"
+module: algo.optimizer.sgd_momentum
+description: "SGD with Nesterov accelerated gradient"
+
+types:
+  SGDMomentumConfig:
+    fields:
+      - name: learning_rate
+        type: f32
+      - name: momentum
+        type: f32
+      - name: nesterov
+        type: bool
+
+constants:
+  DEFAULT_MOMENTUM:
+    type: f32
+    value: 0.9
+
+functions:
+  step:
+    params:
+      - name: grad
+        type: "[]const f32"
+      - name: param
+        type: "[]f32"
+      - name: velocity
+        type: "[]f32"
+      - name: lr
+        type: f32
+      - name: mu
+        type: f32
+      - name: nesterov
+        type: bool
+    returns: "void"
+    formula: |
+      # velocity = mu * velocity - lr * grad
+      # param = param + velocity
+      # Nesterov: compute gradient at param + mu * velocity
+
+behaviors:
+  - name: momentum_acceleration
+    description: "Accumulates gradient direction for faster convergence"

@@ -1,0 +1,32 @@
+# Residual Connection — Source of Truth
+# Add & Norm pattern for Transformer blocks
+# φ² + 1/φ² = 3 | TRINITY
+
+name: residual
+version: "1.0.0"
+module: algo.transformer.residual
+description: "Residual connection with layer normalization"
+
+functions:
+  forward:
+    params:
+      - name: input
+        type: "[]const f32"
+      - name: sublayer_output
+        type: "[]const f32"
+      - name: gamma
+        type: "[]const f32"
+      - name: beta
+        type: "[]const f32"
+      - name: output
+        type: "[]f32"
+    returns: "void"
+    formula: |
+      # normed = layer_norm(sublayer_output + input, gamma, beta)
+      # output = normed
+
+behaviors:
+  - name: residual_add
+    description: "Add input to sublayer output before normalization"
+  - name: layer_norm_first
+    description: "Pre-LN: normalize before residual (better for deep models)"

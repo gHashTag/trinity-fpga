@@ -1,0 +1,53 @@
+# AdamW — Source of Truth
+# Adam with decoupled weight decay (Adam + L2 regularization)
+# φ² + 1/φ² = 3 | TRINITY
+
+name: adamw
+version: "1.0.0"
+module: algo.optimizer.adamw
+description: "AdamW - Adam with decoupled L2 regularization"
+
+types:
+  AdamWConfig:
+    fields:
+      - name: learning_rate
+        type: f32
+      - name: beta1
+        type: f32
+      - name: beta2
+        type: f32
+      - name: weight_decay
+        type: f32
+
+constants:
+  DEFAULT_WEIGHT_DECAY:
+    type: f32
+    value: 0.01
+
+functions:
+  step:
+    params:
+      - name: grad
+        type: "[]const f32"
+      - name: param
+        type: "[]f32"
+      - name: m
+        type: "[]f32"
+      - name: v
+        type: "[]f32"
+      - name: lr
+        type: f32
+      - name: wd
+        type: f32
+    returns: "void"
+    formula: |
+      # Apply weight decay BEFORE Adam update
+      # param = param - lr * wd * param
+      # Then standard Adam step:
+      # m = beta1 * m + (1 - beta1) * grad
+      # v = beta2 * v + (1 - beta2) * grad^2
+      # param = param - lr * m / (sqrt(v) + epsilon)
+
+behaviors:
+  - name: decoupled_decay
+    description: "Weight decay applied to parameters, not gradients"
