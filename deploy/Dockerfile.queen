@@ -30,7 +30,7 @@ RUN apt-get update && apt-get install -y \
 
 # Install Zig 0.15.1
 ENV ZIG_VERSION=0.15.1
-RUN curl -fsSL https://ziglang.org/download/0.15.1/zig-linux-x86_64-0.15.1.tar.xz | tar xJ
+RUN curl -fsSL https://ziglang.org/download/0.15.1/zig-linux-x86_64-0.15.1.tarball | tar xJ
 ENV PATH="/zig-linux-x86_64-${ZIG_VERSION}:${PATH}"
 
 # Copy Trinity source
