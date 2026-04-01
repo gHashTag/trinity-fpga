@@ -342,8 +342,8 @@ fn cmdPinVerify() !void {
 
     std.debug.print("If D26/E26 is correct:\n", .{});
     std.debug.print("  → Update fpga/constraints/uart_bridge_j2.xdc:\n", .{});
-    std.debug.print("    set_property -dict {PACKAGE_PIN D26 ...} [get_ports uart_tx]\n", .{});
-    std.debug.print("    set_property -dict {PACKAGE_PIN E26 ...} [get_ports uart_rx]\n", .{});
+    std.debug.print("    set_property -dict {{PACKAGE_PIN D26 ...}} [get_ports uart_tx]\n", .{});
+    std.debug.print("    set_property -dict {{PACKAGE_PIN E26 ...}} [get_ports uart_rx]\n", .{});
     std.debug.print("  → Rebuild: tri fpga build-uart\n", .{});
     std.debug.print("  → Update this finding to .trinity/fpga/experience.json\n", .{});
 }
