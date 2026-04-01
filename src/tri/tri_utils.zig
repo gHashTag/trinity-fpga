@@ -1136,7 +1136,7 @@ pub fn printStats(state: *CLIState) void {
     std.debug.print("  Summarized: {d}\n", .{chat_stats.context_summarized_messages});
     std.debug.print("  Key Facts: {d}\n", .{chat_stats.context_key_facts});
 
-    std.debug.print("\n{s}phi^2 + 1/phi^2 = 3 = TRINITY | KOSCHEI IS ENERGY IMMORTAL{s}\n\n", .{ GOLDEN, RESET });
+    std.debug.print("\n{s}phi^2 + 1/phi^2 = 3 = TRINITY | Phi{s}\n\n", .{ GOLDEN, RESET });
 }
 
 pub fn processInput(state: *CLIState, input: []const u8) void {

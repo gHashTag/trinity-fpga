@@ -81,7 +81,7 @@ pub const VSARegisters = struct {
     s1: i64 = 0,
     f0: f64 = 0.0, // For similarity results
     f1: f64 = 0.0,
-    f2: f64 = 0.0, // KOSCHEI v7.0: Additional float registers for chemistry/physics
+    f2: f64 = 0.0, // Trinity: Additional float registers for chemistry/physics
     f3: f64 = 0.0,
 
     // f16 SIMD accumulators (16-wide, 2× throughput vs f32)
@@ -141,7 +141,7 @@ pub const VSAVM = struct {
     jit_engine: ?vsa_jit.JitVSAEngine = null,
     jit_enabled: bool = true,
 
-    // KOSCHEI v7.0: Sacred execution context
+    // Trinity: Sacred execution context
     sacred_ctx: SacredContext,
 
     pub fn init(allocator: std.mem.Allocator) VSAVM {
@@ -549,7 +549,7 @@ pub const VSAVM = struct {
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
-    // KOSCHEI v7.0: SACRED OPCODE EXECUTION
+    // Trinity: SACRED OPCODE EXECUTION
     // ═══════════════════════════════════════════════════════════════════════════
 
     /// Execute a sacred opcode (0x80-0xFF range)
@@ -665,7 +665,7 @@ pub const VSAVM = struct {
         try self.execSacredOpcode(.chem_synthesis, .{});
     }
 
-    /// Meta-discovery: KOSCHEI predicts its own discoveries (3000x speedup)
+    /// Meta-discovery: Trinity predicts its own discoveries (3000x speedup)
     /// s0: meta-depth (1-5), s1: domain filter
     /// Returns: f0=confidence, f1=meta_confidence, s0=discovery_count
     pub fn metaDiscovery(self: *VSAVM, depth: i64) !void {
@@ -855,7 +855,7 @@ pub const VSAVM = struct {
         try self.execSacredOpcode(.anomaly_quantum_fusion, .{});
     }
 
-    /// KOSCHEI UNIVERSE: Simulate entire universe in ternary quantum (SINGULARITY)
+    /// Trinity Universe: Simulate entire universe in ternary quantum (SINGULARITY)
     /// s0: scale (0=observable, 1=multiverse, 2=omniverse), f0: time_step
     /// Returns: f0=sim_time_ms, f1=entropy, s0=state_pointer
     pub fn koscheiUniverse(self: *VSAVM, scale: i64, time_step: f64) !void {
@@ -1193,7 +1193,7 @@ test "VSA VM f16: f16_dot computes dot product" {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// KOSCHEI v7.0: SACRED OPCODE TESTS
+// Trinity: SACRED OPCODE TESTS
 // ═══════════════════════════════════════════════════════════════════════════════
 
 test "VSA VM sacred: phi_const" {

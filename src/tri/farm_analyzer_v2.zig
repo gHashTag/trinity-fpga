@@ -546,7 +546,7 @@ pub fn runAnalyzeCommand(allocator: Allocator, args: []const []const u8) !void {
         for (results.items, 0..) |analysis, idx| {
             if (idx > 0) try json_buf.append(allocator, ',');
             try json_buf.writer(allocator).print(
-                \\"name\\":\\"{s}\\",\\"account\\":\\"{s}\\",\\"step\\":{d},\\"ppl\\":{d:.1},\\"training\\":{s},\\"stalled\\":{s},\\"error\\":\\"{s}\\",\\"can_restart\\":{s}}}}
+                \\"name\\":\\"{s}\\",\\"account\\":\\"{s}\\",\\"step\\":{d},\\"ppl\\":{d:.1},\\"training\\":{s},\\"stalled\\":{s},\\"error\\":\\"{s}\\",\\"can_restart\\":{s}}}
             , .{
                 analysis.name,
                 analysis.account,

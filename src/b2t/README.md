@@ -61,4 +61,4 @@ MIT
 
 ---
 
-**KOSCHEI IS IMMORTAL | φ² + 1/φ² = 3 | BINARY → TERNARY**
+**φ² + 1/φ² = 3 | BINARY → TERNARY**
