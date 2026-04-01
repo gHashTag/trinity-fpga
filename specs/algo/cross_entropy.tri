@@ -1,0 +1,129 @@
+# Cross Entropy Loss — Source of Truth
+# Categorical cross-entropy: -sum(target * log(predictions))
+# φ² + 1/φ² = 3 | TRINITY
+
+name: cross_entropy
+version: "1.0.0"
+module: algo.loss.cross_entropy
+description: "Categorical cross-entropy loss for classification"
+
+types:
+  CrossEntropyConfig:
+    description: "Configuration for CrossEntropy"
+    fields:
+      - name: reduction
+        type: ReductionType
+        description: "How to reduce over batch (mean, sum)"
+      - name: label_smoothing
+        type: f32
+        description: "Smoothing for one-hot labels"
+      - name: epsilon
+        type: f32
+        description: "Small value for log stability"
+
+  ReductionType:
+    description: "Reduction method"
+    enum_type: "enum"
+    values:
+      - name: Mean
+        description: "Average over batch dimension"
+      - name: Sum
+        description: "Sum over batch dimension"
+      - name: None
+        description: "No reduction (per-sample)"
+
+constants:
+  MIN_LOG_PROB:
+    type: f32
+    value: 1.0e-8
+    description: "Minimum log probability for stability"
+
+  DEFAULT_LABEL_SMOOTHING:
+    type: f32
+    value: 0.1
+    description: "Default label smoothing factor"
+
+functions:
+  forward:
+    params:
+      - name: predictions
+        type: "[]const f32"
+        description: "Predicted logits/probabilities [batch, num_classes]"
+      - name: target
+        type: "[]const f32"
+        description: "Target labels [batch] (class indices or one-hot)"
+      - name: output
+        type: "[]f32"
+        description: "Loss values [batch]"
+      - name: config
+        type: CrossEntropyConfig
+    returns: "void"
+    description: "Compute cross-entropy loss"
+    formula: |
+      If predictions are logits (before softmax):
+        probs = softmax(predictions)
+      Else:
+        probs = predictions  # Assume already probabilities
+
+      If target is class indices:
+        For each sample i:
+          t_idx = target[i] as integer
+          loss[i] = -log(probs[i, t_idx] + config.epsilon)
+      Else (target is one-hot):
+        For each sample i:
+          loss[i] = -sum(target[i, :] * log(probs[i, :] + config.epsilon))
+
+      If config.reduction == Mean:
+        output = mean(loss)
+      Else if config.reduction == Sum:
+        output = sum(loss)
+      Else:
+        output = loss
+
+  backward:
+    params:
+      - name: grad_output
+        type: "[]const f32"
+        description: "Gradient from next layer (usually 1 for CE)"
+      - name: predictions
+        type: "[]const f32"
+        description: "Predictions from forward pass"
+      - name: target
+        type: "[]const f32"
+        description: "Target labels"
+      - name: grad_input
+        type: "[]f32"
+        description: "Gradient w.r.t. predictions"
+      - name: config
+        type: CrossEntropyConfig
+    returns: "void"
+    description: "Compute gradient w.r.t. predictions"
+    formula: |
+      If target is class indices:
+        For each sample i:
+          t_idx = target[i] as integer
+          grad_input[i, t_idx] = predictions[i, t_idx] - target[i]
+      Else (target is one-hot):
+        grad_input[i, :] = predictions[i, :] - target[i, :]
+
+      grad_output = (config.reduction == Mean) ? mean(grad_input) : sum(grad_input)
+
+behaviors:
+  - name: log_stability
+    description: "Prevent log(0) numerical error"
+    implementation: |
+      Add epsilon to log argument: log(p + epsilon)
+      Equivalent to limiting minimum log value
+
+  - name: label_smoothing
+    description: "Regularization for over-confident predictions"
+    implementation: |
+      Smooth one-hot labels: (1 - alpha)*y + alpha/C
+      Common values: 0.1 to reduce overconfidence
+      Equivalent to adding uniform noise
+
+constraints:
+  - predictions.shape[0] == predictions.shape[1]  # batch, num_classes, ...
+  - target.shape[0] == predictions.shape[0]  # Batch dimension matches
+  - epsilon > 0
+  - 0 < label_smoothing <= 1

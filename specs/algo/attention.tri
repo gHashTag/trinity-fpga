@@ -1,0 +1,167 @@
+# Attention Mechanism — Source of Truth
+# Scaled dot-product attention: the core of Transformers
+# φ² + 1/φ² = 3 | TRINITY
+
+name: attention
+version: "1.0.0"
+module: algo.nn.attention
+description: "Scaled dot-product attention: Q, K, V mechanism"
+
+types:
+  AttentionConfig:
+    description: "Configuration for attention layer"
+    fields:
+      - name: d_model
+        type: u32
+        description: "Model dimension (must be divisible by num_heads)"
+      - name: num_heads
+        type: u32
+        description: "Number of attention heads"
+      - name: dropout
+        type: f32
+        description: "Dropout probability"
+      - name: causal
+        type: bool
+        description: "Use causal masking (for autoregressive)"
+
+  AttentionOutput:
+    description: "Output of attention computation"
+    fields:
+      - name: output
+        type: "[]f32"
+        description: "Attention output [batch, seq_len, d_model]"
+      - name: weights
+        type: "[]f32"
+        description: "Attention weights [batch, num_heads, seq_len, seq_len]"
+
+constants:
+  SCALE_FACTOR:
+    type: f32
+    value: 0.0
+    description: "Computed as 1/sqrt(d_k) where d_k = d_model/num_heads"
+
+functions:
+  forward:
+    params:
+      - name: query
+        type: "[]const f32"
+        description: "Query tensor [batch, seq_len, d_model]"
+      - name: key
+        type: "[]const f32"
+        description: "Key tensor [batch, seq_len, d_model]"
+      - name: value
+        type: "[]const f32"
+        description: "Value tensor [batch, seq_len, d_model]"
+      - name: output
+        type: "[]f32"
+        description: "Output tensor [batch, seq_len, d_model]"
+      - name: weights
+        type: "[]f32"
+        description: "Attention weights (optional, for visualization)"
+      - name: config
+        type: AttentionConfig
+    returns: "void"
+    description: "Scaled dot-product attention"
+    formula: |
+      d_k = config.d_model / config.num_heads
+
+      # Split into multiple heads
+      For each head h in [0, num_heads):
+        Q_h = query[:, :, h*d_k : (h+1)*d_k]  # [batch, seq_len, d_k]
+        K_h = key[:, :, h*d_k : (h+1)*d_k]
+        V_h = value[:, :, h*d_k : (h+1)*d_k]
+
+        # Scaled dot-product attention
+        scores = Q_h @ K_h^T / sqrt(d_k)       # [batch, seq_len, seq_len]
+
+        # Apply causal mask if needed
+        If config.causal:
+          For i in [0, seq_len):
+            For j in [i+1, seq_len):
+              scores[:, i, j] = -infinity
+
+        # Softmax over keys
+        attn_weights = softmax(scores, axis=-1)  # [batch, seq_len, seq_len]
+
+        # Apply dropout
+        attn_weights = dropout(attn_weights, config.dropout)
+
+        # Weight values
+        head_output = attn_weights @ V_h         # [batch, seq_len, d_k]
+
+      # Concatenate heads and project
+      output = concat(head_0, ..., head_{num_heads-1}) @ W_o
+
+  backward:
+    params:
+      - name: grad_output
+        type: "[]const f32"
+        description: "Gradient w.r.t. output"
+      - name: query
+        type: "[]const f32"
+        description: "Query from forward pass"
+      - name: key
+        type: "[]const f32"
+        description: "Key from forward pass"
+      - name: value
+        type: "[]const f32"
+        description: "Value from forward pass"
+      - name: attn_weights
+        type: "[]const f32"
+        description: "Attention weights from forward"
+      - name: grad_query
+        type: "[]f32"
+        description: "Gradient w.r.t. query"
+      - name: grad_key
+        type: "[]f32"
+        description: "Gradient w.r.t. key"
+      - name: grad_value
+        type: "[]f32"
+        description: "Gradient w.r.t. value"
+      - name: config
+        type: AttentionConfig
+    returns: "void"
+    description: "Backward pass through attention"
+    formula: |
+      d_k = config.d_model / config.num_heads
+
+      For each head h:
+        # Gradient w.r.t. values
+        grad_value_h = attn_weights^T @ grad_output
+
+        # Gradient w.r.t. attention weights
+        d_attn = grad_output @ value^T
+
+        # Gradient through softmax
+        d_scores = softmax_backward(d_attn, attn_weights)
+
+        # Gradients w.r.t. Q and K
+        grad_query_h = d_scores @ key / sqrt(d_k)
+        grad_key_h = d_scores^T @ query / sqrt(d_k)
+
+behaviors:
+  - name: multi_head_attention
+    description: "Multiple attention heads learn different representations"
+    implementation: |
+      Each head operates on d_k = d_model / num_heads dimensions
+      Heads are computed in parallel, then concatenated
+      Enables attention to different position subsets
+
+  - name: causal_masking
+    description: "Prevent attention to future positions (autoregressive)"
+    implementation: |
+      Set upper triangular scores to -infinity
+      After softmax: future positions have zero weight
+      Used in GPT-style decoder-only models
+
+  - name: flash_attention
+    description: "Memory-efficient attention for long sequences"
+    implementation: |
+      Tile attention computation to avoid materializing [N x N] matrix
+      Online softmax algorithm
+      Reduces memory from O(N^2) to O(N)
+
+constraints:
+  - d_model % num_heads == 0
+  - 0 <= dropout < 1
+  - query.shape == key.shape == value.shape

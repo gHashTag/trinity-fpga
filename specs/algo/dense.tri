@@ -1,0 +1,136 @@
+# Dense (Fully Connected) Layer — Source of Truth
+# Matrix multiplication + bias + activation
+# φ² + 1/φ² = 3 | TRINITY
+
+name: dense
+version: "1.0.0"
+module: algo.nn.dense
+description: "Dense/Fully Connected layer: output = activation(input @ weight + bias)"
+
+types:
+  DenseConfig:
+    description: "Configuration for dense layer"
+    fields:
+      - name: input_size
+        type: u32
+        description: "Number of input features"
+      - name: output_size
+        type: u32
+        description: "Number of output neurons"
+      - name: has_bias
+        type: bool
+        description: "Whether to include bias term"
+      - name: activation
+        type: ActivationType
+        description: "Activation function to apply"
+
+  ActivationType:
+    description: "Supported activation functions"
+    enum_type: "enum"
+    values:
+      - name: None
+        description: "No activation (linear)"
+      - name: ReLU
+        description: "Rectified Linear Unit: max(0, x)"
+      - name: GELU
+        description: "Gaussian Error Linear Unit"
+      - name: Sigmoid
+        description: "Logistic sigmoid: 1 / (1 + exp(-x))"
+      - name: Tanh
+        description: "Hyperbolic tangent"
+      - name: Softmax
+        description: "Softmax (for output layer)"
+
+constants:
+  MIN_INPUT_SIZE:
+    type: u32
+    value: 1
+    description: "Minimum input dimension"
+
+  MAX_INPUT_SIZE:
+    type: u32
+    value: 4096
+    description: "Maximum input dimension (FPGA constraint)"
+
+functions:
+  forward:
+    params:
+      - name: input
+        type: "[]const f32"
+        description: "Input vector [input_size]"
+      - name: weights
+        type: "[]const f32"
+        description: "Weight matrix [input_size * output_size]"
+      - name: bias
+        type: "[]const f32"
+        description: "Bias vector [output_size]"
+      - name: output
+        type: "[]f32"
+        description: "Output vector [output_size]"
+      - name: config
+        type: DenseConfig
+        description: "Layer configuration"
+    returns: "void"
+    description: "Forward pass: output = activation(input @ weight + bias)"
+    formula: |
+      For each output neuron j in [0, output_size):
+        sum = (has_bias ? bias[j] : 0)
+        For each input i in [0, input_size):
+          sum += input[i] * weights[i * output_size + j]
+        output[j] = activation(sum)
+
+  backward:
+    params:
+      - name: grad_output
+        type: "[]const f32"
+        description: "Gradient from next layer"
+      - name: input
+        type: "[]const f32"
+        description: "Input from forward pass"
+      - name: weights
+        type: "[]const f32"
+        description: "Weight matrix"
+      - name: grad_input
+        type: "[]f32"
+        description: "Gradient w.r.t. input"
+      - name: grad_weights
+        type: "[]f32"
+        description: "Gradient w.r.t. weights"
+      - name: grad_bias
+        type: "[]f32"
+        description: "Gradient w.r.t. bias"
+      - name: config
+        type: DenseConfig
+    returns: "void"
+    description: "Backward pass: compute gradients"
+    formula: |
+      grad_weights[i][j] = input[i] * grad_output[j]
+      grad_bias[j] = grad_output[j]
+      grad_input[i] = sum_j(weights[i][j] * grad_output[j])
+
+behaviors:
+  - name: matrix_multiply
+    description: "Core operation is matrix-vector multiplication"
+    implementation: |
+      For each output neuron: dot product of input row and weight column
+      Optimize with loop tiling for cache efficiency
+      Use vector instructions when available (SIMD)
+
+  - name: activation_fusion
+    description: "Apply activation immediately after computation"
+    implementation: |
+      Fuse activation into output loop to avoid extra pass
+      Special case for ReLU: max(0, x) computed inline
+
+  - name: memory_layout
+    description: "Row-major weight layout for cache efficiency"
+    implementation: |
+      weights[input_size][output_size] stored as:
+      weights[i * output_size + j] = W[i][j]
+
+constraints:
+  - input.size() == config.input_size
+  - output.size() == config.output_size
+  - weights.size() == input_size * output_size
+  - bias.size() == output_size (if has_bias)
+  - All inputs must be finite (no NaN/Inf)

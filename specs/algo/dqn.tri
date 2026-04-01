@@ -1,0 +1,178 @@
+# DQN — Deep Q-Network — Source of Truth
+# Q-learning with function approximation by neural network
+# φ² + 1/φ² = 3 | TRINITY
+
+name: dqn
+version: "1.0.0"
+module: algo.rl.dqn
+description: "Deep Q-Network: Q-learning with neural network approximation"
+
+types:
+  DQNConfig:
+    description: "Configuration for DQN agent"
+    fields:
+      - name: state_dim
+        type: u32
+        description: "Dimension of state space"
+      - name: action_dim
+        type: u32
+        description: "Number of discrete actions"
+      - name: hidden_dims
+        type: "[]u32"
+        description: "Hidden layer sizes"
+      - name: learning_rate
+        type: f32
+        description: "Learning rate for optimizer"
+      - name: gamma
+        type: f32
+        description: "Discount factor (0 to 1)"
+      - name: epsilon_start
+        type: f32
+        description: "Initial exploration rate"
+      - name: epsilon_end
+        type: f32
+        description: "Final exploration rate"
+      - name: epsilon_decay
+        type: f32
+        description: "Epsilon decay per step"
+      - name: batch_size
+        type: u32
+        description: "Training batch size"
+      - name: target_update_freq
+        type: u32
+        description: "Steps between target network updates"
+
+  Transition:
+    description: "Single experience tuple"
+    fields:
+      - name: state
+        type: "[]f32"
+        description: "Current state"
+      - name: action
+        type: u32
+        description: "Action taken"
+      - name: reward
+        type: f32
+        description: "Reward received"
+      - name: next_state
+        type: "[]f32"
+        description: "Next state"
+      - name: done
+        type: bool
+        description: "Episode termination"
+
+constants:
+  DEFAULT_GAMMA:
+    type: f32
+    value: 0.99
+    description: "Default discount factor"
+
+  DEFAULT_EPSILON_START:
+    type: f32
+    value: 1.0
+    description: "Start with full exploration"
+
+  DEFAULT_EPSILON_END:
+    type: f32
+    value: 0.01
+    description: "End with 1% exploration"
+
+functions:
+  select_action:
+    params:
+      - name: state
+        type: "[]const f32"
+        description: "Current state"
+      - name: q_network
+        type: "[]const f32"
+        description: "Q-network parameters"
+      - name: epsilon
+        type: f32
+        description: "Current exploration rate"
+      - name: config
+        type: DQNConfig
+    returns: "u32"
+    description: "Select action using epsilon-greedy policy"
+    formula: |
+      If random() < epsilon:
+        return random_action(config.action_dim)
+      Else:
+        q_values = q_network.forward(state)
+        return argmax(q_values)
+
+  train_step:
+    params:
+      - name: batch
+        type: "[]Transition"
+        description: "Batch of experiences"
+      - name: q_network
+        type: "[]f32"
+        description: "Q-network parameters"
+      - name: target_network
+        type: "[]f32"
+        description: "Target Q-network parameters"
+      - name: config
+        type: DQNConfig
+    returns: "f32"
+    description: "Train on batch of transitions"
+    formula: |
+      loss = 0.0
+      For each transition in batch:
+        # Current Q-values
+        q_values = q_network.forward(transition.state)
+        q_value = q_values[transition.action]
+
+        # Target Q-value
+        If transition.done:
+          target = transition.reward
+        Else:
+          next_q_values = target_network.forward(transition.next_state)
+          target = transition.reward + config.gamma * max(next_q_values)
+
+        # TD error
+        td_error = target - q_value
+        loss += td_error^2
+
+      # Backpropagate loss
+      q_network.backward(loss / batch_size)
+      return loss
+
+  update_target:
+    params:
+      - name: q_network
+        type: "[]f32"
+        description: "Q-network parameters"
+      - name: target_network
+        type: "[]f32"
+        description: "Target network to update"
+    returns: "void"
+    description: "Copy Q-network to target network"
+    formula: |
+      target_network = copy(q_network)
+
+behaviors:
+  - name: experience_replay
+    description: "Store and sample transitions randomly"
+    implementation: |
+      Store transitions in replay buffer
+      Sample random mini-batches for training
+      Breaks correlation between consecutive samples
+
+  - name: target_network
+    description: "Stabilize learning with frozen target"
+    implementation: |
+      Maintain separate target network
+      Periodically copy Q-network to target
+      Prevents oscillating updates
+
+  - name: epsilon_greedy
+    description: "Balance exploration and exploitation"
+    implementation: |
+      With probability epsilon: random action
+      Otherwise: action with highest Q-value
+      Decay epsilon over time
+
+constraints:
+  - 0 <= gamma <= 1
+  - 0 <= epsilon_end <= epsilon_start <= 1
+  - 0 < epsilon_decay <= 1

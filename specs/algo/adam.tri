@@ -1,0 +1,155 @@
+# Adam Optimizer — Source of Truth
+# Adaptive Moment Estimation: combines momentum and RMSprop
+# φ² + 1/φ² = 3 | TRINITY
+
+name: adam
+version: "1.0.0"
+module: algo.optimizer.adam
+description: "Adam optimizer: adaptive learning rate with momentum"
+
+types:
+  AdamConfig:
+    description: "Configuration for Adam optimizer"
+    fields:
+      - name: learning_rate
+        type: f32
+        description: "Step size (alpha)"
+      - name: beta1
+        type: f32
+        description: "Exponential decay rate for first moment"
+      - name: beta2
+        type: f32
+        description: "Exponential decay rate for second moment"
+      - name: epsilon
+        type: f32
+        description: "Small constant for numerical stability"
+      - name: weight_decay
+        type: f32
+        description: "L2 regularization (AdamW: decoupled)"
+      - name: amsgrad
+        type: bool
+        description: "Use AMSGrad variant"
+
+  AdamState:
+    description: "Per-parameter state for Adam"
+    fields:
+      - name: m
+        type: "[]f32"
+        description: "First moment estimate (mean of gradients)"
+      - name: v
+        type: "[]f32"
+        description: "Second moment estimate (uncentered variance)"
+      - name: v_max
+        type: "[]f32"
+        description: "Max of v (for AMSGrad)"
+      - name: t
+        type: u32
+        description: "Timestep counter"
+
+constants:
+  DEFAULT_LR:
+    type: f32
+    value: 0.001
+    description: "Default learning rate"
+
+  DEFAULT_BETA1:
+    type: f32
+    value: 0.9
+    description: "Default beta1 (momentum)"
+
+  DEFAULT_BETA2:
+    type: f32
+    value: 0.999
+    description: "Default beta2 (RMSprop)"
+
+  DEFAULT_EPSILON:
+    type: f32
+    value: 1.0e-8
+    description: "Default epsilon for stability"
+
+functions:
+  init:
+    params:
+      - name: state
+        type: AdamState
+        description: "State to initialize"
+      - name: param_count
+        type: u32
+        description: "Number of parameters"
+    returns: "void"
+    description: "Initialize Adam state to zeros"
+    formula: |
+      state.m = zeros[param_count]
+      state.v = zeros[param_count]
+      state.v_max = zeros[param_count]  (if amsgrad)
+      state.t = 0
+
+  update:
+    params:
+      - name: params
+        type: "[]f32"
+        description: "Parameters to update"
+      - name: grads
+        type: "[]const f32"
+        description: "Gradients"
+      - name: state
+        type: AdamState
+        description: "Optimizer state"
+      - name: config
+        type: AdamConfig
+    returns: "void"
+    description: "Update parameters using Adam"
+    formula: |
+      state.t += 1
+      lr_t = config.learning_rate * sqrt(1 - config.beta2^state.t) / (1 - config.beta1^state.t)
+
+      For each parameter i:
+        # Update biased first moment estimate
+        state.m[i] = config.beta1 * state.m[i] + (1 - config.beta1) * grads[i]
+
+        # Update biased second raw moment estimate
+        state.v[i] = config.beta2 * state.v[i] + (1 - config.beta2) * grads[i]^2
+
+        # Compute bias-corrected estimates
+        m_hat = state.m[i] / (1 - config.beta1^state.t)
+        v_hat = state.v[i] / (1 - config.beta2^state.t)
+
+        # AMSGrad variant
+        If config.amsgrad:
+          state.v_max[i] = max(state.v_max[i], v_hat)
+          params[i] -= lr_t * m_hat / (sqrt(state.v_max[i]) + config.epsilon)
+        Else:
+          params[i] -= lr_t * m_hat / (sqrt(v_hat) + config.epsilon)
+
+        # AdamW: decoupled weight decay
+        If config.weight_decay > 0:
+          params[i] -= config.learning_rate * config.weight_decay * params[i]
+
+behaviors:
+  - name: bias_correction
+    description: "Correct bias in moment estimates"
+    implementation: |
+      First moment: m_hat = m / (1 - beta1^t)
+      Second moment: v_hat = v / (1 - beta2^t)
+      Especially important early in training (t small)
+
+  - name: adaptive_learning_rate
+    description: "Per-parameter learning rate based on gradient history"
+    implementation: |
+      Large gradients -> large v -> small effective LR
+      Small gradients -> small v -> large effective LR
+      Automatic scaling based on gradient magnitude
+
+  - name: sparse_updates
+    description: "Efficient for sparse gradients"
+    implementation: |
+      Only update parameters with non-zero gradients
+      Accumulate moments only for active parameters
+
+constraints:
+  - 0 < learning_rate < 1
+  - 0 <= beta1 < 1
+  - 0 <= beta2 < 1
+  - beta2 > beta1 (typically)
+  - epsilon > 0
+  - params.size() == grads.size() == state.m.size() == state.v.size()

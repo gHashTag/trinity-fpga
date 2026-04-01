@@ -1,0 +1,115 @@
+# Layer Normalization — Source of Truth
+# Normalize across feature dimension (not batch)
+# φ² + 1/φ² = 3 | TRINITY
+
+name: layernorm
+version: "1.0.0"
+module: algo.nn.layernorm
+description: "Layer normalization: stabilize hidden states"
+
+types:
+  LayerNormConfig:
+    description: "Configuration for LayerNorm"
+    fields:
+      - name: normalized_shape
+        type: "[]u32"
+        description: "Shape of dimensions to normalize over"
+      - name: epsilon
+        type: f32
+        description: "Small constant for stability"
+      - name: elementwise_affine
+        type: bool
+        description: "Whether to use learnable scale and shift"
+
+constants:
+  DEFAULT_EPSILON:
+    type: f32
+    value: 1.0e-5
+    description: "Default epsilon for stability"
+
+functions:
+  forward:
+    params:
+      - name: input
+        type: "[]const f32"
+        description: "Input tensor"
+      - name: gamma
+        type: "[]const f32"
+        description: "Scale parameter [normalized_size]"
+      - name: beta
+        type: "[]const f32"
+        description: "Shift parameter [normalized_size]"
+      - name: output
+        type: "[]f32"
+        description: "Normalized output"
+      - name: config
+        type: LayerNormConfig
+    returns: "void"
+    description: "Apply layer normalization"
+    formula: |
+      For each sample (independent normalization):
+        mean = mean over feature dimensions
+        variance = var over feature dimensions
+
+        For each feature dimension f:
+          x_hat = (input[f] - mean) / sqrt(variance + config.epsilon)
+          If config.elementwise_affine:
+            output[f] = gamma[f] * x_hat + beta[f]
+          Else:
+            output[f] = x_hat
+
+  backward:
+    params:
+      - name: grad_output
+        type: "[]const f32"
+        description: "Gradient from next layer"
+      - name: input
+        type: "[]const f32"
+        description: "Input from forward pass"
+      - name: gamma
+        type: "[]const f32"
+        description: "Scale parameter"
+      - name: mean
+        type: "[]const f32"
+        description: "Mean from forward pass"
+      - name: var
+        type: "[]const f32"
+        description: "Variance from forward pass"
+      - name: grad_gamma
+        type: "[]f32"
+        description: "Gradient w.r.t. gamma"
+      - name: grad_beta
+        type: "[]f32"
+        description: "Gradient w.r.t. beta"
+      - name: grad_input
+        type: "[]f32"
+        description: "Gradient w.r.t. input"
+      - name: config
+        type: LayerNormConfig
+    returns: "void"
+    description: "Compute gradients"
+    formula: |
+      x_hat = (input - mean) / sqrt(var + epsilon)
+
+      # Gradient w.r.t. parameters
+      grad_gamma = sum(grad_output * x_hat)
+      grad_beta = sum(grad_output)
+
+      # Gradient w.r.t. input
+      d_xhat = grad_output * gamma
+      N = number of features
+      grad_input = (d_xhat - mean(d_xhat) - x_hat * mean(d_xhat * x_hat)) / sqrt(var + epsilon)
+
+behaviors:
+  - name: sample_wise_normalization
+    description: "Normalize each sample independently"
+    implementation: |
+      Unlike BatchNorm, LayerNorm doesn't use batch statistics
+      Each sample is normalized independently
+      More stable for RNNs and online learning
+
+  - name: feature_normalization
+    description: "Normalize across feature dimension"
+    implementation: |
+      Common in Transformers: normalize over d_model dimension
+      Preserves relative scale between different positions

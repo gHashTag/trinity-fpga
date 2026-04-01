@@ -1,0 +1,160 @@
+# Batch Normalization — Source of Truth
+# Normalize activations across batch dimension
+# φ² + 1/φ² = 3 | TRINITY
+
+name: batchnorm
+version: "1.0.0"
+module: algo.nn.batchnorm
+description: "Batch normalization: stabilize and accelerate training"
+
+types:
+  BatchNormConfig:
+    description: "Configuration for BatchNorm layer"
+    fields:
+      - name: num_features
+        type: u32
+        description: "Number of features (channels)"
+      - name: epsilon
+        type: f32
+        description: "Small constant for numerical stability"
+      - name: momentum
+        type: f32
+        description: "Momentum for running stats"
+      - name: affine
+        type: bool
+        description: "Whether to apply scale and shift (learnable)"
+      - name: track_running_stats
+        type: bool
+        description: "Whether to track running mean/variance"
+
+  BatchNormState:
+    description: "Running statistics for inference"
+    fields:
+      - name: running_mean
+        type: "[]f32"
+        description: "Running mean [num_features]"
+      - name: running_var
+        type: "[]f32"
+        description: "Running variance [num_features]"
+
+constants:
+  DEFAULT_EPSILON:
+    type: f32
+    value: 1.0e-5
+    description: "Default epsilon for stability"
+
+  DEFAULT_MOMENTUM:
+    type: f32
+    value: 0.1
+    description: "Default momentum for running stats"
+
+functions:
+  forward:
+    params:
+      - name: input
+        type: "[]const f32"
+        description: "Input [batch, num_features, ...]"
+      - name: gamma
+        type: "[]const f32"
+        description: "Scale parameter [num_features]"
+      - name: beta
+        type: "[]const f32"
+        description: "Shift parameter [num_features]"
+      - name: state
+        type: BatchNormState"
+        description: "Running statistics"
+      - name: output
+        type: "[]f32"
+        description: "Normalized output"
+      - name: config
+        type: BatchNormConfig
+    returns: "void"
+    description: "Apply batch normalization"
+    formula: |
+      If config.track_running_stats:
+        Use state.running_mean, state.running_var
+        mean = state.running_mean
+        variance = state.running_var
+      Else (training mode):
+        mean = mean over batch dimension
+        variance = var over batch dimension
+        Update running stats with momentum
+
+      For each feature f:
+        x_hat = (input[:, f] - mean[f]) / sqrt(variance[f] + config.epsilon)
+        If config.affine:
+          output[:, f] = gamma[f] * x_hat + beta[f]
+        Else:
+          output[:, f] = x_hat
+
+  backward:
+    params:
+      - name: grad_output
+        type: "[]const f32"
+        description: "Gradient from next layer"
+      - name: input
+        type: "[]const f32"
+        description: "Input from forward pass"
+      - name: gamma
+        type: "[]const f32"
+        description: "Scale parameter"
+      - name: beta
+        type: "[]const f32"
+        description: "Shift parameter"
+      - name: mean
+        type: "[]const f32"
+        description: "Mean from forward pass"
+      - name: var
+        type: "[]const f32"
+        description: "Variance from forward pass"
+      - name: grad_gamma
+        type: "[]f32"
+        description: "Gradient w.r.t. gamma"
+      - name: grad_beta
+        type: "[]f32"
+        description: "Gradient w.r.t. beta"
+      - name: grad_input
+        type: "[]f32"
+        description: "Gradient w.r.t. input"
+      - name: config
+        type: BatchNormConfig
+    returns: "void"
+    description: "Compute gradients"
+    formula: |
+      For each feature f:
+        x_hat = (input[:, f] - mean[f]) / sqrt(var[f] + config.epsilon)
+        d_xhat = grad_output[:, f] * gamma[f]
+
+        # Gradient w.r.t. parameters
+        grad_gamma[f] = sum over batch of (d_xhat * x_hat)
+        grad_beta[f] = sum over batch of d_xhat
+
+        # Gradient w.r.t. input
+        grad_input[:, f] = d_xhat / sqrt(var[f] + config.epsilon)
+
+behaviors:
+  - name: reduce_internal_covariate_shift
+    description: "BatchNorm reduces internal covariate shift"
+    implementation: |
+      Normalizes each channel independently
+      Reduces sensitivity to input scale changes
+
+  - name: training_inference_modes
+    description: "Different behavior for training vs inference"
+    implementation: |
+      Training: compute batch mean/variance, update running stats
+      Inference: use stored running mean/variance (frozen)
+      Switch controlled by track_running_stats flag
+
+  - name: epsilon_stability
+    description: "Prevent division by zero in sqrt"
+    implementation: |
+      sqrt(variance + epsilon) where epsilon > 0
+      Small values: 1e-5, 1e-6, 1e-8
+
+constraints:
+  - num_features > 0
+  - epsilon > 0
+  - 0 <= momentum < 1
+  - gamma.size() == num_features
+  - beta.size() == num_features

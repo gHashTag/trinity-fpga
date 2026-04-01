@@ -1,0 +1,96 @@
+# Dropout — Source of Truth
+# Randomly zero activations during training for regularization
+# φ² + 1/φ² = 3 | TRINITY
+
+name: dropout
+version: "1.0.0"
+module: algo.nn.dropout
+description: "Dropout: randomly set activations to zero"
+
+types:
+  DropoutConfig:
+    description: "Configuration for Dropout"
+    fields:
+      - name: p
+        type: f32
+        description: "Probability of zeroing (0 to 1)"
+      - name: inplace
+        type: bool
+        description: "Modify input in-place"
+      - name: scale_during_training
+        type: bool
+        description: "Scale during training (vs inference)"
+
+constants:
+  DEFAULT_DROP_RATE:
+    type: f32
+    value: 0.5
+    description: "Default dropout probability"
+
+functions:
+  forward:
+    params:
+      - name: input
+        type: "[]const f32"
+        description: "Input activations"
+      - name: output
+        type: "[]f32"
+        description: "Output with dropout applied"
+      - name: mask
+        type: "[]bool"
+        description: "Dropout mask (for backward pass)"
+      - name: training
+        type: bool
+        description: "Whether in training mode"
+      - name: config
+        type: DropoutConfig
+    returns: "void"
+    description: "Apply dropout"
+    formula: |
+      If not training (inference):
+        output = input  # Pass through unchanged
+      Else:
+        scale = 1.0 / (1.0 - config.p)
+        For each element i:
+          mask[i] = random() > config.p  # True = keep
+          If mask[i]:
+            output[i] = input[i] * scale
+          Else:
+            output[i] = 0.0
+
+  backward:
+    params:
+      - name: grad_output
+        type: "[]const f32"
+        description: "Gradient from next layer"
+      - name: mask
+        type: "[]const bool"
+        description: "Mask from forward pass"
+      - name: grad_input
+        type: "[]f32"
+        description: "Gradient w.r.t. input"
+      - name: config
+        type: DropoutConfig
+    returns: "void"
+    description: "Backpropagate through dropout"
+    formula: |
+      scale = 1.0 / (1.0 - config.p)
+      For each element i:
+        If mask[i]:
+          grad_input[i] = grad_output[i] * scale
+        Else:
+          grad_input[i] = 0.0
+
+behaviors:
+  - name: inverted_dropout
+    description: "Scale during training, not inference"
+    implementation: |
+      During training: multiply kept activations by 1/(1-p)
+      During inference: no scaling needed
+      Ensures expected value is preserved
+
+  - name: regularization
+    description: "Prevent co-adaptation of neurons"
+    implementation: |
+      Randomly zero activations forces network to learn redundant features
+      Reduces overfitting by preventing reliance on specific neurons

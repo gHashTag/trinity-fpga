@@ -1,0 +1,152 @@
+# Conv2D Layer — Source of Truth
+# 2D Convolution for spatial feature extraction
+# φ² + 1/φ² = 3 | TRINITY
+
+name: conv2d
+version: "1.0.0"
+module: algo.nn.conv2d
+description: "2D Convolution layer: applies learned filters to input"
+
+types:
+  Conv2DConfig:
+    description: "Configuration for Conv2D layer"
+    fields:
+      - name: in_channels
+        type: u32
+        description: "Number of input channels"
+      - name: out_channels
+        type: u32
+        description: "Number of output filters"
+      - name: kernel_size
+        type: u32
+        description: "Filter size (kernel_size x kernel_size)"
+      - name: stride
+        type: u32
+        description: "Stride of the convolution"
+      - name: padding
+        type: u32
+        description: "Zero-padding added to both sides"
+      - name: dilation
+        type: u32
+        description: "Spacing between kernel elements"
+      - name: groups
+        type: u32
+        description: "Number of grouped convolutions"
+      - name: has_bias
+        type: bool
+        description: "Whether to include bias term"
+
+  PaddingMode:
+    description: "Padding mode"
+    enum_type: "enum"
+    values:
+      - name: Zeros
+        description: "Pad with zeros"
+      - name: Reflect
+        description: "Mirror reflection"
+      - name: Replicate
+        description: "Replicate edge values"
+      - name: Circular
+        description: "Circular wrapping"
+
+constants:
+  MIN_KERNEL_SIZE:
+    type: u32
+    value: 1
+    description: "Minimum kernel size"
+
+  MAX_KERNEL_SIZE:
+    type: u32
+    value: 7
+    description: "Maximum kernel size (FPGA constraint)"
+
+functions:
+  forward:
+    params:
+      - name: input
+        type: "[]const f32"
+        description: "Input tensor [batch, in_channels, height, width]"
+      - name: weights
+        type: "[]const f32"
+        description: "Filter tensor [out_channels, in_channels/groups, kernel_h, kernel_w]"
+      - name: bias
+        type: "[]const f32"
+        description: "Bias vector [out_channels]"
+      - name: output
+        type: "[]f32"
+        description: "Output tensor [batch, out_channels, out_h, out_w]"
+      - name: config
+        type: Conv2DConfig
+    returns: "void"
+    description: "Forward pass: 2D convolution"
+    formula: |
+      output_h = (input_h + 2*padding - dilation*(kernel_size-1) - 1) / stride + 1
+      output_w = (input_w + 2*padding - dilation*(kernel_size-1) - 1) / stride + 1
+
+      For each batch b:
+        For each output channel c:
+          For each output position (y, x):
+            sum = (has_bias ? bias[c] : 0)
+            For each input channel g:
+              For each kernel element (ky, kx):
+                iy = y*stride + ky*dilation - padding
+                ix = x*stride + kx*dilation - padding
+                If iy, ix in valid range:
+                  sum += input[b, g, iy, ix] * weights[c, g, ky, kx]
+            output[b, c, y, x] = sum
+
+  backward:
+    params:
+      - name: grad_output
+        type: "[]const f32"
+        description: "Gradient from next layer"
+      - name: input
+        type: "[]const f32"
+        description: "Input from forward pass"
+      - name: weights
+        type: "[]const f32"
+        description: "Weight tensor"
+      - name: grad_input
+        type: "[]f32"
+        description: "Gradient w.r.t. input"
+      - name: grad_weights
+        type: "[]f32"
+        description: "Gradient w.r.t. weights"
+      - name: grad_bias
+        type: "[]f32"
+        description: "Gradient w.r.t. bias"
+      - name: config
+        type: Conv2DConfig
+    returns: "void"
+    description: "Backward pass: compute gradients"
+    formula: |
+      grad_bias[c] = sum over batch, height, width of grad_output[b, c, y, x]
+      grad_weights[c, g, ky, kx] = sum over valid positions of input * grad_output
+      grad_input = full convolution of grad_output with rotated weights
+
+behaviors:
+  - name: im2col_optimization
+    description: "Convert convolution to matrix multiplication"
+    implementation: |
+      Reshape input to columns [out_h*out_w, in_channels*kernel_size*kernel_size]
+      Matrix multiply with weights
+      Reshape result back to output format
+
+  - name: winograd_algorithm
+    description: "Reduce multiplication count for small kernels"
+    implementation: |
+      For 3x3 kernels: use Winograd F(2x2, 3x3)
+      Reduces multiplications from 36 to 16 per output tile
+
+  - name: depthwise_separable
+    description: "Optimized depthwise convolution"
+    implementation: |
+      When groups == in_channels: use depthwise convolution
+      Separate channel-wise and pointwise operations
+
+constraints:
+  - kernel_size in [1, 3, 5, 7]
+  - stride in [1, 2, 4]
+  - dilation in [1, 2]
+  - in_channels % groups == 0
+  - out_channels % groups == 0

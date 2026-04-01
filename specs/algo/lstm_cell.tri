@@ -1,0 +1,178 @@
+# LSTM Cell — Source of Truth
+# Long Short-Term Memory: gating mechanism for sequence learning
+# φ² + 1/φ² = 3 | TRINITY
+
+name: lstm_cell
+version: "1.0.0"
+module: algo.nn.lstm
+description: "LSTM cell with input, forget, output gates and cell state"
+
+types:
+  LSTMConfig:
+    description: "Configuration for LSTM cell"
+    fields:
+      - name: input_size
+        type: u32
+        description: "Number of input features"
+      - name: hidden_size
+        type: u32
+        description: "Number of hidden units"
+
+  LSTMState:
+    description: "LSTM hidden state and cell state"
+    fields:
+      - name: h
+        type: "[]f32"
+        description: "Hidden state [hidden_size]"
+      - name: c
+        type: "[]f32"
+        description: "Cell state [hidden_size]"
+
+  LSTMWeights:
+    description: "Combined weight matrices for efficiency"
+    fields:
+      - name: W_ii
+        type: "[]f32"
+        description: "Input-input gate [input_size, hidden_size]"
+      - name: W_hi
+        type: "[]f32"
+        description: "Hidden-input gate [hidden_size, hidden_size]"
+      - name: b_i
+        type: "[]f32"
+        description: "Input gate bias [hidden_size]"
+      - name: W_if
+        type: "[]f32"
+        description: "Input-forget gate"
+      - name: W_hf
+        type: "[]f32"
+        description: "Hidden-forget gate"
+      - name: b_f
+        type: "[]f32"
+        description: "Forget gate bias (often initialized to 1)"
+      - name: W_ig
+        type: "[]f32"
+        description: "Input-cell gate"
+      - name: W_hg
+        type: "[]f32"
+        description: "Hidden-cell gate"
+      - name: b_g
+        type: "[]f32"
+        description: "Cell gate bias"
+      - name: W_io
+        type: "[]f32"
+        description: "Input-output gate"
+      - name: W_ho
+        type: "[]f32"
+        description: "Hidden-output gate"
+      - name: b_o
+        type: "[]f32"
+        description: "Output gate bias"
+
+constants:
+  FORGET_BIAS_INIT:
+    type: f32
+    value: 1.0
+    description: "Initial forget gate bias (remember more)"
+
+functions:
+  forward:
+    params:
+      - name: input
+        type: "[]const f32"
+        description: "Input vector [input_size]"
+      - name: state
+        type: LSTMState
+        description: "Previous hidden state and cell state"
+      - name: weights
+        type: LSTMWeights
+        description: "Weight matrices and biases"
+      - name: output_state
+        type: LSTMState
+        description: "New hidden state and cell state"
+      - name: config
+        type: LSTMConfig
+    returns: "void"
+    description: "LSTM cell forward pass"
+    formula: |
+      i = sigmoid(input @ W_ii + state.h @ W_hi + b_i)  # Input gate
+      f = sigmoid(input @ W_if + state.h @ W_hf + b_f)  # Forget gate
+      g = tanh(input @ W_ig + state.h @ W_hg + b_g)     # Cell gate
+      o = sigmoid(input @ W_io + state.h @ W_ho + b_o)  # Output gate
+
+      output_state.c = f * state.c + i * g              # New cell state
+      output_state.h = o * tanh(output_state.c)         # New hidden state
+
+  backward:
+    params:
+      - name: grad_output
+        type: "[]const f32"
+        description: "Gradient w.r.t. hidden state"
+      - name: grad_cell
+        type: "[]const f32"
+        description: "Gradient w.r.t. cell state"
+      - name: input
+        type: "[]const f32"
+        description: "Input from forward pass"
+      - name: state
+        type: LSTMState
+        description: "State from forward pass"
+      - name: weights
+        type: LSTMWeights
+        description: "Weight matrices"
+      - name: grad_input
+        type: "[]f32"
+        description: "Gradient w.r.t. input"
+      - name: grad_state
+        type: LSTMState
+        description: "Gradient w.r.t. previous state"
+      - name: grad_weights
+        type: LSTMWeights
+        description: "Gradient w.r.t. weights"
+    returns: "void"
+    description: "LSTM cell backward pass (BPTT)"
+    formula: |
+      # Gradient through output gate
+      d_o = grad_output * tanh(state.c)
+      grad_W_io += input^T @ d_o
+      grad_W_ho += state.h^T @ d_o
+
+      # Gradient through cell state
+      d_c = grad_cell + grad_output * o * (1 - tanh(state.c)^2)
+      grad_c_f = d_c * prev_c
+      grad_c_i = d_c * g
+      grad_c_g = d_c * i
+
+      # Gradient through forget gate
+      d_f = sigmoid_derivative(f) * d_c * prev_c
+      grad_W_if += input^T @ d_f
+      grad_W_hf += state.h^T @ d_f
+
+      # Gradient through input gate
+      d_i = sigmoid_derivative(i) * d_c * g
+      grad_W_ii += input^T @ d_i
+      grad_W_hi += state.h^T @ d_i
+
+      # Gradient through cell gate
+      d_g = tanh_derivative(g) * d_c * i
+      grad_W_ig += input^T @ d_g
+      grad_W_hg += state.h^T @ d_g
+
+behaviors:
+  - name: gating_mechanism
+    description: "Learn what to remember and forget"
+    implementation: |
+      Input gate (i): controls information flow into cell
+      Forget gate (f): controls information retention
+      Output gate (o): controls information flow to hidden state
+
+  - name: gradient_flow
+    description: "LSTM solves vanishing gradient problem"
+    implementation: |
+      Cell state has linear path through time
+      Forget gate close to 1 preserves gradients
+      Constant error carousel enables long-term memory
+
+constraints:
+  - input.size() == config.input_size
+  - state.h.size() == config.hidden_size
+  - state.c.size() == config.hidden_size

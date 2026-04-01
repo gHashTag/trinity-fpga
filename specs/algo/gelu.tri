@@ -1,0 +1,84 @@
+# GELU Activation — Source of Truth
+# Gaussian Error Linear Unit: x * Phi(x)
+# φ² + 1/φ² = 3 | TRINITY
+
+name: gelu
+version: "1.0.0"
+module: algo.activation.gelu
+description: "GELU: x * Phi(x) where Phi is Gaussian CDF"
+
+types:
+  GELUConfig:
+    description: "Configuration for GELU"
+    fields:
+      - name: approximate
+        type: bool
+        description: "Use tanh approximation instead of exact"
+
+constants:
+  SQRT_2_OVER_PI:
+    type: f32
+    value: 0.7978845608
+    description: "sqrt(2/pi) constant for approximation"
+
+  SQRT_PI_OVER_2:
+    type: f32
+    value: 1.2533141373
+    description: "sqrt(pi/2) constant for exact computation"
+
+functions:
+  forward:
+    params:
+      - name: input
+        type: "[]const f32"
+        description: "Input values"
+      - name: output
+        type: "[]f32"
+        description: "Output values"
+      - name: config
+        type: GELUConfig
+    returns: "void"
+    description: "Apply GELU activation"
+    formula: |
+      For each i:
+        If config.approximate (tanh approximation):
+          x = input[i]
+          output[i] = 0.5 * x * (1 + tanh(SQRT_2_OVER_PI * (x + 0.044715 * x^3)))
+        Else (exact, using erf):
+          output[i] = 0.5 * input[i] * (1 + erf(input[i] / SQRT_PI_OVER_2))
+
+  backward:
+    params:
+      - name: grad_output
+        type: "[]const f32"
+        description: "Gradient from next layer"
+      - name: input
+        type: "[]const f32"
+        description: "Input values"
+      - name: grad_input
+        type: "[]f32"
+        description: "Gradient w.r.t. input"
+      - name: config
+        type: GELUConfig
+    returns: "void"
+    description: "Compute GELU gradient"
+    formula: |
+      For each i:
+        x = input[i]
+        cdf = 0.5 * (1 + tanh(SQRT_2_OVER_PI * (x + 0.044715 * x^3)))
+        pdf = exp(-0.5 * x^2) / SQRT_PI_OVER_2
+        grad_input[i] = grad_output[i] * (cdf + x * pdf)
+
+behaviors:
+  - name: smooth_activation
+    description: "GELU is smoother than ReLU"
+    implementation: |
+      GELU is differentiable everywhere
+      No sharp kink like ReLU at x=0
+      Better gradient flow for deep networks
+
+  - name: gaussian_cdf
+    description: "Based on cumulative distribution function"
+    implementation: |
+      GELU(x) = x * Phi(x) where Phi is Gaussian CDF
+      Phi(x) = 0.5 * (1 + erf(x / sqrt(2)))

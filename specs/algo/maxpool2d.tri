@@ -1,0 +1,99 @@
+# MaxPool2D — Source of Truth
+# 2D Max Pooling: spatial downsampling
+# φ² + 1/φ² = 3 | TRINITY
+
+name: maxpool2d
+version: "1.0.0"
+module: algo.nn.maxpool2d
+description: "2D max pooling: take maximum value in window"
+
+types:
+  MaxPool2DConfig:
+    description: "Configuration for MaxPool2D"
+    fields:
+      - name: kernel_size
+        type: u32
+        description: "Pooling window size"
+      - name: stride
+        type: u32
+        description: "Stride between windows"
+      - name: padding
+        type: u32
+        description: "Zero-padding on each side"
+      - name: dilation
+        type: u32
+        description: "Spacing between kernel elements"
+      - name: return_indices
+        type: bool
+        description: "Return indices of max values (for unpooling)"
+
+functions:
+  forward:
+    params:
+      - name: input
+        type: "[]const f32"
+        description: "Input [batch, channels, height, width]"
+      - name: output
+        type: "[]f32"
+        description: "Output [batch, channels, out_h, out_w]"
+      - name: indices
+        type: "[]u32"
+        description: "Indices of max values (optional)"
+      - name: config
+        type: MaxPool2DConfig
+    returns: "void"
+    description: "Apply max pooling"
+    formula: |
+      out_h = (height + 2*padding - dilation*(kernel_size-1) - 1) / stride + 1
+      out_w = (width + 2*padding - dilation*(kernel_size-1) - 1) / stride + 1
+
+      For each batch, channel, output position (y, x):
+        max_val = -infinity
+        For each kernel element (ky, kx):
+          iy = y*stride + ky*dilation - padding
+          ix = x*stride + kx*dilation - padding
+          If iy, ix in valid range:
+            val = input[batch, channel, iy, ix]
+            If val > max_val:
+              max_val = val
+              If config.return_indices:
+                indices[...] = (iy, ix)
+        output[batch, channel, y, x] = max_val
+
+  backward:
+    params:
+      - name: grad_output
+        type: "[]const f32"
+        description: "Gradient from next layer"
+      - name: input
+        type: "[]const f32"
+        description: "Input from forward pass"
+      - name: indices
+        type: "[]const u32"
+        description: "Max indices from forward pass"
+      - name: grad_input
+        type: "[]f32"
+        description: "Gradient w.r.t. input"
+      - name: config
+        type: MaxPool2DConfig
+    returns: "void"
+    description: "Backpropagate through max pooling"
+    formula: |
+      grad_input = zeros  # Initialize to zeros
+
+      For each batch, channel, output position (y, x):
+        iy, ix = indices[batch, channel, y, x]
+        grad_input[batch, channel, iy, ix] += grad_output[batch, channel, y, x]
+
+behaviors:
+  - name: spatial_invariance
+    description: "Max pooling provides translation invariance"
+    implementation: |
+      Small shifts in input don't affect max value
+      Useful for feature robustness
+
+  - name: downsampling
+    description: "Reduce spatial dimensions"
+    implementation: |
+      Common kernel sizes: 2x2, 3x3
+      Common strides: 2 (halve dimensions)

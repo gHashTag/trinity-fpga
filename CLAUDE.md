@@ -16,6 +16,19 @@ Repository: https://github.com/gHashTag/trinity
 **ABSOLUTE BAN: No .sh/.bash scripts.** All tooling, entrypoints, deploy scripts MUST be Zig binaries.
 PreToolUse hook enforces this — creating .sh files is blocked. See `.claude/rules/no-shell-scripts.md`.
 
+**ALGORITHM IMPLEMENTATION: .tri ONLY!** All algorithms MUST be implemented as `.tri` specifications.
+- ❌ FORBIDDEN: Writing Zig directly for algorithms (dense layers, convolutions, optimizers, etc.)
+- ❌ FORBIDDEN: Writing Python algorithm implementations
+- ✅ REQUIRED: Create `.tri` spec in `specs/algo/` (e.g., `specs/algo/dense.tri`)
+- ✅ REQUIRED: Use `tri gen` or VIBEE compiler to compile .tri → .t27 → .zig
+- ✅ REQUIRED: Test generated code with `tri test`
+
+**Reason**: `.tri` is the SINGLE source of truth. All algorithm implementations must go through the VIBEE compiler pipeline to ensure consistency across targets (Zig, Verilog, Python, etc.).
+
+**Exception**: Core infrastructure (build.zig, src/vsa.zig, src/vm.zig, src/tri27/emu/) may use Zig directly.
+
+**See**: `specs/algo/` for algorithm specification examples (dense.tri, relu.tri, softmax.tri, conv2d.tri, adam.tri, lstm_cell.tri, attention.tri, batchnorm.tri, sgd.tri, cross_entropy.tri, gelu.tri, maxpool2d.tri, dropout.tri, layernorm.tri, dqn.tri)
+
 **MANDATORY: GitHub Issue Tracking.** Every significant action MUST be logged in a GitHub issue:
 - Training farm changes → update tracker issue (#357) with status comment
 - Every deploy/redeploy/fix → comment with before/after state

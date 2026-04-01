@@ -1,0 +1,94 @@
+# Softmax Activation — Source of Truth
+# exp(x) / sum(exp(x)) for probability distribution
+# φ² + 1/φ² = 3 | TRINITY
+
+name: softmax
+version: "1.0.0"
+module: algo.activation.softmax
+description: "Softmax: convert logits to probabilities"
+
+types:
+  SoftmaxConfig:
+    description: "Configuration for Softmax"
+    fields:
+      - name: temperature
+        type: f32
+        description: "Temperature for scaling (1.0 = standard)"
+      - name: axis
+        type: u32
+        description: "Axis to normalize along (0 = last dimension)"
+      - name: stable
+        type: bool
+        description: "Use numerically stable implementation"
+
+constants:
+  ZERO:
+    type: f32
+    value: 0.0
+    description: "Zero constant"
+
+  MIN_TEMP:
+    type: f32
+    value: 0.001
+    description: "Minimum temperature to avoid division by zero"
+
+functions:
+  forward:
+    params:
+      - name: logits
+        type: "[]const f32"
+        description: "Input logits [n_classes]"
+      - name: output
+        type: "[]f32"
+        description: "Output probabilities [n_classes]"
+      - name: config
+        type: SoftmaxConfig
+    returns: "void"
+    description: "Apply softmax: output[i] = exp(logits[i]/temp) / sum(exp(logits)/temp)"
+    formula: |
+      If config.stable (numerically stable):
+        max_logit = max(logits)
+        For each i:
+          exp_value = exp(logits[i] - max_logit) / config.temperature
+          output[i] = exp_value / sum(exp(logits - max_logit) / config.temperature)
+      Else (simple, may overflow):
+        For each i:
+          output[i] = exp(logits[i] / config.temperature) / sum(exp(logits / config.temperature))
+
+  backward:
+    params:
+      - name: grad_output
+        type: "[]const f32"
+        description: "Gradient from loss (e.g., one-hot target)"
+      - name: probabilities
+        type: "[]const f32"
+        description: "Output probabilities from forward"
+      - name: grad_input
+        type: "[]f32"
+        description: "Gradient w.r.t. logits"
+      - name: config
+        type: SoftmaxConfig
+    returns: "void"
+    description: "Compute gradient: grad_input = probabilities * (grad_output - sum(p * g))"
+    formula: |
+      For each i:
+        grad_input[i] = probabilities[i] * (grad_output[i] - sum_j(probabilities[j] * grad_output[j]))
+
+behaviors:
+  - name: numerical_stability
+    description: "Use max trick to avoid overflow"
+    implementation: |
+      Subtract max before exp(x)
+      Equivalent to exp(x) / sum(exp(x)) but numerically stable
+
+  - name: temperature_scaling
+    description: "Control sharpness of distribution"
+    implementation: |
+      High temperature (>1): smoother distribution
+      Low temperature (<1): sharper distribution
+      As temp → 0: becomes argmax (one-hot)
+
+constraints:
+  - logits.size() == output.size()
+  - config.temperature >= MIN_TEMP
+  - sum(output) ≈ 1.0 (within floating precision)

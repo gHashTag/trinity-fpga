@@ -1,0 +1,121 @@
+# SGD Optimizer — Source of Truth
+# Stochastic Gradient Descent: simplest optimizer
+# φ² + 1/φ² = 3 | TRINITY
+
+name: sgd
+version: "1.0.0"
+module: algo.optimizer.sgd
+description: "SGD optimizer: parameter -= learning_rate * gradient"
+
+types:
+  SGDConfig:
+    description: "Configuration for SGD optimizer"
+    fields:
+      - name: learning_rate
+        type: f32
+        description: "Step size"
+      - name: momentum
+        type: f32
+        description: "Momentum coefficient (0 for plain SGD)"
+      - name: weight_decay
+        type: f32
+        description: "L2 regularization strength"
+      - name: dampening
+        type: f32
+        description: "Dampening for momentum"
+      - name: nesterov
+        type: bool
+        description: "Use Nesterov momentum"
+
+  SGDState:
+    description: "Velocity buffer for momentum"
+    fields:
+      - name: velocity
+        type: "[]f32"
+        description: "Momentum accumulator [param_count]"
+
+constants:
+  DEFAULT_LR:
+    type: f32
+    value: 0.01
+    description: "Default learning rate"
+
+  DEFAULT_MOMENTUM:
+    type: f32
+    value: 0.0
+    description: "Default momentum (plain SGD)"
+
+functions:
+  init:
+    params:
+      - name: state
+        type: SGDState
+        description: "State to initialize"
+      - name: param_count
+        type: u32
+        description: "Number of parameters"
+    returns: "void"
+    description: "Initialize SGD state"
+    formula: |
+      If config.momentum > 0:
+        state.velocity = zeros[param_count]
+
+  update:
+    params:
+      - name: params
+        type: "[]f32"
+        description: "Parameters to update"
+      - name: grads
+        type: "[]const f32"
+        description: "Gradients"
+      - name: state
+        type: SGDState
+        description: "Optimizer state"
+      - name: config
+        type: SGDConfig
+    returns: "void"
+    description: "Update parameters using SGD"
+    formula: |
+      For each parameter i:
+        d_p = grads[i] + config.weight_decay * params[i]
+
+        If config.momentum > 0:
+          If config.nesterov:
+            params[i] += config.momentum * state.velocity[i]
+            state.velocity[i] = config.momentum * state.velocity[i] - config.learning_rate * d_p
+            params[i] += state.velocity[i]
+          Else:
+            state.velocity[i] = config.momentum * state.velocity[i] - config.learning_rate * d_p
+            params[i] += state.velocity[i]
+        Else (plain SGD):
+          params[i] -= config.learning_rate * d_p
+
+behaviors:
+  - name: plain_sgd
+    description: "Basic SGD without momentum"
+    implementation: |
+      params[i] -= learning_rate * (grads[i] + weight_decay * params[i])
+      Simple, deterministic, no additional state
+
+  - name: momentum_sgd
+    description: "SGD with momentum accelerates convergence"
+    implementation: |
+      velocity = momentum * velocity - learning_rate * gradient
+      params += velocity
+      Accumulates gradient direction for faster convergence
+
+  - name: nesterov_momentum
+    description: "Nesterov accelerated gradient (NAG)"
+    implementation: |
+      Look-ahead: apply momentum, compute gradient at look-ahead position
+      Corrects overshooting from standard momentum
+      params += momentum * velocity
+      velocity = momentum * velocity - lr * grad(params)
+      params += velocity
+
+constraints:
+  - learning_rate > 0
+  - 0 <= momentum < 1
+  - weight_decay >= 0
+  - params.size() == grads.size()
+  - If momentum > 0: state.velocity.size() == params.size()
