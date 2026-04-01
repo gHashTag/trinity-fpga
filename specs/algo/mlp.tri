@@ -1,0 +1,128 @@
+# MLP (Multi-Layer Perceptron) — Source of Truth
+# Simple MLP: Dense → ReLU → Dense → ReLU
+# φ² + 1/φ² = 3 | TRINITY
+
+name: mlp
+version: "1.0.0"
+module: algo.nn.mlp
+description: "Simple 2-layer MLP: 784 → 128 → 10 (for MNIST)"
+
+types:
+  MLPConfig:
+    description: "Configuration for MLP"
+    fields:
+      - name: input_size
+        type: u32
+        description: "Number of input features (784 for MNIST)"
+      - name: hidden_size
+        type: u32
+        description: "Number of hidden units"
+      - name: output_size
+        type: u32
+        description: "Number of output classes (10 for MNIST)"
+
+  MLPState:
+    description: "MLP parameters and state"
+    fields:
+      - name: w1
+        type: "[]f32"
+        description: "Layer 1 weights [input_size * hidden_size]"
+      - name: b1
+        type: "[]f32"
+        description: "Layer 1 bias [hidden_size]"
+      - name: w2
+        type: "[]f32"
+        description: "Layer 2 weights [hidden_size * output_size]"
+      - name: b2
+        type: "[]f32"
+        description: "Layer 2 bias [output_size]"
+
+constants:
+  MNIST_INPUT_SIZE:
+    type: u32
+    value: 784
+    description: "28x28 pixels flattened"
+
+  MNIST_OUTPUT_SIZE:
+    type: u32
+    value: 10
+    description: "Digits 0-9"
+
+  DEFAULT_HIDDEN_SIZE:
+    type: u32
+    value: 128
+    description: "Default hidden layer size"
+
+functions:
+  forward:
+    params:
+      - name: input
+        type: "[]const f32"
+        description: "Input vector [input_size]"
+      - name: state
+        type: MLPState
+        description: "MLP weights and biases"
+      - name: output
+        type: "[]f32"
+        description: "Output vector [output_size]"
+      - name: config
+        type: MLPConfig
+    returns: "void"
+    description: "MLP forward pass"
+    formula: |
+      # Layer 1: Dense + ReLU
+      For each hidden neuron h in [0, hidden_size):
+        sum_h = b1[h]
+        For each input i in [0, input_size):
+          sum_h += input[i] * w1[i * hidden_size + h]
+        hidden[h] = max(0, sum_h)  # ReLU
+
+      # Layer 2: Dense + ReLU
+      For each output neuron o in [0, output_size):
+        sum_o = b2[o]
+        For each hidden h in [0, hidden_size):
+          sum_o += hidden[h] * w2[h * output_size + o]
+        output[o] = max(0, sum_o)  # ReLU
+
+  init:
+    params:
+      - name: state
+        type: MLPState
+        description: "MLP state to initialize"
+      - name: config
+        type: MLPConfig
+    returns: "void"
+    description: "Initialize weights with Xavier initialization"
+    formula: |
+      # Xavier initialization: uniform(-sqrt(6/(n_in + n_out)), sqrt(6/(n_in + n_out)))
+      For each weight in w1:
+        limit = sqrt(6.0 / (input_size + hidden_size))
+        weight = random(-limit, limit)
+      For each weight in w2:
+        limit = sqrt(6.0 / (hidden_size + output_size))
+        weight = random(-limit, limit)
+      b1 = zeros[hidden_size]
+      b2 = zeros[output_size]
+
+behaviors:
+  - name: xavier_initialization
+    description: "Xavier/Glorot initialization for better convergence"
+    implementation: |
+      Scale weights by sqrt(6 / (n_in + n_out))
+      Prevents vanishing/exploding gradients in deep networks
+
+  - name: relu_nonlinearity
+    description: "ReLU activation for hidden layers"
+    implementation: |
+      max(0, x) is simple and effective
+      Sparse gradients (~50% zeros)
+      No saturation for positive values
+
+constraints:
+  - input_size == MNIST_INPUT_SIZE (784)
+  - output_size == MNIST_OUTPUT_SIZE (10)
+  - hidden_size > 0
+  - w1.size() == input_size * hidden_size
+  - w2.size() == hidden_size * output_size
+  - b1.size() == hidden_size
+  - b2.size() == output_size
