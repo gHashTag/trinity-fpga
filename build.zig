@@ -54,7 +54,7 @@ pub fn build(b: *std.Build) void {
     });
     // Add vibeec as a sub-module
     const vibeec_mod = b.createModule(.{
-        .root_source_path = b.path("src/vibeec/gen_parser_types.zig"),
+        .root_source_file = b.path("src/vibeec/gen_parser_types.zig"),
         .target = target,
         .optimize = optimize,
     });
