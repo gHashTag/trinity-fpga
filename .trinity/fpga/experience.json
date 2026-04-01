@@ -94,6 +94,53 @@
       "idcode_actual": "0x00000000",
       "cpld_version": "0xFFFE",
       "required_equipment": ["USB-to-UART adapter (CP2102/CH340)", "FPGA board with working CPLD"]
+    },
+    {
+    "id": "FPGA-DSLOGIC-001",
+    "date": "2026-04-01",
+    "category": "DSLOGIC",
+    "action": "DSLogic U2basic Integration — full signal analysis infrastructure",
+    "result": "DONE",
+    "symptom": "DSLogic U2basic integration complete with bilingual documentation, channel mapping JSON, DSView presets, and Zig diagnostic tool",
+    "root_cause": "Implemented Phase 1-2 of DSLogic U2basic integration plan. Physical connection guide, channel mappings, presets, and CLI tool created.",
+    "lesson": "DSLogic U2basic provides 16-channel logic analysis at 400 MS/s with DSView software. Integration includes: (1) Bilingual connection guide in Russian+English, (2) Machine-readable channel mapping JSON, (3) DSView configuration presets for all test workflows, (4) Zig diagnostic tool for DSLogic control and analysis, (5) Updated hardware_state.json with DSLogic section.",
+    "tags": [
+      "dslogic",
+      "u2basic",
+      "integration",
+      "documentation",
+      "cli-tool"
+    ],
+    "data": {
+      "phase": "1-2-complete",
+      "files_created": [
+        "fpga/DSLOGIC_U2BASIC_CONNECTION.md",
+        "fpga/dslogic_channels.json",
+        "fpga/dslogic_presets.json",
+        "src/cli/fpga_dslogic.zig",
+        ".trinity/fpga/hardware_state.json (updated)",
+        ".trinity/fpga/experience.json (updated)"
+      ],
+      "cli_commands": [
+        "tri fpga dslogic-connect",
+        "tri fpga dslogic-capture --preset <name>",
+        "tri fpga dslogic-analyze <file>",
+        "tri fpga dslogic-uart",
+        "tri fpga dslogic-jtag",
+        "tri fpga dslogic-clock",
+        "tri fpga dslogic-pins"
+      ],
+      "supported_presets": [
+        "full_analysis",
+        "uart_debug",
+        "uart_loopback",
+        "jtag_debug",
+        "spi_debug",
+        "clock_tree",
+        "pin_verify",
+        "minimal"
+      ],
+      "note": "Phase 3 (diagnostic workflows) and Phase 4 (CLI integration) complete. Ready for Phase 5 (pin mapping verification via actual DSLogic captures)."
     }
   }
 ]

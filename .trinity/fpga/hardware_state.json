@@ -52,6 +52,19 @@
     "connection": "NOT_SOLDERED",
     "last_echo_test": "FAIL"
   },
+  "dslogic": {
+    "model": "U2basic",
+    "channels": 16,
+    "sample_rate_max": "400M",
+    "connected": false,
+    "last_capture": null,
+    "firmware_version": null,
+    "dsview_path": null,
+    "channel_mapping": "fpga/dslogic_channels.json",
+    "presets": "fpga/dslogic_presets.json",
+    "connection_guide": "fpga/DSLOGIC_U2BASIC_CONNECTION.md",
+    "note": "Logic analyzer for full signal analysis (UART + JTAG + SPI + Clock tree)"
+  },
   "blockers": [],
   "resolved_blockers": [
     {

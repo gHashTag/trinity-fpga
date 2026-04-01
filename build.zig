@@ -2568,6 +2568,28 @@ pub fn build(b: *std.Build) void {
     sebo_step.dependOn(&run_sebo.step);
 
     // ═════════════════════════════════════════════════════════════════════════════
+    // DSLOGIC FPGA DIAGNOSTICS — Logic analyzer control for QMTech XC7A100T
+    // ═══════════════════════════════════════════════════════════════════════════════════════
+
+    const fpga_dslogic_mod = b.createModule(.{
+        .root_source_file = b.path("src/cli/fpga_dslogic.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    const fpga_dslogic = b.addExecutable(.{
+        .name = "tri-fpga-dslogic",
+        .root_module = fpga_dslogic_mod,
+    });
+    b.installArtifact(fpga_dslogic);
+
+    const run_fpga_dslogic = b.addRunArtifact(fpga_dslogic);
+    if (b.args) |run_args| {
+        run_fpga_dslogic.addArgs(run_args);
+    }
+    const fpga_dslogic_step = b.step("tri-fpga-dslogic", "Run DSLogic U2basic FPGA diagnostics");
+    fpga_dslogic_step.dependOn(&run_fpga_dslogic.step);
+
+    // ═════════════════════════════════════════════════════════════════════════════
     // LOGGING TEST — Test centralized logging module (TEMPORARILY DISABLED)
     // ═══════════════════════════════════════════════════════════════════════════════════════
 

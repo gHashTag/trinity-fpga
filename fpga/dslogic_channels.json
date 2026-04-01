@@ -1,0 +1,240 @@
+{
+  "version": "1.0.0",
+  "target": "QMTech XC7A100T-FGG676",
+  "analyzer": "DSLogic U2basic",
+  "channels": 16,
+  "sample_rate_max": "400M",
+  "voltage_threshold": "3.3V",
+  "last_updated": "2026-04-01",
+  "mapping": [
+    {
+      "channel": 0,
+      "fpga_ball": "K20",
+      "fpga_pin": "J2-5",
+      "signal": "UART_TX",
+      "direction": "output",
+      "description": "UART data from FPGA to FT232RL",
+      "protocol": "UART",
+      "recommended_color": "yellow"
+    },
+    {
+      "channel": 1,
+      "fpga_ball": "L20",
+      "fpga_pin": "J2-6",
+      "signal": "UART_RX",
+      "direction": "input",
+      "description": "UART data from FT232RL to FPGA",
+      "protocol": "UART",
+      "recommended_color": "green"
+    },
+    {
+      "channel": 2,
+      "fpga_ball": "M22",
+      "fpga_pin": "OSC50",
+      "signal": "CLK_50MHZ",
+      "direction": "input",
+      "description": "50 MHz oscillator - base clock reference",
+      "protocol": "CLOCK",
+      "recommended_color": "blue",
+      "expected_frequency": "50.0 MHz"
+    },
+    {
+      "channel": 3,
+      "fpga_ball": "U22",
+      "fpga_pin": "MMCM_OUT",
+      "signal": "CLK_MMCM",
+      "direction": "input",
+      "description": "MMCM output - system clock (81.25 MHz for HSLM)",
+      "protocol": "CLOCK",
+      "recommended_color": "purple",
+      "expected_frequency": "81.25 MHz"
+    },
+    {
+      "channel": 4,
+      "fpga_ball": "T23",
+      "fpga_pin": "LED_D5",
+      "signal": "LED_OUTPUT",
+      "direction": "output",
+      "description": "LED output (active-low) - visual feedback",
+      "protocol": "GPIO",
+      "recommended_color": "red"
+    },
+    {
+      "channel": 5,
+      "fpga_ball": "J21",
+      "fpga_pin": "SPI_SCK",
+      "signal": "SPI_SCK",
+      "direction": "bidirectional",
+      "description": "SPI clock (if implemented)",
+      "protocol": "SPI",
+      "recommended_color": "orange",
+      "status": "reserved"
+    },
+    {
+      "channel": 6,
+      "fpga_ball": "H21",
+      "fpga_pin": "SPI_MISO",
+      "signal": "SPI_MISO",
+      "direction": "input",
+      "description": "SPI MISO - Master In Slave Out (if implemented)",
+      "protocol": "SPI",
+      "recommended_color": "white",
+      "status": "reserved"
+    },
+    {
+      "channel": 7,
+      "fpga_ball": "G22",
+      "fpga_pin": "SPI_MOSI",
+      "signal": "SPI_MOSI",
+      "direction": "output",
+      "description": "SPI MOSI - Master Out Slave In (if implemented)",
+      "protocol": "SPI",
+      "recommended_color": "gray",
+      "status": "reserved"
+    },
+    {
+      "channel": 8,
+      "fpga_ball": "F22",
+      "fpga_pin": "SPI_CS",
+      "signal": "SPI_CS",
+      "direction": "output",
+      "description": "SPI chip select (if implemented)",
+      "protocol": "SPI",
+      "recommended_color": "pink",
+      "status": "reserved"
+    },
+    {
+      "channel": 9,
+      "fpga_ball": "JTAG_TCK",
+      "fpga_pin": "JTAG-3",
+      "signal": "JTAG_TCK",
+      "direction": "input",
+      "description": "JTAG clock - timing reference only",
+      "protocol": "JTAG",
+      "recommended_color": "brown",
+      "warning": "Do not connect simultaneously with Xilinx JTAG cable"
+    },
+    {
+      "channel": 10,
+      "fpga_ball": "JTAG_TDI",
+      "fpga_pin": "JTAG-5",
+      "signal": "JTAG_TDI",
+      "direction": "input",
+      "description": "JTAG data input - timing reference only",
+      "protocol": "JTAG",
+      "recommended_color": "beige",
+      "warning": "Do not connect simultaneously with Xilinx JTAG cable"
+    },
+    {
+      "channel": 11,
+      "fpga_ball": "JTAG_TDO",
+      "fpga_pin": "JTAG-4",
+      "signal": "JTAG_TDO",
+      "direction": "output",
+      "description": "JTAG data output - glitch detection",
+      "protocol": "JTAG",
+      "recommended_color": "lime",
+      "warning": "Do not connect simultaneously with Xilinx JTAG cable"
+    },
+    {
+      "channel": 12,
+      "fpga_ball": "JTAG_TMS",
+      "fpga_pin": "JTAG-6",
+      "signal": "JTAG_TMS",
+      "direction": "input",
+      "description": "JTAG mode select - state machine analysis",
+      "protocol": "JTAG",
+      "recommended_color": "turquoise",
+      "warning": "Do not connect simultaneously with Xilinx JTAG cable"
+    },
+    {
+      "channel": 13,
+      "fpga_ball": "D26",
+      "fpga_pin": "J2-5-ALT",
+      "signal": "UART_TX_ALT",
+      "direction": "output",
+      "description": "Alternative mapping for UART TX - pin verification",
+      "protocol": "UART",
+      "recommended_color": "dark_blue",
+      "status": "verification"
+    },
+    {
+      "channel": 14,
+      "fpga_ball": "E26",
+      "fpga_pin": "J2-6-ALT",
+      "signal": "UART_RX_ALT",
+      "direction": "input",
+      "description": "Alternative mapping for UART RX - pin verification",
+      "protocol": "UART",
+      "recommended_color": "dark_green",
+      "status": "verification"
+    },
+    {
+      "channel": 15,
+      "fpga_ball": "GND",
+      "fpga_pin": "GND",
+      "signal": "GROUND",
+      "direction": "reference",
+      "description": "Ground reference - connect first, disconnect last",
+      "protocol": "REFERENCE",
+      "recommended_color": "black",
+      "critical": true
+    }
+  ],
+  "presets": {
+    "uart_only": {
+      "channels": [0, 1, 2, 15],
+      "description": "Minimal UART debugging (TX, RX, Clock, GND)"
+    },
+    "uart_full": {
+      "channels": [0, 1, 2, 3, 4, 15],
+      "description": "UART + Clock tree + LED"
+    },
+    "jtag_timing": {
+      "channels": [9, 10, 11, 12, 15],
+      "description": "JTAG timing analysis (disconnect Xilinx cable first!)"
+    },
+    "spi_analysis": {
+      "channels": [5, 6, 7, 8, 15],
+      "description": "SPI protocol analysis (if implemented)"
+    },
+    "full_analysis": {
+      "channels": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+      "description": "All 16 channels for comprehensive analysis"
+    },
+    "pin_verify": {
+      "channels": [0, 1, 13, 14, 15],
+      "description": "Pin mapping verification (K20/L20 vs D26/E26)"
+    }
+  },
+  "timing_constraints": {
+    "uart_115200": {
+      "baud_rate": 115200,
+      "bit_period_us": 8.68,
+      "byte_width_us": 86.8,
+      "description": "Expected timing at 115200 baud"
+    },
+    "clock_50mhz": {
+      "frequency_hz": 50000000,
+      "period_ns": 20.0,
+      "description": "50 MHz oscillator"
+    },
+    "clock_mmcm": {
+      "frequency_hz": 81250000,
+      "period_ns": 12.31,
+      "description": "MMCM output (HSLM configuration)"
+    },
+    "jtag_setup_hold": {
+      "setup_max_ns": 10.0,
+      "hold_max_ns": 10.0,
+      "description": "Xilinx JTAG timing requirements"
+    }
+  },
+  "notes": [
+    "GND (CH15) must be connected FIRST and disconnected LAST",
+    "JTAG channels (9-12) for timing reference only - disconnect Xilinx cable before connecting",
+    "Channels 13-14 for pin mapping verification (K20/L20 vs D26/E26 discrepancy)",
+    "LVCMOS33 voltage threshold for all signals",
+    "Use test hooks for JTAG header pins - they are small!"
+  ]
+}

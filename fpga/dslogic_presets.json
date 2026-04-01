@@ -1,0 +1,304 @@
+{
+  "version": "1.0.0",
+  "target": "QMTech XC7A100T-FGG676",
+  "analyzer": "DSLogic U2basic",
+  "description": "DSView protocol decoder presets for Trinity FPGA debugging",
+  "presets": {
+    "trinity_full_analysis": {
+      "name": "Full Signal Analysis (All 16 Channels)",
+      "sample_rate": "400M",
+      "channels": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+      "description": "All 16 channels for comprehensive signal analysis - UART, JTAG, SPI, Clock tree",
+      "trigger": {
+        "type": "pulse",
+        "channel": 2,
+        "min_width": "18ns",
+        "condition": "positive"
+      },
+      "decoders": [
+        {"protocol": "UART", "channels": [0, 1]},
+        {"protocol": "JTAG", "channels": [9, 10, 11, 12]}
+      ]
+    },
+    "trinity_uart_debug": {
+      "name": "UART Debug (TX/RX + Clock)",
+      "sample_rate": "400M",
+      "channels": [0, 1, 2, 15],
+      "description": "UART TX/RX with 50MHz clock reference",
+      "protocol": "UART",
+      "uart_config": {
+        "baud_rate": 115200,
+        "data_bits": 8,
+        "parity": "none",
+        "stop_bits": 1,
+        "endianness": "little"
+      },
+      "trigger": {
+        "type": "edge",
+        "channel": 0,
+        "edge": "falling",
+        "description": "Trigger on UART start bit"
+      },
+      "expected_timings": {
+        "bit_period_us": 8.68,
+        "byte_width_us": 86.8
+      },
+      "test_patterns": {
+        "ping": {"tx": 0x03, "rx": 0x83, "description": "PING → PONG"},
+        "echo": {"tx": 0x55, "rx": 0x55, "description": "0x55 echo"}
+      }
+    },
+    "trinity_uart_loopback": {
+      "name": "UART Loopback Test",
+      "sample_rate": "400M",
+      "channels": [0, 1, 15],
+      "description": "Test UART loopback - TX should appear on RX",
+      "protocol": "UART",
+      "uart_config": {
+        "baud_rate": 115200,
+        "data_bits": 8,
+        "parity": "none",
+        "stop_bits": 1
+      },
+      "trigger": {
+        "type": "serial",
+        "channel": 0,
+        "start_byte": "0x03",
+        "match": "exact"
+      },
+      "verification": {
+        "tx_to_rx_delay_max_ns": 100.0,
+        "data_integrity": "exact_match"
+      }
+    },
+    "trinity_jtag_debug": {
+      "name": "JTAG Timing Analysis",
+      "sample_rate": "400M",
+      "channels": [9, 10, 11, 12, 15],
+      "description": "JTAG timing validation - TCK, TDI, TDO, TMS",
+      "protocol": "JTAG",
+      "jtag_config": {
+        "tck_frequency": "auto",
+        "state_machine": "visible"
+      },
+      "trigger": {
+        "type": "edge",
+        "channel": 9,
+        "edge": "rising",
+        "description": "Trigger on TCK rising edge"
+      },
+      "timing_checks": {
+        "setup_time_max_ns": 10.0,
+        "hold_time_max_ns": 10.0,
+        "tck_period_min_ns": 50.0,
+        "tdo_glitch_detection": true
+      },
+      "warning": "Disconnect Xilinx JTAG cable before connecting DSLogic to JTAG header!"
+    },
+    "trinity_spi_debug": {
+      "name": "SPI Protocol Analysis",
+      "sample_rate": "400M",
+      "channels": [5, 6, 7, 8, 15],
+      "description": "SPI analysis - SCK, MISO, MOSI, CS",
+      "protocol": "SPI",
+      "spi_config": {
+        "clock_polarity": "CPOL=0",
+        "clock_phase": "CPHA=0",
+        "bit_order": "MSB first"
+      },
+      "trigger": {
+        "type": "edge",
+        "channel": 8,
+        "edge": "falling",
+        "description": "Trigger on CS falling edge"
+      },
+      "status": "reserved - SPI not yet implemented"
+    },
+    "trinity_clock_tree": {
+      "name": "Clock Tree Analysis",
+      "sample_rate": "400M",
+      "channels": [2, 3, 15],
+      "description": "50MHz oscillator + 81.25MHz MMCM analysis",
+      "trigger": {
+        "type": "pulse",
+        "channel": 2,
+        "min_width": "18ns",
+        "condition": "positive",
+        "description": "Trigger on 50MHz clock edge"
+      },
+      "measurements": {
+        "ch2": {
+          "signal": "CLK_50MHZ",
+          "expected_frequency": "50.0 MHz",
+          "expected_period_ns": 20.0,
+          "tolerance_percent": 0.1
+        },
+        "ch3": {
+          "signal": "CLK_MMCM",
+          "expected_frequency": "81.25 MHz",
+          "expected_period_ns": 12.31,
+          "tolerance_percent": 0.1
+        }
+      },
+      "checks": {
+        "frequency_accuracy": true,
+        "jitter_measurement": true,
+        "phase_relationship": true,
+        "mmcm_lock_status": "check_CH3_stability"
+      }
+    },
+    "trinity_pin_verify": {
+      "name": "Pin Mapping Verification",
+      "sample_rate": "400M",
+      "channels": [0, 1, 13, 14, 15],
+      "description": "Verify J2 pin mapping - K20/L20 vs D26/E26",
+      "protocol": "UART",
+      "uart_config": {
+        "baud_rate": 115200,
+        "data_bits": 8,
+        "parity": "none",
+        "stop_bits": 1
+      },
+      "trigger": {
+        "type": "serial",
+        "channel": 0,
+        "start_byte": "0x55"
+      },
+      "verification_logic": {
+        "if_ch0_captures": "K20 mapping confirmed",
+        "if_ch13_captures": "D26 mapping confirmed - update XDC",
+        "if_both_capture": "Both balls connected - verify schematic",
+        "if_neither_captures": "UART TX not working - check FPGA"
+      }
+    },
+    "trinity_led_debug": {
+      "name": "LED Output Analysis",
+      "sample_rate": "100M",
+      "channels": [4, 15],
+      "description": "LED toggle frequency and timing",
+      "trigger": {
+        "type": "edge",
+        "channel": 4,
+        "edge": "falling"
+      },
+      "measurements": {
+        "toggle_frequency": "measure",
+        "pulse_width": "measure",
+        "duty_cycle": "calculate"
+      },
+      "notes": "LED is active-low - falling edge = LED ON"
+    },
+    "trinity_minimal": {
+      "name": "Minimal UART Setup (4 wires)",
+      "sample_rate": "400M",
+      "channels": [0, 1, 2, 15],
+      "description": "Fast start - GND, TX, RX, Clock only",
+      "protocol": "UART",
+      "uart_config": {
+        "baud_rate": 115200,
+        "data_bits": 8,
+        "parity": "none",
+        "stop_bits": 1
+      },
+      "trigger": {
+        "type": "edge",
+        "channel": 0,
+        "edge": "falling"
+      }
+    }
+  },
+  "global_settings": {
+    "voltage_threshold": "3.3V",
+    "input_mode": "digital",
+    "sample_buffer": "maximum",
+    "export_formats": ["csv", "json", "waveform"]
+  },
+  "decoder_library": {
+    "UART": {
+      "class": "UART",
+      "options": {
+        "Baud rate": ["9600", "19200", "38400", "57600", "115200", "230400", "460800", "921600"],
+        "Data bits": [5, 6, 7, 8],
+        "Parity": ["None", "Even", "Odd", "Mark", "Space"],
+        "Stop bits": [1, 1.5, 2]
+      }
+    },
+    "JTAG": {
+      "class": "JTAG",
+      "options": {
+        "TCK frequency": ["auto", "1 MHz", "5 MHz", "10 MHz"]
+      }
+    },
+    "SPI": {
+      "class": "SPI",
+      "options": {
+        "Clock polarity": ["CPOL=0", "CPOL=1"],
+        "Clock phase": ["CPHA=0", "CPHA=1"],
+        "Bit order": ["MSB first", "LSB first"]
+      }
+    },
+    "I2C": {
+      "class": "I2C",
+      "options": {
+        "Address length": [7, 10]
+      }
+    }
+  },
+  "trigger_presets": {
+    "uart_start_bit": {
+      "type": "edge",
+      "description": "Trigger on UART start bit (falling edge on TX)"
+    },
+    "uart_byte": {
+      "type": "serial",
+      "description": "Trigger on specific byte value (e.g., 0x03 for PING)"
+    },
+    "jtag_tck_rising": {
+      "type": "edge",
+      "description": "Trigger on JTAG clock rising edge"
+    },
+    "pulse_width": {
+      "type": "pulse",
+      "description": "Trigger on pulse width (useful for clock verification)"
+    },
+    "glitch": {
+      "type": "glitch",
+      "description": "Trigger on glitch (short pulse detection)"
+    }
+  },
+  "export_settings": {
+    "csv": {
+      "delimiter": ",",
+      "include_timestamp": true,
+      "include_all_channels": true
+    },
+    "json": {
+      "format": "array_of_samples",
+      "include_metadata": true
+    },
+    "waveform": {
+      "format": "png",
+      "width": 1920,
+      "height": 1080,
+      "zoom_level": "auto"
+    }
+  },
+  "troubleshooting": {
+    "no_signal": [
+      "Check GND connection (must be connected first!)",
+      "Verify voltage threshold is set to 3.3V",
+      "Confirm probe connections to FPGA pins",
+      "Try test hook instead of crocodile clip"
+    ],
+    "jtag_not_visible": [
+      "Disconnect Xilinx JTAG cable before connecting DSLogic",
+      "Use test hooks for small JTAG header pins",
+      "Verify TCK is not shorted to GND"
+    ],
+    "wrong_channel": [
+      "CH13/CH14 may capture if D26/E26 mapping is correct",
+      "Run 'tri fpga dslogic-pins' to verify mapping",
+      "Update uart_bridge_j2.xdc if discrepancy found"
+    ]
+  }
+}
