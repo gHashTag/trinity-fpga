@@ -340,7 +340,7 @@ fn readMnistImages(filename: []const u8, allocator: std.mem.Allocator) !struct {
     // Parse header
     var header: [4]u32 = undefined;
     for (&header, 0..) |*h, i| {
-        h.* = std.mem.readInt(u32, bytes[i*4..][0..4], .big);
+        h.* = std.mem.readInt(u32, bytes[i * 4 ..][0..4], .big);
     }
 
     const count = header[1];
@@ -385,7 +385,7 @@ pub fn main() !void {
     const allocator = gpa.allocator();
 
     const config = LayerConfig{
-        .input_size = 784,   // 28x28
+        .input_size = 784, // 28x28
         .hidden_size = 128,
         .output_size = 10,
     };

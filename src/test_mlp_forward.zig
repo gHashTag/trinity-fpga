@@ -66,9 +66,9 @@ fn mlpForward(
 
 pub fn main() !void {
     const config = LayerConfig{
-        .input_size = 784,  // MNIST: 28x28
+        .input_size = 784, // MNIST: 28x28
         .hidden_size = 128,
-        .output_size = 10,   // Digits 0-9
+        .output_size = 10, // Digits 0-9
     };
 
     // Initialize weights with random values (using simple pattern for reproducibility)
@@ -190,7 +190,7 @@ pub fn main() !void {
     print("1/φ (phi_inv)     = {d:.15}\n", .{PHI_INV});
     print("φ² (phi_sq)       = {d:.15}\n", .{PHI_SQ});
     print("\nVerification:\n", .{});
-    print("  φ × (1/φ) = {d:.15}\n", .{ PHI * PHI_INV });
-    print("  φ² + 1/φ² = {d:.15}\n", .{ PHI_SQ + 1.0 / PHI_SQ });
+    print("  φ × (1/φ) = {d:.15}\n", .{PHI * PHI_INV});
+    print("  φ² + 1/φ² = {d:.15}\n", .{PHI_SQ + 1.0 / PHI_SQ});
     print("\n✅ Trinity Identity Verified: φ² + 1/φ² = 3\n", .{});
 }

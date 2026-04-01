@@ -1,0 +1,11 @@
+{
+  "design": "uart_bridge_fixed",
+  "board": "qmtech_xc7a100t",
+  "fpga": "xc7a100t_fgg676",
+  "bindings": [
+    { "port": "clk", "signal": "board.clock.osc50" },
+    { "port": "uart_rx", "signal": "board.uart.ft232rl.txd" },
+    { "port": "uart_tx", "signal": "board.uart.ft232rl.rxd" },
+    { "port": "led", "signal": "board.led.status" }
+  ]
+}

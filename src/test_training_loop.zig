@@ -166,9 +166,9 @@ fn trainingStep(
 
 pub fn main() !void {
     const config = LayerConfig{
-        .input_size = 4,   // Simplified: 4 features instead of 784
+        .input_size = 4, // Simplified: 4 features instead of 784
         .hidden_size = 8,
-        .output_size = 3,   // 3 classes
+        .output_size = 3, // 3 classes
     };
 
     print("\n╔═══════════════════════════════════════════════════════════════╗\n", .{});
@@ -176,9 +176,9 @@ pub fn main() !void {
     print("╚═══════════════════════════════════════════════════════════════╝\n\n", .{});
 
     // Initialize weights (Xavier)
-    var w1_buffer: [32]f32 = undefined;  // 4 * 8
+    var w1_buffer: [32]f32 = undefined; // 4 * 8
     var b1_buffer: [8]f32 = undefined;
-    var w2_buffer: [24]f32 = undefined;  // 8 * 3
+    var w2_buffer: [24]f32 = undefined; // 8 * 3
     var b2_buffer: [3]f32 = undefined;
 
     // Xavier initialization
@@ -200,10 +200,10 @@ pub fn main() !void {
 
     // Training data: simple 3-class problem
     const train_data = [_]TrainSample{
-        .{ .input = [_]f32{ 1.0, 0.0, 0.0, 0.0 }, .target = 0 },  // Class 0
-        .{ .input = [_]f32{ 0.0, 1.0, 0.0, 0.0 }, .target = 1 },  // Class 1
-        .{ .input = [_]f32{ 0.0, 0.0, 1.0, 0.0 }, .target = 2 },  // Class 2
-        .{ .input = [_]f32{ 1.0, 1.0, 0.0, 0.0 }, .target = 0 },  // Mixed 0+1
+        .{ .input = [_]f32{ 1.0, 0.0, 0.0, 0.0 }, .target = 0 }, // Class 0
+        .{ .input = [_]f32{ 0.0, 1.0, 0.0, 0.0 }, .target = 1 }, // Class 1
+        .{ .input = [_]f32{ 0.0, 0.0, 1.0, 0.0 }, .target = 2 }, // Class 2
+        .{ .input = [_]f32{ 1.0, 1.0, 0.0, 0.0 }, .target = 0 }, // Mixed 0+1
     };
 
     // Buffers
@@ -213,9 +213,7 @@ pub fn main() !void {
 
     print("Training Data:\n", .{});
     for (train_data, 0..) |sample, i| {
-        print("  Sample {d}: input=[{d:.1},{d:.1},{d:.1},{d:.1}], target={d}\n", .{
-            i, sample.input[0], sample.input[1], sample.input[2], sample.input[3], sample.target
-        });
+        print("  Sample {d}: input=[{d:.1},{d:.1},{d:.1},{d:.1}], target={d}\n", .{ i, sample.input[0], sample.input[1], sample.input[2], sample.input[3], sample.target });
     }
 
     print("\n", .{});
@@ -262,9 +260,7 @@ pub fn main() !void {
         const accuracy = @as(f32, @floatFromInt(correct)) / @as(f32, @floatFromInt(train_data.len));
         const avg_loss = total_loss / @as(f32, @floatFromInt(train_data.len));
 
-        print("Epoch {d:2}: loss={d:.6}, accuracy={d:.2}% ({d}/{d})\n", .{
-            epoch + 1, avg_loss, accuracy * 100, correct, train_data.len
-        });
+        print("Epoch {d:2}: loss={d:.6}, accuracy={d:.2}% ({d}/{d})\n", .{ epoch + 1, avg_loss, accuracy * 100, correct, train_data.len });
     }
 
     print("\n", .{});
@@ -276,7 +272,7 @@ pub fn main() !void {
     const PHI: f64 = 1.618033988749895;
     const PHI_SQ: f64 = 2.618033988749895;
     _ = PHI;
-    print("✅ Trinity Identity: φ² + 1/φ² = {d:.15} ≈ 3.0\n", .{ PHI_SQ + 1.0 / PHI_SQ });
+    print("✅ Trinity Identity: φ² + 1/φ² = {d:.15} ≈ 3.0\n", .{PHI_SQ + 1.0 / PHI_SQ});
 }
 
 const TrainSample = struct {
