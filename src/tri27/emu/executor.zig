@@ -618,6 +618,282 @@ pub fn execute(cpu: *CPUState, inst: Instruction, memory: []align(8) u8) ExecErr
             cpu.pc += 1;
         },
 
+        // ═════════════════════════════════════════════════════════════════════
+        // STRING I/O INSTRUCTIONS (0x20-0x22)
+        // ═════════════════════════════════════════════════════════════════════════════════
+        .STR_LOAD => {
+            // Load string literal from .t27 data section into register
+            // Immediate value is offset in bytes from start of data section
+            const data_offset = @as(usize, @abs(inst.immediate));
+
+            // Calculate actual address: 12 (header) + data_offset
+            const str_addr = 12 + data_offset;
+
+            if (str_addr >= memory.len) {
+                return ExecError.InvalidMemory;
+            }
+
+            // Store string address (as ternary value) in destination register
+            const trit_value = Trit27{ .trits = @as(i64, str_addr) };
+            cpu.t27[inst.dst] = trit_value;
+            cpu.flags.Z = false;
+            cpu.flags.N = false;
+            cpu.pc += 1;
+        },
+
+        .STR_CONCAT => {
+            // Concatenate two string addresses into destination
+            const str1_addr = @as(usize, cpu.t27[inst.src1].trits);
+            const str2_addr = @as(usize, cpu.t27[inst.src2].trits);
+
+            // Read string lengths (stored as u16 after address)
+            if (str1_addr >= memory.len or str1_addr + 2 >= memory.len) {
+                return ExecError.InvalidMemory;
+            }
+            const len1 = @as(u16, memory[str1_addr]) | (@as(u16, memory[str1_addr + 1]) << 8);
+
+            if (str2_addr >= memory.len or str2_addr + 2 >= memory.len) {
+                return ExecError.InvalidMemory;
+            }
+            const len2 = @as(u16, memory[str2_addr]) | (@as(u16, memory[str2_addr + 1]) << 8);
+
+            // Find available space for result (simple allocation: start after existing strings)
+            const total_len = @as(usize, len1) + @as(usize, len2);
+            const result_addr = @max(str1_addr + @as(usize, len1), str2_addr + @as(usize, len2)) + 2;
+
+            if (result_addr + total_len > memory.len) {
+                return ExecError.InvalidMemory;
+            }
+
+            // Copy string 1
+            for (0..@as(usize, len1)) |i| {
+                const src = str1_addr + 2 + i;
+                if (src >= memory.len or result_addr + i >= memory.len) break;
+                memory[result_addr + i] = memory[src];
+            }
+
+            // Copy string 2
+            for (0..@as(usize, len2)) |i| {
+                const src = str2_addr + 2 + i;
+                if (src >= memory.len or result_addr + @as(usize, len1) + i >= memory.len) break;
+                memory[result_addr + @as(usize, len1) + i] = memory[src];
+            }
+
+            // Store result address and length in destination register
+            const trit_value = Trit27{ .trits = @as(i64, result_addr) };
+            cpu.t27[inst.dst] = trit_value;
+            cpu.flags.Z = false;
+            cpu.flags.N = false;
+            cpu.pc += 1;
+        },
+
+        .STR_PRINT => {
+            // Print string from register to stdout
+            const str_addr = @as(usize, cpu.t27[inst.src1].trits);
+
+            if (str_addr >= memory.len) {
+                return ExecError.InvalidMemory;
+            }
+
+            // Read string length
+            if (str_addr + 2 >= memory.len) {
+                return ExecError.InvalidMemory;
+            }
+            const len = @as(u16, memory[str_addr]) | (@as(u16, memory[str_addr + 1]) << 8);
+
+            // Print string bytes (null-terminated)
+            const str_start = str_addr + 2;
+            const print_len = @min(@as(usize, len), memory.len - str_start);
+            for (0..print_len) |i| {
+                if (str_start + i < memory.len) {
+                    std.debug.print("{c}", .{memory[str_start + i]});
+                }
+            }
+            std.debug.print("\n", .{});
+
+            cpu.flags.Z = false;
+            cpu.flags.N = false;
+            cpu.pc += 1;
+        },
+
+        // ═════════════════════════════════════════════════════════════════════
+        // FILE I/O INSTRUCTIONS (0x23-0x25)
+        // ═══════════════════════════════════════════════════════════════════════════════════
+        .FILE_READ => {
+            // Read file into memory
+            // src1 register contains path address
+            const path_addr = @as(usize, cpu.t27[inst.src1].trits);
+
+            if (path_addr >= memory.len) {
+                return ExecError.InvalidMemory;
+            }
+
+            // Read path length
+            if (path_addr + 2 >= memory.len) {
+                return ExecError.InvalidMemory;
+            }
+            const path_len = @as(u16, memory[path_addr]) | (@as(u16, memory[path_addr + 1]) << 8);
+
+            // Read path string
+            const path_start = path_addr + 2;
+            const max_path_len = @min(@as(usize, path_len), memory.len - path_start);
+            const path_slice = memory[path_start..@min(path_start + max_path_len, memory.len)];
+
+            // Convert to null-terminated C string
+            var path_buf: [256]u8 = undefined;
+            const copy_len = @min(path_slice.len, 255);
+            @memcpy(&path_buf, path_slice.ptr, copy_len);
+            path_buf[copy_len] = 0; // Null-terminate
+
+            // Use std.fs.cwd() for relative paths
+            const cwd = std.fs.cwd() catch {
+                // On error, just proceed with absolute path handling
+                return ExecError.InvalidMemory;
+            };
+
+            const file_path = if (path_buf[0] == '/') path_buf[0..copy_len :0] else try std.fs.path.join(cwd, &path_buf);
+
+            // Open and read file
+            const file = std.fs.cwd().openFile(file_path, .{}) catch {
+                return ExecError.InvalidMemory;
+            };
+            defer file.close();
+
+            // Read file content (max 1KB for safety)
+            var content_buf: [1024]u8 = undefined;
+            const bytes_read = file.readAll(&content_buf) catch {
+                return ExecError.InvalidMemory;
+            };
+
+            // Find space to store result (path, length, content)
+            const result_addr = @max(path_addr + @as(usize, path_len) + 2, @as(usize, 1000));
+            if (result_addr + 2 + @as(usize, bytes_read) > memory.len) {
+                return ExecError.InvalidMemory;
+            }
+
+            // Store content length (little-endian u16)
+            memory[result_addr] = @as(u8, bytes_read);
+            memory[result_addr + 1] = @as(u8, @truncate(bytes_read >> 8));
+
+            // Copy content
+            for (0..@as(usize, bytes_read)) |i| {
+                memory[result_addr + 2 + i] = content_buf[i];
+            }
+
+            // Store result address in destination register
+            const trit_value = Trit27{ .trits = @as(i64, result_addr) };
+            cpu.t27[inst.dst] = trit_value;
+            cpu.flags.Z = bytes_read == 0;
+            cpu.flags.N = false;
+            cpu.pc += 1;
+        },
+
+        .FILE_WRITE => {
+            // Write string to file
+            // src1 register contains path address, src2 contains data address
+            const path_addr = @as(usize, cpu.t27[inst.src1].trits);
+            const data_addr = @as(usize, cpu.t27[inst.src2].trits);
+
+            if (path_addr >= memory.len or data_addr >= memory.len) {
+                return ExecError.InvalidMemory;
+            }
+
+            // Read path length
+            if (path_addr + 2 >= memory.len) {
+                return ExecError.InvalidMemory;
+            }
+            const path_len = @as(u16, memory[path_addr]) | (@as(u16, memory[path_addr + 1]) << 8);
+
+            // Read data length
+            if (data_addr + 2 >= memory.len) {
+                return ExecError.InvalidMemory;
+            }
+            const data_len = @as(u16, memory[data_addr]) | (@as(u16, memory[data_addr + 1]) << 8);
+
+            // Read path string
+            const path_start = path_addr + 2;
+            const max_path_len = @min(@as(usize, path_len), memory.len - path_start);
+            const path_slice = memory[path_start..@min(path_start + max_path_len, memory.len)];
+
+            // Convert to null-terminated C string
+            var path_buf: [256]u8 = undefined;
+            const copy_len = @min(path_slice.len, 255);
+            @memcpy(&path_buf, path_slice.ptr, copy_len);
+            path_buf[copy_len] = 0; // Null-terminate
+
+            // Use std.fs.cwd() for relative paths
+            const cwd = std.fs.cwd() catch {
+                return ExecError.InvalidMemory;
+            };
+
+            const file_path = if (path_buf[0] == '/') path_buf[0..copy_len :0] else try std.fs.path.join(cwd, &path_buf);
+
+            // Open and write file
+            const file = std.fs.cwd().createFile(file_path, .{}) catch {
+                return ExecError.InvalidMemory;
+            };
+            defer file.close();
+
+            // Write data content
+            const data_start = data_addr + 2;
+            const max_data_len = @min(@as(usize, data_len), memory.len - data_start);
+            const data_slice = memory[data_start..@min(data_start + max_data_len, memory.len)];
+            _ = file.writeAll(data_slice) catch {
+                return ExecError.InvalidMemory;
+            };
+
+            cpu.flags.Z = false;
+            cpu.flags.N = false;
+            cpu.pc += 1;
+        },
+
+        .FILE_EXISTS => {
+            // Check if file exists
+            // src1 register contains path address
+            const path_addr = @as(usize, cpu.t27[inst.src1].trits);
+
+            if (path_addr >= memory.len) {
+                return ExecError.InvalidMemory;
+            }
+
+            // Read path length
+            if (path_addr + 2 >= memory.len) {
+                return ExecError.InvalidMemory;
+            }
+            const path_len = @as(u16, memory[path_addr]) | (@as(u16, memory[path_addr + 1]) << 8);
+
+            // Read path string
+            const path_start = path_addr + 2;
+            const max_path_len = @min(@as(usize, path_len), memory.len - path_start);
+            const path_slice = memory[path_start..@min(path_start + max_path_len, memory.len)];
+
+            // Convert to null-terminated C string
+            var path_buf: [256]u8 = undefined;
+            const copy_len = @min(path_slice.len, 255);
+            @memcpy(&path_buf, path_slice.ptr, copy_len);
+            path_buf[copy_len] = 0; // Null-terminate
+
+            // Use std.fs.cwd() for relative paths
+            const cwd = std.fs.cwd() catch {
+                return ExecError.InvalidMemory;
+            };
+
+            const file_path = if (path_buf[0] == '/') path_buf[0..copy_len :0] else try std.fs.path.join(cwd, &path_buf);
+
+            // Check if file exists
+            const exists = std.fs.cwd().access(file_path, .{}) catch {
+                cpu.flags.Z = true; // File does not exist
+                cpu.flags.N = false;
+                cpu.pc += 1;
+                return;
+            };
+
+            // File exists
+            cpu.flags.Z = false;
+            cpu.flags.N = false;
+            cpu.pc += 1;
+        },
+
         else => {
             return ExecError.InvalidOpcode;
         },
@@ -637,6 +913,12 @@ pub fn estimateCycles(opcode: Opcode) u64 {
         .CALL => 3, // Stack push + jump
         .RET => 3, // Stack pop + jump
         .HALT => 1,
+        .STR_LOAD => 1, // String load
+        .STR_CONCAT => 2, // String concat (linear)
+        .STR_PRINT => 10, // String print (variable, depends on length)
+        .FILE_READ => 20, // File read (variable, depends on file size)
+        .FILE_WRITE => 20, // File write (variable, depends on data size)
+        .FILE_EXISTS => 5, // File exists check
         .SYSCALL => 10, // System call (variable)
         else => 1,
     };

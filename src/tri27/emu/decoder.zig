@@ -60,6 +60,16 @@ pub const Opcode = enum(u8) {
     E_CONST = 0x82,
     SACR = 0x83, // Sacred arithmetic operation
 
+    // === STRING I/O (0x20-0x22) ===
+    STR_LOAD = 0x20, // Load string literal
+    STR_CONCAT = 0x21, // Concatenate strings
+    STR_PRINT = 0x22, // Print string
+
+    // === FILE I/O (0x23-0x25) ===
+    FILE_READ = 0x23, // Read file to string
+    FILE_WRITE = 0x24, // Write string to file
+    FILE_EXISTS = 0x25, // Check file exists
+
     // === EXECUTOR EXTENSIONS ===
     LD_IMM = 0x84, // Load immediate (executor compatibility)
     ADD3 = 0x85, // Ternary add (executor)
@@ -121,7 +131,7 @@ pub fn decode(word: u32) Instruction {
 
     // Determine if instruction has immediate or src2
     const has_imm = switch (opcode) {
-        .LD, .ST, .LDI, .STI, .LD_IMM, .PHI_CONST, .PI_CONST, .E_CONST, .JMP, .JZ, .JNZ, .JGT, .JLT, .CALL, .RET, .SHL, .SHR => true,
+        .LD, .ST, .LDI, .STI, .LD_IMM, .PHI_CONST, .PI_CONST, .E_CONST, .JMP, .JZ, .JNZ, .JGT, .JLT, .CALL, .RET, .SHL, .SHR, .STR_LOAD, .STR_CONCAT, .STR_PRINT, .FILE_READ, .FILE_WRITE, .FILE_EXISTS => true,
         else => false,
     };
 
@@ -180,7 +190,7 @@ pub fn encode(inst: Instruction) u32 {
     };
 
     const has_imm = switch (inst.opcode) {
-        .LD, .ST, .LDI, .STI, .LD_IMM, .PHI_CONST, .PI_CONST, .E_CONST, .JMP, .JZ, .JNZ, .JGT, .JLT, .CALL, .RET, .SHL, .SHR => true,
+        .LD, .ST, .LDI, .STI, .LD_IMM, .PHI_CONST, .PI_CONST, .E_CONST, .JMP, .JZ, .JNZ, .JGT, .JLT, .CALL, .RET, .SHL, .SHR, .STR_LOAD, .STR_CONCAT, .STR_PRINT, .FILE_READ, .FILE_WRITE, .FILE_EXISTS => true,
         else => false,
     };
 
@@ -226,6 +236,12 @@ pub fn formatInstruction(inst: Instruction, writer: anytype) !void {
     } else if (inst.opcode == .MOV) {
         // MOV is two-operand (dst, src1)
         try writer.print(", t{d}", .{inst.src1});
+    } else if (inst.opcode == .STR_PRINT) {
+        // STR_PRINT: dst, src1 (string address - unary)
+        try writer.print(", t{d}", .{inst.src1});
+    } else if (inst.opcode == .FILE_WRITE) {
+        // FILE_WRITE: src1, src2 (path + data addresses, no dst)
+        try writer.print("t{d}, t{d}", .{ inst.src1, inst.src2 });
     } else if (inst.opcode == .HALT or inst.opcode == .NOP or inst.opcode == .RET) {
         // No operands
     } else if (inst.opcode == .BUNDLE3) {
@@ -243,6 +259,12 @@ pub fn formatInstruction(inst: Instruction, writer: anytype) !void {
         } else if (inst.opcode == .JGT or inst.opcode == .JLT) {
             // JGT/JLT: dst, src1 already printed, add offset
             try writer.print(", {d}", .{inst.immediate});
+        } else if (inst.opcode == .STR_CONCAT) {
+            // STR_CONCAT: dst, src1, src2 (three operands)
+            try writer.print(", t{d}, t{d}", .{ inst.src1, inst.src2 });
+        } else if (inst.opcode == .FILE_READ or inst.opcode == .FILE_EXISTS) {
+            // FILE_READ/FILE_EXISTS: dst, src1 (two operands)
+            try writer.print(", t{d}", .{inst.src1});
         } else {
             try writer.print(", t{d}", .{inst.src2});
         }
