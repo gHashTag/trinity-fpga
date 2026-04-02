@@ -82,6 +82,53 @@ functions:
           grad_input[i] = 0.0
 
 behaviors:
+  - name: forward_dropout
+    description: "Dropout forward implementation"
+    implementation: |
+      pub fn forward(input: []const f32, output: []f32, mask: []bool,
+          training: bool, config: DropoutConfig, seed: u64) void {
+          const scale = 1.0 / (1.0 - config.p);
+
+          if (!training) {
+              // Inference mode: pass through unchanged
+              for (input, 0..) |x, i| {
+                  output[i] = x;
+                  mask[i] = true; // All kept
+              }
+          } else {
+              // Training mode: apply dropout
+              var rng = std.Random.DefaultPrng.init(seed);
+              const rand = rng.random();
+
+              for (input, 0..) |x, i| {
+                  const keep = rand.float(f32) > config.p;
+                  mask[i] = keep;
+
+                  if (keep) {
+                      output[i] = x * scale;
+                  } else {
+                      output[i] = 0.0;
+                  }
+              }
+          }
+      }
+
+  - name: backward_dropout
+    description: "Dropout backward implementation"
+    implementation: |
+      pub fn backward(grad_output: []const f32, mask: []const bool,
+          grad_input: []f32, config: DropoutConfig) void {
+          const scale = 1.0 / (1.0 - config.p);
+
+          for (grad_output, 0..) |g, i| {
+              if (mask[i]) {
+                  grad_input[i] = g * scale;
+              } else {
+                  grad_input[i] = 0.0;
+              }
+          }
+      }
+
   - name: inverted_dropout
     description: "Scale during training, not inference"
     implementation: |

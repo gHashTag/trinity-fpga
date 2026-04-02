@@ -128,6 +128,98 @@ functions:
       return output
 
 behaviors:
+  - name: forward_avgpool2d
+    description: "AvgPool2D forward implementation"
+    implementation: |
+      pub fn forward(input: []const f32, output: []f32, config: AvgPool2DConfig,
+          batch_size: u32, channels: u32, in_h: u32, in_w: u32, out_h: u32, out_w: u32) void {
+          const k = config.kernel_size;
+          const s = config.stride;
+          const p = config.padding;
+
+          for (0..batch_size) |b| {
+              for (0..channels) |c| {
+                  for (0..out_h) |oy| {
+                      for (0..out_w) |ox| {
+                          var sum: f32 = 0;
+                          var count: u32 = 0;
+
+                          for (0..k) |ky| {
+                              for (0..k) |kx| {
+                                  const iy = @as(i32, @intCast(oy *% s +% ky)) -% @as(i32, @intCast(p));
+                                  const ix = @as(i32, @intCast(ox *% s +% kx)) -% @as(i32, @intCast(p));
+
+                                  if (iy >= 0 and iy < @as(i32, @intCast(in_h)) and
+                                      ix >= 0 and ix < @as(i32, @intCast(in_w))) {
+                                      const iu = @as(usize, @intCast(iy));
+                                      const iu2 = @as(usize, @intCast(ix));
+                                      const in_idx = ((b * channels + c) * in_h + iu) * in_w + iu2;
+                                      sum += input[in_idx];
+                                      count += 1;
+                                  }
+                              }
+                          }
+
+                          const out_idx = ((b * channels + c) * out_h + oy) * out_w + ox;
+                          output[out_idx] = sum / @as(f32, @floatFromInt(count));
+                      }
+                  }
+              }
+          }
+      }
+
+  - name: backward_avgpool2d
+    description: "AvgPool2D backward implementation"
+    implementation: |
+      pub fn backward(grad_output: []const f32, grad_input: []f32, config: AvgPool2DConfig,
+          batch_size: u32, channels: u32, in_h: u32, in_w: u32, out_h: u32, out_w: u32) void {
+          const k = config.kernel_size;
+          const s = config.stride;
+          const p = config.padding;
+
+          @memset(grad_input, 0);
+
+          for (0..batch_size) |b| {
+              for (0..channels) |c| {
+                  for (0..out_h) |oy| {
+                      for (0..out_w) |ox| {
+                          const g = grad_output[((b * channels + c) * out_h + oy) * out_w + ox];
+
+                          var count: u32 = 0;
+                          for (0..k) |ky| {
+                              for (0..k) |kx| {
+                                  const iy = @as(i32, @intCast(oy *% s +% ky)) -% @as(i32, @intCast(p));
+                                  const ix = @as(i32, @intCast(ox *% s +% kx)) -% @as(i32, @intCast(p));
+
+                                  if (iy >= 0 and iy < @as(i32, @intCast(in_h)) and
+                                      ix >= 0 and ix < @as(i32, @intCast(in_w))) {
+                                      count += 1;
+                                  }
+                              }
+                          }
+
+                          const grad_per_element = g / @as(f32, @floatFromInt(count));
+
+                          for (0..k) |ky| {
+                              for (0..k) |kx| {
+                                  const iy = @as(i32, @intCast(oy *% s +% ky)) -% @as(i32, @intCast(p));
+                                  const ix = @as(i32, @intCast(ox *% s +% kx)) -% @as(i32, @intCast(p));
+
+                                  if (iy >= 0 and iy < @as(i32, @intCast(in_h)) and
+                                      ix >= 0 and ix < @as(i32, @intCast(in_w))) {
+                                      const iu = @as(usize, @intCast(iy));
+                                      const iu2 = @as(usize, @intCast(ix));
+                                      const in_idx = ((b * channels + c) * in_h + iu) * in_w + iu2;
+                                      grad_input[in_idx] += grad_per_element;
+                                  }
+                              }
+                          }
+                      }
+                  }
+              }
+          }
+      }
+
   - name: downsampling
     description: "Reduce spatial resolution"
     implementation: |

@@ -398,6 +398,17 @@ pub fn build(b: *std.Build) void {
     const run_vibee_optimizer_tests = b.addRunArtifact(vibee_optimizer_tests);
     test_step.dependOn(&run_vibee_optimizer_tests.step);
 
+    // VIBEE expansion 2 tests — BatchNorm, LayerNorm, Dropout, AvgPool2D
+    const vibee_expansion2_tests = b.addTest(.{
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/tri/vibee/expansion2_test.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
+    });
+    const run_vibee_expansion2_tests = b.addRunArtifact(vibee_expansion2_tests);
+    test_step.dependOn(&run_vibee_expansion2_tests.step);
+
     // TRI-TRACE tests (DEV-001)
     const trace_tests = b.addTest(.{
         .root_module = b.createModule(.{

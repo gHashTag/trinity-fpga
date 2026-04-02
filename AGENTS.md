@@ -73,6 +73,44 @@ tri agent kill <N>      # Kill agent container
 **Key Files**:
 - `src/scholar/scholar_agent.zig` — Research agent logic
 
+### Copywright Agent (`agent-t`)
+
+**Role**: Technical content queen for social media
+
+**Binary**: `zig build agent-t`
+
+**Purpose**:
+- Generates viral posts for Twitter/X and Reddit after agent work completion
+- Studies Twitter/X and Reddit oriented presentation styles
+- Proposes posts in Reddit/Twitter format for manual review
+- Professional, evidence-based, no mysticism
+
+**Key Files**:
+- `src/tri/copywright.zig` — Content generation logic
+- `specs/tri/copywright.tri` — Agent specification
+- `.trinity/copywright/config.json` — Agent configuration
+
+**Commands**:
+```bash
+tri agent-t post         # Generate posts for latest agent work
+tri agent-t review       # Review generated posts before publishing
+tri agent-t config       # Show current configuration
+```
+
+**Social Media Patterns**:
+- **Twitter/X**: 7-8 tweet threads, bookmarkable teases, stop/start framework
+- **Reddit**: Showcase template with title, hook, demo, tech stack, lessons, CTA
+- **Engagement boosters**: GIF (+300%), GitHub link (+150%), Questions (+100%)
+- **Optimal times**: Reddit Tue-Thu 14:00-17:00 UTC
+
+**Content Generation**:
+- Analyzes agent output from `.trinity/agent_events.jsonl`
+- Extracts key achievements (benchmarks, releases, breakthroughs)
+- Generates structured JSON for manual review
+- Applies proven viral patterns
+
+---
+
 ### Oracle Agent
 
 **Role**: Decision validator, sacred constants guardian

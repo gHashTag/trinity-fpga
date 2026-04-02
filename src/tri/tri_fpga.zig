@@ -2083,7 +2083,6 @@ fn runPinsToXdcCommand(allocator: std.mem.Allocator, args: []const []const u8) !
 /// Validate pin mapping
 fn runPinsValidateCommand(allocator: std.mem.Allocator, args: []const []const u8) !void {
     _ = allocator;
-    _ = @import("pins_parser.zig");
 
     if (args.len < 1) {
         std.debug.print("Usage: tri fpga pins validate <design.tri>\n", .{});
@@ -2092,9 +2091,7 @@ fn runPinsValidateCommand(allocator: std.mem.Allocator, args: []const []const u8
 
     const input = args[0];
     std.debug.print("{s}Pins DSL:{s} Validating {s}\n", .{ CYAN, RESET, input });
-
-    // TODO: pins_parser.validateDesign not implemented yet
-    std.debug.print("{s}TODO:{s} pins_parser.validateDesign not implemented yet\n", .{ YELLOW, RESET });
+    std.debug.print("Not implemented: use .tri specs instead\n", .{});
 }
 
 /// Export intermediate representation

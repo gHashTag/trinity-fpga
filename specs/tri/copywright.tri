@@ -1,0 +1,190 @@
+# ═════════════════════════════════════════════════════════════════════════════
+# VIBEE Specification — Copywright (AGENT T)
+# ═════════════════════════════════════════════════════════════════════════════
+# φ² + 1/φ² = 3 = TRINITY
+# Issue: AGENT T — Technical content agent for Trinity social media
+# ═════════════════════════════════════════════════════════════════════════════════
+
+name: copywright
+version: "1.0.0"
+language: zig
+module: copywright
+
+description: |
+  AGENT T — Technical content queen for Trinity. Generates viral posts for Twitter/X
+  and Reddit after agent work completion. Professional, evidence-based, no mysticism.
+
+  Personality: Pragmatic, technical writer — focuses on numbers, metrics, demos.
+
+# ═══════════════════════════════════════════════════════════════════════════
+# TYPE SYSTEM
+# ═════════════════════════════════════════════════════════════════════════════════════════
+
+types:
+  TwitterThread:
+    fields:
+      tweets: List(Tweet)
+
+  Tweet:
+    fields:
+      number: Int
+      content: String
+      has_gif: Bool
+      has_question: Bool
+
+  RedditPost:
+    fields:
+      title: String
+      hook: String
+      demo_link: String
+      what_built: List(String)
+      tech_stack: List(String)
+      lessons_learned: List(String)
+      cta: String
+      tags: List(String)
+
+  PostContent:
+    fields:
+      twitter_thread: TwitterThread
+      reddit_post: RedditPost
+
+  Config:
+    fields:
+      target_subreddits: List(String)
+      optimal_times_reddit: String
+      optimal_times_twitter: String
+      engagement_boosters: List(String)
+
+# ═════════════════════════════════════════════════════════════════════════════════════
+# BEHAVIORS
+# ═══════════════════════════════════════════════════════════════════════════════════════════
+
+behaviors:
+  generate_posts:
+    description: "Generate Twitter/X thread and Reddit post from agent work output"
+    inputs:
+      - event_context: String (JSON from .trinity/agent_events.jsonl)
+    output: PostContent
+    steps:
+      - Parse agent event JSON to extract work context
+      - Identify viral-worthy moments (benchmarks, releases, breakthroughs)
+      - Generate Twitter/X thread (7-8 tweets)
+      - Generate Reddit post (showcase template)
+      - Apply engagement boosters (questions, CTAs, tech keywords)
+      - Return structured JSON for manual review
+
+  analyze_content:
+    description: "Extract key technical achievements from agent output"
+    inputs:
+      - event_type: String (PR merged, benchmark, release, etc.)
+      - agent_output: String
+    output: List(String)
+    steps:
+      - Parse agent output for metrics
+      - Extract numbers, percentages, time savings
+      - Identify "aha" moments and breakthroughs
+      - Return list of key highlights
+
+  generate_twitter_thread:
+    description: "Generate 7-8 tweet Twitter/X thread"
+    inputs:
+      - highlights: List(String)
+    output: TwitterThread
+    steps:
+      - Tweet 1: Hook with numbers/curiosity + emoji
+      - Tweets 2-6: Numbered insights from highlights
+      - Tweet 7-8: CTA (question for engagement)
+      - Apply bookmarkable tease patterns
+      - Apply stop/start framework for advice
+      - Mark tweets needing GIF/video (+300% engagement)
+
+  generate_reddit_post:
+    description: "Generate Reddit post using showcase template"
+    inputs:
+      - highlights: List(String)
+      - project_name: String
+    output: RedditPost
+    steps:
+      - Title: [Project]: [Benefit] (max 60 chars)
+      - Hook: Problem solved + "aha" moment (1-2 sentences)
+      - Demo/Proof: Link placeholder for GIF/video
+      - What I Built: 3-5 features with tech details
+      - Tech Stack: Short list + GitHub link placeholder
+      - Lessons: Pain points + solutions (engagement bait)
+      - CTA: "Star/fork if useful! Feedback welcome 🚀"
+      - Tags: Add [OC] for original content
+
+  apply_patterns:
+    description: "Apply proven engagement patterns"
+    inputs:
+      - content: PostContent
+      - config: Config
+    output: PostContent
+    steps:
+      - Check optimal posting times
+      - Add engagement boosters where appropriate
+      - Ensure tech keywords present (+50% engagement)
+      - Add GIF/video suggestions (+300% engagement)
+      - Add engagement questions (+100% engagement)
+
+  get_config:
+    description: "Return current Copywright configuration"
+    inputs: []
+    output: Config
+    steps:
+      - Load from .trinity/copywright/config.json
+      - Return default config if not set
+      - Default subreddits: r/programming, r/rust, r/coolgithubprojects, r/MachineLearning
+
+  set_config:
+    description: "Update Copywright configuration"
+    inputs:
+      - config: Config
+    output: Void
+    steps:
+      - Save to .trinity/copywright/config.json
+      - Ensure directory exists
+
+# ═════════════════════════════════════════════════════════════════════════════════════
+# CONSTRAINTS
+# ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════
+
+constraints:
+  - Config stored at .trinity/copywright/config.json
+  - Twitter thread: 7-8 tweets minimum
+  - Reddit post: Must follow showcase template
+  - Evidence-based only — no speculation without data
+  - All posts must have at least one engagement booster
+  - Target subreddits: technical communities only
+  - Optimal posting: Reddit Tue-Thu 14:00-17:00 UTC
+  - Language: All code and documentation in English
+  - User communication: Russian
+
+# ═════════════════════════════════════════════════════════════════════════════════════
+# TESTS
+# ═════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+
+tests:
+  - name: "twitter thread has 7 tweets"
+    input: {highlights: ["Speed +50%", "Memory -90%"]}
+    expected: {tweet_count: 7}
+
+  - name: "reddit post has all sections"
+    input: {project: "HSLM", highlights: ["New record"]}
+    expected: {
+      title_present: true,
+      hook_present: true,
+      what_built_present: true,
+      cta_present: true,
+      tags_include_oc: true
+    }
+
+  - name: "engagement boosters applied"
+    input: {content: "Test output"}
+    expected: {has_question: true or has_gif_suggestion: true}
+
+  - name: "default config loaded"
+    expected: {
+      subreddits_count: 4,
+      reddit_time: "Tue-Thu 14:00-17:00 UTC"
+    }

@@ -76,11 +76,21 @@ pub const ImproveResponse = struct {
     quality_score: f64 = 0.0,
     cycles_analyzed: usize = 0,
     patterns_found: usize = 0,
+    tri27_config: Tri27Config = null,
 };
 
-// Placeholder for Tri27Config (self_learning module integration)
+// Configuration for Tri27 code generation (self_learning module integration)
 pub const Tri27Config = struct {
-    auto_adapt: bool = false,
+    /// Path to tri_gen binary
+    tri_gen_path: ?[]const u8 = null,
+    /// Output directory for generated Zig code
+    output_dir: ?[]const u8 = null,
+    /// Exit code from tri_gen (0 = success)
+    exit_code: i32 = 0,
+    /// Whether code generation was successful
+    codegen_success: bool = false,
+    /// tri_gen output (stdout or error message)
+    codegen_output: ?[]const u8 = null,
 };
 
 // ============================================================================
@@ -425,13 +435,61 @@ pub const QueenBackend = struct {
         self.health.improve_cycles += 1;
         self.health.last_improve_time = @truncate(std.time.nanoTimestamp());
 
+        // Generate .tri spec and compile with tri_gen
+        const tri_spec = try engine.generateTriSpec(result.quality_score, result.patterns);
+        defer self.allocator.free(tri_spec);
+
+        // Write .tri spec to file
+        const spec_path = ".trinity/specs/auto_improvement.tri";
+        try std.fs.cwd().writeFile(.{
+            .sub_path = spec_path,
+            .data = tri_spec,
+        });
+
+        // Call tri_gen to compile the spec
+        const tri_gen_path = "external/zig-golden-float/zig-out/bin/tri_gen";
+        const args = &[_][]const u8{
+            tri_gen_path,
+            "--input", spec_path,
+            "--lang", "zig",
+            "--out-dir", "src/generated",
+        };
+
+        const codegen_result = std.process.ChildProcess.exec(self.allocator, args) catch |err| {
+            const error_response = ImproveResponse{
+                .success = false,
+                .message = try std.fmt.allocPrint(self.allocator, "tri_gen failed: {}", .{err}),
+                .applied_deltas = result.applied_deltas,
+                .quality_score = result.quality_score,
+                .cycles_analyzed = result.cycles_analyzed,
+                .patterns_found = result.patterns_found,
+                .tri27_config = .{ .codegen_success = false },
+            };
+            const body_json = try std.json.Stringify.valueAlloc(self.allocator, error_response, .{});
+            return try self.httpResponse("application/json", body_json);
+        };
+        defer codegen_result.deinit();
+
+        var codegen_success: bool = codegen_result.term == .Exited and codegen_result.term.Exited == 0;
+        var codegen_output: []const u8 = if (codegen_success)
+            codegen_result.stdout
+        else
+            try std.fmt.allocPrint(self.allocator, "tri_gen exited with code {}", .{codegen_result.term});
+
         const response = ImproveResponse{
-            .success = result.success,
+            .success = result.success and codegen_success,
             .message = result.message,
             .applied_deltas = result.applied_deltas,
             .quality_score = result.quality_score,
-            .patterns_found = result.patterns_found,
             .cycles_analyzed = result.cycles_analyzed,
+            .patterns_found = result.patterns_found,
+            .tri27_config = .{
+                .tri_gen_path = tri_gen_path,
+                .output_dir = "src/generated",
+                .exit_code = codegen_result.term.Exited orelse 1,
+                .codegen_success = codegen_success,
+                .codegen_output = codegen_output,
+            },
         };
 
         const body_json = try std.json.Stringify.valueAlloc(self.allocator, response, .{});

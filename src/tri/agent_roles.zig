@@ -45,6 +45,9 @@ pub const AgentRole = enum {
 
     // === UNKNOWN ===
     unknown,
+
+    // === CONTENT CREATION (Wave 6) ===
+    copywright,  // 👑 AGENT T — Technical content queen for social media
 };
 
 /// Role descriptions for display
@@ -70,6 +73,7 @@ pub fn roleDescription(role: AgentRole) []const u8 {
         .evolution_events => "EVOLUTION — Events (kill/crash)",
         .farm_orchestrator => "FARM — Training orchestration",
         .arena_competition => "ARENA — Model battles",
+        .copywright => "👑 AGENT T — Technical content queen for social media",
         .unknown => "UNKNOWN — Unidentified",
     };
 }
@@ -97,6 +101,7 @@ pub fn roleSymbol(role: AgentRole) []const u8 {
         .evolution_events => "💀",
         .farm_orchestrator => "🧬",
         .arena_competition => "⚔️",
+        .copywright => "👑",
         .unknown => "❓",
     };
 }
@@ -128,6 +133,7 @@ pub fn agentToRole(agent_name: []const u8) AgentRole {
         .{ "hypothalamus", .hypothalamus },
         .{ "regen", .immune_system },
         .{ "immune_system", .immune_system },
+        .{ "copywright", .copywright },
     };
 
     for (mapping) |entry| {
@@ -168,4 +174,12 @@ test "agent_roles immune_system role" {
     try std.testing.expectEqual(agentToRole("regen"), .immune_system);
     const desc = roleDescription(.immune_system);
     try std.testing.expect(std.mem.indexOf(u8, desc, "IMMUNE") != null);
+}
+
+test "agent_roles copywright role" {
+    try std.testing.expectEqual(agentToRole("copywright"), .copywright);
+    const desc = roleDescription(.copywright);
+    try std.testing.expect(std.mem.indexOf(u8, desc, "content queen") != null);
+    const sym = roleSymbol(.copywright);
+    try std.testing.expectEqual(sym, "👑");
 }

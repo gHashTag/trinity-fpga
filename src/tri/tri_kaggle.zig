@@ -86,7 +86,7 @@ pub fn runKaggleCommand(allocator: Allocator, args: []const []const u8) !void {
     else if (std.mem.eql(u8, subcmd, "generate")) {
         return runGenerateCommand(allocator, args[1..]);
     } else if (std.mem.eql(u8, subcmd, "convert-mc")) {
-        return runConvertMcCommand(allocator, args[1..]);
+        return runConvertCommand(allocator, args[1..]);
     }
 
     // Execution commands
@@ -119,7 +119,7 @@ pub fn runKaggleCommand(allocator: Allocator, args: []const []const u8) !void {
         return runParseCommand(allocator, args[1..]);
     } else if (std.mem.eql(u8, subcmd, "convert")) {
         print("{s}⚠️  'convert' is renamed to 'convert-mc'{s}\n", .{ YELLOW, RESET });
-        return runConvertMcCommand(allocator, args[1..]);
+        return runConvertCommand(allocator, args[1..]);
     } else if (std.mem.eql(u8, subcmd, "eval")) {
         return runEvalCommand(allocator, args[1..]);
     } else if (std.mem.eql(u8, subcmd, "export")) {
@@ -722,6 +722,78 @@ fn runValidateCommand(allocator: Allocator) !void {
         }
         print("\n", .{});
     }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// STUB COMMANDS (TODO: implement)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+fn runQuotaCommand(allocator: Allocator) !void {
+    _ = allocator;
+    print("\n{s}📊 KAGGLE QUOTA{s}\n", .{ BOLD, RESET });
+    print("{s}════════════════════════════════════════════════════{s}\n\n", .{ DIM, RESET });
+    print("Not implemented yet\n\n", .{});
+}
+
+fn runTracksCommand(allocator: Allocator) !void {
+    _ = allocator;
+    print("\n{s}📊 KAGGLE TRACKS{s}\n", .{ BOLD, RESET });
+    print("{s}════════════════════════════════════════════════════{s}\n\n", .{ DIM, RESET });
+    print("Not implemented yet\n\n", .{});
+}
+
+fn runLeaderboardCommand(allocator: Allocator) !void {
+    _ = allocator;
+    print("\n{s}📊 KAGGLE LEADERBOARD{s}\n", .{ BOLD, RESET });
+    print("{s}════════════════════════════════════════════════════{s}\n\n", .{ DIM, RESET });
+    print("Not implemented yet\n\n", .{});
+}
+
+fn runGenerateCommand(allocator: Allocator, args: []const []const u8) !void {
+    _ = allocator;
+    _ = args;
+    print("\n{s}📊 KAGGLE GENERATE{s}\n", .{ BOLD, RESET });
+    print("{s}════════════════════════════════════════════════════{s}\n\n", .{ DIM, RESET });
+    print("Not implemented yet\n\n", .{});
+}
+
+fn runRunCommand(allocator: Allocator, args: []const []const u8) !void {
+    _ = allocator;
+    _ = args;
+    print("\n{s}📊 KAGGLE RUN{s}\n", .{ BOLD, RESET });
+    print("{s}════════════════════════════════════════════════════{s}\n\n", .{ DIM, RESET });
+    print("Not implemented yet\n\n", .{});
+}
+
+fn runFixCommand(allocator: Allocator, args: []const []const u8) !void {
+    _ = allocator;
+    _ = args;
+    print("\n{s}📊 KAGGLE FIX{s}\n", .{ BOLD, RESET });
+    print("{s}════════════════════════════════════════════════════{s}\n\n", .{ DIM, RESET });
+    print("Not implemented yet\n\n", .{});
+}
+
+fn runPublishCommand(allocator: Allocator, args: []const []const u8) !void {
+    _ = allocator;
+    _ = args;
+    print("\n{s}📊 KAGGLE PUBLISH{s}\n", .{ BOLD, RESET });
+    print("{s}══════════════════════════════════════════════{s}\n\n", .{ DIM, RESET });
+    print("Not implemented yet\n\n", .{});
+}
+
+fn runReadmeCommand(allocator: Allocator) !void {
+    _ = allocator;
+    print("\n{s}📊 KAGGLE README{s}\n", .{ BOLD, RESET });
+    print("{s}══════════════════════════════════════════════{s}\n\n", .{ DIM, RESET });
+    print("Not implemented yet\n\n", .{});
+}
+
+fn runTaskDescCommand(allocator: Allocator, args: []const []const u8) !void {
+    _ = allocator;
+    _ = args;
+    print("\n{s}📊 KAGGLE TASK-DESC{s}\n", .{ BOLD, RESET });
+    print("{s}════════════════════════════════════════════{s}\n\n", .{ DIM, RESET });
+    print("Not implemented yet\n\n", .{});
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

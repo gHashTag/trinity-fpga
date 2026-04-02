@@ -20,6 +20,7 @@ const finetune_batch = @import("demos/finetune_batch_demo.zig");
 const tooluse_vision2 = @import("demos/tooluse_vision2_demo.zig");
 const voice_agent2 = @import("demos/voice_agent2_demo.zig");
 const orchestration = @import("demos/orchestration_demo.zig");
+const copywright = @import("copywright.zig");
 
 // ── TVC & Agent demos (Cycles 14-15) ────────────────────────────────────────
 
@@ -107,6 +108,15 @@ pub const runConsensusBench = orchestration.runConsensusBench;
 pub const runSpecExecDemo = orchestration.runSpecExecDemo;
 pub const runSpecExecBench = orchestration.runSpecExecBench;
 pub const runGovernorDemo = orchestration.runGovernorDemo;
+// ── Copywright Agent (Cycles 54-55) ─────────────────────────
+pub const runCopywrightDemo = copywright.runCopywrightPostCommand;
+pub const runCopywrightPost = copywright.runCopywrightPostCommand;
+pub const runCopywrightReview = copywright.runCopywrightReviewCommand;
+pub const runCopywrightConfig = copywright.runCopywrightConfigCommand;
+pub const runAgentCopywrightDemo = copywright.runCopywrightPostCommand;
+pub const runAgentCopywrightPost = copywright.runCopywrightPostCommand;
+pub const runAgentCopywrightReview = copywright.runCopywrightReviewCommand;
+pub const runAgentCopywrightConfig = copywright.runCopywrightConfigCommand;
 pub const runGovernorBench = orchestration.runGovernorBench;
 pub const runFedLearnDemo = orchestration.runFedLearnDemo;
 pub const runFedLearnBench = orchestration.runFedLearnBench;

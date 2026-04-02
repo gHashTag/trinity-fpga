@@ -7,6 +7,9 @@
 //   .tri files → Lexer → Parser → AST → IR → Validator → Emitters (XDC/PCF/JSON)
 //
 // phi^2 + 1/phi^2 = 3 = TRINITY
+// BOOTSTRAP: Migration to .tri specs in progress
+// This file is bootstrap implementation pending migration to proper .tri specs.
+// See: specs/pins/README.md for migration plan.
 
 const std = @import("std");
 
