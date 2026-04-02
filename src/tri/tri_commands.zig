@@ -107,8 +107,8 @@ pub fn runGenCommand(allocator: std.mem.Allocator, args: []const []const u8) !vo
     }
     if (backend_path == null) {
         std.debug.print("{s}Error:{s} {s} binary not found.\n", .{ RED, RESET, backend_name });
-        std.debug.print("  Fix: zig build {s}\n", .{ backend_name });
-        std.debug.print("  Expected: zig-out/bin/{s}\n", .{ backend_name });
+        std.debug.print("  Fix: zig build {s}\n", .{backend_name});
+        std.debug.print("  Expected: zig-out/bin/{s}\n", .{backend_name});
         return;
     }
 
@@ -129,24 +129,29 @@ pub fn runGenCommand(allocator: std.mem.Allocator, args: []const []const u8) !vo
     const term = try child.spawnAndWait();
     switch (term) {
         .Exited => |code| if (code != 0) {
-            std.debug.print("vibee exited with code {d}\n", .{code});
+            std.debug.print("{s} exited with code {d}\n", .{ backend_name, code });
             const exp_hooks = @import("experience_hooks.zig");
-            exp_hooks.autoSaveExperience("gen", if (args.len > 0) args[0] else "", false);
-            return error.VibeeProcessFailed;
+            const spec_name = if (actual_args.len > 0) actual_args[0] else "";
+            exp_hooks.autoSaveExperience(if (use_emit_t27) "gen-emit-t27" else "gen", spec_name, false);
+            return if (use_emit_t27) error.EmitT27ProcessFailed else error.VibeeProcessFailed;
         },
         else => {
             const exp_hooks = @import("experience_hooks.zig");
-            exp_hooks.autoSaveExperience("gen", if (args.len > 0) args[0] else "", false);
-            return error.VibeeProcessFailed;
+            const spec_name = if (actual_args.len > 0) actual_args[0] else "";
+            exp_hooks.autoSaveExperience(if (use_emit_t27) "gen-emit-t27" else "gen", spec_name, false);
+            return if (use_emit_t27) error.EmitT27ProcessFailed else error.VibeeProcessFailed;
         },
     }
     const exp_hooks = @import("experience_hooks.zig");
-    exp_hooks.autoSaveExperience("gen", if (args.len > 0) args[0] else "", true);
+    const spec_name = if (actual_args.len > 0) actual_args[0] else "";
+    exp_hooks.autoSaveExperience(if (use_emit_t27) "gen-emit-t27" else "gen", spec_name, true);
 }
 fn printGenHelp() void {
     std.debug.print("\n{s}GEN COMMAND HELP{s}\n", .{ YELLOW, RESET });
-    std.debug.print("{s}Usage:{s}  tri gen <spec-file.tri>\n", .{ CYAN, RESET });
-    std.debug.print("  Generates code from VIBEE specification\n", .{});
+    std.debug.print("{s}Usage:{s}  tri gen [--emit-t27] <spec-file.tri> [output-file]\n", .{ CYAN, RESET });
+    std.debug.print("  Generates code from VIBEE specification\n\n", .{});
+    std.debug.print("{s}Options:{s}\n", .{ YELLOW, RESET });
+    std.debug.print("  --emit-t27    Use emit_t27 backend for TRI-27 assembly output (.t27)\n", .{});
 }
 // ═══════════════════════════════════════════════════════════════════════════════
 // CONVERT COMMAND - Format Conversion
