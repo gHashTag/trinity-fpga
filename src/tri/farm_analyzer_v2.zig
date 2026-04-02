@@ -4,12 +4,12 @@
 // FARM ANALYZER V2 — Logs-Based Sacred Worker Analysis
 // ═══════════════════════════════════════════════════════════════════════════════
 //
-// Правильная логика для автономного анализа sacred workers:
-// 1. Статус берём только из свежих `railway logs` (step=... PPL=... строки)
-// 2. Sacred воркер можно перезапускать только если в логах видна реальная ошибка
+// Proper logic for autonomous analysis of sacred workers:
+// 1. Status taken only from fresh `railway logs` (step=... PPL=... lines)
+// 2. Sacred worker can be restarted only if logs show a real error
 //    (DatasetNotFound, OOM, panic, exception)
-// 3. Отсутствие API доступа к аккаунту (FARM-7/8) трактуем как "unmonitored"
-// 4. НЕ считаем sacred воркеров stalled, пока логи показывают растущие `step=`
+// 3. No API access to account (FARM-7/8) treated as "unmonitored"
+// 4. DON'T consider sacred workers stalled while logs show growing `step=`
 //
 // φ² + 1/φ² = 3 = TRINITY
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -28,31 +28,31 @@ const MAGENTA = "\x1b[35m";
 
 /// Категории ошибок для sacred workers
 pub const ErrorCategory = enum(u8) {
-    none, // Нет ошибки
-    dataset_not_found, // DatasetNotFound — фатально
-    oom, // Out of Memory — фатально
-    panic, // panic/abort — фатально
-    exception, // exception — фатально
-    timeout, // timeout — возможно восстановимо
-    network, // network error — возможно восстановимо
-    unknown, // неизвестная ошибка
+    none, // No error
+    dataset_not_found, // DatasetNotFound — fatal
+    oom, // Out of Memory — fatal
+    panic, // panic/abort — fatal
+    exception, // exception — fatal
+    timeout, // timeout — possibly recoverable
+    network, // network error — possibly recoverable
+    unknown, // unknown error
 };
 
-/// Результат анализа логов sacred worker
+/// Result of sacred worker log analysis
 pub const WorkerAnalysis = struct {
     name: []const u8,
     account: []const u8,
-    // Из логов
+    // From logs
     latest_step: u32 = 0,
     latest_ppl: f32 = 999.0,
     latest_loss: f32 = 99.0,
-    log_age_sec: i64 = 0, // возраст последней строки лога (сек)
-    // Статус
-    is_training: bool = false, // есть свежие step=... строки
-    is_stalled: bool = false, // step не растёт >10 мин
+    log_age_sec: i64 = 0, // age of latest log line (seconds)
+    // Status
+    is_training: bool = false, // has fresh step=... lines
+    is_stalled: bool = false, // step not progressing >10 min
     error_category: ErrorCategory = .none,
     error_message: []const u8 = "",
-    // Рекомендация
+    // Recommendation
     can_restart: bool = false,
     restart_reason: []const u8 = "",
 };
@@ -70,7 +70,7 @@ pub fn analyzeWorkerLogs(
     };
 
     const parsed = std.json.parseFromSlice(std.json.Value, allocator, log_json, .{}) catch {
-        return result; // Вернуть defaults при ошибке парсинга
+        return result; // Return defaults on parsing error
     };
     defer parsed.deinit();
 
@@ -81,11 +81,11 @@ pub fn analyzeWorkerLogs(
     const logs = logs_val.array.items;
     if (logs.len == 0) return result;
 
-    // Проходим по логам от старых к новым (для поиска свежих метрик)
+    // Iterate through logs from old to new (to find fresh metrics)
     var latest_step: u32 = 0;
     var latest_ppl: f32 = 999.0;
     var latest_loss: f32 = 99.0;
-    var has_training_line = false;
+    var has_training_line = false; // has fresh step=... lines
 
     for (logs) |log_entry| {
         const msg = log_entry.object.get("message") orelse continue;
@@ -93,11 +93,11 @@ pub fn analyzeWorkerLogs(
 
         const line = msg.string;
 
-        // Проверка на фатальные ошибки
+        // Check for fatal errors
         if (detectFatalError(line)) |cat| {
             result.error_category = cat;
             result.error_message = line;
-            result.can_restart = true; // При фатальной ошибке нужен рестарт
+            result.can_restart = true; // Restart needed on fatal error
             return result;
         }
 
@@ -117,7 +117,7 @@ pub fn analyzeWorkerLogs(
     result.latest_loss = latest_loss;
     result.is_training = has_training_line and latest_step > 0;
 
-    // Проверка на stale логи (нет свежих строк >10 мин)
+    // Check for stale logs (no fresh lines >10 min)
     if (logs.len > 0) {
         const last_log = logs[logs.len - 1];
         if (last_log.object.get("timestamp")) |ts| {
@@ -127,19 +127,19 @@ pub fn analyzeWorkerLogs(
                 const age_ms = now_ms - log_ts_ms;
                 result.log_age_sec = @divTrunc(age_ms, 1000);
 
-                // Логи старше 10 минут → возможно stalled
+                // Logs older than 10 min → possibly stalled
                 result.is_stalled = result.is_training and result.log_age_sec > 600;
             }
         }
     }
 
-    // Можно рестартить только при явной ошибке
+    // Can restart only on explicit error
     result.can_restart = result.error_category != .none;
 
     return result;
 }
 
-/// Определяет категорию фатальной ошибки в строке лога
+/// Determines fatal error category in log line
 fn detectFatalError(line: []const u8) ?ErrorCategory {
     // Dataset errors
     if (std.mem.indexOf(u8, line, "DatasetNotFound") != null or
@@ -192,23 +192,23 @@ fn detectFatalError(line: []const u8) ?ErrorCategory {
     return null;
 }
 
-/// Метрики из строки обучения
+/// Metrics from training line
 const TrainingMetrics = struct {
     step: u32,
     loss: f32,
     ppl: f32,
 };
 
-/// Парсит строку обучения: "step | loss | avg_loss | ppl | ..."
+/// Parses training line: "step | loss | avg_loss | ppl | ..."
 fn parseTrainingLine(line: []const u8) ?TrainingMetrics {
-    // Должно быть как минимум 6 пайпов
+    // Must be at least 6 pipes
     var pipe_count: usize = 0;
     for (line) |c| {
         if (c == '|') pipe_count += 1;
     }
     if (pipe_count < 6) return null;
 
-    // Разбиваем по '|'
+    // Split by '|'
     var columns: [8][]const u8 = undefined;
     var col_idx: usize = 0;
     var start: usize = 0;
@@ -221,7 +221,7 @@ fn parseTrainingLine(line: []const u8) ?TrainingMetrics {
             start = ci + 1;
         }
     }
-    // Последняя колонка
+    // Last column
     if (col_idx < 8 and start < line.len) {
         columns[col_idx] = std.mem.trim(u8, line[start..], &[_]u8{ ' ', '\t' });
         col_idx += 1;
@@ -268,7 +268,7 @@ pub const AccountAnalysis = struct {
     best_worker: []const u8 = "",
 };
 
-/// Анализирует все аккаунты фермы
+/// Analyzes all farm accounts
 pub fn analyzeFarmAccounts(
     allocator: Allocator,
     accounts: []const []const u8,
@@ -280,7 +280,7 @@ pub fn analyzeFarmAccounts(
         const analysis = AccountAnalysis{
             .name = acct_name,
             .suffix = "",
-            .status = .unmonitored, // По умолчанию — не мониторится
+            .status = .unmonitored, // By default — not monitored
         };
         try results.append(analysis);
     }
@@ -288,7 +288,7 @@ pub fn analyzeFarmAccounts(
     return results.toOwnedSlice(allocator);
 }
 
-/// Возвращает человекочитаемое описание статуса
+/// Returns human-readable status description
 pub fn formatAccountStatus(status: AccountStatus) []const u8 {
     return switch (status) {
         .monitored => "✅ monitored",
@@ -297,7 +297,7 @@ pub fn formatAccountStatus(status: AccountStatus) []const u8 {
     };
 }
 
-/// Возвращает человекочитаемое описание ошибки
+/// Returns human-readable error description
 pub fn formatErrorCategory(cat: ErrorCategory) []const u8 {
     return switch (cat) {
         .none => "none",
@@ -311,7 +311,7 @@ pub fn formatErrorCategory(cat: ErrorCategory) []const u8 {
     };
 }
 
-/// Форматирует анализ worker для дашборда
+/// Formats worker analysis for dashboard
 pub fn formatWorkerAnalysis(analysis: *const WorkerAnalysis) ![]const u8 {
     var buf = std.ArrayList(u8).init(std.heap.page_allocator);
     defer buf.deinit();
@@ -342,7 +342,7 @@ pub fn formatWorkerAnalysis(analysis: *const WorkerAnalysis) ![]const u8 {
 
 const print = std.debug.print;
 
-/// Запускает анализ фермы на основе свежих логов Railway API
+/// Launches farm analysis based on fresh logs via Railway API
 /// Usage: tri farm analyze [--account <name>] [--worker <name>] [--sacred-only] [--json]
 pub fn runAnalyzeCommand(allocator: Allocator, args: []const []const u8) !void {
     var filter_account: ?[]const u8 = null;
@@ -623,7 +623,7 @@ fn padToName(current: usize, target: usize) void {
     }
 }
 
-/// Проверяет, является ли воркер "sacred" (r33 или sacred-*)
+/// Checks if worker is "sacred" (r33 or sacred-*)
 fn isSacredWorker(name: []const u8) bool {
     if (std.mem.indexOf(u8, name, "r33") != null) return true;
     if (std.mem.indexOf(u8, name, "sacred-") != null) return true;
@@ -631,7 +631,7 @@ fn isSacredWorker(name: []const u8) bool {
     return false;
 }
 
-/// Проверяет, является ли сервис тренировочным воркером
+/// Checks if service is training worker
 fn isTrainingWorker(name: []const u8) bool {
     // hslm-wN, hslm-rN, r33-*, sacred-*
     if (std.mem.indexOf(u8, name, "hslm-") != null) return true;
@@ -641,7 +641,7 @@ fn isTrainingWorker(name: []const u8) bool {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// Тесты
+// Tests
 // ═══════════════════════════════════════════════════════════════════════════════
 
 test "analyzeWorkerLogs - training line" {
