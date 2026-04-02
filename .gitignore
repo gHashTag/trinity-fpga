@@ -303,7 +303,45 @@ fpga/openxc7-synth/fpga/
 fpga/tools/weight_col2wide
 fpga/tools/weight_pack_wide
 
-# Generated sacred CSV exports — all tracked for Zenodo upload
+# Report files (auto-generated docs)
+*.md
+!CLAUDE.md
+!.github/
+!docs/
+
+# Docker files in root (use deploy/ subdirectory instead)
+Dockerfile*
+*.toml
+fly.toml
+
+# Install scripts
+install.sh
+deploy-*.sh
+
+# Temporary CLI flags
+--language
+--output-dir
+
+# Build artifacts
+bin/
+bindings/
+contracts/
+demo/
+demos/
+extensions/
+homebrew-tap/
+install.sh
+k8s/
+libs/
+mcp/
+metrics/
+models/
+packages/
+runtime/
+translator-app/
+tree-sitter-vibee/
+trinity-nexus/
+website/
 
 # Junk archive (large, local only)
 archive/junk-*/
