@@ -21,9 +21,7 @@ pub const BatchNormState = struct {
     running_var: []const f32,
 };
 
-pub fn forward_batchnorm(input: []const f32, gamma: []const f32, beta: []const f32,
-    state: BatchNormState, output: []f32, config: BatchNormConfig,
-    batch_size: u32, spatial_dims: u32) void {
+pub fn forward_batchnorm(input: []const f32, gamma: []const f32, beta: []const f32, state: BatchNormState, output: []f32, config: BatchNormConfig, batch_size: u32, spatial_dims: u32) void {
     const num_features = config.num_features;
     const eps = config.epsilon;
     const element_count = batch_size * spatial_dims;
@@ -54,11 +52,11 @@ test "BatchNorm forward with running stats" {
     // Input: [batch, features, spatial] = 2 * 2 * 3 = 12 elements
     const input = [_]f32{
         // Batch 0, Feature 0: [1, 2, 3]
-        1.0, 2.0, 3.0,
+        1.0,  2.0,  3.0,
         // Batch 0, Feature 1: [4, 5, 6]
-        4.0, 5.0, 6.0,
+        4.0,  5.0,  6.0,
         // Batch 1, Feature 0: [7, 8, 9]
-        7.0, 8.0, 9.0,
+        7.0,  8.0,  9.0,
         // Batch 1, Feature 1: [10, 11, 12]
         10.0, 11.0, 12.0,
     };
@@ -83,8 +81,7 @@ test "BatchNorm forward with running stats" {
         .track_running_stats = true,
     };
 
-    forward_batchnorm(&input, &gamma, &beta, &state, &output, config,
-        batch_size, spatial_dims);
+    forward_batchnorm(&input, &gamma, &beta, &state, &output, config, batch_size, spatial_dims);
 
     // Check output has zero mean and unit variance (approximately)
     const tolerance: f32 = 0.1;
@@ -110,10 +107,10 @@ test "BatchNorm without affine" {
         4.0, 5.0, 6.0,
     };
 
-    const running_mean = [_]f32{ 3.5 };
-    const running_var = [_]f32{ 2.92 };
-    const gamma = [_]f32{ 1.0 };
-    const beta = [_]f32{ 0.0 };
+    const running_mean = [_]f32{3.5};
+    const running_var = [_]f32{2.92};
+    const gamma = [_]f32{1.0};
+    const beta = [_]f32{0.0};
 
     var state = BatchNormState{
         .running_mean = running_mean[0..],
@@ -130,8 +127,7 @@ test "BatchNorm without affine" {
         .track_running_stats = true,
     };
 
-    forward_batchnorm(&input, &gamma, &beta, &state, &output, config,
-        batch_size, spatial_dims);
+    forward_batchnorm(&input, &gamma, &beta, &state, &output, config, batch_size, spatial_dims);
 
     // Without affine, output = (x - mean) / std
     // output[0] = (1 - 3.5) / sqrt(2.92) = -2.5 / 1.709 ≈ -1.463
@@ -149,8 +145,7 @@ pub const LayerNormConfig = struct {
     eps: f32,
 };
 
-pub fn forward_layernorm(input: []const f32, gamma: []const f32, beta: []const f32,
-    output: []f32, config: LayerNormConfig, size: u32) void {
+pub fn forward_layernorm(input: []const f32, gamma: []const f32, beta: []const f32, output: []f32, config: LayerNormConfig, size: u32) void {
     const eps = config.eps;
 
     // Compute mean
@@ -250,8 +245,7 @@ pub const DropoutConfig = struct {
     p: f32,
 };
 
-pub fn forward_dropout(input: []const f32, output: []f32, mask: []bool,
-    training: bool, config: DropoutConfig, seed: u64) void {
+pub fn forward_dropout(input: []const f32, output: []f32, mask: []bool, training: bool, config: DropoutConfig, seed: u64) void {
     const scale = 1.0 / (1.0 - config.p);
 
     if (!training) {
@@ -361,8 +355,7 @@ pub const AvgPool2DConfig = struct {
     padding: u32,
 };
 
-pub fn forward_avgpool2d(input: []const f32, output: []f32, config: AvgPool2DConfig,
-    batch_size: u32, channels: u32, in_h: u32, in_w: u32, out_h: u32, out_w: u32) void {
+pub fn forward_avgpool2d(input: []const f32, output: []f32, config: AvgPool2DConfig, batch_size: u32, channels: u32, in_h: u32, in_w: u32, out_h: u32, out_w: u32) void {
     const k = config.kernel_size;
     const s = config.stride;
     const p = config.padding;
@@ -380,7 +373,8 @@ pub fn forward_avgpool2d(input: []const f32, output: []f32, config: AvgPool2DCon
                             const ix = @as(i32, @intCast(ox *% s +% kx)) -% @as(i32, @intCast(p));
 
                             if (iy >= 0 and iy < @as(i32, @intCast(in_h)) and
-                                ix >= 0 and ix < @as(i32, @intCast(in_w))) {
+                                ix >= 0 and ix < @as(i32, @intCast(in_w)))
+                            {
                                 const iu = @as(usize, @intCast(iy));
                                 const iu2 = @as(usize, @intCast(ix));
                                 const in_idx = ((b * channels + c) * in_h + iu) * in_w + iu2;
@@ -411,9 +405,9 @@ test "AvgPool2D 2x2" {
 
     // Input: 4x4
     const input = [_]f32{
-        1.0, 2.0, 3.0, 4.0,
-        5.0, 6.0, 7.0, 8.0,
-        9.0, 10.0, 11.0, 12.0,
+        1.0,  2.0,  3.0,  4.0,
+        5.0,  6.0,  7.0,  8.0,
+        9.0,  10.0, 11.0, 12.0,
         13.0, 14.0, 15.0, 16.0,
     };
 
@@ -425,8 +419,7 @@ test "AvgPool2D 2x2" {
         .padding = p,
     };
 
-    forward_avgpool2d(&input, &output, config,
-        batch_size, channels, in_h, in_w, out_h, out_w);
+    forward_avgpool2d(&input, &output, config, batch_size, channels, in_h, in_w, out_h, out_w);
 
     // Expected: avg of each 2x2 window
     // Top-left: (1+2+5+6)/4 = 3.5
@@ -464,8 +457,7 @@ test "AvgPool2D vs MaxPool2D" {
         .padding = p,
     };
 
-    forward_avgpool2d(&input, &output_avg, config,
-        batch_size, channels, in_h, in_w, out_h, out_w);
+    forward_avgpool2d(&input, &output_avg, config, batch_size, channels, in_h, in_w, out_h, out_w);
 
     // AvgPool: (1+100+50+75)/4 = 56.5
     // MaxPool: would be 100
@@ -502,8 +494,7 @@ test "AvgPool2D stride 1" {
         .padding = p,
     };
 
-    forward_avgpool2d(&input, &output, config,
-        batch_size, channels, in_h, in_w, out_h, out_w);
+    forward_avgpool2d(&input, &output, config, batch_size, channels, in_h, in_w, out_h, out_w);
 
     // Expected: avg of each 2x2 window (overlapping due to stride 1)
     // (0,0): (1+2+4+5)/4 = 3.0

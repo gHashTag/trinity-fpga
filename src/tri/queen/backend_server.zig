@@ -450,9 +450,12 @@ pub const QueenBackend = struct {
         const tri_gen_path = "external/zig-golden-float/zig-out/bin/tri_gen";
         const args = &[_][]const u8{
             tri_gen_path,
-            "--input", spec_path,
-            "--lang", "zig",
-            "--out-dir", "src/generated",
+            "--input",
+            spec_path,
+            "--lang",
+            "zig",
+            "--out-dir",
+            "src/generated",
         };
 
         const codegen_result = std.process.ChildProcess.exec(self.allocator, args) catch |err| {

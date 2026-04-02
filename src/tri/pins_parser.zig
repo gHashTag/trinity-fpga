@@ -13,6 +13,10 @@
 
 const std = @import("std");
 
+// BOOTSTRAP: Migration to .tri specs in progress
+// This file is bootstrap implementation pending migration to proper .tri specs.
+// See: specs/pins/README.md for migration plan.
+
 // =============================================================================
 // LEXER
 // =============================================================================

@@ -47,7 +47,7 @@ pub const AgentRole = enum {
     unknown,
 
     // === CONTENT CREATION (Wave 6) ===
-    copywright,  // 👑 AGENT T — Technical content queen for social media
+    copywright, // 👑 AGENT T — Technical content queen for social media
 };
 
 /// Role descriptions for display

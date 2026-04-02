@@ -1,0 +1,15 @@
+{
+  "id": "playra/trinity-tefb-mc-benchmark",
+  "title": "Trinity TEFB MC Benchmark",
+  "code_file": "tefb_mc_task.ipynb",
+  "language": "python",
+  "kernel_type": "notebook",
+  "is_private": "false",
+  "enable_gpu": "false",
+  "enable_internet": "true",
+  "dataset_sources": [
+    "playra/trinity-cognitive-probes-tefb-mc"
+  ],
+  "competition_sources": [],
+  "kernel_sources": []
+}

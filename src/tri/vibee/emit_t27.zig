@@ -316,7 +316,101 @@ pub const T27Emitter = struct {
 };
 
 // ============================================================================
-// SIMPLE TRI SPEC TYPES
+// ALGO TRI SPEC AST TYPES
+// ============================================================================
+
+// Type expression: f32, []f32, ReLUConfig, etc.
+pub const AstTypeExpr = union(enum) {
+    base: []const u8, // f32, i32, bool, etc.
+    slice_const: struct { // []const T
+        inner: []const u8,
+    },
+    slice_mut: struct { // []T
+        inner: []const u8,
+    },
+    named: []const u8, // Named type like ReLUConfig
+};
+
+// Function parameter: name, type, description
+pub const AstParam = struct {
+    name: []const u8,
+    type: AstTypeExpr,
+    description: []const u8,
+};
+
+// Type declaration with fields
+pub const AstField = struct {
+    name: []const u8,
+    type: AstTypeExpr,
+    description: []const u8,
+};
+
+pub const AstTypeDecl = struct {
+    name: []const u8,
+    description: []const u8,
+    fields: ArrayList(AstField),
+
+    pub fn deinit(self: *AstTypeDecl, allocator: Allocator) void {
+        if (self.name.len > 0) allocator.free(self.name);
+        if (self.description.len > 0) allocator.free(self.description);
+        for (self.fields.items) |*f| {
+            if (f.name.len > 0) allocator.free(f.name);
+            if (f.description.len > 0) allocator.free(f.description);
+        }
+        self.fields.deinit(allocator);
+    }
+};
+
+// Constant declaration: name, type, value
+pub const AstConstDecl = struct {
+    name: []const u8,
+    type: AstTypeExpr,
+    value: f64,
+    string_value: []const u8,
+    description: []const u8,
+
+    pub fn deinit(self: *AstConstDecl, allocator: Allocator) void {
+        if (self.name.len > 0) allocator.free(self.name);
+        if (self.description.len > 0) allocator.free(self.description);
+        if (self.string_value.len > 0) allocator.free(self.string_value);
+    }
+};
+
+// Function declaration with parameters, returns, formula
+pub const AstFuncDecl = struct {
+    name: []const u8,
+    params: ArrayList(AstParam),
+    returns: AstTypeExpr,
+    description: []const u8,
+    formula: []const u8,
+
+    pub fn deinit(self: *AstFuncDecl, allocator: Allocator) void {
+        if (self.name.len > 0) allocator.free(self.name);
+        if (self.description.len > 0) allocator.free(self.description);
+        if (self.formula.len > 0) allocator.free(self.formula);
+        for (self.params.items) |*p| {
+            if (p.name.len > 0) allocator.free(p.name);
+            if (p.description.len > 0) allocator.free(p.description);
+        }
+        self.params.deinit(allocator);
+    }
+};
+
+// Behavior entry with meta-info (no Zig code)
+pub const AstBehavior = struct {
+    name: []const u8,
+    description: []const u8,
+    notes: []const u8, // Replaces 'implementation' with cleaner name
+
+    pub fn deinit(self: *AstBehavior, allocator: Allocator) void {
+        if (self.name.len > 0) allocator.free(self.name);
+        if (self.description.len > 0) allocator.free(self.description);
+        if (self.notes.len > 0) allocator.free(self.notes);
+    }
+};
+
+// ============================================================================
+// LEGACY SIMPLE TRI SPEC TYPES (backward compat)
 // ============================================================================
 
 pub const Constant = struct {
@@ -350,9 +444,15 @@ pub const TriSpec = struct {
     version: []const u8,
     module: []const u8,
     description: []const u8,
-    types: ArrayList(TypeDef),
-    constants: ArrayList(Constant),
-    behaviors: ArrayList(Behavior),
+    types: ArrayList(TypeDef), // Legacy
+    constants: ArrayList(Constant), // Legacy
+    behaviors: ArrayList(Behavior), // Legacy
+
+    // ALGO-DSL parsed structures
+    type_decls: ArrayList(AstTypeDecl),
+    const_decls: ArrayList(AstConstDecl),
+    func_decls: ArrayList(AstFuncDecl),
+    behavior_decls: ArrayList(AstBehavior),
 
     const DEFAULT_VERSION: []const u8 = "1.0.0";
 
@@ -365,6 +465,10 @@ pub const TriSpec = struct {
             .types = .{},
             .constants = .{},
             .behaviors = .{},
+            .type_decls = .{},
+            .const_decls = .{},
+            .func_decls = .{},
+            .behavior_decls = .{},
         };
     }
 
@@ -375,12 +479,31 @@ pub const TriSpec = struct {
         if (self.module.len > 0) allocator.free(self.module);
         if (self.description.len > 0) allocator.free(self.description);
 
+        // Legacy cleanup
         for (self.types.items) |*t| {
             t.fields.deinit(allocator);
         }
         self.types.deinit(allocator);
         self.constants.deinit(allocator);
         self.behaviors.deinit(allocator);
+
+        // ALGO-DSL cleanup
+        for (self.type_decls.items) |*t| {
+            t.deinit(allocator);
+        }
+        for (self.const_decls.items) |*c| {
+            c.deinit(allocator);
+        }
+        for (self.func_decls.items) |*f| {
+            f.deinit(allocator);
+        }
+        for (self.behavior_decls.items) |*b| {
+            b.deinit(allocator);
+        }
+        self.type_decls.deinit(allocator);
+        self.const_decls.deinit(allocator);
+        self.func_decls.deinit(allocator);
+        self.behavior_decls.deinit(allocator);
     }
 };
 

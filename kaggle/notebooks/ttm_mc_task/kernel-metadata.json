@@ -1,0 +1,15 @@
+{
+  "id": "playra/trinity-ttm-mc-benchmark",
+  "title": "Trinity TTM MC Benchmark",
+  "code_file": "ttm_mc_task.ipynb",
+  "language": "python",
+  "kernel_type": "notebook",
+  "is_private": "false",
+  "enable_gpu": "false",
+  "enable_internet": "true",
+  "dataset_sources": [
+    "playra/trinity-cognitive-probes-tmp-mc"
+  ],
+  "competition_sources": [],
+  "kernel_sources": []
+}
