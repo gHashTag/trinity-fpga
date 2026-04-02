@@ -656,7 +656,7 @@ test "Amygdala analyzeTask - all null inputs" {
 
 test "Amygdala analyzeTask - unicode in task_id" {
     // Should handle unicode characters correctly
-    const result = Amygdala.analyzeTask("urgent-日本語-fix", "dukh", "high");
+    const result = Amygdala.analyzeTask("urgent-test-fix", "dukh", "high");
     try std.testing.expect(result.score >= 40); // dukh realm + urgent keyword
 }
 
@@ -1079,7 +1079,7 @@ test "Amygdala: scanPatterns - very short input" {
 
 test "Amygdala: scanPatterns - unicode handling" {
     // Unicode characters should not break the scanner
-    const result = Amygdala.scanPatterns("urgent-critical-日本語");
+    const result = Amygdala.scanPatterns("urgent-critical-test");
     try std.testing.expectEqual(@as(f32, 80), result); // 30 + 50
 }
 

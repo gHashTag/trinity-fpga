@@ -76,6 +76,42 @@ functions:
             grad_input[i] = grad_output[i]
 
 behaviors:
+  - name: forward_relu
+    description: "ReLU forward implementation"
+    implementation: |
+      pub fn forward(input: []const f32, output: []f32, config: ReLUConfig) void {
+          const ZERO: f32 = 0;
+          const alpha: f32 = config.negative_slope;
+
+          for (input, 0..) |x, i| {
+              if (alpha == 0) {
+                  // Standard ReLU
+                  output[i] = if (x > ZERO) x else ZERO;
+              } else {
+                  // Leaky ReLU
+                  output[i] = if (x > ZERO) x else x * alpha;
+              }
+          }
+      }
+
+  - name: backward_relu
+    description: "ReLU backward implementation"
+    implementation: |
+      pub fn backward(grad_output: []const f32, input: []const f32, grad_input: []f32, config: ReLUConfig) void {
+          const ZERO: f32 = 0;
+          const alpha: f32 = config.negative_slope;
+
+          for (grad_output, 0..) |g, i| {
+              if (alpha == 0) {
+                  // Standard ReLU gradient
+                  grad_input[i] = if (input[i] > ZERO) g else ZERO;
+              } else {
+                  // Leaky ReLU gradient
+                  grad_input[i] = if (input[i] > ZERO) g else g * alpha;
+              }
+          }
+      }
+
   - name: ternary_compatibility
     description: "ReLU maps naturally to ternary {-1, 0, +1}"
     implementation: |

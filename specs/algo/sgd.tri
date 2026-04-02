@@ -91,6 +91,52 @@ functions:
           params[i] -= config.learning_rate * d_p
 
 behaviors:
+  - name: init_sgd
+    description: "Initialize SGD optimizer state"
+    implementation: |
+      pub fn init(state: SGDState, _: u32, config: SGDConfig) void {
+          if (config.momentum > 0) {
+              @memset(state.velocity, 0);
+          }
+      }
+
+  - name: update_sgd
+    description: "SGD optimizer update implementation"
+    implementation: |
+      pub fn update(params: []f32, grads: []const f32, state: SGDState, config: SGDConfig) void {
+          const lr = config.learning_rate;
+          const momentum = config.momentum;
+          const wd = config.weight_decay;
+
+          if (momentum > 0 and state.velocity.len > 0) {
+              // Momentum or Nesterov
+              const n = @min(params.len, state.velocity.len);
+              for (0..n) |i| {
+                  const d_p = grads[i] + wd * params[i];
+                  const p = &params[i];
+                  const vel = &state.velocity[i];
+
+                  if (config.nesterov) {
+                      // Nesterov: look-ahead position
+                      p.* += momentum * vel.*;
+                      vel.* = momentum * vel.* - lr * d_p;
+                      p.* += vel.*;
+                  } else {
+                      // Standard momentum
+                      vel.* = momentum * vel.* - lr * d_p;
+                      p.* += vel.*;
+                  }
+              }
+          } else {
+              // Plain SGD
+              const n = params.len;
+              for (0..n) |i| {
+                  const d_p = grads[i] + wd * params[i];
+                  params[i] -= lr * d_p;
+              }
+          }
+      }
+
   - name: plain_sgd
     description: "Basic SGD without momentum"
     implementation: |

@@ -75,6 +75,53 @@ functions:
         grad_input[i] = probabilities[i] * (grad_output[i] - sum_j(probabilities[j] * grad_output[j]))
 
 behaviors:
+  - name: forward_softmax
+    description: "Softmax forward implementation with numerical stability"
+    implementation: |
+      pub fn forward(logits: []const f32, output: []f32, config: SoftmaxConfig) void {
+          const n = logits.len;
+          if (n == 0) return;
+
+          // Find max for numerical stability
+          var max_val: f32 = logits[0];
+          for (logits[1..]) |logit| {
+              if (logit > max_val) max_val = logit;
+          }
+
+          const temp = config.temperature;
+          var exp_sum: f32 = 0;
+
+          // Compute exp(x - max) / temp and sum
+          for (logits, 0..) |logit, i| {
+              const shifted = if (config.stable) logit - max_val else logit;
+              const exp_val = @exp(shifted / temp);
+              output[i] = exp_val;
+              exp_sum += exp_val;
+          }
+
+          // Normalize
+          const inv_sum = 1.0 / exp_sum;
+          for (output) |*out| {
+              out.* *= inv_sum;
+          }
+      }
+
+  - name: backward_softmax
+    description: "Softmax backward implementation"
+    implementation: |
+      pub fn backward(grad_output: []const f32, probabilities: []const f32, grad_input: []f32, _: SoftmaxConfig) void {
+          // Compute dot product: sum(p * g)
+          var dot_product: f32 = 0;
+          for (probabilities, 0..) |p, i| {
+              dot_product += p * grad_output[i];
+          }
+
+          // grad_input = p * (g - dot_product)
+          for (probabilities, 0..) |p, i| {
+              grad_input[i] = p * (grad_output[i] - dot_product);
+          }
+      }
+
   - name: numerical_stability
     description: "Use max trick to avoid overflow"
     implementation: |

@@ -11,7 +11,7 @@ types:
   MSELossConfig:
     fields:
       - name: reduction
-        type: string
+        type: []const u8
         description: "mean, sum, or none"
 
 functions:
@@ -27,5 +27,37 @@ functions:
       # sum over all elements, divide by count
 
 behaviors:
+  - name: forward_mse_loss
+    description: "MSE loss forward implementation"
+    implementation: |
+      pub fn forward(predictions: []const f32, targets: []const f32) f32 {
+          const n = predictions.len;
+          if (n == 0) return 0;
+
+          var sum_loss: f32 = 0;
+          for (predictions, 0..) |pred, i| {
+              const diff = pred - targets[i];
+              sum_loss += diff * diff;
+          }
+
+          return sum_loss / @as(f32, @floatFromInt(n));
+      }
+
+  - name: backward_mse_loss
+    description: "MSE loss backward implementation"
+    implementation: |
+      pub fn backward(predictions: []const f32, targets: []const f32, grad_input: []f32) void {
+          const n = predictions.len;
+          if (n == 0) return;
+
+          const scale = 2.0 / @as(f32, @floatFromInt(n));
+          for (predictions, 0..) |pred, i| {
+              grad_input[i] = scale * (pred - targets[i]);
+          }
+      }
+
   - name: squared_error
     description: "Penalizes large errors more heavily"
+    implementation: |
+      Loss = mean((predictions - targets)^2)
+      Gradient = 2 * (predictions - targets) / n

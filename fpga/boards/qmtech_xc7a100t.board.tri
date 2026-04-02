@@ -22,8 +22,10 @@ board qmtech_xc7a100t {
   }
 
   uart ft232rl {
-    txd fpga.K20   # FPGA uart_tx → FT232RL RXD (green, J2 pin 6)
-    rxd fpga.L20   # FT232RL TXD → FPGA uart_rx (white, J2 pin 5)
+    # FT232RL TXD (белый, J2.5) → FPGA uart_rx (L20)
+    # FT232RL RXD (зелёный, J2.6) → FPGA uart_tx (K20)
+    txd fpga.L20
+    rxd fpga.K20
     baud 115200
   }
 

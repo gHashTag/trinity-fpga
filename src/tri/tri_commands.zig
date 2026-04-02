@@ -77,32 +77,48 @@ pub fn runGenCommand(allocator: std.mem.Allocator, args: []const []const u8) !vo
         printGenHelp();
         return;
     }
-    // Delegate to the VIBEE compiler binary
-    const vibee_paths = [_][]const u8{
-        "zig-out/bin/vibee",
-        "./zig-out/bin/vibee",
+
+    // Check for --emit-t27 flag to use emit_t27 backend
+    var use_emit_t27 = false;
+    var actual_args = args;
+
+    if (args.len > 0 and std.mem.eql(u8, args[0], "--emit-t27")) {
+        use_emit_t27 = true;
+        // Filter out the --emit-t27 flag
+        if (args.len > 1) {
+            actual_args = args[1..];
+        } else {
+            actual_args = &[_][]const u8{};
+        }
+        std.debug.print("{s}Using emit_t27 backend for TRI-27 assembly output{s}\n", .{ CYAN, RESET });
+    }
+
+    // Delegate to backend binary (vibee or emit_t27)
+    const backend_name = if (use_emit_t27) "emit_t27" else "vibee";
+    const backend_paths = [_][]const u8{
+        if (use_emit_t27) "zig-out/bin/emit_t27" else "zig-out/bin/vibee",
+        if (use_emit_t27) "./zig-out/bin/emit_t27" else "./zig-out/bin/vibee",
     };
-    var vibee_path: ?[]const u8 = null;
-    for (vibee_paths) |path| {
+    var backend_path: ?[]const u8 = null;
+    for (backend_paths) |path| {
         std.fs.cwd().access(path, .{}) catch continue;
-        vibee_path = path;
+        backend_path = path;
         break;
     }
-    if (vibee_path == null) {
-        std.debug.print("{s}Error:{s} VIBEE binary not found.\n", .{ RED, RESET });
-        std.debug.print("  Fix: zig build vibee\n", .{});
-        std.debug.print("  Expected: zig-out/bin/vibee\n", .{});
+    if (backend_path == null) {
+        std.debug.print("{s}Error:{s} {s} binary not found.\n", .{ RED, RESET, backend_name });
+        std.debug.print("  Fix: zig build {s}\n", .{ backend_name });
+        std.debug.print("  Expected: zig-out/bin/{s}\n", .{ backend_name });
         return;
     }
-    // Build argv: vibee gen <spec> [output]
-    // Max args: vibee + gen + spec + [output] = 4
+
+    // Build argv: <backend> <spec> [output]
+    // Max args: backend + spec + [output] = 4
     var argv_buf: [16][]const u8 = undefined;
     var argc: usize = 0;
-    argv_buf[argc] = vibee_path.?;
+    argv_buf[argc] = backend_path.?;
     argc += 1;
-    argv_buf[argc] = "gen";
-    argc += 1;
-    for (args) |arg| {
+    for (actual_args) |arg| {
         if (argc >= argv_buf.len) break;
         argv_buf[argc] = arg;
         argc += 1;

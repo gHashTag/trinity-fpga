@@ -9,11 +9,11 @@ set_property LOC M22 [get_ports clk]
 set_property IOSTANDARD LVCMOS33 [get_ports clk]
 
 # board.uart.ft232rl.txd
-set_property LOC K20 [get_ports uart_rx]
+set_property LOC L20 [get_ports uart_rx]
 set_property IOSTANDARD LVCMOS33 [get_ports uart_rx]
 
 # board.uart.ft232rl.rxd
-set_property LOC L20 [get_ports uart_tx]
+set_property LOC K20 [get_ports uart_tx]
 set_property IOSTANDARD LVCMOS33 [get_ports uart_tx]
 
 # board.led.status

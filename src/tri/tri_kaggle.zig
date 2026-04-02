@@ -5,15 +5,20 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 //
 // Commands:
-//   tri kaggle parse       — Parse CSV files and show statistics
-//   tri kaggle convert     — Convert open-ended questions to MC format
-//   tri kaggle eval        — Run local evaluation with Trinity models
-//   tri kaggle export      — Export to Kaggle-compatible format
-//   tri kaggle validate    — Validate CSV files before upload
-//   tri kaggle status      — Show all tracks status
-//   tri kaggle auth        — Check ~/.kaggle/kaggle.json
-//   tri kaggle meta        — Generate kernel-metadata.json for notebooks
-//   tri kaggle push        — Push notebooks to Kaggle
+//   tri kaggle status          — Show all tracks status
+//   tri kaggle quota           — Show Kaggle AI quota and cost estimate
+//   tri kaggle tracks          — List all tracks with links
+//   tri kaggle generate        — Generate probe datasets (wrapper over generators)
+//   tri kaggle convert-mc      — Convert open-ended to MC format
+//   tri kaggle run <track>    — Run benchmark on Kaggle (dry-run/real)
+//   tri kaggle leaderboard     — Aggregate and show leaderboard
+//   tri kaggle publish <track>  — Toggle Task to Public visibility
+//   tri kaggle readme          — Generate/update kaggle/data/README.md
+//   tri kaggle task-desc <track> — Generate task description text
+//   tri kaggle fix <track>     — Fix specific track issues (tefb/tscp/tagp)
+//   tri kaggle auth            — Check ~/.kaggle/kaggle.json
+//   tri kaggle meta [track]    — Generate kernel-metadata.json for notebooks
+//   tri kaggle push <track>     — Push notebooks to Kaggle
 //
 // φ² + 1/φ² = 3 = TRINITY
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -66,25 +71,65 @@ const TRACKS = [_]Track{
 pub fn runKaggleCommand(allocator: Allocator, args: []const []const u8) !void {
     const subcmd = if (args.len > 0) args[0] else "help";
 
-    if (std.mem.eql(u8, subcmd, "parse")) {
-        return runParseCommand(allocator, args[1..]);
-    } else if (std.mem.eql(u8, subcmd, "convert")) {
-        return runConvertCommand(allocator, args[1..]);
-    } else if (std.mem.eql(u8, subcmd, "eval")) {
-        return runEvalCommand(allocator, args[1..]);
-    } else if (std.mem.eql(u8, subcmd, "export")) {
-        return runExportCommand(allocator, args[1..]);
-    } else if (std.mem.eql(u8, subcmd, "status")) {
+    // Info commands
+    if (std.mem.eql(u8, subcmd, "status")) {
         return runStatusCommand(allocator);
-    } else if (std.mem.eql(u8, subcmd, "auth")) {
+    } else if (std.mem.eql(u8, subcmd, "quota")) {
+        return runQuotaCommand(allocator);
+    } else if (std.mem.eql(u8, subcmd, "tracks")) {
+        return runTracksCommand(allocator);
+    } else if (std.mem.eql(u8, subcmd, "leaderboard")) {
+        return runLeaderboardCommand(allocator);
+    }
+
+    // Generation commands
+    else if (std.mem.eql(u8, subcmd, "generate")) {
+        return runGenerateCommand(allocator, args[1..]);
+    } else if (std.mem.eql(u8, subcmd, "convert-mc")) {
+        return runConvertMcCommand(allocator, args[1..]);
+    }
+
+    // Execution commands
+    else if (std.mem.eql(u8, subcmd, "run")) {
+        return runRunCommand(allocator, args[1..]);
+    } else if (std.mem.eql(u8, subcmd, "fix")) {
+        return runFixCommand(allocator, args[1..]);
+    }
+
+    // Publishing commands
+    else if (std.mem.eql(u8, subcmd, "publish")) {
+        return runPublishCommand(allocator, args[1..]);
+    } else if (std.mem.eql(u8, subcmd, "readme")) {
+        return runReadmeCommand(allocator);
+    } else if (std.mem.eql(u8, subcmd, "task-desc")) {
+        return runTaskDescCommand(allocator, args[1..]);
+    }
+
+    // Kaggle API commands
+    else if (std.mem.eql(u8, subcmd, "auth")) {
         return runAuthCommand(allocator);
     } else if (std.mem.eql(u8, subcmd, "meta")) {
         return runMetaCommand(allocator, args[1..]);
     } else if (std.mem.eql(u8, subcmd, "push")) {
         return runPushCommand(allocator, args[1..]);
+    }
+
+    // Legacy aliases (for backward compatibility)
+    else if (std.mem.eql(u8, subcmd, "parse")) {
+        return runParseCommand(allocator, args[1..]);
+    } else if (std.mem.eql(u8, subcmd, "convert")) {
+        print("{s}⚠️  'convert' is renamed to 'convert-mc'{s}\n", .{ YELLOW, RESET });
+        return runConvertMcCommand(allocator, args[1..]);
+    } else if (std.mem.eql(u8, subcmd, "eval")) {
+        return runEvalCommand(allocator, args[1..]);
+    } else if (std.mem.eql(u8, subcmd, "export")) {
+        return runExportCommand(allocator, args[1..]);
     } else if (std.mem.eql(u8, subcmd, "validate")) {
         return runValidateCommand(allocator);
-    } else if (std.mem.eql(u8, subcmd, "help") or std.mem.eql(u8, subcmd, "--help")) {
+    }
+
+    // Help
+    else if (std.mem.eql(u8, subcmd, "help") or std.mem.eql(u8, subcmd, "--help") or std.mem.eql(u8, subcmd, "-h")) {
         printHelp();
     } else {
         print("{s}Unknown kaggle subcommand: {s}{s}\n", .{ RED, subcmd, RESET });

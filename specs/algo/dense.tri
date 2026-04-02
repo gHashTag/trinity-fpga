@@ -109,6 +109,60 @@ functions:
       grad_input[i] = sum_j(weights[i][j] * grad_output[j])
 
 behaviors:
+  - name: forward_dense
+    description: "Dense layer forward pass implementation"
+    implementation: |
+      pub fn forward(input: []const f32, weights: []const f32, bias: []const f32, output: []f32, config: DenseConfig) void {
+          const input_size = config.input_size;
+          const output_size = config.output_size;
+
+          for (0..output_size) |output_j| {
+              var sum: f32 = if (config.has_bias) bias[output_j] else 0;
+
+              for (0..input_size) |input_i| {
+                  const weight_idx = input_i * output_size + output_j;
+                  sum += input[input_i] * weights[weight_idx];
+              }
+
+              output[output_j] = sum; // Activation applied externally
+          }
+      }
+
+  - name: backward_dense
+    description: "Dense layer backward pass implementation"
+    implementation: |
+      pub fn backward(grad_output: []const f32, input: []const f32, weights: []const f32,
+      grad_input: []f32, grad_weights: []f32, grad_bias: []f32,
+      config: DenseConfig) void {
+          const input_size = config.input_size;
+          const output_size = config.output_size;
+
+          // Clear gradients
+          @memset(grad_weights, 0);
+
+          // Compute grad_weights and grad_bias
+          for (0..output_size) |output_j| {
+              if (config.has_bias) {
+                  grad_bias[output_j] = grad_output[output_j];
+              }
+
+              for (0..input_size) |input_i| {
+                  const weight_idx = input_i * output_size + output_j;
+                  grad_weights[weight_idx] += input[input_i] * grad_output[output_j];
+              }
+          }
+
+          // Compute grad_input
+          for (0..input_size) |input_i| {
+              var sum: f32 = 0;
+              for (0..output_size) |output_j| {
+                  const weight_idx = input_i * output_size + output_j;
+                  sum += weights[weight_idx] * grad_output[output_j];
+              }
+              grad_input[input_i] = sum;
+          }
+      }
+
   - name: matrix_multiply
     description: "Core operation is matrix-vector multiplication"
     implementation: |
