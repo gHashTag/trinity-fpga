@@ -312,7 +312,7 @@ Shared `vectors.json` with 33 entries covering:
 |-------|-------------|--------|
 | 0 | Competitive analysis | ✅ Complete |
 | 1 | GF16 specification | ✅ Complete |
-| 2 | MNIST/CIFAR-10 benchmarks | 🔄 In Progress |
+| 2 | MNIST/CIFAR-10 benchmarks | ✅ Complete |
 | 3 | FPGA synthesis via VIBEE | ⏳ Planned |
 | 4 | GF8/GF32 extensions | ⏳ Planned |
 | 5 | Academic publication | ⏳ Planned |

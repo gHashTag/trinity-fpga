@@ -216,4 +216,5 @@ From GitHub repositories (2024-2025):
 ---
 
 **Document Status:** ✅ Complete — Phase 2 of research roadmap
-**Next:** Phase 3 — F0.2 CIFAR-10 Cross-Stack Validation
+**Next:** Phase 4 — FPGA synthesis via VIBEE toolchain
+**See:** `CROSS_STACK_VALIDATION.md` for Phase 3 benchmark results
