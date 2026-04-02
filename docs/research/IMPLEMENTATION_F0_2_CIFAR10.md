@@ -10,7 +10,7 @@ F0.2 validates GF16 format against competing formats (FP16, BF16) using CIFAR-10
 
 ```
 Dataset: CIFAR-10 (10k images, 32x32x3 RGB, 10 classes)
-Model: Small CNN — Conv(3→16)→ReLU→Pool → Conv(16→32)→ReLU→Pool → FC(1152→128) → FC(128→10)
+Model: Small CNN — Conv(3→16)→ReLU→Pool → Conv(16→32)→ReLU→Pool → FC(2048→128) → FC(128→10)
 Formats compared: GF16, FP16, BF16
 Output: results/cifar10_metrics.json
 ```
