@@ -3870,6 +3870,20 @@ pub fn build(b: *std.Build) void {
     });
 
     // ═══════════════════════════════════════════════════════════════════════════════
+    // TRI-CODEGEN — VIBEE Codegen Phase 1, 2, 3
+    // ═══════════════════════════════════════════════════════════════════════════════
+
+    const tri_codegen = b.addExecutable(.{
+        .name = "tri-codegen",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/vibeec/codegen_impl.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
+    });
+    b.installArtifact(tri_codegen);
+
+    // ═══════════════════════════════════════════════════════════════════════════════
     // TRI-API — Direct Anthropic API Agent (Issue #60)
     // ═══════════════════════════════════════════════════════════════════════════════
 

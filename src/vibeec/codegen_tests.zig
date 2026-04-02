@@ -386,7 +386,7 @@ test "Semantic equivalence: SGD update" {
     update_sgd(&gen_params, &grads, state, config);
 
     // Reference implementation
-    ReferenceImpl.sgd_update_ref(&ref_params, &grads, lr);
+    ReferenceImpl.sgd_update_ref(ref_params[0..], grads[0..], lr);
 
     // Check element-wise equality
     for (gen_params, ref_params) |g, r| {
