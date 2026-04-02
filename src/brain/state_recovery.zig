@@ -1980,8 +1980,8 @@ test "Edge case: state file with UTF-8 content" {
     defer event_bus.deinit();
 
     // Use UTF-8 characters in task/agent IDs
-    const utf8_task = "task-日本語-тест-🧠";
-    const utf8_agent = "agent-тест";
+    const utf8_task = "task-日本語-test-🧠";
+    const utf8_agent = "agent-test";
 
     _ = try registry.claim(allocator, utf8_task, utf8_agent, 60000);
     try manager.save(&registry, &event_bus);

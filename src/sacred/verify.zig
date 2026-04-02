@@ -138,7 +138,7 @@ pub const PowersOfPhi = [11]f64{
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// RUNTIME VERIFICATION (для тестов)
+// RUNTIME VERIFICATION (for tests)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /// Structure for runtime verification of Sacred invariants
