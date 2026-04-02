@@ -100,17 +100,59 @@ Special values:
 
 ## 3. GoldenFloat Family Extension
 
-### 3.1 Proposed Family Members
+### 3.1 Core Principle: φ-Optimized Bit Allocation
 
-| Format | Bits | Layout | Bias | Use Case |
-|--------|------|--------|------|----------|
-| GF8 | 8 | [1][4][3] | 7 | Extreme compression |
-| GF12 | 12 | [1][5][6] | 15 | Embedded ML |
-| **GF16** | **16** | **[1][6][9]** | **31** | **Standard ML** |
-| GF24 | 24 | [1][7][16] | 63 | High-precision training |
-| GF32 | 32 | [1][8][23] | 127 | FP32 replacement |
+**Golden Ratio Split Rule:**
+```
+exp / mantissa ≈ 1/φ ≈ 0.618
+```
 
-### 3.2 GF8 (8-bit) Specification
+This principle differentiates GoldenFloat from IEEE/industry formats, where exp/mantissa splits are chosen ad-hoc for specific use cases (e.g., E4M3 for forward pass, E5M2 for backward pass, BF16 for range).
+
+### 3.2 Complete Family Comparison
+
+| Format | Bits | S:E:M | E/M Ratio | Δ от 1/φ | Precision | Memory vs FP32 | Use Case |
+|--------|------|-------|-----------|----------|-----------|-----------------|----------|
+| GF4 | 4 | 1:1:2 | 0.500 | 0.118 | 3 bits | −88% | Extreme compression, binary-ish |
+| GF6 | 6 | 1:2:3 | 0.667 | 0.049 | 4 bits | −81% | Ultra-low precision |
+| GF8 | 8 | 1:3:4 | 0.750 | 0.132 | 5 bits | −75% | LLM quantization, edge inference |
+| GF12 | 12 | 1:4:7 | 0.571 | 0.047 | 8 bits | −62% | Embedded ML |
+| **GF16** | **16** | **[1][6][9]** | **0.667** | **0.049** | **10 bits** | **−50%** | **Standard ML** |
+| GF20 | 20 | 1:7:12 | 0.583 | 0.035 | 13 bits | −38% | Mid-range precision |
+| GF24 | 24 | 1:9:14 | 0.643 | 0.025 | 15 bits | −25% | High-precision training |
+| GF32 | 32 | 1:12:19 | 0.632 | 0.014 | 20 bits | 0% | FP32 replacement |
+
+**Notes:**
+- **S:E:M** = Sign:Exponent:Mantissa bit allocation
+- **Δ от 1/φ** = Distance from golden ratio optimum (lower = better)
+- **Precision** = Effective bits of precision (≈ mantissa_bits + 1)
+- **Memory vs FP32** = Memory savings compared to 32-bit float
+
+### 3.3 Format Specifications
+
+### 3.3 GF4 (4-bit) Specification
+
+```
+GF4: [sign:1][exp:1][mant:2]
+```
+
+- Exponent bias: 1
+- Special encoding: exp=1, mant=3 → Inf/NaN
+- No subnormals
+- Target: Extreme compression, binary-like operations
+
+### 3.4 GF6 (6-bit) Specification
+
+```
+GF6: [sign:1][exp:2][mant:3]
+```
+
+- Exponent bias: 3
+- Special encoding: exp=3, mant=7 → Inf/NaN
+- No subnormals
+- Target: Ultra-low precision research
+
+### 3.5 GF8 (8-bit) Specification
 
 ```
 GF8: [sign:1][exp:4][mant:3]
@@ -121,7 +163,40 @@ GF8: [sign:1][exp:4][mant:3]
 - No subnormals
 - Target: LLM quantization, edge inference
 
-### 3.3 GF32 (32-bit) Specification
+### 3.7 GF12 (12-bit) Specification
+
+```
+GF12: [sign:1][exp:4][mant:7]
+```
+
+- Exponent bias: 7
+- Special encoding: exp=15, mant=127 → Inf/NaN
+- No subnormals
+- Target: Embedded ML, ARM Cortex-M with FPU
+
+### 3.8 GF20 (20-bit) Specification
+
+```
+GF20: [sign:1][exp:7][mant:12]
+```
+
+- Exponent bias: 63
+- Special encoding: exp=127, mant=4095 → Inf/NaN
+- No subnormals
+- Target: Mid-range precision, balance of speed/accuracy
+
+### 3.9 GF24 (24-bit) Specification
+
+```
+GF24: [sign:1][exp:9][mant:14]
+```
+
+- Exponent bias: 255
+- Special encoding: exp=511, mant=16383 → Inf/NaN
+- No subnormals
+- Target: High-precision training, research workloads
+
+### 3.10 GF32 (32-bit) Specification
 
 ```
 GF32: [sign:1][exp:8][mant:23]
