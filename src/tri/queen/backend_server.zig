@@ -91,7 +91,8 @@ pub const Tri27Config = struct {
     codegen_success: bool = false,
     /// tri_gen output (stdout or error message)
     codegen_output: ?[]const u8 = null,
-};
+    /// Whether auto-adapt is enabled
+    auto_adapt: bool = false,};
 
 // ============================================================================
 // BACKEND SERVER
@@ -473,8 +474,8 @@ pub const QueenBackend = struct {
         };
         defer codegen_result.deinit();
 
-        var codegen_success: bool = codegen_result.term == .Exited and codegen_result.term.Exited == 0;
-        var codegen_output: []const u8 = if (codegen_success)
+        const codegen_success: bool = codegen_result.term == .Exited and codegen_result.term.Exited == 0;
+        const codegen_output: []const u8 = if (codegen_success)
             codegen_result.stdout
         else
             try std.fmt.allocPrint(self.allocator, "tri_gen exited with code {}", .{codegen_result.term});
