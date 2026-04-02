@@ -209,6 +209,9 @@ vite.svg
 # Vibee client (separate project)
 vibee-client/
 
+# ESP32 JTAG (xvc-esp32 external project)
+fpga/esp32-xvc/
+
 # Releases (use GitHub Releases for binaries)
 releases/
 
