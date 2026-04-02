@@ -26,7 +26,7 @@ const DIM = "\x1b[2m";
 const CYAN = "\x1b[36m";
 const MAGENTA = "\x1b[35m";
 
-/// Категории ошибок для sacred workers
+/// Error categories for sacred workers
 pub const ErrorCategory = enum(u8) {
     none, // No error
     dataset_not_found, // DatasetNotFound — fatal
@@ -57,7 +57,7 @@ pub const WorkerAnalysis = struct {
     restart_reason: []const u8 = "",
 };
 
-/// Анализирует логи sacred worker и возвращает статус
+/// Analyzes sacred worker logs and returns status
 pub fn analyzeWorkerLogs(
     allocator: Allocator,
     log_json: []const u8,
@@ -101,7 +101,7 @@ pub fn analyzeWorkerLogs(
             return result;
         }
 
-        // Парсинг строки обучения: "step | loss | avg_loss | ppl | ..."
+        // Parses training line: "step | loss | avg_loss | ppl | ..."
         if (parseTrainingLine(line)) |metrics| {
             if (metrics.step > latest_step) {
                 latest_step = metrics.step;
