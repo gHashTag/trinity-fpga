@@ -314,7 +314,50 @@ GoldenFloat (GF16) is a 16-bit φ-optimized floating-point format ([sign:1][exp:
 
 ---
 
-## 5. Sources
+## 5. GitHub Activity Analysis (Phase 2)
+
+### 5.1 Key Repositories
+
+| Repository | Stars | Focus | Last Updated |
+|------------|-------|-------|--------------|
+| **Hao840/Awesome-Low-Precision-Training** | N/A | 200+ papers survey | Apr 2025 |
+| **pprp/Awesome-LLM-Quantization** | 4k+ | LLM quantization | May 2024 |
+| **Kai-Liu001/Awesome-Model-Quantization** | 1k+ | Quantization techniques | Jul 2024 |
+
+### 5.2 Active Research Directions
+
+**Quantization Techniques (2024-2025):**
+1. **Mixed-Precision Quantization** — Different precisions per layer/channel
+2. **Post-Training Quantization (PTQ)** — Zero-shot, calibration-free methods
+3. **Quantization-Aware Training (QAT)** — Simulated quantization during training
+4. **Low-Rank Compensation** — ResQ, LQER, AQLM for 2-3 bit quantization
+
+**Architectural Adaptations:**
+- Per-block scaling (32 elements share scale factor) — similar to OCP MXFP8
+- Outlier-aware quantization (OWQ, SpinQuant)
+- Learnable rounding (FlexRound)
+- Affine transformation quantization (AffineQuant)
+
+**Frameworks:**
+- NVIDIA Transformer Engine (FP8)
+- TFLite (INT8)
+- ONNX Runtime (dynamic quantization)
+
+### 5.3 Competitive Intelligence
+
+**No φ-optimized formats** in existing research:
+- All formats use IEEE-based or ad-hoc layouts
+- No work on golden-ratio based exponent/mantissa splits
+- Opportunity for novelty in φ-mathematical foundation
+
+**16-bit gap:**
+- Most research focuses on 8-bit (efficiency) or 32-bit (accuracy)
+- 16-bit formats (FP16, BF16) treated as "good enough" baseline
+- No systematic study of intermediate 16-bit formats
+
+---
+
+## 6. Sources
 
 ### 5.1 Primary Sources
 
