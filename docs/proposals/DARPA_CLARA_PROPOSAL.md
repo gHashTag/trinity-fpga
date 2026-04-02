@@ -30,7 +30,11 @@ Current AI systems use either:
 
 All four layers are **formally verified** with polynomial-time complexity proofs.
 
-### 4. Why do you think you will be successful?
+### 4. Budget Request
+
+We request **$931,750** over 24 months (15 months Phase 1 + 9 months Phase 2), well under the $2,000,000 DARPA cap. Our cost share of **$360,000** (38.6% in-kind contributions) exceeds the required 1/3 minimum. This conservative budget demonstrates efficient use of resources: a dedicated PI and two researchers, targeted hardware procurement, and focused cloud infrastructure. Full cost volume with detailed breakdowns, quotations, and milestone schedules is provided in Section 8 and the separate `CLARA_COST_VOLUME.md` document.
+
+### 5. Why do you think you will be successful?
 - **3 mathematical theorems** proving O(n) complexity bounds
 - **8 published Zenodo bundles** with DOIs (10.5281/zenodo.19227865-19227877)
 - **3000+ tests** passing, all open-source (MIT/Apache 2.0)
@@ -612,58 +616,61 @@ tri clara test --suite integration
 
 ## 8. Budget Summary
 
-### Phase 1 (15 months): $1,200,000
+### Phase 1 (15 months): $598,250
 
 | Category | Amount | Notes |
 |----------|--------|-------|
-| Personnel (PI + 2 researchers) | $600,000 | 15 months |
-| FPGA Hardware (5× XC7A100T boards) | $25,000 | Development boards |
-| Cloud Compute (Railway) | $50,000 | Training farm |
-| Travel (DARPA meetings, hackathons) | $30,000 | 5 events |
-| Publication & Zenodo fees | $10,000 | Open access |
-| **Cost Share (1/3)** | $400,000 | In-kind: open source code |
-| **Total Phase 1** | **$1,113,500** | |
+| Direct Labor (PI + 2 researchers) | $396,000 | PI: $12K/mo × 15, R1: $8K/mo × 15, R2: $8K/mo × 12 |
+| FPGA Hardware (5× XC7A100T boards) | $25,000 | Development boards from QMTech |
+| Cloud Compute (Railway + GPU) | $60,000 | Training infrastructure, CI/CD |
+| Travel (DARPA meetings + 2 hackathons) | $35,000 | US travel for DARPA events |
+| Publication & Zenodo fees | $8,000 | Open access journals, DOI maintenance |
+| Indirect (15% of direct) | $74,250 | Admin, tools, comms, benefits |
+| **Total Phase 1** | **$598,250** | |
 
-### Phase 2 (9 months): $800,000
+### Phase 2 (9 months): $333,500
 
 | Category | Amount | Notes |
 |----------|--------|-------|
-| Personnel (PI + 1 researcher) | $400,000 | 9 months |
-| AR Training Experiments | $100,000 | Sample complexity studies |
-| Medical Data Licensing | $50,000 | For scenario validation |
-| Travel (DARPA hackathons) | $25,000 | Up to $60K total |
-| **Cost Share (1/3)** | $267,000 | In-kind: continued development |
-| **Total Phase 2** | **$842,000** | |
+| Direct Labor (PI + 1 researcher) | $180,000 | PI: $12K/mo × 9, R1: $8K/mo × 9 |
+| Experiments (sample complexity + validation) | $40,000 | AR-assisted training, final benchmarks |
+| Travel (DARPA hackathon + final review) | $25,000 | Hackathon logistics + incentives |
+| Hackathon incentives | $30,000 | Participant prizes (≤$60K across phases) |
+| Benchmark data infrastructure | $15,000 | Public datasets + compute |
+| Indirect (15% of direct) | $43,500 | Admin, tools, comms, benefits |
+| **Total Phase 2** | **$333,500** | |
 
-### Total Request: $1,955,500 (under $2M cap)
+### Total Request: $931,750 (under $2M cap)
 
-**Cost Share Justification**:
-- Open-source codebase: ~9200 LOC of research code
-- 8 published Zenodo bundles (value: ~$200K)
-- Community contributions: 200+ GitHub contributors
-- FPGA bitstreams: Open-source, reusable
+**Cost Share Justification ($360,000 in-kind, 38.6%)**:
+- CLARA codebase: 9,000 hrs × $35/hr = $315,000
+- Zenodo bundles: 400 hrs × $50/hr = $20,000
+- FPGA bitstreams: 200 hrs × $50/hr = $10,000
+- Research documentation: 300 hrs × $50/hr = $15,000
+
+**Full Cost Volume**: See `CLARA_COST_VOLUME.md` for detailed breakdown with supporting evidence and quotations.
 
 ---
 
 ## 9. Timeline
 
-### Phase 1 (Months 1-15): Theory, Algorithms, OSS
+### Phase 1 (Months 1-15): Theory, Algorithms, OSS — $598,250
 
-| Month | Milestone | Deliverable |
-|-------|-----------|-------------|
-| 1-3 | CLARA integration tests | `test/clara_integration.zig` |
-| 4-6 | Complexity verification | Polynomial-time proofs |
-| 7-9 | Kill web demo | Scenario implementation |
-| 10-12 | Medical guidance demo | Scenario implementation |
-| 13-15 | TA1 package v1.0 | OSS release |
+| Month | Milestone | Deliverable | Budget Burn |
+|-------|-----------|-------------|-------------|
+| 1-3 | CLARA integration tests | `test/clara_integration.zig` | $120K (team onboarding, setup) |
+| 4-6 | Complexity verification | Polynomial-time proofs | $160K (heavy research) |
+| 7-9 | Kill web demo | Scenario implementation | $140K (FPGA dev) |
+| 10-12 | Medical guidance demo | Scenario implementation | $100K (algorithm work) |
+| 13-15 | TA1 package v1.0 | OSS release | $78,250 (documentation, publication) |
 
-### Phase 2 (Months 16-24): AR-Based Training, Sample Complexity
+### Phase 2 (Months 16-24): AR-Based Training, Sample Complexity — $333,500
 
-| Month | Milestone | Deliverable |
-|-------|-----------|-------------|
-| 16-18 | AR-assisted training | Training algorithms |
-| 19-21 | Sample complexity study | Scientific paper |
-| 22-24 | Final TA1 package | v2.0 OSS release |
+| Month | Milestone | Deliverable | Budget Burn |
+|-------|-----------|-------------|-------------|
+| 16-18 | AR-assisted training | Training algorithms | $120K (core experiments) |
+| 19-21 | Sample complexity study | Scientific paper | $120K (validation runs) |
+| 22-24 | Final TA1 package | v2.0 OSS release | $93,500 (final reporting, hackathon) |
 
 ---
 

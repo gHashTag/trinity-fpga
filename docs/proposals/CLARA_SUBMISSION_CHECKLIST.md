@@ -186,10 +186,10 @@ Trinity Project Lead
 
 | Task | Status | Notes |
 |------|--------|-------|
-| ✅ In-kind value calculated | See details below |
-| ✅ Budget breakdown | Phase 1: $1.2M, Phase 2: $842K |
-| ⏳ 1/3 minimum met | Required: $665K (33% of $2M) |
-| ✅ Cost share proposal | Documented in main proposal |
+| ✅ Cost volume document created | `CLARA_COST_VOLUME.md` (850 LOC) |
+| ✅ Budget breakdown | Phase 1: $598,250, Phase 2: $333,500 |
+| ✅ 1/3 minimum met | Required: $311K (we provide $360K = 38.6%) |
+| ✅ Cost share documented | Main proposal Section 8 updated |
 
 ### In-Kind Value Calculation
 

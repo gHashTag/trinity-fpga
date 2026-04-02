@@ -1,0 +1,526 @@
+//! Background Agent HTTP Server
+//! φ² + 1/φ² = 3 | TRINITY
+
+const std = @import("std");
+const Allocator = std.mem.Allocator;
+const net = std.net;
+
+const Config = @import("../config.zig").Config;
+const Sessions = @import("../db/sessions.zig");
+const Railway = @import("../railway/client.zig").RailwayClient;
+const Jwt = @import("../auth/jwt.zig");
+const PostgresClient = @import("../db/client.zig").PostgresClient;
+
+/// HTTP request context
+pub const RequestContext = struct {
+    method: []const u8,
+    path: []const u8,
+    query: []const u8,
+    headers: std.ArrayList(Header),
+    body: []const u8,
+    user_id: ?[]const u8 = null, // From JWT
+};
+
+/// HTTP header
+pub const Header = struct {
+    name: []const u8,
+    value: []const u8,
+};
+
+/// HTTP response
+pub const Response = struct {
+    status: u16 = 200,
+    content_type: []const u8 = "application/json",
+    body: []const u8,
+    cors: bool = true,
+};
+
+/// HTTP server
+pub const Server = struct {
+    allocator: Allocator,
+    address: net.Address,
+    server: net.Server,
+    running: bool,
+
+    config: Config,
+    db_client: PostgresClient,
+    railway_client: ?RailwayClient,
+    auth_secret: []const u8,
+};
+
+/// Initialize server
+    pub fn init(allocator: Allocator, config: Config, db_client: PostgresClient, auth_secret: []const u8) !Server {
+        const address = try net.Address.parseIp(config.host, config.port);
+
+        var server = try net.Address.listen(address, .{ .reuse_address = true });
+
+        // Initialize Railway client if not in local mode
+        const railway_client = if (config.localMode) null else RailwayClient.init(allocator, config.railwayApiToken, config.railwayProjectId);
+
+        return .{
+            .allocator = allocator,
+            .address = address,
+            .server = server,
+            .running = false,
+            .config = config,
+            .db_client = db_client,
+            .railway_client = railway_client,
+            .auth_secret = auth_secret,
+        };
+    }
+
+    /// Start HTTP server
+    pub fn start(self: *Server) !void {
+        if (self.running) return;
+
+        self.running = true;
+
+        std.log.info("Background agent listening on {any}", .{self.address});
+
+        while (self.running) {
+            const connection = self.server.accept() catch |err| {
+                std.log.err("Accept error: {}", .{err});
+                continue;
+            };
+
+            // Handle connection in a thread
+            self.handleConnection(connection) catch |err| {
+                std.log.err("Connection error: {}", .{err});
+            };
+    }
+
+    /// Stop server
+    pub fn stop(self: *Server) void {
+        self.running = false;
+    }
+
+    /// Handle HTTP connection
+    fn handleConnection(self: *Server, connection: net.Server.Connection) !void {
+        defer connection.stream.close();
+
+        var buffer: [8192]u8 = undefined;
+        const request = try connection.stream.read(&buffer);
+
+        // Parse HTTP request
+        const request_str = buffer[0..request];
+        var lines = std.mem.splitScalar(u8, request_str, '\n');
+
+        const first_line = lines.first() orelse return error.InvalidRequest;
+        var parts = std.mem.splitScalar(u8, first_line, ' ');
+
+        const method = parts.first() orelse return error.InvalidRequest;
+        _ = parts.next(); // URI
+        _ = parts.next(); // Protocol
+
+        // Parse URI and query string
+        var uri_parts = std.mem.splitScalar(u8, parts.first() orelse "", '?');
+        const path = uri_parts.first() orelse return error.InvalidRequest;
+        const query = uri_parts.next() orelse "";
+
+        // Parse headers
+        var headers = std.ArrayList(Header).init(self.allocator);
+        errdefer {
+            for (headers.items) |*h| {
+                self.allocator.free(h.name);
+                self.allocator.free(h.value);
+            }
+            headers.deinit();
+        }
+
+        while (lines.next()) |line| {
+            if (line.len == 0) break; // Empty line = end of headers
+            var header_parts = std.mem.splitScalar(u8, line, ':');
+            if (header_parts.next()) |name| {
+                if (header_parts.rest()) |value| {
+                    // Trim leading space
+                    const value_trimmed = if (value.len > 0 and value[0] == ' ')
+                        value[1..]
+                    else
+                        value;
+                    try headers.append(Header{
+                        .name = try self.allocator.dupe(u8, name),
+                        .value = try self.allocator.dupe(u8, value_trimmed),
+                    });
+                }
+            }
+        }
+
+        // Find body (after empty line)
+        var body_len: usize = 0;
+        var body_start: usize = request.len;
+
+        for (lines) |line, i| {
+            const offset = if (i == 0) 0 else @intCast(usize, std.mem.indexOfPos(u8, request_str, line, @intCast(i32, @intFrom usize, lines.len - 1))) + line.len;
+            if (offset + 2 < request.len and
+                request[offset + 1] == '\r' and request[offset + 2] == '\n')
+            {
+                body_start = offset + 3;
+                body_len = request.len - body_start;
+                break;
+            }
+        }
+
+        const body = buffer[body_start .. body_start + body_len];
+
+        // Verify JWT if Authorization header
+        var user_id: ?[]const u8 = null;
+        for (headers.items) |*h| {
+            if (std.mem.eql(u8, h.name, "Authorization")) {
+                const auth_parts = std.mem.splitScalar(u8, h.value, ' ');
+                _ = auth_parts.first(); // "Bearer"
+                const token = auth_parts.rest() orelse continue;
+
+                if (token.len > 0) {
+                    const payload = Jwt.verifyToken(self.allocator, token, self.auth_secret) catch |err| {
+                        std.log.warn("JWT verification failed: {}", .{err});
+                        continue;
+                    };
+                    defer self.allocator.free(payload.sub);
+
+                    user_id = payload.sub;
+                }
+            }
+        }
+
+        const request_context = RequestContext{
+            .method = method,
+            .path = path,
+            .query = query,
+            .headers = headers,
+            .body = body,
+            .user_id = user_id,
+        };
+
+        // Route and handle request
+        const response = self.routeRequest(&request_context);
+
+        // Send response
+        try self.sendResponse(connection.stream, response);
+    }
+
+    /// Route request to handler
+    fn routeRequest(self: *Server, ctx: *const RequestContext) !Response {
+        const allocator = self.allocator;
+
+        // GET /health
+        if (std.mem.eql(u8, ctx.path, "/health")) {
+            return Response{
+                .status = 200,
+                .content_type = "application/json",
+                .body = "{\"status\":\"ok\"}",
+            };
+        }
+
+        // Require authentication for /api routes
+        if (ctx.user_id == null) {
+            return Response{
+                .status = 401,
+                .body = "{\"error\":\"Unauthorized\"}",
+            };
+        }
+
+        // GET /api/sessions
+        if (std.mem.eql(u8, ctx.path, "/api/sessions")) {
+            return self.handleListSessions();
+        }
+
+        // POST /api/sessions
+        if (std.mem.eql(u8, ctx.path, "/api/sessions") and std.mem.eql(u8, ctx.method, "POST")) {
+            return self.handleCreateSession(ctx.body);
+        }
+
+        // GET /api/sessions/:id
+        if (std.mem.startsWith(u8, ctx.path, "/api/sessions/")) {
+            const session_id = ctx.path["/api/sessions/".len..];
+            return self.handleGetSession(session_id);
+        }
+
+        // DELETE /api/sessions/:id
+        if (std.mem.eql(u8, ctx.method, "DELETE") and std.mem.startsWith(u8, ctx.path, "/api/sessions/")) {
+            const session_id = ctx.path["/api/sessions/".len..];
+            return self.handleDeleteSession(session_id);
+        }
+
+        // POST /api/containers
+        if (std.mem.eql(u8, ctx.path, "/api/containers") and std.mem.eql(u8, ctx.method, "POST")) {
+            return self.handleCreateContainer(ctx.body);
+        }
+
+        // DELETE /api/containers/:id
+        if (std.mem.eql(u8, ctx.method, "DELETE") and std.mem.startsWith(u8, ctx.path, "/api/containers/")) {
+            const service_id = ctx.path["/api/containers/".len..];
+            return self.handleDeleteContainer(service_id);
+        }
+
+        return Response{
+            .status = 404,
+            .body = "{\"error\":\"Not Found\"}",
+        };
+    }
+
+    /// Handle GET /api/sessions
+    fn handleListSessions(self: *Server) !Response {
+        const allocator = self.allocator;
+
+        const sessions = try Sessions.listSessions(allocator, &self.db_client);
+        defer {
+            for (sessions.items) |*s| {
+                allocator.free(s.id);
+                allocator.free(s.name);
+                allocator.free(s.status);
+                allocator.free(s.railway_service_id);
+            }
+            sessions.deinit();
+        }
+
+        // Build JSON response
+        var json = std.ArrayList(u8).init(allocator);
+        try json.appendSlice("{\"sessions\":[");
+        for (sessions.items, 0..) |s, i| {
+            if (i > 0) try json.append(',');
+            try json.writer().print(
+                \\{{"id":"{s}","name":"{s}","status":"{s}","railway_service_id":"{s}"}}
+            , .{ s.id, s.name, s.status, s.railway_service_id });
+        }
+        try json.appendSlice("]}");
+
+        return Response{
+            .status = 200,
+            .body = try json.toOwnedSlice(),
+        };
+    }
+
+    /// Handle POST /api/sessions
+    fn handleCreateSession(self: *Server, body: []const u8) !Response {
+        const allocator = self.allocator;
+
+        // Parse JSON body
+        const parsed = try std.json.parseFromSlice(struct {
+            name: []const u8,
+            service_id: []const u8,
+        }, allocator, body, .{ .ignore_unknown_fields = true });
+        defer parsed.deinit();
+
+        // Create session
+        const session = try Sessions.createSession(allocator, &self.db_client, parsed.value.name, parsed.value.service_id);
+        defer {
+            allocator.free(session.id);
+            allocator.free(session.name);
+            allocator.free(session.status);
+            allocator.free(session.railway_service_id);
+        }
+
+        // Build JSON response
+        const json = try std.fmt.allocPrint(allocator,
+            \\{{"id":"{s}","name":"{s}","status":"{s}","railway_service_id":"{s}"}}
+        , .{ session.id, session.name, session.status, session.railway_service_id });
+
+        return Response{
+            .status = 201,
+            .body = json,
+        };
+    }
+
+    /// Handle GET /api/sessions/:id
+    fn handleGetSession(self: *Server, session_id: []const u8) !Response {
+        const allocator = self.allocator;
+
+        const session = try Sessions.getSession(allocator, &self.db_client, session_id) catch |err| {
+            return switch (err) {
+                error.SessionNotFound => Response{
+                    .status = 404,
+                    .body = "{\"error\":\"Session not found\"}",
+                },
+                else => Response{
+                    .status = 500,
+                    .body = "{\"error\":\"Database error\"}",
+                },
+            };
+        };
+        defer {
+            allocator.free(session.id);
+            allocator.free(session.name);
+            allocator.free(session.status);
+            allocator.free(session.railway_service_id);
+        }
+
+        const json = try std.fmt.allocPrint(allocator,
+            \\{{"id":"{s}","name":"{s}","status":"{s}","railway_service_id":"{s}"}}
+        , .{ session.id, session.name, session.status, session.railway_service_id });
+
+        return Response{
+            .status = 200,
+            .body = json,
+        };
+    }
+
+    /// Handle DELETE /api/sessions/:id
+    fn handleDeleteSession(self: *Server, session_id: []const u8) !Response {
+        _ = try Sessions.deleteSession(&self.db_client, session_id) catch |err| {
+            return switch (err) {
+                error.SessionNotFound, error.InvalidInput => Response{
+                    .status = 404,
+                    .body = "{\"error\":\"Session not found\"}",
+                },
+                else => Response{
+                    .status = 500,
+                    .body = "{\"error\":\"Database error\"}",
+                },
+            };
+        };
+
+        return Response{
+            .status = 200,
+            .body = "{\"status\":\"deleted\"}",
+        };
+    }
+
+    /// Handle POST /api/containers
+    fn handleCreateContainer(self: *Server, body: []const u8) !Response {
+        const allocator = self.allocator;
+
+        // Check Railway client
+        const railway_client = self.railway_client orelse return Response{
+            .status = 503,
+            .body = "{\"error\":\"Railway not available in local mode\"}",
+        };
+
+        // Parse JSON body
+        const parsed = try std.json.parseFromSlice(struct {
+            environment_id: []const u8,
+            name: []const u8,
+            image: []const u8,
+        }, allocator, body, .{ .ignore_unknown_fields = true });
+        defer parsed.deinit();
+
+        // Create Railway service
+        const result = try railway_client.createService(parsed.value.environment_id, parsed.value.name, parsed.value.image) catch |err| {
+            return Response{
+                .status = 500,
+                .body = try std.fmt.allocPrint(allocator, "{{\"error\":\"{s}\"}}", .{@errorName(err)}),
+            };
+        };
+        defer allocator.free(result.id);
+
+        // Create session
+        const session = try Sessions.createSession(allocator, &self.db_client, parsed.value.name, result.id);
+        defer {
+            allocator.free(session.id);
+            allocator.free(session.name);
+            allocator.free(session.status);
+            allocator.free(session.railway_service_id);
+        }
+
+        const json = try std.fmt.allocPrint(allocator,
+            \\{{"id":"{s}","name":"{s}","status":"{s}","railway_service_id":"{s}"}}
+        , .{ session.id, session.name, session.status, session.railway_service_id });
+
+        return Response{
+            .status = 201,
+            .body = json,
+        };
+    }
+
+    /// Handle DELETE /api/containers/:id
+    fn handleDeleteContainer(self: *Server, service_id: []const u8) !Response {
+        const allocator = self.allocator;
+
+        // Check Railway client
+        const railway_client = self.railway_client orelse return Response{
+            .status = 503,
+            .body = "{\"error\":\"Railway not available in local mode\"}",
+        };
+
+        // Delete Railway service
+        _ = try railway_client.deleteService(service_id) catch |err| {
+            return Response{
+                .status = 500,
+                .body = try std.fmt.allocPrint(allocator, "{{\"error\":\"{s}\"}}", .{@errorName(err)}),
+            };
+        };
+
+        // Update sessions to remove service_id reference
+        _ = Sessions.updateSession(allocator, &self.db_client, service_id, .{
+            .railway_service_id = null,
+        }) catch |err| {
+            return Response{
+                .status = 500,
+                .body = "{\"error\":\"Failed to update sessions\"}",
+            };
+        };
+
+        return Response{
+            .status = 200,
+            .body = "{\"status\":\"deleted\"}",
+        };
+    }
+
+    /// Send HTTP response
+    fn sendResponse(self: *Server, stream: *net.Stream, response: Response) !void {
+        _ = self;
+        _ = response.user_id;
+
+        // Build headers
+        var headers = std.ArrayList(u8).init(self.allocator);
+        defer headers.deinit();
+
+        try headers.writer().print(
+            \\HTTP/1.1 {d} OK\r
+            \\Content-Type: {s}\r
+            \\Content-Length: {d}\r
+            \\Connection: close\r
+        , .{ response.status, response.content_type, response.body.len });
+
+        // Add CORS if enabled
+        if (response.cors) {
+            try headers.appendSlice("Access-Control-Allow-Origin: *\r");
+            try headers.appendSlice("Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS\r");
+            try headers.appendSlice("Access-Control-Allow-Headers: Content-Type, Authorization\r");
+        }
+
+        try headers.append("\r");
+
+        // Send headers and body
+        _ = try stream.writeAll(headers.items);
+        _ = try stream.writeAll(response.body);
+    }
+
+    /// Get error name from error union
+    fn errorName(err: anyerror) []const u8 {
+        return switch (err) {
+            error.ConnectionFailed => "ConnectionFailed",
+            error.InvalidResponse => "InvalidResponse",
+            error.AuthFailed => "AuthFailed",
+            error.GraphQL => "GraphQL",
+            error.SessionNotFound => "SessionNotFound",
+            error.DatabaseError => "DatabaseError",
+            error.InvalidInput => "InvalidInput",
+            error.InvalidStatus => "InvalidStatus",
+            error.InvalidUrl => "InvalidUrl",
+            else => "Unknown",
+        };
+    }
+}
+
+test "server: parse simple request" {
+    const allocator = std.testing.allocator;
+    const request = "GET /health HTTP/1.1\r\nHost: localhost\r\n\r\n";
+
+    var lines = std.mem.splitScalar(u8, request, '\n');
+    const first_line = lines.first();
+    var parts = std.mem.splitScalar(u8, first_line, ' ');
+
+    try std.testing.expectEqualStrings(parts.first(), "GET");
+}
+
+test "server: build health response" {
+    const response = Response{
+        .status = 200,
+        .content_type = "application/json",
+        .body = "{\"status\":\"ok\"}",
+        .cors = true,
+    };
+
+    try std.testing.expect(response.status == 200);
+    try std.testing.expectEqualStrings(response.body, "{\"status\":\"ok\"}");
+}

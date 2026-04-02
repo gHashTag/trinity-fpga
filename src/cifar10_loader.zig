@@ -60,7 +60,7 @@ pub const Dataset = struct {
 
     /// Get sample by index
     pub fn get(self: *const Dataset, index: usize) *const Sample {
-        std.debug.assert(index < self.samples.items.len, "Index out of bounds");
+        std.debug.assert(index < self.samples.items.len);
         return &self.samples.items[index];
     }
 
@@ -96,7 +96,7 @@ pub const CIFAR10Loader = struct {
 
     /// Load a single batch file
     pub fn loadBatch(
-        self: CIFAR10Loader,
+        _: CIFAR10Loader,
         allocator: Allocator,
         batch_path: []const u8,
     ) !Dataset {

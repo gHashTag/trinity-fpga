@@ -281,6 +281,132 @@ pub fn quantizeValue(x: f32, fmt: Format) f32 {
     };
 }
 
+// ═════════════════════════════════════════════════════════════════════
+// CNN Operations (2D Convolution + Max Pooling)
+// ═════════════════════════════════════════════════════════════════════════════
+
+/// 2D convolution: output[y,x,c] = sum over kernel weights
+///
+/// Parameters:
+///   - input: flattened input [H_in * W_in * C_in] (channel-major layout)
+///   - weights: filter weights [C_out * C_in * K_h * K_w]
+///   - bias: per-channel bias [C_out]
+///   - output: pre-allocated output buffer [H_out * W_out * C_out]
+///   - config: layer dimensions and kernel parameters
+///
+/// Supports valid padding (padding = kernel_size / 2)
+pub fn conv2d(
+    input: []const f32,
+    weights: []const f32,
+    bias: []const f32,
+    output: []f32,
+    config: struct {
+        in_channels: u32,
+        out_channels: u32,
+        in_height: u32,
+        in_width: u32,
+        kernel_size: u32,
+        stride: u32,
+        padding: u32,
+    },
+) void {
+    const k = config.kernel_size;
+    const p = config.padding;
+    const s = config.stride;
+
+    // Output dimensions with valid padding
+    const out_h = (config.in_height + 2 * p - k) / s + 1;
+    const out_w = (config.in_width + 2 * p - k) / s + 1;
+
+    const in_area = config.in_height * config.in_width;
+
+    // For each output channel
+    for (0..config.out_channels) |oc| {
+        const bias_val = bias[oc];
+        const out_offset = oc * out_h * out_w;
+
+        // For each output position
+        for (0..out_h) |oy| {
+            for (0..out_w) |ox| {
+                var sum: f32 = bias_val;
+
+                // For each input channel
+                for (0..config.in_channels) |ic| {
+                    // For each kernel position
+                    for (0..k) |ky| {
+                        for (0..k) |kx| {
+                            // Input position
+                            const in_y = oy * s + ky - p;
+                            const in_x = ox * s + kx - p;
+
+                            if (in_y >= 0 and in_y < config.in_height and
+                                in_x >= 0 and in_x < config.in_width)
+                            {
+                                const in_idx = ic * in_area + in_y * config.in_width + in_x;
+                                sum += input[in_idx] * weights[oc * config.in_channels * k * k + ic * k * k + ky * k + kx];
+                            }
+                        }
+                    }
+                }
+
+                output[out_offset + oy * out_w + ox] = sum;
+            }
+        }
+    }
+}
+
+/// 2D max pooling: output[y,x,c] = max over kernel window
+///
+/// Parameters:
+///   - input: [H_in * W_in * C_in]
+///   - output: pre-allocated output buffer [H_out * W_out * C_in]
+///   - config: input dimensions and pooling parameters
+pub fn maxPool2d(
+    input: []const f32,
+    output: []f32,
+    config: struct {
+        height: u32,
+        width: u32,
+        channels: u32,
+        kernel_size: u32,
+        stride: u32,
+    },
+) void {
+    const k = config.kernel_size;
+    const s = config.stride;
+
+    const out_h = config.height / s;
+    const out_w = config.width / s;
+    const in_area = config.height * config.width;
+
+    // For each channel
+    for (0..config.channels) |c| {
+        const out_offset = c * out_h * out_w;
+
+        // For each output position
+        for (0..out_h) |oy| {
+            for (0..out_w) |ox| {
+                // Find max in kernel window
+                var max_val: f32 = -std.math.inf(f32);
+                for (0..k) |ky| {
+                    const in_y = oy * s + ky;
+                    if (in_y < config.height) {
+                        for (0..k) |kx| {
+                            const in_x = ox * s + kx;
+                            if (in_x < config.width) {
+                                const in_idx = c * in_area + in_y * config.width + in_x;
+                                max_val = @max(max_val, input[in_idx]);
+                            }
+                        }
+                    }
+                }
+
+                output[out_offset + oy * out_w + ox] = max_val;
+            }
+        }
+    }
+}
+
 // ═══════════════════════════════════════════════════════════════════
 // Trained MLP Weights Loader
 // ═══════════════════════════════════════════════════════════════════

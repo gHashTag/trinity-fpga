@@ -186,6 +186,24 @@ pub fn build(b: *std.Build) void {
     const run_mnist = b.addRunArtifact(bench_mnist);
     bench_mnist_step.dependOn(&run_mnist.step);
 
+    // ═════════════════════════════════════════════════════════════════════════
+    // BENCH-F0.2: CIFAR-10 CNN Benchmark (Quantized)
+    // ═══════════════════════════════════════════════════════════════════════════
+    const bench_cifar10 = b.addExecutable(.{
+        .name = "bench-cifar10",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/bench_cifar10.zig"),
+            .target = target,
+            .optimize = .ReleaseFast,
+            }),
+    });
+    bench_cifar10.root_module.addImport("formats", formats_mod);
+    b.installArtifact(bench_cifar10);
+
+    const bench_cifar10_step = b.step("bench_cifar10", "Run CIFAR-10 CNN benchmark (F0.2)");
+    const run_cifar10 = b.addRunArtifact(bench_cifar10);
+    bench_cifar10_step.dependOn(&run_cifar10.step);
+
     // BENCH-001: Ternary vs FP16/BF16/GF16 on MNIST
     // ═══════════════════════════════════════════════════════════════════════════
     const bench_001 = b.addExecutable(.{
@@ -2061,6 +2079,25 @@ pub fn build(b: *std.Build) void {
     const train_deploy_step = b.step("train-deploy", "Build hslm-train + hslm-entrypoint for Railway deploy");
     train_deploy_step.dependOn(&hslm_train.step);
     train_deploy_step.dependOn(&hslm_entrypoint.step);
+
+    // ═════════════════════════════════════════════════════════════════════════════════
+    // Background Agent API — Railway Management (Zig, no node_modules)
+    // ═════════════════════════════════════════════════════════════════════════════════════════════
+
+    const background_agent_api = b.addExecutable(.{
+        .name = "background-agent-api",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/background_agent/main.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
+    });
+    b.installArtifact(background_agent_api);
+
+    const run_background_agent = b.addRunArtifact(background_agent_api);
+    if (b.args) |args| run_background_agent.addArgs(args);
+    const background_agent_step = b.step("background-agent-api", "Run Background Agent API (Zig replacement for TypeScript API)");
+    background_agent_step.dependOn(&run_background_agent.step);
 
     // ═══════════════════════════════════════════════════════════════════════════
     // CLUTRR Benchmark — Compositional Language Understanding & Textual Relational Reasoning
