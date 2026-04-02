@@ -62,6 +62,27 @@ functions:
       return 1 - tanh_x * tanh_x
 
 behaviors:
+  - name: forward_tanh
+    description: "Tanh forward implementation"
+    implementation: |
+      pub fn forward(input: []const f32, output: []f32) void {
+          for (input, 0..) |x, i| {
+              // Use std.math.tanh for efficient computation
+              output[i] = std.math.tanh(x);
+          }
+      }
+
+  - name: backward_tanh
+    description: "Tanh backward implementation"
+    implementation: |
+      pub fn backward(grad_output: []const f32, output: []const f32, grad_input: []f32) void {
+          for (grad_output, 0..) |g, i| {
+              // Derivative: 1 - tanh(x)^2 = 1 - output^2
+              const tanh_x = output[i];
+              grad_input[i] = g * (1.0 - tanh_x * tanh_x);
+          }
+      }
+
   - name: zero_centered
     description: "Output centered at 0"
     implementation: |

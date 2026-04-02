@@ -86,6 +86,101 @@ functions:
         grad_input[batch, channel, iy, ix] += grad_output[batch, channel, y, x]
 
 behaviors:
+  - name: forward_maxpool2d
+    description: "MaxPool2D forward implementation"
+    implementation: |
+      pub fn forward(input: []const f32, output: []f32, config: MaxPool2DConfig,
+          batch_size: u32, channels: u32, in_h: u32, in_w: u32, out_h: u32, out_w: u32) void {
+          const k = config.kernel_size;
+          const s = config.stride;
+          const p = config.padding;
+
+          for (0..batch_size) |b| {
+              for (0..channels) |c| {
+                  for (0..out_h) |oy| {
+                      for (0..out_w) |ox| {
+                          var max_val: f32 = -std.math.inf(f32);
+
+                          for (0..k) |ky| {
+                              for (0..k) |kx| {
+                                  const iy = @as(i32, @intCast(oy *% s +% ky)) -% @as(i32, @intCast(p));
+                                  const ix = @as(i32, @intCast(ox *% s +% kx)) -% @as(i32, @intCast(p));
+
+                                  if (iy >= 0 and iy < @as(i32, @intCast(in_h)) and
+                                      ix >= 0 and ix < @as(i32, @intCast(in_w))) {
+                                      const iu = @as(usize, @intCast(iy));
+                                      const iu2 = @as(usize, @intCast(ix));
+                                      const in_idx = ((b * channels + c) * in_h + iu) * in_w + iu2;
+                                      if (input[in_idx] > max_val) {
+                                          max_val = input[in_idx];
+                                      }
+                                  }
+                              }
+                          }
+
+                          const out_idx = ((b * channels + c) * out_h + oy) * out_w + ox;
+                          output[out_idx] = max_val;
+                      }
+                  }
+              }
+          }
+      }
+
+  - name: backward_maxpool2d
+    description: "MaxPool2D backward implementation"
+    implementation: |
+      pub fn backward(grad_output: []const f32, input: []const f32, indices: []const u32,
+          grad_input: []f32, config: MaxPool2DConfig,
+          batch_size: u32, channels: u32, in_h: u32, in_w: u32, out_h: u32, out_w: u32) void {
+          const k = config.kernel_size;
+          const s = config.stride;
+          const p = config.padding;
+
+          @memset(grad_input, 0);
+
+          for (0..batch_size) |b| {
+              for (0..channels) |c| {
+                  for (0..out_h) |oy| {
+                      for (0..out_w) |ox| {
+                          const g = grad_output[((b * channels + c) * out_h + oy) * out_w + ox];
+
+                          // Find max position again
+                          var max_val: f32 = -std.math.inf(f32);
+                          var max_iy: i32 = -1;
+                          var max_ix: i32 = -1;
+
+                          for (0..k) |ky| {
+                              for (0..k) |kx| {
+                                  const iy = @as(i32, @intCast(oy *% s +% ky)) -% @as(i32, @intCast(p));
+                                  const ix = @as(i32, @intCast(ox *% s +% kx)) -% @as(i32, @intCast(p));
+
+                                  if (iy >= 0 and iy < @as(i32, @intCast(in_h)) and
+                                      ix >= 0 and ix < @as(i32, @intCast(in_w))) {
+                                      const iu = @as(usize, @intCast(iy));
+                                      const iu2 = @as(usize, @intCast(ix));
+                                      const in_idx = ((b * channels + c) * in_h + iu) * in_w + iu2;
+                                      if (input[in_idx] > max_val) {
+                                          max_val = input[in_idx];
+                                          max_iy = iy;
+                                          max_ix = ix;
+                                      }
+                                  }
+                              }
+                          }
+
+                          // Route gradient to max position
+                          if (max_iy >= 0) {
+                              const iu = @as(usize, @intCast(max_iy));
+                              const iu2 = @as(usize, @intCast(max_ix));
+                              const in_idx = ((b * channels + c) * in_h + iu) * in_w + iu2;
+                              grad_input[in_idx] += g;
+                          }
+                      }
+                  }
+              }
+          }
+      }
+
   - name: spatial_invariance
     description: "Max pooling provides translation invariance"
     implementation: |

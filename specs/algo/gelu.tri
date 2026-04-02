@@ -70,6 +70,66 @@ functions:
         grad_input[i] = grad_output[i] * (cdf + x * pdf)
 
 behaviors:
+  - name: forward_gelu
+    description: "GELU forward implementation"
+    implementation: |
+      pub fn forward(input: []const f32, output: []f32, config: GELUConfig) void {
+          const SQRT_2_OVER_PI: f32 = 0.7978845608;
+          const GELU_CONST: f32 = 0.044715;
+
+          if (config.approximate) {
+              // Tanh approximation (faster)
+              for (input, 0..) |x, i| {
+                  const x_cubed = x * x * x;
+                  const tanh_arg = SQRT_2_OVER_PI * (x + GELU_CONST * x_cubed);
+                  const tanh_val = std.math.tanh(tanh_arg);
+                  output[i] = 0.5 * x * (1.0 + tanh_val);
+              }
+          } else {
+              // Exact computation using erf
+              for (input, 0..) |x, i| {
+                  const erf_val = std.math.erf(x * 0.7071067812); // 1/sqrt(2)
+                  output[i] = 0.5 * x * (1.0 + erf_val);
+              }
+          }
+      }
+
+  - name: backward_gelu
+    description: "GELU backward implementation"
+    implementation: |
+      pub fn backward(grad_output: []const f32, input: []const f32, grad_input: []f32, config: GELUConfig) void {
+          const SQRT_2_OVER_PI: f32 = 0.7978845608;
+          const GELU_CONST: f32 = 0.044715;
+          const PI: f32 = 3.1415926536;
+
+          if (config.approximate) {
+              // Gradient using tanh approximation
+              for (grad_output, 0..) |g, i| {
+                  const x = input[i];
+                  const x_cubed = x * x * x;
+                  const tanh_arg = SQRT_2_OVER_PI * (x + GELU_CONST * x_cubed);
+                  const tanh_val = std.math.tanh(tanh_arg);
+                  const sech_sq = 1.0 - tanh_val * tanh_val;
+                  const tanh_grad = SQRT_2_OVER_PI * (1.0 + 3.0 * GELU_CONST * x * x) * sech_sq;
+
+                  const cdf = 0.5 * (1.0 + tanh_val);
+                  const pdf = 0.5 * (1.0 + x * tanh_grad);
+
+                  grad_input[i] = g * pdf;
+              }
+          } else {
+              // Gradient using exact computation
+              for (grad_output, 0..) |g, i| {
+                  const x = input[i];
+                  const exp_val = @exp(-0.5 * x * x);
+                  const pdf = exp_val / @sqrt(2.0 * PI);
+                  const cdf = 0.5 * (1.0 + std.math.erf(x * 0.7071067812));
+
+                  grad_input[i] = g * (cdf + x * pdf);
+              }
+          }
+      }
+
   - name: smooth_activation
     description: "GELU is smoother than ReLU"
     implementation: |

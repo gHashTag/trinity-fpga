@@ -125,6 +125,138 @@ functions:
       grad_input = full convolution of grad_output with rotated weights
 
 behaviors:
+  - name: forward_conv2d
+    description: "Conv2D forward implementation"
+    implementation: |
+      pub fn forward(input: []const f32, weights: []const f32, bias: []const f32,
+          output: []f32, config: Conv2DConfig,
+          batch_size: u32, in_h: u32, in_w: u32, out_h: u32, out_w: u32) void {
+          const in_c = config.in_channels;
+          const out_c = config.out_channels;
+          const k = config.kernel_size;
+          const s = config.stride;
+          const p = config.padding;
+
+          // For each batch
+          for (0..batch_size) |b| {
+              // For each output channel
+              for (0..out_c) |oc| {
+                  // For each output position
+                  for (0..out_h) |oy| {
+                      for (0..out_w) |ox| {
+                          var sum: f32 = if (config.has_bias) bias[oc] else 0;
+
+                          // For each input channel
+                          for (0..in_c) |ic| {
+                              // For each kernel element
+                              for (0..k) |ky| {
+                                  for (0..k) |kx| {
+                                      const iy = @as(i32, @intCast(oy *% s +% ky)) -% @as(i32, @intCast(p));
+                                      const ix = @as(i32, @intCast(ox *% s +% kx)) -% @as(i32, @intCast(p));
+
+                                      // Check bounds (handle padding)
+                                      if (iy >= 0 and iy < @as(i32, @intCast(in_h)) and
+                                          ix >= 0 and ix < @as(i32, @intCast(in_w))) {
+                                          const iu = @as(usize, @intCast(iy));
+                                          const iu2 = @as(usize, @intCast(ix));
+                                          const in_idx = ((b * in_c + ic) * in_h + iu) * in_w + iu2;
+                                          const w_idx = ((oc * in_c + ic) * k + ky) * k + kx;
+                                          sum += input[in_idx] * weights[w_idx];
+                                      }
+                                  }
+                              }
+                          }
+
+                          const out_idx = ((b * out_c + oc) * out_h + oy) * out_w + ox;
+                          output[out_idx] = sum;
+                      }
+                  }
+              }
+          }
+      }
+
+  - name: backward_conv2d
+    description: "Conv2D backward implementation"
+    implementation: |
+      pub fn backward(grad_output: []const f32, input: []const f32, weights: []const f32,
+          grad_input: []f32, grad_weights: []f32, grad_bias: []f32,
+          config: Conv2DConfig,
+          batch_size: u32, in_h: u32, in_w: u32, out_h: u32, out_w: u32) void {
+          const in_c = config.in_channels;
+          const out_c = config.out_channels;
+          const k = config.kernel_size;
+          const s = config.stride;
+          const p = config.padding;
+
+          // Clear gradients
+          @memset(grad_weights, 0);
+          @memset(grad_bias, 0);
+
+          // Compute grad_bias and grad_weights
+          for (0..batch_size) |b| {
+              for (0..out_c) |oc| {
+                  for (0..out_h) |oy| {
+                      for (0..out_w) |ox| {
+                          const g = grad_output[((b * out_c + oc) * out_h + oy) * out_w + ox];
+
+                          if (config.has_bias) {
+                              grad_bias[oc] += g;
+                          }
+
+                          for (0..in_c) |ic| {
+                              for (0..k) |ky| {
+                                  for (0..k) |kx| {
+                                      const iy = @as(i32, @intCast(oy *% s +% ky)) -% @as(i32, @intCast(p));
+                                      const ix = @as(i32, @intCast(ox *% s +% kx)) -% @as(i32, @intCast(p));
+
+                                      if (iy >= 0 and iy < @as(i32, @intCast(in_h)) and
+                                          ix >= 0 and ix < @as(i32, @intCast(in_w))) {
+                                          const iu = @as(usize, @intCast(iy));
+                                          const iu2 = @as(usize, @intCast(ix));
+                                          const in_idx = ((b * in_c + ic) * in_h + iu) * in_w + iu2;
+                                          const w_idx = ((oc * in_c + ic) * k + ky) * k + kx;
+                                          grad_weights[w_idx] += input[in_idx] * g;
+                                      }
+                                  }
+                              }
+                          }
+                      }
+                  }
+              }
+          }
+
+          // Compute grad_input (full convolution with rotated weights)
+          // Simplified: accumulate gradients from each output position
+          @memset(grad_input, 0);
+          for (0..batch_size) |b| {
+              for (0..out_c) |oc| {
+                  for (0..in_c) |ic| {
+                      for (0..out_h) |oy| {
+                          for (0..out_w) |ox| {
+                              const g = grad_output[((b * out_c + oc) * out_h + oy) * out_w + ox];
+
+                              for (0..k) |ky| {
+                                  for (0..k) |kx| {
+                                      const iy = @as(i32, @intCast(oy *% s +% ky)) -% @as(i32, @intCast(p));
+                                      const ix = @as(i32, @intCast(ox *% s +% kx)) -% @as(i32, @intCast(p));
+
+                                      if (iy >= 0 and iy < @as(i32, @intCast(in_h)) and
+                                          ix >= 0 and ix < @as(i32, @intCast(in_w))) {
+                                          const iu = @as(usize, @intCast(iy));
+                                          const iu2 = @as(usize, @intCast(ix));
+                                          const in_idx = ((b * in_c + ic) * in_h + iu) * in_w + iu2;
+                                          const w_idx = ((oc * in_c + ic) * k + ky) * k + kx;
+                                          grad_input[in_idx] += weights[w_idx] * g;
+                                      }
+                                  }
+                              }
+                          }
+                      }
+                  }
+              }
+          }
+      }
+
   - name: im2col_optimization
     description: "Convert convolution to matrix multiplication"
     implementation: |

@@ -365,6 +365,39 @@ pub fn build(b: *std.Build) void {
     const run_vibeec_tests = b.addRunArtifact(vibeec_tests);
     test_step.dependOn(&run_vibeec_tests.step);
 
+    // VIBEE expansion tests — GELU, Tanh, Sigmoid, Conv2D, MaxPool2D
+    const vibee_expansion_tests = b.addTest(.{
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/tri/vibee/expansion_test.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
+    });
+    const run_vibee_expansion_tests = b.addRunArtifact(vibee_expansion_tests);
+    test_step.dependOn(&run_vibee_expansion_tests.step);
+
+    // VIBEE integration tests — Dense+ReLU+Softmax MLP
+    const vibee_integration_tests = b.addTest(.{
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/tri/vibee/integration_test.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
+    });
+    const run_vibee_integration_tests = b.addRunArtifact(vibee_integration_tests);
+    test_step.dependOn(&run_vibee_integration_tests.step);
+
+    // VIBEE optimizer tests — MSE loss + SGD
+    const vibee_optimizer_tests = b.addTest(.{
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/tri/vibee/optimizer_test.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
+    });
+    const run_vibee_optimizer_tests = b.addRunArtifact(vibee_optimizer_tests);
+    test_step.dependOn(&run_vibee_optimizer_tests.step);
+
     // TRI-TRACE tests (DEV-001)
     const trace_tests = b.addTest(.{
         .root_module = b.createModule(.{

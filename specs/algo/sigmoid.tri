@@ -54,6 +54,34 @@ functions:
       return sigmoid_x * (1 - sigmoid_x)
 
 behaviors:
+  - name: forward_sigmoid
+    description: "Sigmoid forward implementation"
+    implementation: |
+      pub fn forward(input: []const f32, output: []f32) void {
+          for (input, 0..) |x, i| {
+              // Numerically stable: if x >= 0, use 1/(1+exp(-x))
+              // else use exp(x)/(1+exp(x))
+              if (x >= 0) {
+                  const exp_neg_x = @exp(-x);
+                  output[i] = 1.0 / (1.0 + exp_neg_x);
+              } else {
+                  const exp_x = @exp(x);
+                  output[i] = exp_x / (1.0 + exp_x);
+              }
+          }
+      }
+
+  - name: backward_sigmoid
+    description: "Sigmoid backward implementation"
+    implementation: |
+      pub fn backward(grad_output: []const f32, output: []const f32, grad_input: []f32) void {
+          for (grad_output, 0..) |g, i| {
+              // Derivative: sigmoid(x) * (1 - sigmoid(x)) = output * (1 - output)
+              const sigmoid_x = output[i];
+              grad_input[i] = g * sigmoid_x * (1.0 - sigmoid_x);
+          }
+      }
+
   - name: probability_output
     description: "Maps to (0, 1) for probabilities"
     implementation: |
