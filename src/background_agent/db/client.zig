@@ -110,7 +110,7 @@ pub const PostgresClient = struct {
         _ = try stream.writeAll(startup_msg);
 
         // Handle authentication
-        try self.handleAuthentication(&stream);
+        try handleAuthentication(&stream);
 
         // Wait for ReadyForQuery
         try self.waitForReady(&stream);
@@ -156,7 +156,7 @@ pub const PostgresClient = struct {
     }
 
     /// Handle authentication response from server
-    fn handleAuthentication(self: *PostgresClient, stream: *net.Stream) !void {
+    fn handleAuthentication(stream: *net.Stream) !void {
         var len_buf: [4]u8 = undefined;
         _ = try stream.readAll(&len_buf);
         const msg_len = std.mem.readInt(u32, &len_buf, .big);
@@ -281,7 +281,7 @@ pub const PostgresClient = struct {
                 try row.values.append("");
             } else {
                 const value_len_usize = @as(usize, @intCast(value_len));
-                var value_buf = try self.allocator.alloc(u8, value_len_usize);
+                const value_buf = try self.allocator.alloc(u8, value_len_usize);
                 _ = try stream.readAll(value_buf);
                 try row.values.append(value_buf);
                 try row.columns.append(""); // Column name not in DataRow
@@ -294,7 +294,7 @@ pub const PostgresClient = struct {
     }
 
     /// Read and parse error response
-    fn readErrorResponse(self: *PostgresClient, stream: *net.Stream, len: u32) !void {
+    fn readErrorResponse(stream: *net.Stream, len: u32) !void {
         var message: [256]u8 = undefined;
         var message_len: usize = 0;
 
@@ -326,7 +326,7 @@ pub const PostgresClient = struct {
 }
 
     /// Skip a message
-    fn skipMessage(self: *PostgresClient, stream: *net.Stream, len: u32) !void {
+    fn skipMessage(stream: *net.Stream, len: u32) !void {
         var buf: [1024]u8 = undefined;
         var remaining: u32 = len;
 
@@ -415,29 +415,29 @@ pub fn buildStartupMessage(allocator: Allocator, user: []const u8, database: []c
     var offset: usize = 0;
 
     // Message length (including self, excluding length field)
-    std.mem.writeInt(u32, msg[offset..][0..4], @intCast(size - 4), .big);
+    std.mem.writeInt(u32, msg[0..4], @intCast(size - 4), .big);
     offset += 4;
 
     // Protocol version 3.0
-    std.mem.writeInt(u32, msg[offset..][0..4], PROTOCOL_VERSION, .big);
+    std.mem.writeInt(u32, msg[4..8], PROTOCOL_VERSION, .big);
     offset += 4;
 
     // User parameter
-    @memcpy(msg[offset..][0..5], "user");
+    @memcpy(msg[offset..offset+5], "user");
     offset += 5;
     msg[offset] = 0;
     offset += 1;
-    @memcpy(msg[offset..][0..user.len], user);
+    @memcpy(msg[offset..offset+user.len], user);
     offset += user.len;
     msg[offset] = 0;
     offset += 1;
 
     // Database parameter
-    @memcpy(msg[offset..][0..9], "database");
+    @memcpy(msg[offset..offset+9], "database");
     offset += 9;
     msg[offset] = 0;
     offset += 1;
-    @memcpy(msg[offset..][0..database.len], database);
+    @memcpy(msg[offset..offset+database.len], database);
     offset += database.len;
     msg[offset] = 0;
     offset += 1;
@@ -457,8 +457,8 @@ pub fn buildQueryMessage(allocator: Allocator, sql: []const u8) ![]u8 {
     errdefer allocator.free(msg);
 
     msg[0] = @intFromEnum(MessageType.Query);
-    std.mem.writeInt(u32, msg[1..][0..4], @intCast(sql.len + 1), .big);
-    @memcpy(msg[5..][0..sql.len], sql);
+    std.mem.writeInt(u32, msg[1..5], @intCast(sql.len + 1), .big);
+    @memcpy(msg[5..5+sql.len], sql);
     msg[5 + sql.len] = 0;
 
     return msg;
@@ -473,8 +473,8 @@ pub fn buildAuthenticationOk(allocator: Allocator) ![]u8 {
     errdefer allocator.free(msg);
 
     msg[0] = @intFromEnum(MessageType.AuthenticationOk);
-    std.mem.writeInt(u32, msg[1..][0..4], 4, .big); // length of auth_code
-    std.mem.writeInt(u32, msg[5..][0..4], 0, .big); // AUTH_OK
+    std.mem.writeInt(u32, msg[1..5], 4, .big); // length of auth_code
+    std.mem.writeInt(u32, msg[5..9], 0, .big); // AUTH_OK
 
     return msg;
 }
@@ -489,9 +489,9 @@ pub fn buildBackendKeyData(allocator: Allocator, pid: i32, key: i32) ![]u8 {
     errdefer allocator.free(msg);
 
     msg[0] = @intFromEnum(MessageType.BackendKeyData);
-    std.mem.writeInt(u32, msg[1..][0..4], 8, .big);
-    std.mem.writeInt(i32, msg[5..][0..4], pid, .big);
-    std.mem.writeInt(i32, msg[9..][0..4], key, .big);
+    std.mem.writeInt(u32, msg[1..5], 8, .big);
+    std.mem.writeInt(i32, msg[5..9], pid, .big);
+    std.mem.writeInt(i32, msg[9..13], key, .big);
 
     return msg;
 }
@@ -506,7 +506,7 @@ pub fn buildReadyForQuery(allocator: Allocator, status: TransactionStatus) ![]u8
     errdefer allocator.free(msg);
 
     msg[0] = @intFromEnum(MessageType.ReadyForQuery);
-    std.mem.writeInt(u32, msg[1..][0..4], 1, .big);
+    std.mem.writeInt(u32, msg[1..5], 1, .big);
     msg[5] = @intFromEnum(status);
 
     return msg;
@@ -522,8 +522,8 @@ pub fn buildCommandComplete(allocator: Allocator, tag: []const u8) ![]u8 {
     errdefer allocator.free(msg);
 
     msg[0] = @intFromEnum(MessageType.CommandComplete);
-    std.mem.writeInt(u32, msg[1..][0..4], @intCast(tag.len + 1), .big);
-    @memcpy(msg[5..][0..tag.len], tag);
+    std.mem.writeInt(u32, msg[1..5], @intCast(tag.len + 1), .big);
+    @memcpy(msg[5..5+tag.len], tag);
     msg[5 + tag.len] = 0;
 
     return msg;
@@ -540,9 +540,9 @@ pub fn buildErrorResponse(allocator: Allocator, message: []const u8) ![]u8 {
     errdefer allocator.free(msg);
 
     msg[0] = @intFromEnum(MessageType.ErrorResponse);
-    std.mem.writeInt(u32, msg[1..][0..4], @intCast(size - 5), .big);
+    std.mem.writeInt(u32, msg[1..5], @intCast(size - 5), .big);
     msg[5] = 'M'; // Message field
-    @memcpy(msg[6..][0..message.len], message);
+    @memcpy(msg[6..6+message.len], message);
     msg[6 + message.len] = 0; // Null terminator for value
     msg[6 + message.len + 1] = 0; // Terminator
 

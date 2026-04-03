@@ -238,13 +238,14 @@ pub const HybridBigInt = struct {
 
         self.ensureUnpacked();
 
+        const cache = self.unpacked_cache orelse return;
         const num_packs = (self.trit_len + TRITS_PER_BYTE - 1) / TRITS_PER_BYTE;
         for (0..num_packs) |pack_idx| {
             const base = pack_idx * TRITS_PER_BYTE;
             var trits: [5]Trit = .{ 0, 0, 0, 0, 0 };
             for (0..TRITS_PER_BYTE) |j| {
                 if (base + j < self.trit_len) {
-                    trits[j] = self.unpacked_cache[base + j];
+                    trits[j] = cache[base + j];
                 }
             }
             self.packed_data[pack_idx] = tvc_packed.encodePack(trits);
@@ -372,7 +373,7 @@ pub const HybridBigInt = struct {
             inline for (0..SIMD_WIDTH) |i| {
                 const idx = base + i;
                 a_vec[i] = if (idx < a.trit_len) a.getTritChecked(idx) else 0;
-                b_vec[i] = if (idx < b.trit_len) .getTritChecked(idx) else 0;
+                b_vec[i] = if (idx < b.trit_len) b.getTritChecked(idx) else 0;
             }
 
             const simd_result = simdAddTrits(a_vec, b_vec);
@@ -452,7 +453,7 @@ pub const HybridBigInt = struct {
             for (0..b.trit_len) |j| {
                 if (i + j >= MAX_TRITS) break;
 
-                var prod: i16 = @as(i16, a_trit) * @as(i16, .getTritChecked(j));
+                var prod: i16 = @as(i16, a_trit) * @as(i16, b.getTritChecked(j));
                 prod += result.unpacked_cache[i + j];
                 prod += carry;
                 carry = 0;
@@ -581,7 +582,7 @@ test "HybridBigInt fromI64 and toI64" {
     const cases = [_]i64{ 0, 1, -1, 10, -10, 100, -100, 12345, -12345 };
     for (cases) |val| {
         var hybrid = HybridBigInt.fromI64(val);
-        const back = hybrid.toI64();
+        const back = hybrid.toI64(std.testing.allocator);
         try std.testing.expectEqual(val, back);
     }
 }
@@ -589,20 +590,20 @@ test "HybridBigInt fromI64 and toI64" {
 test "HybridBigInt addition" {
     var a = HybridBigInt.fromI64(123);
     var b = HybridBigInt.fromI64(456);
-    var sum = a.add(&b);
-    try std.testing.expectEqual(@as(i64, 579), sum.toI64());
+    var sum = a.add(&b, std.testing.allocator);
+    try std.testing.expectEqual(@as(i64, 579), sum.toI64(std.testing.allocator));
 }
 
 test "HybridBigInt multiplication" {
     var a = HybridBigInt.fromI64(12);
     var b = HybridBigInt.fromI64(34);
-    var prod = a.mul(&b);
-    try std.testing.expectEqual(@as(i64, 408), prod.toI64());
+    var prod = a.mul(&b, std.testing.allocator);
+    try std.testing.expectEqual(@as(i64, 408), prod.toI64(std.testing.allocator));
 }
 
 test "HybridBigInt pack/unpack roundtrip" {
     var hybrid = HybridBigInt.fromI64(12345);
-    const val1 = hybrid.toI64();
+    const val1 = hybrid.toI64(std.testing.allocator);
 
     // Force pack
     hybrid.pack();
@@ -612,7 +613,7 @@ test "HybridBigInt pack/unpack roundtrip" {
     _ = hybrid.getTrit(0);
     try std.testing.expectEqual(StorageMode.unpacked_mode, hybrid.mode);
 
-    const val2 = hybrid.toI64();
+    const val2 = hybrid.toI64(std.testing.allocator);
     try std.testing.expectEqual(val1, val2);
 }
 
@@ -627,13 +628,13 @@ test "HybridBigInt memory efficiency" {
 test "HybridBigInt conversion from BigInt" {
     const val: i64 = 12345;
     const big = tvc_bigint.TVCBigInt.fromI64(val);
-    var hybrid = HybridBigInt.fromBigInt(&big);
-    try std.testing.expectEqual(val, hybrid.toI64());
+    var hybrid = HybridBigInt.fromBigInt(&big, std.testing.allocator);
+    try std.testing.expectEqual(val, hybrid.toI64(std.testing.allocator));
 }
 
 test "HybridBigInt conversion to BigInt" {
     var hybrid = HybridBigInt.fromI64(12345);
-    const big = hybrid.toBigInt();
+    const big = hybrid.toBigInt(std.testing.allocator);
     try std.testing.expectEqual(@as(i64, 12345), big.toI64());
 }
 
@@ -650,10 +651,10 @@ test "SIMD addSimd correctness" {
         var a = HybridBigInt.fromI64(pair[0]);
         var b = HybridBigInt.fromI64(pair[1]);
 
-        var sum_scalar = a.add(&b);
-        var sum_simd = a.addSimd(&b);
+        var sum_scalar = a.add(&b, std.testing.allocator);
+        var sum_simd = a.addSimd(&b, std.testing.allocator);
 
-        try std.testing.expectEqual(sum_scalar.toI64(), sum_simd.toI64());
+        try std.testing.expectEqual(sum_scalar.toI64(std.testing.allocator), sum_simd.toI64(std.testing.allocator));
     }
 }
 
@@ -661,7 +662,7 @@ test "SIMD dotProduct" {
     var a = HybridBigInt.fromI64(12345);
     var b = HybridBigInt.fromI64(12345);
 
-    const dot = a.dotProduct(&b);
+    const dot = a.dotProduct(&b, std.testing.allocator);
     // dot product of identical vectors = sum of squares of trits
     // For balanced ternary, each trit is -1, 0, or 1, so trit^2 = 0 or 1
     try std.testing.expect(dot > 0);
@@ -744,7 +745,7 @@ pub fn runBenchmarks() void {
     var hybrid_result = HybridBigInt.zero();
     i = 0;
     while (i < iterations) : (i += 1) {
-        hybrid_result = hybrid_a.add(&hybrid_b);
+        hybrid_result = hybrid_a.add(&hybrid_b, std.heap.page_allocator);
     }
     const hybrid_end = std.time.nanoTimestamp();
     std.mem.doNotOptimizeAway(hybrid_result);
@@ -770,7 +771,7 @@ pub fn runBenchmarks() void {
     var simd_result = HybridBigInt.zero();
     i = 0;
     while (i < iterations) : (i += 1) {
-        simd_result = hybrid_a.addSimd(&hybrid_b);
+        simd_result = hybrid_a.addSimd(&hybrid_b, std.heap.page_allocator);
     }
     const simd_end = std.time.nanoTimestamp();
     std.mem.doNotOptimizeAway(simd_result);
@@ -790,7 +791,7 @@ pub fn runBenchmarks() void {
     var dot_result: i32 = 0;
     i = 0;
     while (i < iterations) : (i += 1) {
-        dot_result = hybrid_a.dotProduct(&hybrid_b);
+        dot_result = hybrid_a.dotProduct(&hybrid_b, std.heap.page_allocator);
     }
     const dot_end = std.time.nanoTimestamp();
     std.mem.doNotOptimizeAway(dot_result);
@@ -800,8 +801,8 @@ pub fn runBenchmarks() void {
 
     std.debug.print("\nResults match:\n", .{});
     std.debug.print("  Unpacked == Packed: {}\n", .{unpacked_result.toI64() == packed_result.toI64()});
-    std.debug.print("  Unpacked == Hybrid: {}\n", .{unpacked_result.toI64() == hybrid_result.toI64()});
-    std.debug.print("  Hybrid == SIMD:     {}\n", .{hybrid_result.toI64() == simd_result.toI64()});
+    std.debug.print("  Unpacked == Hybrid: {}\n", .{unpacked_result.toI64() == hybrid_result.toI64(std.heap.page_allocator)});
+    std.debug.print("  Hybrid == SIMD:     {}\n", .{hybrid_result.toI64(std.heap.page_allocator) == simd_result.toI64(std.heap.page_allocator)});
 }
 
 pub fn main() !void {

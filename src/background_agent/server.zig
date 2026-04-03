@@ -87,6 +87,7 @@ pub const Server = struct {
             self.handleConnection(connection) catch |err| {
                 std.log.err("Connection error: {}", .{err});
             };
+        }
     }
 
     /// Stop server
@@ -149,8 +150,8 @@ pub const Server = struct {
         var body_len: usize = 0;
         var body_start: usize = request.len;
 
-        for (lines) |line, i| {
-            const offset = if (i == 0) 0 else @intCast(usize, std.mem.indexOfPos(u8, request_str, line, @intCast(i32, @intFrom usize, lines.len - 1))) + line.len;
+        for (lines, 0..) |line, i| {
+            const offset = if (i == 0) 0 else @intCast(usize, std.mem.indexOfPos(u8, request_str, line, @intCast(i32, lines.len - 1))) + line.len;
             if (offset + 2 < request.len and
                 request[offset + 1] == '\r' and request[offset + 2] == '\n')
             {
