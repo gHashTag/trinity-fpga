@@ -143,20 +143,13 @@ pub fn bundle2(a: *HybridBigInt, b: *HybridBigInt, allocator: std.mem.Allocator)
     return result;
 }
 
-pub fn bundle3(a: *HybridBigInt, b: *HybridBigInt, c: *HybridBigInt) HybridBigInt {
-    const page_alloc = std.heap.page_allocator;
-    a.ensureUnpacked();
-    b.ensureUnpacked();
-    c.ensureUnpacked();
+pub fn bundle3(a: *HybridBigInt, b: *HybridBigInt, c: *HybridBigInt, allocator: std.mem.Allocator) HybridBigInt {
+    a.ensureUnpacked(allocator);
+    b.ensureUnpacked(allocator);
+    c.ensureUnpacked(allocator);
 
-    var result = HybridBigInt{
-        .packed_data = [_]u8{0} ** common.MAX_PACKED_BYTES,
-        .unpacked_cache = null,
-        .allocator = page_alloc,
-        .mode = .unpacked_mode,
-        .trit_len = 1,
-        .dirty = true,
-    };
+    var result = HybridBigInt.zero();
+    result.ensureUnpacked(allocator); // Allocate heap for result
     result.ensureUnpacked();
 
     const len = @max(@max(a.trit_len, b.trit_len), c.trit_len);
