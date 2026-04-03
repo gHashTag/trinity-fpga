@@ -314,6 +314,13 @@ Dockerfile*
 *.toml
 fly.toml
 
+# Temporary directories
+temp/
+build-artifacts/
+demo-scripts/
+legacy-bin/
+.cache
+
 # Install scripts
 install.sh
 deploy-*.sh

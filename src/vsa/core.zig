@@ -226,8 +226,8 @@ pub fn cosineSimilarity(a: *const HybridBigInt, b: *const HybridBigInt) f64 {
 /// Returns f64 in range [-1, 1].
 pub fn cosineSimilarityF16(a: *const HybridBigInt, b: *const HybridBigInt, allocator: std.mem.Allocator) f64 {
     _ = allocator;
-    @constCast(a).ensureUnpacked();
-    @constCast(b).ensureUnpacked();
+    a.ensureUnpacked(allocator);
+    b.ensureUnpacked(allocator);
 
     const len = @max(a.trit_len, b.trit_len);
     if (len == 0) return 0;

@@ -135,6 +135,47 @@ tri cloud spawn <N>    # Spawn Railway container for issue
 | `.ralph/` | Agent state, identity, memory, handover |
 | `fpga/openxc7-synth/` | FPGA bitstreams and Verilog |
 
+## Project Structure Rules
+
+### Root Directory
+
+Only these files/directories should be in project root:
+
+**Essential Files:**
+- `build.zig` - Main build file
+- `build.zig.zon` - Package manifest
+- `README.md` - Project overview
+- `LICENSE` - License
+- `.gitignore` - Git ignore patterns
+
+**Configuration Files:**
+- `.gitattributes`, `.editorconfig`, `.env.example`
+- `.mcp.json`, `.railwayignore`, `fly.toml`, `vercel.json`
+- `package.json` (for Node.js tooling)
+
+**Documentation:**
+- `CLAUDE.md`, `AGENTS.md`, `CHANGELOG.md`, `CONTRIBUTING.md`
+- `CITATION.cff`, `CODE_OF_CONDUCT.md`
+
+**Essential Directories:**
+- `src/` - Source code
+- `specs/` - Algorithm specifications (.tri)
+- `docs/` - Documentation
+- `deploy/` - Deployment configs (Dockerfiles, k8s, etc.)
+- `fpga/` - FPGA toolchain and bitstreams
+- `tests/` - Test files
+
+**Hidden Directories (.*)**: Configuration, state, caches
+
+### What Should NOT Be in Root
+
+- Binary executables (use `zig-out/bin/`)
+- Build artifacts (use `zig-cache/`, `zig-out/`)
+- Temporary files (use `temp/` directory, but .gitignore it)
+- Test binaries (use `tests/` directory)
+- Dockerfiles (use `deploy/` directory)
+- Shell scripts (see no-shell-scripts.md rule)
+
 ## Code Style
 
 - Zig 0.15, `std` only, zero external dependencies
