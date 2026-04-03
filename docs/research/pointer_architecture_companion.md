@@ -232,7 +232,54 @@ Code: src/vsa.zig → `bundleN()` for multi-agent consensus
       src/sacred/temporal_engine.zig → `EternalCycle` for integrated return (π×3)
 ```
 
-### 3.7 Holographic Principle
+### 3.7 Memory Density Profile (Savchenko Eq. 7-3)
+
+Savchenko's main theoretical contribution describes the distribution of archived pointers (dark matter) as a function of radius.
+
+**Dissertation Equation (Eq. 7-3):**
+```
+mem(r) = exp(-r/r_mem) × (1 + ln(1 + r/r_core))
+```
+
+**Parameters:**
+- `r_mem` — Memory extent (disk radius), defines exponential decay
+- `r_core` — Core radius, modulates logarithmic term
+- Profile peaks at r = 0, decays as exp(-r/r_mem) with log correction
+
+**Trinity Connection:**
+- Sacred formula with `exp()` → φ^p for decay
+- Sacred formula with `ln()` → ln(3^k × φ^p) for log correction
+- CLI test: `tri math sacred search 2.36` (median r_mem/r_disk ratio from SPARC)
+
+**Implementation:**
+- `src/vsa.zig` — `bundleN()` for creating dense pointer distributions
+- Agent memory provides spatial structure for archived pointers
+
+### 3.8 Multi-Agent Consensus Render (Savchenko Eq. 3-3)
+
+Savchenko's reality model posits that conscious reality emerges from distributed agent consensus, not centralized processing.
+
+**Dissertation Equation (Eq. 3-3):**
+```
+world(t+1) = resolve(W₁, ..., W_N, C_global)
+```
+
+**Components:**
+- `W_i` — Individual agent perspectives (world models)
+- `C_global` — Shared context / global state
+- `resolve()` — Consensus function (majority vote, weighted agreement)
+
+**Trinity Connection:**
+- VSA `bundleN()` implements N-way consensus
+- `bundleN([φ₁, φ₂, ..., φ_N])` where φ_i = similarity(agent_i, state)
+- Code path: `src/vsa.zig:bundleN()`
+- TRI-27: `src/tri27/isa.zig` provides `STR_RESOLVE` opcode
+
+**Key Insight:**
+- Consciousness Φ = integrated information across agent boundaries
+- More agents → higher resolution possible (via `bundleN()` arity)
+
+### 3.9 Holographic Principle
 
 ```
 Standard: S = A/4 (entropy scales with boundary area)
@@ -242,6 +289,8 @@ Trinity Connection: S_BH = n × 3^k × π^m × φ^p × e^q
 
 This gives S/A = 0.2497 ≈ 1/4 (0.115% error)
 ```
+
+> **CAVEAT:** Sacred formula with 5 parameters spans ~150K combinations and fits random numbers with 0.007% median error — identical to physics constants. 5-param fits are universal approximators, not evidence of φ-structure.
 
 ---
 
@@ -416,6 +465,24 @@ Pre-built queries for external research.
 "ternary computing phi identity three base computational graph"
 ```
 
+### 6.6 SPARC-Specific Research Queries
+
+Pre-built queries for investigating SPARC validation results:
+
+```bash
+# Search for rotation curve data
+"SPARC galaxy catalog rotation curves pointer architecture memory density"
+
+# Search for JWST morphology correlations
+"JWST high-redshift dark matter halo morphology correlation SPARC Lelli McGaugh 2016"
+
+# Search for Tully-Fisher relation
+"baryonic Tully-Fisher relation information theoretic pointer density"
+
+# Search for uniform profile prediction
+"JWST high-redshift dark matter halo uniform profile pointer model prediction"
+```
+
 ---
 
 ## Section 7: Open Questions & Experiments
@@ -537,58 +604,7 @@ tri cloud spawn <N>  # Spawn new agent containers
 # - Swarm_integration = inter-agent edge density
 ```
 
-### Section 3.7: Memory Density Profile (Savchenko Eq. 7-3)
-
-Savchenko's main theoretical contribution describes the distribution of archived pointers (dark matter) as a function of radius.
-
-**Dissertation Equation (Eq. 7-3):**
-```
-mem(r) = exp(-r/r_mem) × (1 + ln(1 + r/r_core))
-```
-
-**Parameters:**
-- `r_mem` — Memory extent (disk radius), defines exponential decay
-- `r_core` — Core radius, modulates logarithmic term
-- Profile peaks at r = 0, decays as exp(-r/r_mem) with log correction
-
-**Trinity Connection:**
-- Sacred formula with `exp()` → φ^p for decay
-- Sacred formula with `ln()` → ln(3^k × φ^p) for log correction
-- CLI test: `tri math sacred search 2.36` (median r_mem/r_disk ratio from SPARC)
-
-**Implementation:**
-- `src/vsa.zig` — `bundleN()` for creating dense pointer distributions
-- Agent memory provides spatial structure for archived pointers
-
----
-
-### Section 3.8: Multi-Agent Consensus Render (Savchenko Eq. 3-3)
-
-Savchenko's reality model posits that conscious reality emerges from distributed agent consensus, not centralized processing.
-
-**Dissertation Equation (Eq. 3-3):**
-```
-world(t+1) = resolve(W₁, ..., W_N, C_global)
-```
-
-**Components:**
-- `W_i` — Individual agent perspectives (world models)
-- `C_global` — Shared context / global state
-- `resolve()` — Consensus function (majority vote, weighted agreement)
-
-**Trinity Connection:**
-- VSA `bundleN()` implements N-way consensus
-- `bundleN([φ₁, φ₂, ..., φ_N])` where φ_i = similarity(agent_i, state)
-- Code path: `src/vsa.zig:bundleN()`
-- TRI-27: `src/tri27/isa.zig` provides `STR_RESOLVE` opcode
-
-**Key Insight:**
-- Consciousness Φ = integrated information across agent boundaries
-- More agents → higher resolution possible (via `bundleN()` arity)
-
----
-
-### Section 8.5: SPARC Empirical Validation
+### 7.6 SPARC Empirical Validation
 
 **SPARC (Spitzer Photometry and Accurate Rotation Curves) dataset validation of Pointer Architecture predictions.**
 
@@ -603,29 +619,6 @@ world(t+1) = resolve(W₁, ..., W_N, C_global)
 | χ² median (goodness of fit) | 0.77 | H1 CONFIRMED |
 | Binomial p (correlation significance) | 0.031 | H2 CONFIRMED |
 | H3-H6 hypotheses | TO BE TESTED | — |
-| -- |
-| -- |
-| -- |
-| -- |
-
-### 6.6: SPARC-Specific Research Queries
-
-Pre-built queries for investigating SPARC validation results:
-
-```bash
-# Search for rotation curve data
-"SPARC galaxy catalog rotation curves pointer architecture memory density"
-
-# Search for JWST morphology correlations
-"JWST high-redshift dark matter halo morphology correlation SPARC Lelli McGaugh 2016"
-
-# Search for Tully-Fisher relation
-"baryonic Tully-Fisher relation information theoretic pointer density"
-
-# Search for uniform profile prediction
-"JWST high-redshift dark matter halo uniform profile pointer model prediction"
-```
-| H3-H6 hypotheses | TO BE TESTED | — |
 
 **Interpretation:**
 - χ² = 0.77 indicates excellent fit (median < 1.0 is "good")
@@ -633,17 +626,8 @@ Pre-built queries for investigating SPARC validation results:
 - Memory density profile successfully predicts galaxy rotation curves
 - **Conclusion:** Pointer Architecture's `mem(r)` formula empirically validated
 
-**SPARC-Specific Research Queries:**
-```
-"SPARC galaxy catalog rotation curves pointer architecture memory density"
-"JWST high-redshift dark matter halo morphology correlation SPARC Lelli McGaugh 2016"
-"baryonic Tully-Fisher relation information theoretic pointer density"
-"JWST high-redshift dark matter halo uniform profile pointer model prediction"
-```
-
 ---
 
-## Section 8: Quick Reference Card
 ## Section 8: Quick Reference Card
 
 ### 8.1 Fundamental Constants
@@ -764,18 +748,16 @@ src/tri27/
 | **Φ (Phi)** | Integrated information (cross-partition mutual info) | Savchenko Sec. 3 (main contribution) |
 | **φ²** | Squared golden ratio (≈2.618) | Trinity identity component |
 | **1/φ²** | Inverse squared golden ratio (≈0.382) | Trinity identity component |
-| **IIT** | Integrated Information Theory | Savchenko's main contribution (cross-partition mutual info) | Savchenko Sec. 3 (Eq. 3-1: Φ = I(G) - I(G_A) - I(G_B)) |
+| **IIT** | Integrated Information Theory; Savchenko's main contribution is cross-partition mutual info (Φ = I(G) - I(G_A) - I(G_B)) | Savchenko Sec. 3 (Eq. 3-1) |
 | **S/A** | Entropy per Planck area (≈1/4) | Black hole thermodynamics |
-| **κ (kappa)** | Coupling constant | Savchenko Sec. 4.1 | Maps pointer density to acceleration |
+| **κ (kappa)** | Coupling constant; Maps pointer density to acceleration | Savchenko Sec. 4-1 (Eq. 4-1: g(r) = -κ∇ρ(r)) |
 | **r_mem** | Memory extent parameter (disk radius) | Savchenko Eq. 7-3 |
 | **r_core** | Core radius parameter | Savchenko Eq. 7-3 |
-| **Cursor Hypothesis** | Brain as edge node, not processor | S. Russell 1921, Sec. 1 |
-| **Commit Strength** | Objectivity = reproducibility | Tegmark 2000, Oizumi 2016, Savchenko Sec. 6.2 |
-| **Debug Mode** | Consciousness intercept | Savchenko (original, Sec. 4.1) | TemporalEngine.EternalCycle monitoring |
-| **Cursor Hypothesis** | Brain as edge-node, not processor | Savchenko (original, Sec. 3-6.4); Penrose-Hameroff 1996 (context) | VSA node as cursor pointer |
-| **Commit Strength** | Objectivity = reproducibility | Savchenko (original, Sec. 3-7.2); Zurek 2003 (decoherence) | Agent swarm reproducibility |
-| **Memory Density Profile** | mem(r) = exp(-r/r_mem) × (1 + ln(1 + r/r_core)) | Savchenko Eq. 7-3 (main contribution) | Describes distribution of archived pointers |
-| **Consensus Render** | world(t+1) = resolve(W₁,...,Wₙ, C_global) | Savchenko Eq. 3-3 (main contribution) | Multi-agent reality model |
+| **Cursor Hypothesis** | Brain as edge-node, not processor | Savchenko (original, Sec. 3-6.4); Penrose-Hameroff 1996 (context) |
+| **Commit Strength** | Objectivity = reproducibility | Savchenko (original, Sec. 3-7.2); Zurek 2003 (decoherence) |
+| **Debug Mode** | Consciousness intercept | Savchenko (original, Sec. 4-1) |
+| **Memory Density Profile** | mem(r) = exp(-r/r_mem) × (1 + ln(1 + r/r_core)) | Savchenko Eq. 7-3 (main contribution) |
+| **Consensus Render** | world(t+1) = resolve(W₁,...,Wₙ, C_global) | Savchenko Eq. 3-3 (main contribution) |
 
 ---
 
