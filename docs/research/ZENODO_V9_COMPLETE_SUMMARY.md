@@ -144,4 +144,3 @@ B003 TRI27 ───────────────────────
 
 **φ² + 1/φ² = 3 | TRINITY**
 
-Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
