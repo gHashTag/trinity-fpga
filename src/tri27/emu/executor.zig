@@ -881,7 +881,7 @@ pub fn execute(cpu: *CPUState, inst: Instruction, memory: []align(8) u8) ExecErr
             const file_path = if (path_buf[0] == '/') path_buf[0..copy_len :0] else try std.fs.path.join(cwd, &path_buf);
 
             // Check if file exists
-            const exists = std.fs.cwd().access(file_path, .{}) catch {
+            const _exists = std.fs.cwd().access(file_path, .{}) catch {
                 cpu.flags.Z = true; // File does not exist
                 cpu.flags.N = false;
                 cpu.pc += 1;

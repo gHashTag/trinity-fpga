@@ -24,14 +24,15 @@ inline fn setTritSafe(vec: *HybridBigInt, pos: usize, value: Trit) void {
 
 /// Bind operation (XOR-like for balanced ternary)
 pub fn bind(a: *HybridBigInt, b: *HybridBigInt) HybridBigInt {
-    const page_alloc = std.heap.page_allocator;
     a.ensureUnpacked();
     b.ensureUnpacked();
 
+    // Inherit allocator from first argument
+    const inherited_allocator = a.allocator orelse std.heap.page_allocator;
     var result = HybridBigInt{
         .packed_data = [_]u8{0} ** common.MAX_PACKED_BYTES,
         .unpacked_cache = null,
-        .allocator = page_alloc,
+        .allocator = inherited_allocator,
         .mode = .unpacked_mode,
         .trit_len = 1,
         .dirty = true,
@@ -82,11 +83,14 @@ pub fn unbind(bound: *HybridBigInt, key: *HybridBigInt) HybridBigInt {
 }
 
 pub fn bundle2(a: *HybridBigInt, b: *HybridBigInt, allocator: std.mem.Allocator) HybridBigInt {
-    a.ensureUnpacked(allocator);
-    b.ensureUnpacked(allocator);
+    _ = allocator; // Use inherited allocator instead
+    a.ensureUnpacked();
+    b.ensureUnpacked();
 
+    // Inherit allocator from first argument
+    const inherited_allocator = a.allocator orelse std.heap.page_allocator;
     var result = HybridBigInt.zero();
-    result.ensureUnpacked(allocator); // Allocate heap for result
+    result.allocator = inherited_allocator;
     result.ensureUnpacked();
 
     const len = @max(a.trit_len, b.trit_len);
@@ -144,12 +148,15 @@ pub fn bundle2(a: *HybridBigInt, b: *HybridBigInt, allocator: std.mem.Allocator)
 }
 
 pub fn bundle3(a: *HybridBigInt, b: *HybridBigInt, c: *HybridBigInt, allocator: std.mem.Allocator) HybridBigInt {
-    a.ensureUnpacked(allocator);
-    b.ensureUnpacked(allocator);
-    c.ensureUnpacked(allocator);
+    _ = allocator; // Use inherited allocator instead
+    a.ensureUnpacked();
+    b.ensureUnpacked();
+    c.ensureUnpacked();
 
+    // Inherit allocator from first argument
+    const inherited_allocator = a.allocator orelse std.heap.page_allocator;
     var result = HybridBigInt.zero();
-    result.ensureUnpacked(allocator); // Allocate heap for result
+    result.allocator = inherited_allocator;
     result.ensureUnpacked();
 
     const len = @max(@max(a.trit_len, b.trit_len), c.trit_len);
@@ -225,9 +232,9 @@ pub fn cosineSimilarity(a: *const HybridBigInt, b: *const HybridBigInt) f64 {
 /// Converts ternary vectors to f16, computes similarity with 16-wide operations.
 /// Returns f64 in range [-1, 1].
 pub fn cosineSimilarityF16(a: *const HybridBigInt, b: *const HybridBigInt, allocator: std.mem.Allocator) f64 {
-    _ = allocator;
-    a.ensureUnpacked(allocator);
-    b.ensureUnpacked(allocator);
+    _ = allocator; // Read-only, no allocations needed
+    @constCast(a).ensureUnpacked();
+    @constCast(b).ensureUnpacked();
 
     const len = @max(a.trit_len, b.trit_len);
     if (len == 0) return 0;
@@ -384,24 +391,27 @@ pub fn countNonZero(v: *HybridBigInt) usize {
 pub fn bundleN(vectors: []*HybridBigInt, allocator: std.mem.Allocator) !HybridBigInt {
     if (vectors.len == 0) return HybridBigInt.zero();
     if (vectors.len == 1) {
-        vectors[0].ensureUnpacked(allocator);
+        vectors[0].ensureUnpacked();
+        // Inherit allocator from first vector
+        const inherited_allocator = vectors[0].allocator orelse std.heap.page_allocator;
         var result = HybridBigInt.zero();
+        result.allocator = inherited_allocator;
         result.mode = .unpacked_mode;
         result.dirty = true;
         result.trit_len = vectors[0].trit_len;
-        result.ensureUnpacked(allocator);
+        result.ensureUnpacked();
         // Copy using safe access
         for (0..vectors[0].trit_len) |i| {
             setTritSafe(&result, i, getTritSafe(vectors[0], i));
         }
         return result;
     }
-    if (vectors.len == 2) return bundle2(vectors[0], vectors[1]);
-    if (vectors.len == 3) return bundle3(vectors[0], vectors[1], vectors[2]);
+    if (vectors.len == 2) return bundle2(vectors[0], vectors[1], allocator);
+    if (vectors.len == 3) return bundle3(vectors[0], vectors[1], vectors[2], allocator);
 
     var max_len: usize = 0;
     for (vectors) |v| {
-        v.ensureUnpacked(allocator);
+        v.ensureUnpacked();
         max_len = @max(max_len, v.trit_len);
     }
 
@@ -432,11 +442,14 @@ pub fn bundleN(vectors: []*HybridBigInt, allocator: std.mem.Allocator) !HybridBi
         }
     }
 
+    // Inherit allocator from first vector
+    const inherited_allocator = if (vectors.len > 0) vectors[0].allocator orelse std.heap.page_allocator else std.heap.page_allocator;
     var result = HybridBigInt.zero();
+    result.allocator = inherited_allocator;
     result.mode = .unpacked_mode;
     result.dirty = true;
     result.trit_len = max_len;
-    result.ensureUnpacked(allocator);
+    result.ensureUnpacked();
 
     const num_result_chunks = max_len / SIMD_WIDTH;
     var i: usize = 0;
@@ -474,9 +487,10 @@ pub fn bundleN(vectors: []*HybridBigInt, allocator: std.mem.Allocator) !HybridBi
 
 pub fn randomVector(len: usize, seed: u64) HybridBigInt {
     var result = HybridBigInt.zero();
+    result.allocator = std.heap.page_allocator; // Explicit: random vectors use page allocator
     result.mode = .unpacked_mode;
     result.dirty = true;
-    result.ensureUnpacked(); // Allocate heap for result
+    result.ensureUnpacked();
 
     var rng = std.Random.DefaultPrng.init(seed);
     const random = rng.random();
@@ -487,9 +501,12 @@ pub fn randomVector(len: usize, seed: u64) HybridBigInt {
 }
 
 pub fn permute(v: *HybridBigInt, k: usize) HybridBigInt {
-    v.ensureUnpacked(); // Uses page allocator
+    v.ensureUnpacked();
+    // Inherit allocator from v
+    const inherited_allocator = v.allocator orelse std.heap.page_allocator;
     var result = HybridBigInt.zero();
-    result.ensureUnpacked(); // Allocate heap for result
+    result.allocator = inherited_allocator;
+    result.ensureUnpacked();
 
     result.mode = .unpacked_mode;
     result.dirty = true;
@@ -505,7 +522,12 @@ pub fn permute(v: *HybridBigInt, k: usize) HybridBigInt {
 
 pub fn inversePermute(v: *HybridBigInt, k: usize) HybridBigInt {
     v.ensureUnpacked();
+    // Inherit allocator from v
+    const inherited_allocator = v.allocator orelse std.heap.page_allocator;
     var result = HybridBigInt.zero();
+    result.allocator = inherited_allocator;
+    result.ensureUnpacked();
+
     result.mode = .unpacked_mode;
     result.dirty = true;
     result.trit_len = v.trit_len;

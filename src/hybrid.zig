@@ -134,7 +134,7 @@ pub const HybridBigInt = struct {
         const cache = alloc.alloc(Trit, MAX_TRITS) catch |err| {
             std.debug.panic("OOM in HybridBigInt.ensureUnpacked: {}", .{err});
         };
-        @memset(cache, @as(Trit, 0), MAX_TRITS);
+        @memset(cache, @as(Trit, 0));
 
         // Unpack from packed_data to cache
         const num_packs = (self.trit_len + TRITS_PER_BYTE - 1) / TRITS_PER_BYTE;
@@ -195,7 +195,8 @@ pub const HybridBigInt = struct {
 
     /// Convert to i64
     pub fn toI64(self: *Self, allocator: std.mem.Allocator) i64 {
-        self.ensureUnpacked(allocator);
+        _ = allocator; // Read-only, no allocation needed
+        self.ensureUnpacked();
         const cache = self.unpacked_cache orelse return 0;
         var result: i64 = 0;
         var power: i64 = 1;
@@ -208,8 +209,9 @@ pub const HybridBigInt = struct {
 
     /// Get trit at position (auto-unpacks if needed)
     pub fn getTrit(self: *Self, pos: usize, allocator: std.mem.Allocator) Trit {
+        _ = allocator; // Read-only, no allocation needed
         if (pos >= self.trit_len) return 0;
-        self.ensureUnpacked(allocator);
+        self.ensureUnpacked();
         return self.unpacked_cache.?[pos];
     }
 
@@ -220,8 +222,9 @@ pub const HybridBigInt = struct {
     }
     /// Set trit at position (marks dirty)
     pub fn setTrit(self: *Self, pos: usize, value: Trit, allocator: std.mem.Allocator) void {
+        _ = allocator; // Uses self.allocator
         if (pos >= MAX_TRITS) return;
-        self.ensureUnpacked(allocator);
+        self.ensureUnpacked();
         self.unpacked_cache.?[pos] = value;
         self.dirty = true;
         if (pos >= self.trit_len and value != 0) {
@@ -257,7 +260,8 @@ pub const HybridBigInt = struct {
 
     /// Normalize: remove leading zeros
     fn normalize(self: *Self, allocator: std.mem.Allocator) void {
-        self.ensureUnpacked(allocator);
+        _ = allocator; // Uses self.allocator
+        self.ensureUnpacked();
         const cache = self.unpacked_cache.?;
         while (self.trit_len > 1 and cache[self.trit_len - 1] == 0) {
             self.trit_len -= 1;
@@ -267,14 +271,16 @@ pub const HybridBigInt = struct {
 
     /// Check if zero
     pub fn isZero(self: *Self, allocator: std.mem.Allocator) bool {
-        self.ensureUnpacked(allocator);
+        _ = allocator; // Read-only, no allocation needed
+        self.ensureUnpacked();
         const cache = self.unpacked_cache orelse return false;
         return self.trit_len == 1 and cache[0] == 0;
     }
 
     /// Check if negative
     pub fn isNegative(self: *Self, allocator: std.mem.Allocator) bool {
-        self.ensureUnpacked(allocator);
+        _ = allocator; // Read-only, no allocation needed
+        self.ensureUnpacked();
         const cache = self.unpacked_cache orelse return false;
         return cache[self.trit_len - 1] < 0;
     }
@@ -282,14 +288,15 @@ pub const HybridBigInt = struct {
     /// Negate
     pub fn negate(self: *const Self, allocator: std.mem.Allocator) Self {
         var result = Self.zero();
+        result.allocator = allocator;
         result.trit_len = self.trit_len;
         result.mode = .unpacked_mode;
         result.dirty = true;
-        result.ensureUnpacked(allocator); // Allocate heap for result
+        result.ensureUnpacked();
 
         // Ensure self is unpacked for reading
         var self_mut = self.*;
-        self_mut.ensureUnpacked(allocator);
+        self_mut.ensureUnpacked();
 
         const cache = self_mut.unpacked_cache.?;
         for (0..self.trit_len) |i| {
@@ -300,13 +307,14 @@ pub const HybridBigInt = struct {
 
     /// Add two HybridBigInts (uses unpacked for speed)
     pub fn add(a: *Self, b: *Self, allocator: std.mem.Allocator) Self {
-        a.ensureUnpacked(allocator);
-        b.ensureUnpacked(allocator);
+        a.ensureUnpacked();
+        b.ensureUnpacked();
 
         var result = Self.zero();
+        result.allocator = allocator;
         result.mode = .unpacked_mode;
         result.dirty = true;
-        result.ensureUnpacked(allocator); // Allocate heap for result
+        result.ensureUnpacked();
 
         var carry: Trit = 0;
         const max_len = @max(a.trit_len, b.trit_len);
@@ -340,13 +348,14 @@ pub const HybridBigInt = struct {
     /// SIMD-accelerated add (32 trits at a time)
     /// Uses SIMD for parallel addition, then sequential carry propagation
     pub fn addSimd(a: *Self, b: *Self, allocator: std.mem.Allocator) Self {
-        a.ensureUnpacked(allocator);
-        b.ensureUnpacked(allocator);
+        a.ensureUnpacked();
+        b.ensureUnpacked();
 
         var result = Self.zero();
+        result.allocator = allocator;
         result.mode = .unpacked_mode;
         result.dirty = true;
-        result.ensureUnpacked(allocator); // Allocate heap for result
+        result.ensureUnpacked();
 
         const max_len = @max(a.trit_len, b.trit_len);
         const num_chunks = (max_len + SIMD_WIDTH - 1) / SIMD_WIDTH;
@@ -426,13 +435,14 @@ pub const HybridBigInt = struct {
 
     /// Multiply two HybridBigInts
     pub fn mul(a: *Self, b: *Self, allocator: std.mem.Allocator) Self {
-        a.ensureUnpacked(allocator);
-        b.ensureUnpacked(allocator);
+        a.ensureUnpacked();
+        b.ensureUnpacked();
 
         var result = Self.zero();
+        result.allocator = allocator;
         result.mode = .unpacked_mode;
         result.dirty = true;
-        result.ensureUnpacked(allocator); // Allocate heap for result
+        result.ensureUnpacked();
 
         for (0..a.trit_len) |i| {
             const a_trit = a.getTritChecked(i);
@@ -471,8 +481,9 @@ pub const HybridBigInt = struct {
 
     /// SIMD dot product (for VSA similarity)
     pub fn dotProduct(a: *Self, b: *Self, allocator: std.mem.Allocator) i32 {
-        a.ensureUnpacked(allocator);
-        b.ensureUnpacked(allocator);
+        _ = allocator; // Read-only, no allocation needed
+        a.ensureUnpacked();
+        b.ensureUnpacked();
 
         var total: i32 = 0;
         const min_len = @min(a.trit_len, b.trit_len);
@@ -505,9 +516,10 @@ pub const HybridBigInt = struct {
     /// Convert from TVCBigInt
     pub fn fromBigInt(big: *const tvc_bigint.TVCBigInt, allocator: std.mem.Allocator) Self {
         var result = Self.zero();
+        result.allocator = allocator;
         result.mode = .unpacked_mode;
         result.dirty = true;
-        result.ensureUnpacked(allocator); // Allocate heap for result
+        result.ensureUnpacked();
         for (0..big.len) |i| {
             result.unpacked_cache.?[i] = big.trits[i];
         }
@@ -517,7 +529,8 @@ pub const HybridBigInt = struct {
 
     /// Convert to TVCBigInt
     pub fn toBigInt(self: *Self, allocator: std.mem.Allocator) tvc_bigint.TVCBigInt {
-        self.ensureUnpacked(allocator);
+        _ = allocator; // Read-only, no allocation needed
+        self.ensureUnpacked();
         const cache = self.unpacked_cache orelse {
             var result = tvc_bigint.TVCBigInt.zero();
             result.len = self.trit_len;

@@ -1,0 +1,207 @@
+name: postgres_wire_startup
+version: 1.0.0
+module: postgres_client
+description: |
+  PostgreSQL wire protocol startup messages (v3.0).
+  Implements Startup Message (S), Authentication Ok (R), BackendKeyData, ReadyForQuery (Q).
+  Uses PostgreSQL wire protocol format from zig-golden-float.
+
+types:
+  StartupMessageParams:
+    description: Parameters for PostgreSQL StartupMessage
+    fields:
+      version: u32
+        note: Protocol version, typically 196608 for v3.0
+      user_name: []const u8
+      database: []const u8
+      process_id: u32
+      authentication_timeout_ms: u32
+
+  AuthenticationOkParams:
+    description: Parameters for AuthenticationOk response
+    fields:
+      auth_code: []const u8
+        note: SCRAM-SHA256 of password hash
+      user_variant: u8
+        note: 0 = CLEAR_TEXT, 1 = MD5_PASSWORD
+      database: []const u8
+
+  BackendKeyDataParams:
+    description: Parameters for BackendKeyData response
+    fields:
+      process_id: u32
+        note: PostgreSQL process ID
+      backend_key_data: u32
+        note: Process parameters and status
+
+  ReadyForQueryParams:
+    description: Parameters for ReadyForQuery response
+    fields:
+      transaction_id: ?u32
+        note: Optional transaction ID for extended query
+
+  CommandCompleteParams:
+    description: Parameters for CommandComplete response
+    fields:
+      status_code: u32
+        note: Command completion status code
+
+  ErrorResponseParams:
+    description: Parameters for ErrorResponse
+    fields:
+      error_code: u32
+        note: PostgreSQL error code
+      sqlstate: ?[]const u8
+        note: 5-character SQLSTATE code
+      message: ?[]const u8
+        note: Human-readable error message
+      constraint: ?[]const u8
+        note: Constraint name if applicable
+      hint: ?[]const u8
+        note: Suggestion for fixing the error
+
+constants:
+  WIRE_PROTOCOL_VERSION:
+    value: 196608
+    note: PostgreSQL v3.0 wire protocol version
+
+  MESSAGE_TYPE_STARTUP:
+    value: 0x53
+    note: 'S' character
+
+  MESSAGE_TYPE_AUTHENTICATION_OK:
+    value: 0x52
+    note: 'R' character
+
+  MESSAGE_TYPE_BACKEND_KEY_DATA:
+    value: 0x51
+    note: 'K' character
+
+  MESSAGE_TYPE_READY_FOR_QUERY:
+    value: 0x50
+    note: 'Q' character
+
+  MESSAGE_TYPE_ERROR_RESPONSE:
+    value: 0x45
+    note: 'E' character
+
+  PARAMETER_STATUS:
+    value: 0x01
+
+  AUTHENTICATION_AUTH_CODE:
+    value: 0x10
+
+  AUTHENTICATION_DATABASE_VARIANT:
+    value: 0x11
+
+  AUTHENTICATION_USER_NAME:
+    value: 0x0C
+
+  AUTHENTICATION_PASSWORD:
+    value: 0x0D
+
+  BACKEND_KEY_DATA_PARAM:
+    value: 0x51
+
+  AUTHENTICATION_TRANSACTION_STATUS:
+    value: 0x00
+
+  BACKEND_KEY_DATA_HAS_TRANSACTION:
+    value: 0x01
+
+  USER_VARIANT_CLEAR_TEXT:
+    value: 0
+    note: Clear text authentication
+
+  USER_VARIANT_MD5_PASSWORD:
+    value: 1
+    note: MD5 password authentication
+
+functions:
+  buildStartupMessage:
+    params:
+      - name: allocator
+        type: std.mem.Allocator
+      - name: params
+        type: StartupMessageParams
+    returns: ![]const u8
+    description: |
+      Builds PostgreSQL StartupMessage wire format.
+      Format: [len:4][version:4][code:4][type:char[1]]...
+      Returns allocated byte buffer.
+
+  buildAuthenticationOk:
+    params:
+      - name: allocator
+        type: std.mem.Allocator
+      - name: params
+        type: AuthenticationOkParams
+    returns: ![]const u8
+    description: |
+      Builds AuthenticationOk response (R).
+      Format: [len:4][code:4][auth_code:4][user_variant:4][database:?string]...
+      Returns allocated byte buffer.
+
+  buildBackendKeyData:
+    params:
+      - name: allocator
+        type: std.mem.Allocator
+      - name: params
+        type: BackendKeyDataParams
+    returns: ![]const u8
+    description: |
+      Builds BackendKeyData response (K).
+      Format: [len:4][code:4][pid:8][backend_key_data:4]...
+      Returns allocated byte buffer.
+
+  buildReadyForQuery:
+    params:
+      - name: allocator
+        type: std.mem.Allocator
+      - name: params
+        type: ReadyForQueryParams
+    returns: ![]const u8
+    description: |
+      Builds ReadyForQuery response (Q).
+      Format: [len:4][code:4][status:4][pid:?8]...
+      Returns allocated byte buffer.
+
+  buildCommandComplete:
+    params:
+      - name: allocator
+        type: std.mem.Allocator
+      - name: params
+        type: CommandCompleteParams
+    returns: ![]const u8
+    description: |
+      Builds CommandComplete response (C).
+      Format: [len:4][code:4][status:4]...
+      Returns allocated byte buffer.
+
+  buildErrorResponse:
+    params:
+      - name: allocator
+        type: std.mem.Allocator
+      - name: params
+        type: ErrorResponseParams
+    returns: ![]const u8
+    description: |
+      Builds ErrorResponse (E).
+      Format: [len:4][code:4][error_code:4][sqlstate:?5][message:?string]...
+      Returns allocated byte buffer.
+
+export_functions:
+  - buildStartupMessage
+  - buildAuthenticationOk
+  - buildBackendKeyData
+  - buildReadyForQuery
+  - buildCommandComplete
+  - buildErrorResponse
+
+behaviors:
+  - name: wire_protocol_format
+    description: |
+      Follows PostgreSQL wire protocol v3.0 specification.
+      All messages prefixed with 4-byte length (network byte order).
+      Message type indicated by single character byte.
+    note: See https://www.postgresql.org/docs/current/protocol-message-formats.html

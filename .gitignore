@@ -321,6 +321,9 @@ demo-scripts/
 legacy-bin/
 .cache
 
+# Build outputs (keep zig-out-linux locally only)
+zig-out-linux/
+
 # Install scripts
 install.sh
 deploy-*.sh

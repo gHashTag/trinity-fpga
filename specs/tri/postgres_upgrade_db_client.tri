@@ -1,0 +1,148 @@
+# ============================================================================
+# postgres_upgrade_db_client - PostgreSQL Wire Protocol & Connection Pooling
+# ============================================================================
+# @origin(spec:postgres_upgrade_db_client.tri) @regen(vibee-spec)
+# Golden Identity: phi^2 + 1/phi^2 = 3 = TRINITY
+#
+# ============================================================================
+# NAME
+name: postgres_upgrade_db_client
+version: 1.0.0
+module: postgres_client
+#
+# ============================================================================
+# DESCRIPTION
+#
+# Full PostgreSQL wire protocol implementation with connection pooling,
+# prepared statements, and migration support.
+#
+# Replaces stub implementation in src/background_agent/db/client.zig
+#
+# ============================================================================
+#
+# DEPENDENCIES
+#
+# std (Zig 0.15)
+# Postgres client module (will reference new implementation)
+# ============================================================================
+#
+# EXPORTS
+#
+# pub fn connect(allocator: Allocator) !PostgresConnection
+# pub fn query(allocator: Allocator, connection: *PostgresConnection, sql: []const u8, params: []const ?[]const u8) !QueryResult
+# pub fn execute(allocator: Allocator, connection: *PostgresConnection, sql: []const u8, params: []const ?[]const u8) !ExecuteResult
+# pub fn close(connection: *PostgresConnection) void
+#
+# pub fn beginTransaction(connection: *PostgresConnection) !PostgresTransaction
+# pub fn commitTransaction(transaction: *PostgresTransaction) !void
+# pub fn rollbackTransaction(transaction: *PostgresTransaction) !void
+#
+# pub fn prepare(connection: *PostgresConnection, statement_name: []const u8, param_index: u32, param_types: []const []const u8) !!PreparedStatement
+# pub fn setParam(statement: *PreparedStatement, param_index: u32, value: []const u8) !void
+# pub fn execute(statement: *PreparedStatement) !ExecuteResult
+# ============================================================================
+#
+# TYPES
+#
+# pub const PostgresConnection = struct {
+#     allocator: std.mem.Allocator,
+#     stream: std.net.Stream,
+#     host: []const u8,
+#     port: u16,
+#     database: []const u8,
+#     user: []const u8,
+#     password: []const u8,
+#     server_version: []const u8,
+#     parameters: []const u8,
+#     transaction: ?PostgresTransaction,
+# }
+#
+# pub const PostgresTransaction = struct {
+#     connection: *PostgresConnection,
+# }
+#
+# pub const PreparedStatement = struct {
+#     connection: *PostgresConnection,
+#     name: []const u8,
+#     params: std.ArrayList([]const u8),
+#     param_types: []const u8,
+# }
+#
+# pub const QueryResult = struct {
+#     rows: std.ArrayList(Row),
+#     affected_rows: usize,
+#     command_tag: ?CommandTag,
+# }
+#
+# pub const Row = struct {
+#     columns: std.ArrayList([]const u8),
+#     values: std.ArrayList([]const u8),
+# }
+#
+# pub const CommandTag = enum {
+#     COMPLETE,
+#     EMPTY_QUERY,
+#     ERROR,
+# }
+#
+# pub const Error = error{
+#     ConnectionFailed,
+#     AuthenticationFailed,
+#     QueryFailed,
+#     ParseError,
+#     StatementFailed,
+#     TransactionFailed,
+#     InvalidUrl,
+#     InvalidResponse,
+#     OutOfMemory,
+# }
+#
+# pub const AuthContext = struct {
+#     user: []const u8,
+#     password: []const u8,
+#     method: AuthMethod,
+#     database: []const u8,
+# }
+#
+# pub const AuthMethod = enum {
+#     CLEAR_TEXT,
+#     MD5_PASSWORD,
+#     SCRAM_SHA256,
+# }
+#
+# ============================================================================
+# BEHAVIORS
+#
+# 1. PostgreSQL Wire Protocol Compliance
+#    - Implements full PostgreSQL startup message sequence
+#    - Supports both simple and extended query protocol
+#    - Parameter binding (prevents SQL injection)
+#    - Binary data handling (CopyIn/Out)
+#    - Row and result descriptions
+#    - Transaction management (begin/commit/rollback)
+#    - Error handling and recovery
+#
+#
+# 2. Connection Pool Management
+#    - LIFO queue for reusing connections
+#    - Min connections (default: 2, max: 10)
+#    - Connection health checks
+#    - Automatic reconnection on failure
+#
+#
+# 3. Query Performance
+#    - Prepared statements with parameter caching
+#    - Bulk operations support
+#    - Result streaming for large datasets
+# #
+# 4. Migration Support
+#    - Versioned schema migrations
+#    - Rollback on failure
+#    - Migration history tracking
+# #
+# IMPORTS
+#
+# Use postgres wire protocol definitions from src/tri/postgres_wire_protocol.zig
+# Use std.crypto for SCRAM-SHA256 authentication (via MD5 password)
+# Use zig-golden-float kernel database patterns as reference
+# ============================================================================
