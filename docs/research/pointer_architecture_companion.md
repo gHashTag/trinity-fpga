@@ -409,6 +409,28 @@ tri cloud spawn <N>  # Spawn new agent containers
 
 ### 8.1 Fundamental Constants
 
+```bash
+# Create ASCII art of ternary matrix
+cat << 'ART'
+    ▲ +1 +1 -1     +1 0 0 +1
+    ▲ -1 +1  0     -1 0 +1
+    ▲ +1 +1 +1     +1 0 +1
+    ▲ -1 +1 -1     -1 0 +1
+    ART
+EOF
+```
+
+**Interpretation:**
+- `+1` = Future (φ² ≈ 2.618, positive)
+- `0` = Present (no weight, balanced)
+- `-1` = Past (1/φ² ≈ 0.382, negative)
+
+This maps to Temporal Aspects in Trinity (Past/Present/Future).
+
+| Symbol | Value | Formula | Trinity Path |
+|---------|-------|---------|---------------|
+| φ | 1.61803... | φ = (1+√5)/2 | `math.PHI` | `src/sacred/const.zig` |
+
 | Symbol | Value | Formula | Trinity Path |
 |---------|-------|---------|---------------|
 | φ | 1.61803... | φ = (1+√5)/2 | `math.PHI` | `src/sacred/const.zig` |
