@@ -81,19 +81,12 @@ pub fn unbind(bound: *HybridBigInt, key: *HybridBigInt) HybridBigInt {
     return bind(bound, key);
 }
 
-pub fn bundle2(a: *HybridBigInt, b: *HybridBigInt) HybridBigInt {
-    const page_alloc = std.heap.page_allocator;
-    a.ensureUnpacked();
-    b.ensureUnpacked();
+pub fn bundle2(a: *HybridBigInt, b: *HybridBigInt, allocator: std.mem.Allocator) HybridBigInt {
+    a.ensureUnpacked(allocator);
+    b.ensureUnpacked(allocator);
 
-    var result = HybridBigInt{
-        .packed_data = [_]u8{0} ** common.MAX_PACKED_BYTES,
-        .unpacked_cache = null,
-        .allocator = page_alloc,
-        .mode = .unpacked_mode,
-        .trit_len = 1,
-        .dirty = true,
-    };
+    var result = HybridBigInt.zero();
+    result.ensureUnpacked(allocator); // Allocate heap for result
     result.ensureUnpacked();
 
     const len = @max(a.trit_len, b.trit_len);
@@ -396,7 +389,6 @@ pub fn countNonZero(v: *HybridBigInt) usize {
 
 /// Bundle N vectors — SIMD accelerated majority vote (OPT-001)
 pub fn bundleN(vectors: []*HybridBigInt, allocator: std.mem.Allocator) !HybridBigInt {
-    _ = allocator; // Reserved for future heap operations
     if (vectors.len == 0) return HybridBigInt.zero();
     if (vectors.len == 1) {
         vectors[0].ensureUnpacked(allocator);
