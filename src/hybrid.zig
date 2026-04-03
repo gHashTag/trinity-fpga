@@ -194,22 +194,23 @@ pub const HybridBigInt = struct {
     }
 
     /// Convert to i64
-    pub fn toI64(self: *Self) i64 {
-        self.ensureUnpacked();
+    pub fn toI64(self: *Self, allocator: std.mem.Allocator) i64 {
+        self.ensureUnpacked(allocator);
+        const cache = self.unpacked_cache orelse return 0;
         var result: i64 = 0;
         var power: i64 = 1;
         for (0..self.trit_len) |i| {
-            result += @as(i64, self.unpacked_cache[i]) * power;
+            result += @as(i64, cache[i]) * power;
             power *= 3;
         }
         return result;
     }
 
     /// Get trit at position (auto-unpacks if needed)
-    pub fn getTrit(self: *Self, pos: usize) Trit {
+    pub fn getTrit(self: *Self, pos: usize, allocator: std.mem.Allocator) Trit {
         if (pos >= self.trit_len) return 0;
-        self.ensureUnpacked();
-        return self.unpacked_cache[pos];
+        self.ensureUnpacked(allocator);
+        return self.unpacked_cache.?[pos];
     }
 
 
@@ -218,10 +219,10 @@ pub const HybridBigInt = struct {
         return @intCast(self.getTrit(pos));
     }
     /// Set trit at position (marks dirty)
-    pub fn setTrit(self: *Self, pos: usize, value: Trit) void {
+    pub fn setTrit(self: *Self, pos: usize, value: Trit, allocator: std.mem.Allocator) void {
         if (pos >= MAX_TRITS) return;
-        self.ensureUnpacked();
-        self.unpacked_cache[pos] = value;
+        self.ensureUnpacked(allocator);
+        self.unpacked_cache.?[pos] = value;
         self.dirty = true;
         if (pos >= self.trit_len and value != 0) {
             self.trit_len = pos + 1;
@@ -255,51 +256,57 @@ pub const HybridBigInt = struct {
     }
 
     /// Normalize: remove leading zeros
-    fn normalize(self: *Self) void {
-        self.ensureUnpacked();
-        while (self.trit_len > 1 and self.unpacked_cache[self.trit_len - 1] == 0) {
+    fn normalize(self: *Self, allocator: std.mem.Allocator) void {
+        self.ensureUnpacked(allocator);
+        const cache = self.unpacked_cache.?;
+        while (self.trit_len > 1 and cache[self.trit_len - 1] == 0) {
             self.trit_len -= 1;
         }
         self.dirty = true;
     }
 
     /// Check if zero
-    pub fn isZero(self: *Self) bool {
-        self.ensureUnpacked();
-        return self.trit_len == 1 and self.unpacked_cache[0] == 0;
+    pub fn isZero(self: *Self, allocator: std.mem.Allocator) bool {
+        self.ensureUnpacked(allocator);
+        const cache = self.unpacked_cache orelse return false;
+        return self.trit_len == 1 and cache[0] == 0;
     }
 
     /// Check if negative
-    pub fn isNegative(self: *Self) bool {
-        self.ensureUnpacked();
-        return self.unpacked_cache[self.trit_len - 1] < 0;
+    pub fn isNegative(self: *Self, allocator: std.mem.Allocator) bool {
+        self.ensureUnpacked(allocator);
+        const cache = self.unpacked_cache orelse return false;
+        return cache[self.trit_len - 1] < 0;
     }
 
     /// Negate
-    pub fn negate(self: *const Self) Self {
+    pub fn negate(self: *const Self, allocator: std.mem.Allocator) Self {
         var result = Self.zero();
         result.trit_len = self.trit_len;
         result.mode = .unpacked_mode;
         result.dirty = true;
+        result.ensureUnpacked(allocator); // Allocate heap for result
 
-        // Copy and negate from self (may need to unpack)
+        // Ensure self is unpacked for reading
         var self_mut = self.*;
-        self_mut.ensureUnpacked();
+        self_mut.ensureUnpacked(allocator);
 
+        const cache = self_mut.unpacked_cache.?;
         for (0..self.trit_len) |i| {
-            result.unpacked_cache[i] = -self_mut.unpacked_cache[i];
+            result.unpacked_cache.?[i] = -cache[i];
         }
         return result;
     }
 
     /// Add two HybridBigInts (uses unpacked for speed)
-    pub fn add(a: *Self, b: *Self) Self {
-        a.ensureUnpacked();
-        b.ensureUnpacked();
+    pub fn add(a: *Self, b: *Self, allocator: std.mem.Allocator) Self {
+        a.ensureUnpacked(allocator);
+        b.ensureUnpacked(allocator);
 
         var result = Self.zero();
         result.mode = .unpacked_mode;
         result.dirty = true;
+        result.ensureUnpacked(allocator); // Allocate heap for result
 
         var carry: Trit = 0;
         const max_len = @max(a.trit_len, b.trit_len);
@@ -326,19 +333,20 @@ pub const HybridBigInt = struct {
         }
 
         result.trit_len = @min(max_len + 1, MAX_TRITS);
-        result.normalize();
+        result.normalize(allocator);
         return result;
     }
 
     /// SIMD-accelerated add (32 trits at a time)
     /// Uses SIMD for parallel addition, then sequential carry propagation
-    pub fn addSimd(a: *Self, b: *Self) Self {
-        a.ensureUnpacked();
-        b.ensureUnpacked();
+    pub fn addSimd(a: *Self, b: *Self, allocator: std.mem.Allocator) Self {
+        a.ensureUnpacked(allocator);
+        b.ensureUnpacked(allocator);
 
         var result = Self.zero();
         result.mode = .unpacked_mode;
         result.dirty = true;
+        result.ensureUnpacked(allocator); // Allocate heap for result
 
         const max_len = @max(a.trit_len, b.trit_len);
         const num_chunks = (max_len + SIMD_WIDTH - 1) / SIMD_WIDTH;
@@ -406,24 +414,25 @@ pub const HybridBigInt = struct {
         }
 
         result.trit_len = @min(max_len + 1, MAX_TRITS);
-        result.normalize();
+        result.normalize(allocator);
         return result;
     }
 
     /// Subtract
-    pub fn sub(a: *Self, b: *Self) Self {
-        var neg_b = b.negate();
-        return a.add(&neg_b);
+    pub fn sub(a: *Self, b: *Self, allocator: std.mem.Allocator) Self {
+        var neg_b = b.negate(allocator);
+        return a.add(&neg_b, allocator);
     }
 
     /// Multiply two HybridBigInts
-    pub fn mul(a: *Self, b: *Self) Self {
-        a.ensureUnpacked();
-        b.ensureUnpacked();
+    pub fn mul(a: *Self, b: *Self, allocator: std.mem.Allocator) Self {
+        a.ensureUnpacked(allocator);
+        b.ensureUnpacked(allocator);
 
         var result = Self.zero();
         result.mode = .unpacked_mode;
         result.dirty = true;
+        result.ensureUnpacked(allocator); // Allocate heap for result
 
         for (0..a.trit_len) |i| {
             const a_trit = a.getTritChecked(i);
@@ -456,14 +465,14 @@ pub const HybridBigInt = struct {
         }
 
         result.trit_len = @min(a.trit_len + b.trit_len, MAX_TRITS);
-        result.normalize();
+        result.normalize(allocator);
         return result;
     }
 
     /// SIMD dot product (for VSA similarity)
-    pub fn dotProduct(a: *Self, b: *Self) i32 {
-        a.ensureUnpacked();
-        b.ensureUnpacked();
+    pub fn dotProduct(a: *Self, b: *Self, allocator: std.mem.Allocator) i32 {
+        a.ensureUnpacked(allocator);
+        b.ensureUnpacked(allocator);
 
         var total: i32 = 0;
         const min_len = @min(a.trit_len, b.trit_len);
@@ -494,23 +503,29 @@ pub const HybridBigInt = struct {
     }
 
     /// Convert from TVCBigInt
-    pub fn fromBigInt(big: *const tvc_bigint.TVCBigInt) Self {
+    pub fn fromBigInt(big: *const tvc_bigint.TVCBigInt, allocator: std.mem.Allocator) Self {
         var result = Self.zero();
         result.mode = .unpacked_mode;
         result.dirty = true;
+        result.ensureUnpacked(allocator); // Allocate heap for result
         for (0..big.len) |i| {
-            result.unpacked_cache[i] = big.trits[i];
+            result.unpacked_cache.?[i] = big.trits[i];
         }
         result.trit_len = big.len;
         return result;
     }
 
     /// Convert to TVCBigInt
-    pub fn toBigInt(self: *Self) tvc_bigint.TVCBigInt {
-        self.ensureUnpacked();
+    pub fn toBigInt(self: *Self, allocator: std.mem.Allocator) tvc_bigint.TVCBigInt {
+        self.ensureUnpacked(allocator);
+        const cache = self.unpacked_cache orelse {
+            var result = tvc_bigint.TVCBigInt.zero();
+            result.len = self.trit_len;
+            return result;
+        };
         var result = tvc_bigint.TVCBigInt.zero();
         for (0..self.trit_len) |i| {
-            result.trits[i] = self.unpacked_cache[i];
+            result.trits[i] = cache[i];
         }
         result.len = self.trit_len;
         return result;
