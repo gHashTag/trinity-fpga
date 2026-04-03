@@ -1,0 +1,3 @@
+[submodule "external/zig-golden-float"]
+	path = external/zig-golden-float
+	url = https://github.com/gHashTag/zig-golden-float
