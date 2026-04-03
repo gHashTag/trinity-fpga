@@ -1,35 +1,43 @@
-# Exclude everything not needed for HSLM training deploy
-# Only pre-built binaries in zig-out/bin/ and Dockerfile needed
+# Docker ignore for Railway build deployment
+# Need source files for zig build, exclude large unnecessary files
 
-# Large dirs
-fpga/
+# Large data
 data/
+*.tar.gz
+*.zip
+*.jsonl
+
+# Git and CI
 .git/
 .github/
+
+# Documentation
 docs/
 docsite/
 website/
+
+# Node modules
 node_modules/
-.zig-cache/
-zig-cache/
-build/
-release/
+
+# Build artifacts from previous builds
+zig-out/
+*.o
+*.a
+
+# Claude/Ralph state (optional - can exclude)
 .claude/
 .ralph/
 .trinity/
-.trinity-nexus/
-trinity-nexus/
-telegram-bridge/
-deploy/
+
+# Dev scripts
 scripts/
-specs/
-tools/
 archive/
 
-# Keep only zig-out/bin/ (pre-built binaries)
-zig-out/lib/
-zig-out/doc/
-
-# Large file patterns
-*.jsonl
+# Test/benchmark data
 *.vcd
+*.bin
+*.elf
+
+# Keep .zig-cache for build dependencies
+# Keep src/ for source code
+# Keep build.zig and build.zig.zon for build config
