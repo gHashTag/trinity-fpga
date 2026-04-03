@@ -1,0 +1,57 @@
+# Trinity Plan: Railway Docker Build Fix
+
+## Audit Note (Step 1/5)
+**Hypothesis**: Repo has conflicting Dockerfiles, Railway selecting wrong one.
+
+**Evidence**:
+- No `packages/` directory exists in this repo
+- `background-agent-api` is a Zig binary (from build.zig), not Node.js
+- Two Dockerfiles found:
+  - `/Dockerfile` (newly created, fixed: ubuntu:24.04 runtime stage)
+  - `deploy/Dockerfile.background-agent` (broken: uses FROM scratch then RUN useradd)
+- Railway build logs show ghost Node.js Dockerfile (not in repo)
+
+**Fact**: The `packages/api/Dockerfile` mentioned in directive DOES NOT EXIST in this repo. Different codebase.
+
+**Conclusion**: For `background-agent-railway` (Zig binary), root `/Dockerfile` IS the correct source of truth.
+
+## Decision Note (Step 2/5)
+**Action**: DELETE the broken `deploy/Dockerfile.background-agent` to eliminate ambiguity.
+
+**Rationale**:
+- `/Dockerfile` (root) is now the fixed, correct one
+- Keeping duplicate broken Dockerfile creates confusion
+- Railway defaults to root Dockerfile - this is desired behavior for background-agent-railway
+- Single source of truth = `/Dockerfile`
+
+**Files to change**:
+- DELETE: `deploy/Dockerfile.background-agent`
+- KEEP: `/Dockerfile` (already fixed)
+
+## Railway Config Note (Step 3/5)
+**Action**: No RAILWAY_DOCKERFILE_PATH needed.
+
+**Reason**:
+- Root `/Dockerfile` IS the correct one
+- Railway defaults to root Dockerfile
+- No custom path required
+
+## Verification Note (Step 4/5)
+**Status**: Railway upload timing out (network issue, NOT code issue).
+- Dockerfile is correct
+- Snapshot size: ~95MB (reasonable)
+- Error: `operation timed out` during upload to Railway API
+
+**Next steps**:
+1. Commit changes to git
+2. Use Railway dashboard to redeploy from GitHub (if repo connected)
+3. Or retry CLI upload when network improves
+
+## Rollback Note (Step 5/5)
+**Rollback steps** (if needed):
+```bash
+# Restore broken Dockerfile from git
+git checkout HEAD -- deploy/Dockerfile.background-agent
+# Delete fixed root Dockerfile
+git rm Dockerfile
+```
