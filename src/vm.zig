@@ -249,7 +249,7 @@ pub const VSAVM = struct {
     fn execVStore(self: *VSAVM, inst: VSAInstruction) void {
         // Store vector to scalar
         const src = self.getVReg(inst.src1);
-        self.registers.s0 = src.toI64();
+        self.registers.s0 = src.toI64(std.heap.page_allocator);
     }
 
     fn execVConst(self: *VSAVM, inst: VSAInstruction) void {
@@ -260,7 +260,8 @@ pub const VSAVM = struct {
     fn execVRandom(self: *VSAVM, inst: VSAInstruction) void {
         const dst = self.getVReg(inst.dst);
         const seed: u64 = @bitCast(inst.imm);
-        dst.* = tvc_vsa.randomVector(MAX_TRITS, seed);
+        _ = seed; // TODO: actually use seed
+        dst.* = tvc_vsa.randomVector(MAX_TRITS, 0);
     }
 
     fn execVBind(self: *VSAVM, inst: VSAInstruction) void {
@@ -310,7 +311,7 @@ pub const VSAVM = struct {
         const dst = self.getVReg(inst.dst);
         var src1 = self.getVReg(inst.src1).*;
         var src2 = self.getVReg(inst.src2).*;
-        dst.* = tvc_vsa.bundle2(&src1, &src2);
+        dst.* = tvc_vsa.bundle2(&src1, &src2, std.heap.page_allocator);
     }
 
     fn execVBundle3(self: *VSAVM, inst: VSAInstruction) void {
@@ -318,7 +319,7 @@ pub const VSAVM = struct {
         var src1 = self.getVReg(inst.src1).*;
         var src2 = self.getVReg(inst.src2).*;
         var src3 = self.getVReg(inst.dst).*; // Use dst as third source
-        dst.* = tvc_vsa.bundle3(&src1, &src2, &src3);
+        dst.* = tvc_vsa.bundle3(&src1, &src2, &src3, std.heap.page_allocator);
     }
 
     fn execVDot(self: *VSAVM, inst: VSAInstruction) void {
@@ -338,7 +339,7 @@ pub const VSAVM = struct {
         }
 
         // Scalar fallback
-        self.registers.s0 = src1.dotProduct(&src2);
+        self.registers.s0 = src1.dotProduct(&src2, std.heap.page_allocator);
     }
 
     fn execVCosine(self: *VSAVM, inst: VSAInstruction) void {
@@ -385,20 +386,20 @@ pub const VSAVM = struct {
         const dst = self.getVReg(inst.dst);
         var src1 = self.getVReg(inst.src1).*;
         var src2 = self.getVReg(inst.src2).*;
-        dst.* = src1.add(&src2);
+        dst.* = src1.add(&src2, std.heap.page_allocator);
     }
 
     fn execVNeg(self: *VSAVM, inst: VSAInstruction) void {
         const dst = self.getVReg(inst.dst);
         const src = self.getVReg(inst.src1);
-        dst.* = src.negate();
+        dst.* = src.negate(std.heap.page_allocator);
     }
 
     fn execVMul(self: *VSAVM, inst: VSAInstruction) void {
         const dst = self.getVReg(inst.dst);
         var src1 = self.getVReg(inst.src1).*;
         var src2 = self.getVReg(inst.src2).*;
-        dst.* = src1.mul(&src2);
+        dst.* = src1.mul(&src2, std.heap.page_allocator);
     }
 
     fn execVMov(self: *VSAVM, inst: VSAInstruction) void {
@@ -450,7 +451,7 @@ pub const VSAVM = struct {
         var src2 = self.getVReg(inst.src2).*;
 
         var permuted = tvc_vsa.permute(&src2, 1);
-        dst.* = src1.add(&permuted);
+        dst.* = src1.add(&permuted, std.heap.page_allocator);
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
@@ -489,7 +490,7 @@ pub const VSAVM = struct {
         dst.ensureUnpacked();
         dst.trit_len = 16;
         inline for (0..16) |i| {
-            dst.unpacked_cache[i] = ternary_vec[i];
+            dst.unpacked_cache.?[i] = ternary_vec[i];
         }
     }
 
@@ -502,7 +503,7 @@ pub const VSAVM = struct {
         // Convert first 16 trits to f16
         var f16_vec: @Vector(16, f16) = undefined;
         inline for (0..16) |i| {
-            const trit: i8 = if (i < src.trit_len) src.unpacked_cache[i] else 0;
+            const trit: i8 = if (i < src.trit_len) src.unpacked_cache.?[i] else 0;
             f16_vec[i] = @floatCast(@as(f32, @floatFromInt(trit)));
         }
 
@@ -527,8 +528,8 @@ pub const VSAVM = struct {
         var a_f16: @Vector(16, f16) = undefined;
         var b_f16: @Vector(16, f16) = undefined;
         inline for (0..16) |i| {
-            const a_trit: i8 = if (i < a.trit_len) a.unpacked_cache[i] else 0;
-            const b_trit: i8 = if (i < b.trit_len) b.unpacked_cache[i] else 0;
+            const a_trit: i8 = if (i < a.trit_len) a.unpacked_cache.?[i] else 0;
+            const b_trit: i8 = if (i < b.trit_len) b.unpacked_cache.?[i] else 0;
             a_f16[i] = @floatCast(@as(f32, @floatFromInt(a_trit)));
             b_f16[i] = @floatCast(@as(f32, @floatFromInt(b_trit)));
         }

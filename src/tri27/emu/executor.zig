@@ -643,8 +643,8 @@ pub fn execute(cpu: *CPUState, inst: Instruction, memory: []align(8) u8) ExecErr
 
         .STR_CONCAT => {
             // Concatenate two string addresses into destination
-            const str1_addr = @as(usize, cpu.t27[inst.src1].trits);
-            const str2_addr = @as(usize, cpu.t27[inst.src2].trits);
+            const str1_addr = @as(usize, @bitCast(cpu.t27[inst.src1].trits);
+            const str2_addr = @as(usize, @bitCast(cpu.t27[inst.src2].trits);
 
             // Read string lengths (stored as u16 after address)
             if (str1_addr >= memory.len or str1_addr + 2 >= memory.len) {
@@ -689,7 +689,7 @@ pub fn execute(cpu: *CPUState, inst: Instruction, memory: []align(8) u8) ExecErr
 
         .STR_PRINT => {
             // Print string from register to stdout
-            const str_addr = @as(usize, cpu.t27[inst.src1].trits);
+            const str_addr = @as(usize, @bitCast(cpu.t27[inst.src1].trits);
 
             if (str_addr >= memory.len) {
                 return ExecError.InvalidMemory;
@@ -722,7 +722,7 @@ pub fn execute(cpu: *CPUState, inst: Instruction, memory: []align(8) u8) ExecErr
         .FILE_READ => {
             // Read file into memory
             // src1 register contains path address
-            const path_addr = @as(usize, cpu.t27[inst.src1].trits);
+            const path_addr = @as(usize, @bitCast(cpu.t27[inst.src1].trits);
 
             if (path_addr >= memory.len) {
                 return ExecError.InvalidMemory;
@@ -791,8 +791,8 @@ pub fn execute(cpu: *CPUState, inst: Instruction, memory: []align(8) u8) ExecErr
         .FILE_WRITE => {
             // Write string to file
             // src1 register contains path address, src2 contains data address
-            const path_addr = @as(usize, cpu.t27[inst.src1].trits);
-            const data_addr = @as(usize, cpu.t27[inst.src2].trits);
+            const path_addr = @as(usize, @bitCast(cpu.t27[inst.src1].trits);
+            const data_addr = @as(usize, @bitCast(cpu.t27[inst.src2].trits);
 
             if (path_addr >= memory.len or data_addr >= memory.len) {
                 return ExecError.InvalidMemory;
@@ -850,7 +850,7 @@ pub fn execute(cpu: *CPUState, inst: Instruction, memory: []align(8) u8) ExecErr
         .FILE_EXISTS => {
             // Check if file exists
             // src1 register contains path address
-            const path_addr = @as(usize, cpu.t27[inst.src1].trits);
+            const path_addr = @as(usize, @bitCast(cpu.t27[inst.src1].trits);
 
             if (path_addr >= memory.len) {
                 return ExecError.InvalidMemory;

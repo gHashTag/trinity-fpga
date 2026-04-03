@@ -47,8 +47,8 @@ pub fn bind(a: *HybridBigInt, b: *HybridBigInt) HybridBigInt {
 
     var i: usize = 0;
     while (i < num_full_chunks * SIMD_WIDTH) : (i += SIMD_WIDTH) {
-        const a_vec: Vec32i8 = undefined;
-        const b_vec: Vec32i8 = undefined;
+        var a_vec: Vec32i8 = undefined;
+        var b_vec: Vec32i8 = undefined;
 
         inline for (0..SIMD_WIDTH) |j| {
             const idx = i + j;
@@ -65,14 +65,14 @@ pub fn bind(a: *HybridBigInt, b: *HybridBigInt) HybridBigInt {
 
         // Write back using safe access
         inline for (0..SIMD_WIDTH) |j| {
-            result.setTritSafe(i + j, result_vec[j]);
+            setTritSafe(&result, i + j, result_vec[j]);
         }
     }
 
     while (i < len) : (i += 1) {
         const a_trit: Trit = if (i < a.trit_len) getTritSafe(a, i) else 0;
         const b_trit: Trit = if (i < b.trit_len) getTritSafe(b, i) else 0;
-        result.setTritSafe(i, a_trit * b_trit);
+        setTritSafe(&result, i, a_trit * b_trit);
     }
 
     return result;
@@ -101,8 +101,8 @@ pub fn bundle2(a: *HybridBigInt, b: *HybridBigInt, allocator: std.mem.Allocator)
 
     var i: usize = 0;
     while (i < num_full_chunks * SIMD_WIDTH) : (i += SIMD_WIDTH) {
-        const a_vec: Vec32i8 = undefined;
-        const b_vec: Vec32i8 = undefined;
+        var a_vec: Vec32i8 = undefined;
+        var b_vec: Vec32i8 = undefined;
 
         inline for (0..SIMD_WIDTH) |j| {
             const idx = i + j;
@@ -166,8 +166,8 @@ pub fn bundle3(a: *HybridBigInt, b: *HybridBigInt, c: *HybridBigInt, allocator: 
     // SIMD path: 32 trits at a time via i16 widening + sign extraction
     var i: usize = 0;
     while (i < num_full_chunks * SIMD_WIDTH) : (i += SIMD_WIDTH) {
-        const a_vec: Vec32i8 = undefined;
-        const b_vec: Vec32i8 = undefined;
+        var a_vec: Vec32i8 = undefined;
+        var b_vec: Vec32i8 = undefined;
         const c_vec: Vec32i8 = undefined;
 
         inline for (0..SIMD_WIDTH) |j| {
@@ -219,7 +219,7 @@ pub fn bundle3(a: *HybridBigInt, b: *HybridBigInt, c: *HybridBigInt, allocator: 
 }
 
 pub fn cosineSimilarity(a: *const HybridBigInt, b: *const HybridBigInt) f64 {
-    const dot = @constCast(a).dotProduct(@constCast(b));
+    const dot = @constCast(a).dotProduct(@constCast(b), std.heap.page_allocator);
     const norm_a = vectorNorm(@constCast(a));
     const norm_b = vectorNorm(@constCast(b));
 
@@ -357,7 +357,7 @@ pub fn dotSimilarity(a: *HybridBigInt, b: *HybridBigInt) f64 {
 
 /// Vector norm — SIMD accelerated via dotProduct(v, v) (OPT-001)
 pub fn vectorNorm(v: *HybridBigInt) f64 {
-    const dot = v.dotProduct(v);
+    const dot = v.dotProduct(v, std.heap.page_allocator);
     return @sqrt(@as(f64, @floatFromInt(dot)));
 }
 
@@ -486,6 +486,7 @@ pub fn bundleN(vectors: []*HybridBigInt, allocator: std.mem.Allocator) !HybridBi
 }
 
 pub fn randomVector(len: usize, seed: u64) HybridBigInt {
+    _ = len; // TODO: actually use this parameter
     var result = HybridBigInt.zero();
     result.allocator = std.heap.page_allocator; // Explicit: random vectors use page allocator
     result.mode = .unpacked_mode;
@@ -545,7 +546,7 @@ pub fn encodeSequence(items: []HybridBigInt) HybridBigInt {
     var result = items[0];
     for (1..items.len) |i| {
         var permuted = permute(&items[i], i);
-        result = result.add(&permuted);
+        result = result.add(&permuted, std.heap.page_allocator);
     }
     return result;
 }

@@ -96,7 +96,7 @@ fn hvSimilarity(a: *HybridBigInt, b: *HybridBigInt) f64 {
 }
 
 fn hvBundle2(a: *HybridBigInt, b: *HybridBigInt) HybridBigInt {
-    return vsa.bundle2(a, b);
+    return vsa.bundle2(a, b, std.heap.page_allocator);
 }
 
 fn treeBundleN(items: []HybridBigInt) HybridBigInt {

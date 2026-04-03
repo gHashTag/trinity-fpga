@@ -338,7 +338,7 @@ pub const HybridBigInt = struct {
                 carry -= 1;
             }
 
-            result.unpacked_cache[i] = @intCast(sum);
+            result.unpacked_cache.?[i] = @intCast(sum);
         }
 
         result.trit_len = @min(max_len + 1, MAX_TRITS);
@@ -381,7 +381,7 @@ pub const HybridBigInt = struct {
             inline for (0..SIMD_WIDTH) |i| {
                 const idx = base + i;
                 if (idx < MAX_TRITS) {
-                    result.unpacked_cache[idx] = simd_result.sum[i];
+                    result.unpacked_cache.?[idx] = simd_result.sum[i];
                 }
                 carries[chunk][i] = simd_result.carry[i];
             }
@@ -395,7 +395,7 @@ pub const HybridBigInt = struct {
             const chunk = i / SIMD_WIDTH;
             const offset = i % SIMD_WIDTH;
 
-            var val: i16 = result.unpacked_cache[i];
+            var val: i16 = result.unpacked_cache.?[i];
 
             // Add carry from SIMD (shifted by 1 position)
             if (i > 0) {
@@ -418,7 +418,7 @@ pub const HybridBigInt = struct {
                 carry -= 1;
             }
 
-            result.unpacked_cache[i] = @intCast(val);
+            result.unpacked_cache.?[i] = @intCast(val);
             _ = chunk;
             _ = offset;
         }
@@ -454,7 +454,7 @@ pub const HybridBigInt = struct {
                 if (i + j >= MAX_TRITS) break;
 
                 var prod: i16 = @as(i16, a_trit) * @as(i16, b.getTritChecked(j));
-                prod += result.unpacked_cache[i + j];
+                prod += result.unpacked_cache.?[i + j];
                 prod += carry;
                 carry = 0;
 
@@ -467,11 +467,11 @@ pub const HybridBigInt = struct {
                     carry -= 1;
                 }
 
-                result.unpacked_cache[i + j] = @intCast(prod);
+                result.unpacked_cache.?[i + j] = @intCast(prod);
             }
 
             if (carry != 0 and i + b.trit_len < MAX_TRITS) {
-                result.unpacked_cache[i + b.trit_len] += carry;
+                result.unpacked_cache.?[i + b.trit_len] += carry;
             }
         }
 
@@ -499,7 +499,7 @@ pub const HybridBigInt = struct {
 
             inline for (0..SIMD_WIDTH) |i| {
                 a_vec[i] = a.getTritChecked(base + i);
-                b_vec[i] = .getTritChecked(base + i);
+                b_vec[i] = b.getTritChecked(base + i);
             }
 
             total += simdDotProduct(a_vec, b_vec);
@@ -508,7 +508,7 @@ pub const HybridBigInt = struct {
         // Remainder (scalar)
         const remainder_start = num_chunks * SIMD_WIDTH;
         for (remainder_start..min_len) |i| {
-            total += @as(i32, a.getTritChecked(i)) * @as(i32, .getTritChecked(i));
+            total += @as(i32, a.getTritChecked(i)) * @as(i32, b.getTritChecked(i));
         }
 
         return total;

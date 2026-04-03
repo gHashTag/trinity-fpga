@@ -282,7 +282,7 @@ pub const JitVSAEngine = struct {
         // Scalar fallback
         var count: i64 = 0;
         for (0..dim) |i| {
-            if (a.unpacked_cache[i] != b.unpacked_cache[i]) {
+            if (a.unpacked_cache.?[i] != b.unpacked_cache.?[i]) {
                 count += 1;
             }
         }
