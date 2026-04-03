@@ -13,6 +13,7 @@ const episodes = @import("episodes.zig");
 const auto_improve = @import("auto_improve.zig");
 const episode_handler = @import("episode_handler.zig");
 const EpisodeLogger = @import("episode_logger.zig").EpisodeLogger;
+const EpisodePattern = auto_improve.EpisodePattern;
 
 // ============================================================================
 
@@ -437,7 +438,9 @@ pub const QueenBackend = struct {
         self.health.last_improve_time = @truncate(std.time.nanoTimestamp());
 
         // Generate .tri spec and compile with tri_gen
-        const tri_spec = try engine.generateTriSpec(result.quality_score, result.patterns);
+        // TODO: Need to analyze patterns from episodes - passing empty for now
+        const patterns: []const EpisodePattern = &[_]EpisodePattern{};
+        const tri_spec = try engine.generateTriSpec(result.quality_score, patterns);
         defer self.allocator.free(tri_spec);
 
         // Write .tri spec to file
@@ -459,7 +462,8 @@ pub const QueenBackend = struct {
             "src/generated",
         };
 
-        const codegen_result = std.process.ChildProcess.exec(self.allocator, args) catch |err| {
+        var child = std.process.Child.init(args, self.allocator);
+        const codegen_result = child.spawnAndWait() catch |err| {
             const error_response = ImproveResponse{
                 .success = false,
                 .message = try std.fmt.allocPrint(self.allocator, "tri_gen failed: {}", .{err}),

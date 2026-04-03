@@ -1,0 +1,1 @@
+{"episode_id":"ep-002","agent":"beta","episode_type":"error","timestamp":"2026-03-31T10:01:00Z","title":"Test error","parent_episode_id":null,"correlation_id":null,"data":{"domain":"test","action":"fail action","thought":"fail thought","next_step":null}}

@@ -1,0 +1,11 @@
+{
+  "issue_bindings": {
+    "active": [],
+    "completed": []
+  },
+  "heartbeat": {
+    "agent_id": null,
+    "last_heartbeat": null,
+    "status": "idle"
+  }
+}

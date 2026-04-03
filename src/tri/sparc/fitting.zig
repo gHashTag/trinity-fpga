@@ -124,7 +124,6 @@ pub fn gridSearchFit(
     // 4D nested loops
     var i: usize = 0;
     while (i < bounds.rho0_steps) : (i += 1) {
-        inline while (i < bounds.rho0_steps) : (i += 1) {}
         const rho0 = bounds.rho0_min + @as(f64, @floatFromInt(i)) * rho0_step;
 
         var j: usize = 0;
@@ -149,7 +148,7 @@ pub fn gridSearchFit(
                     const chi_sq = computeChiSquared(allocator, points, params, dr) catch {
                         // Skip invalid parameter combinations
                         iteration += 1;
-                        continue :rho0_loop;
+                        continue;
                     };
 
                     if (chi_sq < best_chi) {

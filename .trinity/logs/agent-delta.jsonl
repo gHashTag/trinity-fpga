@@ -1,0 +1,1 @@
+{"episode_id":"ep-test-1","agent":"delta","episode_type":"task","timestamp":"2026-03-31T11:1:00Z","title":"Test 1","parent_episode_id":null,"correlation_id":null,"data":{"domain":"test","action":"action 1","thought":null,"next_step":null}}

@@ -78,8 +78,7 @@ fn base64UrlDecode(allocator: Allocator, input: []const u8) ![]u8 {
         allocator.free(normalized);
     }
 
-    var base64_decoder = std.base64.standard.Decoder;
-    return base64_decoder.decode(allocator, if (padding > 0) padded else normalized);
+    return std.base64.standard.Decoder.decode(allocator, if (padding > 0) padded else normalized);
 }
 
 /// Generate JWT token
@@ -130,19 +129,17 @@ pub fn generateToken(allocator: Allocator, secret: []const u8, payload: Payload)
 pub fn verifyToken(allocator: Allocator, token: []const u8, secret: []const u8) !Payload {
     // Split token into parts
     var parts = std.mem.splitScalar(u8, token, '.');
-    const header_encoded = parts.first() orelse return error.InvalidToken;
-    const payload_encoded = parts.next() orelse return error.InvalidToken;
-    const signature_encoded = parts.next() orelse return error.InvalidToken;
+    const header_encoded = parts.first();
+    const payload_encoded = if (parts.next()) |p| p else return error.InvalidToken;
+    const signature_encoded = if (parts.next()) |s| s else return error.InvalidToken;
 
     if (parts.next() != null) return error.InvalidToken; // Too many parts
 
     // Rebuild signature input
-    var signature_input = std.ArrayList(u8).init(allocator);
-    defer signature_input.deinit();
+    var signature_input = try std.ArrayList(u8).initCapacity(allocator, 256);
+    defer signature_input.deinit(allocator);
 
-    try signature_input.appendSlice(header_encoded);
-    try signature_input.append('.');
-    try signature_input.appendSlice(payload_encoded);
+    try signature_input.writer(allocator).print("{s}.{s}", .{ header_encoded, payload_encoded });
 
     // Decode provided signature
     const provided_sig = try base64UrlDecode(allocator, signature_encoded);

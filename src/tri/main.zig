@@ -44,6 +44,7 @@ const structured_log = @import("structured_log.zig");
 const env_loader = @import("env_loader.zig");
 const golden_chain = @import("golden_chain");
 const tri_clara = @import("tri_clara.zig");
+const tri_sparc = @import("sparc/mod.zig");
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // MAIN
@@ -314,7 +315,7 @@ pub fn main() !void {
             try commands.runDeployCommand(allocator, deploy_sub, deploy_args);
             return;
         }
-        // Railway namespace: route `tri railway <build|status|logs>` to railway commands
+        // Railway namespace: route `tri railway <build|status|logs|claude|telegram>` to railway commands
         if (std.mem.eql(u8, first_arg, "railway")) {
             const railway_sub = if (arg_idx + 1 < args.len) args[arg_idx + 1] else "";
             if (railway_sub.len == 0) {
@@ -324,10 +325,38 @@ pub fn main() !void {
                 std.debug.print("  {s}tri railway status{s}   Show deployment status\n", .{ "\x1b[0;36m", "\x1b[0m" });
                 std.debug.print("  {s}tri railway logs{s}     Show build/deploy logs\n", .{ "\x1b[0;36m", "\x1b[0m" });
                 std.debug.print("  {s}tri railway up{s}      Alias for 'build'\n", .{ "\x1b[0;36m", "\x1b[0m" });
+                std.debug.print("\n{s}CLAUDE RUNTIME:{s}\n", .{ "\x1b[0;36m", "\x1b[0m" });
+                std.debug.print("  {s}tri railway claude install{s}     Check Claude installation\n", .{ "\x1b[0;36m", "\x1b[0m" });
+                std.debug.print("  {s}tri railway claude version{s}     Show Claude version\n", .{ "\x1b[0;36m", "\x1b[0m" });
+                std.debug.print("  {s}tri railway claude login-status{s} Check login status\n", .{ "\x1b[0;36m", "\x1b[0m" });
+                std.debug.print("\n{s}TELEGRAM CHANNELS:{s}\n", .{ "\x1b[0;36m", "\x1b[0m" });
+                std.debug.print("  {s}init [--from-env <var>]{s}  Configure Telegram bot (stdin > env)\n", .{ "\x1b[0;36m", "\x1b[0m" });
+                std.debug.print("  {s}start [--skip-permissions]{s} Start Claude with Telegram\n", .{ "\x1b[0;36m", "\x1b[0m" });
+                std.debug.print("  {s}pair <code>{s}             Complete pairing (auto-allowlist)\n", .{ "\x1b[0;36m", "\x1b[0m" });
+                std.debug.print("  {s}status{s}                   Show channel status\n", .{ "\x1b[0;36m", "\x1b[0m" });
+                std.debug.print("  {s}logs [lines]{s}             Show Claude logs (default: 100)\n", .{ "\x1b[0;36m", "\x1b[0m" });
+                std.debug.print("  {s}allowlist [on|off]{s}      Manage allowlist security\n", .{ "\x1b[0;36m", "\x1b[0m" });
+                std.debug.print("  {s}doctor{s}                   Diagnose issues\n", .{ "\x1b[0;36m", "\x1b[0m" });
                 return;
             }
             const railway_args = if (arg_idx + 2 < args.len) args[arg_idx + 2 ..] else &[_][]const u8{};
             logAgentCommand(args[arg_idx..]);
+
+            // Claude runtime commands
+            if (std.mem.eql(u8, railway_sub, "claude")) {
+                const claude_runtime = @import("claude_runtime.zig");
+                try claude_runtime.runClaudeCommand(allocator, railway_args);
+                return;
+            }
+
+            // Telegram channels commands
+            if (std.mem.eql(u8, railway_sub, "telegram")) {
+                const claude_channels = @import("claude_channels.zig");
+                try claude_channels.runClaudeChannelsCommand(allocator, railway_args);
+                return;
+            }
+
+            // Original railway commands
             const railway_build = @import("railway_build.zig");
             if (std.mem.eql(u8, railway_sub, "build") or std.mem.eql(u8, railway_sub, "up")) {
                 try railway_build.runRailwayBuildCommand(allocator, railway_args);
@@ -880,6 +909,7 @@ pub fn main() !void {
         .zenodo => try tri_zenodo.runZenodoCommand(allocator, cmd_args),
         .clara => try tri_clara.main(allocator, cmd_args), // DARPA CLARA TA1 (PA-25-07-02)
         .kaggle => try tri_kaggle.runKaggleCommand(allocator, cmd_args),
+        .sparc => try tri_sparc.runCommand(allocator, cmd_args), // SPARC galaxy rotation curves
         .cloud => try tri_register.runCommand(allocator, "cloud", cmd_args),
         .farm => try tri_register.runCommand(allocator, "farm", cmd_args),
         .loop => try tri_loop.runLoopCommand(allocator, cmd_args),

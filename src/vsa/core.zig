@@ -565,7 +565,7 @@ test "cosineSimilarityF16 matches cosineSimilarity" {
     var b = randomVector(100, 222);
 
     const sim_f64 = cosineSimilarity(&a, &b);
-    const sim_f16 = cosineSimilarityF16(&a, &b);
+    const sim_f16 = cosineSimilarityF16(&a, &b, std.heap.page_allocator);
 
     // Should be very close (within f16 precision)
     try std.testing.expectApproxEqAbs(sim_f64, sim_f16, 0.01);
@@ -574,7 +574,7 @@ test "cosineSimilarityF16 matches cosineSimilarity" {
 test "cosineSimilarityF16 identical vectors" {
     var a = randomVector(100, 333);
 
-    const sim = cosineSimilarityF16(&a, &a);
+    const sim = cosineSimilarityF16(&a, &a, std.heap.page_allocator);
 
     // Identical vectors should have similarity 1.0
     try std.testing.expectApproxEqAbs(@as(f64, 1.0), sim, 0.01);
@@ -584,7 +584,7 @@ test "cosineSimilarityF16 zero vectors" {
     var a = HybridBigInt.zero();
     var b = HybridBigInt.zero();
 
-    const sim = cosineSimilarityF16(&a, &b);
+    const sim = cosineSimilarityF16(&a, &b, std.heap.page_allocator);
 
     // Zero vectors should return 0
     try std.testing.expectEqual(@as(f64, 0), sim);
@@ -660,7 +660,9 @@ pub fn qbundle(vectors: []const HybridBigInt, amplitudes: []const f32, allocator
                 @constCast(vec).ensureUnpacked();
                 if (i + j < vec.trit_len) {
                     const weight = amplitudes[k] / normalized;
-                    sum += @as(f32, @floatFromInt(vec.unpacked_cache[i + j])) * weight;
+                    if (vec.unpacked_cache) |cache| {
+                        sum += @as(f32, @floatFromInt(cache[i + j])) * weight;
+                    }
                 }
             }
             weighted_sum[j] = sum;
@@ -682,7 +684,9 @@ pub fn qbundle(vectors: []const HybridBigInt, amplitudes: []const f32, allocator
         inline for (0..SIMD_WIDTH) |j| {
             const float_val: f32 = out[j];
             const int_val: i32 = @intFromFloat(float_val);
-            result.unpacked_cache[i + j] = @intCast(int_val);
+            if (result.unpacked_cache) |cache| {
+                cache[i + j] = @intCast(int_val);
+            }
         }
     }
 
@@ -693,7 +697,9 @@ pub fn qbundle(vectors: []const HybridBigInt, amplitudes: []const f32, allocator
             @constCast(vec).ensureUnpacked();
             if (i < vec.trit_len) {
                 const weight = amplitudes[k] / normalized;
-                sum += @as(f32, @floatFromInt(getTritSafe(vec, i))) * weight;
+                if (vec.unpacked_cache) |cache| {
+                    sum += @as(f32, @floatFromInt(cache[i])) * weight;
+                }
             }
         }
 
@@ -778,7 +784,7 @@ pub fn computeCoherence(vectors: []const HybridBigInt) f32 {
 
     for (0..vectors.len) |i| {
         for (i + 1..vectors.len) |j| {
-            const sim = cosineSimilarityF16(&vectors[i], &vectors[j]);
+            const sim = cosineSimilarityF16(&vectors[i], &vectors[j], std.heap.page_allocator);
             total_sim += sim;
             count += 1;
         }
@@ -891,15 +897,15 @@ test "entangle with correlation" {
 
     // With full correlation, vectors should share trits using safe access
     try std.testing.expectEqual(
-        getTritSafe(@constCast(a), 0),
-        getTritSafe(@constCast(&fully_entangled.right), 0),
+        getTritSafe(&a, 0),
+        getTritSafe(&fully_entangled.right, 0),
     );
 
     const independent = entangle(&a, &b, 0.0);
 
     // With zero correlation, vectors should be copies
     try std.testing.expectEqual(
-        a.unpacked_cache[0],
-        independent.left.unpacked_cache[0],
+        if (a.unpacked_cache) |cache| cache[0] else 0,
+        if (independent.left.unpacked_cache) |cache| cache[0] else 0,
     );
 }

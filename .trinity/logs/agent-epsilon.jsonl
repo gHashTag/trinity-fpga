@@ -1,0 +1,1 @@
+{"episode_id":"ep-new-1","agent":"epsilon","episode_type":"task","timestamp":"2026-03-31T12:01:00Z","title":"New 1","parent_episode_id":null,"correlation_id":null,"data":{"domain":"test","action":"action 1","thought":null,"next_step":null}}

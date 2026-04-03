@@ -160,7 +160,7 @@ pub const HybridBigInt = struct {
     }
 
     /// Safe access to unpacked cache (panics if not unpacked)
-    inline fn getTritChecked(self: *const Self, pos: usize) Trit {
+    pub inline fn getTritChecked(self: *const Self, pos: usize) Trit {
         const cache = self.unpacked_cache orelse return 0;
         return cache[pos];
     }
@@ -208,8 +208,7 @@ pub const HybridBigInt = struct {
     }
 
     /// Get trit at position (auto-unpacks if needed)
-    pub fn getTrit(self: *Self, pos: usize, allocator: std.mem.Allocator) Trit {
-        _ = allocator; // Read-only, no allocation needed
+    pub fn getTrit(self: *Self, pos: usize) Trit {
         if (pos >= self.trit_len) return 0;
         self.ensureUnpacked();
         return self.unpacked_cache.?[pos];
@@ -221,8 +220,7 @@ pub const HybridBigInt = struct {
         return @intCast(self.getTrit(pos));
     }
     /// Set trit at position (marks dirty)
-    pub fn setTrit(self: *Self, pos: usize, value: Trit, allocator: std.mem.Allocator) void {
-        _ = allocator; // Uses self.allocator
+    pub fn setTrit(self: *Self, pos: usize, value: Trit) void {
         if (pos >= MAX_TRITS) return;
         self.ensureUnpacked();
         self.unpacked_cache.?[pos] = value;
@@ -481,13 +479,13 @@ pub const HybridBigInt = struct {
     }
 
     /// SIMD dot product (for VSA similarity)
-    pub fn dotProduct(a: *Self, b: *Self, allocator: std.mem.Allocator) i32 {
-        _ = allocator; // Read-only, no allocation needed
-        a.ensureUnpacked();
+    pub fn dotProduct(self: *Self, b: *Self, allocator: std.mem.Allocator) i32 {
+        _ = allocator;
+        self.ensureUnpacked();
         b.ensureUnpacked();
 
         var total: i32 = 0;
-        const min_len = @min(a.trit_len, b.trit_len);
+        const min_len = @min(self.trit_len, b.trit_len);
         const num_chunks = min_len / SIMD_WIDTH;
 
         // SIMD chunks
@@ -498,7 +496,7 @@ pub const HybridBigInt = struct {
             var b_vec: Vec32i8 = undefined;
 
             inline for (0..SIMD_WIDTH) |i| {
-                a_vec[i] = a.getTritChecked(base + i);
+                a_vec[i] = self.getTritChecked(base + i);
                 b_vec[i] = b.getTritChecked(base + i);
             }
 
@@ -508,7 +506,7 @@ pub const HybridBigInt = struct {
         // Remainder (scalar)
         const remainder_start = num_chunks * SIMD_WIDTH;
         for (remainder_start..min_len) |i| {
-            total += @as(i32, a.getTritChecked(i)) * @as(i32, b.getTritChecked(i));
+            total += @as(i32, self.getTritChecked(i)) * @as(i32, b.getTritChecked(i));
         }
 
         return total;
@@ -662,7 +660,7 @@ test "SIMD dotProduct" {
     var a = HybridBigInt.fromI64(12345);
     var b = HybridBigInt.fromI64(12345);
 
-    const dot = a.dotProduct(&b, std.testing.allocator);
+    const dot = a.dotProduct(&b, std.heap.page_allocator);
     // dot product of identical vectors = sum of squares of trits
     // For balanced ternary, each trit is -1, 0, or 1, so trit^2 = 0 or 1
     try std.testing.expect(dot > 0);

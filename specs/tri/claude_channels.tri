@@ -1,0 +1,122 @@
+name: claude_channels
+version: "1.1.0"
+language: zig
+module: tri.claude_channels
+
+description: |
+  Claude Channels integration for Telegram.
+  Manages tmux sessions, pairing, and status monitoring via Railway SSH.
+
+  SECURITY FEATURES (v1.1):
+  - Auto-allowlist enabled by default after pairing (P0)
+  - Bot token read from stdin > env > CLI arg (P0)
+  - Version gate: Claude >= 2.1.80 required (P1)
+  - --skip-permissions flag available with explicit warning (P1)
+
+types:
+  ChannelStatus:
+    kind: enum
+    variants: [NotStarted, WaitingForPair, Paired, Error, Crashed, Unknown]
+
+  SessionError:
+    kind: error_set
+    variants:
+      - SSHExecFailed
+      - TmuxCommandFailed
+      - SessionAlreadyRunning
+      - InvalidPairingCode
+      - TokenReadFailed
+
+  StartOptions:
+    kind: struct
+    fields:
+      skip_permissions: boolean (default: false)
+      auto_allowlist: boolean (default: true)
+
+behaviors:
+  - name: startSession
+    given: StartOptions struct
+    when: Claude session with Telegram channels should be started
+    then: |
+      If skip_permissions: shows security warning
+      Builds command: 'claude --channel telegram [--dangerously-skip-permissions]'
+      Uses railway_ssh.tmuxNewSession() to create detached session named 'claude'
+      Kills existing session first if present
+      Checks Claude version compatibility (requires 2.1.80+)
+      Returns void on success, error on SSH failure
+
+  - name: sendPairCommand
+    given: 6-character pairing code from Telegram bot
+    when: User completes pairing flow in Telegram
+    then: |
+      Validates pairing code format (exactly 6 alphanumeric chars)
+      Uses railway_ssh.tmuxSendKeys() to send '/telegram:access pair <code>' to Claude session
+      Sends C-m to execute command
+      P0: Automatically sends '/telegram:access policy allowlist' after 1.5s delay
+      Returns void on success, InvalidPairingCode if format invalid
+
+  - name: enableAllowlist
+    given: No arguments
+    when: Allowlist should be enabled for security
+    then: |
+      Uses railway_ssh.tmuxSendKeys() to send '/telegram:access policy allowlist'
+      Restricts channel to only paired user
+      Returns void on success
+
+  - name: getStatus
+    given: No arguments
+    when: Channel status inspection is needed
+    then: |
+      Uses railway_ssh.tmuxCapture() to get last 50 lines from 'claude' session
+      Parses output for status indicators:
+        - "READY" or "paired" -> Paired
+        - "pairing code" or "waiting" -> WaitingForPair
+        - "ERROR" or "failed" -> Error
+        - "crashed" or "exited" -> Crashed
+        - No session -> NotStarted
+        - Otherwise -> Unknown
+      Returns ChannelStatus enum value
+
+  - name: getLogs
+    given: Number of lines (optional, default 100)
+    when: Claude session logs are needed
+    then: |
+      Uses railway_ssh.tmuxCapture() to get last N lines from 'claude' session
+      Returns owned stdout slice with captured output
+      Returns error if SSH fails or session not found
+
+  - name: restartSession
+    given: StartOptions struct
+    when: Claude session needs recovery
+    then: |
+      Kills existing 'claude' tmux session
+      Calls startSession() with given options
+      Returns void on success, error on failure
+
+  - name: stopSession
+    given: No arguments
+    when: Claude session should be terminated
+    then: |
+      Kills 'claude' tmux session via SSH
+      Returns void even if session doesn't exist (idempotent)
+      Returns error on SSH failure
+
+  - name: configureTelegramBot
+    given: Optional CLI token argument
+    when: Telegram bot token needs to be configured
+    then: |
+      P0: Reads token in priority order: stdin > env (TELEGRAM_BOT_TOKEN) > CLI arg
+      Validates token format (bot_identifier:actual_token)
+      Shows security reminder based on token source
+      Returns owned token string for potential persistence
+      Does NOT automatically persist to Railway (manual step required)
+
+export_functions:
+  - startSession
+  - sendPairCommand
+  - enableAllowlist
+  - getStatus
+  - getLogs
+  - restartSession
+  - stopSession
+  - configureTelegramBot

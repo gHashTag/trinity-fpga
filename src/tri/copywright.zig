@@ -57,7 +57,7 @@ const DEFAULT_REDDITS = [_][]const u8{
 };
 
 const DEFAULT_CONFIG = Config{
-    .target_subreddits = &DEFAULT_REDDITS,
+    .target_subreddits = DEFAULT_REDDITS[0..],
     .optimal_times_reddit = @as([]const u8, "Tue-Thu 14:00-17:00 UTC"),
     .optimal_times_twitter = @as([]const u8, "Peak audience times (depends on analytics)"),
 };
@@ -100,13 +100,13 @@ fn saveConfig(allocator: Allocator, config: Config) !void {
 
 /// Extract key highlights from agent output
 fn analyzeContent(allocator: Allocator, agent_output: []const u8) ![][]const u8 {
-    var highlights = std.ArrayList([]const u8).init(allocator);
+    var highlights = try std.ArrayList([]const u8).initCapacity(allocator, 8);
 
     // Look for numbers/percentages (viral-worthy)
     if (std.mem.indexOf(u8, agent_output, "%") != null or
         std.mem.indexOf(u8, agent_output, "x") != null)
     {
-        try highlights.append("📊 Metrics-based content detected");
+        try highlights.append(allocator, "📊 Metrics-based content detected");
     }
 
     // Look for key achievement keywords
@@ -119,16 +119,16 @@ fn analyzeContent(allocator: Allocator, agent_output: []const u8) ![][]const u8 
     for (achievement_keywords) |keyword| {
         if (std.mem.indexOf(u8, agent_output, keyword) != null) {
             const keyword_phrase = try std.fmt.allocPrint(allocator, "🏆 Achievement: {s}", .{keyword});
-            try highlights.append(keyword_phrase);
+            try highlights.append(allocator, keyword_phrase);
             allocator.free(keyword_phrase);
         }
     }
 
     if (highlights.items.len == 0) {
-        try highlights.append("📝 Agent work completed (generic)");
+        try highlights.append(allocator, "📝 Agent work completed (generic)");
     }
 
-    return highlights.toOwnedSlice();
+    return highlights.toOwnedSlice(allocator);
 }
 
 /// Generate Twitter/X thread from highlights

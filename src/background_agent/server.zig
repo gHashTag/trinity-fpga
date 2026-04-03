@@ -107,26 +107,27 @@ pub const Server = struct {
         const request_str = buffer[0..request];
         var lines = std.mem.splitScalar(u8, request_str, '\n');
 
-        const first_line = lines.next() orelse return error.InvalidRequest;
+        const first_line = if (lines.next()) |line| line else return error.InvalidRequest;
         var parts = std.mem.splitScalar(u8, first_line, ' ');
 
-        const method = parts.next() orelse return error.InvalidRequest;
+        const method = if (parts.next()) |m| m else return error.InvalidRequest;
         _ = parts.next(); // URI
         _ = parts.next(); // Protocol
 
         // Parse URI and query string
-        var uri_parts = std.mem.splitScalar(u8, parts.next() orelse "", '?');
-        const path = uri_parts.next() orelse return error.InvalidRequest;
-        const query = uri_parts.next() orelse "";
+        const next_part = parts.next() orelse "";
+        var uri_parts = std.mem.splitScalar(u8, next_part, '?');
+        const path = if (uri_parts.next()) |p| p else return error.InvalidRequest;
+        const query = if (uri_parts.next()) |q| q else "";
 
         // Parse headers
-        var headers = std.ArrayList(Header).init(self.allocator);
+        var headers = try std.ArrayList(Header).initCapacity(self.allocator, 16);
         errdefer {
             for (headers.items) |*h| {
                 self.allocator.free(h.name);
                 self.allocator.free(h.value);
             }
-            headers.deinit();
+            headers.deinit(self.allocator);
         }
 
         while (lines.next()) |line| {
@@ -139,7 +140,7 @@ pub const Server = struct {
                         value[1..]
                     else
                         value;
-                    try headers.append(Header{
+                    try headers.append(self.allocator, .{
                         .name = try self.allocator.dupe(u8, name),
                         .value = try self.allocator.dupe(u8, value_trimmed),
                     });
@@ -149,18 +150,18 @@ pub const Server = struct {
 
         // Find body (after empty line)
         var body_len: usize = 0;
-        var body_start: usize = request.len;
+        var body_start: usize = request_str.len;
 
-        for (lines, 0..) |line, i| {
-            const offset = if (i == 0) 0 else blk: {
-                const idx = std.mem.indexOf(u8, request_str, line) orelse break;
-                break :blk idx + line.len;
-            };
-            if (offset + 2 < request.len and
-                request[offset + 1] == '\r' and request[offset + 2] == '\n')
+        var idx: usize = 0;
+        while (lines.next()) |line| {
+            const offset = idx;
+            const line_len = line.len;
+            idx += line_len + 1; // +1 for newline
+            if (offset + 2 < request_str.len and
+                request_str[offset + 1] == '\r' and request_str[offset + 2] == '\n')
             {
                 body_start = offset + 3;
-                body_len = request.len - body_start;
+                body_len = request_str.len - body_start;
                 break;
             }
         }
@@ -171,9 +172,13 @@ pub const Server = struct {
         var user_id: ?[]const u8 = null;
         for (headers.items) |*h| {
             if (std.mem.eql(u8, h.name, "Authorization")) {
-                const auth_parts = std.mem.splitScalar(u8, h.value, ' ');
+                var auth_parts = std.mem.splitScalar(u8, h.value, ' ');
                 _ = auth_parts.next(); // "Bearer"
-                const token = auth_parts.rest() orelse continue;
+                var token: []const u8 = "";
+                // Collect remaining bytes as token
+                while (auth_parts.next()) |part| {
+                    token = part;
+                }
 
                 if (token.len > 0) {
                     const payload = Jwt.verifyToken(self.allocator, token, self.auth_secret) catch |err| {
@@ -302,7 +307,7 @@ pub const Server = struct {
             name: []const u8,
             service_id: []const u8,
         }, allocator, body, .{ .ignore_unknown_fields = true });
-        defer parsed.deinit();
+        defer parsed.deinit(allocator);
 
         // Create session
         const session = try Sessions.createSession(allocator, &self.db_client, parsed.value.name, parsed.value.service_id);
@@ -394,7 +399,7 @@ pub const Server = struct {
             name: []const u8,
             image: []const u8,
         }, allocator, body, .{ .ignore_unknown_fields = true });
-        defer parsed.deinit();
+        defer parsed.deinit(allocator);
 
         // Create Railway service
         const result = try railway_client.createService(parsed.value.environment_id, parsed.value.name, parsed.value.image) catch |err| {
@@ -462,7 +467,7 @@ pub const Server = struct {
     fn sendResponse(self: *Server, stream: *net.Stream, response: Response) !void {
         // Build headers
         var headers = std.ArrayList(u8).init(self.allocator);
-        defer headers.deinit();
+        defer headers.deinit(self.allocator);
 
         try headers.writer().print(
             \\HTTP/1.1 {d} OK\r
@@ -505,10 +510,11 @@ test "server: parse simple request" {
     const request = "GET /health HTTP/1.1\r\nHost: localhost\r\n\r\n";
 
     var lines = std.mem.splitScalar(u8, request, '\n');
-    const first_line = lines.first();
+    const first_line = if (lines.next()) |line| line else @panic("no first line");
     var parts = std.mem.splitScalar(u8, first_line, ' ');
 
-    try std.testing.expectEqualStrings(parts.next(), "GET");
+    const method = if (parts.next()) |m| m else @panic("no method");
+    try std.testing.expectEqualStrings(method, "GET");
 }
 
 test "server: build health response" {

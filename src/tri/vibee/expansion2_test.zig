@@ -81,7 +81,7 @@ test "BatchNorm forward with running stats" {
         .track_running_stats = true,
     };
 
-    forward_batchnorm(&input, &gamma, &beta, &state, &output, config, batch_size, spatial_dims);
+    forward_batchnorm(input, gamma, beta, state, output, config, batch_size, spatial_dims);
 
     // Check output has zero mean and unit variance (approximately)
     const tolerance: f32 = 0.1;
@@ -127,7 +127,7 @@ test "BatchNorm without affine" {
         .track_running_stats = true,
     };
 
-    forward_batchnorm(&input, &gamma, &beta, &state, &output, config, batch_size, spatial_dims);
+    forward_batchnorm(input, gamma, beta, state, output, config, batch_size, spatial_dims);
 
     // Without affine, output = (x - mean) / std
     // output[0] = (1 - 3.5) / sqrt(2.92) = -2.5 / 1.709 ≈ -1.463

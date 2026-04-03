@@ -6,7 +6,7 @@ const Allocator = std.mem.Allocator;
 
 test "e2e: SOUL.md template exists" {
     // Verify template file exists and has required sections
-    const content = try std.fs.cwd().readFileAlloc(std.testing.allocator, "templates/SOUL.md", .{});
+    const content = try std.fs.cwd().readFileAlloc(std.testing.allocator, "templates/SOUL.md", .{ .max_bytes = 1024 });
     defer std.testing.allocator.free(content);
 
     // Check for required sections
@@ -20,7 +20,7 @@ test "e2e: SOUL.md template exists" {
 
 test "e2e: issue_bindings.json exists" {
     // Verify bindings file exists with correct structure
-    const content = try std.fs.cwd().readFileAlloc(std.testing.allocator, ".trinity/issue_bindings.json", .{});
+    const content = try std.fs.cwd().readFileAlloc(std.testing.allocator, ".trinity/issue_bindings.json", .{ .max_bytes = 1024 });
     defer std.testing.allocator.free(content);
 
     // Check for required fields

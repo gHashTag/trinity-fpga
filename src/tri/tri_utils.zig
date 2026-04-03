@@ -194,6 +194,8 @@ pub const Command = enum {
     neuro,
     // Chemistry (v6.0)
     chem,
+    // SPARC Galaxy Rotation Curves (v1.0)
+    sparc,
     // Intelligence System
     intelligence,
     // Dev Utilities
@@ -682,6 +684,13 @@ pub fn printHelp() void {
     std.debug.print("  {s}neuro{s} neurons                Brain statistics & sacred constants\n", .{ GREEN, RESET });
     std.debug.print("\n", .{});
 
+    std.debug.print("{s}SPARC (v1.0) - Galaxy Rotation Curves:{s}\n", .{ GOLDEN, RESET });
+    std.debug.print("  {s}sparc{s} fit <galaxy>           Fit Savchenko model to galaxy data\n", .{ GREEN, RESET });
+    std.debug.print("  {s}sparc{s} plot <galaxy>          ASCII-art rotation curve plot\n", .{ GREEN, RESET });
+    std.debug.print("  {s}sparc{s} list                   List all available galaxies\n", .{ GREEN, RESET });
+    std.debug.print("  {s}sparc{s} fit --format json      JSON output for batch processing\n", .{ GREEN, RESET });
+    std.debug.print("\n", .{});
+
     std.debug.print("{s}SACRED INTELLIGENCE:{s}\n", .{ GOLDEN, RESET });
     std.debug.print("  {s}intelligence{s} [<symbol>.]   Sacred formula + gematria analysis\n", .{ GREEN, RESET });
     std.debug.print("  {s}intel{s} [<symbol>.]          Alias for intelligence\n", .{ GREEN, RESET });
@@ -918,6 +927,8 @@ pub fn parseCommand(arg: []const u8) Command {
     if (std.mem.eql(u8, arg, "neuro") or std.mem.eql(u8, arg, "neuroscience")) return .neuro;
     // Chemistry (v6.0)
     if (std.mem.eql(u8, arg, "chem") or std.mem.eql(u8, arg, "chemistry")) return .chem;
+    // SPARC Galaxy Rotation Curves (v1.0)
+    if (std.mem.eql(u8, arg, "sparc") or std.mem.eql(u8, arg, "sp")) return .sparc;
     // Intelligence System
     if (std.mem.eql(u8, arg, "intelligence") or std.mem.eql(u8, arg, "intel")) return .intelligence;
     // Dev Utilities

@@ -1,17 +1,31 @@
-# Data directories (not needed for Queen build)
+# === Railway Snapshot Exclusions ===
+
+# Data directories (8GB+)
 data/
 kaggle/
+*.tar.gz
+*.tar.xz
+*.zip
 
 # Build outputs
 zig-out/
 zig-out-linux/
 zig-cache/
+build-artifacts/
+release/
+*.o
+*.a
+*.so
+*.dylib
+*.dll
 
-# Documentation
+# Documentation (1.5GB node_modules)
 docs/
 
-# FPGA files
+# FPGA files (1GB)
 fpga/
+*.bit
+*.bin
 
 # Large test/benchmark files
 *.png
@@ -19,23 +33,62 @@ fpga/
 *.jpeg
 *.mp4
 *.wav
+*.mp3
+*.flac
+*.webp
 
 # Node modules in subdirectories
 **/node_modules/
+**/.npm/
 
 # Demotapes and recordings
 demotapes/
 recordings/
+*.mp4
+*.webm
 
 # External deps with large binaries
 external/
+archive/
+apps/
+trinity-nexus/
 
 # Git (Railway should skip)
 .git/
 
-# Archive directories
-archive/
+# Cache directories
+.cache/
+zig-cache/
+**/.cache/
 
+# Generated files
+generated/
+*.zig-cache/
+zig-out/
 
-# Git (Railway should skip, but explicit)
-.git
+# Training data and models
+models/
+*.pth
+*.pt
+*.onnx
+*.safetensors
+*.gguf
+
+# Large JSON/CSV files
+*.csv
+*.jsonl
+*.parquet
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test data
+test_data/
+bench/

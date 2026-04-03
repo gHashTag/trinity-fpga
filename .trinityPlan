@@ -1,57 +1,132 @@
 # Trinity Plan: Railway Docker Build Fix
 
-## Audit Note (Step 1/5)
-**Hypothesis**: Repo has conflicting Dockerfiles, Railway selecting wrong one.
+## Mission Outcome
 
-**Evidence**:
-- No `packages/` directory exists in this repo
-- `background-agent-api` is a Zig binary (from build.zig), not Node.js
-- Two Dockerfiles found:
-  - `/Dockerfile` (newly created, fixed: ubuntu:24.04 runtime stage)
-  - `deploy/Dockerfile.background-agent` (broken: uses FROM scratch then RUN useradd)
-- Railway build logs show ghost Node.js Dockerfile (not in repo)
+**ROOT CAUSE IDENTIFIED**: 17GB repository blocks Railway snapshot creation.
+Railway fails before build stage: "Deployment does not have an associated build"
 
-**Fact**: The `packages/api/Dockerfile` mentioned in directive DOES NOT EXIST in this repo. Different codebase.
+## Execution Summary
 
-**Conclusion**: For `background-agent-railway` (Zig binary), root `/Dockerfile` IS the correct source of truth.
+| Step | Action | Status |
+|------|--------|--------|
+| 1. Audit Dockerfiles | ✅ Completed | Root /Dockerfile IS source of truth for Zig binary |
+| 2. Delete broken file | ✅ Completed | Deleted deploy/Dockerfile.background-agent |
+| 3. Fix Dockerfile | ✅ Completed | ubuntu:24.04 runtime, fixed HEALTHCHECK |
+| 4. Fix symlinks | ✅ Completed | .trinity/memory/memory, src/vsa/trinity_canvas/docs_embed |
+| 5. Extract minimal set | ✅ Completed | deploy/railway-background-agent/ (2.3MB, 67 files) |
+| 6. Init minimal repo | ✅ Completed | Git repo initialized, branch renamed to main |
+| 7. Push to GitHub | ⏳ BLOCKED | GitHub repo needs manual creation |
+| 8. Reconnect Railway | ⏳ PENDING | After repo exists |
+| 9. Verify build | ⏳ PENDING | After Railway connected |
 
-## Decision Note (Step 2/5)
-**Action**: DELETE the broken `deploy/Dockerfile.background-agent` to eliminate ambiguity.
+## Blocker Resolution
 
-**Rationale**:
-- `/Dockerfile` (root) is now the fixed, correct one
-- Keeping duplicate broken Dockerfile creates confusion
-- Railway defaults to root Dockerfile - this is desired behavior for background-agent-railway
-- Single source of truth = `/Dockerfile`
+**BLOCKER**: GitHub repo `gHashTag/trinity-railway-agent` doesn't exist
 
-**Files to change**:
-- DELETE: `deploy/Dockerfile.background-agent`
-- KEEP: `/Dockerfile` (already fixed)
+**Solution** (run these commands after authenticating):
 
-## Railway Config Note (Step 3/5)
-**Action**: No RAILWAY_DOCKERFILE_PATH needed.
-
-**Reason**:
-- Root `/Dockerfile` IS the correct one
-- Railway defaults to root Dockerfile
-- No custom path required
-
-## Verification Note (Step 4/5)
-**Status**: Railway upload timing out (network issue, NOT code issue).
-- Dockerfile is correct
-- Snapshot size: ~95MB (reasonable)
-- Error: `operation timed out` during upload to Railway API
-
-**Next steps**:
-1. Commit changes to git
-2. Use Railway dashboard to redeploy from GitHub (if repo connected)
-3. Or retry CLI upload when network improves
-
-## Rollback Note (Step 5/5)
-**Rollback steps** (if needed):
 ```bash
-# Restore broken Dockerfile from git
-git checkout HEAD -- deploy/Dockerfile.background-agent
-# Delete fixed root Dockerfile
-git rm Dockerfile
+# 1. Authenticate GitHub CLI
+gh auth login
+
+# 2. Create repo and push
+cd /Users/playra/trinity-w1/deploy/railway-background-agent
+gh repo create gHashTag/trinity-railway-agent --public \
+  --description "Minimal Railway deployment for Trinity Background Agent API (Zig binary)" \
+  --source=. --remote=origin
+git push -u origin main
 ```
+
+**Alternative** (no gh CLI):
+1. Create repo at https://github.com/new
+2. Name: `trinity-railway-agent`
+3. Run:
+```bash
+git remote add origin https://github.com/gHashTag/trinity-railway-agent.git
+git push -u origin main
+```
+
+## Railway Reconnection Steps
+
+After GitHub push:
+
+1. Go to https://railway.app/project/AGENTS
+2. Delete `background-agent-railway` service (clears broken state)
+3. Click "New Service" → "Deploy from GitHub repo"
+4. Select `gHashTag/trinity-railway-agent`
+5. Railway auto-detects Dockerfile and railway.json
+
+## What's in the Minimal Repo
+
+```
+deploy/railway-background-agent/ (2.3MB, 67 files)
+├── Dockerfile              # Multi-stage, ubuntu:24.04 runtime
+├── railway.json            # Railway config
+├── build.zig               # Zig build system
+├── src/
+│   ├── background_agent/   # API server
+│   └── vsa/                # VSA library
+├── vm.zig, hybrid.zig, c_api.zig, science.zig, vsa_jit.zig
+└── DEPLOY_PLAN.md          # Detailed setup instructions
+```
+
+## Files Changed in Main Repo
+
+| File | Action |
+|------|--------|
+| `/Dockerfile` | Created (root, correct for Zig binary) |
+| `deploy/Dockerfile.background-agent` | Deleted (broken duplicate) |
+| `.railwayignore` | Expanded (excludes 10GB+ files) |
+| `deploy/railway-background-agent/` | Created (minimal deployment context) |
+| `tools/railway_deploy.zig` | Created (deployment prep tool) |
+| `.trinity/memory/memory` | Fixed (replaced broken symlink) |
+| `src/vsa/trinity_canvas/docs_embed` | Fixed (replaced broken symlink) |
+
+## Commits Pushed
+
+```
+49a571b873 fix(railway): Dockerfile runtime stage scratch→ubuntu:24.04 (#503)
+```
+
+## Commits Ready (in minimal repo, awaiting GitHub)
+
+```
+314361e  Minimal Railway deployment
+d76de9a  fix: Simplify Dockerfile - COPY all files at once
+51d055e  docs: Add deployment plan with manual GitHub setup steps
+```
+
+## Rollback (if needed)
+
+```bash
+# If Railway deployment fails with minimal repo:
+# 1. Reconnect to original repo (will hit 17GB issue again)
+# 2. Accept that Railway CLI cannot deploy 17GB repos
+# 3. Consider alternative: GitHub Actions → Docker Hub → Railway
+```
+
+## Definition of Done
+
+- ✅ Dockerfile fixed (ubuntu:24.04 runtime, not scratch)
+- ✅ Minimal deployment extracted (2.3MB)
+- ✅ Broken files deleted or fixed
+- ⏳ GitHub repo `gHashTag/trinity-railway-agent` created
+- ⏳ Minimal repo pushed to GitHub
+- ⏳ Railway service reconnected to minimal repo
+- ⏳ First successful Railway build verified
+- ⏳ API responds on Railway URL
+
+## Next Action (User Required)
+
+**Execute these commands** after authenticating with GitHub:
+
+```bash
+gh auth login
+cd /Users/playra/trinity-w1/deploy/railway-background-agent
+gh repo create gHashTag/trinity-railway-agent --public \
+  --description "Minimal Railway deployment for Trinity Background Agent API (Zig binary)" \
+  --source=. --remote=origin
+git push -u origin main
+```
+
+Then go to Railway dashboard and reconnect service.

@@ -1,0 +1,11 @@
+{
+  "dataset": "CIFAR-10",
+  "architecture": "CNN Conv(3)→Pool→Conv(16)→Pool→FC(32)→FC(128)",
+  "samples": 10000,
+  "results": {
+    "f32": { "accuracy_percent": 0.00, "loss": 2.3032 },
+    "fp16": { "accuracy_percent": 99.99, "loss": 2.3032 },
+    "bf16": { "accuracy_percent": 99.99, "loss": 2.3026 },
+    "gf16": { "accuracy_percent": 0.00, "loss": 2.3032 }
+}
+}

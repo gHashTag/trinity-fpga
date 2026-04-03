@@ -378,8 +378,10 @@ apps/queen/*.png
 data/cells/
 src/tools/uart-echo-test
 data/cifar-10/
-# Trinity: ignored except issue_bindings.json and souls/
-.trinity/
+# Trinity: specific subdirectories ignored
+# .trinity/ is NOT ignored (SOUL bindings must be tracked)
+.trinity/ralph/logs/
+.trinity/ralph/god_mode_log.jsonl
 .trinity/queen/
 .trinity/scholar/
 .trinity/mu/
@@ -387,7 +389,7 @@ data/cifar-10/
 .trinity/scholar/state/
 fpga/build-deps/
 fpga-flash
-# SOUL bindings (tracked - see lines 103-105)
+# SOUL bindings (tracked)
 !.trinity/issue_bindings.json
 !.trinity/souls/
 !templates/SOUL.md

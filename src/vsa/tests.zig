@@ -56,10 +56,10 @@ fn incrementCounter(ctx: *anyopaque) void {
 test "permute/inverse_permute roundtrip" {
     var v = randomVector(100, 99999);
     var permuted = permute(&v, 7);
-    const recovered = inversePermute(&permuted, 7);
+    var recovered = inversePermute(&permuted, 7);
 
-    permuted.ensureUnpacked(std.heap.page_allocator);
-    recovered.ensureUnpacked(std.heap.page_allocator);
+    permuted.ensureUnpacked();
+    recovered.ensureUnpacked();
 
     for (0..v.trit_len) |i| {
         try std.testing.expectEqual(permuted.getTrit(i), recovered.getTrit(i));
@@ -70,13 +70,13 @@ test "permute shift correctness" {
     var v = HybridBigInt.zero();
     v.mode = .unpacked_mode;
     v.trit_len = 5;
-    v.ensureUnpacked(std.heap.page_allocator);
+    v.ensureUnpacked();
     v.setTrit(0, 1);
     v.setTrit(1, -1);
     v.setTrit(2, 0);
     v.setTrit(3, 1);
     v.setTrit(4, -1);
-    const p = permute(&v, 2);
+    var p = permute(&v, 2);
     try std.testing.expectEqual(@as(Trit, 1), p.getTrit(0));
     try std.testing.expectEqual(@as(Trit, -1), p.getTrit(1));
     try std.testing.expectEqual(@as(Trit, 1), p.getTrit(2));
@@ -94,8 +94,8 @@ test "sequence encoding" {
 
 test "bind self-inverse" {
     var a = randomVector(100, 12345);
-    const bound = bind(&a, &a);
-    bound.ensureUnpacked(std.heap.page_allocator);
+    var bound = bind(&a, &a);
+    bound.ensureUnpacked();
 
     for (0..a.trit_len) |i| {
         if (bound.getTrit(i) != 0) {
@@ -109,7 +109,7 @@ test "bind self-inverse" {
 test "bundle2 similarity" {
     var a = randomVector(100, 33333);
     var b = randomVector(100, 44444);
-    var bundled = bundle2(&a, &b);
+    var bundled = bundle2(&a, &b, std.heap.page_allocator);
     const sim_a = cosineSimilarity(&bundled, &a);
     const sim_b = cosineSimilarity(&bundled, &b);
     try std.testing.expect(sim_a > 0.3);
@@ -168,7 +168,7 @@ test "SIMD bundle3 correctness" {
     var a = randomVector(100, 55555);
     var b = randomVector(100, 66666);
     var c = randomVector(100, 77777);
-    var bundled = bundle3(&a, &b, &c);
+    var bundled = bundle3(&a, &b, &c, std.heap.page_allocator);
     // bundle3 result should be similar to all 3 inputs
     const sim_a = cosineSimilarity(&bundled, &a);
     const sim_b = cosineSimilarity(&bundled, &b);
@@ -201,7 +201,7 @@ test "SIMD bundleN 5 vectors" {
     var d = randomVector(100, 10004);
     var e = randomVector(100, 10005);
     var vecs = [_]*HybridBigInt{ &a, &b, &c, &d, &e };
-    var bundled = bundleN(&vecs);
+    var bundled = try bundleN(&vecs, std.heap.page_allocator);
     // bundleN result should be similar to each input
     const sim_a = cosineSimilarity(&bundled, &a);
     try std.testing.expect(sim_a > 0.1);

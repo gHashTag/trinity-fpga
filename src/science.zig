@@ -50,8 +50,9 @@ pub fn computeStats(hv: *Hypervector) VectorStats {
     var sum_sq: i64 = 0;
 
     for (0..hv.data.trit_len) |i| {
-        const t = hv.data.unpacked_cache[i];
-        if (t > 0) {
+        if (hv.data.unpacked_cache) |cache| {
+            const t = cache[i];
+            if (t > 0) {
             positive += 1;
         } else if (t < 0) {
             negative += 1;
@@ -138,8 +139,8 @@ pub fn euclideanDistance(a: *Hypervector, b: *Hypervector) f64 {
     const len = @max(a.data.trit_len, b.data.trit_len);
 
     for (0..len) |i| {
-        const a_t: i64 = if (i < a.data.trit_len) a.data.unpacked_cache[i] else 0;
-        const b_t: i64 = if (i < b.data.trit_len) b.data.unpacked_cache[i] else 0;
+        const a_t: i64 = if (i < a.data.trit_len) a.data.unpacked_cache.?[i] else 0;
+        const b_t: i64 = if (i < b.data.trit_len) b.data.unpacked_cache.?[i] else 0;
         const diff = a_t - b_t;
         sum_sq += diff * diff;
     }
@@ -156,8 +157,8 @@ pub fn manhattanDistance(a: *Hypervector, b: *Hypervector) f64 {
     const len = @max(a.data.trit_len, b.data.trit_len);
 
     for (0..len) |i| {
-        const a_t: i64 = if (i < a.data.trit_len) a.data.unpacked_cache[i] else 0;
-        const b_t: i64 = if (i < b.data.trit_len) b.data.unpacked_cache[i] else 0;
+        const a_t: i64 = if (i < a.data.trit_len) a.data.unpacked_cache.?[i] else 0;
+        const b_t: i64 = if (i < b.data.trit_len) b.data.unpacked_cache.?[i] else 0;
         sum += @abs(a_t - b_t);
     }
 
@@ -174,8 +175,8 @@ pub fn jaccardDistance(a: *Hypervector, b: *Hypervector) f64 {
     const len = @max(a.data.trit_len, b.data.trit_len);
 
     for (0..len) |i| {
-        const a_t = if (i < a.data.trit_len) a.data.unpacked_cache[i] else 0;
-        const b_t = if (i < b.data.trit_len) b.data.unpacked_cache[i] else 0;
+        const a_t = if (i < a.data.trit_len) a.data.unpacked_cache.?[i] else 0;
+        const b_t = if (i < b.data.trit_len) b.data.unpacked_cache.?[i] else 0;
 
         const a_nz = a_t != 0;
         const b_nz = b_t != 0;
@@ -199,8 +200,8 @@ pub fn diceDistance(a: *Hypervector, b: *Hypervector) f64 {
     const len = @max(a.data.trit_len, b.data.trit_len);
 
     for (0..len) |i| {
-        const a_t = if (i < a.data.trit_len) a.data.unpacked_cache[i] else 0;
-        const b_t = if (i < b.data.trit_len) b.data.unpacked_cache[i] else 0;
+        const a_t = if (i < a.data.trit_len) a.data.unpacked_cache.?[i] else 0;
+        const b_t = if (i < b.data.trit_len) b.data.unpacked_cache.?[i] else 0;
 
         if (a_t != 0) a_count += 1;
         if (b_t != 0) b_count += 1;
@@ -448,7 +449,9 @@ pub const SparseHypervector = struct {
         for (0..self.indices.items.len) |i| {
             const idx = self.indices.items[i];
             const val = self.values.items[i];
-            hv.data.unpacked_cache[idx] = val;
+            if (hv.data.unpacked_cache) |cache| {
+                hv.data.unpacked_cache[idx] = val;
+            }
         }
 
         hv.data.dirty = true;

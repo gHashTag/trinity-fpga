@@ -1,0 +1,74 @@
+name: claude_runtime
+version: "1.0.0"
+language: zig
+module: tri.claude_runtime
+
+description: |
+  Claude Code lifecycle management for Railway deployment.
+  Checks installation, version, login status, and Channels support.
+
+types:
+  LoginStatus:
+    kind: enum
+    variants: [LoggedOut, LoggedIn, NotInstalled, Unknown]
+
+  ClaudeInstallError:
+    kind: error_set
+    variants:
+      - SSHExecFailed
+      - CommandNotFound
+      - ParseFailed
+
+behaviors:
+  - name: checkInstallation
+    given: No arguments
+    when: Claude installation verification is needed
+    then: |
+      Executes 'which claude' via Railway SSH
+      Returns true if command found in PATH, false otherwise
+    observable: claude_binary_found
+    observable_threshold: true
+
+  - name: getInstalledVersion
+    given: No arguments
+    when: Claude version check is needed
+    then: |
+      Executes 'claude --version' via Railway SSH
+      Parses version string from output
+      Returns owned version string on success
+      Returns error if command fails or output unparseable
+    observable: claude_version
+    min_version: "2.1.80"
+
+  - name: checkLoginStatus
+    given: No arguments
+    when: Claude auth status check is needed
+    then: |
+      Executes 'claude auth status' via Railway SSH
+      Parses output for "Logged in as" or "Not logged in" patterns
+      Returns LoginStatus enum value
+    observable: auth_status_output
+    pattern: "(Logged in as .+)|(Not logged in)"
+
+  - name: probeChannelsSupport
+    given: No arguments
+    when: Claude Channels support probe is needed
+    then: |
+      Executes 'claude --channels' via Railway SSH
+      Checks if Channels mode is supported in the installed version
+      Returns true if --channels flag is available
+
+  - name: getEnvironmentVariables
+    given: Variable name (optional, empty for all)
+    when: Environment variable check is needed
+    then: |
+      Executes 'env | grep TELEGRAM_BOT_TOKEN' via Railway SSH
+      Returns owned stdout slice with matching variables
+      Useful for checking Telegram bot token configuration
+
+export_functions:
+  - checkInstallation
+  - getInstalledVersion
+  - checkLoginStatus
+  - probeChannelsSupport
+  - getEnvironmentVariables

@@ -345,15 +345,28 @@ pub fn build(b: *std.Build) void {
 
     // E2E + Benchmarks + Verdict tests (Phase 4)
     const e2e_tests = b.addTest(.{
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("tests/e2e_agent_lifecycle.zig"),
-            .target = target,
-            .optimize = optimize,
-        }),
+        .root_source_file = b.path("tests/e2e_agent_lifecycle.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    const hooks_test = b.addTest(.{
+        .root_source_file = b.path("tests/e2e_hooks_test.zig"),
+        .target = target,
+        .optimize = optimize,
     });
     const run_e2e_tests = b.addRunArtifact(e2e_tests);
     test_step.dependOn(&run_e2e_tests.step);
     const e2e_step = b.step("e2e", "Run E2E agent lifecycle tests");
+    const hooks_test = b.addTest(.{
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("tests/e2e_hooks_test.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
+    });
+    const run_hooks_test = b.addRunArtifact(hooks_test);
+    hooks_test.dependOn(&run_hooks_test.step);
+    const hooks_step = b.step("hooks", "Run E2E hooks integration test");
     e2e_step.dependOn(&run_e2e_tests.step);
 
     // C API tests (libtrinity-vsa)

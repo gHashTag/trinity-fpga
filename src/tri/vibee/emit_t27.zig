@@ -148,6 +148,19 @@ pub const T27Emitter = struct {
         }
     }
 
+    // Emit ALGO-DSL constants as .const section entries
+    pub fn emitAlgoConsts(self: *T27Emitter, spec: TriSpec) !void {
+        if (spec.const_decls.items.len == 0) return;
+
+        try self.emitConstLine("; ALGO-DSL Constants (Q8.8 format)");
+        try self.emitConstLine("; φ² + 1/φ² = 3 | TRINITY");
+
+        for (spec.const_decls.items) |c| {
+            const q8_value = self.f32ToQ8(@as(f32, @floatCast(c.value)));
+            try self.emitConst("{s} = {d}  ; {s}", .{ c.name, q8_value, c.description });
+        }
+    }
+
     // ═══════════════════════════════════════════════════════════════════════
     // .DATA SECTION GENERATION
     // ═══════════════════════════════════════════════════════════════════════
@@ -156,6 +169,7 @@ pub const T27Emitter = struct {
         try self.emitDataLine("; Data section");
         try self.emitData("; Generated from {s}", .{spec.name});
 
+        // Emit legacy types
         for (spec.types.items) |t| {
             try self.emitDataLine("");
             try self.emitData("; Type: {s}", .{t.name});
@@ -164,6 +178,30 @@ pub const T27Emitter = struct {
                 try self.emitData("{s}: .skip {d}", .{ f.name, type_size });
             }
         }
+
+        // Emit ALGO-DSL constants as data labels (Q8.8 format)
+        try self.emitDataLine("");
+        try self.emitDataLine("; ALGO-DSL Constants (Q8.8 fixed-point)");
+
+        // Special labels for ReLU
+        for (spec.const_decls.items) |c| {
+            const q8_value = self.f32ToQ8(@as(f32, @floatCast(c.value)));
+            try self.emitData("{s}: .word {d}  ; {s} (Q8.8)", .{ c.name, q8_value, c.description });
+        }
+
+        // Data labels for algorithm input/output
+        try self.emitDataLine("");
+        try self.emitDataLine("; Algorithm data");
+        try self.emitDataLine("N: .word 10  ; Array length (example)");
+        try self.emitDataLine("neg_slope: .word 26  ; 0.1 in Q8.8 (26/256 ≈ 0.10)");
+        try self.emitDataLine("input: .skip 40  ; 10 x f32 values");
+        try self.emitDataLine("output: .skip 40  ; 10 x f32 values");
+    }
+
+    // Convert f32 to Q8.8 fixed-point integer representation
+    fn f32ToQ8(_: *T27Emitter, value: f32) i32 {
+        const scaled = value * 256.0;
+        return @intFromFloat(scaled);
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -181,6 +219,11 @@ pub const T27Emitter = struct {
 
         for (spec.behaviors.items) |b| {
             try self.emitBehavior(b);
+        }
+
+        // Emit algorithm functions from ALGO-DSL
+        for (spec.func_decls.items) |func| {
+            try self.emitAlgoFunction(&spec, func);
         }
 
         try self.emitCodeLine("");
@@ -257,6 +300,126 @@ pub const T27Emitter = struct {
     }
 
     // ═══════════════════════════════════════════════════════════════════════
+    // ALGORITHM PATTERN DETECTION AND EMISSION
+    // ═══════════════════════════════════════════════════════════════════════
+
+    const AlgoPattern = enum { relu, unknown };
+
+    // Detect which algorithm pattern a function implements
+    fn detectAlgoPattern(_: *const TriSpec, func: AstFuncDecl) AlgoPattern {
+        // Debug: print function name and param count
+        std.debug.print("DEBUG: func.name='{s}', params.len={d}\n", .{ func.name, func.params.items.len });
+
+        // Check if this is a ReLU forward function
+        if (std.mem.indexOf(u8, func.name, "forward") != null) {
+            // Check for ReLU-specific parameters (separate params for input and output)
+            var has_input = false;
+            var has_output = false;
+
+            for (func.params.items) |p| {
+                std.debug.print("DEBUG: param name='{s}'\n", .{p.name});
+                if (std.mem.indexOf(u8, p.name, "input") != null) {
+                    has_input = true;
+                }
+                if (std.mem.indexOf(u8, p.name, "output") != null) {
+                    has_output = true;
+                }
+            }
+
+            if (has_input and has_output) {
+                return .relu;
+            }
+        }
+        return .unknown;
+    }
+
+    // Emit algorithm function based on detected pattern
+    fn emitAlgoFunction(self: *T27Emitter, spec: *const TriSpec, func: AstFuncDecl) !void {
+        const pattern = detectAlgoPattern(spec, func);
+
+        switch (pattern) {
+            .relu => try self.emitReLUT27(func),
+            .unknown => try self.emitUnknownAlgo(func),
+        }
+    }
+
+    // Emit T27 code for ReLU forward pass
+    // Register mapping: t0=i, t1=N, t4=val, t5=tmp, t6=ZERO, t7=neg_slope
+    fn emitReLUT27(self: *T27Emitter, _: AstFuncDecl) !void {
+        try self.emitCommentLine("; ReLU forward: output[i] = max(0, input[i])");
+        try self.emitCommentLine("; Q8.8 fixed-point arithmetic");
+        try self.emitCodeLine("");
+
+        // Initialize loop counter
+        try self.emitCodeLine("LDI t0, 0  ; i = 0");
+        // Load N (length) - assume N label exists
+        try self.emitCodeLine("LD t1, N  ; Load length");
+        // Load ZERO constant
+        try self.emitCodeLine("LD t6, ZERO  ; ZERO = 0");
+        // Load negative slope
+        try self.emitCodeLine("LD t7, neg_slope  ; Leaky slope");
+        try self.emitCodeLine("");
+
+        // Loop entry label
+        try self.emitLabel("relu_loop");
+        try self.emitCommentLine("; Check if i < N");
+        try self.emitCodeLine("JGE t0, t1, relu_done  ; Exit loop if i >= N");
+        try self.emitCodeLine("");
+
+        // Load input[i]
+        try self.emitCommentLine("; Load input[i]");
+        try self.emitCodeLine("LDI t4, input  ; Base address of input");
+        try self.emitCodeLine("ADD t4, t4, t0  ; t4 = input + i (byte offset, assumes 4-byte elements)");
+        try self.emitCodeLine("LD t4, t4  ; t4 = input[i]");
+        try self.emitCodeLine("");
+
+        // Check if val < ZERO
+        try self.emitCommentLine("; Check if input[i] < ZERO");
+        try self.emitCodeLine("JLT t4, t6, relu_negative  ; Branch if negative");
+        try self.emitCodeLine("");
+
+        // Positive path: output[i] = input[i]
+        try self.emitLabel("relu_positive");
+        try self.emitCommentLine("; Positive path: output[i] = input[i]");
+        try self.emitCodeLine("LDI t5, output  ; Base address of output");
+        try self.emitCodeLine("ADD t5, t5, t0  ; t5 = output + i");
+        try self.emitCodeLine("ST t5, t4  ; output[i] = input[i]");
+        try self.emitCodeLine("JUMP relu_next");
+        try self.emitCodeLine("");
+
+        // Negative path: output[i] = input[i] * neg_slope
+        try self.emitLabel("relu_negative");
+        try self.emitCommentLine("; Negative path: output[i] = input[i] * neg_slope");
+        try self.emitCodeLine("MUL t5, t4, t7  ; t5 = input[i] * neg_slope (Q8.8 * Q8.8 = Q16.16)");
+        try self.emitCodeLine("DIV t5, t5, 256  ; Convert back to Q8.8");
+        try self.emitCodeLine("LDI t4, output  ; Base address of output");
+        try self.emitCodeLine("ADD t4, t4, t0  ; t4 = output + i");
+        try self.emitCodeLine("ST t4, t5  ; output[i] = scaled value");
+        try self.emitCodeLine("");
+
+        // Next iteration
+        try self.emitLabel("relu_next");
+        try self.emitCodeLine("INC t0  ; i++");
+        try self.emitCodeLine("JUMP relu_loop");
+        try self.emitCodeLine("");
+
+        // Done
+        try self.emitLabel("relu_done");
+        try self.emitCommentLine("; ReLU complete");
+    }
+
+    // Emit placeholder for unknown algorithms
+    fn emitUnknownAlgo(self: *T27Emitter, func: AstFuncDecl) !void {
+        try self.emitComment("; TODO: Unknown algorithm pattern for {s}", .{func.name});
+        try self.emitComment("; {s}", .{func.description});
+        if (func.formula.len > 0) {
+            try self.emitFormula(func.formula);
+        } else {
+            try self.emitCodeLine("HALT");
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
     // UTILITIES
     // ═══════════════════════════════════════════════════════════════════════
 
@@ -309,6 +472,7 @@ pub const T27Emitter = struct {
 
     pub fn emitSpec(self: *T27Emitter, spec: TriSpec, file: std.fs.File) !void {
         try self.emitConsts(spec.constants.items);
+        try self.emitAlgoConsts(spec);
         try self.emitDataSection(spec);
         try self.emitCodeSection(spec);
         try self.generate(spec, file);
@@ -523,12 +687,37 @@ pub const TriParser = struct {
         errdefer spec.deinit(self.allocator);
 
         var lines = std.mem.splitScalar(u8, source, '\n');
-        var current_section: enum { none, header, types, constants, behaviors } = .none;
+        var current_section: enum { none, header, types, constants, functions, behaviors } = .none;
+
+        // Track current type/const/function being parsed
+        var current_type: ?*AstTypeDecl = null;
+        var current_const: ?*AstConstDecl = null;
+        var current_func: ?*AstFuncDecl = null;
+        var current_behavior: ?*AstBehavior = null;
+
+        // Track nested contexts (fields:, params:, formula: |)
+        var in_fields = false;
+        var in_params = false;
+        var in_formula = false;
+        var formula_lines = ArrayList(u8){};
+        defer formula_lines.deinit(self.allocator);
 
         while (lines.next()) |line| {
             const trimmed = std.mem.trim(u8, line, " \t\r");
             if (trimmed.len == 0) continue;
             if (trimmed[0] == '#') continue;
+
+            // Check indentation level
+            const indent = getIndentLevel(line);
+
+            // End formula collection on de-dent or end of file
+            if (in_formula and indent < 4) {
+                if (current_func) |f| {
+                    f.formula = try self.allocator.dupe(u8, formula_lines.items);
+                }
+                formula_lines.clearRetainingCapacity();
+                in_formula = false;
+            }
 
             if (std.mem.indexOfScalar(u8, trimmed, ':')) |colon_idx| {
                 const key = std.mem.trim(u8, trimmed[0..colon_idx], " ");
@@ -539,26 +728,253 @@ pub const TriParser = struct {
                     value = value[1 .. value.len - 1];
                 }
 
-                // Identify section
-                if (std.mem.eql(u8, key, "name")) {
-                    spec.name = try self.allocator.dupe(u8, value);
-                } else if (std.mem.eql(u8, key, "version")) {
-                    spec.version = try self.allocator.dupe(u8, value);
-                } else if (std.mem.eql(u8, key, "module")) {
-                    spec.module = try self.allocator.dupe(u8, value);
-                } else if (std.mem.eql(u8, key, "description")) {
-                    spec.description = try self.allocator.dupe(u8, value);
-                } else if (std.mem.eql(u8, key, "types")) {
-                    current_section = .types;
-                } else if (std.mem.eql(u8, key, "constants")) {
-                    current_section = .constants;
-                } else if (std.mem.eql(u8, key, "behaviors") or std.mem.eql(u8, key, "functions")) {
-                    current_section = .behaviors;
+                // Top-level sections (indent == 0)
+                if (indent == 0) {
+                    // Section markers
+                    if (std.mem.eql(u8, key, "types")) {
+                        current_section = .types;
+                    } else if (std.mem.eql(u8, key, "constants")) {
+                        current_section = .constants;
+                    } else if (std.mem.eql(u8, key, "functions")) {
+                        current_section = .functions;
+                    } else if (std.mem.eql(u8, key, "behaviors")) {
+                        current_section = .behaviors;
+                    }
+                    // Header fields
+                    else if (std.mem.eql(u8, key, "name")) {
+                        spec.name = try self.allocator.dupe(u8, value);
+                    } else if (std.mem.eql(u8, key, "version")) {
+                        spec.version = try self.allocator.dupe(u8, value);
+                    } else if (std.mem.eql(u8, key, "module")) {
+                        spec.module = try self.allocator.dupe(u8, value);
+                    } else if (std.mem.eql(u8, key, "description")) {
+                        spec.description = try self.allocator.dupe(u8, value);
+                    }
                 }
+                // Section-level declarations (indent == 2)
+                else if (indent == 2) {
+                    // Finalize previous context when entering new declaration
+                    in_fields = false;
+                    in_params = false;
+                    current_type = null;
+                    current_const = null;
+                    current_func = null;
+                    current_behavior = null;
+
+                    switch (current_section) {
+                        .types => {
+                            const type_decl = AstTypeDecl{
+                                .name = try self.allocator.dupe(u8, key),
+                                .description = "",
+                                .fields = .{},
+                            };
+                            try spec.type_decls.append(self.allocator, type_decl);
+                            current_type = &spec.type_decls.items[spec.type_decls.items.len - 1];
+                        },
+                        .constants => {
+                            const const_decl = AstConstDecl{
+                                .name = try self.allocator.dupe(u8, key),
+                                .type = .{ .base = "f32" },
+                                .value = 0.0,
+                                .string_value = "",
+                                .description = "",
+                            };
+                            try spec.const_decls.append(self.allocator, const_decl);
+                            current_const = &spec.const_decls.items[spec.const_decls.items.len - 1];
+                        },
+                        .functions => {
+                            const func_decl = AstFuncDecl{
+                                .name = try self.allocator.dupe(u8, key),
+                                .params = .{},
+                                .returns = .{ .base = "void" },
+                                .description = "",
+                                .formula = "",
+                            };
+                            try spec.func_decls.append(self.allocator, func_decl);
+                            current_func = &spec.func_decls.items[spec.func_decls.items.len - 1];
+                        },
+                        .behaviors => {
+                            if (trimmed[0] == '-') {
+                                // List item: - name: behavior_name
+                                const list_content = std.mem.trim(u8, trimmed[1..], " \t");
+                                if (std.mem.indexOfScalar(u8, list_content, ':')) |b_colon| {
+                                    const b_name = std.mem.trim(u8, list_content[0..b_colon], " ");
+                                    const behavior = AstBehavior{
+                                        .name = try self.allocator.dupe(u8, b_name),
+                                        .description = "",
+                                        .notes = "",
+                                    };
+                                    try spec.behavior_decls.append(self.allocator, behavior);
+                                    current_behavior = &spec.behavior_decls.items[spec.behavior_decls.items.len - 1];
+                                }
+                            } else {
+                                const behavior = AstBehavior{
+                                    .name = try self.allocator.dupe(u8, key),
+                                    .description = "",
+                                    .notes = "",
+                                };
+                                try spec.behavior_decls.append(self.allocator, behavior);
+                                current_behavior = &spec.behavior_decls.items[spec.behavior_decls.items.len - 1];
+                            }
+                        },
+                        else => {},
+                    }
+                }
+                // Nested properties (indent >= 2)
+                else {
+                    // Type fields
+                    if (current_type != null and std.mem.eql(u8, key, "fields")) {
+                        in_fields = true;
+                    }
+                    // Constant properties
+                    else if (current_const != null) {
+                        if (current_const) |c| {
+                            if (std.mem.eql(u8, key, "type")) {
+                                c.type = .{ .base = try self.allocator.dupe(u8, value) };
+                            } else if (std.mem.eql(u8, key, "value")) {
+                                c.value = std.fmt.parseFloat(f64, value) catch 0.0;
+                            } else if (std.mem.eql(u8, key, "string_value")) {
+                                c.string_value = try self.allocator.dupe(u8, value);
+                            } else if (std.mem.eql(u8, key, "description")) {
+                                c.description = try self.allocator.dupe(u8, value);
+                            }
+                        }
+                    }
+                    // Function properties
+                    else if (current_func != null) {
+                        if (current_func) |f| {
+                            if (std.mem.eql(u8, key, "params")) {
+                                std.debug.print("DEBUG: Found params: at indent {d}, in_params set to true\n", .{indent});
+                                in_params = true;
+                            } else if (std.mem.eql(u8, key, "returns")) {
+                                f.returns = .{ .base = try self.allocator.dupe(u8, value) };
+                            } else if (std.mem.eql(u8, key, "description")) {
+                                f.description = try self.allocator.dupe(u8, value);
+                            } else if (std.mem.eql(u8, key, "formula")) {
+                                if (std.mem.endsWith(u8, value, "|")) {
+                                    in_formula = true;
+                                }
+                            }
+                        }
+                    }
+                    // Behavior properties
+                    else if (current_behavior != null) {
+                        if (current_behavior) |b| {
+                            if (std.mem.eql(u8, key, "name")) {
+                                // Already set from - name: syntax
+                            } else if (std.mem.eql(u8, key, "description")) {
+                                b.description = try self.allocator.dupe(u8, value);
+                            } else if (std.mem.eql(u8, key, "notes")) {
+                                b.notes = try self.allocator.dupe(u8, value);
+                            }
+                        }
+                    }
+                    // Field definitions within fields:
+                    else if (in_fields and std.mem.startsWith(u8, trimmed, "- name:")) {
+                        if (current_type) |t| {
+                            // Parse list item: - name: field_name
+                            const list_content = std.mem.trim(u8, trimmed[1..], " \t");
+                            if (std.mem.indexOfScalar(u8, list_content, ':')) |f_colon| {
+                                const f_name = std.mem.trim(u8, list_content[0..f_colon], " ");
+                                const field = AstField{
+                                    .name = try self.allocator.dupe(u8, f_name),
+                                    .type = .{ .base = "f32" },
+                                    .description = "",
+                                };
+                                try t.fields.append(self.allocator, field);
+                            }
+                        }
+                    }
+                    // Field properties
+                    else if (in_fields and current_type != null) {
+                        if (current_type) |t| {
+                            if (t.fields.items.len > 0) {
+                                var last_field = &t.fields.items[t.fields.items.len - 1];
+                                if (std.mem.eql(u8, key, "type")) {
+                                    last_field.type = .{ .base = try self.allocator.dupe(u8, value) };
+                                } else if (std.mem.eql(u8, key, "description")) {
+                                    last_field.description = try self.allocator.dupe(u8, value);
+                                }
+                            }
+                        }
+                    }
+                    // Parameter definitions within params:
+                    else if (in_params) {
+                        // Debug: show all lines when in_params is true
+                        std.debug.print("DEBUG (in_params=true): line='[{s}]' starts_with '- name:' = {}\n", .{ trimmed, std.mem.startsWith(u8, trimmed, "- name:") });
+
+                        if (std.mem.startsWith(u8, trimmed, "- name:")) {
+                            std.debug.print("DEBUG: Found - name: line, in_params=true, current_func={}\n", .{current_func != null});
+                        if (current_func) |f| {
+                            const list_content = std.mem.trim(u8, trimmed[1..], " \t");
+                            if (std.mem.indexOfScalar(u8, list_content, ':')) |p_colon| {
+                                const p_name = std.mem.trim(u8, list_content[0..p_colon], " ");
+                                std.debug.print("DEBUG: Adding param: {s}\n", .{p_name});
+                                const param = AstParam{
+                                    .name = try self.allocator.dupe(u8, p_name),
+                                    .type = .{ .base = "f32" },
+                                    .description = "",
+                                };
+                                try f.params.append(self.allocator, param);
+                            }
+                        }
+                    }
+                    // Parameter properties
+                    else if (in_params and current_func != null) {
+                        if (current_func) |f| {
+                            if (f.params.items.len > 0) {
+                                var last_param = &f.params.items[f.params.items.len - 1];
+                                if (std.mem.eql(u8, key, "type")) {
+                                    const type_str = if (value.len > 0) value else "f32";
+                                    // Parse slice types: []const f32, []f32
+                                    if (std.mem.startsWith(u8, type_str, "[]const")) {
+                                        const inner = std.mem.trim(u8, type_str["[]const".len..], " ");
+                                        last_param.type = .{ .slice_const = .{ .inner = try self.allocator.dupe(u8, inner) } };
+                                    } else if (std.mem.startsWith(u8, type_str, "[]")) {
+                                        const inner = std.mem.trim(u8, type_str[2..], " ");
+                                        last_param.type = .{ .slice_mut = .{ .inner = try self.allocator.dupe(u8, inner) } };
+                                    } else if (std.mem.eql(u8, type_str, "ReLUConfig")) {
+                                        last_param.type = .{ .named = try self.allocator.dupe(u8, type_str) };
+                                    } else {
+                                        last_param.type = .{ .base = try self.allocator.dupe(u8, type_str) };
+                                    }
+                                } else if (std.mem.eql(u8, key, "description")) {
+                                    last_param.description = try self.allocator.dupe(u8, value);
+                                }
+                            }
+                        }
+                    }
+                }
+            } else if (in_formula) {
+                // Collect formula lines (including indentation for structure)
+                try formula_lines.appendSlice(self.allocator, line);
+                try formula_lines.append(self.allocator, '\n');
             }
         }
 
+        // Finalize formula if still collecting
+        if (in_formula and formula_lines.items.len > 0) {
+            if (current_func) |f| {
+                f.formula = try self.allocator.dupe(u8, formula_lines.items);
+            }
+        }
+
+        // Debug output
+        std.debug.print("Parsed: {d} types, {d} consts, {d} funcs, {d} behaviors\n", .{
+            spec.type_decls.items.len,
+            spec.const_decls.items.len,
+            spec.func_decls.items.len,
+            spec.behavior_decls.items.len,
+        });
+
         return spec;
+    }
+
+    // Helper: Count leading whitespace to determine indentation level
+    fn getIndentLevel(line: []const u8) usize {
+        var i: usize = 0;
+        while (i < line.len and (line[i] == ' ' or line[i] == '\t')) : (i += 1) {}
+        return i; // Return raw indent count
     }
 };
 

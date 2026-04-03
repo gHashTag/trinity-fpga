@@ -9,6 +9,7 @@
 //!   bench-cifar10                      # Random weights (sanity-check)
 //!   bench-cifar10 --weights=weights.bin  # Trained weights
 //!
+//
 
 const std = @import("std");
 const cifar10_loader = @import("cifar10_loader.zig");
@@ -32,6 +33,109 @@ fn relu(x: f32) f32 {
     return if (x > 0) x else 0;
 }
 
+/// Load trained weights from binary file
+/// Expected layout: conv1_w (1440 floats) -> conv1_b (16 floats) ->
+///                   conv2_w (4608 floats) -> conv2_b (32 floats) ->
+///                   fc1_w (262144 floats) -> fc1_b (128 floats) ->
+///                   fc2_w (1280 floats) -> fc2_b (10 floats)
+/// Total: 268,650 floats × 4 bytes = 1,074,600 bytes
+fn loadWeights(
+    allocator: std.mem.Allocator,
+    path: []const u8,
+    conv1_w: *[]f32,
+    conv1_b: *[]f32,
+    conv2_w: *[]f32,
+    conv2_b: *[]f32,
+    fc1_w: *[]f32,
+    fc1_b: *[]f32,
+    fc2_w: *[]f32,
+    fc2_b: *[]f32,
+) !void {
+    const file = try std.fs.cwd().openFile(path, .{});
+    defer file.close();
+
+    const file_stat = try file.stat();
+    const expected_size: usize = 268_650 * 4; // 1,074,600 bytes
+
+    if (file_stat.size != expected_size) {
+        std.debug.print("ERROR: Expected {d} bytes, got {d}\n", .{ expected_size, file_stat.size });
+        return error.InvalidData;
+    }
+
+    const buffer = try allocator.alloc(u8, expected_size);
+    defer allocator.free(buffer);
+    _ = try file.readAll(buffer);
+
+    var offset: usize = 0;
+
+    // conv1_w: 3×16×3×3 = 1440 floats
+    conv1_w.* = try allocator.alloc(f32, 1440);
+    for (0..1440) |i| {
+        const i32_val = std.mem.readInt(u32, buffer[offset..][0..4], .little);
+        conv1_w.*[i] = @bitCast(i32_val);
+        offset += 4;
+    }
+
+    // conv1_b: 16 floats
+    conv1_b.* = try allocator.alloc(f32, 16);
+    for (0..16) |i| {
+        const i32_val = std.mem.readInt(u32, buffer[offset..][0..4], .little);
+        conv1_b.*[i] = @bitCast(i32_val);
+        offset += 4;
+    }
+
+    // conv2_w: 16×32×3×3 = 4608 floats
+    conv2_w.* = try allocator.alloc(f32, 4608);
+    for (0..4608) |i| {
+        const i32_val = std.mem.readInt(u32, buffer[offset..][0..4], .little);
+        conv2_w.*[i] = @bitCast(i32_val);
+        offset += 4;
+    }
+
+    // conv2_b: 32 floats
+    conv2_b.* = try allocator.alloc(f32, 32);
+    for (0..32) |i| {
+        const i32_val = std.mem.readInt(u32, buffer[offset..][0..4], .little);
+        conv2_b.*[i] = @bitCast(i32_val);
+        offset += 4;
+    }
+
+    // fc1_w: 2048×128 = 262,144 floats
+    fc1_w.* = try allocator.alloc(f32, 262144);
+    for (0..262144) |i| {
+        const i32_val = std.mem.readInt(u32, buffer[offset..][0..4], .little);
+        fc1_w.*[i] = @bitCast(i32_val);
+        offset += 4;
+    }
+
+    // fc1_b: 128 floats
+    fc1_b.* = try allocator.alloc(f32, 128);
+    for (0..128) |i| {
+        const i32_val = std.mem.readInt(u32, buffer[offset..][0..4], .little);
+        fc1_b.*[i] = @bitCast(i32_val);
+        offset += 4;
+    }
+
+    // fc2_w: 128×10 = 1,280 floats
+    fc2_w.* = try allocator.alloc(f32, 1280);
+    for (0..1280) |i| {
+        const i32_val = std.mem.readInt(u32, buffer[offset..][0..4], .little);
+        fc2_w.*[i] = @bitCast(i32_val);
+        offset += 4;
+    }
+
+    // fc2_b: 10 floats
+    fc2_b.* = try allocator.alloc(f32, 10);
+    for (0..10) |i| {
+        const i32_val = std.mem.readInt(u32, buffer[offset..][0..4], .little);
+        fc2_b.*[i] = @bitCast(i32_val);
+        offset += 4;
+    }
+
+    std.debug.print("Loaded weights: conv1={d}, conv2={d}, fc1={d}, fc2={d}\n", .{
+        conv1_w.*.len, conv2_w.*.len, fc1_w.*.len, fc2_w.*.len });
+}
+
 pub fn main() !void {
     const config = LayerConfig{
         .input_height = 32,
@@ -51,7 +155,7 @@ pub fn main() !void {
 
     // Parse command line args for --weights flag
     // Supports both: --weights value and --weights=value
-    const weights_path: ?[]const u8 = blk: {
+    var weights_path: ?[]const u8 = blk: {
         var idx: usize = 1;
         while (idx < std.os.argv.len) : (idx += 1) {
             const arg = spanZ(std.os.argv[idx]);
@@ -100,76 +204,82 @@ pub fn main() !void {
 
     if (weights_path) |path| {
         std.debug.print("Loading trained weights from: {s}\n", .{path});
-        std.debug.print("WARNING: CIFAR-10 weight loading not implemented yet.\n", .{});
-        std.debug.print("Using random weights instead.\n", .{});
+        loadWeights(allocator, path, &conv1_weights_f32, &conv1_biases_f32, &conv2_weights_f32, &conv2_biases_f32, &fc1_weights_f32, &fc1_biases_f32, &fc2_weights_f32, &fc2_biases_f32) catch |err| {
+            std.debug.print("Failed to load weights: {s}\n", .{@errorName(err)});
+            std.debug.print("Using random weights instead.\n", .{});
+            // Fall through to random init below
+            weights_path = null;
+        };
     }
 
-    std.debug.print("Using random weights (Xavier init, seed=42)\n", .{});
+    if (weights_path == null) {
+        std.debug.print("Using random weights (Xavier init, seed=42)\n", .{});
 
-    // Generate random weights
-    var prng = std.Random.DefaultPrng.init(42);
-    const random = prng.random();
+        // Generate random weights
+        var prng = std.Random.DefaultPrng.init(42);
+        const random = prng.random();
 
-    // Xavier initialization scale: sqrt(2 / fan_in)
-    const conv1_scale = std.math.sqrt(2.0 / @as(f32, @floatFromInt(config.input_channels * config.conv1_kernel * config.conv1_kernel)));
-    const conv2_scale = std.math.sqrt(2.0 / @as(f32, @floatFromInt(config.conv1_out * config.conv2_kernel * config.conv2_kernel)));
+        // Xavier initialization scale: sqrt(2 / fan_in)
+        const conv1_scale = std.math.sqrt(2.0 / @as(f32, @floatFromInt(config.input_channels * config.conv1_kernel * config.conv1_kernel)));
+        const conv2_scale = std.math.sqrt(2.0 / @as(f32, @floatFromInt(config.conv1_out * config.conv2_kernel * config.conv2_kernel)));
 
-    // FC1: fan_in is fc1_out
-    const fc1_scale = std.math.sqrt(2.0 / @as(f32, @floatFromInt(config.fc1_out)));
+        // FC1: fan_in is fc1_out
+        const fc1_scale = std.math.sqrt(2.0 / @as(f32, @floatFromInt(config.fc1_out)));
 
-    // FC2: fan_in is fc1_out
-    const fc2_scale = std.math.sqrt(2.0 / @as(f32, @floatFromInt(config.fc1_out)));
+        // FC2: fan_in is fc1_out
+        const fc2_scale = std.math.sqrt(2.0 / @as(f32, @floatFromInt(config.fc1_out)));
 
-    // Conv1 weights
-    conv1_weights_f32 = try allocator.alloc(f32, 1440);
-    defer allocator.free(conv1_weights_f32);
-    conv1_biases_f32 = try allocator.alloc(f32, 16);
-    defer allocator.free(conv1_biases_f32);
+        // Conv1 weights
+        conv1_weights_f32 = try allocator.alloc(f32, 1440);
+        defer allocator.free(conv1_weights_f32);
+        conv1_biases_f32 = try allocator.alloc(f32, 16);
+        defer allocator.free(conv1_biases_f32);
 
-    for (0..1440) |i| {
-        conv1_weights_f32[i] = random.floatNorm(f32) * conv1_scale;
-    }
-    for (0..16) |i| {
-        conv1_biases_f32[i] = 0;
-    }
+        for (0..1440) |i| {
+            conv1_weights_f32[i] = random.floatNorm(f32) * conv1_scale;
+        }
+        for (0..16) |i| {
+            conv1_biases_f32[i] = 0;
+        }
 
-    // Conv2 weights
-    conv2_weights_f32 = try allocator.alloc(f32, 4608);
-    defer allocator.free(conv2_weights_f32);
-    conv2_biases_f32 = try allocator.alloc(f32, 32);
-    defer allocator.free(conv2_biases_f32);
+        // Conv2 weights
+        conv2_weights_f32 = try allocator.alloc(f32, 4608);
+        defer allocator.free(conv2_weights_f32);
+        conv2_biases_f32 = try allocator.alloc(f32, 32);
+        defer allocator.free(conv2_biases_f32);
 
-    for (0..4608) |i| {
-        conv2_weights_f32[i] = random.floatNorm(f32) * conv2_scale;
-    }
-    for (0..32) |i| {
-        conv2_biases_f32[i] = 0;
-    }
+        for (0..4608) |i| {
+            conv2_weights_f32[i] = random.floatNorm(f32) * conv2_scale;
+        }
+        for (0..32) |i| {
+            conv2_biases_f32[i] = 0;
+        }
 
-    // FC1 weights
-    fc1_weights_f32 = try allocator.alloc(f32, 262144);
-    defer allocator.free(fc1_weights_f32);
-    fc1_biases_f32 = try allocator.alloc(f32, 128);
-    defer allocator.free(fc1_biases_f32);
+        // FC1 weights
+        fc1_weights_f32 = try allocator.alloc(f32, 262144);
+        defer allocator.free(fc1_weights_f32);
+        fc1_biases_f32 = try allocator.alloc(f32, 128);
+        defer allocator.free(fc1_biases_f32);
 
-    for (0..262144) |i| {
-        fc1_weights_f32[i] = random.floatNorm(f32) * fc1_scale;
-    }
-    for (0..128) |i| {
-        fc1_biases_f32[i] = 0;
-    }
+        for (0..262144) |i| {
+            fc1_weights_f32[i] = random.floatNorm(f32) * fc1_scale;
+        }
+        for (0..128) |i| {
+            fc1_biases_f32[i] = 0;
+        }
 
-    // FC2 weights (no bias for output layer)
-    fc2_weights_f32 = try allocator.alloc(f32, 1280);
-    defer allocator.free(fc2_weights_f32);
-    fc2_biases_f32 = try allocator.alloc(f32, 10);
-    defer allocator.free(fc2_biases_f32);
+        // FC2 weights (no bias for output layer)
+        fc2_weights_f32 = try allocator.alloc(f32, 1280);
+        defer allocator.free(fc2_weights_f32);
+        fc2_biases_f32 = try allocator.alloc(f32, 10);
+        defer allocator.free(fc2_biases_f32);
 
-    for (0..1280) |i| {
-        fc2_weights_f32[i] = random.floatNorm(f32) * fc2_scale;
-    }
-    for (0..10) |i| {
-        fc2_biases_f32[i] = 0;
+        for (0..1280) |i| {
+            fc2_weights_f32[i] = random.floatNorm(f32) * fc2_scale;
+        }
+        for (0..10) |i| {
+            fc2_biases_f32[i] = 0;
+        }
     }
 
     std.debug.print("\nRunning inference benchmarks...\n", .{});

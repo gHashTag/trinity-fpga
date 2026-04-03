@@ -145,7 +145,8 @@ pub fn parseSPARCData(allocator: Allocator, content: []const u8) ![]GalaxyDataPo
 /// # Parameters
 ///   - allocator: Memory allocator
 ///   - data: Galaxy data to cache
-pub fn cacheData(_allocator: Allocator, _data: []const u8) !void {
+pub fn cacheData(allocator: Allocator, data: []const u8) !void {
+    _ = allocator;
     const dir = CACHE_DIR;
     std.fs.makePathAbsolute(dir) catch {};
 
@@ -159,7 +160,7 @@ pub fn cacheData(_allocator: Allocator, _data: []const u8) !void {
     const file = try std.fs.cwd().createFile(CACHE_FILE, .{});
     defer file.close();
 
-    _ = try file.writeAll(_data);
+    _ = try file.writeAll(data);
 
     std.debug.print("SPARC data cached to {s}\n", .{CACHE_FILE});
 }
@@ -212,7 +213,8 @@ pub fn parseGalaxyName(content: []const u8) []const u8 {
 ///
 /// # Parameters
 ///   - allocator: Memory allocator
-pub fn createEmbeddedDataFile(_allocator: Allocator) !void {
+pub fn createEmbeddedDataFile(allocator: Allocator) !void {
+    _ = allocator;
     const dir = CACHE_DIR;
     std.fs.cwd().makePath(dir) catch {};
 
@@ -284,4 +286,174 @@ test "parseGalaxyName extracts from header" {
 
     const name = parseGalaxyName(content);
     try std.testing.expectEqualSlices(u8, name, "NGC");
+}
+
+/// Parse all galaxies from SPARC dataset content
+/// Galaxy data is separated by "# GalaxyName" headers
+///
+/// # Parameters
+///   - allocator: Memory allocator
+///   - content: Raw data content containing multiple galaxies
+///
+/// # Returns
+///   Array of GalaxyDataset
+pub fn parseAllGalaxies(allocator: Allocator, content: []const u8) ![]GalaxyDataset {
+    var galaxies = std.ArrayList(GalaxyDataset).init(allocator);
+    defer {
+        for (galaxies.items) |*g| g.deinit(allocator);
+        galaxies.deinit();
+    }
+
+    // Split by potential galaxy headers
+    var lines = std.mem.splitScalar(u8, content, '\n');
+    defer lines.deinit();
+
+    var current_points = std.ArrayList(GalaxyDataPoint).init(allocator);
+    defer current_points.deinit();
+
+    var current_name: []const u8 = "";
+    var distance: f64 = 0.0;
+    var inclination: f64 = 0.0;
+    var position_angle: f64 = 0.0;
+    var has_data = false;
+
+    var line_num: usize = 0;
+    while (lines.next()) |line| {
+        line_num += 1;
+        const trimmed = std.mem.trim(u8, line, &std.ascii.whitespace);
+
+        // Check for galaxy header
+        if (trimmed.len > 0 and trimmed[0] == '#') {
+            const comment = std.mem.trim(u8, trimmed[1..], &std.ascii.whitespace);
+
+            // Look for galaxy name pattern (starts with NGC, UGC, IC, etc.)
+            if (std.mem.indexOf(u8, comment, "NGC") != null or
+                std.mem.indexOf(u8, comment, "UGC") != null or
+                std.mem.indexOf(u8, comment, "IC") != null)
+            {
+                // Save previous galaxy if we have data
+                if (has_data and current_points.items.len > 0) {
+                    const name_copy = try allocator.dupe(u8, current_name);
+                    const points_copy = try allocator.dupe(GalaxyDataPoint, current_points.items);
+                    try galaxies.append(.{
+                        .name = name_copy,
+                        .points = points_copy,
+                        .distance = distance,
+                        .inclination = inclination,
+                        .position_angle = position_angle,
+                    });
+                }
+
+                // Reset for new galaxy
+                current_points.clearRetainingCapacity();
+                has_data = false;
+                distance = 0.0;
+                inclination = 0.0;
+                position_angle = 0.0;
+
+                // Extract galaxy name (first word)
+                var parts = std.mem.splitScalar(u8, comment, ' ');
+                if (parts.next()) |name| {
+                    current_name = name;
+                }
+            } else {
+                // Try to extract metadata (Distance, Inclination)
+                var parts = std.mem.splitScalar(u8, comment, ':');
+                if (parts.next()) |key| {
+                    const key_trimmed = std.mem.trim(u8, key, &std.ascii.whitespace);
+                    if (parts.next()) |value| {
+                        const value_trimmed = std.mem.trim(u8, value, &std.ascii.whitespace);
+                        if (std.mem.eql(u8, key_trimmed, "Distance")) {
+                            distance = std.fmt.parseFloat(f64, value_trimmed) catch 0.0;
+                        } else if (std.mem.eql(u8, key_trimmed, "Inclination")) {
+                            inclination = std.fmt.parseFloat(f64, value_trimmed) catch 0.0;
+                        } else if (std.mem.eql(u8, key_trimmed, "PA") or
+                                   std.mem.eql(u8, key_trimmed, "Position Angle")) {
+                            position_angle = std.fmt.parseFloat(f64, value_trimmed) catch 0.0;
+                        }
+                    }
+                }
+            }
+            continue;
+        }
+
+        // Parse data line
+        if (trimmed.len > 0 and trimmed[0] != '#') {
+            var parts = std.mem.splitScalar(u8, trimmed, ' ');
+            var fields = std.ArrayList([]const u8).init(allocator);
+            defer fields.deinit();
+
+            while (parts.next()) |part| {
+                if (part.len > 0) try fields.append(part);
+            }
+
+            if (fields.items.len >= 3) {
+                const radius = std.fmt.parseFloat(f64, fields.items[0]) catch continue;
+                const velocity = std.fmt.parseFloat(f64, fields.items[1]) catch continue;
+                const velocity_err = std.fmt.parseFloat(f64, fields.items[2]) catch continue;
+
+                // Validate ranges
+                if (radius >= 0 and radius <= 50 and
+                    velocity >= 0 and velocity <= 500 and
+                    velocity_err >= 0 and velocity_err <= 100)
+                {
+                    try current_points.append(.{
+                        .radius = radius,
+                        .velocity = velocity,
+                        .velocity_err = velocity_err,
+                    });
+                    has_data = true;
+                }
+            }
+        }
+    }
+
+    // Don't forget the last galaxy
+    if (has_data and current_points.items.len > 0) {
+        const name_copy = try allocator.dupe(u8, current_name);
+        const points_copy = try allocator.dupe(GalaxyDataPoint, current_points.items);
+        try galaxies.append(.{
+            .name = name_copy,
+            .points = points_copy,
+            .distance = distance,
+            .inclination = inclination,
+            .position_angle = position_angle,
+        });
+    }
+
+    // Transfer ownership to caller
+    const result = try allocator.dupe(GalaxyDataset, galaxies.items);
+    for (result) |*g| {
+        g.name = try allocator.dupe(u8, g.name);
+        g.points = try allocator.dupe(GalaxyDataPoint, g.points);
+    }
+    return result;
+}
+
+test "parseAllGalaxies handles multiple galaxies" {
+    const allocator = std.testing.allocator;
+    const content =
+        \\# NGC 2403
+        \\# Distance: 3.2 Mpc
+        \\# Inclination: 75 degrees
+        \\0.5 45.2 2.3
+        \\1.0 67.8 3.1
+        \\
+        \\# UGC 1234
+        \\# Distance: 5.0 Mpc
+        \\0.3 30.1 1.5
+        \\0.6 55.4 2.2
+    ;
+
+    const galaxies = try parseAllGalaxies(allocator, content);
+    defer {
+        for (galaxies) |*g| g.deinit(allocator);
+        allocator.free(galaxies);
+    }
+
+    try std.testing.expect(galaxies.len == 2);
+    try std.testing.expectEqualStrings("NGC", galaxies[0].name);
+    try std.testing.expect(galaxies[0].points.len == 2);
+    try std.testing.expectEqualStrings("UGC", galaxies[1].name);
+    try std.testing.expect(galaxies[1].distance == 5.0);
 }

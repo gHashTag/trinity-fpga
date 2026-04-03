@@ -54,7 +54,9 @@ pub fn spawnAgent(allocator: Allocator, issue_number: u32) !void {
         print("  Agent ID: {s}\n", .{binding.?.agent_id});
         print("  Status: {s}\n", .{binding.?.status});
         return error.InvalidInput;
-    } else |_| {};
+    } else |_| {
+        // No existing binding, continue
+    }
 
     // 3. Generate agent ID
     const agent_id = try generateAgentId(allocator, issue_number);
@@ -226,6 +228,8 @@ fn generateSoulContent(allocator: Allocator, issue_number: u32, agent_id: []cons
 
 /// Run agent run command
 pub fn runAgentRunCommand(allocator: Allocator, args: []const []const u8) !void {
+    _ = allocator;
+    _ = args;
     if (args.len < 2) {
         std.debug.print("Usage: tri agent run <issue_number>\n", .{});
         return error.InvalidInput;

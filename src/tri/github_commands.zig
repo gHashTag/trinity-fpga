@@ -17,6 +17,7 @@
 
 const std = @import("std");
 const github_client = @import("github_client.zig");
+const jsonl_logger = @import("jsonl_logger.zig");
 
 // ANSI colors
 const GREEN = "\x1b[38;2;0;229;153m";
@@ -286,6 +287,19 @@ fn issueComment(allocator: std.mem.Allocator, args: []const []const u8, dry_run:
     try client.commentIssue(number, comment_body);
 
     try appendProtocolLog(allocator, "issue_comment", number, agent_name, true);
+
+    // Log to agent_events.jsonl
+    const event_ts = std.time.timestamp();
+    const comment_event = jsonl_logger.Event{
+        .ts = @intCast(event_ts),
+        .event_type = "issue_comment",
+        .issue = number,
+        .agent = agent_name,
+        .ok = true,
+    };
+    jsonl_logger.appendEvent(allocator, comment_event) catch |err| {
+        std.log.warn("github_commands: jsonl_logger.appendEvent (issue_comment #{d}) failed: {}", .{ number, err });
+    };
 
     std.debug.print("{s}✅ Comment posted on #{d}{s}\n", .{ GREEN, number, RESET });
 }

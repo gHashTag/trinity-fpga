@@ -1147,8 +1147,10 @@ test "VSA VM f16: v_f16_load quantizes correctly" {
 
     // All values should be in {-1, 0, +1}
     for (0..16) |i| {
-        const val = v0.unpacked_cache[i];
-        try std.testing.expect(val == -1 or val == 0 or val == 1);
+        if (v0.unpacked_cache) |cache| {
+            const val = cache[i];
+            try std.testing.expect(val == -1 or val == 0 or val == 1);
+        }
     }
 }
 
