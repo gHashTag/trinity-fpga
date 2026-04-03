@@ -476,7 +476,8 @@ pub fn randomVector(len: usize, seed: u64) HybridBigInt {
     var result = HybridBigInt.zero();
     result.mode = .unpacked_mode;
     result.dirty = true;
-    result.trit_len = @min(len, MAX_TRITS);
+    result.ensureUnpacked(); // Allocate heap for result
+
     var rng = std.Random.DefaultPrng.init(seed);
     const random = rng.random();
     for (0..result.trit_len) |i| {
@@ -486,8 +487,10 @@ pub fn randomVector(len: usize, seed: u64) HybridBigInt {
 }
 
 pub fn permute(v: *HybridBigInt, k: usize) HybridBigInt {
-    v.ensureUnpacked();
+    v.ensureUnpacked(); // Uses page allocator
     var result = HybridBigInt.zero();
+    result.ensureUnpacked(); // Allocate heap for result
+
     result.mode = .unpacked_mode;
     result.dirty = true;
     result.trit_len = v.trit_len;
