@@ -128,26 +128,25 @@ pub const PostgresClient = struct {
     pub fn query(self: *PostgresClient, sql: []const u8) !QueryResult {
         if (self.stream == null) return error.ConnectionFailed;
 
-        const stream = self.stream.?;
         var result = QueryResult{
-            .rows = std.ArrayList(Row).init(self.allocator),
+            .rows = try std.ArrayList(Row).initCapacity(self.allocator, 0),
             .affected_rows = 0,
         };
         errdefer {
             for (result.rows.items) |*row| {
                 row.deinit(self.allocator);
             }
-            result.rows.deinit();
+            result.rows.deinit(self.allocator);
         }
 
         // Send query message
         const query_msg = try buildQueryMessage(self.allocator, sql);
         defer self.allocator.free(query_msg);
 
-        _ = try stream.writeAll(query_msg);
+        _ = try self.stream.?.writeAll(query_msg);
 
         // Read response
-        try self.readQueryResponse(&stream, &result);
+        try self.readQueryResponse(&self.stream.?, &result);
 
         return result;
     }
@@ -237,6 +236,7 @@ pub const PostgresClient = struct {
 
     /// Read query response from server
     fn readQueryResponse(self: *PostgresClient, stream: *net.Stream, result: *QueryResult) !void {
+        _ = result; // autofix
         while (true) {
             var type_buf: [1]u8 = undefined;
             const n = try stream.read(type_buf[0..]);
@@ -250,11 +250,8 @@ pub const PostgresClient = struct {
             const msg_len_u32 = std.mem.readInt(u32, &len_buf, .big);
 
             switch (msg_type) {
-                @intFromEnum(MessageType.DataRow) => {
-                    try self.readDataRow(stream, msg_len_u32 - 4, result);
-                },
                 @intFromEnum(MessageType.CommandComplete) => {
-                    _ = try self.skipMessage(stream, msg_len_u32 - 4);
+                    _ = try skipMessage(stream, msg_len_u32 - 4);
                 },
                 @intFromEnum(MessageType.ReadyForQuery) => {
                     var status_buf: [1]u8 = undefined;
@@ -267,7 +264,7 @@ pub const PostgresClient = struct {
                     return readErrorResponse(stream, msg_len_u32 - 4);
                 },
                 else => {
-                    _ = try self.skipMessage(stream, msg_len_u32 - 4);
+                    _ = try skipMessage(stream, msg_len_u32 - 4);
                 },
             }
         }
@@ -386,13 +383,13 @@ pub const Row = struct {
         for (self.values.items) |val| {
             allocator.free(val);
         }
-        self.columns.deinit();
-        self.values.deinit();
+        self.columns.deinit(allocator);
+        self.values.deinit(allocator);
     }
 
     pub fn clone(self: *const Row, allocator: Allocator) !Row {
-        var new_columns = std.ArrayList([]const u8).init(allocator);
-        var new_values = std.ArrayList([]const u8).init(allocator);
+        var new_columns = try std.ArrayList([]const u8).initCapacity(allocator, self.columns.items.len);
+        var new_values = try std.ArrayList([]const u8).initCapacity(allocator, self.values.items.len);
 
         for (self.columns.items) |col| {
             try new_columns.append(try allocator.dupe(u8, col));

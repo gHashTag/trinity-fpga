@@ -183,7 +183,7 @@ fn showClaudeHelp() !void {
         \\  {s}tri railway telegram restart{s}   Restart Claude session
         \\  {s}tri railway telegram doctor{s}    Diagnose issues
         \\
-    , .{ CYAN, RESET, CYAN, RESET, CYAN, RESET, CYAN, RESET, CYAN, RESET, YELLOW, RESET, CYAN, RESET, CYAN, RESET, CYAN, RESET, CYAN, RESET, CYAN, RESET, CYAN, RESET });
+    , .{ CYAN, RESET, CYAN, RESET, CYAN, RESET, CYAN, RESET, CYAN, RESET, YELLOW, RESET, CYAN, RESET, CYAN, RESET, CYAN, RESET, CYAN, RESET, CYAN, RESET, CYAN, RESET, YELLOW, RESET });
 }
 
 fn runInstallCheck(allocator: Allocator) !void {
@@ -242,7 +242,8 @@ fn runLoginStatusCheck(allocator: Allocator) !void {
 
 fn runEnvCheck(allocator: Allocator, args: []const []const u8) !void {
     const pattern = if (args.len > 0) args[0] else "";
-    std.debug.print("{s}Environment variables{c}{s}\n", .{ CYAN, if (pattern.len > 0) ' ' else ':', pattern });
+    const sep: u8 = if (pattern.len > 0) ' ' else ':';
+    std.debug.print("{s}Environment variables{c}{s}\n", .{ CYAN, sep, pattern });
 
     const output = getEnvironmentVariables(allocator, pattern) catch {
         std.debug.print("{s}✗ Failed to fetch environment variables{s}\n", .{ RED, RESET });
@@ -259,7 +260,7 @@ fn runEnvCheck(allocator: Allocator, args: []const []const u8) !void {
 
 /// Simple version comparison (major.minor.patch)
 /// Returns true if v1 >= v2
-fn compareVersions(allocator: Allocator, v1: []const u8, v2: []const u8) !bool {
+pub fn compareVersions(allocator: Allocator, v1: []const u8, v2: []const u8) !bool {
     const v1_parts = try parseVersionParts(allocator, v1);
     defer allocator.free(v1_parts);
 

@@ -59,5 +59,6 @@ pub const FitResult = struct {
 };
 
 pub fn runCommand(allocator: Allocator, args: []const []const u8) !void {
-    try Cli.run(allocator, args);
+    const options = try Cli.parseArgs(allocator, args);
+    try Cli.run(allocator, options);
 }

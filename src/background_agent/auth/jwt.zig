@@ -78,7 +78,12 @@ fn base64UrlDecode(allocator: Allocator, input: []const u8) ![]u8 {
         allocator.free(normalized);
     }
 
-    return std.base64.standard.Decoder.decode(allocator, if (padding > 0) padded else normalized);
+    // Zig 0.15 base64 API: calculate size, allocate, decode
+    const decoder = std.base64.standard.Decoder;
+    const size = try decoder.calcSizeForSlice(if (padding > 0) padded else normalized);
+    const result = try allocator.alloc(u8, size);
+    try decoder.decode(result, if (padding > 0) padded else normalized);
+    return result;
 }
 
 /// Generate JWT token
@@ -145,9 +150,9 @@ pub fn verifyToken(allocator: Allocator, token: []const u8, secret: []const u8) 
     const provided_sig = try base64UrlDecode(allocator, signature_encoded);
     defer allocator.free(provided_sig);
 
-    // Compute expected signature
-    var expected_mac: [hmac.sha256.mac_length]u8 = undefined;
-    hmac.sha256.create(&expected_mac, signature_input.items, secret);
+    // Compute expected signature (Zig 0.15 API)
+    var expected_mac: [crypto.auth.hmac.sha2.HmacSha256.mac_length]u8 = undefined;
+    crypto.auth.hmac.sha2.HmacSha256.create(&expected_mac, signature_input.items, secret);
 
     // Verify signature
     if (!std.mem.eql(u8, provided_sig, &expected_mac)) {

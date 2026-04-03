@@ -7,8 +7,9 @@ const net = std.net;
 
 const Config = @import("config.zig").Config;
 const Sessions = @import("db/sessions.zig");
-const RailwayClient = @import("railway/client.zig").RailwayClient;
-const railwayInit = @import("railway/client.zig").init;
+const railway = @import("railway/client.zig");
+const RailwayClient = railway.RailwayClient;
+const railwayInit = railway.init;
 const Jwt = @import("auth/jwt.zig");
 const PostgresClient = @import("db/client.zig").PostgresClient;
 
@@ -202,14 +203,14 @@ pub const Server = struct {
         };
 
         // Route and handle request
-        const response = self.routeRequest(&request_context);
+        const response = try routeRequest(self, &request_context);
 
         // Send response
-        try self.sendResponse(connection.stream, response);
+        try sendResponse(self, connection.stream, response);
     }
 
     /// Route request to handler
-    fn routeRequest(self: *Server, ctx: *const RequestContext) !Response {
+    pub fn routeRequest(self: *Server, ctx: *const RequestContext) !Response {
         // GET /health
         if (std.mem.eql(u8, ctx.path, "/health")) {
             return Response{
@@ -229,35 +230,35 @@ pub const Server = struct {
 
         // GET /api/sessions
         if (std.mem.eql(u8, ctx.path, "/api/sessions")) {
-            return self.handleListSessions();
+            return handleListSessions(self);
         }
 
         // POST /api/sessions
         if (std.mem.eql(u8, ctx.path, "/api/sessions") and std.mem.eql(u8, ctx.method, "POST")) {
-            return self.handleCreateSession(ctx.body);
+            return handleCreateSession(self, ctx.body);
         }
 
         // GET /api/sessions/:id
         if (std.mem.startsWith(u8, ctx.path, "/api/sessions/")) {
             const session_id = ctx.path["/api/sessions/".len..];
-            return self.handleGetSession(session_id);
+            return handleGetSession(self, session_id);
         }
 
         // DELETE /api/sessions/:id
         if (std.mem.eql(u8, ctx.method, "DELETE") and std.mem.startsWith(u8, ctx.path, "/api/sessions/")) {
             const session_id = ctx.path["/api/sessions/".len..];
-            return self.handleDeleteSession(session_id);
+            return handleDeleteSession(self, session_id);
         }
 
         // POST /api/containers
         if (std.mem.eql(u8, ctx.path, "/api/containers") and std.mem.eql(u8, ctx.method, "POST")) {
-            return self.handleCreateContainer(ctx.body);
+            return handleCreateContainer(self, ctx.body);
         }
 
         // DELETE /api/containers/:id
         if (std.mem.eql(u8, ctx.method, "DELETE") and std.mem.startsWith(u8, ctx.path, "/api/containers/")) {
             const service_id = ctx.path["/api/containers/".len..];
-            return self.handleDeleteContainer(service_id);
+            return handleDeleteContainer(self, service_id);
         }
 
         return Response{
@@ -270,31 +271,32 @@ pub const Server = struct {
     fn handleListSessions(self: *Server) !Response {
         const allocator = self.allocator;
 
-        const sessions = try Sessions.listSessions(allocator, &self.db_client);
+        var sessions = try Sessions.listSessions(allocator, &self.db_client);
         defer {
             for (sessions.items) |*s| {
                 allocator.free(s.id);
                 allocator.free(s.name);
                 allocator.free(s.status);
                 allocator.free(s.railway_service_id);
+                allocator.free(s.soul_file);
             }
-            sessions.deinit();
+            sessions.deinit(allocator);
         }
 
         // Build JSON response
-        var json = std.ArrayList(u8).init(allocator);
-        try json.appendSlice("{\"sessions\":[");
+        var json = try std.ArrayList(u8).initCapacity(allocator, 512);
+        try json.appendSlice(allocator, "{\"sessions\":[");
         for (sessions.items, 0..) |s, i| {
-            if (i > 0) try json.append(',');
-            try json.writer().print(
+            if (i > 0) try json.append(allocator, ',');
+            try json.writer(allocator).print(
                 \\{{"id":"{s}","name":"{s}","status":"{s}","railway_service_id":"{s}"}}
             , .{ s.id, s.name, s.status, s.railway_service_id });
         }
-        try json.appendSlice("]}");
+        try json.appendSlice(allocator, "]}");
 
         return Response{
             .status = 200,
-            .body = try json.toOwnedSlice(),
+            .body = try json.toOwnedSlice(allocator),
         };
     }
 
@@ -307,7 +309,7 @@ pub const Server = struct {
             name: []const u8,
             service_id: []const u8,
         }, allocator, body, .{ .ignore_unknown_fields = true });
-        defer parsed.deinit(allocator);
+        defer parsed.deinit();
 
         // Create session
         const session = try Sessions.createSession(allocator, &self.db_client, parsed.value.name, parsed.value.service_id);
@@ -333,7 +335,7 @@ pub const Server = struct {
     fn handleGetSession(self: *Server, session_id: []const u8) !Response {
         const allocator = self.allocator;
 
-        const session = try Sessions.getSession(allocator, &self.db_client, session_id) catch |err| {
+        const session = Sessions.getSession(allocator, &self.db_client, session_id) catch |err| {
             return switch (err) {
                 error.SessionNotFound => Response{
                     .status = 404,
@@ -364,9 +366,9 @@ pub const Server = struct {
 
     /// Handle DELETE /api/sessions/:id
     fn handleDeleteSession(self: *Server, session_id: []const u8) !Response {
-        _ = try Sessions.deleteSession(&self.db_client, session_id) catch |err| {
+        _ = Sessions.deleteSession(&self.db_client, session_id) catch |err| {
             return switch (err) {
-                error.SessionNotFound, error.InvalidInput => Response{
+                error.InvalidInput => Response{
                     .status = 404,
                     .body = "{\"error\":\"Session not found\"}",
                 },
@@ -388,7 +390,7 @@ pub const Server = struct {
         const allocator = self.allocator;
 
         // Check Railway client
-        const railway_client = self.railway_client orelse return Response{
+        if (self.railway_client == null) return Response{
             .status = 503,
             .body = "{\"error\":\"Railway not available in local mode\"}",
         };
@@ -399,10 +401,10 @@ pub const Server = struct {
             name: []const u8,
             image: []const u8,
         }, allocator, body, .{ .ignore_unknown_fields = true });
-        defer parsed.deinit(allocator);
+        defer parsed.deinit();
 
         // Create Railway service
-        const result = try railway_client.createService(parsed.value.environment_id, parsed.value.name, parsed.value.image) catch |err| {
+        const result = railway.createService(&self.railway_client.?, parsed.value.environment_id, parsed.value.name, parsed.value.image) catch |err| {
             return Response{
                 .status = 500,
                 .body = try std.fmt.allocPrint(allocator, "{{\"error\":\"{s}\"}}", .{@errorName(err)}),
@@ -434,13 +436,13 @@ pub const Server = struct {
         const allocator = self.allocator;
 
         // Check Railway client
-        const railway_client = self.railway_client orelse return Response{
+        if (self.railway_client == null) return Response{
             .status = 503,
             .body = "{\"error\":\"Railway not available in local mode\"}",
         };
 
         // Delete Railway service
-        _ = try railway_client.deleteService(service_id) catch |err| {
+        _ = railway.deleteService(&self.railway_client.?, service_id) catch |err| {
             return Response{
                 .status = 500,
                 .body = try std.fmt.allocPrint(allocator, "{{\"error\":\"{s}\"}}", .{@errorName(err)}),
@@ -449,6 +451,8 @@ pub const Server = struct {
 
         // Update sessions to remove service_id reference
         _ = Sessions.updateSession(allocator, &self.db_client, service_id, .{
+            .status = null,
+            .name = null,
             .railway_service_id = null,
         }) catch {
             return Response{
@@ -464,12 +468,12 @@ pub const Server = struct {
     }
 
     /// Send HTTP response
-    fn sendResponse(self: *Server, stream: *net.Stream, response: Response) !void {
+    fn sendResponse(self: *Server, stream: net.Stream, response: Response) !void {
         // Build headers
-        var headers = std.ArrayList(u8).init(self.allocator);
+        var headers = try std.ArrayList(u8).initCapacity(self.allocator, 256);
         defer headers.deinit(self.allocator);
 
-        try headers.writer().print(
+        try headers.writer(self.allocator).print(
             \\HTTP/1.1 {d} OK\r
             \\Content-Type: {s}\r
             \\Content-Length: {d}\r
@@ -478,12 +482,12 @@ pub const Server = struct {
 
         // Add CORS if enabled
         if (response.cors) {
-            try headers.appendSlice("Access-Control-Allow-Origin: *\r");
-            try headers.appendSlice("Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS\r");
-            try headers.appendSlice("Access-Control-Allow-Headers: Content-Type, Authorization\r");
+            try headers.appendSlice(self.allocator, "Access-Control-Allow-Origin: *\r");
+            try headers.appendSlice(self.allocator, "Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS\r");
+            try headers.appendSlice(self.allocator, "Access-Control-Allow-Headers: Content-Type, Authorization\r");
         }
 
-        try headers.append("\r");
+        try headers.append(self.allocator, '\r');
 
         // Send headers and body
         _ = try stream.writeAll(headers.items);

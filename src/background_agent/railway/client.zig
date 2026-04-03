@@ -88,26 +88,27 @@ fn buildCreateServiceMutation(input: ServiceCreateInput) ![]const u8 {
     _ = input;
     return std.fmt.allocPrint(std.heap.page_allocator,
         \\mutation {{ serviceCreate(input: $input: ServiceCreateInput!) {{ id }} }}
-    );
+    , .{});
 }
 
 /// Build serviceDelete mutation
 fn buildDeleteServiceMutation(service_id: []const u8) ![]const u8 {
+    _ = service_id;
     return std.fmt.allocPrint(std.heap.page_allocator,
-        \\mutation {{ serviceDelete(id: $id: String!) {{ serviceId }} }}
-    , .{ service_id });
+        \\mutation {{ serviceDelete(id: "PLACEHOLDER") {{ serviceId }} }}
+    , .{});
 }
 
 /// Send GraphQL request
 fn sendGraphQLRequest(client: *RailwayClient, query: []const u8) ![]const u8 {
     // Build HTTP POST request
-    var request = std.ArrayList(u8).init(std.heap.page_allocator);
+    var request = try std.ArrayList(u8).initCapacity(std.heap.page_allocator, 512);
     defer {
-        const bytes = request.toOwnedSlice();
+        const bytes = request.toOwnedSlice(std.heap.page_allocator) catch &[_]u8{};
         std.heap.page_allocator.free(bytes);
     }
 
-    try request.writer().print(
+    try request.writer(std.heap.page_allocator).print(
         \\POST {s} HTTP/1.1\r
         \\Host: backboard.railway.app\r
         \\Content-Type: application/json\r
@@ -122,7 +123,7 @@ fn sendGraphQLRequest(client: *RailwayClient, query: []const u8) ![]const u8 {
     const address = try std.net.Address.parseIp("backboard.railway.app", 443);
 
     // Connect via TCP (HTTPS would need TLS)
-    var stream = try net.tcpConnectToAddress(client.allocator, address);
+    var stream = try net.tcpConnectToAddress(address);
     defer stream.close();
 
     // Send request

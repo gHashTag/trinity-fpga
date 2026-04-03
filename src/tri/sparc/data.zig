@@ -33,6 +33,7 @@ pub const DownloadError = error{
     ParseError,
     CacheError,
     IOError,
+    NoDataAvailable,
 };
 
 /// Download SPARC data from astroweb.case.edu
@@ -46,29 +47,29 @@ pub const DownloadError = error{
 pub fn downloadSPARCData(allocator: Allocator, use_cached: bool) ![]const u8 {
     // Try cache first if requested
     if (use_cached) {
-        if (std.fs.path.dirnameAlloc(allocator, CACHE_FILE)) |dir| {
-            defer allocator.free(dir);
+        const dir_opt = std.fs.path.dirname(CACHE_FILE);
+        if (dir_opt) |dir| {
+            var dir_stream = std.fs.cwd().openDir(dir, .{}) catch {
+                return error.CacheError;
+            };
+            defer dir_stream.close();
 
-            if (std.fs.cwd().openDir(dir, .{})) |dir_stream| {
-                defer dir_stream.close();
+            var dir_iter = dir_stream.iterate();
+            while (try dir_iter.next()) |entry| {
+                if (entry.kind == .file) {
+                    if (std.mem.eql(u8, entry.name, std.fs.path.basename(CACHE_FILE))) {
+                        std.debug.print("Using cached SPARC data from {s}...\n", .{CACHE_FILE});
 
-                var dir_iter = dir_stream.iterate();
-                while (dir_iter.next()) |entry| {
-                    if (entry.kind == .file) {
-                        if (std.mem.eql(u8, entry.name, std.fs.path.basename(CACHE_FILE))) {
-                            std.debug.print("Using cached SPARC data from {s}...\n", .{CACHE_FILE});
+                        const cached_data = std.fs.cwd().readFileAlloc(allocator, CACHE_FILE, 10 * 1024 * 1024) catch |err| {
+                            std.debug.print("Failed to read cache: {}\n", .{err});
+                            continue;
+                        };
 
-                            const cached_data = std.fs.cwd().readFileAlloc(allocator, CACHE_FILE) catch |err| {
-                                std.debug.print("Failed to read cache: {}\n", .{err});
-                                continue;
-                            };
-
-                            return cached_data;
-                        }
+                        return cached_data;
                     }
                 }
-            } else |_| {}
-        } else |_| {}
+            }
+        }
     }
 
     // Try embedded data
@@ -82,6 +83,8 @@ pub fn downloadSPARCData(allocator: Allocator, use_cached: bool) ![]const u8 {
 
         return data;
     } else |_| {}
+
+    return error.NoDataAvailable;
 }
 
 /// Parse SPARC plaintext format (8 columns)
@@ -94,10 +97,9 @@ pub fn downloadSPARCData(allocator: Allocator, use_cached: bool) ![]const u8 {
 /// # Returns
 ///   Array of GalaxyDataPoint
 pub fn parseSPARCData(allocator: Allocator, content: []const u8) ![]GalaxyDataPoint {
-    var points = std.ArrayList(GalaxyDataPoint).initCapacity(allocator, 100);
+    var points = try std.ArrayList(GalaxyDataPoint).initCapacity(allocator, 100);
 
     var lines = std.mem.splitScalar(u8, content, '\n');
-    defer lines.deinit();
 
     while (lines.next()) |line| {
         // Skip empty lines and comments
@@ -106,14 +108,13 @@ pub fn parseSPARCData(allocator: Allocator, content: []const u8) ![]GalaxyDataPo
 
         // Split by whitespace
         var parts = std.mem.splitScalar(u8, trimmed, ' ');
-        defer parts.deinit();
 
-        var fields = std.ArrayList([]const u8).initCapacity(allocator, 8);
-        defer fields.deinit();
+        var fields = try std.ArrayList([]const u8).initCapacity(allocator, 8);
+        defer fields.deinit(allocator);
 
         while (parts.next()) |part| {
             if (part.len > 0) {
-                try fields.append(part);
+                try fields.append(allocator, part);
             }
         }
 
@@ -130,14 +131,14 @@ pub fn parseSPARCData(allocator: Allocator, content: []const u8) ![]GalaxyDataPo
         if (velocity < 0 or velocity > 500) continue; // km/s
         if (velocity_err < 0 or velocity_err > 100) continue; // km/s
 
-        try points.append(.{
+        try points.append(allocator, .{
             .radius = radius,
             .velocity = velocity,
             .velocity_err = velocity_err,
         });
     }
 
-    return points.toOwnedSlice();
+    return points.toOwnedSlice(allocator);
 }
 
 /// Cache parsed data as JSON for fast reloads
@@ -174,7 +175,6 @@ pub fn cacheData(allocator: Allocator, data: []const u8) !void {
 ///   Galaxy name (or default)
 pub fn parseGalaxyName(content: []const u8) []const u8 {
     var lines = std.mem.splitScalar(u8, content, '\n');
-    defer lines.deinit();
 
     var line_num: u32 = 0;
     while (lines.next()) |line| {
@@ -194,7 +194,6 @@ pub fn parseGalaxyName(content: []const u8) []const u8 {
             {
                 // Extract name (take first "word" or alphanumeric sequence)
                 var name_parts = std.mem.splitScalar(u8, comment, ' ');
-                defer name_parts.deinit();
 
                 if (name_parts.next()) |name| {
                     return name;
@@ -298,18 +297,17 @@ test "parseGalaxyName extracts from header" {
 /// # Returns
 ///   Array of GalaxyDataset
 pub fn parseAllGalaxies(allocator: Allocator, content: []const u8) ![]GalaxyDataset {
-    var galaxies = std.ArrayList(GalaxyDataset).init(allocator);
+    var galaxies = try std.ArrayList(GalaxyDataset).initCapacity(allocator, 0);
     defer {
         for (galaxies.items) |*g| g.deinit(allocator);
-        galaxies.deinit();
+        galaxies.deinit(allocator);
     }
 
     // Split by potential galaxy headers
     var lines = std.mem.splitScalar(u8, content, '\n');
-    defer lines.deinit();
 
-    var current_points = std.ArrayList(GalaxyDataPoint).init(allocator);
-    defer current_points.deinit();
+    var current_points = try std.ArrayList(GalaxyDataPoint).initCapacity(allocator, 0);
+    defer current_points.deinit(allocator);
 
     var current_name: []const u8 = "";
     var distance: f64 = 0.0;
@@ -335,7 +333,7 @@ pub fn parseAllGalaxies(allocator: Allocator, content: []const u8) ![]GalaxyData
                 if (has_data and current_points.items.len > 0) {
                     const name_copy = try allocator.dupe(u8, current_name);
                     const points_copy = try allocator.dupe(GalaxyDataPoint, current_points.items);
-                    try galaxies.append(.{
+                    try galaxies.append(allocator, .{
                         .name = name_copy,
                         .points = points_copy,
                         .distance = distance,
@@ -380,11 +378,11 @@ pub fn parseAllGalaxies(allocator: Allocator, content: []const u8) ![]GalaxyData
         // Parse data line
         if (trimmed.len > 0 and trimmed[0] != '#') {
             var parts = std.mem.splitScalar(u8, trimmed, ' ');
-            var fields = std.ArrayList([]const u8).init(allocator);
-            defer fields.deinit();
+            var fields = try std.ArrayList([]const u8).initCapacity(allocator, 8);
+            defer fields.deinit(allocator);
 
             while (parts.next()) |part| {
-                if (part.len > 0) try fields.append(part);
+                if (part.len > 0) try fields.append(allocator, part);
             }
 
             if (fields.items.len >= 3) {
@@ -397,7 +395,7 @@ pub fn parseAllGalaxies(allocator: Allocator, content: []const u8) ![]GalaxyData
                     velocity >= 0 and velocity <= 500 and
                     velocity_err >= 0 and velocity_err <= 100)
                 {
-                    try current_points.append(.{
+                    try current_points.append(allocator, .{
                         .radius = radius,
                         .velocity = velocity,
                         .velocity_err = velocity_err,
@@ -412,7 +410,7 @@ pub fn parseAllGalaxies(allocator: Allocator, content: []const u8) ![]GalaxyData
     if (has_data and current_points.items.len > 0) {
         const name_copy = try allocator.dupe(u8, current_name);
         const points_copy = try allocator.dupe(GalaxyDataPoint, current_points.items);
-        try galaxies.append(.{
+        try galaxies.append(allocator, .{
             .name = name_copy,
             .points = points_copy,
             .distance = distance,

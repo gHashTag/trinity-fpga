@@ -56,8 +56,18 @@ const DEFAULT_REDDITS = [_][]const u8{
     "r/MachineLearning",
 };
 
+var default_config_storage: Config = undefined;
+
+pub fn initDefaults() void {
+    default_config_storage = Config{
+        .target_subreddits = DEFAULT_REDDITS[0..],
+        .optimal_times_reddit = @as([]const u8, "Tue-Thu 14:00-17:00 UTC"),
+        .optimal_times_twitter = @as([]const u8, "Peak audience times (depends on analytics)"),
+    };
+}
+
 const DEFAULT_CONFIG = Config{
-    .target_subreddits = DEFAULT_REDDITS[0..],
+    .target_subreddits = @constCast(&[_][]const u8{ "r/programming", "r/rust", "r/coolgithubprojects", "r/MachineLearning" }),
     .optimal_times_reddit = @as([]const u8, "Tue-Thu 14:00-17:00 UTC"),
     .optimal_times_twitter = @as([]const u8, "Peak audience times (depends on analytics)"),
 };
@@ -82,7 +92,7 @@ fn loadConfig(allocator: Allocator) !Config {
     const content = try file.readToEndAlloc(allocator, 1024 * 1024);
     defer allocator.free(content);
 
-    const parsed = try std.json.parseFromSliceLeaky(Config, content);
+    const parsed = try std.json.parseFromSliceLeaky(Config, allocator, content, .{});
     return parsed;
 }
 
@@ -133,12 +143,12 @@ fn analyzeContent(allocator: Allocator, agent_output: []const u8) ![][]const u8 
 
 /// Generate Twitter/X thread from highlights
 fn generateTwitterThread(allocator: Allocator, highlights: [][]const u8) !TwitterThread {
-    var tweets = std.ArrayList(Tweet).init(allocator);
+    var tweets = std.ArrayList(Tweet).empty;
 
     // Tweet 1: Hook with numbers/curiosity
     const hook = if (highlights.len > 0) highlights[0] else "📝 Agent work completed";
     const hook_display = if (highlights.len > 0) highlights[0] else "";
-    try tweets.append(.{
+    try tweets.append(allocator, .{
         .number = 1,
         .content = try std.fmt.allocPrint(allocator, "{s}\n\n🧵 {s}", .{ hook, hook_display }),
     });
@@ -148,7 +158,7 @@ fn generateTwitterThread(allocator: Allocator, highlights: [][]const u8) !Twitte
     for (0..insights_count) |i| {
         const insight = if (i + 1 < highlights.len) highlights[i + 1] else "";
         if (insight.len > 0) {
-            try tweets.append(.{
+            try tweets.append(allocator, .{
                 .number = i + 2,
                 .content = try std.fmt.allocPrint(allocator, "{d}. {s}", .{ i + 1, insight }),
                 .has_question = i == insights_count - 1, // Last insight is a question
@@ -157,13 +167,13 @@ fn generateTwitterThread(allocator: Allocator, highlights: [][]const u8) !Twitte
     }
 
     // Tweet 7-8: CTA
-    try tweets.append(.{
+    try tweets.append(allocator, .{
         .number = insights_count + 2,
         .content = try std.fmt.allocPrint(allocator, "📢 Which of these will you try first?", .{}),
         .has_question = true,
     });
 
-    return TwitterThread{ .tweets = tweets.toOwnedSlice() };
+    return TwitterThread{ .tweets = try tweets.toOwnedSlice(allocator) };
 }
 
 /// Generate Reddit post using showcase template
@@ -171,25 +181,25 @@ fn generateRedditPost(allocator: Allocator) !RedditPost {
     const title_slice = try std.fmt.allocPrint(allocator, "[Trinity]: Agent T ready", .{});
     defer allocator.free(title_slice);
 
-    var what_built = std.ArrayList([]const u8).init(allocator);
-    var tech_stack = std.ArrayList([]const u8).init(allocator);
-    var lessons_learned = std.ArrayList([]const u8).init(allocator);
+    var what_built = std.ArrayList([]const u8).empty;
+    var tech_stack = std.ArrayList([]const u8).empty;
+    var lessons_learned = std.ArrayList([]const u8).empty;
 
-    try what_built.append("📝 Generate viral posts from agent work");
-    try what_built.append("👑 Twitter/X thread generation (7-8 tweets)");
-    try what_built.append("📝 Reddit post generation (showcase template)");
-    try what_built.append("🔍 Content analysis and highlight extraction");
+    try what_built.append(allocator, "📝 Generate viral posts from agent work");
+    try what_built.append(allocator, "👑 Twitter/X thread generation (7-8 tweets)");
+    try what_built.append(allocator, "📝 Reddit post generation (showcase template)");
+    try what_built.append(allocator, "🔍 Content analysis and highlight extraction");
 
-    try tech_stack.append("Pure Zig (no external dependencies)");
-    try tech_stack.append("VIBEE specification-driven development");
+    try tech_stack.append(allocator, "Pure Zig (no external dependencies)");
+    try tech_stack.append(allocator, "VIBEE specification-driven development");
 
-    try lessons_learned.append("Focus on numbers, metrics, and demos");
-    try lessons_learned.append("Evidence-based, no speculation");
+    try lessons_learned.append(allocator, "Focus on numbers, metrics, and demos");
+    try lessons_learned.append(allocator, "Evidence-based, no speculation");
 
-    var tags = std.ArrayList([]const u8).init(allocator);
-    try tags.append("[OC]");
-    try tags.append("trinity");
-    try tags.append("zig");
+    var tags = std.ArrayList([]const u8).empty;
+    try tags.append(allocator, "[OC]");
+    try tags.append(allocator, "trinity");
+    try tags.append(allocator, "zig");
 
     const hook_slice = try std.fmt.allocPrint(allocator, "Technical content queen is now ready! 📢", .{});
     defer allocator.free(hook_slice);
@@ -201,11 +211,11 @@ fn generateRedditPost(allocator: Allocator) !RedditPost {
         .title = title_slice,
         .hook = hook_slice,
         .demo_link = "",
-        .what_built = what_built.toOwnedSlice(),
-        .tech_stack = tech_stack.toOwnedSlice(),
-        .lessons_learned = lessons_learned.toOwnedSlice(),
+        .what_built = try what_built.toOwnedSlice(allocator),
+        .tech_stack = try tech_stack.toOwnedSlice(allocator),
+        .lessons_learned = try lessons_learned.toOwnedSlice(allocator),
         .cta = cta_slice,
-        .tags = tags.toOwnedSlice(),
+        .tags = try tags.toOwnedSlice(allocator),
     };
 }
 
@@ -239,7 +249,7 @@ pub fn runCopywrightPostCommand(allocator: Allocator, args: []const []const u8) 
 
         const highlights = try analyzeContent(allocator, last_event);
         const twitter = try generateTwitterThread(allocator, highlights);
-        const reddit = try generateRedditPost(allocator, highlights, "Trinity");
+        const reddit = try generateRedditPost(allocator);
 
         // Output as JSON for manual review
         const content = PostContent{
@@ -247,7 +257,7 @@ pub fn runCopywrightPostCommand(allocator: Allocator, args: []const []const u8) 
             .reddit_post = reddit,
         };
 
-        const json = try std.json.stringifyAlloc(allocator, content, .{ .whitespace = .indent_2 });
+        const json = try std.json.stringifyToAlloc(allocator, content, .{ .whitespace = .indent_2 });
         defer allocator.free(json);
         std.debug.print("{s}\n{s}{s}\n", .{ json, "\x1b[0m" });
     } else {
@@ -274,7 +284,7 @@ pub fn runCopywrightConfigCommand(allocator: Allocator, args: []const []const u8
 
     std.debug.print("{s}Target subreddits:{s}\n", .{"\x1b[36m"});
     for (config.target_subreddits) |sub| {
-        std.debug.print("  - {s}\n", .{sub}, .{});
+        std.debug.print("  - {s}\n", .{sub});
     }
 
     std.debug.print("{s}Optimal Reddit time: {s}\n", .{ "\x1b[36m", config.optimal_times_reddit });

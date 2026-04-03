@@ -65,17 +65,17 @@ pub fn startSession(allocator: Allocator, options: StartOptions) !void {
     // Security warning for skip-permissions
     if (options.skip_permissions) {
         std.debug.print("\n{s}⚠️  SECURITY WARNING:{s}\n", .{ YELLOW, RESET });
-        std.debug.print("  --skip-permissions is enabled. This allows Claude to execute\n");
-        std.debug.print("  commands without confirmation. Use ONLY in isolated project directories.\n");
+        std.debug.print("  --skip-permissions is enabled. This allows Claude to execute\n", .{});
+        std.debug.print("  commands without confirmation. Use ONLY in isolated project directories.\n", .{});
         std.debug.print("  See: https://docs.anthropic.com/en/docs/build-with-claude/channels#security\n\n", .{});
     }
 
     // Build command with optional flags
     var cmd_buf: [256]u8 = undefined;
     const cmd = if (options.skip_permissions)
-        std.fmt.bufPrint(&cmd_buf, "claude --channel telegram --dangerously-skip-permissions", .{})
+        try std.fmt.bufPrint(&cmd_buf, "claude --channel telegram --dangerously-skip-permissions", .{})
     else
-        std.fmt.bufPrint(&cmd_buf, "{s}", .{CLAUDE_COMMAND}) catch CLAUDE_COMMAND;
+        try std.fmt.bufPrint(&cmd_buf, "{s}", .{CLAUDE_COMMAND});
 
     var ssh = railway_ssh.RailwaySSH.initDefault();
     try ssh.tmuxNewSession(allocator, CLAUDE_SESSION, cmd);
@@ -258,16 +258,19 @@ pub fn configureTelegramBot(allocator: Allocator, cli_token: ?[]const u8) ![]con
     var token: ?[]const u8 = null;
 
     // 1. Try stdin first (most secure for interactive use)
-    if (std.io.isStdInTty()) {
+    // In Zig 0.15, check if stdin is a TTY using isatty
+    const is_tty = std.posix.isatty(std.posix.STDIN_FILENO);
+    if (is_tty) {
         // Terminal is interactive, can read from stdin if piped
         var stdin_buf: [1024]u8 = undefined;
-        const stdin_reader = std.io.getStdIn().reader();
-        const bytes_read = stdin_reader.readAll(&stdin_buf) catch 0;
+        // Use posix read for stdin
+        const bytes_read = std.posix.read(std.posix.STDIN_FILENO, &stdin_buf) catch 0;
 
         if (bytes_read > 0) {
             const input = stdin_buf[0..bytes_read];
-            token = std.mem.trim(u8, input, " \n\r\t");
-            if (token.len > 0) {
+            const trimmed = std.mem.trim(u8, input, " \n\r\t");
+            if (trimmed.len > 0) {
+                token = trimmed;
                 std.debug.print("{s}Token read from stdin{s}\n", .{ CYAN, RESET });
             }
         }
@@ -282,10 +285,12 @@ pub fn configureTelegramBot(allocator: Allocator, cli_token: ?[]const u8) ![]con
     }
 
     // 3. Try CLI argument (least secure, but convenient)
-    if (token == null and cli_token) |ct| {
-        token = ct;
-        std.debug.print("{s}Token read from CLI argument{s}\n", .{ YELLOW, RESET });
-        std.debug.print("  ⚠ Consider using stdin or env variable instead for security\n", .{});
+    if (token == null) {
+        if (cli_token) |ct| {
+            token = ct;
+            std.debug.print("{s}Token read from CLI argument{s}\n", .{ YELLOW, RESET });
+            std.debug.print("  ⚠ Consider using stdin or env variable instead for security\n", .{});
+        }
     }
 
     // Validate token format
@@ -394,7 +399,6 @@ fn showChannelsHelp() !void {
         CYAN, RESET, CYAN, RESET,
         YELLOW, RESET,
         MIN_CHANNELS_VERSION,
-        YELLOW, RESET,
     });
 }
 

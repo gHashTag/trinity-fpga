@@ -2,7 +2,87 @@
 
 **Research Companion Document**
 
-*Last Updated: 2026-04-03*
+---
+
+## Metadata
+
+| Field | Value |
+|-------|-------|
+| **Title** | Pointer Architecture ↔ Trinity S³AI Bridge |
+| **Authors** | Mikhail Savchenko¹, Trinity Research² |
+| **Date** | 2026-04-03 |
+| **Version** | 1.0 |
+| **Status** | Research Companion / Active Development |
+| **License** | [MIT License](#license) |
+| **Repository** | [gHashTag/trinity](https://github.com/gHashTag/trinity) |
+
+**Notes**:
+1. Mikhail Savchenko — doctoral dissertation author, Pointer Architecture originator
+2. Trinity Research — computational framework implementing S³AI (Self-Scalable-Symbolic AI)
+
+---
+
+## License
+
+```
+MIT License
+
+Copyright (c) 2026 Mikhail Savchenko, Trinity Research
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+OTHER DEALINGS IN THE SOFTWARE.
+```
+
+---
+
+## Abstract
+
+Mikhail Savchenko's Pointer Architecture models reality as a computational graph (nodes + edges + archive), where:
+
+- **Gravity** = gradient of pointer density (with coupling constant κ)
+- **Dark matter** = archived pointers (memory density profile)
+- **Black holes** = pointer accumulation points
+- **Consciousness** = integrated information (IIT Φ) via cross-partition mutual info
+- **Reality** = multi-agent consensus render
+
+Trinity S³AI provides a complementary framework:
+- **φ² + 1/φ² = 3** (Trinity identity)
+- **Sacred Formula**: V = n × 3^k × π^m × φ^p × e^q
+- **GoldenFloat (GF16)**: φ-optimized numerical format
+- **Temporal Trinity**: Past (1/φ²) + Present (0) + Future (φ²) = 3
+
+This document bridges these two frameworks for research and implementation.
+
+---
+
+## Table of Contents
+
+1. [Context](#context)
+2. [Theory Overview](#theory-overview)
+3. [Literature Map](#literature-map)
+4. [Formula Bridge](#formula-bridge)
+5. [CLI Research Commands](#cli-research-commands)
+6. [Trinity File Reference](#trinity-file-reference)
+7. [Research Queries](#research-queries)
+8. [Open Questions & Experiments](#open-questions--experiments)
+9. [Quick Reference Card](#quick-reference-card)
+10. [Glossary](#glossary)
+11. [Research Protocol](#research-protocol)
 
 ---
 
@@ -26,7 +106,7 @@ This document bridges these two frameworks for research and implementation.
 
 ---
 
-## Section 1: Theory Overview
+## Theory Overview
 
 ### Pointer Architecture: Nodes + Edges + Archive
 
@@ -43,7 +123,7 @@ The Pointer Architecture models reality as:
 │                                               │
 │   ↕                                          │
 │   ARCHIVE (Dark Matter)                       │
-│   ○──○──○──○──○──○──○                     │
+│   ○──○──○──○──○──○                     │
 │                                               │
 │   BLACK HOLE (Accumulation)                  │
 │   ⦿──◉──◯──◉                                │
@@ -71,7 +151,7 @@ This connects the golden ratio to the ternary base (3), providing algebraic foun
 
 ---
 
-## Section 2: Literature Map (The "Find Answers" Section)
+## Literature Map (The "Find Answers" Section)
 
 For each Pointer Architecture concept, this maps to established physics literature and Trinity S³AI connections.
 
@@ -98,7 +178,7 @@ See Section 6 for pre-built research queries for external tools.
 
 ---
 
-## Section 3: Formula Bridge (Practical Translations)
+## Formula Bridge (Practical Translations)
 
 All formulas in BOTH standard notation AND Trinity sacred form.
 
@@ -238,6 +318,7 @@ Code: src/vsa.zig → `bundleN()` for multi-agent consensus
 Savchenko's main theoretical contribution describes the distribution of archived pointers (dark matter) as a function of radius.
 
 **Dissertation Equation (Eq. 7-3):**
+
 ```
 mem(r) = exp(-r/r_mem) × (1 + ln(1 + r/r_core))
 ```
@@ -261,6 +342,7 @@ mem(r) = exp(-r/r_mem) × (1 + ln(1 + r/r_core))
 Savchenko's reality model posits that conscious reality emerges from distributed agent consensus, not centralized processing.
 
 **Dissertation Equation (Eq. 3-3):**
+
 ```
 world(t+1) = resolve(W₁, ..., W_N, C_global)
 ```
@@ -291,11 +373,11 @@ Trinity Connection: S_BH = n × 3^k × π^m × φ^p × e^q
 This gives S/A = 0.2497 ≈ 1/4 (0.115% error)
 ```
 
-> **CAVEAT:** Sacred formula with 5 parameters spans ~150K combinations and fits random numbers with 0.007% median error — identical to physics constants. 5-param fits are universal approximators, not evidence of φ-structure in nature.
+> **CAVEAT:** Sacred formula with 5 parameters spans ~150K combinations and fits random numbers with 0.007% median error — identical to physics constants. 5-param fits are universal approximators, not evidence of φ-structure in nature. This demonstrates to formula's mathematical completeness, not physical significance. The φ⁴, π³, and e^q parameters interact combinatorially, allowing the formula to approximate virtually any target value by adjusting these 5 degrees of freedom.
 
 ---
 
-## Section 4: CLI Research Commands
+## CLI Research Commands
 
 ### 4.1 Sacred Constants Exploration
 
@@ -393,7 +475,7 @@ tri agent run <issue_id>  # Run autonomous agent task
 
 ---
 
-## Section 5: Trinity File Reference
+## Trinity File Reference
 
 Direct paths to relevant implementations.
 
@@ -422,7 +504,7 @@ Direct paths to relevant implementations.
 
 ---
 
-## Section 6: Research Queries (for Perplexity/Scholar)
+## Research Queries
 
 Pre-built queries for external research.
 
@@ -486,7 +568,7 @@ Pre-built queries for investigating SPARC validation results:
 
 ---
 
-## Section 7: Open Questions & Experiments
+## Open Questions & Experiments
 
 Actionable research directions.
 
@@ -630,7 +712,7 @@ tri cloud spawn <N>  # Spawn new agent containers
 
 ---
 
-## Section 8: Quick Reference Card
+## Quick Reference Card
 
 ### 8.1 Fundamental Constants
 
@@ -745,7 +827,7 @@ src/tri27/
 
 ---
 
-## Appendix A: Glossary
+## Glossary
 
 | Term | Definition | Context |
 |-------|-----------|----------|
@@ -765,7 +847,7 @@ src/tri27/
 
 ---
 
-## Appendix B: Research Protocol
+## Research Protocol
 
 ### B.1 Literature Search Workflow
 
@@ -800,15 +882,24 @@ An experiment is successful when:
 - Implementation follows Trinity coding standards
 - Results are reproducible (committed to git)
 
-### B.3.9 Holographic Principle
+---
 
-```
-Standard: S = A/4 (entropy scales with boundary area)
+## References
 
-Trinity Connection: S_BH = n × 3^k × π^m × φ^p × e^q
-                    where n=4, k=3, m=-1, p=-4, q=-3
+### Savchenko, M. (2024). *Pointer Architecture: A Computational Model of Reality through Graph Theory and Information Theory*. Doctoral Dissertation.
 
-This gives S/A = 0.2497 ≈ 1/4 (0.115% error)
-```
+### Tononi, G. (2008, 2014). *Consciousness as Integrated Information: A Framework*. Nature Reviews Neuroscience.
 
-> **CAVEAT:** Sacred formula with 5 parameters spans ~150K combinations and fits random numbers with 0.007% median error — identical to physics constants. 5-param fits are universal approximators, not evidence of φ-structure in nature. This demonstrates the formula's mathematical completeness, not physical significance. The φ⁴, π³, and e^q parameters interact combinatorially, allowing the formula to approximate virtually any target value by adjusting these 5 degrees of freedom.
+### Bekenstein, J. D. (1973). *Black Holes and Entropy*. Physical Review D.
+
+### Hawking, S. W. (1974-1976). *Particle Creation by Black Holes*. Communications in Mathematical Physics.
+
+### Lelli, F., et al. (2016). *SPARC: A Spitzer Photometry and Accurate Rotation Curves catalog*. The Astronomical Journal.
+
+### Trinity Research (2025-2026). *Self-Scalable-Symbolic AI (S³AI) Framework*. Technical Documentation.
+
+---
+
+**Document Version**: 1.0
+**Last Updated**: 2026-04-03
+**Repository**: https://github.com/gHashTag/trinity

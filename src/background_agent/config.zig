@@ -33,19 +33,31 @@ fn getEnvOr(allocator: Allocator, key: []const u8, default_value: []const u8) ![
     }
 }
 
+/// Validate configuration at runtime
+pub fn validateConfig(config: *const Config) !void {
+    if (config.databaseUrl.len == 0) {
+        return error.MissingEnv;
+    }
+    // API token and auth secret are optional for Railway health checks
+    // but will be validated when used
+}
+
 /// Load configuration from environment variables
 pub fn loadConfig(allocator: Allocator) !Config {
     const port_str = try getEnvOr(allocator, "PORT", "3000");
     const port = try std.fmt.parseInt(u16, port_str, 10);
 
-    return Config{
+    var config = Config{
         .port = port,
-        .railwayApiToken = try getEnv(allocator, "RAILWAY_API_TOKEN"),
-        .railwayProjectId = try getEnv(allocator, "RAILWAY_PROJECT_ID"),
-        .authSecret = try getEnv(allocator, "AUTH_SECRET"),
+        .railwayApiToken = getEnvOr(allocator, "RAILWAY_API_TOKEN", "") catch "",
+        .railwayProjectId = try getEnvOr(allocator, "RAILWAY_PROJECT_ID", ""),
+        .authSecret = getEnvOr(allocator, "AUTH_SECRET", "") catch "",
         .databaseUrl = try getEnv(allocator, "DATABASE_URL"),
         .localMode = try isLocalMode(allocator),
     };
+
+    try validateConfig(&config);
+    return config;
 }
 
 /// Check if running in local mode
@@ -81,4 +93,34 @@ test "config: load defaults" {
     try std.testing.expectEqualStrings(config.authSecret, "secret123");
     try std.testing.expectEqualStrings(config.databaseUrl, "postgres://localhost/test");
     try std.testing.expect(config.localMode == false);
+}
+
+test "config: optional api token and auth secret" {
+    const allocator = std.testing.allocator;
+    var env = std.process.EnvMap.init(allocator);
+    defer env.deinit();
+
+    try env.put("PORT", "3000");
+    try env.put("RAILWAY_PROJECT_ID", "proj_optional");
+    try env.put("DATABASE_URL", "postgres://localhost/test");
+    try env.put("LOCAL_MODE", "false");
+    // RAILWAY_API_TOKEN and AUTH_SECRET are now optional
+
+    const config = try loadConfig(allocator);
+    try std.testing.expect(config.port == 3000);
+    try std.testing.expectEqualStrings(config.railwayApiToken, "");
+    try std.testing.expectEqualStrings(config.authSecret, "");
+    try std.testing.expectEqualStrings(config.railwayProjectId, "proj_optional");
+}
+
+test "config: missing database url" {
+    const allocator = std.testing.allocator;
+    var env = std.process.EnvMap.init(allocator);
+    defer env.deinit();
+
+    try env.put("PORT", "3000");
+    try env.put("RAILWAY_PROJECT_ID", "proj_test");
+    // DATABASE_URL is still required
+
+    try std.testing.expectError(error.MissingEnv, loadConfig(allocator));
 }

@@ -13,6 +13,22 @@ const Fitting = @import("fitting.zig");
 const mod = @import("mod.zig");
 const Savchenko = @import("savchenko.zig");
 
+/// Helper to stringify JSON value to string (Zig 0.15 compatible)
+fn stringifyJson(allocator: Allocator, value: json.Value) ![]const u8 {
+    return std.json.Stringify.valueAlloc(allocator, value, .{ .whitespace = .indent_2 });
+}
+
+/// Helper to stringify JSON value to string (minified)
+fn stringifyJsonMinified(allocator: Allocator, value: json.Value) ![]const u8 {
+    return std.json.Stringify.valueAlloc(allocator, value, .{ .whitespace = .minified });
+}
+
+/// Helper to get stdout writer in Zig 0.15
+fn getStdOutWriter() @TypeOf((std.fs.File{ .handle = 0 }).writer()) {
+    const stdout_file = std.fs.File{ .handle = std.posix.STDOUT_FILENO };
+    return stdout_file.writer();
+}
+
 /// ANSI color codes for terminal output
 const Color = enum {
     reset,
@@ -24,26 +40,19 @@ const Color = enum {
     magenta,
 };
 
-const ColorCode = struct {
-    red: []const u8 = "\x1b[31m",
-    green: []const u8 = "\x1b[32m",
-    yellow: []const u8 = "\x1b[33m",
-    blue: []const u8 = "\x1b[34m",
-    cyan: []const u8 = "\x1b[36m",
-    magenta: []const u8 = "\x1b[35m",
-    reset: []const u8 = "\x1b[0m",
-};
+const RED = "\x1b[31m";
+const GREEN = "\x1b[32m";
+const YELLOW = "\x1b[33m";
+const BLUE = "\x1b[34m";
+const CYAN = "\x1b[36m";
+const MAGENTA = "\x1b[35m";
+const RESET = "\x1b[0m";
 
+// colorize returns the string without color (simplified for Zig 0.15)
+// Use color codes directly in print statements instead
 fn colorize(s: []const u8, color: Color) []const u8 {
-    return switch (color) {
-        .red => ColorCode.red ++ s ++ ColorCode.reset,
-        .green => ColorCode.green ++ s ++ ColorCode.reset,
-        .yellow => ColorCode.yellow ++ s ++ ColorCode.reset,
-        .blue => ColorCode.blue ++ s ++ ColorCode.reset,
-        .cyan => ColorCode.cyan ++ s ++ ColorCode.reset,
-        .magenta => ColorCode.magenta ++ s ++ ColorCode.reset,
-        .reset => ColorCode.reset ++ s,
-    };
+    _ = color; // autofix
+    return s;
 }
 
 /// Output format options
@@ -156,10 +165,9 @@ pub fn parseArgs(allocator: Allocator, args: []const []const u8) !SparcOptions {
 
 /// Print usage information
 fn printUsage(allocator: Allocator) void {
-    const stdout = std.io.getStdOut().writer();
     _ = allocator; // autofix
 
-    stdout.print(
+    std.debug.print(
         \\SPARC (Spitzer Photometry and Accurate Rotation Curves) Analysis
         \\
         \\Usage: tri sparc <command> [options] [galaxy]
@@ -182,7 +190,7 @@ fn printUsage(allocator: Allocator) void {
         \\  tri sparc fit UGC1234 --format json
         \\  tri sparc fit IC342 --dr 0.05 --verbose
         \\  tri sparc list
-    , .{}) catch unreachable;
+    , .{});
 }
 
 /// Run SPARC command based on parsed options
@@ -234,10 +242,9 @@ fn runFit(allocator: Allocator, options: SparcOptions) !void {
 
 /// Batch fit all galaxies and output summary statistics
 fn runBatchFit(allocator: Allocator, data_content: []const u8, options: SparcOptions) !void {
-    const stdout = std.io.getStdOut().writer();
 
-    stdout.print("\n{s}SPARC Batch Fit{ s}\n", .{ colorize("════════════════════════════════════════════════════════════", .cyan), colorize("", .reset) });
-    stdout.print("{s}Fitting Savchenko model to all galaxies...{s}\n\n", .{
+    std.debug.print("\n{s}SPARC Batch Fit{s}\n", .{ colorize("════════════════════════════════════════════════════════════", .cyan), colorize("", .reset) });
+    std.debug.print("{s}Fitting Savchenko model to all galaxies...{s}\n\n", .{
         colorize("", .yellow), colorize("", .reset),
     });
 
@@ -248,34 +255,34 @@ fn runBatchFit(allocator: Allocator, data_content: []const u8, options: SparcOpt
     }
 
     if (galaxies.len == 0) {
-        stdout.print("No galaxies found in dataset.\n", .{});
+        std.debug.print("No galaxies found in dataset.\n", .{});
         return error.NoData;
     }
 
-    stdout.print("Found {d} galaxies to fit...\n\n", .{galaxies.len});
+    std.debug.print("Found {d} galaxies to fit...\n\n", .{galaxies.len});
 
-    var results = std.ArrayList(struct {
+    var results = try std.ArrayList(struct {
         name: []const u8,
         chi_sq: f64,
         reduced_chi_sq: f64,
         is_good: bool,
         num_points: usize,
-    }).init(allocator);
-    defer results.deinit();
+    }).initCapacity(allocator, 0);
+    defer results.deinit(allocator);
 
     var total_good: usize = 0;
     var total_chi_sum: f64 = 0;
-    var chi_values = std.ArrayList(f64).init(allocator);
-    defer chi_values.deinit();
+    var chi_values = try std.ArrayList(f64).initCapacity(allocator, 0);
+    defer chi_values.deinit(allocator);
 
     for (galaxies, 0..) |galaxy, i| {
         if (options.verbose) {
-            stdout.print("[{d:0>3}/{d:0>3}] Fitting {s}... ", .{ i + 1, galaxies.len, galaxy.name });
+            std.debug.print("[{d:0>3}/{d:0>3}] Fitting {s}... ", .{ i + 1, galaxies.len, galaxy.name });
         }
 
         const result = Fitting.fitGalaxy(allocator, galaxy.points) catch |err| {
             if (options.verbose) {
-                stdout.print("FAILED: {}\n", .{err});
+                std.debug.print("FAILED: {}\n", .{err});
             }
             continue;
         };
@@ -284,9 +291,9 @@ fn runBatchFit(allocator: Allocator, data_content: []const u8, options: SparcOpt
         if (is_good) total_good += 1;
 
         total_chi_sum += result.reduced_chi_squared;
-        try chi_values.append(result.reduced_chi_squared);
+        try chi_values.append(allocator, result.reduced_chi_squared);
 
-        try results.append(.{
+        try results.append(allocator, .{
             .name = galaxy.name,
             .chi_sq = result.chi_squared,
             .reduced_chi_sq = result.reduced_chi_squared,
@@ -296,21 +303,21 @@ fn runBatchFit(allocator: Allocator, data_content: []const u8, options: SparcOpt
 
         if (options.verbose) {
             const status = if (is_good) colorize("GOOD", .green) else colorize("POOR", .red);
-            stdout.print("{s} (χ²={d:.3f})\n", .{ status, result.reduced_chi_squared });
+            std.debug.print("{s} (χ²={:.3f})\n", .{ status, result.reduced_chi_squared });
         } else {
             // Simple progress indicator
             if ((i + 1) % 10 == 0 or i + 1 == galaxies.len) {
-                stdout.print("\rProgress: {d}/{d} galaxies fitted", .{ i + 1, galaxies.len });
+                std.debug.print("\rProgress: {d}/{d} galaxies fitted", .{ i + 1, galaxies.len });
             }
         }
     }
 
-    stdout.print("\n\n", .{});
+    std.debug.print("\n\n", .{});
 
     // Calculate median χ²
     const median_chi = if (chi_values.items.len > 0) blk: {
         // Simple median calculation
-        std.sort.insert(f64, chi_values.items, {}, struct {
+        std.sort.block(f64, chi_values.items, {}, struct {
             fn lessThan(_: void, a: f64, b: f64) bool {
                 return a < b;
             }
@@ -326,13 +333,13 @@ fn runBatchFit(allocator: Allocator, data_content: []const u8, options: SparcOpt
     const mean_chi = if (results.items.len > 0) total_chi_sum / @as(f64, @floatFromInt(results.items.len)) else 0;
 
     // Print summary
-    stdout.print("{s}Batch Fit Summary{s}\n", .{ colorize("════════════════════════════════════════════════════════════", .cyan), colorize("", .reset) });
-    stdout.print("\n", .{});
-    stdout.print("  Total galaxies: {d}\n", .{results.items.len});
-    stdout.print("  Good fits (χ² < 2.0): {d} ({d:.1f}%)\n", .{ total_good, if (results.items.len > 0) @as(f64, @floatFromInt(total_good)) / @as(f64, @floatFromInt(results.items.len)) * 100 else 0 });
-    stdout.print("  Mean reduced χ²: {d:.3f}\n", .{mean_chi});
-    stdout.print("  Median reduced χ²: {d:.3f}\n", .{median_chi});
-    stdout.print("\n", .{});
+    std.debug.print("{s}Batch Fit Summary{s}\n", .{ colorize("════════════════════════════════════════════════════════════", .cyan), colorize("", .reset) });
+    std.debug.print("\n", .{});
+    std.debug.print("  Total galaxies: {d}\n", .{results.items.len});
+    std.debug.print("  Good fits (χ² < 2.0): {d} ({:.1f}%)\n", .{ total_good, if (results.items.len > 0) @as(f64, @floatFromInt(total_good)) / @as(f64, @floatFromInt(results.items.len)) * 100 else 0 });
+    std.debug.print("  Mean reduced χ²: {:.3f}\n", .{mean_chi});
+    std.debug.print("  Median reduced χ²: {:.3f}\n", .{median_chi});
+    std.debug.print("\n", .{});
 
     // Quality indicator
     const quality_threshold: f64 = 0.97; // 97% good fits target
@@ -348,20 +355,20 @@ fn runBatchFit(allocator: Allocator, data_content: []const u8, options: SparcOpt
     else
         colorize("POOR", .red);
 
-    stdout.print("  Overall quality: {s} ({d:.1f}% good fits){s}\n\n", .{ status_str, success_rate * 100, colorize("", .reset) });
+    std.debug.print("  Overall quality: {s} ({:.1f}% good fits){s}\n\n", .{ status_str, success_rate * 100, colorize("", .reset) });
 
     // Output detailed results based on format
     switch (options.format) {
         .text => {
             if (!options.verbose) {
-                stdout.print("Use --verbose for per-galaxy details.\n", .{});
+                std.debug.print("Use --verbose for per-galaxy details.\n", .{});
             }
         },
         .json => {
-            const root = std.ArrayList(json.Value).initCapacity(allocator, results.items.len);
+            var root = std.json.Array.init(allocator);
             defer root.deinit();
 
-            var summary_obj = std.StringHashMap(json.Value).init(allocator);
+            var summary_obj = std.json.ObjectMap.init(allocator);
             defer summary_obj.deinit();
 
             try summary_obj.put("total_galaxies", json.Value{ .integer = @intCast(results.items.len) });
@@ -370,11 +377,11 @@ fn runBatchFit(allocator: Allocator, data_content: []const u8, options: SparcOpt
             try summary_obj.put("mean_reduced_chi_squared", json.Value{ .float = mean_chi });
             try summary_obj.put("median_reduced_chi_squared", json.Value{ .float = median_chi });
 
-            var results_array = std.ArrayList(json.Value).initCapacity(allocator, results.items.len);
+            var results_array = std.json.Array.init(allocator);
             defer results_array.deinit();
 
-            for (results) |r| {
-                var r_obj = std.StringHashMap(json.Value).init(allocator);
+            for (results.items) |r| {
+                var r_obj = std.json.ObjectMap.init(allocator);
                 defer r_obj.deinit();
 
                 try r_obj.put("name", json.Value{ .string = r.name });
@@ -386,19 +393,23 @@ fn runBatchFit(allocator: Allocator, data_content: []const u8, options: SparcOpt
                 try results_array.append(json.Value{ .object = r_obj });
             }
 
-            var output_obj = std.StringHashMap(json.Value).init(allocator);
+            var output_obj = std.json.ObjectMap.init(allocator);
             defer output_obj.deinit();
 
             try output_obj.put("summary", json.Value{ .object = summary_obj });
             try output_obj.put("results", json.Value{ .array = results_array });
 
-            try stdout.print("{s}\n", .{try json.stringifyAlloc(allocator, json.Value{ .object = output_obj }, .{ .minify = false })});
+            {
+                const json_str = try stringifyJson(allocator, json.Value{ .object = output_obj });
+                defer allocator.free(json_str);
+                std.debug.print("{s}\n", .{json_str});
+            }
         },
         .csv => {
-            stdout.print("name,chi_squared,reduced_chi_squared,is_good_fit,num_points\n", .{});
+            std.debug.print("name,chi_squared,reduced_chi_squared,is_good_fit,num_points\n", .{});
             for (results) |r| {
                 const good_str = if (r.is_good) "true" else "false";
-                stdout.print("{s},{e},{e},{s},{}\n", .{
+                std.debug.print("{s},{e},{e},{s},{}\n", .{
                     r.name, r.chi_sq, r.reduced_chi_sq, good_str, r.num_points,
                 });
             }
@@ -410,40 +421,38 @@ fn runBatchFit(allocator: Allocator, data_content: []const u8, options: SparcOpt
 fn outputText(allocator: Allocator, result: mod.FitResult, options: SparcOptions) !void {
     _ = allocator; // autofix
 
-    const stdout = std.io.getStdOut().writer();
+    const name = if (options.galaxy_name.len > 0) options.galaxy_name else "Unknown";
 
-    stdout.print("\n{s}Fit Results{s}\n", .{ colorize("=", .cyan), colorize("=", .cyan) }) catch unreachable;
+    std.debug.print("\n{s}Fit Results{s}\n", .{ "=", "=" });
+    std.debug.print("{s}Galaxy: {s}\n", .{ "  ", name });
+    std.debug.print("\n", .{});
 
-    stdout.print("{s}Galaxy: {s}\n", .{ colorize("  ", .blue), if (options.galaxy_name.len > 0) options.galaxy_name else "Unknown" }) catch unreachable;
-    stdout.print("\n", .{});
+    std.debug.print("{s}Savchenko Parameters:{s}\n", .{ "  ", "" });
+    std.debug.print("{s}  ρ₀:      {e:.4} M☉/pc³\n", .{ "  ", result.params.rho0 });
+    std.debug.print("{s}  r_mem:    {e:.4} kpc\n", .{ "  ", result.params.r_mem });
+    std.debug.print("{s}  r_core:   {e:.4} kpc\n", .{ "  ", result.params.r_core });
+    std.debug.print("{s}  Υ_bul:    {e:.4}\n", .{ "  ", result.params.upsilon_bul });
 
-    stdout.print("{s}Savchenko Parameters:{s}\n", .{ colorize("  ", .magenta), colorize("", .reset) }) catch unreachable;
-    stdout.print("{s}  ρ₀:      {d:.4e} M☉/pc³\n", .{ colorize("  ", .blue), result.params.rho0 }) catch unreachable;
-    stdout.print("{s}  r_mem:    {d:.4e} kpc\n", .{ colorize("  ", .blue), result.params.r_mem }) catch unreachable;
-    stdout.print("{s}  r_core:   {d:.4e} kpc\n", .{ colorize("  ", .blue), result.params.r_core }) catch unreachable;
-    stdout.print("{s}  Υ_bul:    {d:.4e}\n", .{ colorize("  ", .blue), result.params.upsilon_bul }) catch unreachable;
-
-    stdout.print("\n", .{});
-    stdout.print("{s}Fit Quality:{s}\n", .{ colorize("  ", .magenta), colorize("", .reset) }) catch unreachable;
-    stdout.print("{s}  χ²:         {d:.6f}\n", .{ colorize("  ", .blue), result.chi_squared }) catch unreachable;
-    stdout.print("{s}  DOF:         {}\n", .{ colorize("  ", .blue), result.dof }) catch unreachable;
-    stdout.print("{s}  Reduced χ²: {d:.6f}\n", .{ colorize("  ", .blue), result.reduced_chi_squared }) catch unreachable;
+    std.debug.print("\n", .{});
+    std.debug.print("{s}Fit Quality:{s}\n", .{ "  ", "" });
+    std.debug.print("{s}  χ²:         {:.6f}\n", .{ "  ", result.chi_squared });
+    std.debug.print("{s}  DOF:         {}\n", .{ "  ", result.dof });
+    std.debug.print("{s}  Reduced χ²: {:.6f}\n", .{ "  ", result.reduced_chi_squared });
 
     // Quality indicator
     const is_good = Fitting.isGoodFit(result);
-    const quality_str = if (is_good) colorize("GOOD", .green) else colorize("POOR", .red);
-    stdout.print("\n{s}Quality: {s}{s}\n", .{ colorize("  ", .magenta), quality_str, colorize("", .reset) }) catch unreachable;
+    const quality_str = if (is_good) "GOOD" else "POOR";
+    std.debug.print("\n{s}Quality: {s}{s}\n", .{ "  ", quality_str, "" });
 }
 
 /// Output fit results in JSON format
 fn outputJson(allocator: Allocator, result: mod.FitResult, points: []const mod.GalaxyDataPoint) !void {
-    const stdout = std.io.getStdOut().writer();
 
-    const root = std.ArrayList(json.Value).initCapacity(allocator, 10);
+    var root = std.json.Array.init(allocator);
     defer root.deinit();
 
-    // Parameters object
-    var params_obj = std.StringHashMap(json.Value).init(allocator);
+    // Parameters object - use ObjectMap for JSON compatibility
+    var params_obj = std.json.ObjectMap.init(allocator);
     defer params_obj.deinit();
 
     try params_obj.put("rho0", json.Value{ .float = result.params.rho0 });
@@ -452,7 +461,7 @@ fn outputJson(allocator: Allocator, result: mod.FitResult, points: []const mod.G
     try params_obj.put("upsilon_bul", json.Value{ .float = result.params.upsilon_bul });
 
     // Result object
-    var result_obj = std.StringHashMap(json.Value).init(allocator);
+    var result_obj = std.json.ObjectMap.init(allocator);
     defer result_obj.deinit();
 
     try result_obj.put("params", json.Value{ .object = params_obj });
@@ -462,11 +471,11 @@ fn outputJson(allocator: Allocator, result: mod.FitResult, points: []const mod.G
     try result_obj.put("is_good_fit", json.Value{ .bool = Fitting.isGoodFit(result) });
 
     // Output array
-    var data_array = std.ArrayList(json.Value).initCapacity(allocator, points.len);
+    var data_array = std.json.Array.init(allocator);
     defer data_array.deinit();
 
-    for (points) |point| {
-        var data_obj = std.StringHashMap(json.Value).init(allocator);
+    for (points) |*point| {
+        var data_obj = std.json.ObjectMap.init(allocator);
         defer data_obj.deinit();
 
         try data_obj.put("radius_kpc", json.Value{ .float = point.radius });
@@ -476,24 +485,27 @@ fn outputJson(allocator: Allocator, result: mod.FitResult, points: []const mod.G
         try data_array.append(json.Value{ .object = data_obj });
     }
 
-    var output_obj = std.StringHashMap(json.Value).init(allocator);
+    var output_obj = std.json.ObjectMap.init(allocator);
     defer output_obj.deinit();
 
     try output_obj.put("result", json.Value{ .object = result_obj });
     try output_obj.put("data_points", json.Value{ .array = data_array });
 
     // Write as compact JSON
-    try stdout.print("{s}\n", .{try json.stringifyAlloc(allocator, json.Value{ .object = output_obj }, .{ .minify = true })});
+    {
+        const json_str = try stringifyJsonMinified(allocator, json.Value{ .object = output_obj });
+        defer allocator.free(json_str);
+        std.debug.print("{s}\n", .{json_str});
+    }
 }
 
 /// Output fit results in CSV format
 fn outputCsv(allocator: Allocator, result: mod.FitResult, points: []const mod.GalaxyDataPoint) !void {
     _ = allocator; // autofix
-    const stdout = std.io.getStdOut().writer();
 
     // Header
-    stdout.print("rho0,r_mem,r_core,upsilon_bul,chi_squared,dof,reduced_chi_squared\n", .{});
-    stdout.print("{e},{e},{e},{e},{e},{},{e}\n", .{
+    std.debug.print("rho0,r_mem,r_core,upsilon_bul,chi_squared,dof,reduced_chi_squared\n", .{});
+    std.debug.print("{e},{e},{e},{e},{e},{},{e}\n", .{
         result.params.rho0,
         result.params.r_mem,
         result.params.r_core,
@@ -504,9 +516,9 @@ fn outputCsv(allocator: Allocator, result: mod.FitResult, points: []const mod.Ga
     }) catch unreachable;
 
     // Data points header
-    stdout.print("\nradius_kpc,velocity_kms,velocity_err_kms\n", .{});
-    for (points) |point| {
-        stdout.print("{e},{e},{e}\n", .{
+    std.debug.print("\nradius_kpc,velocity_kms,velocity_err_kms\n", .{});
+    for (points) |*point| {
+        std.debug.print("{e},{e},{e}\n", .{
             point.radius,
             point.velocity,
             point.velocity_err,
@@ -516,7 +528,6 @@ fn outputCsv(allocator: Allocator, result: mod.FitResult, points: []const mod.Ga
 
 /// Run list command (lists available galaxies)
 fn runList(allocator: Allocator, options: SparcOptions) !void {
-    const stdout = std.io.getStdOut().writer();
 
     // Download or load data
     const data_content = try Data.downloadSPARCData(allocator, options.use_cache);
@@ -529,30 +540,30 @@ fn runList(allocator: Allocator, options: SparcOptions) !void {
     }
 
     if (galaxies.len == 0) {
-        stdout.print("No galaxies found in dataset.\n", .{});
+        std.debug.print("No galaxies found in dataset.\n", .{});
         return;
     }
 
     switch (options.format) {
         .text => {
-            stdout.print("\n{s}SPARC Galaxies ({d} found){s}\n\n", .{
+            std.debug.print("\n{s}SPARC Galaxies ({d} found){s}\n\n", .{
                 colorize("╔════════════════════════════════════════════════════════════════╗\n", .cyan),
                 galaxies.len,
                 colorize("╚════════════════════════════════════════════════════════════════╝", .cyan),
             });
 
-            stdout.print("{s}Name{s}     Points  Dist  Inc  PA\n", .{
+            std.debug.print("{s}Name{s}     Points  Dist  Inc  PA\n", .{
                 colorize("────────────────────────────────────────────────────────────", .cyan),
                 colorize("", .reset),
             });
 
             for (galaxies) |galaxy| {
                 const name_fmt = if (galaxy.name.len < 12)
-                    std.fmt.comptimePrint("{s}" ** 12, .{" "}) ++ galaxy.name
+                    galaxy.name
                 else
                     galaxy.name[0..12];
 
-                stdout.print("{s} {d: >6}  {d:>4.1f}  {d:>3.0f}  {d:>3.0f}\n", .{
+                std.debug.print("{s: <12} {d: >6}  {:.1f}  {:.0f}  {:.0f}\n", .{
                     colorize(name_fmt, .blue),
                     galaxy.points.len,
                     galaxy.distance,
@@ -560,14 +571,14 @@ fn runList(allocator: Allocator, options: SparcOptions) !void {
                     galaxy.position_angle,
                 });
             }
-            stdout.print("\n  Dist: Mpc, Inc: degrees, PA: degrees\n\n", .{});
+            std.debug.print("\n  Dist: Mpc, Inc: degrees, PA: degrees\n\n", .{});
         },
         .json => {
-            const root = std.ArrayList(json.Value).initCapacity(allocator, galaxies.len);
+            var root = std.json.Array.init(allocator);
             defer root.deinit();
 
             for (galaxies) |galaxy| {
-                var galaxy_obj = std.StringHashMap(json.Value).init(allocator);
+                var galaxy_obj = std.json.ObjectMap.init(allocator);
                 defer galaxy_obj.deinit();
 
                 try galaxy_obj.put("name", json.Value{ .string = galaxy.name });
@@ -576,15 +587,19 @@ fn runList(allocator: Allocator, options: SparcOptions) !void {
                 try galaxy_obj.put("inclination_deg", json.Value{ .float = galaxy.inclination });
                 try galaxy_obj.put("position_angle_deg", json.Value{ .float = galaxy.position_angle });
 
-                try root.append(json.Value{ .object = galaxy_obj });
+                try root.append(allocator, json.Value{ .object = galaxy_obj });
             }
 
-            try stdout.print("{s}\n", .{try json.stringifyAlloc(allocator, json.Value{ .array = root }, .{ .minify = false })});
+            {
+                const json_str = try stringifyJson(allocator, json.Value{ .array = root });
+                defer allocator.free(json_str);
+                std.debug.print("{s}\n", .{json_str});
+            }
         },
         .csv => {
-            stdout.print("name,points,distance_mpc,inclination_deg,position_angle_deg\n", .{});
+            std.debug.print("name,points,distance_mpc,inclination_deg,position_angle_deg\n", .{});
             for (galaxies) |galaxy| {
-                stdout.print("{s},{d},{e},{e},{e}\n", .{
+                std.debug.print("{s},{d},{e},{e},{e}\n", .{
                     galaxy.name,
                     galaxy.points.len,
                     galaxy.distance,
@@ -598,11 +613,10 @@ fn runList(allocator: Allocator, options: SparcOptions) !void {
 
 /// Run plot command (ASCII-art rotation curve plot)
 fn runPlot(allocator: Allocator, options: SparcOptions) !void {
-    const stdout = std.io.getStdOut().writer();
 
     if (options.galaxy_name.len == 0) {
-        stdout.print("Error: Please specify a galaxy name for plotting.\n", .{});
-        stdout.print("Usage: tri sparc plot <galaxy_name>\n", .{});
+        std.debug.print("Error: Please specify a galaxy name for plotting.\n", .{});
+        std.debug.print("Usage: tri sparc plot <galaxy_name>\n", .{});
         return error.MissingGalaxyName;
     }
 
@@ -614,7 +628,7 @@ fn runPlot(allocator: Allocator, options: SparcOptions) !void {
     defer allocator.free(points);
 
     if (points.len == 0) {
-        stdout.print("No data points found.\n", .{});
+        std.debug.print("No data points found.\n", .{});
         return error.NoData;
     }
 
@@ -633,14 +647,14 @@ fn runPlot(allocator: Allocator, options: SparcOptions) !void {
         if (p.velocity > max_v) max_v = p.velocity;
     }
 
-    stdout.print("\n{s}Rotation Curve: {s}{s}\n", .{
+    std.debug.print("\n{s}Rotation Curve: {s}{s}\n", .{
         colorize("══════════════════════════════════════════════════════════════════\n", .cyan),
         options.galaxy_name,
         colorize("", .reset),
     });
 
     // Print legend
-    stdout.print("{s}●{s} Observed data  {s}─{s} Savchenko model\n\n", .{
+    std.debug.print("{s}●{s} Observed data  {s}─{s} Savchenko model\n\n", .{
         colorize("", .blue), colorize("", .reset),
         colorize("", .green), colorize("", .reset),
     });
@@ -652,9 +666,9 @@ fn runPlot(allocator: Allocator, options: SparcOptions) !void {
 
         // Y-axis label
         if (y % 5 == 0) {
-            stdout.print("{d:4.0f} |", .{v_at_y});
+            std.debug.print("{:.0f} |", .{v_at_y});
         } else {
-            stdout.print("      |", .{});
+            std.debug.print("      |", .{});
         }
 
         // Draw row
@@ -702,34 +716,34 @@ fn runPlot(allocator: Allocator, options: SparcOptions) !void {
         // Print row
         for (row_buffer) |c| {
             if (c == '●') {
-                stdout.print("{s}●{s}", .{ colorize("", .blue), colorize("", .reset) });
+                std.debug.print("{s}●{s}", .{ colorize("", .blue), colorize("", .reset) });
             } else if (c == '─') {
-                stdout.print("{s}─{s}", .{ colorize("", .green), colorize("", .reset) });
+                std.debug.print("{s}─{s}", .{ colorize("", .green), colorize("", .reset) });
             } else {
-                stdout.print(" ", .{});
+                std.debug.print(" ", .{});
             }
         }
-        stdout.print("\n", .{});
+        std.debug.print("\n", .{});
     }
 
     // X-axis
-    stdout.print("      +", .{});
+    std.debug.print("      +", .{});
     for (0..PLOT_WIDTH) |_| {
-        stdout.print("─", .{});
+        std.debug.print("─", .{});
     }
-    stdout.print("\n", .{});
+    std.debug.print("\n", .{});
 
     // X-axis labels
-    stdout.print("     0.0", .{});
-    stdout.print(" {d: >40.1f} kpc (R)\n", .{max_r});
+    std.debug.print("     0.0", .{});
+    std.debug.print(" {:.1f} kpc (R)\n", .{max_r});
 
     // Print fit parameters below
-    stdout.print("\n{s}Fit Parameters:{s}\n", .{ colorize("", .magenta), colorize("", .reset) });
-    stdout.print("  ρ₀:      {d:.4e} M☉/pc³\n", .{result.params.rho0});
-    stdout.print("  r_mem:   {d:.4e} kpc\n", .{result.params.r_mem});
-    stdout.print("  r_core:  {d:.4e} kpc\n", .{result.params.r_core});
-    stdout.print("  Υ_bul:   {d:.4e}\n", .{result.params.upsilon_bul});
-    stdout.print("  χ²:      {d:.4f} (reduced: {d:.4f})\n", .{result.chi_squared, result.reduced_chi_squared});
+    std.debug.print("\n{s}Fit Parameters:{s}\n", .{ colorize("", .magenta), colorize("", .reset) });
+    std.debug.print("  ρ₀:      {e:.4} M☉/pc³\n", .{result.params.rho0});
+    std.debug.print("  r_mem:   {e:.4} kpc\n", .{result.params.r_mem});
+    std.debug.print("  r_core:  {e:.4} kpc\n", .{result.params.r_core});
+    std.debug.print("  Υ_bul:   {e:.4}\n", .{result.params.upsilon_bul});
+    std.debug.print("  χ²:      {:.4f} (reduced: {:.4f})\n", .{result.chi_squared, result.reduced_chi_squared});
 }
 
 /// Argument parsing error set

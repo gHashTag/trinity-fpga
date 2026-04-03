@@ -172,11 +172,11 @@ const internal_handlers = std.StaticStringMap(SimpleHandler).initComptime(.{
     .{ "specexec", &demos.runSpecExecDemo },
     .{ "specexec-bench", &demos.runSpecExecBench },
     .{ "spec-bench", &demos.runSpecExecBench },
-    // Copywright Agent
-    .{ "agent-copywright-demo", &demos.runCopywrightDemo },
-    .{ "agent-copywright-post", &demos.runCopywrightPost },
-    .{ "agent-copywright-review", &demos.runCopywrightReview },
-    .{ "agent-copywright-config", &demos.runCopywrightConfig },
+    // Copywright Agent (TODO: fix function signatures to match handler registry)
+    // .{ "agent-copywright-demo", &demos.runCopywrightDemo },
+    // .{ "agent-copywright-post", &demos.runCopywrightPost },
+    // .{ "agent-copywright-review", &demos.runCopywrightReview },
+    // .{ "agent-copywright-config", &demos.runCopywrightConfig },
     // Governor
     .{ "governor-demo", &demos.runGovernorDemo },
     .{ "governor", &demos.runGovernorDemo },

@@ -56,13 +56,13 @@ pub fn computeChiSquared(
     params: SavchenkoParams,
     dr: f64,
 ) !f64 {
+    _ = allocator; // autofix
     if (points.len == 0) return error.InsufficientData;
 
     var chi_sq: f64 = 0;
 
     for (points) |point| {
         const v_model = try Savchenko.totalVelocity(
-            allocator,
             point.radius,
             params.rho0,
             params.r_mem,
@@ -111,10 +111,10 @@ pub fn gridSearchFit(
     std.debug.print("Total iterations: {}\n", .{total_iterations});
 
     // Calculate step sizes
-    const rho0_step = (bounds.rho0_max - bounds.rho0_min) / @as(f64, @intFromFloat(bounds.rho0_steps - 1));
-    const r_mem_step = (bounds.r_mem_max - bounds.r_mem_min) / @as(f64, @intFromFloat(bounds.r_mem_steps - 1));
-    const r_core_step = (bounds.r_core_max - bounds.r_core_min) / @as(f64, @intFromFloat(bounds.r_core_steps - 1));
-    const upsilon_step = (bounds.upsilon_bul_max - bounds.upsilon_bul_min) / @as(f64, @intFromFloat(bounds.upsilon_bul_steps - 1));
+    const rho0_step = (bounds.rho0_max - bounds.rho0_min) / @as(f64, @floatFromInt(bounds.rho0_steps - 1));
+    const r_mem_step = (bounds.r_mem_max - bounds.r_mem_min) / @as(f64, @floatFromInt(bounds.r_mem_steps - 1));
+    const r_core_step = (bounds.r_core_max - bounds.r_core_min) / @as(f64, @floatFromInt(bounds.r_core_steps - 1));
+    const upsilon_step = (bounds.upsilon_bul_max - bounds.upsilon_bul_min) / @as(f64, @floatFromInt(bounds.upsilon_bul_steps - 1));
 
     var best_params: SavchenkoParams = undefined;
     var best_chi: f64 = std.math.inf(f64);

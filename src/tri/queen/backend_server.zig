@@ -77,7 +77,7 @@ pub const ImproveResponse = struct {
     quality_score: f64 = 0.0,
     cycles_analyzed: usize = 0,
     patterns_found: usize = 0,
-    tri27_config: Tri27Config = null,
+    tri27_config: ?Tri27Config = null,
 };
 
 // Configuration for Tri27 code generation (self_learning module integration)
@@ -462,8 +462,11 @@ pub const QueenBackend = struct {
             "src/generated",
         };
 
-        var child = std.process.Child.init(args, self.allocator);
-        const codegen_result = child.spawnAndWait() catch |err| {
+        // Zig 0.15: Use Child.run() to get output and exit status
+        const codegen_result = std.process.Child.run(.{
+            .allocator = self.allocator,
+            .argv = args,
+        }) catch |err| {
             const error_response = ImproveResponse{
                 .success = false,
                 .message = try std.fmt.allocPrint(self.allocator, "tri_gen failed: {}", .{err}),
@@ -476,13 +479,17 @@ pub const QueenBackend = struct {
             const body_json = try std.json.Stringify.valueAlloc(self.allocator, error_response, .{});
             return try self.httpResponse("application/json", body_json);
         };
-        defer codegen_result.deinit();
+        // Zig 0.15: RunResult doesn't have deinit, free stdout/stderr manually
+        defer self.allocator.free(codegen_result.stdout);
+        defer self.allocator.free(codegen_result.stderr);
 
-        const codegen_success: bool = codegen_result.term == .Exited and codegen_result.term.Exited == 0;
+        // Zig 0.15: Term.Exited is the exit code (u8), not a nested field
+        const term = codegen_result.term;
+        const codegen_success: bool = term == .Exited and term.Exited == 0;
         const codegen_output: []const u8 = if (codegen_success)
             codegen_result.stdout
         else
-            try std.fmt.allocPrint(self.allocator, "tri_gen exited with code {}", .{codegen_result.term});
+            try std.fmt.allocPrint(self.allocator, "tri_gen exited: {}", .{term});
 
         const response = ImproveResponse{
             .success = result.success and codegen_success,
@@ -494,7 +501,7 @@ pub const QueenBackend = struct {
             .tri27_config = .{
                 .tri_gen_path = tri_gen_path,
                 .output_dir = "src/generated",
-                .exit_code = codegen_result.term.Exited orelse 1,
+                .exit_code = if (codegen_result.term == .Exited) codegen_result.term.Exited else 1,
                 .codegen_success = codegen_success,
                 .codegen_output = codegen_output,
             },
