@@ -1,0 +1,53 @@
+{
+  "$schema": "https://gHashTag.github.io/trinity/schemas/repo_policy.json",
+  "version": "1.0.0",
+  "policies": {
+    "t27": {
+      "role": "language_canon",
+      "purpose": "TRI-27 Assembly language specification — numeric formats, sacred constants, ops, types, conformance tests",
+      "allowed_paths": [
+        "t27/specs/",
+        "t27/conformance/",
+        "architecture/graph_v2.json",
+        "architecture/graph.tri"
+      ],
+      "forbidden_paths": [
+        "docs/FIELD_MANUAL.md",
+        "docs/AGENTS_ALPHABET.md",
+        ".trinity/agents/",
+        "AGENTS.md",
+        "FIELD_MANUAL.md"
+      ],
+      "forbidden_patterns": [
+        "agent.*framework",
+        "27-agent.*alphabet",
+        "queen.*trinity",
+        "orchestration.*cycle"
+      ],
+      "redirect_to": "gHashTag/trinity",
+      "redirect_message": "Agent framework documentation lives in gHashTag/trinity. This repository is for TRI-27 language specification only."
+    },
+    "trinity": {
+      "role": "agent_framework",
+      "purpose": "Trinity CLI, agents, orchestration, training, FPGA, research",
+      "allowed_paths": [
+        "src/",
+        "docs/",
+        "specs/",
+        ".trinity/",
+        "fpga/",
+        "tools/",
+        "deploy/"
+      ],
+      "forbidden_paths": [],
+      "forbidden_patterns": []
+    }
+  },
+  "enforcement": {
+    "tri_git": {
+      "enabled": true,
+      "check": "before_commit,before_push",
+      "action": "block_with_error"
+    }
+  }
+}

@@ -1,0 +1,62 @@
+{
+  "episode_id": "wrong-repo-agent-manual-001",
+  "timestamp": "2026-04-04T00:00:00Z",
+  "severity": "toxic",
+  "category": "repo_governance",
+  "summary": "Created agent framework documentation (FIELD_MANUAL.md) in t27 repo instead of trinity",
+
+  "mistake": {
+    "what": "Agent created docs/FIELD_MANUAL.md in gHashTag/t27 repository",
+    "why": "No repo_policy.json, no tri git guard, no context of repo role",
+    "consequence": "Misplaced files, broken cross-repo links, no episode tracking"
+  },
+
+  "steps": [
+    {"step": 1, "action": "created", "path": "t27/docs/FIELD_MANUAL.md", "toxic": true},
+    {"step": 2, "action": "modified", "path": "README.md", "added": "Field Manual link", "toxic": true},
+    {"step": 3, "action": "modified", "path": "docs/DOCUMENTATION_INDEX.md", "added": "Field Manual reference", "toxic": true},
+    {"step": 4, "action": "modified", "path": "MEMORY.md", "added": "false completion record", "toxic": true},
+    {"step": 5, "action": "reverted", "paths": ["README.md", "DOCUMENTATION_INDEX.md", "MEMORY.md"], "toxic": false},
+    {"step": 6, "action": "orphaned", "path": "t27/docs/FIELD_MANUAL.md", "toxic": true}
+  ],
+
+  "fix": {
+    "architectural": [
+      "Create .trinity/repo_policy.json with repo roles (t27=language_canon, trinity=agent_framework)",
+      "Implement tri git guard to block forbidden paths/patterns",
+      "Use tri cell protocol for any repo changes with begin/checkpoint/verdict/seal"
+    ],
+    "immediate": [
+      "Delete t27/docs/FIELD_MANUAL.md (or redirect to trinity)",
+      "Create proper issue in gHashTag/trinity for AGENTS/Field Manual",
+      "Save this episode as toxic with MNL pattern"
+    ]
+  },
+
+  "mnl": {
+    "pattern": "Mistake → Not-repeat → Learning",
+    "mistake": "Wrote to wrong repo (t27) without repo_policy validation",
+    "not_repeat": "tri git guard will block forbidden paths in t27",
+    "learning": "Repo governance is not optional; all changes must go through tri cell"
+  },
+
+  "verdict": {
+    "toxic": true,
+    "reason": "Created orphaned file in wrong repo, no episode tracking, no tri cell protocol",
+    "repeat_risk": "high",
+    "mitigation": "repo_policy.json + tri git guard + mandatory tri cell for repo changes"
+  },
+
+  "cell": {
+    "issue": null,
+    "cell_id": "repo-governance-001",
+    "steps_executed": 0,
+    "steps_expected": 8
+  },
+
+  "prevention": {
+    "check": "tri git commit should verify repo_policy.json",
+    "block": "forbidden_paths in t27 → ERROR: use gHashTag/trinity for agent docs",
+    "enforce": "tri cell begin required for any repo modification"
+  }
+}

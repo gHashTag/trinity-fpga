@@ -24,7 +24,6 @@
 | File | Description |
 |------|-------------|
 | [`README.md`](../README.md) | Main project README with installation and quick start |
-| [`FIELD_MANUAL.md`](FIELD_MANUAL.md) | 1-page developer quick reference (6-phase cycle, key commands) |
 | [`ARCHITECTURE.md`](ARCHITECTURE.md) | High-level system architecture overview |
 | [`docs/papers/README_FOR_SCIENTISTS.md`](papers/README_FOR_SCIENTISTS.md) | Mathematical framework for scientific collaborators |
 | [Contributing Guide](docs/docs/contributing.md) | Guidelines for contributing to Trinity |
