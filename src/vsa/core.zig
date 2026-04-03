@@ -18,8 +18,7 @@ inline fn getTritSafe(vec: *const HybridBigInt, pos: usize) Trit {
 
 /// Helper: Safe trit write after ensureUnpacked()
 inline fn setTritSafe(vec: *HybridBigInt, pos: usize, value: Trit) void {
-    const cache = vec.unpacked_cache orelse return;
-    cache[pos] = value;
+    vec.setTritChecked(pos, value);
 }
 
 /// Bind operation (XOR-like for balanced ternary)
@@ -126,7 +125,7 @@ pub fn bundle2(a: *HybridBigInt, b: *HybridBigInt, allocator: std.mem.Allocator)
         out = @select(i16, neg_mask, neg_ones, out);
 
         inline for (0..SIMD_WIDTH) |j| {
-            result.setTritSafe(i + j, @truncate(out[j]));
+            setTritSafe(&result, i + j, @truncate(out[j]));
         }
     }
 
@@ -136,11 +135,11 @@ pub fn bundle2(a: *HybridBigInt, b: *HybridBigInt, allocator: std.mem.Allocator)
         const sum = a_trit + b_trit;
 
         if (sum > 0) {
-            result.setTritSafe(i, 1);
+            setTritSafe(&result, i, 1);
         } else if (sum < 0) {
-            result.setTritSafe(i, -1);
+            setTritSafe(&result, i, -1);
         } else {
-            result.setTritSafe(i, 0);
+            setTritSafe(&result, i, 0);
         }
     }
 
@@ -168,7 +167,7 @@ pub fn bundle3(a: *HybridBigInt, b: *HybridBigInt, c: *HybridBigInt, allocator: 
     while (i < num_full_chunks * SIMD_WIDTH) : (i += SIMD_WIDTH) {
         var a_vec: Vec32i8 = undefined;
         var b_vec: Vec32i8 = undefined;
-        const c_vec: Vec32i8 = undefined;
+        var c_vec: Vec32i8 = undefined;
 
         inline for (0..SIMD_WIDTH) |j| {
             const idx = i + j;
@@ -194,7 +193,7 @@ pub fn bundle3(a: *HybridBigInt, b: *HybridBigInt, c: *HybridBigInt, allocator: 
         out = @select(i16, neg_mask, neg_ones, out);
 
         inline for (0..SIMD_WIDTH) |j| {
-            result.setTritSafe(i + j, @truncate(out[j]));
+            setTritSafe(&result, i + j, @truncate(out[j]));
         }
     }
 
@@ -206,11 +205,11 @@ pub fn bundle3(a: *HybridBigInt, b: *HybridBigInt, c: *HybridBigInt, allocator: 
         const sum = a_trit + b_trit + c_trit;
 
         if (sum > 0) {
-            result.setTritSafe(i, 1);
+            setTritSafe(&result, i, 1);
         } else if (sum < 0) {
-            result.setTritSafe(i, -1);
+            setTritSafe(&result, i, -1);
         } else {
-            result.setTritSafe(i, 0);
+            setTritSafe(&result, i, 0);
         }
     }
 
@@ -433,9 +432,10 @@ pub fn bundleN(vectors: []*HybridBigInt, allocator: std.mem.Allocator) !HybridBi
                 vec[j] = getTritSafe(v, base + j);
             }
             const wide: @Vector(32, i16) = vec;
-            const acc_vec: @Vector(32, i16) = @as(@Vector(32, i16), accum[i..][0..SIMD_WIDTH].*);
+            const acc_array: [SIMD_WIDTH]i16 = accum[i..][0..SIMD_WIDTH].*;
+            const acc_vec: @Vector(32, i16) = acc_array;
             const sum_val = acc_vec + wide;
-            accum[i..][0..SIMD_WIDTH].* = @as([MAX_TRITS]i16, sum_val);
+            accum[i..][0..SIMD_WIDTH].* = sum_val;
         }
         while (i < v.trit_len) : (i += 1) {
             accum[i] += @as(i16, getTritSafe(v, i));

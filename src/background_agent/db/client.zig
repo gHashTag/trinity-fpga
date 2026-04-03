@@ -82,19 +82,27 @@ pub const PostgresClient = struct {
 
         // Parse host:port
         var hp_iter = std.mem.splitScalar(u8, host_port, '@');
-        const host_part = hp_iter.first() orelse "localhost";
-        const actual_host_port = hp_iter.next() orelse host_part;
+        const host_part: ?[]const u8 = hp_iter.first();
+        if (host_part == null) return error.InvalidUrl;
+        const actual_host_port = hp_iter.next() orelse host_part.?;
 
         hp_iter = std.mem.splitScalar(u8, actual_host_port, ':');
-        self.host = hp_iter.first() orelse "localhost";
+        const hp_first = hp_iter.next();
+        if (hp_first) |hp| {
+            self.host = hp;
+        } else {
+            self.host = "localhost";
+        }
         if (hp_iter.next()) |port_str| {
             self.port = std.fmt.parseInt(u16, port_str, 10) catch 5432;
         }
 
         // Parse credentials user:password
         var cred_iter = std.mem.splitScalar(u8, credentials, ':');
-        self.user = if (cred_iter.first()) |u| u else "postgres";
-        self.password = cred_iter.next() orelse "";
+        const cred_user = cred_iter.first();
+        const cred_pass = cred_iter.next();
+        self.user = cred_user;
+        self.password = cred_pass orelse "";
 
         self.database = if (db_name.len > 0) db_name else "postgres";
 
@@ -158,20 +166,23 @@ pub const PostgresClient = struct {
     /// Handle authentication response from server
     fn handleAuthentication(stream: *net.Stream) !void {
         var len_buf: [4]u8 = undefined;
-        _ = try stream.readAll(&len_buf);
-        const msg_len = std.mem.readInt(u32, &len_buf, .big);
+        const bytes_read = try stream.read(&len_buf);
+        if (bytes_read < 4) return error.InvalidMessage;
+        const msg_len_u32 = std.mem.readInt(u32, &len_buf, .big);
 
         var type_buf: [1]u8 = undefined;
-        _ = try stream.readAll(&type_buf);
+        const read_bytes = try stream.read(&type_buf);
+        if (read_bytes != 1) return error.InvalidMessage;
         const msg_type = type_buf[0];
 
-        // For AuthenticationOk (R), msg_len includes the type byte
+        // For AuthenticationOk (R), msg_len_u32 includes the type byte
         // AuthenticationOk has auth_code = 0
         if (msg_type == @intFromEnum(MessageType.AuthenticationOk)) {
-            const remaining_len = msg_len - 4;
+            const remaining_len = msg_len_u32 - 4;
             if (remaining_len >= 4) {
                 var auth_buf: [4]u8 = undefined;
-                _ = try stream.readAll(&auth_buf);
+                const auth_bytes_read = try stream.read(&auth_buf);
+                if (auth_bytes_read < 4) return error.InvalidMessage;
                 const auth_code = std.mem.readInt(u32, &auth_buf, .big);
 
                 if (auth_code != 0) {
@@ -188,17 +199,20 @@ pub const PostgresClient = struct {
     /// Wait for ReadyForQuery message
     fn waitForReady(self: *PostgresClient, stream: *net.Stream) !void {
         var type_buf: [1]u8 = undefined;
-        _ = try stream.readAll(&type_buf);
+        const type_bytes = try stream.read(type_buf[0..]);
+        if (type_bytes != 1) return error.InvalidMessage;
         const msg_type = type_buf[0];
 
         var len_buf: [4]u8 = undefined;
-        _ = try stream.readAll(&len_buf);
-        const msg_len = std.mem.readInt(u32, &len_buf, .big);
+        const len_bytes = try stream.read(len_buf[0..]);
+        if (len_bytes != 4) return error.InvalidMessage;
+        const msg_len_u32 = std.mem.readInt(u32, &len_buf, .big);
 
         if (msg_type == @intFromEnum(MessageType.BackendKeyData)) {
             // Read backend key data
             var buf: [8]u8 = undefined;
-            _ = try stream.readAll(&buf);
+            const buf_bytes = try stream.read(buf[0..]);
+            if (buf_bytes != 8) return error.InvalidMessage;
             self.backend_pid = std.mem.readInt(i32, buf[0..4], .big);
             self.backend_key = std.mem.readInt(i32, buf[4..8], .big);
 
@@ -208,13 +222,14 @@ pub const PostgresClient = struct {
 
         if (msg_type == @intFromEnum(MessageType.ReadyForQuery)) {
             var status_buf: [1]u8 = undefined;
-            _ = try stream.readAll(&status_buf);
+            const status_bytes = try stream.read(status_buf[0..]);
+            if (status_bytes != 1) return error.InvalidMessage;
             self.transaction_status = @as(TransactionStatus, @enumFromInt(status_buf[0]));
             return;
         }
 
         if (msg_type == @intFromEnum(MessageType.ErrorResponse)) {
-            return self.readErrorResponse(stream, msg_len - 4);
+            return readErrorResponse(stream, msg_len_u32 - 4);
         }
 
         return error.UnexpectedMessage;
@@ -230,27 +245,29 @@ pub const PostgresClient = struct {
             const msg_type = type_buf[0];
 
             var len_buf: [4]u8 = undefined;
-            _ = try stream.readAll(&len_buf);
-            const msg_len = std.mem.readInt(u32, &len_buf, .big);
+            const len_bytes = try stream.read(len_buf[0..]);
+            if (len_bytes != 4) return error.InvalidMessage;
+            const msg_len_u32 = std.mem.readInt(u32, &len_buf, .big);
 
             switch (msg_type) {
                 @intFromEnum(MessageType.DataRow) => {
-                    try self.readDataRow(stream, msg_len - 4, result);
+                    try self.readDataRow(stream, msg_len_u32 - 4, result);
                 },
                 @intFromEnum(MessageType.CommandComplete) => {
-                    _ = try self.skipMessage(stream, msg_len - 4);
+                    _ = try self.skipMessage(stream, msg_len_u32 - 4);
                 },
                 @intFromEnum(MessageType.ReadyForQuery) => {
                     var status_buf: [1]u8 = undefined;
-                    _ = try stream.readAll(&status_buf);
+                    const status_bytes = try stream.read(status_buf[0..]);
+                    if (status_bytes != 1) return error.InvalidMessage;
                     self.transaction_status = @as(TransactionStatus, @enumFromInt(status_buf[0]));
                     break;
                 },
                 @intFromEnum(MessageType.ErrorResponse) => {
-                    return self.readErrorResponse(stream, msg_len - 4);
+                    return readErrorResponse(stream, msg_len_u32 - 4);
                 },
                 else => {
-                    _ = try self.skipMessage(stream, msg_len - 4);
+                    _ = try self.skipMessage(stream, msg_len_u32 - 4);
                 },
             }
         }
@@ -259,7 +276,8 @@ pub const PostgresClient = struct {
     /// Read a DataRow message
     fn readDataRow(self: *PostgresClient, stream: *net.Stream, len: u32, result: *QueryResult) !void {
         var col_count_buf: [2]u8 = undefined;
-        _ = try stream.readAll(&col_count_buf);
+        const col_count_bytes = try stream.read(col_count_buf[0..]);
+        if (col_count_bytes != 2) return error.InvalidMessage;
         const col_count = std.mem.readInt(u16, &col_count_buf, .big);
 
         var row = Row{
@@ -271,7 +289,8 @@ pub const PostgresClient = struct {
         var remaining: u32 = len - 2;
         for (0..col_count) |_| {
             var value_len_buf: [4]u8 = undefined;
-            _ = try stream.readAll(&value_len_buf);
+            const value_len_bytes = try stream.read(value_len_buf[0..]);
+            if (value_len_bytes != 4) return error.InvalidMessage;
             const value_len = std.mem.readInt(i32, &value_len_buf, .big);
             remaining -= 4;
 
@@ -282,8 +301,9 @@ pub const PostgresClient = struct {
             } else {
                 const value_len_usize = @as(usize, @intCast(value_len));
                 const value_buf = try self.allocator.alloc(u8, value_len_usize);
-                _ = try stream.readAll(value_buf);
-                try row.values.append(value_buf);
+                const value_bytes = try stream.read(value_buf[0..value_len_usize]);
+                if (value_bytes != value_len_usize) return error.InvalidMessage;
+                try row.values.append(value_buf[0..value_len_usize]);
                 try row.columns.append(""); // Column name not in DataRow
                 remaining -= value_len_usize;
             }
@@ -301,7 +321,8 @@ pub const PostgresClient = struct {
         var remaining: u32 = len;
         while (remaining > 0) {
             var type_buf: [1]u8 = undefined;
-            _ = try stream.readAll(&type_buf);
+            const type_bytes = try stream.read(type_buf[0..]);
+            if (type_bytes != 1) return error.InvalidMessage;
             remaining -= 1;
 
             if (type_buf[0] == 0) break; // Null terminator
@@ -309,7 +330,8 @@ pub const PostgresClient = struct {
             // Read string until null terminator
             while (true) {
                 var byte_buf: [1]u8 = undefined;
-                _ = try stream.readAll(&byte_buf);
+                const byte_bytes = try stream.read(byte_buf[0..]);
+                if (byte_bytes != 1) return error.InvalidMessage;
                 remaining -= 1;
 
                 if (byte_buf[0] == 0) break;

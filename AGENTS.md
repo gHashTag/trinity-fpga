@@ -2,6 +2,25 @@
 
 Trinity S³AI implements a multi-agent swarm architecture using pure Zig. Each agent has a specific role and communicates through GitHub issues, JSONL events, and the unified `tri` CLI.
 
+## SOUL.md — Mandatory Agent Soul
+
+**Every agent/container MUST have `SOUL.md` at its root.**
+
+**SOUL.md contains:**
+- Agent type (Ralph / Mu / Scholar / Copywright / Oracle / Swarm / Custom)
+- Bound GitHub issue number
+- Mission statement
+- Allowed commands
+- Stop conditions
+- Reporting format (Protocol v2)
+- References to CLAUDE.md and AGENTS.md
+
+**Template**: `templates/SOUL.md`
+
+**All agents must follow CLAUDE.md law.**
+
+---
+
 ## Table of Contents
 
 - [Agent Types](#agent-types)

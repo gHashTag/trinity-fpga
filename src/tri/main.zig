@@ -200,15 +200,27 @@ pub fn main() !void {
             std.mem.eql(u8, first_arg, "pr") or std.mem.eql(u8, first_arg, "check") or
             std.mem.eql(u8, first_arg, "dispatch") or std.mem.eql(u8, first_arg, "graphql"))
         {
-            // Intercept `tri agent run <N>` → flagship chimera
-            if (std.mem.eql(u8, first_arg, "agent") and arg_idx + 1 < args.len and
-                std.mem.eql(u8, args[arg_idx + 1], "run"))
-            {
-                const run_args = if (arg_idx + 2 < args.len) args[arg_idx + 2 ..] else &[_][]const u8{};
-                logAgentCommand(args[arg_idx..]);
-                const tri_agent_run = @import("tri_agent_run.zig");
-                try tri_agent_run.runAgentRunCommand(allocator, run_args);
-                return;
+            // Intercept `tri agent <subcommand>` → spawn/run/stop
+            if (std.mem.eql(u8, first_arg, "agent") and arg_idx + 1 < args.len) {
+                const agent_subcmd = args[arg_idx + 1];
+                const agent_args = if (arg_idx + 2 < args.len) args[arg_idx + 2 ..] else &[_][]const u8{};
+
+                if (std.mem.eql(u8, agent_subcmd, "spawn")) {
+                    logAgentCommand(args[arg_idx..]);
+                    const agent_commands = @import("agent_commands.zig");
+                    try agent_commands.runAgentSpawnCommand(allocator, agent_args);
+                    return;
+                } else if (std.mem.eql(u8, agent_subcmd, "run")) {
+                    logAgentCommand(args[arg_idx..]);
+                    const tri_agent_run = @import("tri_agent_run.zig");
+                    try tri_agent_run.runAgentRunCommand(allocator, agent_args);
+                    return;
+                } else if (std.mem.eql(u8, agent_subcmd, "stop")) {
+                    logAgentCommand(args[arg_idx..]);
+                    const agent_commands = @import("agent_commands.zig");
+                    try agent_commands.runAgentStopCommand(allocator, agent_args);
+                    return;
+                }
             }
             const gh_args = args[arg_idx..];
             logAgentCommand(gh_args);

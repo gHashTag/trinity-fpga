@@ -1,565 +1,155 @@
 # CLAUDE.md
 
-## FPGA Flashing — CRITICAL: JTAG Cable Requires fxload
+## Zig 0.15 API Compatibility and Migration Rules
 
-**BEFORE ANY FPGA flashing operation:**
-1. JTAG cable starts at PID 0x0013 (bootloader mode)
-2. MUST run fxload to switch to PID 0x0008 (JTAG mode)
-3. flash_no_sudo.sh auto-handles this
-4. NEVER skip fxload step — programming will fail
+**Reference**: docs/zig-migration-rules.md — https://ziglang.org/download/0.15.1/
 
-## Project
+---
 
-Trinity — Pure Zig autonomous AI agent swarm. 0 TypeScript, 0 Python, 0 bash dependencies.
-Repository: https://github.com/gHashTag/trinity
+## SplitIterator API Changes (Zig 0.15)
 
-**ABSOLUTE BAN: No .sh/.bash scripts.** All tooling, entrypoints, deploy scripts MUST be Zig binaries.
-PreToolUse hook enforces this — creating .sh files is blocked. See `.claude/rules/no-shell-scripts.md`.
+⚠️ **IMPORTANT**: `SplitIterator` semantics changed significantly in Zig 0.15:
+- `.first()` and `.next()` now return `?[]const u8` (optional) instead of direct slices
+- Multiple `orelse` calls fail when left side is not optional
+- Direct slice access pattern requires using `?[0..N]` or iterator index notation
 
-**ALGORITHM IMPLEMENTATION: .tri ONLY!** All algorithms MUST be implemented as `.tri` specifications.
-- ❌ FORBIDDEN: Writing Zig directly for algorithms (dense layers, convolutions, optimizers, etc.)
-- ❌ FORBIDDEN: Writing Python algorithm implementations
-- ✅ REQUIRED: Create `.tri` spec in `specs/algo/` (e.g., `specs/algo/dense.tri`)
-- ✅ REQUIRED: Use `tri gen` or VIBEE compiler to compile .tri → .t27 → .zig
-- ✅ REQUIRED: Test generated code with `tri test`
+**Rules**:
+1. ✅ Используйте `if (iterator_expr) |capture|` для optionals, `orelse` для non-optionals
+2. ✅ Не полагайтесь на поведение `next()`/`first()` из Zig 0.14 — они могут не работать в Zig 0.15
+3. ✅ Проверяйте типы с помощью `@as()`, `@intCast()`, или явной аннотации типа
 
-**Reason**: `.tri` is the SINGLE source of truth. All algorithm implementations must go through the VIBEE compiler pipeline to ensure consistency across targets (Zig, Verilog, Python, etc.).
+### ArrayList.init() API Changes
 
-**Exception**: Core infrastructure (build.zig, src/vsa.zig, src/vm.zig, src/tri27/emu/) may use Zig directly.
+⚠️ **IMPORTANT**: `ArrayList.init()` now uses error union return types:
+- Return type is `!ArrayList(Header, null)` or similar error unions
+- Cannot use `.append()` or `.writer()` with error returns
 
-**See**: `specs/algo/` for algorithm specification examples (dense.tri, relu.tri, softmax.tri, conv2d.tri, adam.tri, lstm_cell.tri, attention.tri, batchnorm.tri, sgd.tri, cross_entropy.tri, gelu.tri, maxpool2d.tri, dropout.tri, layernorm.tri, dqn.tri)
+**Rules**:
+1. ✅ Используйте `ArrayList(Header).initCapacity(allocator, capacity)` вместо `ArrayList(Header).init(allocator)`
+2. ✅ Обрабатывайте error union из `init()` явно с помощью `if` или `switch`
+3. ✅ Не пытайтесь присвоить результат `init()` переменной до проверки ошибок
 
-**MANDATORY: GitHub Issue Tracking.** Every significant action MUST be logged in a GitHub issue:
-- Training farm changes → update tracker issue (#357) with status comment
-- Every deploy/redeploy/fix → comment with before/after state
-- Every experiment result → comment with step, loss, PPL, tok/s
-- Evolution status must be visible in issue comments at all times
-- Use `gh issue comment <N> --body "..."` for updates
+### orelse Keyword (Zig 0.15)
 
-**SAFEGUARDS — Destructive Actions Blocked:**
-1. NEVER delete a running Railway service — only crashed/finished
-2. NEVER use `flat` LR schedule — cosine/sacred ONLY (flat = dead by 20K steps)
-3. NEVER set startCommand on training services — must be null (Dockerfile ENTRYPOINT)
-4. NEVER force-push to main
-5. NEVER deploy without env vars set (HSLM_OPTIMIZER, HSLM_LR, HSLM_LR_SCHEDULE minimum)
-5b. ALWAYS set `builder: NIXPACKS` via `serviceInstanceUpdate` — default `RAILPACK` ignores Dockerfiles!
-5c. ALWAYS set `dockerfilePath: "Dockerfile.hslm-train"` via `serviceInstanceUpdate` (env var `RAILWAY_DOCKERFILE_PATH` does NOT override service config!)
-6. ALWAYS `source .env` before Railway API calls — all tokens live there
-7. ALWAYS record experiment results before deleting/replacing a service
-8. ALWAYS cosine schedule — zero exceptions
-
-## Binaries
-
-50+ binaries from one `build.zig` (Zig 0.15.x, std only, zero external deps):
-
-### Core Binaries
-
-| Binary | Build | Purpose |
-|--------|-------|---------|
-| `tri` | `zig build tri` | Railway cloud build (tri/build → railway up --detach on Linux with 2-8 MB stack) |
-| `trinity-mcp` | `zig build` | MCP server, 47+ tools, Oracle watchdog |
-| `ralph-agent` | `zig build` | Sleep-wake daemon, picks GitHub issues |
-| `ralph-hook` | `zig build` | Hook events → Telegram notifications |
-| `tri-bot` | `zig build tri-bot` | Telegram bot, SSE streaming to Anthropic API |
-| `tri-api` | `zig build tri-api` | Standalone agentic loop (2,555 LOC, 11 files) |
-| `hslm-entrypoint` | `zig build` | Railway training entrypoint (replaces bash) |
-
-### Build Methods
-
-#### Cloud Build (RECOMMENDED for production)
-```bash
-tri build  # Triggers Railway cloud build via tri/build → railway up --detach
-```
-
-**How it works:**
-- `runBuildCommand()` in `src/tri/commands/quantum_cosmic.zig` calls `railway_build.runRailwayBuildCommand(allocator, &.{})`
-- `runRailwayBuildCommand()` executes `railway up --detach` (from `src/tri/railway_build.zig`)
-- Builds on Railway Linux with 2-8 MB thread stack
-- Solves macOS stack overflow issues (512 KB main-thread vs 59 KB HybridBigInt per call)
-
-#### Local Build (DEPRECATED - CI only)
-```bash
-zig build  # Direct local build, macOS stack limits (512 KB)
-```
-
-**Why Cloud Builds:**
-- Consistent environment across all developers
-- Railway Docker infrastructure handles all dependencies
-- Larger thread stack on Linux (2-8 MB) solves HybridBigInt stack issues
-- `tri build` now uses Railway cloud instead of local `zig build`
-
-### Additional Binaries
-| Binary | Purpose |
-|--------|---------|
-| `arena` | LLM battle arena with ELO tracking |
-| `b2t` | BitNet-to-Ternary conversion |
-| `firebird` | LLM engine CLI |
-| `forge` | Build system tool |
-| `fluent` | Fluent code generator |
-| `needle-mcp` | Needle semantic search MCP server |
-| `scholar-agent` | Research-focused agent |
-| `vibee` | VIBEE compiler |
-| `trinity-node` | DePIN node |
-| `hslm-train` | HSLM training entrypoint |
-| `mu-agent` | Memory/learning agent |
-
-## Commands
-
-```bash
-zig build              # All 50+ binaries (only direct zig call allowed)
-tri test               # Run tests
-tri issue list         # See task queue
-tri git status         # Working tree status
-tri git commit "msg"   # Commit (zig fmt auto, format enforced)
-tri railway build      # Trigger Railway deployment
-tri railway status     # Show deployment status
-tri railway logs       # Show build/deploy logs
-tri clara demo         # Run CLARA pipeline demonstration
-tri clara explain      # Proof trace generation
-tri clara status       # Show CLARA proposal progress
-tri faculty            # Agent status dashboard
-tri notify "msg"       # Telegram notification
-tri agent run <N>      # Autonomous issue resolution
-tri cloud spawn <N>    # Spawn Railway container for issue
-```
-
-## Key Paths
-
-| Path | What |
-|------|------|
-| `src/tri-api/` | Claude Code replacement (11 files, 2,555 LOC) |
-| `src/vsa.zig` | Core VSA: bind, unbind, bundle, similarity |
-| `src/vm.zig` | Ternary VM (stack-based bytecode) |
-| `tools/mcp/trinity_mcp/` | MCP server + bot + agent |
-| `specs/` | .tri specifications (source of truth for codegen) |
-| `.ralph/` | Agent state, identity, memory, handover |
-| `fpga/openxc7-synth/` | FPGA bitstreams and Verilog |
-
-## Project Structure Rules
-
-### Root Directory
-
-Only these files/directories should be in project root:
-
-**Essential Files:**
-- `build.zig` - Main build file
-- `build.zig.zon` - Package manifest
-- `README.md` - Project overview
-- `LICENSE` - License
-- `.gitignore` - Git ignore patterns
-
-**Configuration Files:**
-- `.gitattributes`, `.editorconfig`, `.env.example`
-- `.mcp.json`, `.railwayignore`, `fly.toml`, `vercel.json`
-- `package.json` (for Node.js tooling)
-
-**Documentation:**
-- `CLAUDE.md`, `AGENTS.md`, `CHANGELOG.md`, `CONTRIBUTING.md`
-- `CITATION.cff`, `CODE_OF_CONDUCT.md`
-
-**Essential Directories:**
-- `src/` - Source code
-- `specs/` - Algorithm specifications (.tri)
-- `docs/` - Documentation
-- `deploy/` - Deployment configs (Dockerfiles, k8s, etc.)
-- `fpga/` - FPGA toolchain and bitstreams
-- `tests/` - Test files
-
-**Hidden Directories (.*)**: Configuration, state, caches
-
-### What Should NOT Be in Root
-
-- Binary executables (use `zig-out/bin/`)
-- Build artifacts (use `zig-cache/`, `zig-out/`)
-- Temporary files (use `temp/` directory, but .gitignore it)
-- Test binaries (use `tests/` directory)
-- Dockerfiles (use `deploy/` directory)
-- Shell scripts (see no-shell-scripts.md rule)
-
-## Code Style
-
-- Zig 0.15, `std` only, zero external dependencies
-- Tests in same file (`test "description" { ... }`)
-- Error handling: return error sets, never panic
-- Memory: explicit allocators, no hidden allocations
-- `zig fmt` before every commit
-- Never edit generated files in `var/trinity/output/` or `generated/`
-
-## Golden Rule
-
-Every action in Trinity goes through the `tri` CLI. No exceptions.
-
-```
-❌ git status        → ✅ tri git status
-❌ gh issue list     → ✅ tri issue list
-❌ curl telegram     → ✅ tri notify "msg"
-❌ zig build test    → ✅ tri test
-❌ pgrep ralph-agent → ✅ tri agent list
-```
-
-Agents know ONE word: **`tri`**. Everything else is inside the binary.
-New feature? → New `tri` command. No direct tool calls.
-
-This gives: **safety** (tri git push blocks main), **audit** (every command logged), **testability** (test tri CLI, not 6 separate agents).
-
-## Rigid Process Framework — Dev Workflow
-
-Trinity S³AI includes a **Rigid Process Framework** for structured development workflow enforcement.
-
-### State Machine
-
-```
-IDLE → ACTIVE → DIRTY → TESTED → COMMITTED → SHIPPED
-   ↑        ↓        ↑        ↓          ↑
-   ←─────────────────── RESET ──────────────
-                        ↓
-                     BLOCKED
-```
-
-### Dev Commands
-
-```bash
-tri dev              # Show dev session status
-tri dev status        # Alias for status
-tri dev start --issue <N>  # Start session for issue N
-tri dev test          # Run tests and mark as passed
-tri dev commit "msg"  # Commit changes with issue ID
-tri dev ship          # Ship changes (mark as delivered)
-tri dev reset         # Reset changes back to ACTIVE state
-tri dev unblock       # Clear BLOCKED state
-tri dev log           # Show state history
-```
-
-### Session Persistence
-
-- **File**: `.trinity/dev_session.json`
-- **State**: Tracks current workflow state, issue number, test status
-- **Validation**: Each transition checked by `canTransition()` before applying
-
-### Integration
-
-- **Git Hooks**: Commit-msg hook enforces issue ID format (#N) and session state validation
-- **GitHub**: `src/tri/github_integration.zig` provides issue creation, status updates, test results
-- **Test Runner**: `src/tri/test_dev_runner.zig` — standalone binary for framework testing
-
-### Test Commands
-
-```bash
-zig build test_dev_runner  # Build standalone test runner
-./zig-out/bin/test_dev_runner status
-./zig-out/bin/test_dev_runner cycle  # Full cycle test
-```
-
-See [AGENTS.md](AGENTS.md) for complete agent documentation.
-
-## Workflow
-
-1. Issue on GitHub → branch `feat/issue-{N}`
-2. Implement (spec first if .tri, then code)
-3. `zig fmt src/ && zig build && zig build test`
-4. Commit: `feat(scope): description (#N)`
-5. Push, create PR with `Closes #N`
-6. CI passes → merge
-
-## Trinity Protocol v2 — GitHub = Thought Graph
-
-EVERY agent step MUST be recorded in GitHub. No GitHub OK → NO next step.
-
-### Step comment format:
-```
-{emoji} **Agent: {name}** | timestamp
-📋 **Step**: {N}/{total} — {description}
-🔄 **Status**: THINKING | ACTING | DONE | FAILED
-**Thought**: why this step
-**Action**: what was done
-**Result**: what happened
-**Next**: what comes next
-```
-
-### Rules:
-1. Every task → create sub-issues (RESEARCH, PLAN, IMPLEMENT, TEST, VERIFY)
-2. Every thought → comment on sub-issue
-3. Every action → comment on sub-issue
-4. `tri issue comment` must return exit 0 before next step
-5. Close sub-issue → comment on parent with summary
-6. All sub-issues closed → close parent issue
-7. Never do >1 action without a comment
-8. Never close issue with <2 comments
-9. Every commit references issue (#N)
-
-### Labels:
-- `status:done` / `status:in-progress` / `status:queued` — workflow state
-- `agent:ralph` / `agent:mu` / `agent:scholar` / `agent:swarm` / `agent:linter` / `agent:oracle` — owner
-
-### Project Board:
-- Board: TRINITY (project #6)
-- Columns: Backlog → In Progress → In Review → Ready → Done
-- Every issue MUST be on the board with correct column
-
-## Architecture
-
-### tri-api (Claude Code replacement)
-
-```
-src/tri-api/
-  main.zig           — CLI + interactive TUI + agentic loop
-  tui.zig            — ANSI colored terminal (tri> prompt)
-  tool_executor.zig  — Built-in tools (read/write/bash/grep) + MCP routing
-  tool_protocol.zig  — Anthropic Messages API JSON parse/build
-  mcp_client.zig     — MCP stdio client (JSON-RPC 2.0)
-  context.zig        — Token counting, auto-compaction at 80% of 180K
-  permissions.zig    — deny > allow rule engine
-  checkpoint.zig     — Git stash before writes
-  session_store.zig  — Persistent sessions (~/.tri-api/sessions/)
-  claude_md.zig      — CLAUDE.md hierarchy → system prompt
-  memory.zig         — Persistent learnings (~/.tri-api/MEMORY.md)
-```
-
-### VSA Operations (src/vsa.zig)
-
+⚠️ **IMPORTANT**: `orelse` now requires optional on LEFT side:
 ```zig
-bind(a, b)          // Associate two vectors
-unbind(bound, key)  // Retrieve from binding
-bundle2(a, b)       // Majority vote (2 vectors)
-bundle3(a, b, c)    // Majority vote (3 vectors)
-cosineSimilarity()  // Similarity [-1, 1]
-permute(v, count)   // Cyclic permutation
+if (optional_expr) |capture| else_expr
 ```
 
-### Mathematical Foundation
+**Rules**:
+1. ✅ Левая сторона `orelse` ДОЛЖНА быть optional (т.е. `if` или `while`)
+2. ✅ Для получения среза из optional: `if (opt) |val| opt.? else default_value`
+3. ✅ Не используйте `orelse` для простых развилок без захвата ошибок
 
-Ternary {-1, 0, +1}: 1.58 bits/trit, 20x memory savings vs float32, add-only compute.
-Trinity Identity: `phi^2 + 1/phi^2 = 3` where phi = (1 + sqrt(5)) / 2.
+---
 
-## TTT Dogfood Architecture
+## PostgreSQL Protocol Read Patterns
 
-**Principle**: `.tri` spec is SINGLE source of truth — generates to ANY target language (.t27, .zig, .py, .rs, .go).
+✅ `stream.read(buffer)` возвращает количество прочитанных байтов
+- Используйте `if (bytes_read > 0)` проверки
+- Не используйте `readAll()` — эта функция была удалена в Zig 0.15
 
+---
+
+**Ссылка на правила миграции**
+
+Миграция API: **Zig 0.15 Compatibility**
+- Типы данных: optional, error unions
+- Ссылка на: docs/zig-migration-rules.md
+
+---
+**Дата добавления**: 2026-04-03
+
+---
+
+## Queen Trinity Orchestrator Law
+
+### SOUL.md — Mandatory Agent Soul
+
+**Every container/agent MUST have `SOUL.md` at its root.**
+
+**SOUL.md contains:**
+- Agent type (Ralph / Mu / Scholar / Copywright / Oracle / Swarm / Custom)
+- Bound GitHub issue number
+- Mission statement
+- Allowed commands
+- Stop conditions
+- Reporting format (Protocol v2)
+- References to CLAUDE.md and AGENTS.md
+
+**Template**: `templates/SOUL.md`
+
+### Issue-Bound Containers
+
+**Every container MUST be bound to exactly one GitHub issue.**
+
+**Canonical registry**: `.trinity/issue_bindings.json`
+
+```json
+{
+  "issue_number": 505,
+  "agent_id": "ralph-505-a1",
+  "soul_file": ".trinity/souls/issue-505-ralph-505-a1/SOUL.md",
+  "session_id": "sess_123",
+  "railway_service_id": "svc_abc",
+  "deployment_id": "dep_xyz",
+  "experience_file": ".trinity/experience/issue-505-run-001.jsonl",
+  "status": "ACTIVE"
+}
 ```
-.tri (VIBEE spec)          ← SINGLE source of truth
-    │
-    ├── tri gen → .t27     ← TRI-27 Assembly (our language)
-    ├── tri gen → .zig     ← via zig-golden-float (kernel)
-    ├── tri gen → .py      ← Python target (future)
-    ├── tri gen → .rs      ← Rust target (future)
-    └── tri gen → .go      ← Go target (future)
-```
 
-**Architecture Split**:
-- **zig-golden-float/** = Kernel (numerical operations, VSA, Ternary VM)
-- **trinity/** = Language layer (.tri specs, .t27 assembly, configs, docs)
-- **NO .zig files in trinity/src/** except build.zig**
+### Akashic Journaling — GitHub Issues as Immutable Record
 
-**Complete 10-Step Pipeline**:
-```
-1. tri dev scan          — Read issues + experience
-2. tri dev pick --smart  — Priority + MNL (avoid 3+ fails)
-3. tri issue comment N   — Immutable GitHub record
-4. tri spec create       — .tri spec from experience template
-5. tri gen               — .tri → .t27 + .zig + ...
-6. tri test              — Compare outputs
-7. tri verdict --toxic   — "Past: 3/7. Now: 7/7"
-8. tri experience save   — Episode + learnings + mistakes
-9. tri git commit        — [DONE] + push
-10. tri loop decide      — Continue or Done?
-```
+**Every significant agent action MUST be reflected as a GitHub issue comment.**
 
-**MNL Pattern** (Mistake → Not-repeat → Learning):
+**Comment format (Protocol v2):**
+- `🔍 [RESEARCH] Step 1/8`
+- `📜 [SPEC] Reused nearest template`
+- `⚙️ [CODEGEN] .tri -> .zig`
+- `🧪 [TEST] 6/7 passed`
+- `☣️ [VERDICT] Past: 3/7. Now: 7/7`
+- `✅ [DONE] Build clean. Commit pushed`
+
+### Single Source of Truth
+
+- **`.tri` spec** — Logic and algorithms
+- **`.trinity/experience/`** — Episodes and learnings
+- **GitHub issue** — Immutable event thread
+- **`.trinity/issue_bindings.json`** — Issue ↔ session ↔ service ↔ soul mapping
+
+### Agent Lifecycle Commands
+
+- `tri agent spawn <issue>` — Create container + SOUL.md + register binding
+- `tri agent run <issue>` — Execute 8-step cycle with journaling
+- `tri agent stop <issue>` — Delete service + final comment
+
+### 8-Step Agent Cycle
+
+1. `tri dev scan` — Read issues + experience
+2. `tri dev pick --smart` — Priority + MNL (avoid 3+ fails)
+3. `tri spec create` — .tri spec from experience template
+4. `tri gen` — .tri → .t27 + .zig
+5. `tri test` — Compare outputs
+6. `tri verdict --toxic` — "Past: 3/7. Now: 7/7"
+7. `tri experience save` — Episode + learnings + mistakes
+8. `tri git commit` — [DONE] + push
+9. `tri loop decide` — Continue or Done?
+
+**Each step writes to:**
+- GitHub issue (comment)
+- `.trinity/agent_events.jsonl`
+- `.trinity/experience/...`
+
+### MNL Pattern (Mistake → Not-repeat → Learning)
+
 - Task X: 3 consecutive fails → SKIP (toxic)
 - Task Y: 0 fails, similar to solved Z → PICK
 - Task Z: 1 fail, but fix found → PICK with learning
 
-## MCP Servers
+### Hard Rules
 
-| Server | Tools | Config |
-|--------|-------|--------|
-| **trinity** | 47+ (codegen, math, git, sacred) | `.mcp.json` |
-| **needle** | 6 (structural_replace, search, quality_gates) | `.mcp.json` |
-| **zig-docs** | 4 (builtins, std lib search) | `.mcp.json` |
-| **railway** | deploy, logs, env vars, domains | `.mcp.json` |
-
-## Skills
-
-| Command | Purpose |
-|---------|---------|
-| `/fpga-synth` | FPGA synthesis pipeline |
-| `/vsa-verify` | VSA math proof verification |
-| `/vibee-gen` | Generate Zig/Verilog from .tri |
-| `/trinity-test` | Run test suites |
-| `/implement-issue` | Read issue → branch → implement → PR |
-| `/review-code` | Review changes, find bugs |
-| `/cloud` | Cloud Dev dashboard: containers, events, issues, PRs |
-| `/agents` | Agent swarm observatory: pools, queue, events, PRs, ETA |
-| `/status` | Live ouroboros dashboard: score, dimensions, recommendations |
-
-## Hooks
-
-- **Stop** → macOS notification + ralph-hook → Telegram
-- **PreToolUse** (Write/Edit) → Block editing `var/trinity/output/`, `generated/`
-- **PostToolUse** (.zig) → Auto `zig fmt`
-- **PostToolUse** (Bash/Edit/Write) → ralph-hook → Telegram
-
-## Telegram Bot
-
-```
-FORBIDDEN: InlineKeyboardMarkup
-ONLY: ReplyKeyboardMarkup
-```
-
-## VIBEE Codegen
-
-```bash
-zig build vibee -- gen specs/tri/feature.tri  # Generate Zig
-zig build vibee -- gen specs/tri/fpga.tri     # Generate Verilog
-```
-
-Never manually edit generated output. Edit the .tri spec, regenerate, test.
-
-## Default Development Workflow
-
-Every issue → container → agent → PR → merge → cleanup.
-
-1. Create issue (use templates) → label `agent:spawn` auto-added
-2. GitHub Actions spawns Railway container `agent-{issue-number}`
-3. Agent reads issue, codes, self-reviews, tests, creates PR
-4. Live status in issue comments + Telegram + JSONL events
-5. PR merge → container auto-destroyed → issue auto-closed
-
-Manual development only when "manual (no agent)" is selected in issue template.
-
-### Commands
-```bash
-tri cloud spawn <N>      # Manual spawn
-tri cloud kill <N>       # Destroy container
-tri cloud agents         # List active (max 10)
-tri cloud history <N>    # Event timeline
-tri cloud cleanup        # Remove finished
-tri cloud sync           # Reconcile with Railway
-tri cloud spawn-all      # Spawn for all agent:spawn issues
-```
-
-## Cloud Dev (Issue-Based Container Orchestration)
-
-Each GitHub issue = one Docker container on Railway = one Claude Code agent.
-
-### Flow
-1. Issue created with template → `agent:spawn` label auto-added
-2. GitHub Actions `agent-spawn.yml` runs `tri cloud spawn <N>`
-3. Railway deploys `deploy/Dockerfile.agent` (multi-stage, prebuild cached)
-4. `agent-entrypoint.sh`: auth → clone → read issue → Claude Code → self-review → PR
-5. Agent emits structured events (JSONL) + heartbeats every 30s
-6. Live dashboard comment updated in issue + Telegram alerts
-7. PR merged → `agent-cleanup.yml` runs `tri cloud kill <N>` → issue auto-closed
-
-### Key Files
-| File | Purpose |
-|------|---------|
-| `SOUL.md` | Agent mission template (injected into container) |
-| `src/tri/cloud_orchestrator.zig` | Spawn/kill/list lifecycle |
-| `deploy/Dockerfile.agent` | Container image (multi-stage prebuild) |
-| `deploy/agent-entrypoint.sh` | Boot: auth → clone → solve → self-review → PR |
-| `tools/mcp/trinity_mcp/cloud_monitor.zig` | HTTP monitor + JSONL persistence |
-| `.github/workflows/agent-spawn.yml` | Auto-spawn on issue open/label |
-| `.github/workflows/agent-cleanup.yml` | Auto-cleanup on PR merge |
-
-### Agent Roles
-- **agent:ralph** (default) — Code implementation
-- **agent:scholar** — Research first, then propose solution
-- **agent:mu** — Memory/learning pattern updates
-
-### Safety
-- Max 10 concurrent containers (Railway billing guard)
-- 1h timeout for Claude Code (configurable via AGENT_TIMEOUT)
-- Self-review before PR: build check, format, diff size, generated files
-- Bearer auth on monitor POST endpoint
-- Retry wrapper (3x) for git/gh operations
-- Structured JSONL event logging for audit
-
-## Deploy (GitHub Pages)
-
-ALWAYS deploy website + docs together, never separately.
-Website: `gHashTag.github.io/trinity/` | Docs: `gHashTag.github.io/trinity/docs/`
-
-Build docs: `cd docs && npm run build` (NOT `docsite/` — moved to `docs/`)
-
-### Website & Docs Deployment Rules
-
-**CRITICAL: Custom Domain t27.ai**
-
-1. **Vite config** (`apps/website/vite.config.ts`):
-   - `base: '/'` для кастомного домена
-   - НЕ использовать `base: '/trinity/'`
-
-2. **Docusaurus config** (`docs/docusaurus.config.ts`):
-   - `url: 'https://t27.ai'`
-   - `baseUrl: '/docs/'`
-   - НЕ использовать GitHub Pages URLs
-
-3. **HTML meta tags** (`apps/website/index.html`):
-   - Open Graph URLs: `https://t27.ai/`
-   - Twitter card URLs: `https://t27.ai/`
-   - Canonical URL: `https://t27.ai/`
-   - JSON-LD structured data: `https://t27.ai/`
-
-4. **Component links** (`apps/website/src/components/Navigation.tsx`, `Footer.tsx`):
-   - DOCS_URL: `https://t27.ai/docs/`
-   - НЕ использовать GitHub Pages URLs
-
-5. **Deployment workflow** (`.github/workflows/deploy-docs.yml`):
-   - Комбинировать `apps/website/dist/*` + `docs/build/*`
-   - Копировать `CNAME` из `apps/website/public/CNAME`
-   - Деплоить в корень gh-pages branch
-
-6. **При изменении домена:**
-   - Обновить BOTH: vite.config.ts AND docusaurus.config.ts
-   - Обновить index.html (OG, Twitter, canonical, JSON-LD)
-   - Обновить компоненты (Navigation, Footer)
-   - Обновить CNAME файл
-   - Проверить GitHub Pages settings via API
-
-## Supervisor Mode
-
-Doctor system enforces pipeline-first development. `tri doctor` is the single source of truth.
-
-### Commands
-```
-tri doctor              One-line health status
-tri doctor init         Scan + mark + report (all-in-one)
-tri doctor scan         Classify all .zig files → .doctor/scan_results.json
-tri doctor mark         Add @origin/@regen markers (reverts if build fails)
-tri doctor report       Health score dashboard with emoji grades
-tri doctor plan         Create migration queue → .doctor/migration_queue.json
-tri doctor heal         Regenerate manual files through pipeline
-tri doctor enforce      Show hook setup instructions
-tri doctor enforce-check  Hook binary: reads JSON stdin, outputs permit/deny JSON stdout
-```
-
-### Health Formula
-```
-health = 100 × (0.4 × generated_ratio + 0.3 × compliance_rate
-              + 0.2 × specs_coverage + 0.1 × tests_passing)
-90+ → HEALTHY | 70-89 → RECOVERING | 50-69 → INFECTED | 0-49 → CRITICAL
-```
-
-### State Directory: `.doctor/`
-- `scan_results.json` — last scan
-- `violations.jsonl` — blocked writes
-- `migration_queue.json` — pending regen
-- `mark_history.jsonl` — mark operations
-
-## FPGA Operations — Experience-First Protocol
-
-Before ANY FPGA hardware operation (flash, uart, jtag, probe):
-1. Read `.trinity/fpga/hardware_state.json` — check blockers
-2. Read `.trinity/fpga/experience.json` — check if this operation was tried before
-3. If blocker affects this test → SKIP, log experience entry with result=BLOCKED
-4. If same operation previously FAILED with same hardware state → DON'T RETRY, use lesson
-5. After every operation → append experience entry
-6. Max 3 attempts on new failures → then log & move on
-
-### Known Anti-Patterns (from experience log)
-- openFPGALoader --cable xpc → ALWAYS FAILS (not supported)
-- fxload -D flag → ALWAYS FAILS (use lowercase -d)
-- sudo without -S → ALWAYS FAILS (use keychain pipe)
-- UART without soldered headers → ALWAYS NO ECHO
-- CPLD 0xFFFE → check bitrev() on TDO reads first, 0xFFFE is normal for DLC10 clones
+- ❌ No direct `.zig` writing where `.tri -> tri gen` should be used
+- ❌ No logic duplication between spec and code
+- ✅ Every container must have `SOUL.md`
+- ✅ Every container must be bound to exactly one issue
+- ✅ Every significant action must be reflected as issue comment

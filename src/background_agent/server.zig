@@ -5,11 +5,12 @@ const std = @import("std");
 const Allocator = std.mem.Allocator;
 const net = std.net;
 
-const Config = @import("../config.zig").Config;
-const Sessions = @import("../db/sessions.zig");
-const Railway = @import("../railway/client.zig").RailwayClient;
-const Jwt = @import("../auth/jwt.zig");
-const PostgresClient = @import("../db/client.zig").PostgresClient;
+const Config = @import("config.zig").Config;
+const Sessions = @import("db/sessions.zig");
+const RailwayClient = @import("railway/client.zig").RailwayClient;
+const railwayInit = @import("railway/client.zig").init;
+const Jwt = @import("auth/jwt.zig");
+const PostgresClient = @import("db/client.zig").PostgresClient;
 
 /// HTTP request context
 pub const RequestContext = struct {
@@ -52,10 +53,10 @@ pub const Server = struct {
     pub fn init(allocator: Allocator, config: Config, db_client: PostgresClient, auth_secret: []const u8) !Server {
         const address = try net.Address.parseIp(config.host, config.port);
 
-        var server = try net.Address.listen(address, .{ .reuse_address = true });
+        const server = try net.Address.listen(address, .{ .reuse_address = true });
 
         // Initialize Railway client if not in local mode
-        const railway_client = if (config.localMode) null else RailwayClient.init(allocator, config.railwayApiToken, config.railwayProjectId);
+        const railway_client = if (config.localMode) null else railwayInit(allocator, config.railwayApiToken, config.railwayProjectId);
 
         return .{
             .allocator = allocator,
@@ -84,7 +85,7 @@ pub const Server = struct {
             };
 
             // Handle connection in a thread
-            self.handleConnection(connection) catch |err| {
+            handleConnection(self, connection) catch |err| {
                 std.log.err("Connection error: {}", .{err});
             };
         }
@@ -106,16 +107,16 @@ pub const Server = struct {
         const request_str = buffer[0..request];
         var lines = std.mem.splitScalar(u8, request_str, '\n');
 
-        const first_line = lines.first() orelse return error.InvalidRequest;
+        const first_line = lines.next() orelse return error.InvalidRequest;
         var parts = std.mem.splitScalar(u8, first_line, ' ');
 
-        const method = parts.first() orelse return error.InvalidRequest;
+        const method = parts.next() orelse return error.InvalidRequest;
         _ = parts.next(); // URI
         _ = parts.next(); // Protocol
 
         // Parse URI and query string
-        var uri_parts = std.mem.splitScalar(u8, parts.first() orelse "", '?');
-        const path = uri_parts.first() orelse return error.InvalidRequest;
+        var uri_parts = std.mem.splitScalar(u8, parts.next() orelse "", '?');
+        const path = uri_parts.next() orelse return error.InvalidRequest;
         const query = uri_parts.next() orelse "";
 
         // Parse headers
@@ -132,7 +133,7 @@ pub const Server = struct {
             if (line.len == 0) break; // Empty line = end of headers
             var header_parts = std.mem.splitScalar(u8, line, ':');
             if (header_parts.next()) |name| {
-                if (header_parts.rest()) |value| {
+                if (header_parts.next()) |value| {
                     // Trim leading space
                     const value_trimmed = if (value.len > 0 and value[0] == ' ')
                         value[1..]
@@ -151,7 +152,10 @@ pub const Server = struct {
         var body_start: usize = request.len;
 
         for (lines, 0..) |line, i| {
-            const offset = if (i == 0) 0 else @intCast(usize, std.mem.indexOfPos(u8, request_str, line, @intCast(i32, lines.len - 1))) + line.len;
+            const offset = if (i == 0) 0 else blk: {
+                const idx = std.mem.indexOf(u8, request_str, line) orelse break;
+                break :blk idx + line.len;
+            };
             if (offset + 2 < request.len and
                 request[offset + 1] == '\r' and request[offset + 2] == '\n')
             {
@@ -168,7 +172,7 @@ pub const Server = struct {
         for (headers.items) |*h| {
             if (std.mem.eql(u8, h.name, "Authorization")) {
                 const auth_parts = std.mem.splitScalar(u8, h.value, ' ');
-                _ = auth_parts.first(); // "Bearer"
+                _ = auth_parts.next(); // "Bearer"
                 const token = auth_parts.rest() orelse continue;
 
                 if (token.len > 0) {
@@ -201,8 +205,6 @@ pub const Server = struct {
 
     /// Route request to handler
     fn routeRequest(self: *Server, ctx: *const RequestContext) !Response {
-        const allocator = self.allocator;
-
         // GET /health
         if (std.mem.eql(u8, ctx.path, "/health")) {
             return Response{
@@ -443,7 +445,7 @@ pub const Server = struct {
         // Update sessions to remove service_id reference
         _ = Sessions.updateSession(allocator, &self.db_client, service_id, .{
             .railway_service_id = null,
-        }) catch |err| {
+        }) catch {
             return Response{
                 .status = 500,
                 .body = "{\"error\":\"Failed to update sessions\"}",
@@ -458,9 +460,6 @@ pub const Server = struct {
 
     /// Send HTTP response
     fn sendResponse(self: *Server, stream: *net.Stream, response: Response) !void {
-        _ = self;
-        _ = response.user_id;
-
         // Build headers
         var headers = std.ArrayList(u8).init(self.allocator);
         defer headers.deinit();
@@ -501,17 +500,15 @@ pub const Server = struct {
             else => "Unknown",
         };
     }
-}
 
 test "server: parse simple request" {
-    const allocator = std.testing.allocator;
     const request = "GET /health HTTP/1.1\r\nHost: localhost\r\n\r\n";
 
     var lines = std.mem.splitScalar(u8, request, '\n');
     const first_line = lines.first();
     var parts = std.mem.splitScalar(u8, first_line, ' ');
 
-    try std.testing.expectEqualStrings(parts.first(), "GET");
+    try std.testing.expectEqualStrings(parts.next(), "GET");
 }
 
 test "server: build health response" {

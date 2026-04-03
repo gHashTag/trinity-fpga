@@ -31,7 +31,7 @@ pub const Error = error{
     ConnectionFailed,
     InvalidResponse,
     AuthFailed,
-    GraphQL error,
+    GraphQL
 };
 
 /// Railway client
@@ -85,23 +85,16 @@ pub fn deleteService(client: *RailwayClient, service_id: []const u8) !ServiceDel
 
 /// Build serviceCreate mutation
 fn buildCreateServiceMutation(input: ServiceCreateInput) ![]const u8 {
+    _ = input;
     return std.fmt.allocPrint(std.heap.page_allocator,
-        \\mutation serviceCreate($input: ServiceCreateInput!) {{
-            serviceCreate(input: $input) {{
-                id
-            }}
-        }}
+        \\mutation {{ serviceCreate(input: $input: ServiceCreateInput!) {{ id }} }}
     );
 }
 
 /// Build serviceDelete mutation
 fn buildDeleteServiceMutation(service_id: []const u8) ![]const u8 {
     return std.fmt.allocPrint(std.heap.page_allocator,
-        \\mutation serviceDelete($id: String!) {{
-            serviceDelete(id: $id) {{
-                serviceId
-            }}
-        }}
+        \\mutation {{ serviceDelete(id: $id: String!) {{ serviceId }} }}
     , .{ service_id });
 }
 
@@ -112,7 +105,7 @@ fn sendGraphQLRequest(client: *RailwayClient, query: []const u8) ![]const u8 {
     defer {
         const bytes = request.toOwnedSlice();
         std.heap.page_allocator.free(bytes);
-    };
+    }
 
     try request.writer().print(
         \\POST {s} HTTP/1.1\r

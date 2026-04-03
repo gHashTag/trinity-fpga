@@ -166,7 +166,7 @@ pub const HybridBigInt = struct {
     }
 
     /// Safe write to unpacked cache (panics if not unpacked)
-    inline fn setTritChecked(self: *Self, pos: usize, value: Trit) void {
+    pub inline fn setTritChecked(self: *Self, pos: usize, value: Trit) void {
         const cache = self.unpacked_cache orelse return;
         cache[pos] = value;
     }

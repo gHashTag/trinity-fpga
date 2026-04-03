@@ -124,6 +124,7 @@ pub fn gridSearchFit(
     // 4D nested loops
     var i: usize = 0;
     while (i < bounds.rho0_steps) : (i += 1) {
+        inline while (i < bounds.rho0_steps) : (i += 1) {}
         const rho0 = bounds.rho0_min + @as(f64, @floatFromInt(i)) * rho0_step;
 
         var j: usize = 0;
@@ -148,7 +149,7 @@ pub fn gridSearchFit(
                     const chi_sq = computeChiSquared(allocator, points, params, dr) catch {
                         // Skip invalid parameter combinations
                         iteration += 1;
-                        continue :l;
+                        continue :rho0_loop;
                     };
 
                     if (chi_sq < best_chi) {
@@ -160,7 +161,7 @@ pub fn gridSearchFit(
 
                     // Progress every 10%
                     if (iteration * 10 >= total_iterations) {
-                        const progress = @as(usize, @intFromFloat(@floor(@as(f64, @floatFromInt(iteration)) * 100.0 / @as(f64, @floatFromInt(total_iterations))));
+                        const progress = iteration * 100 / total_iterations;
                         std.debug.print("Progress: {}%\r", .{progress});
                     }
                 }
@@ -223,7 +224,7 @@ test "computeChiSquared for perfect fit" {
     const chi_sq = computeChiSquared(allocator, &points, params, 0.1) catch unreachable;
 
     // χ² should be positive finite value
-    try std.testing.expect(@isFinite(chi_sq) and chi_sq > 0);
+    try std.testing.expect(std.math.isFinite(chi_sq) and chi_sq > 0);
 }
 
 test "isGoodFit classification" {

@@ -6,6 +6,7 @@ const Allocator = std.mem.Allocator;
 
 /// Configuration for background-agent API
 pub const Config = struct {
+    host: []const u8 = "0.0.0.0",
     port: u16 = 3000,
     railwayApiToken: []const u8 = "",
     railwayProjectId: []const u8 = "",

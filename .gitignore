@@ -99,6 +99,10 @@ zig/
 # Context index (generated binary, 80MB+)
 deploy/trinity-nexus/.context_index
 
+# SOUL bindings (tracked for orchestration)
+!.trinity/issue_bindings.json
+!.trinity/souls/
+
 # Temporary scripts
 check_ssh.py
 
@@ -312,6 +316,9 @@ fpga/tools/weight_pack_wide
 # Docker files in root (use deploy/ subdirectory instead)
 Dockerfile*
 *.toml
+
+# Templates (tracked for agent orchestration)
+!templates/SOUL.md
 fly.toml
 
 # Temporary directories
@@ -353,6 +360,11 @@ tree-sitter-vibee/
 trinity-nexus/
 website/
 
+# SOUL bindings (tracked for orchestration)
+!.trinity/issue_bindings.json
+!.trinity/souls/
+!templates/SOUL.md
+
 # Junk archive (large, local only)
 archive/junk-*/
 fpga/openxc7-synth/synth_reports/hslm_full_top.json
@@ -366,6 +378,7 @@ apps/queen/*.png
 data/cells/
 src/tools/uart-echo-test
 data/cifar-10/
+# Trinity: ignored except issue_bindings.json and souls/
 .trinity/
 .trinity/queen/
 .trinity/scholar/
@@ -374,3 +387,7 @@ data/cifar-10/
 .trinity/scholar/state/
 fpga/build-deps/
 fpga-flash
+# SOUL bindings (tracked - see lines 103-105)
+!.trinity/issue_bindings.json
+!.trinity/souls/
+!templates/SOUL.md

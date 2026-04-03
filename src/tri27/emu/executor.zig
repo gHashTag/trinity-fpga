@@ -634,7 +634,7 @@ pub fn execute(cpu: *CPUState, inst: Instruction, memory: []align(8) u8) ExecErr
             }
 
             // Store string address (as ternary value) in destination register
-            const trit_value = Trit27{ .trits = @as(i64, str_addr) };
+            const trit_value = Trit27{ .trits = @bitCast(str_addr) };
             cpu.t27[inst.dst] = trit_value;
             cpu.flags.Z = false;
             cpu.flags.N = false;
@@ -643,8 +643,8 @@ pub fn execute(cpu: *CPUState, inst: Instruction, memory: []align(8) u8) ExecErr
 
         .STR_CONCAT => {
             // Concatenate two string addresses into destination
-            const str1_addr = @as(usize, @bitCast(cpu.t27[inst.src1].trits);
-            const str2_addr = @as(usize, @bitCast(cpu.t27[inst.src2].trits);
+            const str1_addr: usize = @bitCast(cpu.t27[inst.src1].trits);
+            const str2_addr: usize = @bitCast(cpu.t27[inst.src2].trits);
 
             // Read string lengths (stored as u16 after address)
             if (str1_addr >= memory.len or str1_addr + 2 >= memory.len) {
@@ -680,7 +680,7 @@ pub fn execute(cpu: *CPUState, inst: Instruction, memory: []align(8) u8) ExecErr
             }
 
             // Store result address and length in destination register
-            const trit_value = Trit27{ .trits = @as(i64, result_addr) };
+            const trit_value = Trit27{ .trits = @bitCast(result_addr) };
             cpu.t27[inst.dst] = trit_value;
             cpu.flags.Z = false;
             cpu.flags.N = false;
@@ -689,7 +689,7 @@ pub fn execute(cpu: *CPUState, inst: Instruction, memory: []align(8) u8) ExecErr
 
         .STR_PRINT => {
             // Print string from register to stdout
-            const str_addr = @as(usize, @bitCast(cpu.t27[inst.src1].trits);
+            const str_addr: usize = @bitCast(cpu.t27[inst.src1].trits);
 
             if (str_addr >= memory.len) {
                 return ExecError.InvalidMemory;
@@ -722,7 +722,7 @@ pub fn execute(cpu: *CPUState, inst: Instruction, memory: []align(8) u8) ExecErr
         .FILE_READ => {
             // Read file into memory
             // src1 register contains path address
-            const path_addr = @as(usize, @bitCast(cpu.t27[inst.src1].trits);
+            const path_addr: usize = @bitCast(cpu.t27[inst.src1].trits);
 
             if (path_addr >= memory.len) {
                 return ExecError.InvalidMemory;
@@ -745,14 +745,12 @@ pub fn execute(cpu: *CPUState, inst: Instruction, memory: []align(8) u8) ExecErr
             @memcpy(path_buf[0..copy_len], path_slice[0..copy_len]);
             path_buf[copy_len] = 0; // Null-terminate
 
-            // Use std.fs.cwd() for relative paths
-            const cwd = std.fs.cwd() catch {
-                // On error, just proceed with absolute path handling
+            // For now, only handle absolute paths (simplification)
+            if (path_buf[0] != '/') {
                 return ExecError.InvalidMemory;
-            };
+            }
 
-            const file_path = if (path_buf[0] == '/') path_buf[0..copy_len :0] else try std.fs.path.join(cwd, &path_buf);
-
+            const file_path = path_buf[0..copy_len :0];
             // Open and read file
             const file = std.fs.cwd().openFile(file_path, .{}) catch {
                 return ExecError.InvalidMemory;
@@ -772,8 +770,8 @@ pub fn execute(cpu: *CPUState, inst: Instruction, memory: []align(8) u8) ExecErr
             }
 
             // Store content length (little-endian u16)
-            memory[result_addr] = @as(u8, bytes_read);
-            memory[result_addr + 1] = @as(u8, @truncate(bytes_read >> 8));
+            memory[result_addr] = @intCast(bytes_read);
+            memory[result_addr + 1] = @intCast(bytes_read >> 8);
 
             // Copy content
             for (0..@as(usize, bytes_read)) |i| {
@@ -781,7 +779,7 @@ pub fn execute(cpu: *CPUState, inst: Instruction, memory: []align(8) u8) ExecErr
             }
 
             // Store result address in destination register
-            const trit_value = Trit27{ .trits = @as(i64, result_addr) };
+            const trit_value = Trit27{ .trits = @bitCast(result_addr) };
             cpu.t27[inst.dst] = trit_value;
             cpu.flags.Z = bytes_read == 0;
             cpu.flags.N = false;
@@ -791,8 +789,8 @@ pub fn execute(cpu: *CPUState, inst: Instruction, memory: []align(8) u8) ExecErr
         .FILE_WRITE => {
             // Write string to file
             // src1 register contains path address, src2 contains data address
-            const path_addr = @as(usize, @bitCast(cpu.t27[inst.src1].trits);
-            const data_addr = @as(usize, @bitCast(cpu.t27[inst.src2].trits);
+            const path_addr: usize = @bitCast(cpu.t27[inst.src1].trits);
+            const data_addr: usize = @bitCast(cpu.t27[inst.src2].trits);
 
             if (path_addr >= memory.len or data_addr >= memory.len) {
                 return ExecError.InvalidMemory;
@@ -821,13 +819,12 @@ pub fn execute(cpu: *CPUState, inst: Instruction, memory: []align(8) u8) ExecErr
             @memcpy(path_buf[0..copy_len], path_slice[0..copy_len]);
             path_buf[copy_len] = 0; // Null-terminate
 
-            // Use std.fs.cwd() for relative paths
-            const cwd = std.fs.cwd() catch {
+            // For now, only handle absolute paths (simplification)
+            if (path_buf[0] != '/') {
                 return ExecError.InvalidMemory;
-            };
+            }
 
-            const file_path = if (path_buf[0] == '/') path_buf[0..copy_len :0] else try std.fs.path.join(cwd, &path_buf);
-
+            const file_path = path_buf[0..copy_len :0];
             // Open and write file
             const file = std.fs.cwd().createFile(file_path, .{}) catch {
                 return ExecError.InvalidMemory;
@@ -850,7 +847,7 @@ pub fn execute(cpu: *CPUState, inst: Instruction, memory: []align(8) u8) ExecErr
         .FILE_EXISTS => {
             // Check if file exists
             // src1 register contains path address
-            const path_addr = @as(usize, @bitCast(cpu.t27[inst.src1].trits);
+            const path_addr: usize = @bitCast(cpu.t27[inst.src1].trits);
 
             if (path_addr >= memory.len) {
                 return ExecError.InvalidMemory;
@@ -873,15 +870,15 @@ pub fn execute(cpu: *CPUState, inst: Instruction, memory: []align(8) u8) ExecErr
             @memcpy(path_buf[0..copy_len], path_slice[0..copy_len]);
             path_buf[copy_len] = 0; // Null-terminate
 
-            // Use std.fs.cwd() for relative paths
-            const cwd = std.fs.cwd() catch {
+            // For now, only handle absolute paths (simplification)
+            if (path_buf[0] != '/') {
                 return ExecError.InvalidMemory;
-            };
+            }
 
-            const file_path = if (path_buf[0] == '/') path_buf[0..copy_len :0] else try std.fs.path.join(cwd, &path_buf);
+            const file_path = path_buf[0..copy_len :0];
 
             // Check if file exists
-            const _exists = std.fs.cwd().access(file_path, .{}) catch {
+            _ = std.fs.cwd().access(file_path, .{}) catch {
                 cpu.flags.Z = true; // File does not exist
                 cpu.flags.N = false;
                 cpu.pc += 1;

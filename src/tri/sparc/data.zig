@@ -7,7 +7,6 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 
-const Http = @import("../../http.zig");
 const SavchenkoParams = @import("mod.zig").SavchenkoParams;
 const GalaxyDataPoint = @import("mod.zig").GalaxyDataPoint;
 const GalaxyDataset = @import("mod.zig").GalaxyDataset;
@@ -54,7 +53,7 @@ pub fn downloadSPARCData(allocator: Allocator, use_cached: bool) ![]const u8 {
                 defer dir_stream.close();
 
                 var dir_iter = dir_stream.iterate();
-                while (dir_iter.next() catch break) |entry| {
+                while (dir_iter.next()) |entry| {
                     if (entry.kind == .file) {
                         if (std.mem.eql(u8, entry.name, std.fs.path.basename(CACHE_FILE))) {
                             std.debug.print("Using cached SPARC data from {s}...\n", .{CACHE_FILE});
@@ -146,7 +145,7 @@ pub fn parseSPARCData(allocator: Allocator, content: []const u8) ![]GalaxyDataPo
 /// # Parameters
 ///   - allocator: Memory allocator
 ///   - data: Galaxy data to cache
-pub fn cacheData(allocator: Allocator, data: []const u8) !void {
+pub fn cacheData(_allocator: Allocator, _data: []const u8) !void {
     const dir = CACHE_DIR;
     std.fs.makePathAbsolute(dir) catch {};
 
@@ -160,7 +159,7 @@ pub fn cacheData(allocator: Allocator, data: []const u8) !void {
     const file = try std.fs.cwd().createFile(CACHE_FILE, .{});
     defer file.close();
 
-    _ = try file.writeAll(data);
+    _ = try file.writeAll(_data);
 
     std.debug.print("SPARC data cached to {s}\n", .{CACHE_FILE});
 }
@@ -213,7 +212,7 @@ pub fn parseGalaxyName(content: []const u8) []const u8 {
 ///
 /// # Parameters
 ///   - allocator: Memory allocator
-pub fn createEmbeddedDataFile(allocator: Allocator) !void {
+pub fn createEmbeddedDataFile(_allocator: Allocator) !void {
     const dir = CACHE_DIR;
     std.fs.cwd().makePath(dir) catch {};
 
