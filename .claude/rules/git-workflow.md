@@ -7,6 +7,13 @@
 - `docs(<module>): <description>` — documentation
 - `chore(<module>): <description>` — maintenance
 
+**IMPORTANT**: All commits MUST be bilingual — English + Russian. Use format:
+```
+<English description>
+
+Русский перевод описания изменений.
+```
+
 ## Rules
 - Pipeline auto-commits generated code via Link 18 (git)
 - Manual commits for: specs, config, pipeline infra, rules, core library
