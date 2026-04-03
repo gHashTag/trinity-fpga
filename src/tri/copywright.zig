@@ -49,13 +49,15 @@ pub const Config = struct {
     optimal_times_twitter: []const u8,
 };
 
+const DEFAULT_REDDITS = [_][]const u8{
+    "r/programming",
+    "r/rust",
+    "r/coolgithubprojects",
+    "r/MachineLearning",
+};
+
 const DEFAULT_CONFIG = Config{
-    .target_subreddits = &[_][]const u8{
-        "r/programming",
-        "r/rust",
-        "r/coolgithubprojects",
-        "r/MachineLearning",
-    },
+    .target_subreddits = &DEFAULT_REDDITS,
     .optimal_times_reddit = @as([]const u8, "Tue-Thu 14:00-17:00 UTC"),
     .optimal_times_twitter = @as([]const u8, "Peak audience times (depends on analytics)"),
 };
@@ -165,7 +167,7 @@ fn generateTwitterThread(allocator: Allocator, highlights: [][]const u8) !Twitte
 }
 
 /// Generate Reddit post using showcase template
-fn generateRedditPost(allocator: Allocator, highlights: [][]const u8, project_name: []const u8) !RedditPost {
+fn generateRedditPost(allocator: Allocator) !RedditPost {
     const title_slice = try std.fmt.allocPrint(allocator, "[Trinity]: Agent T ready", .{});
     defer allocator.free(title_slice);
 

@@ -742,7 +742,7 @@ pub fn execute(cpu: *CPUState, inst: Instruction, memory: []align(8) u8) ExecErr
             // Convert to null-terminated C string
             var path_buf: [256]u8 = undefined;
             const copy_len = @min(path_slice.len, 255);
-            @memcpy(&path_buf, path_slice.ptr, copy_len);
+            @memcpy(path_buf[0..copy_len], path_slice[0..copy_len]);
             path_buf[copy_len] = 0; // Null-terminate
 
             // Use std.fs.cwd() for relative paths
@@ -818,7 +818,7 @@ pub fn execute(cpu: *CPUState, inst: Instruction, memory: []align(8) u8) ExecErr
             // Convert to null-terminated C string
             var path_buf: [256]u8 = undefined;
             const copy_len = @min(path_slice.len, 255);
-            @memcpy(&path_buf, path_slice.ptr, copy_len);
+            @memcpy(path_buf[0..copy_len], path_slice[0..copy_len]);
             path_buf[copy_len] = 0; // Null-terminate
 
             // Use std.fs.cwd() for relative paths
@@ -870,7 +870,7 @@ pub fn execute(cpu: *CPUState, inst: Instruction, memory: []align(8) u8) ExecErr
             // Convert to null-terminated C string
             var path_buf: [256]u8 = undefined;
             const copy_len = @min(path_slice.len, 255);
-            @memcpy(&path_buf, path_slice.ptr, copy_len);
+            @memcpy(path_buf[0..copy_len], path_slice[0..copy_len]);
             path_buf[copy_len] = 0; // Null-terminate
 
             // Use std.fs.cwd() for relative paths
