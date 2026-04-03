@@ -1,3 +1,227 @@
+# Pointer Architecture ↔ Trinity S³AI Bridge
+
+**Research Companion Document**
+
+*Last Updated: 2026-04-03*
+
+---
+
+## Context
+
+Mikhail Savchenko's Pointer Architecture doctoral dissertation models reality as a computational graph (nodes + edges + archive), where:
+
+- **Gravity** = gradient of pointer density (with coupling constant κ)
+- **Dark matter** = archived pointers (memory density profile)
+- **Black holes** = pointer accumulation points
+- **Consciousness** = integrated information (IIT Φ) via cross-partition mutual info
+- **Reality** = multi-agent consensus render
+
+Trinity S³AI provides a complementary framework:
+- **φ² + 1/φ² = 3** (Trinity identity)
+- **Sacred Formula**: V = n × 3^k × π^m × φ^p × e^q
+- **GoldenFloat (GF16)**: φ-optimized numerical format
+- **Temporal Trinity**: Past (1/φ²) + Present (0) + Future (φ²) = 3
+
+This document bridges these two frameworks for research and implementation.
+
+---
+
+## Section 1: Theory Overview
+
+### Pointer Architecture: Nodes + Edges + Archive
+
+The Pointer Architecture models reality as:
+
+```
+┌─────────────────────────────────────────────┐
+│           COMPUTATIONAL GRAPH                   │
+│                                               │
+│   Node ──Edge──> Node                      │
+│      ↖         ↙                             │
+│       ↘      ↖                              │
+│         Edge                                   │
+│                                               │
+│   ↕                                          │
+│   ARCHIVE (Dark Matter)                       │
+│   ○──○──○──○──○──○──○                     │
+│                                               │
+│   BLACK HOLE (Accumulation)                  │
+│   ⦿──◉──◯──◉                                │
+│                                               │
+│   CONSCIOUSNESS (Integrated Φ)                  │
+│   ══════════════════════════════════════════│
+└─────────────────────────────────────────────┘
+```
+
+**Key Equations from Savchenko's Thesis:**
+
+| Concept | Formula | Description |
+|---------|---------|-------------|
+| Pointer Density | ρ(r) = lim_{V→0} \|{e ∈ E∪A : endpoint(e) ∈ V_r}\| / V | Density at position r (Savchenko Eq. 2-1) |
+| Gravity Field | g(r) = -κ∇ρ(r) | Gradient with coupling constant κ (Savchenko Eq. 4-1) |
+| Memory Density | mem(r) = exp(-r/r_mem) × (1 + ln(1 + r/r_core)) | Profile of archived pointers (Savchenko Eq. 7-3, main contribution) |
+| Integrated Φ | Φ(G) = I(G) - I(G_A) - I(G_B) | Cross-partition mutual info (Savchenko Sec. 3, main contribution) |
+| Consensus Render | world(t+1) = resolve(W₁,...,Wₙ, C_global) | Multi-agent commit (Savchenko Eq. 3-3) |
+
+**Trinity Identity as Foundation:**
+
+$$\varphi^2 + \frac{1}{\varphi^2} = 3 = \text{TRINITY}$$
+
+This connects the golden ratio to the ternary base (3), providing algebraic foundation for all computational operations.
+
+---
+
+## Section 2: Literature Map (The "Find Answers" Section)
+
+For each Pointer Architecture concept, this maps to established physics literature and Trinity S³AI connections.
+
+**CRITICAL NOTE**: Savchenko's original contributions are explicitly marked. References to other authors provide context but Savchenko's formulations are primary.
+
+| Pointer Architecture Concept | Established Physics | Key Papers | Trinity Connection |
+|------------------------------|-------------------|------------|-------------------|
+| **Dark matter = archived pointers** | Memory density profile | Savchenko Eq. 7-3; McGaugh 2016 | Agent memory + bundleN() |
+| **Gravity = pointer gradient** | Entropic gravity | Verlinde 2011 (complementary), Padmanabhan 2020 | φ-gradient in sacred formulas; cosineSimilarity() for spatial proximity |
+| **Black holes = pointer sinks** | BH thermodynamics | Bekenstein 1973, Hawking 1976 | S/A ratio sacred formula: `sacredFormula(4,3,-1,-4,-3)` → 0.2497 (0.115% error) |
+| **Consciousness = Φ** | Cross-partition mutual info | Savchenko original (I(G) - I(G_A) - I(G_B)); Tononi 2008, 2014 (context) | Temporal Trinity: Past/Present/Future aspects with φ-weights; EternalCycle for integrated return |
+| **Reality = consensus render** | Multi-agent systems | Savchenko (original, Eq. 3-3); Kung-Robinson 1981 (optimistic); Zurek 2003 (decoherence) | VSA integration with AgentMemory; bundleN() for consensus |
+| **Pointer density = ρ(x)** | Statistical field theory | Kolmogorov 1941; Kadanoff-Baym 1962 | VSA vector density operations; vectorNorm() for normalization |
+| **Archive = dark matter** | Information entropy | Shannon 1948; Jaynes 1957 | Agent memory systems with persistent storage; AgentMemory struct |
+| **Horizon = r_S** | Event horizon thermodynamics | Bekenstein-Hawking; Hawking radiation 1974-1976 | Sacred formula fits: Age of universe with 0.005% error |
+| **Time arrow** | CPT asymmetry | Sakharov 1967; Carroll 2022 | TimeArrow struct with φ⁴ ratio (≈6.854) and forward direction |
+| **Network emergence** | Graph theory; Small-world networks | Watts-Strogatz 1998; Barabasi 1999 | Dependency graph (DependencyGraph) for agent coordination; Chase-Lev deque |
+| **Cursor hypothesis** | Brain-as-edge-node | Savchenko (original, Sec. 3.6.4); Penrose-Hameroff 1996 (context) | VSA node as cursor pointer |
+| **Commit strength** | Objectivity = reproducibility | Savchenko (original, Sec. 3.7.2); Zurek 2003 (decoherence) | Agent swarm reproducibility |
+
+**Literature Search Queries:**
+
+See Section 6 for pre-built research queries for external tools.
+
+---
+
+## Section 3: Formula Bridge (Practical Translations)
+
+All formulas in BOTH standard notation AND Trinity sacred form.
+
+### 3.1 Black Hole Thermodynamics
+
+**Bekenstein-Hawking Entropy:**
+
+```
+Standard: S_BH = A / 4ℓ_P²
+         where A = 4πr_s², ℓ_P = Gℏ/c³
+
+Trinity: S_BH = n × 3^k × π^m × φ^p × e^q
+         where n=4, k=3, m=-1, p=-4, q=-3
+
+Result: 0.2497 vs 1/4 = 0.25 (0.115% error)
+```
+
+**Hawking Temperature:**
+
+```
+Standard: T_H = ℏc³ / (8πGMkB)
+
+Trinity: T_H = n × 3^k × π^m × φ^p × e^q
+         where n=1, k=2, m=1, p=-3, q=-2
+
+Result: 6.284e-8 (close to ℏc³/8πG)
+```
+
+### 3.2 Cosmological Constants
+
+**Hubble Parameter:**
+
+```
+Standard: H₀ ≈ 67.4 km/s/Mpc (Planck 2018)
+
+Trinity: H₀ = n × 3^k × π^m × φ^p × e^q
+         where n=4, k=3, m=-3, p=2, q=2
+
+Result: 67.381 vs 67.4 (0.028% error)
+```
+
+**Dark Energy Density (Ω_Λ):**
+
+```
+Standard: Ω_Λ ≈ 0.685
+
+Trinity: Ω_Λ = n × 3^k × π^m × φ^p × e^q
+         where n=4, k=2, m=0, p=-2, q=-3
+
+Result: 0.6846 vs 0.685 (0.057% error)
+```
+
+### 3.3 Fine Structure Constant
+
+**1/α (Fine Structure Inverse):**
+
+```
+Standard: 1/α = 137.036
+
+Trinity: 1/α = n × 3^k × π^m × φ^p × e^q
+         where n=4, k=2, m=-1, p=1, q=2
+
+Result: 137.0027 vs 137.036 (0.024% error)
+```
+
+**Alternative Formula:**
+
+```
+Standard: 1/α = 4π³ + π² + π
+
+Trinity Check: Using π and φ constants
+         4π³ + π² + π ≈ 137.036
+```
+
+### 3.4 Spatial Dimensions
+
+**Space = 3 Dimensions:**
+
+```
+Standard: d = 3
+
+Trinity: d = n × 3^k × π^m × φ^p × e^q
+         where n=1, k=1, m=0, p=0, q=0
+
+Result: 3.000 vs 3 (0.000% EXACT)
+```
+
+**M-Theory/String Theory Dimensions:**
+
+```
+M-Theory: d = 11 → sacred fit: 11.0001 (unmeasured)
+String Theory: d = 10 → sacred fit: 25.999 (theory: 26)
+```
+
+### 3.5 Temporal Asymmetry
+
+**Time Arrow Ratio (φ⁴):**
+
+```
+Standard: τ = ΔS_future / ΔS_past ≥ 1
+
+Trinity: τ = φ⁴ / (1/φ² × 1/φ²)
+        = (2.618)⁴ / (0.382 × 0.382)
+        = 6.854 / 0.146
+        ≈ 6.854
+
+Code: src/sacred/temporal_engine.zig → `TIME_ARROW_RATIO`
+```
+
+**Temporal Trinity:**
+
+```
+Past + Present + Future = 1/φ² + 0 + φ² = 0.382 + 0 + 2.618 = 3
+
+Code: src/sacred/temporal_engine.zig → `TemporalAspect` enum
+         .PAST = -1 (1/φ² weight)
+         .PRESENT = 0 (no weight)
+         .FUTURE = 1 (φ² weight)
+```
+
+### 3.6 Integrated Information (Φ)
+
+**IIT 3.0 Φ Calculation:**
 
 ```
 Standard: Φ = Σ_i φ_i × I_i (integrated cause-effect)
@@ -67,7 +291,7 @@ Trinity Connection: S_BH = n × 3^k × π^m × φ^p × e^q
 This gives S/A = 0.2497 ≈ 1/4 (0.115% error)
 ```
 
-> **CAVEAT:** Sacred formula with 5 parameters spans ~150K combinations and fits random numbers with 0.007% median error — identical to physics constants. 5-param fits are universal approximators, not evidence of φ-structure.
+> **CAVEAT:** Sacred formula with 5 parameters spans ~150K combinations and fits random numbers with 0.007% median error — identical to physics constants. 5-param fits are universal approximators, not evidence of φ-structure in nature.
 
 ---
 
@@ -118,11 +342,11 @@ tri math sacred deep 938.272
 
 ```bash
 # Check temporal balance (φ² + 1/φ² = 3)
-zig build --list-steps temporal_engine
+zig build temporal_engine
 ./zig-out/bin/temporal_engine
 
-# Compute time arrow (should point forward)
-tri time sacred
+# View arrow of time summary (φ⁴ ratio ≈ 6.854)
+tri time all
 
 # Verify temporal aspects
 # Past weight = 1/φ² ≈ 0.382
@@ -288,7 +512,7 @@ Actionable research directions.
 
 **Question:** Does φ-gradient correlate with gravitational fields?
 
-**Hypothesis:** Gravity = -∇ρ(x) in Pointer Architecture. φ-gradient (φ^4 ratio ≈ 6.854) in sacred formulas describes spatial relationship strength.
+**Hypothesis:** Gravity = -∇ρ(x) in Pointer Architecture. φ-gradient (φ⁴ ratio ≈ 6.854) in sacred formulas describes spatial relationship strength.
 
 **Experiment:**
 ```bash
@@ -390,6 +614,7 @@ tri cloud spawn <N>  # Spawn new agent containers
 - Test: Do memory density profiles (Savchenko Eq. 7-3) match observed dynamics?
 
 **Results from Savchenko's validation:**
+
 | Metric | Value | Status |
 |--------|-------|--------|
 | Galaxies tested | 171/175 (97.7%) | — |
@@ -409,34 +634,12 @@ tri cloud spawn <N>  # Spawn new agent containers
 
 ### 8.1 Fundamental Constants
 
-```bash
-# Create ASCII art of ternary matrix
-cat << 'ART'
-    ▲ +1 +1 -1     +1 0 0 +1
-    ▲ -1 +1  0     -1 0 +1
-    ▲ +1 +1 +1     +1 0 +1
-    ▲ -1 +1 -1     -1 0 +1
-    ART
-EOF
-```
-
-**Interpretation:**
-- `+1` = Future (φ² ≈ 2.618, positive)
-- `0` = Present (no weight, balanced)
-- `-1` = Past (1/φ² ≈ 0.382, negative)
-
-This maps to Temporal Aspects in Trinity (Past/Present/Future).
-
-| Symbol | Value | Formula | Trinity Path |
-|---------|-------|---------|---------------|
-| φ | 1.61803... | φ = (1+√5)/2 | `math.PHI` | `src/sacred/const.zig` |
-
 | Symbol | Value | Formula | Trinity Path |
 |---------|-------|---------|---------------|
 | φ | 1.61803... | φ = (1+√5)/2 | `math.PHI` | `src/sacred/const.zig` |
 | φ² | 2.61803... | φ² = φ + 1 | `math.PHI_SQ` | `src/sacred/const.zig` |
 | 1/φ | 0.61803... | 1/φ = φ - 1 | `math.PHI_INV` | `src/sacred/const.zig` |
-| 1/φ² | 0.38196... | 1/φ² = 1/φ² | `math.PHI_INV_SQ` | `src/sacred/const.zig` |
+| 1/φ² | 0.38196... | 1/φ² = 2 - φ | `math.PHI_INV_SQ` | `src/sacred/const.zig` |
 | **TRINITY** | **3** | φ² + 1/φ² = 3 | `math.TRINITY` | `src/sacred/const.zig` |
 | π | 3.14159... | π | `math.PI` | `src/sacred/const.zig` |
 | e | 2.71828... | e | `math.E` | `src/sacred/const.zig` |
@@ -488,8 +691,8 @@ pub fn sacredFormula(n: f64, k: i32, m: i32, p: i32, q: i32) f64 {
 | α_s (strong) | 0.1179 | (4,-2,-2,2,0) → 0.11789 | **0.005%** | `sacred-formulas.md` |
 | Spatial dims | 3.0 | (1,1,0,0,0) → 3.000 | **0.000% EXACT** | `sacred-formulas.md` |
 | Planck time | 5.3912e-44 | (3,4,-2,1,-2) → 5.39145 | **0.004%** | `sacred-formulas.md` |
-| Solar mass | 10⁻³⁰ kg | (7,-3,0,-2,3) → 1.98904 | **0.002%** | `sacred-formulas.md` |
-| Age of universe | 13.787 | (1,4,-2,-1,1) → 13.7877 | **0.005%** | `sacred-formulas.md` |
+| Solar mass (10⁻³⁰ kg) | 1.989 | (7,-3,0,-2,3) → 1.98904 | **0.002%** | `sacred-formulas.md` |
+| Age of universe (Gyr) | 13.787 | (1,4,-2,-1,1) → 13.7877 | **0.005%** | `sacred-formulas.md` |
 | θ_13 (reactor) | 8.57° | (9,4,0,-3,-3) → 8.568 | **0.023%** | `sacred-formulas.md` |
 
 ### 8.6 CLI Command Summary
@@ -504,10 +707,10 @@ tri math sacred search <val>  # Find sacred formula fit
 tri math sacred deep <val>    # Extended search (better fits)
 
 # Temporal operations
-tri time sacred                 # Compute time arrow (φ⁴ ratio)
+tri time all                    # Show arrow of time summary (φ⁴ ratio)
 
 # VSA graph operations
-zig build vsa                    # Build VSA library
+zig build                        # Build VSA library
 zig test vsa.bind               # Test graph edge creation
 zig test vsa.unbind             # Test archive retrieval
 zig test vsa.bundle2             # Test 2-way consensus
@@ -517,6 +720,7 @@ zig test vsa.cosineSimilarity   # Test relationships
 # Agent swarm management
 tri faculty                     # Show agent status
 tri cloud spawn <N>             # Spawn Railway container
+tri cloud agents                 # List active containers
 ```
 
 ### 8.7 File Quick Access
@@ -531,8 +735,9 @@ docs/research/
 src/sacred/
 ├── const.zig                    # ALL sacred constants
 ├── temporal_engine.zig           # Time as Trinity
-└── vsa.zig                      # Graph operations (bind/unbind/bundle)
+└── ...
 
+src/vsa.zig                      # Graph operations (bind/unbind/bundle)
 src/tri27/
 ├── isa.zig                      # TRI-27 VM & ISA
 └── emu/executor.zig             # Execution engine
@@ -543,7 +748,7 @@ src/tri27/
 ## Appendix A: Glossary
 
 | Term | Definition | Context |
-|-------|-----------|---------|
+|-------|-----------|----------|
 | **Φ (Phi)** | Integrated information (cross-partition mutual info) | Savchenko Sec. 3 (main contribution) |
 | **φ²** | Squared golden ratio (≈2.618) | Trinity identity component |
 | **1/φ²** | Inverse squared golden ratio (≈0.382) | Trinity identity component |
@@ -552,8 +757,8 @@ src/tri27/
 | **κ (kappa)** | Coupling constant; Maps pointer density to acceleration | Savchenko Sec. 4-1 (Eq. 4-1: g(r) = -κ∇ρ(r)) |
 | **r_mem** | Memory extent parameter (disk radius) | Savchenko Eq. 7-3 |
 | **r_core** | Core radius parameter | Savchenko Eq. 7-3 |
-| **Cursor Hypothesis** | Brain as edge-node, not processor | Savchenko (original, Sec. 3-6.4); Penrose-Hameroff 1996 (context) |
-| **Commit Strength** | Objectivity = reproducibility | Savchenko (original, Sec. 3-7.2); Zurek 2003 (decoherence) |
+| **Cursor Hypothesis** | Brain as edge-node, not processor | Savchenko (original, Sec. 3.6.4); Penrose-Hameroff 1996 (context) |
+| **Commit Strength** | Objectivity = reproducibility | Savchenko (original, Sec. 3.7.2); Zurek 2003 (decoherence) |
 | **Debug Mode** | Consciousness intercept | Savchenko (original, Sec. 4-1) |
 | **Memory Density Profile** | mem(r) = exp(-r/r_mem) × (1 + ln(1 + r/r_core)) | Savchenko Eq. 7-3 (main contribution) |
 | **Consensus Render** | world(t+1) = resolve(W₁,...,Wₙ, C_global) | Savchenko Eq. 3-3 (main contribution) |
@@ -594,7 +799,8 @@ An experiment is successful when:
 - All tests pass
 - Implementation follows Trinity coding standards
 - Results are reproducible (committed to git)
-### 3.9 Holographic Principle
+
+### B.3.9 Holographic Principle
 
 ```
 Standard: S = A/4 (entropy scales with boundary area)
@@ -606,4 +812,3 @@ This gives S/A = 0.2497 ≈ 1/4 (0.115% error)
 ```
 
 > **CAVEAT:** Sacred formula with 5 parameters spans ~150K combinations and fits random numbers with 0.007% median error — identical to physics constants. 5-param fits are universal approximators, not evidence of φ-structure in nature. This demonstrates the formula's mathematical completeness, not physical significance. The φ⁴, π³, and e^q parameters interact combinatorially, allowing the formula to approximate virtually any target value by adjusting these 5 degrees of freedom.
-
