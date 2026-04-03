@@ -1,0 +1,84 @@
+{
+  "description": "GoldenFloat4 Conformance Vectors — NUMERIC-STANDARD-001 (Agent 10)",
+  "version": "1.0",
+  "format_name": "GF4",
+  "format_bits": 4,
+  "phi_distance": 0.1180339887498949,
+  "sacred_ok": true,
+  "is_primary": false,
+
+  "format_spec": {
+    "sign_bits": 1,
+    "exp_bits": 1,
+    "mant_bits": 2,
+    "exp_mant_ratio": 0.5,
+    "exp_bias": 0,
+    "memory_ratio_vs_fp32": 0.125
+  },
+
+  "test_vectors": [
+    {
+      "name": "zero_positive",
+      "description": "Positive zero encodes to 0b0000",
+      "input": { "value": 0.0 },
+      "expected": {
+        "raw": 0,
+        "decoded": 0.0,
+        "tolerance_abs": 0.0
+      }
+    },
+    {
+      "name": "one_point_zero",
+      "description": "1.0 encodes to mant=0.75, exp=2.0",
+      "input": { "value": 1.0 },
+      "expected": {
+        "decoded": 1.0,
+        "tolerance_abs": 0.25
+      }
+    },
+    {
+      "name": "max_value",
+      "description": "Maximum value is 1.5",
+      "input": { "value": 1.5 },
+      "expected": {
+        "decoded": 1.5,
+        "tolerance_abs": 0.0
+      }
+    },
+    {
+      "name": "min_positive",
+      "description": "Minimum positive is 0.25",
+      "input": { "value": 0.25 },
+      "expected": {
+        "decoded": 0.25,
+        "tolerance_abs": 0.0
+      }
+    },
+    {
+      "name": "negative_value",
+      "description": "Negative values set sign bit",
+      "input": { "value": -0.5 },
+      "expected": {
+        "sign_bit": 1,
+        "decoded": -0.5,
+        "tolerance_abs": 0.25
+      }
+    },
+    {
+      "name": "roundtrip_small",
+      "description": "Small value roundtrip",
+      "input": { "value": 0.3 },
+      "expected": {
+        "tolerance_rel": 0.5,
+        "sacred_ok": true
+      }
+    }
+  ],
+
+  "benchmark_metrics": {
+    "mse_vs_fp32": null,
+    "speedup_vs_fp32": null,
+    "memory_savings": 0.875,
+    "use_cases": ["binary_classification", "attention_masks", "sparsity_indicators"]
+  }
+}

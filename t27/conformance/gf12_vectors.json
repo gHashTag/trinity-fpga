@@ -1,0 +1,99 @@
+{
+  "description": "GoldenFloat12 Conformance Vectors — NUMERIC-STANDARD-001 (Agent 12)",
+  "version": "1.0",
+  "format_name": "GF12",
+  "format_bits": 12,
+  "phi_distance": 0.04660512288042107,
+  "sacred_ok": true,
+  "is_primary": false,
+  "best_phi_approximation": true,
+
+  "format_spec": {
+    "sign_bits": 1,
+    "exp_bits": 4,
+    "mant_bits": 7,
+    "exp_mant_ratio": 0.5714285714285714,
+    "exp_bias": 7,
+    "memory_ratio_vs_fp32": 0.375
+  },
+
+  "test_vectors": [
+    {
+      "name": "zero_positive",
+      "description": "Positive zero encodes to 0x000",
+      "input": { "value": 0.0 },
+      "expected": {
+        "raw": 0,
+        "decoded": 0.0,
+        "tolerance_abs": 0.0
+      }
+    },
+    {
+      "name": "one_point_zero",
+      "description": "1.0 encodes to exp=7, mant=0",
+      "input": { "value": 1.0 },
+      "expected": {
+        "exp_biased": 7,
+        "mant": 0,
+        "decoded": 1.0,
+        "tolerance_abs": 0.0078125
+      }
+    },
+    {
+      "name": "max_value",
+      "description": "Maximum value ≈ 254",
+      "input": { "value": 254.0 },
+      "expected": {
+        "decoded": 254.0,
+        "tolerance_abs": 2.0
+      }
+    },
+    {
+      "name": "min_positive",
+      "description": "Minimum positive ≈ 0.0078",
+      "input": { "value": 0.0078125 },
+      "expected": {
+        "decoded": 0.0078125,
+        "tolerance_abs": 0.001
+      }
+    },
+    {
+      "name": "pi_precise",
+      "description": "π with good precision",
+      "input": { "value": 3.14159265359 },
+      "expected": {
+        "decoded": 3.140625,
+        "tolerance_abs": 0.001,
+        "relative_error": 0.0003
+      }
+    },
+    {
+      "name": "phi_value",
+      "description": "φ (golden ratio) representation",
+      "input": { "value": 1.61803398875 },
+      "expected": {
+        "decoded": 1.6171875,
+        "tolerance_abs": 0.001,
+        "relative_error": 0.0005,
+        "sacred_ok": true
+      }
+    },
+    {
+      "name": "e_value",
+      "description": "e (Euler's number) representation",
+      "input": { "value": 2.71828182846 },
+      "expected": {
+        "decoded": 2.71875,
+        "tolerance_abs": 0.001,
+        "relative_error": 0.0002
+      }
+    }
+  ],
+
+  "benchmark_metrics": {
+    "mse_vs_fp32": null,
+    "speedup_vs_fp32": null,
+    "memory_savings": 0.625,
+    "use_cases": ["high_precision_quantization", "attention_matrices", "critical_path_weights"]
+  }
+}

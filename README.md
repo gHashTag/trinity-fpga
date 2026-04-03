@@ -1069,6 +1069,7 @@ trinity/
 
 | Resource | URL |
 |----------|-----|
+| **Field Manual** | [docs/FIELD_MANUAL.md](docs/FIELD_MANUAL.md) — 1-page quick reference (6-phase cycle, key commands) |
 | **Documentation Index** | [docs/DOCUMENTATION_INDEX.md](docs/DOCUMENTATION_INDEX.md) — Central documentation hub |
 | **API Reference** | [docs/api_reference.md](docs/api_reference.md) — HTTP API, CLI, MCP servers |
 | **Glossary** | [docs/glossary.md](docs/glossary.md) — Technical terms and acronyms |
@@ -1078,6 +1079,7 @@ trinity/
 | **Changelog** | [CHANGELOG.md](CHANGELOG.md) — Version history |
 | **For Researchers** | [docs/papers/README_FOR_SCIENTISTS.md](docs/papers/README_FOR_SCIENTISTS.md) |
 | **Command Reference** | [docs/command_registry.md](docs/command_registry.md) (auto-generated) |
+| **27-Agent Canon** | [gHashTag/t27](https://github.com/gHashTag/t27) — AGENTS_ALPHABET + AGENT_T_SKILL |
 | **DePIN Overview** | [gHashTag.github.io/trinity/docs/depin](https://gHashTag.github.io/trinity/docs/depin) |
 | **Quick Start** | [gHashTag.github.io/trinity/docs/depin/quickstart](https://gHashTag.github.io/trinity/docs/depin/quickstart) |
 | **Tokenomics** | [gHashTag.github.io/trinity/docs/depin/tokenomics](https://gHashTag.github.io/trinity/docs/depin/tokenomics) |

@@ -1,0 +1,108 @@
+{
+  "description": "GoldenFloat20 Conformance Vectors — NUMERIC-STANDARD-001",
+  "version": "1.0",
+  "format_name": "GF20",
+  "format_bits": 20,
+  "phi_distance": 0.0346666666666667,
+  "sacred_ok": true,
+  "is_primary": false,
+  "best_phi_approximation": true,
+
+  "format_spec": {
+    "sign_bits": 1,
+    "exp_bits": 7,
+    "mant_bits": 12,
+    "exp_mant_ratio": 0.5833333333333333,
+    "exp_bias": 63,
+    "memory_ratio_vs_fp32": 0.625
+  },
+
+  "test_vectors": [
+    {
+      "name": "zero_positive",
+      "description": "Positive zero encodes to 0x00000",
+      "input": { "value": 0.0 },
+      "expected": {
+        "raw": 0,
+        "decoded": 0.0,
+        "tolerance_abs": 0.0
+      }
+    },
+    {
+      "name": "one_point_zero",
+      "description": "1.0 encodes to exp=63, mant=0",
+      "input": { "value": 1.0 },
+      "expected": {
+        "exp_biased": 63,
+        "mant": 0,
+        "decoded": 1.0,
+        "tolerance_abs": 0.0
+      }
+    },
+    {
+      "name": "max_value",
+      "description": "Maximum value ≈ 2.62e6",
+      "input": { "value": 262144.0 },
+      "expected": {
+        "decoded": 262144.0,
+        "tolerance_abs": 0.5
+      }
+    },
+    {
+      "name": "min_positive",
+      "description": "Minimum positive ≈ 1.5e-6",
+      "input": { "value": 1.5258789e-5 },
+      "expected": {
+        "decoded": 1.5258789e-5,
+        "tolerance_abs": 0.0
+      }
+    },
+    {
+      "name": "negative_value",
+      "description": "Negative values set sign bit",
+      "input": { "value": -10.0 },
+      "expected": {
+        "sign_bit": 1,
+        "decoded": -10.0,
+        "tolerance_abs": 0.5
+      }
+    },
+    {
+      "name": "roundtrip_small",
+      "description": "Small value roundtrip",
+      "input": { "value": 1.618 },
+      "expected": {
+        "tolerance_rel": 0.5,
+        "sacred_ok": true
+      }
+    },
+    {
+      "name": "pi_precise",
+      "description": "π with good precision",
+      "input": { "value": 3.14159265359 },
+      "expected": {
+        "decoded": 3.1416,
+        "tolerance_abs": 0.001,
+        "relative_error": 0.000006
+      }
+    },
+    {
+      "name": "phi_value",
+      "description": "φ (golden ratio) representation",
+      "input": { "value": 1.61803398875 },
+      "expected": {
+        "decoded": 1.6171875,
+        "tolerance_abs": 0.001,
+        "relative_error": 0.0003,
+        "sacred_ok": true
+      }
+    }
+  ],
+
+  "benchmark_metrics": {
+    "mse_vs_fp32": null,
+    "speedup_vs_fp32": null,
+    "memory_savings": 0.375,
+    "use_cases": ["gradient_quantization", "activation_caching", "intermediate_values"]
+  }
+}

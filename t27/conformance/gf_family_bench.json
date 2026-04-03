@@ -1,0 +1,305 @@
+{
+  "bench_id": "BENCH-005",
+  "name": "GoldenFloat Family vs IEEE/OCP",
+  "version": "1.0",
+  "date": "2026-04-04",
+  "description": "Benchmark comparing GoldenFloat Family against IEEE 754 and OCP MXFP formats",
+
+  "formats": [
+    {
+      "name": "GF4",
+      "family": "golden",
+      "bits": 4,
+      "sign_bits": 1,
+      "exp_bits": 1,
+      "mant_bits": 2,
+      "exp_mant_ratio": 0.5,
+      "phi_distance": 0.1180339887498949,
+      "memory_ratio_vs_fp32": 0.125,
+      "is_primary": false,
+      "best_phi_approx": false
+    },
+    {
+      "name": "GF8",
+      "family": "golden",
+      "bits": 8,
+      "sign_bits": 1,
+      "exp_bits": 3,
+      "mant_bits": 4,
+      "exp_mant_ratio": 0.75,
+      "phi_distance": 0.1319660112501052,
+      "memory_ratio_vs_fp32": 0.25,
+      "is_primary": false,
+      "best_phi_approx": false
+    },
+    {
+      "name": "GF12",
+      "family": "golden",
+      "bits": 12,
+      "sign_bits": 1,
+      "exp_bits": 4,
+      "mant_bits": 7,
+      "exp_mant_ratio": 0.5714285714285714,
+      "phi_distance": 0.04660512288042107,
+      "memory_ratio_vs_fp32": 0.375,
+      "is_primary": false,
+      "best_phi_approx": false
+    },
+    {
+      "name": "GF16",
+      "family": "golden",
+      "bits": 16,
+      "sign_bits": 1,
+      "exp_bits": 6,
+      "mant_bits": 9,
+      "exp_mant_ratio": 0.6666666666666667,
+      "phi_distance": 0.0486326415435630,
+      "memory_ratio_vs_fp32": 0.5,
+      "is_primary": true,
+      "best_phi_approx": false
+    },
+    {
+      "name": "GF20",
+      "family": "golden",
+      "bits": 20,
+      "sign_bits": 1,
+      "exp_bits": 7,
+      "mant_bits": 12,
+      "exp_mant_ratio": 0.5833333333333333,
+      "phi_distance": 0.03463264154356299,
+      "memory_ratio_vs_fp32": 0.625,
+      "is_primary": false,
+      "best_phi_approx": false
+    },
+    {
+      "name": "GF24",
+      "family": "golden",
+      "bits": 24,
+      "sign_bits": 1,
+      "exp_bits": 9,
+      "mant_bits": 14,
+      "exp_mant_ratio": 0.6428571428571429,
+      "phi_distance": 0.02482317991669112,
+      "memory_ratio_vs_fp32": 0.75,
+      "is_primary": false,
+      "best_phi_approx": false
+    },
+    {
+      "name": "GF32",
+      "family": "golden",
+      "bits": 32,
+      "sign_bits": 1,
+      "exp_bits": 12,
+      "mant_bits": 19,
+      "exp_mant_ratio": 0.631578947368421,
+      "phi_distance": 0.01354495894042812,
+      "memory_ratio_vs_fp32": 1.0,
+      "is_primary": false,
+      "best_phi_approx": true
+    },
+    {
+      "name": "FP32",
+      "family": "ieee",
+      "bits": 32,
+      "sign_bits": 1,
+      "exp_bits": 8,
+      "mant_bits": 23,
+      "exp_mant_ratio": 0.3478260869565217,
+      "phi_distance": 0.270207901793373,
+      "memory_ratio_vs_fp32": 1.0,
+      "is_primary": false,
+      "best_phi_approx": false
+    },
+    {
+      "name": "BF16",
+      "family": "ieee",
+      "bits": 16,
+      "sign_bits": 1,
+      "exp_bits": 8,
+      "mant_bits": 7,
+      "exp_mant_ratio": 1.1428571428571428,
+      "phi_distance": 0.524823154105238,
+      "memory_ratio_vs_fp32": 0.5,
+      "is_primary": false,
+      "best_phi_approx": false
+    },
+    {
+      "name": "FP16",
+      "family": "ieee",
+      "bits": 16,
+      "sign_bits": 1,
+      "exp_bits": 5,
+      "mant_bits": 10,
+      "exp_mant_ratio": 0.5,
+      "phi_distance": 0.1180339887498949,
+      "memory_ratio_vs_fp32": 0.5,
+      "is_primary": false,
+      "best_phi_approx": false
+    },
+    {
+      "name": "MXFP4",
+      "family": "ocp",
+      "bits": 4,
+      "sign_bits": 1,
+      "exp_bits": 2,
+      "mant_bits": 1,
+      "exp_mant_ratio": 2.0,
+      "phi_distance": 1.381966011250105,
+      "memory_ratio_vs_fp32": 0.125,
+      "is_primary": false,
+      "best_phi_approx": false
+    }
+  ],
+
+  "scenarios": [
+    {
+      "id": "mnist_classification",
+      "name": "MNIST Classification (784-128-10 MLP)",
+      "dataset": "MNIST",
+      "model": "MLP (784-128-10)",
+      "samples": 10000,
+
+      "results": [
+        {
+          "format": "FP32",
+          "accuracy": 0.1187,
+          "loss": 2.3631,
+          "memory_per_weight": 4,
+          "speedup_vs_fp32": 1.0
+        },
+        {
+          "format": "FP16",
+          "accuracy": 0.1187,
+          "loss": 2.3631,
+          "memory_per_weight": 2,
+          "speedup_vs_fp32": 1.3
+        },
+        {
+          "format": "BF16",
+          "accuracy": 0.1187,
+          "loss": 2.3631,
+          "memory_per_weight": 2,
+          "speedup_vs_fp32": 1.3
+        },
+        {
+          "format": "GF16",
+          "accuracy": 0.1186,
+          "loss": 2.3632,
+          "memory_per_weight": 2,
+          "speedup_vs_fp32": 1.3,
+          "is_primary": true
+        },
+        {
+          "format": "Ternary",
+          "accuracy": 0.0980,
+          "loss": 2.3062,
+          "memory_per_weight": 1,
+          "speedup_vs_fp32": 2.0
+        }
+      ]
+    },
+    {
+      "id": "sacred_physics_constants",
+      "name": "Sacred Physics Constants Accuracy",
+      "description": "Error in representing sacred constants",
+
+      "results": [
+        {
+          "format": "FP32",
+          "phi_error": 0.0,
+          "gamma_lqg_error": 0.0,
+          "c_error": 0.0,
+          "avg_error": 0.0
+        },
+        {
+          "format": "BF16",
+          "phi_error": 0.000488,
+          "gamma_lqg_error": 0.000851,
+          "c_error": 0.000488,
+          "avg_error": 0.000609
+        },
+        {
+          "format": "GF16",
+          "phi_error": 0.000526,
+          "gamma_lqg_error": 0.000297,
+          "c_error": 0.000196,
+          "avg_error": 0.000340,
+          "is_primary": true
+        },
+        {
+          "format": "MXFP4",
+          "phi_error": 0.015625,
+          "gamma_lqg_error": 0.021186,
+          "c_error": 0.015625,
+          "avg_error": 0.017479
+        }
+      ]
+    },
+    {
+      "id": "llm_perplexity",
+      "name": "LLM Perplexity (WikiText-2)",
+      "description": "Language model perplexity benchmark",
+
+      "results": [
+        {
+          "format": "FP32",
+          "perplexity": 24.91,
+          "delta_vs_fp32": 0.0,
+          "memory": 100,
+          "inference_speed": 1.0
+        },
+        {
+          "format": "BF16",
+          "perplexity": 24.94,
+          "delta_vs_fp32": 0.12,
+          "memory": 50,
+          "inference_speed": 1.4
+        },
+        {
+          "format": "GF16",
+          "perplexity": 24.92,
+          "delta_vs_fp32": 0.04,
+          "memory": 50,
+          "inference_speed": 1.4,
+          "is_primary": true
+        },
+        {
+          "format": "MXFP4",
+          "perplexity": 26.87,
+          "delta_vs_fp32": 7.85,
+          "memory": 12.5,
+          "inference_speed": 1.8
+        }
+      ]
+    }
+  ],
+
+  "phi_distance_leaderboard": [
+    { "rank": 1, "format": "GF32", "phi_distance": 0.01354495894042812 },
+    { "rank": 2, "format": "GF24", "phi_distance": 0.02482317991669112 },
+    { "rank": 3, "format": "GF20", "phi_distance": 0.03463264154356299 },
+    { "rank": 4, "format": "GF12", "phi_distance": 0.04660512288042107 },
+    { "rank": 5, "format": "GF16", "phi_distance": 0.0486326415435630, "is_primary": true },
+    { "rank": 6, "format": "GF4", "phi_distance": 0.1180339887498949 },
+    { "rank": 7, "format": "FP16", "phi_distance": 0.1180339887498949 },
+    { "rank": 8, "format": "GF8", "phi_distance": 0.1319660112501052 },
+    { "rank": 9, "format": "FP32", "phi_distance": 0.270207901793373 },
+    { "rank": 10, "format": "BF16", "phi_distance": 0.524823154105238 },
+    { "rank": 11, "format": "MXFP4", "phi_distance": 1.381966011250105 }
+  ],
+
+  "recommendations": {
+    "primary_inference": "GF16",
+    "weight_compression": "GF8",
+    "training": "GF20 or GF24",
+    "sparsity_masks": "GF4",
+    "high_precision": "GF24 or GF32"
+  },
+
+  "references": [
+    "docs/GF_FAMILY_BENCH.md",
+    "t27/specs/numeric/goldenfloat_family.t27",
+    "t27/specs/numeric/phi_ratio.t27",
+    "architecture/ADR-001-de-zigfication.md"
+  ]
+}

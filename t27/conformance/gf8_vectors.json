@@ -1,0 +1,96 @@
+{
+  "description": "GoldenFloat8 Conformance Vectors — NUMERIC-STANDARD-001 (Agent 11)",
+  "version": "1.0",
+  "format_name": "GF8",
+  "format_bits": 8,
+  "phi_distance": 0.1319660112501052,
+  "sacred_ok": true,
+  "is_primary": false,
+
+  "format_spec": {
+    "sign_bits": 1,
+    "exp_bits": 3,
+    "mant_bits": 4,
+    "exp_mant_ratio": 0.75,
+    "exp_bias": 3,
+    "memory_ratio_vs_fp32": 0.25
+  },
+
+  "test_vectors": [
+    {
+      "name": "zero_positive",
+      "description": "Positive zero encodes to 0x00",
+      "input": { "value": 0.0 },
+      "expected": {
+        "raw": 0,
+        "decoded": 0.0,
+        "tolerance_abs": 0.0
+      }
+    },
+    {
+      "name": "one_point_zero",
+      "description": "1.0 encodes to exp=3, mant=0",
+      "input": { "value": 1.0 },
+      "expected": {
+        "exp_biased": 3,
+        "mant": 0,
+        "decoded": 1.0,
+        "tolerance_abs": 0.0625
+      }
+    },
+    {
+      "name": "max_value",
+      "description": "Maximum value ≈ 15.5",
+      "input": { "value": 15.5 },
+      "expected": {
+        "decoded": 15.5,
+        "tolerance_abs": 0.5
+      }
+    },
+    {
+      "name": "min_positive",
+      "description": "Minimum positive ≈ 0.0625",
+      "input": { "value": 0.0625 },
+      "expected": {
+        "decoded": 0.0625,
+        "tolerance_abs": 0.01
+      }
+    },
+    {
+      "name": "subnormal",
+      "description": "Subnormal value (exp=0, mant!=0)",
+      "input": { "value": 0.01 },
+      "expected": {
+        "exp_biased": 0,
+        "mant_nonzero": true,
+        "tolerance_rel": 0.5
+      }
+    },
+    {
+      "name": "negative_max",
+      "description": "Negative maximum value",
+      "input": { "value": -10.0 },
+      "expected": {
+        "sign_bit": 1,
+        "decoded": -10.0,
+        "tolerance_abs": 1.0
+      }
+    },
+    {
+      "name": "roundtrip_pi",
+      "description": "π roundtrip",
+      "input": { "value": 3.14159 },
+      "expected": {
+        "tolerance_rel": 0.1,
+        "sacred_ok": true
+      }
+    }
+  ],
+
+  "benchmark_metrics": {
+    "mse_vs_fp32": null,
+    "speedup_vs_fp32": null,
+    "memory_savings": 0.75,
+    "use_cases": ["weight_quantization", "activation_caching", "lightweight_models"]
+  }
+}

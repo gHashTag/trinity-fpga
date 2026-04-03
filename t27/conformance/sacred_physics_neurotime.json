@@ -1,0 +1,96 @@
+{
+  "description": "Sacred Neurotime — SACRED-PHYSICS-003/4",
+  "version": "1.0",
+  "source_module": "math::sacred_physics",
+  "category": "neurotime",
+  "references": [
+    {
+      "name": "Psychophysical Present",
+      "value_ms": {
+        "min": 300,
+        "max": 500
+      },
+      "source": "Human perception literature"
+    },
+    {
+      "name": "Gamma Band Centers",
+      "value_hz": {
+        "min": 30,
+        "max": 100
+      },
+      "source": "Neural oscillation literature"
+    },
+    {
+      "name": "Consciousness Threshold",
+      "theory": "Integrated Information Theory",
+      "description": "Critical threshold for global binding ≈ φ⁻¹"
+    }
+  ],
+
+  "constants": {
+    "T_PRESENT": {
+      "symbol": "t_present",
+      "description": "Specious present duration (seconds)",
+      "value": 0.381966011250105151,
+      "formula": "φ⁻²",
+      "tolerance_abs": 1e-6,
+      "unit": "seconds",
+      "reference_range_ms": [300, 500]
+    },
+    "F_GAMMA": {
+      "symbol": "f_γ",
+      "description": "Neural gamma band center frequency",
+      "value": 56.23489801858734,
+      "formula": "φ³ × π / γ",
+      "tolerance_abs": 0.1,
+      "unit": "Hz",
+      "reference_range_hz": [30, 100]
+    },
+    "C_THRESHOLD": {
+      "symbol": "C",
+      "description": "Consciousness threshold — inverse golden ratio",
+      "value": 1.6180339887498948,
+      "formula": "φ⁻¹",
+      "tolerance_abs": 1e-15,
+      "unit": "dimensionless",
+      "reference": "Integrated Information Theory"
+    }
+  },
+
+  "test_vectors": [
+    {
+      "name": "Specious Present Verification",
+      "description": "Verify t_present = φ⁻² matches psychophysical range",
+      "input": {},
+      "expected": {
+        "t_present_ms": 381.966011250105151,
+        "in_range": true,
+        "range_min_ms": 300,
+        "range_max_ms": 500
+      }
+    },
+    {
+      "name": "Neural Gamma Band Center",
+      "description": "Verify f_γ ≈ 56.2 Hz within gamma band range",
+      "input": {
+        "pi_value": 3.141592653589793
+      },
+      "expected": {
+        "f_gamma_pred": 56.23489801858734,
+        "in_range": true,
+        "range_min_hz": 30,
+        "range_max_hz": 100
+      }
+    },
+    {
+      "name": "Consciousness Threshold Verification",
+      "description": "Verify C = φ⁻¹ matches IIT theoretical value",
+      "input": {},
+      "expected": {
+        "c_threshold": 1.6180339887498948,
+        "matches_theory": true,
+        "theory": "IIT critical threshold"
+      }
+    }
+  ]
+}

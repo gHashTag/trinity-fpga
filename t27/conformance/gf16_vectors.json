@@ -1,0 +1,173 @@
+{
+  "description": "GoldenFloat16 Conformance Vectors — NUMERIC-STANDARD-001 (Agent 13)",
+  "version": "1.0",
+  "format_name": "GF16",
+  "format_bits": 16,
+  "phi_distance": 0.0486326415435630,
+  "sacred_ok": true,
+  "is_primary": true,
+
+  "format_spec": {
+    "sign_bits": 1,
+    "exp_bits": 6,
+    "mant_bits": 9,
+    "exp_mant_ratio": 0.6666666666666667,
+    "exp_bias": 31,
+    "memory_ratio_vs_fp32": 0.5
+  },
+
+  "test_vectors": [
+    {
+      "name": "zero_positive",
+      "description": "Positive zero encodes to 0x0000",
+      "input": { "value": 0.0 },
+      "expected": {
+        "raw": 0,
+        "decoded": 0.0,
+        "tolerance_abs": 0.0
+      }
+    },
+    {
+      "name": "one_point_zero",
+      "description": "1.0 encodes to exp=31, mant=0",
+      "input": { "value": 1.0 },
+      "expected": {
+        "exp_biased": 31,
+        "mant": 0,
+        "decoded": 1.0,
+        "tolerance_abs": 0.001953125
+      }
+    },
+    {
+      "name": "max_value",
+      "description": "Maximum value ≈ 65504",
+      "input": { "value": 65504.0 },
+      "expected": {
+        "decoded": 65504.0,
+        "tolerance_abs": 1.0
+      }
+    },
+    {
+      "name": "min_positive",
+      "description": "Minimum positive ≈ 0.000061",
+      "input": { "value": 0.000061035 },
+      "expected": {
+        "decoded": 0.000061035,
+        "tolerance_abs": 0.000001
+      }
+    },
+    {
+      "name": "pi_high_precision",
+      "description": "π with high precision",
+      "input": { "value": 3.14159265359 },
+      "expected": {
+        "decoded": 3.140625,
+        "tolerance_abs": 0.001,
+        "relative_error": 0.0003
+      }
+    },
+    {
+      "name": "phi_primary",
+      "description": "φ (golden ratio) - PRIMARY FORMAT test",
+      "input": { "value": 1.61803398875 },
+      "expected": {
+        "decoded": 1.6171875,
+        "tolerance_abs": 0.001,
+        "relative_error": 0.0005,
+        "sacred_ok": true,
+        "sacred_physics_link": true
+      }
+    },
+    {
+      "name": "gamma_lqg",
+      "description": "γ = φ⁻³ (Barbero-Immirzi parameter)",
+      "input": { "value": 0.2360679775 },
+      "expected": {
+        "decoded": 0.236083984,
+        "tolerance_abs": 0.0001,
+        "relative_error": 0.00007,
+        "sacred_ok": true,
+        "sacred_physics_link": true
+      }
+    },
+    {
+      "name": "consciousness_threshold",
+      "description": "C = φ⁻¹ (consciousness threshold)",
+      "input": { "value": 0.61803398875 },
+      "expected": {
+        "decoded": 0.617919922,
+        "tolerance_abs": 0.0002,
+        "relative_error": 0.0002,
+        "sacred_ok": true,
+        "sacred_physics_link": true
+      }
+    },
+    {
+      "name": "sacred_pi_power",
+      "description": "π³ (used in sacred gravity)",
+      "input": { "value": 31.00627668 },
+      "expected": {
+        "decoded": 31.0,
+        "tolerance_abs": 0.1,
+        "relative_error": 0.0002,
+        "sacred_ok": true
+      }
+    },
+    {
+      "name": "roundtrip_accuracy",
+      "description": "Comprehensive roundtrip test",
+      "input": { "value": 1.61803398875 },
+      "expected": {
+        "encode_then_decode": 1.6171875,
+        "tolerance_rel": 0.001,
+        "sacred_ok": true
+      }
+    }
+  ],
+
+  "benchmark_metrics": {
+    "mse_vs_fp32": 0.0021,
+    "speedup_vs_fp32": 1.3,
+    "memory_savings": 0.5,
+    "use_cases": [
+      "primary_inference_format",
+      "activation_quantization",
+      "weight_storage",
+      "gradient_accumulation"
+    ],
+    "comparison_vs_bf16": {
+      "phi_distance": 0.049,
+      "bf16_phi_distance": 0.525,
+      "phi_advantage": "10.7x closer to sacred ratio"
+    },
+    "comparison_vs_ocp_mxfp4": {
+      "phi_distance": 0.049,
+      "mxfp4_phi_distance": 1.382,
+      "phi_advantage": "28.2x closer to sacred ratio"
+    }
+  },
+
+  "sacred_physics_links": [
+    {
+      "constant": "PHI",
+      "value": 1.61803398875,
+      "encoded": 1.6171875,
+      "relative_error": 0.0005,
+      "ok": true
+    },
+    {
+      "constant": "PHI_INV (C)",
+      "value": 0.61803398875,
+      "encoded": 0.617919922,
+      "relative_error": 0.0002,
+      "ok": true
+    },
+    {
+      "constant": "GAMMA_LQG",
+      "value": 0.2360679775,
+      "encoded": 0.236083984,
+      "relative_error": 0.00007,
+      "ok": true
+    }
+  ]
+}

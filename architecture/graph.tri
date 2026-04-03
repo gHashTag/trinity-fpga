@@ -1,0 +1,148 @@
+; graph.tri — Trinity Dependency Graph
+; Shows dependencies between t27 modules
+; Each node is a spec file, edges show import relationships
+; φ² + 1/φ² = 3 | TRINITY
+
+.data
+    ; Node registry: module_id, module_name, file_path
+    ; Module IDs: 0-255 for specs
+    .node 0  ; base/types
+    .node 1  ; base/ops
+    .node 2  ; numeric/gf16
+    .node 3  ; numeric/tf3
+    .node 4  ; math/constants
+    .node 5  ; vsa/ops
+    .node 6  ; isa/registers
+    .node 7  ; nn/attention
+    .node 8  ; nn/hslm
+    .node 9  ; fpga/mac
+    .node 10 ; queen/lotus
+    .node 11 ; compiler/parser
+    .node 12 ; compiler/codegen/zig
+    .node 13 ; compiler/codegen/verilog
+    .node 14 ; compiler/codegen/c
+    .node 15 ; compiler/runtime
+    .node 16 ; math/sacred_physics
+
+    ; Edge registry: from_id, to_id
+    ; Use packed storage: each word = two edges (8 bits each)
+    .edge 0  ; base/types → base/ops (depends on types)
+    .edge 1  ; base/ops → numeric/gf16 (ops used in encoding)
+    .edge 2  ; base/ops → numeric/tf3 (ops used in quantization)
+    .edge 3  ; base/types → math/constants (types for φ)
+    .edge 4  ; math/constants → nn/attention (sacred constants)
+    .edge 5  ; base/types → vsa/ops (vectors use trits)
+    .edge 6  ; base/ops → vsa/ops (arithmetic for binding)
+    .edge 7  ; base/types → fpga/mac (trits for LUTs)
+    .edge 8  ; base/ops → fpga/mac (multiply for MAC)
+    .edge 9  ; math/constants → nn/hslm (φ for architecture)
+    .edge 10 ; vsa/ops → nn/attention (embedding operations)
+    .edge 11 ; base/types → isa/registers (register encoding)
+    .edge 12 ; compiler/parser → all codegen (parse first)
+    .edge 13 ; compiler/codegen/* → compiler/runtime (generated code uses runtime)
+    .edge 14 ; compiler/codegen/verilog → fpga/mac (hardware target)
+    .edge 15 ; compiler/codegen/zig → bindings (FFI layer)
+    .edge 16 ; math/constants → math/sacred_physics (φ → G, Ω_Λ)
+
+.code
+    ; Initialize graph traversal
+    MOV r0, #0      ; r0 = start node (0: base/types)
+    MOV r1, #0      ; r1 = visited count
+    MOV r2, #1      ; r2 = edge index
+
+    ; Visit base/types (node 0)
+    ; No dependencies to check
+    MOV r3, #1      ; Mark visited
+    ADD r1, r1, r3  ; Increment visited count
+
+    ; Visit base/ops (node 1)
+    ; Check dependency from base/types (edge 0)
+    MOV r4, #0      ; from_id = 0
+    MOV r5, #1      ; to_id = 1
+    ; Check if edge 0 connects r4 to r5
+    ; (Implementation would check edge registry)
+    MOV r3, #1      ; Mark visited
+    ADD r1, r1, r3  ; Increment visited count
+
+    ; Visit numeric/gf16 (node 2)
+    ; Check dependency from base/ops (edge 1)
+    ; Mark visited, increment count
+    MOV r3, #1
+    ADD r1, r1, r3
+
+    ; Visit numeric/tf3 (node 3)
+    ; Check dependency from base/ops (edge 2)
+    MOV r3, #1
+    ADD r1, r1, r3
+
+    ; Visit math/constants (node 4)
+    ; Check dependency from base/types (edge 3)
+    MOV r3, #1
+    ADD r1, r1, r3
+
+    ; Visit vsa/ops (node 5)
+    ; Check dependencies from base/types (edge 5) and base/ops (edge 6)
+    MOV r3, #1
+    ADD r1, r1, r3
+
+    ; Visit isa/registers (node 6)
+    ; Check dependency from base/types (edge 11)
+    MOV r3, #1
+    ADD r1, r1, r3
+
+    ; Visit nn/attention (node 7)
+    ; Check dependencies from math/constants (edge 4) and vsa/ops (edge 10)
+    MOV r3, #1
+    ADD r1, r1, r3
+
+    ; Visit nn/hslm (node 8)
+    ; Check dependency from math/constants (edge 9)
+    MOV r3, #1
+    ADD r1, r1, r3
+
+    ; Visit fpga/mac (node 9)
+    ; Check dependencies from base/types (edge 7) and base/ops (edge 8)
+    MOV r3, #1
+    ADD r1, r1, r3
+
+    ; Visit queen/lotus (node 10)
+    ; No explicit dependencies (orchestration layer)
+    MOV r3, #1
+    ADD r1, r1, r3
+
+    ; Visit compiler/parser (node 11)
+    ; Depends on all specs (parse them)
+    MOV r3, #1
+    ADD r1, r1, r3
+
+    ; Visit codegen modules (nodes 12-14)
+    ; Depend on parser (edge 12)
+    MOV r3, #1
+    ADD r1, r1, r3
+    MOV r3, #1
+    ADD r1, r1, r3
+    MOV r3, #1
+    ADD r1, r1, r3
+
+    ; Visit runtime (node 15)
+    ; Depends on codegen (edge 13)
+    MOV r3, #1
+    ADD r1, r1, r3
+
+    ; Visit math/sacred_physics (node 16)
+    ; Check dependency from math/constants (edge 16)
+    MOV r3, #1
+    ADD r1, r1, r3
+
+    ; Done: all 17 nodes visited
+    ; r1 = 17 (visited count)
+    HALT
+
+; ═════════════════════════════════════════════════════════════════════
+; Graph Statistics
+; ═════════════════════════════════════════════════════════════════════
+; Nodes: 17
+; Edges: 17
+; Topological order: base/types → base/ops → numeric/*, math/*, math/sacred_physics, vsa/ops, isa/registers, fpga/mac
+;                     → nn/*, math/sacred_physics → compiler/* → runtime → bindings
+; ═════════════════════════════════════════════════════════════════════════

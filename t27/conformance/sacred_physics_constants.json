@@ -1,0 +1,126 @@
+{
+  "description": "Sacred Physics Constants — SACRED-PHYSICS-003/1",
+  "version": "2.0",
+  "source_module": "math::sacred_physics",
+  "category": "constants",
+
+  "constants": {
+    "PHI": {
+      "symbol": "φ",
+      "description": "Golden ratio",
+      "value": 1.61803398874989484820458683436563811772,
+      "formula": "(1 + sqrt(5)) / 2",
+      "tolerance_abs": 1e-15
+    },
+    "PHI_INV": {
+      "symbol": "φ⁻¹",
+      "description": "Inverse golden ratio (consciousness threshold)",
+      "value": 0.61803398874989484820458683436563811772,
+      "formula": "φ - 1",
+      "tolerance_abs": 1e-15
+    },
+    "PHI_SQ": {
+      "symbol": "φ²",
+      "description": "Golden ratio squared",
+      "value": 2.61803398874989484820458683436563811772,
+      "formula": "φ × φ",
+      "tolerance_abs": 1e-15
+    },
+    "PHI_INV_SQ": {
+      "symbol": "φ⁻²",
+      "description": "Inverse golden ratio squared",
+      "value": 0.381966011250105151794137429023269,
+      "formula": "(φ⁻¹)²",
+      "tolerance_abs": 1e-15
+    },
+    "TRINITY": {
+      "symbol": "φ² + φ⁻²",
+      "description": "Sacred identity — must equal exactly 3.0",
+      "value": 3.0,
+      "formula": "φ² + φ⁻²",
+      "tolerance_abs": 1e-12,
+      "critical": true
+    },
+    "GAMMA_LQG": {
+      "symbol": "γ",
+      "description": "Barbero-Immirzi parameter from pure math",
+      "value": 0.236067977499789696409173668731276,
+      "formula": "φ⁻³",
+      "tolerance_abs": 1e-15,
+      "reference": "Barbero-Immirzi LQG constant"
+    },
+    "C_THRESHOLD": {
+      "symbol": "C",
+      "description": "Consciousness threshold — inverse golden ratio",
+      "value": 0.61803398874989484820458683436563811772,
+      "formula": "φ⁻¹",
+      "tolerance_abs": 1e-15,
+      "reference": "Integrated Information Theory threshold"
+    },
+    "T_PRESENT_SEC": {
+      "symbol": "t_present",
+      "description": "Specious present duration (seconds)",
+      "value": 0.381966011250105151,
+      "formula": "φ⁻²",
+      "tolerance_abs": 1e-6,
+      "reference": "Psychophysical present (300-500ms)"
+    },
+    "T_PRESENT_MS": {
+      "symbol": "t_present",
+      "description": "Specious present duration (milliseconds)",
+      "value": 381.966011250105151,
+      "formula": "φ⁻² × 1000",
+      "tolerance_abs": 0.001,
+      "reference": "Psychophysical present (300-500ms range)"
+    },
+    "F_GAMMA_PRED": {
+      "symbol": "f_γ",
+      "description": "Neural gamma band center frequency",
+      "value": 56.23489801858734,
+      "formula": "φ³ × π / γ",
+      "tolerance_abs": 0.1,
+      "reference": "Gamma band 30-100 Hz, peak ~40-60 Hz"
+    },
+    "G_MEASURED": {
+      "symbol": "G",
+      "description": "Gravitational constant (CODATA 2022)",
+      "value": 6.67430e-11,
+      "unit": "m³ kg⁻¹ s⁻²",
+      "tolerance_rel": 1.5e-5
+    },
+    "LAMBDA_COSMO": {
+      "symbol": "Λ",
+      "description": "Cosmological constant (dimensional)",
+      "value": 1.1056e-52,
+      "unit": "m⁻²",
+      "tolerance_rel": 0.1
+    },
+    "OMEGA_LAMBDA_MEASURED": {
+      "symbol": "Ω_Λ",
+      "description": "Dark energy density parameter (dimensionless)",
+      "value": 0.685,
+      "unit": "dimensionless",
+      "tolerance_rel": 0.01,
+      "reference": "Planck 2018/2020"
+    }
+  },
+
+  "identities": [
+    {
+      "name": "TRINITY Identity",
+      "formula": "φ² + φ⁻² = 3",
+      "critical": true,
+      "tolerance_abs": 1e-12
+    },
+    {
+      "name": "Phi Cubed Identity",
+      "formula": "φ³ = 2φ + 1",
+      "critical": false
+    },
+    {
+      "name": "Gamma from Phi",
+      "formula": "γ = φ⁻³",
+      "critical": true
+    }
+  ]
+}

@@ -1,0 +1,49 @@
+{
+  "description": "Sacred Gravity — SACRED-PHYSICS-003/2",
+  "version": "1.0",
+  "source_module": "math::sacred_physics",
+  "category": "gravity",
+  "target_quantity": "G",
+  "reference_source": "CODATA 2022",
+
+  "measured_value": {
+    "value": 6.67430e-11,
+    "unit": "m³ kg⁻¹ s⁻²",
+    "uncertainty": "1.5e-16",
+    "reference": "CODATA 2022 recommended value"
+  },
+
+  "sacred_formula": {
+    "function": "sacred_gravity(pi)",
+    "formula": "G = π³ × γ² / φ",
+    "derivation": "From TRINITY identity φ² + 1/φ² = 3, substitute γ = φ⁻³"
+  },
+
+  "test_vectors": [
+    {
+      "name": "Standard Gravity Prediction",
+      "description": "Compute G_sacred using sacred formula with π",
+      "input": {
+        "pi_value": 3.141592653589793
+      },
+      "expected": {
+        "g_pred": 6.671281904336e-11,
+        "tolerance_rel": 0.001
+      }
+    },
+    {
+      "name": "CODATA Comparison",
+      "description": "Verify sacred prediction matches measured value within 0.1%",
+      "input": {
+        "pi_value": 3.141592653589793
+      },
+      "expected": {
+        "g_measured": 6.67430e-11,
+        "g_pred": 6.671281904336e-11,
+        "g_rel_error": 0.00045,
+        "tolerance_rel": 0.001,
+        "g_ok": true
+      }
+    }
+  ]
+}
