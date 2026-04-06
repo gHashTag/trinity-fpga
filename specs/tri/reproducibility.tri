@@ -1,0 +1,260 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# VIBEE Specification — Scientific Reproducibility System
+# ═══════════════════════════════════════════════════════════════════════════════
+# Code + Data + Environment = Reproducible Science
+# ═════════════════════════════════════════════════════════════════════════════════
+
+name: reproducibility
+version: "1.0.0"
+language: zig
+module: reproducibility
+
+description: |
+  Scientific Reproducibility System verifies and ensures research can be replicated.
+  Checks code availability, environment documentation, data provenance, and metadata.
+  Generates reproducibility scores and reports missing elements.
+
+types:
+  ReproducibilityItem:
+    fields:
+      name: String
+      description: String
+      present: Bool
+      required: Bool
+      path: String
+
+  EnvironmentInfo:
+    fields:
+      has_dockerfile: Bool
+      dockerfile_path: String
+      image_tag: String
+      base_image: String
+      compiler_versions: List<String>
+      dependency_versions: List<String>
+
+  DataProvenance:
+    fields:
+      datasets_versioned: Bool
+      semantic_versioning: Bool
+      repository_urls: List<String>
+      doi_available: Bool
+      hash_checksums: Bool
+      raw_data_preserved: Bool
+
+  DocumentationStatus:
+    fields:
+      has_readme: Bool
+      has_api_docs: Bool
+      has_setup_guide: Bool
+      has_experiment_examples: Bool
+      has_metadata_docs: Bool
+
+  ReproducibilityReport:
+    fields:
+      overall_score: Float
+      code_available: Bool
+      environment_ok: Bool
+      data_tracked: Bool
+      documentation_complete: Bool
+      missing_items: List<String>
+      recommendations: List<String>
+
+  ReproducibilityConfig:
+    fields:
+      project_path: String
+      strict_mode: Bool
+      threshold_score: Float
+      check_code: Bool
+      check_environment: Bool
+      check_data: Bool
+      check_docs: Bool
+
+constants:
+  DEFAULT_THRESHOLD: Float = 0.8
+  PERFECT_SCORE: Float = 1.0
+  MINIMUM_ACCEPTABLE: Float = 0.6
+  CODE_WEIGHT: Float = 0.3
+  ENVIRONMENT_WEIGHT: Float = 0.25
+  DATA_WEIGHT: Float = 0.25
+  DOCUMENTATION_WEIGHT: Float = 0.2
+
+behaviors:
+  - name: checkReproducibility
+    given: config: ReproducibilityConfig
+    when: User runs `tri repro_check <project>`
+    then: Analyze project and return ReproducibilityReport
+    test_cases:
+      - name: test_perfect_reproducibility
+        input: "{\"mock_complete\": true}"
+        expected: "{\"score\": 1.0}"
+      - name: test_missing_docker
+        input: "{\"has_dockerfile\": false}"
+        expected: "{\"environment_ok\": false}"
+
+  - name: checkCodeAvailability
+    given: project_path: String
+    when: Verifying code is in open repository
+    then: Return boolean + repository URL
+    test_cases:
+      - name: test_public_repo
+        input: "{\"is_public\": true}"
+        expected: "{\"available\": true}"
+
+  - name: checkEnvironmentSetup
+    given: project_path: String
+    when: Checking Docker/container environment
+    then: Return EnvironmentInfo with Dockerfile status
+    test_cases:
+      - name: test_dockerfile_exists
+        input: "{\"has_dockerfile\": true}"
+        expected: "{\"has_dockerfile\": true}"
+
+  - name: checkDataProvenance
+    given: project_path: String
+    when: Verifying data versioning and tracking
+    then: Return DataProvenance status
+    test_cases:
+      - name: test_versioned_data
+        input: "{\"versioned\": true}"
+        expected: "{\"datasets_versioned\": true}"
+
+  - name: checkDocumentation
+    given: project_path: String
+    when: Assessing documentation completeness
+    then: Return DocumentationStatus
+    test_cases:
+      - name: test_complete_docs
+        input: "{\"has_all\": true}"
+        expected: "{\"complete\": true}"
+
+  - name: calculateReproducibilityScore
+    given: code_ok: Bool, env_ok: Bool, data_ok: Bool, docs_ok: Bool
+    when: Computing overall score
+    then: Return weighted score 0.0-1.0
+    test_cases:
+      - name: test_all_true
+        input: "{\"all\": true}"
+        expected: "{\"score\": 1.0}"
+      - name: test_partial
+        input: "{\"code\": true, \"env\": true, \"data\": false, \"docs\": true}"
+        expected: "{\"score\": 0.75}"
+
+  - name: generateRecommendations
+    given: report: ReproducibilityReport
+    when: Creating improvement suggestions
+    then: Return list of actionable recommendations
+    test_cases:
+      - name: test_docker_recommendation
+        input: "{\"missing\": [\"dockerfile\"]}"
+        expected: "{\"recommendations\": [\"Create Dockerfile\"]}"
+
+  - name: validateDockerfile
+    given: dockerfile_path: String
+    when: Checking Dockerfile quality
+    then: Return validation with pinned versions check
+    test_cases:
+      - name: test_pinned_versions
+        input: "{\"uses_latest\": false}"
+        expected: "{\"valid\": true}"
+
+  - name: checkTestVectors
+    given: project_path: String
+    when: Verifying test vectors exist
+    then: Return boolean + count of test vectors
+    test_cases:
+      - name: test_vectors_present
+        input: "{\"count\": 10}"
+        expected: "{\"available\": true}"
+
+  - name: generateMetadataReport
+    given: project_path: String
+    when: Creating metadata completeness report
+    then: Return report with parameter tracking status
+    test_cases:
+      - name: test_full_metadata
+        input: "{\"has_params\": true}"
+        expected: "{\"complete\": true}"
+
+  - name: exportReproducibilityBadge
+    given: score: Float
+    when: Generating badge for README
+    then: Return SVG badge with score color
+    test_cases:
+      - name: test_green_badge
+        input: "{\"score\": 0.9}"
+        expected: "{\"color\": \"green\"}"
+
+integration:
+  std.fs:
+    module: std.fs
+    functions:
+      - cwd
+      - openFile
+      - access
+
+  std.mem:
+    module: std.mem
+    functions:
+      - Allocator
+
+  tri_context:
+    module: tri_context
+    functions:
+      - getProjectPath
+
+  github_commands:
+    module: github_commands
+    functions:
+      - checkRepoVisibility
+
+  tri_commands:
+    module: tri_commands
+    functions:
+      - runChatCommand
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# IMPLEMENTATION NOTES
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+# 1. Reproducibility Score Calculation:
+#    score = (code_ok * 0.3) + (env_ok * 0.25) + (data_ok * 0.25) + (docs_ok * 0.2)
+#    Threshold: 0.8 for "reproducible" status
+#
+# 2. Code Availability Check:
+#    - Repository is public (GitHub/GitLab)
+#    - Has proper LICENSE file
+#    - Version control (git tags/releases)
+#
+# 3. Environment Setup:
+#    - Dockerfile exists and uses pinned versions (not :latest)
+#    - Base image is stable (Ubuntu LTS, debian:stable)
+#    - Compiler versions specified
+#    - Dependency versions locked
+#
+# 4. Data Provenance:
+#    - Datasets versioned (v1.0.0, v1.1.0, ...)
+#    - Raw data preserved
+#    - Checksums/hashes available
+#    - DOI for datasets (Zenodo, Figshare)
+#    - Repository URLs documented
+#
+# 5. Documentation:
+#    - README with setup instructions
+#    - API documentation
+#    - Example experiments
+#    - Parameter metadata
+#
+# 6. CLI Command: `tri repro_check <project_path>`
+#    - Outputs: Score breakdown, missing items, recommendations
+#    - Exit code: 0 if score >= threshold, 1 otherwise
+#    - Flag: --strict fails on any missing item
+#
+# 7. Badge Generation:
+#    - Score >= 0.9: green (Excellent)
+#    - Score >= 0.8: yellow (Good)
+#    - Score >= 0.6: orange (Fair)
+#    - Score < 0.6: red (Needs improvement)
+#
+# ═════════════════════════════════════════════════════════════════════════════════
+# END OF SPECIFICATION
+# ═════════════════════════════════════════════════════════════════════════════════════════════

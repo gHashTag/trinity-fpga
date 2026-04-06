@@ -6,8 +6,8 @@ kind = "virtual-sub"
 path = "src/tri"
 parent = "trinity.tri"
 status = "stable"
-description = "Domain sciences: biology, chemistry, cosmology, neuroscience"
-capabilities = ["biology", "chemistry", "cosmology", "neuroscience"]
+description = "Domain sciences: biology, chemistry, cosmology, neuroscience + scientific writing (IMRaD)"
+capabilities = ["biology", "chemistry", "cosmology", "neuroscience", "imrad_structure", "reproducibility"]
 tests = 18
 owner = "agent:ralph"
 
@@ -16,11 +16,11 @@ scope = "sacred"
 type = "domain"
 
 [source]
-file_patterns = ["tri_biology.zig", "tri_chemistry.zig", "tri_cosmology.zig", "tri_neuro.zig"]
+file_patterns = ["tri_biology.zig", "tri_chemistry.zig", "tri_cosmology.zig", "tri_neuro.zig", "tri_scientific_writing.zig"]
 
 [contributes]
-commands = ["bio", "chem", "cosmos", "neuro"]
-exports = ["runChemCommand", "runBioCommand", "runNeuroCommand", "runCosmosCommand", "showCosmosHelp"]
+commands = ["bio", "chem", "cosmos", "neuro", "paper", "repro_check"]
+exports = ["runChemCommand", "runBioCommand", "runNeuroCommand", "runCosmosCommand", "showCosmosHelp", "generatePaper", "checkReproducibility"]
 
 [dependencies]
 

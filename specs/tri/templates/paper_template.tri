@@ -1,0 +1,256 @@
+# ═════════════════════════════════════════════════════════════════════════════
+# VIBEE Specification — Scientific Paper Template
+# ═══════════════════════════════════════════════════════════════════════════════
+# IMRaD Structure = Academic Excellence
+# ═════════════════════════════════════════════════════════════════════════════════
+
+name: paper_template
+version: "1.0.0"
+language: zig
+module: paper_template
+
+description: |
+  Scientific Paper Template provides IMRaD-compliant structure for T27 generated papers.
+  Generates complete academic papers with introduction, methods, results, discussion,
+  abstract, references, and reproducibility metadata.
+
+types:
+  PaperSpec:
+    fields:
+      title: String
+      research_question: String
+      significance: String
+      hypothesis: String
+      authors: List<String>
+      venue: String
+      doi: String
+      year: Int
+      keywords: List<String>
+
+  MethodsSpec:
+    fields:
+      study_design: String
+      participants: String
+      materials: String
+      data_collection: String
+      procedure: String
+      analysis: String
+
+  ResultsSpec:
+    fields:
+      findings: List<String>
+      tables: List<String>
+      figures: List<String>
+      statistical_tests: List<String>
+
+  DiscussionSpec:
+    fields:
+      interpretation: String
+      literature_connections: List<LiteratureReference>
+      limitations: String
+      future_work: List<String>
+
+  AbstractSpec:
+    fields:
+      problem_statement: String
+      methods_summary: String
+      key_findings: String(100)
+      conclusion: String
+
+  LiteratureReference:
+    fields:
+      author: String
+      year: Int
+      title: String
+      doi: String
+
+  GeneratedPaper:
+    fields:
+      title: String
+      sections: List<String>
+      abstract: String
+      references: List<String>
+      metadata: PaperMetadata
+
+constants:
+  ABSTRACT_WORD_LIMIT: Int = 300
+  FIGURE_PLACEHOLDER: String = "[FIGURE_PLACEHOLDER]"
+  TABLE_PLACEHOLDER: String = "[TABLE_PLACEHOLDER]"
+  REFERENCE_FORMAT: String = "{author} ({year}) [{doi}]"
+
+behaviors:
+  - name: generateIMRaDPaper
+    given: spec: PaperSpec, methods: MethodsSpec, results: ResultsSpec, discussion: DiscussionSpec
+    when: Generating complete academic paper
+    then: Return markdown with full IMRaD structure
+    test_cases:
+      - name: test_complete_structure
+        input: "{\"full_spec\": true}"
+        expected: "{\"sections\": [\"Introduction\", \"Methods\", \"Results\", \"Discussion\", \"Abstract\"]}"
+
+  - name: writeIntroduction
+    given: spec: PaperSpec
+    when: Writing introduction section
+    then: Generate funnel-structured introduction
+    test_cases:
+      - name: test_funnel_structure
+        input: "{\"has_research_question\": true, \"has_significance\": true}"
+        expected: "{\"structure\": \"funnel\"}"
+
+  - name: writeMethods
+    given: methods: MethodsSpec
+    when: Writing methods section
+    then: Generate detailed, replicable methods
+    test_cases:
+      - name: test_methods_complete
+        input: "{\"has_all_subsections\": true}"
+        expected: "{\"replicable\": true}"
+
+  - name: writeResults
+    given: results: ResultsSpec
+    when: Writing results section
+    then: Generate objective findings only
+    test_cases:
+      - name: test_no_interpretation
+        input: "{\"objective_only\": true}"
+        expected: "{\"no_interpretation\": true}"
+
+  - name: writeDiscussion
+    given: discussion: DiscussionSpec
+    when: Writing discussion section
+    then: Generate balanced discussion section
+    test_cases:
+      - name: test_balanced_discussion
+        input: "{\"has_literature\": true, \"has_limitations\": true}"
+        expected: "{\"balanced\": true}"
+
+  - name: writeAbstract
+    given: abstract: AbstractSpec
+    when: Writing 300-word abstract
+    then: Generate concise summary
+    test_cases:
+      - name: test_abstract_length
+        input: "{\"word_count\": 280}"
+        expected: "{\"within_limit\": true}"
+
+  - name: formatCitations
+    given: references: List<LiteratureReference>
+    when: Formatting references section
+    then: Generate properly formatted citations
+    test_cases:
+      - name: test_citation_format
+        input: "{\"valid_ref\": true}"
+        expected: "{\"format_correct\": true}"
+
+  - name: addReproducibilitySection
+    given: code_repo: String, env_dockerfile: String, data_zenodo: String
+    when: Adding reproducibility section to paper
+    then: Generate reproducibility checklist section
+    test_cases:
+      - name: test_reproducibility_section
+        input: "{\"has_all\": true}"
+        expected: "{\"section_present\": true}"
+
+  - name: validatePaperStructure
+    given: paper: GeneratedPaper
+    when: Validating IMRaD compliance
+    then: Return validation result with missing sections
+    test_cases:
+      - name: test_valid_paper
+        input: "{\"all_sections\": true}"
+        expected: "{\"valid\": true}"
+
+  - name: generatePaperMetadata
+    given: spec: PaperSpec, ring: Int
+    when: Creating metadata for episode tracking
+    then: Return PaperMetadata JSON
+    test_cases:
+      - name: test_metadata_complete
+        input: "{\"has_doi\": true, \"has_venue\": true}"
+        expected: "{\"complete\": true}"
+
+integration:
+  std.mem:
+    module: std.mem
+    functions:
+      - Allocator
+
+  std.fs:
+    module: std.fs
+    functions:
+      - cwd
+      - createFile
+      - writeAll
+
+  tri_context:
+    module: tri_context
+    functions:
+      - getRingNumber
+      - getProjectPath
+
+  scientific_writing:
+    module: scientific_writing
+    functions:
+      - createIMRaDPaper
+      - validateAbstract
+      - checkReproducibility
+
+# ═════════════════════════════════════════════════════════════════════════════
+# IMPLEMENTATION NOTES
+# ═══════════════════════════════════════════════════════════════════════════════════
+#
+# Paper Structure (IMRaD):
+#
+# 1. Introduction (Funnel Structure):
+#    - First paragraph: Broad context, research significance
+#    - Second paragraph: Specific research question
+#    - Third paragraph: Hypothesis (if applicable)
+#    - Fourth paragraph: Brief literature context
+#
+# 2. Methods (Replicable):
+#    - Study Design: Experiment type, participants/samples
+#    - Materials & Equipment: Hardware, software, versions
+#    - Data Collection: How data was acquired
+#    - Procedure: Step-by-step experimental process
+#    - Analysis Methods: Statistical tests, computational approaches
+#    - MUST enable another researcher to replicate exactly
+#
+# 3. Results (Objective Only):
+#    - Present findings without interpretation
+#    - Use tables for quantitative data
+#    - Use figures for visual data
+#    - Report statistical significance where applicable
+#    - NO "this shows", "this indicates" (interpretation is for Discussion)
+#    - Number findings logically (1, 2, 3, ...)
+#
+# 4. Discussion (Interpretation):
+#    - Interpret findings in context of literature
+#    - Support or contradict prior studies
+#    - Discuss limitations honestly
+#    - Suggest future research directions
+#    - Connect back to research question
+#
+# 5. Abstract (Written LAST, 300 words max):
+#    - Problem statement: What was studied
+#    - Methods summary: How it was done
+#    - Key findings: What was found (1-2 sentences)
+#    - Conclusion: Main implication
+#
+# 6. References:
+#    - Format: Author (Year) [DOI]
+#    - Alphabetical order
+#    - Include all DOIs for traceability
+#
+# 7. Reproducibility Section:
+#    - Code repository URL
+#    - Environment (Dockerfile or specification)
+#    - Data versioning and DOIs
+#    - Parameter documentation
+#
+# 8. Output Location:
+#    - docs/scientific/{paper_name}.md
+#    - Metadata in .trinity/experience/episodes.jsonl
+#
+# ═══════════════════════════════════════════════════════════════════════════════
+# END OF SPECIFICATION
+# ═══════════════════════════════════════════════════════════════════════════════════════════

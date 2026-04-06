@@ -1,0 +1,261 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# VIBEE Specification — Scientific Writing System
+# ═══════════════════════════════════════════════════════════════════════════════
+# IMRaD Structure + Reproducibility = Scientific Excellence
+# ═════════════════════════════════════════════════════════════════════════════════
+
+name: scientific_writing
+version: "1.0.0"
+language: zig
+module: scientific_writing
+
+description: |
+  Scientific Writing System enables T27 agents to generate IMRaD-compliant academic papers.
+  Integrates reproducibility best practices with PHI LOOP and RING SYSTEM workflows.
+  All scientific claims are traceable, testable, and sealed.
+
+types:
+  PaperSection:
+    fields:
+      name: String
+      content: String
+      word_count: Int
+
+  PaperMetadata:
+    fields:
+      title: String
+      abstract: String(300)
+      authors: List<String>
+      venue: String
+      doi: String
+      year: Int
+      keywords: List<String>
+
+  IMRaDPaper:
+    fields:
+      metadata: PaperMetadata
+      introduction: PaperSection
+      methods: PaperSection
+      results: PaperSection
+      discussion: PaperSection
+      figures: List<String>
+
+  LiteratureReference:
+    fields:
+      author: String
+      year: Int
+      title: String
+      doi: String
+
+  ReproducibilityCheck:
+    fields:
+      code_repository_available: Bool
+      environment_documented: Bool
+      docker_available: Bool
+      test_vectors_available: Bool
+      full_metadata: Bool
+      setup_documented: Bool
+      score: Float  // 0.0 to 1.0
+
+  ScientificEpisode:
+    fields:
+      ring: Int
+      paper_title: String
+      venue: String
+      doi: String
+      structure: String
+      reproducibility: ReproducibilityCheck
+      actions: List<String>
+
+constants:
+  ABSTRACT_MAX_WORDS: Int = 300
+  INTRO_PARAGRAPHS_MAX: Int = 4
+  METHODS_MIN_SUBSECTIONS: Int = 3
+  REPRODUCIBILITY_SCORE_THRESHOLD: Float = 0.8
+  FUNNEL_STRUCTURE: String = "general_to_specific"
+
+behaviors:
+  - name: createIMRaDPaper
+    given: paper_spec: IMRaDPaper
+    when: Creating scientific paper from spec
+    then: Generate markdown in docs/scientific/ with full IMRaD structure
+    test_cases:
+      - name: test_imrad_structure
+        input: "{}"
+        expected: "{\"sections\": [\"Introduction\", \"Methods\", \"Results\", \"Discussion\", \"Abstract\"]}"
+
+  - name: validateAbstract
+    given: abstract: String
+    when: Checking abstract word count
+    then: Return validation result with word count and status
+    test_cases:
+      - name: test_abstract_within_limit
+        input: "{\"abstract\": \"test abstract\"}"
+        expected: "{\"valid\": true, \"word_count\": 2}"
+      - name: test_abstract_over_limit
+        input: "{\"abstract\": \"300 words \"}"  // 300 words repeated
+        expected: "{\"valid\": false}"
+
+  - name: checkReproducibility
+    given: project_path: String
+    when: Verifying scientific reproducibility setup
+    then: Return ReproducibilityCheck with score and missing items
+    test_cases:
+      - name: test_full_reproducibility
+        input: "{\"mock_complete\": true}"
+        expected: "{\"score\": 1.0}"
+
+  - name: formatLiteratureCitation
+    given: ref: LiteratureReference
+    when: Formatting citation for paper
+    then: Return markdown-formatted citation string
+    test_cases:
+      - name: test_citation_format
+        input: "{\"author\": \"Smith\", \"year\": 2020, \"doi\": \"10.xxxx/x\"}"
+        expected: "{\"contains_bracket\": true}"
+
+  - name: generateScientificEpisode
+    given: paper_data: IMRaDPaper, ring: Int
+    when: Creating episode record for scientific paper
+    then: Generate JSON for .trinity/experience/episodes.jsonl
+    test_cases:
+      - name: test_episode_structure
+        input: "{}"
+        expected: "{\"has_scientific_field\": true}"
+
+  - name: applyFunnelStructure
+    given: content: String
+    when: Ensuring funnel structure in section
+    then: Return content analysis with structure assessment
+    test_cases:
+      - name: test_funnel_detected
+        input: "{\"content\": \"General statement. Specific concept. Implementation details.\"}"
+        expected: "{\"structure\": \"funnel\"}"
+
+  - name: validateMethodsReplication
+    given: methods_section: PaperSection
+    when: Checking if methods enable replication
+    then: Return validation result with missing steps
+    test_cases:
+      - name: test_complete_methods
+        input: "{\"has_study_design\": true, \"has_procedure\": true}"
+        expected: "{\"replicable\": true}"
+
+  - name: assessDiscussionBalance
+    given: discussion: PaperSection
+    when: Evaluating discussion section quality
+    then: Return assessment with strengths and weaknesses
+    test_cases:
+      - name: test_balanced_discussion
+        input: "{\"has_literature\": true, \"has_limitations\": true}"
+        expected: "{\"balanced\": true}"
+
+  - name: recordScientificAction
+    given: action: String, ring: Int
+    when: Recording scientific workflow action
+    then: Write to .trinity/experience/episodes.jsonl with trace
+    test_cases:
+      - name: test_action_recorded
+        input: "{\"action\": \"spec_create\"}"
+        expected: "{\"recorded\": true}"
+
+  - name: calculateReproducibilityScore
+    given: check: ReproducibilityCheck
+    when: Computing overall reproducibility score
+    then: Return float score 0.0-1.0 based on completed checklist
+    test_cases:
+      - name: test_perfect_score
+        input: "{\"all_true\": true}"
+        expected: "{\"score\": 1.0}"
+
+integration:
+  tri_context:
+    module: tri_context
+    functions:
+      - getContextForPrompt
+      - getRingNumber
+
+  experience_hooks:
+    module: tri_experience
+    functions:
+      - saveEpisode
+      - getRelatedEpisodes
+
+  github_commands:
+    module: github_commands
+    functions:
+      - addIssueComment
+
+  tri_commands:
+    module: tri_commands
+    functions:
+      - runChatCommand
+
+  tri_pipeline:
+    module: tri_pipeline
+    functions:
+      - runGenCommand
+      - runTestCommand
+      - runVerdictCommand
+
+  std:
+    module: std
+    functions:
+      - log
+      - fs
+
+  std.mem:
+    module: std.mem
+    functions:
+      - Allocator
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# IMPLEMENTATION NOTES
+# ═════════════════════════════════════════════════════════════════════════════════
+#
+# 1. IMRaD Structure:
+#    - Introduction: Research question, significance, hypothesis, context
+#    - Methods: Study design, materials, procedure, analysis
+#    - Results: Objective findings only (no interpretation)
+#    - Discussion: Interpretation, literature connections, limitations
+#    - Abstract: 300-word max, written LAST
+#
+# 2. Funnel Structure:
+#    - Start broad/general context
+#    - Narrow to specific research question
+#    - Focus on implementation/results
+#    - Each paragraph = one key concept
+#
+# 3. Reproducibility Checklist:
+#    - Code in open repository with version control
+#    - Complete documentation (README, API docs)
+#    - Standardized environment (Docker with pinned versions)
+#    - Full metadata (parameters, data provenance, DOIs)
+#    - Test vectors included
+#
+# 4. Writing Principles:
+#    - Clear research question in introduction
+#    - Methods detailed enough for replication
+#    - Results = facts only
+#    - Discussion connects to literature honestly
+#    - Limitations acknowledged openly
+#    - Future research directions suggested
+#
+# 5. Integration with PHI LOOP:
+#    - Each paper = one PHI LOOP cycle
+#    - spec/scientific/ -> gen -> test -> verdict -> experience -> commit
+#    - Episode record includes metadata: venue, DOI, year, authors
+#
+# 6. Integration with RING SYSTEM:
+#    - Scientific work creates entry in .trinity/experience/episodes.jsonl
+#    - Includes: ring number, task type "scientific_paper", reproducibility score
+#    - Actions tracked: spec_create, gen, test, verdict, experience_save, commit
+#
+# 7. Output Format:
+#    - Papers written to docs/scientific/{paper_name}.md
+#    - Episodes logged to .trinity/experience/episodes.jsonl
+#    - Each commit references issue number (L1 enforcement)
+#
+# ═════════════════════════════════════════════════════════════════════════════════
+# END OF SPECIFICATION
+# ═════════════════════════════════════════════════════════════════════════════════════════════
