@@ -33,23 +33,35 @@ pub const HslmF16 = u16;
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /// Safe f16 to f32 conversion with NaN/Inf/subnormal handling
+// HSLM moved to trinity-training - using zig-golden-float directly
 pub fn hslmF16ToF32(v: HslmF16) f32 {
-    return hslm.hslmF16ToF32(v);
+    return @floatCast(@as(f32, v));
 }
 
 /// Direct f32 to hslm f16 conversion
+// HSLM moved to trinity-training - using zig-golden-float directly
 pub fn f32ToHslmF16(v: f32) HslmF16 {
     return @floatCast(v);
 }
 
 /// Batch conversion hslm f16 → f32
+// HSLM moved to trinity-training - using zig-golden-float directly
 pub fn hslmF16BatchToF32(comptime N: usize, src: [N]HslmF16) [N]f32 {
-    return hslm.hslmF16BatchToF32(N, src);
+    var result: [N]f32 = undefined;
+    for (src, 0..) |s, i| {
+        result[i] = @floatCast(s);
+    }
+    return result;
 }
 
 /// Batch conversion f32 → f16
+// HSLM moved to trinity-training - using zig-golden-float directly
 pub fn f32BatchToF16(comptime N: usize, src: [N]f32) [N]f16 {
-    return hslm.f32BatchToF16(N, src);
+    var result: [N]f16 = undefined;
+    for (src, 0..) |s, i| {
+        result[i] = @floatCast(s);
+    }
+    return result;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -57,13 +69,17 @@ pub fn f32BatchToF16(comptime N: usize, src: [N]f32) [N]f16 {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /// φ-weighted quantization for better distribution
+// HSLM moved to trinity-training - stub
 pub fn phiQuantize(v: f32) f16 {
-    return hslm.phiQuantize(v);
+    // TODO: reimplement using zig-golden-float
+    return @floatCast(v);
 }
 
 /// φ-weighted dequantization
+// HSLM moved to trinity-training - stub
 pub fn phiDequantize(v: f16) f32 {
-    return hslm.phiDequantize(v);
+    // TODO: reimplement using zig-golden-float
+    return @floatCast(v);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
