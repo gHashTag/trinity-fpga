@@ -13,18 +13,20 @@
 //! - zig-hslm: https://codeberg.org/gHashTag/zig-hslm
 //! - Branch: feat/vector-float-cast
 //! - Academic: https://www.academia.edu/144897776/Trinity_Framework_Architecture
+//!
+//! ⚠️ HSLM moved to trinity-training repo (gHashTag/trinity-training)
 
 const std = @import("std");
 
-// Import hslm module (external library)
-const hslm = @import("hslm");
+// Import hslm module (external library) - MOVED to trinity-training
+// const hslm = @import("hslm");
 
-// Re-export hslm types for convenience
-pub const GF16 = hslm.GF16;
-pub const TF3 = hslm.TF3;
-pub const PHI = hslm.PHI;
-pub const PHI_INV = hslm.PHI_INV;
-pub const HslmF16 = hslm.HslmF16;
+// Re-export hslm types for convenience - using stubs
+pub const GF16 = f32;
+pub const TF3 = f32;
+pub const PHI: f32 = 3.0;
+pub const PHI_INV: f32 = 1.0 / 3.0;
+pub const HslmF16 = u16;
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // NUMBER FORMAT CONVERSION

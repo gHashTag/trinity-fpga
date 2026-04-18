@@ -2013,40 +2013,6 @@ pub fn build(b: *std.Build) void {
     // HSLM — Hybrid Symbolic Language Model Training CLI
     // ═══════════════════════════════════════════════════════════════════════════
 
-    const hslm_train = b.addExecutable(.{
-        .name = "hslm-train",
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("src/hslm/cli.zig"),
-            .target = target,
-            .optimize = .ReleaseFast,
-        }),
-    });
-    b.installArtifact(hslm_train);
-
-    const run_hslm_train = b.addRunArtifact(hslm_train);
-    if (b.args) |run_args| {
-        run_hslm_train.addArgs(run_args);
-    }
-    const hslm_step = b.step("hslm-train", "Run HSLM — Hybrid Symbolic Language Model trainer");
-    hslm_step.dependOn(&run_hslm_train.step);
-
-    // ═══════════════════════════════════════════════════════════════════════════
-    // HSLM — Platform Benchmark Suite (for arXiv paper)
-    // ═══════════════════════════════════════════════════════════════════════════
-
-    const hslm_bench = b.addExecutable(.{
-        .name = "hslm-bench",
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("src/hslm/hslm_benchmark.zig"),
-            .target = target,
-            .optimize = .ReleaseFast,
-        }),
-    });
-    b.installArtifact(hslm_bench);
-    const run_hslm_bench = b.addRunArtifact(hslm_bench);
-    const hslm_bench_step = b.step("hslm-bench", "Run HSLM inference platform benchmark");
-    hslm_bench_step.dependOn(&run_hslm_bench.step);
-
     // ═══════════════════════════════════════════════════════════════════════════
     // BPE Tokenizer Trainer
     // ═══════════════════════════════════════════════════════════════════════════
@@ -2088,13 +2054,6 @@ pub fn build(b: *std.Build) void {
     train_deploy_step.dependOn(&hslm_train.step);
     train_deploy_step.dependOn(&hslm_entrypoint.step);
 
-    // ═════════════════════════════════════════════════════════════════════════════════
-    // Background Agent API — Railway Management (Zig, no node_modules)
-    // ═════════════════════════════════════════════════════════════════════════════════════════════
-
-    const background_agent_api = b.addExecutable(.{
-        .name = "background-agent-api",
-        .root_module = b.createModule(.{
             .root_source_file = b.path("src/background_agent/main.zig"),
             .target = target,
             .optimize = optimize,
@@ -2123,15 +2082,6 @@ pub fn build(b: *std.Build) void {
 
     // ═══════════════════════════════════════════════════════════════════════════
     // Railway Redeploy Tool — Bypasses PreToolUse hook for Railway API
-    // ═══════════════════════════════════════════════════════════════════════════
-
-    const railway_redeploy = b.addExecutable(.{
-        .name = "railway-redeploy",
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("src/cli/railway_redeploy.zig"),
-            .target = target,
-            .optimize = optimize,
-            .link_libc = true,
         }),
     });
     b.installArtifact(railway_redeploy);
@@ -2341,25 +2291,6 @@ pub fn build(b: *std.Build) void {
     // IGLA Hybrid Chat module (symbolic + LLM fallback + KG)
     const vibeec_hybrid_chat = b.createModule(.{
         .root_source_file = b.path("src/vibeec/igla_hybrid_chat.zig"),
-        .target = target,
-        .optimize = optimize,
-        .imports = &.{
-            .{ .name = "igla_chat", .module = vibeec_chat },
-            .{ .name = "tvc_corpus", .module = tvc_corpus_mod },
-            .{ .name = "igla_kg", .module = igla_kg_mod },
-            .{ .name = "triples_parser", .module = triples_parser_mod },
-        },
-    });
-    // STORM Golden Chain (28-link pipeline with neuroanatomical mapping)
-    const golden_chain_mod = b.createModule(.{
-        .root_source_file = b.path("src/storm/golden_chain.zig"),
-        .target = target,
-        .optimize = optimize,
-        .imports = &.{},
-    });
-    // IGLA TVC Chat module (fluent chat + TVC integration)
-    const igla_tvc_chat_mod = b.createModule(.{
-        .root_source_file = b.path("src/vibeec/igla_tvc_chat.zig"),
         .target = target,
         .optimize = optimize,
         .imports = &.{
@@ -2948,35 +2879,6 @@ pub fn build(b: *std.Build) void {
                 .{ .name = "firebird_governance", .module = firebird_governance_mod },
                 // S³AI Brain Regions (v5.1 - Neuroanatomy)
                 .{ .name = "basal_ganglia", .module = basal_ganglia_mod },
-                .{ .name = "reticular_formation", .module = reticular_formation_mod },
-                .{ .name = "locus_coeruleus", .module = locus_coeruleus_mod },
-                .{ .name = "amygdala", .module = amygdala_mod },
-                .{ .name = "persistence", .module = persistence_mod },
-                .{ .name = "telemetry", .module = telemetry_mod },
-                .{ .name = "brain", .module = brain_mod },
-                // Brain simulation module
-                .{ .name = "simulation", .module = simulation_mod },
-                // SEBO CLI module
-                .{ .name = "sebo_cli", .module = sebo_cli_mod },
-                // STORM P1 Brain Zones (Ethical Infrastructure)
-                .{ .name = "storm_ofc", .module = storm_ofc_mod },
-                .{ .name = "storm_habenula", .module = storm_habenula_mod },
-                .{ .name = "storm_amygdala", .module = storm_amygdala_mod },
-                // TRI Commands module (for brain commands)
-                .{ .name = "tri_commands", .module = tri_commands_mod },
-                // Bench module — IGLA benchmark
-                .{ .name = "bench", .module = bench_mod },
-                // zig-hslm — Official HSLM Numerical Library
-                .{ .name = "hslm", .module = hslm_mod },
-                // Intraparietal Sulcus — Numerical Layer
-                .{ .name = "intraparietal", .module = intraparietal_mod },
-                // STORM Golden Chain — 28-link pipeline
-                .{ .name = "golden_chain", .module = golden_chain_mod },
-                // TRI-27 CLI module
-                .{ .name = "tri27_cli", .module = tri27_cli_mod },
-                // Kaggle benchmark module
-                .{ .name = "kaggle", .module = kaggle_mod },
-            },
         }),
     });
     b.installArtifact(tri);
@@ -3060,23 +2962,6 @@ pub fn build(b: *std.Build) void {
                 .{ .name = "trinity_swe", .module = vibeec_swe },
                 .{ .name = "igla_chat", .module = vibeec_chat },
                 .{ .name = "igla_hybrid_chat", .module = vibeec_hybrid_chat },
-                .{ .name = "igla_coder", .module = vibeec_coder },
-                .{ .name = "vsa", .module = vsa_tri },
-                .{ .name = "tvc_corpus", .module = tvc_corpus_mod },
-                .{ .name = "tvc_distributed", .module = tvc_distributed_mod },
-                .{ .name = "igla_tvc_chat", .module = igla_tvc_chat_mod },
-                .{ .name = "pas_orchestrator", .module = pas_orchestrator_mod },
-                .{ .name = "api", .module = api_mod },
-                // P3.11: Token rotator for z.ai keys
-                .{ .name = "token_rotator", .module = b.createModule(.{
-                    .root_source_file = b.path("src/tri/token_rotator.zig"),
-                    .target = target,
-                    .optimize = optimize,
-                }) },
-                // Railway Circuit Breaker — 3-tier production-grade protection
-                .{ .name = "railway_circuit_breaker", .module = b.createModule(.{
-                    .root_source_file = b.path("src/tri/railway_circuit_breaker.zig"),
-                    .target = target,
                     .optimize = optimize,
                 }) },
                 // P3.11: Token CLI commands
@@ -3522,26 +3407,6 @@ pub fn build(b: *std.Build) void {
 
     const run_node = b.addRunArtifact(trinity_node);
     if (b.args) |args| {
-        run_node.addArgs(args);
-    }
-    const node_step = b.step("node", "Run Trinity Node - Decentralized Inference");
-    node_step.dependOn(&run_node.step);
-
-    // Trinity Node GUI - with Raylib UI (requires raylib installed)
-    // Install raylib: brew install raylib (macOS) / apt install libraylib-dev (Linux)
-    // Skipped in CI mode (-Dci=true) since raylib is not available
-    if (!ci_mode) {
-        const trinity_node_gui = b.addExecutable(.{
-            .name = "trinity-node-gui",
-            .root_module = b.createModule(.{
-                .root_source_file = b.path("src/trinity_node/main_gui.zig"),
-                .target = target,
-                .optimize = optimize,
-            }),
-        });
-        trinity_node_gui.linkSystemLibrary("raylib");
-        trinity_node_gui.linkLibC();
-        b.installArtifact(trinity_node_gui);
 
         const run_node_gui = b.addRunArtifact(trinity_node_gui);
         if (b.args) |args| {
@@ -4265,33 +4130,6 @@ pub fn build(b: *std.Build) void {
         .root_source_file = b.path("src/clara/kill_web.zig"),
         .target = target,
         .optimize = optimize,
-        .imports = &.{
-            .{ .name = "vsa", .module = trinity_mod },
-            .{ .name = "zodd", .module = zodd_mod },
-        },
-    });
-
-    // CLARA explainability (proof traces)
-    const clara_explain_mod = b.createModule(.{
-        .root_source_file = b.path("src/clara/explain.zig"),
-        .target = target,
-        .optimize = optimize,
-        .imports = &.{
-            .{ .name = "vsa", .module = trinity_mod },
-            .{ .name = "zodd", .module = zodd_mod },
-        },
-    });
-
-    // CLARA bounded rationality (Restraint)
-    const clara_bounded_mod = b.createModule(.{
-        .root_source_file = b.path("src/clara/bounded.zig"),
-        .target = target,
-        .optimize = optimize,
-        .imports = &.{
-            .{ .name = "vsa", .module = trinity_mod },
-            .{ .name = "zodd", .module = zodd_mod },
-        },
-    });
 
     // CLARA baselines (SOA comparison)
     const clara_baselines_mod = b.createModule(.{

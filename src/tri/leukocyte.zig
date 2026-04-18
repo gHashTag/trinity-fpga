@@ -3,6 +3,9 @@
 //! SUPERVISOR MODE: enforces pipeline-first development
 //! Spec: specs/tri/tri_doctor.tri
 //! phi^2 + 1/phi^2 = 3 | TRINITY
+//!
+//! ⚠️  HSLM moved to trinity-training repo (gHashTag/trinity-training)
+//!    model.zig and trainer.zig checks below are disabled
 
 const std = @import("std");
 const Allocator = std.mem.Allocator;
@@ -1384,45 +1387,43 @@ pub fn runDupes(allocator: Allocator) !void {
     };
     check_count += 1;
 
-    // 5. Duplicate model.zig
-    const model_paths = [_][]const u8{
-        "src/hslm/model.zig",
-        "deploy/trinity-nexus/core/src/ml/model.zig",
-        "deploy/trinity-nexus/llm/src/ml/model.zig",
-        "archive/implementations/zig/src/ml/model.zig",
-    };
-    var model_count: u32 = 0;
-    for (model_paths) |p| {
-        std.fs.cwd().access(p, .{}) catch continue;
-        model_count += 1;
-    }
-    checks[check_count] = .{
-        .name = "model.zig copies",
-        .count = model_count,
-        .severity = if (model_count <= 1) .ok else if (model_count <= 2) .warn else .critical,
-        .detail = if (model_count <= 1) "single canonical" else "DIVERGENCE RISK \xe2\x80\x94 canonical: src/hslm/model.zig",
-    };
-    check_count += 1;
-
-    // 6. Duplicate trainer.zig
-    const trainer_paths = [_][]const u8{
-        "src/hslm/trainer.zig",
-        "deploy/trinity-nexus/core/src/ml/trainer.zig",
-        "deploy/trinity-nexus/llm/src/ml/trainer.zig",
-        "archive/implementations/zig/src/ml/trainer.zig",
-    };
-    var trainer_count: u32 = 0;
-    for (trainer_paths) |p| {
-        std.fs.cwd().access(p, .{}) catch continue;
-        trainer_count += 1;
-    }
-    checks[check_count] = .{
-        .name = "trainer.zig copies",
-        .count = trainer_count,
-        .severity = if (trainer_count <= 1) .ok else .critical,
-        .detail = if (trainer_count <= 1) "single canonical" else "DIVERGENCE RISK \xe2\x80\x94 canonical: src/hslm/trainer.zig",
-    };
-    check_count += 1;
+// HSLM moved to trinity-training repo - disabled\n// // HSLM moved to trinity-training repo - checks disabled    const model_paths = [_][]const u8{
+// // HSLM moved to trinity-training repo - checks disabled        "src/hslm/model.zig",
+// // HSLM moved to trinity-training repo - checks disabled        "deploy/trinity-nexus/core/src/ml/model.zig",
+// // HSLM moved to trinity-training repo - checks disabled        "deploy/trinity-nexus/llm/src/ml/model.zig",
+// // HSLM moved to trinity-training repo - checks disabled        "archive/implementations/zig/src/ml/model.zig",
+// // HSLM moved to trinity-training repo - checks disabled    };
+// // HSLM moved to trinity-training repo - checks disabled    var model_count: u32 = 0;
+// // HSLM moved to trinity-training repo - checks disabled    for (model_paths) |p| {
+// // HSLM moved to trinity-training repo - checks disabled        std.fs.cwd().access(p, .{}) catch continue;
+// // HSLM moved to trinity-training repo - checks disabled        model_count += 1;
+// // HSLM moved to trinity-training repo - checks disabled    }
+// // HSLM moved to trinity-training repo - checks disabled    checks[check_count] = .{
+// // HSLM moved to trinity-training repo - checks disabled        .name = "model.zig copies",
+// // HSLM moved to trinity-training repo - checks disabled        .count = model_count,
+// // HSLM moved to trinity-training repo - checks disabled        .severity = if (model_count <= 1) .ok else if (model_count <= 2) .warn else .critical,
+// // HSLM moved to trinity-training repo - checks disabled        .detail = if (model_count <= 1) "single canonical" else "DIVERGENCE RISK \xe2\x80\x94 canonical: src/hslm/model.zig",
+    // HSLM moved to trinity-training repo - checks disabled    };
+    // HSLM moved to trinity-training repo - checks disabled    check_count += 1;
+    // HSLM moved to trinity-training repo - checks disabled
+// HSLM moved to trinity-training repo - disabled\n// // HSLM moved to trinity-training repo - checks disabled    const trainer_paths = [_][]const u8{
+// // HSLM moved to trinity-training repo - checks disabled        "src/hslm/trainer.zig",
+// // HSLM moved to trinity-training repo - checks disabled        "deploy/trinity-nexus/core/src/ml/trainer.zig",
+// // HSLM moved to trinity-training repo - checks disabled        "deploy/trinity-nexus/llm/src/ml/trainer.zig",
+// // HSLM moved to trinity-training repo - checks disabled        "archive/implementations/zig/src/ml/trainer.zig",
+// // HSLM moved to trinity-training repo - checks disabled    };
+// // HSLM moved to trinity-training repo - checks disabled    var trainer_count: u32 = 0;
+// // HSLM moved to trinity-training repo - checks disabled    for (trainer_paths) |p| {
+// // HSLM moved to trinity-training repo - checks disabled        std.fs.cwd().access(p, .{}) catch continue;
+// // HSLM moved to trinity-training repo - checks disabled        trainer_count += 1;
+// // HSLM moved to trinity-training repo - checks disabled    }
+// // HSLM moved to trinity-training repo - checks disabled    checks[check_count] = .{
+// // HSLM moved to trinity-training repo - checks disabled        .name = "trainer.zig copies",
+// // HSLM moved to trinity-training repo - checks disabled        .count = trainer_count,
+// // HSLM moved to trinity-training repo - checks disabled        .severity = if (trainer_count <= 1) .ok else .critical,
+// // HSLM moved to trinity-training repo - checks disabled        .detail = if (trainer_count <= 1) "single canonical" else "DIVERGENCE RISK \xe2\x80\x94 canonical: src/hslm/trainer.zig",
+// // HSLM moved to trinity-training repo - checks disabled    };
+// // HSLM moved to trinity-training repo - checks disabled    check_count += 1;
 
     // 7. Trinity-nexus output backups
     var nexus_backups: u32 = 0;

@@ -113,8 +113,8 @@ fn runSelfTest(allocator: Allocator, args: []const []const u8) !void {
     printGateResult(&gates[1]);
 
     // Gate 3: FORMAT
-    print("{s}[3/5]{s} FORMAT — zig fmt --check src/tri/ tools/mcp/ src/hslm/ ... ", .{ DIM, RESET });
-    gates[2] = runChildGate("FORMAT", &.{ "zig", "fmt", "--check", "src/tri/", "tools/mcp/", "src/hslm/" }, allocator);
+    print("{s}[3/5]{s} FORMAT — zig fmt --check src/tri/ tools/mcp/ ... ", .{ DIM, RESET });
+    gates[2] = runChildGate("FORMAT", &.{ "zig", "fmt", "--check", "src/tri/", "tools/mcp/" }, allocator);
     printGateResult(&gates[2]);
 
     // Gate 4: HEALTH
