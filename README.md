@@ -1,23 +1,15 @@
-# trinity-fpga
+# trinity
 
-**FPGA Synthesis and Hardware Deployment for Trinity** — T27 VM, openxc7-synth, and ternary computing on FPGAs.
+[![Zig](https://img.shields.io/badge/Zig-0.15+-F7A41D?logo=zig&logoColor=white)](https://ziglang.org/)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Golden Ratio](https://img.shields.io/badge/φ-1.618033988-gold)](https://en.wikipedia.org/wiki/Golden_ratio)
+[![Ecosystem](https://img.shields.io/badge/Trinity-Main-blue)](https://github.com/gHashTag/trinity)
 
-## Modules
+> **Trinity Orchestrator** — Golden Ratio mathematics meets computational physics and AI. Links all Trinity micro-repositories via `build.zig.zon`.
 
-- `src/tvc/` — Ternary Vector Computing VM, JIT, indexer, RAG
-- `fpga/` — Hardware synthesis, flash scripts, guides
+## 🎯 What is Trinity?
 
-## Hardware
-
-DSLogic Plus, Artix-7, Kintex-7, ESP32
-
-## License
-
-MIT © 2026 Trinity Project
-
-## Architecture
-
-Trinity is an orchestrator connecting a family of focused micro-repositories. Each repo has a single responsibility and can be used independently.
+Trinity is the main orchestrator connecting a family of focused micro-repositories. Each repo has a single responsibility and can be used independently.
 
 ### Dependency Graph
 
@@ -38,7 +30,26 @@ zig-crypto-mining       ← BTC mining + DePIN (~60KB)
 trinity                 ← Orchestrator (links all via build.zig.zon)
 ```
 
-### Repository Overview
+## 🌌 Trinity Ecosystem
+
+> Golden Ratio mathematics meets computational physics and AI.
+
+| Repository | Purpose | Status |
+|---|---|---|
+| [trinity](https://github.com/gHashTag/trinity) | 🎯 Orchestrator, agents, API, MCP server | ✅ Here |
+| [zig-golden-float](https://github.com/gHashTag/zig-golden-float) | 🔢 Numeric core: GF16, TF3, VSA, JIT | ✅ Core |
+| [trinity-training](https://github.com/gHashTag/trinity-training) | 🧠 ML: HSLM, benchmarks, datasets | [![CI](https://img.shields.io/github/actions/workflow/status/gHashTag/trinity-training/ci.yml?branch=main)](https://github.com/gHashTag/trinity-training/actions) |
+| [t27](https://github.com/gHashTag/t27) | 📜 Ternary SSOT + Rust bootstrap | 📜 Language |
+| [vibee-lang](https://github.com/gHashTag/vibee-lang) | 🎵 VIBEE language spec (.tri/.vibee) | 📜 Language |
+| [zig-hdc](https://github.com/gHashTag/zig-hdc) | 🧩 Hyperdimensional: VSA, HRR | ✅ |
+| [zig-sacred-geometry](https://github.com/gHashTag/zig-sacred-geometry) | 📐 Sacred φ-geometry, Beal | ✅ |
+| [zig-physics](https://github.com/gHashTag/zig-physics) | ⚛️ Quantum: QCD, gravity, dark matter | ✅ |
+| [zig-knowledge-graph](https://github.com/gHashTag/zig-knowledge-graph) | 🕸️ KG server + CLI | ✅ |
+| [zig-agents](https://github.com/gHashTag/zig-agents) | 🤖 Agents: MCP, autonomous | ✅ |
+| [zig-crypto-mining](https://github.com/gHashTag/zig-crypto-mining) | 💰 BTC mining + DePIN | ✅ |
+| [trinity-fpga](https://github.com/gHashTag/trinity-fpga) | 🔌 FPGA: Verilog synthesis | 🔄 WIP |
+
+## 📦 Repository Overview
 
 | # | Repository | Status | Size | Description |
 |---|---|---|---|---|
@@ -53,7 +64,7 @@ trinity                 ← Orchestrator (links all via build.zig.zon)
 | 9 | [trinity-training](https://github.com/gHashTag/trinity-training) | ✅ LIVE | 208MB data | HSLM, benchmarks, datasets |
 | 10 | [trinity](https://github.com/gHashTag/trinity) | ✅ LIVE | ~500MB | Orchestrator, API, CLI, VIBEE, FPGA |
 
-### Migration Status
+## 🚀 Migration Status
 
 **Phase 1 — HIGH Priority:** ✅ Complete
 - [zig-golden-float](https://github.com/gHashTag/zig-golden-float) — Cloned as submodule in trinity-training
@@ -74,20 +85,23 @@ trinity                 ← Orchestrator (links all via build.zig.zon)
 - trinity-cli — Unify TRI CLI
 - trinity-www — Docsite
 
-### Using a Module Independently
+## 💻 Using a Module Independently
 
 Each micro-repo is a standalone Zig package. To use any module independently:
 
-\`\`\`zig build.zig.zon\`\` — Clone and cache dependencies
-
-Example: Using zig-golden-float from any repo
-\`\`\`// build.zig.zon
+```zig
+// build.zig.zon
 .dependencies = .{
     .zig_golden_float = .{
         .url = "https://github.com/gHashTag/zig-golden-float/archive/refs/heads/main.tar.gz",
     },
 },
-\`\`
+```
 
-\`\`\`zig fetch --save https://github.com/gHashTag/zig-golden-float/archive/refs/heads/main.tar.gz`\`\`
+```bash
+zig fetch --save https://github.com/gHashTag/zig-golden-float/archive/refs/heads/main.tar.gz
+```
 
+## 📜 License
+
+MIT © gHashTag
