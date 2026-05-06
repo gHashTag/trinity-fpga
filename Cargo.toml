@@ -1,0 +1,30 @@
+[workspace]
+members = [
+    "rings/FP-00",
+    "rings/FP-01",
+    "rings/FP-02",
+    "rings/BR-BITSTREAM",
+]
+resolver = "2"
+
+[package]
+name = "trios-fpga-workspace"
+version = "0.1.0"
+edition = "2021"
+description = "trios-fpga: FPGA synthesis, flash and inference for Trinity S3AI (XC7A200T)"
+license = "MIT"
+
+[lib]
+name = "trios_fpga"
+path = "src/lib.rs"
+
+[dependencies]
+trios-fpga-fp00 = { path = "rings/FP-00" }
+trios-fpga-fp01 = { path = "rings/FP-01" }
+trios-fpga-fp02 = { path = "rings/FP-02" }
+
+[workspace.lints.rust]
+dead_code = "allow"
+
+[workspace.lints.clippy]
+too_many_arguments = "allow"
