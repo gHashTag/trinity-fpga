@@ -49,9 +49,9 @@ module vsa_matmul #(
     // =========================================================================
     reg [DIM*2-1:0] weights [0:N_OUT-1];
 
+    integer wi, wj;
+
     initial begin
-        // Self-test weights: W[j][i] = +1 if (i+j)%3==0, -1 if (i+j)%3==1, 0 else
-        integer wi, wj;
         for (wj = 0; wj < N_OUT; wj = wj + 1) begin
             for (wi = 0; wi < DIM; wi = wi + 1) begin
                 case ((wi + wj) % 3)
