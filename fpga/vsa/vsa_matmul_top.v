@@ -23,7 +23,7 @@ module vsa_matmul_top (
     input  wire uart_rx,
     output wire uart_tx,
     output wire led,
-    output wire [1:0] debug_state
+    output reg [1:0] debug_state
 );
 
     localparam DIM       = 64;
