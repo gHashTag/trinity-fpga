@@ -29,6 +29,19 @@ impl SynthConfig {
             freq_mhz: board.clock_mhz,
         }
     }
+
+    pub fn vsa_matmul(board: &BoardConfig, out: &Path) -> Self {
+        let vsa_dir = Path::new("fpga/vsa");
+        let mut rtl_sources = Vec::new();
+        collect_verilog(vsa_dir, &mut rtl_sources);
+        Self {
+            top_module: "vsa_matmul_top".to_string(),
+            rtl_sources,
+            constraints: PathBuf::from("fpga/vsa/vsa_matmul_top.xdc"),
+            output_dir: out.to_path_buf(),
+            freq_mhz: board.clock_mhz,
+        }
+    }
 }
 
 fn collect_verilog(dir: &Path, out: &mut Vec<PathBuf>) {
