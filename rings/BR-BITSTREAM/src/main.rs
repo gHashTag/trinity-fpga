@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use std::time::Instant;
 
 use clap::{Parser, Subcommand};
-use trios_fpga_fp00::{BoardConfig, TritValue, XvcConfig, ARTIX7_200T};
+use trios_fpga_fp00::{BoardConfig, TritValue, XvcConfig, ARTIX7_100T, ARTIX7_200T};
 
 #[derive(Parser)]
 #[command(name = "trios-fpga", version, about = "FPGA synthesis, flash and verify via XVC WiFi JTAG")]
@@ -26,7 +26,7 @@ enum Commands {
     Flash {
         #[arg(long)]
         bitstream: PathBuf,
-        #[arg(long, default_value = "XC7A200T")]
+        #[arg(long, default_value = "XC7A100T")]
         board: String,
     },
     Synth {
@@ -55,6 +55,7 @@ enum Commands {
 
 fn resolve_board(name: &str) -> Option<&'static BoardConfig> {
     match name.to_uppercase().as_str() {
+        "XC7A100T" | "ARTIX7-100T" => Some(&ARTIX7_100T),
         "XC7A200T" | "ARTIX7-200T" => Some(&ARTIX7_200T),
         _ => None,
     }
@@ -82,7 +83,7 @@ fn main() -> anyhow::Result<()> {
             board,
         } => {
             let board_cfg = resolve_board(board)
-                .ok_or_else(|| anyhow::anyhow!("unknown board '{board}'. Use XC7A200T"))?;
+                .ok_or_else(|| anyhow::anyhow!("unknown board '{board}'. Use XC7A100T or XC7A200T"))?;
             let flasher = trios_fpga_fp02::XvcFlasher::new(xvc, board_cfg);
 
             eprintln!("Flashing {} via XVC...", bitstream.display());
@@ -124,17 +125,10 @@ fn main() -> anyhow::Result<()> {
         }
 
         Commands::Status {} => {
-            let flasher = trios_fpga_fp02::XvcFlasher::new(xvc, &ARTIX7_200T);
-            let status = flasher.status()?;
-            println!(
-                "IDCODE: 0x{:08X} | DONE: {}",
-                status.idcode,
-                if status.done { "YES" } else { "NO" }
-            );
+            let flasher = trios_fpga_fp02::XvcFlasher::new(xvc, &ARTIX7_100T);
         }
-
         Commands::Verify {} => {
-            let flasher = trios_fpga_fp02::XvcFlasher::new(xvc, &ARTIX7_200T);
+            let flasher = trios_fpga_fp02::XvcFlasher::new(xvc, &ARTIX7_100T);
             let idcode = flasher.verify_idcode()?;
             println!("IDCODE: 0x{idcode:08X} — MATCH");
         }
