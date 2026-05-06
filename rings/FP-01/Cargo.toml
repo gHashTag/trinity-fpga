@@ -1,0 +1,12 @@
+[package]
+name = "trios-fpga-fp01"
+version = "0.1.0"
+edition = "2021"
+description = "FP-01: RTL synthesis engine (Yosys + nextpnr + openxc7) for trios-fpga"
+license = "MIT"
+
+[dependencies]
+trios-fpga-fp00 = { path = "../FP-00" }
+anyhow = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
