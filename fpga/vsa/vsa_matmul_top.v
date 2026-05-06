@@ -69,11 +69,10 @@ module vsa_matmul_top (
     // =========================================================================
     // TERNARY EMBEDDING — token_id -> 64-trit vector (register-based)
     // =========================================================================
+    integer ei, ej;
     reg [DIM*2-1:0] embed_rom [0:VOCAB-1];
     initial begin
-        integer ei;
         for (ei = 0; ei < VOCAB; ei = ei + 1) begin
-            integer ej;
             for (ej = 0; ej < DIM; ej = ej + 1) begin
                 case ((ei + ej) % 3)
                     0: embed_rom[ei][ej*2 +: 2] = 2'b01;
@@ -157,6 +156,7 @@ module vsa_matmul_top (
     reg [7:0]  uart_shift;
     reg        uart_active;
     reg        uart_tx_reg;
+    reg        uart_start_tx;
 
     assign uart_tx = uart_tx_reg;
 
@@ -170,26 +170,35 @@ module vsa_matmul_top (
             uart_cnt    <= 0;
             uart_bit    <= 0;
             uart_shift  <= 0;
-        end else if (uart_active) begin
-            if (uart_cnt == UART_DIV - 1) begin
-                uart_cnt <= 0;
-                if (uart_bit == 0) begin
-                    uart_tx_reg <= 1'b0;
-                    uart_bit <= uart_bit + 1;
-                end else if (uart_bit < 9) begin
-                    uart_tx_reg <= uart_shift[0];
-                    uart_shift <= {1'b0, uart_shift[7:1]};
-                    uart_bit <= uart_bit + 1;
-                end else begin
-                    uart_tx_reg <= 1'b1;
-                    uart_active <= 1'b0;
-                    uart_bit <= 0;
-                end
-            end else begin
-                uart_cnt <= uart_cnt + 1;
-            end
+            uart_start_tx <= 1'b0;
         end else begin
-            uart_tx_reg <= 1'b1;
+            uart_start_tx <= 1'b0;
+            if (uart_active) begin
+                if (uart_cnt == UART_DIV - 1) begin
+                    uart_cnt <= 0;
+                    if (uart_bit == 0) begin
+                        uart_tx_reg <= 1'b0;
+                        uart_bit <= uart_bit + 1;
+                    end else if (uart_bit < 9) begin
+                        uart_tx_reg <= uart_shift[0];
+                        uart_shift <= {1'b0, uart_shift[7:1]};
+                        uart_bit <= uart_bit + 1;
+                    end else begin
+                        uart_tx_reg <= 1'b1;
+                        uart_active <= 1'b0;
+                        uart_bit <= 0;
+                    end
+                end else begin
+                    uart_cnt <= uart_cnt + 1;
+                end
+            end else if (uart_start_tx) begin
+                uart_tx_reg <= 1'b0;
+                uart_active <= 1'b1;
+                uart_cnt    <= 0;
+                uart_bit    <= 0;
+            end else begin
+                uart_tx_reg <= 1'b1;
+            end
         end
     end
 
@@ -274,9 +283,7 @@ module vsa_matmul_top (
 
                         if (uart_byte_cnt < 5'd10) begin
                             uart_shift  <= report_byte;
-                            uart_active <= 1'b1;
-                            uart_cnt    <= 0;
-                            uart_bit    <= 0;
+                            uart_start_tx <= 1'b1;
                             uart_byte_cnt <= uart_byte_cnt + 1;
                         end else begin
                             state <= S_NEXT;
