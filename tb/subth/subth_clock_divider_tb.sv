@@ -91,12 +91,12 @@ module subth_clock_divider_tb;
   endtask
 
   // -----------------------------------------------------------------------
-  // TEST 2: test_op_e4_activates_subvt
+  // TEST 2: test_op_e5_activates_subvt
   // op_subth_clk_active=1 → sub_vt_active goes high next clock edge
   // -----------------------------------------------------------------------
-  task test_op_e4_activates_subvt;
+  task test_op_e5_activates_subvt;
     begin
-      $display("TEST 2: test_op_e4_activates_subvt");
+      $display("TEST 2: test_op_e5_activates_subvt");
       rst_n = 1;
       op_subth_clk_active = 1;
       @(posedge clk_in_800mhz); #0.1;
@@ -204,6 +204,29 @@ module subth_clock_divider_tb;
   endtask
 
   // -----------------------------------------------------------------------
+  // TEST 8: test_ica_w38_opcode_rectified
+  // ICA-W38-001: verify localparam OP_SUBTH_CLK = 8'hE5 (was 0xE4 in W37)
+  // -----------------------------------------------------------------------
+  task test_ica_w38_opcode_rectified;
+    reg [7:0] expected_op;
+    reg [7:0] forbidden_op;
+    begin
+      $display("TEST 8: test_ica_w38_opcode_rectified");
+      expected_op  = 8'hE5;  // W38 corrected
+      forbidden_op = 8'hE4;  // W36 OP_AVS_RECONF — must NOT equal SUBTH_CLK
+      assert_eq({56'b0, u_clkdiv.OP_SUBTH_CLK}, {56'b0, expected_op},
+                "OP_SUBTH_CLK == 8'hE5 (ICA-W38-001)");
+      if (u_clkdiv.OP_SUBTH_CLK !== forbidden_op) begin
+        $display("  PASS: OP_SUBTH_CLK != 0xE4 (R-SI-1 uniqueness)");
+        pass_count = pass_count + 1;
+      end else begin
+        $display("  FAIL: OP_SUBTH_CLK still equals 0xE4 (ICA-W38-001 not applied)");
+        fail_count = fail_count + 1;
+      end
+    end
+  endtask
+
+  // -----------------------------------------------------------------------
   // Main stimulus
   // -----------------------------------------------------------------------
   initial begin
@@ -219,15 +242,16 @@ module subth_clock_divider_tb;
     @(posedge clk_in_800mhz); #0.1;
 
     test_reset;
-    test_op_e4_activates_subvt;
+    test_op_e5_activates_subvt;
     test_math_400_toggles_each_cycle;
     test_lang_200_div_4;
     test_body_bias_math_strand;
     test_body_bias_language_strand;
     test_no_star_grep;
+    test_ica_w38_opcode_rectified;
 
     $display("--------------------------------------------------");
-    $display("Wave-37 Lane AA Sub-V_T RTL: %0d passed, %0d failed", pass_count, fail_count);
+    $display("Wave-37 Lane AA + W38 Sub-V_T RTL: %0d passed, %0d failed", pass_count, fail_count);
     $display("Anchor: phi^2 + phi^-2 = 3");
     $display("--------------------------------------------------");
 
