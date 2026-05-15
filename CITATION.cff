@@ -1,6 +1,7 @@
 cff-version: 1.2.0
 message: "If you use this FPGA synthesis stack, please cite it as below."
 title: "trinity-fpga: openxc7-synth + T27 VM + GF16 ternary matmul FPGA stack"
+doi: "10.5281/zenodo.19227877"
 abstract: "trinity-fpga is the FPGA synthesis and hardware deployment branch of the Trinity S³AI programme. It packages openxc7-synth flows for Artix-7 / Kintex-7, the T27 ternary VM bitstream, the GF16 ternary matmul macro (XOR-popcount, zero multipliers), and the Sacred ALU 352-LUT silicon-port pre-image used by the TTSKY26a Tiny Tapeout submission (Wave-15-TT-E). Companion FPGA release artefacts live under the parent gHashTag/trinity repository at 10.5281/zenodo.18947017 (v2.0.2) and 10.5281/zenodo.18950696 (v2.0.3); trinity-fpga itself has no independent DOI deposit and inherits the canonical anchor 10.5281/zenodo.19227877 (φ²+φ⁻²=3). Statistical claims and Coq witnesses for the Trinity Identity live in gHashTag/t27/coq and gHashTag/trios/docs/phd — not asserted by this CITATION.cff. PASS-9 R5-honest fix 2026-05-15."
 authors:
   - family-names: "Vasilev"
