@@ -6,7 +6,7 @@
 //   3) test_charge_conservation — sum_in ≈ sum_out + dissipated within tolerance
 //   4) test_four_phase_no_overlap — at most one of phi_1..phi_4 HIGH per ref edge
 //   5) test_bypass_when_zero    — input 0 yields y=0, bypass_active asserted
-//   6) test_opcode_E5_enable    — opcode != 0xE5 keeps PE in low-power mode
+//   6) test_opcode_E5_enable    — opcode != 0xE6 keeps PE in low-power mode
 // Anchor: phi^2 + phi^-2 = 3
 
 `timescale 1ns/1ps
@@ -102,7 +102,7 @@ module test_nullor_pe;
     pass_count = 0;
     fail_count = 0;
     rst_n  = 1'b0;
-    opcode = 8'hE5;
+    opcode = 8'hE6;
     a_trit = 2'b00;
     b_trit = 2'b00;
     #5;
@@ -133,7 +133,7 @@ module test_nullor_pe;
       $display("FAIL [bypass_when_zero]: bypass=%b y=%b", bypass_active, y_trit);
     end
 
-    // ------ Test 6: opcode != 0xE5 must keep PE quiet
+    // ------ Test 6: opcode != 0xE6 must keep PE quiet
     $display("--- test_opcode_E5_enable ---");
     opcode = 8'h00;
     a_trit = 2'b01; b_trit = 2'b01;
@@ -146,7 +146,7 @@ module test_nullor_pe;
       fail_count = fail_count + 1;
       $display("FAIL [opcode_E5_enable]: opcode=00 but y=%b", y_trit);
     end
-    opcode = 8'hE5;
+    opcode = 8'hE6;
 
     // ------ Test 3: charge conservation proxy
     // Drive 16 multiplications, expect reservoir_q to accumulate then bleed.
