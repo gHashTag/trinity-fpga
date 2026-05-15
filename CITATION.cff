@@ -1,118 +1,50 @@
 cff-version: 1.2.0
-message: "If you use this software, please cite it as below."
-title: "Trinity S³AI: Pure-Zig Autonomous AI Agent Swarm"
-abstract: "Trinity S³AI is a research software stack written in Zig, exploring ternary neural networks, FPGA inference, and Vector-Symbolic-Architecture (VSA) reasoning over balanced ternary. Includes the HSLM-1.95M ternary LM, a zero-DSP FPGA architecture sketch (XOR-popcount, no multipliers), the TRI-27 stack machine, and a balanced-ternary VSA module. Status: software description stubs, not peer-reviewed papers. Coq witness for the anchor identity φ²+φ⁻²=3 lives in gHashTag/t27/coq (10 .v files, 48 statements: 6 Theorem + 42 Lemma, 35 Qed, 0 Admitted, audited 2026-05-12; the broader t27/proofs/ tree adds further work-in-progress lemmas outside the canonical coq/ directory and is not counted here). Canonical Zenodo source of truth (community level): https://zenodo.org/communities/trinity-s3ai/ (12 records: 8 v5.0 description stubs B001-B008 + 4 D-series D004-D007). Statistical evaluation methodology (bootstrap CI, Welch t, Cohen's d) is described as a methodology in the companion PhD monograph in gHashTag/trios/docs/phd; per-experiment statistical results are not asserted by this CITATION.cff."
+message: "If you use this FPGA synthesis stack, please cite it as below."
+title: "trinity-fpga: openxc7-synth + T27 VM + GF16 ternary matmul FPGA stack"
+abstract: "trinity-fpga is the FPGA synthesis and hardware deployment branch of the Trinity S³AI programme. It packages openxc7-synth flows for Artix-7 / Kintex-7, the T27 ternary VM bitstream, the GF16 ternary matmul macro (XOR-popcount, zero multipliers), and the Sacred ALU 352-LUT silicon-port pre-image used by the TTSKY26a Tiny Tapeout submission (Wave-15-TT-E). Companion FPGA release artefacts live under the parent gHashTag/trinity repository at 10.5281/zenodo.18947017 (v2.0.2) and 10.5281/zenodo.18950696 (v2.0.3); trinity-fpga itself has no independent DOI deposit and inherits the canonical anchor 10.5281/zenodo.19227877 (φ²+φ⁻²=3). Statistical claims and Coq witnesses for the Trinity Identity live in gHashTag/t27/coq and gHashTag/trios/docs/phd — not asserted by this CITATION.cff. PASS-9 R5-honest fix 2026-05-15."
 authors:
   - family-names: "Vasilev"
     given-names: "Dmitrii"
     orcid: "https://orcid.org/0009-0008-4294-6159"
-    email: "dmitrii@trinity.ai"
     affiliation: "Trinity Research Collective"
-version: 9.0.0
-doi: 10.5281/zenodo.19227879
-date-released: 2026-03-27
-url: "https://github.com/gHashTag/trinity"
-license: MIT
-license-url: "https://opensource.org/licenses/MIT"
+version: 0.9.0
+date-released: 2026-05-15
+url: "https://github.com/gHashTag/trinity-fpga"
+repository-code: "https://github.com/gHashTag/trinity-fpga"
+license: Apache-2.0
+license-url: "https://www.apache.org/licenses/LICENSE-2.0"
 keywords:
-  - "autonomous agents"
-  - "ternary neural networks"
   - "FPGA synthesis"
-  - "Vector Symbolic Architecture"
-  - "pure Zig"
-  - "zero dependencies"
-  - "sacred geometry"
-  - "balanced ternary"
-  - "HSLM"
-  - "TRI-27"
-  - "VSA"
-  - "symbolic reasoning"
-  - "hyperdimensional computing"
-  - "FAIR principles"
+  - "openxc7-synth"
+  - "Artix-7"
+  - "Kintex-7"
+  - "T27 VM"
+  - "GF16 ternary matmul"
+  - "Sacred ALU 352-LUT"
+  - "TTSKY26a"
+  - "Tiny Tapeout"
+  - "SKY130 PDK"
+  - "XOR-popcount"
+  - "zero multipliers"
+  - "ternary computing"
+  - "Trinity Identity"
+  - "phi"
 identifiers:
-  - description: "Zenodo DOI"
+  - description: "Companion FPGA release v2.0.2 (under parent trinity)"
     type: "doi"
-    value: "10.5281/zenodo.19227879"
+    value: "10.5281/zenodo.18947017"
+  - description: "Companion FPGA release v2.0.3 (under parent trinity)"
+    type: "doi"
+    value: "10.5281/zenodo.18950696"
+  - description: "Canonical Trinity Identity anchor"
+    type: "doi"
+    value: "10.5281/zenodo.19227877"
   - description: "GitHub Repository"
     type: "url"
-    value: "https://github.com/gHashTag/trinity"
-  - description: "Documentation"
-    type: "url"
-    value: "https://gHashTag.github.io/trinity"
-preferred-citation:
-  type: "software"
-  authors:
-    - family-names: "Vasilev"
-      given-names: "Dmitrii"
-      orcid: "https://orcid.org/0009-0008-4294-6159"
-  title: "Trinity S³AI: Pure-Zig Autonomous AI Agent Swarm v9.0"
-  year: 2026
-  version: 9.0.0
-  doi: "10.5281/zenodo.19227879"
-  url: "https://doi.org/10.5281/zenodo.19227879"
-references:
-  - type: "software"
-    title: "Trinity B001: HSLM-1.95M Ternary Neural Networks"
-    authors:
-      - family-names: "Vasilev"
-        given-names: "Dmitrii"
-        orcid: "https://orcid.org/0009-0008-4294-6159"
-    year: 2026
-    doi: "10.5281/zenodo.19227865"
-    url: "https://doi.org/10.5281/zenodo.19227865"
-  - type: "software"
-    title: "Trinity B002: Zero-DSP FPGA Accelerator"
-    authors:
-      - family-names: "Vasilev"
-        given-names: "Dmitrii"
-        orcid: "https://orcid.org/0009-0008-4294-6159"
-    year: 2026
-    doi: "10.5281/zenodo.19227867"
-    url: "https://doi.org/10.5281/zenodo.19227867"
-  - type: "software"
-    title: "Trinity B003: TRI-27 Stack Machine"
-    authors:
-      - family-names: "Vasilev"
-        given-names: "Dmitrii"
-        orcid: "https://orcid.org/0009-0008-4294-6159"
-    year: 2026
-    doi: "10.5281/zenodo.19227869"
-    url: "https://doi.org/10.5281/zenodo.19227869"
-  - type: "software"
-    title: "Trinity B004: Queen Lotus Consciousness Cycle"
-    authors:
-      - family-names: "Vasilev"
-        given-names: "Dmitrii"
-        orcid: "https://orcid.org/0009-0008-4294-6159"
-    year: 2026
-    doi: "10.5281/zenodo.19227871"
-    url: "https://doi.org/10.5281/zenodo.19227871"
-  - type: "software"
-    title: "Trinity B005: Tri Language & VIBEE Compiler"
-    authors:
-      - family-names: "Vasilev"
-        given-names: "Dmitrii"
-        orcid: "https://orcid.org/0009-0008-4294-6159"
-    year: 2026
-    doi: "10.5281/zenodo.19227873"
-    url: "https://doi.org/10.5281/zenodo.19227873"
-  - type: "software"
-    title: "Trinity B006: GF16/TF3 Ternary Encoding"
-    authors:
-      - family-names: "Vasilev"
-        given-names: "Dmitrii"
-        orcid: "https://orcid.org/0009-0008-4294-6159"
-    year: 2026
-    doi: "10.5281/zenodo.19227875"
-    url: "https://doi.org/10.5281/zenodo.19227875"
-  - type: "software"
-    title: "Trinity B007: VSA Operations & SIMD Acceleration"
-    authors:
-      - family-names: "Vasilev"
-        given-names: "Dmitrii"
-        orcid: "https://orcid.org/0009-0008-4294-6159"
-    year: 2026
-    doi: "10.5281/zenodo.19227877"
-    url: "https://doi.org/10.5281/zenodo.19227877"
-
-# φ² + 1/φ² = 3 | TRINITY
+    value: "https://github.com/gHashTag/trinity-fpga"
+# PASS-9 R5-honest audit 2026-05-15: previously this file was a verbatim copy
+# of gHashTag/trinity/CITATION.cff which described the parent Zig stack and
+# attributed an incorrect DOI (10.5281/zenodo.19227879). This revision aligns
+# title/abstract/url/keywords with the actual FPGA-synthesis scope of trinity-fpga
+# and removes the incorrect independent DOI claim — trinity-fpga has no
+# independent Zenodo deposit and inherits the parent Trinity anchor.
