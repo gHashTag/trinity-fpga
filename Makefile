@@ -4,6 +4,10 @@
 # Wave-37 Lane AA: Sub-V_T RTL targets (OP_SUBTH_CLK=0xE4)
 # R-SI-1: synth_check_no_star verifies zero star operators in RTL
 
+# Wave-41 Lane HH: Sparse-Activation Gating (OP_SPARSE_SKIP=0xE8)
+SPARSE_RTL = rtl/sparse_gate.sv
+SPARSE_TB  = tb/sparse_gate_tb.sv
+
 # RTL source
 LUT_NPU_RTL = rtl/lut_npu/lut_npu_controller.sv
 LUT_NPU_TB  = tb/lut_npu/lut_npu_controller_tb.sv
@@ -16,7 +20,7 @@ AVS_TB  = tb/avs/avs_regulator_tb.sv
 SUBTH_RTL = rtl/subth/subth_clock_divider.sv
 SUBTH_TB  = tb/subth/subth_clock_divider_tb.sv
 
-.PHONY: synth_check_no_star sim_lut_npu synth_check_no_star_avs sim_avs synth_check_no_star_subth sim_subth help
+.PHONY: synth_check_no_star sim_lut_npu synth_check_no_star_avs sim_avs synth_check_no_star_subth sim_subth synth_check_no_star_sparse sparse_tb help
 
 # R-SI-1 compliance check: zero star operators in synthesizable RTL
 synth_check_no_star:
@@ -60,6 +64,22 @@ synth_check_no_star_subth:
 sim_subth:
 	iverilog -g2012 -o /tmp/tb_subth.vvp $(SUBTH_RTL) $(SUBTH_TB) && vvp /tmp/tb_subth.vvp
 
+# R-SI-1 compliance check for Sparse-Gate RTL (Wave-41 Lane HH)
+synth_check_no_star_sparse:
+	@count=$$(grep -E '[^a-zA-Z_]\*[^a-zA-Z_/]' $(SPARSE_RTL) | grep -v "^\s*//" | wc -l); \
+	 if [ $$count -ne 0 ]; then \
+	   echo "FAIL: $$count star op(s) in $(SPARSE_RTL)"; \
+	   grep -E '[^a-zA-Z_]\*[^a-zA-Z_/]' $(SPARSE_RTL) | grep -v "^\s*//"; \
+	   exit 1; \
+	 fi; \
+	 echo "R-SI-1 OK: zero star operators in $(SPARSE_RTL)"
+
+# iverilog simulation for Sparse-Activation Gating (Wave-41 Lane HH)
+sparse_tb: synth_check_no_star_sparse
+	iverilog -g2012 -o /tmp/tb_sparse_gate.vvp $(SPARSE_RTL) $(SPARSE_TB) && \
+	vvp /tmp/tb_sparse_gate.vvp | tee /tmp/sparse_tb.log && \
+	grep -q 'ALL 10/10 PASS' /tmp/sparse_tb.log && echo '\nsparse_tb: 10/10 PASS ✓'
+
 help:
 	@echo "Wave-35 Lane W — LUT-NPU RTL targets:"
 	@echo "  make synth_check_no_star      -- R-SI-1: verify zero star ops (LUT-NPU)"
@@ -70,3 +90,6 @@ help:
 	@echo "Wave-37 Lane AA — Sub-V_T RTL targets:"
 	@echo "  make synth_check_no_star_subth -- R-SI-1: verify zero star ops (Sub-V_T)"
 	@echo "  make sim_subth                 -- run iverilog simulation (Sub-V_T)"
+	@echo "Wave-41 Lane HH — Sparse-Activation Gating targets:"
+	@echo "  make synth_check_no_star_sparse -- R-SI-1: verify zero star ops (Sparse-Gate)"
+	@echo "  make sparse_tb                  -- run iverilog simulation 10/10 (Sparse-Gate)"
