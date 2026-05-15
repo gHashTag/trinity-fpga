@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // Wave-37 Lane AA — Sub-Threshold Clock Divider
-// OP_SUBTH_CLK = 0xE4 (sacred opcode chain head, post W35 OP_LUT_NPU=0xE3)
+// OP_SUBTH_CLK = 0xE5 (ICA-W38-001 rectify; W36 OP_AVS_RECONF holds 0xE4)
 // Drops clock from 800 → 400 MHz on entering sub-V_T inference batch
 // Three-strand outputs: 400 / 300 / 200 MHz
 // R-SI-1: zero `*` operators
@@ -16,7 +16,7 @@ module subth_clock_divider (
   output reg         sub_vt_active
 );
 
-  localparam [7:0] OP_SUBTH_CLK = 8'hE4;
+  localparam [7:0] OP_SUBTH_CLK = 8'hE5;  // ICA-W38-001 rectify, was 0xE4
 
   reg [3:0] div_counter;  // counts 0..7 modulo 8
 
