@@ -1,0 +1,8 @@
+# SPDX-License-Identifier: Apache-2.0
+# Wave-35 Lane U synth check for lut_npu_pe.sv
+#   Goals: 0 $mul, ≤350 cells (mapped to liberty's gates is generic-only here).
+read_verilog -sv rtl/lut_npu/lut_npu_pe.sv
+hierarchy -check -top lut_npu_pe
+proc; opt; fsm; opt; memory; opt
+techmap; opt
+stat -tech cmos
