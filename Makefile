@@ -93,3 +93,26 @@ help:
 	@echo "Wave-41 Lane HH — Sparse-Activation Gating targets:"
 	@echo "  make synth_check_no_star_sparse -- R-SI-1: verify zero star ops (Sparse-Gate)"
 	@echo "  make sparse_tb                  -- run iverilog simulation 10/10 (Sparse-Gate)"
+
+# Wave-42 Lane JJ: Stochastic Rounding (OP_STOCH_ROUND=0xE9)
+STOCH_RTL  = rtl/lfsr32.sv rtl/stoch_round.sv
+STOCH_TB   = tb/stoch_round_tb.sv
+
+.PHONY: synth_check_no_star_stoch stoch_tb
+
+# R-SI-1 compliance check for Stochastic-Round RTL (Wave-42 Lane JJ)
+synth_check_no_star_stoch:
+	@for f in $(STOCH_RTL); do \
+	  count=$$(grep -E '[^a-zA-Z_]\*[^a-zA-Z_/]' $$f | grep -v "^\s*//" | wc -l); \
+	  if [ $$count -ne 0 ]; then \
+	    echo "FAIL: $$count star op(s) in $$f"; \
+	    exit 1; \
+	  fi; \
+	done; \
+	echo "R-SI-1 OK: zero star operators in stoch_round RTL"
+
+# iverilog simulation for Stochastic-Round (Wave-42 Lane JJ)
+stoch_tb: synth_check_no_star_stoch
+	iverilog -g2012 -o /tmp/stoch_tb $(STOCH_RTL) $(STOCH_TB) && \
+	vvp /tmp/stoch_tb | tee /tmp/stoch_tb.log && \
+	grep -q 'ALL 10/10 PASS' /tmp/stoch_tb.log && echo '\nstoch_tb: 10/10 PASS ✓'
