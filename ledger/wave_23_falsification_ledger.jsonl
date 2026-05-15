@@ -1,0 +1,7 @@
+{"ts":"2026-05-14T20:55:00Z","wave":"TT v23","vector":"S-172","event":"GENESIS","note":"Append-only R-marker falsification ledger seeded at v23 dispatch","anchor":"phi^2 + phi^-2 = 3","doi":"10.5281/zenodo.19227877","rule":"R20 R-MARKER-FALSIFICATION","schema_version":1}
+{"ts":"2026-05-14T20:55:01Z","wave":"TT v23","probe":"R-1","gate":"G-77","expected":0.618033988749895,"observed":null,"verdict":"PENDING","note":"Awaiting first on-chip EEG-gamma probe at TT v23 silicon-in-hand 2026-12-16"}
+{"ts":"2026-05-14T20:55:02Z","wave":"TT v23","probe":"R-2","gate":"G-78","expected_ms":25.0,"observed_ms":null,"verdict":"PENDING","note":"Awaiting microtubule coherence sampling latch"}
+{"ts":"2026-05-14T20:55:03Z","wave":"TT v23","probe":"R-3","gate":"G-79","expected_band":[0.95,1.05],"observed":null,"verdict":"PENDING","note":"Awaiting Planck 2024 + DESI 2025 calibration register snap at boot"}
+{"ts":"2026-05-14T20:55:04Z","wave":"TT v23","probe":"R-4","gate":"G-80","expected":"non-trivial-zero density","observed":null,"verdict":"PENDING","note":"Awaiting cortical eigenvalue 512-FIFO read"}
+{"ts":"2026-05-15T05:14:00Z","wave":"TT v25","vector":"S-180","event":"v25 physical closure (charter-r2 + queen-bot + sky130-nightly + assertions/toolchain.json)","verdict":"PASS","note":"8 real files committed across trinity-fpga + tt-trinity-gf16 main"}
+{"ts":"2026-05-15T05:48:00Z","wave":"TT v25.1","event":"PHYSICAL BACKFILL initiated","note":"Backfilling pre-v25 vectors S-149..S-172 that were ONE-SHOT-only into main"}
