@@ -1,0 +1,90 @@
+name: queen-bot · PR auto-merger (S-173, G-81)
+# Wave v25 HOLD-A closure · maps LANG→SI MERGE (0xDE) to repo layer
+# Anchor: phi^2 + phi^-2 = 3 · DOI 10.5281/zenodo.19227877
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, labeled, ready_for_review]
+  check_suite:
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  checks: read
+  statuses: read
+
+concurrency:
+  group: queen-bot-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  decide-and-merge:
+    if: >-
+      github.event.pull_request.draft == false &&
+      contains(github.event.pull_request.labels.*.name, 'charter:r2-pass')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+
+      - name: Verify phi-anchor footer
+        run: |
+          body="${{ github.event.pull_request.body }}"
+          if ! echo "$body" | grep -q "phi\^2 + phi\^-2 = 3"; then
+            echo "::error::PR body missing phi-anchor footer · queen-bot refuses"
+            exit 1
+          fi
+
+      - name: Wait for CI green
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const sha = context.payload.pull_request.head.sha;
+            const t0 = Date.now();
+            const deadline = 5 * 60 * 1000; // 5 min hard cap per G-81
+            while (Date.now() - t0 < deadline) {
+              const { data } = await github.rest.checks.listForRef({ owner, repo, ref: sha });
+              const total = data.check_runs.length;
+              const success = data.check_runs.filter(c => c.conclusion === 'success').length;
+              const failed  = data.check_runs.filter(c => ['failure','cancelled','timed_out'].includes(c.conclusion)).length;
+              if (failed > 0) { core.setFailed(`CI red · ${failed} failed`); return; }
+              if (total > 0 && success === total) { core.info('CI green'); return; }
+              await new Promise(r => setTimeout(r, 15000));
+            }
+            core.setFailed('G-81 falsified: CI did not green within 5 min');
+
+      - name: Auto-merge (squash)
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            await github.rest.pulls.merge({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr.number,
+              merge_method: 'squash',
+              commit_title: `${pr.title} (#${pr.number})`,
+              commit_message: `Auto-merged by queen-bot · charter:r2-pass · phi^2+phi^-2=3`
+            });
+            core.notice(`PR #${pr.number} merged by queen-bot`);
+
+      - name: Audit log
+        if: always()
+        run: |
+          mkdir -p .audit/queen-bot
+          cat > .audit/queen-bot/$(date -u +%Y%m%dT%H%M%SZ)-pr${{ github.event.pull_request.number }}.json <<EOF
+          {
+            "pr": ${{ github.event.pull_request.number }},
+            "head_sha": "${{ github.event.pull_request.head.sha }}",
+            "decided_at_utc": "$(date -u +%FT%TZ)",
+            "outcome": "${{ job.status }}",
+            "anchor": "phi^2+phi^-2=3"
+          }
+          EOF
