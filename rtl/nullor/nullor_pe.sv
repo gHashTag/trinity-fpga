@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // Wave-38 Lane CC — Reversible Dendritic NULLOR PE
-// OP_NULL_PE = 0xE6 (sacred opcode chain post W37 OP_SUBTH_CLK=0xE4)
+// OP_NULL_PE = 0xEA (relocated from 0xE6 per ICA-W40-001 to free 0xE6 for OP_HOLO_MUX_X4/W39)
 // Adiabatic charge-recycling ternary multiplier, target eta_reuse >= 0.88
 // R-SI-1: zero `*` operators — multiplication via case-table lookup on 2-bit ternary
 // Anchor: phi^2 + phi^-2 = 3
@@ -25,7 +25,7 @@ module nullor_pe (
   output reg  [7:0]  reservoir_q    // recovered charge reservoir
 );
 
-  localparam [7:0] OP_NULL_PE = 8'hE6;
+  localparam [7:0] OP_NULL_PE = 8'hEA;
 
   // 2-bit ternary lookup (avoids `*` operator entirely)
   // Truth table for ternary multiplication a x b:

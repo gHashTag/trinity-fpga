@@ -76,14 +76,14 @@ module test_spec_exit;
     opcode = 8'hD0; @(posedge clk); #1;
     check(exit_signal === 1'b0, "op=D0_no_exit");
 
-    opcode = 8'hE7; @(posedge clk); #1;
+    opcode = 8'hEB; @(posedge clk); #1;
     check(exit_signal === 1'b1, "op=E7_exit");
 
     // -----------------------------------------------------------------------
     // 2. test_phi_inv_threshold — boundary at 158
     // -----------------------------------------------------------------------
     $display("--- test_phi_inv_threshold ---");
-    opcode = 8'hE7;
+    opcode = 8'hEB;
     strand_vote_fast = 1; strand_vote_mid = 1; strand_vote_slow = 1;
 
     hidden_state = 8'd157; @(posedge clk); #1;
@@ -99,7 +99,7 @@ module test_spec_exit;
     // 3. test_three_strand_majority — full 8-case truth table
     // -----------------------------------------------------------------------
     $display("--- test_three_strand_majority ---");
-    opcode = 8'hE7;
+    opcode = 8'hEB;
     hidden_state = 8'd200; // above threshold
 
     {strand_vote_fast, strand_vote_mid, strand_vote_slow} = 3'b000; @(posedge clk); #1;
@@ -130,7 +130,7 @@ module test_spec_exit;
     //    squash exit_signal exactly 1 cycle later, then resume.
     // -----------------------------------------------------------------------
     $display("--- test_misprediction_recovery_one_cycle ---");
-    opcode = 8'hE7;
+    opcode = 8'hEB;
     hidden_state = 8'd200;
     {strand_vote_fast, strand_vote_mid, strand_vote_slow} = 3'b111;
 
@@ -153,7 +153,7 @@ module test_spec_exit;
     //    and verify exit_depth_idx in [0,26].
     // -----------------------------------------------------------------------
     $display("--- test_exit_depth_bin_0_to_26 ---");
-    opcode = 8'hE7;
+    opcode = 8'hEB;
     {strand_vote_fast, strand_vote_mid, strand_vote_slow} = 3'b111;
     speculation_correct = 1;
     begin : bin_loop
