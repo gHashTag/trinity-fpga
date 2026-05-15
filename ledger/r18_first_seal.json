@@ -1,0 +1,57 @@
+{
+  "event": "R18_LAYER_FROZEN_FIRST_SEAL",
+  "wave": "v25.1",
+  "timestamp_utc": "2026-05-15T06:20:34Z",
+  "sealed_by": "Vasilev Dmitrii <admin@t27.ai>",
+  "witness_workflow": "25903641040",
+  "witness_conclusion": "success",
+  "witness_jobs": [
+    "phi^2 + phi^-2 = 3 (three-path witness)",
+    "Verify peer repos have identity-gate green"
+  ],
+  "anchor_doi": "10.5281/zenodo.19227877",
+  "trinity_identity_q313": 3,
+  "trinity_identity_float": 3.0,
+  "trinity_identity_balanced_ternary": 3,
+  "layers": {
+    "L0": {
+      "hash": "e743ded74711db2bb98de605951e6d58934d94d912252469f82ffb65f0a2dbc9",
+      "status": "physical",
+      "files": 4,
+      "first_file": "docs/R20_R_MARKER_FALSIFICATION.md",
+      "last_file": "rtl/L0/sacred_rom_75.json"
+    },
+    "L1": {
+      "hash": "51f982ae601df00ca1137a8c05b5b80df492dca4f549ed7e077baf45a5b46588",
+      "status": "physical",
+      "files": 2,
+      "first_file": "docs/opcodes/vsa_opcodes.md",
+      "last_file": "microcode/brain_modules_21.json"
+    },
+    "L2": {
+      "hash": "bf5584d4c1059915163ac724bec2e67d77c4899a81413c150006c5e9ad06e095",
+      "status": "physical",
+      "files": 2,
+      "first_file": "docs/isa/tri27_dispatcher.md",
+      "last_file": "docs/pins/amygdala_valence.md"
+    },
+    "L3": {
+      "hash": "d6a6e37e4a3a6d14269d9561e8e7d057cbddfae32d2e677f0358f365b02d40ff",
+      "status": "paper-frozen",
+      "files": 0,
+      "note": "No RTL yet; sealed at paper level"
+    },
+    "L4": {
+      "hash": "92df15052395382107f45584e05a31496300ecdb086390c160bcfac779aff7bd",
+      "status": "paper-frozen",
+      "files": 0,
+      "note": "No RTL yet; sealed at paper level"
+    },
+    "L5": {
+      "hash": "3ffb5a2b56e60749c974cdfd1d32747b045063eca07ac63bb79dd346763274d1",
+      "status": "paper-frozen",
+      "files": 0,
+      "note": "No RTL yet; sealed at paper level"
+    }
+  }
+}
