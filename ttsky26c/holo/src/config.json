@@ -1,0 +1,29 @@
+{
+  "//": "OpenLane2 config skeleton — Quantum Brain HOLOGRAPHIC (tt_um_qbrain_holo)",
+  "//anchor": "phi^2 + phi^-2 = 3 · QUANTUM BRAIN 1:1 SILICON",
+  "//status": "SKELETON — full RTL implementation is a future wave",
+  "//tiles": "1x2 (320x100 um) — double-wide for 4x4 PE mesh + D2D hooks",
+
+  "DESIGN_NAME": "tt_um_qbrain_holo",
+
+  "CLOCK_PORT": "clk",
+  "CLOCK_PERIOD": 4.0,
+
+  "FP_SIZING": "absolute",
+  "DIE_AREA": "0 0 320 100",
+
+  "FP_PDN_HPITCH": 27.14,
+  "FP_PDN_VPITCH": 27.14,
+
+  "SYNTH_STRATEGY": "AREA 0",
+
+  "PL_TARGET_DENSITY": 0.60,
+
+  "RUN_KLAYOUT_DRC": true,
+  "RUN_KLAYOUT_XOR": true,
+
+  "ROUTING_CORES": 8,
+
+  "//note_D2D": "D2D ports routed through uio_* pads; see tt_um_qbrain_holo.v",
+  "//note_ICA": "RUN_KLAYOUT_DRC=true avoids ICA-MAX-TRUE-008 false-pass trap"
+}
