@@ -1,0 +1,44 @@
+{
+  "wave": "v24",
+  "theme": "HOLD CLOSURE — PR auto-merge + SKY130 toolchain docker",
+  "date": "2026-05-15",
+  "epic": "gHashTag/trinity-fpga#61",
+  "predecessor_wave": "v23",
+  "predecessor_verdict": "RVR-014 GO with 2 HOLDs",
+  "deadline_w15_tt_e_utc": "2026-05-17T22:00:00Z",
+  "vectors": {
+    "S-173": {"name": "queen-bot.yml", "repo": "gHashTag/trinity-fpga", "branch": "feat/v24-queen-bot", "maps": "LANG->SI 0xDE MERGE"},
+    "S-174": {"name": "charter-r2-validator.py", "repo": "gHashTag/trinity-fpga", "branch": "feat/v24-r2-linter", "maps": "R2 enforcement"},
+    "S-175": {"name": "Dockerfile.sky130-toolchain", "repo": "gHashTag/tt-trinity-gf16", "branch": "feat/v24-sky130-docker", "image": "ghcr.io/ghashtag/tt-trinity-gf16/sky130-toolchain:v24-frozen"},
+    "S-176": {"name": "run_sky130_actual.sh", "repo": "gHashTag/tt-trinity-gf16", "branch": "feat/v24-sky130-docker", "runtime_max_h": 4},
+    "S-177": {"name": "sky130-nightly.yml", "repo": "gHashTag/tt-trinity-gf16", "branch": "feat/v24-sky130-nightly", "cron": "0 2 * * *"},
+    "S-178": {"name": "assertions/toolchain.json", "repo": "gHashTag/tt-trinity-gf16", "branch": "feat/v24-sky130-docker", "maps": "R20 R-marker extension to toolchain"},
+    "S-179": {"name": "R2_CHARTER_BOT.md", "repo": "gHashTag/trinity-fpga", "branch": "feat/v24-queen-bot", "maps": "BIO->SI executive function"},
+    "S-180": {"name": "tt_shuttle_max_squeeze_v24.json", "repo": "gHashTag/trinity-fpga", "branch": "feat/v24-queen-bot", "maps": "manifest discipline"}
+  },
+  "gates": {
+    "G-81": {"name": "PR-AUTO-MERGE-LIVE", "owner": "S-173"},
+    "G-82": {"name": "R2-LINTER-CATCHES-STAR", "owner": "S-174"},
+    "G-83": {"name": "SKY130-DOCKER-REPRO", "owner": "S-175+S-176"},
+    "G-84": {"name": "TOOLCHAIN-FREEZE-COQ", "owner": "S-178"}
+  },
+  "totals_after_v24": {
+    "silicon_vectors": 180,
+    "popper_gates": 84,
+    "sacred_opcodes": 16,
+    "constitutional_rules": 20,
+    "sacred_rom_cells": 75,
+    "brain_modules": 21,
+    "coptic_registers": 27
+  },
+  "anchors": {
+    "phi_identity": "phi^2 + phi^-2 = 3",
+    "gamma": "phi^-3 = 0.236",
+    "C": "phi^-1 = 0.618",
+    "G": "pi^3 gamma^2 / phi = 6.68e-11 (0.09% err)",
+    "t_present": "phi^-2 = 382 ms",
+    "f_gamma": "phi^3 pi / gamma = 56 Hz",
+    "gf16_dot4_canon": "0x47C0",
+    "doi": "10.5281/zenodo.19227877"
+  }
+}
