@@ -1,0 +1,38 @@
+# Tiny Tapeout project info — Quantum Brain HOLOGRAPHIC
+# Target shuttle: TTSKY26c (~2026-09)
+# phi^2 + phi^-2 = 3 · QUANTUM BRAIN 1:1 SILICON
+
+project:
+  title:       "Quantum Brain HOLOGRAPHIC"
+  author:      "Vasilev Dmitrii"
+  description: >
+    4x4 PE mesh + multi-die hologram. 16 PE x 2 MAC = 32 effective MACs.
+    4 D2D cross-die ports (N/E/S/W). 75+4 R-marker ROM. 16+4 opcodes
+    (R_MARKER_LOAD/STORE/SWAP/SEAL). 250 MHz, 4-25 TOPS, 55 TOPS/W.
+    SKU: tt_um_qbrain_holo. One brain, many dies, one frozen hash.
+  language:    "Verilog"
+  top_module:  "tt_um_qbrain_holo"
+  tiles:       "1x2"
+
+  # I/O usage
+  inputs:
+    - "opcode[4:0] (bits [4:0] of ui_in, 5-bit extended ISA)"
+    - "operand_a[2:0] (bits [7:5] of ui_in)"
+  outputs:
+    - "result[7:0] (uo_out: 32-MAC aggregated result)"
+  bidirectional:
+    - "uio[1:0] — d2d_n[1:0] North D2D port"
+    - "uio[3:2] — d2d_e[1:0] East  D2D port"
+    - "uio[5:4] — d2d_s[1:0] South D2D port"
+    - "uio[7:6] — d2d_w[1:0] West  D2D port"
+
+  clock_hz:    250000000
+  reset:       "rst_n (active-low)"
+
+  # Shuttle
+  shuttle:     "tt_um_ttsky26c"  # TTSKY26c target
+
+  # Docs / licensing
+  documentation_url: "https://github.com/gHashTag/trinity-fpga/tree/main/ttsky26c/holo"
+  discord:     ""
+  license:     "Apache-2.0"

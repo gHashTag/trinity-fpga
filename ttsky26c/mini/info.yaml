@@ -1,0 +1,34 @@
+# Tiny Tapeout project info — Quantum Brain MINI
+# Target shuttle: TTSKY26c (~2026-09)
+# phi^2 + phi^-2 = 3 · QUANTUM BRAIN 1:1 SILICON
+
+project:
+  title:       "Quantum Brain MINI"
+  author:      "Vasilev Dmitrii"
+  description: >
+    Single-Column Cortex: 4 GF16 cells, 75-word ROM, 16-opcode ISA.
+    0.1 TOPS / 5.6 TOPS/W at 50 MHz. SKU: tt_um_qbrain_mini.
+    Hold a quantum brain in your hand for EUR 17.
+  language:    "Verilog"
+  top_module:  "tt_um_qbrain_mini"
+  tiles:       "1x1"
+
+  # I/O usage
+  inputs:
+    - "opcode[3:0] (lower 4 bits of ui_in)"
+    - "operand_a[3:0] (upper 4 bits of ui_in)"
+  outputs:
+    - "result[7:0] (uo_out: GF16 computation result)"
+  bidirectional:
+    - "uio_in[7:0]  / uio_out[7:0] — extended operand / status bus"
+
+  clock_hz:    50000000
+  reset:       "rst_n (active-low)"
+
+  # Shuttle
+  shuttle:     "tt_um_ttsky26c"  # TTSKY26c target
+
+  # Docs / licensing
+  documentation_url: "https://github.com/gHashTag/trinity-fpga/tree/main/ttsky26c/mini"
+  discord:     ""
+  license:     "Apache-2.0"
