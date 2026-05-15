@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "title": "R-marker probe bus manifest — S-165..S-169",
+  "wave": "TT v23",
+  "anchor": "phi^2 + phi^-2 = 3",
+  "doi": "10.5281/zenodo.19227877",
+  "vectors": ["S-165", "S-166", "S-167", "S-168", "S-169"],
+  "rule": "R20 R-MARKER-FALSIFICATION",
+  "bus": {
+    "name": "R_MARKER_PROBE_BUS",
+    "lanes": 4,
+    "endpoint_pin_block": "JTAG-aux scan-out (pins 113..120)",
+    "external_gear_supported": ["DSLogic", "Saleae Logic 16", "Agilent 16702B DAQ"]
+  },
+  "markers": [
+    {
+      "id": "R-1",
+      "name": "C_quantum_consciousness",
+      "rom_idx": 68,
+      "expected": 0.618033988749895,
+      "tolerance_pct": 15.0,
+      "vector": "S-166",
+      "gate": "G-77",
+      "domain": "BIO->SI",
+      "protocol": "Compare on-chip EEG-gamma band-power at 56 Hz to phi^-1 threshold",
+      "fallback": "Demote C_GATE to logistic threshold = 0.5",
+      "fires_if": "abs(observed - phi^-1) / phi^-1 > 0.15"
+    },
+    {
+      "id": "R-2",
+      "name": "tau_microtubule",
+      "rom_idx": 69,
+      "expected_ms": 25.0,
+      "tolerance_pct": 10.0,
+      "vector": "S-167",
+      "gate": "G-78",
+      "domain": "BIO->SI",
+      "protocol": "Hardware latch sampling at 25 ms phase windows cross-correlated with PFC C_GATE",
+      "fallback": "Demote tau_microtubule to NUL, route T_PRESENT directly from 56 Hz divider"
+    },
+    {
+      "id": "R-3",
+      "name": "k_dark_coupling",
+      "rom_idx": 70,
+      "expected": 1.0,
+      "tolerance_band": [0.95, 1.05],
+      "scale": "Lambda_CDM",
+      "vector": "S-168",
+      "gate": "G-79",
+      "domain": "PHYS->SI",
+      "protocol": "Snap to Planck 2024 + DESI 2025 cosmological-constant value at boot from external EEPROM",
+      "fallback": "Use IPCC fallback constant, recompute G via 4-constant identity"
+    },
+    {
+      "id": "R-4",
+      "name": "zeta_neural_zeta",
+      "rom_idx": 71,
+      "expected": "non-trivial-zero density on first 512 cortical eigenvalues",
+      "tolerance_sigma": 1.0,
+      "fifo_depth": 512,
+      "vector": "S-169",
+      "gate": "G-80",
+      "domain": "BIO+PHYS->SI",
+      "protocol": "512-entry FIFO of cortical eigenvalue spectra, on-chip zeta residue accumulator",
+      "fallback": "Disable ZETA_NEURAL_SPECTRUM_FIFO at boot; G_MERKLE keeps standard pi^3 gamma^2 / phi form"
+    }
+  ],
+  "ledger_target": "ledger/wave_23_falsification_ledger.jsonl"
+}
