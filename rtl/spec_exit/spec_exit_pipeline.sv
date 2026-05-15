@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // Wave-39 Lane EE — Speculative Early-Exit Pipeline
-// OP_SPEC_EXIT = 0xE7 (sacred chain 0xD0..0xE7, 20 opcodes; succeeds W38 0xE6 NULL_PE)
+// OP_SPEC_EXIT = 0xEB (sacred chain 0xD0..0xEB, 22 opcodes; relocated from 0xE7 per ICA-W40-001 to free 0xE7 for OP_DFS_GATE/W40)
 // Target: TOPS/W >= 470 (x1.20 over W38=392). avg_exit_depth <= 0.45.
 // R-SI-1 // — zero `*` operator. Confidence test via subtraction; 2-of-3 majority
 // via boolean ops; 1-cycle misprediction recovery via bypass register.
@@ -24,7 +24,7 @@ module spec_exit_pipeline (
   // ---------------------------------------------------------------------------
   // Constants
   // ---------------------------------------------------------------------------
-  localparam [7:0] OP_SPEC_EXIT = 8'hE7;
+  localparam [7:0] OP_SPEC_EXIT = 8'hEB;
   localparam [7:0] PHI_INV_Q8   = 8'd158; // floor(0.618 // * 256) = 158
   // Coptic bin width approx 256 / 27 ~ 9.48. We use shift+sub for division below.
   // (No `*` // operator.)
