@@ -13,6 +13,17 @@ url: "https://github.com/gHashTag/trinity-fpga"
 repository-code: "https://github.com/gHashTag/trinity-fpga"
 license: Apache-2.0
 license-url: "https://www.apache.org/licenses/LICENSE-2.0"
+doi: 10.5281/zenodo.19227877
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.19227877
+    description: "Trinity S³AI canonical anchor (φ²+φ⁻²=3); trinity-fpga inherits this DOI"
+  - type: doi
+    value: 10.5281/zenodo.18947017
+    description: "Parent trinity FPGA release v2.0.2"
+  - type: doi
+    value: 10.5281/zenodo.18950696
+    description: "Parent trinity FPGA release v2.0.3"
 keywords:
   - "FPGA synthesis"
   - "openxc7-synth"
