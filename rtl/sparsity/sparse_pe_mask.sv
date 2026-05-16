@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2025 Dmitrii Vasilev <admin@t27.ai>
 //
-// phi^2 + phi^-2 = 3 · OP_SPARSE_MASK=0xE8 · λ=φ⁻² · R-SI-1 zero-multiplier · Apache-2.0
+// phi^2 + phi^-2 = 3 · OP_SPARSE_MASK=0xED · λ=φ⁻² · R-SI-1 zero-multiplier · Apache-2.0
+// ICA-W40-001: shifted from 0xE8 (taken by OP_SPARSE_SKIP) to 0xED per Coq+Rust truth
 //
 // W40 Lane GG — Sparse PE Mask Gating Module
 // Wave-40 RTL: sparsity-aware processing-element mask gating
-//   OP_SPARSE_MASK = 0xE8 (Trinity-loss s=0.80 sparsity, λ=φ⁻²≈0.3820)
+//   OP_SPARSE_MASK = 0xED (Trinity-loss s=0.80 sparsity, λ=φ⁻²≈0.3820)
 //   Target: 540 TOPS/W
 //   N=27 PEs (Coptic-27 = 3 banks × 9 registers)
 //   WIDTH=4 ternary input (GF16 ternary {-1, 0, +1})
