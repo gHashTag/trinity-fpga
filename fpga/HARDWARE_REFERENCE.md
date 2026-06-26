@@ -37,12 +37,18 @@
 
 ### LED Outputs (Active-High)
 
-| LED | Pin | Notes |
-|-----|-----|-------|
-| LED0 | B13 | LVCMOS18 |
-| LED1 | C13 | LVCMOS18 |
-| LED2 | D14 | LVCMOS18 |
-| LED3 | D15 | LVCMOS18 |
+| Silkscreen | Verilog bit | Pin | Standard | Notes |
+|------------|-------------|-----|----------|-------|
+| LED1 | led[0] | B13 | LVCMOS18 | anchor verified on HW 2026-06-26 (lights first in led_onehot walk) |
+| LED2 | led[1] | C13 | LVCMOS18 | |
+| LED3 | led[2] | D14 | LVCMOS18 | |
+| LED4 | led[3] | D15 | LVCMOS18 | |
+
+> **Silkscreen is 1-based (LED1..LED4, no LED0).** Earlier docs used 0-based
+> LED0..LED3 — corrected. Anchor verified on hardware via the
+> `led_onehot_ax7203` walking-LED diagnostic: LEDs light in order
+> LED1→LED2→LED3→LED4, and since the RTL drives led[0]→led[3] in that order,
+> LED1 = B13 = led[0].
 
 ### UART
 

@@ -363,3 +363,52 @@ conformance harness to compare against the pack's expected reference.
    pack's `expected.raw` instead of against operand `a`.
 4. Re-run full conformance and confirm bit-exact PASS.
 5. Update this experience log with the final PASS result.
+
+### led_onehot anchor — flash OK, camera FOV wall (2026-06-26)
+
+PR #192 merged (`89f312550`): CFGMCLK `led_onehot_ax7203` anchor diagnostic
+(`fpga/vivado/led_onehot_ax7203.v`, dedicated `specs/fpga/constraints/led_onehot_ax7203.xdc`,
+CI workflow `.github/workflows/ax7203-led-onehot.yml`). Counter [26:0]; phase ~0.37 Hz
+(rising edge cnt[26] @ CFGMCLK). **LVCMOS18 kept** for LEDs — a review claimed
+LVCMOS33, but all three AX7203 XDCs (`ax7203.xdc`, `gf16_ax7203.xdc`, onehot) use
+LVCMOS18; the LVCMOS33 hits in-repo are the OLD QMTECH board (T23/R23). Verified.
+
+Flash via the documented-working openocd sequence:
+`init` → `pld load 0 led_onehot_ax7203.bit` → `runtest 200000` → `shutdown`.
+Result: "loaded ... in 78s", exit 0. `LIBUSB_ERROR_ACCESS` warning present but
+non-blocking (macOS serial driver holds FT2232H channel B = UART; channel A =
+JTAG is free, so openocd scans fine). **IDCODE recheck after load: 0x13636093
+(JTAG clean — corrupted-TAP scenario did NOT occur).**
+
+**Camera observation (Brio 100, ~5 fps):** board shows the SAME scattered red
+power/DONE LEDs as the blank state; no green DONE visible (AX7203 DONE
+color/position unknown — this log never stated green, do not assume); NO
+user-LED bank (B13/C13/D14/D15) visible; whole-frame brightness flat after
+exposure settle (no walking modulation); composite t=1 s vs t=10 s identical.
+=> walking-LED pattern NOT observable. This reproduces the FOV wall seen for
+EVERY design this session (blank, gf16, onehot): the user-LED bank is outside
+the camera FOV, with no physical access to reposition.
+
+DONE not JTAG-confirmable: openFPGALoader cannot open the device (libftdi
+"device not found -3" — macOS driver blocks libftdi; openocd via libusb works
+but has no simple 7-series DONE read). Config most likely completed (pld load
+success + clean IDCODE + documented-working sequence) but not independently
+verified.
+
+**Proposed next (camera-independent):** on-board CP2102N UART is now enumerated
+(`/dev/cu.usbserial-120`); AL321 FT2232H channel B also has a UART node
+(`/dev/cu.usbserial-210512180081`). Build a UART-TX heartbeat variant (drive
+`uart_tx` N15 with a recognizable pattern at a known baud) and read BOTH serial
+ports — whichever shows the pattern is the working host-RX path; receiving it
+proves the design RUNS (CFGMCLK+fabric) without the camera and, if it works,
+unblocks the original UART-conformance blocker.
+
+**UPDATE — RESOLVED by direct human observation (2026-06-26):** the onehot
+diagnostic WORKS. LED1..LED4 light sequentially (chase / "snake"), confirming
+the design RUNS — configuration completed, CFGMCLK started (EOS asserted),
+fabric + LED pins (B13/C13/D14/D15) all functional. The camera "not observable"
+finding above was PURELY the FOV wall, not a dead chip — the design was running
+correctly the whole time. Central session ambiguity resolved in favor of
+"the board works." Anchor order (which silkscreen lights first = led[0]=B13)
+pending one human confirmation. This does NOT verify the 200 MHz path (gf16,
+separate) or the UART path.
