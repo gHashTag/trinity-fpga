@@ -1,5 +1,5 @@
-# ALINX AX7203 UART TX probe — streams 0x55 on uart_tx (N15), CFGMCLK-clocked.
-# Camera-independent test of the FPGA->host UART path.
+# ALINX AX7203 UART TX probe — streams cnt[26:19] (monotonic) on uart_tx (N15),
+# CFGMCLK-clocked. Camera-independent test of the FPGA->host UART path.
 
 name: AX7203 UART TX Probe
 
@@ -60,29 +60,42 @@ jobs:
             "
           ls -lh build/ax7203_uart_tx/chipdb/xc7a200tfbg484-2.bin
 
-      - name: nextpnr place and route
+      - name: nextpnr place and route (seed search for a clean $PACKER_VCC_NET route)
         run: |
-          docker run --rm \
-            -v "$PWD:/work" -w /work \
-            regymm/openxc7 \
-            nextpnr-xilinx \
-              --chipdb /work/build/ax7203_uart_tx/chipdb/xc7a200tfbg484-2.bin \
-              --xdc /work/specs/fpga/constraints/uart_tx_probe_ax7203.xdc \
-              --json /work/build/ax7203_uart_tx/uart_tx_probe_ax7203.json \
-              --write /work/build/ax7203_uart_tx/uart_tx_probe_ax7203_routed.json \
-              --fasm /work/build/ax7203_uart_tx/uart_tx_probe_ax7203.fasm \
-              --freq 50.0 --seed 2 --placer sa --router router1 --timing-allow-fail 2>&1 | tee /tmp/nextpnr.log
-          tail -n 200 /tmp/nextpnr.log || true
-          grep -E "Max frequency|ERROR|Info|router|placer" /tmp/nextpnr.log || true
-          # NO --force: nextpnr must fail (non-zero exit) on an unrouted global
-          # constant net ($PACKER_VCC_NET / GND_WIRE bug on xc7a200t) rather than
-          # emit a functionally-broken bitstream. --timing-allow-fail stays.
-          # Secondary guard below catches the warning text as a backstop.
-          if grep -q "Failed to find a route" /tmp/nextpnr.log; then
-            echo "::error::nextpnr routing failure (unrouted global net) — refusing to ship a broken bitstream; change --seed"
-            grep "Failed to find a route" /tmp/nextpnr.log
+          # nextpnr-xilinx on xc7a200t intermittently fails to route the global
+          # constant net $PACKER_VCC_NET ("Failed to find a route for arc N").
+          # NO --force: a bad seed must FAIL (no fasm) rather than emit a broken
+          # bitstream. We auto-search seeds 1..8 and accept the first clean route.
+          CLEAN=0
+          for s in 1 2 3 4 5 6 7 8; do
+            echo "::group::nextpnr seed $s"
+            rm -f build/ax7203_uart_tx/uart_tx_probe_ax7203.fasm
+            docker run --rm \
+              -v "$PWD:/work" -w /work \
+              regymm/openxc7 \
+              nextpnr-xilinx \
+                --chipdb /work/build/ax7203_uart_tx/chipdb/xc7a200tfbg484-2.bin \
+                --xdc /work/specs/fpga/constraints/uart_tx_probe_ax7203.xdc \
+                --json /work/build/ax7203_uart_tx/uart_tx_probe_ax7203.json \
+                --write /work/build/ax7203_uart_tx/uart_tx_probe_ax7203_routed.json \
+                --fasm /work/build/ax7203_uart_tx/uart_tx_probe_ax7203.fasm \
+                --freq 50.0 --seed $s --placer sa --router router1 --timing-allow-fail > /tmp/nextpnr_$s.log 2>&1 || true
+            echo "::endgroup::"
+            if grep -q "Failed to find a route" /tmp/nextpnr_$s.log || [ ! -f build/ax7203_uart_tx/uart_tx_probe_ax7203.fasm ]; then
+              echo "seed $s: unrouted \$PACKER_VCC_NET (or no fasm) — rejecting"
+              continue
+            fi
+            echo "seed $s: CLEAN route — accepted"
+            cp /tmp/nextpnr_$s.log /tmp/nextpnr.log
+            CLEAN=$s
+            break
+          done
+          if [ "$CLEAN" = "0" ]; then
+            echo "::error::no seed in 1..8 routed cleanly (all hit unrouted \$PACKER_VCC_NET); try --router router2 or reduce constant-tied pins"
             exit 1
           fi
+          echo "Accepted nextpnr seed: $CLEAN"
+          grep -E "Max frequency|Info: Device utilisation" /tmp/nextpnr.log || true
 
       - name: fasm2frames + xc7frames2bit
         run: |
