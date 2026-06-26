@@ -37,18 +37,19 @@
 
 ### LED Outputs (Active-High)
 
-| Silkscreen | Verilog bit | Pin | Standard | Notes |
+| Silkscreen (assumed) | Verilog bit | Pin | Standard | Notes |
 |------------|-------------|-----|----------|-------|
-| LED1 | led[0] | B13 | LVCMOS18 | anchor verified on HW 2026-06-26 (lights first in led_onehot walk) |
-| LED2 | led[1] | C13 | LVCMOS18 | |
-| LED3 | led[2] | D14 | LVCMOS18 | |
-| LED4 | led[3] | D15 | LVCMOS18 | |
+| LED1 (assumed) | led[0] | B13 | LVCMOS18 | pin verified (XDC); label NOT HW-verified |
+| LED2 (assumed) | led[1] | C13 | LVCMOS18 | |
+| LED3 (assumed) | led[2] | D14 | LVCMOS18 | |
+| LED4 (assumed) | led[3] | D15 | LVCMOS18 | |
 
-> **Silkscreen is 1-based (LED1..LED4, no LED0).** Earlier docs used 0-based
-> LED0..LED3 — corrected. Anchor verified on hardware via the
-> `led_onehot_ax7203` walking-LED diagnostic: LEDs light in order
-> LED1→LED2→LED3→LED4, and since the RTL drives led[0]→led[3] in that order,
-> LED1 = B13 = led[0].
+> **Silkscreen is 1-based (LED1..LED4, no LED0)** (corrected from earlier 0-based).
+> Verified: `led[0]=B13 … led[3]=D15` (XDC) and the `led_onehot` walk lights
+> `led[0]` first [observed]. NOT verified: that the B13 LED is silkscreen-LABELED
+> "LED1" — that assumes LiteX's user_led ordering; the camera FOV never reached
+> the bank to read the label. So **`LED1=B13` is a [LiteX assumption, not
+> HW-verified]**. (Does not affect UART/clock results — those are pin-level.)
 
 ### UART
 
@@ -56,6 +57,18 @@
 |--------|-----|----------|-------|
 | UART_TX | N15 | LVCMOS33 | FPGA -> host |
 | UART_RX | P20 | LVCMOS33 | Host -> FPGA |
+
+### Internal clocks (measured 2026-06-26)
+
+- **CFGMCLK (STARTUPE2) ≈ 69–70 MHz** on this xc7a200t instance — measured via
+  the uart_tx_probe baud sweep (clean decode at ~160000 baud; CFGMCLK = baud ×
+  BAUD_DIV = 160000 × 434 ≈ 69 MHz). Use for any CFGMCLK-clocked design's baud.
+- **Working UART bridge = `/dev/cu.usbserial-120` (on-board CP2102N)** — verified
+  receiving FPGA uart_tx (N15). `/dev/cu.usbserial-210512180081` (AL321 FT2232H
+  ch.B) receives nothing (not wired to N15/P20).
+- **200 MHz differential (clk200, IBUFDS→BUFG)** — used by blinky/gf16/loopback;
+  nominal UART baud 115200 (BAUD_DIV ≈ 1736). [200 MHz path liveness still
+  pending — to be verified by the loopback test.]
 
 ### XDC Constraints
 
