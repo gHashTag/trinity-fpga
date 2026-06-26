@@ -270,7 +270,7 @@ Hardware observation:
 | Bitstream `build/ax7203_gf16_fixed/gf16_codec_ax7203.bit` | 9.7 MB, sha256 `e8831a200dce5e7750c7021195f28545bea632e5dae3deedc7f26db19a0c1ccf` |
 | First openFPGALoader flash | reported `done=1 init=1` |
 | `conformance/gf16_conformance_ax7203.py --limit 1` | ❌ `TimeoutError: short response from FPGA: got 0 bytes` |
-| Camera observation after flash | multiple red LEDs lit; inconsistent with GF16 design (`led = {~rst_n, 3'b000}` would show at most one LED) |
+| Camera observation after flash | multiple red LEDs lit. ~~Originally read as inconsistent with GF16 design (`led = {~rst_n, 3'b000}` → ≤1 LED).~~ **ERRATA 2026-06-26 — the GF16 RTL does NOT drive `{~rst_n,3'b000}`; see "RTL LED-mapping errata" below.** |
 | Subsequent openFPGALoader flash | ❌ `mpsse_write: fail to write ... Unknown device with IDCODE: 0x6da25d34` |
 | Subsequent OpenOCD scan | ❌ IR capture error, bogus IDCODE `0x00000000` plus many auto-detected taps |
 
@@ -279,6 +279,33 @@ the initial flash attempts. The bogus IDCODEs and IR-capture errors indicate the
 TAP shift register is latched with garbage; the FPGA itself is probably still
 running the previous image (likely the blinky/factory design), which explains
 why the GF16 conformance script receives no response.
+
+### RTL LED-mapping errata (2026-06-26)
+
+The "GF16 UART Conformance Status" table above and the old plan assumed the GF16
+image drives `led = {~rst_n, 3'b000}` (at most one LED). **That is wrong.** The
+actual RTL (`fpga/vivado/gf16_codec_ax7203.v:348-351`) is:
+
+```
+assign led[0] = hb_cnt[25];      // heartbeat ~3 Hz (200 MHz / 2^26)
+assign led[1] = frame_valid;
+assign led[2] = add_out_valid;
+assign led[3] = ~rst;
+```
+
+So a correctly loaded, non-reset GF16 image **blinks led[0] (~3 Hz)** and holds
+**led[3]** on. Consequence: "multiple steady red LEDs, none blinking" does **not**
+by itself prove the GF16 image is mis-loaded — the camera observation must be made
+on the actual user-LED bank (pins B13/C13/D14/D15) and at >6 fps to resolve 3 Hz.
+The 2026-06-26 camera self-test was limited to ~5 fps (low-light auto-exposure)
+and the user-LED bank was not clearly in frame, so it could not decide this.
+
+**Silkscreen:** the AX7203 PCB labels the four user LEDs **LED1..LED4** (1-based,
+no LED0), whereas this log and `HARDWARE_REFERENCE.md` used 0-based LED0..LED3.
+XDC-confirmed (iron-solid): `led[0]=B13, led[1]=C13, led[2]=D14, led[3]=D15`.
+The silkscreen↔pin correspondence is pending the `led_onehot_ax7203` anchor test
+(`fpga/vivado/led_onehot_ax7203.v`, 5-phase walking-LED, flashes when AL321 is
+reconnected).
 
 ### UART Connection Blocker (2026-06-24)
 

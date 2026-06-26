@@ -1,0 +1,110 @@
+# ALINX AX7203 LED one-hot anchor diagnostic bitstream
+# 5-phase walking LED (CFGMCLK-clocked): first silkscreen to light = led[0]=B13.
+# Independent of the 200 MHz differential clock path.
+
+name: AX7203 LED Onehot Anchor
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, 'feat/**']
+    paths:
+      - 'fpga/vivado/led_onehot_ax7203.v'
+      - 'specs/fpga/constraints/led_onehot_ax7203.xdc'
+      - '.github/workflows/ax7203-led-onehot.yml'
+
+jobs:
+  bitstream:
+    name: Generate AX7203 LED Onehot Bitstream
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Pull openXC7 Docker image
+        run: docker pull regymm/openxc7:latest
+
+      - name: Yosys synthesis
+        run: |
+          mkdir -p build/ax7203_onehot
+          docker run --rm \
+            -v "$PWD:/work" -w /work \
+            regymm/openxc7 \
+            yosys -p "
+              read_verilog fpga/vivado/led_onehot_ax7203.v;
+              synth_xilinx -flatten -abc9 -nocarry -arch xc7 -top led_onehot_ax7203;
+              setundef -zero -params;
+              write_json build/ax7203_onehot/led_onehot_ax7203.json
+            " 2>&1 | tee /tmp/yosys.log
+          grep -E "Estimated number of LCs|ERROR" /tmp/yosys.log
+
+      - name: Cache chipdb for xc7a200tfbg484-2
+        id: chipdb-cache
+        uses: actions/cache@v4
+        with:
+          path: build/ax7203_onehot/chipdb/xc7a200tfbg484-2.bin
+          key: chipdb-xc7a200tfbg484-2-regymm-openxc7-${{ github.run_id }}
+          restore-keys: |
+            chipdb-xc7a200tfbg484-2-regymm-openxc7-
+
+      - name: Generate chipdb for xc7a200tfbg484-2
+        if: steps.chipdb-cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p build/ax7203_onehot/chipdb
+          docker run --rm \
+            -v "$PWD:/work" -w /work \
+            regymm/openxc7 \
+            bash -c "
+              cd /nextpnr-xilinx && \
+              python3 xilinx/python/bbaexport.py --device xc7a200tfbg484-2 --bba /work/build/ax7203_onehot/chipdb/xc7a200tfbg484-2.bba && \
+              bbasm -l /work/build/ax7203_onehot/chipdb/xc7a200tfbg484-2.bba /work/build/ax7203_onehot/chipdb/xc7a200tfbg484-2.bin
+            "
+          ls -lh build/ax7203_onehot/chipdb/xc7a200tfbg484-2.bin
+
+      - name: nextpnr place and route
+        run: |
+          docker run --rm \
+            -v "$PWD:/work" -w /work \
+            regymm/openxc7 \
+            nextpnr-xilinx \
+              --chipdb /work/build/ax7203_onehot/chipdb/xc7a200tfbg484-2.bin \
+              --xdc /work/specs/fpga/constraints/led_onehot_ax7203.xdc \
+              --json /work/build/ax7203_onehot/led_onehot_ax7203.json \
+              --write /work/build/ax7203_onehot/led_onehot_ax7203_routed.json \
+              --fasm /work/build/ax7203_onehot/led_onehot_ax7203.fasm \
+              --freq 50.0 --seed 1 --placer sa --router router1 --timing-allow-fail --force 2>&1 | tee /tmp/nextpnr.log
+          tail -n 200 /tmp/nextpnr.log || true
+          grep -E "Max frequency|ERROR|Info|router|placer" /tmp/nextpnr.log || true
+
+      - name: fasm2frames + xc7frames2bit
+        run: |
+          docker run --rm \
+            -v "$PWD:/work" -w /work \
+            regymm/openxc7 \
+            bash -c "
+              source /prjxray/env/bin/activate && \
+              fasm2frames \
+                --db-root /nextpnr-xilinx/xilinx/external/prjxray-db/artix7 \
+                --part xc7a200tfbg484-2 \
+                /work/build/ax7203_onehot/led_onehot_ax7203.fasm \
+                /work/build/ax7203_onehot/led_onehot_ax7203.frames && \
+              /prjxray/build/tools/xc7frames2bit \
+                --part_file /nextpnr-xilinx/xilinx/external/prjxray-db/artix7/xc7a200tfbg484-2/part.yaml \
+                --part_name xc7a200tfbg484-2 \
+                --frm_file /work/build/ax7203_onehot/led_onehot_ax7203.frames \
+                --output_file /work/build/ax7203_onehot/led_onehot_ax7203.bit
+            "
+
+      - name: Verify bitstream
+        run: |
+          ls -lh build/ax7203_onehot/led_onehot_ax7203.bit
+          file build/ax7203_onehot/led_onehot_ax7203.bit
+
+      - name: Upload bitstream
+        uses: actions/upload-artifact@v4
+        with:
+          name: ax7203-led-onehot-bitstream
+          path: |
+            build/ax7203_onehot/led_onehot_ax7203.bit
+            build/ax7203_onehot/led_onehot_ax7203.fasm
+          retention-days: 30
