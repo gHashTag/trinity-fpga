@@ -89,22 +89,29 @@ module dual_clk_heartbeat_ax7203 (
     end
 
     // -------------------------------------------------------------------------
-    // CDC: 2-FF synchronizer per bit for cnt_200[26:23] -> CFGMCLK domain.
-    // The nibble changes slowly (~24 Hz at 200 MHz) vs the sync (2 CFGMCLK
-    // cycles ~28 ns), so per-bit 2-FF is sufficient (quasi-static multi-bit).
+    // CDC: 2-FF synchronizer per bit for the 200 MHz nibble -> CFGMCLK domain.
+    // The raw 4-bit binary slice has multi-bit transitions (e.g. 0111->1000),
+    // so per-bit 2-FF sync would skew and produce transient garbage -> would
+    // masquerade as "marginal". FIX: Gray-code the slice first, so only ONE bit
+    // changes per increment -> per-bit 2-FF is safe (no multibit skew). The host
+    // decodes the lower nibble gray->binary to read the advancing count.
     // -------------------------------------------------------------------------
+    wire [3:0] cnt_200_bin  = cnt_200[26:23];
+    wire [3:0] cnt_200_gray = cnt_200_bin ^ (cnt_200_bin >> 1);  // 1-bit/trans
     reg [3:0] sync_a, sync_b;
     always @(posedge mclk_c or posedge rst) begin
         if (rst) begin
             sync_a <= 4'd0;
             sync_b <= 4'd0;
         end else begin
-            sync_a <= cnt_200[26:23];
+            sync_a <= cnt_200_gray;
             sync_b <= sync_a;
         end
     end
 
-    wire [7:0] payload = {cnt_c[26:23], sync_b};  // {CFGMCLK nibble, 200MHz nibble}
+    // payload = {CFGMCLK nibble (binary, same domain — no CDC),
+    //            200 MHz nibble (GRAY-coded, 2-FF synced)}. Host decodes lower.
+    wire [7:0] payload = {cnt_c[26:23], sync_b};
 
     // -------------------------------------------------------------------------
     // UART TX on CFGMCLK: stream payload, BAUD_DIV for ~70 MHz CFGMCLK (~160k)
