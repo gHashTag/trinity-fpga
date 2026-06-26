@@ -71,13 +71,13 @@ jobs:
               --json /work/build/ax7203_uart_tx/uart_tx_probe_ax7203.json \
               --write /work/build/ax7203_uart_tx/uart_tx_probe_ax7203_routed.json \
               --fasm /work/build/ax7203_uart_tx/uart_tx_probe_ax7203.fasm \
-              --freq 50.0 --seed 2 --placer sa --router router1 --timing-allow-fail --force 2>&1 | tee /tmp/nextpnr.log
+              --freq 50.0 --seed 2 --placer sa --router router1 --timing-allow-fail 2>&1 | tee /tmp/nextpnr.log
           tail -n 200 /tmp/nextpnr.log || true
           grep -E "Max frequency|ERROR|Info|router|placer" /tmp/nextpnr.log || true
-          # Guard: --force lets nextpnr emit a bitstream despite an unrouted
-          # global constant net ($PACKER_VCC_NET / GND_WIRE bug on xc7a200t),
-          # which yields a functionally-broken image. Fail the build instead of
-          # shipping a broken bitstream; reseed (above) to get a clean route.
+          # NO --force: nextpnr must fail (non-zero exit) on an unrouted global
+          # constant net ($PACKER_VCC_NET / GND_WIRE bug on xc7a200t) rather than
+          # emit a functionally-broken bitstream. --timing-allow-fail stays.
+          # Secondary guard below catches the warning text as a backstop.
           if grep -q "Failed to find a route" /tmp/nextpnr.log; then
             echo "::error::nextpnr routing failure (unrouted global net) — refusing to ship a broken bitstream; change --seed"
             grep "Failed to find a route" /tmp/nextpnr.log

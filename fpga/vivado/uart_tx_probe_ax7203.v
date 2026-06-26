@@ -1,29 +1,29 @@
 `default_nettype wire
 
 // =============================================================================
-// uart_tx_probe_ax7203 — UART TX heartbeat probe (camera-independent)
+// uart_tx_probe_ax7203 — UART TX probe (camera-independent, fabric-proving)
 // =============================================================================
-// Streams 0x55 ('U') back-to-back on uart_tx (pin N15) to verify the FPGA->host
-// UART TX electrical path WITHOUT relying on the camera (the user-LED bank is
-// outside the camera FOV). Clock = STARTUPE2 CFGMCLK (same isolated, proven path
-// as led_onehot) so a successful read isolates the UART path, not the clock.
+// Streams a MONOTONIC COUNTER BYTE (cnt[26:19]) back-to-back on uart_tx (N15).
+// Unlike a static 0x55, a counting payload is irrefutable proof the fabric is
+// alive: the host sees an incrementing sequence (0x00, 0x01, ...) rather than a
+// fixed value a stuck FSM could also produce. cnt[26:19] advances every
+// 2^19 mclk ~= 10.5 ms (at 50 MHz), so each value repeats ~120x at 115200 baud.
 //
-// CFGMCLK is part-dependent (~32-98 MHz), so the actual baud scales with it
-// (nominal 115200 at 50 MHz -> ~74k..226k across the range). The host therefore
-// SWEEPS baud rates and reads BOTH candidate serial ports:
+// Clock = STARTUPE2 CFGMCLK (same isolated path as led_onehot) so success
+// isolates the UART path, not the clock. CFGMCLK is part-dependent (~32-98 MHz)
+// -> actual baud scales (~74k-226k); the host sweeps baud and reads BOTH:
 //   /dev/cu.usbserial-120           (on-board CP2102N UART)
 //   /dev/cu.usbserial-210512180081  (AL321 FT2232H channel B)
-// Repeating "UUUU..." on a port => that port is the working host-RX path AND the
-// design is running (CFGMCLK + fabric + uart_tx pin all functional).
+// A monotonic byte stream on a port => that port is the working host-RX path
+// AND the fabric/counter is provably running.
 //
-// PARALLEL VISUAL: LED1..LED4 walk (identical proven onehot logic), so a human
-// observer confirms the bitstream loaded/ran independently of the UART path:
-//   walk visible + UART bytes => both observers agree
-//   walk visible + no bytes    => UART TX path (N15) isolated as the fault
-//   no walk                     => configuration problem (not the UART path)
+// PARALLEL VISUAL: LED1..LED4 walk (proven onehot logic) so a human observer
+// confirms the bitstream loaded/ran independently of the UART path.
 //
-// Success here proves ONLY this design's infrastructure; it does NOT verify the
-// 200 MHz differential path (gf16) — that remains a separate test.
+// NOTE on build: this design must build WITHOUT --force. nextpnr-xilinx on
+// xc7a200t can leave a global constant net ($PACKER_VCC_NET) unrouted; --force
+// would emit a functionally-broken bitstream. CI fails the build if any
+// "Failed to find a route" appears. Success proves only this design's infra.
 // =============================================================================
 
 `timescale 1ns / 1ps
@@ -60,7 +60,7 @@ module uart_tx_probe_ax7203 (
     wire rst = ~rst_n | ~eos;
 
     // -------------------------------------------------------------------------
-    // LED walking (proven from led_onehot) — parallel visual "design alive"
+    // Free-running counter + LED walking (proven from led_onehot)
     // -------------------------------------------------------------------------
     reg [26:0] cnt;
     reg [2:0]  phase;
@@ -91,34 +91,32 @@ module uart_tx_probe_ax7203 (
     end
 
     // -------------------------------------------------------------------------
-    // UART TX: stream 0x55 back-to-back at nominal 115200 (50 MHz CFGMCLK)
-    // Frame (LSB-first out of shreg[0]): start(0), d0..d7, stop(1)
-    // 0x55 = d7..d0 = 0101_0101, so frame = stop,0,1,0,1,0,1,0,1,start
-    //                                = 1_01010101_0 ... bit layout => 10'b1010101010
+    // UART TX: stream cnt[26:19] (monotonic) at nominal 115200 (50 MHz CFGMCLK)
+    // Frame out of shreg[0] (LSB first): start(0), d0..d7, stop(1).
+    // Each byte = live cnt[26:19], re-sampled at the byte boundary => monotonic.
     // -------------------------------------------------------------------------
-    localparam [8:0] BAUD_DIV    = 9'd434;          // 50 MHz / 115200 ~= 434
-    localparam [9:0] FRAME_0x55  = 10'b1010101010;
+    localparam [8:0] BAUD_DIV = 9'd434;          // 50 MHz / 115200 ~= 434
 
     reg [8:0] baud_cnt;
-    reg [3:0] bit_idx;                               // 0..9 (start + 8 data + stop)
+    reg [3:0] bit_idx;                            // 0..9 (start + 8 data + stop)
     reg [9:0] shreg;
 
     always @(posedge mclk or posedge rst) begin
         if (rst) begin
             baud_cnt <= 9'd0;
             bit_idx  <= 4'd0;
-            shreg    <= FRAME_0x55;
-            uart_tx  <= 1'b1;                        // idle line high
+            shreg    <= {1'b1, 8'h00, 1'b0};      // cnt=0 at reset -> data 0x00
+            uart_tx  <= 1'b1;                     // idle line high
         end else begin
-            uart_tx <= shreg[0];                     // emit current LSB
+            uart_tx <= shreg[0];                  // emit current LSB
             if (baud_cnt == BAUD_DIV - 9'd1) begin
                 baud_cnt <= 9'd0;
                 if (bit_idx == 4'd9) begin
                     bit_idx <= 4'd0;
-                    shreg   <= FRAME_0x55;           // next byte frame
+                    shreg   <= {1'b1, cnt[26:19], 1'b0}; // next byte = live counter slice
                 end else begin
                     bit_idx <= bit_idx + 4'd1;
-                    shreg   <= {1'b1, shreg[9:1]};   // shift right, feed stop/idle
+                    shreg   <= {1'b1, shreg[9:1]};       // shift right, feed stop/idle
                 end
             end else begin
                 baud_cnt <= baud_cnt + 9'd1;

@@ -412,3 +412,25 @@ correctly the whole time. Central session ambiguity resolved in favor of
 "the board works." Anchor order (which silkscreen lights first = led[0]=B13)
 pending one human confirmation. This does NOT verify the 200 MHz path (gf16,
 separate) or the UART path.
+
+### uart_tx_probe build root cause + deterministic fix (2026-06-26)
+
+uart_tx_probe (0x55 payload, seed 1) flashed OK + IDCODE clean but did NOT run
+on silicon (no LED walk, no UART bytes); led_onehot walked and a re-flash of
+onehot restored the walk => board healthy, design-specific failure. iverilog
+sim: RTL correct (uart_tx toggles ~115200, LED=0001 phase0). CI nextpnr smoking
+gun: `Failed to find a route for arc 39 of net $PACKER_VCC_NET` — nextpnr-xilinx
+left a global constant net unrouted (GND_WIRE/VCC class bug on xc7a200t) and
+`--force` emitted a functionally-broken bitstream anyway (timing still PASS).
+onehot (seed 1) routed clean => worked.
+
+Fix: (1) DROP `--force` so nextpnr fails fast on an unrouted net instead of
+shipping a broken image; keep `--timing-allow-fail`. (2) **seed 2 routes clean**
+[data point: seed-2 build had no unrouted-net warning] — but seed-bump is a
+**[workaround, not root fix]**: any RTL edit shifts placement and can resurrect
+the unrouted VCC, needing another reseed. Deterministic fallbacks if it recurs:
+try `--router router2`, reduce constant-tied STARTUPE2 pins, or reseed. (3) CI
+guard: fail if "Failed to find a route" appears (backstop). (4) UART payload
+0x55 -> cnt[26:19] (monotonic counter byte) so a received stream irrefutably
+proves the fabric/counter runs (sim: 0x00,0x01,0x02 monotonic), not just that
+TX toggles.
