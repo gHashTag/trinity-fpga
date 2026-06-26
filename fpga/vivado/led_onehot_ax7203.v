@@ -66,7 +66,7 @@ module led_onehot_ax7203 (
     // Free-running counter + phase stepped on rising edge of cnt[26]
     // (no wide comparator -> minimal timing risk)
     // -------------------------------------------------------------------------
-    reg [31:0] cnt;
+    reg [26:0] cnt;          // MSB = cnt[26], the only bit we read
     reg [2:0]  phase;        // 0..4 (wraps 4 -> 0)
     reg        cnt26_d;
     wire       step = cnt[26] & ~cnt26_d;   // rising edge of cnt[26]
@@ -77,7 +77,7 @@ module led_onehot_ax7203 (
             phase   <= 3'd0;
             cnt26_d <= 1'b0;
         end else begin
-            cnt     <= cnt + 32'd1;
+            cnt     <= cnt + 27'd1;
             cnt26_d <= cnt[26];
             if (step)
                 phase <= (phase == 3'd4) ? 3'd0 : (phase + 3'd1);
