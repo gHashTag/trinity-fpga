@@ -1,17 +1,18 @@
 [tasks]
-prove_add
-prove_sub
+prove   : default
+cover
 
 [options]
-mode prove
-depth 50
+prove: mode prove
+cover: mode cover
+depth 20
 
 [engines]
 smtbmc z3
 
 [script]
-read_verilog -DVERIFIC formal/gf_adder_property.v
 read_verilog -sv fpga/openxc7-synth/gf_adder_param.v
+read_verilog -formal formal/gf_adder_property.v
 prep -top gf_adder_property
 
 [files]
