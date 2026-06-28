@@ -86,6 +86,14 @@ module gf_adder_property #(
         reg            ra, rb, az, bz, adn, bdn, sg, same_in;
         reg [EXP_BITS-1:0]  ea, eb;
         reg [MANT_BITS-1:0] ma, mb;
+        // ВНИМАНИЕ (честность): `integer` = 32-бит знаковый в Verilog. Для дефолтных
+        // параметров GF8 (EXP_BITS=3) sh_a<=6, sa_mag<=~11 бит — переполнения нет,
+        // доказательство exhaustive валидно. Для параметризации на GF16 (EXP_BITS=6)
+        // sh_a достигает ~62, sa_mag/ssum/mag НЕ помещаются в 32 бита -> требуется
+        // расширить эти переменные до reg signed [127:0] перед прогоном GF16-прува.
+        // Логика (включая исправленную границу скана) проверена bit-exact в
+        // verify_adder_oracle.py на произвольной точности (GF6/GF8 exhaustive,
+        // GF12/GF16 sample). [доказано для GF8; GF16 = требует расширения разрядности]
         integer base_a, base_b, sh_a, sh_b, sa_mag, sb_mag, ssum, mag;
         integer lead, k, i, exp_field, frac, gb, tailnz, lsb_bit;
         reg [EXP_BITS-1:0]  ef_r;
@@ -103,7 +111,11 @@ module gf_adder_property #(
             same_in = (ra == rb);
 
             res = {TOTAL{1'b0}};
-            if (az)          res = b;            // DUT: a_zero -> pass b (priority)
+            // FIX (2026-06-29, верифицировано verify_adder_oracle.py): DUT обрабатывает
+            // (+/-0)+(+/-0) ОТДЕЛЬНО со знаком: -0 ТОЛЬКО если ОБА операнда -0, иначе +0.
+            // Прежний оракул возвращал b при az -> ложный контрпример на (+0)+(-0).
+            if (az && bz)    res = (ra && rb) ? {1'b1, {(TOTAL-1){1'b0}}} : {TOTAL{1'b0}};
+            else if (az)     res = b;            // DUT: a_zero -> pass b (priority)
             else if (bz)     res = a;            // DUT: b_zero -> pass a
             else begin
                 base_a = (adn ? 0 : (1 << MANT_BITS)) + ma;   // {implicit, mant}
@@ -118,7 +130,12 @@ module gf_adder_property #(
                 else begin
                     sg  = (ssum < 0);
                     mag = sg ? -ssum : ssum;
-                    lead = 0;  for (i = 0; i < 24; i = i + 1) if ((mag >> i) & 1) lead = i;
+                    // Параметрическая граница скана старшего бита mag.
+                    // sh_a = ea-1, ea<=2^EXP_BITS-1; base<=2^(MANT_BITS+1).
+                    // => MSB(mag) <= (MANT_BITS+1) + (2^EXP_BITS-2). Запас +4.
+                    // Прежняя граница TOTAL+MANT_BITS+4 (=29 для GF16) ломалась:
+                    // при ea~62 mag достигал ~67 бит, lead обрезался -> мусор.
+                    lead = 0;  for (i = 0; i < (MANT_BITS + 1) + ((1 << EXP_BITS) - 2) + 4; i = i + 1) if ((mag >> i) & 1) lead = i;
                     exp_field = lead - MANT_BITS + 1;          // biased field for normal form
                     if (exp_field >= 1) begin
                         k    = lead - MANT_BITS;

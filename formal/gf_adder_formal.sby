@@ -1,10 +1,25 @@
+# Формальная проверка gf_adder_param: out_y == ref_fpadd(a,b) на каждом
+# out_valid (assert в formal/gf_adder_property.v).
+#
+# Дефолтные параметры property = GF8 (EXP_BITS=3, MANT_BITS=4) — ширина
+# `integer` достаточна, переполнения нет (см. комментарий в .v).
+# Логика оракула проверена bit-exact против Fraction-золота в
+# verify_adder_oracle.py (GF6/GF8 exhaustive, GF12/GF16 sample).
+#
+# Прежняя версия объявляла бессмысленные [tasks] prove_add/prove_sub
+# (оба гоняли идентичный скрипт) и mode prove + depth 50 без явной
+# индукции. Здесь — два РАЗНЫХ режима: bmc (поиск контрпримера на конечную
+# глубину) и prove (k-индукция, безграничное доказательство).
+
 [tasks]
-prove_add
-prove_sub
+bmc
+prove
 
 [options]
-mode prove
-depth 50
+bmc:   mode bmc
+bmc:   depth 40
+prove: mode prove
+prove: depth 20
 
 [engines]
 smtbmc z3
