@@ -99,7 +99,7 @@ module gf_mul_param #(
     reg  signed [EXP_BITS+3:0] er;           // несмещённая сумма экспонент (с запасом)
     reg  [MANT_BITS+2:0]      mant_field;   // значащая после нормализации (1.x)
     reg                        guard, round_b, sticky;
-    reg  [MANT_BITS:0]        mant_rnd;     // округлённая значащая (MANT+1 бит, ловим carry)
+    reg  [MANT_BITS+1:0]      mant_rnd;     // MANT+2 bits: ловим rounding carry (fix: было MANT+1 -> wrap терял exp++)
     reg  signed [EXP_BITS+3:0] exp_field;    // итоговое exp-поле (signed для underflow/overflow)
     integer                     msb;          // позиция старшего значащего бита prod
 
@@ -107,7 +107,7 @@ module gf_mul_param #(
         result_packed = CODE_PZERO;
         p = prod; er = ea_eff + eb_eff - BIAS;
         guard = 1'b0; round_b = 1'b0; sticky = 1'b0;
-        mant_field = {(MANT_BITS+3){1'b0}}; mant_rnd = {(MANT_BITS+1){1'b0}};
+        mant_field = {(MANT_BITS+3){1'b0}}; mant_rnd = {(MANT_BITS+2){1'b0}};
         exp_field = 0; msb = 0;
 
         // --- 1) спец-края (NaN > 0*Inf > Inf > zero) ---
