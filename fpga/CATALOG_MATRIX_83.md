@@ -1,15 +1,29 @@
 # Catalog matrix: 83 formats × {SW-conformance / FPGA port}
 
 > Starter map for the "flash the full catalog" focused session on AX7203 (XC7A200T).
-> All statuses are from HEAD of `gHashTag/t27` SSOT. [verified HEAD]
+> SW-conformance statuses are from `gHashTag/t27` SSOT (master HEAD `92f3506`,
+> INDEX_all_formats.json). [verified HEAD 2026-06-28]
 
-## Summary
+## Summary (SW-conformance, t27 master 92f3506)
 - **83** formats (total_formats, INDEX_all_formats.json)
-- **55** bit-exact packs (incl. 6 self-consistent)
-- **22** structural packs
+- **62** strict SW-bitexact packs (independent decoder, abs_error=0)
+- **6** bitexact_selfconsistent packs (single decode law, NO independent 2nd witness — weaker tier, NOT counted as strict bitexact)
+- **15** structural packs
 - **14** P0 (Corona RTL ready + bit-exact) — fast port
 - **47** P1 (bit-exact, RTL to write) — medium cost
-- **22** P2 (structural, need bit-exact generator) — backlog
+- **22** P2 (structural / parametric, need bit-exact generator) — backlog
+
+> **Recent t27 promotions (2026-06-28):** PR #1221 (+gf10, decimal32/64/128,
+> double_double, quad_double; 55->61) and PR #1222 (+takum8 via independent
+> log-decoder vs libtakum; 61->62) MERGED. takum16/32/64 honestly stay structural
+> (no external libtakum oracle = no 2nd witness). takum defining cite =
+> arXiv:2404.18603 (CoNGA 2024), NOT 2412.20273.
+
+## HW progress to global goal [verified 2026-06-28]
+- **SW-bitexact: 62/83** (t27 master, above).
+- **decode-HW: 0/83** — design ready on trinity-fpga main (#208 `corona_decode_top_ax7203.v`, CFGMCLK, 5 Corona decoders) + 2-oracle SW cross-check (Python golden == Corona RTL, fp8_e4m3_fnuz + posit8: 512/0) [verified SW]. NOT run on AX7203 yet. `encoding != compute != FPGA`.
+- **compute-HW: 0/83** — ADD (`gf_adder_param.v`) + MUL (`gf_mul_param.v`) cores on main, GF6-GF20 verified by 2 independent SW oracles. NOT run on AX7203 yet.
+- decode-HW / compute-HW cells close ONLY after a real synth+flash+UART run on the board — **[REQUIRES USER HARDWARE ACTION]**.
 
 ## P0 — Corona RTL ready + bit-exact (14) — FAST PORT
 | Format | SW | n_vec | Corona RTL | FV | FPGA |
