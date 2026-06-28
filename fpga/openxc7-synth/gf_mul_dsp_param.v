@@ -242,7 +242,7 @@ module gf_mul_dsp_param #(
     reg  signed [EXP_BITS+3:0] er;
     reg  [MANT_BITS+2:0]      mant_field;
     reg                        guard, round_b, sticky;
-    reg  [MANT_BITS:0]        mant_rnd;
+    reg  [MANT_BITS+1:0]      mant_rnd;     // MANT+2 bits: ловим rounding carry (fix: было MANT+1 -> wrap терял exp++)
     reg  signed [EXP_BITS+3:0] exp_field;
     integer                     msb;
 
@@ -250,7 +250,7 @@ module gf_mul_dsp_param #(
         result_packed = CODE_PZERO;
         p = prod_dsp; er = ea_eff + eb_eff - BIAS;
         guard = 1'b0; round_b = 1'b0; sticky = 1'b0;
-        mant_field = {(MANT_BITS+3){1'b0}}; mant_rnd = {(MANT_BITS+1){1'b0}};
+        mant_field = {(MANT_BITS+3){1'b0}}; mant_rnd = {(MANT_BITS+2){1'b0}};
         exp_field = 0; msb = 0;
 
         if (a_nan || b_nan) begin

@@ -3,14 +3,23 @@
 """
 verify_mul_rtl.py — НЕЗАВИСИМАЯ верификация behavioral-ядра умножения gf_mul_param.v.
 
-Метод (как для ADD): faithful Python-транскрипция RTL-алгоритма (rtl_mul) — это
-"модель железа" / оракул №1 в песочнице (НЕ зависит от iverilog), сверяется с
-золотым эталоном gf_mul (точная Fraction-арифметика) из gf_add_ref.py — оракул №0.
+Метод: Python-транскрипция RTL-алгоритма (rtl_mul) — оракул №1 в песочнице
+(НЕ зависит от iverilog), сверяется с золотым эталоном gf_mul (точная Fraction)
+из gf_add_ref.py — оракул №0.
 
-Совпадение rtl_mul == gf_mul на всех краях = логика RTL подтверждена в песочнице
-[смоделировано]. Второй оракул (твой iverilog) на той же spec даёт bit-exact-кросс.
-DSP48E1-версия здесь НЕ моделируется (UNISIM не работает в iverilog) — её
-эквивалентность доказывается co-simulation в Vivado.
+!!! КРИТИЧЕСКИЙ УРОК (28.06.2026) !!!
+  Python-транскрипция с native-int НЕ ловит fixed-width wrap/overflow баги RTL.
+  Реальный пример: mant_rnd был reg[MANT:0] (MANT+1 бит); +1 к all-ones давал
+  wrap->0 в Verilog, и carry (exp++) терялся. Python-инт без маски carry
+  СОХРАНЯЛ -> транскрипция была точнее самого RTL и ПРОПУСТИЛА баг
+  (1376/65536 GF8). Независимый from-spec iverilog-оракул №2 его поймал.
+  ФИКС: каждый reg[N:0] в транскрипции ДОЛЖЕН маскироваться reg_mask(x,N+1)
+  в точках присваивания. ВСЁ РАВНО Python-транскрипция СЛАБЕЕ from-spec
+  integer-reference на настоящем iverilog — последний ОБЯЗАТЕЛЕН.
+
+Совпадение rtl_mul == gf_mul = логика подтверждена [смоделировано] — но
+ТОЛЬКО при верном моделировании ширины регистров. DSP48E1-версия здесь НЕ
+моделируется (UNISIM требует Vivado).
 
 Honesty: Vasilev, ORCID 0009-0008-4294-6159. [смоделировано], не железо.
 """
@@ -18,6 +27,13 @@ import sys, random
 import os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from gf_ref import FORMATS, gf_mul as ref_mul
+
+
+def reg_mask(x, nbits):
+    """Модель Verilog reg[nbits-1:0]: усекает к nbits битам (wrap, как в железе).
+    ОБЯЗАТЕЛЬНО применять в каждой точке присваивания reg в транскрипции,
+    иначе native-int Python скроет fixed-width wrap/overflow баги RTL."""
+    return x & ((1 << nbits) - 1)
 
 
 def rtl_mul(fmt, a_raw, b_raw):
@@ -110,12 +126,17 @@ def rtl_mul(fmt, a_raw, b_raw):
         if (prod & ((1 << lim) - 1)) != 0:
             sticky = 1
 
-    # RNE
+    # RNE.
+    # mant_rnd моделирует Verilog reg[MANT+1:0] = MANT+2 бит (ФИКС 28.06):
+    #   раньше был reg[MANT:0] (MANT+1 бит) -> +1 к all-ones wrap->0,
+    #   carry-check не срабатывал, exp++ терялся. reg_mask делает
+    #   транскрипцию faithful к фиксированной ширине.
+    REG_W = MANT + 2  # ширина mant_rnd в битах (= MANT_BITS+1 : 0)
     lsb = mant_field & 1
     if guard and (round_b or sticky or lsb):
-        mant_rnd = (mant_field & ((1 << (MANT + 1)) - 1)) + 1
+        mant_rnd = reg_mask((mant_field & ((1 << (MANT + 1)) - 1)) + 1, REG_W)
     else:
-        mant_rnd = mant_field & ((1 << (MANT + 1)) - 1)
+        mant_rnd = reg_mask(mant_field & ((1 << (MANT + 1)) - 1), REG_W)
     # carry из округления (значащая стала 2.0): mant_rnd > 1.111..1
     if mant_rnd > ((1 << (MANT + 1)) - 1):
         mant_rnd >>= 1
