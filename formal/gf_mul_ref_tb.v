@@ -67,7 +67,12 @@ module gf_mul_ref_tb;
             ra=a[TOTAL-1]; ea=a[TOTAL-2:MANT_BITS]; ma=a[MANT_BITS-1:0];
             rb=b[TOTAL-1]; eb=b[TOTAL-2:MANT_BITS]; mb=b[MANT_BITS-1:0];
             az=(ea==0)&&(ma==0); bz=(eb==0)&&(mb==0);
-            adn=(BIAS>0)&&(ea==0)&&(ma!=0); bdn=(BIAS>0)&&(eb==0)&&(mb!=0);
+            // (BIAS>0) guard REMOVED 2026-06-30: gf_mul_param.v (commits ca3aac4/
+            // 2f12722) dropped the BIAS>0 guard so GF4 (BIAS=0) denormals use the
+            // general pack path; the stale guard here made the oracle flush GF4
+            // denormals -> 96 false MISMATCH on GF4 MUL (RTL was correct: GF4 256/256
+            // bit-exact on silicon Tier E). Oracle now == gf_ref golden exhaustively.
+            adn=(ea==0)&&(ma!=0); bdn=(eb==0)&&(mb!=0);
             asp=(HAS_INF!=0)&&(ea=={EXP_BITS{1'b1}}); bsp=(HAS_INF!=0)&&(eb=={EXP_BITS{1'b1}});
             ainf=asp&&(ma==0); binf=bsp&&(mb==0); anan=asp&&(ma!=0); bnan=bsp&&(mb!=0);
             sgn = ra^rb;
@@ -94,9 +99,10 @@ module gf_mul_ref_tb;
                     if (exp_field < 1) begin
                         // subnormal result: gradual underflow, single RNE from exact prod
                         p_sh = (ea_eff+eb_eff-BIAS) - MANT_BITS - 1;          // = er - MANT - 1
-                        if (BIAS==0)
-                            res = sgn ? {1'b1,{(TOTAL-1){1'b0}}} : {TOTAL{1'b0}};
-                        else if (p_sh >= 0)
+                        // (BIAS==0) subnormal flush REMOVED 2026-06-30: matches the
+                        // gf_mul_param.v general-pack fix. GF4 subnormal products now
+                        // round via the same gradual-underflow path as wider widths.
+                        if (p_sh >= 0)
                             res = pack_den(sgn, prod << p_sh);
                         else begin
                             sh = -p_sh;
