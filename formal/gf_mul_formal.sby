@@ -47,7 +47,7 @@ gf24  gf24
 # first `primed` assert fires at cycle 4 -> depth 10 leaves ~6 independent valid
 # free-pair checks. Each cycle feeds a fresh $anyseq pair (combinational property).
 mode bmc
-depth 14
+depth 16
 
 [engines]
 smtbmc z3

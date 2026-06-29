@@ -60,18 +60,23 @@ module gf_mul_property #(
     always @(posedge clk) if (rst_cnt) rst_cnt <= rst_cnt - 3'b001;
     wire rst = |rst_cnt;
 
-    // ---- rst delayed one cycle (for async-reset phase alignment) ----
-    // The DUT uses `always @(posedge clk or posedge rst)` — ASYNCHRONOUS reset.
-    // On the LAST reset edge the synchronous harness already sees rst low and would
-    // capture a pair + raise `primed`, but the DUT's out_reg is still held at 0 by
-    // its async reset on that same edge -> out_y lags a_cap by one cycle ONLY on
-    // that boundary cycle (verified 2026-06-29 run 28385309101: t=80 a_cap=0x20,0x10
-    // primed=1 but out_y=0x0=mul(0,0); true mul(0x20,0x10)=0x8). FIX: gate the FIRST
-    // primed-cycle out with rst_prev so `primed` rises only after rst has been low
-    // for one FULL cycle, skipping the async-reset boundary. RTL is NOT modified.
-    reg rst_prev;
-    initial rst_prev = 1'b1;
-    always @(posedge clk) rst_prev <= rst;
+    // ---- rst delayed TWO cycles (async-reset phase + registered-input latency) ----
+    // The DUT uses `always @(posedge clk or posedge rst)` — ASYNCHRONOUS reset, and
+    // the harness registers the free operands ($anyseq -> in_a_q -> in_a_r), adding
+    // one pipeline stage. So out_reg = mul(in_a_r) only stabilises TWO clean cycles
+    // after reset release. On the boundary, smtbmc leaves the DUT's anyinit out_reg
+    // garbage residue for one extra cycle (verified 2026-06-29 run 28387449102 VCD:
+    // mul gf8 t=50 a_cap=0x29,0x4 primed=1 but out_y=0x0; true mul=0x03 — out_reg
+    // still held its anyinit value 0x0 one cycle past the single-rst_prev gate, then
+    // flushed to the correct 0x80 at t=60). FIX: extend the reset-release delay to a
+    // 2-deep shift `rst_dly` so `primed` rises only after rst has been low for TWO
+    // full cycles, skipping BOTH the async-reset boundary AND the registered-input
+    // settling cycle. On every steady cycle out_y == result_packed(a_cap,b_cap).
+    // RTL is NOT modified — this is purely a harness phase/latency alignment.
+    reg [1:0] rst_dly;
+    initial rst_dly = 2'b11;
+    always @(posedge clk) rst_dly <= {rst_dly[0], rst};
+    wire rst_prev = |rst_dly;   // high until rst has been low for 2 full cycles
 
     // ---- FREE unconstrained operands — REGISTERED (deterministic sampling) ----
     // $anyseq lets the solver pick a fresh arbitrary value every step. Earlier we

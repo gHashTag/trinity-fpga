@@ -65,16 +65,21 @@ module gf_adder_property #(
     always @(posedge clk) if (rst_cnt) rst_cnt <= rst_cnt - 3'b001;
     wire rst = |rst_cnt;
 
-    // ---- rst delayed one cycle (async-reset phase alignment) ----
+    // ---- rst delayed TWO cycles (async-reset phase + registered-input latency) ----
     // DUT gf_adder_param uses `always @(posedge clk or posedge rst)` — ASYNCHRONOUS
-    // reset. On the last reset edge the synchronous harness sees rst low and would
-    // raise `primed`, but DUT out_reg is still async-held at 0 on that edge -> out_y
-    // lags a_cap by one cycle ONLY on that boundary (same class of false-CE found
-    // for MUL, run 28385309101). FIX: gate primed with rst_prev so it rises only
-    // after rst has been low a full cycle, skipping the boundary. RTL NOT modified.
-    reg rst_prev;
-    initial rst_prev = 1'b1;
-    always @(posedge clk) rst_prev <= rst;
+    // reset; the harness also registers the free operands ($anyseq -> in_a_q ->
+    // in_a_r), adding a pipeline stage. So out_reg = add(in_a_r) only stabilises TWO
+    // clean cycles after reset release. With a single-cycle rst_prev gate, smtbmc
+    // leaves the DUT's anyinit out_reg garbage residue for one extra cycle on the
+    // boundary -> out_y lags a_cap there -> false CE (same class proven for MUL on
+    // run 28387449102 VCD: gf8 t=50 a_cap=0x29,0x4 primed=1 out_y=0x0, true=0x03).
+    // FIX: extend the reset-release delay to a 2-deep shift `rst_dly` so `primed`
+    // rises only after rst has been low TWO full cycles, skipping BOTH the async
+    // boundary AND the registered-input settling cycle. RTL is NOT modified.
+    reg [1:0] rst_dly;
+    initial rst_dly = 2'b11;
+    always @(posedge clk) rst_dly <= {rst_dly[0], rst};
+    wire rst_prev = |rst_dly;   // high until rst has been low for 2 full cycles
 
     // ---- FREE unconstrained operands — REGISTERED (deterministic sampling) ----
     // $anyseq lets the solver pick a fresh arbitrary value every step. Feeding the
