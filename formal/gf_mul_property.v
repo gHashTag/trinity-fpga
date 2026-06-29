@@ -53,7 +53,12 @@ module gf_mul_property #(
     wire rst = |rst_cnt;
 
     // ---- FREE unconstrained operands ----
-    reg  [TOTAL-1:0] in_a_r, in_b_r;
+    // MUST use $anyseq: a plain undriven `reg` is NOT a free formal input in
+    // yosys/sby ("no driver" -> undefined, NOT solver-chosen). $anyseq lets the
+    // solver pick a fresh arbitrary value EVERY cycle (new operand pair per clock).
+    // Verified 2026-06-29: undriven reg caused BMC FAIL (run 28378070910).
+    wire [TOTAL-1:0] in_a_r = $anyseq;
+    wire [TOTAL-1:0] in_b_r = $anyseq;
     wire in_valid_r = 1'b1;
     wire out_ready  = 1'b1;
     wire in_ready, out_valid;
