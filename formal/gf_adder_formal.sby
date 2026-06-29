@@ -45,7 +45,7 @@ gf24  gf24
 # depth 10: reset now spans 3 cycles (3-bit rst_cnt, deterministic anyinit fix);
 # first `primed` assert at cycle 4 -> ~6 independent free-pair checks remain.
 mode bmc
-depth 12
+depth 14
 
 [engines]
 smtbmc z3

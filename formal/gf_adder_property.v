@@ -76,14 +76,22 @@ module gf_adder_property #(
     initial rst_prev = 1'b1;
     always @(posedge clk) rst_prev <= rst;
 
-    // ---- FREE unconstrained operands ----
-    // MUST use $anyseq: a plain undriven `reg` is NOT a free formal input in
-    // yosys/sby (it has "no driver" -> undefined, NOT solver-chosen). $anyseq
-    // lets the solver pick a fresh arbitrary value EVERY cycle, which is exactly
-    // what we want (a new operand pair per clock). Verified 2026-06-29: undriven
-    // reg caused BMC FAIL on gf4/gf8/gf12/gf16 (run 28378070910).
-    wire [TOTAL-1:0] in_a_r = $anyseq;
-    wire [TOTAL-1:0] in_b_r = $anyseq;
+    // ---- FREE unconstrained operands — REGISTERED (deterministic sampling) ----
+    // $anyseq lets the solver pick a fresh arbitrary value every step. Feeding the
+    // COMBINATIONAL $anyseq wire directly to BOTH the DUT and the a_cap latch let
+    // smtbmc resolve the DUT-seen operand and the a_cap-latched operand to DIFFERENT
+    // $anyseq samples (false CE not reproduced by our Python model; same class as
+    // mul, run 28385887191). FIX: REGISTER the free operands once into in_a_q/in_b_q,
+    // drive the SAME registered value to the DUT and capture it -> one unambiguous
+    // operand sample per cycle: out_reg(N+1)=pack(in_q(N)), a_cap(N+1)=in_q(N).
+    reg  [TOTAL-1:0] in_a_q, in_b_q;
+    initial begin in_a_q = {TOTAL{1'b0}}; in_b_q = {TOTAL{1'b0}}; end
+    always @(posedge clk) begin
+        in_a_q <= $anyseq;
+        in_b_q <= $anyseq;
+    end
+    wire [TOTAL-1:0] in_a_r = in_a_q;
+    wire [TOTAL-1:0] in_b_r = in_b_q;
     wire in_valid_r = 1'b1;
     wire out_ready  = 1'b1;
     wire in_ready, out_valid;
