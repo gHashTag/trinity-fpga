@@ -1,9 +1,11 @@
 `default_nettype wire
 `timescale 1ns / 1ps
-// gf6_clean_ax7203 — GF6 ADD compute-conformance (GoldenFloat6: 1S+2E+3M).
-// gf_adder_param #(.EXP_BITS(2),.MANT_BITS(3)) for 6-bit GF6 operands (low 6 bits of 16-bit protocol word).
-module gf6_clean_ax7203 (
-    input wire rst_n, input wire uart_rx, output reg uart_tx, output wire [3:0] led
+// corona_decode_fp8_e5m2_ax7203 — FP8 E5M2 (OCP MX / IEEE-like) decode on AX7203.
+// Single-decoder build: CFGMCLK (~70 MHz, STARTUPE2) clock, BAUD_DIV 434 (~161290).
+// Frame: AA 55 fmt code_lo code_hi trig -> A5 r0 r1 r2 r3 (32-bit decoded LE).
+// Identical infrastructure to corona_decode_fp8_ax7203; only the decoder differs.
+module corona_decode_fp8_e5m2_ax7203 (
+    input  wire rst_n, input wire uart_rx, output reg uart_tx, output wire [3:0] led
 );
     wire mclk, eos;
     STARTUPE2 #(.PROG_USR("FALSE"), .SIM_CCLK_FREQ(0.0)) u_startup (
@@ -15,7 +17,6 @@ module gf6_clean_ax7203 (
     reg [26:0] cnt_c;
     always @(posedge mclk or posedge rst) if (rst) cnt_c<=0; else cnt_c<=cnt_c+1;
     assign led[0]=cnt_c[25]; assign led[3]=~rst;
-
     reg [2:0] rsync;
     always @(posedge mclk or posedge rst) if(rst) rsync<=3'b111; else rsync<={rsync[1:0],uart_rx};
     wire rxd=rsync[2];
@@ -31,42 +32,44 @@ module gf6_clean_ax7203 (
             endcase
         end
     end
-
-    reg [2:0] frm; reg [15:0] op_a,op_b; reg frame_valid;
+    reg [2:0] frm; reg [7:0] fmt_r; reg [15:0] code_r; reg frame_valid;
     always @(posedge mclk or posedge rst) begin
-        if(rst) begin frm<=0;op_a<=0;op_b<=0;frame_valid<=0; end
+        if(rst) begin frm<=0;fmt_r<=0;code_r<=0;frame_valid<=0; end
         else begin frame_valid<=0;
             if(rx_new) begin case(frm)
                 3'd0: frm<=(rx_byte==8'hAA)?3'd1:3'd0;
                 3'd1: frm<=(rx_byte==8'h55)?3'd2:3'd0;
-                3'd2: begin op_a[5:0]<=rx_byte;frm<=3; end
-                3'd3: begin op_a[15:8]<=rx_byte;frm<=4; end
-                3'd4: begin op_b[7:0]<=rx_byte;frm<=5; end
-                3'd5: begin op_b[15:8]<=rx_byte;frm<=6; end
-                3'd6: begin frame_valid<=1;frm<=0; end
+                3'd2: begin fmt_r<=rx_byte;frm<=3; end
+                3'd3: begin code_r[7:0]<=rx_byte;frm<=4; end
+                3'd4: begin code_r[15:8]<=rx_byte;frm<=5; end
+                3'd5: begin frame_valid<=1;frm<=0; end
             endcase end
         end
     end
-
-    wire [5:0] add_a=op_a[5:0]; wire [5:0] add_b=op_b[7:0];
-    wire add_in_ready,add_out_valid; wire [5:0] add_out_y;
-    gf_adder_param #(.EXP_BITS(2), .MANT_BITS(3)) u_add (
-        .clk(mclk),.rst(rst),.in_valid(frame_valid),.in_a(add_a),.in_b(add_b),
-        .in_ready(add_in_ready),.out_valid(add_out_valid),.out_y(add_out_y),.out_ready(1'b1));
-    wire [15:0] result_y={10'b0,add_out_y};
-    assign led[1]=frame_valid; assign led[2]=add_out_valid;
-
-    reg responding; reg [1:0] tx_idx; reg [7:0] tx_buf0,tx_buf1,tx_buf2,tx_buf3;
+    assign led[1]=frame_valid;
+    wire [31:0] result;
+    fp8_e5m2_decode u_dec (.e5m2_in(code_r[7:0]), .fp32_out(result), .is_zero(), .is_inf(), .is_nan());
+    assign led[2] = |result;
+    reg responding; reg [2:0] tx_idx; reg [7:0] tx_buf0,tx_buf1,tx_buf2,tx_buf3,tx_buf4;
     reg [8:0] tcnt; reg [3:0] tbi; reg [9:0] tsr;
     always @(posedge mclk or posedge rst) begin
         if(rst) begin responding<=0;tx_idx<=0;tcnt<=BAUD_DIV-1;tbi<=0;tsr<=10'h3FF;uart_tx<=1;
-            tx_buf0<=8'hFF;tx_buf1<=8'hFF;tx_buf2<=8'hFF;tx_buf3<=8'hFF; end
+            tx_buf0<=8'hFF;tx_buf1<=8'hFF;tx_buf2<=8'hFF;tx_buf3<=8'hFF;tx_buf4<=8'hFF; end
         else begin uart_tx<=tsr[0];
-            if(add_out_valid) begin tx_buf0<=8'hA5;tx_buf1<=result_y[7:0];tx_buf2<=result_y[15:8];tx_buf3<=8'h00;responding<=1;tx_idx<=0; end
+            if(frame_valid) begin
+                tx_buf0<=8'hA5; tx_buf1<=result[7:0]; tx_buf2<=result[15:8];
+                tx_buf3<=result[23:16]; tx_buf4<=result[31:24]; responding<=1; tx_idx<=0;
+            end
             if(tcnt==0) begin tcnt<=BAUD_DIV-1;
                 if(tbi==9) begin tbi<=0;
-                    if(responding) begin case(tx_idx) 2'd0:tsr<={1'b1,tx_buf0,1'b0};2'd1:tsr<={1'b1,tx_buf1,1'b0};2'd2:tsr<={1'b1,tx_buf2,1'b0};2'd3:tsr<={1'b1,tx_buf3,1'b0}; endcase if(tx_idx==3) responding<=0; else tx_idx<=tx_idx+1; end
-                    else tsr<=10'h3FF;
+                    if(responding) begin
+                        case(tx_idx)
+                            3'd0: tsr<={1'b1,tx_buf0,1'b0}; 3'd1: tsr<={1'b1,tx_buf1,1'b0};
+                            3'd2: tsr<={1'b1,tx_buf2,1'b0}; 3'd3: tsr<={1'b1,tx_buf3,1'b0};
+                            3'd4: tsr<={1'b1,tx_buf4,1'b0};
+                        endcase
+                        if(tx_idx==4) responding<=0; else tx_idx<=tx_idx+1;
+                    end else tsr<=10'h3FF;
                 end else begin tbi<=tbi+1;tsr<={1'b1,tsr[9:1]}; end
             end else tcnt<=tcnt-1;
         end

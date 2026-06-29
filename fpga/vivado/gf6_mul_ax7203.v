@@ -1,8 +1,8 @@
 `default_nettype wire
 `timescale 1ns / 1ps
-// gf6_clean_ax7203 — GF6 ADD compute-conformance (GoldenFloat6: 1S+2E+3M).
-// gf_adder_param #(.EXP_BITS(2),.MANT_BITS(3)) for 6-bit GF6 operands (low 6 bits of 16-bit protocol word).
-module gf6_clean_ax7203 (
+// gf6_mul_ax7203 — GF6 MUL compute-conformance (GoldenFloat6: 1S+2E+3M).
+// gf_mul_param #(.EXP_BITS(2),.MANT_BITS(3)) for 6-bit GF6 operands (low 6 bits of 16-bit protocol word).
+module gf6_mul_ax7203 (
     input wire rst_n, input wire uart_rx, output reg uart_tx, output wire [3:0] led
 );
     wire mclk, eos;
@@ -50,7 +50,7 @@ module gf6_clean_ax7203 (
 
     wire [5:0] add_a=op_a[5:0]; wire [5:0] add_b=op_b[7:0];
     wire add_in_ready,add_out_valid; wire [5:0] add_out_y;
-    gf_adder_param #(.EXP_BITS(2), .MANT_BITS(3)) u_add (
+    gf_mul_param #(.EXP_BITS(2), .MANT_BITS(3)) u_add (
         .clk(mclk),.rst(rst),.in_valid(frame_valid),.in_a(add_a),.in_b(add_b),
         .in_ready(add_in_ready),.out_valid(add_out_valid),.out_y(add_out_y),.out_ready(1'b1));
     wire [15:0] result_y={10'b0,add_out_y};

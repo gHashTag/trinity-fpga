@@ -1,0 +1,39 @@
+name: Conformance golden self-tests
+
+# Regression gate for the conformance GOLDEN MODELS (decode + gf_add reference
+# implementations in Python). Runs every script's --self-test (pure golden,
+# no hardware) on any change under conformance/. Complements the gf-adder-ref-tb
+# gate (which covers the RTL core) by protecting the Python golden models that
+# drive HW conformance on the board.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'conformance/**'
+      - '.github/workflows/conformance-selftest.yml'
+  pull_request:
+    paths:
+      - 'conformance/**'
+
+jobs:
+  selftest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run all conformance golden self-tests
+        run: |
+          set -e
+          echo "== decode-host (7 formats) =="
+          python3 conformance/corona_decode_host_ax7203.py --self-test
+          echo "== compute goldens (gf4..gf24) =="
+          for gf in gf4 gf6 gf8 gf12 gf16 gf20 gf24; do
+            echo "--- $gf ---"
+            python3 conformance/${gf}_add_conformance_ax7203.py --self-test
+          done
+          echo "== golden consistency (host goldens vs decode_verify oracles, all codes) =="
+          python3 conformance/golden_consistency.py
+          echo "== compute golden consistency (gf6/gf8/gf12 self-refs vs gf_ref.py) =="
+          python3 conformance/compute_golden_consistency.py
+          echo "ALL CONFORMANCE GOLDEN SELF-TESTS: PASS"

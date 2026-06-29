@@ -185,6 +185,11 @@ module gf_adder_property #(
         reg [MANT_BITS-1:0] fr_r, mr_r;
         reg [TOTAL-1:0] res;
         begin
+            // NOTE: операнды уже декодированы и спец-случаи (zero/NaN/Inf) обработаны
+            // в ref_fpadd; сюда приходит только числовое ядро. Разрешение merge-конфликта
+            // 29.06: взята версия ветки (wide ACC_W-аккумулятор + полная HAS_INF-ветка),
+            // т.к. она корректна для широких форматов (gf20/gf24 ~2^524) и gf16 Inf/NaN;
+            // inline-вариант main использовал 32-bit integer + lead-loop<24 (узко).
             base_a = (adn ? 0 : (1 << MANT_BITS)) + ma;   // {implicit, mant}
             base_b = (bdn ? 0 : (1 << MANT_BITS)) + mb;
             sh_a   = (adn ? 1 : ea) - 1;                  // exp_eff - 1 (>= 0)

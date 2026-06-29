@@ -1,8 +1,8 @@
 `default_nettype wire
 `timescale 1ns / 1ps
-// gf6_clean_ax7203 — GF6 ADD compute-conformance (GoldenFloat6: 1S+2E+3M).
-// gf_adder_param #(.EXP_BITS(2),.MANT_BITS(3)) for 6-bit GF6 operands (low 6 bits of 16-bit protocol word).
-module gf6_clean_ax7203 (
+// gf12_mul_ax7203 — GF12 MUL compute-conformance (GoldenFloat12: 1S+4E+7M).
+// gf_mul_param #(4,7) for 12-bit GF12 operands. Same frame/UART as gf8_clean.
+module gf12_mul_ax7203 (
     input wire rst_n, input wire uart_rx, output reg uart_tx, output wire [3:0] led
 );
     wire mclk, eos;
@@ -15,7 +15,6 @@ module gf6_clean_ax7203 (
     reg [26:0] cnt_c;
     always @(posedge mclk or posedge rst) if (rst) cnt_c<=0; else cnt_c<=cnt_c+1;
     assign led[0]=cnt_c[25]; assign led[3]=~rst;
-
     reg [2:0] rsync;
     always @(posedge mclk or posedge rst) if(rst) rsync<=3'b111; else rsync<={rsync[1:0],uart_rx};
     wire rxd=rsync[2];
@@ -31,7 +30,6 @@ module gf6_clean_ax7203 (
             endcase
         end
     end
-
     reg [2:0] frm; reg [15:0] op_a,op_b; reg frame_valid;
     always @(posedge mclk or posedge rst) begin
         if(rst) begin frm<=0;op_a<=0;op_b<=0;frame_valid<=0; end
@@ -39,7 +37,7 @@ module gf6_clean_ax7203 (
             if(rx_new) begin case(frm)
                 3'd0: frm<=(rx_byte==8'hAA)?3'd1:3'd0;
                 3'd1: frm<=(rx_byte==8'h55)?3'd2:3'd0;
-                3'd2: begin op_a[5:0]<=rx_byte;frm<=3; end
+                3'd2: begin op_a[7:0]<=rx_byte;frm<=3; end
                 3'd3: begin op_a[15:8]<=rx_byte;frm<=4; end
                 3'd4: begin op_b[7:0]<=rx_byte;frm<=5; end
                 3'd5: begin op_b[15:8]<=rx_byte;frm<=6; end
@@ -47,15 +45,13 @@ module gf6_clean_ax7203 (
             endcase end
         end
     end
-
-    wire [5:0] add_a=op_a[5:0]; wire [5:0] add_b=op_b[7:0];
-    wire add_in_ready,add_out_valid; wire [5:0] add_out_y;
-    gf_adder_param #(.EXP_BITS(2), .MANT_BITS(3)) u_add (
+    wire [11:0] add_a=op_a[11:0]; wire [11:0] add_b=op_b[11:0];
+    wire add_in_ready,add_out_valid; wire [11:0] add_out_y;
+    gf_mul_param #(.EXP_BITS(4), .MANT_BITS(7)) u_add (
         .clk(mclk),.rst(rst),.in_valid(frame_valid),.in_a(add_a),.in_b(add_b),
         .in_ready(add_in_ready),.out_valid(add_out_valid),.out_y(add_out_y),.out_ready(1'b1));
-    wire [15:0] result_y={10'b0,add_out_y};
+    wire [15:0] result_y={4'b0,add_out_y};
     assign led[1]=frame_valid; assign led[2]=add_out_valid;
-
     reg responding; reg [1:0] tx_idx; reg [7:0] tx_buf0,tx_buf1,tx_buf2,tx_buf3;
     reg [8:0] tcnt; reg [3:0] tbi; reg [9:0] tsr;
     always @(posedge mclk or posedge rst) begin

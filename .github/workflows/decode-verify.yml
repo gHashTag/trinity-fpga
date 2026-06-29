@@ -1,0 +1,42 @@
+name: Decode RTL exhaustive verification
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'fpga/openxc7-synth/*_decode.v'
+      - 'fpga/openxc7-synth/binary16_decode.v'
+      - 'conformance/decode_verify.py'
+      - 'formal/decode_tb.v'
+      - 'formal/binary16_decode_tb.v'
+      - 'formal/fp8_e5m2_decode_tb.v'
+      - '.github/workflows/decode-verify.yml'
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install iverilog
+        run: sudo apt-get update && sudo apt-get install -y iverilog
+      - name: iverilog version
+        run: iverilog -V 2>&1 | head -1
+      - name: Compile + exhaustive-verify decode RTL (8 formats)
+        run: |
+          set -eo pipefail
+          iverilog -g2012 -o /tmp/dec.vvp formal/decode_tb.v \
+            fpga/openxc7-synth/fp8_e4m3_fnuz_decode.v fpga/openxc7-synth/fp6_e2m3_decode.v \
+            fpga/openxc7-synth/fp6_e3m2_decode.v fpga/openxc7-synth/fp4_decode.v \
+            fpga/openxc7-synth/int4_decode.v fpga/openxc7-synth/posit8_decode.v \
+            fpga/openxc7-synth/lns8_decode.v fpga/openxc7-synth/int8_decode.v
+          vvp /tmp/dec.vvp | python3 conformance/decode_verify.py
+      - name: binary16 (exhaustive 65536, struct 'e' oracle)
+        run: |
+          set -eo pipefail
+          iverilog -g2012 -o /tmp/b16.vvp formal/binary16_decode_tb.v fpga/openxc7-synth/binary16_decode.v
+          vvp /tmp/b16.vvp | python3 conformance/decode_verify.py --format binary16
+      - name: fp8_e5m2 (exhaustive 256)
+        run: |
+          set -eo pipefail
+          iverilog -g2012 -o /tmp/f8.vvp formal/fp8_e5m2_decode_tb.v fpga/openxc7-synth/fp8_e5m2_decode.v
+          vvp /tmp/f8.vvp | python3 conformance/decode_verify.py --format fp8_e5m2
+      - run: echo "DECODE RTL VERIFY PASS (10 formats)"

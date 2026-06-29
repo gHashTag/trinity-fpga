@@ -1,8 +1,11 @@
 `default_nettype wire
 `timescale 1ns / 1ps
-// gf6_clean_ax7203 — GF6 ADD compute-conformance (GoldenFloat6: 1S+2E+3M).
-// gf_adder_param #(.EXP_BITS(2),.MANT_BITS(3)) for 6-bit GF6 operands (low 6 bits of 16-bit protocol word).
-module gf6_clean_ax7203 (
+// gf8_mul_ax7203 — GF8 MUL compute-conformance (GoldenFloat8: 1S+3E+4M, HAS_INF=0).
+// Near-clone of gf8_clean_ax7203 (ADD) with the DUT swapped: gf_mul_param #(3,4)
+// (same clk/rst/in_valid/in_a/in_b/in_ready/out_valid/out_y/out_ready interface).
+// Standard 6-byte request / 4-byte response, 8-bit GF8 operands (low byte of the
+// 16-bit protocol word). Golden = conformance/gf_ref.py::gf_mul (exact Fraction).
+module gf8_mul_ax7203 (
     input wire rst_n, input wire uart_rx, output reg uart_tx, output wire [3:0] led
 );
     wire mclk, eos;
@@ -39,7 +42,7 @@ module gf6_clean_ax7203 (
             if(rx_new) begin case(frm)
                 3'd0: frm<=(rx_byte==8'hAA)?3'd1:3'd0;
                 3'd1: frm<=(rx_byte==8'h55)?3'd2:3'd0;
-                3'd2: begin op_a[5:0]<=rx_byte;frm<=3; end
+                3'd2: begin op_a[7:0]<=rx_byte;frm<=3; end
                 3'd3: begin op_a[15:8]<=rx_byte;frm<=4; end
                 3'd4: begin op_b[7:0]<=rx_byte;frm<=5; end
                 3'd5: begin op_b[15:8]<=rx_byte;frm<=6; end
@@ -48,13 +51,13 @@ module gf6_clean_ax7203 (
         end
     end
 
-    wire [5:0] add_a=op_a[5:0]; wire [5:0] add_b=op_b[7:0];
-    wire add_in_ready,add_out_valid; wire [5:0] add_out_y;
-    gf_adder_param #(.EXP_BITS(2), .MANT_BITS(3)) u_add (
-        .clk(mclk),.rst(rst),.in_valid(frame_valid),.in_a(add_a),.in_b(add_b),
-        .in_ready(add_in_ready),.out_valid(add_out_valid),.out_y(add_out_y),.out_ready(1'b1));
-    wire [15:0] result_y={10'b0,add_out_y};
-    assign led[1]=frame_valid; assign led[2]=add_out_valid;
+    wire [7:0] mul_a=op_a[7:0]; wire [7:0] mul_b=op_b[7:0];
+    wire mul_in_ready,mul_out_valid; wire [7:0] mul_out_y;
+    gf_mul_param #(.EXP_BITS(3), .MANT_BITS(4)) u_mul (   // GF8: HAS_INF=0 (default)
+        .clk(mclk),.rst(rst),.in_valid(frame_valid),.in_a(mul_a),.in_b(mul_b),
+        .in_ready(mul_in_ready),.out_valid(mul_out_valid),.out_y(mul_out_y),.out_ready(1'b1));
+    wire [15:0] result_y={8'b0,mul_out_y};
+    assign led[1]=frame_valid; assign led[2]=mul_out_valid;
 
     reg responding; reg [1:0] tx_idx; reg [7:0] tx_buf0,tx_buf1,tx_buf2,tx_buf3;
     reg [8:0] tcnt; reg [3:0] tbi; reg [9:0] tsr;
@@ -62,7 +65,7 @@ module gf6_clean_ax7203 (
         if(rst) begin responding<=0;tx_idx<=0;tcnt<=BAUD_DIV-1;tbi<=0;tsr<=10'h3FF;uart_tx<=1;
             tx_buf0<=8'hFF;tx_buf1<=8'hFF;tx_buf2<=8'hFF;tx_buf3<=8'hFF; end
         else begin uart_tx<=tsr[0];
-            if(add_out_valid) begin tx_buf0<=8'hA5;tx_buf1<=result_y[7:0];tx_buf2<=result_y[15:8];tx_buf3<=8'h00;responding<=1;tx_idx<=0; end
+            if(mul_out_valid) begin tx_buf0<=8'hA5;tx_buf1<=result_y[7:0];tx_buf2<=result_y[15:8];tx_buf3<=8'h00;responding<=1;tx_idx<=0; end
             if(tcnt==0) begin tcnt<=BAUD_DIV-1;
                 if(tbi==9) begin tbi<=0;
                     if(responding) begin case(tx_idx) 2'd0:tsr<={1'b1,tx_buf0,1'b0};2'd1:tsr<={1'b1,tx_buf1,1'b0};2'd2:tsr<={1'b1,tx_buf2,1'b0};2'd3:tsr<={1'b1,tx_buf3,1'b0}; endcase if(tx_idx==3) responding<=0; else tx_idx<=tx_idx+1; end

@@ -63,9 +63,12 @@ module gf_mul_param #(
     // ----- классификация -----
     wire a_zero = (ea == {EXP_BITS{1'b0}}) && (ma == {MANT_BITS{1'b0}});
     wire b_zero = (eb == {EXP_BITS{1'b0}}) && (mb == {MANT_BITS{1'b0}});
-    // denormal: exp_field==0 && mant!=0 && bias>0
-    wire a_denorm = (BIAS > 0) && (ea == {EXP_BITS{1'b0}}) && (ma != {MANT_BITS{1'b0}});
-    wire b_denorm = (BIAS > 0) && (eb == {EXP_BITS{1'b0}}) && (mb != {MANT_BITS{1'b0}});
+    // denormal: exp_field==0 && mant!=0. (BIAS>0) guard REMOVED — matches the
+    // gf_adder_param fix: GF4 has BIAS=0, so the guard skipped GF4 denormals →
+    // ma_f used implicit-1 (1.x) instead of 0.x → HW a*denorm≈a (caught on silicon,
+    // bug-equals-bug in the Python transcription). Only GF4 (BIAS=0) was affected.
+    wire a_denorm = (ea == {EXP_BITS{1'b0}}) && (ma != {MANT_BITS{1'b0}});
+    wire b_denorm = (eb == {EXP_BITS{1'b0}}) && (mb != {MANT_BITS{1'b0}});
     // спец exp=all-ones (только если HAS_INF): Inf при mant==0, NaN при mant!=0
     wire a_special = (HAS_INF != 0) && (ea == {EXP_BITS{1'b1}});
     wire b_special = (HAS_INF != 0) && (eb == {EXP_BITS{1'b1}});
@@ -203,9 +206,7 @@ module gf_mul_param #(
         reg gd, st, lsbf;
         reg [MANT_BITS+1:0]  mant_out;
         begin
-            if (BIAS == 0) begin
-                pack_denorm = sgn ? CODE_NZERO : CODE_PZERO;  // GF4 вырожден — отдельное ядро
-            end else begin
+            begin   // (BIAS==0 short-circuit REMOVED: the assumed "separate gf4 core" doesn't exist — gf_mul_param serves all widths, so gf4 denormal MUL must use the general pack path. Was flushing all gf4 denormal results to ±0 = 60/256 HW fails.)
                 p_sh = er_real - MANT_BITS + BIAS - 1;
                 if (p_sh >= 0) begin
                     // точный left-shift (без округления)

@@ -1,0 +1,70 @@
+name: Wrapper FSM/UART runtime sim
+
+# Fourth regression gate: sim-verifies the wrapper FSM/UART runtime (frame -> tx_buf)
+# for all 3 FSM variants — decode 6-byte (fp4), compute 7-byte (gf16), compute
+# 9-byte wider (gf20). Drives uart_rx at baud timing, reads tx_buf hierarchically
+# (avoids the immediate-TX recv race). Complements decode-verify (decoder logic)
+# by covering the wrapper frame FSM + UART RX runtime — the path the board exercises.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'fpga/openxc7-synth/corona_decode_*_ax7203.v'
+      - 'fpga/vivado/gf*_clean_ax7203.v'
+      - 'fpga/openxc7-synth/gf_adder_param.v'
+      - 'formal/wrapper_uart_sim_tb.v'
+      - 'formal/gf16_wrapper_sim_tb.v'
+      - 'formal/gf20_wrapper_sim_tb.v'
+      - '.github/workflows/wrapper-fsm-sim.yml'
+jobs:
+  fsm-sim:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install iverilog
+        run: sudo apt-get update && sudo apt-get install -y iverilog
+      - name: Structural FSM audit (all 20 wrappers)
+        run: python3 conformance/wrapper_fsm_audit.py
+      - name: Decode 6-byte frame FSM (fp4, 16 codes)
+        run: |
+          set -eo pipefail
+          iverilog -g2012 -o /tmp/a.vvp formal/wrapper_uart_sim_tb.v \
+            fpga/openxc7-synth/corona_decode_fp4_ax7203.v fpga/openxc7-synth/fp4_decode.v \
+            fpga/openxc7-synth/STARTUPE2_mock.v
+          vvp /tmp/a.vvp | tee /tmp/a.out
+          grep -q ": 0 errors" /tmp/a.out
+      - name: Decode 7-byte/3-code frame FSM (tf32)
+        run: |
+          set -eo pipefail
+          iverilog -g2012 -o /tmp/d.vvp formal/tf32_wrapper_sim_tb.v \
+            fpga/openxc7-synth/corona_decode_tf32_ax7203.v fpga/openxc7-synth/tf32_decode.v \
+            fpga/openxc7-synth/STARTUPE2_mock.v
+          vvp /tmp/d.vvp | tee /tmp/d.out
+          grep -q ": 0 errors" /tmp/d.out
+      - name: lns8 tuple packing (decode 6-byte, non-fp32 result)
+        run: |
+          set -eo pipefail
+          iverilog -g2012 -o /tmp/e.vvp formal/lns8_wrapper_sim_tb.v \
+            fpga/openxc7-synth/corona_decode_lns8_ax7203.v fpga/openxc7-synth/lns8_decode.v \
+            fpga/openxc7-synth/STARTUPE2_mock.v
+          vvp /tmp/e.vvp | tee /tmp/e.out
+          grep -q ": 0 errors" /tmp/e.out
+      - name: Compute 7-byte frame FSM (gf16, migrated, HAS_INF=1)
+        run: |
+          set -eo pipefail
+          iverilog -g2012 -o /tmp/b.vvp formal/gf16_wrapper_sim_tb.v \
+            fpga/vivado/gf16_clean_ax7203.v fpga/openxc7-synth/gf_adder_param.v \
+            fpga/openxc7-synth/STARTUPE2_mock.v
+          vvp /tmp/b.vvp | tee /tmp/b.out
+          grep -q ": 0 errors" /tmp/b.out
+      - name: Compute 9-byte wider-frame FSM (gf20)
+        run: |
+          set -eo pipefail
+          iverilog -g2012 -o /tmp/c.vvp formal/gf20_wrapper_sim_tb.v \
+            fpga/vivado/gf20_clean_ax7203.v fpga/openxc7-synth/gf_adder_param.v \
+            fpga/openxc7-synth/STARTUPE2_mock.v
+          vvp /tmp/c.vvp | tee /tmp/c.out
+          grep -q ": 0 errors" /tmp/c.out
+      - run: echo "WRAPPER FSM SIM (3 variants) PASS"

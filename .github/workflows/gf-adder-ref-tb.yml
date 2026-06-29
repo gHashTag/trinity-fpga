@@ -1,0 +1,68 @@
+name: GF compute core ref-TB (ADD + MUL)
+
+# Functional regression gate for the parametric GF compute primitives:
+# gf_adder_param.v (ADD) and gf_mul_param.v (MUL). Runs the independent
+# integer-scaled reference TBs for GF4/6/8 exhaustive + GF12/16 sample. The ADD
+# TB caught the GF4 BIAS=0 bug; both validate the family. CI runs iverilog 12.0.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'fpga/openxc7-synth/gf_adder_param.v'
+      - 'fpga/openxc7-synth/gf_mul_param.v'
+      - 'formal/gf_adder_ref_tb.v'
+      - 'formal/gf_mul_ref_tb.v'
+      - '.github/workflows/gf-adder-ref-tb.yml'
+  pull_request:
+    paths:
+      - 'fpga/openxc7-synth/gf_adder_param.v'
+      - 'fpga/openxc7-synth/gf_mul_param.v'
+      - 'formal/gf_adder_ref_tb.v'
+      - 'formal/gf_mul_ref_tb.v'
+
+jobs:
+  ref-tb:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install iverilog
+        run: sudo apt-get update && sudo apt-get install -y iverilog
+      - name: Run parameterized ref-TB for all GF widths
+        run: |
+          set -e
+          run_width() {
+            local E=$1 M=$2 HI=$3 N=$4 D=""
+            [ -n "$N" ] && D="-DGF_SAMPLE_N=$N"
+            iverilog -g2012 -DGF_EXP_BITS=$E -DGF_MANT_BITS=$M -DGF_HAS_INF=$HI $D \
+              -o /tmp/tb.vvp formal/gf_adder_ref_tb.v fpga/openxc7-synth/gf_adder_param.v
+            vvp /tmp/tb.vvp | tee /tmp/tb.out
+            grep -q "errors=0" /tmp/tb.out || { echo "::error::GF E=$E M=$M ref-TB has errors"; exit 1; }
+            echo "PASS GF E=$E M=$M HAS_INF=$HI $([ -n "$N" ] && echo sample=$N || echo exhaustive)"
+          }
+          # CI runs iverilog 12.0 (Ubuntu 24.04 apt); these 5 widths pass there.
+          # GF20/GF24 are validated locally on iverilog 13.0 (544-bit ref needed for
+          # GF24's exp range); they share the same parametric core, so these 5 widths
+          # (incl. exhaustive GF8 65536, the HW-proven width) give full regression cover.
+          run_width 1 2 0       # GF4 exhaustive (256)
+          run_width 2 3 0       # GF6 exhaustive (4096)
+          run_width 3 4 0       # GF8 exhaustive (65536) — HW-proven width
+          run_width 4 7 0 30000 # GF12 sample
+          run_width 6 9 1 30000 # GF16 sample (HAS_INF)
+          # ---- MUL core (gf_mul_param) ----
+          run_mul() {
+            local E=$1 M=$2 HI=$3 N=$4 D=""
+            [ -n "$N" ] && D="-DGF_SAMPLE_N=$N"
+            iverilog -g2012 -DGF_EXP_BITS=$E -DGF_MANT_BITS=$M -DGF_HAS_INF=$HI $D \
+              -o /tmp/mtb.vvp formal/gf_mul_ref_tb.v fpga/openxc7-synth/gf_mul_param.v
+            vvp /tmp/mtb.vvp | tee /tmp/mtb.out
+            grep -q "errors=0" /tmp/mtb.out || { echo "::error::GF MUL E=$E M=$M ref-TB has errors"; exit 1; }
+            echo "PASS GF MUL E=$E M=$M HAS_INF=$HI $([ -n "$N" ] && echo sample=$N || echo exhaustive)"
+          }
+          run_mul 1 2 0       # GF4 exhaustive
+          run_mul 2 3 0       # GF6 exhaustive
+          run_mul 3 4 0       # GF8 exhaustive
+          run_mul 4 7 0 30000 # GF12 sample
+          run_mul 6 9 1 30000 # GF16 sample (HAS_INF=1 -> validates Inf-producing overflow)
+          echo "GF compute core ref-TB (ADD+MUL): PASS"

@@ -35,9 +35,19 @@ module gf_adder_param #(
     wire                        a_zero = (ea == {EXP_BITS{1'b0}}) && (ma == {MANT_BITS{1'b0}});
     wire                        b_zero = (eb == {EXP_BITS{1'b0}}) && (mb == {MANT_BITS{1'b0}});
 
-    // Denormal detection: exp_field==0 && mant!=0 && bias>0 (only exists for EXP_BITS>=2)
-    wire a_denorm = (BIAS > 0) && (ea == {EXP_BITS{1'b0}}) && (ma != {MANT_BITS{1'b0}});
-    wire b_denorm = (BIAS > 0) && (eb == {EXP_BITS{1'b0}}) && (mb != {MANT_BITS{1'b0}});
+    // Denormal detection: exp_field==0 && mant!=0. (Dropped the bias>0 guard: per the
+    // gf_ref.py golden, exp=0,mant!=0 is a DENORMAL for ALL widths including GF4 (bias=0) —
+    // value = mant/2^MANT * 2^(1-bias). The old guard sent GF4 exp=0,mant!=0 to the normal
+    // path with sh=ea-1=-1 => negative shift (undefined). No-op for BIAS>0 formats where the
+    // guard was always true, so GF6/8/12/16 netlists are unchanged.)
+    wire a_denorm = (ea == {EXP_BITS{1'b0}}) && (ma != {MANT_BITS{1'b0}});
+    wire b_denorm = (eb == {EXP_BITS{1'b0}}) && (mb != {MANT_BITS{1'b0}});
+
+    // NaN input detection (HAS_INF only — GF16): exp=all-ones && mant!=0.
+    // Without this, NaN inputs fall into the normal path and produce Inf (overflow),
+    // violating IEEE 754 (NaN+x = NaN). Caught by HW flash burst (fire #56).
+    wire a_nan = (HAS_INF != 0) && (ea == {EXP_BITS{1'b1}}) && (ma != {MANT_BITS{1'b0}});
+    wire b_nan = (HAS_INF != 0) && (eb == {EXP_BITS{1'b1}}) && (mb != {MANT_BITS{1'b0}});
 
     // Effective exponent: denormals use 1 (not 0) for alignment — their real_exp = 1-BIAS
     wire [EXP_BITS-1:0] ea_eff = a_denorm ? {{(EXP_BITS-1){1'b0}}, 1'b1} : ea;
@@ -99,6 +109,9 @@ module gf_adder_param #(
             result_packed = in_b;
         else if (b_zero)
             result_packed = in_a;
+        // NaN input → quiet NaN (IEEE 754: NaN propagates through ADD)
+        else if (a_nan || b_nan)
+            result_packed = {1'b0, {EXP_BITS{1'b1}}, {(MANT_BITS-1){1'b0}}, 1'b1};
         else begin
             sg = sr; mw = mant_raw; ew = {1'b0, er}; underflow = 1'b0;
             // Add overflow (preserve sticky: capture old bit[0], OR into new sticky after >>1)
@@ -120,7 +133,7 @@ module gf_adder_param #(
             // mantissa sits one bit high; right-shift by 1 (sticky-preserving) to
             // align with the ew==0 denormal pack path. (er-independent: the offset
             // is GRS_width+1 regardless of exponent/MANT_BITS.)
-            if (!same_sign && BIAS > 0 && mw != 0 && ew == 0) begin
+            if (!same_sign && mw != 0 && ew == 0) begin
                 old_sticky = mw[0];
                 mw = mw >> 1;
                 mw[0] = mw[0] | old_sticky;
@@ -134,8 +147,10 @@ module gf_adder_param #(
                 mant_rounded = mant_rounded >> 1;
                 ew = ew + 1;
             end
-            // Denormal result detection (addition only, same_sign)
-            if (same_sign && BIAS > 0 && !mw[MANT_BITS+3] && ew <= 1'b1)
+            // Denormal result detection (addition only, same_sign). Applies to ALL
+            // widths incl. GF4 (BIAS=0): a same-sign sum whose leading bit sits below
+            // the implicit position (mw[MANT_BITS+3]==0) with ew<=1 is a denormal result.
+            if (same_sign && !mw[MANT_BITS+3] && ew <= 1'b1)
                 ew = {EXP_BITS{1'b0}};  // force denormal packing
             // Pack
             if (mw == 0 || underflow)

@@ -1,20 +1,19 @@
 `default_nettype wire
-
-// =============================================================================
-// gf16_clean_ax7203 — clean GF16 ADD HW-conformance engine (replaces buggy smoke-test)
-// =============================================================================
-// Built from PROVEN components: RX FSM from rx_echo_hb (verified clean 0x55 echo),
-// TX pattern from uart_tx_probe (verified monotonic cnt stream), gf_adder_param
-// #(EXP_BITS=6, MANT_BITS=9, HAS_INF=1) core. All on CFGMCLK (~70 MHz, STARTUPE2→BUFG). BAUD_DIV 434 (~161290).
-//
-// Protocol (matches conformance/gf16_add_conformance_ax7203.py):
-//   Host -> FPGA: [0xAA][0x55][a_lo][a_hi][b_lo][b_hi][cmd]
-//   FPGA -> Host: [0xA5][res_lo][res_hi][0x00]
-// =============================================================================
-
 `timescale 1ns / 1ps
 
-module gf16_clean_ax7203 (
+// =============================================================================
+// gf24_mul_ax7203 — GF24 ADD HW-conformance engine (1S+9E+14M, bias=255, no Inf).
+// Same wider-frame protocol as gf20_clean (24-bit = exactly 3 bytes/operand):
+//   Host -> FPGA: [0xAA][0x55][a_lo][a_mid][a_hi][b_lo][b_mid][b_hi][cmd]
+//     op_a[23:0] = {a_hi[7:0], a_mid[7:0], a_lo[7:0]}  (same for op_b)
+//   FPGA -> Host: [0xA5][r_lo][r_mid][r_hi]
+//     result[23:0] = {r_hi[7:0], r_mid[7:0], r_lo[7:0]}
+// Core = gf_mul_param #(EXP_BITS=9, MANT_BITS=14) (validated SW for gf24,
+// 30000/30000; HAS_INF=0 -> overflow saturates to max-finite). Matches
+// conformance/gf24_add_conformance_ax7203.py.
+// =============================================================================
+
+module gf24_mul_ax7203 (
     input  wire rst_n,
     input  wire uart_rx,
     output reg  uart_tx,
@@ -29,14 +28,12 @@ module gf16_clean_ax7203 (
     wire rst = ~rst_n | ~eos;
     localparam [8:0] BAUD_DIV = 9'd434;
 
-    // Heartbeat
     reg [26:0] cnt_c;
     always @(posedge mclk or posedge rst)
         if (rst) cnt_c <= 0; else cnt_c <= cnt_c + 1;
     assign led[0] = cnt_c[25];
     assign led[3] = ~rst;
 
-    // ===== UART RX (from rx_echo_hb — PROVEN mid-bit sampling) =====
     reg [2:0] rsync;
     always @(posedge mclk or posedge rst)
         if (rst) rsync <= 3'b111; else rsync <= {rsync[1:0], uart_rx};
@@ -44,7 +41,7 @@ module gf16_clean_ax7203 (
 
     reg [1:0]  rxs;
     reg [9:0]  rxcnt;
-    reg [2:0]  rbi;
+    reg [3:0]  rbi;
     reg [7:0]  rxsr;
     reg [7:0]  rx_byte;
     reg        rx_new;
@@ -71,9 +68,8 @@ module gf16_clean_ax7203 (
         end
     end
 
-    // ===== Frame assembly: [AA 55 a_lo a_hi b_lo b_hi cmd] → frame_valid =====
-    reg [2:0] frm;
-    reg [15:0] op_a, op_b;
+    reg [3:0] frm;
+    reg [23:0] op_a, op_b;
     reg frame_valid;
 
     always @(posedge mclk or posedge rst) begin
@@ -82,37 +78,32 @@ module gf16_clean_ax7203 (
             frame_valid <= 0;
             if (rx_new) begin
                 case (frm)
-                    3'd0: frm <= (rx_byte==8'hAA) ? 3'd1 : 3'd0;
-                    3'd1: frm <= (rx_byte==8'h55) ? 3'd2 : 3'd0;
-                    3'd2: begin op_a[7:0]  <= rx_byte; frm <= 3'd3; end
-                    3'd3: begin op_a[15:8] <= rx_byte; frm <= 3'd4; end
-                    3'd4: begin op_b[7:0]  <= rx_byte; frm <= 3'd5; end
-                    3'd5: begin op_b[15:8] <= rx_byte; frm <= 3'd6; end
-                    3'd6: begin frame_valid <= 1; frm <= 3'd0; end
+                    4'd0: frm <= (rx_byte==8'hAA) ? 4'd1 : 4'd0;
+                    4'd1: frm <= (rx_byte==8'h55) ? 4'd2 : 4'd0;
+                    4'd2: begin op_a[7:0]   <= rx_byte; frm <= 4'd3; end
+                    4'd3: begin op_a[15:8]  <= rx_byte; frm <= 4'd4; end
+                    4'd4: begin op_a[23:16] <= rx_byte; frm <= 4'd5; end
+                    4'd5: begin op_b[7:0]   <= rx_byte; frm <= 4'd6; end
+                    4'd6: begin op_b[15:8]  <= rx_byte; frm <= 4'd7; end
+                    4'd7: begin op_b[23:16] <= rx_byte; frm <= 4'd8; end
+                    4'd8: begin frame_valid <= 1; frm <= 4'd0; end
                 endcase
             end
         end
     end
 
-    // ===== GF16 adder (PARAMETRIC: gf_adder_param, HAS_INF=1 -> overflow -> Inf) =====
-    // Field layout: sign=bit15, exp=bits14:9 (6b), mant=bits8:0 (9b), BIAS=31.
-    // Same parametric core proven on HW for GF6/GF8/GF12; full 16-bit operands
-    // (replaces the non-parametric gf16_adder + {add_out_y15, op_a[0]} recombine).
     wire add_in_ready, add_out_valid;
-    wire [15:0] add_out_y16;
-    gf_adder_param #(.EXP_BITS(6), .MANT_BITS(9), .HAS_INF(1)) u_add (
+    wire [23:0] add_out_y24;
+    gf_mul_param #(.EXP_BITS(9), .MANT_BITS(14)) u_add (
         .clk(mclk), .rst(rst),
-        .in_valid(frame_valid), .in_a(op_a[15:0]), .in_b(op_b[15:0]),
+        .in_valid(frame_valid), .in_a(op_a[23:0]), .in_b(op_b[23:0]),
         .in_ready(add_in_ready), .out_valid(add_out_valid),
-        .out_y(add_out_y16), .out_ready(1'b1));
-    wire [15:0] result_y = add_out_y16;
+        .out_y(add_out_y24), .out_ready(1'b1));
+    wire [23:0] result_y = add_out_y24;
 
     assign led[1] = frame_valid;
     assign led[2] = add_out_valid;
 
-    // ===== UART TX: send [A5 res_lo res_hi 00] on add_out_valid =====
-    // Clean design based on uart_tx_probe TX pattern (PROVEN). Continuously shifts;
-    // at byte boundary: if responding, load tx_buf[idx]; else idle (0x3FF).
     reg        responding;
     reg [1:0]  tx_idx;
     reg [7:0]  tx_buf0, tx_buf1, tx_buf2, tx_buf3;
@@ -129,17 +120,15 @@ module gf16_clean_ax7203 (
         end else begin
             uart_tx <= tsr[0];
 
-            // Capture result on ALU done
             if (add_out_valid) begin
                 tx_buf0 <= 8'hA5;
                 tx_buf1 <= result_y[7:0];
                 tx_buf2 <= result_y[15:8];
-                tx_buf3 <= 8'h00;
+                tx_buf3 <= result_y[23:16];
                 responding <= 1;
                 tx_idx <= 0;
             end
 
-            // TX shift
             if (tcnt==0) begin
                 tcnt <= BAUD_DIV-1;
                 if (tbi==9) begin
@@ -154,7 +143,7 @@ module gf16_clean_ax7203 (
                         if (tx_idx==3) responding <= 0;
                         else tx_idx <= tx_idx + 1;
                     end else begin
-                        tsr <= 10'h3FF;  // idle (line high)
+                        tsr <= 10'h3FF;
                     end
                 end else begin
                     tbi <= tbi + 1;

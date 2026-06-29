@@ -1,0 +1,65 @@
+name: AX7203 GF24 Clean Conformance
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'fpga/vivado/gf24_clean_ax7203.v'
+      - 'fpga/openxc7-synth/gf_adder_param.v'
+      - 'specs/fpga/constraints/gf16_clean_ax7203.xdc'
+      - '.github/workflows/ax7203-gf24-clean.yml'
+
+jobs:
+  bitstream:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker pull regymm/openxc7:latest
+      - name: Yosys synthesis
+        run: |
+          mkdir -p build/gf24_clean
+          docker run --rm -v "$PWD:/work" -w /work regymm/openxc7 yosys -p "
+            read_verilog fpga/openxc7-synth/gf_adder_param.v fpga/vivado/gf24_clean_ax7203.v;
+            synth_xilinx -flatten -abc9 -nocarry -arch xc7 -top gf24_clean_ax7203;
+            setundef -zero -params; write_json build/gf24_clean/gf24_clean_ax7203.json" 2>&1 | tee /tmp/yosys.log
+          grep -E "Estimated number of LCs|ERROR" /tmp/yosys.log
+      - name: Cache chipdb
+        id: chipdb-cache
+        uses: actions/cache@v4
+        with:
+          path: build/gf24_clean/chipdb/xc7a200tfbg484-2.bin
+          key: chipdb-xc7a200tfbg484-2-regymm-openxc7-${{ github.run_id }}
+          restore-keys: chipdb-xc7a200tfbg484-2-regymm-openxc7-
+      - name: Generate chipdb
+        if: steps.chipdb-cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p build/gf24_clean/chipdb
+          docker run --rm -v "$PWD:/work" -w /work regymm/openxc7 bash -c "
+            cd /nextpnr-xilinx && python3 xilinx/python/bbaexport.py --device xc7a200tfbg484-2 --bba /work/build/gf24_clean/chipdb/xc7a200tfbg484-2.bba && bbasm -l /work/build/gf24_clean/chipdb/xc7a200tfbg484-2.bba /work/build/gf24_clean/chipdb/xc7a200tfbg484-2.bin"
+      - name: nextpnr (seed search)
+        run: |
+          CLEAN=0
+          for s in $(seq 1 16); do
+            rm -f build/gf24_clean/gf24_clean_ax7203.fasm
+            docker run --rm -v "$PWD:/work" -w /work regymm/openxc7 nextpnr-xilinx \
+              --chipdb /work/build/gf24_clean/chipdb/xc7a200tfbg484-2.bin \
+              --xdc /work/specs/fpga/constraints/gf16_clean_ax7203.xdc \
+              --json /work/build/gf24_clean/gf24_clean_ax7203.json \
+              --write /work/build/gf24_clean/gf24_clean_ax7203_routed.json \
+              --fasm /work/build/gf24_clean/gf24_clean_ax7203.fasm \
+              --freq 50.0 --seed $s --placer sa --router router1 --timing-allow-fail > /tmp/np_$s.log 2>&1 || true
+            if grep -q "Failed to find a route" /tmp/np_$s.log || [ ! -f build/gf24_clean/gf24_clean_ax7203.fasm ]; then continue; fi
+            cp /tmp/np_$s.log /tmp/np.log; CLEAN=$s; break
+          done
+          [ "$CLEAN" = "0" ] && { echo "::error::no clean seed"; exit 1; }
+          echo "seed=$CLEAN"
+      - name: fasm2frames + xc7frames2bit
+        run: |
+          docker run --rm -v "$PWD:/work" -w /work regymm/openxc7 bash -c "
+            source /prjxray/env/bin/activate && fasm2frames --db-root /nextpnr-xilinx/xilinx/external/prjxray-db/artix7 --part xc7a200tfbg484-2 /work/build/gf24_clean/gf24_clean_ax7203.fasm /work/build/gf24_clean/gf24_clean_ax7203.frames && /prjxray/build/tools/xc7frames2bit --part_file /nextpnr-xilinx/xilinx/external/prjxray-db/artix7/xc7a200tfbg484-2/part.yaml --part_name xc7a200tfbg484-2 --frm_file /work/build/gf24_clean/gf24_clean_ax7203.frames --output_file /work/build/gf24_clean/gf24_clean_ax7203.bit"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gf24-clean-bitstream
+          path: build/gf24_clean/gf24_clean_ax7203.bit

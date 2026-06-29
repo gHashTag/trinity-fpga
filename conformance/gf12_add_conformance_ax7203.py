@@ -56,6 +56,22 @@ def hw_exchange(ser, a, b):
     if len(resp) != 4 or resp[0] != 0xA5: return None
     return resp[1] | (resp[2] << 8)
 
+def self_test():
+    rnd = random.Random(42)
+    corners = [0x000, 0x001, 0x7FF, 0x400, 0x3C0, 0x3FF, 0x010, 0x100]
+    sample = corners + [rnd.randint(0, (1 << TOTAL) - 1) for _ in range(56)]
+    bad = checked = 0
+    for a in sample:
+        for b in sample[:8]:
+            g = gf12_add(a, b)
+            checked += 1
+            if not (0 <= g < (1 << TOTAL)):
+                bad += 1
+            if gf12_add(a, b) != gf12_add(b, a):
+                bad += 1
+    print(f"self-test: {checked}-pair GF12 golden, in-width+commutative, bad={bad}")
+    return bad == 0
+
 def run_hw(port, baud):
     import serial
     ser = serial.Serial(port, baud, timeout=2)
@@ -75,8 +91,12 @@ def run_hw(port, baud):
     print(f"HW RESULT: {checked-fails}/{checked} bit-exact (fails={fails})")
     return fails == 0
 
-ap = argparse.ArgumentParser()
-ap.add_argument("--port", default="/dev/cu.usbserial-120")
-ap.add_argument("--baud", type=int, default=160000)
-a = ap.parse_args()
-sys.exit(0 if run_hw(a.port, a.baud) else 1)
+if __name__ == "__main__":
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--self-test", action="store_true")
+    ap.add_argument("--port", default="/dev/cu.usbserial-120")
+    ap.add_argument("--baud", type=int, default=160000)
+    a = ap.parse_args()
+    if a.self_test:
+        sys.exit(0 if self_test() else 1)
+    sys.exit(0 if run_hw(a.port, a.baud) else 1)
