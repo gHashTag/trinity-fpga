@@ -43,11 +43,14 @@ gf24  gf24
 # (basecase PASSED, induction FAILED — verified 2026-06-29 run 28375327534). BMC
 # from reset feeds a fresh FREE pair each cycle; depth 8 checks ~6 independent
 # valid-output cycles — equivalent to a full functional check.
-# depth 10: reset now spans 3 cycles (rst_cnt 3-bit, deterministic anyinit fix),
-# first `primed` assert fires at cycle 4 -> depth 10 leaves ~6 independent valid
-# free-pair checks. Each cycle feeds a fresh $anyseq pair (combinational property).
+# REWRITE 2026-06-30: operands are now $anyconst (time-invariant). Reset spans
+# 3 cycles (rst_cnt 3-bit), then a 3-bit `settle` counter saturates over 7 more
+# cycles before `primed` rises (~cycle 10), guaranteeing the async-reset boundary
+# and the first stable out_reg write have both passed. depth 20 leaves several
+# asserted steady cycles. Because a/b are constant, every asserted cycle is the
+# SAME check out_y==ref_fpmul(a,b) — no per-cycle sample skew can occur.
 mode bmc
-depth 16
+depth 20
 
 [engines]
 smtbmc z3

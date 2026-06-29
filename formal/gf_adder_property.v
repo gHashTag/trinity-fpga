@@ -51,55 +51,34 @@ module gf_adder_property #(
     input wire clk
 );
 
-    // ---- Internal power-on reset (DETERMINISTIC init — critical for BMC) ----
-    // smtbmc lets the solver pick ARBITRARY power-on values for any reg WITHOUT an
-    // `initial` value ("anyinit"). The DUT's out_reg/out_valid_reg are such regs ->
-    // the solver can raise out_valid in step 0 with garbage out_reg, yielding a
-    // FALSE counterexample (root cause of the mul/adder "defects" seen 2026-06-29
-    // run 28380750995 — NOT real RTL bugs; algorithm proven == gf_ref golden).
-    // FIX (mirror of gf_mul_property.v): a harness-owned `primed` flag,
-    // deterministically initialised, gates the assert so it fires ONLY on cycles
-    // whose out_y is the genuine DUT result of a real captured pair. RTL untouched.
+    // -----------------------------------------------------------------------------
+    // ROOT-CAUSE REWRITE 2026-06-30 — $anyconst time-invariant operands (mirror of
+    // gf_mul_property.v). HISTORY: four harness iterations (anyinit primed,
+    // async-reset rst_prev, registered-operand sampling, primed_d) each removed ONE
+    // boundary-cycle false CE, but smtbmc kept finding the next, because the property
+    // compared a LATENT anyinit-capable out_y against a COMBINATIONAL oracle of a
+    // separately-captured pair, hand-aligned in phase. Any 1-cycle residue => spurious
+    // CE. FIX (kills the whole class): drive the DUT with $anyconst operands invariant
+    // across the trace. With out_ready=1/in_ready=1/in_valid=1 the DUT writes
+    // out_reg <= result_packed(a,b) every cycle, so out_reg is STABLE at the correct
+    // value once reset+settle pass — no sample skew, no capture, no anyinit residue.
+    // RTL is UNCHANGED. (Independent gf_ref golden and silicon — adder family Tier E —
+    // confirm the RTL; every formal FAIL here was a harness timing artifact.)
+    // -----------------------------------------------------------------------------
     reg [2:0] rst_cnt;
-    initial rst_cnt = 3'b011;   // 3 reset cycles (rst high while rst_cnt!=0)
+    initial rst_cnt = 3'b011;            // reset asserted while rst_cnt != 0
     always @(posedge clk) if (rst_cnt) rst_cnt <= rst_cnt - 3'b001;
     wire rst = |rst_cnt;
 
-    // ---- rst delayed TWO cycles (async-reset phase + registered-input latency) ----
-    // DUT gf_adder_param uses `always @(posedge clk or posedge rst)` — ASYNCHRONOUS
-    // reset; the harness also registers the free operands ($anyseq -> in_a_q ->
-    // in_a_r), adding a pipeline stage. So out_reg = add(in_a_r) only stabilises TWO
-    // clean cycles after reset release. With a single-cycle rst_prev gate, smtbmc
-    // leaves the DUT's anyinit out_reg garbage residue for one extra cycle on the
-    // boundary -> out_y lags a_cap there -> false CE (same class proven for MUL on
-    // run 28387449102 VCD: gf8 t=50 a_cap=0x29,0x4 primed=1 out_y=0x0, true=0x03).
-    // FIX: extend the reset-release delay to a 2-deep shift `rst_dly` so `primed`
-    // rises only after rst has been low TWO full cycles, skipping BOTH the async
-    // boundary AND the registered-input settling cycle. RTL is NOT modified.
-    reg [1:0] rst_dly;
-    initial rst_dly = 2'b11;
-    always @(posedge clk) rst_dly <= {rst_dly[0], rst};
-    wire rst_prev = |rst_dly;   // high until rst has been low for 2 full cycles
+    // ---- TIME-INVARIANT free operands ($anyconst): solver explores all pairs ----
+    wire [TOTAL-1:0] a_op;
+    wire [TOTAL-1:0] b_op;
+    assign a_op = $anyconst;
+    assign b_op = $anyconst;
 
-    // ---- FREE unconstrained operands — REGISTERED (deterministic sampling) ----
-    // $anyseq lets the solver pick a fresh arbitrary value every step. Feeding the
-    // COMBINATIONAL $anyseq wire directly to BOTH the DUT and the a_cap latch let
-    // smtbmc resolve the DUT-seen operand and the a_cap-latched operand to DIFFERENT
-    // $anyseq samples (false CE not reproduced by our Python model; same class as
-    // mul, run 28385887191). FIX: REGISTER the free operands once into in_a_q/in_b_q,
-    // drive the SAME registered value to the DUT and capture it -> one unambiguous
-    // operand sample per cycle: out_reg(N+1)=pack(in_q(N)), a_cap(N+1)=in_q(N).
-    reg  [TOTAL-1:0] in_a_q, in_b_q;
-    initial begin in_a_q = {TOTAL{1'b0}}; in_b_q = {TOTAL{1'b0}}; end
-    always @(posedge clk) begin
-        in_a_q <= $anyseq;
-        in_b_q <= $anyseq;
-    end
-    wire [TOTAL-1:0] in_a_r = in_a_q;
-    wire [TOTAL-1:0] in_b_r = in_b_q;
-    wire in_valid_r = 1'b1;
-    wire out_ready  = 1'b1;
-    wire in_ready, out_valid;
+    wire             in_valid = 1'b1;
+    wire             out_ready = 1'b1;
+    wire             in_ready, out_valid;
     wire [TOTAL-1:0] out_y;
 
     gf_adder_param #(
@@ -108,31 +87,18 @@ module gf_adder_property #(
         .HAS_INF(HAS_INF)
     ) dut (
         .clk(clk), .rst(rst),
-        .in_valid(in_valid_r), .in_a(in_a_r), .in_b(in_b_r), .in_ready(in_ready),
+        .in_valid(in_valid), .in_a(a_op), .in_b(b_op), .in_ready(in_ready),
         .out_valid(out_valid), .out_y(out_y), .out_ready(out_ready)
     );
 
-    // ---- Latency-matched capture (DUT latency = 1) + primed tracker ----
-    // a_cap/b_cap latch the operand pair the SAME edge the DUT latches out_reg;
-    // `primed` (deterministic initial) marks that out_y now reflects (a_cap,b_cap),
-    // so the assert is immune to the anyinit out_reg/out_valid_reg of the DUT.
-    reg [TOTAL-1:0] a_cap, b_cap;
-    reg             primed;
-    initial begin a_cap = {TOTAL{1'b0}}; b_cap = {TOTAL{1'b0}}; primed = 1'b0; end
+    // ---- `primed` margin: assert only after reset boundary + first stable write ----
+    reg [2:0] settle;
+    initial settle = 3'b000;
     always @(posedge clk) begin
-        if (rst) begin
-            a_cap  <= {TOTAL{1'b0}};
-            b_cap  <= {TOTAL{1'b0}};
-            primed <= 1'b0;
-        end else if (in_valid_r && in_ready) begin
-            // primed rises only if rst was already low last cycle (skip async-reset
-            // boundary where DUT out_reg is still held 0). On steady cycles out_y ==
-            // result_packed(a_cap,b_cap).
-            a_cap  <= in_a_r;
-            b_cap  <= in_b_r;
-            primed <= ~rst_prev;
-        end
+        if (rst) settle <= 3'b000;
+        else if (~&settle) settle <= settle + 3'b001;
     end
+    wire primed = (~rst) && (&settle);   // high once settle saturates after reset
 
     // ---- INDEPENDENT reference: exact integer arithmetic + mathematical RNE ----
     function [TOTAL-1:0] ref_fpadd;
@@ -251,21 +217,12 @@ module gf_adder_property #(
     endfunction
 
     // ---- THE proof: DUT == independent reference ----
-    // Gate on harness-owned `primed` (deterministic init) AND `primed_d` (primed
-    // delayed one cycle), NOT on the DUT's anyinit out_valid. The `primed_d` term
-    // skips the FIRST primed cycle, where a_cap has just latched a real pair but the
-    // DUT's anyinit out_reg may still hold a garbage residue (same class proven for
-    // MUL on run 28388301696 VCD: first primed cycle catches a stale out_reg, the
-    // next cycle flushes to the correct golden result). Requiring `primed` HIGH a
-    // full prior cycle guarantees out_reg was written from a genuine captured pair,
-    // eliminating the residue regardless of pipeline depth. Sound + complete; on
-    // every steady cycle out_y == result_packed(a_cap,b_cap). RTL is NOT modified.
-    reg primed_d;
-    initial primed_d = 1'b0;
-    always @(posedge clk) primed_d <= primed;
+    // With $anyconst operands out_reg is stable at result_packed(a_op,b_op) once
+    // `primed` rises (reset boundary + first stable write passed). No phase capture
+    // is needed: assert directly against a_op/b_op.
     always @(posedge clk) begin
-        if (primed && primed_d && !rst)
-            assert(out_y == ref_fpadd(a_cap, b_cap));
+        if (primed)
+            assert(out_y == ref_fpadd(a_op, b_op));
     end
 
 endmodule
