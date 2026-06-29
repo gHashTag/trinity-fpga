@@ -41,8 +41,8 @@ depth 5
 smtbmc z3
 
 [script]
-read_verilog -sv fpga/openxc7-synth/gf_adder_param.v
-read_verilog -sv formal/gf_adder_property.v
+read_verilog -sv gf_adder_param.v
+read_verilog -sv gf_adder_property.v
 gf4:   chparam -set EXP_BITS 1 -set MANT_BITS 2 -set HAS_INF 0 gf_adder_property
 gf6:   chparam -set EXP_BITS 2 -set MANT_BITS 3 -set HAS_INF 0 gf_adder_property
 gf8:   chparam -set EXP_BITS 3 -set MANT_BITS 4 -set HAS_INF 0 gf_adder_property
