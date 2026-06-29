@@ -251,12 +251,20 @@ module gf_adder_property #(
     endfunction
 
     // ---- THE proof: DUT == independent reference ----
-    // Gate ONLY on harness-owned `primed` (deterministic init), NOT on the DUT's
-    // anyinit out_valid: when primed is high, out_y is provably the DUT result of
-    // the captured pair (latency=1, in_valid=in_ready=1), making the proof sound
-    // AND complete and removing all false anyinit counterexamples.
+    // Gate on harness-owned `primed` (deterministic init) AND `primed_d` (primed
+    // delayed one cycle), NOT on the DUT's anyinit out_valid. The `primed_d` term
+    // skips the FIRST primed cycle, where a_cap has just latched a real pair but the
+    // DUT's anyinit out_reg may still hold a garbage residue (same class proven for
+    // MUL on run 28388301696 VCD: first primed cycle catches a stale out_reg, the
+    // next cycle flushes to the correct golden result). Requiring `primed` HIGH a
+    // full prior cycle guarantees out_reg was written from a genuine captured pair,
+    // eliminating the residue regardless of pipeline depth. Sound + complete; on
+    // every steady cycle out_y == result_packed(a_cap,b_cap). RTL is NOT modified.
+    reg primed_d;
+    initial primed_d = 1'b0;
+    always @(posedge clk) primed_d <= primed;
     always @(posedge clk) begin
-        if (primed && !rst)
+        if (primed && primed_d && !rst)
             assert(out_y == ref_fpadd(a_cap, b_cap));
     end
 

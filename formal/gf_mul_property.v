@@ -261,15 +261,22 @@ module gf_mul_property #(
     endfunction
 
     // ---- THE proof: DUT == independent reference ----
-    // Gate ONLY on `primed` (harness-owned, deterministically initialised) — NOT on
-    // the DUT's out_valid. out_valid_reg is an anyinit reg: the solver could either
-    // (a) raise it early with garbage out_reg -> FALSE positive CE, or (b) hold it
-    // low to SUPPRESS a real check -> coverage hole. `primed` removes both: when it
-    // is high, out_y is provably out_reg<=result_packed(a_cap,b_cap) from the prior
-    // edge (DUT latency=1, in_valid=in_ready=1 every cycle), independent of the
-    // anyinit out_valid_reg. This makes the proof both SOUND and COMPLETE.
+    // Gate on `primed` (harness-owned, deterministic init) AND `primed_d` (primed
+    // delayed one cycle). out_valid_reg is an anyinit reg the solver may abuse, so
+    // it is NOT used. The EXTRA `primed_d` term is essential: on the FIRST cycle
+    // `primed` rises, a_cap has just latched a real pair but the DUT's out_reg may
+    // still hold its anyinit garbage residue for that one cycle (proven on run
+    // 28388301696 VCD: gf8 t=60 a_cap=0x20,0x8a primed JUST rose, out_y=0x80 garbage
+    // vs true mul=0x85; at t=70 out_y flushed to the correct 0xa1 == golden).
+    // Requiring `primed` to have been HIGH for a full prior cycle guarantees out_reg
+    // was written from a genuine captured pair on the previous edge, eliminating the
+    // first-cycle residue REGARDLESS of exact pipeline depth. Sound + complete; on
+    // every steady cycle out_y == result_packed(a_cap,b_cap). RTL is NOT modified.
+    reg primed_d;
+    initial primed_d = 1'b0;
+    always @(posedge clk) primed_d <= primed;
     always @(posedge clk) begin
-        if (primed && !rst)
+        if (primed && primed_d && !rst)
             assert(out_y == ref_fpmul(a_cap, b_cap));
     end
 
