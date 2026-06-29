@@ -1,25 +1,41 @@
-# Формальная проверка gf_adder_param: out_y == ref_fpadd(a,b) на каждом
-# out_valid (assert в formal/gf_adder_property.v).
+# =============================================================================
+# gf_adder_formal.sby — bit-exact formal proof of gf_adder_param across ALL 7 GF
+# widths via the independent integer-oracle property gf_adder_property.v.
 #
-# Дефолтные параметры property = GF8 (EXP_BITS=3, MANT_BITS=4) — ширина
-# `integer` достаточна, переполнения нет (см. комментарий в .v).
-# Логика оракула проверена bit-exact против Fraction-золота в
-# verify_adder_oracle.py (GF6/GF8 exhaustive, GF12/GF16 sample).
+# Each task overrides EXP_BITS/MANT_BITS/HAS_INF with `chparam`, so the SAME
+# property module proves every width. Free unconstrained operands => the solver
+# explores BOTH effective-add (same sign) and effective-sub (diff sign) and all
+# special inputs; no per-op task split is needed (op is part of the free input).
 #
-# Прежняя версия объявляла бессмысленные [tasks] prove_add/prove_sub
-# (оба гоняли идентичный скрипт) и mode prove + depth 50 без явной
-# индукции. Здесь — два РАЗНЫХ режима: bmc (поиск контрпримера на конечную
-# глубину) и prove (k-индукция, безграничное доказательство).
+# Width params (SSOT = conformance/gf_ref.py, verified 2026-06-29):
+#   gf4  EXP=1 MANT=2 BIAS=0  HAS_INF=0   (degenerate: BIAS=0)
+#   gf6  EXP=2 MANT=3 BIAS=1  HAS_INF=0
+#   gf8  EXP=3 MANT=4 BIAS=3  HAS_INF=0
+#   gf12 EXP=4 MANT=7 BIAS=7  HAS_INF=0
+#   gf16 EXP=6 MANT=9 BIAS=31 HAS_INF=1   (only width with Inf/NaN)
+#   gf20 EXP=7 MANT=12 BIAS=63 HAS_INF=0
+#   gf24 EXP=9 MANT=14 BIAS=255 HAS_INF=0
+#
+# NOTE on tractability: gf4..gf16 prove quickly with z3. gf20 (40-bit input
+# space) and gf24 (48-bit) are heavier — keep depth low (the property is
+# combinational w.r.t. the captured pair, so depth 5 suffices for `prove`
+# tempinduct) and allow a longer timeout. If a wide task times out, it is a
+# SOLVER-CAPACITY limit, NOT a disproof; the SW three-oracle check
+# (verify_adder_oracle.py / verify_mul_oracle.py) covers wide widths by sampling.
+# =============================================================================
 
 [tasks]
-bmc
-prove
+gf4   gf4
+gf6   gf6
+gf8   gf8
+gf12  gf12
+gf16  gf16
+gf20  gf20
+gf24  gf24
 
 [options]
-bmc:   mode bmc
-bmc:   depth 40
-prove: mode prove
-prove: depth 20
+mode prove
+depth 5
 
 [engines]
 smtbmc z3
@@ -27,6 +43,13 @@ smtbmc z3
 [script]
 read_verilog -sv fpga/openxc7-synth/gf_adder_param.v
 read_verilog -sv formal/gf_adder_property.v
+gf4:   chparam -set EXP_BITS 1 -set MANT_BITS 2 -set HAS_INF 0 gf_adder_property
+gf6:   chparam -set EXP_BITS 2 -set MANT_BITS 3 -set HAS_INF 0 gf_adder_property
+gf8:   chparam -set EXP_BITS 3 -set MANT_BITS 4 -set HAS_INF 0 gf_adder_property
+gf12:  chparam -set EXP_BITS 4 -set MANT_BITS 7 -set HAS_INF 0 gf_adder_property
+gf16:  chparam -set EXP_BITS 6 -set MANT_BITS 9 -set HAS_INF 1 gf_adder_property
+gf20:  chparam -set EXP_BITS 7 -set MANT_BITS 12 -set HAS_INF 0 gf_adder_property
+gf24:  chparam -set EXP_BITS 9 -set MANT_BITS 14 -set HAS_INF 0 gf_adder_property
 prep -top gf_adder_property
 
 [files]

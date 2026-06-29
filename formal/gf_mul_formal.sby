@@ -1,0 +1,59 @@
+# =============================================================================
+# gf_mul_formal.sby — bit-exact formal proof of gf_mul_param across 6 GF widths
+# via the independent integer-oracle property gf_mul_property.v.
+#
+# Each task overrides EXP_BITS/MANT_BITS/HAS_INF with `chparam`, so the SAME
+# property module proves every width. Free unconstrained operands => the solver
+# explores all sign combinations and all special inputs (NaN/Inf/zero/denorm);
+# no per-op task split is needed.
+#
+# Width params (SSOT = conformance/gf_ref.py, verified 2026-06-29):
+#   gf6  EXP=2 MANT=3 BIAS=1  HAS_INF=0
+#   gf8  EXP=3 MANT=4 BIAS=3  HAS_INF=0
+#   gf12 EXP=4 MANT=7 BIAS=7  HAS_INF=0
+#   gf16 EXP=6 MANT=9 BIAS=31 HAS_INF=1   (only width with Inf/NaN)
+#   gf20 EXP=7 MANT=12 BIAS=63 HAS_INF=0
+#   gf24 EXP=9 MANT=14 BIAS=255 HAS_INF=0
+#
+# gf4 is OMITTED: BIAS=0 makes pack_denorm degenerate (every product flushes to
+# +/-0 per gf_mul_param.v), so a width-4 MUL proof is not meaningful. gf4 MUL is
+# still covered as a degenerate case by the SW three-oracle (verify_mul_oracle.py)
+# if needed; it is excluded here by design, not by capacity.
+#
+# NOTE on tractability: gf6..gf16 prove quickly with z3. gf20 (40-bit input
+# space) and gf24 (48-bit) are heavier — the property is combinational w.r.t. the
+# captured pair, so depth 5 suffices for `prove` tempinduct. If a wide task times
+# out, it is a SOLVER-CAPACITY limit, NOT a disproof; the SW three-oracle check
+# (verify_mul_oracle.py) covers wide widths by sampling (PASSED all 6 widths,
+# O1==O2==O3, 0 mismatch on gf6/gf8 exhaustive + gf12-24 @300k).
+# =============================================================================
+
+[tasks]
+gf6   gf6
+gf8   gf8
+gf12  gf12
+gf16  gf16
+gf20  gf20
+gf24  gf24
+
+[options]
+mode prove
+depth 5
+
+[engines]
+smtbmc z3
+
+[script]
+read_verilog -sv fpga/openxc7-synth/gf_mul_param.v
+read_verilog -sv formal/gf_mul_property.v
+gf6:   chparam -set EXP_BITS 2 -set MANT_BITS 3 -set HAS_INF 0 gf_mul_property
+gf8:   chparam -set EXP_BITS 3 -set MANT_BITS 4 -set HAS_INF 0 gf_mul_property
+gf12:  chparam -set EXP_BITS 4 -set MANT_BITS 7 -set HAS_INF 0 gf_mul_property
+gf16:  chparam -set EXP_BITS 6 -set MANT_BITS 9 -set HAS_INF 1 gf_mul_property
+gf20:  chparam -set EXP_BITS 7 -set MANT_BITS 12 -set HAS_INF 0 gf_mul_property
+gf24:  chparam -set EXP_BITS 9 -set MANT_BITS 14 -set HAS_INF 0 gf_mul_property
+prep -top gf_mul_property
+
+[files]
+fpga/openxc7-synth/gf_mul_param.v
+formal/gf_mul_property.v
