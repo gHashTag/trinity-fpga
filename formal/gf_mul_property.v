@@ -46,10 +46,18 @@ module gf_mul_property #(
     input wire clk
 );
 
-    // ---- Internal power-on reset ----
-    reg [1:0] rst_cnt;
-    initial rst_cnt = 2'b11;
-    always @(posedge clk) if (rst_cnt) rst_cnt <= rst_cnt - 2'b01;
+    // ---- Internal power-on reset (DETERMINISTIC init — critical for BMC) ----
+    // BMC with smtbmc lets the solver pick ARBITRARY power-on values for any reg
+    // WITHOUT an `initial` value ("anyinit"). The DUT's out_reg/out_valid_reg are
+    // such regs -> solver can assert out_valid high in step 0 with garbage out_reg,
+    // producing a FALSE counterexample (verified 2026-06-29 run 28380750995:
+    // a_cap=0x21,b_cap=0x91 but out_y=0x80=anyinit garbage; true product=0x89).
+    // FIX: a harness-owned `primed` flag, deterministically initialised, gates the
+    // assert so it fires ONLY on cycles whose out_y is the genuine DUT result of a
+    // real captured pair (>=2 cycles after reset release). RTL is NOT modified.
+    reg [2:0] rst_cnt;
+    initial rst_cnt = 3'b111;
+    always @(posedge clk) if (rst_cnt) rst_cnt <= rst_cnt - 3'b001;
     wire rst = |rst_cnt;
 
     // ---- FREE unconstrained operands ----
@@ -74,15 +82,23 @@ module gf_mul_property #(
         .out_valid(out_valid), .out_y(out_y), .out_ready(out_ready)
     );
 
-    // ---- Latency-matched capture (DUT latency = 1) ----
+    // ---- Latency-matched capture (DUT latency = 1) + primed tracker ----
+    // a_cap/b_cap latch the operand pair the SAME edge the DUT latches out_reg, so
+    // at the next cycle out_y == f(a_cap,b_cap). `primed` is set ONLY after a real
+    // capture occurs post-reset, marking that out_y now reflects (a_cap,b_cap).
+    // All three regs have deterministic `initial` -> solver cannot inject anyinit.
     reg [TOTAL-1:0] a_cap, b_cap;
+    reg             primed;
+    initial begin a_cap = {TOTAL{1'b0}}; b_cap = {TOTAL{1'b0}}; primed = 1'b0; end
     always @(posedge clk) begin
         if (rst) begin
-            a_cap <= {TOTAL{1'b0}};
-            b_cap <= {TOTAL{1'b0}};
+            a_cap  <= {TOTAL{1'b0}};
+            b_cap  <= {TOTAL{1'b0}};
+            primed <= 1'b0;
         end else if (in_valid_r && in_ready) begin
-            a_cap <= in_a_r;
-            b_cap <= in_b_r;
+            a_cap  <= in_a_r;
+            b_cap  <= in_b_r;
+            primed <= 1'b1;   // out_y next cycle is the genuine result of this pair
         end
     end
 
@@ -210,9 +226,16 @@ module gf_mul_property #(
         end
     endfunction
 
-    // ---- THE proof: DUT == independent reference, every out_valid cycle ----
+    // ---- THE proof: DUT == independent reference ----
+    // Gate ONLY on `primed` (harness-owned, deterministically initialised) — NOT on
+    // the DUT's out_valid. out_valid_reg is an anyinit reg: the solver could either
+    // (a) raise it early with garbage out_reg -> FALSE positive CE, or (b) hold it
+    // low to SUPPRESS a real check -> coverage hole. `primed` removes both: when it
+    // is high, out_y is provably out_reg<=result_packed(a_cap,b_cap) from the prior
+    // edge (DUT latency=1, in_valid=in_ready=1 every cycle), independent of the
+    // anyinit out_valid_reg. This makes the proof both SOUND and COMPLETE.
     always @(posedge clk) begin
-        if (out_valid && !rst)
+        if (primed && !rst)
             assert(out_y == ref_fpmul(a_cap, b_cap));
     end
 

@@ -42,8 +42,10 @@ gf24  gf24
 # BMC from reset feeds a fresh FREE operand pair every cycle, so depth 8 checks
 # ~6 independent valid-output cycles with arbitrary operands — equivalent to a full
 # functional check of the combinational map (no state to induct over).
+# depth 10: reset now spans 3 cycles (3-bit rst_cnt, deterministic anyinit fix);
+# first `primed` assert at cycle 4 -> ~6 independent free-pair checks remain.
 mode bmc
-depth 8
+depth 10
 
 [engines]
 smtbmc z3

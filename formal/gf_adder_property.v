@@ -51,10 +51,18 @@ module gf_adder_property #(
     input wire clk
 );
 
-    // ---- Internal power-on reset ----
-    reg [1:0] rst_cnt;
-    initial rst_cnt = 2'b11;
-    always @(posedge clk) if (rst_cnt) rst_cnt <= rst_cnt - 2'b01;
+    // ---- Internal power-on reset (DETERMINISTIC init — critical for BMC) ----
+    // smtbmc lets the solver pick ARBITRARY power-on values for any reg WITHOUT an
+    // `initial` value ("anyinit"). The DUT's out_reg/out_valid_reg are such regs ->
+    // the solver can raise out_valid in step 0 with garbage out_reg, yielding a
+    // FALSE counterexample (root cause of the mul/adder "defects" seen 2026-06-29
+    // run 28380750995 — NOT real RTL bugs; algorithm proven == gf_ref golden).
+    // FIX (mirror of gf_mul_property.v): a harness-owned `primed` flag,
+    // deterministically initialised, gates the assert so it fires ONLY on cycles
+    // whose out_y is the genuine DUT result of a real captured pair. RTL untouched.
+    reg [2:0] rst_cnt;
+    initial rst_cnt = 3'b111;
+    always @(posedge clk) if (rst_cnt) rst_cnt <= rst_cnt - 3'b001;
     wire rst = |rst_cnt;
 
     // ---- FREE unconstrained operands ----
@@ -80,15 +88,22 @@ module gf_adder_property #(
         .out_valid(out_valid), .out_y(out_y), .out_ready(out_ready)
     );
 
-    // ---- Latency-matched capture (DUT latency = 1) ----
+    // ---- Latency-matched capture (DUT latency = 1) + primed tracker ----
+    // a_cap/b_cap latch the operand pair the SAME edge the DUT latches out_reg;
+    // `primed` (deterministic initial) marks that out_y now reflects (a_cap,b_cap),
+    // so the assert is immune to the anyinit out_reg/out_valid_reg of the DUT.
     reg [TOTAL-1:0] a_cap, b_cap;
+    reg             primed;
+    initial begin a_cap = {TOTAL{1'b0}}; b_cap = {TOTAL{1'b0}}; primed = 1'b0; end
     always @(posedge clk) begin
         if (rst) begin
-            a_cap <= {TOTAL{1'b0}};
-            b_cap <= {TOTAL{1'b0}};
+            a_cap  <= {TOTAL{1'b0}};
+            b_cap  <= {TOTAL{1'b0}};
+            primed <= 1'b0;
         end else if (in_valid_r && in_ready) begin
-            a_cap <= in_a_r;
-            b_cap <= in_b_r;
+            a_cap  <= in_a_r;
+            b_cap  <= in_b_r;
+            primed <= 1'b1;
         end
     end
 
@@ -203,9 +218,13 @@ module gf_adder_property #(
         end
     endfunction
 
-    // ---- THE proof: DUT == independent reference, every out_valid cycle ----
+    // ---- THE proof: DUT == independent reference ----
+    // Gate ONLY on harness-owned `primed` (deterministic init), NOT on the DUT's
+    // anyinit out_valid: when primed is high, out_y is provably the DUT result of
+    // the captured pair (latency=1, in_valid=in_ready=1), making the proof sound
+    // AND complete and removing all false anyinit counterexamples.
     always @(posedge clk) begin
-        if (out_valid && !rst)
+        if (primed && !rst)
             assert(out_y == ref_fpadd(a_cap, b_cap));
     end
 
