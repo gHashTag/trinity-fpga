@@ -23,7 +23,7 @@ CORNERS = [0x00, 0x80, 0x01, 0x0F, 0x70, 0x71, 0x7F, 0x38]
 
 def hw_exchange(ser, a, b):
     # 6-byte frame: AA 55 a_lo a_hi b_lo b_hi (operand = low byte; high byte ignored).
-    pkt = FRAME + bytes([a & 0xFF, 0x00, b & 0xFF, 0x00])
+    pkt = FRAME + bytes([a & 0xFF, 0x00, b & 0xFF, 0x00, 0x00])  # +trigger byte
     ser.write(pkt)
     resp = ser.read(4)
     if len(resp) != 4 or resp[0] != 0xA5:
@@ -51,12 +51,13 @@ def self_test():
     return bad == 0
 
 
-def run_hw(port, baud):
+def run_hw(port, baud, exhaustive=False):
     import serial
     ser = serial.Serial(port, baud, timeout=2)
-    cov = _cov(); fails = checked = 0
+    cov = list(range(1 << WIDTH)) if exhaustive else _cov()
+    fails = checked = 0
     for a in cov:
-        for b in cov[:8]:
+        for b in (cov if exhaustive else cov[:8]):
             hw = hw_exchange(ser, a, b); g = gf_mul(FMT, a, b); checked += 1
             if hw is None or hw != g:
                 fails += 1
@@ -70,7 +71,8 @@ ap = argparse.ArgumentParser()
 ap.add_argument("--self-test", action="store_true")
 ap.add_argument("--port", default="/dev/cu.usbserial-120")
 ap.add_argument("--baud", type=int, default=160000)
+ap.add_argument("--exhaustive", action="store_true", help="all 256x256=65536 pairs (gf8 fits)")
 a = ap.parse_args()
 if a.self_test:
     sys.exit(0 if self_test() else 1)
-sys.exit(0 if run_hw(a.port, a.baud) else 1)
+sys.exit(0 if run_hw(a.port, a.baud, a.exhaustive) else 1)
