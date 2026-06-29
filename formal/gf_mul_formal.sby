@@ -61,6 +61,20 @@ gf12:  chparam -set EXP_BITS 4 -set MANT_BITS 7 -set HAS_INF 0 gf_mul_property
 gf16:  chparam -set EXP_BITS 6 -set MANT_BITS 9 -set HAS_INF 1 gf_mul_property
 gf20:  chparam -set EXP_BITS 7 -set MANT_BITS 12 -set HAS_INF 0 gf_mul_property
 gf24:  chparam -set EXP_BITS 9 -set MANT_BITS 14 -set HAS_INF 0 gf_mul_property
+# ROOT-CAUSE FIX (2026-06-30): gf_mul_param.v uses `always @(posedge clk or
+# posedge rst)` — an ASYNCHRONOUS reset. Yosys `prep` REQUIRES async2sync (or
+# clk2fflogic) BEFORE it for async-reset FFs (per YosysHQ docs: "If a design
+# contains latches and/or multiple different clocks run the async2sync or
+# clk2fflogic passes before using this pass"). WITHOUT it, the async-reset DFF
+# out_reg/out_valid_reg are modeled with free/undefined edge behaviour under BMC,
+# letting smtbmc FREEZE out_reg for a single clock edge (run 28389444114 gf8 VCD:
+# t60->t70 edge, in_a_r=0x83,0xd, in_ready=1, but out_reg held 0x80 instead of
+# updating to mul=0x81) -> SPURIOUS counterexample at the assert. This is NOT an
+# RTL defect and NOT a harness defect: the cycle-accurate Python model of the
+# same logic PASSES all widths under adversarial anyinit. async2sync converts the
+# async-reset FFs to their equivalent clocked behaviour so BMC steps them
+# consistently. RTL and harness are UNCHANGED.
+async2sync
 prep -top gf_mul_property
 
 [files]
