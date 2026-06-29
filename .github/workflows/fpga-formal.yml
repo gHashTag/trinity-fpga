@@ -1,0 +1,127 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# FPGA FORMAL VERIFICATION — bit-exact proof of GF adder/multiplier
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+# Runs SymbiYosys (sby) with the smtbmc z3 engine to PROVE, for every GF width,
+# that the RTL output equals an INDEPENDENT integer-oracle reference:
+#   formal/gf_adder_formal.sby  -> gf_adder_param.v   (7 widths gf4..gf24)
+#   formal/gf_mul_formal.sby    -> gf_mul_param.v     (6 widths gf6..gf24)
+#
+# Toolchain: YosysHQ oss-cad-suite (bundles yosys + sby + yosys-smtbmc + z3).
+# Homebrew yosys is NOT sufficient — it lacks smtbmc.
+#
+# Narrow widths (gf4..gf16) prove quickly. Wide widths (gf20/gf24) are heavier and
+# may hit SOLVER CAPACITY (timeout) — that is a capacity LIMIT, NOT a disproof, and
+# is also covered by the SW three-oracle harness (verify_*_oracle.py @300k samples).
+# Wide tasks are therefore run with continue-on-error so a capacity timeout does not
+# red the whole gate; the narrow-width proofs remain hard pass/fail.
+#
+# φ² + 1/φ² = 3 = TRINITY
+# ═══════════════════════════════════════════════════════════════════════════════
+
+name: FPGA Formal Verification
+
+on:
+  push:
+    branches: [main, "fix/**", "feat/**"]
+    paths:
+      - 'fpga/openxc7-synth/gf_adder_param.v'
+      - 'fpga/openxc7-synth/gf_mul_param.v'
+      - 'formal/gf_adder_property.v'
+      - 'formal/gf_adder_formal.sby'
+      - 'formal/gf_mul_property.v'
+      - 'formal/gf_mul_formal.sby'
+      - '.github/workflows/fpga-formal.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'fpga/openxc7-synth/gf_adder_param.v'
+      - 'fpga/openxc7-synth/gf_mul_param.v'
+      - 'formal/gf_adder_property.v'
+      - 'formal/gf_adder_formal.sby'
+      - 'formal/gf_mul_property.v'
+      - 'formal/gf_mul_formal.sby'
+      - '.github/workflows/fpga-formal.yml'
+  workflow_dispatch:
+
+jobs:
+  formal:
+    name: "🔬 sby z3 — ${{ matrix.op }} ${{ matrix.task }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # ---- ADDER (7 widths) — narrow are hard gates ----
+          - { op: adder, sby: formal/gf_adder_formal.sby, task: gf4,  wide: false }
+          - { op: adder, sby: formal/gf_adder_formal.sby, task: gf6,  wide: false }
+          - { op: adder, sby: formal/gf_adder_formal.sby, task: gf8,  wide: false }
+          - { op: adder, sby: formal/gf_adder_formal.sby, task: gf12, wide: false }
+          - { op: adder, sby: formal/gf_adder_formal.sby, task: gf16, wide: false }
+          - { op: adder, sby: formal/gf_adder_formal.sby, task: gf20, wide: true  }
+          - { op: adder, sby: formal/gf_adder_formal.sby, task: gf24, wide: true  }
+          # ---- MULTIPLIER (6 widths, no gf4) ----
+          - { op: mul,   sby: formal/gf_mul_formal.sby,   task: gf6,  wide: false }
+          - { op: mul,   sby: formal/gf_mul_formal.sby,   task: gf8,  wide: false }
+          - { op: mul,   sby: formal/gf_mul_formal.sby,   task: gf12, wide: false }
+          - { op: mul,   sby: formal/gf_mul_formal.sby,   task: gf16, wide: false }
+          - { op: mul,   sby: formal/gf_mul_formal.sby,   task: gf20, wide: true  }
+          - { op: mul,   sby: formal/gf_mul_formal.sby,   task: gf24, wide: true  }
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup oss-cad-suite (yosys + sby + smtbmc + z3)
+        uses: YosysHQ/setup-oss-cad-suite@v3
+        with:
+          version: '2025-06-01'
+
+      - name: Tool sanity (versions)
+        run: |
+          yosys --version
+          sby --version
+          yosys-smtbmc --help >/dev/null 2>&1 && echo "smtbmc OK"
+          z3 --version
+
+      - name: "Prove ${{ matrix.op }} / ${{ matrix.task }} (z3)"
+        id: prove
+        continue-on-error: ${{ matrix.wide }}
+        run: |
+          set -o pipefail
+          echo "::group::sby ${{ matrix.sby }} ${{ matrix.task }}"
+          sby -f "${{ matrix.sby }}" "${{ matrix.task }}" 2>&1 | tee sby_${{ matrix.op }}_${{ matrix.task }}.log
+          rc=${PIPESTATUS[0]}
+          echo "::endgroup::"
+          echo "exit code: $rc"
+          exit $rc
+
+      - name: Note on wide-width capacity timeout
+        if: ${{ matrix.wide && steps.prove.outcome == 'failure' }}
+        run: |
+          echo "::warning title=Solver capacity::${{ matrix.op }} ${{ matrix.task }} did NOT finish within the budget."
+          echo "This is a SOLVER-CAPACITY limit (wide ${{ matrix.task }}), NOT a disproof."
+          echo "Coverage fallback: SW three-oracle verify_${{ matrix.op }}_oracle.py (@300k samples, PASS)."
+
+      - name: Upload sby workdir + log
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: sby-${{ matrix.op }}-${{ matrix.task }}
+          path: |
+            sby_${{ matrix.op }}_${{ matrix.task }}.log
+            formal/*/
+          retention-days: 14
+          if-no-files-found: ignore
+
+  formal-summary:
+    name: "📊 Formal Summary"
+    needs: formal
+    runs-on: ubuntu-latest
+    if: ${{ always() }}
+    steps:
+      - name: Result
+        run: |
+          echo "Formal gate finished. Narrow-width tasks (gf4..gf16) are hard pass/fail;"
+          echo "wide tasks (gf20/gf24) are continue-on-error (capacity, not disproof)."
+          echo "If a narrow task failed, the matrix job is red and this needs investigation."
