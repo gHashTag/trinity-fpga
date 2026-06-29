@@ -56,9 +56,22 @@ module gf_mul_property #(
     // assert so it fires ONLY on cycles whose out_y is the genuine DUT result of a
     // real captured pair (>=2 cycles after reset release). RTL is NOT modified.
     reg [2:0] rst_cnt;
-    initial rst_cnt = 3'b111;
+    initial rst_cnt = 3'b011;   // 3 reset cycles (rst high while rst_cnt!=0)
     always @(posedge clk) if (rst_cnt) rst_cnt <= rst_cnt - 3'b001;
     wire rst = |rst_cnt;
+
+    // ---- rst delayed one cycle (for async-reset phase alignment) ----
+    // The DUT uses `always @(posedge clk or posedge rst)` — ASYNCHRONOUS reset.
+    // On the LAST reset edge the synchronous harness already sees rst low and would
+    // capture a pair + raise `primed`, but the DUT's out_reg is still held at 0 by
+    // its async reset on that same edge -> out_y lags a_cap by one cycle ONLY on
+    // that boundary cycle (verified 2026-06-29 run 28385309101: t=80 a_cap=0x20,0x10
+    // primed=1 but out_y=0x0=mul(0,0); true mul(0x20,0x10)=0x8). FIX: gate the FIRST
+    // primed-cycle out with rst_prev so `primed` rises only after rst has been low
+    // for one FULL cycle, skipping the async-reset boundary. RTL is NOT modified.
+    reg rst_prev;
+    initial rst_prev = 1'b1;
+    always @(posedge clk) rst_prev <= rst;
 
     // ---- FREE unconstrained operands ----
     // MUST use $anyseq: a plain undriven `reg` is NOT a free formal input in
@@ -98,7 +111,10 @@ module gf_mul_property #(
         end else if (in_valid_r && in_ready) begin
             a_cap  <= in_a_r;
             b_cap  <= in_b_r;
-            primed <= 1'b1;   // out_y next cycle is the genuine result of this pair
+            // Raise primed ONLY if rst was already low last cycle (rst_prev==0), so
+            // the async-reset boundary cycle (where DUT out_reg is still held 0) is
+            // skipped. On all steady cycles out_y == result_packed(a_cap,b_cap).
+            primed <= ~rst_prev;
         end
     end
 

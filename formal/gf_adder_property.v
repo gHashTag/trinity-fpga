@@ -61,9 +61,20 @@ module gf_adder_property #(
     // deterministically initialised, gates the assert so it fires ONLY on cycles
     // whose out_y is the genuine DUT result of a real captured pair. RTL untouched.
     reg [2:0] rst_cnt;
-    initial rst_cnt = 3'b111;
+    initial rst_cnt = 3'b011;   // 3 reset cycles (rst high while rst_cnt!=0)
     always @(posedge clk) if (rst_cnt) rst_cnt <= rst_cnt - 3'b001;
     wire rst = |rst_cnt;
+
+    // ---- rst delayed one cycle (async-reset phase alignment) ----
+    // DUT gf_adder_param uses `always @(posedge clk or posedge rst)` — ASYNCHRONOUS
+    // reset. On the last reset edge the synchronous harness sees rst low and would
+    // raise `primed`, but DUT out_reg is still async-held at 0 on that edge -> out_y
+    // lags a_cap by one cycle ONLY on that boundary (same class of false-CE found
+    // for MUL, run 28385309101). FIX: gate primed with rst_prev so it rises only
+    // after rst has been low a full cycle, skipping the boundary. RTL NOT modified.
+    reg rst_prev;
+    initial rst_prev = 1'b1;
+    always @(posedge clk) rst_prev <= rst;
 
     // ---- FREE unconstrained operands ----
     // MUST use $anyseq: a plain undriven `reg` is NOT a free formal input in
@@ -101,9 +112,12 @@ module gf_adder_property #(
             b_cap  <= {TOTAL{1'b0}};
             primed <= 1'b0;
         end else if (in_valid_r && in_ready) begin
+            // primed rises only if rst was already low last cycle (skip async-reset
+            // boundary where DUT out_reg is still held 0). On steady cycles out_y ==
+            // result_packed(a_cap,b_cap).
             a_cap  <= in_a_r;
             b_cap  <= in_b_r;
-            primed <= 1'b1;
+            primed <= ~rst_prev;
         end
     end
 
