@@ -18,8 +18,8 @@
 #
 # NOTE on tractability: gf4..gf16 prove quickly with z3. gf20 (40-bit input
 # space) and gf24 (48-bit) are heavier — keep depth low (the property is
-# combinational w.r.t. the captured pair, so depth 5 suffices for `prove`
-# tempinduct) and allow a longer timeout. If a wide task times out, it is a
+# combinational w.r.t. the captured pair; BMC depth 8
+# covers it and allow a longer timeout. If a wide task times out, it is a
 # SOLVER-CAPACITY limit, NOT a disproof; the SW three-oracle check
 # (verify_adder_oracle.py / verify_mul_oracle.py) covers wide widths by sampling.
 # =============================================================================
@@ -34,8 +34,16 @@ gf20  gf20
 gf24  gf24
 
 [options]
-mode prove
-depth 5
+# mode bmc (NOT prove): the property is a PURE FUNCTION of the captured pair —
+# DUT latency=1, no cross-pair state accumulation. `mode prove` temporal-induction
+# starts the induction step from an UNCONSTRAINED register state (a_cap/b_cap/DUT
+# internals = arbitrary) unreachable from reset, yielding FALSE counterexamples
+# (basecase PASSED, induction FAILED — verified 2026-06-29 run 28375327534).
+# BMC from reset feeds a fresh FREE operand pair every cycle, so depth 8 checks
+# ~6 independent valid-output cycles with arbitrary operands — equivalent to a full
+# functional check of the combinational map (no state to induct over).
+mode bmc
+depth 8
 
 [engines]
 smtbmc z3

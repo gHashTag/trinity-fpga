@@ -22,7 +22,7 @@
 #
 # NOTE on tractability: gf6..gf16 prove quickly with z3. gf20 (40-bit input
 # space) and gf24 (48-bit) are heavier — the property is combinational w.r.t. the
-# captured pair, so depth 5 suffices for `prove` tempinduct. If a wide task times
+# captured pair, so depth 8 BMC covers ~6 valid cycles. If a wide task times
 # out, it is a SOLVER-CAPACITY limit, NOT a disproof; the SW three-oracle check
 # (verify_mul_oracle.py) covers wide widths by sampling (PASSED all 6 widths,
 # O1==O2==O3, 0 mismatch on gf6/gf8 exhaustive + gf12-24 @300k).
@@ -37,8 +37,14 @@ gf20  gf20
 gf24  gf24
 
 [options]
-mode prove
-depth 5
+# mode bmc (NOT prove): property is a PURE FUNCTION of the captured pair (DUT
+# latency=1, no cross-pair state). `mode prove` tempinduct starts induction from an
+# UNCONSTRAINED register state unreachable from reset -> FALSE counterexample
+# (basecase PASSED, induction FAILED — verified 2026-06-29 run 28375327534). BMC
+# from reset feeds a fresh FREE pair each cycle; depth 8 checks ~6 independent
+# valid-output cycles — equivalent to a full functional check.
+mode bmc
+depth 8
 
 [engines]
 smtbmc z3
