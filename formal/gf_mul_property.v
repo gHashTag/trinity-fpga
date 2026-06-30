@@ -227,6 +227,43 @@ module gf_mul_property #(
             assert(out_y == ref_fpmul(a_op, b_op));
     end
 
+    // -------------------------------------------------------------------------
+    // WV-MUL-COVER (companion to WV-27 adder cover) — reachability witnesses for
+    // the IEEE-754 special-input classes of MULTIPLY. SEPARATE from the bmc
+    // proof above: these are `cover` (NOT assert), so soundness of the proof is
+    // unaffected. Purpose: prove the gf16 (HAS_INF) special paths are actually
+    // REACHABLE, so the assert-proof is not vacuously true on a harness that
+    // constrained away Inf/NaN inputs. Run via formal/gf_mul_cover.sby (mode
+    // cover). gf16 is the only HAS_INF MUL width; for non-HAS_INF widths there
+    // are no Inf/NaN classes, so the block is generate-gated on HAS_INF.
+    //
+    // MUL-specific special algebra (mirrors ref_fpmul order, lines ~144-152):
+    //   NaN  > (0*Inf = qNaN)  > +/-Inf  > +/-0  > numeric.
+    // -------------------------------------------------------------------------
+    generate if (HAS_INF != 0) begin : g_wv_mul_cover
+        wire ca_spec = (a_op[TOTAL-2:MANT_BITS] == {EXP_BITS{1'b1}});
+        wire cb_spec = (b_op[TOTAL-2:MANT_BITS] == {EXP_BITS{1'b1}});
+        wire ca_zero = (a_op[TOTAL-2:MANT_BITS] == {EXP_BITS{1'b0}}) && (a_op[MANT_BITS-1:0] == {MANT_BITS{1'b0}});
+        wire cb_zero = (b_op[TOTAL-2:MANT_BITS] == {EXP_BITS{1'b0}}) && (b_op[MANT_BITS-1:0] == {MANT_BITS{1'b0}});
+        wire ca_inf  = ca_spec && (a_op[MANT_BITS-1:0] == {MANT_BITS{1'b0}});
+        wire cb_inf  = cb_spec && (b_op[MANT_BITS-1:0] == {MANT_BITS{1'b0}});
+        wire ca_nan  = ca_spec && (a_op[MANT_BITS-1:0] != {MANT_BITS{1'b0}});
+        wire cb_nan  = cb_spec && (b_op[MANT_BITS-1:0] != {MANT_BITS{1'b0}});
+        wire cb_fin  = ~cb_spec && ~cb_zero;   // finite non-zero second operand
+        wire out_inf = (out_y[TOTAL-2:MANT_BITS] == {EXP_BITS{1'b1}}) && (out_y[MANT_BITS-1:0] == {MANT_BITS{1'b0}});
+        wire out_nan = (out_y[TOTAL-2:MANT_BITS] == {EXP_BITS{1'b1}}) && (out_y[MANT_BITS-1:0] != {MANT_BITS{1'b0}});
+        always @(posedge clk) if (primed) begin
+            cover (ca_inf && cb_inf);              // Inf * Inf -> Inf
+            cover (ca_inf && cb_fin);              // Inf * finite -> Inf
+            cover (ca_inf && cb_zero);             // Inf * 0 -> qNaN (the MUL-unique special)
+            cover (ca_zero && cb_inf);             // 0 * Inf -> qNaN (symmetric)
+            cover (ca_nan || cb_nan);              // NaN propagation
+            cover (ca_zero && cb_fin);             // +/-0 * finite -> +/-0
+            cover (out_inf);                       // DUT emitted Inf for some pair
+            cover (out_nan);                       // DUT emitted NaN for some pair
+        end
+    end endgenerate
+
 endmodule
 
 `default_nettype wire

@@ -31,6 +31,7 @@ on:
       - 'formal/gf_adder_formal.sby'
       - 'formal/gf_mul_property.v'
       - 'formal/gf_mul_formal.sby'
+      - 'formal/gf_mul_cover.sby'
       - '.github/workflows/fpga-formal.yml'
   pull_request:
     branches: [main]
@@ -41,6 +42,7 @@ on:
       - 'formal/gf_adder_formal.sby'
       - 'formal/gf_mul_property.v'
       - 'formal/gf_mul_formal.sby'
+      - 'formal/gf_mul_cover.sby'
       - '.github/workflows/fpga-formal.yml'
   workflow_dispatch:
 
@@ -90,6 +92,12 @@ jobs:
           - { op: mul,   sby: formal/gf_mul_formal.sby,   task: gf16, wide: true  }
           - { op: mul,   sby: formal/gf_mul_formal.sby,   task: gf20, wide: true  }
           - { op: mul,   sby: formal/gf_mul_formal.sby,   task: gf24, wide: true  }
+          # ---- MULTIPLIER COVER: reachability of gf16 Inf/NaN/0 special-input
+          # classes for MULTIPLY (mode cover, SEPARATE from the bmc proof above).
+          # Companion to adder-cover. Soft (wide): confirms the MUL special-case
+          # algebra (Inf*Inf, Inf*finite, Inf*0->NaN, 0*Inf->NaN, NaN-prop,
+          # 0*finite->0) is REACHABLE, so the assert-proof is not vacuously true.
+          - { op: mul-cover, sby: formal/gf_mul_cover.sby, task: gf16, wide: true  }
     steps:
       - name: Checkout
         uses: actions/checkout@v4

@@ -1,0 +1,39 @@
+# =============================================================================
+# gf_mul_cover.sby — reachability COVER for IEEE-754 special-input classes of
+# gf_mul_param MULTIPLY (gf16, the only HAS_INF width). Companion to
+# gf_adder_cover.sby (WV-27).
+#
+# This is SEPARATE from gf_mul_formal.sby (the bmc PROOF). `mode cover` asks the
+# solver to find a witness trace reaching each `cover(...)` in
+# gf_mul_property.v's g_wv_mul_cover block:
+#   Inf*Inf->Inf, Inf*finite->Inf, Inf*0->qNaN, 0*Inf->qNaN, NaN-propagation,
+#   +/-0*finite->+/-0, and DUT-emitted Inf / DUT-emitted NaN outputs.
+#
+# PASS = every cover is reachable (the special-case algebra of MUL is exercised
+# by the harness). A future harness change that constrained away Inf/NaN inputs
+# would make a cover UNREACHABLE -> this task FAILS, catching the regression.
+# The proof of DUT==ref correctness lives in gf_mul_formal.sby (mode bmc); this
+# file does NOT assert correctness, only reachability. Run as a soft (wide) CI
+# task.
+# =============================================================================
+
+[tasks]
+gf16  gf16
+
+[options]
+mode cover
+depth 20
+
+[engines]
+smtbmc z3
+
+[script]
+read_verilog -sv gf_mul_param.v
+read_verilog -sv gf_mul_property.v
+gf16:  chparam -set EXP_BITS 6 -set MANT_BITS 9 -set HAS_INF 1 gf_mul_property
+async2sync
+prep -top gf_mul_property
+
+[files]
+fpga/openxc7-synth/gf_mul_param.v
+formal/gf_mul_property.v
