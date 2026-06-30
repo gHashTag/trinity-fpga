@@ -50,6 +50,7 @@ module gf_adder_ref_tb;
     function [TOTAL-1:0] ref_fpadd;
         input [TOTAL-1:0] a, b;
         reg            ra, rb, az, bz, adn, bdn, sg, same_in;
+        reg            a_spec, b_spec, a_nan, b_nan, a_inf, b_inf;
         reg [EXP_BITS-1:0]  ea, eb;
         reg [MANT_BITS-1:0] ma, mb;
         integer sh_a, sh_b;
@@ -67,10 +68,26 @@ module gf_adder_ref_tb;
             adn = (ea == {EXP_BITS{1'b0}}) && (ma != {MANT_BITS{1'b0}});
             bdn = (eb == {EXP_BITS{1'b0}}) && (mb != {MANT_BITS{1'b0}});
             same_in = (ra == rb);
+            // WV-22: special-class detection (HAS_INF only — GF16).
+            //   exp=all-ones && mant!=0 => NaN ; exp=all-ones && mant==0 => Inf.
+            a_spec = (HAS_INF != 0) && (ea == {EXP_BITS{1'b1}});
+            b_spec = (HAS_INF != 0) && (eb == {EXP_BITS{1'b1}});
+            a_nan  = a_spec && (ma != {MANT_BITS{1'b0}});
+            b_nan  = b_spec && (mb != {MANT_BITS{1'b0}});
+            a_inf  = a_spec && (ma == {MANT_BITS{1'b0}});
+            b_inf  = b_spec && (mb == {MANT_BITS{1'b0}});
             res = {TOTAL{1'b0}};
-            // NaN input → quiet NaN (HAS_INF only — GF16). IEEE 754: NaN propagates.
-            if (HAS_INF != 0 && ((ea == {EXP_BITS{1'b1}} && ma != 0) || (eb == {EXP_BITS{1'b1}} && mb != 0)))
-                res = {1'b0, {EXP_BITS{1'b1}}, {(MANT_BITS-1){1'b0}}, 1'b1};
+            // DUT special-case order (gf_adder_param.v, WV-22 fixed): NaN > Inf >
+            //   both-zero > zero > numeric. NaN propagates; Inf+(-Inf)=qNaN,
+            //   Inf(same)=Inf, Inf+finite=Inf (IEEE 754, matches gf_ref golden).
+            if (a_nan || b_nan)
+                res = {1'b0, {EXP_BITS{1'b1}}, {(MANT_BITS-1){1'b0}}, 1'b1};   // qNaN
+            else if (a_inf && b_inf)
+                res = (ra != rb)
+                    ? {1'b0, {EXP_BITS{1'b1}}, {(MANT_BITS-1){1'b0}}, 1'b1}     // Inf+(-Inf)=qNaN
+                    : {ra,   {EXP_BITS{1'b1}}, {MANT_BITS{1'b0}}};               // +/-Inf
+            else if (a_inf)  res = {ra, {EXP_BITS{1'b1}}, {MANT_BITS{1'b0}}};    // Inf + finite
+            else if (b_inf)  res = {rb, {EXP_BITS{1'b1}}, {MANT_BITS{1'b0}}};    // finite + Inf
             else if (az && bz)    res = (ra && rb) ? {1'b1, {(TOTAL-1){1'b0}}} : {TOTAL{1'b0}};
             else if (az)     res = b;
             else if (bz)     res = a;

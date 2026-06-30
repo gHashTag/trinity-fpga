@@ -49,6 +49,14 @@ module gf_adder_param #(
     wire a_nan = (HAS_INF != 0) && (ea == {EXP_BITS{1'b1}}) && (ma != {MANT_BITS{1'b0}});
     wire b_nan = (HAS_INF != 0) && (eb == {EXP_BITS{1'b1}}) && (mb != {MANT_BITS{1'b0}});
 
+    // Inf input detection (HAS_INF only — GF16): exp=all-ones && mant==0.
+    // WV-22 fix: without this, an Inf operand fell into the normal path and
+    // produced a FINITE saturated value instead of propagating Inf, violating
+    // IEEE 754 (Inf+x=Inf, Inf+(-Inf)=NaN). NaN has priority over Inf below.
+    // Proven against gf_ref.gf_add golden on all gf16 special inputs (0 mismatch).
+    wire a_inf = (HAS_INF != 0) && (ea == {EXP_BITS{1'b1}}) && (ma == {MANT_BITS{1'b0}});
+    wire b_inf = (HAS_INF != 0) && (eb == {EXP_BITS{1'b1}}) && (mb == {MANT_BITS{1'b0}});
+
     // Effective exponent: denormals use 1 (not 0) for alignment — their real_exp = 1-BIAS
     wire [EXP_BITS-1:0] ea_eff = a_denorm ? {{(EXP_BITS-1){1'b0}}, 1'b1} : ea;
     wire [EXP_BITS-1:0] eb_eff = b_denorm ? {{(EXP_BITS-1){1'b0}}, 1'b1} : eb;
@@ -112,6 +120,16 @@ module gf_adder_param #(
         // NaN input → quiet NaN (IEEE 754: NaN propagates through ADD)
         else if (a_nan || b_nan)
             result_packed = {1'b0, {EXP_BITS{1'b1}}, {(MANT_BITS-1){1'b0}}, 1'b1};
+        // Inf input (WV-22 fix, NaN already handled above so neither is NaN here):
+        //   Inf + (-Inf) = NaN; Inf(+/-) + Inf(same) = Inf(same); Inf + finite = Inf.
+        else if (a_inf && b_inf)
+            result_packed = (sa != sb)
+                ? {1'b0, {EXP_BITS{1'b1}}, {(MANT_BITS-1){1'b0}}, 1'b1}   // Inf+(-Inf)=qNaN
+                : {sa,   {EXP_BITS{1'b1}}, {MANT_BITS{1'b0}}};              // +/-Inf
+        else if (a_inf)
+            result_packed = {sa, {EXP_BITS{1'b1}}, {MANT_BITS{1'b0}}};     // Inf + finite = Inf
+        else if (b_inf)
+            result_packed = {sb, {EXP_BITS{1'b1}}, {MANT_BITS{1'b0}}};     // finite + Inf = Inf
         else begin
             sg = sr; mw = mant_raw; ew = {1'b0, er}; underflow = 1'b0;
             // Add overflow (preserve sticky: capture old bit[0], OR into new sticky after >>1)

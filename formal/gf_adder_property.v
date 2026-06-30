@@ -104,7 +104,7 @@ module gf_adder_property #(
     function [TOTAL-1:0] ref_fpadd;
         input [TOTAL-1:0] a, b;
         reg               ra, rb, az, bz, adn, bdn;
-        reg               a_spec, b_spec, a_nan, b_nan;
+        reg               a_spec, b_spec, a_nan, b_nan, a_inf, b_inf;
         reg [EXP_BITS-1:0]  ea, eb;
         reg [MANT_BITS-1:0] ma, mb;
         reg [TOTAL-1:0] res;
@@ -119,11 +119,16 @@ module gf_adder_property #(
             b_spec = (HAS_INF != 0) && (eb == {EXP_BITS{1'b1}});
             a_nan  = a_spec && (ma != {MANT_BITS{1'b0}});
             b_nan  = b_spec && (mb != {MANT_BITS{1'b0}});
+            // WV-22: Inf input = all-ones-exp && mant==0 (HAS_INF only).
+            a_inf  = a_spec && (ma == {MANT_BITS{1'b0}});
+            b_inf  = b_spec && (mb == {MANT_BITS{1'b0}});
 
-            // ---- DUT special-case order (gf_adder_param.v 106-114): ----
-            //   both-zero -> a_zero -> b_zero -> NaN -> numeric.
-            //   The DUT does NOT short-circuit Inf inputs in ADD; an all-ones-exp
-            //   finite-mant=0 operand goes numeric and naturally saturates -> Inf.
+            // ---- DUT special-case order (gf_adder_param.v, WV-22 fixed): ----
+            //   both-zero -> a_zero -> b_zero -> NaN -> Inf -> numeric.
+            //   WV-22: Inf inputs are now short-circuited per IEEE 754
+            //   (Inf+(-Inf)=NaN; Inf(+/-)+Inf(same)=Inf; Inf+finite=Inf), matching
+            //   the fixed DUT and gf_ref.gf_add golden. Zero-passthrough stays
+            //   first: 0+Inf returns the Inf operand (correct), Inf has exp!=0.
             res = {TOTAL{1'b0}};
             if (az && bz)
                 res = (ra && rb) ? {1'b1, {(TOTAL-1){1'b0}}} : {TOTAL{1'b0}};
@@ -131,6 +136,14 @@ module gf_adder_property #(
             else if (bz)        res = a;
             else if (a_nan || b_nan)
                 res = {1'b0, {EXP_BITS{1'b1}}, {(MANT_BITS-1){1'b0}}, 1'b1}; // qNaN
+            else if (a_inf && b_inf)
+                res = (ra != rb)
+                    ? {1'b0, {EXP_BITS{1'b1}}, {(MANT_BITS-1){1'b0}}, 1'b1}  // Inf+(-Inf)=qNaN
+                    : {ra,   {EXP_BITS{1'b1}}, {MANT_BITS{1'b0}}};            // +/-Inf
+            else if (a_inf)
+                res = {ra, {EXP_BITS{1'b1}}, {MANT_BITS{1'b0}}};             // Inf + finite
+            else if (b_inf)
+                res = {rb, {EXP_BITS{1'b1}}, {MANT_BITS{1'b0}}};             // finite + Inf
             else
                 res = ref_numeric_add(ra, rb, ea, eb, ma, mb, adn, bdn);
             ref_fpadd = res;
