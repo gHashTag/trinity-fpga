@@ -29,6 +29,7 @@ on:
       - 'fpga/openxc7-synth/gf_mul_param.v'
       - 'formal/gf_adder_property.v'
       - 'formal/gf_adder_formal.sby'
+      - 'formal/gf_adder_cover.sby'
       - 'formal/gf_mul_property.v'
       - 'formal/gf_mul_formal.sby'
       - '.github/workflows/fpga-formal.yml'
@@ -39,6 +40,7 @@ on:
       - 'fpga/openxc7-synth/gf_mul_param.v'
       - 'formal/gf_adder_property.v'
       - 'formal/gf_adder_formal.sby'
+      - 'formal/gf_adder_cover.sby'
       - 'formal/gf_mul_property.v'
       - 'formal/gf_mul_formal.sby'
       - '.github/workflows/fpga-formal.yml'
@@ -71,6 +73,11 @@ jobs:
           - { op: adder, sby: formal/gf_adder_formal.sby, task: gf16, wide: true  }
           - { op: adder, sby: formal/gf_adder_formal.sby, task: gf20, wide: true  }
           - { op: adder, sby: formal/gf_adder_formal.sby, task: gf24, wide: true  }
+          # ---- ADDER COVER (WV-27): reachability of gf16 Inf/NaN special-input
+          # classes (mode cover, SEPARATE from the bmc proof above). Soft (wide):
+          # confirms the WV-22 fix is exercised; a harness that constrained away
+          # Inf/NaN inputs would make a cover UNREACHABLE and fail this task.
+          - { op: adder-cover, sby: formal/gf_adder_cover.sby, task: gf16, wide: true  }
           # ---- MULTIPLIER (6 widths, no gf4) ----
           # gf8/gf12/gf16 are `soft` (continue-on-error): SymbiYosys (yosys prep +
           # smtbmc z3) MIS-ELABORATES the pack_denorm gradual-underflow path for

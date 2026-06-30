@@ -238,6 +238,39 @@ module gf_adder_property #(
             assert(out_y == ref_fpadd(a_op, b_op));
     end
 
+
+    // -------------------------------------------------------------------------
+    // WV-27: explicit reachability COVER for IEEE-754 special-input classes
+    //   (HAS_INF only -- gf16). Each cover proves the formal harness can still
+    //   reach the special class after the WV-22 fix; a future harness change
+    //   that accidentally constrains away Inf/NaN inputs would make these
+    //   UNREACHABLE and fail `sby ... cover`, catching the regression.
+    //   These are cover (witness existence), NOT assert -- proof soundness of
+    //   the DUT==ref check above is unaffected.
+    // -------------------------------------------------------------------------
+    generate if (HAS_INF != 0) begin : g_wv27_cover
+        wire ca_spec = (a_op[TOTAL-2:MANT_BITS] == {EXP_BITS{1'b1}});
+        wire cb_spec = (b_op[TOTAL-2:MANT_BITS] == {EXP_BITS{1'b1}});
+        wire ca_zero = (a_op[TOTAL-2:MANT_BITS] == {EXP_BITS{1'b0}}) && (a_op[MANT_BITS-1:0] == {MANT_BITS{1'b0}});
+        wire cb_zero = (b_op[TOTAL-2:MANT_BITS] == {EXP_BITS{1'b0}}) && (b_op[MANT_BITS-1:0] == {MANT_BITS{1'b0}});
+        wire ca_inf  = ca_spec && (a_op[MANT_BITS-1:0] == {MANT_BITS{1'b0}});
+        wire cb_inf  = cb_spec && (b_op[MANT_BITS-1:0] == {MANT_BITS{1'b0}});
+        wire ca_nan  = ca_spec && (a_op[MANT_BITS-1:0] != {MANT_BITS{1'b0}});
+        wire cb_nan  = cb_spec && (b_op[MANT_BITS-1:0] != {MANT_BITS{1'b0}});
+        wire cb_fin  = ~cb_spec && ~cb_zero;   // finite non-zero second operand
+        wire out_inf = (out_y[TOTAL-2:MANT_BITS] == {EXP_BITS{1'b1}}) && (out_y[MANT_BITS-1:0] == {MANT_BITS{1'b0}});
+        wire out_nan = (out_y[TOTAL-2:MANT_BITS] == {EXP_BITS{1'b1}}) && (out_y[MANT_BITS-1:0] != {MANT_BITS{1'b0}});
+        always @(posedge clk) if (primed) begin
+            cover (ca_inf && cb_inf && (a_op[TOTAL-1] != b_op[TOTAL-1])); // Inf+(-Inf) -> qNaN
+            cover (ca_inf && cb_inf && (a_op[TOTAL-1] == b_op[TOTAL-1])); // Inf+Inf(same) -> Inf
+            cover (ca_inf && cb_fin);                                     // Inf + finite -> Inf
+            cover (ca_nan || cb_nan);                                     // NaN propagation
+            cover (ca_zero && cb_inf);                                    // +/-0 + Inf -> Inf
+            cover (out_inf);                                              // DUT emitted Inf for some pair
+            cover (out_nan);                                              // DUT emitted NaN for some pair
+        end
+    end endgenerate
+
 endmodule
 
 `default_nettype wire

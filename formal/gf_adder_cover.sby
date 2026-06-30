@@ -1,0 +1,37 @@
+# =============================================================================
+# gf_adder_cover.sby — WV-27 reachability COVER for IEEE-754 special-input
+# classes of gf_adder_param (gf16, the only HAS_INF width).
+#
+# This is SEPARATE from gf_adder_formal.sby (the bmc PROOF). `mode cover` asks
+# the solver to find a witness trace reaching each `cover(...)` in
+# gf_adder_property.v's g_wv27_cover block:
+#   Inf+(-Inf)->qNaN, Inf+Inf->Inf, Inf+finite->Inf, NaN-propagation,
+#   +/-0+Inf->Inf, and DUT-emitted Inf / DUT-emitted NaN outputs.
+#
+# PASS = every cover is reachable (the WV-22 fix is exercised by the harness).
+# A future harness change that constrained away Inf/NaN inputs would make a
+# cover UNREACHABLE -> this task FAILS, catching the regression. The proof of
+# DUT==ref correctness lives in gf_adder_formal.sby (mode bmc); this file does
+# NOT assert correctness, only reachability. Run as a soft (wide) CI task.
+# =============================================================================
+
+[tasks]
+gf16  gf16
+
+[options]
+mode cover
+depth 20
+
+[engines]
+smtbmc z3
+
+[script]
+read_verilog -sv gf_adder_param.v
+read_verilog -sv gf_adder_property.v
+gf16:  chparam -set EXP_BITS 6 -set MANT_BITS 9 -set HAS_INF 1 gf_adder_property
+async2sync
+prep -top gf_adder_property
+
+[files]
+fpga/openxc7-synth/gf_adder_param.v
+formal/gf_adder_property.v
