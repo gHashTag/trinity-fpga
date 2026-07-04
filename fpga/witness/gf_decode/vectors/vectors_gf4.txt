@@ -1,0 +1,18 @@
+# gf_decode vectors: gf4  N=4 E=1 M=2 BIAS=0
+# format: <gf_in hex, 1 digits> <fp32_expected hex, 8 digits>
+0 00000000
+1 3f000000
+2 3f800000
+3 3fc00000
+4 7f800000
+5 7fc00000
+6 7fc00000
+7 7fc00000
+8 80000000
+9 bf000000
+a bf800000
+b bfc00000
+c ff800000
+d 7fc00000
+e 7fc00000
+f 7fc00000
