@@ -16,11 +16,43 @@ env:
 
 jobs:
   # =========================================================================
+  # Phase -1: Build entry-point detection
+  # -------------------------------------------------------------------------
+  # The S³AI "brain" (`tri` binary + `test-brain-*` targets) is driven by a
+  # root `build.zig`, which is NOT present in the current RTL/HW-focused
+  # trinity-fpga tree (only `build_minimal.zig` with an `hslm` step and
+  # `build.zig.zon` exist at root). Without it every `zig build tri` step
+  # crashes with `no build.zig file found`. This detector lets the brain jobs
+  # skip honestly (no fake-pass) until a root `build.zig` returns, at which
+  # point they re-activate automatically.
+  # =========================================================================
+  detect-build:
+    name: 🔍 Detect Zig brain build
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    outputs:
+      present: ${{ steps.check.outputs.present }}
+    steps:
+      - name: Checkout Trinity
+        uses: actions/checkout@v4
+      - name: Check for root build.zig
+        id: check
+        run: |
+          if [ -f build.zig ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::No root build.zig; S³AI brain CI (tri / test-brain-*) skipped (trinity-fpga is RTL/HW-focused). Re-enable when a root build.zig returns."
+          fi
+
+  # =========================================================================
   # Phase 0: Quick Health Check (fast feedback, runs on all commits)
   # =========================================================================
   brain-health-check:
     name: ⚡ Brain Health Check
     runs-on: ubuntu-latest
+    needs: detect-build
+    if: needs.detect-build.outputs.present == 'true'
     timeout-minutes: 5
     steps:
       - name: Setup Zig
@@ -119,6 +151,8 @@ jobs:
   build-check:
     name: 🔨 Build Check
     runs-on: ubuntu-latest
+    needs: detect-build
+    if: needs.detect-build.outputs.present == 'true'
     timeout-minutes: 5
     steps:
       - name: Setup Zig
@@ -141,7 +175,8 @@ jobs:
   brain-unit:
     name: 🧠 Unit Tests
     runs-on: ubuntu-latest
-    needs: [build-check, brain-health-check]
+    needs: [detect-build, build-check, brain-health-check]
+    if: needs.detect-build.outputs.present == 'true'
     timeout-minutes: 10
     strategy:
       fail-fast: false
@@ -173,7 +208,8 @@ jobs:
   brain-integration:
     name: 🔗 Integration Test
     runs-on: ubuntu-latest
-    needs: brain-unit
+    needs: [detect-build, brain-unit]
+    if: needs.detect-build.outputs.present == 'true'
     timeout-minutes: 10
     steps:
       - name: Setup Zig
@@ -196,7 +232,8 @@ jobs:
   brain-stress:
     name: 🧪 Stress Test (Functional MRI)
     runs-on: ubuntu-latest
-    needs: brain-integration
+    needs: [detect-build, brain-integration]
+    if: needs.detect-build.outputs.present == 'true'
     timeout-minutes: 15
     steps:
       - name: Setup Zig
@@ -312,7 +349,8 @@ jobs:
   cli-smoke:
     name: 💨 CLI Smoke Test
     runs-on: ubuntu-latest
-    needs: brain-stress
+    needs: [detect-build, brain-stress]
+    if: needs.detect-build.outputs.present == 'true'
     timeout-minutes: 5
     steps:
       - name: Setup Zig
@@ -350,8 +388,8 @@ jobs:
   brain-metrics:
     name: 📊 Export Brain Metrics
     runs-on: ubuntu-latest
-    needs: cli-smoke
-    if: always()
+    needs: [detect-build, cli-smoke]
+    if: needs.detect-build.outputs.present == 'true'
     timeout-minutes: 5
     steps:
       - name: Setup Zig
@@ -388,7 +426,7 @@ jobs:
   brain-health-report:
     name: 📋 Brain Health Report
     runs-on: ubuntu-latest
-    needs: [brain-health-check, build-check, brain-unit, brain-integration, brain-stress, cli-smoke]
+    needs: [detect-build, brain-health-check, build-check, brain-unit, brain-integration, brain-stress, cli-smoke]
     if: always()
     timeout-minutes: 5
     steps:
@@ -407,6 +445,13 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
 
           echo "## Verdict" >> $GITHUB_STEP_SUMMARY
+          # When the root build.zig is absent, all brain jobs are `skipped`
+          # (see detect-build). That is an honest "not applicable" state for
+          # the current RTL/HW-focused repo, not damage — do not block on it.
+          if [ "${{ needs.detect-build.outputs.present }}" != "true" ]; then
+            echo "### ⏭️ Brain CI skipped — no root build.zig (RTL/HW-focused repo). Non-blocking." >> $GITHUB_STEP_SUMMARY
+            exit 0
+          fi
           if [ "${{ needs.brain-health-check.result }}" == "success" ] && \
              [ "${{ needs.build-check.result }}" == "success" ] && \
              [ "${{ needs.brain-unit.result }}" == "success" ] && \
@@ -421,7 +466,7 @@ jobs:
           fi
 
       - name: Critical State Notification
-        if: failure()
+        if: failure() && needs.detect-build.outputs.present == 'true'
         uses: actions/github-script@v7
         with:
           script: |
