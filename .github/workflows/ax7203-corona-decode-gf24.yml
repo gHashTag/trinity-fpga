@@ -41,7 +41,7 @@ jobs:
           docker run --rm -v "$PWD:/work" -w /work regymm/openxc7 bash -c "cd /nextpnr-xilinx && python3 xilinx/python/bbaexport.py --device xc7a200tfbg484-2 --bba /work/build/corona_decode_gf24/chipdb/xc7a200tfbg484-2.bba && bbasm -l /work/build/corona_decode_gf24/chipdb/xc7a200tfbg484-2.bba /work/build/corona_decode_gf24/chipdb/xc7a200tfbg484-2.bin"
       - name: nextpnr (seed search)
         run: |
-          CLEAN=0; for s in $(seq 1 8); do
+          CLEAN=0; for s in $(seq 1 12); do
             rm -f build/corona_decode_gf24/corona_decode_ax7203.fasm
             docker run --rm -v "$PWD:/work" -w /work regymm/openxc7 timeout --signal=KILL 1800 nextpnr-xilinx \
               --chipdb /work/build/corona_decode_gf24/chipdb/xc7a200tfbg484-2.bin \
@@ -49,7 +49,7 @@ jobs:
               --json /work/build/corona_decode_gf24/corona_decode_ax7203.json \
               --write /work/build/corona_decode_gf24/corona_decode_ax7203_routed.json \
               --fasm /work/build/corona_decode_gf24/corona_decode_ax7203.fasm \
-              --freq 50.0 --seed $s --placer sa --router router1 --timing-allow-fail > /tmp/np_$s.log 2>&1 || true
+              --freq 50.0 --seed $s --placer heap --router router1 --timing-allow-fail > /tmp/np_$s.log 2>&1 || true
             if grep -q "Failed to find a route" /tmp/np_$s.log || [ ! -f build/corona_decode_gf24/corona_decode_ax7203.fasm ]; then continue; fi
             cp /tmp/np_$s.log /tmp/np.log; CLEAN=$s; break
           done; [ "$CLEAN" = "0" ] && { echo "::error::no clean seed"; exit 1; }; echo "seed=$CLEAN"
