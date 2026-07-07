@@ -4,6 +4,13 @@
 // NEW 32-bit decode frame: AA 55 fmt code[3] code[2] code[1] code[0] trig -> A5 FP32 LE.
 // This extends the 16-bit decode frame (2 code bytes) to 32-bit (4 code bytes),
 // opening the 32-bit-format decode column (takum32, int32, posit32, etc.).
+//
+// PIPELINED (2026-07-07): uses takum32_decode_pipelined (5-stage) instead of
+// the combinational takum32_decode. The 87-bit + 72-bit multiplies + BRAM
+// lookup + barrel-shift in the combinational version created an unroutable
+// critical path (failed sa+heap x8, ~4h). Pipeline registers break the chain.
+// frame_valid is delayed 5 cycles (frame_valid_d5) so tx_buf loads from the
+// registered result on the correct cycle.
 module corona_decode_takum32_ax7203 (
     input  wire rst_n, input wire uart_rx, output reg uart_tx, output wire [3:0] led
 );
@@ -52,15 +59,21 @@ module corona_decode_takum32_ax7203 (
     assign led[1]=frame_valid;
     wire [31:0] result;
     wire        is_zero;
-    takum32_decode u_dec (.t32(code_r[31:0]), .fp32_out(result));
+    takum32_decode_pipelined u_dec (.clk(mclk), .rst_n(~rst), .t32(code_r[31:0]), .fp32_out(result));
     assign led[2] = |result;
+    // 5-cycle frame_valid delay to align tx_buf load with pipelined result
+    reg frame_valid_d1, frame_valid_d2, frame_valid_d3, frame_valid_d4, frame_valid_d5;
+    always @(posedge mclk or posedge rst) begin
+        if(rst) begin frame_valid_d1<=0; frame_valid_d2<=0; frame_valid_d3<=0; frame_valid_d4<=0; frame_valid_d5<=0; end
+        else begin frame_valid_d1<=frame_valid; frame_valid_d2<=frame_valid_d1; frame_valid_d3<=frame_valid_d2; frame_valid_d4<=frame_valid_d3; frame_valid_d5<=frame_valid_d4; end
+    end
     reg responding; reg [2:0] tx_idx; reg [7:0] tx_buf0,tx_buf1,tx_buf2,tx_buf3,tx_buf4;
     reg [8:0] tcnt; reg [3:0] tbi; reg [9:0] tsr;
     always @(posedge mclk or posedge rst) begin
         if(rst) begin responding<=0;tx_idx<=0;tcnt<=BAUD_DIV-1;tbi<=0;tsr<=10'h3FF;uart_tx<=1;
             tx_buf0<=8'hFF;tx_buf1<=8'hFF;tx_buf2<=8'hFF;tx_buf3<=8'hFF;tx_buf4<=8'hFF; end
         else begin uart_tx<=tsr[0];
-            if(frame_valid) begin
+            if(frame_valid_d5) begin
                 tx_buf0<=8'hA5; tx_buf1<=result[7:0]; tx_buf2<=result[15:8];
                 tx_buf3<=result[23:16]; tx_buf4<=result[31:24]; responding<=1; tx_idx<=0;
             end
