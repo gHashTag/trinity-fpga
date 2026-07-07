@@ -1,7 +1,7 @@
 `default_nettype wire
 `timescale 1ns / 1ps
-// corona_decode_mxfp6_ax7203 — GoldenFloat4 (S1E1M2, BIAS=0) decode on AX7203.
-// Decoder = gf_decode_param #(16,6,9,31) (parametric, iverilog-witnessed 65536/65536, PR #239).
+// corona_decode_mxfp6_ax7203 — MXFP6 E3M2 (1+3+2, bias=3) decode on AX7203.
+// Decoder = fp6_e3m2_decode (16-entry, OCP MX: e==EM saturates, no Inf/NaN).
 // Identical UART/frame infra to corona_decode_binary16; only the decoder differs.
 
 module corona_decode_mxfp6_ax7203 (

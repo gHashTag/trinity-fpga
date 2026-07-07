@@ -1,7 +1,7 @@
 `default_nettype wire
 `timescale 1ns / 1ps
-// corona_decode_afp_ax7203 — GoldenFloat4 (S1E1M2, BIAS=0) decode on AX7203.
-// Decoder = gf_decode_param #(16,6,9,31) (parametric, iverilog-witnessed 65536/65536, PR #239).
+// corona_decode_afp_ax7203 — AFP (Adaptive Float, bf16-compatible 1+8+7, bias=127) decode on AX7203.
+// Decoder = bf16_decode (pure bit-pad {bf16_in, 16'b0}; IEEE 754 subnormals kept, no flush).
 // Identical UART/frame infra to corona_decode_binary16; only the decoder differs.
 
 module corona_decode_afp_ax7203 (

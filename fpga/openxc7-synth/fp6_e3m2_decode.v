@@ -16,6 +16,7 @@ module fp6_e3m2_decode (
 
     wire is_zero      = (exp == 3'd0) && (mant == 2'd0);
     wire is_subnormal = (exp == 3'd0) && (mant != 2'd0);
+    wire is_saturate  = (exp == 3'd7);  // OCP MX: e==EM saturates (no Inf/NaN)
 
     reg [7:0]  fp32_exp;
     reg [22:0] fp32_mant;
@@ -36,6 +37,11 @@ module fp6_e3m2_decode (
                 fp32_exp  = 8'd123;  // -3-1+127 = 123
                 fp32_mant = 23'b0;
             end
+        end else if (is_saturate) begin
+            // OCP MX mxfp6: e==EM (7) saturates to largest finite value:
+            // exp=EM-1=6, mant=MMAX=3 -> (1+3/4)*2^(6-3) = 14.0
+            fp32_exp  = 8'd130;       // (EM-1) + 124 = 6 + 124
+            fp32_mant = {2'b11, 21'b0};  // MMAX = 3
         end else begin
             // Normal: FP32 exp = exp - 3 + 127 = exp + 124
             fp32_exp  = {5'b0, exp} + 8'd124;
