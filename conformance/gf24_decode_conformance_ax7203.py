@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""gf32 decode conformance — GF(32,12,19) BIAS=2047 → FP32. 4-byte frame."""
+"""gf24 decode conformance — GF(24,9,14) BIAS=255 → FP32. 3-byte frame."""
 import serial, struct, time, random, sys, argparse
-N,E,M,BIAS = 32,12,19,2047
+N,E,M,BIAS = 24,9,14,255
 EM = (1<<E)-1
 def decode(raw):
     raw &= (1<<N)-1; s=raw>>(N-1); e=(raw>>M)&EM; m=raw&((1<<M)-1)
@@ -37,13 +37,13 @@ def main():
         if 1<=e<EM:
             for mv in [0,MMAX,max(0,MMAX//2)]:
                 for s in (0,1): codes.add((s<<(N-1))|(e<<M)|mv)
-    rng=random.Random(32)
+    rng=random.Random(24)
     NMAX=(1<<N)-1
     for _ in range(min(2000,NMAX)): codes.add(rng.randrange(NMAX+1))
     codes=sorted(codes)
     port=serial.Serial(args.port,args.baud,timeout=3)
     ok=0; fails=[]
-    nbytes=4
+    nbytes=3
     for raw in codes:
         g=decode(raw)
         b=[(raw>>(i*8))&0xFF for i in range(nbytes)]
