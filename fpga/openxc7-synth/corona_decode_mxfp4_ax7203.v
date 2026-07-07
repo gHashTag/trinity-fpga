@@ -1,7 +1,10 @@
 `default_nettype wire
 `timescale 1ns / 1ps
-// corona_decode_mxfp4_ax7203 — GoldenFloat4 (S1E1M2, BIAS=0) decode on AX7203.
-// Decoder = gf_decode_param #(16,6,9,31) (parametric, iverilog-witnessed 65536/65536, PR #239).
+// corona_decode_mxfp4_ax7203 — single MXFP4 element (FP4 E2M1, bias=1) decode on AX7203.
+// Decoder = fp4_decode (16-entry E2M1 LUT per OCP MX spec; bit-identical to the
+// already-proven fp4_e2m1 cell, Tier-E proof #199 comment 4863304724). This module
+// covers ONE mxfp4 element only; the shared-E8M0 block scaling (32xE2M1 + E8M0 ->
+// 32 scaled FP32) is a separate wider decoder (horizon B).
 // Identical UART/frame infra to corona_decode_binary16; only the decoder differs.
 
 module corona_decode_mxfp4_ax7203 (

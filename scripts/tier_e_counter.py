@@ -20,7 +20,12 @@ def fetch_comments():
 
 RE_SHA = re.compile(r'\b[0-9a-f]{8,}\b', re.I)
 RE_IDCODE = re.compile(r'0x13636093', re.I)
-RE_CI = re.compile(r'(?:actions/runs/)?\b(\d{8,})\b')
+# CI witness: strongest form is a numeric run-id (>=8 digits, possibly in an
+# actions/runs/ URL). Some proofs record only a textual "CI run: ... SUCCESS"
+# line without pasting the run-id. Both count as a CI witness, but only the
+# numeric run-id is auditable (main() flags proofs that lack it).
+RE_CI_RUNID = re.compile(r'(?:actions/runs/)?\b(\d{8,})\b')
+RE_CI_TEXT = re.compile(r'\bCI[\s-]*run\b.*?\bSUCCESS\b', re.I)
 RE_UART = re.compile(r'(\d+)\s*/\s*(\d+).*?(?:bit-exact|fails\s*=\s*0)', re.I)
 RE_HEADER = re.compile(r'###\s+Tier-E\s+(re-)?proofs?\s*:\s*(.*)', re.I)
 RE_FMT_BTICK = re.compile(r'`([a-z][a-z0-9_]*(?:-[a-z]+)?)`', re.I)
@@ -75,11 +80,14 @@ def parse_comment(body):
     sha = RE_SHA.search(body)
     uart = RE_UART.search(body)
     idcode = RE_IDCODE.search(body)
-    ci = RE_CI.search(body)
+    ci_runid = RE_CI_RUNID.search(body)
+    ci_text = RE_CI_TEXT.search(body)
+    ci = ci_runid or ci_text
     chain = all([sha, uart, idcode, ci])
 
     return [{'format': f, 'op': op, 'chain_4_4': chain, 'is_reproof': is_reproof,
-             'sha': bool(sha), 'uart': bool(uart), 'idcode': bool(idcode), 'ci': bool(ci)}
+             'sha': bool(sha), 'uart': bool(uart), 'idcode': bool(idcode),
+             'ci': bool(ci), 'ci_runid': bool(ci_runid)}
             for f in unique_fmts]
 
 def main():
@@ -108,6 +116,9 @@ def main():
     union = sorted(set(dec) | set(comp))
     both = sorted(set(dec) & set(comp))
     no_chain = [p for p in proofs if not p['chain_4_4']]
+    # Valid proofs whose CI witness is only textual ("CI run: SUCCESS") and lack an
+    # auditable numeric run-id. They count, but should be upgraded with the run-id.
+    no_runid = sorted(set(p['format'] for p in unique if not p.get('ci_runid')))
 
     if args.json:
         out = {
@@ -116,6 +127,7 @@ def main():
             'cellop_total': len(unique), 'union_unique': len(union),
             'both_axes': both, 'both_axes_count': len(both),
             'parsed': len(proofs), 'chain_4_4': len(valid), 'no_chain': len(no_chain),
+            'valid_no_runid': no_runid,
         }
         print(json.dumps(out, indent=2, ensure_ascii=False))
         return
@@ -132,6 +144,9 @@ def main():
     if both: print(f"    → {', '.join(both)}")
     if no_chain:
         print(f"\n⚠ {len(no_chain)} without 4/4 chain")
+    if no_runid:
+        print(f"⚠ {len(no_runid)} valid but no numeric CI run-id (upgrade recommended):")
+        print(f"    → {', '.join(no_runid)}")
     if args.verbose:
         print(f"\n--- decode ({len(dec)}) ---")
         for f in dec: print(f"  {f}")
