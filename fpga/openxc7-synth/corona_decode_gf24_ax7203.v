@@ -49,15 +49,17 @@ module corona_decode_gf24_ax7203 (
     assign led[1]=frame_valid;
     wire [31:0] result;
     wire        is_zero;
-    gf_decode_param #(.N(24), .E(9), .M(14), .BIAS(255), .OUT_REG(0)) u_dec (.clk(1'b0), .rst_n(1'b1), .gf_in(code_r[23:0]), .fp32_out(result), .is_nan_o(), .is_inf_o(), .is_zero_o(), .is_subnormal_o());
+    gf_decode_param #(.N(24), .E(9), .M(14), .BIAS(255), .OUT_REG(1)) u_dec (.clk(mclk), .rst_n(~rst), .gf_in(code_r[23:0]), .fp32_out(result), .is_nan_o(), .is_inf_o(), .is_zero_o(), .is_subnormal_o());
     assign led[2] = |result;
     reg responding; reg [2:0] tx_idx; reg [7:0] tx_buf0,tx_buf1,tx_buf2,tx_buf3,tx_buf4;
     reg [8:0] tcnt; reg [3:0] tbi; reg [9:0] tsr;
+    reg frame_valid_d;
+    always @(posedge mclk or posedge rst) if(rst) frame_valid_d<=0; else frame_valid_d<=frame_valid;
     always @(posedge mclk or posedge rst) begin
         if(rst) begin responding<=0;tx_idx<=0;tcnt<=BAUD_DIV-1;tbi<=0;tsr<=10'h3FF;uart_tx<=1;
             tx_buf0<=8'hFF;tx_buf1<=8'hFF;tx_buf2<=8'hFF;tx_buf3<=8'hFF;tx_buf4<=8'hFF; end
         else begin uart_tx<=tsr[0];
-            if(frame_valid) begin
+            if(frame_valid_d) begin
                 tx_buf0<=8'hA5; tx_buf1<=result[7:0]; tx_buf2<=result[15:8];
                 tx_buf3<=result[23:16]; tx_buf4<=result[31:24]; responding<=1; tx_idx<=0;
             end
