@@ -94,10 +94,32 @@ module takum32_decode_pipelined (
     end
 
     // ============================================================
-    // Stage 3: BRAM lookup tval + flo_ln2 multiply -> corr
+    // Stage 2.5: register f_hi_q for BRAM synchronous read
+    // (yosys infers synchronous BRAM from tbl[f_hi_q], adding 1 cycle latency)
     // ============================================================
-    wire [47:0] S3_tval = tbl[f_hi_q];   // synchronous BRAM read (1 cycle)
-    wire signed [107:0] S3_flo_ln2 = $signed({49'b0, f_lo_q}) * $signed({1'b0, LN2_Q48});
+    reg [15:0] f_hi_q2;
+    reg [58:0] f_lo_q2;
+    reg signed [11:0] k_q2b;
+    reg [31:0] t32_q2b;
+    always @(posedge clk) begin
+        if (!rst_n) begin
+            f_hi_q2  <= 16'd0;
+            f_lo_q2  <= 59'd0;
+            k_q2b    <= 12'sd0;
+            t32_q2b  <= 32'd0;
+        end else begin
+            f_hi_q2  <= f_hi_q;
+            f_lo_q2  <= f_lo_q;
+            k_q2b    <= k_q;
+            t32_q2b  <= t32_q2;
+        end
+    end
+
+    // ============================================================
+    // Stage 3: BRAM lookup tval (synchronous read, 1 cycle) + flo_ln2 multiply
+    // ============================================================
+    wire [47:0] S3_tval = tbl[f_hi_q2];   // synchronous BRAM read (1 cycle)
+    wire signed [107:0] S3_flo_ln2 = $signed({49'b0, f_lo_q2}) * $signed({1'b0, LN2_Q48});
     wire [31:0] S3_corr = S3_flo_ln2 >>> 75;
 
     reg [47:0]        tval_q;
@@ -113,8 +135,8 @@ module takum32_decode_pipelined (
         end else begin
             tval_q  <= S3_tval;
             corr_q  <= S3_corr;
-            k_q3    <= k_q;
-            t32_q3  <= t32_q2;
+            k_q3    <= k_q2b;
+            t32_q3  <= t32_q2b;
         end
     end
 

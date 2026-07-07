@@ -61,11 +61,12 @@ module corona_decode_takum32_ax7203 (
     wire        is_zero;
     takum32_decode_pipelined u_dec (.clk(mclk), .rst_n(~rst), .t32(code_r[31:0]), .fp32_out(result));
     assign led[2] = |result;
-    // 5-cycle frame_valid delay to align tx_buf load with pipelined result
-    reg frame_valid_d1, frame_valid_d2, frame_valid_d3, frame_valid_d4, frame_valid_d5;
+    // 6-cycle frame_valid delay to align tx_buf load with pipelined result
+    // (5 pipeline stages + 1 extra for BRAM synchronous read latency)
+    reg frame_valid_d1, frame_valid_d2, frame_valid_d3, frame_valid_d4, frame_valid_d5, frame_valid_d6;
     always @(posedge mclk or posedge rst) begin
-        if(rst) begin frame_valid_d1<=0; frame_valid_d2<=0; frame_valid_d3<=0; frame_valid_d4<=0; frame_valid_d5<=0; end
-        else begin frame_valid_d1<=frame_valid; frame_valid_d2<=frame_valid_d1; frame_valid_d3<=frame_valid_d2; frame_valid_d4<=frame_valid_d3; frame_valid_d5<=frame_valid_d4; end
+        if(rst) begin frame_valid_d1<=0; frame_valid_d2<=0; frame_valid_d3<=0; frame_valid_d4<=0; frame_valid_d5<=0; frame_valid_d6<=0; end
+        else begin frame_valid_d1<=frame_valid; frame_valid_d2<=frame_valid_d1; frame_valid_d3<=frame_valid_d2; frame_valid_d4<=frame_valid_d3; frame_valid_d5<=frame_valid_d4; frame_valid_d6<=frame_valid_d5; end
     end
     reg responding; reg [2:0] tx_idx; reg [7:0] tx_buf0,tx_buf1,tx_buf2,tx_buf3,tx_buf4;
     reg [8:0] tcnt; reg [3:0] tbi; reg [9:0] tsr;
@@ -73,7 +74,7 @@ module corona_decode_takum32_ax7203 (
         if(rst) begin responding<=0;tx_idx<=0;tcnt<=BAUD_DIV-1;tbi<=0;tsr<=10'h3FF;uart_tx<=1;
             tx_buf0<=8'hFF;tx_buf1<=8'hFF;tx_buf2<=8'hFF;tx_buf3<=8'hFF;tx_buf4<=8'hFF; end
         else begin uart_tx<=tsr[0];
-            if(frame_valid_d5) begin
+            if(frame_valid_d6) begin
                 tx_buf0<=8'hA5; tx_buf1<=result[7:0]; tx_buf2<=result[15:8];
                 tx_buf3<=result[23:16]; tx_buf4<=result[31:24]; responding<=1; tx_idx<=0;
             end
