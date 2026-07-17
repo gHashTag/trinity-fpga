@@ -1289,7 +1289,9 @@ Eight findings, restated without superlatives:
   (\S\ref{sec:named}), floating-point LUT cost on Artix-7 (zero-DSP)
   follows $\text{LUT}_{\text{ADD}} = 1.63W^{2}$ (R$^{2}{=}0.97$) and
   $\text{LUT}_{\text{MUL}} = 2.09W^{2}$ (R$^{2}{=}0.97$) across four
-  orders of magnitude in width.
+  orders of magnitude in width. These coefficients are from Yosys
+  synthesis (\texttt{synth\_xilinx -abc9}); post-place-and-route LUT
+  counts are typically 15--30\% higher (see Threats to Validity).
 
 \item \textbf{Encoding invariance (Encoding Equivalence).} By the Encoding
    Equivalence (\S\ref{sec:named}), GF16 MUL and a native takum16 MUL both
