@@ -5,6 +5,30 @@
 
 ---
 
+## 0. HONESTY ERRATUM (added 2026-07-17, audit pass)
+
+Перед использованием этого отчёта в статье/гранте — следующие заявления ПОНИЖЕНЫ в статусе
+по результатам аудита (независимая проверка по репо + единый re-benchmark `wave_audit/rebench_unified.py`):
+
+1. **«INT6 побеждает все FP форматы на training» — НЕ ПОДТВЕРЖДЕНО.** На согласованной шкале
+   (один корпус/seed-set) INT6 ХУЖЕ FP32 и GF14/GF16 по BPB. Совпадает с §3.7 (FineWeb: INT6 = FP32 +0.013).
+   «Победа INT6» в §3.2 — артефакт overfitting-режима toy-Shakespeare. Статус: **[смоделировано, scale-dependent]**.
+2. **BPB-числа НЕСОГЛАСОВАНЫ между разделами** (§3.2 INT6=0.263, §3.6=0.278, §3.7 FineWeb≈1.94).
+   Это РАЗНЫЕ шкалы/корпуса. Каждой строке leaderboard нужна пометка шкалы; строки не сопоставимы напрямую.
+3. **LUT-числа (486/505/851/120…) — [измерено локально, БЕЗ CI-артефакта].** В репо нет ни одного
+   nextpnr/yosys utilization-report. Для воспроизводимости нужен CI-job с сохранённым report.
+4. **«FPGA AI model работает / inference на AX7203» — [прошито, вывод НЕ верифицирован].** UART сломан
+   на macOS 26 → выход модели не считан. «DONE LED / blinking» ≠ корректный инференс.
+5. **«SmoothQuant не используют НИКТО из 2000+ участников» → «в публично описанных топ-решениях SQ не встречается».**
+   Приватные решения проверить нельзя (honesty rule #1: без категоричных отрицаний).
+6. **SQ-INT6 «эталон 0.255» — [смоделировано, НЕ воспроизведено на единой шкале].** Корректный SQ
+   (scale migration + инверсия в активациях) на реальном harness ещё не прогнан на согласованном корпусе.
+
+Всё, что НЕ в этом списке (16 GF compute Tier-E ячеек прошлых сессий, наличие кода/артефактов в main,
+исправление φ-proof в af65d907c) — остаётся в силе. Детали: `wave_audit/rebench_findings_2026-07-17.md`.
+
+---
+
 ## 1. ПОСТАНОВКА ЗАДАЧИ
 
 Найти и создать лучший числовой формат для LLM — **эталон**. Критерий: минимальный BPB (bits per byte) при фиксированном бюджете байтов (artifact size). Дополнительные оси: robustness (7 workload tests), LUT cost на FPGA, hardware implementability.
@@ -44,8 +68,8 @@
 - **BBQ** (ICLR 2026): first format both ITO + compute-efficient
 - **Takum** (Hünhold): единственный конкурент на той же оси (single-rule + LUT)
 - **OCP MX / Blackwell MXFP4**: consortium + shipping silicon
-- **φ-ratio**: УНИКАЛЕН — никто не использует golden ratio для E/M split
-- **SmoothQuant**: НИКТО в Parameter Golf не использует
+- **φ-ratio**: в просмотренных 45 работах golden ratio для E/M split не встречался (не «никто в мире» — [обзор ограничен]).
+- **SmoothQuant**: в публично описанных топ-решениях Parameter Golf не встречается (приватные решения не проверяемы — §0 п.5).
 
 ### 3.2. Systematic Format Exploration
 
@@ -67,7 +91,7 @@
 | MXFP8 | Microscaling | 8.25 | diverge | — | M=3 too few |
 | FP32 | Float | 32 | 0.346 | ~3000 | Reference |
 
-**Открытие: INT6 побеждает GF14 на 7.6% BPB при 17× дешевле LUT.**
+**Наблюдение (toy-Shakespeare, overfitting-режим): INT6 ниже GF14 по BPB при меньшем LUT.** ВНИМАНИЕ: на согласованной шкале и на FineWeb (§3.7) направление ИНВЕРТИРУЕТСЯ — INT6 хуже FP32/GF. Статус: [смоделировано, scale-dependent]. См. §0 п.1.
 
 **Этап 3: Advanced techniques**
 
@@ -143,7 +167,7 @@ Hybrid = best training BPB, но fails DynRange.
 - **Winner:** 1.05651 BPB (codemath3000, PR #2135)
 - **Winner format:** INT6 GPTQ + INT7 embeddings + LQER rank-4
 - **Winner stack:** Muon optimizer, CaseOps tokenizer, depth recurrence, TTT
-- **SmoothQuant:** НЕ используется ни одним из 2000+ участников
+- **SmoothQuant:** не встречается в публично описанных топ-решениях (2000+ приватных решений проверить нельзя — §0 п.5)
 - **Submission pipeline:** `parameter_golf_sq_int6.py` написан
 
 **Оценка шансов на победу:**
@@ -244,15 +268,17 @@ Hybrid = best training BPB, но fails DynRange.
 ├──────────────┬──────────┬──────────┬─────────┬──────────────────────┤
 │ Format       │ BPB      │ Robust   │ LUT MAC │ Best for             │
 ├──────────────┼──────────┼──────────┼─────────┼──────────────────────┤
-│ SQ-INT6   ★  │ 0.255    │ 4/7      │ 120     │ QAT training (BEST) │
+│ SQ-INT6 ★‼ │ 0.255‼   │ 4/7      │ 120‼    │ QAT training        │
 │ LM-INT6      │ 0.266    │ —        │ 120     │ Most stable training│
-│ INT6         │ 0.263    │ 1/7      │ 103     │ Cheapest HW training│
+│ INT6         │ 0.263‼   │ 1/7      │ 103‼    │ дешёво по HW        │
 │ INT7         │ 0.278    │ 2/7      │ 50      │ Widest stable INT   │
 │ Hyb σ2.0     │ 0.265    │ 3/7      │ 100     │ Hybrid INT7+GF14    │
 │ GF14         │ 0.301    │ 6/7      │ 851     │ Numerical robustness│
 │ GF16         │ 0.336    │ 7/7      │ 991     │ Full robustness     │
 │ FP32         │ 0.346    │ 7/7      │ ~3000   │ Reference            │
 └──────────────┴──────────┴──────────┴─────────┴──────────────────────┘
+
+‼ = статус понижен в §0 (scale-dependent BPB / LUT без CI-report). Строки с разных шкал НЕ сопоставимы напрямую.
 
 Эталон = контекстно-зависимый:
   • QAT training: SQ-INT6 (α=0.5)
@@ -270,7 +296,7 @@ Hybrid = best training BPB, но fails DynRange.
 **Время:** 1 день на GPU.
 **Ожидаемый результат:** 1.052-1.056 BPB → top-2 до top-5.
 **Риск:** QAT advantage может не масштабироваться с d=128 до d=512.
-**ROI:** Высокий — единственный путь к соревновательному результату.
+**ROI:** Высокий потенциал, НО сначала снять риск: QAT-преимущество SQ-INT6 показано только на d≤128 (может не масштабироваться). Дешёвый первый шаг = единый re-benchmark, НЕ GPU-прогон.
 
 ### Вариант B: FPGA AI Model Completion (Linux or macOS fix)
 **Что:** Достроить INT6 MLP inference engine на AX7203. Full MLP с BRAM sync-read fix. Прошить, протестировать UART на Linux.
@@ -280,7 +306,7 @@ Hybrid = best training BPB, но fails DynRange.
 **ROI:** Демонстрация end-to-end AI на FPGA с нашим etalon форматом.
 
 ### Вариант C: Takum Collaboration (Hünhold email)
-**Что:** Написать Jasmin Hünhold (takum author) с находкой 505=505 LUT эквивалентности. Предложить совместную статью "Encoding Equivalence + INT6 dominance".
+**Что:** Написать Jasmin Hünhold (takum author) с находкой 505=505 LUT эквивалентности. Предложить совместную статью "Encoding Equivalence" (без заявления «INT6 dominance» — см. §0; и СНАЧАЛА воспроизводимый synth-report, потом письмо — первый вопрос Hünhold = utilization log).
 **Время:** 1 email + обсуждение.
 **Ожидаемый результат:** Co-authorship, citation boost, access to takum RTL.
 **Риск:** Отказ или игнорирование.
