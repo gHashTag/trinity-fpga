@@ -1,0 +1,227 @@
+{
+  "seed": 20260730,
+  "note": "[измерено — SW proxy, CPU] Вариант B: ось catalog-select (GF+A) vs ось metadata-augment (M²XFP-стиль). Гарантия на MSE-метрике выбора, НЕ downstream. Превосходство НЕ заявляется — вывод про ортогональность/композицию.",
+  "synthetic": [
+    {
+      "dist": "uniform",
+      "N": 4,
+      "sqnr_catalog": 22.994,
+      "sqnr_metadata": 19.838,
+      "mse_catalog": 0.0016826980918720697,
+      "mse_metadata": 0.003479990279321173,
+      "effbits_catalog": 4.0391,
+      "effbits_metadata": 4.1562,
+      "base_format": "e2m1"
+    },
+    {
+      "dist": "gaussian",
+      "N": 4,
+      "sqnr_catalog": 20.131,
+      "sqnr_metadata": 20.554,
+      "mse_catalog": 0.009860647059800092,
+      "mse_metadata": 0.008945136555346882,
+      "effbits_catalog": 4.0391,
+      "effbits_metadata": 4.1562,
+      "base_format": "e2m1"
+    },
+    {
+      "dist": "heavy",
+      "N": 4,
+      "sqnr_catalog": 14.08,
+      "sqnr_metadata": 20.865,
+      "mse_catalog": 0.15856443653684676,
+      "mse_metadata": 0.03324385226503697,
+      "effbits_catalog": 4.0391,
+      "effbits_metadata": 4.1562,
+      "base_format": "e2m1"
+    },
+    {
+      "dist": "mixed_outlier",
+      "N": 4,
+      "sqnr_catalog": 20.254,
+      "sqnr_metadata": 20.642,
+      "mse_catalog": 0.3345024561167952,
+      "mse_metadata": 0.3058803716199284,
+      "effbits_catalog": 4.0391,
+      "effbits_metadata": 4.1562,
+      "base_format": "e2m1"
+    },
+    {
+      "dist": "uniform",
+      "N": 6,
+      "sqnr_catalog": 35.914,
+      "sqnr_metadata": 32.846,
+      "mse_catalog": 8.562941761314582e-05,
+      "mse_metadata": 0.00017352828012378598,
+      "effbits_catalog": 6.0391,
+      "effbits_metadata": 6.1562,
+      "base_format": "e2m3"
+    },
+    {
+      "dist": "gaussian",
+      "N": 6,
+      "sqnr_catalog": 31.62,
+      "sqnr_metadata": 33.015,
+      "mse_catalog": 0.0006738840795028043,
+      "mse_metadata": 0.0004887082505905545,
+      "effbits_catalog": 6.0391,
+      "effbits_metadata": 6.1562,
+      "base_format": "e2m3"
+    },
+    {
+      "dist": "heavy",
+      "N": 6,
+      "sqnr_catalog": 28.768,
+      "sqnr_metadata": 34.049,
+      "mse_catalog": 0.005614389335748439,
+      "mse_metadata": 0.0016640819367112366,
+      "effbits_catalog": 6.0391,
+      "effbits_metadata": 6.1562,
+      "base_format": "e2m3"
+    },
+    {
+      "dist": "mixed_outlier",
+      "N": 6,
+      "sqnr_catalog": 31.613,
+      "sqnr_metadata": 32.937,
+      "mse_catalog": 0.02479351725720889,
+      "mse_metadata": 0.018276677392164514,
+      "effbits_catalog": 6.0391,
+      "effbits_metadata": 6.1562,
+      "base_format": "e2m3"
+    },
+    {
+      "dist": "uniform",
+      "N": 8,
+      "sqnr_catalog": 48.11,
+      "sqnr_metadata": 45.218,
+      "mse_catalog": 5.138899102416592e-06,
+      "mse_metadata": 1.0000317251719682e-05,
+      "effbits_catalog": 8.0391,
+      "effbits_metadata": 8.1562,
+      "base_format": "e2m5"
+    },
+    {
+      "dist": "gaussian",
+      "N": 8,
+      "sqnr_catalog": 43.721,
+      "sqnr_metadata": 45.148,
+      "mse_catalog": 4.2933703732784954e-05,
+      "mse_metadata": 3.090779334754471e-05,
+      "effbits_catalog": 8.0391,
+      "effbits_metadata": 8.1562,
+      "base_format": "e2m5"
+    },
+    {
+      "dist": "heavy",
+      "N": 8,
+      "sqnr_catalog": 41.783,
+      "sqnr_metadata": 46.527,
+      "mse_catalog": 0.0003127787095878918,
+      "mse_metadata": 0.00010491674981606313,
+      "effbits_catalog": 8.0391,
+      "effbits_metadata": 8.1562,
+      "base_format": "e2m5"
+    },
+    {
+      "dist": "mixed_outlier",
+      "N": 8,
+      "sqnr_catalog": 43.881,
+      "sqnr_metadata": 44.938,
+      "mse_catalog": 0.0014793242923175369,
+      "mse_metadata": 0.0011598094438847876,
+      "effbits_catalog": 8.0391,
+      "effbits_metadata": 8.1562,
+      "base_format": "e2m5"
+    },
+    {
+      "dist": "uniform",
+      "N": 12,
+      "sqnr_catalog": 72.268,
+      "sqnr_metadata": 69.4,
+      "mse_catalog": 1.971380868499794e-08,
+      "mse_metadata": 3.8153507020363926e-08,
+      "effbits_catalog": 12.0391,
+      "effbits_metadata": 12.1562,
+      "base_format": "e2m9"
+    },
+    {
+      "dist": "gaussian",
+      "N": 12,
+      "sqnr_catalog": 67.829,
+      "sqnr_metadata": 69.31,
+      "mse_catalog": 1.663417276995378e-07,
+      "mse_metadata": 1.1826184755191754e-07,
+      "effbits_catalog": 12.0391,
+      "effbits_metadata": 12.1562,
+      "base_format": "e2m9"
+    },
+    {
+      "dist": "heavy",
+      "N": 12,
+      "sqnr_catalog": 63.857,
+      "sqnr_metadata": 70.437,
+      "mse_catalog": 1.953936314428111e-06,
+      "mse_metadata": 4.294853857327621e-07,
+      "effbits_catalog": 12.0391,
+      "effbits_metadata": 12.1562,
+      "base_format": "e2m9"
+    },
+    {
+      "dist": "mixed_outlier",
+      "N": 12,
+      "sqnr_catalog": 67.936,
+      "sqnr_metadata": 69.235,
+      "mse_catalog": 5.953433186731617e-06,
+      "mse_metadata": 4.414363056871011e-06,
+      "effbits_catalog": 12.0391,
+      "effbits_metadata": 12.1562,
+      "base_format": "e2m9"
+    },
+    {
+      "dist": "uniform",
+      "N": 16,
+      "sqnr_catalog": 96.329,
+      "sqnr_metadata": 93.399,
+      "mse_catalog": 7.743799318971918e-11,
+      "mse_metadata": 1.520213280767255e-10,
+      "effbits_catalog": 16.0391,
+      "effbits_metadata": 16.1562,
+      "base_format": "e2m13"
+    },
+    {
+      "dist": "gaussian",
+      "N": 16,
+      "sqnr_catalog": 91.903,
+      "sqnr_metadata": 93.445,
+      "mse_catalog": 6.599014323984654e-10,
+      "mse_metadata": 4.6268498206889633e-10,
+      "effbits_catalog": 16.0391,
+      "effbits_metadata": 16.1562,
+      "base_format": "e2m13"
+    },
+    {
+      "dist": "heavy",
+      "N": 16,
+      "sqnr_catalog": 88.167,
+      "sqnr_metadata": 94.568,
+      "mse_catalog": 6.19412775592864e-09,
+      "mse_metadata": 1.4186600319637566e-09,
+      "effbits_catalog": 16.0391,
+      "effbits_metadata": 16.1562,
+      "base_format": "e2m13"
+    },
+    {
+      "dist": "mixed_outlier",
+      "N": 16,
+      "sqnr_catalog": 91.979,
+      "sqnr_metadata": 93.519,
+      "mse_catalog": 2.2391175840515083e-08,
+      "mse_metadata": 1.5707181829357637e-08,
+      "effbits_catalog": 16.0391,
+      "effbits_metadata": 16.1562,
+      "base_format": "e2m13"
+    }
+  ],
+  "real": []
+}
