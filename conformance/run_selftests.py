@@ -10,7 +10,24 @@ Exit code: 0 only if every ref that HAS a _selftest passes it.
 from __future__ import annotations
 import importlib
 import os
+import re
 import sys
+
+# A ref only matters to this gate if it declares a `_selftest`. Some refs import
+# optional third-party deps (e.g. gf_mx_ref imports numpy) at module top-level but
+# have NO _selftest, so they are skipped anyway. In a clean CI interpreter that
+# optional dep may be absent; an ImportError on such a ref must NOT fail the gate
+# (it would have been skipped). We detect "declares a _selftest" from source text
+# (cheap, no import) to decide whether an import failure is fatal.
+_SELFTEST_RE = re.compile(r"^\s*def\s+_selftest\s*\(", re.MULTILINE)
+
+
+def _declares_selftest(path: str) -> bool:
+    try:
+        with open(path, "r", encoding="utf-8") as fh:
+            return bool(_SELFTEST_RE.search(fh.read()))
+    except OSError:
+        return False
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(HERE)
@@ -27,9 +44,18 @@ def main() -> int:
         modname = fn[:-3]  # strip .py
         try:
             m = importlib.import_module(modname)
-        except Exception as e:  # import error is a real failure (CI must catch it)
-            failed += 1
-            failures.append((fn, "IMPORT", f"{type(e).__name__}: {e}"))
+        except Exception as e:
+            # Import error is fatal ONLY if this ref actually has a _selftest we
+            # were supposed to run. A ref with no _selftest (would be skipped) that
+            # fails to import on an optional dep is skipped, not failed.
+            if _declares_selftest(os.path.join(HERE, fn)):
+                failed += 1
+                failures.append((fn, "IMPORT", f"{type(e).__name__}: {e}"))
+                print(f"FAIL  {fn:<22} IMPORT {type(e).__name__}: {str(e)[:120]}")
+            else:
+                skipped += 1
+                print(f"SKIP  {fn:<22} (no _selftest; import skipped: "
+                      f"{type(e).__name__})")
             continue
         st = getattr(m, "_selftest", None)
         if not callable(st):
