@@ -31,6 +31,10 @@ def _norm(value):
     # Specials in the refs carry a .kind or are non-numeric sentinels.
     kind = getattr(value, "kind", None)
     if kind is not None:
+        if kind == "inf":
+            # preserve sign: +Inf and -Inf must not compare equal
+            sign = getattr(value, "sign", 0)
+            return "special:-inf" if sign else "special:inf"
         return f"special:{kind}"
     try:
         f = float(value)

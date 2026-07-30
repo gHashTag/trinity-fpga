@@ -45,12 +45,51 @@ value* (NaN/Inf/zero compared by class — payload differences are not penalised
 and prints the match rate with the first mismatches. Exit code: `0` on 100%, `1`
 otherwise — usable in CI.
 
+## Encode & round-trip audit
+Most oracles also provide a golden `encode(value) -> raw`. Three commands expose it:
+```
+# encode one value; shows the raw bits and what it decodes back to (exposes rounding)
+python3 -m tools.conformance_sdk encode --format fp8_e4m3 --value 0.375
+python3 -m tools.conformance_sdk encode --format fp8_e4m3 --value 3/8      # fraction
+python3 -m tools.conformance_sdk encode --format fp8_e4m3 --value nan      # nan/inf/-inf
+
+# round-trip audit vs golden (exhaustive for width <= 16, random sample above)
+python3 -m tools.conformance_sdk roundtrip --format fp8_e4m3
+```
+`roundtrip` checks two independent properties and prints both rates (exit `0`
+only if both are 100%):
+- **encode-stable** (`raw -> value -> raw`): re-encoding a decoded value returns
+  a raw that decodes to the *same value* (no representable value is lost). The
+  bit pattern may legitimately differ (NaN payload, -0 vs +0), so the check is on
+  the value, not the bits.
+- **idempotent** (`value -> raw -> raw`): the projection onto the representable
+  grid is stable under re-encoding.
+
+## FP8 audit (built-in naive decoder)
+`fp8_e4m3` is the classic trap: it has **no Inf**, and **NaN only at
+exp=max & mant=max** — every other exp=max pattern is a *finite normal* (up to
+±448). A textbook "exp all-ones ⇒ Inf/NaN" decoder silently turns the 14 largest
+finite magnitudes into Inf/NaN, corrupting inference at the top of the range.
+```
+python3 -m tools.conformance_sdk fp8-audit --format fp8_e4m3
+```
+This ships a deliberately naive IEEE-rule decoder and audits it against the
+golden over the full 256-code sweep, printing the exact raws where a naive
+implementation is wrong (e4m3: 14 divergences at 0x78–0x7e / 0xf8–0xfe; e5m2:
+0 — it is IEEE-like). Use it as a template check for your own FP8 kernel.
+
 ## Programmatic API
 ```python
 from tools.conformance_sdk import check_decoder, audit_report, catalog
 print(audit_report())
 r = check_decoder("fp8_e4m3", my_decode, n_random=10000)
 print(r["rate"], r["mismatches"][:5])
+
+from tools.conformance_sdk.roundtrip import check_roundtrip, encode_value
+from tools.conformance_sdk.fp8_audit import audit_fp8, naive_ieee_fp8
+print(check_roundtrip("gf16"))        # exhaustive 65536/65536
+print(encode_value("fp8_e4m3", "0.1"))  # {'exact': False, 'decodes_to': '0.1015625', ...}
+print(audit_fp8("fp8_e4m3")["diverge_count"])  # 14
 ```
 
 ## Verification of v0.1
@@ -65,8 +104,13 @@ NEG-CONTROL fp8_e4m3(always 0.0)   0.93%   # the audit catches a wrong decoder
 ```
 
 ## Scope and honest limits (v0.1)
-- Audits **decode** (raw → value). Encode / round-trip audit and ADD/MUL
-  compute-audit are designed-in but not exposed in the CLI yet.
+- Audits **decode** (raw → value) and **encode / round-trip** (value ↔ raw).
+  ADD/MUL compute-audit is designed-in but not exposed in the CLI yet.
+- `roundtrip`/`encode` require the ref to expose `encode()`; refs without it are
+  reported as skipped (most do — bf16, fp8, gf, ieee, int, lns, mxfp, nf4,
+  posit, takum, tekum, decimal, extended, legacy).
+- The `fp8-audit` naive decoder is a *teaching control*, not a Trinity codec —
+  it is intentionally wrong on e4m3 to demonstrate the audit; do not copy it.
 - Comparison is on the binary64 value of the exact golden (golden decodes are
   exact; a correctly-rounded decoder matches). For formats wider than binary64
   (e.g. gf96+) the value-level audit still works because the SDK compares the
