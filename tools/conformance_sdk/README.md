@@ -19,9 +19,16 @@ Pure Python, no extra deps (uses `fractions`, standard library). The package is
 ```
 python3 -m tools.conformance_sdk report
 ```
-Reports the full SSOT: 84 formats across 15 families (gf, legacy, int, ieee, mxfp,
-fp8, bf16, lns, posit, takum, decimal, tekum, extended, gfternary, nf4), with a
-golden-decode sanity check per format.
+Reports every golden oracle (`conformance/*_ref.py`) discovered in this repo. The
+count is computed dynamically at runtime as `len(catalog())` (not hard-coded), so
+it tracks whatever oracles are present. As of this writing that is a superset of
+the **83-format SSOT catalog** (canonical list: t27 `specs/numeric/formats_catalog.t27`):
+it additionally carries GF width-extensions (gf48/64/96/128/256/512/1024),
+legacy/historical floats (VAX, x87, Cray, PDP-11, IBM HFP, MS-MBF), decimal and
+extended-precision oracles that live in this repo for testing but are outside the
+83-format SSOT. Do not read the reported number as "the catalog size" — it is the
+repo's oracle count; the SSOT is 83. The report also runs a golden-decode sanity
+check per discovered format, grouped by family.
 
 ## Audit your decoder
 ```
