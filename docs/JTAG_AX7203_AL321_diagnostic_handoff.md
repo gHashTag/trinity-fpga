@@ -81,8 +81,11 @@ For each format: flash → run the decode-conformance host script on
 - IDCODE 0x13636093 is silicon-fixed (same for every bitstream) — one clean read
   satisfies the Task-C IDCODE requirement; per-bitstream IDCODE is a sanity re-check.
 - Keep three metrics separate: RTL-generated ≠ yosys-PASS([simulated]) ≠ Tier-E 4/4.
-- No "first/best/only". Status tags required. Do not move the 71/83 ceiling
+- No "first/best/only". Status tags required. Do not move the Tier-E counts
   retroactively — only after a clean 4/4 chain is posted.
+- The old "71/83" headline was a decode+compute **cell sum**, not format-coverage;
+  #199 @2026-07-15 retracted it (`"71/83" was WRONG`). Real union (decode ∪
+  compute) ~49-55/83. Don't re-introduce 71/83 as a coverage figure.
 - If after Step 1 the verdict is "real hang" and Steps 2–3 don't resolve it,
   report back; the alternative path is installing `nextpnr-xilinx` and rebuilding
   bitstreams (unblocks Task D/E/B too).
