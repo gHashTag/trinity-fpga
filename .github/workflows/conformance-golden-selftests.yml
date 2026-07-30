@@ -1,0 +1,29 @@
+name: Conformance golden self-tests
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'conformance/**_ref.py'
+      - 'conformance/run_selftests.py'
+      - '.github/workflows/conformance-golden-selftests.yml'
+  pull_request:
+    paths:
+      - 'conformance/**_ref.py'
+      - 'conformance/run_selftests.py'
+      - '.github/workflows/conformance-golden-selftests.yml'
+  workflow_dispatch:
+
+jobs:
+  selftest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run golden oracle self-tests
+        run: |
+          # posit_ref._selftest does a wide exhaustive sweep (~70-90 s); the rest are fast.
+          # Default job timeout is plenty.
+          python3 conformance/run_selftests.py
