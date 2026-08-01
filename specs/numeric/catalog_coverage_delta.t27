@@ -4197,3 +4197,40 @@ both caught by reading the file rather than the excerpt.
 """
   resolved true
 }
+
+// ---- Pass 124b: the re-check flagged my fix, and the checker was wrong --------
+
+correction THE_CHECKER_REPORTED_ITS_OWN_LIMITATION_AS_A_DEFECT {
+  detail """
+The corrected row for gen_conformance_pack.py documents two invocations -- no argument
+lists the 84-oracle set, a format name derives one candidate pack. The re-run flagged
+it again.
+
+The row was right. The checker runs each script ONCE, with no arguments, and required
+every backticked literal in the row to appear in that single output. So the literal
+belonging to the with-argument mode could never be found, and the tool reported that
+as the row disagreeing.
+
+Fixed: literals are now taken only from the part of the row before "with a format
+name" or "with an argument". Verified afterwards -- the default run's literal
+"84 formats with a golden oracle:" is present and the exit code is 0.
+"""
+  resolved true
+}
+
+result THE_TABLE_STANDS_AT_NINE_ROWS_AND_NO_DEFECTS {
+  detail """
+  literal and exit matched               6   (five, plus the multi-mode row once the
+                                              checker stopped mis-reading it)
+  prose expectation, read and correct     2
+  documented limit, confirmed not a bug   1   (verify_arithmetic_invariants, which the
+                                              README says does not finish in 600 s)
+  ---------------------------------------------
+  genuine defects remaining               0
+
+Both of this pass's "disagreements" turned out to be the checker's, not the table's --
+one a documented caveat it could not read, one a multi-mode row it could not model.
+The single real defect was the row I wrote in pass 123, and that is fixed.
+"""
+  status VERIFIED_SW
+}
