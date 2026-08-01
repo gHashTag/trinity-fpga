@@ -365,22 +365,32 @@ not the unpublished thirteen:
 > **linearly (mantissa + exponent), not logarithmically**. *"The same methodology as
 > `tekum_ref.py`."*
 
-`takum8`, `takum16`, `takum32` and `takum64` derive from it and are published as
-`kind: bitexact`, with **4 witnesses each for takum32/64 and none for takum8/16**.
+**But a logarithmic reference also exists, and this needs stating carefully.** The tree
+holds three takum paths, not one:
 
-**Two things follow, and both need your decision:**
+| path | evaluation | role |
+|---|---|---|
+| `conformance/takum_ref.py` | **linear** structural model | generates packs |
+| `conformance/takum16_decode_conformance_ax7203.py` | **logarithmic**, `mpmath` at 120-bit | *"replicate the t27 verified second-witness"* |
+| `research/head_to_head.py` | **logarithmic**, `math.exp` | the accuracy benchmark |
 
-1. **The label.** `bitexact` here means the vectors are exactly the oracle's values, not
-   that the oracle matches Hunhold's format. A reader is likely to take the stronger
-   reading. Either say in the pack metadata what the model is, or say it in the paper.
-2. **The one-ULP row.** §5d's `takum` route read the `libtakum` comparison as *"they
-   differ by one ULP because a logarithmic decode needs `exp()`"* — a rounding ceiling.
-   The oracle is not attempting a logarithmic decode, so that reading is wrong, and
-   `ONE_ULP_BOUNDARY_READY_TO_PASTE.md` now drops the row from the paragraph and
-   explains why. The other two routes are unaffected.
+So the corpus does compute real takum where it matters, and the comparison document
+`GF16_VS_TEKUM16_VS_TAKUM16.md` discloses the distinction repeatedly — *"linear tapered"*
+against *"logarithmic tapered (LNS)"*, *"linear interpretation"*, *"emulated"*.
 
-This was found by reading oracle headers after pass 129 retracted a recommendation for
-the same reason. The measurements were all sound; none of them could see this.
+**What remains, narrowed:** `takum8` and `takum16` are generated from the **linear**
+oracle and carry **0 witnesses**. `takum32` and `takum64` are hand-curated with **4
+witnesses each**. So the question is only about the two smallest packs: what does
+`bitexact` with no witness mean for a format whose real definition is logarithmic and
+whose generating oracle is not? Either witness them against the mpmath path that
+already exists, or say in the metadata which model the vectors come from.
+
+**And one correction to §5d.** The `takum` route there read the `libtakum` comparison as
+a rounding ceiling — *"a logarithmic decode needs `exp()`"*. Whether that reading holds
+depends on which path produced the compared pack, and the record does not say.
+`ONE_ULP_BOUNDARY_READY_TO_PASTE.md` therefore drops the row from the paragraph and
+keeps it under caution pending re-measurement. The numpy and `lns16` routes are
+unaffected.
 
 ---
 

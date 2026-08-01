@@ -4584,3 +4584,72 @@ The t27-spec skill already says "Read the artefact's documentation FIRST". It no
 to say that the artefact includes the project's own oracles.
 """
 }
+
+// ---- Pass 131: I overstated it, and the tree is better than I said ------------
+
+correction PASS_130_WAS_TOO_BROAD {
+  name     "there are three takum paths, and I found one"
+  severity MEDIUM
+
+  what_i_wrote """
+Pass 130: "four published packs rest on a linear model of a logarithmic format",
+severity HIGH, on the strength of takum_ref.py's header.
+"""
+  what_tracing_the_dependents_showed """
+The tree holds three takum implementations, not one:
+
+  conformance/takum_ref.py                        LINEAR structural model; generates
+                                                  packs; no math.exp anywhere in it
+  conformance/takum16_decode_conformance_ax7203   LOGARITHMIC, mpmath at 120-bit
+                                                  precision, value = (-1)^S*exp(ell/2),
+                                                  described as "replicate the t27
+                                                  verified second-witness"
+  research/head_to_head.py                        LOGARITHMIC, math.exp, the benchmark
+
+So the corpus does compute real takum where the definition matters. My pass-130
+statement implied it does not, and that was wrong.
+"""
+  and_the_comparison_document_already_disclosed_it """
+research/GF16_VS_TEKUM16_VS_TAKUM16.md says so repeatedly and unprompted:
+"linear tapered precision, working binary-takum-lineage model", a table row reading
+"Linear tapered" against "Logarithmic tapered (LNS)", "tekum16 (linear
+interpretation)", "tekum16 (emulated)". It also states that its takum16 path snaps
+exp(ell/2) to the FP32 grid.
+
+I read the oracle header and not the document that uses it, having spent pass 130
+reporting that others do the same.
+"""
+  resolved true
+}
+
+finding WHAT_SURVIVES_AND_IT_IS_NARROW {
+  severity LOW
+  detail """
+  takum8    generated from the LINEAR oracle    0 witnesses
+  takum16   generated from the LINEAR oracle    0 witnesses
+  takum32   hand-curated                        4 witnesses
+  takum64   hand-curated                        4 witnesses
+
+The question is only about the two smallest: a pack labelled bitexact, with no witness,
+for a format whose real definition is logarithmic and whose generating oracle is not.
+
+The fix is cheap because the logarithmic path already exists in the tree -- witness
+takum8 and takum16 against the mpmath decode, or record in the metadata which model
+the vectors come from.
+"""
+  resolved false
+}
+
+note THE_HONEST_ARC_OF_THREE_PASSES {
+  detail """
+  129   retracted a publication recommendation. Correct.
+  130   generalised it to "four published packs rest on a model". Overstated.
+  131   traced the dependents and found the logarithmic reference the tree already
+        has, narrowing the finding to two packs with no witness.
+
+Pass 130's method was right -- read what the artefact says about itself -- and its
+scope was wrong, because I stopped at the oracle instead of following it to what uses
+it. One more file would have caught it, and that file was the benchmark whose careful
+disclosure I then failed to notice.
+"""
+}
