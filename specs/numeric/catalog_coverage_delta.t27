@@ -4504,3 +4504,83 @@ documentation FIRST" is already a section in the t27-spec skill, and I did not a
 to the oracle whose output I was recommending for publication.
 """
 }
+
+// ---- Pass 130: the same shape, in the published corpus this time --------------
+
+result THE_SCAN_FOUND_A_SECOND_CASE_AND_IT_IS_WORSE {
+  method """
+research/audit_oracle_self_caveats.py reads the header of every conformance/*_ref.py
+and reports the ones whose own text hedges, ranked by how strong the hedge is. It is a
+surface-form scan, so it prints the matched sentence and separates a hit count from a
+finding count, per the t27-spec rule.
+
+  oracle modules                                     17
+  whose header hedges about itself                    4
+  carrying a reverse-engineering note or open TODO    2
+"""
+  the_two """
+  tekum_ref.py   the pass-129 case: a model of a format whose spec could not be read
+  takum_ref.py   THE SAME, and takum8/16/32/64 ARE among the 83 published
+
+The other two, gf16_plus_ref.py and gf_ref.py, say "[смоделировано] -- это SW-оракул,
+НЕ железо", which is the software-versus-hardware distinction this campaign has
+documented repeatedly. Careful, not hedging.
+"""
+  status VERIFIED_SW
+}
+
+finding FOUR_PUBLISHED_PACKS_MODEL_A_LOGARITHMIC_FORMAT_LINEARLY {
+  severity HIGH
+
+  what_the_oracle_says """
+"Настоящий takum -- ЛОГАРИФМИЧЕСКИЙ (value = (-1)^S * exp(ell/2)), поэтому значения в
+общем случае ИРРАЦИОНАЛЬНЫ и не допускают точной Fraction-арифметики. Оракул требует
+точной рациональной арифметики, поэтому здесь реализована РАБОЧАЯ СТРУКТУРНАЯ МОДЕЛЬ
+на основе ПОЛЕВОЙ СХЕМЫ takum (обратная инженерия из takum64_decode.v),
+интерпретированная ЛИНЕЙНО (мантисса+порядок), а НЕ логарифмически. Это та же
+методология, что в conformance/tekum_ref.py."
+"""
+  what_is_published """
+  takum8    bitexact   256 vectors   witnesses 0
+  takum16   bitexact     3 vectors   witnesses 0
+  takum32   bitexact   hand-curated  witnesses 4
+  takum64   bitexact   hand-curated  witnesses 4
+
+"bitexact" in this corpus means the vectors are exactly the oracle's values, not that
+the oracle matches the outside world -- that is what the witness count carries. A
+reader is likely to take the stronger reading, and nothing in the pack metadata
+prevents it.
+"""
+  resolved false
+}
+
+correction THE_ONE_ULP_TAKUM_ROW_RESTED_ON_A_WRONG_READING {
+  detail """
+Pass 45 recorded, and pass 112 published for print, that takum32's pack differs from
+libtakum on 12 of 15 vectors by exactly one ULP "because a logarithmic decode needs
+exp()" -- a rounding ceiling.
+
+The oracle is not attempting a logarithmic decode. It computes a linear function of the
+same fields. So the comparison is between two different functions, and agreeing within
+one ULP on 12 of 15 vectors is weaker and stranger than a bound -- and 15 vectors is a
+small sample from which to claim "none by more".
+
+ONE_ULP_BOUNDARY_READY_TO_PASTE.md now drops the row from the paragraph, keeps it in
+the table under an explicit caution, and says what re-measuring would require. The
+numpy and lns16 routes are untouched and stand on their own; the paragraph reads "twice
+from independent directions" instead of three times.
+"""
+  resolved true
+}
+
+note WHAT_THE_MEASUREMENTS_COULD_NOT_SEE {
+  detail """
+Nine passes of measurement across these oracles -- decode errors, cross-validation,
+exhaustive comparisons, invariants -- and not one could have found this, because the
+question is not whether the oracle is self-consistent but what it claims to model.
+That is in the header, in prose, and only reading it answers it.
+
+The t27-spec skill already says "Read the artefact's documentation FIRST". It now needs
+to say that the artefact includes the project's own oracles.
+"""
+}

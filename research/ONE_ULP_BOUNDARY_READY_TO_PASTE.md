@@ -1,13 +1,13 @@
 # The one-ULP boundary — ready to paste
 
-Three independent routes reached the same limit during verification of this corpus.
-Each was measured separately, none was looked for, and together they say something a
-conformance-suite paper is in an unusually good position to say: **bit-exactness is
+Two independent routes reached the same limit during verification of this corpus, and
+a third is under caution — see below. Each was measured separately, none was looked
+for, and together they say something a conformance-suite paper is in an unusually good
+position to say: **bit-exactness is
 attainable over the decidable class, and logarithmic evaluation is not in it.**
 
 Neither preprint says this. It costs one paragraph and it strengthens the papers,
-because it converts a limitation into a stated boundary with three measurements behind
-it.
+because it converts a limitation into a stated boundary with measurements behind it.
 
 ---
 
@@ -15,7 +15,7 @@ it.
 
 | route | what was measured | result |
 |---|---|---|
-| **third-party library** | the corpus's `takum32` pack against `libtakum` | **12 of 15** vectors differ by exactly one ULP — **none by more** |
+| **third-party library** | the corpus's `takum32` pack against `libtakum` | **12 of 15** vectors differ by exactly one ULP — none by more. **See the caution below before using this row.** |
 | **the field's own practice** | numpy 2.4.4, `_core/tests/data/umath-validation-set-*.csv` | **26,615** rows, 20 operations, tolerances 1–4 ULP; **0 rows claim zero error** |
 | **silicon** | `lns16` decode on an AX7203, `--extended` conformance | `472/576 bit-exact, 104 known-limitation(s), 0 hard-fail(s)` — all 104 are 1-ULP subnormal-band residuals |
 
@@ -29,19 +29,35 @@ numpy's tolerance histogram, since the shape matters: 1 ULP on 12,001 rows, 2 on
 > Every format in this catalogue whose decode is a finite sequence of integer
 > operations admits bit-exact conformance vectors, and the suite provides them. Formats
 > whose decode requires a transcendental evaluation do not, and the boundary is sharp
-> rather than gradual. We met it three times from independent directions during
-> verification. Compared against `libtakum`, our `takum32` pack differs on 12 of 15
-> vectors by exactly one unit in the last place and on none by more, the difference
-> arising because a logarithmic decode requires `exp()`. numpy's own validation sets —
+> rather than gradual. We met it twice from independent directions during
+> verification. numpy's own validation sets —
 > 26,615 vectors across 20 transcendental operations, the closest artefact in the field
 > to a conformance pack — state a tolerance of one to four ULP on every row and claim
 > exactness on none. And on hardware, our `lns16` decode returns 472 of 576 vectors
 > bit-exact with 104 disclosed one-ULP residuals in the subnormal band and no hard
-> failures. Software reference, third-party implementation and silicon agree on where
-> the line falls. We therefore make no claim of bit-exactness for logarithmic formats,
+> failures. The field's own practice and our silicon agree on where the line falls. We therefore make no claim of bit-exactness for logarithmic formats,
 > and report their residuals rather than tightening a tolerance until they disappear.
 
 ---
+
+## A caution about the takum row, added after the paragraph was drafted
+
+`conformance/takum_ref.py` states in its own header that real takum is **logarithmic**
+— `value = (-1)^S · exp(ell/2)`, so values are generally irrational and admit no exact
+rational arithmetic — and that what the oracle implements is therefore a **working
+structural model interpreted linearly**, reverse-engineered from `takum64_decode.v`.
+
+That changes what the `libtakum` comparison means. The earlier reading was *"they
+differ by one ULP because a logarithmic decode needs `exp()`"* — a rounding ceiling.
+But the oracle is not attempting a logarithmic decode and falling short by a rounding;
+it is computing a **different function**, and agreeing with `libtakum` to within one
+ULP on 12 of 15 vectors is a much weaker and more surprising statement than a bound.
+Fifteen vectors is also a small sample from which to say *"none by more"*.
+
+**Do not use this row as one of three independent routes until it is re-measured** over
+a wide sample with the linear-versus-logarithmic difference stated. The other two
+routes — numpy's own validation sets and the `lns16` silicon residuals — are unaffected
+and stand on their own.
 
 ## The sentence that must accompany it
 

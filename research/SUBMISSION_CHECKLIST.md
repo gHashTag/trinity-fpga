@@ -353,6 +353,37 @@ pack, pending review."*
 
 ---
 
+## 5h. Four published packs rest on a linear model of a logarithmic format
+
+`conformance/takum_ref.py` states this in its own header, and it is about the **83**,
+not the unpublished thirteen:
+
+> Real takum is **logarithmic** — `value = (-1)^S · exp(ell/2)` — so values are
+> generally **irrational** and admit no exact rational arithmetic. The oracle requires
+> exact rationals, so what is implemented is a **working structural model** based on
+> takum's field scheme, **reverse-engineered from `takum64_decode.v`**, interpreted
+> **linearly (mantissa + exponent), not logarithmically**. *"The same methodology as
+> `tekum_ref.py`."*
+
+`takum8`, `takum16`, `takum32` and `takum64` derive from it and are published as
+`kind: bitexact`, with **4 witnesses each for takum32/64 and none for takum8/16**.
+
+**Two things follow, and both need your decision:**
+
+1. **The label.** `bitexact` here means the vectors are exactly the oracle's values, not
+   that the oracle matches Hunhold's format. A reader is likely to take the stronger
+   reading. Either say in the pack metadata what the model is, or say it in the paper.
+2. **The one-ULP row.** §5d's `takum` route read the `libtakum` comparison as *"they
+   differ by one ULP because a logarithmic decode needs `exp()`"* — a rounding ceiling.
+   The oracle is not attempting a logarithmic decode, so that reading is wrong, and
+   `ONE_ULP_BOUNDARY_READY_TO_PASTE.md` now drops the row from the paragraph and
+   explains why. The other two routes are unaffected.
+
+This was found by reading oracle headers after pass 129 retracted a recommendation for
+the same reason. The measurements were all sound; none of them could see this.
+
+---
+
 ## 6. The artefact itself has been repaired
 
 The papers point a reader at `github.com/gHashTag/t27`. Five defects that a reader
