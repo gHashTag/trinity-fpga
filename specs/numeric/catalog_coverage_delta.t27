@@ -4653,3 +4653,59 @@ it. One more file would have caught it, and that file was the benchmark whose ca
 disclosure I then failed to notice.
 """
 }
+
+// ---- Pass 132: the gap measured, and it closes the thread ---------------------
+
+result THE_LINEAR_MODEL_IS_NOT_AN_APPROXIMATION_OF_TAKUM {
+  method """
+research/witness_takum_small.py decodes every code twice: once through
+conformance/takum_ref.py, the linear structural model that generates the packs, and
+once through the logarithmic path already in the tree -- ell = (1-2S)(c+m),
+value = (-1)^S * exp(ell/2), mpmath at 120-bit precision, transcribed from
+conformance/takum16_decode_conformance_ax7203.py which calls itself the t27 verified
+second-witness.
+"""
+  measured """
+                                    takum8        takum16
+  finite codes compared               254         65,534
+  linear value == logarithmic           3              3
+  ratio linear/logarithmic       2.4e-132 ..    8.0e-133 ..
+                                  3.1e+95        1.3e+132
+  worst disagreement            437 binades   439 binades
+  special-class mismatches              0              0
+
+Three codes out of sixty-five thousand. These are not two implementations of one
+format differing by rounding; they are different functions over the same field layout.
+"""
+  status VERIFIED_SW
+}
+
+conclusion WHAT_THIS_SETTLES {
+  precise """
+takum8 and takum16 are generated from the linear oracle and carry no witnesses. They
+should not be described as takum conformance vectors. The options are to regenerate
+from the mpmath path, to witness and republish with the gap disclosed, or to withdraw.
+
+It does not touch takum32 and takum64, which are hand-curated with four witnesses each
+-- a different and sounder chain. And it is consistent with the pass-45 libtakum
+comparison, which was made against takum32: the hand-curated pack agreeing with
+libtakum to within one ULP and the generated packs differing by 400-odd binades are
+the same fact seen from two ends.
+"""
+}
+
+correction MY_WITNESS_HAD_THE_SIGN_IN_THE_WRONG_PLACE {
+  detail """
+First run: worst disagreement 437 binades WITH A SIGN FLIP -- linear -3.45e-77 against
+logarithmic +1.43e+55 at code 0x81.
+
+exp() is always positive. The header says value = (-1)^S * exp(ell/2), with the sign
+applied OUTSIDE the exponential; I had folded S into ell only, so every negative code
+came back positive.
+
+Caught because a sign disagreement is not a magnitude disagreement and the two do not
+arise together by accident. Fixed, and the magnitudes are unchanged -- 437 and 439
+binades -- so the finding survives the correction to the tool that found it.
+"""
+  resolved true
+}

@@ -378,12 +378,27 @@ So the corpus does compute real takum where it matters, and the comparison docum
 `GF16_VS_TEKUM16_VS_TAKUM16.md` discloses the distinction repeatedly — *"linear tapered"*
 against *"logarithmic tapered (LNS)"*, *"linear interpretation"*, *"emulated"*.
 
-**What remains, narrowed:** `takum8` and `takum16` are generated from the **linear**
-oracle and carry **0 witnesses**. `takum32` and `takum64` are hand-curated with **4
-witnesses each**. So the question is only about the two smallest packs: what does
-`bitexact` with no witness mean for a format whose real definition is logarithmic and
-whose generating oracle is not? Either witness them against the mpmath path that
-already exists, or say in the metadata which model the vectors come from.
+**What remains — now measured, and it is not small.** `takum8` and `takum16` are
+generated from the **linear** oracle and carry **0 witnesses**; `takum32` and `takum64`
+are hand-curated with **4 each**. Witnessing the two smallest against the mpmath
+logarithmic path that already exists in the tree
+(`research/witness_takum_small.py`):
+
+| | takum8 | takum16 |
+|---|---|---|
+| finite codes compared | 254 | 65,534 |
+| **linear value = logarithmic value** | **3** | **3** |
+| ratio linear ÷ logarithmic | 2.4e−132 … 3.1e+95 | 8.0e−133 … 1.3e+132 |
+| **worst disagreement** | **437 binades** | **439 binades** |
+
+Three codes out of sixty-five thousand. The two are not an approximation of one another
+— they are different functions sharing a field layout.
+
+**So these two packs should not be described as takum conformance vectors.** The
+options are to regenerate them from the mpmath path, to witness and republish with the
+gap disclosed, or to withdraw them. This does not touch `takum32`/`takum64`, whose
+hand-curated provenance and four witnesses are a different and sounder chain — and it
+is consistent with the earlier libtakum comparison, which was made against `takum32`.
 
 **And one correction to §5d.** The `takum` route there read the `libtakum` comparison as
 a rounding ceiling — *"a logarithmic decode needs `exp()`"*. Whether that reading holds
