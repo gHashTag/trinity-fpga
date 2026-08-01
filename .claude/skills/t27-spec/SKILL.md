@@ -180,6 +180,38 @@ is not a defect** — and if it does not, the residue is the part worth investig
   flags sat unexamined for 35 passes with a comment already warning what they
   probably were. Diagnose on discovery or the flag becomes folklore.
 
+## Checks written against surface form find mostly correct text
+
+This arrived three times in one campaign with the same shape and the same cost, so it
+is worth stating as a rule rather than rediscovering.
+
+| pass | the check | hits | genuine |
+|---|---|---|---|
+| 100 | "does this file use another format's constants?" over GF sources | 19 | **1** |
+| 110 | "does this workflow watch a file it never builds?" | 4 | **1** |
+| 118 | "does this document state a figure that is no longer current?" over prose | 23 | **0 of those sampled** |
+
+The pattern: a regex matches a *form*, but the meaning of that form depends on
+context the regex cannot see. `0x7F800000` in a decode suite that emits binary32 is
+correct code. `q_mant[22:13]` is right for a ten-bit mantissa and wrong for a nine-bit
+one. `472/576 bit-exact` is a UART result, not a pack count. `49 bit-exact` inside a
+document *explaining* a discrepancy is a correct quotation.
+
+**Before reporting any hit from a form-based scan:**
+
+1. **Open the first three hits and read them.** If two of three are correct code, the
+   scan's premise is wrong, not the code's.
+2. **Narrow until the form is unambiguous in this tree**, then say so in the tool. A
+   scan for `Tier-E n/83` works because nothing else is written that way; a scan for
+   `\d+ bit-exact` does not, because four different quantities are.
+3. **A hit count is not a finding count.** Report both, and report the sampling that
+   separated them.
+
+The corollary is worth the same weight: **a form-based scan that finds nothing has
+established nothing**, because the same blindness that produces false positives
+produces false negatives. Pass 76 proved a "no hits" result was an unindexed
+repository, not an absent string, by running a known-positive control first. Do that.
+
 ## Merging into t27 master
 
 **Git-flow, as of 2026-08-01.** Branch, commit, push, open the PR, **and merge** —

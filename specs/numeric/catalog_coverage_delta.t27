@@ -3860,3 +3860,45 @@ is likely to lift.
 """
   status VERIFIED_SW
 }
+
+// ---- Pass 119: writing down the mistake made three times ----------------------
+
+result THE_SURFACE_FORM_RULE_IS_NOW_IN_THE_SKILL {
+  detail """
+.claude/skills/t27-spec/SKILL.md gains "Checks written against surface form find
+mostly correct text", with the three instances and their cost:
+
+  pass 100   another format's constants, over GF sources        19 hits    1 genuine
+  pass 110   a workflow watching a file it never builds          4 hits    1 genuine
+  pass 118   a document stating a figure no longer current      23 hits    0 of those
+                                                                          sampled
+
+The rule it states: a regex matches a FORM, and the meaning of that form depends on
+context the regex cannot see. 0x7F800000 in a decode suite that emits binary32 is
+correct code. q_mant[22:13] is right for a ten-bit mantissa and wrong for a nine-bit
+one. "472/576 bit-exact" is a UART result. "49 bit-exact" inside a document explaining
+a discrepancy is a correct quotation.
+
+Three procedures before reporting: read the first three hits, narrow until the form is
+unambiguous in this tree and say so in the tool, and report hit count and finding count
+separately with the sampling that separated them.
+
+And the corollary, which costs as much: a form-based scan finding NOTHING has
+established nothing, because the blindness producing false positives produces false
+negatives. Pass 76 is the instance -- a "no hits" result that was an unindexed
+repository rather than an absent string, caught by a known-positive control.
+"""
+  status IMPLEMENTED
+}
+
+note WHY_A_SKILL_RATHER_THAN_A_SPEC {
+  detail """
+This log records what was found. A skill records how to look, and is what the next
+pass reads before starting. The same mistake three times in twenty passes is not bad
+luck; it is a property of the approach, and the approach is what a skill describes.
+
+Placement mattered: the section first landed between two subsections of "At which
+level does the property live?", which made the second of them read as belonging to
+the new material. Moved to a clean boundary before the merge section.
+"""
+}
