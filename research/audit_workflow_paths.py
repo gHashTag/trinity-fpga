@@ -45,7 +45,9 @@ READV = re.compile(r"read_verilog\s+([^\";']+)")
 # newline reported it as watching files it never built. Second false positive from
 # this tool, second one caught by reading the workflow instead of the report.
 IVERILOG = re.compile(r"iverilog\s+((?:[^\n|&;]|\\\n)+)")
-VFILE = re.compile(r"[\w./-]+\.v\b")
+# A shell expansion such as ${name}_add.v leaves "_add.v" behind, which is not a
+# file. Requiring a leading word character drops those without hiding real names.
+VFILE = re.compile(r"(?<![\w./-])[A-Za-z0-9][\w./-]*\.v\b")
 
 
 def paths_block(text: str) -> list[str]:
@@ -74,6 +76,12 @@ def matches(pattern: str, path: str) -> bool:
     with no wildcard has to match exactly. Being loose here would turn a real finding
     into a false clean.
     """
+    # A pattern naming a directory covers everything beneath it, which is how
+    # GitHub Actions reads it -- and is the only way to watch a submodule, whose
+    # internal edits are invisible to this repository's path filter anyway.
+    if "*" not in pattern and not pattern.endswith(".v"):
+        if path == pattern or path.startswith(pattern.rstrip("/") + "/"):
+            return True
     rx = re.escape(pattern).replace(r"\*\*", ".*").replace(r"\*", "[^/]*")
     rx = rx.replace(r"\{", "(").replace(r"\}", ")").replace(",", "|")
     return re.fullmatch(rx, path) is not None
@@ -179,7 +187,11 @@ def main() -> int:
     print("""
 Read from `paths:` and `read_verilog` only. A workflow's name and its header comments
 are exactly what went stale in the case that prompted this, so neither is consulted.""")
-    return 1 if watch_not_build else 0
+    # Both directions fail the check. Exiting 0 on "built but not watched" was the
+    # first version's behaviour, and the negative control caught it: that is the
+    # direction which found the unwatched parametric cores behind the Tier-E proofs,
+    # so a gate blind to it would be a gate blind to the worst case so far.
+    return 1 if (watch_not_build or build_not_watch) else 0
 
 
 if __name__ == "__main__":

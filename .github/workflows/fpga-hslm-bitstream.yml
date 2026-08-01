@@ -15,6 +15,10 @@ on:
       - 'fpga/openxc7-synth/tmu.v'
       - 'fpga/openxc7-synth/tmu_top.v'
       - 'fpga/openxc7-synth/trinity_block.v'
+      - 'fpga/openxc7-synth/ternary_activation.v'
+      - 'fpga/openxc7-synth/ternary_rmsnorm.v'
+      - 'fpga/openxc7-synth/embedding_lookup.v'
+      - 'fpga/openxc7-synth/argmax_unit.v'
 
 jobs:
   bitstream:

@@ -14,9 +14,17 @@ on:
       - 'fpga/openxc7-synth/corona_decode_*_ax7203.v'
       - 'fpga/vivado/gf*_clean_ax7203.v'
       - 'fpga/openxc7-synth/gf_adder_param.v'
+      # the decoders its testbenches instantiate live in the submodule; only a
+      # pointer bump is visible to this repository's path filter
+      - 'external/tt-trinity-corona'
       - 'formal/wrapper_uart_sim_tb.v'
       - 'formal/gf16_wrapper_sim_tb.v'
       - 'formal/gf20_wrapper_sim_tb.v'
+      - 'formal/lns8_wrapper_sim_tb.v'
+      - 'formal/tf32_wrapper_sim_tb.v'
+      # every one of these simulations links the mock; a change to it changes
+      # all five results
+      - 'fpga/openxc7-synth/STARTUPE2_mock.v'
       - '.github/workflows/wrapper-fsm-sim.yml'
 jobs:
   fsm-sim:

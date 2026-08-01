@@ -3370,3 +3370,74 @@ vsa_10k_top.v, the third, times out rather than erroring and is untouched.
 """
   status VERIFIED_SW
 }
+
+// ---- Pass 111: the other direction, finished --------------------------------
+
+result BOTH_DIRECTIONS_ARE_NOW_CLEAN {
+  measured """
+  workflow files                     71
+  with a synthesis or simulation step 52
+  watching a .v they never build       0
+  building a .v they never watch       0
+"""
+  status VERIFIED_SW
+}
+
+finding WHAT_THE_SECOND_DIRECTION_FOUND {
+  severity MEDIUM
+  detail """
+  decode-verify        watched fpga/openxc7-synth/*_decode.v, a glob matching no
+                       file that exists -- every decoder it builds is in the corona
+                       submodule. The watch was vacuous, not merely wrong.
+
+  fpga-hslm-bitstream  watched 4 of the 8 sources it compiles. The other four --
+                       ternary_activation, ternary_rmsnorm, embedding_lookup and
+                       argmax_unit -- could change without re-running the bitstream.
+                       Its docker step mounts fpga/openxc7-synth as the working
+                       directory, which is why the bare names in read_verilog are
+                       those files.
+
+  wrapper-fsm-sim      watched three of its five testbenches and not STARTUPE2_mock.v,
+                       which every one of the five links. A change to the mock changes
+                       all five results and triggered nothing.
+
+  ax7203-trinet-node-v2  built a testbench it did not watch.
+"""
+  resolved true
+}
+
+note SUBMODULE_SOURCES_CANNOT_BE_WATCHED_FROM_HERE {
+  detail """
+decode-verify and wrapper-fsm-sim both build from external/tt-trinity-corona. A
+GitHub Actions `paths:` filter sees changes in THIS repository, and an edit inside a
+submodule is not one -- only a pointer bump is. So the honest fix is to watch the
+pointer and say that internal edits are invisible, which both files now do in a
+comment rather than leaving a reader to assume the coverage is complete.
+"""
+}
+
+correction THE_TOOL_NEEDED_THREE_FIXES_AND_THE_CONTROL_FOUND_THE_WORST {
+  detail """
+  a directory path covers what is under it -- Actions reads it that way, and it is
+    the only way to watch a submodule at all
+  ${name}_add.v leaves "_add.v" behind, which is not a file
+  and the one the negative control caught: the tool exited 0 while reporting
+    "built but not watched". Only the other direction set the exit code.
+
+That last one matters most. As a gate it would have passed every case in this pass --
+including the unwatched gf_adder_param.v, the worst finding of the last three. Both
+directions now fail. Verified by breaking a workflow deliberately: exit 1 broken,
+exit 0 repaired.
+"""
+  resolved true
+}
+
+correction I_DROPPED_A_WATCH_WHILE_FIXING_ONE {
+  detail """
+Replacing decode-verify's vacuous glob, my substitution took the neighbouring line
+with it -- fpga/openxc7-synth/binary16_decode.v, which that job does build. The audit
+caught it on the next run, which is the argument for running the check after each edit
+rather than at the end.
+"""
+  resolved true
+}

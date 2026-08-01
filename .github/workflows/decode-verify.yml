@@ -4,7 +4,12 @@ on:
   push:
     branches: [main]
     paths:
-      - 'fpga/openxc7-synth/*_decode.v'
+      # This job builds only from the corona submodule; there are no
+      # *_decode.v files in fpga/openxc7-synth, so the glob that used to sit
+      # here matched nothing at all. Note that `paths:` filters on changes in
+      # THIS repository, so edits inside the submodule are invisible from here --
+      # only a pointer bump can be watched, and that is what this line does.
+      - 'external/tt-trinity-corona'
       - 'fpga/openxc7-synth/binary16_decode.v'
       - 'conformance/decode_verify.py'
       - 'formal/decode_tb.v'

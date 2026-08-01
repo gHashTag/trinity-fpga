@@ -1,0 +1,35 @@
+name: Workflow path gate
+
+# A workflow that watches files it never builds reports success on changes it could
+# not have seen; one that builds files it never watches stays silent when they break.
+# Pass 109 found the first kind by accident (ax7203-gf16-conformance triggered on
+# gf16_add.v and compiled gf16_adder.v), and pass 111 found the second to matter more:
+# ax7203-gf20-clean compiled gf_adder_param.v -- the file behind every gf16 and gf20
+# Tier-E proof -- without watching it, so a change there re-ran nothing.
+#
+# Both directions fail this check. See research/audit_workflow_paths.py and
+# specs/numeric/catalog_coverage_delta.t27 (passes 109-111).
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/**'
+      - 'research/audit_workflow_paths.py'
+  pull_request:
+    paths:
+      - '.github/workflows/**'
+      - 'research/audit_workflow_paths.py'
+  workflow_dispatch:
+
+jobs:
+  paths:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Every workflow must watch what it builds
+        run: |
+          python3 research/audit_workflow_paths.py --verbose
