@@ -4349,3 +4349,59 @@ more formats" is not, and the whole point of passes 125 and 126 is the differenc
 """
   status VERIFIED_SW
 }
+
+// ---- Pass 127: two more by construction, and a second alias -------------------
+
+result THE_LEGACY_PAIR_VALIDATES_THE_SAME_WAY {
+  detail """
+Two of the six remaining unvalidated oracles derive from published ones, and their own
+field values say so:
+
+  pdp11_float   1 + 8E + 23M    bias 128     vax_f is 1 + 8E + 23M, bias 128
+  x87_48bit     1 + 15E + 32M   bias 16383   x87_fp80 is 1 + 15E + 64M, bias 16383
+
+Both vax_f and x87_fp80 are among the 83 published packs.
+"""
+  measured """
+  pdp11_float == vax_f                          50,013 codes    0 divergences
+  x87_48bit == x87_fp80 with a 32-bit mantissa  50,013 codes    0 divergences
+"""
+  the_truncation_was_not_assumed """
+A 32-bit mantissa against a 64-bit one could be a truncation, a rounding, or an
+unrelated encoding, and x87 extended carries an EXPLICIT integer bit rather than a
+hidden one -- so the narrowing need not line up the way it would in an IEEE-style
+format. The tool tried the hypothesis and reported the outcome, with the text for the
+failing case written before the run.
+"""
+  status VERIFIED_SW
+}
+
+finding A_SECOND_ALIAS_AMONG_THE_THIRTEEN {
+  severity MEDIUM
+  detail """
+pdp11_float decodes every tested code exactly as vax_f, which the catalogue already
+publishes. That is the second such pair after bfloat32 and binary32.
+
+Historically expected -- DEC carried the PDP-11 F-format into the VAX -- and the point
+is that it is now measured rather than assumed, which is the difference between a
+plausible claim and a checkable one.
+
+x87_48bit is deliberately NOT counted here. A 32-bit mantissa against 64 is a genuinely
+narrower format, not a second name for the same one, and lumping it in would overstate
+the finding.
+"""
+  resolved false
+}
+
+conclusion THE_HEADLINE_IS_ELEVEN_AND_TWO {
+  precise """
+  validated against a third party   5   uint4, uint8, uint16, uint32, mxfp8_e4m3
+  validated by construction         4   bfloat24, bfloat32, pdp11_float, x87_48bit
+  unvalidated                       4   mxint8, tekum8, tekum16, tekum32
+  of the thirteen, aliases          2   bfloat32 = binary32, pdp11_float = vax_f
+
+So "thirteen more formats" is wrong twice over: nine are validated rather than none,
+and eleven are new formats rather than thirteen. Both corrections make the claim
+smaller and both make it checkable, which is the trade this campaign keeps making.
+"""
+}

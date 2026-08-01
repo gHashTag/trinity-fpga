@@ -315,16 +315,18 @@ with Trinity's ternary thesis"*. Publishing bit-exact vectors for the nearest co
 format, from the same harness, disarms the obvious review question — *is this a
 catalogue or an advertisement?* — before it is asked.
 
-**Seven of the thirteen are now validated.** Five against a third party — `uint4`,
-`uint8`, `uint16`, `uint32` and `mxfp8_e4m3`, 66,135 codes with 0 divergences — and two
-by construction: `bfloat32` is identical to `binary32` in every field and decodes every
-tested code alike, and `bfloat24` is `binary32` with the low eight mantissa bits
-removed, matching numpy's `float32` over 100,014 codes.
+**Nine of the thirteen are now validated** — five against a third party (`uint4/8/16/32`,
+`mxfp8_e4m3`; 66,135 codes, 0 divergences) and four by construction, each against a
+format already among the 83: `bfloat32` ≡ `binary32`, `bfloat24` ≡ `binary32` truncated,
+`pdp11_float` ≡ `vax_f`, and `x87_48bit` ≡ `x87_fp80` over a 32-bit mantissa. Only
+`mxint8` and `tekum8/16/32` remain unvalidated.
 
-**And one of those is a question rather than a gain.** If `bfloat32` is bit-identical
-to `binary32`, publishing it separately duplicates a format already in the catalogue —
-so either state what makes it distinct, or publish **twelve**. The remaining six
-(`mxint8`, `pdp11_float`, `tekum8/16/32`, `x87_48bit`) stay unvalidated.
+**Two of the thirteen are aliases, not new formats.** `bfloat32` decodes exactly as
+`binary32` and `pdp11_float` exactly as `vax_f`, both of which the catalogue already
+publishes. `x87_48bit` is *not* in that category — a 32-bit mantissa against 64 is
+genuinely narrower. So the headline is **eleven new formats and two aliases**, and the
+aliases should be a deliberate choice: published with a note on what the second name is
+for, or left out.
 
 **The honest bound, which must travel with it:** generating is not publishing. Zero
 decode errors shows the oracle is self-consistent and terminates, not that its values

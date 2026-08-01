@@ -106,10 +106,30 @@ oracle in this tree.
 Either say what makes it distinct — a different provenance or intended use — or publish
 **twelve**, not thirteen.
 
-The remaining six — `mxint8`, `pdp11_float`, `tekum8`, `tekum16`, `tekum32`,
-`x87_48bit` — have no third-party implementation available here and stay unvalidated.
-Naming which is which is the point: *"seven validated, six unvalidated, one a possible
-duplicate"* is a claim a referee can check, where *"thirteen more formats"* is not.
+**Two more follow the same route** (`research/verify_legacy_by_construction.py`).
+`pdp11_float` is 1+8E+23M bias 128 — the same fields as **`vax_f`**, which is published
+— and `x87_48bit` shares `x87_fp80`'s 15-bit exponent and bias 16383 over a 32-bit
+mantissa instead of 64. Both hold over 50,013 codes with **0 divergences**, so both
+inherit the standing of a published, validated pack. The pdp11 result is historically
+expected — DEC carried the PDP-11 F-format into the VAX — and is now measured rather
+than assumed.
+
+### The sharper claim
+
+| | count | |
+|---|---|---|
+| validated against a third party | **5** | `uint4/8/16/32`, `mxfp8_e4m3` |
+| validated by construction | **4** | `bfloat24`, `bfloat32`, `pdp11_float`, `x87_48bit` |
+| unvalidated | **4** | `mxint8`, `tekum8`, `tekum16`, `tekum32` |
+
+**And two of the thirteen are aliases, not new formats.** `bfloat32` decodes exactly as
+`binary32`, and `pdp11_float` exactly as `vax_f` — both of which are already in the 83.
+`x87_48bit` is *not* in that category: a 32-bit mantissa against 64 is a genuinely
+narrower format, not another name for the same one.
+
+So the honest headline is **eleven new formats and two aliases**, not thirteen. Decide
+the aliases deliberately: publish them with a note saying what the second name is for,
+or leave them out.
 
 ---
 
