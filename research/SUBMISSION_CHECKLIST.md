@@ -240,6 +240,30 @@ hex, so they cannot drift again. The audit now reports 5 of 5 complete.
 
 ---
 
+## 5d. One paragraph that turns a limitation into a result
+
+Three independent measurements, made in three different passes for three different
+reasons, reached the same boundary:
+
+| route | result |
+|---|---|
+| `takum32` vs **`libtakum`** | **12 of 15** vectors differ by exactly one ULP, **none by more** |
+| **numpy 2.4.4** validation sets | **26,615** rows, 20 transcendental operations, tolerance 1–4 ULP, **0 rows claim exactness** |
+| **silicon** — `lns16` on AX7203 | `472/576 bit-exact, 104 known-limitation(s), 0 hard-fail(s)`, all 104 one-ULP subnormal residuals |
+
+Software reference, third-party implementation and hardware agree on where the line
+falls: **bit-exactness is attainable over the decidable class, and logarithmic
+evaluation is not in it.** Neither preprint says this, and saying it converts an
+apparent weakness into a stated boundary with three measurements behind it.
+
+**Ready-to-paste text is in `ONE_ULP_BOUNDARY_READY_TO_PASTE.md`**, including the
+sentence that must accompany it — the corpus is exact *because of the problem it
+chose*, not through superior rigour, and numpy is the deeper artefact on operation
+coverage (20 operations against 1). A reviewer who knows numpy will check that; saying
+it first is both more accurate and more persuasive than being corrected.
+
+---
+
 ## 6. The artefact itself has been repaired
 
 The papers point a reader at `github.com/gHashTag/t27`. Five defects that a reader

@@ -3441,3 +3441,61 @@ rather than at the end.
 """
   resolved true
 }
+
+// ---- Pass 112: back to the papers -------------------------------------------
+
+result THE_ONE_ULP_BOUNDARY_IS_NOW_WRITTEN_FOR_PUBLICATION {
+  detail """
+research/ONE_ULP_BOUNDARY_READY_TO_PASTE.md carries the paragraph, the sentence that
+must accompany it, an optional related-work line, and the provenance of every figure.
+
+Eight consecutive passes went into RTL and CI. That was necessary work and it found
+real defects, but the task is to improve two preprints, and this result had been
+sitting unwritten across three separate records since pass 96.
+"""
+  status VERIFIED_SW
+}
+
+correction I_ALMOST_CITED_MYSELF_AT_SECOND_HAND {
+  name "the two older numbers appear only inside my own summary"
+  detail """
+Searching the main log for the takum and numpy figures returned exactly one hit each,
+and both were inside the pass-96 entry that SUMMARISED them. Quoting that would have
+been citing my own recollection rather than the measurement.
+
+The primary records are in specs/numeric/related_work_measured.t27, and they are
+richer than the summary:
+
+  numpy 2.4.4, _core/tests/data/umath-validation-set-*.csv
+    20 files, 26,615 vectors, 2 formats, 20 operations
+    ULP tolerance histogram  1: 12,001   2: 8,455   3: 3,799   4: 2,355
+    rows claiming zero error: 0
+
+  takum, pass 45
+    the corpus's takum32 pack against libtakum: 12 of 15 vectors differ by exactly
+    one ULP, none by more, because a logarithmic decode needs exp()
+
+  corpus, for the comparison
+    83 formats (75 bit-exact + 8 structural), 5,075 vectors, 1 operation
+    4,949 at abs_error exactly 0, 112 nonzero and disclosed
+
+Verified at source before writing anything for print.
+"""
+  resolved true
+}
+
+note THE_FRAMING_THAT_MUST_SURVIVE_INTO_PRINT {
+  detail """
+related_work_measured.t27 already records the honest reading, and it would be easy to
+drop when compressing three records into one paragraph:
+
+  "numpy's tolerance is not sloppiness and must not be reported as though it were."
+  "The corpus is exact because of the PROBLEM it chose, not because of superior
+   rigour."
+
+numpy covers 20 operations this catalogue does not touch and 26,615 vectors against
+5,075; on operation coverage it is the deeper artefact by a wide margin, and on format
+coverage, 83 against 2, this one is. The ready-to-paste file carries both sentences,
+not just the flattering half.
+"""
+}
