@@ -4142,3 +4142,58 @@ same shape as everything else this campaign reports.
 """
   resolved true
 }
+
+// ---- Pass 124: running every row of the reproduction table --------------------
+
+result EIGHT_OF_NINE_ROWS_DESCRIBE_WHAT_THEIR_SCRIPT_DOES {
+  method """
+Pass 123 found one row wrong by accident. This ran the rest: every row of
+research/README.md naming a script, executed, with the backticked literals required to
+appear in the output and the exit code required to match. Prose expectations like
+"locates the documented boundary" are reported for reading rather than judged, because
+matching those mechanically is the mistake recorded in the t27-spec skill.
+
+  rows naming a script            9
+  literal and exit both matched   5
+  prose, read and correct         2
+  disagreed                       2
+"""
+  status VERIFIED_SW
+}
+
+finding THE_ONE_WRONG_ROW_WAS_THE_ONE_I_WROTE_YESTERDAY {
+  severity LOW
+  detail """
+Pass 123 replaced "regenerates a pack" with a description of the OK-line output. That
+description is of the WITH-ARGUMENT behaviour, and the table's convention is a
+no-argument run -- so the row now promised output the row's own invocation does not
+produce.
+
+Fixed a second time, naming both modes: no argument lists the 84-oracle set, a format
+name derives one candidate pack.
+
+Editing a table row without running it is how the row it replaced went wrong in the
+first place. Doing it again one pass later is the useful part of this finding.
+"""
+  resolved true
+}
+
+correction THE_SECOND_DISAGREEMENT_WAS_NOT_ONE {
+  detail """
+verify_arithmetic_invariants.py timed out at 600 s and my checker called that a
+disagreement. Reading the README before reporting it:
+
+  "### The one genuine caveat
+   verify_arithmetic_invariants.py samples K = 24 codes per format and tests all
+   24 x 24 = 576 ordered pairs... it did NOT complete within 600 s on an arm64 Mac."
+
+So the table's "slow -- see below" points at a real section, the section states the
+exact behaviour observed, and my run is an independent confirmation of a documented
+limit rather than a defect.
+
+I had also started to report that "see below" pointed at nothing, having looked only
+at the lines immediately following. It points at line 67. Two near-misses in one pass,
+both caught by reading the file rather than the excerpt.
+"""
+  resolved true
+}
