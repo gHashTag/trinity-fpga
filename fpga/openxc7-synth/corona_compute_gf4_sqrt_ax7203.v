@@ -81,16 +81,16 @@ module corona_compute_gf4_sqrt_ax7203 (
     wire q_sign=q_in[31]; wire [7:0] q_exp=q_in[30:23]; wire [22:0] q_mant=q_in[22:0];
     wire q_nan=(q_in==32'h7FC00000); wire q_zero=(q_in==32'h00000000);
     wire q_inf=(q_exp==8'hFF)&&(q_mant==0);
-    wire signed [11:0] tgt_exp_s = $signed({1'b0, q_exp}) - 12'sd127 + 12'sd1;
+    wire signed [11:0] tgt_exp_s = $signed({1'b0, q_exp}) - 12'sd127 + 12'sd0;
     reg [3:0] q_result;
     always @(*) begin
         if(q_nan) q_result=4'd0;
         else if(q_zero) q_result=4'd0;
-        else if(q_inf) q_result={q_sign, 2'd3, 2'd0};
-        else if(q_exp >= 8'd130) q_result={q_sign, 2'd3, 2'd0};
-        else if(q_exp < 8'd127) q_result={q_sign, 3'b0};
+        else if(q_inf) q_result={q_sign, 1'd1, 2'd0};
+        else if(q_exp >= 8'd129) q_result={q_sign, 1'd1, 2'd0};
+        else if(q_exp < 8'd126) q_result={q_sign, 3'b0};
         else if(tgt_exp_s < 1) q_result={q_sign, 1'b0, q_mant[22:21]};
-        else q_result={q_sign, tgt_exp_s[1:0], q_mant[22:21]};
+        else q_result={q_sign, tgt_exp_s[0:0], q_mant[22:21]};
     end
     reg [31:0] result_reg; reg result_ready;
     always @(posedge mclk or posedge rst) begin

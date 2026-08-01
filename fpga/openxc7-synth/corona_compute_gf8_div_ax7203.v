@@ -107,7 +107,7 @@ module corona_compute_gf8_div_ax7203 (
         else if(q_zero) q_result=8'd0;
         else if(q_inf) q_result={q_sign, 3'd7, 4'd0};
         else if(q_exp >= 8'd132) q_result={q_sign, 3'd7, 4'd0};
-        else if(q_exp < 8'd125) q_result={q_sign, 7'b0};
+        else if(q_exp < 8'd121) q_result={q_sign, 7'b0};
         else if(tgt_exp_s < 1) q_result={q_sign, 3'b0, q_mant[22:19]};
         else q_result={q_sign, tgt_exp_s[2:0], q_mant[22:19]};
     end

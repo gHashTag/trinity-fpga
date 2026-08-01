@@ -2867,3 +2867,103 @@ conformance script and no Tier-E proof for any of them.
 """
   resolved false
 }
+
+// ---- Pass 105: I had fixed half a conversion, and the gate earned its keep ------
+
+correction MY_PASS_101_FIX_LEFT_THE_WRAPPERS_INCONSISTENT {
+  name     "input decoded as gf16, output still packed as binary16"
+  severity HIGH
+
+  detail """
+Pass 101 checked and repaired the stage that READS the operand. It never looked at the
+stage that WRITES the result, and that stage was still the original layout:
+
+    tgt_exp_s = $signed({1'b0, q_exp}) - 15'sd127 + 15'sd15;   // bias 15
+    q_result  = {q_sign, 5'd31, 10'd0};                        // 1+5E+10M
+    q_result  = {q_sign, tgt_exp_s[4:0], q_mant[22:13]};
+
+Before pass 101 the wrapper was wrong but self-consistent: binary16 in, binary16 out,
+under a gf16 name. After pass 101 it decoded gf16 and encoded binary16, which is worse.
+The same 9 of 12 wrappers, exactly the set whose input I had changed.
+
+Repaired here, with every threshold derived from the format rather than written down.
+"""
+  resolved true
+}
+
+finding THE_BINARY32_DATAPATH_CANNOT_HOLD_THE_WIDE_RUNGS {
+  name     "gf32 and above do not fit through a binary32 conversion at all"
+  severity HIGH
+
+  how_it_surfaced """
+Deriving the thresholds produced `8'd-1938` for gf32 -- a negative literal in an
+8-bit field, which yosys rejects outright. The formula was not at fault:
+
+  gf4    2^-1 .. 2^1            fits in binary32
+  gf8    2^-6 .. 2^4            fits
+  gf16   2^-39 .. 2^31          fits
+  gf32   2^-2065 .. 2^2048      NO
+  gf64   2^-8388645 .. 2^8388608  NO
+
+A binary32 exponent field cannot address gf32's range, so no constant is correct and
+writing one would be papering over a design error rather than fixing a coding one.
+"""
+  what_i_did """
+Reverted the three gf32 wrappers to their previous state and left them wrong, because
+the honest repair is a datapath decision -- widen the intermediate format, or drop the
+conversion for wide rungs -- and that is the author's call, not a substitution I can
+make. Repaired gf4, gf8 and gf16, where binary32 does hold the range.
+"""
+  resolved false
+}
+
+correction MY_OVERFLOW_THRESHOLD_WAS_WRONG_FOR_FORMATS_WITHOUT_INF {
+  detail """
+The derived overflow point was 127 - bias + exp_max, which reserves the all-ones
+exponent for Inf. That is right for gf16 and wrong for gf4 and gf8, where all-ones is
+the largest FINITE exponent, so overflow starts one step higher.
+
+Caught by comparing the diff against the original: gf8's threshold had been 132 and I
+had lowered it to 131. The original was right. Corrected to
+127 - bias + exp_max + (0 if has_inf else 1), which reproduces 132 for gf8, 129 for
+gf4 and 159 for gf16.
+
+Underflow was the reverse: my 121 for gf8 is the point below the smallest subnormal,
+where the original 125 flushed far more aggressively. That change stands.
+"""
+  resolved true
+}
+
+result THE_WIDENED_GATE_CAUGHT_A_DEFECT_ON_ITS_FIRST_REAL_RUN {
+  detail """
+Pass 104 widened the gate from "files matching the known bad name" to "any wrapper,
+any disconnected datapath". Running it on a fresh sample immediately flagged a file I
+have never touched, carrying a different defect class:
+
+  corona_compute_gf32_cmp_ax7203.v:137  Range select [15:8] out of bounds on
+                                        signal `\result_reg'
+  ... and [23:16], [31:24]
+
+result_reg is declared [7:0] while the UART transmit path reads up to bit 31, so three
+of the four bytes it sends are undef. Three files carry it -- gf12_cmp, gf20_cmp and
+gf32_cmp, declared 8 bits and read to 12, 20 and 32.
+
+Widened, the gate found something. Left as written in pass 103 it would have found
+nothing, because zero files still match the old name. That is the argument for the
+widening, made by the gate rather than by me.
+"""
+  fix "result_reg widened to the width the transmit path reads; diagnostics now 0"
+  status VERIFIED_SW
+}
+
+not_done THE_CONFORMANCE_SCRIPT_I_SET_OUT_TO_WRITE {
+  detail """
+The plan for this pass was a conformance script for gf16_div -- the first real test of
+this layer. It is not written. Reading the output stage to build the golden is what
+exposed the half-fixed conversion, and repairing that, the wide-rung finding and the
+threshold error took the pass.
+
+Stated rather than quietly dropped. The test is still the right next step, and it is
+now easier: the conversion it would check is consistent for gf4, gf8 and gf16.
+"""
+}

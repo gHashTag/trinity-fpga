@@ -113,7 +113,7 @@ module corona_compute_gf32_cmp_ax7203 (
                       (op_reg == 8'h01) ? cmp_lt :
                       (op_reg == 8'h02) ? cmp_le : 1'b0;
 
-    reg [7:0] result_reg;
+    reg [31:0] result_reg;   // widened: the TX path reads up to bit 31
     reg result_ready;
     always @(posedge mclk or posedge rst) begin
         if(rst) begin result_reg<=0; result_ready<=0; end
