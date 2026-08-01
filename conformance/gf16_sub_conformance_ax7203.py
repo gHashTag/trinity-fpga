@@ -64,7 +64,24 @@ def run_hw(port, baud, n, exhaustive=False):
     if exhaustive:
         sample = list(range(T))      # 65536 (representative; full 65536^2 is huge)
     else:
-        sample = [0x0000, 0x0001, 0x7C00, 0x7C01, 0xFC00, 0xFFFF, SIGN, 0x3C00]
+        # Derived from GFMT, not hard-coded. The previous list was binary16
+        # constants pasted into a gf16 test: in gf16's 1+6E+9M layout 0x7C00,
+        # 0x7C01 and 0xFC00 are ordinary normals (2^31), not +-Inf and NaN, and
+        # 1.0 is 0x3E00 rather than 0x3C00 -- so four of the eight "specials"
+        # exercised normals under a special's name, and the suite tested no Inf
+        # at all. Only 0xFFFF happened to be a NaN in both layouts, and it is the
+        # one through which this suite caught the zero-passthrough-before-NaN
+        # defect (711f5d572). Deriving the constants removes the coincidence.
+        # NOTE: this changes what the suite covers, so the cell's recorded
+        # 512/512 was established under the old vectors and needs a re-run on the
+        # board to stand under these.
+        NAN_MAX = (GFMT.exp_max << GFMT.mant_bits) | GFMT.mant_max
+        sample = [0x0000, SIGN,                        # +0, -0
+                  0x0001, GFMT.mant_max,               # min / max subnormal
+                  GFMT.pos_inf, GFMT.neg_inf,          # +-Inf
+                  GFMT.quiet_nan, NAN_MAX,             # canonical + non-canonical NaN
+                  SIGN | NAN_MAX,                      # negative non-canonical NaN
+                  GFMT.bias << GFMT.mant_bits]         # 1.0
         sample += [rnd.randint(0, T - 1) for _ in range(n - len(sample))]
     for a in sample:
         for b in (sample[:8]):

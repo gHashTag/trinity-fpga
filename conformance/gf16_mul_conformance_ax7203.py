@@ -18,10 +18,24 @@ WIDTH = FMT.width                 # 16
 FRAME = bytes([0xAA, 0x55, 0x00])  # AA 55 fmt
 
 # §3.5-style corner codes (raw): zero, denormal, normal, 1.0/-1.0, max-normal, Inf, NaN.
+# Ordering matters as much as membership: the pairing below is `for b in cov[:8]`,
+# so only the first eight ever appear as the right operand. The previous order put
+# every special after that cut, leaving the b-position with two zeroes, two
+# denormals and four ordinary finites -- and the sole NaN, 0x7E01, is gf16's
+# CANONICAL quiet NaN. A defect that returned an operand's raw NaN payload instead
+# of the canonical one was therefore invisible here, and shipped: gf_adder_param
+# checked zero-passthrough before the NaN branch, this suite reported 512/512 on
+# silicon, and gf16 SUB caught it only because its vectors held a NON-canonical NaN
+# (fixed in 711f5d572; reproduced in research/vector_blindness.py).
+#
+# Specials now sit inside the first eight, and 0x7FFF/0xFFFF carry non-canonical
+# payloads. NOTE: this changes what the suite covers, so the recorded 512/512 was
+# established under the old vectors and needs a re-run on the board to stand.
 CORNERS = [
-    0x0000, 0x8000, 0x0001, 0x01FF,   # +0, -0, smallest/largest denormal
+    0x0000, 0x8000, 0x7E00, 0xFE00,   # +0, -0, +Inf, -Inf
+    0x7E01, 0x7FFF, 0x0001, 0x01FF,   # canonical NaN, NaN(payload 511), denormals
     0x3C00, 0x3E00, 0xBE00, 0x4000,   # 0.5, 1.0, -1.0, 2.0
-    0x7DFF, 0x7E00, 0xFE00, 0x7E01,   # max-normal, +Inf, -Inf, NaN
+    0x7DFF, 0xFFFF,                   # max-normal, -NaN(payload 511)
 ]
 
 

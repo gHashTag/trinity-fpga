@@ -198,6 +198,48 @@ bounds the vectors, not the cell.**
 
 ---
 
+## 5c. Three conformance suites repaired — and this one needs your board
+
+Pass 98's question, asked of all 106 conformance scripts (`research/audit_vector_coverage.py`).
+41 analysed, 62 not a GF format, **3 unparseable and reported as unknown rather than
+clean**. Only **5** target a format carrying Inf/NaN — `gf_ref` gives `has_inf` to
+gf16 alone — and **3 of those 5 were incomplete**.
+
+**The serious one: `gf16_sub` was testing binary16 constants.** gf16 is 1+6E+9M, bias
+31. Four of its eight seeded "specials" were binary16 values:
+
+| constant | labelled | actually, in gf16 | is that value in… |
+|---|---|---|---|
+| `0x7C00` | +Inf | **a normal, 2³¹** | binary16 |
+| `0x7C01` | NaN | **a normal, 2³¹** | binary16 |
+| `0xFC00` | −Inf | **a normal, 2³¹** | binary16 |
+| `0x3C00` | 1.0 | **2⁻¹** (gf16's 1.0 is `0x3E00`) | binary16 |
+
+So the suite tested **no Inf at all** and exercised ordinary normals under the names
+Inf and NaN. The one constant that landed, `0xFFFF`, is a NaN in *both* layouts — and
+it is the one through which this suite caught the defect that shipped. The catch was
+real and it was luck.
+
+**Repairs, measured against the shipped defect:**
+
+| suite | before | after |
+|---|---|---|
+| `gf16_sub` | 4 catches / 512 | **8** |
+| `gf16_add` | **0** catches / 512 | **6** |
+
+`gf16_mul` had the same blind spot; probing it found **0 divergences over 108
+special-value pairs**, so the gap is closed preventively — a gap in the vectors is not
+a defect in the cell. Constants are now derived from the format rather than written as
+hex, so they cannot drift again. The audit now reports 5 of 5 complete.
+
+> **This needs a decision only you can make.** gf16 ADD, MUL and SUB each carry a
+> recorded `N/N` established under the *old* vectors. Those figures no longer describe
+> what the code runs. Nothing suggests the cells are wrong — but the three proofs need
+> a re-run on the AX7203 to stand under the corrected vectors, or the changes reverted.
+> I do not have the board.
+
+---
+
 ## 6. The artefact itself has been repaired
 
 The papers point a reader at `github.com/gHashTag/t27`. Five defects that a reader

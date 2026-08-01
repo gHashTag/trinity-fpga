@@ -2320,3 +2320,118 @@ carrying non-canonical NaN payloads -- rather than sampling, and it is backed by
 defect that actually shipped rather than by a constructed example.
 """
 }
+
+// ---- Pass 99: the same question, asked of every suite -------------------------
+
+result THE_AUDIT_AND_ITS_HONEST_SCOPE {
+  detail """
+research/audit_vector_coverage.py asks pass 98's question of all 106 conformance
+scripts: what does each suite's vector set actually contain?
+
+  analysed (GF format, vectors found) : 41
+  not analysed -- not a GF format     : 62
+  not analysed -- no parseable list   :  3
+
+Of the 41, only 5 target a format with Inf/NaN at all: gf_ref sets has_inf by
+name == "gf16", so in this family gf16 is the only rung carrying specials. The
+other 36 have no NaN to omit.
+
+The 3 unparseable are printed as NOT ANALYSED, never folded into the clean count.
+"No finding" and "no look" are different results.
+"""
+  status VERIFIED_SW
+}
+
+finding THREE_OF_FIVE_HAS_INF_SUITES_WERE_INCOMPLETE {
+  severity MEDIUM
+  detail """
+  gf16_add   no non-canonical NaN; no special in the b-position (cov[:8])
+  gf16_mul   no non-canonical NaN; no special in the b-position (cov[:8])
+  gf16_sub   no Inf
+"""
+  resolved true
+}
+
+finding THE_SUB_SUITE_USED_BINARY16_CONSTANTS_IN_A_GF16_TEST {
+  name     "four of eight specials were the wrong format's values"
+  severity HIGH
+
+  detail """
+gf16 is 1 + 6E + 9M, bias 31. The suite's eight seeded specials were:
+
+  0x0000  +0                OK
+  0x8000  -0                OK
+  0x0001  min subnormal     OK
+  0x7C00  labelled +Inf     is a NORMAL, 2^31   -- 0x7C00 is +Inf in binary16
+  0x7C01  labelled NaN      is a NORMAL, 2^31   -- 0x7C01 is a NaN in binary16
+  0xFC00  labelled -Inf     is a NORMAL, 2^31   -- 0xFC00 is -Inf in binary16
+  0x3C00  labelled 1.0      is 2^-1             -- gf16's 1.0 is 0x3E00
+  0xFFFF  labelled -NaN     IS a NaN, payload 511
+
+So the suite tested no Inf at all, and exercised ordinary normals under the names
++Inf, -Inf and NaN. The one constant that landed correctly, 0xFFFF, is a NaN in
+BOTH layouts -- and it is the constant through which this suite caught the
+zero-passthrough-before-NaN defect. The catch was real and it was luck.
+"""
+  fix """
+Constants now derived from GFMT (pos_inf, neg_inf, quiet_nan, exp_max/mant_max)
+rather than written as hex, so they cannot drift from the format again.
+"""
+  resolved true
+}
+
+result THE_REPAIRS_ARE_MEASURED_NOT_ASSERTED {
+  detail """
+Replaying the shipped defect over each suite's own vectors, before and after:
+
+  gf16 SUB   before  512 pairs -> 4 failures      after  512 -> 8
+  gf16 ADD   before  512 pairs -> 0 failures      after  528 -> 6
+
+ADD's set was blind and is not any longer. Specials now sit inside cov[:8], the slice
+that actually reaches the b operand, and 0x7FFF/0xFFFF carry non-canonical payloads.
+
+After the repairs the audit reports 5 of 5 HAS_INF suites complete, 0 incomplete.
+"""
+  status VERIFIED_SW
+}
+
+result THE_MUL_GAP_HAD_NOTHING_BEHIND_IT {
+  detail """
+gf16 MUL's suite carried the same blind spot, and its 512/512 is already credited as
+Tier-E, so the gap was worth probing rather than only closing. 108 special-value pairs
+-- every NaN payload against zeros, both infinities, 1.0, the minimum subnormal, and
+against each other -- through the RTL port and the Fraction golden:
+
+  0 divergences
+
+A gap in the vectors is not a defect in the cell. This one is closed preventively.
+"""
+  status VERIFIED_SW
+}
+
+caveat THESE_REPAIRS_INVALIDATE_THE_VECTOR_BASIS_OF_THREE_TIER_E_PROOFS {
+  detail """
+gf16 ADD, MUL and SUB each have a recorded N/N established under the OLD vectors.
+Changing the vectors means those figures no longer describe what the code now runs.
+Nothing suggests the cells are wrong -- ADD and MUL were probed in software and are
+clean, and SUB was fixed and re-proven -- but the proofs need a re-run on the board
+to stand under these vectors, and only the author has the board.
+
+Flagged rather than quietly absorbed, and repeated in the checklist so the choice
+between re-running and reverting stays visible.
+"""
+  resolved false
+}
+
+correction MY_AUDIT_PENALISED_THE_SCRIPT_I_HAD_JUST_FIXED {
+  detail """
+The first version scored hex literals only. The repaired SUB suite writes
+GFMT.pos_inf rather than 0x7E00, so the audit reported the improved script as
+carrying no Inf -- marking the better-written suite as the poorer one.
+
+Fixed twice: symbolic names are now credited, and both scans read the same
+multi-line chunks. The first attempt at that fix still failed, because the symbol
+scan was per-line and the derived constants sit on continuation lines.
+"""
+  resolved true
+}
