@@ -4449,3 +4449,58 @@ problem rather than this one's.
 """
   status VERIFIED_SW
 }
+
+// ---- Pass 129: the recommendation I was most pleased with was wrong -----------
+
+correction RETRACTING_THE_TEKUM_RECOMMENDATION {
+  name     "the three formats I called the most valuable are the three that must not ship"
+  severity HIGH
+
+  what_i_recommended """
+Pass 122 wrote, and passes 125 to 128 repeated, that tekum8, tekum16 and tekum32 were
+the most valuable of the thirteen unpublished oracles -- because tekum is the nearest
+competing format and publishing bit-exact vectors for a competitor from the same
+harness "disarms the obvious review question". I put that in the checklist and in the
+ready-to-paste text.
+"""
+  what_the_oracle_says_about_itself """
+conformance/tekum_ref.py's own header, which I had not read until this pass:
+
+  "Полная потритовая спецификация tekum требует сверки с полным текстом статьи
+   (23 стр.). Абстракт НЕ даёт потритовых таблиц смещений и точного правила
+   баланса... Поэтому здесь реализована РАБОЧАЯ структурная модель на основе
+   ПОЛЕВОЙ СХЕМЫ takum (обратная инженерия из takum64_decode.v), интерпретированная
+   ЛИНЕЙНО (мантисса+порядок)... а НЕ логарифмически как «настоящий» takum."
+
+Three "# TODO: verify from full paper" markers remain open in the file.
+"""
+  so_the_recommendation_inverts """
+These are not an implementation of Hunhold's published format. They are a
+self-consistent model of a guess at it, differing from the real thing in the one
+respect that matters most for a tapered format -- linear where takum is logarithmic.
+
+Publishing them as tekum conformance vectors would misrepresent another author's work
+under his format's name. That is worse than omitting them, and worse than any defect
+this campaign has found in the papers themselves.
+"""
+  and_the_catalogue_was_already_right """
+tekum is not among the 83. takum8, takum16, takum32 and takum64 are, and they are a
+different format with a real reference behind them. The exclusion was correct before I
+proposed reversing it.
+"""
+  resolved true
+}
+
+note WHY_THIS_TOOK_SEVEN_PASSES_TO_FIND {
+  detail """
+Passes 121 through 128 measured everything about these thirteen oracles except what
+they claim to be. gen_conformance_pack.py ran them: zero decode errors. The
+cross-validations ran: zero divergences where a third party existed. Every measurement
+was sound and none of them could have caught this, because a self-consistent model of
+the wrong format is self-consistent.
+
+The header was four lines from the top of the file the whole time. "Read the artefact's
+documentation FIRST" is already a section in the t27-spec skill, and I did not apply it
+to the oracle whose output I was recommending for publication.
+"""
+}

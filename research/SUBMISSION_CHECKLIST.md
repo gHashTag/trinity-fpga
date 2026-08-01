@@ -309,11 +309,17 @@ leaves **thirteen formats with no published pack**, and every one generates a pa
 today with a SHA-256 and **zero decode errors**: 1,161 vectors in total. The machinery
 reaches **96** where the catalogue publishes 83.
 
-Three are **`tekum8`, `tekum16`, `tekum32`** — the format this project's own literature
-scan calls *"the single most important paper"* in the space, which *"collides head-on
-with Trinity's ternary thesis"*. Publishing bit-exact vectors for the nearest competing
-format, from the same harness, disarms the obvious review question — *is this a
-catalogue or an advertisement?* — before it is asked.
+**Retracted: do not publish `tekum8/16/32`.** An earlier version of this line
+recommended them as the strongest item in the set. The oracle's own header rules it
+out — the per-trit specification needs the full 23-page paper, the abstract does not
+give the offset tables or the balance rule, and what is implemented is a **structural
+model reverse-engineered from `takum64_decode.v` and interpreted linearly** where real
+takum is logarithmic, with three `# TODO: verify from full paper` markers still open.
+
+Publishing those as `tekum` vectors would misrepresent another author's published
+format under its own name. The catalogue is right to exclude them. `takum8/16/32/64`
+*are* published and are a different format with a real reference behind them. If the
+comparison is worth making, implement against the paper's tables first.
 
 **Ten of the thirteen are now validated** — five against a third party (`uint4/8/16/32`,
 `mxfp8_e4m3`; 66,135 codes, 0 divergences) and five by construction, each against a
