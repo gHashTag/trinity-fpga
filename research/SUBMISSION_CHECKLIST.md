@@ -163,6 +163,41 @@ the board. That is the distinction to keep in the sentence.
 
 ---
 
+## 5b. The strongest methodological claim either paper can make, and neither does
+
+A 512-vector conformance suite ran on real silicon, reported **512/512 bit-exact**, and
+the cell it tested was **defective**. A second suite of the same size, on the same
+board, through the same adder, found the defect at 508/512.
+
+The cell is shared: `SUB(a,b)` is computed as `ADD(a, b XOR sign)` in both the RTL and
+the golden, so ADD and SUB exercised one adder. The defect was IEEE-754 ordering —
+zero-passthrough evaluated before the NaN branch, so a zero paired with a NaN returned
+that NaN's **raw payload** instead of the canonical quiet NaN (fixed in `711f5d572`).
+
+Why one suite was blind:
+
+- gf16 ADD carries exactly one NaN, `0x7E01` — and `0x7E01` **is** gf16's canonical
+  quiet NaN, so the defective path returned the right answer by coincidence.
+- ADD's b-position set holds **no NaN at all**: two zeroes, two subnormals, four
+  ordinary finites.
+- gf16 SUB seeds `0xFFFF`, a NaN whose payload is **not** canonical. Against a zero,
+  the defect is immediate.
+
+**Reproduced exactly, with no board** — `research/vector_blindness.py` replays the
+pre-fix behaviour over each suite's own vectors: **ADD 0 failures, SUB 4**, matching
+the silicon's 512/512 and 508/512, with the four pairs named.
+
+So the difference was not sample size, not the operation, and not the hardware: one
+vector set contained a non-canonical NaN payload and the other did not. That is a
+transferable argument for enumerating structural boundaries rather than sampling, and
+it is backed by a defect that actually shipped rather than by a constructed example.
+A conformance-suite paper that can say this has something most cannot.
+
+It also carries a caution the papers should state: **a bit-exact hardware result
+bounds the vectors, not the cell.**
+
+---
+
 ## 6. The artefact itself has been repaired
 
 The papers point a reader at `github.com/gHashTag/t27`. Five defects that a reader

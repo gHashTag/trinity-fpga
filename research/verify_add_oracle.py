@@ -160,9 +160,10 @@ def boundary_codes(fmt) -> list[int]:
     """Codes at every structural edge: zero, subnormals, the normal boundary,
     the top finite, and -- where they exist -- Inf and NaN.
 
-    Pass 96 found that gf16 SUB fails 4/512 on silicon precisely on Inf/NaN
-    sentinels while MUL is clean, so a sample drawn from the middle of the range
-    is the one sample guaranteed to miss the interesting part.
+    gf16 SUB once failed 4/512 on silicon on exactly these sentinels while MUL was
+    clean -- since root-caused and fixed (711f5d572), and re-proven PASS. The lesson
+    outlived the defect: a sample drawn from the middle of the range is the one
+    sample guaranteed to miss the interesting part. See research/vector_blindness.py.
     """
     top_exp = (fmt.exp_max - 1) if fmt.has_inf else fmt.exp_max
     out = {
@@ -176,8 +177,25 @@ def boundary_codes(fmt) -> list[int]:
         fmt.bias << fmt.mant_bits,                      # 1.0
     }
     if fmt.has_inf:
-        out |= {fmt.exp_max << fmt.mant_bits,            # +Inf
-                (fmt.exp_max << fmt.mant_bits) | 1,      # a NaN
+        # NaN payloads matter, and the canonical one is the least informative of
+        # them. The historical gf16-sub defect (zero-passthrough evaluated before
+        # the NaN branch, commit 711f5d572) returned the operand's raw payload
+        # instead of the canonical quiet NaN -- invisible when the NaN under test
+        # IS the canonical one. gf16's ADD suite had exactly that blind spot: its
+        # sole NaN corner was 0x7E01, which is the canonical value, and no NaN at
+        # all sat in the b-position set, so the cell passed 512/512 while
+        # defective. Measured, not assumed: replaying the pre-fix behaviour over
+        # ADD's own 512 vectors gives 0 failures and over SUB's gives exactly the
+        # historical 4.
+        #
+        # This set was never blind -- it carries both signs, and a sign-flipped
+        # canonical NaN is already non-canonical, which caught the fault 4 times.
+        # Adding real payload variety takes that to 20. Weak, not blind, and the
+        # difference is worth the two extra codes.
+        out |= {fmt.exp_max << fmt.mant_bits,                    # +Inf
+                (fmt.exp_max << fmt.mant_bits) | 1,              # payload 1
+                (fmt.exp_max << fmt.mant_bits) | fmt.mant_max,   # max payload
+                (fmt.exp_max << fmt.mant_bits) | (fmt.mant_max >> 1),
                 fmt.quiet_nan & ~(1 << fmt.sign_shift)}
     out = {c for c in out if 0 <= c <= fmt.mant_max | (fmt.exp_max << fmt.mant_bits)}
     return sorted(out | {c | (1 << fmt.sign_shift) for c in out})   # both signs
@@ -261,12 +279,33 @@ def self_check() -> int:
             return r & (1 << fmt.sign_shift)         # subnormals -> signed zero
         return r
 
+    def zero_passthrough_before_nan(fmt, a, b):
+        """The real one. gf_adder_param's result mux checked zero-passthrough
+        (x + 0 = x) before the NaN branch, so a zero paired with a NaN returned
+        that NaN's raw payload rather than the canonical quiet NaN. It reached
+        silicon, passed gf16 ADD at 512/512, and was caught only by gf16 SUB at
+        508/512 -- because SUB's vector set contained one non-canonical NaN and
+        ADD's did not. Fixed in 711f5d572.
+        """
+        ka, _, va = _classify(fmt, a)
+        kb, _, vb = _classify(fmt, b)
+        a_zero = ka == "finite" and va == 0
+        b_zero = kb == "finite" and vb == 0
+        if a_zero and b_zero:
+            return nearest_representable(fmt, a, b)
+        if a_zero:
+            return b                                 # verbatim, payload and all
+        if b_zero:
+            return a
+        return nearest_representable(fmt, a, b)
+
     faults = [("ties-away-from-zero", ties_away),
               ("overflow-never-Inf", no_overflow),
-              ("subnormals-flushed", flush_subnormals)]
+              ("subnormals-flushed", flush_subnormals),
+              ("zero-passthrough-before-NaN", zero_passthrough_before_nan)]
 
     rng = random.Random(7)
-    print("=== negative control: three injected faults, each must be caught ===")
+    print("=== negative control: four injected faults, each must be caught ===")
     survivors = 0
     for label, mutant in faults:
         counts = []

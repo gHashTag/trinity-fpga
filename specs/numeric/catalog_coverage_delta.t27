@@ -2212,3 +2212,111 @@ this strengthens confidence in the definition, not in the silicon claim. Those a
 two halves that pass 96 established must be stated separately.
 """
 }
+
+// ---- Pass 98: the SUB discrepancy was closed, and is worth more closed ---------
+
+correction I_RECORDED_A_CLOSED_DEFECT_AS_A_LIVE_ONE {
+  name     "the gf16 SUB 4/512 was already root-caused and fixed"
+  severity MEDIUM
+
+  what_i_wrote """
+Pass 96 recorded gf16 SUB failing 4/512 on Inf/NaN sentinels as a live, SUB-cell-
+specific edge, and pass 97 repeated it in a commit message and a source comment.
+"""
+  what_is_true """
+It was found, diagnosed, fixed and re-proven, and the issue thread says so:
+
+  "Root cause (was 508/512): shared gf_adder_param.v result mux checked
+   zero-passthrough (x+0=x) BEFORE the NaN branch, so 0+NaN/NaN+0 returned the raw
+   NaN payload instead of canonical 0x7E01. The SUB wrapper's sign flip was correct
+   (identical to golden). Fix: NaN precedence over zero-passthrough (IEEE 754).
+   Commit 711f5d572."
+
+Verified in the tree: the commit exists, and gf_adder_param.v now carries the NaN
+branch ahead of zero-passthrough with a comment saying why.
+"""
+  and_my_hypothesis_was_wrong """
+I had reasoned this pass that SUB reaches Inf + (-Inf) -> NaN where ADD's sample
+might not. Tested it: three oracles agree on all 196 special-value SUB pairs
+including Inf - Inf. The real cause was 0 + NaN, not Inf - Inf.
+"""
+  resolved true
+}
+
+result WHY_ADD_PASSED_512_OF_512_WITH_A_DEFECTIVE_ADDER {
+  detail """
+SUB is not a separate cell. Both the RTL and the golden compute SUB(a,b) as
+ADD(a, b XOR sign), so ADD and SUB exercised the same adder on the same silicon with
+the same 512 pairs. One passed and one failed. The difference is entirely in the
+vectors:
+
+  ADD carries exactly one NaN, 0x7E01 -- and for gf16 the canonical quiet NaN IS
+  0x7E01, so returning the raw payload verbatim gave the correct answer by
+  coincidence. Its b-position set (cov[:8]) holds no NaN at all: two zeroes, two
+  subnormals, four ordinary finites.
+
+  SUB seeds eight specials including 0xFFFF, a NaN whose payload is not canonical.
+  Paired with a zero, the defect is immediate.
+"""
+  reproduced_exactly """
+research/vector_blindness.py replays the pre-fix behaviour over each suite's own
+vectors, with no board:
+
+  ADD  512 pairs -> 0 failures      (silicon reported 512/512)
+  SUB  512 pairs -> 4 failures      (silicon reported 508/512)
+
+The four are named: SUB(0x0000,0xFFFF), SUB(0xFFFF,0x0000), SUB(0xFFFF,0x8000),
+SUB(0x8000,0xFFFF) -- every one a zero against the non-canonical NaN.
+"""
+  status VERIFIED_SW
+}
+
+result THE_HISTORICAL_DEFECT_IS_NOW_A_REGRESSION_TEST {
+  detail """
+verify_add_oracle.py --self-check gains a fourth injected fault, and unlike the other
+three it is not hypothetical: it is the ordering that actually reached silicon.
+
+  ties-away-from-zero          gf6:424  gf8:5328  gf16:263   caught
+  overflow-never-Inf           gf6:0    gf8:0     gf16:30    caught
+  subnormals-flushed           gf6:586  gf8:2614  gf16:83    caught
+  zero-passthrough-before-NaN  gf6:0    gf8:0     gf16:20    caught
+
+The gf6/gf8 zeroes are correct rather than misses: those formats have HAS_INF=0, so
+they have no NaN for the fault to mishandle.
+"""
+  status VERIFIED_SW
+}
+
+correction MY_OWN_BOUNDARY_SET_WAS_WEAK_NOT_BLIND {
+  name "measuring beat assuming, again"
+  detail """
+I was about to write that pass 97's boundary set shared ADD's blind spot, since its
+only NaN codes were 0x7E01 and (exp_max<<M)|1 -- both canonical for gf16.
+
+Measured instead:
+
+  boundary pairs (784)                                -> 20 divergences
+  random pairs (20,000)                               ->  0 divergences
+  boundary set without non-canonical payloads (576)   ->  4 divergences
+
+Not blind. The set carries both signs, and a sign-flipped canonical NaN (0xFE01) is
+already non-canonical, which caught the fault four times. Adding payload variety takes
+it to 20. Weak, not blind -- and random sampling at forty times the pair count caught
+nothing at all, which is the sharper result.
+"""
+  resolved true
+}
+
+conclusion WHAT_THE_PAPERS_CAN_TAKE_FROM_THIS {
+  precise """
+A 512-vector conformance suite ran on real silicon, reported bit-exact agreement, and
+the cell it tested was defective. A second suite of the same size, on the same cell,
+through the same adder, found the defect. The difference was not sample size, not the
+operation and not the hardware: one set contained a NaN whose payload differed from
+the canonical quiet NaN and the other did not.
+
+That is an argument for enumerating structural boundaries -- and specifically for
+carrying non-canonical NaN payloads -- rather than sampling, and it is backed by a
+defect that actually shipped rather than by a constructed example.
+"""
+}
