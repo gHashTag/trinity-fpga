@@ -3499,3 +3499,64 @@ coverage, 83 against 2, this one is. The ready-to-paste file carries both senten
 not just the flattering half.
 """
 }
+
+// ---- Pass 113: re-reading the checklist against what can still be checked ------
+
+result WHAT_RE_RAN_AND_STILL_HOLDS {
+  detail """
+The checklist grew across forty passes and section 0 was last checked against the
+PUBLISHED arXiv text at pass 71. This pass re-ran everything re-runnable.
+
+  phi-rule            17/17 catalogued widths satisfy e = round((N-1)/phi^2), and no
+                      width lands on an exact .5, so the paper's unstated rounding
+                      convention remains moot
+  arithmetic laws     8,865 ordered pairs, 0 violations
+  file references     19 of 19 resolve -- 13 in this repository, 4 in the papers' own
+                      repositories exactly as section 0 says, and 2 (ERRATA_2026-06-14.md,
+                      cocotb_ref_model.py) in t27, which is the artefact the checklist
+                      is about
+
+Nothing had gone stale.
+"""
+  status VERIFIED_SW
+}
+
+result WHAT_COULD_NOT_BE_REACHED_AND_IS_SAID_SO {
+  detail """
+  ml_dtypes cross-validation   the module is not installed here, so 66,224 codes /
+                               0 divergences is unconfirmed today rather than
+                               withdrawn. One pip install settles it.
+
+  every section-1 claim that quotes the published papers   needs the arXiv text, and
+                               the web-fetch tool has failed fourteen times running.
+                               Pass 110 established the tool is down rather than the
+                               target, by fetching example.com and getting the same
+                               error. Those claims were correct at pass 71 and have
+                               not been re-read since.
+
+A checklist that does not distinguish "checked today" from "checked once, long ago"
+invites the reader to trust both equally. Section 7 now separates them.
+"""
+  status VERIFIED_SW
+}
+
+correction THE_CAUTION_UNDERCOUNTED_MY_OWN_CORRECTIONS {
+  detail """
+The closing caution said "roughly fifteen alarming measurements across seventy
+passes". True when written; the campaign is now at 113.
+
+Counted rather than re-estimated: 27 blocks typed `correction` across ten spec files,
+through pass 112 --
+
+  catalog_coverage_delta        15
+  ml_dtypes_crossval             2
+  wide_rung_commutativity        2
+  layout_b_audit                 2
+  and one each in six others
+
+The line now carries the figure with the command that re-derives it, and says the
+earlier number was true when written. A caution about self-correction that is itself
+out of date is the wrong kind of irony.
+"""
+  resolved true
+}

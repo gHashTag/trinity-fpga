@@ -285,10 +285,44 @@ and a new gate locks the index against the packs it summarises.
 
 ---
 
+## 7. What was re-verified on 2026-08-02, and what could not be
+
+This checklist grew over forty passes. Section 0 was last checked against the
+**published** arXiv text at pass 71. This pass re-ran everything re-runnable and states
+plainly what it could not reach.
+
+**Re-verified by execution, still holding:**
+
+| claim | where | result |
+|---|---|---|
+| φ-rule over the catalogued widths | §2, `(9/9)` question | **17/17** satisfy `e = round((N−1)/φ²)`; no width lands on an exact .5, so the unstated rounding convention is moot |
+| commutativity and the arithmetic laws | §5 | **8,865** ordered pairs, **0** violations |
+| every file this checklist cites | throughout | **19 of 19** resolve — 13 here, 4 in the papers' own repositories as §0 says, 2 in `t27` |
+
+**Could not be re-verified, and why:**
+
+- **ml_dtypes cross-validation** (§4, *"66,224 codes, 0 divergences"*) — the `ml_dtypes`
+  module is not installed in this environment. The claim is not withdrawn; it is
+  simply unconfirmed as of today. `python3 -m pip install 'ml_dtypes==0.5.4' numpy`
+  then `python3 research/crossval_ml_dtypes.py` settles it in a minute.
+- **Everything in §1 that quotes the published papers** — abstracts, reference lists,
+  the TTSKY26b clause. Verifying those needs the arXiv text, and the web-fetch tool has
+  been unavailable across fourteen consecutive attempts (a fetch of `example.com` fails
+  identically, so it is the tool and not the target). Those claims were correct at
+  pass 71 and have not been re-read since.
+
+Nothing was found to have gone stale except the self-correction count in the caution
+below, which is now stated with its derivation.
+
+---
+
 ### One caution about this checklist
 
-Roughly fifteen alarming measurements across seventy passes turned out to be defects
-in my own harness rather than in the artefact, and were withdrawn before publication:
+**27** blocks across ten spec files are typed `correction` — measurements or fixes of
+mine that turned out to be wrong and were withdrawn or repaired before publication.
+That figure is re-derivable: `grep -c '^correction' specs/numeric/*.t27`, through pass
+112. An earlier version of this line said "roughly fifteen across seventy passes",
+which was true when written and is no longer. Examples:
 a defaulted format width that manufactured 57,330 phantom defects, an oracle loader
 that silently skipped two formats, API throttling read as dead references, a URL
 typo that made 238 files look unreadable. One correction was *not* caught in time — a
