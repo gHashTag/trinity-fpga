@@ -3792,3 +3792,71 @@ available outcome, and marking it "check before printing" and moving on would ha
 left it to whoever printed it.
 """
 }
+
+// ---- Pass 118: document currency is not mechanically decidable, and one notation
+//                means two things ------------------------------------------------
+
+correction THE_OBVIOUS_CHECK_DID_NOT_WORK {
+  name     "a currency scan over prose is noise with a finding inside it"
+  severity MEDIUM
+
+  detail """
+The plan was to scan all 50 documents for figures disagreeing with current verified
+values. The first version flagged 23 of them. Sampling the flags before reporting:
+
+  "49 bit-exact / 34 structural"   a CORRECT quotation of what the paper says, in a
+                                   document written to explain the discrepancy
+  "the remaining 15 formats are    a subset count, not the catalogue total
+   structural"
+  "472/576 bit-exact"              a UART result
+  "65/65 bit-exact (fails=0)"      another UART result
+
+Every sampled flag was a false positive. The same numeral means different things in
+different sentences and prose does not carry the type of its own numbers.
+
+This is the third time the same lesson has arrived: pass 100 on foreign-layout
+constants (19 hits, one real), pass 110 on workflow paths (4 hits, one real), and now
+23 hits and none of the sampled ones real. The pattern is that a check written against
+surface form, over text whose form is not constrained, finds mostly correct text.
+"""
+  fix "narrowed to the single unambiguous form, and the tool now states this limit"
+  resolved true
+}
+
+finding ONE_NOTATION_IS_CARRYING_TWO_QUANTITIES {
+  severity MEDIUM
+  detail """
+Narrowed to "Tier-E n/83", which nothing else in the tree is written like, four
+documents state a running total and the values are 41, 47 and 71.
+
+  2026-07-14  LITERATURE_SCAN_2024_2026.md          71/83  (three times)
+  2026-07-15  CATALOG_PAPER_DRAFT.md                41/83
+  2026-07-30  PAPER_INTEGRITY_ISSUES.md             47/83
+  2026-07-30  takum_horizon_b_reassessment          71/83  (twice)
+
+Growth explains some of it. It does not explain the last two: 47 and 71 carry the SAME
+date. So the notation is being used for at least two different quantities -- plausibly
+decode-only against decode-plus-compute -- and a reader meeting "Tier-E n/83" cannot
+tell which without opening the document.
+
+The current figure is 44 of 83: of 74 issue-#199 comments carrying all four links,
+covering 45 cells, 44 map onto published packs.
+
+That is the finding worth having. Not that working notes are old, which is what a note
+is, but that a single notation in this project means more than one thing.
+"""
+  resolved false
+}
+
+result WHAT_START_HERE_NOW_TELLS_THE_READER {
+  detail """
+The entry page already said the forty working notes have unchecked currency. It now
+adds the specific hazard: four of them state a "Tier-E n/83" total, the values are 41,
+47 and 71, none is the current 44, and two disagree while carrying the same date. If
+you meet the notation, open the document; do not carry the number out.
+
+That is more useful than a blanket warning, because it names the one number a reader
+is likely to lift.
+"""
+  status VERIFIED_SW
+}

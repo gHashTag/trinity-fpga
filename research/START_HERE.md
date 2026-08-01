@@ -59,6 +59,12 @@ comparisons, format leaderboards, session reports, competitive scans, draft pape
 Some are current, some are superseded, and **their currency has not been checked**.
 They are not part of the seven above and nothing here depends on them.
 
+One caution with a name. Four of them state a running **"Tier-E n/83"** total, and the
+values seen are **41, 47 and 71** — none of them the current figure, which is **44 of
+83**. Two of those disagree while carrying the *same date*, so the notation is being
+used for at least two different quantities. If you meet it, open the document; do not
+carry the number out.
+
 Two ways to tell what you are looking at:
 
 - Anything a checklist line points to is current, because §7 records when each was
