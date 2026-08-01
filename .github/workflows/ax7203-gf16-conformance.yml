@@ -5,13 +5,19 @@
 # Target: xc7a200tfbg484-2 (Artix-7 200T, speed grade -2)
 # Source files:
 #   - fpga/vivado/gf16_codec_ax7203.v
-#   - fpga/openxc7-synth/gf16_add.v
-#   - fpga/openxc7-synth/gf16_mul.v
+#   - fpga/openxc7-synth/gf16_adder.v
 #   - specs/fpga/constraints/gf16_ax7203.xdc
 #
 # Trigger: workflow_dispatch (manual) or push to GF16 RTL/XDC.
 # Artifact: gf16_codec_ax7203.bit
 
+# NOTE ON SCOPE. This builds gf16_adder.v, whose own header describes a
+# "GF16 format (15 bits + sign)" with an 8-bit mantissa and "bias TBD" -- an
+# AX7203 bring-up variant, not the catalog's gf16 (1+6E+9M, bias 31). No Tier-E
+# proof cites this workflow: the gf16 ADD, SUB and MUL proofs cite
+# "AX7203 GF16 Clean Conformance", "AX7203 GF16 SUB Conformance" and
+# "AX7203 GF16 MUL Clean Conformance", which build gf_adder_param.v and
+# gf_mul_param.v. The name below is older than that split.
 name: AX7203 GF16 Conformance Bitstream
 
 on:
@@ -20,8 +26,11 @@ on:
     branches: [main]
     paths:
       - 'fpga/vivado/gf16_codec_ax7203.v'
-      - 'fpga/openxc7-synth/gf16_add.v'
-      - 'fpga/openxc7-synth/gf16_mul.v'
+      # These now name what the job actually compiles. They previously listed
+      # gf16_add.v and gf16_mul.v, which this workflow has never read: a change
+      # to either triggered a build that ignored it and went green regardless.
+      - 'fpga/vivado/gf16_codec_ax7203.v'
+      - 'fpga/openxc7-synth/gf16_adder.v'
       - 'specs/fpga/constraints/gf16_ax7203.xdc'
       - '.github/workflows/ax7203-gf16-conformance.yml'
 

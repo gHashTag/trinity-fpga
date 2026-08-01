@@ -3189,3 +3189,99 @@ when this was written, so the corpus figure is not restated here.
 """
   status VERIFIED_SW
 }
+
+// ---- Pass 109: three gf16 adders, and a workflow watching what it never builds --
+
+finding THE_WORKFLOW_WATCHED_TWO_FILES_IT_NEVER_COMPILED {
+  name     "a green CI run that could not have depended on the change that triggered it"
+  severity MEDIUM
+
+  detail """
+.github/workflows/ax7203-gf16-conformance.yml triggered on changes to
+
+    fpga/openxc7-synth/gf16_add.v
+    fpga/openxc7-synth/gf16_mul.v
+
+and its synthesis step read
+
+    fpga/vivado/gf16_codec_ax7203.v  fpga/openxc7-synth/gf16_adder.v
+
+Neither watched file appears in any read_verilog line anywhere. So editing gf16_add.v
+started a build that ignored it and reported success regardless -- a green run that
+carried no information about the change that caused it.
+"""
+  fix "paths: now name the two files the job actually compiles"
+  resolved true
+}
+
+finding THE_TREE_HAS_THREE_DIFFERENT_GF16_ADDERS {
+  severity MEDIUM
+  detail """
+  gf_adder_param.v    397 lines   parametric; the one behind every Tier-E proof
+  gf16_add.v          285 lines   standalone module gf16_add; built by nothing
+  gf16_adder.v        125 lines   built by the conformance-bitstream workflow
+
+Distinct files, distinct sizes, distinct hashes. gf16_adder.v is not a gf16 adder in
+the catalog's sense at all -- its own header says so:
+
+    // GF16 format (15 bits + sign):
+    //   [14]    - sign bit
+    //   [13:8]  - exponent (6 bits, bias TBD)
+    //   [7:0]   - mantissa (8 bits, implied hidden bit)
+
+That is 1+6+8 in fifteen bits with an undetermined bias, described in the file as an
+"AX7203 bring-up variant". The catalog's gf16 is 1+6E+9M in sixteen bits, bias 31.
+"""
+  resolved true
+}
+
+result BUT_NO_PUBLISHED_CLAIM_TOUCHES_ANY_OF_IT {
+  measured """
+The four gf16 Tier-E proofs cite, by run id, these workflows:
+
+  28508237612, 28671091708   AX7203 GF16 Clean Conformance      ADD
+  28508237577                AX7203 GF16 SUB Conformance        SUB
+  28497252942                AX7203 GF16 MUL Clean Conformance  MUL
+
+and those three build exactly what they should:
+
+  gf_adder_param.v + gf16_clean_ax7203.v
+  gf_adder_param.v + gf16_sub_ax7203.v
+  gf_mul_param.v   + gf16_mul_ax7203.v
+
+None cites AX7203 GF16 Conformance Bitstream. The papers' gf16 claims rest on the
+parametric adder, correctly built and correctly proven. The fourth workflow is a
+leftover whose name is older than the split, and it now says so in a header comment.
+"""
+  status VERIFIED_SW
+}
+
+finding ROUNDING_IS_DISABLED_IN_FIVE_UNBUILT_FILES {
+  severity HIGH_BUT_UNREACHED
+  detail """
+gf16_add.v, gf16_alu.v, gf16_mul.v, gf16_add_top.v and gf16_mul_top.v all contain
+
+    wire [9:0] mant_normalized = ...
+    wire [4:0] round_remainder = mant_normalized[14:10];
+    wire do_round = round_bit & (|round_remainder);
+
+mant_normalized is ten bits, so [14:10] is entirely out of bounds and every bit of
+round_remainder is undef. do_round is therefore x, which synthesis resolves to 0:
+these adders never round, they truncate.
+
+This is NOT repairable by widening the select. The sticky information the comment
+describes -- "bits 10+" -- does not exist in that signal, so the rounding logic refers
+to something the design does not carry. Fixing it means deciding where the sticky bits
+come from, which is a design decision and not a substitution.
+"""
+  reach """
+  gf16_add.v       watched by 1 workflow, built by 0
+  gf16_alu.v       watched by 0, built by 0
+  gf16_mul.v       watched by 1, built by 0
+  gf16_add_top.v   watched by 0, built by 0
+  gf16_mul_top.v   watched by 0, built by 0
+
+Not one is compiled by any workflow, and no Tier-E proof cites them.
+"""
+  resolved false
+}
