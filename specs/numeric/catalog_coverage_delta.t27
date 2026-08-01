@@ -3285,3 +3285,88 @@ Not one is compiled by any workflow, and no Tier-E proof cites them.
 """
   resolved false
 }
+
+// ---- Pass 110: all three, and three false positives on the way ----------------
+
+result C_IS_BLOCKED_BY_THE_TOOL_NOT_BY_THE_TARGET {
+  detail """
+Fourteen consecutive attempts to read Berkeley TestFloat's page have failed. This pass
+finally tested the assumption behind that report by fetching example.com, which fails
+identically:
+
+  "There's an issue with the selected model (glm-4.5-air)."
+
+So WebFetch is unavailable in this session, and every earlier report of "TestFloat
+still unchecked" was accurate but imprecisely attributed -- the target was never
+unreachable, the tool was never working. Worth one call to find out, and worth saying
+correctly.
+"""
+  resolved false
+}
+
+result B_ONE_GENUINE_HIT_AND_THREE_THAT_WERE_NOT {
+  detail """
+research/audit_workflow_paths.py compares every workflow's `paths:` against the
+sources it actually names. 71 workflows, 53 with a synthesis step.
+
+The first run reported 4 "watched but not built". Reading them before writing them up:
+
+  three trinet workflows   FALSE. The testbench is compiled by iverilog on the line
+                           above; the tool was only reading read_verilog.
+  wrapper-fsm-sim          FALSE. Its sources sit on iverilog continuation lines,
+                           which the regex stopped at.
+  lut-report               FALSE. It generates wrappers into /tmp and hands synthesis
+                           to run_synth.py, which is what reads the cores it watches.
+  ax7203-corona-decode     REAL. Watches corona_decode_top_ax7203.v and
+                           fpga/openxc7-synth/*_decode.v; builds
+                           corona_decode_posit8_ax7203.v and an external decoder.
+                           Neither watched pattern matches either built file.
+
+Three false positives in one tool, each caught by opening the workflow rather than
+trusting the report. The tool now reads sources from anywhere outside the paths block
+and reports script delegation as a limitation instead of a finding.
+"""
+  status VERIFIED_SW
+}
+
+finding THE_SHARED_PARAMETRIC_CORES_WERE_UNWATCHED {
+  severity MEDIUM
+  detail """
+The opposite direction found something the first did not. ax7203-gf20-clean.yml builds
+
+    read_verilog fpga/openxc7-synth/gf_adder_param.v fpga/vivado/gf20_clean_ax7203.v
+
+and its paths list watches only gf20_clean_ax7203.v and the XDC. So a change to
+gf_adder_param.v -- the file behind every gf16 and gf20 Tier-E proof -- did not
+re-trigger the build that compiles it. Same for gf_mul_param.v in
+ax7203-gfternary-mul.yml.
+
+The most safety-critical shared files in the tree were not watched by the jobs that
+compile them.
+"""
+  fix "both workflows now list the parametric core they build"
+  resolved true
+}
+
+result A_THE_TWO_UNPARSEABLE_FILES_ARE_READABLE_AGAIN {
+  detail """
+qutrit_layer.v and vsa_10k_bind_bundle.v were the two files yosys refused outright,
+and an unreadable file is worse than a wrong one because nothing can be said about it.
+
+Both declare a loop variable mid-block:
+
+    integer j;
+    for (j = 0; j < 16; j = j + 1) begin
+
+A Verilog-2005 declaration inside an UNNAMED begin/end is illegal, and these two files
+set `default_nettype none, so what is a silent warning elsewhere in this tree is a hard
+error here. They are stricter than their neighbours, which is why they failed loudly.
+
+Moved to module scope -- three variables across the two files, since
+vsa_10k_bind_bundle has one in each of its two modules. Both now read with exit 0 and
+zero diagnostics.
+
+vsa_10k_top.v, the third, times out rather than erroring and is untouched.
+"""
+  status VERIFIED_SW
+}

@@ -113,6 +113,8 @@ module VSA10K_BindBundle (
     endgenerate
 
     // Pipeline stage
+    integer i;   // module scope: see above
+
     always @(posedge clk) begin
         if (rst) begin
             valid_out <= 0;
@@ -121,7 +123,6 @@ module VSA10K_BindBundle (
             valid_out <= valid_in;
 
             // Pack block results
-            integer i;
             for (i = 0; i < 625; i = i + 1) begin
                 result[i*32 +: 32] <= block_result[i];
             end
@@ -265,6 +266,7 @@ module VSA10K_BindBundle_Top (
     );
 
     // Control state machine
+    integer j;   // module scope, as above
     always @(posedge clk) begin
         if (rst) begin
             state <= IDLE;
@@ -296,7 +298,6 @@ module VSA10K_BindBundle_Top (
                 STORE: begin
                     if (bind_valid_out) begin
                         // Store result
-                        integer j;
                         for (j = 0; j < 625; j = j + 1) begin
                             result_storage[j] <= bind_result[j*32 +: 32];
                         end

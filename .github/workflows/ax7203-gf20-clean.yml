@@ -5,6 +5,7 @@ on:
   push:
     branches: [main]
     paths:
+      - 'fpga/openxc7-synth/gf_adder_param.v'
       - 'fpga/vivado/gf20_clean_ax7203.v'
       - 'specs/fpga/constraints/gf16_clean_ax7203.xdc'
       - '.github/workflows/ax7203-gf20-clean.yml'

@@ -4,8 +4,12 @@ on:
   push:
     branches: [main]
     paths:
-      - 'fpga/openxc7-synth/corona_decode_top_ax7203.v'
-      - 'fpga/openxc7-synth/*_decode.v'
+      # These now name what the job compiles. They previously watched
+      # corona_decode_top_ax7203.v and fpga/openxc7-synth/*_decode.v, neither of
+      # which this workflow reads -- so a change to either triggered a build that
+      # ignored it.
+      - 'fpga/openxc7-synth/corona_decode_posit8_ax7203.v'
+      - 'external/tt-trinity-corona/src/rtl/posit8_decode.v'
       - 'fpga/openxc7-synth/corona_decode_ax7203.xdc'
       - '.github/workflows/ax7203-corona-decode.yml'
 jobs:

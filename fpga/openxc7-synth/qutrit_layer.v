@@ -218,13 +218,14 @@ module TQNN_Layer1 (
     // Quantum state encoding for monitoring
     // Count how many qutrits are in each state
     reg [3:0] count_neg, count_zero, count_pos;
+    integer j;   // module scope: a Verilog-2005
+                     // declaration inside an unnamed begin/end is
+                     // an error under `default_nettype none
     always @(posedge clk) begin
         if (valid_in) begin
             count_neg <= 0;
             count_zero <= 0;
             count_pos <= 0;
-
-            integer j;
             for (j = 0; j < 16; j = j + 1) begin
                 if (neuron_out[j] == 2'b00) count_neg <= count_neg + 1;
                 else if (neuron_out[j] == 2'b01) count_zero <= count_zero + 1;
