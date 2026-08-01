@@ -353,67 +353,32 @@ pack, pending review."*
 
 ---
 
-## 5h. Four published packs rest on a linear model of a logarithmic format
+## 5h. RETRACTED — the published takum packs are correct
 
-`conformance/takum_ref.py` states this in its own header, and it is about the **83**,
-not the unpublished thirteen:
+Passes 129–135 built a case that `takum8` and `takum16` carry values from a linear
+model of a logarithmic format. **Pass 136 checked the packs themselves and the case
+does not survive.**
 
-> Real takum is **logarithmic** — `value = (-1)^S · exp(ell/2)` — so values are
-> generally **irrational** and admit no exact rational arithmetic. The oracle requires
-> exact rationals, so what is implemented is a **working structural model** based on
-> takum's field scheme, **reverse-engineered from `takum64_decode.v`**, interpreted
-> **linearly (mantissa + exponent), not logarithmically**. *"The same methodology as
-> `tekum_ref.py`."*
-
-**But a logarithmic reference also exists, and this needs stating carefully.** The tree
-holds three takum paths, not one:
-
-| path | evaluation | role |
+| pack | vectors | worst relative difference from the **logarithmic** definition |
 |---|---|---|
-| `conformance/takum_ref.py` | **linear** structural model | generates packs |
-| `conformance/takum16_decode_conformance_ax7203.py` | **logarithmic**, `mpmath` at 120-bit | *"replicate the t27 verified second-witness"* |
-| `research/head_to_head.py` | **logarithmic**, `math.exp` | the accuracy benchmark |
+| `takum8` | 256 | **1.02e−16** — the float64 rounding level, half an ULP of a double |
+| `takum16` | 3 | **exactly 0** |
 
-So the corpus does compute real takum where it matters, and the comparison document
-`GF16_VS_TEKUM16_VS_TAKUM16.md` discloses the distinction repeatedly — *"linear tapered"*
-against *"logarithmic tapered (LNS)"*, *"linear interpretation"*, *"emulated"*.
+The published vectors are logarithmically correct. `conformance/takum_ref.py` *is* a
+linear model and says so — that part stands — but `gen_all_formats.py`, which generated
+these packs, does not use it.
 
-**What remains — now measured, and it is not small.** `takum8` and `takum16` are
-generated from the **linear** oracle and carry **0 witnesses**; `takum32` and `takum64`
-are hand-curated with **4 each**. Witnessing the two smallest against the mpmath
-logarithmic path that already exists in the tree
-(`research/witness_takum_small.py`):
+**What went wrong in my reasoning.** I measured oracle against oracle, found a
+437-binade gap, and concluded something about the *packs* without opening one. That is
+the identical mistake as pass 130, where I read an oracle's header and did not follow
+it to what uses it — and I wrote that lesson down at the time.
 
-| | takum8 | takum16 |
-|---|---|---|
-| finite codes compared | 254 | 65,534 |
-| **linear value = logarithmic value** | **3** | **3** |
-| ratio linear ÷ logarithmic | 2.4e−132 … 3.1e+95 | 8.0e−133 … 1.3e+132 |
-| **worst disagreement** | **437 binades** | **439 binades** |
-
-Three codes out of sixty-five thousand. The two are not an approximation of one another
-— they are different functions sharing a field layout.
-
-**So these two packs should not be described as takum conformance vectors.** The
-options are to regenerate them from the mpmath path, to witness and republish with the
-gap disclosed, or to withdraw them.
-
-**The first option is now available as a drop-in.** `conformance/takum_log_ref.py`
-applies `lns_ref.py`'s discipline to takum: it returns the **exact** natural logarithm
-as a `Fraction` for every finite code, an exact value only where one exists — `ell = 0`,
-value ±1 — and a `Special` carrying the exact logarithm everywhere else, rather than a
-fabricated rational. Validated against the mpmath witness over **all 65,536 takum16 and
-256 takum8 codes: 0 class mismatches, worst relative difference exactly 0.** It needs no
-precision parameter, because it never leaves exact arithmetic. This does not touch `takum32`/`takum64`, whose
-hand-curated provenance and four witnesses are a different and sounder chain — and it
-is consistent with the earlier libtakum comparison, which was made against `takum32`.
-
-**And one correction to §5d.** The `takum` route there read the `libtakum` comparison as
-a rounding ceiling — *"a logarithmic decode needs `exp()`"*. Whether that reading holds
-depends on which path produced the compared pack, and the record does not say.
-`ONE_ULP_BOUNDARY_READY_TO_PASTE.md` therefore drops the row from the paragraph and
-keeps it under caution pending re-measurement. The numpy and `lns16` routes are
-unaffected.
+**What survives, and it is small.** `takum8` and `takum16` carry 0 witnesses where
+`takum32`/`takum64` carry 4. Witnessing them is cheap and now trivial:
+`conformance/takum_log_ref.py` (pass 135) reproduces the logarithmic definition in exact
+rational arithmetic, needs no precision parameter, and agrees with the mpmath witness on
+all 65,536 codes with a worst difference of exactly zero. That module remains useful for
+witnessing; it is not needed for a repair, because there is nothing to repair.
 
 ---
 

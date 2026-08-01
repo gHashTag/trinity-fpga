@@ -4860,3 +4860,59 @@ Six passes to find the problem, one to fix it, and the fix was a file in the sam
 directory the whole time.
 """
 }
+
+// ---- Pass 136: I checked the packs, and my case collapses --------------------
+
+correction THE_PUBLISHED_TAKUM_PACKS_ARE_CORRECT {
+  name     "seven passes of case-building, undone by opening the artefact"
+  severity HIGH
+
+  what_i_built """
+Passes 129 to 135: takum_ref.py declares itself a linear model of a logarithmic format
+(true); the linear and logarithmic paths disagree by 437 binades over 65,536 codes
+(true); therefore takum8 and takum16 "should not be described as takum conformance
+vectors" (NOT true).
+"""
+  what_the_packs_say """
+Compared code by code against the logarithmic definition at 200-bit precision:
+
+  takum8    256 vectors   worst relative difference  1.02e-16
+  takum16     3 vectors   worst relative difference  exactly 0
+
+1.02e-16 is the float64 rounding level -- half an ULP of a double. The published
+vectors are logarithmically correct. gen_all_formats.py, which produced them, does not
+use takum_ref.py.
+"""
+  the_error_in_my_reasoning """
+I measured oracle against oracle, found a large gap, and drew a conclusion about the
+PACKS without opening one.
+
+That is precisely the mistake of pass 130 -- reading an oracle's header and not
+following it to what uses it -- which pass 131 corrected and which I recorded as a
+lesson. I then made it again, over six further passes, with more measurement each time
+and no check of the artefact the claim was about.
+
+More measurement of the wrong object is not more evidence.
+"""
+  what_survives """
+takum8 and takum16 carry 0 witnesses where takum32 and takum64 carry 4. That is worth
+closing and is now trivial: takum_log_ref.py from pass 135 reproduces the logarithmic
+definition exactly, needs no precision parameter, and agrees with the mpmath witness on
+every code. It remains useful for witnessing. It is not needed for a repair, because
+there is nothing to repair.
+"""
+  resolved true
+}
+
+result AND_THE_ONE_ULP_ROW_IS_PARTLY_RESTORED {
+  detail """
+Pass 130 pulled the takum route out of the one-ULP paragraph on the grounds that the
+compared pack might carry linear values. It does not. So the libtakum comparison was
+between two logarithmic implementations, and the one-ULP reading stands on that count.
+
+What remains open is only the sample: fifteen vectors is a small basis for "none by
+more". The row stays out of the printed paragraph pending a wider measurement, but the
+reason to doubt it has gone.
+"""
+  status VERIFIED_SW
+}

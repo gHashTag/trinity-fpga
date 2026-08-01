@@ -54,10 +54,16 @@ it is computing a **different function**, and agreeing with `libtakum` to within
 ULP on 12 of 15 vectors is a much weaker and more surprising statement than a bound.
 Fifteen vectors is also a small sample from which to say *"none by more"*.
 
-**Do not use this row as one of three independent routes until it is re-measured** over
-a wide sample with the linear-versus-logarithmic difference stated. The other two
-routes — numpy's own validation sets and the `lns16` silicon residuals — are unaffected
-and stand on their own.
+**This caution is now partly resolved.** Pass 136 compared the published `takum8` pack
+against the logarithmic definition directly: all 256 vectors agree to within
+**1.02e−16**, the float64 rounding level, and `takum16`'s agree exactly. So the packs
+are logarithmically correct and the linear oracle is not what produced them. The
+`libtakum` comparison was therefore between two logarithmic implementations after all,
+and the one-ULP reading stands on that count.
+
+What remains unverified is only the sample size: fifteen vectors is a small basis for
+*"none by more"*. Re-measure over a wider set before printing the row, but the reason to
+doubt it has gone.
 
 ## The sentence that must accompany it
 
