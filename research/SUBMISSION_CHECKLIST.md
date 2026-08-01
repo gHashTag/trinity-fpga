@@ -315,11 +315,17 @@ with Trinity's ternary thesis"*. Publishing bit-exact vectors for the nearest co
 format, from the same harness, disarms the obvious review question — *is this a
 catalogue or an advertisement?* — before it is asked.
 
-**Nine of the thirteen are now validated** — five against a third party (`uint4/8/16/32`,
-`mxfp8_e4m3`; 66,135 codes, 0 divergences) and four by construction, each against a
+**Ten of the thirteen are now validated** — five against a third party (`uint4/8/16/32`,
+`mxfp8_e4m3`; 66,135 codes, 0 divergences) and five by construction, each against a
 format already among the 83: `bfloat32` ≡ `binary32`, `bfloat24` ≡ `binary32` truncated,
-`pdp11_float` ≡ `vax_f`, and `x87_48bit` ≡ `x87_fp80` over a 32-bit mantissa. Only
-`mxint8` and `tekum8/16/32` remain unvalidated.
+`pdp11_float` ≡ `vax_f`, `x87_48bit` ≡ `x87_fp80` over a 32-bit mantissa, and `mxint8`'s
+**element** decode ≡ `int8` on all 256 codes. Only `tekum8/16/32` remain unvalidated,
+and they are the three that would need an external build.
+
+`mxint8` is deliberately not a third alias. An MX block is one shared `e8m0` scale byte
+plus N elements, so two formats whose *elements* decode alike are still different
+formats — it agrees at one level and differs at another, where `bfloat32` and
+`pdp11_float` agree at every level.
 
 **Two of the thirteen are aliases, not new formats.** `bfloat32` decodes exactly as
 `binary32` and `pdp11_float` exactly as `vax_f`, both of which the catalogue already

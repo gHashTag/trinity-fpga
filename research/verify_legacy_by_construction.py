@@ -98,7 +98,7 @@ def main() -> int:
     args = ap.parse_args()
 
     o = load_oracles()
-    need = ["pdp11_float", "vax_f", "x87_48bit", "x87_fp80"]
+    need = ["pdp11_float", "vax_f", "x87_48bit", "x87_fp80", "mxint8", "int8"]
     missing = [n for n in need if n not in o]
     if missing:
         print(f"absent from the oracle set: {', '.join(missing)}")
@@ -109,9 +109,21 @@ def main() -> int:
     n2, b2, notes2 = compare_truncation(o, "x87_48bit", "x87_fp80", 48, 80, 15,
                                         32, 64, args.sample)
 
+    # mxint8's ELEMENT decode against int8, which is published. This is not a claim
+    # that the two formats are the same: an MX block is one shared e8m0 scale byte
+    # plus N elements, as the oracle module's own header states, so the element
+    # decode coinciding leaves the formats distinct at the block level. Which level a
+    # property lives at is the question the t27-spec skill exists to force.
+    mm, fm = o["mxint8"]
+    mi, fi = o["int8"]
+    b3 = sum(1 for c in range(256)
+             if not same(decode(mm, fm, c), decode(mi, fi, c)))
+    n3 = 256
+
     print(f"{'hypothesis':<52} {'compared':>9} {'divergences':>12}")
     print(f"  pdp11_float == vax_f (identical fields){'':<13} {n1:>9} {b1:>12}")
     print(f"  x87_48bit == x87_fp80 with a 32-bit mantissa{'':<8} {n2:>9} {b2:>12}")
+    print(f"  mxint8 ELEMENT decode == int8 (exhaustive){'':<10} {n3:>9} {b3:>12}")
     for s in notes1 + notes2:
         print(f"      {s}")
 
@@ -136,7 +148,16 @@ def main() -> int:
         print("and needs its own reference. x87 extended carries an EXPLICIT integer")
         print("bit rather than a hidden one, so a narrowed mantissa need not line up")
         print("the way it would in an IEEE-style format.")
-    return 1 if (b1 or b2) else 0
+    if b3 == 0:
+        print("\nmxint8's element decode is int8's, on all 256 codes, and int8 is among")
+        print("the 83 published packs -- so the element decode inherits that standing.")
+        print("It is NOT a third alias. The oracle module's own header describes an MX")
+        print("block as one shared e8m0 scale byte plus N elements, so two formats whose")
+        print("elements decode alike are still different formats. bfloat32 and")
+        print("pdp11_float are aliases because they agree at every level; this one")
+        print("agrees at one level and differs at another.")
+
+    return 1 if (b1 or b2 or b3) else 0
 
 
 if __name__ == "__main__":

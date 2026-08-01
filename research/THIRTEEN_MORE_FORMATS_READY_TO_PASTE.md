@@ -119,8 +119,13 @@ than assumed.
 | | count | |
 |---|---|---|
 | validated against a third party | **5** | `uint4/8/16/32`, `mxfp8_e4m3` |
-| validated by construction | **4** | `bfloat24`, `bfloat32`, `pdp11_float`, `x87_48bit` |
-| unvalidated | **4** | `mxint8`, `tekum8`, `tekum16`, `tekum32` |
+| validated by construction | **5** | `bfloat24`, `bfloat32`, `pdp11_float`, `x87_48bit`, `mxint8` |
+| unvalidated | **3** | `tekum8`, `tekum16`, `tekum32` |
+
+`mxint8`'s **element** decode matches `int8` on all 256 codes, and `int8` is published.
+It is deliberately **not** counted as an alias: an MX block is one shared `e8m0` scale
+byte plus N elements, so formats whose elements decode alike are still different
+formats. It agrees at one level and differs at another.
 
 **And two of the thirteen are aliases, not new formats.** `bfloat32` decodes exactly as
 `binary32`, and `pdp11_float` exactly as `vax_f` — both of which are already in the 83.

@@ -4405,3 +4405,47 @@ and eleven are new formats rather than thirteen. Both corrections make the claim
 smaller and both make it checkable, which is the trade this campaign keeps making.
 """
 }
+
+// ---- Pass 128: the last one reachable without an external build ---------------
+
+result MXINT8_ELEMENT_DECODE_VALIDATES_AGAINST_INT8 {
+  measured "all 256 codes, 0 divergences, against int8 -- which is among the 83 published"
+  status VERIFIED_SW
+}
+
+finding BUT_IT_IS_NOT_A_THIRD_ALIAS {
+  severity LOW
+  detail """
+The temptation was to call this a third alias after bfloat32 and pdp11_float, since
+the element decode is identical on every code. The oracle module's own header rules
+that out:
+
+  "MX-блок = 1 shared scale-байт (e8m0, беззнаковый порядок с bias 127) + N элементов"
+
+An MX block is a shared e8m0 scale byte plus N elements. So two formats whose ELEMENTS
+decode alike are still different formats -- mxint8 agrees with int8 at the element
+level and differs at the block level, where bfloat32 and pdp11_float agree with their
+counterparts at every level.
+
+This is the distinction the t27-spec skill's "at which level does the property live?"
+section exists to force, and it is the first time in this campaign it has argued
+AGAINST a finding rather than for one.
+"""
+  resolved true
+}
+
+result WHERE_THE_THIRTEEN_STAND_NOW {
+  detail """
+  validated against a third party   5   uint4, uint8, uint16, uint32, mxfp8_e4m3
+  validated by construction         5   bfloat24, bfloat32, pdp11_float, x87_48bit,
+                                        mxint8 (element level)
+  unvalidated                       3   tekum8, tekum16, tekum32
+  aliases rather than new formats   2   bfloat32 = binary32, pdp11_float = vax_f
+
+Ten of thirteen validated without a single external dependency. The three that remain
+are the three that matter most for the papers -- tekum is the nearest competing format
+-- and they are the three that need an external build, which is the next pass's
+problem rather than this one's.
+"""
+  status VERIFIED_SW
+}
