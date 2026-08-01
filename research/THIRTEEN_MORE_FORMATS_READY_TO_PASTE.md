@@ -78,6 +78,23 @@ thirteen should not be counted alongside the 83 until they have been through the
 process. What is verifiable today is exactly this: the harness runs on them and
 produces a hashed, error-free pack.
 
+**Five of the thirteen now carry independent confirmation as well**
+(`research/crossval_unpublished.py`):
+
+| format | against | compared | divergences |
+|---|---|---|---|
+| `uint4` | `ml_dtypes.uint4` | 16 | **0** |
+| `uint8` | numpy `uint8` | 256 | **0** |
+| `uint16` | numpy `uint16` | 65,536 | **0** |
+| `uint32` | numpy `uint32` | 71 sampled | **0** |
+| `mxfp8_e4m3` | `ml_dtypes.float8_e4m3fn` | 256 | **0** |
+
+66,135 codes compared in total, none disagreeing. The remaining eight — `bfloat24`,
+`bfloat32`, `mxint8`, `pdp11_float`, `tekum8`, `tekum16`, `tekum32`, `x87_48bit` — have
+no third-party implementation available here and stay unvalidated. Naming which is
+which is the point: *"five cross-validated, eight unvalidated"* is a claim a referee can
+check, where *"thirteen more formats"* is not.
+
 ---
 
 ## Provenance

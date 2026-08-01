@@ -4234,3 +4234,59 @@ The single real defect was the row I wrote in pass 123, and that is fixed.
 """
   status VERIFIED_SW
 }
+
+// ---- Pass 125: five of the thirteen now carry independent confirmation --------
+
+result CROSS_VALIDATING_THE_UNPUBLISHED_ORACLES {
+  measured """
+research/crossval_unpublished.py, against implementations that exist in this
+environment:
+
+  uint8        numpy uint8                     256 codes    0 divergences
+  uint16       numpy uint16                 65,536         0
+  uint32       numpy uint32                     71 sampled 0
+  mxfp8_e4m3   ml_dtypes.float8_e4m3fn         256          0
+  ------------------------------------------------------------------
+  and uint4 was already covered by crossval_ml_dtypes.py (16 codes, 0)
+
+  66,135 codes compared, none disagreeing
+
+mxfp8_e4m3 is the interesting one: OCP's MX element format and ml_dtypes'
+float8_e4m3fn are not guaranteed to agree on the special values, and the P3109
+comparison showed what a convention difference looks like. Here they agree on all 256
+codes including both NaN encodings.
+"""
+  status VERIFIED_SW
+}
+
+result THE_BOUND_IS_NOW_NAMED_RATHER_THAN_BLANKET {
+  detail """
+Pass 122 wrote "thirteen working oracles, none reviewed". It is now "five
+cross-validated, eight unvalidated", and the eight are named: bfloat24, bfloat32,
+mxint8, pdp11_float, tekum8, tekum16, tekum32, x87_48bit. No third-party
+implementation for any of them exists in this environment.
+
+A referee can check "five cross-validated, eight unvalidated". "Thirteen more formats"
+is not a checkable claim, and the difference is the whole value of the pass.
+"""
+  status VERIFIED_SW
+}
+
+correction MY_TOOL_REPORTED_ITS_OWN_LIMITATION_FOR_THE_FOURTH_TIME {
+  detail """
+The first run showed mxfp8_e4m3 with 2 divergences, both at 0x7F and 0xFF, printed as
+"ours NaN  ml_dtypes nan". Reading the values rather than the report:
+
+  0x7F  type=Special  repr=NaN   and  (v != v) is False
+
+The oracles return a Special marker for NaN and Inf, not a float, so the standard
+NaN test `v != v` is False for them and my comparison called agreement a divergence.
+Both sides agree that 0x7F and 0xFF are NaN.
+
+Fixed to recognise the marker, and mxfp8_e4m3 is 256/256. That is the fourth
+consecutive pass in which a tool written to find defects reported one of its own
+first -- passes 122 through 125 -- and the fourth caught by the pass-119 rule, which
+says to read the hits before reporting them.
+"""
+  resolved true
+}
