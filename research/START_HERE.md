@@ -3,7 +3,7 @@
 This directory holds work on the two GoldenFloat preprints —
 [arXiv:2606.05017](https://arxiv.org/abs/2606.05017) and
 [arXiv:2606.09686](https://arxiv.org/abs/2606.09686). It has grown across many
-sessions and now holds about fifty documents. Most of them are working notes. **Seven
+sessions and now holds about fifty documents. Most of them are working notes. **Eight
 are meant for you**, and this page says which, in what order, and what each costs.
 
 ---
@@ -39,6 +39,10 @@ paragraph.
   how the suite was checked against being *uniformly* wrong: three structurally
   distinct oracles per operation, a negative control, and the reproduction showing why
   a 512/512 bit-exact hardware result bounded the vectors rather than the cell.
+- **[`THREE_MORE_RESULTS_READY_TO_PASTE.md`](THREE_MORE_RESULTS_READY_TO_PASTE.md)** —
+  the P3109 cross-walk (**one word** in Paper B's abstract, and the change *strengthens*
+  the claim), the three exactness techniques, and how vectors wider than a `double` are
+  published at all.
 
 ## If a claim is disputed
 

@@ -3671,3 +3671,58 @@ implausible.
 """
   resolved true
 }
+
+// ---- Pass 116: the last three section-5 results, written for print ------------
+
+result THE_P3109_CROSSWALK_IS_A_STRONGER_RESULT_THAN_THE_ABSTRACT_CLAIMS {
+  re_run """
+  research/p3109_bias_law.py    bias = 2^(e-1) at all 252 configurations
+                                119 signed, 133 unsigned, 0 different, 0 unreadable
+  research/crossval_p3109.py    258,524 finite codes differ, ratio 2, ONE distinct value
+"""
+  the_argument """
+Paper B's abstract says the cross-walk maps each pack to its CORRESPONDING configured
+format. It cannot: P3109 uses bias 2^(e-1) where IEEE and OCP use 2^(e-1) - 1, so every
+binaryKpP value is exactly twice its same-layout counterpart.
+
+That is not a caveat to bury. A decoder defect scatters; a constant offset against an
+independently generated standards-body table is two correct decoders reading two
+conventions. Across a quarter of a million codes with a single distinct ratio, the
+comparison CONFIRMS the decode law rather than qualifying it.
+
+Cost in the abstract: one word. "corresponding" -> "same-layout".
+"""
+  status VERIFIED_SW
+}
+
+result THREE_EXACTNESS_TECHNIQUES_AND_THE_BOUND_THAT_TRAVELS_WITH_THEM {
+  re_run """
+  research/verify_oracle_exactness.py   12 oracles, 19,110 values, all exact carriers,
+                                        all denominators admissible
+"""
+  detail """
+Exact rational arithmetic for the binary, decimal, integer and legacy families; the log
+domain where the format is logarithmic; and for the ternary family the algebraic ring
+Q[phi], closing on the same anchor phi^2 = phi + 1 from which the width law is derived.
+Most catalogues carry one technique.
+
+The bound must travel with the claim: `extended` reports two formats and zero values
+sampled, `gf_mx` none. Sampled, not exhaustive -- and the tool says so in the same line
+that reports the result.
+"""
+  status VERIFIED_SW
+}
+
+correction I_SENT_THE_READER_TO_A_FIELD_THAT_IS_NOT_HERE {
+  detail """
+The wide-format paragraph's provenance line said "inspect any value_encoding field in
+conformance/vectors". It is not there: value_encoding appears zero times in this
+repository, because conformance/ here holds the scripts and the packs live in t27.
+
+Checked before merging rather than after. In t27 the field appears in 22 files, so the
+claim holds and only the pointer was wrong. Third consecutive pass in which a sentence
+written confidently turned out to need checking -- and the third in which checking took
+less time than writing the sentence.
+"""
+  resolved true
+}

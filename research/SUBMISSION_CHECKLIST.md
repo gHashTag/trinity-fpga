@@ -286,6 +286,21 @@ each suite's own vectors gives **ADD 0, SUB 4**, matching the silicon exactly.
 
 ---
 
+## 5f. The three §5 items, now written as paragraphs
+
+§5 lists these as *"what the papers could claim and don't"*. They are now drafted, in
+**`THREE_MORE_RESULTS_READY_TO_PASTE.md`**, with every figure re-run rather than quoted.
+
+| result | figures | why it is worth the space |
+|---|---|---|
+| **P3109 maps layout, not values** | **252** configurations (119 signed, 133 unsigned); **258,524** finite codes differing by **one distinct ratio, exactly 2** | *A decoder defect scatters.* A constant offset against an independently generated standards-body table is two correct decoders reading two conventions — so this **confirms** the decode law rather than qualifying it |
+| **Three exactness techniques** | **12** oracles, **19,110** values, all exact carriers | most catalogues carry one; the third is the ring **ℚ[φ]**, closing on the papers' own anchor `φ² = φ + 1`. Sampled, not exhaustive — and the draft says so |
+| **Wide formats serialise as `A·2^B`** | `gf1024` carries a **632-bit** mantissa | a working answer to "how do you publish exact vectors wider than a `double`?" — no decimal literal parsed into a binary64 survives above ~53 bits |
+
+Item 1 costs **one word in Paper B's abstract**: *"corresponding"* → *"same-layout"*.
+
+---
+
 ## 6. The artefact itself has been repaired
 
 The papers point a reader at `github.com/gHashTag/t27`. Five defects that a reader
