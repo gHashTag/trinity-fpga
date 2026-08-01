@@ -2123,3 +2123,92 @@ the decidable class, so no oracle -- shared or independent -- can settle it to t
 last bit; the board and the reference disagree by 1 ULP and both are defensible.
 """
 }
+
+// ---- Pass 97: ADD gets the third oracle that MUL already had -----------------
+
+finding ADD_HAD_TWO_ORACLES_WHERE_MUL_HAD_THREE {
+  name     "the weaker of the two main operations was the one checked less"
+  severity MEDIUM
+
+  detail """
+formal/verify_mul_oracle.py runs three structurally distinct implementations against
+each other, exhaustive on GF6 and GF8, expressly to rule out bug-equals-bug before
+the SAT proof.
+
+ADD had two: rtl_adder_model, a bit-level transcription of gf_adder_param.v, checked
+against gf_ref.gf_add on samples of 8032 vectors. Never exhaustive, and never against
+a third formulation.
+
+Two oracles cannot separate "both correct" from "both wrong the same way" when one is
+a transcription of the artefact the other defines. Addition is also the operation the
+papers lean on hardest.
+"""
+  fix "research/verify_add_oracle.py -- a third oracle sharing no rounding code"
+  resolved true
+}
+
+result THE_THIRD_ORACLE_IS_INDEPENDENT_BY_CONSTRUCTION {
+  detail """
+nearest_representable builds the format's grid of representable magnitudes, bisects
+for the exact rational sum, and takes the nearer neighbour with ties to even code
+parity.
+
+It has no exponent extraction, no alignment shift, no sticky bit, no ilog2, no
+carry-out renormalisation -- none of the machinery O1 and O3 are built from. It reads
+the field law directly rather than calling gf_ref.decode, so a defect in decode cannot
+reach it either. It is round-to-nearest-even read literally instead of implemented.
+
+The one thing it cannot avoid sharing is the specification: signed-zero rules,
+Inf + (-Inf) = NaN, and the overflow threshold are the format's definition, not an
+implementation choice.
+"""
+  status VERIFIED_SW
+}
+
+result THREE_ORACLES_AGREE_ON_ADD {
+  measured """
+  gf6     4,096 pairs  EXHAUSTIVE                    0 divergences
+  gf8    65,536 pairs  EXHAUSTIVE                    0 divergences
+  gf12  300,400 pairs  sample + all boundary pairs   0 divergences
+  gf16  300,576 pairs  sample + all boundary pairs   0 divergences
+  gf20  300,400 pairs  sample + all boundary pairs   0 divergences
+  ---------------------------------------------------------------
+        971,008 pairs, three oracles, no disagreement
+"""
+  boundary_pairs_are_deliberate """
+Every pair drawn from the structural edges -- zero, both ends of the subnormal band,
+the normal boundary, the top finite, 1.0, and for gf16 Inf and NaN -- in both signs.
+Pass 96 found gf16 SUB failing 4/512 on silicon precisely on Inf/NaN sentinels while
+MUL was clean, which makes a sample from the middle of the range the one sample
+guaranteed to miss the interesting part.
+"""
+  status VERIFIED_SW
+}
+
+result THE_HARNESS_PROVES_IT_WOULD_HAVE_NOTICED {
+  detail """
+Three oracles agreeing on the first run invites the question of whether the comparison
+discriminates at all. `--self-check` injects three plausible rounding faults into the
+new oracle; every one must be caught:
+
+  ties-away-from-zero   gf6:424  gf8:5328  gf16:263   caught
+  overflow-never-Inf    gf6:0    gf8:0     gf16:30    caught
+  subnormals-flushed    gf6:586  gf8:2614  gf16:83    caught
+
+The zeroes on gf6 and gf8 for the overflow fault are the correct reading rather than
+a miss: neither format carries an Inf, so suppressing Inf is a no-op there, and gf16
+is the only one of the three where the fault has anywhere to show.
+"""
+  status VERIFIED_SW
+}
+
+conclusion WHAT_THIS_DOES_AND_DOES_NOT_STRENGTHEN {
+  precise """
+Both main operations now have an independent second formulation of the definition,
+which is what pass 96 found ADD lacking.
+
+It remains a software result. The board still compares against gf_ref on the host, so
+this strengthens confidence in the definition, not in the silicon claim. Those are the
+two halves that pass 96 established must be stated separately.
+"""
+}

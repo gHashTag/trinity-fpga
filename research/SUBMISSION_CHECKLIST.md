@@ -145,13 +145,21 @@ Nothing in the repository overstates this — `gf_ref`'s own docstring says it i
 software oracle and that the compute-hardware checkmark closes only on the board. The
 risk is in the paper's summary sentence, not in the artefact.
 
-**MUL is stronger and may be claimed as such.** `formal/verify_mul_oracle.py` runs
+**Both main operations do have an independent second formulation, and that may be claimed.** `formal/verify_mul_oracle.py` runs
 three structurally distinct implementations against each other — the RTL port, an
 exact-integer-product-then-single-RNE oracle embedded in the formal property file, and
 the `Fraction` golden — expressly to rule out bug-equals-bug before the SAT proof.
 Re-run independently: **1,269,632 pairs, GF6 and GF8 exhaustive, zero disagreement.**
-For MUL the definition does have independent support — from a second software
-formulation, not from the board.
+ADD now has the same, added in pass 97: `research/verify_add_oracle.py` puts a
+third oracle beside the RTL port and the `Fraction` golden — one that bisects the
+format's grid of representable values and shares no rounding code with either, so
+it has no exponent extraction, no alignment shift and no sticky bit to inherit a
+fault from. **971,008 pairs, GF6 and GF8 exhaustive, every structural-boundary
+pair including Inf and NaN, zero disagreement** — and `--self-check` injects three
+rounding faults to demonstrate the comparison would have caught them.
+
+For both operations the support is from a second *software* formulation, not from
+the board. That is the distinction to keep in the sentence.
 
 ---
 
