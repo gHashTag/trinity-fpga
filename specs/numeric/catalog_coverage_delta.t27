@@ -3611,3 +3611,63 @@ against being uniformly wrong, which is the half a referee cares about most.
 """
   status VERIFIED_SW
 }
+
+// ---- Pass 115: one way in, and two counts that had drifted --------------------
+
+result THE_DIRECTORY_NOW_HAS_AN_ENTRY_POINT {
+  detail """
+research/ holds 49 documents and 49 scripts. Seven of the documents are for the
+author; the rest are working notes from earlier sessions and other lines of work.
+Nothing said which was which.
+
+research/START_HERE.md routes by intent rather than by filename: ten minutes, a
+replacement round, strengthening rather than correcting, or disputing a claim. Every
+link resolves.
+
+It also says plainly what the other forty documents are -- earlier sessions, currency
+unchecked, nothing depends on them -- and gives two ways to tell: a checklist line
+pointing at a file means section 7 records when it was last verified, and
+`git log -1 --format=%ad` gives the rest.
+"""
+  status VERIFIED_SW
+}
+
+correction I_WROTE_A_BIBLIOGRAPHY_COUNT_FROM_MEMORY_AGAIN {
+  detail """
+The entry page said "27 reference defects". The checklist and BIBLIOGRAPHY_FIXES.md
+both say 20 -- 8 in Paper A and 12 in Paper B. 27 was the count from a much earlier
+summary that spanned three documents including the Russian manuscript.
+
+Caught before merging by checking the file rather than trusting the sentence. This is
+the second consecutive pass where a number written from recollection turned out to be
+the wrong one; pass 112 caught the same habit with the takum and numpy figures.
+"""
+  resolved true
+}
+
+correction THE_REPRODUCTION_GUIDE_UNDERCOUNTED_ITS_OWN_SCOPE {
+  detail """
+research/README.md opened with "Measured by AST across all 15 scripts". There are 49.
+The directory grew across many passes and the count did not, which is precisely the
+staleness this campaign keeps finding in other people's files.
+
+Re-measured, and the conclusion survives unchanged -- which is the interesting part:
+
+  49 scripts
+    40  Python standard library only
+     8  plus an in-tree module (gf_ref, tekum_ref, verify_adder_e24,
+        bibliography_defects)
+     1  needing a third-party package: crossval_ml_dtypes.py -> ml_dtypes, numpy
+
+So "the third-party surface is one script" was true when written and is still true at
+three times the scope. The table now says 49 and records that it said 15 until today.
+
+The measurement needed two corrections of its own before it could be trusted. This
+environment is Python 3.9, where sys.stdlib_module_names does not exist, and the
+fallback list I wrote first omitted __future__, html and unicodedata -- which made 46
+of 49 scripts look like they needed third-party packages. A tool that reports 46 where
+the answer is 1 is not a small error, and it was caught only by the result being
+implausible.
+"""
+  resolved true
+}

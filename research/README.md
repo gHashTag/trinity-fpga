@@ -12,14 +12,15 @@ in the environment that produced it is weaker than one that says what it require
 
 ## Dependencies
 
-Measured by AST across all 15 scripts, so lazy imports inside functions are
-included:
+Measured by AST across **all 49 scripts** in this directory, so lazy imports inside
+functions are included. (This table said "15 scripts" until 2026-08-02; the directory
+grew and the count did not. The conclusion did not change.)
 
-| script | needs |
+| scripts | need |
 |---|---|
 | `crossval_ml_dtypes.py` | `ml_dtypes==0.5.4`, `numpy` |
-| `format_benchmark.py`, `head_to_head.py` | `conformance/gf_ref.py`, `conformance/tekum_ref.py` (in-tree) |
-| **the other 12** | **Python standard library only** |
+| 8 others | an in-tree module — `conformance/gf_ref.py`, `conformance/tekum_ref.py`, `conformance/verify_adder_e24.py`, or `research/bibliography_defects.py` |
+| **the remaining 40** | **Python standard library only** |
 
 So the third-party surface is one script. For that one:
 
