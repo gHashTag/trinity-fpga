@@ -3902,3 +3902,64 @@ level does the property live?", which made the second of them read as belonging 
 the new material. Moved to a clean boundary before the merge section.
 """
 }
+
+// ---- Pass 120: applying the pass-119 rule to my own tools ---------------------
+
+finding FOUR_TOOLS_REPORTED_A_ZERO_FROM_AN_EMPTY_SCAN {
+  name     "the corollary, found in my own toolset"
+  severity MEDIUM
+
+  detail """
+The rule recorded in pass 119 has a corollary: a form-based scan that finds nothing
+has established nothing. Nineteen tools in research/ take their inputs from argv.
+Running each with none:
+
+  SILENT ZERO -- scanned nothing, exited 0, printed a zero      4
+  refused or errored, which is correct                         11
+  produced output without arguments                             4
+
+The four printed lines like "works cited by 2+ documents in IDENTICAL form: 0" and
+"documents scanned: 0" and returned success. From a log, that is indistinguishable
+from a clean result on a real corpus.
+
+  check_agreed_refs.py
+  compare_shared_numbers.py
+  compare_three_bibliographies.py
+  find_duplicated_facts.py
+"""
+  fix """
+All four now refuse: they print what they read, the usage line, and "Exiting 2 rather
+than reporting a zero from an empty scan", then exit 2. Verified to still run normally
+when given files.
+
+Three more -- audit_tex_refs.py, check_bibitems_latex.py, find_ru_only_content.py --
+were already refusing, but by way of an IndexError traceback. They now say what they
+need instead. Correct behaviour with an unreadable explanation is still worth fixing.
+"""
+  resolved true
+}
+
+correction MY_OWN_MEASUREMENT_MISREAD_AN_EXIT_CODE {
+  detail """
+A first sweep reported find_ru_only_content.py as "crashes but exits 0", which would
+have been the worst case in the set. It exits 1. The loop I wrote piped the script
+into `head`, so `$?` carried head's status rather than the script's.
+
+Caught by re-checking the one result that seemed too bad to be true. The rule written
+in pass 119 says to read the first hits before reporting them; this is the same rule
+applied to a measurement rather than to a scan.
+"""
+  resolved true
+}
+
+note WHAT_THIS_PASS_IS_AND_IS_NOT {
+  detail """
+It is not a finding about the papers or the corpus. It is the author of a rule being
+its first user, on his own tools, one pass after writing it -- and finding four
+instances there.
+
+The 11 tools that refuse correctly did so because they were written to; the four that
+did not were written earlier in the campaign, before the corollary was articulated.
+That ordering is the honest version of the story.
+"""
+}

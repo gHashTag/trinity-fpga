@@ -26,7 +26,25 @@ import unicodedata
 SPECIAL = "&%#_$~^"
 
 
+def _require_inputs(argv, what):
+    """Refuse to report a result after scanning nothing.
+
+    A form-based scan that finds nothing has established nothing (skill t27-spec).
+    Run with no arguments, an argv-driven tool scans no files -- and a "0" printed
+    from that is indistinguishable from a clean result. So say so and exit 2.
+    """
+    paths = [a for a in argv[1:] if not a.startswith("-")]
+    if not paths:
+        import sys as _s
+        print(f"nothing to scan: this tool reads {what} named on the command line.")
+        print(f"  usage: python3 {argv[0]} <file> [file ...]")
+        print("Exiting 2 rather than reporting a zero from an empty scan.")
+        raise SystemExit(2)
+    return paths
+
+
 def main() -> int:
+    _require_inputs(sys.argv, 'a .tex bibliography')
     path = sys.argv[1]
     lines = open(path, encoding="utf-8").read().splitlines()
 
