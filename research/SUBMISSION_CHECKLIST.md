@@ -264,6 +264,28 @@ it first is both more accurate and more persuasive than being corrected.
 
 ---
 
+## 5e. A section neither paper has: how the suite was verified
+
+Both preprints describe **what** the corpus contains. Neither describes **how it was
+checked against the possibility of being uniformly wrong** — which is the half a
+referee will care about most, and it is already done.
+
+| operation | third oracle, sharing no code with the other two | result |
+|---|---|---|
+| **MUL** | exact integer product, single RNE | **1,269,632 pairs, 0 divergences** |
+| **ADD** | nearest-representable by bisection over the format's grid | **971,216 pairs, 0 divergences** |
+
+GF6 and GF8 exhaustive in both. And the harness proves it discriminates: four faults
+injected into the third oracle, each required to be caught — three plausible rounding
+errors and **one that actually reached silicon** in this project's own adder.
+
+**Ready-to-paste text is in `VERIFICATION_METHOD_READY_TO_PASTE.md`**, including §3 —
+the reproduction showing why gf16 ADD reported 512/512 on a defective cell while gf16
+SUB, the same cell through a sign flip, reported 508/512. Replaying the defect over
+each suite's own vectors gives **ADD 0, SUB 4**, matching the silicon exactly.
+
+---
+
 ## 6. The artefact itself has been repaired
 
 The papers point a reader at `github.com/gHashTag/t27`. Five defects that a reader
@@ -299,12 +321,14 @@ plainly what it could not reach.
 | commutativity and the arithmetic laws | §5 | **8,865** ordered pairs, **0** violations |
 | every file this checklist cites | throughout | **19 of 19** resolve — 13 here, 4 in the papers' own repositories as §0 says, 2 in `t27` |
 
-**Could not be re-verified, and why:**
+**Could not be re-verified, and why** (one of the two was closed the same day):
 
-- **ml_dtypes cross-validation** (§4, *"66,224 codes, 0 divergences"*) — the `ml_dtypes`
-  module is not installed in this environment. The claim is not withdrawn; it is
-  simply unconfirmed as of today. `python3 -m pip install 'ml_dtypes==0.5.4' numpy`
-  then `python3 research/crossval_ml_dtypes.py` settles it in a minute.
+- ~~**ml_dtypes cross-validation**~~ — **settled the same day.** `ml_dtypes 0.5.4` was
+  installed and `research/crossval_ml_dtypes.py` re-run: **66,224 codes compared, 0
+  divergences**, across `bfloat16`, `float8_e4m3fn`, `float8_e5m2`, `float4_e2m1fn`,
+  `float6_e2m3fn`, `float6_e3m2fn`, `int4` and `uint4`. The run also reports **14
+  zero-sign codes the oracle's container cannot carry**, excluded explicitly rather
+  than silently — worth keeping in any sentence that quotes the figure.
 - **Everything in §1 that quotes the published papers** — abstracts, reference lists,
   the TTSKY26b clause. Verifying those needs the arXiv text, and the web-fetch tool has
   been unavailable across fourteen consecutive attempts (a fetch of `example.com` fails

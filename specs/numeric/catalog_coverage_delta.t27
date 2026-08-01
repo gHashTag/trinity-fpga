@@ -3560,3 +3560,54 @@ out of date is the wrong kind of irony.
 """
   resolved true
 }
+
+// ---- Pass 114: the gap closed, and a second section written for print ---------
+
+result THE_ONE_GAP_I_COULD_CLOSE_IS_CLOSED {
+  detail """
+Pass 113 left two claims unconfirmed. One depended on a broken tool and one on a
+missing module; only the second was mine to fix.
+
+ml_dtypes 0.5.4 installed, research/crossval_ml_dtypes.py re-run:
+
+  bfloat16   vs ml_dtypes.bfloat16         65,536 codes   AGREE
+  fp8_e4m3   vs float8_e4m3fn                 256          AGREE
+  fp8_e5m2   vs float8_e5m2                   256          AGREE
+  fp4_e2m1   vs float4_e2m1fn                  16          AGREE
+  fp6_e2m3   vs float6_e2m3fn                  64          AGREE
+  fp6_e3m2   vs float6_e3m2fn                  64          AGREE
+  int4       vs int4                           16          AGREE
+  uint4      vs uint4                          16          AGREE
+  ---------------------------------------------------------------
+  total 66,224 codes compared, 0 divergences
+
+The run also reports 14 zero-sign codes the oracle's container cannot carry, excluded
+explicitly rather than silently. Worth keeping beside the figure whenever it is quoted.
+"""
+  status VERIFIED_SW
+}
+
+result THE_VERIFICATION_METHOD_IS_NOW_WRITTEN_FOR_PRINT {
+  detail """
+research/VERIFICATION_METHOD_READY_TO_PASTE.md, with every number re-run today rather
+than quoted from this log:
+
+  MUL   three structurally distinct oracles   1,269,632 pairs   0 divergences
+  ADD   three structurally distinct oracles     971,216 pairs   0 divergences
+        GF6 and GF8 exhaustive in both
+
+  negative control   four injected faults, all caught, one of them the ordering defect
+                     that actually reached silicon (711f5d572)
+
+  vector blindness   replaying that defect over each suite's own vectors gives
+                     ADD 0 failures and SUB 4, reproducing the silicon's 512/512 and
+                     508/512 with no board
+
+  and the sentence not to write: software and hardware are not two witnesses, because
+  the host takes its expected values from the same gf_ref the software proofs use
+
+Both preprints describe what the corpus contains. Neither describes how it was checked
+against being uniformly wrong, which is the half a referee cares about most.
+"""
+  status VERIFIED_SW
+}
