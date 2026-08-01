@@ -66,13 +66,21 @@ usual way of publishing conformance vectors — a decimal literal a reader parse
 > form `A·2^B`, with an explicit `value_encoding` field naming the convention. This
 > keeps every published value exact and machine-checkable at widths where a decimal
 > literal parsed into a binary64 would already have lost the value — `gf1024` carries a
-> 632-bit mantissa. We are not aware of another conformance corpus that states an
-> encoding convention for values it cannot represent in a host float.
+> 632-bit mantissa.
 
-That last sentence is worth checking before printing. It is a claim about the
-literature, and the literature scan behind it is in
-`LITERATURE_SCAN_2024_2026.md`; soften it to *"we did not find another"* if the check
-has not been repeated recently.
+**A comparative sentence was here and has been removed.** The draft claimed *"we are
+not aware of another conformance corpus that states an encoding convention for values
+it cannot represent in a host float"* and cited `LITERATURE_SCAN_2024_2026.md` as its
+backing. That scan does not support it: its six axes are number formats, FPGA
+toolchains, FPGA floating-point arithmetic, VSA/HDC hardware, LLM-on-FPGA and DePIN,
+and it contains **zero** occurrences of *"serialisation"*, *"test suite"*,
+*"TestFloat"* or *"dyadic"*, and no mention of a competing conformance corpus at all.
+The question was never asked, so the answer was never evidence.
+
+If you want the comparative claim, it needs its own survey — the obvious comparators
+being Berkeley TestFloat, the IEEE 754 conformance literature, and whatever the posit
+and takum communities publish as vectors. Until then the paragraph above stands on its
+own, describing what the corpus does without asserting that nobody else does it.
 
 ---
 

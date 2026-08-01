@@ -3726,3 +3726,69 @@ less time than writing the sentence.
 """
   resolved true
 }
+
+// ---- Pass 117: the one claim I marked as unchecked, checked ------------------
+
+finding THE_LITERATURE_CLAIM_WAS_NOT_SUPPORTED_BY_THE_SCAN_IT_CITED {
+  name     "the question was never asked, so the answer was never evidence"
+  severity MEDIUM
+
+  what_i_wrote """
+In pass 116's ready-to-paste text: "We are not aware of another conformance corpus
+that states an encoding convention for values it cannot represent in a host float",
+citing research/LITERATURE_SCAN_2024_2026.md.
+
+I flagged it myself as needing a check before printing. This pass did the check.
+"""
+  what_the_scan_actually_covers """
+Six axes, stated in its own header: number formats, open-source FPGA toolchains, FPGA
+floating-point arithmetic, VSA/HDC hardware, LLM-on-FPGA, DePIN. Method: arXiv plus
+F4PGA/openXC7 primary sources.
+
+Occurrences in it:
+
+  "serialisation"   0
+  "test suite"      0
+  "TestFloat"       0
+  "dyadic"          0
+  a competing conformance corpus, anywhere   0
+
+So it does not support the claim, and could not: it never examined conformance-suite
+serialisation at all. A survey's silence on a question it did not ask is not evidence
+of a negative.
+"""
+  fix """
+The comparative sentence is removed. The paragraph now describes what the corpus does
+without asserting that nobody else does it, and says in place of the removed sentence
+what a real survey would need to cover -- Berkeley TestFloat, the IEEE 754 conformance
+literature, and whatever the posit and takum communities publish as vectors.
+"""
+  resolved true
+}
+
+result THE_REST_OF_THE_AUTHOR_FACING_SET_IS_CLEAN {
+  detail """
+Swept all eight author-facing documents for the same shape -- "no other", "nobody
+else", "first to", "the only ... corpus", "unlike any", "we did not find". Two hits,
+both inside this pass's own explanation of the removal.
+
+So the single unsupported comparative claim in the whole set was the one I had already
+marked, and it is gone.
+
+RELATED_WORK_READY_TO_PASTE.md is the file where such claims would most naturally
+appear, and it holds none. It states its own basis instead: four comparables, "each
+measured from the artefact rather than from its own description", twelve numeric
+figures, and a "what this does and does not claim" paragraph.
+"""
+  status VERIFIED_SW
+}
+
+note WHY_THIS_MATTERED_MORE_THAN_ITS_SIZE {
+  detail """
+One sentence in one paragraph. But it is the exact defect class this campaign has been
+reporting in the papers themselves: a claim whose cited support does not address it.
+Leaving it in a document written to fix such defects would have been the worst
+available outcome, and marking it "check before printing" and moving on would have
+left it to whoever printed it.
+"""
+}
