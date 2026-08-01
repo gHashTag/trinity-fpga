@@ -409,6 +409,41 @@ unaffected.
 
 ---
 
+## 5i. `abs_error = 0` measures a round trip, not exactness — and for logarithmic formats those differ
+
+Checked after the takum finding, and the answer is reassuring in one direction and
+worth a sentence in the other.
+
+**`posit_ref.py` has no problem to solve**: `value = (−1)^S · useed^k · 2^e · (1+f)` is
+rational by construction. **`lns_ref.py` solves it honestly and explicitly** — its
+header says LNS values are *"generally IRRATIONAL… the same fundamental situation as
+takum"*, so it works in the log domain exactly and returns `Special('+2^(1/8)')` rather
+than a fabricated rational. **`takum_ref.py` is the outlier**, not the pattern, and the
+correct pattern already sits in the same directory.
+
+**But the published `lns8` pack reports `abs_error: 0.0` on all 256 vectors** and
+carries `bitexact: True`. Reading one entry explains it:
+
+```
+code_0x01   oracle says  +2^(1/8)
+            input_f64    1.0905077326652577
+            decoded_f64  1.0905077326652577
+            abs_error    0.0
+```
+
+`abs_error` is `|decoded_f64 − input_f64|` and **both sides are the same float64**. It
+correctly reports a round trip and cannot report the distance from the exact value,
+because a float64 cannot hold `2^(1/8)` at all.
+
+**Nothing here is wrong as defined.** The risk is the reading: `bitexact: True` with
+`abs_error: 0.0` invites *"the decoded value is exact"*, which for a logarithmic format
+it cannot be. One line in `format_notes` fixes it — the existing note says *"1 sign + 7
+fixed-point base-2 log bits"* and could add that the reference value is itself the
+nearest float64, so `abs_error` bounds the round trip rather than the format. It
+applies to `lns8/16/32/64`.
+
+---
+
 ## 6. The artefact itself has been repaired
 
 The papers point a reader at `github.com/gHashTag/t27`. Five defects that a reader

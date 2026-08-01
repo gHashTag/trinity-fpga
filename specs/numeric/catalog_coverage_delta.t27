@@ -4709,3 +4709,54 @@ binades -- so the finding survives the correction to the tool that found it.
 """
   resolved true
 }
+
+// ---- Pass 133: takum is the outlier, and one metric measures a round trip -----
+
+result THE_LINEARISATION_IS_NOT_SYSTEMATIC {
+  detail """
+Asked whether lns and posit share takum's problem. They do not, and the contrast is
+instructive.
+
+  posit_ref.py    value = (-1)^S * useed^k * 2^e * (1+f) -- rational by construction,
+                  exact Fraction arithmetic, nothing to work around
+
+  lns_ref.py      states the problem outright: "value = (-1)^sign * 2^L в общем случае
+                  ИРРАЦИОНАЛЬНО... Это та же фундаментальная ситуация, что и у takum".
+                  So it works in the LOG DOMAIN exactly: decode_log returns the exact
+                  log2 as a Fraction, and decode returns Special('+2^(1/8)') rather
+                  than a fabricated rational. Confirmed by running it: lns8 gives 31
+                  exact Fractions -- the powers of two -- and Special markers for the
+                  rest.
+
+  takum_ref.py    linearises instead
+
+takum is the outlier rather than the pattern, and the honest pattern already sits in
+the same directory. That strengthens pass 132's recommendation: the fix is not novel
+work, it is following lns_ref.py.
+"""
+  status VERIFIED_SW
+}
+
+finding ABS_ERROR_ZERO_MEANS_ROUND_TRIP_NOT_EXACTNESS {
+  severity MEDIUM
+  detail """
+The published lns8 pack reports abs_error 0.0 on all 256 vectors and carries
+bitexact true. One entry explains it:
+
+  code_0x01   oracle says  +2^(1/8)
+              input_f64    1.0905077326652577
+              decoded_f64  1.0905077326652577
+              abs_error    0.0
+
+abs_error is |decoded_f64 - input_f64| and both sides are the same float64. It
+correctly reports a round trip and CANNOT report distance from the exact value,
+because no float64 holds 2^(1/8).
+
+Nothing is wrong as defined. The risk is the reading: bitexact with abs_error 0
+invites "the decoded value is exact", which for a logarithmic format it cannot be.
+The existing format_notes says "1 sign + 7 fixed-point base-2 log bits" and one added
+clause -- that the reference value is itself the nearest float64 -- would settle it.
+Applies to lns8, lns16, lns32, lns64.
+"""
+  resolved false
+}
