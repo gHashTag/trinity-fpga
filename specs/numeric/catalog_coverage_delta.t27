@@ -4290,3 +4290,62 @@ says to read the hits before reporting them.
 """
   resolved true
 }
+
+// ---- Pass 126: two more validated, and one of them may be a duplicate ---------
+
+result VALIDATION_BY_CONSTRUCTION_WHERE_NO_THIRD_PARTY_EXISTS {
+  detail """
+Two of the eight unvalidated oracles do not need a third party, because their layout
+makes them derivable from a format already validated. Read from the oracles' own
+fields rather than assumed:
+
+  bfloat16   1 + 8E +  7M   bias 127
+  bfloat24   1 + 8E + 15M   bias 127
+  bfloat32   1 + 8E + 23M   bias 127
+  binary32   1 + 8E + 23M   bias 127
+
+bfloat32 and binary32 agree on every field, the bias, and every special code.
+bfloat24 is that exponent field over a 15-bit mantissa -- binary32 with the low eight
+mantissa bits removed.
+"""
+  measured """
+  bfloat32 == binary32                      100,014 codes    0 divergences
+  bfloat24 == binary32 truncated to 24 bits 100,014 codes    0 divergences
+
+The second uses numpy's float32 on the widened word, so its reference is independent
+of this tree rather than another oracle in it. Both sets include every structural
+boundary -- zero, both signs, the exponent edges, both NaN payload ends.
+"""
+  status VERIFIED_SW
+}
+
+finding BFLOAT32_MAY_BE_A_DUPLICATE_OF_BINARY32 {
+  severity MEDIUM
+  detail """
+If bfloat32 decodes every code exactly as binary32 does, and its fields, bias and
+special codes are identical, then publishing it as a separate format adds a name
+rather than a format.
+
+The catalogue is currently correct: binary32 is among the 83 published and bfloat32 is
+not. The question only arises on publishing the thirteen, and the answer is either a
+stated distinction -- different provenance, different intended use -- or publishing
+twelve.
+
+Raised rather than settled, because whether two names for one layout are one format is
+the author's call and not a measurement.
+"""
+  resolved false
+}
+
+result THE_UNVALIDATED_SET_IS_NOW_SIX {
+  detail """
+  cross-validated against a third party   5   uint4, uint8, uint16, uint32, mxfp8_e4m3
+  validated by construction               2   bfloat24, bfloat32
+  unvalidated                             6   mxint8, pdp11_float, tekum8, tekum16,
+                                              tekum32, x87_48bit
+
+"Seven validated, six unvalidated, one a possible duplicate" is checkable. "Thirteen
+more formats" is not, and the whole point of passes 125 and 126 is the difference.
+"""
+  status VERIFIED_SW
+}

@@ -89,11 +89,27 @@ produces a hashed, error-free pack.
 | `uint32` | numpy `uint32` | 71 sampled | **0** |
 | `mxfp8_e4m3` | `ml_dtypes.float8_e4m3fn` | 256 | **0** |
 
-66,135 codes compared in total, none disagreeing. The remaining eight — `bfloat24`,
-`bfloat32`, `mxint8`, `pdp11_float`, `tekum8`, `tekum16`, `tekum32`, `x87_48bit` — have
-no third-party implementation available here and stay unvalidated. Naming which is
-which is the point: *"five cross-validated, eight unvalidated"* is a claim a referee can
-check, where *"thirteen more formats"* is not.
+66,135 codes compared in total, none disagreeing.
+
+**Two more are validated by construction rather than by a third party**
+(`research/verify_bfloat_by_construction.py`). Reading the oracles' own fields,
+`bfloat32` is 1+8E+23M bias 127 — **identical to `binary32` in every field, bias and
+special code** — and `bfloat24` is that exponent field over a 15-bit mantissa, which is
+`binary32` with the low eight mantissa bits removed. Both hold over **100,014 codes
+with 0 divergences**: `bfloat32` decodes exactly as `binary32`, which is one of the 83
+published packs and already cross-validated, so it inherits that; `bfloat24` matches
+numpy's `float32` on the widened word, an independent reference rather than another
+oracle in this tree.
+
+**A question worth settling before publishing.** If `bfloat32` is bit-identical to
+`binary32`, publishing it as a separate format duplicates one already in the catalogue.
+Either say what makes it distinct — a different provenance or intended use — or publish
+**twelve**, not thirteen.
+
+The remaining six — `mxint8`, `pdp11_float`, `tekum8`, `tekum16`, `tekum32`,
+`x87_48bit` — have no third-party implementation available here and stay unvalidated.
+Naming which is which is the point: *"seven validated, six unvalidated, one a possible
+duplicate"* is a claim a referee can check, where *"thirteen more formats"* is not.
 
 ---
 

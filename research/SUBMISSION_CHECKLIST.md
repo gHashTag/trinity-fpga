@@ -315,10 +315,16 @@ with Trinity's ternary thesis"*. Publishing bit-exact vectors for the nearest co
 format, from the same harness, disarms the obvious review question — *is this a
 catalogue or an advertisement?* — before it is asked.
 
-**Five of the thirteen are now cross-validated** — `uint4`, `uint8`, `uint16` and
-`uint32` against numpy and `ml_dtypes`, and `mxfp8_e4m3` against
-`ml_dtypes.float8_e4m3fn`: **66,135 codes compared, 0 divergences**. The other eight
-have no third-party implementation available here and stay unvalidated.
+**Seven of the thirteen are now validated.** Five against a third party — `uint4`,
+`uint8`, `uint16`, `uint32` and `mxfp8_e4m3`, 66,135 codes with 0 divergences — and two
+by construction: `bfloat32` is identical to `binary32` in every field and decodes every
+tested code alike, and `bfloat24` is `binary32` with the low eight mantissa bits
+removed, matching numpy's `float32` over 100,014 codes.
+
+**And one of those is a question rather than a gain.** If `bfloat32` is bit-identical
+to `binary32`, publishing it separately duplicates a format already in the catalogue —
+so either state what makes it distinct, or publish **twelve**. The remaining six
+(`mxint8`, `pdp11_float`, `tekum8/16/32`, `x87_48bit`) stay unvalidated.
 
 **The honest bound, which must travel with it:** generating is not publishing. Zero
 decode errors shows the oracle is self-consistent and terminates, not that its values
