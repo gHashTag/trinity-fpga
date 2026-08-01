@@ -53,7 +53,7 @@ module corona_compute_fp32_to_fp4_e2m1_ax7203 (
     reg [3:0] rv;
     always @(*) begin
         if(fn) rv={1'b0,{2{1'b1}},{0{1'b0}},1'b1};
-        else if(fi) rv={fp_sign,{2{1'b1}},{1{1'b0}}};
+        else if(fi) rv={fs,{2{1'b1}},{1{1'b0}}};
         else if(fz) rv={4{1'b0}};
         else rv={fs,fe[1:0],fm[22:22]};
     end

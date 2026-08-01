@@ -49,7 +49,7 @@ module corona_decode_lns32_ax7203 (
     assign led[1]=frame_valid;
     wire [31:0] result;
     wire        is_zero;
-    lns32_decode u_dec (.lns_in(code_r), .fp32_out(result), .is_zero(zero_flag));
+    lns32_decode u_dec (.lns_in(code_r), .fp32_out(result), .is_zero(is_zero));
     assign led[2] = |result;
     reg responding; reg [2:0] tx_idx; reg [7:0] tx_buf0,tx_buf1,tx_buf2,tx_buf3,tx_buf4;
     reg [8:0] tcnt; reg [3:0] tbi; reg [9:0] tsr;

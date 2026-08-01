@@ -53,7 +53,7 @@ module corona_compute_fp32_to_tf32_ax7203 (
     reg [18:0] rv;
     always @(*) begin
         if(fn) rv={1'b0,{8{1'b1}},{9{1'b0}},1'b1};
-        else if(fi) rv={fp_sign,{8{1'b1}},{10{1'b0}}};
+        else if(fi) rv={fs,{8{1'b1}},{10{1'b0}}};
         else if(fz) rv={19{1'b0}};
         else rv={fs,fe[7:0],fm[22:13]};
     end

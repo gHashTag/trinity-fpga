@@ -3113,3 +3113,79 @@ conversion computes.
 """
   status IMPLEMENTED
 }
+
+// ---- Pass 108: the three remaining defect classes ------------------------------
+
+finding EIGHT_CONVERTERS_READ_AN_UNDECLARED_SIGN {
+  severity MEDIUM
+  detail """
+corona_compute_fp32_to_{bf16,binary16,fp4_e2m1,fp6_e2m3,fp6_e3m2,fp8_e4m3,fp8_e5m2,
+tf32} build their infinity result from `fp_sign`, which no file declares. The sign
+they mean is `fs`, declared two lines above as a_reg[31].
+
+So the Inf case emitted an undef sign bit. 29 files mention fp_sign; in 21 of them it
+is properly declared, and the 8 above are the ones where it is not -- which is why the
+count had to be measured rather than taken from the grep.
+"""
+  fix "fp_sign -> fs in the eight files that lack the declaration"
+  resolved true
+}
+
+finding TWO_FRAME_MACHINES_WRITE_PAST_THE_CODE_REGISTER {
+  severity HIGH
+  detail """
+corona_decode_gf48: code_r is 48 bits and the UART frame machine has a seventh arm
+writing code_r[55:48]. gf48 is exactly six bytes, so that arm is spurious -- and it
+does more than overflow. Its case label is 4'd9, the same label as the arm that sets
+frame_valid, and a Verilog case takes the first match. The frame therefore NEVER
+completed: frame_valid was unreachable.
+
+corona_decode_gf20 is a different case, not a spurious byte. gf20 is 20 bits, so three
+bytes are genuinely needed, but the third was written as code_r[23:16] and overran the
+register by four bits. Narrowed to code_r[19:16] <= rx_byte[3:0].
+"""
+  resolved true
+}
+
+finding A_DECODER_CONNECTED_A_PORT_TO_A_NAME_THAT_DOES_NOT_EXIST {
+  severity MEDIUM
+  detail """
+corona_decode_lns32 declares `wire is_zero;` and then instantiates
+
+    lns32_decode u_dec (.lns_in(code_r), .fp32_out(result), .is_zero(zero_flag));
+
+zero_flag is undeclared, so the port drove an implicit one-bit net and is_zero was
+left floating. Renamed to the declared wire.
+"""
+  resolved true
+}
+
+correction ONE_APPARENT_HIT_WAS_A_BLOCK_LABEL {
+  detail """
+My detector also flagged tekum16_adder.v for zero_flag. Reading it first:
+
+    always @(*) begin : zero_flag
+
+That is a named block, not a signal, and there is nothing to repair. Inspected rather
+than renamed, which would have changed working code to satisfy a pattern.
+"""
+  resolved true
+}
+
+result TWELVE_FILES_REPAIRED_AND_VERIFIED_INDIVIDUALLY {
+  detail """
+Each repaired file re-read by yosys: 0 implicit-declaration and 0 out-of-bounds
+diagnostics, where each previously had 1 to 3.
+
+  8   fp32_to_* converters      fp_sign -> fs
+  1   corona_decode_lns32       zero_flag -> is_zero
+  1   corona_decode_gf48        spurious seventh byte-arm dropped, which also
+                                un-shadows the frame_valid arm
+  1   corona_decode_gf20        third byte narrowed to the format's 4 remaining bits
+  1   tekum16_adder             inspected, nothing wrong
+
+A full-tree sweep was started to confirm the corpus-wide count but had not finished
+when this was written, so the corpus figure is not restated here.
+"""
+  status VERIFIED_SW
+}

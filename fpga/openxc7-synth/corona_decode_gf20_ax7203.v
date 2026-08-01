@@ -40,7 +40,7 @@ module corona_decode_gf20_ax7203 (
                 3'd2: begin fmt_r<=rx_byte;frm<=3; end
                 3'd3: begin code_r[7:0]<=rx_byte;frm<=4; end
                 3'd4: begin code_r[15:8]<=rx_byte;frm<=5; end
-                3'd5: begin code_r[23:16]<=rx_byte;frame_valid<=1;frm<=0; end
+                3'd5: begin code_r[19:16]<=rx_byte[3:0];frame_valid<=1;frm<=0; end   // gf20 is 20 bits: the third byte carries only 4 of them
                 
                 
             endcase end

@@ -45,7 +45,6 @@ module corona_decode_gf48_ax7203 (
                 4'd6:  begin code_r[31:24]<=rx_byte;frm<=7; end
                 4'd7:  begin code_r[39:32]<=rx_byte;frm<=8; end
                 4'd8:  begin code_r[47:40]<=rx_byte;frm<=9; end
-                4'd9:  begin code_r[55:48]<=rx_byte;frm<=10; end
                                                                                                                                                                 4'd9: begin frame_valid<=1;frm<=0; end
                 default: frm<=0;
             endcase end
