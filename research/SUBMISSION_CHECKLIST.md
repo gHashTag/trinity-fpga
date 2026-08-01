@@ -301,6 +301,33 @@ Item 1 costs **one word in Paper B's abstract**: *"corresponding"* → *"same-la
 
 ---
 
+## 5g. Thirteen formats the harness already covers, and three of them are the competitor
+
+Not a correction — **capacity neither paper mentions.** `gen_conformance_pack.py`
+carries **84** golden oracles; the catalogue publishes **83** packs. Comparing the sets
+leaves **thirteen formats with no published pack**, and every one generates a pack
+today with a SHA-256 and **zero decode errors**: 1,161 vectors in total. The machinery
+reaches **96** where the catalogue publishes 83.
+
+Three are **`tekum8`, `tekum16`, `tekum32`** — the format this project's own literature
+scan calls *"the single most important paper"* in the space, which *"collides head-on
+with Trinity's ternary thesis"*. Publishing bit-exact vectors for the nearest competing
+format, from the same harness, disarms the obvious review question — *is this a
+catalogue or an advertisement?* — before it is asked.
+
+**The honest bound, which must travel with it:** generating is not publishing. Zero
+decode errors shows the oracle is self-consistent and terminates, not that its values
+are right. The 83 went through review, third-party cross-validation where one exists,
+and hardware verification in 44 cases. These thirteen have had none of that, so the
+claim is *"working oracles, not yet reviewed packs"*.
+
+**Ready-to-paste text, with both the publish and the do-not-publish sentence, is in
+`THIRTEEN_MORE_FORMATS_READY_TO_PASTE.md`.** The second costs nothing: *"A further
+thirteen formats have working decode references in the repository but no published
+pack, pending review."*
+
+---
+
 ## 6. The artefact itself has been repaired
 
 The papers point a reader at `github.com/gHashTag/t27`. Five defects that a reader

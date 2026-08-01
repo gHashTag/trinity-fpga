@@ -4036,3 +4036,52 @@ took one command.
 """
   resolved true
 }
+
+// ---- Pass 122: the finding reaches the documents the author reads -------------
+
+result THE_THIRTEEN_ARE_NOW_WRITTEN_FOR_THE_AUTHOR {
+  detail """
+Pass 121 found them and left them in this log and a pull request. Neither is what the
+author reads.
+
+  research/THIRTEEN_MORE_FORMATS_READY_TO_PASTE.md   the table, why three of them
+                                                     matter more than the other ten,
+                                                     a paragraph if the packs are
+                                                     published and a sentence if they
+                                                     are not, and the bound
+  SUBMISSION_CHECKLIST.md 5g                         the decision, ranked with the rest
+  START_HERE.md                                      now routes to nine documents
+
+Re-verified before writing rather than quoted: 13 formats, 1,161 vectors, 0 decode
+errors, against a catalogue of 83 packs -- 75 bitexact and 8 structural.
+"""
+  status VERIFIED_SW
+}
+
+note THE_BOUND_THAT_TRAVELS_WITH_IT {
+  detail """
+Generating is not publishing, and the draft says so in its own section rather than in
+a footnote. A pack running with zero decode errors has shown that the oracle is
+self-consistent and terminates. It has not shown the values are right.
+
+The 83 published packs went through review, cross-validation against third-party
+implementations where one exists, and hardware verification in 44 cases. These
+thirteen have had none of that. So the claim is "working oracles, not yet reviewed
+packs", and they must not be counted alongside the 83 until they have been through the
+same process.
+
+Writing the flattering version and burying the bound would have been easy here, and it
+is the failure mode this whole campaign exists to catch in other people's documents.
+"""
+}
+
+open_question WHAT_PRODUCED_THE_OTHER_FOUR_PACKS {
+  detail """
+mxfp8, gf8_bfp, gf_lns_hybrid and per_channel_scale are published, bit-exact, and
+carry 776 vectors between them -- and gen_conformance_pack.py has no oracle for any of
+them. So the corpus has at least two generators, and the reproduction guide names one.
+
+That bears on reproducibility rather than on correctness, and it is not answered here.
+"""
+  resolved false
+}
