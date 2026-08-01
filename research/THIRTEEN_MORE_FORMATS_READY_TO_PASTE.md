@@ -90,5 +90,12 @@ python3 research/gen_conformance_pack.py tekum16        # generates one pack
 Compare against `conformance/vectors/INDEX_all_formats.json` in the `t27` repository —
 `total_formats: 83`, `total_packs: 83`, kinds `75 bitexact + 8 structural`. The twelve
 packs with no oracle in this generator are the eight structural ones, which carry no
-vectors by definition, plus `mxfp8`, `gf8_bfp`, `gf_lns_hybrid` and `per_channel_scale`,
-which are bit-exact and were produced by something else — worth tracing separately.
+vectors by definition, plus `mxfp8`, `gf8_bfp`, `gf_lns_hybrid` and `per_channel_scale`.
+
+Those four were traced: the index's `source` field names **`gen_all_formats.py`**,
+which produced **68 of the 83** published packs and lives in `t27` at
+`conformance/vectors/`. That is the corpus's primary generator.
+`gen_conformance_pack.py` — the tool above — produced **none** of the published packs
+and says so itself: *"The packs written here are candidates for review, not published
+artefacts… deliberately NOT written into gHashTag/t27."* The two are complementary, and
+a sentence claiming this tool regenerates the corpus would be wrong.

@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
 """Derive a t27 conformance pack from an existing golden oracle.
 
-Motivation (specs/numeric/catalog_coverage_delta.t27): twelve formats carry a
-golden decode oracle but have no published conformance pack. Because the oracle
+Motivation (specs/numeric/catalog_coverage_delta.t27): thirteen formats carry a
+golden decode oracle but have no published conformance pack. (This line said twelve
+until 2026-08-02; measured against t27's INDEX_all_formats.json the set is
+bfloat24, bfloat32, mxfp8_e4m3, mxint8, pdp11_float, tekum8, tekum16, tekum32,
+uint4, uint8, uint16, uint32 and x87_48bit -- 1,161 vectors, zero decode errors.) Because the oracle
 already exists, the pack is DERIVABLE rather than new work — this script performs
 that derivation.
 
