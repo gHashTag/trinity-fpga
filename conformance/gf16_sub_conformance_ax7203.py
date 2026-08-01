@@ -38,7 +38,10 @@ def self_test():
     # so it validates the sign-mask + format wiring without the 4B-pair blowup.
     # Plus corner no-crash + a spot-check.
     rnd = random.Random(42)
-    corners = [0x0000, 0x0001, 0x7C00, 0x7C01, 0xFC00, 0xFFFF, SIGN, 0x3C00, 0x4000]
+    # Same repair as run_hw's sample: these were binary16 constants in a gf16 test.
+    NAN_MAX = (GFMT.exp_max << GFMT.mant_bits) | GFMT.mant_max
+    corners = [0x0000, SIGN, 0x0001, GFMT.mant_max, GFMT.pos_inf, GFMT.neg_inf,
+               GFMT.quiet_nan, NAN_MAX, GFMT.bias << GFMT.mant_bits]
     bad = 0
     for a in corners:                       # corner no-crash
         for b in corners:
@@ -47,7 +50,14 @@ def self_test():
         a = rnd.randint(0, T - 1)
         # Skip NaN a: NaN + (-0) = canonical quiet-NaN (≠ a's payload) — correct
         # IEEE propagation, not a wiring bug. (GF16 is the only SUB width with NaN.)
-        is_nan = ((a & 0x7C00) == 0x7C00) and ((a & 0x03FF) != 0)
+        # Masks derived from GFMT. They were binary16's (0x7C00/0x03FF), which
+        # test bits 14:10 and a 10-bit mantissa -- gf16 is 1+6E+9M, so the correct
+        # masks are 0x7E00/0x01FF. The wrong ones missed no genuine NaN but
+        # over-skipped 1024 ordinary normals at exponent field 62-63, silently
+        # dropping the largest-magnitude band from the a-0==a identity check.
+        # Measured: a-0==a holds for all 1024, so this cost coverage, not a catch.
+        EXP_ALL_ONES = GFMT.exp_max << GFMT.mant_bits
+        is_nan = ((a & EXP_ALL_ONES) == EXP_ALL_ONES) and ((a & GFMT.mant_max) != 0)
         if not is_nan and golden_sub(a, 0) != a:
             bad += 1
     spot = golden_sub(0x3C00, 0x3C00)        # finite a: a - a -> +0 (1.0 - 1.0)

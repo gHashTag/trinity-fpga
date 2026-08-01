@@ -48,9 +48,65 @@ CONF = os.path.join(os.path.dirname(os.path.abspath(__file__)),
 # names whose right-hand side holds test vectors
 VECNAME = re.compile(
     r"^\s*(?:(CORNERS|SPECIALS|VECTORS|corners|specials|sample|cov|vecs|pool)"
-    r"\s*(?::[^=]+)?=|return\s+)(.*)$")
+    r"\s*(?::[^=]+)?=|return\s+|\w*codes\.add\(|for\s+[ab]\s+in\s*(?=\[))(.*)$")
+
+# Vectors that arrive from a published pack rather than being written in the
+# script. Not unparseable -- differently sourced, and worth its own category so
+# that "I could not read this" is not confused with "this reads its input".
+PACK = re.compile(r"""(?:test_vectors|pack\s*\[|json\.load|\.get\(["']vectors)""")
 HEX = re.compile(r"0[xX][0-9a-fA-F]+")
 SLICE = re.compile(r"for\s+b\s+in\s+(\w+)\s*\[\s*:\s*(\d+)\s*\]")
+
+
+EXPTEST = re.compile(r"\(\s*\w+\s*&\s*(0[xX][0-9a-fA-F]+)\s*\)\s*==\s*(0[xX][0-9a-fA-F]+)")
+MANTTEST = re.compile(r"\(\s*\w+\s*&\s*(0[xX][0-9a-fA-F]+)\s*\)\s*!=\s*0")
+
+
+def wrong_layout_masks(fmt, text: str):
+    """Lines that DECIDE NaN/Inf using a mask that is not this format's.
+
+    Narrow on purpose. A first, broader version flagged every appearance of a
+    binary16 or binary32 constant and produced 19 hits, nearly all correct code:
+    the decode suites emit IEEE binary32 by design, so 0x7F800000 belongs there,
+    and gf10's 0x3FF is a legitimate ten-bit width mask. Only a mask used to
+    classify the TARGET format's own codes can be wrong, so only those are read.
+    """
+    exp_mask = fmt.exp_max << fmt.mant_bits
+    out = []
+    for ln, line in enumerate(text.splitlines(), 1):
+        if line.lstrip().startswith("#") or not re.search(r"nan|inf", line, re.I):
+            continue
+        m = EXPTEST.search(line)
+        if not m:
+            continue
+        got = int(m.group(1), 16)
+        if got == int(m.group(2), 16) and got != exp_mask:
+            mm = MANTTEST.search(line)
+            out.append((ln, line.strip()[:88], got, exp_mask,
+                        int(mm.group(1), 16) if mm else None, fmt.mant_max))
+    return out
+
+
+# Families whose format carries no NaN payload to omit, so pass 98's property is
+# vacuous rather than missing. Each is evidenced by the corpus's own code, not by
+# recollection: takum and posit decode a single NaR (takum16 returns "nar" for the
+# lone code 1<<(N-1); posit maps NaR to one qNaN), and the integer, ternary and
+# decimal-digit families have no NaN encoding at all.
+NO_NAN_BY_DESIGN = {
+    "takum": "single NaR code, no payload field",
+    "posit": "single NaR code, no payload field",
+    "int": "integer format, no NaN encoding",
+    "uint": "integer format, no NaN encoding",
+    "mxint": "integer format, no NaN encoding",
+    "bcd": "decimal digits, no NaN encoding",
+    "ternary": "trit format, no NaN encoding",
+    "gfternary": "trit format, no NaN encoding",
+    "trinet": "trit format, no NaN encoding",
+    "vax": "legacy format, reserved operand rather than NaN payloads",
+    "ms": "legacy MBF, no NaN encoding",
+    "ibm": "legacy hexadecimal FP, no NaN encoding",
+    "cray": "legacy format, no NaN payload field",
+}
 
 
 def format_for(filename: str):
@@ -60,9 +116,12 @@ def format_for(filename: str):
 
 
 SYMBOL = [
-    (re.compile(r"\bNAN_MAX\b|exp_max\s*<<[^)]*\)\s*\|\s*\w*mant_max"), "nan_other"),
-    (re.compile(r"\bquiet_nan\b"), "nan_canonical"),
-    (re.compile(r"\b(?:pos_inf|neg_inf)\b"), "inf"),
+    (re.compile(r"\bNAN_MAX\b|(?:exp_max|EMAX)\s*<<[^)]*\)?\s*\|\s*"
+                r"\w*(?:mant_max|M_MAX|MANT_MAX)\b"), "nan_other"),
+    (re.compile(r"\bquiet_nan\b|(?:EMAX|exp_max)\s*<<\s*\w*(?:M_BITS|mant_bits)"
+                r"\s*\)?\s*\|\s*1\b"), "nan_canonical"),
+    (re.compile(r"\b(?:pos_inf|neg_inf)\b|(?:EMAX|exp_max)\s*<<\s*"
+                r"\w*(?:M_BITS|mant_bits)\s*\)?\s*(?:$|[,)\]])"), "inf"),
     (re.compile(r"\bmant_max\b"), "subnormal"),
 ]
 
@@ -166,7 +225,9 @@ def main() -> int:
         text = open(os.path.join(CONF, f), encoding="utf-8", errors="replace").read()
         lits = vector_literals(text)
         if not lits and not vector_symbols(text):
-            skipped_novec.append(f)
+            skipped_novec.append((f, "vectors come from a published pack"
+                                  if PACK.search(text) else
+                                  "no vector-defining form this can read"))
             continue
         n, bl = b_slice(text, lits)
         syms = vector_symbols(text)
@@ -174,10 +235,26 @@ def main() -> int:
         bkinds = {classify(fmt, c) for c in bl} | syms
         analysed.append((f, fmt, lits, kinds, n, bl, bkinds))
 
+    vacuous, unknown = [], []
+    for f in skipped_fmt:
+        fam = re.sub(r"\d+$", "", os.path.basename(f).split("_")[0].lower())
+        (vacuous if fam in NO_NAN_BY_DESIGN else unknown).append((f, fam))
+
     print(f"conformance scripts               : {len(files)}")
     print(f"  analysed (GF format + vectors)  : {len(analysed)}")
-    print(f"  not analysed -- not a GF format : {len(skipped_fmt)}")
-    print(f"  not analysed -- no vector list  : {len(skipped_novec)}\n")
+    print(f"  not a GF format                 : {len(skipped_fmt)}")
+    print(f"      of those, no NaN payload    : {len(vacuous)}  "
+          f"(property vacuous, not missing)")
+    print(f"      of those, layout unknown    : {len(unknown)}  "
+          f"(NOT analysed -- unknown, not clean)")
+    print(f"  vectors not read from the script: {len(skipped_novec)}\n")
+
+    fams = sorted({fam for _, fam in vacuous})
+    print("No NaN payload to omit, so pass 98's property cannot apply:")
+    for fam in fams:
+        n = sum(1 for _, x in vacuous if x == fam)
+        print(f"  {fam:<12} {n:>2}   {NO_NAN_BY_DESIGN[fam]}")
+    print()
 
     inf_cells = [r for r in analysed if r[1].has_inf]
     print(f"Of the analysed, {len(inf_cells)} target a format with Inf/NaN "
@@ -196,6 +273,21 @@ def main() -> int:
             why.append(f"no special in b-position (cov[:{n}])")
         (weak if why else ok).append((f, why, len(lits)))
 
+    mask_hits = []
+    for f, fmt, *_ in analysed:
+        text = open(os.path.join(CONF, f), encoding="utf-8",
+                    errors="replace").read()
+        for hit in wrong_layout_masks(fmt, text):
+            mask_hits.append((f, fmt, hit))
+    print(f"NaN/Inf decisions using another format's mask : {len(mask_hits)}")
+    for f, fmt, (ln, src, got, want, gm, wm) in mask_hits:
+        print(f"  {f}  L{ln}   ({fmt.name} = 1+{fmt.exp_bits}E+{fmt.mant_bits}M)")
+        print(f"      {src}")
+        print(f"      exp-mask 0x{got:04X}, correct 0x{want:04X}"
+              + (f";  mant-mask 0x{gm:04X}, correct 0x{wm:04X}"
+                 if gm is not None else ""))
+    print()
+
     print(f"HAS_INF suites carrying every special-value property : {len(ok)}")
     print(f"HAS_INF suites missing at least one                  : {len(weak)}\n")
     for f, why, nl in sorted(weak):
@@ -207,11 +299,10 @@ def main() -> int:
             print(f"  {f}  ({nl} literals)")
 
     if skipped_novec:
-        print(f"\nNOT ANALYSED -- no vector-defining assignment this could parse "
-              f"({len(skipped_novec)}).")
-        print("These are unknown, not clean:")
-        for f in sorted(skipped_novec)[:12]:
-            print(f"  {f}")
+        print(f"\nVectors not read from the script text ({len(skipped_novec)}) -- "
+              f"unknown, not clean:")
+        for f, why in sorted(skipped_novec)[:12]:
+            print(f"  {f}\n      {why}")
         if len(skipped_novec) > 12:
             print(f"  ... and {len(skipped_novec) - 12} more")
 

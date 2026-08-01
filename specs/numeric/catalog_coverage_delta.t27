@@ -2435,3 +2435,95 @@ scan was per-line and the derived constants sit on continuation lines.
 """
   resolved true
 }
+
+// ---- Pass 100: all three options -----------------------------------------------
+
+finding THE_SELF_TEST_CARRIED_THE_SAME_WRONG_LAYOUT {
+  name     "gf16 SUB's NaN mask was binary16's, one layer below the vectors"
+  severity MEDIUM
+
+  detail """
+Pass 99 repaired the vector list. The same file's self-test still read:
+
+    is_nan = ((a & 0x7C00) == 0x7C00) and ((a & 0x03FF) != 0)
+
+Those masks test bits 14:10 and a ten-bit mantissa -- binary16's layout. gf16 is
+1+6E+9M, so the correct masks are 0x7E00 and 0x01FF.
+"""
+  measured """
+  genuine gf16 NaN codes                     1022
+  codes the binary16 mask skipped            2046
+    of those, NOT NaN in gf16                1024
+  genuine NaNs missed                           0
+  exponent fields wrongly skipped            62, 63  (ordinary normals at 2^31)
+  does a - 0 == a hold for all 1024?         yes, 0 failures
+"""
+  so_what """
+Coverage loss, not a hidden failure. The self-test silently stopped checking the
+largest-magnitude band of the format under the belief it was NaN. Nothing was wrong
+behind it -- but the check read stronger than it was.
+"""
+  fix "masks derived from GFMT; corners likewise"
+  resolved true
+}
+
+correction MY_FIRST_SCAN_FOR_THIS_WAS_MOSTLY_FALSE_POSITIVES {
+  detail """
+Looking for "constants belonging to another format" across GF scripts returned 19
+hits. Nearly all were correct code:
+
+  the decode suites emit IEEE binary32 by design, so 0x7F800000 and 0x7FFFFF belong
+  gf10's 0x3FF is a legitimate ten-bit width mask -- gf10 IS ten bits wide
+
+Only a mask used to CLASSIFY the target format's own codes can be wrong. Narrowing
+to NaN/Inf decision expressions gives exactly one hit, the genuine one. A scan whose
+hits are mostly correct code is not a finding, it is noise with a finding inside it.
+"""
+  resolved true
+}
+
+result THE_PROPERTY_DOES_NOT_APPLY_TO_MOST_OF_THE_CORPUS {
+  detail """
+Extending pass 98's question to the 62 non-GF suites, the honest answer for 27 of
+them is that it cannot apply -- there is no NaN payload to omit. Evidenced from the
+corpus's own code rather than recalled:
+
+  takum      4   decodes a single NaR: `if b == (1 << (N-1)): return (0, None, "nar")`
+  posit      3   single NaR, mapped to one qNaN
+  int/mxint  5   integer, no NaN encoding
+  vax        4   legacy, reserved operand rather than NaN payloads
+  ibm        3   legacy hexadecimal FP, no NaN
+  ms         2   legacy MBF, no NaN
+  ternary    4   trit formats, no NaN            (ternary, gfternary x2, trinet)
+  bcd        1   decimal digits, no NaN
+  cray       1   legacy, no NaN payload field
+
+The remaining 35 have layouts this cannot derive from the tree and are printed as
+unknown. Vacuous, missing and unexamined are three different states and the audit
+now prints all three separately.
+"""
+  status VERIFIED_SW
+}
+
+result THE_THREE_UNREADABLE_SCRIPTS_WERE_NOT_UNREADABLE {
+  detail """
+gf256_decode builds its vectors with codes.add((EMAX << M_BITS) | 1) -- symbolic, no
+hex literal, so both scanners missed it. Now read: 42 analysed rather than 41.
+
+gf16_conformance and gf64_conformance take their vectors from a published pack.
+That is not a parsing failure, it is a different source, and it now has its own
+category rather than sitting in a bucket labelled "could not read".
+"""
+  status VERIFIED_SW
+}
+
+open_question TESTFLOAT_STILL_UNCHECKED {
+  detail """
+Fourth consecutive attempt blocked: WebFetch and WebSearch both return a model
+provisioning error. The comparison I want to make -- whether Berkeley TestFloat
+validates against a single reference implementation, which would make the corpus's
+three-oracle structure a methodological argument rather than only internal hygiene --
+stays unverified. Recalled belief is not evidence and is not recorded as one.
+"""
+  resolved false
+}
