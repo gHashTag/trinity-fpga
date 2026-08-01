@@ -4760,3 +4760,54 @@ Applies to lns8, lns16, lns32, lns64.
 """
   resolved false
 }
+
+// ---- Pass 134: the number behind the caution ---------------------------------
+
+result THE_UNREPORTABLE_ERROR_IS_HALF_AN_ULP_OF_A_DOUBLE {
+  method """
+research/measure_lns_true_error.py, exhaustive over lns8's 256 published vectors. For
+each code the oracle gives an exact base-2 logarithm as a Fraction; the exact value is
+2^L at 200-bit mpmath precision; the pack gives decoded_f64. Their difference is what
+the pack's own abs_error field is structurally unable to report.
+"""
+  measured """
+  vectors in the pack                         256
+  where the pack reports abs_error 0          256
+  codes whose value IS a power of two           30   float64 holds these exactly
+  codes whose value is irrational              224
+
+  relative error, stored float64 vs exact 2^L
+    smallest   1.79e-17   at code 0x07
+    median     3.35e-17
+    largest    6.84e-17   at code 0xFC
+
+  worst case  0xFC   stored -0.7071067811865476
+                     exact  -0.70710678118654752440...
+
+That is -1/sqrt(2), and the stored value is the correctly-rounded nearest float64.
+"""
+  what_it_settles """
+The decoder is as accurate as its container allows -- about half an ULP of a double --
+so this was never an arithmetic defect. It is a labelling matter, and now a measured
+one: the caution in checklist 5i carries a bound instead of an adjective.
+
+A caution without a number invites either dismissal or alarm. 1e-16 invites neither.
+"""
+  status VERIFIED_SW
+}
+
+correction TWO_SLIPS_IN_WRITING_THE_MEASUREMENT {
+  detail """
+The first version called Fraction() on decode_log's return without checking it, and
+decode_log returns Special('zero') or Special('nar') for two of the 256 codes -- a
+TypeError on the first special it met.
+
+It also carried a fragment of an abandoned expression, "** 1 if False else", left in
+place while restructuring the exact-value calculation. It parsed and would have
+computed the wrong thing had the type error not stopped it first.
+
+Both were mine and both were caught by running rather than reading. The measurement
+stands after the fixes.
+"""
+  resolved true
+}

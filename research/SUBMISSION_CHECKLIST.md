@@ -435,12 +435,26 @@ code_0x01   oracle says  +2^(1/8)
 correctly reports a round trip and cannot report the distance from the exact value,
 because a float64 cannot hold `2^(1/8)` at all.
 
-**Nothing here is wrong as defined.** The risk is the reading: `bitexact: True` with
-`abs_error: 0.0` invites *"the decoded value is exact"*, which for a logarithmic format
-it cannot be. One line in `format_notes` fixes it — the existing note says *"1 sign + 7
-fixed-point base-2 log bits"* and could add that the reference value is itself the
-nearest float64, so `abs_error` bounds the round trip rather than the format. It
-applies to `lns8/16/32/64`.
+**Nothing here is wrong as defined, and the size of the gap is now measured**
+(`research/measure_lns_true_error.py`, exhaustive over `lns8` against exact `2^L` at
+200-bit precision):
+
+| | |
+|---|---|
+| codes whose value is a power of two — float64 holds them exactly | **30** |
+| codes whose value is irrational | **224** |
+| relative error of the stored float64 against exact `2^L` | **1.8e−17 … 6.8e−17**, median 3.3e−17 |
+
+Worst case, code `0xFC`: stored `−0.7071067811865476`, exact `−0.70710678118654752440…`
+— that is −1/√2, and the float64 is the correctly-rounded nearest. **The decoder is as
+accurate as the container allows; about half an ULP of a double.**
+
+So this is a labelling matter and nothing more, but it is still worth a clause. The
+risk is the reading: `bitexact: True` with `abs_error: 0.0` invites *"the decoded value
+is exact"*, which for a logarithmic format it cannot be. The existing `format_notes`
+says *"1 sign + 7 fixed-point base-2 log bits"*; adding **"for the irrational codes the
+stored value is the nearest float64 to 2^L, within ~1e−16 relative; `abs_error` bounds
+the round trip rather than that distance"** settles it. Applies to `lns8/16/32/64`.
 
 ---
 
