@@ -1,0 +1,45 @@
+name: Wrapper conversion conformance
+
+# Pass 106 tested one wrapper and found six defects in a file that three careful
+# readings had already repaired. This runs the same test over all nine repaired
+# wrappers, exhaustively, on every change to them.
+#
+# It needs no board: iverilog simulates the wrapper, the operand register and the
+# operation's result are driven with `force`, and the two conversion stages are
+# compared against an exact-rational golden. The operation between them is forced
+# rather than exercised.
+#
+# See conformance/wrapper_conversion_conformance.py and
+# specs/numeric/catalog_coverage_delta.t27 (passes 106-107).
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'fpga/openxc7-synth/corona_compute_gf*_{div,sqrt,quire}_ax7203.v'
+      - 'fpga/openxc7-synth/gf_*_param.v'
+      - 'conformance/wrapper_conversion_conformance.py'
+      - '.github/workflows/wrapper-conversion-conformance.yml'
+  pull_request:
+    paths:
+      - 'fpga/openxc7-synth/corona_compute_gf*_{div,sqrt,quire}_ax7203.v'
+      - 'fpga/openxc7-synth/gf_*_param.v'
+      - 'conformance/wrapper_conversion_conformance.py'
+      - '.github/workflows/wrapper-conversion-conformance.yml'
+  workflow_dispatch:
+
+jobs:
+  conversion:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install iverilog
+        run: sudo apt-get update && sudo apt-get install -y iverilog
+      - name: Exhaustive conversion conformance, all nine wrappers
+        # gf4 and gf8 are 16 and 256 codes; gf16 is 65,536, three times over. The
+        # whole sweep is a few minutes of simulation, so nothing is sampled.
+        run: |
+          python3 conformance/wrapper_conversion_conformance.py

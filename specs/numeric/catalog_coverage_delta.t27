@@ -3047,3 +3047,69 @@ run and confirmed the rest gone in its second. That is the argument this campaig
 been making from the outside since pass 98, now made from the inside.
 """
 }
+
+// ---- Pass 107: the same test, over all nine repaired wrappers -----------------
+
+result THE_TEST_GENERALISES_BECAUSE_THE_CONVERSION_DOES {
+  detail """
+A wrapper decodes its operand into binary32 and packs the binary32 result back,
+whatever operation sits between. So one golden per format serves div, sqrt and quire
+alike, and the testbench differs only in the module name it instantiates.
+
+conformance/wrapper_conversion_conformance.py generates the testbench per cell, builds
+it with iverilog, and drives the operand register and the operation's result with
+`force`. gf4, gf8 and gf16 are 16, 256 and 65,536 codes, so every cell is exhaustive
+rather than sampled.
+"""
+  status VERIFIED_SW
+}
+
+result ALL_NINE_EXACT_IN_BOTH_DIRECTIONS {
+  measured """
+  cell          codes        decode              pack
+  gf4_div          16        16/16               16/16
+  gf4_sqrt         16        16/16               16/16
+  gf4_quire        16        16/16               16/16
+  gf8_div         256       256/256             256/256
+  gf8_sqrt        256       256/256             256/256
+  gf8_quire       256       256/256             256/256
+  gf16_div     65,536    65,536/65,536       65,536/65,536
+  gf16_sqrt    65,536    65,536/65,536       65,536/65,536
+  gf16_quire   65,536    65,536/65,536       65,536/65,536
+
+  cells exact in both directions: 9    divergences: 0    not simulated: 0
+
+197,424 codes per direction. The eight cells beyond gf16_div were repaired by the same
+substitutions as it was, so passing was expected -- but expected is not the same as
+checked, which is the whole argument of passes 98 onward.
+"""
+  status VERIFIED_SW
+}
+
+correction MY_FIRST_NEGATIVE_CONTROL_WAS_INVALID {
+  detail """
+I tried to validate the harness by restoring a pre-repair version through
+`git log -S`. The search returned nothing, `git show` failed, the file was never
+replaced, and the run I read as a control was of the already-repaired file. It
+reported 256/256 and I nearly recorded that as evidence the test discriminates.
+
+Redone by injecting the defect deliberately -- the binary16-era mantissa shift, 19
+back to 18 -- which drops decode from 256/256 to 46/256 with concrete divergences
+printed, and the script exits 1. Repaired, it exits 0. A control that cannot fail is
+not a control, and one whose setup silently no-ops is worse, because it looks like one.
+"""
+  resolved true
+}
+
+fix THE_CONFORMANCE_RUNS_IN_CI {
+  detail """
+.github/workflows/wrapper-conversion-conformance.yml runs the full nine-cell sweep on
+any change to the wrappers, their parametric cores, or the script. Nothing is sampled:
+the whole sweep is a few minutes of simulation.
+
+That makes two gates on this layer now -- the datapath gate from pass 104, which reads
+what yosys says rather than what it returns, and this one, which checks what the
+conversion computes.
+"""
+  status IMPLEMENTED
+}
