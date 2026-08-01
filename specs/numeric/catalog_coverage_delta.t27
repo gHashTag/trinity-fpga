@@ -4811,3 +4811,52 @@ stands after the fixes.
 """
   resolved true
 }
+
+// ---- Pass 135: the fix, built by following the pattern already in the tree ----
+
+result AN_HONEST_TAKUM_ORACLE_EXISTS_NOW {
+  detail """
+conformance/takum_log_ref.py applies lns_ref.py's discipline to takum. Nothing in it is
+novel; it is that module's method with takum's field decode, taken from the conformance
+script that replicates the t27 verified second-witness rather than from the linear
+oracle.
+
+  ell = (1 - 2S) * (c + m)         exact: c integer, m dyadic
+  ln|value| = ell / 2              exact, a Fraction
+  value = (-1)^S * e^(ell/2)       irrational unless ell == 0
+
+So decode_ln is exact for every finite code, and decode returns an exact value only at
+ell == 0 -- where it is exactly +-1 -- and otherwise a Special carrying the exact
+logarithm. That is lns_ref.decode's shape exactly: an exact Fraction where one exists,
+a marker with the exact log where none does.
+"""
+  validated """
+Against the mpmath witness of pass 132, over every code:
+
+  takum8    254 finite codes    0 class mismatches   worst relative difference 0
+  takum16  65,534 finite codes  0 class mismatches   worst relative difference 0
+
+Exactly zero, not "within tolerance" -- the new oracle never leaves exact rational
+arithmetic, so it needs no precision parameter at all, where the mpmath path needs 120
+bits.
+
+Landmarks the conformance script names also hold: takum16 0x4000 -> 1, 0xC000 -> -1.
+"""
+  status VERIFIED_SW
+}
+
+note WHAT_THIS_DOES_AND_DOES_NOT_CHANGE {
+  detail """
+It does not replace takum_ref.py. Other code depends on that module, and the corpus's
+own comparison document uses it knowingly and says so -- "linear tapered" against
+"logarithmic tapered (LNS)". Replacing it silently would break a document that is
+already honest about what it does.
+
+What it provides is the option pass 132 recommended and could not supply: a drop-in
+from which takum8 and takum16 could be regenerated, or against which they could be
+witnessed. The decision stays with the author; the obstacle does not.
+
+Six passes to find the problem, one to fix it, and the fix was a file in the same
+directory the whole time.
+"""
+}

@@ -396,7 +396,15 @@ Three codes out of sixty-five thousand. The two are not an approximation of one 
 
 **So these two packs should not be described as takum conformance vectors.** The
 options are to regenerate them from the mpmath path, to witness and republish with the
-gap disclosed, or to withdraw them. This does not touch `takum32`/`takum64`, whose
+gap disclosed, or to withdraw them.
+
+**The first option is now available as a drop-in.** `conformance/takum_log_ref.py`
+applies `lns_ref.py`'s discipline to takum: it returns the **exact** natural logarithm
+as a `Fraction` for every finite code, an exact value only where one exists — `ell = 0`,
+value ±1 — and a `Special` carrying the exact logarithm everywhere else, rather than a
+fabricated rational. Validated against the mpmath witness over **all 65,536 takum16 and
+256 takum8 codes: 0 class mismatches, worst relative difference exactly 0.** It needs no
+precision parameter, because it never leaves exact arithmetic. This does not touch `takum32`/`takum64`, whose
 hand-curated provenance and four witnesses are a different and sounder chain — and it
 is consistent with the earlier libtakum comparison, which was made against `takum32`.
 
