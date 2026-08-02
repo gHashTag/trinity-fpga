@@ -5677,3 +5677,49 @@ and a flash, not a design problem.
 """
   owner author
 }
+
+
+// ============================================================================
+// Pass 155 -- decimal has no independent witness available here, and why.
+// ============================================================================
+
+limitation DECIMAL_HAS_NO_INDEPENDENT_ENCODER_HERE {
+  wanted "a second implementation of the BID encoding for decimal32/64/128"
+
+  what_is_available """
+CPython ships libmpdec 2.5.0 (Stefan Krah), a genuinely independent implementation of
+the General Decimal Arithmetic Specification. It is present and it works.
+
+It is not enough. libmpdec implements decimal VALUES and ARITHMETIC; it does not expose
+the IEEE 754-2008 interchange bit patterns. The packs carry only the BID code and the
+decoded f64 -- no separate coefficient or exponent field -- so using libmpdec would
+mean writing the BID field extraction here and feeding libmpdec the result.
+
+That is a single-source check wearing a witness's clothes. Pass 149 caught exactly this
+shape with takum8, where the pack and the oracle shared one field-decode error and
+agreed 255/255 because of it. The independent-reference requirement is what failed
+there, and writing the decoder ourselves fails it again.
+"""
+
+  what_was_tried {
+    libmpdec        "present, version 2.5.0 -- values only, no interchange encoding"
+    compiler_native "_Decimal32 rejected: 'GNU decimal type extension not supported' (clang, arm64 macOS)"
+    decNumber       "not installed; the standalone source is not a git repository"
+    intel_dfp       "not available here"
+  }
+
+  what_would_close_it """
+Any ONE of:
+  - a GCC toolchain, where _Decimal32/64/128 are native and BID-encoded on x86;
+  - the decNumber source, which carries decimal32FromString and the interchange
+    conversions;
+  - the Intel Decimal Floating-Point Math Library, whose entire interface is BID.
+
+None needs a board and none needs new science. The three decimal packs stay in the 57
+without an independent witness until one of them is to hand.
+"""
+
+  // What IS settled about decimal, from pass 154.
+  already_checked "RTL headers and pack notes both say BID for all three widths -- no variant split"
+  owner author
+}
