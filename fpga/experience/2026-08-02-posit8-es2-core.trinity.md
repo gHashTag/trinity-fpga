@@ -93,6 +93,30 @@ Re-synthesis costs 58 LUTs. Take it.
 What still needs the board: a CI run URL, the bitstream SHA-256, a UART log and the
 IDCODE. Simulation and synthesis are neither of the four.
 
+## The board cell, 2026-08-03
+
+`corona_decode_posit8_es2_ax7203.v` is a clone of the existing wrapper with one line
+changed -- it instantiates `posit8_es2_decode` instead of `posit8_decode`. The
+STARTUPE2 clock, the 160000-baud UART framing and the LED map are byte-for-byte the
+original, so a diff between the two files shows what differs about the format and
+nothing about the harness.
+
+| cell | es | LUTs | FF |
+|---|---|---|---|
+| `corona_decode_posit8_ax7203` (existing) | 0 | **130** | 139 |
+| `corona_decode_posit8_es2_ax7203` (new) | 2 | **187** | 139 |
+
+57 LUTs apart, which is the 58-LUT core difference almost exactly -- the flip-flop count
+is identical because the harness is. 187 LUTs is **0.14 %** of an XC7A200T.
+
+A second cell rather than an edit, deliberately: the existing wrapper's proof in issue
+#199 is a valid Tier-E result about posit(8,0), and overwriting it would destroy evidence
+to fix a labelling problem.
+
+**What is done: synthesis.** What is not: place-and-route, a bitstream, its SHA-256, a
+CI run, a flash, a UART log, an IDCODE read. Synthesising is the cheapest of those and
+the only one that does not need the board or the openXC7 flow.
+
 ## Original risk note, kept for the record
 
 The wrapper instantiates the full 16-bit datapath to decode 8 bits, so the LUT cost will
