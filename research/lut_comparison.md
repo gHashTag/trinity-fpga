@@ -81,7 +81,7 @@ extrapolations from a measured neighbor in the same family.
 | **FP16** `[1\|5\|10]` (binary16) | 16 | ~300 `[literature]` | ~200 + 1 DSP | ~30 `[measured]` | algebraic | Decode: 65 536/65 536 exhaustive HW-verified |
 | **MXFP8** (E4M3) | 8 | ~150 `[literature]` | ~80 + 0 DSP | ~20 `[measured]` | algebraic | Decode: `fpga/openxc7-synth/corona_decode_mxfp8_e4m3_ax7203.v`, 256/256 HW |
 | **FP8 E5M2** | 8 | ~150 `[literature]` | ~80 + 0 DSP | ~20 `[measured]` | algebraic | Decode Tier-E bit-exact |
-| **Posit8** `(8,0)` | 8 | n/a (decode-only) | n/a | ~40 `[measured]` | regime+alg | Decode: `fpga/openxc7-synth/corona_decode_posit8_ax7203.v`, 256/256 HW |
+| **Posit8** `(8,0)` — **not the catalogue's posit8, which is `(8,2)`; see `specs/numeric/catalog_coverage_delta.t27`** | 8 | n/a (decode-only) | n/a | ~40 `[measured]` | regime+alg | Decode: `fpga/openxc7-synth/corona_decode_posit8_ax7203.v`, 256/256 HW |
 | **Posit16** `(16,1)` | 16 | ~1 500 `[literature]` | N/A (codec) | ~400 `[literature]` | regime+alg | **PERI** [arXiv:1908.01466]: 3 507 LUT @ 100 MHz on Artix-7-100T (full FPU, closed flow Vivado). Trinity has decode-only on openXC7. |
 | **Takum16** | 16 | n/a (decode-only) | n/a | **0 LUT + 57 BRAM36** `[measured]` | **BRAM-LUT** (65 536×32) | `takum16_decode.v` + `takum16_lut.mem`; 64/64 HW bit-exact. BRAM cost = 65 536×32 bit = 2.09 Mbit ≈ 57 BRAM36 of 365 on XC7A200T. |
 | **Takum32** | 32 | n/a | n/a | ~400 LUT `[estimate]` | transcendental | `takum32_decode.v`; routing fix shipped (`399bb0cf`); 1-ULP Taylor residuals remain |

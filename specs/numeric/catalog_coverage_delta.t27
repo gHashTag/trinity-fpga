@@ -5523,3 +5523,87 @@ should say so, or it compared against NaN.
 """
   owner author
 }
+
+
+// ============================================================================
+// Pass 153 -- three posit packs get a real second witness, and one silicon proof
+// turns out to be about a different format than the pack it is credited to.
+// ============================================================================
+
+finding POSIT_PACKS_VALIDATED_AGAINST_SOFTPOSIT {
+  reference "SoftPosit (Cerlane Leong), the posit reference implementation"
+  built_from "gitlab.com/cerlane/SoftPosit, compiled on this host"
+  tool "research/crossval_softposit.py"
+
+  // The comparand had to be chosen carefully and the obvious choice was wrong.
+  // SoftPosit's posit8_t/posit16_t/posit32_t are the LEGACY fixed-es types --
+  // posit(8,0), posit(16,1), posit(32,2) from the pre-standard draft. Posit Standard
+  // 2022 fixes es = 2 at every width, which is what these packs declare. Comparing
+  // against convertP8ToDouble gives 3 agreements out of 255 and looks like a
+  // catastrophe; it is a catastrophe of comparand.
+  //
+  // The tell that settles it needs no argument: maxpos. posit(8,0) tops out at
+  // 2^6 = 64, posit(8,2) at 2^24 = 16,777,216, and the pack says 16,777,216.
+  comparand "convertPX2ToDouble -- the positX family, es = 2, code left-aligned in a 32-bit container"
+
+  results {
+    posit8   "256 vectors, 255 bit-identical, 1 NaR, 0 differing -- EXHAUSTIVE"
+    posit16  "8 curated vectors, 8 bit-identical, 0 differing"
+    posit32  "8 curated vectors, 8 bit-identical, 0 differing"
+    posit64  "NOT COVERED -- positX uses a 32-bit container and posit64_t is the legacy es = 0 type"
+  }
+  verdict "the packs implement Posit Standard 2022 exactly as the reference does"
+}
+
+finding POSIT8_SILICON_IMPLEMENTS_A_DIFFERENT_VARIANT {
+  severity HIGH
+
+  // Found while reconciling the es question. The pack is right; the hardware proof
+  // credited to it is about another format.
+  the_split """
+  published pack    posit8, es = 2, Posit Standard 2022, maxpos 16,777,216
+                    -- validated above against SoftPosit, 255/255
+
+  silicon           external/tt-trinity-corona/src/rtl/posit8_decode.v says so in its
+                    own header: 'Posit8(es=0) -> FP32 decode. Posit8: 1 sign +
+                    variable regime + 0 exponent + remaining fraction.' maxpos 64.
+
+  the Tier-E proof  its own heading reads '### Tier-E proof: `posit8` (decode --
+                    Posit8 (es=0))', and research/lut_comparison.md line 84 carries
+                    'Posit8 (8,0)'. Both say es = 0 plainly.
+
+These are different formats, not different spellings. At the same 8-bit code, posit(8,0)
+and posit(8,2) disagree on 252 of 255 values, by up to five orders of magnitude.
+"""
+
+  // The other two widths are fine, and that is what makes this specific rather than
+  // systemic.
+  not_affected """
+posit16_decode.v and posit32_decode.v both state 'Posit Standard 2022, es = 2' in their
+headers and match their packs. Only posit8 is split, and its core is the one living in
+the external tt-trinity-corona submodule -- an earlier core, predating the move to
+es = 2.
+"""
+
+  consequence """
+The Tier-E row 'posit8 256/256' is a valid proof about posit(8,0). The catalogue pack it
+is credited to is posit(8,2). The hardware evidence does not support that pack.
+
+This is the same shape as the takum variant split -- one name, two formats, credited as
+though they were one -- and it is the first time it has appeared BETWEEN silicon and a
+pack rather than between two software oracles.
+"""
+
+  two_ways_to_close """
+  1. Re-synthesise an es = 2 posit8 decode core and re-run the board proof. The pack
+     stays as it is; the hardware row becomes true of it.
+  2. Say in the row that the silicon proof is for posit(8,0) and remove posit8 from
+     the count of packs with decode verified on the board, taking 46 to 45.
+
+The first is more work and keeps the claim. The second is one sentence and is honest
+today. Which to take is the author's call; either is defensible, and leaving it as it
+stands is not.
+"""
+  do_not_guess true
+  owner author
+}
