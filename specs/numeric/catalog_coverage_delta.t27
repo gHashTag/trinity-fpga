@@ -5484,14 +5484,27 @@ rtl_iverilog_exhaustive 1, rtl_bit_model_fp64 1.
   // The distinction this survey must not blur, and the reason it is a survey of
   // METADATA rather than of verification.
   what_this_does_and_does_not_show """
-An empty witnesses field is not evidence that a pack was never verified. This campaign
-has itself produced independent checks for many of the 60 -- 66,224 codes against
-ml_dtypes, by-construction checks for bfloat24/bfloat32/pdp11_float/x87_48bit/mxint8,
-three-oracle sweeps over ADD and MUL -- none of which is written into the packs.
+An empty witnesses field is not evidence that a pack was never verified.
 
-So the finding is about the record, not the work: honesty rule #10 asks for an
-independent second witness, and 10 of 70 bit-exact packs say they have one. The gap is
-closable by writing down what already exists, which is a better position than it looks.
+But pass 151 said this campaign "has produced independent checks for many of the 60",
+and pass 152 checked that claim against the list. It is wrong. The campaign can supply a
+citable witness for THREE of them -- takum8, takum16 and lns8 -- and 57 remain without.
+
+Where the rest of the campaign's work went, and why none of it lands here:
+
+  ml_dtypes, 66,224 codes    covers bfloat16, fp8_e4m3, fp8_e5m2. Their packs are
+                             bf16_golden, fp8_e4m3fn and fp8_e5m2, and NONE of the
+                             three declares bitexact true, so none is among the 60.
+  by-construction checks     cover bfloat24, bfloat32, pdp11_float, x87_48bit, mxint8.
+                             None of these has a pack in the catalogue at all.
+  three-oracle ADD and MUL   covers the GF formats, which ARE among the 60 -- but those
+                             are witnesses for ARITHMETIC and the packs are decode
+                             conformance. Different claims; this campaign has been
+                             caught merging two claims before and does not do it here.
+
+So the finding stands and is larger than it was stated: honesty rule #10 asks for an
+independent second witness, 10 of 70 bit-exact packs record one, and the corpus can
+close 3 of the remaining 60 from work already done. The other 57 need new work.
 """
 
   // Two of the ten are the two this pass and pass 150 called into question.

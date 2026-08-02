@@ -1,0 +1,43 @@
+name: Hardware row gate
+
+# Pass 151 found a row in the hardware-evidence list with no proof behind it: takum32,
+# listed at 65,536/65,536, while issue #199 records that takum64/32 do not route on the
+# part and are explicitly NOT Tier E. The number belonged to gf16.
+#
+# That was found by reading one row. This checks all 46 against the issue: for each
+# format in with_hardware, is there a comment carrying all four links whose Tier-E proof
+# title names it? --self-check requires the rule to still fail on takum32 and pass on
+# gf16, so a green run is distinguishable from a blind one.
+#
+# The gate needs the live issue and says so rather than assuming when it cannot read it.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'specs/numeric/catalog_coverage_delta.t27'
+      - 'research/audit_hardware_rows.py'
+      - '.github/workflows/hardware-row-gate.yml'
+  pull_request:
+    paths:
+      - 'specs/numeric/catalog_coverage_delta.t27'
+      - 'research/audit_hardware_rows.py'
+      - '.github/workflows/hardware-row-gate.yml'
+  workflow_dispatch:
+
+jobs:
+  hardware-rows:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: The gate must still reject the row it was written for
+        run: |
+          python3 research/audit_hardware_rows.py --self-check
+      - name: Every hardware row must have a four-link proof behind it
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 research/audit_hardware_rows.py
