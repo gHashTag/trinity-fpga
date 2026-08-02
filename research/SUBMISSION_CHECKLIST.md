@@ -373,12 +373,22 @@ these packs, does not use it.
 the identical mistake as pass 130, where I read an oracle's header and did not follow
 it to what uses it — and I wrote that lesson down at the time.
 
-**What survives, and it is small.** `takum8` and `takum16` carry 0 witnesses where
-`takum32`/`takum64` carry 4. Witnessing them is cheap and now trivial:
-`conformance/takum_log_ref.py` (pass 135) reproduces the logarithmic definition in exact
-rational arithmetic, needs no precision parameter, and agrees with the mpmath witness on
-all 65,536 codes with a worst difference of exactly zero. That module remains useful for
-witnessing; it is not needed for a repair, because there is nothing to repair.
+**What survived was small, and it is now closed.** `takum8` and `takum16` carried 0
+witnesses where `takum32`/`takum64` carry 4. `research/witness_takum_packs.py` supplies
+one, against `conformance/takum_log_ref.py`:
+
+| pack | comparable vectors | stored float64 is the **nearest** double to exact |
+|---|---|---|
+| `takum8` | 255 (1 NaR) | **255 / 255** |
+| `takum16` | 3 | **3 / 3** |
+
+This is stronger than the 1.02e−16 bound measured earlier: a value one ULP out would
+satisfy that bound and fail this check. Correct rounding is decided in exact arithmetic
+by comparing both neighbouring doubles, and the reference never leaves exact rational
+arithmetic, so there is no precision parameter to argue about.
+
+**Suggested action:** record the witness count for these two packs as you do for
+`takum32`/`takum64`. Nothing else about them needs to change.
 
 ---
 

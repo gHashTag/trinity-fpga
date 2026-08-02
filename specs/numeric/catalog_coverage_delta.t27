@@ -4965,3 +4965,50 @@ measurement, and takum_log_ref.py. The rest was a case built on the wrong artefa
 and the honest ledger is worth as much as the survivors.
 """
 }
+
+// ---- Pass 138: the last open item, closed --------------------------------------
+
+result THE_PUBLISHED_TAKUM_PACKS_ARE_CORRECTLY_ROUNDED {
+  method """
+research/witness_takum_packs.py reads the PUBLISHED packs -- the object the claim is
+about, per the rule recorded in pass 137 -- and checks the property a witness should
+assert: that each stored float64 is the NEAREST double to the exact value, not merely
+close to it.
+
+Correct rounding is decided in exact arithmetic. math.nextafter supplies the doubles
+either side and the three distances are compared at 300-bit mpmath precision, so the
+verdict never rests on a float operation. The reference is takum_log_ref.py, which
+computes ln|value| exactly as a Fraction and never leaves exact rational arithmetic.
+"""
+  measured """
+  takum8    255 comparable vectors (1 NaR)   255/255 correctly rounded
+  takum16     3 comparable vectors             3/3   correctly rounded
+  not correctly rounded: 0
+"""
+  why_it_is_stronger_than_pass_136 """
+Pass 136 measured agreement to within 1.02e-16 and concluded the packs are correct.
+True, but a value one ULP out satisfies that bound. "Nearest double" either holds or
+does not, and it holds for every vector.
+"""
+  status VERIFIED_SW
+}
+
+conclusion THE_THREAD_IS_CLOSED {
+  precise """
+Nine passes, three retractions, and this is what stands:
+
+  the lns and posit contrast -- takum_ref.py is the outlier, and lns_ref.py's
+  log-domain discipline is the pattern the tree already had
+
+  the lns representation error measured at 1.8e-17 to 6.8e-17, so abs_error's
+  blindness is a labelling matter and not an arithmetic one
+
+  takum_log_ref.py, an exact logarithmic oracle with no precision parameter
+
+  and now a witness for takum8 and takum16, closing the only defect the thread
+  actually found -- which was a missing witness, not a wrong value
+
+The suggested action for the author is one line of metadata. That is the whole
+outcome, and it is worth saying plainly after nine passes.
+"""
+}
