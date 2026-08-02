@@ -5458,3 +5458,55 @@ whose own evidence issue records that it does not route on the part. A reviewer 
 opened #199 would have found the verdict before finding the claim.
 """
 }
+
+
+// ============================================================================
+// Pass 151 -- what the packs record about their own verification.
+// ============================================================================
+
+survey WITNESS_METADATA_ACROSS_THE_CATALOGUE {
+  read "all 83 published packs, live"
+
+  counts {
+    declaring_bitexact_true              70
+    of_those_recording_a_witness         10
+    of_those_recording_none              60
+    not_declaring_bitexact_true          13
+  }
+
+  witness_kinds_in_use """
+sw_independent_dyadic 6, sw_golden_fraction_oracle 6, analytic_separation_bound 5,
+python_mpmath_oracle 2, python_independent_math_exp 2, sample_probe 2,
+libtakum_c_parity 2, python_golden 1, iverilog_sim 1, fpga_hw 1,
+rtl_iverilog_exhaustive 1, rtl_bit_model_fp64 1.
+"""
+
+  // The distinction this survey must not blur, and the reason it is a survey of
+  // METADATA rather than of verification.
+  what_this_does_and_does_not_show """
+An empty witnesses field is not evidence that a pack was never verified. This campaign
+has itself produced independent checks for many of the 60 -- 66,224 codes against
+ml_dtypes, by-construction checks for bfloat24/bfloat32/pdp11_float/x87_48bit/mxint8,
+three-oracle sweeps over ADD and MUL -- none of which is written into the packs.
+
+So the finding is about the record, not the work: honesty rule #10 asks for an
+independent second witness, and 10 of 70 bit-exact packs say they have one. The gap is
+closable by writing down what already exists, which is a better position than it looks.
+"""
+
+  // Two of the ten are the two this pass and pass 150 called into question.
+  note_on_the_ten """
+takum32 and takum64 are among the packs that DO record a witness, and both records need
+revisiting.
+
+takum32's pack is unaffected by the hardware correction above -- that was a
+with_hardware list entry, not a pack field -- but the pack should not be read as
+carrying board evidence, because there is none.
+
+takum64's pack records a libtakum_c_parity witness claiming 'libtakum decodes the same
+codes to the same f64'. libtakum stubs takum64 decoding to NaN wherever
+LDBL_MANT_DIG < 64, which is every arm64 host. Either that witness ran on x86-64 and
+should say so, or it compared against NaN.
+"""
+  owner author
+}
