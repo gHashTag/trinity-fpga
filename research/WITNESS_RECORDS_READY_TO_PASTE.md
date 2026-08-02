@@ -58,6 +58,51 @@ has been caught merging two claims before, and the fix is not to do it again qui
 
 ---
 
+## `posit8`, `posit16`, `posit32` — added pass 153
+
+SoftPosit is the posit reference implementation, and all three packs match it exactly.
+Use `research/crossval_softposit.py` to reproduce.
+
+```json
+{
+  "kind": "softposit_c_parity",
+  "oracle": "SoftPosit (Cerlane Leong, gitlab.com/cerlane/SoftPosit), the posit reference implementation, built from source. Entry point convertPX2ToDouble -- the positX family at es = 2, per Posit Standard 2022, with the code left-aligned in a 32-bit container. NOT convertP8ToDouble, whose posit8_t is the legacy es = 0 type from the pre-standard draft.",
+  "result": "posit8: 255 of 255 comparable codes bit-identical, exhaustive over the whole code space, 1 NaR. posit16 and posit32: 8 of 8 curated vectors bit-identical each. Zero differences at any width.",
+  "reproduce": "research/crossval_softposit.py in gHashTag/trinity-fpga, against a SoftPosit checkout"
+}
+```
+
+`posit64` gets **no** such record. SoftPosit's `positX` family uses a 32-bit container,
+so es = 2 at width 64 is out of its reach, and `posit64_t` is the legacy es = 0 type.
+The pack remains without an independent witness, and the record should say that rather
+than let the family look finished.
+
+---
+
+## The historical formats: "no witness exists, and here is why"
+
+`afp`, `cray_float`, `ms_mbf32`, `ms_mbf64`, `ibm_hfp32/64/128`, `vax_d/f/g/h` and
+`x87_fp80` have no maintained reference implementation to compare against. That is a
+fact about the world, not a gap in the corpus, and honesty rule #10 is better served by
+saying so than by leaving the field empty — an empty field reads as "not yet done".
+
+A record of this shape is itself a witness record:
+
+```json
+{
+  "kind": "no_independent_reference_exists",
+  "searched": "no maintained implementation of this format is available. The format is defined by hardware that is no longer manufactured and by documentation rather than by a reference library.",
+  "what_supports_the_pack_instead": "the decode is implemented directly from the published field layout, and the vectors are exact under that layout. This is a single-source claim and is labelled as one.",
+  "what_would_change_this": "a period-correct emulator, a surviving machine, or a second independent implementation written from the same documentation by someone else"
+}
+```
+
+The last field is the important one. It converts "we could not find a witness" into a
+statement about what a witness would have to be, which is checkable by a reader and
+actionable by anyone who has one.
+
+---
+
 ## What the other 57 would need
 
 Not a sweep. Each needs a **second implementation of that format**, independent of the
