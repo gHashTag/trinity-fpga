@@ -10,6 +10,7 @@ The descriptor objects carry width under varying attribute names (.width/.W/
 .total/.bits/.nbits); we probe heuristically and fall back to parsing the name.
 """
 from __future__ import annotations
+import sys
 import importlib.util
 import os
 import re
@@ -22,6 +23,11 @@ def _load_ref_module(path: str):
     name = "cf_" + os.path.splitext(os.path.basename(path))[0]
     spec = importlib.util.spec_from_file_location(name, path)
     mod = importlib.util.module_from_spec(spec)
+    # Register before executing: a module using @dataclass looks itself up in
+    # sys.modules while the decorator runs, and under a synthetic name it is not
+    # there. conformance/takum_log_ref.py fails exactly that way, so an
+    # unregistered loader omitted it silently.
+    sys.modules[spec.name] = mod
     spec.loader.exec_module(mod)  # refs are self-contained (fractions, no heavy deps)
     return mod
 

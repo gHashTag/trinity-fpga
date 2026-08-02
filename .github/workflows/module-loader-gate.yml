@@ -1,0 +1,45 @@
+name: Module loader gate
+
+# Pass 156 found a check printing "no golden oracle" for all four takum widths. No
+# oracle was missing: conformance/takum_log_ref.py was failing to import and the handler
+# swallowed it. A module using @dataclass looks itself up in sys.modules while the
+# decorator runs, and under a synthetic name loaded by spec_from_file_location without
+# registration, it is not there.
+#
+# Pass 157 measured the radius: 8 loaders swept every *_ref.py and all 8 omitted it
+# silently -- including crossval_libtakum.py, whose whole purpose is cross-validating
+# takum, structurally unable to see the logarithmic takum oracle.
+#
+# --self-check requires the probe to still reproduce that failure. A clean sweep from a
+# blind probe is worth less than no sweep at all.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'research/*.py'
+      - 'conformance/*_ref.py'
+      - 'tools/**/*.py'
+      - '.github/workflows/module-loader-gate.yml'
+  pull_request:
+    paths:
+      - 'research/*.py'
+      - 'conformance/*_ref.py'
+      - 'tools/**/*.py'
+      - '.github/workflows/module-loader-gate.yml'
+  workflow_dispatch:
+
+jobs:
+  module-loaders:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: The probe must still reproduce the original import failure
+        run: |
+          python3 research/audit_module_loaders.py --self-check
+      - name: No sweeping loader may miss an oracle it cannot import
+        run: |
+          python3 research/audit_module_loaders.py

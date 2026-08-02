@@ -122,6 +122,11 @@ def load_oracles():
             spec = importlib.util.spec_from_file_location(name[:-3],
                                                           os.path.join(CONF, name))
             mod = importlib.util.module_from_spec(spec)
+            # Register before executing: a module using @dataclass looks itself up in
+            # sys.modules while the decorator runs, and under a synthetic name it is not
+            # there. conformance/takum_log_ref.py fails exactly that way, so an
+            # unregistered loader omitted it silently.
+            sys.modules[spec.name] = mod
             spec.loader.exec_module(mod)
         except Exception:
             continue
