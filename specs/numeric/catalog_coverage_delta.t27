@@ -5231,3 +5231,66 @@ its source is found.
 """
   resolved false
 }
+
+// ---- Pass 143: the figure is unlocatable, and two records contradict ----------
+
+result WHERE_THE_60485_CAME_FROM {
+  traced """
+The only occurrence outside my own log is research/ARXIV_V2_CORRECTION_PACKAGE.md,
+where it appears under "What survives" after a retraction:
+
+  "research/libtakum_bridge.c and the comparison scripts stand: they established that
+   the HW conformance golden is an exact implementation of logarithmic takum
+   (60485/60485 at takum16)."
+
+So the figure was attributed to the libtakum bridge. But the spec that records that
+very comparison gives different numbers.
+"""
+  what_the_spec_records """
+specs/numeric/takum_libtakum_crossval.t27, exhaustive over all 65,536 takum16 codes:
+
+  positive_half   raw < 32768    32,768 codes   agree 32,768   verdict EXACT
+  negative_half   raw >= 32768   32,768 codes   agree 2        verdict DIVERGENT
+
+with an example: raw 32769 gives the oracle -1.835e-77 and libtakum -5.609e+76 -- the
+oracle mirroring magnitude where libtakum takes the reciprocal direction.
+
+60,485 matches neither half, nor 65,534, nor any figure in any spec.
+"""
+  status VERIFIED_SW
+}
+
+finding TWO_CAMPAIGN_RECORDS_CONTRADICT_EACH_OTHER {
+  severity HIGH
+  detail """
+  takum_libtakum_crossval.t27      finding NEGATIVE_HALF_DECODE_SUSPECT,
+                                   severity HIGH, confidence ESTABLISHED, upgraded at
+                                   pass 15 on the strength of the negation invariant
+
+  ARXIV_V2_CORRECTION_PACKAGE.md   "The pass-32 framing is withdrawn as a finding.
+                                   The split is documented in that same docstring...
+                                   a design decision, not an undiscovered
+                                   inconsistency."
+
+One says the negative-half divergence is an established defect; the other says it was
+retracted as a documented design decision. Both are in this repository, neither
+references the other, and a reader meeting either alone would take it as settled.
+
+I cannot settle it here. Re-running needs libtakum's takum.h, which is not in the tree
+-- research/libtakum_bridge.c includes it and cannot compile without it.
+"""
+  resolved false
+}
+
+fix THE_DOSSIER_ROW_NOW_POINTS_AT_EVIDENCE_THAT_EXISTS {
+  detail """
+Rewritten to cite takum_libtakum_crossval.t27 with its actual figures -- 32,768/32,768
+exact on the positive half, 2/32,768 on the negative -- to state that two records
+disagree about the interpretation, to say what re-running would require, and to tell
+the reader which number to quote.
+
+The alternative was deleting the row. That would have removed a real cross-validation
+against the format author's own implementation because its summary figure was wrong.
+"""
+  status IMPLEMENTED
+}
