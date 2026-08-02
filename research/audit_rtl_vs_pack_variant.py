@@ -108,6 +108,7 @@ def main() -> int:
                 agree.append((name, kind, a.group(1)))
 
     print(f"formats checked                       : {len(subjects)}")
+    print(f"COVERAGE: {len(subjects)} formats where a variant could be stated")
     print(f"  RTL and pack both state a parameter : {len(agree) + len(split)}")
     print(f"  they AGREE                          : {len(agree)}")
     print(f"  they DISAGREE                       : {len(split)}")

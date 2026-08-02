@@ -139,6 +139,7 @@ def main() -> int:
     print(f"  1 + e + m == bits                       : {holds}")
     print(f"  declared exceptions                     : {len(excepted)}")
     print(f"  LAYOUTS THAT CANNOT EXIST               : {len(broken)}\n")
+    print(f"COVERAGE: {holds + len(excepted)} packs with a checkable layout, of {len(names)} published")
 
     for name, b, e, m, why, corrected in excepted:
         state = "" if corrected is None else \

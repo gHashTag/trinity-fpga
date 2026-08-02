@@ -159,6 +159,7 @@ def main() -> int:
 
     print(f"\nrows describing a layout that cannot exist, or disagreeing across "
           f"tables: {bad}")
+    print(f"COVERAGE: {sum(len(r) for _, r in parsed.values())} format-table rows")
     print("""
 Both invariants hold for any sign-exponent-mantissa format, so neither needs to know
 what a format means. A failure is not a matter of opinion: the fields either account

@@ -126,6 +126,7 @@ def main() -> int:
         print(f"    {name:<14} {w:>3} bits  {count:>10,} = 2^{w}")
 
     print(f"\nsampled (count < 2^width)               : {len(sampled)}")
+    print(f"COVERAGE: {len(exhaustive) + len(sampled)} coverage cells with a resolvable width")
 
     # The claim in prose, checked against the arithmetic above.
     bad = 0

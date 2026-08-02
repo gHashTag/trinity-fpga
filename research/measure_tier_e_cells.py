@@ -135,6 +135,7 @@ def main() -> int:
 
     print(f"distinct (format, operation) cells  : {len(pairs)}")
     print(f"distinct base formats               : {len(formats)}\n")
+    print(f"COVERAGE: {len(bodies)} issue comments, {len(four)} with all four links")
     print("  " + ", ".join(sorted(formats)))
 
     print("""

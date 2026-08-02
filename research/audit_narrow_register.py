@@ -153,6 +153,7 @@ def main() -> int:
     print(f"verilog files scanned              : {len(files)}")
     print(f"  registers narrower than their use: {len(findings)}")
     print(f"  read and accepted as benign      : {len(accepted)}\n")
+    print(f"COVERAGE: {len(files)} verilog files")
     for p, kind, line, sig, w, _ in accepted:
         print(f"  accepted  {p}:{line}  {sig}")
         print(f"            {ACCEPTED[(p, sig)]}")

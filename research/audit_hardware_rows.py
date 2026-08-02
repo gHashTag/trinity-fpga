@@ -132,6 +132,7 @@ def main() -> int:
     print(f"issue #{ISSUE}: {total} comments, {four} carrying all four links")
     print(f"formats proved by a titled four-link comment : {len(proven)}")
     print(f"rows in the with_hardware list               : {len(rows)}\n")
+    print(f"COVERAGE: {len(set(rows))} hardware rows against {four} four-link proofs")
 
     missing = []
     for name in sorted(set(rows)):

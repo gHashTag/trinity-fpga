@@ -35,29 +35,51 @@ ROOT = os.path.dirname(HERE)
 
 PREFIXES = ("audit_", "crossval_", "measure_", "verify_", "witness_")
 
-# Lines that state how much a check looked at. Deliberately loose: the point is to
-# surface a number the reader can judge, not to parse every phrasing perfectly.
-COVERAGE = re.compile(
-    r"^\s*(?:.*?[:=]\s*)?([\d,]{2,})\s*(?:of|/)\s*([\d,]{2,})\b"
-    r"|(\b[\d,]{3,})\s+(?:codes|pairs|vectors|formats|packs|wrappers|files|comments)\b",
-    re.I | re.M)
+# How much a check looked at. Two routes, and the runner says which it used.
+#
+# Pass 158 corrected an earlier claim from this file. It reported that 26 checks printed
+# no coverage figure; they printed one, and the regex here could not see it -- exactly
+# the shape this campaign keeps catching in other tools. The heuristic below is wider
+# now, and the declared route exists so that guessing is never the only option.
+#
+# A check declares coverage by printing one line:
+#
+#     COVERAGE: 83 packs
+#
+# Anything else is guessed from "label : number" and "number unit" shapes, and marked
+# as guessed, because a guessed figure and a stated one are not the same evidence.
+
+DECLARED = re.compile(r"^COVERAGE:\s*([\d,]+)\s*(.*)$", re.M)
+
+GUESSES = (
+    re.compile(r"^\s*([A-Za-z][\w /()+*=-]{4,44}?)\s*:\s*([\d,]{2,})\s*$", re.M),
+    re.compile(r"\b(codes|pairs|vectors|formats|packs|wrappers|files|comments|"
+               r"cells|rows|scripts|loaders|oracles)\s*=?\s*([\d,]{2,})\b", re.I),
+    re.compile(r"\b([\d,]{2,})\s+(codes|pairs|vectors|formats|packs|wrappers|files|"
+               r"comments|cells|rows|scripts|loaders|oracles)\b", re.I),
+)
 
 
-def coverage_of(text: str) -> str:
-    best = 0
-    shown = ""
-    for m in COVERAGE.finditer(text):
-        a = m.group(1) or m.group(3)
-        if not a:
-            continue
-        try:
-            n = int(a.replace(",", ""))
-        except ValueError:
-            continue
-        if n > best:
-            best = n
-            shown = m.group(0).strip()[:46]
-    return shown
+def coverage_of(text: str) -> tuple[str, str]:
+    """(figure, how) -- how is 'declared', 'guessed' or 'none'."""
+    m = DECLARED.search(text)
+    if m:
+        return (f"{m.group(1)} {m.group(2)}".strip()[:46], "declared")
+
+    best, shown = 0, ""
+    for rx in GUESSES:
+        for g in rx.finditer(text):
+            parts = [p for p in g.groups() if p]
+            num = next((p for p in parts if p.replace(",", "").isdigit()), None)
+            if not num:
+                continue
+            try:
+                n = int(num.replace(",", ""))
+            except ValueError:
+                continue
+            if n > best:
+                best, shown = n, " ".join(g.group(0).split())[:46]
+    return (shown, "guessed" if shown else "none")
 
 
 def main() -> int:
@@ -80,21 +102,21 @@ def main() -> int:
             r = subprocess.run([sys.executable, path], capture_output=True,
                                text=True, timeout=args.timeout, cwd=ROOT)
             out = (r.stdout or "") + (r.stderr or "")
-            cov = coverage_of(out)
+            cov, how = coverage_of(out)
             if r.returncode == 0:
-                buckets["HOLDS"].append((name, cov))
-                if not cov:
+                buckets["HOLDS"].append((name, cov, how))
+                if how == "none":
                     blind.append(name)
             elif r.returncode == 1:
-                buckets["FINDINGS"].append((name, cov))
+                buckets["FINDINGS"].append((name, cov, how))
             elif r.returncode == 2:
-                buckets["NO INPUT"].append((name, cov))
+                buckets["NO INPUT"].append((name, cov, how))
             else:
-                buckets["BROKE"].append((name, f"exit {r.returncode}"))
+                buckets["BROKE"].append((name, f"exit {r.returncode}", "none"))
         except subprocess.TimeoutExpired:
-            buckets["SLOW"].append((name, f">{args.timeout}s"))
+            buckets["SLOW"].append((name, f">{args.timeout}s", "none"))
         except Exception as e:                                   # pragma: no cover
-            buckets["BROKE"].append((name, type(e).__name__))
+            buckets["BROKE"].append((name, type(e).__name__, "none"))
 
     print(f"checks in research/ : {len(scripts)}\n")
     for k in ("HOLDS", "FINDINGS", "NO INPUT", "SLOW", "BROKE"):
@@ -104,12 +126,15 @@ def main() -> int:
         if not buckets[k]:
             continue
         print(f"\n{k}")
-        for name, note in buckets[k]:
+        for name, note, _ in buckets[k]:
             print(f"    {name:<40} {note}")
 
     print("\nHOLDS, with what each one looked at")
-    for name, cov in buckets["HOLDS"]:
-        print(f"    {name:<40} {cov or '-- no coverage figure printed'}")
+    decl = sum(1 for _, _, h in buckets["HOLDS"] if h == "declared")
+    print(f"    ({decl} declare a COVERAGE line; the rest are guessed from output)\n")
+    for name, cov, how in buckets["HOLDS"]:
+        mark = {"declared": "  ", "guessed": " ~", "none": " ?"}[how]
+        print(f"   {mark}{name:<40} {cov or '-- nothing found'}")
 
     if blind:
         print(f"""

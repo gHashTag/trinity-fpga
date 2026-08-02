@@ -96,6 +96,8 @@ def main() -> int:
         checked += 1
         bad += compare(pack_path, load_ref(ref_path), f"posit{w}")
 
+    print(f"COVERAGE: {checked} posit packs against SoftPosit")
+
     if not checked:
         print("\nNothing was compared. This script does not report success when it "
               "has read nothing.")

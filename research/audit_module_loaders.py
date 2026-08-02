@@ -105,6 +105,7 @@ def main() -> int:
     print(f"  register before executing        : {len(ls) - len(unregistered)}")
     print(f"  do NOT register                  : {len(unregistered)}")
     print(f"  of which sweep every *_ref.py    : {len(at_risk)}\n")
+    print(f"COVERAGE: {len(ls)} dynamic loaders and {len(glob.glob(os.path.join(CONF, '*_ref.py')))} oracles")
 
     print(f"oracles in conformance/*_ref.py    : "
           f"{len(glob.glob(os.path.join(CONF, '*_ref.py')))}")
