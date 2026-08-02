@@ -2,7 +2,12 @@
 # gf14_decode_conformance_ax7203.py — GoldenFloat14 (1S+5E+8M, bias 15, has_inf=0) decode on AX7203.
 # Core: fpga/openxc7-synth/gf14_decode.v. Standard IEEE-like unpack; exp=all-ones is
 # finite max (no Inf/NaN). Decode to FP32 is exact. Golden mirrors the RTL.
-import argparse, sys, struct, serial, random
+# `serial` is imported where it is used, not at module level. Pass 181 found
+# that 30 hosts with a verified golden model could not even be IMPORTED without
+# pyserial, which put those goldens out of reach of CI, of any cross-check, and
+# of reuse by another host. A model that needs a board driver to be read is
+# checking the wrong thing.
+import argparse, sys, struct, random
 
 FRAME = bytes([0xAA, 0x55])  # magic only — the fmt byte is appended with the payload below
 FMT_GF14 = 0x16
@@ -29,6 +34,7 @@ def golden_gf14(code):
 
 
 def hw_exchange(ser, code):
+    import serial
     pkt = FRAME + bytes([FMT_GF14 & 0xFF, code & 0xFF, (code >> 8) & 0xFF, 0x00])
     ser.write(pkt)
     resp = ser.read(5)
@@ -52,6 +58,7 @@ def self_test():
 
 
 def run_hw(port, baud, n):
+    import serial
     import serial
     ser = serial.Serial(port, baud, timeout=2)
     fails = 0; checked = 0

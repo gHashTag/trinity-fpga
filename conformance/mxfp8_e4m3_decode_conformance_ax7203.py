@@ -3,7 +3,12 @@
 # E4M3: 1 sign + 4 exp (bias 7) + 3 mant. No Inf. NaN = S.1111.111. -> FP32.
 # Core: fpga/openxc7-synth/mxfp8_e4m3_decode.v (ported from tt-trinity-corona).
 # Self-contained golden mirrors the RTL exactly (NaN/zero/subnormal-3-case/normal).
-import argparse, sys, struct, serial
+# `serial` is imported where it is used, not at module level. Pass 181 found
+# that 30 hosts with a verified golden model could not even be IMPORTED without
+# pyserial, which put those goldens out of reach of CI, of any cross-check, and
+# of reuse by another host. A model that needs a board driver to be read is
+# checking the wrong thing.
+import argparse, sys, struct
 
 FRAME = bytes([0xAA, 0x55])
 FMT_MXFP8 = 0x12  # ignored by the single-decoder build; sent for protocol parity
@@ -30,6 +35,7 @@ def golden_mxfp8(code):
 
 
 def hw_exchange(ser, code):
+    import serial
     # Frame: AA 55 fmt code_lo code_hi trig  ->  A5 r0 r1 r2 r3 (uint32 LE)
     pkt = FRAME + bytes([FMT_MXFP8 & 0xFF, code & 0xFF, 0x00, 0x00])
     ser.write(pkt)
@@ -52,6 +58,7 @@ def self_test():
 
 
 def run_hw(port, baud):
+    import serial
     ser = serial.Serial(port, baud, timeout=2)
     fails = 0; checked = 0
     for code in range(256):           # exhaustive over the 8-bit E4M3 space

@@ -2,7 +2,12 @@
 # decimal64_decode_conformance_ax7203.py — IEEE 754 decimal64 (BID) -> FP32 decode on AX7203.
 # BID combination-field decode per IEEE 754-2008 (Wikipedia decimal64). value = (-1)^s * C * 10^(E-398).
 # Oracle = Python decimal.Decimal (authoritative); exact RNE rounding to binary32 (no double-rounding).
-import argparse, sys, struct, serial, random
+# `serial` is imported where it is used, not at module level. Pass 181 found
+# that 30 hosts with a verified golden model could not even be IMPORTED without
+# pyserial, which put those goldens out of reach of CI, of any cross-check, and
+# of reuse by another host. A model that needs a board driver to be read is
+# checking the wrong thing.
+import argparse, sys, struct, random
 from decimal import Decimal, ROUND_HALF_EVEN, localcontext
 
 FRAME = bytes([0xAA, 0x55])
@@ -103,6 +108,7 @@ T27 = {
 
 
 def hw_exchange(ser, code):
+    import serial
     b = code.to_bytes(8, 'little')
     pkt = FRAME + bytes([FMT_DECIMAL64 & 0xFF]) + b + bytes([0x00])
     ser.write(pkt)
@@ -124,6 +130,7 @@ def self_test():
 
 
 def run_hw(port, baud, n):
+    import serial
     import serial
     ser = serial.Serial(port, baud, timeout=2); fails = 0; checked = 0; rnd = random.Random(42)
     corners = list(T27.keys()) + [_enc(0, 9999999999999999, 398), _enc(1, 1234567890123456, 384)]

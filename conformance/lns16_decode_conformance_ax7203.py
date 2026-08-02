@@ -2,7 +2,12 @@
 # lns16_decode_conformance_ax7203.py — 16-bit LNS decode on AX7203.
 # 1 sign + 15-bit signed log (2's complement, scale 128). Antilog via 128-entry LUT.
 # Golden = struct.pack FP32 of 2^(signed_log/128). Validated against 5 t27 vectors.
-import argparse, sys, struct, serial, random
+# `serial` is imported where it is used, not at module level. Pass 181 found
+# that 30 hosts with a verified golden model could not even be IMPORTED without
+# pyserial, which put those goldens out of reach of CI, of any cross-check, and
+# of reuse by another host. A model that needs a board driver to be read is
+# checking the wrong thing.
+import argparse, sys, struct, random
 
 FRAME = bytes([0xAA, 0x55])
 FMT_LNS16 = 0x18
@@ -30,6 +35,7 @@ def golden_lns16(code):
 
 
 def hw_exchange(ser, code):
+    import serial
     pkt = FRAME + bytes([FMT_LNS16 & 0xFF, code & 0xFF, (code >> 8) & 0xFF, 0x00])
     ser.write(pkt)
     resp = ser.read(5)
@@ -49,6 +55,7 @@ def self_test():
 
 
 def run_hw(port, baud, n, extended=False, strict=False):
+    import serial
     import serial
     ser = serial.Serial(port, baud, timeout=2)
     fails = 0; known = 0; checked = 0

@@ -1,7 +1,12 @@
 #!/usr/bin/env python3
 # binary128_decode_conformance_ax7203.py — IEEE 754 binary128 (quad) decode on AX7203.
 # FP128 -> FP32 narrowing with RNE. NEW 128-bit decode frame (16 code bytes).
-import argparse, sys, struct, serial, random
+# `serial` is imported where it is used, not at module level. Pass 181 found
+# that 30 hosts with a verified golden model could not even be IMPORTED without
+# pyserial, which put those goldens out of reach of CI, of any cross-check, and
+# of reuse by another host. A model that needs a board driver to be read is
+# checking the wrong thing.
+import argparse, sys, struct, random
 
 FRAME = bytes([0xAA, 0x55])
 FMT_BINARY128 = 0x24
@@ -44,6 +49,7 @@ def golden_binary128(code):
     return (sign << 31) | (exp_final << 23) | (mant_rnd & 0x7FFFFF)
 
 def hw_exchange(ser, code):
+    import serial
     b = code.to_bytes(16, 'little')
     pkt = FRAME + bytes([FMT_BINARY128 & 0xFF]) + b + bytes([0x00])
     ser.write(pkt)
@@ -57,6 +63,7 @@ def self_test():
     return bad == 0
 
 def run_hw(port, baud, n):
+    import serial
     import serial
     ser = serial.Serial(port, baud, timeout=2); fails = 0; checked = 0; rnd = random.Random(42)
     corners = list(T27.keys()) + [0x40014000000000000000000000000000, 0xC0008000000000000000000000000000]

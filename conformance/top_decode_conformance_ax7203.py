@@ -3,7 +3,12 @@
 Tests all 5 decoders (bf16, fp8_e4m3_fnuz, int8, nf4, posit8) through the
 top wrapper's fmt mux. Frame: AA 55 fmt code_lo code_hi trigger -> A5 + 4 bytes LE.
 """
-import serial, struct, sys, os, argparse
+# `serial` is imported where it is used, not at module level. Pass 181 found
+# that 30 hosts with a verified golden model could not even be IMPORTED without
+# pyserial, which put those goldens out of reach of CI, of any cross-check, and
+# of reuse by another host. A model that needs a board driver to be read is
+# checking the wrong thing.
+import struct, sys, os, argparse
 
 # Import golden decoders from existing conformance scripts
 sys.path.insert(0, os.path.dirname(__file__))
@@ -87,6 +92,7 @@ GOLDENS = {0: ("bf16", golden_bf16, 0xFFFF), 1: ("fp8_e4m3_fnuz", golden_fp8_e4m
            2: ("int8", golden_int8, 0xFF), 3: ("nf4", golden_nf4, 0xF), 4: ("posit8", golden_posit8, 0xFF)}
 
 def run_hw(port, baud):
+    import serial
     ser = serial.Serial(port, baud, timeout=2)
     total_ok = 0; total = 0; fmt_results = {}
     for fmt in range(5):

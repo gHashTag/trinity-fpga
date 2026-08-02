@@ -1,7 +1,12 @@
 #!/usr/bin/env python3
 # ibm_hfp64_decode_conformance_ax7203.py — IBM hex floating-point (64-bit, HFP double) decode on AX7203.
 # 1S + 7E(excess-64, base-16) + 56M(hex 0.MMMM...). -> FP32 via leading-1 normalize (truncate).
-import argparse, sys, struct, serial, random
+# `serial` is imported where it is used, not at module level. Pass 181 found
+# that 30 hosts with a verified golden model could not even be IMPORTED without
+# pyserial, which put those goldens out of reach of CI, of any cross-check, and
+# of reuse by another host. A model that needs a board driver to be read is
+# checking the wrong thing.
+import argparse, sys, struct, random
 
 FRAME = bytes([0xAA, 0x55])
 FMT_IBM_HFP64 = 0x23
@@ -39,6 +44,7 @@ def golden_ibm_hfp64(code):
     return (sign << 31) | (exp_final << 23) | mant
 
 def hw_exchange(ser, code):
+    import serial
     b = code.to_bytes(8, 'little')
     pkt = FRAME + bytes([FMT_IBM_HFP64 & 0xFF]) + b + bytes([0x00])
     ser.write(pkt)
@@ -52,6 +58,7 @@ def self_test():
     return bad == 0
 
 def run_hw(port, baud, n):
+    import serial
     import serial
     ser = serial.Serial(port, baud, timeout=2); fails = 0; checked = 0; rnd = random.Random(42)
     corners = list(T27.keys()) + [0x4210000000000000, 0xC130000000000000, 0x4010000000000000, 0x7FFFFFFFFFFFFFFF]

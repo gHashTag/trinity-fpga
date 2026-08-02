@@ -3,7 +3,12 @@
 # Core: fpga/openxc7-synth/posit16_decode.v. Decode -> FP32 is exact (fraction <=13
 # bits fits FP32 mantissa; exponent integral). Golden mirrors the RTL exactly and is
 # validated against the 8 authoritative t27 vectors (posit16_conformance_v0.json).
-import argparse, sys, struct, serial, random
+# `serial` is imported where it is used, not at module level. Pass 181 found
+# that 30 hosts with a verified golden model could not even be IMPORTED without
+# pyserial, which put those goldens out of reach of CI, of any cross-check, and
+# of reuse by another host. A model that needs a board driver to be read is
+# checking the wrong thing.
+import argparse, sys, struct, random
 
 FRAME = bytes([0xAA, 0x55])
 FMT_POSIT16 = 0x15
@@ -54,6 +59,7 @@ def golden_posit16(code):
 
 
 def hw_exchange(ser, code):
+    import serial
     pkt = FRAME + bytes([FMT_POSIT16 & 0xFF, code & 0xFF, (code >> 8) & 0xFF, 0x00])
     ser.write(pkt)
     resp = ser.read(5)
@@ -74,6 +80,7 @@ def self_test():
 
 
 def run_hw(port, baud, n):
+    import serial
     import serial
     ser = serial.Serial(port, baud, timeout=2)
     fails = 0; checked = 0

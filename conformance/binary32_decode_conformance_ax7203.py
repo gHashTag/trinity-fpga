@@ -2,7 +2,12 @@
 # binary32_decode_conformance_ax7203.py — IEEE 754 binary32 (FP32) decode on AX7203.
 # binary32 IS FP32 → identity decode (passthrough). Exercises the new 32-bit decode
 # frame (4 code bytes). First cell of the 32-bit-format decode column.
-import argparse, sys, struct, serial, random
+# `serial` is imported where it is used, not at module level. Pass 181 found
+# that 30 hosts with a verified golden model could not even be IMPORTED without
+# pyserial, which put those goldens out of reach of CI, of any cross-check, and
+# of reuse by another host. A model that needs a board driver to be read is
+# checking the wrong thing.
+import argparse, sys, struct, random
 
 FRAME = bytes([0xAA, 0x55])
 FMT_BINARY32 = 0x1A
@@ -13,6 +18,7 @@ def golden_binary32(code):
 
 
 def hw_exchange(ser, code):
+    import serial
     # 8-byte frame: AA 55 fmt code[0] code[1] code[2] code[3] trig
     pkt = FRAME + bytes([FMT_BINARY32 & 0xFF,
                           code & 0xFF, (code >> 8) & 0xFF,
@@ -37,6 +43,7 @@ def self_test():
 
 
 def run_hw(port, baud, n):
+    import serial
     import serial
     ser = serial.Serial(port, baud, timeout=2)
     fails = 0; checked = 0

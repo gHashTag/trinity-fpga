@@ -1,7 +1,12 @@
 #!/usr/bin/env python3
 # vax_d_decode_conformance_ax7203.py — DEC VAX D_floating (64-bit) decode on AX7203.
 # Same bias as vax_f (excess-128) + 55-bit mantissa → FP32 23-bit with RNE.
-import argparse, sys, struct, serial, random
+# `serial` is imported where it is used, not at module level. Pass 181 found
+# that 30 hosts with a verified golden model could not even be IMPORTED without
+# pyserial, which put those goldens out of reach of CI, of any cross-check, and
+# of reuse by another host. A model that needs a board driver to be read is
+# checking the wrong thing.
+import argparse, sys, struct, random
 
 FRAME = bytes([0xAA, 0x55]); FMT = 0x21
 
@@ -23,6 +28,7 @@ def golden_vax_d(code):
     return (sign << 31) | (exp_final << 23) | (mant_rnd & 0x7FFFFF)
 
 def hw_exchange(ser, code):
+    import serial
     b = code.to_bytes(8, 'little'); pkt = FRAME + bytes([FMT & 0xFF]) + b + bytes([0x00])
     ser.write(pkt); resp = ser.read(5)
     if len(resp) != 5 or resp[0] != 0xA5: return None
@@ -33,6 +39,7 @@ def self_test():
     print(f"self-test: golden vs {len(T27)} t27 vectors, {bad} failures"); return bad == 0
 
 def run_hw(port, baud, n):
+    import serial
     import serial; ser = serial.Serial(port, baud, timeout=2); fails=0; checked=0; rnd=random.Random(42)
     corners = list(T27.keys()) + [0x4100000000000000, 0xC0C0000000000000]
     sample = corners + [rnd.randint(0, 0xFFFFFFFFFFFFFFFF) for _ in range(max(0, n-len(corners)))]

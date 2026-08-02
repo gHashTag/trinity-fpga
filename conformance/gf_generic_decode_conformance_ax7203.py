@@ -2,7 +2,12 @@
 """Generic GF decode conformance — works for any GF{N} format using iverilog golden.
 Usage: python3 gf_generic_decode_conformance.py --fmt gf4 --port /dev/cu.usbserial-1120
 """
-import serial, time, random, sys, argparse, subprocess, os
+# `serial` is imported where it is used, not at module level. Pass 181 found
+# that 30 hosts with a verified golden model could not even be IMPORTED without
+# pyserial, which put those goldens out of reach of CI, of any cross-check, and
+# of reuse by another host. A model that needs a board driver to be read is
+# checking the wrong thing.
+import time, random, sys, argparse, subprocess, os
 
 GF_PARAMS = {
     "gf4":  {"N": 4,  "E": 1, "M": 2,  "BIAS": 0,  "nbytes": 2},

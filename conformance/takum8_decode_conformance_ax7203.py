@@ -1,7 +1,12 @@
 #!/usr/bin/env python3
 # takum8_decode_conformance_ax7203.py — Takum8 (8-bit logarithmic) decode on AX7203.
 # Full 256-entry LUT decoder (all codes pre-computed from t27 authoritative vectors).
-import argparse, sys, struct, serial
+# `serial` is imported where it is used, not at module level. Pass 181 found
+# that 30 hosts with a verified golden model could not even be IMPORTED without
+# pyserial, which put those goldens out of reach of CI, of any cross-check, and
+# of reuse by another host. A model that needs a board driver to be read is
+# checking the wrong thing.
+import argparse, sys, struct
 
 FRAME = bytes([0xAA, 0x55])
 FMT_TAKUM8 = 0x19
@@ -272,6 +277,7 @@ def golden_takum8(code):
 
 
 def hw_exchange(ser, code):
+    import serial
     pkt = FRAME + bytes([FMT_TAKUM8 & 0xFF, code & 0xFF, 0x00, 0x00])
     ser.write(pkt)
     resp = ser.read(5)
@@ -290,6 +296,7 @@ def self_test():
 
 
 def run_hw(port, baud):
+    import serial
     import serial
     ser = serial.Serial(port, baud, timeout=2)
     fails = 0; checked = 0

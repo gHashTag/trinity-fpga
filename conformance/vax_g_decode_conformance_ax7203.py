@@ -3,7 +3,12 @@
 # VAX G = sign + 11-bit exp (excess-1024) + 52-bit mantissa -> FP32 (RNE narrowing).
 # VAX has NO inf/nan sentinel exponent (unlike IEEE): exp 0..2047 all normal/reserved;
 # exp==0 -> signed zero, overflow -> FP32 inf. Decode exp = exp64 - 897.
-import argparse, sys, struct, serial, random
+# `serial` is imported where it is used, not at module level. Pass 181 found
+# that 30 hosts with a verified golden model could not even be IMPORTED without
+# pyserial, which put those goldens out of reach of CI, of any cross-check, and
+# of reuse by another host. A model that needs a board driver to be read is
+# checking the wrong thing.
+import argparse, sys, struct, random
 
 FRAME = bytes([0xAA, 0x55])
 FMT_VAX_G = 0x22
@@ -41,6 +46,7 @@ def golden_vax_g(code):
     return (sign << 31) | (exp_final << 23) | (mant_rnd & 0x7FFFFF)
 
 def hw_exchange(ser, code):
+    import serial
     b = code.to_bytes(8, 'little')
     pkt = FRAME + bytes([FMT_VAX_G & 0xFF]) + b + bytes([0x00])
     ser.write(pkt)
@@ -54,6 +60,7 @@ def self_test():
     return bad == 0
 
 def run_hw(port, baud, n):
+    import serial
     import serial
     ser = serial.Serial(port, baud, timeout=2); fails = 0; checked = 0; rnd = random.Random(42)
     corners = list(T27.keys()) + [0x4024000000000000, 0xC018000000000000]

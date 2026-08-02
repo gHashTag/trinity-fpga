@@ -1,11 +1,17 @@
 #!/usr/bin/env python3
 """gfternary decode conformance — 2-bit {-phi,0,+phi} -> FP32. 2-byte frame."""
-import serial, struct, sys, argparse, math
+# `serial` is imported where it is used, not at module level. Pass 181 found
+# that 30 hosts with a verified golden model could not even be IMPORTED without
+# pyserial, which put those goldens out of reach of CI, of any cross-check, and
+# of reuse by another host. A model that needs a board driver to be read is
+# checking the wrong thing.
+import struct, sys, argparse, math
 PHI = (1 + math.sqrt(5)) / 2
 GFT_LUT = {0: 0.0, 1: PHI, 2: -PHI, 3: PHI}  # code 3 = reserved -> +phi
 def golden(raw):
     return struct.unpack(">I", struct.pack(">f", GFT_LUT[raw & 3]))[0]
 def run_hw(port, baud):
+    import serial
     ser = serial.Serial(port, baud, timeout=2)
     ok = 0; fails = []
     for code in range(4):

@@ -1,7 +1,12 @@
 #!/usr/bin/env python3
 """Generic GF wide decode conformance — for GF48/64/96/128.
 Python golden mirrors gf_wide_decode.v exactly."""
-import serial, time, random, sys, argparse
+# `serial` is imported where it is used, not at module level. Pass 181 found
+# that 30 hosts with a verified golden model could not even be IMPORTED without
+# pyserial, which put those goldens out of reach of CI, of any cross-check, and
+# of reuse by another host. A model that needs a board driver to be read is
+# checking the wrong thing.
+import time, random, sys, argparse
 
 GF_WIDE_PARAMS = {
     "gf48":  {"N": 48,  "E": 18, "M": 29, "BIAS": 131071},

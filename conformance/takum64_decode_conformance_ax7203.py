@@ -1,6 +1,11 @@
 #!/usr/bin/env python3
 """Takum64 decode conformance — logarithmic N=64 → FP32. 8-byte data frame."""
-import serial, struct, time, random, sys, argparse, subprocess, os
+# `serial` is imported where it is used, not at module level. Pass 181 found
+# that 30 hosts with a verified golden model could not even be IMPORTED without
+# pyserial, which put those goldens out of reach of CI, of any cross-check, and
+# of reuse by another host. A model that needs a board driver to be read is
+# checking the wrong thing.
+import struct, time, random, sys, argparse, subprocess, os
 
 def golden_fp32(takum_bits):
     """Use iverilog combinational decoder as golden reference."""

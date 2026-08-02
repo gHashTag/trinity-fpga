@@ -1,7 +1,12 @@
 #!/usr/bin/env python3
 """GF256 decode conformance — GoldenFloat N=256 -> FP32. 32-byte data frame.
 Uses gf_decode_param.v iverilog golden reference for bit-exact comparison."""
-import serial, struct, time, random, sys, argparse, subprocess, os
+# `serial` is imported where it is used, not at module level. Pass 181 found
+# that 30 hosts with a verified golden model could not even be IMPORTED without
+# pyserial, which put those goldens out of reach of CI, of any cross-check, and
+# of reuse by another host. A model that needs a board driver to be read is
+# checking the wrong thing.
+import struct, time, random, sys, argparse, subprocess, os
 
 N = 256; E_BITS = 97; M_BITS = 158
 BIAS = (1 << (E_BITS - 1)) - 1
