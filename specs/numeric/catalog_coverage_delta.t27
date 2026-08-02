@@ -4916,3 +4916,52 @@ reason to doubt it has gone.
 """
   status VERIFIED_SW
 }
+
+// ---- Pass 137: the lesson, written where the next pass will read it ----------
+
+result THE_WRONG_OBJECT_RULE_IS_NOW_IN_THE_SKILL {
+  detail """
+.claude/skills/t27-spec/SKILL.md gains "Measure the object the claim is about".
+
+The framing that matters: the takum detour was not a wrong measurement. Every number
+in it was correct -- 437 binades over 65,536 codes, exhaustive, with a negative control
+and a corrected sign bug. It was seven passes of CORRECT measurement of the wrong
+object, ended by opening one pack.
+
+Two tells recorded, because the failure is not obvious from inside it:
+
+  the measurement is easy and the artefact is remote -- oracles import, packs live
+  behind an API call in another repository, and convenience selects the wrong object
+
+  each pass adds rigour rather than scope -- exhaustive instead of sampled, a control,
+  a second width, a fixed bug, all deepening a measurement that was never of the right
+  thing. Increasing rigour FEELS like increasing confidence, which is what makes it
+  dangerous.
+
+And the part worth stating plainly: this is the same failure as the one already
+recorded under "Read the artefact's documentation FIRST", and it recurred after that
+lesson was written down. A rule about following an oracle to its users was not enough;
+the stronger form is that the documentation of the thing you measured is not the thing
+you are claiming about either.
+"""
+  status IMPLEMENTED
+}
+
+note THE_TALLY_OF_THIS_THREAD {
+  detail """
+  129   retracted a publication recommendation                  correct
+  130   generalised it to the published corpus                  overstated
+  131   traced dependents, narrowed to two packs                 correct
+  132   measured oracle vs oracle, 437 binades                   correct number,
+                                                                 wrong object
+  133   contrasted lns and posit, found takum the outlier        correct
+  134   measured the lns representation error at 1e-16           correct
+  135   built an exact takum oracle after lns_ref                useful, and stands
+  136   opened the packs; the case collapsed                     the retraction
+  137   wrote the rule into the skill
+
+Three of nine passes produced something that survives: the lns contrast, the 1e-16
+measurement, and takum_log_ref.py. The rest was a case built on the wrong artefact,
+and the honest ledger is worth as much as the survivors.
+"""
+}

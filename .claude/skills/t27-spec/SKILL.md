@@ -212,6 +212,41 @@ established nothing**, because the same blindness that produces false positives
 produces false negatives. Pass 76 proved a "no hits" result was an unindexed
 repository, not an absent string, by running a known-positive control first. Do that.
 
+## Measure the object the claim is about
+
+The most expensive mistake in this campaign was not a wrong measurement. Every number
+was correct. It was seven passes of correct measurement of the **wrong object**.
+
+The claim under construction was *"the published takum packs carry values from a linear
+model"*. What got measured was **oracle against oracle** — two decoders in
+`conformance/`, disagreeing by 437 binades over 65,536 codes, exhaustively, with a
+negative control and a corrected sign bug. All true, and none of it about a pack.
+
+Opening one pack ended it. The published vectors agree with the logarithmic definition
+to **1.02e−16** — the float64 rounding level. The case had been wrong from its first
+sentence, and three retractions were needed to unwind it.
+
+**The rule: before measuring, name the artefact the claim is about, and measure that
+one.** If the claim says "the packs", open a pack. If it says "the published
+corpus", fetch from the published corpus. An oracle is evidence about an oracle.
+
+Two tells that this is happening:
+
+- **The measurement is easy and the artefact is remote.** Oracles are importable;
+  packs live in another repository behind an API call. Convenience selects the wrong
+  object.
+- **Each pass adds rigour rather than scope.** Exhaustive instead of sampled, a
+  negative control, a second width, a fixed sign — all of it deepening a measurement
+  that was never of the right thing. *More measurement of the wrong object is not more
+  evidence*, and increasing rigour feels like increasing confidence, which is what
+  makes it dangerous.
+
+This is the same failure as the earlier one recorded under **Read the artefact's
+documentation FIRST** — reading an oracle's header and not following it to what uses
+it — and it recurred *after* that lesson was written down. So it is worth stating in
+its stronger form: the documentation of the thing you measured is not the thing you
+are claiming about either.
+
 ## Merging into t27 master
 
 **Git-flow, as of 2026-08-01.** Branch, commit, push, open the PR, **and merge** —
