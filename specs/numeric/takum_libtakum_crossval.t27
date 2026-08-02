@@ -381,3 +381,71 @@ touches 124 of 255 vectors.
 """
   }
 }
+
+
+// ============================================================================
+// Pass 150 -- the reference-width rule checked at 32 and 64, and why 64 cannot be.
+// ============================================================================
+
+finding REFERENCE_WIDTH_RULE_HOLDS_AT_32 {
+  // codec.c states the rule outright for every width: p = p_lut[DR] at 16,
+  // p_lut[DR] + 16 at 32, p_lut[DR] + 48 at 64 -- that is 11-r, 27-r and 59-r.
+  // The oracle computes p = n - r_eff - 5, which gives exactly those three.
+  // So the rule was never width-specific; only width 8 fell outside it, because
+  // 8 - r_eff - 5 goes negative and 8 is not a width libtakum decodes at all.
+  source_rule    "p = p_lut[DR] + {0,16,48} for widths 16, 32, 64"
+  oracle_rule    "p = n - r_eff - OVERHEAD"
+  agree_by_algebra true
+
+  takum32_measured {
+    codes            40000     // pseudorandom, xorshift, whole code space
+    median_rel_error "4.508e-16"
+    max_rel_error    "7.393e-15"
+    worse_than_1e_9  0
+    reading "the same long-double noise ceiling as takum8 and takum16"
+  }
+}
+
+limitation TAKUM64_CANNOT_BE_CROSS_VALIDATED_HERE {
+  // Not a build error, not a corpus defect, and not a mystery. libtakum says so
+  // itself, in codec.c, guarded on the platform's extended float precision:
+  //
+  //   #if LDBL_MANT_DIG >= 64
+  //       ... the real decode ...
+  //   #else
+  //   #pragma message "Extended float format is too small to hold what
+  //                    takum_log64 offers, takum_log64 decoding is stubbed"
+  //       return NAN;
+  //   #endif
+  //
+  // On this host sizeof(long double) is 8 and LDBL_MANT_DIG is 53, so every
+  // takum64 and takum_log64 decode returns NaN by design -- verified on the
+  // library's own named constant, TAKUM_LOG64_2_PI, which should decode to 2*pi
+  // and returns NaN.
+  precondition   "LDBL_MANT_DIG >= 64"
+  this_host      "arm64 macOS, LDBL_MANT_DIG = 53, sizeof(long double) = 8"
+  consequence    "takum64 parity against libtakum is unobtainable here, at any effort"
+  how_to_obtain  "an x86-64 host (80-bit long double) or one with 113-bit long double"
+
+  confirms """
+The spec's earlier note -- 'takum32/64 published-pack variant, ctypes returned NaN,
+measurement void' -- was correct. It is now explained rather than merely observed, and
+the precondition is exact, so the next attempt need not rediscover it.
+
+takum32 is NOT affected: codec_takum_log32_to_l returns a double and carries no
+extended-float requirement, which is why 40,000 codes compared cleanly above.
+"""
+
+  // One consequence the author should check, and it is not decidable from here.
+  open_for_author """
+The published takum64 pack's own metadata records a libtakum_c_parity witness saying
+'libtakum decodes the same codes to the same f64 (<=1 ULP long-double noise)'. On a
+host with LDBL_MANT_DIG = 53 that comparison can only ever have been against NaN.
+
+Either that witness ran on an x86-64 host, in which case it stands and should say so,
+or it ran here, in which case it is void. Which of the two is a fact about where it
+was run, and this pass has no way to find that out.
+"""
+  do_not_guess true
+  owner        author
+}
