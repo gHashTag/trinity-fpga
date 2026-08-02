@@ -402,7 +402,8 @@ does not survive.**
 
 The published vectors are logarithmically correct. `conformance/takum_ref.py` *is* a
 linear model and says so — that part stands — but `gen_all_formats.py`, which generated
-these packs, does not use it.
+these packs, does not use it. (That generator lives in **`t27`** at `conformance/vectors/`, not in this
+repository — worth saying, because a reader will otherwise look for it here.)
 
 **What went wrong in my reasoning.** I measured oracle against oracle, found a
 437-binade gap, and concluded something about the *packs* without opening one. That is
@@ -498,36 +499,35 @@ and a new gate locks the index against the packs it summarises.
 
 ---
 
-## 7. What was re-verified on 2026-08-02, and what could not be
+## 7. What was re-verified, and when
 
-This checklist grew over forty passes. Section 0 was last checked against the
-**published** arXiv text at pass 71. This pass re-ran everything re-runnable and states
-plainly what it could not reach.
+This checklist grew across sixty passes. The table says what was last re-run and on
+what date, so fresh evidence is distinguishable from old — which the section itself
+warned would blur, and did.
 
-**Re-verified by execution, still holding:**
+**Re-run on 2026-08-03, all holding:**
 
-| claim | where | result |
+| claim | check | result |
 |---|---|---|
-| φ-rule over the catalogued widths | §2, `(9/9)` question | **17/17** satisfy `e = round((N−1)/φ²)`; no width lands on an exact .5, so the unstated rounding convention is moot |
-| commutativity and the arithmetic laws | §5 | **8,865** ordered pairs, **0** violations |
-| every file this checklist cites | throughout | **19 of 19** resolve — 13 here, 4 in the papers' own repositories as §0 says, 2 in `t27` |
+| φ-rule over the catalogued widths | `verify_phi_rule.py` | **17/17** |
+| arithmetic laws, 16 GoldenFloat widths | `verify_wide_arithmetic.py` | **8,865** pairs, **0** violations |
+| ADD, three independent oracles | `verify_add_oracle.py` | 5 formats, **0** divergences |
+| P3109 bias law | `p3109_bias_law.py` | **252** configurations |
+| ml_dtypes cross-validation | `crossval_ml_dtypes.py` | **66,224** codes, **0** divergences |
+| the previously unvalidated oracles | `crossval_unpublished.py` | 4 formats, all agreeing exactly |
+| `bfloat24`/`bfloat32` by construction | `verify_bfloat_by_construction.py` | 20,014 codes each, **0** |
+| `pdp11_float`/`x87_48bit`/`mxint8` | `verify_legacy_by_construction.py` | **0** divergences |
+| published `takum8`/`takum16` witness | `witness_takum_packs.py` | **255/255** and **3/3** correctly rounded |
+| every file this checklist cites | reference sweep | **32/32** resolve |
 
-**Could not be re-verified, and why** (one of the two was closed the same day):
+**Still not re-checkable here:**
 
-- ~~**ml_dtypes cross-validation**~~ — **settled the same day.** `ml_dtypes 0.5.4` was
-  installed and `research/crossval_ml_dtypes.py` re-run: **66,224 codes compared, 0
-  divergences**, across `bfloat16`, `float8_e4m3fn`, `float8_e5m2`, `float4_e2m1fn`,
-  `float6_e2m3fn`, `float6_e3m2fn`, `int4` and `uint4`. The run also reports **14
-  zero-sign codes the oracle's container cannot carry**, excluded explicitly rather
-  than silently — worth keeping in any sentence that quotes the figure.
 - **Everything in §1 that quotes the published papers** — abstracts, reference lists,
-  the TTSKY26b clause. Verifying those needs the arXiv text, and the web-fetch tool has
-  been unavailable across fourteen consecutive attempts (a fetch of `example.com` fails
-  identically, so it is the tool and not the target). Those claims were correct at
-  pass 71 and have not been re-read since.
-
-Nothing was found to have gone stale except the self-correction count in the caution
-below, which is now stated with its derivation.
+  the TTSKY26b clause. Those need the arXiv text, and the web-fetch tool has been
+  unavailable throughout; pass 110 confirmed the tool is down rather than the target by
+  fetching `example.com` and getting the same error. **These were correct at pass 71 and
+  have not been re-read since.** That is the one place in this document where "verified"
+  means "verified some time ago".
 
 ---
 

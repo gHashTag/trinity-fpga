@@ -5121,3 +5121,54 @@ A pass that ends "nothing further found" after a real search is worth as much as
 that ends with a finding, and is easier to mistake for wasted work. The alternative was
 to leave "there may be more" standing indefinitely.
 """
+
+// ---- Pass 141: section 7 re-run, and one reference that pointed nowhere ------
+
+result EVERYTHING_RE_RUNNABLE_STILL_HOLDS {
+  re_run_2026_08_03 """
+  verify_phi_rule                 17/17 catalogued widths
+  verify_wide_arithmetic          8,865 ordered pairs, 0 violations
+  verify_add_oracle               5 formats, 0 divergences
+  p3109_bias_law                  252 configurations
+  crossval_ml_dtypes              66,224 codes, 0 divergences
+  crossval_unpublished            4 formats, all agreeing exactly
+  verify_bfloat_by_construction   20,014 codes each, 0
+  verify_legacy_by_construction   3 hypotheses, 0 divergences
+  witness_takum_packs             255/255 and 3/3 correctly rounded
+  reference sweep                 32/32 resolve
+
+Nine checks added since pass 113 had never been re-run. All of them hold.
+"""
+  status VERIFIED_SW
+}
+
+finding ONE_CITATION_POINTED_AT_NOTHING_A_READER_COULD_FIND {
+  severity LOW
+  detail """
+The reference sweep returned 31 of 32. The one was gen_all_formats.py, cited in the
+retracted section 5h as the generator that produced the published takum packs.
+
+That is true and pass 123 established it: it lives in t27 at conformance/vectors/, not
+in this repository. But the checklist named it bare, so a reader would look for it here
+and conclude the citation was broken.
+
+Fixed by naming the repository in place. The sweep now returns 32 of 32.
+
+A citation that resolves for the writer and not for the reader is the smallest possible
+version of the defect this whole campaign reports in the papers.
+"""
+  resolved true
+}
+
+result SECTION_7_NOW_CARRIES_A_TABLE_RATHER_THAN_A_PARAGRAPH {
+  detail """
+It was written at pass 113 and warned that "checked today" and "checked once, long ago"
+blur together. Twenty-eight passes later they had.
+
+Rewritten as a dated table of ten checks with their commands and results, plus the one
+standing exception: everything in section 1 that quotes the published papers needs the
+arXiv text, the web-fetch tool has been down throughout, and those claims were last read
+at pass 71. Said in one place rather than implied across the document.
+"""
+  status VERIFIED_SW
+}
