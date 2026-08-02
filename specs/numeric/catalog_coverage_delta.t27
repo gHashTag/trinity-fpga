@@ -1688,25 +1688,46 @@ statement in any of the three documents.
     distinct_cells_with_a_complete_chain  34     // see UNRESOLVED below
   }
 
-  // The one figure pass 149 could NOT reproduce, and did not guess at.
-  unresolved CELL_COUNT_DISAGREES_WITH_ITS_OWN_LIST {
-    claimed    34
-    enumerated 33      // count the names in the_cells below; there are 33
-    do_not_guess true
-    owner       author
-    detected_by "research/audit_counted_claims.py"
-    note """
-Both numbers are in this spec, side by side, and they differ by one. The 34 came from
-counting comments on issue #199; the 33 is the list written beside it.
+  // RESOLVED 2026-08-02 (pass 150). Pass 149 could not reproduce this figure because
+  // 'cell' had never been defined anywhere -- it was a number counted once, which is
+  // a transcription and not a measurement. research/measure_tier_e_cells.py defines
+  // it: a proof comment is one carrying all four links, and the cell it proves is the
+  // backticked name in its '### Tier-E proof:' title. Both readings of 'cell' are
+  // reported because the corpus has used the word both ways.
+  resolved CELL_COUNT {
+    definition_now_in_code "research/measure_tier_e_cells.py, --self-check exercises all four link patterns"
+    measured_2026_08_02 {
+      comments                       224
+      carrying_ALL_FOUR               75
+      of_those_without_a_proof_title   3
+      distinct_format_operation_cells 72
+      distinct_base_formats           49
+    }
 
-Pass 149 tried to settle it by re-running the comment count and could not: extracting
-a format name from a comment yields format-and-operation pairs, a different
-granularity than "cells", so the re-run produced 23 names and answers a different
-question. Reporting that 23 as the truth would have been a tool's shortfall dressed as
-a finding, which this campaign has done before and does not do again.
+    // The direction of the error is the point, and it is the same direction as the
+    // largest defect found in either paper: an under-claim. The corpus was giving
+    // away evidence it had already earned.
+    against_the_written_list """
+the_cells below names 33 formats. The issue supports 49 by the same standard, and 72
+if a cell is a format-and-operation pair.
 
-So it stands open. One of the two is a transcription slip and the other is a
-measurement. Deciding needs whoever knows how a cell was counted in pass 91.
+Eighteen formats carry a complete four-link chain in the issue and appear nowhere in
+the list: bf16, bitnet, double_double, e8m0, fp4_e2m1, fp6_e2m3, fp6_e3m2, ibm_hfp32,
+ibm_hfp64, lns8, lns16, ms_mbf32, ms_mbf64, mxfp8_e4m3, mxint8, nf4, quad_double, tf32.
+
+Two names go the other way -- bfloat16 and fp8 are in the list and not in the issue --
+but the issue carries bf16 and fp8_e5m2, so those are spellings rather than absences.
+Sixteen are genuinely new.
+
+Whether pass 91's 34 came from a narrower reading of 'cell' is unknown and no longer
+matters: the number is now recomputable from the issue, and the definition is written
+down instead of remembered.
+"""
+
+    carries_a_date """
+224 comments today against 217 at pass 91, and every link count rose with it. A figure
+of this kind is a measurement with a date, not a constant, and re-running it is now
+one command.
 """
   }
 

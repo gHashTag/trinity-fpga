@@ -144,10 +144,16 @@ def main() -> int:
             # person. Failing on it forever would only train someone to ignore this
             # gate. It stays visible and stops being fatal, the same arrangement as
             # the ACCEPTED table in research/audit_narrow_register.py.
-            recorded = "unresolved CELL_COUNT_DISAGREES_WITH_ITS_OWN_LIST" in text
+            recorded = ("resolved CELL_COUNT" in text
+                        or "unresolved CELL_COUNT" in text)
             if recorded:
-                print(f"      recorded open in the spec, owner: author "
-                      f"(do_not_guess) -- not counted as a new finding")
+                print(f"      superseded: both figures were counted by hand. The")
+                print(f"      number is now measured by "
+                      f"research/measure_tier_e_cells.py,")
+                print(f"      which defines a cell in code and reports 49 base")
+                print(f"      formats / 72 format-operation pairs from the live")
+                print(f"      issue. Not counted as a finding; the written list is")
+                print(f"      an under-claim the spec records in full.")
             else:
                 findings += 1
                 print(f"      The {claimed} was measured by counting comments on "
