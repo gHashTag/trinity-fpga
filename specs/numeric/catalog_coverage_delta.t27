@@ -5607,3 +5607,73 @@ stands is not.
   do_not_guess true
   owner author
 }
+
+
+// ============================================================================
+// Pass 154 -- the variant-split class checked, and posit8's software half closed.
+// ============================================================================
+
+finding VARIANT_SPLIT_IS_A_CLASS_OF_ONE {
+  tool "research/audit_rtl_vs_pack_variant.py"
+  method "compare only where BOTH the RTL header and the pack state a parameter"
+
+  results {
+    formats_checked            8
+    both_sides_state_a_value   7
+    agree                      6
+    disagree                   1     // posit8, found in pass 153
+  }
+
+  the_posit_family """
+  width   core es   pack es   verdict
+      8        0         2    SPLIT -- the only one
+     16        2         2    agree
+     32        2         2    agree
+     64        2         2    agree
+    128        4        --    no pack, so no claim rests on it
+
+posit128_decode.v at es = 4 is the legacy scheme, where es grows with width -- the one
+Posit Standard 2022 replaced with a fixed es = 2. It has no pack and therefore makes no
+false claim, but it is the same drift that produced the posit8 split and is recorded so
+it is not discovered a third time.
+"""
+
+  decimal_family "decimal32/64/128: RTL and packs all say BID. No split."
+  silence_is_not_evidence "a header naming no parameter is reported unstated, never assumed to agree"
+}
+
+resolution POSIT8_ES2_CORE_EXISTS {
+  closes_half_of "the posit8 variant split; the board half remains"
+  file "fpga/openxc7-synth/posit8_es2_decode.v"
+
+  // Not new arithmetic. At a fixed es, posit codes are prefix-coded, so an n-bit
+  // posit is the wider one with zero bits appended. Measured, not assumed:
+  //
+  //   posit8(es=2)[c] == posit16(es=2)[c << 8]   all 256 codes, 0 differ
+  //
+  // against SoftPosit, whose positX family uses exactly this property by left-
+  // aligning an n-bit code in a 32-bit container. posit16_decode.v is already es = 2
+  // and already correct, so the core hands it the code in the high bits and does
+  // nothing else. Duplicating the regime counter is how the two cores drifted apart
+  // in the first place.
+  implementation "a wrapper over posit16_decode; no regime, exponent or rounding path is duplicated"
+
+  verified {
+    against    "SoftPosit convertPX2ToDouble, all 256 codes"
+    result     "255 bit-identical, 1 NaR correctly flagged, 0 differing"
+    exactness  "every posit8 value is exactly representable in FP32, checked rather than assumed, so this is bit equality and not a tolerance"
+    tool       "research/crossval_posit8_es2_rtl.py"
+  }
+
+  what_remains """
+This does NOT complete a Tier-E chain. That needs a public CI run, a bitstream SHA-256,
+a UART log from the board and a matching IDCODE, and simulation is explicitly not one
+of the four by this project's own standard.
+
+Until the board runs, the honest position is unchanged: the Tier-E row 'posit8 256/256'
+proves posit(8,0), the pack is posit(8,2), and the count of packs with board-verified
+decode is 45 rather than 46. What has changed is that closing it is now a synthesis run
+and a flash, not a design problem.
+"""
+  owner author
+}
