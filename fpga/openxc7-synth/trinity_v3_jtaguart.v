@@ -60,7 +60,17 @@ module trinity_v3_jtaguart (
     wire jtag_tms, jtag_tck, jtag_tdi, jtag_tdo;
 
     // UART signals between JTAG UART and TRINITY V2
-    wire jtag_tx_to_trinity;
+    //
+    // NOTHING DRIVES jtag_tx_to_trinity IN THIS FILE, AND THAT IS DELIBERATE.
+    // The NOTES block at the bottom records that this is a simplified version and
+    // that the full design would instantiate the JTAG_UART module from jtag_uart.v
+    // behind a Xilinx BSCAN2 primitive. Neither is present here, so the receive
+    // path below has no source. It is tied to the UART idle level rather than left
+    // floating, so simulation is deterministic instead of propagating X -- but the
+    // receiver still cannot receive anything, and no start bit will ever arrive.
+    // The usage instructions in this file's header describe the full design, not
+    // this one.
+    wire jtag_tx_to_trinity = 1'b1;   // UART idle; see above -- stub, no driver
     wire jtag_rx_from_trinity;
 
     // Status LEDs
@@ -74,7 +84,11 @@ module trinity_v3_jtaguart (
 
     // Simplified test pattern (for simulation/testing)
     reg [7:0] test_counter;
-    reg [23:0] blink_divider;
+    // 26 bits, not 24: the LED mode ladder reads bits 25, 22 and 21, and bit 25 did
+    // not exist -- the Slow mode drove the LED from an out-of-bounds select, which
+    // is undef. Widening keeps the intended 25 > 22 > 21 ratio between the modes;
+    // narrowing the ladder to fit 24 bits would have changed the blink rates.
+    reg [25:0] blink_divider;
 
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
@@ -116,7 +130,12 @@ module trinity_v3_jtaguart (
     reg [7:0] data_idx;
     reg [31:0] vector_a, vector_b;
     reg [7:0] similarity_score;
-    reg led_mode_reg;
+    // Three bits, not one. It is assigned uart_rx_data[2:0] below and compared
+    // against 3'b000..3'b011 in the LED mode ladder. As a single bit it could only
+    // ever hold 0 or 1, so the 3'b010 and 3'b011 arms of that ladder were
+    // unreachable -- the Medium and Fast blink modes were dead code. Verilog widens
+    // the comparison silently, so no tool reports this.
+    reg [2:0] led_mode_reg;
 
     // Simple UART receiver @ 115200 baud (50MHz / 434 ≈ 115200)
     localparam BAUD_DIV = 16'd434;

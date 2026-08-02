@@ -75,14 +75,19 @@ module cordic_cf_pipeline #(
     assign z_out = z_pipe[STAGES];
 
     // Valid signal (pipeline delay)
-    reg [$clog2(STAGES+1)-1:0] valid_shift;
+    // Tracks the STAGES-deep pipeline, so it needs STAGES bits and the output is
+    // the last of them. The previous form sized the register $clog2(STAGES+1) wide
+    // and read bit $clog2(STAGES), which is only in bounds when STAGES is a power
+    // of two. At the default STAGES=12 the register is 4 bits and the read is at
+    // bit 4, so valid_out was undef for the default parameterisation.
+    reg [STAGES-1:0] valid_shift;
     always @(posedge clk) begin
         if (rst) valid_shift <= 0;
         else if (en) begin
             valid_shift <= (valid_shift << 1) | 1'b1;
         end
     end
-    assign valid_out = valid_shift[$clog2(STAGES)];
+    assign valid_out = valid_shift[STAGES-1];
 
 endmodule
 

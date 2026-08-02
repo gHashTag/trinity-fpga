@@ -191,7 +191,13 @@ module decimal128_wide_decode (
     integer ns;  // normal shift
     integer ds;  // denormal shift
     integer ep;  // extract position
-    reg [23:0] m24;
+    // 25 bits, not 24: the normal path masks to 24 bits at 24'hFFFFFF and then
+    // increments for round-up, so the carry needs a bit to land in. It is read
+    // back as m24[24] below, which on a [23:0] register was out of bounds and
+    // therefore always undef -- the carry branch could never be taken. The
+    // denormal path further down already gets this right (masks to 23 bits,
+    // tests bit 23) and is unaffected by the wider register.
+    reg [24:0] m24;
     reg grd, rnd, sty, rup;
     reg [31:0] res;
 

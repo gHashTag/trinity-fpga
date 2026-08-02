@@ -70,6 +70,18 @@ module VSA10K_OpsCore (
     reg busy_reg = 0;
     assign busy = busy_reg;
 
+    // Loop variable and per-lane trit temporaries for the similarity accumulator
+    // below. These were declared inside unnamed begin/end blocks, which
+    // Verilog-2005 does not permit; the file did not parse at all as a result.
+    // a_val/b_val were also declared `reg signed` with no width -- one bit -- while
+    // being assigned 8-bit constants, so +1 and -1 both collapsed to the same
+    // stored value and the dot product could never go negative.
+    integer i;          // similarity accumulator loop
+    integer bi;         // result-copy loop; a separate variable, because driving one
+                        // integer from two always blocks gives it conflicting drivers
+    reg [1:0] sim_a_t, sim_b_t;
+    reg signed [7:0] sim_a_val, sim_b_val;
+
     // Generate trit arrays for similarity computation
     wire [9999:0] a_signed;
     wire [9999:0] b_signed;
@@ -181,24 +193,28 @@ module VSA10K_OpsCore (
                 SIM_COMPUTE: begin
                     // Process 16 trits (one block) per cycle
                     if (sim_block < 625) begin
-                        // Compute for this block
-                        integer i;
+                        // Compute for this block. The loop variable and the trit
+                        // temporaries are declared at module scope: they were
+                        // declared inside these unnamed begin/end blocks, which
+                        // Verilog-2005 does not allow, and the file did not parse
+                        // at all under `default_nettype none as a result.
                         for (i = 0; i < 16; i = i + 1) begin
                             if ((sim_block * 16 + i) < 10000) begin
-                                // Convert trit to signed value
-                                reg [1:0] a_t, b_t;
-                                reg signed a_val, b_val;
-                                a_t = a_vec[(sim_block * 16 + i) * 2 +: 2];
-                                b_t = b_vec[(sim_block * 16 + i) * 2 +: 2];
+                                // Convert trit to signed value. TritMult in this
+                                // same file fixes the encoding: 2'b00 = 0,
+                                // 2'b01 = +1, 2'b10 = -1 (equal operands give
+                                // 2'b01, differing ones 2'b10).
+                                sim_a_t = a_vec[(sim_block * 16 + i) * 2 +: 2];
+                                sim_b_t = b_vec[(sim_block * 16 + i) * 2 +: 2];
 
-                                a_val = (a_t == 2'b01) ? 8'sd01 :
-                                        (a_t == 2'b10) ? 8'sd81 : 8'sd00;
-                                b_val = (b_t == 2'b01) ? 8'sd01 :
-                                        (b_t == 2'b10) ? 8'sd81 : 8'sd00;
+                                sim_a_val = (sim_a_t == 2'b01) ?  8'sd1 :
+                                        (sim_a_t == 2'b10) ? -8'sd1 : 8'sd0;
+                                sim_b_val = (sim_b_t == 2'b01) ?  8'sd1 :
+                                        (sim_b_t == 2'b10) ? -8'sd1 : 8'sd0;
 
-                                dot_acc <= dot_acc + (a_val * b_val);
-                                norm_a_acc <= norm_a_acc + (a_val * a_val);
-                                norm_b_acc <= norm_b_acc + (b_val * b_val);
+                                dot_acc <= dot_acc + (sim_a_val * sim_b_val);
+                                norm_a_acc <= norm_a_acc + (sim_a_val * sim_a_val);
+                                norm_b_acc <= norm_b_acc + (sim_b_val * sim_b_val);
                             end
                         end
                         sim_block <= sim_block + 1;
@@ -227,9 +243,8 @@ module VSA10K_OpsCore (
         if (rst) begin
             result_vec <= 20000'd0;
         end else if (state == PROCESS && op_mode != 2'b10) begin
-            integer i;
-            for (i = 0; i < 625; i = i + 1) begin
-                result_vec[i*32 +: 32] <= block_result[i];
+            for (bi = 0; bi < 625; bi = bi + 1) begin
+                result_vec[bi*32 +: 32] <= block_result[bi];
             end
         end
     end
@@ -302,9 +317,11 @@ module VSA10K_Top (
     output wire [15:0] similarity_score,
     // Status
     output wire busy,
-    output wire done,
+    output reg  done,      // assigned procedurally below; was declared wire
     output wire led
 );
+
+    integer i;          // hoisted out of an unnamed block; see VSA10K_OpsCore
 
     // Storage
     wire [31:0] storage_a_out, storage_b_out;
@@ -398,7 +415,6 @@ module VSA10K_Top (
                             done <= 1;
                         end else begin
                             // Bind/Bundle: store result
-                            integer i;
                             for (i = 0; i < 625; i = i + 1) begin
                                 result_storage[i] <= ops_result[i*32 +: 32];
                             end
