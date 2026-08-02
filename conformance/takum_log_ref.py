@@ -72,13 +72,21 @@ class TakumLogFormat:
 # VALIDATED FOR takum16 ONLY.
 #
 # The field decode below is transcribed from conformance/takum16_decode_conformance_
-# ax7203.py, which is a takum16 script, and pass 145 measured what that costs at other
-# widths: against a freshly built libtakum, takum16's positive half agrees on all
-# 32,768 codes while takum8 agrees on 1 of 127 in each half. The overhead-5,
-# three-bit-regime scheme does not carry down to width 8 -- p = n - r_eff - 5 goes
-# negative there -- and the entries below are kept only so the width is nameable.
+# ax7203.py, which is a takum16 script. Measured against libtakum's takum_log family --
+# the one this corpus implements, per the takum32 pack's own parity witness -- by
+# relative error rather than bit equality, since these values are irrational:
 #
-# Use takum16. For the others, transcribe from a width-specific reference first.
+#   takum16   all 65,534 finite codes, median 4.47e-16, max 7.38e-15, none worse
+#             than 1e-9. Correct everywhere. (The 7.38e-15 ceiling is long-double
+#             noise in libtakum's powl; the takum32 pack reports the same 7.5e-15.)
+#
+#   takum8    130 of 254 correct, 124 wrong, worst 1.14e+26 -- and exactly where
+#             p = n - r_eff - OVERHEAD goes negative, which the code below answers by
+#             clamping p to 0. The clamp is the defect. It cannot occur at width 16 or
+#             above, where n - OVERHEAD >= 11 exceeds any r_eff.
+#
+# Use takum16. For width 8 the clamp below is wrong and a width-specific reference is
+# needed; widths 32 and 64 are untested here.
 FORMATS = {
     "takum8": TakumLogFormat("takum8", 8),      # NOT validated -- see above
     "takum16": TakumLogFormat("takum16", 16),   # validated against libtakum

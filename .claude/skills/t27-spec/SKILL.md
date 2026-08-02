@@ -363,3 +363,33 @@ defect usually does not scatter like that.
 This is the same failure as pass 137 (measure the object the claim is about) seen from a
 new angle: there, the wrong object; here, the right object under the wrong conditions.
 
+## An independent reference with two families is two references — check which one
+
+libtakum exposes `takum{N}_to_float64` **and** `takum_log{N}_to_float64` at every width,
+and its header names neither variant in words. Two passes measured the corpus against
+the first and drew conclusions: that takum16's negative half was broken across 32,766
+codes (carried since pass 34/35 as "the most consequential result of this campaign"),
+and that the takum8 pack matched on 3 of 255. Against the family the corpus actually
+implements, takum16 is correct on **all 65,534** finite codes.
+
+The metadata said so the whole time. The takum32 pack's own parity witness records
+`takum_log32_from_float64(...) == stored bits exactly`. **Read what the artefact says it
+was checked against before choosing what to check it against.**
+
+The landmark test that was supposed to settle it — decode the library's named 2π
+constant — is passed by *both* families, each reproducing its own constant. **A
+discriminator both candidates pass is not a discriminator.** Pick a probe the wrong
+answer fails.
+
+## Bit equality is the wrong instrument for an irrational value
+
+The same two passes counted exact float64 matches. But a C reference computing `powl` in
+long double and an oracle in exact rational arithmetic will differ by an ULP on almost
+every transcendental — so "3 of 255" and "2 of 65,534" measured rounding, not
+correctness. Under relative error the same data separates cleanly: agreement sits at
+4e-16 and real defects at 1e+26, six orders of magnitude apart from anything ambiguous.
+
+**Match the instrument to the value class.** Bit equality is for values a format
+represents exactly; relative error is for values it approximates. Using the first where
+the second belongs manufactures defects at exactly the rate of the rounding noise.
+

@@ -426,51 +426,59 @@ reason is the subject of the next section.
 
 ---
 
-## 5i. The published `takum8` pack disagrees with the format author's own reference
+## 5i. RETRACTED and re-measured — takum16 is correct everywhere; takum8 is not
 
-Pass 145 compared the packs against **libtakum**, Hunhold's C99 reference implementation
-of takum — an artefact outside this corpus entirely. `ml_dtypes` does not implement
-takum, so before this the family was single-source.
+**What §5i said yesterday was wrong, and so was a result this corpus has carried since
+pass 34/35.** Both compared the corpus against `takum{N}_to_float64`. libtakum exposes
+**two** families at every width — `takum{N}` and `takum_log{N}` — and its header names
+neither in words. The corpus implements the second one, and the packs say so themselves:
+`takum32`'s own `libtakum_c_parity` witness records
+*"`takum_log32_from_float64(input_f64)` == stored bits exactly, 15/15"*.
 
-| pack | codes | bit-identical to libtakum |
-|---|---|---|
-| `takum16`, positive half | 32,768 | **32,768 / 32,768** |
-| `takum8` | 255 (1 NaR) | **3 / 255** |
+The 2π landmark check that was supposed to settle the family does not settle it. Each
+family has its own named constant and each decodes its own to 2π —
+`takum16_to_float64(20040) = 6.28125` and `takum_log16_to_float64(20826) = 6.2832705`.
+A landmark both candidates reproduce cannot choose between them.
 
-The three that agree are exactly the codes for 0, +1 and −1 — the fixed points of any
-log-domain scheme. Every other value differs, and the clearest way to see it is the
-dynamic range:
+**Bit equality was also the wrong instrument.** These values are irrational; libtakum
+computes them with `powl` in long double while the corpus uses exact rational
+arithmetic, so a one-ULP difference is expected. Counting exact matches is what produced
+"3 of 255" and "2 of 65,534". Relative error is the right measure.
 
-| | takum8 minimum | takum8 maximum |
-|---|---|---|
-| libtakum | 1.13e−72 | 8.83e+71 |
-| published pack | 6.99e−56 | 1.43e+55 |
+### Re-measured against `takum_log`
 
-A **dynamic range that does not shrink with width** is takum's defining property, and
-libtakum shows it: its takum8 range (1e−72 … 8.8e+71) nearly matches its takum16 range
-(1.8e−77 … 5.6e+76). The published takum8 pack spans a far narrower range, which is what
-happens when a width-16 field layout — overhead 5, a three-bit regime — is applied at
-width 8, where it leaves too few characteristic bits.
+| | codes | median rel. err | max | worse than 1e−9 |
+|---|---|---|---|---|
+| `takum16` positive half | 32,767 | 4.47e−16 | 7.38e−15 | **0** |
+| `takum16` negative half | 32,767 | 4.47e−16 | 7.38e−15 | **0** |
+| published `takum8` | 254 | 5.03e−16 | **1.14e+26** | **124** |
 
-**This is not a claim that takum16 is wrong.** Width 16 matches libtakum on every code
-of its positive half, so the corpus's method is sound where a width-appropriate witness
-was used. The defect is specific to width 8. (The negative half is a separate, already
-recorded matter: 32,766 of 32,768 differ there, matching the spec's own note.)
+**`takum16` is correct on every finite code.** There is no negative-half defect and
+there never was one; the 7.38e−15 ceiling is long-double transcendental noise, and the
+`takum32` pack's metadata independently reports the same figure, 7.5e−15. The result
+described in the spec as *"the most consequential result of this verification
+campaign"* was an artefact of the wrong comparand.
 
-**Why the pass-144 witness missed it.** That witness compared the pack against
-`conformance/takum_log_ref.py`, whose field decode is transcribed from a *takum16*
-script. The pack and the reference share the same width-8 error, so they agreed 255/255
-— an oracle-against-oracle result wearing a witness's clothes. This is the pass-137
-lesson recurring in a new place, and only an artefact from outside the corpus broke the
-tie. `takum_log_ref.py` now states in its `FORMATS` table which width it is validated
-for.
+**`takum8` is genuinely wrong, and the boundary is exact.** Grouped by the direction bit
+D and the three regime bits R, the divergence lands precisely where the characteristic
+field does not fit. With `r_eff = R if D else (7−R)` and `p = n − r_eff − 5`, width 8
+gives `p = 3 − r_eff`:
 
-**For the author:** either regenerate `takum8` from libtakum, or state in the pack's
-metadata which definition it implements. Reproduce with
-`research/crossval_libtakum.py`.
+| D | R | r_eff | p | outcome |
+|---|---|---|---|---|
+| 0 | 0–3 | 7–4 | **< 0** | all 62 wrong |
+| 0 | 4–7 | 3–0 | ≥ 0 | all 64 right |
+| 1 | 0–3 | 0–3 | ≥ 0 | all 64 right |
+| 1 | 4–7 | 4–7 | **< 0** | 62 wrong (2 coincidental) |
 
-**Suggested action:** record the witness count for these two packs as you do for
-`takum32`/`takum64`. Nothing else about them needs to change.
+Both the pack and `conformance/takum_log_ref.py` answer `p < 0` by clamping `p` to zero;
+libtakum does something else. **The clamp is the defect**, and it cannot arise at width
+16 or above, where `n − 5 ≥ 11` exceeds any `r_eff`. The boundary predicted from the
+arithmetic matches the measurement cell for cell.
+
+**For the author:** nothing here touches `takum16`. For `takum8`, either regenerate from
+libtakum or mark the width implementation-defined rather than bit-exact — the open
+question of whether takum8 sits below the standard's width threshold now decides which.
 
 ---
 

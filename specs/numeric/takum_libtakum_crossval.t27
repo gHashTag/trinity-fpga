@@ -234,3 +234,96 @@ unanswered.
   owner        author
   reproduce_with "research/crossval_libtakum.py"
 }
+
+
+// ============================================================================
+// Pass 146, 2026-08-02 -- RETRACTION. Both the pass 34/35 headline result and the
+// pass 145 finding above were measured against the WRONG libtakum family.
+// ============================================================================
+
+retraction WRONG_LIBTAKUM_FAMILY {
+  retracts {
+    "pass 34/35: takum16 agrees with libtakum on the entire positive half and
+     disagrees on almost the entire negative half (32,766 of 32,768)"
+    "pass 145: the published takum8 pack is bit-identical to libtakum on 3 of 255
+     codes, and its dynamic range is 6.99e-56..1.43e+55 against libtakum's
+     1.13e-72..8.83e+71"
+  }
+
+  // libtakum exposes TWO families at every width -- takum{N}_to_float64 and
+  // takum_log{N}_to_float64 -- and its header names neither in words. Both
+  // measurements above used the plain family. The corpus implements the other one,
+  // and the packs say so in their own metadata: takum32's libtakum_c_parity witness
+  // records "takum_log32_from_float64(input_f64) == stored bits exactly, 15/15".
+  cause "compared against takum{N}_to_float64; the corpus implements takum_log{N}"
+
+  // The 2*pi landmark check in the pass 145 record does NOT establish the family.
+  // Each family has its own named constant and each decodes its own to 2*pi, so the
+  // test is passed by both and distinguishes nothing.
+  why_the_earlier_check_did_not_catch_it {
+    checked  "takum16_to_float64(TAKUM16_2_PI) = 6.28125, which is 2*pi"
+    but      "takum_log16_to_float64(TAKUM_LOG16_2_PI) = 6.2832705, also 2*pi"
+    lesson   "a landmark that both candidates reproduce cannot choose between them"
+  }
+}
+
+finding TAKUM_AGAINST_THE_CORRECT_FAMILY {
+  measured_on "the corpus takum decode law and the published takum8 pack"
+  against     "libtakum takum_log16 (all 65,534 finite codes) and takum_log8 (254)"
+
+  // Relative error, not bit equality. These values are irrational, libtakum computes
+  // them with powl in long double, and the corpus uses exact rational arithmetic --
+  // so a one-ULP difference is expected and bit equality is the wrong instrument.
+  // Counting exact matches is what produced "3 of 255" and "2 of 65,534".
+  instrument "relative error; bit equality is not meaningful for a transcendental"
+
+  takum16 {
+    positive_half { n 32767  median 4.466e-16  max 7.384e-15  worse_than_1e-9 0 }
+    negative_half { n 32767  median 4.466e-16  max 7.384e-15  worse_than_1e-9 0 }
+    verdict "CORRECT ON EVERY FINITE CODE. There is no negative-half defect. The
+             7.384e-15 ceiling is long-double transcendental noise, and the takum32
+             pack's own metadata independently reports the same figure, 7.5e-15."
+  }
+
+  takum8 {
+    agree_to_rounding_noise 130    // worst among them 5.881e-16
+    diverge                 124    // worst 1.142e+26 at raw 120
+    verdict "GENUINELY WRONG, and the boundary is exact."
+  }
+
+  // The width-8 divergence is not scattered. Grouped by the direction bit D and the
+  // three regime bits R, it lands exactly where the characteristic field does not fit:
+  //
+  //     r_eff = R if D else (7 - R)        p = n - r_eff - OVERHEAD = 3 - r_eff
+  //
+  //   D=0  R=0..3  r_eff=7..4  p<0   ALL 62 WRONG
+  //   D=0  R=4..7  r_eff=3..0  p>=0  ALL 64 RIGHT
+  //   D=1  R=0..3  r_eff=0..3  p>=0  ALL 64 RIGHT
+  //   D=1  R=4..7  r_eff=4..7  p<0   ALL 62 WRONG (2 coincidental at R=4)
+  //
+  // Both the pack and conformance/takum_log_ref.py answer p<0 by clamping p to 0.
+  // libtakum does something else. The clamp is the defect, and it cannot arise at
+  // width 16 or above, where n - OVERHEAD >= 11 exceeds any r_eff.
+  width8_boundary_predicted_by "p < 0, i.e. r_eff > n - OVERHEAD"
+  boundary_matches_measurement true
+
+  scope "Decode direction. takum32/takum64 packs are curated (15 vectors) and their
+         own metadata already records a libtakum takum_log parity check."
+}
+
+open_question TAKUM8_CLAMP {
+  question """
+At width 8 the characteristic field can be wider than the bits left for it. The
+corpus clamps the mantissa width to zero; libtakum's takum_log8 does something
+different, and the two disagree on 124 of 254 codes by up to 26 orders of magnitude.
+
+Which is canonical? The earlier question stands and now has teeth: if takum8 is below
+the standard's width threshold, the catalog should mark it implementation-defined
+rather than bit-exact. If it is not, the pack needs regenerating from libtakum.
+
+Nothing here touches takum16, which is correct on every finite code.
+"""
+  do_not_guess true
+  owner        author
+  escalate_to  "Hunhold (takum author, libtakum maintainer)"
+}
