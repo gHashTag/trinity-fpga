@@ -1,0 +1,42 @@
+name: Pack layout gate
+
+# Pass 147's layout invariant -- 1 + e + m == bits -- was applied to two tables inside
+# this repository and found two rows describing layouts that cannot exist. Pass 155
+# applied it to the 83 published packs, which carry the same fields.
+#
+# The catalogue is clean: 57 entries hold, 8 are declared exceptions, 0 are broken.
+# Getting to clean took the work: run naively the invariant reports 8 findings and every
+# one is false -- multi-limb formats have one sign bit per limb, posit stores its es
+# parameter in the `e` field, and two formats have no S/E/M decomposition at all.
+#
+# --self-check replays the two pass-147 defects and re-derives each exception's
+# corrected arithmetic, so a green run means the gate can still see.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'research/audit_pack_layouts.py'
+      - '.github/workflows/pack-layout-gate.yml'
+  pull_request:
+    paths:
+      - 'research/audit_pack_layouts.py'
+      - '.github/workflows/pack-layout-gate.yml'
+  workflow_dispatch:
+
+jobs:
+  pack-layouts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: The gate must still catch the layouts it was written for
+        run: |
+          python3 research/audit_pack_layouts.py --self-check
+      - name: Every published pack must describe a layout that can exist
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 research/audit_pack_layouts.py
