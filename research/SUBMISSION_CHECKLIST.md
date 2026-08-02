@@ -476,9 +476,33 @@ libtakum does something else. **The clamp is the defect**, and it cannot arise a
 16 or above, where `n − 5 ≥ 11` exceeds any `r_eff`. The boundary predicted from the
 arithmetic matches the measurement cell for cell.
 
-**For the author:** nothing here touches `takum16`. For `takum8`, either regenerate from
-libtakum or mark the width implementation-defined rather than bit-exact — the open
-question of whether takum8 sits below the standard's width threshold now decides which.
+**RESOLVED, pass 149 — and the answer is regeneration.** The rule was derived from
+libtakum's source rather than guessed: `codec.c`'s field decode is written over a
+`uint16_t`, with `p = 16 − r − 5` and a 16-entry table whose smallest entry is 4. There
+is no `n = 8` path at all — which suggests a narrow takum decodes in the **high bits of
+the reference width**, and that is testable. It tests true on all 256 codes:
+`takum_log8_to_float64(x) == takum_log16_to_float64(x << 8)`, 256/256, 0 differ.
+
+So the fields are sized by the reference width, not the storage width. Sizing them at
+`n = 8` gives `p = 8 − r_eff − 5`, negative over half the code space; clamping it to
+zero is what put 124 codes wrong. At the reference width `p = 11 − r_eff`, never below 4.
+
+That also explains the range: the low bits are simply absent, so a narrow takum's values
+are a strict subset of the wider grid — which is why takum's dynamic range does **not**
+shrink with width. The clamped decode destroyed exactly that property.
+
+| | before | after |
+|---|---|---|
+| takum8 oracle vs libtakum, worse than 1e−9 | **124 of 254** | **0** |
+| worst relative error | 1.14e+26 | **6.89e−15** |
+| takum16 regression check | — | **0** — unaffected |
+
+The 6.89e−15 ceiling matches takum16's 7.38e−15: the same long-double noise, nothing more.
+
+**Nothing here is implementation-defined**, so the earlier fork does not arise.
+Regeneration is the answer, and the ledger is exact: of the published pack, **130
+vectors survive unchanged and 124 would change** — the largest being raw 120, where the
+pack has 4.318853922e+53 and the correct value is 3.781809085e+27.
 
 ---
 

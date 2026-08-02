@@ -327,3 +327,57 @@ Nothing here touches takum16, which is correct on every finite code.
   owner        author
   escalate_to  "Hunhold (takum author, libtakum maintainer)"
 }
+
+
+// ============================================================================
+// Pass 149, 2026-08-02 -- TAKUM8_CLAMP is ANSWERED, and not by guessing. The rule
+// was derived from libtakum's own source and then verified against its output.
+// ============================================================================
+
+resolution TAKUM8_DECODES_AT_THE_REFERENCE_WIDTH {
+  answers     "open_question TAKUM8_CLAMP"
+  method      "read libtakum/src/codec.c, form a hypothesis, test it exhaustively"
+
+  // codec.c's field decode is written over a uint16_t, with p = 16 - r - 5 and a
+  // 16-entry p_lut whose smallest entry is 4. There is no n = 8 path at all. That
+  // suggests a narrow takum is decoded in the HIGH BITS of the reference width,
+  // which is a testable statement rather than a reading.
+  hypothesis  "takum_log8_to_float64(x) == takum_log16_to_float64(x << 8)"
+  tested      "all 256 codes against the built library"
+  result      "256 of 256 agree, 0 differ"
+
+  // So the fields are sized by the REFERENCE width, not the storage width. The
+  // corpus sized them at n = 8, giving p = 8 - r_eff - 5, which goes negative over
+  // half the code space; clamping p to zero is what put 124 codes wrong. At the
+  // reference width p = 11 - r_eff and is never below 4.
+  rule """
+A takum narrower than the reference width decodes as the high bits of a word at that
+width. The low bits are absent, so its mantissa bits read as zero -- which is why the
+values are a strict subset of the wider format's grid, and why takum's dynamic range
+does not shrink with width. That property is the format's signature, and the clamped
+decode destroyed it: the pack's range was 6.99e-56..1.43e+55 where libtakum's is
+1.26e-52..7.91e+51.
+"""
+
+  after_the_fix {
+    takum8_oracle_vs_libtakum   "254 codes, median 4.36e-16, max 6.89e-15, 0 worse than 1e-9"
+    was_before                  "124 of 254 worse than 1e-9, worst 1.14e+26"
+    takum16_regression_check    "0 codes worse than 1e-9 -- unaffected"
+    ceiling_matches_takum16     "6.89e-15 against 7.38e-15; the same long-double noise"
+  }
+
+  // The ledger the author asked for, now exact rather than estimated.
+  published_pack_regeneration {
+    vectors_surviving_unchanged 130
+    vectors_that_would_change   124
+    largest_change              "raw 120: pack 4.318853922e+53, correct 3.781809085e+27"
+    note """
+This settles which of the two ways to close it applies. The earlier question was
+whether to regenerate takum8 from libtakum or to mark the width implementation-defined.
+There is nothing implementation-defined here: libtakum's behaviour at width 8 follows
+from its own field decode, is exhaustively reproducible, and now agrees with this
+corpus's oracle to the long-double noise floor. Regeneration is the answer, and it
+touches 124 of 255 vectors.
+"""
+  }
+}

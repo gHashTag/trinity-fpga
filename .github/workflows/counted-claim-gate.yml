@@ -1,0 +1,39 @@
+name: Counted claim gate
+
+# A count stated beside a list is arithmetic. Pass 148 found one such claim wrong in
+# both directions at once -- "Two are exhaustive" where twelve cells are, and takum32
+# named among them at 0.0015% of its code space. Pass 149 checked the rest.
+#
+# 45 of 83 and 38 software-only both hold, and 45 + 38 = 83. The Tier-E cell count
+# does not: 34 claimed, 33 listed. That one is recorded in the spec as unresolved with
+# an owner, so it stays visible without failing the gate forever -- the same
+# arrangement as the ACCEPTED table in the narrow-register gate.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'specs/numeric/catalog_coverage_delta.t27'
+      - 'research/audit_counted_claims.py'
+      - '.github/workflows/counted-claim-gate.yml'
+  pull_request:
+    paths:
+      - 'specs/numeric/catalog_coverage_delta.t27'
+      - 'research/audit_counted_claims.py'
+      - '.github/workflows/counted-claim-gate.yml'
+  workflow_dispatch:
+
+jobs:
+  counted-claims:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: The gate must still catch a count that disagrees with its list
+        run: |
+          python3 research/audit_counted_claims.py --self-check
+      - name: Every stated count must match its own enumeration
+        run: |
+          python3 research/audit_counted_claims.py

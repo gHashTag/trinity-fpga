@@ -1673,14 +1673,41 @@ That is falsifiable against a public artefact, and it was the strongest unverifi
 statement in any of the three documents.
 """
 
+  // RE-MEASURED 2026-08-02 (pass 149) against the live issue. Every figure had
+  // drifted upward, and all by a consistent amount, because the issue grew by seven
+  // comments since pass 91 counted it. The method reproduces; the numbers are a
+  // measurement with a date on them, not constants.
   measurement {
-    comments_in_issue 217
-    carrying_ci_url 98
-    carrying_sha256 121
-    carrying_uart_log 98
-    carrying_idcode 151
-    carrying_ALL_FOUR 74
-    distinct_cells_with_a_complete_chain 34
+    //                                   pass 91    pass 149
+    comments_in_issue                    217     // 224
+    carrying_ci_url                       98     // 104
+    carrying_sha256                      121     // 127
+    carrying_uart_log                     98     //  99
+    carrying_idcode                      151     // 155
+    carrying_ALL_FOUR                     74     //  75
+    distinct_cells_with_a_complete_chain  34     // see UNRESOLVED below
+  }
+
+  // The one figure pass 149 could NOT reproduce, and did not guess at.
+  unresolved CELL_COUNT_DISAGREES_WITH_ITS_OWN_LIST {
+    claimed    34
+    enumerated 33      // count the names in the_cells below; there are 33
+    do_not_guess true
+    owner       author
+    detected_by "research/audit_counted_claims.py"
+    note """
+Both numbers are in this spec, side by side, and they differ by one. The 34 came from
+counting comments on issue #199; the 33 is the list written beside it.
+
+Pass 149 tried to settle it by re-running the comment count and could not: extracting
+a format name from a comment yields format-and-operation pairs, a different
+granularity than "cells", so the re-run produced 23 names and answers a different
+question. Reporting that 23 as the truth would have been a tool's shortfall dressed as
+a finding, which this campaign has done before and does not do again.
+
+So it stands open. One of the two is a transcription slip and the other is a
+measurement. Deciding needs whoever knows how a cell was counted in pass 91.
+"""
   }
 
   the_cells """

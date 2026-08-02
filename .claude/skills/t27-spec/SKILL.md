@@ -419,3 +419,26 @@ and treat an unmerged branch as evidence, not as noise. Squash merges make
 `--no-merged` over-report -- compare content per file rather than trusting ancestry --
 but over-reporting is the safe direction. The expensive failure is not reading a
 branch that turned out to be redundant; it is re-deriving something already recorded.
+
+## Read the reference implementation's source, not only its output
+
+Three passes measured this corpus against libtakum by running it and comparing numbers.
+That found *that* takum8 disagreed on 124 of 254 codes; it could not say why, and the
+question went to the author as undecidable from here.
+
+Opening `libtakum/src/codec.c` decided it in one reading. The field decode is written
+over a `uint16_t` -- `p = 16 - r - 5`, a 16-entry table whose smallest entry is 4, and
+no `n = 8` path anywhere. That suggests narrow takums decode in the high bits of the
+reference width, which is not a conclusion but a **testable hypothesis**:
+`takum_log8_to_float64(x) == takum_log16_to_float64(x << 8)`. It holds on all 256 codes.
+
+Two lessons, and the second is the one worth carrying:
+
+**A black-box comparison tells you there is a disagreement; the source tells you what
+the rule is.** When an artefact is available in source and the question is "what rule is
+this implementing", read it.
+
+**Read it to form a hypothesis, then test the hypothesis exhaustively.** The reading
+alone would have been an interpretation -- this campaign has been wrong on interpretations
+several times. `256 of 256, 0 differ` is not an interpretation. Source narrows the search
+space; measurement still decides.

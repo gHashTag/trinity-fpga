@@ -49,6 +49,7 @@ CBIAS = (-255, -127, -63, -31, -15, -7, -3, -1,
 
 OVERHEAD = 5          # sign + direction + 3 regime bits
 REGIME_BITS = 3
+REFERENCE_WIDTH = 16  # narrower takums decode in the high bits of this width
 
 
 @dataclass(frozen=True)
@@ -128,16 +129,25 @@ def decode_ln(fmt: TakumLogFormat, raw: int):
     if raw == fmt.nar:
         return Special("nar")
 
-    n = fmt.width
+    # The field layout is sized by the REFERENCE width, not the storage width.
+    # libtakum decodes a narrow takum by placing it in the high bits of a wider word
+    # and using that word's layout: takum_log8_to_float64(x) equals
+    # takum_log16_to_float64(x << 8) on all 256 codes, verified against the built
+    # library. Its own codec.c is written over a uint16_t with p = 16 - r - 5.
+    #
+    # Sizing the fields at n = 8 instead gives p = 8 - r_eff - 5, which goes negative
+    # for half the code space. Clamping it to zero -- which this file used to do --
+    # is what put 124 of 254 takum8 codes wrong by up to 26 orders of magnitude.
+    n = max(fmt.width, REFERENCE_WIDTH)
+    if fmt.width < REFERENCE_WIDTH:
+        raw <<= (REFERENCE_WIDTH - fmt.width)
     S = (raw >> (n - 1)) & 1
     D = (raw >> (n - 2)) & 1
     R = (raw >> (n - OVERHEAD)) & ((1 << REGIME_BITS) - 1)
 
     c_bias = CBIAS[(D << REGIME_BITS) | R]
     r_eff = R if D else ((1 << REGIME_BITS) - 1 - R)
-    p = n - r_eff - OVERHEAD
-    if p < 0:
-        p = 0
+    p = n - r_eff - OVERHEAD          # >= 4 at the reference width; never negative
 
     lower = raw & ((1 << (r_eff + p)) - 1)
     m_uint = (lower & ((1 << p) - 1)) if p > 0 else 0
