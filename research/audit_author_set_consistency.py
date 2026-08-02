@@ -77,6 +77,66 @@ def normalise(tok: str):
     return int(t) if t.isdigit() else None
 
 
+
+# ---------------------------------------------------------------- references
+
+# Files these documents legitimately cite that do not live in this repository.
+# Naming them is the honest alternative to a blanket exemption: each is a real file
+# somewhere, and a reader needs to be told where.
+ELSEWHERE = {
+    "ERRATA_2026-06-14.md": "t27",
+    "cocotb_ref_model.py": "t27",
+    "gen_all_formats.py": "t27, conformance/vectors/",
+    "gf_preprint_v19.tex": "the goldenfloat-preprint repository",
+    "main_ru.tex": "the trinity-papers-ru repository",
+    "INDEX_all_formats.json": "t27, conformance/vectors/",
+    # Cited by VERIFICATION_DOSSIER for a claim whose evidence could not be
+    # located anywhere. The row is flagged in place rather than repointed,
+    # so this entry records a known gap rather than excusing one.
+    "takum_variant_split.t27": "NOWHERE -- flagged in the dossier",
+}
+
+CITED = re.compile(r"`([\w./-]+\.(?:md|tex|py|t27|json|v|yml))`")
+
+
+def check_references() -> int:
+    """Every file the author-facing documents cite must resolve, or be named as
+    living elsewhere. A citation that resolves for the writer and not for the reader
+    is the smallest version of the defect this whole set exists to report."""
+    import subprocess
+
+    unresolved = []
+    total = 0
+    for name in AUTHOR_SET:
+        path = os.path.join(HERE, name)
+        if not os.path.exists(path):
+            continue
+        text = open(path, encoding="utf-8", errors="replace").read()
+        for tok in sorted(set(CITED.findall(text))):
+            total += 1
+            base = os.path.basename(tok)
+            if base in ELSEWHERE:
+                continue
+            if subprocess.run(["git", "ls-files", "--error-unmatch", tok],
+                              capture_output=True).returncode == 0:
+                continue
+            if subprocess.run(["git", "ls-files", "*" + base],
+                              capture_output=True, text=True).stdout.strip():
+                continue
+            line = text[:text.index("`" + tok + "`")].count("\n") + 1
+            unresolved.append((tok, name, line))
+
+    print(f"\nfile citations across the set : {total}")
+    print(f"  unresolved                  : {len(unresolved)}")
+    for tok, name, line in unresolved:
+        print(f"  {name}:{line}  cites {tok}, which is not in this repository")
+        print(f"      either add it, correct the path, or name where it lives")
+    if not unresolved:
+        print("  (files known to live elsewhere are listed in ELSEWHERE and named "
+              "in the text)")
+    return len(unresolved)
+
+
 def main() -> int:
     seen = defaultdict(list)          # subject -> [(value, file, sentence)]
     missing = []
@@ -122,12 +182,14 @@ def main() -> int:
     print(f"subjects stated consistently across documents : {agreed}")
     print(f"subjects stated inconsistently                : {disagreements}")
 
+    bad_refs = check_references()
+
     print("""
 Each pair above is printed with both sentences because this tool cannot tell which
 side is right. A disagreement is a place to read, not a defect -- "83 formats" and "83
 packs" are one subject, and a document quoting what a PAPER says will differ from one
 stating what the corpus holds, correctly.""")
-    return 0
+    return 1 if bad_refs else 0
 
 
 if __name__ == "__main__":

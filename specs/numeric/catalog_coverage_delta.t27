@@ -5172,3 +5172,62 @@ at pass 71. Said in one place rather than implied across the document.
 """
   status VERIFIED_SW
 }
+
+// ---- Pass 142: the automated check found what the manual one missed ----------
+
+result THE_CITATION_CHECK_IS_NOW_A_GATE {
+  detail """
+research/audit_author_set_consistency.py gains a reference pass, and
+.github/workflows/author-docs-gate.yml runs it on any change to research/*.md.
+
+It fails on an unresolved citation. Cross-document disagreements are printed for
+reading rather than failed on, because the tool cannot tell which side is right and a
+disagreement is usually two correct sentences about different subjects -- pass 140
+found three hits and zero defects for exactly that reason.
+
+Files that legitimately live elsewhere are named in an ELSEWHERE table rather than
+exempted silently, so each is a statement about where a reader should look.
+"""
+  status IMPLEMENTED
+}
+
+finding FOUR_MORE_CITATIONS_THAT_RESOLVED_ONLY_FOR_ME {
+  severity LOW
+  detail """
+Pass 141 swept SUBMISSION_CHECKLIST.md by hand and found one. Running the check over
+the whole set found four more on its first execution:
+
+  INDEX_all_formats.json   cited by three documents; lives in t27,
+                           conformance/vectors/ -- now named in each
+
+That is the same defect as pass 141's, in files I had not thought to sweep. The manual
+method found one instance; the automated one found the class.
+"""
+  resolved true
+}
+
+finding AND_ONE_CITATION_POINTING_AT_NOTHING_ANYWHERE {
+  severity MEDIUM
+  detail """
+VERIFICATION_DOSSIER.md cites takum_variant_split.t27 for the claim that the hardware
+conformance golden is an exact logarithmic takum at 60,485/60,485, verified against the
+format author's own library.
+
+  the spec         does not exist -- 0 hits in GitHub code search, anywhere
+  the figure       60,485/60,485 appears in no spec in this repository
+
+So a substantive claim in the verification dossier -- the document whose entire purpose
+is to say where each claim's evidence lives -- has no locatable evidence.
+
+Flagged in place rather than repointed. specs/numeric/takum_libtakum_crossval.t27
+exists and is about takum against libtakum, but it does not carry that figure, and
+silently redirecting a citation to a nearby file that does not support it would be
+worse than leaving it broken.
+
+The surrounding claim IS corroborated by other work -- takum16_decode_conformance
+computes exp(ell/2) at 120-bit precision, and pass 138 witnessed the published packs as
+correctly rounded. The row now says that, and says the count should not be quoted until
+its source is found.
+"""
+  resolved false
+}

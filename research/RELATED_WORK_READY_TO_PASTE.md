@@ -75,7 +75,7 @@ Three independent artefacts at very different scales mark the same frontier.
   own distribution page, libtakum's and microxcaling's by counting file types in
   their repository trees, numpy's from
   `numpy/_core/tests/data/umath-validation-set-*.csv`, and this corpus's from
-  `INDEX_all_formats.json`.
+  `INDEX_all_formats.json` (in the **`t27`** repository, `conformance/vectors/`).
 - Keep the concession. numpy is deeper (26,615 vectors to 5,075) and covers 20
   operations this corpus does not touch. Stating that is what makes the 83-vs-5
   format comparison credible.

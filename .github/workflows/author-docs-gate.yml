@@ -1,0 +1,39 @@
+name: Author docs gate
+
+# The documents in research/ that an author would act on must agree with each other and
+# cite files a reader can find. Two passes running found a defect in them by hand --
+# pass 141 a citation that resolved only for the writer, pass 142 three more of the same
+# and one pointing at a file that exists nowhere. Both were found by a manual sweep, so
+# the next one would be too.
+#
+# The check fails on an unresolved citation. Cross-document disagreements are printed
+# for reading rather than failed on, because the tool cannot tell which side is right
+# and a disagreement is often two correct sentences about different subjects -- see
+# research/audit_author_set_consistency.py and the t27-spec skill's section on scans
+# written against surface form.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'research/*.md'
+      - 'research/audit_author_set_consistency.py'
+      - '.github/workflows/author-docs-gate.yml'
+  pull_request:
+    paths:
+      - 'research/*.md'
+      - 'research/audit_author_set_consistency.py'
+      - '.github/workflows/author-docs-gate.yml'
+  workflow_dispatch:
+
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Every citation must resolve for a reader, not just the writer
+        run: |
+          python3 research/audit_author_set_consistency.py
