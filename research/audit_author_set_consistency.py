@@ -90,10 +90,6 @@ ELSEWHERE = {
     "gf_preprint_v19.tex": "the goldenfloat-preprint repository",
     "main_ru.tex": "the trinity-papers-ru repository",
     "INDEX_all_formats.json": "t27, conformance/vectors/",
-    # Cited by VERIFICATION_DOSSIER for a claim whose evidence could not be
-    # located anywhere. The row is flagged in place rather than repointed,
-    # so this entry records a known gap rather than excusing one.
-    "takum_variant_split.t27": "NOWHERE -- flagged in the dossier",
 }
 
 CITED = re.compile(r"`([\w./-]+\.(?:md|tex|py|t27|json|v|yml))`")

@@ -393,3 +393,29 @@ correctness. Under relative error the same data separates cleanly: agreement sit
 represents exactly; relative error is for values it approximates. Using the first where
 the second belongs manufactures defects at exactly the rate of the rounding noise.
 
+## Search the unmerged branches before investigating
+
+Pass 148 surveyed all 72 remote branches. 144 PRs had merged and 56 branches' content
+was fully in main -- but one was not, and it mattered. `specs/numeric/takum_variant_split.t27`,
+written 2026-07-31 on `fix-takum-negation`, opens by stating that libtakum exposes
+`takum<N>_to_float64` (linear) and `takum_log<N>_to_float64` (logarithmic) as two
+different variants under one name.
+
+That is precisely the distinction passes 144 and 145 got wrong and pass 146 spent a
+whole pass re-deriving before retracting two results. The answer had been written down
+two days earlier and was one unmerged PR away.
+
+Worse, the citation audit had already noticed the file was missing and classified it
+as `"NOWHERE -- flagged in the dossier"`. **It was not nowhere; it was on a branch.**
+A tool that resolves citations against `git ls-files` cannot see `git branch -r`, and
+that blind spot converted a merge oversight into a phantom.
+
+So, before opening an investigation into anything this corpus has touched before:
+
+    git branch -r --no-merged origin/main
+    git log --all --oneline -- <the file or subject>
+
+and treat an unmerged branch as evidence, not as noise. Squash merges make
+`--no-merged` over-report -- compare content per file rather than trusting ancestry --
+but over-reporting is the safe direction. The expensive failure is not reading a
+branch that turned out to be redundant; it is re-deriving something already recorded.
