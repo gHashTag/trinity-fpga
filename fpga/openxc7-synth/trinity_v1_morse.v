@@ -101,7 +101,10 @@ module trinity_v1_morse (
 
     localparam MORSE_BITS = 38;  // Total symbols in "TRINITY"
     reg [5:0] morse_idx = 0;
-    reg [24:0] morse_timer = 0;
+    // 31 bits: the 30-second interval below is 1,500,000,000 cycles, which does not
+    // fit in 25. The literal was silently truncated to 23,604,992 -- about 0.47 s at
+    // 50 MHz -- so the timer fired roughly 64 times too often and nothing warned.
+    reg [30:0] morse_timer = 0;
     reg morse_active = 0;
     reg morse_led = 0;
 
@@ -126,7 +129,7 @@ module trinity_v1_morse (
             morse_led <= 0;
         end else begin
             // Start Morse code every 30 seconds
-            if (!morse_active && morse_timer == 25'd1_500_000_000) begin  // 30s
+            if (!morse_active && morse_timer == 31'd1_500_000_000) begin  // 30s
                 morse_active <= 1;
                 morse_idx <= 0;
                 morse_timer <= 0;

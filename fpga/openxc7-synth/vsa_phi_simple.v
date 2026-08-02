@@ -51,13 +51,15 @@ module vsa_phi_simple_top (
     assign rotated_out = rotated;
 
     // LED blinks to show FPGA is working
-    reg [23:0] led_counter;
+    // 25 bits: 25,000,000 does not fit in 24. The literal was truncated to 8,222,784,
+    // so the LED blinked at about 6 Hz rather than the 1 Hz the comment claims.
+    reg [24:0] led_counter;
     reg led_state;
 
     always @(posedge clk) begin
         led_counter <= led_counter + 1;
-        if (led_counter == 24'd25000000) begin  // ~1 Hz at 50 MHz
-            led_counter <= 24'd0;
+        if (led_counter == 25'd25000000) begin  // ~1 Hz at 50 MHz
+            led_counter <= 25'd0;
             led_state <= ~led_state;
         end
     end

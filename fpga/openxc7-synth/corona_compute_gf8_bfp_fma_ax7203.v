@@ -50,7 +50,7 @@ module corona_compute_gf8_bfp_fma_ax7203 (
     reg [7:0] a_reg,b_reg,c_reg; reg comp_trigger;
     wire [7:0] fmt_a=a_reg, fmt_b=b_reg, fmt_c=c_reg;
     wire gf_sign_a = fmt_a[7];
-    wire [2:0] gf_exp_a = fmt_a[6:3];
+    wire [2:0] gf_exp_a = fmt_a[6:4];
     wire [3:0] gf_mant_a = fmt_a[3:0];
     wire gf_zero_a = (gf_exp_a == 3'd0) && (gf_mant_a == 4'd0);
     wire gf_nan_a = (gf_exp_a == 3'd7) && (gf_mant_a != 0);
@@ -66,7 +66,7 @@ module corona_compute_gf8_bfp_fma_ax7203 (
         else fp32_a={gf_sign_a, gf_exp32_a, gf_mant32_a};
     end
     wire gf_sign_b = fmt_b[7];
-    wire [2:0] gf_exp_b = fmt_b[6:3];
+    wire [2:0] gf_exp_b = fmt_b[6:4];
     wire [3:0] gf_mant_b = fmt_b[3:0];
     wire gf_zero_b = (gf_exp_b == 3'd0) && (gf_mant_b == 4'd0);
     wire gf_nan_b = (gf_exp_b == 3'd7) && (gf_mant_b != 0);
@@ -82,7 +82,7 @@ module corona_compute_gf8_bfp_fma_ax7203 (
         else fp32_b={gf_sign_b, gf_exp32_b, gf_mant32_b};
     end
     wire gf_sign_c = fmt_c[7];
-    wire [2:0] gf_exp_c = fmt_c[6:3];
+    wire [2:0] gf_exp_c = fmt_c[6:4];
     wire [3:0] gf_mant_c = fmt_c[3:0];
     wire gf_zero_c = (gf_exp_c == 3'd0) && (gf_mant_c == 4'd0);
     wire gf_nan_c = (gf_exp_c == 3'd7) && (gf_mant_c != 0);

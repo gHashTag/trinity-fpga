@@ -48,7 +48,7 @@ module corona_compute_gf8_bfp_to_fp32_ax7203 (
     reg [7:0] a_reg; reg conv_trigger;
     wire [7:0] fmt_a = a_reg;
     wire gf_sign_a = fmt_a[7];
-    wire [2:0] gf_exp_a = fmt_a[6:3];
+    wire [2:0] gf_exp_a = fmt_a[6:4];
     wire [3:0] gf_mant_a = fmt_a[3:0];
     wire gf_zero_a = (gf_exp_a == 3'd0) && (gf_mant_a == 4'd0);
     wire gf_nan_a = (gf_exp_a == 3'd7) && (gf_mant_a != 0);

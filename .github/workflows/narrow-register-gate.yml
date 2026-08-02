@@ -1,0 +1,37 @@
+name: Narrow register gate
+
+# A register narrower than the constant it is compared against, or than the slice
+# assigned into it, is legal Verilog and silent in yosys -- pass 146 confirmed that by
+# running yosys over trinity_v1_morse.v, which compared a 25-bit register against
+# 1,500,000,000 and produced zero warnings. Fifteen real defects were found this way,
+# including a UART frame counter that terminated on the wrong count and six GF8 decode
+# wrappers whose exponent slice dropped its top bit.
+#
+# Findings that have been read and judged benign live in the script's ACCEPTED table
+# with the reason written out, so this gate fails only on something new.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'fpga/**/*.v'
+      - 'research/audit_narrow_register.py'
+      - '.github/workflows/narrow-register-gate.yml'
+  pull_request:
+    paths:
+      - 'fpga/**/*.v'
+      - 'research/audit_narrow_register.py'
+      - '.github/workflows/narrow-register-gate.yml'
+  workflow_dispatch:
+
+jobs:
+  narrow-register:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: No register narrower than what is put in it
+        run: |
+          python3 research/audit_narrow_register.py

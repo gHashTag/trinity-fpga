@@ -391,13 +391,16 @@ module JTAG_UART #(
     reg [7:0]  uart_tx_data;
     reg        uart_tx_busy;
     reg [15:0] uart_tx_baud_counter;
-    reg [2:0]  uart_tx_bit;
+    // 4 bits: this counter must reach 8. At 3 bits the literal 3'd8 below truncated
+    // to 3'd0, so the frame terminated on the wrong count, and `uart_tx_bit <= 8` in
+    // the output mux was always true because 7 is the widest value it could hold.
+    reg [3:0]  uart_tx_bit;
 
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             uart_tx_busy <= 1'b0;
             uart_tx_baud_counter <= 16'd0;
-            uart_tx_bit <= 3'd0;
+            uart_tx_bit <= 4'd0;
             uart_tx_start <= 1'b0;
         end else begin
             uart_tx_start <= 1'b0;
@@ -405,14 +408,14 @@ module JTAG_UART #(
             if (!uart_tx_busy && !tx_empty) begin
                 uart_tx_data <= tx_data_out[7:0];
                 uart_tx_busy <= 1'b1;
-                uart_tx_bit <= 3'd0;
+                uart_tx_bit <= 4'd0;
                 uart_tx_baud_counter <= 16'd0;
                 uart_tx_start <= 1'b1;
             end else if (uart_tx_busy) begin
                 if (uart_tx_baud_counter == CLKS_PER_BIT - 1) begin
                     uart_tx_baud_counter <= 16'd0;
                     uart_tx_bit <= uart_tx_bit + 1;
-                    if (uart_tx_bit == 3'd8) begin  // Done
+                    if (uart_tx_bit == 4'd8) begin  // Done
                         uart_tx_busy <= 1'b0;
                     end
                 end else begin
