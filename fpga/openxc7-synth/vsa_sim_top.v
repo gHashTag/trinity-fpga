@@ -105,7 +105,8 @@ module vsa_sim_top (
 
     reg [3:0] state = IDLE;
     reg [7:0] cmd_byte;
-    reg [7:0] data_len;
+    reg [15:0] data_len;   // the frame carries a 16-bit length; an
+                       // 8-bit register discarded the high byte
     reg [7:0] data_idx;
     reg [15:0] crc_accum;
     reg [15:0] crc_received;

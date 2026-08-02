@@ -63,6 +63,13 @@ number, what it should print, and what it needs installed.
 About forty other documents, from earlier sessions and other lines of work — LUT
 comparisons, format leaderboards, session reports, competitive scans, draft papers.
 Some are current, some are superseded, and **their currency has not been checked**.
+
+Their citations have been, and the result is better than the warning suggests:
+**of 227 file citations across the 41 working notes, 191 resolve in this repository**,
+13 name files in `t27` or the paper repositories, 8 are glob suffixes rather than
+filenames (`` `_add.json` `` is a pattern), and **14 are dead** — seven of them in
+`lut_comparison.md` alone, pointing at synthesis outputs that existed only during a
+build.
 They are not part of the seven above and nothing here depends on them.
 
 One caution with a name. Four of them state a running **"Tier-E n/83"** total, and the

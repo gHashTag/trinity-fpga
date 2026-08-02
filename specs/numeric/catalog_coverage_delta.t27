@@ -5294,3 +5294,50 @@ against the format author's own implementation because its summary figure was wr
 """
   status IMPLEMENTED
 }
+
+// ---- Pass 144: all three, and the citation sweep quantified -------------------
+
+result B_THE_WORKING_NOTES_CITE_BETTER_THAN_THE_WARNING_SUGGESTS {
+  measured """
+227 file citations across the 41 working notes, classified rather than counted:
+
+  resolve in this repository        191
+  live in t27 or the paper repos     13
+  a glob suffix, not a filename       8   (`_add.json` is a pattern; the same
+                                           document shows ls conformance/vectors/*_add.json)
+  present but untracked by git        1
+  GENUINELY MISSING                  14   seven of them in lut_comparison.md alone,
+                                           naming synthesis outputs that existed only
+                                           during a build
+
+The first classification found 31 "dead" citations. Reading three of them before
+reporting turned up the suffix class, the cross-repo class and the untracked class --
+the fifth time this campaign has met that lesson, and the first time it was checked
+before writing rather than after.
+"""
+  status VERIFIED_SW
+}
+
+result C_SIX_OF_THE_TEN_REMAINING_DATAPATH_FILES_REPAIRED {
+  two_classes """
+  gf16_mac_16.v      w_reg and x_reg are [255:0], and the generate loop reads
+                     w_reg[16*i + 16] -- at i=15 that is bit 256, one past the end.
+                     Element i of a 16-bit packed vector has its sign at 16*i + 15.
+
+  trinity_v1, trinity_v2, vsa_bitnet_top, vsa_sim_top, vsa_vsa_top
+                     data_len declared reg [7:0] while the frame writes
+                     data_len[15:8] -- an 8-bit register receiving a 16-bit length
+                     field, discarding the high byte. Widened to [15:0].
+
+All six now read with zero diagnostics.
+"""
+  still_open """
+  cordic_sacred.v            valid_shift
+  decimal128_wide_decode.v   m24
+  trinity_v3_jtaguart.v      blink_divider
+  vsa_10k_top.v              yosys times out rather than erroring
+
+Four left, each needing its own reading rather than a shared fix.
+"""
+  status VERIFIED_SW
+}

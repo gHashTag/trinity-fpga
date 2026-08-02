@@ -78,8 +78,8 @@ module gf16_mac_16 (
     wire mul_valid [16];
 
     generate for (i = 0; i < 16; i = i + 1) begin : gen_mul
-        wire w_sign = w_reg[16*i + 16];
-        wire x_sign = x_reg[16*i + 16];
+        wire w_sign = w_reg[16*i + 15];   // element i is bits [16i+15 : 16i]
+        wire x_sign = x_reg[16*i + 15];
 
         // Sign
         assign mul_sign[i] = w_sign ^ x_sign;
