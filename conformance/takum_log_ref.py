@@ -69,11 +69,21 @@ class TakumLogFormat:
         return self.width - 1
 
 
+# VALIDATED FOR takum16 ONLY.
+#
+# The field decode below is transcribed from conformance/takum16_decode_conformance_
+# ax7203.py, which is a takum16 script, and pass 145 measured what that costs at other
+# widths: against a freshly built libtakum, takum16's positive half agrees on all
+# 32,768 codes while takum8 agrees on 1 of 127 in each half. The overhead-5,
+# three-bit-regime scheme does not carry down to width 8 -- p = n - r_eff - 5 goes
+# negative there -- and the entries below are kept only so the width is nameable.
+#
+# Use takum16. For the others, transcribe from a width-specific reference first.
 FORMATS = {
-    "takum8": TakumLogFormat("takum8", 8),
-    "takum16": TakumLogFormat("takum16", 16),
-    "takum32": TakumLogFormat("takum32", 32),
-    "takum64": TakumLogFormat("takum64", 64),
+    "takum8": TakumLogFormat("takum8", 8),      # NOT validated -- see above
+    "takum16": TakumLogFormat("takum16", 16),   # validated against libtakum
+    "takum32": TakumLogFormat("takum32", 32),   # NOT validated
+    "takum64": TakumLogFormat("takum64", 64),   # NOT validated
 }
 
 

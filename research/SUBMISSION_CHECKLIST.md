@@ -416,20 +416,65 @@ one, against `conformance/takum_log_ref.py`:
 
 | pack | comparable vectors | stored float64 is the **nearest** double to exact |
 |---|---|---|
-| `takum8` | 255 (1 NaR) | **255 / 255** |
+| `takum8` | 255 (1 NaR) | 255 / 255 — **but see 5i; this reference is wrong at width 8** |
 | `takum16` | 3 | **3 / 3** |
 
-This is stronger than the 1.02e−16 bound measured earlier: a value one ULP out would
-satisfy that bound and fail this check. Correct rounding is decided in exact arithmetic
-by comparing both neighbouring doubles, and the reference never leaves exact rational
-arithmetic, so there is no precision parameter to argue about.
+Correct rounding is decided in exact arithmetic by comparing both neighbouring doubles,
+and the reference never leaves exact rational arithmetic, so there is no precision
+parameter to argue about. The width-16 row stands. The width-8 row does not, and the
+reason is the subject of the next section.
+
+---
+
+## 5i. The published `takum8` pack disagrees with the format author's own reference
+
+Pass 145 compared the packs against **libtakum**, Hunhold's C99 reference implementation
+of takum — an artefact outside this corpus entirely. `ml_dtypes` does not implement
+takum, so before this the family was single-source.
+
+| pack | codes | bit-identical to libtakum |
+|---|---|---|
+| `takum16`, positive half | 32,768 | **32,768 / 32,768** |
+| `takum8` | 255 (1 NaR) | **3 / 255** |
+
+The three that agree are exactly the codes for 0, +1 and −1 — the fixed points of any
+log-domain scheme. Every other value differs, and the clearest way to see it is the
+dynamic range:
+
+| | takum8 minimum | takum8 maximum |
+|---|---|---|
+| libtakum | 1.13e−72 | 8.83e+71 |
+| published pack | 6.99e−56 | 1.43e+55 |
+
+A **dynamic range that does not shrink with width** is takum's defining property, and
+libtakum shows it: its takum8 range (1e−72 … 8.8e+71) nearly matches its takum16 range
+(1.8e−77 … 5.6e+76). The published takum8 pack spans a far narrower range, which is what
+happens when a width-16 field layout — overhead 5, a three-bit regime — is applied at
+width 8, where it leaves too few characteristic bits.
+
+**This is not a claim that takum16 is wrong.** Width 16 matches libtakum on every code
+of its positive half, so the corpus's method is sound where a width-appropriate witness
+was used. The defect is specific to width 8. (The negative half is a separate, already
+recorded matter: 32,766 of 32,768 differ there, matching the spec's own note.)
+
+**Why the pass-144 witness missed it.** That witness compared the pack against
+`conformance/takum_log_ref.py`, whose field decode is transcribed from a *takum16*
+script. The pack and the reference share the same width-8 error, so they agreed 255/255
+— an oracle-against-oracle result wearing a witness's clothes. This is the pass-137
+lesson recurring in a new place, and only an artefact from outside the corpus broke the
+tie. `takum_log_ref.py` now states in its `FORMATS` table which width it is validated
+for.
+
+**For the author:** either regenerate `takum8` from libtakum, or state in the pack's
+metadata which definition it implements. Reproduce with
+`research/crossval_libtakum.py`.
 
 **Suggested action:** record the witness count for these two packs as you do for
 `takum32`/`takum64`. Nothing else about them needs to change.
 
 ---
 
-## 5i. `abs_error = 0` measures a round trip, not exactness — and for logarithmic formats those differ
+## 5j. `abs_error = 0` measures a round trip, not exactness — and for logarithmic formats those differ
 
 Checked after the takum finding, and the answer is reassuring in one direction and
 worth a sentence in the other.

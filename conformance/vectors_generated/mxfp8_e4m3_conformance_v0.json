@@ -1,0 +1,2074 @@
+{
+  "schema": "t27-conformance/v0.1",
+  "format": "MXFP8_E4M3",
+  "format_name": "mxfp8_e4m3",
+  "bitexact": true,
+  "format_notes": "Derived from the golden oracle conformance/mxfp_ref.py by research/gen_conformance_pack.py. Exhaustive over all codes. CANDIDATE pack — not yet reviewed or published.",
+  "catalog": {
+    "id": "mxfp8_e4m3",
+    "bits": 8,
+    "status": "Candidate",
+    "source": "conformance/mxfp_ref.py"
+  },
+  "ssot": "https://github.com/gHashTag/t27/blob/master/conformance/FORMAT-SPEC-001.json",
+  "preprint": "https://arxiv.org/abs/2606.05017",
+  "anchor_identity": "phi^2 + 1/phi^2 = 3",
+  "anchor_check": {
+    "value": 3.0,
+    "expected": 3.0,
+    "ieee754_exact": true,
+    "note": "exact grid point"
+  },
+  "round_trip_policy": "decode: exact bits->f64 via the golden oracle. Values outside binary64 range are recorded as null with a note rather than clamped.",
+  "vector_mode": "exhaustive",
+  "n_vectors": 256,
+  "max_finite": 448.0,
+  "vectors": [
+    {
+      "name": "code_0x00",
+      "mxfp8_e4m3_bits_hex": "0x00",
+      "mxfp8_e4m3_bits_int": 0,
+      "decoded_f64": 0.0,
+      "decoded_f64_hex": "0x0000000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x01",
+      "mxfp8_e4m3_bits_hex": "0x01",
+      "mxfp8_e4m3_bits_int": 1,
+      "decoded_f64": 0.001953125,
+      "decoded_f64_hex": "0x3f60000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x02",
+      "mxfp8_e4m3_bits_hex": "0x02",
+      "mxfp8_e4m3_bits_int": 2,
+      "decoded_f64": 0.00390625,
+      "decoded_f64_hex": "0x3f70000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x03",
+      "mxfp8_e4m3_bits_hex": "0x03",
+      "mxfp8_e4m3_bits_int": 3,
+      "decoded_f64": 0.005859375,
+      "decoded_f64_hex": "0x3f78000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x04",
+      "mxfp8_e4m3_bits_hex": "0x04",
+      "mxfp8_e4m3_bits_int": 4,
+      "decoded_f64": 0.0078125,
+      "decoded_f64_hex": "0x3f80000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x05",
+      "mxfp8_e4m3_bits_hex": "0x05",
+      "mxfp8_e4m3_bits_int": 5,
+      "decoded_f64": 0.009765625,
+      "decoded_f64_hex": "0x3f84000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x06",
+      "mxfp8_e4m3_bits_hex": "0x06",
+      "mxfp8_e4m3_bits_int": 6,
+      "decoded_f64": 0.01171875,
+      "decoded_f64_hex": "0x3f88000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x07",
+      "mxfp8_e4m3_bits_hex": "0x07",
+      "mxfp8_e4m3_bits_int": 7,
+      "decoded_f64": 0.013671875,
+      "decoded_f64_hex": "0x3f8c000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x08",
+      "mxfp8_e4m3_bits_hex": "0x08",
+      "mxfp8_e4m3_bits_int": 8,
+      "decoded_f64": 0.015625,
+      "decoded_f64_hex": "0x3f90000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x09",
+      "mxfp8_e4m3_bits_hex": "0x09",
+      "mxfp8_e4m3_bits_int": 9,
+      "decoded_f64": 0.017578125,
+      "decoded_f64_hex": "0x3f92000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x0a",
+      "mxfp8_e4m3_bits_hex": "0x0a",
+      "mxfp8_e4m3_bits_int": 10,
+      "decoded_f64": 0.01953125,
+      "decoded_f64_hex": "0x3f94000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x0b",
+      "mxfp8_e4m3_bits_hex": "0x0b",
+      "mxfp8_e4m3_bits_int": 11,
+      "decoded_f64": 0.021484375,
+      "decoded_f64_hex": "0x3f96000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x0c",
+      "mxfp8_e4m3_bits_hex": "0x0c",
+      "mxfp8_e4m3_bits_int": 12,
+      "decoded_f64": 0.0234375,
+      "decoded_f64_hex": "0x3f98000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x0d",
+      "mxfp8_e4m3_bits_hex": "0x0d",
+      "mxfp8_e4m3_bits_int": 13,
+      "decoded_f64": 0.025390625,
+      "decoded_f64_hex": "0x3f9a000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x0e",
+      "mxfp8_e4m3_bits_hex": "0x0e",
+      "mxfp8_e4m3_bits_int": 14,
+      "decoded_f64": 0.02734375,
+      "decoded_f64_hex": "0x3f9c000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x0f",
+      "mxfp8_e4m3_bits_hex": "0x0f",
+      "mxfp8_e4m3_bits_int": 15,
+      "decoded_f64": 0.029296875,
+      "decoded_f64_hex": "0x3f9e000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x10",
+      "mxfp8_e4m3_bits_hex": "0x10",
+      "mxfp8_e4m3_bits_int": 16,
+      "decoded_f64": 0.03125,
+      "decoded_f64_hex": "0x3fa0000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x11",
+      "mxfp8_e4m3_bits_hex": "0x11",
+      "mxfp8_e4m3_bits_int": 17,
+      "decoded_f64": 0.03515625,
+      "decoded_f64_hex": "0x3fa2000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x12",
+      "mxfp8_e4m3_bits_hex": "0x12",
+      "mxfp8_e4m3_bits_int": 18,
+      "decoded_f64": 0.0390625,
+      "decoded_f64_hex": "0x3fa4000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x13",
+      "mxfp8_e4m3_bits_hex": "0x13",
+      "mxfp8_e4m3_bits_int": 19,
+      "decoded_f64": 0.04296875,
+      "decoded_f64_hex": "0x3fa6000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x14",
+      "mxfp8_e4m3_bits_hex": "0x14",
+      "mxfp8_e4m3_bits_int": 20,
+      "decoded_f64": 0.046875,
+      "decoded_f64_hex": "0x3fa8000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x15",
+      "mxfp8_e4m3_bits_hex": "0x15",
+      "mxfp8_e4m3_bits_int": 21,
+      "decoded_f64": 0.05078125,
+      "decoded_f64_hex": "0x3faa000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x16",
+      "mxfp8_e4m3_bits_hex": "0x16",
+      "mxfp8_e4m3_bits_int": 22,
+      "decoded_f64": 0.0546875,
+      "decoded_f64_hex": "0x3fac000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x17",
+      "mxfp8_e4m3_bits_hex": "0x17",
+      "mxfp8_e4m3_bits_int": 23,
+      "decoded_f64": 0.05859375,
+      "decoded_f64_hex": "0x3fae000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x18",
+      "mxfp8_e4m3_bits_hex": "0x18",
+      "mxfp8_e4m3_bits_int": 24,
+      "decoded_f64": 0.0625,
+      "decoded_f64_hex": "0x3fb0000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x19",
+      "mxfp8_e4m3_bits_hex": "0x19",
+      "mxfp8_e4m3_bits_int": 25,
+      "decoded_f64": 0.0703125,
+      "decoded_f64_hex": "0x3fb2000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x1a",
+      "mxfp8_e4m3_bits_hex": "0x1a",
+      "mxfp8_e4m3_bits_int": 26,
+      "decoded_f64": 0.078125,
+      "decoded_f64_hex": "0x3fb4000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x1b",
+      "mxfp8_e4m3_bits_hex": "0x1b",
+      "mxfp8_e4m3_bits_int": 27,
+      "decoded_f64": 0.0859375,
+      "decoded_f64_hex": "0x3fb6000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x1c",
+      "mxfp8_e4m3_bits_hex": "0x1c",
+      "mxfp8_e4m3_bits_int": 28,
+      "decoded_f64": 0.09375,
+      "decoded_f64_hex": "0x3fb8000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x1d",
+      "mxfp8_e4m3_bits_hex": "0x1d",
+      "mxfp8_e4m3_bits_int": 29,
+      "decoded_f64": 0.1015625,
+      "decoded_f64_hex": "0x3fba000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x1e",
+      "mxfp8_e4m3_bits_hex": "0x1e",
+      "mxfp8_e4m3_bits_int": 30,
+      "decoded_f64": 0.109375,
+      "decoded_f64_hex": "0x3fbc000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x1f",
+      "mxfp8_e4m3_bits_hex": "0x1f",
+      "mxfp8_e4m3_bits_int": 31,
+      "decoded_f64": 0.1171875,
+      "decoded_f64_hex": "0x3fbe000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x20",
+      "mxfp8_e4m3_bits_hex": "0x20",
+      "mxfp8_e4m3_bits_int": 32,
+      "decoded_f64": 0.125,
+      "decoded_f64_hex": "0x3fc0000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x21",
+      "mxfp8_e4m3_bits_hex": "0x21",
+      "mxfp8_e4m3_bits_int": 33,
+      "decoded_f64": 0.140625,
+      "decoded_f64_hex": "0x3fc2000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x22",
+      "mxfp8_e4m3_bits_hex": "0x22",
+      "mxfp8_e4m3_bits_int": 34,
+      "decoded_f64": 0.15625,
+      "decoded_f64_hex": "0x3fc4000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x23",
+      "mxfp8_e4m3_bits_hex": "0x23",
+      "mxfp8_e4m3_bits_int": 35,
+      "decoded_f64": 0.171875,
+      "decoded_f64_hex": "0x3fc6000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x24",
+      "mxfp8_e4m3_bits_hex": "0x24",
+      "mxfp8_e4m3_bits_int": 36,
+      "decoded_f64": 0.1875,
+      "decoded_f64_hex": "0x3fc8000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x25",
+      "mxfp8_e4m3_bits_hex": "0x25",
+      "mxfp8_e4m3_bits_int": 37,
+      "decoded_f64": 0.203125,
+      "decoded_f64_hex": "0x3fca000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x26",
+      "mxfp8_e4m3_bits_hex": "0x26",
+      "mxfp8_e4m3_bits_int": 38,
+      "decoded_f64": 0.21875,
+      "decoded_f64_hex": "0x3fcc000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x27",
+      "mxfp8_e4m3_bits_hex": "0x27",
+      "mxfp8_e4m3_bits_int": 39,
+      "decoded_f64": 0.234375,
+      "decoded_f64_hex": "0x3fce000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x28",
+      "mxfp8_e4m3_bits_hex": "0x28",
+      "mxfp8_e4m3_bits_int": 40,
+      "decoded_f64": 0.25,
+      "decoded_f64_hex": "0x3fd0000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x29",
+      "mxfp8_e4m3_bits_hex": "0x29",
+      "mxfp8_e4m3_bits_int": 41,
+      "decoded_f64": 0.28125,
+      "decoded_f64_hex": "0x3fd2000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x2a",
+      "mxfp8_e4m3_bits_hex": "0x2a",
+      "mxfp8_e4m3_bits_int": 42,
+      "decoded_f64": 0.3125,
+      "decoded_f64_hex": "0x3fd4000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x2b",
+      "mxfp8_e4m3_bits_hex": "0x2b",
+      "mxfp8_e4m3_bits_int": 43,
+      "decoded_f64": 0.34375,
+      "decoded_f64_hex": "0x3fd6000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x2c",
+      "mxfp8_e4m3_bits_hex": "0x2c",
+      "mxfp8_e4m3_bits_int": 44,
+      "decoded_f64": 0.375,
+      "decoded_f64_hex": "0x3fd8000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x2d",
+      "mxfp8_e4m3_bits_hex": "0x2d",
+      "mxfp8_e4m3_bits_int": 45,
+      "decoded_f64": 0.40625,
+      "decoded_f64_hex": "0x3fda000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x2e",
+      "mxfp8_e4m3_bits_hex": "0x2e",
+      "mxfp8_e4m3_bits_int": 46,
+      "decoded_f64": 0.4375,
+      "decoded_f64_hex": "0x3fdc000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x2f",
+      "mxfp8_e4m3_bits_hex": "0x2f",
+      "mxfp8_e4m3_bits_int": 47,
+      "decoded_f64": 0.46875,
+      "decoded_f64_hex": "0x3fde000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x30",
+      "mxfp8_e4m3_bits_hex": "0x30",
+      "mxfp8_e4m3_bits_int": 48,
+      "decoded_f64": 0.5,
+      "decoded_f64_hex": "0x3fe0000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x31",
+      "mxfp8_e4m3_bits_hex": "0x31",
+      "mxfp8_e4m3_bits_int": 49,
+      "decoded_f64": 0.5625,
+      "decoded_f64_hex": "0x3fe2000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x32",
+      "mxfp8_e4m3_bits_hex": "0x32",
+      "mxfp8_e4m3_bits_int": 50,
+      "decoded_f64": 0.625,
+      "decoded_f64_hex": "0x3fe4000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x33",
+      "mxfp8_e4m3_bits_hex": "0x33",
+      "mxfp8_e4m3_bits_int": 51,
+      "decoded_f64": 0.6875,
+      "decoded_f64_hex": "0x3fe6000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x34",
+      "mxfp8_e4m3_bits_hex": "0x34",
+      "mxfp8_e4m3_bits_int": 52,
+      "decoded_f64": 0.75,
+      "decoded_f64_hex": "0x3fe8000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x35",
+      "mxfp8_e4m3_bits_hex": "0x35",
+      "mxfp8_e4m3_bits_int": 53,
+      "decoded_f64": 0.8125,
+      "decoded_f64_hex": "0x3fea000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x36",
+      "mxfp8_e4m3_bits_hex": "0x36",
+      "mxfp8_e4m3_bits_int": 54,
+      "decoded_f64": 0.875,
+      "decoded_f64_hex": "0x3fec000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x37",
+      "mxfp8_e4m3_bits_hex": "0x37",
+      "mxfp8_e4m3_bits_int": 55,
+      "decoded_f64": 0.9375,
+      "decoded_f64_hex": "0x3fee000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x38",
+      "mxfp8_e4m3_bits_hex": "0x38",
+      "mxfp8_e4m3_bits_int": 56,
+      "decoded_f64": 1.0,
+      "decoded_f64_hex": "0x3ff0000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x39",
+      "mxfp8_e4m3_bits_hex": "0x39",
+      "mxfp8_e4m3_bits_int": 57,
+      "decoded_f64": 1.125,
+      "decoded_f64_hex": "0x3ff2000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x3a",
+      "mxfp8_e4m3_bits_hex": "0x3a",
+      "mxfp8_e4m3_bits_int": 58,
+      "decoded_f64": 1.25,
+      "decoded_f64_hex": "0x3ff4000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x3b",
+      "mxfp8_e4m3_bits_hex": "0x3b",
+      "mxfp8_e4m3_bits_int": 59,
+      "decoded_f64": 1.375,
+      "decoded_f64_hex": "0x3ff6000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x3c",
+      "mxfp8_e4m3_bits_hex": "0x3c",
+      "mxfp8_e4m3_bits_int": 60,
+      "decoded_f64": 1.5,
+      "decoded_f64_hex": "0x3ff8000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x3d",
+      "mxfp8_e4m3_bits_hex": "0x3d",
+      "mxfp8_e4m3_bits_int": 61,
+      "decoded_f64": 1.625,
+      "decoded_f64_hex": "0x3ffa000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x3e",
+      "mxfp8_e4m3_bits_hex": "0x3e",
+      "mxfp8_e4m3_bits_int": 62,
+      "decoded_f64": 1.75,
+      "decoded_f64_hex": "0x3ffc000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x3f",
+      "mxfp8_e4m3_bits_hex": "0x3f",
+      "mxfp8_e4m3_bits_int": 63,
+      "decoded_f64": 1.875,
+      "decoded_f64_hex": "0x3ffe000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x40",
+      "mxfp8_e4m3_bits_hex": "0x40",
+      "mxfp8_e4m3_bits_int": 64,
+      "decoded_f64": 2.0,
+      "decoded_f64_hex": "0x4000000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x41",
+      "mxfp8_e4m3_bits_hex": "0x41",
+      "mxfp8_e4m3_bits_int": 65,
+      "decoded_f64": 2.25,
+      "decoded_f64_hex": "0x4002000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x42",
+      "mxfp8_e4m3_bits_hex": "0x42",
+      "mxfp8_e4m3_bits_int": 66,
+      "decoded_f64": 2.5,
+      "decoded_f64_hex": "0x4004000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x43",
+      "mxfp8_e4m3_bits_hex": "0x43",
+      "mxfp8_e4m3_bits_int": 67,
+      "decoded_f64": 2.75,
+      "decoded_f64_hex": "0x4006000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x44",
+      "mxfp8_e4m3_bits_hex": "0x44",
+      "mxfp8_e4m3_bits_int": 68,
+      "decoded_f64": 3.0,
+      "decoded_f64_hex": "0x4008000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x45",
+      "mxfp8_e4m3_bits_hex": "0x45",
+      "mxfp8_e4m3_bits_int": 69,
+      "decoded_f64": 3.25,
+      "decoded_f64_hex": "0x400a000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x46",
+      "mxfp8_e4m3_bits_hex": "0x46",
+      "mxfp8_e4m3_bits_int": 70,
+      "decoded_f64": 3.5,
+      "decoded_f64_hex": "0x400c000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x47",
+      "mxfp8_e4m3_bits_hex": "0x47",
+      "mxfp8_e4m3_bits_int": 71,
+      "decoded_f64": 3.75,
+      "decoded_f64_hex": "0x400e000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x48",
+      "mxfp8_e4m3_bits_hex": "0x48",
+      "mxfp8_e4m3_bits_int": 72,
+      "decoded_f64": 4.0,
+      "decoded_f64_hex": "0x4010000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x49",
+      "mxfp8_e4m3_bits_hex": "0x49",
+      "mxfp8_e4m3_bits_int": 73,
+      "decoded_f64": 4.5,
+      "decoded_f64_hex": "0x4012000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x4a",
+      "mxfp8_e4m3_bits_hex": "0x4a",
+      "mxfp8_e4m3_bits_int": 74,
+      "decoded_f64": 5.0,
+      "decoded_f64_hex": "0x4014000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x4b",
+      "mxfp8_e4m3_bits_hex": "0x4b",
+      "mxfp8_e4m3_bits_int": 75,
+      "decoded_f64": 5.5,
+      "decoded_f64_hex": "0x4016000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x4c",
+      "mxfp8_e4m3_bits_hex": "0x4c",
+      "mxfp8_e4m3_bits_int": 76,
+      "decoded_f64": 6.0,
+      "decoded_f64_hex": "0x4018000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x4d",
+      "mxfp8_e4m3_bits_hex": "0x4d",
+      "mxfp8_e4m3_bits_int": 77,
+      "decoded_f64": 6.5,
+      "decoded_f64_hex": "0x401a000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x4e",
+      "mxfp8_e4m3_bits_hex": "0x4e",
+      "mxfp8_e4m3_bits_int": 78,
+      "decoded_f64": 7.0,
+      "decoded_f64_hex": "0x401c000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x4f",
+      "mxfp8_e4m3_bits_hex": "0x4f",
+      "mxfp8_e4m3_bits_int": 79,
+      "decoded_f64": 7.5,
+      "decoded_f64_hex": "0x401e000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x50",
+      "mxfp8_e4m3_bits_hex": "0x50",
+      "mxfp8_e4m3_bits_int": 80,
+      "decoded_f64": 8.0,
+      "decoded_f64_hex": "0x4020000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x51",
+      "mxfp8_e4m3_bits_hex": "0x51",
+      "mxfp8_e4m3_bits_int": 81,
+      "decoded_f64": 9.0,
+      "decoded_f64_hex": "0x4022000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x52",
+      "mxfp8_e4m3_bits_hex": "0x52",
+      "mxfp8_e4m3_bits_int": 82,
+      "decoded_f64": 10.0,
+      "decoded_f64_hex": "0x4024000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x53",
+      "mxfp8_e4m3_bits_hex": "0x53",
+      "mxfp8_e4m3_bits_int": 83,
+      "decoded_f64": 11.0,
+      "decoded_f64_hex": "0x4026000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x54",
+      "mxfp8_e4m3_bits_hex": "0x54",
+      "mxfp8_e4m3_bits_int": 84,
+      "decoded_f64": 12.0,
+      "decoded_f64_hex": "0x4028000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x55",
+      "mxfp8_e4m3_bits_hex": "0x55",
+      "mxfp8_e4m3_bits_int": 85,
+      "decoded_f64": 13.0,
+      "decoded_f64_hex": "0x402a000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x56",
+      "mxfp8_e4m3_bits_hex": "0x56",
+      "mxfp8_e4m3_bits_int": 86,
+      "decoded_f64": 14.0,
+      "decoded_f64_hex": "0x402c000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x57",
+      "mxfp8_e4m3_bits_hex": "0x57",
+      "mxfp8_e4m3_bits_int": 87,
+      "decoded_f64": 15.0,
+      "decoded_f64_hex": "0x402e000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x58",
+      "mxfp8_e4m3_bits_hex": "0x58",
+      "mxfp8_e4m3_bits_int": 88,
+      "decoded_f64": 16.0,
+      "decoded_f64_hex": "0x4030000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x59",
+      "mxfp8_e4m3_bits_hex": "0x59",
+      "mxfp8_e4m3_bits_int": 89,
+      "decoded_f64": 18.0,
+      "decoded_f64_hex": "0x4032000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x5a",
+      "mxfp8_e4m3_bits_hex": "0x5a",
+      "mxfp8_e4m3_bits_int": 90,
+      "decoded_f64": 20.0,
+      "decoded_f64_hex": "0x4034000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x5b",
+      "mxfp8_e4m3_bits_hex": "0x5b",
+      "mxfp8_e4m3_bits_int": 91,
+      "decoded_f64": 22.0,
+      "decoded_f64_hex": "0x4036000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x5c",
+      "mxfp8_e4m3_bits_hex": "0x5c",
+      "mxfp8_e4m3_bits_int": 92,
+      "decoded_f64": 24.0,
+      "decoded_f64_hex": "0x4038000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x5d",
+      "mxfp8_e4m3_bits_hex": "0x5d",
+      "mxfp8_e4m3_bits_int": 93,
+      "decoded_f64": 26.0,
+      "decoded_f64_hex": "0x403a000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x5e",
+      "mxfp8_e4m3_bits_hex": "0x5e",
+      "mxfp8_e4m3_bits_int": 94,
+      "decoded_f64": 28.0,
+      "decoded_f64_hex": "0x403c000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x5f",
+      "mxfp8_e4m3_bits_hex": "0x5f",
+      "mxfp8_e4m3_bits_int": 95,
+      "decoded_f64": 30.0,
+      "decoded_f64_hex": "0x403e000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x60",
+      "mxfp8_e4m3_bits_hex": "0x60",
+      "mxfp8_e4m3_bits_int": 96,
+      "decoded_f64": 32.0,
+      "decoded_f64_hex": "0x4040000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x61",
+      "mxfp8_e4m3_bits_hex": "0x61",
+      "mxfp8_e4m3_bits_int": 97,
+      "decoded_f64": 36.0,
+      "decoded_f64_hex": "0x4042000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x62",
+      "mxfp8_e4m3_bits_hex": "0x62",
+      "mxfp8_e4m3_bits_int": 98,
+      "decoded_f64": 40.0,
+      "decoded_f64_hex": "0x4044000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x63",
+      "mxfp8_e4m3_bits_hex": "0x63",
+      "mxfp8_e4m3_bits_int": 99,
+      "decoded_f64": 44.0,
+      "decoded_f64_hex": "0x4046000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x64",
+      "mxfp8_e4m3_bits_hex": "0x64",
+      "mxfp8_e4m3_bits_int": 100,
+      "decoded_f64": 48.0,
+      "decoded_f64_hex": "0x4048000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x65",
+      "mxfp8_e4m3_bits_hex": "0x65",
+      "mxfp8_e4m3_bits_int": 101,
+      "decoded_f64": 52.0,
+      "decoded_f64_hex": "0x404a000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x66",
+      "mxfp8_e4m3_bits_hex": "0x66",
+      "mxfp8_e4m3_bits_int": 102,
+      "decoded_f64": 56.0,
+      "decoded_f64_hex": "0x404c000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x67",
+      "mxfp8_e4m3_bits_hex": "0x67",
+      "mxfp8_e4m3_bits_int": 103,
+      "decoded_f64": 60.0,
+      "decoded_f64_hex": "0x404e000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x68",
+      "mxfp8_e4m3_bits_hex": "0x68",
+      "mxfp8_e4m3_bits_int": 104,
+      "decoded_f64": 64.0,
+      "decoded_f64_hex": "0x4050000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x69",
+      "mxfp8_e4m3_bits_hex": "0x69",
+      "mxfp8_e4m3_bits_int": 105,
+      "decoded_f64": 72.0,
+      "decoded_f64_hex": "0x4052000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x6a",
+      "mxfp8_e4m3_bits_hex": "0x6a",
+      "mxfp8_e4m3_bits_int": 106,
+      "decoded_f64": 80.0,
+      "decoded_f64_hex": "0x4054000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x6b",
+      "mxfp8_e4m3_bits_hex": "0x6b",
+      "mxfp8_e4m3_bits_int": 107,
+      "decoded_f64": 88.0,
+      "decoded_f64_hex": "0x4056000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x6c",
+      "mxfp8_e4m3_bits_hex": "0x6c",
+      "mxfp8_e4m3_bits_int": 108,
+      "decoded_f64": 96.0,
+      "decoded_f64_hex": "0x4058000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x6d",
+      "mxfp8_e4m3_bits_hex": "0x6d",
+      "mxfp8_e4m3_bits_int": 109,
+      "decoded_f64": 104.0,
+      "decoded_f64_hex": "0x405a000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x6e",
+      "mxfp8_e4m3_bits_hex": "0x6e",
+      "mxfp8_e4m3_bits_int": 110,
+      "decoded_f64": 112.0,
+      "decoded_f64_hex": "0x405c000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x6f",
+      "mxfp8_e4m3_bits_hex": "0x6f",
+      "mxfp8_e4m3_bits_int": 111,
+      "decoded_f64": 120.0,
+      "decoded_f64_hex": "0x405e000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x70",
+      "mxfp8_e4m3_bits_hex": "0x70",
+      "mxfp8_e4m3_bits_int": 112,
+      "decoded_f64": 128.0,
+      "decoded_f64_hex": "0x4060000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x71",
+      "mxfp8_e4m3_bits_hex": "0x71",
+      "mxfp8_e4m3_bits_int": 113,
+      "decoded_f64": 144.0,
+      "decoded_f64_hex": "0x4062000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x72",
+      "mxfp8_e4m3_bits_hex": "0x72",
+      "mxfp8_e4m3_bits_int": 114,
+      "decoded_f64": 160.0,
+      "decoded_f64_hex": "0x4064000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x73",
+      "mxfp8_e4m3_bits_hex": "0x73",
+      "mxfp8_e4m3_bits_int": 115,
+      "decoded_f64": 176.0,
+      "decoded_f64_hex": "0x4066000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x74",
+      "mxfp8_e4m3_bits_hex": "0x74",
+      "mxfp8_e4m3_bits_int": 116,
+      "decoded_f64": 192.0,
+      "decoded_f64_hex": "0x4068000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x75",
+      "mxfp8_e4m3_bits_hex": "0x75",
+      "mxfp8_e4m3_bits_int": 117,
+      "decoded_f64": 208.0,
+      "decoded_f64_hex": "0x406a000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x76",
+      "mxfp8_e4m3_bits_hex": "0x76",
+      "mxfp8_e4m3_bits_int": 118,
+      "decoded_f64": 224.0,
+      "decoded_f64_hex": "0x406c000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x77",
+      "mxfp8_e4m3_bits_hex": "0x77",
+      "mxfp8_e4m3_bits_int": 119,
+      "decoded_f64": 240.0,
+      "decoded_f64_hex": "0x406e000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x78",
+      "mxfp8_e4m3_bits_hex": "0x78",
+      "mxfp8_e4m3_bits_int": 120,
+      "decoded_f64": 256.0,
+      "decoded_f64_hex": "0x4070000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x79",
+      "mxfp8_e4m3_bits_hex": "0x79",
+      "mxfp8_e4m3_bits_int": 121,
+      "decoded_f64": 288.0,
+      "decoded_f64_hex": "0x4072000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x7a",
+      "mxfp8_e4m3_bits_hex": "0x7a",
+      "mxfp8_e4m3_bits_int": 122,
+      "decoded_f64": 320.0,
+      "decoded_f64_hex": "0x4074000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x7b",
+      "mxfp8_e4m3_bits_hex": "0x7b",
+      "mxfp8_e4m3_bits_int": 123,
+      "decoded_f64": 352.0,
+      "decoded_f64_hex": "0x4076000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x7c",
+      "mxfp8_e4m3_bits_hex": "0x7c",
+      "mxfp8_e4m3_bits_int": 124,
+      "decoded_f64": 384.0,
+      "decoded_f64_hex": "0x4078000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x7d",
+      "mxfp8_e4m3_bits_hex": "0x7d",
+      "mxfp8_e4m3_bits_int": 125,
+      "decoded_f64": 416.0,
+      "decoded_f64_hex": "0x407a000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x7e",
+      "mxfp8_e4m3_bits_hex": "0x7e",
+      "mxfp8_e4m3_bits_int": 126,
+      "decoded_f64": 448.0,
+      "decoded_f64_hex": "0x407c000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x7f",
+      "mxfp8_e4m3_bits_hex": "0x7f",
+      "mxfp8_e4m3_bits_int": 127,
+      "decoded_f64": null,
+      "note": "NaR/NaN"
+    },
+    {
+      "name": "code_0x80",
+      "mxfp8_e4m3_bits_hex": "0x80",
+      "mxfp8_e4m3_bits_int": 128,
+      "decoded_f64": 0.0,
+      "decoded_f64_hex": "0x0000000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x81",
+      "mxfp8_e4m3_bits_hex": "0x81",
+      "mxfp8_e4m3_bits_int": 129,
+      "decoded_f64": -0.001953125,
+      "decoded_f64_hex": "0xbf60000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x82",
+      "mxfp8_e4m3_bits_hex": "0x82",
+      "mxfp8_e4m3_bits_int": 130,
+      "decoded_f64": -0.00390625,
+      "decoded_f64_hex": "0xbf70000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x83",
+      "mxfp8_e4m3_bits_hex": "0x83",
+      "mxfp8_e4m3_bits_int": 131,
+      "decoded_f64": -0.005859375,
+      "decoded_f64_hex": "0xbf78000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x84",
+      "mxfp8_e4m3_bits_hex": "0x84",
+      "mxfp8_e4m3_bits_int": 132,
+      "decoded_f64": -0.0078125,
+      "decoded_f64_hex": "0xbf80000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x85",
+      "mxfp8_e4m3_bits_hex": "0x85",
+      "mxfp8_e4m3_bits_int": 133,
+      "decoded_f64": -0.009765625,
+      "decoded_f64_hex": "0xbf84000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x86",
+      "mxfp8_e4m3_bits_hex": "0x86",
+      "mxfp8_e4m3_bits_int": 134,
+      "decoded_f64": -0.01171875,
+      "decoded_f64_hex": "0xbf88000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x87",
+      "mxfp8_e4m3_bits_hex": "0x87",
+      "mxfp8_e4m3_bits_int": 135,
+      "decoded_f64": -0.013671875,
+      "decoded_f64_hex": "0xbf8c000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x88",
+      "mxfp8_e4m3_bits_hex": "0x88",
+      "mxfp8_e4m3_bits_int": 136,
+      "decoded_f64": -0.015625,
+      "decoded_f64_hex": "0xbf90000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x89",
+      "mxfp8_e4m3_bits_hex": "0x89",
+      "mxfp8_e4m3_bits_int": 137,
+      "decoded_f64": -0.017578125,
+      "decoded_f64_hex": "0xbf92000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x8a",
+      "mxfp8_e4m3_bits_hex": "0x8a",
+      "mxfp8_e4m3_bits_int": 138,
+      "decoded_f64": -0.01953125,
+      "decoded_f64_hex": "0xbf94000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x8b",
+      "mxfp8_e4m3_bits_hex": "0x8b",
+      "mxfp8_e4m3_bits_int": 139,
+      "decoded_f64": -0.021484375,
+      "decoded_f64_hex": "0xbf96000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x8c",
+      "mxfp8_e4m3_bits_hex": "0x8c",
+      "mxfp8_e4m3_bits_int": 140,
+      "decoded_f64": -0.0234375,
+      "decoded_f64_hex": "0xbf98000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x8d",
+      "mxfp8_e4m3_bits_hex": "0x8d",
+      "mxfp8_e4m3_bits_int": 141,
+      "decoded_f64": -0.025390625,
+      "decoded_f64_hex": "0xbf9a000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x8e",
+      "mxfp8_e4m3_bits_hex": "0x8e",
+      "mxfp8_e4m3_bits_int": 142,
+      "decoded_f64": -0.02734375,
+      "decoded_f64_hex": "0xbf9c000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x8f",
+      "mxfp8_e4m3_bits_hex": "0x8f",
+      "mxfp8_e4m3_bits_int": 143,
+      "decoded_f64": -0.029296875,
+      "decoded_f64_hex": "0xbf9e000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x90",
+      "mxfp8_e4m3_bits_hex": "0x90",
+      "mxfp8_e4m3_bits_int": 144,
+      "decoded_f64": -0.03125,
+      "decoded_f64_hex": "0xbfa0000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x91",
+      "mxfp8_e4m3_bits_hex": "0x91",
+      "mxfp8_e4m3_bits_int": 145,
+      "decoded_f64": -0.03515625,
+      "decoded_f64_hex": "0xbfa2000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x92",
+      "mxfp8_e4m3_bits_hex": "0x92",
+      "mxfp8_e4m3_bits_int": 146,
+      "decoded_f64": -0.0390625,
+      "decoded_f64_hex": "0xbfa4000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x93",
+      "mxfp8_e4m3_bits_hex": "0x93",
+      "mxfp8_e4m3_bits_int": 147,
+      "decoded_f64": -0.04296875,
+      "decoded_f64_hex": "0xbfa6000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x94",
+      "mxfp8_e4m3_bits_hex": "0x94",
+      "mxfp8_e4m3_bits_int": 148,
+      "decoded_f64": -0.046875,
+      "decoded_f64_hex": "0xbfa8000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x95",
+      "mxfp8_e4m3_bits_hex": "0x95",
+      "mxfp8_e4m3_bits_int": 149,
+      "decoded_f64": -0.05078125,
+      "decoded_f64_hex": "0xbfaa000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x96",
+      "mxfp8_e4m3_bits_hex": "0x96",
+      "mxfp8_e4m3_bits_int": 150,
+      "decoded_f64": -0.0546875,
+      "decoded_f64_hex": "0xbfac000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x97",
+      "mxfp8_e4m3_bits_hex": "0x97",
+      "mxfp8_e4m3_bits_int": 151,
+      "decoded_f64": -0.05859375,
+      "decoded_f64_hex": "0xbfae000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x98",
+      "mxfp8_e4m3_bits_hex": "0x98",
+      "mxfp8_e4m3_bits_int": 152,
+      "decoded_f64": -0.0625,
+      "decoded_f64_hex": "0xbfb0000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x99",
+      "mxfp8_e4m3_bits_hex": "0x99",
+      "mxfp8_e4m3_bits_int": 153,
+      "decoded_f64": -0.0703125,
+      "decoded_f64_hex": "0xbfb2000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x9a",
+      "mxfp8_e4m3_bits_hex": "0x9a",
+      "mxfp8_e4m3_bits_int": 154,
+      "decoded_f64": -0.078125,
+      "decoded_f64_hex": "0xbfb4000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x9b",
+      "mxfp8_e4m3_bits_hex": "0x9b",
+      "mxfp8_e4m3_bits_int": 155,
+      "decoded_f64": -0.0859375,
+      "decoded_f64_hex": "0xbfb6000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x9c",
+      "mxfp8_e4m3_bits_hex": "0x9c",
+      "mxfp8_e4m3_bits_int": 156,
+      "decoded_f64": -0.09375,
+      "decoded_f64_hex": "0xbfb8000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x9d",
+      "mxfp8_e4m3_bits_hex": "0x9d",
+      "mxfp8_e4m3_bits_int": 157,
+      "decoded_f64": -0.1015625,
+      "decoded_f64_hex": "0xbfba000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x9e",
+      "mxfp8_e4m3_bits_hex": "0x9e",
+      "mxfp8_e4m3_bits_int": 158,
+      "decoded_f64": -0.109375,
+      "decoded_f64_hex": "0xbfbc000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0x9f",
+      "mxfp8_e4m3_bits_hex": "0x9f",
+      "mxfp8_e4m3_bits_int": 159,
+      "decoded_f64": -0.1171875,
+      "decoded_f64_hex": "0xbfbe000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xa0",
+      "mxfp8_e4m3_bits_hex": "0xa0",
+      "mxfp8_e4m3_bits_int": 160,
+      "decoded_f64": -0.125,
+      "decoded_f64_hex": "0xbfc0000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xa1",
+      "mxfp8_e4m3_bits_hex": "0xa1",
+      "mxfp8_e4m3_bits_int": 161,
+      "decoded_f64": -0.140625,
+      "decoded_f64_hex": "0xbfc2000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xa2",
+      "mxfp8_e4m3_bits_hex": "0xa2",
+      "mxfp8_e4m3_bits_int": 162,
+      "decoded_f64": -0.15625,
+      "decoded_f64_hex": "0xbfc4000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xa3",
+      "mxfp8_e4m3_bits_hex": "0xa3",
+      "mxfp8_e4m3_bits_int": 163,
+      "decoded_f64": -0.171875,
+      "decoded_f64_hex": "0xbfc6000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xa4",
+      "mxfp8_e4m3_bits_hex": "0xa4",
+      "mxfp8_e4m3_bits_int": 164,
+      "decoded_f64": -0.1875,
+      "decoded_f64_hex": "0xbfc8000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xa5",
+      "mxfp8_e4m3_bits_hex": "0xa5",
+      "mxfp8_e4m3_bits_int": 165,
+      "decoded_f64": -0.203125,
+      "decoded_f64_hex": "0xbfca000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xa6",
+      "mxfp8_e4m3_bits_hex": "0xa6",
+      "mxfp8_e4m3_bits_int": 166,
+      "decoded_f64": -0.21875,
+      "decoded_f64_hex": "0xbfcc000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xa7",
+      "mxfp8_e4m3_bits_hex": "0xa7",
+      "mxfp8_e4m3_bits_int": 167,
+      "decoded_f64": -0.234375,
+      "decoded_f64_hex": "0xbfce000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xa8",
+      "mxfp8_e4m3_bits_hex": "0xa8",
+      "mxfp8_e4m3_bits_int": 168,
+      "decoded_f64": -0.25,
+      "decoded_f64_hex": "0xbfd0000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xa9",
+      "mxfp8_e4m3_bits_hex": "0xa9",
+      "mxfp8_e4m3_bits_int": 169,
+      "decoded_f64": -0.28125,
+      "decoded_f64_hex": "0xbfd2000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xaa",
+      "mxfp8_e4m3_bits_hex": "0xaa",
+      "mxfp8_e4m3_bits_int": 170,
+      "decoded_f64": -0.3125,
+      "decoded_f64_hex": "0xbfd4000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xab",
+      "mxfp8_e4m3_bits_hex": "0xab",
+      "mxfp8_e4m3_bits_int": 171,
+      "decoded_f64": -0.34375,
+      "decoded_f64_hex": "0xbfd6000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xac",
+      "mxfp8_e4m3_bits_hex": "0xac",
+      "mxfp8_e4m3_bits_int": 172,
+      "decoded_f64": -0.375,
+      "decoded_f64_hex": "0xbfd8000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xad",
+      "mxfp8_e4m3_bits_hex": "0xad",
+      "mxfp8_e4m3_bits_int": 173,
+      "decoded_f64": -0.40625,
+      "decoded_f64_hex": "0xbfda000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xae",
+      "mxfp8_e4m3_bits_hex": "0xae",
+      "mxfp8_e4m3_bits_int": 174,
+      "decoded_f64": -0.4375,
+      "decoded_f64_hex": "0xbfdc000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xaf",
+      "mxfp8_e4m3_bits_hex": "0xaf",
+      "mxfp8_e4m3_bits_int": 175,
+      "decoded_f64": -0.46875,
+      "decoded_f64_hex": "0xbfde000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xb0",
+      "mxfp8_e4m3_bits_hex": "0xb0",
+      "mxfp8_e4m3_bits_int": 176,
+      "decoded_f64": -0.5,
+      "decoded_f64_hex": "0xbfe0000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xb1",
+      "mxfp8_e4m3_bits_hex": "0xb1",
+      "mxfp8_e4m3_bits_int": 177,
+      "decoded_f64": -0.5625,
+      "decoded_f64_hex": "0xbfe2000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xb2",
+      "mxfp8_e4m3_bits_hex": "0xb2",
+      "mxfp8_e4m3_bits_int": 178,
+      "decoded_f64": -0.625,
+      "decoded_f64_hex": "0xbfe4000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xb3",
+      "mxfp8_e4m3_bits_hex": "0xb3",
+      "mxfp8_e4m3_bits_int": 179,
+      "decoded_f64": -0.6875,
+      "decoded_f64_hex": "0xbfe6000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xb4",
+      "mxfp8_e4m3_bits_hex": "0xb4",
+      "mxfp8_e4m3_bits_int": 180,
+      "decoded_f64": -0.75,
+      "decoded_f64_hex": "0xbfe8000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xb5",
+      "mxfp8_e4m3_bits_hex": "0xb5",
+      "mxfp8_e4m3_bits_int": 181,
+      "decoded_f64": -0.8125,
+      "decoded_f64_hex": "0xbfea000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xb6",
+      "mxfp8_e4m3_bits_hex": "0xb6",
+      "mxfp8_e4m3_bits_int": 182,
+      "decoded_f64": -0.875,
+      "decoded_f64_hex": "0xbfec000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xb7",
+      "mxfp8_e4m3_bits_hex": "0xb7",
+      "mxfp8_e4m3_bits_int": 183,
+      "decoded_f64": -0.9375,
+      "decoded_f64_hex": "0xbfee000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xb8",
+      "mxfp8_e4m3_bits_hex": "0xb8",
+      "mxfp8_e4m3_bits_int": 184,
+      "decoded_f64": -1.0,
+      "decoded_f64_hex": "0xbff0000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xb9",
+      "mxfp8_e4m3_bits_hex": "0xb9",
+      "mxfp8_e4m3_bits_int": 185,
+      "decoded_f64": -1.125,
+      "decoded_f64_hex": "0xbff2000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xba",
+      "mxfp8_e4m3_bits_hex": "0xba",
+      "mxfp8_e4m3_bits_int": 186,
+      "decoded_f64": -1.25,
+      "decoded_f64_hex": "0xbff4000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xbb",
+      "mxfp8_e4m3_bits_hex": "0xbb",
+      "mxfp8_e4m3_bits_int": 187,
+      "decoded_f64": -1.375,
+      "decoded_f64_hex": "0xbff6000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xbc",
+      "mxfp8_e4m3_bits_hex": "0xbc",
+      "mxfp8_e4m3_bits_int": 188,
+      "decoded_f64": -1.5,
+      "decoded_f64_hex": "0xbff8000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xbd",
+      "mxfp8_e4m3_bits_hex": "0xbd",
+      "mxfp8_e4m3_bits_int": 189,
+      "decoded_f64": -1.625,
+      "decoded_f64_hex": "0xbffa000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xbe",
+      "mxfp8_e4m3_bits_hex": "0xbe",
+      "mxfp8_e4m3_bits_int": 190,
+      "decoded_f64": -1.75,
+      "decoded_f64_hex": "0xbffc000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xbf",
+      "mxfp8_e4m3_bits_hex": "0xbf",
+      "mxfp8_e4m3_bits_int": 191,
+      "decoded_f64": -1.875,
+      "decoded_f64_hex": "0xbffe000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xc0",
+      "mxfp8_e4m3_bits_hex": "0xc0",
+      "mxfp8_e4m3_bits_int": 192,
+      "decoded_f64": -2.0,
+      "decoded_f64_hex": "0xc000000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xc1",
+      "mxfp8_e4m3_bits_hex": "0xc1",
+      "mxfp8_e4m3_bits_int": 193,
+      "decoded_f64": -2.25,
+      "decoded_f64_hex": "0xc002000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xc2",
+      "mxfp8_e4m3_bits_hex": "0xc2",
+      "mxfp8_e4m3_bits_int": 194,
+      "decoded_f64": -2.5,
+      "decoded_f64_hex": "0xc004000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xc3",
+      "mxfp8_e4m3_bits_hex": "0xc3",
+      "mxfp8_e4m3_bits_int": 195,
+      "decoded_f64": -2.75,
+      "decoded_f64_hex": "0xc006000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xc4",
+      "mxfp8_e4m3_bits_hex": "0xc4",
+      "mxfp8_e4m3_bits_int": 196,
+      "decoded_f64": -3.0,
+      "decoded_f64_hex": "0xc008000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xc5",
+      "mxfp8_e4m3_bits_hex": "0xc5",
+      "mxfp8_e4m3_bits_int": 197,
+      "decoded_f64": -3.25,
+      "decoded_f64_hex": "0xc00a000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xc6",
+      "mxfp8_e4m3_bits_hex": "0xc6",
+      "mxfp8_e4m3_bits_int": 198,
+      "decoded_f64": -3.5,
+      "decoded_f64_hex": "0xc00c000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xc7",
+      "mxfp8_e4m3_bits_hex": "0xc7",
+      "mxfp8_e4m3_bits_int": 199,
+      "decoded_f64": -3.75,
+      "decoded_f64_hex": "0xc00e000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xc8",
+      "mxfp8_e4m3_bits_hex": "0xc8",
+      "mxfp8_e4m3_bits_int": 200,
+      "decoded_f64": -4.0,
+      "decoded_f64_hex": "0xc010000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xc9",
+      "mxfp8_e4m3_bits_hex": "0xc9",
+      "mxfp8_e4m3_bits_int": 201,
+      "decoded_f64": -4.5,
+      "decoded_f64_hex": "0xc012000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xca",
+      "mxfp8_e4m3_bits_hex": "0xca",
+      "mxfp8_e4m3_bits_int": 202,
+      "decoded_f64": -5.0,
+      "decoded_f64_hex": "0xc014000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xcb",
+      "mxfp8_e4m3_bits_hex": "0xcb",
+      "mxfp8_e4m3_bits_int": 203,
+      "decoded_f64": -5.5,
+      "decoded_f64_hex": "0xc016000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xcc",
+      "mxfp8_e4m3_bits_hex": "0xcc",
+      "mxfp8_e4m3_bits_int": 204,
+      "decoded_f64": -6.0,
+      "decoded_f64_hex": "0xc018000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xcd",
+      "mxfp8_e4m3_bits_hex": "0xcd",
+      "mxfp8_e4m3_bits_int": 205,
+      "decoded_f64": -6.5,
+      "decoded_f64_hex": "0xc01a000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xce",
+      "mxfp8_e4m3_bits_hex": "0xce",
+      "mxfp8_e4m3_bits_int": 206,
+      "decoded_f64": -7.0,
+      "decoded_f64_hex": "0xc01c000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xcf",
+      "mxfp8_e4m3_bits_hex": "0xcf",
+      "mxfp8_e4m3_bits_int": 207,
+      "decoded_f64": -7.5,
+      "decoded_f64_hex": "0xc01e000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xd0",
+      "mxfp8_e4m3_bits_hex": "0xd0",
+      "mxfp8_e4m3_bits_int": 208,
+      "decoded_f64": -8.0,
+      "decoded_f64_hex": "0xc020000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xd1",
+      "mxfp8_e4m3_bits_hex": "0xd1",
+      "mxfp8_e4m3_bits_int": 209,
+      "decoded_f64": -9.0,
+      "decoded_f64_hex": "0xc022000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xd2",
+      "mxfp8_e4m3_bits_hex": "0xd2",
+      "mxfp8_e4m3_bits_int": 210,
+      "decoded_f64": -10.0,
+      "decoded_f64_hex": "0xc024000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xd3",
+      "mxfp8_e4m3_bits_hex": "0xd3",
+      "mxfp8_e4m3_bits_int": 211,
+      "decoded_f64": -11.0,
+      "decoded_f64_hex": "0xc026000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xd4",
+      "mxfp8_e4m3_bits_hex": "0xd4",
+      "mxfp8_e4m3_bits_int": 212,
+      "decoded_f64": -12.0,
+      "decoded_f64_hex": "0xc028000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xd5",
+      "mxfp8_e4m3_bits_hex": "0xd5",
+      "mxfp8_e4m3_bits_int": 213,
+      "decoded_f64": -13.0,
+      "decoded_f64_hex": "0xc02a000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xd6",
+      "mxfp8_e4m3_bits_hex": "0xd6",
+      "mxfp8_e4m3_bits_int": 214,
+      "decoded_f64": -14.0,
+      "decoded_f64_hex": "0xc02c000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xd7",
+      "mxfp8_e4m3_bits_hex": "0xd7",
+      "mxfp8_e4m3_bits_int": 215,
+      "decoded_f64": -15.0,
+      "decoded_f64_hex": "0xc02e000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xd8",
+      "mxfp8_e4m3_bits_hex": "0xd8",
+      "mxfp8_e4m3_bits_int": 216,
+      "decoded_f64": -16.0,
+      "decoded_f64_hex": "0xc030000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xd9",
+      "mxfp8_e4m3_bits_hex": "0xd9",
+      "mxfp8_e4m3_bits_int": 217,
+      "decoded_f64": -18.0,
+      "decoded_f64_hex": "0xc032000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xda",
+      "mxfp8_e4m3_bits_hex": "0xda",
+      "mxfp8_e4m3_bits_int": 218,
+      "decoded_f64": -20.0,
+      "decoded_f64_hex": "0xc034000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xdb",
+      "mxfp8_e4m3_bits_hex": "0xdb",
+      "mxfp8_e4m3_bits_int": 219,
+      "decoded_f64": -22.0,
+      "decoded_f64_hex": "0xc036000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xdc",
+      "mxfp8_e4m3_bits_hex": "0xdc",
+      "mxfp8_e4m3_bits_int": 220,
+      "decoded_f64": -24.0,
+      "decoded_f64_hex": "0xc038000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xdd",
+      "mxfp8_e4m3_bits_hex": "0xdd",
+      "mxfp8_e4m3_bits_int": 221,
+      "decoded_f64": -26.0,
+      "decoded_f64_hex": "0xc03a000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xde",
+      "mxfp8_e4m3_bits_hex": "0xde",
+      "mxfp8_e4m3_bits_int": 222,
+      "decoded_f64": -28.0,
+      "decoded_f64_hex": "0xc03c000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xdf",
+      "mxfp8_e4m3_bits_hex": "0xdf",
+      "mxfp8_e4m3_bits_int": 223,
+      "decoded_f64": -30.0,
+      "decoded_f64_hex": "0xc03e000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xe0",
+      "mxfp8_e4m3_bits_hex": "0xe0",
+      "mxfp8_e4m3_bits_int": 224,
+      "decoded_f64": -32.0,
+      "decoded_f64_hex": "0xc040000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xe1",
+      "mxfp8_e4m3_bits_hex": "0xe1",
+      "mxfp8_e4m3_bits_int": 225,
+      "decoded_f64": -36.0,
+      "decoded_f64_hex": "0xc042000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xe2",
+      "mxfp8_e4m3_bits_hex": "0xe2",
+      "mxfp8_e4m3_bits_int": 226,
+      "decoded_f64": -40.0,
+      "decoded_f64_hex": "0xc044000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xe3",
+      "mxfp8_e4m3_bits_hex": "0xe3",
+      "mxfp8_e4m3_bits_int": 227,
+      "decoded_f64": -44.0,
+      "decoded_f64_hex": "0xc046000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xe4",
+      "mxfp8_e4m3_bits_hex": "0xe4",
+      "mxfp8_e4m3_bits_int": 228,
+      "decoded_f64": -48.0,
+      "decoded_f64_hex": "0xc048000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xe5",
+      "mxfp8_e4m3_bits_hex": "0xe5",
+      "mxfp8_e4m3_bits_int": 229,
+      "decoded_f64": -52.0,
+      "decoded_f64_hex": "0xc04a000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xe6",
+      "mxfp8_e4m3_bits_hex": "0xe6",
+      "mxfp8_e4m3_bits_int": 230,
+      "decoded_f64": -56.0,
+      "decoded_f64_hex": "0xc04c000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xe7",
+      "mxfp8_e4m3_bits_hex": "0xe7",
+      "mxfp8_e4m3_bits_int": 231,
+      "decoded_f64": -60.0,
+      "decoded_f64_hex": "0xc04e000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xe8",
+      "mxfp8_e4m3_bits_hex": "0xe8",
+      "mxfp8_e4m3_bits_int": 232,
+      "decoded_f64": -64.0,
+      "decoded_f64_hex": "0xc050000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xe9",
+      "mxfp8_e4m3_bits_hex": "0xe9",
+      "mxfp8_e4m3_bits_int": 233,
+      "decoded_f64": -72.0,
+      "decoded_f64_hex": "0xc052000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xea",
+      "mxfp8_e4m3_bits_hex": "0xea",
+      "mxfp8_e4m3_bits_int": 234,
+      "decoded_f64": -80.0,
+      "decoded_f64_hex": "0xc054000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xeb",
+      "mxfp8_e4m3_bits_hex": "0xeb",
+      "mxfp8_e4m3_bits_int": 235,
+      "decoded_f64": -88.0,
+      "decoded_f64_hex": "0xc056000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xec",
+      "mxfp8_e4m3_bits_hex": "0xec",
+      "mxfp8_e4m3_bits_int": 236,
+      "decoded_f64": -96.0,
+      "decoded_f64_hex": "0xc058000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xed",
+      "mxfp8_e4m3_bits_hex": "0xed",
+      "mxfp8_e4m3_bits_int": 237,
+      "decoded_f64": -104.0,
+      "decoded_f64_hex": "0xc05a000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xee",
+      "mxfp8_e4m3_bits_hex": "0xee",
+      "mxfp8_e4m3_bits_int": 238,
+      "decoded_f64": -112.0,
+      "decoded_f64_hex": "0xc05c000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xef",
+      "mxfp8_e4m3_bits_hex": "0xef",
+      "mxfp8_e4m3_bits_int": 239,
+      "decoded_f64": -120.0,
+      "decoded_f64_hex": "0xc05e000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xf0",
+      "mxfp8_e4m3_bits_hex": "0xf0",
+      "mxfp8_e4m3_bits_int": 240,
+      "decoded_f64": -128.0,
+      "decoded_f64_hex": "0xc060000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xf1",
+      "mxfp8_e4m3_bits_hex": "0xf1",
+      "mxfp8_e4m3_bits_int": 241,
+      "decoded_f64": -144.0,
+      "decoded_f64_hex": "0xc062000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xf2",
+      "mxfp8_e4m3_bits_hex": "0xf2",
+      "mxfp8_e4m3_bits_int": 242,
+      "decoded_f64": -160.0,
+      "decoded_f64_hex": "0xc064000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xf3",
+      "mxfp8_e4m3_bits_hex": "0xf3",
+      "mxfp8_e4m3_bits_int": 243,
+      "decoded_f64": -176.0,
+      "decoded_f64_hex": "0xc066000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xf4",
+      "mxfp8_e4m3_bits_hex": "0xf4",
+      "mxfp8_e4m3_bits_int": 244,
+      "decoded_f64": -192.0,
+      "decoded_f64_hex": "0xc068000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xf5",
+      "mxfp8_e4m3_bits_hex": "0xf5",
+      "mxfp8_e4m3_bits_int": 245,
+      "decoded_f64": -208.0,
+      "decoded_f64_hex": "0xc06a000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xf6",
+      "mxfp8_e4m3_bits_hex": "0xf6",
+      "mxfp8_e4m3_bits_int": 246,
+      "decoded_f64": -224.0,
+      "decoded_f64_hex": "0xc06c000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xf7",
+      "mxfp8_e4m3_bits_hex": "0xf7",
+      "mxfp8_e4m3_bits_int": 247,
+      "decoded_f64": -240.0,
+      "decoded_f64_hex": "0xc06e000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xf8",
+      "mxfp8_e4m3_bits_hex": "0xf8",
+      "mxfp8_e4m3_bits_int": 248,
+      "decoded_f64": -256.0,
+      "decoded_f64_hex": "0xc070000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xf9",
+      "mxfp8_e4m3_bits_hex": "0xf9",
+      "mxfp8_e4m3_bits_int": 249,
+      "decoded_f64": -288.0,
+      "decoded_f64_hex": "0xc072000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xfa",
+      "mxfp8_e4m3_bits_hex": "0xfa",
+      "mxfp8_e4m3_bits_int": 250,
+      "decoded_f64": -320.0,
+      "decoded_f64_hex": "0xc074000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xfb",
+      "mxfp8_e4m3_bits_hex": "0xfb",
+      "mxfp8_e4m3_bits_int": 251,
+      "decoded_f64": -352.0,
+      "decoded_f64_hex": "0xc076000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xfc",
+      "mxfp8_e4m3_bits_hex": "0xfc",
+      "mxfp8_e4m3_bits_int": 252,
+      "decoded_f64": -384.0,
+      "decoded_f64_hex": "0xc078000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xfd",
+      "mxfp8_e4m3_bits_hex": "0xfd",
+      "mxfp8_e4m3_bits_int": 253,
+      "decoded_f64": -416.0,
+      "decoded_f64_hex": "0xc07a000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xfe",
+      "mxfp8_e4m3_bits_hex": "0xfe",
+      "mxfp8_e4m3_bits_int": 254,
+      "decoded_f64": -448.0,
+      "decoded_f64_hex": "0xc07c000000000000",
+      "abs_error": 0.0
+    },
+    {
+      "name": "code_0xff",
+      "mxfp8_e4m3_bits_hex": "0xff",
+      "mxfp8_e4m3_bits_int": 255,
+      "decoded_f64": null,
+      "note": "NaR/NaN"
+    }
+  ]
+}

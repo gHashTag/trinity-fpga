@@ -146,3 +146,91 @@ Two questions for the author, and possibly for Hunhold:
   owner        author
   escalate_to  "Hunhold (takum author, libtakum maintainer)"
 }
+
+
+// ============================================================================
+// Pass 145, 2026-08-02 -- the width-8 question above is now answered, and the
+// answer is about the PUBLISHED PACK, not only about the oracle.
+// ============================================================================
+
+finding TAKUM8_PACK_DIVERGES_FROM_AUTHOR_REFERENCE {
+  measured_on   "the published takum8 conformance pack, 256 vectors"
+  against       "libtakum takum8_to_float64, all 256 codes"
+
+  agreement {
+    takum16_positive_half  "32768 / 32768   bit-identical"
+    takum8                 "3 / 255   bit-identical (1 NaR not comparable)"
+    the_three_that_agree   "the codes for 0, +1 and -1 -- the fixed points of any
+                            log-domain scheme, where ell = 0"
+  }
+
+  // The clearest statement of the divergence is not a code-by-code diff. It is
+  // the dynamic range, because a range that does NOT shrink with width is the
+  // defining property of takum, and libtakum exhibits it while the pack does not.
+  dynamic_range {
+    libtakum_takum8   { min 1.131959884853339e-72   max 8.834235323891922e+71 }
+    published_takum8  { min 6.991989996645917e-56   max 1.4302079958348105e+55 }
+    libtakum_takum16  { min 1.8351858179575695e-77  max 5.6086793224325032e+76 }
+    reading """
+libtakum's takum8 range nearly matches its takum16 range, as the format intends.
+The published takum8 pack spans a far narrower range -- which is what happens when
+a width-16 field layout (overhead 5, a three-bit regime) is applied at width 8,
+where it leaves too few characteristic bits.
+"""
+  }
+
+  // Which function in libtakum is the right comparand was settled against the
+  // artefact rather than against its naming, because the library exposes both
+  // takum8_to_float64 and takum_log8_to_float64 and the header names neither
+  // variant in words.
+  comparand_established_by {
+    landmark  "TAKUM16_2_PI = 20040"
+    decoded   "takum16_to_float64(20040) = 6.28125, which is 2*pi"
+    therefore "takum{N}_to_float64 is the family the corpus's takum packs target"
+  }
+
+  scope "Width 8 only. takum16 matches libtakum on every code of its positive
+         half, so the corpus's method is sound where a width-appropriate witness
+         was used. The negative-half divergence is the separate, earlier finding."
+}
+
+retraction WITNESS_TAKUM_PACKS_WIDTH_8 {
+  retracts    "pass 144: the published takum8 pack is 255/255 correctly rounded"
+  stands      "the same claim at width 16: 3/3"
+
+  why """
+That witness compared the pack against conformance/takum_log_ref.py, whose field
+decode is transcribed from a takum16 script. The pack and the reference share the
+same width-8 error, so they agreed 255/255. It was an oracle-against-oracle result
+wearing a witness's clothes, and only an artefact from outside the corpus -- libtakum
+-- broke the tie.
+
+This is the pass-137 lesson recurring in a new place. Pass 137 recorded "measure the
+object the claim is about"; the claim here WAS measured against the published pack,
+and that was not sufficient, because the independent-reference requirement was the
+one that failed. Honesty rule #10 exists for exactly this and was satisfied only
+once an outside implementation was brought in.
+"""
+
+  action_taken "conformance/takum_log_ref.py now states in its FORMATS table which
+                width it is validated for. takum8, takum32 and takum64 are marked
+                NOT validated."
+}
+
+open_question TAKUM8_REGENERATE_OR_DOCUMENT {
+  question """
+Two ways to close this, and the choice is the author's:
+
+  1. Regenerate the takum8 pack from libtakum, making it bit-exact against the
+     format author's reference like takum16's positive half already is.
+  2. State in the pack's metadata which definition it implements, and drop the
+     bit-exact label for that width.
+
+The earlier question -- whether takum8 is below the standard's width threshold and
+therefore has no canonical behaviour at all -- bears on which is right, and is still
+unanswered.
+"""
+  do_not_guess true
+  owner        author
+  reproduce_with "research/crossval_libtakum.py"
+}

@@ -16,22 +16,47 @@ to show the natural mapping. Literature numbers are from closed flows (Vivado).
 
 ## 1. Headline table — measured in-house (openXC7 / Yosys)
 
-All rows below are **directly extracted from committed synthesis JSON / bench
-reports** in this repository. "LC" = logic-cell estimate; LUT totals are the sum
-of LUT1..LUT7.
+"LC" = logic-cell estimate; LUT totals are the sum of LUT1..LUT7.
 
-| Format | Op | LUTs | FF | DSP48E1 | BRAM36 | Source |
-|--------|-----|------:|---:|--------:|-------:|--------|
-| **GF16** `[1\|6\|9]` | ADD | **118** | 47 | 0 | 0 | `BENCH-005_FINAL.md`, `gf16_add_top.json` (171 cells) |
-| **GF16** `[1\|6\|9]` | MUL | **94** | 47 | **1** | 0 | `BENCH-005_FINAL.md`, `gf16_mul_top.json` (148 cells) |
-| **GF16** `[1\|6\|9]` | MAC-16 (dot, 16 elem) | **71** | 266 | **16** | 0 | `BENCH-006_RESULTS.md`, `gf16_mac_16.json` (549 cells) |
-| **Ternary** `{-1,0,+1}` | MAC-16 (dot, 16 elem) | **52** | 69 | 0 | 0 | `BENCH-006_RESULTS.md`, `ternary_mac_16.json` |
-| **VSA bind** (10k-dim) | bind/bundle | **89** | — | 0 | 0 | `fpga/VSA_BIND_BENCHMARK.md` |
-| **HSLM full pipeline** | inference top | **4 267** | 2 449 | 0 | 2 | `BENCH-005_CORRECTED.md` (reference scale) |
+> **Provenance corrected 2026-08-02 (pass 145).** This paragraph used to say the rows
+> were "directly extracted from committed synthesis JSON in this repository". They were
+> not: `gf16_add_top.json`, `gf16_mul_top.json`, `gf16_mac_16.json` and
+> `ternary_mac_16.json` are in neither the repository nor the working tree. Each such
+> file is ~10 MB, so the >1 MB rule would have excluded them in any case. The numbers
+> themselves were then re-derived from the RTL, which does exist, using the flow this
+> document's own header specifies. **Two of the four reproduce exactly.**
 
-GF16 ADD/MUL FF count (47) is the registered I/O boundary, not internal pipeline
-depth — the parametric cores (`gf_adder_param.v`, `gf_mul_param.v`) are
-combinational with output registration.
+| Format | Op | LUTs | FF | DSP48E1 | BRAM36 | RTL source | 2026-07-14 |
+|--------|-----|------:|---:|--------:|-------:|--------|---:|
+| **GF16** `[1\|6\|9]` | ADD | **118** | 47 | 0 | 0 | `fpga/openxc7-synth/gf16_add_top.v` | 118 ✓ |
+| **GF16** `[1\|6\|9]` | MUL | **94** | 47 | **1** | 0 | `fpga/openxc7-synth/gf16_mul_top.v` | 94 ✓ |
+| **GF16** `[1\|6\|9]` | MAC-16 (dot, 16 elem) | **0** | 266 | **16** | 0 | `fpga/openxc7-synth/gf16_mac_16.v` | 71 |
+| **Ternary** `{-1,0,+1}` | MAC-16 (dot, 16 elem) | **55** | 69 | 0 | 0 | `fpga/openxc7-synth/ternary_mac_16.v` | 52 |
+
+Reproduce any row — `-nodsp` on the two rows showing 0 DSP, omitted on the other two:
+
+```
+yosys -p "read_verilog gf16_add_top.v; synth_xilinx -abc9 -top gf16_add_top -nodsp; stat"
+```
+
+Measured with **Yosys 0.63** (`70a11c6`). FF, DSP48E1 and BRAM36 agree with the
+2026-07-14 run in **all four** rows. ADD and MUL agree on LUTs too, to the unit. The two
+MAC-16 rows do not, and neither difference is large in the sense that matters: the GF16
+MAC maps entirely into its 16 DSP48E1 blocks here, leaving no LUT logic at all, and the
+ternary MAC differs by three LUTs.
+
+**`-abc9` is not optional, and dropping it is how this table gets misread.** The first
+attempt at this correction ran `synth_xilinx` without it and produced 121 / 92 / 68 —
+three numbers that would have looked like three defects in the original table and were
+in fact one missing flag. A sibling document, `LUT_COMPARISON_MEASURED.md`, reports
+**176** LUTs for `gf16_add_top` and concludes from it that *"118 LUT is WRONG"*. That
+conclusion does not hold: its own header records the flow it used, `-abc9 -nocarry
+-arch xc7`, and `-nocarry` forbids CARRY4 inference so the carry chain falls back into
+LUTs. Re-running that exact command here returns **176**, to the unit. Both numbers are
+correct measurements of different questions.
+
+So a LUT count in this table means nothing without the flags beside it. Read §2 as
+ratios within one column, never as absolutes.
 
 ---
 
@@ -52,11 +77,11 @@ extrapolations from a measured neighbor in the same family.
 | **GF20** `[1\|7\|12]` bias=63 | 20 | ~180 `[estimate]` | ~140 + 1 DSP | ~70 `[estimate]` | algebraic | SW-verified 1 M random; HW pending |
 | **GF24** `[1\|9\|14]` bias=255 | 24 | ~300 `[estimate]` | ~250 + 1 DSP | ~90 `[estimate]` | algebraic | SW-only (reference model impractical at 525-bit) |
 | **GF32** `[1\|12\|19]` bias=2047 | 32 | ~600 `[estimate]` | ~500 + 1 DSP | ~120 `[estimate]` | algebraic | Tier-E 64-vector HW proof; full-width reference TBD |
-| **BF16** `[1\|8\|7]` | 16 | ~200 `[literature]` | ~150 + 1 DSP | ~20 `[measured]` | algebraic | Decode: `bf16_decode.v` corona RTL, Tier-E bit-exact |
+| **BF16** `[1\|8\|7]` | 16 | ~200 `[literature]` | ~150 + 1 DSP | ~20 `[measured]` | algebraic | Decode: `fpga/openxc7-synth/corona_decode_bf16_ax7203.v`, Tier-E bit-exact |
 | **FP16** `[1\|5\|10]` (binary16) | 16 | ~300 `[literature]` | ~200 + 1 DSP | ~30 `[measured]` | algebraic | Decode: 65 536/65 536 exhaustive HW-verified |
-| **MXFP8** (E4M3) | 8 | ~150 `[literature]` | ~80 + 0 DSP | ~20 `[measured]` | algebraic | Decode: `mxfp8_e4m3_decode.v`, 256/256 HW |
+| **MXFP8** (E4M3) | 8 | ~150 `[literature]` | ~80 + 0 DSP | ~20 `[measured]` | algebraic | Decode: `fpga/openxc7-synth/corona_decode_mxfp8_e4m3_ax7203.v`, 256/256 HW |
 | **FP8 E5M2** | 8 | ~150 `[literature]` | ~80 + 0 DSP | ~20 `[measured]` | algebraic | Decode Tier-E bit-exact |
-| **Posit8** `(8,0)` | 8 | n/a (decode-only) | n/a | ~40 `[measured]` | regime+alg | Decode: `posit8_decode.v`, 256/256 HW |
+| **Posit8** `(8,0)` | 8 | n/a (decode-only) | n/a | ~40 `[measured]` | regime+alg | Decode: `fpga/openxc7-synth/corona_decode_posit8_ax7203.v`, 256/256 HW |
 | **Posit16** `(16,1)` | 16 | ~1 500 `[literature]` | N/A (codec) | ~400 `[literature]` | regime+alg | **PERI** [arXiv:1908.01466]: 3 507 LUT @ 100 MHz on Artix-7-100T (full FPU, closed flow Vivado). Trinity has decode-only on openXC7. |
 | **Takum16** | 16 | n/a (decode-only) | n/a | **0 LUT + 57 BRAM36** `[measured]` | **BRAM-LUT** (65 536×32) | `takum16_decode.v` + `takum16_lut.mem`; 64/64 HW bit-exact. BRAM cost = 65 536×32 bit = 2.09 Mbit ≈ 57 BRAM36 of 365 on XC7A200T. |
 | **Takum32** | 32 | n/a | n/a | ~400 LUT `[estimate]` | transcendental | `takum32_decode.v`; routing fix shipped (`399bb0cf`); 1-ULP Taylor residuals remain |

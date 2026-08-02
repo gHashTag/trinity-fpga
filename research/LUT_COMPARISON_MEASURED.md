@@ -18,7 +18,7 @@
 
 ## Key Findings
 
-1. **"118 LUT" (BENCH-005_FINAL.md) is WRONG.** The same module synthesized now gives **176 LUT**. The JSON artifact (`gf16_add_top.json`) is missing from the repo. The original number may have been from a different yosys version or different flags.
+1. ~~**"118 LUT" (BENCH-005_FINAL.md) is WRONG.**~~ **Withdrawn 2026-08-02 (pass 145) — the cause was the flag, and this document names it in its own header.** The 176 above is reproducible, to the unit, with the flow recorded at the top of this file: `-abc9 -nocarry -arch xc7`. `-nocarry` forbids CARRY4 inference, so the adder's carry chain falls back into LUTs. Re-synthesising the same module *with* carry inference — `synth_xilinx -abc9 -top gf16_add_top -nodsp`, the flow `lut_comparison.md` specifies — returns **118**, also to the unit. Both measurements are right; they answer different questions, and neither makes the other wrong. The last sentence of the original finding guessed "a different yosys version or different flags" and was half correct: same yosys 0.63, different flags. (The observation that `gf16_add_top.json` is missing from the repository stands, and is now recorded in `lut_comparison.md` §1.)
 
 2. **The current parameterized adder (gf_adder_param at GF16) is 486 LUT, not 118.** It's 2.8x larger than the old non-parameterized adder because it includes denormal handling, NaN/Inf logic, and parameterization overhead.
 

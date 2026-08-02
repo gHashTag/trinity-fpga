@@ -341,3 +341,25 @@ Then verify the change actually landed by reading the body back — a `sed` pipe
 that strips the old `Closes #N` and appends a new one can drop both and leave the PR
 with no issue reference at all, which is exactly what failed `check-linked-issue`
 here.
+
+## A re-measurement that drops a documented flag manufactures defects
+
+Pass 145 re-derived four synthesis numbers whose JSON artefacts had gone missing. The
+run used `synth_xilinx` plainly and got 121 / 92 / 68 against a recorded 118 / 94 / 52 —
+which reads as three defects in the record. The document's own header specified `-abc9`.
+With it, ADD returns **118** and MUL returns **94**, to the unit. There were no defects.
+
+A sibling document had already fallen into the same hole from the other side: it measured
+**176** for the same module and concluded the recorded 118 was wrong. Its header recorded
+`-nocarry`, which forbids CARRY4 inference and pushes the carry chain into LUTs. Both
+numbers reproduce exactly; they answer different questions.
+
+So: **before calling a recorded number wrong, reproduce it with the flags the record
+names.** A number is a measurement *plus* its configuration, and comparing across
+configurations is not a check — it is a different experiment wearing a check's clothes.
+The tell is a cluster of small disagreements with the signs going both ways; a real
+defect usually does not scatter like that.
+
+This is the same failure as pass 137 (measure the object the claim is about) seen from a
+new angle: there, the wrong object; here, the right object under the wrong conditions.
+
