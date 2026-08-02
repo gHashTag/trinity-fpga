@@ -77,6 +77,7 @@ def main() -> int:
     print(f"{'oracle':<12}{'formats':>8}{'checked':>9}  {'carrier':<22}{'denominators'}")
     print("-" * 72)
     failures = 0
+    tested_oracles = 0
     unreachable = []       # counted separately -- see below
 
     for base in UNCAVEATED:
@@ -85,6 +86,7 @@ def main() -> int:
             print(f"{base:<12}{'':>8}{'':>9}  MODULE MISSING")
             unreachable.append((base, "module missing"))
             continue
+        tested_oracles += 1
         try:
             mod = load(fn)
         except Exception as e:
@@ -164,6 +166,8 @@ def main() -> int:
         print(f"All {tested} tested oracles return exact carriers with admissible")
         print("denominators. The claim recorded in oracle_fidelity_map.t27 holds")
         print("on this evidence — sampled, not exhaustive.")
+    print(f"COVERAGE: {tested_oracles} of {len(UNCAVEATED)} oracles checked "
+          f"for exact carriers")
     return 1 if failures else 0
 
 

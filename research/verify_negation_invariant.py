@@ -160,6 +160,8 @@ def check(name, mod, fmt) -> tuple[int, int, list]:
 def main() -> int:
     oracles = load_oracles()
     any_fail = False
+    total_pairs = 0
+    families = 0
     print("invariant:  decode((-raw) mod 2^n) == -decode(raw)")
     print("(zero and NaR excluded; specials skipped)\n")
 
@@ -172,6 +174,8 @@ def main() -> int:
         verdict = "HOLDS" if nfail == 0 else f"FAILS on {nfail}+ of {tested}"
         if nfail:
             any_fail = True
+        total_pairs += tested
+        families += 1
         print(f"{name:<9} tested={tested:<7} {verdict}")
         for raw, comp, a, b in fails:
             print(f"    raw={raw} -> {float(a):.6e}   "
@@ -184,6 +188,7 @@ def main() -> int:
         print("That is intrinsic — no external reference is needed to see it.")
     else:
         print("All tested families satisfy the invariant.")
+    print(f"COVERAGE: {total_pairs} code pairs across {families} families")
     return 1 if any_fail else 0
 
 
