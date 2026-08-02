@@ -86,6 +86,32 @@ def norm(x):
     return f
 
 
+# Relative-error ceiling for a transcendental compared against a long-double pow.
+# None disables the log-domain path entirely.
+_LOG_TOL = 1e-9
+
+try:
+    import mpmath as _mp
+    _mp.mp.prec = 200
+except ImportError:                                          # pragma: no cover
+    _mp = None
+    _LOG_TOL = None
+
+
+def _log_domain_agrees(mod, fmt, raw, theirs):
+    """Compare a log-domain oracle against a value, by relative error."""
+    ln = mod.decode_ln(fmt, raw)
+    if getattr(ln, "kind", None) is not None:
+        return (theirs == 0 or theirs != theirs, "zero")
+    v = _mp.e ** (_mp.mpf(ln.numerator) / _mp.mpf(ln.denominator))
+    if mod.sign_of(fmt, raw):
+        v = -v
+    if theirs == 0 or theirs != theirs:
+        return (False, "libtakum gave zero/NaN where the oracle has a value")
+    rel = abs((_mp.mpf(theirs) - v) / v)
+    return (rel < _LOG_TOL, f"relative error {float(rel):.3g}")
+
+
 def bits_to_f64(hexbits: str) -> float:
     return struct.unpack(">d", bytes.fromhex(hexbits))[0]
 
@@ -116,6 +142,26 @@ def run(path: str, fmt_name: str) -> tuple[int, int, int]:
             except Exception as e:
                 divergences.append((raw, f"oracle raised {type(e).__name__}", "-"))
                 continue
+            # A logarithmic oracle returns a Special carrying the exact ln|value|,
+            # because the value itself is irrational. Comparing that against a float
+            # by string equality reports every finite code as a divergence -- which is
+            # what this script did as soon as takum_log_ref.py became loadable at all.
+            #
+            # So for a log-domain oracle, compare where the format is exact: rebuild
+            # the value at high precision from the exact logarithm and use relative
+            # error. libtakum evaluates the same quantity with pow in long double, so a
+            # 1-ULP difference is expected and bit equality is the wrong instrument.
+            # Pass 146 measured the resulting ceiling at 7.4e-15 over all 65,534 finite
+            # takum16 codes.
+            if _LOG_TOL is not None and hasattr(mod, "decode_ln"):
+                compared += 1
+                ok, why = _log_domain_agrees(mod, fmt, raw, theirs_val)
+                if not ok and why == "zero":
+                    zero_unknown += 1
+                elif not ok:
+                    divergences.append((raw, why, repr(theirs_val)))
+                continue
+
             a, b = norm(ours_val), norm(theirs_val)
             compared += 1
             if a == "zero" and b == "zero":
