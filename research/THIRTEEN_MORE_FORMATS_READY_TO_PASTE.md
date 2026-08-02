@@ -104,7 +104,7 @@ produces a hashed, error-free pack.
 | `uint32` | numpy `uint32` | 71 sampled | **0** |
 | `mxfp8_e4m3` | `ml_dtypes.float8_e4m3fn` | 256 | **0** |
 
-66,135 codes compared in total, none disagreeing.
+66,135 codes compared in total, none disagreeing. (Not to be confused with the **66,224** of `crossval_ml_dtypes.py`, which cross-validates the *published* small-float packs against `ml_dtypes`. Different tool, different set, and the two totals are close enough to be misread for one another.)
 
 **Two more are validated by construction rather than by a third party**
 (`research/verify_bfloat_by_construction.py`). Reading the oracles' own fields,

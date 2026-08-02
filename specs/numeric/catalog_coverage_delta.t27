@@ -5063,3 +5063,61 @@ and of the thirteen, ten are validated.
 """
   resolved true
 }
+
+// ---- Pass 140: the sweep, and three hits that were not defects ---------------
+
+result THE_AUTHOR_FACING_SET_IS_INTERNALLY_CONSISTENT {
+  method """
+research/audit_author_set_consistency.py looks for the one thing that IS mechanically
+decidable about a document set: the same subject stated twice with different figures.
+Checking a number against "the truth" would be the surface-form scan the t27-spec skill
+warns about; disagreement BETWEEN documents is a real signal, because one of the two
+must be stale.
+
+Subjects are matched on a phrase rather than a number, so "83 formats" and "83 packs"
+are one subject while "13 oracles" and "13 families" are two.
+
+  documents checked        10
+  subjects looked for      10
+  stated consistently       7
+  stated inconsistently     3
+"""
+  and_all_three_were_false """
+Read before reporting, per the rule:
+
+  12 vs 83 "formats"      the 12 is "30 compute proofs across 12 formats" -- the
+                          formats with compute proofs, not the catalogue size
+
+  66,224 vs 66,135        different tools over different sets: crossval_ml_dtypes.py
+                          covers the published small-float packs, crossval_unpublished.py
+                          the previously unvalidated oracles
+
+  8 vs 34 "structural"    the 34 is "49 bit-exact / 34 structural", quoted deliberately
+                          as what the PAPER says, against the corpus's 75/8
+
+Three hits, zero defects. The set agrees with itself on every subject tested, and the
+hits are the tool's limitation rather than the documents'.
+"""
+  status VERIFIED_SW
+}
+
+fix ONE_GENUINE_AMBIGUITY_WORTH_A_CLAUSE {
+  detail """
+66,224 and 66,135 are not a contradiction, but they are both described as "codes
+compared" in two documents the author reads together, and they differ by 89. A reader
+meeting the second after the first will assume a typo.
+
+THIRTEEN_MORE_FORMATS_READY_TO_PASTE.md now says which is which in place.
+"""
+  status IMPLEMENTED
+}
+
+note WHY_THIS_PASS_LOOKS_EMPTIER_THAN_IT_IS """
+Pass 139 found a stale claim in START_HERE.md by accident and recommended sweeping for
+the class. The sweep found none -- which is the answer, and it took building the tool
+to get it.
+
+A pass that ends "nothing further found" after a real search is worth as much as one
+that ends with a finding, and is easier to mistake for wasted work. The alternative was
+to leave "there may be more" standing indefinitely.
+"""
