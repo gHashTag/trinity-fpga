@@ -73,6 +73,9 @@ decision about what a claim means.
    255 values. Either re-synthesise the `es=2` core — `fpga/openxc7-synth/posit8_es2_decode.v`
    exists and matches SoftPosit on all 256 codes in simulation — or say in the row that
    the silicon is posit(8,0), taking board-verified decode from 46 to 45.
+   **Measured 2026-08-03: re-synthesis costs 58 LUTs** — 103 against the legacy
+   core's 45, which is 0.08 % of an XC7A200T. There is no area argument for the
+   second option.
 2. **`bcd`: should invalid nibbles decode?** 156 of 256 codes are invalid packed BCD
    (both nibbles must be 0–9, so 100 are valid). The oracle decodes them anyway as
    `sum(nibble·10ⁱ)`, and silicon agrees. The pack declares bit-exact BCD.

@@ -69,7 +69,31 @@ Simulation is explicitly **not** one of the four by this project's own standard,
 until the board runs, the honest position is unchanged: the Tier-E row `posit8 256/256`
 proves posit(8,0), and the count of packs with board-verified decode is **45, not 46**.
 
-## Risk to watch on the next synthesis run
+## Measured 2026-08-03 — the risk below did not bite
+
+| core | es | LUTs |
+|---|---|---|
+| `posit8_decode` (legacy, `external/tt-trinity-corona`) | 0 | **45** |
+| **`posit8_es2_decode`** (this one) | **2** | **103** |
+| `posit16_decode` alone | 2 | 98 |
+
+Yosys 0.63, `synth_xilinx -abc9 -nodsp`, whole-design totals.
+
+So the correct-format core costs **58 LUTs more** than the legacy one — 2.3×, which
+sounds like a lot and is not. The XC7A200T has 134,600 LUTs; 103 is **0.08 %** of the
+part. There is no area argument against decoding the format the pack describes.
+
+The 103-vs-98 gap is the wrapper's own boundary, not waste: tying the low byte to zero
+lets yosys fold some of the 16-bit path, and the 8-bit port adds a little back.
+
+**This settles handover question 1.** The choice was: re-synthesise an es=2 core, or
+record that the silicon proves posit(8,0) and drop board-verified decode from 46 to 45.
+Re-synthesis costs 58 LUTs. Take it.
+
+What still needs the board: a CI run URL, the bitstream SHA-256, a UART log and the
+IDCODE. Simulation and synthesis are neither of the four.
+
+## Original risk note, kept for the record
 
 The wrapper instantiates the full 16-bit datapath to decode 8 bits, so the LUT cost will
 be `posit16_decode`'s, not a smaller posit8's. If area matters on the part, that is the
