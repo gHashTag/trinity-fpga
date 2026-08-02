@@ -95,6 +95,36 @@ ELSEWHERE = {
 CITED = re.compile(r"`([\w./-]+\.(?:md|tex|py|t27|json|v|yml))`")
 
 
+def on_a_branch(base: str) -> list[str]:
+    """Branches carrying a file `git ls-files` cannot see.
+
+    Pass 148 recorded specs/numeric/takum_variant_split.t27 in ELSEWHERE as
+    "NOWHERE", because this check only ever asked the index. The file was on an
+    unmerged branch the whole time, and two passes re-derived what it already said.
+    A citation that resolves on a branch is a merge that did not happen, which is a
+    different problem from a citation that resolves nowhere -- and the fix is
+    different too, so they must not be reported the same way.
+    """
+    import subprocess
+    try:
+        refs = subprocess.run(
+            ["git", "for-each-ref", "--format=%(refname:short)", "refs/remotes"],
+            capture_output=True, text=True, timeout=60).stdout.split()
+    except Exception:
+        return []
+    found = []
+    for ref in refs:
+        if ref.endswith("/HEAD"):
+            continue
+        r = subprocess.run(["git", "ls-tree", "-r", "--name-only", ref],
+                           capture_output=True, text=True)
+        if any(os.path.basename(p) == base for p in r.stdout.split("\n")):
+            found.append(ref)
+        if len(found) >= 4:
+            break
+    return found
+
+
 def check_references() -> int:
     """Every file the author-facing documents cite must resolve, or be named as
     living elsewhere. A citation that resolves for the writer and not for the reader
@@ -120,13 +150,19 @@ def check_references() -> int:
                               capture_output=True, text=True).stdout.strip():
                 continue
             line = text[:text.index("`" + tok + "`")].count("\n") + 1
-            unresolved.append((tok, name, line))
+            unresolved.append((tok, name, line, on_a_branch(base)))
 
     print(f"\nfile citations across the set : {total}")
     print(f"  unresolved                  : {len(unresolved)}")
-    for tok, name, line in unresolved:
+    for tok, name, line, branches in unresolved:
         print(f"  {name}:{line}  cites {tok}, which is not in this repository")
-        print(f"      either add it, correct the path, or name where it lives")
+        if branches:
+            print(f"      IT IS ON A BRANCH, though: {', '.join(branches[:4])}")
+            print(f"      merge it or say where it lives -- do NOT record it as "
+                  f"missing")
+        else:
+            print(f"      not on any branch either; add it, correct the path, or "
+                  f"name where it lives")
     if not unresolved:
         print("  (files known to live elsewhere are listed in ELSEWHERE and named "
               "in the text)")
