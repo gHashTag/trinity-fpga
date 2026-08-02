@@ -127,6 +127,42 @@ dossier, but the three that would most change a reader's impression:
 
 ---
 
+### How to use the ten subsections below
+
+They grew one per pass and are grouped here by what you *do* with each, because the
+lettering records when they were written rather than how they are used.
+
+**Text to add — each is drafted and ready to paste**
+
+| § | what it adds | where it goes |
+|---|---|---|
+| **5b** | why a 512/512 bit-exact hardware result bounded the *vectors*, not the cell | a methodology paragraph |
+| **5d** | the one-ULP boundary: two independent routes to the same limit | discussion |
+| **5e** | how the suite was checked against being *uniformly* wrong — three oracles per operation | a section neither paper has |
+| **5f** | P3109 maps layout not values; three exactness techniques; wide-format serialisation | three paragraphs |
+| **5g** | thirteen formats the harness covers beyond the published 83 | one paragraph, with a bound |
+
+**Sentences not to write — each is a claim the evidence does not carry**
+
+| § | the phrasing |
+|---|---|
+| **5a** | *"verified in software and confirmed on hardware"* as two independent confirmations |
+| **5i** | `abs_error: 0` read as *"the decoded value is exact"* for a logarithmic format |
+
+**Needs something only you have**
+
+| § | what |
+|---|---|
+| **5c** | three conformance suites were repaired; their recorded `N/N` figures were established under the *old* vectors and need a re-run on the board |
+
+**Retracted, and left visible**
+
+| § | what |
+|---|---|
+| **5h** | a seven-pass case that the published takum packs were wrong. They are correct. Kept because a checklist that quietly deletes a withdrawn finding is harder to trust than one that says it withdrew it |
+
+---
+
 ## 5a. One phrasing to avoid — software and hardware are not two witnesses
 
 Read the harness before writing the sentence. The compute cores carry no expected

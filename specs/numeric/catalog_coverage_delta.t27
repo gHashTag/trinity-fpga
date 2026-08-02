@@ -5012,3 +5012,54 @@ The suggested action for the author is one line of metadata. That is the whole
 outcome, and it is worth saying plainly after nine passes.
 """
 }
+
+// ---- Pass 139: the author's set, read as a whole rather than as a history ------
+
+finding SECTION_5_HAD_GROWN_TO_TEN_SUBSECTIONS_ORDERED_BY_DATE {
+  severity LOW
+  detail """
+5a through 5i were added one per pass, so the lettering records WHEN each was written
+rather than how it is used. Read in order a reader meets, in this sequence: a phrasing
+to avoid, an opportunity, an action needing hardware, three more opportunities, a
+retraction, another phrasing to avoid.
+
+Nothing in them is wrong. The ordering is a log, and a log is not an instruction.
+"""
+  fix """
+A routing table at the head of section 5 groups them by what the author DOES:
+
+  text to add, drafted and ready          5b, 5d, 5e, 5f, 5g
+  sentences not to write                  5a, 5i
+  needs something only the author has     5c
+  retracted, and left visible             5h
+
+The subsections themselves are untouched. Reorganising prose that took nine passes to
+get right, in order to improve its ordering, is a trade this campaign has no reason to
+make.
+"""
+  resolved true
+}
+
+correction THE_ENTRY_PAGE_STILL_CARRIED_A_RETRACTED_CLAIM {
+  detail """
+START_HERE.md described the thirteen unpublished oracles as "three of them the nearest
+competing format" -- the tekum framing that pass 129 retracted, because that oracle
+states it models a specification it could not obtain and publishing its vectors would
+misrepresent another author's format.
+
+Ten passes of corrections went into the checklist and the ready-to-paste file. The
+entry page, which is what a reader opens first, kept the original sentence.
+
+Corrected to the current position, and with the arithmetic stated so the headline
+cannot drift again:
+
+  13 oracles
+   -2 aliases of formats already published (bfloat32 = binary32, pdp11_float = vax_f)
+   -3 tekum widths that must not be published
+  ---
+    8 worth publishing today
+
+and of the thirteen, ten are validated.
+"""
+  resolved true
+}

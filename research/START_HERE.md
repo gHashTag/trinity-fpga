@@ -40,8 +40,11 @@ paragraph.
   distinct oracles per operation, a negative control, and the reproduction showing why
   a 512/512 bit-exact hardware result bounded the vectors rather than the cell.
 - **[`THIRTEEN_MORE_FORMATS_READY_TO_PASTE.md`](THIRTEEN_MORE_FORMATS_READY_TO_PASTE.md)** —
-  the harness covers **thirteen formats beyond the published 83**, three of them the
-  nearest competing format. Not a correction; capacity neither paper mentions.
+  the harness covers thirteen formats beyond the published 83. Read the document rather
+  than the headline: **ten are validated, two are aliases of formats already in the
+  catalogue, and three (`tekum8/16/32`) must not be published at all** — their oracle
+  states it models a specification it could not obtain. The honest figure is **eleven
+  new formats, of which eight are worth publishing today.**
 - **[`THREE_MORE_RESULTS_READY_TO_PASTE.md`](THREE_MORE_RESULTS_READY_TO_PASTE.md)** —
   the P3109 cross-walk (**one word** in Paper B's abstract, and the change *strengthens*
   the claim), the three exactness techniques, and how vectors wider than a `double` are
