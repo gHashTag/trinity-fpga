@@ -1728,10 +1728,18 @@ is computed in, so the figure it returns describes the metric rather than the
 format. Measuring the upper rungs requires exact rationals throughout, as the
 oracle itself already uses.
 
-\item \textbf{Five of nine rungs are measured in hardware.} TEF4 through TEF64 fit
-the device, TEF64 at $7{,}479$ LUTs and $48.20$\,MHz. TEF128 at $M = 119$ does not
-converge in routing on this part and is not claimed; TEF256 upwards exceed a
-single Artix-7 fabric entirely. Table~\ref{tab:spec} is the
+\item \textbf{Six of nine rungs are measured in hardware, and one of those
+measurements corrects us.} TEF4 through TEF64 fit the device with hard multipliers
+disabled, TEF64 at $7{,}479$ LUTs and $48.20$\,MHz. We previously reported TEF128
+as failing to route. It does not fail: with the device's own DSP48 blocks enabled
+it closes at $4{,}869$ LUTs, $56$ DSP48 and $103.39$\,MHz, comfortably and at more
+than twice TEF64's fabric-only frequency. What fails is TEF128 \emph{under our own}
+\texttt{-nodsp} \emph{constraint}, which we impose everywhere so the figures
+describe fabric alone and are not confounded by how many hard multipliers a part
+happens to carry. That is the right policy for comparing formats; reporting its
+consequence as a property of the format was not. The two are different
+measurements of different questions. TEF256 upwards exceed a single Artix-7
+either way. Table~\ref{tab:spec} is the
 specification and the oracle's coverage; Table~\ref{tab:ladder} is what was
 placed and routed. We keep them apart on purpose.
 
