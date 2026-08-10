@@ -59,3 +59,48 @@ The most likely reason for the number 84 in v1 is counting E8M0 block scale as a
 - [ ] Only AFTER v2 — attach the random-10 HW-replay to the second article (otherwise a reviewer will catch 84 vs replay-from-83).
 
 *All claims verified against the live SSOT 2026-07-04. Delta established (E8M0), family count confirmed (13).*
+
+---
+
+# Addendum v3 — the catalog has since grown to 109
+
+**Verified 2026-08-11** against `gHashTag/t27` `origin/master`:
+`grep -c "// CATALOG: id=" specs/numeric/formats_catalog.t27` = **109**, clusters = **13**.
+
+This is not a new counting error. Everything above stands: at the time it was
+written the SSOT held 83 rows and the delta against the published 84 was the
+E8M0 question. The catalog has grown since, and an erratum that corrects 84 to
+83 while the SSOT says 109 would be wrong on the day it was filed.
+
+## What grew
+
+The GoldenFloat cluster is now 48 rows, because the ladder was split into the
+four distinct families the integrity gate now asserts:
+
+    17 GF + 9 GF-T + 8 BNF + 9 TNF + gfternary
+
+GF-T stopped being a former name of the ladder and was restored as its own
+family on the phi axis; BNF was added as the control that differs from TNF in
+exactly one thing, the radix the exponent field is encoded in, so the pair
+measures what ternary encoding is worth instead of asserting it. The gate
+`tools/check_catalog_integrity.py` fails if any of the four collapses into
+another.
+
+## Consequence for the correction
+
+The number to publish is **109**, not 83, and the sentence that carries it should
+say what a reader would otherwise have to guess: the catalog is a living SSOT
+with a count that moves, not a fixed set frozen at submission. A version
+identifier is worth more than any single number here -- cite the count together
+with the commit it was taken from, so a future reader can tell growth from
+error.
+
+## Corrections superseded
+
+Items 1-3 of the v2 action list still apply in form but not in value:
+"84" becomes **109**, not 83. Item 4's footnote about E8M0 is unaffected --
+E8M0 remains the shared-exponent component of Microscaling and is still not a
+standalone row.
+
+*Verified against the live SSOT 2026-08-11: 109 rows, 13 clusters, four
+GoldenFloat-axis families present and distinct.*
