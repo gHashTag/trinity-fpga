@@ -8,9 +8,9 @@ for mn in MODS:
     try: m=importlib.import_module(mn)
     except Exception: continue
     for k,v in getattr(m,"FORMATS",{}).items(): cat.append((mn,k,v,m))
-import tef_ref as G
+import tnf_ref as G
 for nm,Et,M in [("tef8",3,4),("tef16",4,9),("tef32",6,25),("tef64",7,52)]:
-    cat.append(("tef_ref",nm,G.TEFFormat(Et,M),G))
+    cat.append(("tnf_ref",nm,G.TEFFormat(Et,M),G))
 
 def probe(mod,fmt,e,n=40):
     """средняя относит. ошибка round-trip на бинаде |e|; None если формат туда не достаёт"""

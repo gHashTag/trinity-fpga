@@ -112,7 +112,7 @@
 
 ### 3.2 Relation to Trinity
 
-- Trinity's GF MAC (`fpga/mac.t27`, zero-DSP) is the right idea *given the openXC7 `-nodsp` constraint*. The literature baseline to beat is **PERI's 3507 LUTs @ 100 MHz on the identical Artix-7-100T** — Trinity should publish GF16-MAC numbers against this directly.
+- Trinity's GF MAC (`t27:specs/fpga/mac.t27`, zero-DSP) is the right idea *given the openXC7 `-nodsp` constraint*. The literature baseline to beat is **PERI's 3507 LUTs @ 100 MHz on the identical Artix-7-100T** — Trinity should publish GF16-MAC numbers against this directly.
 - **EULER-ADAS (2026)** is the strongest contemporary datapoint: bounded-posit + logarithmic mul gives −41% LUT. Trinity's φ-structured approach should be benchmarked against bounded-posit, not just exact posit.
 - Trinity's "transcendental decode via BRAM table + Taylor correction" template is consistent with **Crdkovic/Milenkovic** (2^x via small table + degree-2 poly) cited in its own loop report — solid prior-art grounding.
 

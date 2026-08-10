@@ -1,0 +1,29 @@
+name: Harness observation
+
+# Three harness confounds in three iterations, none visible in any number
+# because every design synthesised, routed and reported plausible figures:
+#   1. a shared accumulator held the critical path, so delay differences bounded
+#      the shared block rather than the varying part;
+#   2. observing four output bits pruned a 32-bit datapath to 15% of itself and
+#      an unrelated 6-bit design barely at all, reversing a 2.34x conclusion;
+#   3. designs consuming fewer harness sources pruned the rest, so net-of-harness
+#      subtraction used a subtrahend that varied with the design.
+#
+# Synthesis removes logic that does not reach an output. A harness must fold
+# every output bit of the design under test, and every source it provides, into
+# what it observes -- or the comparison is between designs cut to different
+# fractions of themselves.
+
+on:
+  pull_request:
+  push:
+    branches: [main, master]
+
+jobs:
+  harness:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: python3 tools/check_harness.py

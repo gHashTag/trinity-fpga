@@ -1,0 +1,26 @@
+name: Paper traceability
+
+# Three earlier gates in this repository guard code against code, and each was
+# found by tripping over the defect it now catches. Enumerating every pair of
+# artefacts that must agree showed all three occupy one region, and that every
+# pair with a DOCUMENT on either side is unguarded -- which is where a withdrawn
+# claim's number survives, since it does not remove itself from a paper.
+#
+# This asks whether each distinctive figure in the paper appears in any file
+# under research/, fpga/ or conformance/. It excludes constants stated beside
+# their own formula, figures attributed to someone else's paper, and rounding.
+
+on:
+  pull_request:
+    paths: ['research/arxiv_tnf/**', 'research/**', 'fpga/**']
+  push:
+    branches: [main, master]
+
+jobs:
+  paper-numbers:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: python3 tools/check_paper_numbers.py

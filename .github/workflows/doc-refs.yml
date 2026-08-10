@@ -1,0 +1,24 @@
+name: Document references
+
+# Enumerating every pair of artefacts that must agree showed all existing gates
+# are code against code, and that every pair with a DOCUMENT on one side was
+# unguarded. A document naming a file, a script or a gate makes a checkable claim
+# about the tree, and a path in prose does not update itself when the tree moves.
+#
+# Ratcheted: 250 historical dangling references are baselined and the job fails
+# only on new ones. Temporary paths, sibling-repository paths, and files a
+# document names precisely to record their absence are excluded explicitly.
+
+on:
+  pull_request:
+  push:
+    branches: [main, master]
+
+jobs:
+  doc-refs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: python3 tools/check_doc_refs.py

@@ -1,0 +1,36 @@
+name: Artefact agreement
+
+# Every other check in this repository verifies an artefact against ITSELF: the
+# oracle round-trips, the RTL simulates, the catalogue validates. All of them
+# passed while the oracle and the RTL implemented different formats under the
+# name TNF16, and while a synthesised, measured format had no catalogue row at
+# all. No within-artefact test can catch either. This one compares declared
+# PARAMETERS across artefacts.
+#
+# It runs as a ratchet: the known divergences are recorded in
+# conformance/artefact_agreement_baseline.txt and the job fails only on NEW
+# ones, or when a baseline entry stops reproducing (so the file cannot rot into
+# a permanent excuse). Background: research/frontier/WITHDRAWAL_10_*.md and
+# WITHDRAWAL_11_*.md.
+
+on:
+  pull_request:
+  push:
+    branches: [main, master]
+
+jobs:
+  artefact-agreement:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check out the SSOT catalogue
+        uses: actions/checkout@v4
+        with:
+          repository: gHashTag/t27
+          path: ../t27
+        continue-on-error: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compare declared parameters across artefacts
+        run: python3 conformance/check_artefact_agreement.py

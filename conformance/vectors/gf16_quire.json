@@ -1,403 +1,403 @@
 {
-  "format": "gf16",
-  "op": "quire",
-  "oracle": "gf_ref.py",
-  "family": "gf",
-  "width": 16,
-  "specials": {
-    "pos_zero": "0x0000",
-    "neg_zero": "0x8000",
-    "pos_inf": "0x7E00",
-    "neg_inf": "0xFE00",
-    "quiet_nan": "0x7E01"
+ "format": "gf16",
+ "op": "quire",
+ "oracle": "gf_ref.py",
+ "family": "gf",
+ "width": 16,
+ "specials": {
+  "pos_zero": "0x0000",
+  "neg_zero": "0x8000",
+  "pos_inf": "0x7E00",
+  "neg_inf": "0xFE00",
+  "quiet_nan": "0x7E01"
+ },
+ "note": "NOT an accumulator: this is encode(decode(a)), the decode/encode round trip the fp32 proxy called `quire`. b is ignored. The QUIRE core on silicon has never been checked against an accumulator golden. DIVERGES FROM specs/numeric/gf16.t27 IN TWO WAYS, and the difference is in the expected values here: (1) the spec declares GF16_NAN = 0xFE01, with the sign bit set, while this oracle builds a quiet NaN family-generically as (exp_max << mant_bits) | 1 = 0x7E01; (2) the spec flushes subnormals to zero, this oracle uses gradual underflow. A spec-conformant design therefore disagrees with these vectors on those inputs and is not thereby wrong. Measured 2026-08-11: three independently stored copies of gf16_mul.v each produced exactly 110 mismatches out of 994 against this pack -- 55 NaN sign, 13 flushed subnormals, 4 one-LSB, 38 other.",
+ "provenance": "expected values recomputed from the named oracle. They previously came from conformance/golden_conformance_vectors.py, a float32 proxy: 6,690 of 11,520 disagreed (research/audit_fp32_proxy_golden.py). Inputs and order are unchanged from the silicon sprint.",
+ "count": 64,
+ "vectors": [
+  {
+   "a": 0,
+   "b": 0,
+   "op": "quire",
+   "result": 0
   },
-  "note": "NOT an accumulator: this is encode(decode(a)), the decode/encode round trip the fp32 proxy called `quire`. b is ignored. The QUIRE core on silicon has never been checked against an accumulator golden.",
-  "provenance": "expected values recomputed from the named oracle. They previously came from conformance/golden_conformance_vectors.py, a float32 proxy: 6,690 of 11,520 disagreed (research/audit_fp32_proxy_golden.py). Inputs and order are unchanged from the silicon sprint.",
-  "count": 64,
-  "vectors": [
-    {
-      "a": 0,
-      "b": 0,
-      "op": "quire",
-      "result": 0
-    },
-    {
-      "a": 1,
-      "b": 0,
-      "op": "quire",
-      "result": 1
-    },
-    {
-      "a": 65535,
-      "b": 0,
-      "op": "quire",
-      "result": 32257
-    },
-    {
-      "a": 32768,
-      "b": 0,
-      "op": "quire",
-      "result": 0
-    },
-    {
-      "a": 32768,
-      "b": 0,
-      "op": "quire",
-      "result": 0
-    },
-    {
-      "a": 16384,
-      "b": 0,
-      "op": "quire",
-      "result": 16384
-    },
-    {
-      "a": 14592,
-      "b": 0,
-      "op": "quire",
-      "result": 14592
-    },
-    {
-      "a": 3278,
-      "b": 0,
-      "op": "quire",
-      "result": 3278
-    },
-    {
-      "a": 36048,
-      "b": 0,
-      "op": "quire",
-      "result": 36048
-    },
-    {
-      "a": 32098,
-      "b": 0,
-      "op": "quire",
-      "result": 32098
-    },
-    {
-      "a": 29256,
-      "b": 0,
-      "op": "quire",
-      "result": 29256
-    },
-    {
-      "a": 18289,
-      "b": 0,
-      "op": "quire",
-      "result": 18289
-    },
-    {
-      "a": 13434,
-      "b": 0,
-      "op": "quire",
-      "result": 13434
-    },
-    {
-      "a": 11395,
-      "b": 0,
-      "op": "quire",
-      "result": 11395
-    },
-    {
-      "a": 55302,
-      "b": 0,
-      "op": "quire",
-      "result": 55302
-    },
-    {
-      "a": 4165,
-      "b": 0,
-      "op": "quire",
-      "result": 4165
-    },
-    {
-      "a": 3905,
-      "b": 0,
-      "op": "quire",
-      "result": 3905
-    },
-    {
-      "a": 12280,
-      "b": 0,
-      "op": "quire",
-      "result": 12280
-    },
-    {
-      "a": 28657,
-      "b": 0,
-      "op": "quire",
-      "result": 28657
-    },
-    {
-      "a": 30495,
-      "b": 0,
-      "op": "quire",
-      "result": 30495
-    },
-    {
-      "a": 3478,
-      "b": 0,
-      "op": "quire",
-      "result": 3478
-    },
-    {
-      "a": 26062,
-      "b": 0,
-      "op": "quire",
-      "result": 26062
-    },
-    {
-      "a": 54987,
-      "b": 0,
-      "op": "quire",
-      "result": 54987
-    },
-    {
-      "a": 28893,
-      "b": 0,
-      "op": "quire",
-      "result": 28893
-    },
-    {
-      "a": 58878,
-      "b": 0,
-      "op": "quire",
-      "result": 58878
-    },
-    {
-      "a": 36463,
-      "b": 0,
-      "op": "quire",
-      "result": 36463
-    },
-    {
-      "a": 851,
-      "b": 0,
-      "op": "quire",
-      "result": 851
-    },
-    {
-      "a": 20926,
-      "b": 0,
-      "op": "quire",
-      "result": 20926
-    },
-    {
-      "a": 55392,
-      "b": 0,
-      "op": "quire",
-      "result": 55392
-    },
-    {
-      "a": 44597,
-      "b": 0,
-      "op": "quire",
-      "result": 44597
-    },
-    {
-      "a": 36421,
-      "b": 0,
-      "op": "quire",
-      "result": 36421
-    },
-    {
-      "a": 20379,
-      "b": 0,
-      "op": "quire",
-      "result": 20379
-    },
-    {
-      "a": 28221,
-      "b": 0,
-      "op": "quire",
-      "result": 28221
-    },
-    {
-      "a": 44118,
-      "b": 0,
-      "op": "quire",
-      "result": 44118
-    },
-    {
-      "a": 13396,
-      "b": 0,
-      "op": "quire",
-      "result": 13396
-    },
-    {
-      "a": 12156,
-      "b": 0,
-      "op": "quire",
-      "result": 12156
-    },
-    {
-      "a": 49797,
-      "b": 0,
-      "op": "quire",
-      "result": 49797
-    },
-    {
-      "a": 12676,
-      "b": 0,
-      "op": "quire",
-      "result": 12676
-    },
-    {
-      "a": 47052,
-      "b": 0,
-      "op": "quire",
-      "result": 47052
-    },
-    {
-      "a": 45082,
-      "b": 0,
-      "op": "quire",
-      "result": 45082
-    },
-    {
-      "a": 34671,
-      "b": 0,
-      "op": "quire",
-      "result": 34671
-    },
-    {
-      "a": 5695,
-      "b": 0,
-      "op": "quire",
-      "result": 5695
-    },
-    {
-      "a": 60217,
-      "b": 0,
-      "op": "quire",
-      "result": 60217
-    },
-    {
-      "a": 16361,
-      "b": 0,
-      "op": "quire",
-      "result": 16361
-    },
-    {
-      "a": 49615,
-      "b": 0,
-      "op": "quire",
-      "result": 49615
-    },
-    {
-      "a": 10328,
-      "b": 0,
-      "op": "quire",
-      "result": 10328
-    },
-    {
-      "a": 38427,
-      "b": 0,
-      "op": "quire",
-      "result": 38427
-    },
-    {
-      "a": 47400,
-      "b": 0,
-      "op": "quire",
-      "result": 47400
-    },
-    {
-      "a": 25203,
-      "b": 0,
-      "op": "quire",
-      "result": 25203
-    },
-    {
-      "a": 9116,
-      "b": 0,
-      "op": "quire",
-      "result": 9116
-    },
-    {
-      "a": 6006,
-      "b": 0,
-      "op": "quire",
-      "result": 6006
-    },
-    {
-      "a": 29871,
-      "b": 0,
-      "op": "quire",
-      "result": 29871
-    },
-    {
-      "a": 37930,
-      "b": 0,
-      "op": "quire",
-      "result": 37930
-    },
-    {
-      "a": 10458,
-      "b": 0,
-      "op": "quire",
-      "result": 10458
-    },
-    {
-      "a": 30512,
-      "b": 0,
-      "op": "quire",
-      "result": 30512
-    },
-    {
-      "a": 13238,
-      "b": 0,
-      "op": "quire",
-      "result": 13238
-    },
-    {
-      "a": 49823,
-      "b": 0,
-      "op": "quire",
-      "result": 49823
-    },
-    {
-      "a": 36434,
-      "b": 0,
-      "op": "quire",
-      "result": 36434
-    },
-    {
-      "a": 59429,
-      "b": 0,
-      "op": "quire",
-      "result": 59429
-    },
-    {
-      "a": 47819,
-      "b": 0,
-      "op": "quire",
-      "result": 47819
-    },
-    {
-      "a": 21319,
-      "b": 0,
-      "op": "quire",
-      "result": 21319
-    },
-    {
-      "a": 48520,
-      "b": 0,
-      "op": "quire",
-      "result": 48520
-    },
-    {
-      "a": 46566,
-      "b": 0,
-      "op": "quire",
-      "result": 46566
-    },
-    {
-      "a": 27460,
-      "b": 0,
-      "op": "quire",
-      "result": 27460
-    }
-  ]
+  {
+   "a": 1,
+   "b": 0,
+   "op": "quire",
+   "result": 1
+  },
+  {
+   "a": 65535,
+   "b": 0,
+   "op": "quire",
+   "result": 32257
+  },
+  {
+   "a": 32768,
+   "b": 0,
+   "op": "quire",
+   "result": 0
+  },
+  {
+   "a": 32768,
+   "b": 0,
+   "op": "quire",
+   "result": 0
+  },
+  {
+   "a": 16384,
+   "b": 0,
+   "op": "quire",
+   "result": 16384
+  },
+  {
+   "a": 14592,
+   "b": 0,
+   "op": "quire",
+   "result": 14592
+  },
+  {
+   "a": 3278,
+   "b": 0,
+   "op": "quire",
+   "result": 3278
+  },
+  {
+   "a": 36048,
+   "b": 0,
+   "op": "quire",
+   "result": 36048
+  },
+  {
+   "a": 32098,
+   "b": 0,
+   "op": "quire",
+   "result": 32098
+  },
+  {
+   "a": 29256,
+   "b": 0,
+   "op": "quire",
+   "result": 29256
+  },
+  {
+   "a": 18289,
+   "b": 0,
+   "op": "quire",
+   "result": 18289
+  },
+  {
+   "a": 13434,
+   "b": 0,
+   "op": "quire",
+   "result": 13434
+  },
+  {
+   "a": 11395,
+   "b": 0,
+   "op": "quire",
+   "result": 11395
+  },
+  {
+   "a": 55302,
+   "b": 0,
+   "op": "quire",
+   "result": 55302
+  },
+  {
+   "a": 4165,
+   "b": 0,
+   "op": "quire",
+   "result": 4165
+  },
+  {
+   "a": 3905,
+   "b": 0,
+   "op": "quire",
+   "result": 3905
+  },
+  {
+   "a": 12280,
+   "b": 0,
+   "op": "quire",
+   "result": 12280
+  },
+  {
+   "a": 28657,
+   "b": 0,
+   "op": "quire",
+   "result": 28657
+  },
+  {
+   "a": 30495,
+   "b": 0,
+   "op": "quire",
+   "result": 30495
+  },
+  {
+   "a": 3478,
+   "b": 0,
+   "op": "quire",
+   "result": 3478
+  },
+  {
+   "a": 26062,
+   "b": 0,
+   "op": "quire",
+   "result": 26062
+  },
+  {
+   "a": 54987,
+   "b": 0,
+   "op": "quire",
+   "result": 54987
+  },
+  {
+   "a": 28893,
+   "b": 0,
+   "op": "quire",
+   "result": 28893
+  },
+  {
+   "a": 58878,
+   "b": 0,
+   "op": "quire",
+   "result": 58878
+  },
+  {
+   "a": 36463,
+   "b": 0,
+   "op": "quire",
+   "result": 36463
+  },
+  {
+   "a": 851,
+   "b": 0,
+   "op": "quire",
+   "result": 851
+  },
+  {
+   "a": 20926,
+   "b": 0,
+   "op": "quire",
+   "result": 20926
+  },
+  {
+   "a": 55392,
+   "b": 0,
+   "op": "quire",
+   "result": 55392
+  },
+  {
+   "a": 44597,
+   "b": 0,
+   "op": "quire",
+   "result": 44597
+  },
+  {
+   "a": 36421,
+   "b": 0,
+   "op": "quire",
+   "result": 36421
+  },
+  {
+   "a": 20379,
+   "b": 0,
+   "op": "quire",
+   "result": 20379
+  },
+  {
+   "a": 28221,
+   "b": 0,
+   "op": "quire",
+   "result": 28221
+  },
+  {
+   "a": 44118,
+   "b": 0,
+   "op": "quire",
+   "result": 44118
+  },
+  {
+   "a": 13396,
+   "b": 0,
+   "op": "quire",
+   "result": 13396
+  },
+  {
+   "a": 12156,
+   "b": 0,
+   "op": "quire",
+   "result": 12156
+  },
+  {
+   "a": 49797,
+   "b": 0,
+   "op": "quire",
+   "result": 49797
+  },
+  {
+   "a": 12676,
+   "b": 0,
+   "op": "quire",
+   "result": 12676
+  },
+  {
+   "a": 47052,
+   "b": 0,
+   "op": "quire",
+   "result": 47052
+  },
+  {
+   "a": 45082,
+   "b": 0,
+   "op": "quire",
+   "result": 45082
+  },
+  {
+   "a": 34671,
+   "b": 0,
+   "op": "quire",
+   "result": 34671
+  },
+  {
+   "a": 5695,
+   "b": 0,
+   "op": "quire",
+   "result": 5695
+  },
+  {
+   "a": 60217,
+   "b": 0,
+   "op": "quire",
+   "result": 60217
+  },
+  {
+   "a": 16361,
+   "b": 0,
+   "op": "quire",
+   "result": 16361
+  },
+  {
+   "a": 49615,
+   "b": 0,
+   "op": "quire",
+   "result": 49615
+  },
+  {
+   "a": 10328,
+   "b": 0,
+   "op": "quire",
+   "result": 10328
+  },
+  {
+   "a": 38427,
+   "b": 0,
+   "op": "quire",
+   "result": 38427
+  },
+  {
+   "a": 47400,
+   "b": 0,
+   "op": "quire",
+   "result": 47400
+  },
+  {
+   "a": 25203,
+   "b": 0,
+   "op": "quire",
+   "result": 25203
+  },
+  {
+   "a": 9116,
+   "b": 0,
+   "op": "quire",
+   "result": 9116
+  },
+  {
+   "a": 6006,
+   "b": 0,
+   "op": "quire",
+   "result": 6006
+  },
+  {
+   "a": 29871,
+   "b": 0,
+   "op": "quire",
+   "result": 29871
+  },
+  {
+   "a": 37930,
+   "b": 0,
+   "op": "quire",
+   "result": 37930
+  },
+  {
+   "a": 10458,
+   "b": 0,
+   "op": "quire",
+   "result": 10458
+  },
+  {
+   "a": 30512,
+   "b": 0,
+   "op": "quire",
+   "result": 30512
+  },
+  {
+   "a": 13238,
+   "b": 0,
+   "op": "quire",
+   "result": 13238
+  },
+  {
+   "a": 49823,
+   "b": 0,
+   "op": "quire",
+   "result": 49823
+  },
+  {
+   "a": 36434,
+   "b": 0,
+   "op": "quire",
+   "result": 36434
+  },
+  {
+   "a": 59429,
+   "b": 0,
+   "op": "quire",
+   "result": 59429
+  },
+  {
+   "a": 47819,
+   "b": 0,
+   "op": "quire",
+   "result": 47819
+  },
+  {
+   "a": 21319,
+   "b": 0,
+   "op": "quire",
+   "result": 21319
+  },
+  {
+   "a": 48520,
+   "b": 0,
+   "op": "quire",
+   "result": 48520
+  },
+  {
+   "a": 46566,
+   "b": 0,
+   "op": "quire",
+   "result": 46566
+  },
+  {
+   "a": 27460,
+   "b": 0,
+   "op": "quire",
+   "result": 27460
+  }
+ ]
 }

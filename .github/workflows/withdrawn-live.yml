@@ -1,0 +1,18 @@
+name: Withdrawn numbers
+
+# The paper carried two paragraphs about one measurement eighteen lines apart:
+# the first asserted a figure "and that number is real", the second withdrew it
+# as a single placement run. The abstract quoted the withdrawn one. Nothing
+# checked it -- the traceability gate asks whether a number appears in a data
+# file, which a withdrawn number does, having been measured once.
+
+on: [pull_request, push]
+
+jobs:
+  withdrawn-live:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: python3 tools/check_withdrawn_live.py

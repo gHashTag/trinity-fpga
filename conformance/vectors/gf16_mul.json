@@ -1,1 +1,4988 @@
-{"format": "gf16", "operation": "mul", "oracle": "gf_ref.py", "family": "gf", "width": 16, "specials": {"pos_zero": "0x0000", "neg_zero": "0x8000", "pos_inf": "0x7E00", "neg_inf": "0xFE00", "quiet_nan": "0x7E01"}, "note": "exact Fraction decode/mul/encode, round-ties-even.", "vector_count": 994, "vectors": [{"a": "0x0000", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x0200", "expected": "0x0000"}, {"a": "0x0000", "b": "0x3A00", "expected": "0x0000"}, {"a": "0x0000", "b": "0x3AAB", "expected": "0x0000"}, {"a": "0x0000", "b": "0x3C00", "expected": "0x0000"}, {"a": "0x0000", "b": "0x3CAB", "expected": "0x0000"}, {"a": "0x0000", "b": "0x3E00", "expected": "0x0000"}, {"a": "0x0000", "b": "0x4000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x4100", "expected": "0x0000"}, {"a": "0x0000", "b": "0x4480", "expected": "0x0000"}, {"a": "0x0000", "b": "0x7E00", "expected": "0x7E01"}, {"a": "0x0000", "b": "0x7E01", "expected": "0x7E01"}, {"a": "0x0000", "b": "0x8000", "expected": "0x8000"}, {"a": "0x0000", "b": "0xBA00", "expected": "0x8000"}, {"a": "0x0000", "b": "0xBC00", "expected": "0x8000"}, {"a": "0x0000", "b": "0xBE00", "expected": "0x8000"}, {"a": "0x0000", "b": "0xC000", "expected": "0x8000"}, {"a": "0x0000", "b": "0xC100", "expected": "0x8000"}, {"a": "0x0000", "b": "0xC480", "expected": "0x8000"}, {"a": "0x0000", "b": "0xFE00", "expected": "0x7E01"}, {"a": "0x0200", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0200", "b": "0x0200", "expected": "0x0000"}, {"a": "0x0200", "b": "0x3A00", "expected": "0x0080"}, {"a": "0x0200", "b": "0x3AAB", "expected": "0x00AB"}, {"a": "0x0200", "b": "0x3C00", "expected": "0x0100"}, {"a": "0x0200", "b": "0x3CAB", "expected": "0x0156"}, {"a": "0x0200", "b": "0x3E00", "expected": "0x0200"}, {"a": "0x0200", "b": "0x4000", "expected": "0x0400"}, {"a": "0x0200", "b": "0x4100", "expected": "0x0500"}, {"a": "0x0200", "b": "0x4480", "expected": "0x0880"}, {"a": "0x0200", "b": "0x7E00", "expected": "0x7E00"}, {"a": "0x0200", "b": "0x7E01", "expected": "0x7E01"}, {"a": "0x0200", "b": "0x8000", "expected": "0x8000"}, {"a": "0x0200", "b": "0xBA00", "expected": "0x8080"}, {"a": "0x0200", "b": "0xBC00", "expected": "0x8100"}, {"a": "0x0200", "b": "0xBE00", "expected": "0x8200"}, {"a": "0x0200", "b": "0xC000", "expected": "0x8400"}, {"a": "0x0200", "b": "0xC100", "expected": "0x8500"}, {"a": "0x0200", "b": "0xC480", "expected": "0x8880"}, {"a": "0x0200", "b": "0xFE00", "expected": "0xFE00"}, {"a": "0x3A00", "b": "0x0000", "expected": "0x0000"}, {"a": "0x3A00", "b": "0x0200", "expected": "0x0080"}, {"a": "0x3A00", "b": "0x3A00", "expected": "0x3600"}, {"a": "0x3A00", "b": "0x3AAB", "expected": "0x36AB"}, {"a": "0x3A00", "b": "0x3C00", "expected": "0x3800"}, {"a": "0x3A00", "b": "0x3CAB", "expected": "0x38AB"}, {"a": "0x3A00", "b": "0x3E00", "expected": "0x3A00"}, {"a": "0x3A00", "b": "0x4000", "expected": "0x3C00"}, {"a": "0x3A00", "b": "0x4100", "expected": "0x3D00"}, {"a": "0x3A00", "b": "0x4480", "expected": "0x4080"}, {"a": "0x3A00", "b": "0x7E00", "expected": "0x7E00"}, {"a": "0x3A00", "b": "0x7E01", "expected": "0x7E01"}, {"a": "0x3A00", "b": "0x8000", "expected": "0x8000"}, {"a": "0x3A00", "b": "0xBA00", "expected": "0xB600"}, {"a": "0x3A00", "b": "0xBC00", "expected": "0xB800"}, {"a": "0x3A00", "b": "0xBE00", "expected": "0xBA00"}, {"a": "0x3A00", "b": "0xC000", "expected": "0xBC00"}, {"a": "0x3A00", "b": "0xC100", "expected": "0xBD00"}, {"a": "0x3A00", "b": "0xC480", "expected": "0xC080"}, {"a": "0x3A00", "b": "0xFE00", "expected": "0xFE00"}, {"a": "0x3AAB", "b": "0x0000", "expected": "0x0000"}, {"a": "0x3AAB", "b": "0x0200", "expected": "0x00AB"}, {"a": "0x3AAB", "b": "0x3A00", "expected": "0x36AB"}, {"a": "0x3AAB", "b": "0x3AAB", "expected": "0x378F"}, {"a": "0x3AAB", "b": "0x3C00", "expected": "0x38AB"}, {"a": "0x3AAB", "b": "0x3CAB", "expected": "0x398F"}, {"a": "0x3AAB", "b": "0x3E00", "expected": "0x3AAB"}, {"a": "0x3AAB", "b": "0x4000", "expected": "0x3CAB"}, {"a": "0x3AAB", "b": "0x4100", "expected": "0x3E00"}, {"a": "0x3AAB", "b": "0x4480", "expected": "0x4156"}, {"a": "0x3AAB", "b": "0x7E00", "expected": "0x7E00"}, {"a": "0x3AAB", "b": "0x7E01", "expected": "0x7E01"}, {"a": "0x3AAB", "b": "0x8000", "expected": "0x8000"}, {"a": "0x3AAB", "b": "0xBA00", "expected": "0xB6AB"}, {"a": "0x3AAB", "b": "0xBC00", "expected": "0xB8AB"}, {"a": "0x3AAB", "b": "0xBE00", "expected": "0xBAAB"}, {"a": "0x3AAB", "b": "0xC000", "expected": "0xBCAB"}, {"a": "0x3AAB", "b": "0xC100", "expected": "0xBE00"}, {"a": "0x3AAB", "b": "0xC480", "expected": "0xC156"}, {"a": "0x3AAB", "b": "0xFE00", "expected": "0xFE00"}, {"a": "0x3C00", "b": "0x0000", "expected": "0x0000"}, {"a": "0x3C00", "b": "0x0200", "expected": "0x0100"}, {"a": "0x3C00", "b": "0x3A00", "expected": "0x3800"}, {"a": "0x3C00", "b": "0x3AAB", "expected": "0x38AB"}, {"a": "0x3C00", "b": "0x3C00", "expected": "0x3A00"}, {"a": "0x3C00", "b": "0x3CAB", "expected": "0x3AAB"}, {"a": "0x3C00", "b": "0x3E00", "expected": "0x3C00"}, {"a": "0x3C00", "b": "0x4000", "expected": "0x3E00"}, {"a": "0x3C00", "b": "0x4100", "expected": "0x3F00"}, {"a": "0x3C00", "b": "0x4480", "expected": "0x4280"}, {"a": "0x3C00", "b": "0x7E00", "expected": "0x7E00"}, {"a": "0x3C00", "b": "0x7E01", "expected": "0x7E01"}, {"a": "0x3C00", "b": "0x8000", "expected": "0x8000"}, {"a": "0x3C00", "b": "0xBA00", "expected": "0xB800"}, {"a": "0x3C00", "b": "0xBC00", "expected": "0xBA00"}, {"a": "0x3C00", "b": "0xBE00", "expected": "0xBC00"}, {"a": "0x3C00", "b": "0xC000", "expected": "0xBE00"}, {"a": "0x3C00", "b": "0xC100", "expected": "0xBF00"}, {"a": "0x3C00", "b": "0xC480", "expected": "0xC280"}, {"a": "0x3C00", "b": "0xFE00", "expected": "0xFE00"}, {"a": "0x3CAB", "b": "0x0000", "expected": "0x0000"}, {"a": "0x3CAB", "b": "0x0200", "expected": "0x0156"}, {"a": "0x3CAB", "b": "0x3A00", "expected": "0x38AB"}, {"a": "0x3CAB", "b": "0x3AAB", "expected": "0x398F"}, {"a": "0x3CAB", "b": "0x3C00", "expected": "0x3AAB"}, {"a": "0x3CAB", "b": "0x3CAB", "expected": "0x3B8F"}, {"a": "0x3CAB", "b": "0x3E00", "expected": "0x3CAB"}, {"a": "0x3CAB", "b": "0x4000", "expected": "0x3EAB"}, {"a": "0x3CAB", "b": "0x4100", "expected": "0x4000"}, {"a": "0x3CAB", "b": "0x4480", "expected": "0x4356"}, {"a": "0x3CAB", "b": "0x7E00", "expected": "0x7E00"}, {"a": "0x3CAB", "b": "0x7E01", "expected": "0x7E01"}, {"a": "0x3CAB", "b": "0x8000", "expected": "0x8000"}, {"a": "0x3CAB", "b": "0xBA00", "expected": "0xB8AB"}, {"a": "0x3CAB", "b": "0xBC00", "expected": "0xBAAB"}, {"a": "0x3CAB", "b": "0xBE00", "expected": "0xBCAB"}, {"a": "0x3CAB", "b": "0xC000", "expected": "0xBEAB"}, {"a": "0x3CAB", "b": "0xC100", "expected": "0xC000"}, {"a": "0x3CAB", "b": "0xC480", "expected": "0xC356"}, {"a": "0x3CAB", "b": "0xFE00", "expected": "0xFE00"}, {"a": "0x3E00", "b": "0x0000", "expected": "0x0000"}, {"a": "0x3E00", "b": "0x0200", "expected": "0x0200"}, {"a": "0x3E00", "b": "0x3A00", "expected": "0x3A00"}, {"a": "0x3E00", "b": "0x3AAB", "expected": "0x3AAB"}, {"a": "0x3E00", "b": "0x3C00", "expected": "0x3C00"}, {"a": "0x3E00", "b": "0x3CAB", "expected": "0x3CAB"}, {"a": "0x3E00", "b": "0x3E00", "expected": "0x3E00"}, {"a": "0x3E00", "b": "0x4000", "expected": "0x4000"}, {"a": "0x3E00", "b": "0x4100", "expected": "0x4100"}, {"a": "0x3E00", "b": "0x4480", "expected": "0x4480"}, {"a": "0x3E00", "b": "0x7E00", "expected": "0x7E00"}, {"a": "0x3E00", "b": "0x7E01", "expected": "0x7E01"}, {"a": "0x3E00", "b": "0x8000", "expected": "0x8000"}, {"a": "0x3E00", "b": "0xBA00", "expected": "0xBA00"}, {"a": "0x3E00", "b": "0xBC00", "expected": "0xBC00"}, {"a": "0x3E00", "b": "0xBE00", "expected": "0xBE00"}, {"a": "0x3E00", "b": "0xC000", "expected": "0xC000"}, {"a": "0x3E00", "b": "0xC100", "expected": "0xC100"}, {"a": "0x3E00", "b": "0xC480", "expected": "0xC480"}, {"a": "0x3E00", "b": "0xFE00", "expected": "0xFE00"}, {"a": "0x4000", "b": "0x0000", "expected": "0x0000"}, {"a": "0x4000", "b": "0x0200", "expected": "0x0400"}, {"a": "0x4000", "b": "0x3A00", "expected": "0x3C00"}, {"a": "0x4000", "b": "0x3AAB", "expected": "0x3CAB"}, {"a": "0x4000", "b": "0x3C00", "expected": "0x3E00"}, {"a": "0x4000", "b": "0x3CAB", "expected": "0x3EAB"}, {"a": "0x4000", "b": "0x3E00", "expected": "0x4000"}, {"a": "0x4000", "b": "0x4000", "expected": "0x4200"}, {"a": "0x4000", "b": "0x4100", "expected": "0x4300"}, {"a": "0x4000", "b": "0x4480", "expected": "0x4680"}, {"a": "0x4000", "b": "0x7E00", "expected": "0x7E00"}, {"a": "0x4000", "b": "0x7E01", "expected": "0x7E01"}, {"a": "0x4000", "b": "0x8000", "expected": "0x8000"}, {"a": "0x4000", "b": "0xBA00", "expected": "0xBC00"}, {"a": "0x4000", "b": "0xBC00", "expected": "0xBE00"}, {"a": "0x4000", "b": "0xBE00", "expected": "0xC000"}, {"a": "0x4000", "b": "0xC000", "expected": "0xC200"}, {"a": "0x4000", "b": "0xC100", "expected": "0xC300"}, {"a": "0x4000", "b": "0xC480", "expected": "0xC680"}, {"a": "0x4000", "b": "0xFE00", "expected": "0xFE00"}, {"a": "0x4100", "b": "0x0000", "expected": "0x0000"}, {"a": "0x4100", "b": "0x0200", "expected": "0x0500"}, {"a": "0x4100", "b": "0x3A00", "expected": "0x3D00"}, {"a": "0x4100", "b": "0x3AAB", "expected": "0x3E00"}, {"a": "0x4100", "b": "0x3C00", "expected": "0x3F00"}, {"a": "0x4100", "b": "0x3CAB", "expected": "0x4000"}, {"a": "0x4100", "b": "0x3E00", "expected": "0x4100"}, {"a": "0x4100", "b": "0x4000", "expected": "0x4300"}, {"a": "0x4100", "b": "0x4100", "expected": "0x4440"}, {"a": "0x4100", "b": "0x4480", "expected": "0x47C0"}, {"a": "0x4100", "b": "0x7E00", "expected": "0x7E00"}, {"a": "0x4100", "b": "0x7E01", "expected": "0x7E01"}, {"a": "0x4100", "b": "0x8000", "expected": "0x8000"}, {"a": "0x4100", "b": "0xBA00", "expected": "0xBD00"}, {"a": "0x4100", "b": "0xBC00", "expected": "0xBF00"}, {"a": "0x4100", "b": "0xBE00", "expected": "0xC100"}, {"a": "0x4100", "b": "0xC000", "expected": "0xC300"}, {"a": "0x4100", "b": "0xC100", "expected": "0xC440"}, {"a": "0x4100", "b": "0xC480", "expected": "0xC7C0"}, {"a": "0x4100", "b": "0xFE00", "expected": "0xFE00"}, {"a": "0x4480", "b": "0x0000", "expected": "0x0000"}, {"a": "0x4480", "b": "0x0200", "expected": "0x0880"}, {"a": "0x4480", "b": "0x3A00", "expected": "0x4080"}, {"a": "0x4480", "b": "0x3AAB", "expected": "0x4156"}, {"a": "0x4480", "b": "0x3C00", "expected": "0x4280"}, {"a": "0x4480", "b": "0x3CAB", "expected": "0x4356"}, {"a": "0x4480", "b": "0x3E00", "expected": "0x4480"}, {"a": "0x4480", "b": "0x4000", "expected": "0x4680"}, {"a": "0x4480", "b": "0x4100", "expected": "0x47C0"}, {"a": "0x4480", "b": "0x4480", "expected": "0x4B20"}, {"a": "0x4480", "b": "0x7E00", "expected": "0x7E00"}, {"a": "0x4480", "b": "0x7E01", "expected": "0x7E01"}, {"a": "0x4480", "b": "0x8000", "expected": "0x8000"}, {"a": "0x4480", "b": "0xBA00", "expected": "0xC080"}, {"a": "0x4480", "b": "0xBC00", "expected": "0xC280"}, {"a": "0x4480", "b": "0xBE00", "expected": "0xC480"}, {"a": "0x4480", "b": "0xC000", "expected": "0xC680"}, {"a": "0x4480", "b": "0xC100", "expected": "0xC7C0"}, {"a": "0x4480", "b": "0xC480", "expected": "0xCB20"}, {"a": "0x4480", "b": "0xFE00", "expected": "0xFE00"}, {"a": "0x7E00", "b": "0x0000", "expected": "0x7E01"}, {"a": "0x7E00", "b": "0x0200", "expected": "0x7E00"}, {"a": "0x7E00", "b": "0x3A00", "expected": "0x7E00"}, {"a": "0x7E00", "b": "0x3AAB", "expected": "0x7E00"}, {"a": "0x7E00", "b": "0x3C00", "expected": "0x7E00"}, {"a": "0x7E00", "b": "0x3CAB", "expected": "0x7E00"}, {"a": "0x7E00", "b": "0x3E00", "expected": "0x7E00"}, {"a": "0x7E00", "b": "0x4000", "expected": "0x7E00"}, {"a": "0x7E00", "b": "0x4100", "expected": "0x7E00"}, {"a": "0x7E00", "b": "0x4480", "expected": "0x7E00"}, {"a": "0x7E00", "b": "0x7E00", "expected": "0x7E00"}, {"a": "0x7E00", "b": "0x7E01", "expected": "0x7E01"}, {"a": "0x7E00", "b": "0x8000", "expected": "0x7E01"}, {"a": "0x7E00", "b": "0xBA00", "expected": "0xFE00"}, {"a": "0x7E00", "b": "0xBC00", "expected": "0xFE00"}, {"a": "0x7E00", "b": "0xBE00", "expected": "0xFE00"}, {"a": "0x7E00", "b": "0xC000", "expected": "0xFE00"}, {"a": "0x7E00", "b": "0xC100", "expected": "0xFE00"}, {"a": "0x7E00", "b": "0xC480", "expected": "0xFE00"}, {"a": "0x7E00", "b": "0xFE00", "expected": "0xFE00"}, {"a": "0x7E01", "b": "0x0000", "expected": "0x7E01"}, {"a": "0x7E01", "b": "0x0200", "expected": "0x7E01"}, {"a": "0x7E01", "b": "0x3A00", "expected": "0x7E01"}, {"a": "0x7E01", "b": "0x3AAB", "expected": "0x7E01"}, {"a": "0x7E01", "b": "0x3C00", "expected": "0x7E01"}, {"a": "0x7E01", "b": "0x3CAB", "expected": "0x7E01"}, {"a": "0x7E01", "b": "0x3E00", "expected": "0x7E01"}, {"a": "0x7E01", "b": "0x4000", "expected": "0x7E01"}, {"a": "0x7E01", "b": "0x4100", "expected": "0x7E01"}, {"a": "0x7E01", "b": "0x4480", "expected": "0x7E01"}, {"a": "0x7E01", "b": "0x7E00", "expected": "0x7E01"}, {"a": "0x7E01", "b": "0x7E01", "expected": "0x7E01"}, {"a": "0x7E01", "b": "0x8000", "expected": "0x7E01"}, {"a": "0x7E01", "b": "0xBA00", "expected": "0x7E01"}, {"a": "0x7E01", "b": "0xBC00", "expected": "0x7E01"}, {"a": "0x7E01", "b": "0xBE00", "expected": "0x7E01"}, {"a": "0x7E01", "b": "0xC000", "expected": "0x7E01"}, {"a": "0x7E01", "b": "0xC100", "expected": "0x7E01"}, {"a": "0x7E01", "b": "0xC480", "expected": "0x7E01"}, {"a": "0x7E01", "b": "0xFE00", "expected": "0x7E01"}, {"a": "0x8000", "b": "0x0000", "expected": "0x8000"}, {"a": "0x8000", "b": "0x0200", "expected": "0x8000"}, {"a": "0x8000", "b": "0x3A00", "expected": "0x8000"}, {"a": "0x8000", "b": "0x3AAB", "expected": "0x8000"}, {"a": "0x8000", "b": "0x3C00", "expected": "0x8000"}, {"a": "0x8000", "b": "0x3CAB", "expected": "0x8000"}, {"a": "0x8000", "b": "0x3E00", "expected": "0x8000"}, {"a": "0x8000", "b": "0x4000", "expected": "0x8000"}, {"a": "0x8000", "b": "0x4100", "expected": "0x8000"}, {"a": "0x8000", "b": "0x4480", "expected": "0x8000"}, {"a": "0x8000", "b": "0x7E00", "expected": "0x7E01"}, {"a": "0x8000", "b": "0x7E01", "expected": "0x7E01"}, {"a": "0x8000", "b": "0x8000", "expected": "0x0000"}, {"a": "0x8000", "b": "0xBA00", "expected": "0x0000"}, {"a": "0x8000", "b": "0xBC00", "expected": "0x0000"}, {"a": "0x8000", "b": "0xBE00", "expected": "0x0000"}, {"a": "0x8000", "b": "0xC000", "expected": "0x0000"}, {"a": "0x8000", "b": "0xC100", "expected": "0x0000"}, {"a": "0x8000", "b": "0xC480", "expected": "0x0000"}, {"a": "0x8000", "b": "0xFE00", "expected": "0x7E01"}, {"a": "0xBA00", "b": "0x0000", "expected": "0x8000"}, {"a": "0xBA00", "b": "0x0200", "expected": "0x8080"}, {"a": "0xBA00", "b": "0x3A00", "expected": "0xB600"}, {"a": "0xBA00", "b": "0x3AAB", "expected": "0xB6AB"}, {"a": "0xBA00", "b": "0x3C00", "expected": "0xB800"}, {"a": "0xBA00", "b": "0x3CAB", "expected": "0xB8AB"}, {"a": "0xBA00", "b": "0x3E00", "expected": "0xBA00"}, {"a": "0xBA00", "b": "0x4000", "expected": "0xBC00"}, {"a": "0xBA00", "b": "0x4100", "expected": "0xBD00"}, {"a": "0xBA00", "b": "0x4480", "expected": "0xC080"}, {"a": "0xBA00", "b": "0x7E00", "expected": "0xFE00"}, {"a": "0xBA00", "b": "0x7E01", "expected": "0x7E01"}, {"a": "0xBA00", "b": "0x8000", "expected": "0x0000"}, {"a": "0xBA00", "b": "0xBA00", "expected": "0x3600"}, {"a": "0xBA00", "b": "0xBC00", "expected": "0x3800"}, {"a": "0xBA00", "b": "0xBE00", "expected": "0x3A00"}, {"a": "0xBA00", "b": "0xC000", "expected": "0x3C00"}, {"a": "0xBA00", "b": "0xC100", "expected": "0x3D00"}, {"a": "0xBA00", "b": "0xC480", "expected": "0x4080"}, {"a": "0xBA00", "b": "0xFE00", "expected": "0x7E00"}, {"a": "0xBC00", "b": "0x0000", "expected": "0x8000"}, {"a": "0xBC00", "b": "0x0200", "expected": "0x8100"}, {"a": "0xBC00", "b": "0x3A00", "expected": "0xB800"}, {"a": "0xBC00", "b": "0x3AAB", "expected": "0xB8AB"}, {"a": "0xBC00", "b": "0x3C00", "expected": "0xBA00"}, {"a": "0xBC00", "b": "0x3CAB", "expected": "0xBAAB"}, {"a": "0xBC00", "b": "0x3E00", "expected": "0xBC00"}, {"a": "0xBC00", "b": "0x4000", "expected": "0xBE00"}, {"a": "0xBC00", "b": "0x4100", "expected": "0xBF00"}, {"a": "0xBC00", "b": "0x4480", "expected": "0xC280"}, {"a": "0xBC00", "b": "0x7E00", "expected": "0xFE00"}, {"a": "0xBC00", "b": "0x7E01", "expected": "0x7E01"}, {"a": "0xBC00", "b": "0x8000", "expected": "0x0000"}, {"a": "0xBC00", "b": "0xBA00", "expected": "0x3800"}, {"a": "0xBC00", "b": "0xBC00", "expected": "0x3A00"}, {"a": "0xBC00", "b": "0xBE00", "expected": "0x3C00"}, {"a": "0xBC00", "b": "0xC000", "expected": "0x3E00"}, {"a": "0xBC00", "b": "0xC100", "expected": "0x3F00"}, {"a": "0xBC00", "b": "0xC480", "expected": "0x4280"}, {"a": "0xBC00", "b": "0xFE00", "expected": "0x7E00"}, {"a": "0xBE00", "b": "0x0000", "expected": "0x8000"}, {"a": "0xBE00", "b": "0x0200", "expected": "0x8200"}, {"a": "0xBE00", "b": "0x3A00", "expected": "0xBA00"}, {"a": "0xBE00", "b": "0x3AAB", "expected": "0xBAAB"}, {"a": "0xBE00", "b": "0x3C00", "expected": "0xBC00"}, {"a": "0xBE00", "b": "0x3CAB", "expected": "0xBCAB"}, {"a": "0xBE00", "b": "0x3E00", "expected": "0xBE00"}, {"a": "0xBE00", "b": "0x4000", "expected": "0xC000"}, {"a": "0xBE00", "b": "0x4100", "expected": "0xC100"}, {"a": "0xBE00", "b": "0x4480", "expected": "0xC480"}, {"a": "0xBE00", "b": "0x7E00", "expected": "0xFE00"}, {"a": "0xBE00", "b": "0x7E01", "expected": "0x7E01"}, {"a": "0xBE00", "b": "0x8000", "expected": "0x0000"}, {"a": "0xBE00", "b": "0xBA00", "expected": "0x3A00"}, {"a": "0xBE00", "b": "0xBC00", "expected": "0x3C00"}, {"a": "0xBE00", "b": "0xBE00", "expected": "0x3E00"}, {"a": "0xBE00", "b": "0xC000", "expected": "0x4000"}, {"a": "0xBE00", "b": "0xC100", "expected": "0x4100"}, {"a": "0xBE00", "b": "0xC480", "expected": "0x4480"}, {"a": "0xBE00", "b": "0xFE00", "expected": "0x7E00"}, {"a": "0xC000", "b": "0x0000", "expected": "0x8000"}, {"a": "0xC000", "b": "0x0200", "expected": "0x8400"}, {"a": "0xC000", "b": "0x3A00", "expected": "0xBC00"}, {"a": "0xC000", "b": "0x3AAB", "expected": "0xBCAB"}, {"a": "0xC000", "b": "0x3C00", "expected": "0xBE00"}, {"a": "0xC000", "b": "0x3CAB", "expected": "0xBEAB"}, {"a": "0xC000", "b": "0x3E00", "expected": "0xC000"}, {"a": "0xC000", "b": "0x4000", "expected": "0xC200"}, {"a": "0xC000", "b": "0x4100", "expected": "0xC300"}, {"a": "0xC000", "b": "0x4480", "expected": "0xC680"}, {"a": "0xC000", "b": "0x7E00", "expected": "0xFE00"}, {"a": "0xC000", "b": "0x7E01", "expected": "0x7E01"}, {"a": "0xC000", "b": "0x8000", "expected": "0x0000"}, {"a": "0xC000", "b": "0xBA00", "expected": "0x3C00"}, {"a": "0xC000", "b": "0xBC00", "expected": "0x3E00"}, {"a": "0xC000", "b": "0xBE00", "expected": "0x4000"}, {"a": "0xC000", "b": "0xC000", "expected": "0x4200"}, {"a": "0xC000", "b": "0xC100", "expected": "0x4300"}, {"a": "0xC000", "b": "0xC480", "expected": "0x4680"}, {"a": "0xC000", "b": "0xFE00", "expected": "0x7E00"}, {"a": "0xC100", "b": "0x0000", "expected": "0x8000"}, {"a": "0xC100", "b": "0x0200", "expected": "0x8500"}, {"a": "0xC100", "b": "0x3A00", "expected": "0xBD00"}, {"a": "0xC100", "b": "0x3AAB", "expected": "0xBE00"}, {"a": "0xC100", "b": "0x3C00", "expected": "0xBF00"}, {"a": "0xC100", "b": "0x3CAB", "expected": "0xC000"}, {"a": "0xC100", "b": "0x3E00", "expected": "0xC100"}, {"a": "0xC100", "b": "0x4000", "expected": "0xC300"}, {"a": "0xC100", "b": "0x4100", "expected": "0xC440"}, {"a": "0xC100", "b": "0x4480", "expected": "0xC7C0"}, {"a": "0xC100", "b": "0x7E00", "expected": "0xFE00"}, {"a": "0xC100", "b": "0x7E01", "expected": "0x7E01"}, {"a": "0xC100", "b": "0x8000", "expected": "0x0000"}, {"a": "0xC100", "b": "0xBA00", "expected": "0x3D00"}, {"a": "0xC100", "b": "0xBC00", "expected": "0x3F00"}, {"a": "0xC100", "b": "0xBE00", "expected": "0x4100"}, {"a": "0xC100", "b": "0xC000", "expected": "0x4300"}, {"a": "0xC100", "b": "0xC100", "expected": "0x4440"}, {"a": "0xC100", "b": "0xC480", "expected": "0x47C0"}, {"a": "0xC100", "b": "0xFE00", "expected": "0x7E00"}, {"a": "0xC480", "b": "0x0000", "expected": "0x8000"}, {"a": "0xC480", "b": "0x0200", "expected": "0x8880"}, {"a": "0xC480", "b": "0x3A00", "expected": "0xC080"}, {"a": "0xC480", "b": "0x3AAB", "expected": "0xC156"}, {"a": "0xC480", "b": "0x3C00", "expected": "0xC280"}, {"a": "0xC480", "b": "0x3CAB", "expected": "0xC356"}, {"a": "0xC480", "b": "0x3E00", "expected": "0xC480"}, {"a": "0xC480", "b": "0x4000", "expected": "0xC680"}, {"a": "0xC480", "b": "0x4100", "expected": "0xC7C0"}, {"a": "0xC480", "b": "0x4480", "expected": "0xCB20"}, {"a": "0xC480", "b": "0x7E00", "expected": "0xFE00"}, {"a": "0xC480", "b": "0x7E01", "expected": "0x7E01"}, {"a": "0xC480", "b": "0x8000", "expected": "0x0000"}, {"a": "0xC480", "b": "0xBA00", "expected": "0x4080"}, {"a": "0xC480", "b": "0xBC00", "expected": "0x4280"}, {"a": "0xC480", "b": "0xBE00", "expected": "0x4480"}, {"a": "0xC480", "b": "0xC000", "expected": "0x4680"}, {"a": "0xC480", "b": "0xC100", "expected": "0x47C0"}, {"a": "0xC480", "b": "0xC480", "expected": "0x4B20"}, {"a": "0xC480", "b": "0xFE00", "expected": "0x7E00"}, {"a": "0xFE00", "b": "0x0000", "expected": "0x7E01"}, {"a": "0xFE00", "b": "0x0200", "expected": "0xFE00"}, {"a": "0xFE00", "b": "0x3A00", "expected": "0xFE00"}, {"a": "0xFE00", "b": "0x3AAB", "expected": "0xFE00"}, {"a": "0xFE00", "b": "0x3C00", "expected": "0xFE00"}, {"a": "0xFE00", "b": "0x3CAB", "expected": "0xFE00"}, {"a": "0xFE00", "b": "0x3E00", "expected": "0xFE00"}, {"a": "0xFE00", "b": "0x4000", "expected": "0xFE00"}, {"a": "0xFE00", "b": "0x4100", "expected": "0xFE00"}, {"a": "0xFE00", "b": "0x4480", "expected": "0xFE00"}, {"a": "0xFE00", "b": "0x7E00", "expected": "0xFE00"}, {"a": "0xFE00", "b": "0x7E01", "expected": "0x7E01"}, {"a": "0xFE00", "b": "0x8000", "expected": "0x7E01"}, {"a": "0xFE00", "b": "0xBA00", "expected": "0x7E00"}, {"a": "0xFE00", "b": "0xBC00", "expected": "0x7E00"}, {"a": "0xFE00", "b": "0xBE00", "expected": "0x7E00"}, {"a": "0xFE00", "b": "0xC000", "expected": "0x7E00"}, {"a": "0xFE00", "b": "0xC100", "expected": "0x7E00"}, {"a": "0xFE00", "b": "0xC480", "expected": "0x7E00"}, {"a": "0xFE00", "b": "0xFE00", "expected": "0x7E00"}, {"a": "0x07E7", "b": "0x0D0B", "expected": "0x0000"}, {"a": "0xC972", "b": "0x4DC6", "expected": "0xD940"}, {"a": "0x88E3", "b": "0x7D1B", "expected": "0xC83E"}, {"a": "0xA92D", "b": "0x451B", "expected": "0xB077"}, {"a": "0x6338", "b": "0x3AAF", "expected": "0x6029"}, {"a": "0x2CC2", "b": "0x5AF8", "expected": "0x4A0C"}, {"a": "0xD8DE", "b": "0xBEAA", "expected": "0x59D2"}, {"a": "0xA269", "b": "0x1EF7", "expected": "0x8393"}, {"a": "0xC471", "b": "0x20C8", "expected": "0xA765"}, {"a": "0x20CC", "b": "0x4F92", "expected": "0x327F"}, {"a": "0xEEF4", "b": "0xE063", "expected": "0x7E00"}, {"a": "0x1909", "b": "0x84BE", "expected": "0x8000"}, {"a": "0xA099", "b": "0x47B0", "expected": "0xAA65"}, {"a": "0xAD0B", "b": "0xC6B8", "expected": "0x3611"}, {"a": "0xC972", "b": "0x6B12", "expected": "0xF6A5"}, {"a": "0x7D6A", "b": "0x8A36", "expected": "0xC9C6"}, {"a": "0xBEAA", "b": "0xC471", "expected": "0x4541"}, {"a": "0xD4EE", "b": "0xCFF2", "expected": "0x66E4"}, {"a": "0xEA0D", "b": "0x9ED7", "expected": "0x4AE9"}, {"a": "0x1861", "b": "0x9BE2", "expected": "0x8009"}, {"a": "0x4584", "b": "0x2936", "expected": "0x30D2"}, {"a": "0x8954", "b": "0x3CAB", "expected": "0x8838"}, {"a": "0xB54A", "b": "0x1679", "expected": "0x8E08"}, {"a": "0x534F", "b": "0xEBA3", "expected": "0xFE00"}, {"a": "0xDA77", "b": "0xE92A", "expected": "0x7E00"}, {"a": "0xEDDA", "b": "0xBEAA", "expected": "0x6E91"}, {"a": "0x0A1A", "b": "0xA676", "expected": "0x8003"}, {"a": "0x514F", "b": "0x58CB", "expected": "0x6C4F"}, {"a": "0x8900", "b": "0x480C", "expected": "0x9312"}, {"a": "0xF451", "b": "0x6D5C", "expected": "0xFE00"}, {"a": "0x07E7", "b": "0x9B3D", "expected": "0x8000"}, {"a": "0xD149", "b": "0xCCE0", "expected": "0x605C"}, {"a": "0x9D33", "b": "0x3E27", "expected": "0x9D71"}, {"a": "0xBE2E", "b": "0x62A2", "expected": "0xE2DF"}, {"a": "0xA6C4", "b": "0xAD80", "expected": "0x166C"}, {"a": "0xE063", "b": "0x6A98", "expected": "0xFE00"}, {"a": "0x3C00", "b": "0xDBDD", "expected": "0xD9DD"}, {"a": "0x7D1B", "b": "0x9718", "expected": "0xD667"}, {"a": "0x2D35", "b": "0x54D9", "expected": "0x4448"}, {"a": "0xEF12", "b": "0xA14E", "expected": "0x5289"}, {"a": "0xA099", "b": "0x4B55", "expected": "0xAE2A"}, {"a": "0xEA0D", "b": "0x50EE", "expected": "0xFD01"}, {"a": "0x1679", "b": "0xBEAA", "expected": "0x974B"}, {"a": "0xF072", "b": "0x7D1B", "expected": "0xFE00"}, {"a": "0x7F64", "b": "0x229A", "expected": "0x7E01"}, {"a": "0x69E6", "b": "0xB54A", "expected": "0xE135"}, {"a": "0x3CAB", "b": "0x1496", "expected": "0x1373"}, {"a": "0xC5F4", "b": "0xCCA7", "expected": "0x549F"}, {"a": "0x534F", "b": "0x4000", "expected": "0x554F"}, {"a": "0x0000", "b": "0x8C9A", "expected": "0x8000"}, {"a": "0x8A36", "b": "0xD449", "expected": "0x2087"}, {"a": "0x8863", "b": "0x4F92", "expected": "0x9A21"}, {"a": "0x9718", "b": "0x5E0F", "expected": "0xB72F"}, {"a": "0x1A41", "b": "0x3CAB", "expected": "0x1902"}, {"a": "0xDA77", "b": "0x47B0", "expected": "0xE446"}, {"a": "0xDA58", "b": "0xF3EA", "expected": "0x7E00"}, {"a": "0x8863", "b": "0xB618", "expected": "0x0140"}, {"a": "0xB618", "b": "0xED30", "expected": "0x6556"}, {"a": "0x1861", "b": "0x7398", "expected": "0x4E23"}, {"a": "0x9718", "b": "0x9A0C", "expected": "0x0003"}, {"a": "0x543F", "b": "0xEBA3", "expected": "0xFE00"}, {"a": "0x69E6", "b": "0x20C8", "expected": "0x4CB6"}, {"a": "0x6A98", "b": "0xE35E", "expected": "0xFE00"}, {"a": "0x7F64", "b": "0x3C00", "expected": "0x7E01"}, {"a": "0x62A2", "b": "0xB54A", "expected": "0xDA2A"}, {"a": "0x6803", "b": "0x8254", "expected": "0xAC57"}, {"a": "0x3CAB", "b": "0x5B9B", "expected": "0x5A68"}, {"a": "0x9A0C", "b": "0x3B1C", "expected": "0x972F"}, {"a": "0x2AE9", "b": "0xCE67", "expected": "0xBB7F"}, {"a": "0xF416", "b": "0xA14E", "expected": "0x5772"}, {"a": "0x4DC6", "b": "0x3A00", "expected": "0x49C6"}, {"a": "0x54D9", "b": "0xC471", "expected": "0xDB7A"}, {"a": "0x54D9", "b": "0x9718", "expected": "0xAE34"}, {"a": "0x4500", "b": "0x18EA", "expected": "0x2030"}, {"a": "0x543F", "b": "0xDA58", "expected": "0xF0A2"}, {"a": "0x20CC", "b": "0x3A00", "expected": "0x1CCC"}, {"a": "0x4B55", "b": "0x2936", "expected": "0x36AD"}, {"a": "0x4000", "b": "0x8EB1", "expected": "0x90B1"}, {"a": "0x8DFB", "b": "0xAE46", "expected": "0x0091"}, {"a": "0x2936", "b": "0xF002", "expected": "0xDB39"}, {"a": "0x3E27", "b": "0x1679", "expected": "0x16A9"}, {"a": "0x0D0B", "b": "0x3C00", "expected": "0x0B0B"}, {"a": "0x2D35", "b": "0xCB9B", "expected": "0xBAE4"}, {"a": "0x4CD1", "b": "0x534F", "expected": "0x6254"}, {"a": "0xE8B4", "b": "0xDBFB", "expected": "0x7E00"}, {"a": "0x05B6", "b": "0x62A2", "expected": "0x2A71"}, {"a": "0x3A93", "b": "0x4142", "expected": "0x3E19"}, {"a": "0xB589", "b": "0x7D6A", "expected": "0xF504"}, {"a": "0x3E00", "b": "0x0033", "expected": "0x0033"}, {"a": "0x164B", "b": "0xA269", "expected": "0x802C"}, {"a": "0xC471", "b": "0x8254", "expected": "0x08D8"}, {"a": "0x8A5C", "b": "0xCB9B", "expected": "0x1820"}, {"a": "0xEA0D", "b": "0x62A2", "expected": "0xFE00"}, {"a": "0xA14E", "b": "0x69E6", "expected": "0xCD39"}, {"a": "0x3B1C", "b": "0x42D8", "expected": "0x4036"}, {"a": "0xF45C", "b": "0x8AB6", "expected": "0x4133"}, {"a": "0x2F6A", "b": "0x510D", "expected": "0x429B"}, {"a": "0x4000", "b": "0x9AF0", "expected": "0x9CF0"}, {"a": "0x20C8", "b": "0xA727", "expected": "0x8A31"}, {"a": "0x3A93", "b": "0x995F", "expected": "0x962B"}, {"a": "0x9AF0", "b": "0x8E64", "expected": "0x0000"}, {"a": "0xA727", "b": "0xDBDD", "expected": "0x450B"}, {"a": "0xDA77", "b": "0xD8DE", "expected": "0x7589"}, {"a": "0xAD0B", "b": "0x27DC", "expected": "0x96F0"}, {"a": "0x48F0", "b": "0xDA77", "expected": "0xE59F"}, {"a": "0x7983", "b": "0x4E09", "expected": "0x7E00"}, {"a": "0x6A98", "b": "0x1496", "expected": "0x415B"}, {"a": "0x27DC", "b": "0x33BD", "expected": "0x1D9B"}, {"a": "0xE8B4", "b": "0xE44F", "expected": "0x7E00"}, {"a": "0x62A2", "b": "0x3A93", "expected": "0x5F64"}, {"a": "0x4CD1", "b": "0x2D35", "expected": "0x3C42"}, {"a": "0x6B8A", "b": "0x5DAE", "expected": "0x7E00"}, {"a": "0x05B6", "b": "0x1107", "expected": "0x0000"}, {"a": "0x4F92", "b": "0xAD80", "expected": "0xBF20"}, {"a": "0x521B", "b": "0x6D5C", "expected": "0x7E00"}, {"a": "0x8254", "b": "0x58CB", "expected": "0x9D40"}, {"a": "0x1496", "b": "0x20C8", "expected": "0x000E"}, {"a": "0xF8A4", "b": "0x7B63", "expected": "0xFE00"}, {"a": "0x4D8A", "b": "0x759A", "expected": "0x7E00"}, {"a": "0x9C96", "b": "0xCB9B", "expected": "0x2A55"}, {"a": "0x8254", "b": "0x18EA", "expected": "0x8000"}, {"a": "0x8AC4", "b": "0x3B1C", "expected": "0x8826"}, {"a": "0x3E45", "b": "0x4142", "expected": "0x41B2"}, {"a": "0x60DF", "b": "0xF451", "expected": "0xFE00"}, {"a": "0x33BD", "b": "0x14B9", "expected": "0x0A8B"}, {"a": "0x8900", "b": "0xCC67", "expected": "0x179A"}, {"a": "0xDD2B", "b": "0xFE5C", "expected": "0x7E01"}, {"a": "0xAD80", "b": "0xD8DE", "expected": "0x4882"}, {"a": "0x759A", "b": "0x0D0B", "expected": "0x44BD"}, {"a": "0xF454", "b": "0x4000", "expected": "0xF654"}, {"a": "0xA6C4", "b": "0x3B1C", "expected": "0xA426"}, {"a": "0xDEE0", "b": "0x6733", "expected": "0xFE00"}, {"a": "0x50EE", "b": "0xEDDA", "expected": "0xFE00"}, {"a": "0xEBBE", "b": "0x3C00", "expected": "0xE9BE"}, {"a": "0x1679", "b": "0x5E0F", "expected": "0x368C"}, {"a": "0x4000", "b": "0x8A36", "expected": "0x8C36"}, {"a": "0x2075", "b": "0xAD9E", "expected": "0x9039"}, {"a": "0x4FE6", "b": "0xB589", "expected": "0xC772"}, {"a": "0x229A", "b": "0x995F", "expected": "0x808C"}, {"a": "0x8A36", "b": "0x20C8", "expected": "0x8000"}, {"a": "0xD7EA", "b": "0xA92D", "expected": "0x431C"}, {"a": "0xD3FE", "b": "0xA6C4", "expected": "0x3CC3"}, {"a": "0x5AF8", "b": "0xE063", "expected": "0xFD8B"}, {"a": "0xE742", "b": "0xE063", "expected": "0x7E00"}, {"a": "0x3AAF", "b": "0x8C9A", "expected": "0x897E"}, {"a": "0xDBFB", "b": "0xCC67", "expected": "0x6A64"}, {"a": "0x8EB1", "b": "0xA727", "expected": "0x0011"}, {"a": "0x5B9B", "b": "0x8DFB", "expected": "0xAB96"}, {"a": "0x33BD", "b": "0x3A00", "expected": "0x2FBD"}, {"a": "0x3192", "b": "0x0787", "expected": "0x0032"}, {"a": "0x8254", "b": "0xDD2B", "expected": "0x21B0"}, {"a": "0x8E64", "b": "0x8AC4", "expected": "0x0000"}, {"a": "0xAE46", "b": "0xBE2E", "expected": "0x2E7A"}, {"a": "0x6D5C", "b": "0x9DD3", "expected": "0xCD36"}, {"a": "0xB618", "b": "0x3D31", "expected": "0xB557"}, {"a": "0x8C9A", "b": "0x2075", "expected": "0x8001"}, {"a": "0x73EA", "b": "0x8954", "expected": "0xBF42"}, {"a": "0x9C96", "b": "0x8C22", "expected": "0x0000"}, {"a": "0xBE2E", "b": "0x8C22", "expected": "0x0C53"}, {"a": "0x1679", "b": "0xB618", "expected": "0x8E97"}, {"a": "0xA727", "b": "0x3E45", "expected": "0xA794"}, {"a": "0x1679", "b": "0xD8DE", "expected": "0xB18B"}, {"a": "0x0026", "b": "0xF072", "expected": "0xACE7"}, {"a": "0x3CAB", "b": "0xE8B4", "expected": "0xE79B"}, {"a": "0xAE46", "b": "0xB56E", "expected": "0x25E6"}, {"a": "0x0033", "b": "0xEDDA", "expected": "0xAB12"}, {"a": "0x4D8A", "b": "0xDEE0", "expected": "0xEE8B"}, {"a": "0xD3FE", "b": "0x8254", "expected": "0x1853"}, {"a": "0xDA77", "b": "0xEBBE", "expected": "0x7E00"}, {"a": "0x1909", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0A1A", "b": "0x0033", "expected": "0x0000"}, {"a": "0x4FE6", "b": "0x08FD", "expected": "0x1AEA"}, {"a": "0x6199", "b": "0xA269", "expected": "0xC62B"}, {"a": "0x9718", "b": "0x9DD3", "expected": "0x000C"}, {"a": "0x86E5", "b": "0xCB9B", "expected": "0x149C"}, {"a": "0xAD80", "b": "0x2075", "expected": "0x9026"}, {"a": "0x8A36", "b": "0xDD2B", "expected": "0x2981"}, {"a": "0x62A2", "b": "0x0DB1", "expected": "0x326E"}, {"a": "0x7D6A", "b": "0xCFF2", "expected": "0xFE00"}, {"a": "0x6338", "b": "0x8C22", "expected": "0xB16F"}, {"a": "0x7D1B", "b": "0xB589", "expected": "0xF4BF"}, {"a": "0x510D", "b": "0xED30", "expected": "0xFE00"}, {"a": "0xDEE0", "b": "0x20C8", "expected": "0xC200"}, {"a": "0x9C07", "b": "0xF45C", "expected": "0x5264"}, {"a": "0xCE67", "b": "0x0000", "expected": "0x8000"}, {"a": "0x7F64", "b": "0x8189", "expected": "0x7E01"}, {"a": "0xCCE0", "b": "0x0A1A", "expected": "0x9905"}, {"a": "0xA099", "b": "0xE44F", "expected": "0x4700"}, {"a": "0x8AC4", "b": "0x4B55", "expected": "0x984E"}, {"a": "0xB618", "b": "0x3C00", "expected": "0xB418"}, {"a": "0xA14E", "b": "0x8EB1", "expected": "0x0002"}, {"a": "0x3AAB", "b": "0x54D9", "expected": "0x51CC"}, {"a": "0x164B", "b": "0x9C96", "expected": "0x8006"}, {"a": "0x6D5C", "b": "0xBD69", "expected": "0xECDD"}, {"a": "0x6B12", "b": "0xA676", "expected": "0xD3C7"}, {"a": "0x759A", "b": "0x9A0C", "expected": "0xD1B0"}, {"a": "0xD7A4", "b": "0x8A5C", "expected": "0x2426"}, {"a": "0x229A", "b": "0x3E00", "expected": "0x229A"}, {"a": "0xE742", "b": "0x18EA", "expected": "0xC260"}, {"a": "0x48F0", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x48F0", "expected": "0x0000"}, {"a": "0xB54A", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0xB54A", "expected": "0x8000"}, {"a": "0x28BC", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x28BC", "expected": "0x0000"}, {"a": "0xF45C", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0xF45C", "expected": "0x8000"}, {"a": "0xDA58", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0xDA58", "expected": "0x8000"}, {"a": "0x5DAE", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x5DAE", "expected": "0x0000"}, {"a": "0x60DF", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x60DF", "expected": "0x0000"}, {"a": "0x1A41", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x1A41", "expected": "0x0000"}, {"a": "0xDEE0", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0xDEE0", "expected": "0x8000"}, {"a": "0x4F92", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x4F92", "expected": "0x0000"}, {"a": "0x3B1C", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x3B1C", "expected": "0x0000"}, {"a": "0x0DB1", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x0DB1", "expected": "0x0000"}, {"a": "0xB618", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0xB618", "expected": "0x8000"}, {"a": "0x07E7", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x07E7", "expected": "0x0000"}, {"a": "0x3AAF", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x3AAF", "expected": "0x0000"}, {"a": "0x9AF0", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0x9AF0", "expected": "0x8000"}, {"a": "0x3A93", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x3A93", "expected": "0x0000"}, {"a": "0xA92D", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0xA92D", "expected": "0x8000"}, {"a": "0xBD69", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0xBD69", "expected": "0x8000"}, {"a": "0xF072", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0xF072", "expected": "0x8000"}, {"a": "0xC471", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0xC471", "expected": "0x8000"}, {"a": "0xBBFA", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0xBBFA", "expected": "0x8000"}, {"a": "0x534F", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x534F", "expected": "0x0000"}, {"a": "0x8AC4", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0x8AC4", "expected": "0x8000"}, {"a": "0xD7A4", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0xD7A4", "expected": "0x8000"}, {"a": "0x2CC2", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x2CC2", "expected": "0x0000"}, {"a": "0xED30", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0xED30", "expected": "0x8000"}, {"a": "0x9ED7", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0x9ED7", "expected": "0x8000"}, {"a": "0xA676", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0xA676", "expected": "0x8000"}, {"a": "0x5AF8", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x5AF8", "expected": "0x0000"}, {"a": "0xCFF2", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0xCFF2", "expected": "0x8000"}, {"a": "0xF3EA", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0xF3EA", "expected": "0x8000"}, {"a": "0x0A1A", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x0A1A", "expected": "0x0000"}, {"a": "0x3192", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x3192", "expected": "0x0000"}, {"a": "0xE742", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0xE742", "expected": "0x8000"}, {"a": "0x8A36", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0x8A36", "expected": "0x8000"}, {"a": "0x995F", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0x995F", "expected": "0x8000"}, {"a": "0xBEAA", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0xBEAA", "expected": "0x8000"}, {"a": "0xA14E", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0xA14E", "expected": "0x8000"}, {"a": "0x7F64", "b": "0x0000", "expected": "0x7E01"}, {"a": "0x0000", "b": "0x7F64", "expected": "0x7E01"}, {"a": "0xC03F", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0xC03F", "expected": "0x8000"}, {"a": "0x2D35", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x2D35", "expected": "0x0000"}, {"a": "0xE8B4", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0xE8B4", "expected": "0x8000"}, {"a": "0xDD2B", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0xDD2B", "expected": "0x8000"}, {"a": "0x510D", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x510D", "expected": "0x0000"}, {"a": "0xAD80", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0xAD80", "expected": "0x8000"}, {"a": "0xEA0D", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0xEA0D", "expected": "0x8000"}, {"a": "0x4DC6", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x4DC6", "expected": "0x0000"}, {"a": "0x27DC", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x27DC", "expected": "0x0000"}, {"a": "0x8189", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0x8189", "expected": "0x8000"}, {"a": "0x6803", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x6803", "expected": "0x0000"}, {"a": "0x9BE2", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0x9BE2", "expected": "0x8000"}, {"a": "0x0E1F", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x0E1F", "expected": "0x0000"}, {"a": "0x8EB1", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0x8EB1", "expected": "0x8000"}, {"a": "0xF002", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0xF002", "expected": "0x8000"}, {"a": "0xAE46", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0xAE46", "expected": "0x8000"}, {"a": "0x08FD", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x08FD", "expected": "0x0000"}, {"a": "0xA727", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0xA727", "expected": "0x8000"}, {"a": "0x759A", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x759A", "expected": "0x0000"}, {"a": "0xA3EE", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0xA3EE", "expected": "0x8000"}, {"a": "0x9DD3", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0x9DD3", "expected": "0x8000"}, {"a": "0x543F", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x543F", "expected": "0x0000"}, {"a": "0x0026", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x0026", "expected": "0x0000"}, {"a": "0xDA77", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0xDA77", "expected": "0x8000"}, {"a": "0x6A98", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x6A98", "expected": "0x0000"}, {"a": "0xD149", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0xD149", "expected": "0x8000"}, {"a": "0x3509", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x3509", "expected": "0x0000"}, {"a": "0xA6C4", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0xA6C4", "expected": "0x8000"}, {"a": "0x8AB6", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0x8AB6", "expected": "0x8000"}, {"a": "0x6338", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x6338", "expected": "0x0000"}, {"a": "0x47B0", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x47B0", "expected": "0x0000"}, {"a": "0xEBBE", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0xEBBE", "expected": "0x8000"}, {"a": "0x6199", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x6199", "expected": "0x0000"}, {"a": "0x9B3D", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0x9B3D", "expected": "0x8000"}, {"a": "0x2075", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x2075", "expected": "0x0000"}, {"a": "0x8254", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0x8254", "expected": "0x8000"}, {"a": "0x5E0F", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x5E0F", "expected": "0x0000"}, {"a": "0x70AB", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x70AB", "expected": "0x0000"}, {"a": "0x8954", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0x8954", "expected": "0x8000"}, {"a": "0x4584", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x4584", "expected": "0x0000"}, {"a": "0x14B9", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x14B9", "expected": "0x0000"}, {"a": "0xB612", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0xB612", "expected": "0x8000"}, {"a": "0x17CE", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x17CE", "expected": "0x0000"}, {"a": "0xAECA", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0xAECA", "expected": "0x8000"}, {"a": "0x1679", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x1679", "expected": "0x0000"}, {"a": "0x521B", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x521B", "expected": "0x0000"}, {"a": "0x4500", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x4500", "expected": "0x0000"}, {"a": "0x69E6", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x69E6", "expected": "0x0000"}, {"a": "0x6D5C", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x6D5C", "expected": "0x0000"}, {"a": "0xE063", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0xE063", "expected": "0x8000"}, {"a": "0x514F", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x514F", "expected": "0x0000"}, {"a": "0x20C6", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x20C6", "expected": "0x0000"}, {"a": "0x9718", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0x9718", "expected": "0x8000"}, {"a": "0x8E64", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0x8E64", "expected": "0x8000"}, {"a": "0x1E5E", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x1E5E", "expected": "0x0000"}, {"a": "0xC5C5", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0xC5C5", "expected": "0x8000"}, {"a": "0xDBDD", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0xDBDD", "expected": "0x8000"}, {"a": "0x8863", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0x8863", "expected": "0x8000"}, {"a": "0x84BE", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0x84BE", "expected": "0x8000"}, {"a": "0x0D0B", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x0D0B", "expected": "0x0000"}, {"a": "0x2936", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x2936", "expected": "0x0000"}, {"a": "0x33BD", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x33BD", "expected": "0x0000"}, {"a": "0x8A5C", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0x8A5C", "expected": "0x8000"}, {"a": "0xCC67", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0xCC67", "expected": "0x8000"}, {"a": "0x7398", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x7398", "expected": "0x0000"}, {"a": "0x1EF7", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x1EF7", "expected": "0x0000"}, {"a": "0x0787", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x0787", "expected": "0x0000"}, {"a": "0x54D9", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x54D9", "expected": "0x0000"}, {"a": "0x7765", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x7765", "expected": "0x0000"}, {"a": "0xAD0B", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0xAD0B", "expected": "0x8000"}, {"a": "0x4B55", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x4B55", "expected": "0x0000"}, {"a": "0x480C", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x480C", "expected": "0x0000"}, {"a": "0xD3FE", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0xD3FE", "expected": "0x8000"}, {"a": "0x1496", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x1496", "expected": "0x0000"}, {"a": "0x0033", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x0033", "expected": "0x0000"}, {"a": "0xDBFB", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0xDBFB", "expected": "0x8000"}, {"a": "0x8900", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0x8900", "expected": "0x8000"}, {"a": "0xEDDA", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0xEDDA", "expected": "0x8000"}, {"a": "0xC5F4", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0xC5F4", "expected": "0x8000"}, {"a": "0xD7EA", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0xD7EA", "expected": "0x8000"}, {"a": "0x20CC", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x20CC", "expected": "0x0000"}, {"a": "0x9D33", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0x9D33", "expected": "0x8000"}, {"a": "0xA963", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0xA963", "expected": "0x8000"}, {"a": "0xF1DB", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0xF1DB", "expected": "0x8000"}, {"a": "0xA269", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0xA269", "expected": "0x8000"}, {"a": "0x4CD1", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x4CD1", "expected": "0x0000"}, {"a": "0x18EA", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x18EA", "expected": "0x0000"}, {"a": "0x6733", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x6733", "expected": "0x0000"}, {"a": "0x05B6", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x05B6", "expected": "0x0000"}, {"a": "0x164B", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x164B", "expected": "0x0000"}, {"a": "0xD4EE", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0xD4EE", "expected": "0x8000"}, {"a": "0xE92A", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0xE92A", "expected": "0x8000"}, {"a": "0x7983", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x7983", "expected": "0x0000"}, {"a": "0x8DFB", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0x8DFB", "expected": "0x8000"}, {"a": "0x3E27", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x3E27", "expected": "0x0000"}, {"a": "0xAD9E", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0xAD9E", "expected": "0x8000"}, {"a": "0xCCE0", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0xCCE0", "expected": "0x8000"}, {"a": "0x0000", "b": "0x1909", "expected": "0x0000"}, {"a": "0x7D1B", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x7D1B", "expected": "0x0000"}, {"a": "0x229A", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x229A", "expected": "0x0000"}, {"a": "0x8C9A", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0xCE67", "expected": "0x8000"}, {"a": "0xE44F", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0xE44F", "expected": "0x8000"}, {"a": "0x50EE", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x50EE", "expected": "0x0000"}, {"a": "0x73EA", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x73EA", "expected": "0x0000"}, {"a": "0x9C07", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0x9C07", "expected": "0x8000"}, {"a": "0xE35E", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0xE35E", "expected": "0x8000"}, {"a": "0x3D31", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x3D31", "expected": "0x0000"}, {"a": "0x6B12", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x6B12", "expected": "0x0000"}, {"a": "0x4D8A", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x4D8A", "expected": "0x0000"}, {"a": "0xC972", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0xC972", "expected": "0x8000"}, {"a": "0xB56E", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0xB56E", "expected": "0x8000"}, {"a": "0xF8A4", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0xF8A4", "expected": "0x8000"}, {"a": "0xD8DE", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0xD8DE", "expected": "0x8000"}, {"a": "0x2B1E", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x2B1E", "expected": "0x0000"}, {"a": "0x88E3", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0x88E3", "expected": "0x8000"}, {"a": "0xFE5C", "b": "0x0000", "expected": "0x7E01"}, {"a": "0x0000", "b": "0xFE5C", "expected": "0x7E01"}, {"a": "0x5B9B", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x5B9B", "expected": "0x0000"}, {"a": "0x451B", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x451B", "expected": "0x0000"}, {"a": "0xC6B8", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0xC6B8", "expected": "0x8000"}, {"a": "0xF416", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0xF416", "expected": "0x8000"}, {"a": "0x4E09", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x4E09", "expected": "0x0000"}, {"a": "0xB589", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0xB589", "expected": "0x8000"}, {"a": "0x4FE6", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x4FE6", "expected": "0x0000"}, {"a": "0x4142", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x4142", "expected": "0x0000"}, {"a": "0xD449", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0xD449", "expected": "0x8000"}, {"a": "0x7D6A", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x7D6A", "expected": "0x0000"}, {"a": "0x1D26", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x1D26", "expected": "0x0000"}, {"a": "0xB1CC", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0xB1CC", "expected": "0x8000"}, {"a": "0x8C22", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0x8C22", "expected": "0x8000"}, {"a": "0xEBA3", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0xEBA3", "expected": "0x8000"}, {"a": "0x42D8", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x42D8", "expected": "0x0000"}, {"a": "0x6B8A", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x6B8A", "expected": "0x0000"}, {"a": "0xCCA7", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0xCCA7", "expected": "0x8000"}, {"a": "0x5D0D", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x5D0D", "expected": "0x0000"}, {"a": "0x7B63", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x7B63", "expected": "0x0000"}, {"a": "0x563C", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x563C", "expected": "0x0000"}, {"a": "0x9C96", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0x9C96", "expected": "0x8000"}, {"a": "0x3E45", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x3E45", "expected": "0x0000"}, {"a": "0xBE2E", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0xBE2E", "expected": "0x8000"}, {"a": "0x60A3", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x60A3", "expected": "0x0000"}, {"a": "0xEEF4", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0xEEF4", "expected": "0x8000"}, {"a": "0x58CB", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x58CB", "expected": "0x0000"}, {"a": "0xF451", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0xF451", "expected": "0x8000"}, {"a": "0x1107", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x1107", "expected": "0x0000"}, {"a": "0xCB9B", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0xCB9B", "expected": "0x8000"}, {"a": "0x5520", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x5520", "expected": "0x0000"}, {"a": "0xF454", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0xF454", "expected": "0x8000"}, {"a": "0xA4BD", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0xA4BD", "expected": "0x8000"}, {"a": "0x9E69", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0x9E69", "expected": "0x8000"}, {"a": "0x2AE9", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x2AE9", "expected": "0x0000"}, {"a": "0x20C8", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x20C8", "expected": "0x0000"}, {"a": "0xA099", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0xA099", "expected": "0x8000"}, {"a": "0x86E5", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0x86E5", "expected": "0x8000"}, {"a": "0x62A2", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x62A2", "expected": "0x0000"}, {"a": "0x1861", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x1861", "expected": "0x0000"}, {"a": "0x9A0C", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0x9A0C", "expected": "0x8000"}, {"a": "0x2F6A", "b": "0x0000", "expected": "0x0000"}, {"a": "0x0000", "b": "0x2F6A", "expected": "0x0000"}, {"a": "0xEF12", "b": "0x0000", "expected": "0x8000"}, {"a": "0x0000", "b": "0xEF12", "expected": "0x8000"}]}
+{
+ "format": "gf16",
+ "operation": "mul",
+ "oracle": "gf_ref.py",
+ "family": "gf",
+ "width": 16,
+ "specials": {
+  "pos_zero": "0x0000",
+  "neg_zero": "0x8000",
+  "pos_inf": "0x7E00",
+  "neg_inf": "0xFE00",
+  "quiet_nan": "0x7E01"
+ },
+ "note": "exact Fraction decode/mul/encode, round-ties-even. DIVERGES FROM specs/numeric/gf16.t27 IN TWO WAYS, and the difference is in the expected values here: (1) the spec declares GF16_NAN = 0xFE01, with the sign bit set, while this oracle builds a quiet NaN family-generically as (exp_max << mant_bits) | 1 = 0x7E01; (2) the spec flushes subnormals to zero, this oracle uses gradual underflow. A spec-conformant design therefore disagrees with these vectors on those inputs and is not thereby wrong. Measured 2026-08-11: three independently stored copies of gf16_mul.v each produced exactly 110 mismatches out of 994 against this pack -- 55 NaN sign, 13 flushed subnormals, 4 one-LSB, 38 other.",
+ "vector_count": 994,
+ "vectors": [
+  {
+   "a": "0x0000",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x0200",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x3A00",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x3AAB",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x3C00",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x3CAB",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x3E00",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x4000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x4100",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x4480",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x7E00",
+   "expected": "0x7E01"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x7E01",
+   "expected": "0x7E01"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x8000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0xBA00",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0xBC00",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0xBE00",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0xC000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0xC100",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0xC480",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0xFE00",
+   "expected": "0x7E01"
+  },
+  {
+   "a": "0x0200",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0200",
+   "b": "0x0200",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0200",
+   "b": "0x3A00",
+   "expected": "0x0080"
+  },
+  {
+   "a": "0x0200",
+   "b": "0x3AAB",
+   "expected": "0x00AB"
+  },
+  {
+   "a": "0x0200",
+   "b": "0x3C00",
+   "expected": "0x0100"
+  },
+  {
+   "a": "0x0200",
+   "b": "0x3CAB",
+   "expected": "0x0156"
+  },
+  {
+   "a": "0x0200",
+   "b": "0x3E00",
+   "expected": "0x0200"
+  },
+  {
+   "a": "0x0200",
+   "b": "0x4000",
+   "expected": "0x0400"
+  },
+  {
+   "a": "0x0200",
+   "b": "0x4100",
+   "expected": "0x0500"
+  },
+  {
+   "a": "0x0200",
+   "b": "0x4480",
+   "expected": "0x0880"
+  },
+  {
+   "a": "0x0200",
+   "b": "0x7E00",
+   "expected": "0x7E00"
+  },
+  {
+   "a": "0x0200",
+   "b": "0x7E01",
+   "expected": "0x7E01"
+  },
+  {
+   "a": "0x0200",
+   "b": "0x8000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0200",
+   "b": "0xBA00",
+   "expected": "0x8080"
+  },
+  {
+   "a": "0x0200",
+   "b": "0xBC00",
+   "expected": "0x8100"
+  },
+  {
+   "a": "0x0200",
+   "b": "0xBE00",
+   "expected": "0x8200"
+  },
+  {
+   "a": "0x0200",
+   "b": "0xC000",
+   "expected": "0x8400"
+  },
+  {
+   "a": "0x0200",
+   "b": "0xC100",
+   "expected": "0x8500"
+  },
+  {
+   "a": "0x0200",
+   "b": "0xC480",
+   "expected": "0x8880"
+  },
+  {
+   "a": "0x0200",
+   "b": "0xFE00",
+   "expected": "0xFE00"
+  },
+  {
+   "a": "0x3A00",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x3A00",
+   "b": "0x0200",
+   "expected": "0x0080"
+  },
+  {
+   "a": "0x3A00",
+   "b": "0x3A00",
+   "expected": "0x3600"
+  },
+  {
+   "a": "0x3A00",
+   "b": "0x3AAB",
+   "expected": "0x36AB"
+  },
+  {
+   "a": "0x3A00",
+   "b": "0x3C00",
+   "expected": "0x3800"
+  },
+  {
+   "a": "0x3A00",
+   "b": "0x3CAB",
+   "expected": "0x38AB"
+  },
+  {
+   "a": "0x3A00",
+   "b": "0x3E00",
+   "expected": "0x3A00"
+  },
+  {
+   "a": "0x3A00",
+   "b": "0x4000",
+   "expected": "0x3C00"
+  },
+  {
+   "a": "0x3A00",
+   "b": "0x4100",
+   "expected": "0x3D00"
+  },
+  {
+   "a": "0x3A00",
+   "b": "0x4480",
+   "expected": "0x4080"
+  },
+  {
+   "a": "0x3A00",
+   "b": "0x7E00",
+   "expected": "0x7E00"
+  },
+  {
+   "a": "0x3A00",
+   "b": "0x7E01",
+   "expected": "0x7E01"
+  },
+  {
+   "a": "0x3A00",
+   "b": "0x8000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x3A00",
+   "b": "0xBA00",
+   "expected": "0xB600"
+  },
+  {
+   "a": "0x3A00",
+   "b": "0xBC00",
+   "expected": "0xB800"
+  },
+  {
+   "a": "0x3A00",
+   "b": "0xBE00",
+   "expected": "0xBA00"
+  },
+  {
+   "a": "0x3A00",
+   "b": "0xC000",
+   "expected": "0xBC00"
+  },
+  {
+   "a": "0x3A00",
+   "b": "0xC100",
+   "expected": "0xBD00"
+  },
+  {
+   "a": "0x3A00",
+   "b": "0xC480",
+   "expected": "0xC080"
+  },
+  {
+   "a": "0x3A00",
+   "b": "0xFE00",
+   "expected": "0xFE00"
+  },
+  {
+   "a": "0x3AAB",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x3AAB",
+   "b": "0x0200",
+   "expected": "0x00AB"
+  },
+  {
+   "a": "0x3AAB",
+   "b": "0x3A00",
+   "expected": "0x36AB"
+  },
+  {
+   "a": "0x3AAB",
+   "b": "0x3AAB",
+   "expected": "0x378F"
+  },
+  {
+   "a": "0x3AAB",
+   "b": "0x3C00",
+   "expected": "0x38AB"
+  },
+  {
+   "a": "0x3AAB",
+   "b": "0x3CAB",
+   "expected": "0x398F"
+  },
+  {
+   "a": "0x3AAB",
+   "b": "0x3E00",
+   "expected": "0x3AAB"
+  },
+  {
+   "a": "0x3AAB",
+   "b": "0x4000",
+   "expected": "0x3CAB"
+  },
+  {
+   "a": "0x3AAB",
+   "b": "0x4100",
+   "expected": "0x3E00"
+  },
+  {
+   "a": "0x3AAB",
+   "b": "0x4480",
+   "expected": "0x4156"
+  },
+  {
+   "a": "0x3AAB",
+   "b": "0x7E00",
+   "expected": "0x7E00"
+  },
+  {
+   "a": "0x3AAB",
+   "b": "0x7E01",
+   "expected": "0x7E01"
+  },
+  {
+   "a": "0x3AAB",
+   "b": "0x8000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x3AAB",
+   "b": "0xBA00",
+   "expected": "0xB6AB"
+  },
+  {
+   "a": "0x3AAB",
+   "b": "0xBC00",
+   "expected": "0xB8AB"
+  },
+  {
+   "a": "0x3AAB",
+   "b": "0xBE00",
+   "expected": "0xBAAB"
+  },
+  {
+   "a": "0x3AAB",
+   "b": "0xC000",
+   "expected": "0xBCAB"
+  },
+  {
+   "a": "0x3AAB",
+   "b": "0xC100",
+   "expected": "0xBE00"
+  },
+  {
+   "a": "0x3AAB",
+   "b": "0xC480",
+   "expected": "0xC156"
+  },
+  {
+   "a": "0x3AAB",
+   "b": "0xFE00",
+   "expected": "0xFE00"
+  },
+  {
+   "a": "0x3C00",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x3C00",
+   "b": "0x0200",
+   "expected": "0x0100"
+  },
+  {
+   "a": "0x3C00",
+   "b": "0x3A00",
+   "expected": "0x3800"
+  },
+  {
+   "a": "0x3C00",
+   "b": "0x3AAB",
+   "expected": "0x38AB"
+  },
+  {
+   "a": "0x3C00",
+   "b": "0x3C00",
+   "expected": "0x3A00"
+  },
+  {
+   "a": "0x3C00",
+   "b": "0x3CAB",
+   "expected": "0x3AAB"
+  },
+  {
+   "a": "0x3C00",
+   "b": "0x3E00",
+   "expected": "0x3C00"
+  },
+  {
+   "a": "0x3C00",
+   "b": "0x4000",
+   "expected": "0x3E00"
+  },
+  {
+   "a": "0x3C00",
+   "b": "0x4100",
+   "expected": "0x3F00"
+  },
+  {
+   "a": "0x3C00",
+   "b": "0x4480",
+   "expected": "0x4280"
+  },
+  {
+   "a": "0x3C00",
+   "b": "0x7E00",
+   "expected": "0x7E00"
+  },
+  {
+   "a": "0x3C00",
+   "b": "0x7E01",
+   "expected": "0x7E01"
+  },
+  {
+   "a": "0x3C00",
+   "b": "0x8000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x3C00",
+   "b": "0xBA00",
+   "expected": "0xB800"
+  },
+  {
+   "a": "0x3C00",
+   "b": "0xBC00",
+   "expected": "0xBA00"
+  },
+  {
+   "a": "0x3C00",
+   "b": "0xBE00",
+   "expected": "0xBC00"
+  },
+  {
+   "a": "0x3C00",
+   "b": "0xC000",
+   "expected": "0xBE00"
+  },
+  {
+   "a": "0x3C00",
+   "b": "0xC100",
+   "expected": "0xBF00"
+  },
+  {
+   "a": "0x3C00",
+   "b": "0xC480",
+   "expected": "0xC280"
+  },
+  {
+   "a": "0x3C00",
+   "b": "0xFE00",
+   "expected": "0xFE00"
+  },
+  {
+   "a": "0x3CAB",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x3CAB",
+   "b": "0x0200",
+   "expected": "0x0156"
+  },
+  {
+   "a": "0x3CAB",
+   "b": "0x3A00",
+   "expected": "0x38AB"
+  },
+  {
+   "a": "0x3CAB",
+   "b": "0x3AAB",
+   "expected": "0x398F"
+  },
+  {
+   "a": "0x3CAB",
+   "b": "0x3C00",
+   "expected": "0x3AAB"
+  },
+  {
+   "a": "0x3CAB",
+   "b": "0x3CAB",
+   "expected": "0x3B8F"
+  },
+  {
+   "a": "0x3CAB",
+   "b": "0x3E00",
+   "expected": "0x3CAB"
+  },
+  {
+   "a": "0x3CAB",
+   "b": "0x4000",
+   "expected": "0x3EAB"
+  },
+  {
+   "a": "0x3CAB",
+   "b": "0x4100",
+   "expected": "0x4000"
+  },
+  {
+   "a": "0x3CAB",
+   "b": "0x4480",
+   "expected": "0x4356"
+  },
+  {
+   "a": "0x3CAB",
+   "b": "0x7E00",
+   "expected": "0x7E00"
+  },
+  {
+   "a": "0x3CAB",
+   "b": "0x7E01",
+   "expected": "0x7E01"
+  },
+  {
+   "a": "0x3CAB",
+   "b": "0x8000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x3CAB",
+   "b": "0xBA00",
+   "expected": "0xB8AB"
+  },
+  {
+   "a": "0x3CAB",
+   "b": "0xBC00",
+   "expected": "0xBAAB"
+  },
+  {
+   "a": "0x3CAB",
+   "b": "0xBE00",
+   "expected": "0xBCAB"
+  },
+  {
+   "a": "0x3CAB",
+   "b": "0xC000",
+   "expected": "0xBEAB"
+  },
+  {
+   "a": "0x3CAB",
+   "b": "0xC100",
+   "expected": "0xC000"
+  },
+  {
+   "a": "0x3CAB",
+   "b": "0xC480",
+   "expected": "0xC356"
+  },
+  {
+   "a": "0x3CAB",
+   "b": "0xFE00",
+   "expected": "0xFE00"
+  },
+  {
+   "a": "0x3E00",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x3E00",
+   "b": "0x0200",
+   "expected": "0x0200"
+  },
+  {
+   "a": "0x3E00",
+   "b": "0x3A00",
+   "expected": "0x3A00"
+  },
+  {
+   "a": "0x3E00",
+   "b": "0x3AAB",
+   "expected": "0x3AAB"
+  },
+  {
+   "a": "0x3E00",
+   "b": "0x3C00",
+   "expected": "0x3C00"
+  },
+  {
+   "a": "0x3E00",
+   "b": "0x3CAB",
+   "expected": "0x3CAB"
+  },
+  {
+   "a": "0x3E00",
+   "b": "0x3E00",
+   "expected": "0x3E00"
+  },
+  {
+   "a": "0x3E00",
+   "b": "0x4000",
+   "expected": "0x4000"
+  },
+  {
+   "a": "0x3E00",
+   "b": "0x4100",
+   "expected": "0x4100"
+  },
+  {
+   "a": "0x3E00",
+   "b": "0x4480",
+   "expected": "0x4480"
+  },
+  {
+   "a": "0x3E00",
+   "b": "0x7E00",
+   "expected": "0x7E00"
+  },
+  {
+   "a": "0x3E00",
+   "b": "0x7E01",
+   "expected": "0x7E01"
+  },
+  {
+   "a": "0x3E00",
+   "b": "0x8000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x3E00",
+   "b": "0xBA00",
+   "expected": "0xBA00"
+  },
+  {
+   "a": "0x3E00",
+   "b": "0xBC00",
+   "expected": "0xBC00"
+  },
+  {
+   "a": "0x3E00",
+   "b": "0xBE00",
+   "expected": "0xBE00"
+  },
+  {
+   "a": "0x3E00",
+   "b": "0xC000",
+   "expected": "0xC000"
+  },
+  {
+   "a": "0x3E00",
+   "b": "0xC100",
+   "expected": "0xC100"
+  },
+  {
+   "a": "0x3E00",
+   "b": "0xC480",
+   "expected": "0xC480"
+  },
+  {
+   "a": "0x3E00",
+   "b": "0xFE00",
+   "expected": "0xFE00"
+  },
+  {
+   "a": "0x4000",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x4000",
+   "b": "0x0200",
+   "expected": "0x0400"
+  },
+  {
+   "a": "0x4000",
+   "b": "0x3A00",
+   "expected": "0x3C00"
+  },
+  {
+   "a": "0x4000",
+   "b": "0x3AAB",
+   "expected": "0x3CAB"
+  },
+  {
+   "a": "0x4000",
+   "b": "0x3C00",
+   "expected": "0x3E00"
+  },
+  {
+   "a": "0x4000",
+   "b": "0x3CAB",
+   "expected": "0x3EAB"
+  },
+  {
+   "a": "0x4000",
+   "b": "0x3E00",
+   "expected": "0x4000"
+  },
+  {
+   "a": "0x4000",
+   "b": "0x4000",
+   "expected": "0x4200"
+  },
+  {
+   "a": "0x4000",
+   "b": "0x4100",
+   "expected": "0x4300"
+  },
+  {
+   "a": "0x4000",
+   "b": "0x4480",
+   "expected": "0x4680"
+  },
+  {
+   "a": "0x4000",
+   "b": "0x7E00",
+   "expected": "0x7E00"
+  },
+  {
+   "a": "0x4000",
+   "b": "0x7E01",
+   "expected": "0x7E01"
+  },
+  {
+   "a": "0x4000",
+   "b": "0x8000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x4000",
+   "b": "0xBA00",
+   "expected": "0xBC00"
+  },
+  {
+   "a": "0x4000",
+   "b": "0xBC00",
+   "expected": "0xBE00"
+  },
+  {
+   "a": "0x4000",
+   "b": "0xBE00",
+   "expected": "0xC000"
+  },
+  {
+   "a": "0x4000",
+   "b": "0xC000",
+   "expected": "0xC200"
+  },
+  {
+   "a": "0x4000",
+   "b": "0xC100",
+   "expected": "0xC300"
+  },
+  {
+   "a": "0x4000",
+   "b": "0xC480",
+   "expected": "0xC680"
+  },
+  {
+   "a": "0x4000",
+   "b": "0xFE00",
+   "expected": "0xFE00"
+  },
+  {
+   "a": "0x4100",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x4100",
+   "b": "0x0200",
+   "expected": "0x0500"
+  },
+  {
+   "a": "0x4100",
+   "b": "0x3A00",
+   "expected": "0x3D00"
+  },
+  {
+   "a": "0x4100",
+   "b": "0x3AAB",
+   "expected": "0x3E00"
+  },
+  {
+   "a": "0x4100",
+   "b": "0x3C00",
+   "expected": "0x3F00"
+  },
+  {
+   "a": "0x4100",
+   "b": "0x3CAB",
+   "expected": "0x4000"
+  },
+  {
+   "a": "0x4100",
+   "b": "0x3E00",
+   "expected": "0x4100"
+  },
+  {
+   "a": "0x4100",
+   "b": "0x4000",
+   "expected": "0x4300"
+  },
+  {
+   "a": "0x4100",
+   "b": "0x4100",
+   "expected": "0x4440"
+  },
+  {
+   "a": "0x4100",
+   "b": "0x4480",
+   "expected": "0x47C0"
+  },
+  {
+   "a": "0x4100",
+   "b": "0x7E00",
+   "expected": "0x7E00"
+  },
+  {
+   "a": "0x4100",
+   "b": "0x7E01",
+   "expected": "0x7E01"
+  },
+  {
+   "a": "0x4100",
+   "b": "0x8000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x4100",
+   "b": "0xBA00",
+   "expected": "0xBD00"
+  },
+  {
+   "a": "0x4100",
+   "b": "0xBC00",
+   "expected": "0xBF00"
+  },
+  {
+   "a": "0x4100",
+   "b": "0xBE00",
+   "expected": "0xC100"
+  },
+  {
+   "a": "0x4100",
+   "b": "0xC000",
+   "expected": "0xC300"
+  },
+  {
+   "a": "0x4100",
+   "b": "0xC100",
+   "expected": "0xC440"
+  },
+  {
+   "a": "0x4100",
+   "b": "0xC480",
+   "expected": "0xC7C0"
+  },
+  {
+   "a": "0x4100",
+   "b": "0xFE00",
+   "expected": "0xFE00"
+  },
+  {
+   "a": "0x4480",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x4480",
+   "b": "0x0200",
+   "expected": "0x0880"
+  },
+  {
+   "a": "0x4480",
+   "b": "0x3A00",
+   "expected": "0x4080"
+  },
+  {
+   "a": "0x4480",
+   "b": "0x3AAB",
+   "expected": "0x4156"
+  },
+  {
+   "a": "0x4480",
+   "b": "0x3C00",
+   "expected": "0x4280"
+  },
+  {
+   "a": "0x4480",
+   "b": "0x3CAB",
+   "expected": "0x4356"
+  },
+  {
+   "a": "0x4480",
+   "b": "0x3E00",
+   "expected": "0x4480"
+  },
+  {
+   "a": "0x4480",
+   "b": "0x4000",
+   "expected": "0x4680"
+  },
+  {
+   "a": "0x4480",
+   "b": "0x4100",
+   "expected": "0x47C0"
+  },
+  {
+   "a": "0x4480",
+   "b": "0x4480",
+   "expected": "0x4B20"
+  },
+  {
+   "a": "0x4480",
+   "b": "0x7E00",
+   "expected": "0x7E00"
+  },
+  {
+   "a": "0x4480",
+   "b": "0x7E01",
+   "expected": "0x7E01"
+  },
+  {
+   "a": "0x4480",
+   "b": "0x8000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x4480",
+   "b": "0xBA00",
+   "expected": "0xC080"
+  },
+  {
+   "a": "0x4480",
+   "b": "0xBC00",
+   "expected": "0xC280"
+  },
+  {
+   "a": "0x4480",
+   "b": "0xBE00",
+   "expected": "0xC480"
+  },
+  {
+   "a": "0x4480",
+   "b": "0xC000",
+   "expected": "0xC680"
+  },
+  {
+   "a": "0x4480",
+   "b": "0xC100",
+   "expected": "0xC7C0"
+  },
+  {
+   "a": "0x4480",
+   "b": "0xC480",
+   "expected": "0xCB20"
+  },
+  {
+   "a": "0x4480",
+   "b": "0xFE00",
+   "expected": "0xFE00"
+  },
+  {
+   "a": "0x7E00",
+   "b": "0x0000",
+   "expected": "0x7E01"
+  },
+  {
+   "a": "0x7E00",
+   "b": "0x0200",
+   "expected": "0x7E00"
+  },
+  {
+   "a": "0x7E00",
+   "b": "0x3A00",
+   "expected": "0x7E00"
+  },
+  {
+   "a": "0x7E00",
+   "b": "0x3AAB",
+   "expected": "0x7E00"
+  },
+  {
+   "a": "0x7E00",
+   "b": "0x3C00",
+   "expected": "0x7E00"
+  },
+  {
+   "a": "0x7E00",
+   "b": "0x3CAB",
+   "expected": "0x7E00"
+  },
+  {
+   "a": "0x7E00",
+   "b": "0x3E00",
+   "expected": "0x7E00"
+  },
+  {
+   "a": "0x7E00",
+   "b": "0x4000",
+   "expected": "0x7E00"
+  },
+  {
+   "a": "0x7E00",
+   "b": "0x4100",
+   "expected": "0x7E00"
+  },
+  {
+   "a": "0x7E00",
+   "b": "0x4480",
+   "expected": "0x7E00"
+  },
+  {
+   "a": "0x7E00",
+   "b": "0x7E00",
+   "expected": "0x7E00"
+  },
+  {
+   "a": "0x7E00",
+   "b": "0x7E01",
+   "expected": "0x7E01"
+  },
+  {
+   "a": "0x7E00",
+   "b": "0x8000",
+   "expected": "0x7E01"
+  },
+  {
+   "a": "0x7E00",
+   "b": "0xBA00",
+   "expected": "0xFE00"
+  },
+  {
+   "a": "0x7E00",
+   "b": "0xBC00",
+   "expected": "0xFE00"
+  },
+  {
+   "a": "0x7E00",
+   "b": "0xBE00",
+   "expected": "0xFE00"
+  },
+  {
+   "a": "0x7E00",
+   "b": "0xC000",
+   "expected": "0xFE00"
+  },
+  {
+   "a": "0x7E00",
+   "b": "0xC100",
+   "expected": "0xFE00"
+  },
+  {
+   "a": "0x7E00",
+   "b": "0xC480",
+   "expected": "0xFE00"
+  },
+  {
+   "a": "0x7E00",
+   "b": "0xFE00",
+   "expected": "0xFE00"
+  },
+  {
+   "a": "0x7E01",
+   "b": "0x0000",
+   "expected": "0x7E01"
+  },
+  {
+   "a": "0x7E01",
+   "b": "0x0200",
+   "expected": "0x7E01"
+  },
+  {
+   "a": "0x7E01",
+   "b": "0x3A00",
+   "expected": "0x7E01"
+  },
+  {
+   "a": "0x7E01",
+   "b": "0x3AAB",
+   "expected": "0x7E01"
+  },
+  {
+   "a": "0x7E01",
+   "b": "0x3C00",
+   "expected": "0x7E01"
+  },
+  {
+   "a": "0x7E01",
+   "b": "0x3CAB",
+   "expected": "0x7E01"
+  },
+  {
+   "a": "0x7E01",
+   "b": "0x3E00",
+   "expected": "0x7E01"
+  },
+  {
+   "a": "0x7E01",
+   "b": "0x4000",
+   "expected": "0x7E01"
+  },
+  {
+   "a": "0x7E01",
+   "b": "0x4100",
+   "expected": "0x7E01"
+  },
+  {
+   "a": "0x7E01",
+   "b": "0x4480",
+   "expected": "0x7E01"
+  },
+  {
+   "a": "0x7E01",
+   "b": "0x7E00",
+   "expected": "0x7E01"
+  },
+  {
+   "a": "0x7E01",
+   "b": "0x7E01",
+   "expected": "0x7E01"
+  },
+  {
+   "a": "0x7E01",
+   "b": "0x8000",
+   "expected": "0x7E01"
+  },
+  {
+   "a": "0x7E01",
+   "b": "0xBA00",
+   "expected": "0x7E01"
+  },
+  {
+   "a": "0x7E01",
+   "b": "0xBC00",
+   "expected": "0x7E01"
+  },
+  {
+   "a": "0x7E01",
+   "b": "0xBE00",
+   "expected": "0x7E01"
+  },
+  {
+   "a": "0x7E01",
+   "b": "0xC000",
+   "expected": "0x7E01"
+  },
+  {
+   "a": "0x7E01",
+   "b": "0xC100",
+   "expected": "0x7E01"
+  },
+  {
+   "a": "0x7E01",
+   "b": "0xC480",
+   "expected": "0x7E01"
+  },
+  {
+   "a": "0x7E01",
+   "b": "0xFE00",
+   "expected": "0x7E01"
+  },
+  {
+   "a": "0x8000",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x8000",
+   "b": "0x0200",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x8000",
+   "b": "0x3A00",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x8000",
+   "b": "0x3AAB",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x8000",
+   "b": "0x3C00",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x8000",
+   "b": "0x3CAB",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x8000",
+   "b": "0x3E00",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x8000",
+   "b": "0x4000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x8000",
+   "b": "0x4100",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x8000",
+   "b": "0x4480",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x8000",
+   "b": "0x7E00",
+   "expected": "0x7E01"
+  },
+  {
+   "a": "0x8000",
+   "b": "0x7E01",
+   "expected": "0x7E01"
+  },
+  {
+   "a": "0x8000",
+   "b": "0x8000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x8000",
+   "b": "0xBA00",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x8000",
+   "b": "0xBC00",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x8000",
+   "b": "0xBE00",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x8000",
+   "b": "0xC000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x8000",
+   "b": "0xC100",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x8000",
+   "b": "0xC480",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x8000",
+   "b": "0xFE00",
+   "expected": "0x7E01"
+  },
+  {
+   "a": "0xBA00",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0xBA00",
+   "b": "0x0200",
+   "expected": "0x8080"
+  },
+  {
+   "a": "0xBA00",
+   "b": "0x3A00",
+   "expected": "0xB600"
+  },
+  {
+   "a": "0xBA00",
+   "b": "0x3AAB",
+   "expected": "0xB6AB"
+  },
+  {
+   "a": "0xBA00",
+   "b": "0x3C00",
+   "expected": "0xB800"
+  },
+  {
+   "a": "0xBA00",
+   "b": "0x3CAB",
+   "expected": "0xB8AB"
+  },
+  {
+   "a": "0xBA00",
+   "b": "0x3E00",
+   "expected": "0xBA00"
+  },
+  {
+   "a": "0xBA00",
+   "b": "0x4000",
+   "expected": "0xBC00"
+  },
+  {
+   "a": "0xBA00",
+   "b": "0x4100",
+   "expected": "0xBD00"
+  },
+  {
+   "a": "0xBA00",
+   "b": "0x4480",
+   "expected": "0xC080"
+  },
+  {
+   "a": "0xBA00",
+   "b": "0x7E00",
+   "expected": "0xFE00"
+  },
+  {
+   "a": "0xBA00",
+   "b": "0x7E01",
+   "expected": "0x7E01"
+  },
+  {
+   "a": "0xBA00",
+   "b": "0x8000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0xBA00",
+   "b": "0xBA00",
+   "expected": "0x3600"
+  },
+  {
+   "a": "0xBA00",
+   "b": "0xBC00",
+   "expected": "0x3800"
+  },
+  {
+   "a": "0xBA00",
+   "b": "0xBE00",
+   "expected": "0x3A00"
+  },
+  {
+   "a": "0xBA00",
+   "b": "0xC000",
+   "expected": "0x3C00"
+  },
+  {
+   "a": "0xBA00",
+   "b": "0xC100",
+   "expected": "0x3D00"
+  },
+  {
+   "a": "0xBA00",
+   "b": "0xC480",
+   "expected": "0x4080"
+  },
+  {
+   "a": "0xBA00",
+   "b": "0xFE00",
+   "expected": "0x7E00"
+  },
+  {
+   "a": "0xBC00",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0xBC00",
+   "b": "0x0200",
+   "expected": "0x8100"
+  },
+  {
+   "a": "0xBC00",
+   "b": "0x3A00",
+   "expected": "0xB800"
+  },
+  {
+   "a": "0xBC00",
+   "b": "0x3AAB",
+   "expected": "0xB8AB"
+  },
+  {
+   "a": "0xBC00",
+   "b": "0x3C00",
+   "expected": "0xBA00"
+  },
+  {
+   "a": "0xBC00",
+   "b": "0x3CAB",
+   "expected": "0xBAAB"
+  },
+  {
+   "a": "0xBC00",
+   "b": "0x3E00",
+   "expected": "0xBC00"
+  },
+  {
+   "a": "0xBC00",
+   "b": "0x4000",
+   "expected": "0xBE00"
+  },
+  {
+   "a": "0xBC00",
+   "b": "0x4100",
+   "expected": "0xBF00"
+  },
+  {
+   "a": "0xBC00",
+   "b": "0x4480",
+   "expected": "0xC280"
+  },
+  {
+   "a": "0xBC00",
+   "b": "0x7E00",
+   "expected": "0xFE00"
+  },
+  {
+   "a": "0xBC00",
+   "b": "0x7E01",
+   "expected": "0x7E01"
+  },
+  {
+   "a": "0xBC00",
+   "b": "0x8000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0xBC00",
+   "b": "0xBA00",
+   "expected": "0x3800"
+  },
+  {
+   "a": "0xBC00",
+   "b": "0xBC00",
+   "expected": "0x3A00"
+  },
+  {
+   "a": "0xBC00",
+   "b": "0xBE00",
+   "expected": "0x3C00"
+  },
+  {
+   "a": "0xBC00",
+   "b": "0xC000",
+   "expected": "0x3E00"
+  },
+  {
+   "a": "0xBC00",
+   "b": "0xC100",
+   "expected": "0x3F00"
+  },
+  {
+   "a": "0xBC00",
+   "b": "0xC480",
+   "expected": "0x4280"
+  },
+  {
+   "a": "0xBC00",
+   "b": "0xFE00",
+   "expected": "0x7E00"
+  },
+  {
+   "a": "0xBE00",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0xBE00",
+   "b": "0x0200",
+   "expected": "0x8200"
+  },
+  {
+   "a": "0xBE00",
+   "b": "0x3A00",
+   "expected": "0xBA00"
+  },
+  {
+   "a": "0xBE00",
+   "b": "0x3AAB",
+   "expected": "0xBAAB"
+  },
+  {
+   "a": "0xBE00",
+   "b": "0x3C00",
+   "expected": "0xBC00"
+  },
+  {
+   "a": "0xBE00",
+   "b": "0x3CAB",
+   "expected": "0xBCAB"
+  },
+  {
+   "a": "0xBE00",
+   "b": "0x3E00",
+   "expected": "0xBE00"
+  },
+  {
+   "a": "0xBE00",
+   "b": "0x4000",
+   "expected": "0xC000"
+  },
+  {
+   "a": "0xBE00",
+   "b": "0x4100",
+   "expected": "0xC100"
+  },
+  {
+   "a": "0xBE00",
+   "b": "0x4480",
+   "expected": "0xC480"
+  },
+  {
+   "a": "0xBE00",
+   "b": "0x7E00",
+   "expected": "0xFE00"
+  },
+  {
+   "a": "0xBE00",
+   "b": "0x7E01",
+   "expected": "0x7E01"
+  },
+  {
+   "a": "0xBE00",
+   "b": "0x8000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0xBE00",
+   "b": "0xBA00",
+   "expected": "0x3A00"
+  },
+  {
+   "a": "0xBE00",
+   "b": "0xBC00",
+   "expected": "0x3C00"
+  },
+  {
+   "a": "0xBE00",
+   "b": "0xBE00",
+   "expected": "0x3E00"
+  },
+  {
+   "a": "0xBE00",
+   "b": "0xC000",
+   "expected": "0x4000"
+  },
+  {
+   "a": "0xBE00",
+   "b": "0xC100",
+   "expected": "0x4100"
+  },
+  {
+   "a": "0xBE00",
+   "b": "0xC480",
+   "expected": "0x4480"
+  },
+  {
+   "a": "0xBE00",
+   "b": "0xFE00",
+   "expected": "0x7E00"
+  },
+  {
+   "a": "0xC000",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0xC000",
+   "b": "0x0200",
+   "expected": "0x8400"
+  },
+  {
+   "a": "0xC000",
+   "b": "0x3A00",
+   "expected": "0xBC00"
+  },
+  {
+   "a": "0xC000",
+   "b": "0x3AAB",
+   "expected": "0xBCAB"
+  },
+  {
+   "a": "0xC000",
+   "b": "0x3C00",
+   "expected": "0xBE00"
+  },
+  {
+   "a": "0xC000",
+   "b": "0x3CAB",
+   "expected": "0xBEAB"
+  },
+  {
+   "a": "0xC000",
+   "b": "0x3E00",
+   "expected": "0xC000"
+  },
+  {
+   "a": "0xC000",
+   "b": "0x4000",
+   "expected": "0xC200"
+  },
+  {
+   "a": "0xC000",
+   "b": "0x4100",
+   "expected": "0xC300"
+  },
+  {
+   "a": "0xC000",
+   "b": "0x4480",
+   "expected": "0xC680"
+  },
+  {
+   "a": "0xC000",
+   "b": "0x7E00",
+   "expected": "0xFE00"
+  },
+  {
+   "a": "0xC000",
+   "b": "0x7E01",
+   "expected": "0x7E01"
+  },
+  {
+   "a": "0xC000",
+   "b": "0x8000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0xC000",
+   "b": "0xBA00",
+   "expected": "0x3C00"
+  },
+  {
+   "a": "0xC000",
+   "b": "0xBC00",
+   "expected": "0x3E00"
+  },
+  {
+   "a": "0xC000",
+   "b": "0xBE00",
+   "expected": "0x4000"
+  },
+  {
+   "a": "0xC000",
+   "b": "0xC000",
+   "expected": "0x4200"
+  },
+  {
+   "a": "0xC000",
+   "b": "0xC100",
+   "expected": "0x4300"
+  },
+  {
+   "a": "0xC000",
+   "b": "0xC480",
+   "expected": "0x4680"
+  },
+  {
+   "a": "0xC000",
+   "b": "0xFE00",
+   "expected": "0x7E00"
+  },
+  {
+   "a": "0xC100",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0xC100",
+   "b": "0x0200",
+   "expected": "0x8500"
+  },
+  {
+   "a": "0xC100",
+   "b": "0x3A00",
+   "expected": "0xBD00"
+  },
+  {
+   "a": "0xC100",
+   "b": "0x3AAB",
+   "expected": "0xBE00"
+  },
+  {
+   "a": "0xC100",
+   "b": "0x3C00",
+   "expected": "0xBF00"
+  },
+  {
+   "a": "0xC100",
+   "b": "0x3CAB",
+   "expected": "0xC000"
+  },
+  {
+   "a": "0xC100",
+   "b": "0x3E00",
+   "expected": "0xC100"
+  },
+  {
+   "a": "0xC100",
+   "b": "0x4000",
+   "expected": "0xC300"
+  },
+  {
+   "a": "0xC100",
+   "b": "0x4100",
+   "expected": "0xC440"
+  },
+  {
+   "a": "0xC100",
+   "b": "0x4480",
+   "expected": "0xC7C0"
+  },
+  {
+   "a": "0xC100",
+   "b": "0x7E00",
+   "expected": "0xFE00"
+  },
+  {
+   "a": "0xC100",
+   "b": "0x7E01",
+   "expected": "0x7E01"
+  },
+  {
+   "a": "0xC100",
+   "b": "0x8000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0xC100",
+   "b": "0xBA00",
+   "expected": "0x3D00"
+  },
+  {
+   "a": "0xC100",
+   "b": "0xBC00",
+   "expected": "0x3F00"
+  },
+  {
+   "a": "0xC100",
+   "b": "0xBE00",
+   "expected": "0x4100"
+  },
+  {
+   "a": "0xC100",
+   "b": "0xC000",
+   "expected": "0x4300"
+  },
+  {
+   "a": "0xC100",
+   "b": "0xC100",
+   "expected": "0x4440"
+  },
+  {
+   "a": "0xC100",
+   "b": "0xC480",
+   "expected": "0x47C0"
+  },
+  {
+   "a": "0xC100",
+   "b": "0xFE00",
+   "expected": "0x7E00"
+  },
+  {
+   "a": "0xC480",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0xC480",
+   "b": "0x0200",
+   "expected": "0x8880"
+  },
+  {
+   "a": "0xC480",
+   "b": "0x3A00",
+   "expected": "0xC080"
+  },
+  {
+   "a": "0xC480",
+   "b": "0x3AAB",
+   "expected": "0xC156"
+  },
+  {
+   "a": "0xC480",
+   "b": "0x3C00",
+   "expected": "0xC280"
+  },
+  {
+   "a": "0xC480",
+   "b": "0x3CAB",
+   "expected": "0xC356"
+  },
+  {
+   "a": "0xC480",
+   "b": "0x3E00",
+   "expected": "0xC480"
+  },
+  {
+   "a": "0xC480",
+   "b": "0x4000",
+   "expected": "0xC680"
+  },
+  {
+   "a": "0xC480",
+   "b": "0x4100",
+   "expected": "0xC7C0"
+  },
+  {
+   "a": "0xC480",
+   "b": "0x4480",
+   "expected": "0xCB20"
+  },
+  {
+   "a": "0xC480",
+   "b": "0x7E00",
+   "expected": "0xFE00"
+  },
+  {
+   "a": "0xC480",
+   "b": "0x7E01",
+   "expected": "0x7E01"
+  },
+  {
+   "a": "0xC480",
+   "b": "0x8000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0xC480",
+   "b": "0xBA00",
+   "expected": "0x4080"
+  },
+  {
+   "a": "0xC480",
+   "b": "0xBC00",
+   "expected": "0x4280"
+  },
+  {
+   "a": "0xC480",
+   "b": "0xBE00",
+   "expected": "0x4480"
+  },
+  {
+   "a": "0xC480",
+   "b": "0xC000",
+   "expected": "0x4680"
+  },
+  {
+   "a": "0xC480",
+   "b": "0xC100",
+   "expected": "0x47C0"
+  },
+  {
+   "a": "0xC480",
+   "b": "0xC480",
+   "expected": "0x4B20"
+  },
+  {
+   "a": "0xC480",
+   "b": "0xFE00",
+   "expected": "0x7E00"
+  },
+  {
+   "a": "0xFE00",
+   "b": "0x0000",
+   "expected": "0x7E01"
+  },
+  {
+   "a": "0xFE00",
+   "b": "0x0200",
+   "expected": "0xFE00"
+  },
+  {
+   "a": "0xFE00",
+   "b": "0x3A00",
+   "expected": "0xFE00"
+  },
+  {
+   "a": "0xFE00",
+   "b": "0x3AAB",
+   "expected": "0xFE00"
+  },
+  {
+   "a": "0xFE00",
+   "b": "0x3C00",
+   "expected": "0xFE00"
+  },
+  {
+   "a": "0xFE00",
+   "b": "0x3CAB",
+   "expected": "0xFE00"
+  },
+  {
+   "a": "0xFE00",
+   "b": "0x3E00",
+   "expected": "0xFE00"
+  },
+  {
+   "a": "0xFE00",
+   "b": "0x4000",
+   "expected": "0xFE00"
+  },
+  {
+   "a": "0xFE00",
+   "b": "0x4100",
+   "expected": "0xFE00"
+  },
+  {
+   "a": "0xFE00",
+   "b": "0x4480",
+   "expected": "0xFE00"
+  },
+  {
+   "a": "0xFE00",
+   "b": "0x7E00",
+   "expected": "0xFE00"
+  },
+  {
+   "a": "0xFE00",
+   "b": "0x7E01",
+   "expected": "0x7E01"
+  },
+  {
+   "a": "0xFE00",
+   "b": "0x8000",
+   "expected": "0x7E01"
+  },
+  {
+   "a": "0xFE00",
+   "b": "0xBA00",
+   "expected": "0x7E00"
+  },
+  {
+   "a": "0xFE00",
+   "b": "0xBC00",
+   "expected": "0x7E00"
+  },
+  {
+   "a": "0xFE00",
+   "b": "0xBE00",
+   "expected": "0x7E00"
+  },
+  {
+   "a": "0xFE00",
+   "b": "0xC000",
+   "expected": "0x7E00"
+  },
+  {
+   "a": "0xFE00",
+   "b": "0xC100",
+   "expected": "0x7E00"
+  },
+  {
+   "a": "0xFE00",
+   "b": "0xC480",
+   "expected": "0x7E00"
+  },
+  {
+   "a": "0xFE00",
+   "b": "0xFE00",
+   "expected": "0x7E00"
+  },
+  {
+   "a": "0x07E7",
+   "b": "0x0D0B",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0xC972",
+   "b": "0x4DC6",
+   "expected": "0xD940"
+  },
+  {
+   "a": "0x88E3",
+   "b": "0x7D1B",
+   "expected": "0xC83E"
+  },
+  {
+   "a": "0xA92D",
+   "b": "0x451B",
+   "expected": "0xB077"
+  },
+  {
+   "a": "0x6338",
+   "b": "0x3AAF",
+   "expected": "0x6029"
+  },
+  {
+   "a": "0x2CC2",
+   "b": "0x5AF8",
+   "expected": "0x4A0C"
+  },
+  {
+   "a": "0xD8DE",
+   "b": "0xBEAA",
+   "expected": "0x59D2"
+  },
+  {
+   "a": "0xA269",
+   "b": "0x1EF7",
+   "expected": "0x8393"
+  },
+  {
+   "a": "0xC471",
+   "b": "0x20C8",
+   "expected": "0xA765"
+  },
+  {
+   "a": "0x20CC",
+   "b": "0x4F92",
+   "expected": "0x327F"
+  },
+  {
+   "a": "0xEEF4",
+   "b": "0xE063",
+   "expected": "0x7E00"
+  },
+  {
+   "a": "0x1909",
+   "b": "0x84BE",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0xA099",
+   "b": "0x47B0",
+   "expected": "0xAA65"
+  },
+  {
+   "a": "0xAD0B",
+   "b": "0xC6B8",
+   "expected": "0x3611"
+  },
+  {
+   "a": "0xC972",
+   "b": "0x6B12",
+   "expected": "0xF6A5"
+  },
+  {
+   "a": "0x7D6A",
+   "b": "0x8A36",
+   "expected": "0xC9C6"
+  },
+  {
+   "a": "0xBEAA",
+   "b": "0xC471",
+   "expected": "0x4541"
+  },
+  {
+   "a": "0xD4EE",
+   "b": "0xCFF2",
+   "expected": "0x66E4"
+  },
+  {
+   "a": "0xEA0D",
+   "b": "0x9ED7",
+   "expected": "0x4AE9"
+  },
+  {
+   "a": "0x1861",
+   "b": "0x9BE2",
+   "expected": "0x8009"
+  },
+  {
+   "a": "0x4584",
+   "b": "0x2936",
+   "expected": "0x30D2"
+  },
+  {
+   "a": "0x8954",
+   "b": "0x3CAB",
+   "expected": "0x8838"
+  },
+  {
+   "a": "0xB54A",
+   "b": "0x1679",
+   "expected": "0x8E08"
+  },
+  {
+   "a": "0x534F",
+   "b": "0xEBA3",
+   "expected": "0xFE00"
+  },
+  {
+   "a": "0xDA77",
+   "b": "0xE92A",
+   "expected": "0x7E00"
+  },
+  {
+   "a": "0xEDDA",
+   "b": "0xBEAA",
+   "expected": "0x6E91"
+  },
+  {
+   "a": "0x0A1A",
+   "b": "0xA676",
+   "expected": "0x8003"
+  },
+  {
+   "a": "0x514F",
+   "b": "0x58CB",
+   "expected": "0x6C4F"
+  },
+  {
+   "a": "0x8900",
+   "b": "0x480C",
+   "expected": "0x9312"
+  },
+  {
+   "a": "0xF451",
+   "b": "0x6D5C",
+   "expected": "0xFE00"
+  },
+  {
+   "a": "0x07E7",
+   "b": "0x9B3D",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0xD149",
+   "b": "0xCCE0",
+   "expected": "0x605C"
+  },
+  {
+   "a": "0x9D33",
+   "b": "0x3E27",
+   "expected": "0x9D71"
+  },
+  {
+   "a": "0xBE2E",
+   "b": "0x62A2",
+   "expected": "0xE2DF"
+  },
+  {
+   "a": "0xA6C4",
+   "b": "0xAD80",
+   "expected": "0x166C"
+  },
+  {
+   "a": "0xE063",
+   "b": "0x6A98",
+   "expected": "0xFE00"
+  },
+  {
+   "a": "0x3C00",
+   "b": "0xDBDD",
+   "expected": "0xD9DD"
+  },
+  {
+   "a": "0x7D1B",
+   "b": "0x9718",
+   "expected": "0xD667"
+  },
+  {
+   "a": "0x2D35",
+   "b": "0x54D9",
+   "expected": "0x4448"
+  },
+  {
+   "a": "0xEF12",
+   "b": "0xA14E",
+   "expected": "0x5289"
+  },
+  {
+   "a": "0xA099",
+   "b": "0x4B55",
+   "expected": "0xAE2A"
+  },
+  {
+   "a": "0xEA0D",
+   "b": "0x50EE",
+   "expected": "0xFD01"
+  },
+  {
+   "a": "0x1679",
+   "b": "0xBEAA",
+   "expected": "0x974B"
+  },
+  {
+   "a": "0xF072",
+   "b": "0x7D1B",
+   "expected": "0xFE00"
+  },
+  {
+   "a": "0x7F64",
+   "b": "0x229A",
+   "expected": "0x7E01"
+  },
+  {
+   "a": "0x69E6",
+   "b": "0xB54A",
+   "expected": "0xE135"
+  },
+  {
+   "a": "0x3CAB",
+   "b": "0x1496",
+   "expected": "0x1373"
+  },
+  {
+   "a": "0xC5F4",
+   "b": "0xCCA7",
+   "expected": "0x549F"
+  },
+  {
+   "a": "0x534F",
+   "b": "0x4000",
+   "expected": "0x554F"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x8C9A",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x8A36",
+   "b": "0xD449",
+   "expected": "0x2087"
+  },
+  {
+   "a": "0x8863",
+   "b": "0x4F92",
+   "expected": "0x9A21"
+  },
+  {
+   "a": "0x9718",
+   "b": "0x5E0F",
+   "expected": "0xB72F"
+  },
+  {
+   "a": "0x1A41",
+   "b": "0x3CAB",
+   "expected": "0x1902"
+  },
+  {
+   "a": "0xDA77",
+   "b": "0x47B0",
+   "expected": "0xE446"
+  },
+  {
+   "a": "0xDA58",
+   "b": "0xF3EA",
+   "expected": "0x7E00"
+  },
+  {
+   "a": "0x8863",
+   "b": "0xB618",
+   "expected": "0x0140"
+  },
+  {
+   "a": "0xB618",
+   "b": "0xED30",
+   "expected": "0x6556"
+  },
+  {
+   "a": "0x1861",
+   "b": "0x7398",
+   "expected": "0x4E23"
+  },
+  {
+   "a": "0x9718",
+   "b": "0x9A0C",
+   "expected": "0x0003"
+  },
+  {
+   "a": "0x543F",
+   "b": "0xEBA3",
+   "expected": "0xFE00"
+  },
+  {
+   "a": "0x69E6",
+   "b": "0x20C8",
+   "expected": "0x4CB6"
+  },
+  {
+   "a": "0x6A98",
+   "b": "0xE35E",
+   "expected": "0xFE00"
+  },
+  {
+   "a": "0x7F64",
+   "b": "0x3C00",
+   "expected": "0x7E01"
+  },
+  {
+   "a": "0x62A2",
+   "b": "0xB54A",
+   "expected": "0xDA2A"
+  },
+  {
+   "a": "0x6803",
+   "b": "0x8254",
+   "expected": "0xAC57"
+  },
+  {
+   "a": "0x3CAB",
+   "b": "0x5B9B",
+   "expected": "0x5A68"
+  },
+  {
+   "a": "0x9A0C",
+   "b": "0x3B1C",
+   "expected": "0x972F"
+  },
+  {
+   "a": "0x2AE9",
+   "b": "0xCE67",
+   "expected": "0xBB7F"
+  },
+  {
+   "a": "0xF416",
+   "b": "0xA14E",
+   "expected": "0x5772"
+  },
+  {
+   "a": "0x4DC6",
+   "b": "0x3A00",
+   "expected": "0x49C6"
+  },
+  {
+   "a": "0x54D9",
+   "b": "0xC471",
+   "expected": "0xDB7A"
+  },
+  {
+   "a": "0x54D9",
+   "b": "0x9718",
+   "expected": "0xAE34"
+  },
+  {
+   "a": "0x4500",
+   "b": "0x18EA",
+   "expected": "0x2030"
+  },
+  {
+   "a": "0x543F",
+   "b": "0xDA58",
+   "expected": "0xF0A2"
+  },
+  {
+   "a": "0x20CC",
+   "b": "0x3A00",
+   "expected": "0x1CCC"
+  },
+  {
+   "a": "0x4B55",
+   "b": "0x2936",
+   "expected": "0x36AD"
+  },
+  {
+   "a": "0x4000",
+   "b": "0x8EB1",
+   "expected": "0x90B1"
+  },
+  {
+   "a": "0x8DFB",
+   "b": "0xAE46",
+   "expected": "0x0091"
+  },
+  {
+   "a": "0x2936",
+   "b": "0xF002",
+   "expected": "0xDB39"
+  },
+  {
+   "a": "0x3E27",
+   "b": "0x1679",
+   "expected": "0x16A9"
+  },
+  {
+   "a": "0x0D0B",
+   "b": "0x3C00",
+   "expected": "0x0B0B"
+  },
+  {
+   "a": "0x2D35",
+   "b": "0xCB9B",
+   "expected": "0xBAE4"
+  },
+  {
+   "a": "0x4CD1",
+   "b": "0x534F",
+   "expected": "0x6254"
+  },
+  {
+   "a": "0xE8B4",
+   "b": "0xDBFB",
+   "expected": "0x7E00"
+  },
+  {
+   "a": "0x05B6",
+   "b": "0x62A2",
+   "expected": "0x2A71"
+  },
+  {
+   "a": "0x3A93",
+   "b": "0x4142",
+   "expected": "0x3E19"
+  },
+  {
+   "a": "0xB589",
+   "b": "0x7D6A",
+   "expected": "0xF504"
+  },
+  {
+   "a": "0x3E00",
+   "b": "0x0033",
+   "expected": "0x0033"
+  },
+  {
+   "a": "0x164B",
+   "b": "0xA269",
+   "expected": "0x802C"
+  },
+  {
+   "a": "0xC471",
+   "b": "0x8254",
+   "expected": "0x08D8"
+  },
+  {
+   "a": "0x8A5C",
+   "b": "0xCB9B",
+   "expected": "0x1820"
+  },
+  {
+   "a": "0xEA0D",
+   "b": "0x62A2",
+   "expected": "0xFE00"
+  },
+  {
+   "a": "0xA14E",
+   "b": "0x69E6",
+   "expected": "0xCD39"
+  },
+  {
+   "a": "0x3B1C",
+   "b": "0x42D8",
+   "expected": "0x4036"
+  },
+  {
+   "a": "0xF45C",
+   "b": "0x8AB6",
+   "expected": "0x4133"
+  },
+  {
+   "a": "0x2F6A",
+   "b": "0x510D",
+   "expected": "0x429B"
+  },
+  {
+   "a": "0x4000",
+   "b": "0x9AF0",
+   "expected": "0x9CF0"
+  },
+  {
+   "a": "0x20C8",
+   "b": "0xA727",
+   "expected": "0x8A31"
+  },
+  {
+   "a": "0x3A93",
+   "b": "0x995F",
+   "expected": "0x962B"
+  },
+  {
+   "a": "0x9AF0",
+   "b": "0x8E64",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0xA727",
+   "b": "0xDBDD",
+   "expected": "0x450B"
+  },
+  {
+   "a": "0xDA77",
+   "b": "0xD8DE",
+   "expected": "0x7589"
+  },
+  {
+   "a": "0xAD0B",
+   "b": "0x27DC",
+   "expected": "0x96F0"
+  },
+  {
+   "a": "0x48F0",
+   "b": "0xDA77",
+   "expected": "0xE59F"
+  },
+  {
+   "a": "0x7983",
+   "b": "0x4E09",
+   "expected": "0x7E00"
+  },
+  {
+   "a": "0x6A98",
+   "b": "0x1496",
+   "expected": "0x415B"
+  },
+  {
+   "a": "0x27DC",
+   "b": "0x33BD",
+   "expected": "0x1D9B"
+  },
+  {
+   "a": "0xE8B4",
+   "b": "0xE44F",
+   "expected": "0x7E00"
+  },
+  {
+   "a": "0x62A2",
+   "b": "0x3A93",
+   "expected": "0x5F64"
+  },
+  {
+   "a": "0x4CD1",
+   "b": "0x2D35",
+   "expected": "0x3C42"
+  },
+  {
+   "a": "0x6B8A",
+   "b": "0x5DAE",
+   "expected": "0x7E00"
+  },
+  {
+   "a": "0x05B6",
+   "b": "0x1107",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x4F92",
+   "b": "0xAD80",
+   "expected": "0xBF20"
+  },
+  {
+   "a": "0x521B",
+   "b": "0x6D5C",
+   "expected": "0x7E00"
+  },
+  {
+   "a": "0x8254",
+   "b": "0x58CB",
+   "expected": "0x9D40"
+  },
+  {
+   "a": "0x1496",
+   "b": "0x20C8",
+   "expected": "0x000E"
+  },
+  {
+   "a": "0xF8A4",
+   "b": "0x7B63",
+   "expected": "0xFE00"
+  },
+  {
+   "a": "0x4D8A",
+   "b": "0x759A",
+   "expected": "0x7E00"
+  },
+  {
+   "a": "0x9C96",
+   "b": "0xCB9B",
+   "expected": "0x2A55"
+  },
+  {
+   "a": "0x8254",
+   "b": "0x18EA",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x8AC4",
+   "b": "0x3B1C",
+   "expected": "0x8826"
+  },
+  {
+   "a": "0x3E45",
+   "b": "0x4142",
+   "expected": "0x41B2"
+  },
+  {
+   "a": "0x60DF",
+   "b": "0xF451",
+   "expected": "0xFE00"
+  },
+  {
+   "a": "0x33BD",
+   "b": "0x14B9",
+   "expected": "0x0A8B"
+  },
+  {
+   "a": "0x8900",
+   "b": "0xCC67",
+   "expected": "0x179A"
+  },
+  {
+   "a": "0xDD2B",
+   "b": "0xFE5C",
+   "expected": "0x7E01"
+  },
+  {
+   "a": "0xAD80",
+   "b": "0xD8DE",
+   "expected": "0x4882"
+  },
+  {
+   "a": "0x759A",
+   "b": "0x0D0B",
+   "expected": "0x44BD"
+  },
+  {
+   "a": "0xF454",
+   "b": "0x4000",
+   "expected": "0xF654"
+  },
+  {
+   "a": "0xA6C4",
+   "b": "0x3B1C",
+   "expected": "0xA426"
+  },
+  {
+   "a": "0xDEE0",
+   "b": "0x6733",
+   "expected": "0xFE00"
+  },
+  {
+   "a": "0x50EE",
+   "b": "0xEDDA",
+   "expected": "0xFE00"
+  },
+  {
+   "a": "0xEBBE",
+   "b": "0x3C00",
+   "expected": "0xE9BE"
+  },
+  {
+   "a": "0x1679",
+   "b": "0x5E0F",
+   "expected": "0x368C"
+  },
+  {
+   "a": "0x4000",
+   "b": "0x8A36",
+   "expected": "0x8C36"
+  },
+  {
+   "a": "0x2075",
+   "b": "0xAD9E",
+   "expected": "0x9039"
+  },
+  {
+   "a": "0x4FE6",
+   "b": "0xB589",
+   "expected": "0xC772"
+  },
+  {
+   "a": "0x229A",
+   "b": "0x995F",
+   "expected": "0x808C"
+  },
+  {
+   "a": "0x8A36",
+   "b": "0x20C8",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0xD7EA",
+   "b": "0xA92D",
+   "expected": "0x431C"
+  },
+  {
+   "a": "0xD3FE",
+   "b": "0xA6C4",
+   "expected": "0x3CC3"
+  },
+  {
+   "a": "0x5AF8",
+   "b": "0xE063",
+   "expected": "0xFD8B"
+  },
+  {
+   "a": "0xE742",
+   "b": "0xE063",
+   "expected": "0x7E00"
+  },
+  {
+   "a": "0x3AAF",
+   "b": "0x8C9A",
+   "expected": "0x897E"
+  },
+  {
+   "a": "0xDBFB",
+   "b": "0xCC67",
+   "expected": "0x6A64"
+  },
+  {
+   "a": "0x8EB1",
+   "b": "0xA727",
+   "expected": "0x0011"
+  },
+  {
+   "a": "0x5B9B",
+   "b": "0x8DFB",
+   "expected": "0xAB96"
+  },
+  {
+   "a": "0x33BD",
+   "b": "0x3A00",
+   "expected": "0x2FBD"
+  },
+  {
+   "a": "0x3192",
+   "b": "0x0787",
+   "expected": "0x0032"
+  },
+  {
+   "a": "0x8254",
+   "b": "0xDD2B",
+   "expected": "0x21B0"
+  },
+  {
+   "a": "0x8E64",
+   "b": "0x8AC4",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0xAE46",
+   "b": "0xBE2E",
+   "expected": "0x2E7A"
+  },
+  {
+   "a": "0x6D5C",
+   "b": "0x9DD3",
+   "expected": "0xCD36"
+  },
+  {
+   "a": "0xB618",
+   "b": "0x3D31",
+   "expected": "0xB557"
+  },
+  {
+   "a": "0x8C9A",
+   "b": "0x2075",
+   "expected": "0x8001"
+  },
+  {
+   "a": "0x73EA",
+   "b": "0x8954",
+   "expected": "0xBF42"
+  },
+  {
+   "a": "0x9C96",
+   "b": "0x8C22",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0xBE2E",
+   "b": "0x8C22",
+   "expected": "0x0C53"
+  },
+  {
+   "a": "0x1679",
+   "b": "0xB618",
+   "expected": "0x8E97"
+  },
+  {
+   "a": "0xA727",
+   "b": "0x3E45",
+   "expected": "0xA794"
+  },
+  {
+   "a": "0x1679",
+   "b": "0xD8DE",
+   "expected": "0xB18B"
+  },
+  {
+   "a": "0x0026",
+   "b": "0xF072",
+   "expected": "0xACE7"
+  },
+  {
+   "a": "0x3CAB",
+   "b": "0xE8B4",
+   "expected": "0xE79B"
+  },
+  {
+   "a": "0xAE46",
+   "b": "0xB56E",
+   "expected": "0x25E6"
+  },
+  {
+   "a": "0x0033",
+   "b": "0xEDDA",
+   "expected": "0xAB12"
+  },
+  {
+   "a": "0x4D8A",
+   "b": "0xDEE0",
+   "expected": "0xEE8B"
+  },
+  {
+   "a": "0xD3FE",
+   "b": "0x8254",
+   "expected": "0x1853"
+  },
+  {
+   "a": "0xDA77",
+   "b": "0xEBBE",
+   "expected": "0x7E00"
+  },
+  {
+   "a": "0x1909",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0A1A",
+   "b": "0x0033",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x4FE6",
+   "b": "0x08FD",
+   "expected": "0x1AEA"
+  },
+  {
+   "a": "0x6199",
+   "b": "0xA269",
+   "expected": "0xC62B"
+  },
+  {
+   "a": "0x9718",
+   "b": "0x9DD3",
+   "expected": "0x000C"
+  },
+  {
+   "a": "0x86E5",
+   "b": "0xCB9B",
+   "expected": "0x149C"
+  },
+  {
+   "a": "0xAD80",
+   "b": "0x2075",
+   "expected": "0x9026"
+  },
+  {
+   "a": "0x8A36",
+   "b": "0xDD2B",
+   "expected": "0x2981"
+  },
+  {
+   "a": "0x62A2",
+   "b": "0x0DB1",
+   "expected": "0x326E"
+  },
+  {
+   "a": "0x7D6A",
+   "b": "0xCFF2",
+   "expected": "0xFE00"
+  },
+  {
+   "a": "0x6338",
+   "b": "0x8C22",
+   "expected": "0xB16F"
+  },
+  {
+   "a": "0x7D1B",
+   "b": "0xB589",
+   "expected": "0xF4BF"
+  },
+  {
+   "a": "0x510D",
+   "b": "0xED30",
+   "expected": "0xFE00"
+  },
+  {
+   "a": "0xDEE0",
+   "b": "0x20C8",
+   "expected": "0xC200"
+  },
+  {
+   "a": "0x9C07",
+   "b": "0xF45C",
+   "expected": "0x5264"
+  },
+  {
+   "a": "0xCE67",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x7F64",
+   "b": "0x8189",
+   "expected": "0x7E01"
+  },
+  {
+   "a": "0xCCE0",
+   "b": "0x0A1A",
+   "expected": "0x9905"
+  },
+  {
+   "a": "0xA099",
+   "b": "0xE44F",
+   "expected": "0x4700"
+  },
+  {
+   "a": "0x8AC4",
+   "b": "0x4B55",
+   "expected": "0x984E"
+  },
+  {
+   "a": "0xB618",
+   "b": "0x3C00",
+   "expected": "0xB418"
+  },
+  {
+   "a": "0xA14E",
+   "b": "0x8EB1",
+   "expected": "0x0002"
+  },
+  {
+   "a": "0x3AAB",
+   "b": "0x54D9",
+   "expected": "0x51CC"
+  },
+  {
+   "a": "0x164B",
+   "b": "0x9C96",
+   "expected": "0x8006"
+  },
+  {
+   "a": "0x6D5C",
+   "b": "0xBD69",
+   "expected": "0xECDD"
+  },
+  {
+   "a": "0x6B12",
+   "b": "0xA676",
+   "expected": "0xD3C7"
+  },
+  {
+   "a": "0x759A",
+   "b": "0x9A0C",
+   "expected": "0xD1B0"
+  },
+  {
+   "a": "0xD7A4",
+   "b": "0x8A5C",
+   "expected": "0x2426"
+  },
+  {
+   "a": "0x229A",
+   "b": "0x3E00",
+   "expected": "0x229A"
+  },
+  {
+   "a": "0xE742",
+   "b": "0x18EA",
+   "expected": "0xC260"
+  },
+  {
+   "a": "0x48F0",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x48F0",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0xB54A",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0xB54A",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x28BC",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x28BC",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0xF45C",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0xF45C",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0xDA58",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0xDA58",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x5DAE",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x5DAE",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x60DF",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x60DF",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x1A41",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x1A41",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0xDEE0",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0xDEE0",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x4F92",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x4F92",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x3B1C",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x3B1C",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0DB1",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x0DB1",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0xB618",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0xB618",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x07E7",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x07E7",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x3AAF",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x3AAF",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x9AF0",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x9AF0",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x3A93",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x3A93",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0xA92D",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0xA92D",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0xBD69",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0xBD69",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0xF072",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0xF072",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0xC471",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0xC471",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0xBBFA",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0xBBFA",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x534F",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x534F",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x8AC4",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x8AC4",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0xD7A4",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0xD7A4",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x2CC2",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x2CC2",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0xED30",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0xED30",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x9ED7",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x9ED7",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0xA676",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0xA676",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x5AF8",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x5AF8",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0xCFF2",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0xCFF2",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0xF3EA",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0xF3EA",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0A1A",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x0A1A",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x3192",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x3192",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0xE742",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0xE742",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x8A36",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x8A36",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x995F",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x995F",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0xBEAA",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0xBEAA",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0xA14E",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0xA14E",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x7F64",
+   "b": "0x0000",
+   "expected": "0x7E01"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x7F64",
+   "expected": "0x7E01"
+  },
+  {
+   "a": "0xC03F",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0xC03F",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x2D35",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x2D35",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0xE8B4",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0xE8B4",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0xDD2B",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0xDD2B",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x510D",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x510D",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0xAD80",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0xAD80",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0xEA0D",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0xEA0D",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x4DC6",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x4DC6",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x27DC",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x27DC",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x8189",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x8189",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x6803",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x6803",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x9BE2",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x9BE2",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0E1F",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x0E1F",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x8EB1",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x8EB1",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0xF002",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0xF002",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0xAE46",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0xAE46",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x08FD",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x08FD",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0xA727",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0xA727",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x759A",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x759A",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0xA3EE",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0xA3EE",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x9DD3",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x9DD3",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x543F",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x543F",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0026",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x0026",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0xDA77",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0xDA77",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x6A98",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x6A98",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0xD149",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0xD149",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x3509",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x3509",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0xA6C4",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0xA6C4",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x8AB6",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x8AB6",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x6338",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x6338",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x47B0",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x47B0",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0xEBBE",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0xEBBE",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x6199",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x6199",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x9B3D",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x9B3D",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x2075",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x2075",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x8254",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x8254",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x5E0F",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x5E0F",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x70AB",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x70AB",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x8954",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x8954",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x4584",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x4584",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x14B9",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x14B9",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0xB612",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0xB612",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x17CE",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x17CE",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0xAECA",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0xAECA",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x1679",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x1679",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x521B",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x521B",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x4500",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x4500",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x69E6",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x69E6",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x6D5C",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x6D5C",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0xE063",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0xE063",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x514F",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x514F",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x20C6",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x20C6",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x9718",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x9718",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x8E64",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x8E64",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x1E5E",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x1E5E",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0xC5C5",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0xC5C5",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0xDBDD",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0xDBDD",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x8863",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x8863",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x84BE",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x84BE",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0D0B",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x0D0B",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x2936",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x2936",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x33BD",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x33BD",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x8A5C",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x8A5C",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0xCC67",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0xCC67",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x7398",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x7398",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x1EF7",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x1EF7",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0787",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x0787",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x54D9",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x54D9",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x7765",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x7765",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0xAD0B",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0xAD0B",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x4B55",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x4B55",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x480C",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x480C",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0xD3FE",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0xD3FE",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x1496",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x1496",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0033",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x0033",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0xDBFB",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0xDBFB",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x8900",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x8900",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0xEDDA",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0xEDDA",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0xC5F4",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0xC5F4",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0xD7EA",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0xD7EA",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x20CC",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x20CC",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x9D33",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x9D33",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0xA963",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0xA963",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0xF1DB",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0xF1DB",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0xA269",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0xA269",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x4CD1",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x4CD1",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x18EA",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x18EA",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x6733",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x6733",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x05B6",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x05B6",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x164B",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x164B",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0xD4EE",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0xD4EE",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0xE92A",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0xE92A",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x7983",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x7983",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x8DFB",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x8DFB",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x3E27",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x3E27",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0xAD9E",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0xAD9E",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0xCCE0",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0xCCE0",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x1909",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x7D1B",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x7D1B",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x229A",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x229A",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x8C9A",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0xCE67",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0xE44F",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0xE44F",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x50EE",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x50EE",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x73EA",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x73EA",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x9C07",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x9C07",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0xE35E",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0xE35E",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x3D31",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x3D31",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x6B12",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x6B12",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x4D8A",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x4D8A",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0xC972",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0xC972",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0xB56E",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0xB56E",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0xF8A4",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0xF8A4",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0xD8DE",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0xD8DE",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x2B1E",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x2B1E",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x88E3",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x88E3",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0xFE5C",
+   "b": "0x0000",
+   "expected": "0x7E01"
+  },
+  {
+   "a": "0x0000",
+   "b": "0xFE5C",
+   "expected": "0x7E01"
+  },
+  {
+   "a": "0x5B9B",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x5B9B",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x451B",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x451B",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0xC6B8",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0xC6B8",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0xF416",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0xF416",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x4E09",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x4E09",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0xB589",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0xB589",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x4FE6",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x4FE6",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x4142",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x4142",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0xD449",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0xD449",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x7D6A",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x7D6A",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x1D26",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x1D26",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0xB1CC",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0xB1CC",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x8C22",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x8C22",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0xEBA3",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0xEBA3",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x42D8",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x42D8",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x6B8A",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x6B8A",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0xCCA7",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0xCCA7",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x5D0D",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x5D0D",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x7B63",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x7B63",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x563C",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x563C",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x9C96",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x9C96",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x3E45",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x3E45",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0xBE2E",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0xBE2E",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x60A3",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x60A3",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0xEEF4",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0xEEF4",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x58CB",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x58CB",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0xF451",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0xF451",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x1107",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x1107",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0xCB9B",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0xCB9B",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x5520",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x5520",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0xF454",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0xF454",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0xA4BD",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0xA4BD",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x9E69",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x9E69",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x2AE9",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x2AE9",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x20C8",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x20C8",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0xA099",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0xA099",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x86E5",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x86E5",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x62A2",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x62A2",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x1861",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x1861",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x9A0C",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x9A0C",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x2F6A",
+   "b": "0x0000",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0x2F6A",
+   "expected": "0x0000"
+  },
+  {
+   "a": "0xEF12",
+   "b": "0x0000",
+   "expected": "0x8000"
+  },
+  {
+   "a": "0x0000",
+   "b": "0xEF12",
+   "expected": "0x8000"
+  }
+ ]
+}

@@ -312,6 +312,42 @@ remedy** until it survives several cold starts in a row.
 until an independent signal confirms it took, and report the attempt count so the retry is visible
 rather than assumed.
 
+### 🧷 Vary ONE parameter, and build the control with the others held identical
+
+Bisecting frame length against bring-up nearly produced an uninterpretable result: the test builds
+differed from the known-good one in **four** parameters at once (frame length, sweep mode, skew,
+request interval). A failure could not have been attributed to any of them. Building the control —
+same everything, frame length back at its original value — is what made the measurement mean
+something, and it exonerated two of the four parameters for free.
+
+Measured (node link-ups, all other parameters identical): 74 bytes on the wire ~48%, 314 bytes 3/8,
+714 bytes 4/8, **1514 bytes 0/20**. A sharp threshold, ordinary lottery rate either side of it.
+Mechanism still open: 1024 sits in the gap, but the RX and TX indices are both 11-bit, so no
+10-bit bound exists in the datapath.
+
+**Watch parameter widths:** `parameter [13:0] IVL0` silently truncated 25 000 to 8 616, so an
+interval quoted as 200 µs was really 69 µs.
+
+### 📏 Check frame duty cycle before choosing a request interval
+
+A 1514-byte frame occupies **12.1 µs** at 1 Gbit/s. A design whose request interval sweeps down to
+10 µs and 6 µs runs at **121% and 202% duty** at full MTU — saturated, no inter-frame gap, on every
+node at once. The same table is fine at 64 bytes (~5%). Compute
+`frame_time = (FLEN + 14) * 8 / 1e9` against the interval before believing a load figure: a
+throughput number from a saturated transmitter measures the transmitter, not the link.
+
+### 🔁 Audit MDIO designs for HOW OFTEN they write, not just what they write
+
+"Rewriting the PHY configuration restarts auto-negotiation" invalidated **three separate designs**
+here: an uncapped 1 s retry (0 links in 4), a 6 s runtime skew sweep built to measure the timing
+window, and a *supposedly fixed-skew* build that gated the skew **stepping** but not the
+**reprogramming** — its state machine still re-entered the MDIO write sequence every 6 s.
+
+The third is the instructive one: the parameter was named `SWEEP`, the intent was "do not disturb
+the PHY", and it disturbed it every six seconds. **Grep every path that can re-enter the programming
+state, not just the one that changes the value.** A measurement procedure that perturbs what it
+measures yields no data, and looks exactly like broken hardware.
+
 ### 🧪 Assume the instrument is wrong until a second signal agrees
 
 Three separate instrument defects surfaced in one investigation on this project:

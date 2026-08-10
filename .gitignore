@@ -415,3 +415,8 @@ apps/queen/Trinity.app/
 trinet-keys.txt
 *.trinet-keys
 research/.gate_cache/
+
+# synthesis scratch from the closure measurements: generated wrappers and netlists
+fpga/phiscale/c_*.v
+fpga/phiscale/c_*.json
+fpga/phiscale/c[sy]_*.log

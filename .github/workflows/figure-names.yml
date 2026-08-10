@@ -1,0 +1,19 @@
+name: Figure names
+
+# Three figures carried "TEF" and "GF-T" -- the format's names one and two
+# renames ago -- long after every sentence said TNF. Two had no generator at
+# all: the PDFs sat in the tree and the code that drew them did not, and a file
+# nobody regenerates is a file nobody renames. No textual gate can see it; the
+# names are inside vector graphics.
+
+on: [pull_request, push]
+
+jobs:
+  figure-names:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: sudo apt-get update && sudo apt-get install -y poppler-utils
+      - run: python3 tools/check_figure_names.py

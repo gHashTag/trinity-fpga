@@ -21,7 +21,7 @@ HERE = pathlib.Path(__file__).resolve().parent
 NEIGHBOURS = {
     "gf_ref.py": "binary GoldenFloat ladder",
     "gfternary_ref.py": "2-bit {-phi, 0, +phi} alphabet",
-    "tef_ref.py": "ternary-exponent float ladder",
+    "tnf_ref.py": "ternary-exponent float ladder",
 }
 
 
