@@ -5414,3 +5414,44 @@ would have inflated the taxonomy with a description rather than a mechanism.
 check added one wave earlier failed the build on this wave's own new
 proposition, which named a CI step that does not exist. That is the entire
 return on building it.
+
+## Wave 644 — sound, complete, faithful: three ways a check is wrong
+
+**A gate is a decision procedure, so name which of three things is broken.** Let
+`P` be the property it is documented to enforce.
+
+  - **Unsound** — it passes an artifact that violates `P`. (False green.)
+  - **Incomplete** — it fails an artifact that satisfies `P`. (False red.)
+  - **Unfaithful** — it soundly and completely decides some *other* property
+    `P′`, while its documentation claims `P`.
+
+These are independent, and every defect found in ten days of auditing is a
+failure of exactly one.
+
+**A taxonomy of defect shapes describes how you looked, not what exists.** Five
+shapes had accumulated — matching a form not a fact, an uncounted decline,
+reading a claim as the design, targeting by position, a guard tripping only at
+zero. All five turn out to be *unsoundness* mechanisms, because every audit had
+been instructed to find gates that pass when they should fail. The taxonomy was
+complete for the question being asked and silent about the rest of the field.
+When a catalogue looks exhaustive, check whether it is exhausting the subject or
+exhausting your search.
+
+**The unfaithful category is invisible to adversarial testing.** In every
+instance the instrument answered *correctly* — it decided its own `P′` soundly
+and completely — and only the sentence describing it was wrong. Injecting
+defects into the subject finds nothing, because the gate is right every time.
+These are found by reading the claim against the implementation, and nothing
+else has ever found one here. One stood twelve waves with the harness green
+throughout.
+
+**Know what kind of instrument you are running.** Adversarial agent review is a
+*soundness* instrument. It is extremely effective — roughly 28 defects in ten
+days — and it will drive false greens toward zero while leaving every caption
+untouched. If the only technique in use is adversarial review, the unfaithful
+category grows silently, because nothing in the loop is pointed at it.
+
+**Prefer a framing that makes a prediction over a list that summarises.** A list
+of five shapes says what has been seen. "Sound, complete, faithful are
+exhaustive over *the answer is wrong* and *the question is wrong*" says what a
+counterexample would have to look like — and that is checkable.
