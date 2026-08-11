@@ -61,7 +61,11 @@ for m in PAT.finditer(paper):
     # cannot derive; they are counted and printed, never failed. Growing an
     # allowlist to cover them would be the same hand-transcription the gate
     # exists to prevent, one level up.
-    if not re.search(r"in-specification|all \$?\d|of \$?\d[\d{,}]* *\$? *(in-spec|codes exact)", win):
+    # Gate only counts that belong to one of OUR rungs: a competitor's sweep
+    # size ("all 40,000 codes") is a conformance result too, but its code space
+    # is not derivable from the ladder and never will be.
+    if not (re.search(r"in-specification|codes exact", win)
+            and any(n in win for n in ("tnf", "bnf"))):
         unclassified += 1
         continue
     v = int(m.group(1).replace("{,}", ""))
