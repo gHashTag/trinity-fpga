@@ -45,7 +45,12 @@ module posit16_decode (
             15'b0000000000001??: lzc = 4'd12;
             15'b00000000000001?: lzc = 4'd13;
             15'b000000000000001: lzc = 4'd14;
-            default:             lzc = 4'd14;   // all-zero regime_bits (all-1 field): k=+14
+            // All-zero regime_bits means a run with NO terminator: 15 identical
+            // bits. For regime_sign=1 (abs_val all ones, i.e. maxpos) that is
+            // k = 15-1 = +14, so lzc must be 15, not 14. Setting 14 here gave
+            // k=+13 and made maxpos come out 4x too small. The only other way
+            // to reach this branch is abs_val==0, which is_zero already claims.
+            default:             lzc = 4'd15;
         endcase
     end
 
@@ -56,7 +61,12 @@ module posit16_decode (
         -$signed({2'b00, lzc});
 
     // Step 3: regime + terminator length (cap so we don't overflow the field).
-    wire [4:0] regime_total = (lzc < 4'd14) ? {1'b0, lzc} + 5'd1 : {1'b0, lzc};
+    // Regime plus terminator. When the run fills the field there is no
+    // terminator (lzc==15) and when it fills all but one bit the terminator is
+    // the last bit (lzc==14): either way the field is exhausted and 15 is the
+    // right length. Capping at 14 left the terminator sitting in the exponent
+    // slot, which made minpos come out 4x too large.
+    wire [4:0] regime_total = (lzc == 4'd15) ? 5'd15 : {1'b0, lzc} + 5'd1;
 
     // Step 4: exponent (es=2) and fraction. Shift regime+terminator out; the top 2
     //         bits are the exponent, the rest is the fraction (left-aligned).

@@ -8,7 +8,8 @@
   "mhz": 83.19,
   "mhz_per_lut": 0.1797,
   "spread": 6.61,
-  "checked": "all 4 codes"
+  "checked": "all 4 codes",
+  "bram": 0
  },
  {
   "rank": 2,
@@ -19,7 +20,8 @@
   "mhz": 77.0,
   "mhz_per_lut": 0.1631,
   "spread": 6.37,
-  "checked": "not swept"
+  "checked": "not swept",
+  "bram": 0
  },
  {
   "rank": 3,
@@ -30,7 +32,8 @@
   "mhz": 72.16,
   "mhz_per_lut": 0.1354,
   "spread": 5.08,
-  "checked": "all 1{,}024"
+  "checked": "all 1{,}024",
+  "bram": 0
  },
  {
   "rank": 4,
@@ -41,7 +44,8 @@
   "mhz": 64.7,
   "mhz_per_lut": 0.1254,
   "spread": 9.33,
-  "checked": "all 256, 0 wrong"
+  "checked": "all 256, 0 wrong",
+  "bram": 0
  },
  {
   "rank": 5,
@@ -52,7 +56,8 @@
   "mhz": 65.3,
   "mhz_per_lut": 0.1234,
   "spread": 5.7,
-  "checked": "all 256, 0 wrong"
+  "checked": "all 256, 0 wrong",
+  "bram": 0
  },
  {
   "rank": 6,
@@ -63,7 +68,8 @@
   "mhz": 63.3,
   "mhz_per_lut": 0.1213,
   "spread": 7.74,
-  "checked": "all 65{,}536"
+  "checked": "all 65{,}536",
+  "bram": 0
  },
  {
   "rank": 7,
@@ -74,7 +80,8 @@
   "mhz": 71.15,
   "mhz_per_lut": 0.1212,
   "spread": 4.54,
-  "checked": "all 16{,}384"
+  "checked": "all 16{,}384",
+  "bram": 0
  },
  {
   "rank": 8,
@@ -85,7 +92,8 @@
   "mhz": 67.06,
   "mhz_per_lut": 0.1202,
   "spread": 5.49,
-  "checked": "not swept"
+  "checked": "not swept",
+  "bram": 0
  },
  {
   "rank": 9,
@@ -96,7 +104,8 @@
   "mhz": 67.13,
   "mhz_per_lut": 0.1176,
   "spread": 3.3,
-  "checked": "all 131{,}072, 0 wrong"
+  "checked": "all 131{,}072, 0 wrong",
+  "bram": 0
  },
  {
   "rank": 10,
@@ -107,7 +116,8 @@
   "mhz": 66.91,
   "mhz_per_lut": 0.1176,
   "spread": 6.03,
-  "checked": "sampled 9{,}997, 0 wrong"
+  "checked": "sampled 9{,}997, 0 wrong",
+  "bram": 0
  },
  {
   "rank": 11,
@@ -118,7 +128,8 @@
   "mhz": 66.28,
   "mhz_per_lut": 0.1173,
   "spread": 8.56,
-  "checked": "all 131{,}072"
+  "checked": "all 131{,}072",
+  "bram": 0
  },
  {
   "rank": 12,
@@ -129,7 +140,8 @@
   "mhz": 65.38,
   "mhz_per_lut": 0.1143,
   "spread": 8.73,
-  "checked": "sampled, 0 wrong"
+  "checked": "sampled, 0 wrong",
+  "bram": 0
  },
  {
   "rank": 13,
@@ -140,7 +152,8 @@
   "mhz": 62.13,
   "mhz_per_lut": 0.114,
   "spread": 3.63,
-  "checked": "all 1{,}024, 0 wrong"
+  "checked": "all 1{,}024, 0 wrong",
+  "bram": 0
  },
  {
   "rank": 14,
@@ -151,7 +164,8 @@
   "mhz": 61.38,
   "mhz_per_lut": 0.10960714285714286,
   "spread": 3.710000000000001,
-  "checked": "all 40{,}000 \\checkmark"
+  "checked": "all 40{,}000 \\checkmark",
+  "bram": 0
  },
  {
   "rank": 15,
@@ -162,7 +176,8 @@
   "mhz": 63.05,
   "mhz_per_lut": 0.1004,
   "spread": 1.08,
-  "checked": "selector live; no reference"
+  "checked": "selector live; no reference",
+  "bram": 0
  },
  {
   "rank": 16,
@@ -173,18 +188,20 @@
   "mhz": 44.33,
   "mhz_per_lut": 0.0821,
   "spread": 4.02,
-  "checked": "not swept"
+  "checked": "not swept",
+  "bram": 0
  },
  {
   "rank": 17,
   "format": "takum16",
   "ours": false,
-  "storage": "16 bits, 57 BRAM",
+  "storage": "16 bits",
   "lut": 789,
   "mhz": 58.96,
   "mhz_per_lut": 0.0747,
   "spread": 5.75,
-  "checked": "632 of 61{,}505 (fp32 floor)"
+  "checked": "632 of 61{,}505 (fp32 floor)",
+  "bram": 57
  },
  {
   "rank": 18,
@@ -195,18 +212,20 @@
   "mhz": 43.04,
   "mhz_per_lut": 0.0654,
   "spread": 0.45,
-  "checked": "not swept"
+  "checked": "not swept",
+  "bram": 0
  },
  {
   "rank": 19,
   "format": "posit16",
   "ours": false,
   "storage": "16 bits",
-  "lut": 712,
-  "mhz": 40.38,
-  "mhz_per_lut": 0.0567,
-  "spread": 1.02,
-  "checked": "4 of 65{,}536 wrong"
+  "lut": 667,
+  "mhz": 36.75,
+  "mhz_per_lut": 0.055097451274362816,
+  "spread": 1.6300000000000026,
+  "checked": "all 65{,}535 \\checkmark",
+  "bram": 0
  },
  {
   "rank": 20,
@@ -217,17 +236,19 @@
   "mhz": 30.82,
   "mhz_per_lut": 0.030575396825396825,
   "spread": 1.5299999999999976,
-  "checked": "all 40{,}000 \\checkmark"
+  "checked": "all 40{,}000 \\checkmark",
+  "bram": 0
  },
  {
   "rank": 21,
   "format": "posit32",
   "ours": false,
   "storage": "32 bits",
-  "lut": 953,
-  "mhz": 28.16,
-  "mhz_per_lut": 0.0295,
-  "spread": 2.29,
-  "checked": "not swept"
+  "lut": 967,
+  "mhz": 29.55,
+  "mhz_per_lut": 0.030558428128231646,
+  "spread": 1.9600000000000009,
+  "checked": "all 40{,}000 \\checkmark",
+  "bram": 0
  }
 ]

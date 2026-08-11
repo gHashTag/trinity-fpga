@@ -3129,31 +3129,31 @@ found, ours and theirs, made its module smaller: an unimplemented case is
 unsynthesised logic.}\label{tab:fullthroughput}
 \small
 \scriptsize
-\begin{tabular}{rlrrrrrl}
+\begin{tabular}{rlrrrrrrl}
 \toprule
-& format & storage & LUT & MHz & MHz/LUT & spread & conformance \\
+& format & storage & LUT & BRAM & MHz & MHz/LUT & spread & conformance \\
 \midrule
-1 & \textbf{GFTernary} (ours) & 2 bits & 463 & 83.19 & \textbf{0.1797} & $6.61$ & all 4 codes \\
-2 & binary32 & 32 bits & 472 & 77.00 & 0.1631 & $6.37$ & not swept \\
-3 & \textbf{GF10} (ours) & 10 bits & 533 & 72.16 & \textbf{0.1354} & $5.08$ & all 1{,}024 \\
-4 & fp8 e4m3 & 8 bits & 516 & 64.70 & 0.1254 & $9.33$ & all 256, 0 wrong \\
-5 & fp8 e5m2 & 8 bits & 529 & 65.30 & 0.1234 & $5.70$ & all 256, 0 wrong \\
-6 & binary16 & 16 bits & 522 & 63.30 & 0.1213 & $7.74$ & all 65{,}536 \\
-7 & \textbf{GF14} (ours) & 14 bits & 587 & 71.15 & \textbf{0.1212} & $4.54$ & all 16{,}384 \\
-8 & minifloat & 8 bits & 558 & 67.06 & 0.1202 & $5.49$ & not swept \\
-9 & \textbf{BNF16} (ours) & 17 bits & 571 & 67.13 & \textbf{0.1176} & $3.30$ & all 131{,}072, 0 wrong \\
-10 & \textbf{TNF32} (ours) & 36 bits & 569 & 66.91 & \textbf{0.1176} & $6.03$ & sampled 9{,}997, 0 wrong \\
-11 & \textbf{TNF16} (ours) & 17 bits & 565 & 66.28 & \textbf{0.1173} & $8.56$ & all 131{,}072 \\
-12 & \textbf{TNF64} (ours) & 65 bits & 572 & 65.38 & \textbf{0.1143} & $8.73$ & sampled, 0 wrong \\
-13 & \textbf{TNF8} (ours) & 10 bits & 545 & 62.13 & \textbf{0.1140} & $3.63$ & all 1{,}024, 0 wrong \\
-14 & VAX F & 32 bits & 560 & 61.38 & 0.1096 & $3.71$ & all 40{,}000 \checkmark \\
-15 & \textbf{GF+8} (ours) & 8 bits & 628 & 63.05 & \textbf{0.1004} & $1.08$ & selector live; no reference \\
-16 & posit8 & 8 bits & 540 & 44.33 & 0.0821 & $4.02$ & not swept \\
-17 & takum16 & 16 bits, 57 BRAM & 789 & 58.96 & 0.0747 & $5.75$ & 632 of 61{,}505 (fp32 floor) \\
-18 & LNS16 & 16 bits & 658 & 43.04 & 0.0654 & $0.45$ & not swept \\
-19 & posit16 & 16 bits & 712 & 40.38 & 0.0567 & $1.02$ & 4 of 65{,}536 wrong \\
-20 & IBM hex32 & 32 bits & 1008 & 30.82 & 0.0306 & $1.53$ & all 40{,}000 \checkmark \\
-21 & posit32 & 32 bits & 953 & 28.16 & 0.0295 & $2.29$ & not swept \\
+1 & \textbf{GFTernary} (ours) & 2 bits & 463 & 0 & 83.19 & \textbf{0.1797} & $6.61$ & all 4 codes \\
+2 & binary32 & 32 bits & 472 & 0 & 77.00 & 0.1631 & $6.37$ & not swept \\
+3 & \textbf{GF10} (ours) & 10 bits & 533 & 0 & 72.16 & \textbf{0.1354} & $5.08$ & all 1{,}024 \\
+4 & fp8 e4m3 & 8 bits & 516 & 0 & 64.70 & 0.1254 & $9.33$ & all 256, 0 wrong \\
+5 & fp8 e5m2 & 8 bits & 529 & 0 & 65.30 & 0.1234 & $5.70$ & all 256, 0 wrong \\
+6 & binary16 & 16 bits & 522 & 0 & 63.30 & 0.1213 & $7.74$ & all 65{,}536 \\
+7 & \textbf{GF14} (ours) & 14 bits & 587 & 0 & 71.15 & \textbf{0.1212} & $4.54$ & all 16{,}384 \\
+8 & minifloat & 8 bits & 558 & 0 & 67.06 & 0.1202 & $5.49$ & not swept \\
+9 & \textbf{BNF16} (ours) & 17 bits & 571 & 0 & 67.13 & \textbf{0.1176} & $3.30$ & all 131{,}072, 0 wrong \\
+10 & \textbf{TNF32} (ours) & 36 bits & 569 & 0 & 66.91 & \textbf{0.1176} & $6.03$ & sampled 9{,}997, 0 wrong \\
+11 & \textbf{TNF16} (ours) & 17 bits & 565 & 0 & 66.28 & \textbf{0.1173} & $8.56$ & all 131{,}072 \\
+12 & \textbf{TNF64} (ours) & 65 bits & 572 & 0 & 65.38 & \textbf{0.1143} & $8.73$ & sampled, 0 wrong \\
+13 & \textbf{TNF8} (ours) & 10 bits & 545 & 0 & 62.13 & \textbf{0.1140} & $3.63$ & all 1{,}024, 0 wrong \\
+14 & VAX F & 32 bits & 560 & 0 & 61.38 & 0.1096 & $3.71$ & all 40{,}000 \checkmark \\
+15 & \textbf{GF+8} (ours) & 8 bits & 628 & 0 & 63.05 & \textbf{0.1004} & $1.08$ & selector live; no reference \\
+16 & posit8 & 8 bits & 540 & 0 & 44.33 & 0.0821 & $4.02$ & not swept \\
+17 & takum16 & 16 bits & 789 & 57 & 58.96 & 0.0747 & $5.75$ & 632 of 61{,}505 (fp32 floor) \\
+18 & LNS16 & 16 bits & 658 & 0 & 43.04 & 0.0654 & $0.45$ & not swept \\
+19 & posit16 & 16 bits & 667 & 0 & 36.75 & 0.0551 & $1.63$ & all 65{,}535 \checkmark \\
+20 & IBM hex32 & 32 bits & 1008 & 0 & 30.82 & 0.0306 & $1.53$ & all 40{,}000 \checkmark \\
+21 & posit32 & 32 bits & 967 & 0 & 29.55 & 0.0306 & $1.96$ & all 40{,}000 \checkmark \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -3810,16 +3810,47 @@ takum16   & $98.7\%$ & $632/61{,}505$ & linear reference, logarithmic decoder \\
 IBM hex32 & $28\%$   & $0/30{,}245$   & no $\rho$; subnormal path then added \\
 LNS16     & $253$    & $107/65{,}536$ & scale-256 reference, scale-128 decoder \\
 VAX F     & $151$    & $0/40{,}000$   & no $\rho$; subnormal path then added \\
-posit16   & $4$      & $4/65{,}535$   & unchanged: a real edge defect \\
-posit32   & $36$     & $48/40{,}000$  & unchanged: a real defect, count corrected \\
+posit16   & $4$      & $0/65{,}535$   & two regime defects at saturation, repaired \\
+posit32   & $36$     & $0/40{,}000$   & one casez arm unreachable, repaired \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-Four of the six shrank to nothing or nearly nothing, and two did not. That ratio
+All six are now zero or explained, and the two that were real were repaired
+rather than reported. That ratio
 is the useful part of this section: a test that cannot be wrong about itself
 would have found two defects instead of six, and the four false ones cost more
-attention than the two real ones. \emph{The instrument was inside the failure
+attention than the two real ones. 
+\paragraph{The two real defects, and the channel that had already reported one.}
+\texttt{posit16} was wrong at exactly four codes, the two saturation values and
+their negations, each by $2^{\pm2}$ --- one step of an $es=2$ exponent field.
+Two independent off-by-ones caused it: the regime-plus-terminator length was
+capped one short when the run fills the word, so the terminator bit was read as
+the exponent; and the all-zero branch of the leading-count assigned $k=13$ where
+a run of fifteen identical bits gives $k=14$, its own comment saying
+\emph{$k=+14$} beside code that produced $13$.
+
+\texttt{posit32}'s $48$ wrong values had a plainer cause. One \texttt{casez}
+pattern was written thirty-two characters wide in a thirty-one-bit case. Verilog
+truncates from the left, which made the $lzc=11$ arm character-for-character the
+arm above it --- unreachable --- so every code with exactly eleven leading zeros
+fell through to the default. It was misread as regime arithmetic for two
+iterations.
+
+The compiler had said so on every single run:
+\begin{center}
+\texttt{warning: Extra digits given for sized binary constant.}
+\end{center}
+The harness redirected compiler output to a log file, and the log was read only
+when something failed. \emph{A warning nobody reads is not a warning}; it is an
+instrument whose output is disconnected, which is the same defect as an
+instrument inside the failure domain and is harder to notice, because the
+instrument is working perfectly. \texttt{tools/check\_literal\_widths.py} now
+turns this class into an exit code: it checks $188{,}021$ sized literals, gates
+the paths this paper measures, and prints --- rather than hides --- the $41$
+occurrences it finds in test benches outside that scope.
+
+\emph{The instrument was inside the failure
 domain it was measuring} --- the same error, in a different medium, as
 diagnosing a network fault with a tool that runs over that network.
 
