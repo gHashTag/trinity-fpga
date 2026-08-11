@@ -71,8 +71,7 @@ and it is where the multiplier is decided. Removing one rather than cheapening
 it requires the weight lattice to be \emph{closed} under weight application and
 accumulation alike. $\mathbb{Z}[\varphi]$ is, because $\varphi^2=\varphi+1$:
 applying a weight is the Fibonacci step $(a,b)\mapsto(b,a+b)$, accumulation is
-componentwise, and a layer's linear path is exact. Machine-checked in Coq. A set that is not closed must return every accumulation to it, costing an order
-of magnitude more area.
+componentwise, and a layer's linear path is exact. Machine-checked in Coq.
 
 Closure does not single out $\varphi$; enumeration does. A scale is
 multiplier-free exactly when it is an algebraic integer whose companion matrix
@@ -80,14 +79,17 @@ has entries in $\{0,\pm1\}$. Degree two admits $\varphi$ alone, and nothing lies
 between the shift and $\varphi$. The family $r^d=r+1$ reaches any granularity at
 \emph{one addition} and $d$ registers: fineness costs registers, not adders.
 
-On an XC7A200T a ternary neuron costs $28$ LUT per weight, $32.4$ with one
-pipeline stage at $126.73$\,MHz, and \emph{no DSP at any fan-in}.
+Among the twenty formats carrying their own range --- those a training run can
+live in --- GFTernary leads on throughput per area, by $10.2\%$ over the next and
+$6.1\times$ over \texttt{posit32}, with eight of the twenty ours. Formats needing
+an external learned scale are tabulated apart. On an XC7A200T a ternary neuron
+costs $28$ LUT per weight and \emph{no DSP at any fan-in}.
 
 Which rung follows from the budget --- $\varphi$ at four bits, $r^5{=}r^3{+}1$ at
 five, $r^6{=}r{+}1$ at six --- reaching $3.7\%$ of \texttt{fp32} at six bits and
-one adder. On the block axis the element is closed --- the best eight-level codebook beats
-a deployed one by $0.9\%$ --- and the scale is not: a $\varphi$ grid at four bits
-beats MXFP4 on two models at $0.125$ fewer bits per weight.
+one adder. On the block axis the element is closed, the best eight-level
+codebook beating a deployed one by $0.9\%$, and the scale is not: a $\varphi$
+grid at four bits beats MXFP4 on two models at $0.125$ fewer bits per weight.
 
 Five retractions are marked in place below.
 \end{abstract}
