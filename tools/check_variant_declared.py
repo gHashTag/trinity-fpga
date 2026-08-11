@@ -32,7 +32,23 @@ for fmt, e in sorted(entries.items()):
     rtl = ROOT / e["rtl"]
     if not rtl.exists():
         fails.append(f"{fmt}: rtl {e['rtl']} does not exist"); continue
-    head = "\n".join(l for l in rtl.read_text().splitlines()[:24] if l.strip().startswith("//"))
+    # A file may hold several modules, so the declaration for a later one is not
+    # in the first lines. Take the comment block immediately above the module
+    # named by ref_key, falling back to the file header for single-module files.
+    lines = rtl.read_text().splitlines()
+    mod = e.get("ref_key", "")
+    start = next((i for i, l in enumerate(lines)
+                  if l.lstrip().startswith("module") and mod in l), None)
+    if start is None:
+        block = lines[:24]
+    else:
+        j = start - 1
+        while j >= 0 and (lines[j].lstrip().startswith("//") or not lines[j].strip()):
+            j -= 1
+        block = lines[j + 1:start]
+    head = "\n".join(l for l in block if l.strip().startswith("//"))
+    if not head.strip():   # single-module file: its header sits above the directives
+        head = "\n".join(l for l in lines[:24] if l.strip().startswith("//"))
     if not head.strip():
         fails.append(f"{fmt}: {e['rtl']} has no header comment to declare a variant"); continue
     # The declaration must be checkable, not merely present: the token the map
