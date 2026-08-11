@@ -41,6 +41,14 @@ class TNFSpec:
         return 1 + self.off_bits + self.mant_bits
 
 
+# UNIT: STORED BITS. A rung's width here is 1 + ceil(E_t log2 3) + M, the size
+# of the word actually stored and actually synthesised. conformance/
+# tnf_ladder_invariants_test.py declares a different ladder under the same names
+# in UNIT: POSITIONS (N = 1 + E_t + M). Both are meaningful; neither said which
+# it was counting, so tnf16 meant M=9 in one file and M=11 in the other for the
+# whole campaign. The RTL implements THIS one.
+UNIT = "stored bits"
+
 FORMATS = {
     "tnf8":  TNFSpec("tnf8",  et=3, mant_bits=4),
     "tnf16": TNFSpec("tnf16", et=4, mant_bits=9),

@@ -15,7 +15,20 @@ from fractions import Fraction as F
 sys.path.insert(0, __file__.rsplit("/", 1)[0])
 import tnf_ref as G
 
-# The ladder as specs/numeric/gft*.t27 defines it: M = N - 1 - E_t.
+# UNIT: POSITIONS. This ladder is the position budget -- one sign position, E_t
+# ternary positions and M binary positions, so N = 1 + E_t + M and
+# M = N - 1 - E_t. It is NOT the stored-bit ladder.
+#
+# conformance/tnf_spec_ref.py declares a DIFFERENT ladder under the SAME names,
+# in UNIT: STORED BITS, where the width is 1 + ceil(E_t log2 3) + M. The two
+# disagree on tnf16 (M = 11 here, 9 there) and tnf64 (56 here, 52 there), and
+# both passed their own tests for the whole campaign because neither said which
+# unit it was counting. The RTL implements the stored-bit ladder; this file's
+# rungs are not the ones in silicon.
+#
+# tools/check_ladder_units.py now requires both files to declare their unit and
+# forbids a name meaning two different things.
+UNIT = "positions"
 LADDER = [(4, 2, 1), (8, 3, 4), (16, 4, 11), (32, 6, 25), (64, 7, 56),
           (128, 8, 119), (256, 9, 246), (512, 10, 501), (1024, 11, 1012)]
 
