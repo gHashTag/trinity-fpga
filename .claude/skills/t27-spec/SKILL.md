@@ -5875,3 +5875,37 @@ whose repair is a design decision belongs in an explicit table with its reason
 and its issue, reported as a warning, with everything not on the list failing.
 That keeps the gate useful today, keeps the defect visible, and makes removing
 the entry without fixing it turn the build red.
+
+## Wave 657 — a gate should name the thing it exists for
+
+**Give every gate a witness: the specific, named artifact whose absence must be
+loud.** Coverage floors count totals, and a total stays healthy while the one
+interesting case goes missing. Naming the subject — this instantiation, this
+declaration, this register — turns "something was examined" into "the thing this
+gate was written for was examined". Verify it by renaming that subject and
+confirming the gate fails.
+
+**Check your own framing before quoting a coverage ratio.** "The vocabulary
+covers 14% of connections" implied most quantities were unchecked. Enumerating
+the other 86% showed they were clocks, resets, data buses and handshakes — not
+quantities at all. A denominator that includes everything makes any checker look
+negligent. State what the denominator actually contains before drawing a
+conclusion from the ratio.
+
+**When a witness looks silent, suspect the test first.** Two appeared not to fire
+this wave. One was caught by a different guard that ran earlier, so the gate
+failed correctly and only the expected message differed. The other was never
+exercised, because the mutation renamed a declaration while the gate reads
+assignments. Both times the instrument was right and the check of it was wrong.
+
+**Assert that your edit landed — again.** A witness was inserted with
+`str.replace()` on an anchor that did not match, with no count assertion, so the
+variable it populated stayed empty and the new check ran against nothing. This
+rule is written in three separate places in this campaign's notes and was broken
+in the wave that cites them. Knowing a rule and applying it under time pressure
+are different skills; make the assertion mechanical, not remembered.
+
+**A negative result with a corrected framing is a full result.** Most of this
+wave's vocabulary work found nothing to add, and saying so — with the reason the
+earlier estimate was wrong — is more useful than the one family that did need
+adding.
