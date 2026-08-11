@@ -48,6 +48,30 @@ for N, ACC, fn in CASES:
     else:
         print(f"  fan-in {N:2}: {tot} vectors, 0 mismatches")
 
+# Depth. The corollary is that the gain through k phi-layers is exactly
+# F_k*phi + F_(k-1), a pair of integers known in advance -- which is what makes
+# the claim "no multiplier at any depth" rather than "no multiplier in a layer".
+dp = ROOT / "fpga" / "phiscale" / "depth_sweep.txt"
+if dp.exists():
+    fib = [0, 1]
+    while len(fib) < 64: fib.append(fib[-1] + fib[-2])
+    dbad = dtot = 0
+    for line in dp.read_text().splitlines():
+        q = line.split()
+        if len(q) != 3: continue
+        k, ga, gb = int(q[0]), int(q[1]), int(q[2]); dtot += 1
+        if not (ga == fib[k - 1] and gb == fib[k]): dbad += 1
+    if dtot == 0:
+        fails.append("depth_sweep.txt: swept nothing")
+    elif dbad:
+        fails.append(f"depth: {dbad} of {dtot} depths disagree with F_k phi + F_(k-1)")
+    else:
+        print(f"  depth   : {dtot} depths, 0 mismatches "
+              f"(gain at k={dtot} is ({fib[dtot-1]}, {fib[dtot]}))")
+    total += dtot
+else:
+    fails.append("depth_sweep.txt: missing -- run fpga/phiscale/tb_depth first")
+
 print(f"\nvectors compared exactly: {total}")
 if total == 0:
     print("\nFAIL: nothing was compared"); sys.exit(1)

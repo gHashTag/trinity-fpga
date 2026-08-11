@@ -25,3 +25,6 @@ jobs:
             iverilog -o /tmp/$tb -g2012 tern_node2.v $tb.v && vvp /tmp/$tb > ${tb/tb_exact/exact_sweep}.txt
           done
       - run: python3 tools/check_exact_path.py
+      - run: |
+          cd fpga/phiscale
+          iverilog -o /tmp/td -g2012 phi_step_uni.v tb_depth.v && vvp /tmp/td > depth_sweep.txt
