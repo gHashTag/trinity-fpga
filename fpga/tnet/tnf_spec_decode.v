@@ -54,3 +54,17 @@ module tnf8s_decode (input wire [9:0] x, output wire [31:0] fp32_out);
                   : is_zero ? {s, 31'b0}
                   :           {s, e32, mant23};
 endmodule
+// bnf16s: the binary-exponent sibling of TNF16, at the same field widths.
+// E = 7 bits, M = 9, stored width 17. The module this replaces was 16 bits with
+// eight mantissa bits -- one short, exactly as TNF16's was.
+module bnf16s_decode (input wire [16:0] x, output wire [31:0] fp32_out);
+  wire       s = x[16];
+  wire [6:0] e = x[15:9];
+  wire [8:0] m = x[8:0];
+  wire [7:0] e32 = {1'b0, e} - 8'd63 + 8'd127;
+  wire is_zero = (e == 7'd0);
+  wire is_spec = (e == 7'd127);
+  assign fp32_out = is_spec ? {s, 8'hFF, (|m), 22'b0}
+                  : is_zero ? {s, 31'b0}
+                  :           {s, e32, m, 14'b0};
+endmodule
