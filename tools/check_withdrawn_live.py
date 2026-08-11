@@ -60,8 +60,18 @@ for s, e in zones:
 def in_zone(pos):
     return any(s <= pos < e for s, e in zones)
 
+# A number equal to a measured MHz in the regenerated table is a live
+# measurement, not a resurrected claim -- a withdrawn figure and a current
+# one can collide by arithmetic. Read from the JSON the table is
+# machine-written from, so the exclusion cannot be gamed by editing prose.
+import json as _json
+_measured = {f"{r['mhz']:.2f}"
+             for f in ("full_table", "rejected_measured")
+             for r in _json.load(open(f"research/arxiv_tnf/{f}.json"))}
+
 fails = []
 for val, _ in sorted(withdrawn.items()):
+    if val in _measured: continue
     # whole-number matching: 2.44 must not match 2.4455, and a value the
     # withdrawal itself introduces as the CORRECTED one is not withdrawn.
     pat = re.compile(r"(?<![\d.])" + re.escape(val) + r"(?![\d])")
