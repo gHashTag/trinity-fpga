@@ -111,6 +111,35 @@ axis moved in opposite directions on the same weights in the same run. Before
 reporting any quantisation comparison in squared error, remember there is a
 measured case in this repository where it points the wrong way.
 
+### The metric, once it was chased down
+
+Three mechanisms were proposed for that anomaly and all three were wrong. The
+answer, in `METRIC_DISAGREEMENT_2026-08-11.md`, was that nothing was wrong inside
+the network:
+
+| instrument | change under rotation |
+|---|---:|
+| weight L2 | −3.31 % |
+| layer-output L2 | −19.94 % |
+| final-logit L2 | −46.11 % |
+| KL(fp32 ‖ quantised) | **+15.47 %** |
+| perplexity | **+7.96 %** |
+
+Every Euclidean instrument said the quantised model was closer to fp32; KL said
+it was further away, and `exp(ΔKL)` accounts for 85 % of the perplexity change.
+An error costs nothing on tokens that had no probability and a great deal on the
+few that did.
+
+Two rules follow, and they are cheap to apply:
+
+- **Report quantisation quality in KL or perplexity, never in squared error.**
+  Lloyd-Max minimises squared error, which is why the block line kept finding
+  MSE-optimal codebooks that lost — the objective was wrong every time.
+- **When a proxy and the real axis disagree, measure the ladder between them.**
+  Weights, layer outputs, logits and KL took four short runs and turned an
+  unexplained anomaly into a located one. Guessing the mechanism failed three
+  times in a row first.
+
 ### Context Collection (ALWAYS run first)
 ```bash
 # Current project state — feeds into search queries
