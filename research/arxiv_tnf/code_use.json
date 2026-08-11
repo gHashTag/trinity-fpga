@@ -83,6 +83,24 @@
   "exhaustive": true,
   "use": 0.9414520263671875
  },
+ "TNF17e-bare": {
+  "distinct": 130048,
+  "codes": 131072,
+  "exhaustive": true,
+  "use": 0.9921875
+ },
+ "TNF64b": {
+  "distinct": 159931,
+  "codes": 200000,
+  "exhaustive": false,
+  "use": 0.799655
+ },
+ "TNF64b-bare": {
+  "distinct": 199950,
+  "codes": 200000,
+  "exhaustive": false,
+  "use": 0.99975
+ },
  "TNF8": {
   "distinct": 966,
   "codes": 1024,

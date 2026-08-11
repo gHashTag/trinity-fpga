@@ -65,11 +65,17 @@ def in_zone(pos):
 # one can collide by arithmetic. Read from the JSON the table is
 # machine-written from, so the exclusion cannot be gamed by editing prose.
 import json as _json
-_measured = {v
-             for f in ("full_table", "rejected_measured")
-             for r in _json.load(open(f"research/arxiv_tnf/{f}.json"))
-             for v in (f"{r['mhz']:.2f}", f"{r['mhz_per_lut']:.4f}",
-                       str(r['lut']), f"{r['spread']:.2f}")}
+_measured = set()
+for _f in ("full_table", "rejected_measured"):
+    for _r in _json.load(open(f"research/arxiv_tnf/{_f}.json")):
+        _measured.update({f"{_r['mhz']:.2f}", f"{_r['mhz_per_lut']:.4f}",
+                          str(_r['lut']), f"{_r['spread']:.2f}"})
+        # the table now prints five-seed RANGES, so each endpoint and each seed
+        # is itself a live measurement and must not read as a resurrected figure
+        _s = _r.get("seeds")
+        if _s:
+            _measured.update(f"{_v:.2f}" for _v in _s)
+            _measured.update({f"{min(_s)/_r['lut']:.4f}", f"{max(_s)/_r['lut']:.4f}"})
 
 fails = []
 for val, _ in sorted(withdrawn.items()):

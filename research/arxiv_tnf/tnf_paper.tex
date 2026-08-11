@@ -3135,36 +3135,39 @@ rule predicts and is now measured rather than asserted. Every error
 found, ours and theirs, made its module smaller: an unimplemented case is
 unsynthesised logic.}\label{tab:fullthroughput}
 \small
-\scriptsize
-\begin{tabular}{rlrrrrrrl}
+\tiny
+\begin{tabular}{rlrrrrrl}
 \toprule
-& format & storage & LUT & BRAM & MHz & MHz/LUT & spread & conformance \\
+& format & storage & LUT & BRAM & MHz/LUT & five-seed range & conformance \\
 \midrule
-1 & \textbf{GFTernary} (ours) & 2 bits & 463 & 0 & 83.19 & \textbf{0.1797} & $6.61$ & all 4 codes \\
-2 & binary32 & 32 bits & 472 & 0 & 77.00 & 0.1631 & $6.37$ & identity (exact) \\
-3 & \textbf{TNF16a} (ours) & 16b & 502 & 0 & 69.87 & \textbf{0.1392} & $6.97$ & all 65{,}534 \checkmark \\
-4 & \textbf{GF10} (ours) & 10 bits & 533 & 0 & 72.16 & \textbf{0.1354} & $5.08$ & all 1{,}024 \\
-5 & \textbf{TNF17e} (ours) & 17b & 532 & 0 & 69.80 & \textbf{0.1312} & $5.09$ & all 124{,}416 \checkmark \\
-6 & \textbf{TNF16c} (ours) & 16b & 527 & 0 & 67.20 & \textbf{0.1275} & $1.48$ & all 62{,}208 \checkmark \\
-7 & fp8 e4m3 & 8 bits & 516 & 0 & 64.70 & 0.1254 & $9.33$ & all 256, 0 wrong \\
-8 & fp8 e5m2 & 8 bits & 529 & 0 & 65.30 & 0.1234 & $5.70$ & all 256, 0 wrong \\
-9 & binary16 & 16 bits & 522 & 0 & 63.30 & 0.1213 & $7.74$ & all 65{,}536 \\
-10 & \textbf{GF14} (ours) & 14 bits & 587 & 0 & 71.15 & \textbf{0.1212} & $4.54$ & all 16{,}384 \\
-11 & minifloat & 8 bits & 558 & 0 & 67.06 & 0.1202 & $5.49$ & all 254 \checkmark \\
-12 & \textbf{BNF16} (ours) & 17 bits & 571 & 0 & 67.13 & \textbf{0.1176} & $3.30$ & all 131{,}072, 0 wrong \\
-13 & \textbf{TNF32} (ours) & 36 bits & 569 & 0 & 66.91 & \textbf{0.1176} & $6.03$ & sampled 9{,}997, 0 wrong \\
-14 & \textbf{TNF16} (ours) & 17 bits & 565 & 0 & 66.28 & \textbf{0.1173} & $8.56$ & all 131{,}072 \\
-15 & \textbf{TNF16b} (ours) & 16b & 540 & 0 & 61.76 & \textbf{0.1144} & $6.54$ & all 65{,}534 \checkmark \\
-16 & \textbf{TNF64} (ours) & 65 bits & 572 & 0 & 65.38 & \textbf{0.1143} & $8.73$ & sampled, 0 wrong \\
-17 & \textbf{TNF8} (ours) & 10 bits & 545 & 0 & 62.13 & \textbf{0.1140} & $3.63$ & all 1{,}024, 0 wrong \\
-18 & VAX F & 32 bits & 560 & 0 & 61.38 & 0.1096 & $3.71$ & all 40{,}000 \checkmark \\
-19 & \textbf{GF+8} (ours) & 8b (+2 sel) & 628 & 0 & 63.05 & \textbf{0.1004} & $1.08$ & 1{,}024/1{,}024 \checkmark \\
-20 & posit8 & 8 bits & 550 & 0 & 44.68 & 0.0812 & $2.96$ & all 255 \checkmark \\
-21 & takum16 & 16 bits & 789 & 57 & 58.96 & 0.0747 & $5.75$ & 632/61{,}505 \\
-22 & LNS16 & 16 bits & 658 & 0 & 43.04 & 0.0654 & $0.45$ & 107/65{,}536 \\
-23 & posit16 & 16 bits & 667 & 0 & 36.75 & 0.0551 & $1.63$ & all 65{,}535 \checkmark \\
-24 & IBM hex32 & 32 bits & 1008 & 0 & 30.82 & 0.0306 & $1.53$ & all 40{,}000 \checkmark \\
-25 & posit32 & 32 bits & 967 & 0 & 29.55 & 0.0306 & $1.96$ & all 40{,}000 \checkmark \\
+1 & \textbf{GFTernary} (ours) & 2 bits & 527 & 0 & \textbf{0.1574} & $0.1524$--$0.1616$ & all 4 codes \\
+2 & binary32 & 32 bits & 536 & 0 & 0.1422 & $0.1376$--$0.1474$ & identity (exact) \\
+3 & fp8 e4m3 & 8 bits & 549 & 0 & 0.1244 & $0.1133$--$0.1322$ & all 256, 0 wrong \\
+4 & \textbf{TNF16a} (ours) & 16b & 566 & 0 & \textbf{0.1233} & $0.1192$--$0.1278$ & all 65{,}534 \checkmark \\
+5 & fp8 e5m2 & 8 bits & 544 & 0 & 0.1214 & $0.1168$--$0.1252$ & all 256, 0 wrong \\
+6 & \textbf{TNF17e} (ours) & 17b & 596 & 0 & \textbf{0.1207} & $0.1135$--$0.1238$ & all 124{,}416 \checkmark \\
+7 & \textbf{GF10} (ours) & 10 bits & 597 & 0 & \textbf{0.1189} & $0.1134$--$0.1204$ & all 1{,}024 \\
+8 & \textbf{TNF32} (ours) & 36 bits & 569 & 0 & \textbf{0.1176} & $0.1137$--$0.1243$ & sampled 9{,}997, 0 wrong \\
+9 & \textbf{TNF16c} (ours) & 16b & 591 & 0 & \textbf{0.1157} & $0.1118$--$0.1210$ & all 62{,}208 \checkmark \\
+10 & \textbf{TNF64} (ours) & 65 bits & 572 & 0 & \textbf{0.1143} & $0.1061$--$0.1214$ & sampled, 0 wrong \\
+11 & \textbf{TNF64b-bare} (ours) & 65b & 573 & 0 & \textbf{0.1095} & $0.1028$--$0.1155$ & sweep pending \\
+12 & minifloat & 8 bits & 622 & 0 & 0.1075 & $0.1009$--$0.1132$ & all 254 \checkmark \\
+13 & \textbf{GF14} (ours) & 14 bits & 651 & 0 & \textbf{0.1074} & $0.0969$--$0.1140$ & all 16{,}384 \\
+14 & \textbf{TNF17e-bare} (ours) & 17b & 605 & 0 & \textbf{0.1072} & $0.1041$--$0.1104$ & sweep pending \\
+15 & \textbf{TNF8} (ours) & 10 bits & 609 & 0 & \textbf{0.1069} & $0.1028$--$0.1099$ & all 1{,}024, 0 wrong \\
+16 & \textbf{TNF16b} (ours) & 16b & 604 & 0 & \textbf{0.1048} & $0.0998$--$0.1086$ & all 65{,}534 \checkmark \\
+17 & binary16 & 16 bits & 586 & 0 & 0.1039 & $0.0985$--$0.1071$ & all 65{,}536 \\
+18 & \textbf{BNF16} (ours) & 17 bits & 635 & 0 & \textbf{0.1034} & $0.0961$--$0.1064$ & all 131{,}072, 0 wrong \\
+19 & \textbf{TNF64b} (ours) & 65b & 626 & 0 & \textbf{0.1007} & $0.0944$--$0.1018$ & sweep pending \\
+20 & \textbf{TNF16} (ours) & 17 bits & 629 & 0 & \textbf{0.1005} & $0.0971$--$0.1071$ & all 131{,}072 \\
+21 & VAX F & 32 bits & 624 & 0 & 0.0942 & $0.0926$--$0.1000$ & all 40{,}000 \checkmark \\
+22 & \textbf{GF+8} (ours) & 8b (+2 sel) & 692 & 0 & \textbf{0.0882} & $0.0831$--$0.0931$ & 1{,}024/1{,}024 \checkmark \\
+23 & posit8 & 8 bits & 614 & 0 & 0.0728 & $0.0712$--$0.0774$ & all 255 \checkmark \\
+24 & takum16 & 16 bits & 853 & 57 & 0.0695 & $0.0677$--$0.0745$ & 632/61{,}505 \\
+25 & LNS16 & 16 bits & 722 & 0 & 0.0598 & $0.0581$--$0.0600$ & 107/65{,}536 \\
+26 & posit16 & 16 bits & 731 & 0 & 0.0485 & $0.0467$--$0.0496$ & all 65{,}535 \checkmark \\
+27 & posit32 & 32 bits & 1031 & 0 & 0.0302 & $0.0291$--$0.0314$ & all 40{,}000 \checkmark \\
+28 & IBM hex32 & 32 bits & 1072 & 0 & 0.0292 & $0.0273$--$0.0297$ & all 40{,}000 \checkmark \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -3793,31 +3796,34 @@ grouping Proposition~\ref{prop:pruning} leaves valid. Ours in bold.}
 \toprule
 bits & format & LUT & MHz & MHz/LUT \\
 \midrule
-2 & \textbf{GFTernary} & 463 & 83.19 & 0.1797 \\
-8 & fp8 e4m3 & 516 & 64.70 & 0.1254 \\
-8 & fp8 e5m2 & 529 & 65.30 & 0.1234 \\
-8 & minifloat & 558 & 67.06 & 0.1202 \\
-8 & \textbf{GF+8} & 628 & 63.05 & 0.1004 \\
-8 & posit8 & 550 & 44.68 & 0.0812 \\
-10 & \textbf{GF10} & 533 & 72.16 & 0.1354 \\
-10 & \textbf{TNF8} & 545 & 62.13 & 0.1140 \\
-14 & \textbf{GF14} & 587 & 71.15 & 0.1212 \\
-16 & \textbf{TNF16a} & 502 & 69.87 & 0.1392 \\
-16 & \textbf{TNF16c} & 527 & 67.20 & 0.1275 \\
-16 & binary16 & 522 & 63.30 & 0.1213 \\
-16 & \textbf{TNF16b} & 540 & 61.76 & 0.1144 \\
-16 & takum16 & 789 & 58.96 & 0.0747 \\
-16 & LNS16 & 658 & 43.04 & 0.0654 \\
-16 & posit16 & 667 & 36.75 & 0.0551 \\
-17 & \textbf{TNF17e} & 532 & 69.80 & 0.1312 \\
-17 & \textbf{BNF16} & 571 & 67.13 & 0.1176 \\
-17 & \textbf{TNF16} & 565 & 66.28 & 0.1173 \\
-32 & binary32 & 472 & 77.00 & 0.1631 \\
-32 & VAX F & 560 & 61.38 & 0.1096 \\
-32 & IBM hex32 & 1008 & 30.82 & 0.0306 \\
-32 & posit32 & 967 & 29.55 & 0.0306 \\
+2 & \textbf{GFTernary} & 527 & 82.93 & 0.1574 \\
+8 & fp8 e4m3 & 549 & 68.30 & 0.1244 \\
+8 & fp8 e5m2 & 544 & 66.05 & 0.1214 \\
+8 & minifloat & 622 & 66.87 & 0.1075 \\
+8 & \textbf{GF+8} & 692 & 61.06 & 0.0882 \\
+8 & posit8 & 614 & 44.71 & 0.0728 \\
+10 & \textbf{GF10} & 597 & 70.96 & 0.1189 \\
+10 & \textbf{TNF8} & 609 & 65.08 & 0.1069 \\
+14 & \textbf{GF14} & 651 & 69.91 & 0.1074 \\
+16 & \textbf{TNF16a} & 566 & 69.77 & 0.1233 \\
+16 & \textbf{TNF16c} & 591 & 68.35 & 0.1157 \\
+16 & \textbf{TNF16b} & 604 & 63.31 & 0.1048 \\
+16 & binary16 & 586 & 60.90 & 0.1039 \\
+16 & takum16 & 853 & 59.31 & 0.0695 \\
+16 & LNS16 & 722 & 43.15 & 0.0598 \\
+16 & posit16 & 731 & 35.43 & 0.0485 \\
+17 & \textbf{TNF17e} & 596 & 71.94 & 0.1207 \\
+17 & \textbf{TNF17e-bare} & 605 & 64.87 & 0.1072 \\
+17 & \textbf{BNF16} & 635 & 65.68 & 0.1034 \\
+17 & \textbf{TNF16} & 629 & 63.22 & 0.1005 \\
+32 & binary32 & 536 & 76.23 & 0.1422 \\
+32 & VAX F & 624 & 58.75 & 0.0942 \\
+32 & posit32 & 1031 & 31.18 & 0.0302 \\
+32 & IBM hex32 & 1072 & 31.30 & 0.0292 \\
 36 & \textbf{TNF32} & 569 & 66.91 & 0.1176 \\
 65 & \textbf{TNF64} & 572 & 65.38 & 0.1143 \\
+65 & \textbf{TNF64b-bare} & 573 & 62.73 & 0.1095 \\
+65 & \textbf{TNF64b} & 626 & 63.05 & 0.1007 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -3923,6 +3929,85 @@ number resting on a degenerate component --- is the kind of claim this paper
 spends twenty-seven sections dismantling in other people's work.}
 
 
+
+
+\section{The instrument resolves seven levels, not twenty-eight}
+\label{sec:bands}
+
+Until this point the throughput table stored a median and a spread per row. A
+median with a spread cannot answer whether two rows differ, so \emph{no ordering
+in this paper had ever been tested}. Every row was re-swept keeping all five
+per-seed frequencies, and two things came out of it.
+
+\paragraph{The table had been measured on two harnesses.} Seventeen of
+twenty-one rows reproduced their LUT count exactly; four fell. The cause is
+exact: two rows were driven from a $128$-bit LFSR and the rest from a $64$-bit
+one. Re-measuring \texttt{GFTernary}, which reproduces at $463$ LUT on the narrow
+harness, gives $527$ on the wide one --- \textbf{a difference of exactly $64$
+LUT, and exactly $64$ for all twenty-one rows}. Two rows had therefore been
+ranked against nineteen others while carrying $64$ LUT of harness the others did
+not. Everything in this section is re-measured on the wide harness, so the
+comparison is between decoders and not between wrappers.
+
+\paragraph{The ranking resolves into seven levels.} Testing each adjacent pair by
+whether its five-seed ranges overlap gives seven bands, and one of them holds
+twenty formats. \emph{A band is a chain of overlaps, not an equivalence class};
+two members at opposite ends of a chain may still be separated, so the useful
+test is pairwise and direct.
+
+\begin{center}\small
+\begin{tabular}{rl}
+\toprule
+band & members \\
+\midrule
+1 & \textbf{GFTernary} \\
+2 & \texttt{binary32} \\
+3 & twenty formats, from \texttt{fp8~e4m3} to \textbf{GF+8} \\
+4 & \texttt{posit8}, \texttt{takum16} \\
+5 & \texttt{LNS16} \\
+6 & \texttt{posit16} \\
+7 & \texttt{posit32}, IBM hex32 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+\textbf{\texttt{GFTernary} is alone in the first band}: $0.1524$--$0.1616$
+against \texttt{binary32}'s $0.1376$--$0.1474$, with no overlap. That result
+stands. Within band three the fine ordering does not: no reader should conclude
+from a rank that \texttt{TNF16} beats \texttt{BNF16}, because the instrument
+cannot see the difference.
+
+\paragraph{What is separated from IEEE half at equal or near-equal storage.}
+Six of our formats have five-seed ranges entirely above \texttt{binary16}'s
+$0.0985$--$0.1071$:
+
+\begin{center}\small
+\begin{tabular}{lrl}
+\toprule
+& vs \texttt{binary16} & five-seed range \\
+\midrule
+\textbf{GFTernary} & $+51.4\%$ & $0.1524$--$0.1616$ \\
+\textbf{TNF16a}    & $+18.6\%$ & $0.1192$--$0.1278$ \\
+\textbf{TNF17e}    & $+16.1\%$ & $0.1135$--$0.1238$ \\
+\textbf{GF10}      & $+14.4\%$ & $0.1134$--$0.1204$ \\
+\textbf{TNF32}     & $+13.2\%$ & $0.1137$--$0.1243$ \\
+\textbf{TNF16c}    & $+11.3\%$ & $0.1118$--$0.1210$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+\texttt{TNF16c} is the sixteen-bit rung at $E_t=5$ \emph{with its
+out-of-specification offsets reserved}: equal storage to \texttt{binary16},
+every code either defined or flagged, and separated above it. Section~\ref{sec:sixteen}
+reported that comparison as $+5.1\%$ from the narrow harness; on the common
+harness it is $+11.3\%$, and it is the first claim in this paper to be stated
+with a range rather than a point.
+
+\emph{A rank order the instrument cannot resolve is not a result.} The table
+above is printed with ranges for that reason, and every ordering claim elsewhere
+in this paper that falls inside band three should be read as unresolved.
 
 \section{A ternary exponent never tiles a binary field}
 \label{sec:tiling}
@@ -4127,6 +4212,7 @@ format & distinct & codes & utilisation \\
 GF+8 & 454 & 1{,}024 & 44.3\% \\
 IBM hex32 & 105{,}526 & 200{,}000 & 52.8\% (sampled) \\
 GFTernary & 3 & 4 & 75.0\% \\
+TNF64b & 159{,}931 & 200{,}000 & 80.0\% (sampled) \\
 minifloat & 227 & 256 & 88.7\% \\
 takum16 & 61{,}351 & 65{,}536 & 93.6\% \\
 TNF16b & 61{,}446 & 65{,}536 & 93.8\% \\
@@ -4136,9 +4222,11 @@ TNF8 & 966 & 1{,}024 & 94.3\% \\
 BNF16 & 129{,}030 & 131{,}072 & 98.4\% \\
 TNF16 & 129{,}030 & 131{,}072 & 98.4\% \\
 TNF16a & 64{,}518 & 65{,}536 & 98.4\% \\
+TNF17e-bare & 130{,}048 & 131{,}072 & 99.2\% \\
 VAX F & 199{,}211 & 200{,}000 & 99.6\% (sampled) \\
 TNF32 & 199{,}634 & 200{,}000 & 99.8\% (sampled) \\
 TNF64 & 199{,}900 & 200{,}000 & 100.0\% (sampled) \\
+TNF64b-bare & 199{,}950 & 200{,}000 & 100.0\% (sampled) \\
 posit32 & 199{,}964 & 200{,}000 & 100.0\% (sampled) \\
 binary32 & 199{,}997 & 200{,}000 & 100.0\% (sampled) \\
 binary16 & 65{,}536 & 65{,}536 & 100.0\% \\

@@ -8,5 +8,95 @@
   "mhz": 78.83,
   "mhz_per_lut": 0.1736,
   "spread": 11.0
+ },
+ {
+  "rank": 8,
+  "format": "TNF32",
+  "ours": true,
+  "storage": "36 bits",
+  "lut": 569,
+  "mhz": 66.91,
+  "mhz_per_lut": 0.11759226713532513,
+  "spread": 6.029999999999987,
+  "checked": "sampled 9{,}997, 0 wrong",
+  "bram": 0,
+  "code_use": 0.9982,
+  "code_use_measured": false,
+  "seeds": [
+   70.71,
+   65.27,
+   66.91,
+   69.38,
+   64.68
+  ],
+  "harness": "lfsr128",
+  "rejected_because": "exponent aliasing: e[7:0] keeps 8 bits of an exponent spanning +-364 (TNF32) or +-3279 (TNF64); off and off+256 decode identically"
+ },
+ {
+  "rank": 10,
+  "format": "TNF64",
+  "ours": true,
+  "storage": "65 bits",
+  "lut": 572,
+  "mhz": 65.38,
+  "mhz_per_lut": 0.11430069930069929,
+  "spread": 8.729999999999997,
+  "checked": "sampled, 0 wrong",
+  "bram": 0,
+  "code_use": 0.9995,
+  "code_use_measured": false,
+  "seeds": [
+   65.38,
+   65.51,
+   60.71,
+   61.56,
+   69.44
+  ],
+  "harness": "lfsr128",
+  "rejected_because": "exponent aliasing: e[7:0] keeps 8 bits of an exponent spanning +-364 (TNF32) or +-3279 (TNF64); off and off+256 decode identically"
+ },
+ {
+  "format": "TNF64b-bare",
+  "ours": true,
+  "storage": "65b",
+  "lut": 573,
+  "bram": 0,
+  "mhz": 62.73,
+  "mhz_per_lut": 0.1094764397905759,
+  "spread": 7.299999999999997,
+  "checked": "sweep pending",
+  "code_use": 0.9998,
+  "rank": 11,
+  "seeds": [
+   64.82,
+   58.91,
+   66.21,
+   59.13,
+   62.73
+  ],
+  "harness": "lfsr128",
+  "rejected_because": "exponent aliasing: e[7:0] keeps 8 bits of an exponent spanning +-364 (TNF32) or +-3279 (TNF64); off and off+256 decode identically"
+ },
+ {
+  "format": "TNF64b",
+  "ours": true,
+  "storage": "65b",
+  "lut": 626,
+  "bram": 0,
+  "mhz": 63.05,
+  "mhz_per_lut": 0.10071884984025559,
+  "spread": 4.619999999999997,
+  "checked": "sweep pending",
+  "code_use": 0.7997,
+  "rank": 19,
+  "seeds": [
+   59.1,
+   63.72,
+   61.77,
+   63.05,
+   63.61
+  ],
+  "harness": "lfsr128",
+  "rejected_because": "exponent aliasing: e[7:0] keeps 8 bits of an exponent spanning +-364 (TNF32) or +-3279 (TNF64); off and off+256 decode identically"
  }
 ]
