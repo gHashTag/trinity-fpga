@@ -51,4 +51,17 @@ module tnf64b_bare_decode (input wire [64:0] x, output wire [31:0] fp32_out,
                   :                        {s, e32, m[50:28]};
 endmodule
 
+// tnf17e_bare: same E_t=5 rung without the guard, so the k change and the
+// reservation cost separate at 17 bits as they did at 65.
+module tnf17e_bare_decode (input wire [16:0] x, output wire [31:0] fp32_out);
+  wire       s   = x[16];
+  wire [7:0] off = x[15:8];
+  wire [7:0] m   = x[7:0];
+  wire signed [15:0] e = $signed({1'b0, off}) - 16'sd121;
+  wire [7:0] e32 = e[7:0] + 8'd127;
+  assign fp32_out = (off == 8'd242) ? {s, 8'hFF, (|m), 22'b0}
+                  : (off == 8'd0)      ? {s, 31'b0}
+                  :                        {s, e32, {m[7:0], 15'b0}};
+endmodule
+
 `default_nettype wire

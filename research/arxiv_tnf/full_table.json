@@ -11,7 +11,8 @@
   "checked": "all 4 codes",
   "bram": 0,
   "code_use": 0.75,
-  "code_use_measured": true
+  "code_use_measured": true,
+  "seeds": null
  },
  {
   "rank": 2,
@@ -25,7 +26,8 @@
   "checked": "identity (exact)",
   "bram": 0,
   "code_use": 1.0,
-  "code_use_measured": false
+  "code_use_measured": false,
+  "seeds": null
  },
  {
   "format": "TNF16a",
@@ -39,7 +41,14 @@
   "checked": "all 65{,}534 \\checkmark",
   "code_use": 0.9845,
   "rank": 3,
-  "code_use_measured": true
+  "code_use_measured": true,
+  "seeds": [
+   66.4,
+   70.72,
+   68.59,
+   69.87,
+   73.37
+  ]
  },
  {
   "rank": 4,
@@ -53,7 +62,8 @@
   "checked": "all 1{,}024",
   "bram": 0,
   "code_use": 1.0,
-  "code_use_measured": true
+  "code_use_measured": true,
+  "seeds": null
  },
  {
   "format": "TNF17e",
@@ -66,7 +76,14 @@
   "spread": 5.089999999999989,
   "checked": "all 124{,}416 \\checkmark",
   "code_use": 0.9415,
-  "rank": 5
+  "rank": 5,
+  "seeds": [
+   69.8,
+   65.76,
+   70.85,
+   68.54,
+   69.81
+  ]
  },
  {
   "format": "TNF16c",
@@ -79,7 +96,14 @@
   "spread": 1.480000000000004,
   "checked": "all 62{,}208 \\checkmark",
   "code_use": 0.9415,
-  "rank": 6
+  "rank": 6,
+  "seeds": [
+   66.74,
+   66.02,
+   67.39,
+   67.2,
+   67.5
+  ]
  },
  {
   "rank": 7,
@@ -93,7 +117,8 @@
   "checked": "all 256, 0 wrong",
   "bram": 0,
   "code_use": 1.0,
-  "code_use_measured": true
+  "code_use_measured": true,
+  "seeds": null
  },
  {
   "rank": 8,
@@ -107,7 +132,8 @@
   "checked": "all 256, 0 wrong",
   "bram": 0,
   "code_use": 1.0,
-  "code_use_measured": true
+  "code_use_measured": true,
+  "seeds": null
  },
  {
   "rank": 9,
@@ -121,7 +147,8 @@
   "checked": "all 65{,}536",
   "bram": 0,
   "code_use": 1.0,
-  "code_use_measured": true
+  "code_use_measured": true,
+  "seeds": null
  },
  {
   "rank": 10,
@@ -135,7 +162,8 @@
   "checked": "all 16{,}384",
   "bram": 0,
   "code_use": 1.0,
-  "code_use_measured": true
+  "code_use_measured": true,
+  "seeds": null
  },
  {
   "rank": 11,
@@ -149,10 +177,31 @@
   "checked": "all 254 \\checkmark",
   "bram": 0,
   "code_use": 0.8867,
-  "code_use_measured": true
+  "code_use_measured": true,
+  "seeds": null
  },
  {
+  "format": "TNF17e-bare",
+  "ours": true,
+  "storage": "17b",
+  "lut": 541,
+  "bram": 0,
+  "mhz": 64.36,
+  "mhz_per_lut": 0.1189648798521257,
+  "spread": 4.900000000000006,
+  "checked": "sweep pending",
+  "code_use": null,
   "rank": 12,
+  "seeds": [
+   63.64,
+   64.82,
+   68.54,
+   64.21,
+   64.36
+  ]
+ },
+ {
+  "rank": 13,
   "format": "BNF16",
   "ours": true,
   "storage": "17 bits",
@@ -163,10 +212,11 @@
   "checked": "all 131{,}072, 0 wrong",
   "bram": 0,
   "code_use": 0.9844,
-  "code_use_measured": true
+  "code_use_measured": true,
+  "seeds": null
  },
  {
-  "rank": 13,
+  "rank": 14,
   "format": "TNF32",
   "ours": true,
   "storage": "36 bits",
@@ -177,10 +227,11 @@
   "checked": "sampled 9{,}997, 0 wrong",
   "bram": 0,
   "code_use": 0.9982,
-  "code_use_measured": false
+  "code_use_measured": false,
+  "seeds": null
  },
  {
-  "rank": 14,
+  "rank": 15,
   "format": "TNF16",
   "ours": true,
   "storage": "17 bits",
@@ -191,7 +242,8 @@
   "checked": "all 131{,}072",
   "bram": 0,
   "code_use": 0.9844,
-  "code_use_measured": true
+  "code_use_measured": true,
+  "seeds": null
  },
  {
   "format": "TNF16b",
@@ -204,11 +256,18 @@
   "spread": 6.540000000000006,
   "checked": "all 65{,}534 \\checkmark",
   "code_use": 0.9376,
-  "rank": 15,
-  "code_use_measured": true
+  "rank": 16,
+  "code_use_measured": true,
+  "seeds": [
+   61.76,
+   57.5,
+   62.22,
+   57.66,
+   64.04
+  ]
  },
  {
-  "rank": 16,
+  "rank": 17,
   "format": "TNF64",
   "ours": true,
   "storage": "65 bits",
@@ -219,10 +278,11 @@
   "checked": "sampled, 0 wrong",
   "bram": 0,
   "code_use": 0.9995,
-  "code_use_measured": false
+  "code_use_measured": false,
+  "seeds": null
  },
  {
-  "rank": 17,
+  "rank": 18,
   "format": "TNF8",
   "ours": true,
   "storage": "10 bits",
@@ -233,7 +293,8 @@
   "checked": "all 1{,}024, 0 wrong",
   "bram": 0,
   "code_use": 0.9434,
-  "code_use_measured": true
+  "code_use_measured": true,
+  "seeds": null
  },
  {
   "format": "TNF64b-bare",
@@ -246,10 +307,17 @@
   "spread": 7.649999999999999,
   "checked": "sweep pending",
   "code_use": null,
-  "rank": 18
+  "rank": 19,
+  "seeds": [
+   70.53,
+   63.74,
+   64.17,
+   62.88,
+   65.8
+  ]
  },
  {
-  "rank": 19,
+  "rank": 20,
   "format": "VAX F",
   "ours": false,
   "storage": "32 bits",
@@ -260,7 +328,8 @@
   "checked": "all 40{,}000 \\checkmark",
   "bram": 0,
   "code_use": 0.9961,
-  "code_use_measured": false
+  "code_use_measured": false,
+  "seeds": null
  },
  {
   "format": "TNF64b",
@@ -273,10 +342,17 @@
   "spread": 6.740000000000002,
   "checked": "sweep pending",
   "code_use": null,
-  "rank": 20
+  "rank": 21,
+  "seeds": [
+   55.41,
+   62.15,
+   56.92,
+   58.18,
+   56.63
+  ]
  },
  {
-  "rank": 21,
+  "rank": 22,
   "format": "GF+8",
   "ours": true,
   "storage": "8b (+2 sel)",
@@ -287,10 +363,11 @@
   "checked": "1{,}024/1{,}024 \\checkmark",
   "bram": 0,
   "code_use": 0.4434,
-  "code_use_measured": true
+  "code_use_measured": true,
+  "seeds": null
  },
  {
-  "rank": 22,
+  "rank": 23,
   "format": "posit8",
   "ours": false,
   "storage": "8 bits",
@@ -301,10 +378,11 @@
   "checked": "all 255 \\checkmark",
   "bram": 0,
   "code_use": 1.0,
-  "code_use_measured": true
+  "code_use_measured": true,
+  "seeds": null
  },
  {
-  "rank": 23,
+  "rank": 24,
   "format": "takum16",
   "ours": false,
   "storage": "16 bits",
@@ -315,10 +393,11 @@
   "checked": "632/61{,}505",
   "bram": 57,
   "code_use": 0.9361,
-  "code_use_measured": false
+  "code_use_measured": false,
+  "seeds": null
  },
  {
-  "rank": 24,
+  "rank": 25,
   "format": "LNS16",
   "ours": false,
   "storage": "16 bits",
@@ -329,10 +408,11 @@
   "checked": "107/65{,}536",
   "bram": 0,
   "code_use": 1.0,
-  "code_use_measured": true
+  "code_use_measured": true,
+  "seeds": null
  },
  {
-  "rank": 25,
+  "rank": 26,
   "format": "posit16",
   "ours": false,
   "storage": "16 bits",
@@ -343,10 +423,11 @@
   "checked": "all 65{,}535 \\checkmark",
   "bram": 0,
   "code_use": 1.0,
-  "code_use_measured": true
+  "code_use_measured": true,
+  "seeds": null
  },
  {
-  "rank": 26,
+  "rank": 27,
   "format": "IBM hex32",
   "ours": false,
   "storage": "32 bits",
@@ -357,10 +438,11 @@
   "checked": "all 40{,}000 \\checkmark",
   "bram": 0,
   "code_use": 0.5276,
-  "code_use_measured": false
+  "code_use_measured": false,
+  "seeds": null
  },
  {
-  "rank": 27,
+  "rank": 28,
   "format": "posit32",
   "ours": false,
   "storage": "32 bits",
@@ -371,6 +453,7 @@
   "checked": "all 40{,}000 \\checkmark",
   "bram": 0,
   "code_use": 0.9998,
-  "code_use_measured": false
+  "code_use_measured": false,
+  "seeds": null
  }
 ]
