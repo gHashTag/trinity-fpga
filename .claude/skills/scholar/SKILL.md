@@ -129,6 +129,31 @@ Model weights for this line live under a *previous session's* scratchpad
 Qwen, Pythia, GPT-2, OPT, and wikitext-2). Check there before downloading
 anything — it survives across sessions but not forever.
 
+### Hold out the unit the parameters were fitted against
+
+The most expensive lesson of 2026-08-11. A codebook with six free parameters was
+fitted against one model's logits and beat MXFP4 by 7.66 %. It was checked on
+held-out **windows** — disjoint text, a paired per-window test, `t(39) = −12.51`,
+better in 39 of 40, `p = 7.5e-11`, and the two leaked windows deleted for a
+0.12 pp change. Every part of that check was sound, and it certified an overfit.
+
+Run on two models it had never seen, the codebook **lost** to MXFP4 by 1.98 % and
+8.63 %, worse on 17 of 20 and 37 of 40 windows. First of three where it was
+fitted; second of three where it was not.
+
+The check varied text. The parameters were fitted to a *model*. A test that
+varies the wrong axis measures generalisation across an axis nobody was
+overfitting to, and passes with an impressive p-value.
+
+- **Name the fitted unit before designing the check.** Model, layer, dataset,
+  seed, board — whichever the parameters saw is the one to hold out.
+- **A strong statistic on the wrong axis is worse than no check**, because it
+  buys confidence. `p = 7.5e-11` was true and irrelevant.
+- **Look for the ranking inversion.** Best on the fitting unit, middle of the
+  pack elsewhere, is the signature. Compare against *both* neighbours, not just
+  the headline opponent — here the weaker claim (beats the squared-error optimum
+  on all three models) transferred and was worth keeping.
+
 ### Before calling a result new, read what it would be new against
 
 A measured win over a *deployed* format says nothing about the *research* it
