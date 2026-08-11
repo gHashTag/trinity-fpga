@@ -2197,6 +2197,28 @@ arithmetic and not to the precision of the datapath: there is nothing in the
 datapath to be imprecise. The component widths grow logarithmically, reaching
 eight bits over those $512$ terms.
 
+\paragraph{The theorem checked against the silicon.} A theorem about a lattice
+says nothing about whether the RTL implements the lattice, and six modules in
+this work turned out not to implement the format they were labelled with. So the
+synthesised node is compared against exact integer arithmetic in
+$\mathbb{Z}[\varphi]$, with no float anywhere in the comparison: the datapath's
+pair $(a,b)$ against the reference's, as integers.
+
+Sixteen thousand vectors at fan-in $8$, $16$ and $32$, eight-bit samples,
+weights drawn uniformly from the alphabet: \textbf{zero disagreements}. Depth is
+checked the same way, since the claim is about depth and not only about a layer
+--- one step fed back on itself is $k$ stacked layers, and after $k$ clocks the
+pair must be $(F_{k-1},F_k)$. Thirty depths, zero disagreements; at $k=30$ the
+gain is exactly $(514229,\,832040)$, two integers, with no multiplication
+anywhere on the path.
+
+The first run disagreed on $3{,}601$ of $4{,}000$, in the $b$ component only
+with $a$ always agreeing --- the signature of a convention difference rather than
+an arithmetic one, and it was the reference that had the encoding wrong. The
+shape of a disagreement says which side to suspect: all-wrong-in-one-component
+is a convention, wrong-at-the-extremes is a missing edge case, scattered is
+arithmetic.
+
 \subsection{Closure is what removes the machinery}\label{sec:closure}
 
 The multiply-free datapath is not new as an aim, and the published attempts make
