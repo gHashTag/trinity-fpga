@@ -83,8 +83,7 @@ has entries in $\{0,\pm1\}$. Degree two admits $\varphi$ alone, and nothing lies
 between the shift and $\varphi$. The family $r^d=r+1$ reaches any granularity at
 \emph{one addition} and $d$ registers: fineness costs registers, not adders.
 
-Among the twenty-five carrying their own range --- those a training run can
-live in --- GFTernary leads on throughput per area, by $10.9\%$ over the next and $5.24\times$ over \texttt{posit32}, with thirteen of the twenty-five ours.  On an XC7A200T a ternary neuron
+Among the twenty-five carrying their own range, GFTernary leads throughput per area by $10.9\%$ --- at two bits, where width confounds the comparison. At \emph{equal} storage a guarded sixteen-bit rung beats IEEE half by $6.92\%$ ($p<10^{-20}$, fifty-four seeds).  On an XC7A200T a ternary neuron
 costs $28$ LUT per weight and \emph{no DSP at any fan-in}.
 
 Which rung follows from the budget --- $\varphi$ at four bits, $r^5{=}r^3{+}1$ at
@@ -93,7 +92,7 @@ one adder. On the block axis the element is closed, the best eight-level
 codebook beating a deployed one by $0.9\%$, and the scale is not: a $\varphi$
 grid at four bits beats MXFP4 on two models at $0.125$ fewer bits per weight.
 
-A guarded 16-bit rung beats IEEE half by $6.92\%$. Ten retractions are marked in place below.
+ Ten retractions are marked in place below.
 \end{abstract}
 
 \section{What this paper argues}
