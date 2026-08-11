@@ -6194,3 +6194,42 @@ The harness read `acc=0` while the design emitted `TRIT_P` at threshold 3 — an
 impossible pair. Saying "the trit matches" and omitting that is technically true
 and materially false. Name the impossibility and mark it unestablished; the next
 wave needs to know the harness is suspect, not that the engine is fixed.
+
+## Wave 666 — an assumption that makes your property pass may have deleted every trace
+
+The single most important lesson of this campaign so far, and it is about the
+instrument, not the design.
+
+**Under `-set-init-zero`, `assume (R == k)` on a reset-to-zero register is
+unsatisfiable.** Every register is zero at t=0. An always-assumption that one is
+nonzero contradicts itself at the first cycle reset holds. No trace satisfies the
+assumption set — and yosys then reports **"proof succeeded"** for every property
+in the run, with no diagnostic and exit code 0. `assert (1'b0)` proves too.
+
+I hit this twice in one session and wrote "root cause confirmed" the first time.
+
+**The check costs one solver call: inject `assert (1'b0)` and require it to
+REFUTE.** A refutation exhibits a satisfying trace, which is exactly
+satisfiability of the assumption set. If a literally false assertion proves, every
+result from that configuration is meaningless. Always run it with a control —
+"proves with the assumption, refutes without" is the finding; either half alone
+is not.
+
+**A tool that answers a question you did not ask, and answers it soundly, is the
+hardest failure to see.** This is the `unfaithful` category — sound about `P′`
+while claiming `P` — pointed at the method rather than the artifact. The
+taxonomy generalises further than it was written for.
+
+**Provable is not simulable.** Yosys resolves declare-after-use; Icarus rejects
+it. A generated design can pass every formal gate while never having compiled in
+a simulator — which means its control is checked and its arithmetic never has
+been. Check that the artifact your value-measurements run on is the artifact your
+proofs run on; if it will not build, a previously published measurement from it
+is **unreproduced**, and unreproduced obliges the same correction as refuted.
+
+**When your own new gate fails a sibling gate, that is the system working.**
+Three of this wave's defects were in the gate I wrote this wave — an unstripped
+comment regex, a decline that exited 0, and a crash where a diagnosis belonged.
+All three are shapes I had already catalogued. Writing the catalogue does not
+exempt you from it. Record the one you cannot fix as failing; do not raise its
+ceiling or exclude it from the sweep.
