@@ -1,23 +1,58 @@
 {
-  "takum16": {"rtl": "fpga/tnet/takum16_decode.v", "ref_module": "takum_log_ref",
-    "ref_key": "takum16", "declares": "exp(",
-    "note": "LOGARITHMIC takum: value = (-1)^S exp(l/2). The linear variant, value (1+M/2^p)2^c, is takum_ref.py and is a DIFFERENT format."},
-  "lns16": {"rtl": "fpga/tnet/lns16_decode.v", "ref_module": "lns_ref",
-    "ref_key": "lns16", "declares": "scale 128",
-    "note": "frac_bits=7. The FORMATS['lns16'] entry in lns_ref.py declares frac_bits=8 and is a different scale; construct LNSFormat(frac_bits=7) to compare."},
-  "ibm_hfp32": {"rtl": "fpga/tnet/ibm_hfp32_decode.v", "ref_module": "legacy_ref",
-    "ref_key": "ibm_hfp32", "declares": "excess-64",
-    "note": "base-16, 7-bit excess-64 exponent, 24-bit fraction, no hidden bit."},
-  "vax_f": {"rtl": "fpga/tnet/vax_f_decode.v", "ref_module": "legacy_ref",
-    "ref_key": "vax_f", "declares": "excess-128",
-    "note": "VAX F_floating. Byte-swap is a storage convention and is not in the logical code."},
-  "posit16": {"rtl": "fpga/tnet/posit16_decode.v", "ref_module": "posit_ref",
-    "ref_key": "posit16", "declares": "es=2",
-    "note": "Posit Standard 2022, n=16, es=2, useed=16."},
-  "posit32": {"rtl": "fpga/tnet/posit32_decode.v", "ref_module": "posit_ref",
-    "ref_key": "posit32", "declares": "es=2",
-    "note": "Posit Standard 2022, n=32, es=2. Fraction exceeds fp32's 23 bits, so the decoder rounds RNE."},
-  "minifloat": {"rtl": "fpga/tnet/minifloat_decode.v", "ref_module": "fp8_ref",
-    "ref_key": "minifloat", "declares": "E3M4",
-    "note": "E3M4, bias 3. Not the E4M3 of OCP fp8."}
+  "takum16": {
+    "rtl": "fpga/tnet/takum16_decode.v",
+    "ref_module": "takum_log_ref",
+    "ref_key": "takum16",
+    "declares": "exp(",
+    "note": "LOGARITHMIC takum: value = (-1)^S exp(l/2). The linear variant, value (1+M/2^p)2^c, is takum_ref.py and is a DIFFERENT format."
+  },
+  "lns16": {
+    "rtl": "fpga/tnet/lns16_decode.v",
+    "ref_module": "lns_ref",
+    "ref_key": "lns16",
+    "declares": "scale 128",
+    "note": "frac_bits=7. The FORMATS['lns16'] entry in lns_ref.py declares frac_bits=8 and is a different scale; construct LNSFormat(frac_bits=7) to compare."
+  },
+  "ibm_hfp32": {
+    "rtl": "fpga/tnet/ibm_hfp32_decode.v",
+    "ref_module": "legacy_ref",
+    "ref_key": "ibm_hfp32",
+    "declares": "excess-64",
+    "note": "base-16, 7-bit excess-64 exponent, 24-bit fraction, no hidden bit."
+  },
+  "vax_f": {
+    "rtl": "fpga/tnet/vax_f_decode.v",
+    "ref_module": "legacy_ref",
+    "ref_key": "vax_f",
+    "declares": "excess-128",
+    "note": "VAX F_floating. Byte-swap is a storage convention and is not in the logical code."
+  },
+  "posit16": {
+    "rtl": "fpga/tnet/posit16_decode.v",
+    "ref_module": "posit_ref",
+    "ref_key": "posit16",
+    "declares": "es=2",
+    "note": "Posit Standard 2022, n=16, es=2, useed=16."
+  },
+  "posit32": {
+    "rtl": "fpga/tnet/posit32_decode.v",
+    "ref_module": "posit_ref",
+    "ref_key": "posit32",
+    "declares": "es=2",
+    "note": "Posit Standard 2022, n=32, es=2. Fraction exceeds fp32's 23 bits, so the decoder rounds RNE."
+  },
+  "minifloat": {
+    "rtl": "fpga/tnet/minifloat_decode.v",
+    "ref_module": "fp8_ref",
+    "ref_key": "minifloat",
+    "declares": "E3M4",
+    "note": "E3M4, bias 3. Not the E4M3 of OCP fp8."
+  },
+  "gfplus8": {
+    "rtl": "fpga/tnet/gfplus8_a_decode.v",
+    "ref_module": "gfplus8_ref",
+    "ref_key": "gfplus8",
+    "declares": "pocket",
+    "note": "GF+A adaptive container: 2-bit selector over four 8-bit pockets (phi_e3m4 bias 3, e2m5 bias 1, int8 scale 1/64, lns8). Decoder input is 10 bits; the selector is amortised over a group of K rows in the container. Pocket 11 as published yields 17 distinct values of 256 -- conformant and degenerate."
+  }
 }

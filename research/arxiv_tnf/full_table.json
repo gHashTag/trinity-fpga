@@ -171,12 +171,12 @@
   "rank": 15,
   "format": "GF+8",
   "ours": true,
-  "storage": "8 bits",
+  "storage": "8b (+2 sel)",
   "lut": 628,
   "mhz": 63.05,
   "mhz_per_lut": 0.1004,
   "spread": 1.08,
-  "checked": "no reference",
+  "checked": "1{,}024/1{,}024 \\checkmark",
   "bram": 0
  },
  {
