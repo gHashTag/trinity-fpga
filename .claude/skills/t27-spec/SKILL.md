@@ -5978,3 +5978,37 @@ declaration mechanically — and splitting an initialised wire into a declaratio
 plus an assign left in place — keeps the logic identical, where hand-editing the
 few names the error mentions invites exactly the doubt you cannot afford when
 the simulation is your main evidence.
+
+## Wave 659b — a suite grown alongside a defect contains properties that ARE the defect
+
+**When a repair makes properties refute, run the before/after control first.**
+Three engine properties failed on the fixed RTL. Testing each against the
+*pre-fix* tree showed all three PROVED before — so the fix changed them, and the
+only remaining question was whether they described the design or the bug. Without
+that control the natural reading is "my fix broke something", and the natural
+response is to undo a correct repair.
+
+**Four properties have now been found asserting a defect rather than a
+contract.** One proved a packer never emits a partial word (the defect). One
+asserted a ping-pong flips one cycle after a strobe — which was precisely the
+too-early flip being repaired. Two tracked a signal the repair disconnected from
+the memory they describe. A verification suite that grew alongside a bug will
+encode that bug, so a repair must retire or re-point those properties **in the
+same change** or it reads as a regression. Budget for it when estimating.
+
+**Re-point, don't weaken.** Each property kept its claim and named the signal
+that now carries the meaning it was written about: alternation still asserted,
+just relative to the strobe that actually flips the buffer; the read-extent claim
+still asserted, just about the address that actually reaches the memory. Deleting
+them would have been faster and would have removed real coverage.
+
+**Two kinds of evidence, both reported, neither standing for the other.**
+Simulation showed the engine running across the parameter space while the formal
+suite refuted. Publishing only the stronger result is the caption error this
+campaign keeps finding; publishing both is what made the disagreement
+investigable rather than embarrassing.
+
+**Say what still is not established, at the end.** The sweep covers the
+configurations swept; the proofs are bounded at seq 40. "The engine runs and its
+properties hold" is a much narrower claim than "the design is correct", and the
+difference is exactly what a reader needs.
