@@ -3147,27 +3147,23 @@ unsynthesised logic.}\label{tab:fullthroughput}
 5 & fp8 e5m2 & 8 bits & 544 & 0 & 0.1214 & $0.1168$--$0.1252$ & all 256, 0 wrong \\
 6 & \textbf{TNF17e} (ours) & 17b & 596 & 0 & \textbf{0.1207} & $0.1135$--$0.1238$ & all 124{,}416 \checkmark \\
 7 & \textbf{GF10} (ours) & 10 bits & 597 & 0 & \textbf{0.1189} & $0.1134$--$0.1204$ & all 1{,}024 \\
-8 & \textbf{TNF32} (ours) & 36 bits & 569 & 0 & \textbf{0.1176} & $0.1137$--$0.1243$ & sampled 9{,}997, 0 wrong \\
-9 & \textbf{TNF16c} (ours) & 16b & 591 & 0 & \textbf{0.1157} & $0.1118$--$0.1210$ & all 62{,}208 \checkmark \\
-10 & \textbf{TNF64} (ours) & 65 bits & 572 & 0 & \textbf{0.1143} & $0.1061$--$0.1214$ & sampled, 0 wrong \\
-11 & \textbf{TNF64b-bare} (ours) & 65b & 573 & 0 & \textbf{0.1095} & $0.1028$--$0.1155$ & sweep pending \\
-12 & minifloat & 8 bits & 622 & 0 & 0.1075 & $0.1009$--$0.1132$ & all 254 \checkmark \\
-13 & \textbf{GF14} (ours) & 14 bits & 651 & 0 & \textbf{0.1074} & $0.0969$--$0.1140$ & all 16{,}384 \\
-14 & \textbf{TNF17e-bare} (ours) & 17b & 605 & 0 & \textbf{0.1072} & $0.1041$--$0.1104$ & sweep pending \\
-15 & \textbf{TNF8} (ours) & 10 bits & 609 & 0 & \textbf{0.1069} & $0.1028$--$0.1099$ & all 1{,}024, 0 wrong \\
-16 & \textbf{TNF16b} (ours) & 16b & 604 & 0 & \textbf{0.1048} & $0.0998$--$0.1086$ & all 65{,}534 \checkmark \\
-17 & binary16 & 16 bits & 586 & 0 & 0.1039 & $0.0985$--$0.1071$ & all 65{,}536 \\
-18 & \textbf{BNF16} (ours) & 17 bits & 635 & 0 & \textbf{0.1034} & $0.0961$--$0.1064$ & all 131{,}072, 0 wrong \\
-19 & \textbf{TNF64b} (ours) & 65b & 626 & 0 & \textbf{0.1007} & $0.0944$--$0.1018$ & sweep pending \\
-20 & \textbf{TNF16} (ours) & 17 bits & 629 & 0 & \textbf{0.1005} & $0.0971$--$0.1071$ & all 131{,}072 \\
-21 & VAX F & 32 bits & 624 & 0 & 0.0942 & $0.0926$--$0.1000$ & all 40{,}000 \checkmark \\
-22 & \textbf{GF+8} (ours) & 8b (+2 sel) & 692 & 0 & \textbf{0.0882} & $0.0831$--$0.0931$ & 1{,}024/1{,}024 \checkmark \\
-23 & posit8 & 8 bits & 614 & 0 & 0.0728 & $0.0712$--$0.0774$ & all 255 \checkmark \\
-24 & takum16 & 16 bits & 853 & 57 & 0.0695 & $0.0677$--$0.0745$ & 632/61{,}505 \\
-25 & LNS16 & 16 bits & 722 & 0 & 0.0598 & $0.0581$--$0.0600$ & 107/65{,}536 \\
-26 & posit16 & 16 bits & 731 & 0 & 0.0485 & $0.0467$--$0.0496$ & all 65{,}535 \checkmark \\
-27 & posit32 & 32 bits & 1031 & 0 & 0.0302 & $0.0291$--$0.0314$ & all 40{,}000 \checkmark \\
-28 & IBM hex32 & 32 bits & 1072 & 0 & 0.0292 & $0.0273$--$0.0297$ & all 40{,}000 \checkmark \\
+8 & \textbf{TNF16c} (ours) & 16b & 591 & 0 & \textbf{0.1157} & $0.1118$--$0.1210$ & all 62{,}208 \checkmark \\
+9 & minifloat & 8 bits & 622 & 0 & 0.1075 & $0.1009$--$0.1132$ & all 254 \checkmark \\
+10 & \textbf{GF14} (ours) & 14 bits & 651 & 0 & \textbf{0.1074} & $0.0969$--$0.1140$ & all 16{,}384 \\
+11 & \textbf{TNF17e-bare} (ours) & 17b & 605 & 0 & \textbf{0.1072} & $0.1041$--$0.1104$ & sweep pending \\
+12 & \textbf{TNF8} (ours) & 10 bits & 609 & 0 & \textbf{0.1069} & $0.1028$--$0.1099$ & all 1{,}024, 0 wrong \\
+13 & \textbf{TNF16b} (ours) & 16b & 604 & 0 & \textbf{0.1048} & $0.0998$--$0.1086$ & all 65{,}534 \checkmark \\
+14 & binary16 & 16 bits & 586 & 0 & 0.1039 & $0.0985$--$0.1071$ & all 65{,}536 \\
+15 & \textbf{BNF16} (ours) & 17 bits & 635 & 0 & \textbf{0.1034} & $0.0961$--$0.1064$ & all 131{,}072, 0 wrong \\
+16 & \textbf{TNF16} (ours) & 17 bits & 629 & 0 & \textbf{0.1005} & $0.0971$--$0.1071$ & all 131{,}072 \\
+17 & VAX F & 32 bits & 624 & 0 & 0.0942 & $0.0926$--$0.1000$ & all 40{,}000 \checkmark \\
+18 & \textbf{GF+8} (ours) & 8b (+2 sel) & 692 & 0 & \textbf{0.0882} & $0.0831$--$0.0931$ & 1{,}024/1{,}024 \checkmark \\
+19 & posit8 & 8 bits & 614 & 0 & 0.0728 & $0.0712$--$0.0774$ & all 255 \checkmark \\
+20 & takum16 & 16 bits & 853 & 57 & 0.0695 & $0.0677$--$0.0745$ & 632/61{,}505 \\
+21 & LNS16 & 16 bits & 722 & 0 & 0.0598 & $0.0581$--$0.0600$ & 107/65{,}536 \\
+22 & posit16 & 16 bits & 731 & 0 & 0.0485 & $0.0467$--$0.0496$ & all 65{,}535 \checkmark \\
+23 & posit32 & 32 bits & 1031 & 0 & 0.0302 & $0.0291$--$0.0314$ & all 40{,}000 \checkmark \\
+24 & IBM hex32 & 32 bits & 1072 & 0 & 0.0292 & $0.0273$--$0.0297$ & all 40{,}000 \checkmark \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -3820,10 +3816,6 @@ bits & format & LUT & MHz & MHz/LUT \\
 32 & VAX F & 624 & 58.75 & 0.0942 \\
 32 & posit32 & 1031 & 31.18 & 0.0302 \\
 32 & IBM hex32 & 1072 & 31.30 & 0.0292 \\
-36 & \textbf{TNF32} & 569 & 66.91 & 0.1176 \\
-65 & \textbf{TNF64} & 572 & 65.38 & 0.1143 \\
-65 & \textbf{TNF64b-bare} & 573 & 62.73 & 0.1095 \\
-65 & \textbf{TNF64b} & 626 & 63.05 & 0.1007 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -4115,17 +4107,21 @@ codes exact, all $6{,}656$ out-of-specification codes flagged, zero errors.}
 \toprule
 $17$-bit rung & $E_t$ & waste & MHz/LUT & guarded \\
 \midrule
-TNF16, as built    & $4$ & $36.7\%$ & $0.1173$ & no \\
-\textbf{TNF17e}    & $5$ & $5.1\%$  & $\mathbf{0.1312}$ & \textbf{yes} \\
+TNF16, as built    & $4$ & $36.7\%$ & $0.1005$ & no \\
+\textbf{TNF17e}    & $5$ & $5.1\%$  & $\mathbf{0.1207}$ & \textbf{yes} \\
 \bottomrule
 \end{tabular}
 \end{center}
 
 \noindent
-$11.9\%$ faster per LUT \emph{while} checking its offset field, which the rung
-it replaces does not. The same rule sends the $65$-bit rung from $E_t=7$, the
-worst waste in the range at $46.6\%$, to $E_t=8$ at $19.9\%$ for one mantissa
-bit; that rung is generated and referenced here but not yet swept.
+$20.1\%$ faster per LUT \emph{while} checking its offset field, which the rung
+it replaces does not --- both figures re-measured on the common harness of
+Section~\ref{sec:bands}. The same rule sends the $65$-bit rung to $E_t=8$, but
+that rung is withdrawn: an independent review found its exponent path keeps
+eight bits of an exponent spanning $\pm3279$, so \texttt{off} and
+\texttt{off}${}+256$ decode identically. \texttt{TNF32} and \texttt{TNF64} carry
+the same defect and are withdrawn with it; \texttt{TNF16c} and \texttt{TNF17e}
+do not, their exponents spanning $\pm121$ inside \texttt{fp32}'s window.
 
 The dilemma of Section~\ref{sec:sixteen} does not need to be settled because it
 was an artefact of standing on $E_t=4$. Theorem~\ref{thm:tiling} says no rung
@@ -4212,7 +4208,6 @@ format & distinct & codes & utilisation \\
 GF+8 & 454 & 1{,}024 & 44.3\% \\
 IBM hex32 & 105{,}526 & 200{,}000 & 52.8\% (sampled) \\
 GFTernary & 3 & 4 & 75.0\% \\
-TNF64b & 159{,}931 & 200{,}000 & 80.0\% (sampled) \\
 minifloat & 227 & 256 & 88.7\% \\
 takum16 & 61{,}351 & 65{,}536 & 93.6\% \\
 TNF16b & 61{,}446 & 65{,}536 & 93.8\% \\
@@ -4224,9 +4219,6 @@ TNF16 & 129{,}030 & 131{,}072 & 98.4\% \\
 TNF16a & 64{,}518 & 65{,}536 & 98.4\% \\
 TNF17e-bare & 130{,}048 & 131{,}072 & 99.2\% \\
 VAX F & 199{,}211 & 200{,}000 & 99.6\% (sampled) \\
-TNF32 & 199{,}634 & 200{,}000 & 99.8\% (sampled) \\
-TNF64 & 199{,}900 & 200{,}000 & 100.0\% (sampled) \\
-TNF64b-bare & 199{,}950 & 200{,}000 & 100.0\% (sampled) \\
 posit32 & 199{,}964 & 200{,}000 & 100.0\% (sampled) \\
 binary32 & 199{,}997 & 200{,}000 & 100.0\% (sampled) \\
 binary16 & 65{,}536 & 65{,}536 & 100.0\% \\
