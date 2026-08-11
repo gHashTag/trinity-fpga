@@ -40,3 +40,17 @@ module tnf64s_decode (input wire [64:0] x, output wire [31:0] fp32_out);
                   : is_zero ? {s, 31'b0}
                   :           {s, e32, mant23};
 endmodule
+// tnf8s: E_t=3 (5 bits), M=4, stored width 10
+module tnf8s_decode (input wire [9:0] x, output wire [31:0] fp32_out);
+  wire        s   = x[9];
+  wire [4:0] off = x[8:4];
+  wire [3:0] m   = x[3:0];
+  wire signed [6:0] e = $signed({1'b0, off}) - 7'sd13;
+  wire [7:0] e32 = e[7:0] + 8'd127;
+  wire is_zero = (off == 5'd0);
+  wire is_spec = (off == 5'd26);
+  wire [22:0] mant23 = {m, 19'b0};
+  assign fp32_out = is_spec ? {s, 8'hFF, (|m), 22'b0}
+                  : is_zero ? {s, 31'b0}
+                  :           {s, e32, mant23};
+endmodule

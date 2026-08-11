@@ -293,13 +293,22 @@
   "Lloyd-Max (published)": 22.916605575392765,
   "KL-optimised": 20.258629512752968,
   "MSE-CD equal budget": 22.5373215880481,
-  "MSE-CD 5x budget": 22.5373215880481
+  "MSE-CD 5x budget": 22.5373215880481,
+  "true Lloyd (deployed path)": 21.87481280141574
  },
  "ppl_heldout": {
   "MXFP4 (E2M1)": 24.033520284395294,
   "Lloyd-Max (published)": 25.172544820728582,
   "KL-optimised": 21.9525240637283,
   "MSE-CD equal budget": 23.213052978953304,
-  "MSE-CD 5x budget": 23.213052978953304
+  "MSE-CD 5x budget": 23.213052978953304,
+  "true Lloyd (deployed path)": 23.47334243844672
+ },
+ "verdict": {
+  "mse_equal_budget_beats_mxfp4": false,
+  "mse_5x_beats_mxfp4": false,
+  "true_lloyd_beats_mxfp4": true,
+  "kl_beats_mxfp4": true,
+  "kl_beats_every_mse_arm": true
  }
 }
