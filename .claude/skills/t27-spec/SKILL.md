@@ -6044,3 +6044,35 @@ inflated to a finding has to be retracted.
 "does this compute the right number" belongs beside the design, not in /tmp. Its
 absence is precisely what let the defects through, and a scratch copy would
 recreate that absence next week.
+
+## Wave 661 — a reference chosen to discriminate against the design can be indiscriminate against the harness
+
+**Pick a reference value that no uninitialised variable could produce.** The test
+vector was designed so the expected accumulator would be exactly 0, because zero
+is wrong under almost any indexing error — a mis-addressed read picks up a
+different mixture. That reasoning was sound about the design and blind about the
+instrument: zero is also what an unwritten counter reads, and the "agreement"
+reported was a variable that had never been assigned. Choose a reference that is
+discriminating against BOTH, or assert separately that the observation actually
+happened.
+
+**Assert that the capture fired, not just that the value matches.** A testbench
+variable assigned under a condition needs a companion flag proving the condition
+occurred. Comparing an initial value against a reference is not a measurement,
+and it will look exactly like a passing test.
+
+**A wait for a signal that your own action triggers is a deadlock.** Waiting for
+`prefetch_done` before starting inference hung forever, because the prefetch is
+started BY the inference. The output — "done=0 after 5000 cycles" — reads like a
+design finding and was entirely self-inflicted. Before reporting that something
+never completes, check whether anything was ever asked to start it.
+
+**Do not start on a fixed delay when an observable condition exists.** The
+original harness began inference 200 cycles after the DMA, which is a guess
+dressed as a sequence. Every value it then produced was conditional on that guess
+being right, and it was not.
+
+**"Instrument built, not measurement taken" is a real status worth reporting.**
+The harness exists, is checked in, and its sequencing errors are now documented.
+That is genuine progress, and it is much less than the headline the previous wave
+published. Saying which of the two you have is the whole difference.
