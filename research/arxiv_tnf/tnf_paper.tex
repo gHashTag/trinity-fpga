@@ -2068,8 +2068,9 @@ eight-bit measurement below reports GF-T8 and ``TNF8 at $E_t=3$'' as one line
 of $109$ magnitudes and $15.5147$ --- they are the same format, reached from two
 directions. BNF is measured too, at $97$ LUT and $388.35$\,MHz, but on the
 isolated-decoder harness of Section~\ref{sec:hardware} rather than the
-ternary-neuron datapath of Table~\ref{tab:carryrange}, which is the only reason
-it does not appear in that table's twenty rows.
+ternary-neuron datapath of Table~\ref{tab:fullthroughput}, which is where
+it now appears in Table~\ref{tab:fullthroughput} as row 2, measured on the
+same harness as everything else.
 
 \paragraph{The two rules name the same format, and neither predicted it.}
 GF8 at $E=3$ and BNF8 at $E=3$ return $14.6130$ --- the same number, not a close
@@ -3121,44 +3122,7 @@ bar labels carry the LUT count so area and throughput are readable together.}
 \label{fig:fullthroughput}
 \end{figure}
 
-\begin{table}[t]\centering
-\caption{Throughput per area among formats that carry a range, complete. One
-ternary-neuron datapath, one harness, XC7A200T, no DSP anywhere. Twenty formats;
-\texttt{int8} is not among them and is reported in Table~\ref{tab:rejected}
-instead, for the reason given there. Ours are set in bold. \emph{Provenance:}
-single placement run per format, unlike the decoder tables elsewhere in this
-paper, which report the median of five seeds. Seed spread on this flow measures
-$16\%$, so orderings between rows closer than that --- rows 5 and 6, rows 7 and
-8, rows 10 and 11 --- are not resolved by these data and should be read as ties. The BNF16 row is unnumbered because it was measured later, on this harness but a separate invocation: there BNF16 took $519$ LUT and TNF16 took $514$, against the $495$ recorded above, so the pair is placed by its own control rather than against a row from a different run. That $519$ against $514$ is the $1\%$ agreement between the two encodings, measured here rather than inferred.}\label{tab:carryrange}
-\small
-\begin{tabular}{rlrrrrr}
-\toprule
-& format & storage & LUT & MHz & MHz/LUT & vs.\ first \\
-\midrule
-1 & \textbf{GFTernary} (ours) & 2 bits & 466 & 82.51 & \textbf{0.177} & $1.00\times$ \\
-2 & \textbf{TNF4} (ours) & 4 bits & 469 & 78.28 & \textbf{0.167} & $1.06\times$ \\
-3 & binary32 & 32 bits & 479 & 78.23 & 0.163 & $1.09\times$ \\
-4 & \textbf{TNF32} (ours) & 32 bits & 499 & 75.49 & \textbf{0.151} & $1.17\times$ \\
-5 & \textbf{TNF8} (ours) & 8 bits & 487 & 71.64 & \textbf{0.147} & $1.20\times$ \\
-6 & fp8 e4m3 & 8 bits & 490 & 71.95 & 0.147 & $1.20\times$ \\
-7 & \textbf{TNF16} (ours) & 16 bits & 495 & 71.90 & \textbf{0.145} & $1.22\times$ \\
--- & \textbf{BNF16} (ours) & 16 bits & 519 & 71.57 & \textbf{0.138} & $1.28\times$ \\
-8 & \textbf{GF+8} (ours) & 8 bits & 507 & 72.91 & \textbf{0.144} & $1.23\times$ \\
-9 & VAX F & 32 bits & 524 & 73.88 & 0.141 & $1.26\times$ \\
-10 & \textbf{GF10} (ours) & 10 bits & 538 & 73.14 & \textbf{0.136} & $1.30\times$ \\
-11 & fp8 e5m2 & 8 bits & 481 & 65.33 & 0.136 & $1.30\times$ \\
-12 & \textbf{GF14} (ours) & 14 bits & 590 & 73.13 & \textbf{0.124} & $1.43\times$ \\
-13 & binary16 & 16 bits & 552 & 62.69 & 0.114 & $1.55\times$ \\
-14 & minifloat & 8 bits & 570 & 62.38 & 0.109 & $1.62\times$ \\
-15 & takum16 & 16 bits & 817 & 64.16 & 0.079 & $2.24\times$ \\
-16 & posit8 & 8 bits & 560 & 43.55 & 0.078 & $2.27\times$ \\
-17 & IBM hex32 & 32 bits & 683 & 49.71 & 0.073 & $2.42\times$ \\
-18 & LNS16 & 16 bits & 659 & 43.11 & 0.065 & $2.72\times$ \\
-19 & posit16 & 16 bits & 774 & 36.30 & 0.047 & $3.77\times$ \\
-20 & posit32 & 32 bits & 955 & 28.33 & 0.030 & $5.90\times$ \\
-\bottomrule
-\end{tabular}
-\end{table}
+
 
 
 \subsection{The scale applier, and a claim we withdraw}
@@ -3499,7 +3463,7 @@ add. Its scale is inside the system by construction rather than fitted from
 outside it. That is the difference between carrying range and borrowing it, and
 it is why the stack trains on the part.
 
-\paragraph{Why \texttt{int8} is not in Table~\ref{tab:carryrange}.}
+\paragraph{Why \texttt{int8} is reported apart.}
 An \texttt{int8} datapath scores $0.180$\,MHz/LUT at a median of five placement
 seeds, against GFTernary's $0.181$ --- a difference of $0.4\%$ inside a $16\%$
 seed spread, so the two are indistinguishable on this flow. An earlier version of
