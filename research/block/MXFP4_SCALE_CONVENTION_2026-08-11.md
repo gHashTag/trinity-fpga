@@ -36,6 +36,36 @@ for E2M1 since `6.0 = 1.5 × 2²`. It permits saturation — a block maximum abo
 `1.5 × 2^⌊log₂ a_max⌋` clamps — which the other two avoid by construction, and
 that is why it is the worst of the three.
 
+## Correction, same day: the published table was consistent, my check was not
+
+The ruler failure above was read as two documents disagreeing. Re-measured with
+both codebooks under both rules, that reading was wrong in an important place:
+
+| codebook | `s = 2^⌈log₂(a_max / top)⌉` | `s = 2^⌈log₂(a_max)⌉ / top` |
+|---|---:|---:|
+| MXFP4 (top 6.0) | **22.4998** | 21.9397 |
+| Lloyd-Max (top 0.96567) | **22.2976** | 22.9166 |
+
+Both figures `BLOCK_AXIS_CLOSED` publishes — 22.4998 and 22.2976 — are the first
+column. **That document is internally consistent.** What was inconsistent was the
+check that flagged it: it passed E2M1 already normalised to a top of 1.0 and
+Lloyd-Max un-normalised, so one codebook was measured under each rule.
+
+The instrument was still worth having. It found a real ambiguity, and the
+ambiguity turns out to be sharper than a difference in numbers:
+
+**The convention decides which codebook wins.**
+
+- under `2^⌈log₂(a_max/top)⌉`: Lloyd-Max beats MXFP4 by **0.90 %**
+- under `2^⌈log₂(a_max)⌉/top`: MXFP4 beats Lloyd-Max by **4.45 %**
+
+`BLOCK_AXIS_CLOSED` concludes that no eight-level element format will take the
+block axis, on the grounds that the squared-error optimum beats MXFP4 by only
+0.9 %. Under the other rule the optimum does not beat MXFP4 at all. The
+conclusion survives either way — it is *harder* to argue for element codebooks
+when the best possible one already loses — but the 0.9 % margin it quotes is a
+property of the alignment rule, not of the formats.
+
 ## What this does and does not damage
 
 **Every internally consistent comparison stands.** `SCALE_FRONTIER`'s table puts
