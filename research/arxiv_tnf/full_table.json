@@ -654,7 +654,88 @@
   "module": "tnf16c_safe_decode"
  },
  {
-  "rank": 9,
+  "format": "TNF16a-guarded",
+  "ours": true,
+  "storage": "16b",
+  "lut": 613,
+  "bram": 0,
+  "mhz": 66.13944444444445,
+  "mhz_per_lut": 0.10789468914264999,
+  "ci95": 0.0011117340109589216,
+  "seeds54": [
+   64.23,
+   65.76,
+   67.72,
+   67.21,
+   62.71,
+   67.84,
+   63.73,
+   68.85,
+   68.74,
+   61.77,
+   61.74,
+   65.87,
+   70.95,
+   68.9,
+   62.71,
+   68.38,
+   70.19,
+   69.03,
+   66.99,
+   63.27,
+   64.07,
+   66.16,
+   66.11,
+   67.61,
+   63.68,
+   65.71,
+   66.42,
+   67.27,
+   67.49,
+   62.08,
+   64.35,
+   69.87,
+   62.87,
+   67.82,
+   64.78,
+   65.97,
+   69.66,
+   68.36,
+   60.09,
+   64.62,
+   63.99,
+   63.65,
+   68.67,
+   66.33,
+   68.32,
+   69.45,
+   69.83,
+   66.83,
+   67.8,
+   64.33,
+   65.64,
+   67.06,
+   64.02,
+   64.03
+  ],
+  "seed_count": 54,
+  "spread": 10.86,
+  "seeds": [
+   64.23,
+   65.76,
+   67.72,
+   67.21,
+   62.71
+  ],
+  "checked": "all 41{,}472 \\checkmark",
+  "code_use": null,
+  "status": "control: guard added",
+  "module": "tnf16a_safe_decode",
+  "harness": "lfsr128",
+  "rank": 9
+ },
+ {
+  "rank": 10,
   "format": "binary16",
   "ours": false,
   "storage": "16 bits",
@@ -736,7 +817,7 @@
   "module": "binary16_decode"
  },
  {
-  "rank": 10,
+  "rank": 11,
   "format": "minifloat",
   "ours": false,
   "storage": "8 bits",
@@ -762,7 +843,7 @@
   "module": "minifloat_decode"
  },
  {
-  "rank": 11,
+  "rank": 12,
   "format": "GF14",
   "ours": true,
   "storage": "14 bits",
@@ -798,7 +879,7 @@
   "spread": 3.8599999999999923,
   "checked": "sweep pending",
   "code_use": 0.9922,
-  "rank": 12,
+  "rank": 13,
   "seeds": [
    64.87,
    64.17,
@@ -813,7 +894,7 @@
   "module": "tnf17e_bare_decode"
  },
  {
-  "rank": 13,
+  "rank": 14,
   "format": "TNF8",
   "ours": true,
   "storage": "10 bits",
@@ -849,7 +930,7 @@
   "spread": 5.300000000000004,
   "checked": "all 65{,}534 \\checkmark",
   "code_use": 0.9376,
-  "rank": 14,
+  "rank": 15,
   "code_use_measured": true,
   "seeds": [
    63.31,
@@ -865,7 +946,7 @@
   "module": "tnf16b_decode"
  },
  {
-  "rank": 15,
+  "rank": 16,
   "format": "BNF16",
   "ours": true,
   "storage": "17 bits",
@@ -891,7 +972,7 @@
   "module": "bnf16s_decode"
  },
  {
-  "rank": 16,
+  "rank": 17,
   "format": "TNF16",
   "ours": true,
   "storage": "17 bits",
@@ -917,7 +998,7 @@
   "module": "tnf17_decode"
  },
  {
-  "rank": 17,
+  "rank": 18,
   "format": "VAX F",
   "ours": false,
   "storage": "32 bits",
@@ -943,7 +1024,7 @@
   "module": "vax_f_decode"
  },
  {
-  "rank": 18,
+  "rank": 19,
   "format": "GF+8",
   "ours": true,
   "storage": "8b (+2 sel)",
@@ -969,7 +1050,7 @@
   "module": "gfplus8_a_decode"
  },
  {
-  "rank": 19,
+  "rank": 20,
   "format": "posit8",
   "ours": false,
   "storage": "8 bits",
@@ -995,7 +1076,7 @@
   "module": "posit8_es2_decode"
  },
  {
-  "rank": 20,
+  "rank": 21,
   "format": "takum16",
   "ours": false,
   "storage": "16 bits",
@@ -1021,7 +1102,7 @@
   "module": "takum16_decode"
  },
  {
-  "rank": 21,
+  "rank": 22,
   "format": "LNS16",
   "ours": false,
   "storage": "16 bits",
@@ -1047,7 +1128,7 @@
   "module": "lns16_decode"
  },
  {
-  "rank": 22,
+  "rank": 23,
   "format": "posit16",
   "ours": false,
   "storage": "16 bits",
@@ -1073,7 +1154,7 @@
   "module": "posit16_decode"
  },
  {
-  "rank": 23,
+  "rank": 24,
   "format": "posit32",
   "ours": false,
   "storage": "32 bits",
@@ -1099,7 +1180,7 @@
   "module": "posit32_decode"
  },
  {
-  "rank": 24,
+  "rank": 25,
   "format": "IBM hex32",
   "ours": false,
   "storage": "32 bits",
