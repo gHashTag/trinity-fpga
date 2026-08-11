@@ -37,4 +37,18 @@ module tnf64b_decode (input wire [64:0] x, output wire [31:0] fp32_out,
                   :                        {s, e32, m[50:28]};
 endmodule
 
+// tnf64b_bare: the same E_t=8 rung WITHOUT the guard, so the k change and
+// the reservation cost can be separated. One variable per experiment.
+module tnf64b_bare_decode (input wire [64:0] x, output wire [31:0] fp32_out,
+                      output wire invalid);
+  wire       s   = x[64];
+  wire [12:0] off = x[63:51];
+  wire [50:0] m   = x[50:0];
+  wire signed [15:0] e = $signed({1'b0, off}) - 16'sd3280;
+  wire [7:0] e32 = e[7:0] + 8'd127;
+  assign fp32_out = (off == 13'd6560) ? {s, 8'hFF, (|m), 22'b0}
+                  : (off == 13'd0)      ? {s, 31'b0}
+                  :                        {s, e32, m[50:28]};
+endmodule
+
 `default_nettype wire

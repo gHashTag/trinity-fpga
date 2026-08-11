@@ -236,7 +236,20 @@
   "code_use_measured": true
  },
  {
-  "rank": 18,
+  "format": "TNF64b-bare",
+  "ours": true,
+  "storage": "65b",
+  "lut": 566,
+  "bram": 0,
+  "mhz": 64.17,
+  "mhz_per_lut": 0.11337455830388693,
+  "spread": 7.649999999999999,
+  "checked": "sweep pending",
+  "code_use": null,
+  "rank": 18
+ },
+ {
+  "rank": 19,
   "format": "VAX F",
   "ours": false,
   "storage": "32 bits",
@@ -250,7 +263,20 @@
   "code_use_measured": false
  },
  {
-  "rank": 19,
+  "format": "TNF64b",
+  "ours": true,
+  "storage": "65b",
+  "lut": 565,
+  "bram": 0,
+  "mhz": 56.92,
+  "mhz_per_lut": 0.1007433628318584,
+  "spread": 6.740000000000002,
+  "checked": "sweep pending",
+  "code_use": null,
+  "rank": 20
+ },
+ {
+  "rank": 21,
   "format": "GF+8",
   "ours": true,
   "storage": "8b (+2 sel)",
@@ -264,7 +290,7 @@
   "code_use_measured": true
  },
  {
-  "rank": 20,
+  "rank": 22,
   "format": "posit8",
   "ours": false,
   "storage": "8 bits",
@@ -278,7 +304,7 @@
   "code_use_measured": true
  },
  {
-  "rank": 21,
+  "rank": 23,
   "format": "takum16",
   "ours": false,
   "storage": "16 bits",
@@ -292,7 +318,7 @@
   "code_use_measured": false
  },
  {
-  "rank": 22,
+  "rank": 24,
   "format": "LNS16",
   "ours": false,
   "storage": "16 bits",
@@ -306,7 +332,7 @@
   "code_use_measured": true
  },
  {
-  "rank": 23,
+  "rank": 25,
   "format": "posit16",
   "ours": false,
   "storage": "16 bits",
@@ -320,7 +346,7 @@
   "code_use_measured": true
  },
  {
-  "rank": 24,
+  "rank": 26,
   "format": "IBM hex32",
   "ours": false,
   "storage": "32 bits",
@@ -334,7 +360,7 @@
   "code_use_measured": false
  },
  {
-  "rank": 25,
+  "rank": 27,
   "format": "posit32",
   "ours": false,
   "storage": "32 bits",
