@@ -62,6 +62,23 @@ for m in CLAIM.finditer(t):
     if n != marked:
         fails.append(f"claims {n} retractions but the body marks {marked}: {s[:100]}")
 
+# The abstract is the most-read paragraph and this gate did not read it. It
+# carried "Five retractions" while the body carried ten, "twenty formats" while
+# the table held twenty-five, and figures from a superseded harness -- a flat
+# contradiction on page one that survived because the counter scanned only the
+# body. It also ran 2,010 characters against arXiv's 1,920 limit.
+_i, _j = t.find(r"\begin{abstract}"), t.find(r"\end{abstract}")
+if _i > 0 and _j > _i:
+    _ab = re.sub(r"\s+", " ", t[_i + len(r"\begin{abstract}"):_j]).strip()
+    if len(_ab) > 1920:
+        fails.append(f"abstract is {len(_ab)} characters; arXiv allows 1920")
+    for _m in CLAIM.finditer(_ab):
+        _tok = _m.group(1).lower()
+        _n = WORDS.get(_tok, int(_tok) if _tok.isdigit() else None)
+        if _n is not None and _n != marked:
+            fails.append(f"abstract claims {_n} retractions but the body marks {marked}")
+    print(f"abstract: {len(_ab)} characters of 1920")
+
 print(f"retraction marks in the body: {marked}")
 if fails:
     print(f"\nFAIL: {len(fails)} self-inconsistency(ies)\n")
