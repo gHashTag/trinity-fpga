@@ -40,6 +40,8 @@ bits per weight and finds a strict domination:
 | **`phi^k` 4b/32** | **0.1250** | **4.1250** | **21.3545** | **14.8512** |
 | MXFP4, E8M0 8b/32 | 0.2500 | 4.2500 | 22.4998 | 14.9447 |
 
+> **Convention note.** The 22.4998 here and the 21.9397 quoted in the rotation section below are the same format measured under two different E8M0 alignment rules, not a changing result — see `block/MXFP4_SCALE_CONVENTION_2026-08-11.md`, which measures three defensible rules spanning 21.94 to 23.54. Both comparisons are internally consistent; the numbers must not be quoted against each other.
+
 Cheaper by 0.125 bits per weight *and* better perplexity on both models. That is
 domination in both coordinates, not a trade.
 
