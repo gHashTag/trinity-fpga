@@ -72,7 +72,12 @@ if _i > 0 and _j > _i:
     _ab = re.sub(r"\s+", " ", t[_i + len(r"\begin{abstract}"):_j]).strip()
     if len(_ab) > 1920:
         fails.append(f"abstract is {len(_ab)} characters; arXiv allows 1920")
-    for _m in CLAIM.finditer(_ab):
+    # The abstract phrases it "N retractions are marked in place below", which
+    # CLAIM does not match: CLAIM requires retracted/withdrawn/falsified and the
+    # abstract says "marked". That mismatch is exactly why the contradiction
+    # survived -- the gate looked, and its pattern did not fit the sentence.
+    _ABCLAIM = re.compile(r"([A-Z][a-z]+|\d+)\s+retractions?\s+are\s+marked", re.I)
+    for _m in list(CLAIM.finditer(_ab)) + list(_ABCLAIM.finditer(_ab)):
         _tok = _m.group(1).lower()
         _n = WORDS.get(_tok, int(_tok) if _tok.isdigit() else None)
         if _n is not None and _n != marked:
