@@ -6,13 +6,20 @@
   "storage": "2 bits",
   "lut": 463,
   "mhz": 83.19,
-  "mhz_per_lut": 0.1797,
-  "spread": 6.61,
+  "mhz_per_lut": 0.17967602591792656,
+  "spread": 6.609999999999999,
   "checked": "all 4 codes",
   "bram": 0,
   "code_use": 0.75,
   "code_use_measured": true,
-  "seeds": null
+  "seeds": [
+   81.97,
+   87.57,
+   83.13,
+   83.19,
+   88.58
+  ],
+  "harness": "lfsr64"
  },
  {
   "rank": 2,
@@ -21,13 +28,42 @@
   "storage": "32 bits",
   "lut": 472,
   "mhz": 77.0,
-  "mhz_per_lut": 0.1631,
-  "spread": 6.37,
+  "mhz_per_lut": 0.163135593220339,
+  "spread": 6.36999999999999,
   "checked": "identity (exact)",
   "bram": 0,
   "code_use": 1.0,
   "code_use_measured": false,
-  "seeds": null
+  "seeds": [
+   79.87,
+   79.99,
+   73.62,
+   74.73,
+   77.0
+  ],
+  "harness": "lfsr64"
+ },
+ {
+  "rank": 3,
+  "format": "fp8 e5m2",
+  "ours": false,
+  "storage": "8 bits",
+  "lut": 480,
+  "mhz": 67.06,
+  "mhz_per_lut": 0.13970833333333335,
+  "spread": 5.459999999999994,
+  "checked": "all 256, 0 wrong",
+  "bram": 0,
+  "code_use": 1.0,
+  "code_use_measured": true,
+  "seeds": [
+   65.58,
+   67.34,
+   69.86,
+   64.4,
+   67.06
+  ],
+  "harness": "lfsr64"
  },
  {
   "format": "TNF16a",
@@ -40,7 +76,7 @@
   "spread": 6.969999999999999,
   "checked": "all 65{,}534 \\checkmark",
   "code_use": 0.9845,
-  "rank": 3,
+  "rank": 4,
   "code_use_measured": true,
   "seeds": [
    66.4,
@@ -51,19 +87,48 @@
   ]
  },
  {
-  "rank": 4,
+  "rank": 5,
+  "format": "fp8 e4m3",
+  "ours": false,
+  "storage": "8 bits",
+  "lut": 485,
+  "mhz": 67.02,
+  "mhz_per_lut": 0.13818556701030926,
+  "spread": 6.780000000000001,
+  "checked": "all 256, 0 wrong",
+  "bram": 0,
+  "code_use": 1.0,
+  "code_use_measured": true,
+  "seeds": [
+   65.1,
+   64.33,
+   69.1,
+   67.02,
+   71.11
+  ],
+  "harness": "lfsr64"
+ },
+ {
+  "rank": 6,
   "format": "GF10",
   "ours": true,
   "storage": "10 bits",
   "lut": 533,
   "mhz": 72.16,
-  "mhz_per_lut": 0.1354,
-  "spread": 5.08,
+  "mhz_per_lut": 0.13538461538461538,
+  "spread": 5.079999999999998,
   "checked": "all 1{,}024",
   "bram": 0,
   "code_use": 1.0,
   "code_use_measured": true,
-  "seeds": null
+  "seeds": [
+   71.66,
+   72.94,
+   72.85,
+   67.86,
+   72.16
+  ],
+  "harness": "lfsr64"
  },
  {
   "format": "TNF17e",
@@ -76,7 +141,7 @@
   "spread": 5.089999999999989,
   "checked": "all 124{,}416 \\checkmark",
   "code_use": 0.9415,
-  "rank": 5,
+  "rank": 7,
   "seeds": [
    69.8,
    65.76,
@@ -96,7 +161,7 @@
   "spread": 1.480000000000004,
   "checked": "all 62{,}208 \\checkmark",
   "code_use": 0.9415,
-  "rank": 6,
+  "rank": 8,
   "seeds": [
    66.74,
    66.02,
@@ -106,79 +171,92 @@
   ]
  },
  {
-  "rank": 7,
-  "format": "fp8 e4m3",
-  "ours": false,
-  "storage": "8 bits",
-  "lut": 516,
-  "mhz": 64.7,
-  "mhz_per_lut": 0.1254,
-  "spread": 9.33,
-  "checked": "all 256, 0 wrong",
-  "bram": 0,
-  "code_use": 1.0,
-  "code_use_measured": true,
-  "seeds": null
- },
- {
-  "rank": 8,
-  "format": "fp8 e5m2",
-  "ours": false,
-  "storage": "8 bits",
-  "lut": 529,
-  "mhz": 65.3,
-  "mhz_per_lut": 0.1234,
-  "spread": 5.7,
-  "checked": "all 256, 0 wrong",
-  "bram": 0,
-  "code_use": 1.0,
-  "code_use_measured": true,
-  "seeds": null
- },
- {
   "rank": 9,
+  "format": "TNF32",
+  "ours": true,
+  "storage": "36 bits",
+  "lut": 505,
+  "mhz": 64.36,
+  "mhz_per_lut": 0.12744554455445545,
+  "spread": 5.269999999999996,
+  "checked": "sampled 9{,}997, 0 wrong",
+  "bram": 0,
+  "code_use": 0.9982,
+  "code_use_measured": false,
+  "seeds": [
+   62.36,
+   67.58,
+   64.36,
+   65.46,
+   62.31
+  ],
+  "harness": "lfsr64"
+ },
+ {
+  "rank": 10,
   "format": "binary16",
   "ours": false,
   "storage": "16 bits",
   "lut": 522,
   "mhz": 63.3,
-  "mhz_per_lut": 0.1213,
-  "spread": 7.74,
+  "mhz_per_lut": 0.12126436781609194,
+  "spread": 7.739999999999995,
   "checked": "all 65{,}536",
   "bram": 0,
   "code_use": 1.0,
   "code_use_measured": true,
-  "seeds": null
+  "seeds": [
+   57.81,
+   63.3,
+   65.55,
+   65.11,
+   61.76
+  ],
+  "harness": "lfsr64"
  },
  {
-  "rank": 10,
+  "rank": 11,
   "format": "GF14",
   "ours": true,
   "storage": "14 bits",
   "lut": 587,
   "mhz": 71.15,
-  "mhz_per_lut": 0.1212,
-  "spread": 4.54,
+  "mhz_per_lut": 0.12120954003407156,
+  "spread": 4.539999999999992,
   "checked": "all 16{,}384",
   "bram": 0,
   "code_use": 1.0,
   "code_use_measured": true,
-  "seeds": null
+  "seeds": [
+   72.21,
+   69.31,
+   71.15,
+   70.28,
+   73.85
+  ],
+  "harness": "lfsr64"
  },
  {
-  "rank": 11,
+  "rank": 12,
   "format": "minifloat",
   "ours": false,
   "storage": "8 bits",
   "lut": 558,
   "mhz": 67.06,
-  "mhz_per_lut": 0.1202,
-  "spread": 5.49,
+  "mhz_per_lut": 0.12017921146953406,
+  "spread": 5.489999999999995,
   "checked": "all 254 \\checkmark",
   "bram": 0,
   "code_use": 0.8867,
   "code_use_measured": true,
-  "seeds": null
+  "seeds": [
+   68.23,
+   69.49,
+   65.58,
+   64.0,
+   67.06
+  ],
+  "harness": "lfsr64"
  },
  {
   "format": "TNF17e-bare",
@@ -191,7 +269,7 @@
   "spread": 4.900000000000006,
   "checked": "sweep pending",
   "code_use": null,
-  "rank": 12,
+  "rank": 13,
   "seeds": [
    63.64,
    64.82,
@@ -201,34 +279,26 @@
   ]
  },
  {
-  "rank": 13,
+  "rank": 14,
   "format": "BNF16",
   "ours": true,
   "storage": "17 bits",
   "lut": 571,
   "mhz": 67.13,
-  "mhz_per_lut": 0.1176,
-  "spread": 3.3,
+  "mhz_per_lut": 0.11756567425569175,
+  "spread": 3.3000000000000114,
   "checked": "all 131{,}072, 0 wrong",
   "bram": 0,
   "code_use": 0.9844,
   "code_use_measured": true,
-  "seeds": null
- },
- {
-  "rank": 14,
-  "format": "TNF32",
-  "ours": true,
-  "storage": "36 bits",
-  "lut": 569,
-  "mhz": 66.91,
-  "mhz_per_lut": 0.1176,
-  "spread": 6.03,
-  "checked": "sampled 9{,}997, 0 wrong",
-  "bram": 0,
-  "code_use": 0.9982,
-  "code_use_measured": false,
-  "seeds": null
+  "seeds": [
+   68.91,
+   67.13,
+   65.99,
+   69.29,
+   67.06
+  ],
+  "harness": "lfsr64"
  },
  {
   "rank": 15,
@@ -237,13 +307,20 @@
   "storage": "17 bits",
   "lut": 565,
   "mhz": 66.28,
-  "mhz_per_lut": 0.1173,
-  "spread": 8.56,
+  "mhz_per_lut": 0.11730973451327434,
+  "spread": 8.560000000000002,
   "checked": "all 131{,}072",
   "bram": 0,
   "code_use": 0.9844,
   "code_use_measured": true,
-  "seeds": null
+  "seeds": [
+   66.15,
+   71.48,
+   62.92,
+   66.67,
+   66.28
+  ],
+  "harness": "lfsr64"
  },
  {
   "format": "TNF16b",
@@ -289,12 +366,19 @@
   "lut": 545,
   "mhz": 62.13,
   "mhz_per_lut": 0.114,
-  "spread": 3.63,
+  "spread": 3.6299999999999955,
   "checked": "all 1{,}024, 0 wrong",
   "bram": 0,
   "code_use": 0.9434,
   "code_use_measured": true,
-  "seeds": null
+  "seeds": [
+   62.98,
+   61.35,
+   59.35,
+   62.87,
+   62.13
+  ],
+  "harness": "lfsr64"
  },
  {
   "format": "TNF64b-bare",
@@ -329,7 +413,14 @@
   "bram": 0,
   "code_use": 0.9961,
   "code_use_measured": false,
-  "seeds": null
+  "seeds": [
+   58.94,
+   59.08,
+   62.22,
+   62.65,
+   61.38
+  ],
+  "harness": "lfsr64"
  },
  {
   "format": "TNF64b",
@@ -358,13 +449,20 @@
   "storage": "8b (+2 sel)",
   "lut": 628,
   "mhz": 63.05,
-  "mhz_per_lut": 0.1004,
-  "spread": 1.08,
+  "mhz_per_lut": 0.10039808917197451,
+  "spread": 1.0799999999999983,
   "checked": "1{,}024/1{,}024 \\checkmark",
   "bram": 0,
   "code_use": 0.4434,
   "code_use_measured": true,
-  "seeds": null
+  "seeds": [
+   62.57,
+   63.05,
+   62.18,
+   63.26,
+   63.08
+  ],
+  "harness": "lfsr64"
  },
  {
   "rank": 23,
@@ -379,7 +477,14 @@
   "bram": 0,
   "code_use": 1.0,
   "code_use_measured": true,
-  "seeds": null
+  "seeds": [
+   46.15,
+   43.78,
+   46.74,
+   44.68,
+   44.2
+  ],
+  "harness": "lfsr64"
  },
  {
   "rank": 24,
@@ -388,13 +493,20 @@
   "storage": "16 bits",
   "lut": 789,
   "mhz": 58.96,
-  "mhz_per_lut": 0.0747,
+  "mhz_per_lut": 0.07472750316856781,
   "spread": 5.75,
   "checked": "632/61{,}505",
   "bram": 57,
   "code_use": 0.9361,
   "code_use_measured": false,
-  "seeds": null
+  "seeds": [
+   58.96,
+   58.27,
+   62.42,
+   57.59,
+   63.34
+  ],
+  "harness": "lfsr64"
  },
  {
   "rank": 25,
@@ -403,13 +515,20 @@
   "storage": "16 bits",
   "lut": 658,
   "mhz": 43.04,
-  "mhz_per_lut": 0.0654,
-  "spread": 0.45,
+  "mhz_per_lut": 0.06541033434650456,
+  "spread": 0.45000000000000284,
   "checked": "107/65{,}536",
   "bram": 0,
   "code_use": 1.0,
   "code_use_measured": true,
-  "seeds": null
+  "seeds": [
+   42.83,
+   43.18,
+   43.04,
+   43.21,
+   42.76
+  ],
+  "harness": "lfsr64"
  },
  {
   "rank": 26,
@@ -424,7 +543,14 @@
   "bram": 0,
   "code_use": 1.0,
   "code_use_measured": true,
-  "seeds": null
+  "seeds": [
+   37.67,
+   36.04,
+   37.64,
+   36.75,
+   36.23
+  ],
+  "harness": "lfsr64"
  },
  {
   "rank": 27,
@@ -439,7 +565,14 @@
   "bram": 0,
   "code_use": 0.5276,
   "code_use_measured": false,
-  "seeds": null
+  "seeds": [
+   29.94,
+   31.47,
+   30.07,
+   30.82,
+   31.26
+  ],
+  "harness": "lfsr64"
  },
  {
   "rank": 28,
@@ -454,6 +587,13 @@
   "bram": 0,
   "code_use": 0.9998,
   "code_use_measured": false,
-  "seeds": null
+  "seeds": [
+   29.21,
+   28.73,
+   29.55,
+   30.63,
+   30.69
+  ],
+  "harness": "lfsr64"
  }
 ]
