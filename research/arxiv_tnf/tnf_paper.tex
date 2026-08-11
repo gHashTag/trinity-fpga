@@ -3924,6 +3924,47 @@ spends twenty-seven sections dismantling in other people's work.}
 
 
 
+
+\section{Why the ladder stops at five trits when the target is \texttt{fp32}}
+\label{sec:window}
+
+Every decoder in this catalogue forms the \texttt{fp32} exponent the same way:
+
+\begin{center}\ttfamily wire [7:0] e32 = e[7:0] + 8'd127;\end{center}
+
+\noindent
+which is correct only while $e+127$ lies in $[0,255]$. Outside that window the
+addition wraps rather than saturating, and a wrapped exponent is a wrong finite
+number, not an overflow --- so nothing downstream can detect it. \texttt{TNF32}'s
+offsets $364$, $620$ and $876$, whose exponents are $0$, $256$ and $512$, all
+decode to exactly $1.0$.
+
+\begin{proposition}[The exponent window bounds the rung]
+\label{prop:window}
+A rung with $E_t$ trits has $E = (3^{E_t}-1)/2$ and its exponent spans
+$[1-E,\;3^{E_t}-2-E]$. That span lies inside $[-127,+128]$ exactly when
+$3^{E_t}/2 \le 128$, that is
+\[
+  E_t \;\le\; 5 .
+\]
+$3^{5}/2 = 121$ fits and $3^{6}/2 = 364$ does not, so on a decoder emitting
+\texttt{fp32} the ladder admits at most five trits of exponent. A wider rung must
+saturate outside the window or emit more than $32$ bits, and either changes its
+cost.
+\end{proposition}
+
+The boundary is sharp and it falls exactly where
+Corollary~\ref{cor:rungs} put the least-waste rung. $E_t=5$ is simultaneously the
+$k$ of minimum $w(k)$ below $k=10$ and the widest exponent an \texttt{fp32}
+decoder can carry without wrapping --- a coincidence of two unrelated
+constraints, one arithmetic and one about the target type, and the reason
+\texttt{TNF16c} and \texttt{TNF17e} are the two rungs this paper recommends.
+
+Three rungs were withdrawn for violating it. \texttt{tools/check\_exponent\_window.py}
+now fails on any rung whose span leaves the window, lists the withdrawn ones
+explicitly rather than deleting them --- a gate that silently ignores a known-bad
+entry is how the defect returns --- and is verified red by removing that list.
+
 \section{The instrument resolves seven levels, not twenty-eight}
 \label{sec:bands}
 
