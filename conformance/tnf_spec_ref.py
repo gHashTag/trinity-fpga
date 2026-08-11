@@ -29,6 +29,11 @@ class TNFSpec:
         return 3 ** self.et - 1
 
     @property
+    def offset_count(self) -> int:
+        """How many offsets the specification defines: 3^E_t."""
+        return 3 ** self.et
+
+    @property
     def exp_offset(self) -> int:
         return (3 ** self.et - 1) // 2
 
@@ -84,3 +89,23 @@ def decode(fmt: TNFSpec, raw: int):
         return Fraction(0)
     val = (Fraction(1) + Fraction(m, fmt.mant)) * _pow2(off - fmt.exp_offset)
     return -val if sign else val
+
+
+def code_counts(fmt):
+    """How many codes a rung has, in and out of specification.
+
+    The paper quotes these -- 65,534 for tnf16c, 62,208 for its in-spec set,
+    124,416 for tnf17e -- and they were transcribed by hand, which is how a
+    number and its source drift apart. tools/check_conformance_counts.py now
+    checks the paper against this function rather than against a memory.
+
+    Returns (total, in_spec, out_of_spec, comparable) where `comparable` excludes
+    the zero and inf/nan offsets, which have no finite value to compare.
+    """
+    total = 1 << fmt.width
+    per_sign = 1 << (fmt.off_bits + fmt.mant_bits)
+    in_spec = 2 * fmt.offset_count * fmt.mant
+    out_of_spec = total - in_spec
+    # off == 0 is zero and off == offset_max is inf/nan on both signs
+    comparable = in_spec - 2 * 2 * fmt.mant
+    return total, in_spec, out_of_spec, comparable

@@ -72,6 +72,9 @@ for _f in ("full_table", "rejected_measured"):
                           str(_r['lut']), f"{_r['spread']:.2f}"})
         # the table now prints five-seed RANGES, so each endpoint and each seed
         # is itself a live measurement and must not read as a resurrected figure
+        # 54-seed rows carry a mean and a 95% half-width; both are live
+        if _r.get("ci95"): _measured.add(f"{_r['ci95']:.4f}")
+        for _v in (_r.get("seeds54") or []): _measured.add(f"{_v:.2f}")
         _s = _r.get("seeds")
         if _s:
             _measured.update(f"{_v:.2f}" for _v in _s)
