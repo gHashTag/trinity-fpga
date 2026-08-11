@@ -6135,3 +6135,35 @@ in this campaign now share that shape. A suite that constrains handshakes, phase
 and readiness will pass an engine reading an entirely unwritten memory: it runs,
 completes and raises done. If a design has memories, at least one property must
 say something about what is in them.
+
+## Wave 664 — a gate's error message is a promise it has to keep
+
+**An error message that offers an alternative must implement it.** One gate had
+said "fix the defect or document it in FORMAL_FOUNDATIONS.md" since the day it
+was written, and had no mechanism whatever for accepting documentation. That is
+an unfaithful gate — sound and complete for the property it decides, wrong about
+the property it advertises — and the failure lives in a string rather than in
+logic, so no amount of testing the checker would find it. Read your gates' error
+text as claims.
+
+**Apply an existing property pattern to every memory it fits, at the time you
+write it.** A written-bitmap property guarded one memory for thirty waves while
+the memory beside it had none, and the defect that cost was found by simulation
+three waves ago. When a property turns out to be worth having, grep for the other
+places its subject appears before moving on.
+
+**Encode a defect you are not fixing as a failing property, not just prose.** A
+proposition describing a gap is checked when someone reads it. A gated expected
+refutation is checked every run, and it makes a silent repair impossible: the fix
+cannot land without someone deliberately moving the property out of its guard.
+
+**Check the column index before quoting a table.** A corroboration was drawn from
+column 15 when the header put the subject at 16. The conclusion survived and the
+stated evidence did not — and the correct column was better evidence than the one
+claimed. Print the header alongside the data whenever you cite a position.
+
+**A count of "properties proved" must exclude properties expected to fail.**
+Adding a known-refuting property inflated an integration figure by exactly the
+number of known-open defects, which inverts what that number is for. The tree
+already excluded non-vacuity oracles for the same reason; the new category needed
+the same treatment, and the claims gate caught it.
