@@ -5776,3 +5776,40 @@ the same.
 flush, require a multiple-of-27 contract, or tolerate a partial final word is a
 design decision that changes emitted hardware. Correcting the false annotation
 and recording the defect is complete work; silently changing behaviour is not.
+
+## Wave 654 — twelve days on instruments, one day on the design
+
+**A catalogue of failure shapes is a catalogue of the questions asked.** Twelve
+consecutive waves audited the verification tooling and found real defects in it
+every single time — which felt like evidence the approach was working. One wave
+pointed at the design instead found five confirmed defects, including one where
+multi-layer inference does not terminate. Nothing was wrong with the instrument
+work; it simply could not answer a question it never asked. When a line of
+investigation keeps succeeding, that is not evidence it is the right line.
+
+**A control suite reports perfect health through data defects.** Twenty-eight
+integration properties prove while the machine computes the wrong answer and
+deadlocks past one layer. Handshakes, buffer phase, address contiguity and
+readiness were all correct. If a suite constrains control, its greenness says
+nothing whatever about the values flowing through — and that had been recorded
+in writing two dozen waves earlier without changing where anyone looked.
+
+**Reproduce through the real interface when you can.** The strongest of the five
+findings came from a testbench driving the assembled engine only through its CSR
+aperture with a compliant bus model. A module-level counterexample invites the
+question "is that reachable?"; a port-level one does not.
+
+**Look for the shared line.** Two of five defects traced to a single assignment
+using the wrong index variable. Reporting five separate defects would have
+implied five separate fixes; finding the common root changes both the estimate
+and the order of work.
+
+**A defect protected by an assertion makes its own repair fail CI.** The fix for
+the missing flush must retire the property that proves the flush is absent, in
+the same change. Say this explicitly in the report — otherwise whoever picks it
+up hits a red suite and reasonably concludes their fix is wrong.
+
+**Report defects; do not silently change the subject.** Five fixes were proposed
+by the agents that found them, all touching emitted hardware and interacting with
+one another. Recording them precisely, with reproductions and root causes, is
+complete work. Choosing between architectural repairs is not the reviewer's call.
