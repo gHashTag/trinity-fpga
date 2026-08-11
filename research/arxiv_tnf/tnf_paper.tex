@@ -3135,25 +3135,27 @@ unsynthesised logic.}\label{tab:fullthroughput}
 \midrule
 1 & \textbf{GFTernary} (ours) & 2 bits & 463 & 0 & 83.19 & \textbf{0.1797} & $6.61$ & all 4 codes \\
 2 & binary32 & 32 bits & 472 & 0 & 77.00 & 0.1631 & $6.37$ & identity (exact) \\
-3 & \textbf{GF10} (ours) & 10 bits & 533 & 0 & 72.16 & \textbf{0.1354} & $5.08$ & all 1{,}024 \\
-4 & fp8 e4m3 & 8 bits & 516 & 0 & 64.70 & 0.1254 & $9.33$ & all 256, 0 wrong \\
-5 & fp8 e5m2 & 8 bits & 529 & 0 & 65.30 & 0.1234 & $5.70$ & all 256, 0 wrong \\
-6 & binary16 & 16 bits & 522 & 0 & 63.30 & 0.1213 & $7.74$ & all 65{,}536 \\
-7 & \textbf{GF14} (ours) & 14 bits & 587 & 0 & 71.15 & \textbf{0.1212} & $4.54$ & all 16{,}384 \\
-8 & minifloat & 8 bits & 558 & 0 & 67.06 & 0.1202 & $5.49$ & all 254 \checkmark \\
-9 & \textbf{BNF16} (ours) & 17 bits & 571 & 0 & 67.13 & \textbf{0.1176} & $3.30$ & all 131{,}072, 0 wrong \\
-10 & \textbf{TNF32} (ours) & 36 bits & 569 & 0 & 66.91 & \textbf{0.1176} & $6.03$ & sampled 9{,}997, 0 wrong \\
-11 & \textbf{TNF16} (ours) & 17 bits & 565 & 0 & 66.28 & \textbf{0.1173} & $8.56$ & all 131{,}072 \\
-12 & \textbf{TNF64} (ours) & 65 bits & 572 & 0 & 65.38 & \textbf{0.1143} & $8.73$ & sampled, 0 wrong \\
-13 & \textbf{TNF8} (ours) & 10 bits & 545 & 0 & 62.13 & \textbf{0.1140} & $3.63$ & all 1{,}024, 0 wrong \\
-14 & VAX F & 32 bits & 560 & 0 & 61.38 & 0.1096 & $3.71$ & all 40{,}000 \checkmark \\
-15 & \textbf{GF+8} (ours) & 8b (+2 sel) & 628 & 0 & 63.05 & \textbf{0.1004} & $1.08$ & 1{,}024/1{,}024 \checkmark \\
-16 & posit8 & 8 bits & 550 & 0 & 44.68 & 0.0812 & $2.96$ & all 255 \checkmark \\
-17 & takum16 & 16 bits & 789 & 57 & 58.96 & 0.0747 & $5.75$ & 632/61{,}505 \\
-18 & LNS16 & 16 bits & 658 & 0 & 43.04 & 0.0654 & $0.45$ & 107/65{,}536 \\
-19 & posit16 & 16 bits & 667 & 0 & 36.75 & 0.0551 & $1.63$ & all 65{,}535 \checkmark \\
-20 & IBM hex32 & 32 bits & 1008 & 0 & 30.82 & 0.0306 & $1.53$ & all 40{,}000 \checkmark \\
-21 & posit32 & 32 bits & 967 & 0 & 29.55 & 0.0306 & $1.96$ & all 40{,}000 \checkmark \\
+3 & \textbf{TNF16a} (ours) & 16b & 502 & 0 & 69.87 & \textbf{0.1392} & $6.97$ & all 65{,}534 \checkmark \\
+4 & \textbf{GF10} (ours) & 10 bits & 533 & 0 & 72.16 & \textbf{0.1354} & $5.08$ & all 1{,}024 \\
+5 & fp8 e4m3 & 8 bits & 516 & 0 & 64.70 & 0.1254 & $9.33$ & all 256, 0 wrong \\
+6 & fp8 e5m2 & 8 bits & 529 & 0 & 65.30 & 0.1234 & $5.70$ & all 256, 0 wrong \\
+7 & binary16 & 16 bits & 522 & 0 & 63.30 & 0.1213 & $7.74$ & all 65{,}536 \\
+8 & \textbf{GF14} (ours) & 14 bits & 587 & 0 & 71.15 & \textbf{0.1212} & $4.54$ & all 16{,}384 \\
+9 & minifloat & 8 bits & 558 & 0 & 67.06 & 0.1202 & $5.49$ & all 254 \checkmark \\
+10 & \textbf{BNF16} (ours) & 17 bits & 571 & 0 & 67.13 & \textbf{0.1176} & $3.30$ & all 131{,}072, 0 wrong \\
+11 & \textbf{TNF32} (ours) & 36 bits & 569 & 0 & 66.91 & \textbf{0.1176} & $6.03$ & sampled 9{,}997, 0 wrong \\
+12 & \textbf{TNF16} (ours) & 17 bits & 565 & 0 & 66.28 & \textbf{0.1173} & $8.56$ & all 131{,}072 \\
+13 & \textbf{TNF16b} (ours) & 16b & 540 & 0 & 61.76 & \textbf{0.1144} & $6.54$ & all 65{,}534 \checkmark \\
+14 & \textbf{TNF64} (ours) & 65 bits & 572 & 0 & 65.38 & \textbf{0.1143} & $8.73$ & sampled, 0 wrong \\
+15 & \textbf{TNF8} (ours) & 10 bits & 545 & 0 & 62.13 & \textbf{0.1140} & $3.63$ & all 1{,}024, 0 wrong \\
+16 & VAX F & 32 bits & 560 & 0 & 61.38 & 0.1096 & $3.71$ & all 40{,}000 \checkmark \\
+17 & \textbf{GF+8} (ours) & 8b (+2 sel) & 628 & 0 & 63.05 & \textbf{0.1004} & $1.08$ & 1{,}024/1{,}024 \checkmark \\
+18 & posit8 & 8 bits & 550 & 0 & 44.68 & 0.0812 & $2.96$ & all 255 \checkmark \\
+19 & takum16 & 16 bits & 789 & 57 & 58.96 & 0.0747 & $5.75$ & 632/61{,}505 \\
+20 & LNS16 & 16 bits & 658 & 0 & 43.04 & 0.0654 & $0.45$ & 107/65{,}536 \\
+21 & posit16 & 16 bits & 667 & 0 & 36.75 & 0.0551 & $1.63$ & all 65{,}535 \checkmark \\
+22 & IBM hex32 & 32 bits & 1008 & 0 & 30.82 & 0.0306 & $1.53$ & all 40{,}000 \checkmark \\
+23 & posit32 & 32 bits & 967 & 0 & 29.55 & 0.0306 & $1.96$ & all 40{,}000 \checkmark \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -3791,7 +3793,9 @@ bits & format & LUT & MHz & MHz/LUT \\
 10 & \textbf{GF10} & 533 & 72.16 & 0.1354 \\
 10 & \textbf{TNF8} & 545 & 62.13 & 0.1140 \\
 14 & \textbf{GF14} & 587 & 71.15 & 0.1212 \\
+16 & \textbf{TNF16a} & 502 & 69.87 & 0.1392 \\
 16 & binary16 & 522 & 63.30 & 0.1213 \\
+16 & \textbf{TNF16b} & 540 & 61.76 & 0.1144 \\
 16 & takum16 & 789 & 58.96 & 0.0747 \\
 16 & LNS16 & 658 & 43.04 & 0.0654 \\
 16 & posit16 & 667 & 36.75 & 0.0551 \\
@@ -3906,6 +3910,88 @@ by a pocket that discards most of its own code space. Repaired, it loses by
 more. \emph{We report this because it is true and because the alternative --- a
 number resting on a degenerate component --- is the kind of claim this paper
 spends twenty-seven sections dismantling in other people's work.}
+
+
+\section{A rung at exactly sixteen bits, and what winning there costs}
+\label{sec:sixteen}
+
+Section~\ref{sec:confound} left this work with one honest comparison and an
+apology attached to it: our nearest rung to the sixteen-bit competitors was
+seventeen bits wide, so every same-width claim carried a one-bit caveat. A
+rung's stored width is $1 + \lceil E_t \log_2 3\rceil + M$, and exactly two
+assignments reach sixteen:
+
+\begin{center}\small
+\begin{tabular}{clrrr}
+\toprule
+& $E_t$ & offset bits & $M$ & dynamic range \\
+\midrule
+A & $4$ & $7$ ($81$ offsets) & $8$ & $2^{-39}\ldots2^{39}$ \\
+B & $3$ & $5$ ($27$ offsets) & $10$ & $2^{-12}\ldots2^{12}$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+Which is \emph{the} sixteen-bit member is a measurement, not a preference, so
+both were built and both were checked exhaustively against the ladder
+reference: \textbf{$65{,}534$ of $65{,}534$ exact, each.} Rung A wins on
+throughput, $0.1392$ against $0.1144$, and it wins its width class outright:
+
+\begin{center}\small
+\begin{tabular}{lr}
+\toprule
+\textbf{TNF16a} (16 bits) versus & \\
+\midrule
+\texttt{binary16} & $\mathbf{+14.7\%}$ \\
+\texttt{takum16}  & $+86.3\%$ \\
+\texttt{LNS16}    & $+112.8\%$ \\
+\texttt{posit16}  & $+152.6\%$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+This is the first same-width win in the catalogue against IEEE, and it is the
+result the previous section said the paper did not yet have. It also has a price
+that must be printed beside it.
+
+\paragraph{The price.} A ternary exponent of four trits has $81$ values and its
+binary field holds $128$: \emph{thirty-seven percent of rung A's offset codes
+lie outside the format}. Counting representable values, rung A uses $40{,}960$
+of $65{,}536$ codes and delivers $15.32$ effective bits where \texttt{binary16}
+delivers close to sixteen. \textbf{The win is $+14.7\%$ of throughput for
+$-0.68$ bits of code space.}
+
+That trade is not incidental, and Proposition~\ref{prop:pruning} already
+predicts its direction. A decoder whose image is smaller needs less logic to
+produce it, and logic observing that image may specialise to it --- and an image
+can be small because the input is narrow \emph{or because the format discards
+codes}. The mechanism is the same; only the cause differs.
+
+\begin{center}\small
+\begin{tabular}{lrr}
+\toprule
+& codes discarded & MHz/LUT advantage \\
+\midrule
+\texttt{GF+8} pocket 11, as published & $93.4\%$ & $+19.2\%$ \\
+\textbf{TNF16a} vs \texttt{binary16}  & $37.5\%$ & $+14.7\%$ \\
+\textbf{TNF16b} vs \texttt{binary16}  & $18.8\%$ & $-5.7\%$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+Three points do not establish a law and are not offered as one; at $n=3$ the
+correlation of $+0.81$ carries no significance. The claim rests on the mechanism,
+which is deductive, and the points are consistent with it.
+
+The consequence for reading this paper's own table is direct. \emph{A throughput
+metric rewards a format for discarding code space}, so no ranking on MHz/LUT
+alone should be read as a ranking of format quality. Our own first place is
+unaffected --- \texttt{GFTernary} uses all four of its codes and discards
+nothing --- but rung A's third place is bought in part with codes it does not
+spend, and saying so is the difference between a result and an advertisement.
 
 \section{When a conformance test measures itself}
 \label{sec:wellposed}

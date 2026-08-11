@@ -46,6 +46,10 @@ FORMATS = {
     "tnf16": TNFSpec("tnf16", et=4, mant_bits=9),
     "tnf32": TNFSpec("tnf32", et=6, mant_bits=25),
     "tnf64": TNFSpec("tnf64", et=7, mant_bits=52),
+    # Two candidate rungs that fill exactly 16 stored bits, so the catalogue
+    # has a width class where one of ours meets binary16 head-on.
+    "tnf16a": TNFSpec("tnf16a", et=4, mant_bits=8),
+    "tnf16b": TNFSpec("tnf16b", et=3, mant_bits=10),
 }
 
 

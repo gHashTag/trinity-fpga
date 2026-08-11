@@ -95,5 +95,21 @@
     "declares": "e5m2",
     "table_name": "fp8 e5m2",
     "note": "OCP fp8 E5M2, bias 15, subnormals present."
+  },
+  "tnf16a": {
+    "rtl": "fpga/tnet/tnf16_rungs.v",
+    "ref_module": "tnf_spec_ref",
+    "ref_key": "tnf16a",
+    "declares": "E_t=4",
+    "table_name": "TNF16a",
+    "note": "Ternary-exponent rung at exactly 16 stored bits: E_t=4 (7 offset bits, 81 of 128 used), M=8. 37.5% of the offset field lies outside the format."
+  },
+  "tnf16b": {
+    "rtl": "fpga/tnet/tnf16_rungs.v",
+    "ref_module": "tnf_spec_ref",
+    "ref_key": "tnf16b",
+    "declares": "E_t=3",
+    "table_name": "TNF16b",
+    "note": "Ternary-exponent rung at exactly 16 stored bits: E_t=3 (5 offset bits, 27 of 32 used), M=10."
   }
 }

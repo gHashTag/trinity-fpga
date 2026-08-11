@@ -9,7 +9,8 @@
   "mhz_per_lut": 0.1797,
   "spread": 6.61,
   "checked": "all 4 codes",
-  "bram": 0
+  "bram": 0,
+  "code_use": null
  },
  {
   "rank": 2,
@@ -21,10 +22,24 @@
   "mhz_per_lut": 0.1631,
   "spread": 6.37,
   "checked": "identity (exact)",
-  "bram": 0
+  "bram": 0,
+  "code_use": null
  },
  {
-  "rank": 3,
+  "format": "TNF16a",
+  "ours": true,
+  "storage": "16b",
+  "lut": 502,
+  "bram": 0,
+  "mhz": 69.87,
+  "mhz_per_lut": 0.13918326693227093,
+  "spread": 6.969999999999999,
+  "checked": "all 65{,}534 \\checkmark",
+  "code_use": 0.625,
+  "rank": 3
+ },
+ {
+  "rank": 4,
   "format": "GF10",
   "ours": true,
   "storage": "10 bits",
@@ -33,10 +48,11 @@
   "mhz_per_lut": 0.1354,
   "spread": 5.08,
   "checked": "all 1{,}024",
-  "bram": 0
+  "bram": 0,
+  "code_use": null
  },
  {
-  "rank": 4,
+  "rank": 5,
   "format": "fp8 e4m3",
   "ours": false,
   "storage": "8 bits",
@@ -45,10 +61,11 @@
   "mhz_per_lut": 0.1254,
   "spread": 9.33,
   "checked": "all 256, 0 wrong",
-  "bram": 0
+  "bram": 0,
+  "code_use": null
  },
  {
-  "rank": 5,
+  "rank": 6,
   "format": "fp8 e5m2",
   "ours": false,
   "storage": "8 bits",
@@ -57,10 +74,11 @@
   "mhz_per_lut": 0.1234,
   "spread": 5.7,
   "checked": "all 256, 0 wrong",
-  "bram": 0
+  "bram": 0,
+  "code_use": null
  },
  {
-  "rank": 6,
+  "rank": 7,
   "format": "binary16",
   "ours": false,
   "storage": "16 bits",
@@ -69,10 +87,11 @@
   "mhz_per_lut": 0.1213,
   "spread": 7.74,
   "checked": "all 65{,}536",
-  "bram": 0
+  "bram": 0,
+  "code_use": null
  },
  {
-  "rank": 7,
+  "rank": 8,
   "format": "GF14",
   "ours": true,
   "storage": "14 bits",
@@ -81,10 +100,11 @@
   "mhz_per_lut": 0.1212,
   "spread": 4.54,
   "checked": "all 16{,}384",
-  "bram": 0
+  "bram": 0,
+  "code_use": null
  },
  {
-  "rank": 8,
+  "rank": 9,
   "format": "minifloat",
   "ours": false,
   "storage": "8 bits",
@@ -93,10 +113,11 @@
   "mhz_per_lut": 0.1202,
   "spread": 5.49,
   "checked": "all 254 \\checkmark",
-  "bram": 0
+  "bram": 0,
+  "code_use": null
  },
  {
-  "rank": 9,
+  "rank": 10,
   "format": "BNF16",
   "ours": true,
   "storage": "17 bits",
@@ -105,10 +126,11 @@
   "mhz_per_lut": 0.1176,
   "spread": 3.3,
   "checked": "all 131{,}072, 0 wrong",
-  "bram": 0
+  "bram": 0,
+  "code_use": null
  },
  {
-  "rank": 10,
+  "rank": 11,
   "format": "TNF32",
   "ours": true,
   "storage": "36 bits",
@@ -117,10 +139,11 @@
   "mhz_per_lut": 0.1176,
   "spread": 6.03,
   "checked": "sampled 9{,}997, 0 wrong",
-  "bram": 0
+  "bram": 0,
+  "code_use": null
  },
  {
-  "rank": 11,
+  "rank": 12,
   "format": "TNF16",
   "ours": true,
   "storage": "17 bits",
@@ -129,10 +152,24 @@
   "mhz_per_lut": 0.1173,
   "spread": 8.56,
   "checked": "all 131{,}072",
-  "bram": 0
+  "bram": 0,
+  "code_use": null
  },
  {
-  "rank": 12,
+  "format": "TNF16b",
+  "ours": true,
+  "storage": "16b",
+  "lut": 540,
+  "bram": 0,
+  "mhz": 61.76,
+  "mhz_per_lut": 0.11437037037037037,
+  "spread": 6.540000000000006,
+  "checked": "all 65{,}534 \\checkmark",
+  "code_use": 0.812,
+  "rank": 13
+ },
+ {
+  "rank": 14,
   "format": "TNF64",
   "ours": true,
   "storage": "65 bits",
@@ -141,10 +178,11 @@
   "mhz_per_lut": 0.1143,
   "spread": 8.73,
   "checked": "sampled, 0 wrong",
-  "bram": 0
+  "bram": 0,
+  "code_use": null
  },
  {
-  "rank": 13,
+  "rank": 15,
   "format": "TNF8",
   "ours": true,
   "storage": "10 bits",
@@ -153,10 +191,11 @@
   "mhz_per_lut": 0.114,
   "spread": 3.63,
   "checked": "all 1{,}024, 0 wrong",
-  "bram": 0
+  "bram": 0,
+  "code_use": null
  },
  {
-  "rank": 14,
+  "rank": 16,
   "format": "VAX F",
   "ours": false,
   "storage": "32 bits",
@@ -165,10 +204,11 @@
   "mhz_per_lut": 0.10960714285714286,
   "spread": 3.710000000000001,
   "checked": "all 40{,}000 \\checkmark",
-  "bram": 0
+  "bram": 0,
+  "code_use": null
  },
  {
-  "rank": 15,
+  "rank": 17,
   "format": "GF+8",
   "ours": true,
   "storage": "8b (+2 sel)",
@@ -177,10 +217,11 @@
   "mhz_per_lut": 0.1004,
   "spread": 1.08,
   "checked": "1{,}024/1{,}024 \\checkmark",
-  "bram": 0
+  "bram": 0,
+  "code_use": null
  },
  {
-  "rank": 16,
+  "rank": 18,
   "format": "posit8",
   "ours": false,
   "storage": "8 bits",
@@ -189,10 +230,11 @@
   "mhz_per_lut": 0.08123636363636363,
   "spread": 2.960000000000001,
   "checked": "all 255 \\checkmark",
-  "bram": 0
+  "bram": 0,
+  "code_use": null
  },
  {
-  "rank": 17,
+  "rank": 19,
   "format": "takum16",
   "ours": false,
   "storage": "16 bits",
@@ -201,10 +243,11 @@
   "mhz_per_lut": 0.0747,
   "spread": 5.75,
   "checked": "632/61{,}505",
-  "bram": 57
+  "bram": 57,
+  "code_use": null
  },
  {
-  "rank": 18,
+  "rank": 20,
   "format": "LNS16",
   "ours": false,
   "storage": "16 bits",
@@ -213,10 +256,11 @@
   "mhz_per_lut": 0.0654,
   "spread": 0.45,
   "checked": "107/65{,}536",
-  "bram": 0
+  "bram": 0,
+  "code_use": null
  },
  {
-  "rank": 19,
+  "rank": 21,
   "format": "posit16",
   "ours": false,
   "storage": "16 bits",
@@ -225,10 +269,11 @@
   "mhz_per_lut": 0.055097451274362816,
   "spread": 1.6300000000000026,
   "checked": "all 65{,}535 \\checkmark",
-  "bram": 0
+  "bram": 0,
+  "code_use": null
  },
  {
-  "rank": 20,
+  "rank": 22,
   "format": "IBM hex32",
   "ours": false,
   "storage": "32 bits",
@@ -237,10 +282,11 @@
   "mhz_per_lut": 0.030575396825396825,
   "spread": 1.5299999999999976,
   "checked": "all 40{,}000 \\checkmark",
-  "bram": 0
+  "bram": 0,
+  "code_use": null
  },
  {
-  "rank": 21,
+  "rank": 23,
   "format": "posit32",
   "ours": false,
   "storage": "32 bits",
@@ -249,6 +295,7 @@
   "mhz_per_lut": 0.030558428128231646,
   "spread": 1.9600000000000009,
   "checked": "all 40{,}000 \\checkmark",
-  "bram": 0
+  "bram": 0,
+  "code_use": null
  }
 ]
