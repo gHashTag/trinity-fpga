@@ -1,0 +1,27 @@
+name: Exact linear path
+
+# The paper's central claim is that a ternary layer's linear path is computed
+# without rounding error, because Z[phi] is closed under both weight
+# application and accumulation. That is a theorem, machine-checked in Coq.
+#
+# A proof about a lattice says nothing about whether the RTL implements the
+# lattice, and this project has found six modules that did not implement the
+# format they were labelled with. This compares the accumulator pair against
+# exact integer arithmetic -- no float appears in the comparison at all.
+
+on: [pull_request, push]
+
+jobs:
+  exact-path:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: sudo apt-get update && sudo apt-get install -y iverilog
+      - run: |
+          cd fpga/phiscale
+          for tb in tb_exact tb_exact16 tb_exact32; do
+            iverilog -o /tmp/$tb -g2012 tern_node2.v $tb.v && vvp /tmp/$tb > ${tb/tb_exact/exact_sweep}.txt
+          done
+      - run: python3 tools/check_exact_path.py
