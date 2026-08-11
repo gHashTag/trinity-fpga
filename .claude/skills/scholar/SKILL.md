@@ -129,6 +129,35 @@ Model weights for this line live under a *previous session's* scratchpad
 Qwen, Pythia, GPT-2, OPT, and wikitext-2). Check there before downloading
 anything — it survives across sessions but not forever.
 
+### Run the baselines before building the alternative
+
+The single most expensive omission of 2026-08-11, and it cost three sessions.
+
+`BLOCK_AXIS_CLOSED` concluded no eight-level element format takes the block axis
+from MXFP4. Three codebooks were then designed and searched here to test it. The
+thing that actually falsified it was **NF4** — the 4-bit NormalFloat from QLoRA,
+published in 2023, sixteen constants in `bitsandbytes`, fitted to a Gaussian
+prior and to nothing in this repository. It beats MXFP4 in this harness by
+**−6.50 % pooled out of sample**, `t = −15.60`, `p = 2e-28`, at strictly equal
+budget. **Nobody had ever run it.**
+
+A day of searching produced a codebook five times weaker than that.
+
+- **Every "we beat X by Y %" is meaningless until the field's own leader is in
+  the same table.** Beating a *deployed hardware format* is not the same as
+  beating the *research* in the class your work belongs to, and the second is the
+  one a reviewer will ask about.
+- **The strongest opponent is usually free.** Published constants, a pip install,
+  an afternoon. That is cheaper than any search, and it bounds what a search is
+  worth before the search is run.
+- **A conclusion of the form "nothing can do X" needs a literature check, not
+  just an argument.** The argument in `BLOCK_AXIS_CLOSED` was wrong *and* the
+  counterexample predated it by three years.
+
+The corollary for reporting: once a real baseline is in the table, restate old
+margins against it. "−1.31 % against MXFP4" and "five times weaker than NF4" are
+the same measurement, and only the second tells the reader where the work stands.
+
 ### Hold out the unit the parameters were fitted against
 
 The most expensive lesson of 2026-08-11. A codebook with six free parameters was
