@@ -4183,6 +4183,26 @@ and $\lceil x\rceil - x = 1-\{x\}$ whenever $x\notin\mathbb{Z}$, which
 Theorem's first sentence guarantees.
 \end{proof}
 
+\begin{corollary}[The waste is the undefined code space]
+\label{cor:wasteiscodes}
+Because the sign and mantissa fields are full --- every one of their $2^{1+M}$
+patterns denotes a distinct value --- the fraction of the \emph{stored word}
+that the specification leaves undefined equals the fraction of the offset field
+it leaves undefined:
+\[
+  \frac{2^{\text{width}} - 2\cdot 3^{E_t}\cdot 2^{M}}{2^{\text{width}}}
+  \;=\; 1 - \frac{3^{E_t}}{2^{\lceil E_t\log_2 3\rceil}} \;=\; w(E_t).
+\]
+So $w$ is not an abstract packing loss: it \emph{is} the share of the format's
+own codes that name nothing. At $E_t=4$ that is $24{,}064$ of $65{,}536$ codes;
+at $E_t=5$, $3{,}328$.
+\end{corollary}
+
+\noindent
+This is why Proposition~\ref{prop:reserve} bites exactly where $w$ is large: the
+codes a rung must guard are the codes $w$ counts, and there is no third place for
+them to be.
+
 \begin{corollary}[The waste is uneven, and the good rungs are sparse]
 \label{cor:rungs}
 $w(k)$ is small exactly where $\{k\log_2 3\}$ is close to $1$, that is where

@@ -78,7 +78,8 @@
    80.83
   ],
   "ci95": 0.0017929932266461575,
-  "seed_count": 54
+  "seed_count": 54,
+  "module": "gfternary_decode"
  },
  {
   "rank": 2,
@@ -159,7 +160,8 @@
    80.05
   ],
   "ci95": 0.0013023222880149644,
-  "seed_count": 54
+  "seed_count": 54,
+  "module": "binary32_decode"
  },
  {
   "rank": 3,
@@ -240,7 +242,8 @@
    67.65
   ],
   "ci95": 0.001236007341136572,
-  "seed_count": 54
+  "seed_count": 54,
+  "module": "fp8_e4m3_decode"
  },
  {
   "format": "TNF16a",
@@ -321,7 +324,8 @@
    72.47
   ],
   "ci95": 0.0011958715905084024,
-  "seed_count": 54
+  "seed_count": 54,
+  "module": "tnf16a_decode"
  },
  {
   "rank": 5,
@@ -402,7 +406,8 @@
    69.92
   ],
   "ci95": 0.001088574151932593,
-  "seed_count": 54
+  "seed_count": 54,
+  "module": "fp8_e5m2_decode"
  },
  {
   "rank": 6,
@@ -483,7 +488,8 @@
    67.07
   ],
   "ci95": 0.001171085150355798,
-  "seed_count": 54
+  "seed_count": 54,
+  "module": "gf10_decode"
  },
  {
   "format": "TNF17e",
@@ -563,7 +569,8 @@
    68.16
   ],
   "ci95": 0.001339535878314585,
-  "seed_count": 54
+  "seed_count": 54,
+  "module": "tnf17e_decode"
  },
  {
   "format": "TNF16c",
@@ -643,7 +650,8 @@
    72.09
   ],
   "ci95": 0.0010007059256690357,
-  "seed_count": 54
+  "seed_count": 54,
+  "module": "tnf16c_safe_decode"
  },
  {
   "rank": 9,
@@ -724,7 +732,8 @@
    63.4
   ],
   "ci95": 0.0011794638384483211,
-  "seed_count": 54
+  "seed_count": 54,
+  "module": "binary16_decode"
  },
  {
   "rank": 10,
@@ -749,7 +758,8 @@
   "harness": "lfsr128",
   "status": "competitor",
   "seed_count": 5,
-  "ci95": null
+  "ci95": null,
+  "module": "minifloat_decode"
  },
  {
   "rank": 11,
@@ -774,7 +784,8 @@
   "harness": "lfsr128",
   "status": "ours, not a ladder rung",
   "seed_count": 5,
-  "ci95": null
+  "ci95": null,
+  "module": "gf14_decode"
  },
  {
   "format": "TNF17e-bare",
@@ -798,7 +809,8 @@
   "harness": "lfsr128",
   "status": "control: guard removed",
   "seed_count": 5,
-  "ci95": null
+  "ci95": null,
+  "module": "tnf17e_bare_decode"
  },
  {
   "rank": 13,
@@ -823,7 +835,8 @@
   "harness": "lfsr128",
   "status": "legacy: poor $k$, unguarded",
   "seed_count": 5,
-  "ci95": null
+  "ci95": null,
+  "module": "tnf8s_decode"
  },
  {
   "format": "TNF16b",
@@ -848,7 +861,8 @@
   "harness": "lfsr128",
   "status": "legacy: poor $k$, unguarded",
   "seed_count": 5,
-  "ci95": null
+  "ci95": null,
+  "module": "tnf16b_decode"
  },
  {
   "rank": 15,
@@ -873,7 +887,8 @@
   "harness": "lfsr128",
   "status": "legacy: poor $k$, unguarded",
   "seed_count": 5,
-  "ci95": null
+  "ci95": null,
+  "module": "bnf16s_decode"
  },
  {
   "rank": 16,
@@ -898,7 +913,8 @@
   "harness": "lfsr128",
   "status": "legacy: poor $k$, unguarded",
   "seed_count": 5,
-  "ci95": null
+  "ci95": null,
+  "module": "tnf17_decode"
  },
  {
   "rank": 17,
@@ -923,7 +939,8 @@
   "harness": "lfsr128",
   "status": "competitor",
   "seed_count": 5,
-  "ci95": null
+  "ci95": null,
+  "module": "vax_f_decode"
  },
  {
   "rank": 18,
@@ -948,7 +965,8 @@
   "harness": "lfsr128",
   "status": "ours, not a ladder rung",
   "seed_count": 5,
-  "ci95": null
+  "ci95": null,
+  "module": "gfplus8_a_decode"
  },
  {
   "rank": 19,
@@ -973,7 +991,8 @@
   "harness": "lfsr128",
   "status": "competitor",
   "seed_count": 5,
-  "ci95": null
+  "ci95": null,
+  "module": "posit8_es2_decode"
  },
  {
   "rank": 20,
@@ -998,7 +1017,8 @@
   "harness": "lfsr128",
   "status": "competitor",
   "seed_count": 5,
-  "ci95": null
+  "ci95": null,
+  "module": "takum16_decode"
  },
  {
   "rank": 21,
@@ -1023,7 +1043,8 @@
   "harness": "lfsr128",
   "status": "competitor",
   "seed_count": 5,
-  "ci95": null
+  "ci95": null,
+  "module": "lns16_decode"
  },
  {
   "rank": 22,
@@ -1048,7 +1069,8 @@
   "harness": "lfsr128",
   "status": "competitor",
   "seed_count": 5,
-  "ci95": null
+  "ci95": null,
+  "module": "posit16_decode"
  },
  {
   "rank": 23,
@@ -1073,7 +1095,8 @@
   "harness": "lfsr128",
   "status": "competitor",
   "seed_count": 5,
-  "ci95": null
+  "ci95": null,
+  "module": "posit32_decode"
  },
  {
   "rank": 24,
@@ -1098,6 +1121,7 @@
   "harness": "lfsr128",
   "status": "competitor",
   "seed_count": 5,
-  "ci95": null
+  "ci95": null,
+  "module": "ibm_hfp32_decode"
  }
 ]
