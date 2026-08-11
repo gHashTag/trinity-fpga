@@ -6076,3 +6076,34 @@ being right, and it was not.
 The harness exists, is checked in, and its sequencing errors are now documented.
 That is genuine progress, and it is much less than the headline the previous wave
 published. Saying which of the two you have is the whole difference.
+
+## Wave 662 — wrong answer, no answer, named missing precondition
+
+**Track which of the three a failing check is giving you.** A harness that
+reports a *wrong answer* is dangerous. One that reports *no answer* is useless.
+One that reports a *named missing precondition* — "no weight ever reaches the
+memory the MAC reads" — is a foundation. Three consecutive waves moved through
+exactly that sequence, and only the last is progress worth reporting as such.
+
+**Probe the preconditions, not just the result.** Comparing an output against a
+reference tells you nothing when an input never arrived. A two-line counter on
+the weight-write path turned an unexplained mismatch into a specific, actionable
+statement, and it cost less than the paragraph speculating about the mismatch
+would have.
+
+**Choose reference values outside the range of every degenerate reading.** Zero
+is what an unwritten register, an unassigned variable and a stuck bus all
+produce. A reference of 27 and a trit of `TRIT_P` cannot be manufactured by any
+of them. When picking a test vector, ask what your instrument would show if it
+were completely broken, and pick something else.
+
+**Pair every conditional capture with a flag that it happened.** `x` assigned
+under `if (cond)` needs `saw_x` set in the same branch. Without it, a comparison
+against `x` is a comparison against its initial value whenever `cond` never
+fires — and that reads as a pass.
+
+**Say which hypothesis your evidence points at, and that it is a lead.** The
+prefetch may be undriven by this harness or unstarted by the design. Another
+harness raised a prefetch IRQ, which points at mine first. Recording that as a
+direction rather than a conclusion is what stops the next wave inheriting a
+guess as a fact.
