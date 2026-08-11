@@ -1,0 +1,20 @@
+name: Decoder conformance
+
+# The throughput table prices twenty decoders by area and frequency. Neither
+# says anything about whether the circuit computes the right value, and a
+# decoder that is wrong is small for a reason. Four in the table do not
+# implement their formats fully -- three theirs, one ours, and ours is the one
+# whose every code is wrong.
+
+on: [pull_request, push]
+
+jobs:
+  decoder-conformance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: sudo apt-get update && sudo apt-get install -y iverilog
+      - run: cd fpga/tnet && ./conform.sh
+      - run: python3 conformance/check_decoders.py
