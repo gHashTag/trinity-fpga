@@ -4241,8 +4241,19 @@ rung C, unguarded          & $509$ & $66.11$ & $0.1299$ & $+7.1\%$ \\
 \end{center}
 
 \noindent
-Rung A's guard costs $15.1\%$ and takes the format below IEEE half. Rung C's
-costs $1.8\%$ and leaves it above. \textbf{The claim this paper can make at equal
+The guarded build of rung A measures $15.1\%$ below its unguarded build and the
+guarded rung C only $1.8\%$ below --- but \emph{those percentages are not the
+comparator's price}. Synthesised in isolation the guard is
+$1$ LUT at $E_t=5$, $2$ at $E_t=4$ and $3$ at $E_t=8$, against modules of some
+five hundred, so at most half a percent of the area is the comparison itself.
+What changes is the decoder's output image: reserving $47$ offsets collapses
+$24{,}064$ codes onto one \textsc{NaN}, and everything downstream is specialised
+to the image it observes (Proposition~\ref{prop:pruning}). \textbf{The difference
+between a guarded and an unguarded build is a fact about the whole datapath, not
+a cost that can be attributed to the guard}, and this paper stated it as the
+latter until an adversarial review of the derivation refuted the attribution.
+At seventeen bits the same difference proved to lie inside the seed spread
+entirely. \textbf{The claim this paper can make at equal
 storage, with every code either defined or flagged, is $+5.1\%$ against IEEE
 half} --- smaller than the $14.7\%$ first reported, and unlike it, not resting
 on an unchecked field.
