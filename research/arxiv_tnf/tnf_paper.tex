@@ -3108,8 +3108,15 @@ twenty-five, TNF64 likewise --- and none had a reference, which is how the
 divergence survived to be quoted. Written from the specification and checked
 against it they agree on every code swept, and they cost eight to eleven places
 each. What is left at the top is the alphabet, which agrees on all four of its
-codes.}
-\label{tab:fullthroughput}
+codes. \emph{Six of our modules moved when a reference was written for
+them} --- four TNF rungs and BNF16 were a mantissa bit short or a different
+format outright, and GF+8 had been measured with its pocket selector tied off,
+pricing one of four paths. \emph{Four of the competitors' decoders are
+incomplete}: takum16 disagrees with its reference on $98.7\%$ of its codes, IBM
+hex32 on $28\%$, and \texttt{fp8} omits subnormals entirely, which makes those
+rows lower bounds on what a complete implementation would cost. Every error
+found, ours and theirs, made its module smaller: an unimplemented case is
+unsynthesised logic.}\label{tab:fullthroughput}
 \small
 \begin{tabular}{rlrrrrrl}
 \toprule

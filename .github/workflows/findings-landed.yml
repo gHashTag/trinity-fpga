@@ -1,0 +1,20 @@
+name: Findings landed
+
+# An external session reset this tree to origin/main and orphaned four commits.
+# One carried a paragraph of the paper: every gate stayed green and the
+# paragraph was simply absent, found by accident two iterations later.
+#
+# Every other gate checks the paper against itself, against data files, against
+# the tree. Nothing checked it against the campaign's own record of what it
+# should contain.
+
+on: [pull_request, push]
+
+jobs:
+  findings-landed:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: python3 tools/check_findings_landed.py

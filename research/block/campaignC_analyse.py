@@ -54,18 +54,39 @@ print(f"rms residual = {math.sqrt(ss_res/len(mea)):.4f} ppl "
 print(f"sd of measurements = {float(mea.std(ddof=1)):.4f} ppl")
 
 print("\n" + "=" * 74)
-print("B. CURVATURE ALONG EACH LEVEL  (is +-5% still on the tangent line?)")
+print("B. IS THE ONE-LEVEL GRADIENT EVEN WELL DEFINED?")
 print("=" * 74)
 by = {(p["level"], p["delta"]): p["ppl"] for p in d["perturb"]}
 DEL = (-0.05, -0.02, -0.01, 0.01, 0.02, 0.05)
-print(f"{'lvl':>4}{'L':>9}" + "".join(f"{x:>+9.0%}" for x in DEL)
-      + f"{'lin.err@5%':>12}")
+print("central difference dppl/dln(L) computed at three step sizes.")
+print("A locally smooth surface gives the same number at all three.\n")
+print(f"{'lvl':>4}{'L':>9}{'@1%':>10}{'@2%':>10}{'@5%':>10}"
+      f"{'  agree?':>10}{'   monotone in L?':>18}")
 for j in range(1, 7):
-    lin5 = mx + g[j] * 0.05
-    err = by[(j, 0.05)] - lin5
-    print(f"{j:>4}{MXL[j]:>9.5f}"
-          + "".join(f"{100*(by[(j,x)]/mx-1):>+8.2f}%" for x in DEL)
-          + f"{err:>+12.4f}")
+    gs = [(by[(j, h)] - by[(j, -h)]) / (2 * h) for h in (0.01, 0.02, 0.05)]
+    sgn = len({np.sign(x) for x in gs}) == 1
+    rng = max(gs) - min(gs)
+    seq = [by[(j, x)] for x in DEL]
+    seq = [seq[0], seq[1], seq[2], mx, seq[3], seq[4], seq[5]]
+    dd = np.diff(seq)
+    nsign = int((np.sign(dd[:-1]) != np.sign(dd[1:])).sum())
+    print(f"{j:>4}{MXL[j]:>9.5f}" + "".join(f"{x:>+10.2f}" for x in gs)
+          + f"{('same sign' if sgn else 'SIGN FLIPS'):>10}"
+          + f"{('yes' if nsign == 0 else f'no, {nsign} turns'):>18}")
+print("\nsame table as perplexity, MXFP4 = %.4f at delta 0" % mx)
+print(f"{'lvl':>4}{'-5%':>9}{'-2%':>9}{'-1%':>9}{'  0':>9}{'+1%':>9}"
+      f"{'+2%':>9}{'+5%':>9}{'  best':>9}")
+for j in range(1, 7):
+    seq = [by[(j, DEL[0])], by[(j, DEL[1])], by[(j, DEL[2])], mx,
+           by[(j, DEL[3])], by[(j, DEL[4])], by[(j, DEL[5])]]
+    lab = ["-5%", "-2%", "-1%", "0", "+1%", "+2%", "+5%"]
+    print(f"{j:>4}" + "".join(f"{v:>9.4f}" for v in seq)
+          + f"{lab[int(np.argmin(seq))]:>9}")
+nbeat = sum(1 for p in d["perturb"] if p["ppl"] < mx)
+print(f"\nsingle-level perturbations that BEAT MXFP4: {nbeat}/{len(d['perturb'])}")
+best = min(d["perturb"], key=lambda p: p["ppl"])
+print(f"best single-level move: level {best['level']} {best['delta']:+.0%} "
+      f"-> {best['ppl']:.4f} ({100*(best['ppl']/mx-1):+.2f}% vs MXFP4)")
 
 print("\n" + "=" * 74)
 print("C. THE SPREAD AGAINST THE PUBLISHED MARGINS")
@@ -108,12 +129,28 @@ print(f"max deviation from the straight chord: {max(dev, key=abs):+.4f} ppl "
 steps = np.array(d["interp_steps"])
 print(f"steps: min {steps.min():+.4f}  max {steps.max():+.4f}  "
       f"ratio |max|/|min| = {abs(steps).max()/abs(steps).min():.2f}")
-# how far apart are the two codebooks, in the same units as the random draws?
-rms_lk = math.sqrt(float(np.mean([(it[-1]["levels"][j] / it[0]["levels"][j] - 1) ** 2
-                                  for j in range(1, 7)])))
-print(f"\nLloyd->KL distance = {100*rms_lk:.2f}% RMS relative "
-      f"(the random draws sat at 2.00%)")
-print(f"perplexity moved {100*(p1/p0-1):+.2f}% over that distance")
-print(f"=> {100*(p1/p0-1)/(100*rms_lk):+.3f}% ppl per 1% RMS along that line; "
-      f"random 2% RMS gave sd {s['sd_pct']:.2f}pp "
-      f"(= {s['sd_pct']/2:.3f}%/1% RMS, undirected)")
+# How far apart are these codebooks, in the two units that both have a claim?
+# Relative distance is what the random draws were specified in; absolute
+# distance is what the coordinate descent that produced KL actually stepped in
+# (it added +-step to a level, not +-step% of it).
+L0, L1 = it[0]["levels"], it[-1]["levels"]
+rel = [L1[j] / L0[j] - 1 for j in range(1, 7)]
+absd = [L1[j] - L0[j] for j in range(1, 7)]
+rms_rel = math.sqrt(float(np.mean(np.square(rel))))
+rms_abs = math.sqrt(float(np.mean(np.square(absd))))
+rnd_abs = 0.02 * math.sqrt(float(np.mean([MXL[j] ** 2 for j in range(1, 7)])))
+print("\nper-level move, normalised Lloyd-Max -> KL:")
+print(f"  {'lvl':>4}{'Lloyd':>10}{'KL':>10}{'abs':>10}{'rel':>10}")
+for j in range(1, 7):
+    print(f"  {j:>4}{L0[j]:>10.5f}{L1[j]:>10.5f}"
+          f"{absd[j-1]:>+10.5f}{100*rel[j-1]:>+9.2f}%")
+print(f"\nLloyd->KL distance: {100*rms_rel:.2f}% RMS relative | "
+      f"{rms_abs:.5f} RMS absolute")
+print(f"random draws      : {2.00:.2f}% RMS relative | "
+      f"{rnd_abs:.5f} RMS absolute")
+print(f"  => the random draws are {rms_rel/0.02:.1f}x closer in relative units, "
+      f"{rms_abs/rnd_abs:.1f}x closer in absolute units")
+print(f"perplexity moved {100*(p1/p0-1):+.2f}% over the Lloyd->KL distance")
+print(f"  {100*(p1/p0-1)/(100*rms_rel):+.3f}% ppl per 1% RMS relative, DIRECTED")
+print(f"  random 2% RMS gave sd {s['sd_pct']:.2f}pp = "
+      f"{s['sd_pct']/2:.3f}% ppl per 1% RMS relative, UNDIRECTED")

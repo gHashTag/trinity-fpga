@@ -56,7 +56,15 @@ def quant_signed(w, lv, signed_scale=False):
         s = q_e8m0_t((amax / top).clamp(min=1e-30)).clamp(min=1e-30)
     y = head / s[:, None]
     bnd = (lv_t[:-1] + lv_t[1:]) / 2
-    rec = lv_t[torch.bucketize(y, bnd)] * s[:, None]
+    # Tie rule. quant() bucketizes |y| with right=False, so a value sitting
+    # EXACTLY on a midpoint takes the smaller magnitude -- ties toward zero.
+    # Applying right=False to signed y would send negative ties the other way.
+    # Dyadic midpoints are reachable: y = -0.125 is exact whenever the block
+    # scale is a power of two, and it happens 94462 times in SmolLM2 alone.
+    idx = torch.where(y < 0,
+                      torch.bucketize(y, bnd, right=True),
+                      torch.bucketize(y, bnd, right=False))
+    rec = lv_t[idx] * s[:, None]
     out = w.clone()
     out[:, :n] = rec.reshape(-1, n).to(w.dtype)
     return out
@@ -64,7 +72,7 @@ def quant_signed(w, lv, signed_scale=False):
 
 def mirror(mag):
     """8 magnitudes -> the 15 distinct signed levels they generate."""
-    return sorted(set([-x for x in mag] + list(mag)))
+    return sorted(set([-x for x in mag if x != 0.0] + list(mag)))
 
 
 def main():
