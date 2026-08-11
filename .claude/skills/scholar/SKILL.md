@@ -154,6 +154,32 @@ overfitting to, and passes with an impressive p-value.
   the headline opponent — here the weaker claim (beats the squared-error optimum
   on all three models) transferred and was worth keeping.
 
+### The graceful failure is the dangerous one
+
+Two codebooks were fitted to the same model with the same search and the same six
+free parameters, differing only in what they were fitted *against*. Both failed
+out of sample, and the two failures do not look alike:
+
+| fitted against | in sample | on two unseen models |
+|---|---:|---|
+| the model's **logits** | −7.66 % | **loses**, +1.98 % and +8.63 % — ranking inverts |
+| the model's **weight statistics** | −5.24 % | −0.10 %, −0.19 % — ranking holds, `t = −0.22`, `p = 0.83` |
+
+The logit fit goes **actively wrong**: first of three where fitted, second of
+three everywhere else. The weight-statistics fit merely **stops helping**: the
+sign never flips, the magnitude collapses 30–50× into a tie.
+
+- **Fitting against a static property of a system degrades gracefully; fitting
+  against its behaviour can reverse.** Weight distributions are more alike across
+  checkpoints than logit distributions are.
+- **The graceful one is easier to mistake for a result**, precisely because the
+  sign holds. `−0.19 %` reads like a small win and is a tie: `t = −0.181`,
+  `p = 0.858`, 22 windows better and 18 worse. A point estimate without its
+  paired statistic beside it is noise with a decimal point.
+- **Report the confidence interval when a margin shrinks**, not just the new
+  point estimate. The pooled CI here was `[−1.56 %, +1.27 %]`, which settles the
+  question in one line where three perplexity figures did not.
+
 ### Before calling a result new, read what it would be new against
 
 A measured win over a *deployed* format says nothing about the *research* it
