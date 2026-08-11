@@ -166,8 +166,11 @@ priced in mantissa bits of silicon; Section~\ref{sec:valuelaw} then finds that
 for a logarithmic format the field layout is the smaller half of that cost, and
 that we had been measuring the wrong half.
 
-Five of our own claims were falsified by the measurements meant to support them,
-and each is retracted where it was made rather than quietly dropped.
+Six of our own claims were falsified by the measurements meant to support them,
+and each is retracted where it was made rather than quietly dropped. The sixth,
+Section~\ref{sec:wellposed}, accounts for four published disagreement figures at
+once, because they turned out to share one cause: the comparison, not the thing
+compared.
 Section~\ref{sec:selfcheck} generalises the shape those errors took, because in
 almost every case the measurement was correct and the comparison around it was
 not.
@@ -3111,7 +3114,12 @@ each. What is left at the top is the alphabet, which agrees on all four of its
 codes. \emph{Six of our modules moved when a reference was written for
 them} --- four TNF rungs and BNF16 were a mantissa bit short or a different
 format outright, and GF+8 had been measured with its pocket selector tied off,
-pricing one of four paths. \emph{Three of the competitors' decoders are incomplete}: IBM hex32 disagrees with its reference on $28\%$ of its codes, and \texttt{fp8} omitted subnormals entirely. The
+pricing one of four paths. That $28\%$ figure for IBM hex32 is withdrawn here
+along with the $253$ reported for LNS16, for the reason developed in
+\S\ref{sec:wellposed}: neither was measuring a decoder. Repaired and
+re-measured, IBM hex32 and VAX~F are exact on every comparable code, and both
+fell in the table because the logic they had been missing is logic they now pay
+for. \texttt{fp8} omitted subnormals entirely. The
 \texttt{fp8} rows are now the completed decoders, which cost $10\%$ more area
 and moved them from ranks three and five to ten and eleven --- the omission had
 been worth more than the format's own margin, and repairing a competitor's
@@ -3125,27 +3133,27 @@ unsynthesised logic.}\label{tab:fullthroughput}
 \toprule
 & format & storage & LUT & MHz & MHz/LUT & spread & conformance \\
 \midrule
-1 & \textbf{GFTernary} (ours) & 2b & 463 & 83.19 & \textbf{0.1797} & $6.61$ & all 4 codes \\
-2 & binary32 & 32b & 472 & 77.00 & 0.1631 & $6.37$ & not swept \\
-3 & VAX F & 32b & 527 & 73.51 & 0.1395 & $4.43$ & not swept \\
-4 & \textbf{GF10} (ours) & 10b & 533 & 72.16 & \textbf{0.1354} & $5.08$ & all 1{,}024 \\
-5 & fp8 e4m3 & 8b & 516 & 64.70 & 0.1254 & $9.33$ & all 256, 0 wrong \\
-6 & fp8 e5m2 & 8b & 529 & 65.30 & 0.1234 & $5.70$ & all 256, 0 wrong \\
-7 & binary16 & 16b & 522 & 63.30 & 0.1213 & $7.74$ & all 65{,}536 \\
-8 & \textbf{GF14} (ours) & 14b & 587 & 71.15 & \textbf{0.1212} & $4.54$ & all 16{,}384 \\
-9 & minifloat & 8b & 558 & 67.06 & 0.1202 & $5.49$ & not swept \\
-10 & \textbf{BNF16} (ours) & 17b & 571 & 67.13 & \textbf{0.1176} & $3.30$ & all 131{,}072, 0 wrong \\
-11 & \textbf{TNF32} (ours) & 36b & 569 & 66.91 & \textbf{0.1176} & $6.03$ & sampled 9{,}997, 0 wrong \\
-12 & \textbf{TNF16} (ours) & 17b & 565 & 66.28 & \textbf{0.1173} & $8.56$ & all 131{,}072 \\
-13 & \textbf{TNF64} (ours) & 65b & 572 & 65.38 & \textbf{0.1143} & $8.73$ & sampled, 0 wrong \\
-14 & \textbf{TNF8} (ours) & 10b & 545 & 62.13 & \textbf{0.1140} & $3.63$ & all 1{,}024, 0 wrong \\
-15 & \textbf{GF+8} (ours) & 8b & 628 & 63.05 & \textbf{0.1004} & $1.08$ & selector live; no reference \\
-16 & posit8 & 8b & 540 & 44.33 & 0.0821 & $4.02$ & not swept \\
-17 & takum16 & 16b, 57 BRAM & 789 & 58.96 & 0.0747 & $5.75$ & 632/61{,}505 (fp32 fl.) \\
-18 & IBM hex32 & 32b & 687 & 46.78 & 0.0681 & $3.78$ & not swept \\
-19 & LNS16 & 16b & 658 & 43.04 & 0.0654 & $0.45$ & not swept \\
-20 & posit16 & 16b & 712 & 40.38 & 0.0567 & $1.02$ & 4 of 65{,}536 wrong \\
-21 & posit32 & 32b & 953 & 28.16 & 0.0295 & $2.29$ & not swept \\
+1 & \textbf{GFTernary} (ours) & 2 bits & 463 & 83.19 & \textbf{0.1797} & $6.61$ & all 4 codes \\
+2 & binary32 & 32 bits & 472 & 77.00 & 0.1631 & $6.37$ & not swept \\
+3 & \textbf{GF10} (ours) & 10 bits & 533 & 72.16 & \textbf{0.1354} & $5.08$ & all 1{,}024 \\
+4 & fp8 e4m3 & 8 bits & 516 & 64.70 & 0.1254 & $9.33$ & all 256, 0 wrong \\
+5 & fp8 e5m2 & 8 bits & 529 & 65.30 & 0.1234 & $5.70$ & all 256, 0 wrong \\
+6 & binary16 & 16 bits & 522 & 63.30 & 0.1213 & $7.74$ & all 65{,}536 \\
+7 & \textbf{GF14} (ours) & 14 bits & 587 & 71.15 & \textbf{0.1212} & $4.54$ & all 16{,}384 \\
+8 & minifloat & 8 bits & 558 & 67.06 & 0.1202 & $5.49$ & not swept \\
+9 & \textbf{BNF16} (ours) & 17 bits & 571 & 67.13 & \textbf{0.1176} & $3.30$ & all 131{,}072, 0 wrong \\
+10 & \textbf{TNF32} (ours) & 36 bits & 569 & 66.91 & \textbf{0.1176} & $6.03$ & sampled 9{,}997, 0 wrong \\
+11 & \textbf{TNF16} (ours) & 17 bits & 565 & 66.28 & \textbf{0.1173} & $8.56$ & all 131{,}072 \\
+12 & \textbf{TNF64} (ours) & 65 bits & 572 & 65.38 & \textbf{0.1143} & $8.73$ & sampled, 0 wrong \\
+13 & \textbf{TNF8} (ours) & 10 bits & 545 & 62.13 & \textbf{0.1140} & $3.63$ & all 1{,}024, 0 wrong \\
+14 & VAX F & 32 bits & 560 & 61.38 & 0.1096 & $3.71$ & all 40{,}000 \checkmark \\
+15 & \textbf{GF+8} (ours) & 8 bits & 628 & 63.05 & \textbf{0.1004} & $1.08$ & selector live; no reference \\
+16 & posit8 & 8 bits & 540 & 44.33 & 0.0821 & $4.02$ & not swept \\
+17 & takum16 & 16 bits, 57 BRAM & 789 & 58.96 & 0.0747 & $5.75$ & 632 of 61{,}505 (fp32 floor) \\
+18 & LNS16 & 16 bits & 658 & 43.04 & 0.0654 & $0.45$ & not swept \\
+19 & posit16 & 16 bits & 712 & 40.38 & 0.0567 & $1.02$ & 4 of 65{,}536 wrong \\
+20 & IBM hex32 & 32 bits & 1008 & 30.82 & 0.0306 & $1.53$ & all 40{,}000 \checkmark \\
+21 & posit32 & 32 bits & 953 & 28.16 & 0.0295 & $2.29$ & not swept \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -3712,6 +3720,108 @@ Theorem~\ref{thm:compose} says transforms and formats act on different objects -
 a transform moves the ceiling, a format divides it --- so improving the element is
 orthogonal to improving the rotation, and neither subsumes the other.
 
+
+
+\section{When a conformance test measures itself}
+\label{sec:wellposed}
+
+Three of the disagreements this work reported between a decoder and its
+reference were not disagreements about the decoder. They are worth stating as a
+proposition because the failure is silent: every number involved is correct, and
+the test has no signal that could reveal the error.
+
+\begin{theorem}[Well-posedness of conformance]
+\label{thm:wellposed}
+Let $f\colon C\to\mathbb{R}$ be a format's exact value map on its code space,
+let $D\colon C\to F$ be a decoder into a finite floating type $F\subset
+\mathbb{R}$, and let $\rho\colon\mathbb{R}\to F\cup\{\bot\}$ be correct rounding,
+with $\rho(x)=\bot$ when $x$ has no finite image in $F$. Conformance of $D$ is
+the predicate
+\[
+  D(c) \;=\; \rho(f(c)) \qquad\text{on}\qquad \{c\in C : \rho(f(c))\neq\bot\}.
+\]
+The predicate $D(c)=f(c)$ is not equivalent to it. It fails at every $c$ with
+$f(c)\notin F$, and that set is determined by the dynamic ranges of $f$ and $F$
+alone --- it is the same set for a correct $D$ and for an arbitrary one.
+\end{theorem}
+
+\begin{proof}
+$F$ is finite and $f(C)\subset\mathbb{R}$, so $f(c)\in F$ holds only on the
+codes whose exact value is a member of $F$. For $c$ outside that set,
+$D(c)\in F$ gives $D(c)\neq f(c)$ whatever $D$ is, including $D=\rho\circ f$.
+Hence the second predicate is false on a set independent of $D$, while the
+first is true on all of the restricted domain when $D=\rho\circ f$.
+\end{proof}
+
+\begin{corollary}[A floor under spurious error]
+\label{cor:floor}
+A conformance test that omits $\rho$ reports at least $|\{c:f(c)\notin F\}|/|C|$
+of the code space as error, for every decoder. For IBM hex32, whose range is
+$16^{\pm 64}$, against \texttt{fp32}, this floor is $45.0\%$ measured on a
+uniform sample of $40{,}000$ codes; the $28\%$ previously reported for that
+decoder lies entirely beneath it and was therefore uninformative. Applying
+$\rho$ moves the comparable set from $22{,}001$ to $30{,}245$ codes and the
+disagreement to zero.
+\end{corollary}
+
+\begin{proposition}[Variant distance is not decoder error]
+\label{prop:variant}
+Let $D$ implement variant $f_1$ while the reference computes $f_2\neq f_1$.
+The measured disagreement is $|\{c:\rho(f_1(c))\neq\rho(f_2(c))\}|$, a property
+of the pair $(f_1,f_2)$ alone. No conformance test can separate this from
+decoder error, because agreement is its only signal and both variants are
+internally consistent. The variant must therefore be fixed by a declaration
+external to the test.
+\end{proposition}
+
+Proposition~\ref{prop:variant} is not hypothetical here. Two formats in this
+catalogue publish more than one variant, and both were compared against the
+wrong one. \texttt{takum16} implements the logarithmic takum, value
+$(-1)^{S}e^{\ell/2}$, and was compared against the linear one, value
+$(1+M/2^{p})2^{c}$: reported disagreement $98.7\%$, actual $632$ of $61{,}505$,
+all at \texttt{fp32}'s denormal floor. \texttt{lns16} implements scale $128$ and
+was compared against scale $256$: reported $253$, actual $107$, of which three
+are a zero-and-NaN convention and $104$ are sub-\textsc{ulp} precision in the
+subnormal range. Each RTL states its variant in its header comment, and reading
+it would have cost nothing.
+
+The remedy is mechanical and is now enforced. \texttt{conformance/variant\_map.json}
+records, per format, the reference module compared against and a token that must
+appear in the decoder's own header; \texttt{tools/check\_variant\_declared.py}
+fails if a declaration is missing or if the map and the header disagree. The
+gate was verified by binding \texttt{lns16} to the wrong scale and confirming it
+goes red.
+
+\begin{table}[htbp]
+\centering
+\vspace{0.6em}
+\caption{Reported disagreement against disagreement measured well-posedly. The
+first column is what this work published; the second is what the same decoder
+scores once the reference is rounded to the decoder's type and the declared
+variant is used. No decoder was changed to produce the second column except
+where the third column says so.}
+\label{tab:wellposed}
+\scriptsize
+\begin{tabular}{lrrl}
+\toprule
+format & reported & well-posed & what the difference was \\
+\midrule
+takum16   & $98.7\%$ & $632/61{,}505$ & linear reference, logarithmic decoder \\
+IBM hex32 & $28\%$   & $0/30{,}245$   & no $\rho$; subnormal path then added \\
+LNS16     & $253$    & $107/65{,}536$ & scale-256 reference, scale-128 decoder \\
+VAX F     & $151$    & $0/40{,}000$   & no $\rho$; subnormal path then added \\
+posit16   & $4$      & $4/65{,}535$   & unchanged: a real edge defect \\
+posit32   & $36$     & $48/40{,}000$  & unchanged: a real defect, count corrected \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Four of the six shrank to nothing or nearly nothing, and two did not. That ratio
+is the useful part of this section: a test that cannot be wrong about itself
+would have found two defects instead of six, and the four false ones cost more
+attention than the two real ones. \emph{The instrument was inside the failure
+domain it was measuring} --- the same error, in a different medium, as
+diagnosing a network fault with a tool that runs over that network.
 
 \section{What this settles}
 \label{sec:settles}

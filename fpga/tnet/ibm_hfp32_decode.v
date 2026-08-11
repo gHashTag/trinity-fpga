@@ -53,13 +53,29 @@ module ibm_hfp32_decode (
     wire [23:0] frac_shifted = fraction << (5'd23 - lead);
     wire [22:0] mant = frac_shifted[22:0];
 
+    // Subnormal: value = {1,mant} * 2^(exp_final-127); fp32 subnormals are
+    // m * 2^-149, so m = {1,mant} >> (1 - exp_final), rounded to nearest even.
+    wire signed [10:0] sh_s   = 11'sd1 - exp_final;
+    wire [5:0]         sh     = (sh_s > 11'sd63) ? 6'd63 : sh_s[5:0];
+    wire [47:0]        sub_w  = {1'b1, mant, 24'd0} >> sh;
+    wire               sub_g  = sub_w[23];
+    wire               sub_s  = |sub_w[22:0];
+    wire [23:0]        sub_rnd = sub_w[47:24] + ((sub_g & (sub_s | sub_w[24])) ? 24'd1 : 24'd0);
+
     always @(*) begin
         if (is_zero || fraction == 24'd0)
             fp32_out = {sign, 31'd0};  // zero (or unnormalized zero mantissa)
         else if (exp_final > 11'sd254)
             fp32_out = {sign, 8'hFF, 23'd0};  // overflow -> Inf
-        else if (exp_final < 11'sd1)
-            fp32_out = {sign, 31'd0};  // underflow -> zero
+        else if (exp_final < 11'sd1) begin
+            // Subnormal path. Without it every value below fp32's smallest
+            // normal flushed to zero: 1,727 of 22,001 comparable codes, and
+            // an unimplemented case is unsynthesised logic, so the module
+            // priced cheaper than the format it claims to decode.
+            if (sh > 6'd24) fp32_out = {sign, 31'd0};       // below 2^-149
+            else if (sub_rnd[23]) fp32_out = {sign, 8'd1, 23'd0};  // rounded up to normal
+            else fp32_out = {sign, 8'd0, sub_rnd[22:0]};
+        end
         else
             fp32_out = {sign, exp_final[7:0], mant};
     end

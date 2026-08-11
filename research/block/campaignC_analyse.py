@@ -25,9 +25,27 @@ MDIR = os.environ.get("MDIR", "smollm2")
 d = json.load(open(os.path.join(HERE, f"campaignC_sensitivity_{MDIR}.json")))
 
 mx = d["baseline"]["MXFP4"]
-g = {r["level"]: r["dppl_dlnlevel"] for r in d["gradients"]}
 MXL = d["runs"][1]["levels"]          # the MXFP4 run recorded in stage 0
 assert abs(MXL[-1] - 1.0) < 1e-12
+by = {(p["level"], p["delta"]): p["ppl"] for p in d["perturb"]}
+# gradient at the +-1% step, in d ppl / d ln(level)
+g = {j: (by[(j, 0.01)] - by[(j, -0.01)]) / 0.02 for j in range(1, 7)}
+
+print("=" * 74)
+print("0. IS THE INSTRUMENT NOISE-FREE?  (everything below depends on this)")
+print("=" * 74)
+cp = d["cross_process_mxfp4"]
+print(f"same codebook, two separate processes, {cp['threads']} threads each:")
+print(f"   {cp['first']:.8f} vs {cp['second']:.8f}  -> |diff| {cp['absdiff']:.3e}")
+det = d.get("determinism")
+if det:
+    print(f"three fresh quantisations in one process: spread "
+          f"{det['spread']:.3e} ppl")
+print("recorded separately: the SAME measurement at 6 threads instead of 8 gave")
+print("   21.93966162 vs 21.93966176 -> 1.31e-07 ppl (6e-09 relative),")
+print("   i.e. non-associative CPU reductions, not model or data variation.")
+print(f"\nnoise floor <= 1.3e-07 ppl. The smallest effect discussed below is")
+print(f"   ~0.05 ppl -- about 400,000x the floor. Nothing below is noise.")
 
 print("=" * 74)
 print("A. IS THE SURFACE LOCALLY LINEAR?  (gradient prediction vs measurement)")
@@ -56,7 +74,6 @@ print(f"sd of measurements = {float(mea.std(ddof=1)):.4f} ppl")
 print("\n" + "=" * 74)
 print("B. IS THE ONE-LEVEL GRADIENT EVEN WELL DEFINED?")
 print("=" * 74)
-by = {(p["level"], p["delta"]): p["ppl"] for p in d["perturb"]}
 DEL = (-0.05, -0.02, -0.01, 0.01, 0.02, 0.05)
 print("central difference dppl/dln(L) computed at three step sizes.")
 print("A locally smooth surface gives the same number at all three.\n")
@@ -154,3 +171,28 @@ print(f"perplexity moved {100*(p1/p0-1):+.2f}% over the Lloyd->KL distance")
 print(f"  {100*(p1/p0-1)/(100*rms_rel):+.3f}% ppl per 1% RMS relative, DIRECTED")
 print(f"  random 2% RMS gave sd {s['sd_pct']:.2f}pp = "
       f"{s['sd_pct']/2:.3f}% ppl per 1% RMS relative, UNDIRECTED")
+
+fine = d.get("fine_interp")
+if fine:
+    print("\nrefined path (midpoints of [0,0.5] filled in; * = new):")
+    allp = sorted([(r["t"], r["ppl"], "") for r in it if r["t"] <= 0.5]
+                  + [(r["t"], r["ppl"], " *") for r in fine])
+    for t, p, m in allp:
+        print(f"  {t:>6.2f}{p:>11.4f}{m}")
+    dd = np.diff([p for _, p, _ in allp])
+    print(f"  sign changes on the refined path: "
+          f"{int((np.sign(dd[:-1]) != np.sign(dd[1:])).sum())} of {len(dd)-1}")
+    print(f"  step range {dd.min():+.4f} .. {dd.max():+.4f} ppl")
+
+cont = d.get("continuity")
+if cont:
+    print("\n" + "=" * 74)
+    print("E. CONTINUITY AT SMALL SCALE (is it steep, or discontinuous?)")
+    print("=" * 74)
+    print(f"{'lvl':>4}{'delta':>10}{'ppl':>11}{'vs MXFP4':>11}"
+          f"{'amplification':>15}")
+    for c in cont:
+        print(f"{c['level']:>4}{c['delta']:>+10.3%}{c['ppl']:>11.4f}"
+              f"{c['pct']:>+10.3f}%{c['pct']/(100*c['delta']):>15.2f}")
+    print("\namplification = (% change in ppl) / (% change in the level).")
+    print("Bounded and shrinking with the step => continuous but steep.")

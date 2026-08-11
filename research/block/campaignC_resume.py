@@ -136,13 +136,22 @@ def main():
     print(f"  killed process wrote {was:.8f}", flush=True)
     print(f"  this process measures {now:.8f}   ({time.time()-t0:.0f}s)",
           flush=True)
-    print(f"  |diff| = {abs(now-was):.3e}   "
-          f"{'REPRODUCES' if abs(now-was) < 1e-9 else 'DOES NOT REPRODUCE'}",
-          flush=True)
+    # Tolerance is RELATIVE. A first attempt used an absolute 1e-9 and fired:
+    # the two processes differed by 1.3e-07 ppl = 6e-09 relative, because they
+    # ran with different OMP thread counts and CPU reductions are not
+    # associative. Thread count is now pinned to match the first run. The
+    # smallest effect this campaign discusses is ~0.05 ppl, five orders of
+    # magnitude above this floor, so the bar is set there and the measured
+    # floor is recorded rather than hidden.
+    rel = abs(now - was) / was
+    good = rel < 1e-6
+    print(f"  |diff| = {abs(now-was):.3e} ppl = {rel:.3e} relative   "
+          f"{'REPRODUCES' if good else 'DOES NOT REPRODUCE'}", flush=True)
     log["cross_process_mxfp4"] = {"first": was, "second": now,
-                                  "absdiff": abs(now - was)}
+                                  "absdiff": abs(now - was), "reldiff": rel,
+                                  "threads": torch.get_num_threads()}
     save()
-    if abs(now - was) >= 1e-9:
+    if not good:
         print("STOP: cached points from the killed run are not trustworthy.")
         return 2
     mx = now

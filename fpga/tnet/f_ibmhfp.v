@@ -15,7 +15,6 @@ module f_ibmhfp (input wire clk, input wire rst_n, output wire [3:0] led);
   always @(posedge clk) begin
     if (!rst_n) begin ao<=10'b0; am<=25'b0; end else begin ao<=no; am<=nm; end
   end
-  // EVERY bit of both registers reaches the output
   wire [34:0] all = {ao, am};
   assign led = all[3:0]^all[7:4]^all[11:8]^all[15:12]^all[19:16]^all[23:20]
              ^ all[27:24]^all[31:28]^{1'b0,all[34:32]};
