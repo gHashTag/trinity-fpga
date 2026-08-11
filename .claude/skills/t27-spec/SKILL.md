@@ -5909,3 +5909,36 @@ are different skills; make the assertion mechanical, not remembered.
 wave's vocabulary work found nothing to add, and saying so — with the reason the
 earlier estimate was wrong — is more useful than the one family that did need
 adding.
+
+## Wave 658 — a defect list can be complete about symptoms and wrong about causes
+
+**Test each candidate root cause ALONE before believing any of them.** Three
+candidates were enumerated from static reading and adversarial proof. Applied one
+at a time to the assembled system: the first was byte-identical to stock across
+every configuration — it changed nothing at all — the second changed nothing for
+any interesting input, and the third unblocked one stage while leaving the system
+just as dead. The true root was a fourth reading nobody had listed. An
+explanation that has never been applied in isolation is a hypothesis.
+
+**Symptoms cluster; causes do not.** Five separately-found defects turned out to
+be four faces of a single units confusion, and one of the five was not a defect
+at all — it was correct under the right reading. Finding many independent
+problems in one area is weak evidence they are independent.
+
+**Only the whole system can adjudicate between module-level explanations.** Every
+candidate was defensible from the module it lived in. Sweeping the assembled
+machine across its real parameter space, driven through its actual host
+interface, is what separated "changes nothing" from "changes everything", and no
+amount of further module-level proof would have.
+
+**A repaired variant is the strongest confirmation available.** Building the
+coherent fix and showing the system completes for exactly the configurations
+theory predicts — and fails, correctly, for exactly the ones it predicts should —
+turns a diagnosis into a demonstration. Predicted and measured patterns matching
+with no exceptions is a much stronger claim than any single counterexample.
+
+**When your published root cause is refuted, say which claim died.** Prop. 121a
+named a line as the root of two defects; it changes nothing whatsoever. The
+symptoms it described are still real and still reproduced. Separating "the
+finding stands" from "the attribution is wrong" is what lets the next reader keep
+the useful half.
