@@ -86,6 +86,31 @@ Model weights for this line live under a *previous session's* scratchpad
 Qwen, Pythia, GPT-2, OPT, and wikitext-2). Check there before downloading
 anything — it survives across sessions but not forever.
 
+### Testing a mechanism you proposed yourself
+
+A measured result attracts an explanation, and the explanation is where the next
+error goes in — it is written while the number is fresh and nobody checks it,
+because the number is right. `WHY_ROTATION_HURTS_2026-08-11.md` is what happened
+when one was checked: the mechanism attached to the rotation result was **wrong
+by sign**, and finding that out was worth more than the original result.
+
+- **Test it against several mechanisms, not just yours.** Three predictors were
+  correlated against the same per-block error change. One candidate cannot lose.
+- **Correlate against a shuffled target as well.** All three controls came back
+  at |r| < 0.001. Without that column the winner is not evidence, it is a number.
+- **Say what "no answer" would look like before running.** The script prints
+  "no candidate explains the variation" and "the top two are not separated" as
+  first-class outcomes, so an inconclusive run cannot be quietly read as a win.
+- **Withdraw in the original document, not just the new one.** The refuted
+  hypothesis was published; it is struck through where it was published, with a
+  pointer, rather than tidied away.
+
+**And the finding itself is a standing warning.** Rotation reduced total weight
+MSE by 3.31 % while perplexity worsened by 8.24 % — the cheap proxy and the real
+axis moved in opposite directions on the same weights in the same run. Before
+reporting any quantisation comparison in squared error, remember there is a
+measured case in this repository where it points the wrong way.
+
 ### Context Collection (ALWAYS run first)
 ```bash
 # Current project state — feeds into search queries
