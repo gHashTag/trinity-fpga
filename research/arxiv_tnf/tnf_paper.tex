@@ -3140,7 +3140,7 @@ unsynthesised logic.}\label{tab:fullthroughput}
 5 & fp8 e5m2 & 8 bits & 529 & 0 & 65.30 & 0.1234 & $5.70$ & all 256, 0 wrong \\
 6 & binary16 & 16 bits & 522 & 0 & 63.30 & 0.1213 & $7.74$ & all 65{,}536 \\
 7 & \textbf{GF14} (ours) & 14 bits & 587 & 0 & 71.15 & \textbf{0.1212} & $4.54$ & all 16{,}384 \\
-8 & minifloat & 8 bits & 558 & 0 & 67.06 & 0.1202 & $5.49$ & not swept \\
+8 & minifloat & 8 bits & 558 & 0 & 67.06 & 0.1202 & $5.49$ & all 254 \checkmark \\
 9 & \textbf{BNF16} (ours) & 17 bits & 571 & 0 & 67.13 & \textbf{0.1176} & $3.30$ & all 131{,}072, 0 wrong \\
 10 & \textbf{TNF32} (ours) & 36 bits & 569 & 0 & 66.91 & \textbf{0.1176} & $6.03$ & sampled 9{,}997, 0 wrong \\
 11 & \textbf{TNF16} (ours) & 17 bits & 565 & 0 & 66.28 & \textbf{0.1173} & $8.56$ & all 131{,}072 \\
@@ -3148,7 +3148,7 @@ unsynthesised logic.}\label{tab:fullthroughput}
 13 & \textbf{TNF8} (ours) & 10 bits & 545 & 0 & 62.13 & \textbf{0.1140} & $3.63$ & all 1{,}024, 0 wrong \\
 14 & VAX F & 32 bits & 560 & 0 & 61.38 & 0.1096 & $3.71$ & all 40{,}000 \checkmark \\
 15 & \textbf{GF+8} (ours) & 8b (+2 sel) & 628 & 0 & 63.05 & \textbf{0.1004} & $1.08$ & 1{,}024/1{,}024 \checkmark \\
-16 & posit8 & 8 bits & 540 & 0 & 44.33 & 0.0821 & $4.02$ & not swept \\
+16 & posit8 & 8 bits & 550 & 0 & 44.68 & 0.0812 & $2.96$ & all 255 \checkmark \\
 17 & takum16 & 16 bits & 789 & 57 & 58.96 & 0.0747 & $5.75$ & 632/61{,}505 \\
 18 & LNS16 & 16 bits & 658 & 0 & 43.04 & 0.0654 & $0.45$ & 107/65{,}536 \\
 19 & posit16 & 16 bits & 667 & 0 & 36.75 & 0.0551 & $1.63$ & all 65{,}535 \checkmark \\
@@ -3787,7 +3787,7 @@ bits & format & LUT & MHz & MHz/LUT \\
 8 & fp8 e5m2 & 529 & 65.30 & 0.1234 \\
 8 & minifloat & 558 & 67.06 & 0.1202 \\
 8 & \textbf{GF+8} & 628 & 63.05 & 0.1004 \\
-8 & posit8 & 540 & 44.33 & 0.0821 \\
+8 & posit8 & 550 & 44.68 & 0.0812 \\
 10 & \textbf{GF10} & 533 & 72.16 & 0.1354 \\
 10 & \textbf{TNF8} & 545 & 62.13 & 0.1140 \\
 14 & \textbf{GF14} & 587 & 71.15 & 0.1212 \\

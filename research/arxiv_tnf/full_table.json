@@ -92,7 +92,7 @@
   "mhz": 67.06,
   "mhz_per_lut": 0.1202,
   "spread": 5.49,
-  "checked": "not swept",
+  "checked": "all 254 \\checkmark",
   "bram": 0
  },
  {
@@ -184,11 +184,11 @@
   "format": "posit8",
   "ours": false,
   "storage": "8 bits",
-  "lut": 540,
-  "mhz": 44.33,
-  "mhz_per_lut": 0.0821,
-  "spread": 4.02,
-  "checked": "not swept",
+  "lut": 550,
+  "mhz": 44.68,
+  "mhz_per_lut": 0.08123636363636363,
+  "spread": 2.960000000000001,
+  "checked": "all 255 \\checkmark",
   "bram": 0
  },
  {

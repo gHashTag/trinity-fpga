@@ -61,3 +61,36 @@ dismantling in other people's work.
 
 **Conformance now closed on 20 of 21 rows.** `minifloat` and `posit8` were the
 two open; GF+8 closing brings it to 20 with one of those two remaining.
+
+## Postscript: the sweep closed, and found a third variant mismatch
+
+`minifloat` and `posit8` were the last two rows. Closing them needed a new E3M4
+reference (the repository had only OCP's E4M3 and E5M2 — *not the same format*)
+and turned up the third variant mismatch of this campaign:
+
+**`posit_ref.FORMATS["posit8"]` declares `es=0`. The RTL declares `es=2`.**
+Against es=0 the decoder scores **3 of 255**; against es=2, **255 of 255**.
+
+The variant gate exists precisely for this and stayed green, because `posit8`
+had no entry in `variant_map.json`. **A gate is only as wide as its coverage.**
+The gate now derives its required coverage from `full_table.json`: any row that
+claims conformance and has no variant entry is a failure. That found four more
+silent gaps — `binary32`, `binary16`, `fp8 e4m3`, `fp8 e5m2` — all now declared.
+
+`posit8` is implemented by zero-extending to `posit16` and reusing that decoder,
+which is mathematically exact and means its LUT count is posit16's decoder
+specialised to 256 inputs — Proposition (output-space pruning) again, this time
+inside a single format family.
+
+### Final status
+
+**Conformance closed on all 21 of 21 rows.**
+
+| | |
+|---|---|
+| exact on every comparable code | 17 rows |
+| exact with a documented convention divergence | 3 rows (LNS16, takum16, GF+8) |
+| exact by construction | 1 row (binary32, identity) |
+
+Twelve defects found across the campaign: seven ours, five competitors'. **Every
+single one made its module smaller or faster before repair.**

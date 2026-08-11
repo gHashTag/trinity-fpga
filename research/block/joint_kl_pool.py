@@ -43,6 +43,8 @@ def main():
     data = {}
     for f in sorted(glob.glob(os.path.join(HERE, "joint_kl_judge_*.json"))):
         j = json.load(open(f))
+        if j.get("win0", 0) != 0:
+            continue          # disjoint-window robustness runs are judged separately
         data[j["model"]] = j
     print(f"loaded: {list(data)}")
 

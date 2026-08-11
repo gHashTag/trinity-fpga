@@ -46,6 +46,24 @@ for fmt, e in sorted(entries.items()):
     if not ref.exists():
         fails.append(f"{fmt}: reference module {e['ref_module']}.py does not exist")
 
+# Coverage: a format the paper makes a conformance claim about, but which has
+# no entry here, is a format whose variant nothing checks. posit8 was exactly
+# that -- its reference declares es=0 and its RTL es=2, scoring 3 of 255
+# against the wrong one, and the gate stayed green because posit8 was absent.
+TABLE = ROOT / "research" / "arxiv_tnf" / "full_table.json"
+if TABLE.exists():
+    import unicodedata
+    def norm(s): return "".join(c for c in s.lower() if c.isalnum())
+    have = {norm(k) for k in entries} | {norm(e["table_name"]) for e in entries.values()
+                                          if e.get("table_name")}
+    for row in json.loads(TABLE.read_text()):
+        claim = row.get("checked", "")
+        if "not swept" in claim or "no reference" in claim: continue
+        if row.get("ours"): continue            # ours are checked by their own oracles
+        if norm(row["format"]) not in have:
+            fails.append(f"{row['format']}: claims conformance ({claim}) "
+                         f"but has no variant_map entry -- nothing checks which variant")
+
 print(f"variant declarations checked: {len(entries)}")
 if fails:
     print(f"\nFAIL: {len(fails)} declaration problem(s)\n")

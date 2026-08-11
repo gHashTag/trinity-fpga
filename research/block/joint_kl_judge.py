@@ -48,6 +48,7 @@ W = os.path.dirname(ns["MODEL"])
 torch.set_grad_enabled(False)
 
 NWIN = int(os.environ.get("NWIN", "40"))
+WIN0 = int(os.environ.get("WIN0", "0"))   # first window; 0 reproduces the rulers
 MDIR = os.environ.get("MDIR", "smollm2")
 FIT = os.path.join(HERE, "joint_kl_codebook.json")
 
@@ -118,15 +119,16 @@ def main():
     ids = tok(load_wikitext(), return_tensors="pt").input_ids
     flat = ids.reshape(-1)
     ntot = flat.numel() // SEQLEN
-    win = flat[:ntot * SEQLEN].view(-1, SEQLEN)
-    if ntot < NWIN:
-        raise SystemExit(f"only {ntot} windows available, need {NWIN}")
+    win = flat[:ntot * SEQLEN].view(-1, SEQLEN)[WIN0:]
+    if ntot - WIN0 < NWIN:
+        raise SystemExit(f"only {ntot - WIN0} windows available from {WIN0}, "
+                         f"need {NWIN}")
     lins = target_modules(model)
     if not lins:
         raise SystemExit("zero target modules -- nothing would be quantised")
     npar = sum(m.weight.numel() for _, m in lins)
     print(f"{len(lins)} linear tensors, {npar/1e6:.1f}M weights quantised; "
-          f"{ntot} windows available, using [0,{NWIN})", flush=True)
+          f"{ntot} windows available, using [{WIN0},{WIN0 + NWIN})", flush=True)
     orig = {n: m.weight.detach().clone() for n, m in lins}
 
     def apply(lv):
@@ -164,7 +166,7 @@ def main():
     ok = True
     r = RULERS.get(MDIR)
     print("\n=== RULER CHECK ===")
-    if r is None or r["nwin"] != NWIN:
+    if r is None or r["nwin"] != NWIN or WIN0 != 0:
         print(f"  no published figures for MDIR={MDIR} NWIN={NWIN} -- this is a "
               f"first measurement on this model, not a reproduction")
         ruler_status = "none_published"
@@ -201,13 +203,15 @@ def main():
     print(f"\nJOINT-KL on {MDIR}: {100*(j/mx-1):+.2f}% vs MXFP4 -> "
           f"{'BEATS' if j < mx else 'LOSES TO'} MXFP4")
 
-    out = {"model": MDIR, "nwin": NWIN, "ruler_status": ruler_status,
+    out = {"model": MDIR, "nwin": NWIN, "win0": WIN0,
+           "ruler_status": ruler_status,
            "rulers_reproduce": bool(ok), "n_linear": len(lins),
            "params_quantised": int(npar), "ppl": results,
            "joint_levels": JOINT,
            "paired_vs_mxfp4": tests,
            "per_window_nll": {k: list(map(float, v)) for k, v in nlls.items()}}
-    dst = os.path.join(HERE, f"joint_kl_judge_{MDIR}.json")
+    tag = MDIR if WIN0 == 0 else f"{MDIR}_w{WIN0}"
+    dst = os.path.join(HERE, f"joint_kl_judge_{tag}.json")
     json.dump(out, open(dst, "w"), indent=1)
     print(f"\nwrote {dst}")
     return 0 if (ruler_status in ("reproduce", "none_published")) else 2
