@@ -866,7 +866,7 @@ $\log_2 3 = 1.585$ bits per trit.}
 \label{tab:pack}
 \begin{tabular}{rrrrr}
 \toprule
-$E_t$ & values $3^{E_t}$ & bits & capacity & efficiency \\
+$E_t$ & values $3^{E_t}$ &b & capacity & efficiency \\
 \midrule
 $3$  & $27$    & $5$  & $32$   & $84.4\%$ \\
 $\mathbf{4}$  & $81$    & $7$  & $128$  & $\mathbf{63.3\%}$ \\
@@ -1721,14 +1721,14 @@ advantage is smaller and it is real.}
 \toprule
 width & format & LUTs & $F_{\max}$ & MHz/LUT & ratio \\
 \midrule
-8 bits & \textbf{TNF8} & $\mathbf{545}$ & $62.13$\,MHz & $\mathbf{0.1140}$ & $\mathbf{1.39\times}$ \\
-8 bits & posit8 & $540$ & $44.33$\,MHz & $0.0821$ & --- \\
+8b & \textbf{TNF8} & $\mathbf{545}$ & $62.13$\,MHz & $\mathbf{0.1140}$ & $\mathbf{1.39\times}$ \\
+8b & posit8 & $540$ & $44.33$\,MHz & $0.0821$ & --- \\
 \addlinespace
-16 bits & \textbf{TNF16} & $\mathbf{565}$ & $66.28$\,MHz & $\mathbf{0.1173}$ & $\mathbf{2.07\times}$ \\
-16 bits & posit16 & $712$ & $40.38$\,MHz & $0.0567$ & --- \\
+16b & \textbf{TNF16} & $\mathbf{565}$ & $66.28$\,MHz & $\mathbf{0.1173}$ & $\mathbf{2.07\times}$ \\
+16b & posit16 & $712$ & $40.38$\,MHz & $0.0567$ & --- \\
 \addlinespace
-32 bits & \textbf{TNF32} & $\mathbf{569}$ & $66.91$\,MHz & $\mathbf{0.1176}$ & $\mathbf{3.99\times}$ \\
-32 bits & posit32 & $953$ & $28.16$\,MHz & $0.0295$ & --- \\
+32b & \textbf{TNF32} & $\mathbf{569}$ & $66.91$\,MHz & $\mathbf{0.1176}$ & $\mathbf{3.99\times}$ \\
+32b & posit32 & $953$ & $28.16$\,MHz & $0.0295$ & --- \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -2536,7 +2536,7 @@ bits and their benefit does not replicate.}
 \label{tab:scalegrid}
 \begin{tabular}{lrrr}
 \toprule
-scale grid & bits & SmolLM2 & Qwen \\
+scale grid &b & SmolLM2 & Qwen \\
 \midrule
 $2^{k}$ (the MX specification's) & 4 & $22.4998$ & $14.9447$ \\
 $\varphi^{k}$                    & \textbf{4} & $\mathbf{21.3545}$ & $\mathbf{14.8512}$ \\
@@ -2637,7 +2637,7 @@ models; the sign does.}
 \label{tab:geoscale}
 \begin{tabular}{lrrr}
 \toprule
-scale grid & bits & SmolLM2 & Qwen \\
+scale grid &b & SmolLM2 & Qwen \\
 \midrule
 geometric & 7 & $\mathbf{18.8024}$ & $\mathbf{13.6401}$ \\
 E4M3      & 7 & $19.8628$ & $13.7636$ \\
@@ -3137,34 +3137,34 @@ found, ours and theirs, made its module smaller: an unimplemented case is
 unsynthesised logic. \textbf{Resolution.} The pooled coefficient of variation across seeds is $3.71\%$, so two rows separate at $\alpha=.05$ only when their MHz/LUT differ by more than $5.50\%$ relative; smaller gaps in this table are not results. The detection floor for a difference in \emph{decoder} cost is $41.3$ LUT, which is $79\%$ of a whole decoder at the median row --- the $472$-LUT harness inflates that floor tenfold. Every row is measured on the same $128$-bit harness; rows that were not have been re-measured or withdrawn.}\label{tab:fullthroughput}
 \small
 \tiny
-\begin{tabular}{rlrrrlll}
+\begin{tabular}{rlrrrrlll}
 \toprule
-& format & storage & LUT & MHz/LUT & five-seed range & status & conformance \\
+& format &b & LUT & MHz/LUT & $\pm$/range & sd & status & conformance \\
 \midrule
-1 & \textbf{GFTernary} & 2 bits & 527 & \textbf{0.1574} & $0.1524$--$0.1616$ & ours, not a ladder rung & all 4 codes \\
-2 & binary32 & 32 bits & 536 & 0.1422 & $0.1376$--$0.1474$ & competitor & identity (exact) \\
-3 & fp8 e4m3 & 8 bits & 549 & 0.1244 & $0.1133$--$0.1322$ & competitor & all 256, 0 wrong \\
-4 & \textbf{TNF16a} & 16b & 566 & \textbf{0.1233} & $0.1192$--$0.1278$ & legacy: poor $k$, unguarded & all 65{,}534 \checkmark \\
-5 & fp8 e5m2 & 8 bits & 544 & 0.1214 & $0.1168$--$0.1252$ & competitor & all 256, 0 wrong \\
-6 & \textbf{TNF17e} & 17b & 596 & \textbf{0.1207} & $0.1135$--$0.1238$ & recommended & all 124{,}416 \checkmark \\
-7 & \textbf{GF10} & 10 bits & 597 & \textbf{0.1189} & $0.1134$--$0.1204$ & ours, not a ladder rung & all 1{,}024 \\
-8 & \textbf{TNF16c} & 16b & 591 & \textbf{0.1157} & $0.1118$--$0.1210$ & recommended & all 62{,}208 \checkmark \\
-9 & minifloat & 8 bits & 622 & 0.1075 & $0.1009$--$0.1132$ & competitor & all 254 \checkmark \\
-10 & \textbf{GF14} & 14 bits & 651 & \textbf{0.1074} & $0.0969$--$0.1140$ & ours, not a ladder rung & all 16{,}384 \\
-11 & \textbf{TNF17e-bare} & 17b & 605 & \textbf{0.1072} & $0.1041$--$0.1104$ & control: guard removed & sweep pending \\
-12 & \textbf{TNF8} & 10 bits & 609 & \textbf{0.1069} & $0.1028$--$0.1099$ & legacy: poor $k$, unguarded & all 1{,}024, 0 wrong \\
-13 & \textbf{TNF16b} & 16b & 604 & \textbf{0.1048} & $0.0998$--$0.1086$ & legacy: poor $k$, unguarded & all 65{,}534 \checkmark \\
-14 & binary16 & 16 bits & 586 & 0.1039 & $0.0985$--$0.1071$ & competitor & all 65{,}536 \\
-15 & \textbf{BNF16} & 17 bits & 635 & \textbf{0.1034} & $0.0961$--$0.1064$ & legacy: poor $k$, unguarded & all 131{,}072, 0 wrong \\
-16 & \textbf{TNF16} & 17 bits & 629 & \textbf{0.1005} & $0.0971$--$0.1071$ & legacy: poor $k$, unguarded & all 131{,}072 \\
-17 & VAX F & 32 bits & 624 & 0.0942 & $0.0926$--$0.1000$ & competitor & all 40{,}000 \checkmark \\
-18 & \textbf{GF+8} & 8b (+2 sel) & 692 & \textbf{0.0882} & $0.0831$--$0.0931$ & ours, not a ladder rung & 1{,}024/1{,}024 \checkmark \\
-19 & posit8 & 8 bits & 614 & 0.0728 & $0.0712$--$0.0774$ & competitor & all 255 \checkmark \\
-20 & takum16 & 16 bits & 853 & 0.0695 & $0.0677$--$0.0745$ & competitor & 632/61{,}505 \\
-21 & LNS16 & 16 bits & 722 & 0.0598 & $0.0581$--$0.0600$ & competitor & 107/65{,}536 \\
-22 & posit16 & 16 bits & 731 & 0.0485 & $0.0467$--$0.0496$ & competitor & all 65{,}535 \checkmark \\
-23 & posit32 & 32 bits & 1031 & 0.0302 & $0.0291$--$0.0314$ & competitor & all 40{,}000 \checkmark \\
-24 & IBM hex32 & 32 bits & 1072 & 0.0292 & $0.0273$--$0.0297$ & competitor & all 40{,}000 \checkmark \\
+1 & \textbf{GFTernary} & 2b & 527 & \textbf{0.1584} & $\pm0.0018$ & 54 & ours & all 4 codes \\
+2 & binary32 & 32b & 536 & 0.1429 & $\pm0.0013$ & 54 & --- & identity (exact) \\
+3 & fp8 e4m3 & 8b & 549 & 0.1225 & $\pm0.0012$ & 54 & --- & all 256, 0 wrong \\
+4 & \textbf{TNF16a} & 16b & 566 & \textbf{0.1214} & $\pm0.0012$ & 54 & legacy & all 65{,}534 \checkmark \\
+5 & fp8 e5m2 & 8b & 544 & 0.1188 & $\pm0.0011$ & 54 & --- & all 256, 0 wrong \\
+6 & \textbf{GF10} & 10b & 597 & \textbf{0.1172} & $\pm0.0012$ & 54 & ours & all 1{,}024 \\
+7 & \textbf{TNF17e} & 17b & 596 & \textbf{0.1155} & $\pm0.0013$ & 54 & \textbf{rec.} & all 124{,}416 \checkmark \\
+8 & \textbf{TNF16c} & 16b & 591 & \textbf{0.1152} & $\pm0.0010$ & 54 & \textbf{rec.} & all 62{,}208 \checkmark \\
+9 & binary16 & 16b & 586 & 0.1078 & $\pm0.0012$ & 54 & --- & all 65{,}536 \\
+10 & minifloat & 8b & 622 & 0.1075 & $0.1009$--$0.1132$ & 5 & --- & all 254 \checkmark \\
+11 & \textbf{GF14} & 14b & 651 & \textbf{0.1074} & $0.0969$--$0.1140$ & 5 & ours & all 16{,}384 \\
+12 & \textbf{TNF17e-bare} & 17b & 605 & \textbf{0.1072} & $0.1041$--$0.1104$ & 5 & control & sweep pending \\
+13 & \textbf{TNF8} & 10b & 609 & \textbf{0.1069} & $0.1028$--$0.1099$ & 5 & legacy & all 1{,}024, 0 wrong \\
+14 & \textbf{TNF16b} & 16b & 604 & \textbf{0.1048} & $0.0998$--$0.1086$ & 5 & legacy & all 65{,}534 \checkmark \\
+15 & \textbf{BNF16} & 17b & 635 & \textbf{0.1034} & $0.0961$--$0.1064$ & 5 & legacy & all 131{,}072, 0 wrong \\
+16 & \textbf{TNF16} & 17b & 629 & \textbf{0.1005} & $0.0971$--$0.1071$ & 5 & legacy & all 131{,}072 \\
+17 & VAX F & 32b & 624 & 0.0942 & $0.0926$--$0.1000$ & 5 & --- & all 40{,}000 \checkmark \\
+18 & \textbf{GF+8} & 8b (+2 sel) & 692 & \textbf{0.0882} & $0.0831$--$0.0931$ & 5 & ours & 1{,}024/1{,}024 \checkmark \\
+19 & posit8 & 8b & 614 & 0.0728 & $0.0712$--$0.0774$ & 5 & --- & all 255 \checkmark \\
+20 & takum16 & 16b & 853 & 0.0695 & $0.0677$--$0.0745$ & 5 & --- & 632/61{,}505 \\
+21 & LNS16 & 16b & 722 & 0.0598 & $0.0581$--$0.0600$ & 5 & --- & 107/65{,}536 \\
+22 & posit16 & 16b & 731 & 0.0485 & $0.0467$--$0.0496$ & 5 & --- & all 65{,}535 \checkmark \\
+23 & posit32 & 32b & 1031 & 0.0302 & $0.0291$--$0.0314$ & 5 & --- & all 40{,}000 \checkmark \\
+24 & IBM hex32 & 32b & 1072 & 0.0292 & $0.0273$--$0.0297$ & 5 & --- & all 40{,}000 \checkmark \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -3925,6 +3925,63 @@ spends twenty-seven sections dismantling in other people's work.}
 
 
 
+
+\section{At fifty-four seeds the claims separate}
+\label{sec:fiftyfour}
+
+Section~\ref{sec:bands} left the ranking resolving into seven levels on five
+seeds, with a separation threshold of $5.50\%$ and a detection floor for a
+decoder-cost difference of $41.3$ LUT --- $79\%$ of a whole decoder. Both are
+consequences of the sample size and of reporting a median, whose efficiency at
+$n=5$ is $0.698$. The nine formats the paper's claims rest on were therefore
+re-swept at \textbf{fifty-four seeds}, and the reported statistic is the
+\textbf{mean}.
+
+The separation threshold falls from $5.50\%$ to $\mathbf{1.43\%}$.
+
+\begin{table}[htbp]
+\centering
+\vspace{0.6em}
+\caption{Fifty-four seeds, mean with a $95\%$ confidence interval, all on the
+common $128$-bit harness. Welch against \texttt{binary16} with Holm correction
+over the eight comparisons; every one survives.}
+\label{tab:fiftyfour}
+\small
+\begin{tabular}{lrrrl}
+\toprule
+& MHz/LUT & $\pm95\%$ & vs \texttt{binary16} & $p_{\text{Holm}}$ \\
+\midrule
+\textbf{GFTernary} & $0.1584$ & $0.0018$ & $+46.99\%$ & $<10^{-300}$ \\
+\texttt{binary32}  & $0.1429$ & $0.0013$ & $+32.53\%$ & $<10^{-300}$ \\
+\texttt{fp8 e4m3}  & $0.1225$ & $0.0012$ & $+13.68\%$ & $1.9\times10^{-63}$ \\
+\textbf{TNF16a}    & $0.1214$ & $0.0012$ & $+12.59\%$ & $8.1\times10^{-56}$ \\
+\texttt{fp8 e5m2}  & $0.1188$ & $0.0011$ & $+10.26\%$ & $5.6\times10^{-41}$ \\
+\textbf{GF10}      & $0.1172$ & $0.0012$ & $+8.70\%$  & $5.6\times10^{-28}$ \\
+\textbf{TNF17e}    & $0.1155$ & $0.0013$ & $+7.17\%$  & $2.1\times10^{-17}$ \\
+\textbf{TNF16c}    & $0.1152$ & $0.0010$ & $+6.92\%$  & $6.9\times10^{-21}$ \\
+\texttt{binary16}  & $0.1078$ & $0.0012$ & --- & --- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent
+The margins are smaller than the five-seed estimates suggested --- \texttt{TNF16c}
+read $+12.5\%$ there and reads $+6.92\%$ here --- and that is the expected
+direction: a point estimate taken near the resolution floor is as likely to
+flatter as to understate, and the larger sample removes the flattery along with
+the noise.
+
+\textbf{The claim this paper makes at equal storage is $+6.92\%$ over IEEE half,
+with a $95\%$ interval of $\pm0.0010$ on $0.1152$ and $p_{\text{Holm}} =
+6.9\times10^{-21}$.} \texttt{TNF16c} is sixteen stored bits against
+\texttt{binary16}'s sixteen, its out-of-specification offsets are reserved so
+every code is defined or flagged, and its exponent spans $\pm121$ --- inside the
+window Proposition~\ref{prop:window} requires.
+
+\texttt{TNF17e} at $+7.17\%$ and \texttt{TNF16c} at $+6.92\%$ are not separated
+from \emph{each other}: their intervals overlap. The paper claims the pair, not
+an order within it.
+
 \section{Why the ladder stops at five trits when the target is \texttt{fp32}}
 \label{sec:window}
 
@@ -4088,7 +4145,7 @@ which is the best in the range by a factor of three.}
 \scriptsize
 \begin{tabular}{rrrrll}
 \toprule
-$E_t$ & $3^{E_t}$ & bits & capacity & waste & built here \\
+$E_t$ & $3^{E_t}$ &b & capacity & waste & built here \\
 \midrule
 1 & 3 & 2 & 4 & 25.0\% &  \\
 2 & 9 & 4 & 16 & 43.8\% &  \\
@@ -4183,7 +4240,7 @@ assignments reach sixteen:
 \begin{center}\small
 \begin{tabular}{clrrr}
 \toprule
-& $E_t$ & offset bits & $M$ & dynamic range \\
+& $E_t$ & offsetb & $M$ & dynamic range \\
 \midrule
 A & $4$ & $7$ ($81$ offsets) & $8$ & $2^{-39}\ldots2^{39}$ \\
 B & $3$ & $5$ ($27$ offsets) & $10$ & $2^{-12}\ldots2^{12}$ \\
@@ -4574,10 +4631,10 @@ word. The loss is a property of the integers, not of an implementation.}
 \toprule
 width & best packed member & codes used & lost \\
 \midrule
-4 bits & $E_t{=}1$, $M{=}1$ & 6 / 8 & $25.0\%$ \\
-6 bits & $E_t{=}3$, $M{=}0$ & 27 / 32 & $15.6\%$ \\
-8 bits & $E_t{=}3$, $M{=}2$ & 108 / 128 & $15.6\%$ \\
-16 bits & $E_t{=}5$, $M{=}7$ & 31{,}104 / 32{,}768 & $5.1\%$ \\
+4b & $E_t{=}1$, $M{=}1$ & 6 / 8 & $25.0\%$ \\
+6b & $E_t{=}3$, $M{=}0$ & 27 / 32 & $15.6\%$ \\
+8b & $E_t{=}3$, $M{=}2$ & 108 / 128 & $15.6\%$ \\
+16b & $E_t{=}5$, $M{=}7$ & 31{,}104 / 32{,}768 & $5.1\%$ \\
 \bottomrule
 \end{tabular}
 \end{table}
