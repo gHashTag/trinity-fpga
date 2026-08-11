@@ -57,3 +57,5 @@ research/XC7A200T_GF16_DATAPOINT_2026-08-05.md: names `trinity-gf16.tex` -> reso
 research/arxiv_submission/submission_checklist.md: names `formats_catalog.t27` -> resolves in t27
 research/arxiv_v3_catalog_update.md: names `formats_catalog.t27` -> resolves in t27
 research/arxiv_v3_catalog_update.md: names `formats_catalog.t27` -> resolves in t27
+research/frontier/DOCUMENT_TRACEABILITY_2026-08-10.md: names `cases.yaml` -> resolves in claim-audit-lab
+research/frontier/WITHDRAWAL_10_ARTEFACT_DIVERGENCE_2026-08-10.md: names `formats_catalog.t27` -> resolves in t27

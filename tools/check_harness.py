@@ -61,6 +61,34 @@ def analyse(p):
     return out
 
 fails, checked = [], 0
+# Scripts that GENERATE wrappers are read too. The wrappers behind several
+# published numbers were written by a shell script, gitignored as scratch, and
+# then deleted -- so the evidence for how those numbers were observed did not
+# survive the measurement. A generator is permanent where its output is not.
+for sh in sorted(ROOT.rglob("fpga/**/*.sh")):
+    try: src = sh.read_text(errors="ignore")
+    except Exception: continue
+    # Comments are not code. This script's own header quotes the defective
+    # harness it replaces -- "# assign led = ao[7:0] ^ am[7:0];" -- and reading
+    # that as the wrapper reported a clean generator as a dirty one.
+    code = "\n".join(l for l in src.split("\n") if not l.lstrip().startswith("#"))
+    for m in re.finditer(r"assign\s+led\s*=\s*([^;]+);", code, re.S):
+        expr = m.group(1)
+        # a reduction over the whole register, ^{q...}, observes everything
+        if "^{" in expr: continue
+        bits = set()
+        for r_ in re.finditer(r"\[\s*(\d+)\s*:\s*(\d+)\s*\]", expr):
+            hi, lo = int(r_.group(1)), int(r_.group(2))
+            bits |= set(range(min(hi, lo), max(hi, lo) + 1))
+        decl = re.search(r"wire\s*\[\s*(\d+)\s*:\s*0\s*\]\s*all\b", code) \
+            or re.search(r"reg\s*\[\s*(\d+)\s*:\s*0\s*\]\s*q\b", code)
+        if decl and bits:
+            width = int(decl.group(1)) + 1
+            if len(bits) < width:
+                fails.append(f"{sh.relative_to(ROOT)}: the wrapper it writes observes "
+                             f"{len(bits)} of {width} bits -- "
+                             f"{100*(width-len(bits))//width}% can be pruned")
+
 for v in sorted(ROOT.rglob("fpga/**/*.v")):
     if not re.search(r'output\s+wire\s+\[\d+:0\]\s+led', v.read_text(errors="ignore")):
         continue

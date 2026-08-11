@@ -31,6 +31,26 @@
  },
  {
   "rank": 4,
+  "format": "TNF32",
+  "ours": true,
+  "storage": "32 bits",
+  "lut": 492,
+  "mhz": 75.57,
+  "mhz_per_lut": 0.1536,
+  "spread": 10.15
+ },
+ {
+  "rank": 5,
+  "format": "TNF64",
+  "ours": true,
+  "storage": "64 bits",
+  "lut": 494,
+  "mhz": 75.16,
+  "mhz_per_lut": 0.1521,
+  "spread": 7.87
+ },
+ {
+  "rank": 6,
   "format": "TNF16",
   "ours": true,
   "storage": "16 bits",
@@ -40,7 +60,7 @@
   "spread": 5.62
  },
  {
-  "rank": 5,
+  "rank": 7,
   "format": "BNF16",
   "ours": true,
   "storage": "16 bits",
@@ -50,7 +70,7 @@
   "spread": 12.28
  },
  {
-  "rank": 6,
+  "rank": 8,
   "format": "GF+8",
   "ours": true,
   "storage": "8 bits",
@@ -60,7 +80,7 @@
   "spread": 4.77
  },
  {
-  "rank": 7,
+  "rank": 9,
   "format": "fp8 e5m2",
   "ours": false,
   "storage": "8 bits",
@@ -70,7 +90,7 @@
   "spread": 5.46
  },
  {
-  "rank": 8,
+  "rank": 10,
   "format": "VAX F",
   "ours": false,
   "storage": "32 bits",
@@ -80,7 +100,7 @@
   "spread": 4.43
  },
  {
-  "rank": 9,
+  "rank": 11,
   "format": "fp8 e4m3",
   "ours": false,
   "storage": "8 bits",
@@ -90,7 +110,7 @@
   "spread": 6.78
  },
  {
-  "rank": 10,
+  "rank": 12,
   "format": "GF10",
   "ours": true,
   "storage": "10 bits",
@@ -100,7 +120,7 @@
   "spread": 5.08
  },
  {
-  "rank": 11,
+  "rank": 13,
   "format": "binary16",
   "ours": false,
   "storage": "16 bits",
@@ -110,7 +130,7 @@
   "spread": 7.74
  },
  {
-  "rank": 12,
+  "rank": 14,
   "format": "GF14",
   "ours": true,
   "storage": "14 bits",
@@ -120,7 +140,7 @@
   "spread": 4.54
  },
  {
-  "rank": 13,
+  "rank": 15,
   "format": "minifloat",
   "ours": false,
   "storage": "8 bits",
@@ -130,7 +150,7 @@
   "spread": 5.49
  },
  {
-  "rank": 14,
+  "rank": 16,
   "format": "posit8",
   "ours": false,
   "storage": "8 bits",
@@ -140,7 +160,7 @@
   "spread": 4.02
  },
  {
-  "rank": 15,
+  "rank": 17,
   "format": "takum16",
   "ours": false,
   "storage": "16 bits",
@@ -150,7 +170,7 @@
   "spread": 5.75
  },
  {
-  "rank": 16,
+  "rank": 18,
   "format": "IBM hex32",
   "ours": false,
   "storage": "32 bits",
@@ -160,7 +180,7 @@
   "spread": 3.78
  },
  {
-  "rank": 17,
+  "rank": 19,
   "format": "LNS16",
   "ours": false,
   "storage": "16 bits",
@@ -170,7 +190,7 @@
   "spread": 0.45
  },
  {
-  "rank": 18,
+  "rank": 20,
   "format": "posit16",
   "ours": false,
   "storage": "16 bits",
@@ -180,7 +200,7 @@
   "spread": 1.02
  },
  {
-  "rank": 19,
+  "rank": 21,
   "format": "posit32",
   "ours": false,
   "storage": "32 bits",

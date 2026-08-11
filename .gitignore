@@ -416,8 +416,10 @@ trinet-keys.txt
 *.trinet-keys
 research/.gate_cache/
 
-# synthesis scratch from the closure measurements: generated wrappers and netlists
-fpga/phiscale/c_*.v
+# Synthesis scratch: netlists and logs are regenerable, and large.
+# The generated WRAPPERS are not scratch -- they are the evidence of how a
+# number was observed, and the harness gate reads them. Ignoring them once cost
+# the provenance of several published figures, so only the netlists go.
 fpga/phiscale/c_*.json
 fpga/phiscale/c[sy]_*.log
 
