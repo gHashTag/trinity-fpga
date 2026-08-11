@@ -119,5 +119,21 @@
     "declares": "E_t=5",
     "table_name": "TNF16c",
     "note": "E_t=5 (8 offset bits, 243 of 256 used, 5.08% waste), M=7, stored width 16. The guarded variant reserves the 13 out-of-specification offsets; its guard costs 1.8% against rung A's 15.1%."
+  },
+  "tnf17e": {
+    "rtl": "fpga/tnet/tnf_rebuilt.v",
+    "ref_module": "tnf_spec_ref",
+    "ref_key": "tnf17e",
+    "declares": "E_t=5",
+    "table_name": "TNF17e",
+    "note": "The 17-bit rung rebuilt on the low-waste k: E_t=5 (8 offset bits, 243 of 256, 5.1% waste) against the E_t=4 original's 36.7%, for one mantissa bit. Guarded."
+  },
+  "tnf64b": {
+    "rtl": "fpga/tnet/tnf_rebuilt.v",
+    "ref_module": "tnf_spec_ref",
+    "ref_key": "tnf64b",
+    "declares": "E_t=8",
+    "table_name": "TNF64b",
+    "note": "The 65-bit rung rebuilt: E_t=8 (13 offset bits, 19.9% waste) against E_t=7's 46.6%, the worst in range, for one mantissa bit. Generated and referenced; not yet swept for throughput."
   }
 }

@@ -21,7 +21,12 @@ character changes which values match, whatever it was.
 import pathlib, re, sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-LIT = re.compile(r"(\d+)'([bh])([01?_zxA-Fa-f]+)", re.I)
+# Decimal literals truncate exactly as silently as binary ones, and the
+# generator in this repository produced 11'sd3280 -- a value needing 12 bits in
+# an 11-bit literal -- which this gate did not see because it only read 'b and
+# 'h. iverilog said "Numeric constant truncated to 11 bits" and, once again, the
+# warning was in a log nobody read.
+LIT = re.compile(r"(\d+)'(s?)([bhd])([0-9?_zxA-Fa-f]+)", re.I)
 # Failing scope is the path the paper measures: fpga/tnet/** and the decoders
 # in fpga/openxc7-synth. Everything else is counted and printed, never dropped
 # silently -- a bounded gate that does not say what it bounded reads as
@@ -35,9 +40,22 @@ fails, elsewhere, checked = [], [], 0
 
 for f in sorted((ROOT / "fpga").rglob("*.v")):
     for i, line in enumerate(f.read_text().splitlines(), 1):
-        for m in LIT.finditer(line):
-            w, base, body = int(m.group(1)), m.group(2).lower(), m.group(3).replace("_", "")
+        # Strip comments. A correction that quotes the line it replaced is not
+        # the defect returning -- the harness gate made this exact mistake in
+        # this repository and reported a clean generator as dirty.
+        code = line.split("//", 1)[0]
+        for m in LIT.finditer(code):
+            w, signed, base = int(m.group(1)), m.group(2).lower(), m.group(3).lower()
+            body = m.group(4).replace("_", "")
             checked += 1
+            if base == "d":
+                if not body.isdigit(): continue
+                need = int(body).bit_length() + (1 if signed == "s" else 0)
+                if need > w:
+                    msg = (f"{f.relative_to(ROOT)}:{i}  declares {w} bits, value "
+                           f"{body} needs {need}   {m.group(0)[:44]}")
+                    (fails if measured(f) else elsewhere).append(msg)
+                continue
             bits = body if base == "b" else "".join(
                 "????" if ch in "?zZxX" else f"{int(ch,16):04b}" for ch in body)
             if len(bits) <= w:
@@ -61,7 +79,7 @@ for f in sorted((ROOT / "fpga").rglob("*.v")):
         if re.search(r"\bcase[zx]?\b", line): seen, inside = {}, True; continue
         if "endcase" in line: inside = False; continue
         if not inside: continue
-        m = CASE.search(line)
+        m = CASE.search(line.split("//", 1)[0])
         if not m: continue
         w, pat = int(m.group(1)), m.group(2)
         key = pat[-w:] if len(pat) > w else pat.rjust(w, "0")

@@ -3144,26 +3144,27 @@ unsynthesised logic.}\label{tab:fullthroughput}
 2 & binary32 & 32 bits & 472 & 0 & 77.00 & 0.1631 & $6.37$ & identity (exact) \\
 3 & \textbf{TNF16a} (ours) & 16b & 502 & 0 & 69.87 & \textbf{0.1392} & $6.97$ & all 65{,}534 \checkmark \\
 4 & \textbf{GF10} (ours) & 10 bits & 533 & 0 & 72.16 & \textbf{0.1354} & $5.08$ & all 1{,}024 \\
-5 & \textbf{TNF16c} (ours) & 16b & 527 & 0 & 67.20 & \textbf{0.1275} & $1.48$ & all 62{,}208 \checkmark \\
-6 & fp8 e4m3 & 8 bits & 516 & 0 & 64.70 & 0.1254 & $9.33$ & all 256, 0 wrong \\
-7 & fp8 e5m2 & 8 bits & 529 & 0 & 65.30 & 0.1234 & $5.70$ & all 256, 0 wrong \\
-8 & binary16 & 16 bits & 522 & 0 & 63.30 & 0.1213 & $7.74$ & all 65{,}536 \\
-9 & \textbf{GF14} (ours) & 14 bits & 587 & 0 & 71.15 & \textbf{0.1212} & $4.54$ & all 16{,}384 \\
-10 & minifloat & 8 bits & 558 & 0 & 67.06 & 0.1202 & $5.49$ & all 254 \checkmark \\
-11 & \textbf{BNF16} (ours) & 17 bits & 571 & 0 & 67.13 & \textbf{0.1176} & $3.30$ & all 131{,}072, 0 wrong \\
-12 & \textbf{TNF32} (ours) & 36 bits & 569 & 0 & 66.91 & \textbf{0.1176} & $6.03$ & sampled 9{,}997, 0 wrong \\
-13 & \textbf{TNF16} (ours) & 17 bits & 565 & 0 & 66.28 & \textbf{0.1173} & $8.56$ & all 131{,}072 \\
-14 & \textbf{TNF16b} (ours) & 16b & 540 & 0 & 61.76 & \textbf{0.1144} & $6.54$ & all 65{,}534 \checkmark \\
-15 & \textbf{TNF64} (ours) & 65 bits & 572 & 0 & 65.38 & \textbf{0.1143} & $8.73$ & sampled, 0 wrong \\
-16 & \textbf{TNF8} (ours) & 10 bits & 545 & 0 & 62.13 & \textbf{0.1140} & $3.63$ & all 1{,}024, 0 wrong \\
-17 & VAX F & 32 bits & 560 & 0 & 61.38 & 0.1096 & $3.71$ & all 40{,}000 \checkmark \\
-18 & \textbf{GF+8} (ours) & 8b (+2 sel) & 628 & 0 & 63.05 & \textbf{0.1004} & $1.08$ & 1{,}024/1{,}024 \checkmark \\
-19 & posit8 & 8 bits & 550 & 0 & 44.68 & 0.0812 & $2.96$ & all 255 \checkmark \\
-20 & takum16 & 16 bits & 789 & 57 & 58.96 & 0.0747 & $5.75$ & 632/61{,}505 \\
-21 & LNS16 & 16 bits & 658 & 0 & 43.04 & 0.0654 & $0.45$ & 107/65{,}536 \\
-22 & posit16 & 16 bits & 667 & 0 & 36.75 & 0.0551 & $1.63$ & all 65{,}535 \checkmark \\
-23 & IBM hex32 & 32 bits & 1008 & 0 & 30.82 & 0.0306 & $1.53$ & all 40{,}000 \checkmark \\
-24 & posit32 & 32 bits & 967 & 0 & 29.55 & 0.0306 & $1.96$ & all 40{,}000 \checkmark \\
+5 & \textbf{TNF17e} (ours) & 17b & 532 & 0 & 69.80 & \textbf{0.1312} & $5.09$ & all 124{,}416 \checkmark \\
+6 & \textbf{TNF16c} (ours) & 16b & 527 & 0 & 67.20 & \textbf{0.1275} & $1.48$ & all 62{,}208 \checkmark \\
+7 & fp8 e4m3 & 8 bits & 516 & 0 & 64.70 & 0.1254 & $9.33$ & all 256, 0 wrong \\
+8 & fp8 e5m2 & 8 bits & 529 & 0 & 65.30 & 0.1234 & $5.70$ & all 256, 0 wrong \\
+9 & binary16 & 16 bits & 522 & 0 & 63.30 & 0.1213 & $7.74$ & all 65{,}536 \\
+10 & \textbf{GF14} (ours) & 14 bits & 587 & 0 & 71.15 & \textbf{0.1212} & $4.54$ & all 16{,}384 \\
+11 & minifloat & 8 bits & 558 & 0 & 67.06 & 0.1202 & $5.49$ & all 254 \checkmark \\
+12 & \textbf{BNF16} (ours) & 17 bits & 571 & 0 & 67.13 & \textbf{0.1176} & $3.30$ & all 131{,}072, 0 wrong \\
+13 & \textbf{TNF32} (ours) & 36 bits & 569 & 0 & 66.91 & \textbf{0.1176} & $6.03$ & sampled 9{,}997, 0 wrong \\
+14 & \textbf{TNF16} (ours) & 17 bits & 565 & 0 & 66.28 & \textbf{0.1173} & $8.56$ & all 131{,}072 \\
+15 & \textbf{TNF16b} (ours) & 16b & 540 & 0 & 61.76 & \textbf{0.1144} & $6.54$ & all 65{,}534 \checkmark \\
+16 & \textbf{TNF64} (ours) & 65 bits & 572 & 0 & 65.38 & \textbf{0.1143} & $8.73$ & sampled, 0 wrong \\
+17 & \textbf{TNF8} (ours) & 10 bits & 545 & 0 & 62.13 & \textbf{0.1140} & $3.63$ & all 1{,}024, 0 wrong \\
+18 & VAX F & 32 bits & 560 & 0 & 61.38 & 0.1096 & $3.71$ & all 40{,}000 \checkmark \\
+19 & \textbf{GF+8} (ours) & 8b (+2 sel) & 628 & 0 & 63.05 & \textbf{0.1004} & $1.08$ & 1{,}024/1{,}024 \checkmark \\
+20 & posit8 & 8 bits & 550 & 0 & 44.68 & 0.0812 & $2.96$ & all 255 \checkmark \\
+21 & takum16 & 16 bits & 789 & 57 & 58.96 & 0.0747 & $5.75$ & 632/61{,}505 \\
+22 & LNS16 & 16 bits & 658 & 0 & 43.04 & 0.0654 & $0.45$ & 107/65{,}536 \\
+23 & posit16 & 16 bits & 667 & 0 & 36.75 & 0.0551 & $1.63$ & all 65{,}535 \checkmark \\
+24 & IBM hex32 & 32 bits & 1008 & 0 & 30.82 & 0.0306 & $1.53$ & all 40{,}000 \checkmark \\
+25 & posit32 & 32 bits & 967 & 0 & 29.55 & 0.0306 & $1.96$ & all 40{,}000 \checkmark \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -3808,6 +3809,7 @@ bits & format & LUT & MHz & MHz/LUT \\
 16 & takum16 & 789 & 58.96 & 0.0747 \\
 16 & LNS16 & 658 & 43.04 & 0.0654 \\
 16 & posit16 & 667 & 36.75 & 0.0551 \\
+17 & \textbf{TNF17e} & 532 & 69.80 & 0.1312 \\
 17 & \textbf{BNF16} & 571 & 67.13 & 0.1176 \\
 17 & \textbf{TNF16} & 565 & 66.28 & 0.1173 \\
 32 & binary32 & 472 & 77.00 & 0.1631 \\
@@ -4014,6 +4016,32 @@ storage, with every code either defined or flagged, is $+5.1\%$ against IEEE
 half} --- smaller than the $14.7\%$ first reported, and unlike it, not resting
 on an unchecked field.
 
+
+\paragraph{The ladder rebuilt.} Corollary~\ref{cor:rungs} is a construction
+rule, not only a diagnosis, once the range constraint is added: choose the $k$
+of least $w(k)$ among those whose span $3^{k}/2$ covers the class. At $17$ bits
+that is $E_t=5$, $M=8$ --- $36.7\%$ waste falls to $5.1\%$ for exactly one
+mantissa bit. Generated from the parameters rather than hand-edited, guarded,
+and checked exhaustively: \textbf{$124{,}416$ of $124{,}416$ in-specification
+codes exact, all $6{,}656$ out-of-specification codes flagged, zero errors.}
+
+\begin{center}\small
+\begin{tabular}{lrrrr}
+\toprule
+$17$-bit rung & $E_t$ & waste & MHz/LUT & guarded \\
+\midrule
+TNF16, as built    & $4$ & $36.7\%$ & $0.1173$ & no \\
+\textbf{TNF17e}    & $5$ & $5.1\%$  & $\mathbf{0.1312}$ & \textbf{yes} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+$11.9\%$ faster per LUT \emph{while} checking its offset field, which the rung
+it replaces does not. The same rule sends the $65$-bit rung from $E_t=7$, the
+worst waste in the range at $46.6\%$, to $E_t=8$ at $19.9\%$ for one mantissa
+bit; that rung is generated and referenced here but not yet swept.
+
 The dilemma of Section~\ref{sec:sixteen} does not need to be settled because it
 was an artefact of standing on $E_t=4$. Theorem~\ref{thm:tiling} says no rung
 escapes waste; Corollary~\ref{cor:rungs} says the ladder should be built on the
@@ -4102,6 +4130,7 @@ GFTernary & 3 & 4 & 75.0\% \\
 minifloat & 227 & 256 & 88.7\% \\
 takum16 & 61{,}351 & 65{,}536 & 93.6\% \\
 TNF16b & 61{,}446 & 65{,}536 & 93.8\% \\
+TNF17e & 123{,}398 & 131{,}072 & 94.1\% \\
 TNF16c & 61{,}702 & 65{,}536 & 94.1\% \\
 TNF8 & 966 & 1{,}024 & 94.3\% \\
 BNF16 & 129{,}030 & 131{,}072 & 98.4\% \\

@@ -54,6 +54,11 @@ FORMATS = {
     # 3^5=243 sits just under 2^8. The ladder's natural rungs on binary fabric
     # are the k where 3^k comes closest to a power of two from below.
     "tnf16c": TNFSpec("tnf16c", et=5, mant_bits=7),
+    # Ladder rebuilt on the low-waste k, subject to the range covering the
+    # class: 17 bits goes 36.7% -> 5.1% waste and 65 bits 46.6% -> 19.9%, each
+    # for exactly one mantissa bit.
+    "tnf17e": TNFSpec("tnf17e", et=5, mant_bits=8),
+    "tnf64b": TNFSpec("tnf64b", et=8, mant_bits=51),
 }
 
 

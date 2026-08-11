@@ -27,7 +27,11 @@ module q4_decode (
 
     wire [3:0] norm  = abs << lzc;
     wire [2:0] mant  = norm[2:0];
-    wire [3:0] exp_r = 4'd123 - {2'b0, lzc};  // 127 - 4 - lzc
+    // Was `wire [3:0] exp_r = 4'd123 - {2'b0, lzc}`: two defects in one line.
+    // 123 does not fit four bits and truncated to 11, and the use below reads
+    // exp_r[7:0] from a four-bit wire, so the top half of the fp32 exponent was
+    // constant zero. Both are silent; iverilog reported the first.
+    wire [7:0] exp_r = 8'd123 - {6'b0, lzc};  // 127 - 4 - lzc
 
     always @(*) begin
         if (is_zero)

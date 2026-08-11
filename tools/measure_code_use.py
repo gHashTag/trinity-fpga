@@ -33,6 +33,7 @@ JOBS = {
     "TNF16a":    ("tnf16a_decode", ["tnf16_rungs.v"], "x", 16, ""),
     "TNF16b":    ("tnf16b_decode", ["tnf16_rungs.v"], "x", 16, ""),
     "TNF16c":    ("tnf16c_safe_decode", ["tnf16_rungs.v"], "x", 16, ", .invalid()"),
+    "TNF17e":    ("tnf17e_decode", ["tnf_rebuilt.v"], "x", 17, ", .invalid()"),
     "TNF8":      ("tnf8s_decode", ["tnf_spec_decode.v"], "x", 10, ""),
     "TNF32":     ("tnf32s_decode", ["tnf_spec_decode.v"], "x", 36, ""),
     "TNF64":     ("tnf64s_decode", ["tnf_spec_decode.v"], "x", 65, ""),

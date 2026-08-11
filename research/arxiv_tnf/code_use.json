@@ -77,6 +77,12 @@
   "exhaustive": true,
   "use": 0.941497802734375
  },
+ "TNF17e": {
+  "distinct": 123398,
+  "codes": 131072,
+  "exhaustive": true,
+  "use": 0.9414520263671875
+ },
  "TNF8": {
   "distinct": 966,
   "codes": 1024,
