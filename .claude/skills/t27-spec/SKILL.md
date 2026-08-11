@@ -6107,3 +6107,31 @@ prefetch may be undriven by this harness or unstarted by the design. Another
 harness raised a prefetch IRQ, which points at mine first. Recording that as a
 direction rather than a conclusion is what stops the next wave inheriting a
 guess as a fact.
+
+## Wave 663 — the answer was in a column nobody read
+
+**A control signal that is zero everywhere is a different finding from a stalled
+one.** The weight path showed `start_prefetch`, `mem_rd_en`, `mem_rd_valid`,
+`prefetch_done` and `bram_we` all at zero. That rules out handshakes, parameters
+and timing in one observation, and points straight at "nothing ever asked for
+this to happen". Probe the whole chain, not the last stage: the shape of the
+zeros localises the cause.
+
+**Re-read old measurement tables against new questions.** A sweep committed five
+waves earlier had a prefetch-IRQ column reading zero for every configuration —
+the exact evidence for this defect, sitting in the repository, interpreted at the
+time as an uninteresting column. Data collected for one purpose answers questions
+nobody had yet. When a new hypothesis forms, grep the tables you already have
+before generating more.
+
+**"Only for the next one" is a smell in any initialise-then-iterate design.**
+The prefetcher exists to fetch the *following* layer's weights, which is correct
+and complete for every layer but the first. Whenever a mechanism is defined
+relative to a predecessor, ask what plays that role at the boundary — and check
+that something does, rather than assuming the general case covers it.
+
+**Memory CONTENTS are invisible to control properties.** Three separate defects
+in this campaign now share that shape. A suite that constrains handshakes, phase
+and readiness will pass an engine reading an entirely unwritten memory: it runs,
+completes and raises done. If a design has memories, at least one property must
+say something about what is in them.
