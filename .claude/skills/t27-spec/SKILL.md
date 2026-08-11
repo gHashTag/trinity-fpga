@@ -6012,3 +6012,35 @@ investigable rather than embarrassing.
 configurations swept; the proofs are bounded at seq 40. "The engine runs and its
 properties hold" is a much narrower claim than "the design is correct", and the
 difference is exactly what a reader needs.
+
+## Wave 660 — check the value, not just the handshake
+
+**A harness that feeds a constant can only ever check control flow.** The sweep
+testbench served the same word to both memory ports, so it could establish that
+the engine starts, runs and terminates — and nothing whatever about what it
+computed. Six defects passed through it. If a harness's stimulus carries no
+information, its verdict carries none about data.
+
+**Look for two independent ports before assuming a value check is impossible.**
+Here the DMA reads activations on one interface and the prefetcher reads weights
+on another, so a testbench can drive a known input against known weights and
+compute the expected answer itself. That structural fact is what made an
+end-to-end reference check a morning's work rather than a project.
+
+**Choose a reference value that is wrong under the failure you fear.** Nine
+(+1), nine (0) and nine (−1) against all-(+1) weights sums to exactly zero, and
+almost any mis-addressed read picks up a different mixture and a different sum.
+A test vector of all-ones would have agreed with a badly broken engine.
+
+**Report the part that worked and the part that did not, at their true
+strengths.** The MAC matched the reference exactly — a first for this campaign.
+The emitted trit came out `X`. Whether that X is a real defect, a sampling
+artifact, or an error in the new harness is not established, and writing
+"undefined value reaches an output" would have been a much bigger claim than the
+evidence supports. An observation recorded as an observation stays useful; one
+inflated to a finding has to be retracted.
+
+**Check the harness into the repository.** The only artifact that can answer
+"does this compute the right number" belongs beside the design, not in /tmp. Its
+absence is precisely what let the defects through, and a scratch copy would
+recreate that absence next week.
