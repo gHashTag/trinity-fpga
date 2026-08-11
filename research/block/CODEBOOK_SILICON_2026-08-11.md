@@ -6,6 +6,14 @@ standing between the KL-optimised codebook — 20.2586 perplexity against MXFP4'
 21.9397 on SmolLM2-135M, an advantage that grew to −8.66 % on held-out windows
 with t(39) = −12.51 — and a claim that the block axis is not closed.
 
+> **The motivating claim was withdrawn the same day** — see
+> `KL_CODEBOOK_WITHDRAWN_2026-08-11.md`. The codebook was fitted to SmolLM2 and
+> **loses to MXFP4 on both models it had not seen** (+1.98 % Qwen2.5-0.5B,
+> +8.63 % Pythia-160M). Held-out windows were not a held-out model. **The silicon
+> measurements below are unaffected** — they price a decoder, not a winner — and
+> the question "what does an arbitrary codebook cost" is worth answering either
+> way, since it is the question `BLOCK_AXIS_CLOSED` dismisses without measuring.
+
 So it was measured. yosys 0.65 + nextpnr-xilinx, xc7a200t, `-nodsp` where stated,
 harness subtracted, and every load-bearing number re-run independently by a
 second agent before anything below was written.

@@ -5,6 +5,13 @@ SmolLM2-135M against MXFP4's 21.9397 — 7.66 % in sample, 8.66 % on held-out
 windows with `t(39) = −12.51`, better in 39 of 40 windows. Before that is called
 new, the field has to be read. It was.
 
+> **The headline was withdrawn the same day** — see
+> `KL_CODEBOOK_WITHDRAWN_2026-08-11.md`. The codebook loses to MXFP4 on both
+> models it was not fitted to. The survey below is unaffected, and its central
+> point is *strengthened*: the field optimises squared error, and the KL
+> objective does beat the squared-error optimum on all three models — it simply
+> does not beat a hand-designed format once you leave the fitting checkpoint.
+
 ## What everyone else optimises
 
 | work | objective | scale | baseline beaten | margin |
