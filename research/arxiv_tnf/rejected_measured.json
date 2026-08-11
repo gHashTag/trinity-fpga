@@ -1,0 +1,12 @@
+[
+ {
+  "rank": 2,
+  "format": "int8",
+  "ours": false,
+  "storage": "8 bits",
+  "lut": 454,
+  "mhz": 78.83,
+  "mhz_per_lut": 0.1736,
+  "spread": 11.0
+ }
+]

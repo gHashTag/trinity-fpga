@@ -71,26 +71,23 @@ and it is where the multiplier is decided. Removing one rather than cheapening
 it requires the weight lattice to be \emph{closed} under weight application and
 accumulation alike. $\mathbb{Z}[\varphi]$ is, because $\varphi^2=\varphi+1$:
 applying a weight is the Fibonacci step $(a,b)\mapsto(b,a+b)$, accumulation is
-componentwise, and a layer's linear path is exact. Machine-checked in Coq. A set
-that is not closed must return every accumulation to it, costing an order of
-magnitude more area, and pipelining does not rescue it.
+componentwise, and a layer's linear path is exact. Machine-checked in Coq. A set that is not closed must return every accumulation to it, costing an order
+of magnitude more area.
 
 Closure does not single out $\varphi$; enumeration does. A scale is
 multiplier-free exactly when it is an algebraic integer whose companion matrix
-has entries in $\{0,\pm1\}$ --- a finite condition. Degree two admits $\varphi$
-alone, and nothing lies between the shift and $\varphi$. The family $r^d=r+1$
-has two non-zero coefficients at every degree, so any granularity is reachable
-at \emph{one addition} and $d$ registers; fineness costs registers, not adders.
+has entries in $\{0,\pm1\}$. Degree two admits $\varphi$ alone, and nothing lies
+between the shift and $\varphi$. The family $r^d=r+1$ reaches any granularity at
+\emph{one addition} and $d$ registers: fineness costs registers, not adders.
 
-On an XC7A200T in a fully open flow a ternary neuron costs $28$ LUT per weight,
-$32.4$ with one pipeline stage at $126.73$\,MHz, and \emph{no DSP at any
-fan-in}, as does the stack above it.
+On an XC7A200T a ternary neuron costs $28$ LUT per weight, $32.4$ with one
+pipeline stage at $126.73$\,MHz, and \emph{no DSP at any fan-in}.
 
 Which rung follows from the budget --- $\varphi$ at four bits, $r^5{=}r^3{+}1$ at
 five, $r^6{=}r{+}1$ at six --- reaching $3.7\%$ of \texttt{fp32} at six bits and
-one adder. On the block axis the element is closed, the best eight-level
-codebook beating a deployed one by $0.9\%$; the scale is not, a $\varphi$ grid
-at four bits beating MXFP4 on two models at $0.125$ fewer bits per weight.
+one adder. On the block axis the element is closed --- the best eight-level codebook beats
+a deployed one by $0.9\%$ --- and the scale is not: a $\varphi$ grid at four bits
+beats MXFP4 on two models at $0.125$ fewer bits per weight.
 
 Five retractions are marked in place below.
 \end{abstract}
@@ -3072,18 +3069,15 @@ on-silicon backpropagation & \textbf{0} & XOR $4/4$, 24--25 epochs & trains \\
 \end{table}
 
 \begin{table}[t]\centering
-\caption{Throughput per area, complete and re-measured. One ternary-neuron
-datapath, XC7A200T, no DSP anywhere, \emph{every bit of both accumulator
-registers folded into the observed output}, median of five placement seeds. The
-version this replaces observed $8$ of $10$ offset bits and $8$ of $25$ mantissa
-bits and swept one seed, so synthesis was free to prune up to $68\%$ of the
-accumulator, unequally across formats --- the same defect recorded for the
-decoder tables, on a table that had never been re-run. Twenty-one formats;
-eight are ours, spanning all four families. The last column is the seed spread
-and it decides which neighbouring rows these data separate: GFTernary leads
-\texttt{int8} by $3.5\%$ while \texttt{int8}'s own spread is $11.00$\,MHz, so
-the two are tied here, and rows 4 to 6 lie within $1.1\%$ of one another against
-spreads of $5.6$ to $10.2$.}
+\caption{Throughput per area among formats that carry their own range,
+re-measured. One ternary-neuron datapath, XC7A200T, no DSP anywhere,
+\emph{every bit of both accumulator registers folded into the observed output},
+median of five placement seeds. \texttt{int8} is not here: it has $e=0$ and
+functions only beside an external learned scale, so it is reported in
+Table~\ref{tab:rejected} with its measurement. Twenty formats; eight are ours,
+spanning all four families. The last column is the seed spread and it decides
+which neighbouring rows these data separate --- rows 3 to 5 lie within $1.1\%$
+against spreads of $5.6$ to $10.2$, and should be read as tied.}
 \label{tab:fullthroughput}
 \small
 \begin{tabular}{rlrrrrr}
@@ -3091,26 +3085,25 @@ spreads of $5.6$ to $10.2$.}
 & format & storage & LUT & MHz & MHz/LUT & spread \\
 \midrule
 1 & \textbf{GFTernary} (ours) & 2 bits & 463 & 83.19 & \textbf{0.1797} & $6.61$ \\
-2 & \texttt{int8} & 8 bits & 454 & 78.83 & 0.1736 & $11.00$ \\
-3 & binary32 & 32 bits & 472 & 77.00 & 0.1631 & $6.37$ \\
-4 & \textbf{TNF32} (ours) & 32 bits & 492 & 75.57 & \textbf{0.1536} & $10.15$ \\
-5 & \textbf{TNF64} (ours) & 64 bits & 494 & 75.16 & \textbf{0.1521} & $7.87$ \\
-6 & \textbf{TNF16} (ours) & 16 bits & 510 & 77.47 & \textbf{0.1519} & $5.62$ \\
-7 & \textbf{BNF16} (ours) & 16 bits & 518 & 74.94 & \textbf{0.1447} & $12.28$ \\
-8 & \textbf{GF+8} (ours) & 8 bits & 510 & 72.84 & \textbf{0.1428} & $4.77$ \\
-9 & fp8 e5m2 & 8 bits & 480 & 67.06 & 0.1397 & $5.46$ \\
-10 & VAX F & 32 bits & 527 & 73.51 & 0.1395 & $4.43$ \\
-11 & fp8 e4m3 & 8 bits & 485 & 67.02 & 0.1382 & $6.78$ \\
-12 & \textbf{GF10} (ours) & 10 bits & 533 & 72.16 & \textbf{0.1354} & $5.08$ \\
-13 & binary16 & 16 bits & 522 & 63.30 & 0.1213 & $7.74$ \\
-14 & \textbf{GF14} (ours) & 14 bits & 587 & 71.15 & \textbf{0.1212} & $4.54$ \\
-15 & minifloat & 8 bits & 558 & 67.06 & 0.1202 & $5.49$ \\
-16 & posit8 & 8 bits & 540 & 44.33 & 0.0821 & $4.02$ \\
-17 & takum16 & 16 bits & 789 & 58.96 & 0.0747 & $5.75$ \\
-18 & IBM hex32 & 32 bits & 687 & 46.78 & 0.0681 & $3.78$ \\
-19 & LNS16 & 16 bits & 658 & 43.04 & 0.0654 & $0.45$ \\
-20 & posit16 & 16 bits & 712 & 40.38 & 0.0567 & $1.02$ \\
-21 & posit32 & 32 bits & 953 & 28.16 & 0.0295 & $2.29$ \\
+2 & binary32 & 32 bits & 472 & 77.00 & 0.1631 & $6.37$ \\
+3 & \textbf{TNF32} (ours) & 32 bits & 492 & 75.57 & \textbf{0.1536} & $10.15$ \\
+4 & \textbf{TNF64} (ours) & 64 bits & 494 & 75.16 & \textbf{0.1521} & $7.87$ \\
+5 & \textbf{TNF16} (ours) & 16 bits & 510 & 77.47 & \textbf{0.1519} & $5.62$ \\
+6 & \textbf{BNF16} (ours) & 16 bits & 518 & 74.94 & \textbf{0.1447} & $12.28$ \\
+7 & \textbf{GF+8} (ours) & 8 bits & 510 & 72.84 & \textbf{0.1428} & $4.77$ \\
+8 & fp8 e5m2 & 8 bits & 480 & 67.06 & 0.1397 & $5.46$ \\
+9 & VAX F & 32 bits & 527 & 73.51 & 0.1395 & $4.43$ \\
+10 & fp8 e4m3 & 8 bits & 485 & 67.02 & 0.1382 & $6.78$ \\
+11 & \textbf{GF10} (ours) & 10 bits & 533 & 72.16 & \textbf{0.1354} & $5.08$ \\
+12 & binary16 & 16 bits & 522 & 63.30 & 0.1213 & $7.74$ \\
+13 & \textbf{GF14} (ours) & 14 bits & 587 & 71.15 & \textbf{0.1212} & $4.54$ \\
+14 & minifloat & 8 bits & 558 & 67.06 & 0.1202 & $5.49$ \\
+15 & posit8 & 8 bits & 540 & 44.33 & 0.0821 & $4.02$ \\
+16 & takum16 & 16 bits & 789 & 58.96 & 0.0747 & $5.75$ \\
+17 & IBM hex32 & 32 bits & 687 & 46.78 & 0.0681 & $3.78$ \\
+18 & LNS16 & 16 bits & 658 & 43.04 & 0.0654 & $0.45$ \\
+19 & posit16 & 16 bits & 712 & 40.38 & 0.0567 & $1.02$ \\
+20 & posit32 & 32 bits & 953 & 28.16 & 0.0295 & $2.29$ \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -3445,6 +3438,7 @@ Gradients span many orders of magnitude; a word with no range cannot hold them.}
 format & exponent & what supplies the range & trains alone \\
 \midrule
 \texttt{int8} & $e=0$ & learned per-tensor scale & no \\
+\multicolumn{4}{l}{\quad\emph{measured on the same harness:} $454$ LUT, $78.83$\,MHz, $0.1736$ MHz/LUT, spread $11.00$} \\
 \texttt{int4} & $e=0$ & block scale (32 or 16 elements) & no \\
 \texttt{int12}--\texttt{int24} accum. & $e=0$ & fixed point, set by hand & no \\
 E2M1 element alone & $e=2$ in-block & shared UE8M0, outside & no \\

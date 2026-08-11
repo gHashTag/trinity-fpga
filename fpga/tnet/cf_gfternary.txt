@@ -1,0 +1,5 @@
+0 00000000
+1 3fcf1bbd
+2 bfcf1bbd
+3 3fcf1bbd
+tb_gfternary.v:11: $finish called at 8000 (1ps)

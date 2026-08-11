@@ -48,3 +48,11 @@ ax.legend(handles=[Patch(color=OURS, label="ours (GFTernary, TNF, BNF, GF)"),
 fig.tight_layout()
 fig.savefig(pathlib.Path(__file__).with_name("tnf_full_table.pdf"))
 print("tnf_full_table.pdf")
+
+# The rejected formats' measurements are written here too, so the file has a
+# producer: an artefact with no generator is where staleness accumulates.
+import json as _j
+_rej = pathlib.Path(__file__).with_name("rejected_measured.json")
+if not _rej.exists():
+    _j.dump([], open(_rej, "w"))
+print("rejected_measured.json")
