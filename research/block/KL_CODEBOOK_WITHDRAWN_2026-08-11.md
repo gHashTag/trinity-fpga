@@ -52,6 +52,42 @@ eight-level element format will take the block axis from MXFP4" survives on both
 out-of-sample models. The search that was built to break it instead confirmed it
 against a checkpoint it had never seen — twice.
 
+## And a second deflation: most of it was optimisation, not the objective
+
+A separate attack gave **squared error** the same optimisation budget the KL
+search had — same 120-evaluation coordinate descent, same step schedule, same
+seeds — and it also beats MXFP4 on the fitting model:
+
+| codebook | perplexity | vs MXFP4 |
+|---|---:|---:|
+| KL-optimised | 20.2586 | **−7.66 %** |
+| nSSE-optimised, equal budget, seed MXFP4 | 20.7900 | **−5.24 %** |
+| nSSE-optimised, run to convergence | 21.3561 | −2.66 % |
+| wSSE-optimised, run to convergence | 21.6574 | −1.29 % |
+| MXFP4 (E2M1) | 21.9397 | — |
+| Lloyd-Max | 22.9166 | +4.45 % |
+
+*nSSE = block-normalised squared error, the objective Lloyd-Max is defined by.
+wSSE = weight-domain squared error.*
+
+So the brief's own falsification condition fires: **if squared-error
+optimisation with an equal budget also beats MXFP4, the story is "optimisation
+helps", not "the objective matters".** It does, by 5.24 %. The KL objective buys
+a further 2.4 pp on the fitting model, and given the transfer failure that
+remainder is most likely fit as well.
+
+Note what this also says about Lloyd-Max: it is the *converged* squared-error
+optimum and it is the **worst** row in the table. A partially-converged
+squared-error search beats its own converged optimum by 2.6 pp on perplexity.
+That is `METRIC_DISAGREEMENT` again — running the wrong objective to convergence
+is worse than running it badly.
+
+**The open question this opens.** The nSSE codebook was fitted to SmolLM2's
+*weight statistics* only, with no forward pass. Weight distributions are far more
+similar across models than logits are, so it may transfer where the KL codebook
+did not. That is being measured; until it returns, nothing here says whether any
+codebook beats MXFP4 out of sample.
+
 ## What this costs the other documents
 
 - `CODEBOOK_SILICON_2026-08-11.md` measured what an arbitrary codebook costs in
