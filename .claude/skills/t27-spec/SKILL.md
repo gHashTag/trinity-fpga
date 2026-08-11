@@ -6167,3 +6167,30 @@ Adding a known-refuting property inflated an integration figure by exactly the
 number of known-open defects, which inverts what that number is for. The tree
 already excluded non-vacuity oracles for the same reason; the new category needed
 the same treatment, and the claims gate caught it.
+
+## Wave 665 — when the simulator and the solver disagree, you have one result, not two
+
+The layer-0 weight load landed. Simulation went from every weight-path signal
+reading zero to `bram_we=1` and an emitted trit matching the reference — the
+first agreement between an engine output and a computed expectation in the
+campaign. The formal property written last wave for exactly this defect still
+refutes.
+
+**A repair is not confirmed by the evidence that likes it.** The temptation was
+to report the simulation and mention the formal result as a footnote about bounds.
+That gets it backwards: the property was added *specifically* to detect this gap,
+and it still fires. Either the bound is too short or something remains. Both are
+open questions, and a proposition that picks the flattering one is not a
+measurement — it is advocacy with a gate line attached.
+
+**A designed-in expected refutation is worth its cost precisely here.** Prop. 130
+gated the property behind `T27_FORMAL_OPEN` so a fix could not land silently.
+One wave later it did its job: it refused to flip on a change that the
+simulation applauded. A gate you can turn green by fixing the thing is worth more
+than a gate that was green all along.
+
+**Report the contradiction you cannot explain, in the same breath as the win.**
+The harness read `acc=0` while the design emitted `TRIT_P` at threshold 3 — an
+impossible pair. Saying "the trit matches" and omitting that is technically true
+and materially false. Name the impossibility and mark it unestablished; the next
+wave needs to know the harness is suspect, not that the engine is fixed.
