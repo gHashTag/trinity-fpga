@@ -5942,3 +5942,39 @@ named a line as the root of two defects; it changes nothing whatsoever. The
 symptoms it described are still real and still reproduced. Separating "the
 finding stands" from "the attribution is wrong" is what lets the next reader keep
 the useful half.
+
+## Wave 659 — applying a fix is where the assertions come due
+
+**A verified variant is not a verified patch.** The repair had been demonstrated
+on a hand-patched copy; porting it into the emitters is a separate piece of work
+with its own failure modes. Fifteen edits, each asserted against its anchor, then
+a check that the regenerated RTL carries every one of the fifteen changes the
+verified tree had. Neither step is optional, and the second is what turns "I made
+the edits" into "the artifact has the fix".
+
+**Retire the property that asserts the defect, in the same change.** A formal
+property proved the packer never emits a partial word — the exact behaviour being
+repaired. Left in place it would have failed the build and looked like the fix
+was wrong. Replace it with the contract the repaired design actually has, rather
+than deleting it: "a word is emitted on a full accumulation or on the flush, and
+never spontaneously" is the claim that survives.
+
+**Simulation evidence and formal evidence can disagree, and both belong in the
+report.** The sweep showed multi-layer inference working across the parameter
+space; the integration suite refuted. Whether that is a property encoding the old
+defect or a genuine regression was not yet established. Letting the stronger
+result stand for the whole picture is exactly the caption error this campaign
+keeps finding, so the commit says both.
+
+**Commit an incomplete verification with the gap named in the message, not
+hidden.** Fifteen hardware edits are worse lost than committed, and worse
+committed silently than committed with "the integration properties refute and I
+do not yet know why" written into the record. A future reader needs to know
+which half of the evidence was missing.
+
+**A tooling adapter is not a design change, and must be provably so.** Icarus
+needed declare-before-use ordering the emitter does not produce. Hoisting every
+declaration mechanically — and splitting an initialised wire into a declaration
+plus an assign left in place — keeps the logic identical, where hand-editing the
+few names the error mentions invites exactly the doubt you cannot afford when
+the simulation is your main evidence.
