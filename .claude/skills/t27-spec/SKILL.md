@@ -5498,3 +5498,39 @@ sweep whose premise does not hold for it.
 **Say "instrumented, not covered".** The category has four members; this
 addresses the path projection of one. Naming the gap in the same breath as the
 tool stops the tool from being read as the solution.
+
+## Wave 646 — a gated claim and its ungated synonym
+
+**A gate that matches one phrasing sees only that phrasing.** The same document
+carried "all 37 checking steps" (gated, kept correct through four count changes)
+and, four hundred words later, "all forty CI steps" (ungated, wrong). Both
+described the same quantity. Whenever you register a claim by pattern, ask what
+else in the document says the same thing in different words — that is where the
+drift goes, precisely because the gated spelling is maintained.
+
+**Registering the synonym is usually the wrong fix.** A pattern that must MATCH
+forbids ever rephrasing the sentence, and the maintenance burden grows with every
+paraphrase. The inverse is better: for a quantity the tree already knows, blank
+out the registered spelling and fail on any OTHER numeric claim about it. That
+permits rewriting the prose freely and still forbids drift.
+
+**Let your own guards rule out designs.** Removing the numeric wording tripped an
+UNMET guard added fifteen waves earlier — "the claim is unchecked, not clean" —
+which is exactly what killed the register-the-synonym approach before it shipped.
+A guard that constrains your next design decision is worth more than one that
+only reports.
+
+**Abandon a check that would have nothing to check, and record why.** The first
+design for this projection compared counts stated in gate docstrings against
+runtime counts. No gate docstring states a count, so it would have been a gate
+that checks nothing — the exact failure the campaign exists to prevent. Writing
+down the abandoned design costs three lines and stops the next wave rebuilding
+it.
+
+**A new instrument meets over-detection first. Plan for it.** Three consecutive
+waves, three different checks, each firing on a clean tree on its first run: a
+docstring-vs-path check (24 findings), a function-scope widening (11), and a
+numeric-claim scan (1, on a different subject entirely that happened to share a
+noun). In every case the fix was to NARROW the question, not to add exceptions.
+If a new check fires on a clean tree, the first hypothesis is that its question
+is too broad.
