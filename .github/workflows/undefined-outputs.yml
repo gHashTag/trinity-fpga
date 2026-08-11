@@ -1,0 +1,24 @@
+name: Undefined outputs
+
+# A module whose output is X synthesises beautifully: the logic feeding an
+# unobservable value is pruned, so it comes out small and fast while producing
+# nothing. A TNF8 decoder generated here had a seven-bit signed wire with e[7:0]
+# sliced from it; 960 of its 1,024 codes produced X and it entered the
+# throughput table at rank three, 10% smaller and 22% faster than the working
+# module.
+#
+# An oracle catches this, but an oracle is expensive and three of our formats do
+# not have one. This needs none: sweep, and fail on a single X.
+
+on: [pull_request, push]
+
+jobs:
+  undefined-outputs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: sudo apt-get update && sudo apt-get install -y iverilog
+      - run: cd fpga/tnet && ./conform.sh && ./conform_wide.sh
+      - run: python3 tools/check_undefined_outputs.py
