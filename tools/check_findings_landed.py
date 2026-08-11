@@ -31,7 +31,10 @@ FINDINGS = [
     ("node pipelining",                ["tab:nodepipe", "126.73"]),
     ("three digits forced",            ["frougny2011"]),
     ("full throughput table",          ["tab:fullthroughput", "0.1797"]),
-    ("decoder conformance",            ["98.7"]),
+    # Was ["98.7"] -- takum16 at 98.7% wrong. Withdrawn: the comparison used
+    # the linear reference against a logarithmic decoder. The finding that
+    # survives is IBM hex32 and the fp8 completion.
+    ("decoder conformance",            ["28\\%", "subnormals"]),
     ("exactness in silicon",           ["zero disagreements", "514229"]),
     ("GF-T against TNF",               ["tab:gftvstnf"]),
     ("matched widths against posit",   ["tab:tnet", "3.99"]),

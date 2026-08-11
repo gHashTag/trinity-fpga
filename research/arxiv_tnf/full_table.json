@@ -179,12 +179,12 @@
   "rank": 17,
   "format": "takum16",
   "ours": false,
-  "storage": "16 bits",
+  "storage": "16 bits, 57 BRAM",
   "lut": 789,
   "mhz": 58.96,
   "mhz_per_lut": 0.0747,
   "spread": 5.75,
-  "checked": "not swept"
+  "checked": "632 of 61{,}505 (fp32 floor)"
  },
  {
   "rank": 18,
