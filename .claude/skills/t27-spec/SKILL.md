@@ -5709,3 +5709,34 @@ came with a yosys `miter -equiv` or a rendered-HTML comparison showing the chang
 was semantics-preserving. Without that, "the gate fired on my edit" is an
 argument; with it, the gate is simply wrong. Make the equivalence the price of
 admission for an over-detection report.
+
+## Wave 652 — a defect with a textual signature should be swept, not met again
+
+**Five fixes, four files, one shape, all found separately.** A regex applied to
+raw source, matching inside a comment. Each instance was discovered by whatever
+it broke, wave after wave, while the shape had a grep-able signature the entire
+time. When a defect recurs even twice, stop fixing instances and write the sweep.
+
+**"Strip it, or declare why you don't" beats "strip it".** Several gates read
+comments deliberately — one parses range annotations, one matches tool output
+where comments cannot occur, one reads Python rather than Verilog. A blanket rule
+would have been wrong for all of them. A rule with a written exemption marker
+gets the same coverage and forces each exception to be justified once, in the
+file, where a reader can check it.
+
+**The exemption list is where the knowledge lives.** Writing those four
+declarations surfaced facts nobody had recorded: which gates depend on comments
+being present, and why. That is worth more than the check itself, and it exists
+only because the gate demanded a sentence rather than accepting silence.
+
+**Recognise helpers by name, and expect to miss one.** The new gate flagged a
+file whose comment-stripper is called `code_mask` — it does the right thing under
+an unfamiliar name. Fifth consecutive wave in which a new instrument over-detected
+on first run. Assume your list of "acceptable ways to do this" is incomplete and
+check the flagged cases before believing them.
+
+**The value of closing a class is the instance you never see.** Five fixes were
+already made; the sweep does not recover them. What it buys is the sixth
+occurrence failing the build instead of being found by whatever it breaks — and
+that is the only return, so say so plainly rather than implying the sweep
+repaired anything.
