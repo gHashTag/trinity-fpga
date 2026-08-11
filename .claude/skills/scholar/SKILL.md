@@ -129,6 +129,34 @@ Model weights for this line live under a *previous session's* scratchpad
 Qwen, Pythia, GPT-2, OPT, and wikitext-2). Check there before downloading
 anything — it survives across sessions but not forever.
 
+### Before calling a result new, read what it would be new against
+
+A measured win over a *deployed* format says nothing about the *research* it
+belongs to. The KL-optimised codebook beat MXFP4 by 7.66 %, which sounds like a
+result until you notice MXFP4 is a hardware standard and the thing being claimed
+is a learned codebook — a class with its own literature and its own leader.
+
+Read on 2026-08-11: **every learned 4-bit codebook in the field minimises squared
+error.** BOF4 via EM on Lloyd's, any4 via k-means, QAM-W via Lloyd-Max on a
+circular Gaussian, LO-BCQ via clustering. The strongest of them, BOF4, improves
+NF4 by ≈1.2 %. Their contribution is always a better *estimator* of the same
+objective; none questions the objective.
+
+That is what made the finding worth having rather than deflating it — this
+repository has *measured* that objective pointing the wrong way. But it also
+means:
+
+- **Name the right opponent.** For an element-codebook claim that is NF4/BOF4,
+  not MXFP4. Beating a hardware format says nothing about beating the research
+  leader, and that comparison has not been run.
+- **List what is not comparable, in the document.** Different model, different
+  block size, different *kind* of scale — BOF4 uses a real-valued absmax, which
+  by T38 has no headroom phase at all, so its setup is free of an effect ours has
+  to control for.
+- **Read the full text, not the abstract.** BOF4's abstract does not say what it
+  optimises; the body says MSE and MAE. The abstract would have left the whole
+  comparison unresolved.
+
 ### Testing a mechanism you proposed yourself
 
 A measured result attracts an explanation, and the explanation is where the next
