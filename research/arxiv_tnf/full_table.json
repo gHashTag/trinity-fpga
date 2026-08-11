@@ -56,7 +56,20 @@
   "code_use_measured": true
  },
  {
-  "rank": 5,
+  "format": "TNF16c",
+  "ours": true,
+  "storage": "16b",
+  "lut": 527,
+  "bram": 0,
+  "mhz": 67.2,
+  "mhz_per_lut": 0.12751423149905125,
+  "spread": 1.480000000000004,
+  "checked": "all 62{,}208 \\checkmark",
+  "code_use": 0.9415,
+  "rank": 5
+ },
+ {
+  "rank": 6,
   "format": "fp8 e4m3",
   "ours": false,
   "storage": "8 bits",
@@ -70,7 +83,7 @@
   "code_use_measured": true
  },
  {
-  "rank": 6,
+  "rank": 7,
   "format": "fp8 e5m2",
   "ours": false,
   "storage": "8 bits",
@@ -84,7 +97,7 @@
   "code_use_measured": true
  },
  {
-  "rank": 7,
+  "rank": 8,
   "format": "binary16",
   "ours": false,
   "storage": "16 bits",
@@ -98,7 +111,7 @@
   "code_use_measured": true
  },
  {
-  "rank": 8,
+  "rank": 9,
   "format": "GF14",
   "ours": true,
   "storage": "14 bits",
@@ -112,7 +125,7 @@
   "code_use_measured": true
  },
  {
-  "rank": 9,
+  "rank": 10,
   "format": "minifloat",
   "ours": false,
   "storage": "8 bits",
@@ -126,7 +139,7 @@
   "code_use_measured": true
  },
  {
-  "rank": 10,
+  "rank": 11,
   "format": "BNF16",
   "ours": true,
   "storage": "17 bits",
@@ -140,7 +153,7 @@
   "code_use_measured": true
  },
  {
-  "rank": 11,
+  "rank": 12,
   "format": "TNF32",
   "ours": true,
   "storage": "36 bits",
@@ -154,7 +167,7 @@
   "code_use_measured": false
  },
  {
-  "rank": 12,
+  "rank": 13,
   "format": "TNF16",
   "ours": true,
   "storage": "17 bits",
@@ -178,11 +191,11 @@
   "spread": 6.540000000000006,
   "checked": "all 65{,}534 \\checkmark",
   "code_use": 0.9376,
-  "rank": 13,
+  "rank": 14,
   "code_use_measured": true
  },
  {
-  "rank": 14,
+  "rank": 15,
   "format": "TNF64",
   "ours": true,
   "storage": "65 bits",
@@ -196,7 +209,7 @@
   "code_use_measured": false
  },
  {
-  "rank": 15,
+  "rank": 16,
   "format": "TNF8",
   "ours": true,
   "storage": "10 bits",
@@ -210,7 +223,7 @@
   "code_use_measured": true
  },
  {
-  "rank": 16,
+  "rank": 17,
   "format": "VAX F",
   "ours": false,
   "storage": "32 bits",
@@ -224,7 +237,7 @@
   "code_use_measured": false
  },
  {
-  "rank": 17,
+  "rank": 18,
   "format": "GF+8",
   "ours": true,
   "storage": "8b (+2 sel)",
@@ -238,7 +251,7 @@
   "code_use_measured": true
  },
  {
-  "rank": 18,
+  "rank": 19,
   "format": "posit8",
   "ours": false,
   "storage": "8 bits",
@@ -252,7 +265,7 @@
   "code_use_measured": true
  },
  {
-  "rank": 19,
+  "rank": 20,
   "format": "takum16",
   "ours": false,
   "storage": "16 bits",
@@ -266,7 +279,7 @@
   "code_use_measured": false
  },
  {
-  "rank": 20,
+  "rank": 21,
   "format": "LNS16",
   "ours": false,
   "storage": "16 bits",
@@ -280,7 +293,7 @@
   "code_use_measured": true
  },
  {
-  "rank": 21,
+  "rank": 22,
   "format": "posit16",
   "ours": false,
   "storage": "16 bits",
@@ -294,7 +307,7 @@
   "code_use_measured": true
  },
  {
-  "rank": 22,
+  "rank": 23,
   "format": "IBM hex32",
   "ours": false,
   "storage": "32 bits",
@@ -308,7 +321,7 @@
   "code_use_measured": false
  },
  {
-  "rank": 23,
+  "rank": 24,
   "format": "posit32",
   "ours": false,
   "storage": "32 bits",

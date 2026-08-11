@@ -111,5 +111,13 @@
     "declares": "E_t=3",
     "table_name": "TNF16b",
     "note": "Ternary-exponent rung at exactly 16 stored bits: E_t=3 (5 offset bits, 27 of 32 used), M=10."
+  },
+  "tnf16c": {
+    "rtl": "fpga/tnet/tnf16_rungs.v",
+    "ref_module": "tnf_spec_ref",
+    "ref_key": "tnf16c",
+    "declares": "E_t=5",
+    "table_name": "TNF16c",
+    "note": "E_t=5 (8 offset bits, 243 of 256 used, 5.08% waste), M=7, stored width 16. The guarded variant reserves the 13 out-of-specification offsets; its guard costs 1.8% against rung A's 15.1%."
   }
 }

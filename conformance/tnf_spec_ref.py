@@ -50,6 +50,10 @@ FORMATS = {
     # has a width class where one of ours meets binary16 head-on.
     "tnf16a": TNFSpec("tnf16a", et=4, mant_bits=8),
     "tnf16b": TNFSpec("tnf16b", et=3, mant_bits=10),
+    # E_t=5 wastes only 5.08% of its binary field against E_t=4's 36.7%, because
+    # 3^5=243 sits just under 2^8. The ladder's natural rungs on binary fabric
+    # are the k where 3^k comes closest to a power of two from below.
+    "tnf16c": TNFSpec("tnf16c", et=5, mant_bits=7),
 }
 
 

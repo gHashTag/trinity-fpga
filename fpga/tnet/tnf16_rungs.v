@@ -64,4 +64,39 @@ module tnf16a_safe_decode (input wire [15:0] x, output wire [31:0] fp32_out,
                   :            {s, e32, {m, 15'b0}};
 endmodule
 
+// tnf16c: E_t=5 -> 243 offsets in an 8-bit field, M=7, stored width 16.
+//
+// 3^k = 2^m has no solution for k,m >= 1, so a ternary exponent never fills a
+// binary field exactly and every rung wastes 1 - 3^k/2^ceil(k log2 3). That
+// waste is wildly uneven in k: E_t=4 wastes 36.7% and E_t=5 wastes 5.08%. Rung
+// A sits on the bad one. This sits on the good one, and its guard therefore
+// covers 13 offsets instead of 47.
+//
+// Both variants are here: unguarded, and with the 13 out-of-specification
+// offsets reserved, so the reservation cost can be measured rather than argued.
+module tnf16c_decode (input wire [15:0] x, output wire [31:0] fp32_out);
+  wire       s   = x[15];
+  wire [7:0] off = x[14:7];
+  wire [6:0] m   = x[6:0];
+  wire signed [10:0] e = $signed({1'b0, off}) - 11'sd121;
+  wire [7:0] e32 = e[7:0] + 8'd127;
+  assign fp32_out = (off == 8'd242) ? {s, 8'hFF, (|m), 22'b0}
+                  : (off == 8'd0)   ? {s, 31'b0}
+                  :                   {s, e32, {m, 16'b0}};
+endmodule
+
+module tnf16c_safe_decode (input wire [15:0] x, output wire [31:0] fp32_out,
+                           output wire invalid);
+  wire       s   = x[15];
+  wire [7:0] off = x[14:7];
+  wire [6:0] m   = x[6:0];
+  wire signed [10:0] e = $signed({1'b0, off}) - 11'sd121;
+  wire [7:0] e32 = e[7:0] + 8'd127;
+  assign invalid = (off > 8'd242);
+  assign fp32_out = invalid          ? {1'b0, 8'hFF, 1'b1, 22'b0}
+                  : (off == 8'd242)  ? {s, 8'hFF, (|m), 22'b0}
+                  : (off == 8'd0)    ? {s, 31'b0}
+                  :                    {s, e32, {m, 16'b0}};
+endmodule
+
 `default_nettype wire

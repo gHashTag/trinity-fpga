@@ -3144,25 +3144,26 @@ unsynthesised logic.}\label{tab:fullthroughput}
 2 & binary32 & 32 bits & 472 & 0 & 77.00 & 0.1631 & $6.37$ & identity (exact) \\
 3 & \textbf{TNF16a} (ours) & 16b & 502 & 0 & 69.87 & \textbf{0.1392} & $6.97$ & all 65{,}534 \checkmark \\
 4 & \textbf{GF10} (ours) & 10 bits & 533 & 0 & 72.16 & \textbf{0.1354} & $5.08$ & all 1{,}024 \\
-5 & fp8 e4m3 & 8 bits & 516 & 0 & 64.70 & 0.1254 & $9.33$ & all 256, 0 wrong \\
-6 & fp8 e5m2 & 8 bits & 529 & 0 & 65.30 & 0.1234 & $5.70$ & all 256, 0 wrong \\
-7 & binary16 & 16 bits & 522 & 0 & 63.30 & 0.1213 & $7.74$ & all 65{,}536 \\
-8 & \textbf{GF14} (ours) & 14 bits & 587 & 0 & 71.15 & \textbf{0.1212} & $4.54$ & all 16{,}384 \\
-9 & minifloat & 8 bits & 558 & 0 & 67.06 & 0.1202 & $5.49$ & all 254 \checkmark \\
-10 & \textbf{BNF16} (ours) & 17 bits & 571 & 0 & 67.13 & \textbf{0.1176} & $3.30$ & all 131{,}072, 0 wrong \\
-11 & \textbf{TNF32} (ours) & 36 bits & 569 & 0 & 66.91 & \textbf{0.1176} & $6.03$ & sampled 9{,}997, 0 wrong \\
-12 & \textbf{TNF16} (ours) & 17 bits & 565 & 0 & 66.28 & \textbf{0.1173} & $8.56$ & all 131{,}072 \\
-13 & \textbf{TNF16b} (ours) & 16b & 540 & 0 & 61.76 & \textbf{0.1144} & $6.54$ & all 65{,}534 \checkmark \\
-14 & \textbf{TNF64} (ours) & 65 bits & 572 & 0 & 65.38 & \textbf{0.1143} & $8.73$ & sampled, 0 wrong \\
-15 & \textbf{TNF8} (ours) & 10 bits & 545 & 0 & 62.13 & \textbf{0.1140} & $3.63$ & all 1{,}024, 0 wrong \\
-16 & VAX F & 32 bits & 560 & 0 & 61.38 & 0.1096 & $3.71$ & all 40{,}000 \checkmark \\
-17 & \textbf{GF+8} (ours) & 8b (+2 sel) & 628 & 0 & 63.05 & \textbf{0.1004} & $1.08$ & 1{,}024/1{,}024 \checkmark \\
-18 & posit8 & 8 bits & 550 & 0 & 44.68 & 0.0812 & $2.96$ & all 255 \checkmark \\
-19 & takum16 & 16 bits & 789 & 57 & 58.96 & 0.0747 & $5.75$ & 632/61{,}505 \\
-20 & LNS16 & 16 bits & 658 & 0 & 43.04 & 0.0654 & $0.45$ & 107/65{,}536 \\
-21 & posit16 & 16 bits & 667 & 0 & 36.75 & 0.0551 & $1.63$ & all 65{,}535 \checkmark \\
-22 & IBM hex32 & 32 bits & 1008 & 0 & 30.82 & 0.0306 & $1.53$ & all 40{,}000 \checkmark \\
-23 & posit32 & 32 bits & 967 & 0 & 29.55 & 0.0306 & $1.96$ & all 40{,}000 \checkmark \\
+5 & \textbf{TNF16c} (ours) & 16b & 527 & 0 & 67.20 & \textbf{0.1275} & $1.48$ & all 62{,}208 \checkmark \\
+6 & fp8 e4m3 & 8 bits & 516 & 0 & 64.70 & 0.1254 & $9.33$ & all 256, 0 wrong \\
+7 & fp8 e5m2 & 8 bits & 529 & 0 & 65.30 & 0.1234 & $5.70$ & all 256, 0 wrong \\
+8 & binary16 & 16 bits & 522 & 0 & 63.30 & 0.1213 & $7.74$ & all 65{,}536 \\
+9 & \textbf{GF14} (ours) & 14 bits & 587 & 0 & 71.15 & \textbf{0.1212} & $4.54$ & all 16{,}384 \\
+10 & minifloat & 8 bits & 558 & 0 & 67.06 & 0.1202 & $5.49$ & all 254 \checkmark \\
+11 & \textbf{BNF16} (ours) & 17 bits & 571 & 0 & 67.13 & \textbf{0.1176} & $3.30$ & all 131{,}072, 0 wrong \\
+12 & \textbf{TNF32} (ours) & 36 bits & 569 & 0 & 66.91 & \textbf{0.1176} & $6.03$ & sampled 9{,}997, 0 wrong \\
+13 & \textbf{TNF16} (ours) & 17 bits & 565 & 0 & 66.28 & \textbf{0.1173} & $8.56$ & all 131{,}072 \\
+14 & \textbf{TNF16b} (ours) & 16b & 540 & 0 & 61.76 & \textbf{0.1144} & $6.54$ & all 65{,}534 \checkmark \\
+15 & \textbf{TNF64} (ours) & 65 bits & 572 & 0 & 65.38 & \textbf{0.1143} & $8.73$ & sampled, 0 wrong \\
+16 & \textbf{TNF8} (ours) & 10 bits & 545 & 0 & 62.13 & \textbf{0.1140} & $3.63$ & all 1{,}024, 0 wrong \\
+17 & VAX F & 32 bits & 560 & 0 & 61.38 & 0.1096 & $3.71$ & all 40{,}000 \checkmark \\
+18 & \textbf{GF+8} (ours) & 8b (+2 sel) & 628 & 0 & 63.05 & \textbf{0.1004} & $1.08$ & 1{,}024/1{,}024 \checkmark \\
+19 & posit8 & 8 bits & 550 & 0 & 44.68 & 0.0812 & $2.96$ & all 255 \checkmark \\
+20 & takum16 & 16 bits & 789 & 57 & 58.96 & 0.0747 & $5.75$ & 632/61{,}505 \\
+21 & LNS16 & 16 bits & 658 & 0 & 43.04 & 0.0654 & $0.45$ & 107/65{,}536 \\
+22 & posit16 & 16 bits & 667 & 0 & 36.75 & 0.0551 & $1.63$ & all 65{,}535 \checkmark \\
+23 & IBM hex32 & 32 bits & 1008 & 0 & 30.82 & 0.0306 & $1.53$ & all 40{,}000 \checkmark \\
+24 & posit32 & 32 bits & 967 & 0 & 29.55 & 0.0306 & $1.96$ & all 40{,}000 \checkmark \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -3801,6 +3802,7 @@ bits & format & LUT & MHz & MHz/LUT \\
 10 & \textbf{TNF8} & 545 & 62.13 & 0.1140 \\
 14 & \textbf{GF14} & 587 & 71.15 & 0.1212 \\
 16 & \textbf{TNF16a} & 502 & 69.87 & 0.1392 \\
+16 & \textbf{TNF16c} & 527 & 67.20 & 0.1275 \\
 16 & binary16 & 522 & 63.30 & 0.1213 \\
 16 & \textbf{TNF16b} & 540 & 61.76 & 0.1144 \\
 16 & takum16 & 789 & 58.96 & 0.0747 \\
@@ -3919,6 +3921,105 @@ number resting on a degenerate component --- is the kind of claim this paper
 spends twenty-seven sections dismantling in other people's work.}
 
 
+
+\section{A ternary exponent never tiles a binary field}
+\label{sec:tiling}
+
+Section~\ref{sec:sixteen} ended on a dilemma: rung A's offset field holds $128$
+values and its four trits name $81$, so either $37\%$ of the word lies outside
+the format and must be guarded, or the exponent is not ternary. The dilemma has
+a structural cause, and naming it resolves the case rather than choosing a side.
+
+\begin{theorem}[No exact tiling]
+\label{thm:tiling}
+For integers $k,m \geq 1$, $3^{k} \neq 2^{m}$. Hence for every rung the offset
+field of width $\lceil k\log_2 3\rceil$ has capacity strictly greater than the
+$3^{k}$ offsets it must hold, and the wasted fraction
+\[
+  w(k) \;=\; 1 - \frac{3^{k}}{2^{\lceil k\log_2 3\rceil}}
+        \;=\; 1 - 2^{-\left(1-\{k\log_2 3\}\right)}
+\]
+is strictly positive at every $k$, where $\{\cdot\}$ is the fractional part.
+\end{theorem}
+
+\begin{proof}
+$3^k$ has $3$ in its factorisation and $2^m$ does not, so unique factorisation
+forbids equality for $k,m\geq1$. The capacity is $2^{\lceil x\rceil}$ for
+$x=k\log_2 3$ and the content is $2^{x}$; their ratio is $2^{-(\lceil x\rceil-x)}$,
+and $\lceil x\rceil - x = 1-\{x\}$ whenever $x\notin\mathbb{Z}$, which
+Theorem's first sentence guarantees.
+\end{proof}
+
+\begin{corollary}[The waste is uneven, and the good rungs are sparse]
+\label{cor:rungs}
+$w(k)$ is small exactly where $\{k\log_2 3\}$ is close to $1$, that is where
+$3^{k}$ falls just under a power of two. Over $k\leq 15$ the minimum is
+$k=5$ at $w=5.1\%$; the maximum is $k=7$ at $w=46.6\%$.
+\end{corollary}
+
+\begin{table}[htbp]
+\centering
+\vspace{0.6em}
+\caption{Waste at every rung, and which rungs this work had built. The ladder
+had taken $E_t \in \{3,4,6,7\}$, three of them poor, and had never taken $E_t=5$,
+which is the best in the range by a factor of three.}
+\label{tab:tiling}
+\scriptsize
+\begin{tabular}{rrrrll}
+\toprule
+$E_t$ & $3^{E_t}$ & bits & capacity & waste & built here \\
+\midrule
+1 & 3 & 2 & 4 & 25.0\% &  \\
+2 & 9 & 4 & 16 & 43.8\% &  \\
+3 & 27 & 5 & 32 & 15.6\% & TNF8 \\
+4 & 81 & 7 & 128 & 36.7\% & TNF16{,} TNF16a \\
+5 & 243 & 8 & 256 & 5.1\% & \textbf{TNF16c} \\
+6 & 729 & 10 & 1{,}024 & 28.8\% & TNF32 \\
+7 & 2{,}187 & 12 & 4{,}096 & 46.6\% & TNF64 \\
+8 & 6{,}561 & 13 & 8{,}192 & 19.9\% &  \\
+9 & 19{,}683 & 15 & 32{,}768 & 39.9\% &  \\
+10 & 59{,}049 & 16 & 65{,}536 & 9.9\% &  \\
+11 & 177{,}147 & 18 & 262{,}144 & 32.4\% &  \\
+12 & 531{,}441 & 20 & 1{,}048{,}576 & 49.3\% &  \\
+13 & 1{,}594{,}323 & 21 & 2{,}097{,}152 & 24.0\% &  \\
+14 & 4{,}782{,}969 & 23 & 8{,}388{,}608 & 43.0\% &  \\
+15 & 14{,}348{,}907 & 24 & 16{,}777{,}216 & 14.5\% &  \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{The rung the ladder had skipped.} $E_t=5$ needs $8$ offset bits, so
+$1+8+7=16$: a third sixteen-bit candidate, and the one this work had not
+considered. Built, and checked exhaustively against the ladder reference:
+\textbf{$62{,}208$ of $62{,}208$ in-specification codes exact, all $3{,}328$
+out-of-specification codes flagged, zero errors.}
+
+\begin{center}\small
+\begin{tabular}{lrrrr}
+\toprule
+& LUT & MHz & MHz/LUT & vs \texttt{binary16} \\
+\midrule
+rung A, unguarded          & $502$ & $69.87$ & $0.1392$ & $+14.7\%$ \\
+rung A, offsets reserved   & $549$ & $64.86$ & $0.1181$ & $-2.6\%$ \\
+rung C, unguarded          & $509$ & $66.11$ & $0.1299$ & $+7.1\%$ \\
+\textbf{rung C, offsets reserved} & $527$ & $67.20$ & $\mathbf{0.1275}$ & $\mathbf{+5.1\%}$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+Rung A's guard costs $15.1\%$ and takes the format below IEEE half. Rung C's
+costs $1.8\%$ and leaves it above. \textbf{The claim this paper can make at equal
+storage, with every code either defined or flagged, is $+5.1\%$ against IEEE
+half} --- smaller than the $14.7\%$ first reported, and unlike it, not resting
+on an unchecked field.
+
+The dilemma of Section~\ref{sec:sixteen} does not need to be settled because it
+was an artefact of standing on $E_t=4$. Theorem~\ref{thm:tiling} says no rung
+escapes waste; Corollary~\ref{cor:rungs} says the ladder should be built on the
+$k$ where the waste is least, and this work had built it on three of the worst
+and skipped the best.
+
 \section{A rung at exactly sixteen bits, and what winning there costs}
 \label{sec:sixteen}
 
@@ -4001,6 +4102,7 @@ GFTernary & 3 & 4 & 75.0\% \\
 minifloat & 227 & 256 & 88.7\% \\
 takum16 & 61{,}351 & 65{,}536 & 93.6\% \\
 TNF16b & 61{,}446 & 65{,}536 & 93.8\% \\
+TNF16c & 61{,}702 & 65{,}536 & 94.1\% \\
 TNF8 & 966 & 1{,}024 & 94.3\% \\
 BNF16 & 129{,}030 & 131{,}072 & 98.4\% \\
 TNF16 & 129{,}030 & 131{,}072 & 98.4\% \\
