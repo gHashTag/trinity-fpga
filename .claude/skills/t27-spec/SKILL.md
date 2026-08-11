@@ -5675,3 +5675,37 @@ over-detects announces itself by failing correct work. A *measurement* that
 over-detects produces a plausible number that then gets quoted — which is
 strictly worse, and argues for treating every new figure as unverified until an
 injection confirms the instrument.
+
+## Wave 651 — a gate fails hardest on its author's own idioms
+
+**The inputs a check rejects wrongly are the ones its author never pictured —
+which means the house style.** Six over-detections, and all six rejected
+conventions used throughout the very repository the gate guards: a signed
+literal `16'sd0`, a backticked identifier in a comment the gate itself parses, a
+markdown line indented two spaces, a re-aligned column, an explanatory comment
+inside an assertion. Nothing exotic. When writing a gate, go and read how the
+codebase actually writes the thing you are matching, rather than how you would
+write it.
+
+**"Matching inside comments" has now cost five separate fixes across four
+files.** Each was found on its own, wave after wave, because nobody grepped for
+the pattern after the first. If a defect has a textual signature, search the
+whole tree for that signature the same hour you fix it — the search costs
+seconds and this one has cost five waves.
+
+**A one-line regex is a specification, and specifications need their negative
+cases.** Widening a zero-literal pattern to accept `16'sd0` risks accepting
+`16'sd1`. Check both directions explicitly and keep both in the test; a fix
+verified only on the case that was failing is half-verified.
+
+**Record the fixes you did not make, with the reason.** Four of the ten needed
+more than a character — an exact-text permutation table, a structural comparison
+that uses net names, a floor too brittle for reformatting, a glob that misses an
+extension. Naming them keeps the count honest and stops a future wave reporting
+"all fixed" from a memory of the easy six.
+
+**A proved equivalence turns a complaint into a finding.** Every census entry
+came with a yosys `miter -equiv` or a rendered-HTML comparison showing the change
+was semantics-preserving. Without that, "the gate fired on my edit" is an
+argument; with it, the gate is simply wrong. Make the equivalence the price of
+admission for an over-detection report.
