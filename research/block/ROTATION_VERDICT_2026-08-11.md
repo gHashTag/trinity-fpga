@@ -61,11 +61,20 @@ but does nothing to correct it, so measuring the transform alone is expected to
 look worse than the published combination. Nothing here contradicts that paper,
 and nothing here should be quoted as though it did.
 
-**Why rotation hurts here at all** is not established. The plausible mechanism is
-that a Hadamard mix within a 32-element block raises the typical magnitude
-relative to the block maximum that sets the shared scale, so more elements land
-in the coarse part of the codebook — but that is a hypothesis, not a measurement,
-and it is written here as one.
+**Why rotation hurts here at all** was left as a hypothesis: that a Hadamard mix
+within a 32-element block raises the typical magnitude relative to the block
+maximum that sets the shared scale, so more elements land in the coarse part of
+the codebook.
+
+> **Refuted, 2026-08-11 — see `WHY_ROTATION_HURTS_2026-08-11.md`.** Concentration
+> does rise, but its correlation with the per-block error change is **negative**
+> (r = −0.4592 over 3.3 M blocks, shuffled control −0.0006): blocks that
+> concentrate get *less* error. Rotation in fact **reduces total weight
+> quantisation error by 3.31 %** while perplexity worsens by 8.24 % — the two
+> metrics move in opposite directions on the same weights in the same run. The
+> mechanism is therefore not a weight-magnitude statistic, and the hypothesis
+> above is withdrawn rather than amended. The numbers in this document are
+> unaffected; only its explanation was wrong.
 
 ## Consequence
 
