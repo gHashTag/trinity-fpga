@@ -5534,3 +5534,37 @@ numeric-claim scan (1, on a different subject entirely that happened to share a
 noun). In every case the fix was to NARROW the question, not to add exceptions.
 If a new check fires on a clean tree, the first hypothesis is that its question
 is too broad.
+
+## Wave 647 — a retraction is worthless where the claim isn't
+
+**Put the correction where the claim is, not where the correction happened.** A
+document asserted a figure and, three thousand words later, superseded it with a
+better-measured one — and even said it was doing so. A reader meeting the first
+sentence still gets a retracted number with no warning. Corrections belong
+inline, at the site of the original claim, with a forward pointer. Twice now this
+campaign has recorded a withdrawal hundreds of lines from what it withdraws.
+
+**Use a document's own convention to make a fuzzy rule decidable.** "Is this
+timing trustworthy?" is not checkable. But if propositions are dated records and
+the README is the current-state document, then a duration in the README is a
+LIVE claim and must be traceable — carrying either the conditions it was
+measured under or a citation leading to them. The rule fell out of a convention
+that already existed; no new discipline had to be invented.
+
+**Audit for a class before building the gate for it.** The audit found the live
+defect first; the gate then encoded what the audit had established. Building the
+gate first would have produced something that passed on a tree that was already
+wrong, and the finding would have been invisible.
+
+**A gate will fire on the documentation of its own fix.** The check added one
+wave earlier flagged a bad phrase that exists in the document only because the
+narrative quotes it as the example of what was fixed. This has now happened
+twice — once with an assertion quoted in a comment, once with a phrase quoted in
+prose. Any gate matching text must exclude quoted text, because writing about a
+defect requires reproducing it.
+
+**Say which members of a class remain uninstrumented.** Three projections of a
+four-member category now have checks; the fourth is a noun-phrase mismatch with
+no countable projection. Naming the gap beside the tools stops the tools reading
+as coverage — and it explains why that member survived twelve waves while the
+others were caught in three.
