@@ -3134,23 +3134,23 @@ been worth more than the format's own margin, and repairing a competitor's
 implementation moved the comparison in our favour, which is the direction the
 rule predicts and is now measured rather than asserted. Every error
 found, ours and theirs, made its module smaller: an unimplemented case is
-unsynthesised logic.}\label{tab:fullthroughput \textbf{Resolution.} The pooled coefficient of variation across seeds is $3.71\%$, so two rows separate at $\alpha=.05$ only when their MHz/LUT differ by more than $5.50\%$ relative; smaller gaps in this table are not results. The detection floor for a difference in \emph{decoder} cost is $41.3$ LUT, which is $79\%$ of a whole decoder at the median row --- the $472$-LUT harness inflates that floor tenfold. Every row is measured on the same $128$-bit harness; rows that were not have been re-measured or withdrawn.}
+unsynthesised logic. \textbf{Resolution.} The pooled coefficient of variation across seeds is $3.71\%$, so two rows separate at $\alpha=.05$ only when their MHz/LUT differ by more than $5.50\%$ relative; smaller gaps in this table are not results. The detection floor for a difference in \emph{decoder} cost is $41.3$ LUT, which is $79\%$ of a whole decoder at the median row --- the $472$-LUT harness inflates that floor tenfold. Every row is measured on the same $128$-bit harness; rows that were not have been re-measured or withdrawn.}\label{tab:fullthroughput}
 \small
 \tiny
 \begin{tabular}{rlrrrlll}
 \toprule
 & format & storage & LUT & MHz/LUT & five-seed range & status & conformance \\
 \midrule
-1 & \textbf{GFTernary} & 2 bits & 527 & \textbf{0.1574} & $0.1524$--$0.1616$ & --- & all 4 codes \\
+1 & \textbf{GFTernary} & 2 bits & 527 & \textbf{0.1574} & $0.1524$--$0.1616$ & ours, not a ladder rung & all 4 codes \\
 2 & binary32 & 32 bits & 536 & 0.1422 & $0.1376$--$0.1474$ & competitor & identity (exact) \\
 3 & fp8 e4m3 & 8 bits & 549 & 0.1244 & $0.1133$--$0.1322$ & competitor & all 256, 0 wrong \\
 4 & \textbf{TNF16a} & 16b & 566 & \textbf{0.1233} & $0.1192$--$0.1278$ & legacy: poor $k$, unguarded & all 65{,}534 \checkmark \\
 5 & fp8 e5m2 & 8 bits & 544 & 0.1214 & $0.1168$--$0.1252$ & competitor & all 256, 0 wrong \\
 6 & \textbf{TNF17e} & 17b & 596 & \textbf{0.1207} & $0.1135$--$0.1238$ & recommended & all 124{,}416 \checkmark \\
-7 & \textbf{GF10} & 10 bits & 597 & \textbf{0.1189} & $0.1134$--$0.1204$ & --- & all 1{,}024 \\
+7 & \textbf{GF10} & 10 bits & 597 & \textbf{0.1189} & $0.1134$--$0.1204$ & ours, not a ladder rung & all 1{,}024 \\
 8 & \textbf{TNF16c} & 16b & 591 & \textbf{0.1157} & $0.1118$--$0.1210$ & recommended & all 62{,}208 \checkmark \\
 9 & minifloat & 8 bits & 622 & 0.1075 & $0.1009$--$0.1132$ & competitor & all 254 \checkmark \\
-10 & \textbf{GF14} & 14 bits & 651 & \textbf{0.1074} & $0.0969$--$0.1140$ & --- & all 16{,}384 \\
+10 & \textbf{GF14} & 14 bits & 651 & \textbf{0.1074} & $0.0969$--$0.1140$ & ours, not a ladder rung & all 16{,}384 \\
 11 & \textbf{TNF17e-bare} & 17b & 605 & \textbf{0.1072} & $0.1041$--$0.1104$ & control: guard removed & sweep pending \\
 12 & \textbf{TNF8} & 10 bits & 609 & \textbf{0.1069} & $0.1028$--$0.1099$ & legacy: poor $k$, unguarded & all 1{,}024, 0 wrong \\
 13 & \textbf{TNF16b} & 16b & 604 & \textbf{0.1048} & $0.0998$--$0.1086$ & legacy: poor $k$, unguarded & all 65{,}534 \checkmark \\
@@ -3158,7 +3158,7 @@ unsynthesised logic.}\label{tab:fullthroughput \textbf{Resolution.} The pooled c
 15 & \textbf{BNF16} & 17 bits & 635 & \textbf{0.1034} & $0.0961$--$0.1064$ & legacy: poor $k$, unguarded & all 131{,}072, 0 wrong \\
 16 & \textbf{TNF16} & 17 bits & 629 & \textbf{0.1005} & $0.0971$--$0.1071$ & legacy: poor $k$, unguarded & all 131{,}072 \\
 17 & VAX F & 32 bits & 624 & 0.0942 & $0.0926$--$0.1000$ & competitor & all 40{,}000 \checkmark \\
-18 & \textbf{GF+8} & 8b (+2 sel) & 692 & \textbf{0.0882} & $0.0831$--$0.0931$ & --- & 1{,}024/1{,}024 \checkmark \\
+18 & \textbf{GF+8} & 8b (+2 sel) & 692 & \textbf{0.0882} & $0.0831$--$0.0931$ & ours, not a ladder rung & 1{,}024/1{,}024 \checkmark \\
 19 & posit8 & 8 bits & 614 & 0.0728 & $0.0712$--$0.0774$ & competitor & all 255 \checkmark \\
 20 & takum16 & 16 bits & 853 & 0.0695 & $0.0677$--$0.0745$ & competitor & 632/61{,}505 \\
 21 & LNS16 & 16 bits & 722 & 0.0598 & $0.0581$--$0.0600$ & competitor & 107/65{,}536 \\

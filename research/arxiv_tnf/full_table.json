@@ -20,7 +20,7 @@
    80.31
   ],
   "harness": "lfsr128",
-  "status": "---"
+  "status": "ours, not a ladder rung"
  },
  {
   "rank": 2,
@@ -157,7 +157,7 @@
    69.23
   ],
   "harness": "lfsr128",
-  "status": "---"
+  "status": "ours, not a ladder rung"
  },
  {
   "format": "TNF16c",
@@ -225,7 +225,7 @@
    74.24
   ],
   "harness": "lfsr128",
-  "status": "---"
+  "status": "ours, not a ladder rung"
  },
  {
   "format": "TNF17e-bare",
@@ -408,7 +408,7 @@
    57.51
   ],
   "harness": "lfsr128",
-  "status": "---"
+  "status": "ours, not a ladder rung"
  },
  {
   "rank": 19,
