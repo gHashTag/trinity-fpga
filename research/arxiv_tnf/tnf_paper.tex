@@ -3073,15 +3073,16 @@ on-silicon backpropagation & \textbf{0} & XOR $4/4$, 24--25 epochs & trains \\
 \begin{table}[t]\centering
 \caption{Throughput per area among formats that carry their own range, with
 conformance. One ternary-neuron datapath, XC7A200T, no DSP, every accumulator
-bit observed, median of five placement seeds. \texttt{int8} is reported in
-Table~\ref{tab:rejected}. The last column is what decides how much the rest of
-the row is worth: every code of each 8- and 16-bit format was swept through the
-same RTL that was synthesised and compared against its reference.
-\textbf{TNF16 is at $17$ bits here}, the width its reference specifies, after
-the sixteen-bit module we first measured was found to disagree on all $65{,}536$
-of its codes --- it had one mantissa bit too few, and the correction costs it
-eight places. Three of ours have no reference to check against, and are marked
-so rather than presented as verified.}
+bit observed, median of five placement seeds. \texttt{int8} is in
+Table~\ref{tab:rejected}. \textbf{All three TNF rungs are at their specified
+parameters here}, and all three moved: the modules previously measured
+implemented different formats --- TNF16 one mantissa bit short, TNF32 with twelve
+trits and eleven mantissa bits where the specification gives six and
+twenty-five, TNF64 likewise --- and none had a reference, which is how the
+divergence survived to be quoted. Written from the specification and checked
+against it they agree on every code swept, and they cost eight to eleven places
+each. What is left at the top is the alphabet, which agrees on all four of its
+codes.}
 \label{tab:fullthroughput}
 \small
 \begin{tabular}{rlrrrrrl}
@@ -3090,18 +3091,18 @@ so rather than presented as verified.}
 \midrule
 1 & \textbf{GFTernary} (ours) & 2 bits & 463 & 83.19 & \textbf{0.1797} & $6.61$ & all 4 codes \\
 2 & binary32 & 32 bits & 472 & 77.00 & 0.1631 & $6.37$ & not swept \\
-3 & \textbf{TNF32} (ours) & 32 bits & 492 & 75.57 & \textbf{0.1536} & $10.15$ & no reference \\
-4 & \textbf{TNF64} (ours) & 64 bits & 494 & 75.16 & \textbf{0.1521} & $7.87$ & no reference \\
-5 & \textbf{BNF16} (ours) & 16 bits & 518 & 74.94 & \textbf{0.1447} & $12.28$ & no reference \\
-6 & \textbf{GF+8} (ours) & 8 bits & 510 & 72.84 & \textbf{0.1428} & $4.77$ & no reference \\
-7 & fp8 e5m2 & 8 bits & 480 & 67.06 & 0.1397 & $5.46$ & 6 of 256 wrong \\
-8 & VAX F & 32 bits & 527 & 73.51 & 0.1395 & $4.43$ & not swept \\
-9 & fp8 e4m3 & 8 bits & 485 & 67.02 & 0.1382 & $6.78$ & 14 of 256 wrong \\
-10 & \textbf{GF10} (ours) & 10 bits & 533 & 72.16 & \textbf{0.1354} & $5.08$ & all 1{,}024 \\
-11 & binary16 & 16 bits & 522 & 63.30 & 0.1213 & $7.74$ & all 65{,}536 \\
-12 & \textbf{GF14} (ours) & 14 bits & 587 & 71.15 & \textbf{0.1212} & $4.54$ & all 16{,}384 \\
-13 & minifloat & 8 bits & 558 & 67.06 & 0.1202 & $5.49$ & not swept \\
-14 & \textbf{TNF16} (ours) & 17 bits & 565 & 66.28 & \textbf{0.1173} & $8.56$ & all 131{,}072 \\
+3 & \textbf{BNF16} (ours) & 16 bits & 518 & 74.94 & \textbf{0.1447} & $12.28$ & no reference \\
+4 & \textbf{GF+8} (ours) & 8 bits & 510 & 72.84 & \textbf{0.1428} & $4.77$ & no reference \\
+5 & fp8 e5m2 & 8 bits & 480 & 67.06 & 0.1397 & $5.46$ & 6 of 256 wrong \\
+6 & VAX F & 32 bits & 527 & 73.51 & 0.1395 & $4.43$ & not swept \\
+7 & fp8 e4m3 & 8 bits & 485 & 67.02 & 0.1382 & $6.78$ & 14 of 256 wrong \\
+8 & \textbf{GF10} (ours) & 10 bits & 533 & 72.16 & \textbf{0.1354} & $5.08$ & all 1{,}024 \\
+9 & binary16 & 16 bits & 522 & 63.30 & 0.1213 & $7.74$ & all 65{,}536 \\
+10 & \textbf{GF14} (ours) & 14 bits & 587 & 71.15 & \textbf{0.1212} & $4.54$ & all 16{,}384 \\
+11 & minifloat & 8 bits & 558 & 67.06 & 0.1202 & $5.49$ & not swept \\
+12 & \textbf{TNF32} (ours) & 36 bits & 569 & 66.91 & \textbf{0.1176} & $6.03$ & sampled 9{,}997, 0 wrong \\
+13 & \textbf{TNF16} (ours) & 17 bits & 565 & 66.28 & \textbf{0.1173} & $8.56$ & all 131{,}072 \\
+14 & \textbf{TNF64} (ours) & 65 bits & 572 & 65.38 & \textbf{0.1143} & $8.73$ & sampled, 0 wrong \\
 15 & posit8 & 8 bits & 540 & 44.33 & 0.0821 & $4.02$ & not swept \\
 16 & takum16 & 16 bits & 789 & 58.96 & 0.0747 & $5.75$ & not swept \\
 17 & IBM hex32 & 32 bits & 687 & 46.78 & 0.0681 & $3.78$ & not swept \\

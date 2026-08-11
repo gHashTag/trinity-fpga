@@ -1,31 +1,33 @@
 #!/usr/bin/env python3
-"""ATTACK 5(a), strongest form: give squared error the SAME data access KL had.
+"""ATTACK 5(a), strongest form: give squared error the SAME data access KL had,
+and judge every arm per-window so the margins get an error bar.
 
-`attack5_equal_budget.py` matches the search budget but not the *information*.
+`attack5_equal_budget.py` matched the search budget but not the *information*.
 The KL objective sees the model's logits on real text; plain weight squared error
-sees only the weights. If the squared-error arm loses, a defender of the KL
-result can say the control was starved, not out-argued.
+sees only the weights. If the squared-error arm loses, a defender can say the
+control was starved rather than out-argued. So this arm gives squared error the
+data too:
 
-So this arm gives squared error the data too. The objective is activation-weighted
-(diagonal-Hessian) squared error
+    sum_layers sum_ij  h_j * ( |w_ij| - s_blk * Q(|w_ij|/s_blk) )^2 ,
+    h_j = E[x_j^2] over the SAME wikitext windows the KL search used
 
-    sum_layers sum_ij  h_j * ( |w_ij| - s_block * Q(|w_ij|/s_block) )^2 ,
-    h_j = E[ x_j^2 ] over calibration text
+-- the diagonal-Hessian / activation-weighted squared error that the GPTQ/AWQ
+family actually minimises. Same coordinate descent, same two seeds, same step
+schedule, same per-seed budget, plus a globally-informed Lloyd fit on the same
+weighted distribution.
 
-which is the objective GPTQ/AWQ-family methods actually minimise, collected from
-the SAME wikitext windows the KL search used. Same coordinate descent, same two
-seeds, same step schedule, same per-seed budget, plus a globally-informed Lloyd
-fit on the same weighted distribution.
-
-If a squared-error codebook with equal budget AND equal data access still fails
-to beat MXFP4 while the KL codebook beats it, the objective -- not the budget and
-not the calibration data -- is what carries the result.
+It also fixes a weakness in the first run: that run compared two aggregate
+perplexities per arm and the unweighted-MSE arm changed SIGN between window sets
+(+2.72 % on w0-39, -3.41 % on w40-79). Aggregates cannot say whether that is a
+real effect. Here every arm is scored per window over windows 0..79, which yields
+both aggregates AND a paired t-test against MXFP4 on the same windows.
 
     NWIN=40 EVALS=120 KLWIN=2 python3 attack5_hessian_mse.py
 """
 import os
 import sys
 import json
+import math
 import time
 
 import numpy as np
@@ -37,14 +39,14 @@ MARKER = 'print("загружаю модель…", flush=True)'
 _ns = {}
 exec(compile(open(SRC, encoding="utf-8").read().split(MARKER)[0], SRC, "exec"), _ns)
 fp_levels, q_e8m0_t, quant = _ns["fp_levels"], _ns["q_e8m0_t"], _ns["quant"]
-perplexity, target_modules = _ns["perplexity"], _ns["target_modules"]
-load_wikitext = _ns["load_wikitext"]
+target_modules, load_wikitext = _ns["target_modules"], _ns["load_wikitext"]
 MODEL, K, SEQLEN = _ns["MODEL"], _ns["K"], _ns["SEQLEN"]
 torch.set_grad_enabled(False)
 
 NWIN = int(os.environ.get("NWIN", "40"))
+NTOT = int(os.environ.get("NTOT", "80"))      # windows scored per arm
 EVALS = int(os.environ.get("EVALS", "120"))
-KLWIN = int(os.environ.get("KLWIN", "2"))     # same calibration text as the KL search
+KLWIN = int(os.environ.get("KLWIN", "2"))
 NBINS = int(os.environ.get("NBINS", "2000000"))
 OUT = os.path.join(HERE, "attack5_hessian_mse.json")
 
@@ -52,7 +54,10 @@ MXFP4 = sorted(fp_levels(2, 1))
 LLOYD = [x / 0.96567 for x in
          [0.0, 0.10334, 0.21079, 0.32491, 0.44963, 0.59031, 0.75635, 0.96567]]
 KLOPT = [0.0, 0.07701, 0.18828, 0.31396, 0.46561, 0.6113, 0.79074, 1.0]
-PUB = {"fp32": 14.4874, "MXFP4": 21.9397, "KL-optimised": 20.2587}
+# reproduced by attack5_equal_budget.py, this machine, this run of the ruler
+MSE_CD = [0.0, 0.08451, 0.17328, 0.26896, 0.38311, 0.5288, 0.70824, 1.0]
+MSE_LL = [0.0, 0.07744, 0.16076, 0.25518, 0.36837, 0.51443, 0.6949, 1.0]
+PUB = {"MXFP4 (E2M1)": 21.9397, "KL-optimised": 20.2587}
 
 
 def normalise(lv):
@@ -61,7 +66,7 @@ def normalise(lv):
 
 
 def main():
-    out = {"NWIN": NWIN, "EVALS_per_seed": EVALS, "KLWIN": KLWIN}
+    out = {"NWIN": NWIN, "NTOT": NTOT, "EVALS_per_seed": EVALS, "KLWIN": KLWIN}
     print("loading model…", flush=True)
     from transformers import AutoModelForCausalLM, AutoTokenizer
     tok = AutoTokenizer.from_pretrained(MODEL)
@@ -72,50 +77,27 @@ def main():
     orig = {n: m.weight.detach().clone() for n, m in lins}
     flat = ids.reshape(-1)
     win = flat[:(flat.numel() // SEQLEN) * SEQLEN].view(-1, SEQLEN)
+    print(f"{len(lins)} linear layers, {win.shape[0]} windows", flush=True)
 
     def apply(lv):
-        if lv is None:
-            for n, m in lins:
-                m.weight.copy_(orig[n])
-            return
         for n, m in lins:
-            m.weight.copy_(quant(orig[n], lv))
+            m.weight.copy_(orig[n] if lv is None else quant(orig[n], lv))
 
-    # ---- ruler --------------------------------------------------------------
+    # ---- activation second moments, on the KL search's own calibration text --
     apply(None)
-    r = {"fp32": perplexity(model, ids, NWIN)}
-    apply(MXFP4)
-    r["MXFP4"] = perplexity(model, ids, NWIN)
-    apply(KLOPT)
-    r["KL-optimised"] = perplexity(model, ids, NWIN)
-    ok = all(abs(r[k] - PUB[k]) < 0.02 for k in PUB)
-    for k in ("fp32", "MXFP4", "KL-optimised"):
-        print(f"RULER {k:<13} {r[k]:9.4f} (published {PUB[k]}) "
-              f"{'ok' if abs(r[k]-PUB[k])<0.02 else 'MISMATCH'}", flush=True)
-    out["ruler"], out["ruler_ok"] = r, bool(ok)
-    json.dump(out, open(OUT, "w"), indent=1)
-    if not ok:
-        print("RULER BROKEN. Stop.")
-        return 1
-    apply(None)
-
-    # ---- collect E[x^2] per input feature, on the KL search's own text -------
-    print(f"\ncollecting activation second moments on windows 0..{KLWIN-1}…",
-          flush=True)
+    print(f"\ncollecting E[x^2] on windows 0..{KLWIN-1}…", flush=True)
     t0 = time.time()
-    acc, cnt = {}, {}
-    hooks = []
+    acc, cnt, hooks = {}, {}, []
 
     def mk(name):
-        def hook(mod, inp, _out):
+        def hook(_m, inp, _o):
             x = inp[0].detach().double().reshape(-1, inp[0].shape[-1])
             s = (x * x).sum(0)
             if name in acc:
                 acc[name] += s
                 cnt[name] += x.shape[0]
             else:
-                acc[name] = s
-                cnt[name] = x.shape[0]
+                acc[name], cnt[name] = s, x.shape[0]
         return hook
 
     for n, m in lins:
@@ -124,16 +106,14 @@ def main():
         model(win[i:i + 1])
     for h in hooks:
         h.remove()
-    H = {n: (acc[n] / cnt[n]) for n in acc}
-    print(f"  {len(H)} layers, [{time.time()-t0:.0f}s]", flush=True)
-    hs = torch.cat([v for v in H.values()])
-    print(f"  h_j: min {float(hs.min()):.3e} median {float(hs.median()):.3e} "
-          f"max {float(hs.max()):.3e}  (dynamic range "
-          f"{float(hs.max()/hs.clamp(min=1e-30).min()):.2e})", flush=True)
+    H = {n: acc[n] / cnt[n] for n in acc}
+    hs = torch.cat(list(H.values()))
+    print(f"  {len(H)} layers [{time.time()-t0:.0f}s]; h_j min {float(hs.min()):.3e} "
+          f"med {float(hs.median()):.3e} max {float(hs.max()):.3e}", flush=True)
     out["h_stats"] = {"min": float(hs.min()), "median": float(hs.median()),
                       "max": float(hs.max())}
 
-    # ---- weighted histogram of y = |w|/s, weight = h_j * s^2 ----------------
+    # ---- activation-weighted histogram of y = |w|/s -------------------------
     print("building the activation-weighted squared-error objective…", flush=True)
     t0 = time.time()
     A = torch.zeros(NBINS + 1, dtype=torch.float64)
@@ -144,7 +124,7 @@ def main():
         cols = (w.shape[1] // K) * K
         if cols == 0:
             continue
-        a = w[:, :cols].double().abs()                       # [out, cols]
+        a = w[:, :cols].double().abs()
         blk = a.reshape(-1, K)
         s = q_e8m0_t((blk.amax(dim=1) / 1.0).clamp(min=1e-30)).clamp(min=1e-30)
         y = (blk / s[:, None]).reshape(-1)
@@ -164,19 +144,16 @@ def main():
     def hsse(lv):
         v = sorted(float(x) for x in lv)
         bnd = [(v[i] + v[i + 1]) / 2 for i in range(len(v) - 1)]
-        edges = [0] + [min(NBINS + 1, int(np.ceil(b * NBINS))) for b in bnd] \
-                + [NBINS + 1]
+        e = [0] + [min(NBINS + 1, int(np.ceil(b * NBINS))) for b in bnd] + [NBINS + 1]
         tot = 0.0
         for k in range(len(v)):
-            lo, hi = edges[k], edges[k + 1]
-            if hi <= lo:
-                continue
-            tot += (float(cA[hi] - cA[lo]) - 2.0 * v[k] * float(cB[hi] - cB[lo])
-                    + v[k] * v[k] * float(cC[hi] - cC[lo]))
+            lo, hi = e[k], e[k + 1]
+            if hi > lo:
+                tot += (float(cA[hi] - cA[lo]) - 2 * v[k] * float(cB[hi] - cB[lo])
+                        + v[k] * v[k] * float(cC[hi] - cC[lo]))
         return tot
 
     def hsse_exact(lv):
-        """Ground truth via the real quantiser, h-weighted."""
         tot = 0.0
         for n, _ in lins:
             w = orig[n]
@@ -186,14 +163,13 @@ def main():
         return tot
 
     print("\n  instrument check on the h-weighted objective:")
-    worst = 0.0
-    chk = {}
+    chk, worst = {}, 0.0
     for name, lv in (("MXFP4", MXFP4), ("KL-optimised", KLOPT)):
         h_, e_ = hsse(lv), hsse_exact(lv)
         rel = abs(h_ - e_) / e_
         worst = max(worst, rel)
         chk[name] = {"hist": h_, "exact": e_, "rel": rel}
-        print(f"    {name:<13} hist {h_:.8e}  quant() {e_:.8e}  rel {rel:.2e}",
+        print(f"    {name:<13} hist {h_:.8e} quant() {e_:.8e} rel {rel:.2e}",
               flush=True)
     out["objective_check"] = chk
     if worst > 1e-3:
@@ -201,23 +177,22 @@ def main():
         json.dump(out, open(OUT, "w"), indent=1)
         return 1
 
-    # ---- same coordinate descent, same budget, same seeds -------------------
-    def coord_descent(objective, tag, budget):
+    # ---- same machinery, same budget, same seeds ----------------------------
+    def coord_descent(obj, tag, budget):
         best, traj = None, {}
-        for seed_name, seed in (("MXFP4", MXFP4), ("Lloyd-Max", LLOYD)):
-            lv = normalise(seed)
-            cur = start = objective(lv)
+        for sn, sd in (("MXFP4", MXFP4), ("Lloyd-Max", LLOYD)):
+            lv = normalise(sd)
+            cur = start = obj(lv)
             evals, step = 0, 0.06
             while evals < budget and step > 0.004:
                 improved = False
                 for i in range(1, len(lv) - 1):
                     for d in (+step, -step):
                         cand = list(lv)
-                        cand[i] = cand[i] + d
-                        lo, hi = cand[i - 1] + 1e-3, cand[i + 1] - 1e-3
-                        if not (lo < cand[i] < hi):
+                        cand[i] += d
+                        if not (cand[i - 1] + 1e-3 < cand[i] < cand[i + 1] - 1e-3):
                             continue
-                        v = objective(cand)
+                        v = obj(cand)
                         evals += 1
                         if v < cur - 1e-9 * abs(cur):
                             lv, cur, improved = cand, v, True
@@ -227,24 +202,21 @@ def main():
                         break
                 if not improved:
                     step /= 2
-            print(f"  [{tag}] from {seed_name:<10} {evals:4d} evals "
-                  f"{start:.6e} -> {cur:.6e} ({100*(1-cur/start):+.3f}%)  "
+            print(f"  [{tag}] from {sn:<10} {evals:4d} evals {start:.6e} -> "
+                  f"{cur:.6e} ({100*(1-cur/start):+.3f}%)  "
                   f"{[round(x,5) for x in lv]}", flush=True)
-            traj[seed_name] = {"start": start, "end": cur, "evals": evals,
-                               "levels": [float(x) for x in lv]}
+            traj[sn] = {"start": start, "end": cur, "evals": evals,
+                        "levels": [float(x) for x in lv]}
             if best is None or cur < best[0]:
-                best = (cur, lv, seed_name)
+                best = (cur, lv, sn)
         return best, traj
 
     print("\ncoordinate descent on activation-weighted squared error:", flush=True)
     (v_eq, lv_eq, o_eq), t_eq = coord_descent(hsse, "hSSE 1x", EVALS)
     (v_5x, lv_5x, o_5x), t_5x = coord_descent(hsse, "hSSE 5x", 5 * EVALS)
-    out["hmse_equal"] = {"levels": lv_eq, "obj": v_eq, "origin": o_eq,
-                         "trajectory": t_eq}
-    out["hmse_5x"] = {"levels": lv_5x, "obj": v_5x, "origin": o_5x,
-                      "trajectory": t_5x}
+    out["hmse_equal"] = {"levels": lv_eq, "obj": v_eq, "origin": o_eq, "traj": t_eq}
+    out["hmse_5x"] = {"levels": lv_5x, "obj": v_5x, "origin": o_5x, "traj": t_5x}
 
-    # ---- Lloyd fit on the same weighted distribution ------------------------
     centres = (torch.arange(NBINS + 1, dtype=torch.float64) + 0.5) / NBINS
     hB, hC = cB[1:] - cB[:-1], cC[1:] - cC[:-1]
 
@@ -277,42 +249,77 @@ def main():
     lv_ll = fits[bf]["levels"]
     out["hlloyd_fits"], out["hlloyd"] = fits, {"levels": lv_ll, "from": bf}
 
-    arms = [("MXFP4 (E2M1)", MXFP4), ("KL-optimised", KLOPT),
-            ("hMSE-CD equal budget", lv_eq), ("hMSE-CD 5x budget", lv_5x),
-            ("hMSE Lloyd (global)", lv_ll)]
+    arms = [("MXFP4 (E2M1)", MXFP4),
+            ("KL-optimised", KLOPT),
+            ("MSE-CD (unweighted)", MSE_CD),
+            ("MSE-Lloyd (unweighted)", MSE_LL),
+            ("hMSE-CD equal budget", lv_eq),
+            ("hMSE-Lloyd (global)", lv_ll)]
     print(f"\n  {'codebook':<24} {'h-weighted SSE':>16} {'x best':>9}")
     objs = {n: hsse(l) for n, l in arms}
     ref = min(objs.values())
     for n, _ in arms:
         print(f"  {n:<24} {objs[n]:>16.8e} {objs[n]/ref:>8.4f}x")
-    out["objective"] = objs
+    out["h_objective"] = objs
     del cA, cB, cC, hB, hC, centres
+    json.dump(out, open(OUT, "w"), indent=1)
 
-    held = win[NWIN:2 * NWIN].reshape(1, -1)
-    n_held = held.shape[1] // SEQLEN
-    print(f"\n  {'codebook':<24} {'ppl w0-39':>10} {'vs MXFP4':>9} "
-          f"{'ppl w40-79':>11} {'vs MXFP4':>9}", flush=True)
-    ppl, pph = {}, {}
+    # ---- per-window NLL: one pass gives both window sets AND paired tests ----
+    print(f"\nscoring {NTOT} windows per arm (per-window NLL)…", flush=True)
+    nll = {}
     for name, lv in arms:
         apply(lv)
-        ppl[name] = r["MXFP4"] if name == "MXFP4 (E2M1)" else (
-            r["KL-optimised"] if name == "KL-optimised"
-            else perplexity(model, ids, NWIN))
-        pph[name] = perplexity(model, held, n_held)
-        mx, mxh = ppl["MXFP4 (E2M1)"], pph["MXFP4 (E2M1)"]
-        print(f"  {name:<24} {ppl[name]:>10.4f} {100*(ppl[name]/mx-1):>+8.2f}% "
-              f"{pph[name]:>11.4f} {100*(pph[name]/mxh-1):>+8.2f}%", flush=True)
-        out["ppl"], out["ppl_heldout"] = ppl, pph
+        t0 = time.time()
+        v = []
+        for i in range(NTOT):
+            c = win[i:i + 1]
+            v.append(float(model(c, labels=c).loss.double()))
+        nll[name] = v
+        a = float(np.exp(np.mean(v[:NWIN])))
+        b = float(np.exp(np.mean(v[NWIN:NTOT])))
+        print(f"  {name:<24} ppl w0-{NWIN-1} {a:8.4f}   "
+              f"ppl w{NWIN}-{NTOT-1} {b:8.4f}   [{time.time()-t0:.0f}s]", flush=True)
+        out["nll"] = nll
         json.dump(out, open(OUT, "w"), indent=1)
     apply(None)
 
-    mx = ppl["MXFP4 (E2M1)"]
+    # ---- report -------------------------------------------------------------
+    ref_nll = np.array(nll["MXFP4 (E2M1)"])
+    ppl_a = {n: float(np.exp(np.mean(nll[n][:NWIN]))) for n, _ in arms}
+    ppl_b = {n: float(np.exp(np.mean(nll[n][NWIN:NTOT]))) for n, _ in arms}
+    ppl_all = {n: float(np.exp(np.mean(nll[n]))) for n, _ in arms}
+    mx_a, mx_b, mx_all = (ppl_a["MXFP4 (E2M1)"], ppl_b["MXFP4 (E2M1)"],
+                          ppl_all["MXFP4 (E2M1)"])
+    ruler_ok = (abs(mx_a - PUB["MXFP4 (E2M1)"]) < 0.02 and
+                abs(ppl_a["KL-optimised"] - PUB["KL-optimised"]) < 0.02)
+    print(f"\nRULER on w0-{NWIN-1}: MXFP4 {mx_a:.4f} (pub {PUB['MXFP4 (E2M1)']}), "
+          f"KL {ppl_a['KL-optimised']:.4f} (pub {PUB['KL-optimised']}) -> "
+          f"{'ok' if ruler_ok else 'MISMATCH'}")
+    out["ruler_ok"] = bool(ruler_ok)
+
+    print(f"\n  {'codebook':<24} {'w0-39':>9} {'Δ%':>7} {'w40-79':>9} {'Δ%':>7} "
+          f"{'w0-79':>9} {'Δ%':>7} {'t(79)':>8} {'p':>10} {'wins':>7}")
+    stats = {}
+    for n, _ in arms:
+        d = np.array(nll[n]) - ref_nll          # >0 means worse than MXFP4
+        t = float(d.mean() / (d.std(ddof=1) / math.sqrt(len(d)))) if d.std() > 0 else 0.0
+        # two-sided p from the normal approximation (n=80)
+        p = math.erfc(abs(t) / math.sqrt(2))
+        wins = int((d < 0).sum())
+        stats[n] = {"ppl_w0_39": ppl_a[n], "ppl_w40_79": ppl_b[n],
+                    "ppl_w0_79": ppl_all[n], "t": t, "p_approx": p,
+                    "windows_better_than_mxfp4": wins, "n_windows": len(d)}
+        print(f"  {n:<24} {ppl_a[n]:>9.4f} {100*(ppl_a[n]/mx_a-1):>+6.2f}% "
+              f"{ppl_b[n]:>9.4f} {100*(ppl_b[n]/mx_b-1):>+6.2f}% "
+              f"{ppl_all[n]:>9.4f} {100*(ppl_all[n]/mx_all-1):>+6.2f}% "
+              f"{t:>8.2f} {p:>10.2e} {wins:>4d}/{len(d)}")
+    out["stats"] = stats
     out["verdict"] = {
-        "hmse_equal_beats_mxfp4": bool(ppl["hMSE-CD equal budget"] < mx),
-        "hmse_5x_beats_mxfp4": bool(ppl["hMSE-CD 5x budget"] < mx),
-        "hmse_lloyd_beats_mxfp4": bool(ppl["hMSE Lloyd (global)"] < mx),
-        "kl_beats_mxfp4": bool(ppl["KL-optimised"] < mx),
-    }
+        n: {"beats_mxfp4_w0_39": bool(ppl_a[n] < mx_a),
+            "beats_mxfp4_w40_79": bool(ppl_b[n] < mx_b),
+            "beats_mxfp4_all80": bool(ppl_all[n] < mx_all),
+            "consistent_sign": bool((ppl_a[n] < mx_a) == (ppl_b[n] < mx_b))}
+        for n, _ in arms if n != "MXFP4 (E2M1)"}
     json.dump(out, open(OUT, "w"), indent=1)
     print(f"\nwrote {OUT}")
     return 0

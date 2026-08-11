@@ -289,9 +289,17 @@
   "true Lloyd (deployed path)": 52020.162009995984
  },
  "ppl": {
-  "MXFP4 (E2M1)": 21.939661755059703
+  "MXFP4 (E2M1)": 21.939661755059703,
+  "Lloyd-Max (published)": 22.916605575392765,
+  "KL-optimised": 20.258629512752968,
+  "MSE-CD equal budget": 22.5373215880481,
+  "MSE-CD 5x budget": 22.5373215880481
  },
  "ppl_heldout": {
-  "MXFP4 (E2M1)": 24.033520284395294
+  "MXFP4 (E2M1)": 24.033520284395294,
+  "Lloyd-Max (published)": 25.172544820728582,
+  "KL-optimised": 21.9525240637283,
+  "MSE-CD equal budget": 23.213052978953304,
+  "MSE-CD 5x budget": 23.213052978953304
  }
 }
