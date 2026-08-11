@@ -30,7 +30,10 @@ FINDINGS = [
     ("the assembled node",             ["tab:node", "28.0"]),
     ("node pipelining",                ["tab:nodepipe", "126.73"]),
     ("three digits forced",            ["frougny2011"]),
-    ("full throughput table",          ["tab:fullthroughput", "0.1797"]),
+    # Was 0.1797 -- GFTernary on the narrow harness. Every row is now on the
+    # common 128-bit one, where the same decoder reads 0.1574; the 64-LUT
+    # difference is the wrapper, not the format.
+    ("full throughput table",          ["tab:fullthroughput", "0.1574"]),
     # Was ["98.7"] -- takum16 at 98.7% wrong. Withdrawn: the comparison used
     # the linear reference against a logarithmic decoder. The finding that
     # survives is IBM hex32 and the fp8 completion.
