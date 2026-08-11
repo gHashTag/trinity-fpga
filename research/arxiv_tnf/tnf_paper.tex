@@ -3926,6 +3926,61 @@ spends twenty-seven sections dismantling in other people's work.}
 
 
 
+
+\section{What was already known, and what is left}
+\label{sec:relatedternary}
+
+The construction this paper measures --- a binary-radix float whose exponent
+field carries a ternary-cardinality alphabet packed densely into
+$\lceil E_t\log_2 3\rceil$ bits --- sits close enough to several existing lines
+of work that the boundaries are worth drawing explicitly rather than left to a
+reader to find.
+
+\paragraph{A ternary exponent field is not new.} TERNAC~\cite{ternac1,ternac2}
+was a 48-trit floating-point format with a 42-trit mantissa and a
+\emph{six-trit exponent}, emulated on binary hardware at SUNY Buffalo in
+1972--73. It differs from the format here in two ways that matter --- its value
+semantics are radix-3, and its trits are represented as a pair of binary numbers
+rather than packed --- but \emph{the idea of an exponent field counted in trits
+predates this work by half a century}, and no claim of priority over it is made
+or implied anywhere above.
+
+\paragraph{The $k=5$ packing is public.} Compilade~\cite{compilade} published
+the five-trits-in-eight-bits packing in June 2024 and reported it as
+$99.06\%$ efficient, which is exactly $1-w(5)$ in the notation of
+Theorem~\ref{thm:tiling}. The accompanying discussion also records that
+$17$ trits in $27$ bits and $111$ in $176$ beat $1.6$ bits per trit --- that is,
+\emph{the unevenness of $w(k)$ has been observed publicly}, if not written as a
+function. What Section~\ref{sec:tiling} adds is the closed form, the proof that
+the waste is positive at every $k$, and the consequence for choosing a rung; the
+$k=5$ datum itself is Compilade's.
+
+\paragraph{The packed decoder has been built.} TerEffic~\cite{tereffic}
+implements exactly the packed-$3^5$-in-eight-bits decoder in FPGA LUTs, for
+ternary \emph{weights} rather than for an exponent field. It is one abstraction
+level from the decoders measured in Section~\ref{sec:fiftyfour} and any reader of
+that section will know it.
+
+\paragraph{The binary encoding of balanced ternary is textbook.}
+Parhami and McKeown~\cite{bctparhami} treat binary-encoded balanced ternary
+directly, at two bits per trit --- which is the baseline dense packing improves
+on, and the source of the encoding penalty this paper quantifies. Knuth's
+treatment~\cite{knuthv2} and the Setun machines~\cite{setun} establish balanced
+ternary as a radix; \emph{this work does not change the radix} and therefore does
+not inherit the radix-economy argument that literature carries.
+
+\paragraph{What is left.} Setting those aside, what remains is narrow and stated
+narrowly: the combination of ternary \emph{cardinality} with binary
+\emph{radix} and binary \emph{storage}, with the capacity surplus
+$2^{\lceil k\log_2 3\rceil}-3^k$ treated as a design variable rather than as
+overhead --- reserved, guarded, and priced. Around that: the closed form of
+$w(k)$ and its consequences for rung choice
+(Sections~\ref{sec:tiling},~\ref{sec:window}), the reservation cost measured
+rather than argued, and placed-and-routed silicon with exhaustive conformance for
+each rung claimed. Every one of those is a contribution about \emph{measurement
+and boundary}, not about being first.
+
+
 \section{At fifty-four seeds the claims separate}
 \label{sec:fiftyfour}
 
@@ -5091,6 +5146,35 @@ Conference (DAC)}, 2024. \url{https://doi.org/10.1145/3649329.3656502}
 \bibitem{fibbinary} R.~Fiandaca and M.~D.~Gomony, ``Fibbinary-Based Compression
 and Quantization for Efficient Neural Radio Receivers,'' arXiv:2511.01921, 2025.
 \bibitem{bitnet} S.~Ma et al., ``The Era of 1-bit LLMs: All Large Language Models are in 1.58 Bits,'' arXiv:2402.17764, 2024.
+\bibitem{ternac1} G.~Frieder, ``Ternary computers: Part I: motivation for
+  ternary computers,'' \emph{MICRO-5}, 1972. DOI 10.1145/776378.776392.
+
+\bibitem{ternac2} G.~Frieder and C.~Luk, ``Ternary computers: Part 2: emulation
+  of a ternary computer,'' \emph{MICRO-5}, 1972. DOI 10.1145/776378.776393.
+  TERNAC: a 48-trit floating-point format with a 42-trit mantissa and a
+  \emph{six-trit exponent}, emulated on binary hardware.
+
+\bibitem{bctparhami} B.~Parhami and M.~McKeown, ``Arithmetic with Binary-Encoded
+  Balanced Ternary Numbers,'' \emph{Asilomar Conf.\ on Signals, Systems and
+  Computers}, 2013, pp.~1130--1133.
+
+\bibitem{compilade} Compilade, ``How to pack ternary numbers in 8-bit bytes,''
+  \texttt{compilade.net/blog/ternary-packing}, 26 June 2024. Publishes the
+  five-trits-in-eight-bits packing and its $99.06\%$ efficiency, which is
+  $1-w(5)$ in the notation of this paper.
+
+\bibitem{tereffic} C.~Yin, Z.~Bai, P.~Venkatram, S.~Aggarwal, Z.~Li, and
+  T.~Mitra, ``TerEffic: Highly Efficient Ternary LLM Inference on FPGA,''
+  arXiv:2502.16473, 2025. Builds the packed-$3^5$-in-eight-bits decoder in FPGA
+  LUTs, \S III-B.
+
+\bibitem{knuthv2} D.~E.~Knuth, \emph{The Art of Computer Programming, Vol.~2:
+  Seminumerical Algorithms}, \S4.1, Addison-Wesley, 3rd ed., 1997.
+
+\bibitem{setun} N.~P.~Brusentsov and J.~Ramil Alvarez, ``Ternary Computers: The
+  Setun and the Setun 70,'' \emph{IFIP SoRuCom}, AICT vol.~357, 2006,
+  pp.~74--80.
+
 \end{thebibliography}
 
 \end{document}
