@@ -4,6 +4,7 @@
 0.1140 live near:  bits  545  6213  textbf01140  363  all 1024 0 wrong   (line 3110)
 0.1173 live near:  bits  565  6628  textbf01173  856  all 131072  14    (line 3108)
 0.1176 live near: bits  569  6691  textbf01176  603  sampled 9997 0 wr   (line 3107)
+0.1176 live near: bits  571  6713  textbf01176  330  all 131072 0 wron   (line 3106)
 0.1651 live near:  apot2 d0  384  1  01651  two barrel shifts  apot4   (line 3175)
 1.39 live near: kum and tekum moves by 139times to 172times begincor   (line 3976)
 28.16 live near: posit32  32 bits  953  2816  00295  229  not swept     (line 3116)
