@@ -23,17 +23,6 @@
  },
  {
   "rank": 3,
-  "format": "fp8 e5m2",
-  "ours": false,
-  "storage": "8 bits",
-  "lut": 480,
-  "mhz": 67.06,
-  "mhz_per_lut": 0.1397,
-  "spread": 5.46,
-  "checked": "6 of 256 wrong"
- },
- {
-  "rank": 4,
   "format": "VAX F",
   "ours": false,
   "storage": "32 bits",
@@ -44,18 +33,7 @@
   "checked": "not swept"
  },
  {
-  "rank": 5,
-  "format": "fp8 e4m3",
-  "ours": false,
-  "storage": "8 bits",
-  "lut": 485,
-  "mhz": 67.02,
-  "mhz_per_lut": 0.1382,
-  "spread": 6.78,
-  "checked": "14 of 256 wrong"
- },
- {
-  "rank": 6,
+  "rank": 4,
   "format": "GF10",
   "ours": true,
   "storage": "10 bits",
@@ -64,6 +42,28 @@
   "mhz_per_lut": 0.1354,
   "spread": 5.08,
   "checked": "all 1{,}024"
+ },
+ {
+  "rank": 5,
+  "format": "fp8 e4m3",
+  "ours": false,
+  "storage": "8 bits",
+  "lut": 516,
+  "mhz": 64.7,
+  "mhz_per_lut": 0.1254,
+  "spread": 9.33,
+  "checked": "all 256, 0 wrong"
+ },
+ {
+  "rank": 6,
+  "format": "fp8 e5m2",
+  "ours": false,
+  "storage": "8 bits",
+  "lut": 529,
+  "mhz": 65.3,
+  "mhz_per_lut": 0.1234,
+  "spread": 5.7,
+  "checked": "all 256, 0 wrong"
  },
  {
   "rank": 7,
