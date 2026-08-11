@@ -24,6 +24,17 @@ more area; at 32 it buys 30% for 42%, and the throughput per area falls. The
 crossover is where $N/2$ registers stop being cheap relative to the tree they
 cut.
 
+> **Mechanism refuted and fan-in 32 withdrawn, same day — see
+> `PIPELINE_MECHANISM_2026-08-11.md`.** The register-cost explanation above does
+> not survive measurement: the cut costs a *constant* 9 FF and 2 CARRY4 per
+> weight at every fan-in from 8 to 32, and the LUT penalty is **largest at the
+> smallest fan-in**. What the register actually does is prevent yosys collapsing
+> the tree into a carry-save compressor, forcing N standalone adders — carry-chain
+> restructuring, not register cost. And the −8.7 % at fan-in 32 flips sign with
+> the placement seed (the pipelined arm carries 14.6 % seed spread), so that row
+> should not be quoted in either direction. The fan-in 8 and 16 measurements are
+> unaffected.
+
 So the quotable configuration is fan-in 8 or 16 with one pipeline stage:
 **32.4 LUT per weight at 126.73 MHz**, or **34.9 at 106.38**, both at zero DSP
 and one cycle of added latency. At fan-in 32 the unpipelined form is the better
