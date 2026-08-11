@@ -5604,3 +5604,34 @@ failure mode; it is the slower path to the same place.
 had accumulated and every one was an unsoundness mechanism, because every audit
 had been pointed at unsoundness. When a taxonomy looks complete, ask what
 question produced it before concluding anything about the field.
+
+## Wave 649 — an exit code is not a diagnosis
+
+**"It failed" and "it noticed" are different facts.** A harness that reads only
+the sign of an exit code cannot tell a check that detected its subject was
+missing from one that crashed on an unrelated error, ran a binary that does not
+exist, or hung. All three look identical. Require positive evidence — a
+diagnostic line naming the absence — before recording that a check behaved
+correctly.
+
+**Measure the split before deciding what to enforce.** Classifying what each
+step actually emitted turned "0 passing on nothing" into "9 diagnosed, 28 merely
+crashed". The headline claim had been true and nearly vacuous. That measurement
+is worth more than the fix, because it converts an assumption into a number that
+can be tracked.
+
+**Ship a ratchet when the honest threshold would disable the gate.** Twenty-eight
+steps cannot be fixed in one wave, and failing them all would take the check out
+of service — which is how an incomplete gate turns into an unsound one. Publish
+the count, cap it at today's value, and let it only fall. Progress becomes
+visible without the gate becoming an obstacle.
+
+**Check that an exemption did any work.** A list-membership test counted a step
+as exempt even when it failed, so the summary was identical whether the
+exemption suppressed anything or not. An exemption is a claim that a green
+verdict needed suppressing; count it only when it actually did.
+
+**A comment can describe behaviour the code never had.** The exemption counter
+carried a comment saying it reported "exemptions actually used" — written in the
+same wave as the code that did not do that. When you write what a function does,
+re-read the function.
