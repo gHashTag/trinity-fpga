@@ -66,6 +66,37 @@ conclusion survives either way — it is *harder* to argue for element codebooks
 when the best possible one already loses — but the 0.9 % margin it quotes is a
 property of the alignment rule, not of the formats.
 
+## Second correction: there is one rule, and a per-codebook phase
+
+An adversarial check of a later result went looking for a convention artefact and
+found something sharper. The "two conventions" are **bit-exactly the same
+operation**:
+
+    quant(raw MXFP4,  top = 6.0,     s = 2^⌈log₂(a_max)⌉ / top)
+    quant(MXFP4 scaled to top = 1.0, s = 2^⌈log₂(a_max / top)⌉)
+      -> max absolute difference 0.000e+00, on real weights, float64, K = 32
+
+Same for Lloyd-Max. So there was never a choice of rule. There is one rule, and a
+parameter nobody had named: **where the codebook's top level sits inside its
+binade**, φ = log₂(top) mod 1.
+
+| codebook | raw top | φ | headroom lost to the ⌈·⌉ |
+|---|---:|---:|---:|
+| E2M1 | 6.0 | 0.5850 | 0.585 bit |
+| Lloyd-Max | 0.96567 | 0.9496 | 0.950 bit |
+| a top that is a power of two | — | 0 | none |
+
+The E8M0 scale rounds up to a power of two, so a codebook whose top is not one
+throws away the fraction of a binade between them. That is the whole of the
+21.9397 / 22.4998 spread, and it is a property of the *normalisation*, not of the
+formats.
+
+**The consequence for any codebook comparison: normalise the tops, or you are
+measuring headroom waste rather than codebook shape.** Checked explicitly for the
+KL-optimised codebook result — MXFP4, Lloyd-Max and the KL codebook all carry
+top = 1.000000, φ = 0.000000, so that comparison holds the phase constant and the
+artefact does not apply to it.
+
 ## What this does and does not damage
 
 **Every internally consistent comparison stands.** `SCALE_FRONTIER`'s table puts
