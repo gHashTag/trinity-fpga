@@ -5635,3 +5635,43 @@ verdict needed suppressing; count it only when it actually did.
 carried a comment saying it reported "exemptions actually used" — written in the
 same wave as the code that did not do that. When you write what a function does,
 re-read the function.
+
+## Wave 650 — a wrong gate fails loudly, a wrong measurement propagates
+
+**Check a classifier against cases whose answer you already know, before
+publishing its output.** A verdict classifier reported "9 diagnosed, 28 merely
+crashed", and that number went into a proposition, a README and a filed issue.
+All 28 were in fact naming the exact missing file — in the *tool's* words, not
+the repository's house style. The classifier had been written to recognise one
+project convention and scored yosys's and Python's perfectly clear diagnostics
+as silence.
+
+**Do not encode house style where you mean a fact.** The question was "did this
+step notice its subject was gone?" and the test asked "does the output match our
+`::error::` convention?". Those coincide only inside code we wrote. The corrected
+test asks whether the failure names a starved path — which is the actual
+distinction, and holds regardless of who emitted the message.
+
+**Derive the criterion from the failure you are trying to separate.** The
+distinction that mattered was "starved" versus "already broken", so the test
+should ask what only a starved run can say. Working backwards from the two
+defects that hid gave a criterion that catches both — and a seven-case check,
+including those two, that keeps it honest.
+
+**A fixture that fails silently may be modelling something your tree does not
+contain.** The self-test's "honest step" was a bare `test -f`. No real step
+behaved that way, so the fixture was exercising a case that only existed in the
+test — and it blocked tightening a threshold that the real tree already met.
+
+**When a measurement is corrected, correct it where it was published.** The
+proposition, the README sentence and the filed issue each carried the wrong
+figure, and each needed the correction attached to it — not a new document
+saying so elsewhere. This is the second time a published number has been wrong
+here; both times the fix was to annotate at the site, not to quietly restate.
+
+**Over-detection applies to measurements, not just to gates.** Four consecutive
+waves have now seen a new instrument fire wrongly on first use. A gate that
+over-detects announces itself by failing correct work. A *measurement* that
+over-detects produces a plausible number that then gets quoted — which is
+strictly worse, and argues for treating every new figure as unverified until an
+injection confirms the instrument.
