@@ -19,7 +19,8 @@
    84.51,
    80.31
   ],
-  "harness": "lfsr128"
+  "harness": "lfsr128",
+  "status": "---"
  },
  {
   "rank": 2,
@@ -41,7 +42,8 @@
    73.75,
    75.61
   ],
-  "harness": "lfsr128"
+  "harness": "lfsr128",
+  "status": "competitor"
  },
  {
   "rank": 3,
@@ -63,7 +65,8 @@
    68.3,
    72.6
   ],
-  "harness": "lfsr128"
+  "harness": "lfsr128",
+  "status": "competitor"
  },
  {
   "format": "TNF16a",
@@ -85,7 +88,8 @@
    70.4,
    67.49
   ],
-  "harness": "lfsr128"
+  "harness": "lfsr128",
+  "status": "legacy: poor $k$, unguarded"
  },
  {
   "rank": 5,
@@ -107,7 +111,8 @@
    66.09,
    63.65
   ],
-  "harness": "lfsr128"
+  "harness": "lfsr128",
+  "status": "competitor"
  },
  {
   "format": "TNF17e",
@@ -128,7 +133,8 @@
    73.78,
    68.51
   ],
-  "harness": "lfsr128"
+  "harness": "lfsr128",
+  "status": "recommended"
  },
  {
   "rank": 7,
@@ -150,7 +156,8 @@
    71.55,
    69.23
   ],
-  "harness": "lfsr128"
+  "harness": "lfsr128",
+  "status": "---"
  },
  {
   "format": "TNF16c",
@@ -171,7 +178,8 @@
    71.54,
    68.35
   ],
-  "harness": "lfsr128"
+  "harness": "lfsr128",
+  "status": "recommended"
  },
  {
   "rank": 9,
@@ -193,7 +201,8 @@
    66.83,
    68.68
   ],
-  "harness": "lfsr128"
+  "harness": "lfsr128",
+  "status": "competitor"
  },
  {
   "rank": 10,
@@ -215,7 +224,8 @@
    67.16,
    74.24
   ],
-  "harness": "lfsr128"
+  "harness": "lfsr128",
+  "status": "---"
  },
  {
   "format": "TNF17e-bare",
@@ -236,7 +246,8 @@
    62.96,
    66.82
   ],
-  "harness": "lfsr128"
+  "harness": "lfsr128",
+  "status": "control: guard removed"
  },
  {
   "rank": 12,
@@ -258,7 +269,8 @@
    66.77,
    62.59
   ],
-  "harness": "lfsr128"
+  "harness": "lfsr128",
+  "status": "legacy: poor $k$, unguarded"
  },
  {
   "format": "TNF16b",
@@ -280,7 +292,8 @@
    60.29,
    60.86
   ],
-  "harness": "lfsr128"
+  "harness": "lfsr128",
+  "status": "legacy: poor $k$, unguarded"
  },
  {
   "rank": 14,
@@ -302,7 +315,8 @@
    57.72,
    60.9
   ],
-  "harness": "lfsr128"
+  "harness": "lfsr128",
+  "status": "competitor"
  },
  {
   "rank": 15,
@@ -324,7 +338,8 @@
    61.03,
    64.13
   ],
-  "harness": "lfsr128"
+  "harness": "lfsr128",
+  "status": "legacy: poor $k$, unguarded"
  },
  {
   "rank": 16,
@@ -346,7 +361,8 @@
    61.06,
    63.22
   ],
-  "harness": "lfsr128"
+  "harness": "lfsr128",
+  "status": "legacy: poor $k$, unguarded"
  },
  {
   "rank": 17,
@@ -368,7 +384,8 @@
    58.75,
    58.5
   ],
-  "harness": "lfsr128"
+  "harness": "lfsr128",
+  "status": "competitor"
  },
  {
   "rank": 18,
@@ -390,7 +407,8 @@
    59.94,
    57.51
   ],
-  "harness": "lfsr128"
+  "harness": "lfsr128",
+  "status": "---"
  },
  {
   "rank": 19,
@@ -412,7 +430,8 @@
    43.93,
    47.5
   ],
-  "harness": "lfsr128"
+  "harness": "lfsr128",
+  "status": "competitor"
  },
  {
   "rank": 20,
@@ -434,7 +453,8 @@
    63.59,
    58.15
   ],
-  "harness": "lfsr128"
+  "harness": "lfsr128",
+  "status": "competitor"
  },
  {
   "rank": 21,
@@ -456,7 +476,8 @@
    43.34,
    43.25
   ],
-  "harness": "lfsr128"
+  "harness": "lfsr128",
+  "status": "competitor"
  },
  {
   "rank": 22,
@@ -478,7 +499,8 @@
    35.43,
    35.72
   ],
-  "harness": "lfsr128"
+  "harness": "lfsr128",
+  "status": "competitor"
  },
  {
   "rank": 23,
@@ -500,7 +522,8 @@
    32.39,
    30.43
   ],
-  "harness": "lfsr128"
+  "harness": "lfsr128",
+  "status": "competitor"
  },
  {
   "rank": 24,
@@ -522,6 +545,7 @@
    29.27,
    29.37
   ],
-  "harness": "lfsr128"
+  "harness": "lfsr128",
+  "status": "competitor"
  }
 ]
