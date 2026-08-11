@@ -61,6 +61,11 @@
 % instead of guessing which format a percentage in prose refers to.
 \newcommand{\codeuse}[2]{#2\%}
 
+% A statement containing "we did not search for" is an observation, not a
+% theorem. The block-axis statement was inside \begin{theorem} while its own
+% next paragraph showed the ranking inverts, which is the opposite of a bound.
+\newtheorem{observation}{Observation}
+
 \begin{document}
 \maketitle
 
@@ -92,7 +97,7 @@ one adder. On the block axis the element is closed, the best eight-level
 codebook beating a deployed one by $0.9\%$, and the scale is not: a $\varphi$
 grid at four bits beats MXFP4 on two models at $0.125$ fewer bits per weight.
 
- Ten retractions are marked in place below.
+ Eleven retractions are marked in place below.
 \end{abstract}
 
 \section{What this paper argues}
@@ -167,7 +172,7 @@ priced in mantissa bits of silicon; Section~\ref{sec:valuelaw} then finds that
 for a logarithmic format the field layout is the smaller half of that cost, and
 that we had been measuring the wrong half.
 
-Ten of our own claims were falsified by the measurements meant to support them,
+Eleven of our own claims were falsified by the measurements meant to support them,
 and each is retracted where it was made rather than quietly dropped. The sixth,
 Section~\ref{sec:wellposed}, accounts for four published disagreement figures at
 once, because they turned out to share one cause: the comparison, not the thing
@@ -1729,11 +1734,7 @@ width & format & LUTs & $F_{\max}$ & MHz/LUT & ratio \\
 \end{tabular}
 \end{table}
 
-$2.03\times$ in area and $2.54\times$ in frequency, so $5.16\times$ in throughput
-per LUT --- measured end to end rather than assembled from separate decoder and
-adder figures. The decomposition says why: against a $1{,}477$-LUT multiplier and
-a $384$-LUT adder, posit's $456$-LUT decoder is $20\%$ of the datapath; with the
-multiplier gone it is $54\%$. For takum the same shift takes $85\%$ to $97\%$, and
+TNF16 beats posit16 by $1.26\times$ in area and $1.64\times$ in frequency, so $2.07\times$ in throughput per LUT --- measured end to end rather than assembled from separate decoder and adder figures. The decomposition says why: against a $1{,}477$-LUT multiplier and a $384$-LUT adder, posit's $480$-LUT decoder is $21\%$ of the datapath; with the multiplier gone it is $56\%$. For takum the same shift takes $85\%$ to $97\%$, and
 brings $84$ RAMB36 tiles with it.
 
 \begin{corollary}[Removing the multiplier promotes the decoder]
@@ -1837,9 +1838,7 @@ the width rule forbids the second and the encoding settles the third.
 a property of the \emph{number}, and dominance in it is not dominance in silicon.
 Section~\ref{sec:ternarynet} measures the same formats through one datapath and
 puts TNF mid-pack among fixed fields at $0.114$--$0.118$\,MHz per LUT once
-each rung is measured at its specified parameters. Against
-\texttt{int8} the two are indistinguishable once seeds are swept
-(Table~\ref{tab:rejected}). The two are consistent: the frontier asks what a word of
+each rung is measured at its specified parameters. Against \texttt{int8} the ladder rungs are not competitive on this datapath, and the row that comes closest is GFTernary, which is not a rung (Section~\ref{sec:blockrelated}). The two are consistent: the frontier asks what a word of
 a given width carries, the datapath asks what it costs to unpack, and every fixed
 field unpacks by reading fields. The gap in silicon runs between fixed and tapered
 formats, $2.4$ to $6.4\times$, and belongs to Theorems~\ref{thm:scan}
@@ -2485,12 +2484,9 @@ $\varphi$/plastic, 2 fine steps         & $2.823\!\times\!10^{-3}$ & $2.11$ & $5
 \end{tabular}
 \end{table}
 
-\begin{theorem}[The block axis is not an element-format problem]\label{thm:block}
-On a short block with a shared scale, the element codebook minimising squared
-quantisation error is not the one minimising perplexity, and the gap between the
-best achievable codebook and a deployed one is under one percent. Effort spent
-designing element formats for this axis cannot recover more than that.
-\end{theorem}
+\begin{observation}[The block axis is not an element-format problem]\label{thm:block}
+On a short block with a shared scale, the element codebook minimising squared quantisation error is not the one minimising perplexity: the squared-error optimum scores $22.2976$ against a deployed MXFP4's $22.4998$, a gap of $0.9\%$ on SmolLM2-135M. We did not search for a perplexity-optimal codebook and state no bound on one; what is measured is that on this axis squared error does not predict perplexity, so element-format design guided by squared error has no demonstrated headroom here.
+\end{observation}
 
 The ranking does not merely fail to transfer; it inverts. Every two-segment
 ladder here beats MXFP4 on squared error by factors of three to ten, and every
@@ -3105,10 +3101,8 @@ on-silicon backpropagation & \textbf{0} & XOR $4/4$, 24--25 epochs & trains \\
 
 \begin{table}[t]\centering
 \caption{Throughput per area among formats that carry their own range, with
-conformance. One ternary-neuron datapath, XC7A200T, no DSP, every accumulator
-bit observed, median of five placement seeds. \texttt{int8} is in
-Table~\ref{tab:rejected}. \textbf{All three TNF rungs are at their specified
-parameters here}, and all three moved: the modules previously measured
+conformance. One ternary-neuron datapath, XC7A200T, no DSP, every accumulator bit observed. The \textsc{sd} column gives the seed count per row: rows swept at fifty-four seeds report the \emph{mean} and a $95\%$ interval, rows at five report the median and the observed range. \texttt{int8} is in
+Table~\ref{tab:rejected}. \textbf{Of the three ladder rungs only TNF16 remains here, at its specified parameters}, and it moved: the modules previously measured
 implemented different formats --- TNF16 one mantissa bit short, TNF32 with twelve
 trits and eleven mantissa bits where the specification gives six and
 twenty-five, TNF64 likewise --- and none had a reference, which is how the
@@ -3130,7 +3124,7 @@ been worth more than the format's own margin, and repairing a competitor's
 implementation moved the comparison in our favour, which is the direction the
 rule predicts and is now measured rather than asserted. Every error
 found, ours and theirs, made its module smaller: an unimplemented case is
-unsynthesised logic. \textbf{Resolution.} The pooled coefficient of variation across seeds is $3.71\%$, so two rows separate at $\alpha=.05$ only when their MHz/LUT differ by more than $5.50\%$ relative; smaller gaps in this table are not results. The detection floor for a difference in \emph{decoder} cost is $41.3$ LUT, which is $79\%$ of a whole decoder at the median row --- the $472$-LUT harness inflates that floor tenfold. Every row is measured on the same $128$-bit harness; rows that were not have been re-measured or withdrawn.}\label{tab:fullthroughput}
+unsynthesised logic. \textbf{Resolution.} The pooled coefficient of variation across seeds is $3.71\%$, so two rows at five seeds separate at $\alpha=.05$ only when their MHz/LUT differ by more than $5.50\%$ relative, and two rows at fifty-four seeds only above $1.43\%$; smaller gaps than the applicable threshold are not results. The detection floor for a difference in \emph{decoder} cost is $41.3$ LUT, which is $79\%$ of a whole decoder at the median row --- the $472$-LUT harness inflates that floor tenfold. Every row is measured on the same $128$-bit harness; rows that were not have been re-measured or withdrawn.}\label{tab:fullthroughput}
 \small
 \tiny
 \begin{tabular}{rlrrrrlll}
@@ -3516,9 +3510,7 @@ outside it. That is the difference between carrying range and borrowing it, and
 it is why the stack trains on the part.
 
 \paragraph{Why \texttt{int8} is reported apart.}
-An \texttt{int8} datapath scores $0.180$\,MHz/LUT at a median of five placement
-seeds, against GFTernary's $0.181$ --- a difference of $0.4\%$ inside a $16\%$
-seed spread, so the two are indistinguishable on this flow. An earlier version of
+An \texttt{int8} datapath scores $0.1736$\,MHz/LUT on the same $128$-bit harness --- $454$ LUT at $78.83$\,MHz, median of five seeds --- against GFTernary's $0.1584$. That is a lead of $9.6\%$, above the $5.50\%$ five-seed separation threshold, so the difference is real and \texttt{int8} leads. An earlier version reported $0.180$ against $0.181$ and called the two indistinguishable; that was taken on the narrow $64$-bit harness, where GFTernary measures $463$ LUT rather than $527$, and is withdrawn. An earlier version of
 this paper reported $0.189$ against $0.177$ and called it a $7\%$ lead; that came
 from a single placement run and is withdrawn. \texttt{int8} is excluded from that table even so, and the
 reason is structural rather than favourable to us. \texttt{int8} has $e=0$: no exponent field, hence no dynamic
@@ -3741,12 +3733,10 @@ informative one in the table. \texttt{binary32}'s decoder is
 
 \noindent
 a wire, because \texttt{binary32} \emph{is} \texttt{fp32}. Its conformance is
-therefore exact by construction, and its $472$ LUT are the harness alone: the
+therefore exact by construction, and its $536$ LUT are the harness alone: the
 LFSR, the accumulator, and the output fold, with no decoder in them at all.
 
-That number is a calibration this work had never taken. Every row of the table
-lies between $463$ and $1{,}008$ LUT, so \emph{the harness is between $47\%$ and
-$102\%$ of every measurement}, and for the top ten rows it is never below $80\%$.
+That number is a calibration this work had never taken. Every row of the table lies between $527$ and $1{,}072$ LUT, so \emph{the harness is between $50\%$ and $102\%$ of every measurement}, and for the top ten rows it is never below $80\%$.
 Two consequences follow, and both are structural rather than fixable by more
 seeds.
 
@@ -3758,8 +3748,7 @@ $D_f$, and report $R_f = M_f/(H+D_f)$. Then
   \frac{\partial R_f}{\partial D_f} \;=\; -\frac{M_f}{(H+D_f)^2},
 \]
 which tends to $-M_f/H^{2}$ as $D_f/H\to 0$. When $H\gg D_f$ the report varies
-almost entirely with $M_f$ and the decoder's cost is compressed out of it. Here
-$H=472$ and $D_f\in[-9,536]$, with $D_f<115$ for the top ten rows.
+almost entirely with $M_f$ and the decoder's cost is compressed out of it. Here $H=536$ and $D_f\in[-9,536]$, with $D_f<115$ for the top ten rows.
 \end{proposition}
 
 \begin{proposition}[Output-space pruning]
@@ -3772,7 +3761,7 @@ width, and only a within-$n$ comparison isolates design.
 \end{proposition}
 
 Proposition~\ref{prop:pruning} is not a worry, it is visible in the numbers.
-\texttt{GFTernary} takes $2$ input bits and measures $463$ LUT --- \emph{nine
+\texttt{GFTernary} takes $2$ input bits and measures $527$ LUT --- \emph{nine
 fewer than the bare wire} --- because four distinct outputs let synthesis
 specialise the accumulator behind it. Measured alone against a minimal
 register-and-fold sink, the bare wire costs $112$ LUT and \texttt{GFTernary}
@@ -3822,9 +3811,7 @@ Read that way the table says something different from its ranking, and the
 difference is worth stating plainly.
 
 \paragraph{Where we meet a competitor at the same width, and where we do not.}
-Of the nine width classes, six contain only our formats and two contain only
-other people's. \emph{One class contains both}: at $8$ bits \texttt{GF+8}
-measures $0.1004$ against \texttt{fp8~e4m3}'s $0.1254$, and we lose by $19.9\%$.
+Of the seven width classes, four contain only our formats and one contains only other people's. \emph{Two classes contain both.} At $8$ bits \texttt{GF+8} measures $0.0882$ against \texttt{fp8~e4m3}'s $0.1244$, and we lose by $29.1\%$; at $16$ bits \textbf{TNF16a} measures $0.1233$ against \texttt{binary16}'s $0.1078$, and we win --- the class Section~\ref{sec:sixteen} is about.
 That row's conformance column reads \emph{selector live; no reference}, so it is
 also the one row of ours that has never been checked against an oracle --- the
 loss and the missing check are the same debt.
@@ -4122,7 +4109,7 @@ from a rank that \texttt{TNF16} beats \texttt{BNF16}, because the instrument
 cannot see the difference.
 
 \paragraph{What is separated from IEEE half at equal or near-equal storage.}
-Six of our formats have five-seed ranges entirely above \texttt{binary16}'s
+Five of our formats have five-seed ranges entirely above \texttt{binary16}'s
 $0.0985$--$0.1071$:
 
 \begin{center}\small
@@ -4134,7 +4121,7 @@ $0.0985$--$0.1071$:
 \textbf{TNF16a}    & $+18.6\%$ & $0.1192$--$0.1278$ \\
 \textbf{TNF17e}    & $+16.1\%$ & $0.1135$--$0.1238$ \\
 \textbf{GF10}      & $+14.4\%$ & $0.1134$--$0.1204$ \\
-\textbf{TNF32}     & $+13.2\%$ & $0.1137$--$0.1243$ \\
+
 \textbf{TNF16c}    & $+11.3\%$ & $0.1118$--$0.1210$ \\
 \bottomrule
 \end{tabular}
@@ -4270,10 +4257,7 @@ between a guarded and an unguarded build is a fact about the whole datapath, not
 a cost that can be attributed to the guard}, and this paper stated it as the
 latter until an adversarial review of the derivation refuted the attribution.
 At seventeen bits the same difference proved to lie inside the seed spread
-entirely. \textbf{The claim this paper can make at equal
-storage, with every code either defined or flagged, is $+5.1\%$ against IEEE
-half} --- smaller than the $14.7\%$ first reported, and unlike it, not resting
-on an unchecked field.
+entirely. \textbf{The claim this paper can make at equal storage, with every code either defined or flagged, is the fifty-four-seed $+6.92\%$ of Section~\ref{sec:fiftyfour}} --- smaller than the $14.7\%$ first reported, and unlike it, not resting on an unchecked field. The $+5.1\%$ above is the same rung on five seeds and the narrow harness, and is superseded by it.
 
 
 \paragraph{The ladder rebuilt.} Corollary~\ref{cor:rungs} is a construction
