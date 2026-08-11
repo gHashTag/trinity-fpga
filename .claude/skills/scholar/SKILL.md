@@ -46,6 +46,13 @@ Two traps, both paid for:
   under "open ends" were in fact closed — two by documents sitting in another
   section of the same index, with no link between the entries. That section is
   now hand-resolved with supersession links; the other sections are not.
+- **Read the prose under the table, not just the table.** For six loop
+  iterations "the fan-in 32 pipeline regression, nobody investigated why" was
+  carried forward as an open question. `NODE_PIPELINED_2026-08-11.md` answers it
+  in the paragraph directly beneath the table that was being quoted: the register
+  cost overtakes the frequency gain between sixteen and thirty-two, the cut buys
+  30 % frequency for 42 % area at 32, and the quotable configuration is fan-in 8
+  or 16. Copying a table out of a document is not reading it.
 - **Read to the end before citing a title.** One document of the 76,
   `LADDER_THIRD_MODEL_BREAKS_4BIT`, carries a follow-up appended below a rule
   that withdraws the result its own title announces.
