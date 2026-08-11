@@ -5455,3 +5455,46 @@ category grows silently, because nothing in the loop is pointed at it.
 of five shapes says what has been seen. "Sound, complete, faithful are
 exhaustive over *the answer is wrong* and *the question is wrong*" says what a
 counterexample would have to look like — and that is checkable.
+
+## Wave 645 — instrument the category, then measure what the instrument misses
+
+**Faithfulness is undecidable; a projection of it is not.** You cannot
+mechanically compare "what the docstring means" with "what the code does". You
+can compare one concrete thing each asserts — which paths the code MUTATES
+against which paths the prose names. Pick a projection narrow enough to decide
+and consequential enough to matter, and say in the gate which projection it is.
+
+**Check what a program CHANGES, not what it reads.** A first version demanded
+that every path a gate *reads* appear verbatim in its docstring, and produced 24
+findings on a clean tree — prose says "reads the emitted RTL" where code says
+`build/rtl`, and prose is not a path literal. Reads are ubiquitous and described
+in words; mutations are rare, consequential, and worth naming exactly.
+
+**Write the retroactive test, and believe it when it says no.** The gate's own
+docstring claimed it would have caught the defect that motivated it. The
+retroactive test said otherwise — after an intermediate version appeared to pass
+only because the reconstruction had mangled the docstring it was supposed to
+preserve. A test that reconstructs an old version must be checked for having
+reconstructed it faithfully, or it grades the wrong artifact.
+
+**Declaring a path is not understanding it.** The motivating defect moved a
+directory aside that its docstring *did* name. The path was declared; the
+consequence — that the directory also held the instruments — was not. No
+path-level check sees that, and saying so plainly is more useful than a gate
+whose stated scope quietly exceeds its reach.
+
+**An instrument aimed at a new category will meet over-detection repeatedly.**
+Three times in one file in one wave here. Each was fixed by narrowing rather than
+by adding exceptions: mutations only, self-tests exempt, paths closed under
+parent prefixes. If a new check fires on a clean tree, the first hypothesis
+should be that its question is too broad, not that the tree is dirty.
+
+**A new gate needs its own absence case when the standard one cannot apply.**
+This one's subject is the gate scripts, which the absence sweep deliberately
+preserves — so starving the design cannot make it fail. It gets an exemption
+with a written reason plus an internal floor, rather than being wired into a
+sweep whose premise does not hold for it.
+
+**Say "instrumented, not covered".** The category has four members; this
+addresses the path projection of one. Naming the gap in the same breath as the
+tool stops the tool from being read as the solution.
