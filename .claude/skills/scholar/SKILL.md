@@ -129,6 +129,32 @@ Model weights for this line live under a *previous session's* scratchpad
 Qwen, Pythia, GPT-2, OPT, and wikitext-2). Check there before downloading
 anything — it survives across sessions but not forever.
 
+### Equal bits is not equal levels
+
+The single cleanest result of 2026-08-12, and it came from checking an arithmetic
+detail nobody had checked in a week of comparisons.
+
+Eight codebooks were compared at "strictly equal budget", 4.250 bits per element.
+True. But a **symmetric** book of 8 magnitudes plus a sign bit represents `+0` and
+`−0` with two of its sixteen codewords, for one number — **15 distinct values**.
+An **asymmetric** book spends all sixteen. Every comparison in this repository had
+been putting a 15-value book against a 16-value one and crediting the difference
+to the shape of the curve.
+
+`bitsandbytes` ships the control: `create_normal_map(use_extra_value=False)` is
+NF4 with the extra codeword off. It is a **tie** with MXFP4 (+0.33 %, p = 0.46),
+and `(+0.335 %) × (−4.429 %) = −4.109 %` reproduces the full NF4 margin with a
+residual of `0.00e+00`.
+
+- **Count the representable values, not the bits.** Two schemes can cost the same
+  and offer different alphabets. Put the count in the table as its own column;
+  it took a week to notice because it was never written down.
+- **Look for the vendor's own ablation before building one.** The switch that
+  isolated the effect was a keyword argument in the reference implementation.
+- **A margin that decomposes exactly is telling you the mechanism.** When two
+  ratios multiply to the third with zero residual, that is not a coincidence to
+  report — it is the explanation, and it should replace the observation.
+
 ### Run the baselines before building the alternative
 
 The single most expensive omission of 2026-08-11, and it cost three sessions.
