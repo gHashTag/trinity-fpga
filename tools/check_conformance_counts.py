@@ -64,8 +64,10 @@ for m in PAT.finditer(paper):
     # Gate only counts that belong to one of OUR rungs: a competitor's sweep
     # size ("all 40,000 codes") is a conformance result too, but its code space
     # is not derivable from the ladder and never will be.
-    if not (re.search(r"in-specification|codes exact", win)
-            and any(n in win for n in ("tnf", "bnf"))):
+    # "in-specification codes exact" is the phrasing this paper uses only for
+    # its own rungs; a competitor's row reads "all N codes". That is the whole
+    # discriminator, and it needs no rung name nearby.
+    if "in-specification codes exact" not in win:
         unclassified += 1
         continue
     v = int(m.group(1).replace("{,}", ""))
