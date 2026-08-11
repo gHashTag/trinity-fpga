@@ -3120,31 +3120,32 @@ rule predicts and is now measured rather than asserted. Every error
 found, ours and theirs, made its module smaller: an unimplemented case is
 unsynthesised logic.}\label{tab:fullthroughput}
 \small
+\footnotesize
 \begin{tabular}{rlrrrrrl}
 \toprule
 & format & storage & LUT & MHz & MHz/LUT & spread & conformance \\
 \midrule
-1 & \textbf{GFTernary} (ours) & 2 bits & 463 & 83.19 & \textbf{0.1797} & $6.61$ & all 4 codes \\
-2 & binary32 & 32 bits & 472 & 77.00 & 0.1631 & $6.37$ & not swept \\
-3 & VAX F & 32 bits & 527 & 73.51 & 0.1395 & $4.43$ & not swept \\
-4 & \textbf{GF10} (ours) & 10 bits & 533 & 72.16 & \textbf{0.1354} & $5.08$ & all 1{,}024 \\
-5 & fp8 e4m3 & 8 bits & 516 & 64.70 & 0.1254 & $9.33$ & all 256, 0 wrong \\
-6 & fp8 e5m2 & 8 bits & 529 & 65.30 & 0.1234 & $5.70$ & all 256, 0 wrong \\
-7 & binary16 & 16 bits & 522 & 63.30 & 0.1213 & $7.74$ & all 65{,}536 \\
-8 & \textbf{GF14} (ours) & 14 bits & 587 & 71.15 & \textbf{0.1212} & $4.54$ & all 16{,}384 \\
-9 & minifloat & 8 bits & 558 & 67.06 & 0.1202 & $5.49$ & not swept \\
-10 & \textbf{BNF16} (ours) & 17 bits & 571 & 67.13 & \textbf{0.1176} & $3.30$ & all 131{,}072, 0 wrong \\
-11 & \textbf{TNF32} (ours) & 36 bits & 569 & 66.91 & \textbf{0.1176} & $6.03$ & sampled 9{,}997, 0 wrong \\
-12 & \textbf{TNF16} (ours) & 17 bits & 565 & 66.28 & \textbf{0.1173} & $8.56$ & all 131{,}072 \\
-13 & \textbf{TNF64} (ours) & 65 bits & 572 & 65.38 & \textbf{0.1143} & $8.73$ & sampled, 0 wrong \\
-14 & \textbf{TNF8} (ours) & 10 bits & 545 & 62.13 & \textbf{0.1140} & $3.63$ & all 1{,}024, 0 wrong \\
-15 & \textbf{GF+8} (ours) & 8 bits & 628 & 63.05 & \textbf{0.1004} & $1.08$ & selector live; no reference \\
-16 & posit8 & 8 bits & 540 & 44.33 & 0.0821 & $4.02$ & not swept \\
-17 & takum16 & 16 bits, 57 BRAM & 789 & 58.96 & 0.0747 & $5.75$ & 632 of 61{,}505 (fp32 floor) \\
-18 & IBM hex32 & 32 bits & 687 & 46.78 & 0.0681 & $3.78$ & not swept \\
-19 & LNS16 & 16 bits & 658 & 43.04 & 0.0654 & $0.45$ & not swept \\
-20 & posit16 & 16 bits & 712 & 40.38 & 0.0567 & $1.02$ & 4 of 65{,}536 wrong \\
-21 & posit32 & 32 bits & 953 & 28.16 & 0.0295 & $2.29$ & not swept \\
+1 & \textbf{GFTernary} (ours) & 2b & 463 & 83.19 & \textbf{0.1797} & $6.61$ & all 4 codes \\
+2 & binary32 & 32b & 472 & 77.00 & 0.1631 & $6.37$ & not swept \\
+3 & VAX F & 32b & 527 & 73.51 & 0.1395 & $4.43$ & not swept \\
+4 & \textbf{GF10} (ours) & 10b & 533 & 72.16 & \textbf{0.1354} & $5.08$ & all 1{,}024 \\
+5 & fp8 e4m3 & 8b & 516 & 64.70 & 0.1254 & $9.33$ & all 256, 0 wrong \\
+6 & fp8 e5m2 & 8b & 529 & 65.30 & 0.1234 & $5.70$ & all 256, 0 wrong \\
+7 & binary16 & 16b & 522 & 63.30 & 0.1213 & $7.74$ & all 65{,}536 \\
+8 & \textbf{GF14} (ours) & 14b & 587 & 71.15 & \textbf{0.1212} & $4.54$ & all 16{,}384 \\
+9 & minifloat & 8b & 558 & 67.06 & 0.1202 & $5.49$ & not swept \\
+10 & \textbf{BNF16} (ours) & 17b & 571 & 67.13 & \textbf{0.1176} & $3.30$ & all 131{,}072, 0 wrong \\
+11 & \textbf{TNF32} (ours) & 36b & 569 & 66.91 & \textbf{0.1176} & $6.03$ & sampled 9{,}997, 0 wrong \\
+12 & \textbf{TNF16} (ours) & 17b & 565 & 66.28 & \textbf{0.1173} & $8.56$ & all 131{,}072 \\
+13 & \textbf{TNF64} (ours) & 65b & 572 & 65.38 & \textbf{0.1143} & $8.73$ & sampled, 0 wrong \\
+14 & \textbf{TNF8} (ours) & 10b & 545 & 62.13 & \textbf{0.1140} & $3.63$ & all 1{,}024, 0 wrong \\
+15 & \textbf{GF+8} (ours) & 8b & 628 & 63.05 & \textbf{0.1004} & $1.08$ & selector live; no reference \\
+16 & posit8 & 8b & 540 & 44.33 & 0.0821 & $4.02$ & not swept \\
+17 & takum16 & 16b, 57 BRAM & 789 & 58.96 & 0.0747 & $5.75$ & 632/61{,}505 (fp32 floor) \\
+18 & IBM hex32 & 32b & 687 & 46.78 & 0.0681 & $3.78$ & not swept \\
+19 & LNS16 & 16b & 658 & 43.04 & 0.0654 & $0.45$ & not swept \\
+20 & posit16 & 16b & 712 & 40.38 & 0.0567 & $1.02$ & 4 of 65{,}536 wrong \\
+21 & posit32 & 32b & 953 & 28.16 & 0.0295 & $2.29$ & not swept \\
 \bottomrule
 \end{tabular}
 \end{table}
