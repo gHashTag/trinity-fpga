@@ -20,7 +20,7 @@
   "mhz": 77.0,
   "mhz_per_lut": 0.1631,
   "spread": 6.37,
-  "checked": "not swept",
+  "checked": "identity (exact)",
   "bram": 0
  },
  {
@@ -176,7 +176,7 @@
   "mhz": 63.05,
   "mhz_per_lut": 0.1004,
   "spread": 1.08,
-  "checked": "selector live; no reference",
+  "checked": "no reference",
   "bram": 0
  },
  {
@@ -200,7 +200,7 @@
   "mhz": 58.96,
   "mhz_per_lut": 0.0747,
   "spread": 5.75,
-  "checked": "632 of 61{,}505 (fp32 floor)",
+  "checked": "632/61{,}505",
   "bram": 57
  },
  {
@@ -212,7 +212,7 @@
   "mhz": 43.04,
   "mhz_per_lut": 0.0654,
   "spread": 0.45,
-  "checked": "not swept",
+  "checked": "107/65{,}536",
   "bram": 0
  },
  {

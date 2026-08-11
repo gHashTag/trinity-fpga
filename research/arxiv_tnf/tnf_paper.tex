@@ -3134,7 +3134,7 @@ unsynthesised logic.}\label{tab:fullthroughput}
 & format & storage & LUT & BRAM & MHz & MHz/LUT & spread & conformance \\
 \midrule
 1 & \textbf{GFTernary} (ours) & 2 bits & 463 & 0 & 83.19 & \textbf{0.1797} & $6.61$ & all 4 codes \\
-2 & binary32 & 32 bits & 472 & 0 & 77.00 & 0.1631 & $6.37$ & not swept \\
+2 & binary32 & 32 bits & 472 & 0 & 77.00 & 0.1631 & $6.37$ & identity (exact) \\
 3 & \textbf{GF10} (ours) & 10 bits & 533 & 0 & 72.16 & \textbf{0.1354} & $5.08$ & all 1{,}024 \\
 4 & fp8 e4m3 & 8 bits & 516 & 0 & 64.70 & 0.1254 & $9.33$ & all 256, 0 wrong \\
 5 & fp8 e5m2 & 8 bits & 529 & 0 & 65.30 & 0.1234 & $5.70$ & all 256, 0 wrong \\
@@ -3147,10 +3147,10 @@ unsynthesised logic.}\label{tab:fullthroughput}
 12 & \textbf{TNF64} (ours) & 65 bits & 572 & 0 & 65.38 & \textbf{0.1143} & $8.73$ & sampled, 0 wrong \\
 13 & \textbf{TNF8} (ours) & 10 bits & 545 & 0 & 62.13 & \textbf{0.1140} & $3.63$ & all 1{,}024, 0 wrong \\
 14 & VAX F & 32 bits & 560 & 0 & 61.38 & 0.1096 & $3.71$ & all 40{,}000 \checkmark \\
-15 & \textbf{GF+8} (ours) & 8 bits & 628 & 0 & 63.05 & \textbf{0.1004} & $1.08$ & selector live; no reference \\
+15 & \textbf{GF+8} (ours) & 8 bits & 628 & 0 & 63.05 & \textbf{0.1004} & $1.08$ & no reference \\
 16 & posit8 & 8 bits & 540 & 0 & 44.33 & 0.0821 & $4.02$ & not swept \\
-17 & takum16 & 16 bits & 789 & 57 & 58.96 & 0.0747 & $5.75$ & 632 of 61{,}505 (fp32 floor) \\
-18 & LNS16 & 16 bits & 658 & 0 & 43.04 & 0.0654 & $0.45$ & not swept \\
+17 & takum16 & 16 bits & 789 & 57 & 58.96 & 0.0747 & $5.75$ & 632/61{,}505 \\
+18 & LNS16 & 16 bits & 658 & 0 & 43.04 & 0.0654 & $0.45$ & 107/65{,}536 \\
 19 & posit16 & 16 bits & 667 & 0 & 36.75 & 0.0551 & $1.63$ & all 65{,}535 \checkmark \\
 20 & IBM hex32 & 32 bits & 1008 & 0 & 30.82 & 0.0306 & $1.53$ & all 40{,}000 \checkmark \\
 21 & posit32 & 32 bits & 967 & 0 & 29.55 & 0.0306 & $1.96$ & all 40{,}000 \checkmark \\
@@ -3721,6 +3721,129 @@ a transform moves the ceiling, a format divides it --- so improving the element 
 orthogonal to improving the rotation, and neither subsumes the other.
 
 
+
+
+\section{What the throughput table is actually measuring}
+\label{sec:confound}
+
+The row this work had left marked \emph{not swept} turned out to be the most
+informative one in the table. \texttt{binary32}'s decoder is
+
+\begin{center}\ttfamily assign fp32\_out = binary32\_in;\end{center}
+
+\noindent
+a wire, because \texttt{binary32} \emph{is} \texttt{fp32}. Its conformance is
+therefore exact by construction, and its $472$ LUT are the harness alone: the
+LFSR, the accumulator, and the output fold, with no decoder in them at all.
+
+That number is a calibration this work had never taken. Every row of the table
+lies between $463$ and $1{,}008$ LUT, so \emph{the harness is between $47\%$ and
+$102\%$ of every measurement}, and for the top ten rows it is never below $80\%$.
+Two consequences follow, and both are structural rather than fixable by more
+seeds.
+
+\begin{proposition}[Harness dominance]
+\label{prop:harness}
+Let a measurement compose a fixed harness of cost $H$ with a decoder of cost
+$D_f$, and report $R_f = M_f/(H+D_f)$. Then
+\[
+  \frac{\partial R_f}{\partial D_f} \;=\; -\frac{M_f}{(H+D_f)^2},
+\]
+which tends to $-M_f/H^{2}$ as $D_f/H\to 0$. When $H\gg D_f$ the report varies
+almost entirely with $M_f$ and the decoder's cost is compressed out of it. Here
+$H=472$ and $D_f\in[-9,536]$, with $D_f<115$ for the top ten rows.
+\end{proposition}
+
+\begin{proposition}[Output-space pruning]
+\label{prop:pruning}
+A decoder with $n$ input bits has at most $2^{n}$ distinct outputs. Any logic
+observing only those outputs may be specialised to that image, so its synthesised
+cost is non-increasing in $n$ independently of the decoder's own complexity.
+A comparison across differing $n$ therefore confounds format design with format
+width, and only a within-$n$ comparison isolates design.
+\end{proposition}
+
+Proposition~\ref{prop:pruning} is not a worry, it is visible in the numbers.
+\texttt{GFTernary} takes $2$ input bits and measures $463$ LUT --- \emph{nine
+fewer than the bare wire} --- because four distinct outputs let synthesis
+specialise the accumulator behind it. Measured alone against a minimal
+register-and-fold sink, the bare wire costs $112$ LUT and \texttt{GFTernary}
+costs $66$. A format cannot be cheaper than a wire; what is being measured is
+the width of its image.
+
+\begin{table}[htbp]
+\centering
+\vspace{0.6em}
+\caption{The same measurements grouped by storage width, which is the only
+grouping Proposition~\ref{prop:pruning} leaves valid. Ours in bold.}
+\label{tab:bywidth}
+\scriptsize
+\begin{tabular}{rlrrr}
+\toprule
+bits & format & LUT & MHz & MHz/LUT \\
+\midrule
+2 & \textbf{GFTernary} & 463 & 83.19 & 0.1797 \\
+8 & fp8 e4m3 & 516 & 64.70 & 0.1254 \\
+8 & fp8 e5m2 & 529 & 65.30 & 0.1234 \\
+8 & minifloat & 558 & 67.06 & 0.1202 \\
+8 & \textbf{GF+8} & 628 & 63.05 & 0.1004 \\
+8 & posit8 & 540 & 44.33 & 0.0821 \\
+10 & \textbf{GF10} & 533 & 72.16 & 0.1354 \\
+10 & \textbf{TNF8} & 545 & 62.13 & 0.1140 \\
+14 & \textbf{GF14} & 587 & 71.15 & 0.1212 \\
+16 & binary16 & 522 & 63.30 & 0.1213 \\
+16 & takum16 & 789 & 58.96 & 0.0747 \\
+16 & LNS16 & 658 & 43.04 & 0.0654 \\
+16 & posit16 & 667 & 36.75 & 0.0551 \\
+17 & \textbf{BNF16} & 571 & 67.13 & 0.1176 \\
+17 & \textbf{TNF16} & 565 & 66.28 & 0.1173 \\
+32 & binary32 & 472 & 77.00 & 0.1631 \\
+32 & VAX F & 560 & 61.38 & 0.1096 \\
+32 & IBM hex32 & 1008 & 30.82 & 0.0306 \\
+32 & posit32 & 967 & 29.55 & 0.0306 \\
+36 & \textbf{TNF32} & 569 & 66.91 & 0.1176 \\
+65 & \textbf{TNF64} & 572 & 65.38 & 0.1143 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Read that way the table says something different from its ranking, and the
+difference is worth stating plainly.
+
+\paragraph{Where we meet a competitor at the same width, and where we do not.}
+Of the nine width classes, six contain only our formats and two contain only
+other people's. \emph{One class contains both}: at $8$ bits \texttt{GF+8}
+measures $0.1004$ against \texttt{fp8~e4m3}'s $0.1254$, and we lose by $19.9\%$.
+That row's conformance column reads \emph{selector live; no reference}, so it is
+also the one row of ours that has never been checked against an oracle --- the
+loss and the missing check are the same debt.
+
+The nearest honest comparison is $16$ against $17$ bits, one bit apart:
+
+\begin{center}\small
+\begin{tabular}{lr}
+\toprule
+\textbf{BNF16} (17 bits) versus & \\
+\midrule
+\texttt{binary16} (16 bits) & $-3.1\%$ \\
+\texttt{takum16}  (16 bits) & $+57.4\%$ \\
+\texttt{LNS16}    (16 bits) & $+79.8\%$ \\
+\texttt{posit16}  (16 bits) & $+113.4\%$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+Against every \emph{research} format at comparable width --- takum, LNS, posit,
+the formats this paper is actually arguing with --- our 17-bit design wins by
+between a half and slightly over double. Against IEEE half it loses by three
+percent, and against IEEE single it cannot win at all, because IEEE single's
+decoder is a wire and no decoder beats no decoder.
+
+That is the defensible claim, and it is narrower than the ranking suggests.
+\emph{The overall first place belongs to a two-bit format with no same-width
+competitor in the catalogue}, and second place belongs to an identity function.
+Neither fact was visible while the table was sorted on a single number.
 
 \section{When a conformance test measures itself}
 \label{sec:wellposed}

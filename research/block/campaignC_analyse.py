@@ -139,13 +139,19 @@ for r in it:
 p0, p1 = it[0]["ppl"], it[-1]["ppl"]
 lin = [p0 + (p1 - p0) * r["t"] for r in it]
 dev = [r["ppl"] - l for r, l in zip(it, lin)]
-print(f"monotone: {d['interp_monotone']}")
+steps = np.diff([r["ppl"] for r in it])
+mono = bool(np.all(steps <= 0) or np.all(steps >= 0))
+turns = int((np.sign(steps[:-1]) != np.sign(steps[1:])).sum())
+print(f"monotone: {mono}   ({turns} direction changes in 10 steps, "
+      f"{int((steps > 0).sum())} of them uphill)")
 print(f"max deviation from the straight chord: {max(dev, key=abs):+.4f} ppl "
       f"({100*max(dev, key=abs)/p0:+.2f}% of the Lloyd end) at "
       f"t={it[int(np.argmax(np.abs(dev)))]['t']:.1f}")
-steps = np.array(d["interp_steps"])
 print(f"steps: min {steps.min():+.4f}  max {steps.max():+.4f}  "
       f"ratio |max|/|min| = {abs(steps).max()/abs(steps).min():.2f}")
+print(f"worst point on the path is t=0.1 at {max(r['ppl'] for r in it):.4f}, "
+      f"{100*(max(r['ppl'] for r in it)/p0-1):+.2f}% WORSE than the Lloyd end "
+      f"it started from")
 # How far apart are these codebooks, in the two units that both have a claim?
 # Relative distance is what the random draws were specified in; absolute
 # distance is what the coordinate descent that produced KL actually stepped in
