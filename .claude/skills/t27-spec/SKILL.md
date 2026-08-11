@@ -5813,3 +5813,34 @@ up hits a red suite and reasonably concludes their fix is wrong.
 by the agents that found them, all touching emitted hardware and interacting with
 one another. Recording them precisely, with reproductions and root causes, is
 complete work. Choosing between architectural repairs is not the reviewer's call.
+
+## Wave 655 — report what was proved clean, and don't inherit a root cause
+
+**A report listing only failures misrepresents the subject.** One module yielded
+five defects and four proved-correct behaviours — a quantiser checked exhaustively
+against an independent reference including its one overflow corner, a packing
+order matching its documentation exactly, an invalid encoding shown unreachable
+in all 27 fields rather than the one an existing property guards. Record the
+clean results with the same care as the broken ones: they bound what still needs
+looking at, and they are the difference between "this module is broken" and
+"these five things in this module are broken".
+
+**Do not inherit a root cause from one agent's judgement.** A refuting agent
+named a specific line as the root of two defects; I repeated that as settled.
+The hunting agent had explicitly declined to adjudicate, writing that the fix
+might belong on either side of the interface. When two investigators disagree
+about *why*, the finding still stands and the attribution does not — say so
+rather than picking the more confident phrasing.
+
+**Two components disagreeing about units is a defect even when neither is
+wrong.** A register serving as both a neuron count and a byte-count DMA length
+is a contract violation visible only by reading one module's header against
+another's call site. No property covers it, because each side is internally
+consistent. Grep for parameters that cross a module boundary and check the units
+on both ends.
+
+**"Confirmed by reading" is a real strength, and a lower one than "reproduced".**
+The sixth defect was established by comparing a documented contract with a call
+site — sound, but not simulated. Recording it at that strength keeps the next
+reader from treating it as equivalent to the five that have counterexamples, and
+tells them exactly what work remains to promote it.
