@@ -77,6 +77,12 @@
   "exhaustive": true,
   "use": 0.941497802734375
  },
+ "TNF16a-guarded": {
+  "distinct": 40454,
+  "codes": 65536,
+  "exhaustive": true,
+  "use": 0.617279052734375
+ },
  "TNF17e": {
   "distinct": 123398,
   "codes": 131072,

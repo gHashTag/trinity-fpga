@@ -728,7 +728,7 @@
    62.71
   ],
   "checked": "all 41{,}472 \\checkmark",
-  "code_use": null,
+  "code_use": 0.6173,
   "status": "control: guard added",
   "module": "tnf16a_safe_decode",
   "harness": "lfsr128",
