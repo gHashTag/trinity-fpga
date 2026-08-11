@@ -1,0 +1,140 @@
+{
+ "GFTernary": {
+  "distinct": 3,
+  "codes": 4,
+  "exhaustive": true,
+  "use": 0.75
+ },
+ "binary32": {
+  "distinct": 199997,
+  "codes": 200000,
+  "exhaustive": false,
+  "use": 0.999985
+ },
+ "binary16": {
+  "distinct": 65536,
+  "codes": 65536,
+  "exhaustive": true,
+  "use": 1.0
+ },
+ "GF10": {
+  "distinct": 1024,
+  "codes": 1024,
+  "exhaustive": true,
+  "use": 1.0
+ },
+ "GF14": {
+  "distinct": 16384,
+  "codes": 16384,
+  "exhaustive": true,
+  "use": 1.0
+ },
+ "fp8 e4m3": {
+  "distinct": 256,
+  "codes": 256,
+  "exhaustive": true,
+  "use": 1.0
+ },
+ "fp8 e5m2": {
+  "distinct": 256,
+  "codes": 256,
+  "exhaustive": true,
+  "use": 1.0
+ },
+ "minifloat": {
+  "distinct": 227,
+  "codes": 256,
+  "exhaustive": true,
+  "use": 0.88671875
+ },
+ "BNF16": {
+  "distinct": 129030,
+  "codes": 131072,
+  "exhaustive": true,
+  "use": 0.9844207763671875
+ },
+ "TNF16": {
+  "distinct": 129030,
+  "codes": 131072,
+  "exhaustive": true,
+  "use": 0.9844207763671875
+ },
+ "TNF16a": {
+  "distinct": 64518,
+  "codes": 65536,
+  "exhaustive": true,
+  "use": 0.984466552734375
+ },
+ "TNF16b": {
+  "distinct": 61446,
+  "codes": 65536,
+  "exhaustive": true,
+  "use": 0.937591552734375
+ },
+ "TNF8": {
+  "distinct": 966,
+  "codes": 1024,
+  "exhaustive": true,
+  "use": 0.943359375
+ },
+ "TNF32": {
+  "distinct": 199634,
+  "codes": 200000,
+  "exhaustive": false,
+  "use": 0.99817
+ },
+ "TNF64": {
+  "distinct": 199900,
+  "codes": 200000,
+  "exhaustive": false,
+  "use": 0.9995
+ },
+ "VAX F": {
+  "distinct": 199211,
+  "codes": 200000,
+  "exhaustive": false,
+  "use": 0.996055
+ },
+ "IBM hex32": {
+  "distinct": 105526,
+  "codes": 200000,
+  "exhaustive": false,
+  "use": 0.52763
+ },
+ "posit8": {
+  "distinct": 256,
+  "codes": 256,
+  "exhaustive": true,
+  "use": 1.0
+ },
+ "posit16": {
+  "distinct": 65536,
+  "codes": 65536,
+  "exhaustive": true,
+  "use": 1.0
+ },
+ "posit32": {
+  "distinct": 199964,
+  "codes": 200000,
+  "exhaustive": false,
+  "use": 0.99982
+ },
+ "LNS16": {
+  "distinct": 65536,
+  "codes": 65536,
+  "exhaustive": true,
+  "use": 1.0
+ },
+ "GF+8": {
+  "distinct": 454,
+  "codes": 1024,
+  "exhaustive": true,
+  "use": 0.443359375
+ },
+ "takum16": {
+  "distinct": 61351,
+  "codes": 65536,
+  "exhaustive": true,
+  "use": 0.9361419677734375
+ }
+}

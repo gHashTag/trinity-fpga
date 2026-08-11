@@ -166,11 +166,13 @@ priced in mantissa bits of silicon; Section~\ref{sec:valuelaw} then finds that
 for a logarithmic format the field layout is the smaller half of that cost, and
 that we had been measuring the wrong half.
 
-Six of our own claims were falsified by the measurements meant to support them,
+Eight of our own claims were falsified by the measurements meant to support them,
 and each is retracted where it was made rather than quietly dropped. The sixth,
 Section~\ref{sec:wellposed}, accounts for four published disagreement figures at
 once, because they turned out to share one cause: the comparison, not the thing
-compared.
+compared. The last two are in Section~\ref{sec:sixteen} and were falsified
+inside a single iteration: a caveat this paper computed rather than measured,
+and a sentence defending our own first place.
 Section~\ref{sec:selfcheck} generalises the shape those errors took, because in
 almost every case the measurement was correct and the comparison around it was
 not.
@@ -3956,42 +3958,87 @@ This is the first same-width win in the catalogue against IEEE, and it is the
 result the previous section said the paper did not yet have. It also has a price
 that must be printed beside it.
 
-\paragraph{The price.} A ternary exponent of four trits has $81$ values and its
-binary field holds $128$: \emph{thirty-seven percent of rung A's offset codes
-lie outside the format}. Counting representable values, rung A uses $40{,}960$
-of $65{,}536$ codes and delivers $15.32$ effective bits where \texttt{binary16}
-delivers close to sixteen. \textbf{The win is $+14.7\%$ of throughput for
-$-0.68$ bits of code space.}
+\paragraph{The price, as estimated and as measured.}
+This section first reported that rung A's win was bought with code space: four
+trits give $81$ offsets where the binary field holds $128$, so $37.5\%$ of the
+offset codes lie outside the format, and the rung would deliver $15.32$
+effective bits against \texttt{binary16}'s sixteen. \emph{That estimate was
+computed, not measured, and measurement refutes it.}
 
-That trade is not incidental, and Proposition~\ref{prop:pruning} already
-predicts its direction. A decoder whose image is smaller needs less logic to
-produce it, and logic observing that image may specialise to it --- and an image
-can be small because the input is narrow \emph{or because the format discards
-codes}. The mechanism is the same; only the cause differs.
+Sweeping every code through the RTL and counting distinct outputs gives rung A
+$64{,}518$ distinct values of $65{,}536$ codes: \textbf{$98.4\%$ utilisation},
+against \texttt{binary16}'s $100\%$. The out-of-specification offsets are not
+discarded --- the decoder assigns each of them a distinct value. The win over
+IEEE half at equal storage costs $1.6\%$ of code space, not $37.5\%$, and the
+result is stronger than this section originally claimed.
 
-\begin{center}\small
-\begin{tabular}{lrr}
+It leaves a different defect in view. \emph{The decoder does not reserve the
+$47$ offsets that lie outside the format}: a corrupted offset field yields a
+plausible finite value rather than a signal. Every other rung in the ladder
+shares this, and no test in this work would have found it, because a decoder
+that answers every input answers every test.
+
+\begin{table}[htbp]
+\centering
+\vspace{0.6em}
+\caption{Code utilisation, measured: distinct decoder outputs over codes swept.
+Exhaustive at $2^{18}$ codes and below, uniformly sampled at $200{,}000$ above,
+with the sweep kind stated so a partial sweep never reads as a complete one.}
+\label{tab:codeuse}
+\scriptsize
+\begin{tabular}{lrrl}
 \toprule
-& codes discarded & MHz/LUT advantage \\
+format & distinct & codes & utilisation \\
 \midrule
-\texttt{GF+8} pocket 11, as published & $93.4\%$ & $+19.2\%$ \\
-\textbf{TNF16a} vs \texttt{binary16}  & $37.5\%$ & $+14.7\%$ \\
-\textbf{TNF16b} vs \texttt{binary16}  & $18.8\%$ & $-5.7\%$ \\
+GF+8 & 454 & 1{,}024 & 44.3\% \\
+IBM hex32 & 105{,}526 & 200{,}000 & 52.8\% (sampled) \\
+GFTernary & 3 & 4 & 75.0\% \\
+minifloat & 227 & 256 & 88.7\% \\
+takum16 & 61{,}351 & 65{,}536 & 93.6\% \\
+TNF16b & 61{,}446 & 65{,}536 & 93.8\% \\
+TNF8 & 966 & 1{,}024 & 94.3\% \\
+BNF16 & 129{,}030 & 131{,}072 & 98.4\% \\
+TNF16 & 129{,}030 & 131{,}072 & 98.4\% \\
+TNF16a & 64{,}518 & 65{,}536 & 98.4\% \\
+VAX F & 199{,}211 & 200{,}000 & 99.6\% (sampled) \\
+TNF32 & 199{,}634 & 200{,}000 & 99.8\% (sampled) \\
+TNF64 & 199{,}900 & 200{,}000 & 100.0\% (sampled) \\
+posit32 & 199{,}964 & 200{,}000 & 100.0\% (sampled) \\
+binary32 & 199{,}997 & 200{,}000 & 100.0\% (sampled) \\
+binary16 & 65{,}536 & 65{,}536 & 100.0\% \\
+GF10 & 1{,}024 & 1{,}024 & 100.0\% \\
+GF14 & 16{,}384 & 16{,}384 & 100.0\% \\
+fp8 e4m3 & 256 & 256 & 100.0\% \\
+fp8 e5m2 & 256 & 256 & 100.0\% \\
+posit8 & 256 & 256 & 100.0\% \\
+posit16 & 65{,}536 & 65{,}536 & 100.0\% \\
+LNS16 & 65{,}536 & 65{,}536 & 100.0\% \\
 \bottomrule
 \end{tabular}
-\end{center}
+\end{table}
 
-\noindent
-Three points do not establish a law and are not offered as one; at $n=3$ the
-correlation of $+0.81$ carries no significance. The claim rests on the mechanism,
-which is deductive, and the points are consistent with it.
+\paragraph{And the mechanism this section proposed is not there.}
+The claim was that a throughput metric rewards a format for discarding code
+space, resting on Proposition~\ref{prop:pruning} and three points. Across all
+$23$ formats measured, the correlation between utilisation and MHz/LUT is
+$\mathbf{+0.173}$ --- $t=0.80$ on $21$ degrees of freedom, not significant, and
+of the \emph{opposite} sign to the one predicted. The two least efficient
+formats in the catalogue, \texttt{GF+8} at $44.3\%$ and IBM hex32 at $52.8\%$,
+sit at ranks $17$ and $22$.
 
-The consequence for reading this paper's own table is direct. \emph{A throughput
-metric rewards a format for discarding code space}, so no ranking on MHz/LUT
-alone should be read as a ranking of format quality. Our own first place is
-unaffected --- \texttt{GFTernary} uses all four of its codes and discards
-nothing --- but rung A's third place is bought in part with codes it does not
-spend, and saying so is the difference between a result and an advertisement.
+\textbf{The hypothesis is withdrawn.} Proposition~\ref{prop:pruning} remains
+true as stated --- a smaller image does permit specialisation --- but the
+inference that discarded codes therefore buy measurable throughput does not
+survive contact with twenty-two measurements. Three points agreed with it and
+twenty-three do not, which is the entire reason to prefer measuring a caveat over
+computing one.
+
+One correction belongs to our own headline. This paper stated that
+\texttt{GFTernary} ``uses all four of its codes and discards nothing''. It does
+not: $\{-\varphi, 0, +\varphi\}$ is three values in two bits, and the measured
+utilisation is $\mathbf{75\%}$, the third lowest in the catalogue. Its first
+place stands on the throughput measurement, which is unaffected, but the
+sentence defending it was false and is retracted.
 
 \section{When a conformance test measures itself}
 \label{sec:wellposed}

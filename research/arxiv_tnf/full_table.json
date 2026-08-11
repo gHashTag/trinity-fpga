@@ -10,7 +10,8 @@
   "spread": 6.61,
   "checked": "all 4 codes",
   "bram": 0,
-  "code_use": null
+  "code_use": 0.75,
+  "code_use_measured": true
  },
  {
   "rank": 2,
@@ -23,7 +24,8 @@
   "spread": 6.37,
   "checked": "identity (exact)",
   "bram": 0,
-  "code_use": null
+  "code_use": 1.0,
+  "code_use_measured": false
  },
  {
   "format": "TNF16a",
@@ -35,8 +37,9 @@
   "mhz_per_lut": 0.13918326693227093,
   "spread": 6.969999999999999,
   "checked": "all 65{,}534 \\checkmark",
-  "code_use": 0.625,
-  "rank": 3
+  "code_use": 0.9845,
+  "rank": 3,
+  "code_use_measured": true
  },
  {
   "rank": 4,
@@ -49,7 +52,8 @@
   "spread": 5.08,
   "checked": "all 1{,}024",
   "bram": 0,
-  "code_use": null
+  "code_use": 1.0,
+  "code_use_measured": true
  },
  {
   "rank": 5,
@@ -62,7 +66,8 @@
   "spread": 9.33,
   "checked": "all 256, 0 wrong",
   "bram": 0,
-  "code_use": null
+  "code_use": 1.0,
+  "code_use_measured": true
  },
  {
   "rank": 6,
@@ -75,7 +80,8 @@
   "spread": 5.7,
   "checked": "all 256, 0 wrong",
   "bram": 0,
-  "code_use": null
+  "code_use": 1.0,
+  "code_use_measured": true
  },
  {
   "rank": 7,
@@ -88,7 +94,8 @@
   "spread": 7.74,
   "checked": "all 65{,}536",
   "bram": 0,
-  "code_use": null
+  "code_use": 1.0,
+  "code_use_measured": true
  },
  {
   "rank": 8,
@@ -101,7 +108,8 @@
   "spread": 4.54,
   "checked": "all 16{,}384",
   "bram": 0,
-  "code_use": null
+  "code_use": 1.0,
+  "code_use_measured": true
  },
  {
   "rank": 9,
@@ -114,7 +122,8 @@
   "spread": 5.49,
   "checked": "all 254 \\checkmark",
   "bram": 0,
-  "code_use": null
+  "code_use": 0.8867,
+  "code_use_measured": true
  },
  {
   "rank": 10,
@@ -127,7 +136,8 @@
   "spread": 3.3,
   "checked": "all 131{,}072, 0 wrong",
   "bram": 0,
-  "code_use": null
+  "code_use": 0.9844,
+  "code_use_measured": true
  },
  {
   "rank": 11,
@@ -140,7 +150,8 @@
   "spread": 6.03,
   "checked": "sampled 9{,}997, 0 wrong",
   "bram": 0,
-  "code_use": null
+  "code_use": 0.9982,
+  "code_use_measured": false
  },
  {
   "rank": 12,
@@ -153,7 +164,8 @@
   "spread": 8.56,
   "checked": "all 131{,}072",
   "bram": 0,
-  "code_use": null
+  "code_use": 0.9844,
+  "code_use_measured": true
  },
  {
   "format": "TNF16b",
@@ -165,8 +177,9 @@
   "mhz_per_lut": 0.11437037037037037,
   "spread": 6.540000000000006,
   "checked": "all 65{,}534 \\checkmark",
-  "code_use": 0.812,
-  "rank": 13
+  "code_use": 0.9376,
+  "rank": 13,
+  "code_use_measured": true
  },
  {
   "rank": 14,
@@ -179,7 +192,8 @@
   "spread": 8.73,
   "checked": "sampled, 0 wrong",
   "bram": 0,
-  "code_use": null
+  "code_use": 0.9995,
+  "code_use_measured": false
  },
  {
   "rank": 15,
@@ -192,7 +206,8 @@
   "spread": 3.63,
   "checked": "all 1{,}024, 0 wrong",
   "bram": 0,
-  "code_use": null
+  "code_use": 0.9434,
+  "code_use_measured": true
  },
  {
   "rank": 16,
@@ -205,7 +220,8 @@
   "spread": 3.710000000000001,
   "checked": "all 40{,}000 \\checkmark",
   "bram": 0,
-  "code_use": null
+  "code_use": 0.9961,
+  "code_use_measured": false
  },
  {
   "rank": 17,
@@ -218,7 +234,8 @@
   "spread": 1.08,
   "checked": "1{,}024/1{,}024 \\checkmark",
   "bram": 0,
-  "code_use": null
+  "code_use": 0.4434,
+  "code_use_measured": true
  },
  {
   "rank": 18,
@@ -231,7 +248,8 @@
   "spread": 2.960000000000001,
   "checked": "all 255 \\checkmark",
   "bram": 0,
-  "code_use": null
+  "code_use": 1.0,
+  "code_use_measured": true
  },
  {
   "rank": 19,
@@ -244,7 +262,8 @@
   "spread": 5.75,
   "checked": "632/61{,}505",
   "bram": 57,
-  "code_use": null
+  "code_use": 0.9361,
+  "code_use_measured": false
  },
  {
   "rank": 20,
@@ -257,7 +276,8 @@
   "spread": 0.45,
   "checked": "107/65{,}536",
   "bram": 0,
-  "code_use": null
+  "code_use": 1.0,
+  "code_use_measured": true
  },
  {
   "rank": 21,
@@ -270,7 +290,8 @@
   "spread": 1.6300000000000026,
   "checked": "all 65{,}535 \\checkmark",
   "bram": 0,
-  "code_use": null
+  "code_use": 1.0,
+  "code_use_measured": true
  },
  {
   "rank": 22,
@@ -283,7 +304,8 @@
   "spread": 1.5299999999999976,
   "checked": "all 40{,}000 \\checkmark",
   "bram": 0,
-  "code_use": null
+  "code_use": 0.5276,
+  "code_use_measured": false
  },
  {
   "rank": 23,
@@ -296,6 +318,7 @@
   "spread": 1.9600000000000009,
   "checked": "all 40{,}000 \\checkmark",
   "bram": 0,
-  "code_use": null
+  "code_use": 0.9998,
+  "code_use_measured": false
  }
 ]
