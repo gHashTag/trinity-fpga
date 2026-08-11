@@ -66,6 +66,30 @@ because they are the ones a reviewer raises and we cannot answer by argument.
   driver at module level, so it cannot be imported; the source is split on its
   own first driver line and the helpers executed. A copy would drift and the
   comparison would quietly stop being apples to apples.
+### The ruler check earns its keep by refusing to run
+
+Making a script reproduce the published table *before* it does anything else is
+not ceremony. On 2026-08-11 that gate stopped a codebook search dead: the fp32
+baseline and Lloyd-Max matched to four decimals and MXFP4 came back 21.9397
+against a published 22.4998. Neither number was wrong — E2M1's top magnitude is
+6.0, not a power of two, so dividing the block maximum by it does not commute
+with rounding the E8M0 scale up, and three defensible rules span **21.94 to
+23.54, a 7.3 % spread** on comparisons whose margins are under 3 %.
+
+Without the gate the search would have run, found something, and reported it
+against whichever MXFP4 number the script happened to compute.
+
+- **A convention is part of a number.** Any figure that depends on an alignment,
+  a rounding direction or a normaliser must carry it, or two correct
+  measurements read as a contradiction — which is what shipped to the site and
+  to `COMPETITIVE_LANDSCAPE` before this was found.
+- **Check which way the ambiguity cuts.** Here the specification's own rule was
+  the least favourable to the competitor, so every claim held with more room
+  than reported. Saying so is worth more than the claim itself.
+- **Do not restate published tables to fit a new convention.** They are correct
+  and internally consistent; re-deriving trades a documented convention for an
+  undocumented re-run.
+
 - **The reproduction is the real instrument check.** Before reading any new
   number, the unrotated arms had to return 21.9397 / 36.7214 / 14.7269 /
   18.0275 — the published figures, to four decimals. That is what proves the new
