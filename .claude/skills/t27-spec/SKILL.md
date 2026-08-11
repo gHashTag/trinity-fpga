@@ -5568,3 +5568,39 @@ four-member category now have checks; the fourth is a noun-phrase mismatch with
 no countable projection. Naming the gap beside the tools stops the tools reading
 as coverage — and it explains why that member survived twelve waves while the
 others were caught in three.
+
+## Wave 648 — a negative control licenses nothing on its own
+
+**"Fails when starved" and "works when fed" are two claims.** A harness that
+only asks the first cannot distinguish a check that depends on its subject from
+a check that is simply broken — both fail when starved, and both get recorded as
+correct. Two live CI steps had been broken for days behind exactly this gap: one
+raised `ValueError` on a stray tuple element, the other mutated emitter text that
+a refactor had rewritten three days earlier. Run the positive arm, even if it
+costs what the real pipeline costs.
+
+**Ask which failures your control cannot distinguish.** That is the general form.
+Any deletion-based or perturbation-based control has a set of causes it cannot
+tell apart, and the interesting question is always what else lives in that set.
+
+**A defect can restore the exact condition a proposition was written to fix.**
+Half the zero-size properties went back to being unrun — the same suite whose
+unrun properties motivated the gate — by one stray character. Fixing a class does
+not immunise against re-entering it, so the gate that detects the class has to
+keep working, and that gate needs its own positive arm.
+
+**Over-detection is the default state of a check, not an occasional slip.** A
+census of ten gates found all ten fail some semantics-preserving change: a
+comment spliced into a body, an equivalent literal spelling, a signed zero, a
+`.yaml` extension, an indented marker. Unsoundness was in six of ten after ten
+days of hunting; incompleteness was in ten of ten after one pass — because nobody
+had asked. Budget for it when you write a gate, and probe from both directions.
+
+**A gate that cries wolf becomes an unsound gate with extra steps.** People
+disable checks that fail correct work. So incompleteness is not the milder
+failure mode; it is the slower path to the same place.
+
+**Your catalogue of failure shapes is a catalogue of your search.** Five shapes
+had accumulated and every one was an unsoundness mechanism, because every audit
+had been pointed at unsoundness. When a taxonomy looks complete, ask what
+question produced it before concluding anything about the field.
