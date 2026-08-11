@@ -79,6 +79,18 @@ with rounding the E8M0 scale up, and three defensible rules span **21.94 to
 Without the gate the search would have run, found something, and reported it
 against whichever MXFP4 number the script happened to compute.
 
+**When a ruler check fails, suspect the ruler first.** The failure above was
+written up as two documents disagreeing. Re-measuring both codebooks under both
+rules showed the published pair was internally consistent and the *check* was
+not: it had normalised one codebook to a top of 1.0 and left the other
+un-normalised, so it measured one arm under each rule. The correction went into
+the document that made the claim, the same day.
+
+The instrument still earned its keep, because what it actually found was
+sharper: under one rule the squared-error optimum beats MXFP4 by 0.90 %, under
+the other MXFP4 beats it by 4.45 %. **The convention decides which codebook
+wins**, which is a stronger statement than either number.
+
 - **A convention is part of a number.** Any figure that depends on an alignment,
   a rounding direction or a normaliser must carry it, or two correct
   measurements read as a contradiction — which is what shipped to the site and
