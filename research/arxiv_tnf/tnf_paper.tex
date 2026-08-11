@@ -3071,6 +3071,54 @@ on-silicon backpropagation & \textbf{0} & XOR $4/4$, 24--25 epochs & trains \\
 \end{table}
 
 \begin{table}[t]\centering
+\caption{Throughput per area, complete, re-measured. One ternary-neuron
+datapath, XC7A200T, no DSP anywhere, \emph{every bit of both accumulator
+registers folded into the observed output}, median of five placement seeds. The
+earlier version of this table observed $8$ of $10$ offset bits and $8$ of $25$
+mantissa bits and swept one seed, so synthesis was free to prune up to $68\%$ of
+the accumulator and to prune it by different amounts for different formats ---
+the same defect this paper records for the decoder tables, on a table that had
+never been re-run. All four of our families appear: the GFTernary alphabet, TNF,
+BNF and GF. The last column is the seed spread, and it is what decides which
+neighbouring rows are separated: GFTernary leads \texttt{int8} by $3.5\%$ while
+\texttt{int8}'s own spread is $11.00$\,MHz, so on these data the two are tied.}
+\label{tab:fullthroughput}
+\small
+\begin{tabular}{rlrrrrr}
+\toprule
+& format & storage & LUT & MHz & MHz/LUT & spread \\
+\midrule
+1 & \textbf{GFTernary} (ours) & 2 bits & 463 & 83.19 & \textbf{0.1797} & $6.61$ \\
+2 & \texttt{int8} & 8 bits & 454 & 78.83 & 0.1736 & $11.00$ \\
+3 & binary32 & 32 bits & 472 & 77.00 & 0.1631 & $6.37$ \\
+4 & \textbf{TNF16} (ours) & 16 bits & 510 & 77.47 & \textbf{0.1519} & $5.62$ \\
+5 & \textbf{BNF16} (ours) & 16 bits & 518 & 74.94 & \textbf{0.1447} & $12.28$ \\
+6 & \textbf{GF+8} (ours) & 8 bits & 510 & 72.84 & \textbf{0.1428} & $4.77$ \\
+7 & fp8 e5m2 & 8 bits & 480 & 67.06 & 0.1397 & $5.46$ \\
+8 & VAX F & 32 bits & 527 & 73.51 & 0.1395 & $4.43$ \\
+9 & fp8 e4m3 & 8 bits & 485 & 67.02 & 0.1382 & $6.78$ \\
+10 & \textbf{GF10} (ours) & 10 bits & 533 & 72.16 & \textbf{0.1354} & $5.08$ \\
+11 & binary16 & 16 bits & 522 & 63.30 & 0.1213 & $7.74$ \\
+12 & \textbf{GF14} (ours) & 14 bits & 587 & 71.15 & \textbf{0.1212} & $4.54$ \\
+13 & minifloat & 8 bits & 558 & 67.06 & 0.1202 & $5.49$ \\
+14 & posit8 & 8 bits & 540 & 44.33 & 0.0821 & $4.02$ \\
+15 & takum16 & 16 bits & 789 & 58.96 & 0.0747 & $5.75$ \\
+16 & IBM hex32 & 32 bits & 687 & 46.78 & 0.0681 & $3.78$ \\
+17 & LNS16 & 16 bits & 658 & 43.04 & 0.0654 & $0.45$ \\
+18 & posit16 & 16 bits & 712 & 40.38 & 0.0567 & $1.02$ \\
+19 & posit32 & 32 bits & 953 & 28.16 & 0.0295 & $2.29$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[t]\centering
+\includegraphics[width=0.94\textwidth]{tnf_full_table.pdf}
+\caption{The same nineteen formats. Ours are the four families named above; the
+bar labels carry the LUT count so area and throughput are readable together.}
+\label{fig:fullthroughput}
+\end{figure}
+
+\begin{table}[t]\centering
 \caption{Throughput per area among formats that carry a range, complete. One
 ternary-neuron datapath, one harness, XC7A200T, no DSP anywhere. Twenty formats;
 \texttt{int8} is not among them and is reported in Table~\ref{tab:rejected}

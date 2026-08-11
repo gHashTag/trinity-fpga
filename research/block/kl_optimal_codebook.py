@@ -69,9 +69,15 @@ NWIN = int(os.environ.get("NWIN", "40"))     # perplexity windows, as published
 KLWIN = int(os.environ.get("KLWIN", "2"))    # windows used inside the search
 EVALS = int(os.environ.get("EVALS", "120"))
 
+# Every codebook is normalised to a top of 1.0 before it reaches the quantiser.
+# That fixes the alignment rule to s = 2^ceil(log2(a_max)) for all of them --
+# see MXFP4_SCALE_CONVENTION_2026-08-11.md, where measuring one codebook under
+# each rule inverted which one won. The reference values below are the ones this
+# convention produces; MXFP4's is the figure BLOCK_AXIS_VERDICT publishes.
 MXFP4 = sorted(fp_levels(2, 1))
-LLOYD = [0.0, 0.10334, 0.21079, 0.32491, 0.44963, 0.59031, 0.75635, 0.96567]
-PUBLISHED = {"MXFP4": 22.4998, "Lloyd-Max": 22.2976, "fp32": 14.4874}
+LLOYD = [x / 0.96567 for x in
+         [0.0, 0.10334, 0.21079, 0.32491, 0.44963, 0.59031, 0.75635, 0.96567]]
+PUBLISHED = {"MXFP4": 21.9397, "Lloyd-Max": 22.9166, "fp32": 14.4874}
 
 
 def normalise(lv):
