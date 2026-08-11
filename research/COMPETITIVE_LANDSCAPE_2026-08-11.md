@@ -64,11 +64,20 @@ QuIP intend — so the distribution the verdict's Lloyd-Max bound was computed o
 is not the distribution a 2026 deployment quantises.
 
 **This does not overturn the verdict, and it is not a way back in.** Rotation is
-format-agnostic preprocessing; it helps whatever is quantised afterwards. What
-is untested is whether it helps TNF *more* than MXFP4, and there is no reason on
-the table to expect it does. The honest statement is that the verdict is scoped
-to unrotated weights, and that closing the gap would require rotation to favour
-us specifically — a much stronger and unevidenced claim.
+format-agnostic preprocessing; it helps whatever is quantised afterwards.
+
+**Measured 2026-08-11, and it is worse than that.** `ROTATION_VERDICT_2026-08-11.md`
+ran the comparison under a block-wise Hadamard of the quantisation block size,
+on the verdict's own setup and quantiser. Rotation alone makes every arm worse
+and ours worse by more: MXFP4 21.9397 → 23.7476 against TNF4 36.7214 → 42.3269,
+so the 4-bit gap goes from **+14.78 to +18.58** and the 6-bit gap from **+3.30 to
++6.09**. The scope objection is therefore answered in the direction least
+convenient for us — the element axis is decided against us on both
+distributions.
+
+That measurement isolates the *rotation*. MR-GPTQ is rotation plus GPTQ error
+compensation, and the compensation is the part that repairs what the transform
+costs, so nothing above contradicts that paper or should be quoted as if it did.
 
 ## Also on the board
 
