@@ -1,5 +1,15 @@
 # The block axis is not closed, and the counterexample was published in 2023
 
+> **Corrected 2026-08-12 — see `THE_SIXTEENTH_CODEWORD_2026-08-12.md`.** Two
+> things below are wrong. NF4's **−6.50 %** was pooled over three families; over
+> four it is **−4.11 %**, because on OPT-125M — never run at the time — **NF4
+> loses to MXFP4 by +2.14 %** (p = 4.7e-10). And the margin is not the
+> Gaussian-quantile shape at all: a symmetric 8-magnitude book spends one of its
+> sixteen codewords on a second zero, and `NF4-sym`, the same construction with
+> the extra value switched off, is a **tie** with MXFP4 (+0.33 %, p = 0.46). The
+> decomposition is exact to a residual of 0.00e+00. The conclusion that the block
+> axis is not closed stands; the reason given for it does not.
+
 `BLOCK_AXIS_CLOSED_2026-08-10.md` concludes: *no eight-level element format will
 take the block axis from MXFP4.* Today that conclusion was attacked four times.
 Three of the attacks were ours and two of those failed. The fourth was not an

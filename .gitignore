@@ -426,3 +426,6 @@ fpga/phiscale/c[sy]_*.log
 # yosys netlist dumps: regenerable, tens of MB each
 fpga/codebook/*.json
 fpga/codebook/__pycache__/
+
+# Phase-distribution dumps: regenerable from the checkpoints, tens of MB
+research/block/loguniform_x_*.npy

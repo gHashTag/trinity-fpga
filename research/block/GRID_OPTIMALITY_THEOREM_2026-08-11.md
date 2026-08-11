@@ -82,6 +82,55 @@ not the same quantity:
 A format pays both. Quoting either as "the" advantage of a geometric scale would
 be wrong, and a document that quotes both must say which is which.
 
+## Measured 2026-08-12: the log-uniformity assumption is false, and a ruler broke
+
+The assumption was stated and not tested. It has now been tested over **19,808,256
+blocks** across four models, and it fails in every one.
+
+| model | KS D against U[0,1) | measured E[waste] | vs predicted ½ |
+|---|---:|---:|---:|
+| Pythia-160M | 0.00855 | 0.465832 | −6.8 % |
+| Qwen2.5-0.5B | 0.03513 | 0.490310 | −1.9 % |
+| OPT-125M | 0.04834 | 0.497039 | −0.6 % |
+| SmolLM2-135M | 0.05903 | 0.529067 | +6.0 % |
+
+All `p < 1e-168`, and **not a large-N artefact**: 5,000-block subsamples reject at
+α = 0.05 in 200 of 200 draws for three of the four. The phase density departs from
+flat by up to ±29 %. A layer-level bootstrap — the honest unit — excludes ½ for
+three models; Pythia ties it.
+
+Pooled across all four, `E[waste] = 0.498558`. **The per-model errors cancel, so
+"log-uniform" is right on average over models and wrong for every individual
+one** — which is exactly the shape of assumption that survives casual checking.
+
+### The broken ruler, and it inverts a corollary
+
+Block maxima are not continuous. `frac(log₂ a_max)` takes **exactly 128 distinct
+values on bf16 checkpoints and 1024 on fp16** — the storage mantissa lattice.
+
+A *float* scale grid's tops are a **subset of that lattice**, so it collects exact
+zero-waste hits that a geometric grid cannot: `P(waste = 0)` at m = 6 is **37.9 %
+for float against 0.90 % for geometric** on SmolLM2.
+
+On raw released checkpoints this makes the float grid **beat** the geometric one —
+float/geo = 0.978 at m = 4, 0.866 at m = 5, **0.762 at m = 6** — which flatly
+contradicts the corollary above.
+
+**Both readings are true and must both be recorded.** Dithering each phase
+uniformly inside its own rounding cell removes the effect entirely and restores
+float/geo > 1 everywhere, so the contradiction is an artefact of the *file
+format*, not of the weights. But if you quantise a released bf16 checkpoint — 
+which is what everyone does — the free hits are real and the corollary does not
+apply to you.
+
+### And the honest verdict on the whole theorem
+
+Re-deriving T39 under the measured density buys nothing, because **expected
+headroom waste turns out to be nearly orthogonal to accuracy**. The theorem is
+correct mathematics about a quantity that does not decide the outcome — which is
+the same lesson `METRIC_DISAGREEMENT_2026-08-11.md` recorded about squared error,
+arrived at from the opposite direction.
+
 ## What it does and does not license
 
 **Does.** It explains why `SCALE_FRONTIER`'s φᵏ grid wins on the cost frontier
