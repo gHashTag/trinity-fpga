@@ -42,6 +42,8 @@ class TNFSpec:
 
 
 FORMATS = {
+    "tnf8":  TNFSpec("tnf8",  et=3, mant_bits=4),
+    "tnf16": TNFSpec("tnf16", et=4, mant_bits=9),
     "tnf32": TNFSpec("tnf32", et=6, mant_bits=25),
     "tnf64": TNFSpec("tnf64", et=7, mant_bits=52),
 }

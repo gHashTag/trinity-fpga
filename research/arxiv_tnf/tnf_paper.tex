@@ -1710,7 +1710,7 @@ advantage is smaller and it is real.}
 \toprule
 width & format & LUTs & $F_{\max}$ & MHz/LUT & ratio \\
 \midrule
-8 bits & \textbf{TNF8} & $\mathbf{493}$ & $75.69$\,MHz & $\mathbf{0.1535}$ & $\mathbf{1.87\times}$ \\
+8 bits & \textbf{TNF8} & $\mathbf{545}$ & $62.13$\,MHz & $\mathbf{0.1140}$ & $\mathbf{1.39\times}$ \\
 8 bits & posit8 & $540$ & $44.33$\,MHz & $0.0821$ & --- \\
 \addlinespace
 16 bits & \textbf{TNF16} & $\mathbf{565}$ & $66.28$\,MHz & $\mathbf{0.1173}$ & $\mathbf{2.07\times}$ \\
@@ -3095,19 +3095,19 @@ codes.}
 \midrule
 1 & \textbf{GFTernary} (ours) & 2 bits & 463 & 83.19 & \textbf{0.1797} & $6.61$ & all 4 codes \\
 2 & binary32 & 32 bits & 472 & 77.00 & 0.1631 & $6.37$ & not swept \\
-3 & \textbf{TNF8} (ours) & 10 bits & 493 & 75.69 & \textbf{0.1535} & $6.41$ & no reference \\
-4 & \textbf{BNF16} (ours) & 16 bits & 518 & 74.94 & \textbf{0.1447} & $12.28$ & no reference \\
-5 & \textbf{GF+8} (ours) & 8 bits & 510 & 72.84 & \textbf{0.1428} & $4.77$ & no reference \\
-6 & fp8 e5m2 & 8 bits & 480 & 67.06 & 0.1397 & $5.46$ & 6 of 256 wrong \\
-7 & VAX F & 32 bits & 527 & 73.51 & 0.1395 & $4.43$ & not swept \\
-8 & fp8 e4m3 & 8 bits & 485 & 67.02 & 0.1382 & $6.78$ & 14 of 256 wrong \\
-9 & \textbf{GF10} (ours) & 10 bits & 533 & 72.16 & \textbf{0.1354} & $5.08$ & all 1{,}024 \\
-10 & binary16 & 16 bits & 522 & 63.30 & 0.1213 & $7.74$ & all 65{,}536 \\
-11 & \textbf{GF14} (ours) & 14 bits & 587 & 71.15 & \textbf{0.1212} & $4.54$ & all 16{,}384 \\
-12 & minifloat & 8 bits & 558 & 67.06 & 0.1202 & $5.49$ & not swept \\
-13 & \textbf{TNF32} (ours) & 36 bits & 569 & 66.91 & \textbf{0.1176} & $6.03$ & sampled 9{,}997, 0 wrong \\
-14 & \textbf{TNF16} (ours) & 17 bits & 565 & 66.28 & \textbf{0.1173} & $8.56$ & all 131{,}072 \\
-15 & \textbf{TNF64} (ours) & 65 bits & 572 & 65.38 & \textbf{0.1143} & $8.73$ & sampled, 0 wrong \\
+3 & \textbf{BNF16} (ours) & 16 bits & 518 & 74.94 & \textbf{0.1447} & $12.28$ & no reference \\
+4 & \textbf{GF+8} (ours) & 8 bits & 510 & 72.84 & \textbf{0.1428} & $4.77$ & no reference \\
+5 & fp8 e5m2 & 8 bits & 480 & 67.06 & 0.1397 & $5.46$ & 6 of 256 wrong \\
+6 & VAX F & 32 bits & 527 & 73.51 & 0.1395 & $4.43$ & not swept \\
+7 & fp8 e4m3 & 8 bits & 485 & 67.02 & 0.1382 & $6.78$ & 14 of 256 wrong \\
+8 & \textbf{GF10} (ours) & 10 bits & 533 & 72.16 & \textbf{0.1354} & $5.08$ & all 1{,}024 \\
+9 & binary16 & 16 bits & 522 & 63.30 & 0.1213 & $7.74$ & all 65{,}536 \\
+10 & \textbf{GF14} (ours) & 14 bits & 587 & 71.15 & \textbf{0.1212} & $4.54$ & all 16{,}384 \\
+11 & minifloat & 8 bits & 558 & 67.06 & 0.1202 & $5.49$ & not swept \\
+12 & \textbf{TNF32} (ours) & 36 bits & 569 & 66.91 & \textbf{0.1176} & $6.03$ & sampled 9{,}997, 0 wrong \\
+13 & \textbf{TNF16} (ours) & 17 bits & 565 & 66.28 & \textbf{0.1173} & $8.56$ & all 131{,}072 \\
+14 & \textbf{TNF64} (ours) & 65 bits & 572 & 65.38 & \textbf{0.1143} & $8.73$ & sampled, 0 wrong \\
+15 & \textbf{TNF8} (ours) & 10 bits & 545 & 62.13 & \textbf{0.1140} & $3.63$ & all 1{,}024, 0 wrong \\
 16 & posit8 & 8 bits & 540 & 44.33 & 0.0821 & $4.02$ & not swept \\
 17 & takum16 & 16 bits & 789 & 58.96 & 0.0747 & $5.75$ & not swept \\
 18 & IBM hex32 & 32 bits & 687 & 46.78 & 0.0681 & $3.78$ & not swept \\

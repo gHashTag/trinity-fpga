@@ -23,17 +23,6 @@
  },
  {
   "rank": 3,
-  "format": "TNF8",
-  "ours": true,
-  "storage": "10 bits",
-  "lut": 493,
-  "mhz": 75.69,
-  "mhz_per_lut": 0.1535,
-  "spread": 6.41,
-  "checked": "no reference"
- },
- {
-  "rank": 4,
   "format": "BNF16",
   "ours": true,
   "storage": "16 bits",
@@ -44,7 +33,7 @@
   "checked": "no reference"
  },
  {
-  "rank": 5,
+  "rank": 4,
   "format": "GF+8",
   "ours": true,
   "storage": "8 bits",
@@ -55,7 +44,7 @@
   "checked": "no reference"
  },
  {
-  "rank": 6,
+  "rank": 5,
   "format": "fp8 e5m2",
   "ours": false,
   "storage": "8 bits",
@@ -66,7 +55,7 @@
   "checked": "6 of 256 wrong"
  },
  {
-  "rank": 7,
+  "rank": 6,
   "format": "VAX F",
   "ours": false,
   "storage": "32 bits",
@@ -77,7 +66,7 @@
   "checked": "not swept"
  },
  {
-  "rank": 8,
+  "rank": 7,
   "format": "fp8 e4m3",
   "ours": false,
   "storage": "8 bits",
@@ -88,7 +77,7 @@
   "checked": "14 of 256 wrong"
  },
  {
-  "rank": 9,
+  "rank": 8,
   "format": "GF10",
   "ours": true,
   "storage": "10 bits",
@@ -99,7 +88,7 @@
   "checked": "all 1{,}024"
  },
  {
-  "rank": 10,
+  "rank": 9,
   "format": "binary16",
   "ours": false,
   "storage": "16 bits",
@@ -110,7 +99,7 @@
   "checked": "all 65{,}536"
  },
  {
-  "rank": 11,
+  "rank": 10,
   "format": "GF14",
   "ours": true,
   "storage": "14 bits",
@@ -121,7 +110,7 @@
   "checked": "all 16{,}384"
  },
  {
-  "rank": 12,
+  "rank": 11,
   "format": "minifloat",
   "ours": false,
   "storage": "8 bits",
@@ -132,7 +121,7 @@
   "checked": "not swept"
  },
  {
-  "rank": 13,
+  "rank": 12,
   "format": "TNF32",
   "ours": true,
   "storage": "36 bits",
@@ -143,7 +132,7 @@
   "checked": "sampled 9{,}997, 0 wrong"
  },
  {
-  "rank": 14,
+  "rank": 13,
   "format": "TNF16",
   "ours": true,
   "storage": "17 bits",
@@ -154,7 +143,7 @@
   "checked": "all 131{,}072"
  },
  {
-  "rank": 15,
+  "rank": 14,
   "format": "TNF64",
   "ours": true,
   "storage": "65 bits",
@@ -163,6 +152,17 @@
   "mhz_per_lut": 0.1143,
   "spread": 8.73,
   "checked": "sampled, 0 wrong"
+ },
+ {
+  "rank": 15,
+  "format": "TNF8",
+  "ours": true,
+  "storage": "10 bits",
+  "lut": 545,
+  "mhz": 62.13,
+  "mhz_per_lut": 0.114,
+  "spread": 3.63,
+  "checked": "all 1{,}024, 0 wrong"
  },
  {
   "rank": 16,
