@@ -33,6 +33,19 @@ contribute on this axis has already been contributed. **No eight-level element
 format will take the block axis from MXFP4, because the best possible one does
 not.**
 
+> **WITHDRAWN 2026-08-11 — see `block/BLOCK_AXIS_NOT_CLOSED_2026-08-11.md`.**
+> Both halves fail. "The best possible one" was the squared-error optimum, and
+> squared error is the wrong optimum here — one intervention moved weight L2 by
+> −3.31 %, logit L2 by −46.11 % and perplexity by +7.96 %
+> (`block/METRIC_DISAGREEMENT_2026-08-11.md`). And a counterexample was published
+> in 2023: **NF4**, the 4-bit NormalFloat from QLoRA, beats MXFP4 in this harness
+> by **−6.50 % pooled out of sample** (95 % CI [−7.30, −5.70], t = −15.60,
+> p = 2e-28, better in 95 of 100 windows) at strictly equal budget, fitted to a
+> Gaussian prior rather than to any checkpoint here. It was never run until
+> today. A three-model joint fit also beats MXFP4 on a held-out family by
+> −1.31 % (p = 3.1e-07). **The measured table above is unaffected — only this
+> conclusion is.**
+
 **Squared error and perplexity are nearly unrelated here.** Lloyd-Max improves
 squared error 14.97-fold and perplexity by 0.9%. Worse, the ranking inverts:
 every two-segment ladder beats MXFP4 on squared error, by factors of 3 to 10,

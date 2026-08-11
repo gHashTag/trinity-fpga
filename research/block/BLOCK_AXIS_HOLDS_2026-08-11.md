@@ -1,5 +1,14 @@
 # Two attempts to break the block axis, two failures, and one thing learned from the difference
 
+> **Superseded the same day by `BLOCK_AXIS_NOT_CLOSED_2026-08-11.md`.** The axis
+> is not held: NF4 (2023, published, unfitted here) beats MXFP4 by −6.50 %
+> pooled out of sample, and a three-model joint fit beats it by −1.31 % on a
+> held-out family. Two corrections to what is below: **nSSE-equal does not tie
+> out of sample, it loses** (+1.37 %, t = +2.85, p = 0.0053, CI [+0.42, +2.34])
+> once a third unseen family is included — the pooled figure below wrongly
+> included its own fitting model. And the "graceful degradation" contrast is
+> weakened to "both lose, the logit fit by more".
+
 `BLOCK_AXIS_CLOSED_2026-08-10.md` concludes: *no eight-level element format will
 take the block axis from MXFP4.* Its **argument** was wrong — it rested on
 Lloyd-Max being "the ceiling", and Lloyd-Max is the ceiling for squared error, not
