@@ -5844,3 +5844,34 @@ The sixth defect was established by comparing a documented contract with a call
 site — sound, but not simulated. Recording it at that strength keeps the next
 reader from treating it as equivalent to the five that have counterexamples, and
 tells them exactly what work remains to promote it.
+
+## Wave 656 — a floor on a total says nothing about coverage
+
+**Check that a new gate parses the specific artifact it was built for.** A units
+checker written to catch one known connection never parsed that connection at
+all: a non-greedy body capture stopped at the first `);` and could not survive a
+nested parenthesis in the port list. Eleven instantiations were read, the one
+that mattered was absent, and the tree reported clean. Before believing a new
+gate, print what it actually parsed and look for your subject by name.
+
+**A coverage floor on a total is not a coverage floor.** `compared > 0` passed
+happily on twenty *other* connections while the only interesting one was
+missing. If a gate exists for a particular case, assert that the particular case
+was examined — not that some examining happened.
+
+**A false positive can name the right thing and hide a parse error.** A control
+keyword parsed as a module name produced a finding that cited exactly the two
+signals of the real defect. The gate looked like it worked, so nobody checked
+whether it had read the actual instantiation. When output matches expectation,
+that is the moment to verify the mechanism, not the moment to stop.
+
+**A vocabulary encodes distinctions; check they are the design's.** Separating
+"chunk" from "word" produced two false findings because in this design a chunk
+IS a 54-bit word. When a check reasons from names, its word-families are a claim
+about the domain and need the same scrutiny as any other claim.
+
+**Declare a known-open defect rather than silencing or fixing it.** A real defect
+whose repair is a design decision belongs in an explicit table with its reason
+and its issue, reported as a warning, with everything not on the list failing.
+That keeps the gate useful today, keeps the defect visible, and makes removing
+the entry without fixing it turn the build red.
