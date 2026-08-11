@@ -2,9 +2,9 @@
 
 `BLOCK_AXIS_CLOSED_2026-08-10.md` dismisses the squared-error optimum as "not
 implementable" and never measures it. That dismissal is now the only thing
-standing between the KL-optimised codebook — 20.2586 perplexity against MXFP4's
-21.9397 on SmolLM2-135M, an advantage that grew to −8.66 % on held-out windows
-with t(39) = −12.51 — and a claim that the block axis is not closed.
+standing between the KL-optimised codebook — on SmolLM2-135M over 40 windows,
+20.2586 perplexity against MXFP4's 21.9397 under the top-normalised scale rule —
+and a claim that the block axis is not closed.
 
 > **The motivating claim was withdrawn the same day** — see
 > `KL_CODEBOOK_WITHDRAWN_2026-08-11.md`. The codebook was fitted to SmolLM2 and

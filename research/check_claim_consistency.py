@@ -35,8 +35,15 @@ FORMATS = [
     "E2M1", "NF4", "BOF4", "AF4", "tekum16", "GF-T16", "GF16",
 ]
 
-# A claim looks like: <format> ... <number with a decimal point>
-NUM = r"(\d{1,3}\.\d{2,6})"
+# A claim looks like: <format> ... <number with a decimal point>, and the number
+# must NOT carry a unit. The first version of this file matched "14.97x" (a
+# ratio) and "91.36 dB" (an SNR) as if they were perplexities, which is how an
+# over-broad instrument becomes worse than no instrument.
+NUM = r"(\d{1,3}\.\d{2,6})(?![\dx×%]|\s*(?:x|×|dB|%|bits?|LUT|MHz|nats?))"
+
+# Only lines that are actually reporting a perplexity. Everything else is a
+# different quantity that happens to sit near a format name.
+PPL_CONTEXT = ("ppl", "perplexity", "перплекс")
 
 # Words whose presence near a number means the document HAS declared what
 # distinguishes it. Any one of these is enough.
@@ -69,6 +76,8 @@ def scan():
                 low = line.lower()
                 if any(w in low for w in ("withdraw", "corrected", "superseded",
                                           "previously reported", "was wrong")):
+                    continue
+                if not any(c in low for c in PPL_CONTEXT):
                     continue
                 for fmt in FORMATS:
                     if fmt.lower() not in low:
