@@ -41,4 +41,27 @@ module tnf16b_decode (input wire [15:0] x, output wire [31:0] fp32_out);
                   :           {s, e32, mant23};
 endmodule
 
+// tnf16a_safe: rung A with its out-of-specification offsets reserved.
+//
+// Four trits name 81 offsets and the field holds 128, so offsets 81..127 are
+// outside the format. The unguarded decoder gives each of them a distinct
+// finite value, which means a corrupted offset field is indistinguishable from
+// a valid one -- and no conformance test can find that, because a decoder that
+// answers every input answers every test. Here they signal NaN.
+module tnf16a_safe_decode (input wire [15:0] x, output wire [31:0] fp32_out,
+                           output wire invalid);
+  wire       s   = x[15];
+  wire [6:0] off = x[14:8];
+  wire [7:0] m   = x[7:0];
+  wire signed [10:0] e = $signed({1'b0, off}) - 11'sd40;
+  wire [7:0] e32 = e[7:0] + 8'd127;
+  wire is_zero = (off == 7'd0);
+  wire is_spec = (off == 7'd80);
+  assign invalid = (off > 7'd80);
+  assign fp32_out = invalid  ? {1'b0, 8'hFF, 1'b1, 22'b0}   // reserved -> qNaN
+                  : is_spec  ? {s, 8'hFF, (|m), 22'b0}
+                  : is_zero  ? {s, 31'b0}
+                  :            {s, e32, {m, 15'b0}};
+endmodule
+
 `default_nettype wire

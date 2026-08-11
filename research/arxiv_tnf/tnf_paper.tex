@@ -56,6 +56,11 @@
 \setlength{\abovecaptionskip}{8pt}
 \setlength{\belowcaptionskip}{4pt}
 
+% A live utilisation claim carries the format it is about, so
+% tools/check_codespace_claims.py can verify it against code_use.json
+% instead of guessing which format a percentage in prose refers to.
+\newcommand{\codeuse}[2]{#2\%}
+
 \begin{document}
 \maketitle
 
@@ -3966,8 +3971,8 @@ effective bits against \texttt{binary16}'s sixteen. \emph{That estimate was
 computed, not measured, and measurement refutes it.}
 
 Sweeping every code through the RTL and counting distinct outputs gives rung A
-$64{,}518$ distinct values of $65{,}536$ codes: \textbf{$98.4\%$ utilisation},
-against \texttt{binary16}'s $100\%$. The out-of-specification offsets are not
+$64{,}518$ distinct values of $65{,}536$ codes: \textbf{$\codeuse{TNF16a}{98.4}$
+utilisation}, against \texttt{binary16}'s $\codeuse{binary16}{100.0}$. The out-of-specification offsets are not
 discarded --- the decoder assigns each of them a distinct value. The win over
 IEEE half at equal storage costs $1.6\%$ of code space, not $37.5\%$, and the
 result is stronger than this section originally claimed.
@@ -4017,14 +4022,64 @@ LNS16 & 65{,}536 & 65{,}536 & 100.0\% \\
 \end{tabular}
 \end{table}
 
+\paragraph{What the win rests on.}
+The unguarded decoder gives each of the $47$ out-of-specification offsets a
+distinct finite value, and that is where the same-width win comes from. Guarding
+them --- a comparator on the offset field, invalid codes signalling
+\textsc{NaN} --- was built and swept: $41{,}472$ of $41{,}472$ in-specification
+codes exact, all $24{,}064$ out-of-specification codes flagged, zero errors.
+
+\begin{center}\small
+\begin{tabular}{lrrr}
+\toprule
+rung A & LUT & MHz & MHz/LUT \\
+\midrule
+unguarded & $502$ & $69.87$ & $0.1392$ \\
+offsets reserved & $549$ & $64.86$ & $0.1181$ \\
+\midrule
+& $+9.4\%$ & $-7.2\%$ & $\mathbf{-15.1\%}$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+\texttt{binary16} measures $0.1213$. So the rung beats IEEE half by $14.7\%$
+while its invalid codes are undetectable, and loses to it by $2.6\%$ once they
+are detected. \textbf{The win at equal storage depends on not checking the
+offset field.} IEEE half needs no such check --- all $65{,}536$ of its codes are
+defined --- so the comparison is between a format that must pay for a guard and
+one that has nothing to guard.
+
+\begin{proposition}[The reservation cost]
+\label{prop:reserve}
+Let a format's specification cover $S \subsetneq C$ of its code space. Any
+implementation either (i) guards $C\setminus S$, paying the logic to recognise
+it, or (ii) assigns values to $C\setminus S$, which extends the specification to
+$C$. There is no implementation that preserves both the specification and the
+cost of (ii).
+\end{proposition}
+
+This puts a question under the ladder rather than beside it. Four trits name
+$81$ offsets; the field that holds them is seven bits wide and names $128$.
+Either the exponent is ternary and $37\%$ of the word's codes lie outside the
+format --- in which case Proposition~\ref{prop:reserve} charges us $15.1\%$ and
+the IEEE comparison is lost --- or the exponent is a seven-bit binary field, all
+codes are defined and the win stands, but then \emph{the ternary structure this
+paper is named for does not reach $37\%$ of its own code space}. Both readings
+are defensible and they cannot both be used at once, which is why the number
+appears twice above instead of once.
+
+\emph{We have no measurement that settles it, and say so rather than choosing
+the reading that flatters the result.}
+
 \paragraph{And the mechanism this section proposed is not there.}
 The claim was that a throughput metric rewards a format for discarding code
 space, resting on Proposition~\ref{prop:pruning} and three points. Across all
 $23$ formats measured, the correlation between utilisation and MHz/LUT is
 $\mathbf{+0.173}$ --- $t=0.80$ on $21$ degrees of freedom, not significant, and
 of the \emph{opposite} sign to the one predicted. The two least efficient
-formats in the catalogue, \texttt{GF+8} at $44.3\%$ and IBM hex32 at $52.8\%$,
-sit at ranks $17$ and $22$.
+formats in the catalogue, \texttt{GF+8} at $\codeuse{GF+8}{44.3}$ and IBM hex32 at
+$\codeuse{IBM hex32}{52.8}$, sit at ranks $17$ and $22$.
 
 \textbf{The hypothesis is withdrawn.} Proposition~\ref{prop:pruning} remains
 true as stated --- a smaller image does permit specialisation --- but the
@@ -4036,7 +4091,7 @@ computing one.
 One correction belongs to our own headline. This paper stated that
 \texttt{GFTernary} ``uses all four of its codes and discards nothing''. It does
 not: $\{-\varphi, 0, +\varphi\}$ is three values in two bits, and the measured
-utilisation is $\mathbf{75\%}$, the third lowest in the catalogue. Its first
+utilisation is $\mathbf{\codeuse{GFTernary}{75.0}}$, the third lowest in the catalogue. Its first
 place stands on the throughput measurement, which is unaffected, but the
 sentence defending it was false and is retracted.
 
