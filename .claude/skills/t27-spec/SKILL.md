@@ -5740,3 +5740,39 @@ already made; the sweep does not recover them. What it buys is the sixth
 occurrence failing the build instead of being found by whatever it breaks — and
 that is the only return, so say so plainly rather than implying the sweep
 repaired anything.
+
+## Wave 653 — a property can protect a defect as effectively as a test
+
+**When something asserts the buggy behaviour, the bug is not merely untested —
+it is defended.** A requantizer emits a packed word only when full, silently
+dropping a layer's last partial word, and the module carries a formal property
+*proving* it never emits a partial word. Any fix fails the suite. This is the
+second instance of the shape here; the first was a unit test pinning a wrong
+width. When you meet a surprising behaviour, check whether anything asserts it
+before assuming it is unintended — and if something does, that assertion is part
+of the defect.
+
+**Two statements about the design, one file apart, disagreeing.** An annotation
+said a counter advances `ceil(n/27)` times; the RTL does `floor`. The
+safety argument built on it survived, because floor ≤ ceil — so nothing broke and
+nothing complained. But the discrepancy was pointing straight at the functional
+gap, and the `ceil` version was what the design was *intended* to do. A
+documentation error that is harmless for the stated purpose can still be the
+clearest available evidence of a real defect.
+
+**Ask what the annotation's author believed.** The `ceil` reading is only
+explicable if they thought a partial word gets flushed. Reading a wrong comment
+as a record of intent — rather than as a thing to correct and move past — is what
+turned a documentation fix into a design finding.
+
+**Control properties do not see data loss.** Dropping a layer's last twenty-six
+results leaves every handshake, phase and readiness signal correct. The engine
+runs, the buffers fill, and the answer is wrong. A suite that constrains control
+will report perfect health through this class of defect, in both directions:
+earlier a wrong arithmetic value disturbed nothing, and here a missing value does
+the same.
+
+**Fix the documentation; do not unilaterally fix the hardware.** Whether to add a
+flush, require a multiple-of-27 contract, or tolerate a partial final word is a
+design decision that changes emitted hardware. Correcting the false annotation
+and recording the defect is complete work; silently changing behaviour is not.
