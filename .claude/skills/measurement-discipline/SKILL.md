@@ -434,6 +434,32 @@ analysis. The symptom is not a crash; it is an unexplained instability that then
 research campaign. Three campaigns here went into explaining an instability that was one
 ineligible book in a pool of ten.
 
+## 8c. Before writing a gate, search for the gate
+
+Three times now the fix for "this is not checked" was **already in the repository, uninvoked**.
+The render check, the ARIA check and the typecheck ratchet were each written the day their failure
+was found, each then ran only when someone remembered, and a later session wrote a *second* gate
+for the same thing. The second one is always weaker — it is written under time pressure, against a
+symptom, without the first one's accumulated caveats:
+
+| the duplicate | what already existed | how the duplicate was worse |
+|---|---|---|
+| `website-static-checks.yml` | `website-checks.yml`, green for six runs, already running the render check in CI | wired to raw `npm run typecheck` (184 pre-existing errors) instead of the repo's own `typecheck:ratchet` — red the moment it merged |
+
+A permanently red gate is worse than no gate: it is a red X people learn to scroll past, and it sits
+next to the real signal making that unreadable too.
+
+**Do this first, it costs one command.** Before adding any check: `grep -rl` the repo for the thing
+you are about to write, and `grep` CI config for whether the existing one is *invoked*. "Not run"
+and "not written" look identical from the outside and have completely different fixes — the first
+is one line of YAML.
+
+**And when the debt is real, ratchet rather than demand zero.** A gate on the direction (no file may
+gain errors) is green today, catches the regression tomorrow, and keeps the debt countable. Gate
+**per unit, not on a total**: a scalar count passes when one file is fixed and another breaks by the
+same amount, which is exactly the shape of a refactor trading one bug for another. That case belongs
+in the gate's own self-test — `fixed one, broke another` must fail.
+
 ## 9. Adversarial verification finds what self-consistency cannot
 
 Every theorem in the campaign was handed to a second agent instructed to **refute it, defaulting
