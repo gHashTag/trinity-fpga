@@ -92,10 +92,7 @@ Among the twenty-five carrying their own range, GFTernary leads throughput per a
 costs $28$ LUT per weight and \emph{no DSP at any fan-in}.
 
 Which rung follows from the budget --- $\varphi$ at four bits, $r^5{=}r^3{+}1$ at
-five, $r^6{=}r{+}1$ at six --- reaching $3.7\%$ of \texttt{fp32} at six bits and
-one adder. On the block axis the element is closed, the best eight-level
-codebook beating a deployed one by $0.9\%$, and the scale is not: a $\varphi$
-grid at four bits beats MXFP4 on two models at $0.125$ fewer bits per weight.
+five, $r^6{=}r{+}1$ at six ---  On the block axis the gain is scale \emph{resolution}: at $4.25$ bits per element a finer ladder beats MXFP4 by $17.1\%$ RMSE on two models and $20.0\%$ perplexity, zero losing blocks in $14.9$M --- and a binary ladder realises it better than a ternary one.
 
  Eleven retractions are marked in place below.
 \end{abstract}
@@ -3101,7 +3098,7 @@ on-silicon backpropagation & \textbf{0} & XOR $4/4$, 24--25 epochs & trains \\
 
 \begin{table}[t]\centering
 \caption{Throughput per area among formats that carry their own range, with
-conformance. One ternary-neuron datapath, XC7A200T, no DSP, every accumulator bit observed. The \textsc{sd} column gives the seed count per row: rows swept at fifty-four seeds report the \emph{mean} and a $95\%$ interval, rows at five report the median and the observed range. \texttt{int8} is in
+conformance. One ternary-neuron datapath, XC7A200T, no DSP, every accumulator bit observed. Every row is the \emph{mean} of fifty-four placement seeds with a $95\%$ interval, all on the same $128$-bit harness. \texttt{int8} is in
 Table~\ref{tab:rejected}. \textbf{Of the three ladder rungs only TNF16 remains here, at its specified parameters}, and it moved: the modules previously measured
 implemented different formats --- TNF16 one mantissa bit short, TNF32 with twelve
 trits and eleven mantissa bits where the specification gives six and
@@ -3124,38 +3121,38 @@ been worth more than the format's own margin, and repairing a competitor's
 implementation moved the comparison in our favour, which is the direction the
 rule predicts and is now measured rather than asserted. Every error
 found, ours and theirs, made its module smaller: an unimplemented case is
-unsynthesised logic. \textbf{Resolution.} The pooled coefficient of variation across seeds is $3.71\%$, so two rows at five seeds separate at $\alpha=.05$ only when their MHz/LUT differ by more than $5.50\%$ relative, and two rows at fifty-four seeds only above $1.43\%$; smaller gaps than the applicable threshold are not results. The detection floor for a difference in \emph{decoder} cost is $41.3$ LUT, which is $79\%$ of a whole decoder at the median row --- the $472$-LUT harness inflates that floor tenfold. Every row is measured on the same $128$-bit harness; rows that were not have been re-measured or withdrawn.}\label{tab:fullthroughput}
+unsynthesised logic. \textbf{Resolution.} The pooled coefficient of variation across seeds is $3.71\%$, so at fifty-four seeds two rows separate at $\alpha=.05$ only when their MHz/LUT differ by more than $1.43\%$ relative; smaller gaps are not results. The detection floor for a difference in \emph{decoder} cost is $41.3$ LUT, which is $79\%$ of a whole decoder at the median row --- the $472$-LUT harness inflates that floor tenfold. Every row is measured on the same $128$-bit harness; rows that were not have been re-measured or withdrawn.}\label{tab:fullthroughput}
 \small
 \tiny
-\begin{tabular}{rlrrrrlll}
+\begin{tabular}{rlrrrlll}
 \toprule
-& format & bits & LUT & MHz/LUT & $\pm$/range & sd & status & conformance \\
+& format & bits & LUT & MHz/LUT & $\pm95\%$ & status & conformance \\
 \midrule
-1 & \textbf{GFTernary} & 2 bits & 527 & \textbf{0.1584} & $\pm0.0018$ & 54 & ours & all 4 codes \\
-2 & binary32 & 32 bits & 536 & 0.1429 & $\pm0.0013$ & 54 & --- & identity (exact) \\
-3 & fp8 e4m3 & 8 bits & 549 & 0.1225 & $\pm0.0012$ & 54 & --- & all 256, 0 wrong \\
-4 & \textbf{TNF16a} & 16b & 566 & \textbf{0.1214} & $\pm0.0012$ & 54 & legacy & all 65{,}534 \checkmark \\
-5 & fp8 e5m2 & 8 bits & 544 & 0.1188 & $\pm0.0011$ & 54 & --- & all 256, 0 wrong \\
-6 & \textbf{GF10} & 10 bits & 597 & \textbf{0.1172} & $\pm0.0012$ & 54 & ours & all 1{,}024 \\
-7 & \textbf{TNF17e} & 17b & 596 & \textbf{0.1155} & $\pm0.0013$ & 54 & \textbf{rec.} & all 124{,}416 \checkmark \\
-8 & \textbf{TNF16c} & 16b & 591 & \textbf{0.1152} & $\pm0.0010$ & 54 & \textbf{rec.} & all 62{,}208 \checkmark \\
-9 & \textbf{TNF16a-guarded} & 16b & 613 & \textbf{0.1079} & $\pm0.0011$ & 54 & control & all 41{,}472 \checkmark \\
-10 & binary16 & 16 bits & 586 & 0.1078 & $\pm0.0012$ & 54 & --- & all 65{,}536 \\
-11 & minifloat & 8 bits & 622 & 0.1075 & $0.1009$--$0.1132$ & 5 & --- & all 254 \checkmark \\
-12 & \textbf{GF14} & 14 bits & 651 & \textbf{0.1074} & $0.0969$--$0.1140$ & 5 & ours & all 16{,}384 \\
-13 & \textbf{TNF17e-bare} & 17b & 605 & \textbf{0.1072} & $0.1041$--$0.1104$ & 5 & control & sweep pending \\
-14 & \textbf{TNF8} & 10 bits & 609 & \textbf{0.1069} & $0.1028$--$0.1099$ & 5 & legacy & all 1{,}024, 0 wrong \\
-15 & \textbf{TNF16b} & 16b & 604 & \textbf{0.1048} & $0.0998$--$0.1086$ & 5 & legacy & all 65{,}534 \checkmark \\
-16 & \textbf{BNF16} & 17 bits & 635 & \textbf{0.1034} & $0.0961$--$0.1064$ & 5 & legacy & all 131{,}072, 0 wrong \\
-17 & \textbf{TNF16} & 17 bits & 629 & \textbf{0.1005} & $0.0971$--$0.1071$ & 5 & legacy & all 131{,}072 \\
-18 & VAX F & 32 bits & 624 & 0.0942 & $0.0926$--$0.1000$ & 5 & --- & all 40{,}000 \checkmark \\
-19 & \textbf{GF+8} & 8b (+2 sel) & 692 & \textbf{0.0882} & $0.0831$--$0.0931$ & 5 & ours & 1{,}024/1{,}024 \checkmark \\
-20 & posit8 & 8 bits & 614 & 0.0728 & $0.0712$--$0.0774$ & 5 & --- & all 255 \checkmark \\
-21 & takum16 & 16 bits & 853 & 0.0695 & $0.0677$--$0.0745$ & 5 & --- & 632/61{,}505 \\
-22 & LNS16 & 16 bits & 722 & 0.0598 & $0.0581$--$0.0600$ & 5 & --- & 107/65{,}536 \\
-23 & posit16 & 16 bits & 731 & 0.0485 & $0.0467$--$0.0496$ & 5 & --- & all 65{,}535 \checkmark \\
-24 & posit32 & 32 bits & 1031 & 0.0302 & $0.0291$--$0.0314$ & 5 & --- & all 40{,}000 \checkmark \\
-25 & IBM hex32 & 32 bits & 1072 & 0.0292 & $0.0273$--$0.0297$ & 5 & --- & all 40{,}000 \checkmark \\
+1 & \textbf{GFTernary} & 2 bits & 527 & \textbf{0.1584} & $\pm0.0018$ & ours & all 4 codes \\
+2 & binary32 & 32 bits & 536 & 0.1429 & $\pm0.0013$ & --- & identity (exact) \\
+3 & fp8 e4m3 & 8 bits & 549 & 0.1225 & $\pm0.0012$ & --- & all 256, 0 wrong \\
+4 & \textbf{TNF16a} & 16b & 566 & \textbf{0.1214} & $\pm0.0012$ & legacy & all 65{,}534 \checkmark \\
+5 & fp8 e5m2 & 8 bits & 544 & 0.1188 & $\pm0.0011$ & --- & all 256, 0 wrong \\
+6 & \textbf{GF10} & 10 bits & 597 & \textbf{0.1172} & $\pm0.0012$ & ours & all 1{,}024 \\
+7 & \textbf{TNF17e} & 17b & 596 & \textbf{0.1155} & $\pm0.0013$ & \textbf{rec.} & all 124{,}416 \checkmark \\
+8 & \textbf{TNF16c} & 16b & 591 & \textbf{0.1152} & $\pm0.0010$ & \textbf{rec.} & all 62{,}208 \checkmark \\
+9 & \textbf{TNF16a-guarded} & 16b & 613 & \textbf{0.1079} & $\pm0.0011$ & control & all 41{,}472 \checkmark \\
+10 & binary16 & 16 bits & 586 & 0.1078 & $\pm0.0012$ & --- & all 65{,}536 \\
+11 & \textbf{TNF17e-bare} & 17b & 605 & \textbf{0.1072} & $\pm0.0010$ & control & sweep pending \\
+12 & minifloat & 8 bits & 622 & 0.1072 & $\pm0.0011$ & --- & all 254 \checkmark \\
+13 & \textbf{GF14} & 14 bits & 651 & \textbf{0.1055} & $\pm0.0012$ & ours & all 16{,}384 \\
+14 & \textbf{TNF8} & 10 bits & 609 & \textbf{0.1045} & $\pm0.0010$ & legacy & all 1{,}024, 0 wrong \\
+15 & \textbf{BNF16} & 17 bits & 635 & \textbf{0.1043} & $\pm0.0011$ & legacy & all 131{,}072, 0 wrong \\
+16 & \textbf{TNF16} & 17 bits & 629 & \textbf{0.1036} & $\pm0.0010$ & legacy & all 131{,}072 \\
+17 & \textbf{TNF16b} & 16b & 604 & \textbf{0.1022} & $\pm0.0010$ & legacy & all 65{,}534 \checkmark \\
+18 & VAX F & 32 bits & 624 & 0.0956 & $\pm0.0011$ & --- & all 40{,}000 \checkmark \\
+19 & \textbf{GF+8} & 8b (+2 sel) & 692 & \textbf{0.0893} & $\pm0.0009$ & ours & 1{,}024/1{,}024 \checkmark \\
+20 & posit8 & 8 bits & 614 & 0.0738 & $\pm0.0007$ & --- & all 255 \checkmark \\
+21 & takum16 & 16 bits & 853 & 0.0708 & $\pm0.0008$ & --- & 632/61{,}505 \\
+22 & LNS16 & 16 bits & 722 & 0.0603 & $\pm0.0005$ & --- & 107/65{,}536 \\
+23 & posit16 & 16 bits & 731 & 0.0492 & $\pm0.0004$ & --- & all 65{,}535 \checkmark \\
+24 & posit32 & 32 bits & 1031 & 0.0310 & $\pm0.0002$ & --- & all 40{,}000 \checkmark \\
+25 & IBM hex32 & 32 bits & 1072 & 0.0295 & $\pm0.0002$ & --- & all 40{,}000 \checkmark \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -3779,30 +3776,31 @@ grouping Proposition~\ref{prop:pruning} leaves valid. Ours in bold.}
 \toprule
 bits & format & LUT & MHz & MHz/LUT \\
 \midrule
-2 & \textbf{GFTernary} & 527 & 82.93 & 0.1574 \\
-8 & fp8 e4m3 & 549 & 68.30 & 0.1244 \\
-8 & fp8 e5m2 & 544 & 66.05 & 0.1214 \\
-8 & minifloat & 622 & 66.87 & 0.1075 \\
-8 & \textbf{GF+8} & 692 & 61.06 & 0.0882 \\
-8 & posit8 & 614 & 44.71 & 0.0728 \\
-10 & \textbf{GF10} & 597 & 70.96 & 0.1189 \\
-10 & \textbf{TNF8} & 609 & 65.08 & 0.1069 \\
-14 & \textbf{GF14} & 651 & 69.91 & 0.1074 \\
-16 & \textbf{TNF16a} & 566 & 69.77 & 0.1233 \\
-16 & \textbf{TNF16c} & 591 & 68.35 & 0.1157 \\
-16 & \textbf{TNF16b} & 604 & 63.31 & 0.1048 \\
-16 & binary16 & 586 & 60.90 & 0.1039 \\
-16 & takum16 & 853 & 59.31 & 0.0695 \\
-16 & LNS16 & 722 & 43.15 & 0.0598 \\
-16 & posit16 & 731 & 35.43 & 0.0485 \\
-17 & \textbf{TNF17e} & 596 & 71.94 & 0.1207 \\
-17 & \textbf{TNF17e-bare} & 605 & 64.87 & 0.1072 \\
-17 & \textbf{BNF16} & 635 & 65.68 & 0.1034 \\
-17 & \textbf{TNF16} & 629 & 63.22 & 0.1005 \\
-32 & binary32 & 536 & 76.23 & 0.1422 \\
-32 & VAX F & 624 & 58.75 & 0.0942 \\
-32 & posit32 & 1031 & 31.18 & 0.0302 \\
-32 & IBM hex32 & 1072 & 31.30 & 0.0292 \\
+2 & \textbf{GFTernary} & 527 & 83.49 & 0.1584 \\
+8 & fp8 e4m3 & 549 & 67.27 & 0.1225 \\
+8 & fp8 e5m2 & 544 & 64.65 & 0.1188 \\
+8 & minifloat & 622 & 66.67 & 0.1072 \\
+8 & \textbf{GF+8} & 692 & 61.79 & 0.0893 \\
+8 & posit8 & 614 & 45.30 & 0.0738 \\
+10 & \textbf{GF10} & 597 & 69.95 & 0.1172 \\
+10 & \textbf{TNF8} & 609 & 63.67 & 0.1045 \\
+14 & \textbf{GF14} & 651 & 68.69 & 0.1055 \\
+16 & \textbf{TNF16a} & 566 & 68.69 & 0.1214 \\
+16 & \textbf{TNF16c} & 591 & 68.11 & 0.1152 \\
+16 & \textbf{TNF16a-guarded} & 613 & 66.14 & 0.1079 \\
+16 & binary16 & 586 & 63.16 & 0.1078 \\
+16 & \textbf{TNF16b} & 604 & 61.74 & 0.1022 \\
+16 & takum16 & 853 & 60.38 & 0.0708 \\
+16 & LNS16 & 722 & 43.56 & 0.0603 \\
+16 & posit16 & 731 & 35.95 & 0.0492 \\
+17 & \textbf{TNF17e} & 596 & 68.85 & 0.1155 \\
+17 & \textbf{TNF17e-bare} & 605 & 64.88 & 0.1072 \\
+17 & \textbf{BNF16} & 635 & 66.22 & 0.1043 \\
+17 & \textbf{TNF16} & 629 & 65.17 & 0.1036 \\
+32 & binary32 & 536 & 76.57 & 0.1429 \\
+32 & VAX F & 624 & 59.65 & 0.0956 \\
+32 & posit32 & 1031 & 31.96 & 0.0310 \\
+32 & IBM hex32 & 1072 & 31.59 & 0.0295 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -4060,6 +4058,97 @@ Three rungs were withdrawn for violating it. \texttt{tools/check\_exponent\_wind
 now fails on any rung whose span leaves the window, lists the withdrawn ones
 explicitly rather than deleting them --- a gate that silently ignores a known-bad
 entry is how the defect returns --- and is verified red by removing that list.
+
+
+\section{The block axis, measured}
+\label{sec:blockmeasured}
+
+The rule this work set itself was to beat MXFP4 on the block axis by measurement
+before publishing anything about it. Eleven agents, two independent codebases and
+$14.9$ million real blocks later, the rule is met and the reason is not the one
+this paper expected.
+
+\paragraph{The measurement.} A five-trit balanced-ternary scale field at step
+$2^{k/3}$, byte-identical \texttt{E2M1} elements, block $32$, \textbf{exactly
+$4.25$ bits per element}:
+
+\begin{center}\small
+\begin{tabular}{lrrrr}
+\toprule
+source & blocks & MXFP4 & ours & $\Delta$ \\
+\midrule
+smollm2, $106.2$M weights & $3{,}317{,}760$ & $0.02259767$ & $0.01873104$ & $\mathbf{+17.11\%}$ \\
+qwen, $357.8$M weights    & $11{,}182{,}080$ & $0.00238612$ & $0.00199422$ & $\mathbf{+16.42\%}$ \\
+iid $N(0,1)$              & $200{,}000$ & $0.11501641$ & $0.09672548$ & $+15.90\%$ \\
+Student-$t(3)$            & $200{,}000$ & $0.24983310$ & $0.19157210$ & $+23.32\%$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+\textbf{Zero losing blocks} in $14{,}899{,}840$ real and $400{,}000$ synthetic.
+Downstream on \texttt{wikitext2-test}, $304{,}986$ tokens through $210$ linear
+modules, perplexity falls from MXFP4's $25.056$ to $\mathbf{20.034}$, closing
+$52.1\%$ of the gap to \texttt{fp32}. A re-implementation written from the
+specification text, which never imports the candidate's code, reproduces every
+figure \textbf{to ten significant figures}.
+
+\paragraph{The reason is resolution, and it is not ours alone.}
+The gain is $100\%$ scale axis and $0\%$ element axis --- every winning arm uses
+the byte-identical \texttt{E2M1} codebook. Decomposing the squared error on
+smollm2: the floor rule of Algorithm~1 costs $6.9\%$, and the one-point-per-binade
+grid costs $35.8\%$. The grid is the six-times-larger defect.
+
+Within the scale axis, error is monotone in points per binade \emph{and in
+nothing else}:
+
+\begin{center}\small
+\begin{tabular}{lrr}
+\toprule
+scale ladder, same $8$-bit field & smollm2 & qwen \\
+\midrule
+$2^{k}$ (MXFP4's own) & $+3.50\%$ & $+2.86\%$ \\
+$\varphi^{k}$ & $+8.51\%$ & $+7.53\%$ \\
+$2^{k/3}$ --- five trits, ours & $+17.11\%$ & $+16.42\%$ \\
+$2^{k/8}$ --- plain binary & $\mathbf{+22.37\%}$ & $\mathbf{+21.79\%}$ \\
+$2^{k/16}$ & $+23.74\%$ & $+23.23\%$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+$\sqrt{\varphi}^{\,k}$ at $2.8808$ points per binade lands beside $2^{k/3}$ at
+$3.0000$, which is what a law of step size predicts and what a law of algebra
+does not. \textbf{$\varphi$ is not special on this axis; it is a step finer than
+a binade.} And a plain binary ladder at the same eight bits beats the ternary one
+by five to six points of RMSE and $1.1$ of perplexity. At matched dynamic range,
+$243$ ternary codes lose to $255$ binary ones on \emph{six of six} range settings
+across four sources.
+
+\paragraph{Two things this hands back.} Replacing Algorithm~1's floor with a
+squared-error argmin over the same $254$ \texttt{E8M0} codes is an
+\emph{encoder} change that emits a byte-legal MXFP4 bitstream, and it buys
+$+12.1\%$ perplexity --- about a fifth of the reported win, and it belongs to the
+baseline rather than to any format. Separately, the observation earlier in this
+paper that squared error mispredicts perplexity on this axis has been read as a
+bound on element-format headroom. It is not one: measured headroom for eight
+magnitudes ranges from $+1.6\%$ to $+8.5\%$ depending on the ladder beneath.
+
+\paragraph{The accounting has one hole, and it is stated rather than closed.}
+At the finest ladder the chosen absolute grid index over full tensors spans
+$m\in[-176,-27]$ for qwen. That is $150$ codes, which fits in $255$ but
+\emph{does not fit MXFP4's bias-$127$ origin}. A re-biased origin costs
+essentially nothing per element, but it is a format-level constant tuned on two
+sub-billion-parameter models, so the honest accounting is \textbf{$4.25$ bits per
+element plus an origin constant MXFP4 does not have}.
+
+\paragraph{What this section claims.} That at $4.25$ bits per element a finer
+scale ladder beats MXFP4 by $17\%$ in squared error on two real models and $20\%$
+in perplexity, with zero losing blocks in $14.9$ million; that the gain is
+entirely scale resolution; and that a \emph{binary} ladder realises it better
+than a ternary one. It does not claim that ternary wins the block axis. The
+measurement says otherwise, and a referee would need one afternoon and
+$2^{k/2}$ to say so first.
 
 \section{The instrument resolves seven levels, not twenty-eight}
 \label{sec:bands}
