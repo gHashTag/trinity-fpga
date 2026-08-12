@@ -6936,3 +6936,41 @@ caught nothing — indistinguishable from a gate that does not work.
 **`git checkout <file>` reverts everything uncommitted in that file.** I used it
 to abort one malformed edit and lost verified work from the same session. Commit
 verified increments before attempting speculative ones.
+
+## Wave 685 — measure the chain before committing to clear it
+
+Last wave's theorem said an occlusion chain must be cleared atomically. This wave
+tried, implemented four of its links, and found a **fifth** only once the first
+four worked. The chain was deeper than the evidence available when I planned it.
+
+**So: before promising an atomic fix for a chain, measure its depth by
+implementing links throwaway-style and reading what each newly exposes.** The
+depth is not discoverable from the artifact — each link is invisible until its
+predecessor parses. Budget for "the chain is longer than it looks."
+
+**Keep the links that cannot regress; drop the heads.** Backtracking and
+recursive generic arguments changed no count and replaced a bound that could not
+express the corpus. Generic fn names and generic calls were verified working in
+isolation and still removed, because they are the *head* — with them present and
+the tail absent, a file goes from partial parse to hard failure.
+
+**Check whether the state you need to snapshot is actually expensive.** Two waves
+were spent designing around a parser with one token of lookahead. Its lexer is
+`{source, pos, line, col}` and `source` is immutable — a mark is three integers
+plus two tokens. **Look at the struct before concluding you cannot save it.**
+
+**Disambiguate by the invariant of what you want, not by excluding what you
+fear.** `<` is ambiguous with comparison. What works: a generic list is *always*
+immediately followed by `(`. That needs no theory of comparisons.
+
+**A lexer that discards unknown characters makes typos invisible.** `?` is not a
+token here — the default case skips and recurses, so `T?` lexes as `T`. It made
+one link free and it means a mistyped byte in a spec vanishes rather than
+erroring. Worth knowing about any lexer you rely on.
+
+**For any hand-maintained list of files, add a coverage check with an explicit
+exemption set.** Auditing found no new gaps — every omission was justified. But
+justified-and-implicit is exactly how the previous omission hid, and this
+campaign has now rediscovered the same two files with two different instruments.
+Exemptions that must be written down are countable; ones that live in someone's
+head are not.
