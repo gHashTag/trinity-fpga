@@ -6488,3 +6488,51 @@ committed tree sees them; every check reading the working tree doesn't. Each vie
 is internally consistent, so nothing reports a problem. `git status` is the only
 instrument that sees it — which is why it belongs in a periodic audit, not just
 before a commit.
+
+## Wave 673 — a predicate that is conservative for one caller is incomplete for another
+
+**The defect was documented in its own comment and still cost the corpus.**
+`is_top_level_start()` says it "deliberately excludes const/var, which can appear
+inside keyword-style test/invariant/bench blocks". True and correct — for those
+callers. Shared with error recovery, it meant recovery skipped past **every**
+module-level `const` until it hit a `fn` or `pub`. That is exactly why
+`pub const` survived (`KwPub` stops the skip) and bare `const` did not.
+
+**Theorem: if a predicate is conservative for caller A and exact for caller B,
+sharing it makes B silently incomplete on precisely the inputs where A needs the
+conservatism.** The failure is invisible because the predicate is correct. The
+repair is never to change the predicate — parameterise it at the call site. The
+tell is a caller whose correctness argument differs from the predicate's comment.
+
+**A counter placed before its own exit test measures its terminator.** My first
+version of "declarations swallowed" recorded the keyword the loop *stops* at, and
+reported 28 on a file with zero errors. Count what is passed over, not what is
+arrived at.
+
+**Exclude by construction, not by heuristic.** The sound metric works because
+tokens inside brace groups are consumed by a different function and never reach
+the counting loop — so function-local bindings are excluded structurally. The
+withdrawn regex tried to achieve the same thing by pattern and could not, because
+that separation *is* parsing.
+
+**A withdrawal can be vindicated later, and it is worth checking.** `gf16.t27`
+was ranked worst in the corpus by the withdrawn metric — "640 constants lost".
+Measured properly: 20 `pub const`, 20 AST nodes, 0 events, 0 swallowed. Parsed
+perfectly. All 669 bare `const` were function locals. The single most alarming
+number in two waves described nothing at all.
+
+**Aggregate by a compound key, illustrate by a component of it, and the
+illustration will eventually contradict the aggregate.** I reported "61 deleted
+Coq proofs" because a counter keyed on `(state, class)` shared an example dict
+keyed on `class`. They were generated Verilog under `specs/fpga/`. Print examples
+from the same bucket you counted.
+
+**Before committing a deletion, prove each file is recoverable.** All 61 had both
+a source `.t27` beside them and a regenerated copy in `gen/verilog/`. "It looks
+generated" is a guess; "every one has a source and a live copy" is a check, and
+it is what made deleting 15143 lines a safe autonomous action rather than a risk.
+
+**An unreviewed-changes pile shrinks when you can prove which parts you wrote.**
+16 of 72 blocked specs were provably mine under the pre-image oracle. The
+remaining 56 need a human, and saying "56" instead of "72" is the difference
+between a decision and a chore.
