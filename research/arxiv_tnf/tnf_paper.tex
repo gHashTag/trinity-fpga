@@ -4747,6 +4747,62 @@ this is the hard case.} Its stability is not robustness; it is insensitivity to
 the thing that varies.
 \end{proposition}
 
+\begin{proposition}[The model spread is sensitivity, not perturbation]
+\label{prop:sensitivity}
+At $4.25$ bits per weight with MXFP4's reference encoder, on the same layers in
+each model, the relative weight perturbation is
+$$\frac{\lVert \Delta W\rVert_{F}}{\lVert W\rVert_{F}}
+ = 11.79\%,\; 11.72\%,\; 11.76\%,\; 11.57\%$$
+for GPT-2, Qwen, SmolLM2 and Pythia --- a spread of $1.02\times$ --- while the
+induced perplexity degradation is $20.1\%$, $23.8\%$, $62.7\%$, $75.7\%$, a spread
+of $3.77\times$. \textbf{The two are anti-ordered:} Pythia takes the smallest
+perturbation and suffers the largest damage. Hence the model-to-model variation
+in quantisation damage carries \emph{no} information about the size of the
+perturbation, and is entirely a property of the model's sensitivity to it.
+\end{proposition}
+
+\noindent This is the measured form of the $H \neq I$ statement above, and it is
+tighter than that statement suggests: the perturbation is not merely a poor
+predictor of the damage, it is \emph{constant to two percent} across four
+architectures while the damage nearly quadruples. Any figure of merit that is a
+functional of $\Delta W$ alone is therefore pinned by measurement and cannot
+separate a model that loses a fifth of its perplexity from one that loses three
+quarters.
+
+\paragraph{The standard explanation does not survive either, and its failure is
+inverted.} Block-level outliers are what the quantisation literature reaches for
+here~\cite{awq,mxgap}, and a block whose maximum sits far above its own RMS does
+spend most of its codebook on unreachable headroom. Measured by counting, with
+nothing quantised:
+
+\begin{center}\small
+\begin{tabular}{lrrrr}
+\toprule
+model & ppl degradation & $\mathbb{E}[a_{\max}/\mathrm{rms}]$ & blocks $>3$ & kurtosis \\
+\midrule
+GPT-2   & $20.1\%$ & $2.454$ & $9.3\%$ & $\mathbf{76.00}$ \\
+Qwen    & $23.8\%$ & $\mathbf{2.465}$ & $9.9\%$ & $5.28$ \\
+SmolLM2 & $62.7\%$ & $2.431$ & $8.1\%$ & $4.67$ \\
+Pythia  & $\mathbf{75.7\%}$ & $\mathbf{2.404}$ & $6.8\%$ & $7.77$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent The peak ratio orders \emph{exactly opposite} to the damage --- Pythia
+lowest and worst, Qwen highest and nearly best --- and it barely varies at all,
+$2.404$ to $2.465$, a range of $2.5\%$ against a $3.8\times$ range in damage.
+Kurtosis fares no better: GPT-2 carries a kurtosis of $76$, sixteen times the next
+model's, and takes the \emph{least} damage of the four. \emph{We registered the
+peak-ratio prediction before running it and it failed on all three statistics.}
+
+Two things follow. Empirically, the whole class of explanations resting on the
+\emph{shape of the weight distribution} is closed on these four models, since
+every such statistic we measured is either constant or anti-ordered. And
+methodologically, this is why the squared-error proxy's stability in
+Proposition~\ref{prop:transfer} should not be read as a virtue: the proxy is
+stable because \emph{the perturbation it measures is stable}, and the perturbation
+is not what varies.
+
 \noindent Two cautions. The perplexity rows rest on $146$--$148$ windows where the
 squared-error rows rest on millions of blocks, so part of the gap between the two
 metrics is sampling and not substance; the $2.21\times$ is far outside anything
