@@ -4672,49 +4672,72 @@ be read.
 model halves it.} Repeating the attribution on Qwen, with the independently
 written instruments of Section~\ref{sec:blockmeasured} and not the original run:
 
-\begin{center}\small
-\begin{tabular}{lrrr}
+\begin{table}[t]\centering
+\caption{The encoder's share of the achievable improvement, four models, both
+metrics. \emph{Same layers, same blocking, same quantiser, same weights} --- the
+squared-error column is computed by a script that imports the perplexity
+harness's quantiser rather than reimplementing it, so \textbf{only the metric
+changes between the two columns}.}
+\label{tab:encodershare4}
+\begin{tabular}{lrr}
 \toprule
-encoder's share of the achievable gain & squared error & perplexity & disagreement \\
+model & squared error & perplexity \\
 \midrule
-SmolLM2 & $20.5\%$ & $58.7\%$ & $2.87\times$ \\
-Qwen    & $17.1\%$ & $23.3\%$ & $1.36\times$ \\
-GPT-2   & --- & $\mathbf{-7.2\%}$ & sign inversion \\
+SmolLM2 & $20.5\%$ & $+58.7\%$ \\
+Qwen    & $17.1\%$ & $+23.3\%$ \\
+Pythia  & $20.6\%$ & $\mathbf{-0.6\%}$ \\
+GPT-2   & $18.6\%$ & $\mathbf{-7.2\%}$ \\
+\midrule
+spread  & $\mathbf{1.20\times}$ & \textbf{crosses zero} \\
 \bottomrule
 \end{tabular}
-\end{center}
+\end{table}
 
-\noindent The squared-error column reproduces the figure above exactly; the
-perplexity column reads $58.7\%$ against the $60.6\%$ measured on the earlier
-harness. \textbf{But ``three times apart'' is SmolLM2's number. On Qwen the two
-metrics are $1.36$ times apart.} The sign replicates --- the encoder is worth
-more on perplexity than on squared error, on both models --- and the magnitude
-does not, which is the third time in this paper that a comparison has behaved
-that way.
+\noindent \textbf{The proxy is nearly constant across four models and the task
+metric changes sign.} Squared error puts the encoder's worth at $17.1$--$20.6\%$
+of the achievable gain on every model tried, a spread of $1.20\times$; perplexity
+puts it anywhere from $+58.7\%$ to $-7.2\%$. On two of the four models the
+squared-error-optimal encoder makes perplexity \emph{worse}.
+
+\emph{One row of this table is a control and not a result.} The argmin encoder
+minimises squared error over the E8M0 ladder block by block, so its squared-error
+share is positive by construction; measuring it anyway is what makes the
+perplexity column trustworthy, because a negative entry in the squared-error
+column would have condemned the harness rather than the theory. All four are
+positive. The SmolLM2 entry also reproduces the $20.5\%$ published above, from
+code that shares only the quantiser with the run that produced it.
+
+\noindent \textbf{``Three times apart'' was SmolLM2's number.} Two models later
+the disagreement is not a factor at all but a change of sign, and the honest
+statement of Proposition~\ref{prop:encodershare} is the one the table makes:
+squared error answers this question the same way on every model and perplexity
+does not answer it the same way twice.
 
 \begin{proposition}[What transfers between models, and what does not]
 \label{prop:transfer}
 Measuring one intervention --- the $2^{k/3}$ scale ladder against MXFP4, at fixed
 codebook, block size and bit budget --- four ways on two models gives:
 \begin{center}\small
-\begin{tabular}{lrrrr}
+\begin{tabular}{lrrrrr}
 \toprule
-claim variant & SmolLM2 & Qwen & GPT-2 & spread \\
+claim variant & SmolLM2 & Qwen & Pythia & GPT-2 & spread \\
 \midrule
-squared error, best encoder both sides & $14.10\%$ & $14.01\%$ & --- & $\mathbf{1.01\times}$ \\
-squared error, against Algorithm~1     & $17.11\%$ & $16.42\%$ & --- & $1.04\times$ \\
-perplexity, best encoder both sides    & $9.50\%$  & $7.18\%$  & $7.19\%$ & $\mathbf{1.32\times}$ \\
-perplexity, against Algorithm~1        & $20.25\%$ & $9.16\%$  & $6.74\%$ & $\mathbf{3.00\times}$ \\
+sq.\ error, best encoder both sides & $14.10\%$ & $14.01\%$ & --- & --- & $\mathbf{1.01\times}$ \\
+sq.\ error, against Algorithm~1     & $17.11\%$ & $16.42\%$ & --- & --- & $1.04\times$ \\
+perplexity, best encoder both sides & $9.50\%$  & $7.18\%$  & $12.38\%$ & $7.19\%$ & $\mathbf{1.72\times}$ \\
+perplexity, against Algorithm~1     & $20.25\%$ & $9.16\%$  & $12.31\%$ & $6.74\%$ & $\mathbf{3.00\times}$ \\
 \bottomrule
 \end{tabular}
 \end{center}
 Two axes order the transferability and both point the same way. \emph{Squared
 error transfers and perplexity does not}; \emph{best-against-best transfers and
 against-the-reference-encoder does not.} \textbf{The least transferable of the
-four is the combination most often quoted.} The third model sharpens the second
-axis rather than blunting it: adding GPT-2 leaves the best-against-best row at
-$1.32\times$ and widens the against-Algorithm-1 row from $2.21\times$ to
-$3.00\times$.
+four is the combination most often quoted.} Two further models keep the second
+axis intact without flattering it: at four models the best-against-best row
+spreads $1.72\times$ and the against-Algorithm-1 row $3.00\times$. The gap
+narrowed when Pythia was added --- from $1.32$ against $3.00$ at three models to
+$1.72$ against $3.00$ at four --- and we report the narrowing rather than
+stopping at the more favourable count.
 \end{proposition}
 
 \noindent Two cautions. The perplexity rows rest on $146$--$148$ windows where the
