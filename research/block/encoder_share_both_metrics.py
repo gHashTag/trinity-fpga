@@ -44,7 +44,8 @@ quantise, targets, W, K = g["quantise"], g["targets"], g["W"], g["K"]
 torch.set_grad_enabled(False)
 
 MODELS = sys.argv[1:] or ["smollm2", "qwen", "gpt2", "pythia"]
-ARMS = [("floor", "floor", None), ("argmin", "argmin2", None), ("step3", "step", 3)]
+ARMS = [("floor", "floor", None), ("argmin", "argmin2", None),
+        ("step3", "step", 3), ("step8", "step", 8)]
 
 print("  ДОЛЯ КОДИРОВЩИКА ПО КВАДРАТИЧНОЙ ОШИБКЕ")
 print("  те же слои, то же разбиение, тот же квантователь, что и у перплексии\n")
@@ -81,4 +82,9 @@ for name in MODELS:
         flag = "  ❗ argmin ХУЖЕ пола по квадратичной ошибке — прибор сломан"
     print(f"  {name:9s} {len(tg):6d} {r['floor']:12.8f} {r['argmin']:12.8f}"
           f" {r['step3']:12.8f} {share:17.1f}%{flag}", flush=True)
+    # the two transfer variants, on the SAME layers the perplexity table uses
+    print(f"           step3 против пола {(1 - r['step3'] / r['floor']) * 100:6.2f}%"
+          f"   против argmin {(1 - r['step3'] / r['argmin']) * 100:6.2f}%"
+          f"   |  step8 {(1 - r['step8'] / r['floor']) * 100:6.2f}%"
+          f" / {(1 - r['step8'] / r['argmin']) * 100:6.2f}%", flush=True)
     del model

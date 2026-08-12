@@ -4722,22 +4722,29 @@ codebook, block size and bit budget --- four ways on two models gives:
 \toprule
 claim variant & SmolLM2 & Qwen & Pythia & GPT-2 & spread \\
 \midrule
-sq.\ error, best encoder both sides & $14.10\%$ & $14.01\%$ & --- & --- & $\mathbf{1.01\times}$ \\
-sq.\ error, against Algorithm~1     & $17.11\%$ & $16.42\%$ & --- & --- & $1.04\times$ \\
-perplexity, best encoder both sides & $9.50\%$  & $7.18\%$  & $12.38\%$ & $7.19\%$ & $\mathbf{1.72\times}$ \\
+sq.\ error, best encoder both sides & $14.10\%$ & $14.01\%$ & $13.54\%$ & $14.10\%$ & $\mathbf{1.04\times}$ \\
+sq.\ error, against Algorithm~1     & $17.11\%$ & $16.42\%$ & $16.47\%$ & $16.79\%$ & $\mathbf{1.04\times}$ \\
+perplexity, best encoder both sides & $9.50\%$  & $7.18\%$  & $12.38\%$ & $7.19\%$ & $1.72\times$ \\
 perplexity, against Algorithm~1     & $20.25\%$ & $9.16\%$  & $12.31\%$ & $6.74\%$ & $\mathbf{3.00\times}$ \\
 \bottomrule
 \end{tabular}
 \end{center}
-Two axes order the transferability and both point the same way. \emph{Squared
-error transfers and perplexity does not}; \emph{best-against-best transfers and
-against-the-reference-encoder does not.} \textbf{The least transferable of the
-four is the combination most often quoted.} Two further models keep the second
-axis intact without flattering it: at four models the best-against-best row
-spreads $1.72\times$ and the against-Algorithm-1 row $3.00\times$. The gap
-narrowed when Pythia was added --- from $1.32$ against $3.00$ at three models to
-$1.72$ against $3.00$ at four --- and we report the narrowing rather than
-stopping at the more favourable count.
+At four models the two axes are no longer symmetric, and the asymmetry is the
+result. \textbf{The metric axis dominates:} squared error answers to within
+$1.04\%$ on every model and perplexity to within $1.72$--$3.00\times$.
+\emph{The baseline axis operates only inside perplexity} --- there,
+best-against-best spreads $1.72\times$ against the reference encoder's
+$3.00\times$; inside squared error both baselines spread $1.04\times$ and the
+choice does not matter at all. So \textbf{the least transferable of the four
+variants is the combination most often quoted}, and the most transferable pair is
+indistinguishable from each other.
+
+One entry makes the point better than the spreads do. Pythia is the model MXFP4
+damages most --- its perplexity rises $75.7\%$ against fp32, where Qwen's rises
+$23.8\%$ --- and \emph{its squared-error rows are the most ordinary in the
+table}, $16.47\%$ and $13.54\%$. \textbf{The proxy gives no signal at all that
+this is the hard case.} Its stability is not robustness; it is insensitivity to
+the thing that varies.
 \end{proposition}
 
 \noindent Two cautions. The perplexity rows rest on $146$--$148$ windows where the
