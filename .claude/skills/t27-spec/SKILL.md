@@ -6397,3 +6397,49 @@ gate.
 **`git add -A <dir>` stages deletions you never made.** It staged removals of
 files an earlier regeneration had dropped. Read `git diff --cached --name-only`
 before every commit that used `-A`, and stage intended paths explicitly.
+
+## Wave 671 — a defect that generates errors is invisible behind one that discards them
+
+**Two defects concealed each other exactly, for the life of the repository.** A
+commit corrupted 154 specs; the parser silently swallowed every resulting error.
+Neither was observable while the other stood, and "497/497 specs parse" held
+throughout. **Fix the discarding defect first** — removing it reveals the other
+at full magnitude, while removing the generating defect alone reveals nothing.
+That asymmetry tells you the order to work in.
+
+**"Replace all Unicode with ASCII" substituted each character's running index.**
+`fcf80027d` turned `→` (U+2192) into ` 12 `, and `═` into consecutive digits —
+which is why a spec carries comment lines reading `123456789101112...`. 162167
+occurrences, 112 distinct characters, 154 files. Verified at byte level with
+`git show fcf80027d^:file | od -c`, and `git log -S` for the ASCII form finding
+nothing is what proved the arrow was *never* `->`.
+
+**A partial-success defect is the hardest to see.** The parser's `= value`
+branch never consumed the trailing `;`, while the sibling bracket branch did. If
+it had dropped *every* constant it would have been fixed on day one; dropping
+69% of them survived indefinitely, because every spot check finds one that
+parsed. Suspect the code paths that work *sometimes*.
+
+**Build the counter before the fix, so the fix has a score.** One line took
+recovery events 1741→556 and constants lost 3292→2339 — measured by the same
+ratchet that will catch its regression. "I fixed a parser bug" is a claim; those
+numbers are a measurement, and they exist only because the previous wave shipped
+the instrument first.
+
+**Reconstruct a repair from the pre-image, never from a pattern.** For each
+corrupted line the pre-corruption version says exactly where the character was;
+the repair then has an oracle — the result must equal the pre-image with the
+character transliterated, or the line is left untouched. Guessing from
+`) <digits> <type>` would have been plausible and unverifiable.
+
+**Scope a repair to what is mechanical and report the rest as a decision.** 677
+arrows are functional and were repaired. The other 161490 characters are Greek
+letters and box drawing in prose — restoring those is a transliteration choice,
+not a repair, and doing it silently would have been rewriting the source of
+truth on my own authority.
+
+**`git add -A <dir>` after a scripted edit is how you commit someone else's
+mess.** Classify every modified file as *provably my edit* or *not*, and stage
+only the first set. Here 62 specs carried pre-existing uncommitted edits that
+made their repairs inseparable — so they were left out and named, which finally
+attached a cost to a dirty tree that had been an abstract question for 40 waves.
