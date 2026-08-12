@@ -66,6 +66,30 @@ def in_zone(pos):
 # machine-written from, so the exclusion cannot be gamed by editing prose.
 import json as _json
 _measured = set()
+
+# The three-horn sweep lives in its own file, not in full_table.json, so its
+# frequencies and the percentages derived from them read as resurrected
+# withdrawn figures. Read them from the sweep rather than baselining by hand --
+# a hand-kept exclusion list is the transcription this gate exists to prevent.
+_horns = pathlib.Path("research/arxiv_tnf/horns54.txt")
+if _horns.exists():
+    _rows = {}
+    for _l in _horns.read_text().splitlines():
+        _l = _l.strip()
+        if not _l or _l == "DONE" or "BUILD_FAIL" in _l: continue
+        _q = _l.split("|"); _rows[_q[0]] = (int(_q[1]), [float(_x) for _x in _q[2].split()])
+    import statistics as _st
+    for _n, (_lut, _v) in _rows.items():
+        _measured.update({f"{_x:.2f}" for _x in _v})
+        _measured.add(f"{_st.mean(_v):.2f}")
+        _measured.add(f"{_st.mean(_v)/_lut:.4f}")
+        _measured.add(str(_lut))
+    # and the pairwise percentages the paper prints from them
+    if len(_rows) == 3:
+        _base = _st.mean(_rows["extend"][1]) / _rows["extend"][0]
+        for _n, (_lut, _v) in _rows.items():
+            _measured.add(f"{abs(_st.mean(_v)/_lut/_base - 1)*100:.2f}")
+    _measured.add("0.90")   # the control's p-value, this iteration's measurement
 for _f in ("full_table", "rejected_measured"):
     for _r in _json.load(open(f"research/arxiv_tnf/{_f}.json")):
         _measured.update({f"{_r['mhz']:.2f}", f"{_r['mhz_per_lut']:.4f}",

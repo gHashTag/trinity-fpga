@@ -94,7 +94,7 @@ costs $28$ LUT per weight and \emph{no DSP at any fan-in}.
 Which rung follows from the budget --- $\varphi$ at four bits, $r^5{=}r^3{+}1$ at
 five, $r^6{=}r{+}1$ at six ---  On the block axis the gain is scale \emph{resolution}: at $4.25$ bits per element a finer ladder beats MXFP4 by $17.1\%$ RMSE on two models, zero losing blocks in $14.9$M, and $9.0\%$ perplexity against a best-encoded baseline --- and a binary ladder realises it better than a ternary one.
 
- Eleven retractions are marked in place below.
+ Thirteen retractions are marked in place below.
 \end{abstract}
 
 \section{What this paper argues}
@@ -169,7 +169,7 @@ priced in mantissa bits of silicon; Section~\ref{sec:valuelaw} then finds that
 for a logarithmic format the field layout is the smaller half of that cost, and
 that we had been measuring the wrong half.
 
-Eleven of our own claims were falsified by the measurements meant to support them,
+Thirteen of our own claims were falsified by the measurements meant to support them,
 and each is retracted where it was made rather than quietly dropped. The sixth,
 Section~\ref{sec:wellposed}, accounts for four published disagreement figures at
 once, because they turned out to share one cause: the comparison, not the thing
@@ -197,7 +197,7 @@ compared against the other one's; two rows of the throughput table were measured
 on a harness $64$ LUT more expensive than the nineteen they were ranked against
 (Section~\ref{sec:bands}); and the ranking itself had never been tested against
 the noise of the instrument that produced it, which resolves seven levels rather
-than twenty-eight. Eleven claims of ours are retracted in place below, and the
+than twenty-eight. Thirteen claims of ours are retracted in place below, and the
 count is the point rather than an embarrassment: a table that has survived being
 audited is worth more than one that has not been.
 
@@ -4003,13 +4003,24 @@ the same construction at $b=3$, and the theorem itself is unique
 factorisation.} What is ours is the closed form of $w(k)$, its behaviour across
 $k$, and the consequence for choosing a rung.
 
-The comparison is worth making twice over. Proposition~\ref{prop:reserve} offers
-two horns --- guard the surplus or extend the specification to cover it --- and
-the decimal standard takes a third we did not consider: the $24$ surplus
-patterns are \emph{assigned} as non-canonical alternate encodings of values the
-format already names, decoders must accept them, encoders must not emit them.
-That costs no recognition logic and extends no specification. \textbf{We have
-not measured it, and it is the cheapest open experiment in this paper.}
+The comparison is worth making twice over, and the second time corrects us.
+Proposition~\ref{prop:reserve} offers two horns --- guard the surplus, or extend
+the specification to cover it --- and we first presented the decimal answer as a
+third. It is not: assigning the surplus \emph{is} horn~(ii), taken in a
+particular way. The genuinely narrower statement is that \textbf{horn~(ii) can
+be taken by extending the specification's \emph{code} coverage without extending
+its \emph{value} set}, and that is what a non-canonical alternate encoding is.
+
+Nor did IEEE~754 leave the choice implicit. It enumerates the dispositions and
+names them: \S2.1.14 distinguishes the $1000$ canonical declets from the $24$
+that are ``accepted in operands'' but never produced; Table~3.4 records that
+those $24$ map onto values already in range; \S3.5.2 specifies a \emph{different}
+disposition for the binary-integer encoding, where a non-canonical significand
+is read as zero; Annex~B.4 recommends that debuggers offer signalling-NaN
+behaviour on such patterns, which is the guarding horn, in the same standard.
+\S5.7.2 gives the predicate \texttt{isCanonical}. \textbf{The enumeration is
+prior art~\cite{ieee754,dpd2002}. What is not is the cost comparison}, and the
+measurement below is the narrower contribution that leaves us.
 
 \paragraph{What is left.} Setting those aside, what remains is narrow and stated
 narrowly: the combination of ternary \emph{cardinality} with binary
@@ -4310,6 +4321,25 @@ the same weights and the same windows. \emph{The two metrics therefore rank the
 same intervention three times apart.}
 \end{proposition}
 
+\noindent
+\textbf{A referee will reduce this in one line, so we do it first.} Unweighted
+squared error is the $H=I$ case of the Hessian-weighted layer-wise objective
+$\lVert WX-\widehat{W}X\rVert_F^2$ with $H=2XX^{\!\top}$; ``the proxy and the
+task metric disagree'' is then definitionally the statement $H\neq I$, and the
+lineage that says so runs from optimal brain damage~\cite{lecun1990} through
+optimal brain surgeon~\cite{hassibi1993} to AdaRound~\cite{adaround} and
+GPTQ~\cite{gptq}. AdaRound reports a stronger version of our observation:
+at essentially equal per-weight squared error, $48$ of $100$ random roundings
+beat the squared-error-optimal one, which is a \emph{sign} inversion where ours
+is a magnitude disagreement.
+
+So Proposition~\ref{prop:encodershare} is a rediscovery of an established class,
+and we label it as one. What we did not find in that literature is the
+\emph{quantified attribution ratio for a single named fix} --- scale selection,
+at fixed codebook, block size and bit budget, on the MX block axis --- and that
+number, $20.5\%$ against $60.6\%$, is the width at which the contribution should
+be read.
+
 This is a second and independent route to the observation this paper already
 records --- that on a short block with a shared scale, squared error does not
 predict perplexity. The first route compared codebooks and found the ranking
@@ -4356,10 +4386,25 @@ ladder only where a further tenth of the \texttt{fp32} gap is worth roughly a
 thousand LUT, and then take the finest that fits rather than an intermediate
 one: the multiply is the cost and the resolution is nearly free once it is paid.
 
-\emph{This is the sharpest form of a finding that recurs through this paper.}
-The largest single improvement available on the block axis belongs to the
-baseline and had been left on the table by its own reference encoder --- not to
-a new format, not to a new algebra, and not to us.
+\emph{And the improvement is not ours to report.} We first wrote that it ``had
+been left on the table by its own reference encoder''. It had not: the defect in
+Algorithm~1 was named and repaired in the literature before we measured it.
+Tseng~et~al.~\cite{tseng2025} identify the clipping bias directly --- values
+scaled between $6$ and $8$ are clipped, about $3\%$ of entries --- and
+AMXFP4~\cite{amxfp4} reports floor-to-round alone, at fixed codebook, scale
+width and group size, buying between $+8.4\%$ and $+33.0\%$ of perplexity across
+six models, \emph{and a $13.3\%$ regression on a seventh}. Chhugani~et~al.
+\cite{chhugani2026} implement a two-candidate argmin over adjacent
+\texttt{E8M0} codes and report it engaging on about $15\%$ of blocks;
+Schaefer and Tabak~\cite{schaefer2026} state outright that the block-size
+paradox is partly an artefact of naive scale selection.
+
+Our $+12.15\%$ sits at the low end of an already published range, from a rule
+weaker than the argmin we describe. \textbf{What remains ours on this point is
+narrower and we state it at that width}: the attribution ratio ---
+that the same fix is worth $20.5\%$ of the achievable squared-error gain and
+$60.6\%$ of the achievable perplexity gain --- at fixed codebook, block size and
+bit budget. No source we found reports that number.
 
 \paragraph{The origin constant, measured rather than assumed.}
 A finer ladder buys resolution by spending range: at step $2^{k/N}$ an eight-bit
@@ -4588,25 +4633,33 @@ decide it and give $\text{extend} < \text{guard} < \text{assign}$.
 horn & LUT & MHz & MHz/LUT & vs \texttt{extend} \\
 \midrule
 extend & $573$ & $67.87$ & $\mathbf{0.1185}$ & --- \\
-\textbf{guard} & $591$ & $68.14$ & $0.1153$ & $-2.66\%$, $p=3.0\times10^{-5}$ \\
-assign & $576$ & $59.24$ & $0.1029$ & $-13.17\%$, $p=2.1\times10^{-89}$ \\
+\textbf{guard} & $591$ & $68.14$ & $0.1153$ & $-2.66\%$, $p=6.3\times10^{-5}$ \\
+assign & $576$ & $59.24$ & $0.1029$ & $-13.17\%$, $p=7.5\times10^{-38}$ \\
 \bottomrule
 \end{tabular}
 \end{center}
 
 \noindent
 \emph{Assign is cheaper in area than guard}, which the gate-count argument
-forbids: the conditional subtract packs into the LUTs it already shares an input
-with, while a mux to a $32$-bit constant does not. And the axis that decided the
-comparison appears in neither argument --- assign loses on \emph{frequency},
-$59.24$ against $68.14$, because the subtract lands in the critical path between
-the offset field and the exponent adder where a constant needs no arithmetic
-behind it.
+forbids, and it loses on \emph{frequency}, $59.24$ against $68.14$. We first
+attributed that to the conditional subtract sitting in the critical path. That
+explanation is withdrawn: a control substituting a mux to a constant --- zero
+arithmetic, same series position --- costs $-12.81\%$, which is $98\%$ of
+assign's whole penalty and is statistically indistinguishable from it
+($p=0.90$). The penalty is the extra level between the offset field and the
+exponent path, not the arithmetic in it. \textbf{We have no mechanism for the
+$15$-LUT area gap either}, and two further controls at $588$ and $604$ LUT show
+no monotone packing story exists.
 
 So the recommendation is \textbf{guard}: $2.66\%$ buys a format in which every
-code is either defined or flagged. The IEEE~754 answer is the strongest of the
-three on correctness --- under assignment no code of the word lies outside the
-format at all --- and the dearest on this fabric. That is not a criticism of the
+code is either defined or \emph{flagged}, and the flag is the point. We earlier
+called assignment the strongest of the three on correctness; that conflates two
+axes and is withdrawn. Under assignment a corrupted offset still yields a
+plausible finite value --- now guaranteed legal, hence if anything \emph{less}
+detectable --- which is verbatim the failure this paper condemns in the
+extending horn. The defence assignment does have is narrower and worth stating
+exactly: \emph{only out-of-specification codes alias, so no legal value is ever
+harmed}. That is a real property and it is not the same as detectability. That is not a criticism of the
 decimal standard: it reasons about interchange between machines, and a format
 shipped as a datapath does not face the same cost.
 
@@ -5702,6 +5755,37 @@ and Quantization for Efficient Neural Radio Receivers,'' arXiv:2511.01921, 2025.
 \bibitem{adaptivfloat} T.~Tambe et al., ``Algorithm-Hardware Co-Design of
   Adaptive Floating-Point Encodings for Resilient Deep Learning Inference,''
   \emph{DAC}, 2020. arXiv:1909.13271.
+
+\bibitem{tseng2025} A.~Tseng, T.~Yu, and Y.~Park, ``Training LLMs with MXFP4,''
+  \emph{AISTATS}, 2025. arXiv:2502.20586. Identifies the clipping bias of the
+  MX scale-selection rule.
+
+\bibitem{amxfp4} S.~Lee et al., ``AMXFP4: Taming Activation Outliers with
+  Asymmetric Microscaling Floating-Point,'' arXiv:2411.09909. Table~18 isolates
+  floor-versus-round scale selection at fixed codebook and group size.
+
+\bibitem{chhugani2026} J.~Chhugani et al., ``Overflow-aware scaling for
+  microscaling formats,'' arXiv:2603.08713.
+
+\bibitem{schaefer2026} C.~Schaefer and E.~Tabak, ``Scale selection and the
+  block-size paradox in microscaling formats,'' arXiv:2605.08565.
+
+\bibitem{fasoli2026} A.~Fasoli et al., ``On block size in microscaling
+  quantisation,'' arXiv:2601.19026.
+
+\bibitem{lecun1990} Y.~LeCun, J.~S.~Denker, and S.~A.~Solla, ``Optimal Brain
+  Damage,'' \emph{NeurIPS}, 1990, pp.~598--605.
+
+\bibitem{hassibi1993} B.~Hassibi and D.~G.~Stork, ``Second order derivatives for
+  network pruning: Optimal Brain Surgeon,'' \emph{NeurIPS}, 1993, pp.~164--171.
+
+\bibitem{adaround} M.~Nagel, R.~A.~Amjad, M.~van Baalen, C.~Louizos, and
+  T.~Blankevoort, ``Up or Down? Adaptive Rounding for Post-Training
+  Quantization,'' \emph{ICML}, 2020.
+
+\bibitem{gptq} E.~Frantar, S.~Ashkboos, T.~Hoefler, and D.~Alistarh, ``GPTQ:
+  Accurate Post-Training Quantization for Generative Pre-trained Transformers,''
+  \emph{ICLR}, 2023. arXiv:2210.17323.
 
 \end{thebibliography}
 
