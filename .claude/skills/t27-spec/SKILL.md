@@ -6233,3 +6233,40 @@ comment regex, a decline that exited 0, and a crash where a diagnosis belonged.
 All three are shapes I had already catalogued. Writing the catalogue does not
 exempt you from it. Record the one you cannot fix as failing; do not raise its
 ceiling or exclude it from the sweep.
+
+## Wave 667 — a probe that fails to land reports the opposite of the truth
+
+**Injected-probe audits invert on failure; they do not degrade to silence.** I
+built a sweep that injects `assert(1'b0)` into each proof step and requires a
+refutation. Its first run said twelve steps were vacuous. All twelve were false:
+the workflow writes relative paths, my substitution keyed on absolute ones, so
+the probed copies were written and never read. An *unprobed* suite proves — so
+the missing probe produced the failing verdict for every step. Not "no data": the
+wrong data, stated confidently.
+
+The only reason I caught it was that a sibling tool had measured one of those
+same steps live minutes earlier. **Build the contradiction in on purpose** —
+overlapping tools that must agree are cheaper than a trace dump.
+
+**Assert delivery, not construction.** The gate I wrote one wave earlier asserts
+its probe anchor matches exactly once, with the comment "a probe that does not
+land tests nothing". The sweep, same hand, one wave later, omitted it. Writing
+the catalogue does not exempt you from the catalogue.
+
+**Sanitise or index — never both on different strings.** Adding a comment
+stripper introduced a fresh false positive within one command: detection ran on
+stripped text while the insertion offset indexed the original. Stripping shifts
+every index after the first comment. If you clean text and then edit by position,
+one of those two steps is wrong.
+
+**A value check needs three bars, and the middle one is the one people skip.**
+TRUE (the numbers agree), ALIVE (the capture demonstrably fired, against a
+reference value no default could hold), BITING (perturb the *reference alone* and
+watch it fail). My first control zeroed the weights — engine and reference moved
+together, which proves responsiveness and not detection. Only desynchronising the
+two establishes that the harness compares anything.
+
+**Provable is not simulable, and the gap hides in declaration order.** Yosys
+resolves declare-after-use; Icarus rejects it. Four forward-referenced nets kept
+this design from ever compiling in a simulator while every formal gate stayed
+green — control fully checked, arithmetic never checked once.
