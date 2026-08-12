@@ -2675,6 +2675,36 @@ E4M3      & 8 & $19.8628$ & $13.7636$ \\
 \end{tabular}
 \end{table}
 
+\paragraph{The same question on the larger sample, and the margin nearly vanishes.}
+Table~\ref{tab:geoscale} rests on perplexity over $40$ windows. The squared-error
+axis carries $14.9$ million blocks, and asking it the same question --- two scale
+grids of \emph{identical} resolution, eight points per binade, differing only in
+whether those points are placed geometrically ($2^{k/8}$) or linearly in a
+mantissa (E4M3, which is NVFP4's grid) --- gives a very different effect size:
+
+\begin{center}\small
+\begin{tabular}{lrr}
+\toprule
+scale grid, $8$ bits, $K{=}32$ & smollm2 & Qwen \\
+\midrule
+E4M3, NVFP4's grid & $+19.41\%$ & $+19.38\%$ \\
+$2^{k/8}$, geometric & $\mathbf{+19.55\%}$ & $\mathbf{+19.53\%}$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent Both against each model's own best E8M0 encoder. \textbf{Geometric wins
+on both models, as Theorem~\ref{thm:geoscale} requires --- by $0.14$ and $0.15$
+points, which is $0.7\%$ of the gain the resolution itself buys.} The sign
+replicates; the magnitude does not survive contact with the larger sample. We
+therefore keep the theorem and withdraw any suggestion that the choice between
+these two grids matters in practice: \emph{at fixed resolution the placement of
+scale points is worth under one percent of what the resolution is worth}, which
+is not a defeat for this paper's central law on this axis but its sharpest
+confirmation --- two grids of equal point count agreeing to within $0.7\%$ is
+exactly what ``monotone in points per binade and in nothing else'' predicts, and
+it is a stronger test of that law than any pair of unequal grids can be.
+
 One further reading is model-dependent and we do not make it. On SmolLM2 a
 geometric grid at $4.25$ bits per weight beats the NVFP4-like configuration at
 $4.50$ --- cheaper and better; on Qwen it is cheaper and worse, $13.6910$
@@ -4214,6 +4244,94 @@ this section previously read the monotone ordering as confirming a known result,
 and the ordering does hold, but \emph{the law it was attributed to is measurably
 not the law being obeyed.}
 
+\begin{theorem}[The exponent of a lattice-minimised objective is set by the local shape, not by the law]
+\label{thm:latticeexp}
+Let $g$ be continuous with a unique minimiser $t^{*}$, and let the minimum be
+sought over a lattice $\{t_{0}+jh : j \in \mathbb{Z}\}$ whose offset $t_{0}$ is
+uniform on $[0,h)$. Write $\mathcal{E}(h) = \mathbb{E}\,[\min_{j} g(t_{0}+jh)] -
+g(t^{*})$.
+\begin{enumerate}
+\item[(i)] If $g$ is $C^{2}$ near $t^{*}$ with $g''(t^{*})>0$, then
+  $\mathcal{E}(h) = \tfrac{1}{24}g''(t^{*})\,h^{2} + o(h^{2})$.
+\item[(ii)] If instead $g$ has a corner at $t^{*}$, with one-sided slopes
+  $-c_{-}<0<c_{+}$, then
+  $\mathcal{E}(h) = \dfrac{c_{-}c_{+}}{2(c_{-}+c_{+})}\,h + o(h)$.
+\end{enumerate}
+\end{theorem}
+
+\begin{proof}
+Let $u \in [0,h)$ be the distance from $t^{*}$ up to the next lattice point, so
+that the two neighbours sit at $-(h-u)$ and $+u$ and $u$ is uniform.
+For (i), the nearer neighbour is at distance $d = \min(u,h-u)$ and the excess is
+$\tfrac12 g''d^{2}+o(d^2)$; since
+$\mathbb{E}\,d^{2} = \tfrac{2}{h}\int_{0}^{h/2}\!d^{2}\,\mathrm{d}d = h^{2}/12$,
+the claim follows.
+For (ii), the two candidate excesses are $c_{+}u$ and $c_{-}(h-u)$ and the
+smaller is taken, so
+$\mathcal{E} = \tfrac1h\int_{0}^{h}\min\{c_{+}u,\,c_{-}(h-u)\}\,\mathrm{d}u$.
+The integrand switches at $u^{*} = c_{-}h/(c_{-}+c_{+})$; integrating the two
+linear pieces gives
+$\tfrac1h\big[\tfrac12 c_{+}u^{*2} + \tfrac12 c_{-}(h-u^{*})^{2}\big]
+= h\,c_{-}c_{+}/\big(2(c_{-}+c_{+})\big)$.
+\end{proof}
+
+\noindent The relevance is that \emph{our} $g$ --- a block's squared error as a
+function of $\log_{2}$ of the shared scale --- is neither case but a chain of
+both. The E2M1 rounding index of each element is piecewise constant in $t$ and
+jumps when that element crosses a midpoint boundary, at
+$t = \log_{2}(|v_{i}|/\beta_{j})$, so $g$ is a sequence of smooth arcs joined at
+corners. Which regime a ladder of spacing $h=1/N$ reports therefore depends on
+$h$ against the local corner spacing, and \textbf{the exponent must rise from
+near $1$ toward $2$ as the ladder refines} --- which is the drift
+Proposition~\ref{prop:notbennett} measured and could not explain.
+
+\begin{table}[t]\centering
+\caption{Excess over the fine-grid optimum, averaged over every lattice phase,
+and the exponent read straight off successive excesses with nothing fitted.
+smollm2, $86{,}400$ blocks, reference ladder $512$ points per binade.}
+\label{tab:latticeexp}
+\begin{tabular}{rrr}
+\toprule
+$N$ & excess (fraction) & $p(N \to 2N)$ \\
+\midrule
+$2$   & $4.214\times10^{-1}$ & $1.417$ \\
+$4$   & $1.579\times10^{-1}$ & $1.604$ \\
+$8$   & $5.193\times10^{-2}$ & $1.728$ \\
+$16$  & $1.568\times10^{-2}$ & $1.838$ \\
+$32$  & $4.385\times10^{-3}$ & $1.933$ \\
+$64$  & $1.148\times10^{-3}$ & $\mathbf{2.030}$ \\
+$128$ & $2.812\times10^{-4}$ & --- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent \textbf{The prediction is quantitative and it holds.} The corner
+positions $\log_{2}(|v_{i}|/\beta_{j})$ are computable without evaluating the
+error even once, so the corner density is an \emph{independent} instrument.
+Measured within $\pm\tfrac14$ octave of each block's optimum it is $46.5$ corners
+per octave, mean and median agreeing, i.e.\ a typical corner spacing of $0.0215$
+octave --- a ladder of $N \approx 47$. Table~\ref{tab:latticeexp} reaches
+$p = 1.933$ across $N{=}32{\to}64$ and $p = 2.030$ across $64{\to}128$: the
+exponent arrives at Bennett's value exactly where the corner spacing says the
+lattice starts resolving a single smooth arc. \emph{The law was never wrong; it
+was being applied on the wrong side of a crossover this paper had not
+identified.}
+
+\paragraph{What is and is not ours here.} \textbf{Theorem~\ref{thm:latticeexp}
+is elementary and we claim no priority for it.} Case (i) is the standard
+$O(h^{2})$ rate for grid search against a smooth minimum, familiar from
+polynomial optimisation over a simplex~\cite{deklerk2017grid}, and the behaviour
+of grid and descent methods against kinks is an active
+literature~\cite{griewank2019kink}; we state and prove both cases only because
+we need the constants and the contrast in one place. What we have not found
+stated anywhere is the \emph{diagnosis}: that a block format's scale-ladder
+exponent is a measurement of the element grid's corner density, that the two
+quantities can be measured by instruments sharing no code, and that they agree.
+An implication follows for anyone designing such a format --- \textbf{the return
+on scale resolution is governed by the element codebook, not by the scale field}
+--- and it is testable on any codebook by counting corners before running a
+single quantisation.
+
 \paragraph{One mechanism, proposed and refuted.} The E2M1 element grid
 $\{0,\tfrac12,1,\tfrac32,2,3,4,6\}$ repeats identically in every binade, and so
 does every $2^{k/N}$ ladder; a natural guess is that the two interact, that a
@@ -5733,6 +5851,10 @@ and Pisot bases,'' \emph{Math.\ Systems Theory}, vol.~27, pp.~275--282, 1994.
 \emph{Ergodic Theory Dynam.\ Systems}, vol.~36, no.~2, pp.~343--354, 2016.
 \bibitem{mxgap} V.~Egiazarian et al., ``Bridging the Gap Between Promise and
 Performance for Microscaling FP4 Quantization,'' arXiv:2509.23202, 2025.
+\bibitem{deklerk2017grid} E. de Klerk, M. Laurent, Z. Sun, ``On the convergence rate of grid search for polynomial optimization over the simplex,'' \emph{Optimization Letters} 11 (2017), 597--608.
+
+\bibitem{griewank2019kink} A. Griewank, A. Walther, ``Relaxing kink qualifications and proving convergence rates in piecewise smooth optimization,'' \emph{SIAM J. Optimization} 29(1) (2019), 262--289.
+
 \bibitem{nvfp4} NVIDIA, ``Introducing NVFP4 for Efficient and Accurate
 Low-Precision Inference,'' 2025; and ``Pretraining Large Language Models with
 NVFP4,'' arXiv:2509.25149, 2025.

@@ -79,7 +79,8 @@ def tensors(model):
 
 ARMS = [("mxfp4_floor", "floor", None), ("mxfp4_argmin", "argmin2", None),
         ("step2", "step", 2), ("step3", "step", 3), ("step4", "step", 4),
-        ("step8", "step", 8), ("step16", "step", 16)]
+        ("step8", "step", 8), ("step16", "step", 16),
+        ("e4m3_nvfp4_grid", "e4m3", None)]
 
 for model in [m for m in ("smollm2", "qwen") if os.path.isdir(os.path.join(WROOT, m))]:
     tot = {n: [0.0, 0] for n, _, _ in ARMS}
