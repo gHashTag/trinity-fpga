@@ -1,0 +1,281 @@
+{
+ "measured_pooled_score": {
+  "NEAR0": 0.04876915663480758,
+  "MIDN": 0.027332818508148195,
+  "MID": 0.021050088107585907,
+  "MID2": 0.0157636895775795,
+  "TOP": 0.007302001118659974
+ },
+ "measured_order": [
+  "NEAR0",
+  "MIDN",
+  "MID",
+  "MID2",
+  "TOP"
+ ],
+ "predictors": {
+  "P1_mass": {
+   "rho_pooled": 0.7,
+   "p_pooled": 0.11666666666666667,
+   "predicted_order": [
+    "NEAR0",
+    "MID2",
+    "MIDN",
+    "MID",
+    "TOP"
+   ],
+   "rho_no_top": 0.4,
+   "p_no_top": 0.375,
+   "values": {
+    "NEAR0": 0.123225207310036,
+    "MIDN": 0.030014713511443046,
+    "MID": 0.029507358218772557,
+    "MID2": 0.07192087732391916,
+    "TOP": 0.0059918992442719865
+   },
+   "per_model": {
+    "smollm2": {
+     "rho": 0.5,
+     "p": 0.225,
+     "argmax_pred": "NEAR0",
+     "argmax_measured": "MIDN",
+     "hit": false
+    },
+    "qwen": {
+     "rho": 0.7,
+     "p": 0.11666666666666667,
+     "argmax_pred": "NEAR0",
+     "argmax_measured": "NEAR0",
+     "hit": true
+    },
+    "pythia": {
+     "rho": -0.1,
+     "p": 0.6083333333333333,
+     "argmax_pred": "NEAR0",
+     "argmax_measured": "TOP",
+     "hit": false
+    },
+    "opt": {
+     "rho": 0.6,
+     "p": 0.175,
+     "argmax_pred": "NEAR0",
+     "argmax_measured": "NEAR0",
+     "hit": true
+    }
+   },
+   "argmax_hits": [
+    2,
+    4
+   ]
+  },
+  "P1b_captured": {
+   "rho_pooled": 0.7,
+   "p_pooled": 0.11666666666666667,
+   "predicted_order": [
+    "NEAR0",
+    "MID2",
+    "MIDN",
+    "MID",
+    "TOP"
+   ],
+   "rho_no_top": 0.4,
+   "p_no_top": 0.375,
+   "values": {
+    "NEAR0": 0.060323545331467186,
+    "MIDN": 0.009595212521085323,
+    "MID": 0.009415053810230379,
+    "MID2": 0.03613941403260759,
+    "TOP": 0.0038941050591453936
+   },
+   "per_model": {
+    "smollm2": {
+     "rho": 0.5,
+     "p": 0.225,
+     "argmax_pred": "NEAR0",
+     "argmax_measured": "MIDN",
+     "hit": false
+    },
+    "qwen": {
+     "rho": 0.7,
+     "p": 0.11666666666666667,
+     "argmax_pred": "NEAR0",
+     "argmax_measured": "NEAR0",
+     "hit": true
+    },
+    "pythia": {
+     "rho": -0.1,
+     "p": 0.6083333333333333,
+     "argmax_pred": "NEAR0",
+     "argmax_measured": "TOP",
+     "hit": false
+    },
+    "opt": {
+     "rho": 0.6,
+     "p": 0.175,
+     "argmax_pred": "NEAR0",
+     "argmax_measured": "NEAR0",
+     "hit": true
+    }
+   },
+   "argmax_hits": [
+    2,
+    4
+   ]
+  },
+  "P2_mass_w2": {
+   "rho_pooled": 0.4,
+   "p_pooled": 0.25833333333333336,
+   "predicted_order": [
+    "MIDN",
+    "MID",
+    "MID2",
+    "NEAR0",
+    "TOP"
+   ],
+   "rho_no_top": -0.2,
+   "p_no_top": 0.625,
+   "values": {
+    "NEAR0": 0.0008557306063196944,
+    "MIDN": 0.0018759195944651904,
+    "MID": 0.0018442098886732848,
+    "MID2": 0.001123763708186237,
+    "TOP": 0.000166441645674222
+   },
+   "per_model": {
+    "smollm2": {
+     "rho": 0.7,
+     "p": 0.11666666666666667,
+     "argmax_pred": "MIDN",
+     "argmax_measured": "MIDN",
+     "hit": true
+    },
+    "qwen": {
+     "rho": 0.1,
+     "p": 0.475,
+     "argmax_pred": "MID",
+     "argmax_measured": "NEAR0",
+     "hit": false
+    },
+    "pythia": {
+     "rho": -1.0,
+     "p": 1.0,
+     "argmax_pred": "MIDN",
+     "argmax_measured": "TOP",
+     "hit": false
+    },
+    "opt": {
+     "rho": 0.3,
+     "p": 0.3416666666666667,
+     "argmax_pred": "MIDN",
+     "argmax_measured": "NEAR0",
+     "hit": false
+    }
+   },
+   "argmax_hits": [
+    1,
+    4
+   ]
+  },
+  "P2b_sse_share": {
+   "rho_pooled": 0.4,
+   "p_pooled": 0.25833333333333336,
+   "predicted_order": [
+    "MIDN",
+    "MID",
+    "MID2",
+    "NEAR0",
+    "TOP"
+   ],
+   "rho_no_top": -0.2,
+   "p_no_top": 0.625,
+   "values": {
+    "NEAR0": 0.05464457321005743,
+    "MIDN": 0.11508697475882118,
+    "MID": 0.1129646676817666,
+    "MID2": 0.08469317793568407,
+    "TOP": 0.052690455960747944
+   },
+   "per_model": {
+    "smollm2": {
+     "rho": 0.4,
+     "p": 0.25833333333333336,
+     "argmax_pred": "MIDN",
+     "argmax_measured": "MIDN",
+     "hit": true
+    },
+    "qwen": {
+     "rho": 0.1,
+     "p": 0.475,
+     "argmax_pred": "MID",
+     "argmax_measured": "NEAR0",
+     "hit": false
+    },
+    "pythia": {
+     "rho": -0.9,
+     "p": 0.9916666666666667,
+     "argmax_pred": "MIDN",
+     "argmax_measured": "TOP",
+     "hit": false
+    },
+    "opt": {
+     "rho": 0.3,
+     "p": 0.3416666666666667,
+     "argmax_pred": "MIDN",
+     "argmax_measured": "NEAR0",
+     "hit": false
+    }
+   },
+   "argmax_hits": [
+    1,
+    4
+   ]
+  },
+  "P3_kl_share": {
+   "rho_pooled": 0.9,
+   "p_pooled": 0.041666666666666664,
+   "predicted_order": [
+    "NEAR0",
+    "MIDN",
+    "MID",
+    "TOP",
+    "MID2"
+   ],
+   "rho_no_top": 1.0,
+   "p_no_top": 0.041666666666666664,
+   "values": {
+    "NEAR0": 0.2075805588257571,
+    "MIDN": 0.09766025670037155,
+    "MID": 0.07268862995351393,
+    "MID2": 0.047907430370183794,
+    "TOP": 0.05036376219041383
+   },
+   "per_model": {
+    "smollm2": {
+     "rho": 0.6,
+     "p": 0.175,
+     "argmax_pred": "NEAR0",
+     "argmax_measured": "MIDN",
+     "hit": false
+    },
+    "pythia": {
+     "rho": 0.0,
+     "p": 0.525,
+     "argmax_pred": "NEAR0",
+     "argmax_measured": "TOP",
+     "hit": false
+    },
+    "opt": {
+     "rho": 1.0,
+     "p": 0.008333333333333333,
+     "argmax_pred": "NEAR0",
+     "argmax_measured": "NEAR0",
+     "hit": true
+    }
+   },
+   "argmax_hits": [
+    1,
+    3
+   ]
+  }
+ }
+}
