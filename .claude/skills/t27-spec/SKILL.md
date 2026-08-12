@@ -6443,3 +6443,48 @@ mess.** Classify every modified file as *provably my edit* or *not*, and stage
 only the first set. Here 62 specs carried pre-existing uncommitted edits that
 made their repairs inseparable — so they were left out and named, which finally
 attached a cost to a dirty tree that had been an abstract question for 40 waves.
+
+## Wave 672 — a metric that needs the artifact it audits is not an external check
+
+**Withdrew my own headline number, from two published propositions.** A gate
+ratcheted on "constants written minus constants reaching the AST". Its regex
+required `const` at line start — so it **missed every `pub const`** (the real
+module-level declarations) and instead counted `const bit = ...`, function-local
+bindings that were never meant to be module nodes. Wrong in both directions
+simultaneously, which is why the number looked plausible.
+
+**Three formulations, three answers — that is the tell.** `^\s*const` → 2339
+lost; brace-depth ≤ 1 → 2444 (array literals `[32]u16{` open braces, so depth
+drifts); `^\s*pub\s+const` → **118%**, more AST nodes than source markers. When
+successive refinements of a measurement disagree by more than noise, the quantity
+is not well defined, not merely mismeasured.
+
+**The general rule: `const` is legal at module scope AND inside a function, so
+separating them requires parsing — the thing being measured.** Any external
+metric that would need the artifact it audits in order to be computed is not an
+external check. Have the tool report it, or don't ratchet on it.
+
+**Third mislabel in one instrument.** The gate was built to catch a compiler
+reporting success while reading 31% of its input, and shipped with two labels
+that didn't describe what they counted. *The failure being audited and the
+failure of the audit were the same shape* — which is not irony, it's a warning
+that building an instrument for a defect class does not immunise the instrument.
+
+**A truncated sample of errors is not a census of causes.** `t27c parse` prints
+the first five messages per file. I clustered those and reported "57 of this
+kind" — a fix that should have removed 57 removed 8. Before ranking causes by
+frequency, check whether the tool truncated its own output.
+
+**Scope a mechanical repair by an oracle, and skip what the oracle can't
+decide.** 162167 corrupted characters, a 148-entry transliteration table
+covering 99%: every line reconstructed from git's pre-image and accepted only
+when it equals the pre-image transliterated. The 44 Coptic and Cyrillic
+occurrences had no defensible mapping, so 17 lines were **skipped, not guessed**.
+A repair with a per-item oracle can be run autonomously; one without cannot.
+
+**A deletion that is never committed is invisible from both sides.** 61 Coq
+proof files are removed on disk and present in HEAD. Every check reading the
+committed tree sees them; every check reading the working tree doesn't. Each view
+is internally consistent, so nothing reports a problem. `git status` is the only
+instrument that sees it — which is why it belongs in a periodic audit, not just
+before a commit.
