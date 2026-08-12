@@ -81,9 +81,30 @@ measured and is *not* the table — the sixth weight bit widens the multiplier b
 +24 LUT, while the asymmetric decode inside the lane is 4 LUT **cheaper** than
 the best symmetric decode.
 
-Frequency separates nothing that matters: every lane comparison ties under the
-project's seed-spread rule. **And the frequency collector itself was broken** —
-see the correction now carried in `CODEBOOK_SILICON_2026-08-11.md`.
+**The frequency collector was broken**, and every figure below is the corrected
+one. `run_synth.py` appended nextpnr's `Max frequency for clock` line — which is
+printed **twice per run**, post-placement and post-route — and then sliced the
+last `len(SEEDS)` values, keeping a mixture of three post-route and two
+post-placement figures from the last seeds only. `run_asym.py` `import`s
+`run_synth`, so it inherited the same collector and the same defect; fixing the
+one fixed both, and the blast radius was bounded by that import.
+
+Corrected post-route medians over seeds 1–5, standalone decoders:
+
+| arm | median MHz | [min, max] |
+|---|---:|---|
+| `ad_mx24fl` best symmetric, flat | 906.62 | [904.98, 1002.00] |
+| `ad_mx12fl` symmetric, flat, 1/12 | 888.10 | [766.87, 946.07] |
+| `ad_asymsr` | 849.62 | [776.40, 888.89] |
+| `ad_asymmx` **the challenger** | 816.99 | [810.37, 914.91] |
+| `ad_mxfp4` **the published incumbent** | 458.30 | [406.01, 509.16] |
+| `ad_mx24st` symmetric, structural | 393.24 | [363.77, 402.25] |
+
+The conclusion survives the correction: **every lane comparison still ties** under
+the project's seed-spread rule, and the one separated pair is the asymmetric
+decoder against the *structural* incumbent — 816.99 against 458.30, a gap that is
+the sign-apply carry chain and **vanishes against the flat symmetric decoder**
+(816.99 [810, 915] against 906.62 [905, 1002] overlap).
 
 ## 3. What predicts placement: the conjecture failed, and the classical answer is anti-correlated
 
