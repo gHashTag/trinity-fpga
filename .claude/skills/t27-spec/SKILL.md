@@ -7114,3 +7114,37 @@ need it.
 provably the `"`→`]` substitution and 4 were not. Checking each changed line
 against the exact transformation is cheap and keeps someone else's uncommitted
 work out of your commit.
+
+## Wave 690 — a comment stripper that does not know about strings is a string corrupter
+
+**My first runaway-string gate reported 74 findings, every sampled one
+spurious.** It split each line on `//` before counting quotes — which cuts
+`"https://example.com"` in half and leaves an odd count. Replaced with a state
+machine that treats `//` as a comment only when *outside* a string.
+
+This is the exact inverse of the rule this campaign already enforces (strip
+comments before applying a regex to code). There, code was read as comment; here,
+a string was read as comment. **Both directions are the same defect: a scanner
+that decides what is code without tracking what is a string.**
+
+**A repair scoped to the shape you first saw finds the instances that look like
+the first one.** The struct-field pattern `name : [[]T",` missed the identical
+corruption in `const NAME : [[]U32" = "...";`. After any pattern-based repair,
+re-run the *detector* rather than assuming the pattern was the population.
+
+**Promote a signature to a gate the second time it appears**, not the third. The
+runaway-string shape cost 33 specs once and 4 more a wave later; the gate is
+twenty lines and it verified clean over 497 files, bit a planted corruption by
+file and line, and returned clean on restore.
+
+**An unexplained residue of one is indistinguishable from a residue of one you
+have not looked at.** The last zero-capture spec turned out to be an API
+*document* wearing a `.t27` extension — parsing even its fenced blocks captures
+nothing, because they hold signatures with indented prose. Excusing it by name
+with the reason makes the exemption countable; leaving the metric at 1 would have
+concealed the next one.
+
+**Test the excusal, not just the exclusion.** Before excusing the file I checked
+whether a fence-aware mode would help by extracting the fences and parsing those
+alone. It captured zero — which is what turned "the parser needs a Markdown mode"
+into "this is not a spec".
