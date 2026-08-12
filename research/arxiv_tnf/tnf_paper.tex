@@ -4259,6 +4259,53 @@ competitor its best, because a result that needs the opponent handicapped is not
 a result} --- and Section~\ref{sec:selfcheck} records four earlier claims in this
 paper that failed exactly that test.
 
+
+\paragraph{The same question, asked of the squared error.} The paragraph above
+gave each side its best encoder and halved the perplexity headline. The
+$+17.11\%$ RMSE figure was measured against the same reference encoder and
+deserves the same treatment. An argmin encoder improves MXFP4's own RMSE by
+$3.50\%$ on SmolLM2 and $2.86\%$ on Qwen, so best against best:
+
+\begin{center}\small
+\begin{tabular}{lrrr}
+\toprule
+& vs Algorithm~1 & encoder alone & \textbf{best vs best} \\
+\midrule
+RMSE, SmolLM2 & $+17.11\%$ & $+3.50\%$ & $\mathbf{+14.10\%}$ \\
+RMSE, Qwen & $+16.42\%$ & $+2.86\%$ & $\mathbf{+13.96\%}$ \\
+perplexity, SmolLM2 & $+20.04\%$ & $+12.15\%$ & $+8.99\%$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+The squared-error headline survives the correction nearly intact and the
+perplexity headline does not, and the gap between those two outcomes is the
+finding.
+
+\begin{proposition}[The encoder's share is metric-dependent, and strongly]
+\label{prop:encodershare}
+Fixing the scale-selection rule, holding the codebook, the block size and the
+bit budget constant, recovers $20.5\%$ of the achievable squared-error
+improvement on SmolLM2 and $60.6\%$ of the achievable perplexity improvement on
+the same weights and the same windows. \emph{The two metrics therefore rank the
+same intervention three times apart.}
+\end{proposition}
+
+This is a second and independent route to the observation this paper already
+records --- that on a short block with a shared scale, squared error does not
+predict perplexity. The first route compared codebooks and found the ranking
+inverts. This one compares \emph{encoders}, changes no codebook at all, and
+finds a threefold disagreement about how much a single fix is worth. A design
+loop tuned on squared error would have judged the encoder a minor cleanup worth
+a fifth of the available gain; on the metric that matters it is worth three
+fifths, and it is free.
+
+\emph{So the paper's block-axis recommendation stands on the stronger of the two
+readings.} Against a properly encoded MXFP4 the five-trit ladder is worth
+$+14.10\%$ of squared error and $+8.99\%$ of perplexity, and the encoder that
+must be given to the baseline first is worth more than the ladder is.
+
 \paragraph{Accuracy and area in one calculation, which changes the recommendation.}
 The two measurements above --- perplexity from the sweep, area from the placed
 appliers --- say something together that neither says alone.
