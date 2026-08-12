@@ -7076,3 +7076,41 @@ direction makes the finding look bigger.**
 zero-capture specs split into genuine literate-Markdown files and ordinary specs
 failing on unknown constructs. A single count would have implied a single fix and
 sent the next wave down one path for both.
+
+## Wave 689 — silent consumption inverts the search
+
+**Six waves hunted a parser gap that was one character of data.** 33 specs
+captured zero declarations. Each carried `bits : [[]Usize",` — a stray `"` where
+`]` belongs, opening a string literal that swallowed the rest of the file. One
+generator, one commit, 107 sites.
+
+**Theorem: if a lexical error causes the remainder of a file to be CONSUMED
+rather than reported, the symptom appears at the consumer — a missing
+declaration, an unclosed block — and carries no information about where the cause
+is.** Every instinct said "the parser cannot handle construct X". The cause was
+upstream of parsing entirely.
+
+**What broke it was a metric that knows nothing about parsing.** The
+inside-the-machine counter (`declarations-swallowed`) had reached 0 and stayed
+there, because a file whose preamble fails never enters the loop that counter
+lives in. A file-level question — *does a file that declares something public
+capture anything?* — read 34 and pointed straight at the files. **Pair every
+counter inside a mechanism with a coarse one outside it.**
+
+**Bracket balance is a decisive oracle when no uncorrupted example exists.** No
+`[[]T],` form appears anywhere in the corpus, so nothing could be copied. But
+`[[]Usize` has exactly one unclosed `[`, and `]` is the unique character that
+closes it. Applying the repair only where balance decides, and skipping
+otherwise, gave 0 skips over 107 sites — the oracle covered the whole population.
+**Look for a structural invariant before concluding a repair needs a judgement.**
+
+**"A scanner must never consume a terminator it did not open" was missing in a
+second place.** Fixed once in a value scanner, and the same defect sat in the
+recovery skip: a keyword-style block at end-of-module ran to EOF and ate the
+module's closing brace. After fixing a rule, grep for every scanner that could
+need it.
+
+**Stage by proving the diff is yours.** 61 specs showed symmetric diffs; 57 were
+provably the `"`→`]` substitution and 4 were not. Checking each changed line
+against the exact transformation is cheap and keeps someone else's uncommitted
+work out of your commit.
