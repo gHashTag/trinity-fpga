@@ -4317,6 +4317,65 @@ lattice starts resolving a single smooth arc. \emph{The law was never wrong; it
 was being applied on the wrong side of a crossover this paper had not
 identified.}
 
+\paragraph{The diagnosis is a design rule, not a fact about E2M1.} One codebook
+is an anecdote, so the prediction was registered
+(\texttt{research/block/PREREG\_codebook\_exponent\_2026-08-12.md}) and then run
+on four four-bit codebooks chosen to spread $D$ as widely as four-bit codebooks
+can: E2M1; \texttt{int4}, whose linear magnitudes bunch its boundaries at the top
+in log space; NF4, which is \emph{asymmetric} and so carries fifteen distinct
+magnitudes where a symmetric codebook carries eight; and E3M0, a pure exponent
+whose boundaries are spread over $6.58$ octaves. $D$ was measured first, by
+counting, with the error never evaluated.
+
+\begin{table}[t]\centering
+\caption{Corner density against measured crossover, smollm2, $82{,}944$ blocks.
+$D$ counts corners within $\pm\tfrac14$ octave of each block's optimum and
+evaluates no error; the crossover is where the measured exponent reaches $2$,
+interpolated in $\log N$. The registered prediction was ordinal only.}
+\label{tab:codebookexp}
+\begin{tabular}{lrrr}
+\toprule
+codebook & $D$ (counted) & crossover (measured) & ratio \\
+\midrule
+E3M0 --- pure exponent      & $28.0$ & $36.7$ & $1.31$ \\
+E2M1 --- MXFP4's own        & $46.9$ & $49.0$ & $1.05$ \\
+\texttt{int4} --- linear    & $51.2$ & $53.0$ & $1.04$ \\
+NF4 --- asymmetric          & $53.1$ & $54.3$ & $1.02$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent \textbf{The ordering holds, on values that are distinct rather than
+tied}, and three of the four cardinal predictions land within $5\%$ --- better
+than the registration asked for, since it had recorded that a cardinal hit
+``would be luck at this level of modelling.'' The exception is E3M0 at $1.31$,
+and its boundaries are the sparsest of the four, spread over $6.58$ octaves
+against E2M1's $4.32$; with corners that sparse, fewer of them fall inside the
+window the density is estimated over, and the local-arc picture the ratio assumes
+is correspondingly weaker. We report the outlier rather than dropping it.
+
+Two cautions belong with this table. The discrete crossover --- the first $N$ in
+a doubling sequence at which $p \ge 1.9$ --- has too little resolution to
+separate $D=46.9$ from $D=53.1$: it returns $32$ for three of the four codebooks,
+and reading an ordering off it would be reading off a tie. The interpolated
+crossover is what Table~\ref{tab:codebookexp} reports. And the final doubling of
+each sweep, $N=64 \to 128$, is discarded: at a reference ladder of $256$ points
+per binade the coarse grid is only twice the reference, so its excess is biased
+low and its exponent high --- \emph{all four codebooks return $\approx 2.29$
+there, which is the signature of an instrument artefact and not of four
+independent physical results.}
+
+\begin{corollary}[Scale resolution pays until the ladder resolves one arc]
+\label{cor:designrule}
+For a block format with element codebook $\mathcal{C}$ and corner density $D$
+per octave, refining the shared-scale ladder beyond roughly $D$ points per binade
+buys the $O(h^{2})$ tail of Theorem~\ref{thm:latticeexp}(i) rather than the
+$O(h)$ regime, so the return per doubling falls from about $50\%$ to about $25\%$
+of the previous doubling. $D$ is computable from $\mathcal{C}$ and the weight
+distribution alone. \emph{The operating point of the scale field is therefore set
+by the element codebook, and can be read off before any quantisation is run.}
+\end{corollary}
+
 \paragraph{What is and is not ours here.} \textbf{Theorem~\ref{thm:latticeexp}
 is elementary and we claim no priority for it.} Case (i) is the standard
 $O(h^{2})$ rate for grid search against a smooth minimum, familiar from
