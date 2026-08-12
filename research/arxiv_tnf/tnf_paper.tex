@@ -181,6 +181,47 @@ Section~\ref{sec:selfcheck} generalises the shape those errors took, because in
 almost every case the measurement was correct and the comparison around it was
 not.
 
+
+
+\paragraph{And then the paper turns on itself.} Everything above was written
+before the campaign that produced the second half, and the second half is not
+more results of the same kind --- it is what happened when the instruments were
+audited. Sections~\ref{sec:wellposed} to~\ref{sec:selfcheck} record it, and the
+shape is worth stating in advance because it recurs.
+
+\emph{The measurement was almost always right and the comparison around it was
+almost always wrong.} A decoder emitting \texttt{fp32} was compared against a
+real-valued reference by exact equality, which reports rounding as error
+(Section~\ref{sec:wellposed}); two formats publishing two variants were each
+compared against the other one's; two rows of the throughput table were measured
+on a harness $64$ LUT more expensive than the nineteen they were ranked against
+(Section~\ref{sec:bands}); and the ranking itself had never been tested against
+the noise of the instrument that produced it, which resolves seven levels rather
+than twenty-eight. Eleven claims of ours are retracted in place below, and the
+count is the point rather than an embarrassment: a table that has survived being
+audited is worth more than one that has not been.
+
+Three results came out of the audit that could not have come out of the
+measurements alone. Section~\ref{sec:tiling} proves that a ternary exponent
+never tiles a binary field --- $3^{k}\neq 2^{m}$ --- and turns the waste into a
+closed form whose minimum picks the rung; Section~\ref{sec:window} shows the same
+rung is the widest an \texttt{fp32} decoder can carry without its exponent
+wrapping, so two unrelated constraints land on $E_t=5$; and
+Section~\ref{sec:sixteen} builds that rung, guards every code outside its
+specification, and measures it against IEEE half at equal storage on fifty-four
+placement seeds.
+
+\paragraph{The block axis, last, because it was the rule we set ourselves.}
+This work would not publish on the block axis until it beat a deployed format
+there by measurement. Section~\ref{sec:blockmeasured} reports that measurement
+--- and reports, in the same breath, that the ternary reading of the scale field
+is not why it wins, that a plain binary ladder wins by more, that about a fifth
+of the improvement is an encoder change belonging to the baseline, and that once
+the appliers are placed in silicon the cheapest arm is $3.6$ times more efficient
+per LUT than the best ladder. \emph{The result stands and the story we expected
+does not}, which is the same sentence the audit sections keep producing and the
+reason they are in the paper rather than in a notebook.
+
 \section{The format}\label{sec:format}
 
 \begin{equation}
