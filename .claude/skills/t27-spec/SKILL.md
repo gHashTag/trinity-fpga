@@ -6897,3 +6897,42 @@ it belongs in every such step — not only where you first noticed.
 **Keep a strictly-safer change even when it moves no number.** Replacing an
 unbounded scan with a bounded one changed nothing measurable and removed a path
 that was one signature away from destroying a file.
+
+## Wave 684 — count the occlusion chain before deciding a fix was wrong
+
+**Theorem: if features f₁…fₙ occur in one artifact such that fᵢ is unreachable
+until fᵢ₋₁ parses, then no proper subset containing f₁ improves that artifact —
+and any subset containing f₁ but missing the rest makes it strictly WORSE**,
+converting a partial parse into a hard failure. One spec here needed generic fn
+names → `(T) -> void` → `[T?]` → `read<str>(...)` in expression position, each
+unreachable until the previous parsed.
+
+So when a correct fix makes a file worse, **count the chain** before reverting.
+Then ship only the members that cannot regress — here, the one feature reachable
+*without* the head of the chain.
+
+**State the invariant of the construct you want, not the negation of the one you
+fear.** `<` is ambiguous with comparison. Two attempts failed trying to
+characterise a comparison. What works is positional: a generic list on a function
+name is *always* immediately followed by `(`. Requiring that makes the two
+impossible to confuse without knowing anything about comparisons.
+
+**Backtracking is usually cheap — check before designing around its absence.**
+Two waves went into shape-bounded matching because the parser had one token of
+lookahead. Its lexer is `{source, pos, line, col}` with `source` immutable, so a
+mark is three integers plus two tokens. Look at the state before concluding you
+cannot save it.
+
+**A file omitted from one hand-maintained list is disproportionately likely to be
+omitted from the next.** The two property files no phantom scan reached are the
+same two that were ungated for many waves. Both lists were written by reading the
+same mental inventory. When you find one such omission, check every *other* list
+for the same names.
+
+**Plant mutations into code, not comments.** My first bite test for the new scan
+targeted the first regex match in the file, which was inside a comment, and
+caught nothing — indistinguishable from a gate that does not work.
+
+**`git checkout <file>` reverts everything uncommitted in that file.** I used it
+to abort one malformed edit and lost verified work from the same session. Commit
+verified increments before attempting speculative ones.
