@@ -7628,3 +7628,73 @@ The tell is the phrasing of your own justification. If the reason you wrote is a
 general one — *"this is documentation, not code"* — but the exemption you coded is
 a literal string, those two disagree, and the code is the one that will be read
 next wave.
+
+## Theorem (exemption drift) — every prose justification in a checker is an unchecked claim
+
+The previous section's rule — *when you excuse something, count the class it
+belongs to* — is mechanical, so it can be run over a whole suite. Doing that
+across 28 gates found **13 hardcoded exemption sets, 8 naming literal files**, and
+two that were wrong **in opposite directions**.
+
+An exemption is a pair `(J, S)`: a justification `J`, which is a predicate over
+the corpus, and a set `S` of literals. Soundness requires
+
+```
+S = { x : J(x) }
+```
+
+and **nothing enforces it**. The two drift apart independently:
+
+| | | |
+|---|---|---|
+| `S ⊊ {x : J(x)}` | **under**-exemption | siblings go unnoticed; the count is inflated |
+| `S ⊋ {x : J(x)}` | **over**-exemption | checks are silently disabled; the count looks complete |
+
+### Over-exemption is the dangerous half
+
+Under-exemption produces *visible* noise — an inflated number somebody eventually
+investigates. Over-exemption produces **silence**: the artefact is simply absent
+from every count, and the count still looks whole. There is no symptom at all.
+
+The instance was mine, written two waves earlier. A gate exempted four scripts
+with the reason *"not checking scripts, so coverage is not a question they
+answer"*. Re-deriving that stated property — never returns a failure status, emits
+no `::error::` — refuted three of the four:
+
+```
+bench.py         ::error::arm '{label}' exited nonzero      <- can fail CI
+mutate.py        ::error::mutate self-test found no RTL     <- can fail CI
+scale_probe.py   has a `return 1` failure path
+trace_reader.py  the only one the sentence is true of
+```
+
+Three scripts that gate CI were excused from a requirement by a sentence that was
+not true of them, and it survived because **a justification written in prose is
+never compared to the code beneath it.**
+
+### The corollary, and it generalises past exemptions
+
+This skill already holds that an unrun check proves nothing, an unbounded search
+establishes nothing, and an unpublished denominator means nothing. A `# reason:`
+comment beside an exemption is **all three at once** — an assertion about the
+corpus, never executed, never bounded, never counted.
+
+**Practical rule.** Whenever you write a justification for skipping something,
+write it twice: once in prose, once as a predicate you can run. Then run it and
+compare the two sets. If they differ, one of them is wrong and you have just found
+out which — cheaply, and before it silently disables a check for a year.
+
+The tell that a set needs this: it is spelled with literal filenames while its
+comment above it is a general sentence. That mismatch is visible without running
+anything, and it is the same tell as the previous section's — because it is the
+same defect, seen from the over-exempting side.
+
+### Report a zero-effect correctness change as zero
+
+The other half of this wave re-derived an under-scoped exemption into a structural
+property. **Measured effect: none** — the counter it feeds was 0 before and after.
+
+Say that. The temptation is to report the fix and let the reader assume it moved
+something, or to hunt for a number that did move and lead with it. A correctness
+change with a zero-sized effect is still worth making, and describing it honestly
+costs one clause: *"recorded as a correctness change with no numeric effect."*
