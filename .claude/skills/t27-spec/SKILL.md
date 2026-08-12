@@ -7211,3 +7211,78 @@ much reports at the consumer, with no information about the cause's location.**
 **Two eliminated approaches, recorded at the site with their measurements, beat a
 third guess.** The next attempt needs the counterexample field type — which is a
 different piece of work from "try another loop".
+
+## A defect in the data is invisible to every component built to tolerate it
+
+Six waves of parser work, 24 gates, and 1213 passing tests went past 18 corrupted
+field types that a four-character balance check finds instantly:
+
+```
+benchmarks : [[]Const [,     <- three `[`, one `]`
+```
+
+Two attempts to make `parse_struct_body` nesting-aware were recorded as failures
+and reverted. They were not failures. A nesting-aware scanner is **correct** never
+to stop on that line, because the nesting genuinely never closes. The naive
+comma-terminated scanner that "worked" survives the corpus only by ignoring
+nesting — the exact property that makes it wrong everywhere else.
+
+**The rule.** The one component that would notice a malformed property is the one
+whose correctness depends on it — and if that component was written to tolerate
+the malformation, nobody will ever notice. Here:
+
+| instrument | why it was blind |
+|---|---|
+| the parser | does not track nesting, so unbalanced brackets are not a category it has |
+| `spec_parse_gate` | these cost **zero** recovery events — the naive loop stops at the comma and silently produces a *wrong type string* |
+| 1213 tests | none assert on a captured field's type text |
+
+The gates measured **control flow** (did recovery fire, was a declaration
+swallowed). The defect was in a **value**. A campaign can be exhaustive along one
+axis and have no instrument at all on the other.
+
+### The tolerance ledger
+
+Every `catch`, every recovery path, every "skip to the next declaration" makes a
+class of defect permanently unobservable. Tolerance is paid for in blindness, and
+the debt is invisible by construction — you cannot grep for what a tolerant
+component declined to report.
+
+The only way to price it is to run, **once**, an instrument that does not
+tolerate. Four `eprintln!` lines inside the loop printed the offending token
+stream on the first run and named the counterexample in one wave, against six
+waves of inference from downstream symptoms. When a repair "fails" for reasons
+you cannot state, stop repairing and print what the code actually sees.
+
+### Corollary: two failed repairs can mean the input is wrong
+
+Prop. 191 recorded two attempts and concluded *"the next attempt needs the
+counterexample, not a third guess."* That was right, but the framing was still
+"which repair is correct". The answer was **neither — the data is malformed**.
+Before a third attempt at any repair, check whether the thing being repaired is
+well-formed at all.
+
+### Repair only as far as your oracle reaches
+
+Prop. 186 repaired 107 sites of the sibling corruption (`[[]Usize",`) with 0
+skipped, because bracket balance determined the **whole** repair. Here it does
+not: `[[]Const [` → `[[]Const ]` is balanced and is a list type *with no element*.
+The generator lost the element type too, and nothing in the repository recovers
+it.
+
+So the 18 were **not repaired**. They were ratcheted — recorded in a baseline, a
+19th fails the build. Repairing them would mean guessing what the corpus meant,
+which is a decision about content, not a scanner's call. **An oracle that fixes
+part of a defect does not license fixing the rest by inference.**
+
+### The NOW.md heading convention above is now blocked by a gate
+
+`bootstrap/build.rs:152` enforces an English-only language policy and **panics**
+on any Cyrillic in a first-party doc — which fails `cargo check`, which is
+pre-commit gate 3 of 4. The `### Что легло` / `### Границы честности (BINDING)`
+shape recorded earlier in this skill therefore no longer commits. Use
+**`### What landed`** and **`### Honesty limits (BINDING)`**; the sections and
+their content are unchanged. (Grandfathered files are listed in
+`docs/.legacy-non-english-docs`, Architect approval only.) The failure surfaces
+as `BLOCKED: cargo check failed in bootstrap/` with the real cause buried in the
+build script's stderr — read `--- stderr`, not the top-level error.
