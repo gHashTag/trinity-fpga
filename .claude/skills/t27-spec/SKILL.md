@@ -7286,3 +7286,62 @@ their content are unchanged. (Grandfathered files are listed in
 `docs/.legacy-non-english-docs`, Architect approval only.) The failure surfaces
 as `BLOCKED: cargo check failed in bootstrap/` with the real cause buried in the
 build script's stderr — read `--- stderr`, not the top-level error.
+
+## Search for the question, not the shape you already found
+
+The skill already warns that *form-based scans find mostly correct text* (false
+positives) and that *a form-based scan finding nothing establishes nothing*
+(false negatives). This is the third face of the same coin, and it is the
+expensive one, because the gate stays **green** the whole time.
+
+Two members of one corruption family were found six waves apart:
+
+| | shape | sites | how it surfaced |
+|---|---|---|---|
+| first | `bits : [[]Usize",` — `"` for `]` | 107 | 33 specs captured nothing; six waves of parser work |
+| second | `x : [[]Const [,` — `[` for `]` | 18 | instrumenting a repair that had "failed" twice |
+
+Both were **one generator writing a wrong character**. After the first, a gate
+was written for *odd quote count*. It could not see the second. After the second,
+a check was added for *unbalanced field brackets*. It cannot see a third.
+
+Asking the question those are both instances of — *can this file's delimiters
+close at all?* — took one pass and immediately widened the family from 10 specs
+(all `[`) to **18 specs, 21 imbalances, three delimiter classes**, including
+paren and brace defects that no `[`-shaped search could ever return.
+
+### The coverage theorem, and why it is not just a slogan
+
+Let a defect class `D` come from an unknown corruption process, and let `S_σ`
+match a shape `σ` observed in some `d ∈ D`. Then
+
+```
+coverage(S_σ) = { d ∈ D : σ ⊑ d }
+```
+
+and the residue `D \ S_σ` is **undetectable by construction** — not merely
+unfound. Each newly discovered member yields a new `σ'` and a new gate, so
+shape-search converges to full coverage only *after* every member has been found
+by other means, at which point the gates are redundant.
+
+**A shape search cannot bound its own residue. A question search can.** If the
+question is decidable over the whole artefact — balance, parity, a total
+invariant — then "0 findings" is a real statement about the class.
+
+### The corollary that costs the most
+
+> A green shape-specific gate is evidence about the shape, **never** about the
+> class.
+
+The odd-quote gate was green continuously through all 18 sites the next wave
+found. Nothing was broken about it. It answered its question correctly and its
+question was too narrow — which is indistinguishable from health, from outside.
+
+**Practical test.** When adding a gate after finding a defect, write down the
+sentence *"this gate would also catch ___"*. If you cannot complete it with a
+defect you have **not** already seen, you have written a regression test, not a
+gate. Keep it — regression tests are worth having — but do not let it be counted
+as coverage of the class, and go looking for the decidable question underneath.
+
+Applied here: `runtime/instance.t27` is off by ten braces and
+`fpga/fifo.t27` by four parens. Neither was on anyone's list.
