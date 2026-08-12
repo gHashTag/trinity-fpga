@@ -4137,6 +4137,51 @@ MXFP4 does not have''. Measuring four models rather than two settles it: one
 origin covers all of them, and MXFP4 has an origin constant of its own.
 
 
+
+\paragraph{The cost column, measured.} The comparison above priced the ladders
+on accuracy and argued about their silicon. The appliers were then built and
+placed --- one instance, XC7A200T, \texttt{-nodsp}, five seeds, the harness of
+Section~\ref{sec:bands} --- and each was checked against a reference to within
+one \textsc{ulp} before being measured.
+
+\begin{center}\small
+\begin{tabular}{lrrrl}
+\toprule
+scale applier & LUT & MHz & vs $2^{k}$ & what it is \\
+\midrule
+$2^{k}$ (MXFP4's) & $207$ & $149.10$ & $1.0\times$ & one exponent add \\
+$2^{k/3}$ (five trits) & $1{,}244$ & $66.24$ & $\mathbf{6.0\times}$ & add $+$ one of $3$ constants \\
+$2^{k/8}$ & $1{,}576$ & $61.60$ & $7.6\times$ & add $+$ one of $8$ \\
+$2^{k/16}$ & $1{,}989$ & $60.19$ & $9.6\times$ & add $+$ one of $16$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+\textbf{The accuracy the finer ladders buy costs six to ten times the applier's
+area and more than half its frequency}, against decoders that run $500$ to $600$
+LUT --- so a step-3 applier is heavier than the entire decoder it feeds, and a
+step-16 applier is heavier than three of them. The applier is one instance
+amortised over a block of $32$ in \emph{time}, not replicated per element, so
+this is area rather than throughput; but it is area on the same die, and the
+paper's own frontier is drawn in area.
+
+Two things follow that neither the accuracy table nor the argument would have
+given. First, \textbf{$2^{k}$ is not merely cheaper, it is a different order of
+cheap}: everything with a fractional step pays a mantissa multiply, and the jump
+from $207$ to $1{,}244$ is that multiply appearing, not the ladder getting finer.
+Second, \emph{once the multiply is paid for, finer is nearly free}: $2^{k/3}$ to
+$2^{k/16}$ costs $60\%$ more area for four times the resolution. \textbf{The
+design rule is to take $2^{k}$ or to take the finest ladder that fits} --- and
+Proposition~\ref{prop:origin} says that is $2^{k/18}$. Anything between pays the
+multiplier without spending it.
+
+That also settles what the ternary step buys here. $2^{k/3}$ is where five trits
+land, and its fraction field holds four slots for three values --- $25\%$ of the
+field naming nothing, the same packing loss Theorem~\ref{thm:tiling} describes
+for the exponent, now appearing in the scale. It is neither the cheap option nor
+the accurate one.
+
 \paragraph{The origin constant, measured rather than assumed.}
 A finer ladder buys resolution by spending range: at step $2^{k/N}$ an eight-bit
 field spans $255/N$ octaves against MXFP4's $255$. Whether that is enough is a
