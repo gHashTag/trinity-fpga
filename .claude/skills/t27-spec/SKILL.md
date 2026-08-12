@@ -7148,3 +7148,30 @@ concealed the next one.
 whether a fence-aware mode would help by extracting the fences and parsing those
 alone. It captured zero — which is what turned "the parser needs a Markdown mode"
 into "this is not a spec".
+
+## Wave 691 — duplication is found by the corpus, never by review
+
+**A third inline copy of the type parser, worth 88 recovery events in one
+change.** The return type in `parse_fn_decl` handled identifiers, generics and
+bracket prefixes but not `(`, so `-> (Lexer, Token)` failed while the identical
+type parsed fine in a parameter. The second copy (in `parse_const_decl`) was
+removed two waves earlier for exactly the same reason.
+
+**Theorem: where a grammar is implemented n times, each copy diverges on the
+constructs its own call sites never exercise.** So the defect surfaces only when
+a construct crosses from one position to another — and no amount of reading the
+function shows it, because the copy is correct for everything that has ever
+reached it. **The signal is always the same sentence: "this works over there and
+not here."** Treat that as evidence of duplication, not of a missing feature.
+
+**When you delete one duplicate, grep for the others immediately.** The const
+copy was found by `&[u8; 5]`, the return copy by `(Lexer, Token)`, two waves
+apart. A single `grep -c` for the inline-type idiom would have found both at
+once.
+
+**Know when a metric stops being about your code.** 161 recovery events remain,
+and 96 of them are English sentences and Markdown bullets in files carrying a
+`.t27` extension. *A parser cannot be improved into reading prose.* Continuing to
+drive that number down would mean either mangling the parser or deleting other
+people's documentation — so the honest move is to say what the residue is and
+stop.
