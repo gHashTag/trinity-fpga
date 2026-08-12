@@ -825,7 +825,7 @@
   "mhz": 64.87962962962963,
   "mhz_per_lut": 0.10723905723905724,
   "spread": 10.530000000000001,
-  "checked": "sweep pending",
+  "checked": "all 124{,}416 \\checkmark",
   "code_use": 0.9922,
   "rank": 11,
   "seeds": [

@@ -3796,7 +3796,7 @@ observing only those outputs may be specialised to that image, so its synthesise
 cost is non-increasing in $n$ independently of the decoder's own complexity.
 A comparison across differing $n$ therefore confounds format design with format
 width, and only a within-$n$ comparison isolates design.
-\end{proposition}
+\end{proposition} This is observability-don't-care minimisation~\cite{savoj1990}, standard in logic synthesis and implemented in the tool used here; we state it because its consequence for cross-width comparison is easy to miss, not because the mechanism is new.
 
 Proposition~\ref{prop:pruning} is not a worry, it is visible in the numbers.
 \texttt{GFTernary} takes $2$ input bits and measures $527$ LUT --- \emph{nine
@@ -3992,6 +3992,25 @@ treatment~\cite{knuthv2} and the Setun machines~\cite{setun} establish balanced
 ternary as a radix; \emph{this work does not change the radix} and therefore does
 not inherit the radix-economy argument that literature carries.
 
+
+\paragraph{The construction is standard for decimal, and the standard took a
+third horn.} Packing $b^{k}$ values into $\lceil k\log_2 b\rceil$ bits and
+disposing of the surplus is the problem Chen and Ho~\cite{chenho1975} solved for
+$b=10$ in 1975 and Cowlishaw~\cite{dpd2002} standardised as Densely Packed
+Decimal, normative in IEEE~754~\cite{ieee754}: three decimal digits in ten bits,
+$w=2.34\%$ in the notation of Theorem~\ref{thm:tiling}. \emph{That theorem is
+the same construction at $b=3$, and the theorem itself is unique
+factorisation.} What is ours is the closed form of $w(k)$, its behaviour across
+$k$, and the consequence for choosing a rung.
+
+The comparison is worth making twice over. Proposition~\ref{prop:reserve} offers
+two horns --- guard the surplus or extend the specification to cover it --- and
+the decimal standard takes a third we did not consider: the $24$ surplus
+patterns are \emph{assigned} as non-canonical alternate encodings of values the
+format already names, decoders must accept them, encoders must not emit them.
+That costs no recognition logic and extends no specification. \textbf{We have
+not measured it, and it is the cheapest open experiment in this paper.}
+
 \paragraph{What is left.} Setting those aside, what remains is narrow and stated
 narrowly: the combination of ternary \emph{cardinality} with binary
 \emph{radix} and binary \emph{storage}, with the capacity surplus
@@ -4021,8 +4040,7 @@ The separation threshold falls from $5.50\%$ to $\mathbf{1.43\%}$.
 \centering
 \vspace{0.6em}
 \caption{Fifty-four seeds, mean with a $95\%$ confidence interval, all on the
-common $128$-bit harness. Welch against \texttt{binary16} with Holm correction
-over the eight comparisons; every one survives.}
+common $128$-bit harness. Welch against \texttt{binary16}, Holm-corrected over all $24$ non-baseline comparisons in the table rather than over the eight shown --- correcting over the displayed subset is anti-conservative. Every one still survives.}
 \label{tab:fiftyfour}
 \small
 \begin{tabular}{lrrrl}
@@ -4158,7 +4176,7 @@ $2^{k/16}$ & $+23.74\%$ & $+23.23\%$ \\
 \end{center}
 
 \noindent
-$\sqrt{\varphi}^{\,k}$ at $2.8808$ points per binade lands beside $2^{k/3}$ at $3.0000$, which is what a law of step size predicts and what a law of algebra does not. \textbf{$\varphi$ is not special \emph{for accuracy} on this axis; it is a step finer than a binade.} And a plain binary ladder at the same eight bits beats the ternary one by five to six points of RMSE and $1.1$ of perplexity. At matched dynamic range, $243$ ternary codes lose to $255$ binary ones on \emph{six of six} range settings across four sources.
+$\sqrt{\varphi}^{\,k}$ at $2.8808$ points per binade lands beside $2^{k/3}$ at $3.0000$, which is what a law of step size predicts and what a law of algebra does not. That is the expected behaviour of a logarithmic companding law: distortion falls with the square of the step and the step is all that enters~\cite{bennett1948,grayneuhoff1998}, so the measurement confirms a known result rather than reporting a surprise. \textbf{$\varphi$ is not special \emph{for accuracy} on this axis; it is a step finer than a binade.} And a plain binary ladder at the same eight bits beats the ternary one by five to six points of RMSE and $1.1$ of perplexity. At matched dynamic range, $243$ ternary codes lose to $255$ binary ones on \emph{six of six} range settings across four sources.
 
 \paragraph{What that comparison leaves out, and it is the axis this paper is about.} Accuracy is one column and the multiplier is the other. Applying a scale drawn from $2^{k}$ is an exponent add and costs nothing; from $\varphi^{k}$ it is the Fibonacci step and costs an addition; from $2^{k/3}$ it is a shift and one of three constants; from $2^{k/8}$, one of eight. \emph{The ladders that win on accuracy here are the ones that stop being multiply-free}, and Section~\ref{sec:geoscale}'s claim --- that among \emph{multiply-free} grids $\varphi^{k}$ is the finest available at four bits --- survives this section untouched, because $2^{k/8}$ is not one of them. What does not survive is any reading in which $\varphi$ wins on accuracy by virtue of its algebra. \textbf{We have not synthesised the non-power-of-two scale appliers, so the cost column above is an argument and not a measurement} --- which is the one place in this paper where a comparison rests on reasoning while its neighbour rests on silicon.
 
@@ -4559,6 +4577,20 @@ $E_t$ & $3^{E_t}$ &b & capacity & waste & built here \\
 \bottomrule
 \end{tabular}
 \end{table}
+
+
+\paragraph{The unevenness is equidistribution, and its worst case is ancient.}
+$w(k)$ depends on $k$ only through $\{k\log_2 3\}$, which is equidistributed in
+$[0,1)$ by Weyl~\cite{weyl1916}; the extremes of $w$ over an interval of $k$ are
+therefore governed by the continued-fraction convergents of $\log_2 3$ and their
+spacing by the three-distance theorem~\cite{sos1958}. Rungs where $k\log_2 3$
+falls just \emph{below} an integer are cheap --- $k=5$ at $5.08\%$, $k=17$ at
+$3.78\%$, which is the global minimum for $k\le24$ and which
+Compilade~\cite{compilade} also names --- and rungs just \emph{above} are
+ruinous. The worst in range is $k=12$ at $\mathbf{49.32\%}$, and it is the
+Pythagorean comma: $3^{12}/2^{19}=1.013643$, the near-miss that has defeated
+musical temperament since antiquity~\cite{barbour1951}. \emph{A designer
+choosing a rung is choosing a temperament.}
 
 \paragraph{The rung the ladder had skipped.} $E_t=5$ needs $8$ offset bits, so
 $1+8+7=16$: a third sixteen-bit candidate, and the one this work had not
@@ -5551,6 +5583,45 @@ and Quantization for Efficient Neural Radio Receivers,'' arXiv:2511.01921, 2025.
 \bibitem{setun} N.~P.~Brusentsov and J.~Ramil Alvarez, ``Ternary Computers: The
   Setun and the Setun 70,'' \emph{IFIP SoRuCom}, AICT vol.~357, 2006,
   pp.~74--80.
+
+\bibitem{chenho1975} T.~C.~Chen and I.~T.~Ho, ``Storage-efficient
+  representation of decimal data,'' \emph{Communications of the ACM}, vol.~18,
+  no.~1, pp.~49--52, 1975.
+
+\bibitem{dpd2002} M.~F.~Cowlishaw, ``Densely packed decimal encoding,''
+  \emph{IEE Proceedings --- Computers and Digital Techniques}, vol.~149, no.~3,
+  pp.~102--104, 2002.
+
+\bibitem{ieee754} IEEE Std 754-2019, \emph{IEEE Standard for Floating-Point
+  Arithmetic}, 2019. Decimal interchange formats and non-canonical encodings,
+  \S3.5 and \S5.12.
+
+\bibitem{weyl1916} H.~Weyl, ``\"Uber die Gleichverteilung von Zahlen mod.
+  Eins,'' \emph{Mathematische Annalen}, vol.~77, pp.~313--352, 1916.
+
+\bibitem{sos1958} V.~T.~S\'os, ``On the distribution mod 1 of the sequence
+  $n\alpha$,'' \emph{Ann.\ Univ.\ Sci.\ Budapest}, vol.~1, pp.~127--134, 1958.
+
+\bibitem{barbour1951} J.~M.~Barbour, \emph{Tuning and Temperament: A Historical
+  Survey}, Michigan State College Press, 1951.
+
+\bibitem{savoj1990} H.~Savoj and R.~K.~Brayton, ``The use of observability and
+  external don't cares for the simplification of multi-level networks,''
+  \emph{Design Automation Conference}, 1990, pp.~297--301.
+
+\bibitem{bennett1948} W.~R.~Bennett, ``Spectra of quantized signals,''
+  \emph{Bell System Technical Journal}, vol.~27, no.~3, pp.~446--472, 1948.
+
+\bibitem{grayneuhoff1998} R.~M.~Gray and D.~L.~Neuhoff, ``Quantization,''
+  \emph{IEEE Transactions on Information Theory}, vol.~44, no.~6,
+  pp.~2325--2383, 1998.
+
+\bibitem{microexp} B.~Darvish Rouhani et al., ``With Shared Microexponents, A
+  Little Shifting Goes a Long Way,'' \emph{ISCA}, 2023. arXiv:2302.08007.
+
+\bibitem{adaptivfloat} T.~Tambe et al., ``Algorithm-Hardware Co-Design of
+  Adaptive Floating-Point Encodings for Resilient Deep Learning Inference,''
+  \emph{DAC}, 2020. arXiv:1909.13271.
 
 \end{thebibliography}
 
