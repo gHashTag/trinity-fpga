@@ -126,7 +126,8 @@ ARMS = [("mxfp4_floor", "floor", None), ("mxfp4_argmin", "argmin2", None),
 # mid-teens. Outside this band the ruler is broken and comparisons are void.
 SANE = (5.0, 60.0)
 
-for name in [m for m in ("smollm2", "qwen") if os.path.isdir(os.path.join(W, m))]:
+MODELS = sys.argv[1:] or ["smollm2", "qwen"]
+for name in [m for m in MODELS if os.path.isdir(os.path.join(W, m))]:
     from transformers import AutoModelForCausalLM, AutoTokenizer
     path = os.path.join(W, name)
     tok = AutoTokenizer.from_pretrained(path)

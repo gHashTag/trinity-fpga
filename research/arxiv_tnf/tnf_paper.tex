@@ -4664,6 +4664,65 @@ at fixed codebook, block size and bit budget, on the MX block axis --- and that
 number, $20.5\%$ against $60.6\%$, is the width at which the contribution should
 be read.
 
+\paragraph{The proposition's headline is a SmolLM2 statement, and the second
+model halves it.} Repeating the attribution on Qwen, with the independently
+written instruments of Section~\ref{sec:blockmeasured} and not the original run:
+
+\begin{center}\small
+\begin{tabular}{lrrr}
+\toprule
+encoder's share of the achievable gain & squared error & perplexity & disagreement \\
+\midrule
+SmolLM2 & $20.5\%$ & $58.7\%$ & $2.87\times$ \\
+Qwen    & $17.1\%$ & $23.3\%$ & $\mathbf{1.36\times}$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent The squared-error column reproduces the figure above exactly; the
+perplexity column reads $58.7\%$ against the $60.6\%$ measured on the earlier
+harness. \textbf{But ``three times apart'' is SmolLM2's number. On Qwen the two
+metrics are $1.36$ times apart.} The sign replicates --- the encoder is worth
+more on perplexity than on squared error, on both models --- and the magnitude
+does not, which is the third time in this paper that a comparison has behaved
+that way.
+
+\begin{proposition}[What transfers between models, and what does not]
+\label{prop:transfer}
+Measuring one intervention --- the $2^{k/3}$ scale ladder against MXFP4, at fixed
+codebook, block size and bit budget --- four ways on two models gives:
+\begin{center}\small
+\begin{tabular}{lrrr}
+\toprule
+claim variant & SmolLM2 & Qwen & ratio \\
+\midrule
+squared error, best encoder both sides & $14.10\%$ & $14.01\%$ & $\mathbf{1.01\times}$ \\
+squared error, against Algorithm~1     & $17.11\%$ & $16.42\%$ & $1.04\times$ \\
+perplexity, best encoder both sides    & $9.50\%$  & $7.18\%$  & $1.32\times$ \\
+perplexity, against Algorithm~1        & $20.25\%$ & $9.16\%$  & $\mathbf{2.21\times}$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+Two axes order the transferability and both point the same way. \emph{Squared
+error transfers and perplexity does not}; \emph{best-against-best transfers and
+against-the-reference-encoder does not.} \textbf{The least transferable of the
+four is the combination most often quoted.}
+\end{proposition}
+
+\noindent Two cautions. The perplexity rows rest on $146$--$148$ windows where the
+squared-error rows rest on millions of blocks, so part of the gap between the two
+metrics is sampling and not substance; the $2.21\times$ is far outside anything
+that noise explains, the $1.32\times$ is not necessarily. And the ordering, not
+the individual ratios, is what two models can establish --- a third would be
+needed to call these numbers rather than a direction.
+
+\emph{The practical reading is uncomfortable and we state it against our own
+interest.} This paper's own headline for the block axis is a perplexity figure
+measured against Algorithm~1, which is the bottom row. The figure in the top row
+is less than half as large and roughly ten times more stable between models. A
+reader deciding whether to adopt a format should be given the top row; a reader
+deciding whether the axis exists at all is well served by either.
+
 This is a second and independent route to the observation this paper already
 records --- that on a short block with a shared scale, squared error does not
 predict perplexity. The first route compared codebooks and found the ranking
