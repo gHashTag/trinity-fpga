@@ -4577,6 +4577,43 @@ all $3{,}328$ surplus codes decode \emph{bit-identically to their canonical
 twins}, which is what ``non-canonical alternate encoding'' means and is the
 property a decoder must have for the scheme to be legal.
 
+\paragraph{And it was measured, against a prediction written first.} All three
+horns were placed on the common harness at fifty-four seeds. The prediction ---
+recorded before the sweep finished, and wrong --- was that gate count would
+decide it and give $\text{extend} < \text{guard} < \text{assign}$.
+
+\begin{center}\small
+\begin{tabular}{lrrrl}
+\toprule
+horn & LUT & MHz & MHz/LUT & vs \texttt{extend} \\
+\midrule
+extend & $573$ & $67.87$ & $\mathbf{0.1185}$ & --- \\
+\textbf{guard} & $591$ & $68.14$ & $0.1153$ & $-2.66\%$, $p=3.0\times10^{-5}$ \\
+assign & $576$ & $59.24$ & $0.1029$ & $-13.17\%$, $p=2.1\times10^{-89}$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+\emph{Assign is cheaper in area than guard}, which the gate-count argument
+forbids: the conditional subtract packs into the LUTs it already shares an input
+with, while a mux to a $32$-bit constant does not. And the axis that decided the
+comparison appears in neither argument --- assign loses on \emph{frequency},
+$59.24$ against $68.14$, because the subtract lands in the critical path between
+the offset field and the exponent adder where a constant needs no arithmetic
+behind it.
+
+So the recommendation is \textbf{guard}: $2.66\%$ buys a format in which every
+code is either defined or flagged. The IEEE~754 answer is the strongest of the
+three on correctness --- under assignment no code of the word lies outside the
+format at all --- and the dearest on this fabric. That is not a criticism of the
+decimal standard: it reasons about interchange between machines, and a format
+shipped as a datapath does not face the same cost.
+
+\emph{Both arguments predicted the wrong ordering, in opposite directions, and
+the answer turned on placement.} A cost argument about a decoder that does not
+mention the critical path is not an argument about the decoder's cost.
+
 
 \noindent
 This is why Proposition~\ref{prop:reserve} bites exactly where $w$ is large: the
