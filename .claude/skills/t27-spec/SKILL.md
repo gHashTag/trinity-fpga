@@ -6742,3 +6742,38 @@ compiles fine" came from cargo saying `manifest path does not exist` — my filt
 matched `^error` and cargo's message did not start that way. Filters that select
 *expected* failure text will pass unexpected failures. Assert the tool ran on the
 subject before reading its verdict.
+
+## Wave 679 — a manifest describes a build; only an invocation performs one
+
+**No workflow mentioned `trios-coq` at all.** Its `_CoqProject` lists 30 files,
+and I had published "641 Qed built" on the strength of that file existing. With
+the requirement that some workflow actually *runs* the project, the true figure
+was **197**. Found by auditing workflow **path filters**, not by looking at
+proofs.
+
+**Third correction to one gate's notion of "built"** — membership in a project
+file, then explicit `coqc` in a workflow, now *someone runs the project*. Every
+time the error was **matching a construct instead of resolving it**, and every
+time the gate had been written by someone who had just written that rule down.
+
+**Corollary: a manifest, project file, solution, target list or lockfile
+describes a build that some agent must run.** Its existence is evidence about
+intent; only an invocation is evidence about execution. Three constructs in this
+campaign read as performing work they merely describe: a discovery matrix, a
+`--workspace` flag, a `_CoqProject`.
+
+**After fixing a parser defect, expect the error count to RISE.** Two features
+landed and swallowed declarations went 13 → 38. That was correct: a file which
+had reported zero — because it never parsed far enough to lose anything
+countable — now revealed 25 losses from a *third* missing feature. **A feature
+whose absence aborts parsing occludes every feature later in the same file.**
+
+**The discriminator is per-file, not the total.** 19 files better and 1 worse is
+progress; 1 better and 19 worse is a regression. A single aggregate cannot tell
+those apart, and the per-file diff against the ratchet baseline costs one script.
+
+**Ship an unverifiable CI step non-blocking, and name the flip as the
+deliverable.** The trios-coq build has never run in CI and could not be verified
+locally (no Flocq, no opam). Landing it blocking would wall off every PR on an
+unknown; landing it non-blocking publishes the true state and leaves one
+explicit next action. Do not pretend the step is the achievement.
