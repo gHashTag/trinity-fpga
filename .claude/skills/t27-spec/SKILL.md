@@ -7494,3 +7494,66 @@ The claim never shipped, purely because the number that falsifies it was in the
 output next to it. **Make gates print the quantity their own threshold rests on.**
 A tuned constant with its justification unprinted is a claim nobody can check —
 including you, one wave later.
+
+## The obvious one-line fix is wrong: count the other uses first
+
+The correction above established that `spec Name {` is read as an empty shell. The
+cause is that **`spec` is not a keyword in that language at all** — it lexes as a
+bare identifier, so the declaration never forms.
+
+The fix suggests itself immediately: add `"spec" => TokenKind::KwModule` to the
+lexer. One line.
+
+**It is wrong.** `spec` appears **31 times in that corpus as an ordinary
+identifier** — `fn generate_t27(spec: TriSpec)`, `when spec = parse_tri_file(...)`
+— and promoting it wholesale breaks every one. Nothing about reading the 8 broken
+files reveals this; only counting the *other* uses does:
+
+```bash
+grep -rhoE "\bspec\b" specs/ | wc -l      # all uses
+# then separate `spec Ident {` from the rest
+```
+
+**Rule: before promoting any word to a keyword, count its occurrences in the
+non-declaration position.** A keyword promotion is a global change to a shared
+namespace, and the evidence for it is never in the files you are trying to fix.
+
+### Contextual keywords, and the positional invariant that decides them
+
+A module opener is `spec Ident {` and **nothing else**. Three tokens decide it, so
+it is a contextual keyword — legal as a declaration head, legal as an identifier
+everywhere else. This is the same pattern that settled generic function names in
+that parser (a generic list is *always* followed by `(`) and it keeps recurring:
+
+> When a token is ambiguous, look for a **positional** invariant rather than
+> widening the grammar. Backtrack to check it if lookahead is too short — that is
+> what `mark()`/`reset()` are for.
+
+Result, measured: 8 empty shells → **1**, recovery events 161 → **154**,
+declarations swallowed 0 → 0, 1213 tests still passing.
+
+### Theorem (repair asymmetry) — a detector is not a diagnostic
+
+The density check that found this is a **ratio** test: it reports *how much* was
+read without knowing *why*. That is exactly what makes it a valid detector for an
+unbounded class of causes (Prop. 193's question-search), and exactly what makes it
+useless for localising any one of them.
+
+The remaining shell proves it. `ternary_logic.t27` opens `type Trit = Trit` — an
+unsupported construct whose recovery occludes everything after it. **Two
+independent causes produced one indistinguishable symptom**, and `8 → 1` rather
+than `8 → 0` is the *only* evidence the second cause exists.
+
+So: **a bounded-residue detector and a cause-naming diagnostic are different
+instruments, and you need both.** A campaign that builds only detectors can prove
+something is wrong and never close anything; one that builds only diagnostics
+fixes what it happened to look at. The tell that you have only detectors is a
+finding count that drops but never reaches zero — the residue is not stubbornness,
+it is a second cause your detector cannot distinguish.
+
+### And check that "read" means "used"
+
+The 7 recovered specs are now parsed. **Nothing consumes their contents** — no
+generator, no checker reads them. "Read by the parser" is one relation further
+along than "recorded in a file", and still not "used by anything". State which one
+you have achieved; the temptation is to report the last one you can name.
