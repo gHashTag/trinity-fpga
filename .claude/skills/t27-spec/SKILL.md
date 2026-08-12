@@ -6816,3 +6816,43 @@ merging, rebasing, and cherry-picking onto a fresh branch.
 **State when a gate cannot bootstrap itself.** The new reachability gate lives in
 the very workflow it reports as unreachable. Saying so plainly is better than
 relocating it somewhere that would make the report look self-consistent.
+
+## Waves 681–682 — never let the default branch of a verdict be the answer most checks expect
+
+**The liveness step scored every failure as a refutation.**
+`if yosys ...; then got=proves; else got=refutes; fi` — and **six of its seven
+probes expect `refutes`**. An elaboration error, a syntax error, a missing
+binary, a timeout: all `ok`. This is the same `returncode != 0` conflation
+catalogued many waves earlier, living inside the step whose entire purpose is to
+prove the design is not inert.
+
+**Theorem: if k of n cases expect the default branch, any fault landing there is
+undetectable in those k, and the masking probability rises with k/n.** Here 6/7.
+Make the default a *third* value that fails.
+
+**The dangerous half was not a tool error.** A probe naming a signal the design
+lacks does NOT fail yosys — it implicitly declares an undriven wire and the
+property genuinely refutes. Indistinguishable from a real refutation, forever,
+the moment an emitter renames a signal. Grep the tool's *warnings*, not just its
+exit code, and drop `-q` so they exist.
+
+**`$( cmd 2>&1 )` across a multi-line command substitution did not capture
+stderr — and the failure was silent.** My first fix passed its own phantom test
+while doing nothing, because the guard grepped an empty variable. **Redirect to a
+file when the capture matters.** A guard reading a variable you have not verified
+is populated is a guard on an empty string.
+
+**Revert rather than iterate at the end of a session.** A generic-fn-name parser
+change over-consumed angle brackets and turned a spec into a hard parse failure.
+Reverting cost one command; debugging it at 99% context would have risked leaving
+the tree broken.
+
+**Take a fix from the branch that already has it.** `master` carried the correct
+container config (`--user root`, `checkout@v6`) while this branch held a pre-fix
+copy. Hand-writing it would have been slower and less trustworthy than
+`git show origin/master:<path>`.
+
+**A premise repeated across waves earns scrutiny, not authority.** "It failed at
+checkout on every run since July" was wrong — those runs got past checkout and
+failed one step later, a different wall entirely. I had restated my own inference
+until it read as established.
