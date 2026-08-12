@@ -6579,3 +6579,46 @@ deliverable.
 **A ratchet is the right shape when the fix requires a judgement you cannot
 make.** Whether an unbuilt proof file *should* be added to a build is
 mathematics, not scanning. The gate records the set and fails when it grows.
+
+## Wave 675 — a counter inside a recovery routine measures what the routine skips, not what was lost
+
+**Fourth metric correction in the same instrument, and the first that made the
+number smaller.** The swallowed-declaration counter recorded every declaration
+keyword the recovery skip passed over — 788. But inside a keyword-style
+`test name given ... when ...` block, which has **no terminator**, those are
+test-local `var` bindings the skip is *entitled* to discard. Restricting the
+count to declarations at or shallower than the block header's column: **161**.
+
+**Theorem: a counter inside a recovery routine measures a superset of the loss,
+exceeding it by exactly the elements the routine was entitled to skip.** Sound
+counting requires the counter to share the routine's scope rule — and where the
+routine has no scope rule, neither can the counter.
+
+**Measure a heuristic before relying on it.** Before keying anything on
+indentation I counted: of 469 `const`/`var` occurrences following a keyword-style
+header, 466 are strictly more indented (genuinely inside) and 3 sit at header
+depth. That 466:3 split is what justified the rule — not the intuition that
+indentation "usually" tracks nesting.
+
+**Look for the single feature behind the residue.** After correcting the count,
+**133 of the remaining 161 (83%) had one cause**: generic const parameters,
+`pub const ArrayView(T) = struct {...}`, unimplemented, so `(` was an unexpected
+top-level token and the whole declaration was discarded. One bounded feature took
+161 → 67. Cluster the residue before writing more checks — a long tail is often
+one item.
+
+**An error count rising can be the correct direction.** Recovery events went
+523 → 530 while losses fell. Declarations that now parse far enough to fail on
+their *own* content produce their own errors instead of vanishing silently inside
+someone else's. A ratchet on "errors" alone would have called that a regression.
+
+**"Orphan" is a sharper status than "unbuilt", and cheap to compute.** 16 of 17
+unbuilt proof files are `Require`d by nothing anywhere. An unbuilt file that
+something imports has an obvious repair; one that nothing compiles *and* nothing
+imports is disconnected in both directions, and the decision about it is
+genuinely open rather than merely deferred.
+
+**When a decision is not yours, ship the artifact that makes it cheap.**
+`docs/BLOCKED_SPECS.md` lists each blocked spec with how much of its diff is the
+mechanical repair versus someone's edit. That converts "56 files need review"
+into a sorted list where the top rows are almost entirely mechanical.
