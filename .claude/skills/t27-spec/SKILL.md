@@ -6974,3 +6974,40 @@ justified-and-implicit is exactly how the previous omission hid, and this
 campaign has now rediscovered the same two files with two different instruments.
 Exemptions that must be written down are countable; ones that live in someone's
 head are not.
+
+## Wave 686 — a feature can occlude a defect it created
+
+**The chain closed at six links, and the sixth was self-inflicted.** A parameter
+NAMED `fn` collided with the `fn` TYPE keyword I had added four waves earlier —
+the param parser skipped the name, the type parser read the name as a type, and
+the file collapsed. It was invisible until the other five links parsed.
+**When a chain ends in a construct you recently added, suspect your own feature
+before the corpus.**
+
+**One invariant settled three separate ambiguities**, and it has a shape worth
+copying:
+
+- a generic list is ALWAYS immediately followed by `(` — on a name and on a call
+- a binary `|` can never START an expression, so a `|` in primary position is a
+  closure
+- a keyword immediately followed by `:` is a NAME, because nothing else can be
+
+Each states what the *wanted* construct must look like. Two earlier waves failed
+trying to characterise the *feared* one (what does a comparison look like?).
+**Positive invariants are decidable from one token; negative ones are not.**
+
+**Buying the depth of an occlusion chain is not wasted work.** The previous wave
+implemented four links throwaway-style and reverted them all, which looked like a
+failed wave. It was the measurement that made this one atomic — and my own
+theorem forbids partial delivery, so without it this wave could not have started.
+
+**"It works for free" deserves one more question.** `[T?]` parsed only because
+the lexer *discards* `?`. That is not support, it is deletion: `Option<T>` and
+`T` are indistinguishable to this compiler. Check WHY something unexpectedly
+works before recording it as working.
+
+**Count what a component silently drops, even if you cannot decide what to do
+about it.** The lexer throws away 880 characters across 79 specs — including
+UTF-8 continuation bytes left over from a corruption I thought was repaired. The
+count cost nothing, needed no language decision, and turned an invisible loss
+into a ratchetable number.
