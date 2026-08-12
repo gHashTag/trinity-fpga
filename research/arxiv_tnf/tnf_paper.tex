@@ -4397,7 +4397,15 @@ six models, \emph{and a $13.3\%$ regression on a seventh}. Chhugani~et~al.
 \cite{chhugani2026} implement a two-candidate argmin over adjacent
 \texttt{E8M0} codes and report it engaging on about $15\%$ of blocks;
 Schaefer and Tabak~\cite{schaefer2026} state outright that the block-size
-paradox is partly an artefact of naive scale selection.
+paradox is partly an artefact of naive scale selection. MR-GPTQ~\cite{mrgptq} names the same defect in its abstract --- MXFP4's
+power-of-two scale quantisation reduces accuracy --- and repairs it a different
+way, with \emph{learned per-block scale shifts} rather than a finer grid. That
+is worth distinguishing carefully, because it is the closest published
+alternative to the mechanism this section measures: a learned shift adapts each
+block independently and costs a trained parameter per block; a finer ladder is
+fixed, untrained, and costs a multiplier in the applier. \textbf{We have not
+compared them, and a reader choosing between the two axes should know that only
+one of them has been priced in silicon here.}
 
 Our $+12.15\%$ sits at the low end of an already published range, from a rule
 weaker than the argmin we describe. \textbf{What remains ours on this point is
