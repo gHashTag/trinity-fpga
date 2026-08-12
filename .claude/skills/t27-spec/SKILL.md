@@ -7011,3 +7011,38 @@ about it.** The lexer throws away 880 characters across 79 specs — including
 UTF-8 continuation bytes left over from a corruption I thought was repaired. The
 count cost nothing, needed no language decision, and turned an invisible loss
 into a ratchetable number.
+
+## Wave 687 — "a language decision" was three ordinary ones once measured
+
+**I had deferred making `?` a token because deciding what an unknown byte means
+looked like a design question.** Measuring what it actually means in the corpus
+answered it: postfix optional type (70), postfix try (48), prefix optional (13).
+Three uses, all real, none ambiguous. **Before deferring something as a "design
+decision", count how the artifact already uses it — the corpus often contains
+the decision.**
+
+**Position separated all three, with no lookahead.** A type annotation and an
+expression never occupy the same slot, so a postfix `?` in a type is an optional
+and in an expression is a try. Fourth construct in three waves settled by asking
+*where* rather than *what* — after `<` (generic vs comparison), `|` (closure vs
+bitwise-or), and a keyword followed by `:` (name vs keyword).
+
+**"It works for free" and "it is deleted" can be the same sentence.** `[T?]`
+parsed only because the lexer discarded `?`. Now that it is a token, `Option<T>`
+and `T` are distinguishable — which they were not, silently, for the whole
+campaign.
+
+**A repair scoped to a commit's file list cannot see the same defect outside
+it.** Five corrupted signature arrows survived every repair pass because their
+files were not among the 154 the corruption commit touched. They were invisible
+because the lexer *discarded* the byte instead of erroring — a silent discard
+leaves no trace in any count, which is why counting it first was what found them.
+
+**One of the seven code arrows was inside a string literal**, where the arrow is
+data and rewriting it would corrupt program output. Scope a mechanical repair by
+what the construct *is*, not by where the character appears.
+
+**Measure the part of a mess the tool cannot read, not the whole mess.** 280
+specs hold 257,486 non-ASCII bytes; exactly 8 ever reached the lexer's default
+arm. The first number invites a huge cleanup that would change comments for no
+benefit; the second names five real defects.
