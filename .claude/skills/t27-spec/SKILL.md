@@ -7557,3 +7557,74 @@ The 7 recovered specs are now parsed. **Nothing consumes their contents** — no
 generator, no checker reads them. "Read by the parser" is one relation further
 along than "recorded in a file", and still not "used by anything". State which one
 you have achieved; the temptation is to report the last one you can name.
+
+## The error messages were already being collected and thrown away
+
+Before building any new instrument, check what the existing one already knows and
+discards. In that compiler, every recovery event pushed a formatted error string
+into a `discarded` vector. Only `discarded.len()` was ever printed.
+
+**One `eprintln!` over that vector turned a scalar into a ranked work-list** —
+154 events, 20 distinct causes, each with a file and a line. Several waves had
+gone into inferring causes by hand from downstream symptoms, and the causes were
+in a variable the whole time.
+
+Ask it explicitly: *what does this code compute that it does not report?* Counters
+built from rich values, exceptions caught and rethrown as booleans, `Result::Err`
+strings collapsed to `is_err()`. Every one is a diagnostic already paid for.
+
+## Theorem (composition confound) — a metric over mixed kinds measures the mix
+
+Ranking those causes produced the wave's real finding. The top two, 91 of 128
+events, were **Markdown**:
+
+```
+48 events / 30 files   Unexpected top-level token: Ident   e.g.  ## Specification
+43 events / 17 files   Unexpected top-level token: Minus   e.g.  - protocol_version: ...
+```
+
+Headings and bullet lists, in files named `.t27`. Structurally, **16 of 497 specs
+are Markdown documents and account for 36% of the "parser backlog"**.
+
+Stated generally: for a ratchet `M(C) = Σ_{x∈C} m(x)` over a corpus partitioned
+into kinds with different characteristic `m`, `M` moves under **three** independent
+operations:
+
+1. improving the subject (the parser got better),
+2. improving the instrument (the counter got more honest),
+3. **changing the mix of kinds** (someone added or renamed a file),
+
+and `M`'s value alone cannot distinguish them. Renaming sixteen files to `.md`
+would have moved that campaign's headline number from 154 to 99 with **no parser
+and no spec changing at all**.
+
+**Every ratchet over a heterogeneous population is partly a composition metric.**
+This is the unexamined-denominator failure again, applied to the denominator's
+*contents* rather than its size — and the fix is the same: publish the partition,
+not just the total.
+
+Practical: when a ratchet improves, ask *which of the three happened*. If files
+entered or left the corpus that wave, the number is not comparable to last wave's
+and saying so costs one sentence.
+
+## An exemption granted by name cannot notice it has siblings
+
+The sharpest part of this is that the campaign had **already met one of these
+files**. `c_api_contract.t27` was excused in an earlier wave as "documentation
+wearing a `.t27` extension", with the reasoning that renaming it is a decision
+about the corpus rather than a parser defect.
+
+That reasoning was correct. The **scope** was wrong: it was recorded as a
+singleton exception, by literal filename, when it was a *sample of a population*.
+Fifteen siblings went on inflating a number read as a parser backlog for many
+waves after.
+
+> **Rule: when you excuse something, ask what class it belongs to and count the
+> class.** A by-name exemption is a fact about one file; a by-property exemption
+> is a fact about the corpus, and only the second can tell you how big the
+> problem is.
+
+The tell is the phrasing of your own justification. If the reason you wrote is a
+general one — *"this is documentation, not code"* — but the exemption you coded is
+a literal string, those two disagree, and the code is the one that will be read
+next wave.
