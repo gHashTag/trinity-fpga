@@ -4654,8 +4654,12 @@ lineage that says so runs from optimal brain damage~\cite{lecun1990} through
 optimal brain surgeon~\cite{hassibi1993} to AdaRound~\cite{adaround} and
 GPTQ~\cite{gptq}. AdaRound reports a stronger version of our observation:
 at essentially equal per-weight squared error, $48$ of $100$ random roundings
-beat the squared-error-optimal one, which is a \emph{sign} inversion where ours
-is a magnitude disagreement.
+beat the squared-error-optimal one, which is a \emph{sign} inversion.
+\textbf{An earlier draft said ours was only a magnitude disagreement. A third
+model retired that sentence:} on GPT-2 the squared-error argmin encoder makes
+perplexity \emph{worse} than MXFP4's reference rule, $36.1482$ against $35.9747$,
+so the encoder's share of the achievable gain is $-7.2\%$. Ours is a sign
+inversion too, and we found it only by asking a third model.
 
 So Proposition~\ref{prop:encodershare} is a rediscovery of an established class,
 and we label it as one. What we did not find in that literature is the
@@ -4674,7 +4678,8 @@ written instruments of Section~\ref{sec:blockmeasured} and not the original run:
 encoder's share of the achievable gain & squared error & perplexity & disagreement \\
 \midrule
 SmolLM2 & $20.5\%$ & $58.7\%$ & $2.87\times$ \\
-Qwen    & $17.1\%$ & $23.3\%$ & $\mathbf{1.36\times}$ \\
+Qwen    & $17.1\%$ & $23.3\%$ & $1.36\times$ \\
+GPT-2   & --- & $\mathbf{-7.2\%}$ & sign inversion \\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -4692,21 +4697,24 @@ that way.
 Measuring one intervention --- the $2^{k/3}$ scale ladder against MXFP4, at fixed
 codebook, block size and bit budget --- four ways on two models gives:
 \begin{center}\small
-\begin{tabular}{lrrr}
+\begin{tabular}{lrrrr}
 \toprule
-claim variant & SmolLM2 & Qwen & ratio \\
+claim variant & SmolLM2 & Qwen & GPT-2 & spread \\
 \midrule
-squared error, best encoder both sides & $14.10\%$ & $14.01\%$ & $\mathbf{1.01\times}$ \\
-squared error, against Algorithm~1     & $17.11\%$ & $16.42\%$ & $1.04\times$ \\
-perplexity, best encoder both sides    & $9.50\%$  & $7.18\%$  & $1.32\times$ \\
-perplexity, against Algorithm~1        & $20.25\%$ & $9.16\%$  & $\mathbf{2.21\times}$ \\
+squared error, best encoder both sides & $14.10\%$ & $14.01\%$ & --- & $\mathbf{1.01\times}$ \\
+squared error, against Algorithm~1     & $17.11\%$ & $16.42\%$ & --- & $1.04\times$ \\
+perplexity, best encoder both sides    & $9.50\%$  & $7.18\%$  & $7.19\%$ & $\mathbf{1.32\times}$ \\
+perplexity, against Algorithm~1        & $20.25\%$ & $9.16\%$  & $6.74\%$ & $\mathbf{3.00\times}$ \\
 \bottomrule
 \end{tabular}
 \end{center}
 Two axes order the transferability and both point the same way. \emph{Squared
 error transfers and perplexity does not}; \emph{best-against-best transfers and
 against-the-reference-encoder does not.} \textbf{The least transferable of the
-four is the combination most often quoted.}
+four is the combination most often quoted.} The third model sharpens the second
+axis rather than blunting it: adding GPT-2 leaves the best-against-best row at
+$1.32\times$ and widens the against-Algorithm-1 row from $2.21\times$ to
+$3.00\times$.
 \end{proposition}
 
 \noindent Two cautions. The perplexity rows rest on $146$--$148$ windows where the

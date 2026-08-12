@@ -124,11 +124,24 @@ def perplexity(model, ids, SEQLEN=None):
 
 
 def targets(model):
-    """Every linear weight except the tied head and the embeddings."""
+    """Every 2-D projection weight except the tied head and the embeddings.
+
+    GPT-2 does NOT use nn.Linear -- it uses transformers' Conv1D, whose weight
+    is stored transposed. Filtering on nn.Linear alone matched ZERO modules and
+    the harness happily reported a quantised perplexity identical to fp32 to
+    four decimals. The fp32 sanity band did not catch it, because the baseline
+    was fine; what was broken was that the intervention never happened.
+    """
+    try:
+        from transformers.pytorch_utils import Conv1D
+        kinds = (torch.nn.Linear, Conv1D)
+    except Exception:
+        kinds = (torch.nn.Linear,)
     out = []
     for name, mod in model.named_modules():
-        if isinstance(mod, torch.nn.Linear) and "lm_head" not in name:
-            out.append((name, mod))
+        if isinstance(mod, kinds) and "lm_head" not in name:
+            if getattr(mod, "weight", None) is not None and mod.weight.ndim == 2:
+                out.append((name, mod))
     return out
 
 
@@ -155,7 +168,11 @@ for name in [m for m in MODELS if os.path.isdir(os.path.join(W, m))]:
     if not (SANE[0] <= base <= SANE[1]):
         print(f"    ❗ ЛИНЕЙКА СЛОМАНА: fp32 ppl = {base:.4f} вне {SANE}. Отказ.")
         continue
-    print(f"    fp32 (линейка)   ppl {base:9.4f}")
+    tg = targets(model)
+    if not tg:
+        print(f"    ❗ НИ ОДНОГО ЦЕЛЕВОГО СЛОЯ НЕ НАЙДЕНО. Отказ.")
+        continue
+    print(f"    fp32 (линейка)   ppl {base:9.4f}   целевых слоёв: {len(tg)}")
 
     res = {}
     for arm, mode, N in ARMS:
@@ -163,9 +180,20 @@ for name in [m for m in MODELS if os.path.isdir(os.path.join(W, m))]:
             A = orig[n].numpy().astype(np.float64)
             m.weight.data = torch.from_numpy(quantise(A, mode, N)).float()
         res[arm] = perplexity(model, ids, SL)
+        # An arm equal to the fp32 baseline means nothing was quantised. This is
+        # the check the ruler band cannot make: the baseline can be perfect while
+        # the intervention silently does not happen.
+        if abs(res[arm] - base) < 1e-9:
+            print(f"    ❗ {arm}: ppl совпал с fp32 до {abs(res[arm]-base):.1e} — "
+                  f"квантование не подействовало. Отказ.")
+            res = None
+            break
         print(f"    {arm:14s} ppl {res[arm]:9.4f}", flush=True)
     for n, m in targets(model):
         m.weight.data = orig[n]
+    if res is None:
+        del model
+        continue
 
     fl, am = res["mxfp4_floor"], res["mxfp4_argmin"]
     print(f"    --- против пола / против argmin (лучший кодировщик с обеих сторон) ---")
