@@ -6700,3 +6700,45 @@ OS/target with no coverage question at all. Scale the method to the population.
 workflows use a matrix" was the wrong question; "which crates does anything
 build" was the right one, and it turned two suspects into eight and three real
 defects.
+
+## Wave 678 — a `?` in a helper silently promotes a local failure to a global one
+
+**One unparsable initialiser destroyed its whole file.** `parse_var_decl` used
+`?` on the expression parser, so the failure escaped *past* the module body's
+recovery loop and the spec ended as `Expected RBrace, got Eof`. The module body
+recovers from failed declarations; the value position did not, and nothing about
+reading either function suggests they are on different sides of a boundary.
+
+**Theorem: a recovery handler protects exactly the call sites beneath it.** An
+error raised by a callee invoked outside the handler's dynamic extent is not
+recovered, however comprehensive the handler looks. When a parser (or any
+pipeline) has a recovery loop, every helper must either recover locally or be
+called from inside it. **Audit `?`/`throw`/`raise` in helpers against where the
+handler actually sits.**
+
+**Name what you could not parse; never omit it silently.** The fix records
+`<unparsed initialiser at line N>` rather than dropping the value — the feature
+is still unimplemented, and now the AST says so instead of looking complete.
+
+**A scanner must never consume a terminator it did not open.** A value scanner
+delegated brace groups to a helper that over-consumes on `{}` and would eat an
+enclosing block's closing brace. Track depth inline; on an unmatched closer,
+stop rather than consume.
+
+**Evaluate a coverage-claiming construct; never match it.** `--workspace` covers
+exactly the `members` list — crediting the flag would mark every crate covered,
+including three explicitly excluded ones the command does not build. Third
+construct in this campaign read as broader than it is, after a discovery matrix
+and `_CoqProject` membership. In every case, resolving it was a few lines the
+checker could run itself.
+
+**"In neither members nor exclude" is a build-stopping state, not a warning.**
+Two crates could not be built at all — cargo refuses with *"believes it's in a
+workspace when it's not"*. Excluding is the conservative repair: it fixes the
+error without silently enlarging what the workspace build covers.
+
+**A cwd reset can make a check print nothing and look clean.** My "converter
+compiles fine" came from cargo saying `manifest path does not exist` — my filter
+matched `^error` and cargo's message did not start that way. Filters that select
+*expected* failure text will pass unexpected failures. Assert the tool ran on the
+subject before reading its verdict.
