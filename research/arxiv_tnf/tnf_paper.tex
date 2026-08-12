@@ -4130,13 +4130,57 @@ paper that squared error mispredicts perplexity on this axis has been read as a
 bound on element-format headroom. It is not one: measured headroom for eight
 magnitudes ranges from $+1.6\%$ to $+8.5\%$ depending on the ladder beneath.
 
-\paragraph{The accounting has one hole, and it is stated rather than closed.}
-At the finest ladder the chosen absolute grid index over full tensors spans
-$m\in[-176,-27]$ for qwen. That is $150$ codes, which fits in $255$ but
-\emph{does not fit MXFP4's bias-$127$ origin}. A re-biased origin costs
-essentially nothing per element, but it is a format-level constant tuned on two
-sub-billion-parameter models, so the honest accounting is \textbf{$4.25$ bits per
-element plus an origin constant MXFP4 does not have}.
+\paragraph{The accounting hole is closed below.} The first version of this
+section reported that the chosen index at the finest ladder did not fit MXFP4's
+bias-$127$ origin, and priced the format at ``$4.25$ bits plus an origin constant
+MXFP4 does not have''. Measuring four models rather than two settles it: one
+origin covers all of them, and MXFP4 has an origin constant of its own.
+
+
+\paragraph{The origin constant, measured rather than assumed.}
+A finer ladder buys resolution by spending range: at step $2^{k/N}$ an eight-bit
+field spans $255/N$ octaves against MXFP4's $255$. Whether that is enough is a
+question about weights, not about arithmetic, so it was measured --- every
+$32$-element block of every two-dimensional projection weight in four models,
+$19{,}808{,}256$ blocks in total.
+
+\begin{center}\small
+\begin{tabular}{lrrr}
+\toprule
+model & blocks & index span at $2^{k/3}$ & at $2^{k/16}$ \\
+\midrule
+SmolLM2-135M & $3{,}317{,}760$ & $26$ & $134$ \\
+Qwen2 & $11{,}182{,}080$ & $29$ & $147$ \\
+GPT-2 & $2{,}654{,}208$ & $38$ & $195$ \\
+Pythia & $2{,}654{,}208$ & $24$ & $126$ \\
+\midrule
+\textbf{all four, one origin} & $19{,}808{,}256$ & $\mathbf{39/243}$ & $\mathbf{201/255}$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{proposition}[A single origin suffices, and the step has a ceiling]
+\label{prop:origin}
+Real weight tensors ask for $14$ octaves of block scale. A fixed origin therefore
+covers every model measured at both ladders, with $204$ spare codes at
+$2^{k/3}$ and $30$ at $2^{k/16}$; and since a step of $2^{k/N}$ needs
+$14N+1$ codes of $255$, the finest ladder that fits an eight-bit field is
+\[
+  N \;\le\; \left\lfloor 254/14 \right\rfloor \;=\; 18 .
+\]
+\end{proposition}
+
+\noindent
+This settles the one hole the block-axis accounting carried. \textbf{The origin is
+a compile-time constant, not a per-block or per-tensor field, so the cost stays
+at $4.25$ bits per element} --- the earlier phrasing, ``$4.25$ plus an origin
+constant MXFP4 does not have'', overstated it: MXFP4 has an origin constant too,
+it is $127$, and the only difference is that ours was not yet chosen.
+
+It also bounds the axis. $2^{k/16}$ is within one step of the ceiling, so the
+resolution gain measured in this section is close to everything an eight-bit
+scale field can give: past $N=18$ a block whose scale falls outside the window
+is annihilated, and the range is not recoverable by any choice of origin.
 
 \paragraph{What this section claims.} That at $4.25$ bits per element a finer
 scale ladder beats MXFP4 by $17\%$ in squared error on two real models and $20\%$
