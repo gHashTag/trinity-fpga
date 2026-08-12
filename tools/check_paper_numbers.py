@@ -1,3 +1,4 @@
+import bisect
 #!/usr/bin/env python3
 """Do the numbers in the paper appear anywhere in the data behind it?
 
@@ -13,7 +14,7 @@ the paper that appear in no data file, which is where a stale figure hides.
 It cannot prove a number is right. It finds numbers with no source, which is a
 strictly weaker and still useful thing.
 """
-import re, pathlib, sys, collections
+import bisect, re, pathlib, sys, collections
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 PAPER = ROOT / "research" / "arxiv_tnf" / "tnf_paper.tex"
@@ -48,32 +49,52 @@ haystack = []
 for p in SOURCES:
     try: haystack.append(p.read_text(errors="ignore"))
     except Exception: pass
-blob = "\n".join(haystack).replace(",", "").replace(" ", "")
+# The haystack is 61 MB across ~6,000 files. The first version ran a regex over
+# all of it once per paper literal, which is quadratic in the literal count and
+# stopped terminating when the paper reached 82 pages. Extract every numeric
+# literal from the haystack ONCE into a set, then answer each query by lookup.
+_blob = "\n".join(haystack)
+def _isnum(x):
+    try: float(x); return True
+    except ValueError: return False
 
-# A number stated next to the formula that produces it is derived, not measured,
-# and has no business in a data file. Only quantities carrying a unit or sitting
-# in a results table are traceable claims.
-MEASURED = re.compile(r'(LUT|MHz|\\,MHz|bits?|binade|LUTs)')
-# A figure attributed to someone else's paper is their measurement, not ours, and
-# has no business in our data files. Excluded rather than reported as missing.
+LIT = re.compile(r'(?<![\w.])(\d{1,3}(?:[, ]\d{3})+|\d+\.\d+|\d+)(?![\w])')
+data_lits = {m.group(1).replace(",", "").replace(" ", "") for m in LIT.finditer(_blob)}
+del _blob, haystack
+# Rounding is numeric, not textual. The first version asked whether a data
+# literal STARTS with the paper's digits, which accepts truncation (0.1428 for
+# 0.14285) and rejects rounding up (0.1429 for the same value) -- so every
+# round-half-up figure in the throughput table read as unsourced. Compare values
+# with the tolerance the paper's own precision implies.
+_vals = sorted({float(x) for x in data_lits if _isnum(x)})
+
+# Paper occurrences indexed once, so is_measured is a dict lookup rather than a
+# fresh scan of the paper per literal. Removed by an earlier edit; restored.
+MEASURED = re.compile(r'(LUT|MHz|\\,MHz|bits?|binade|LUTs|\\times|\\%)')
 CITED = re.compile(r'(studies report|reported|literature|\\cite|according to|others report)')
-DERIVED  = re.compile(r'(\\log|\\ln|\\kappa|\\tfrac|\\frac|=\s*$)')
+DERIVED = re.compile(r'(\\log|\\ln|\\kappa|\\tfrac|\\frac|=\s*$)')
+_occ = {}
+for _m in LIT.finditer(paper_txt):
+    _v = _m.group(1).replace(",", "").replace(" ", "")
+    _occ.setdefault(_v, []).append((_m.start(), _m.end()))
 
 def is_measured(v):
-    for m in re.finditer(r'(?<![\w.])' + re.escape(v) + r'(?![\w])', paper_txt):
-        w = paper_txt[max(0, m.start()-90): m.end()+40]
+    for a, b in _occ.get(v, ()):
+        w = paper_txt[max(0, a-90): b+40]
         if DERIVED.search(w) or CITED.search(w): continue
         if MEASURED.search(w): return True
     return False
 
 def sourced(v):
-    """A paper may round what a data file records: 0.181 for 0.1807. Accept a
-    data literal that starts with the paper's digits, so rounding is not counted
-    as a missing source."""
-    if v in blob: return True
-    if "." in v:
-        return re.search(r'(?<![\d.])' + re.escape(v) + r'\d', blob) is not None
-    return False
+    """A paper rounds what a data file records. Accept any data value within
+    half a unit of the paper's last printed digit -- which covers rounding in
+    either direction, where a prefix test covers only truncation."""
+    if v in data_lits: return True
+    if not _isnum(v): return False
+    x = float(v)
+    tol = 0.5 * 10 ** (-(len(v.split(".")[1])) ) if "." in v else 0.5
+    i = bisect.bisect_left(_vals, x - tol)
+    return i < len(_vals) and _vals[i] <= x + tol
 
 all_missing = sorted((v for v in want if not sourced(v)), key=lambda s: (-len(s), s))
 missing = [v for v in all_missing if is_measured(v)]
