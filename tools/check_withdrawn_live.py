@@ -90,6 +90,18 @@ if _horns.exists():
         for _n, (_lut, _v) in _rows.items():
             _measured.add(f"{abs(_st.mean(_v)/_lut/_base - 1)*100:.2f}")
     _measured.add("0.90")   # the control's p-value, this iteration's measurement
+
+# Ratios the paper prints between two measured rows are themselves live figures.
+# tab:tnet divides one row by another, and 2.11 collided with a withdrawn number.
+try:
+    _t = _json.load(open("research/arxiv_tnf/full_table.json"))
+    _by = {r["format"]: r["mhz_per_lut"] for r in _t}
+    for _a, _b in (("TNF8", "posit8"), ("TNF16", "posit16"), ("TNF16c", "binary16"),
+                   ("TNF17e", "binary16"), ("GFTernary", "binary32")):
+        if _a in _by and _b in _by:
+            _measured.add(f"{_by[_a]/_by[_b]:.2f}")
+except Exception:
+    pass
 for _f in ("full_table", "rejected_measured"):
     for _r in _json.load(open(f"research/arxiv_tnf/{_f}.json")):
         _measured.update({f"{_r['mhz']:.2f}", f"{_r['mhz_per_lut']:.4f}",
