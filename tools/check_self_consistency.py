@@ -27,9 +27,17 @@ t = PAPER.read_text()
 fails = []
 
 # 1. count the marks the body actually carries
+# NOTE (2026-08-12): this pattern originally omitted the ACTIVE voice. Three
+# retractions were added in later iterations phrased "we withdraw it" and "that
+# sentence is now retired", the counter did not see them, and the paper's
+# self-reported retraction count silently drifted BELOW the truth while this
+# gate stayed green. A counter that only recognises one phrasing is a counter
+# you can evade by writing normally.
 MARK = re.compile(r"\\paragraph\{[^}]*[Ww]ithdrawn[^}]*\}"
                   r"|(?<!are )(?<!not )\bis withdrawn\b"
-                  r"|\bare withdrawn\b|\bis retracted\b")
+                  r"|\bare withdrawn\b|\bis retracted\b"
+                  r"|\bwe withdraw\b|\bwe retract\b"
+                  r"|\b(?:is|are|was|were) now retired\b|\bretired that sentence\b")
 # A \paragraph heading announcing a withdrawal and the sentence closing it are
 # ONE retraction, not two. A summary sentence counting the retractions is not a
 # retraction at all. Counting raw marks gave eight where the body holds five,
@@ -49,9 +57,12 @@ marked = len(marks)
 
 # 2. every sentence claiming a count must agree, EXCEPT ones explicitly scoped
 #    to the campaign rather than to this document
+# "marked in place" is the abstract's own phrasing and the original pattern did
+# not include it, so the single most-read sentence in the document stating a
+# retraction count was the one sentence this gate never checked.
 CLAIM = re.compile(r"([A-Z][a-z]+|\d+)\s+(?:of our own\s+)?"
                    r"(?:retractions?|claims?)\s+[^.]{0,90}?"
-                   r"(?:retracted|withdrawn|falsified)[^.]*\.", re.I)
+                   r"(?:retracted|withdrawn|falsified|marked in place)[^.]*\.", re.I)
 for m in CLAIM.finditer(t):
     s = re.sub(r"\s+", " ", m.group(0))
     tok = m.group(1).lower()
