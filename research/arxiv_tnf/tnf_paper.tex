@@ -4536,6 +4536,49 @@ at $E_t=5$, $3{,}328$.
 \end{corollary}
 
 \noindent
+\textbf{That corollary needs a hypothesis it did not state, and finding the
+hypothesis is the useful part.} It holds when every code names at most one value
+and every value has one code --- a \emph{canonical} encoding. IEEE 754's decimal
+formats do not require that: the surplus patterns are assigned as non-canonical
+alternates, and the identity breaks in a way worth writing down.
+
+\begin{proposition}[Two quantities the identity conflates]
+\label{prop:twowastes}
+Let $C$ be the code space, $V$ the set of values a format defines, and
+$d\colon C\to V\cup\{\bot\}$ its decoder. Two ratios are distinct once
+$d$ is allowed to be non-injective:
+\[
+  w_{\text{void}} \;=\; \frac{|d^{-1}(\bot)|}{|C|},
+  \qquad
+  w_{\text{redundant}} \;=\; 1-\frac{|V|}{|C|} .
+\]
+Corollary~\ref{cor:wasteiscodes} states $w_{\text{void}} = w(E_t)$, and that is
+correct for the guarding and extending encoders, where $d$ is injective on its
+domain. Under an assigning encoder $w_{\text{void}} = 0$ by construction while
+$w_{\text{redundant}} = w(E_t)$ remains. \textbf{The surplus can be removed from
+the code space or from the value space, and $w(E_t)$ counts the second no matter
+what is done about the first.}
+\end{proposition}
+
+\noindent
+So the reservation dilemma has a third horn, it is standardised, and it is
+strictly better on one axis: under assignment \emph{no code of the word lies
+outside the format}, so a corrupted offset cannot produce a value the
+specification does not define --- the failure mode Section~\ref{sec:sixteen}
+names. Whether it is better on area is a separate question and is measured
+below. What is not in doubt is that a two-horned dilemma in a paper is a prompt
+to ask what a shipping standard does about the same problem, and this one had an
+answer since 1975~\cite{chenho1975}.
+
+\paragraph{The construction, and it verifies.} For \texttt{TNF16c} the thirteen
+surplus offsets $243\ldots255$ alias onto $0\ldots12$ by a conditional subtract.
+Swept exhaustively: $62{,}208$ of $62{,}208$ in-specification codes exact, and
+all $3{,}328$ surplus codes decode \emph{bit-identically to their canonical
+twins}, which is what ``non-canonical alternate encoding'' means and is the
+property a decoder must have for the scheme to be legal.
+
+
+\noindent
 This is why Proposition~\ref{prop:reserve} bites exactly where $w$ is large: the
 codes a rung must guard are the codes $w$ counts, and there is no third place for
 them to be.

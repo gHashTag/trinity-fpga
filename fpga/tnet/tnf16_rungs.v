@@ -99,4 +99,29 @@ module tnf16c_safe_decode (input wire [15:0] x, output wire [31:0] fp32_out,
                   :                    {s, e32, {m, 16'b0}};
 endmodule
 
+// tnf16c_dpd: the third horn, taken from Densely Packed Decimal.
+//
+// The reservation proposition offers two: guard the 13 surplus offsets, or
+// extend the specification to cover them. IEEE 754's decimal formats take a
+// third -- the surplus patterns are ASSIGNED as non-canonical alternate
+// encodings of values the format already names. A decoder must accept them; an
+// encoder must never emit them. No code is invalid and no new value is added.
+//
+// Here offsets 243..255 alias onto 0..12 by a conditional subtract. The format
+// gains nothing and loses nothing, and the question this module exists to
+// answer is what that costs against guarding.
+module tnf16c_dpd_decode (input wire [15:0] x, output wire [31:0] fp32_out,
+                          output wire noncanonical);
+  wire       s   = x[15];
+  wire [7:0] off_raw = x[14:7];
+  wire [6:0] m   = x[6:0];
+  assign noncanonical = (off_raw > 8'd242);
+  wire [7:0] off = noncanonical ? (off_raw - 8'd243) : off_raw;
+  wire signed [10:0] e = $signed({1'b0, off}) - 11'sd121;
+  wire [7:0] e32 = e[7:0] + 8'd127;
+  assign fp32_out = (off == 8'd242) ? {s, 8'hFF, (|m), 22'b0}
+                  : (off == 8'd0)   ? {s, 31'b0}
+                  :                   {s, e32, {m, 16'b0}};
+endmodule
+
 `default_nettype wire
