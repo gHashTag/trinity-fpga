@@ -2465,7 +2465,7 @@ neither multiply-free nor a ladder; it is the best any eight magnitudes can do.
 \begin{table}[t]\centering
 \caption{Block axis, SmolLM2-135M, 40 windows, \texttt{fp32} baseline $14.4874$.
 The optimal codebook improves squared error nearly fifteenfold and perplexity by
-$0.9\%$, and every ladder that beats MXFP4 on the first loses on the second.}
+$0.9\%$, and every ladder that beats MXFP4 on the first loses on the second. \emph{The fifteenfold figure has not been reproduced by an independent instrument, which measures $1.18\times$ on the same windows; until the harness is published this column should be read as unconfirmed.}}
 \label{tab:blockbound}
 \begin{tabular}{lrrr}
 \toprule
@@ -2580,7 +2580,7 @@ $9.12$ binades and eight exponent bits buy nothing over four.
 
 \emph{At those four bits $\varphi^{k}$ beats $2^{k}$}, so $\varphi^{k}$ 4b/32
 strictly dominates MXFP4: cheaper by $0.125$ bits per weight and better on both
-models. It is not a trade.
+models. Section~\ref{sec:blockmeasured} measures that comparison again at \emph{equal} bits and finds the ordering is step size rather than algebra: $2^{k/8}$ beats $\varphi^{k}$ by more than $\varphi^{k}$ beats $2^{k}$. What survives here is that $\varphi^{k}$ is the finest grid available \emph{without a multiplier}, which is a different and narrower claim than the one this paragraph originally made. It is not a trade.
 
 \emph{And the upper frontier is reached by spending more.} E4M3 --- a scale
 carrying a mantissa, which is what NVFP4~\cite{nvfp4} uses --- reaches
@@ -4117,13 +4117,9 @@ $2^{k/16}$ & $+23.74\%$ & $+23.23\%$ \\
 \end{center}
 
 \noindent
-$\sqrt{\varphi}^{\,k}$ at $2.8808$ points per binade lands beside $2^{k/3}$ at
-$3.0000$, which is what a law of step size predicts and what a law of algebra
-does not. \textbf{$\varphi$ is not special on this axis; it is a step finer than
-a binade.} And a plain binary ladder at the same eight bits beats the ternary one
-by five to six points of RMSE and $1.1$ of perplexity. At matched dynamic range,
-$243$ ternary codes lose to $255$ binary ones on \emph{six of six} range settings
-across four sources.
+$\sqrt{\varphi}^{\,k}$ at $2.8808$ points per binade lands beside $2^{k/3}$ at $3.0000$, which is what a law of step size predicts and what a law of algebra does not. \textbf{$\varphi$ is not special \emph{for accuracy} on this axis; it is a step finer than a binade.} And a plain binary ladder at the same eight bits beats the ternary one by five to six points of RMSE and $1.1$ of perplexity. At matched dynamic range, $243$ ternary codes lose to $255$ binary ones on \emph{six of six} range settings across four sources.
+
+\paragraph{What that comparison leaves out, and it is the axis this paper is about.} Accuracy is one column and the multiplier is the other. Applying a scale drawn from $2^{k}$ is an exponent add and costs nothing; from $\varphi^{k}$ it is the Fibonacci step and costs an addition; from $2^{k/3}$ it is a shift and one of three constants; from $2^{k/8}$, one of eight. \emph{The ladders that win on accuracy here are the ones that stop being multiply-free}, and Section~\ref{sec:geoscale}'s claim --- that among \emph{multiply-free} grids $\varphi^{k}$ is the finest available at four bits --- survives this section untouched, because $2^{k/8}$ is not one of them. What does not survive is any reading in which $\varphi$ wins on accuracy by virtue of its algebra. \textbf{We have not synthesised the non-power-of-two scale appliers, so the cost column above is an argument and not a measurement} --- which is the one place in this paper where a comparison rests on reasoning while its neighbour rests on silicon.
 
 \paragraph{Two things this hands back.} Replacing Algorithm~1's floor with a
 squared-error argmin over the same $254$ \texttt{E8M0} codes is an
