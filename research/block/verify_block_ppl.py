@@ -99,7 +99,20 @@ def load_text(tok):
     return tok("\n\n".join(txt), return_tensors="pt").input_ids
 
 
-def perplexity(model, ids):
+def window(model):
+    """GPT-2 has 1024 positions, not 2048. Feeding a longer window raises
+    IndexError inside the embedding rather than degrading gracefully, so the
+    window is taken from the model's own config and reported with the result."""
+    c = model.config
+    for k in ("max_position_embeddings", "n_positions", "n_ctx"):
+        v = getattr(c, k, None)
+        if isinstance(v, int) and v > 0:
+            return min(SEQLEN, v)
+    return SEQLEN
+
+
+def perplexity(model, ids, SEQLEN=None):
+    SEQLEN = SEQLEN or globals()["SEQLEN"]
     n = ids.shape[1] // SEQLEN
     tot, cnt = 0.0, 0
     for i in range(n):
@@ -134,10 +147,11 @@ for name in [m for m in MODELS if os.path.isdir(os.path.join(W, m))]:
     model = AutoModelForCausalLM.from_pretrained(path, torch_dtype=torch.float32)
     model.eval()
     ids = load_text(tok)
-    print(f"\n  {name}: {ids.shape[1] // SEQLEN} окон по {SEQLEN}")
+    SL = window(model)
+    print(f"\n  {name}: {ids.shape[1] // SL} окон по {SL}")
 
     orig = {n: m.weight.data.clone() for n, m in targets(model)}
-    base = perplexity(model, ids)
+    base = perplexity(model, ids, SL)
     if not (SANE[0] <= base <= SANE[1]):
         print(f"    ❗ ЛИНЕЙКА СЛОМАНА: fp32 ppl = {base:.4f} вне {SANE}. Отказ.")
         continue
@@ -148,7 +162,7 @@ for name in [m for m in MODELS if os.path.isdir(os.path.join(W, m))]:
         for n, m in targets(model):
             A = orig[n].numpy().astype(np.float64)
             m.weight.data = torch.from_numpy(quantise(A, mode, N)).float()
-        res[arm] = perplexity(model, ids)
+        res[arm] = perplexity(model, ids, SL)
         print(f"    {arm:14s} ppl {res[arm]:9.4f}", flush=True)
     for n, m in targets(model):
         m.weight.data = orig[n]

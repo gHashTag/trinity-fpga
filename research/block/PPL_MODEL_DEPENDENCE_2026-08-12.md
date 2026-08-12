@@ -9,12 +9,27 @@ everything below is complete and reproducible from `verify_block_ppl.py`.
 | mxfp4_floor | 25.0798 | 16.1795 |
 | mxfp4_argmin | 22.1015 | 15.8346 |
 | **step3** (2^(k/3), ours) | **20.0022** | **14.6979** |
+| step8 (2^(k/8), binary) | 18.9053 | 14.5698 |
 
 | gain | smollm2 | Qwen |
 |---|---|---|
 | encoder alone (argmin vs floor) | **+11.88%** | **+2.13%** |
 | step3 vs floor | **+20.25%** | **+9.16%** |
 | step3 vs the baseline's own best encoder | **+9.50%** | **+7.18%** |
+| step8 vs floor | +24.62% | +9.95% |
+| step8 vs the baseline's own best encoder | +14.46% | +7.99% |
+
+## The binary ladder's perplexity advantage is also SmolLM2-sized
+
+On SmolLM2 the binary `2^(k/8)` ladder beats our ternary `2^(k/3)` by **4.37
+points** against the floor and **4.96** best-against-best. On Qwen the same
+comparison gives **0.79** and **0.81** — an advantage five to six times smaller.
+
+The sign replicates: binary wins on both models, on both baselines, and the
+paper continues to say so. But *how much* it wins by is another magnitude that
+does not transfer. This is recorded because it runs mildly in our favour and is
+therefore exactly the kind of number that needs stating carefully rather than
+promoted.
 
 ## The finding
 
