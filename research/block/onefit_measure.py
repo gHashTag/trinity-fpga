@@ -71,12 +71,17 @@ def t38(lv):
 def main():
     from transformers import AutoModelForCausalLM, AutoTokenizer
 
+    # FITS: "name=file.json,name=file.json".  Default is the four published
+    # MXFP4-seeded fits; LINE B passes the Lloyd-seeded ones instead.
+    spec = os.environ.get("FITS") or ",".join(
+        f"FIT-{f}=onefit_kl_{f}.json" for f in MODELS)
     BOOKS = {}
-    for f in MODELS:
-        p = os.path.join(HERE, f"onefit_kl_{f}.json")
+    for item in spec.split(","):
+        name, _, fname = item.partition("=")
+        p = os.path.join(HERE, fname)
         j = json.load(open(p))
-        assert j["ruler_reproduces"], f
-        BOOKS[f"FIT-{f}"] = t38(j["fitted"])
+        assert j["ruler_reproduces"], fname
+        BOOKS[name] = t38(j["fitted"])
     t38(C.MXFP4)
     print("books under test (T38 asserted on both tails):")
     for n, lv in BOOKS.items():
@@ -134,7 +139,7 @@ def main():
         apply(lv)
         v = per_window()
         nll[name] = v
-        tag = "  <- in-sample" if name == f"FIT-{MDIR}" else ""
+        tag = "  <- in-sample" if name.endswith(f"-{MDIR}") else ""
         print(f"  {name:<14}{float(np.exp(v.mean())):>10.4f}"
               f"   ({time.time()-t0:.0f}s){tag}", flush=True)
     apply(None)
@@ -144,7 +149,8 @@ def main():
            "ppl": {k: float(np.exp(v.mean())) for k, v in nll.items()},
            "per_window_nll": {k: list(map(float, v)) for k, v in nll.items()},
            "books": {n: lv for n, lv in BOOKS.items()} | {"MXFP4": list(C.MXFP4)}}
-    dst = os.path.join(HERE, f"onefit_ppl_{MDIR}.json")
+    _tag = os.environ.get("TAG", "")
+    dst = os.path.join(HERE, f"onefit_ppl_{_tag + '_' if _tag else ''}{MDIR}.json")
     json.dump(out, open(dst, "w"), indent=1)
     print(f"wrote {dst}")
     return 0

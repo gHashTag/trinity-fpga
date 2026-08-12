@@ -96,8 +96,16 @@ def jk_family():
     }
 
 
+# Arms that are NOT placements: they extend the ladder to 16/12 and pay for the
+# rung by clipping the negative extreme to -0.75.  Same status as campaignA_books
+# .clipping_arms(); check() below verifies the label rather than trusting it.
+CLIPPING = {"MX-asym-TOP", "JK-asym-TOP"}
+
+
 def books():
-    """(name, kind, levels).  'mag' -> block_tnf.quant, 'sig' -> quant_signed."""
+    """(name, kind, levels).  'mag' -> block_tnf.quant, everything else ->
+    quant_signed.  'sig' is a placement of the sixteenth codeword, 'clip' is an
+    arm that buys its rung by clipping a tail."""
     out = [
         ("MXFP4",      "mag", C.MXFP4),
         ("Lloyd-Max",  "mag", C.LLOYD),
@@ -107,16 +115,30 @@ def books():
     ]
     for d in (mx_family(), jk_family()):
         for k, v in d.items():
-            out.append((k, "sig", v))
+            out.append((k, "clip" if k in CLIPPING else "sig", v))
     return out
 
 
 def check(bs):
-    """T38 phase assert + alphabet accounting."""
+    """T38 on BOTH tails, per kind, + alphabet accounting.
+
+    max(|level|) == 1.0 is satisfied by EITHER tail reaching 1.0, so it passes a
+    book at +1.000 / -0.750 whose stated purpose is to be rejected.  Each tail is
+    asserted on its own: a 'sig' placement reaches 1.0 on both, a 'clip' arm on
+    one and must be SHORT on the other.  See CLIPPING_ARM_CORRECTION_2026-08-12.md.
+    """
     for name, kind, lv in bs:
         lv = [float(x) for x in lv]
-        top = max(abs(x) for x in lv)
-        assert abs(top - 1.0) < 1e-12, f"{name}: max|level| = {top}, phase phi != 0"
+        pos = max(x for x in lv)
+        neg = -min(x for x in lv)
+        assert pos <= 1.0 + 1e-12 and neg <= 1.0 + 1e-12, (name, pos, neg)
+        if kind in ("sig", "mag"):
+            assert abs(pos - 1.0) < 1e-12, f"{name}: +tail={pos}, phase phi != 0"
+        if kind == "sig":
+            assert abs(neg - 1.0) < 1e-12, f"{name}: -tail={neg}"
+        if kind == "clip":
+            assert abs(max(pos, neg) - 1.0) < 1e-12, name
+            assert min(pos, neg) < 1.0 - 1e-12, f"{name}: not clipping"
         assert lv == sorted(lv), name
         if kind == "mag":
             assert lv[0] == 0.0 and len(lv) == 8, (name, len(lv))

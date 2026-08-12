@@ -210,9 +210,13 @@ def main():
     print(f"KL(MXFP4) = {kl_mx:.6f}   one evaluation costs {dt:.1f}s", flush=True)
 
     # ---- coordinate descent, kl_optimal_codebook.py's shape ----------------
-    seeds = [("MXFP4", MXFP4)]
-    if os.environ.get("SEEDS", "mxfp4") == "both":
-        seeds.append(("Lloyd-Max", LLOYD))
+    # SEEDS: mxfp4 (default, as published) | lloyd | both.  The Lloyd-only mode
+    # is the control LINE B asks for: the same search, the same budget, started
+    # from the book that is FAR from MXFP4 in level space.
+    _seed_mode = os.environ.get("SEEDS", "mxfp4")
+    seeds = {"mxfp4": [("MXFP4", MXFP4)],
+             "lloyd": [("Lloyd-Max", LLOYD)],
+             "both": [("MXFP4", MXFP4), ("Lloyd-Max", LLOYD)]}[_seed_mode]
 
     runs = []
     for seed_name, seed in seeds:
@@ -267,8 +271,11 @@ def main():
            "fitted_kl": best["kl"],
            "ppl": {"fp32": float(np.exp(nll["fp32"].mean())),
                    "MXFP4": float(np.exp(nll["MXFP4"].mean()))},
-           "per_window_nll": {k: list(map(float, v)) for k, v in nll.items()}}
-    dst = os.path.join(HERE, f"onefit_kl_{MDIR}.json")
+           "per_window_nll": {k: list(map(float, v)) for k, v in nll.items()},
+           "seed_mode": _seed_mode}
+    # TAG keeps a non-default seed mode out of the published file names.
+    _tag = os.environ.get("TAG", "")
+    dst = os.path.join(HERE, f"onefit_kl_{_tag + '_' if _tag else ''}{MDIR}.json")
     json.dump(out, open(dst, "w"), indent=1)
     print(f"wrote {dst}")
     return 0

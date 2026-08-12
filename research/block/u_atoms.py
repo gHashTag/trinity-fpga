@@ -199,10 +199,18 @@ def main():
                            jumps=[dict(u0=j[0], u1=j[1], f0=j[2], f1=j[3]) for j in jumps],
                            stair=[dict(u=r[0], c=r[1], clamp=r[2]) for r in rows])
 
+    # The two instruments disagreeing BREAKS out of the u loop, so `stair` and
+    # `jumps` would be silently truncated.  Report nothing rather than a prefix
+    # that looks complete: same rule as scale_settled.abort_if_failed.
+    if FAILED:
+        print("\n  SELF-TESTS FAILED -- no measurement will be reported:", flush=True)
+        for lbl in FAILED:
+            print(f"    - {lbl}", flush=True)
+        sys.exit(1)
     with open(os.path.join(os.path.dirname(os.path.abspath(__file__)),
                            f"u_atoms_{a.tag}.json"), "w") as fh:
         json.dump(out, fh, indent=1)
-    print(f"\n  {'ALL CHECKS PASSED' if not FAILED else 'FAILURES: ' + str(FAILED)}", flush=True)
+    print("\n  ALL CHECKS PASSED", flush=True)
 
 
 if __name__ == "__main__":

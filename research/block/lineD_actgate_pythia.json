@@ -1,0 +1,13 @@
+{
+ "model": "pythia",
+ "n_cal_windows": 1,
+ "coh_MXFP4": 27011.059496320675,
+ "inc_MXFP4": 37021.39269671941,
+ "coh_TOP": 41621.15387862181,
+ "inc_TOP": 41198.88127231651,
+ "total_MXFP4": 64032.45219304009,
+ "total_TOP": 82820.03515093832,
+ "coherent_share_MXFP4": 0.4218339072020828,
+ "coherent_share_TOP": 0.5025493384875755,
+ "gated_ratio_TOP_over_MXFP4": 1.29340720704025
+}

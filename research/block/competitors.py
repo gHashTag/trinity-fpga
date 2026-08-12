@@ -55,6 +55,15 @@ def _mags(eb, mb, emax_expected=None, maxnorm_expected=None, reserved="none"):
         for m in range(m_hi + 1):
             out.add((1 + m / (1 << mb)) * 2.0 ** e)
     lv = np.array(sorted(out))
+    # Cardinality, because the top of the ladder does not witness its bottom:
+    # a ladder built with the subnormal loop DELETED has the same max normal and
+    # the same emax, and would pass both checks below while the docstring says
+    # INCLUDING SUBNORMALS.  0 + (2^mb - 1) subnormals + one binade per exponent.
+    n_expected = 1 + ((1 << mb) - 1) + (e_hi - (1 - bias) + 1) * (1 << mb)
+    if reserved == "e4m3fn":
+        n_expected -= 1                                 # S.1111.111 is NaN
+    assert len(lv) == n_expected, (
+        f"E{eb}M{mb}: {len(lv)} magnitudes, definition gives {n_expected}")
     if maxnorm_expected is not None:
         assert abs(lv[-1] - maxnorm_expected) < 1e-9, (
             f"E{eb}M{mb}: max normal {lv[-1]} != published {maxnorm_expected}")

@@ -39,8 +39,12 @@ published first.
 
 1. **The exact decomposition.** `NF4-sym` — the same Gaussian-quantile
    construction with the sixteenth value switched off — is a **tie** with MXFP4
-   (+0.33 %, p = 0.46), and `(+0.335 %) × (−4.429 %) = −4.109 %` reproduces the
-   full NF4-vs-MXFP4 margin with residual `0.00e+00`. That the *entire* margin of
+   (+0.46 %, p = 0.795 at n = 4 checkpoints), and
+   `(+0.464 %) × (−4.324 %) = −3.880 %` reproduces the full NF4-vs-MXFP4 margin
+   with residual `6.94e-18`. Restated at the model level 2026-08-12; the
+   window-pooled figures it replaces are in `THE_SIXTEENTH_CODEWORD`. The
+   decomposition is unchanged — what is withdrawn is the *strength* of the
+   surrounding margins, since NF4-vs-MXFP4 is a tie at four checkpoints. That the *entire* margin of
    the field's reference 4-bit codebook is the codeword and not the curve is a
    measurement, and it is ours.
 2. **The block-float setting.** Their work is integer quantisation and does not

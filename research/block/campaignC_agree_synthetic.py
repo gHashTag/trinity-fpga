@@ -61,7 +61,10 @@ def boundary_block(mags):
     # vacuous for every book whose midpoints are not float32-representable.
     # Verified live by the negative control below.
     w = torch.tensor(rows, dtype=torch.float64)
-    assert float(w.abs().amax(dim=1).min()) == 1.0
+    # EVERY row, not min(): a single row at 1.0 satisfies min() while any row
+    # carrying a value above 1.0 gets s = 2, so its elements stop sitting on a
+    # boundary and that row silently degrades to an ordinary random test.
+    assert bool((w.abs().amax(dim=1) == 1.0).all()), float(w.abs().amax())
     return w
 
 

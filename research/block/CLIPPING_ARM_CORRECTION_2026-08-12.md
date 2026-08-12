@@ -38,8 +38,27 @@ named — it is a real arm, just not a placement.
 
 Blast radius, bounded by import as the run_synth lesson prescribes:
 `campaignA_run.py`, `campaignA_stats.py`, `campaignB_selector.py` and
-`onefit_klscore.py` take their pool from `candidates()`. `campaignB_stats.py`
-hard-codes its own four-arm list and never called `check()` at all.
+`onefit_klscore.py` take their pool from `candidates()`.
+
+**🛑 And the sentence that stood here was wrong in the most useful way a
+sentence can be.** It read: *"`campaignB_stats.py` hard-codes its own four-arm
+list and never called `check()` at all."* Every word true, and used as an
+exemption when it is the exact opposite — **because it never draws from
+`candidates()`, it is the one campaign that did not inherit the fix.** A
+blast-radius check bounded by imports tells you what an edit *reaches*; it does
+not tell you what shares the defect through duplication rather than through
+import. Two further things followed:
+
+* **There is a second clipping arm, and this document did not name it.**
+  `campaignB_books.py` asserts `top = max(abs(x) for x in lv)` under a docstring
+  reading "T38 phase assert" — the same defect in different notation. It shipped
+  **two** books at +1.000 / −0.750: `MX-asym-TOP` **and `JK-asym-TOP`**. Both are
+  now `kind="clip"`, and `check()` verifies the label rather than trusting it: a
+  `clip` that does not clip fails too.
+* **The Bonferroni family counted a clipping choice as a placement.** Three
+  placements, not four. The reclassification was made on structural grounds a
+  day before anyone computed which way it moved a verdict — and at the model
+  level it moves none.
 
 ## What moves
 

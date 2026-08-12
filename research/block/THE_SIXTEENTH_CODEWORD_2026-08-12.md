@@ -42,18 +42,31 @@ repository, and the one published this morning, put a 15-value book against a
 gives **NF4-sym**, the identical Gaussian-quantile construction with the extra
 codeword turned off.
 
-| comparison | pooled, four models | verdict |
-|---|---|---|
-| **NF4-sym vs MXFP4** | **+0.33 % [−0.55, +1.23], t = +0.75, p = 0.46** | **TIE** |
-| NF4 vs NF4-sym | −4.43 % [−5.22, −3.63], t = −10.81, p = 3.8e-20, 121/140 windows | NF4 wins |
-| NF4 vs MXFP4 | −4.11 % [−4.98, −3.23], t = −9.06 | NF4 wins |
+**🛑 Restated 2026-08-12 at the model level.** The three rows below were pooled
+over 140 *windows* of four models. Windows are replicates of the text, not of
+the model family, so a cross-model comparison takes n = 4 checkpoints. That
+correction demotes the two "NF4 wins" rows to ties, and it strengthens rather
+than weakens the row this section rests on.
 
-And the two factors compose exactly:
+| comparison | four models, n = 4 checkpoints | window-pooled (n = 140, withdrawn) | verdict |
+|---|---|---|---|
+| **NF4-sym vs MXFP4** | **+0.46 % [−4.62, +5.82], t = +0.28, p = 0.795** | +0.33 %, p = 0.46 | **TIE, and more clearly than before** |
+| NF4 vs NF4-sym | −4.32 % [−9.75, +1.42], t = −2.41, p = 0.095, 4/4 | −4.43 %, p = 3.8e-20 | **TIE** (was "NF4 wins") |
+| NF4 vs MXFP4 | −3.88 % [−11.16, +3.99], t = −1.60, p = 0.208, 3/4 | −4.11 %, t = −9.06 | **TIE** (was "NF4 wins") |
 
-    (+0.335 %) × (−4.429 %) = −4.109 %      residual 0.00e+00
+And the two factors still compose exactly, because the composition is arithmetic
+rather than statistics and holds at either level:
 
-(means of log ratios over the same windows, so the product is an identity rather
+    (+0.464 %) × (−4.324 %) = −3.880 %      residual 6.94e-18
+
+(means of log ratios over the same units, so the product is an identity rather
 than an approximation).
+
+**What this does and does not change.** The *decomposition* is unaffected: the
+whole of NF4's margin over MXFP4 is still the sixteenth codeword and none of it
+is the curve, and that is what T40 asserts. What is withdrawn is the strength of
+the surrounding margins — at four checkpoints, "NF4 beats MXFP4" is a tie, and
+NF4's win is a per-model result on 3 of 4 checkpoints, not a cross-model one.
 
 **T40.** *At a fixed 4-bit index, the normal-quantile shape is worth nothing
 measurable against E2M1 — the entire NF4 advantage is the codeword that a

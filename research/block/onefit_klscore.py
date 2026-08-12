@@ -67,10 +67,19 @@ NWIN = int(os.environ.get("NWIN", RULERS[MDIR]["nwin"]))
 
 
 def t38(lv):
+    """Every book normalised so max|level| == 1.0, checked on BOTH tails.
+
+    max(pos, neg) is satisfied by EITHER tail, so it admits a book at
+    +1.000 / -0.750 -- a clipping arm, not a placement.  Identical to
+    onefit_kl.t38 / onefit_measure.t38; a magnitude ladder has min(v) == 0 and
+    mirrors.  See CLIPPING_ARM_CORRECTION_2026-08-12.md.
+    """
     v = [float(x) for x in lv]
     assert v == sorted(v) and len(set(v)) == len(v)
-    pos, neg = max(v), -min(v)
-    assert abs(max(pos, neg) - 1.0) < 1e-12, (pos, neg)
+    pos = max(v)
+    neg = max(-x for x in v) if min(v) < 0 else pos     # symmetric book: mirror
+    assert abs(pos - 1.0) < 1e-12, f"positive tail {pos}"
+    assert abs(neg - 1.0) < 1e-12, f"negative tail {neg}"
     return v
 
 

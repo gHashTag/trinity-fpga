@@ -460,6 +460,44 @@ gain errors) is green today, catches the regression tomorrow, and keeps the debt
 same amount, which is exactly the shape of a refactor trading one bug for another. That case belongs
 in the gate's own self-test — `fixed one, broke another` must fail.
 
+## 8d. The replicate unit is a claim — write it where claims are written
+
+Six times. Five were caught by reading documents; the sixth was live in a script, three lines long,
+and its statistical decision was made by `np.concatenate`:
+
+```python
+d = np.concatenate([dvec(D, m, arm, ref) for m in models])   # 4 models x 35 windows
+r = paired(d)                                                # ...as n = 140
+```
+
+The section header said "POOLED OVER ALL FOUR MODELS" and the statistic said "n = 140 windows".
+**Eleven of fourteen verdicts flipped** when each model contributed one mean log-ratio instead:
+every "BEATS MXFP4" and every "loses to NF4" became a tie. The point estimates barely moved
+(−4.99 % → −4.76 %); the intervals grew by roughly √35 and every one came to contain zero.
+
+**Why this one hid for six rounds.** The declaration was implicit in a *shape-changing utility*.
+`concatenate`'s job is to join arrays; nobody reads it as an assertion about exchangeability. The
+five earlier instances were sentences in documents, which get re-read; this was a reshape, which
+does not.
+
+**The rule.** State the replicate unit in prose, at the site, and branch on it explicitly:
+
+```python
+if len(models) > 1:      # cross-model claim: n = models
+    d = np.array([float(dvec(D, m, arm, ref).mean()) for m in models])
+else:                    # within-model claim: windows are the right unit
+    d = dvec(D, models[0], arm, ref)
+```
+
+**And the tell that it is a real correction rather than a motivated one: it should move claims in
+both directions.** Here four rows moved toward our codebooks and seven away. An error that only
+ever flattered us would be a different finding, and would deserve a harder look.
+
+**Corollary — a unanimous rotation is not a rotation.** If every leave-one-out fold selects the
+same arm, the "held-out" mean is *algebraically identical* to the in-sample mean. The label
+transports no information and must not be quoted as though it does. Check that the folds disagree
+before believing the rotation bought anything.
+
 ## 9. Adversarial verification finds what self-consistency cannot
 
 Every theorem in the campaign was handed to a second agent instructed to **refute it, defaulting

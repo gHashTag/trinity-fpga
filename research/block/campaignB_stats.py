@@ -23,6 +23,8 @@ import os
 import numpy as np
 from scipy import stats
 
+import campaignB_books as B
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 MODELS = ["smollm2", "qwen", "pythia", "opt"]
 LABEL = {"smollm2": "SmolLM2-135M", "qwen": "Qwen2.5-0.5B",
@@ -90,13 +92,42 @@ def load():
     return out
 
 
+# The placement family is three: MX-asym-TOP and JK-asym-TOP extend the ladder
+# to 16/12 and pay by clipping the negative extreme to -0.75, so campaignB_books
+# labels them kind="clip". A Bonferroni family of "the four placements" counted
+# a clipping choice as a placement. A clipping arm is also never ranked beside
+# placements without saying so -- hence the tag.
+NK_PLACEMENT = 3
+_KIND = {n: k for n, k, lv in B.books()}
+
+
+def CLIP_TAG(arm):
+    return "  [clipping arm, not a placement]" if _KIND.get(arm) == "clip" else ""
+
+
 def dvec(D, m, a, ref):
     return (np.array(D[m]["per_window_nll"][a])
             - np.array(D[m]["per_window_nll"][ref]))
 
 
 def row(D, arm, ref, models, nk=1, tag=""):
-    d = np.concatenate([dvec(D, m, arm, ref) for m in models])
+    """One comparison, at the level its replicate unit actually supports.
+
+    This used to `np.concatenate` the per-window vectors of every model and hand
+    140 windows to `paired` as if they were 140 replicates. They are not: they
+    are replicates of the TEXT, and four checkpoints' worth of them says nothing
+    about a fifth checkpoint. That inflates every cross-model comparison, and
+    here it inflated eleven of fourteen -- every "BEATS MXFP4" and every "loses
+    to NF4" in the pooled section was a tie at the model level.
+
+    So: more than one model is a cross-model claim and takes n = models, with
+    each model contributing its own mean log-ratio. One model is a within-model
+    claim and keeps its windows, which is the level that claim is entitled to.
+    """
+    if len(models) > 1:
+        d = np.array([float(dvec(D, m, arm, ref).mean()) for m in models])
+    else:
+        d = dvec(D, models[0], arm, ref)
     r = paired(d)
     names = "+".join(LABEL[m].split("-")[0] for m in models)
     print(f"  {arm:<15}vs {ref:<11}{names:<26}{r['pct']:>+8.2f}%"
@@ -110,14 +141,17 @@ def main():
     print("RULERS reproduced on all four models (fp32, MXFP4, Lloyd-Max).\n")
 
     print("=" * 108)
-    print("PERPLEXITY   block 32, E8M0, lm_head excluded, every book at "
-          "max|level| = 1.0, 4.250 b/elem")
+    print("PERPLEXITY   block 32, E8M0, lm_head excluded, 4.250 b/elem; every "
+          "book at max|level| = 1.0 on BOTH tails except the two clipping arms, "
+          "\n             MX-asym-TOP and JK-asym-TOP, which are +1.000 / -0.750")
     print("=" * 108)
     print(f"{'arm':<16}{'alph':>5}" + "".join(f"{LABEL[m]:>16}" for m in MODELS))
     print(f"{'fp32':<16}{'--':>5}"
           + "".join(f"{D[m]['ppl']['fp32']:>16.4f}" for m in MODELS))
     for a in ARMS:
-        alph = 16 if D[MODELS[0]]["book_kind"][a] == "sig" else 15
+        # 'mag' is a symmetric magnitude ladder (15 signed values); every signed
+        # book -- 'sig' placement or 'clip' arm -- spends all 16 codewords.
+        alph = 15 if D[MODELS[0]]["book_kind"][a] == "mag" else 16
         print(f"{a:<16}{alph:>5}"
               + "".join(f"{D[m]['ppl'][a]:>16.4f}" for m in MODELS))
 
@@ -131,9 +165,14 @@ def main():
     row(D, "NF4-sym", "MXFP4", MODELS)
     row(D, "NF4", "NF4-sym", MODELS)
     row(D, "NF4", "MXFP4", MODELS)
-    a = paired(np.concatenate([dvec(D, m, "NF4-sym", "MXFP4") for m in MODELS]))
-    b = paired(np.concatenate([dvec(D, m, "NF4", "NF4-sym") for m in MODELS]))
-    c = paired(np.concatenate([dvec(D, m, "NF4", "MXFP4") for m in MODELS]))
+    # Model-level, so the composition quotes the same numbers as the three rows
+    # printed above it. The identity a + b = c holds at either level -- it is
+    # arithmetic, not statistics -- but a section that shows +0.46 % in a row and
+    # +0.335 % two lines below is a section that will be misquoted.
+    def _ml(arm, ref):
+        return paired(np.array([float(dvec(D, m, arm, ref).mean()) for m in MODELS]))
+
+    a, b, c = _ml("NF4-sym", "MXFP4"), _ml("NF4", "NF4-sym"), _ml("NF4", "MXFP4")
     resid = a["mean_d"] + b["mean_d"] - c["mean_d"]
     print(f"\n  composition: (1{a['pct']/100:+.5f}) x (1{b['pct']/100:+.5f}) = "
           f"1{(math.exp(a['mean_d']+b['mean_d'])-1):+.5f}   "
@@ -179,21 +218,29 @@ def main():
         row(D, best, "NF4-sym", oos)
 
     print("\n" + "=" * 108)
-    print("ALL FOUR PLACEMENTS POOLED OVER ALL FOUR MODELS "
-          "(Bonferroni x4 over the placements)")
+    print("EVERY ARM ACROSS ALL FOUR MODELS, MODEL-LEVEL "
+          "(Bonferroni x3 over the three placements)")
     print("=" * 108)
     print(hdr)
+    # nk is the size of the PLACEMENT family. MX-asym-TOP and JK-asym-TOP are
+    # not placements -- they extend the ladder to 16/12 and pay by clipping the
+    # negative extreme to -0.75 (campaignB_books labels them kind="clip"), so a
+    # family of "the four placements" counted a clipping choice as one. Three.
+    # The reclassification was made on structural grounds a day before anyone
+    # computed which way it moved a verdict; at model level it moves none.
     for arm in MX_ASYM + ["MX-asym-MIDN"]:
-        row(D, arm, "MXFP4", MODELS, nk=4)
+        row(D, arm, "MXFP4", MODELS, nk=NK_PLACEMENT, tag=CLIP_TAG(arm))
     print()
     for arm in MX_ASYM:
-        row(D, arm, "NF4", MODELS, nk=4)
+        row(D, arm, "NF4", MODELS, nk=NK_PLACEMENT, tag=CLIP_TAG(arm))
     print()
     for arm in JK_ASYM:
-        row(D, arm, "JOINT-KL", MODELS, nk=4, tag="3/4 in-sample")
+        row(D, arm, "JOINT-KL", MODELS, nk=NK_PLACEMENT,
+            tag=("3/4 in-sample" + CLIP_TAG(arm)))
     print()
     for arm in JK_ASYM:
-        row(D, arm, "NF4", ["opt"], nk=4, tag="only OOS model")
+        row(D, arm, "NF4", ["opt"], nk=NK_PLACEMENT,
+            tag=("only OOS model" + CLIP_TAG(arm)))
 
     print("\n" + "=" * 108)
     print("MIRROR CONTROL -- the codeword, or its sign?")

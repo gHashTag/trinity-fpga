@@ -6,7 +6,9 @@
 > loses to MXFP4 by +2.14 %** (p = 4.7e-10). And the margin is not the
 > Gaussian-quantile shape at all: a symmetric 8-magnitude book spends one of its
 > sixteen codewords on a second zero, and `NF4-sym`, the same construction with
-> the extra value switched off, is a **tie** with MXFP4 (+0.33 %, p = 0.46). The
+> the extra value switched off, is a **tie** with MXFP4 (+0.46 %, p = 0.795 at
+> n = 4 checkpoints; the window-pooled +0.33 %, p = 0.46 was restated
+> 2026-08-12). The
 > decomposition is exact to a residual of 0.00e+00. The conclusion that the block
 > axis is not closed stands; the reason given for it does not.
 
