@@ -4176,7 +4176,9 @@ scale ladder, same $8$-bit field & smollm2 & qwen \\
 \midrule
 $2^{k}$ (MXFP4's own) & $+3.50\%$ & $+2.86\%$ \\
 $\varphi^{k}$ & $+8.51\%$ & $+7.53\%$ \\
+$2^{k/2}$ & $+9.83\%$ & $+9.02\%$ \\
 $2^{k/3}$ --- five trits, ours & $+17.11\%$ & $+16.42\%$ \\
+$2^{k/4}$ & $+18.57\%$ & $+17.95\%$ \\
 $2^{k/8}$ --- plain binary & $\mathbf{+22.37\%}$ & $\mathbf{+21.79\%}$ \\
 $2^{k/16}$ & $+23.74\%$ & $+23.23\%$ \\
 \bottomrule
@@ -4184,7 +4186,50 @@ $2^{k/16}$ & $+23.74\%$ & $+23.23\%$ \\
 \end{center}
 
 \noindent
-$\sqrt{\varphi}^{\,k}$ at $2.8808$ points per binade lands beside $2^{k/3}$ at $3.0000$, which is what a law of step size predicts and what a law of algebra does not. That is the expected behaviour of a logarithmic companding law: distortion falls with the square of the step and the step is all that enters~\cite{bennett1948,grayneuhoff1998}, so the measurement confirms a known result rather than reporting a surprise. \textbf{$\varphi$ is not special \emph{for accuracy} on this axis; it is a step finer than a binade.} And a plain binary ladder at the same eight bits beats the ternary one by five to six points of RMSE and $1.1$ of perplexity. At matched dynamic range, $243$ ternary codes lose to $255$ binary ones on \emph{six of six} range settings across four sources.
+$\sqrt{\varphi}^{\,k}$ at $2.8808$ points per binade lands beside $2^{k/3}$ at $3.0000$, which is what a law of step size predicts and what a law of algebra does not. The direction is the expected behaviour of a logarithmic companding law, but \emph{the rate is not}, and Proposition~\ref{prop:notbennett} measures how far off it is. \textbf{$\varphi$ is not special \emph{for accuracy} on this axis; it is a step finer than a binade.} And a plain binary ladder at the same eight bits beats the ternary one by five to six points of RMSE and $1.1$ of perplexity. At matched dynamic range, $243$ ternary codes lose to $255$ binary ones on \emph{six of six} range settings across four sources.
+
+\begin{proposition}[The scale axis does not obey Bennett's law, and the discrepancy replicates]
+\label{prop:notbennett}
+Bennett's law for a companding quantiser gives squared error
+$\mathrm{MSE}(N) = a + b/N^{2}$ in the points per binade $N$, so along a
+\emph{nested} chain of ladders the ratio of successive differences
+$\mathrm{MSE}(N)-\mathrm{MSE}(2N)$ must equal $2^{2}=4$, independent of $N$ and
+of the model. Measured on the nested chain $2^{k/2} \subset 2^{k/4} \subset
+2^{k/8} \subset 2^{k/16}$, the implied exponent is
+$$p = 1.310 \ \text{then} \ 1.537 \quad(\text{SmolLM2}), \qquad
+  p = 1.327 \ \text{then} \ 1.545 \quad(\text{Qwen}).$$
+Two conclusions follow, and the second is the one that costs us something.
+\emph{The exponent is near $1.5$, not $2$}, so error falls with resolution
+distinctly more slowly than the law predicts; and \emph{it is not constant},
+drifting upward as the ladder refines. The two models agree to within $0.02$ on
+both values, across a $3.4\times$ difference in block count, so this is a
+property of the compound quantiser and not of a corpus.
+\end{proposition}
+
+\noindent The immediate consequence is arithmetic and unwelcome: at $p=1.5$ a
+doubling of scale resolution returns $2^{-1.5}=35\%$ of the previous doubling
+rather than $25\%$, so \textbf{the case for stopping at $2^{k/8}$ rests on the
+area column alone and not on saturation.} A second consequence is a retraction:
+this section previously read the monotone ordering as confirming a known result,
+and the ordering does hold, but \emph{the law it was attributed to is measurably
+not the law being obeyed.}
+
+\paragraph{One mechanism, proposed and refuted.} The E2M1 element grid
+$\{0,\tfrac12,1,\tfrac32,2,3,4,6\}$ repeats identically in every binade, and so
+does every $2^{k/N}$ ladder; a natural guess is that the two interact, that a
+ladder commensurate with the element grid spends points where the grid is
+already dense, and that this is what costs the missing half-exponent. It also
+would have been a pleasing result, since it would have distinguished
+$\varphi^{k}$ --- the worst-approximable ratio --- on exactly the grounds this
+paper cares about. \textbf{The control refutes it.} Sliding the ladder's phase
+against the element grid in eighths of a step moves the gain by $0.10$ points at
+$N=2$, $0.01$ at $N=3$, $0.04$ at $N=4$ and $0.02$ at $N=8$, against the
+$7.28$-point gap the mechanism was invented to explain. Phase does not matter,
+so alignment is not the cause. What remains consistent with the measurement is
+that the scale here is chosen by \emph{argmin of downstream error} rather than
+by rounding, and that the downstream error saturates on the element grid's own
+floor --- neither of which is the high-resolution rounding regime Bennett's law
+describes. We state the measurement and decline the mechanism.
 
 \paragraph{What that comparison leaves out, and it is the axis this paper is about.} Accuracy is one column and the multiplier is the other. Applying a scale drawn from $2^{k}$ is an exponent add and costs nothing; from $\varphi^{k}$ it is the Fibonacci step and costs an addition; from $2^{k/3}$ it is a shift and one of three constants; from $2^{k/8}$, one of eight. \emph{The ladders that win on accuracy here are the ones that stop being multiply-free}, and Section~\ref{sec:geoscale}'s claim --- that among \emph{multiply-free} grids $\varphi^{k}$ is the finest available at four bits --- survives this section untouched, because $2^{k/8}$ is not one of them. What does not survive is any reading in which $\varphi$ wins on accuracy by virtue of its algebra. \textbf{We have not synthesised the non-power-of-two scale appliers, so the cost column above is an argument and not a measurement} --- which is the one place in this paper where a comparison rests on reasoning while its neighbour rests on silicon.
 
@@ -4461,8 +4506,17 @@ scale ladder beats MXFP4 by $17\%$ in squared error on two real models and $20\%
 in perplexity, with zero losing blocks in $14.9$ million; that the gain is
 entirely scale resolution; and that a \emph{binary} ladder realises it better
 than a ternary one. It does not claim that ternary wins the block axis. The
-measurement says otherwise, and a referee would need one afternoon and
-$2^{k/2}$ to say so first.
+measurement says otherwise. An earlier draft of this section closed by observing
+that a referee would need one afternoon and $2^{k/2}$ to say so first; that
+afternoon has now been spent here. The prediction was registered before the run,
+in \texttt{research/block/PREREG\_step2\_step4\_2026-08-12.md}: Bennett's law
+fitted at $N\in\{3,8\}$ gave $+10.01\%$ at $N=2$ and $+19.75\%$ at $N=4$, with
+bands of $10.0$--$11.5\%$ and $19.7$--$20.7\%$. \textbf{Both cardinal
+predictions failed, low, by $0.2$ and $1.2$ points} --- which is what
+Proposition~\ref{prop:notbennett} then quantified. \emph{The ordinal prediction
+held}: the ordering is $\varphi^{k} < 2^{k/2} < 2^{k/3} < 2^{k/4} < 2^{k/8} <
+2^{k/16}$ with no inversion, so the section's ordering survives its own
+referee.
 
 \section{The instrument resolves seven levels, not twenty-eight}
 \label{sec:bands}
