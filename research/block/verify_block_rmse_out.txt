@@ -1,0 +1,16 @@
+# research/block/verify_block_rmse.py, 2026-08-12
+# Independent re-implementation. Bracket spans the same octave range for every
+# ladder. Compare against the workflow figures recorded in
+# research/frontier/BLOCK_AXIS_RESOLVED_2026-08-12.md.
+
+smollm2  3317760 blocks
+  mxfp4_floor   0.0225976709   +0.00% vs floor    -3.63% vs argmin
+  mxfp4_argmin  0.0218061472   +3.50% vs floor    +0.00% vs argmin
+  step3         0.0187310354  +17.11% vs floor   +14.10% vs argmin
+  step8         0.0175427943  +22.37% vs floor   +19.55% vs argmin
+
+qwen  11182080 blocks
+  mxfp4_floor   0.0023861225   +0.00% vs floor    -2.89% vs argmin
+  mxfp4_argmin  0.0023190486   +2.81% vs floor    +0.00% vs argmin
+  step3         0.0019942209  +16.42% vs floor   +14.01% vs argmin
+  step8         0.0018661200  +21.79% vs floor   +19.53% vs argmin

@@ -4298,7 +4298,7 @@ $3.50\%$ on SmolLM2 and $2.86\%$ on Qwen, so best against best:
 & vs Algorithm~1 & encoder alone & \textbf{best vs best} \\
 \midrule
 RMSE, SmolLM2 & $+17.11\%$ & $+3.50\%$ & $\mathbf{+14.10\%}$ \\
-RMSE, Qwen & $+16.42\%$ & $+2.86\%$ & $\mathbf{+13.96\%}$ \\
+RMSE, Qwen & $+16.42\%$ & $+2.81\%$ & $\mathbf{+14.01\%}$ \\
 perplexity, SmolLM2 & $+20.04\%$ & $+12.15\%$ & $+8.99\%$ \\
 \bottomrule
 \end{tabular}
@@ -4307,7 +4307,7 @@ perplexity, SmolLM2 & $+20.04\%$ & $+12.15\%$ & $+8.99\%$ \\
 \noindent
 The squared-error headline survives the correction nearly intact and the
 perplexity headline does not, and the gap between those two outcomes is the
-finding.
+finding. Both RMSE rows were re-measured after the fact by an independently written script, \texttt{research/block/verify\_block\_rmse.py}, which reproduces the baseline to ten significant figures and the ladder arms exactly; the Qwen encoder figure moved from $2.86\%$ to $2.81\%$ under its search, and the best-against-best column with it. \emph{That script is in the repository because the original figures came from a run whose working directory no longer exists, and a number whose only witness is a log has no instrument behind it.}
 
 \begin{proposition}[The encoder's share is metric-dependent, and strongly]
 \label{prop:encodershare}
