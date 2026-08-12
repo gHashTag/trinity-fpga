@@ -7345,3 +7345,81 @@ as coverage of the class, and go looking for the decidable question underneath.
 
 Applied here: `runtime/instance.t27` is off by ten braces and
 `fpga/fifo.t27` by four parens. Neither was on anyone's list.
+
+## A green gate is indistinguishable from a blind one unless it publishes a denominator
+
+The previous section gave the theorem: a shape search covers exactly what contains
+its shape, and cannot bound its residue. Turning that on a campaign's own 29
+instruments produced something worse than the theorem predicts.
+
+**Two of them had been printing their blindness in the summary line all along.**
+
+```
+units scan: 13 files, 41 connections compared, 122 SKIPPED AS UNRECOGNISED,
+            0 new disagreements
+width scan: 16 signed declarations (3 RANGE-ANNOTATED), 5 reductions checked
+```
+
+`units_scan` infers a quantity from a port **name** against a hand-written table:
+it compares **41 of 163, 25%**. `width_scan` needs a range annotation to know what
+a declaration should hold: **3 of 16, 19%**. Both exit 0. Both had exited 0 every
+wave since they landed, and the numbers were right there in the output.
+
+Neither gate is broken. Each answers its question correctly. What was wrong is the
+reading: *"0 new disagreements"* was taken as **no unit defects** when it means
+**no unit defects among the quarter of connections whose names we recognise**.
+
+### The numerator fallacy
+
+For a gate `G` examining `E ⊆ A` and reporting `|F|` findings:
+
+```
+|F| = 0 with E = A      and      |F| = 0 with E ⊊ A
+```
+
+produce **byte-identical output and the same exit code**. So a green gate carries
+no information about `A \ E`, and an unstated scope silently becomes a universal
+claim. This is vacuity and locality-of-evidence one level up — at the instrument
+rather than the proof.
+
+**Enumerated in that repo: 22 of 29 checking scripts publish no denominator at
+all.** Seven print a skipped or exempt count; the rest print a numerator and an
+exit code. That is not evidence they are narrow — it is the absence of evidence
+either way, which is exactly the problem.
+
+### The fix is a paragraph, and it must be a paragraph
+
+No scanner can compute another scanner's true denominator — that is the halting
+problem wearing a lab coat. So the requirement is documentary: every checking
+script carries a **`COVERAGE.`** paragraph stating what it examined, what it could
+not, and why. A gate whose author cannot write that in one paragraph has not
+established coverage of anything.
+
+Be honest that this checks *presence*, not truth. A gate can satisfy it with a
+false denominator, and the meta-gate cannot tell. Say so **in the meta-gate's own
+COVERAGE. paragraph** — an instrument that cannot audit itself must at least
+declare it.
+
+### Why this is worth doing: it converts backlog into design questions
+
+Writing the two paragraphs settled both items on the spot:
+
+- `units_scan`'s residue is **not** reducible by widening the name table — that is
+  a shape search over names, so the theorem applies. Only a design-side naming
+  convention or a real type annotation can close it.
+- `width_scan`'s 13 unannotated declarations do not lack a better regex. **The
+  information is absent from the artefact.**
+
+Two "scan harder someday" tickets became one design question. That is what a
+denominator is for — it tells you whether more scanning can help at all.
+
+### The tell that the whole set needs re-running
+
+Adding this gate forced a run of every other gate, and that run failed:
+`faith_check` reported that a gate mutated an artifact its own docstring denied
+writing. **The previous wave had shipped with that gate red and nobody knew**,
+because each wave runs the gates its change touches.
+
+So: **when you add or edit any gate, re-run the entire set, not the ones you
+think are affected.** A gate suite is a single object; editing one member can
+falsify another's stated contract, and a per-change subset run will not see it.
