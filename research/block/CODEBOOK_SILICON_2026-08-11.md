@@ -35,6 +35,30 @@ stops being the codebook that won.
 **Six fractional bits, so a 7-bit magnitude.** E2M1 needs no such choice: in units
 of 0.5 its magnitudes are the integers 0,1,2,3,4,6,8,12 — four bits, exactly.
 
+> **Second correction, 2026-08-12 — every frequency in this document is
+> restated.** `fpga/codebook/run_synth.py` collected `Max frequency for clock`
+> lines with `.append()` and then sliced the last `len(SEEDS)`. nextpnr prints
+> that line **twice per run** — once after placement, once after routing — so the
+> slice kept a *mixture*: three post-route figures and two post-placement ones,
+> from the last seeds only. Post-placement is optimistic, so every median here
+> was drawn from two different distributions. The collector now takes the last
+> match per seed log and **asserts one value per seed**. Corrected post-route
+> medians over seeds 1–5, recomputed from the existing logs:
+>
+> | arm | median MHz | [min, max] |
+> |---|---:|---|
+> | `ad_asymmx` | 816.99 | [810.37, 914.91] |
+> | `ad_asymsr` | 849.62 | [776.40, 888.89] |
+> | `ad_mx12fl` | 888.10 | [766.87, 946.07] |
+> | `ad_mx24fl` | 906.62 | [904.98, 1002.00] |
+> | `ad_mx24st` | 393.24 | [363.77, 402.25] |
+> | `ad_mxfp4` | 458.30 | [406.01, 509.16] |
+> | `ad_wire5` | 888.89 | [766.28, 918.27] |
+> | `ad_wire6` | 905.80 | [833.33, 995.02] |
+>
+> **The LUT and CARRY4 conclusions are unaffected** — area is seed-invariant and
+> was never collected this way. Only the frequency column was wrong.
+
 ## The first answer was wrong, and the ruler is why
 
 The measurement reported the two decoders as costing the same — 16 LUT each, "the

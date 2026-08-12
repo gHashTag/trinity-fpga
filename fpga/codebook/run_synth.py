@@ -94,11 +94,20 @@ def run(name, W, body, deps, reg_out=True, nodsp=True):
                 for line in log.splitlines():
                     if key + ":" in line:
                         res[tag] = int(line.split(key + ":")[1].split("/")[0].strip())
-        for line in log.splitlines():
-            if "Max frequency for clock" in line:
-                res["f"].append(float(line.split(":")[-1].split("MHz")[0].strip()))
-    fs = res["f"][-len(SEEDS):] if len(res["f"]) >= len(SEEDS) else res["f"]
-    res["f"] = fs
+        # nextpnr prints "Max frequency for clock" TWICE per run: once after
+        # placement and once after routing. Appending both and then slicing the
+        # last len(SEEDS) values silently kept a mixture -- three post-route
+        # figures and two post-placement ones, all from the last seeds only.
+        # Post-placement is optimistic, so the median was drawn from two
+        # different distributions. Take the LAST match in each seed's log, which
+        # is the post-route estimate, and record exactly one value per seed.
+        per_seed = [ln for ln in log.splitlines() if "Max frequency for clock" in ln]
+        if per_seed:
+            res["f"].append(float(per_seed[-1].split(":")[-1].split("MHz")[0].strip()))
+    if len(res["f"]) != len(SEEDS):
+        raise SystemExit(
+            f"run_synth: {len(res['f'])} frequency values for {len(SEEDS)} seeds — "
+            "one per seed is required, refusing to report a median over a mixture")
     if fs:
         res["fmed"] = statistics.median(fs)
         res["fspread"] = (max(fs) - min(fs)) / statistics.median(fs)
