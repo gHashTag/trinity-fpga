@@ -7046,3 +7046,33 @@ what the construct *is*, not by where the character appears.
 specs hold 257,486 non-ASCII bytes; exactly 8 ever reached the lexer's default
 arm. The first number invites a huge cleanup that would change comments for no
 benefit; the second names five real defects.
+
+## Wave 688 — two parsers for one grammar, and a metric that could not see the loss
+
+**The last four swallowed declarations were caused by duplication.**
+`parse_const_decl` had its own inline type parser — a bracket prefix and an
+identifier — so `const X : &[u8; 5]` failed at the `&` while the identical type
+parsed fine in a function signature. Deleting the copy and delegating to the
+shared parser took 4 → 0. **Two parsers for one grammar diverge; the only
+question is which construct finds it.** When a construct works in one position
+and not another, look for a second implementation before adding a third.
+
+**A counter placed inside a recovery path cannot see failures that never reach
+it.** "0 swallowed" was true and hid 40 specs capturing nothing, because a file
+whose preamble fails never enters the loop the counter lives in. **Pair any
+inside-the-machine counter with a coarse outside-the-machine one** — here,
+"files with declarations that captured zero nodes", which cannot be fooled by
+scope and needs no parser knowledge.
+
+**I nearly published the same withdrawn error a fifth time.** Measuring "60% of
+declarations captured" used a regex counting function-local `const` as
+module-level — the identical mistake Prop. 149 withdrew, on the identical file
+(`gf16.t27`, 669 phantom losses). It was caught only because that number was
+memorable from the earlier retraction. **A regex that must distinguish scope is
+measuring something only a parser defines, and it will be wrong in whichever
+direction makes the finding look bigger.**
+
+**Report distinct causes as distinct groups, not one number.** The 34 remaining
+zero-capture specs split into genuine literate-Markdown files and ordinary specs
+failing on unknown constructs. A single count would have implied a single fix and
+sent the next wave down one path for both.
