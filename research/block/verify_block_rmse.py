@@ -33,6 +33,23 @@ def arm_rmse(V, mode, N=None):
     if mode == "floor":
         X = 2.0 ** (np.floor(np.log2(amax)) - EMAX)
         err = ((quant_elem(V / X[:, None]) * X[:, None] - V) ** 2).sum()
+    elif mode == "e4m3":
+        # NVFP4's scale grid: an FP8-E4M3 value, i.e. 3 mantissa bits, which is
+        # EIGHT POINTS PER BINADE -- the same resolution as the 2^(k/8) ladder,
+        # but placed linearly in the mantissa (1 + m/8) instead of geometrically
+        # (2^(m/8)). Same 8-bit field as E8M0. This arm tests whether the
+        # paper's own law -- error monotone in points per binade and in nothing
+        # else -- holds across a change of point PLACEMENT at fixed resolution.
+        # Grid only: E4M3's finite range is not modelled, and the index-span
+        # measurement already showed these weights fit.
+        f = np.floor(np.log2(amax) - EMAX)
+        best = None
+        for o in (-1.0, 0.0, 1.0):
+            for m in range(8):
+                X = (2.0 ** (f + o)) * (1.0 + m / 8.0)
+                e = ((quant_elem(V / X[:, None]) * X[:, None] - V) ** 2).sum(axis=1)
+                best = e if best is None else np.minimum(best, e)
+        err = best.sum()
     else:
         step = 1.0 if mode == "argmin2" else 1.0 / N
         # candidate ladder points bracketing amax/2^emax, within +-2 steps
@@ -61,7 +78,8 @@ def tensors(model):
                 yield a.to(torch.float32).numpy().astype(np.float64)
 
 ARMS = [("mxfp4_floor", "floor", None), ("mxfp4_argmin", "argmin2", None),
-        ("step3", "step", 3), ("step8", "step", 8)]
+        ("step2", "step", 2), ("step3", "step", 3), ("step4", "step", 4),
+        ("step8", "step", 8), ("step16", "step", 16)]
 
 for model in [m for m in ("smollm2", "qwen") if os.path.isdir(os.path.join(WROOT, m))]:
     tot = {n: [0.0, 0] for n, _, _ in ARMS}
