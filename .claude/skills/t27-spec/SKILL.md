@@ -6777,3 +6777,42 @@ deliverable.** The trios-coq build has never run in CI and could not be verified
 locally (no Flocq, no opam). Landing it blocking would wall off every PR on an
 unknown; landing it non-blocking publishes the true state and leaves one
 explicit next action. Do not pretend the step is the achievement.
+
+## Wave 680 — a check on one machine is a measurement; a check in CI is a guarantee
+
+**165 of 167 propositions cite a workflow that has never run.** `formal-yosys.yml`
+exists only on a feature branch and triggers on push/PR to `master`. **GitHub
+registers workflows from the DEFAULT branch**, so a workflow file on a feature
+branch triggering on the default branch is inert. `gh run list` reports no runs,
+ever.
+
+The gates are real — written, executed every wave, ~30 defects caught including
+several in themselves. What was false is the sentence each `Gate:` line carries:
+*that CI re-checks this*. The convention existed precisely to bind a claim to a
+re-execution, and it was satisfied by **naming a step rather than reaching one**.
+
+**Theorem (locality of evidence): a check constrains the artifact only in states
+reachable from the environment where it was observed to pass.** One working tree
+establishes a property of that tree at that moment — nothing about another clone,
+another branch, or the next commit.
+
+**Check the branch before believing anything about CI.** `git branch --show-current`,
+`git rev-list --count origin/<default>..HEAD`, and whether the workflow file
+exists on the default branch. Three commands, and they should be the *first* ones
+in any session that will make claims about gating. This branch is 920 ahead,
+1700 behind, merge base four months old, 2230 files changed on both sides, no PR.
+
+**The action that examined CI rather than the code found in minutes what thirty
+waves of local green had hidden.** I had promised to "watch" a `continue-on-error`
+step. Doing that surfaced a workflow failing at `actions/checkout` — and then that
+none of my own workflows ran at all. **Periodically point an instrument at the
+instrument's environment**, not just at the subject.
+
+**Do not attempt a 2230-file conflict resolution unattended**, however tempting
+it is to "fix" the finding in the same wave. Report the numbers that make the
+decision cheap and name the options. The repair here is a human's call between
+merging, rebasing, and cherry-picking onto a fresh branch.
+
+**State when a gate cannot bootstrap itself.** The new reachability gate lives in
+the very workflow it reports as unreachable. Saying so plainly is better than
+relocating it somewhere that would make the report look self-consistent.
