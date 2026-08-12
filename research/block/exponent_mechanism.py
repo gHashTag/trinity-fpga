@@ -82,6 +82,12 @@ def glob_safetensors(model):
 
 
 V = blocks(MODEL, NTENS)
+# G is [blocks x 1537] float64; on a 0.5B model an uncapped block count
+# allocates several GB and the run swaps instead of finishing. Cap it --
+# the exponent is a shape statistic and does not need every block.
+MAXB = 120_000
+if V.shape[0] > MAXB:
+    V = V[np.linspace(0, V.shape[0] - 1, MAXB).astype(int)]
 amax = np.abs(V).max(axis=1)
 ok = amax > 0
 V, amax = V[ok], amax[ok]
