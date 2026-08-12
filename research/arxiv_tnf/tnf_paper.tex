@@ -92,7 +92,7 @@ Among the twenty-five carrying their own range, GFTernary leads throughput per a
 costs $28$ LUT per weight and \emph{no DSP at any fan-in}.
 
 Which rung follows from the budget --- $\varphi$ at four bits, $r^5{=}r^3{+}1$ at
-five, $r^6{=}r{+}1$ at six ---  On the block axis the gain is scale \emph{resolution}: at $4.25$ bits per element a finer ladder beats MXFP4 by $17.1\%$ RMSE on two models and $20.0\%$ perplexity, zero losing blocks in $14.9$M --- and a binary ladder realises it better than a ternary one.
+five, $r^6{=}r{+}1$ at six ---  On the block axis the gain is scale \emph{resolution}: at $4.25$ bits per element a finer ladder beats MXFP4 by $17.1\%$ RMSE on two models, zero losing blocks in $14.9$M, and by $9.0\%$ perplexity once the baseline is given its own best encoder --- and a binary ladder realises it better than a ternary one.
 
  Eleven retractions are marked in place below.
 \end{abstract}
@@ -4223,6 +4223,41 @@ field naming nothing, the same packing loss Theorem~\ref{thm:tiling} describes
 for the exponent, now appearing in the scale. It is neither the cheap option nor
 the accurate one.
 
+
+
+\paragraph{Best against best, which halves the headline.}
+The $+20.04\%$ above compares our best encoder against MXFP4's reference one.
+That is the comparison the deployed format invites, since Algorithm~1 is what a
+reader will run --- but it is not the comparison that isolates the format.
+Giving each side its own best encoder:
+
+\begin{center}\small
+\begin{tabular}{llr}
+\toprule
+baseline & ours & gain \\
+\midrule
+MXFP4, Algorithm~1 (floor) & $2^{k/3}$, search & $+20.04\%$ \\
+MXFP4, Algorithm~1 (floor) & $2^{k/3}$, floor & $+15.52\%$ \\
+\textbf{MXFP4 $+$ argmin encoder} & $\mathbf{2^{k/3}}$\textbf{, search} & $\mathbf{+8.99\%}$ \\
+MXFP4 $+$ argmin encoder & $2^{k/8}$, search & $+14.12\%$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+So the headline decomposes: of its $20.04$ points, \textbf{$12.15$ --- sixty-one
+percent --- are the encoder, and the encoder's output is a byte-legal MXFP4
+bitstream.} It belongs to the baseline. The remaining $7.90$ points, thirty-nine
+percent, are the ladder, and they are ours.
+
+\textbf{The number this paper should be quoted on is $+8.99\%$}, five-trit ladder
+against a properly encoded MXFP4, and $+14.12\%$ for the finest binary ladder
+against the same. Both are real, both are smaller than the figure a comparison
+against the reference encoder produces, and the difference between them is a
+choice about who is allowed their best implementation. \emph{We give the
+competitor its best, because a result that needs the opponent handicapped is not
+a result} --- and Section~\ref{sec:selfcheck} records four earlier claims in this
+paper that failed exactly that test.
 
 \paragraph{Accuracy and area in one calculation, which changes the recommendation.}
 The two measurements above --- perplexity from the sweep, area from the placed
