@@ -27,13 +27,37 @@ PAPER = ROOT / "research" / "arxiv_tnf" / "tnf_paper.tex"
 t = PAPER.read_text()
 
 # a withdrawal passage: from the sentence announcing it to the end of its paragraph
-WD = re.compile(r"[^.]*\b(?:is|are|was|were)\s+(?:withdrawn|retracted)\b[^.]*\.")
+# NOTE (2026-08-12): this was PASSIVE VOICE ONLY, and a mutation test proved
+# the consequence: a withdrawal written "We withdraw the X figure" opened no
+# zone, so the gate never went on to check whether X was still asserted live
+# elsewhere. The same hole was found the same day in check_self_consistency.
+# One author, one habit, two gates.
+# A DECIMAL POINT IS NOT A FULL STOP. Splitting sentences on [^.]* truncated
+# "We withdraw the $77.77\\%$ figure." at the decimal, so the only kind of
+# number this gate exists to track fell outside its own zone. The passive
+# branch survived only because its zone is the whole paragraph. Found by
+# mutation test, not by reading.
+SENT = r"(?:[^.]|\.(?=\d))*"
+WD = re.compile(SENT + r"(?:\b(?:is|are|was|were)\s+(?:withdrawn|retracted)\b"
+                r"|\b[Ww]e (?:withdraw|retract)\b"
+                r"|\b(?:is|are|was|were) now retired\b"
+                r"|\bretired that sentence\b)" + SENT + r"\.")
+# The two voices need different zones, and conflating them produced false
+# positives the moment the active voice was added. "X is withdrawn" typically
+# HEADS a paragraph that then discusses the replacement, so the paragraph is the
+# right zone. "We withdraw X" names its object in the SAME SENTENCE and is
+# normally embedded in a paragraph of live measurements -- taking the paragraph
+# there flagged 1.02 and 1.31, which are current measured ratios that happen to
+# sit beside a sentence retracting something else.
+PASSIVE = re.compile(r"\b(?:is|are|was|were)\s+(?:withdrawn|retracted)\b")
 zones = []
 for m in WD.finditer(t):
-    # the paragraph containing it
-    start = t.rfind("\n\n", 0, m.start()) + 2
-    end = t.find("\n\n", m.end())
-    zones.append((start, end if end > 0 else len(t)))
+    if PASSIVE.search(m.group(0)):
+        start = t.rfind("\n\n", 0, m.start()) + 2
+        end = t.find("\n\n", m.end())
+        zones.append((start, end if end > 0 else len(t)))
+    else:
+        zones.append((m.start(), m.end()))       # the sentence only
 
 NUM = re.compile(r"\$?(\d+\.\d{2,})\$?")
 withdrawn = collections.defaultdict(list)
