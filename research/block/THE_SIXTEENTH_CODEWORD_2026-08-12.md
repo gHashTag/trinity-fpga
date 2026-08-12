@@ -5,6 +5,16 @@ that a Gaussian-quantile codebook from 2023 outclasses a hand-designed float.
 That conclusion was wrong about *why*, and the correction is a cleaner result
 than the observation it replaces.
 
+> **Attribution, 2026-08-12.** The structural observation — that a
+> symmetric few-bit alphabet wastes a representable value — is published:
+> *Signed Symmetric Quantization for Few-Bit Integers*,
+> [arXiv:2607.08779](https://arxiv.org/abs/2607.08779), from the integer
+> side (int4's `−8 … +7` misallocated by symmetric scaling). What is ours
+> is narrower and stated in `PRIOR_ART_SIXTEENTH_CODEWORD_2026-08-12.md`:
+> the exact decomposition showing the codeword is the *entire* NF4 margin,
+> the block-float setting under E8M0, the non-monotone placement, and the
+> drop-in E2M1 variant.
+
 ## The arithmetic nobody had done
 
 Every arm here costs **4.250 bits per element**: a 4-bit element index — sixteen

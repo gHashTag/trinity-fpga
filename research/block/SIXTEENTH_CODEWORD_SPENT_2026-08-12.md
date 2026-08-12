@@ -4,6 +4,16 @@ T40 established that a symmetric 8-magnitude book forfeits one of its sixteen
 codewords on a second zero, and that the forfeit — not the shape of NF4's
 quantile curve — is where NF4's margin comes from. This spends it.
 
+> **Attribution, 2026-08-12.** The structural observation — that a
+> symmetric few-bit alphabet wastes a representable value — is published:
+> *Signed Symmetric Quantization for Few-Bit Integers*,
+> [arXiv:2607.08779](https://arxiv.org/abs/2607.08779), from the integer
+> side (int4's `−8 … +7` misallocated by symmetric scaling). What is ours
+> is narrower and stated in `PRIOR_ART_SIXTEENTH_CODEWORD_2026-08-12.md`:
+> the exact decomposition showing the codeword is the *entire* NF4 margin,
+> the block-float setting under E8M0, the non-monotone placement, and the
+> drop-in E2M1 variant.
+
 ## The construction, and it is not fitted to anything
 
 **MX-asym-NEAR0** is E2M1's exact magnitudes plus **one extra positive level at
