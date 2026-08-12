@@ -6856,3 +6856,44 @@ copy. Hand-writing it would have been slower and less trustworthy than
 checkout on every run since July" was wrong — those runs got past checkout and
 failed one step later, a different wall entirely. I had restated my own inference
 until it read as established.
+
+## Wave 683 — withdraw the explanation you cannot reproduce, keep the fix you verified
+
+**I published a mechanism I could not reproduce.** Prop. 173d claimed
+`$( cmd 2>&1 )` fails to capture stderr across a multi-line command
+substitution. Re-tested: it captures 132 KB with the warning present, and with
+`-q` restored it *still* contains the exact pattern the guard greps for. **Two
+changes went in together — dropping `-q` and redirecting to a file — and I
+credited the wrong one.** Change one thing when you intend to learn which one
+mattered; if you changed two, say the attribution is untested.
+
+The fix stands on its *verification* (passes clean, bites a planted phantom).
+The explanation does not. Those are separable, and only the second was wrong.
+
+**A depth-scanned `<...>` runs to EOF, because `<` is also a comparison.**
+Bounding it by SHAPE — `< Ident (, Ident)* >` — cannot run away. But shape bounds
+are narrow: `Result<[T?], StorageError>` has an argument that is not a bare
+identifier, and a correct version needs the argument to be a full type
+recursively. A parser without backtracking cannot attempt that, because a failed
+match has already consumed tokens. **Record the blocking constraint instead of
+shipping a narrower thing that looks complete.**
+
+**Fixing one copy of a defect exposes the other.** The bounded fn-name scan
+immediately hit an *identical* depth scan in `parse_type_annotation`, which had
+never mattered because the name always failed first. Third instance of the
+occlusion relation in this campaign — and the first between two copies of one
+mistake. **After fixing a shape, grep for the shape.**
+
+**Sweep for a shape the moment you have a rule for it.** Prop. 173 gave "never
+let the default branch of a verdict be the answer most checks expect". Scanning
+every workflow step for that found the witness step within minutes — same
+phantom exposure, all 14 cases expecting a refutation, invisible by construction.
+
+**A hand-written property file is a phantom surface.** Any artifact naming a
+signal by string, checked against a *generated* design, decouples silently the
+moment the generator renames it. One grep of the tool's warnings catches it, and
+it belongs in every such step — not only where you first noticed.
+
+**Keep a strictly-safer change even when it moves no number.** Replacing an
+unbounded scan with a bounded one changed nothing measurable and removed a path
+that was one signature away from destroying a file.
