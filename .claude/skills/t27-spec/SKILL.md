@@ -7175,3 +7175,39 @@ and 96 of them are English sentences and Markdown bullets in files carrying a
 drive that number down would mean either mangling the parser or deleting other
 people's documentation — so the honest move is to say what the residue is and
 stop.
+
+## Wave 692 — locating duplication is mechanical; removing it is not
+
+**The grep found the fourth copy in one command.** After two copies of a type
+parser were found by accident, two waves apart, scanning for the idiom — building
+a type string from raw lexemes instead of calling the shared parser — returned
+the remaining one immediately. **Run that grep the same hour you remove the first
+duplicate.**
+
+**But two repairs both regressed, identically.** Delegating to the shared parser
+took the ratchet from 161 events / 0 blind specs to 171 / 6, because that parser
+has no notion of a *field terminator* and consumed the struct's closing brace.
+Making the local loop nesting-aware regressed to exactly the same numbers.
+Reverting restored 161 / 0, which is what identified the cause.
+
+**Each copy has adapted to the call sites that reach it.** That is why removing
+one is not mechanical: the shared parser is correct for parameters and return
+types, where the terminator is `,` or `)` or `{`, and wrong for fields, where it
+is `,` or `}`. A duplicate is not simply redundant code — it encodes a context.
+
+**A scanner's termination must never depend on its input being well-formed.**
+My nesting-aware loop exited only when brackets balanced, so an unbalanced type
+at end-of-file spun forever — the lexer yields `Eof` indefinitely and `advance()`
+never progresses. It hung the build. Put the `Eof` break first and
+unconditionally.
+
+**When the obvious explanation is checkable, check it.** I assumed
+`parse_struct_body` was shared with unrelated grammar. It has exactly two
+callers, both genuine structs — so the regression is over-consumption shifting
+everything downstream, and the observable failure sat 40 lines later at an
+unrelated block. Same shape as a runaway string: **a scanner that consumes too
+much reports at the consumer, with no information about the cause's location.**
+
+**Two eliminated approaches, recorded at the site with their measurements, beat a
+third guess.** The next attempt needs the counterexample field type — which is a
+different piece of work from "try another loop".
