@@ -6536,3 +6536,46 @@ it is what made deleting 15143 lines a safe autonomous action rather than a risk
 16 of 72 blocked specs were provably mine under the pre-image oracle. The
 remaining 56 need a human, and saying "56" instead of "72" is the difference
 between a decision and a chore.
+
+## Wave 674 — a count cited as evidence must range over what its gate checks
+
+**"546 Qed. across 41 files" is exactly right and means less than it reads.**
+69 of those 546, in 7 files, are in no `_CoqProject` — so `coq_makefile` never
+generates a rule for them, `make` never compiles them, and no CI job type-checks
+them. Two carry headers saying in capitals they do not compile. Across all three
+proof trees: **560 Qed inside a build, 123 outside one.**
+
+**`grep -c 'Qed\.'` measures proof terminators in text; only membership in a
+build measures proofs.** Fourth instance in this campaign of an accurate count
+over a wider denominator than the check supporting it.
+
+**Corollary worth applying to any evidence claim: compare the citation's glob
+against the gate's input set.** Where the citation's domain strictly contains the
+gate's, the excess is presented as evidence and supported by nothing — and it is
+invisible precisely *because* the count is correct.
+
+**Do not commit someone's half-finished proof inside a wave about honesty.**
+`PhiAttractor.v` had uncommitted changes too — but they *remove* four
+proof-bearing lines and add a TODO. That is mid-work weakening a file, not an
+annotation. Committing it under a banner of "adding honesty headers" would have
+quietly reduced verified content. Leave it and name it.
+
+**Third filter mismatch, all mine, all invisible for the same reason.** "15 files
+in HEAD vs 11 on disk" was `git ls-tree` (all entries) against `find -name
+'*.v'` (proof files only). Earlier: a regex over `const` against AST nodes; a
+counter keyed on `(state, class)` against examples keyed on `class`. **Both sides
+are always computed correctly — that is why none of them look wrong.** State the
+set each side ranges over *before* subtracting.
+
+**When a file mixes your mechanical repair with someone's unfinished edit, split
+it at the line level and stage into the INDEX.** `git hash-object -w` plus
+`git update-index --cacheinfo` commits your lines while leaving their work
+untouched in the working tree. Overwriting the file would have destroyed
+uncommitted work; skipping it leaves the repair permanently blocked. This only
+works where line counts match — where lines were added or removed, no positional
+oracle applies and a human is required. 2 of 56 qualified; saying which is the
+deliverable.
+
+**A ratchet is the right shape when the fix requires a judgement you cannot
+make.** Whether an unbuilt proof file *should* be added to a build is
+mathematics, not scanning. The gate records the set and fails when it grows.
