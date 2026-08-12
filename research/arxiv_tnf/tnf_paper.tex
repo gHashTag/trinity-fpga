@@ -4432,6 +4432,50 @@ surface is nearly flat in the scale, the lattice minimum at $h = 1/16$ sits far
 from $t^{*}$, and what is being measured there is the global bowl and not any
 local shape. We report it and claim nothing from it.
 
+\paragraph{We tried to restore the constant by derivation, and it cannot be
+done at this level of description.} The obvious repair is to stop reading a
+spacing off Theorem~\ref{thm:latticeexp} and instead equate its two branches
+directly. Setting $\tfrac{1}{24}g''h^{2} = \tfrac12 c_{-}c_{+}h/(c_{-}{+}c_{+})$
+gives a crossover with no fitted constant anywhere,
+$$N^{*}_{\text{theory}} \;=\; \frac{g''(t^{*})\,(c_{-}+c_{+})}{12\,c_{-}c_{+}},$$
+and every term is exactly computable per block rather than estimated: on a single
+arc the rounding indices are frozen, so $g(t) = s^{2}A - 2sB + C$ with $s=2^{t}$,
+$A = \sum L_{i}^{2}$, $B = \sum L_{i}v_{i}$, whence
+$g'' = 2(\ln 2)^{2}s(2sA-B)$ and each one-sided slope is
+$2(\ln 2)s(sA-B)$ taken with its own arc's $(A,B)$. No finite differences are
+involved, so the estimate does not inherit a lattice bias.
+
+It does not work. Against the seven measured crossovers, and across five ways of
+aggregating the per-block value to the population the measurement is taken over
+--- median, mean, $90$th percentile, and weighting by each block's corner
+coefficient or by its curvature --- \emph{no predictor is even approximately
+constant}:
+
+\begin{center}\small
+\begin{tabular}{lrr}
+\toprule
+predictor of $N^{*}$ & mean ratio & coefficient of variation \\
+\midrule
+$1/w^{*}$, arc containing the optimum & $0.27$ & $32.1\%$ \\
+$N^{*}_{\text{theory}}$, median over blocks & $0.30$ & $37.6\%$ \\
+$N^{*}_{\text{theory}}$, corner-weighted & $0.21$ & $37.8\%$ \\
+$D$, the withdrawn heuristic & $0.84$ & $40.5\%$ \\
+$N^{*}_{\text{theory}}$, curvature-weighted & $1.22$ & $51.4\%$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent A usable predictor would sit near $10\%$; the best of these is $32\%$,
+and it is not the derived one. \textbf{The crossover is not a local functional of
+the error curve at the optimum.} That is not a defect in the theorem, which
+concerns two asymptotic regimes and is exact in each: it is that equating leading
+terms locates a crossover only when every block is deep in one regime or the
+other, and near the crossover none is. The measured $N^{*}$ is where the exponent
+of a \emph{sum} over millions of blocks reaches two, and that is a property of the
+whole distribution of per-block behaviours over a range of $h$ --- not of any one
+block's slopes and curvature at its own minimum. We record the attempt and the
+formula so the next reader does not spend the afternoon we spent.
+
 \paragraph{What survives, and it is what a designer needs.} The ordering held
 across \emph{seven} codebooks, two element widths and a $31\times$ range of $D$.
 A designer choosing between element codebooks can still rank them by counting
