@@ -129,6 +129,31 @@ Model weights for this line live under a *previous session's* scratchpad
 Qwen, Pythia, GPT-2, OPT, and wikitext-2). Check there before downloading
 anything — it survives across sessions but not forever.
 
+### Pool over the unit your claim is about
+
+Three times in this campaign a window-pooled p-value certified a claim that
+model-level pooling does not support. It is the single most repeated error here.
+
+    "beats NF4 out of sample, -2.87%, p = 1.7e-13"     100 windows, 3 models
+    the same data, pooled by model:  -2.55% [-7.43, +2.59], p = 0.163
+
+Windows are replicates of the **text**. A claim about *this model on this corpus*
+may pool them. A claim of the form "beats X across models" has n = 3, and the
+window count is not evidence for it — it is evidence about wikitext-2.
+
+- **Name the unit before computing the statistic.** Whichever noun follows
+  "across" in the sentence you intend to write is the unit: across models, across
+  layers, across seeds. `KL_CODEBOOK_WITHDRAWN` is the standing precedent — a
+  `t = -12.51` over 40 windows certified an overfit that failed on two families.
+- **A selection protocol needs a leave-one-out rotation.** If a placement,
+  hyperparameter or variant was chosen on one model, re-run the choice on each of
+  the others and report all of them. For the sixteenth-codeword result three of
+  four rotations gave a tie and the fourth **lost**: one rotation of four produced
+  the headline, which is what the single-selection number was silently reporting.
+- **A comparison that survives the rotation is the one to quote.** The same work's
+  MXFP4 comparison held under every rotation and every model, so that is the
+  claim that shipped; the NF4 comparison did not, so it was demoted to a tie.
+
 ### Equal bits is not equal levels
 
 The single cleanest result of 2026-08-12, and it came from checking an arithmetic
