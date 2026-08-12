@@ -6309,3 +6309,48 @@ nobody built the fine one.
 verification.** If the assertion is the assignment's right-hand side copied, it
 can only fail on an inconsistent edit. Keep it if it guards wiring rather than
 formula — but say so in a comment, so the choice is countable.
+
+## Wave 669 — a suite whose expected output is constant is testing one thing
+
+**Sweeping shape does not enlarge the input set.** For 139 propositions every
+vector was all-(+1) inputs against all-(+1) weights. The accumulator is then
+always `27C` and the trit always `TRIT_P` — so a sign error, a lane
+transposition, a wrong trit decode and an inverted comparison all survive, in
+every configuration. A twelve-point grid replicating one input is one test with
+twelve names. **Ask which parameters the OBSERVABLE can see, and whether the
+expected output ever changes.** If it doesn't, the suite size is decoration.
+
+**A boundary disagreement is visible only from the boundary.** Randomised trits
+found it in two seeds: at `acc = -threshold` exactly, the design emitted TRIT_N
+and my independently written reference said TRIT_Z. Nothing else in the range
+disagreed. The all-(+1) vector produced `acc >= 27` — never within 24 of the
+threshold — so it was structurally incapable of reaching the one point where the
+two implementations differed.
+
+**When two implementations disagree and no spec exists, say which way the
+evidence pointed, not just who won.** The design's convention was stated twice
+(RTL chain plus its own inline properties) and mine agreed with neither, so mine
+was wrong. But write down that had the intended semantics been the other way,
+the same evidence would have condemned the design. "The design is the design"
+is not a reason.
+
+**An ill-posed configuration is not a conservative one.** A published figure
+here — "20 of 28 configurations terminate" — counted twelve points outside the
+design's contract. That does not make a pass-rate pessimistic; it makes it
+uninterpretable, because undefined behaviour can fall either way (and in the
+previous wave, the analogous points did both). Replaced with 16 of 16 over the
+well-formed subset — smaller, and it measures correctness rather than
+termination.
+
+**Retroactive checks that CLEAR a prior claim are worth running too.** The same
+audit that condemned "20 of 28" confirmed the one-in-81 headline untouched,
+because that sweep was all single-layer, where the well-formedness predicate is
+vacuous. Report both halves.
+
+**Two exemptions can look identical and be opposite.** One step was vacuous *by
+design* (a canary: it proves only when assumptions are live). Another was
+*immune* — its pass condition is a refutation, which vacuity makes impossible, so
+the hazard cannot reach it. Granting the second an exemption-by-argument would
+have hidden that it never needed one. Enforce both: a canary that stops being
+vacuous, and an immunity claim naming a step that no longer exists, are each a
+silent loss of coverage.
