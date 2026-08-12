@@ -4182,6 +4182,44 @@ field naming nothing, the same packing loss Theorem~\ref{thm:tiling} describes
 for the exponent, now appearing in the scale. It is neither the cheap option nor
 the accurate one.
 
+
+\paragraph{Accuracy and area in one calculation, which changes the recommendation.}
+The two measurements above --- perplexity from the sweep, area from the placed
+appliers --- say something together that neither says alone.
+
+\begin{center}\small
+\begin{tabular}{lrrrr}
+\toprule
+arm, all $4.25$ b/el & ppl & vs MXFP4 & applier LUT & gain per $100$ LUT \\
+\midrule
+MXFP4, Algorithm 1 & $25.056$ & --- & $207$ & --- \\
+\textbf{MXFP4 $+$ argmin encoder} & $22.013$ & $+12.15\%$ & $\mathbf{207}$ & $\mathbf{5.87}$ \\
+$\varphi^{k}$ & $23.061$ & $+7.96\%$ & $1{,}244$ & $0.64$ \\
+$2^{k/3}$, five trits & $20.034$ & $+20.04\%$ & $1{,}244$ & $1.61$ \\
+$2^{k/8}$ & $18.906$ & $+24.55\%$ & $1{,}576$ & $1.56$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+\textbf{The cheapest arm is $3.6$ times more efficient per LUT than the best
+ladder}, and it is not a format at all: an argmin over the same $254$
+\texttt{E8M0} codes emits a byte-legal MXFP4 bitstream. Past it the marginal
+price is $131$ LUT per point of perplexity for $2^{k/3}$ and $110$ for
+$2^{k/8}$.
+
+The recommendation this section reaches is therefore not the one its accuracy
+table alone would give. \emph{Fix the encoder first --- it is free, it is legal
+MXFP4, and it buys half of what the finest ladder buys.} Take a fractional
+ladder only where a further tenth of the \texttt{fp32} gap is worth roughly a
+thousand LUT, and then take the finest that fits rather than an intermediate
+one: the multiply is the cost and the resolution is nearly free once it is paid.
+
+\emph{This is the sharpest form of a finding that recurs through this paper.}
+The largest single improvement available on the block axis belongs to the
+baseline and had been left on the table by its own reference encoder --- not to
+a new format, not to a new algebra, and not to us.
+
 \paragraph{The origin constant, measured rather than assumed.}
 A finer ladder buys resolution by spending range: at step $2^{k/N}$ an eight-bit
 field spans $255/N$ octaves against MXFP4's $255$. Whether that is enough is a
