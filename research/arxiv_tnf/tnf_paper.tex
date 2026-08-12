@@ -4769,6 +4769,59 @@ functional of $\Delta W$ alone is therefore pinned by measurement and cannot
 separate a model that loses a fifth of its perplexity from one that loses three
 quarters.
 
+\paragraph{And the sensitivity is a property of the model, not of the pairing.}
+Proposition~\ref{prop:sensitivity} was measured on one encoder, which leaves open
+whether the ratio is a stable model property or a model--format interaction that
+happens to look stable at one point. Four models by four encoders --- MXFP4's
+reference rule, its squared-error argmin, $2^{k/3}$ and $2^{k/8}$ --- settles it,
+and the prediction was registered first
+(\texttt{research/block/PREREG\_sensitivity\_scope\_2026-08-12.md}).
+
+Second order requires the invariant to be
+$S_{2} = \Delta_{\mathrm{ppl}} / p^{2}$ with $p = \lVert\Delta W\rVert_{F} /
+\lVert W\rVert_{F}$, and \emph{not} the ratio $\Delta_{\mathrm{ppl}}/p$ that
+Proposition~\ref{prop:sensitivity} is diagnosed by; the registration says so
+explicitly, because printing the first-power ratio as though it were a candidate
+invariant would be a units error of the kind this paper keeps finding in itself.
+
+\begin{table}[t]\centering
+\caption{Sensitivity across four encoders. Within-model spread of
+$S_{2}=\Delta_{\mathrm{ppl}}/p^{2}$ against the first-power ratio, and both
+against the between-model spread. \emph{Every registered prediction held.}}
+\label{tab:sensscope}
+\begin{tabular}{lrrr}
+\toprule
+model & spread of $\Delta_{\mathrm{ppl}}/p$ & spread of $S_{2}$ & $S_{2}$, mean \\
+\midrule
+GPT-2   & $1.82\times$ & $\mathbf{1.46\times}$ & $13.4$ \\
+Qwen    & $1.62\times$ & $\mathbf{1.33\times}$ & $15.1$ \\
+SmolLM2 & $2.15\times$ & $\mathbf{1.67\times}$ & $34.4$ \\
+Pythia  & $1.40\times$ & $\mathbf{1.13\times}$ & $57.2$ \\
+\midrule
+between models & $4.14\times$ & $\mathbf{4.26\times}$ & \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent \textbf{$S_{2}$ is tighter than the first-power ratio on all four
+models}, the worst within-model spread is $1.67\times$ against a between-model
+spread of $4.26\times$, and the ordering by $S_{2}$ reproduces the ordering by
+damage exactly. So sensitivity is a model property: \emph{one number per model
+predicts what any of four structurally different block encoders will cost it, to
+within a factor of $1.67$.} The registration also carried a caution that a
+second-order expansion has no right to hold at $p \approx 11.7\%$ with perplexity
+rising by up to three quarters. That caution proved unnecessary, which is
+informative in itself --- the quadratic regime reaches further into this
+amplitude than we expected it to.
+
+Two consequences. For anyone measuring: $S_{2}$ can be calibrated on the cheapest
+encoder and used to predict the rest, which is the model-side companion to
+Corollary~\ref{cor:designrule}'s codebook-side ranking. For this paper: it
+explains why every magnitude in Proposition~\ref{prop:transfer} failed to
+transfer while every sign did. \emph{A format's ranking is carried by the
+perturbation, which is constant across models; a format's margin is carried by
+$S_{2}$, which is not.}
+
 \paragraph{The standard explanation does not survive either, and its failure is
 inverted.} Block-level outliers are what the quantisation literature reaches for
 here~\cite{awq,mxgap}, and a block whose maximum sits far above its own RMS does
