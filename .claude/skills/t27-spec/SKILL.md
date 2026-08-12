@@ -7423,3 +7423,74 @@ because each wave runs the gates its change touches.
 So: **when you add or edit any gate, re-run the entire set, not the ones you
 think are affected.** A gate suite is a single object; editing one member can
 falsify another's stated contract, and a per-change subset run will not see it.
+
+## CORRECTION — the syntax block above is not the language the compiler reads
+
+This skill opens by saying a verified claim must be recorded as a `.t27` spec, and
+gives a "Syntax in one block" section with `spec`/`rule`/`lemma`/`conjecture`/
+`verification`/`finding`, citing three files as *"the working idioms, not
+invented"*. **Measured against `t27c`, that form is read as an empty shell.**
+
+| form | files | code lines | AST nodes captured | density |
+|---|---|---|---|---|
+| `module X { const NAME : T = v; }` | 41 | 7,194 | 4,982 | **69.3 / 100 lines** |
+| `spec` / `rule` / `lemma` / `finding` | 28 | 13,598 | **56** | **0.4 / 100 lines** |
+
+**173×.** The declarative form yields exactly **2 nodes per file regardless of
+size** — `kind: Module, name: ""`, an anonymous wrapper with nothing inside. A
+6,630-line spec produces 2 nodes. The parser reads the outer shell and stops.
+
+Two of the three cited example files also **do not exist in the `t27` repo at
+all** — they live only in `trinity-fpga`, which has no parser. The table silently
+spanned two repositories, so "read one before writing a new spec" pointed at files
+a reader in `t27` cannot open and nothing has ever parsed.
+
+### What to write instead
+
+Use the **module form**, which is what the corpus uses and what `t27c` reads:
+
+```
+module GammaConjecture {
+    use math::constants;
+
+    // Claim: C-gamma-001 (CONJECTURAL), tolerance: CONJECTURAL
+    const GAMMA_PHI : f64 = pow(PHI, -3.0);
+}
+```
+
+Provenance, status tags and honesty limits still go in — as **comments attached to
+the declaration they qualify**, exactly as `specs/physics/gamma_conjecture.t27`
+does (0 recovery events, fully captured). The discipline is unchanged; the
+container is.
+
+### The general lesson, and it is the sharp one
+
+**Recorded is not read.** Every gate in that campaign enforces some
+well-formedness predicate `W` — parses without recovery, delimiters balance,
+quotes even. None of them entails `R`, that a consumer extracts content. A file
+can satisfy all of `W` and still yield `O(1)` output for `O(n)` input.
+
+The separating observable is not any predicate on the file. It is **whether the
+consumer's output scales with the input** — a ratio, not a pattern, which is why
+no shape search could find it and no numerator could report it.
+
+**Practical test, before writing anything into a source-of-truth format:**
+
+```bash
+<the tool> parse <your file> | grep -c "kind:"
+```
+
+Then double the file and run it again. If the count does not move, the tool is not
+reading your file, whatever its exit code says. This costs one command and would
+have saved 13,598 lines written into a shell.
+
+### An instrument refuted me in its own log — leave that mechanism in
+
+The gate written this wave asserted in its docstring that the corpus was "sharply
+bimodal, a factor of 200 with nothing in between", to justify a single threshold.
+It also printed the measured gap on every run. The first run printed **6×**.
+
+The claim never shipped, purely because the number that falsifies it was in the
+output next to it. **Make gates print the quantity their own threshold rests on.**
+A tuned constant with its justification unprinted is a claim nobody can check —
+including you, one wave later.
