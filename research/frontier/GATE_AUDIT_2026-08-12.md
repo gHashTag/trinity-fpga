@@ -92,3 +92,61 @@ passes all 8 gates.
 > **Regression-passing tells you a checker catches the case you wrote. Mutation
 > testing tells you what it catches.** And the mutations must come with controls,
 > because a harness that finds holes everywhere has usually found itself.
+
+---
+
+# Round two: five gates covered, two more holes, and a harness that infected what it tested
+
+## Two more holes, both the same class
+
+| gate | mutation | before | after |
+|---|---|---|---|
+| `check_self_consistency` | *"We have retracted twelve claims"* — count **after** the verb | 🕳 passed | ✓ caught |
+| `check_conformance_counts` | count written `62208` instead of `62{,}208` | 🕳 passed | ✓ caught |
+
+Both are **one notation recognised**, the third and fourth instance of the same
+habit in two days. The retraction counter knew one voice; this one knew one word
+order and one thousands-separator convention.
+
+## Two broken controls, both my aim rather than the gates
+
+- `check_exponent_window` **does not read Verilog at all** — it derives the
+  exponent span arithmetically from `conformance/tnf_spec_ref.py`. Mutating a
+  `.v` file proved nothing about it. Retargeted at the ladder: control now fails
+  as it must.
+- `check_conformance_counts` keys on the phrase *"in-specification codes exact"*
+  within 130 characters. My mutation changed the **first** `62{,}208` in the
+  file, which is not that one.
+
+> **A control that passes is usually a statement about your aim, not about the
+> gate.** Both times the fix was to find out what the gate actually reads.
+
+## ⚠ The serious one: the harness left its mutation running
+
+After a clean run with every file byte-restored and `git status` clean, **two
+gates failed on the restored tree**. `conformance/tnf_spec_ref.py` read `et=5`
+on disk and returned `et=7` through import.
+
+**A `.pyc` records the source mtime it was compiled from. A restore that lands in
+the same second as the mutated compile leaves the cache looking valid.** So the
+mutation survived the restore, invisibly, in bytecode — and the next gates ran
+against it and failed for a reason that had nothing to do with them.
+
+Fixed: `restore_all()` now purges `__pycache__` and touches the source. Verified
+by running the full gate suite immediately after the harness with no manual
+cleanup.
+
+> **Restoring content does not restore behaviour.** Anything that compiles,
+> caches, or memoises can carry a mutation past a byte-perfect rollback — and
+> sub-second mtime granularity makes the cache look fresh precisely when the
+> rollback was fast.
+
+This is the same failure class as the campaign's oldest lesson: *a poisoned
+environment makes correct fixes test as failures*. The two gates were fine. The
+tree was fine. The bytecode was not.
+
+## Coverage
+
+**5 of 8 gates** now mutation-covered, **9 mutations**, **all controls fail as
+they must**, **0 holes remaining**. Uncovered: `check_overfull`,
+`check_ladder_units`, `check_codespace_claims`.

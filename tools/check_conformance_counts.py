@@ -50,7 +50,12 @@ for name, f in ref.FORMATS.items():
 
 # numbers in the paper written LaTeX-style with a thousands separator, sitting
 # next to the word "codes" -- those are the conformance counts
-PAT = re.compile(r"\$?(\d{1,3}(?:\{,\}\d{3})+)\$?")
+# This matched ONLY the LaTeX thousands-separator form. A count written
+# 62208 instead of 62{,}208 was invisible, so a wrong conformance count in
+# plain digits passed silently -- mutation-confirmed. The scope filter
+# below ("in-specification codes exact" within 130 chars) is what keeps the
+# wider pattern from sweeping in unrelated integers.
+PAT = re.compile(r"\$?(\d{1,3}(?:\{,\}\d{3})+|\d{4,})\$?")
 fails, checked, unclassified = [], 0, 0
 for m in PAT.finditer(paper):
     lo, hi = max(0, m.start() - 130), min(len(paper), m.end() + 130)

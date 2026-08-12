@@ -17,6 +17,7 @@ The paper is restored from a backup after every mutation, and the restore is
 verified by byte comparison before the next one runs.
 """
 import hashlib
+import os
 import pathlib
 import shutil
 import subprocess
@@ -28,6 +29,31 @@ BAK = pathlib.Path("/tmp/tnf_paper_mutation_backup.tex")
 ORIG = PAPER.read_bytes()
 DIGEST = hashlib.sha256(ORIG).hexdigest()
 shutil.copy2(PAPER, BAK)
+
+# Mutations are no longer confined to the paper: half the gates read Verilog or
+# the conformance reference instead. Every touched file is snapshotted by bytes
+# and restored by bytes, and the restore is verified before the next case runs.
+SNAP = {}
+def snapshot(paths):
+    for q in paths:
+        SNAP[q] = pathlib.Path(q).read_bytes()
+def restore_all():
+    """Restore by bytes AND purge bytecode.
+
+    Restoring content is not enough. A .pyc records the source mtime it was
+    compiled from, and a restore that lands in the SAME SECOND as the mutated
+    compile leaves the cache looking valid -- so the next gate imports the
+    MUTATION from cache while the source on disk is correct. That happened here:
+    conformance/tnf_spec_ref.py read et=5 on disk and et=7 through import, and
+    two gates failed on a clean tree afterwards.
+    """
+    for q, b in SNAP.items():
+        f = pathlib.Path(q)
+        f.write_bytes(b)
+        for c in f.parent.glob("__pycache__/*.pyc"):
+            c.unlink(missing_ok=True)
+        os.utime(f, None)
+    SNAP.clear()
 
 BODY = r"\section{The format}"
 ABSTRACT_END = r"\end{abstract}"
@@ -50,62 +76,95 @@ def run(gate):
     return r.returncode == 0            # True = gate passed
 
 
-# A tool that ends in an unconditional sys.exit(0) cannot fail, so mutating the
-# paper against it proves nothing. check_paper_numbers and
-# check_scoped_superlatives are REPORTS, not gates, and were being counted among
-# "gates green" for thirteen iterations. Probe rather than assume.
+
 import re as _re
 def gates_at_all(name):
     s = (ROOT / "tools" / f"{name}.py").read_text()
     return bool(_re.search(r"sys\.exit\((?!0\))|sys\.exit\(main\(\)\)", s))
 
-# The withdrawal and the live assertion must land in DIFFERENT paragraphs: the
-# gate deliberately ignores a number that appears inside the withdrawal's own
-# paragraph, since a replacement value lives there. The first harness put both in
-# one insertion, so its control could not fail -- which is what the control was
-# for.
-WD_ANCHOR = r"\section{The format}"
-LIVE_ANCHOR = r"\section{Hardware}"
+PAP = str(PAPER)
+def find_one(pat, glob):
+    """First file under ROOT matching glob that contains pat."""
+    for q in sorted(ROOT.glob(glob)):
+        if q.is_file() and pat in q.read_text(errors="ignore"):
+            return str(q)
+    return None
+
+VERI = find_one("8'd127", "fpga/**/*.v")
+SPEC = str(ROOT / "conformance" / "tnf_spec_ref.py")
+
+# Each case: (label, gate, [(file, old, new)], is_control)
+# A control uses the phrasing the gate was written against and MUST fail.
+# A test uses an equally ordinary alternative; if it passes, the hole is real.
 CASES = [
     ("снятие СТРАДАТЕЛЬНЫМ залогом", "check_withdrawn_live",
-     [(WD_ANCHOR, "\n\nThe $77.77\\%$ figure is withdrawn.\n\n"),
-      (LIVE_ANCHOR, "\n\nThe rung measures $77.77\\%$ throughput per LUT.\n\n")], True),
+     [(PAP, r"\section{The format}",
+       "\\section{The format}\n\nThe $77.77\\%$ figure is withdrawn.\n"),
+      (PAP, r"\section{Hardware}",
+       "\\section{Hardware}\n\nThe rung measures $77.77\\%$ per LUT.\n")], True),
     ("снятие ДЕЙСТВИТЕЛЬНЫМ залогом", "check_withdrawn_live",
-     [(WD_ANCHOR, "\n\nWe withdraw the $77.77\\%$ figure.\n\n"),
-      (LIVE_ANCHOR, "\n\nThe rung measures $77.77\\%$ throughput per LUT.\n\n")], False),
+     [(PAP, r"\section{The format}",
+       "\\section{The format}\n\nWe withdraw the $77.77\\%$ figure.\n"),
+      (PAP, r"\section{Hardware}",
+       "\\section{Hardware}\n\nThe rung measures $77.77\\%$ per LUT.\n")], False),
     ("дубль \\label", "check_latex_hygiene",
-     [(WD_ANCHOR, "\n\n\\label{sec:format}\n\n")], True),
-    ("ссылка \\ref без \\label", "check_latex_hygiene",
-     [(WD_ANCHOR, "\n\nSee Section~\\ref{sec:nonexistent-xyz}.\n\n")], True),
+     [(PAP, r"\section{Hardware}", "\\section{Hardware}\\label{sec:format}")], True),
+    ("\\ref без \\label", "check_latex_hygiene",
+     [(PAP, r"\section{Hardware}",
+       "\\section{Hardware} See Section~\\ref{sec:nope-xyz}.")], True),
+    ("счёт снятий, ЗНАКОМАЯ форма", "check_self_consistency",
+     [(PAP, "Sixteen retractions are marked in place below.",
+       "Twelve retractions are marked in place below.")], True),
+    ("счёт снятий, ДРУГАЯ форма", "check_self_consistency",
+     [(PAP, r"\section{Hardware}",
+       "\\section{Hardware}\n\nWe have retracted twelve claims in this document.\n")], False),
+    # The gate keys on the phrase "in-specification codes exact" within 130
+    # characters, so the mutation must hit THAT occurrence, not the first one in
+    # the file. The first harness changed an unrelated 62{,}208 and its control
+    # could not fail.
+    ("счёт соответствия, С РАЗДЕЛИТЕЛЕМ", "check_conformance_counts",
+     [(PAP, "$62{,}208$ of $62{,}208$ in-specification codes exact",
+            "$62{,}209$ of $62{,}209$ in-specification codes exact")], True),
+    ("счёт соответствия, БЕЗ РАЗДЕЛИТЕЛЯ", "check_conformance_counts",
+     [(PAP, "$62{,}208$ of $62{,}208$ in-specification codes exact",
+            "$62209$ of $62209$ in-specification codes exact")], False),
+    # check_exponent_window reads the LADDER, not any Verilog: it checks the
+    # exponent span arithmetically from conformance/tnf_spec_ref.py. Mutating a
+    # .v file proved nothing about it, which is why that control passed.
+    ("окно экспоненты, E_t за предел", "check_exponent_window",
+     [(SPEC, "et=5", "et=7")], True),
 ]
 
-def apply_all(edits):
-    t = ORIG.decode()
-    for anchor, text in sorted(edits, key=lambda e: -t.index(e[0])):
-        i = t.index(anchor) + len(anchor)
-        t = t[:i] + text + t[i:]
-    return t
+def apply_edits(edits):
+    snapshot({f for f, _, _ in edits})
+    for f, old, new in edits:
+        q = pathlib.Path(f); s = q.read_text()
+        if old not in s:
+            raise LookupError(f"{pathlib.Path(f).name}: не найдено {old[:40]!r}")
+        q.write_text(s.replace(old, new, 1))
 
-print(f"  статья: {len(ORIG):,} байт, sha256 {DIGEST[:12]}\n")
-print(f"  {'мутация':34s} {'гейт':24s} {'роль':9s} итог")
-holes, broken = [], []
+print(f"  {'мутация':40s} {'гейт':26s} {'роль':9s} итог")
+holes, broken, skipped = [], [], []
 for label, gate, edits, ctrl in CASES:
     if not gates_at_all(gate):
-        print(f"  {label:34s} {gate:24s} {'—':9s} ⚠ НЕ ГЕЙТ (безусловный exit 0)")
-        broken.append(gate); continue
+        print(f"  {label:40s} {gate:26s} {'—':9s} ⚠ НЕ ГЕЙТ"); broken.append(gate); continue
     try:
-        PAPER.write_text(apply_all(edits))
+        apply_edits(edits)
+    except LookupError as e:
+        restore_all(); print(f"  {label:40s} {gate:26s} {'—':9s} ⚠ {e}")
+        skipped.append(gate); continue
+    try:
         passed = run(gate)
     finally:
-        restore()
+        restore_all()
     role = "контроль" if ctrl else "тест"
     if passed:
-        print(f"  {label:34s} {gate:24s} {role:9s} "
+        print(f"  {label:40s} {gate:26s} {role:9s} "
               f"{'❗СТЕНД СЛОМАН' if ctrl else '🕳 ДЫРА'}")
         (broken if ctrl else holes).append(gate)
     else:
-        print(f"  {label:34s} {gate:24s} {role:9s} ✓ поймал")
+        print(f"  {label:40s} {gate:26s} {role:9s} ✓ поймал")
 
 restore()
-print(f"\n  восстановлено, sha256 {hashlib.sha256(PAPER.read_bytes()).hexdigest()[:12]}")
-print(f"  дыр: {len(holes)}   сломанных контролей/не-гейтов: {len(broken)}")
+print(f"\n  статья цела: sha256 {hashlib.sha256(PAPER.read_bytes()).hexdigest()[:12]}")
+print(f"  дыр: {len(holes)}   сломано/не-гейт: {len(broken)}   пропущено: {len(skipped)}")

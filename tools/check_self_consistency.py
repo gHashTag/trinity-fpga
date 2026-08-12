@@ -60,12 +60,19 @@ marked = len(marks)
 # "marked in place" is the abstract's own phrasing and the original pattern did
 # not include it, so the single most-read sentence in the document stating a
 # retraction count was the one sentence this gate never checked.
-CLAIM = re.compile(r"([A-Z][a-z]+|\d+)\s+(?:of our own\s+)?"
-                   r"(?:retractions?|claims?)\s+[^.]{0,90}?"
-                   r"(?:retracted|withdrawn|falsified|marked in place)[^.]*\.", re.I)
+# Two word orders occur and only one was matched. "Sixteen claims are
+# retracted" was caught; "we have retracted sixteen claims" was not, and a
+# mutation test proved a wrong count in that order passes silently. Same class
+# of hole as the passive-voice one above: one phrasing recognised.
+CLAIM = re.compile(
+    r"([A-Z][a-z]+|\d+)\s+(?:of our own\s+)?"
+    r"(?:retractions?|claims?)\s+[^.]{0,90}?"
+    r"(?:retracted|withdrawn|falsified|marked in place)[^.]*\."
+    r"|(?:retracted|withdrawn|falsified)\s+([a-z]+|\d+)\s+"
+    r"(?:of our own\s+)?(?:retractions?|claims?)[^.]*\.", re.I)
 for m in CLAIM.finditer(t):
     s = re.sub(r"\s+", " ", m.group(0))
-    tok = m.group(1).lower()
+    tok = (m.group(1) or m.group(2) or "").lower()
     n = WORDS.get(tok, int(tok) if tok.isdigit() else None)
     if n is None: continue
     if "during the campaign" in s or "during this work" in s or "during the work" in s:
