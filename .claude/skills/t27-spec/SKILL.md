@@ -6622,3 +6622,44 @@ genuinely open rather than merely deferred.
 `docs/BLOCKED_SPECS.md` lists each blocked spec with how much of its diff is the
 mechanical repair versus someone's edit. That converts "56 files need review"
 into a sorted list where the top rows are almost entirely mechanical.
+
+## Wave 676 — a discovery matrix looks general and covers only what it matches
+
+**1213 tests existed and no job ran them.** Four parser changes made `cargo test`
+the obvious check; one test had been red for ten waves, asserting an RTL line
+from before a change I made in Wave 666. The inline test in `src/` was updated in
+that commit; the integration test in `tests/` was not, and nothing executed it.
+
+The pre-commit hook's Gate 3/4 is `cargo check` — compiles, does not run. The one
+workflow calling `cargo test` discovers `ring-*-rust` crates **by matrix** and
+never matches the compiler crate.
+
+**Third mechanism for gated-looking evidence nothing runs**, after a step never
+wired into a workflow and a property file no step reads. **The matrix is the
+worst of the three**, because it reads as parameterised and general — nothing
+about it suggests your crate is outside its reach. *For every test tree, name the
+job that executes it; if the answer is a matrix, evaluate the matrix. Its
+coverage is its output, not its intent.*
+
+**Run the test suite after changing a parser.** Four changes to a shared code
+path is exactly when a suite earns its cost, and it is how this was found at all.
+
+**My own gate had the defect it was written to catch.** The Coq scan measured
+"is this file in a `_CoqProject`" while claiming "is this file type-checked" —
+and a workflow compiles 13 files by explicit `coqc` with no `_CoqProject`. So 6
+files CI checks on every push were reported as built by nothing. Published
+560/123/17; true 608/75/11. **Writing the rule down does not exempt the writer**,
+and this is the second time the exemption failed inside an instrument built for
+the class.
+
+**A compile harness must separate its own misconfiguration from the subject's
+defects.** My first run used the wrong `-R` logical name, so six load-path
+failures looked like file defects. The second put every tree on the path and read
+the *first* stderr line — a duplicate-load-path warning — classifying all 14
+failures as genuine. Filter for lines that actually begin `Error`. Stderr order
+is not a severity ordering.
+
+**Re-attribute the residue after every fix.** Three waves running, one cause held
+58–83% of what remained after the previous head was removed. A long tail measured
+once is a long tail; measured again after the head comes off, it is usually
+another head.
