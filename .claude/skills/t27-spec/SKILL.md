@@ -6270,3 +6270,42 @@ two establishes that the harness compares anything.
 resolves declare-after-use; Icarus rejects it. Four forward-referenced nets kept
 this design from ever compiling in a simulator while every formal gate stayed
 green — control fully checked, arithmetic never checked once.
+
+## Wave 668 — check that the question is well-posed before believing the answer
+
+**A sweep found six failures with a beautiful pattern, and the pattern was
+mine.** Every `C>=2, L=2` configuration emitted one activation word where two
+were owed, while every `C=1` passed. Both layers demonstrably ran, so compute
+happened and only emission was lost — the exact signature of a defect class this
+project had already fixed twice. I was one command from publishing the eighth
+design defect.
+
+The networks were ill-posed. A multi-layer net needs layer 0 to produce what
+layer 1 consumes (`N = C*27`); the grid asked layer 1 to read 27–81 trits from a
+layer producing 1–3. At well-formed points the same configurations pass.
+
+**Before reporting that a sweep found a defect, verify the failing
+configurations are ones the artifact was ever obliged to handle.** Systematic
+variation across an invalid region is the most convincing possible presentation
+of nothing — and the `C=1` rows, equally invalid but passing, manufactured a
+fake mechanism to explain it.
+
+**Breadth in a sweep is not independence.** Eighteen configurations, and the
+observable depended on one axis only — three facts wearing eighteen hats. Before
+claiming a grid covers something, ask which parameters the *observable* can
+actually see. The fix is another observable, not a bigger grid.
+
+**A check whose name suggests coverage it lacks is worse than no check.**
+`mirror_check.py` sounds like it catches properties that restate their RTL; it
+compares an algebra abstraction instead. Nobody asked the restatement question
+for 139 propositions because the name implied someone had.
+
+**A global canary hides the absence of a per-item one.** This repo has checked
+"are assumptions live in this job" for many waves. That cannot see one wrapper
+whose own assumptions are contradictory. Having the coarse check is precisely why
+nobody built the fine one.
+
+**Editing a property and its RTL line in the same commit is bookkeeping, not
+verification.** If the assertion is the assignment's right-hand side copied, it
+can only fail on an inconsistent edit. Keep it if it guards wiring rather than
+formula — but say so in a comment, so the choice is countable.
