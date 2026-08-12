@@ -6663,3 +6663,40 @@ is not a severity ordering.
 58–83% of what remained after the previous head was removed. A long tail measured
 once is a long tail; measured again after the head comes off, it is usually
 another head.
+
+## Wave 677 — the components nothing builds are the components that broke
+
+**8 of 30 Rust crates were covered by no workflow, and 3 of those 8 did not
+compile. None of the 22 covered crates failed.** That correlation is the whole
+lesson: a crate no job builds cannot report that it stopped building, so every
+workflow stays green precisely where the repository is broken.
+
+**Theorem: in a repo of n components of which k are built by CI, the probability
+that a randomly-introduced breakage is reported is k/n** — independent of how
+many jobs run or how green they are. Adding jobs over already-covered components
+does not raise it. Only enlarging k does. Enumerate components and subtract; the
+gap is the number that matters, not the count of passing jobs.
+
+**Fix drift with the construct that prevents its recurrence.** `flash-spi` broke
+because a struct gained two fields and one call site named them all. The repair
+is `..Default::default()`, not adding two field names — struct-update syntax does
+not break the next time a field appears. Check the `Default` values are the ones
+that path wants before relying on them.
+
+**When a whole-suite build is red for a pre-existing reason, verify at the
+finest granularity the build system offers — and prove the redness is
+pre-existing.** `make` failed on unrelated targets needing a library this
+machine lacks. Running the identical build *without* my change failed the same
+way (the control), then `make <specific>.vo` verified each addition through the
+project's real load paths. That is stronger than a standalone compile, and it is
+available in almost every build system.
+
+**Read the two matrix definitions rather than pattern-matching 26 workflows.**
+My regex classified a discovery matrix as "(static list)". With only two
+candidates, opening them was faster and correct — one was a build matrix over
+OS/target with no coverage question at all. Scale the method to the population.
+
+**Then ask the general question, not the one you started with.** "Which
+workflows use a matrix" was the wrong question; "which crates does anything
+build" was the right one, and it turned two suspects into eight and three real
+defects.
