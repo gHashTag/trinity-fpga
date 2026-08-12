@@ -6354,3 +6354,46 @@ the hazard cannot reach it. Granting the second an exemption-by-argument would
 have hidden that it never needed one. Enforce both: a canary that stops being
 vacuous, and an immunity claim naming a step that no longer exists, are each a
 silent loss of coverage.
+
+## Wave 670 — "the spec parses" did not mean the parser read the spec
+
+**A resilient parser with silent recovery always reports success.**
+`parse_module_body` here recovers from a failed declaration by skipping to the
+next one and continuing — correct behaviour — and throws the error away. Result:
+497 specs exit 0 while **3292 constant declarations never reach any AST**. The
+flagship spec captures 3 of its 14. "496/496 specs parse" has always meant "the
+parser did not abort", and nothing in the exit code could ever have said
+otherwise.
+
+**Found by writing a spec and reading its AST.** The new file parsed to 16 nodes
+containing none of its identifiers. The instinct is "my syntax is wrong"; the
+control — parse a known-good spec and count — is what moved it from my file to
+the corpus. Run the control before concluding anything about your own input.
+
+**Fix the visibility, not the parser, late in a session.** A counter, a
+reporting entry point, and a stderr line with the first five messages and their
+line numbers. That converts an invisible loss into a precise defect list, costs
+four lines, and does not risk a compiler rewrite at hour eleven.
+
+**Then I mislabelled the counter, in the wave that catalogues mislabelling.**
+Shipped as `discarded-declarations`; it counts *recovery events*, and one
+recovery can swallow several declarations. A planted three-constant regression
+left the total unchanged at 1741 — so the gate built to catch regressions
+reported none — while constants-lost moved 15→18. **Plant a regression before
+believing a ratchet**, and if the number doesn't move, suspect the label before
+the gate.
+
+**Two derivations of one path is a defect even when both "work".** A pre-commit
+hook derived a seal path by basename while the compiler derives it from the
+path. The tracked hook had been fixed; the *installed* one hadn't, because hooks
+are local-only and a stale copy survives indefinitely. When a script and a tool
+must agree on a derived path, the script should ask the tool.
+
+**When a hook blocks you, fix the hook rather than passing `--no-verify`.** The
+block was correct in spirit and wrong in mechanism. Bypassing would have left
+the trap armed for the next agent, and a gate that is always bypassed is not a
+gate.
+
+**`git add -A <dir>` stages deletions you never made.** It staged removals of
+files an earlier regeneration had dropped. Read `git diff --cached --name-only`
+before every commit that used `-A`, and stage intended paths explicitly.
