@@ -47,8 +47,9 @@ published first.
    discuss a shared scale. Ours is MXFP4's own element format under E8M0.
 3. **Placement is not the tail, and is not monotone.** Their choice is binary —
    which tail. Ours is a position in the ladder, and the measured spread across
-   five placements is 3.13× at a fixed alphabet ratio, with `TOP` a trap that
-   clips the opposite extreme.
+   four placements is 3.13× at a fixed alphabet ratio (−4.99 % for `NEAR0`
+   against −1.59 % for `MID2`). The fifth arm `TOP` is excluded: it is a clipping
+   choice, not a placement — see `CLIPPING_ARM_CORRECTION_2026-08-12.md`.
 4. **A deployable artefact.** `MX-asym-NEAR0` is E2M1's magnitudes plus one level
    at 1/24 — integers in units of 1/24, so the same 4-bit lookup as MXFP4 — that
    beats MXFP4 in 140 of 140 windows across four models.

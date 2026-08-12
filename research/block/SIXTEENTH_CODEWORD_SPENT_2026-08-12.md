@@ -67,10 +67,24 @@ the placement on each model in turn:
 | OPT | NEAR0 | +0.67 %, tie |
 | **Pythia** | **TOP** | **+5.97 %, and +2.55 % vs MXFP4 — the protocol loses** |
 
-**One rotation of four gives the headline.** The NF4 comparison is not a property
-of the codebook; it is a property of which model happened to be used to pick the
-placement. The MXFP4 comparison is unaffected — NEAR0, MID, MID2 and MIDN all
-beat MXFP4 regardless of which model selects.
+**🛑 Corrected 2026-08-12.** `TOP` is not a placement — it is the clipping arm
+described two sections below, and it was in the ranked pool because the T38
+assertion compared `max(pos, neg)` while its docstring claimed both tails. See
+`CLIPPING_ARM_CORRECTION_2026-08-12.md`. On this document's own pool with the
+clipping arm removed, the rotation is **unanimous**:
+
+| picked on | with the clipping arm | placements only |
+|---|---|---|
+| SmolLM2 | NEAR0, −2.53 % vs NF4 | NEAR0, −2.53 % |
+| Qwen | NEAR0, −0.85 % | NEAR0, −0.85 % |
+| **Pythia** | **TOP, +5.35 %** | **NEAR0, −0.51 %** |
+| OPT | NEAR0, +0.44 % | NEAR0, +0.44 % |
+
+So "one rotation of four gives the headline" was one rotation reaching for a
+non-placement. `NEAR0` is picked 4/4, every rotation ties against NF4, and every
+rotation beats MXFP4 held out (−4.65 %, −5.27 %, −3.62 %, −5.40 %). The MXFP4
+comparison was already unaffected — NEAR0, MID, MID2 and MIDN all beat MXFP4
+regardless of which model selects.
 
 ## T40 confirmed constructively
 
@@ -100,7 +114,7 @@ most-used codeword of sixteen. It earns its place immediately.
 | MIDN (mirror control, negative side) | −2.78 % | 134/140 |
 | MID (coarsest interior gap) | −2.21 % | 127/140 |
 | MID2 (second-coarsest) | −1.59 % | 89/140 |
-| TOP (beyond the top magnitude) | −0.67 % | 72/140, **tie** |
+| TOP — **not a placement**, see below | −0.67 % | 72/140, **tie** |
 
 **TOP is a trap.** Extending the positive ladder forces a renormalisation that
 clips the negative extreme to −0.75: reach bought on one side, paid for by

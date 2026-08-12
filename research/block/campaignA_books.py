@@ -51,14 +51,28 @@ assert len(GAPS) == len(U)             # seven gaps for seven ladder rungs
 
 
 def candidates():
-    """(name, kind, levels) for every placement of the sixteenth codeword."""
+    """(name, kind, levels) for every PLACEMENT of the sixteenth codeword.
+
+    MX-asym-TOP is deliberately not here -- see clipping_arms().
+    """
     out = []
     for tag, x in GAPS.items():
         out.append((f"MX-asym-{tag}", "sig", B.asym(sorted(U + [x]), U)))
-    out.append(("MX-asym-TOP",   "sig", B.asym(U + [F(16)], U)))
     out.append(("MX-asym-MIDN",  "sig", B.asym(U, sorted(U + [GAPS["MID"]]))))
     out.append(("MX-asym-NEAR0N", "sig", B.asym(U, sorted(U + [GAPS["NEAR0"]]))))
     return out
+
+
+def clipping_arms():
+    """Arms that are NOT placements: they buy a rung by clipping a tail.
+
+    TOP extends the ladder to 16/12, and normalising to the positive tail leaves
+    the negative extreme at -0.75 -- so it reconstructs the largest-magnitude
+    negative element of every block at 0.75x. Ranking it beside the insertions
+    compares a placement choice against a clipping choice. Measure it, name it,
+    keep it out of the placement ranking.
+    """
+    return [("MX-asym-TOP", "clip", B.asym(U + [F(16)], U))]
 
 
 def references():
@@ -68,7 +82,7 @@ def references():
 
 
 def all_books():
-    return candidates() + references()
+    return candidates() + clipping_arms() + references()
 
 
 def check(bs):
@@ -80,8 +94,20 @@ def check(bs):
         assert len(set(lv)) == len(lv), name
         pos = max(x for x in lv)
         neg = -min(x for x in lv)
-        assert abs(max(pos, neg) - 1.0) < 1e-12, f"{name}: max|level|={max(pos,neg)}"
+        # T38 on BOTH tails, one assertion each. Asserting max(pos, neg) instead
+        # let MX-asym-TOP through at +1.000 / -0.750 for two campaigns: it was
+        # ranked against the insertions as if it were one of them, when the
+        # docstring above already says it pays for its extra rung by clipping
+        # the negative extreme. A clipping arm is kind "clip" and is kept out of
+        # candidates(); only a "sig" book is a placement.
         assert pos <= 1.0 + 1e-12 and neg <= 1.0 + 1e-12, name
+        if kind in ("sig", "mag"):
+            assert abs(pos - 1.0) < 1e-12, f"{name}: +tail={pos}"
+        if kind == "sig":
+            assert abs(neg - 1.0) < 1e-12, f"{name}: -tail={neg}"
+        if kind == "clip":
+            assert abs(max(pos, neg) - 1.0) < 1e-12, name
+            assert min(pos, neg) < 1.0 - 1e-12, f"{name}: not clipping"
         if kind == "mag":
             assert lv[0] == 0.0 and len(lv) == 8, (name, len(lv))
             nd, npos, nneg = 15, 7, 7

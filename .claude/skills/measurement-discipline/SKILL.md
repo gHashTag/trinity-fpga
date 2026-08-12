@@ -399,6 +399,41 @@ When a competitor bug is found, `grep -l` for the competitor's symbols. Scripts 
 reference it **cannot** be affected. This took seconds and exempted four load-bearing results from
 re-measurement.
 
+## 8b. Read what the assertion compares, not what the line above it claims
+
+Four separate failures in this project have the same shape, and it is not "we didn't know".
+In every one the fact was **already written down in the repository** and the harness quietly
+contradicted it downstream:
+
+| the harness | its docstring / comment said | its code did | what it cost |
+|---|---|---|---|
+| `campaignA_books.check` | "T38 on **BOTH** tails" | `assert max(pos, neg) == 1.0` | a clipping arm ranked as a placement for two campaigns; a published protocol finding withdrawn |
+| `run_synth.py` | one Fmax per seed | appended **two** per run, sliced the last N | a median over three post-route and two post-placement figures |
+| the decoder cost | "logic LUT" | counted `SLICE_LUTX` **BEL occupancy** | 1.00× reported where the truth was 1.67× |
+| the render harness | "5 runs passed" | 5 × `exit=1` in 0 s with `dist` absent | a setup failure nearly reported as flakiness |
+
+`max(a, b) == 1.0` is satisfied by *either* argument. `assert a == 1.0; assert b == 1.0` is the
+claim. This is not a subtle distinction and it is not caught by reading the docstring — the
+docstring is what lied.
+
+**The check, and it is cheap.** For every assertion in a harness whose output you are about to
+quote: read the *expression*, decide what set of inputs passes it, and ask whether that set is the
+one the surrounding prose describes. Then feed it one input that should fail. In all four cases
+above a single deliberate bad input would have caught it in under a minute.
+
+**The corollary that costs the most.** When the fact is already recorded in the code — a docstring,
+a comment, an `if name == ...: # careful` — that is *not* protection. Prose does not execute.
+`campaignA_books.py` said TOP clips the negative tail to −0.75 in its module docstring, and
+`campaignD_spearman.py` said the same thing at line 86 with an explicit without-TOP column, and
+the arm was still in the ranked pool of every campaign for three days. Only the assertion is
+load-bearing. See `research/block/CLIPPING_ARM_CORRECTION_2026-08-12.md`.
+
+**And the class of bug this creates.** A too-permissive assertion does not produce an obviously
+wrong number — it produces a *plausible* one, carrying an ineligible member through the whole
+analysis. The symptom is not a crash; it is an unexplained instability that then gets its own
+research campaign. Three campaigns here went into explaining an instability that was one
+ineligible book in a pool of ten.
+
 ## 9. Adversarial verification finds what self-consistency cannot
 
 Every theorem in the campaign was handed to a second agent instructed to **refute it, defaulting

@@ -185,9 +185,14 @@ def main():
     ref.flush()
     print(f"reference log-probs: vocab {V}, {ref.nbytes/1e9:.2f} GB", flush=True)
 
-    def kl():
-        tot, cnt = 0.0, 0
+    def kl_per_window():
+        """Per-window mean per-token KL.  Every window is exactly SEQLEN tokens,
+        so the mean of the first k entries IS the KLWIN=k score -- one run at
+        KLWIN=16 therefore yields the 2/4/8/16-window objectives as prefix means
+        rather than four runs that would each re-quantise and re-forward."""
+        out = []
         for i in range(KLWIN):
+            tot, cnt = 0.0, 0
             lg = model(win[i:i + 1]).logits[0]
             for a in range(0, SEQLEN, CHUNK):
                 b = min(a + CHUNK, SEQLEN)
@@ -198,20 +203,27 @@ def main():
                 cnt += b - a
                 del lpr, lpq
             del lg
-        return tot / cnt
+            out.append(tot / cnt)
+        return out
+
+    def kl():
+        v = kl_per_window()
+        return float(np.mean(v)), v
 
     apply(None)
-    kl_self = kl()
+    kl_self, kl_self_w = kl()
     print(f"self-KL (fp32 vs fp32) = {kl_self:.3e}  "
           f"{'OK' if abs(kl_self) < 1e-9 else 'INSTRUMENT BROKEN'}", flush=True)
     if abs(kl_self) >= 1e-9:
         return 4
 
-    scores = {}
-    for name in BOOKS:
+    want_kl = [b for b in os.environ["KLBOOKS"].split(",") if b] \
+        if os.environ.get("KLBOOKS") else list(BOOKS)
+    scores, scores_w = {}, {}
+    for name in want_kl:
         t0 = time.time()
         apply(BOOKS[name])
-        scores[name] = kl()
+        scores[name], scores_w[name] = kl()
         print(f"  KL {name:<16}{scores[name]:>12.6f}   ({time.time()-t0:.0f}s)",
               flush=True)
     apply(None)
@@ -220,11 +232,12 @@ def main():
 
     out = {"model": MDIR, "nwin": NWIN, "klwin": KLWIN, "vocab": V,
            "ruler_reproduces": True, "self_kl": kl_self, "kl": scores,
+           "self_kl_per_window": kl_self_w, "kl_per_window": scores_w,
            "ppl": {"fp32": float(np.exp(nll["fp32"].mean())),
                    "MXFP4": float(np.exp(nll["MXFP4"].mean()))},
            "per_window_nll": {k: list(map(float, v)) for k, v in nll.items()},
            "books": {n: BOOKS[n][1] for n in BOOKS}}
-    dst = os.path.join(HERE, f"campaignA_kl_{MDIR}.json")
+    dst = os.environ.get("OUT") or os.path.join(HERE, f"campaignA_kl_{MDIR}.json")
     json.dump(out, open(dst, "w"), indent=1)
     print(f"wrote {dst}")
     return 0

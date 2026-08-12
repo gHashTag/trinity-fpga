@@ -15,32 +15,37 @@ gives **three distinct winners in four rotations** (NEAR0 twice, NEAR0N once,
 MIDN once). The placement is still a property of which checkpoints are in the fit
 set.
 
-**And the jointness is not what helps.** Switching the *objective* from
-perplexity to KL is:
+**🛑 The rest of this section was withdrawn on 2026-08-12** — see
+`CLIPPING_ARM_CORRECTION_2026-08-12.md`. `MX-asym-TOP` is not a placement: it
+extends the ladder to 16/12 and pays for the renormalisation by clipping the
+negative extreme to −0.75. The T38 assertion said "BOTH tails" in its docstring
+and compared `max(pos, neg)` in its code, so the clipping arm sat in the ranked
+pool as `kind="sig"` through this whole campaign. The corrected instrument is in
+`campaignA_books.check`; the corrected numbers, all from re-running this repo's
+own scripts on the nine placements, are:
 
-| protocol | held-out wins vs MXFP4 | worst case | mean |
-|---|---|---:|---:|
-| select on one model **by perplexity** | 10 / 12 | **+4.68 %** (a loss) | — |
-| select on three models by KL | 4 / 4 | −1.72 % | −2.46 % |
-| **select on one model by KL** | **12 / 12** | **−1.41 %** | **−2.75 %** |
+| protocol | with the clipping arm | placements only |
+|---|---|---|
+| select on one model **by perplexity** | 10 / 12, worst **+4.68 %** | **12 / 12, worst −1.41 %** |
+| select on one model by KL | 12 / 12, worst −1.41 % | 12 / 12, worst −1.41 % |
+| select jointly on three by KL | 4 / 4, worst −1.72 % | 4 / 4, worst −1.72 % |
 
-The one-model KL protocol **dominates the joint one on every summary**. The
-original diagnosis — "one model is not enough" — was wrong; the problem was that
-perplexity on a single checkpoint is a noisy selector, and KL on a single
-checkpoint is not.
+**The claim "the objective was the fix, not the jointness" does not survive.**
+It rested on one rotation: with the clipping arm in the pool, perplexity selects
+it on Pythia and loses on two held-out models. Without it, perplexity selects
+`NEAR0N` and wins all three. On the placements the two objectives are
+indistinguishable — 12/12, worst −1.41 %, both.
 
-**Why it stays unstable, measured rather than asserted.** The Spearman
-correlation between joint-KL score and held-out margin across the ten placements
-is **+0.927** on OPT and **+0.758** on Qwen — the two rotations that pick NEAR0 —
-but **+0.188** on SmolLM2 and **−0.030** on Pythia, the two that pick mirrors.
-The rotations that disagree are exactly those where the objective carries no rank
-information about the judge.
+The mechanism Spearmans go the same way: joint-KL against held-out margin was
++0.188 SmolLM2 and −0.030 Pythia, and on the placements is **+0.433** and
+**+0.333**. No rotation carries zero rank information, so the sentence that
+explained the instability was describing the clipping arm.
 
-**Two things worth keeping.** `TOP` is never selected by KL — last in three of
-four rotations — so the failure mode that sank the earlier protocol is removed.
-And the enumeration was **completed**: the four gap placements the first campaign
-skipped, plus `NEAR0N`, were built and measured on all four models. None wins
-anything. The incomplete enumeration was not hiding a better answer.
+**What does survive.** The enumeration was **completed** — the four gap
+placements the first campaign skipped, plus `NEAR0N`, were built and measured on
+all four models, and none wins anything. The incomplete enumeration was not
+hiding a better answer. And `NEAR0` is now selected by *more* rotations than
+before, not fewer.
 
 **A stated premise turned out false.** The mirror arms are not controls that land
 on their twin: `NEAR0` and `NEAR0N` differ by 3.4 % of perplexity on SmolLM2 while
@@ -116,11 +121,17 @@ the per-model orders disagree violently — SmolLM2 ranks MIDN first, Qwen and O
 rank NEAR0 first, Pythia ranks TOP first and MIDN last. A predictor was being
 scored against an ordering whose internal steps the data does not assert.
 
-| predictor | Spearman | p | leave-one-model-out |
-|---|---:|---:|---|
-| P1 bin mass | +0.700 | 0.117 | +0.70 → +0.40 without SmolLM2 |
-| P2 mass × width² — the classical greedy step | +0.400 | 0.258 | +0.40 → **−0.80** without SmolLM2 |
-| P3 KL share | +0.900 | 0.042 | +0.90 → **+0.10** without SmolLM2 |
+| predictor | Spearman, n = 5 | p | leave-one-model-out | **n = 4, placements only** |
+|---|---:|---:|---|---:|
+| P1 bin mass | +0.700 | 0.117 | +0.70 → +0.40 without SmolLM2 | +0.400 |
+| P2 mass × width² — the classical greedy step | +0.400 | 0.258 | +0.40 → **−0.80** without SmolLM2 | **−0.200** |
+| P3 KL share | +0.900 | 0.042 | +0.90 → **+0.10** without SmolLM2 | **+1.000** |
+
+The last column drops `MX-asym-TOP`, which is a clipping arm and not a placement
+(`CLIPPING_ARM_CORRECTION_2026-08-12.md`). At n = 4 only a perfect order is
+significant at all, so P3's `+1.000` is the floor of what this test can say
+rather than a strong result — but P2's sign change is in the same direction as
+the real-weight-space measurement below.
 
 **No predictor is rotation-stable.** P3's apparent significance is carried
 entirely by one model, and with three predictors tested `0.042 × 3 = 0.125`
