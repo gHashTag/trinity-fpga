@@ -7952,3 +7952,73 @@ appears as a baseline entry with no matching step. That proves nothing about
 whether any suspended check still fails — and claiming otherwise would be the
 numerator fallacy again — but it does guarantee that **no suspension is ever
 undocumented**, which is the property that was actually missing.
+
+## Theorem (tactic failure is not proof failure) — and the warning was in the log
+
+The previous section stopped at a proof error and called it *"a proof obligation,
+not bookkeeping, and was not guessed at"*. Correct not to guess. **Wrong about the
+category**, and the evidence was three lines away in a warning the build had been
+printing all along:
+
+```
+line 22: To avoid stack overflow, large numbers in nat are interpreted as
+         applications of of_num_uint.  [abstract-large-number]
+Error:   Tactic failure: Cannot find witness.
+```
+
+The definition was `theta_period_ps : nat := 142857143`. A Peano `nat` literal
+that large is kept **abstract**, so `lia` cannot lift it into its arithmetic and
+reports a missing witness — which reads exactly like an unprovable goal.
+
+Measured against a control, which is the only reason this is knowable:
+
+| goal | `lia` | structural lemma |
+|---|---|---|
+| `x > 0`, x = 7 | **OK** | — |
+| `x > 0`, x = 142857143 | fails | `Nat.lt_0_succ` — **OK** |
+| `x <> 0`, x = 142857143 | fails | `Nat.neq_succ_0` — **OK** |
+
+Same statement, same type, different tactic. `lia` evaluates; `Nat.lt_0_succ :
+0 < S n` never looks at the value.
+
+**Stated generally.** A decision procedure returns failure for two distinct
+reasons:
+
+```
+the goal is false or unprovable          the goal left my fragment
+```
+
+and **the message does not distinguish them.** A large literal, a non-linear term,
+an opaque definition, a missing hint database — each leaves the fragment while the
+goal stays trivially true. So *"the prover failed"* is evidence about the prover's
+fragment, never about the proposition. Same relation as an unpublished denominator
+and an unrun check, one level down: at the tactic.
+
+**Why this is worth its own rule:** a tactic failure is the most
+authoritative-looking negative result you will meet. It comes from a decision
+procedure, it is deterministic, and it feels like mathematics. It is a tool
+report.
+
+### Practical procedure when a solver fails
+
+1. **Read the warnings above the error.** They are printed by the same run and
+   routinely name the cause. This one cost a wave because the error was read and
+   the warning above it was not.
+2. **Run a control**: the same goal shape with a small or simple instance. If the
+   control passes, the failure is about your term, not your claim.
+3. **Reach for a structural lemma** that does not inspect the value —
+   `Nat.lt_0_succ`, `Nat.neq_succ_0`, constructor discrimination. A goal that is
+   true *by shape* should be proven by shape.
+4. Only after all three: consider that the statement might actually be false.
+
+### Closing a suspension is a deliverable — say so, with the caveat attached
+
+The step this unblocked carried the comment *"flip `continue-on-error` off once it
+is observed green — that flip is the deliverable, not this step."* Six mechanical
+defect classes later: **28 of 28 files, `make` exits 0, flag off.**
+
+Attach the caveat in the same breath: green was measured on **one toolchain
+version on one host**. Enforcing the step is how a version difference would get
+discovered — which is the argument *for* flipping it, not against, but it means
+"CI will pass" is not what was established. Write the caveat into the workflow
+comment, where the next reader of that step will find it.
