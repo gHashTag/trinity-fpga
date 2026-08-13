@@ -8266,3 +8266,69 @@ The refusal is **correct** — a timing taken under load is not a measurement. T
 consequence is uncomfortable and should be said plainly: **the suite's verdict is
 not a pure function of the repository.** A red must be read before it is believed,
 and a runner that aggregates such gates cannot be treated as a decision procedure.
+
+## Theorem (self-matching liveness) — exclude the scanner from the population it scans
+
+The previous section established that whether a check passes on an absent subject
+is a property of *how it was written*. Making that partition designed instead of
+accidental meant executing every exemption: **each gate copied alone into an empty
+tree and run.**
+
+| result | gates |
+|---|---|
+| exit 1 — names what is missing | 13 |
+| exit 2 — declines, nonzero | 1 |
+| exit 0 — **correct** (its subject genuinely absent = pass) | 1 |
+| exit 0 — **wrong** | 1 |
+
+**15 of 16 held, and the sixteenth had a defect no reading of the code had caught
+in over a hundred waves.**
+
+That gate checks whether other gates strip comments before regex-matching Verilog.
+It already carried the right liveness floor — *"a scan that found nothing in scope
+reports clean"*, so `scoped == 0` fails. Alone in an empty tree it found **one**
+file, itself, and:
+
+```python
+READS_VERILOG = re.compile(r"\.sv\b|build/rtl|glob\(['\"]\*\.sv")
+```
+
+**that line makes the file match its own pattern.** `scoped` became 1, the floor
+was satisfied, and it reported a clean sweep of an empty corpus.
+
+Stated generally: a floor of the form *"the scan must have found ≥1 item in
+scope"* is sound **only if the scanner is excluded from the population it scans.**
+For any scanner whose implementation must *mention* the pattern it searches for,
+`scoped ≥ 1` holds identically — the floor is a tautology, and it is tautologous
+in exactly the case it was written to detect.
+
+**The defect grows with the precision of the scanner.** The more literally you
+write the pattern, the more certainly your source contains it. A vague scanner
+would not have had this bug.
+
+Two fixes, and either alone leaves a hole:
+
+1. **exclude your own file** from the population;
+2. **require the artefacts the pipeline actually references to be present** —
+   coverage is an invocation's output, not a glob's.
+
+## Execute the exemption, do not read it
+
+This is the third wave in which running a stated absence case beat reading it, so
+it is worth stating as procedure rather than as a finding:
+
+```bash
+mkdir -p /tmp/probe/<dir> && cp <script> /tmp/probe/<dir>/
+cd /tmp/probe && <run the script>; echo "starved exit=$?"
+```
+
+Four lines. It found a false exemption in a list that had been believed for the
+gate's entire life, and it distinguishes four outcomes that a code review reads as
+one: *exits 1 naming the cause*, *declines nonzero*, *passes correctly*, and
+*passes wrongly*.
+
+**And record the table, not the verdict.** Writing "all exemptions verified" into
+the list would have lost exactly the information that mattered — that one of the
+sixteen was different, and which one. The table is now in the source above the
+exemption set, so the next reader inherits the measurement rather than the
+conclusion.
