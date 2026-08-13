@@ -8208,3 +8208,61 @@ Related, and worth separating from real failures: one gate refused that wave wit
 That is a **correct** refusal — a timing taken under load is not a measurement —
 but it means a suite runner's verdict can be machine-state-dependent. A red must
 be read before it is believed.
+
+## Theorem (absence is not a value) — a suite's verdict on a missing subject is arbitrary
+
+The outage recorded above produced a measurement no design review would have: on
+**one identically starved tree, 23 of 44 gates failed and 21 passed.**
+
+Both groups saw the same absent subjects. Whether a gate reported *"found no
+property files"* or *"0 disagreements"* was **not a fact about the tree** — it was
+a fact about how that gate happened to be written. The 21 passes established
+nothing, and were indistinguishable from the 21 passes of a healthy run.
+
+For a check `C` over subject `S`, `C(∅)` is defined but carries no information
+about `C`'s question. A suite therefore partitions on `S = ∅` into
+
+```
+gates that treat ∅ as a failure       gates that treat ∅ as a clean result
+```
+
+and that partition is a property of the **implementations**, not of the subject.
+So the aggregate verdict on an absent subject is arbitrary — which is the whole
+argument for running a starvation sweep in the first place, seen from the other
+side.
+
+**Practical consequence.** When a subject can go missing accidentally (a killed
+job, a failed generator, a bad checkout), guard it *once*, early, loudly — rather
+than hoping each check declines. Place the guard first so a suite-wide cascade of
+unrelated reds becomes one line naming the cause.
+
+### A guard must not repair
+
+The obvious next step — have the guard restore the tree and continue — is wrong.
+A guard that silently repairs makes the outage invisible again, which is the exact
+failure the whole chain is about. Separate the roles:
+
+- **guard**: detects, names, refuses, and says *do not delete the stash* (that is
+  what got done last time, and it held the only copy);
+- **recovery**: runs in the destructive tool's own startup and in the suite
+  runner, where it is a deliberate action, logged.
+
+### State the residual window, do not imply it away
+
+After the fix the window is: CI — closed. Suite runner — closed. **A single gate
+invoked by hand — still open.** Closing that means a guard inside every script,
+and that was not done.
+
+Write the three cases out. "Fixed" would have been false, and the next reader
+needs to know which invocation path they are on.
+
+### A suite runner whose verdict depends on machine load
+
+Worth separating from real failures, because it recurred in both full runs: one
+gate refused with *"the machine was contended (load > 6.0 on 8 cores). No
+comparison is printed"*, and passed at load 5.3.
+
+The refusal is **correct** — a timing taken under load is not a measurement. The
+consequence is uncomfortable and should be said plainly: **the suite's verdict is
+not a pure function of the repository.** A red must be read before it is believed,
+and a runner that aggregates such gates cannot be treated as a decision procedure.
