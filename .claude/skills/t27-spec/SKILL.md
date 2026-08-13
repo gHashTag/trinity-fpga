@@ -7821,3 +7821,61 @@ that requested it — plus a decline path for a tree with no workflow steps at a
 
 Running that test costs four shell lines and caught a gate that would have passed
 forever in an empty repository.
+
+## Theorem (the suspended check) — `continue-on-error` plus "until green" is a red reported as success
+
+The previous section's fix — *run the suite by construction, not by recall* — was
+built as a runner that parses the workflow files, extracts every
+`python3 formal/*.py` invocation and runs all of them. 43 invocations, 30 scripts,
+no list to forget.
+
+**Its first full run disagreed with CI, and the disagreement was the finding.**
+
+One gate failed whose workflow step carries `continue-on-error: true`. A runner
+that ignores the flag disagrees with the thing it simulates. But treating it as a
+hard failure is not safe either: it trains the operator to expect one red and wave
+it through, which is precisely how a *second* red gets missed. So report them in
+their own category, labelled for what they are — **red checks the workflow
+ignores, not passes.**
+
+Enumerated in that repo: **5 steps carry the flag, 2 of them are checks.** One
+read *"non-blocking until observed green"*. Building it locally: it has **never
+been green** — three proof files used `Forall` while importing only a local
+module, and `Forall` lives in the standard list library. A missing import fails on
+every version of the toolchain, so it was not an environment artifact.
+
+Stated generally: a step with `continue-on-error: true` and a justification of the
+form *"non-blocking until X"* is a **promise to re-check**. Nothing schedules that
+re-check, and the step emits no signal distinguishing
+
+```
+green, safe to enforce        red for a year
+```
+
+— both render as a passing workflow. The flag converts a failing check into an
+**indefinitely suspended** one, and the suspension becomes invisible at exactly
+the moment it should end.
+
+This is the refutation-liveness theorem with the polarity reversed. There, a
+suppression entry rotted when the defect was **fixed**. Here, a suspension rots
+when the defect is **not** fixed. Both are unobservable because the mechanism that
+would report the change is the one that was switched off.
+
+> **Every `continue-on-error` needs an expiry probe**: a check that the suspended
+> step *still fails*, so the day it starts passing is the day the build tells you
+> to flip the flag. A suspension without one is a deletion with better manners.
+
+### Fix the class, then stop at the class boundary
+
+The missing import was in three files, not one — found by asking which files use
+the symbol without importing its module, rather than by fixing the file the build
+happened to name first.
+
+After those three, the build advanced and stopped on something else entirely: a
+type error inside a proof (`81 : Z` where `nat` was expected). That is **proof
+content, not bookkeeping.** It was left alone and reported.
+
+Two different defect classes were hiding behind one suspended check, and only the
+first is mechanically repairable. Say which one you fixed, say the build still
+fails, and do not flip the flag — *"the build advances past three files and now
+fails differently"* is an honest result; *"fixed the Coq build"* would not be.
