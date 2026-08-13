@@ -8332,3 +8332,58 @@ the list would have lost exactly the information that mattered — that one of t
 sixteen was different, and which one. The table is now in the source above the
 exemption set, so the next reader inherits the measurement rather than the
 conclusion.
+
+## Theorem (ratchet monotonicity) — a finding ratchet is satisfied by deleting the subject
+
+Every absence case tested so far starved a check **completely**. The untested
+middle is a subject that is *partly* there. Measured with **249 of 497 specs
+removed**:
+
+| gate | full corpus | half corpus | verdict |
+|---|---|---|---|
+| parse gate | 154 events | **95** | `ratchet holds` — reads as 38% better |
+| delimiter scan | 21 imbalances | **6** | `ratchet holds` — 71% better |
+| class scan | 16 documents | **11** | `ratchet holds` |
+
+**All exit 0.** Deleting half the subject is not merely undetected — in three of
+them it is indistinguishable from *progress*.
+
+For a finding count `M(C) = |{x ∈ C : P(x)}|` and any `C' ⊆ C`, `M(C') ≤ M(C)`. A
+ratchet asserting `M(now) ≤ M(baseline)` is therefore **satisfied by every
+deletion**, up to and including the complete removal of its own subject. It
+constrains the numerator and is **unbounded below in the denominator**.
+
+An earlier rule here says gates must *publish* a denominator, and these do —
+`497 specs` appears on every run. **Publishing is not ratcheting.** Nothing had
+ever checked that the 497 stayed 497.
+
+**Ratchet the population size as its own gate**, so a deletion is exactly as loud
+as a regression. Do not forbid removing files — forbid removing them *silently
+while another gate reports the drop as an improvement*.
+
+## Record the general form of a defect, or it recurs in one wave
+
+The previous section recorded self-matching as: *a scanner whose regex mentions
+its own pattern satisfies its own liveness floor.*
+
+Writing the very next gate, I put in a liveness check of the form
+`all(populations_empty)` — and it **passed alone in an empty tree**, because one
+of the populations was `formal/*.py` and it counted **itself**. Same defect, one
+wave later, no regex involved.
+
+The narrow record is why it did not transfer. The general form is:
+
+> **Any scanner that is a member of the population it measures will satisfy its
+> own liveness floor.** Regex, glob, file count, database query — the mechanism is
+> irrelevant.
+
+When you write up a defect, ask what the *smallest* class is that contains it, and
+record that. "A regex matching its own source" is a symptom; "the instrument is
+inside its own sample" is the defect.
+
+**Corollary, from three occurrences of the identical repair:** when a scanner's
+subject is the project's own tooling, **resolve the reference set from the
+pipeline** — the workflow file, the manifest, the project file — rather than
+globbing the directory. A glob returns whatever is on disk, including the scanner
+and nothing else. That is not a per-gate fix; it is the default such a gate should
+be written with.
