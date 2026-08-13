@@ -8387,3 +8387,53 @@ pipeline** — the workflow file, the manifest, the project file — rather than
 globbing the directory. A glob returns whatever is on disk, including the scanner
 and nothing else. That is not a per-gate fix; it is the default such a gate should
 be written with.
+
+## Theorem (hollowing) — a file that still exists and has been emptied defeats a file-count guard
+
+The previous section closed the deletion case by ratcheting population **size**.
+The next case is a file that is *still there* and has been hollowed out. Measured
+with **249 of 497 specs replaced by a single comment line, every file present**:
+
+| gate | full | hollowed |
+|---|---|---|
+| parse gate | 154 events | **95** — `ratchet holds` |
+| delimiter scan | 21 imbalances | **9** — `ratchet holds` |
+| class scan | 16 documents | **9** — `ratchet holds` |
+| **the size guard written for exactly this** | 497 specs | **497** — agreed |
+
+For a corpus `C` and any content measure `‖·‖` with `‖∅‖ = 0`: deletion moves both
+`|C|` and `Σ‖c‖`; **hollowing moves only the second**. A guard on cardinality is
+therefore *complete for deletion and empty for hollowing* — and the two are
+indistinguishable in every finding count, because a finding needs content to be
+found in.
+
+Hollowing is strictly the harder case: it produces the same drop in every
+downstream metric while leaving the evidence *outside* everything those metrics
+measure. The fix is one line of arithmetic — **ratchet `Σ‖c‖` alongside `|C|`**.
+Measured after: `specs-lines: 76092 → 38522 (37570 missing)` with `specs=497`
+unchanged.
+
+### A COVERAGE paragraph is a work-list, not a disclaimer
+
+The size guard's own coverage note had said it: *"It counts FILES, not content: a
+spec emptied to zero bytes is not detected here."* Written honestly one wave
+earlier, and the case it named was demonstrated **the very next wave**.
+
+> Every stated residue is a prediction that something will eventually be found
+> there. Reading those paragraphs as admissions is the mistake; reading them as a
+> **queue** is the correct use.
+
+This works because writing an honest residue forces you to name the exact shape
+you cannot see — which is already most of the work of constructing the case that
+exploits it. Pull the next wave's task straight out of the last wave's coverage
+notes.
+
+### Two operational notes that cost time here
+
+- **`cmd &` inside a tool call dies with its shell.** A long job backgrounded that
+  way produced an empty log and looked like a silent failure. Use the harness's
+  own background mechanism, which survives the call.
+- **A hand-run check during a running destructive sweep sees a starved tree.** One
+  gate here failed with `FileNotFoundError: formal/witnesses.sv` mid-wave — not a
+  defect, but the documented open window occurring live. If a check fails with a
+  missing *subject* file, look for a sweep in progress before debugging the check.
