@@ -7879,3 +7879,76 @@ Two different defect classes were hiding behind one suspended check, and only th
 first is mechanically repairable. Say which one you fixed, say the build still
 fails, and do not flip the flag — *"the build advances past three files and now
 fails differently"* is an honest result; *"fixed the Coq build"* would not be.
+
+## A suspended check accumulates defect classes, not defects
+
+The previous section established that `continue-on-error: true` turns a failing
+check into an indefinitely suspended one. Repairing behind a single such flag,
+until the point where guessing would start:
+
+| # | class | files |
+|---|---|---|
+| 1 | a symbol used with its module never imported | 3 |
+| 2 | bare numeral in `nat` position under an open `Z_scope` | 1 (3 sites) |
+| 3 | `assert (H : P) := term.` — not valid syntax at all | 1 |
+| 4 | same as 2, under `R_scope` | 1 |
+| 5 | `&&` outside `bool_scope` | 1 |
+
+**Proof files building: 10 of 28 → 25 of 28.**
+
+Two things worth carrying:
+
+**One repair unblocked seven files.** A build stops at its first error, so every
+file downstream of a failure is reported by *nothing* — not as failing, not as
+skipped. The visible defect count is always 1, regardless of the true count, and
+that is not a property of this build system but of every fail-fast pipeline.
+**Never estimate remaining work from the current error.**
+
+**Five unrelated classes had accumulated behind one flag.** They could, because
+the observable was "workflow passed" — which distinguishes neither one defect from
+five, nor a recent regression from a year-old one. A suspension does not pause a
+check; it pauses your knowledge of it, and the debt compounds silently.
+
+### Stop at the class boundary and say where it is
+
+The build now fails with `Tactic failure: Cannot find witness` — a proof
+obligation, not bookkeeping. That is where mechanical repair ends. It was left,
+reported, and **the flag was not flipped**.
+
+Reporting "10 → 25 of 28, still failing, here is the remaining error" is worth
+more than a green tick would be, and infinitely more than flipping the flag to
+make the number look finished.
+
+## An exclusion coarser than the defect cannot see a partial fix
+
+Scanning for class 4, the scan skipped any line already containing `%nat` — to
+avoid re-reporting sites already annotated. The actual defect:
+
+```coq
+Nat.gcd 400 (Nat.gcd 300 200) = 100 /\ (400+300+200 = 900)%nat /\ (30^2 = 900)%nat
+```
+
+**Two conjuncts annotated, one not.** The line contained the marker, so the scan
+skipped it.
+
+> When an exclusion's granularity is coarser than the defect's, it hides
+> **partially** corrected artefacts — and a partial fix is the single most likely
+> state of any file somebody has already worked on.
+
+The rule: exclude at the granularity of the thing you are checking. If the defect
+is per-token, do not exclude per-line. If it is per-property, do not exclude
+per-file. "Already touched" is not "already fixed", and a scan that conflates them
+goes blind precisely where a repair is in progress.
+
+### Theorem (suspension bookkeeping)
+
+A suspension is a triple `(step, flag, promise)` and is sound only if the promise
+is checkable. Running the suspended check on every invocation is the direct test
+and is often prohibitive — here it means rebuilding a proof tree.
+
+The cheap sound alternative is to ratchet the **set** of suspensions: a new one
+fails the build until it is recorded with what would end it, and a removed one
+appears as a baseline entry with no matching step. That proves nothing about
+whether any suspended check still fails — and claiming otherwise would be the
+numerator fallacy again — but it does guarantee that **no suspension is ever
+undocumented**, which is the property that was actually missing.
