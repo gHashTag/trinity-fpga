@@ -32,6 +32,14 @@ def _index(root):
             if q.is_file(): names.add(q.name)
     return names
 
+def _exists(q):
+    """Path.exists() propagates OSError when a parent directory cannot be read
+    -- PermissionError on the CI runner, where /root is 0700 -- so a single
+    unreadable path aborts the whole gate before it prints anything. Unreadable
+    is not a claim about whether the file is there, so treat it as absent."""
+    try: return q.exists()
+    except OSError: return False
+
 _OWN = _index(ROOT)
 _SIB = {s_: _index(ROOT.parent / s_) for s_ in SIBLING_NAMES}
 
@@ -51,8 +59,12 @@ for d in DOCS:
         p = m.group(1); refs += 1
         if p.startswith("http"): continue
         # A temporary path is expected to be gone; naming one is not a broken
-        # reference, it is a note about a run that has finished.
-        if p.startswith(("/tmp/", "/private/tmp/", "/var/")): continue
+        # reference, it is a note about a run that has finished. The same holds
+        # for any absolute path: it names a location on some machine, not a file
+        # in this tree, so resolving it here measures nothing -- and on CI it can
+        # kill the run, because .exists() under an unreadable directory (/root is
+        # 0700) raises PermissionError instead of returning False.
+        if p.startswith("/"): continue
         rel = str(d.relative_to(ROOT))
         if p.startswith("external/") or rel.startswith("external/"):
             # A vendored document carries paths relative to ITS OWN root.
@@ -82,14 +94,14 @@ for d in DOCS:
                 # is a reason to name them, not to drop them silently.
                 cross.append(f"{str(d.relative_to(ROOT))}: names `{p}`" f" -> resolves in {_hit}")
                 continue
-        _sib = next((sib for sib in SIBLINGS if (ROOT.parent / sib / p).exists()), None)
-        if _sib and not (ROOT / p).exists():
+        _sib = next((sib for sib in SIBLINGS if _exists(ROOT.parent / sib / p)), None)
+        if _sib and not _exists(ROOT / p):
             # Same rule as the bare-name case: excluded, but named. CI has no
             # siblings, so it cannot tell this from rot -- which is why the
             # exclusion belongs in a file rather than in the checker's silence.
             cross.append(f"{str(d.relative_to(ROOT))}: names `{p}` -> resolves in {_sib}")
             continue
-        if any(c.exists() for c in cands): continue
+        if any(_exists(c) for c in cands): continue
         fails.append(f"{d.relative_to(ROOT)}: names `{p}`, which does not exist")
 
 # Ratchet: the tree carries historical documents naming files removed long ago.

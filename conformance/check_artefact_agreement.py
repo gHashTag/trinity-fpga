@@ -12,31 +12,43 @@ PARAMETERS across artefacts, which is the only place the divergence shows.
 Exit 1 on any disagreement, and on any format whose declared parameters do not
 fit its declared storage.
 """
-import re, sys, math, pathlib
+import re, sys, os, math, pathlib
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-CAT = ROOT.parent / "t27" / "specs" / "numeric" / "formats_catalog.t27"
+# The catalogue lives in a separate repository. Locally that is the sibling
+# checkout; on CI it is wherever the workflow put it, which cannot be a sibling
+# because actions/checkout refuses any path outside GITHUB_WORKSPACE.
+T27 = pathlib.Path(os.environ.get("T27_ROOT") or (ROOT.parent / "t27"))
+CAT = T27 / "specs" / "numeric" / "formats_catalog.t27"
 RTL = ROOT / "fpga" / "tnet" / "bnf_decode.v"
 
 fails = []
 
 # --- 1. catalogue: do declared parameters fit declared storage? -------------
+# An absent SSOT is not "nothing to compare". With an empty catalogue every row
+# of the baseline stops reproducing, the ratchet reports all of them as [fixed],
+# and a gate that compared nothing reads as a gate that found everything fixed.
+# Missing input is a broken gate, so say so and stop.
+if not CAT.exists():
+    sys.exit(f"FAIL: SSOT catalogue not found at {CAT}\n"
+             f"      point T27_ROOT at a checkout of gHashTag/t27 "
+             f"(default: the sibling {ROOT.parent / 't27'})")
+
 cat = {}
-if CAT.exists():
-    for m in re.finditer(r'id=(\w+)\s+name="([^"]+)"\s+bits=(\d+)\s+s=1\s+e=(\d+)\s+m=(\d+)', CAT.read_text()):
-        fid, name, N, e, mm = m.group(1), m.group(2), int(m.group(3)), int(m.group(4)), int(m.group(5))
-        tern = fid.startswith(("gft", "tnf"))
-        cat[fid] = dict(name=name, N=N, e=e, m=mm, ternary=tern)
-        # Parametric families declare no width (Q-format, minifloat, Unum I,
-        # tapered FP) and GFTernary is a 2-bit alphabet rather than a float --
-        # the fit test does not apply to either.
-        if N < 2 or fid == "gfternary":
-            continue
-        codes = (3 ** e if tern else 2 ** e) * (2 ** mm)
-        if codes > (1 << (N - 1)):
-            need = math.ceil(math.log2(codes)) + 1
-            fails.append(f"[catalogue] {name}: e={e}{' trits' if tern else ' bits'}, m={mm} "
-                         f"needs {need} bits but declares {N}")
+for m in re.finditer(r'id=(\w+)\s+name="([^"]+)"\s+bits=(\d+)\s+s=1\s+e=(\d+)\s+m=(\d+)', CAT.read_text()):
+    fid, name, N, e, mm = m.group(1), m.group(2), int(m.group(3)), int(m.group(4)), int(m.group(5))
+    tern = fid.startswith(("gft", "tnf"))
+    cat[fid] = dict(name=name, N=N, e=e, m=mm, ternary=tern)
+    # Parametric families declare no width (Q-format, minifloat, Unum I,
+    # tapered FP) and GFTernary is a 2-bit alphabet rather than a float --
+    # the fit test does not apply to either.
+    if N < 2 or fid == "gfternary":
+        continue
+    codes = (3 ** e if tern else 2 ** e) * (2 ** mm)
+    if codes > (1 << (N - 1)):
+        need = math.ceil(math.log2(codes)) + 1
+        fails.append(f"[catalogue] {name}: e={e}{' trits' if tern else ' bits'}, m={mm} "
+                     f"needs {need} bits but declares {N}")
 
 # --- 2. RTL: what parameters does the decoder actually implement? -----------
 rtl = {}

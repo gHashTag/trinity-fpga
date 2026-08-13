@@ -23,14 +23,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # actions/checkout refuses any path outside GITHUB_WORKSPACE, so the
+      # catalogue cannot be placed as a sibling the way it sits locally. Check it
+      # out in-workspace and tell the script where it went; without T27_ROOT the
+      # script still falls back to the sibling path, so local runs are unchanged.
       - name: Check out the SSOT catalogue
         uses: actions/checkout@v4
         with:
           repository: gHashTag/t27
-          path: ../t27
-        continue-on-error: true
+          path: t27
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
       - name: Compare declared parameters across artefacts
+        env:
+          T27_ROOT: ${{ github.workspace }}/t27
         run: python3 conformance/check_artefact_agreement.py
