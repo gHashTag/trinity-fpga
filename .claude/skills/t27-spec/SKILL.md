@@ -7756,3 +7756,68 @@ reproducible from the repository alone — it depends on whatever the build step
 produced. **A denominator can be published and still not be versioned.** That
 belongs in the `COVERAGE.` paragraph, and it is a fact no amount of scanning
 harder would have surfaced.
+
+## Theorem (self-referential blindness) — never choose which checks to run by recall
+
+An earlier section here says: *when you touch any gate, re-run the entire set.*
+Six waves then ended with the line **"all 20 gates green"**. The suite had **58
+steps**. The 20 were a list typed by hand, and the strongest check in it — the one
+that deletes the subject and asks what still passes — was not on that list.
+
+It had been **red for six waves**.
+
+Let `S` be a suite and `A ∈ S` the check that validates membership in `S`. If the
+operator runs a hand-chosen subset `R ⊆ S`, then
+
+```
+A ∉ R   is unobservable from inside R
+```
+
+Every member of `R` passes, and `A`'s absence removes the only signal that
+`R ≠ S`. **A suite's completeness check must be run by construction — enumerated
+from the workflow file, never from memory.** The failure mode of recall is
+silence, and what gets dropped is disproportionately the slow, expensive check,
+which is exactly the one worth having.
+
+The corollary, measured: the four gates missing from the sweep were the four I had
+**written** in those six waves — each landing with a proposition asserting the
+whole set was green.
+
+### A rising number can be the symptom
+
+The README claimed *"all N checking steps are absence-swept"*, and `N` was derived
+as *steps not exempt*. Every new unexempted step therefore **raised** it — 44, 45,
+46, 47 — and the prose was updated to match each wave. Adding the missing
+exemptions dropped it to **43**.
+
+The count rose *precisely because* the sweep was broken. A green consistency gate
+and a red completeness gate, together, made the defect look like progress.
+
+> When a metric moves in the direction you want, check that the mechanism moving
+> it is the one you think. A derived number is only as meaningful as the
+> derivation, and "more steps are swept" and "more steps escaped classification"
+> can be the same arithmetic.
+
+### Measure the exemption, don't assert it — it fails about a quarter of the time
+
+Applying the earlier rule (*write the justification as a runnable predicate*) to
+four new exemptions, each claiming *"its subject is X, not the RTL, and its absence
+case is internal and enforced"*:
+
+```
+copy the script ALONE into an empty tree, run it, read the exit code
+```
+
+| gate | starved | |
+|---|---|---|
+| three of them | exit 1 | correctly name what is missing |
+| the fourth | **exit 0** | found one script — *itself* — and declared it compliant |
+
+The fourth's subject was `formal/*.py`, so **a directory containing only the
+scanner satisfies every count it makes**. "The corpus is present" is not "the
+corpus is the right corpus." The fix was to resolve which scripts CI actually runs
+and require those to be there — coverage is an invocation's *output*, not the glob
+that requested it — plus a decline path for a tree with no workflow steps at all.
+
+Running that test costs four shell lines and caught a gate that would have passed
+forever in an empty repository.
