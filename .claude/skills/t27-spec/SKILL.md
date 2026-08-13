@@ -8146,3 +8146,65 @@ Two rules:
 
 The tell that you have this problem: a cascade of unrelated gate failures right
 after a long-running job was interrupted. Suspect the environment before the code.
+
+## Theorem (cleanup placement) — a `finally` establishes nothing about the case you care about
+
+The previous section recorded an outage: a destructive check moved its subjects
+aside, was killed by a harness timeout, and left them moved. This is its fix, and
+the reasoning generalises past this repo.
+
+For a process holding external state `S` with restore `R`, in-process cleanup
+(`finally`, `defer`, a context manager, an `atexit` hook) establishes exactly:
+
+```
+terminated normally  ⇒  R ran
+```
+
+and says **nothing** under abnormal termination — which is precisely the case
+where `S` is left corrupted. `SIGKILL` cannot be trapped at all, and a signal can
+arrive at any instant, so no in-process handler is sufficient. The only placement
+that is total is **the next run, before anything else**:
+
+```python
+def main():
+    recover()          # idempotent; driven by the stash EXISTING,
+    ...                # not by remembering that we created it
+```
+
+Two design points that matter more than they look:
+
+- **Never overwrite a destination that already exists.** A present file means
+  somebody restored or regenerated it. Clobbering that turns a recovery into a
+  second outage. Restore what is missing, report what you kept.
+- **Drive it off the artefact, not off state.** A flag file saying "a run is in
+  progress" has the same problem as the `finally` — it is written by the process
+  that may die. The *presence of the stash* is the signal.
+
+### The observing command can cause the failure it is looking for
+
+Verifying this fix was nearly broken by:
+
+```bash
+python3 formal/absence_sweep.py | head -2
+```
+
+`head` closes the pipe after two lines, which can `SIGPIPE` the producer mid-run
+— **the exact interruption under investigation, introduced by the command used to
+watch it.**
+
+Run long destructive commands to completion into a file, then read the file. Never
+through `head`, `grep -m`, or any early-exiting consumer.
+
+### Diagnose environment before code when failures scatter
+
+The tell for this whole class: **a cascade of unrelated checks failing at once.**
+23 of 44 gates failed, spread across every subject area, none for a reason
+connected to what they check. That pattern is almost never a code regression — a
+code change breaks the things it touches. Suspect the environment first: a moved
+directory, a killed job, a missing generated artefact.
+
+Related, and worth separating from real failures: one gate refused that wave with
+*"the machine was contended (load > 6.0 on 8 cores). No comparison is printed."*
+That is a **correct** refusal — a timing taken under load is not a measurement —
+but it means a suite runner's verdict can be machine-state-dependent. A red must
+be read before it is believed.
