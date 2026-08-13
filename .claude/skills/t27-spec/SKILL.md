@@ -7698,3 +7698,61 @@ Say that. The temptation is to report the fix and let the reader assume it moved
 something, or to hunt for a number that did move and lead with it. A correctness
 change with a zero-sized effect is still worth making, and describing it honestly
 costs one clause: *"recorded as a correctness change with no numeric effect."*
+
+## Theorem (refutation liveness) — every suppression list needs an expiry check
+
+The exemption audit above continued into a gate's `KNOWN_OPEN` list, which carried
+its own contract in a comment:
+
+> *"a known finding is listed with its reason, and anything NOT on this list fails
+> the build. Removing an entry here must coincide with fixing the defect, or the
+> gate goes red — which is the point."*
+
+That guards **one** direction. The reverse had no signal at all. The single entry
+recorded a real defect as *"Real, unfixed"* — and the RTL had since been repaired.
+The gate printed `0 known-open` and exited 0 every wave since, in silence.
+
+An expected-refutation entry `e` asserts `fires(e)`. Checking only
+
+```
+¬fires(e) ⇒ e ∈ KNOWN          (a new defect must be listed)
+```
+
+is half a contract. Soundness also needs
+
+```
+e ∈ KNOWN ⇒ fires(e)           (a listed defect must still exist)
+```
+
+and **the missing half is unobservable by construction**: a non-firing entry
+produces no output, so the failure looks exactly like success.
+
+**This applies to every suppression mechanism**, not just this one — `KNOWN_OPEN`,
+`EXPECTED_VACUOUS`, `EXCUSED`, expected-refutation guards, `xfail`/`skip` markers,
+allowlists, and every ratchet baseline entry. Each asserts a live defect. Each rots
+the moment somebody fixes it, and nothing connects the fix to the record.
+
+The check is four lines: compute the set that fired, subtract, fail on the
+remainder. Write it when you write the list.
+
+## Check the tracking status before you publish a ratio
+
+This wave came one step from publishing *"92% of the RTL is unscanned."* The
+arithmetic was right — the gate reads one directory, 13 of 158 `.sv` files under
+`build/` — and a sibling tree genuinely still contained the pre-fix code.
+
+**It was false.** `build/` is entirely gitignored. The five sibling trees are
+untracked derived copies (`build/mut` is literally a `copytree` of `build/rtl` for
+mutation testing), and the "unfixed" file was a stale snapshot, not live RTL. One
+`git ls-files` call was the difference between a finding and a retraction.
+
+> Before reporting any coverage ratio, ask what the denominator's members **are**:
+> tracked sources, generated artefacts, or scratch. A ratio over a directory
+> listing counts whatever happens to be on disk.
+
+What *did* survive the check is worth more than the number would have been: the
+gate's subject tree is **generated and gitignored**, so its result is not
+reproducible from the repository alone — it depends on whatever the build step last
+produced. **A denominator can be published and still not be versioned.** That
+belongs in the `COVERAGE.` paragraph, and it is a fact no amount of scanning
+harder would have surfaced.
