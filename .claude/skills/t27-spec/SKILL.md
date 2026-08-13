@@ -8022,3 +8022,64 @@ version on one host**. Enforcing the step is how a version difference would get
 discovered — which is the argument *for* flipping it, not against, but it means
 "CI will pass" is not what was established. Write the caveat into the workflow
 comment, where the next reader of that step will find it.
+
+## `Qed` is a statement about a derivation, never about the truth of its premises
+
+The previous section closed a proof tree at 28 of 28 files and noted the limit:
+*compiling is not meaning*. Making that limit measurable produced the sharpest
+result of the run, and the instrument was the proof assistant's own:
+
+```
+Print Assumptions avs_efficiency_lower_bound.
+Axioms:
+  ClassicalDedekindReals.sig_forall_dec      <- standard, comes with Reals
+  isscc_pi_2024_measured_bound               <- DOMAIN: asserts the bound
+```
+
+**A lower-bound theorem resting on an axiom that asserts the bound.** The `Qed` is
+entirely correct — the derivation is valid. The premise was assumed.
+
+For `T` proved from assumption set `A`, `Qed` certifies `A ⊢ T` and says nothing
+about `⊨ A`. So
+
+```
+∅ ⊢ T                unconditional
+{T'} ⊢ T,  T' ≈ T    a restatement of its own hypothesis
+```
+
+are **indistinguishable** in a `Qed` count, in a built/unbuilt file split, and in
+the file's own prose. It is the unexamined-denominator failure carried into logic:
+here the denominator is the assumption set.
+
+### Use `Print Assumptions`, not a grep for `Axiom`
+
+No text scan can reconstruct this. An `Admitted` lemma declares itself as nobody's
+axiom, yet appears in the assumptions of **everything that uses it** — so a `Qed`
+sitting downstream of an `Admitted` is not a proof, and only the proof assistant
+will tell you. In that tree: **136 `Axiom`/`Parameter`/`Hypothesis`/`Admitted`
+across 13 files, 32 of them `Admitted.`**
+
+Ask the tool the question. The tool has the answer and a regex structurally cannot.
+
+### Do not forbid domain axioms — ratchet them
+
+A measured physical constant legitimately enters a model as an axiom. Whether a
+*particular* constant should be assumed is a modelling decision, not a scanner's,
+and a gate that bans them lands red and gets disabled.
+
+What was actually missing is narrower and enforceable: **a proof must not acquire
+an assumption silently.** Ratchet the set of `(theorem, axiom)` pairs. Existing
+dependencies stand; a new one fails the build and has to be argued for.
+
+### Report the unresolved fraction, always
+
+The scan found 460 theorem names and **resolved 340**. The other 120 — **26%** —
+are modules whose probe failed to load. They are counted and published, because
+"12 theorems rest on a domain axiom" is a statement about the 340 and a **lower
+bound** on the tree.
+
+A probe-based instrument has two failure modes that look identical from the
+summary line: *the property is absent* and *the probe did not run*. Print the
+resolved count next to the finding count every time, and make the gate fail
+outright when it resolves zero — otherwise a tree that does not load reports a
+clean sweep.
