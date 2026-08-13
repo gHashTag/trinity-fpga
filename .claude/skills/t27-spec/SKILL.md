@@ -8083,3 +8083,66 @@ summary line: *the property is absent* and *the probe did not run*. Print the
 resolved count next to the finding count every time, and make the gate fail
 outright when it resolves zero — otherwise a tree that does not load reports a
 clean sweep.
+
+## Attribute a residue before you publish it — the instrument owned 100% of this one
+
+The previous section reported an instrument resolving **340 of 460** items and
+called the missing 26% "the honest residue... a lower bound on the tree."
+
+It was a lower bound on **the scanner**. Three independent instrument defects:
+
+| cause | fix | resolved |
+|---|---|---|
+| probe hardcoded one load-path root | read them from the project file — it declares **two** | 340 → 393 |
+| a `Module X.` qualifies every name beneath it | track the module stack | 393 → **419** |
+| two files in no project listing | one missing import, one solver-fragment issue | +1 built |
+
+An unresolved fraction has exactly two possible owners — **the artefact** and
+**the instrument** — and publishing it without saying which implies the first.
+Try to resolve it *once* before reporting it. Here that took one wave and the
+instrument owned all of it.
+
+The middle row is the subtle one: querying an unqualified name fails with
+*"reference not found"*, which in a summary line is **indistinguishable from "the
+module did not load"**. Two different failures collapsed into one number, which is
+the unexamined-denominator failure occurring inside a residue count.
+
+### A coverage improvement and a regression look identical in a ratchet
+
+Fixing the scanner took visible dependencies from **12 theorems to 19**. Nothing
+was acquired — they were always there. But the gate exists precisely to catch
+*newly acquired* dependencies, so it fired, correctly, on a change that was pure
+instrument gain.
+
+> When you improve an instrument's coverage, **re-baseline with the reason written
+> into the baseline file**, not silently. The next reader sees a jump and has only
+> your note to distinguish "the scanner got better" from "the proofs got worse."
+
+Also: a count reported as `N of M` is worth more than `N`, and the ratio needs its
+own attribution — `28 of 28` in that repo counted the *project listing*, while the
+directory held **30** files. Two more existed that no build had ever touched.
+
+## A destructive check needs a restore that survives its own death
+
+The strongest gate in that suite starves the subject: it moves the generated RTL
+and the property files aside, runs everything, and restores them. Killed by a
+timeout mid-run, it leaves them moved.
+
+**23 of 44 gates then failed for reasons having nothing to do with any of them.**
+Diagnosis cost most of a wave, and recovery needed regenerating one tree from its
+generator and `git checkout` of 15 tracked files — plus the stash directory was
+deleted before its contents were understood, which would have been unrecoverable
+had those files not been tracked.
+
+Two rules:
+
+1. **Before deleting anything that looks like a backup, list its contents and
+   account for every file.** "It looked empty" was wrong; it held the only copy.
+2. **A check that mutates its own subject must restore on death, not on
+   completion** — a trap handler, a context manager, or a restore-first step that
+   runs at startup. A `try/finally` inside the process does not survive `SIGKILL`
+   from a timeout, so the durable form is: *on startup, if a stash exists, restore
+   it before doing anything else.*
+
+The tell that you have this problem: a cascade of unrelated gate failures right
+after a long-running job was interrupted. Suspect the environment before the code.
