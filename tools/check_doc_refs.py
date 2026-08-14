@@ -13,6 +13,30 @@ renamed or moved. A path in prose does not update itself.
 import re, pathlib, sys
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
+
+
+def exists(p):
+    """`Path.exists()` that cannot abort the run.
+
+    A document naming an absolute path -- `/root/bitnet_h100_metrics.json` is
+    the one in this tree -- makes `base / p` collapse to that absolute path,
+    because joining with an absolute right operand discards the left. Stat-ing
+    it is then a stat of somebody's home directory. pathlib ignores ENOENT and
+    ENOTDIR but not EACCES, so on a machine where `/root` exists and is 0700 --
+    every CI runner -- this raised PermissionError and killed the checker
+    before it reported anything.
+
+    On a developer Mac `/root` does not exist, so `.exists()` answered False and
+    the whole gate looked fine. Unreadable is not the same as absent, but for a
+    checker asking "does this repository contain the file it names" the answer
+    is False either way.
+    """
+    try:
+        return p.exists()
+    except OSError:
+        return False
+
+
 DOCS = sorted(set(list(ROOT.glob("research/**/*.md")) + list(ROOT.glob("*.md"))
                   + list(ROOT.glob("docs/**/*.md"))))
 
@@ -82,14 +106,14 @@ for d in DOCS:
                 # is a reason to name them, not to drop them silently.
                 cross.append(f"{str(d.relative_to(ROOT))}: names `{p}`" f" -> resolves in {_hit}")
                 continue
-        _sib = next((sib for sib in SIBLINGS if (ROOT.parent / sib / p).exists()), None)
-        if _sib and not (ROOT / p).exists():
+        _sib = next((sib for sib in SIBLINGS if exists(ROOT.parent / sib / p)), None)
+        if _sib and not exists(ROOT / p):
             # Same rule as the bare-name case: excluded, but named. CI has no
             # siblings, so it cannot tell this from rot -- which is why the
             # exclusion belongs in a file rather than in the checker's silence.
             cross.append(f"{str(d.relative_to(ROOT))}: names `{p}` -> resolves in {_sib}")
             continue
-        if any(c.exists() for c in cands): continue
+        if any(exists(c) for c in cands): continue
         fails.append(f"{d.relative_to(ROOT)}: names `{p}`, which does not exist")
 
 # Ratchet: the tree carries historical documents naming files removed long ago.
@@ -107,7 +131,7 @@ uniq = sorted(set(fails))
 if "--update-baseline" in _s.argv:
     BASE.write_text("\n".join(uniq) + ("\n" if uniq else ""))
     print(f"baseline written: {len(uniq)} known"); _s.exit(0)
-known = {l for l in BASE.read_text().splitlines() if l.strip()} if BASE.exists() else set()
+known = {l for l in BASE.read_text().splitlines() if l.strip()} if exists(BASE) else set()
 new = sorted(set(uniq) - known)
 if new:
     print(f"\nFAIL: {len(new)} NEW dangling reference(s)\n")
