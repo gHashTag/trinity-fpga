@@ -19,11 +19,19 @@ perturbation path, zero-eps control bit-identical to the ruler:
 | 0.005 | +0.037 % | — | 0.0657 pp | — |
 | 0.010 | +0.145 % | **3.92** | 0.1312 pp | **2.00** |
 | 0.020 | +0.576 % | **3.97** | 0.2624 pp | **2.00** |
+| 0.040 | +2.350 % | **4.08** | 0.5240 pp | **2.00** |
 
-**The seed-averaged mean scales as `eps²`. The across-seed spread scales as
-`eps¹`.** Three doublings, both ratios within 2 % of their theoretical values.
+Fitted over all four:
+
+| | exponent | theory |
+|---|---:|---:|
+| **mean over seeds** | **1.998** | 2.000 — a locally quadratic loss |
+| **spread across seeds** | **0.999** | 1.000 — a realised first-order term |
+
+**Both within 0.1 % of their theoretical values over four perturbation sizes.**
 That is the confound demonstrated rather than argued: the linear term is present,
-it cancels in expectation, and a single draw does not cancel it.
+it cancels in expectation, and a single draw does not cancel it. There is no
+room left for an alternative reading.
 
 ## Consequences
 
