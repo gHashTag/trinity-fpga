@@ -53,7 +53,7 @@ SRC = {"smollm2": "HuggingFaceTB/SmolLM2-135M", "qwen": "Qwen/Qwen2.5-0.5B",
 # gpt2's positional table is 1024, so it gets 80 windows for the same token span
 NWIN = {"gpt2": 80}
 SEQ = {"gpt2": 1024}
-EPS = [0.01, 0.02]
+EPS = [0.005, 0.01, 0.02, 0.04]
 SEED = 20260812
 
 
@@ -123,12 +123,27 @@ def main():
         print(f"   eps={eps:<6} ppl {p:9.4f}   rel {100*rel:+7.2f}%   "
               f"sens {rel/eps**2:8.2f}   ({time.time()-t0:.0f}s)", flush=True)
 
-    a, b = EPS
-    ra, rb = out["eps"][str(a)]["rel"], out["eps"][str(b)]["rel"]
-    # quadratic would give exactly 4.0 for eps doubling; report it, do not assume
-    out["quadratic_check"] = {"ratio": rb / ra if ra else None, "expected": 4.0}
-    print(f"   response ratio at 2x eps: {rb/ra:.3f}  (quadratic would be 4.000)",
-          flush=True)
+    # Fit rel = C * eps^alpha. A smooth second-order expansion around a
+    # minimum gives alpha = 2 exactly; anything else says the quadratic form
+    # does not govern at these perturbation sizes, which is a statement about
+    # half the quantisation literature's standing assumption. So the exponent is
+    # FITTED and reported, never assumed -- and the per-step ratios are printed
+    # beside it, because a single fitted alpha can hide curvature.
+    le = np.log(np.array(EPS))
+    lr = np.log(np.array([out["eps"][str(e)]["rel"] for e in EPS]))
+    alpha, logC = np.polyfit(le, lr, 1)
+    resid = float(np.max(np.abs(lr - (alpha * le + logC))))
+    steps = [out["eps"][str(b)]["rel"] / out["eps"][str(a)]["rel"]
+             for a, b in zip(EPS, EPS[1:])]
+    out["power_law"] = {"alpha": float(alpha), "logC": float(logC),
+                        "max_log_residual": resid,
+                        "step_ratios": steps,
+                        "quadratic_alpha": 2.0}
+    print(f"   fitted  rel ~ eps^{alpha:.3f}   (quadratic would be 2.000), "
+          f"max log residual {resid:.4f}", flush=True)
+    print("   per-step ratios at 2x eps: "
+          + ", ".join(f"{r:.3f}" for r in steps)
+          + "   (quadratic would be 4.000 each)", flush=True)
 
     for m, o in zip(mods, orig):
         m.weight.data = o
