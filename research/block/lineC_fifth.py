@@ -63,7 +63,8 @@ quant, perplexity, target_modules, load_wikitext = (
 K = ns["K"]
 
 sys.path.insert(0, HERE)
-import campaignA_books as A          # noqa: E402
+import campaignA_books as A
+import provenance as PV          # noqa: E402
 import campaignC_books as C          # noqa: E402
 
 from transformers.pytorch_utils import Conv1D    # noqa: E402
@@ -244,6 +245,7 @@ def main():
 
         dst = os.path.join(HERE, f"lineC_{mdir}.json")
         out = {"model": mdir, "src": sp["src"], "seqlen": SEQLEN, "nwin": NWIN,
+               "provenance": PV.describe(joined_text=txt, src=sp["src"]),
                "block": K, "scale": "E8M0", "lm_head": "excluded",
                "n_target_tensors": len(tg), "n_conv1d": n_conv,
                "elem_blocked": nq, "elem_target": nt, "param_total": ptot,
