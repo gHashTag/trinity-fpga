@@ -527,6 +527,37 @@ This one was caught because the ratchet was run against its own freshly-written 
 worth doing on purpose: **a new gate's first act should be to disagree with itself, so you find out
 whether it can.**
 
+## 8f. Pin the substrate, not just the harness
+
+Every number in the 2026-08 block campaign was measured against a `weights/` directory in `/tmp`
+belonging to **another session's scratchpad**. It vanished mid-campaign. Eleven documents quote
+figures only that directory could produce, and nothing in the repository recorded how to rebuild it.
+
+The recovery took twenty minutes and only because one file happened to carry the right gate:
+
+1. corpus from the HuggingFace cache under `~` (which survived);
+2. checkpoint re-downloaded from the Hub;
+3. **and neither counts until the ruler reproduces** — a restored corpus differing by one row, or a
+   re-uploaded checkpoint, produces numbers that look exactly like the old ones and are not
+   comparable to them. Measured: fp32 14.4874 and MXFP4 21.9397 both to under 2e-06 relative. Gate
+   passes, so pre-loss and post-loss numbers are comparable. Had it failed, the honest move was to
+   say so, not to quote them together.
+
+**What a measurement record needs and this one lacked:**
+
+* **a provenance line per input** — Hub repo id *and revision* per checkpoint, repo/revision/file
+  for the corpus. `gpt2` is not a version; `gpt2@<sha>` is;
+* **a fingerprint checkable without the original** — row count, character count, content hash of
+  the exact joined text, stored *in the measurement records*, so a restored copy is compared to
+  what was used rather than to a description of it;
+* **a ruler gate that runs on restore**, as the documented first step of any measuring session —
+  not a gate that one file happens to carry.
+
+The campaign spent a week finding harnesses that asserted less than their prose claimed. This is
+that defect one level down: **the substrate was never asserted about at all.** A number is
+comparable to another number only if something checkable says the instrument did not move — and the
+instrument includes its inputs.
+
 ## 9. Adversarial verification finds what self-consistency cannot
 
 Every theorem in the campaign was handed to a second agent instructed to **refute it, defaulting
