@@ -558,6 +558,38 @@ that defect one level down: **the substrate was never asserted about at all.** A
 comparable to another number only if something checkable says the instrument did not move — and the
 instrument includes its inputs.
 
+## 8g. Ask what the format destroys before building a predictor on it
+
+Five separate predictor failures in this campaign turned out to be one failure. T41's clipping
+criterion (wrong sign on two of four), T42's occupancy conjecture, the P1/P2/P3 bin predictors
+(none rotation-stable, and the classical greedy one *anti*-correlated), the four refuted
+explanations for a selector's uneven behaviour, and the standing surprise that a margin measured on
+four checkpoints does not appear on a fifth.
+
+All of them tried to predict a codebook's behaviour from the **weight distribution**. Measured
+across eight checkpoints and four architecture families:
+
+| | spread |
+|---|---:|
+| raw weight kurtosis | **14.6×** (3.786 → 55.334) |
+| kurtosis **after the block scale** | **6 %** (2.795 → 2.985) |
+
+The E8M0 rule `s = 2^⌈log₂ a⌉` absorbs essentially all of it. **The information those predictors
+were built to extract is destroyed by the format's own scale rule before the codebook sees the
+data.** Including on a non-transformer with no attention, which landed inside the band written for
+the transformers.
+
+**The rule.** Before building any predictor on an input statistic, measure that statistic *after*
+every normalisation the pipeline applies, not before. If the pipeline flattens it, the predictor
+cannot work and no amount of feature engineering on the raw side will save it. This costs one sweep
+and it would have saved five.
+
+**And the corollary for where to look next.** If a normalisation flattens the input differences
+while the *outputs* still differ by 21×, the difference is downstream — in how sensitive the trained
+function is, not in what it is made of. That is a different measurement (perturb by a fixed relative
+size and watch the loss) and it needs its own control: a zero-perturbation run that must reproduce
+the baseline bit-identically, or the harness is not measuring what it claims.
+
 ## 9. Adversarial verification finds what self-consistency cannot
 
 Every theorem in the campaign was handed to a second agent instructed to **refute it, defaulting
