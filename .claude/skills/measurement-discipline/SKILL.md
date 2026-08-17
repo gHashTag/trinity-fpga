@@ -618,6 +618,37 @@ registration is the thing that makes "the weight side is closed" a result rather
 either way is not constraining anything. If writing the number down does not feel like a risk, it
 is not a prediction.
 
+## 8i. A gate that stops finding things looks exactly like a corpus that got fixed
+
+A cross-check was added to two yosys stat parsers, correctly diagnosed as missing. Wired as a gate,
+it fired on **every** core -- the histogram exceeded yosys' declared total by a near-constant 6-9 --
+so every core became "could not measure" and the script **exited 0 with nothing to report**. The
+status ratchet recorded the change as `findings -> clean`: an *improvement*, in the severity order.
+
+**Two lessons and the second is the sharper one.**
+
+**(a) Severity orders are asymmetric in the wrong direction.** `clean` above `findings` encodes
+"fewer problems is better", which is true of the corpus and false of the instrument. A gate that
+stops reporting is not distinguishable from a corpus that got clean unless something separately
+records **how much it examined**. `run_all_checks.py` in the same directory already makes exactly
+this distinction -- HOLDS with a coverage of zero is "the shape that reads as assurance and is not"
+-- and the ratchet did not. Record coverage alongside status, or a fix that silences a check reads
+as progress.
+
+**(b) The check was right and the population was wrong.** `logic_count.py` cross-checks its
+histogram against the declared total and *raises*, correctly, because it locates an explicit
+`=== top ===` block and reads the table beneath it. The two broken files take
+`stdout.split("=== ")[-1]` -- the trailing text after the last marker, whose declared total and
+whose matched lines are **not the same population**. Copying a check between two harnesses copies
+its assumptions about what it is counting, and those assumptions are usually undocumented.
+
+**The rule.** Before promoting a diagnostic to a gate, run it in advisory mode over the real corpus
+and look at the hit rate. A check that fires on 100 % of inputs is measuring its own assumptions,
+not the corpus -- and if you gate on it, you have replaced a partial instrument with a silent one.
+
+This is instance nine, in a fix written for instances one through eight, by the person writing the
+rules. The class is not something other people do.
+
 ## 9. Adversarial verification finds what self-consistency cannot
 
 Every theorem in the campaign was handed to a second agent instructed to **refute it, defaulting
