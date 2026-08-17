@@ -45,6 +45,28 @@ WF = os.path.join(ROOT, ".github", "workflows", "build-matrix.yml")
 
 NAME = re.compile(r"^corona_compute_(?P<fmt>.+?)_(?P<op>[a-z0-9]+)_ax7203\.v$")
 STAT = re.compile(r"^\s+(\d+)\s+(\S+)\s*$", re.M)
+
+# yosys's stat table ends with summary lines ("N cells", "N wires", ...) whose
+# shape the cell regex also matches, so the declared total arrives in the same
+# dict as the cell types. logic_count.py cross-checks the histogram against that
+# total and raises when they disagree; these two had the number available and
+# did not use it. A regex that silently misses a cell type produces a LUT count
+# that is low and looks fine -- which is how pass 250's retracted LUT table
+# happened, in this same parser family.
+SUMMARY_KEYS = {"cells", "wires", "processes", "memories", "bits", "public"}
+
+
+def cross_check(cells):
+    """(ok, note). Only checks when yosys actually printed a total."""
+    declared = cells.get("cells")
+    if declared is None:
+        return True, "no declared total in this block -- not checked"
+    got = sum(v for k, v in cells.items() if k not in SUMMARY_KEYS)
+    if got != declared:
+        return False, f"histogram {got} != declared {declared}"
+    return True, f"histogram sums to the declared {declared}"
+
+
 READS_LINE = re.compile(r'READS="([^"]*)\$\{DESIGN\}\.v"')
 
 # The ops the workflow does NOT protect with -nodsp, other than the trivial ones.
@@ -94,6 +116,9 @@ def measure(base, reads, timeout):
     cells = dict((m.group(2), int(m.group(1))) for m in STAT.finditer(tail))
     if not cells:
         return None, "stat produced no cell counts -- parser, not design"
+    ok, note = cross_check(cells)
+    if not ok:
+        return None, f"stat parse disagrees with yosys: {note}"
     luts = sum(v for k, v in cells.items() if k.startswith("LUT"))
     dsps = sum(v for k, v in cells.items() if "DSP" in k.upper())
     return (luts, dsps), None

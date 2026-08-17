@@ -68,6 +68,28 @@ CORES = [
 # somewhere to disagree with.
 STAT = re.compile(r"^\s+(\d+)\s+(\S+)\s*$", re.M)
 
+# yosys's stat table ends with summary lines ("N cells", "N wires", ...) whose
+# shape the cell regex also matches, so the declared total arrives in the same
+# dict as the cell types. logic_count.py cross-checks the histogram against that
+# total and raises when they disagree; these two had the number available and
+# did not use it. A regex that silently misses a cell type produces a LUT count
+# that is low and looks fine -- which is how pass 250's retracted LUT table
+# happened, in this same parser family.
+SUMMARY_KEYS = {"cells", "wires", "processes", "memories", "bits", "public"}
+
+
+def cross_check(cells):
+    """(ok, note). Only checks when yosys actually printed a total."""
+    declared = cells.get("cells")
+    if declared is None:
+        return True, "no declared total in this block -- not checked"
+    got = sum(v for k, v in cells.items() if k not in SUMMARY_KEYS)
+    if got != declared:
+        return False, f"histogram {got} != declared {declared}"
+    return True, f"histogram sums to the declared {declared}"
+
+
+
 
 def synth(top, params, nodsp):
     """(LUTs, DSPs) or (None, reason)."""
@@ -99,6 +121,9 @@ def synth(top, params, nodsp):
     dsps = sum(v for k, v in cells.items() if "DSP" in k.upper())
     if not cells:
         return None, "stat produced no cell counts -- parser, not design"
+    ok, note = cross_check(cells)
+    if not ok:
+        return None, f"stat parse disagrees with yosys: {note}"
     return (luts, dsps), None
 
 
