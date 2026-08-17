@@ -124,8 +124,12 @@ def main():
         print()
 
     print("=" * 92)
-    print("A-pooled  (all measured models concatenated; k constant <=> the "
-          "ratio predicts the gain)")
+    print("A-across-checkpoints  (n = MODELS, one mean log-ratio each; k "
+          "constant <=> the ratio predicts the gain)")
+    print("   'k is the same at every width' is a claim about the LAW, which "
+          "has to hold on a")
+    print("   checkpoint nobody here has run.  Its replicate unit is the "
+          "CHECKPOINT, not the window.")
     print("=" * 92)
     print(f"{'width':<7}{'ratio':>9}{'improvement':>14}{'95% CI':>21}"
           f"{'t':>9}{'p':>11}{'k = imp/ratio':>16}{'CI on k':>20}")
@@ -135,10 +139,12 @@ def main():
         for m in Wd:
             nl = Wd[m]["per_window_nll"]
             if f"b{b}-sym" in nl and f"b{b}-asym" in nl:
-                ds.append(np.array(nl[f"b{b}-asym"]) - np.array(nl[f"b{b}-sym"]))
-        if not ds:
+                # one number per checkpoint, not that checkpoint's window vector
+                ds.append(float((np.array(nl[f"b{b}-asym"])
+                                 - np.array(nl[f"b{b}-sym"])).mean()))
+        if len(ds) < 2:
             continue
-        st = paired(np.concatenate(ds))
+        st = paired(np.array(ds))
         r = ratio_pct(b)
         pooled[b] = dict(st, ratio=r, k=st["imp"] / r,
                          k_lo=st["lo"] / r, k_hi=st["hi"] / r)
@@ -184,6 +190,14 @@ def main():
             pairs.append((a, "MXFP4", Bd, "E2M1 + 1 codeword"))
         for a in ("JK-asym-TOP", "JK-asym-MID", "JK-asym-MID2", "JK-asym-NEAR0"):
             pairs.append((a, "JOINT-KL", Bd, "JOINT-KL + 1 codeword"))
+        print("   n = CHECKPOINTS.  'Placement matters more than the ratio' is "
+              "a claim about books,")
+        print("   asserted across model families, so a family is one replicate. "
+              " Until 2026-08-12 these")
+        print("   rows concatenated 140 windows and printed intervals ~sqrt(35) "
+              "too narrow -- the same")
+        print("   defect POOLED_VERDICTS_RESTATED corrected in campaignB_stats "
+              "for these very arms.")
         print(f"{'asym book':<16}{'vs sym parent':<12}{'models':<24}"
               f"{'improvement':>13}{'95% CI':>20}{'k=imp/6.67':>12}")
         rB = ratio_pct(4)
@@ -193,12 +207,13 @@ def main():
             ms = []
             for m in MODELS:
                 if m in src and a in src[m]["per_window_nll"]:
-                    ds.append(np.array(src[m]["per_window_nll"][a])
-                              - np.array(src[m]["per_window_nll"][ref]))
+                    ds.append(float((np.array(src[m]["per_window_nll"][a])
+                                     - np.array(src[m]["per_window_nll"][ref])
+                                     ).mean()))
                     ms.append(m)
-            if not ds:
+            if len(ds) < 2:
                 continue
-            st = paired(np.concatenate(ds))
+            st = paired(np.array(ds))
             got.append((a, st))
             print(f"{a:<16}{ref:<12}{'+'.join(LABEL[x].split('-')[0] for x in ms):<24}"
                   f"{st['imp']:>+12.2f}%"

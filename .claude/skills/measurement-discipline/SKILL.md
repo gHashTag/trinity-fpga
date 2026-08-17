@@ -498,6 +498,35 @@ same arm, the "held-out" mean is *algebraically identical* to the in-sample mean
 transports no information and must not be quoted as though it does. Check that the folds disagree
 before believing the rotation bought anything.
 
+## 8e. A wall-clock limit measures the machine, not the code
+
+The gate-status ratchet's first run against its own baseline, on an **unchanged tree**, reported
+two scripts degraded `clean → TIMEOUT` and one improved `TIMEOUT → clean`. Nothing had changed
+except how many workers were competing for cores.
+
+A timeout is not a property of the script. It is a property of the script *and* the load, and any
+status derived from it inherits that. Three consequences, all of which bit here:
+
+* **The threshold is part of the measurement.** A script that is `TIMEOUT` at 90 s and `clean` at
+  300 s has not changed; comparing across two thresholds reports a fix or a regression that did
+  not happen. Record the threshold **in the baseline** and reuse it on every check, rather than
+  passing it as a convenience flag.
+* **Parallelism is part of the measurement too**, and it is the part people forget to record. Four
+  workers on a machine already running a build is a different instrument from four workers on an
+  idle one.
+* **Re-run disagreements serially before believing them.** Any status change with a timing-derived
+  status on either side gets one clean re-run with no contention. Only a script that exceeds the
+  limit *alone* has actually regressed.
+
+**The general rule.** Any gate whose verdict can move without the tree moving is a broken ruler,
+and it will be muted within a week — correctly, because it is lying. Before wiring a gate into CI,
+run it twice on an unchanged tree under *different* load and check it says the same thing. That
+costs one command and it is the only evidence that the gate measures the code.
+
+This one was caught because the ratchet was run against its own freshly-written baseline, which is
+worth doing on purpose: **a new gate's first act should be to disagree with itself, so you find out
+whether it can.**
+
 ## 9. Adversarial verification finds what self-consistency cannot
 
 Every theorem in the campaign was handed to a second agent instructed to **refute it, defaulting

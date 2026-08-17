@@ -1,7 +1,13 @@
 {
  "picks": {
-  "MXFP4": "MX-asym-NEAR0",
-  "JOINT-KL": "JK-asym-MID"
+  "MXFP4": {
+   "placement_argmin": "MX-asym-MIDN",
+   "published": "MX-asym-NEAR0"
+  },
+  "JOINT-KL": {
+   "placement_argmin": "JK-asym-MID",
+   "published": "JK-asym-MID"
+  }
  },
  "select_on": "smollm2",
  "ppl": {

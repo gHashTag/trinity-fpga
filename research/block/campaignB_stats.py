@@ -92,13 +92,25 @@ def load():
     return out
 
 
-# The placement family is three: MX-asym-TOP and JK-asym-TOP extend the ladder
-# to 16/12 and pay by clipping the negative extreme to -0.75, so campaignB_books
-# labels them kind="clip". A Bonferroni family of "the four placements" counted
-# a clipping choice as a placement. A clipping arm is also never ranked beside
-# placements without saying so -- hence the tag.
-NK_PLACEMENT = 3
+# A placement is a book that INSERTS the sixteenth codeword; campaignB_books
+# labels it kind="sig". MX-asym-TOP and JK-asym-TOP instead extend the ladder to
+# 16/12 and pay by clipping the negative extreme to -0.75, kind="clip", and are
+# not placements. A clipping arm is never ranked beside placements without
+# saying so -- hence the tag.
+#
+# The family size is COUNTED, not written down. A single constant NK_PLACEMENT=3
+# was applied to both families while the MX block tests FOUR placements (MID,
+# MID2, NEAR0, MIDN) and the JK block tests THREE. The constant was correct for
+# one of the two blocks it was used in. It moves no verdict at n = 4 -- every MX
+# row is a TIE at 3 and at 4 -- but a family size that has to be re-derived by
+# the reader is a family size that will be wrong the next time an arm is added,
+# which is exactly how MIDN slipped out of the set below.
 _KIND = {n: k for n, k, lv in B.books()}
+
+
+def placements(arms):
+    """The kind='sig' members of `arms` -- the set a placement claim ranges over."""
+    return [a for a in arms if _KIND.get(a) == "sig"]
 
 
 def CLIP_TAG(arm):
@@ -198,48 +210,77 @@ def main():
           "no part in the choice.")
     print("=" * 108)
     picks = {}
-    for fam, parent, arms in (("MXFP4", "MXFP4", MX_ASYM),
+    # THE SET THE ARGMIN RANGES OVER, named. It used to be the literal MX_ASYM,
+    # which is a DISPLAY list written before MX-asym-MIDN existed: it carried
+    # the clipping arm MX-asym-TOP, which is not a placement, and omitted MIDN,
+    # which is. So the argmin ran over a set that was neither the placement
+    # family nor the Bonferroni family -- a third set, never stated.
+    # It is not cosmetic. On the selection model MIDN is 20.8333 and NEAR0
+    # 20.8440, so over the placements the pick is MIDN, and two of the three
+    # held-out verdicts below change with it. Both picks are therefore printed,
+    # because the honest reading is that the selection model does not resolve
+    # the choice: MIDN vs NEAR0 on SmolLM2 is -0.05 % [-0.72, +0.62], p = 0.88,
+    # better in 19 of 40 windows -- a TIE on the very data that chose.
+    for fam, parent, disp in (("MXFP4", "MXFP4", MX_ASYM + ["MX-asym-MIDN"]),
                               ("JOINT-KL", "JOINT-KL", JK_ASYM)):
-        best = min(arms, key=lambda a: D[SELECT_ON]["ppl"][a])
-        picks[fam] = best
-        oos = [m for m in MODELS if m != SELECT_ON and m not in FITTED_ON[best]]
-        print(f"\n{fam}: chosen on {LABEL[SELECT_ON]} = {best}   "
-              f"(ranking there: "
+        cands = placements(disp)
+        best = min(cands, key=lambda a: D[SELECT_ON]["ppl"][a])
+        shipped = min(MX_ASYM if fam == "MXFP4" else JK_ASYM,
+                      key=lambda a: D[SELECT_ON]["ppl"][a])
+        # Both, always. Downstream sections take an argmin's winner as "the"
+        # arm; when the argmin cannot separate its top two, "the" arm does not
+        # exist and a single key would hide that.
+        picks[fam] = {"placement_argmin": best, "published": shipped}
+        print(f"\n{fam}: argmin over the {len(cands)} PLACEMENTS "
+              f"{'{'}{', '.join(a.replace('MX-asym-', '').replace('JK-asym-', '') for a in cands)}{'}'}"
+              f" on {LABEL[SELECT_ON]} = {best}")
+        print("   ranking there: "
               + ", ".join(f"{a}={D[SELECT_ON]['ppl'][a]:.4f}"
-                          for a in sorted(arms, key=lambda a: D[SELECT_ON]['ppl'][a]))
-              + ")")
-        if not oos:
-            print("   NO held-out model remains -- nothing can be claimed OOS.")
-            continue
-        print(hdr)
-        row(D, best, parent, oos)
-        row(D, best, "MXFP4", oos)
-        row(D, best, "NF4", oos)
-        row(D, best, "NF4-sym", oos)
+                          for a in sorted(disp, key=lambda a: D[SELECT_ON]['ppl'][a]))
+              + f"   ({CLIP_TAG(disp[0]).strip() or 'no clipping arm in this family'})")
+        if shipped != best:
+            print(f"   NOTE: published as {shipped}, the argmin over the stale "
+                  f"display list. Both are reported.")
+        for pick, why in ([(best, "argmin over the placements")]
+                          + ([(shipped, "the published pick")]
+                             if shipped != best else [])):
+            oos = [m for m in MODELS
+                   if m != SELECT_ON and m not in FITTED_ON[pick]]
+            print(f"\n   {pick}  ({why}); held out on "
+                  + "+".join(LABEL[m].split("-")[0] for m in oos))
+            if not oos:
+                print("   NO held-out model remains -- nothing can be claimed OOS.")
+                continue
+            print(hdr)
+            row(D, pick, parent, oos)
+            row(D, pick, "MXFP4", oos)
+            row(D, pick, "NF4", oos)
+            row(D, pick, "NF4-sym", oos)
 
+    # nk is the size of the placement family THIS BLOCK ranges over, counted
+    # from the arms actually printed. The MX block tests four placements and the
+    # JK block three; one constant served both.
+    MXD = MX_ASYM + ["MX-asym-MIDN"]
+    nk_mx, nk_jk = len(placements(MXD)), len(placements(JK_ASYM))
     print("\n" + "=" * 108)
-    print("EVERY ARM ACROSS ALL FOUR MODELS, MODEL-LEVEL "
-          "(Bonferroni x3 over the three placements)")
+    print(f"EVERY ARM ACROSS ALL FOUR MODELS, MODEL-LEVEL  (Bonferroni x{nk_mx} "
+          f"over the {nk_mx} MX placements, x{nk_jk} over the {nk_jk} JK ones)")
+    print("   n = 4 CHECKPOINTS in every row. A clipping arm is printed but is "
+          "not in either family.")
     print("=" * 108)
     print(hdr)
-    # nk is the size of the PLACEMENT family. MX-asym-TOP and JK-asym-TOP are
-    # not placements -- they extend the ladder to 16/12 and pay by clipping the
-    # negative extreme to -0.75 (campaignB_books labels them kind="clip"), so a
-    # family of "the four placements" counted a clipping choice as one. Three.
-    # The reclassification was made on structural grounds a day before anyone
-    # computed which way it moved a verdict; at model level it moves none.
-    for arm in MX_ASYM + ["MX-asym-MIDN"]:
-        row(D, arm, "MXFP4", MODELS, nk=NK_PLACEMENT, tag=CLIP_TAG(arm))
+    for arm in MXD:
+        row(D, arm, "MXFP4", MODELS, nk=nk_mx, tag=CLIP_TAG(arm))
     print()
-    for arm in MX_ASYM:
-        row(D, arm, "NF4", MODELS, nk=NK_PLACEMENT, tag=CLIP_TAG(arm))
+    for arm in MXD:
+        row(D, arm, "NF4", MODELS, nk=nk_mx, tag=CLIP_TAG(arm))
     print()
     for arm in JK_ASYM:
-        row(D, arm, "JOINT-KL", MODELS, nk=NK_PLACEMENT,
+        row(D, arm, "JOINT-KL", MODELS, nk=nk_jk,
             tag=("3/4 in-sample" + CLIP_TAG(arm)))
     print()
     for arm in JK_ASYM:
-        row(D, arm, "NF4", ["opt"], nk=NK_PLACEMENT,
+        row(D, arm, "NF4", ["opt"], nk=nk_jk,
             tag=("only OOS model" + CLIP_TAG(arm)))
 
     print("\n" + "=" * 108)
@@ -268,17 +309,41 @@ def main():
     print("\n" + "=" * 108)
     print("THE CONTROL THAT MATTERS: does spending the codeword on E2M1's SHAPE "
           "close the gap to NF4?")
+    print("   CROSS-MODEL, so n = 4 CHECKPOINTS, one mean log-ratio each -- the "
+          "same unit row() takes.")
     print("=" * 108)
-    gap = paired(np.concatenate([dvec(D, m, "NF4", "MXFP4") for m in MODELS]))
-    best_mx = picks["MXFP4"]
-    got = paired(np.concatenate([dvec(D, m, best_mx, "MXFP4") for m in MODELS]))
-    left = paired(np.concatenate([dvec(D, m, best_mx, "NF4") for m in MODELS]))
-    frac = got["mean_d"] / gap["mean_d"] if gap["mean_d"] else float("nan")
-    print(f"  gap NF4 - MXFP4                : {gap['pct']:+.2f} %")
-    print(f"  {best_mx} - MXFP4          : {got['pct']:+.2f} %")
-    print(f"  fraction of the gap recovered  : {100*frac:.1f} %")
-    print(f"  residual {best_mx} vs NF4  : {left['pct']:+.2f} % "
-          f"[{left['lo']:+.2f}, {left['hi']:+.2f}]  {verdict(left)}")
+    # `row()` was corrected on 2026-08-12 and these three calls were not: they
+    # kept `np.concatenate` over the four models and reported a 140-window
+    # interval three lines under a table of four-checkpoint intervals. The point
+    # estimates move by hundredths; the residual's verdict moves from BEATS to
+    # TIE, which is the verdict POOLED_VERDICTS_RESTATED_2026-08-12 already
+    # published for the identical comparison in the table above. The section was
+    # contradicting its own file.
+    def _ml4(arm, ref):
+        return paired(np.array([float(dvec(D, m, arm, ref).mean())
+                                for m in MODELS]))
+
+    gap = _ml4("NF4", "MXFP4")
+    print(f"  gap NF4 - MXFP4                : {gap['pct']:+.2f} % "
+          f"[{gap['lo']:+.2f}, {gap['hi']:+.2f}]  {verdict(gap)}")
+    # Both arms the selection model cannot separate, not just the one that
+    # happened to win an argmin over a stale list.
+    for key, why in (("placement_argmin", "argmin over the placements"),
+                     ("published", "the published pick")):
+        best_mx = picks["MXFP4"][key]
+        if key == "published" and best_mx == picks["MXFP4"]["placement_argmin"]:
+            continue
+        got = _ml4(best_mx, "MXFP4")
+        left = _ml4(best_mx, "NF4")
+        frac = got["mean_d"] / gap["mean_d"] if gap["mean_d"] else float("nan")
+        print(f"\n  {best_mx}   ({why})")
+        print(f"    vs MXFP4                     : {got['pct']:+.2f} % "
+              f"[{got['lo']:+.2f}, {got['hi']:+.2f}]  {verdict(got)}")
+        print(f"    fraction of the gap recovered: {100*frac:.1f} %   "
+              f"(a ratio of two point estimates, and it carries no interval)")
+        print(f"    residual vs NF4              : {left['pct']:+.2f} % "
+              f"[{left['lo']:+.2f}, {left['hi']:+.2f}]  {verdict(left)}")
+    print(f"\n  n = {gap['n']} checkpoints in every line above.")
 
     out = {"picks": picks, "select_on": SELECT_ON,
            "ppl": {m: D[m]["ppl"] for m in MODELS}}
