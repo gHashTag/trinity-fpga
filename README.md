@@ -4,7 +4,9 @@ This repository proves numerical number formats on open-source FPGA tooling. Eac
 
 ## Status
 
-Snapshot 2026-07-14 (Wave 4). Counts are measured, not projected.
+Snapshot 2026-08-18. Counts are measured, not projected. Three rows were
+re-checked against their primary sources on that date and two had gone stale;
+what changed is noted in the row.
 
 | Axis | Count | Notes |
 |------|-------|-------|
@@ -13,7 +15,8 @@ Snapshot 2026-07-14 (Wave 4). Counts are measured, not projected.
 | compute-HW Tier-E | 16 cells | GF4–GF32 × {ADD, MUL}, 0 failures on silicon (vectors vary by run) |
 | GF64+ on silicon | 70.1% | 359 / 512 score; two timing paths identified, fix in progress |
 | Tekum benchmark | Done | GF16 wins LUT, tekum16 wins dynamic range — see findings |
-| arXiv package | Ready | `research/arxiv_submission/` |
+| Catalog paper | **Published** | [arXiv:2606.09686](https://arxiv.org/abs/2606.09686) v2, 83 formats. Was "Ready" -- it has been submitted and is live |
+| Upstream patches to the toolchain | 25 merged | 23 in [openXC7/nextpnr-xilinx](https://github.com/openXC7/nextpnr-xilinx/pulls?q=author%3AgHashTag), 2 in openXC7/demo-projects; 1 open, 2 draft |
 
 Tier-E = rigorous evidence: dedicated proof post, hardware IDCODE + run ID, bit-exact UART witness on silicon. See `fpga/CATALOG_MATRIX_83.md` for the live SSOT.
 
@@ -114,6 +117,9 @@ The current GF16 adder is **0.85×** the tekum16 stub (15% smaller), not "4–11
 - **GF64 does not yet close timing.** 70.1% silicon score; the pipeline fix is designed but not yet proven on hardware.
 - **takum16 / takum32 / takum64 have no adder RTL** in this repository — only `takum16_decode.v` exists. Any LUT comparison involving takum is N/A.
 - **tekum16 result is a stub** (65% bit-exact, truncation not RNE). A corrected tekum16 with RNE may be larger than 573 LUT.
+- **No silicon is pending.** The TTSKY26b tape-out submission was withdrawn and
+  there is no fabrication route at present, so nothing here is awaiting a die.
+  Any ASIC claim about this work is out of date.
 - The `0.85×` LUT ratio compares a production GF16 adder against a non-final tekum16 stub. Treat it as a lower bound on the real ratio, not a victory claim.
 
 Per `research/goldenfloat-positioning.md`: claims are scoped to what was measured, on this toolchain, on this silicon, on this date.
@@ -126,9 +132,28 @@ MIT © 2024-2026 Dmitrii Vasilev. See [LICENSE](LICENSE).
 
 **Dmitrii Vasilev** — ORCID [0009-0008-4294-6159](https://orcid.org/0009-0008-4294-6159), Trinity Research Collective.
 
+## Upstream contributions
+
+Getting these results required fixing the toolchain, not only using it.
+**25 patches merged** into openXC7: 23 in `nextpnr-xilinx`, 2 in
+`demo-projects`. One is open and two are drafts.
+
+Representative of the class of defect found: a clock-buffer placement search
+gave up after 50 000 wires when the buffer it needed was the 75 492nd, so "no
+legal placement" meant "did not finish counting"; and `set_multicycle_path
+-setup` was parsed but never applied.
+
+Two remain unresolved and are stated as such. A hardware `IDDR` does not deliver
+data until the flow writes one ILOGIC configuration bit -- established by A/B/A
+reflashing on silicon, reproducible in both directions, but the polarity of the
+fix is not established, so that patch is deliberately a draft. And a `BUFR`
+divider appears to be ignored; that one is a source reading whose consequence
+has never been built or measured, and it says so where it is filed.
+
 ## Links
 
-- Paper: [arXiv:2606.05017](https://arxiv.org/abs/2606.05017)
+- Catalog paper (this repository): [arXiv:2606.09686](https://arxiv.org/abs/2606.09686)
+- GoldenFloat GF16 paper: [arXiv:2606.05017](https://arxiv.org/abs/2606.05017)
 - Issues: [github.com/gHashTag/trinity-fpga/issues](https://github.com/gHashTag/trinity-fpga/issues)
 - Catalog SSOT: [`fpga/CATALOG_MATRIX_83.md`](fpga/CATALOG_MATRIX_83.md)
 - LUT measurements: [`research/LUT_COMPARISON_MEASURED.md`](research/LUT_COMPARISON_MEASURED.md)
