@@ -590,6 +590,34 @@ function is, not in what it is made of. That is a different measurement (perturb
 size and watch the loss) and it needs its own control: a zero-perturbation run that must reproduce
 the baseline bit-identically, or the harness is not measuring what it claims.
 
+## 8h. Register the prediction you expect to fail, and score it when it does
+
+The occupancy registration wrote down, in advance: *"the registered expectation is that O1 holds and
+O2-O4 fail -- occupancy carries real information and is still not usable."* Uncomfortable to commit
+to. Then **O1 failed too** -- 12.8 % spread against a registered threshold of 20 % and a registered
+point prediction of 25-60 %.
+
+Being wrong in the direction that *strengthens* the conclusion is the only evidence that the
+conclusion was not steered. Had the spread come back at 30 %, the registration would have been the
+thing stopping a post-hoc story about why 30 % is "meaningful". Because it came back at 12.8 %, the
+registration is the thing that makes "the weight side is closed" a result rather than an assertion.
+
+**The practice, and the order matters:**
+
+1. write the threshold **and the predicted sign** before the data exists — a correlation with the
+   right magnitude and the wrong sign is a failure of the stated mechanism, not a discovery, and
+   only a pre-committed sign makes that call automatic;
+2. write what each outcome will mean, including the one you do not want;
+3. **score the prediction, not just the hypothesis.** "O1 failed" and "my P1 was wrong by half"
+   are different admissions and the second is the one that calibrates you;
+4. report the near-miss that pointed the right way — here `MID` at rho = -0.800 with the predicted
+   sign, p = 0.104, x4 = 0.416 — because a null deserves the same scrutiny as a hit, and because
+   one of four pointing correctly at n = 5 is what chance produces.
+
+**The tell you are doing it wrong:** a registration whose predictions you would be happy with
+either way is not constraining anything. If writing the number down does not feel like a risk, it
+is not a prediction.
+
 ## 9. Adversarial verification finds what self-consistency cannot
 
 Every theorem in the campaign was handed to a second agent instructed to **refute it, defaulting
