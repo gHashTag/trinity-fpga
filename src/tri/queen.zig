@@ -17,6 +17,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_mutex = @import("mutex.zig");
 const faculty_board = @import("cortex.zig");
 const faculty_types = @import("faculty_types.zig");
 const colors = @import("tri_colors.zig");
@@ -943,7 +944,7 @@ fn stopSupervisor() !void {
 
 const SupervisorLog = struct {
     file: std.fs.File,
-    mutex: std.Thread.Mutex,
+    mutex: tri_mutex.Mutex,
 
     fn init() !SupervisorLog {
         const dir = try std.fs.cwd().makeOpenPath(".trinity/queen", .{});
@@ -954,7 +955,7 @@ const SupervisorLog = struct {
 
         return SupervisorLog{
             .file = file,
-            .mutex = std.Thread.Mutex{},
+            .mutex = tri_mutex.Mutex{},
         };
     }
 

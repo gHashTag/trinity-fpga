@@ -7,6 +7,7 @@
 //! φ² + 1/φ² = 3 = TRINITY
 
 const std = @import("std");
+const tri_mutex = @import("mutex.zig");
 const observability = @import("observability.zig");
 
 /// Log level severity
@@ -339,7 +340,7 @@ pub const Logger = struct {
 
 /// Global logger instance (initialized on first use)
 var global_logger: ?Logger = null;
-var global_logger_mutex = std.Thread.Mutex{};
+var global_logger_mutex = tri_mutex.Mutex{};
 
 pub fn initGlobalLogger(allocator: std.mem.Allocator, min_level: Level) !void {
     global_logger_mutex.lock();

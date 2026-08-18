@@ -147,12 +147,22 @@ jobs:
           say "### Does the FASM become a bitstream?"
           say ""
           cat out/f2f.status 2>/dev/null | while read -r line; do say "- \`$line\`"; done
+          # The exception, not the head of the file: the first lines are an
+          # antlr import warning that says nothing, and burying a decisive
+          # error under it is how that error comes to read as noise. Measured
+          # in run 32100921307:
+          #
+          #   FasmLookupError: Segment DB HCLK_IOI3, key
+          #   HCLK_IOI3.HCLK_IOI_IO_PLL_CLK0_DMUX.HCLK_IOI_I2IOCLK_TOP0 not found
+          #
+          # identically for stock and patched, so it is the database gap and
+          # not #151.
           for t in stock patched; do
             if [ -s "out/$t.f2f.err" ]; then
               say ""
-              say "\`$t\` stderr:"
+              say "\`$t\`:"
               say '```'
-              head -6 "out/$t.f2f.err" >> $GITHUB_STEP_SUMMARY
+              say "$(grep -aE 'Error|error:' "out/$t.f2f.err" | tail -2)"
               say '```'
             fi
           done

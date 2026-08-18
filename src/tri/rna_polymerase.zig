@@ -6,6 +6,7 @@
 // ============================================================================
 
 const std = @import("std");
+const tri_mutex = @import("mutex.zig");
 const golden_chain = @import("dna_polymerase.zig");
 const tvc_gate_mod = @import("tvc_gate.zig");
 const tvc_corpus = @import("tvc_corpus");
@@ -258,7 +259,7 @@ pub const PipelineExecutor = struct {
         link: ChainLink,
         result: LinkResult,
         err: ?ChainError,
-        mutex: *std.Thread.Mutex,
+        mutex: *tri_mutex.Mutex,
     };
 
     /// Run a group of independent links in parallel using Thread.Pool.
@@ -267,7 +268,7 @@ pub const PipelineExecutor = struct {
             CYAN, links.len, RESET,
         });
 
-        var mutex = std.Thread.Mutex{};
+        var mutex = tri_mutex.Mutex{};
 
         // Create contexts for each link
         var contexts_buf: [8]ParallelLinkContext = undefined;

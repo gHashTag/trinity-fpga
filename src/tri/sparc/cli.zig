@@ -242,7 +242,6 @@ fn runFit(allocator: Allocator, options: SparcOptions) !void {
 
 /// Batch fit all galaxies and output summary statistics
 fn runBatchFit(allocator: Allocator, data_content: []const u8, options: SparcOptions) !void {
-
     std.debug.print("\n{s}SPARC Batch Fit{s}\n", .{ colorize("════════════════════════════════════════════════════════════", .cyan), colorize("", .reset) });
     std.debug.print("{s}Fitting Savchenko model to all galaxies...{s}\n\n", .{
         colorize("", .yellow), colorize("", .reset),
@@ -447,7 +446,6 @@ fn outputText(allocator: Allocator, result: mod.FitResult, options: SparcOptions
 
 /// Output fit results in JSON format
 fn outputJson(allocator: Allocator, result: mod.FitResult, points: []const mod.GalaxyDataPoint) !void {
-
     var root = std.json.Array.init(allocator);
     defer root.deinit();
 
@@ -613,7 +611,6 @@ fn runList(allocator: Allocator, options: SparcOptions) !void {
 
 /// Run plot command (ASCII-art rotation curve plot)
 fn runPlot(allocator: Allocator, options: SparcOptions) !void {
-
     if (options.galaxy_name.len == 0) {
         std.debug.print("Error: Please specify a galaxy name for plotting.\n", .{});
         std.debug.print("Usage: tri sparc plot <galaxy_name>\n", .{});
@@ -655,7 +652,7 @@ fn runPlot(allocator: Allocator, options: SparcOptions) !void {
 
     // Print legend
     std.debug.print("{s}●{s} Observed data  {s}─{s} Savchenko model\n\n", .{
-        colorize("", .blue), colorize("", .reset),
+        colorize("", .blue),  colorize("", .reset),
         colorize("", .green), colorize("", .reset),
     });
 
@@ -743,7 +740,7 @@ fn runPlot(allocator: Allocator, options: SparcOptions) !void {
     std.debug.print("  r_mem:   {e:.4} kpc\n", .{result.params.r_mem});
     std.debug.print("  r_core:  {e:.4} kpc\n", .{result.params.r_core});
     std.debug.print("  Υ_bul:   {e:.4}\n", .{result.params.upsilon_bul});
-    std.debug.print("  χ²:      {:.4f} (reduced: {:.4f})\n", .{result.chi_squared, result.reduced_chi_squared});
+    std.debug.print("  χ²:      {:.4f} (reduced: {:.4f})\n", .{ result.chi_squared, result.reduced_chi_squared });
 }
 
 /// Argument parsing error set
