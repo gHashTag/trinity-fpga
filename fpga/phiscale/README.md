@@ -19,17 +19,39 @@ integer pair `(a,b) ≡ a + bφ`, the scale `φ^k` is `k` applications of
 | **`scale_phi`** — φ^k, Fibonacci step | yes | **171** | **0** | 135 | 10 |
 | **`scale_phi`** | no | 171 | 0 | 135 | 10 |
 
-**The multiplier arm costs 2 DSP48 blocks, or 1215 LUTs without them — 7.1× ours.
-The φ arm is DSP-invariant**: identical with and without, because there is no
-multiply to map. That is a structural property, not a synthesis outcome.
+**Read the table's own first row before the 7.1×.** Given its DSPs — the normal
+case on an XC7A200T, which has 740 — the multiplier arm is **0 LUT and 2 DSP48**.
+That is **171 LUT smaller than the φ arm**, not 7.1× larger. The 7.1× compares us
+against the `no` row, a multiplier denied the resource its design assumes, and
+that comparison measures the denial (T52).
+
+What stands, on this table, is narrower and still true: **the φ arm is
+DSP-invariant** — identical with and without, because there is no multiply to
+map — and it is **7.1× smaller than a multiplier built from logic**. On a part
+with no DSP blocks, or one where they are spent, that is the whole product. On a
+part with DSPs to spare it is not a saving at all.
+
+Sized since: the φ arm trades 436–492 LUT per DSP freed, on parts carrying
+182–264 LUT per DSP, and the multiplier arm is LUT-bound on every Artix and
+Kintex part measured — so it fits *more* layers, not fewer. See
+`ON_A_PART_WITH_DSP.md` and `conformance/device_fit.py`.
 
 ## What it costs us, stated
 
-- **4× the registers**: 135 FF against 33. The pair representation carries two
-  components where the multiplier carries one. This is real and unavoidable.
+- **45× the registers**, not 4×. The 4× compared 135 FF against the 33 of the
+  DSP-denied row, which is the baseline that flatters us. Against the multiplier
+  as it would actually be built — the `yes` row — it is **135 against 3**. The
+  pair representation carries two components where the multiplier carries one,
+  and the iteration state carries the rest. This is real and unavoidable, and it
+  was understated here by an order of magnitude until the claims in this
+  directory were re-audited against T52.
 - **`k` cycles instead of 1.** With `α = mean|W| ≈ 0.02`, `k = round(log_φ α)`
-  is about 8, so at fan-in 512 the scale costs ~1.6% of the layer's work. An
-  unrolled or barrel variant would be one cycle at more area; not built.
+  is about 8. The "~1.6% of the layer's work" this line used to claim was 8/512
+  — the scale's share of ADDITIONS — while the sentence reads as a share of
+  time, and against a one-cycle multiplier it is not. Measured since: at |k| = 8
+  the multiplier arm is 2.15× faster per output element despite half the clock
+  (`FMAX.md`). The unrolled variant IS built now and takes the cycles back —
+  660 LC at 204.08 MHz, one element per cycle (`PIPELINED.md`).
 - **No Fmax.** `nextpnr-xilinx` is not installed on this machine, so this is
   area only. Saying "faster" here would be unsupported.
 - **The built direction is not the one deployed.** Real layer scales are below
