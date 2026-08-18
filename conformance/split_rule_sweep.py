@@ -107,8 +107,16 @@ def main():
             print(f"  {D:>8} {b[0]:>7} {e_phi:>6} {str(ok):>6}  {b[1]:>11.2e}  {sp:>11.2e}")
         print(f"  -> optimal at {agree}/{tested} of the ranges tested\n")
 
-    print("The comparison that matters, at 32 bits: IEEE binary32 spends e = 8 of")
-    print("31 bits (0.258 of the budget). The rule spends 12 (0.382).\n")
+    print("The comparison that matters, at 32 bits: binary32 spends e = 8 of 31")
+    print("bits (0.258 of the budget). The rule spends 12 (0.382).")
+    print()
+    print("Caveat, measured rather than assumed: the e=8 rung built here shares")
+    print("binary32's FIELD WIDTHS and its bias, but not its specials: has_inf is")
+    print("False, so the all-ones exponent is a finite normal instead of Inf. That")
+    print("buys it 6.81e38 -- exactly twice binary32's top -- and it SATURATES")
+    print("there rather than overflowing. Out-of-range samples are therefore")
+    print("charged as a large relative error rather than disqualified, so the e=8")
+    print("row is if anything flattered at wide spans.\n")
     print(f"  {'decades':>8} {'e=8':>12} {'e=12 (rule)':>13}  verdict")
     for D in (2, 6, 12, 20, 40, 80):
         a, _ = score(rung(8, 23), D)
