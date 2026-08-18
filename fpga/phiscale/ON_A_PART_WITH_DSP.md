@@ -12,16 +12,24 @@ depending on the part. Measured there, with the same memory-backed layer:
 
 | arm | N | DSP inference | LUT | DSP48 | FF |
 |---|---:|---|---:|---:|---:|
-| φ | 16 | either | 5133 | 0 | 1767 |
-| multiplier | 16 | forbidden | 5607 | 0 | 1022 |
-| **multiplier** | 16 | **allowed** | **3825** | **3** | 1022 |
-| φ | 32 | either | 9270 | 0 | 2727 |
-| multiplier | 32 | forbidden | 9579 | 0 | 1982 |
-| **multiplier** | 32 | **allowed** | **7794** | **3** | 1982 |
+| φ | 16 | either | 1711 | 0 | 723 |
+| multiplier | 16 | forbidden | 1869 | 0 | 346 |
+| **multiplier** | 16 | **allowed** | **1275** | **1** | 346 |
+| φ | 32 | either | 3090 | 0 | 1043 |
+| multiplier | 32 | forbidden | 3193 | 0 | 666 |
+| **multiplier** | 32 | **allowed** | **2598** | **1** | 666 |
+
+> **Corrected 2026-08-18.** The figures first published here were inflated by
+> exactly 3.0, and the DSP count by 3. `synth_xilinx` prints its own statistics
+> before the script's explicit `stat`, and the extraction summed LUT lines
+> across every block in the log. `tern_layer_mem` contains one 16×16 multiply,
+> which fits **one** DSP48E1 — three was never obtainable from this RTL, and
+> nothing in the original run questioned it. Every conclusion below survives,
+> because numerator and denominator were inflated by the same factor.
 
 With DSP inference forbidden the φ arm is smaller, as on iCE40. **With DSPs
-available — the normal case on this family — the multiplier arm is 1308 LUT
-smaller at fan-in 16 and 1476 smaller at 32, and uses 745 fewer flip-flops.**
+available — the normal case on this family — the multiplier arm is 436 LUT
+smaller at fan-in 16 and 492 smaller at 32, and uses 377 fewer flip-flops.**
 
 ## The exchange rate, which is the honest way to state it
 
@@ -30,8 +38,8 @@ flip-flops to avoid three DSP48 blocks.
 
 | N | LUT cost | DSP freed | LUT per DSP |
 |---:|---:|---:|---:|
-| 16 | 1308 | 3 | **436** |
-| 32 | 1476 | 3 | **492** |
+| 16 | 436 | 1 | **436** |
+| 32 | 492 | 1 | **492** |
 
 Against what the parts themselves carry:
 
@@ -54,12 +62,19 @@ not, and the earlier 1.13× was measured on iCE40 where the multiplier has no
 DSP to use.
 
 **Stands**: the φ arm needs **zero DSP48 at any fan-in**, and it is smaller than a
-multiplier built from logic — 5133 against 5607 at N=16, 9270 against 9579 at
+multiplier built from logic — 1711 against 1869 at N=16, 3090 against 3193 at
 N=32. On a device with no DSPs, or one where they are spent, that is the whole
 product.
 
 **Also stands**: exactness. The lattice accumulates without rounding, which is a
 property no LUT count reflects and which this comparison does not measure.
+
+## Nothing here touched silicon
+
+`synth_xilinx` targets a **family**, not a device — it has no device option — and
+no place-and-route ran. These are post-synthesis cell counts. No board is
+attached to this machine, `nextpnr-xilinx` and `prjxray` are not installed, and
+no bitstream for this family was ever built, let alone loaded.
 
 ## Method note
 

@@ -23,34 +23,48 @@ negative control: a wrong expectation would be caught
 
 ## Measured — Yosys 0.65, `synth_xilinx -family xc7`, W=8, ACC=24
 
-| N | arm | DSP allowed | LUT | DSP48 | FF | CARRY4 |
-|---:|---|---|---:|---:|---:|---:|
-| 16 | **φ** | either | **4299** | **0** | 254 | 220 |
-| 16 | multiplier | no | 6591 | 0 | 123 | 234 |
-| 16 | multiplier | yes | 3906 | **3** | 123 | 204 |
-| 64 | **φ** | either | **19158** | **0** | 254 | 796 |
-| 64 | multiplier | no | 21405 | 0 | 123 | 810 |
-| 64 | multiplier | yes | 18819 | **3** | 123 | 780 |
+| N | arm | DSP allowed | LUT | DSP48 | FF |
+|---:|---|---|---:|---:|---:|
+| 16 | **φ** | either | **1433** | **0** | 127 |
+| 16 | multiplier | no | 2197 | 0 | 49 |
+| 16 | multiplier | yes | **1302** | **1** | 49 |
+| 64 | **φ** | either | **6386** | **0** | 127 |
+| 64 | multiplier | no | 7135 | 0 | 49 |
+| 64 | multiplier | yes | **6273** | **1** | 49 |
+
+> **Corrected 2026-08-18.** The figures first published here were inflated by
+> exactly 3.0 and the DSP count by 3, because the extraction summed LUT lines
+> across every stat block `synth_xilinx` emits rather than the last one. The
+> RTL has one 16×16 multiply and fits **one** DSP48E1.
 
 ## What that changes about the claim
 
-**The saving is a constant, not a ratio.** φ is ~2250 LUT smaller than the
+**The saving is a constant, not a ratio.** φ is ~760 LUT smaller than the
 DSP-less multiplier arm at both fan-ins, because what it removes is the
 multiplier itself and the MAC tree in front of it is identical in both arms. As
 a ratio that is **1.53× at fan-in 16 and 1.12× at fan-in 64** — the wider the
 layer, the more the fixed saving is diluted.
 
 So "7.1×" is true of the scale block and misleading if read as a layer claim.
-The layer claim is: a fixed ~2250 LUT, or three DSP48 blocks, removed.
+The layer claim is: a fixed ~760 LUT removed against a multiplier denied its
+DSPs, and **one** DSP48 removed against one allowed them — for which the φ arm
+pays 131 LUT more at N=16 and 113 more at N=64. Against a multiplier on its
+normal footing the φ arm is the LARGER one, at 0.91× and 0.98×.
 
-**With DSPs available the multiplier arm is smaller in LUTs** (3906 against
-4299 at N=16) and pays three DSP48 for it. The φ arm is DSP-invariant —
+**With DSPs available the multiplier arm is smaller in LUTs** (1302 against
+1433 at N=16) and pays one DSP48 for it. The φ arm is DSP-invariant —
 identical with and without — because there is no multiply to map. On a part
 where DSPs are scarce or already spent, that invariance is the point; on a part
 with DSPs to spare, the multiplier arm wins on LUTs.
 
-**φ costs 2× the registers**, 254 against 123, at every fan-in. The pair
+**φ costs 2.6× the registers**, 127 against 49, at every fan-in. The pair
 representation carries two components where the multiplier carries one.
+
+## Nothing here touched silicon
+
+`synth_xilinx` targets a family, not a device, and no place-and-route ran: these
+are post-synthesis cell counts. No board is attached to this machine and no
+bitstream for this family was built.
 
 ## What this does not establish
 

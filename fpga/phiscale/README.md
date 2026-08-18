@@ -10,7 +10,11 @@ integer pair `(a,b) ≡ a + bφ`, the scale `φ^k` is `k` applications of
 (a, b) -> (b, a + b)        one integer addition, no shift, no multiplier
 ```
 
-## Measured (yosys 0.65, `synth_xilinx`, XC7A200T primitives)
+## Post-synthesis estimate (yosys 0.65, `synth_xilinx -family xc7`)
+
+`synth_xilinx` has no device option — it targets a family — so naming a part
+here was wrong. No place-and-route ran: these are cell counts, not an
+implementation.
 
 | arm | DSP allowed | LUT | DSP48 | FF | CARRY4 |
 |---|---|---:|---:|---:|---:|
@@ -31,10 +35,15 @@ map — and it is **7.1× smaller than a multiplier built from logic**. On a par
 with no DSP blocks, or one where they are spent, that is the whole product. On a
 part with DSPs to spare it is not a saving at all.
 
-Sized since: the φ arm trades 436–492 LUT per DSP freed, on parts carrying
-182–264 LUT per DSP, and the multiplier arm is LUT-bound on every Artix and
-Kintex part measured — so it fits *more* layers, not fewer. See
+Sized since: the φ arm trades 436–492 LUT per **one** DSP freed, on parts
+carrying 182–264 LUT per DSP, and the multiplier arm is LUT-bound on every Artix
+and Kintex part measured — so it fits *more* layers, not fewer. See
 `ON_A_PART_WITH_DSP.md` and `conformance/device_fit.py`.
+
+**Nothing in this directory touched silicon.** `synth_xilinx` targets a family,
+not a device; the iCE40 numbers come from `nextpnr-ice40`'s timing model, not
+from a board. `icepack` built a real 135,100-byte bitstream and there is nothing
+attached to load it into.
 
 ## What it costs us, stated
 

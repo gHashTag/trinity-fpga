@@ -15,18 +15,37 @@ long before DSPs do, so the multiplier arm fits MORE layers, not fewer. The
 niche exists only when something else has already taken most of the DSPs
 without taking the LUTs.
 
-Costs are the measured ones from gHashTag/trinity-fpga#595, yosys 0.65,
-synth_xilinx -family xc7, N=16, ACC=16, ROWS=16. Change them here when the RTL
+Costs are measured with yosys 0.65, `synth_xilinx -family xc7`, N=16, ACC=16,
+ROWS=16, reading only the LAST stat block. Change them here when the RTL
 changes, and the conclusion recomputes.
+
+Nothing here touched silicon. `synth_xilinx` targets a FAMILY, not a device --
+it has no device option -- and no place-and-route ran, so these are
+post-synthesis cell counts, not implemented ones.
 """
 
 import sys
 
 # arm -> (LUT, DSP48, FF) per layer
+# Corrected 2026-08-18. The published figures here were inflated by exactly 3.0
+# and the DSP count by 3: `synth_xilinx` prints its own statistics before the
+# script's explicit `stat`, and the extraction summed LUT lines across every
+# block in the log. Re-measured from the LAST block only:
+#
+#   published   5133 / 0 / 1767      true   1711 / 0 /  723
+#   published   3825 / 3 / 1022      true   1275 / 1 /  346
+#   published   5607 / 0 / 1022      true   1869 / 0 /  346
+#
+# `tern_layer_mem` contains exactly one 16x16 multiply, which fits ONE DSP48E1
+# (25x18). Three was never obtainable from this RTL at any fan-in, and nothing
+# in the original run questioned it.
+#
+# The exchange rate below survives the correction unchanged, because numerator
+# and denominator were inflated by the same factor.
 ARMS = {
-    "phi": (5133, 0, 1767),
-    "multiplier": (3825, 3, 1022),
-    "multiplier, DSP denied": (5607, 0, 1022),
+    "phi": (1711, 0, 723),
+    "multiplier": (1275, 1, 346),
+    "multiplier, DSP denied": (1869, 0, 346),
 }
 
 # part -> (LUT, DSP48, FF)
