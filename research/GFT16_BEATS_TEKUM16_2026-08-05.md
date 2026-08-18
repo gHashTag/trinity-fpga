@@ -25,6 +25,21 @@
 > does not survive is the comparison being at equal width, and the competitor
 > being tekum rather than takum.
 >
+> **4. The opponent is neither takum nor tekum.** Both oracles say so in their
+> own headers. `takum_ref.py`: *"настоящий takum — ЛОГАРИФМИЧЕСКИЙ (value =
+> (-1)^S · exp(ℓ/2)) … здесь реализована РАБОЧАЯ СТРУКТУРНАЯ МОДЕЛЬ …
+> интерпретированная ЛИНЕЙНО … а НЕ логарифмически."* Read the same 16-bit word
+> both ways and they are different numbers — `0x1001` is 1.10e-19 linear and
+> 1.01e+00 logarithmic, a ratio of 9.2e+18. **This caveat outranks the width
+> one:** the comparison is against a linear reinterpretation of takum's field
+> layout, not against either published format.
+>
+> **Measured at equal width** (`conformance/equal_width_vs_takum.py`), against
+> that linear model: TNF(4,8) at 16 bits is **1.4× better over nine decades and
+> 2.0× over twelve**, and **worse near unity**, where the taper spends its bits.
+> The 17-bit version shows 2.7× and 4.0× — the extra bit is roughly half the
+> advantage.
+>
 > The cost half was withdrawn separately: the only GF-T adder in the tree
 > (`fpga/tef/gft_add_w.v`) is magnitude-only — no sign, no subtraction, no
 > rounding, no normalisation — against tekum16's full adder. That gap is feature
