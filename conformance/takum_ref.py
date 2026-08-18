@@ -177,7 +177,32 @@ def decode(fmt: TakumFormat, raw: int):
     M_u = lower & ((1 << p) - 1) if p > 0 else 0
 
     c = cbias + C_u
-    val = (1 + (Fraction(M_u, 1 << p) if p > 0 else 0)) * pow2(c)
+    # The negative branch is NOT a sign flip of the positive one.
+    #
+    # libtakum's reference decode (src/codec.c,
+    # codec_s_and_linear_l_to_float64) derives the linear value from the
+    # logarithmic pair (c, m):
+    #
+    #     e = (1 - 2s)(c + s)
+    #     s == 0:  h = e,               g = m
+    #     s == 1:  h = e + 1, g = 0     if m == 0
+    #              h = e,     g = 1 - m otherwise
+    #     value = (-1)^s (1 + g) 2^h
+    #
+    # For s = 1 the exponent's SIGN flips, so negation is close to
+    # reciprocation -- the defining behaviour of a tapered logarithmic format,
+    # and exactly what a plain `-val` discards. Before this fix the oracle
+    # matched the reference on 32768 of 65535 takum16 codes: every positive one,
+    # and no negative one.
+    m_frac = Fraction(M_u, 1 << p) if p > 0 else Fraction(0)
+    e = (1 - 2 * S) * (c + S)
+    if S == 0:
+        h, g = e, m_frac
+    elif m_frac == 0:
+        h, g = e + 1, Fraction(0)
+    else:
+        h, g = e, 1 - m_frac
+    val = (1 + g) * pow2(h)
     return -val if S else val
 
 
@@ -191,6 +216,28 @@ def encode(fmt: TakumFormat, value):
 
     sign = 1 if v < 0 else 0
     a = -v if v < 0 else v
+
+    # Invert the decode's negative branch before choosing fields.
+    #
+    # decode packs (c, m) and reads them back as
+    #     s = 0:  value =  (1 + m) 2^c
+    #     s = 1:  value = -(1 + g) 2^h  with h = -(c+1), g = 1 - m
+    #                     (or h = -c, g = 0 when m = 0)
+    #
+    # so a negative target does NOT share fields with its absolute value. Map it
+    # to the POSITIVE value that the same (c, m) would decode to, encode that,
+    # and set the sign bit. Without this, encode and decode disagree on every
+    # negative code: measured, 4681 of 9362 round trips held -- exactly the
+    # positive half.
+    if sign:
+        h = ilog2_floor(a)
+        g = a / pow2(h) - 1
+        if g == 0:
+            c_t, m_t = -h, Fraction(0)
+        else:
+            c_t, m_t = -h - 1, 1 - g
+        a = (1 + m_t) * pow2(c_t)
+
     E = ilog2_floor(a)
     frac = a / pow2(E) - 1
 
