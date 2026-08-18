@@ -60,3 +60,17 @@ fixed-field adder against a tapered-field adder, both binary, and it bears on
 neither published format.
 
 Post-synthesis cell counts, `-family xc7`, no place-and-route, no board.
+
+## Chained, 2026-08-18
+
+`tef_add_full_chain_tb.v` feeds the adder's output back as its next operand —
+40 chains of 32 terms, expected finals from `tnf_ref`'s own encode:
+
+```
+40 chains of 32 terms, 0 errors
+```
+
+So the accumulation measurements (`arithmetic_across_rungs.py`,
+`true_width_ladder.py`) model exactly what this hardware does, step for step.
+Chains avoid the zero and Inf rows mid-stream, which the adder does not define;
+vector generation regenerates any chain that would touch them and says so.
