@@ -1,4 +1,18 @@
 #!/usr/bin/env python3
+"""SUPERSEDED -- this script regenerates a table the paper no longer contains.
+
+It emits decades 8, 26, 80, 242; the paper's ladder table prints 2, 8, 24, 73,
+and 26, 80 and 242 occur ZERO times anywhere in tnf_paper.tex. The difference is
+the source: this script reads the SPECIFICATION's field widths and the paper now
+takes the ORACLE's throughout. The table's own caption records the repair --
+"Mixing the two sources in one table is the defect being repaired: the rows are
+now the oracle throughout".
+
+Use `recompute_ladder_exact.py`, which owns the tab:ladderacc table. Running this
+one against the current paper reports a table's worth of false differences, which
+is what two separate audit passes saw and could not account for.
+"""
+
 """Recompute Table `tab:ladderacc` from the shipped TNF oracle.
 
 Two configurations of the 16-bit rung were in the paper at once: the fill study

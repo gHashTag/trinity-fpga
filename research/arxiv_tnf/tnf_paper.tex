@@ -482,7 +482,7 @@ specification, which is two ladders in one table.}
 \toprule
 rung & $M$ & $2^{-(M+1)}$ & measured & ratio & flatness \\
 \midrule
-TNF8    & $4$    & $3.12\mathrm{e}{-2}$   & $1.11\mathrm{e}{-2}$   & $0.36$ & $1.082$ \\
+TNF8    & $4$    & $3.12\mathrm{e}{-2}$   & $1.54\mathrm{e}{-2}$   & $0.49$ & $1.883$ \\
 TNF16   & $11$   & $2.44\mathrm{e}{-4}$   & $8.51\mathrm{e}{-5}$   & $0.35$ & $1.048$ \\
 TNF32   & $25$   & $1.49\mathrm{e}{-8}$   & $5.17\mathrm{e}{-9}$   & $0.35$ & $1.090$ \\
 TNF64   & $52$   & $1.11\mathrm{e}{-16}$  & $3.96\mathrm{e}{-17}$  & $0.36$ & $1.074$ \\
@@ -673,14 +673,13 @@ subnormal boundary, which is not a defect; the instrument says which of the two 
 is, where an accuracy table alone does not.
 
 
-\subsection{Tapering has a functional form, and it follows from the encoding}
+\subsection{Tapering has a functional form, and it follows from the encoding}\label{sec:taperlaw}
 \begin{figure}[htbp]\centering
 \includegraphics[width=\textwidth]{canon/canon-tnf-35-taperform.png}
 \caption{Canon plate. Both tapers lose significand in staircases, and they are different staircases; a fitted rate presupposes a linear taper, which is why we withdraw it.}
 \label{fig:canon-taperform}
 \end{figure}
 
-\label{sec:taperlaw}
 
 Section~\ref{sec:catalogue} reported a taper rate per family. That was half right,
 and the half that was wrong is instructive: a rate presupposes a linear taper, and
@@ -1011,7 +1010,7 @@ the oracle throughout, with the 16-bit rung at its reconciled $M{=}11$
 rung & decades & $|e|<8$ & $|e|\,8$--$20$ & $|e|\,20$--$38$ \\
 \midrule
 TNF4    & $2$      & $1.04\mathrm{e}{-1}$\,(58/115) & \multicolumn{2}{c}{beyond range} \\
-TNF8    & $8$      & $1.07\mathrm{e}{-2}$ & $1.16\mathrm{e}{-2}$\,(82/187) & beyond range \\
+TNF8    & $8$      & $1.07\mathrm{e}{-2}$ & $2.02\mathrm{e}{-2}$\,(85/187) & beyond range \\
 TNF16   & $24$     & $8.26\mathrm{e}{-5}$   & $8.61\mathrm{e}{-5}$   & $8.66\mathrm{e}{-5}$ \\
 TNF32   & $73$     & $7.63\mathrm{e}{-8}$   & $8.58\mathrm{e}{-8}$   & $8.32\mathrm{e}{-8}$ \\
 TNF64   & $658$    & $3.80\mathrm{e}{-17}$  & $4.08\mathrm{e}{-17}$  & $4.01\mathrm{e}{-17}$ \\
@@ -2408,7 +2407,7 @@ Theorem~\ref{thm:floor} forbids it.
 
 
 
-\section{Where the format is the datapath}
+\section{Where the format is the datapath}\label{sec:ternarynet}
 
 \begin{figure}[htbp]\centering
 \includegraphics[width=\textwidth]{canon/canon-tnf-24-ternarynet.png}
@@ -2416,7 +2415,6 @@ Theorem~\ref{thm:floor} forbids it.
 \label{fig:canon-ternarynet}
 \end{figure}
 
-\label{sec:ternarynet}
 
 Every hardware figure so far compares a decoder against a datapath that contains a
 significand multiplier. That comparison flatters every format equally, because a
@@ -3045,7 +3043,7 @@ in bits.
 \end{figure}
 
 
-\section{Two formats close a ternary node}
+\section{Two formats close a ternary node}\label{sec:pair}
 
 \begin{figure}[htbp]\centering
 \includegraphics[width=\textwidth]{canon/canon-tnf-26-pair.png}
@@ -3053,7 +3051,6 @@ in bits.
 \label{fig:canon-pair}
 \end{figure}
 
-\label{sec:pair}
 
 A ternary node contains exactly three sites where a number format could live, and
 only one of them needs one.
@@ -4291,14 +4288,13 @@ and throughput are readable together.}
 
 
 
-\subsection{The scale applier, and a claim we withdraw}
+\subsection{The scale applier, and a claim we withdraw}\label{sec:scaleapplier}
 \begin{figure}[htbp]\centering
 \includegraphics[width=\textwidth]{canon/canon-tnf-45-applier.png}
 \caption{Canon plate. No applier dominates another in area, latency and error together, and the area advantage we previously reported is withdrawn.}
 \label{fig:canon-applier}
 \end{figure}
 
-\label{sec:scaleapplier}
 
 Section~\ref{sec:pair} closes the multiplier out of the weight and the
 accumulation. The layer scale is the third site, and our first two attempts at it
@@ -4467,14 +4463,13 @@ down what the competitor would build if it were trying to win, and measure that.
 
 
 
-\subsection{The post-route FPGA table, evaluated on an audited harness}
+\subsection{The post-route FPGA table, evaluated on an audited harness}\label{sec:cleantable}
 \begin{figure}[htbp]\centering
 \includegraphics[width=\textwidth]{canon/canon-tnf-46-audited.png}
 \caption{Canon plate. With every decoder bit folded into one observed output, a tapered format is paid in delay rather than in area: 1.43 times the area against 19.9 times the frequency.}
 \label{fig:canon-audited}
 \end{figure}
 
-\label{sec:cleantable}
 
 Every FPGA post-route figure in this paper was originally evaluated through a
 harness that
@@ -4900,14 +4895,13 @@ and reported the levers as nearly multiplicative. They are not.
 \end{figure}
 
 
-\subsection{Where the block literature is not looking}
+\subsection{Where the block literature is not looking}\label{sec:blockrelated}
 \begin{figure}[htbp]\centering
 \includegraphics[width=\textwidth]{canon/canon-tnf-51-blocklit.png}
 \caption{Canon plate. The literature varies the transform while holding the element format fixed, and inside a block two of three non-sign positions buy range the shared scale already bought.}
 \label{fig:canon-blocklit}
 \end{figure}
 
-\label{sec:blockrelated}
 
 The block axis is the escape route Corollary~\ref{cor:escape} leaves open, and it
 is where the field's attention currently sits. It is worth being precise about
@@ -6785,7 +6779,7 @@ specification version: the affected files remain in place under
 claiming conformance against the older manifest should be re-read with this in
 mind.
 
-\section{Limitations}\label{sec:limitations-anchor}
+\section{Limitations}\label{sec:limitations-anchor}\label{sec:limits}
 
 \begin{figure}[htbp]\centering
 \includegraphics[width=\textwidth]{canon/canon-tnf-32-limits.png}
@@ -6806,7 +6800,6 @@ per stored bit, with equality only at $t=1$. The two statements are about
 different axes and both hold. The claims that survive on parts you can buy today are the fixed-field
 ones: no regime codec, no exponential to
 evaluate. The ternary claim is architectural and is labelled as such throughout.
-\label{sec:limits}
 
 \begin{enumerate}[leftmargin=*]
 \item \textbf{The comparison is against takum16, not tekum16.} The oracle
