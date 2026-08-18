@@ -139,6 +139,23 @@ def phi_is_inert_in_the_closed_format():
                 for x in range(4) for y in range(4)]
 
     ref = tables(PHI)
+    # `tables` is compared only against other `tables` results, so nothing here
+    # pins the quantiser: a degenerate q (say, one that always returns 1) would
+    # make every substitution agree and the inertness claim would pass
+    # VACUOUSLY. `tri mutate` found exactly that -- mutating the code values on
+    # this line left every claim green. So the phi table is tied to the shadow
+    # map, which is itself tied to the decode RTL above.
+    code = {1: 1, -1: 2, 0: 0}
+    expected = [(code[(SHADOW[x] + SHADOW[y] > 0) - (SHADOW[x] + SHADOW[y] < 0)],
+                 code[(SHADOW[x] * SHADOW[y] > 0) - (SHADOW[x] * SHADOW[y] < 0)])
+                for x in range(4) for y in range(4)]
+    check(ref == expected,
+          "the phi table is the sign rule over the RTL's own shadow map",
+          "without this the substitution test compares tables only to each "
+          "other, and a degenerate quantiser passes it vacuously")
+    check(len({c for pair in ref for c in pair}) == 3,
+          "the table is non-degenerate: all three codes occur")
+
     others = {"1 (balanced ternary)": Decimal(1),
               "2": Decimal(2),
               "pi": Decimal("3.14159265358979323846"),
