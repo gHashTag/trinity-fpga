@@ -6143,7 +6143,7 @@ not qualify.
 
 \begin{table}[htbp]\centering\small
 \caption{Crossover measurement. Bulk placed at $2^{c\pm 2}$. \texttt{binary16}
-has no representation at all from $c=20$ upward, marked ---.}
+has no representation at all from $c=20$ upward, marked ---. \emph{Data:} \texttt{measurements/crossover2\_2026-08-13e.json}}
 \label{tab:window}
 \begin{tabular}{rrrrrr}
 \hline
@@ -6189,7 +6189,7 @@ $0.44\times$ against \texttt{takum16} and $0.25\times$ against \texttt{binary16}
 \begin{table}[htbp]\centering\small
 \caption{Real GPT-2 weight tensors against the threshold of
 Table~\ref{tab:window}. $20{,}000$ sampled values per tensor, no clipping in any
-format. Both tensors sit below $2^{12}$ and both lose.}
+format. Both tensors sit below $2^{12}$ and both lose. \emph{Data:} \texttt{measurements/gpt2\_window\_2026-08-13e.json}}
 \label{tab:gpt2window}
 \begin{tabular}{lrrrrrr}
 \hline
@@ -6236,7 +6236,7 @@ $S$, and $S$ is swept.
 \caption{The same samples, centred and displaced. Mean relative round-trip error;
 the ratio is \texttt{takum16} over TNF, so a ratio above one means TNF is the more
 accurate of the two. $8000$ samples per row, seed $20260813$. TNF$(4,8)$ occupies
-sixteen physical cells, as does \texttt{takum16}.}
+sixteen physical cells, as does \texttt{takum16}. \emph{Data:} \texttt{measurements/centering\_2026-08-13f.json}}
 \label{tab:centring}
 \begin{tabular}{lrrrr}
 \hline
@@ -6420,7 +6420,7 @@ part of the earlier negative result stands, and we keep it.
 forward pass sits. Weights from \texttt{openai-community/gpt2} in \texttt{float32},
 $82$ real tokens, plain \texttt{numpy}. Not one row approaches the thresholds of
 Table~\ref{tab:rungthr}; the median column is reported because it is what the
-earlier absolute window was stated in.}
+earlier absolute window was stated in. \emph{Data:} \texttt{measurements/inside\_window\_2026-08-13f.json}}
 \label{tab:landing}
 \begin{tabular}{lrrr}
 \hline
@@ -6457,7 +6457,7 @@ representable in the TNF rung; when it is no, no ratio exists and none is
 reported. Ratio is \texttt{takum} over TNF at equal physical cell count; bold
 marks a pair that satisfies both halves of the condition. The same eleven
 workloads are evaluated at both rungs, so a workload can qualify at one and fail
-at the other.}
+at the other. \emph{Data:} \texttt{measurements/workloads\_strict\_2026-08-13g.json}}
 \label{tab:workloads}
 \begin{tabular}{lrrrlr}
 \hline
