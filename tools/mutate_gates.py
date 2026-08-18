@@ -92,6 +92,7 @@ def find_one(pat, glob):
 
 VERI = find_one("8'd127", "fpga/**/*.v")
 SPEC = str(ROOT / "conformance" / "tnf_spec_ref.py")
+INVF = str(ROOT / "conformance" / "tnf_ladder_invariants_test.py")
 
 # Each case: (label, gate, [(file, old, new)], is_control)
 # A control uses the phrasing the gate was written against and MUST fail.
@@ -133,6 +134,35 @@ CASES = [
     # .v file proved nothing about it, which is why that control passed.
     ("окно экспоненты, E_t за предел", "check_exponent_window",
      [(SPEC, "et=5", "et=7")], True),
+
+    # check_overfull greps the build log for "Overfull \\hbox". Its docstring
+    # asks whether anything runs off the page; a vertical overflow does exactly
+    # that and matches no pattern it holds.
+    ("переполнение ГОРИЗОНТАЛЬНОЕ", "check_overfull",
+     [(PAP, r"\section{Hardware}",
+       "\\section{Hardware}\n\n\\noindent "
+       "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n")], True),
+    ("переполнение ВЕРТИКАЛЬНОЕ", "check_overfull",
+     [(PAP, r"\section{Hardware}",
+       "\\section{Hardware}\n\n\\begin{minipage}[t][2pt]{\\linewidth}\n"
+       "One two three four five six seven eight nine ten eleven twelve thirteen "
+       "fourteen fifteen sixteen seventeen eighteen nineteen twenty.\n"
+       "\\end{minipage}\n")], False),
+
+    # UNIT is read from one file by IMPORT and from the other by scanning for a
+    # line that STARTS with "UNIT". An ordinary annotated declaration does not.
+    ("рассогласование единиц, знакомая запись", "check_ladder_units",
+     [(INVF, 'UNIT = "positions"', 'UNIT = "stored bits"')], True),
+    ("объявление UNIT с аннотацией типа", "check_ladder_units",
+     [(INVF, 'UNIT = "positions"', 'UNIT: str = "positions"')], False),
+
+    # This gate FAILS only on MARKED claims -- an unmarked percentage is
+    # counted and printed, never failed, by design. The first control here
+    # asserted an unmarked claim and so could not fail: my aim, not the gate.
+    ("размеченное utilisation, знакомая запись", "check_codespace_claims",
+     [(PAP, "\\codeuse{TNF16a}{98.4}", "\\codeuse{TNF16a}{62.5}")], True),
+    ("размеченное utilisation, ПРОБЕЛЫ в аргументе", "check_codespace_claims",
+     [(PAP, "\\codeuse{TNF16a}{98.4}", "\\codeuse{TNF16a}{ 62.5 }")], False),
 ]
 
 def apply_edits(edits):
