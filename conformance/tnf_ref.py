@@ -10,6 +10,19 @@ decode; add/mul are decode -> exact Fraction -> re-encode (round-to-nearest-even
 
 Off-path conformance oracle (like gf_ref.py / tekum_ref.py). Supersedes the
 single-width tnf16_ref.py (TNF16 == TNFFormat(4, 9)).
+
+WIDTH NOTICE (2026-08-18, measured in conformance/true_width_ladder.py):
+the LADDER keys below are NAMES, not stored widths. The exponent field needs
+ceil(Et*log2 3) bits, so the stored widths are:
+
+    TNF4=6b(+2)  TNF8=10b(+2)  TNF16=17b(+1)  TNF32=30b(-2)  TNF64=65b(+1)
+    TNF128=129b  TNF256=258b   TNF512=514b    TNF1024=1025b
+
+Not one rung stores the width in its name. Use stored_width(fmt) before any
+"at N bits" comparison, or use TRUE_LADDER, whose rungs are exactly their
+named width. Measured consequence of the misnaming: the sign of the advantage
+over takum followed the sign of the width excess (+2 bits: 484x; +1: 2x;
+-2: 0.08x), and at true width with range to spare the advantage is 1.00x.
 """
 
 from fractions import Fraction
@@ -123,6 +136,23 @@ def tef_mul(fmt: TNFFormat, a: int, b: int) -> int:
 
 
 # Canonical ladder rungs (exp_trits, mant_bits) per nominal width.
+
+def stored_width(fmt):
+    """Bits this rung actually stores. Not the name; the name lies on every rung."""
+    return fmt.sign_shift + 1
+
+
+# Rungs that are exactly their named width, chosen by measurement
+# (true_width_ladder.py). The narrow-exponent splits that score better inside
+# +-3 decades are deliberately NOT here: TNF(3,10) drops 58% of values at +-9
+# decades, and a default that traps is worse than a default that ties.
+TRUE_LADDER = {
+    8:  TNFFormat(2, 3),    # 1+4+3;  best true-8 split measured (2.04x vs takum8)
+    16: TNFFormat(4, 8),    # 1+7+8;  range-safe, ties takum16 at 1.00x
+    32: TNFFormat(4, 24),   # 1+7+24; range-safe, ties takum32 at 0.94x
+}
+
+
 LADDER = {
     4:   TNFFormat(2, 1),
     8:   TNFFormat(3, 4),

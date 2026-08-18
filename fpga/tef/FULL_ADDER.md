@@ -74,3 +74,25 @@ So the accumulation measurements (`arithmetic_across_rungs.py`,
 `true_width_ladder.py`) model exactly what this hardware does, step for step.
 Chains avoid the zero and Inf rows mid-stream, which the adder does not define;
 vector generation regenerates any chain that would touch them and says so.
+
+## At true width, 2026-08-18
+
+`tnf_ref.TRUE_LADDER` now names rungs that are exactly their stored width. The
+full adder verified at each (1500 oracle-encode vectors, 0 errors, both splits):
+
+| adder | stored bits | LUT | CARRY4 |
+|---|---:|---:|---:|
+| `tef_add_full` at TNF(4,8) | **16** | **397** | 45 |
+| `tef_add_full` at TNF(4,9) | 17 | 440 | 48 |
+| `tef_add_full` at TNF(4,24) | 32 | 1226 | 106 |
+| `tekum16_adder` (linear takum model) | 16 | 1182 | 211 |
+
+The 16-bit row is the first like-for-like pair in this whole line: same stored
+width, same feature set (sign, subtract, round, normalise), and equal measured
+accuracy (`true_width_ladder.py`: 1.00×). On that pair the fixed-field adder is
+**2.98× smaller**. That is the fixed-field claim, finally standing on nothing
+but itself.
+
+Caveats that stay attached: the opponent implements the *linear takum model* —
+the real takum is logarithmic and the real tekum is base-3, and neither has
+adder RTL here. Post-synthesis counts, family-level, no board.
