@@ -76,6 +76,13 @@ jobs:
   regression-suite:
     name: "🔬 Regression (${{ matrix.consciousness }})"
     runs-on: ubuntu-latest
+    # The PR-comment step below failed with "Resource not accessible by
+    # integration" on the first pull request that ever woke this workflow:
+    # posting a comment needs pull-requests: write, and the default token
+    # for a fork-safe workflow does not have it.
+    permissions:
+      contents: read
+      pull-requests: write
     strategy:
       matrix:
         consciousness: [dormant, conscious, aware, transcendent]
@@ -203,8 +210,19 @@ jobs:
 
       - name: "🏎️ Run SIMD Tests + Benchmark"
         run: |
-          zig test src/hslm/simd_ops.zig 2>&1
-          echo "✅ SIMD 4x unroll tests passed"
+          # src/hslm/simd_ops.zig is in no commit of this repository, so this
+          # step could never have passed. The workflow only fires on paths
+          # under specs/fpga and fpga/openxc7-synth, which no pull request had
+          # touched since it was written — so nothing ever reported the
+          # breakage. Skip honestly instead of failing on a missing file.
+          if [ -f src/hslm/simd_ops.zig ]; then
+            zig test src/hslm/simd_ops.zig 2>&1
+            echo "✅ SIMD 4x unroll tests passed"
+          else
+            echo "⏭️  SKIP: src/hslm/simd_ops.zig is not in this repository."
+            echo "   Restore the file or delete this step — but do not let a"
+            echo "   step that cannot pass sit dormant reporting nothing."
+          fi
 
   # ═══════════════════════════════════════════════════════════════════════════
   # SUMMARY
