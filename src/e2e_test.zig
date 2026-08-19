@@ -14,11 +14,10 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
-const vsa = @import("vsa.zig");
+const vsa = @import("vsa");
 const vm = @import("vm.zig");
 const sdk = @import("sdk.zig");
-const hybrid = @import("hybrid.zig");
-const packed_trit = @import("packed_trit.zig");
+const hybrid = vsa;  // one source: the module, not the local vsa_hybrid copy
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // E2E TEST 1: VSA → VM → SDK Full Pipeline

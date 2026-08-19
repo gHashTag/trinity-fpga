@@ -216,7 +216,7 @@ fn watchdogLoop() void {
     var last_hash: u64 = 0;
 
     // Allocator for shell commands
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
@@ -562,7 +562,7 @@ fn sendTelegram(token: []const u8, chat_id: []const u8, text: []const u8) void {
 
     const body = body_buf[0..body_idx];
 
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 

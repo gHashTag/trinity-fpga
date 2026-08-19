@@ -1,0 +1,63 @@
+{
+  "task": "Байесовская оценка солнечного гравитационного параметра по сумме логарифмических правдоподобий",
+  "seed": 20260813,
+  "n_observations": 66,
+  "mu_true_SI": 1.32712440018e+20,
+  "radii_m_range": [
+    1125899906842624.0,
+    5.764607523034235e+17
+  ],
+  "sigma_definition": "0.005*a_true (m/s^2)",
+  "accumulator": "float32 for TNF32/takum32/binary32; float64 only for reference",
+  "search": "золотое сечение по log(mu), 72 итерации",
+  "results": {
+    "ref64": {
+      "mu_hat": 1.327272275439194e+20,
+      "theta_hat": 46.33482777537425,
+      "iterations": 72,
+      "bracket_width": 7.105427357601002e-15,
+      "objective": 2270.180177760517,
+      "iterations_to_rel_mu_1e-6": 28,
+      "iterations_to_rel_mu_1e-5": 23,
+      "relative_mu_error_vs_ref64": 0.0,
+      "relative_mu_error_vs_true": 0.0001114253186618081,
+      "objective_error_vs_ref64": 0.0
+    },
+    "binary32": {
+      "mu_hat": 1.32727189905212e+20,
+      "theta_hat": 46.33482749179481,
+      "iterations": 72,
+      "bracket_width": 7.105427357601002e-15,
+      "objective": 2270.18017578125,
+      "iterations_to_rel_mu_1e-6": 28,
+      "iterations_to_rel_mu_1e-5": 23,
+      "relative_mu_error_vs_ref64": 2.8357939884002596e-07,
+      "relative_mu_error_vs_true": 0.0001111417076650432,
+      "objective_error_vs_ref64": 1.9792669263551943e-06
+    },
+    "tnf32": {
+      "mu_hat": 1.3272596724828288e+20,
+      "theta_hat": 46.334818279947854,
+      "iterations": 72,
+      "bracket_width": 7.105427357601002e-15,
+      "objective": 2270.1806640625,
+      "iterations_to_rel_mu_1e-6": 21,
+      "iterations_to_rel_mu_1e-5": 21,
+      "relative_mu_error_vs_ref64": 9.49538131578792e-06,
+      "relative_mu_error_vs_true": 0.00010192887932013125,
+      "objective_error_vs_ref64": 0.0004863019830736448
+    },
+    "takum32": {
+      "mu_hat": 1.327252151823289e+20,
+      "theta_hat": 46.33481261362573,
+      "iterations": 72,
+      "bracket_width": 7.105427357601002e-15,
+      "objective": 2270.180419921875,
+      "iterations_to_rel_mu_1e-6": 27,
+      "iterations_to_rel_mu_1e-5": 21,
+      "relative_mu_error_vs_ref64": 1.5161633582854717e-05,
+      "relative_mu_error_vs_true": 9.626199568909998e-05,
+      "objective_error_vs_ref64": 0.0002421613580736448
+    }
+  }
+}

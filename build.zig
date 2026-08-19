@@ -184,16 +184,6 @@ pub fn build(b: *std.Build) void {
     const test_step = b.step("test", "Run library tests");
     test_step.dependOn(&run_main_tests.step);
 
-    // VSA tests
-    const vsa_tests = b.addTest(.{
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("src/vsa.zig"),
-            .target = target,
-            .optimize = optimize,
-        }),
-    });
-    const run_vsa_tests = b.addRunArtifact(vsa_tests);
-    test_step.dependOn(&run_vsa_tests.step);
 
     // Queen API tests
     const queen_api_tests = b.addTest(.{
@@ -201,6 +191,8 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/queen_api.zig"),
             .target = target,
             .optimize = optimize,
+            // uses std.heap.c_allocator, which Zig requires be declared
+            .link_libc = true,
         }),
     });
     const run_queen_api_tests = b.addRunArtifact(queen_api_tests);
@@ -209,7 +201,7 @@ pub fn build(b: *std.Build) void {
     // Benchmark tests
     const bench_tests = b.addTest(.{
         .root_module = b.createModule(.{
-            .root_source_file = b.path("benchmarks/benchmark_test.zig"),
+            .root_source_file = b.path("tests/benchmarks/benchmarks/benchmark_test.zig"),
             .target = target,
             .optimize = .ReleaseFast,
             .imports = &.{.{ .name = "vsa", .module = trinity_mod }},
@@ -261,6 +253,8 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/c_api.zig"),
             .target = target,
             .optimize = optimize,
+            // uses std.heap.c_allocator, which Zig requires be declared
+            .link_libc = true,
         }),
     });
     const run_c_api_tests = b.addRunArtifact(c_api_tests);
@@ -363,7 +357,7 @@ pub fn build(b: *std.Build) void {
     const bench_core = b.addExecutable(.{
         .name = "bench-core",
         .root_module = b.createModule(.{
-            .root_source_file = b.path("benchmarks/bench_core.zig"),
+            .root_source_file = b.path("tests/benchmarks/benchmarks/bench_core.zig"),
             .target = target,
             .optimize = .ReleaseFast,
             .imports = &.{.{ .name = "vsa", .module = trinity_mod }},
@@ -379,7 +373,7 @@ pub fn build(b: *std.Build) void {
     const bench_compress = b.addExecutable(.{
         .name = "bench-compress",
         .root_module = b.createModule(.{
-            .root_source_file = b.path("benchmarks/bench_compression.zig"),
+            .root_source_file = b.path("tests/benchmarks/benchmarks/bench_compression.zig"),
             .target = target,
             .optimize = .ReleaseFast,
         }),
@@ -1342,6 +1336,51 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
     const vsa_tri = zig_hdc_dep.module("zig-hdc-vsa");
+
+    // trinity_mod is created at the top of this function, long before the
+    // dependency exists, so the import is attached here rather than in its
+    // initialiser. Without it, src/trinity.zig and the eleven files under
+    // src/ that say @import("vsa") -- sdk, sparse, science, vm, jit, parallel,
+    // c_api, simd_avx512, trinity_search, query_cli, e2e_test -- have no such
+    // module. They used to say @import("vsa.zig"), a FILE import of
+    // src/vsa.zig, which was extracted into zig-hdc and left behind a
+    // dangling name in every one of them.
+    trinity_mod.addImport("vsa", vsa_tri);
+
+    // trinity-search and trinity-query build their own root modules far above
+    // this line, before the dependency exists, so their imports are attached
+    // here too. Both name @import("vsa") in source and had no imports at all.
+    trinity_search.root_module.addImport("vsa", vsa_tri);
+    trinity_query.root_module.addImport("vsa", vsa_tri);
+
+    // The test artifacts have the same problem and are declared even earlier.
+    // Six test compilations were failing on one line -- src/vm.zig naming
+    // @import("vsa") with no such module in their root -- and `zig build test`
+    // reported that through a step I had marked continue-on-error, so the gate
+    // went green while the tests did not compile. Fixed on both sides: the
+    // import is attached here, and the step no longer claims a pass it did not
+    // measure.
+    for ([_]*std.Build.Step.Compile{ main_tests, queen_api_tests, brain_bench, vm_tests, e2e_tests, c_api_tests }) |t_| {
+        t_.root_module.addImport("vsa", vsa_tri);
+    }
+
+    // src/vm.zig names a JIT engine that CANNOT be built from anything that
+    // exists. zig-hdc has src/vsa_jit.zig, but it reaches jit_unified.zig,
+    // which imports "../../jit_arm64.zig" -- outside the package -- and
+    // jit_x86_64.zig. Neither backend is in zig-hdc, in either vendored
+    // golden_float, or in the zig-golden-float submodule.
+    //
+    // So it is the same shape as vsa/agent.zig: a facade over files that have
+    // never existed, which is why zig-hdc declines to export it rather than
+    // having merely forgotten to. Wiring it through zig_hdc_dep.path() was
+    // tried and turned one clean FileNotFound into two errors inside a
+    // dependency -- I had checked that jit_unified.zig parses and that its
+    // siblings exist, which says nothing about whether ITS imports resolve.
+    //
+    // Left dangling deliberately. Removing the JIT from the VM touches
+    // thirteen sites and the public getJitStats, and is a decision about that
+    // VM rather than a way to turn this build green.
+
     // TVC Corpus module for TRI (moved up: needed by fluent CLI and hybrid chat)
     const tvc_corpus_mod = b.createModule(.{
         .root_source_file = b.path("src/tvc/tvc_corpus.zig"),
@@ -1561,6 +1600,14 @@ pub fn build(b: *std.Build) void {
                 .{ .name = "vsa", .module = vsa_tri },
                 .{ .name = "treesitter_zig", .module = ts_zig_mod },
                 .{ .name = "tri_train", .module = tri_train_mod },
+                // src/trinity_workspace.zig has always been here; the module was
+                // simply never declared, so server.zig's one call to
+                // cdToRepoRootSilent() had nothing to resolve against.
+                .{ .name = "trinity_workspace", .module = b.createModule(.{
+                    .root_source_file = b.path("src/trinity_workspace.zig"),
+                    .target = target,
+                    .optimize = optimize,
+                }) },
             },
         }),
     });
@@ -1727,25 +1774,6 @@ pub fn build(b: *std.Build) void {
     forge_step.dependOn(&run_forge.step);
 
     // ═══════════════════════════════════════════════════════════════════════════
-    // TERNARY QUANTUM VM — Qutrit-based Quantum Virtual Machine
-    // ═══════════════════════════════════════════════════════════════════════════
-
-    const quantum = b.addExecutable(.{
-        .name = "quantum",
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("src/quantum/main.zig"),
-            .target = target,
-            .optimize = .ReleaseFast,
-        }),
-    });
-    b.installArtifact(quantum);
-
-    const run_quantum = b.addRunArtifact(quantum);
-    if (b.args) |run_args| {
-        run_quantum.addArgs(run_args);
-    }
-    const quantum_step = b.step("quantum", "Run Ternary Quantum VM — Qutrit computation");
-    quantum_step.dependOn(&run_quantum.step);
 
     // ═══════════════════════════════════════════════════════════════════════════
     // BEAL CONJECTURE SCANNER — SIMD-accelerated counterexample search
@@ -1801,62 +1829,17 @@ pub fn build(b: *std.Build) void {
     hslm_step.dependOn(&run_hslm_train.step);
 
     // ═══════════════════════════════════════════════════════════════════════════
-    // HSLM — Platform Benchmark Suite (for arXiv paper)
-    // ═══════════════════════════════════════════════════════════════════════════
-
-    const hslm_bench = b.addExecutable(.{
-        .name = "hslm-bench",
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("src/hslm/hslm_benchmark.zig"),
-            .target = target,
-            .optimize = .ReleaseFast,
-        }),
-    });
-    b.installArtifact(hslm_bench);
-    const run_hslm_bench = b.addRunArtifact(hslm_bench);
-    const hslm_bench_step = b.step("hslm-bench", "Run HSLM inference platform benchmark");
-    hslm_bench_step.dependOn(&run_hslm_bench.step);
 
     // ═══════════════════════════════════════════════════════════════════════════
-    // BPE Tokenizer Trainer
-    // ═══════════════════════════════════════════════════════════════════════════
-
-    const bpe_train = b.addExecutable(.{
-        .name = "bpe-train",
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("src/hslm/bpe_train.zig"),
-            .target = target,
-            .optimize = .ReleaseFast,
-        }),
-    });
-    b.installArtifact(bpe_train);
-
-    const run_bpe_train = b.addRunArtifact(bpe_train);
-    if (b.args) |run_args| {
-        run_bpe_train.addArgs(run_args);
-    }
-    const bpe_step = b.step("bpe-train", "Train BPE tokenizer merge rules from corpus");
-    bpe_step.dependOn(&run_bpe_train.step);
 
     // ═══════════════════════════════════════════════════════════════════════════
-    // HSLM Entrypoint — Pure Zig replacement for entrypoint-train.sh
-    // ═══════════════════════════════════════════════════════════════════════════
-
-    const hslm_entrypoint = b.addExecutable(.{
-        .name = "hslm-entrypoint",
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("src/cli/entrypoint_train.zig"),
-            .target = target,
-            .optimize = .ReleaseFast,
-            .link_libc = true,
-        }),
-    });
-    b.installArtifact(hslm_entrypoint);
 
     // train-deploy: build ONLY training binaries (for Railway Dockerfile — no raylib)
-    const train_deploy_step = b.step("train-deploy", "Build hslm-train + hslm-entrypoint for Railway deploy");
+    // hslm-entrypoint was removed with the rest of the HSLM training targets:
+    // its source, src/cli/entrypoint_train.zig, went to trinity-training in
+    // 36f38639c. hslm-train survives because src/hslm/cli.zig is still here.
+    const train_deploy_step = b.step("train-deploy", "Build hslm-train for Railway deploy");
     train_deploy_step.dependOn(&hslm_train.step);
-    train_deploy_step.dependOn(&hslm_entrypoint.step);
 
     // ═══════════════════════════════════════════════════════════════════════════
     // Railway Redeploy Tool — Bypasses PreToolUse hook for Railway API
@@ -2015,16 +1998,6 @@ pub fn build(b: *std.Build) void {
     const swe_deploy_step = b.step("swe-deploy", "Build swe-entrypoint for Railway dev agent deploy");
     swe_deploy_step.dependOn(&swe_entrypoint.step);
 
-    // HSLM tests
-    const hslm_tests = b.addTest(.{
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("src/hslm/root.zig"),
-            .target = target,
-            .optimize = optimize,
-        }),
-    });
-    const run_hslm_tests = b.addRunArtifact(hslm_tests);
-    test_step.dependOn(&run_hslm_tests.step);
 
     // ═══════════════════════════════════════════════════════════════════════════
     // Trinity Orchestrator — REMOVED (generated.old/ deleted)
@@ -2877,52 +2850,7 @@ pub fn build(b: *std.Build) void {
         const node_gui_step = b.step("node-gui", "Run Trinity Node with Raylib GUI");
         node_gui_step.dependOn(&run_node_gui.step);
 
-        // Emergent Photon AI Demo - Interactive wave visualization
-        // phi^2 + 1/phi^2 = 3 = TRINITY | KOSCHEI IS IMMORTAL
-        const photon_demo = b.addExecutable(.{
-            .name = "photon-demo",
-            .root_module = b.createModule(.{
-                .root_source_file = b.path("src/vsa/photon_demo.zig"),
-                .target = target,
-                .optimize = optimize,
-            }),
-        });
-        photon_demo.root_module.linkSystemLibrary("raylib", .{});
-        photon_demo.root_module.link_libc = true;
-        b.installArtifact(photon_demo);
-
-        const run_photon_demo = b.addRunArtifact(photon_demo);
-        if (b.args) |args| {
-            run_photon_demo.addArgs(args);
-        }
-        const photon_demo_step = b.step("photon-demo", "Run Emergent Photon AI Demo");
-        photon_demo_step.dependOn(&run_photon_demo.step);
     } // end if (!ci_mode) — GUI targets
-
-    // Emergent Photon AI v0.3 - IMMERSIVE COSMIC CANVAS
-    // No UI panels. No buttons. Pure emergent wave intelligence.
-    // phi^2 + 1/phi^2 = 3 = TRINITY | KOSCHEI IS IMMORTAL
-    // Skipped in CI mode (-Dci=true) since raylib is not available
-    if (!ci_mode) {
-        const photon_immersive = b.addExecutable(.{
-            .name = "photon-immersive",
-            .root_module = b.createModule(.{
-                .root_source_file = b.path("src/vsa/photon_immersive.zig"),
-                .target = target,
-                .optimize = optimize,
-            }),
-        });
-        photon_immersive.root_module.linkSystemLibrary("raylib", .{});
-        photon_immersive.root_module.link_libc = true;
-        b.installArtifact(photon_immersive);
-
-        const run_photon_immersive = b.addRunArtifact(photon_immersive);
-        if (b.args) |args| {
-            run_photon_immersive.addArgs(args);
-        }
-        const photon_immersive_step = b.step("photon-immersive", "Run Immersive Cosmic Canvas (v0.3)");
-        photon_immersive_step.dependOn(&run_photon_immersive.step);
-    }
 
     // Emergent Photon AI v0.4 - TRINITY COSMIC CANVAS
     // Full Trinity functionality emerges from wave interference
@@ -3091,24 +3019,6 @@ pub fn build(b: *std.Build) void {
         }
     } // end if (!ci_mode) — raylib canvas targets
 
-    // Photon Terminal v1.0 - TERNARY EMERGENT TUI
-    // Not a grid of cells — a living wave field in your terminal.
-    const photon_terminal = b.addExecutable(.{
-        .name = "photon-terminal",
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("src/vsa/photon_terminal.zig"),
-            .target = target,
-            .optimize = optimize,
-        }),
-    });
-    b.installArtifact(photon_terminal);
-
-    const run_photon_terminal = b.addRunArtifact(photon_terminal);
-    if (b.args) |args| {
-        run_photon_terminal.addArgs(args);
-    }
-    const photon_terminal_step = b.step("photon-terminal", "Run Photon Terminal (Emergent TUI v1.0)");
-    photon_terminal_step.dependOn(&run_photon_terminal.step);
 
     // VSA module (re-exports HybridBigInt from hybrid.zig) — REMOVED (unused after generated.old/ cleanup)
 
@@ -3340,6 +3250,8 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/tri/sacred_alu.zig"),
             .target = target,
             .optimize = .ReleaseFast,
+            // reaches std.c, which Zig requires declared rather than inferred
+            .link_libc = true,
         }),
     });
     b.installArtifact(sacred);

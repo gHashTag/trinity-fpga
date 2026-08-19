@@ -21,7 +21,7 @@ pub const KeyPair = struct {
     /// Generate new random keypair
     pub fn generate() KeyPair {
         var seed: [32]u8 = undefined;
-        std.Options.debug_io.random(&seed);
+        std.crypto.random.bytes(&seed);
         return fromSeed(seed);
     }
 
@@ -113,7 +113,7 @@ pub fn deriveKey(password: []const u8, salt: [16]u8) [32]u8 {
 /// Encrypt data with AES-256-GCM
 pub fn encrypt(allocator: std.mem.Allocator, plaintext: []const u8, key: [32]u8) !EncryptedData {
     var nonce: [12]u8 = undefined;
-    std.Options.debug_io.random(&nonce);
+    std.crypto.random.bytes(&nonce);
 
     const ciphertext = try allocator.alloc(u8, plaintext.len);
     var tag: [16]u8 = undefined;
@@ -215,8 +215,8 @@ pub fn createWalletFile(keypair: *const KeyPair, password: []const u8) WalletFil
     };
 
     // Generate random salt and nonce
-    std.Options.debug_io.random(&wf.salt);
-    std.Options.debug_io.random(&wf.nonce);
+    std.crypto.random.bytes(&wf.salt);
+    std.crypto.random.bytes(&wf.nonce);
 
     // Derive key from password
     const key = deriveKey(password, wf.salt);

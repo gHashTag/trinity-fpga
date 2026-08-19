@@ -303,3 +303,128 @@ number I wanted and no more truth than the third.
 
 Coverage that matters grows by reading. The smoke list here stayed at 18 of 144,
 each read individually, because that is the only figure anyone can defend.
+
+---
+
+## 13. A baseline generated from a broken gate freezes the bug as known state
+
+A ratchet needs a baseline: the debt that exists today, which you fail only on
+top of. The baseline is produced by running the gate — so **if the gate is
+wrong, `--update-baseline` launders its defect into a file that reads like
+history.** Nobody re-derives a baseline. It looks like a record of the tree; it
+is a record of the checker.
+
+**The case.** A gate asked whether a number the paper *withdraws* is still
+asserted live elsewhere. It failed on `0.1173` — a current value, printed in two
+results tables, withdrawn by nobody.
+
+The withdrawal zone ran blank-line to blank-line. A LaTeX float has no blank
+line inside it, so a withdrawal sentence in the `\caption` — where a paper
+naturally puts one — made the zone span `\begin{table}` to `\end{table}` and
+swallow the **tabular body**. Every live number in that table became
+"withdrawn", and every legitimate appearance of one became a violation.
+
+Three things worth separating:
+
+1. **One zone of nine did it, and produced 14 of the 15 baseline entries.** The
+   baseline was 93% artefact.
+2. **The gate simultaneously missed everything it was aimed at.** The numbers
+   that caption actually withdraws are `440`, `895`, `5.1` — and the value
+   regex required two decimal places, so none of them matched. It flagged the
+   neighbours of its targets while seeing none of the targets.
+3. **The stale entries were not inert.** After the zone fix those 14 could never
+   fire again — so if the paper ever *did* withdraw one of those values, the
+   baseline would have silently excused it. A dead exclusion is a live hole.
+
+**Rules.**
+
+* When a ratchet fires on something that looks correct, **suspect the ratchet
+  before the content** — and read its baseline as evidence about the checker,
+  not about the tree. A baseline that is mostly one shape is a defect with a
+  shape.
+* After fixing a gate, **regenerate the baseline rather than editing the failing
+  line out of it.** Here it went from 15 entries to zero: the debt had never
+  been real.
+* **An empty baseline plus a blind checker is permanently green.** Emptying it
+  raises the stakes on §12: prove the gate still catches, from both classes,
+  *after* the baseline is empty. Injecting each genuinely-withdrawn value as a
+  live assertion — three of them — and confirming each is caught took one
+  command.
+* **A test that patches a file by string replacement must assert the file
+  changed.** A replace whose target is absent is a no-op, and the gate then
+  reports OK because nothing was injected — indistinguishable from a gate that
+  has gone blind. Check by checksum before trusting the result, and restore
+  byte-identically after.
+
+### The generalisation
+
+Both defects here were one mistake wearing two costumes: **a withdrawal
+withdraws a claim, not every number sharing its paragraph.** The zone was a
+proxy — "same paragraph" standing in for "same claim" — and proxies fail at
+their edges, which is exactly where a float boundary or a second sentence lives.
+
+That is §1 from the other side. A gate that answers *"is this number near a
+retraction"* while claiming to answer *"is this number retracted"* will be
+wrong in both directions at once: false on the neighbours, silent on the
+targets. When a gate fires, ask which question it actually asked.
+
+---
+
+## 14. A handoff note rots faster than the thing it describes
+
+The hand-off file said the next step on a hardware bug was "an A/B on four
+`IFF.ZSRVAL_Q` bits — the last standing hypothesis". I repeated that in three
+status reports and a dashboard across one day, and offered it as the highest-value
+remaining work.
+
+It had been answered weeks earlier. Those four bits **were** the real
+discrepancy; emitting them was the fix, it shipped as its own PR, and the thread
+had moved on to a different failure — the block is now correctly initialised and
+still never clocks. The experiment I kept promising would have re-tested a
+question whose answer was already merged.
+
+Nothing about the note looked stale. It was specific, it named real bits, and it
+was written by someone who had read the thread — which is exactly why it survived
+three re-readings of *itself* without anyone re-reading the *source*.
+
+**Rule.** A summary of a live thread is a cache with no invalidation. Before
+acting on one, open the thread. The cost is a minute; the cost of not doing it
+is running an experiment to confirm something already known, and telling
+collaborators you are about to.
+
+The tell is temporal, not textual: **ask when the note was written and what has
+happened in that thread since.** Not "does this still look right" — a stale note
+looks exactly as right as it did the day it was written.
+
+### The same shape, one layer up
+
+The blocker the thread actually names is a reference dump only vendor tools can
+produce. That had been sitting in plain sight in my own comment for weeks, under
+a sentence beginning "I still can't say what is wrong without…". A stated
+blocker is not a request until someone who can act on it is asked directly —
+and I had been carrying it as a fact about the world rather than as an ask with
+an owner.
+
+---
+
+## 15. When you cannot execute, say which part is reading
+
+Three JIT tests failed. The fix was found by decoding the emitted machine code
+by hand — the ModRM and SIB bytes, the `F6 /5` form of `IMUL`, the rel32
+displacements measured from the end of the instruction — and confirming the
+emitter was correct, then finding the defect one level up: the function pointer
+was handed out with no `callconv`, so Zig's unspecified `.auto` convention was
+being asked to agree with hand-written System V.
+
+**The tests skip unless `cpu.arch == .x86_64`, and the machine doing the fixing
+is arm64.** Every one of them has always skipped locally. The reading is the
+entire evidence; CI is the only executor.
+
+**Rule.** When the environment cannot run the thing being fixed, say so in the
+commit, in those words, before the fix is reviewed. Not as a hedge — as the
+scope of the claim. "The emitter decodes correctly and the convention was never
+declared" is a claim about source that reading can support. "This fixes the
+tests" is a claim about execution, and belongs to whoever ran them.
+
+A skipped test reports success exactly like a passing one — §12 again, arriving
+this time through the target architecture rather than through a classifier.

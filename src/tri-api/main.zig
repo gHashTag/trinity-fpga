@@ -20,7 +20,7 @@ const max_turns = 20;
 const default_model = "claude-sonnet-4-20250514";
 
 pub fn main() !void {
-    var gpa: std.heap.GeneralPurposeAllocator(.{}) = .init;
+    var gpa: std.heap.DebugAllocator(.{}) = .init;
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 

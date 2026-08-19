@@ -4,15 +4,11 @@
 Vector PDFs, headless backend, one figure per claim. Numbers are the measured
 ones; nothing here is drawn from an estimate.
 """
+import canon_style  # engraving house style: white ground, serif, double base rule
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
-
-plt.rcParams.update({
-    "font.size": 9, "axes.titlesize": 10, "axes.labelsize": 9,
-    "legend.fontsize": 8, "figure.dpi": 150, "savefig.bbox": "tight",
-})
 
 # ── 1. accuracy against tekum16, by binary-exponent magnitude ────────────────
 # ── 1. accuracy, COMPUTED from the oracles rather than transcribed ──────────
@@ -78,7 +74,7 @@ tak = _mean_err(_d_tk)
 gf16 = _mean_err(_d_gf)
 
 x = np.arange(len(bins)); w = 0.27
-fig, ax = plt.subplots(figsize=(5.2, 2.9))
+fig, ax = plt.subplots(figsize=(4.80, 2.68))
 ax.bar(x - w, gf16, w, label="GF16 (φ)", color="#b9c6c1")
 ax.bar(x,     tef,  w, label="TNF16 (M=11)", color="#0a7a4c")
 ax.bar(x + w, tak,  w, label="takum16", color="#7d8f99")
@@ -98,7 +94,7 @@ rungs = ["TNF4", "TNF8", "TNF16", "TNF32", "TNF64"]
 luts = [12, 50, 212, 1477, 7479]
 fmax = [161.11, 153.23, 131.73, 83.27, 48.20]
 
-fig, ax1 = plt.subplots(figsize=(5.2, 2.9))
+fig, ax1 = plt.subplots(figsize=(4.80, 2.68))
 ax1.bar(rungs, luts, 0.5, color="#0a7a4c")
 ax1.set_ylabel("LUTs (no DSP48)", color="#0a7a4c")
 ax1.tick_params(axis="y", labelcolor="#0a7a4c")
@@ -119,7 +115,7 @@ print("tnf_ladder.pdf")
 labels = ["32-bit ports\n(as written)", "widths derived\nfrom parameters", "+ one pipeline\nregister"]
 lut3 = [1179, 219, 219]
 f3 = [81.0, 81.35, 147.32]
-fig, ax = plt.subplots(figsize=(5.2, 2.9))
+fig, ax = plt.subplots(figsize=(4.80, 2.68))
 b = ax.bar(labels, lut3, 0.5, color=["#c46a6a", "#0a7a4c", "#0a7a4c"])
 ax.set_ylabel("LUTs")
 ax.set_title("TNF16 multiplier: interface width dominates the arithmetic")
@@ -140,46 +136,67 @@ print("tnf_width.pdf")
 # now derive from the tables they illustrate (tab:field and tab:ladderacc), so a
 # figure that disagrees with its table is a build away from being noticed.
 FIELD = [
-    ("TNF16 (ours)",  [3.56e-4, 3.52e-4, 3.53e-4], [0, 0, 0],       "#0a7a4c"),
-    ("GF16 (phi)",    [3.56e-4, 3.52e-4, 6.76e-3], [0, 0, 478],     "#b9c6c1"),
-    ("takum16",       [3.27e-4, 1.00e-3, 1.95e-3], [0, 0, 0],       "#7d8f99"),
-    ("posit16",       [1.36e-4, 8.31e-4, 1.43e-2], [0, 0, 0],       "#c8912f"),
-    ("IEEE binary16", [1.76e-4, 1.28e-3, 1.57e-1], [0, 299, 2479],  "#b04a4a"),
-    ("bfloat16",      [1.45e-3, 1.38e-3, 1.41e-3], [0, 0, 0],       "#4a5b8c"),
-    ("LNS16",         [8.39e-4, 7.63e-4, 6.66e-4], [1324, 1808, 2849], "#9b8bb4"),
+    # Recomputed 2026-08-13 from conformance/*_ref.py on the workload below, at
+    # the ADOPTED 16-bit rung (E_t = 4, M = 11). The previous values were the
+    # unfilled M = 9 rung, transcribed by hand, so the figure disagreed with the
+    # fill study two sections earlier. Overflow counts are counted, not recalled:
+    # a value counts as overflowed when the decoder cannot return a finite
+    # non-zero number for it. LNS16 previously carried counts of 1,324/1,808/
+    # 2,849 -- it clips nothing on this workload, since its 15-bit log field with
+    # 8 fractional bits reaches |e| = 63 and the workload stops at 38.
+    ("TNF16 (ours)",  [8.34e-5, 8.41e-5, 8.45e-5], [0, 0, 0],       "#0a7a4c"),
+    ("GF16 (phi)",    [3.41e-4, 3.46e-4, 5.76e-3], [0, 0, 465],     "#b9c6c1"),
+    ("takum16",       [3.08e-4, 9.42e-4, 1.92e-3], [0, 0, 0],       "#7d8f99"),
+    ("posit16",       [1.25e-4, 7.87e-4, 1.37e-2], [0, 0, 0],       "#c8912f"),
+    ("IEEE binary16", [1.70e-4, 1.15e-3, 1.46e-1], [0, 313, 2413],  "#b04a4a"),
+    ("bfloat16",      [1.32e-3, 1.34e-3, 1.37e-3], [0, 0, 0],       "#4a5b8c"),
+    ("LNS16",         [7.05e-4, 6.88e-4, 6.82e-4], [0, 0, 0],       "#9b8bb4"),
 ]
 bins3 = ["|e| < 8", "|e| 8-20", "|e| 20-38"]
 x = np.arange(len(bins3)); w = 0.115
-fig, ax = plt.subplots(figsize=(7.2, 3.1))
+fig, ax = plt.subplots(figsize=(4.80, 2.85))
 for k, (name, vals, clip, col) in enumerate(FIELD):
     off = (k - (len(FIELD) - 1) / 2) * w
     ax.bar(x + off, vals, w, label=name, color=col)
     for i, (v, c) in enumerate(zip(vals, clip)):
         if c:
-            ax.annotate(f"{c}✂", (x[i] + off, v * 1.25), ha="center",
-                        va="bottom", fontsize=6, color="#b04a4a", rotation=90)
+            ax.annotate(f"{c}✂", (x[i] + off, v * 1.6), ha="center",
+                        va="bottom", fontsize=6, color="#b04a4a", rotation=90,
+                        bbox=dict(facecolor="white", edgecolor="none",
+                                  pad=0.4))
 ax.set_yscale("log")
 ax.set_ylabel("mean relative round-trip error")
 ax.set_xticks(x); ax.set_xticklabels(bins3)
-ax.set_title("16-bit-class formats on one workload (✂ = values that overflowed)")
+ax.set_xlim(-0.62, len(bins3) - 1 + 0.68)
+ax.set_title("16-bit-class formats on one workload (* = values that overflowed)")
 ax.legend(frameon=False, ncol=2, fontsize=7.5)
 fig.savefig("tnf_competition.pdf")
 print("tnf_competition.pdf")
 
 # ── 5. the ladder's accuracy, rung by rung ──────────────────────────────────
 LADDER = [
-    ("TNF4",    2,     None),
-    ("TNF8",    8,     [1.22e-2, None, None]),
-    ("TNF16",   24,    [3.45e-4, 3.69e-4, 3.66e-4]),
-    ("TNF32",   219,   [5.27e-9, 5.63e-9, 5.58e-9]),
-    ("TNF64",   658,   [4.33e-17, 4.22e-17, 4.12e-17]),
-    ("TNF128",  1975,  [4.25e-36, 4.55e-36, 4.51e-36]),
-    ("TNF256",  5925,  [2.76e-74, 2.69e-74, 2.63e-74]),
-    ("TNF512",  17775, [4.32e-151, 4.62e-151, 4.58e-151]),
-    ("TNF1024", 53326, [2.84e-304, 2.77e-304, 2.71e-304]),
+    # Recomputed 2026-08-13 by recompute_ladder_exact.py: 600 values, 1,200-bit
+    # significands, exact rationals, seed 20260809. Three published rows could
+    # not be reproduced -- TNF16 carried the unfilled M = 9 rung, TNF32 was four
+    # decimal orders better than a 21-bit mantissa can be, and TNF32's decade
+    # count followed exp_trits = 6 where the oracle ships 5.
+    ("TNF4",    2,     [1.04e-1, None, None]),
+    ("TNF8",    8,     [1.07e-2, 1.16e-2, None]),
+    ("TNF16",   24,    [8.26e-5, 8.61e-5, 8.66e-5]),
+    ("TNF32",   73,    [7.63e-8, 8.58e-8, 8.32e-8]),
+    ("TNF64",   658,   [3.80e-17, 4.08e-17, 4.01e-17]),
+    ("TNF128",  1975,  [4.39e-36, 4.67e-36, 4.21e-36]),
+    ("TNF256",  5925,  [2.39e-74, 2.44e-74, 2.47e-74]),
+    ("TNF512",  17775, [4.08e-151, 4.18e-151, 4.22e-151]),
+    ("TNF1024", 53326, [2.53e-304, 2.65e-304, 2.70e-304]),
 ]
-fig, ax = plt.subplots(figsize=(6.4, 3.4))
-names = [r[0] for r in LADDER]
+fig, ax = plt.subplots(figsize=(4.80, 3.05))
+# Rungs the workload overruns are marked with a star on the tick label rather
+# than a shaded band: in the engraved style a band becomes a hatch that reads
+# as data.
+over = [i for i, (_, _, v) in enumerate(LADDER) if v is None or v[1] is None]
+names = [r[0].replace("TNF", "") + ("*" if i in over else "")
+         for i, r in enumerate(LADDER)]
 xr = np.arange(len(LADDER)); ww = 0.26
 for j, (band, col) in enumerate(zip(bins3, ["#0a7a4c", "#4f9e7a", "#9cc4b2"])):
     ys, xs = [], []
@@ -187,18 +204,23 @@ for j, (band, col) in enumerate(zip(bins3, ["#0a7a4c", "#4f9e7a", "#9cc4b2"])):
         if vals and vals[j] is not None:
             xs.append(xr[i] + (j - 1) * ww); ys.append(vals[j])
     ax.bar(xs, ys, ww, label=band, color=col)
-for i, (_, _, vals) in enumerate(LADDER):
-    if vals is None or vals[1] is None:
-        ax.axvspan(xr[i] - 0.45, xr[i] + 0.45, color="#c8912f", alpha=0.13)
 ax.set_yscale("log")
 ax.set_ylim(1e-320, 1e2)
 ax.set_ylabel("mean relative error (exact rationals)")
-ax.set_xticks(xr); ax.set_xticklabels(names, rotation=30, ha="right")
+ax.set_xticks(xr); ax.set_xticklabels(names)
+ax.set_xlabel("TNF rung (width in bits)")
+ax.set_yticks([1e0, 1e-50, 1e-100, 1e-150, 1e-200, 1e-250, 1e-300])
+# On a 320-decade axis the difference between 1e-5 and 1e-8 is a few pixels, so
+# each rung's decimal exponent goes into its tick label instead: the doubling the
+# title claims becomes readable rather than merely asserted.
+labels = []
+for nm, (_, _, vals) in zip(names, LADDER):
+    v = next((q for q in vals if q is not None), None) if vals else None
+    labels.append(nm if v is None else "%s\n$10^{%d}$" % (nm, int(np.floor(np.log10(v)))))
+ax.set_xticklabels(labels, fontsize=7)
 ax.set_title("Error is flat in magnitude, and its exponent doubles per rung")
-# The legend sat on top of the annotation in the first version of this figure.
-ax.legend(frameon=False, fontsize=8, loc="lower left", bbox_to_anchor=(0.02, 0.02))
-ax.annotate("shaded: workload overruns the rung", (0.02, 0.965),
-            xycoords="axes fraction", fontsize=7.5, color="#8a6a20", va="top")
+# No legend: the three bars per rung are the three magnitude bands in the
+# order given in the caption. A legend here can only sit on top of the data.
 fig.savefig("tnf_ladder_acc.pdf")
 print("tnf_ladder_acc.pdf")
 

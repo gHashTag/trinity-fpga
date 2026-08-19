@@ -1,0 +1,208 @@
+name: TNF cost sweep (E_t, M)
+
+# What this sweeps and why.
+#
+# The published TNF cost model
+#     LUT ~ 2.194 M^2 + 53.84 M - 197.1 E_t + 363.5,  R^2 = 0.9989
+# is fitted only on post-route rows with M <= 25, and the paper states two defects
+# in it outright: the two TNF16 rows at M = 9 and M = 11 are mutually inconsistent
+# with any smooth model, and the two widest measured rungs grow far more slowly
+# than M^2. This sweep is built to settle both, including against the model:
+#
+#   Q1  Re-measure the M = 9 and M = 11 arms at E_t = 4 through ONE identical
+#       flow. If they reconcile, the earlier inconsistency was a flow artefact
+#       and the paper must say so.
+#   Q2  Extend past M = 25 to M = 29 and M = 33. If growth flattens, the
+#       quadratic is a local fit and must be relabelled as one.
+#
+# No new RTL is introduced. A TNF exponent field is a binary field of
+# ceil(E_t log2 3) cells holding a ternary-derived offset, and the adder datapath
+# never sees a trit, so the audited gf_adder_param / gf_mul_param cores are
+# instantiated at the sweep parameters. The sweep therefore measures the cost of
+# the FIELD LAYOUT, which is exactly what the phi rule chooses, and nothing else.
+#
+# Status of every number produced here: yosys stat is [modelled]; nextpnr
+# post-route LUT/FF/Fmax is [measured CI-synth]. Neither is a hardware claim.
+# Hardware requires a UART transcript from the AX7203 (XC7A200T,
+# xc7a200tfbg484-2, IDCODE 0x13636093) with a green CI URL and an artefact
+# SHA256, recorded on issue #199. This workflow cannot produce that and does not
+# claim to.
+#
+# Cost control: yosys runs on every arm because it is cheap. nextpnr runs only on
+# the arms named in PNR_ARMS, because place-and-route on 104 arms is hours of
+# runner time and the routing-limit risk is real -- the takum-class cells already
+# fail routing on this fabric with -flatten. Arms that fail routing are recorded
+# as [routing-pending], not as zero and not as a defect.
+
+on:
+  workflow_dispatch:
+    inputs:
+      pnr_arms:
+        description: 'Comma-separated tops to place-and-route (empty = Q1/Q2 set)'
+        required: false
+        default: ''
+
+env:
+  # Q1 needs e4m9 and e4m11 side by side; Q2 needs the two arms past M = 25.
+  PNR_DEFAULT: 'tnf_cost_e4m9_add_top,tnf_cost_e4m11_add_top,tnf_cost_e4m29_add_top,tnf_cost_e3m33_add_top,tnf_cost_e4m21_add_top'
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    outputs:
+      arms: ${{ steps.gen.outputs.arms }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - id: gen
+        name: Generate sweep wrappers
+        run: |
+          python3 fpga/openxc7-synth/gen/gen_tnf_cost_sweep.py
+          # The generator is deterministic, so a dirty tree here means someone
+          # edited a generated file by hand. That must fail, not be committed.
+          git diff --exit-code --stat -- fpga/openxc7-synth/tnf_cost/ || {
+            echo "::error::generated wrappers differ from committed ones -- do not hand-edit tnf_cost/"; exit 1; }
+          echo "arms=$(python3 -c "import json;print(json.dumps([a['top'] for a in json.load(open('fpga/openxc7-synth/tnf_cost/manifest.json'))['arms']]))")" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v4
+        with: {name: tnf-cost-manifest, path: fpga/openxc7-synth/tnf_cost/manifest.json}
+
+  yosys:
+    needs: generate
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        top: ${{ fromJSON(needs.generate.outputs.arms) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - name: Regenerate wrappers
+        run: python3 fpga/openxc7-synth/gen/gen_tnf_cost_sweep.py
+      - name: Docker pull regymm/openxc7 (retry on transient 5xx)
+        run: |
+          for i in 1 2 3 4 5 6; do
+            docker pull regymm/openxc7:latest && break
+            echo "::warning::docker pull attempt $i failed, sleeping $((i*20))s"; sleep $((i*20))
+          done
+          docker image inspect regymm/openxc7:latest >/dev/null 2>&1 || { echo "::error::docker pull failed after 6 retries"; exit 1; }
+      - name: Yosys stat
+        run: |
+          TOP=${{ matrix.top }}
+          mkdir -p build/tnfcost metrics
+          # -flatten is deliberately ABSENT: its removal is what made routing
+          # deterministic for the GF cells (see issue #199), and keeping the flow
+          # identical to the one that produced the audited rows is the whole
+          # point of Q1.
+          docker run --rm -v "$PWD:/work" -w /work regymm/openxc7 yosys -p "
+            read_verilog fpga/openxc7-synth/tnf_cost/${TOP}.v \
+                         fpga/openxc7-synth/gf_adder_param.v \
+                         fpga/openxc7-synth/gf_mul_param.v;
+            synth_xilinx -abc9 -nocarry -arch xc7 -top ${TOP};
+            setundef -zero -params; stat; write_json build/tnfcost/${TOP}.json" 2>&1 | tee /tmp/y.log
+          ! grep -q "^ERROR" /tmp/y.log
+          {
+            echo "top=${TOP}"
+            echo "lc=$(grep -oE 'Estimated number of LCs: *[0-9]+' /tmp/y.log | grep -oE '[0-9]+' | tail -1)"
+            echo "lut6=$(grep -oE 'LUT6 +[0-9]+' /tmp/y.log | grep -oE '[0-9]+' | tail -1)"
+            echo "ff=$(grep -oE 'FDRE +[0-9]+' /tmp/y.log | grep -oE '[0-9]+' | tail -1)"
+          } | tee metrics/${TOP}.yosys.txt
+      - uses: actions/upload-artifact@v4
+        with: {name: 'tnfcost-yosys-${{ matrix.top }}', path: 'metrics/${{ matrix.top }}.yosys.txt'}
+      - uses: actions/upload-artifact@v4
+        with: {name: 'tnfcost-json-${{ matrix.top }}', path: 'build/tnfcost/${{ matrix.top }}.json'}
+
+  pnr:
+    needs: [generate, yosys]
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with: {pattern: 'tnfcost-json-*', merge-multiple: true, path: build/tnfcost}
+      - name: Docker pull
+        run: |
+          for i in 1 2 3 4 5 6; do docker pull regymm/openxc7:latest && break; sleep $((i*20)); done
+      - uses: actions/cache@v4
+        id: chipdb
+        with:
+          path: build/tnfcost/chipdb/xc7a200tfbg484-2.bin
+          key: chipdb-xc7a200tfbg484-2-regymm-${{ github.run_id }}
+          restore-keys: chipdb-xc7a200tfbg484-2-regymm-
+      - if: steps.chipdb.outputs.cache-hit != 'true'
+        name: Build chipdb
+        run: |
+          mkdir -p build/tnfcost/chipdb
+          docker run --rm -v "$PWD:/work" -w /work regymm/openxc7 bash -c "cd /nextpnr-xilinx && python3 xilinx/python/bbaexport.py --device xc7a200tfbg484-2 --bba /work/build/tnfcost/chipdb/xc7a200tfbg484-2.bba && bbasm -l /work/build/tnfcost/chipdb/xc7a200tfbg484-2.bba /work/build/tnfcost/chipdb/xc7a200tfbg484-2.bin"
+      - name: Place and route the Q1/Q2 arms
+        run: |
+          ARMS="${{ github.event.inputs.pnr_arms }}"
+          [ -z "$ARMS" ] && ARMS="$PNR_DEFAULT"
+          mkdir -p metrics
+          for TOP in $(echo "$ARMS" | tr ',' ' '); do
+            CLEAN=0
+            for CFG in "heap router1" "heap router2" "sa router2"; do
+              set -- $CFG; P=$1; R=$2
+              for s in 1 2 3 4; do
+                rm -f build/tnfcost/${TOP}_routed.json
+                docker run --rm -v "$PWD:/work" -w /work regymm/openxc7 timeout --signal=KILL 1800 nextpnr-xilinx \
+                  --chipdb /work/build/tnfcost/chipdb/xc7a200tfbg484-2.bin \
+                  --xdc /work/fpga/openxc7-synth/corona_decode_ax7203.xdc \
+                  --json /work/build/tnfcost/${TOP}.json \
+                  --write /work/build/tnfcost/${TOP}_routed.json \
+                  --freq 50.0 --seed $s --placer $P --router $R --timing-allow-fail > /tmp/np_${TOP}.log 2>&1 || true
+                if [ -f build/tnfcost/${TOP}_routed.json ] && ! grep -q "Failed to find a route" /tmp/np_${TOP}.log; then
+                  CLEAN="$P/$R/seed$s"; break 2
+                fi
+              done
+            done
+            if [ "$CLEAN" = "0" ]; then
+              # A routing failure is a fabric limit, recorded as such. It is not
+              # a zero, not a defect in the format, and must never be dropped
+              # silently from the fit.
+              echo "top=${TOP}"$'\n'"status=routing-pending" | tee metrics/${TOP}.pnr.txt
+              echo "::warning::${TOP} routing-pending on xc7a200tfbg484-2"
+              continue
+            fi
+            {
+              echo "top=${TOP}"
+              echo "status=routed"
+              echo "seed=${CLEAN}"
+              echo "luts=$(grep -E 'SLICE_LUTX' /tmp/np_${TOP}.log | tail -1 | grep -oE '[0-9]+/' | head -1 | tr -d /)"
+              echo "ffs=$(grep -E 'SLICE_FFX' /tmp/np_${TOP}.log | tail -1 | grep -oE '[0-9]+/' | head -1 | tr -d /)"
+              echo "fmax=$(grep -E 'Max frequency for clock' /tmp/np_${TOP}.log | tail -1 | sed 's/^.*: //')"
+              # Worst slack is reported against the nextpnr --freq target below,
+              # NOT against an XDC create_clock: corona_decode_ax7203.xdc carries
+              # pin constraints only. Recording the target with the slack is what
+              # makes the number readable.
+              echo "target_freq_mhz=50.0"
+              echo "wns=$(grep -E 'Max delay|worst slack|Slack' /tmp/np_${TOP}.log | tail -3 | tr '\n' ';')"
+              echo "crit_path=$(grep -E 'Critical path report|critical path' -A2 /tmp/np_${TOP}.log | tail -1)"
+              echo "log_sha256=$(sha256sum /tmp/np_${TOP}.log | cut -d' ' -f1)"
+            } | tee metrics/${TOP}.pnr.txt
+            cp /tmp/np_${TOP}.log metrics/${TOP}.nextpnr.log
+          done
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: {name: tnfcost-pnr, path: metrics}
+
+  refit:
+    needs: [generate, yosys, pnr]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - uses: actions/download-artifact@v4
+        with: {pattern: 'tnfcost-*', merge-multiple: true, path: metrics}
+      - name: Refit the cost model and report against the published one
+        run: |
+          python3 -m pip install --quiet numpy
+          python3 research/arxiv_tnf/refit_cost_model.py metrics | tee refit.md
+          cat refit.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with: {name: tnfcost-refit, path: refit.md}

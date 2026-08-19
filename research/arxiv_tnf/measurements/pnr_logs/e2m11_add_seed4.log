@@ -1,0 +1,320 @@
+Info: Packing constants..
+Info: Inserting IO buffers..
+Info:     IO port 'clk' driven by IBUF '$iopadmap$tnf_cost_e2m11_add_top.clk'
+Info:     IO port 'in_ready' driven by OBUF '$iopadmap$tnf_cost_e2m11_add_top.in_ready'
+Info:     IO port 'in_valid' driven by IBUF '$iopadmap$tnf_cost_e2m11_add_top.in_valid'
+Info:     IO port 'out_ready' driven by IBUF '$iopadmap$tnf_cost_e2m11_add_top.out_ready'
+Info:     IO port 'out_valid' driven by OBUF '$iopadmap$tnf_cost_e2m11_add_top.out_valid'
+Info:     IO port 'rst' driven by IBUF '$iopadmap$tnf_cost_e2m11_add_top.rst'
+Info:     IO port 'in_a[0]' driven by IBUF '$iopadmap$tnf_cost_e2m11_add_top.in_a'
+Info:     IO port 'in_a[1]' driven by IBUF '$iopadmap$tnf_cost_e2m11_add_top.in_a_1'
+Info:     IO port 'in_a[10]' driven by IBUF '$iopadmap$tnf_cost_e2m11_add_top.in_a_10'
+Info:     IO port 'in_a[11]' driven by IBUF '$iopadmap$tnf_cost_e2m11_add_top.in_a_11'
+Info:     IO port 'in_a[12]' driven by IBUF '$iopadmap$tnf_cost_e2m11_add_top.in_a_12'
+Info:     IO port 'in_a[13]' driven by IBUF '$iopadmap$tnf_cost_e2m11_add_top.in_a_13'
+Info:     IO port 'in_a[14]' driven by IBUF '$iopadmap$tnf_cost_e2m11_add_top.in_a_14'
+Info:     IO port 'in_a[15]' driven by IBUF '$iopadmap$tnf_cost_e2m11_add_top.in_a_15'
+Info:     IO port 'in_a[2]' driven by IBUF '$iopadmap$tnf_cost_e2m11_add_top.in_a_2'
+Info:     IO port 'in_a[3]' driven by IBUF '$iopadmap$tnf_cost_e2m11_add_top.in_a_3'
+Info:     IO port 'in_a[4]' driven by IBUF '$iopadmap$tnf_cost_e2m11_add_top.in_a_4'
+Info:     IO port 'in_a[5]' driven by IBUF '$iopadmap$tnf_cost_e2m11_add_top.in_a_5'
+Info:     IO port 'in_a[6]' driven by IBUF '$iopadmap$tnf_cost_e2m11_add_top.in_a_6'
+Info:     IO port 'in_a[7]' driven by IBUF '$iopadmap$tnf_cost_e2m11_add_top.in_a_7'
+Info:     IO port 'in_a[8]' driven by IBUF '$iopadmap$tnf_cost_e2m11_add_top.in_a_8'
+Info:     IO port 'in_a[9]' driven by IBUF '$iopadmap$tnf_cost_e2m11_add_top.in_a_9'
+Info:     IO port 'in_b[0]' driven by IBUF '$iopadmap$tnf_cost_e2m11_add_top.in_b'
+Info:     IO port 'in_b[1]' driven by IBUF '$iopadmap$tnf_cost_e2m11_add_top.in_b_1'
+Info:     IO port 'in_b[10]' driven by IBUF '$iopadmap$tnf_cost_e2m11_add_top.in_b_10'
+Info:     IO port 'in_b[11]' driven by IBUF '$iopadmap$tnf_cost_e2m11_add_top.in_b_11'
+Info:     IO port 'in_b[12]' driven by IBUF '$iopadmap$tnf_cost_e2m11_add_top.in_b_12'
+Info:     IO port 'in_b[13]' driven by IBUF '$iopadmap$tnf_cost_e2m11_add_top.in_b_13'
+Info:     IO port 'in_b[14]' driven by IBUF '$iopadmap$tnf_cost_e2m11_add_top.in_b_14'
+Info:     IO port 'in_b[15]' driven by IBUF '$iopadmap$tnf_cost_e2m11_add_top.in_b_15'
+Info:     IO port 'in_b[2]' driven by IBUF '$iopadmap$tnf_cost_e2m11_add_top.in_b_2'
+Info:     IO port 'in_b[3]' driven by IBUF '$iopadmap$tnf_cost_e2m11_add_top.in_b_3'
+Info:     IO port 'in_b[4]' driven by IBUF '$iopadmap$tnf_cost_e2m11_add_top.in_b_4'
+Info:     IO port 'in_b[5]' driven by IBUF '$iopadmap$tnf_cost_e2m11_add_top.in_b_5'
+Info:     IO port 'in_b[6]' driven by IBUF '$iopadmap$tnf_cost_e2m11_add_top.in_b_6'
+Info:     IO port 'in_b[7]' driven by IBUF '$iopadmap$tnf_cost_e2m11_add_top.in_b_7'
+Info:     IO port 'in_b[8]' driven by IBUF '$iopadmap$tnf_cost_e2m11_add_top.in_b_8'
+Info:     IO port 'in_b[9]' driven by IBUF '$iopadmap$tnf_cost_e2m11_add_top.in_b_9'
+Info:     IO port 'out_y[0]' driven by OBUF '$iopadmap$tnf_cost_e2m11_add_top.out_y'
+Info:     IO port 'out_y[1]' driven by OBUF '$iopadmap$tnf_cost_e2m11_add_top.out_y_1'
+Info:     IO port 'out_y[10]' driven by OBUF '$iopadmap$tnf_cost_e2m11_add_top.out_y_10'
+Info:     IO port 'out_y[11]' driven by OBUF '$iopadmap$tnf_cost_e2m11_add_top.out_y_11'
+Info:     IO port 'out_y[12]' driven by OBUF '$iopadmap$tnf_cost_e2m11_add_top.out_y_12'
+Info:     IO port 'out_y[13]' driven by OBUF '$iopadmap$tnf_cost_e2m11_add_top.out_y_13'
+Info:     IO port 'out_y[14]' driven by OBUF '$iopadmap$tnf_cost_e2m11_add_top.out_y_14'
+Info:     IO port 'out_y[15]' driven by OBUF '$iopadmap$tnf_cost_e2m11_add_top.out_y_15'
+Info:     IO port 'out_y[2]' driven by OBUF '$iopadmap$tnf_cost_e2m11_add_top.out_y_2'
+Info:     IO port 'out_y[3]' driven by OBUF '$iopadmap$tnf_cost_e2m11_add_top.out_y_3'
+Info:     IO port 'out_y[4]' driven by OBUF '$iopadmap$tnf_cost_e2m11_add_top.out_y_4'
+Info:     IO port 'out_y[5]' driven by OBUF '$iopadmap$tnf_cost_e2m11_add_top.out_y_5'
+Info:     IO port 'out_y[6]' driven by OBUF '$iopadmap$tnf_cost_e2m11_add_top.out_y_6'
+Info:     IO port 'out_y[7]' driven by OBUF '$iopadmap$tnf_cost_e2m11_add_top.out_y_7'
+Info:     IO port 'out_y[8]' driven by OBUF '$iopadmap$tnf_cost_e2m11_add_top.out_y_8'
+Info:     IO port 'out_y[9]' driven by OBUF '$iopadmap$tnf_cost_e2m11_add_top.out_y_9'
+Info: Generating input buffer for '$iopadmap$tnf_cost_e2m11_add_top.clk'
+Info: Generating output buffer for '$iopadmap$tnf_cost_e2m11_add_top.in_ready'
+Info: Generating input buffer for '$iopadmap$tnf_cost_e2m11_add_top.in_valid'
+Info: Generating input buffer for '$iopadmap$tnf_cost_e2m11_add_top.out_ready'
+Info: Generating output buffer for '$iopadmap$tnf_cost_e2m11_add_top.out_valid'
+Info: Generating input buffer for '$iopadmap$tnf_cost_e2m11_add_top.rst'
+Info: Generating input buffer for '$iopadmap$tnf_cost_e2m11_add_top.in_a'
+Info: Generating input buffer for '$iopadmap$tnf_cost_e2m11_add_top.in_a_1'
+Info: Generating input buffer for '$iopadmap$tnf_cost_e2m11_add_top.in_a_10'
+Info: Generating input buffer for '$iopadmap$tnf_cost_e2m11_add_top.in_a_11'
+Info: Generating input buffer for '$iopadmap$tnf_cost_e2m11_add_top.in_a_12'
+Info: Generating input buffer for '$iopadmap$tnf_cost_e2m11_add_top.in_a_13'
+Info: Generating input buffer for '$iopadmap$tnf_cost_e2m11_add_top.in_a_14'
+Info: Generating input buffer for '$iopadmap$tnf_cost_e2m11_add_top.in_a_15'
+Info: Generating input buffer for '$iopadmap$tnf_cost_e2m11_add_top.in_a_2'
+Info: Generating input buffer for '$iopadmap$tnf_cost_e2m11_add_top.in_a_3'
+Info: Generating input buffer for '$iopadmap$tnf_cost_e2m11_add_top.in_a_4'
+Info: Generating input buffer for '$iopadmap$tnf_cost_e2m11_add_top.in_a_5'
+Info: Generating input buffer for '$iopadmap$tnf_cost_e2m11_add_top.in_a_6'
+Info: Generating input buffer for '$iopadmap$tnf_cost_e2m11_add_top.in_a_7'
+Info: Generating input buffer for '$iopadmap$tnf_cost_e2m11_add_top.in_a_8'
+Info: Generating input buffer for '$iopadmap$tnf_cost_e2m11_add_top.in_a_9'
+Info: Generating input buffer for '$iopadmap$tnf_cost_e2m11_add_top.in_b'
+Info: Generating input buffer for '$iopadmap$tnf_cost_e2m11_add_top.in_b_1'
+Info: Generating input buffer for '$iopadmap$tnf_cost_e2m11_add_top.in_b_10'
+Info: Generating input buffer for '$iopadmap$tnf_cost_e2m11_add_top.in_b_11'
+Info: Generating input buffer for '$iopadmap$tnf_cost_e2m11_add_top.in_b_12'
+Info: Generating input buffer for '$iopadmap$tnf_cost_e2m11_add_top.in_b_13'
+Info: Generating input buffer for '$iopadmap$tnf_cost_e2m11_add_top.in_b_14'
+Info: Generating input buffer for '$iopadmap$tnf_cost_e2m11_add_top.in_b_15'
+Info: Generating input buffer for '$iopadmap$tnf_cost_e2m11_add_top.in_b_2'
+Info: Generating input buffer for '$iopadmap$tnf_cost_e2m11_add_top.in_b_3'
+Info: Generating input buffer for '$iopadmap$tnf_cost_e2m11_add_top.in_b_4'
+Info: Generating input buffer for '$iopadmap$tnf_cost_e2m11_add_top.in_b_5'
+Info: Generating input buffer for '$iopadmap$tnf_cost_e2m11_add_top.in_b_6'
+Info: Generating input buffer for '$iopadmap$tnf_cost_e2m11_add_top.in_b_7'
+Info: Generating input buffer for '$iopadmap$tnf_cost_e2m11_add_top.in_b_8'
+Info: Generating input buffer for '$iopadmap$tnf_cost_e2m11_add_top.in_b_9'
+Info: Generating output buffer for '$iopadmap$tnf_cost_e2m11_add_top.out_y'
+Info: Generating output buffer for '$iopadmap$tnf_cost_e2m11_add_top.out_y_1'
+Info: Generating output buffer for '$iopadmap$tnf_cost_e2m11_add_top.out_y_10'
+Info: Generating output buffer for '$iopadmap$tnf_cost_e2m11_add_top.out_y_11'
+Info: Generating output buffer for '$iopadmap$tnf_cost_e2m11_add_top.out_y_12'
+Info: Generating output buffer for '$iopadmap$tnf_cost_e2m11_add_top.out_y_13'
+Info: Generating output buffer for '$iopadmap$tnf_cost_e2m11_add_top.out_y_14'
+Info: Generating output buffer for '$iopadmap$tnf_cost_e2m11_add_top.out_y_15'
+Info: Generating output buffer for '$iopadmap$tnf_cost_e2m11_add_top.out_y_2'
+Info: Generating output buffer for '$iopadmap$tnf_cost_e2m11_add_top.out_y_3'
+Info: Generating output buffer for '$iopadmap$tnf_cost_e2m11_add_top.out_y_4'
+Info: Generating output buffer for '$iopadmap$tnf_cost_e2m11_add_top.out_y_5'
+Info: Generating output buffer for '$iopadmap$tnf_cost_e2m11_add_top.out_y_6'
+Info: Generating output buffer for '$iopadmap$tnf_cost_e2m11_add_top.out_y_7'
+Info: Generating output buffer for '$iopadmap$tnf_cost_e2m11_add_top.out_y_8'
+Info: Generating output buffer for '$iopadmap$tnf_cost_e2m11_add_top.out_y_9'
+Info:     Created 54 PAD cells from:
+Info:             54x PAD
+Info: Preparing clocking...
+Info: Packing constants..
+Info: Packing cfg...
+Info: Packing PLLs...
+Info: Packing Gigabit Transceivers..
+Info: Packing global buffers...
+Info: Packing MUX[789]s..
+Info: Packing carries (atomic CARRY4)..
+Info:    Packed 0 CARRY4 cells into 0 chains (atomic).
+Info: router2 PRECYINIT fix: 0 CARRY4 cells, 0 constant carry pins disconnected
+Info: Packing LUTs..
+Info:     Created 467 SLICE_LUTX cells from:
+Info:             69x LUT2
+Info:            135x LUT3
+Info:             88x LUT4
+Info:             94x LUT5
+Info:             81x LUT6
+Info: Packing DRAM..
+Info:    Transformed 0 tied-low DRAM address inputs to be tied-high
+Info: Packing BRAM..
+Info: Packing DSPs..
+Info: Packing flipflops..
+Info:     Created 17 SLICE_FFX cells from:
+Info:             17x FDCE
+Info:     local-const FF control: disconnected 0 SR(=GND) + 1 CE(=VCC) pins from global nets
+Info:     Created 3 SELMUX2_1 cells from:
+Info:              2x MUXF7
+Info:              1x MUXF8
+Info: Constrained 17 LUTFF pairs.
+
+Info: Annotating ports with timing budgets for target frequency 50.00 MHz
+Info: Checksum: 0x4f04f982
+
+Info: Device utilisation:
+Info: 	          SLICE_LUTX:   467/269200     0%
+Info: 	           SLICE_FFX:    17/269200     0%
+Info: 	              CARRY4:     0/33650     0%
+Info: 	          PSEUDO_GND:     1/69165     0%
+Info: 	          PSEUDO_VCC:     1/69165     0%
+Info: 	               HARD0:     0/ 3960     0%
+Info: 	            RAMB18E1:     0/  730     0%
+Info: 	            FIFO18E1:     0/  365     0%
+Info: 	        RAMBFIFO36E1:     0/  365     0%
+Info: 	            RAMB36E1:     0/  365     0%
+Info: 	             DSP48E1:     0/  740     0%
+Info: 	                 PAD:    54/ 1460     3%
+Info: 	       IOB33M_OUTBUF:     0/  240     0%
+Info: 	       IOB33S_OUTBUF:     0/  240     0%
+Info: 	        IOB33_OUTBUF:    18/  500     3%
+Info: 	     IOB33M_INBUF_EN:     0/  240     0%
+Info: 	     IOB33S_INBUF_EN:     0/  240     0%
+Info: 	      IOB33_INBUF_EN:    36/  500     7%
+Info: 	IOB33M_TERM_OVERRIDE:     0/  240     0%
+Info: 	IOB33S_TERM_OVERRIDE:     0/  240     0%
+Info: 	 IOB33_TERM_OVERRIDE:     0/  500     0%
+Info: 	       PULL_OR_KEEP1:     0/  980     0%
+Info: 	            IDELAYE2:     0/  500     0%
+Info: 	        OLOGICE3_TFF:     0/  500     0%
+Info: 	      OLOGICE3_OUTFF:     0/  500     0%
+Info: 	       OLOGICE3_MISR:     0/  500     0%
+Info: 	           OSERDESE2:     0/  500     0%
+Info: 	        ILOGICE3_IFF:     0/  500     0%
+Info: 	ILOGICE3_ZHOLD_DELAY:     0/  500     0%
+Info: 	           ISERDESE2:     0/  500     0%
+Info: 	               BUFIO:     0/   40     0%
+Info: 	          IDELAYCTRL:     0/   10     0%
+Info: 	            BUFGCTRL:     1/   32     3%
+Info: 	               BSCAN:     0/    4     0%
+Info: 	                BUFG:     0/   32     0%
+Info: 	              BUFHCE:     0/  120     0%
+Info: 	            DCIRESET:     0/    1     0%
+Info: 	            DNA_PORT:     0/    1     0%
+Info: 	           EFUSE_USR:     0/    1     0%
+Info: 	           FRAME_ECC:     0/    1     0%
+Info: 	                ICAP:     0/    2     0%
+Info: 	            INVERTER:     0/  240     0%
+Info: 	        OLOGICE2_TFF:     0/  500     0%
+Info: 	      OLOGICE2_OUTFF:     0/  500     0%
+Info: 	           PLLE2_ADV:     0/   10     0%
+Info: 	           SELMUX2_1:     3/102950     0%
+Info: 	             STARTUP:     0/    1     0%
+Info: 	          USR_ACCESS:     0/    1     0%
+Info: 	              BUFFER:     0/  480     0%
+Info: 	        ILOGICE2_IFF:     0/  500     0%
+Info: 	       OLOGICE2_MISR:     0/  500     0%
+
+Info: HeAP congestion knobs: beta=0.400 spread_scale=2,1 alpha=0.080
+Info: Placed 109 cells based on constraints.
+Info: Creating initial analytic placement for 464 cells, random placement wirelen = 212490.
+Info:     at initial placer iter 0, wirelen = 2585
+Info:     at initial placer iter 1, wirelen = 2121
+Info:     at initial placer iter 2, wirelen = 2109
+Info:     at initial placer iter 3, wirelen = 2143
+Info: Running main analytical placer.
+Info:     at iteration #1, type ALL: wirelen solved = 2137, spread = 7886, legal = 8110; time = 0.01s
+Info:     at iteration #2, type ALL: wirelen solved = 2791, spread = 8981, legal = 9110; time = 0.01s
+Info:     at iteration #3, type ALL: wirelen solved = 3438, spread = 6978, legal = 7182; time = 0.02s
+Info:     at iteration #4, type ALL: wirelen solved = 3642, spread = 6857, legal = 7065; time = 0.02s
+Info:     at iteration #5, type ALL: wirelen solved = 3908, spread = 6608, legal = 6787; time = 0.02s
+Info:     at iteration #6, type ALL: wirelen solved = 4162, spread = 6428, legal = 6599; time = 0.02s
+Info:     at iteration #7, type ALL: wirelen solved = 4536, spread = 6256, legal = 6393; time = 0.02s
+Info:     at iteration #8, type ALL: wirelen solved = 4693, spread = 6214, legal = 6382; time = 0.02s
+Info:     at iteration #9, type ALL: wirelen solved = 4873, spread = 6197, legal = 6381; time = 0.01s
+Info:     at iteration #10, type ALL: wirelen solved = 4933, spread = 6082, legal = 6320; time = 0.01s
+Info:     at iteration #11, type ALL: wirelen solved = 4947, spread = 6783, legal = 6969; time = 0.01s
+Info:     at iteration #12, type ALL: wirelen solved = 5548, spread = 6636, legal = 6827; time = 0.01s
+Info: HeAP Placer Time: 0.29s
+Info:   of which solving equations: 0.12s
+Info:   of which spreading cells: 0.06s
+Info:   of which strict legalisation: 0.01s
+
+Info: Running simulated annealing placer for refinement.
+Info:   at iteration #1: temp = 0.000000, timing cost = 19, wirelen = 6320
+Info:   at iteration #5: temp = 0.000000, timing cost = 14, wirelen = 5755
+Info:   at iteration #10: temp = 0.000000, timing cost = 14, wirelen = 5667
+Info:   at iteration #10: temp = 0.000000, timing cost = 14, wirelen = 5667 
+Info: SA placement time 0.09s
+
+Info: Max frequency for clock '$abc$25598$iopadmap$clk': 506.07 MHz (PASS at 50.00 MHz)
+
+Info: Slack histogram:
+Info:  legend: * represents 1 endpoint(s)
+Info:          + represents [1,1) endpoint(s)
+Info: [ 18024,  18100) |***** 
+Info: [ 18100,  18176) |******* 
+Info: [ 18176,  18252) |*** 
+Info: [ 18252,  18328) | 
+Info: [ 18328,  18404) | 
+Info: [ 18404,  18480) | 
+Info: [ 18480,  18556) | 
+Info: [ 18556,  18632) | 
+Info: [ 18632,  18708) | 
+Info: [ 18708,  18784) | 
+Info: [ 18784,  18860) |* 
+Info: [ 18860,  18936) | 
+Info: [ 18936,  19012) | 
+Info: [ 19012,  19088) | 
+Info: [ 19088,  19164) | 
+Info: [ 19164,  19240) | 
+Info: [ 19240,  19316) | 
+Info: [ 19316,  19392) |* 
+Info: [ 19392,  19468) | 
+Info: [ 19468,  19544) |* 
+Info: Checksum: 0xda14be12
+Info: Running post-placement legalisation...
+Info: post-place repair: relocated 190 stranded cluster(s)/cell(s) to valid bels
+Info: Routing global clocks...
+Info:     routing clock '$auto$clkbufmap.cc:262:execute$26089'
+Info:             failed to find a route using dedicated resources.
+Info:     routing clock '$abc$25598$iopadmap$clk'
+
+Info: Routing..
+Info: Setting up routing queue.
+Info: Routing 1938 arcs.
+Info:            |   (re-)routed arcs  |   delta    | remaining|       time spent     |
+Info:    IterCnt |  w/ripup   wo/ripup |  w/r  wo/r |      arcs| batch(sec) total(sec)|
+Info:       1000 |       54        945 |   54   945 |      1035|       2.44       2.44|
+Info:       2000 |      157       1842 |  103   897 |       214|       0.32       2.76|
+Info:       2263 |      202       2061 |   45   219 |         0|       0.08       2.84|
+Info: Routing complete.
+Info: Router1 time 2.84s
+Info: Checksum: 0x2e0f96c0
+
+Info: Critical path report for clock '$abc$25598$iopadmap$clk' (posedge -> posedge):
+Info: curr total
+Info:  0.1  0.1  Source u.$auto$ff.cc:337:slice$6145.Q
+Info:  0.3  0.4    Net $abc$25598$iopadmap$out_valid budget 6.518000 ns (10,14) -> (10,14)
+Info:                Sink u.$auto$abc9_ops.cc:1552:reintegrate$25591.A2
+Info:  0.1  0.5  Source u.$auto$abc9_ops.cc:1552:reintegrate$25591.O6
+Info:  0.3  0.8    Net $abc$25598$iopadmap$in_ready budget 6.517000 ns (10,14) -> (10,14)
+Info:                Sink u.$abc$25589$lut$0\out_valid_reg[0:0].A2
+Info:  0.1  0.9  Source u.$abc$25589$lut$0\out_valid_reg[0:0].O6
+Info:  1.4  2.3    Net u.$techmap25615$auto$ff.cc:337:slice$6145.D budget 6.517000 ns (10,14) -> (10,35)
+Info:                Sink u.$auto$ff.cc:337:slice$6152.CE
+Info:  0.1  2.4  Setup u.$auto$ff.cc:337:slice$6152.CE
+Info: 0.4 ns logic, 1.9 ns routing
+
+Info: Max frequency for clock '$abc$25598$iopadmap$clk': 422.65 MHz (PASS at 50.00 MHz)
+
+Info: Slack histogram:
+Info:  legend: * represents 1 endpoint(s)
+Info:          + represents [1,1) endpoint(s)
+Info: [ 17634,  17701) |****** 
+Info: [ 17701,  17768) |****** 
+Info: [ 17768,  17835) | 
+Info: [ 17835,  17902) |** 
+Info: [ 17902,  17969) |* 
+Info: [ 17969,  18036) | 
+Info: [ 18036,  18103) | 
+Info: [ 18103,  18170) | 
+Info: [ 18170,  18237) | 
+Info: [ 18237,  18304) | 
+Info: [ 18304,  18371) | 
+Info: [ 18371,  18438) | 
+Info: [ 18438,  18505) | 
+Info: [ 18505,  18572) | 
+Info: [ 18572,  18639) | 
+Info: [ 18639,  18706) |* 
+Info: [ 18706,  18773) | 
+Info: [ 18773,  18840) |* 
+Info: [ 18840,  18907) | 
+Info: [ 18907,  18974) |* 
+Info: Routing $PACKER_VCC_NET connections...
+Info:     $PACKER_VCC_NET: 6/6 sinks bridged (0 left to main router; max BFS 1)
+Info: Routing $PACKER_GND_NET connections...
+Info:     $PACKER_GND_NET: 0/0 sinks bridged (0 left to main router; max BFS 0)
+Info: Running post-routing legalisation...
+

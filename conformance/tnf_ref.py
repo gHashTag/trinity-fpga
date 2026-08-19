@@ -91,8 +91,16 @@ def encode(fmt: TNFFormat, value) -> int:
     if offset >= fmt.offset_max:
         return (sign << fmt.sign_shift) | fmt.inf
     if offset < 1:
-        offset = 1
-        e = offset - fmt.exp_offset
+        # Underflow.  There are no subnormals in this encoding: the only two
+        # representable neighbours of an underflowing magnitude are zero and the
+        # smallest normal 2^(1-exp_offset).  Round to nearest between them, ties
+        # to zero, and keep the sign.  Clamping the offset and continuing (as an
+        # earlier revision did) makes `frac` negative, which produces a negative
+        # code word and therefore a silently wrong sign and magnitude on decode.
+        min_normal = _pow2(1 - fmt.exp_offset)
+        if av * 2 <= min_normal:
+            return sign << fmt.sign_shift
+        return (sign << fmt.sign_shift) | (1 << fmt.exp_shift)
     frac = av / _pow2(e) - 1
     scaled = frac * fmt.mant
     fl = int(scaled)
@@ -135,35 +143,39 @@ def tef_mul(fmt: TNFFormat, a: int, b: int) -> int:
     return encode(fmt, decode(fmt, a) * decode(fmt, b))
 
 
-# Canonical ladder rungs (exp_trits, mant_bits) per nominal width.
-
-def stored_width(fmt):
-    """Bits this rung actually stores. Not the name; the name lies on every rung."""
-    return fmt.sign_shift + 1
-
-
-# Rungs that are exactly their named width, chosen by measurement
-# (true_width_ladder.py). The narrow-exponent splits that score better inside
-# +-3 decades are deliberately NOT here: TNF(3,10) drops 58% of values at +-9
-# decades, and a default that traps is worse than a default that ties.
-TRUE_LADDER = {
-    8:  TNFFormat(2, 3),    # 1+4+3;  best true-8 split measured (2.04x vs takum8)
-    16: TNFFormat(4, 8),    # 1+7+8;  range-safe, ties takum16 at 1.00x
-    32: TNFFormat(4, 24),   # 1+7+24; range-safe, ties takum32 at 0.94x
-}
+# Ladder rungs (exp_trits, mant_bits) per nominal width, by version.
+#
+# The dictionary that shipped first used the research-note mantissas, seven of
+# which do not satisfy the width rule the specification states, 1+E_t+M=N.
+# Repairing it in place would change every conformance vector and every
+# published digest, so both ladders stay addressable and the caller says which
+# one it means.  See tnf_ladder_versions.py for the table and the deltas.
+from tnf_ladder_versions import (  # noqa: E402
+    LADDER_V1_RESEARCH, LADDER_V2_SPEC, DEFAULT_LADDER_VERSION,
+    VECTOR_SPEC_VERSION, width_rule_report,
+)
 
 
-LADDER = {
-    4:   TNFFormat(2, 1),
-    8:   TNFFormat(3, 4),
-    16:  TNFFormat(4, 9),
-    32:  TNFFormat(5, 21),
-    64:  TNFFormat(7, 52),
-    128: TNFFormat(8, 115),
-    256: TNFFormat(9, 242),
-    512: TNFFormat(10, 497),
-    1024: TNFFormat(11, 1006),
-}
+def _mk(table):
+    return {w: TNFFormat(t, m) for w, (t, m) in table.items()}
+
+
+LADDER_RESEARCH = _mk(LADDER_V1_RESEARCH)   # frozen, byte-compatible with v1
+LADDER_SPEC = _mk(LADDER_V2_SPEC)           # satisfies 1+E_t+M=N on every rung
+
+LADDERS = {"v1-research": LADDER_RESEARCH, "v2-spec": LADDER_SPEC}
+
+
+def get_ladder(version: str = DEFAULT_LADDER_VERSION):
+    if version not in LADDERS:
+        raise KeyError(f"unknown ladder version {version!r}; "
+                       f"have {sorted(LADDERS)}")
+    return LADDERS[version]
+
+
+# `LADDER` keeps pointing at the research widths so that existing transcripts
+# stay reproducible.  New work should call get_ladder() explicitly.
+LADDER = LADDER_RESEARCH
 
 
 def _selftest():
@@ -188,6 +200,43 @@ def _selftest():
     F16 = LADDER[16]
     assert abs(float(decode(F16, tef_mul(F16, encode(F16, 1.5), encode(F16, 2.0)))) - 3.0) < 1e-2
     print("TNF16 1.5*2.0 =", float(decode(F16, tef_mul(F16, encode(F16, 1.5), encode(F16, 2.0)))))
+    _width_rule_check()
+    _roundtrip_check()
+
+
+def _width_rule_check():
+    """Print the rule per rung.  v2 must satisfy it everywhere; v1 must not be
+    silently claimed to."""
+    print("\nwidth rule 1+E_t+M=N")
+    for r in width_rule_report():
+        assert r["v2_sum"] == r["width"]
+        print(f"  TNF{r['width']:<5} v1 sum {r['v1_sum']:>5} "
+              f"{'ok' if r['v1_ok'] else 'VIOLATES'};  v2 sum {r['v2_sum']:>5} ok")
+
+
+def _roundtrip_check():
+    """Sign survival and encode->decode->encode fixpoint on both ladders.
+
+    The commutativity check cannot see an inverted sign: it survives on both
+    sides of a+b == b+a.  This one line is what caught the hardcoded sign_shift.
+    """
+    print("\nround-trip (sign survival + encode fixpoint)")
+    from fractions import Fraction as F
+    probes = [F(3, 2), F(-3, 2), F(1), F(-1), F(5, 4), F(-5, 4), F(7, 8), F(-7, 8)]
+    for name, lad in LADDERS.items():
+        bad = 0
+        for w, f in lad.items():
+            for v in probes:
+                r = encode(f, v)
+                d = decode(f, r)
+                if (d < 0) != (v < 0):
+                    bad += 1
+                if encode(f, d) != r:
+                    bad += 1
+        print(f"  {name:<12} {bad} violations over "
+              f"{len(lad) * len(probes)} probes")
+        assert bad == 0, (name, bad)
+    print(f"\nvector spec version: {VECTOR_SPEC_VERSION}")
 
 
 if __name__ == "__main__":

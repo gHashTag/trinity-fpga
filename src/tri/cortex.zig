@@ -773,7 +773,7 @@ fn sendFacultyTelegram(snapshot: FacultySnapshot, delta: FacultyDelta) void {
     const body = body_buf[0..i];
 
     // Fire-and-forget HTTP POST
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     var client = std.http.Client{ .allocator = gpa.allocator() };
     defer client.deinit();

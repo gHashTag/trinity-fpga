@@ -1,0 +1,21 @@
+# TNF conformance vector manifest
+# vector_spec_version=tnf-vectors-3
+# columns: sha256 file rows
+1c0f75f6d2a0fa2f73d9dbbd0c10f14422b11e85cf42516665ab5b19556afe61  tnf4_v1-research_tnf-vectors-3.vec  1038
+adfa730ed28ea3fe8ad2901048cc94db4f146ef9739a3dfc01dc826789ba8d88  tnf8_v1-research_tnf-vectors-3.vec  1038
+cfebaad1e971f15a7a55a2f20544d4385eb68ecc7652a8ca45d0807c8c57f1c5  tnf16_v1-research_tnf-vectors-3.vec  1038
+80e4628abe57497c46f04eedea5b8c1c8cc1f4a27bec1f70b6fb91ac3b7e7b95  tnf32_v1-research_tnf-vectors-3.vec  1038
+88cfd8017e40bbcda26afd150bad9e876c120690a9fe0c9dd6561889422536b0  tnf64_v1-research_tnf-vectors-3.vec  1038
+bbfd6b16dd33722f4973b11bc6421d56284d8477a4cbac18276bc21eb30a82d5  tnf128_v1-research_tnf-vectors-3.vec  1038
+770e1421021664350cea4b125619a457d5d2dab0af1ae3f9debf1d16b15b5b53  tnf256_v1-research_tnf-vectors-3.vec  1038
+094d8135d7efe97ab04a6d5fab728128b9dcbf95088074cf26efd82d7daf856d  tnf512_v1-research_tnf-vectors-3.vec  1038
+b3f5f6d9aed40dd22622802d54185288254012e37e7222a478857a17db1de6bf  tnf1024_v1-research_tnf-vectors-3.vec  1038
+5e91897cdf92238b75054073d8138c02122120876eb5630c4feae0ec0c40abf6  tnf4_v2-spec_tnf-vectors-3.vec  1038
+47db30a94c29803dcdc03ffd5f784056e1c6cba63700252ad2883c860a091bb7  tnf8_v2-spec_tnf-vectors-3.vec  1038
+aa1e9ac3628c311e658860bdf93d4ae4af17b123f17aa766c634a21a92e76634  tnf16_v2-spec_tnf-vectors-3.vec  1038
+aca4cb49419a5635581c7cb21214a095a9878d3774ca7d5722703f3c5a2e8435  tnf32_v2-spec_tnf-vectors-3.vec  1038
+ffd97b4549f715fb0aae49755b0d9d8fd30e7a2e32e548450d1409742bfd131c  tnf64_v2-spec_tnf-vectors-3.vec  1038
+ba2365d928e2898dcbbb4a682f6977a8af98e28cca1cae87f74a027d209a6818  tnf128_v2-spec_tnf-vectors-3.vec  1038
+fcc792ccc9bf7b54a2cfc4187b72fa499f3a0635c78dd629faaa5c138a77e0ce  tnf256_v2-spec_tnf-vectors-3.vec  1038
+6f27f887037047aa07da841109e3cabed08814f8f1a877edb959789e9cb71f66  tnf512_v2-spec_tnf-vectors-3.vec  1038
+d3e47103c9ee98fe5421f800ca554172083c9bb2e90a04101a7a34f6c79d8071  tnf1024_v2-spec_tnf-vectors-3.vec  1038

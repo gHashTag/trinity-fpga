@@ -464,7 +464,7 @@ pub fn runE2EBenchmark(allocator: Allocator) !void {
 }
 
 pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     try runE2EBenchmark(gpa.allocator());
 }

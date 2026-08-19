@@ -10,11 +10,26 @@
 const std = @import("std");
 
 // Core modules
-pub const bigint = @import("bigint.zig");
-pub const packed_trit = @import("packed_trit.zig");
-pub const hybrid = @import("hybrid.zig");
-pub const vsa = @import("vsa/core.zig");
-pub const vsa_agent = @import("vsa/agent.zig");
+pub const bigint = @import("vsa_hybrid/bigint.zig");
+pub const packed_trit = @import("vsa_hybrid/packed_trit.zig");
+pub const hybrid = @import("vsa_hybrid/hybrid.zig");
+// src/vsa/ was extracted to gHashTag/zig-hdc and this directory is now empty;
+// the module `vsa` is that package's `zig-hdc-vsa`, whose root is the very
+// src/vsa.zig that used to live here. So `core` comes back through it.
+pub const vsa = @import("vsa").core;
+
+// vsa_agent is NOT restored. zig-hdc declines to export vsa/agent.zig with a
+// note that it "cannot compile and never could": it is a facade over
+// agent/types.zig, memory.zig, unified.zig, autonomous.zig and system.zig,
+// five files absent from that package and from gHashTag/trinity, which is
+// where it was migrated from. Verified here rather than taken on trust --
+// all five are absent.
+//
+// Re-exporting it from this root made every consumer of `trinity` unbuildable
+// for the sake of a name that resolves to nothing. Whether the agent layer
+// gets finished or dropped is a decision about that library, not a way to turn
+// this build green -- which is the same reason zig-hdc left the file in place
+// and merely stopped exporting it.
 pub const vm = @import("vm.zig");
 
 // SDK modules (high-level API)
@@ -23,11 +38,19 @@ pub const science = @import("science.zig");
 pub const sparse = @import("sparse.zig");
 pub const jit = @import("jit.zig");
 
-// Re-export main types
+// Re-export main types.
+//
+// HybridBigInt and Trit come from the MODULE, not from src/vsa_hybrid/. That
+// directory is a local leftover of the same types the `vsa` module exports,
+// and taking the type from one while taking bind/bundle/permute from the other
+// splits one structural type into two nominal ones -- which is every
+// "expected vsa_hybrid.hybrid_impl.HybridBigInt, found ternary.hybrid.HybridBigInt"
+// that consumers of this root were failing on.
+const vsa_mod = @import("vsa");
 pub const BigInt = bigint.TVCBigInt;
 pub const PackedBigInt = packed_trit.PackedBigInt;
-pub const HybridBigInt = hybrid.HybridBigInt;
-pub const Trit = hybrid.Trit;
+pub const HybridBigInt = vsa_mod.HybridBigInt;
+pub const Trit = vsa_mod.Trit;
 
 // Re-export VSA operations
 pub const bind = vsa.bind;
@@ -79,8 +102,10 @@ pub const JitCompiler = jit.JitCompiler;
 pub const JitCache = jit.JitCache;
 
 // Constants
-pub const MAX_TRITS = hybrid.MAX_TRITS;
-pub const TRITS_PER_BYTE = hybrid.TRITS_PER_BYTE;
+pub const MAX_TRITS = vsa_mod.MAX_TRITS;
+// TRITS_PER_BYTE is not exported from the module root, so it stays local --
+// and it lives in packed_trit, not hybrid, which is where I first pointed it.
+pub const TRITS_PER_BYTE = packed_trit.TRITS_PER_BYTE;
 pub const PHI = science.PHI;
 pub const PHI_SQUARED = science.PHI_SQUARED;
 pub const GOLDEN_IDENTITY = science.GOLDEN_IDENTITY;

@@ -15,7 +15,7 @@ const dev_state_machine = @import("dev_state_machine.zig");
 const github_integration = @import("github_integration.zig");
 
 pub fn main() !void {
-    const gpa = std.heap.GeneralPurposeAllocator(.{});
+    const gpa = std.heap.DebugAllocator(.{});
     defer {
         const leaked = gpa.deinit();
         if (leaked == 0) {

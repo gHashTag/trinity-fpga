@@ -10,7 +10,7 @@ const locus = @import("locus_coeruleus.zig");
 const amygdala = @import("amygdala.zig");
 
 pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 

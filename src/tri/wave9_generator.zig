@@ -113,7 +113,7 @@ pub fn generateCompose(allocator: Allocator, num_workers: usize) ![]const u8 {
 }
 
 pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
@@ -175,7 +175,7 @@ pub fn main() !void {
 }
 
 test "generateWorker" {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const worker = try generateWorker(gpa.allocator(), 1);
     defer gpa.allocator().free(worker);
@@ -183,7 +183,7 @@ test "generateWorker" {
 }
 
 test "generateCompose minimal" {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const compose = try generateCompose(gpa.allocator(), 2);
     defer gpa.allocator().free(compose);

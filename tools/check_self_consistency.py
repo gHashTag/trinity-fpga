@@ -27,9 +27,11 @@ t = PAPER.read_text()
 fails = []
 
 # 1. count the marks the body actually carries
-MARK = re.compile(r"\\paragraph\{[^}]*[Ww]ithdrawn[^}]*\}"
+MARK = re.compile(r"\\paragraph\{[^}]*[Ww]ithdraw[^}]*\}"
+                  r"|\\paragraph\{[^}]*[Rr]etract[^}]*\}"
                   r"|(?<!are )(?<!not )\bis withdrawn\b"
-                  r"|\bare withdrawn\b|\bis retracted\b")
+                  r"|\bare withdrawn\b|\bis retracted\b"
+                  r"|\bwe withdraw\b")
 # A \paragraph heading announcing a withdrawal and the sentence closing it are
 # ONE retraction, not two. A summary sentence counting the retractions is not a
 # retraction at all. Counting raw marks gave eight where the body holds five,

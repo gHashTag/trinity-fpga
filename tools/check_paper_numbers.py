@@ -6,7 +6,7 @@ against RTL, RTL against build script, design against harness. Enumerating every
 pair in the project that must agree shows all three sit in one region -- and that
 **no pair with a document on either side is checked at all**.
 
-Sixteen claims were withdrawn during this work. A withdrawn claim's number does
+Twenty claims were withdrawn during this work. A withdrawn claim's number does
 not remove itself from a paper. This looks for distinctive numeric literals in
 the paper that appear in no data file, which is where a stale figure hides.
 

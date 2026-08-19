@@ -1950,7 +1950,7 @@ fn parseClaudeResponse(allocator: std.mem.Allocator, response: []const u8) ?[]co
 // ============================================================================
 
 test "PipelineExecutor initialization" {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
@@ -1998,7 +1998,7 @@ fn parseTestCount(output: []const u8, kind: []const u8) ?u32 {
 }
 
 test "PipelineExecutor with TVC gate" {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 

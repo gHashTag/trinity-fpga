@@ -192,7 +192,7 @@ fn parseWebhookEvent(allocator: Allocator, payload: []const u8) !WebhookEvent {
 
 test "github_webhook: parse issue opened" {
     const payload = "{\"action\":\"opened\",\"issue\":{\"number\":477,\"title\":\"Test\",\"labels\":[\"feature\",\"fpga\"]}}";
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 

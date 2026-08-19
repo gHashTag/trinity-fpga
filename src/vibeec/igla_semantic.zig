@@ -344,7 +344,7 @@ fn benchmarkSimilarity(engine: *SemanticEngine, word1: []const u8, word2: []cons
 // ═══════════════════════════════════════════════════════════════════════════════
 
 pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 

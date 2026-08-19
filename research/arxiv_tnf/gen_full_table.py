@@ -12,12 +12,12 @@ Writes tnf_full_table.pdf and reads full_table.json, which is written by the
 sweep so the figure and the numbers cannot drift apart.
 """
 import json, pathlib
+import canon_style  # engraving house style: white ground, serif, hatched fills
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-plt.rcParams.update({"font.size": 8.5, "axes.titlesize": 10, "axes.labelsize": 9,
-                     "pdf.fonttype": 42, "figure.dpi": 160})
+# canon_style turns these two colours into two stable hatches.
 OURS, OTHER = "#0a7a4c", "#98a0a8"
 
 rows = json.load(open(pathlib.Path(__file__).with_name("full_table.json")))
@@ -26,25 +26,21 @@ names = [r["format"] for r in rows]
 vals = [r["mhz_per_lut"] for r in rows]
 cols = [OURS if r["ours"] else OTHER for r in rows]
 
-fig, ax = plt.subplots(figsize=(7.2, 5.4))
+fig, ax = plt.subplots(figsize=(4.80, 3.60))
 b = ax.barh(names, vals, color=cols, height=0.72)
 for r, bar in zip(rows, b):
-    ax.text(bar.get_width() + 0.0022, bar.get_y() + bar.get_height()/2,
-            f"{r['mhz_per_lut']:.4f}", va="center", fontsize=7.6,
-            color="#111" if r["ours"] else "#555",
-            fontweight="bold" if r["ours"] else "normal")
-    ax.text(0.0025, bar.get_y() + bar.get_height()/2,
-            f"{r['lut']} LUT", va="center", fontsize=6.8, color="white")
+    # One label per bar. Two separate texts collided at every bar width, and an
+    # in-bar label has to fight the hatch that marks our rows.
+    ax.text(bar.get_width() + 0.0025, bar.get_y() + bar.get_height()/2,
+            f"{r['mhz_per_lut']:.4f}  ({r['lut']} LUT)", va="center",
+            fontsize=6.8, fontweight="bold" if r["ours"] else "normal")
 ax.set_xlabel("throughput per area (MHz per LUT), median of five placement seeds")
 ax.set_title("One ternary-neuron datapath, XC7A200T, no DSP, whole accumulator observed")
-ax.set_xlim(0, max(vals) * 1.16)
-ax.spines[["top", "right"]].set_visible(False)
-ax.grid(axis="x", alpha=0.22, linewidth=0.6)
+ax.set_xlim(0, max(vals) * 1.42)
 ax.set_axisbelow(True)
-from matplotlib.patches import Patch
-ax.legend(handles=[Patch(color=OURS, label="ours (GFTernary, TNF, BNF, GF)"),
-                   Patch(color=OTHER, label="other formats")],
-          loc="lower right", frameon=False, fontsize=8)
+# No colour legend: in the engraved style ours are the rows whose value is set
+# in bold, which is stated in the caption. A hatch legend at this size is not
+# reliably distinguishable in print.
 fig.tight_layout()
 fig.savefig(pathlib.Path(__file__).with_name("tnf_full_table.pdf"))
 print("tnf_full_table.pdf")

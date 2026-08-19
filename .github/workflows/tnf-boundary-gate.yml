@@ -1,0 +1,67 @@
+name: TNF boundary gate
+
+# Why this gate exists.
+#
+# The P0 defect fixed on 13 August 2026 -- the encoder silently dropped the sign
+# when a magnitude fell below the smallest normal -- lived at the underflow
+# boundary and survived every existing gate. The conformance vectors sample the
+# interior of each rung densely and the two range ends barely at all, so the
+# boundary is exactly where the next silent defect will hide. This gate states
+# the boundary contract as ten explicit rules and checks all of them on all nine
+# rungs of both ladder versions: zero rows, the special row, the smallest normal
+# and largest finite, exhaustive mantissa coverage at the two end binades where
+# 2^M is enumerable, underflow tie behaviour with the sign preserved, overflow to
+# signed infinity, signed zero payload cleanliness, commutativity with one
+# operand pinned at a range end, and monotonicity of the end binades.
+#
+# It is deliberately separate from the golden self-test gate. A self-test answers
+# "does the oracle agree with itself"; this answers "does the oracle honour the
+# contract at the two places where the contract is hardest to honour". Merging
+# them would let a slow exhaustive sweep hide behind a fast one.
+#
+# Runtime is about six minutes, dominated by the wide rungs where the mantissa is
+# sampled rather than enumerated. Sampling above M = 16 is stated in the test
+# header rather than hidden: 2^115 mantissas cannot be enumerated, and claiming
+# otherwise would be the same kind of overclaim the honesty rules forbid.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'conformance/tnf_ref.py'
+      - 'conformance/tnf_ladder_versions.py'
+      - 'conformance/tnf_boundary_conformance_test.py'
+      - '.github/workflows/tnf-boundary-gate.yml'
+  pull_request:
+    paths:
+      - 'conformance/tnf_ref.py'
+      - 'conformance/tnf_ladder_versions.py'
+      - 'conformance/tnf_boundary_conformance_test.py'
+      - '.github/workflows/tnf-boundary-gate.yml'
+  workflow_dispatch:
+
+jobs:
+  boundary:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run the TNF boundary contract on every rung
+        run: |
+          python3 conformance/tnf_boundary_conformance_test.py | tee /tmp/boundary.log
+      - name: Assert the check count did not silently collapse
+        # A refactor that skips rungs would still exit zero. The count is the
+        # canary: it must stay in the same order of magnitude as the recorded
+        # 889040 checks, so a gate that stops checking fails loudly.
+        run: |
+          N=$(grep -oP 'boundary checks run: \K[0-9]+' /tmp/boundary.log)
+          echo "checks reported: $N"
+          test "$N" -ge 800000 || { echo "::error::boundary coverage collapsed to $N (expected >= 800000)"; exit 1; }
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tnf-boundary-log
+          path: /tmp/boundary.log

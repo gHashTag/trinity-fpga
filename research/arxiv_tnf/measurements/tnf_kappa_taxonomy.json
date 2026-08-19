@@ -1,0 +1,63 @@
+{
+  "kappa": {
+    "2": 0.7213475,
+    "3": 1.2136523,
+    "ratio_3_over_2": 1.6825
+  },
+  "prefactor": "one quarter",
+  "prefactor_status": "[measured -- software]",
+  "monte_carlo_draws": 8000000,
+  "rows": [
+    {
+      "r": 2,
+      "M": 8,
+      "empirical": 0.00070471,
+      "predicted_quarter_kappa": 0.00070444,
+      "ratio": 0.9996
+    },
+    {
+      "r": 2,
+      "M": 11,
+      "empirical": 8.8088e-05,
+      "predicted_quarter_kappa": 8.8055e-05,
+      "ratio": 0.9996
+    },
+    {
+      "r": 3,
+      "M": 8,
+      "empirical": 0.0011852,
+      "predicted_quarter_kappa": 0.0011852,
+      "ratio": 1.0
+    },
+    {
+      "r": 3,
+      "M": 11,
+      "empirical": 0.00014822,
+      "predicted_quarter_kappa": 0.00014815,
+      "ratio": 0.9996
+    }
+  ],
+  "taxonomy": {
+    "catalogue": 83,
+    "no_exponent": 11,
+    "too_narrow": 18,
+    "too_wide_to_probe": 1,
+    "classified": 53,
+    "classes": {
+      "constant": 38,
+      "wobble": 3,
+      "arithmetic": 5,
+      "geometric": 7
+    },
+    "geometric_members": [
+      "takum8",
+      "takum16",
+      "takum32",
+      "takum64",
+      "tekum8",
+      "tekum16",
+      "tekum32"
+    ],
+    "closes_on_catalogue": true
+  }
+}

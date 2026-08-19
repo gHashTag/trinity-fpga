@@ -465,7 +465,7 @@ pub const TEMPLATES = [_]CodeTemplate{
         \\}
         \\
         \\pub fn main() !void {
-        \\    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+        \\    var gpa = std.heap.DebugAllocator(.{}){};
         \\    defer _ = gpa.deinit();
         \\
         \\    var arr = [_]i32{ 64, 34, 25, 12, 22, 11, 90 };
@@ -978,7 +978,7 @@ pub const TEMPLATES = [_]CodeTemplate{
         \\const std = @import("std");
         \\
         \\pub fn main() !void {
-        \\    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+        \\    var gpa = std.heap.DebugAllocator(.{}){};
         \\    defer _ = gpa.deinit();
         \\    const allocator = gpa.allocator();
         \\
@@ -1034,7 +1034,7 @@ pub const TEMPLATES = [_]CodeTemplate{
         \\const std = @import("std");
         \\
         \\pub fn main() !void {
-        \\    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+        \\    var gpa = std.heap.DebugAllocator(.{}){};
         \\    defer _ = gpa.deinit();
         \\    const allocator = gpa.allocator();
         \\
@@ -1182,7 +1182,7 @@ pub const TEMPLATES = [_]CodeTemplate{
         \\}
         \\
         \\pub fn main() !void {
-        \\    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+        \\    var gpa = std.heap.DebugAllocator(.{}){};
         \\    defer _ = gpa.deinit();
         \\    const allocator = gpa.allocator();
         \\
@@ -1215,7 +1215,7 @@ pub const TEMPLATES = [_]CodeTemplate{
         \\const std = @import("std");
         \\
         \\pub fn main() !void {
-        \\    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+        \\    var gpa = std.heap.DebugAllocator(.{}){};
         \\    defer _ = gpa.deinit();
         \\    const allocator = gpa.allocator();
         \\
@@ -1275,7 +1275,7 @@ pub const TEMPLATES = [_]CodeTemplate{
         \\
         \\pub fn main() !void {
         \\    // General Purpose Allocator (recommended for most cases)
-        \\    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+        \\    var gpa = std.heap.DebugAllocator(.{}){};
         \\    defer _ = gpa.deinit();
         \\    const allocator = gpa.allocator();
         \\
@@ -1728,7 +1728,7 @@ pub const TEMPLATES = [_]CodeTemplate{
         \\const std = @import("std");
         \\
         \\pub fn main() !void {
-        \\    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+        \\    var gpa = std.heap.DebugAllocator(.{}){};
         \\    defer _ = gpa.deinit();
         \\    const allocator = gpa.allocator();
         \\
@@ -1911,7 +1911,7 @@ fn containsIgnoreCase(haystack: []const u8, needle: []const u8) bool {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
