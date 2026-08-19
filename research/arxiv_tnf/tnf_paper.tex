@@ -965,7 +965,7 @@ in the gap; the answer corrects a suggestion we made before building them.
 
 \begin{figure}[htbp]\centering
 \includegraphics[width=\textwidth]{canon/canon-tnf-11-accuracy.png}
-\caption{Canon plate. The accuracy measurement of Section~\ref{sec:accuracy}, read by magnitude bin: a tie where the comparison format has not yet spent its mantissa, and a widening advantage where it runs out of exponent.}
+\caption{Canon plate. The accuracy measurement of this section, read by magnitude bin: a tie where the comparison format has not yet spent its mantissa, and a widening advantage where it runs out of exponent.}
 \label{fig:canon-accuracy}
 \end{figure}
 
@@ -7146,11 +7146,20 @@ a winner.
 While building the gating above we measured the representable range of the
 comparison format by probing our own \texttt{takum} oracle rather than by reading
 its parameterisation, and the result corrects a framing this paper carried
-earlier. The smallest positive and largest finite magnitudes of \texttt{takum} are
-$3.45 \times 10^{-77}$ and $2.07 \times 10^{180}$, a reach of about $\pm 599$
-binades, and they are \emph{identical} for \texttt{takum16} and \texttt{takum32}:
-the width buys precision, not reach. Against that, the $(4,8)$ rung reaches
-$\pm 39$ binades and the $(5,23)$ rung $\pm 120$.
+earlier. An exhaustive decode enumeration of all $65{,}536$ \texttt{takum16}
+codes gives smallest positive $1.84 \times 10^{-77}$ and largest finite
+$5.61 \times 10^{76}$ --- $\pm 255$ binades, reciprocal-symmetric ends
+($1/\text{max} \approx \text{min}$), exactly the published takum reach; the
+monotone extreme codes of \texttt{takum32} decode to $2^{\pm 255}$ as well, so
+the reach is \emph{identical} for \texttt{takum16} and \texttt{takum32}: the
+width buys precision, not reach. (An earlier revision of this paragraph printed
+$3.45 \times 10^{-77}$ and $2.07 \times 10^{180}$, ``about $\pm 599$
+binades''; neither end reproduces from the shipped oracle --- the encode
+saturates at $2^{255}$ and underflows below $2^{-255}$, and the quoted minimum
+is $2^{-254}$, twice the true one, which is a band edge rather than the code
+space's edge. The numbers are corrected here; the paragraph's conclusions were
+drawn from the ordering, which survives.) Against that, the $(4,8)$ rung
+reaches $\pm 39$ binades and the $(5,23)$ rung $\pm 120$.
 
 Two consequences follow. Any suggestion that a ternary exponent field buys
 dynamic range relative to \texttt{takum} is withdrawn; at every width we compared,
@@ -7160,6 +7169,21 @@ worked from, that \texttt{takum} reach is about $\pm 255$ binades and scales wit
 width, was simply wrong --- it was inferred from a bias constant instead of
 measured. We record it here because a wrong number that was never printed is
 still a wrong number that shaped a design decision.
+
+\paragraph{The band where any of this matters, measured.} Accumulation of 64
+terms across widening log-uniform bands (\texttt{conformance/wide\_band\_bench.py},
+results in \texttt{research/WIDE\_BAND\_2026-08-19.md}; the $\pm 3$-decade band
+reproduces the three-way-tie bench exactly) puts numbers on the trade: inside
+$\pm 11$ decades the $(4,8)$ rung, \texttt{takum16} and the true base-3
+\texttt{tekum10} tie with zero failures; the $(4,8)$ rung's usable band ends
+between $\pm 11$ and $\pm 13$ decades --- 50 of 60 trials failed at $\pm 13$,
+all 60 from $\pm 16$ --- precisely where its span $[1.8 \times 10^{-12},
+1.1 \times 10^{12}]$ says it must, while \texttt{tekum10} (span $\pm 87$
+decades by code-space scan) and \texttt{takum16} ($\pm 77$) finish every trial
+out to $\pm 30$ decades at $10^{-2}$-class error. The qualifier the measurement
+adds: \texttt{takum16}, a binary format, degrades exactly as gracefully as
+base-3 \texttt{tekum}, so wide-band robustness is an argument for
+\emph{tapering}, not for radix 3.
 
 \subsection{A boundary contract, and the gate that now enforces it}
 \label{sec:boundarygate}
