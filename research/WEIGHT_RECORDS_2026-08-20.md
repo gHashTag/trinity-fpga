@@ -34,13 +34,13 @@ Tensor set everywhere below: every 2-D weight whose name contains neither
 
 | # | paper (line) | claim | measured | verdict |
 |---|---|---|---|---|
-| 1 | tab:blockpct L2995–2998 | within-block span at block 32: p50 1.89 / p90 2.45 / p99 3.04 / p99.9 3.75 binades | 1.8908 / 2.4534 / 3.0415 / 3.7471 (SmolLM2-135M) | **REPRODUCES** — `measurements/blockpct_2026-08-20.json` |
+| 1 | tab:blockpct L2995–2998 | within-block span at block 32: p50 1.89 / p90 2.45 / p99 3.04 / p99.9 3.75 binades | 1.8908 / 2.4534 / 3.0415 / 3.7471 (SmolLM2-135M) | **REPRODUCES** — `arxiv_tnf/measurements/blockpct_2026-08-20.json` |
 | 2 | tab:blockpct E\*/element column | E\* = ceil(log2 span) → 1/2/2/2 → E1M2, E2M1, E2M1, E2M1 | identical from the measured spans | **REPRODUCES** (same record; `recompute_blockpct_table.py` passes cell for cell) |
 | 3 | L3013 (prose) | span "1.89 binades at the median and 3.04 at the 99th percentile" | 1.8908 / 3.0415 | **REPRODUCES** (same record) |
-| 4 | L3873–3874 | "Over 3,317,760 block scales the range actually occupied is 8.32 binades on SmolLM2-135M" | 8.3183 binades over 3,317,760 blocks; independently confirmed by re-running `conformance/ppl_scale_axis.py --diagnose` (port self-checks pass, prints 8.32) | **REPRODUCES** — `measurements/weight_ranges_2026-08-20.json` |
+| 4 | L3873–3874 | "Over 3,317,760 block scales the range actually occupied is 8.32 binades on SmolLM2-135M" | 8.3183 binades over 3,317,760 blocks; independently confirmed by re-running `conformance/ppl_scale_axis.py --diagnose` (port self-checks pass, prints 8.32) | **REPRODUCES** — `arxiv_tnf/measurements/weight_ranges_2026-08-20.json` |
 | 5 | L3874–3875 (also L3936–3937, L4386) | "and 9.12 on Qwen2.5-0.5B" | 9.1200 binades (Qwen2.5-0.5B, 11,182,080 blocks) | **REPRODUCES** (same record) — but see mismatch M1 on the block count and M3 on the sweep doc's label |
 | 6 | L4433–4435 | "the weights' channel dynamic range — 268.95× median over 155,520 channels" | 268.9469× median over 155,520 channels (SmolLM2-135M) | **REPRODUCES** (same record; definition recovered, see below) |
-| 7 | L3322–3323 | regret sweep: "E=1 giving 4.5 million and E=2 giving 288" | BNF8 E=1 → 4,574,409.00 (paper's own record prints 4,574,409); E=2 → 288.5224 | **REPRODUCES** — `measurements/regret_sweep_2026-08-20.json`, full rerun |
+| 7 | L3322–3323 | regret sweep: "E=1 giving 4.5 million and E=2 giving 288" | BNF8 E=1 → 4,574,409.00 (paper's own record prints 4,574,409); E=2 → 288.5224 | **REPRODUCES** — `arxiv_tnf/measurements/regret_sweep_2026-08-20.json`, full rerun |
 | 8 | L3323 | "E=4 costs 0.3% and E=5 costs 6%" | E=4/E=3 = +0.32%, E=5/E=3 = +6.17% | **REPRODUCES** (same record) |
 | 9 | L3317–3319 | width rule named BNF8 E=4 / TNF8 Et=3; measured winners E=3 (14.6130 vs 14.6592) and Et=2 (14.7012 vs 15.5147) | estimator 13.37 binades → predicts E=4/Et=3; measured 14.6130 / 14.6592 / 14.7012 / 15.5147, winners E=3 and Et=2 | **REPRODUCES** (same record; fp32 baseline 14.4874 exact) |
 | 10 | thm:barrelrange L4834–4835 | "Across the 210 layers measured here that range is 3.15 octaves" | 210 tensors confirmed; per-tensor **rms** span = 3.1510 octaves (= 3.15 at printed precision); per-tensor **amax** span = 3.8972 octaves | **MEASURABLE-MATCH, PROVENANCE STILL OPEN** — see below; the untraced-figures concession (L5847) stands |

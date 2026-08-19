@@ -44,9 +44,9 @@ re-run; nothing was guessed).
   `recompute_rungthr_table.py`, `recompute_workloads_table.py`,
   `recompute_gpt2window_table.py`, `recompute_centring_table.py`,
   `recompute_tailsweep_table.py` (record-view reconstructions against
-  `measurements/*.json`), and a deterministic re-run of the logistic-map probe
+  `arxiv_tnf/measurements/*.json`), and a deterministic re-run of the logistic-map probe
   (x₀ = 0.4, r = 3.9, 400 iterates) against `tnf_ref.TNFFormat(2,10)`.
-* Audit driver: one-shot script (scratchpad `range_audit.py`), plus targeted
+* Audit driver: one-shot scratchpad driver (deliberately not committed), plus targeted
   probes; nothing below is quoted from the paper back at itself.
 
 ## Oracles used (shipped in `conformance/`)
@@ -117,7 +117,7 @@ Prop. `prop:uncentred` states.)
 | 23 | 5334–5336 | posit16 "keeping all 112 binades"; log₃ 113 | exhaustive: minpos 2^−56, maxpos 2^+56 → 113 binade indices, span 112 | REPRODUCES |
 | 24 | 6361–6363 | at t=4 a ternary field spans 80 binade steps in seven cells; at t=11, 177,146 against 262,142 | 3^4−1 = 80, 3^11−1 = 177,146, 2^18−2 = 262,142 — bare-field abstraction (the shipped format's usable window is 2 rows smaller, which prop:uncentred states) | NO-ORACLE (analytic, arithmetic checks) |
 | 25 | 6643–6644, 6661 | at 16 physical bits, Et=3 overflows 11,579 of 40,000 in the middle bin (19,939 in the far bin) and Et=2 overflows almost everything | Et=3 reach ±12: positive-side overflow of \|e\| ∈ [8,20) ≈ 7/24 → expected ≈11.7k of 40k (underflow side rounds up to min normal, not clipped — matches the one-sided count); Et=2 reach ±3 ⊂ [8,38] | REPRODUCES as range arithmetic; exact-count generator script not in tree (counts consistent to <1%) |
-| 26 | 6737–6739 | at σ=8 binary16 overflowed 1,192 of 12,000 and TNF itself began to clip | `measurements/crossover_2026-08-13e.json`: binary16 1192, tnf 2, takum 0 (σ=6 row: 403, matching line 6736) | REPRODUCES (record; original harness not in tree) |
+| 26 | 6737–6739 | at σ=8 binary16 overflowed 1,192 of 12,000 and TNF itself began to clip | `arxiv_tnf/measurements/crossover_2026-08-13e.json`: binary16 1192, tnf 2, takum 0 (σ=6 row: 403, matching line 6736) | REPRODUCES (record; original harness not in tree) |
 | 27 | 6746–6747 | past 2^40 TNF(4,8) begins to clip and the window closes | oracle max finite 1.097e12 = 2^40.03; `crossover2` record: TNF clips 4,465 of 9,000 at c=40, 0 at c≤36 | REPRODUCES |
 | 28 | 6758–6759 | binary16 has no representation at all from c=20 upward | record: 9000/9000 clipped for c ≥ 20 (4,509 at c=16); analytic: 2^18 > 65504 | REPRODUCES |
 | 29 | 6797–6799 | GPT-2 tensors: 99.9th pct < 2^1, spans 14.9 and 12.1, no clipping in any format | `recompute_gpt2window_table.py`: 12/12 cells reproduce, no-clipping recomputes true | REPRODUCES |
