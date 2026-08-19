@@ -19,8 +19,10 @@ ceil(Et*log2 3) bits, so the stored widths are:
     TNF128=129b  TNF256=258b   TNF512=514b    TNF1024=1025b
 
 Not one rung stores the width in its name. Use stored_width(fmt) before any
-"at N bits" comparison, or use TRUE_LADDER, whose rungs are exactly their
-named width. Measured consequence of the misnaming: the sign of the advantage
+"at N bits" comparison, or construct the stored-width-exact rungs directly:
+TNFFormat(2,3) stores 8 bits, TNFFormat(4,8) 16, TNFFormat(4,24) 32. (The
+TRUE_LADDER dictionary that once held them was retired by the versioned
+ladders in tnf_ladder_versions.py, which version the NOMINAL budget instead.) Measured consequence of the misnaming: the sign of the advantage
 over takum followed the sign of the width excess (+2 bits: 484x; +1: 2x;
 -2: 0.08x), and at true width with range to spare the advantage is 1.00x.
 """

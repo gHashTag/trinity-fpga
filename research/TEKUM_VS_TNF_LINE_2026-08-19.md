@@ -161,14 +161,18 @@ block axis at equal bits by either measurement.
   the way TNF's field slice costs 1 LUT here. On such a fabric the 542-vs-1
   and 38× results do not carry (`fpga/tekum/TEKUM_HW.md`, closing section).
   No such fabric exists to measure on.
-* **A workload where tekum's range matters.** The accuracy tie was measured
-  on one ±3-decade band. TNF(4,8)'s exponent spans e ∈ [−39, +39] binades
-  (~12 decades) and then hard-clips; tekum8's tapered exponent reaches
-  e ∈ [−365, +365] in powers of **3** (`fpga/tekum/tekum8_add.v` range
-  check), roughly ±174 decades. A workload actually occupying that span
-  would find TNF overflowing where tekum degrades gracefully — that is the
-  trade Theorem 12's taper bound prices, and no benchmark in this line has
-  exercised it.
+* **A workload where tekum's range matters — now measured**
+  (`conformance/wide_band_bench.py`, `research/WIDE_BAND_2026-08-19.md`).
+  TNF(4,8) spans [1.82e-12, 1.10e+12] and its usable band ends between ±11
+  and ±13 decades: 0/60 failed trials at ±11, 50/60 at ±13, 60/60 from ±16
+  on. tekum10 (measured code-space span ±87.4 decades — the ±174 figure an
+  earlier draft of this section extrapolated from the RTL's conservative
+  range bound was wrong) and takum16 (±76.7) run every trial to completion
+  at 1e-2-class error out to ±30 decades with zero clips. The honest
+  qualifier the measurement adds: takum16 — binary, and ~3× cheaper than
+  tekum by this line's own adder datapoint — degrades exactly as
+  gracefully, so wide-band robustness argues for a *tapered* format, not
+  specifically for base 3.
 * **On the block axis**, the stop-rule states its own reversal condition: a
   TNF configuration beating MXFP4 at equal bits, on measurement. Nothing
   measured to date does.

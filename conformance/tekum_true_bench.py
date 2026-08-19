@@ -91,7 +91,10 @@ def main():
     # trit width below 32.
     random.seed(11)
     tk32 = takum_ref.FORMATS["takum32"]
-    tnf424 = tnf_ref.TRUE_LADDER[32]
+    # Stored-width-exact 32-bit rung (1+ceil(6*log2 3)... no: 4 trits pack
+    # into 7 bits, so 1+7+24 = 32 stored). TRUE_LADDER was versioned away by
+    # tnf_ladder_versions; the rung is constructed directly.
+    tnf424 = tnf_ref.TNFFormat(4, 24)
     tot32 = {"tekum20": 0.0, "takum32": 0.0, "TNF(4,24)": 0.0}
     cnt32 = 0
     for _ in range(40):
