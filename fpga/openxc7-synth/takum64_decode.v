@@ -46,7 +46,7 @@ module takum64_decode (input wire [63:0] t64, output reg [31:0] fp32_out);
     wire f_lo_sticky = |f_lo_full[66:0];
     wire [90:0] f_lo = {f_lo_full[90:67], f_lo_sticky, 66'b0};
     reg [47:0] tbl [0:65535];
-    initial $readmemh("fpga/openxc7-synth/takum32_2frac.mem", tbl); // SAME table as takum32/16
+    initial $readmemh("fpga/openxc7-synth/takum32_2frac.mem", tbl); // SAME table as takum32 (takum16 uses its own takum16_lut.mem)
     wire [47:0] tval = tbl[f_hi];
     wire signed [139:0] flo_ln2 = $signed({49'b0, f_lo}) * $signed({1'b0, LN2_Q48});
     wire [31:0] corr = flo_ln2 >>> 107;

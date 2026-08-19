@@ -398,7 +398,7 @@ property of the evaluation order, not of the format.
 
 \begin{figure}[htbp]\centering
 \includegraphics[width=\textwidth]{canon/canon-tnf-79-priorwork.png}
-\caption{Canon plate. What the present paper inherits: the field-layout rule and its nine reproduced widths from the GoldenFloat preprint~\cite{goldenfloat}, the bit-exact conformance ledger from the catalog preprint~\cite{catalogue} --- whose title says 84 where the shipped count is 83 --- and the three-site node argument that is new here.}
+\caption{Canon plate. What the present paper inherits: the field-layout rule and its nine reproduced widths from the GoldenFloat preprint~\cite{goldenfloat}, the bit-exact conformance ledger from the catalog preprint~\cite{catalogue} --- whose v1 title said 84 where the shipped count is 83; the v2 title already says 83 --- and the three-site node argument that is new here.}
 \label{fig:canon-priorwork}
 \end{figure}
 
@@ -2422,8 +2422,12 @@ takum32 decoder carries $d = 2$ and $k = 16$, and $48/3 = 16$ exactly, where 48 
 the table's output width. If the cost were set by the source width, the takum64
 decoder would need a larger table; if it is set by the target, it would need the
 same one. It reads \texttt{takum32\_2frac.mem} --- \emph{the same file} --- and
-emits binary32, as do the takum8, takum16 and takum64 decoders. One table serves
-four source widths because all four target one datapath.
+emits binary32, as does the takum64 decoder. One table serves those two source
+widths because both target one datapath; the takum16 decoder instead ships a
+direct 65,536-entry code$\to$binary32 BRAM LUT and the takum8 decoder a
+256-entry inline ROM, so an earlier revision's ``one table serves four'' was
+wrong --- it repeated a stale comment in \texttt{takum64\_decode.v}, and the
+comment is corrected with this sentence.
 
 \begin{corollary}[The trade curve, and what each target actually costs]
 \label{cor:tradecurve}
@@ -7156,7 +7160,12 @@ its parameterisation, and the result corrects a framing this paper carried
 earlier. An exhaustive decode enumeration of all $65{,}536$ \texttt{takum16}
 codes gives smallest positive $1.84 \times 10^{-77}$ and largest finite
 $5.61 \times 10^{76}$ --- $\pm 255$ binades, reciprocal-symmetric ends
-($1/\text{max} \approx \text{min}$), exactly the published takum reach; the
+($1/\text{max} \approx \text{min}$), exactly the published reach of the
+\emph{linear} takum --- the base-2 variant the takum paper defines in its
+``Linear Takums'' section alongside the headline logarithmic
+base-$\sqrt{\mathrm{e}}$ takum,
+whose own reach is $\sqrt{\mathrm{e}}^{\pm 255}$, about $\pm 184$ binades;
+our oracle and libtakum's default type implement the linear variant --- the
 monotone extreme codes of \texttt{takum32} decode to $2^{\pm 255}$ as well, so
 the reach is \emph{identical} for \texttt{takum16} and \texttt{takum32}: the
 width buys precision, not reach. (An earlier revision of this paragraph printed
