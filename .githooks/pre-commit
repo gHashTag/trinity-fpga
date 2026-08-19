@@ -8,9 +8,14 @@
 #
 # φ² + 1/φ² = 3 = TRINITY
 #
-# Installation:
-#   cp .git/hooks/pre-commit.trinity .git/hooks/pre-commit
-#   chmod +x .git/hooks/pre-commit
+# Installation (one command, from the repository root):
+#   git config core.hooksPath .githooks
+#
+# The instructions here used to name `.git/hooks/pre-commit.trinity`, a file
+# that exists in no clone — this hook lives in `.githooks/`, which is tracked.
+# A guard whose own installation instructions point at a missing path is a
+# guard nobody installs: `core.hooksPath` was unset in this checkout and the
+# hook had never run once.
 #
 # ═══════════════════════════════════════════════════════════════════════════════
 

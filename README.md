@@ -8,6 +8,9 @@ No Vivado. No licence server. Runs on a Mac.
 
 ---
 
+**Before your first commit:** `git config core.hooksPath .githooks` — installs the
+φ-validation pre-commit hook. It is one command and it is not automatic.
+
 ## What is here that is not elsewhere
 
 ### 1. 28 merged patches to the open-source Xilinx toolchain
