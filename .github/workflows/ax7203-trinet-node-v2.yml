@@ -11,6 +11,11 @@ on:
       - '.github/workflows/ax7203-trinet-node-v2.yml'
       # the scripts this job runs: fixing a check must re-run it
       - 'conformance/trinet_mac32_conformance_ax7203.py'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   golden:
     runs-on: ubuntu-latest

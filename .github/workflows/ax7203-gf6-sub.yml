@@ -4,6 +4,11 @@ on:
   push:
     branches: [main]
     paths: ['fpga/vivado/gf6_sub_ax7203.v','fpga/openxc7-synth/gf_adder_param.v','.github/workflows/ax7203-gf6-sub.yml']
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   bitstream:
     runs-on: ubuntu-latest

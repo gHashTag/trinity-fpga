@@ -45,6 +45,10 @@ env:
   REGISTRY: ghcr.io
   IMAGE_NAME: trinity-openxc7
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   # ═══════════════════════════════════════════════════════════════════════════════
   # BUILD DOCKER IMAGE

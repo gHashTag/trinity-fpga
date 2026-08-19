@@ -23,6 +23,10 @@ on:
       - 'specs/fpga/constraints/ax7203.xdc'
       - '.github/workflows/ax7203-blinky-bitstream.yml'
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   bitstream:
     name: Generate AX7203 Blinky Bitstream

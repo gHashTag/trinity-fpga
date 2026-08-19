@@ -30,6 +30,10 @@ on:
       - '.github/workflows/stale-citation-gate.yml'
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   stale-citations:
     runs-on: ubuntu-latest

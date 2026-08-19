@@ -45,6 +45,10 @@ on:
 env:
   CONSCIOUSNESS_DEFAULT: 'aware'
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   # ═══════════════════════════════════════════════════════════════════════════════
   # EXTRACT CHANGED SPECS

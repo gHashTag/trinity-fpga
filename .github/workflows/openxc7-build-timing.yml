@@ -1,0 +1,243 @@
+# openXC7 build-time measurement
+#
+# Produces the number nobody has published with a method attached: how long the
+# open toolchain takes to turn Verilog into a bitstream, on a stated machine,
+# with stated boundaries.
+#
+# The boundaries are the point. Measured:
+#     yosys synthesis + nextpnr place-and-route + fasm2frames + xc7frames2bit
+# NOT measured:
+#     docker pull, checkout, chipdb generation
+# The chipdb is built once in a separate job and handed to every measurement job
+# as an artifact, so it is identical across runs and outside the timed window.
+# It is a property of the part, not of the design, and Vivado has no equivalent
+# step — including it would flatter neither tool honestly.
+#
+# Five repeats per design, because nextpnr is seed-sensitive and one run is one
+# seed. The report prints the median and the full spread; a single number from a
+# single run is what this workflow exists to avoid.
+#
+# The Vivado half of the comparison cannot run here — no license, no install.
+# These designs are plain Verilog + XDC, so anyone with Vivado can build the
+# same three and put their numbers beside these.
+#
+# phi^2 + 1/phi^2 = 3 = TRINITY
+
+name: openXC7 build timing
+
+on:
+  workflow_dispatch:
+    inputs:
+      repeats:
+        description: 'Runs per design'
+        required: false
+        default: '5'
+
+jobs:
+  chipdb:
+    name: chipdb xc7a200tfbg484-2
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Pull openXC7 image
+        run: |
+          for i in 1 2 3 4 5 6; do
+            docker pull regymm/openxc7:latest && break
+            echo "::warning::pull attempt $i failed, sleeping $((i*20))s"; sleep $((i*20))
+          done
+          docker image inspect regymm/openxc7:latest >/dev/null
+
+      - name: Cache chipdb
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: chipdb/xc7a200tfbg484-2.bin
+          key: chipdb-xc7a200tfbg484-2-regymm-v1
+
+      - name: Generate chipdb
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p chipdb
+          docker run --rm -v "$PWD:/work" -w /work regymm/openxc7 bash -c "
+            cd /nextpnr-xilinx &&
+            python3 xilinx/python/bbaexport.py --device xc7a200tfbg484-2 --bba /work/chipdb/xc7a200tfbg484-2.bba &&
+            bbasm -l /work/chipdb/xc7a200tfbg484-2.bba /work/chipdb/xc7a200tfbg484-2.bin
+          "
+
+      - name: Upload chipdb
+        uses: actions/upload-artifact@v4
+        with:
+          name: chipdb
+          path: chipdb/xc7a200tfbg484-2.bin
+          retention-days: 1
+
+  measure:
+    name: ${{ matrix.design }} run ${{ matrix.run }}
+    needs: chipdb
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        design: [blinky, decode_bf16, gf12_mul]
+        run: [1, 2, 3, 4, 5]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Pull openXC7 image
+        run: |
+          for i in 1 2 3 4 5 6; do
+            docker pull regymm/openxc7:latest && break
+            sleep $((i*20))
+          done
+          docker image inspect regymm/openxc7:latest >/dev/null
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: chipdb
+          path: chipdb
+
+      - name: Record the machine
+        run: |
+          echo "cores=$(nproc)" | tee machine.txt
+          echo "mem_kb=$(grep MemTotal /proc/meminfo | awk '{print $2}')" | tee -a machine.txt
+          echo "model=$(grep -m1 'model name' /proc/cpuinfo | cut -d: -f2- | xargs)" | tee -a machine.txt
+
+      - name: Select the design
+        id: d
+        run: |
+          case "${{ matrix.design }}" in
+            blinky)
+              echo "src=fpga/vivado/blinky_ax7203.v"                     >> $GITHUB_OUTPUT
+              echo "top=blinky_ax7203"                                   >> $GITHUB_OUTPUT
+              echo "xdc=specs/fpga/constraints/ax7203.xdc"               >> $GITHUB_OUTPUT
+              echo "synth=-flatten -abc9 -arch xc7"                      >> $GITHUB_OUTPUT
+              echo "placer=sa"                                           >> $GITHUB_OUTPUT
+              echo "freq=100.0"                                          >> $GITHUB_OUTPUT
+              ;;
+            decode_bf16)
+              echo "src=fpga/openxc7-synth/corona_decode_bf16_ax7203.v"  >> $GITHUB_OUTPUT
+              echo "top=corona_decode_bf16_ax7203"                       >> $GITHUB_OUTPUT
+              echo "xdc=fpga/openxc7-synth/corona_decode_ax7203.xdc"     >> $GITHUB_OUTPUT
+              echo "synth=-flatten -abc9 -nocarry -arch xc7"             >> $GITHUB_OUTPUT
+              echo "placer=sa"                                           >> $GITHUB_OUTPUT
+              echo "freq=50.0"                                           >> $GITHUB_OUTPUT
+              ;;
+            gf12_mul)
+              # -nodsp is not optional here. Without it yosys infers DSP48E1
+              # multipliers that nextpnr-xilinx cannot route, and the build dies
+              # with "no clean seed" across every seed and placer. That was the
+              # root cause of every GF MUL routing failure we have had.
+              echo "src=fpga/openxc7-synth/gf_adder_param.v fpga/openxc7-synth/gf_mul_param.v fpga/openxc7-synth/corona_compute_gf12_mul_ax7203.v" >> $GITHUB_OUTPUT
+              echo "top=corona_compute_gf12_mul_ax7203"                  >> $GITHUB_OUTPUT
+              echo "xdc=fpga/openxc7-synth/ax7203_corona.xdc"            >> $GITHUB_OUTPUT
+              echo "synth=-flatten -abc9 -nocarry -nodsp -arch xc7"      >> $GITHUB_OUTPUT
+              echo "placer=heap"                                         >> $GITHUB_OUTPUT
+              echo "freq=5.0"                                            >> $GITHUB_OUTPUT
+              ;;
+          esac
+          mkdir -p out
+
+      - name: Synthesis
+        id: synth
+        run: |
+          S=$(date +%s%3N)
+          docker run --rm -v "$PWD:/work" -w /work regymm/openxc7 \
+            yosys -q -p "read_verilog ${{ steps.d.outputs.src }}; synth_xilinx ${{ steps.d.outputs.synth }} -top ${{ steps.d.outputs.top }}; setundef -zero -params; write_json out/d.json"
+          E=$(date +%s%3N)
+          echo "ms=$((E-S))" >> $GITHUB_OUTPUT
+
+      - name: Place and route
+        id: pnr
+        run: |
+          S=$(date +%s%3N)
+          docker run --rm -v "$PWD:/work" -w /work regymm/openxc7 \
+            nextpnr-xilinx \
+              --chipdb /work/chipdb/xc7a200tfbg484-2.bin \
+              --xdc /work/${{ steps.d.outputs.xdc }} \
+              --json /work/out/d.json \
+              --fasm /work/out/d.fasm \
+              --freq ${{ steps.d.outputs.freq }} --seed 1 \
+              --placer ${{ steps.d.outputs.placer }} --router router1 \
+              --timing-allow-fail --force
+          E=$(date +%s%3N)
+          echo "ms=$((E-S))" >> $GITHUB_OUTPUT
+
+      - name: Bitstream
+        id: bit
+        run: |
+          S=$(date +%s%3N)
+          docker run --rm -v "$PWD:/work" -w /work regymm/openxc7 bash -c "
+            source /prjxray/env/bin/activate &&
+            fasm2frames --db-root /nextpnr-xilinx/xilinx/external/prjxray-db/artix7 \
+              --part xc7a200tfbg484-2 /work/out/d.fasm /work/out/d.frames &&
+            /prjxray/build/tools/xc7frames2bit \
+              --part_file /nextpnr-xilinx/xilinx/external/prjxray-db/artix7/xc7a200tfbg484-2/part.yaml \
+              --part_name xc7a200tfbg484-2 --frm_file /work/out/d.frames \
+              --output_file /work/out/d.bit
+          "
+          E=$(date +%s%3N)
+          echo "ms=$((E-S))" >> $GITHUB_OUTPUT
+          ls -l out/d.bit
+
+      - name: Emit the measurement
+        run: |
+          SY=${{ steps.synth.outputs.ms }}
+          PR=${{ steps.pnr.outputs.ms }}
+          BI=${{ steps.bit.outputs.ms }}
+          jq -n --arg design "${{ matrix.design }}" --argjson run ${{ matrix.run }} \
+                --argjson synth $SY --argjson pnr $PR --argjson bit $BI \
+                --argjson total $((SY+PR+BI)) \
+                --arg cores "$(nproc)" \
+                '{design:$design, run:$run, synth_ms:$synth, pnr_ms:$pnr, bit_ms:$bit, total_ms:$total, cores:($cores|tonumber)}' \
+            > out/timing-${{ matrix.design }}-${{ matrix.run }}.json
+          cat out/timing-${{ matrix.design }}-${{ matrix.run }}.json
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: timing-${{ matrix.design }}-${{ matrix.run }}
+          path: out/timing-${{ matrix.design }}-${{ matrix.run }}.json
+          retention-days: 30
+
+  report:
+    name: Median and spread
+    needs: measure
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: timing-*
+          merge-multiple: true
+          path: t
+
+      - name: Aggregate
+        run: |
+          echo "## openXC7 build time" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Runner: \`ubuntu-latest\`, $(nproc) cores. Measured: synthesis + place-and-route + bitstream." >> $GITHUB_STEP_SUMMARY
+          echo "Not measured: image pull, checkout, chipdb generation." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| design | n | median | min | max | synth | p&r | bit |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|---|---|---|---|---|---|" >> $GITHUB_STEP_SUMMARY
+          jq -s -r '
+            def med: sort | if length == 0 then 0
+                            elif length % 2 == 1 then .[length/2|floor]
+                            else ((.[length/2-1] + .[length/2]) / 2) end;
+            def s(x): (x/1000*10|round)/10 | tostring + "s";
+            group_by(.design)[]
+            | { d: .[0].design, n: length,
+                tot: [.[].total_ms], sy: [.[].synth_ms], pr: [.[].pnr_ms], bi: [.[].bit_ms] }
+            | "| \(.d) | \(.n) | \(.tot|med|s(.)) | \(.tot|min|s(.)) | \(.tot|max|s(.)) | \(.sy|med|s(.)) | \(.pr|med|s(.)) | \(.bi|med|s(.)) |"
+          ' t/*.json >> $GITHUB_STEP_SUMMARY || echo "no measurements collected" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Vivado has no numbers here: no license, no install. These designs are plain Verilog + XDC and can be built by anyone who has it." >> $GITHUB_STEP_SUMMARY
+          cat $GITHUB_STEP_SUMMARY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: timings-all
+          path: t
+          retention-days: 90

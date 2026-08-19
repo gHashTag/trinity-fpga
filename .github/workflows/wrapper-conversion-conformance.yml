@@ -28,6 +28,10 @@ on:
       - '.github/workflows/wrapper-conversion-conformance.yml'
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   conversion:
     runs-on: ubuntu-latest

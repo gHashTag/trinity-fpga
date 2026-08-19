@@ -18,6 +18,10 @@ on:
 # Реальный гейт = per-file `zig test` стабильных модулей + `zig fmt --check`.
 # Когда миграция VIBEE завершится — убрать `continue-on-error` (отдельный PR).
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     name: Build & Test

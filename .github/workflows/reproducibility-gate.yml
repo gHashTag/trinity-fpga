@@ -29,6 +29,10 @@ on:
       - '.github/workflows/reproducibility-gate.yml'
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   reproducibility:
     runs-on: ubuntu-latest

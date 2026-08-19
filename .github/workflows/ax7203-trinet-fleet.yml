@@ -61,6 +61,10 @@ on:
 # Building the fleet at the old 434 would ship a network that is 4x slower than
 # the hardware has already been shown to manage.
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   fleet:
     runs-on: ubuntu-latest

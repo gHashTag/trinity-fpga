@@ -24,6 +24,10 @@ on:
 # Building all three so the fastest working one can be found by measurement
 # rather than by argument.
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   baud:
     runs-on: ubuntu-latest

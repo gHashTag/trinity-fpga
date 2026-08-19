@@ -18,6 +18,10 @@ on:
     branches: [main]
     paths: ['.github/workflows/ax7203-format-cost.yml']
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   synth:
     runs-on: ubuntu-latest

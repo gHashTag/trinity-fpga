@@ -12,6 +12,10 @@ on:
       - 'specs/fpga/constraints/uart_tx_probe_ax7203.xdc'
       - '.github/workflows/ax7203-uart-tx-probe.yml'
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   bitstream:
     name: Generate AX7203 UART TX Probe Bitstream

@@ -25,6 +25,10 @@ on:
       - '.github/workflows/hardware-row-gate.yml'
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   hardware-rows:
     runs-on: ubuntu-latest

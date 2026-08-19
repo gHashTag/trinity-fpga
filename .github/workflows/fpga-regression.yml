@@ -30,6 +30,10 @@ on:
 env:
   CONSCIOUSNESS_THRESHOLD: "61.8"  # φ⁻¹ immortality threshold
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   # ═══════════════════════════════════════════════════════════════════════════
   # SACRED CONSTANTS VALIDATION

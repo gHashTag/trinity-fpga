@@ -16,6 +16,11 @@ on:
       - 'formal/binary16_decode_tb.v'
       - 'formal/fp8_e5m2_decode_tb.v'
       - '.github/workflows/decode-verify.yml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   verify:
     runs-on: ubuntu-latest

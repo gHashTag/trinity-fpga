@@ -31,6 +31,10 @@ on:
       - '.github/workflows/module-loader-gate.yml'
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   module-loaders:
     runs-on: ubuntu-latest

@@ -52,6 +52,10 @@ on:
       - '.github/workflows/fpga-formal.yml'
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   formal:
     name: "🔬 sby z3 — ${{ matrix.op }} ${{ matrix.task }}"

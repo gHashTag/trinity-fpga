@@ -13,6 +13,10 @@ on:
       - 'specs/fpga/constraints/dual_clk_heartbeat_ax7203.xdc'
       - '.github/workflows/ax7203-dual-clk-heartbeat.yml'
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   bitstream:
     name: Generate AX7203 Dual-Clock Heartbeat Bitstream

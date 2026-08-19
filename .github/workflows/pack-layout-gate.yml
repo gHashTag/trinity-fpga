@@ -24,6 +24,10 @@ on:
       - '.github/workflows/pack-layout-gate.yml'
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   pack-layouts:
     runs-on: ubuntu-latest

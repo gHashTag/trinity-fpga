@@ -24,6 +24,10 @@ on:
       - '.github/workflows/narrow-register-gate.yml'
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   narrow-register:
     runs-on: ubuntu-latest

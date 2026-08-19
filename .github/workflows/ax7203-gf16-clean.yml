@@ -10,6 +10,10 @@ on:
       - 'specs/fpga/constraints/gf16_clean_ax7203.xdc'
       - '.github/workflows/ax7203-gf16-clean.yml'
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   bitstream:
     runs-on: ubuntu-latest

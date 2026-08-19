@@ -8,6 +8,11 @@ on:
       - 'formal/trinet_mac32_tb.v'
       - 'conformance/trinet_mac32_conformance_ax7203.py'
       - '.github/workflows/ax7203-trinet-mac32.yml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   golden:
     runs-on: ubuntu-latest

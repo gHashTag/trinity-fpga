@@ -4,6 +4,11 @@ on:
   push:
     branches: [main]
     paths: ['fpga/vivado/gf24_mul_ax7203.v','fpga/openxc7-synth/gf_mul_param.v','.github/workflows/ax7203-gf24-mul-clean.yml']
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   bitstream:
     runs-on: ubuntu-latest

@@ -22,6 +22,10 @@ on:
       - 'research/audit_workflow_paths.py'
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   paths:
     runs-on: ubuntu-latest

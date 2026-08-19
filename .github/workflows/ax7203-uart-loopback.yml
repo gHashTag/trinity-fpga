@@ -13,6 +13,10 @@ on:
       - 'specs/fpga/constraints/gf16_ax7203.xdc'
       - '.github/workflows/ax7203-uart-loopback.yml'
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   bitstream:
     name: Generate AX7203 UART Loopback Bitstream
