@@ -2984,7 +2984,10 @@ format, but which one depends on how much of the block distribution is protected
 and that choice was left unstated in an earlier version of this section.
 
 \begin{table}[t]\centering
-\caption{The width rule on the block axis. The measured within-block span sets
+\caption{The width rule on the block axis. The measured within-block span ---
+SmolLM2-135M weights, block 32, span read as $\log_2(a_{\max}/\mathrm{median})$
+per \texttt{research/block/block\_tnf.py}; record
+\texttt{measurements/blockpct\_2026-08-20.json} --- sets
 $E^{*} = \lceil \log_2 b \rceil$, and the answer moves with the percentile
 protected.}
 \label{tab:blockpct}
@@ -3870,9 +3873,10 @@ one value per thirty-two weights and had never been varied. Its cost is
 amortised thirty-twofold, which is the regime where a finer grid is affordable
 --- and the accounting decides the comparison before any perplexity is measured.
 
-E8M0 gives the scale eight exponent bits. Over $3{,}317{,}760$ block scales the
-range actually occupied is $8.32$ binades on SmolLM2-135M and $9.12$ on
-Qwen2.5-0.5B, so four bits suffice. At four bits $2^{k}$ needs $8.3$ steps of
+E8M0 gives the scale eight exponent bits. The range the block scales actually
+occupy is $8.32$ binades on SmolLM2-135M ($3{,}317{,}760$ blocks) and $9.12$
+on Qwen2.5-0.5B ($11{,}182{,}080$), so four bits suffice
+(\texttt{measurements/weight\_ranges\_2026-08-20.json}). At four bits $2^{k}$ needs $8.3$ steps of
 the sixteen available and $\varphi^{k}$ needs $12.0$, with half the step. The
 choice at equal width is between exactly those two.
 

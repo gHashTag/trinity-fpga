@@ -141,7 +141,7 @@ Prop. `prop:uncentred` states.)
 | 47 | 7471, 1181 | tekum widths count trits; monotone on all 6,559 tekum8 codes | tekum_true_ref selftest re-run: symmetry, monotonicity, encode-inverts-decode on all 6,559; exhaustive scan: 6,559 finite numeric of 6,561 | REPRODUCES |
 | 48 | 7520–7522 | limitations: the range is bounded at ±39 in powers of two, roughly ±12 decades | oracle: ±39, 11.74 decades | REPRODUCES |
 | 49 | 5714–5715 | retraction list: takum "reaches ±599 binades at both widths we compared" | ±255 at both widths | **DOES-NOT-REPRODUCE** — stale ±599, same defect as line 141 |
-| 50 | 3873–3874, 3935–3936 | occupied range 8.32 binades (SmolLM2-135M) and 9.12 (GPT-2) — workload occupancy motivating the four-bit scale | needs the published model weights; not re-run | UNCHECKED-EXPENSIVE |
+| 50 | 3873–3874, 3935–3936 | occupied range 8.32 binades (SmolLM2-135M) and 9.12 (Qwen2.5-0.5B — this row earlier said GPT-2, which was this DOC's error, not the paper's) | measured 2026-08-20: 8.3183 / 9.1200, records in measurements/weight_ranges_2026-08-20.json | REPRODUCES |
 | 51 | 4433 | ladder span covers the weights' channel dynamic range — 268.95× | needs model weights | UNCHECKED-EXPENSIVE |
 
 **Totals: 51 claims checked. 44 REPRODUCE (incl. record-backed), 7 DO-NOT-REPRODUCE

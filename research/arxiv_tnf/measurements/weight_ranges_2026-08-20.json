@@ -1,0 +1,60 @@
+{
+  "record": "weight-derived range numbers: block-scale occupancy, channel dynamic range, per-tensor scale span",
+  "date": "2026-08-20",
+  "generator": "research/arxiv_tnf/measurements/gen_weight_ranges.py",
+  "models": {
+    "SmolLM2-135M": {
+      "snapshot": "93efa2f097d58c2a74874c7e644dbc9b0cee75a2",
+      "model_safetensors_sha256": "80521b40281d6ce74e35c9282c22539e75aa0ac8578892b2a59955ef78d55da1"
+    },
+    "Qwen2.5-0.5B": {
+      "snapshot": "060db6499f32faf8b98477b0a26969ef7d8b9987",
+      "model_safetensors_sha256": "88c142557820ccad55bb59756bfcfcf891de9cc6202816bd346445188a0ed342"
+    }
+  },
+  "tensor_set": "2-D weights, name contains neither 'embed' nor 'norm' (= conformance/ppl_scale_axis.py quantisable set)",
+  "block_scale_occupancy": {
+    "definition": "log2 span of ideal block scales s = amax/6, K=32 along the contraction axis (= block_scales() of conformance/ppl_scale_axis.py, whose --diagnose mode independently reproduces the SmolLM2 row)",
+    "SmolLM2-135M": {
+      "n_blocks": 3317760,
+      "log2_lo": -7.6841,
+      "log2_hi": 0.6342,
+      "occupied_binades": 8.3183,
+      "paper_prints": 8.32,
+      "matches": true
+    },
+    "Qwen2.5-0.5B": {
+      "n_blocks": 11182080,
+      "log2_lo": -10.9703,
+      "log2_hi": -1.8503,
+      "occupied_binades": 9.12,
+      "paper_prints": 9.12,
+      "matches": true
+    },
+    "note": "the paper's '3,317,760 block scales' is the SmolLM2 count alone; the Qwen2.5-0.5B occupancy is over 11,182,080 blocks"
+  },
+  "channel_dynamic_range": {
+    "model": "SmolLM2-135M",
+    "definition": "per output-channel (row) max|w| / p1|w|, p1 = 1st percentile of the row's magnitudes, zeros included, numpy linear interpolation; median over channels (the np.quantile(...,0.01) convention of research/block/block_ladder.py)",
+    "n_channels": 155520,
+    "median_ratio": 268.9469,
+    "paper_prints": 268.95,
+    "matches": true,
+    "rejected_definitions": {
+      "max/min-nonzero median": 2800.68,
+      "max/p0.1 median": 1408.62
+    }
+  },
+  "per_tensor_scale_span": {
+    "model": "SmolLM2-135M",
+    "n_tensors": 210,
+    "paper_claims_layers": 210,
+    "layer_count_matches": true,
+    "span_per_tensor_rms_octaves": 3.151,
+    "span_per_tensor_amax_octaves": 3.8972,
+    "paper_prints_octaves": 3.15,
+    "rms_span_matches_printed": true,
+    "both_below_four_octaves": true,
+    "note": "the paper's untraced-figures subsection concedes 3.15 has no generating file; this record states what IS measurable from the checkpoint (rms-span equals 3.15 at printed precision, amax-span is 3.90) without claiming which quantity the original figure came from. thm:barrelrange's two-bit conclusion needs only span < 4 octaves, which both measured readings satisfy."
+  }
+}
