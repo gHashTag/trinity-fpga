@@ -294,10 +294,13 @@ Sources local: `hayes2001_text.txt` ("Third Base", American Scientist 2001),
 |---|------|-------|---------|
 | 22 | 1818 | the prefix-code hierarchy (universal codeword sets) predates the catalogue's formats by decades | UNVERIFIED-OFFLINE |
 
-- No source text obtainable: IEEE paywalled, no capture on disk. Only bibliographic
-  metadata (title "Universal codeword sets and representations of the integers", 1975) is
-  checkable, which supports "decades" arithmetically but is not source text on the
-  content claim. Recorded as unverified per the evidence rule.
+- No source text obtainable, and the hunt (2026-08-21) was exhaustive: OpenAlex
+  oa_status=closed / no repository fulltext; Semantic Scholar isOpenAccess=false; IEEE
+  Xplore paywalled; archive.org holds only Elias's 1980 ONR report (cites the paper,
+  no reprint); MIT DSpace holds RLE Progress Report 115 (Jan 1975) which lists the
+  exact title as "to appear" — legitimate same-author corroboration of the "1975,
+  decades before" arithmetic and content shape, but not the cited source. Verdict
+  stays UNVERIFIED per the evidence rule.
 
 ### positgap (arXiv:2603.01615) — 1 claim
 
@@ -308,14 +311,22 @@ Sources local: `hayes2001_text.txt` ("Third Base", American Scientist 2001),
 - Raw abs page, fetched this pass: "the b-posit restricts the regime field to a 6-bit
   limit, reducing variability in regime and fraction sizes."
 
-### echeverria2011customizing (IEEE) — 1 claim
+### echeverria2011customizing (Elsevier — this header earlier said IEEE, which was
+### this doc's error; Microprocessors and Microsystems 35(6):535-546, 2011) — 1 claim
 
 | # | Line | Claim | Verdict |
 |---|------|-------|---------|
-| 24 | 2186 | an FPGA FP-unit customization study reports the same area/performance shape | UNVERIFIED-OFFLINE |
+| 24 | 2186 | an FPGA FP-unit customization study reports the same area/performance shape | CONFIRMED (2026-08-21) |
 
-- No source text obtainable: IEEE paywalled, no capture on disk. Recorded as unverified
-  per the evidence rule.
+- Legitimate OA copy at the UPM institutional repository — the bibitem's own URL
+  (oa.upm.es/12150, PDF read in full, 12 pp.). Section 6.1 verbatim: "handling
+  exponents has a small hardware cost in the operators"; Sec. 6.2: one extra mantissa
+  bit means requiring more resources; Table 6 shows the mantissa calculation stage
+  dominating slices in the streamlined operators. Supports the qualitative
+  "mantissa dominates, exponent cheap" shape; caveat: single precision only, no
+  mantissa-width sweep, so it is not a quantitative area-vs-width curve. Provenance
+  fixes recorded: Elsevier journal (not IEEE), and "technical report" in the bibitem
+  is imprecise.
 
 ### bitnet (arXiv:2402.17764) — 1 claim
 
@@ -470,10 +481,15 @@ Source local: `siegel/firstpage.txt` (OCR of the paper's first page).
 |---|------|-------|---------|
 | 37 | 4230 | normalisation in base θ is realisable by a finite automaton exactly when θ is Pisot | UNVERIFIED-OFFLINE |
 
-- No source text obtainable: the Springer fetch was bot-blocked — the capture on disk
-  (`springer_bf.html`) is verbatim a "Client Challenge" page, not the paper. Recorded as
-  unverified per the evidence rule; the claim is standard Berend–Frougny but that is
-  memory, not evidence.
+- No source text obtainable, and the hunt (2026-08-21) was exhaustive: Springer
+  paywalled (the on-disk capture is verbatim a "Client Challenge" page); Frougny's
+  publication page never lists the 1994 paper; Berend's own page links a DVI on a dead
+  FTP host with zero Wayback captures; the BGU CRIS record is abstract-only with no
+  deposit; Unpaywall/OpenAlex/Semantic Scholar all report no repository copy anywhere.
+  Two academia.edu rips of the Springer PDF exist and were deliberately not used. The
+  CRIS abstract states the exact claimed theorem verbatim ("...computable by a finite
+  automaton over any alphabet if and only if θ is a Pisot number") — consistent, but an
+  abstract is not source text. Verdict stays UNVERIFIED per the evidence rule.
 
 ### akiyama2016 (arXiv:1401.6329) — 1 claim
 
@@ -535,9 +551,12 @@ Of the **40** claims in the inventory:
   #33 abstract-level; #34/#36 digit strings re-derived from the quoted polynomial).
 - **1 CONTRADICTED, upheld** — the repo-RTL "one table serves four widths" claim (#15),
   re-spot-checked against the RTL during write-up.
-- **3 UNVERIFIED-OFFLINE** — elias1975 (#22, IEEE paywalled), echeverria2011 (#24, IEEE
-  paywalled), berend1994 (#37, Springer bot-blocked; on-disk capture is a challenge
-  page). No verdict was manufactured for these: no source text, no verdict.
+- **2 UNVERIFIED-OFFLINE** (was 3: echeverria2011 was closed on 2026-08-21 as CONFIRMED
+  via the bibitem's own UPM open-access URL — the "IEEE paywalled" label was this doc's
+  error, the journal is Elsevier) — elias1975 (#22) and berend1994 (#37): exhaustive
+  legitimate-copy hunts recorded in their sections; same-author corroboration found for
+  both but inadmissible under the evidence rule. No verdict was manufactured: no source
+  text, no verdict.
 
 The citing paper's external attributions are in materially good shape: one false claim
 (about its own repo's RTL, seeded by a stale code comment), one stale caption, one
