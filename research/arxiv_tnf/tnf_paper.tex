@@ -138,7 +138,7 @@ Eleven intermediate quantities of a real GPT-2 block satisfy none of it, because
 normalisation is what destroys the property. Seven of twenty-two candidate pairs
 outside neural inference do satisfy it, at $1.23\times$ to $4.00\times$: raw-SI
 inverse-square denominators, unnormalised likelihood products, importance weights.
-\texttt{takum} reaches $\pm 599$ binades at both widths compared and never leaves
+\texttt{takum} reaches $\pm 255$ binades at both widths compared and never leaves
 range where TNF does, so the format that wins inside the window is the one that has
 to be selected into it. One task outcome rather than a round-trip error is also
 reported: on a maximum-a-posteriori estimate in raw SI units with a fixed
@@ -627,15 +627,16 @@ limit. The two look alike in an accuracy table and do not look alike here.
 \begin{corollary}
 A format's position on the range--precision trade can be stated as a pair: the
 constant $M_{\mathrm{eff}}$ it holds, and the number of binades over which it
-holds it. For the TNF ladder those are $(M, 2\cdot 3^{E_t - 1})$ by construction;
+holds it. For the TNF ladder those are $(M, 3^{E_t}-2)$ by construction;
 for a tapered format neither is constant, which is why a ladder makes a better
 ruler than a taper.
 \end{corollary}
 \begin{proof}
 For a TNF rung the field widths are fixed, so the significand retains the same
 $M$ positions at every ordinary binade.  The balanced-ternary exponent has
-$3^{E_t-1}$ positive and the same number of negative nonzero states, giving
-$2\cdot3^{E_t-1}$ binades in the stated convention.  A tapered code instead
+$(3^{E_t}-1)/2$ positive and the same number of negative nonzero states; the
+two extreme offsets are reserved for the zero and special rows, leaving
+$3^{E_t}-2$ ordinary binades, which enumeration on every rung confirms.  A tapered code instead
 allocates a variable-length regime or characteristic as the exponent changes;
 Theorems~\ref{thm:posit} and~\ref{thm:takum} show that this consumes
 significand positions, so neither coordinate remains constant.
@@ -935,7 +936,7 @@ the dichotomy establishes is that they are the only two available.
 \begin{proof}
 For a fixed-field rung, $E_t$ and $M$ are constant, so every binade in its
 finite support has the same significand width. Given any finite binade count
-$b$, choose an integer $E_t\ge2$ with $3^{E_t}-1\ge b$ and set
+$b$, choose an integer $E_t\ge2$ with $3^{E_t}-2\ge b$ and set
 $N=1+E_t+M$; the resulting rung covers that count while retaining the chosen
 $M$. Varying $N$ therefore supplies the range without making one fixed-width
 rung tapered. Conversely, an unbounded exponent code has unbounded codeword
@@ -1220,7 +1221,7 @@ TNF128 & $10{,}029$ & $0$ & $33.23$\,MHz \\
 
 \begin{table}[t]\centering
 \caption{The specified ladder. $E_t$ is the trit budget, $M$ the mantissa width,
-range $(3^{E_t}-1)\log_{10}2$ in decades. Every rung is shown at the width
+range $(3^{E_t}-2)\log_{10}2$ in decades. Every rung is shown at the width
 rule, $M = N-1-E_t$, so each row satisfies $1+E_t+M=N$ by construction; the
 narrower research-note mantissas that predate the reconciliation ($M=9$ at 16
 bits, $M=52$ at 64, $M=115$ at 128) are quoted only where the implementation
@@ -1235,7 +1236,7 @@ here.}
 \toprule
 rung & $E_t$ & $M$ & decades & rung & $E_t$ & $M$ & decades \\
 \midrule
-TNF4  & $2$ & $1$  & $2.4$ & TNF64   & $7$  & $56$   & $658$ \\
+TNF4  & $2$ & $1$  & $2.1$ & TNF64   & $7$  & $56$   & $658$ \\
 TNF8  & $3$ & $4$  & $8$   & TNF128  & $8$  & $119$  & $1{,}975$ \\
 TNF16 & $4$ & $11$ & $24$  & TNF256  & $9$  & $246$  & $5{,}925$ \\
 TNF32 & $6$ & $25$ & $219$ & TNF512  & $10$ & $501$  & $17{,}775$ \\
@@ -1693,7 +1694,7 @@ and its dynamic range is identical.
 By Theorem~\ref{thm:law} the expected relative error is
 $\tfrac12 \mathbb{E}[1/s]\,2^{-(M+1)}$, in which the exponent does not appear;
 replacing $M$ by $M+k$ multiplies it by $2^{-k}$. The dynamic range is
-$3^{E_t}$ binades, a function of $E_t$ alone, so it is unchanged. Nothing else in
+$3^{E_t}-2$ binades, a function of $E_t$ alone, so it is unchanged. Nothing else in
 the layout depends on $M$.
 \end{proof}
 
@@ -1757,7 +1758,8 @@ significand has density $1/(s\ln r)$ on $[1,r)$, so
 $\mathbb{E}[1/s] = \frac{1}{\ln r}\int_1^{r} s^{-2}\,ds = \frac{1-1/r}{\ln r}$.
 Multiplying gives $\tfrac14 (r-1)2^{-M}\cdot\frac{1-1/r}{\ln r}$, and
 $(r-1)(1-1/r) = (r-1)^2/r$, which is $\tfrac14\kappa(r)2^{-M}$ as stated. For
-the range, $E_t$ trits span $3^{E_t}$ steps of $\log_2 r$ binades each. One
+the range, $E_t$ trits span $3^{E_t}$ exponent states --- $3^{E_t}-2$ of them
+ordinary in TNF, the two extremes being reserved --- of $\log_2 r$ binades each. One
 mantissa bit halves the error and one exponent trit triples the range, which
 fixes the exchange rate between the two currencies and gives the position
 figures.
@@ -2818,7 +2820,7 @@ Fix a width $N\geq4$. The set
 $\mathcal{F}_N = \{(E_t,\, M) : 1 + E_t + M = N,\ E_t \geq 2,\ M \geq 1\}$
 contains $N-3$ members, each exact by construction. By
 Theorem~\ref{thm:law} member $E_t$ has effective mantissa $M = N-1-E_t$ and
-dynamic range $3^{E_t}-1$ binades, so the members are totally ordered by $E_t$ and
+dynamic range $3^{E_t}-2$ binades, so the members are totally ordered by $E_t$ and
 yet pairwise Pareto-incomparable --- these are two different relations here, because
 moving along the order raises one coordinate and lowers the other, so no member
 dominates any other: $\mathcal{F}_N$ is a discrete Pareto frontier in
@@ -3052,8 +3054,8 @@ represent it without overflow, the effective mantissa is maximised uniquely at
 \end{theorem}
 \begin{proof}
 Under centring the placement of the window is free and representability
-constrains only how many binades it must hold, so it requires $3^{E_t}-1 \ge b$,
-i.e.\ $E_t \ge \log_3(b+1)$, and
+constrains only how many binades it must hold, so it requires $3^{E_t}-2 \ge b$,
+i.e.\ $E_t \ge \log_3(b+2)$, and
 $E_t$ is an integer, so $E_t \ge E_t^{*}$. By the width rule $M = N-1-E_t$ is
 strictly decreasing in $E_t$, so the constraint binds and the minimiser is unique.
 \end{proof}
@@ -3081,11 +3083,10 @@ binade indices offset by $\Delta$, hence the window $-(\Delta-1) \dots +(\Delta-
 Containment of the visited indices requires $\Delta-1 \ge \max(|e_{\min}|,|e_{\max}|)$,
 which rearranges to $3^{E_t} \ge 2\max(|e_{\min}|,|e_{\max}|)+3$ and gives
 $E_t^{\dagger}$ on taking the ceiling. Since
-$\max(|e_{\min}|,|e_{\max}|) \ge (b-1)/2$ we have $2\max+3 \ge b+2 > b+1$, so
+$\max(|e_{\min}|,|e_{\max}|) \ge (b-1)/2$ we have $2\max+3 \ge b+2$, so
 $E_t^{\dagger} \ge E_t^{*}$. For a span symmetric about unity,
-$e \in \{-k,\dots,k\}$, we have $b=2k+1$ and the two ceilings are
-$\lceil\log_3(2k+2)\rceil$ and $\lceil\log_3(2k+3)\rceil$, which differ only if
-$2k+2$ is a power of three; no power of three is even, so they agree. For any
+$e \in \{-k,\dots,k\}$, we have $b=2k+1$ and the two ceilings coincide term
+for term, $2\max+3 = 2k+3 = b+2$, so they agree. For any
 asymmetric span the inequality $\max > (b-1)/2$ is strict and the widths can part.
 \end{proof}
 
@@ -3114,7 +3115,7 @@ fixed about unity.
 Let a scale carry the largest magnitude of the workload into the top representable
 binade, and let the workload visit $b$ binades. Then the smallest admissible
 exponent width is $\lceil \log_3(2b+1) \rceil$; it never falls below $E_t^{*}$ and
-exceeds it for $137$ of the first $200$ values of $b$. The positive half of the
+exceeds it for $133$ of the first $200$ values of $b$. The positive half of the
 window, $\Delta-1$ binade indices, is unreachable by construction, and centring
 the scale instead of top-aligning it recovers $\log_3 2 = 0.6309$ trits of budget.
 \end{corollary}
@@ -3123,9 +3124,9 @@ the scale instead of top-aligning it recovers $\log_3 2 = 0.6309$ trits of budge
 After scaling, the visited indices are $-(b-1) \ldots 0$. By
 Proposition~\ref{prop:uncentred} containment requires $\Delta - 1 \ge b-1$ with
 $\Delta = (3^{E_t}-1)/2$, that is $3^{E_t} \ge 2b+1$, giving the stated width.
-Since $2b+1 \ge b+1$ for $b \ge 0$ and the ceiling of $\log_3$ is non-decreasing,
-the width never falls below $E_t^{*} = \lceil\log_3(b+1)\rceil$; that it strictly
-exceeds it for $137$ of $b = 1 \ldots 200$ is by enumeration. The indices
+Since $2b+1 \ge b+2$ for $b \ge 1$ and the ceiling of $\log_3$ is non-decreasing,
+the width never falls below $E_t^{*} = \lceil\log_3(b+2)\rceil$; that it strictly
+exceeds it for $133$ of $b = 1 \ldots 200$ is by enumeration. The indices
 $+1 \ldots +(\Delta-1)$ receive no workload, so $\Delta$ of the $2\Delta-1$ usable
 rows carry values and the usable fraction $\Delta/(2\Delta-1)$ falls from
 $57.1\%$ at $E_t=2$ through $52.0\%$, $50.6\%$, $50.2\%$ to $1/2$. The budget
@@ -3156,7 +3157,7 @@ the workload visits $b$ costs
 \[
   R =
   \begin{cases}
-    \lceil\log_3(b'+1)\rceil - \lceil\log_3(b+1)\rceil \ \text{mantissa bits}, & b' > b,\\[2pt]
+    \lceil\log_3(b'+2)\rceil - \lceil\log_3(b+2)\rceil \ \text{mantissa bits}, & b' > b,\\[2pt]
     \text{overflow on a set of measure } 1 - \tfrac{b'}{b}, & b' < b .
   \end{cases}
 \]
@@ -3165,7 +3166,7 @@ Both branches are non-negative as written.
 
 \begin{proof}
 By Theorem~\ref{thm:optimal} the trit budget needed to cover $b$ binades is
-$E_t^{*}(b) = \lceil\log_3(b+1)\rceil$, and the width rule $1 + E_t + M = N$ fixes
+$E_t^{*}(b) = \lceil\log_3(b+2)\rceil$, and the width rule $1 + E_t + M = N$ fixes
 the word, so at a fixed $N$ every trit spent on the exponent is a mantissa bit
 forgone, one for one. Sizing for $b' > b$ therefore spends
 $E_t^{*}(b') - E_t^{*}(b)$ trits that the visited range never uses, which is the
@@ -3173,9 +3174,9 @@ first branch, and it is non-negative because $E_t^{*}$ is non-decreasing. For
 $b' < b$ the format's reach is $b'$ of the $b$ binades the workload visits; on a
 log-uniform workload the density is uniform in $\log_2|x|$, hence uniform across
 binades, so the uncovered share is the binade fraction $1 - b'/b$ and every value
-in it overflows. The ratio $\log_3(b'+1)/\log_3(b+1)$ is the share of the
+in it overflows. The ratio $\log_3(b'+2)/\log_3(b+2)$ is the share of the
 \emph{trit budget}, not of the workload measure --- at $b = 80$, $b' = 26$ the two
-read $0.25$ and $0.675$ --- and an earlier revision of this theorem stated the
+read $0.24$ and $0.675$ --- and an earlier revision of this theorem stated the
 former where the latter belongs. Only the latter is an overflow measure. The first
 branch grows like $\log_3$ of the range ratio, the second is a share of the span
 and is bounded by $1$ however large the shortfall, so a fixed additional cost buys
@@ -5711,7 +5712,7 @@ ladder rungs violated the width rule where an audit of all nine says seven
 heaviness as the property deciding the comparison; both are removed by rescaling
 (Section~\ref{sec:centring}).
 \item The framing that \texttt{takum} carries a dynamic-range disadvantage; it
-reaches $\pm 599$ binades at both widths we compared
+reaches $\pm 255$ binades at both widths we compared
 (Section~\ref{sec:takumrange}).
 \item Our first threshold estimate, produced by a harness that tested
 representability against zero rather than against the range bounds, and so counted
@@ -7021,8 +7022,11 @@ Inside neural inference there are none. A full \texttt{float32} forward pass of
 block~$0$ of GPT-2 was run on real tokenised text in plain \texttt{numpy}, and
 every intermediate quantity was recorded by where its bulk sits.
 Table~\ref{tab:landing} lists all eleven. The largest median is $4.2$, for the
-unscaled attention scores, and the widest spread of any row is under twelve
-binades, so $D$ stays far below every threshold in Table~\ref{tab:rungthr}. The
+unscaled attention scores, and the widest spread of any printed row --- read
+as maximum minus median --- is $7.39$ binades; read as full extent above the
+$0.1$st percentile, five rows spread past twelve, the softmax numerator to
+$42$, which is why $D$, a bulk statistic, and not the extent, is the deciding
+scalar --- and $D$ stays far below every threshold in Table~\ref{tab:rungthr}. The
 candidates we nominated in print one subsection earlier --- accumulators,
 unnormalised scores --- are in the table and they fail: layer-norm variance sits
 at $2^{-5}$, the softmax denominator at $2^{2}$, GEMM partial sums at
@@ -7132,7 +7136,7 @@ constants themselves, wide-shape gamma variates --- have log-magnitude spans fro
 $54$ to $3342$ binades and leave the reach of both rungs entirely.
 \texttt{takum} represents three of them at low accuracy without loss;
 \texttt{boltzmann\_300K}, at $3342$ binades, exceeds even \texttt{takum}'s
-$\pm 599$ --- $376$ of $400$ samples fall outside it at both rungs. This is
+$\pm 255$ --- $376$ of $400$ samples fall outside it at both rungs. This is
 the honest shape of the result: TNF is the more accurate of the two inside a
 window it must be selected into, and \texttt{takum} is the format that never has
 to be selected. Which of those is preferable is a property of the deployment, not
@@ -7163,11 +7167,12 @@ reaches $\pm 39$ binades and the $(5,23)$ rung $\pm 120$.
 Two consequences follow. Any suggestion that a ternary exponent field buys
 dynamic range relative to \texttt{takum} is withdrawn; at every width we compared,
 \texttt{takum} reaches further, and in no row of Table~\ref{tab:workloads} does
-\texttt{takum} go out of range where TNF does not. And the earlier assumption we
-worked from, that \texttt{takum} reach is about $\pm 255$ binades and scales with
-width, was simply wrong --- it was inferred from a bias constant instead of
-measured. We record it here because a wrong number that was never printed is
-still a wrong number that shaped a design decision.
+\texttt{takum} go out of range where TNF does not. And of the earlier assumption we
+worked from --- that \texttt{takum} reach is about $\pm 255$ binades and scales
+with width --- the value was right and the scaling was wrong: the enumeration
+above lands on $\pm 255$ exactly, constant across widths. We record it here
+because an unmeasured number that shaped a design decision is a defect even
+when it turns out true, and its companion claim did not.
 
 \paragraph{The band where any of this matters, measured.} Accumulation of 64
 terms across widening log-uniform bands (\texttt{conformance/wide\_band\_bench.py},
