@@ -1,0 +1,10 @@
+docs/docs/research/papers/ARXIV_SUBMISSION_CONFIRMATION.md: names `gHashTag/trios/docs/infrastructure/zenodo-registry.md`
+docs/papers/ARXIV_SUBMISSION_CONFIRMATION.md: names `gHashTag/trios/docs/infrastructure/zenodo-registry.md`
+research/THE_DEFECT_CLASS_2026-08-12.md: names `gHashTag/trinity/.github/workflows/website-checks.yml`
+research/block/WHAT_THE_CAMPAIGN_ESTABLISHED_2026-08-12.md: names `gHashTag/trinity/.github/workflows/website-checks.yml`
+research/loop-state.md: names `litex-boards/litex_boards/platforms/digilent_arty_s7.py`
+research/loop-state.md: names `litex-boards/litex_boards/platforms/sitlinv_stlv7325_v1.py`
+research/loop-state.md: names `nextpnr-xilinx/.github/workflows/demos.yml`
+research/loop-state.md: names `prjxray-db/artix7/harness/arty-a7/swbut/design.json`
+research/where-this-work-sits.md: names `prjxray-db/artix7/harness/arty-a7/swbut/design.json`
+research/where-this-work-sits.md: names `prjxray-db/artix7/harness/arty-a7/swbut/design.json`

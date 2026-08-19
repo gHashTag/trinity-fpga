@@ -26,9 +26,9 @@ repository, in prose, before the defect did its damage.**
 * `campaignA_books.py`'s module docstring: *"TOP … renormalisation pays for by
   clipping the negative extreme to −0.75"*
 * `campaignD_spearman.py:86` carried an explicit `without TOP (n=4)` column
-* `SIXTEENTH_CODEWORD_SPENT.md`: *"**TOP is a trap.** … reach bought on one
+* `research/block/SIXTEENTH_CODEWORD_SPENT_2026-08-12.md`: *"**TOP is a trap.** … reach bought on one
   side, paid for by clipping on the other"*
-* `website-checks.yml`'s header: *"The three checks that exist and never run"*
+* `gHashTag/trinity/.github/workflows/website-checks.yml`'s header: *"The three checks that exist and never run"*
 * `audit_additional_cores.py`: *"the trap that produced pass 250's retracted LUT
   table"*
 * `run_all_gates.py`'s docstring named two defects that survived a pass because

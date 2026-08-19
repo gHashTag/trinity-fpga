@@ -52,7 +52,8 @@ books differ in is not excluded, has its own registration, and is being measured
 **Six items, one shape: the harness asserted less than its prose claimed.** And
 in every case the fact was already written down somewhere in the repository —
 `campaignA_books.py`'s docstring named TOP's clipping, `campaignD_spearman.py`
-carried a without-TOP column, `website-checks.yml`'s header said "the three
+carried a without-TOP column,
+`gHashTag/trinity/.github/workflows/website-checks.yml`'s header said "the three
 checks that exist and never run". Prose does not execute. Only the assertion is
 load-bearing.
 

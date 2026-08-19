@@ -165,6 +165,7 @@ trinity                 ← Orchestrator (links all via build.zig.zon)
 
 - Do not create, edit, or reference `.sh`/`.bash` files. Legacy scripts in `scripts/`, `deploy/`, `.ralph/scripts/`, and `fpga/` are marked for deletion.
 - Add new tooling as `tri` subcommands or Zig binaries, not shell scripts.
+- **One exemption**: `research/benchmark/**/harness/` retains the shell harnesses that produced published measurements. They are evidence, not tooling — never sourced, extended, or copied from, and never included in a sweep that deletes `.sh` files. See `.claude/rules/no-shell-scripts.md`.
 
 ### Author Attribution
 

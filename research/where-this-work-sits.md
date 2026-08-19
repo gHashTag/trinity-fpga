@@ -97,9 +97,9 @@ author is not a method.
 
 Added at iteration 020, after testing an idea that did not survive.
 
-`prjxray-db` ships four Vivado-built bitstreams — `artix7/harness/arty-a7/{swbut,uart,pmod}` and `artix7/harness/basys3/swbut` — each with a `design.bit`, a `design.dcp`, a `design.json` and a `design.txt`.
+`prjxray-db` ships four Vivado-built bitstreams — `artix7/harness/arty-a7/{swbut,uart,pmod}` and `artix7/harness/basys3/swbut` — each with a `design.bit`, a `design.dcp`, a `prjxray-db/artix7/harness/arty-a7/swbut/design.json` and a `design.txt`.
 
-**The idea that failed.** I expected `design.json` to be a yosys netlist, which would allow the strongest possible test: feed the identical netlist to both toolchains and diff the resulting bitstreams. It is not. Its top-level keys are `info`, `ports` and `required_features` — no `cells`, no `modules`, no `netnames`. These are fuzzing harness descriptors, not rebuildable designs, and the `.dcp` needs Vivado to open. **No whole-design differential build is available from them.**
+**The idea that failed.** I expected each `prjxray-db/artix7/harness/arty-a7/swbut/design.json` to be a yosys netlist, which would allow the strongest possible test: feed the identical netlist to both toolchains and diff the resulting bitstreams. It is not. Its top-level keys are `info`, `ports` and `required_features` — no `cells`, no `modules`, no `netnames`. These are fuzzing harness descriptors, not rebuildable designs, and the `.dcp` needs Vivado to open. **No whole-design differential build is available from them.**
 
 **What they are instead, and it is not nothing.** `design.txt` maps each port to its pin and its routing node, and `required_features` is a published list of FASM features the golden bitstream is known to contain:
 

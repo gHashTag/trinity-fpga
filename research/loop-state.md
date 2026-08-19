@@ -497,7 +497,8 @@ the honest report is "no change" rather than invented work.
 boards, *"or am I misunderstanding something?"*
 
 He was not misunderstanding, and my hesitation was unnecessary.
-`digilent_arty_s7.py` names `xc7s50csga324-1` exactly, so `clk12 F14`,
+`litex-boards/litex_boards/platforms/digilent_arty_s7.py` names
+`xc7s50csga324-1` exactly, so `clk12 F14`,
 `user_sw0 H14`, `user_led0 E18` were a search away, not a research project.
 
 **Part coverage extended to three parts.** The Spartan expectation is recorded
@@ -573,7 +574,7 @@ needs the board, #149 needs 047b.
 Recorded late; iteration 015 did the work and skipped the journal entry, which
 is the same omission this journal exists to prevent.
 
-**`xc7z035` cannot be added, and upstream's own `demos.yml` says why:**
+**`xc7z035` cannot be added, and upstream's own `nextpnr-xilinx/.github/workflows/demos.yml` says why:**
 
     Known-failing projects (BRAM/LUTFF legaliser spiral on artix7,
     missing xc7z035 tilegrid) are intentionally not part of the subset.
@@ -665,7 +666,8 @@ issue rather than waiting for his answer. It builds through `fasm2frames`.
 
 **Two corrections to things I had told him**, both now on the issue:
 
-* The `# TODO verify / test` comment in `sitlinv_stlv7325_v1.py` is on `clk156`
+* The `# TODO verify / test` comment in
+  `litex-boards/litex_boards/platforms/sitlinv_stlv7325_v1.py` is on `clk156`
   and `clk150`, **not** on `clk200`, which is the one I used. I generalised from
   two lines to all of them.
 * The Kintex part id is `-1`, not `-2`. I took the speed grade from the board
@@ -730,7 +732,8 @@ Carlos (`047b`), and the board for #114.
 
 ### 020 — 2026-08-19, night
 
-Hypothesis tested and refuted: `design.json` in prjxray-db's four harness
+Hypothesis tested and refuted:
+`prjxray-db/artix7/harness/arty-a7/swbut/design.json` and its three siblings
 bitstreams is not a yosys netlist (`info`, `ports`, `required_features` only),
 so no whole-design differential build is available from them. They support a
 **per-feature** reference — `required_features` publishes 433/199/431/864 FASM
