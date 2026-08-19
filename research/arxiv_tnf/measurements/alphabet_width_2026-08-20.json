@@ -1,0 +1,146 @@
+{
+ "gfternary_decode": {
+  "alphabet_bits": 2,
+  "decoder_cells": 2.0,
+  "consumer_cells": 5.429,
+  "multiply_alone": 3.429,
+  "r2_bare": 1.0,
+  "r2_fused": 0.991758
+ },
+ "fp8_e4m3_decode": {
+  "alphabet_bits": 8,
+  "decoder_cells": 12.0,
+  "consumer_cells": 138.571,
+  "multiply_alone": 126.571,
+  "r2_bare": 1.0,
+  "r2_fused": 0.999987
+ },
+ "fp8_e5m2_decode": {
+  "alphabet_bits": 8,
+  "decoder_cells": 12.0,
+  "consumer_cells": 138.571,
+  "multiply_alone": 126.571,
+  "r2_bare": 1.0,
+  "r2_fused": 0.999987
+ },
+ "int8_decode": {
+  "alphabet_bits": 8,
+  "decoder_cells": 0.0,
+  "consumer_cells": 126.571,
+  "multiply_alone": 126.571,
+  "r2_bare": 1.0,
+  "r2_fused": 0.999985
+ },
+ "minifloat_decode": {
+  "alphabet_bits": 8,
+  "decoder_cells": 31.0,
+  "consumer_cells": 164.429,
+  "multiply_alone": 133.429,
+  "r2_bare": 1.0,
+  "r2_fused": 0.999421
+ },
+ "takum8_decode": {
+  "alphabet_bits": 8,
+  "decoder_cells": 126.0,
+  "consumer_cells": 254.429,
+  "multiply_alone": 128.429,
+  "r2_bare": 1.0,
+  "r2_fused": 0.999976
+ },
+ "gf10_decode": {
+  "alphabet_bits": 10,
+  "decoder_cells": 26.0,
+  "consumer_cells": 238.571,
+  "multiply_alone": 212.571,
+  "r2_bare": 1.0,
+  "r2_fused": 0.999273
+ },
+ "tnf8s_decode": {
+  "alphabet_bits": 10,
+  "decoder_cells": 18.0,
+  "consumer_cells": 230.571,
+  "multiply_alone": 212.571,
+  "r2_bare": 1.0,
+  "r2_fused": 0.999222
+ },
+ "gf14_decode": {
+  "alphabet_bits": 14,
+  "decoder_cells": 36.0,
+  "consumer_cells": 377.286,
+  "multiply_alone": 341.286,
+  "r2_bare": 1.0,
+  "r2_fused": 0.999903
+ },
+ "binary16_decode": {
+  "alphabet_bits": 16,
+  "decoder_cells": 54.0,
+  "consumer_cells": 438.571,
+  "multiply_alone": 384.571,
+  "r2_bare": 1.0,
+  "r2_fused": 0.999999
+ },
+ "bnf16_decode": {
+  "alphabet_bits": 16,
+  "decoder_cells": 10.0,
+  "consumer_cells": 394.571,
+  "multiply_alone": 384.571,
+  "r2_bare": 1.0,
+  "r2_fused": 0.999998
+ },
+ "tnf16_decode": {
+  "alphabet_bits": 16,
+  "decoder_cells": 2.0,
+  "consumer_cells": 386.571,
+  "multiply_alone": 384.571,
+  "r2_bare": 1.0,
+  "r2_fused": 0.999998
+ },
+ "lns16_decode": {
+  "alphabet_bits": 16,
+  "decoder_cells": 159.0,
+  "consumer_cells": 545.0,
+  "multiply_alone": 386.0,
+  "r2_bare": 1.0,
+  "r2_fused": 1.0
+ },
+ "posit16_decode": {
+  "alphabet_bits": 16,
+  "decoder_cells": 125.0,
+  "consumer_cells": 511.0,
+  "multiply_alone": 386.0,
+  "r2_bare": 1.0,
+  "r2_fused": 1.0
+ },
+ "takum16_decode": {
+  "alphabet_bits": 16,
+  "decoder_cells": 160.0,
+  "consumer_cells": 546.0,
+  "multiply_alone": 386.0,
+  "r2_bare": 1.0,
+  "r2_fused": 1.0
+ },
+ "tnf17_decode": {
+  "alphabet_bits": 17,
+  "decoder_cells": 22.0,
+  "consumer_cells": 424.857,
+  "multiply_alone": 402.857,
+  "r2_bare": 1.0,
+  "r2_fused": 0.999995
+ },
+ "bnf16s_decode": {
+  "alphabet_bits": 17,
+  "decoder_cells": 22.0,
+  "consumer_cells": 424.857,
+  "multiply_alone": 402.857,
+  "r2_bare": 1.0,
+  "r2_fused": 0.999995
+ },
+ "vax_f_decode": {
+  "alphabet_bits": 32,
+  "decoder_cells": 41.0,
+  "consumer_cells": 467.571,
+  "multiply_alone": 426.571,
+  "r2_bare": 1.0,
+  "r2_fused": 0.999999
+ }
+}

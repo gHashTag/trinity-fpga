@@ -1,0 +1,754 @@
+{
+ "generated_by": "W936 replication rig (gen_replicated.py), local yosys 0.63, synth_xilinx -nodsp",
+ "method": "cells(N) = fixture + cost*N fitted over N in {1,2,4,8}; decoders chained through pipeline registers",
+ "metric": "LUT1..LUT6 + CARRY4 (the lut_only series is kept because the first run counted LUTs alone and reported constant-add decoders as 0.000)",
+ "caveats": [
+  "post-synthesis, not post-route",
+  "decoders only, not datapaths",
+  "each row inherits its source decoder's verification status: a wrong decoder is a cheap decoder",
+  "one synthesiser; no vendor-flow calibration"
+ ],
+ "formats": {
+  "bin16": {
+   "module": "binary16_decode",
+   "in_width": 16,
+   "lut_plus_carry_per_decoder": 54.0,
+   "lut_only_per_decoder": 51.0,
+   "fixture_cells": 88.0,
+   "r2": 1.0,
+   "max_residual_cells": 0.0,
+   "points": {
+    "1": {
+     "lut": 136,
+     "muxf": 32,
+     "ff": 192,
+     "carry4": 6,
+     "lut_plus_carry": 142
+    },
+    "2": {
+     "lut": 187,
+     "muxf": 36,
+     "ff": 224,
+     "carry4": 9,
+     "lut_plus_carry": 196
+    },
+    "4": {
+     "lut": 289,
+     "muxf": 44,
+     "ff": 288,
+     "carry4": 15,
+     "lut_plus_carry": 304
+    },
+    "8": {
+     "lut": 493,
+     "muxf": 60,
+     "ff": 416,
+     "carry4": 27,
+     "lut_plus_carry": 520
+    }
+   }
+  },
+  "bin32": {
+   "module": "binary32_decode",
+   "in_width": 32,
+   "lut_plus_carry_per_decoder": 5.0,
+   "lut_only_per_decoder": 5.0,
+   "fixture_cells": 39.0,
+   "r2": 1.0,
+   "max_residual_cells": 0.0,
+   "points": {
+    "1": {
+     "lut": 44,
+     "muxf": 48,
+     "ff": 192,
+     "carry4": 0,
+     "lut_plus_carry": 44
+    },
+    "2": {
+     "lut": 49,
+     "muxf": 60,
+     "ff": 256,
+     "carry4": 0,
+     "lut_plus_carry": 49
+    },
+    "4": {
+     "lut": 59,
+     "muxf": 84,
+     "ff": 384,
+     "carry4": 0,
+     "lut_plus_carry": 59
+    },
+    "8": {
+     "lut": 79,
+     "muxf": 132,
+     "ff": 640,
+     "carry4": 0,
+     "lut_plus_carry": 79
+    }
+   }
+  },
+  "bnf16": {
+   "module": "bnf16_decode",
+   "in_width": 16,
+   "lut_plus_carry_per_decoder": 10.0,
+   "lut_only_per_decoder": 8.0,
+   "fixture_cells": 44.0,
+   "r2": 1.0,
+   "max_residual_cells": 0.0,
+   "points": {
+    "1": {
+     "lut": 50,
+     "muxf": 72,
+     "ff": 192,
+     "carry4": 4,
+     "lut_plus_carry": 54
+    },
+    "2": {
+     "lut": 58,
+     "muxf": 96,
+     "ff": 224,
+     "carry4": 6,
+     "lut_plus_carry": 64
+    },
+    "4": {
+     "lut": 74,
+     "muxf": 144,
+     "ff": 288,
+     "carry4": 10,
+     "lut_plus_carry": 84
+    },
+    "8": {
+     "lut": 106,
+     "muxf": 240,
+     "ff": 416,
+     "carry4": 18,
+     "lut_plus_carry": 124
+    }
+   }
+  },
+  "fp8e4m3": {
+   "module": "fp8_e4m3_decode",
+   "in_width": 8,
+   "lut_plus_carry_per_decoder": 12.0,
+   "lut_only_per_decoder": 8.0,
+   "fixture_cells": 46.0,
+   "r2": 1.0,
+   "max_residual_cells": 0.0,
+   "points": {
+    "1": {
+     "lut": 50,
+     "muxf": 24,
+     "ff": 192,
+     "carry4": 8,
+     "lut_plus_carry": 58
+    },
+    "2": {
+     "lut": 58,
+     "muxf": 24,
+     "ff": 208,
+     "carry4": 12,
+     "lut_plus_carry": 70
+    },
+    "4": {
+     "lut": 74,
+     "muxf": 24,
+     "ff": 240,
+     "carry4": 20,
+     "lut_plus_carry": 94
+    },
+    "8": {
+     "lut": 106,
+     "muxf": 24,
+     "ff": 304,
+     "carry4": 36,
+     "lut_plus_carry": 142
+    }
+   }
+  },
+  "fp8e5m2": {
+   "module": "fp8_e5m2_decode",
+   "in_width": 8,
+   "lut_plus_carry_per_decoder": 12.0,
+   "lut_only_per_decoder": 8.0,
+   "fixture_cells": 46.0,
+   "r2": 1.0,
+   "max_residual_cells": 0.0,
+   "points": {
+    "1": {
+     "lut": 50,
+     "muxf": 24,
+     "ff": 192,
+     "carry4": 8,
+     "lut_plus_carry": 58
+    },
+    "2": {
+     "lut": 58,
+     "muxf": 24,
+     "ff": 208,
+     "carry4": 12,
+     "lut_plus_carry": 70
+    },
+    "4": {
+     "lut": 74,
+     "muxf": 24,
+     "ff": 240,
+     "carry4": 20,
+     "lut_plus_carry": 94
+    },
+    "8": {
+     "lut": 106,
+     "muxf": 24,
+     "ff": 304,
+     "carry4": 36,
+     "lut_plus_carry": 142
+    }
+   }
+  },
+  "gf10": {
+   "module": "gf10_decode",
+   "in_width": 10,
+   "lut_plus_carry_per_decoder": 26.0,
+   "lut_only_per_decoder": 24.0,
+   "fixture_cells": 60.0,
+   "r2": 1.0,
+   "max_residual_cells": 0.0,
+   "points": {
+    "1": {
+     "lut": 82,
+     "muxf": 32,
+     "ff": 192,
+     "carry4": 4,
+     "lut_plus_carry": 86
+    },
+    "2": {
+     "lut": 106,
+     "muxf": 36,
+     "ff": 212,
+     "carry4": 6,
+     "lut_plus_carry": 112
+    },
+    "4": {
+     "lut": 154,
+     "muxf": 44,
+     "ff": 252,
+     "carry4": 10,
+     "lut_plus_carry": 164
+    },
+    "8": {
+     "lut": 250,
+     "muxf": 60,
+     "ff": 332,
+     "carry4": 18,
+     "lut_plus_carry": 268
+    }
+   }
+  },
+  "gf14": {
+   "module": "gf14_decode",
+   "in_width": 14,
+   "lut_plus_carry_per_decoder": 36.0,
+   "lut_only_per_decoder": 35.0,
+   "fixture_cells": 70.0,
+   "r2": 1.0,
+   "max_residual_cells": 0.0,
+   "points": {
+    "1": {
+     "lut": 104,
+     "muxf": 30,
+     "ff": 192,
+     "carry4": 2,
+     "lut_plus_carry": 106
+    },
+    "2": {
+     "lut": 139,
+     "muxf": 33,
+     "ff": 220,
+     "carry4": 3,
+     "lut_plus_carry": 142
+    },
+    "4": {
+     "lut": 209,
+     "muxf": 39,
+     "ff": 276,
+     "carry4": 5,
+     "lut_plus_carry": 214
+    },
+    "8": {
+     "lut": 349,
+     "muxf": 51,
+     "ff": 388,
+     "carry4": 9,
+     "lut_plus_carry": 358
+    }
+   }
+  },
+  "gfplus8": {
+   "module": "gfplus8_a_decode",
+   "in_width": 8,
+   "lut_plus_carry_per_decoder": 56.348,
+   "lut_only_per_decoder": 50.348,
+   "fixture_cells": 110.7,
+   "r2": 0.997307,
+   "max_residual_cells": 12.91,
+   "points": {
+    "1": {
+     "lut": 148,
+     "muxf": 72,
+     "ff": 192,
+     "carry4": 12,
+     "lut_plus_carry": 160
+    },
+    "2": {
+     "lut": 205,
+     "muxf": 96,
+     "ff": 208,
+     "carry4": 18,
+     "lut_plus_carry": 223
+    },
+    "4": {
+     "lut": 319,
+     "muxf": 144,
+     "ff": 240,
+     "carry4": 30,
+     "lut_plus_carry": 349
+    },
+    "8": {
+     "lut": 502,
+     "muxf": 204,
+     "ff": 304,
+     "carry4": 54,
+     "lut_plus_carry": 556
+    }
+   }
+  },
+  "gfternary": {
+   "module": "gfternary_decode",
+   "in_width": 2,
+   "lut_plus_carry_per_decoder": 2.0,
+   "lut_only_per_decoder": 2.0,
+   "fixture_cells": 36.0,
+   "r2": 1.0,
+   "max_residual_cells": 0.0,
+   "points": {
+    "1": {
+     "lut": 38,
+     "muxf": 24,
+     "ff": 192,
+     "carry4": 0,
+     "lut_plus_carry": 38
+    },
+    "2": {
+     "lut": 40,
+     "muxf": 24,
+     "ff": 196,
+     "carry4": 0,
+     "lut_plus_carry": 40
+    },
+    "4": {
+     "lut": 44,
+     "muxf": 24,
+     "ff": 204,
+     "carry4": 0,
+     "lut_plus_carry": 44
+    },
+    "8": {
+     "lut": 52,
+     "muxf": 24,
+     "ff": 220,
+     "carry4": 0,
+     "lut_plus_carry": 52
+    }
+   }
+  },
+  "ibmhfp": {
+   "module": "ibm_hfp32_decode",
+   "in_width": 32,
+   "lut_plus_carry_per_decoder": 129.0,
+   "lut_only_per_decoder": 126.0,
+   "fixture_cells": 163.0,
+   "r2": 1.0,
+   "max_residual_cells": 0.0,
+   "points": {
+    "1": {
+     "lut": 286,
+     "muxf": 44,
+     "ff": 192,
+     "carry4": 6,
+     "lut_plus_carry": 292
+    },
+    "2": {
+     "lut": 412,
+     "muxf": 54,
+     "ff": 256,
+     "carry4": 9,
+     "lut_plus_carry": 421
+    },
+    "4": {
+     "lut": 664,
+     "muxf": 74,
+     "ff": 384,
+     "carry4": 15,
+     "lut_plus_carry": 679
+    },
+    "8": {
+     "lut": 1168,
+     "muxf": 114,
+     "ff": 640,
+     "carry4": 27,
+     "lut_plus_carry": 1195
+    }
+   }
+  },
+  "int8": {
+   "module": "int8_decode",
+   "in_width": 8,
+   "lut_plus_carry_per_decoder": 0.0,
+   "lut_only_per_decoder": 0.0,
+   "fixture_cells": 34.0,
+   "r2": 1.0,
+   "max_residual_cells": 0.0,
+   "points": {
+    "1": {
+     "lut": 34,
+     "muxf": 24,
+     "ff": 192,
+     "carry4": 0,
+     "lut_plus_carry": 34
+    },
+    "2": {
+     "lut": 34,
+     "muxf": 24,
+     "ff": 208,
+     "carry4": 0,
+     "lut_plus_carry": 34
+    },
+    "4": {
+     "lut": 34,
+     "muxf": 24,
+     "ff": 240,
+     "carry4": 0,
+     "lut_plus_carry": 34
+    },
+    "8": {
+     "lut": 34,
+     "muxf": 24,
+     "ff": 304,
+     "carry4": 0,
+     "lut_plus_carry": 34
+    }
+   }
+  },
+  "lns16": {
+   "module": "lns16_decode",
+   "in_width": 16,
+   "lut_plus_carry_per_decoder": 159.0,
+   "lut_only_per_decoder": 149.0,
+   "fixture_cells": 193.0,
+   "r2": 1.0,
+   "max_residual_cells": 0.0,
+   "points": {
+    "1": {
+     "lut": 332,
+     "muxf": 76,
+     "ff": 192,
+     "carry4": 20,
+     "lut_plus_carry": 352
+    },
+    "2": {
+     "lut": 481,
+     "muxf": 102,
+     "ff": 224,
+     "carry4": 30,
+     "lut_plus_carry": 511
+    },
+    "4": {
+     "lut": 779,
+     "muxf": 154,
+     "ff": 288,
+     "carry4": 50,
+     "lut_plus_carry": 829
+    },
+    "8": {
+     "lut": 1375,
+     "muxf": 258,
+     "ff": 416,
+     "carry4": 90,
+     "lut_plus_carry": 1465
+    }
+   }
+  },
+  "minifl": {
+   "module": "minifloat_decode",
+   "in_width": 8,
+   "lut_plus_carry_per_decoder": 31.0,
+   "lut_only_per_decoder": 27.0,
+   "fixture_cells": 65.0,
+   "r2": 1.0,
+   "max_residual_cells": 0.0,
+   "points": {
+    "1": {
+     "lut": 88,
+     "muxf": 28,
+     "ff": 192,
+     "carry4": 8,
+     "lut_plus_carry": 96
+    },
+    "2": {
+     "lut": 115,
+     "muxf": 30,
+     "ff": 208,
+     "carry4": 12,
+     "lut_plus_carry": 127
+    },
+    "4": {
+     "lut": 169,
+     "muxf": 34,
+     "ff": 240,
+     "carry4": 20,
+     "lut_plus_carry": 189
+    },
+    "8": {
+     "lut": 277,
+     "muxf": 42,
+     "ff": 304,
+     "carry4": 36,
+     "lut_plus_carry": 313
+    }
+   }
+  },
+  "posit16": {
+   "module": "posit16_decode",
+   "in_width": 16,
+   "lut_plus_carry_per_decoder": 125.0,
+   "lut_only_per_decoder": 112.0,
+   "fixture_cells": 159.0,
+   "r2": 1.0,
+   "max_residual_cells": 0.0,
+   "points": {
+    "1": {
+     "lut": 258,
+     "muxf": 44,
+     "ff": 192,
+     "carry4": 26,
+     "lut_plus_carry": 284
+    },
+    "2": {
+     "lut": 370,
+     "muxf": 54,
+     "ff": 224,
+     "carry4": 39,
+     "lut_plus_carry": 409
+    },
+    "4": {
+     "lut": 594,
+     "muxf": 74,
+     "ff": 288,
+     "carry4": 65,
+     "lut_plus_carry": 659
+    },
+    "8": {
+     "lut": 1042,
+     "muxf": 114,
+     "ff": 416,
+     "carry4": 117,
+     "lut_plus_carry": 1159
+    }
+   }
+  },
+  "posit32": {
+   "module": "posit32_decode",
+   "in_width": 32,
+   "lut_plus_carry_per_decoder": 304.0,
+   "lut_only_per_decoder": 281.0,
+   "fixture_cells": 338.0,
+   "r2": 1.0,
+   "max_residual_cells": 0.0,
+   "points": {
+    "1": {
+     "lut": 596,
+     "muxf": 136,
+     "ff": 192,
+     "carry4": 46,
+     "lut_plus_carry": 642
+    },
+    "2": {
+     "lut": 877,
+     "muxf": 192,
+     "ff": 256,
+     "carry4": 69,
+     "lut_plus_carry": 946
+    },
+    "4": {
+     "lut": 1439,
+     "muxf": 304,
+     "ff": 384,
+     "carry4": 115,
+     "lut_plus_carry": 1554
+    },
+    "8": {
+     "lut": 2563,
+     "muxf": 528,
+     "ff": 640,
+     "carry4": 207,
+     "lut_plus_carry": 2770
+    }
+   }
+  },
+  "tnf16": {
+   "module": "tnf16_decode",
+   "in_width": 16,
+   "lut_plus_carry_per_decoder": 2.0,
+   "lut_only_per_decoder": 0.0,
+   "fixture_cells": 36.0,
+   "r2": 1.0,
+   "max_residual_cells": 0.0,
+   "points": {
+    "1": {
+     "lut": 34,
+     "muxf": 24,
+     "ff": 192,
+     "carry4": 4,
+     "lut_plus_carry": 38
+    },
+    "2": {
+     "lut": 34,
+     "muxf": 24,
+     "ff": 224,
+     "carry4": 6,
+     "lut_plus_carry": 40
+    },
+    "4": {
+     "lut": 34,
+     "muxf": 24,
+     "ff": 288,
+     "carry4": 10,
+     "lut_plus_carry": 44
+    },
+    "8": {
+     "lut": 34,
+     "muxf": 24,
+     "ff": 416,
+     "carry4": 18,
+     "lut_plus_carry": 52
+    }
+   }
+  },
+  "tnf32": {
+   "module": "tnf32_decode",
+   "in_width": 32,
+   "lut_plus_carry_per_decoder": 2.0,
+   "lut_only_per_decoder": 0.0,
+   "fixture_cells": 36.0,
+   "r2": 1.0,
+   "max_residual_cells": 0.0,
+   "points": {
+    "1": {
+     "lut": 34,
+     "muxf": 24,
+     "ff": 192,
+     "carry4": 4,
+     "lut_plus_carry": 38
+    },
+    "2": {
+     "lut": 34,
+     "muxf": 24,
+     "ff": 256,
+     "carry4": 6,
+     "lut_plus_carry": 40
+    },
+    "4": {
+     "lut": 34,
+     "muxf": 24,
+     "ff": 384,
+     "carry4": 10,
+     "lut_plus_carry": 44
+    },
+    "8": {
+     "lut": 34,
+     "muxf": 24,
+     "ff": 640,
+     "carry4": 18,
+     "lut_plus_carry": 52
+    }
+   }
+  },
+  "tnf64": {
+   "module": "tnf64_decode",
+   "in_width": 64,
+   "lut_plus_carry_per_decoder": 2.0,
+   "lut_only_per_decoder": 0.0,
+   "fixture_cells": 36.0,
+   "r2": 1.0,
+   "max_residual_cells": 0.0,
+   "points": {
+    "1": {
+     "lut": 34,
+     "muxf": 24,
+     "ff": 192,
+     "carry4": 4,
+     "lut_plus_carry": 38
+    },
+    "2": {
+     "lut": 34,
+     "muxf": 24,
+     "ff": 256,
+     "carry4": 6,
+     "lut_plus_carry": 40
+    },
+    "4": {
+     "lut": 34,
+     "muxf": 24,
+     "ff": 384,
+     "carry4": 10,
+     "lut_plus_carry": 44
+    },
+    "8": {
+     "lut": 34,
+     "muxf": 24,
+     "ff": 640,
+     "carry4": 18,
+     "lut_plus_carry": 52
+    }
+   }
+  },
+  "vaxf": {
+   "module": "vax_f_decode",
+   "in_width": 32,
+   "lut_plus_carry_per_decoder": 41.0,
+   "lut_only_per_decoder": 39.0,
+   "fixture_cells": 75.0,
+   "r2": 1.0,
+   "max_residual_cells": 0.0,
+   "points": {
+    "1": {
+     "lut": 112,
+     "muxf": 28,
+     "ff": 192,
+     "carry4": 4,
+     "lut_plus_carry": 116
+    },
+    "2": {
+     "lut": 151,
+     "muxf": 30,
+     "ff": 256,
+     "carry4": 6,
+     "lut_plus_carry": 157
+    },
+    "4": {
+     "lut": 229,
+     "muxf": 34,
+     "ff": 384,
+     "carry4": 10,
+     "lut_plus_carry": 239
+    },
+    "8": {
+     "lut": 385,
+     "muxf": 42,
+     "ff": 640,
+     "carry4": 18,
+     "lut_plus_carry": 403
+    }
+   }
+  }
+ }
+}
