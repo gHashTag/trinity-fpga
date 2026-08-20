@@ -7,7 +7,23 @@ outcome, and **what result would kill it**.
 
 Everything referenced is committed: rigs in `research/arxiv_tnf/*.py`, records in
 `research/arxiv_tnf/measurements/*.json`, and `verify_numbers.py` recomputes every
-headline figure from those records (23 checks).
+headline figure from those records (**27 checks**, including the stability tallies
+below, which are derived here rather than quoted).
+
+**To run any of it on your machine**, nothing needs to match ours:
+
+```bash
+python3 research/arxiv_tnf/verify_numbers.py          # records found beside the script
+T27_WORK=/path/with/datasets \
+T27_CONFORMANCE=$PWD/conformance \
+TASK=mnist EPOCHS=30 python3 research/arxiv_tnf/stability.py
+```
+
+`T27_RECORDS` overrides where `verify_numbers.py` looks; `T27_WORK` is where
+`stability.py` finds the idx-format datasets and writes its record;
+`T27_CONFORMANCE` points at the shipped oracles. Until W948d these rigs carried
+the author's absolute paths, which made this page's own invitation impossible to
+accept.
 
 ---
 
