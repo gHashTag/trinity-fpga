@@ -91,4 +91,33 @@ if missing:
         c = " ".join(ctx.group(0).split()) if ctx else ""
         print(f"  {v:>12s}  {c[:100]}")
     if len(missing) > 40: print(f"  ... and {len(missing)-40} more")
+
+# Until now this ended `sys.exit(0)` unconditionally: it reported unsourced
+# figures and passed regardless, so CI ran it as a check that could not go red.
+# A gate that cannot fail is green for the same reason an unplugged one is.
+#
+# Unsourced is not automatically wrong — a figure may be derived in place or
+# quoted from someone else's paper — so failing on the whole set would block
+# every pull request forever. It fails on what is NEW instead, exactly as
+# check_withdrawn_live does: the accepted set lives in a baseline file, and a
+# figure that was not there before has to be either sourced or added
+# deliberately, with a human deciding which.
+BASELINE = ROOT / "tools" / "paper_numbers_baseline.txt"
+if "--write-baseline" in sys.argv:
+    BASELINE.write_text("\n".join(missing) + ("\n" if missing else ""))
+    print(f"baseline written: {len(missing)} accepted")
+    sys.exit(0)
+
+known = set()
+if BASELINE.is_file():
+    known = {l.strip() for l in BASELINE.read_text().splitlines() if l.strip()}
+new_unsourced = sorted(set(missing) - known, key=lambda s: (-len(s), s))
+if new_unsourced:
+    print(f"\nFAIL: {len(new_unsourced)} NEW unsourced figure(s) carrying a unit:")
+    for v in new_unsourced[:20]:
+        print(f"  {v}")
+    print("\nEither trace the figure to a data file, or accept it deliberately:")
+    print("  python3 tools/check_paper_numbers.py --write-baseline")
+    sys.exit(1)
+print(f"OK: no new unsourced figure ({len(known)} accepted)")
 sys.exit(0)
