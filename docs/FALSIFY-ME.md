@@ -13,12 +13,20 @@ headline figure from those records (23 checks).
 
 ## Claim 1 — recipe-insensitivity
 
-> At six physical bits, TNF4 trains successfully in **20 of 20** runs across three
-> quantiser recipes and three tasks. `fp6 e3m2` manages 12/20 and `fp6 e2m3` 6/20.
+> At six physical bits, TNF4 trains successfully in **40 of 40** runs — eight
+> configurations of five seeds, spanning four quantiser recipes, three tasks and
+> three training lengths. `fp6 e3m2` manages **16 of 40** and `fp6 e2m3` **12 of 40**.
+
+*All counts on this page are **successes out of runs**. The same tallies appear as
+failure counts elsewhere in this repository (28/40 and 24/40); they are the same
+measurement in the opposite polarity, and mixing the two is how an off-by-one
+entered three published documents in W948. `verify_numbers.py` now recomputes
+these tallies from the records, in one polarity, so the arithmetic cannot drift
+from the evidence again.*
 
 **Run it:** `research/arxiv_tnf/stability.py`, environment
-`TASK ∈ {mnist, fashion, kmnist}`, `EPOCHS=3`, `INIT_PCT` unset (max scale) or
-`0.999` (percentile), five seeds `20260820, 7, 1337, 424242, 99991`, MLP
+`TASK ∈ {mnist, fashion, kmnist}`, `EPOCHS ∈ {3, 10, 30}`, `INIT_PCT` unset (max
+scale) or `0.999` (percentile), five seeds `20260820, 7, 1337, 424242, 99991`, MLP
 784-256-256-10, weights **and** activations quantised, LSQ with the gradient factor.
 
 **Failure counted as** final test accuracy below 60 % (MNIST, Fashion) or 40 %
@@ -28,6 +36,13 @@ headline figure from those records (23 checks).
 in 20 across the same three tasks, **or** TNF4 fails at all under a recipe that is
 standard rather than adversarial. A recipe hand-tuned per task does not count; the
 claim is about one recipe surviving three tasks.
+
+**Report it as five numbers, not one.** A threshold count and a mean each hide a
+different thing, and at 30 epochs they hide the most important thing here: by the
+60 % rule `fp6 e3m2` *passes* three of five runs (71.9, 65.6, 55.5, 71.4, 59.3),
+while TNF4's **worst** run is 97.6 — the two sets do not overlap, and the gap
+between the competitor's best and our worst is 25.7 pp. Neither the mean nor the
+pass rate shows that; the five numbers do.
 
 ## Claim 2 — the mechanism is range
 
