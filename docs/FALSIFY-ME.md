@@ -60,21 +60,59 @@ while TNF4's **worst** run is 97.6 — the two sets do not overlap, and the gap
 between the competitor's best and our worst is 25.7 pp. Neither the mean nor the
 pass rate shows that; the five numbers do.
 
-## Claim 2 — the mechanism is range
+## Claim 2 — ~~the mechanism is range~~ **WITHDRAWN (W949): we do not know the mechanism**
 
-> TNF4 spans **14.6 binades** with 28 positive values at six bits; `fp6 e3m2` 8.8
-> with 31; `fp6 e2m3` 5.9 with 31. Under a max-rule scale the narrow grids zero
-> everything below 1.7 % (e2m3) or 0.22 % (e3m2) of the tensor peak.
+> ~~Under a max-rule scale the narrow grids zero everything below 1.7 % (e2m3) or
+> 0.22 % (e3m2) of the tensor peak, against TNF4's 0.0041 %.~~
 
-**Run it:** enumerate all 2⁶ codes through the shipped oracles
-(`conformance/tnf_ref.py`, `fp8_ref.py`) and take min/max of the positive values.
-Ten lines; no training.
+Those three thresholds are `min(grid)/max(grid)` — they assume the tensor peak is
+mapped onto the format's **largest representable value**. **Every training run in
+this project instead mapped the peak onto grid value 1.0**, and the grids peak at
+3072 (TNF4), 28 (`fp6 e3m2`) and 7.5 (`fp6 e2m3`). Under the convention actually
+used the thresholds are **12.50 %, 6.25 % and 12.50 %**: TNF4 zeroed **twice as
+much** as the competitor it beat, and held **7** usable levels against that
+competitor's **12** — and won 40/40 regardless.
 
-**This claim dies if:** the enumeration disagrees with those spans, **or** a
-narrow-grid failure is demonstrated with no underflow — i.e. the activation scale
-does not collapse in the failing runs. `stability_*.json` logs the per-epoch scales
-precisely so this can be checked: in every failure we recorded, the layer-2
-activation scale falls monotonically, e.g. 0.81 → 0.29 → 0.0065.
+**So the explanation is inverted by its own experiment and is withdrawn.** The
+grid spans (14.6 / 8.8 / 5.9 binades) are correct and reproducible in ten lines
+(`tri grid`). What is not established is that they are why TNF4 trains.
+
+**What replaces it:** nothing yet. That is the honest state, and the first thing an
+outside replication should attack.
+
+**This claim is already dead**; what would revive a range-based explanation is a
+demonstration that the failing runs underflow *under the convention they ran in* —
+`stability_*.json` logs the per-epoch scales, and in every failure the layer-2
+activation scale falls monotonically (0.81 → 0.29 → 0.0065), which is consistent
+with underflow but does not by itself identify the cause.
+
+## Claim 2a — the scaling convention decides the competitor, not us
+
+> Changing only the scale initialisation — `s = max|x|` → `s = max|x|/max(grid)` —
+> moves `fp6 e3m2` from **0/5 failures to 5/5** on MNIST. TNF4 moves **0.10 pp** and
+> fails nothing.
+
+**Run it:** `research/arxiv_tnf/scaleconv.py`, five seeds, three epochs. The
+`peak2one` arm must reproduce the W946 record (96.70) or the comparison is invalid.
+
+**This claim dies if:** TNF4 fails under any standard scale initialisation, **or**
+either fp6 grid is stable under both conventions on the same three tasks.
+
+## Claim 2b — and the advantage may not survive block scaling at all
+
+> At the OCP microscaling block size (**32**), on heavy-tailed activations: TNF4
+> zeroes **0.01 %** of values against `fp6 e2m3`'s 2.51 % — but TNF4's relative RMS
+> error is **3.46× worse**, and is the worst of the three six-bit grids at *every*
+> block size. The advantage is confined to **per-tensor scaling of heavy-tailed
+> data**, where `fp6 e2m3` zeroes 44 % and collapses.
+
+**Run it:** `research/arxiv_tnf/blockscale.py`. No training, no datasets.
+
+**This claim is the largest unmeasured threat to this project's result.** Every
+comparison here scales per tensor; the field deploys block-scaled MX formats at
+four to six bits. **No training run in this project has ever used a block scale.**
+If a replication trains `fp6 e2m3` at block 32 and it becomes stable, the surviving
+claim goes with it.
 
 ## Claim 3 — parity on cost
 
