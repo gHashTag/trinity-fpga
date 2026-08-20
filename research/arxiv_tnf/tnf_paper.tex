@@ -2988,17 +2988,18 @@ which carries its binade indices into the window the exponent field spans about
 unity. Among all members of $\mathcal{F}_N$ that
 represent it without overflow, the effective mantissa is maximised uniquely at
 \[
-  E_t^{*} = \bigl\lceil \log_3 (b+1) \bigr\rceil,
+  E_t^{*} = \max\!\left\{2,\,\bigl\lceil \log_3 (b+1) \bigr\rceil\right\},
   \qquad
-  M^{*} = N - 1 - \bigl\lceil \log_3 (b+1) \bigr\rceil .
+  M^{*} = N - 1 - E_t^{*} .
 \]
 \end{theorem}
 \begin{proof}
 Under centring the placement of the window is free and representability
 constrains only how many binades it must hold, so it requires $3^{E_t}-1 \ge b$,
-i.e.\ $E_t \ge \log_3(b+1)$, and
-$E_t$ is an integer, so $E_t \ge E_t^{*}$. By the width rule $M = N-1-E_t$ is
-strictly decreasing in $E_t$, so the constraint binds and the minimiser is unique.
+i.e.\ $E_t \ge \log_3(b+1)$. The family definition also imposes
+$E_t\ge2$, hence every admissible member has $E_t\ge E_t^{*}$. By the width rule
+$M = N-1-E_t$ is strictly decreasing in $E_t$, so the constraint binds at
+$E_t^{*}$ (provided that member exists) and the minimiser is unique.
 \end{proof}
 
 The centring hypothesis is not a formality, and it is the one place where this
@@ -3012,7 +3013,8 @@ $\Delta = (3^{E_t}-1)/2$. Representability then constrains
 $\max(|e_{\min}|,|e_{\max}|)$ rather than $b$, and the smallest admissible
 exponent width is
 \[
-  E_t^{\dagger} = \bigl\lceil \log_3\bigl(2\max(|e_{\min}|,|e_{\max}|)+3\bigr) \bigr\rceil
+  E_t^{\dagger} = \max\!\left\{2,\,\bigl\lceil
+  \log_3\bigl(2\max(|e_{\min}|,|e_{\max}|)+3\bigr) \bigr\rceil\right\}
   \;\ge\; E_t^{*},
 \]
 with equality exactly when the visited span is symmetric about unity.
@@ -3022,8 +3024,9 @@ The offset field takes the values $0 \dots 3^{E_t}-1$; the top row is reserved f
 the special value and the bottom for zero, leaving $3^{E_t}-2$ rows carrying
 binade indices offset by $\Delta$, hence the window $-(\Delta-1) \dots +(\Delta-1)$.
 Containment of the visited indices requires $\Delta-1 \ge \max(|e_{\min}|,|e_{\max}|)$,
-which rearranges to $3^{E_t} \ge 2\max(|e_{\min}|,|e_{\max}|)+3$ and gives
-$E_t^{\dagger}$ on taking the ceiling. Since
+which rearranges to $3^{E_t} \ge 2\max(|e_{\min}|,|e_{\max}|)+3$.
+Taking the ceiling and imposing the family constraint $E_t\ge2$ gives
+$E_t^{\dagger}$. Since
 $\max(|e_{\min}|,|e_{\max}|) \ge (b-1)/2$ we have $2\max+3 \ge b+2 > b+1$, so
 $E_t^{\dagger} \ge E_t^{*}$. For a span symmetric about unity,
 $e \in \{-k,\dots,k\}$, we have $b=2k+1$ and the two ceilings are
@@ -3056,8 +3059,8 @@ fixed about unity.
 \label{cor:topaligned}
 Let a scale carry the largest magnitude of the workload into the top representable
 binade, and let the workload visit $b$ binades. Then the smallest admissible
-exponent width is $\lceil \log_3(2b+1) \rceil$; it never falls below $E_t^{*}$ and
-exceeds it for $137$ of the first $200$ values of $b$. The positive half of the
+ exponent width is $\max\{2,\lceil \log_3(2b+1) \rceil\}$; it never falls below
+$E_t^{*}$ and exceeds it for $136$ of the first $200$ values of $b$. The positive half of the
 window, $\Delta-1$ binade indices, is unreachable by construction, and centring
 the scale instead of top-aligning it recovers $\log_3 2 = 0.6309$ trits of budget.
 \end{corollary}
@@ -3065,10 +3068,12 @@ the scale instead of top-aligning it recovers $\log_3 2 = 0.6309$ trits of budge
 \begin{proof}
 After scaling, the visited indices are $-(b-1) \ldots 0$. By
 Proposition~\ref{prop:uncentred} containment requires $\Delta - 1 \ge b-1$ with
-$\Delta = (3^{E_t}-1)/2$, that is $3^{E_t} \ge 2b+1$, giving the stated width.
+$\Delta = (3^{E_t}-1)/2$, that is $3^{E_t} \ge 2b+1$. Taking the ceiling and
+imposing $E_t\ge2$ gives the stated width.
 Since $2b+1 \ge b+1$ for $b \ge 0$ and the ceiling of $\log_3$ is non-decreasing,
-the width never falls below $E_t^{*} = \lceil\log_3(b+1)\rceil$; that it strictly
-exceeds it for $137$ of $b = 1 \ldots 200$ is by enumeration. The indices
+the width never falls below $E_t^{*} =
+\max\{2,\lceil\log_3(b+1)\rceil\}$; that it strictly exceeds it for $136$ of
+$b = 1 \ldots 200$ is by enumeration. The indices
 $+1 \ldots +(\Delta-1)$ receive no workload, so $\Delta$ of the $2\Delta-1$ usable
 rows carry values and the usable fraction $\Delta/(2\Delta-1)$ falls from
 $57.1\%$ at $E_t=2$ through $52.0\%$, $50.6\%$, $50.2\%$ to $1/2$. The budget
@@ -3099,7 +3104,7 @@ the workload visits $b$ costs
 \[
   R =
   \begin{cases}
-    \lceil\log_3(b'+1)\rceil - \lceil\log_3(b+1)\rceil \ \text{mantissa bits}, & b' > b,\\[2pt]
+    E_t^{*}(b') - E_t^{*}(b) \ \text{mantissa bits}, & b' > b,\\[2pt]
     \text{overflow on a set of measure } 1 - \tfrac{b'}{b}, & b' < b .
   \end{cases}
 \]
@@ -3108,7 +3113,7 @@ Both branches are non-negative as written.
 
 \begin{proof}
 By Theorem~\ref{thm:optimal} the trit budget needed to cover $b$ binades is
-$E_t^{*}(b) = \lceil\log_3(b+1)\rceil$, and the width rule $1 + E_t + M = N$ fixes
+$E_t^{*}(b) = \max\{2,\lceil\log_3(b+1)\rceil\}$, and the width rule $1 + E_t + M = N$ fixes
 the word, so at a fixed $N$ every trit spent on the exponent is a mantissa bit
 forgone, one for one. Sizing for $b' > b$ therefore spends
 $E_t^{*}(b') - E_t^{*}(b)$ trits that the visited range never uses, which is the
@@ -4703,9 +4708,21 @@ construction. The Fibonacci step contains no shifter at all.
 \begin{corollary}[Crossover with the multiplier]
 \label{cor:crossover}
 Since APoT area grows as $n^{d+1}$ while the multiplier's does not grow, there is
-a depth $d^{*}$ at which APoT costs what it was introduced to avoid. In the post-route estimate at
+a depth $d^{*}$ at which APoT costs what it was introduced to avoid. In the
+post-synthesis estimate of \texttt{research/block/SCALE\allowbreak\_FRONTIER\allowbreak\_2026-08-10.md}
+(yosys, XC7A200T primitives, DSP inference off; no place-and-route was run) at
 $W=32$, $n=2$: $d^{*}=2$, where APoT-8 costs 1217 LUTs against 1215.
 \end{corollary}
+\begin{proof}
+For a runtime-variable scale, Theorem~\ref{thm:shifter} gives one
+$\Theta(W\log W)$ barrel path per term, so the term count
+$n^{d+1}$ makes the APoT cost increase with $d$ while the multiplier cost is
+independent of $d$.  In the stated post-synthesis estimate the areas for
+$d=0,1,2$ are $384$, $659$, and $1217$ LUTs, respectively, against $1215$ LUTs
+for the multiplier.  The first two are below the multiplier and the third is
+above it; hence the first crossing is $d^{*}=2$.  The crossing depth is a
+property of that cost estimate, not of routed hardware.
+\end{proof}
 
 \begin{theorem}[No single winner]
 \label{thm:threevertex}
@@ -5096,7 +5113,7 @@ A format is stored in bits, and that difference is the whole of the slack.
 
 \begin{theorem}[Packed coverage]
 \label{thm:packedcov}
-A family member with $E_t$ trits of scale and $m$ bits of significand, realisable
+A packed format with $E_t$ trits of scale and $m$ bits of significand, realisable
 in $N$ bits, obeys $3^{E_t}2^{m} \le 2^{N-1}$. Relaxing $E_t$ to the real value
 $\log_3(b+1)$ gives
 \[
@@ -5178,13 +5195,16 @@ the design space once one asks what a competitor would have to do to escape.
 $\mathcal{F}_N$ contains a member dominating a format of effective mantissa $m$
 and range $b$ binades if and only if
 \[
-  m + \lceil \log_3 (b+1) \rceil \;\le\; N-1 .
+  m + \max\!\left\{2,\,\lceil \log_3 (b+1) \rceil\right\}
+  \;\le\; N-1 .
 \]
 \end{theorem}
 \begin{proof}
 A member $E_t$ has mantissa $N-1-E_t$ and range $3^{E_t}-1$. Domination requires
-$N-1-E_t \ge m$ and $3^{E_t}-1 \ge b$, i.e.\ $\lceil\log_3(b+1)\rceil \le E_t \le
-N-1-m$. Such an integer exists exactly when the stated inequality holds.
+$N-1-E_t \ge m$ and $3^{E_t}-1 \ge b$. Together with the family constraint
+$E_t\ge2$, this is
+$\max\{2,\lceil\log_3(b+1)\rceil\}\le E_t\le N-1-m$.
+Such an integer exists exactly when the stated inequality holds.
 \end{proof}
 
 \begin{theorem}[Position budget of a uniform format]
@@ -5210,8 +5230,8 @@ rate is the whole result.
 
 \begin{corollary}[The ternary exponent is the slack]
 \label{cor:slack}
-Every uniform binary format of width $N$ is dominated by a member of
-$\mathcal{F}_N$. The slack has two readings and they are not equal. In real
+Every uniform binary format of width $N$ with at least two exponent positions is
+dominated by a member of $\mathcal{F}_N$. The slack has two readings and they are not equal. In real
 positions, ignoring the integrality of the trit field,
 \[
   \Delta \;=\; E\,\bigl(1 - \log_3 2\bigr) \;=\; 0.3691\,E \quad\text{positions}.
@@ -5222,13 +5242,14 @@ In whole trits, which is what Theorem~\ref{thm:coverage} actually budgets,
   \;\le\; \Delta ,
 \]
 which is $0$ at $E \in \{1,2\}$ and strictly positive only from $E \ge 3$. So
-domination holds at every $E \ge 1$, but with a strictly positive margin only from
+domination holds for every $E \ge 2$, but with a strictly positive margin only from
 $E = 3$; the linear growth in the competitor's exponent width is a property of
 $\Delta$, not of $\Delta_{\mathbb{Z}}$.
 \end{corollary}
 \begin{proof}
-By Theorem~\ref{thm:budget}, $b+1 \le 2^E$ and $m \le N-1-E$. Then
-$m + \lceil\log_3(b+1)\rceil \le (N-1-E) + \lceil E\log_3 2\rceil
+By Theorem~\ref{thm:budget}, $b+1 \le 2^E$ and $m \le N-1-E$. For $E\ge2$,
+$\max\{2,\lceil\log_3(b+1)\rceil\}\le \lceil E\log_3 2\rceil$. Hence
+$m + \max\{2,\lceil\log_3(b+1)\rceil\} \le (N-1-E) + \lceil E\log_3 2\rceil
 = (N-1) - \Delta_{\mathbb{Z}}$, which satisfies Theorem~\ref{thm:coverage} since
 $\Delta_{\mathbb{Z}} \ge 0$ for every $E \ge 0$. Dropping the ceiling gives
 $m + \log_3(b+1) \le (N-1) - \Delta$, the real-position reading.
