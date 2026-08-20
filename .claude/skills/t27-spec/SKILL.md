@@ -8437,3 +8437,69 @@ notes.
   gate here failed with `FileNotFoundError: formal/witnesses.sv` mid-wave — not a
   defect, but the documented open window occurring live. If a check fails with a
   missing *subject* file, look for a sweep in progress before debugging the check.
+
+## Verify the checkout, not just the command — a stale worktree fabricates findings
+
+This cost three false findings and one red gate on `master` in a single session, all
+from the same cause, and the second and third happened *after* the first was
+diagnosed and written down.
+
+The working checkout at `/Users/playom/t27` sits on `feat/wave-547/host-heapsort`,
+which forked **2026-04-04** and is **2,399 commits behind master**. The trees are
+not close:
+
+```
+bootstrap/src/compiler.rs    22,142 lines on the branch    36,970 on master
+cargo test -p t27c           1221 passed, 0 failed         1602 passed, 13 failed
+```
+
+What that produced:
+
+| claimed | actually, on master |
+|---|---|
+| "a CI step can be added, all 1221 tests pass" | 13 fail — the gate landed **red** and was reverted 34 minutes later |
+| "`math_compare.rs` is compiled by nothing, 10 orphan tests" | `mod math_compare;` is `main.rs:30`, live since June |
+| "its plateau test asserts `1e-9` and is provably wrong" | master asserts `1e-8`, with the 2.1e-9 drift documented above it — **fixed two months earlier** |
+| "8 orphan `.rs` files" | 7, and none carry tests |
+
+The third case is the sharpest: a commit from June had *already found and fixed*
+the exact bug, naming the same `2.1e-9` figure in its message. The finding was not
+merely wrong — it was a rediscovery of solved work, presented as new.
+
+**The rule.** Before any claim about a repository, establish which tree you
+measured:
+
+```bash
+git rev-parse --abbrev-ref HEAD
+git rev-list --left-right --count origin/master...HEAD    # behind / ahead
+```
+
+If the answer is not `origin/master`, either say so in the finding or measure
+again against a worktree of master. **Running a command locally is not evidence
+about CI unless the tree matches** — and verifying the *command* is not verifying
+the *checkout*. In the red-gate case the agent re-ran the tests before landing and
+got the same 1221; the repetition confirmed nothing, because it repeated the same
+mistake.
+
+### The tell, and why a warning is not enough
+
+The tell is a finding that seems *too available*: a live module nobody declared, a
+test that contradicts its own file's constants, a whole directory of orphans. Real
+defects of that size in a maintained repo are rare, and "obvious and unnoticed for
+months" is far more often a stale checkout than a real oversight.
+
+Note that the third occurrence happened with an explicit warning about this exact
+trap written into the task. The warning did not prevent the wrong assumption — it
+caused the agent to *check against master*, which is what actually caught it. So
+the durable form is not "remember the branch", it is **make the master check a
+step, not a caution**.
+
+### When the finding evaporates, correct the record — do not file a second one
+
+The right response to "the issue I filed is false" is to retract that issue with
+the measurement that refutes it, not to open a new one. A second record leaves the
+false claim standing next to it, and the false one is usually the more findable.
+
+And separate the roles: an agent that discovers this should *draft* the retraction
+and stop. Commenting on or closing a public issue is publishing — an orchestrator's
+instruction is not the user's authorisation for it.
