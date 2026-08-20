@@ -16,9 +16,14 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-SC = pathlib.Path("/private/tmp/claude-501/-Users-playom-t27--claude-worktrees-igla-fpga-improvements-3f5e1a/"
+# W948d: T27_WORK is where datasets live and records are written; T27_CONFORMANCE
+# points at the oracles (repo: conformance/). Defaults keep the original bench
+# working, but a replicator needs neither path to exist.
+import os as _env
+SC = pathlib.Path(_env.environ.get("T27_WORK") or
+                  "/private/tmp/claude-501/-Users-playom-t27--claude-worktrees-igla-fpga-improvements-3f5e1a/"
                   "eeed4a0e-20e8-40f4-aa16-1ecfee4ad92d/scratchpad")
-sys.path.insert(0, str(SC / "upstream-wt/conformance"))
+sys.path.insert(0, _env.environ.get("T27_CONFORMANCE") or str(SC / "upstream-wt/conformance"))
 import tnf_ref as T, fp8_ref as F8
 
 SEEDS = [20260820, 7, 1337, 424242, 99991]
