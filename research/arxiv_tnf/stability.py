@@ -30,7 +30,10 @@ SEEDS = [20260820, 7, 1337, 424242, 99991]
 FORMATS = {"TNF4": (T, T.TNFFormat(2, 1), 6),
            "fp6e2m3": (F8, F8.FORMATS["fp6_e2m3"], 6),
            "fp6e3m2": (F8, F8.FORMATS["fp6_e3m2"], 6)}
-EPOCHS = 3
+# W949: the published copy had this hard-coded at 3 while the copy that produced
+# the 10- and 30-epoch records read it from the environment. FALSIFY-ME.md tells
+# a replicator to set EPOCHS; on the published rig that knob did not exist.
+EPOCHS = int(_env.environ.get("EPOCHS", "3"))
 
 
 def value_set(mod, fmt, bits):
@@ -96,16 +99,24 @@ class QLinear(nn.Linear):
             return nn.functional.linear(x, self.weight, self.bias)
         if not self._init:
             with torch.no_grad():
-                self.ws.fill_(float(self.weight.abs().max().clamp(min=1e-8)))
+                # W949: SCALE_RULE names the convention. peak2one maps the tensor
+                # peak onto grid value 1.0 -- what produced every record in this
+                # project, kept as the default so they stay reproducible. peak2max
+                # maps it onto the format's maximum, which is the standard max rule
+                # and the one the withdrawn range mechanism assumed. The two are not
+                # cosmetic: they move fp6 e3m2 from 0/5 failures to 5/5 (T798a).
+                _d = 1.0 if _env.environ.get("SCALE_RULE", "peak2one") == "peak2one" \
+                    else float(QLinear.vals.abs().max())
+                self.ws.fill_(max(float(self.weight.abs().max()) / _d, 1e-8))
                 # W947: a max-rule scale is the worst case for a narrow-range grid --
                 # fp6 e2m3 spans 5.9 binades against TNF4's 14.6, so under max
                 # scaling everything below 1.67 % of the peak underflows. A
                 # percentile init is the standard mitigation; INIT_PCT selects it.
                 if INIT_PCT is not None and x.numel():
                     v = float(np.quantile(np.abs(x.detach().numpy()), INIT_PCT))
-                    self.as_.fill_(max(v, 1e-8))
+                    self.as_.fill_(max(v / _d, 1e-8))
                 else:
-                    self.as_.fill_(float(x.abs().max().clamp(min=1e-8)) if x.numel() else 1.0)
+                    self.as_.fill_(max(float(x.abs().max()) / _d, 1e-8) if x.numel() else 1.0)
             self._init = True
         w = LSQ.apply(self.weight, self.ws.abs().clamp(min=1e-8), QLinear.vals)
         if QLinear.act_vals is not None:
@@ -159,8 +170,12 @@ def main():
     # on the same task+recipe write the same path, and the second silently
     # destroys the first -- two W948 records survived only because they had
     # already been copied into the repository under a wave-suffixed name.
-    p = SC / ("stability_" + __import__("os").environ.get("TASK", "mnist") + "_"
-              + (f"pct{INIT_PCT}" if INIT_PCT else "gs") + f"_{EPOCHS}ep.json")
+    # W949: the convention belongs in the name too -- peak2one and peak2max are
+    # different experiments (T798a), not different runs of one.
+    _pref = "stability_" if _env.environ.get("SCALE_RULE", "peak2one") == "peak2one" else "stability_p2m_"
+    _task = _env.environ.get("TASK", "mnist")
+    _rec = f"pct{INIT_PCT}" if INIT_PCT else "gs"
+    p = SC / f"{_pref}{_task}_{_rec}_{EPOCHS}ep.json"
     p.write_text(json.dumps(out, indent=1))
     print("\nWROTE " + str(p), flush=True)
 
