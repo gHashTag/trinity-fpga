@@ -140,5 +140,29 @@ if _tot:
             _s, _n = _tot[_fmt]
             check(f"успехов {_fmt} из {_n}", _s, _want, tol=0)
 
+# W949: the scaling convention is itself a recipe axis, and it is the one that
+# decides fp6 e3m2. Derived here rather than quoted, per T797.
+sc = rec("scaleconv_w949.json")
+if sc:
+    print("\n== конвенция масштаба (W949)")
+    for conv, want in (("peak2one", {"TNF4": 0, "fp6e2m3": 4, "fp6e3m2": 0}),
+                       ("peak2max", {"TNF4": 0, "fp6e2m3": 5, "fp6e3m2": 5})):
+        for fmt, w in want.items():
+            a = sc["runs"][conv][fmt]
+            check(f"{conv} {fmt}: отказов из {len(a)}", sum(1 for v in a if v < 60.0), w, tol=0)
+    check("peak2one воспроизводит запись W946 (TNF4)",
+          sum(sc["runs"]["peak2one"]["TNF4"]) / 5, 96.70, tol=0.02)
+
+bs = rec("blockscale_w949.json")
+if bs:
+    print("\n== блочный масштаб (W949)")
+    b32 = bs["res"]["acts_heavy"]["32"]
+    check("блок 32, тяж.хвост: TNF4 обнуляет, %", b32["TNF4"]["underflow"] * 100, 0.01, tol=0.005)
+    check("блок 32, тяж.хвост: e2m3 обнуляет, %", b32["fp6e2m3"]["underflow"] * 100, 2.51, tol=0.02)
+    check("блок 32: RMS TNF4 / RMS e2m3",
+          b32["TNF4"]["rel_rmse"] / b32["fp6e2m3"]["rel_rmse"], 3.47, tol=0.03)
+    bt = bs["res"]["acts_heavy"][str(bs["n"])]
+    check("на весь тензор: e2m3 обнуляет, %", bt["fp6e2m3"]["underflow"] * 100, 44.41, tol=0.05)
+
 print(f"\n  ИТОГ: сошлось {ok}, расхождений {bad}, пропущено блоков {skip}")
 sys.exit(1 if bad else 0)
