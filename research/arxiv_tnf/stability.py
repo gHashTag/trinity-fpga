@@ -150,7 +150,12 @@ def main():
             print(f"  {name:8} сид {seed:8}: точность {f['acc']*100:6.2f}%  "
                   f"масштабы активаций {f['act_scales']}  весов {f['w_scales']}", flush=True)
         QLinear.vals = QLinear.act_vals = None
-    p = SC / ("stability_" + __import__("os").environ.get("TASK","mnist") + "_" + (f"pct{INIT_PCT}" if INIT_PCT else "gs") + ".json")
+    # W948d: EPOCHS belongs in the name. Without it a 10-epoch and a 30-epoch run
+    # on the same task+recipe write the same path, and the second silently
+    # destroys the first -- two W948 records survived only because they had
+    # already been copied into the repository under a wave-suffixed name.
+    p = SC / ("stability_" + __import__("os").environ.get("TASK", "mnist") + "_"
+              + (f"pct{INIT_PCT}" if INIT_PCT else "gs") + f"_{EPOCHS}ep.json")
     p.write_text(json.dumps(out, indent=1))
     print("\nWROTE " + str(p), flush=True)
 
