@@ -9,7 +9,13 @@ command rather than an act of attention.
 import json, pathlib, sys
 import numpy as np
 
-R = pathlib.Path("/Users/playom/t27/.claude/worktrees/igla-fpga-improvements-3f5e1a/docs/reports/upstream")
+# W948d: this page exists so somebody else can refute the numbers, and a hard-coded
+# author path makes that impossible. Records sit beside this script (upstream:
+# research/arxiv_tnf/measurements/) or in the directory named by T27_RECORDS.
+import os
+R = pathlib.Path(os.environ.get("T27_RECORDS") or pathlib.Path(__file__).resolve().parent)
+if (R / "measurements").is_dir():
+    R = R / "measurements"
 ok = bad = skip = 0
 
 
