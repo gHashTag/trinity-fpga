@@ -29,6 +29,11 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 PAPER = ROOT / "research" / "arxiv_tnf" / "tnf_paper.tex"
 ANCHOR = "\\section{What this paper argues}"
 
+# Not every gate reads the paper. Those that check documents against the tree
+# need their defect injected into a document instead, so the harness carries a
+# second target and each case says which file it patches.
+SCRATCH_DOC = ROOT / "research" / "GATE_SELFTEST_SCRATCH.md"
+
 # gate -> text inserted before ANCHOR that the gate must reject.
 # Each defect is the smallest thing that gate exists to notice.
 CASES = {
@@ -44,6 +49,9 @@ CASES = {
     "check_latex_hygiene": (
         "A reference to \\ref{sec:does-not-exist-at-all} here.\n\n"
     ),
+    # Documents-against-the-tree gates: the defect goes in a scratch document
+    # that the harness creates and removes, never in a real one.
+    "check_doc_refs": None,
     "check_withdrawn_live": (
         "\\paragraph{Withdrawn.} The earlier claim of $77.31\\times$ is withdrawn: "
         "it was measured against the broken oracle.\n\n"
@@ -68,9 +76,34 @@ def main() -> int:
         print(f"FAIL: the injection anchor is not in {PAPER.name}; this file cannot test anything")
         return 1
 
+    # A gate that is ALREADY failing rejects anything you inject, so its
+    # "rejects its defect" verdict would mean nothing. Establish each gate's
+    # clean-tree state first and report the ones that cannot be tested rather
+    # than counting them as proven — the same distinction between "no boards"
+    # and "cannot tell" that this project keeps rediscovering.
+    already_red = [g for g in CASES if not run(g)]
+
     blind, noop = [], []
     try:
         for gate, defect in CASES.items():
+            if gate in already_red:
+                continue
+            if defect is None:
+                # A gate that reads documents rather than the paper: name a
+                # file that does not exist and require the gate to notice.
+                SCRATCH_DOC.write_text(
+                    "# Gate self-test scratch\n\n"
+                    "This document names `tools/a_file_that_does_not_exist.py`, which is\n"
+                    "the defect check_doc_refs exists to catch. The harness writes this\n"
+                    "file, runs the gate, and removes it.\n"
+                )
+                if not SCRATCH_DOC.is_file():
+                    noop.append(gate)
+                    continue
+                if run(gate):
+                    blind.append(gate)
+                SCRATCH_DOC.unlink(missing_ok=True)
+                continue
             patched = original.replace(ANCHOR, defect + ANCHOR, 1)
             if len(patched) <= len(original):
                 # The whole point: a silent no-op reads exactly like a pass.
@@ -82,10 +115,13 @@ def main() -> int:
             PAPER.write_text(original)
     finally:
         PAPER.write_text(original)
+        SCRATCH_DOC.unlink(missing_ok=True)
 
-    print(f"gates tested: {len(CASES)}")
+    print(f"gates tested: {len(CASES) - len(already_red)} of {len(CASES)}")
     for g in CASES:
-        if g in noop:
+        if g in already_red:
+            print(f"  {g}: UNTESTABLE — already failing on a clean tree")
+        elif g in noop:
             print(f"  {g}: INJECTION NO-OP")
         elif g in blind:
             print(f"  {g}: PASSED ITS OWN DEFECT")
@@ -98,6 +134,10 @@ def main() -> int:
     if blind:
         print(f"\nFAIL: {len(blind)} gate(s) accept the defect they exist to catch")
         return 1
+    if already_red:
+        print(f"\n{len(already_red)} gate(s) could not be tested because they are red")
+        print("on a clean tree. That is a finding about the tree, not about them —")
+        print("fix the tree, then this harness can say whether they work.")
     print("\nOK: every gate rejects the defect it exists to catch")
     return 0
 
