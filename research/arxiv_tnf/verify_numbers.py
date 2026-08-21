@@ -320,5 +320,31 @@ if cs:
           cs["tnf8_as_measured_11b"]["decoder_cells"] / cs["tnf8_ladder_10b"]["decoder_cells"],
           2.417, tol=0.01)
 
+# W964: accuracy at the ladder's TRUE eighth rung, three recipes.
+import glob as _glob
+_rung = {}
+for _f in sorted(R.glob("rung_w964_*.json")):
+    _d = json.loads(_f.read_text())
+    _rung[f"{_d['mode']}_b{_d['block']}"] = _d
+if _rung:
+    print("\n== точность настоящей восьмой ступени (W964)")
+    check("конфигураций", len(_rung), 3, tol=0)
+    _tot = 0
+    for _k, _d in _rung.items():
+        for _fmt, _per in _d["runs"].items():
+            _a = [t[-1]["acc"] for t in _per.values()]
+            _tot += len(_a)
+            check(f"{_k} {_fmt}: отказов", sum(1 for x in _a if x < 60.0), 0, tol=0)
+    check("прогонов всего", _tot, 45, tol=0)
+    for _k, _want, _t in (("computed_b0", -0.010, -0.20), ("computed_b32", -0.018, -0.48),
+                          ("learned_b0", 0.060, 0.89)):
+        _d = _rung[_k]
+        _t1 = np.array([t[-1]["acc"] for t in _d["runs"]["TNF8_true_10b"].values()])
+        _f1 = np.array([t[-1]["acc"] for t in _d["runs"]["fp10_e5m4"].values()])
+        _dd = _t1 - _f1
+        check(f"{_k}: TNF8−fp10, п.п.", float(_dd.mean()), _want, tol=0.002)
+        _se = _dd.std(ddof=1) / np.sqrt(len(_dd))
+        check(f"{_k}: t", float(_dd.mean() / _se), _t, tol=0.02)
+
 print(f"\n  ИТОГ: сошлось {ok}, расхождений {bad}, пропущено блоков {skip}")
 sys.exit(1 if bad else 0)
