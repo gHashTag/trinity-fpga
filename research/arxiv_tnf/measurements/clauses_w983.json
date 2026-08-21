@@ -1,0 +1,137 @@
+{
+ "wave": "W983",
+ "board": "1:5",
+ "idcode": "0x3636093",
+ "instrument": "tri clauses -- which on-die clauses survive synthesis as logic, and which fold to a constant",
+ "census_of_todays_sources": {
+  "gft_signed_dot4_jtag.v": {
+   "clauses": 4,
+   "folded": 0,
+   "real": [
+    "c_ann",
+    "c_can",
+    "c_com",
+    "c_non"
+   ]
+  },
+  "gft_signed_mac_jtag.v": {
+   "clauses": 4,
+   "folded": 1,
+   "folded_names": [
+    "c_zero"
+   ]
+  },
+  "gft_smul_jtag.v": {
+   "clauses": 4,
+   "folded": 2,
+   "folded_names": [
+    "c_zero",
+    "c_gold"
+   ]
+  },
+  "gft_dup_jtag.v": {
+   "clauses": 4,
+   "folded": 2,
+   "folded_names": [
+    "c_init",
+    "c_self"
+   ]
+  },
+  "gft_sadd_jtag.v": {
+   "clauses": 4,
+   "folded": 3,
+   "folded_names": [
+    "c_abs",
+    "c_gold",
+    "c_move"
+   ]
+  },
+  "gft_train1_jtag.v": {
+   "clauses": 4,
+   "folded": 3,
+   "folded_names": [
+    "c_asc",
+    "c_fix",
+    "c_mov"
+   ]
+  },
+  "gft_xorpercep_jtag.v": {
+   "clauses": 4,
+   "folded": 3,
+   "folded_names": [
+    "c_eta0",
+    "c_gold",
+    "c_non"
+   ]
+  },
+  "totals": {
+   "wrappers": 7,
+   "clauses": 28,
+   "folded": 14,
+   "real": 14
+  }
+ },
+ "why_they_fold": "T555 put live counters on the OPERANDS so no clause could be satisfied by a constant folded at synthesis. The COMPARISON folds too: a probe register nothing writes collapses to its INIT; two structurally identical instances with identical operands are MERGED, so comparing them is a tautology; and a clause whose operands are both constants is evaluated at compile time. A folded clause reads PASS in every build, including the failing ones.",
+ "what_it_reinterprets": {
+  "reinterpretable": "gft_sadd 1111, gft_train1 1111, gft_smul 1010, gft_dup 1101 -- their specs and wrappers are unchanged since the die reads",
+  "gft_sadd": "published as 'PASS -- 4 of 4 clauses on the die'. Really 1 of 1 MEASURED clause passed; three were constants.",
+  "gft_train1": "same shape: 1 of 1 measured.",
+  "gft_smul": "published as '2 of 4 fail'. Really 2 of 2 MEASURED clauses FAIL -- every clause that design actually evaluates on silicon is false.",
+  "NOT_reinterpretable": "gft_signed_mac 0011 was read against the PRE-W978 spec, where c_zero was real and false. Today's guard makes it fold. tri clauses describes today's sources and cannot be applied backwards across a source change."
+ },
+ "the_repair": {
+  "attempted_first": "(* keep *) on the probe register and the instances -- INSUFFICIENT. keep preserves the cell; opt still propagates the constant into the comparison.",
+  "what_worked": "the sources must be STRUCTURALLY DISTINCT and carry equal values: a second counter live2 with the same seed and step feeding the control instance, and a rotating probe register tested for a rotation-invariant property (!= 0).",
+  "verified": "tri clauses on the repaired wrapper: 4 clauses, 0 folded. LUT count rises 452 -> 696, which is itself the measure of how much logic the folding had been deleting."
+ },
+ "first_honest_four_clause_reads": {
+  "netlist": "696 LUT, 160 CARRY4 -- IDENTICAL in all three builds; only the placement differs",
+  "reads": [
+   {
+    "seed": 1,
+    "chain": 2,
+    "site": 2,
+    "word": "0xa5a5353f",
+    "clauses": "1111",
+    "c_init": 1,
+    "c_self": 1,
+    "c_comm": 1,
+    "c_ind": 1,
+    "ok": 1,
+    "verdict": "PASS"
+   },
+   {
+    "seed": 42,
+    "chain": 4,
+    "site": 4,
+    "word": "0xa5a53526",
+    "clauses": "1001",
+    "c_init": 1,
+    "c_self": 0,
+    "c_comm": 0,
+    "c_ind": 1,
+    "ok": 0,
+    "verdict": "FAIL"
+   },
+   {
+    "seed": 7,
+    "chain": 1,
+    "site": 1,
+    "word": "0xa5a5352e",
+    "clauses": "1011",
+    "c_init": 1,
+    "c_self": 0,
+    "c_comm": 1,
+    "c_ind": 1,
+    "ok": 0,
+    "verdict": "FAIL"
+   }
+  ],
+  "the_finding": "THE CONTROL FAILS. c_self compares two instances of the same function with the SAME operand order, fed by two counters that step identically -- and it is false at seeds 42 and 7. At seed 7 the control fails while the commutativity clause PASSES.",
+  "consequence": "the failure is not about operand order and never was. Two instances of one function disagree, whichever operands they get. Commutativity was the framing only because the identical-operand control had been folded to a constant and could not contradict it.",
+  "cleaner_statement": "one netlist, three placements, three different answers, with every clause now real -- which is what 'place-and-route is not function-preserving' should have meant all along, and it needs no commutativity argument."
+ },
+ "environment": {
+  "web_search": "unavailable all session (model-config error); competitor work analytic only"
+ }
+}
