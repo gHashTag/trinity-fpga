@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+# W968: this rig bound the name TNF8 to TNFFormat(4, 3) -- 11 bits, 126.91 binades,
+# which is TNF16's exponent field with a truncated mantissa and NOT the ladder's
+# eighth rung. The ladder defines rung 8 as TNFFormat(3, 4): 10 bits, 30.95 binades.
+# Corrected below. The records this rig produced are marked with _format_note and
+# superseded by census_tnf8_w963.json and rung_w964_*.json.
 """W943: does the 4-bit result hold on a convolutional network?
 
 Every accuracy claim in this project comes from MLPs. Convolutions change both the
@@ -22,7 +27,7 @@ FORMATS = {
     "TNF4": (T, T.TNFFormat(2, 1), 6),
     "fp4e2m1": (F8, F8.FORMATS["fp4_e2m1"], 4),
     "GF4": (G, G.FORMATS["gf4"], 4),
-    "TNF8": (T, T.TNFFormat(4, 3), 11),
+    "TNF8": (T, T.TNFFormat(3, 4), 10),
     "fp8e4m3": (F8, F8.FORMATS["fp8_e4m3"], 8),
     "posit8": (P, P.FORMATS["posit8"], 8),
 }
