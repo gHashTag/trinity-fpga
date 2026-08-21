@@ -1,0 +1,56 @@
+{
+ "TNF16_v1research_17b": {
+  "width": 17,
+  "values": 129025,
+  "binades": 127.0,
+  "odd_bits": 10,
+  "max_shift": 135,
+  "aligned": 290,
+  "label": "TNF16 v1-research (4,9)"
+ },
+ "TNF16_v2spec_19b": {
+  "width": 19,
+  "values": 516097,
+  "binades": 127.0,
+  "odd_bits": 12,
+  "max_shift": 137,
+  "aligned": 298,
+  "label": "TNF16 v2-spec (4,11)"
+ },
+ "fp17_e6m10": {
+  "width": 17,
+  "values": 131071,
+  "binades": 73.0,
+  "odd_bits": 11,
+  "max_shift": 72,
+  "aligned": 166,
+  "label": "fp17 e6m10 (\u0448\u0438\u0440\u0438\u043d\u0430)"
+ },
+ "fp19_e6m12": {
+  "width": 19,
+  "values": 524287,
+  "binades": 75.0,
+  "odd_bits": 13,
+  "max_shift": 74,
+  "aligned": 174,
+  "label": "fp19 e6m12 (\u0448\u0438\u0440\u0438\u043d\u0430)"
+ },
+ "fp17_e7m9": {
+  "width": 17,
+  "values": 131071,
+  "binades": 136.0,
+  "odd_bits": 10,
+  "max_shift": 135,
+  "aligned": 290,
+  "label": "fp17 e7m9 (\u0434\u0438\u0430\u043f\u0430\u0437\u043e\u043d)"
+ },
+ "fp19_e7m11": {
+  "width": 19,
+  "values": 524287,
+  "binades": 138.0,
+  "odd_bits": 12,
+  "max_shift": 137,
+  "aligned": 298,
+  "label": "fp19 e7m11 (\u0434\u0438\u0430\u043f\u0430\u0437\u043e\u043d)"
+ }
+}
