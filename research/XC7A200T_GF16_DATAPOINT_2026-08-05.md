@@ -11,7 +11,7 @@
 | Source | Part | Package |
 |---|---|---|
 | arXiv:2606.05017 abstract | XC7A**35T** | Arty |
-| `t27/docs/arxiv-submission/trinity-gf16.tex` body + table | XC7A**100T** | QMTECH FGG676 |
+| `gHashTag/t27/docs/arxiv-submission/trinity-gf16.tex` body + table | XC7A**100T** | QMTECH FGG676 |
 | **This work (2026-08-05)** | XC7A**200T** | ALINX AX7203 FBG484 |
 
 The paper's own abstract and body disagree; this adds a third, independently
@@ -21,7 +21,7 @@ the two *kinds* of frequency below.
 ## 2. The unstated distinction: bare-core combinational Fmax vs routed-wrapper Fmax
 
 The paper's headline **323 MHz** is the **combinational** max-frequency of the bare
-`gf16` core, measured against a ripple-counter probe clock (`trinity-gf16.tex`:
+`gf16` core, measured against a ripple-counter probe clock (`gHashTag/t27/docs/arxiv-submission/trinity-gf16.tex`:
 *"Max frequency for clock 'chain[19]': 323.31 MHz"*). That is a valid but specific
 measurement — a purely combinational multiply has no register-to-register path, so
 the "frequency" is `1 / (combinational delay)` exposed via a probe counter.
@@ -83,7 +83,7 @@ A branch survey (2026-08-05) shows this data point slots into existing, unlanded
   multiplier does not route on this Artix-7 (routing failure)"* — which **corroborates
   the 27.55 MHz / routing-margin finding here**. This work supplies the missing piece:
   **on-silicon UART conformance readback vs the golden oracle** (GF16 5/5, GF8 5/5).
-- **`trinity-fpga/docs/arxiv_v2_table.tex`** already has the **bare per-op** XC7A200T
+- **`docs/arxiv_v2_table.tex`** already has the **bare per-op** XC7A200T
   yosys+abc9 LUT numbers (GF16 mul 132 LUT, gf_mul 294 LUT/1 DSP). The **541 LCs**
   here is the **wrapped** `gf16_mul_ax7203` top (core + UART FSM + STARTUPE2) — a
   different, complementary figure. Label them distinctly.

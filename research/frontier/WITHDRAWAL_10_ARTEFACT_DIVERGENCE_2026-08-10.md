@@ -6,7 +6,7 @@ Found by continuing withdrawal 9's systematic sweep into the silicon numbers.
 
 | artefact | Et | M | word | binades | source |
 |---|---:|---:|---:|---:|---|
-| oracle / SSOT | 6 | 9 | **20 bits** | 729 | `formats_catalog.t27`, `tnf_ref.py` |
+| oracle / SSOT | 6 | 9 | **20 bits** | 729 | `gHashTag/t27/specs/numeric/formats_catalog.t27`, `tnf_ref.py` |
 | RTL | 4 | 8 | **16 bits** | 81 | `fpga/tnet/bnf_decode.v` |
 
 One label, two formats. The paper's accuracy figures describe the 20-bit one and

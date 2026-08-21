@@ -95,7 +95,7 @@ If any of those three lines is missing, the v3 claims do not hold. The make targ
 This is the most important number in the v3 update and the one most likely to be misread. Two counts coexist:
 
 - **84 format-instances** across the 15 oracle modules (§1). This is the engineering count: "how many decode/add/mul implementations exist."
-- **72 / 83 catalog formats** covered (the new headline number). This is the *paper* count: "how many of the 83 strict rows in `formats_catalog.t27` have at least one oracle."
+- **72 / 83 catalog formats** covered (the new headline number). This is the *paper* count: "how many of the 83 strict rows in `gHashTag/t27/specs/numeric/formats_catalog.t27` have at least one oracle."
 
 The gap (83 − 72 = **11**) is structural, not a defect. The 11 missing rows are:
 - parametric / block-scaled containers that have no single `S:E:M` decode law (e.g. MXFP block-scale wrappers themselves, where the *element* is in the catalog but the *block* is a layout),
@@ -246,7 +246,7 @@ Update the `paper.bib` self-citation note (currently line 150: *"The 83-format c
 | 89 MUL files | `ls conformance/vectors/*_mul.json \| wc -l` | 89 ✓ |
 | 79 SUB files | `ls conformance/vectors/*_sub.json \| wc -l` | 79 ✓ |
 | 2,426,879 vectors | sum of `len(vectors)` across all 287 JSONs | 2,426,879 ✓ |
-| 72/83 catalog coverage | decode-law rows in `formats_catalog.t27` with a matching `*_ref.FORMATS` key | 72 ✓ |
+| 72/83 catalog coverage | decode-law rows in `gHashTag/t27/specs/numeric/formats_catalog.t27` with a matching `*_ref.FORMATS` key | 72 ✓ |
 | 11 structural gaps | 83 − 72 | 11 ✓ |
 | 7/7 cross-validation | `make repro` summary line | 7/7 PASS ✓ |
 | 5 make targets exist | grep `^(oracle\|repro\|bench\|lut\|vectors):` in Makefile | 5 ✓ |

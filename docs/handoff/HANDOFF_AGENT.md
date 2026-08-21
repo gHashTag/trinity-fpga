@@ -28,7 +28,7 @@
 ### SW-axis (t27 master `6c704801`)
 - **bitexact: 75** / selfconsistent: **0** / structural: **8** = **83**
 - Horizon-A **TERMINAL** — 8 structural have no decode law (impossible).
-- INDEX: `conformance/vectors/INDEX_all_formats.json`
+- INDEX: `gHashTag/t27/conformance/vectors/INDEX_all_formats.json`
 
 ### HW Tier-E (#137 comments on issue #199)
 - **decode-HW unique: 47** (41 original + gf16/4/6/8/20/12-decode)

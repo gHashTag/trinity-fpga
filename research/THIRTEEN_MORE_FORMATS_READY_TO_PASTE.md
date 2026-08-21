@@ -160,12 +160,12 @@ python3 research/gen_conformance_pack.py                # lists all 84 oracles
 python3 research/gen_conformance_pack.py tekum16        # generates one pack
 ```
 
-Compare against `conformance/vectors/INDEX_all_formats.json` — in the **`t27`** repository, not this one —
+Compare against `gHashTag/t27/conformance/vectors/INDEX_all_formats.json` — in the **`t27`** repository, not this one —
 `total_formats: 83`, `total_packs: 83`, kinds `75 bitexact + 8 structural`. The twelve
 packs with no oracle in this generator are the eight structural ones, which carry no
 vectors by definition, plus `mxfp8`, `gf8_bfp`, `gf_lns_hybrid` and `per_channel_scale`.
 
-Those four were traced: the index's `source` field names **`gen_all_formats.py`**,
+Those four were traced: the index's `source` field names **`gHashTag/t27/conformance/vectors/gen_all_formats.py`**,
 which produced **68 of the 83** published packs and lives in `t27` at
 `conformance/vectors/`. That is the corpus's primary generator.
 `gen_conformance_pack.py` — the tool above — produced **none** of the published packs

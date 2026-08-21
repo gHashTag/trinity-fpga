@@ -14,10 +14,10 @@ decode** (the tapered formats' dominant cost).
 
 | Rung | Et trits | exp values | range (dec) | M bits | adder LCs (yosys, -nodsp) [measured] | spec | status |
 |------|:--:|:--:|:--:|:--:|:--:|------|--------|
-| **GF-T4**  | 2 | 9 | ~2.4 | 1 | **122** | `t27/specs/numeric/gft4.t27` | [spec] ✅ |
-| **GF-T8**  | 3 | 27 | ~8 | 4 | **252** | `t27/specs/numeric/gft8.t27` | [spec] ✅ |
-| **GF-T16** | 4 | 81 | ~24 | 9 | **461** (vs tekum16 ~480–650 est.) | `t27/specs/numeric/gft16.t27` + oracle `conformance/gft16_ref.py` | **[measured] beats tekum16** |
-| **GF-T32** | 6 | 729 | ~219 | 25 | **1618** | `t27/specs/numeric/gft32.t27` | [spec] ✅ |
+| **GF-T4**  | 2 | 9 | ~2.4 | 1 | **122** | `gHashTag/t27/specs/numeric/gft4.t27` | [spec] ✅ |
+| **GF-T8**  | 3 | 27 | ~8 | 4 | **252** | `gHashTag/t27/specs/numeric/gft8.t27` | [spec] ✅ |
+| **GF-T16** | 4 | 81 | ~24 | 9 | **461** (vs tekum16 ~480–650 est.) | `gHashTag/t27/specs/numeric/gft16.t27` + oracle `conformance/gft16_ref.py` | **[measured] beats tekum16** |
+| **GF-T32** | 6 | 729 | ~219 | 25 | **1618** | `gHashTag/t27/specs/numeric/gft32.t27` | [spec] ✅ |
 
 All GF-T adders synthesize with **0 DSP48** (soft-logic). GF-T16 at **461 LC** is
 already below tekum16's estimated 480–650 LC — and carries no regime decode.

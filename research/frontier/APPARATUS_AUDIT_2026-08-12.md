@@ -29,7 +29,7 @@ report.
 
 `Max frequency for clock 'chain[19]': 323.31 MHz` is the reciprocal of the longest
 posedge-to-posedge path on `chain[19]` — the output of a 20-stage LUT1 inverter ring the test
-wrapper instantiates. Verified directly in `t27/fpga/vivado/gf16_matmul4x4_top.v`:
+wrapper instantiates. Verified directly in `gHashTag/t27/fpga/vivado/gf16_matmul4x4_top.v`:
 
 ```verilog
  6:  (* KEEP = "TRUE" *) wire osc;
@@ -42,8 +42,8 @@ wrapper instantiates. Verified directly in `t27/fpga/vivado/gf16_matmul4x4_top.v
 ```
 
 That `always` block is the design's **only** sequential statement. The GF16 arithmetic contains no
-clocked logic at all — `grep -c posedge` over `gf16_mul.v`, `gf16_add.v`, `gf16_dot4.v`,
-`gf16_matmul4x4.v` returns **0, 0, 0, 0**.
+clocked logic at all — `grep -c posedge` over `gf16_mul.v`, `gf16_add.v`, `gHashTag/t27/fpga/vivado/gf16_dot4.v`,
+`gHashTag/t27/fpga/vivado/gf16_matmul4x4.v` returns **0, 0, 0, 0**.
 
 ### GF16 is not in the netlist that produced the bitstream
 
@@ -76,7 +76,7 @@ Sensitivity of the published number to the apparatus is 100 %, to GF16 exactly 0
 This also explains a tell that was visible without any of the above: three designs whose claimed
 sizes differ by 62x report 330 / 322 / 323 MHz — a 2.5 % spread. **A real critical path cannot be
 invariant to a 62x size change.** The same ring and counter appear character-for-character in
-`gf16_top.v` and `gf16_matmul_top.v`.
+`gHashTag/t27/fpga/vivado/gf16_top.v` and `gHashTag/t27/fpga/vivado/gf16_matmul_top.v`.
 
 ## What this retracts, and what it does not
 
@@ -85,8 +85,8 @@ it, and `research/XC7A200T_GF16_DATAPOINT_2026-08-05.md` §2 and
 `research/THREE_PAPER_UPDATE_2026-08-08.md` both state the ring probe, the constant-fed tops and
 the ~54-cell netlist, and prescribe replacement wording.
 
-**The correction was never applied to the paper.** `t27/docs/arxiv-trinity-gf16-draft.md` and
-`docs/arxiv-submission/trinity-gf16.tex` still carry it, last touched by `56e73bde9` (2026-07-04)
+**The correction was never applied to the paper.** `gHashTag/t27/docs/arxiv-trinity-gf16-draft.md` and
+`gHashTag/t27/docs/arxiv-submission/trinity-gf16.tex` still carry it, last touched by `56e73bde9` (2026-07-04)
 — which was itself an honesty pass ("FPGA-synth instead of 'verified on silicon'") that the Fmax
 claim survived:
 

@@ -69,7 +69,7 @@
 ## 8. Активы для подачи (ссылки)
 
 - Линия TRI-NET: `gHashTag/tt-trinity-phi`, `…-euler`, `…-gamma`, `…-corona` (RTL + методология).
-- Каталог-SSOT: `gHashTag/t27` (PR #1028, `specs/numeric/formats_catalog.t27`).
+- Каталог-SSOT: `gHashTag/t27` (PR #1028, `gHashTag/t27/specs/numeric/formats_catalog.t27`).
 - FPGA-conformance (реальные измерения): `gHashTag/trinity-fpga`.
 - arXiv (архив формата): 2606.05017; DOI архивации: 10.5281/zenodo.19227877.
 - Контакт: admin@t27.ai, ORCID 0009-0008-4294-6159.

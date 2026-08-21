@@ -25,7 +25,7 @@ there is now an executable check behind it.
 | `e = round((N-1)/φ²)` generates the family | **17/17** catalogued widths satisfy it, recomputed at 60-digit precision against the oracle's own parameters | `phi_rule_verification.t27` |
 | Lucas-exact accumulator at 500 digits, n = 1…256 | **256/256**, worst residue at the representation floor (relative 1e-499 against magnitude 1e107) | `lucas_exact_verification.t27` |
 | packs cross-validated against ml_dtypes 0.5.4 | **66,224 codes, 0 divergences** — and *exhaustive*, not sampled, on every format both sides implement | `ml_dtypes_crossval.t27` |
-| each pack carries a SHA-256 fingerprint | **83 present**, in `INDEX_all_formats.json`, one per pack | correction package §2.2 |
+| each pack carries a SHA-256 fingerprint | **83 present**, in `gHashTag/t27/conformance/vectors/INDEX_all_formats.json`, one per pack | correction package §2.2 |
 | "no per-rung superiority claim" (Paper A) | holds throughout; nothing measured here contradicts it | — |
 
 ## 2. Verified, and NOT in either paper — the under-claimed set

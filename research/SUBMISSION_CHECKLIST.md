@@ -97,7 +97,7 @@ both.
 Checked and found correct, listed so nobody re-opens them:
 
 - The **83 vs 84** count. The v2 replacement corrected **both the title and the
-  abstract**; `ERRATA_2026-06-14.md` is complete and honest. Nothing left to do.
+  abstract**; `gHashTag/t27/ERRATA_2026-06-14.md` is complete and honest. Nothing left to do.
 - **ml_dtypes 0.5.4** — the version string is correct and the cross-validation
   reproduces against it exactly (66,224 codes, 0 divergences).
   *(P3109's version was listed here as fine until pass 69 established it is not —
@@ -401,7 +401,7 @@ does not survive.**
 | `takum16` | 3 | **exactly 0** |
 
 The published vectors are logarithmically correct. `conformance/takum_ref.py` *is* a
-linear model and says so — that part stands — but `gen_all_formats.py`, which generated
+linear model and says so — that part stands — but `gHashTag/t27/conformance/vectors/gen_all_formats.py`, which generated
 these packs, does not use it. (That generator lives in **`t27`** at `conformance/vectors/`, not in this
 repository — worth saying, because a reader will otherwise look for it here.)
 
@@ -569,7 +569,7 @@ following that pointer would have hit are fixed and merged (#1576, #1578, #1582,
   `/home/user/workspace` — these are the files honesty rule #10 points a sceptic at,
   and running one is the first thing an auditor does;
 - CI demanded an erratum the v2 replacement had already made, on every run;
-- `cocotb_ref_model.py` **could not be imported at all**.
+- `gHashTag/t27/scripts/cocotb_ref_model.py` **could not be imported at all**.
 
 Regeneration now reproduces the committed corpus exactly — 83/83 digests unchanged —
 and a new gate locks the index against the packs it summarises.

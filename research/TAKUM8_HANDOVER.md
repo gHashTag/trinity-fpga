@@ -66,7 +66,7 @@ of zeros.
 
 ## To deliver it
 
-Target: `gHashTag/t27`, path `conformance/vectors/takum8_conformance_v0.json`, branch
+Target: `gHashTag/t27`, path `gHashTag/t27/conformance/vectors/takum8_conformance_v0.json`, branch
 off `master`.
 
 Open it as a **pull request, not a direct push**. This changes published conformance

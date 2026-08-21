@@ -118,5 +118,5 @@ for uniform high precision and a cheaper ternary datapath.
 - Energy/area superiority on ternary is an **architectural argument** (no regime
   decode + native ternary exp), not yet a synthesized number — no ternary process
   exists to synthesize on. The accuracy win above IS measured.
-- Spec: `t27/specs/numeric/gft16.t27`. Oracle sweep reproducible from the
+- Spec: `gHashTag/t27/specs/numeric/gft16.t27`. Oracle sweep reproducible from the
   measurement script in this session.

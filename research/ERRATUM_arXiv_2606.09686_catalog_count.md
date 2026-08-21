@@ -2,7 +2,7 @@
 
 **Article:** *An 84-Format Numeric Catalog with Bit-Exact Conformance Vectors: A Vendor-Neutral Reference for FP8, BF16, MXFP4, and Microscaling Formats*, D. Vasilev, [arXiv:2606.09686](https://arxiv.org/abs/2606.09686), submitted 2026-06-08.
 **Type of correction:** correctness (format count) — blocks HW-replay reinforcement until release.
-**SSOT:** `specs/numeric/formats_catalog.t27` (repo gHashTag/t27, master branch).
+**SSOT:** `gHashTag/t27/specs/numeric/formats_catalog.t27` (repo gHashTag/t27, master branch).
 **Verified:** 2026-07-04 — direct count `grep -c "// CATALOG: id="` = **83**, no duplicate ids; exactly **13** families (clusters).
 
 ---
@@ -14,7 +14,7 @@
 | Number of formats | **84** | **83** |
 | Number of families | 13 | 13 ✓ (matches) |
 
-The v1 title and abstract state "catalog of **84** numeric formats spanning 13 families". The current SSOT `formats_catalog.t27` contains **83** `// CATALOG:` records without duplicates. The families (clusters) match — the discrepancy is only in the number of formats, delta = 1.
+The v1 title and abstract state "catalog of **84** numeric formats spanning 13 families". The current SSOT `gHashTag/t27/specs/numeric/formats_catalog.t27` contains **83** `// CATALOG:` records without duplicates. The families (clusters) match — the discrepancy is only in the number of formats, delta = 1.
 
 ## 2. Root of the delta 84 → 83 [established]
 
@@ -34,7 +34,7 @@ The most likely reason for the number 84 in v1 is counting E8M0 block scale as a
 1. **Title:** "An **84**-Format Numeric Catalog …" → "An **83**-Format Numeric Catalog …".
 2. **Abstract:** "a catalog of **84** numeric formats spanning 13 families" → "a catalog of **83** numeric formats spanning 13 families".
 3. **All occurrences of "84" in the body of the article** referring to the catalog size → **83**. The number of families (13) does not change.
-4. Add a footnote: "E8M0 block scale is covered by a dedicated conformance pack but is enumerated as the shared-exponent component of the Microscaling family, not as a standalone catalog row; the canonical catalog size defined by `formats_catalog.t27` is 83."
+4. Add a footnote: "E8M0 block scale is covered by a dedicated conformance pack but is enumerated as the shared-exponent component of the Microscaling family, not as a standalone catalog row; the canonical catalog size defined by `gHashTag/t27/specs/numeric/formats_catalog.t27` is 83."
 
 ## 4. What does NOT change
 
@@ -48,7 +48,7 @@ The most likely reason for the number 84 in v1 is counting E8M0 block scale as a
 
 ## EN version (for arXiv erratum / v2 comment)
 
-**Erratum (v2).** The v1 title and abstract state a catalog of *84 numeric formats spanning 13 families*. The single source of truth `specs/numeric/formats_catalog.t27` (repo gHashTag/t27, master) contains **83** catalog records with no duplicate ids; the family count (13) is unchanged. The discrepancy of one arises from counting the **E8M0 block scale** as a standalone format: E8M0 is the shared-exponent component of the Microscaling family (mxfp4/6/8), covered by its own conformance pack, but not enumerated as a standalone catalog row. The canonical catalog size is therefore **83**. All occurrences of "84" referring to the catalog size are corrected to **83**; the six conformance packs (including the E8M0 pack) and the φ²+φ⁻²=3 anchor identity are unchanged.
+**Erratum (v2).** The v1 title and abstract state a catalog of *84 numeric formats spanning 13 families*. The single source of truth `gHashTag/t27/specs/numeric/formats_catalog.t27` (repo gHashTag/t27, master) contains **83** catalog records with no duplicate ids; the family count (13) is unchanged. The discrepancy of one arises from counting the **E8M0 block scale** as a standalone format: E8M0 is the shared-exponent component of the Microscaling family (mxfp4/6/8), covered by its own conformance pack, but not enumerated as a standalone catalog row. The canonical catalog size is therefore **83**. All occurrences of "84" referring to the catalog size are corrected to **83**; the six conformance packs (including the E8M0 pack) and the φ²+φ⁻²=3 anchor identity are unchanged.
 
 ---
 

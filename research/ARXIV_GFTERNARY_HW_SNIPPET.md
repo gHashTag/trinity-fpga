@@ -42,4 +42,4 @@ GFTERNARY \texttt{corona\_gfternary\_mul} $\{-\varphi,0,+\varphi\}$ & 1 mul & 2 
 > not a ternary-arithmetic cost result; the balanced-ternary core (0 DSP, 398 LC
 > for 32 MACs) is the ternary-hardware reference."
 
-Backing data: `trinity-fpga/research/GFTERNARY_vs_BALANCED_TERNARY_HW_2026-08-05.md`.
+Backing data: `research/GFTERNARY_vs_BALANCED_TERNARY_HW_2026-08-05.md`.

@@ -160,7 +160,7 @@ Not "increase TOPS in general", but **what exactly we tune after Wave-27** in or
 | Area cost (16 PE cluster) | +0.17 mm² (LUT) + 0.05 mm² (BitROM) | scales in reticle TTIHP27 |
 | Power cost | ~+5 mW (LUT) − 22 mW (BitROM ROM vs SRAM) = **−17 mW NET** | win-win |
 | R-SI-1 (zero `*`) | ✅ preserved | LUT = shifts+ROM; BitROM = transistor read |
-| R-SI-1 spec Qed | ✅ requires extending the `holo_op` alphabet in `coq/IGLA/RMarker.v` | Lane Z already proved the pattern |
+| R-SI-1 spec Qed | ✅ requires extending the `holo_op` alphabet in `gHashTag/t27/coq/IGLA/RMarker.v` | Lane Z already proved the pattern |
 | R7 falsification witness | "Stack fails if W28-G1 silicon < 100 TOPS/W" | pre-register now |
 | Beats which rival | Loihi 3 (15) ×10 · NorthPole (>10) ×15 · BitROM standalone (20.8) ×7 · Hailo (8–16) ×9–18 | edge inference category |
 | Wave assignment | **L-DPC25 ONE SHOT** Lanes V (LUT PE), W (BitROM bank), X (Coq spec ext) | three-lane Wave-28 |

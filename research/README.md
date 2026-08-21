@@ -46,7 +46,7 @@ Run from the repository root.
 | `verify_oracle_exactness.py` | all 12 uncaveated oracles return exact carriers | 0 |
 | `verify_extended_expansion.py` | `double_double` and `quad_double` hold non-overlap | 0 |
 | `verify_quire_associativity.py` | locates the documented boundary; not a defect report | 0 |
-| `gen_conformance_pack.py` | two modes. **With no argument** it lists its oracle set: `84 formats with a golden oracle:` followed by the names. **With a format name** it derives one candidate pack: `OK <fmt> mode=… n=… decode_errors=0 sha256=…`. It does **not** reproduce the published corpus — 68 of the 83 packs came from `gen_all_formats.py`, which lives in `t27` at `conformance/vectors/`, and this tool made none of them. | 0 |
+| `gen_conformance_pack.py` | two modes. **With no argument** it lists its oracle set: `84 formats with a golden oracle:` followed by the names. **With a format name** it derives one candidate pack: `OK <fmt> mode=… n=… decode_errors=0 sha256=…`. It does **not** reproduce the published corpus — 68 of the 83 packs came from `gHashTag/t27/conformance/vectors/gen_all_formats.py`, which lives in `t27` at `conformance/vectors/`, and this tool made none of them. | 0 |
 | `verify_arithmetic_invariants.py` | commutativity etc. across families; **slow** — see below | 0 |
 | `verify_wide_arithmetic.py` | all six laws over 16 GoldenFloat widths through gf1024; `violations: 0` in ~1 s | 0 |
 

@@ -78,7 +78,7 @@ is not, and is not claimed to be, a floating-point accuracy theorem.
 
 ### 2.5 The 83-format catalog
 
-The single source of truth is `formats_catalog.t27` in the gHashTag/t27
+The single source of truth is `gHashTag/t27/specs/numeric/formats_catalog.t27` in the gHashTag/t27
 repository: 83 formats in 13 families. Of these, **72 of 83** carry an
 independent exact-arithmetic conformance oracle (15 reference modules emitting
 bit-exact ADD/MUL vectors); the remaining 11 are structural-by-design
@@ -506,7 +506,7 @@ proliferating low-precision-format space.
 - Accuracy CSV: `research/format_accuracy_results.csv`
 - LUT comparison: `research/lut_comparison.md`
 - GF oracle: `conformance/gf_ref.py`
-- Catalog SSOT: `formats_catalog.t27` (gHashTag/t27, master)
+- Catalog SSOT: `gHashTag/t27/specs/numeric/formats_catalog.t27` (gHashTag/t27, master)
 - Tier-E evidence: EPIC #199; `fpga/CATALOG_MATRIX_83.md`
 - Takum routing unlock: `fpga/LOOP_REPORT_2026_07_03_takum64_routing.md`
 

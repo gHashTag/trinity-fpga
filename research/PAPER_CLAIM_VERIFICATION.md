@@ -125,7 +125,7 @@ would be measuring a neighbour of the claim rather than the claim.
 ## Not checkable from this repository
 
 **"72 of 83 formats carry an independent executable oracle."** The catalog
-membership list is `formats_catalog.t27` in the **t27** repository, which is not
+membership list is `gHashTag/t27/specs/numeric/formats_catalog.t27` in the **t27** repository, which is not
 present here. The oracles carry **84** format keys, and several are known not to
 be catalog rows — `fp16_e6m9` and `fp24_7m16` exist only in the silicon-sprint
 packs, `bf16`/`bfloat16` is an alias pair. **84 neither confirms nor refutes 72.**

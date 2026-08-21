@@ -76,7 +76,7 @@ GF20 (MANT_BITS=12) build was cancelled 9× under the misdiagnosis "Docker Hub p
 
 A naïve reading of "20/83 hardware, 62/83 software" implies 64 remaining uniform gaps. It is not so. The catalog's 83 formats partition into:
 
-- **62 fixed-layout S:E:M formats** → automatically software-bit-exact (the generator `t27/conformance/vectors/gen_all_formats.py` emits a bit-exact pack for any format with a fixed bit layout). No engineering work remains for these in SW.
+- **62 fixed-layout S:E:M formats** → automatically software-bit-exact (the generator `gHashTag/t27/conformance/vectors/gen_all_formats.py` emits a bit-exact pack for any format with a fixed bit layout). No engineering work remains for these in SW.
 - **15 structural-by-design formats** → recorded *honestly* as structural (not bit-exact) for explicit technical reasons:
   - parametric / variable-width (`bits==0`): minifloat, q_format, takum, afp, tapered_fp, unum_i/ii, stochastic_rounding;
   - open R&D parameter: gf256 (bias Experimental);

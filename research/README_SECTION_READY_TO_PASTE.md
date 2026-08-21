@@ -5,11 +5,11 @@
 >
 > **Why this exists.** Five verified properties of the corpus appear in **no
 > document anywhere** — not in arXiv:2606.05017, not in arXiv:2606.09686, not in
-> `conformance/vectors/README.md` (326 lines), not in the t27 root README (726
+> `gHashTag/t27/conformance/vectors/README.md` (326 lines), not in the t27 root README (726
 > lines). They were measured during a 43-pass verification campaign and live only
 > in `specs/numeric/`.
 >
-> **Target:** `conformance/vectors/README.md`, after *Shared row schema*. That file
+> **Target:** `gHashTag/t27/conformance/vectors/README.md`, after *Shared row schema*. That file
 > is the natural home — it already documents the schema, SHA-256 and provenance,
 > and it is what a consumer of the packs reads.
 >

@@ -74,7 +74,7 @@ Rationale:
 
 **Concrete next actions:**
 
-1. Add tekum as a catalog row (`formats_catalog.t27`) and a decode-conformance target (emulated decode path for binary fabric; document the emulation caveat).
+1. Add tekum as a catalog row (`gHashTag/t27/specs/numeric/formats_catalog.t27`) and a decode-conformance target (emulated decode path for binary fabric; document the emulation caveat).
 2. Produce the GF16-vs-tekum-vs-takum16 accuracy + LUT table for the catalog paper [arXiv cs.AR outline, `CATALOG_PAPER_OUTLINE.md` §5].
 3. Cite tekum [arXiv:2512.10964] in all external Trinity documents that mention ternary float, per the honesty rule.
 4. Track ternary-hardware maturation; revisit a native-tekum compute path when commodity ternary FPGA/logic exists.

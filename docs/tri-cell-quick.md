@@ -121,7 +121,7 @@ Formula: `100 * (0.4*gen + 0.3*comp + 0.2*spec + 0.1*test)`
 | Path | Purpose |
 |------|---------|
 | `cell.tri` | Cell manifest (in each module dir) |
-| `.trinity/cells/registry.json` | Auto-generated registry |
+| `.trinity/registry.json` | Auto-generated registry |
 | `~/.tri/templates/` | Custom cell templates |
 | `src/tri/cytoplasm.zig` | Cell management impl |
 
