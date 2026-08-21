@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+# W968: this rig bound the name TNF8 to TNFFormat(4, 3) -- 11 bits, 126.91 binades,
+# which is TNF16's exponent field with a truncated mantissa and NOT the ladder's
+# eighth rung. The ladder defines rung 8 as TNFFormat(3, 4): 10 bits, 30.95 binades.
+# Corrected below. The records this rig produced are marked with _format_note and
+# superseded by census_tnf8_w963.json and rung_w964_*.json.
 """W941: does the 8-bit null survive quantised activations?
 
 Every accuracy result so far quantised WEIGHTS ONLY, with activations and
@@ -27,7 +32,7 @@ SEEDS = [20260820, 7, 1337, 424242, 99991]
 TASKS = {"mnist": SC / "mnist", "fashion": SC / "fashion"}
 
 FORMATS = {
-    "TNF8": (T, T.TNFFormat(4, 3), 11),   # 1 sign + 7 exp cells + 3 mant, per the oracle's own sign_shift
+    "TNF8": (T, T.TNFFormat(3, 4), 10),   # W968: 1 sign + exp + 4 mant, sign_shift + 1 = 10
     "fp8e4m3": (F8, F8.FORMATS["fp8_e4m3"], 8),
     "fp8e5m2": (F8, F8.FORMATS["fp8_e5m2"], 8),
     "posit8": (P, P.FORMATS["posit8"], 8),
