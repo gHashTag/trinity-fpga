@@ -189,5 +189,26 @@ if mw:
     check("согласие насыщение<=>отказ, %", (c["tp"] + c["tn"]) / tot * 100, 90.83, tol=0.02)
     check("fp6e2m3: отказы с насыщением", c["tp"] >= 48, True, tol=0)
 
+# W951: the sweep redone under the computed scale, on all three tasks, and
+# saturation OBSERVED rather than inferred. All derived, per T797.
+sat = rec("saturation_w951.json")
+if sat:
+    print("\n== свод и наблюдённое насыщение (W951)")
+    check("прогонов в своде W951", len(sat), 135, tol=0)
+    comp = [r for r in sat if r["mode"] == "computed"]
+    lrn = [r for r in sat if r["mode"] == "learned"]
+    check("вычисляемый масштаб: прогонов", len(comp), 90, tol=0)
+    check("вычисляемый масштаб: отказов", sum(1 for r in comp if r["failed"]), 0, tol=0)
+    check("обучаемый масштаб: отказов из 45", sum(1 for r in lrn if r["failed"]), 9, tol=0)
+    check("TNF4 отказов во всём своде W951",
+          sum(1 for r in sat if r["fmt"] == "TNF4" and r["failed"]), 0, tol=0)
+    ok_s = [r["sat"] for r in lrn if not r["failed"]]
+    bad_s = [r["sat"] for r in lrn if r["failed"]]
+    check("худший перелёт среди успехов", max(ok_s), 1509.7, tol=0.5)
+    check("лучший перелёт среди отказов", min(bad_s), 84775.4, tol=0.5)
+    check("разделяются ли распределения", max(ok_s) < min(bad_s), True, tol=0)
+    check("вычисляемый масштаб: максимум перелёта",
+          max(r["sat"] for r in comp), 2.0, tol=0.001)
+
 print(f"\n  ИТОГ: сошлось {ok}, расхождений {bad}, пропущено блоков {skip}")
 sys.exit(1 if bad else 0)
