@@ -1,0 +1,38 @@
+{
+ "wave": "W973",
+ "spec": "specs/igla/race/mvp_ternary_classifier.t27",
+ "tops": [
+  "fpga/verilog/mvp_ternary_classifier_check.v",
+  "fpga/verilog/mvp_ternary_classifier_jtag_noport.v"
+ ],
+ "toolchain": "native openxc7 (yosys + nextpnr-xilinx + prjxray), no Docker",
+ "part": "xc7a200tfbg676-1",
+ "stages": {
+  "spec_to_verilog_s": 0.04,
+  "yosys_s": 5.25,
+  "nextpnr_s": 15.14,
+  "fasm2frames_s": 2.6,
+  "frames_to_bit_s": 1.71
+ },
+ "cells": {
+  "LUT": 123,
+  "CARRY4": 52,
+  "DSP48E1": 0,
+  "BSCANE2": 1
+ },
+ "carry4_in_fabric": 52,
+ "carry4_per_dut": 37,
+ "dut_equivalents": 1.19,
+ "fmax_mhz": 80.35,
+ "clock": "cfgmclk",
+ "target_mhz": 70.77,
+ "timing": "PASS",
+ "bitstream_bytes": 9730834,
+ "sync_word_offset": 230,
+ "bench": {
+  "cable": "Digilent 0x0403:0x6014 serial 210512180081 at bus 001 device 005",
+  "jtag_chain": "EMPTY -- no device responds",
+  "note": "W948 measured idcode 0x3636093 on this bench; the chain is now empty. The cable is present and openFPGALoader drives it (frequency negotiated at both 6 MHz and 1 MHz); the target does not answer. Not fixable in software."
+ },
+ "bitstream_sha256": "db9fcd16b5a5084e0834a0f7264253cb58d786a43aaa9ef4af4e2662ede4cd97"
+}
