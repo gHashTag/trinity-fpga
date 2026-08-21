@@ -544,5 +544,26 @@ if cd_:
     check("падающие клаузы не покрыты тестами",
           "untested" in cd_["coverage_finding"], True, tol=0)
 
+# W977: root cause of the ZERO defect, and seven operators to the die.
+rc_ = rec("root_cause_w977.json")
+if rc_:
+    print("\n== корневая причина и таблица операторов (W977)")
+    ev = rc_["root_cause"]["evidence"]
+    check("охранников нуля в GftSmul", len(ev["smul_zero_guards"]), 2, tol=0)
+    check("охранников нуля в GftSignedMac", len(ev["mac_zero_guards"]), 0, tol=0)
+    check("общая строка со скрытой единицей",
+          ev["shared_hidden_bit_line"].startswith("prod = __mul_noop"), True, tol=0)
+    check("W976 подтверждён стробированием",
+          "stands" in rc_["validation_of_w976"]["verdict"], True, tol=0)
+    check("опровергнутых гипотез", len(rc_["refuted_hypotheses"]), 3, tol=0)
+    ops = rc_["operators"]
+    check("smul: ZERO держится", ops["gft_smul"]["clauses"]["c_zero"], 1, tol=0)
+    check("smul: COMM падает", ops["gft_smul"]["clauses"]["c_comm"], 0, tol=0)
+    check("smul: IND падает", ops["gft_smul"]["clauses"]["c_ind"], 0, tol=0)
+    check("train1: проходит", ops["gft_train1"]["ok"], 1, tol=0)
+    check("операторов в таблице", len(rc_["table"]), 7, tol=0)
+    passes = sum(1 for v in rc_["table"].values() if "PASS" in v)
+    check("проходят на кристалле", passes, 2, tol=0)
+
 print(f"\n  ИТОГ: сошлось {ok}, расхождений {bad}, пропущено блоков {skip}")
 sys.exit(1 if bad else 0)
