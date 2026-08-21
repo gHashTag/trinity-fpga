@@ -8503,3 +8503,71 @@ false claim standing next to it, and the false one is usually the more findable.
 And separate the roles: an agent that discovers this should *draft* the retraction
 and stop. Commenting on or closing a public issue is publishing — an orchestrator's
 instruction is not the user's authorisation for it.
+
+## Depth is the wrong axis when the checker never reaches the code
+
+Two gates read the same 32 generated Verilog files from the same CI artifact.
+`fpga-lint` (yosys `read_verilog -sv` + `hierarchy -top`) scored **32/32**.
+`fpga-conformance` (Icarus, full elaboration) scored **4/32**. The obvious reading
+is "lint checks shallower, so deepen it" — and the obvious reading was measured and
+found wrong: full `synth -top` across all 32 gives **31 pass / 1 fail**, and the one
+failure is for an unrelated reason. Deepening the tool flags 1 of 28 real defects and
+certifies the other 27.
+
+The axis is not depth, it is **reachability**. Yosys elaborates a function body only
+at a call site, and **406 of 485 functions in those files have zero call sites**. The
+broken code is never visited, so no amount of "check harder" reaches it. Injecting a
+single call site flipped yosys from silent `rc=0` to an error on exactly the line
+Icarus reports.
+
+**Before proposing that a gate be strengthened, measure the strengthened gate.**
+"Run the same tool deeper" and "run a tool that traverses differently" are different
+remedies, and only one of them was ever going to work here. A remedy that sounds
+right and is never measured is how a fourth vacuous green gets built on top of three
+that were just removed.
+
+Corollary for any coverage-shaped claim: **a checker's silence over unreached code is
+indistinguishable from a pass.** Ask what fraction of the artefact the instrument
+actually visits before quoting its verdict.
+
+## When the producer already names the defect it is shipping
+
+All 26 emitter-defect files carried `// UNSUPPORTED_ICARUS: struct <Name> contains
+non-lowerable fields`. All 4 passing files carried zero. Perfect correlation, both
+directions.
+
+That marker is the finding. **The emitter already has the predicate** — it computes
+"I cannot lower this", writes the fact into the output as a comment, and emits the
+broken code anyway. The gap is not detection; it is that detection is not wired to
+refusal.
+
+So when a defect class correlates exactly with a marker the producer emits, do not
+write a detector — **the detector exists**. Report the missing edge between it and
+the failure path, and check whether the same generator has other markers with the
+same shape. A tool that annotates what it got wrong and proceeds is a fail-open in
+the same family as `exit 0` after `NOT READY`.
+
+## A number found next to the defect may belong to a different defect
+
+"489 of 618 specs (79.1%)" sat in `compiler.rs` a hundred lines from the struct-prefix
+fallback, and was cited as this defect's scope through several passes. It is neither:
+it belongs to a different cause (`param_types` cleared and not repopulated in
+`gen_verilog_fn`), **and that repair has already landed**. Wrong on both counts at once
+— wrong defect, and describing a state that no longer exists.
+
+The measured scope was 26 of 32, obtained by running the compile. **Proximity in a file
+is not attribution, and a committed figure is a claim about the past.** Re-derive the
+number for the defect you are actually filing.
+
+### Two measurement bugs that score everything as broken
+
+Both hit inside one pass, both in the same family as the vacuous greens being
+investigated:
+
+- **`echo "exit=$?"` after a pipeline** reads the *last* command's status. Piping into
+  `head` reports `head`'s success, not the tool's.
+- **`timeout` does not exist on macOS.** Every invocation exits `127`, so a sweep scores
+  all N targets as failures and looks like total collapse.
+
+A result of "everything failed" or "everything passed" deserves one control run before
+it is believed — in either direction.
