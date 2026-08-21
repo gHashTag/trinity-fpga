@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+# W968: this rig bound the name TNF8 to TNFFormat(4, 3) -- 11 bits, 126.91 binades,
+# which is TNF16's exponent field with a truncated mantissa and NOT the ladder's
+# eighth rung. The ladder defines rung 8 as TNFFormat(3, 4): 10 bits, 30.95 binades.
+# Corrected below. The records this rig produced are marked with _format_note and
+# superseded by census_tnf8_w963.json and rung_w964_*.json.
 """W941: generate every decoder from its own reference oracle, exhaustively.
 
 The frontier's one row where TNF wins -- four bits -- has no price, because no
@@ -39,7 +44,7 @@ UNITS = [
     ("fp8_e4m3", 8, lambda: (F8, F8.FORMATS["fp8_e4m3"])),
     ("fp8_e5m2", 8, lambda: (F8, F8.FORMATS["fp8_e5m2"])),
     ("posit8", 8, lambda: (P, P.FORMATS["posit8"])),
-    ("tnf8", 11, lambda: (T, T.TNFFormat(4, 3))),
+    ("tnf8", 10, lambda: (T, T.TNFFormat(3, 4))),   # W968: width follows the format
 ]
 
 
