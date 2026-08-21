@@ -739,5 +739,35 @@ if mt:
     check("метод признан неубедительным",
           tm["verdict"].startswith("INCONCLUSIVE"), True, tol=0)
 
+# W983: half the on-die clauses were constants, and the repaired control fails.
+cl = rec("clauses_w983.json")
+if cl:
+    print("\n== свёрнутые клаузы и первое честное чтение (W983)")
+    t = cl["census_of_todays_sources"]["totals"]
+    check("обёрток в переписи", t["wrappers"], 7, tol=0)
+    check("клауз всего", t["clauses"], 28, tol=0)
+    check("свёрнуто в константу", t["folded"], 14, tol=0)
+    check("ровно половина", t["folded"] * 2, t["clauses"], tol=0)
+    check("свёрнуто + реально = всего", t["folded"] + t["real"], t["clauses"], tol=0)
+    cen = cl["census_of_todays_sources"]
+    check("dot4 не свёрнут ни разу", cen["gft_signed_dot4_jtag.v"]["folded"], 0, tol=0)
+    check("smul: свёрнуто 2", cen["gft_smul_jtag.v"]["folded"], 2, tol=0)
+    check("sadd: свёрнуто 3", cen["gft_sadd_jtag.v"]["folded"], 3, tol=0)
+    check("сумма по обёрткам = итог",
+          sum(v["folded"] for k, v in cen.items() if k.endswith(".v")), t["folded"], tol=0)
+    rp = cl["the_repair"]
+    check("keep оказался недостаточен", "INSUFFICIENT" in rp["attempted_first"], True, tol=0)
+    check("после починки свёрнутых нет", "0 folded" in rp["verified"], True, tol=0)
+    fh = cl["first_honest_four_clause_reads"]
+    check("честных чтений", len(fh["reads"]), 3, tol=0)
+    check("нетлист один на все сборки", len({r["seed"] for r in fh["reads"]}), 3, tol=0)
+    check("контроль падает", sum(1 for r in fh["reads"] if r["c_self"] == 0), 2, tol=0)
+    seed7 = [r for r in fh["reads"] if r["seed"] == 7][0]
+    check("на зерне 7 контроль ложен", seed7["c_self"], 0, tol=0)
+    check("а коммутативность истинна", seed7["c_comm"], 1, tol=0)
+    check("вывод: дело не в порядке операндов",
+          "not about operand order" in cl["first_honest_four_clause_reads"]["consequence"],
+          True, tol=0)
+
 print(f"\n  ИТОГ: сошлось {ok}, расхождений {bad}, пропущено блоков {skip}")
 sys.exit(1 if bad else 0)
