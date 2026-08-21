@@ -1,0 +1,103 @@
+{
+ "wave": "W982",
+ "board": "1:5",
+ "idcode": "0x3636093",
+ "part": "xc7a200tfbg676-1",
+ "minimal_reproducer": {
+  "file": "fpga/verilog/gft_commmin_jtag.v",
+  "design_id": 20,
+  "reduction": "five GftSmul instances and 798 LUT become three instances and 430-452 LUT -- 46 % smaller",
+  "structure": "u_ctrl = smul(live,TWO) and u_comm_a = smul(live,TWO) are the CONTROL (identical operand order); u_comm_b = smul(TWO,live) is the TEST. The two clauses differ in one respect: which port the constant folds into.",
+  "die_reads": [
+   {
+    "seed": 7,
+    "LUT": 430,
+    "CARRY4": 112,
+    "chain": 2,
+    "site": 2,
+    "fmax": 34.68,
+    "word": "0xa5a5353f",
+    "clauses": "1111",
+    "ok": 1,
+    "verdict": "PASS"
+   },
+   {
+    "seed": 1234,
+    "LUT": 452,
+    "CARRY4": 105,
+    "chain": 3,
+    "site": 3,
+    "fmax": 33.03,
+    "word": "0xa5a53536",
+    "clauses": "1101",
+    "ok": 0,
+    "verdict": "FAIL"
+   },
+   {
+    "seed": 42,
+    "LUT": 430,
+    "CARRY4": 112,
+    "chain": 2,
+    "site": 2,
+    "fmax": 29.23,
+    "word": "0xa5a5353f",
+    "clauses": "1111",
+    "ok": 1,
+    "verdict": "PASS"
+   },
+   {
+    "seed": 1,
+    "LUT": 452,
+    "CARRY4": 105,
+    "chain": 3,
+    "site": 3,
+    "fmax": 33.71,
+    "word": "0xa5a53536",
+    "clauses": "1101",
+    "ok": 0,
+    "verdict": "FAIL"
+   }
+  ],
+  "the_failing_clause": "c_self TRUE, c_comm FALSE -- exactly the pattern the 798-LUT design shows. Two instances with the SAME operand order always agree; the one with them swapped does not.",
+  "verdict_tracks_the_netlist_not_the_seed": {
+   "observation": "the two 430 LUT / 112 CARRY4 builds both PASS; the two 452 LUT / 105 CARRY4 builds both FAIL",
+   "what_makes_the_two_netlists": "t27c's fixed-point loop forces JTAG_CHAIN to whatever site nextpnr chose. Seeds 7 and 42 needed forcing to 2; seeds 1234 and 1 did not. The BSCANE2 chain index cannot reach the arithmetic, yet yosys maps 22 LUTs and 7 CARRY4 differently under it.",
+   "significance": "the seed sweep of W842/W977 was reading a netlist difference, not only a placement one -- another confound, found the same way as W981's"
+  },
+  "seed_mapping_inverts": "in the 798-LUT design seeds 1 and 42 PASS and 7 and 1234 FAIL; here 7 and 42 PASS and 1 and 1234 FAIL. The seed is not a property of the failure."
+ },
+ "sat_proof_on_the_mapped_netlist": {
+  "question": "do the two swapped-operand cones compute the same function AFTER yosys has folded the constant and mapped to Xilinx primitives?",
+  "method": "tri miter -- the miter is synthesised by the SAME script t27c runs (including the W813 `share` removal), then techmap -map +/xilinx/cells_sim.v gives the solver models for LUTn/CARRY4/MUXF7, then sat -verify -prove neq 1'b0",
+  "gft_smul": {
+   "cells_after_mapping": 277,
+   "sat_variables": 1822,
+   "sat_clauses": 4754,
+   "result": "proved, no counterexample"
+  },
+  "gft_sadd": {
+   "cells_after_mapping": 5020,
+   "sat_variables": 48200,
+   "result": "proved, no counterexample"
+  },
+  "consequence": "the netlist handed to nextpnr IS commutative. Synthesis is exonerated and the fault is at or below place-and-route. W977 proved commutativity on the MODULE; this proves it on the two FOLDED CONES that actually fail."
+ },
+ "third_method_that_failed_its_control": {
+  "method": "recover each post-place-and-route LUT's logical function from nextpnr's --write JSON, undoing pin permutation with the X_ORIG_PORT_A* attributes, and compare name-matched cells",
+  "control": "seed 42 against seed 1 -- TWO BUILDS THAT BOTH PASS",
+  "result": {
+   "42_vs_1_PASS_PASS": 591,
+   "42_vs_7_PASS_FAIL": 623,
+   "42_vs_1234_PASS_FAIL": 581,
+   "1_vs_7": 609,
+   "1_vs_1234": 613,
+   "7_vs_1234_FAIL_FAIL": 583
+  },
+  "verdict": "INCONCLUSIVE -- the control pair disagrees as much as the test pairs. Place-and-route repacks LUTs into slice halves and renames most cells, so name identity does not imply function identity.",
+  "pattern": "third cell-level method, third control-saved retraction: FASM INIT multisets (W981), post-PnR recovered functions (W982). Cell-level comparison cannot decide function preservation across a repacking placer.",
+  "what_would_work": "a whole-design equivalence over primary inputs and outputs, which needs semantic models for SLICE_LUTX, SLICE_FFX and CARRY4 as nextpnr emits them"
+ },
+ "environment": {
+  "web_search": "unavailable all session (model-config error); competitor and literature work analytic only"
+ }
+}
