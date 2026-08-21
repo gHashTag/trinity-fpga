@@ -792,5 +792,27 @@ if uf:
     check("оговорка о смене нетлиста записана",
           "NEW measurements, not re-runs" in uf["honest_caveat"], True, tol=0)
 
+# W985: the seed sweep the single-placement result of W984 could not stand in for.
+sw = rec("sweep_w985.json")
+if sw:
+    print("\n== развёртка по размещениям (W985)")
+    tot = pas = 0
+    for name, d in sw["sweep"].items():
+        r = d["reads"]
+        tot += len(r); pas += sum(1 for x in r if x["ok"] == 1)
+        check(f"{name}: чтений", len(r), 4, tol=0)
+        check(f"{name}: все слова совпали", len({x["word"] for x in r}), 1, tol=0)
+        check(f"{name}: все клаузы 1111",
+              all(x["clauses"] == "1111" for x in r), True, tol=0)
+        check(f"{name}: рост LUT, %", 100 * (d["LUT"] / d["was_LUT"] - 1),
+              43.1 if "smul" in name else 120.9, tol=0.6)
+    check("чтений всего", tot, 8, tol=0)
+    check("прошло", pas, 8, tol=0)
+    check("оговорка о неразделимости записана",
+          "cannot be separated" in sw["what_cannot_be_concluded"], True, tol=0)
+    check("дефектные обёртки заморожены", len(sw["mitigation"]["files"]), 2, tol=0)
+    check("и проверены как всё ещё дефектные",
+          "2 folded" in sw["mitigation"]["verified_still_defective"], True, tol=0)
+
 print(f"\n  ИТОГ: сошлось {ok}, расхождений {bad}, пропущено блоков {skip}")
 sys.exit(1 if bad else 0)
