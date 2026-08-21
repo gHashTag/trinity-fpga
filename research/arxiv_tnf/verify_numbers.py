@@ -236,5 +236,22 @@ if acc:
     check("надбавка на элемент, аморт. по 32",
           (acc["cost"]["TNF4"]["per_acc"] - acc["cost"]["fp6e2m3"]["per_acc"]) / 32, 0.781, tol=0.005)
 
+# W953: the third datapath, which closes the W952 bracket.
+fl = rec("flane_w953.json")
+if fl:
+    print("\n== полоса MAC во флоатном стиле (W953)")
+    for f, want in (("TNF4", 108.0), ("fp6e3m2", 82.0), ("fp6e2m3", 74.0)):
+        check(f"{f}: ячеек на флоат-полосу", fl["cost"][f]["per_lane"], want, tol=0.01)
+        check(f"{f}: R2 линейности", fl["cost"][f]["r2"], 1.0, tol=0.0001)
+    check("TNF4 / fp6e2m3, флоат-полоса",
+          fl["cost"]["TNF4"]["per_lane"] / fl["cost"]["fp6e2m3"]["per_lane"], 1.459, tol=0.005)
+    check("нечётная мантисса TNF4, бит", fl["fields"]["TNF4"]["odd_bits"], 2, tol=0)
+    check("нечётная мантисса fp6e2m3, бит", fl["fields"]["fp6e2m3"]["odd_bits"], 4, tol=0)
+    if mac:
+        check("флоат дешевле фикс.точки для TNF4",
+              mac["cost"]["TNF4"]["per_lane"] > fl["cost"]["TNF4"]["per_lane"], True, tol=0)
+        check("флоат дешевле фикс.точки для fp6e2m3",
+              mac["cost"]["fp6e2m3"]["per_lane"] > fl["cost"]["fp6e2m3"]["per_lane"], True, tol=0)
+
 print(f"\n  ИТОГ: сошлось {ok}, расхождений {bad}, пропущено блоков {skip}")
 sys.exit(1 if bad else 0)
