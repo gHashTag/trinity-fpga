@@ -1,0 +1,33 @@
+{
+ "tnf4": {
+  "physical_bits": 6,
+  "codes_checked": 64,
+  "mismatches": 0,
+  "outside_fp32": 0,
+  "decoder_cells": 12.0,
+  "consumer_cells": 55.286,
+  "r2_bare": 1.0,
+  "r2_fused": 0.99998
+ },
+ "tnf8": {
+  "physical_bits": 11,
+  "codes_checked": 2048,
+  "mismatches": 0,
+  "outside_fp32": 0,
+  "decoder_cells": 16.0,
+  "consumer_cells": 260.571,
+  "r2_bare": 1.0,
+  "r2_fused": 0.999996
+ },
+ "tnf16": {
+  "physical_bits": 19,
+  "codes_checked": 524288,
+  "mismatches": 0,
+  "outside_fp32": 0,
+  "decoder_cells": 27.0,
+  "consumer_cells": 450.286,
+  "r2_bare": 1.0,
+  "r2_fused": 1.0
+ },
+ "_format_note": "W968: the key 'TNF8' in this record is TNFFormat(4, 3) -- 11 bits, 126.91 binades -- which is NOT the ladder's eighth rung. The ladder defines rung 8 as TNFFormat(3, 4): 10 bits, 30.95 binades. Superseded for the true rung by census_tnf8_w963.json (area) and rung_w964_*.json (accuracy). Records that wrote the format into the key, like accuracy_coordinate_w938.json's 'TNF8 (E_t=4,M=3)', aged correctly; this one did not."
+}
