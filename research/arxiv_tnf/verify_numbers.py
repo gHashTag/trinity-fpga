@@ -620,5 +620,89 @@ if cv80:
     check("предел инструмента заявлен", "OVER-REPORTS" in cv80["limit"], True, tol=0)
     check("жёсткий сигнал назван", "1010" in cv80["hard_signal"], True, tol=0)
 
+# W981: the representable set, and the expiry date of every live stimulus source.
+dm = rec("domain_w981.json")
+if dm:
+    print("\n== область представимости и срок годности стимулов (W981)")
+    rs = dm["representable_set"]
+    check("потолок смещения", rs["offset_ceiling"], 80, tol=0)
+    check("наибольшая магнитуда", rs["max_magnitude"], (80 << 9) | 511, tol=0)
+    check("представимых слов", rs["representable_words"], 2 * 41472, tol=0)
+    check("потолок прочитан, а не вписан",
+          "read, not hardcoded" in rs["offset_ceiling_source"], True, tol=0)
+    ip = dm["identity_is_partial"]
+    check("слов всего", ip["words_total"], 131072, tol=0)
+    check("представимых слов", ip["representable_words"], 82944, tol=0)
+    check("на представимых тождество падает ровно раз", ip["representable_failing"], 1, tol=0)
+    check("исключение -- отрицательный ноль", ip["the_one_exception"]["word"], 65536, tol=0)
+    check("и оно нормализуется в +0", ip["the_one_exception"]["result"], 0, tol=0)
+    check("непредставимых слов", ip["non_representable_words"], 48128, tol=0)
+    check("вне области падает всё",
+          ip["non_representable_failing"], ip["non_representable_words"], tol=0)
+    check("разбиение полное",
+          ip["representable_words"] + ip["non_representable_words"], ip["words_total"], tol=0)
+    check("держится = всего - падает",
+          ip["representable_holding"],
+          ip["words_total"] - ip["non_representable_failing"] - ip["representable_failing"], tol=0)
+    check("первый отказ вне области -- смещение 81",
+          ip["first_out_of_range_failure"]["offset"], 81, tol=0)
+    bm = ip["by_magnitude_unsigned"]
+    check("по магнитудам: держится + падает", bm["holds"] + bm["fails"], bm["total"], tol=0)
+    ct = dm["commutativity_is_total"]
+    check("контрпримеров коммутативности", ct["counterexamples"], 0, tol=0)
+    check("пар проверено", int(ct["method"].split()[0]), 2359296, tol=0)
+    check("живых источников", dm["counts"]["sources"], 17, tol=0)
+    check("все покидают область",
+          dm["counts"]["leaving_the_set"], dm["counts"]["sources"], tol=0)
+    check("не объясняет открытый отказ",
+          dm["does_it_explain_the_open_failure"].startswith("NO"), True, tol=0)
+
+# W981: nine die reads that refuted the site hypothesis and tested the clock.
+pn = rec("pnr_w981.json")
+if pn:
+    print("\n== place-and-route: девять чтений с кристалла (W981)")
+    check("чтений с кристалла", len(pn["die_reads"]), 9, tol=0)
+    fails = [r for r in pn["die_reads"] if r["verdict"] == "FAIL"]
+    passes = [r for r in pn["die_reads"] if r["verdict"] == "PASS"]
+    check("отказов", len(fails), 3, tol=0)
+    check("проходов", len(passes), 6, tol=0)
+    check("все отказы -- зерно 7", {r["seed"] for r in fails} == {7}, True, tol=0)
+    check("отказ на площадке BSCAN3 есть",
+          any(r["site"] == 3 for r in fails), True, tol=0)
+    check("проход на площадке BSCAN1 есть",
+          any(r["site"] == 1 for r in passes), True, tol=0)
+    check("проход на площадке BSCAN2 есть",
+          any(r["site"] == 2 for r in passes), True, tol=0)
+    # The clock test: same seed, same site, one octave apart, same answer.
+    clk = [r for r in pn["die_reads"] if r["seed"] == 7 and r["site"] == 3]
+    check("пара для теста частоты", len(clk), 2, tol=0)
+    check("обе половины теста -- отказ",
+          all(r["clauses"] == "1101" for r in clk), True, tol=0)
+    # Reported Fmax must interleave, or it would carry signal about the verdict.
+    fmin, fmax_ = min(r["fmax"] for r in fails), max(r["fmax"] for r in fails)
+    check("Fmax отказов лежит внутри диапазона проходов",
+          any(r["fmax"] < fmin for r in passes) and any(r["fmax"] > fmax_ for r in passes),
+          True, tol=0)
+    fd = pn["fasm_diff_is_not_decisive"]["measured"]
+    check("логических LUT, зерно 42 (проход)", fd["seed42_PASS"]["logic_luts"], 1164, tol=0)
+    check("логических LUT, зерно 1 (проход)", fd["seed1_PASS"]["logic_luts"], 1165, tol=0)
+    check("два прохода различаются по логическим LUT",
+          fd["seed42_PASS"]["logic_luts"] != fd["seed1_PASS"]["logic_luts"], True, tol=0)
+    check("предел метода назван",
+          "not a function-preservation invariant" in pn["fasm_diff_is_not_decisive"]["why_it_fails"],
+          True, tol=0)
+    check("воспроизведено на другом стенде",
+          "reproduced exactly" in pn["reproduction_of_w977"]["verdict"], True, tol=0)
+    sh = pn["self_heal"]
+    check("самовосстановлений", len(sh), 3, tol=0)
+    check("аудит убивала собственная новая строка",
+          sh["tri_audit_was_dying_at_its_own_new_line"]["introduced"] == "W980", True, tol=0)
+    check("оракулы теперь в репозитории",
+          "conformance/oracles/" in sh["oracles_were_only_in_a_scratchpad"]["fix"], True, tol=0)
+    check("починка проверена на доремонтном корпусе",
+          "exit 1" in sh["xorpercep_lfsr"]["validated"], True, tol=0)
+    check("зелёных строк аудита", len(pn["audit_after"]["rows_green"]), 9, tol=0)
+    check("красных строк аудита", len(pn["audit_after"]["rows_red"]), 1, tol=0)
+
 print(f"\n  ИТОГ: сошлось {ok}, расхождений {bad}, пропущено блоков {skip}")
 sys.exit(1 if bad else 0)
