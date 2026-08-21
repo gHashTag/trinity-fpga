@@ -769,5 +769,28 @@ if cl:
           "not about operand order" in cl["first_honest_four_clause_reads"]["consequence"],
           True, tol=0)
 
+# W984: the folded-clause class closed, and two designs re-read with real clauses.
+uf = rec("unfold_w984.json")
+if uf:
+    print("\n== свёртка снята по корпусу (W984)")
+    t = uf["totals"]
+    check("обёрток починено", t["wrappers_repaired"], 8, tol=0)
+    check("свёрнуто было", t["folded_before"], 14, tol=0)
+    check("свёрнуто стало", t["folded_after"], 0, tol=0)
+    check("клауз теперь настоящих", t["clauses_now_real"], 36, tol=0)
+    check("ни одна обёртка не свёрнута",
+          sum(uf["after"].values()), 0, tol=0)
+    check("обёрток в списке после", len(uf["after"]), 9, tol=0)
+    check("keep признан нерабочим",
+          "(* keep *)" in uf["repair_recipe"]["what_does_not_work"], True, tol=0)
+    check("проверка стала гейтом", "GATE" in uf["gated"], True, tol=0)
+    dr = uf["die_reads_with_every_clause_real"]
+    check("чтений с настоящими клаузами", len(dr), 2, tol=0)
+    check("обе прошли", sum(1 for r in dr if r["ok"] == 1), 2, tol=0)
+    check("smul: все четыре клаузы истинны",
+          dr[0]["clauses"] == "1111", True, tol=0)
+    check("оговорка о смене нетлиста записана",
+          "NEW measurements, not re-runs" in uf["honest_caveat"], True, tol=0)
+
 print(f"\n  ИТОГ: сошлось {ok}, расхождений {bad}, пропущено блоков {skip}")
 sys.exit(1 if bad else 0)
