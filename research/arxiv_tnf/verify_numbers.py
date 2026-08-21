@@ -565,5 +565,28 @@ if rc_:
     passes = sum(1 for v in rc_["table"].values() if "PASS" in v)
     check("проходят на кристалле", passes, 2, tol=0)
 
+# W978: the MAC fixed in the spec, and the cost figures it invalidates.
+mf = rec("mac_fix_w978.json")
+if mf:
+    print("\n== правка MAC (W978)")
+    check("охранников добавлено в smul", len(mf["fix"]["smul_guards_added"]), 3, tol=0)
+    check("охранников добавлено в sadd", len(mf["fix"]["sadd_guards_added"]), 2, tol=0)
+    se = mf["side_effect"]
+    check("LUT до", se["LUT"]["before"], 6466, tol=0)
+    check("LUT после", se["LUT"]["after"], 5484, tol=0)
+    check("LUT, изменение %", se["LUT"]["delta_pct"], -15.2, tol=0.05)
+    check("CARRY4, изменение %", se["CARRY4"]["delta_pct"], -22.3, tol=0.05)
+    check("Fmax, изменение %", se["fmax_mhz"]["delta_pct"], 7.8, tol=0.05)
+    check("правка уменьшила дизайн", se["LUT"]["after"] < se["LUT"]["before"], True, tol=0)
+    check("правка ускорила дизайн",
+          se["fmax_mhz"]["after"] > se["fmax_mhz"]["before"], True, tol=0)
+    check("тестов в спеке стало 4", mf["tests_added"]["after"].startswith("4"), True, tol=0)
+    check("вердикт с кристалла НЕ получен",
+          mf["verification"]["die"].startswith("NOT OBTAINED"), True, tol=0)
+    # T821's MAC row was measured on the defective build
+    if sw:
+        check("T821 мерил дефектную сборку",
+              sw["designs"]["gft_signed_mac"]["LUT"], se["LUT"]["before"], tol=0)
+
 print(f"\n  ИТОГ: сошлось {ok}, расхождений {bad}, пропущено блоков {skip}")
 sys.exit(1 if bad else 0)
