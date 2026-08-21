@@ -1,0 +1,72 @@
+{
+ "wave": "W974",
+ "part": "xc7a200tfbg676-1",
+ "toolchain": "native openxc7 via t27c silicon --skip-hardware, no Docker",
+ "note": "Fmax clocks differ by design: the classifier is constrained on cfgmclk, the gft_* designs on slowclk. The columns are NOT directly comparable across that boundary and are labelled accordingly.",
+ "designs": {
+  "mvp_ternary_classifier": {
+   "spec": "specs/igla/race/mvp_ternary_classifier.t27",
+   "LUT": 123,
+   "CARRY4": 52,
+   "DSP48E1": 0,
+   "carry4_per_dut": 37,
+   "dut_equivalents": 1.19,
+   "clock": "cfgmclk",
+   "fmax_mhz": 80.35,
+   "target_mhz": 70.77,
+   "timing": "PASS",
+   "bitstream_bytes": 9730834,
+   "complete": true,
+   "mhz_per_klut": 653.252
+  },
+  "gft_sadd": {
+   "spec": "specs/ternary/gft_sadd.t27",
+   "LUT": 1312,
+   "CARRY4": 257,
+   "DSP48E1": 0,
+   "carry4_per_dut": 234,
+   "dut_equivalents": 1.06,
+   "clock": "slowclk",
+   "fmax_mhz": 18.24,
+   "target_mhz": 8.85,
+   "timing": "PASS",
+   "bitstream_bytes": 9730820,
+   "complete": true,
+   "mhz_per_klut": 13.902
+  },
+  "gft_signed_mac": {
+   "spec": "specs/ternary/gft_signed_mac.t27",
+   "LUT": 6466,
+   "CARRY4": 1237,
+   "DSP48E1": 0,
+   "carry4_per_dut": 396,
+   "dut_equivalents": 3.1,
+   "clock": "slowclk",
+   "fmax_mhz": 9.14,
+   "target_mhz": 2.21,
+   "timing": "PASS",
+   "bitstream_bytes": 9730826,
+   "complete": true,
+   "mhz_per_klut": 1.414
+  },
+  "gft_signed_dot4": {
+   "spec": "specs/ternary/gft_signed_dot4.t27",
+   "LUT": 12872,
+   "CARRY4": 2043,
+   "DSP48E1": 0,
+   "carry4_per_dut": 1026,
+   "dut_equivalents": 1.98,
+   "clock": "slowclk",
+   "fmax_mhz": 5.5,
+   "target_mhz": 2.21,
+   "timing": "PASS",
+   "bitstream_bytes": null,
+   "complete": false,
+   "failures": [
+    "nextpnr hit the 600 s cap -- ABSENT, not a routing failure",
+    "BSCAN chain/site mismatch: JTAG_CHAIN(3) enabled but BSCAN4 wired"
+   ],
+   "mhz_per_klut": 0.427
+  }
+ }
+}
