@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+# W968: this rig bound the name TNF8 to TNFFormat(4, 3) -- 11 bits, 126.91 binades,
+# which is TNF16's exponent field with a truncated mantissa and NOT the ladder's
+# eighth rung. The ladder defines rung 8 as TNFFormat(3, 4): 10 bits, 30.95 binades.
+# Corrected below. The records this rig produced are marked with _format_note and
+# superseded by census_tnf8_w963.json and rung_w964_*.json.
 """W938: give the area figure an accuracy coordinate, and measure the real prior.
 
 Every LUT-domain competitor prices area against a named accuracy on a named
@@ -29,7 +34,7 @@ _po = P.FORMATS["posit16"]
 _bf = B.FORMATS["bfloat16"]
 # The 8-bit rungs: this is where the field actually fights, and where a 16-bit
 # comparison found no task-level difference at all.
-_tnf8 = T.TNFFormat(4, 3)
+_tnf8 = T.TNFFormat(3, 4)
 _po8 = P.FORMATS["posit8"]
 _gf8 = G.FORMATS["gf8"]
 _e4m3 = F8.FORMATS["fp8_e4m3"]
