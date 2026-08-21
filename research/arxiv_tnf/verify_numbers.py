@@ -523,5 +523,26 @@ if od:
     check("mac: запас по частоте, раз", mc["fmax_mhz"] / mc["target_mhz"], 4.13, tol=0.02)
     check("контроль прогонялся", mc["control_run"], True, tol=0)
 
+# W976: the failing clauses decoded and diagnosed.
+cd_ = rec("clause_diagnosis_w976.json")
+if cd_:
+    print("\n== диагноз клауз (W976)")
+    d = cd_["decoded"]
+    check("магия слова", d["magic"] == "0xA5A5", True, tol=0)
+    check("версия слова", d["version"], 3, tol=0)
+    check("идентификатор дизайна", d["design"], 13, tol=0)
+    check("c_zero падает", d["c_zero"], 0, tol=0)
+    check("c_comm падает", d["c_comm"], 0, tol=0)
+    check("c_cancel держится", d["c_cancel"], 1, tol=0)
+    check("c_ind держится", d["c_ind"], 1, tol=0)
+    check("ZERO воспроизводится в симуляции",
+          cd_["clauses"]["ZERO"]["sim"].startswith("FALSE"), True, tol=0)
+    check("COMM в симуляции не воспроизведён",
+          cd_["clauses"]["COMM"]["sim"].startswith("TRUE"), True, tol=0)
+    check("попыток воспроизвести COMM", len(cd_["clauses"]["COMM"]["attempts"]), 3, tol=0)
+    check("тестов в спеке", len(cd_["spec_tests"]), 2, tol=0)
+    check("падающие клаузы не покрыты тестами",
+          "untested" in cd_["coverage_finding"], True, tol=0)
+
 print(f"\n  ИТОГ: сошлось {ok}, расхождений {bad}, пропущено блоков {skip}")
 sys.exit(1 if bad else 0)
