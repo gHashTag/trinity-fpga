@@ -370,5 +370,29 @@ if r16:
         check(f"{f} несёт больше значений", r16[f]["values"] > r16[t]["values"], True, tol=0)
         check(f"{f} несёт больше диапазона", r16[f]["binades"] > r16[t]["binades"], True, tol=0)
 
+# W966: structural cost against a float built in TNF's own discipline (FTZ).
+st = rec("struct966.json")
+if st:
+    print("\n== структурная цена в равной дисциплине (W966)")
+    for k, bits, dec, con in (("tnf16_v2spec", 19, 27.0, 450.29),
+                              ("fp19_e7m11", 19, 18.0, 441.29),
+                              ("fp19_e6m12", 19, 22.0, 445.29),
+                              ("tnf8_true", 10, 18.0, 230.57),
+                              ("fp10_e5m4", 10, 13.0, 225.57)):
+        check(f"{k}: ширина", st[k]["physical_bits"], bits, tol=0)
+        check(f"{k}: декодер", st[k]["decoder_cells"], dec, tol=0.01)
+        check(f"{k}: потребитель", st[k]["consumer_cells"], con, tol=0.01)
+        check(f"{k}: расхождений с эталоном", st[k]["mismatches"], 0, tol=0)
+    check("TNF16 против диапазон-соперника, %",
+          (st["tnf16_v2spec"]["consumer_cells"] - st["fp19_e7m11"]["consumer_cells"])
+          / st["fp19_e7m11"]["consumer_cells"] * 100, 2.04, tol=0.02)
+    check("TNF8 против fp10_e5m4, %",
+          (st["tnf8_true"]["consumer_cells"] - st["fp10_e5m4"]["consumer_cells"])
+          / st["fp10_e5m4"]["consumer_cells"] * 100, 2.22, tol=0.02)
+    sw = rec("structural_w942.json")
+    if sw:
+        check("TNF16 воспроизводит запись W942",
+              st["tnf16_v2spec"]["consumer_cells"] - sw["tnf16"]["consumer_cells"], 0.0, tol=0.005)
+
 print(f"\n  ИТОГ: сошлось {ok}, расхождений {bad}, пропущено блоков {skip}")
 sys.exit(1 if bad else 0)
