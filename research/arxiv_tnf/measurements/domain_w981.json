@@ -1,0 +1,197 @@
+{
+ "wave": "W981",
+ "instrument": "tri domain",
+ "representable_set": {
+  "encoding": "GF-T16 magnitude = (offset << 9) | mantissa; the word is (sign << 16) | magnitude",
+  "offset_ceiling": 80,
+  "offset_ceiling_source": "specs/ternary/gft_axpy.t27, the magmul saturation `if (res >= 80)` -- read, not hardcoded",
+  "max_magnitude": 41471,
+  "representable_words": 82944,
+  "of_2_32": 4294967296
+ },
+ "identity_is_partial": {
+  "claim": "smul(x, ONE) == x holds on the whole representable set except negative zero, and fails on every word outside it",
+  "method": "exhaustive over all 131072 words (65536 magnitudes x both signs), partitioned by representability",
+  "words_total": 131072,
+  "representable_words": 82944,
+  "representable_holding": 82943,
+  "representable_failing": 1,
+  "the_one_exception": {
+   "word": 65536,
+   "sign": 1,
+   "magnitude": 0,
+   "result": 0,
+   "why": "sign-magnitude admits two zeros. smul's guard tests the whole word (a == 0), so negative zero passes it; magmul then returns 0 and the mag==0 guard normalises the result to +0. Identity fails, and correctly so -- the operator is collapsing a redundant encoding."
+  },
+  "non_representable_words": 48128,
+  "non_representable_failing": 48128,
+  "first_out_of_range_failure": {
+   "magnitude": 41472,
+   "offset": 81,
+   "mantissa": 0,
+   "result": 40960
+  },
+  "why": "magmul saturates out_off at the ceiling, so an out-of-range operand comes back clamped. This is the specified behaviour, not a defect.",
+  "by_magnitude_unsigned": {
+   "holds": 41472,
+   "fails": 24064,
+   "total": 65536
+  }
+ },
+ "commutativity_is_total": {
+  "claim": "smul(a,b) == smul(b,a) including out-of-range operands",
+  "method": "2359296 pairs: every one of 65536 magnitudes crossed with 9 representative magnitudes, both sign combinations, both operand orders; plus symmetry by inspection of magmul (prod, sm and the sign xor are each symmetric)",
+  "counterexamples": 0
+ },
+ "consequence": "An on-die identity clause driven by a free-running counter has an EXPIRY DATE. Past it the clause is false for the right reason and the sticky latch records it as a defect forever.",
+ "live_sources": [
+  {
+   "wrapper": "gft_dup2_jtag.v",
+   "source": "live",
+   "init": 20480,
+   "step": "+1",
+   "beats_valid": "20992",
+   "nominal": "12.0 h"
+  },
+  {
+   "wrapper": "gft_dup2_jtag.v",
+   "source": "live2",
+   "init": 21504,
+   "step": "+7",
+   "beats_valid": "2853",
+   "nominal": "1.6 h"
+  },
+  {
+   "wrapper": "gft_dup3_jtag.v",
+   "source": "live",
+   "init": 20480,
+   "step": "+1",
+   "beats_valid": "20992",
+   "nominal": "12.0 h"
+  },
+  {
+   "wrapper": "gft_dup3_jtag.v",
+   "source": "live2",
+   "init": 21504,
+   "step": "+7",
+   "beats_valid": "2853",
+   "nominal": "1.6 h"
+  },
+  {
+   "wrapper": "gft_dup_jtag.v",
+   "source": "live",
+   "init": 20480,
+   "step": "+1",
+   "beats_valid": "20992",
+   "nominal": "12.0 h"
+  },
+  {
+   "wrapper": "gft_sadd_jtag.v",
+   "source": "liveA",
+   "init": 20480,
+   "step": "+1",
+   "beats_valid": "20992",
+   "nominal": "12.0 h"
+  },
+  {
+   "wrapper": "gft_sadd_jtag.v",
+   "source": "liveB",
+   "init": 21504,
+   "step": "+7",
+   "beats_valid": "2853",
+   "nominal": "1.6 h"
+  },
+  {
+   "wrapper": "gft_sadd_sweep_jtag.v",
+   "source": "liveA",
+   "init": 20480,
+   "step": "+1",
+   "beats_valid": "20992",
+   "nominal": "3 min"
+  },
+  {
+   "wrapper": "gft_sadd_sweep_jtag.v",
+   "source": "liveB",
+   "init": 21504,
+   "step": "+7",
+   "beats_valid": "2853",
+   "nominal": "23 s"
+  },
+  {
+   "wrapper": "gft_signed_mac_jtag.v",
+   "source": "live",
+   "init": 20480,
+   "step": "+1",
+   "beats_valid": "20992",
+   "nominal": "2.0 d"
+  },
+  {
+   "wrapper": "gft_signed_mac_jtag.v",
+   "source": "live2",
+   "init": 21504,
+   "step": "+7",
+   "beats_valid": "2853",
+   "nominal": "6.5 h"
+  },
+  {
+   "wrapper": "gft_smul_jtag.v",
+   "source": "live",
+   "init": 20480,
+   "step": "+1",
+   "beats_valid": "20992",
+   "nominal": "12.0 h"
+  },
+  {
+   "wrapper": "gft_smul_jtag.v",
+   "source": "live2",
+   "init": 21504,
+   "step": "+7",
+   "beats_valid": "2853",
+   "nominal": "1.6 h"
+  },
+  {
+   "wrapper": "gft_xorpercep_jtag.v",
+   "source": "lfsr",
+   "init": 449732333,
+   "step": "lfsr",
+   "beats_valid": "never valid",
+   "nominal": "immediate"
+  },
+  {
+   "wrapper": "gft_xorpercep_jtag.v",
+   "source": "liveA",
+   "init": 20480,
+   "step": "+1",
+   "beats_valid": "20992",
+   "nominal": "4.0 d"
+  },
+  {
+   "wrapper": "gft_xorpercep_jtag.v",
+   "source": "liveB",
+   "init": 20736,
+   "step": "-3",
+   "beats_valid": "6913",
+   "nominal": "31.7 h"
+  },
+  {
+   "wrapper": "gft_xorpercep_jtag.v",
+   "source": "liveC",
+   "init": 21504,
+   "step": "+7",
+   "beats_valid": "2853",
+   "nominal": "13.1 h"
+  }
+ ],
+ "counts": {
+  "sources": 17,
+  "leaving_the_set": 17
+ },
+ "sharpest": {
+  "gft_sadd_sweep_jtag.v": "liveA valid for 3 min, liveB for 23 s -- this wrapper's clauses expire while the operator is still being loaded",
+  "gft_xorpercep_jtag.v": "lfsr is NEVER valid: a 32-bit LFSR seeded 0x1ACE5EED is outside the representable set from the first cycle"
+ },
+ "does_it_explain_the_open_failure": "NO. gft_smul's live counter is valid for 20992 beats (~12 h nominal) and the die was read within minutes. This is a LATENT trap the instrument found, not the cause of the measured COMM/IND failure.",
+ "environment": {
+  "web_search": "unavailable all session (model-config error, glm-4.5-air); competitor work assessed analytically only"
+ }
+}
