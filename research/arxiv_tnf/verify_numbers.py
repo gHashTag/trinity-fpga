@@ -492,5 +492,18 @@ if sw:
           sw["designs"]["gft_signed_mac"]["dut_equivalents"] >
           sw["designs"]["gft_sadd"]["dut_equivalents"], True, tol=0)
 
+# W974: the first verdict read off the die.
+dv = rec("die_verdict_w974.json")
+if dv:
+    print("\n== вердикт с кристалла (W974)")
+    check("Done", dv["hardware"]["B1_done"], 1, tol=0)
+    check("ok", dv["hardware"]["ok"], 1, tol=0)
+    check("beat", dv["hardware"]["beat"], 1, tol=0)
+    check("слово USER2 == 0xa5a5a5a7", dv["hardware"]["B2_word"] == "0xa5a5a5a7", True, tol=0)
+    check("IDCODE == 0x3636093", dv["idcode"] == "0x3636093", True, tol=0)
+    check("плата 1:5 (не 1:4 по умолчанию)", dv["board"] == "1:5", True, tol=0)
+    check("тот же битстрим, что в W973", dv["build"]["bitstream_bytes"], 9730834, tol=0)
+    check("Fmax совпадает с W973", dv["build"]["fmax_mhz"], 80.35, tol=0.01)
+
 print(f"\n  ИТОГ: сошлось {ok}, расхождений {bad}, пропущено блоков {skip}")
 sys.exit(1 if bad else 0)
