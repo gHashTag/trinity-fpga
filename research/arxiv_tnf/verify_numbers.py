@@ -603,5 +603,22 @@ if ga:
     check("tri guards встроен в tri audit", ga["tool"]["wired_into"] == "tri audit", True, tol=0)
     check("расхождение счётчиков объяснено", len(ga["why_counts_differ"]) > 100, True, tol=0)
 
+# W980: clause-vs-test coverage across the wrappers.
+cv80 = rec("coverage_w980.json")
+if cv80:
+    print("\n== покрытие клауз тестами (W980)")
+    t = cv80["totals"]
+    check("обёрток", t["wrappers"], 9, tol=0)
+    check("клауз всего", t["clauses"], 36, tol=0)
+    check("без одноимённого теста", t["without_same_named_test"], 30, tol=0)
+    check("доля, %", t["pct"], 83, tol=1)
+    pw = cv80["per_wrapper"]
+    check("mac: тестов стало 4", pw["gft_signed_mac_jtag.v"]["tests"], 4, tol=0)
+    check("xorpercep: тестов всего 1", pw["gft_xorpercep_jtag.v"]["tests"], 1, tol=0)
+    check("smul: comm не покрыт", "comm" in pw["gft_smul_jtag.v"]["uncovered"], True, tol=0)
+    check("smul: ind не покрыт", "ind" in pw["gft_smul_jtag.v"]["uncovered"], True, tol=0)
+    check("предел инструмента заявлен", "OVER-REPORTS" in cv80["limit"], True, tol=0)
+    check("жёсткий сигнал назван", "1010" in cv80["hard_signal"], True, tol=0)
+
 print(f"\n  ИТОГ: сошлось {ok}, расхождений {bad}, пропущено блоков {skip}")
 sys.exit(1 if bad else 0)
