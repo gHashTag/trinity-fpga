@@ -21,8 +21,7 @@ that reason rather than for runtime.
 import json, re, subprocess, sys, pathlib
 import numpy as np
 
-SC = pathlib.Path("/private/tmp/claude-501/-Users-playom-t27--claude-worktrees-igla-fpga-improvements-3f5e1a/"
-                  "eeed4a0e-20e8-40f4-aa16-1ecfee4ad92d/scratchpad")
+SC = pathlib.Path(_envos.environ.get("T27_WORK") or pathlib.Path(__file__).resolve().parent)
 import os
 sys.path.insert(0, os.environ.get("T27_CONFORMANCE") or str(pathlib.Path(__file__).resolve().parent / "oracles"))
 import tnf_ref as T, gf_ref as G, posit_ref as P, fp8_ref as F8
