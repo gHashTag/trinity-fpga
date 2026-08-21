@@ -411,5 +411,26 @@ if a69 and a41:
         se = d.std(ddof=1) / np.sqrt(len(d))
         check(f"{task}/{mode}: |t| ниже 2", abs(float(d.mean() / se)) < 2.0, True, tol=0)
 
+# W970: the last two records regenerated on the true rung. Damage: none in accuracy.
+c70 = rec("conv_w970.json"); c43 = rec("conv_w943.json")
+if c70 and c43:
+    print("\n== conv, перегенерация (W970)")
+    for task, want in (("mnist", 0.014), ("fashion", -0.020)):
+        o = np.array(c43["tasks"][task]["formats"]["TNF8"], dtype=float)
+        n = np.array(c70["tasks"][task]["formats"]["TNF8"], dtype=float)
+        if o.max() <= 1: o = o * 100
+        if n.max() <= 1: n = n * 100
+        check(f"conv {task}: ступень − подстановка, п.п.", float((n - o).mean()), want, tol=0.002)
+s70 = rec("accuracy_seeds_w970.json"); s39 = rec("accuracy_seeds_w939.json")
+if s70 and s39:
+    print("\n== accuracy_seeds, перегенерация (W970)")
+    for task, want, wt in (("mnist", 0.064, 1.42), ("fashion", 0.040, 0.65)):
+        o = np.array(s39["tasks"][task]["formats"]["8b/TNF8"], dtype=float) * 100
+        n = np.array(s70["tasks"][task]["formats"]["8b/TNF8"], dtype=float) * 100
+        d = n - o
+        check(f"seeds {task}: ступень − подстановка, п.п.", float(d.mean()), want, tol=0.002)
+        se = d.std(ddof=1) / np.sqrt(len(d))
+        check(f"seeds {task}: t", float(d.mean() / se), wt, tol=0.02)
+
 print(f"\n  ИТОГ: сошлось {ok}, расхождений {bad}, пропущено блоков {skip}")
 sys.exit(1 if bad else 0)
