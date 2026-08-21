@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+# W968: this rig bound the name TNF8 to TNFFormat(4, 3) -- 11 bits, 126.91 binades,
+# which is TNF16's exponent field with a truncated mantissa and NOT the ladder's
+# eighth rung. The ladder defines rung 8 as TNFFormat(3, 4): 10 bits, 30.95 binades.
+# Corrected below. The records this rig produced are marked with _format_note and
+# superseded by census_tnf8_w963.json and rung_w964_*.json.
 """W939: make the 4-bit result admissible -- five seeds, two tasks, error bars.
 
 W938 produced one seed on one split, and the LUT-DNN literature does not accept
@@ -38,7 +43,7 @@ BANKS = {
     16: {"TNF16": rt(T, T.TNFFormat(4, 11)), "GF16": rt(G, G.FORMATS["gf16"]),
          "takum16": rt(K, K.TakumFormat("takum16", 16)), "posit16": rt(P, P.FORMATS["posit16"]),
          "bfloat16": rt(B, B.FORMATS["bfloat16"]), "binary16": lambda v: float(np.float16(v))},
-    8: {"TNF8": rt(T, T.TNFFormat(4, 3)), "GF8": rt(G, G.FORMATS["gf8"]),
+    8: {"TNF8": rt(T, T.TNFFormat(3, 4)), "GF8": rt(G, G.FORMATS["gf8"]),
         "posit8": rt(P, P.FORMATS["posit8"]), "fp8e4m3": rt(F8, F8.FORMATS["fp8_e4m3"]),
         "fp8e5m2": rt(F8, F8.FORMATS["fp8_e5m2"])},
     4: {"TNF4": rt(T, T.TNFFormat(2, 1)), "GF4": rt(G, G.FORMATS["gf4"]),
