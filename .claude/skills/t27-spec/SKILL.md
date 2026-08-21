@@ -8571,3 +8571,48 @@ investigated:
 
 A result of "everything failed" or "everything passed" deserves one control run before
 it is believed — in either direction.
+
+## One mutant can mask another — plant them separately
+
+A guard was loosened so that a reset-block line satisfied an assertion meant for a
+handshake block. Proving the repair meant planting the mutant: delete the clear from
+*both* handshake blocks, show the old assertions pass, re-anchor, show they fail.
+
+That is what was asked for, and it would have been **half a proof**. The two
+assertions panic in order — the `B`-channel one fires first and aborts the test, so a
+both-lines mutant demonstrates nothing about the `R` channel. The agent noticed, re-ran
+with **only** `R` deleted, and showed it bites independently.
+
+**A mutant that kills the test at the first assertion leaves every later assertion
+unproven.** Plant one mutant per guard, not one mutant per file, and read *which*
+assertion fired rather than that the run went red. The failure message is the evidence
+— "the block body was `s_axi_awready <= 1'b1; s_axi_wready <= 1'b1;`" proves the
+assertion is reading the right span; a bare `FAILED` proves only that something did.
+
+Corollary: this is the same shape as the vacuous-green family, one level up. There, a
+gate passed without checking. Here, a gate *failed* without checking everything it
+claims to — and a red result is even less likely to be audited than a green one.
+
+## A pre-push gate that blocks you is a question, not an obstacle
+
+The same pass hit a local pre-push hook (`NotebookLM`) and the environment offered
+`SKIP_NOTEBOOK_GATE=1`. Instead the agent asked whether the gate was *right*: the file
+it demanded, `.trinity/current_task/.notebook_id`, is **tracked in git** and was merely
+absent from a sparse checkout. Adding it satisfied the gate legitimately.
+
+**Before bypassing a gate, establish whether it is wrong or you are.** The bypass flag
+exists, is one word, and would have produced an identical-looking green — which is
+exactly why reaching for it is how a bypass becomes the default. If the gate turns out
+to be genuinely wrong, say so in the PR and fix the gate; do not route around it.
+
+## Scope the diff to the defect you proved
+
+The same pass found a second fail-open one function away — a reset-block assertion
+matched against the whole output, where five of its strings also occur elsewhere. It
+was left **unfixed, documented in the PR body, and filed separately**, because it needs
+its own mutant proof.
+
+That is the right call and it is worth naming, because the tempting move is to fix both
+while the file is open. A change whose evidence covers one defect should not carry a
+second: the reviewer cannot tell which measurement backs which hunk, and an unproven
+repair riding along with a proven one inherits its credibility without earning it.
