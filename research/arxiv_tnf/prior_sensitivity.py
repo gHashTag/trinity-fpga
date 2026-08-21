@@ -15,8 +15,7 @@ conformance references, imported unchanged.
 import json, sys, pathlib
 import numpy as np
 
-A = pathlib.Path("/private/tmp/claude-501/-Users-playom-t27--claude-worktrees-igla-fpga-improvements-3f5e1a/"
-                 "eeed4a0e-20e8-40f4-aa16-1ecfee4ad92d/scratchpad/upstream-wt/research/arxiv_tnf")
+A = pathlib.Path(_envos.environ.get("T27_WORK") or pathlib.Path(__file__).resolve().parent)
 sys.path.insert(0, str(A.parent.parent / "conformance"))
 sys.path.insert(0, str(A))
 
@@ -137,8 +136,7 @@ def main():
             f = res[pname]["formats"][k]
             print(f"   {k:10} median {err:.3e}   mean {f['mean_rel_err']:.3e}   "
                   f"p99 {f['p99_rel_err']:.3e}   miss {f['unrepresentable']}")
-    out = pathlib.Path("/private/tmp/claude-501/-Users-playom-t27--claude-worktrees-igla-fpga-improvements-3f5e1a/"
-                       "eeed4a0e-20e8-40f4-aa16-1ecfee4ad92d/scratchpad/prior_sensitivity.json")
+    out = pathlib.Path(_envos.environ.get("T27_WORK") or pathlib.Path(__file__).resolve().parent)
     out.write_text(json.dumps(res, indent=1))
     print("\nWROTE", out)
 
