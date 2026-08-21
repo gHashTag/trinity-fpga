@@ -588,5 +588,20 @@ if mf:
         check("T821 мерил дефектную сборку",
               sw["designs"]["gft_signed_mac"]["LUT"], se["LUT"]["before"], tol=0)
 
+# W979: the corpus guard audit.
+ga = rec("guard_audit_w979.json")
+if ga:
+    print("\n== аудит охранников по корпусу (W979)")
+    a = ga["audit"]
+    check("определений просмотрено", a["definitions_scanned"], 134, tol=0)
+    check("спек в разовом аудите", a["specs"], 26, tol=0)
+    check("найдено без охранников", a["unguarded_found"], 1, tol=0)
+    check("это gft_signed_dot4 :: smul",
+          a["unguarded"][0].endswith("gft_signed_dot4.t27 :: smul"), True, tol=0)
+    check("аудит совпал с измерением W838", "W838" in a["note"], True, tol=0)
+    check("охранников добавлено", len(ga["fix"]["guards_added"]), 2, tol=0)
+    check("tri guards встроен в tri audit", ga["tool"]["wired_into"] == "tri audit", True, tol=0)
+    check("расхождение счётчиков объяснено", len(ga["why_counts_differ"]) > 100, True, tol=0)
+
 print(f"\n  ИТОГ: сошлось {ok}, расхождений {bad}, пропущено блоков {skip}")
 sys.exit(1 if bad else 0)
