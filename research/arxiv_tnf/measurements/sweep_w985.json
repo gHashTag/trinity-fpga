@@ -1,0 +1,96 @@
+{
+ "wave": "W985",
+ "board": "1:5",
+ "idcode": "0x3636093",
+ "question": "after W984 made every clause real, is gft_smul's failure GONE or merely ABSENT at the one placement W984 tried?",
+ "method": "tri seeds -- one netlist, four placements per design, each read bracketed by a wrong-part bitstream forcing Done=0",
+ "sweep": {
+  "gft_smul_jtag": {
+   "LUT": 1877,
+   "CARRY4": 429,
+   "was_LUT": 1312,
+   "reads": [
+    {
+     "seed": 1,
+     "site": 1,
+     "word": "0xa5a5333f",
+     "clauses": "1111",
+     "ok": 1
+    },
+    {
+     "seed": 7,
+     "site": 4,
+     "word": "0xa5a5333f",
+     "clauses": "1111",
+     "ok": 1
+    },
+    {
+     "seed": 42,
+     "site": 4,
+     "word": "0xa5a5333f",
+     "clauses": "1111",
+     "ok": 1
+    },
+    {
+     "seed": 1234,
+     "site": 4,
+     "word": "0xa5a5333f",
+     "clauses": "1111",
+     "ok": 1
+    }
+   ]
+  },
+  "gft_dup_jtag": {
+   "LUT": 1763,
+   "CARRY4": 372,
+   "was_LUT": 798,
+   "reads": [
+    {
+     "seed": 1,
+     "site": 4,
+     "word": "0xa5a533bf",
+     "clauses": "1111",
+     "ok": 1
+    },
+    {
+     "seed": 7,
+     "site": 4,
+     "word": "0xa5a533bf",
+     "clauses": "1111",
+     "ok": 1
+    },
+    {
+     "seed": 42,
+     "site": 4,
+     "word": "0xa5a533bf",
+     "clauses": "1111",
+     "ok": 1
+    },
+    {
+     "seed": 1234,
+     "site": 4,
+     "word": "0xa5a533bf",
+     "clauses": "1111",
+     "ok": 1
+    }
+   ]
+  }
+ },
+ "result": "8 of 8 PASS. Identical words in every build. The split verdict that defined W842, W977, W981, W982 and W983 does not reproduce on the repaired sources.",
+ "what_cannot_be_concluded": "that place-and-route is now function-preserving. The repair grew the designs by 43 % (smul, 1312 -> 1877 LUT) and 121 % (dup, 798 -> 1763 LUT), so 'the failure is gone' and 'the failure is absent in a design this different' are not separated by this sweep and cannot be separated by any future one -- the case that failed no longer exists.",
+ "the_loss": "this project's only reproducible hardware anomaly was carried by the folded wrappers. Repairing them was right and it destroyed the reproducer.",
+ "mitigation": {
+  "files": [
+   "fpga/verilog/legacy/gft_dup_folded_jtag.v",
+   "fpga/verilog/legacy/gft_smul_folded_jtag.v"
+  ],
+  "frozen_at": "6ae9296ff",
+  "verified_still_defective": "tri clauses: 4 clauses, 2 folded",
+  "why": "kept OUT of the corpus and out of the clause gate, as the regression case for the openXC7 report. Marked do-not-fix."
+ },
+ "a_hypothesis_this_raises": "in the folded wrappers the COMM clause compared two cones each specialised on a literal operand; with Z0 neither operand is a literal, both cones are the generic multiplier, and they agree. W982 proved the folded cones logically equivalent (tri miter, 277 cells, no counterexample), so a pure logic difference is excluded -- but a placement sensitivity peculiar to the small specialised cones is not.",
+ "environment": {
+  "disk": "0.37 GiB at the sweep's end; t27-silicon cleared to 0.45 GiB",
+  "web_search": "unavailable all session"
+ }
+}
