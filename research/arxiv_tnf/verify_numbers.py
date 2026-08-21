@@ -272,5 +272,35 @@ if ld:
     check("fp10_e6m3 дороже обоих (шире диапазон)",
           ld["cost"]["fp10_e6m3"]["per_lane"] > ld["cost"]["TNF8_ladder_10b"]["per_lane"], True, tol=0)
 
+# W962: the split sweep. Cost is set by (odd-mantissa bits, max shift), not by range.
+cv = rec("curve_w955.json")
+if cv:
+    print("\n== развёртка по расщеплениям (W955/W962)")
+    for f, want in (("fp6_e1m4", 80.0), ("fp6_e2m3", 74.0), ("fp6_e3m2", 82.0),
+                    ("fp6_e4m1", 106.0), ("fp10_e3m6", 230.0), ("fp10_e4m5", 215.0),
+                    ("fp10_e5m4", 376.0), ("fp10_e6m3", 447.0)):
+        check(f"{f}: ячеек на полосу", cv["cost"][f]["per_lane"], want, tol=0.01)
+    # немонотонность: меньше диапазон, но дороже -- вот почему «ячеек на бинаду» нет
+    check("fp6_e1m4 дороже fp6_e2m3 при МЕНЬШЕМ диапазоне",
+          cv["cost"]["fp6_e1m4"]["per_lane"] > cv["cost"]["fp6_e2m3"]["per_lane"]
+          and cv["fields"]["fp6_e1m4"]["binades"] < cv["fields"]["fp6_e2m3"]["binades"], True, tol=0)
+    check("fp10_e3m6 дороже fp10_e4m5 при МЕНЬШЕМ диапазоне",
+          cv["cost"]["fp10_e3m6"]["per_lane"] > cv["cost"]["fp10_e4m5"]["per_lane"]
+          and cv["fields"]["fp10_e3m6"]["binades"] < cv["fields"]["fp10_e4m5"]["binades"], True, tol=0)
+    # точный закон: одинаковая пара (нечёт, сдвиг) => одинаковая цена
+    if rm_ and ld:
+        for a, da, b, db, tol_pct in (("TNF4", rm_, "fp6e4m1", rm_, 2.0),
+                                      ("TNF8_ladder_10b", ld, "fp10_e5m4", ld, 2.0)):
+            fa, fb = da["fields"][a], db["fields"][b]
+            check(f"{a}/{b}: пара (нечёт, сдвиг) совпадает",
+                  (fa["odd_bits"], fa["max_shift"]) == (fb["odd_bits"], fb["max_shift"]), True, tol=0)
+            ca, cb = da["cost"][a]["per_lane"], db["cost"][b]["per_lane"]
+            check(f"{a}/{b}: разница цены, %", abs(ca - cb) / cb * 100, 1.5, tol=0.5)
+    # перекрёстная сверка между волнами
+    for k6, kc in (("fp6e4m1", "fp6_e4m1"), ("fp6e2m3", "fp6_e2m3"), ("fp6e3m2", "fp6_e3m2")):
+        if rm_ and k6 in rm_["cost"]:
+            check(f"{kc}: W954 против W955",
+                  rm_["cost"][k6]["per_lane"] - cv["cost"][kc]["per_lane"], 0.0, tol=0.001)
+
 print(f"\n  ИТОГ: сошлось {ok}, расхождений {bad}, пропущено блоков {skip}")
 sys.exit(1 if bad else 0)
