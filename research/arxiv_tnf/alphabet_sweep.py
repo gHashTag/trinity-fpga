@@ -11,11 +11,11 @@ and reports (alphabet bits) -> (decoder cells, consumer cells) so the effect bec
 a curve instead of three points. Joined afterwards with the five-seed accuracy runs,
 it is a cost-quality frontier measured end to end on one substrate.
 """
+import os as _envos
 import re, json, subprocess, pathlib
 
-SC = pathlib.Path("/private/tmp/claude-501/-Users-playom-t27--claude-worktrees-igla-fpga-improvements-3f5e1a/"
-                  "eeed4a0e-20e8-40f4-aa16-1ecfee4ad92d/scratchpad")
-TNET = SC / "upstream-wt/fpga/tnet"
+SC = pathlib.Path(_envos.environ.get("T27_WORK") or pathlib.Path(__file__).resolve().parent)
+TNET = pathlib.Path(_envos.environ.get("T27_TNET") or (SC / "fpga/tnet"))
 OUT = SC / "alpha"
 OUT.mkdir(parents=True, exist_ok=True)
 
