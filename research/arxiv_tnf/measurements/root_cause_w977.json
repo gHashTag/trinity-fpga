@@ -1,0 +1,76 @@
+{
+ "wave": "W977",
+ "board": "1:5",
+ "idcode": "0x3636093",
+ "root_cause": {
+  "finding": "GftSignedMac is a FLAT module with ZERO instances of GftSmul or GftSadd. It re-implements the multiply inline, using the identical hidden-bit line prod = __mul_noop((512 + am), (512 + bm)) -- and OMITS the zero guards that GftSmul carries (if (a == 0) at line 258, if (b == 0) at line 262).",
+  "evidence": {
+   "smul_zero_guards": [
+    258,
+    262
+   ],
+   "mac_zero_guards": [],
+   "shared_hidden_bit_line": "prod = __mul_noop((512 + am), (512 + bm))",
+   "smul_line": 333,
+   "mac_line": 69
+  },
+  "consequence": "mac(0,x,0,y) = 512 + 4x. The implicit leading one is added even when the operand is zero, so zero is not an annihilator in the MAC while it IS in smul -- which is exactly what the die reported for both."
+ },
+ "validation_of_w976": {
+  "method": "re-ran the ZERO probe gated on the module's own ready",
+  "result": "16 violations in 16 points with ready high; result = 512 + 4*live",
+  "verdict": "W976's 64/64 stands; it was not a sampling artefact",
+  "note": "GftSmul/GftSignedMac assign ready = 1'b1, so the gate is vacuous here -- but it had to be checked before standing behind the claim"
+ },
+ "operators": {
+  "gft_smul": {
+   "sim_passed": 3,
+   "die_word": "0xa5a5332a",
+   "die_design": 12,
+   "clauses": {
+    "c_zero": 1,
+    "c_comm": 0,
+    "c_gold": 1,
+    "c_ind": 0
+   },
+   "ok": 0,
+   "beat": 1,
+   "note": "ZERO passes -- smul has the guard. COMM and IND fail on the die and were NOT reproduced in simulation across 20 operand pairs."
+  },
+  "gft_xorpercep": {
+   "sim_passed": 1,
+   "LUT": 10799,
+   "CARRY4": 1885,
+   "fmax_mhz": 2.08,
+   "die": "ABSENT -- nextpnr hit the 600 s cap; never reached hardware"
+  },
+  "gft_train1": {
+   "sim_passed": 3,
+   "die_word": "0xa5a5317f",
+   "die_design": 5,
+   "clauses": "1111",
+   "ok": 1,
+   "beat": 1,
+   "note": "PASS"
+  },
+  "gft_bitnet_neuron": {
+   "sim_passed": 2,
+   "die": "FAIL timing -- Max frequency for cfgmclk 16.63 MHz, required 70.77 MHz",
+   "note": "a genuine timing FAIL with rc=1, distinct from the ABSENT of a PnR time cap"
+  }
+ },
+ "refuted_hypotheses": [
+  "sadd(0,0) != 0  -- false, sadd(0,0) = 0",
+  "smul(0,x) != 0  -- false, smul(0,12345) = 0",
+  "smul commutativity broken -- 0 violations in 20 pairs"
+ ],
+ "table": {
+  "gft_sadd": "3/3 sim, die 1111 ok=1  PASS",
+  "gft_train1": "3/3 sim, die 1111 ok=1  PASS",
+  "gft_smul": "3/3 sim, die 1010 ok=0  FAIL (COMM, IND)",
+  "gft_signed_mac": "2/2 sim, die 0011 ok=0  FAIL (ZERO, COMM)",
+  "gft_xorpercep": "1/1 sim, ABSENT -- PnR 600 s cap",
+  "gft_bitnet_neuron": "2 sim, FAIL timing 16.63 vs 70.77 MHz",
+  "gft_signed_dot4": "ABSENT -- PnR cap + BSCAN chain/site mismatch"
+ }
+}
