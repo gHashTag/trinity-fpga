@@ -1,0 +1,83 @@
+{
+ "fp4_e2m1": {
+  "physical_bits": 4,
+  "codes": 16,
+  "distinct_values": 15,
+  "decoder_cells": 3.0,
+  "consumer_cells": 19.143,
+  "multiply_alone": 16.143,
+  "r2_bare": 1.0,
+  "r2_fused": 0.998499
+ },
+ "gf4": {
+  "physical_bits": 4,
+  "codes": 16,
+  "distinct_values": 15,
+  "decoder_cells": 5.0,
+  "consumer_cells": 21.143,
+  "multiply_alone": 16.143,
+  "r2_bare": 1.0,
+  "r2_fused": 0.998769
+ },
+ "tnf4": {
+  "physical_bits": 6,
+  "codes": 64,
+  "distinct_values": 58,
+  "decoder_cells": 8.0,
+  "consumer_cells": 51.286,
+  "multiply_alone": 43.286,
+  "r2_bare": 1.0,
+  "r2_fused": 0.999977
+ },
+ "gf8": {
+  "physical_bits": 8,
+  "codes": 256,
+  "distinct_values": 255,
+  "decoder_cells": 12.0,
+  "consumer_cells": 145.571,
+  "multiply_alone": 133.571,
+  "r2_bare": 1.0,
+  "r2_fused": 0.999928
+ },
+ "fp8_e4m3": {
+  "physical_bits": 8,
+  "codes": 256,
+  "distinct_values": 253,
+  "decoder_cells": 19.0,
+  "consumer_cells": 152.571,
+  "multiply_alone": 133.571,
+  "r2_bare": 1.0,
+  "r2_fused": 0.999934
+ },
+ "fp8_e5m2": {
+  "physical_bits": 8,
+  "codes": 256,
+  "distinct_values": 247,
+  "decoder_cells": 18.0,
+  "consumer_cells": 151.571,
+  "multiply_alone": 133.571,
+  "r2_bare": 1.0,
+  "r2_fused": 0.999933
+ },
+ "posit8": {
+  "physical_bits": 8,
+  "codes": 256,
+  "distinct_values": 255,
+  "decoder_cells": 33.0,
+  "consumer_cells": 165.143,
+  "multiply_alone": 132.143,
+  "r2_bare": 1.0,
+  "r2_fused": 0.99998
+ },
+ "tnf8": {
+  "physical_bits": 11,
+  "codes": 2048,
+  "distinct_values": 2018,
+  "decoder_cells": 29.0,
+  "consumer_cells": 270.571,
+  "multiply_alone": 241.571,
+  "r2_bare": 1.0,
+  "r2_fused": 0.999979
+ },
+ "_format_note": "W968: the key 'TNF8' in this record is TNFFormat(4, 3) -- 11 bits, 126.91 binades -- which is NOT the ladder's eighth rung. The ladder defines rung 8 as TNFFormat(3, 4): 10 bits, 30.95 binades. Superseded for the true rung by census_tnf8_w963.json (area) and rung_w964_*.json (accuracy). Records that wrote the format into the key, like accuracy_coordinate_w938.json's 'TNF8 (E_t=4,M=3)', aged correctly; this one did not."
+}
