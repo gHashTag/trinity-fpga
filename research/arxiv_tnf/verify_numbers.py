@@ -505,5 +505,23 @@ if dv:
     check("тот же битстрим, что в W973", dv["build"]["bitstream_bytes"], 9730834, tol=0)
     check("Fmax совпадает с W973", dv["build"]["fmax_mhz"], 80.35, tol=0.01)
 
+# W975: the format's operators read off the die, with the control satisfied.
+od = rec("operators_die_w975.json")
+if od:
+    print("\n== операторы формата на кристалле (W975)")
+    check("контроль: чужой битстрим уронил Done", od["control"]["A1_wrong_part_done"], 0, tol=0)
+    sa, mc = od["operators"]["gft_sadd"], od["operators"]["gft_signed_mac"]
+    check("sadd: клаузы на кристалле == 1111", sa["die_clauses"] == "1111", True, tol=0)
+    check("sadd: ok", sa["ok"], 1, tol=0)
+    check("sadd: симуляция без падений", sa["sim_failed"], 0, tol=0)
+    check("mac: клаузы на кристалле == 0011", mc["die_clauses"] == "0011", True, tol=0)
+    check("mac: ok", mc["ok"], 0, tol=0)
+    check("mac: жив (beat)", mc["beat"], 1, tol=0)
+    check("mac: симуляция без падений", mc["sim_failed"], 0, tol=0)
+    check("mac: тестов в симуляции меньше, чем клауз на кристалле",
+          mc["sim_passed"] < 4, True, tol=0)
+    check("mac: запас по частоте, раз", mc["fmax_mhz"] / mc["target_mhz"], 4.13, tol=0.02)
+    check("контроль прогонялся", mc["control_run"], True, tol=0)
+
 print(f"\n  ИТОГ: сошлось {ok}, расхождений {bad}, пропущено блоков {skip}")
 sys.exit(1 if bad else 0)
