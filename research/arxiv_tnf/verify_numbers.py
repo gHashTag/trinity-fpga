@@ -253,5 +253,24 @@ if fl:
         check("флоат дешевле фикс.точки для fp6e2m3",
               mac["cost"]["fp6e2m3"]["per_lane"] > fl["cost"]["fp6e2m3"]["per_lane"], True, tol=0)
 
+# W954: cost tracks RANGE, not the lattice. Range-matched peers, both widths.
+rm_ = rec("rangematch_w954.json"); ld = rec("ladder_w954.json")
+if rm_:
+    print("\n== согласование по диапазону, 6 бит (W954)")
+    for f, want in (("TNF4", 108.0), ("fp6e4m1", 106.0), ("fp6e3m2", 82.0), ("fp6e2m3", 74.0)):
+        check(f"{f}: ячеек на полосу", rm_["cost"][f]["per_lane"], want, tol=0.01)
+    check("TNF4 / fp6e4m1 (диапазон согласован)",
+          rm_["cost"]["TNF4"]["per_lane"] / rm_["cost"]["fp6e4m1"]["per_lane"], 1.019, tol=0.005)
+    check("TNF4 / fp6e2m3 (только ширина)",
+          rm_["cost"]["TNF4"]["per_lane"] / rm_["cost"]["fp6e2m3"]["per_lane"], 1.459, tol=0.005)
+if ld:
+    print("\n== ступень TNF8 лестницы, 10 бит (W954)")
+    check("TNF8(3,4): ячеек на полосу", ld["cost"]["TNF8_ladder_10b"]["per_lane"], 380.0, tol=0.01)
+    check("fp10_e5m4: ячеек на полосу", ld["cost"]["fp10_e5m4"]["per_lane"], 376.0, tol=0.01)
+    check("TNF8 / fp10_e5m4 (диапазон согласован)",
+          ld["cost"]["TNF8_ladder_10b"]["per_lane"] / ld["cost"]["fp10_e5m4"]["per_lane"], 1.011, tol=0.005)
+    check("fp10_e6m3 дороже обоих (шире диапазон)",
+          ld["cost"]["fp10_e6m3"]["per_lane"] > ld["cost"]["TNF8_ladder_10b"]["per_lane"], True, tol=0)
+
 print(f"\n  ИТОГ: сошлось {ok}, расхождений {bad}, пропущено блоков {skip}")
 sys.exit(1 if bad else 0)
