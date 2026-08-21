@@ -394,5 +394,22 @@ if st:
         check("TNF16 воспроизводит запись W942",
               st["tnf16_v2spec"]["consumer_cells"] - sw["tnf16"]["consumer_cells"], 0.0, tol=0.005)
 
+# W969: the activations record regenerated on the ladder's TRUE eighth rung.
+a69 = rec("activations_w969.json"); a41 = rec("activations_w941.json")
+if a69 and a41:
+    print("\n== перегенерация на настоящей ступени (W969)")
+    for task, mode, want in (("mnist", "weights_only", -0.008),
+                             ("mnist", "weights_and_activations", 0.018),
+                             ("fashion", "weights_only", -0.016),
+                             ("fashion", "weights_and_activations", -0.068)):
+        o = np.array(a41["tasks"][task][mode]["TNF8"], dtype=float)
+        n = np.array(a69["tasks"][task][mode]["TNF8"], dtype=float)
+        if o.max() <= 1: o = o * 100
+        if n.max() <= 1: n = n * 100
+        check(f"{task}/{mode}: ступень − подстановка, п.п.", float((n - o).mean()), want, tol=0.002)
+        d = n - o
+        se = d.std(ddof=1) / np.sqrt(len(d))
+        check(f"{task}/{mode}: |t| ниже 2", abs(float(d.mean() / se)) < 2.0, True, tol=0)
+
 print(f"\n  ИТОГ: сошлось {ok}, расхождений {bad}, пропущено блоков {skip}")
 sys.exit(1 if bad else 0)
