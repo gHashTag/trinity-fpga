@@ -1,0 +1,68 @@
+{
+ "metric": "LUT1-6 + CARRY4",
+ "ns": [
+  1,
+  2,
+  4,
+  8
+ ],
+ "style": "float: odd-mantissa multiply + shift",
+ "fields": {
+  "TNF4": {
+   "odd_bits": 2,
+   "max_shift": 15,
+   "aligned": 34,
+   "acc": 40
+  },
+  "fp6e3m2": {
+   "odd_bits": 3,
+   "max_shift": 8,
+   "aligned": 22,
+   "acc": 28
+  },
+  "fp6e2m3": {
+   "odd_bits": 4,
+   "max_shift": 5,
+   "aligned": 18,
+   "acc": 24
+  }
+ },
+ "cost": {
+  "TNF4": {
+   "per_lane": 108.0,
+   "fixture": 0.0,
+   "r2": 1.0,
+   "points": [
+    108,
+    216,
+    432,
+    864
+   ],
+   "mux_per_lane": 5.0
+  },
+  "fp6e3m2": {
+   "per_lane": 82.0,
+   "fixture": 0.0,
+   "r2": 1.0,
+   "points": [
+    82,
+    164,
+    328,
+    656
+   ],
+   "mux_per_lane": 1.0
+  },
+  "fp6e2m3": {
+   "per_lane": 74.0,
+   "fixture": 0.0,
+   "r2": 1.0,
+   "points": [
+    74,
+    148,
+    296,
+    592
+   ],
+   "mux_per_lane": 4.0
+  }
+ }
+}
