@@ -9,12 +9,12 @@ question "is the 6.1x a property of the format or of the comparator" gets a numb
 Same method as W936: instantiate the unit N times in a pipelined chain, fit
 cells(N) = fixture + cost*N over N in {1,2,4,8}, report the slope.
 """
+import os as _envos
 import re, sys, json, subprocess, pathlib
 
-SC = pathlib.Path("/private/tmp/claude-501/-Users-playom-t27--claude-worktrees-igla-fpga-improvements-3f5e1a/"
-                  "eeed4a0e-20e8-40f4-aa16-1ecfee4ad92d/scratchpad")
+SC = pathlib.Path(_envos.environ.get("T27_WORK") or pathlib.Path(__file__).resolve().parent)
 PACO = SC / "ext/PACoGen-master"
-TNET = SC / "upstream-wt/fpga/tnet"
+TNET = pathlib.Path(_envos.environ.get("T27_TNET") or (SC / "fpga/tnet"))
 OUT = SC / "ext/rig"
 OUT.mkdir(parents=True, exist_ok=True)
 
@@ -134,8 +134,8 @@ if __name__ == "__main__":
     add_v = PACO / "add/posit_add.v"
     res["pacogen_data_extract_n16_es2"] = run("x_paco_extract", w_extract, [add_v])
     res["pacogen_posit_add_n16_es2"] = run("x_paco_add", w_add, [add_v])
-    cost = SC / "upstream-wt/fpga/openxc7-synth/tnf_cost"
-    synthdir = SC / "upstream-wt/fpga/openxc7-synth"
+    cost = pathlib.Path(_envos.environ.get("T27_SYNTH") or (SC / "fpga/openxc7-synth")) / "tnf_cost"
+    synthdir = pathlib.Path(_envos.environ.get("T27_SYNTH") or (SC / "fpga/openxc7-synth"))
     core = [synthdir / "gf_adder_param.v", synthdir / "gf_decode_param.v"]
     core = [c for c in core if c.exists()]
     res["tnf_e4m8_add_16cells"] = run("x_tnf_add", w_tnf_add, [cost / "tnf_cost_e4m8_add_top.v"] + core)
