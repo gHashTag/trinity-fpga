@@ -44,19 +44,28 @@ module gft_commmin_jtag #(parameter integer JTAG_CHAIN_N = 3);
 
     // Written by nothing; 0x5A5A1234 is neither the shift register's magic nor
     // any TNF constant, so a match cannot come from reading a neighbouring net.
+    // W983: `(* keep *)` is NOT enough -- it preserves the cell and `opt` still
+    // propagates the constant into the comparison. A probe that nothing writes
+    // folds to its INIT and `init_ok` becomes the literal 1: a clause that reads
+    // PASS in every build, including the failing ones. It has to MOVE. A rotation
+    // is value-preserving in the only property the clause tests, and yosys will
+    // not reason about the reachable set of a 32-bit rotate.
     reg [31:0] initprobe = 32'h5A5A1234;
+    always @(posedge slowclk) initprobe <= {initprobe[30:0], initprobe[31]};
 
     // W981 (T830): `live` walks out of the representable set after 20992 beats,
     // about twelve hours. A die read takes minutes, so this is inside its window
     // -- recorded here so the next reader does not have to rediscover it.
     reg [23:0] pre  = 24'd0;
     reg        beat = 1'b0;
-    reg [31:0] live = 32'd20480;
+    reg [31:0] live  = 32'd20480;
+    reg [31:0] live2 = 32'd20480;      // W983: a SECOND counter, same seed, same step
     always @(posedge slowclk) begin
         pre <= pre + 24'd1;
         if (pre == 24'd0) begin
-            beat <= ~beat;
-            live <= live + 32'd1;
+            beat  <= ~beat;
+            live  <= live  + 32'd1;
+            live2 <= live2 + 32'd1;
         end
     end
 
@@ -64,17 +73,23 @@ module gft_commmin_jtag #(parameter integer JTAG_CHAIN_N = 3);
     wire [31:0] r_ctrl, r_comm_a, r_comm_b;
 
     // THE CONTROL: same function, same operand order, two instances.
-    GftSmul u_ctrl (.clk(slowclk), .rst_n(rst_n), .en(1'b1),
+    // W983: two instances with IDENTICAL operands are merged by yosys, and the
+    // comparison between them collapses to the literal 1 -- the control this whole
+    // experiment was read through could not fail in any build. The repair is not
+    // an attribute: the two sources must be STRUCTURALLY DISTINCT and carry equal
+    // values. `live` and `live2` are separate counters stepping identically, and
+    // proving them equal is not something a mapper will attempt.
+    (* keep *) GftSmul u_ctrl (.clk(slowclk), .rst_n(rst_n), .en(1'b1),
         .a(live), .b(TWO), .ready(y1), .result(r_ctrl));
-    GftSmul u_comm_a (.clk(slowclk), .rst_n(rst_n), .en(1'b1),
-        .a(live), .b(TWO), .ready(y2), .result(r_comm_a));
+    (* keep *) GftSmul u_comm_a (.clk(slowclk), .rst_n(rst_n), .en(1'b1),
+        .a(live2), .b(TWO), .ready(y2), .result(r_comm_a));
 
     // THE TEST: same function, operands swapped -- the constant folds into the
     // other port, so yosys builds a different cone for the same mathematics.
-    GftSmul u_comm_b (.clk(slowclk), .rst_n(rst_n), .en(1'b1),
+    (* keep *) GftSmul u_comm_b (.clk(slowclk), .rst_n(rst_n), .en(1'b1),
         .a(TWO), .b(live), .ready(y3), .result(r_comm_b));
 
-    wire init_ok = (initprobe == 32'h5A5A1234);
+    wire init_ok = (initprobe != 32'd0);   // rotation-invariant, and not foldable
     wire self_ok = (r_ctrl == r_comm_a);
     wire comm_ok = (r_comm_a == r_comm_b);
     wire ind_ok  = (r_comm_a != 32'd0);
