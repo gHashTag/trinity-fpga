@@ -1,0 +1,35 @@
+{
+ "wave": "W979",
+ "audit": {
+  "definitions_scanned": 134,
+  "specs": 26,
+  "functions": [
+   "smul",
+   "sadd",
+   "magmul",
+   "magadd",
+   "magsub"
+  ],
+  "unguarded_found": 1,
+  "unguarded": [
+   "ternary/gft_signed_dot4.t27 :: smul"
+  ],
+  "note": "the audit independently predicted a failure measured on hardware in W838: gft_signed_dot4's annihilation clause read FALSE on board 1:4 (0xa5a5a1b4, clauses 1011). The static check found the cause without a board."
+ },
+ "fix": {
+  "spec": "specs/ternary/gft_signed_dot4.t27",
+  "function": "smul",
+  "guards_added": [
+   "if (a == 0) { return 0; }",
+   "if (b == 0) { return 0; }"
+  ],
+  "sim_before": "1 test PASSED",
+  "sim_after": "2 tests PASSED (zero_annihilates added)"
+ },
+ "tool": {
+  "name": "tri guards",
+  "wired_into": "tri audit",
+  "reports": "51 definitions of smul/sadd across 30 specs; every copy guarded"
+ },
+ "why_counts_differ": "the standalone audit counted 134 definitions of five functions across the ternary tree; tri guards counts only smul/sadd, the two where a missing zero guard is a correctness defect, and scans the whole specs tree (30 files)."
+}
