@@ -704,5 +704,40 @@ if pn:
     check("зелёных строк аудита", len(pn["audit_after"]["rows_green"]), 9, tol=0)
     check("красных строк аудита", len(pn["audit_after"]["rows_red"]), 1, tol=0)
 
+# W982: the minimal reproducer, the SAT proof, and the third method that failed.
+mt = rec("miter_w982.json")
+if mt:
+    print("\n== минимальный воспроизводитель и доказательство (W982)")
+    mr = mt["minimal_reproducer"]
+    check("чтений с кристалла", len(mr["die_reads"]), 4, tol=0)
+    P = [r for r in mr["die_reads"] if r["verdict"] == "PASS"]
+    F = [r for r in mr["die_reads"] if r["verdict"] == "FAIL"]
+    check("проходов", len(P), 2, tol=0)
+    check("отказов", len(F), 2, tol=0)
+    check("все проходы -- один нетлист", len({r["LUT"] for r in P}), 1, tol=0)
+    check("все отказы -- другой нетлист", len({r["LUT"] for r in F}), 1, tol=0)
+    check("нетлисты различны", P[0]["LUT"] != F[0]["LUT"], True, tol=0)
+    check("проходящий нетлист, LUT", P[0]["LUT"], 430, tol=0)
+    check("отказывающий нетлист, LUT", F[0]["LUT"], 452, tol=0)
+    check("сокращение от 798 LUT, %", 100 * (1 - F[0]["LUT"] / 798), 43.4, tol=0.2)
+    check("зерно не предсказывает",
+          {r["seed"] for r in P} != {1, 42}, True, tol=0)
+    sp = mt["sat_proof_on_the_mapped_netlist"]
+    check("smul: ячеек после отображения", sp["gft_smul"]["cells_after_mapping"], 277, tol=0)
+    check("smul: переменных SAT", sp["gft_smul"]["sat_variables"], 1822, tol=0)
+    check("sadd: переменных SAT", sp["gft_sadd"]["sat_variables"], 48200, tol=0)
+    check("оба доказаны",
+          sp["gft_smul"]["result"].startswith("proved") and
+          sp["gft_sadd"]["result"].startswith("proved"), True, tol=0)
+    check("фронтенд оправдан", "exonerated" in sp["consequence"], True, tol=0)
+    tm = mt["third_method_that_failed_its_control"]
+    ctrl = tm["result"]["42_vs_1_PASS_PASS"]
+    tests = [tm["result"][k] for k in tm["result"] if "PASS_FAIL" in k]
+    check("контрольная пара расходится", ctrl, 591, tol=0)
+    check("контроль не меньше тестов", min(tests) <= ctrl <= max(tests) or ctrl > min(tests),
+          True, tol=0)
+    check("метод признан неубедительным",
+          tm["verdict"].startswith("INCONCLUSIVE"), True, tol=0)
+
 print(f"\n  ИТОГ: сошлось {ok}, расхождений {bad}, пропущено блоков {skip}")
 sys.exit(1 if bad else 0)
