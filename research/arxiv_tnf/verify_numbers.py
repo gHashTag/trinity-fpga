@@ -432,5 +432,24 @@ if s70 and s39:
         se = d.std(ddof=1) / np.sqrt(len(d))
         check(f"seeds {task}: t", float(d.mean() / se), wt, tol=0.02)
 
+# W972: the last convention removed -- a float peer WITH subnormals, normaliser paid for.
+s72 = rec("struct972.json")
+if s72 and st:
+    print("\n== соперник с субнормалями (W972)")
+    check("fp19_e7m11_sub: декодер", s72["fp19_e7m11_sub"]["decoder_cells"], 78.0, tol=0.01)
+    check("fp19_e7m11_sub: потребитель", s72["fp19_e7m11_sub"]["consumer_cells"], 501.29, tol=0.01)
+    check("цена субнормалей, ячеек",
+          s72["fp19_e7m11_sub"]["consumer_cells"] - s72["fp19_e7m11"]["consumer_cells"], 60.0, tol=0.01)
+    t16 = st["tnf16_v2spec"]["consumer_cells"]
+    check("TNF16 против FTZ-соперника, %",
+          (t16 - s72["fp19_e7m11"]["consumer_cells"]) / s72["fp19_e7m11"]["consumer_cells"] * 100,
+          2.04, tol=0.02)
+    check("TNF16 против субнормального соперника, %",
+          (t16 - s72["fp19_e7m11_sub"]["consumer_cells"]) / s72["fp19_e7m11_sub"]["consumer_cells"] * 100,
+          -10.17, tol=0.02)
+    check("знаки противоположны",
+          (t16 > s72["fp19_e7m11"]["consumer_cells"]) and (t16 < s72["fp19_e7m11_sub"]["consumer_cells"]),
+          True, tol=0)
+
 print(f"\n  ИТОГ: сошлось {ok}, расхождений {bad}, пропущено блоков {skip}")
 sys.exit(1 if bad else 0)
