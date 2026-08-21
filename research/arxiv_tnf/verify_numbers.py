@@ -467,5 +467,30 @@ if bw:
     check("смещение слова синхронизации", bw["sync_word_offset"], 230, tol=0)
     check("собрано без Docker", "no Docker" in bw["toolchain"], True, tol=0)
 
+# W974: the format's own operators on xc7a200tfbg676-1.
+sw = rec("silicon_w974.json")
+if sw:
+    print("\n== операторы формата на кристалле (W974)")
+    want = {"mvp_ternary_classifier": (123, 52, 80.35, "cfgmclk"),
+            "gft_sadd": (1312, 257, 18.24, "slowclk"),
+            "gft_signed_mac": (6466, 1237, 9.14, "slowclk"),
+            "gft_signed_dot4": (12872, 2043, 5.50, "slowclk")}
+    for k, (lut, c4, fm, clk) in want.items():
+        d = sw["designs"][k]
+        check(f"{k}: LUT", d["LUT"], lut, tol=0)
+        check(f"{k}: CARRY4", d["CARRY4"], c4, tol=0)
+        check(f"{k}: Fmax МГц", d["fmax_mhz"], fm, tol=0.01)
+        check(f"{k}: клок совпадает", d["clock"] == clk, True, tol=0)
+        check(f"{k}: DSP48E1", d["DSP48E1"], 0, tol=0)
+    # сопоставимая тройка на slowclk: падение МГц/kLUT в 32 раза
+    a = sw["designs"]["gft_sadd"]["mhz_per_klut"]
+    b = sw["designs"]["gft_signed_dot4"]["mhz_per_klut"]
+    check("падение МГц/kLUT по slowclk, раз", a / b, 32.56, tol=0.05)
+    check("dot4 помечен неполным", sw["designs"]["gft_signed_dot4"]["complete"], False, tol=0)
+    check("у dot4 два отдельных отказа", len(sw["designs"]["gft_signed_dot4"]["failures"]), 2, tol=0)
+    check("mac даёт больше DUT-эквивалентов, чем sadd",
+          sw["designs"]["gft_signed_mac"]["dut_equivalents"] >
+          sw["designs"]["gft_sadd"]["dut_equivalents"], True, tol=0)
+
 print(f"\n  ИТОГ: сошлось {ok}, расхождений {bad}, пропущено блоков {skip}")
 sys.exit(1 if bad else 0)
