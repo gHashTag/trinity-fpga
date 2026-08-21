@@ -164,5 +164,30 @@ if bs:
     bt = bs["res"]["acts_heavy"][str(bs["n"])]
     check("на весь тензор: e2m3 обнуляет, %", bt["fp6e2m3"]["underflow"] * 100, 44.41, tol=0.05)
 
+# W950: the surviving claim, tested against the recipe the field actually uses.
+bq = rec("blockquant_w950.json")
+if bq:
+    print("\n== вычисляемый масштаб MX (W950)")
+    for arm in ("block32", "per_tensor"):
+        for fmt in ("TNF4", "fp6e2m3", "fp6e3m2"):
+            a = bq["runs"][arm][fmt]
+            check(f"{arm} {fmt}: отказов из {len(a)}", sum(1 for v in a if v < 60.0), 0, tol=0)
+    import numpy as _np
+    for arm, opp, want, wt in (("per_tensor", "fp6e2m3", -0.376, -7.24),
+                               ("per_tensor", "fp6e3m2", -0.250, -5.15),
+                               ("block32", "fp6e2m3", 0.010, 0.11)):
+        t = _np.array(bq["runs"][arm]["TNF4"]); f = _np.array(bq["runs"][arm][opp])
+        dd = t - f
+        check(f"{arm} TNF4−{opp}, п.п.", float(dd.mean()), want, tol=0.002)
+        check(f"{arm} TNF4−{opp}, t", float(dd.mean() / (dd.std(ddof=1) / _np.sqrt(len(dd)))), wt, tol=0.02)
+
+mw = rec("mechanism_w950.json")
+if mw:
+    print("\n== механизм: насыщение против отказа (W950)")
+    c = mw["confusion"]; tot = sum(c.values())
+    check("прогонов в трассах", tot, 120, tol=0)
+    check("согласие насыщение<=>отказ, %", (c["tp"] + c["tn"]) / tot * 100, 90.83, tol=0.02)
+    check("fp6e2m3: отказы с насыщением", c["tp"] >= 48, True, tol=0)
+
 print(f"\n  ИТОГ: сошлось {ok}, расхождений {bad}, пропущено блоков {skip}")
 sys.exit(1 if bad else 0)
