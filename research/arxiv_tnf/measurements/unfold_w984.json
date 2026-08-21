@@ -1,0 +1,60 @@
+{
+ "wave": "W984",
+ "board": "1:5",
+ "idcode": "0x3636093",
+ "goal": "clear the 14 folded clauses W983 found, and gate on it",
+ "repair_recipe": {
+  "opaque_zero": "two counters with the same seed and step; Z0 = opq_a - opq_b is identically zero at runtime and opaque to the optimiser, so `K + Z0` is K on silicon and an unknown to `opt`",
+  "constant_operands": "every literal operand now passes through Z0",
+  "identical_instances": "the control's two instances are given structurally distinct sources carrying equal values, or yosys merges them and the comparison is a tautology",
+  "unwritten_probe": "rotates, and is tested for a rotation-invariant property (!= 0)",
+  "what_does_not_work": "(* keep *) -- it preserves the cell and `opt` propagates the constant into the comparison anyway (T837)"
+ },
+ "after": {
+  "gft_smul_jtag.v": 0,
+  "gft_sadd_jtag.v": 0,
+  "gft_train1_jtag.v": 0,
+  "gft_dup_jtag.v": 0,
+  "gft_dup2_jtag.v": 0,
+  "gft_dup3_jtag.v": 0,
+  "gft_xorpercep_jtag.v": 0,
+  "gft_signed_mac_jtag.v": 0,
+  "gft_commmin_jtag.v": 0
+ },
+ "totals": {
+  "wrappers_repaired": 8,
+  "clauses_now_real": 36,
+  "folded_before": 14,
+  "folded_after": 0
+ },
+ "gated": "tri clauses is now a GATE in tri audit, not a report: 'is this net a constant or is it driven' is exact, with no room to over-report (lesson 1494)",
+ "die_reads_with_every_clause_real": [
+  {
+   "design": "gft_smul",
+   "die_design": 12,
+   "word": "0xa5a5333f",
+   "clauses": "1111",
+   "ok": 1,
+   "beat": 1,
+   "site": 4,
+   "before": "1010 -- and W983 showed 2 of those 4 were folded constants, so it was 2 of 2 MEASURED clauses failing",
+   "after": "1111 with all four clauses real"
+  },
+  {
+   "design": "gft_sadd",
+   "die_design": 1,
+   "word": "0xa5a5307f",
+   "clauses": "1111",
+   "ok": 1,
+   "beat": 1,
+   "site": 3,
+   "before": "1111 -- but 3 of 4 were folded, so it was 1 measured clause",
+   "after": "1111 with all four real -- the first time this design's headline is earned"
+  }
+ ],
+ "honest_caveat": "the wrappers CHANGED to make the clauses real, so the netlist and the placement changed with them. These are NEW measurements, not re-runs. Whether gft_smul's failure is gone or merely absent at this placement needs a seed sweep, and that is not done.",
+ "environment": {
+  "disk": "the wave hit ENOSPC mid-edit at 0.12 GiB free and lost a whole patch batch; recovered by deleting regenerable netlists and Rust rlibs, 2.40 GiB reclaimed",
+  "web_search": "unavailable all session"
+ }
+}
