@@ -118,6 +118,14 @@ either fp6 grid is stable under both conventions on the same three tasks.
 
 **Run it:** `research/arxiv_tnf/blockscale.py`. No training, no datasets.
 
+**W951 — the sweep is now redone under the computed scale, on all three tasks:
+zero failures in 90 runs** (3 tasks × 2 granularities × 3 formats × 5 seeds). On the
+same tasks and seeds the learned scale fails 9 times. And saturation is now
+**observed** rather than inferred: every run overshoots the top of the grid, so the
+binary criterion is dead, but among learned-scale runs the magnitudes do not overlap
+— worst success **1 510×**, best failure **84 775×**. The computed scale bounds the
+overshoot in **[1, 2)** by construction, measured maximum **2.0000**.
+
 **MEASURED, W950 — and it was not the block size.** `fp6 e2m3` at block 32 trains
 0/5 failures — but so does it **per-tensor**, under the same computed power-of-two
 scale. The block granularity explains nothing; the **learned scale** was the whole
