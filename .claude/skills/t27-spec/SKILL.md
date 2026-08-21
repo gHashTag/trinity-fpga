@@ -8616,3 +8616,44 @@ That is the right call and it is worth naming, because the tempting move is to f
 while the file is open. A change whose evidence covers one defect should not carry a
 second: the reviewer cannot tell which measurement backs which hunk, and an unproven
 repair riding along with a proven one inherits its credibility without earning it.
+
+## A surviving mutant is not yet a fail-open — compose it with a real defect
+
+A verdict flag had been a hardcoded `let theorem_matrix_ok = true;` — the textbook
+fail-open. It was repaired, and the repair was tested the obvious way: restore the
+hardcoded `true` and see whether anything fails. **Nothing failed.** Read literally,
+that says the guard does not bite and the repair is incomplete.
+
+It says no such thing. Every failure path inside the phase exits through `bail!`
+*before* the verdict is computed, so the flag can never be observed as `false`: the
+conjunct is a tautology given the control flow, and the mutation changes no reachable
+behaviour. It is an **equivalent mutant**. Composing it with a genuine defect — a
+matrix of 23 variants where 24 are required — made the gate fail as it should.
+
+**Two different things produce a surviving mutant:**
+
+- the guard fails to catch a real change — a defect in the guard;
+- the change was **unobservable** — a defect in the mutant.
+
+Only composition tells them apart. Plant the suspect mutant *together with* a real
+break: if the pair is caught, the guard is fine and your mutant was inert. And prove
+the consumption separately — deleting the success assignment must fail, or the flag
+truly is dead.
+
+The corollary matters more than the case: **"the mutant survived" is a lead, not a
+verdict**, exactly like "the scan found hits" and "the checker was silent". Reporting
+it as a finding without the composition step manufactures a defect in working code —
+the same shape as the phantom-defect family recorded further up, arriving through the
+one instrument that was supposed to be immune.
+
+### A value-sensitive proof can still admit more than one value
+
+The same pass: a Coq lemma proved by `vm_compute; reflexivity` genuinely constrains its
+literals — an exhaustive ±5000-ulp scan showed φ's mantissa is the **only** one that
+satisfies it. That is real evidence, and it invites the wrong conclusion, because on the
+*other* side of the same equation three mantissas satisfy it, one of which passes every
+downstream check including `coqchk`.
+
+**A proof pins what it computes over, not every constant in its statement.** Before
+treating a passing proof as a gate on a literal, scan the neighbourhood of each literal
+separately. One being uniquely determined says nothing about the next.
