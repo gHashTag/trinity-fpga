@@ -8657,3 +8657,52 @@ downstream check including `coqchk`.
 **A proof pins what it computes over, not every constant in its statement.** Before
 treating a passing proof as a gate on a literal, scan the neighbourhood of each literal
 separately. One being uniquely determined says nothing about the next.
+
+## The decisive test for a self-referential guard: extract it and see if it still builds
+
+Mutation testing could not settle whether a guard was vacuous — every surviving mutant
+invited the equivalent-mutant defence. What settled it was cheaper and absolute.
+
+**Copy the test body, plus only the type declarations it names, into a file containing
+no production logic at all, and compile it.**
+
+- Before the repair: it compiled and passed — `1 passed; 0 failed`. The test had copied
+  two production lines into its own body and asserted against its own local vector. It
+  constrained `std::slice::sort_by`, not the command.
+- After: **38 compile errors** naming nine missing functions, and no binary.
+
+A guard that still builds without the code it guards is not weak, it is **absent**. This
+is a yes/no answer where mutation gives a judgement call, so reach for it first whenever
+a test and its subject live in the same file.
+
+## Prove consumption with the artefact, not with the unit test
+
+A unit test calling a function is not the command calling it. Both mutants above were
+eventually caught by tests — which says the *tests* reach the code, not that the
+*program* does.
+
+The proof was two real binaries driven by a stubbed `gh`: pristine printed the alarming
+gate first and exited **1**; the same build with the ranking inverted and the verdict
+forced to `None` printed the quiet gate first and exited **0**. That is the claim —
+"this code decides the exit status" — and only the built artefact can carry it.
+
+Applies wherever a checked property is separated from its consumer by a layer: the
+lemma proved but never imported, the phase computed but bailing before its flag is read,
+the seal recomputed but not compared.
+
+## An unreadable history is not a zero
+
+`num()` returned `-1` on unparseable input and was fed `gh(...).unwrap_or_default()`,
+which yields `""` when the API call fails. `-1` then lost every `> 0` test: the finding
+dropped out of the alarming set, `--strict` exited **0** where it previously did not —
+**one HTTP 502 downgraded every hole** — and the verdict printed `has never run anywhere
+at all` about a workflow whose history had simply not been read.
+
+**Absence of an answer and an answer of zero must not share a representation.** A
+sentinel that is numerically comparable will be compared, and it will lose or win
+silently. Use an optional and make the unknown case loud.
+
+The converse is equally load-bearing and was preserved in the same repair: **a 404 *is*
+an answer.** Twelve of 54 registered workflows genuinely have no file on the default
+branch. Collapsing "could not determine" into "no runs" is the defect; collapsing "does
+not exist" into it as well would be the over-correction.
