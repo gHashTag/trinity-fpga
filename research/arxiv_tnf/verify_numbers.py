@@ -210,5 +210,31 @@ if sat:
     check("вычисляемый масштаб: максимум перелёта",
           max(r["sat"] for r in comp), 2.0, tol=0.001)
 
+# W952: what the dynamic range costs in silicon. Two numbers, deliberately: one
+# implementation-specific (fixed-point MAC lane), one forced by arithmetic (the
+# block-32 accumulator width). Quoting only the first would be the same error as
+# quoting a decoder-only census.
+mac = rec("mac_w952.json"); acc = rec("acc_w952.json"); wid = rec("widths_w952.json")
+if wid:
+    print("\n== ширины, вынужденные диапазоном (W952)")
+    for f, w, wp, a in (("TNF4", 17, 33, 38), ("fp6e3m2", 10, 19, 24), ("fp6e2m3", 7, 13, 18)):
+        check(f"{f}: бит на значение", wid[f]["w"], w, tol=0)
+        check(f"{f}: бит на произведение", wid[f]["w_prod"], wp, tol=0)
+if mac:
+    print("\n== полоса MAC в фиксированной точке (W952)")
+    for f, want in (("TNF4", 768.0), ("fp6e3m2", 308.0), ("fp6e2m3", 159.0)):
+        check(f"{f}: ячеек на полосу", mac["cost"][f]["per_lane"], want, tol=0.01)
+        check(f"{f}: R2 линейности", mac["cost"][f]["r2"], 1.0, tol=0.0001)
+    check("TNF4 / fp6e2m3, полоса",
+          mac["cost"]["TNF4"]["per_lane"] / mac["cost"]["fp6e2m3"]["per_lane"], 4.83, tol=0.01)
+if acc:
+    print("\n== аккумулятор блока-32, неизбежная часть (W952)")
+    for f, want in (("TNF4", 48.0), ("fp6e3m2", 30.0), ("fp6e2m3", 23.0)):
+        check(f"{f}: ячеек на аккумулятор", acc["cost"][f]["per_acc"], want, tol=0.01)
+    check("TNF4 / fp6e2m3, аккумулятор",
+          acc["cost"]["TNF4"]["per_acc"] / acc["cost"]["fp6e2m3"]["per_acc"], 2.087, tol=0.01)
+    check("надбавка на элемент, аморт. по 32",
+          (acc["cost"]["TNF4"]["per_acc"] - acc["cost"]["fp6e2m3"]["per_acc"]) / 32, 0.781, tol=0.005)
+
 print(f"\n  ИТОГ: сошлось {ok}, расхождений {bad}, пропущено блоков {skip}")
 sys.exit(1 if bad else 0)
