@@ -451,5 +451,21 @@ if s72 and st:
           (t16 > s72["fp19_e7m11"]["consumer_cells"]) and (t16 < s72["fp19_e7m11_sub"]["consumer_cells"]),
           True, tol=0)
 
+# W973: first silicon numbers -- synthesis and timing on the real part.
+bw = rec("bitstream_w973.json")
+if bw:
+    print("\n== битстрим на xc7a200tfbg676-1 (W973)")
+    check("LUT", bw["cells"]["LUT"], 123, tol=0)
+    check("CARRY4", bw["cells"]["CARRY4"], 52, tol=0)
+    check("DSP48E1", bw["cells"]["DSP48E1"], 0, tol=0)
+    check("BSCANE2", bw["cells"]["BSCANE2"], 1, tol=0)
+    check("Fmax, МГц", bw["fmax_mhz"], 80.35, tol=0.01)
+    check("запас над целью, %",
+          (bw["fmax_mhz"] - bw["target_mhz"]) / bw["target_mhz"] * 100, 13.53, tol=0.02)
+    check("DUT-эквивалентов", bw["dut_equivalents"], 1.19, tol=0.005)
+    check("байт битстрима", bw["bitstream_bytes"], 9730834, tol=0)
+    check("смещение слова синхронизации", bw["sync_word_offset"], 230, tol=0)
+    check("собрано без Docker", "no Docker" in bw["toolchain"], True, tol=0)
+
 print(f"\n  ИТОГ: сошлось {ok}, расхождений {bad}, пропущено блоков {skip}")
 sys.exit(1 if bad else 0)
