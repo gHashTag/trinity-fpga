@@ -8706,3 +8706,36 @@ The converse is equally load-bearing and was preserved in the same repair: **a 4
 an answer.** Twelve of 54 registered workflows genuinely have no file on the default
 branch. Collapsing "could not determine" into "no runs" is the defect; collapsing "does
 not exist" into it as well would be the over-correction.
+
+## No grep for a present token can find a missing one
+
+A deliberate hunt for fail-open defects was given nine confirmed shapes and eight
+grep patterns. It produced **272 raw hits and one genuine finding** — a rate of about
+1 in 25, worse than the 1-in-19 this repo had already measured for form-based scans.
+
+**Neither of the pass's real results came from the patterns.** One came from reading a
+small file end to end. The other came from noticing an *absence*: the `= true;` sweep
+was useful only because its hits were compared against the `let mut … = false`
+declarations, and one name appeared in the declarations and never in the assignments.
+
+That is the general point. The fail-open family is disproportionately made of things
+that are **not there** — a flag never assigned, a phase whose body was dropped, a
+toolchain no workflow installs, an assertion that never mentions the code it guards.
+A textual search enumerates what exists. To find what is missing you need **two sets
+and a difference**: declarations vs assignments, required contexts vs contexts that
+ran, tests that name a function vs functions that exist, workflow steps vs the tools
+their commands invoke.
+
+Budget accordingly: grep for the shapes, but expect the yield to come from reading a
+few whole files and from one set-difference you construct on purpose.
+
+### The scan's own harness is in scope for the same defect
+
+The same pass nearly reported a **clean sweep across all seven patterns** — zero hits
+each — because zsh does not word-split an unquoted variable, so `git grep … -- $PATHS`
+searched one nonexistent path. A known-positive control (`runs-on` must appear many
+times) caught it. A second call lost its argument to zsh's `:c` history modifier.
+
+Both are the exact defect class being hunted, in the instrument. **Run the control
+before believing any zero**, and treat a uniform result across independent patterns —
+all zero, or all hit — as evidence about the harness until proven otherwise.
