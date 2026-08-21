@@ -346,5 +346,29 @@ if _rung:
         _se = _dd.std(ddof=1) / np.sqrt(len(_dd))
         check(f"{_k}: t", float(_dd.mean() / _se), _t, tol=0.02)
 
+# W965: rung 16, both ladder versions, against width- and range-matched peers.
+r16 = rec("rung16_w965.json")
+if r16:
+    print("\n== ступень 16, структурные параметры (W965)")
+    for k, w, vals, bina, ob, sm in (
+            ("TNF16_v1research_17b", 17, 129025, 127.0, 10, 135),
+            ("TNF16_v2spec_19b", 19, 516097, 127.0, 12, 137),
+            ("fp17_e7m9", 17, 131071, 136.0, 10, 135),
+            ("fp19_e7m11", 19, 524287, 138.0, 12, 137),
+            ("fp17_e6m10", 17, 131071, 73.0, 11, 72),
+            ("fp19_e6m12", 19, 524287, 75.0, 13, 74)):
+        check(f"{k}: ширина", r16[k]["width"], w, tol=0)
+        check(f"{k}: значений", r16[k]["values"], vals, tol=0)
+        check(f"{k}: бинад", r16[k]["binades"], bina, tol=0.01)
+        check(f"{k}: нечёт", r16[k]["odd_bits"], ob, tol=0)
+        check(f"{k}: сдвиг", r16[k]["max_shift"], sm, tol=0)
+    for t, f in (("TNF16_v1research_17b", "fp17_e7m9"), ("TNF16_v2spec_19b", "fp19_e7m11")):
+        check(f"{t}/{f}: пара (нечёт, сдвиг) совпадает",
+              (r16[t]["odd_bits"], r16[t]["max_shift"]) == (r16[f]["odd_bits"], r16[f]["max_shift"]),
+              True, tol=0)
+        check(f"{t}/{f}: шина совпадает", r16[t]["aligned"] - r16[f]["aligned"], 0, tol=0)
+        check(f"{f} несёт больше значений", r16[f]["values"] > r16[t]["values"], True, tol=0)
+        check(f"{f} несёт больше диапазона", r16[f]["binades"] > r16[t]["binades"], True, tol=0)
+
 print(f"\n  ИТОГ: сошлось {ok}, расхождений {bad}, пропущено блоков {skip}")
 sys.exit(1 if bad else 0)
