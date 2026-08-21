@@ -21,9 +21,9 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-SC = pathlib.Path("/private/tmp/claude-501/-Users-playom-t27--claude-worktrees-igla-fpga-improvements-3f5e1a/"
-                  "eeed4a0e-20e8-40f4-aa16-1ecfee4ad92d/scratchpad")
-sys.path.insert(0, str(SC / "upstream-wt/conformance"))
+import os as _envos
+SC = pathlib.Path(_envos.environ.get("T27_WORK") or pathlib.Path(__file__).resolve().parent)
+sys.path.insert(0, _envos.environ.get("T27_CONFORMANCE") or str(SC / "oracles"))
 import tnf_ref as T, gf_ref as G, takum_ref as K, posit_ref as P, bf16_ref as B, fp8_ref as F8
 
 WIDTH = int(sys.argv[1]) if len(sys.argv) > 1 else 16
