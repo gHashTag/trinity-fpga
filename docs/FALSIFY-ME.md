@@ -48,6 +48,16 @@ scale) or `0.999` (percentile), five seeds `20260820, 7, 1337, 424242, 99991`, M
 **Failure counted as** final test accuracy below 60 % (MNIST, Fashion) or 40 %
 (KMNIST) — the runs that fail land near chance, so the threshold is not delicate.
 
+> **W950 — THIS CLAIM HAS NOW BEEN KILLED BY ITS OWN TEST.** Replace the learned
+> scale with the one the OCP microscaling formats specify — a **computed
+> power-of-two** shared scale, never learned — and **all three formats train in
+> 5/5 runs, at block 32 and at per-tensor granularity alike**. `fp6 e2m3` goes from
+> **28/40 failures to 0/5** with the granularity unchanged. The letter of the claim
+> survives (TNF4 has failed nothing, ever); its meaning does not, because the float
+> is not fragile under the recipe the field actually deploys — and paired over five
+> seeds at per-tensor granularity TNF4 is **worse** by −0.376 pp (t = −7.24, 0/5
+> seeds favour it). See `blockquant.py`, `blockquant_w950.json`.
+
 **This claim dies if:** any recipe you choose brings either fp6 grid to ≤ 2 failures
 in 20 across the same three tasks, **or** TNF4 fails at all under a recipe that is
 standard rather than adversarial. A recipe hand-tuned per task does not count; the
@@ -108,11 +118,15 @@ either fp6 grid is stable under both conventions on the same three tasks.
 
 **Run it:** `research/arxiv_tnf/blockscale.py`. No training, no datasets.
 
-**This claim is the largest unmeasured threat to this project's result.** Every
-comparison here scales per tensor; the field deploys block-scaled MX formats at
-four to six bits. **No training run in this project has ever used a block scale.**
-If a replication trains `fp6 e2m3` at block 32 and it becomes stable, the surviving
-claim goes with it.
+**MEASURED, W950 — and it was not the block size.** `fp6 e2m3` at block 32 trains
+0/5 failures — but so does it **per-tensor**, under the same computed power-of-two
+scale. The block granularity explains nothing; the **learned scale** was the whole
+effect. The mechanism agrees: failures are saturation driven by a collapsing learned
+scale (T799), and a computed scale cannot collapse.
+
+**What remains true of range:** TNF4's underflow is negligible at every block size,
+and `fp6 e2m3` still zeroes 44 % of heavy-tailed values under a per-tensor max rule.
+**What is refuted:** that this ever mattered to whether a network trains.
 
 ## Claim 3 — parity on cost
 
