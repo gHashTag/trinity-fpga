@@ -302,5 +302,23 @@ if cv:
             check(f"{kc}: W954 против W955",
                   rm_["cost"][k6]["per_lane"] - cv["cost"][kc]["per_lane"], 0.0, tol=0.001)
 
+# W963: the census redone on the ladder's TRUE eighth rung, in the original metric.
+cs = rec("census_tnf8_w963.json")
+if cs:
+    print("\n== перепись на настоящей ступени (W963)")
+    for k, dec, con in (("tnf8_ladder_10b", 12.0, 212.57), ("fp10_e5m4", 14.0, 214.57),
+                        ("tnf8_as_measured_11b", 29.0, 270.57), ("fp11_e6m4", 16.0, 257.57)):
+        check(f"{k}: декодер", cs[k]["decoder_cells"], dec, tol=0.01)
+        check(f"{k}: потребитель", cs[k]["consumer_cells"], con, tol=0.01)
+    t, f = cs["tnf8_ladder_10b"]["consumer_cells"], cs["fp10_e5m4"]["consumer_cells"]
+    check("настоящая ступень против своего float, %", (t - f) / f * 100, -0.93, tol=0.02)
+    ts, fs = cs["tnf8_as_measured_11b"]["consumer_cells"], cs["fp11_e6m4"]["consumer_cells"]
+    check("подстановка против своего float, %", (ts - fs) / fs * 100, 5.05, tol=0.02)
+    check("знак результата инвертируется подстановкой",
+          ((t - f) < 0) and ((ts - fs) > 0), True, tol=0)
+    check("декодер: подстановка дороже во сколько раз",
+          cs["tnf8_as_measured_11b"]["decoder_cells"] / cs["tnf8_ladder_10b"]["decoder_cells"],
+          2.417, tol=0.01)
+
 print(f"\n  ИТОГ: сошлось {ok}, расхождений {bad}, пропущено блоков {skip}")
 sys.exit(1 if bad else 0)
