@@ -51,6 +51,16 @@ jobs:
         with:
           python-version: '3.12'
 
+      # Nine of the fifteen scripts this gate reported as degraded need
+      # iverilog or yosys, and this job installed neither -- so their status
+      # was recorded on a machine that has the RTL toolchain and compared
+      # against a runner that does not. "needs input" there is a fact about
+      # the runner, not about the script, which is why this gate had never
+      # passed on the default branch. The sibling conformance workflow already
+      # installs iverilog the same way.
+      - name: The toolchain the scripts are scored with
+        run: sudo apt-get update && sudo apt-get install -y iverilog yosys
+
       - name: The ratchet can fail
         run: python3 gate_status_ratchet.py --selftest
 
