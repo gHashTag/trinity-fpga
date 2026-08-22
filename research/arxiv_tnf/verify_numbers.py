@@ -868,5 +868,41 @@ if op:
     check("оговорка про одно размещение записана",
           "single placement" in sm["caveat"], True, tol=0)
 
+# W988: the cap, the slope it was derived from, and the two designs it hid.
+cp = rec("cap_w988.json")
+if cp:
+    print("\n== потолок стадии и наклон размещения (W988)")
+    c = cp["the_cap"]
+    check("потолок был", c["was"], 600, tol=0)
+    check("потолок стал", c["now"], 1800, tol=0)
+    check("во сколько раз поднят", c["now"] / c["was"], 3.0, tol=0.01)
+    sl = cp["the_documented_slope_was_wrong"]
+    check("в документации, мс/LUT", sl["documented"], 21.0, tol=0)
+    m = sl["measured_from_completed_builds"]
+    check("замеров наклона", len(m), 3, tol=0)
+    check("наклон dot4", m["gft_signed_dot4"], 50.4, tol=0.1)
+    check("наклон mac", m["gft_signed_mac"], 51.0, tol=0.1)
+    check("наклон train1", m["gft_train1"], 33.7, tol=0.1)
+    check("совокупный наклон", sl["aggregate"], 50.7, tol=0.1)
+    check("во сколько раз ошибка", sl["factor_off"], sl["aggregate"] / sl["documented"], tol=0.05)
+    # the spread is what refutes the single-slope model, so derive it here
+    rates = [v for v in m.values()]
+    check("разброс замеров, раз", max(rates) / min(rates), 1.51, tol=0.02)
+    check("наибольший проект -- не самый медленный на LUT",
+          m["gft_train1"] < m["gft_signed_dot4"], True, tol=0)
+    r = {x["design"]: x for x in cp["results"]}
+    check("train1 попал на кристалл", r["gft_train1"]["ok"], 1, tol=0)
+    check("train1: все клаузы", r["gft_train1"]["clauses"] == "1111", True, tol=0)
+    check("train1: PnR внутри старого потолка был бы",
+          r["gft_train1"]["pnr_s"] < 600, True, tol=0)
+    check("прошлый отказ был краевым",
+          "marginal, not structural" in r["gft_train1"]["note"], True, tol=0)
+    check("xorpercep всё ещё отсутствует",
+          r["gft_xorpercep"]["verdict"].startswith("ABSENT"), True, tol=0)
+    t = cp["table_now"]
+    check("измерено операторов", t["measured_with_all_clauses_real"], 6, tol=0)
+    check("из семи", t["of"], 7, tol=0)
+    check("остался один", len(t["still_absent"]), 1, tol=0)
+
 print(f"\n  ИТОГ: сошлось {ok}, расхождений {bad}, пропущено блоков {skip}")
 sys.exit(1 if bad else 0)
