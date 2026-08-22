@@ -8739,3 +8739,55 @@ times) caught it. A second call lost its argument to zsh's `:c` history modifier
 Both are the exact defect class being hunted, in the instrument. **Run the control
 before believing any zero**, and treat a uniform result across independent patterns —
 all zero, or all hit — as evidence about the harness until proven otherwise.
+
+## A skip that is not `#[ignore]` is counted as a pass
+
+Three tests reported `SKIP: lake not on PATH` and the suite printed
+`173 passed; 0 failed; **0 ignored**`. They were not hidden — they were **classified as
+successes**. None used `#[ignore]`; each printed a line and returned, which libtest cannot
+distinguish from doing the work.
+
+Worse, the reason was unreachable: `cargo test` captures a *passing* test's stdout, so the
+explanation existed only in a buffer nobody printed. Recovering it needed `--nocapture` to
+make the line exist and `--test-threads=1` to make it attributable to a test name.
+
+**A self-declared skip is invisible twice over** — once in the count, once in the log. When
+auditing coverage, do not ask how many tests failed; ask how many *ran*, and be aware that
+the framework's own tally will not tell you.
+
+Generalisation worth carrying: an early `return` on a missing precondition is the most
+common way a test suite quietly stops testing. Grep for the convention the codebase uses
+(`SKIP:`, `eprintln!` before `return`, a bare `if !tool_available() { return; }`) and count
+it separately from `ignored`.
+
+### Guard the absence, not just the growth
+
+The ratchet built for this records a **set of name+reason pairs**, not a number — so a
+renamed skipping test still trips it — and its baseline is emitted by the same parser that
+reads CI's log, never typed by hand. A hardcoded count restates what you already know and
+survives no rename.
+
+Its degenerate cases matter more than its happy path: given no `test result:` line, or no
+log at all, it reports *"skip set NOT evaluated"* and exits 0 — refusing to certify rather
+than reading absence as a clean set. That is the distinction between an honest gate and the
+fail-open family: **an instrument that cannot see must say so, not report zero.**
+
+## An instrument that cannot fail is not measuring
+
+A differential testbench reproduced its published numbers on the first run. The auditor
+then did the thing the author had not: fed the **fixed** rendering in as the "old" side. The
+harness failed, correctly —
+
+```
+FAIL harness: old wrote address 0 -- the off-by-one this harness exists to demonstrate
+is not reproducing
+```
+
+That anti-vacuity control is what separates a measurement from a ritual. A harness that
+passes on the post-fix artefact and was never run against a *non*-defective "before" has
+demonstrated nothing about what it detects.
+
+Companion caveat from the same pass, stated in the PR rather than glossed: `vvp` exits **0**
+on FAIL as well as PASS — measured, not assumed. So the harness is **reporting, not a gate**,
+and calling it a gate would have been the overclaim. Check your runner's exit semantics
+before describing anything as blocking.
