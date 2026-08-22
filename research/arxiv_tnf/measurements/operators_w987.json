@@ -127,5 +127,40 @@
  "environment": {
   "web_search": "unavailable all session",
   "disk": "4.6 GiB free; the volume was cleared between builds"
- }
+ },
+ "die_reads_canonical": [
+  {
+   "design": "gft_sadd",
+   "clauses": "1111",
+   "ok": 1,
+   "wave": "W987",
+   "seed": 1,
+   "LUT": 4231
+  },
+  {
+   "design": "gft_sadd",
+   "clauses": "1111",
+   "ok": 1,
+   "wave": "W987",
+   "seed": 7,
+   "LUT": 4231
+  },
+  {
+   "design": "gft_signed_dot4",
+   "clauses": "1111",
+   "ok": 1,
+   "wave": "W987",
+   "seed": 1,
+   "LUT": 7851
+  },
+  {
+   "design": "gft_signed_mac",
+   "clauses": "1111",
+   "ok": 1,
+   "wave": "W987",
+   "seed": 1,
+   "LUT": 9465
+  }
+ ],
+ "schema_note": "W989: a canonical, machine-readable list of every die read in this record. The records grew ad-hoc schemas over twenty waves and `tri table` could place only 10 of 38 reads; this key is the fix, and new records must carry it."
 }
