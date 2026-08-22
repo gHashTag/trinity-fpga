@@ -1,0 +1,131 @@
+{
+ "wave": "W987",
+ "board": "1:5",
+ "idcode": "0x3636093",
+ "goal": "the final table: every operator re-read on the die with EVERY clause real (W984 repaired them; W983 showed 14 of 28 had been folded constants)",
+ "operators": {
+  "gft_sadd": {
+   "LUT": 4231,
+   "CARRY4": 829,
+   "was_LUT": 1312,
+   "seeds": [
+    1,
+    7
+   ],
+   "clauses": [
+    "1111",
+    "1111"
+   ],
+   "ok": [
+    1,
+    1
+   ],
+   "die_word": "0xa5a5307f",
+   "verdict": "PASS at both placements",
+   "before": "1111 with 3 of 4 clauses folded -- one measured clause",
+   "now": "1111 with four real clauses, two placements"
+  },
+  "gft_signed_dot4": {
+   "LUT": 7851,
+   "CARRY4": 1274,
+   "seeds": [
+    1
+   ],
+   "clauses": [
+    "1111"
+   ],
+   "ok": [
+    1
+   ],
+   "die_word": "0xa5a530ff",
+   "pnr_s": 395.61,
+   "fmax_mhz": 5.31,
+   "verdict": "PASS -- FIRST TIME ON SILICON",
+   "before": "ABSENT since W977 (600 s place-and-route cap plus a BSCAN chain/site mismatch); never reached hardware",
+   "note": "the only wrapper that had NO folded clauses even before W984, so its four clauses were always real"
+  },
+  "gft_signed_mac": {
+   "LUT": 9465,
+   "CARRY4": 1675,
+   "seeds": [
+    1
+   ],
+   "clauses": [
+    "1111"
+   ],
+   "ok": [
+    1
+   ],
+   "die_word": "0xa5a5337f",
+   "pnr_s": 482.42,
+   "fmax_mhz": 7.73,
+   "verdict": "PASS",
+   "before": "0011 FAIL in W975/W977 -- c_zero real and FALSE against the pre-W978 spec, which lacked the zero guards",
+   "significance": "the W978 spec fix has been 'unverified on silicon' for nine waves. It is verified now, and with every clause real."
+  },
+  "gft_train1": {
+   "LUT": 16188,
+   "CARRY4": 2748,
+   "was_LUT": null,
+   "seeds": [
+    1,
+    7
+   ],
+   "clauses": [
+    "ABSENT",
+    "ABSENT"
+   ],
+   "verdict": "ABSENT -- nextpnr hit the 600 s cap at both seeds",
+   "fmax_mhz": [
+    3.13,
+    3.26
+   ],
+   "note": "timing PASSES; only the placement time cap stops it"
+  },
+  "gft_xorpercep": {
+   "LUT": 28217,
+   "CARRY4": 5023,
+   "seeds": [
+    1
+   ],
+   "clauses": [
+    "ABSENT"
+   ],
+   "verdict": "ABSENT -- 600 s cap",
+   "fmax_mhz": 1.97,
+   "note": "was 10799 LUT with three folded clauses; making them real took it to 28217"
+  }
+ },
+ "the_cost_of_honesty": {
+  "claim": "folded clauses were not merely dishonest -- they were deleting most of the design",
+  "growth": {
+   "gft_sadd": "1312 -> 4231 LUT, x3.2",
+   "gft_smul": "1312 -> 1877 LUT, x1.4",
+   "gft_dup": "798 -> 1763 LUT, x2.2",
+   "gft_xorpercep": "10799 -> 28217 LUT, x2.6"
+  },
+  "consequence": "two operators that used to build now exceed the place-and-route time cap. Every area figure this project published for a wrapper with folded clauses was measuring a design with the clause logic optimised away."
+ },
+ "summary": {
+  "measured_with_all_clauses_real": 5,
+  "pass": 5,
+  "fail": 0,
+  "absent": 2,
+  "designs": [
+   "gft_smul (W985, 4 placements)",
+   "gft_dup (W985, 4 placements)",
+   "gft_sadd (2 placements)",
+   "gft_signed_dot4 (1, first ever)",
+   "gft_signed_mac (1, confirms the W978 fix)"
+  ],
+  "absent_designs": [
+   "gft_train1 (600 s cap, both seeds)",
+   "gft_xorpercep (600 s cap)"
+  ],
+  "caveat": "dot4 and mac are ONE placement each. T841/T842 showed a single placement cannot distinguish a passing design from a design whose failure is not reachable at that seed."
+ },
+ "environment": {
+  "web_search": "unavailable all session",
+  "disk": "4.6 GiB free; the volume was cleared between builds"
+ }
+}
