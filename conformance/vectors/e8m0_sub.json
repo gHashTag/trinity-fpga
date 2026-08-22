@@ -1,0 +1,1 @@
+{"format": "e8m0", "operation": "sub", "oracle": "e8m0_ref.py", "family": "e8m0", "width": 8, "specials": {}, "note": "exact Fraction decode/sub/encode (SUB = ADD(a, negate(b))), round-ties-even.", "vector_count": 0, "vectors": []}
