@@ -15,7 +15,7 @@
     {
       "a": "0x03a8de132688d633",
       "b": "0xb69fc1c3af5b54f1",
-      "expected": "0x83be08700c81800f"
+      "expected": "0xfc6d7f4af6a45df3"
     },
     {
       "a": "0x05b62f39f2c78b6e",
@@ -35,12 +35,12 @@
     {
       "a": "0x08ab00c0dd4afbc9",
       "b": "0xa4d9d10817e0b07c",
-      "expected": "0x89ee77ea8ba5a734"
+      "expected": "0xf84d4a1000db8028"
     },
     {
       "a": "0x0b7a45607c34ea56",
       "b": "0xca6f36dad60c0b35",
-      "expected": "0x8b443978980a206e"
+      "expected": "0xf4561ed02b87bd2b"
     },
     {
       "a": "0x0b90c8471e8612eb",
@@ -60,7 +60,7 @@
     {
       "a": "0x0d5665632d0b912f",
       "b": "0x80cd65a3219b83f9",
-      "expected": "0xf9ed9b35d2b37af9"
+      "expected": "0xffffffffffffffff"
     },
     {
       "a": "0x0dbe5155a6a7b98e",
@@ -70,17 +70,17 @@
     {
       "a": "0x0f4f28d6a5e514c6",
       "b": "0x8fa34fcc0823fcc2",
-      "expected": "0xb15792cf3ba08cac"
+      "expected": "0xf877222dbc1afc8d"
     },
     {
       "a": "0x10c0000000000000",
       "b": "0xc2f37b7ef1a99dad",
-      "expected": "0x909d81ae03c580cc"
+      "expected": "0xef3186a39319d15d"
     },
     {
       "a": "0x1363c699cdf171f1",
       "b": "0xd82f0d4d3d171542",
-      "expected": "0x919448d8dc6f947e"
+      "expected": "0xead22087ec8030f8"
     },
     {
       "a": "0x139b7edff32a8e50",
@@ -90,7 +90,7 @@
     {
       "a": "0x146c99fa313e9812",
       "b": "0x8f21ce5462d813b9",
-      "expected": "0xe4cd997e272a3a85"
+      "expected": "0xf6881f5b9769478a"
     },
     {
       "a": "0x15f8319af8af9244",
@@ -100,12 +100,12 @@
     {
       "a": "0x17448291b3e27a00",
       "b": "0xe84aec1210a3754a",
-      "expected": "0x8f9a85cbf14c76a3"
+      "expected": "0xcb5194396495b863"
     },
     {
       "a": "0x1748d731722bd47d",
       "b": "0x8f21ce5462d813b9",
-      "expected": "0xe944f306eb59f018"
+      "expected": "0xf51a85aac5380a36"
     },
     {
       "a": "0x1880000000000000",
@@ -120,12 +120,12 @@
     {
       "a": "0x1aa294cc3ef1dd71",
       "b": "0xf8bf9e9a8903ee18",
-      "expected": "0x85a49132e0d9d439"
+      "expected": "0x89b84c7916ab3685"
     },
     {
       "a": "0x1b56fa9d8bc3ecc4",
       "b": "0xa4d9d10817e0b07c",
-      "expected": "0xa0d09b624ecf0b15"
+      "expected": "0xe8e2764b5d63f12e"
     },
     {
       "a": "0x1d24789a5753ccc8",
@@ -140,12 +140,12 @@
     {
       "a": "0x1fe5b5cefb676e6b",
       "b": "0xcf78425b829ee5c6",
-      "expected": "0x9e76041c3b4f2cbe"
+      "expected": "0xdd6a5a204db7a020"
     },
     {
       "a": "0x2100b5c56603efa4",
       "b": "0xedba4803f18cd95d",
-      "expected": "0x8f6196e584f4b9a9"
+      "expected": "0x95ca2c5f0c282c91"
     },
     {
       "a": "0x240a0f6906cef4c4",
@@ -155,7 +155,7 @@
     {
       "a": "0x252bd83391e85ca1",
       "b": "0xf8bf9e9a8903ee18",
-      "expected": "0x86a2f73ccc46b6b0"
+      "expected": "0x87ddb1ea3fc85ba6"
     },
     {
       "a": "0x25ebd728812e2f8b",
@@ -175,7 +175,7 @@
     {
       "a": "0x274040940c0a6e84",
       "b": "0xb400000000000000",
-      "expected": "0xaa8081281814dd08"
+      "expected": "0xdabfbf6bf3f5917c"
     },
     {
       "a": "0x27c0f540f3bc5b63",
@@ -195,27 +195,27 @@
     {
       "a": "0x2a09f49175873a79",
       "b": "0xa981a2e443d19285",
-      "expected": "0xc14dbb647a701e92"
+      "expected": "0xdd5d5d8a9d792812"
     },
     {
       "a": "0x2cdb7be445f70163",
       "b": "0xe8e942b9b7007e09",
-      "expected": "0x95ef302ec583cd47"
+      "expected": "0x987911e9d50bcfde"
     },
     {
       "a": "0x30663c2ddda62c15",
       "b": "0xa981a2e443d19285",
-      "expected": "0xd08263c6dd0387d3"
+      "expected": "0xda3c59ea7e44413e"
     },
     {
       "a": "0x32e358e0e458d4db",
       "b": "0xef2e33bc5cafbaed",
-      "expected": "0x9040010e73c21745"
+      "expected": "0x9169c5429d2d66ed"
     },
     {
       "a": "0x3400000000000000",
       "b": "0xfec3750854e741ba",
-      "expected": "0x811a5070e7311a39"
+      "expected": "0x815e0fe2a8f104b6"
     },
     {
       "a": "0x348c1e3135e5429b",
@@ -225,27 +225,27 @@
     {
       "a": "0x3555555555555555",
       "b": "0xd1e1bc71403caae6",
-      "expected": "0xaabf75012bbc3761"
+      "expected": "0xb2f6ddc57e3f403f"
     },
     {
       "a": "0x363d6e76027bdc65",
       "b": "0xbc9272a5341f4265",
-      "expected": "0xb7f0fe0184f7635f"
+      "expected": "0xcba1bc6a0e2f0706"
     },
     {
       "a": "0x3656d827b03bc511",
       "b": "0xd6e64db22abc58c4",
-      "expected": "0xa717d64dd850f52a"
+      "expected": "0xabf490c29955371b"
     },
     {
       "a": "0x3660c75dc8ed5807",
       "b": "0xf8bf9e9a8903ee18",
-      "expected": "0x8729d1b2fb8bc4d2"
+      "expected": "0x87571493d02a0f46"
     },
     {
       "a": "0x370d730d035b37ff",
       "b": "0x85798aa617419747",
-      "expected": "0xfa71abf1c0d8874e"
+      "expected": "0xfa9be6fcd3604a0e"
     },
     {
       "a": "0x37bb6c7aed918a6a",
@@ -265,12 +265,12 @@
     {
       "a": "0x3843ebdb108f461e",
       "b": "0x9bd810505467f868",
-      "expected": "0xe39cb04da2e00856"
+      "expected": "0xe4b6683f56e889ca"
     },
     {
       "a": "0x3aaaaaaaaaaaaaab",
       "b": "0xe831fdadcc5bc50a",
-      "expected": "0x979fd20b65df47ba"
+      "expected": "0x97f9fdb50d7c82f2"
     },
     {
       "a": "0x3ac87f224efb59c2",
@@ -285,7 +285,7 @@
     {
       "a": "0x3c138cbfa4978e26",
       "b": "0x8f21ce5462d813b9",
-      "expected": "0xf0cdb9932d547fbc"
+      "expected": "0xf0ee4ab6ce59bd2e"
     },
     {
       "a": "0x3f43dc59a5453850",
@@ -295,32 +295,32 @@
     {
       "a": "0x4000000000000000",
       "b": "0x8d1531be9d89df3a",
-      "expected": "0xf2e6801742991c67"
+      "expected": "0xf2f027e845439764"
     },
     {
       "a": "0x40f6f0f5b148d586",
       "b": "0x8f9d9eb84d6c80dd",
-      "expected": "0xf0653e5299d3b351"
+      "expected": "0xf05e9fb757dd50dc"
     },
     {
       "a": "0x42037ab9cfc4c0ce",
       "b": "0xe4917ec75de60c60",
-      "expected": "0x9b8cf3b27ab90c45"
+      "expected": "0x9b5407acb4ebebae"
     },
     {
       "a": "0x424fd3dadf3716a4",
       "b": "0xedba4803f18cd95d",
-      "expected": "0x92565a449ebec880"
+      "expected": "0x923445a38236dd3b"
     },
     {
       "a": "0x42be527721ae693a",
       "b": "0x840aa847b9b6bc5d",
-      "expected": "0xfbf9cb14d943d2d7"
+      "expected": "0xfbefe4519abfb2ba"
     },
     {
       "a": "0x43ae3e5971515ae8",
       "b": "0xb6c7a676ff63b6f3",
-      "expected": "0xcae42f8b90e05e2a"
+      "expected": "0xc70cad37ffd03151"
     },
     {
       "a": "0x43b7ef535e968b2e",
@@ -330,12 +330,12 @@
     {
       "a": "0x43e65f856fbac51c",
       "b": "0x93afb28624fa25bb",
-      "expected": "0xec6d18051da789f1"
+      "expected": "0xec3420b0c48ba7a4"
     },
     {
       "a": "0x4466ed5020a7c85e",
       "b": "0x9ced3d0b186f5fa2",
-      "expected": "0xe35620291d9f5079"
+      "expected": "0xe2d2ef22ca0ed864"
     },
     {
       "a": "0x463babebcea28627",
@@ -355,22 +355,22 @@
     {
       "a": "0x49b8ff77f4ce9b9c",
       "b": "0xd80d02fa160018e6",
-      "expected": "0xaab911ba686d1e9a"
+      "expected": "0xa688333fc56fb99e"
     },
     {
       "a": "0x4a00000000000000",
       "b": "0xe4917ec75de60c60",
-      "expected": "0x9c28e9aa47ac754f"
+      "expected": "0x9ab1ea83ad019e5e"
     },
     {
       "a": "0x4c7a6e3988b2261b",
       "b": "0xb563df308f8fc6fd",
-      "expected": "0xd152c38354c4cc9f"
+      "expected": "0xbd28ed3feb67d340"
     },
     {
       "a": "0x4d12a476009c29b7",
       "b": "0xca00000000000000",
-      "expected": "0xc5870be556f5c493"
+      "expected": "0xae9e3d06aa428edb"
     },
     {
       "a": "0x4d4fda4adf46c329",
@@ -395,7 +395,7 @@
     {
       "a": "0x512f6db89ae571df",
       "b": "0x95c0000000000000",
-      "expected": "0xeb25edb7135cae3c"
+      "expected": "0xe95a1248eca351c4"
     },
     {
       "a": "0x51c76c7a8fa0cf45",
@@ -415,7 +415,7 @@
     {
       "a": "0x552df35c131269a3",
       "b": "0x8630504f85d7e4ea",
-      "expected": "0xfa28f262f45ac275"
+      "expected": "0xf9764fed1a08bd85"
     },
     {
       "a": "0x553672c89aec9a2a",
@@ -430,7 +430,7 @@
     {
       "a": "0x59bf2aa9b5236c96",
       "b": "0xd5adf4f7fda742b0",
-      "expected": "0xcf9874f714bcf75c"
+      "expected": "0xa07e9764e860b925"
     },
     {
       "a": "0x5a589468edfec83b",
@@ -455,12 +455,12 @@
     {
       "a": "0x5da17356ca671ff8",
       "b": "0xa0a077c7d78b8037",
-      "expected": "0xe6004d50cc9fde78"
+      "expected": "0xcb3ffb66dced9192"
     },
     {
       "a": "0x5f27c8a32d327cc6",
       "b": "0xc26c6ff7ac09f076",
-      "expected": "0xdec605b8864937b1"
+      "expected": "0xa0a36a26cf28bf02"
     },
     {
       "a": "0x5f9fe1f841885337",
@@ -475,7 +475,7 @@
     {
       "a": "0x602f519f31d48a16",
       "b": "0x968e355f65dea895",
-      "expected": "0xed47bbe35842fbf8"
+      "expected": "0xe33aca4523e544a0"
     },
     {
       "a": "0x608aff351cd38df4",
@@ -485,12 +485,12 @@
     {
       "a": "0x60e4ef307d677b72",
       "b": "0xe84aec1210a3754a",
-      "expected": "0x9fc38f6f079c6c25"
+      "expected": "0x9382daaef58c0dc9"
     },
     {
       "a": "0x6232368dbee3c1cb",
       "b": "0xb563df308f8fc6fd",
-      "expected": "0xe3044066cec2cfa4"
+      "expected": "0x9ea84e8eacd31682"
     },
     {
       "a": "0x654c964c60b4360a",
@@ -510,7 +510,7 @@
     {
       "a": "0x67e647b869553f17",
       "b": "0x95c0000000000000",
-      "expected": "0xf0f991ee1a554fc6"
+      "expected": "0xda33708f2d5581d2"
     },
     {
       "a": "0x67e7f83b8f6b2018",
@@ -520,7 +520,7 @@
     {
       "a": "0x68f08d0837ce8f8a",
       "b": "0xcf78425b829ee5c6",
-      "expected": "0xe8388a4faa357416"
+      "expected": "0x965c9f5cd789651e"
     },
     {
       "a": "0x697c01c7b6e7acbd",
@@ -535,7 +535,7 @@
     {
       "a": "0x6b288f688878df6f",
       "b": "0xa981a2e443d19285",
-      "expected": "0xecb7478f1facd60c"
+      "expected": "0x966c232f0acb551e"
     },
     {
       "a": "0x6b37e81b6f50564e",
@@ -545,7 +545,7 @@
     {
       "a": "0x6cb48c999133eaca",
       "b": "0xec2f4de9b309ae77",
-      "expected": "0xcc3040b866bb1ca5"
+      "expected": "0x8bb1c83eb62e4e54"
     },
     {
       "a": "0x70ac6d1dfcc9f493",
@@ -570,12 +570,12 @@
     {
       "a": "0x75ffb5c04a0f005b",
       "b": "0x870ac82da3e32864",
-      "expected": "0xffe307dd43cbf518"
+      "expected": "0xe81fea7461591d63"
     },
     {
       "a": "0x76e3aa28ea8297fa",
       "b": "0xa4d9d10817e0b07c",
-      "expected": "0xf81344f75779f59f"
+      "expected": "0x8a61edc623e99de7"
     },
     {
       "a": "0x77dc936b3d79f7a1",
@@ -585,7 +585,7 @@
     {
       "a": "0x7c90000000000000",
       "b": "0xe4d3c4edd398d268",
-      "expected": "0xfb035780a6d4ed5d"
+      "expected": "0x81e837cba7180f9d"
     },
     {
       "a": "0x7f275c0bf5910fe5",
@@ -595,147 +595,147 @@
     {
       "a": "0x7fffffffffffffff",
       "b": "0xf8bf9e9a8903ee18",
-      "expected": "0xf6a06291787aeba2"
+      "expected": "0x8000000000000000"
     },
     {
       "a": "0x80595d67698116b4",
       "b": "0x4a00000000000000",
-      "expected": "0x8040e8ef9bab6478"
+      "expected": "0x8071d1df3756c8f0"
     },
     {
       "a": "0x80cd65a3219b83f9",
       "b": "0x8bf6c00d6660ba20",
-      "expected": "0x06c12e878fa042a1"
+      "expected": "0x793cdcea245cb3ce"
     },
     {
       "a": "0x840aa847b9b6bc5d",
       "b": "0xca3447605c71d136",
-      "expected": "0x03f12fc55978a290"
+      "expected": "0x7c0d75a512f2237b"
     },
     {
       "a": "0x85798aa617419747",
       "b": "0x42be527721ae693a",
-      "expected": "0x857304f09302293d"
+      "expected": "0x857f46cd8766afe9"
     },
     {
       "a": "0x85c726965562f4e3",
       "b": "0xfc90000000000000",
-      "expected": "0x0000000000000000"
+      "expected": "0x7fffffffffffffff"
     },
     {
       "a": "0x8630504f85d7e4ea",
       "b": "0x5f9fe1f841885337",
-      "expected": "0x85441586430c1c7c"
+      "expected": "0x871c7ec87c7ce366"
     },
     {
       "a": "0x864a5f5c22bfc417",
       "b": "0xfd3b2df2f6506114",
-      "expected": "0x0000000000000000"
+      "expected": "0x7fffffffffffffff"
     },
     {
       "a": "0x870ac82da3e32864",
       "b": "0x85798aa617419747",
-      "expected": "0x650637471a654527"
+      "expected": "0x1af1dc874e26d6c3"
     },
     {
       "a": "0x8a8e66b2e82e55a5",
       "b": "0x608aff351cd38df4",
-      "expected": "0x888abae6cd53ac7c"
+      "expected": "0x8c925342c589acde"
     },
     {
       "a": "0x8b7bf661ecf3572e",
       "b": "0x25ebd728812e2f8b",
-      "expected": "0x8c9e6b903c3328df"
+      "expected": "0x8a5a7c3e4672ad42"
     },
     {
       "a": "0x8bf6c00d6660ba20",
       "b": "0x0b90c8471e8612eb",
-      "expected": "0xd03ea2ea0bc6ecd5"
+      "expected": "0x83d4f0efc9f3fced"
     },
     {
       "a": "0x8d1531be9d89df3a",
       "b": "0xb800000000000000",
-      "expected": "0x0d3531be9d89df3a"
+      "expected": "0x72cace41627620c6"
     },
     {
       "a": "0x8f21ce5462d813b9",
       "b": "0x4732046b66dbc245",
-      "expected": "0x8f03989727e285b3"
+      "expected": "0x8f3f41a02af8e3d2"
     },
     {
       "a": "0x8f9d9eb84d6c80dd",
       "b": "0x4800000000000000",
-      "expected": "0x8f7d9eb84d6c80dd"
+      "expected": "0x8fbd9eb84d6c80dd"
     },
     {
       "a": "0x8fa34fcc0823fcc2",
       "b": "0x3555555555555555",
-      "expected": "0x8fd4f7b20c35fb23"
+      "expected": "0x8f727bd9061afd91"
     },
     {
       "a": "0x90cd7f1939f869ac",
       "b": "0x5da17356ca671ff8",
-      "expected": "0x8ecf8640f4683174"
+      "expected": "0x93f9c7f8c1ba3564"
     },
     {
       "a": "0x934ba164e9f9756f",
       "b": "0x27c0f540f3bc5b63",
-      "expected": "0x951640173457d7e7"
+      "expected": "0x917da51f451c5597"
     },
     {
       "a": "0x93afb28624fa25bb",
       "b": "0x968e355f65dea895",
-      "expected": "0x236d9e838b418478"
+      "expected": "0x5c695179c3f8f801"
     },
     {
       "a": "0x95aa5d2674e15abd",
       "b": "0xf9275843bcebd8db",
-      "expected": "0x0452399097756eb3"
+      "expected": "0x7babc96a5d7f7ade"
     },
     {
       "a": "0x95c0000000000000",
       "b": "0xb9980d3d2b207e9d",
-      "expected": "0x15eabbe17468c86c"
+      "expected": "0x6a0714cd42cd1b52"
     },
     {
       "a": "0x968e355f65dea895",
       "b": "0x7c90000000000000",
-      "expected": "0x81238d57d977aa25"
+      "expected": "0xfa438d57d977aa25"
     },
     {
       "a": "0x9a33e9a61995574b",
       "b": "0x5080000000000000",
-      "expected": "0x988fee1e7adddf6f"
+      "expected": "0x9bdcbaeb47aaac3c"
     },
     {
       "a": "0x9bd810505467f868",
       "b": "0xe8e942b9b7007e09",
-      "expected": "0x1141af58386965b1"
+      "expected": "0x6ebbe91a3409808e"
     },
     {
       "a": "0x9cdaa2c44ac57e71",
       "b": "0xb45e3694c929c9ac",
-      "expected": "0x1dc8370ace7637be"
+      "expected": "0x622d56939bcde3df"
     },
     {
       "a": "0x9ced3d0b186f5fa2",
       "b": "0x0d5665632d0b912f",
-      "expected": "0xf002e3fab6bc943a"
+      "expected": "0x8ab4d4ea44131db1"
     },
     {
       "a": "0x9e8947bfc4fb66a9",
       "b": "0x968e355f65dea895",
-      "expected": "0x61e0ae0d88d63125"
+      "expected": "0x1e0ac35a4cb6943e"
     },
     {
       "a": "0xa06ce1a9ec44439a",
       "b": "0x08ab00c0dd4afbc9",
-      "expected": "0xf581f0ad28c16586"
+      "expected": "0x876d4067e6af9e9a"
     },
     {
       "a": "0xa0a077c7d78b8037",
       "b": "0x77dc936b3d79f7a1",
-      "expected": "0x872b802677f172b9"
+      "expected": "0xf611931a8d73a466"
     },
     {
       "a": "0xa0ee5b28e357d1a7",
@@ -745,372 +745,372 @@
     {
       "a": "0xa1aa0be3172cca6d",
       "b": "0x4d4fda4adf46c329",
-      "expected": "0x9fa0694c979993c5"
+      "expected": "0xa3fe804e10861c3f"
     },
     {
       "a": "0xa3b01e6843a337a5",
       "b": "0x8f21ce5462d813b9",
-      "expected": "0x6ee64230c7118352"
+      "expected": "0x1116689afca65777"
     },
     {
       "a": "0xa4ca17ac7ab69ca1",
       "b": "0x463babebcea28627",
-      "expected": "0xa4017af04c23e9ba"
+      "expected": "0xa5a39ecbc0bcc729"
     },
     {
       "a": "0xa4d9d10817e0b07c",
       "b": "0x59bf2aa9b5236c96",
-      "expected": "0x9e07a0e17f94ec50"
+      "expected": "0xb6bca7aeea386952"
     },
     {
       "a": "0xa51752dabfc70d74",
       "b": "0x43ae3e5971515ae8",
-      "expected": "0xa47e9d3cceffcabc"
+      "expected": "0xa5b14ef872e0e5aa"
     },
     {
       "a": "0xa81e74aa4711e890",
       "b": "0xc800000000000000",
-      "expected": "0x270f3a552388f448"
+      "expected": "0x58f0c5aadc770bb8"
     },
     {
       "a": "0xa852f2d67641f539",
       "b": "0xa81e74aa4711e890",
-      "expected": "0x40c62eca5e544676"
+      "expected": "0x3f2797986a46b123"
     },
     {
       "a": "0xa981a2e443d19285",
       "b": "0xbaf981bdd17af5b8",
-      "expected": "0x2a8e55ce3693c6af"
+      "expected": "0x5510260205a70590"
     },
     {
       "a": "0xac26f5712c89d5d6",
       "b": "0xd080000000000000",
-      "expected": "0x26b8c45a8a07de45"
+      "expected": "0x591970bb17d89e55"
     },
     {
       "a": "0xb0aa7559367e0bc1",
       "b": "0xe3c1e482914a694f",
-      "expected": "0x1ac52218327ddc4b"
+      "expected": "0x651e04fb3fc406ae"
     },
     {
       "a": "0xb174d9fa4add28dc",
       "b": "0xb6c7a676ff63b6f3",
-      "expected": "0x36703b0737702b09"
+      "expected": "0x49039c3250bf5faf"
     },
     {
       "a": "0xb2cf3135074319c5",
       "b": "0xa0a077c7d78b8037",
-      "expected": "0x5d0be1d2908518fe"
+      "expected": "0x22e3d8921518fce6"
     },
     {
       "a": "0xb400000000000000",
       "b": "0xa3b01e6843a337a5",
-      "expected": "0x5a2f52f237925d1e"
+      "expected": "0x25863bb23b9cd00e"
     },
     {
       "a": "0xb45e3694c929c9ac",
       "b": "0x2916ae360475f516",
-      "expected": "0xd2d41776df953bef"
+      "expected": "0xa6c3b5a3dd22006d"
     },
     {
       "a": "0xb563df308f8fc6fd",
       "b": "0x65d21de908224425",
-      "expected": "0x995226362ec0a7f9"
+      "expected": "0xe4ff25cba2dcf794"
     },
     {
       "a": "0xb69fc1c3af5b54f1",
       "b": "0x968e355f65dea895",
-      "expected": "0x6916bae5e35ec31a"
+      "expected": "0x16e0c162c1a4ae70"
     },
     {
       "a": "0xb6c7a676ff63b6f3",
       "b": "0xbc9272a5341f4265",
-      "expected": "0x38a0e5ec99225010"
+      "expected": "0x469dfc94811458ba"
     },
     {
       "a": "0xb800000000000000",
       "b": "0xa3b01e6843a337a5",
-      "expected": "0x5b2f52f237925d1e"
+      "expected": "0x24863bb23b9cd00e"
     },
     {
       "a": "0xb8701f8b2df99738",
       "b": "0x1748d731722bd47d",
-      "expected": "0xe8769f3746d07c12"
+      "expected": "0x97129d2468d7c05d"
     },
     {
       "a": "0xb9980d3d2b207e9d",
       "b": "0xbb1d582bdbc296b3",
-      "expected": "0x3dcf988761ca9b50"
+      "expected": "0x40f1b2251af1bfee"
     },
     {
       "a": "0xbaf981bdd17af5b8",
       "b": "0x1363c699cdf171f1",
-      "expected": "0xec70a1ffff99481d"
+      "expected": "0x933d29078410d43f"
     },
     {
       "a": "0xbb1d582bdbc296b3",
       "b": "0xc2124419cfb9d8df",
-      "expected": "0x38d4262506696f32"
+      "expected": "0x46cd3435915c7f8b"
     },
     {
       "a": "0xbc9272a5341f4265",
       "b": "0x370d730d035b37ff",
-      "expected": "0xc642d362287614bc"
+      "expected": "0xb584b59500dcff23"
     },
     {
       "a": "0xc000000000000000",
       "b": "0x146c99fa313e9812",
-      "expected": "0xeb8b6e87a25783d7"
+      "expected": "0x947491785da87c29"
     },
     {
       "a": "0xc2124419cfb9d8df",
       "b": "0x5f27c8a32d327cc6",
-      "expected": "0xa116ef6ccde6d477"
+      "expected": "0xdf7e3bc02991c547"
     },
     {
       "a": "0xc26c6ff7ac09f076",
       "b": "0x6b37e81b6f50564e",
-      "expected": "0x94d90463b72ee075"
+      "expected": "0xeb4c0ec7da3226f4"
     },
     {
       "a": "0xc2f37b7ef1a99dad",
       "b": "0x840aa847b9b6bc5d",
-      "expected": "0x7bfa4ab5f1a3a7d4"
+      "expected": "0x04039096764ce8bb"
     },
     {
       "a": "0xc3d682ad6ba37e4b",
       "b": "0xd6e64db22abc58c4",
-      "expected": "0x2a0a91d9c170bc47"
+      "expected": "0x55ec3ab6dbd58532"
     },
     {
       "a": "0xc5bb900ed2921f16",
       "b": "0xa81e74aa4711e890",
-      "expected": "0x589ec5e69057e801"
+      "expected": "0x2752a0449f39e525"
     },
     {
       "a": "0xc800000000000000",
       "b": "0x72b55742b57969c0",
-      "expected": "0x8d6665033840d755"
+      "expected": "0xf2d99afcc7bf28ab"
     },
     {
       "a": "0xca00000000000000",
       "b": "0xe0a38f866c7f5422",
-      "expected": "0x202c832bde30df1b"
+      "expected": "0x5fbdf21e978a8daa"
     },
     {
       "a": "0xca3447605c71d136",
       "b": "0xb174d9fa4add28dc",
-      "expected": "0x52462a5eebf9b715"
+      "expected": "0x2d8afb88f0c09451"
     },
     {
       "a": "0xca6f36dad60c0b35",
       "b": "0x57c82de12607280c",
-      "expected": "0xab6717b1d2acaabc"
+      "expected": "0xd987445467b34fa0"
     },
     {
       "a": "0xcaac647536f7fcb7",
       "b": "0x72b55742b57969c0",
-      "expected": "0x8d800720509f71d8"
+      "expected": "0xf2ecdf36f87c5db1"
     },
     {
       "a": "0xcdccc47a3a79b5bc",
       "b": "0x1880000000000000",
-      "expected": "0xe85ccc47a3a79b5c"
+      "expected": "0x99b9988f474f36b8"
     },
     {
       "a": "0xcf78425b829ee5c6",
       "b": "0xb8701f8b2df99738",
-      "expected": "0x518a8034958913c8"
+      "expected": "0x2e5430bed71cade5"
     },
     {
       "a": "0xd080000000000000",
       "b": "0x2a09f49175873a79",
-      "expected": "0xda39e58692bb5026"
+      "expected": "0xb1222ddb30b3d8c3"
     },
     {
       "a": "0xd159b0f79775c4fc",
       "b": "0xe3c1e482914a694f",
-      "expected": "0x1e0d8d9eab972a34"
+      "expected": "0x61e45a97cba31b85"
     },
     {
       "a": "0xd1e1bc71403caae6",
       "b": "0x30663c2ddda62c15",
-      "expected": "0xd787875c2b41b3c3"
+      "expected": "0xc84bd7afb2fa7f61"
     },
     {
       "a": "0xd4c64ccd26656c36",
       "b": "0x067dcf7574a07b49",
-      "expected": "0xf9d7d3c7b975062f"
+      "expected": "0x86d44d35a88ce780"
     },
     {
       "a": "0xd5adf4f7fda742b0",
       "b": "0x968e355f65dea895",
-      "expected": "0x6ae05a79ce168336"
+      "expected": "0x151386f84c12b806"
     },
     {
       "a": "0xd6e64db22abc58c4",
       "b": "0x5221bcb105e28484",
-      "expected": "0xcd70d464500b9724"
+      "expected": "0xdb8baf43995a3078"
     },
     {
       "a": "0xd80d02fa160018e6",
       "b": "0xc2f37b7ef1a99dad",
-      "expected": "0x571212d1affd6ce7"
+      "expected": "0x2863d69631246cbf"
     },
     {
       "a": "0xd80de48610541d3f",
       "b": "0x363d6e76027bdc65",
-      "expected": "0xd95a04a16cced617"
+      "expected": "0xd58165bfbf29ee16"
     },
     {
       "a": "0xd82f0d4d3d171542",
       "b": "0x32e358e0e458d4db",
-      "expected": "0xda5ff90fb2169e04"
+      "expected": "0xd3e3ff1cfbac8014"
     },
     {
       "a": "0xd8670c21e9bf2d1c",
       "b": "0x5080000000000000",
-      "expected": "0xd23e79cfdc6514fa"
+      "expected": "0xdbb8d68187cc2416"
     },
     {
       "a": "0xd9f0b778510599b8",
       "b": "0x80595d67698116b4",
-      "expected": "0x7fffffffffffffff"
+      "expected": "0x0000000000000000"
     },
     {
       "a": "0xdb7ef88278045796",
       "b": "0xff343b45762bcec1",
-      "expected": "0x0172eded4baf71a2"
+      "expected": "0x7e8bbb3cdeb49103"
     },
     {
       "a": "0xdd21a9e0bb38201c",
       "b": "0x252bd83391e85ca1",
-      "expected": "0xe3774ec8b91dd676"
+      "expected": "0xcd9e6e8d087c7439"
     },
     {
       "a": "0xe0a38f866c7f5422",
       "b": "0xca3447605c71d136",
-      "expected": "0x5fa5ce274ee68806"
+      "expected": "0x2030467e0ca4b3d4"
     },
     {
       "a": "0xe2282d83bc58ad23",
       "b": "0xa1aa0be3172cca6d",
-      "expected": "0x68650db6fd199dfd"
+      "expected": "0x1790c95a28d68593"
     },
     {
       "a": "0xe3c1e482914a694f",
       "b": "0xd5adf4f7fda742b0",
-      "expected": "0x60d2c7c752dc6a5e"
+      "expected": "0x1f23da0a1263cd49"
     },
     {
       "a": "0xe4917ec75de60c60",
       "b": "0xa981a2e443d19285",
-      "expected": "0x67a5fa2693f48b76"
+      "expected": "0x183f4afb4e65fba0"
     },
     {
       "a": "0xe4d3c4edd398d268",
       "b": "0x552df35c131269a3",
-      "expected": "0xe2053599ef46bc26"
+      "expected": "0xe7a752b7cdb94718"
     },
     {
       "a": "0xe4f69e2114be1b80",
       "b": "0xb0aa7559367e0bc1",
-      "expected": "0x66536c675d7d2b9e"
+      "expected": "0x1995dae02f5ef7ed"
     },
     {
       "a": "0xe831fdadcc5bc50a",
       "b": "0x17448291b3e27a00",
-      "expected": "0xf0553e51f93f3722"
+      "expected": "0xb372054bc103a1e7"
     },
     {
       "a": "0xe84aec1210a3754a",
       "b": "0x95c0000000000000",
-      "expected": "0x712576090851baa5"
+      "expected": "0x0eda89f6f7ae455b"
     },
     {
       "a": "0xe8e942b9b7007e09",
       "b": "0x4d12a476009c29b7",
-      "expected": "0xe852ffead4197c5e"
+      "expected": "0xe97b9aca98767619"
     },
     {
       "a": "0xec2f4de9b309ae77",
       "b": "0xf8bf9e9a8903ee18",
-      "expected": "0x0c785261256c5434"
+      "expected": "0x73876923d0944509"
     },
     {
       "a": "0xedba4803f18cd95d",
       "b": "0x37bb6c7aed918a6a",
-      "expected": "0xedfe84876c5d209e"
+      "expected": "0xed77ddae12a94c0c"
     },
     {
       "a": "0xef2e33bc5cafbaed",
       "b": "0x51c76c7a8fa0cf45",
-      "expected": "0xee34a598af3f6421"
+      "expected": "0xf014b58f72cb6f64"
     },
     {
       "a": "0xefd89a4bcd057d42",
       "b": "0xd82f0d4d3d171542",
-      "expected": "0x6e0ad8a266de3f13"
+      "expected": "0x11f1dc64b79f5678"
     },
     {
       "a": "0xf4334f581a1efc0e",
       "b": "0xfec3750854e741ba",
-      "expected": "0x074518b97cf12a9a"
+      "expected": "0x78b90d2f1708febd"
     },
     {
       "a": "0xf7dc086b3935c48d",
       "b": "0xb0aa7559367e0bc1",
-      "expected": "0x7819bb9d1a23bf41"
+      "expected": "0x07e39dc28719a8e8"
     },
     {
       "a": "0xf84ae4b7c89bacd0",
       "b": "0x1363c699cdf171f1",
-      "expected": "0xfb61401efff0070e"
+      "expected": "0xf269d88384044c68"
     },
     {
       "a": "0xf8bf9e9a8903ee18",
       "b": "0x738101be15153a7f",
-      "expected": "0xec3a9ec69989e2ab"
+      "expected": "0xfe703d07979e1f13"
     },
     {
       "a": "0xf9275843bcebd8db",
       "b": "0xe4d3c4edd398d268",
-      "expected": "0x773870f82c674bd5"
+      "expected": "0x08c4a59ffbd741bc"
     },
     {
       "a": "0xf94dded250637ed6",
       "b": "0xb2cf3135074319c5",
-      "expected": "0x79718bf51b57c4a2"
+      "expected": "0x068bf12105925e41"
     },
     {
       "a": "0xfaa6784a54145c29",
       "b": "0x3833af1f4bffd9d0",
-      "expected": "0xfab5eab25f39c087"
+      "expected": "0xfa97192afce6ca82"
     },
     {
       "a": "0xfc90000000000000",
       "b": "0xe84aec1210a3754a",
-      "expected": "0x7a8b55c531d45ae3"
+      "expected": "0x05717e1d4795eb23"
     },
     {
       "a": "0xfd3b2df2f6506114",
       "b": "0x65d21de908224425",
-      "expected": "0xfb908ead67c69f77"
+      "expected": "0xfee6a206f26c67d4"
     },
     {
       "a": "0xfec3750854e741ba",
       "b": "0x3660c75dc8ed5807",
-      "expected": "0xfed867b9e528958c"
+      "expected": "0xfeae196c4124341a"
     },
     {
       "a": "0xfec425b966a37ace",
       "b": "0xb174d9fa4add28dc",
-      "expected": "0x7eed8a05321d511b"
+      "expected": "0x011106a8e34c1d69"
     },
     {
       "a": "0xff343b45762bcec1",
       "b": "0x05b62f39f2c78b6e",
-      "expected": "0xffffffffffffffff"
+      "expected": "0xf1f7f203b0cd3a29"
     }
   ]
 }
