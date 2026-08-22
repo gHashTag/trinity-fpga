@@ -12,7 +12,17 @@ name: Paper traceability
 
 on:
   pull_request:
-    paths: ['research/arxiv_tnf/**', 'research/**', 'fpga/**']
+    paths:
+      - 'research/arxiv_tnf/**'
+      - 'research/**'
+      - 'fpga/**'
+      # The gate's own script and, more to the point, the file that SILENCES
+      # it. Adding a line to paper_numbers_baseline.txt is how an unsourced
+      # figure stops being reported, and until now that edit did not wake the
+      # gate on a pull request: the one change that most needs its opinion was
+      # the one change it could not see.
+      - 'tools/check_paper_numbers.py'
+      - 'tools/paper_numbers_baseline.txt'
   push:
     branches: [main, master]
 
