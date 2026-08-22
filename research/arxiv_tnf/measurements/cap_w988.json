@@ -1,0 +1,90 @@
+{
+ "wave": "W988",
+ "board": "1:5",
+ "idcode": "0x3636093",
+ "goal": "the two ABSENT operators, and the model that made them ABSENT",
+ "the_cap": {
+  "was": 600,
+  "now": 1800,
+  "env": "T27_STAGE_TIMEOUT_S, clamped to 30..21600",
+  "why_env": "so the next wave to meet the cap does not have to rebuild the compiler to test whether the cap is the problem",
+  "discipline": "W823's rule -- raise on a measured slope and a known largest design, never because one design failed"
+ },
+ "the_documented_slope_was_wrong": {
+  "documented": 21.0,
+  "units": "ms/LUT",
+  "source": "T560/T567",
+  "measured_from_completed_builds": {
+   "gft_signed_dot4": 50.4,
+   "gft_signed_mac": 51.0,
+   "gft_train1": 33.7
+  },
+  "aggregate": 50.7,
+  "factor_off": 2.4,
+  "consequence": "at 21 ms/LUT a 600 s cap appears to buy 28600 LUT; at the rates actually seen it buys 11800. Both timed-out designs were never going to fit, and were reported ABSENT -- which reads like a property of the design."
+ },
+ "and_the_slope_is_not_a_slope": {
+  "rates_ms_per_lut": {
+   "gft_train1": {
+    "LUT": 15946,
+    "pnr_s": 536.85,
+    "rate": 33.7
+   },
+   "gft_signed_dot4": {
+    "LUT": 7851,
+    "pnr_s": 395.61,
+    "rate": 50.4
+   },
+   "gft_signed_mac": {
+    "LUT": 9465,
+    "pnr_s": 482.42,
+    "rate": 51.0
+   },
+   "gft_xorpercep": {
+    "LUT": 28609,
+    "pnr_s": ">1800",
+    "rate": ">62.9",
+    "note": "lower bound -- killed at the cap"
+   }
+  },
+  "spread": "at least 1.9x, and NOT monotone in LUT count: the 15946-LUT design is the FASTEST per LUT and the 7851-LUT design is slower than it",
+  "conclusion": "place-and-route time per LUT is a property of the design's structure, not of its size. A single slope cannot size a cap; the worst observed rate can, and even then it is a bet."
+ },
+ "results": [
+  {
+   "design": "gft_train1",
+   "LUT": 15946,
+   "CARRY4": 2725,
+   "pnr_s": 536.85,
+   "fmax_mhz": 2.86,
+   "die_word": "0xa5a5317f",
+   "die_design": 5,
+   "clauses": "1111",
+   "ok": 1,
+   "beat": 1,
+   "verdict": "PASS -- reaches the die for the first time with all four clauses real",
+   "note": "the previous run died at 600.10 s with 16188 LUT. This one took 536.85 s with 15946. The old ABSENT was marginal, not structural."
+  },
+  {
+   "design": "gft_xorpercep",
+   "LUT": 28609,
+   "CARRY4": 5019,
+   "pnr_s": ">1800",
+   "fmax_mhz": 1.85,
+   "verdict": "ABSENT still -- killed at the 1800 s cap",
+   "note": "timing PASSES (1.85 MHz against 1.11). It needs more than 62.9 ms/LUT, worse than any completed build on this bench."
+  }
+ ],
+ "table_now": {
+  "measured_with_all_clauses_real": 6,
+  "of": 7,
+  "still_absent": [
+   "gft_xorpercep"
+  ]
+ },
+ "instrument": "tri slope -- re-derives the rate from every record carrying both LUT and pnr_s, reports the SPREAD, and sizes caps on the worst rate rather than the average",
+ "environment": {
+  "rebuild": "t27c rebuilt in 5m50s after W986 reclaimed disk by deleting target/release/deps",
+  "web_search": "unavailable all session"
+ }
+}
