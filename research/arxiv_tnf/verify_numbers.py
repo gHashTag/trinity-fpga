@@ -904,5 +904,34 @@ if cp:
     check("из семи", t["of"], 7, tol=0)
     check("остался один", len(t["still_absent"]), 1, tol=0)
 
+# W989: the table stops being transcribed and starts being derived.
+sc = rec("schema_w989.json")
+if sc:
+    print("\n== схема записей и производная таблица (W989)")
+    b = sc["before_after"]
+    check("размещаемых чтений было", b["placeable_before"], 10, tol=0)
+    check("всего чтений было", b["total"], 38, tol=0)
+    check("доля до, %", 100 * b["placeable_before"] / b["total"], b["pct_before"], tol=1)
+    check("размещаемых стало", b["placeable_after"], 39, tol=0)
+    check("доля после, %", 100 * b["placeable_after"] / b["total_after"], 100, tol=0)
+    f = sc["fix"]
+    check("записей нормализовано", f["records_normalised"], 10, tol=0)
+    check("чтений канонизировано", f["reads_canonicalised"], 39, tol=0)
+    t = sc["totals"]
+    check("схем в таблице", t["designs"], 8, tol=0)
+    check("чтений в таблице", t["die_reads"], 39, tol=0)
+    check("пропущено", t["skipped"], 0, tol=0)
+    dt = sc["derived_table"]
+    check("сумма чтений по строкам", sum(v["reads"] for v in dt.values()), t["die_reads"], tol=0)
+    check("сумма прошедших", sum(v["pass"] for v in dt.values()), t["ok"], tol=0)
+    check("сумма прошедших и упавших",
+          sum(v["pass"] + v["fail"] for v in dt.values()), t["die_reads"], tol=0)
+    split = [k for k, v in dt.items() if len(v["verdicts"]) > 1]
+    check("схем с расхождением", len(split), 5, tol=0)
+    check("предел инструмента заявлен",
+          "cannot tell them apart" in sc["the_tools_own_limit"], True, tol=0)
+    check("незавершённое названо, а не опущено",
+          sc["in_flight"]["design"] == "gft_xorpercep", True, tol=0)
+
 print(f"\n  ИТОГ: сошлось {ok}, расхождений {bad}, пропущено блоков {skip}")
 sys.exit(1 if bad else 0)
