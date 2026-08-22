@@ -34,8 +34,16 @@ ANCHOR = "\\section{What this paper argues}"
 # second target and each case says which file it patches.
 SCRATCH_DOC = ROOT / "research" / "GATE_SELFTEST_SCRATCH.md"
 
-# gate -> text inserted before ANCHOR that the gate must reject.
-# Each defect is the smallest thing that gate exists to notice.
+# gate -> the defect it must reject. A case is one of:
+#
+#   str                      text inserted before ANCHOR in the paper
+#   ("create", rel, text)    a file the harness writes and then removes
+#   ("append", rel, text)    text appended to an existing file, then restored
+#
+# Three forms because three kinds of gate exist here: those that read the
+# paper, those that read the tree for things that should not be in it, and
+# those that read an artefact whose content must be corrupted rather than
+# created. Each defect is the smallest thing its gate exists to notice.
 CASES = {
     "check_self_consistency": (
         "Ninety-nine retractions are marked in place below.\n\n"
@@ -51,7 +59,45 @@ CASES = {
     ),
     # Documents-against-the-tree gates: the defect goes in a scratch document
     # that the harness creates and removes, never in a real one.
-    "check_doc_refs": None,
+    "check_doc_refs": (
+        "create", "research/GATE_SELFTEST_SCRATCH.md",
+        "# Gate self-test scratch\n\n"
+        "This document names `tools/a_file_that_does_not_exist.py`, which is\n"
+        "the defect check_doc_refs exists to catch. The harness writes this\n"
+        "file, runs the gate, and removes it.\n",
+    ),
+    # A citation with no entry behind it. The gate reads the paper, so this is
+    # a paper injection like the four above.
+    "check_bibliography": (
+        "This rests on prior work~\\cite{gate-selftest-no-such-key}.\n\n"
+    ),
+    # An artefact nothing produces: the whole subject of that gate, created
+    # where its glob will find it.
+    "check_orphan_artefacts": (
+        "create", "research/gate_selftest_orphan.json",
+        '{"note": "written by check_gates_can_fail; no producer names it"}\n',
+    ),
+    # A reproduction script naming a module that does not exist. The gate only
+    # reads scripts that call read_verilog, so the scratch script must too.
+    "check_script_rot": (
+        "create", "fpga/gate_selftest_scratch.sh",
+        "#!/bin/sh\n"
+        "# Written by check_gates_can_fail and removed again.\n"
+        "# The gate reads only scripts that call read_verilog, and finds used\n"
+        "# modules by Verilog INSTANTIATION syntax -- not by yosys commands. A\n"
+        "# first version of this defect used `hierarchy -top NAME` and the gate\n"
+        "# passed it, which read as a blind gate and was a bad injection.\n"
+        "read_verilog gate_selftest_absent.v\n"
+        "cat > /dev/null <<EOF\n"
+        "  module_that_is_defined_nowhere_9f3a dut (.clk(clk));\n"
+        "EOF\n",
+    ),
+    # One undefined code in a sweep. Appended rather than created: an empty
+    # sweep is a DIFFERENT finding of the same gate, and testing that one
+    # would not prove it can see this one.
+    "check_undefined_outputs": (
+        "append", "fpga/tnet/cf_binary32.txt", "4294967295 xxxxxxxx\n",
+    ),
     "check_withdrawn_live": (
         "\\paragraph{Withdrawn.} The earlier claim of $77.31\\times$ is withdrawn: "
         "it was measured against the broken oracle.\n\n"
@@ -88,21 +134,38 @@ def main() -> int:
         for gate, defect in CASES.items():
             if gate in already_red:
                 continue
-            if defect is None:
-                # A gate that reads documents rather than the paper: name a
-                # file that does not exist and require the gate to notice.
-                SCRATCH_DOC.write_text(
-                    "# Gate self-test scratch\n\n"
-                    "This document names `tools/a_file_that_does_not_exist.py`, which is\n"
-                    "the defect check_doc_refs exists to catch. The harness writes this\n"
-                    "file, runs the gate, and removes it.\n"
-                )
-                if not SCRATCH_DOC.is_file():
-                    noop.append(gate)
-                    continue
-                if run(gate):
-                    blind.append(gate)
-                SCRATCH_DOC.unlink(missing_ok=True)
+            if isinstance(defect, tuple):
+                mode, rel, text = defect
+                target = ROOT / rel
+                if mode == "create":
+                    # Refusing to overwrite is the point: if the path already
+                    # exists, the harness would be testing somebody's file and
+                    # would delete it afterwards.
+                    if target.exists():
+                        noop.append(gate)
+                        continue
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    target.write_text(text)
+                    if not target.is_file() or target.stat().st_size == 0:
+                        noop.append(gate)
+                        target.unlink(missing_ok=True)
+                        continue
+                    if run(gate):
+                        blind.append(gate)
+                    target.unlink(missing_ok=True)
+                else:  # append
+                    if not target.is_file():
+                        noop.append(gate)
+                        continue
+                    before = target.read_text()
+                    target.write_text(before + text)
+                    if len(target.read_text()) <= len(before):
+                        noop.append(gate)
+                        target.write_text(before)
+                        continue
+                    if run(gate):
+                        blind.append(gate)
+                    target.write_text(before)
                 continue
             patched = original.replace(ANCHOR, defect + ANCHOR, 1)
             if len(patched) <= len(original):
@@ -115,7 +178,13 @@ def main() -> int:
             PAPER.write_text(original)
     finally:
         PAPER.write_text(original)
-        SCRATCH_DOC.unlink(missing_ok=True)
+        # Anything a "create" case may have left if the run died mid-way. An
+        # "append" case restores inside its own branch; a crash there would
+        # leave a modified sweep, which `git status` shows and this cannot fix
+        # without knowing the original.
+        for _d in CASES.values():
+            if isinstance(_d, tuple) and _d[0] == "create":
+                (ROOT / _d[1]).unlink(missing_ok=True)
 
     print(f"gates tested: {len(CASES) - len(already_red)} of {len(CASES)}")
     for g in CASES:
@@ -138,7 +207,12 @@ def main() -> int:
         print(f"\n{len(already_red)} gate(s) could not be tested because they are red")
         print("on a clean tree. That is a finding about the tree, not about them —")
         print("fix the tree, then this harness can say whether they work.")
-    print("\nOK: every gate rejects the defect it exists to catch")
+    if already_red:
+        print(f"\nOK: every TESTABLE gate rejects its defect "
+              f"({len(CASES) - len(already_red)} of {len(CASES)}); "
+              f"{len(already_red)} could not be tested")
+    else:
+        print("\nOK: every gate rejects the defect it exists to catch")
     return 0
 
 
