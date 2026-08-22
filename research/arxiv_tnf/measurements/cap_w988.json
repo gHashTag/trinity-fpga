@@ -86,5 +86,17 @@
  "environment": {
   "rebuild": "t27c rebuilt in 5m50s after W986 reclaimed disk by deleting target/release/deps",
   "web_search": "unavailable all session"
- }
+ },
+ "die_reads_canonical": [
+  {
+   "design": "gft_train1",
+   "clauses": "1111",
+   "ok": 1,
+   "wave": "W988",
+   "seed": 1,
+   "LUT": 15946,
+   "pnr_s": 536.85
+  }
+ ],
+ "schema_note": "W989: a canonical, machine-readable list of every die read in this record. The records grew ad-hoc schemas over twenty waves and `tri table` could place only 10 of 38 reads; this key is the fix, and new records must carry it."
 }
