@@ -58,5 +58,40 @@
   "disk": "the wave ran the volume from 0.48 to 0.15 GiB and back to 1.59 GiB after clearing regenerable build trees",
   "reclaimable_but_not_touched": "build/fpga holds XC7A100T chipdbs (xc7a100t_484.bba 0.43 GiB, xc7a100t_484.bin and xc7a100t.bin 0.15 GiB each) for a part this bench does not have -- ~0.73 GiB. Left alone: deleting a chipdb is expensive to reverse and it is not this wave's to decide.",
   "web_search": "unavailable all session"
- }
+ },
+ "die_reads_canonical": [
+  {
+   "design": "gft_dup_folded",
+   "clauses": "1111",
+   "ok": 1,
+   "wave": "W986",
+   "seed": 1,
+   "site": 3
+  },
+  {
+   "design": "gft_dup_folded",
+   "clauses": "1101",
+   "ok": 0,
+   "wave": "W986",
+   "seed": 7,
+   "site": 1
+  },
+  {
+   "design": "gft_dup_folded",
+   "clauses": "1111",
+   "ok": 1,
+   "wave": "W986",
+   "seed": 42,
+   "site": 3
+  },
+  {
+   "design": "gft_dup_folded",
+   "clauses": "1101",
+   "ok": 0,
+   "wave": "W986",
+   "seed": 1234,
+   "site": 2
+  }
+ ],
+ "schema_note": "W989: a canonical, machine-readable list of every die read in this record. The records grew ad-hoc schemas over twenty waves and `tri table` could place only 10 of 38 reads; this key is the fix, and new records must carry it."
 }
