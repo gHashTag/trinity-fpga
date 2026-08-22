@@ -10,7 +10,7 @@ about the tree, and nothing checked it.
 Sixteen claims were withdrawn during this work and three gates were added,
 renamed or moved. A path in prose does not update itself.
 """
-import re, pathlib, sys
+import os, re, pathlib, sys
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 
@@ -32,9 +32,53 @@ def exists(p):
     is False either way.
     """
     try:
-        return p.exists()
+        if not p.exists():
+            return False
     except OSError:
         return False
+    return _case_exact(p)
+
+
+_LISTING = {}
+
+
+def _case_exact(p):
+    """Does every component of `p` match the case actually stored on disk?
+
+    `Path.exists()` answers a question about the HOST FILESYSTEM, and macOS
+    answers it case-insensitively while every Linux runner does not. One
+    reference -- `docs/internal/agents.md` against a tree holding
+    `docs/docs/internal/AGENTS.md` -- resolved on a developer Mac and failed in
+    CI, so this gate was verified green locally and was red on main at the very
+    commit that "fixed" it. A checker whose verdict depends on who ran it is
+    not a checker.
+
+    Walking the components against real directory listings makes the answer the
+    same everywhere. Listings are memoised: successes are the common path and
+    the walk would otherwise be a stat storm.
+    """
+    try:
+        # `..` and `.` are not entries in any directory listing, so a path
+        # carrying them must be normalised BEFORE the walk. Textual
+        # normalisation, not `resolve()`: resolving follows symlinks and would
+        # answer about the link target rather than the path the document wrote.
+        parts = pathlib.Path(os.path.normpath(str(p.absolute()))).parts
+    except OSError:
+        return False
+    cur = pathlib.Path(parts[0])
+    for part in parts[1:]:
+        key = str(cur)
+        entries = _LISTING.get(key)
+        if entries is None:
+            try:
+                entries = set(os.listdir(cur))
+            except OSError:
+                return False
+            _LISTING[key] = entries
+        if part not in entries:
+            return False
+        cur = cur / part
+    return True
 
 
 DOCS = sorted(set(list(ROOT.glob("research/**/*.md")) + list(ROOT.glob("*.md"))
