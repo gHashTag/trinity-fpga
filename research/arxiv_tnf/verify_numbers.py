@@ -835,5 +835,38 @@ if fz:
     check("smul записан как ABSENT",
           fz["frozen_smul_sweep"]["status"].startswith("ABSENT"), True, tol=0)
 
+# W987: the operator table with every clause real, and what honesty cost in area.
+op = rec("operators_w987.json")
+if op:
+    print("\n== таблица операторов с настоящими клаузами (W987)")
+    o = op["operators"]
+    check("операторов в таблице", len(o), 5, tol=0)
+    passed = [k for k, v in o.items() if v.get("ok") and all(x == 1 for x in v["ok"])]
+    absent = [k for k, v in o.items() if "ABSENT" in v.get("verdict", "")]
+    check("прошли", len(passed), 3, tol=0)
+    check("отсутствуют по потолку PnR", len(absent), 2, tol=0)
+    check("dot4 впервые на кремнии",
+          "FIRST TIME" in o["gft_signed_dot4"]["verdict"], True, tol=0)
+    check("dot4: все клаузы истинны", o["gft_signed_dot4"]["clauses"][0] == "1111", True, tol=0)
+    check("mac подтверждает починку W978",
+          "W978" in o["gft_signed_mac"]["significance"], True, tol=0)
+    check("mac: было 0011", "0011" in o["gft_signed_mac"]["before"], True, tol=0)
+    check("mac: стало 1111", o["gft_signed_mac"]["clauses"][0] == "1111", True, tol=0)
+    check("sadd прошёл на двух размещениях", len(o["gft_sadd"]["seeds"]), 2, tol=0)
+    check("train1 отсутствует на обоих зёрнах",
+          all(c == "ABSENT" for c in o["gft_train1"]["clauses"]), True, tol=0)
+    # the cost of honesty, recomputed from the LUT counts rather than quoted
+    g = op["the_cost_of_honesty"]["growth"]
+    check("рост sadd, раз", 4231 / 1312, 3.2, tol=0.05)
+    check("рост dup, раз", 1763 / 798, 2.2, tol=0.05)
+    check("рост xorpercep, раз", 28217 / 10799, 2.6, tol=0.05)
+    check("рост smul, раз", 1877 / 1312, 1.4, tol=0.05)
+    check("все четыре роста записаны", len(g), 4, tol=0)
+    sm = op["summary"]
+    check("измерено с настоящими клаузами", sm["measured_with_all_clauses_real"], 5, tol=0)
+    check("отказов ноль", sm["fail"], 0, tol=0)
+    check("оговорка про одно размещение записана",
+          "single placement" in sm["caveat"], True, tol=0)
+
 print(f"\n  ИТОГ: сошлось {ok}, расхождений {bad}, пропущено блоков {skip}")
 sys.exit(1 if bad else 0)
