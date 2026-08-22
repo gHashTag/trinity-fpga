@@ -76,7 +76,17 @@ jobs:
           ./zig-out/bin/tri stress --health 2>&1 | tee /tmp/health-output.txt || true
 
           # Extract health score
-          HEALTH_SCORE=$(grep "Score:" /tmp/health-output.txt | grep -oE "[0-9]+\.[0-9]+" || echo "0")
+          # "0" and "no measurement" printed the same, and this gate has
+          # reported "Brain health 0 below 80" on all 47 of its runs. Neither
+          # half of the extraction can succeed: `stress` does not accept
+          # --health (grep -c '"--health"' in its handler: 0), and no .zig file
+          # prints "Score:" at all. Substituting 0 turned that into a health
+          # verdict about the brain instead of a fact about the pipeline.
+          if ! grep -q "Score:" /tmp/health-output.txt; then
+            echo "::error::No health score was produced. `tri stress --health` printed no \"Score:\" line, so there is no measurement to compare against BRAIN_HEALTH_THRESHOLD. This is not a health score of 0 -- it is the absence of one. See the output above."
+            exit 1
+          fi
+          HEALTH_SCORE=$(grep "Score:" /tmp/health-output.txt | grep -oE "[0-9]+\.[0-9]+")
           echo "HEALTH_SCORE=$HEALTH_SCORE" >> $GITHUB_OUTPUT
 
           # Check if healthy
