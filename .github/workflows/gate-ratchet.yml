@@ -61,6 +61,19 @@ jobs:
       - name: The toolchain the scripts are scored with
         run: sudo apt-get update && sudo apt-get install -y iverilog yosys
 
+      # Three of the six scripts this gate still reports as degraded need
+      # mpmath, and nothing installed it. Measured in a clean 3.12 venv against
+      # a pristine checkout of main: without mpmath they exit 1, 1 and 2 --
+      # exactly the statuses CI reports -- and with it all three exit 0.
+      #
+      # They do not fail quietly about it either. audit_host_importability says
+      # "imports something absent: No module named 'mpmath'" and
+      # witness_takum_small says "mpmath is not installed; this witness needs
+      # it". The message was in the log for weeks; nobody was reading the log,
+      # because the ratchet only prints the STATUS.
+      - name: The Python packages the scripts are scored with
+        run: python3 -m pip install --quiet mpmath
+
       - name: The ratchet can fail
         run: python3 gate_status_ratchet.py --selftest
 
