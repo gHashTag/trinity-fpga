@@ -22,7 +22,7 @@ module tb_$1;
   end
 endmodule
 V
-iverilog -o /tmp/cf_$1 -g2012 tb_$1.v $4 2>tb_$1.err && vvp /tmp/cf_$1 > cf_$1.txt 2>/dev/null \
+iverilog -o /tmp/cf_$1 -g2012 tb_$1.v ${=4} 2>tb_$1.err && vvp /tmp/cf_$1 > cf_$1.txt 2>/dev/null \
   && echo "$1 OK $(grep -c . cf_$1.txt) кодов" || echo "$1 СБОЙ $(head -1 tb_$1.err 2>/dev/null | cut -c1-60)"
 }
 run gfternary 2  "gfternary_decode dec (.gft_in(x), .fp32_out(fp));" "gfternary_decode.v"
