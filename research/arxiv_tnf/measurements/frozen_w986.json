@@ -1,0 +1,62 @@
+{
+ "wave": "W986",
+ "board": "1:5",
+ "idcode": "0x3636093",
+ "question": "W985 froze the defective wrappers because repairing them destroyed the reproducer. Is the reproducer still alive in the frozen copy, on today's bench?",
+ "answer": "YES.",
+ "frozen_dup_sweep": {
+  "file": "fpga/verilog/legacy/gft_dup_folded_jtag.v",
+  "frozen_at": "6ae9296ff",
+  "reads": [
+   {
+    "seed": 1,
+    "site": 3,
+    "word": "0xa5a533bf",
+    "clauses": "1111",
+    "ok": 1
+   },
+   {
+    "seed": 7,
+    "site": 1,
+    "word": "0xa5a533b6",
+    "clauses": "1101",
+    "ok": 0
+   },
+   {
+    "seed": 42,
+    "site": 3,
+    "word": "0xa5a533bf",
+    "clauses": "1111",
+    "ok": 1
+   },
+   {
+    "seed": 1234,
+    "site": 2,
+    "word": "0xa5a533b6",
+    "clauses": "1101",
+    "ok": 0
+   }
+  ],
+  "verdict": "SPLIT -- 2 pass, 2 fail, distinct verdicts 1111 and 1101",
+  "matches_w977": "the seed mapping is EXACTLY W977's: 1 and 42 pass, 7 and 1234 fail"
+ },
+ "the_controlled_comparison": {
+  "why_it_matters": "W985 said 'the failure is gone' and 'the failure is absent in a design this different' could never be separated, because the failing case no longer existed. Freezing the file one wave earlier is what made the comparison possible.",
+  "repaired_designs": "8 placements, 8 passes (W985)",
+  "frozen_design": "4 placements, 2 passes, 2 fails (this wave)",
+  "controls": "same bench, same day, same tool, same four seeds",
+  "conclusion": "the split verdict is a property of the FOLDED DESIGN, not of the bench and not of place-and-route in general. The anomaly did not disappear; it stopped being reachable from the repaired sources."
+ },
+ "what_distinguishes_the_two_designs": "in the folded wrapper the COMM clause compares two cones each SPECIALISED on a literal operand -- yosys folds the constant into the multiplier. With Z0 neither operand is a literal, both cones are the generic multiplier, and they agree across every placement tried. T834 proved the folded cones logically equivalent, so this is not a logic difference: it is a placement sensitivity peculiar to the small specialised cones.",
+ "frozen_smul_sweep": {
+  "status": "ABSENT, not FAIL",
+  "seed7": "built (694 LUT, chain 1, BSCAN1 agree) and the readback found no design 12 -- the load did not answer",
+  "seed42": "never ran; the volume reached 0.15 GiB and the script stopped",
+  "note": "recorded as ABSENT because a readback failure under disk exhaustion is not a measurement of the design"
+ },
+ "environment": {
+  "disk": "the wave ran the volume from 0.48 to 0.15 GiB and back to 1.59 GiB after clearing regenerable build trees",
+  "reclaimable_but_not_touched": "build/fpga holds XC7A100T chipdbs (xc7a100t_484.bba 0.43 GiB, xc7a100t_484.bin and xc7a100t.bin 0.15 GiB each) for a part this bench does not have -- ~0.73 GiB. Left alone: deleting a chipdb is expensive to reverse and it is not this wave's to decide.",
+  "web_search": "unavailable all session"
+ }
+}
