@@ -933,5 +933,33 @@ if sc:
     check("незавершённое названо, а не опущено",
           sc["in_flight"]["design"] == "gft_xorpercep", True, tol=0)
 
+# W990: both spec fixes confirmed on silicon, the MAC across four placements.
+cf = rec("confirm_w990.json")
+if cf:
+    print("\n== подтверждение двух починок на кристалле (W990)")
+    w = cf["already_confirmed_in_w987"]
+    check("mac: было 0011", "0011" in w["gft_signed_mac"]["before"], True, tol=0)
+    check("mac: стало 1111", w["gft_signed_mac"]["clauses"] == "1111", True, tol=0)
+    check("dot4: было ABSENT", w["gft_signed_dot4"]["before"].startswith("ABSENT"), True, tol=0)
+    check("dot4: стало 1111", w["gft_signed_dot4"]["clauses"] == "1111", True, tol=0)
+    check("оговорка про одно размещение",
+          "cannot distinguish" in w["caveat"], True, tol=0)
+    m = cf["confirmation_sweep"]["gft_signed_mac"]
+    check("mac: размещений", m["placements"], 4, tol=0)
+    check("mac: все прошли", sum(m["ok"]), 4, tol=0)
+    check("mac: один вердикт на все", len(set(m["clauses"])), 1, tol=0)
+    check("mac: различных площадок BSCAN", len(set(m["sites"])), 3, tol=0)
+    check("mac: слово одинаково", m["identical_in_every_build"], True, tol=0)
+    check("инструмент не называет это доказательством",
+          "not a proof" in m["tool_note"], True, tol=0)
+    d4 = cf["confirmation_sweep"]["gft_signed_dot4"]
+    check("dot4: подтверждено размещений", d4["placements_done"], 1, tol=0)
+    check("dot4: повторяемость на одном зерне",
+          "same word both times" in d4["repeatability"], True, tol=0)
+    check("dot4: остальное названо в полёте",
+          d4["status"].startswith("IN FLIGHT"), True, tol=0)
+    check("прерванное названо, а не скрыто",
+          "killed" in cf["what_was_given_up_for_it"], True, tol=0)
+
 print(f"\n  ИТОГ: сошлось {ok}, расхождений {bad}, пропущено блоков {skip}")
 sys.exit(1 if bad else 0)
