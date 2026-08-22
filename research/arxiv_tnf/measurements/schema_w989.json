@@ -1,0 +1,110 @@
+{
+ "wave": "W989",
+ "finding": "only 10 of 38 die reads this project keeps were machine-locatable. A referee re-deriving the operator table by script would have got a quarter of it.",
+ "cause": "twenty-odd measurement records, written one per wave, each nesting the die read differently: operators.<name>, die_reads[], reads[], sweep.<wrapper>.reads[]. Every table since W975 was assembled by hand from files that share no schema.",
+ "fix": {
+  "key": "die_reads_canonical",
+  "shape": "[{design, clauses, ok, wave, seed?, site?, LUT?, pnr_s?}]",
+  "records_normalised": 10,
+  "reads_canonicalised": 39,
+  "tool": "tri table reads the canonical key first and guesses only for records written before the convention existed"
+ },
+ "before_after": {
+  "placeable_before": 10,
+  "total": 38,
+  "placeable_after": 39,
+  "total_after": 39,
+  "pct_before": 26,
+  "pct_after": 100
+ },
+ "derived_table": {
+  "gft_commmin": {
+   "reads": 7,
+   "pass": 3,
+   "fail": 4,
+   "verdicts": [
+    "1001",
+    "1011",
+    "1101",
+    "1111"
+   ]
+  },
+  "gft_dup": {
+   "reads": 13,
+   "pass": 10,
+   "fail": 3,
+   "verdicts": [
+    "1101",
+    "1111"
+   ]
+  },
+  "gft_dup_folded": {
+   "reads": 4,
+   "pass": 2,
+   "fail": 2,
+   "verdicts": [
+    "1101",
+    "1111"
+   ]
+  },
+  "gft_sadd": {
+   "reads": 4,
+   "pass": 4,
+   "fail": 0,
+   "verdicts": [
+    "1111"
+   ]
+  },
+  "gft_signed_dot4": {
+   "reads": 1,
+   "pass": 1,
+   "fail": 0,
+   "verdicts": [
+    "1111"
+   ]
+  },
+  "gft_signed_mac": {
+   "reads": 2,
+   "pass": 1,
+   "fail": 1,
+   "verdicts": [
+    "0011",
+    "1111"
+   ]
+  },
+  "gft_smul": {
+   "reads": 6,
+   "pass": 5,
+   "fail": 1,
+   "verdicts": [
+    "1010",
+    "1111"
+   ]
+  },
+  "gft_train1": {
+   "reads": 2,
+   "pass": 2,
+   "fail": 0,
+   "verdicts": [
+    "1111"
+   ]
+  }
+ },
+ "totals": {
+  "designs": 8,
+  "die_reads": 39,
+  "ok": 28,
+  "skipped": 0
+ },
+ "the_tools_own_limit": "SPLIT groups by design NAME across every wave, so it mixes source revisions with placements. gft_smul shows 1010 and 1111 because its clauses were repaired between the two (W983/W984); gft_dup_folded shows 1101 and 1111 because one netlist was placed four ways. Those are different kinds of disagreement and the tool cannot tell them apart -- the wave column can, and the output says so.",
+ "in_flight": {
+  "design": "gft_xorpercep",
+  "cap_s": 3600,
+  "status": "running at the time this record was written",
+  "why": "28609 LUT needing more than 62.9 ms/LUT; the 1800 s cap of W988 killed it. It is the one operator never read off silicon.",
+  "note": "recorded as IN FLIGHT rather than omitted, so the next wave does not rediscover the question"
+ },
+ "environment": {
+  "web_search": "unavailable all session"
+ }
+}
