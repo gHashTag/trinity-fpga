@@ -814,5 +814,26 @@ if sw:
     check("и проверены как всё ещё дефектные",
           "2 folded" in sw["mitigation"]["verified_still_defective"], True, tol=0)
 
+# W986: the frozen reproducer, and the comparison W985 called impossible.
+fz = rec("frozen_w986.json")
+if fz:
+    print("\n== замороженный воспроизводитель (W986)")
+    d = fz["frozen_dup_sweep"]; r = d["reads"]
+    check("размещений", len(r), 4, tol=0)
+    check("проходов", sum(1 for x in r if x["ok"] == 1), 2, tol=0)
+    check("отказов", sum(1 for x in r if x["ok"] == 0), 2, tol=0)
+    check("два различных вердикта", len({x["clauses"] for x in r}), 2, tol=0)
+    check("расщепление зафиксировано", d["verdict"].startswith("SPLIT"), True, tol=0)
+    passing = {x["seed"] for x in r if x["ok"] == 1}
+    check("проходят зёрна 1 и 42", passing == {1, 42}, True, tol=0)
+    failing = {x["seed"] for x in r if x["ok"] == 0}
+    check("падают зёрна 7 и 1234", failing == {7, 1234}, True, tol=0)
+    cc = fz["the_controlled_comparison"]
+    check("починенные: 8 из 8", "8 placements, 8 passes" in cc["repaired_designs"], True, tol=0)
+    check("вывод: свойство свёрнутой схемы",
+          "property of the FOLDED DESIGN" in cc["conclusion"], True, tol=0)
+    check("smul записан как ABSENT",
+          fz["frozen_smul_sweep"]["status"].startswith("ABSENT"), True, tol=0)
+
 print(f"\n  ИТОГ: сошлось {ok}, расхождений {bad}, пропущено блоков {skip}")
 sys.exit(1 if bad else 0)
