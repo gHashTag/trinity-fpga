@@ -47,6 +47,17 @@ jobs:
         working-directory: research
     steps:
       - uses: actions/checkout@v4
+        with:
+          # witness_tekum_decode_equiv walks `git log --all` over one RTL file
+          # to find the revision that still carries the pre-fix loop, so it can
+          # compare before against after. checkout@v4 fetches depth 1 by
+          # default, so only HEAD exists, the search finds nothing, and the
+          # witness honestly reports it cannot compare -- exit 2, which the
+          # ratchet records as "needs input" against a baseline that was taken
+          # on a full clone.
+          #
+          # The file has three revisions. One of them is the whole point.
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
