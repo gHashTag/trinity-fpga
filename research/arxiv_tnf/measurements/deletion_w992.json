@@ -1,0 +1,43 @@
+{
+ "wave": "W992",
+ "action": "deleted /Users/playom/t27/build/fpga/{xc7a100t.bin, xc7a100t_484.bin, xc7a100t_484.bba} -- 0.73 GiB, authorised by the user",
+ "why_it_was_proposed": "the bench is XC7A200T-FGG676 per HARDWARE_SSOT; the 100T chipdb is for a part that is not attached, and disk pressure had twice interrupted work",
+ "audit": {
+  "design": "4 independent search angles, each SAFE verdict then attacked by 2 skeptics prompted to refute",
+  "agents": 12,
+  "tool_uses": 349,
+  "subagent_tokens": 1050345,
+  "duration_s": 1092,
+  "sweep_verdicts": [
+   "SAFE_TO_DELETE",
+   "SAFE_TO_DELETE",
+   "SAFE_TO_DELETE",
+   "SAFE_TO_DELETE"
+  ],
+  "what_the_sweep_earned": "not the yes. One angle attached two dependencies it labelled out-of-scope ITSELF: fpga/tools/bscan_spi_xc7a100t_fgg676.bit is compile-time embedded in cli/dlc10 via include_bytes! (breaks cargo build -p dlc10 and the workspace), and a second 100T bitstream is the wrong-part control that must drive Done=0 before any die read is trusted. Both match the pattern xc7a100t and neither is a chipdb. A glob delete would have broken the build AND destroyed the negative control behind every silicon result in this project."
+ },
+ "refutations_that_landed": [
+  {
+   "claim": "no live consumer names any xc7a100t chipdb",
+   "refutation": "established by grepping for a literal, which cannot see a consumer that CONSTRUCTS the path at runtime. bootstrap/src/main.rs:6551 does: let bba = workdir.join(format!(\"{}.bba\", device)). Invoked as `t27c fpga-chipdb --work build/fpga --device xc7a100t_484` it reads exactly the deleted files, and the .bba/.bin same-stem pair in one directory is that function's own output signature -- these files were almost certainly produced by it.",
+   "status": "CONFIRMED by direct reading of main.rs:6549-6552"
+  },
+  {
+   "claim": "auto-discovery cannot reach them",
+   "refutation": "detect_chipdb matches three EXACT names (xc7a100t.bba, xc7a100t-fgg676.bba, xc7a100t-fgg676-2.bba) while the README documents the glob xc7a100t*.bba. On-disk name was xc7a100t_484.bba: the glob matches, the exact list does not. It missed by a doc/code mismatch, not by design -- a latent dependency, not its absence.",
+   "status": "CONFIRMED"
+  },
+  {
+   "claim": "nothing can select them",
+   "refutation": "CHIPDB=, T27_CHIPDB= and --chipdb <path> all accept arbitrary paths",
+   "status": "true but weak -- an override can name any file"
+  }
+ ],
+ "what_is_actually_broken_now": "nothing. Verified after the fact: the dlc10 embed is intact, the wrong-part control is intact, the live 200T chipdb is intact (332405500 B), and a real place-and-route was running on it throughout.",
+ "the_real_cost": "regeneration needs Docker plus a ~7 GB native bbaexport; the repo records waves 549-552 spent on it. The files were untracked and gitignored, so git cannot restore them. Operationally harmless, expensively irreversible.",
+ "my_sequencing_error": "the adversarial audit was launched BECAUSE the action was irreversible, and the deletion was issued after the four sweep verdicts and BEFORE the refutation phase finished. The refuters then found a runtime path the sweep's method could not see. The verification was correct, was paid for, and was not waited for.",
+ "environment": {
+  "free_gib_before": 13.68,
+  "free_gib_after": 14.41
+ }
+}
