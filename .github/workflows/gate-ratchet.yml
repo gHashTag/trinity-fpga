@@ -57,6 +57,15 @@ jobs:
   ratchet:
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    # audit_gf64_chain.py and audit_hardware_rows.py call `gh` to read issues, and
+    # without a token `gh` exits non-zero, the script reports "needs input" (exit 2)
+    # and the ratchet calls it a degradation from the recorded `clean`. That is the
+    # gate honestly saying it could not look, but the diagnosis reads as a broken
+    # subject rather than a missing credential -- both PRs open today show it, and
+    # so does one that changes no gate at all. GITHUB_TOKEN is the built-in
+    # per-run token; it needs no secret and reads only this repository.
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     defaults:
       run:
         working-directory: research
