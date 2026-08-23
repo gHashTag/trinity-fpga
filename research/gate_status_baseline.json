@@ -78,6 +78,7 @@
     "verify_lucas_exact.py": "clean",
     "verify_lucas_product.py": "clean",
     "verify_negation_invariant.py": "clean",
+    "verify_numbers.py": "findings",
     "verify_oracle_exactness.py": "clean",
     "verify_phi_rule.py": "clean",
     "verify_quire_associativity.py": "clean",

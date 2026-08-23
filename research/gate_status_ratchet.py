@@ -99,9 +99,18 @@ def _block_gates():
 
 
 def collect(timeout, jobs):
+    # research/arxiv_tnf/verify_numbers.py is named for one of the three roles
+    # above and re-derives every headline number in the paper, but it sits one
+    # directory down and so was never collected. Nothing else ran it either --
+    # not this ratchet, not gate-ratchet.yml, not paper-numbers.yml -- and it
+    # had been dying on a KeyError, which meant the whole W991 competitor block
+    # was never checked by anything. A script excluded by where it happens to
+    # live is exactly the implicit exclusion this module's docstring refuses to
+    # have; the skip list above is the auditable way to leave a gate out.
     paths = sorted(glob.glob(os.path.join(HERE, "audit_*.py"))
                    + glob.glob(os.path.join(HERE, "witness_*.py"))
-                   + glob.glob(os.path.join(HERE, "verify_*.py")))
+                   + glob.glob(os.path.join(HERE, "verify_*.py"))
+                   + glob.glob(os.path.join(HERE, "arxiv_tnf", "verify_*.py")))
     todo = [p for p in paths if os.path.basename(p) not in G.SKIP]
     todo += _block_gates()
     out = {}

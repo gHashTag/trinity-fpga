@@ -39,6 +39,26 @@ def check(label, got, want, tol=0.02):
         bad += 1
 
 
+def field(d, key, label):
+    """Read a cited field, or report its absence as a divergence.
+
+    A record that does not carry a field the paper cites is not a crash and not
+    a pass. Crashing is worse than it looks: this script died on the first
+    missing key, so every check below it -- including the whole W991 competitor
+    block -- never ran at all, and a partial verification exited looking like a
+    finished one. Returning None instead would route the value into check()'s
+    "не вычислено" branch, which increments neither counter and leaves the exit
+    code at zero, so a missing measurement would read exactly like a satisfied
+    one. Count it against the run.
+    """
+    global bad
+    if not isinstance(d, dict) or key not in d:
+        print(f"  РАСХОЖДЕНИЕ  {label}: запись не содержит поля {key!r}")
+        bad += 1
+        return None
+    return d[key]
+
+
 def paired(d, task, a, b, key="formats"):
     p = d["tasks"][task][key] if key in d["tasks"][task] else d["tasks"][task]
     x = np.array(p[a]); y = np.array(p[b])
@@ -960,9 +980,12 @@ if cf:
           "same word both times" in d4["repeatability"], True, tol=0)
     check("dot4: остальное названо",
           "still placing" in d4["status"], True, tol=0)
-    check("чтения канонизированы", len(cf["die_reads_canonical"]), 6, tol=0)
-    check("прерванное названо, а не скрыто",
-          "killed" in cf["what_was_given_up_for_it"], True, tol=0)
+    _canon = field(cf, "die_reads_canonical", "чтения канонизированы")
+    if _canon is not None:
+        check("чтения канонизированы", len(_canon), 6, tol=0)
+    _given = field(cf, "what_was_given_up_for_it", "прерванное названо, а не скрыто")
+    if _given is not None:
+        check("прерванное названо, а не скрыто", "killed" in _given, True, tol=0)
 
 # W991: the competitor table, computed from the committed oracles.
 cm = rec("compare_w991.json")
