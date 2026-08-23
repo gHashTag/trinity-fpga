@@ -126,18 +126,28 @@ jobs:
       # above it, so a red step said "3 artifacts failed" and not one word about
       # why. Keep the whole log, print the error lines specifically, and upload
       # it -- the summary is the least useful part of a failure.
+      # zig prints `Build Summary` only when a step fails, so on the success path
+      # the summary grep below matched nothing, exited 1, and `bash -e` failed a
+      # step whose tests had all passed. Making this step able to fail had turned
+      # it into a step that cannot pass -- the same defect wearing the opposite
+      # sign, and the harder one to notice, because a permanently red check reads
+      # as a permanently broken subject rather than as a broken check.
+      #
+      # `--summary all` so the line exists on both paths, and `|| true` on every
+      # reporting command so reporting can never decide the verdict. The verdict
+      # is decided in exactly one place: the explicit `exit 1`.
       - name: Do the tests pass?
         run: |
           set -o pipefail
-          zig build test > test.log 2>&1 || {
+          zig build test --summary all > test.log 2>&1 || {
             echo "### Test failures" >> $GITHUB_STEP_SUMMARY
             echo '```' >> $GITHUB_STEP_SUMMARY
-            grep -E 'error:|error!|failed:' test.log | head -30 | tee -a $GITHUB_STEP_SUMMARY
+            grep -E 'error:|error!|failed:' test.log | head -30 | tee -a $GITHUB_STEP_SUMMARY || true
             echo '```' >> $GITHUB_STEP_SUMMARY
-            grep -oE 'Build Summary:.*' test.log | tee -a $GITHUB_STEP_SUMMARY
+            grep -oE 'Build Summary:.*' test.log | tee -a $GITHUB_STEP_SUMMARY || true
             exit 1
           }
-          grep -oE 'Build Summary:.*' test.log | tee -a $GITHUB_STEP_SUMMARY
+          grep -oE 'Build Summary:.*' test.log | tee -a $GITHUB_STEP_SUMMARY || true
 
       - name: TODO stubs in generated code
         if: always()
