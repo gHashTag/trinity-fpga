@@ -52,7 +52,7 @@
 <div class="wrap">
 
 <h1>TRINITY · continuous loop</h1>
-<div class="sub">Итерация <b>113</b> · каждые 15 мин · cron <code>e11d7aed</code> · HEAD <code>c036f6fec</code> · ветка корпуса <code>560b478e6</code> · 2026-08-24</div>
+<div class="sub">Итерация <b>114</b> · каждые 15 мин · cron <code>e11d7aed</code> · HEAD <code>b16bf8091</code> · ветка корпуса <code>560b478e6</code> · 2026-08-24</div>
 
 <div class="grid">
   <div class="card hero"><div class="n ok">77 / 147</div><div class="l">реально <b>собирается и бежит</b></div><div class="d ok">46 → 74 → <b>77</b></div></div>
@@ -66,6 +66,21 @@
   <div class="card"><div class="n ok">109 / 210</div><div class="l">валидны <b>и</b> утверждают</div><div class="d ok">рабочая · <b>с веткой корпуса</b></div></div>
   <div class="card"><div class="n ok">106</div><div class="l">событий гейта · 0 слепых</div><div class="d ok">110 → <b>106</b> · проза больше не рвёт восстановление</div></div>
   <div class="card"><div class="n ok">9</div><div class="l">объявлений <b>потеряно молча</b></div><div class="d ok">50 → 30 → 10 → <b>9</b> в чистых t27</div></div>
+</div>
+
+<div class="note bad">
+<b>Сборщик литерала массива вставал на <i>первой</i> закрывающей скобке.</b>
+<pre>while self.current.kind != TokenKind::RBracket { ... }</pre>
+Литерал, элемент которого содержит скобку, обрывался на внутренней, и остаток пропадал: инициализатор из восьми <code>MACUnit</code> печатался как <b>один усечённый элемент</b>. Zig говорил <code>expected ']', found ';'</code> — указывая на синтаксис повтора, тогда как дефектом было <b>усечение</b>. Итерацию назад я принял эту диагностику за причину.
+<br><br>
+Рядом: список <code>[A{..}, B{..}]</code> не преобразовывался из-за условия <code>!contains('{')</code> — но Zig-литерал заканчивается на <code>}</code>, так что окончание на <code>]</code> уже отсекало нужное; и behaviour-клауза теперь продолжается, пока скобки открыты (13 клауз в 8 спеках переносятся на вторую строку). Только скобки и круглые: <code>{</code> открывает блок.
+</div>
+
+<div class="note ok">
+<b>Храповик разбора сорвался — и был прав.</b>
+Правка вложенности в одиночку дала <code>relay_observer</code> 1 → 2 события восстановления. Я начал гадать, остановился, откатил всё до HEAD, убедился что гейт держится, и вернул по одной. Изолировав, <b>спросил парсер</b> вместо догадок:
+<pre>recovery-at: Expected LBrace, got Ident ('WebSocketState') at line 66:45</pre>
+Строка 66: <code>pub fn websocket_state_new() WebSocketState WebSocketState {</code> — тип возврата написан <b>дважды</b>. Опечатка корпуса, которую правка обнажила; одна такая сигнатура во всём корпусе. Исправлена, гейт держится на 106.
 </div>
 
 <div class="note bad">
