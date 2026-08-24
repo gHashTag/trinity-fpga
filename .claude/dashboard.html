@@ -52,20 +52,36 @@
 <div class="wrap">
 
 <h1>TRINITY · continuous loop</h1>
-<div class="sub">Итерация <b>111</b> · каждые 15 мин · cron <code>e11d7aed</code> · HEAD <code>d7377c404</code> · ветка корпуса <code>560b478e6</code> · 2026-08-24</div>
+<div class="sub">Итерация <b>112</b> · каждые 15 мин · cron <code>e11d7aed</code> · HEAD <code>a550e9aef</code> · ветка корпуса <code>560b478e6</code> · 2026-08-24</div>
 
 <div class="grid">
-  <div class="card hero"><div class="n ok">75 / 146</div><div class="l">реально <b>собирается и бежит</b></div><div class="d ok">46 → 74 → <b>75</b></div></div>
-  <div class="card"><div class="n ok">414</div><div class="l">утверждений <b>исполнено</b></div><div class="d ok">314 → 387 → <b>414</b> · 2 падения</div></div>
+  <div class="card hero"><div class="n ok">77 / 147</div><div class="l">реально <b>собирается и бежит</b></div><div class="d ok">46 → 74 → <b>77</b></div></div>
+  <div class="card"><div class="n ok">416</div><div class="l">утверждений <b>исполнено</b></div><div class="d ok">314 → 387 → <b>414</b> · 2 падения</div></div>
   <div class="card"><div class="n ok">23</div><div class="l">падают <b>внутри импорта</b></div><div class="d ok">55 → <b>23</b> · потолок снят конверсией</div></div>
   <div class="card"><div class="n ok">6 / 12</div><div class="l">мест приведения <b>не покрыты тестом</b></div><div class="d ok">оттого «ноль различий» ничего не доказал</div></div>
   <div class="card hero"><div class="n ok">764 / 798</div><div class="l">импортов <b>указывают на живой файл</b></div><div class="d ok">нерешённых 39 → 35 → <b>34</b></div></div>
-  <div class="card"><div class="n ok">31 / 34</div><div class="l">остатка — <b>пробел корпуса</b></div><div class="d ok">не компилятора · шов исчерпан · #2701</div></div>
+  <div class="card"><div class="n ok">9 / 18</div><div class="l">заблокированных <b>действенны</b></div><div class="d ok">было 20 / 55 · остальное — потолок диалекта</div></div>
   <div class="card"><div class="n ok">83</div><div class="l">спек <b>за стеной</b></div><div class="d ok">99 → 94 → 88 → <b>83</b></div></div>
   <div class="card"><div class="n ok">232/454</div><div class="l">чистых спек t27 — <b>51%</b></div></div>
   <div class="card"><div class="n ok">109 / 210</div><div class="l">валидны <b>и</b> утверждают</div><div class="d ok">рабочая · <b>с веткой корпуса</b></div></div>
   <div class="card"><div class="n ok">106</div><div class="l">событий гейта · 0 слепых</div><div class="d ok">110 → <b>106</b> · проза больше не рвёт восстановление</div></div>
   <div class="card"><div class="n ok">9</div><div class="l">объявлений <b>потеряно молча</b></div><div class="d ok">50 → 30 → 10 → <b>9</b> в чистых t27</div></div>
+</div>
+
+<div class="note bad">
+<b>Ключевое слово — законное имя переменной, и парсер его молча терял.</b>
+<code>var module = node_new(NodeKind::Module);</code> лексится как <code>KwModule</code>, а имя бралось только при токене <code>Ident</code>. Оставалось пустым, и эмиттер печатал <code>var ;</code> — это вообще не объявление. 4 места в 3 спеках.
+<br><br>
+Одно из них — <code>compiler/parser</code>, который импортируют 4 чистые спеки. Валидных <b>151 → 152</b>, ноль в минус, файл ушёл из списка блокировщиков совсем.
+</div>
+
+<div class="note warn">
+<b>Правка была верна и лежала на пути, по которому вход не ходит — третий раз за год.</b>
+<code>[empty_mem_port(); 8]</code> доезжало дословно. Эмиттер литерала массива эту форму <b>уже</b> умеет; но behaviour-клауза рендерится из <b>захваченного текста</b>, а не из узла, и до того эмиттера не доходит.
+<br><br>
+По структуре: <b>229</b> повторов массива, <b>57 в 8 спеках вне манифеста</b> диалекта, хотя <code>array_semi</code> там значится маркером. Переписано в <code>.{X} ** N</code> — не в <code>[_]T{X} ** N</code>: тип элемента в тексте клаузы недоступен, а кортеж приводится к тому массиву, которого ждёт место. Проверено компилятором на четырёх позициях; очевидная форма <code>[_]@TypeOf(0.0){0.0} ** 27</code> <b>не собирается</b>.
+<br><br>
+Две спеки «хуже» — это стена: у <code>fpga/memory</code> новая первая ошибка <code>local variable shadows declaration</code>, она была всегда и не считалась за парс-ошибкой.
 </div>
 
 <div class="note ok">
