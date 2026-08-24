@@ -52,7 +52,7 @@
 <div class="wrap">
 
 <h1>TRINITY · continuous loop</h1>
-<div class="sub">Итерация <b>115</b> · каждые 15 мин · cron <code>e11d7aed</code> · HEAD <code>800786cec</code> · ветка корпуса <code>560b478e6</code> · 2026-08-24</div>
+<div class="sub">Итерация <b>116</b> · каждые 15 мин · cron <code>e11d7aed</code> · HEAD <code>77ba8ec0f</code> · ветка корпуса <code>560b478e6</code> · 2026-08-24</div>
 
 <div class="grid">
   <div class="card hero"><div class="n ok">214 / 284</div><div class="l">реально <b>собирается и бежит</b></div><div class="d ok">77 → <b>214</b> · из них 143 без единого теста</div></div>
@@ -62,10 +62,25 @@
   <div class="card hero"><div class="n ok">764 / 798</div><div class="l">импортов <b>указывают на живой файл</b></div><div class="d ok">нерешённых 39 → 35 → <b>34</b></div></div>
   <div class="card alert"><div class="n warn">14 + 11</div><div class="l">манифест диалекта <b>разъехался</b></div><div class="d bad">не занесено / держится ни на чём · #2705</div></div>
   <div class="card"><div class="n ok">83</div><div class="l">спек <b>за стеной</b></div><div class="d ok">99 → 94 → 88 → <b>83</b></div></div>
-  <div class="card"><div class="n ok">284/455</div><div class="l">чистых спек t27 — <b>62%</b></div><div class="d ok">147 → <b>284</b></div></div>
+  <div class="card"><div class="n ok">285/455</div><div class="l">чистых спек t27 — <b>62%</b></div><div class="d ok">147 → 284 → <b>285</b></div></div>
   <div class="card"><div class="n ok">109 / 210</div><div class="l">валидны <b>и</b> утверждают</div><div class="d ok">рабочая · <b>с веткой корпуса</b></div></div>
   <div class="card"><div class="n ok">106</div><div class="l">событий гейта · 0 слепых</div><div class="d ok">110 → <b>106</b> · проза больше не рвёт восстановление</div></div>
   <div class="card"><div class="n ok">9</div><div class="l">объявлений <b>потеряно молча</b></div><div class="d ok">50 → 30 → 10 → <b>9</b> в чистых t27</div></div>
+</div>
+
+<div class="note ok">
+<b><code>use</code> связывает модуль, но не его имена — 139 ошибок.</b>
+<code>use base::types;</code> печатает <code>const types = @import(…)</code>, а спека пишет <code>Trit</code> напрямую: в Rust <code>use</code> вносит имена в область, в Zig <code>@import</code> — нет. <code>usingnamespace</code> сделал бы это одной строкой и <b>удалён в Zig 0.16</b> — проверено компилятором, не предположено.
+<br><br>
+Эмиттер теперь связывает после <code>use a::b;</code> каждое публичное имя модуля, <b>которое файл действительно упоминает</b>. Только упомянутые: привязка, которую никто не читает, — сама по себе ошибка.
+<br><br>
+Ошибок <b>662 → 614</b>, валидных <b>289 → 290</b>, спек лучше <b>4</b>, хуже <b>0</b>: <code>vsa/ops</code> 39 → 6, <code>base/ternary_add</code> 6 → 0.
+</div>
+
+<div class="note warn">
+<b>Остаток — это видимость, а не связывание.</b> Из 83 нерешённых <b>79 объявлены импортируемым модулем без <code>pub</code></b>: в <code>math/constants</code> написано <code>fn abs</code>, а не <code>pub fn abs</code>. Zig до приватного объявления из другого файла не дотянется — никакая правка эмиттера их не свяжет.
+<br><br>
+<b>И число, которое я не публикую как число.</b> Подсчёт «объявлений, которым нужен <code>pub</code>» дал 340 — и он неверен: шаблон засчитал <code>const a</code>, <code>const idx</code> внутри тел функций как объявления модуля. Настоящий счёт требует прохода с учётом области. Записано как неизмеренное, а не как 340.
 </div>
 
 <div class="note ok">
