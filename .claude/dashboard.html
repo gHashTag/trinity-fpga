@@ -52,18 +52,36 @@
 <div class="wrap">
 
 <h1>TRINITY · continuous loop</h1>
-<div class="sub">Итерация <b>106</b> · каждые 15 мин · cron <code>e11d7aed</code> · HEAD <code>2600ffb89</code> · ветка корпуса <code>560b478e6</code> · 2026-08-24</div>
+<div class="sub">Итерация <b>107</b> · каждые 15 мин · cron <code>e11d7aed</code> · HEAD <code>ec7c09911</code> · ветка корпуса <code>560b478e6</code> · 2026-08-24</div>
 
 <div class="grid">
   <div class="card hero"><div class="n ok">74 / 146</div><div class="l">реально <b>собирается и бежит</b></div><div class="d ok">39 → 46 → <b>74</b> · одна конверсия</div></div>
   <div class="card"><div class="n ok">414</div><div class="l">утверждений <b>исполнено</b></div><div class="d ok">314 → 387 → <b>414</b> · 2 падения</div></div>
   <div class="card"><div class="n ok">23</div><div class="l">падают <b>внутри импорта</b></div><div class="d ok">55 → <b>23</b> · потолок снят конверсией</div></div>
-  <div class="card"><div class="n ok">15</div><div class="l">импортируют <b>несуществующее</b></div><div class="d ok">92 → 41 → <b>15</b></div></div>
+  <div class="card alert"><div class="n warn">639</div><div class="l">приведений <b>выбрасывалось молча</b></div><div class="d bad">67 спек · 9 из них уже валидны · #2696</div></div>
   <div class="card"><div class="n ok">83</div><div class="l">спек <b>за стеной</b></div><div class="d ok">99 → 94 → 88 → <b>83</b></div></div>
   <div class="card"><div class="n ok">232/454</div><div class="l">чистых спек t27 — <b>51%</b></div></div>
   <div class="card"><div class="n ok">109 / 210</div><div class="l">валидны <b>и</b> утверждают</div><div class="d ok">рабочая · <b>с веткой корпуса</b></div></div>
   <div class="card"><div class="n ok">110</div><div class="l">событий гейта · 0 слепых</div><div class="d ok">выше и корректнее — см. ниже</div></div>
   <div class="card"><div class="n ok">9</div><div class="l">объявлений <b>потеряно молча</b></div><div class="d ok">50 → 30 → 10 → <b>9</b> в чистых t27</div></div>
+</div>
+
+<div class="note bad">
+<b>Эмиттер выбрасывал каждое <code>x as T</code> — 639 приведений в 67 спеках.</b>
+<pre>if node.name.starts_with("as_") {
+    self.gen_expr(&node.children[0]);   // приведение стёрто, операнд оставлен
+}</pre>
+Парсер разбирает `as` и кладёт целевой тип в <code>extra_type</code>; эмиттер его удалял. Это не заблокированная спека — это <b>компилирующийся код с другой семантикой</b>, и ни ast-check, ни парс-гейт такого не видят. <b>9 из 67 спек уже проходили</b> — то есть были молча неверны.
+<br><br>
+Исходный тип эмиттеру неизвестен, поэтому разбор отдан comptime: <code>t27_cast</code> смотрит на оба типа и выбирает <code>@intFromFloat</code> / <code>@floatFromInt</code> / <code>@floatCast</code> / <code>@enumFromInt</code> / <code>@intCast</code>. Проверен на живом компиляторе фикстурой по всем шести направлениям <b>до</b> подключения, а не выведен из названий тегов.
+<br><br>
+<b>Движение по заголовкам — ноль</b>, и это ожидаемый результат: выброшенное приведение давало код, который собирается, поэтому его никто не считал. Изменилось то, что доезжает: <b>472 из 639</b>. Из остальных 164 — в 32 спеках, которые и так не проходят ast-check (за парс-стеной), и 6 — внутри invariant-блока, который эмиттер не печатает целиком.
+</div>
+
+<div class="note warn">
+<b>Проверка «ложных срабатываний нет» была круговой.</b> Я сгруппировал совпадения по целевому токену, прочитал <b>верхние 14</b> — <code>u32</code>, <code>f64</code>, <code>f32</code>, <code>i8</code>, всё имена типов — и опубликовал 645 как структурный счёт.
+<br><br>
+Проза живёт в хвосте с единицами: <code>as authoritative</code>, <code>as a polynomial</code>, <code>as unique</code>, <code>as exact</code>. Настоящая цифра <b>639</b>. Частотная таблица отсортирована так, что её голова — ровно та часть, в которой ты уже был прав.
 </div>
 
 <div class="note ok">
