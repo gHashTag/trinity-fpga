@@ -2,8 +2,7 @@
 
 A single API/CLI to **audit a low-precision numeric decoder against the Trinity
 independent golden oracles**. This is the tooling counterpart of the
-"format-conformance infrastructure" line in
-`docs/funding/TRI-NET_grant_onepager_RU.md`: let an ML team plug in *their*
+"format-conformance infrastructure" idea: let an ML team plug in *their*
 FP8 / OCP-MX / NF4 / posit / custom decoder and get a value-level bit-exact audit
 against references they did not write.
 

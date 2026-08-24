@@ -2,7 +2,7 @@
 Trinity SSOT golden oracles.
 
 This is the tooling counterpart of the "format-conformance infrastructure"
-pitched in `docs/funding/TRI-NET_grant_onepager_RU.md`: a single API/CLI that
+envisioned as format-conformance infrastructure: a single API/CLI that
 lets an ML team plug in THEIR decoder (FP8/MX/NF4/posit/...) and get a bit-exact
 audit against the independent golden references in `conformance/*_ref.py`.
 

@@ -8,7 +8,6 @@ docs/competitive/TOPS_LEVERS_W28_PRE_2026-05-15.md: names `coq/IGLA/RMarker.v` -
 docs/docs/architecture/SA-2_EXECUTION_GRAPH.md: names `.github/workflows/release.yml` -> resolves in t27
 docs/docs/architecture/SA-2_EXECUTION_GRAPH.md: names `design.json` -> resolves in t27
 docs/docs/tri27/index.md: names `hello.t27` -> resolves in tri-net
-docs/funding/TRI-NET_grant_onepager_RU.md: names `specs/numeric/formats_catalog.t27` -> resolves in t27
 docs/handoff/HANDOFF_AGENT.md: names `conformance/vectors/INDEX_all_formats.json` -> resolves in t27
 docs/handoff/HANDOFF_AGENT.md: names `docs/NOW.md` -> resolves in t27
 docs/tri-cell-quick.md: names `.trinity/cells/registry.json` -> resolves in t27

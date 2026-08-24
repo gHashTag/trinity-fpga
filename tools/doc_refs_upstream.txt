@@ -9,7 +9,6 @@ docs/ZENODO_UPLOAD_GUIDE.md: names `gHashTag/t27/.github/workflows/zenodo-publis
 docs/competitive/TOPS_LEVERS_W28_PRE_2026-05-15.md: names `gHashTag/t27/coq/IGLA/RMarker.v`
 docs/docs/architecture/SA-2_EXECUTION_GRAPH.md: names `gHashTag/t27/.github/workflows/release.yml`
 docs/docs/research/papers/ARXIV_SUBMISSION_CONFIRMATION.md: names `gHashTag/trios/docs/infrastructure/zenodo-registry.md`
-docs/funding/TRI-NET_grant_onepager_RU.md: names `gHashTag/t27/specs/numeric/formats_catalog.t27`
 docs/handoff/HANDOFF_AGENT.md: names `gHashTag/t27/conformance/vectors/INDEX_all_formats.json`
 docs/papers/ARXIV_SUBMISSION_CONFIRMATION.md: names `gHashTag/trios/docs/infrastructure/zenodo-registry.md`
 research/ARXIV_ABSTRACTS_READY_TO_PASTE.md: names `gHashTag/t27/conformance/vectors/INDEX_all_formats.json`
