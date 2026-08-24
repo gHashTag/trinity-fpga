@@ -52,20 +52,41 @@
 <div class="wrap">
 
 <h1>TRINITY · continuous loop</h1>
-<div class="sub">Итерация <b>114</b> · каждые 15 мин · cron <code>e11d7aed</code> · HEAD <code>b16bf8091</code> · ветка корпуса <code>560b478e6</code> · 2026-08-24</div>
+<div class="sub">Итерация <b>115</b> · каждые 15 мин · cron <code>e11d7aed</code> · HEAD <code>800786cec</code> · ветка корпуса <code>560b478e6</code> · 2026-08-24</div>
 
 <div class="grid">
-  <div class="card hero"><div class="n ok">77 / 147</div><div class="l">реально <b>собирается и бежит</b></div><div class="d ok">46 → 74 → <b>77</b></div></div>
+  <div class="card hero"><div class="n ok">214 / 284</div><div class="l">реально <b>собирается и бежит</b></div><div class="d ok">77 → <b>214</b> · из них 143 без единого теста</div></div>
   <div class="card"><div class="n ok">416</div><div class="l">утверждений <b>исполнено</b></div><div class="d ok">314 → 387 → <b>414</b> · 2 падения</div></div>
   <div class="card"><div class="n ok">23</div><div class="l">падают <b>внутри импорта</b></div><div class="d ok">55 → <b>23</b> · потолок снят конверсией</div></div>
   <div class="card"><div class="n ok">6 / 12</div><div class="l">мест приведения <b>не покрыты тестом</b></div><div class="d ok">оттого «ноль различий» ничего не доказал</div></div>
   <div class="card hero"><div class="n ok">764 / 798</div><div class="l">импортов <b>указывают на живой файл</b></div><div class="d ok">нерешённых 39 → 35 → <b>34</b></div></div>
   <div class="card alert"><div class="n warn">14 + 11</div><div class="l">манифест диалекта <b>разъехался</b></div><div class="d bad">не занесено / держится ни на чём · #2705</div></div>
   <div class="card"><div class="n ok">83</div><div class="l">спек <b>за стеной</b></div><div class="d ok">99 → 94 → 88 → <b>83</b></div></div>
-  <div class="card"><div class="n ok">232/454</div><div class="l">чистых спек t27 — <b>51%</b></div></div>
+  <div class="card"><div class="n ok">284/455</div><div class="l">чистых спек t27 — <b>62%</b></div><div class="d ok">147 → <b>284</b></div></div>
   <div class="card"><div class="n ok">109 / 210</div><div class="l">валидны <b>и</b> утверждают</div><div class="d ok">рабочая · <b>с веткой корпуса</b></div></div>
   <div class="card"><div class="n ok">106</div><div class="l">событий гейта · 0 слепых</div><div class="d ok">110 → <b>106</b> · проза больше не рвёт восстановление</div></div>
   <div class="card"><div class="n ok">9</div><div class="l">объявлений <b>потеряно молча</b></div><div class="d ok">50 → 30 → 10 → <b>9</b> в чистых t27</div></div>
+</div>
+
+<div class="note ok">
+<b>Заглушка не утверждает ничего — значит и печатать нечего. Валидных 152 → 289.</b>
+Пересчёт <b>всех</b> ошибок «undeclared identifier», а не первых на файл: <b>895</b> в 101 имени, и <b>526 — одно имя</b>, <code>default_input</code>. 59% класса.
+<pre>given  input  = default_input()
+when   result = &lt;fn&gt;(input)
+then   result != undefined</pre>
+Считал по структуре, не грепом: <b>571 блок в 169 спеках, и каждый отвечает скелету ровно</b> — ни одного, который начинается так же и дальше расходится. Именно эта проверка позволила сделать правку в эмиттере, а не редактировать 169 файлов.
+<br><br>
+<b>Объявить <code>default_input</code> — вторая возможность, и она хуже.</b> Спеки бы собрались, и каждая гоняла бы тест, ничего не утверждающий: громкая ошибка меняется на молчаливую пустышку. Комментарий говорит правду — спека здесь поведения не задаёт.
+<br><br>
+Ошибок <b>1191 → 662</b>, «валидна и с непустым тестом» <b>112 → 249</b>, спек хуже <b>0</b>, лучше <b>158</b>. Это же закрывает ветку <code>corpus/drop-generated-stubs</code>, ждавшую решения двенадцать итераций: она убирала те же 571 блок из корпуса.
+</div>
+
+<div class="note warn">
+<b>И число, которое держит заголовок честным.</b>
+<pre>собирается и бежит   77 → 214
+из них без тестов      6 → 143
+утверждений         416 → 416</pre>
+<b>На 137 спек больше собирается — и не исполняется ни одного нового утверждения.</b> Так и должно быть: заглушки не утверждали ничего, значит их снятие не может ничего добавить к проверенному. Выигрыш в собираемости, не в проверке; строка «без единого теста», теперь большинство проходящих, — ровно то место, где это видно.
 </div>
 
 <div class="note bad">
