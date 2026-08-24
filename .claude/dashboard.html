@@ -52,17 +52,37 @@
 <div class="wrap">
 
 <h1>TRINITY · continuous loop</h1>
-<div class="sub">Итерация <b>104</b> · каждые 15 мин · cron <code>e11d7aed</code> · HEAD <code>5ed1c1a7b</code> · ветка корпуса <code>560b478e6</code> · 2026-08-24</div>
+<div class="sub">Итерация <b>105</b> · каждые 15 мин · cron <code>e11d7aed</code> · HEAD <code>d9d68c2c7</code> · ветка корпуса <code>560b478e6</code> · 2026-08-24</div>
 
 <div class="grid">
   <div class="card hero"><div class="n ok">46 / 144</div><div class="l">реально <b>собирается и бежит</b></div><div class="d ok">32 → 39 → <b>46</b> · вся популяция</div></div>
   <div class="card"><div class="n ok">387</div><div class="l">утверждений <b>исполнено</b></div><div class="d ok">262 → 314 → 335 → <b>387</b></div></div>
-  <div class="card alert"><div class="n warn">41</div><div class="l">импортируют <b>несуществующее</b></div><div class="d bad">92 → 41 · остаток — символы, не модули · #2683</div></div>
+  <div class="card alert"><div class="n warn">35 / 55</div><div class="l">упёрты в <b>Rust-диалект</b></div><div class="d bad">потолок, не задел · эмиттер их не поднимет · #2688</div></div>
+  <div class="card"><div class="n ok">15</div><div class="l">импортируют <b>несуществующее</b></div><div class="d ok">92 → 41 → <b>15</b></div></div>
   <div class="card"><div class="n ok">83</div><div class="l">спек <b>за стеной</b></div><div class="d ok">99 → 94 → 88 → <b>83</b></div></div>
   <div class="card"><div class="n ok">232/454</div><div class="l">чистых спек t27 — <b>51%</b></div></div>
   <div class="card"><div class="n ok">109 / 210</div><div class="l">валидны <b>и</b> утверждают</div><div class="d ok">рабочая · <b>с веткой корпуса</b></div></div>
   <div class="card"><div class="n ok">110</div><div class="l">событий гейта · 0 слепых</div><div class="d ok">выше и корректнее — см. ниже</div></div>
   <div class="card"><div class="n ok">9</div><div class="l">объявлений <b>потеряно молча</b></div><div class="d ok">50 → 30 → 10 → <b>9</b> в чистых t27</div></div>
+</div>
+
+<div class="note warn">
+<b>Крупнейший рычаг корпуса оказался потолком, а не заделом.</b>
+Ранжирование «сколько чистых спек держит один импорт» указало на <code>math/constants.zig</code> — <b>29</b> спек, все чистые в своём файле. Причина: эмиттер печатает вспомогательный <code>fn pow</code>, а спека объявляет свой — <code>duplicate struct member name 'pow'</code>. Починил в обеих преамбулах.
+<br><br>
+Движения <b>ноль</b>: 150 валидных, 46 бегущих, 387 утверждений — всё как было. Под дубликатом лежит <code>use of undeclared identifier 'let'</code>: <code>specs/math/constants.t27</code> <b>числится в RUST_DIALECT.json</b>, 28 строк на Rust. Эмиттер её разбирать не обязан.
+<br><br>
+По всему корпусу: из <b>55</b> спек, чистых в своём файле и падающих внутри импорта, <b>35</b> упираются в Rust-диалектный модуль и <b>20</b> — в t27-шный. Первые 35 не поднимет никакая работа над эмиттером, им нужна конверсия корпуса. Ранжирование по «держит спек» указывало бы на них и дальше.
+</div>
+
+<div class="note ok">
+<b><code>use fpga::spi::SPI_Master</code> — это символ из модуля, а не модуль.</b> Синтаксис их не различает, эмиттер брал последний сегмент как имя файла. Теперь разрешается по дереву: длиннейший префикс пути, существующий как спека, — модуль, остальное символы.
+<pre>const SPI_Master = @import("spi.zig").SPI_Master;
+const sacred_physics = @import("../math/sacred_physics.zig");
+const PHI = sacred_physics.PHI;</pre>
+Заглавность как признак почти работает и ломается на <code>use base::math::normalize_l2</code>. Привязка пропускается, если файл объявляет это имя сам — иначе <code>duplicate struct member name 'PHI'</code>.
+<br><br>
+Валидных <b>149 → 150</b>, ошибок <b>1193 → 1159</b>, несуществующих импортов <b>41 → 15</b>, регрессий ноль.
 </div>
 
 <div class="note bad">
