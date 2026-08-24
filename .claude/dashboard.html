@@ -52,7 +52,7 @@
 <div class="wrap">
 
 <h1>TRINITY · continuous loop</h1>
-<div class="sub">Итерация <b>112</b> · каждые 15 мин · cron <code>e11d7aed</code> · HEAD <code>a550e9aef</code> · ветка корпуса <code>560b478e6</code> · 2026-08-24</div>
+<div class="sub">Итерация <b>113</b> · каждые 15 мин · cron <code>e11d7aed</code> · HEAD <code>c036f6fec</code> · ветка корпуса <code>560b478e6</code> · 2026-08-24</div>
 
 <div class="grid">
   <div class="card hero"><div class="n ok">77 / 147</div><div class="l">реально <b>собирается и бежит</b></div><div class="d ok">46 → 74 → <b>77</b></div></div>
@@ -60,12 +60,32 @@
   <div class="card"><div class="n ok">23</div><div class="l">падают <b>внутри импорта</b></div><div class="d ok">55 → <b>23</b> · потолок снят конверсией</div></div>
   <div class="card"><div class="n ok">6 / 12</div><div class="l">мест приведения <b>не покрыты тестом</b></div><div class="d ok">оттого «ноль различий» ничего не доказал</div></div>
   <div class="card hero"><div class="n ok">764 / 798</div><div class="l">импортов <b>указывают на живой файл</b></div><div class="d ok">нерешённых 39 → 35 → <b>34</b></div></div>
-  <div class="card"><div class="n ok">9 / 18</div><div class="l">заблокированных <b>действенны</b></div><div class="d ok">было 20 / 55 · остальное — потолок диалекта</div></div>
+  <div class="card alert"><div class="n warn">14 + 11</div><div class="l">манифест диалекта <b>разъехался</b></div><div class="d bad">не занесено / держится ни на чём · #2705</div></div>
   <div class="card"><div class="n ok">83</div><div class="l">спек <b>за стеной</b></div><div class="d ok">99 → 94 → 88 → <b>83</b></div></div>
   <div class="card"><div class="n ok">232/454</div><div class="l">чистых спек t27 — <b>51%</b></div></div>
   <div class="card"><div class="n ok">109 / 210</div><div class="l">валидны <b>и</b> утверждают</div><div class="d ok">рабочая · <b>с веткой корпуса</b></div></div>
   <div class="card"><div class="n ok">106</div><div class="l">событий гейта · 0 слепых</div><div class="d ok">110 → <b>106</b> · проза больше не рвёт восстановление</div></div>
   <div class="card"><div class="n ok">9</div><div class="l">объявлений <b>потеряно молча</b></div><div class="d ok">50 → 30 → 10 → <b>9</b> в чистых t27</div></div>
+</div>
+
+<div class="note bad">
+<b>Потолок, которым я мерил четыре итерации, стоял на несверяемом файле.</b>
+<code>RUST_DIALECT.json</code> говорит «сгенерировано сканом по 8 конструкциям», и <b>ничто в репозитории этот скан не повторяет</b>. При этом он решает, куда относить работу — в компилятор или в корпус.
+<pre>маркеры бьют по      77 спекам
+манифест перечисляет 65
+не занесено          14
+держится ни на чём   11</pre>
+<b>Недобор 14</b>: десять по <code>array_semi</code>, три по <code>for_in</code>, один по <code>match</code>. Среди них <code>fpga/memory</code> и <code>compiler/parser</code> — обе две итерации считались «действенным заделом» ровно потому, что в списке их не было.
+<br><br>
+<b>Перебор 11</b>: двое держатся на маркере <b>внутри комментария</b> — <code>automation/wrapup-auto</code> занесена за <code>tuple_ret</code> из-за строки <code>// wrapup_run(…) -> (WrapUpResult, ErrorCode)</code>; исходный скан комментарии не пропускал. Девять держатся на одном <code>array_semi</code>, который эмиттер теперь понимает.
+<br><br>
+<b>Двое из одиннадцати проходят ast-check сегодня.</b> Манифест освобождал работающие спеки от храповика разбора и от каждой опубликованной мной цифры потолка.
+</div>
+
+<div class="note warn">
+<b>Вчерашняя правка повтора массива покрыла только текст клаузы.</b> Три спеки по-прежнему падают на <code>expected ']', found ';'</code>, и в <code>fpga/mac</code> вывод такой:
+<pre>.pipeline=[TernaryWord{.raw=0};PIPELINE_STAGES};</pre>
+Закрывающая <code>]</code> стала <code>}</code> <b>до</b> всякого переписывания — порча скобок выше по потоку, и правка до неё не дотягивается. Отдельный дефект, открыт.
 </div>
 
 <div class="note bad">
