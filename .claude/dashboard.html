@@ -52,19 +52,35 @@
 <div class="wrap">
 
 <h1>TRINITY · continuous loop</h1>
-<div class="sub">Итерация <b>108</b> · каждые 15 мин · cron <code>e11d7aed</code> · HEAD <code>15d47f8ce</code> · ветка корпуса <code>560b478e6</code> · 2026-08-24</div>
+<div class="sub">Итерация <b>109</b> · каждые 15 мин · cron <code>e11d7aed</code> · HEAD <code>fbbb78979</code> · ветка корпуса <code>560b478e6</code> · 2026-08-24</div>
 
 <div class="grid">
   <div class="card hero"><div class="n ok">75 / 146</div><div class="l">реально <b>собирается и бежит</b></div><div class="d ok">46 → 74 → <b>75</b></div></div>
   <div class="card"><div class="n ok">414</div><div class="l">утверждений <b>исполнено</b></div><div class="d ok">314 → 387 → <b>414</b> · 2 падения</div></div>
   <div class="card"><div class="n ok">23</div><div class="l">падают <b>внутри импорта</b></div><div class="d ok">55 → <b>23</b> · потолок снят конверсией</div></div>
   <div class="card"><div class="n ok">6 / 12</div><div class="l">мест приведения <b>не покрыты тестом</b></div><div class="d ok">оттого «ноль различий» ничего не доказал</div></div>
-  <div class="card"><div class="n ok">7</div><div class="l">импортируют <b>несуществующее</b></div><div class="d ok">92 → 41 → 15 → <b>7</b></div></div>
+  <div class="card hero"><div class="n ok">763 / 802</div><div class="l">импортов <b>указывают на живой файл</b></div><div class="d ok">третий прибор · первое измерение · #2699</div></div>
   <div class="card"><div class="n ok">83</div><div class="l">спек <b>за стеной</b></div><div class="d ok">99 → 94 → 88 → <b>83</b></div></div>
   <div class="card"><div class="n ok">232/454</div><div class="l">чистых спек t27 — <b>51%</b></div></div>
   <div class="card"><div class="n ok">109 / 210</div><div class="l">валидны <b>и</b> утверждают</div><div class="d ok">рабочая · <b>с веткой корпуса</b></div></div>
   <div class="card"><div class="n ok">110</div><div class="l">событий гейта · 0 слепых</div><div class="d ok">выше и корректнее — см. ниже</div></div>
   <div class="card"><div class="n ok">9</div><div class="l">объявлений <b>потеряно молча</b></div><div class="d ok">50 → 30 → 10 → <b>9</b> в чистых t27</div></div>
+</div>
+
+<div class="note bad">
+<b>Я почти «починил» корпус там, где сломан был компилятор.</b>
+<code>use tritype-base::Trit</code> не разрешался в 14 спеках. Имя выглядело устаревшим, и я <b>измерил</b>, какая спека объявляет все четыре импортируемых символа: <code>base/types</code> даёт <code>Trit</code>, <code>trit_negate</code>, <code>trit_multiply</code>, четвёртый — примитив <code>usize</code>; ближайший другой кандидат даёт два и без <code>trit_multiply</code>. Определено, не угадано.
+<br><br>
+Переписал 14 обращений — и был неправ. Строка 6 файла <code>specs/base/types.t27</code>: <code>module tritype-base;</code>. Спека <b>сама объявляет это имя</b>. Правка корпуса откачена через <code>git checkout HEAD --</code>.
+<br><br>
+Пересчёт по структуре: <b>281 спека объявляет имя модуля, у 237 оно расходится с путём файла</b>. Целый слой пространства имён компилятор не читал никогда. <code>sandbox.session_timeout</code> объявлен в <code>specs/sandbox/session_timeout.t27</code>, <code>tritype-ops</code> — в <code>specs/base/ops.t27</code>.
+</div>
+
+<div class="note ok">
+<b>Третий прибор — потому что двух было мало по устройству.</b>
+ast-check импорты не разрешает вовсе. Прогонный сканер разрешает, но докладывает только о спеках, которые ast-check уже назвал валидными — то есть правка разрешения, помогающая невалидной спеке, невидима <b>дважды</b>. Оба были плоски всю эту итерацию и не могли быть иными.
+<br><br>
+<code>formal/import_resolution_scan.py</code> считает цели <code>@import</code> против существующих файлов по всем 497 спекам. Первое чтение: <b>763 разрешаются, 39 нет</b>. Числа «до» не существует, и скрипт это говорит, а не подразумевает.
 </div>
 
 <div class="note warn">
