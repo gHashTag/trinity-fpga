@@ -52,17 +52,31 @@
 <div class="wrap">
 
 <h1>TRINITY · continuous loop</h1>
-<div class="sub">Итерация <b>102</b> · каждые 15 мин · cron <code>e11d7aed</code> · HEAD <code>d93d2188d</code> · ветка корпуса <code>560b478e6</code> · 2026-08-24</div>
+<div class="sub">Итерация <b>103</b> · каждые 15 мин · cron <code>e11d7aed</code> · HEAD <code>677d4ced1</code> · ветка корпуса <code>560b478e6</code> · 2026-08-24</div>
 
 <div class="grid">
   <div class="card hero"><div class="n ok">39 / 125</div><div class="l">реально <b>собирается и бежит</b></div><div class="d ok">вся популяция, без выборки · 32 → <b>39</b></div></div>
   <div class="card"><div class="n ok">314</div><div class="l">утверждений <b>исполнено</b></div><div class="d ok">262 → <b>314</b> · 1 падение</div></div>
-  <div class="card alert"><div class="n warn">60</div><div class="l">чисты сами, падают <b>на импорте</b></div><div class="d bad">крупнейший остаток · 67 → 60</div></div>
+  <div class="card alert"><div class="n warn">92 / 144</div><div class="l">импортируют <b>несуществующего соседа</b></div><div class="d bad">видно только в зеркальной выкладке · #2680</div></div>
   <div class="card"><div class="n ok">83</div><div class="l">спек <b>за стеной</b></div><div class="d ok">99 → 94 → 88 → <b>83</b></div></div>
   <div class="card"><div class="n ok">232/454</div><div class="l">чистых спек t27 — <b>51%</b></div></div>
   <div class="card"><div class="n ok">109 / 210</div><div class="l">валидны <b>и</b> утверждают</div><div class="d ok">рабочая · <b>с веткой корпуса</b></div></div>
   <div class="card"><div class="n ok">110</div><div class="l">событий гейта · 0 слепых</div><div class="d ok">выше и корректнее — см. ниже</div></div>
   <div class="card"><div class="n ok">9</div><div class="l">объявлений <b>потеряно молча</b></div><div class="d ok">50 → 30 → 10 → <b>9</b> в чистых t27</div></div>
+</div>
+
+<div class="note bad">
+<b>92 → 1 на классе, который я чинил, — и 39 → 39 на том, ради чего чинил.</b>
+<code>use base::types;</code> печаталось как <code>@import("types.zig")</code>: путь модуля выбрасывался. Провёл в эмиттер расположение спеки, получил <code>@import("../../base/types.zig")</code> — отсутствующих соседей стало 1 из 92.
+<br><br>
+Бегущих спек как было <b>39</b>, так и осталось; утверждений — <b>335</b> и <b>335</b>. Переранжировал классы заново: 92 спеки теперь падали на <code>import of file outside module path</code>. Zig не даёт модулю подняться выше каталога своего корня — родительский импорт незаконен <b>всегда</b>. Обмен 92 отсутствующих на 92 запрещённых. Откачено.
+</div>
+
+<div class="note warn">
+<b>Плоская выкладка стенда производила тот успех, который измеряла.</b>
+Все спеки эмитились в <b>один</b> каталог, чтобы импорт по basename разрешался. Но Zig разрешает импорт <b>относительно импортирующего файла</b> — плоское не приближение сборки, а другая программа: каждой спеке подсовывался тот файл с этим именем, что записался последним.
+<br><br>
+Зеркальная выкладка убрала и костыль с исключением 22 коллизий, и показала правду: <b>92 из 144</b> валидных спек импортируют то, что не разрешается <b>ни при какой</b> раскладке нынешнего вывода. Плоско с уникальными именами или настоящие модули — решение владельца, #2680.
 </div>
 
 <div class="note bad">
