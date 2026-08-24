@@ -52,18 +52,42 @@
 <div class="wrap">
 
 <h1>TRINITY · continuous loop</h1>
-<div class="sub">Итерация <b>107</b> · каждые 15 мин · cron <code>e11d7aed</code> · HEAD <code>ec7c09911</code> · ветка корпуса <code>560b478e6</code> · 2026-08-24</div>
+<div class="sub">Итерация <b>108</b> · каждые 15 мин · cron <code>e11d7aed</code> · HEAD <code>15d47f8ce</code> · ветка корпуса <code>560b478e6</code> · 2026-08-24</div>
 
 <div class="grid">
-  <div class="card hero"><div class="n ok">74 / 146</div><div class="l">реально <b>собирается и бежит</b></div><div class="d ok">39 → 46 → <b>74</b> · одна конверсия</div></div>
+  <div class="card hero"><div class="n ok">75 / 146</div><div class="l">реально <b>собирается и бежит</b></div><div class="d ok">46 → 74 → <b>75</b></div></div>
   <div class="card"><div class="n ok">414</div><div class="l">утверждений <b>исполнено</b></div><div class="d ok">314 → 387 → <b>414</b> · 2 падения</div></div>
   <div class="card"><div class="n ok">23</div><div class="l">падают <b>внутри импорта</b></div><div class="d ok">55 → <b>23</b> · потолок снят конверсией</div></div>
-  <div class="card alert"><div class="n warn">639</div><div class="l">приведений <b>выбрасывалось молча</b></div><div class="d bad">67 спек · 9 из них уже валидны · #2696</div></div>
+  <div class="card"><div class="n ok">6 / 12</div><div class="l">мест приведения <b>не покрыты тестом</b></div><div class="d ok">оттого «ноль различий» ничего не доказал</div></div>
+  <div class="card"><div class="n ok">7</div><div class="l">импортируют <b>несуществующее</b></div><div class="d ok">92 → 41 → 15 → <b>7</b></div></div>
   <div class="card"><div class="n ok">83</div><div class="l">спек <b>за стеной</b></div><div class="d ok">99 → 94 → 88 → <b>83</b></div></div>
   <div class="card"><div class="n ok">232/454</div><div class="l">чистых спек t27 — <b>51%</b></div></div>
   <div class="card"><div class="n ok">109 / 210</div><div class="l">валидны <b>и</b> утверждают</div><div class="d ok">рабочая · <b>с веткой корпуса</b></div></div>
   <div class="card"><div class="n ok">110</div><div class="l">событий гейта · 0 слепых</div><div class="d ok">выше и корректнее — см. ниже</div></div>
   <div class="card"><div class="n ok">9</div><div class="l">объявлений <b>потеряно молча</b></div><div class="d ok">50 → 30 → 10 → <b>9</b> в чистых t27</div></div>
+</div>
+
+<div class="note warn">
+<b>«Ноль различий» пришлось объяснить, а не предъявить.</b>
+Вчерашняя правка приведений изменила семантику — проверил, наблюдаемо ли это: собрал два дерева, одно с <code>t27_cast</code>, второе с тем, что печатал старый эмиттер, и сравнил <b>результаты прогона</b>. Различий <b>ноль</b>.
+<br><br>
+Это могло значить «приведения безобидны» или «код не исполняется». Из <b>12</b> мест с приведением в 5 валидных спеках тестом достигаются <b>6</b>. Там, где достигаются, разницы под текущими утверждениями нет; про остальные шесть суite не говорит ничего.
+<br><br>
+И поправка: валидных спек с приведением <b>в выводе</b> пять, а не девять. Девять было по исходнику — с прозой и невыпечатанными блоками.
+</div>
+
+<div class="note ok">
+<b>Дефис в <code>use</code> — разделитель пути.</b> <code>provider-schema</code> это <code>specs/provider/schema.t27</code>. Проверено по дереву, а не предположено: provider, lsp, bus, sync, config, runtime — шесть целей из семи. Только как <b>запасной</b> вариант, иначе <code>specs/physics/gamma-conflict.t27</code> разъехался бы на несуществующий каталог.
+<br><br>
+<code>use tritype-base::usize</code> импортирует <b>примитив</b>: файла нет, а <code>const @"usize" = @import(…)</code> ещё и затеняет встроенный тип. Шесть спек стояли на <code>usize.zig: FileNotFound</code>.
+<br><br>
+Бегут <b>74 → 75</b>, несуществующих импортов <b>15 → 7</b>.
+</div>
+
+<div class="note bad">
+<b>Регресс, которого счётчик валидности показать не мог.</b> Первая версия правки дефиса привязала модуль по последнему сегменту: <code>use runtime-process::{…}</code> дало <code>const process = …</code>, а тело обращается к <code>runtime_process</code>. <b>14</b> неопределённых имён в одной спеке, 12 в другой.
+<br><br>
+Перехода VALID→invalid — <b>ноль</b>, потому что обе уже были невалидны. Увидела только подельная разница числа ошибок. Привязка теперь идёт под тем именем, которое использует спека.
 </div>
 
 <div class="note bad">
