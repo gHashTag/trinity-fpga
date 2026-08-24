@@ -52,19 +52,37 @@
 <div class="wrap">
 
 <h1>TRINITY · continuous loop</h1>
-<div class="sub">Итерация <b>110</b> · каждые 15 мин · cron <code>e11d7aed</code> · HEAD <code>610f0aa4d</code> · ветка корпуса <code>560b478e6</code> · 2026-08-24</div>
+<div class="sub">Итерация <b>111</b> · каждые 15 мин · cron <code>e11d7aed</code> · HEAD <code>d7377c404</code> · ветка корпуса <code>560b478e6</code> · 2026-08-24</div>
 
 <div class="grid">
   <div class="card hero"><div class="n ok">75 / 146</div><div class="l">реально <b>собирается и бежит</b></div><div class="d ok">46 → 74 → <b>75</b></div></div>
   <div class="card"><div class="n ok">414</div><div class="l">утверждений <b>исполнено</b></div><div class="d ok">314 → 387 → <b>414</b> · 2 падения</div></div>
   <div class="card"><div class="n ok">23</div><div class="l">падают <b>внутри импорта</b></div><div class="d ok">55 → <b>23</b> · потолок снят конверсией</div></div>
   <div class="card"><div class="n ok">6 / 12</div><div class="l">мест приведения <b>не покрыты тестом</b></div><div class="d ok">оттого «ноль различий» ничего не доказал</div></div>
-  <div class="card hero"><div class="n ok">763 / 798</div><div class="l">импортов <b>указывают на живой файл</b></div><div class="d ok">нерешённых 39 → <b>35</b> · #2699</div></div>
+  <div class="card hero"><div class="n ok">764 / 798</div><div class="l">импортов <b>указывают на живой файл</b></div><div class="d ok">нерешённых 39 → 35 → <b>34</b></div></div>
+  <div class="card"><div class="n ok">31 / 34</div><div class="l">остатка — <b>пробел корпуса</b></div><div class="d ok">не компилятора · шов исчерпан · #2701</div></div>
   <div class="card"><div class="n ok">83</div><div class="l">спек <b>за стеной</b></div><div class="d ok">99 → 94 → 88 → <b>83</b></div></div>
   <div class="card"><div class="n ok">232/454</div><div class="l">чистых спек t27 — <b>51%</b></div></div>
   <div class="card"><div class="n ok">109 / 210</div><div class="l">валидны <b>и</b> утверждают</div><div class="d ok">рабочая · <b>с веткой корпуса</b></div></div>
   <div class="card"><div class="n ok">106</div><div class="l">событий гейта · 0 слепых</div><div class="d ok">110 → <b>106</b> · проза больше не рвёт восстановление</div></div>
   <div class="card"><div class="n ok">9</div><div class="l">объявлений <b>потеряно молча</b></div><div class="d ok">50 → 30 → 10 → <b>9</b> в чистых t27</div></div>
+</div>
+
+<div class="note ok">
+<b>Прежде чем чинить остаток — классифицировал его, и ответ развернулся.</b>
+Для каждой нерешённой цели: содержит ли корпус то, что она называет?
+<pre>SYMBOL (родитель есть и объявляет имя)   0
+MODULE (спека стоит по этому имени)      3
+ABSENT (корпус не содержит вовсе)       31</pre>
+<b>Первая версия правила давала обратный ответ.</b> Она засчитывала SYMBOL, если имя объявлено <i>где угодно</i> — а <code>PHI</code> объявлен в дюжине спек, поэтому <code>base::constants::PHI</code> выглядел путём символа. Ужесточил: родитель должен разрешаться в настоящую спеку <b>и</b> объявлять это имя. SYMBOL 6 → <b>0</b>, ABSENT 26 → 32.
+<br><br>
+Значит шов почти исчерпан для работы над эмиттером: <code>../opaque.zig</code>, <code>../Constants.zig</code>, <code>base::math::l2_norm</code>, <code>tri::sync</code> — корпус не содержит их ни под каким именем. Это отсутствующие спеки, и никакая правка резолвера до них не дотянется.
+</div>
+
+<div class="note warn">
+<b>Число, опубликованное вчера, было полом, а не счётом.</b> Карта объявленных имён читала <code>module X;</code> и останавливалась на конце строки. Вторая форма — <code>module PackedTrit {</code>, и её используют <b>187 из 469</b> объявлений.
+<br><br>
+Значит «281 спека объявляет имя модуля» из #2698 — это то, что увидел мой шаблон, а не то, что есть. Правильно <b>469</b>. Чтение обеих форм дало 763 → 764 разрешённых: мало, потому что фигурные имена это в основном имена типов (<code>PackedTrit</code>, <code>SDK</code>), а не цели импорта — что само по себе и есть ответ, вёз ли этот слой хоть какой-то трафик.
 </div>
 
 <div class="note bad">
