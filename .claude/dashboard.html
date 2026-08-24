@@ -52,18 +52,33 @@
 <div class="wrap">
 
 <h1>TRINITY · continuous loop</h1>
-<div class="sub">Итерация <b>105</b> · каждые 15 мин · cron <code>e11d7aed</code> · HEAD <code>d9d68c2c7</code> · ветка корпуса <code>560b478e6</code> · 2026-08-24</div>
+<div class="sub">Итерация <b>106</b> · каждые 15 мин · cron <code>e11d7aed</code> · HEAD <code>2600ffb89</code> · ветка корпуса <code>560b478e6</code> · 2026-08-24</div>
 
 <div class="grid">
-  <div class="card hero"><div class="n ok">46 / 144</div><div class="l">реально <b>собирается и бежит</b></div><div class="d ok">32 → 39 → <b>46</b> · вся популяция</div></div>
-  <div class="card"><div class="n ok">387</div><div class="l">утверждений <b>исполнено</b></div><div class="d ok">262 → 314 → 335 → <b>387</b></div></div>
-  <div class="card alert"><div class="n warn">35 / 55</div><div class="l">упёрты в <b>Rust-диалект</b></div><div class="d bad">потолок, не задел · эмиттер их не поднимет · #2688</div></div>
+  <div class="card hero"><div class="n ok">74 / 146</div><div class="l">реально <b>собирается и бежит</b></div><div class="d ok">39 → 46 → <b>74</b> · одна конверсия</div></div>
+  <div class="card"><div class="n ok">414</div><div class="l">утверждений <b>исполнено</b></div><div class="d ok">314 → 387 → <b>414</b> · 2 падения</div></div>
+  <div class="card"><div class="n ok">23</div><div class="l">падают <b>внутри импорта</b></div><div class="d ok">55 → <b>23</b> · потолок снят конверсией</div></div>
   <div class="card"><div class="n ok">15</div><div class="l">импортируют <b>несуществующее</b></div><div class="d ok">92 → 41 → <b>15</b></div></div>
   <div class="card"><div class="n ok">83</div><div class="l">спек <b>за стеной</b></div><div class="d ok">99 → 94 → 88 → <b>83</b></div></div>
   <div class="card"><div class="n ok">232/454</div><div class="l">чистых спек t27 — <b>51%</b></div></div>
   <div class="card"><div class="n ok">109 / 210</div><div class="l">валидны <b>и</b> утверждают</div><div class="d ok">рабочая · <b>с веткой корпуса</b></div></div>
   <div class="card"><div class="n ok">110</div><div class="l">событий гейта · 0 слепых</div><div class="d ok">выше и корректнее — см. ниже</div></div>
   <div class="card"><div class="n ok">9</div><div class="l">объявлений <b>потеряно молча</b></div><div class="d ok">50 → 30 → 10 → <b>9</b> в чистых t27</div></div>
+</div>
+
+<div class="note ok">
+<b>Одна спека сняла потолок с 28 других: бегут <b>46 → 74</b>.</b>
+<code>specs/math/constants.t27</code> числилась в RUST_DIALECT.json, а импортировали её 29 чистых спек. Конверсия: 22 <code>let</code>, одно <code>if c { a } else { b }</code> в позиции выражения, <code>for i in 1..=10</code>, 9 приведений <code>as</code>, <code>%</code> и <code>/</code> над знаковыми, три деления на ноль вместо NaN и бесконечности.
+<br><br>
+<b>Два конструкта ломались молча</b>, оттого это была последовательность замеров, а не один проход. <code>as</code> эмиттер <b>выбрасывает</b> — <code>exp_int</code> оставался f64, и жалоба приходила как «remainder division with 'f64'» несколькими строками дальше. А <code>for i in 1..=10</code> заставлял парсер съесть остаток функции: два аккумулятора и <code>return</code> не доехали до вывода, и это отчиталось как «implicitly returns», а не как синтаксическая ошибка.
+<br><br>
+<code>mut</code> не был признаком для <code>var</code>: <code>let scale = 1.0;</code> переприсваивается тремя строками ниже и как Rust тоже не собралось бы. Решал по факту присваивания.
+</div>
+
+<div class="note warn">
+<b>Из конверсии выпал настоящий численный дефект.</b> 16 из 17 тестов модуля проходят, падает <code>pow_fractional_exponent</code>: <code>pow(4.0, 0.5)</code> не равен 2.0 в пределах <code>1e-6</code> — рядов Тейлора в <code>ln_approx</code>/<code>exp_approx</code> не хватает на дробный показатель.
+<br><br>
+Оставлено падающим. Допуск — это утверждение спеки о собственной точности, и оно ложно; ослабить его значило бы спрятать.
 </div>
 
 <div class="note warn">
