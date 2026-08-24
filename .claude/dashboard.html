@@ -52,17 +52,35 @@
 <div class="wrap">
 
 <h1>TRINITY · continuous loop</h1>
-<div class="sub">Итерация <b>103</b> · каждые 15 мин · cron <code>e11d7aed</code> · HEAD <code>677d4ced1</code> · ветка корпуса <code>560b478e6</code> · 2026-08-24</div>
+<div class="sub">Итерация <b>104</b> · каждые 15 мин · cron <code>e11d7aed</code> · HEAD <code>5ed1c1a7b</code> · ветка корпуса <code>560b478e6</code> · 2026-08-24</div>
 
 <div class="grid">
-  <div class="card hero"><div class="n ok">39 / 125</div><div class="l">реально <b>собирается и бежит</b></div><div class="d ok">вся популяция, без выборки · 32 → <b>39</b></div></div>
-  <div class="card"><div class="n ok">314</div><div class="l">утверждений <b>исполнено</b></div><div class="d ok">262 → <b>314</b> · 1 падение</div></div>
-  <div class="card alert"><div class="n warn">92 / 144</div><div class="l">импортируют <b>несуществующего соседа</b></div><div class="d bad">видно только в зеркальной выкладке · #2680</div></div>
+  <div class="card hero"><div class="n ok">46 / 144</div><div class="l">реально <b>собирается и бежит</b></div><div class="d ok">32 → 39 → <b>46</b> · вся популяция</div></div>
+  <div class="card"><div class="n ok">387</div><div class="l">утверждений <b>исполнено</b></div><div class="d ok">262 → 314 → 335 → <b>387</b></div></div>
+  <div class="card alert"><div class="n warn">41</div><div class="l">импортируют <b>несуществующее</b></div><div class="d bad">92 → 41 · остаток — символы, не модули · #2683</div></div>
   <div class="card"><div class="n ok">83</div><div class="l">спек <b>за стеной</b></div><div class="d ok">99 → 94 → 88 → <b>83</b></div></div>
   <div class="card"><div class="n ok">232/454</div><div class="l">чистых спек t27 — <b>51%</b></div></div>
   <div class="card"><div class="n ok">109 / 210</div><div class="l">валидны <b>и</b> утверждают</div><div class="d ok">рабочая · <b>с веткой корпуса</b></div></div>
   <div class="card"><div class="n ok">110</div><div class="l">событий гейта · 0 слепых</div><div class="d ok">выше и корректнее — см. ниже</div></div>
   <div class="card"><div class="n ok">9</div><div class="l">объявлений <b>потеряно молча</b></div><div class="d ok">50 → 30 → 10 → <b>9</b> в чистых t27</div></div>
+</div>
+
+<div class="note bad">
+<b>Вчерашний откат был неверен: я откатил правильную правку и опубликовал неправильную причину.</b>
+Zig запрещает не <code>..</code>, а выход за каталог <b>корня модуля</b> — а корень это тот файл, с которого начата компиляция. Та же пара файлов, тот же импорт:
+<pre>zig test specs/ml/x.zig   → error: import of file outside module path
+zig test specs/root.zig   → All 2 tests passed</pre>
+Моя вчерашняя фикстура компилировала импортирующий файл <b>только</b> сам себе корнем — то есть подтверждала уже имевшееся убеждение. Ломался стенд, а не эмиттер.
+<br><br>
+С корнем на вершине дерева: бегут <b>39 → 46</b>, утверждений <b>335 → 387</b>, отсутствующих соседей <b>92 → 41</b>. Заглушка-корень — <code>comptime</code>, не <code>test</code>: тест-блок считался бы в «All N tests passed» и завышал бы утверждения на единицу с каждой спеки.
+</div>
+
+<div class="note warn">
+<b>Плоский счёт «нет модуля» был тремя разными дефектами.</b> Перепись всех <code>use</code> по структуре: 59 целей не разрешаются ни во что.
+<code>use std</code> печатался как <code>@import("std.zig")</code> — 13 спек, починено, <b>движения ноль</b> (ни одна не была заблокирована только этим; записано как измеренный ноль, а не как непроверенное).
+<code>use fpga::spi::SPI_Master</code> — это <b>символ из модуля</b>, а эмиттер берёт последний сегмент как имя файла. <code>use math::sacred_physics::{PHI, PHI_INV}</code> давало <code>@import("{PHI,PHI_INV}.zig")</code> — видно дословно в переписи.
+<br><br>
+Заглавность почти работает как признак, но <code>use base::math::normalize_l2</code> её ломает — нужно разрешать по дереву, а не угадывать. #2683.
 </div>
 
 <div class="note bad">
