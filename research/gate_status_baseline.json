@@ -40,6 +40,7 @@
     "audit_pack_reproducibility.py": "clean",
     "audit_pack_vs_oracle.py": "findings",
     "audit_paper_claims.py": "findings",
+    "audit_paper_currency.py": "findings",
     "audit_proof_depth.py": "clean",
     "audit_references.py": "needs input",
     "audit_replicate_unit.py": "clean",
