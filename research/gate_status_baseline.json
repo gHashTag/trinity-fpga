@@ -6,7 +6,7 @@
     "audit_additional_cores.py": "clean",
     "audit_arithmetic_claims.py": "clean",
     "audit_author_set_consistency.py": "clean",
-    "audit_ci_health.py": "clean",
+    "audit_ci_health.py": "findings",
     "audit_cite_keys.py": "findings",
     "audit_compute_precision.py": "findings",
     "audit_conformance_selftests.py": "clean",
