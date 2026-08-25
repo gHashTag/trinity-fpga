@@ -133,7 +133,11 @@ jobs:
       # timeout does not fix a gate, it changes what the number means, and that
       # is a decision, not a repair.
       - name: Re-measure the baseline (manual, uploaded, never committed)
-        if: github.event_name == 'workflow_dispatch' && inputs.rebaseline
+        # `always()` because the step before this one fails whenever a gate has
+        # degraded -- which is the only situation in which anybody asks for a
+        # re-measurement. Without it the instrument is available exactly when it
+        # is not needed and skipped exactly when it is.
+        if: always() && github.event_name == 'workflow_dispatch' && inputs.rebaseline
         run: |
           cp gate_status_baseline.json /tmp/baseline_before.json
           python3 gate_status_ratchet.py --update --jobs 2 --timeout "${{ inputs.timeout }}" || true
@@ -155,7 +159,7 @@ jobs:
           git checkout -- gate_status_baseline.json
 
       - name: Keep the re-measured baseline
-        if: github.event_name == 'workflow_dispatch' && inputs.rebaseline
+        if: always() && github.event_name == 'workflow_dispatch' && inputs.rebaseline
         uses: actions/upload-artifact@v4
         with:
           name: gate-baseline-remeasured
