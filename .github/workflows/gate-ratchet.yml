@@ -37,11 +37,35 @@ on:
   # which is how a website workflow sat wired but unexecuted from the moment it
   # merged. See gHashTag/trinity#721.
   workflow_dispatch:
+    inputs:
+      rebaseline:
+        description: >-
+          Re-measure every gate here and upload the resulting baseline as an
+          artifact. Nothing is committed; the file is for review.
+        type: boolean
+        default: false
+      timeout:
+        description: >-
+          Seconds per gate for that re-measurement. The recorded 120 is part of
+          the measurement, not a convenience knob -- changing it makes the new
+          statuses incomparable with the old ones, which is the point of running
+          this deliberately rather than by accident.
+        type: string
+        default: '120'
 
 jobs:
   ratchet:
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    # audit_gf64_chain.py and audit_hardware_rows.py call `gh` to read issues, and
+    # without a token `gh` exits non-zero, the script reports "needs input" (exit 2)
+    # and the ratchet calls it a degradation from the recorded `clean`. That is the
+    # gate honestly saying it could not look, but the diagnosis reads as a broken
+    # subject rather than a missing credential -- both PRs open today show it, and
+    # so does one that changes no gate at all. GITHUB_TOKEN is the built-in
+    # per-run token; it needs no secret and reads only this repository.
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     defaults:
       run:
         working-directory: research
@@ -100,3 +124,39 @@ jobs:
       # it, and a two-core runner needs less contention to start with.
       - name: No gate degraded
         run: python3 gate_status_ratchet.py --jobs 2
+
+      # A baseline measured on a laptop is a laptop's baseline. Six gates are
+      # TIMEOUT at 120 s here and five of those six finish on a ten-core machine
+      # -- three of them clean -- so the recorded status is partly a property of
+      # this runner. `--update` therefore belongs on the runner, and its output
+      # is an artifact for a human to read rather than a commit: raising the
+      # timeout does not fix a gate, it changes what the number means, and that
+      # is a decision, not a repair.
+      - name: Re-measure the baseline (manual, uploaded, never committed)
+        if: github.event_name == 'workflow_dispatch' && inputs.rebaseline
+        run: |
+          cp gate_status_baseline.json /tmp/baseline_before.json
+          python3 gate_status_ratchet.py --update --jobs 2 --timeout "${{ inputs.timeout }}" || true
+          cp gate_status_baseline.json /tmp/baseline_after.json
+          python3 - <<'EOF' >> $GITHUB_STEP_SUMMARY
+          import json
+          b = json.load(open("/tmp/baseline_before.json"))["scripts"]
+          a = json.load(open("/tmp/baseline_after.json"))["scripts"]
+          moved = [(k, b.get(k, "-"), a.get(k, "-")) for k in sorted(set(b) | set(a))
+                   if b.get(k) != a.get(k)]
+          print(f"### Re-measured at {json.load(open('/tmp/baseline_after.json'))['timeout']}s\n")
+          print(f"{len(moved)} of {len(a)} gates moved\n")
+          if moved:
+              print("| gate | was | now |")
+              print("|---|---|---|")
+              for k, was, now in moved:
+                  print(f"| `{k}` | {was} | {now} |")
+          EOF
+          git checkout -- gate_status_baseline.json
+
+      - name: Keep the re-measured baseline
+        if: github.event_name == 'workflow_dispatch' && inputs.rebaseline
+        uses: actions/upload-artifact@v4
+        with:
+          name: gate-baseline-remeasured
+          path: /tmp/baseline_after.json
