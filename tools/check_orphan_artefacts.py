@@ -19,7 +19,10 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 # artefact kinds that are produced rather than written by hand
 PATTERNS = ["research/**/*.pdf", "research/**/*.json", "research/**/*.png"]
 SKIP_NAME = re.compile(r"(_paper|_baseline|cases|package(-lock)?)\.", re.I)
-SKIP_DIR = {"node_modules", ".git", "__pycache__", "arxiv_submission"}
+# `.gate_cache` holds files the gates write and rewrite for themselves. A cache
+# has no generator by design and regenerates when deleted, so counting one as
+# an artefact that "no code produces" is a category error, not a finding.
+SKIP_DIR = {"node_modules", ".git", "__pycache__", "arxiv_submission", ".gate_cache"}
 
 # everything a producer might be
 producers = []
@@ -70,9 +73,27 @@ if "--update-baseline" in sys.argv:
     print(f"baseline written: {len(uniq)} known"); sys.exit(0)
 known = {l for l in BASE.read_text().splitlines() if l.strip()} if BASE.exists() else set()
 new = sorted(set(uniq) - known)
+# One flat list of ninety-odd paths reads as a wall and gets skipped. These are
+# not one problem: a directory of plates awaiting a decision, a handful of
+# measurement records written by hand, and whatever else. Group them so the
+# question each group asks is visible, and print the groups largest first.
+def group_of(path):
+    if "/canon/" in path:        return "canon plates -- figures with no generator"
+    if "/measurements/" in path: return "measurement records written without a script"
+    if path.endswith((".png", ".pdf", ".svg")): return "other figures"
+    return "other artefacts"
+
 if new:
     print(f"\nFAIL: {len(new)} artefact(s) that no code produces\n")
-    for x in new: print(f"  {x}")
-    print("\n  An artefact with no generator is where staleness accumulates.")
+    groups = {}
+    for x in new: groups.setdefault(group_of(x), []).append(x)
+    for name, items in sorted(groups.items(), key=lambda kv: -len(kv[1])):
+        print(f"  {len(items)}x  {name}")
+        for x in items[:6]: print(f"        {x}")
+        if len(items) > 6: print(f"        ... and {len(items) - 6} more")
+        print()
+    print("  An artefact with no generator is where staleness accumulates.")
+    print("  These groups ask different questions; answering them together is")
+    print("  why the count has stood for weeks.")
     sys.exit(1)
 print(f"OK: no new orphaned artefacts ({len(known)} known)")
