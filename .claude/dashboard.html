@@ -52,7 +52,7 @@
 <div class="wrap">
 
 <h1>TRINITY · continuous loop</h1>
-<div class="sub">Итерация <b>123</b> · каждые 15 мин · cron <code>e11d7aed</code> · HEAD <code>0ee33f82e</code> · ветка корпуса <code>560b478e6</code> · 2026-08-24</div>
+<div class="sub">Итерация <b>124</b> · каждые 15 мин · cron <code>e11d7aed</code> · HEAD <code>3960d7238</code> · ветка корпуса <code>560b478e6</code> · 2026-08-24</div>
 
 <div class="grid">
   <div class="card hero"><div class="n ok">211 / 289</div><div class="l">реально <b>собирается и бежит</b></div><div class="d ok">без тестов 143 → <b>29</b> · упало на 8 намеренно</div></div>
@@ -62,10 +62,39 @@
   <div class="card hero"><div class="n ok">764 / 798</div><div class="l">импортов <b>указывают на живой файл</b></div><div class="d ok">нерешённых 39 → 35 → <b>34</b></div></div>
   <div class="card alert"><div class="n warn">14 + 11</div><div class="l">манифест диалекта <b>разъехался</b></div><div class="d bad">не занесено / держится ни на чём · #2705</div></div>
   <div class="card"><div class="n ok">83</div><div class="l">спек <b>за стеной</b></div><div class="d ok">99 → 94 → 88 → <b>83</b></div></div>
-  <div class="card"><div class="n ok">290/455</div><div class="l">чистых спек t27 — <b>64%</b></div><div class="d ok">147 → 284 → <b>290</b></div></div>
+  <div class="card"><div class="n ok">291/455</div><div class="l">чистых спек t27 — <b>64%</b></div><div class="d ok">147 → 284 → <b>291</b></div></div>
   <div class="card"><div class="n ok">109 / 210</div><div class="l">валидны <b>и</b> утверждают</div><div class="d ok">рабочая · <b>с веткой корпуса</b></div></div>
   <div class="card"><div class="n ok">106</div><div class="l">событий гейта · 0 слепых</div><div class="d ok">110 → <b>106</b> · проза больше не рвёт восстановление</div></div>
   <div class="card"><div class="n ok">9</div><div class="l">объявлений <b>потеряно молча</b></div><div class="d ok">50 → 30 → 10 → <b>9</b> в чистых t27</div></div>
+</div>
+
+<div class="note ok">
+<b><code>union(enum)</code> — и 31 из 31 закрыты.</b>
+Нагрузка <code>ParsedCommand</code> была восстановлена, но её нельзя было записать: эмиттер отвечал <code>use of undeclared identifier 'union'</code>. Токена <code>KwUnion</code> в лексере нет — <code>union</code> приходит обычным идентификатором, а различает конструктор типа от поля с таким именем следующая за ним <b>скобка</b>. Тело всюду <code>name : Type</code>, его уже читает разбор структуры, так что отличается лишь ключевое слово, и его несёт флаг.
+<br><br>
+<code>namespace.t27</code> собирается, 2 теста проходят. Валидных <b>295 → 296</b>, ошибок <b>589 → 588</b>, ноль в минус.
+<br><br>
+<b>Спрос мал, и я это говорю прямо:</b> такая конструкция нужна ровно <b>одному</b> объявлению в корпусе. Сделал потому, что иначе восстановленные данные некуда положить, а не потому, что она востребована.
+</div>
+
+<div class="note warn">
+<b>Отрицательный результат: конвертер файлы молча не теряет.</b>
+Я шёл искать ещё потери того же рода. Их нет.
+<pre>предков   366
+переведено 160
+пропущено 206   "No route found for: X", по строке на каждый</pre>
+У него <b>таблица маршрутов</b>: что входит в область t27. Каждый пропуск объявляется и считается. Сверка с корпусом: <b>157 предков имеют одноимённую спеку, 209 — нет</b>, и вторые это исследовательские спеки вроде <code>black_hole_information</code> и <code>before_big_bang</code>, никогда не предназначавшиеся к переводу.
+<br><br>
+Дефект вариантов был <b>молчаливой</b> потерей без диагностики. Это — противоположное: заявленная область, громко соблюдаемая.
+<br><br>
+<b>Мой первый проход насчитал «292 behaviors, 104 functions, 95 constants» — и всё это шум моего же извлекателя:</b> он тащил ключ <code>name</code> из бюллетеней <code>- name: X</code> и читал строки-комментарии <code>#&nbsp;Lifecycle thresholds</code> как имена объявлений. Не публикую. Уцелело при проверке одно — деление по таблице маршрутов.
+</div>
+
+<div class="note ok">
+<b>Третий пункт был закрыт раньше, чем я его предложил.</b>
+<code>tools/converter</code> уже в CI — по manifest-path, и там же мой комментарий, почему не членом workspace: повышение переписывает <code>Cargo.lock</code>, а он несёт чужую незакоммиченную работу. Проверку проходит чисто.
+<br><br>
+Пред-коммитный хук — другое дело, и я его не трогаю: логика гейтов лежит в <code>bootstrap/src/hooks.rs</code>, где сейчас <b>306 строк чужих изменений</b>. Добавить туда проверку значило бы сцепить свою правку с чужой.
 </div>
 
 <div class="note ok">
