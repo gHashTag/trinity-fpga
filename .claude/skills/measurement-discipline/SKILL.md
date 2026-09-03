@@ -498,6 +498,157 @@ same arm, the "held-out" mean is *algebraically identical* to the in-sample mean
 transports no information and must not be quoted as though it does. Check that the folds disagree
 before believing the rotation bought anything.
 
+## 8e. A wall-clock limit measures the machine, not the code
+
+The gate-status ratchet's first run against its own baseline, on an **unchanged tree**, reported
+two scripts degraded `clean → TIMEOUT` and one improved `TIMEOUT → clean`. Nothing had changed
+except how many workers were competing for cores.
+
+A timeout is not a property of the script. It is a property of the script *and* the load, and any
+status derived from it inherits that. Three consequences, all of which bit here:
+
+* **The threshold is part of the measurement.** A script that is `TIMEOUT` at 90 s and `clean` at
+  300 s has not changed; comparing across two thresholds reports a fix or a regression that did
+  not happen. Record the threshold **in the baseline** and reuse it on every check, rather than
+  passing it as a convenience flag.
+* **Parallelism is part of the measurement too**, and it is the part people forget to record. Four
+  workers on a machine already running a build is a different instrument from four workers on an
+  idle one.
+* **Re-run disagreements serially before believing them.** Any status change with a timing-derived
+  status on either side gets one clean re-run with no contention. Only a script that exceeds the
+  limit *alone* has actually regressed.
+
+**The general rule.** Any gate whose verdict can move without the tree moving is a broken ruler,
+and it will be muted within a week — correctly, because it is lying. Before wiring a gate into CI,
+run it twice on an unchanged tree under *different* load and check it says the same thing. That
+costs one command and it is the only evidence that the gate measures the code.
+
+This one was caught because the ratchet was run against its own freshly-written baseline, which is
+worth doing on purpose: **a new gate's first act should be to disagree with itself, so you find out
+whether it can.**
+
+## 8f. Pin the substrate, not just the harness
+
+Every number in the 2026-08 block campaign was measured against a `weights/` directory in `/tmp`
+belonging to **another session's scratchpad**. It vanished mid-campaign. Eleven documents quote
+figures only that directory could produce, and nothing in the repository recorded how to rebuild it.
+
+The recovery took twenty minutes and only because one file happened to carry the right gate:
+
+1. corpus from the HuggingFace cache under `~` (which survived);
+2. checkpoint re-downloaded from the Hub;
+3. **and neither counts until the ruler reproduces** — a restored corpus differing by one row, or a
+   re-uploaded checkpoint, produces numbers that look exactly like the old ones and are not
+   comparable to them. Measured: fp32 14.4874 and MXFP4 21.9397 both to under 2e-06 relative. Gate
+   passes, so pre-loss and post-loss numbers are comparable. Had it failed, the honest move was to
+   say so, not to quote them together.
+
+**What a measurement record needs and this one lacked:**
+
+* **a provenance line per input** — Hub repo id *and revision* per checkpoint, repo/revision/file
+  for the corpus. `gpt2` is not a version; `gpt2@<sha>` is;
+* **a fingerprint checkable without the original** — row count, character count, content hash of
+  the exact joined text, stored *in the measurement records*, so a restored copy is compared to
+  what was used rather than to a description of it;
+* **a ruler gate that runs on restore**, as the documented first step of any measuring session —
+  not a gate that one file happens to carry.
+
+The campaign spent a week finding harnesses that asserted less than their prose claimed. This is
+that defect one level down: **the substrate was never asserted about at all.** A number is
+comparable to another number only if something checkable says the instrument did not move — and the
+instrument includes its inputs.
+
+## 8g. Ask what the format destroys before building a predictor on it
+
+Five separate predictor failures in this campaign turned out to be one failure. T41's clipping
+criterion (wrong sign on two of four), T42's occupancy conjecture, the P1/P2/P3 bin predictors
+(none rotation-stable, and the classical greedy one *anti*-correlated), the four refuted
+explanations for a selector's uneven behaviour, and the standing surprise that a margin measured on
+four checkpoints does not appear on a fifth.
+
+All of them tried to predict a codebook's behaviour from the **weight distribution**. Measured
+across eight checkpoints and four architecture families:
+
+| | spread |
+|---|---:|
+| raw weight kurtosis | **14.6×** (3.786 → 55.334) |
+| kurtosis **after the block scale** | **6 %** (2.795 → 2.985) |
+
+The E8M0 rule `s = 2^⌈log₂ a⌉` absorbs essentially all of it. **The information those predictors
+were built to extract is destroyed by the format's own scale rule before the codebook sees the
+data.** Including on a non-transformer with no attention, which landed inside the band written for
+the transformers.
+
+**The rule.** Before building any predictor on an input statistic, measure that statistic *after*
+every normalisation the pipeline applies, not before. If the pipeline flattens it, the predictor
+cannot work and no amount of feature engineering on the raw side will save it. This costs one sweep
+and it would have saved five.
+
+**And the corollary for where to look next.** If a normalisation flattens the input differences
+while the *outputs* still differ by 21×, the difference is downstream — in how sensitive the trained
+function is, not in what it is made of. That is a different measurement (perturb by a fixed relative
+size and watch the loss) and it needs its own control: a zero-perturbation run that must reproduce
+the baseline bit-identically, or the harness is not measuring what it claims.
+
+## 8h. Register the prediction you expect to fail, and score it when it does
+
+The occupancy registration wrote down, in advance: *"the registered expectation is that O1 holds and
+O2-O4 fail -- occupancy carries real information and is still not usable."* Uncomfortable to commit
+to. Then **O1 failed too** -- 12.8 % spread against a registered threshold of 20 % and a registered
+point prediction of 25-60 %.
+
+Being wrong in the direction that *strengthens* the conclusion is the only evidence that the
+conclusion was not steered. Had the spread come back at 30 %, the registration would have been the
+thing stopping a post-hoc story about why 30 % is "meaningful". Because it came back at 12.8 %, the
+registration is the thing that makes "the weight side is closed" a result rather than an assertion.
+
+**The practice, and the order matters:**
+
+1. write the threshold **and the predicted sign** before the data exists — a correlation with the
+   right magnitude and the wrong sign is a failure of the stated mechanism, not a discovery, and
+   only a pre-committed sign makes that call automatic;
+2. write what each outcome will mean, including the one you do not want;
+3. **score the prediction, not just the hypothesis.** "O1 failed" and "my P1 was wrong by half"
+   are different admissions and the second is the one that calibrates you;
+4. report the near-miss that pointed the right way — here `MID` at rho = -0.800 with the predicted
+   sign, p = 0.104, x4 = 0.416 — because a null deserves the same scrutiny as a hit, and because
+   one of four pointing correctly at n = 5 is what chance produces.
+
+**The tell you are doing it wrong:** a registration whose predictions you would be happy with
+either way is not constraining anything. If writing the number down does not feel like a risk, it
+is not a prediction.
+
+## 8i. A gate that stops finding things looks exactly like a corpus that got fixed
+
+A cross-check was added to two yosys stat parsers, correctly diagnosed as missing. Wired as a gate,
+it fired on **every** core -- the histogram exceeded yosys' declared total by a near-constant 6-9 --
+so every core became "could not measure" and the script **exited 0 with nothing to report**. The
+status ratchet recorded the change as `findings -> clean`: an *improvement*, in the severity order.
+
+**Two lessons and the second is the sharper one.**
+
+**(a) Severity orders are asymmetric in the wrong direction.** `clean` above `findings` encodes
+"fewer problems is better", which is true of the corpus and false of the instrument. A gate that
+stops reporting is not distinguishable from a corpus that got clean unless something separately
+records **how much it examined**. `run_all_checks.py` in the same directory already makes exactly
+this distinction -- HOLDS with a coverage of zero is "the shape that reads as assurance and is not"
+-- and the ratchet did not. Record coverage alongside status, or a fix that silences a check reads
+as progress.
+
+**(b) The check was right and the population was wrong.** `logic_count.py` cross-checks its
+histogram against the declared total and *raises*, correctly, because it locates an explicit
+`=== top ===` block and reads the table beneath it. The two broken files take
+`stdout.split("=== ")[-1]` -- the trailing text after the last marker, whose declared total and
+whose matched lines are **not the same population**. Copying a check between two harnesses copies
+its assumptions about what it is counting, and those assumptions are usually undocumented.
+
+**The rule.** Before promoting a diagnostic to a gate, run it in advisory mode over the real corpus
+and look at the hit rate. A check that fires on 100 % of inputs is measuring its own assumptions,
+not the corpus -- and if you gate on it, you have replaced a partial instrument with a silent one.
+
+This is instance nine, in a fix written for instances one through eight, by the person writing the
+rules. The class is not something other people do.
+
 ## 9. Adversarial verification finds what self-consistency cannot
 
 Every theorem in the campaign was handed to a second agent instructed to **refute it, defaulting

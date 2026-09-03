@@ -1,0 +1,302 @@
+# Can each part still route the simplest possible design?
+#
+# openXC7/nextpnr-xilinx#154: xc7a35t cannot route a three-line flip-flop,
+# while xc7a200t builds the identical design. Nobody noticed, because no CI job
+# builds anything on xc7a35t — the upstream `demos` workflow is the only gate
+# there, and a part nothing exercises can regress to totally broken without a
+# single red run.
+#
+# This is the gate that would have caught it on the day it appeared.
+#
+# ONE design, deliberately trivial:
+#
+#     module top (input wire clk, input wire d, output reg q);
+#         always @(posedge clk) q <= d;
+#     endmodule
+#
+# Trivial because its failures are unambiguous. A demo that fails could be the
+# demo; a flip-flop that fails is the part or the tool.
+#
+# Through fasm2frames, not stopping at place-and-route. openXC7#149 has a design
+# that places and routes cleanly and then has no bitstream at all —
+# FasmLookupError at assembly — so "P&R succeeded" is not "a bitstream exists".
+#
+# THE GATE'S OWN ACCEPTANCE TEST, checked in the last step:
+#
+#     xc7a35tcsg324-1   must FAIL     (reproduces #154)
+#     xc7a200tfbg484-2  must PASS     (the control)
+#
+# If those two invert or both agree, this workflow is broken and says so rather
+# than reporting on the parts. A new gate that cannot reproduce the defect that
+# motivated it is not evidence of anything.
+#
+# ON THE PART LIST. Upstream's demos workflow names xc7a35tcsg324-1,
+# xc7k325tffg676-1, xc7s50csga324-1 and xc7z035. Three are here.
+#
+# @hansfbaier pointed at litex-hub/litex-boards for pin assignments, which
+# settled xc7s50csga324-1 immediately: digilent_arty_s7.py names that exact
+# part. My hesitation was unnecessary and the pins were a search away.
+#
+# xc7z035 is NOT here, and the reason comes from upstream's own demos.yml:
+#
+#     Known-failing projects (BRAM/LUTFF legaliser spiral on artix7,
+#     missing xc7z035 tilegrid) are intentionally not part of the subset.
+#
+# So that part has no tilegrid in the database and chipdb generation cannot
+# succeed. This gate would report INCONCLUSIVE for it -- correctly, since that
+# is the harness and the database rather than the router -- and a permanently
+# inconclusive entry teaches nothing that this comment does not.
+#
+# Worth noting for its own sake: that line confirms from upstream's side what
+# openXC7#154 argues from ours. Their one gate is scoped to what passes, and
+# the known-failing cases are excluded by hand. A part nothing exercises cannot
+# fail, which is how a35t reached "cannot route a flip-flop" unnoticed.
+#
+# xc7k325tffg676 is not here yet, and the reason is specific rather than
+# reluctance. The board carrying that exact part, sitlinv_stlv7325_v1, has only
+# differential clock inputs and they are marked TODO/unverified in that file.
+# The ffg676 boards with clean single-ended pins -- berkeleylab_marble -- are a
+# different die (xc7k160t). Pins are package-level, so they are probably
+# transferable, and 'probably' is what produced the first #154 reducer's four
+# self-inflicted failures. Asked upstream whether a differential clock is
+# acceptable for a smoke design instead of assuming.
+#
+# phi^2 + 1/phi^2 = 3 = TRINITY
+
+name: part coverage — can each part route a flip-flop?
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '37 4 * * *'
+
+env:
+  OPENXC7_IMAGE: regymm/openxc7@sha256:eced1cdd4727549f2d983328e0cf170fb6f6f67d87f19b2bf24365163368c70c
+
+jobs:
+  part:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - part: xc7a35tcsg324-1
+            device: xc7a35tcsg324
+            clk: E3
+            d: A8
+            q: H5
+            io: LVCMOS33
+            family: artix7
+            expect: fail        # openXC7#154
+          - part: xc7a200tfbg484-2
+            device: xc7a200tfbg484
+            clk: U22
+            d: F21
+            q: M22
+            io: LVCMOS33
+            family: artix7
+            expect: pass        # the control
+          # Pins from litex-boards digilent_arty_s7.py, which names this exact
+          # part -- "s7-50": "xc7s50csga324-1" -- so they are read, not guessed:
+          # clk12 F14, user_sw0 H14, user_led0 E18, all LVCMOS33.
+          #
+          # @hansfbaier pointed at that repository when I said I had no verified
+          # pins. He was right and the hesitation was mine: the pins were a
+          # search away.
+          #
+          # `expect: pass` here is a PREDICTION, not a measurement -- this part
+          # has never been built in this gate. If Spartan fails like a35t, that
+          # is a finding, and this line is what makes it visible instead of
+          # something to quietly edit afterwards.
+          - part: xc7s50csga324-1
+            device: xc7s50csga324
+            clk: F14
+            d: H14
+            q: E18
+            io: LVCMOS33
+            family: spartan7
+            expect: pass
+          # Differential clock, so this row's design is NOT the three-liner --
+          # it adds an IBUFDS. Told @hansfbaier on #154 I would try this rather
+          # than wait for his answer, so here it is, with the caveat stated
+          # there: a less trivial design makes a failure less unambiguous.
+          #
+          # Pins from litex-boards sitlinv_stlv7325_v1.py, which carries this
+          # exact part (xc7k325t-ffg676-2): clk200 AB11/AC11 DIFF_SSTL15,
+          # cpu_reset_n AC16 and user_led_n0 AA2, both LVCMOS15.
+          #
+          # Correction to what I told Hans: the `# TODO verify / test` comment
+          # in that file sits on clk156 and clk150, NOT on clk200. I said it
+          # applied to the differential clocks generally; it does not.
+          #
+          # expect is a PREDICTION again. This part has never been built here.
+          - part: xc7k325tffg676-1
+            device: xc7k325tffg676
+            clk: AB11
+            clk_n: AC11
+            d: AC16
+            q: AA2
+            io: LVCMOS15
+            clk_io: DIFF_SSTL15
+            family: kintex7
+            expect: pass
+    name: ${{ matrix.part }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+
+      - name: Pull the pinned image
+        run: |
+          for i in 1 2 3 4 5 6; do docker pull "$OPENXC7_IMAGE" && break; sleep $((i*20)); done
+
+      # Two shapes, because one part has no single-ended clock pin. The
+      # single-ended form is the three-liner this gate exists to run; the
+      # differential form adds an IBUFDS and is therefore a weaker instrument,
+      # which is stated on the row that uses it.
+      - name: The design and its pins
+        run: |
+          mkdir -p work out
+          if [ -n "${{ matrix.clk_n }}" ]; then
+            cat > work/top.v <<'EOF'
+          module top (input wire clk_p, input wire clk_n, input wire d, output reg q);
+              wire clk;
+              IBUFDS ibufds_inst (.I(clk_p), .IB(clk_n), .O(clk));
+              always @(posedge clk) q <= d;
+          endmodule
+          EOF
+            cat > work/top.xdc <<EOF
+          set_property PACKAGE_PIN ${{ matrix.clk }} [get_ports clk_p]
+          set_property IOSTANDARD ${{ matrix.clk_io }} [get_ports clk_p]
+          set_property PACKAGE_PIN ${{ matrix.clk_n }} [get_ports clk_n]
+          set_property IOSTANDARD ${{ matrix.clk_io }} [get_ports clk_n]
+          create_clock -period 5.000 -name sys_clk [get_ports clk_p]
+          set_property PACKAGE_PIN ${{ matrix.d }} [get_ports d]
+          set_property IOSTANDARD ${{ matrix.io }} [get_ports d]
+          set_property PACKAGE_PIN ${{ matrix.q }} [get_ports q]
+          set_property IOSTANDARD ${{ matrix.io }} [get_ports q]
+          EOF
+          else
+            cat > work/top.v <<'EOF'
+          module top (input wire clk, input wire d, output reg q);
+              always @(posedge clk) q <= d;
+          endmodule
+          EOF
+            cat > work/top.xdc <<EOF
+          set_property PACKAGE_PIN ${{ matrix.clk }} [get_ports clk]
+          set_property IOSTANDARD ${{ matrix.io }} [get_ports clk]
+          create_clock -period 10.000 -name sys_clk [get_ports clk]
+          set_property PACKAGE_PIN ${{ matrix.d }} [get_ports d]
+          set_property IOSTANDARD ${{ matrix.io }} [get_ports d]
+          set_property PACKAGE_PIN ${{ matrix.q }} [get_ports q]
+          set_property IOSTANDARD ${{ matrix.io }} [get_ports q]
+          EOF
+          fi
+          cat work/top.v work/top.xdc
+
+      - name: Build it, all the way to frames
+        id: build
+        run: |
+          set +e
+          docker run --rm -v "$PWD:/w" -w /w "$OPENXC7_IMAGE" bash -c '
+            set -e
+            cd /nextpnr-xilinx
+            BB=$(find / -name bbasm -type f -perm -u+x 2>/dev/null | head -1)
+            python3 xilinx/python/bbaexport.py --device ${{ matrix.part }} --bba /w/work/c.bba
+            $BB -l /w/work/c.bba /w/work/chip.bin
+          ' > out/chipdb.log 2>&1
+          echo "chipdb_rc=$?" >> $GITHUB_OUTPUT
+
+          docker run --rm -v "$PWD:/w" -w /w/work "$OPENXC7_IMAGE" bash -c '
+            yosys -p "synth_xilinx -flatten -abc9 -arch xc7 -top top; write_json /w/out/d.json" top.v
+          ' > out/synth.log 2>&1
+          echo "synth_rc=$?" >> $GITHUB_OUTPUT
+
+          docker run --rm -v "$PWD:/w" -w /w/work "$OPENXC7_IMAGE" bash -c '
+            nextpnr-xilinx --chipdb /w/work/chip.bin --xdc top.xdc \
+              --json /w/out/d.json --fasm /w/out/d.fasm
+          ' > out/pnr.log 2>&1
+          echo "pnr_rc=$?" >> $GITHUB_OUTPUT
+
+          docker run --rm -v "$PWD:/w" -w /w "$OPENXC7_IMAGE" bash -c '
+            source /prjxray/env/bin/activate
+            fasm2frames --part ${{ matrix.part }} \
+              --db-root /nextpnr-xilinx/xilinx/external/prjxray-db/${{ matrix.family }} \
+              /w/out/d.fasm > /w/out/d.frames
+          ' > out/frames.log 2>&1
+          echo "frames_rc=$?" >> $GITHUB_OUTPUT
+          exit 0
+
+      - name: Verdict, and whether the gate itself is sound
+        run: |
+          set +e
+          say() { echo "$1" >> $GITHUB_STEP_SUMMARY; echo "$1"; }
+          C=${{ steps.build.outputs.chipdb_rc }}
+          S=${{ steps.build.outputs.synth_rc }}
+          P=${{ steps.build.outputs.pnr_rc }}
+          F=${{ steps.build.outputs.frames_rc }}
+
+          say "## ${{ matrix.part }}"
+          say ''
+          say '| stage | rc |'
+          say '|---|---|'
+          say "| chipdb | $C |"
+          say "| yosys | $S |"
+          say "| nextpnr | $P |"
+          say "| fasm2frames | $F |"
+          say ''
+
+          # A harness fault anywhere is inconclusive, not a part result. The
+          # first three-part run pointed a spartan7 build at the artix7
+          # database and reported the resulting AssertionError as 'Spartan
+          # fails to route' -- when nextpnr had in fact finished with 0 errors.
+          # Guarding only chipdb and yosys left that gap.
+          # Only meaningful when P&R SUCCEEDED. If nextpnr failed there is no
+          # FASM to assemble, so 'No such file' from fasm2frames is a
+          # consequence of the real failure rather than a harness fault --
+          # and treating it as one made the genuine a35t failure report as
+          # inconclusive, which is the defect this gate exists to detect.
+          HARNESS_ERR=0
+          if [ "$P" = 0 ]; then
+            grep -qE 'not found in|AssertionError|No such file' out/frames.log 2>/dev/null && HARNESS_ERR=1
+          fi
+          if [ "$C" != 0 ] || [ "$S" != 0 ] || [ "$HARNESS_ERR" = 1 ]; then
+            say '**Inconclusive.** chipdb, synthesis or the assembler harness failed,'
+            say 'so this says nothing about the part — it is the harness or the image.'
+            say '```'
+            tail -5 out/chipdb.log out/synth.log 2>/dev/null >> $GITHUB_STEP_SUMMARY
+            say '```'
+            exit 1
+          fi
+
+          if [ "$P" = 0 ] && [ "$F" = 0 ]; then RESULT=pass; else RESULT=fail; fi
+          ERR=$(grep -ohE '(ERROR|FasmLookupError): .{0,70}' out/pnr.log out/frames.log 2>/dev/null | head -1)
+          say "**Result: $RESULT** ${ERR:+— \`$ERR\`}"
+          say ''
+
+          # The gate checking itself. Expectations are pinned in the matrix so a
+          # change in either direction is loud: a35t starting to pass means #154
+          # is fixed and this line must be updated deliberately; a200t starting
+          # to fail means a real regression on a part that works today.
+          if [ "$RESULT" = "${{ matrix.expect }}" ]; then
+            say "Matches the recorded expectation (\`${{ matrix.expect }}\`) — gate is sound."
+            exit 0
+          fi
+          say "::error::expected \`${{ matrix.expect }}\`, got \`$RESULT\`"
+          if [ "${{ matrix.expect }}" = fail ]; then
+            say 'This part was failing and now builds. Either openXC7#154 is fixed —'
+            say 'in which case update the expectation in this matrix and say so on'
+            say 'the issue — or this gate has stopped testing what it claims.'
+          else
+            say 'A part that built yesterday no longer does. That is the regression'
+            say 'this workflow exists to catch.'
+          fi
+          exit 1
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: part-coverage-${{ matrix.part }}
+          path: out
+          retention-days: 90

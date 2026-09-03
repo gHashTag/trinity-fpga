@@ -1,0 +1,154 @@
+# Reduce: ERROR: Invalid global constant node 'INT_L_X0Y125/VCC_WIRE'
+#
+# nextpnr-xilinx refuses the IDDR probe on xc7a35tcsg324-1. Synthesis and
+# chipdb generation are fine; router2 dies. Reported on openXC7#114 with a
+# promise to reduce it, which this does.
+#
+# The error names VCC_WIRE — the constant network — and the reported design
+# ties CE, R and S to constants. So the question is which of two things
+# triggers it: the ILOGIC primitive, or a constant driving one of its pins.
+#
+# Five variants, one run, rather than one variant per round:
+#
+#   v1  IDDR, CE/R/S constant          the design as reported
+#   v2  IDDR, CE/R/S from ports        does removing every tie fix it?
+#   v3  IDDR, CE tied, R/S ports       is CE the one that matters?
+#   v4  plain fabric flop, no IDDR     is it the constant net, not ILOGIC?
+#   v5  IDDR, R/S tied, CE from port   the complement of v3
+#
+# Reading the table: if v2 passes and v1 fails, the trigger is a constant tie
+# and v3/v5 say which pin. If v4 also fails, the defect has nothing to do with
+# ILOGIC and the reducer is smaller still.
+#
+# phi^2 + 1/phi^2 = 3 = TRINITY
+
+name: router VCC reducer (openXC7#114 sidebar)
+
+on:
+  workflow_dispatch:
+
+env:
+  OPENXC7_IMAGE: regymm/openxc7@sha256:eced1cdd4727549f2d983328e0cf170fb6f6f67d87f19b2bf24365163368c70c
+  PART: xc7a35tcsg324
+
+jobs:
+  reduce:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+
+      - name: Pull the pinned image
+        run: |
+          for i in 1 2 3 4 5 6; do docker pull "$OPENXC7_IMAGE" && break; sleep $((i*20)); done
+
+      - name: Generate the chipdb
+        run: |
+          mkdir -p chipdb out
+          docker run --rm -v "$PWD:/w" -w /w "$OPENXC7_IMAGE" bash -c "
+            set -e
+            cd /nextpnr-xilinx
+            BB=\$(find / -name bbasm -type f -perm -u+x 2>/dev/null | head -1)
+            python3 xilinx/python/bbaexport.py --device ${PART}-1 --bba /w/chipdb/c.bba
+            \$BB -l /w/chipdb/c.bba /w/chipdb/${PART}.bin
+          "
+          ls -lh chipdb/${PART}.bin
+
+      - name: Build every variant
+        run: |
+          set +e
+          cd research/router-vcc-reducer
+          for v in v1_iddr_const v2_iddr_ports v3_iddr_ce_only v4_ff_const v5_iddr_no_rs; do
+            docker run --rm -v "$PWD/../..:/w" -w /w/research/router-vcc-reducer "$OPENXC7_IMAGE" bash -c "
+              yosys -p 'synth_xilinx -flatten -abc9 -arch xc7 -top top; write_json /w/out/$v.json' $v.v \
+                > /w/out/$v.synth.log 2>&1 || exit 20
+              nextpnr-xilinx --chipdb /w/chipdb/${PART}.bin --xdc $v.xdc \
+                --json /w/out/$v.json --fasm /w/out/$v.fasm \
+                > /w/out/$v.pnr.log 2>&1
+            "
+            echo "$v rc=$?" >> ../../out/status.txt
+          done
+          cat ../../out/status.txt
+
+      - name: The table
+        run: |
+          set +e
+          say() { echo "$1" >> $GITHUB_STEP_SUMMARY; echo "$1"; }
+          say '## Which variant does the router refuse?'
+          say ''
+          say '| variant | what it isolates | rc | verdict | error |'
+          say '|---|---|---|---|---|'
+          declare -A what=(
+            [v1_iddr_const]='IDDR, CE/R/S constant — as reported'
+            [v2_iddr_ports]='IDDR, CE/R/S from ports'
+            [v3_iddr_ce_only]='IDDR, CE tied only'
+            [v4_ff_const]='plain flop, no IDDR'
+            [v5_iddr_no_rs]='IDDR, R/S tied only'
+          )
+          for v in v1_iddr_const v2_iddr_ports v3_iddr_ce_only v4_ff_const v5_iddr_no_rs; do
+            rc=$(grep "^$v rc=" out/status.txt | tail -1 | sed 's/.*rc=//')
+            err=$(grep -oE 'ERROR: [^\\n]{0,60}' "out/$v.pnr.log" 2>/dev/null | head -1)
+            # Classify, because 'it failed' is three different facts. The first
+            # run of this reducer reused one XDC for every variant, so four of
+            # them died on a missing IOSTANDARD and never reached the router --
+            # and the table reported that indistinguishably from a finding.
+            case "$err" in
+              *"Invalid global constant node"*) kind='**TARGET DEFECT**' ;;
+              *IOSTANDARD*|*"type PAD"*)        kind='my XDC is wrong — not a finding' ;;
+              "")                               kind='built' ;;
+              *)                                kind='other router error' ;;
+            esac
+            say "| \`$v\` | ${what[$v]} | ${rc:-?} | $kind | ${err:-—} |"
+          done
+          say ''
+          say 'rc=0 built. rc=20 failed in yosys, which would be a broken variant'
+          say 'rather than a finding. Anything else is the router.'
+          exit 0
+
+
+      # The control that decides how big this is. v4 is a three-line flip-flop
+      # with no I/O primitive; if it cannot route on xc7a35t, either the part
+      # is broken in this flow or openXC7 cannot build anything -- and the
+      # second is refuted by this repository's own benchmark, which builds on
+      # xc7a200t five times a run. Settle it rather than assert it.
+      - name: CONTROL — the same three-line design on xc7a200t
+        run: |
+          set +e
+          say() { echo "$1" >> $GITHUB_STEP_SUMMARY; echo "$1"; }
+          mkdir -p ctl
+          docker run --rm -v "$PWD:/w" -w /w "$OPENXC7_IMAGE" bash -c "
+            set -e
+            cd /nextpnr-xilinx
+            BB=\$(find / -name bbasm -type f -perm -u+x 2>/dev/null | head -1)
+            python3 xilinx/python/bbaexport.py --device xc7a200tfbg484-2 --bba /w/ctl/c.bba
+            \$BB -l /w/ctl/c.bba /w/ctl/a200.bin
+          " > ctl/chipdb.log 2>&1
+          docker run --rm -v "$PWD:/w" -w /w/research/router-vcc-reducer "$OPENXC7_IMAGE" bash -c "
+            yosys -p 'synth_xilinx -flatten -abc9 -arch xc7 -top top; write_json /w/ctl/v4.json' v4_ff_const.v > /w/ctl/synth.log 2>&1
+            nextpnr-xilinx --chipdb /w/ctl/a200.bin --xdc v4_ff_const_a200.xdc \
+              --json /w/ctl/v4.json --fasm /w/ctl/v4.fasm > /w/ctl/pnr.log 2>&1
+          "
+          RC=$?
+          ERR=$(grep -oE 'ERROR: .{0,60}' ctl/pnr.log 2>/dev/null | head -1)
+          say ''
+          say "### Control: v4 on xc7a200tfbg484-2 — rc=$RC"
+          say '```'
+          say "${ERR:-built without error}"
+          say '```'
+          if [ $RC -eq 0 ]; then
+            say 'Builds on a200t, fails on a35t ⇒ **part-specific**, not a universal router defect.'
+          else
+            say 'Fails on both ⇒ the defect is not part-specific, and the reducer is the whole story.'
+          fi
+          exit 0
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: router-vcc-reducer
+          path: |
+            out
+            ctl
+          retention-days: 90

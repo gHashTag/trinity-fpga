@@ -1,0 +1,1154 @@
+{
+  "part": "xc7a200tfbg676-1",
+  "harness": "fpga/tnet/w_*.v (full observation)",
+  "configs": [
+    "heap/router1",
+    "heap/router2",
+    "sa/router2"
+  ],
+  "seeds": [
+    1,
+    2,
+    3,
+    4,
+    5
+  ],
+  "tie_threshold_pct": 3.0,
+  "designs": {
+    "w_baseline": {
+      "heap/router1": {
+        "fmax_by_seed": [
+          977.52,
+          995.02,
+          997.01,
+          999.0,
+          1003.01
+        ],
+        "median_mhz": 997.0
+      },
+      "heap/router2": {
+        "fmax_by_seed": [
+          796.81,
+          836.82,
+          874.89,
+          887.31,
+          998.0
+        ],
+        "median_mhz": 874.9
+      },
+      "sa/router2": {
+        "fmax_by_seed": [
+          440.53,
+          781.25,
+          873.36,
+          1036.27,
+          1036.27
+        ],
+        "median_mhz": 873.4
+      }
+    },
+    "w_bin16": {
+      "heap/router1": {
+        "fmax_by_seed": [
+          206.02,
+          234.58,
+          240.33,
+          255.75,
+          260.62
+        ],
+        "median_mhz": 240.3
+      },
+      "heap/router2": {
+        "fmax_by_seed": [
+          222.42,
+          228.68,
+          232.02,
+          232.07,
+          248.76
+        ],
+        "median_mhz": 232.0
+      },
+      "sa/router2": {
+        "fmax_by_seed": [
+          75.83,
+          107.25,
+          114.92,
+          114.98,
+          116.75
+        ],
+        "median_mhz": 114.9
+      }
+    },
+    "w_bin32": {
+      "heap/router1": {
+        "fmax_by_seed": [
+          985.22,
+          990.1,
+          992.06,
+          1000.0,
+          1001.0
+        ],
+        "median_mhz": 992.1
+      },
+      "heap/router2": {
+        "fmax_by_seed": [
+          837.52,
+          877.19,
+          878.73,
+          888.89,
+          892.86
+        ],
+        "median_mhz": 878.7
+      },
+      "sa/router2": {
+        "fmax_by_seed": [
+          418.41,
+          507.61,
+          523.56,
+          664.45,
+          706.71
+        ],
+        "median_mhz": 523.6
+      }
+    },
+    "w_bnf16": {
+      "heap/router1": {
+        "fmax_by_seed": [
+          549.75,
+          650.2,
+          718.91,
+          753.58,
+          849.62
+        ],
+        "median_mhz": 718.9
+      },
+      "heap/router2": {
+        "fmax_by_seed": [
+          608.64,
+          653.59,
+          744.05,
+          786.78,
+          926.78
+        ],
+        "median_mhz": 744.0
+      },
+      "sa/router2": {
+        "fmax_by_seed": [
+          339.56,
+          358.68,
+          418.41,
+          544.96,
+          735.84
+        ],
+        "median_mhz": 418.4
+      }
+    },
+    "w_fp8e4m3": {
+      "heap/router1": {
+        "fmax_by_seed": [
+          609.38,
+          620.73,
+          647.25,
+          679.81,
+          751.31
+        ],
+        "median_mhz": 647.2
+      },
+      "heap/router2": {
+        "fmax_by_seed": [
+          508.39,
+          517.6,
+          597.37,
+          702.74,
+          874.13
+        ],
+        "median_mhz": 597.4
+      },
+      "sa/router2": {
+        "fmax_by_seed": [
+          315.46,
+          323.1,
+          410.68,
+          410.68,
+          458.72
+        ],
+        "median_mhz": 410.7
+      }
+    },
+    "w_fp8e5m2": {
+      "heap/router1": {
+        "fmax_by_seed": [
+          594.18,
+          594.18,
+          594.18,
+          597.73,
+          677.51
+        ],
+        "median_mhz": 594.2
+      },
+      "heap/router2": {
+        "fmax_by_seed": [
+          517.6,
+          543.18,
+          607.53,
+          612.37,
+          624.61
+        ],
+        "median_mhz": 607.5
+      },
+      "sa/router2": {
+        "fmax_by_seed": [
+          301.2,
+          334.45,
+          446.43,
+          489.0,
+          593.47
+        ],
+        "median_mhz": 446.4
+      }
+    },
+    "w_gf10": {
+      "heap/router1": {
+        "fmax_by_seed": [
+          408.66,
+          420.7,
+          423.91,
+          441.11,
+          488.04
+        ],
+        "median_mhz": 423.9
+      },
+      "heap/router2": {
+        "fmax_by_seed": [
+          365.1,
+          396.35,
+          396.98,
+          401.93,
+          442.87
+        ],
+        "median_mhz": 397.0
+      },
+      "sa/router2": {
+        "fmax_by_seed": [
+          105.51,
+          123.03,
+          123.72,
+          130.5,
+          130.75
+        ],
+        "median_mhz": 123.7
+      }
+    },
+    "w_gf14": {
+      "heap/router1": {
+        "fmax_by_seed": [
+          323.83,
+          344.23,
+          350.39,
+          357.4,
+          382.85
+        ],
+        "median_mhz": 350.4
+      },
+      "heap/router2": {
+        "fmax_by_seed": [
+          308.64,
+          315.36,
+          342.0,
+          347.83,
+          348.92
+        ],
+        "median_mhz": 342.0
+      },
+      "sa/router2": {
+        "fmax_by_seed": [
+          118.99,
+          124.18,
+          137.49,
+          138.06,
+          141.9
+        ],
+        "median_mhz": 137.5
+      }
+    },
+    "w_gfplus8": {
+      "heap/router1": {
+        "fmax_by_seed": [
+          319.8,
+          340.95,
+          352.86,
+          355.62,
+          360.49
+        ],
+        "median_mhz": 352.9
+      },
+      "heap/router2": {
+        "fmax_by_seed": [
+          298.86,
+          302.02,
+          304.79,
+          318.07,
+          344.47
+        ],
+        "median_mhz": 304.8
+      },
+      "sa/router2": {
+        "fmax_by_seed": [
+          68.68,
+          98.75,
+          106.01,
+          111.56,
+          113.25
+        ],
+        "median_mhz": 106.0
+      }
+    },
+    "w_gfternary": {
+      "heap/router1": {
+        "fmax_by_seed": [
+          622.67,
+          665.34,
+          675.68,
+          683.06,
+          711.74
+        ],
+        "median_mhz": 675.7
+      },
+      "heap/router2": {
+        "fmax_by_seed": [
+          433.28,
+          486.85,
+          509.94,
+          511.51,
+          549.15
+        ],
+        "median_mhz": 509.9
+      },
+      "sa/router2": {
+        "fmax_by_seed": [
+          132.98,
+          158.5,
+          182.35,
+          205.38,
+          247.28
+        ],
+        "median_mhz": 182.3
+      }
+    },
+    "w_ibmhfp": {
+      "heap/router1": {
+        "fmax_by_seed": [
+          149.79,
+          151.56,
+          154.99,
+          155.13,
+          161.37
+        ],
+        "median_mhz": 155.0
+      },
+      "heap/router2": {
+        "fmax_by_seed": [
+          130.21,
+          131.32,
+          133.07,
+          135.12,
+          143.45
+        ],
+        "median_mhz": 133.1
+      },
+      "sa/router2": {
+        "fmax_by_seed": [
+          44.09,
+          64.67,
+          65.09,
+          65.93,
+          74.24
+        ],
+        "median_mhz": 65.1
+      }
+    },
+    "w_int8": {
+      "heap/router1": {
+        "fmax_by_seed": [
+          971.82,
+          993.05,
+          1001.0,
+          1003.01,
+          1017.29
+        ],
+        "median_mhz": 1001.0
+      },
+      "heap/router2": {
+        "fmax_by_seed": [
+          591.02,
+          679.35,
+          749.06,
+          790.51,
+          816.99
+        ],
+        "median_mhz": 749.1
+      },
+      "sa/router2": {
+        "fmax_by_seed": [
+          523.56,
+          531.91,
+          544.96,
+          563.38,
+          684.93
+        ],
+        "median_mhz": 545.0
+      }
+    },
+    "w_lns16": {
+      "heap/router1": {
+        "fmax_by_seed": [
+          306.84,
+          307.6,
+          310.27,
+          323.31,
+          327.01
+        ],
+        "median_mhz": 310.3
+      },
+      "heap/router2": {
+        "fmax_by_seed": [
+          274.88,
+          282.81,
+          296.03,
+          302.66,
+          303.12
+        ],
+        "median_mhz": 296.0
+      },
+      "sa/router2": {
+        "fmax_by_seed": [
+          57.18,
+          64.58,
+          66.58,
+          66.93,
+          78.3
+        ],
+        "median_mhz": 66.6
+      }
+    },
+    "w_minifl": {
+      "heap/router1": {
+        "fmax_by_seed": [
+          488.52,
+          493.83,
+          500.75,
+          565.61,
+          589.97
+        ],
+        "median_mhz": 500.8
+      },
+      "heap/router2": {
+        "fmax_by_seed": [
+          499.25,
+          521.1,
+          533.33,
+          533.62,
+          535.33
+        ],
+        "median_mhz": 533.3
+      },
+      "sa/router2": {
+        "fmax_by_seed": [
+          109.18,
+          119.95,
+          127.83,
+          133.17,
+          140.25
+        ],
+        "median_mhz": 127.8
+      }
+    },
+    "w_posit16": {
+      "heap/router1": {
+        "fmax_by_seed": [
+          129.08,
+          134.32,
+          134.75,
+          135.56,
+          139.59
+        ],
+        "median_mhz": 134.8
+      },
+      "heap/router2": {
+        "fmax_by_seed": [
+          116.82,
+          119.27,
+          121.11,
+          122.19,
+          123.84
+        ],
+        "median_mhz": 121.1
+      },
+      "sa/router2": {
+        "fmax_by_seed": [
+          31.05,
+          35.03,
+          38.75,
+          43.77,
+          45.26
+        ],
+        "median_mhz": 38.8
+      }
+    },
+    "w_posit32": {
+      "heap/router1": {
+        "fmax_by_seed": [
+          72.86,
+          74.01,
+          75.69,
+          76.96,
+          77.89
+        ],
+        "median_mhz": 75.7
+      },
+      "heap/router2": {
+        "fmax_by_seed": [
+          64.22,
+          64.59,
+          67.82,
+          68.28,
+          69.74
+        ],
+        "median_mhz": 67.8
+      },
+      "sa/router2": {
+        "fmax_by_seed": [
+          22.12,
+          22.16,
+          24.47,
+          25.34,
+          27.21
+        ],
+        "median_mhz": 24.5
+      }
+    },
+    "w_posit64": {
+      "heap/router1": {
+        "fmax_by_seed": [
+          35.42,
+          36.33,
+          36.43,
+          36.44,
+          36.5
+        ],
+        "median_mhz": 36.4
+      },
+      "heap/router2": {
+        "fmax_by_seed": [
+          29.98,
+          30.74,
+          31.2,
+          31.27,
+          31.71
+        ],
+        "median_mhz": 31.2
+      },
+      "sa/router2": {
+        "fmax_by_seed": [
+          10.45,
+          10.72,
+          11.06,
+          11.12,
+          12.77
+        ],
+        "median_mhz": 11.1
+      }
+    },
+    "w_tnf16": {
+      "heap/router1": {
+        "fmax_by_seed": [
+          573.39,
+          599.16,
+          642.67,
+          746.27,
+          758.73
+        ],
+        "median_mhz": 642.7
+      },
+      "heap/router2": {
+        "fmax_by_seed": [
+          528.26,
+          543.18,
+          584.11,
+          628.14,
+          745.71
+        ],
+        "median_mhz": 584.1
+      },
+      "sa/router2": {
+        "fmax_by_seed": [
+          99.08,
+          134.72,
+          148.3,
+          199.24,
+          246.12
+        ],
+        "median_mhz": 148.3
+      }
+    },
+    "w_tnf32": {
+      "heap/router1": {
+        "fmax_by_seed": [
+          591.72,
+          598.09,
+          642.67,
+          702.74,
+          717.88
+        ],
+        "median_mhz": 642.7
+      },
+      "heap/router2": {
+        "fmax_by_seed": [
+          567.86,
+          586.17,
+          586.51,
+          592.42,
+          608.64
+        ],
+        "median_mhz": 586.5
+      },
+      "sa/router2": {
+        "fmax_by_seed": [
+          133.9,
+          193.95,
+          201.73,
+          215.33,
+          220.31
+        ],
+        "median_mhz": 201.7
+      }
+    },
+    "w_tnf64": {
+      "heap/router1": {
+        "fmax_by_seed": [
+          598.44,
+          625.0,
+          656.6,
+          689.18,
+          710.23
+        ],
+        "median_mhz": 656.6
+      },
+      "heap/router2": {
+        "fmax_by_seed": [
+          535.91,
+          615.01,
+          643.92,
+          728.33,
+          786.78
+        ],
+        "median_mhz": 643.9
+      },
+      "sa/router2": {
+        "fmax_by_seed": [
+          133.64,
+          165.89,
+          179.28,
+          204.12,
+          212.63
+        ],
+        "median_mhz": 179.3
+      }
+    },
+    "w_vaxf": {
+      "heap/router1": {
+        "fmax_by_seed": [
+          456.83,
+          458.72,
+          463.18,
+          486.38,
+          517.6
+        ],
+        "median_mhz": 463.2
+      },
+      "heap/router2": {
+        "fmax_by_seed": [
+          387.75,
+          407.33,
+          437.25,
+          497.76,
+          513.87
+        ],
+        "median_mhz": 437.2
+      },
+      "sa/router2": {
+        "fmax_by_seed": [
+          95.63,
+          125.28,
+          128.92,
+          141.24,
+          159.87
+        ],
+        "median_mhz": 128.9
+      }
+    }
+  },
+  "inversions": {
+    "heap/router1 vs heap/router2": 7,
+    "heap/router1 vs sa/router2": 13,
+    "heap/router2 vs sa/router2": 12
+  },
+  "inversion_pairs": {
+    "heap/router1 vs heap/router2": [
+      {
+        "pair": [
+          "w_fp8e4m3",
+          "w_gfternary"
+        ],
+        "first": {
+          "w_fp8e4m3": 647.2,
+          "w_gfternary": 675.7
+        },
+        "second": {
+          "w_fp8e4m3": 597.4,
+          "w_gfternary": 509.9
+        }
+      },
+      {
+        "pair": [
+          "w_fp8e5m2",
+          "w_gfternary"
+        ],
+        "first": {
+          "w_fp8e5m2": 594.2,
+          "w_gfternary": 675.7
+        },
+        "second": {
+          "w_fp8e5m2": 607.5,
+          "w_gfternary": 509.9
+        }
+      },
+      {
+        "pair": [
+          "w_fp8e5m2",
+          "w_tnf16"
+        ],
+        "first": {
+          "w_fp8e5m2": 594.2,
+          "w_tnf16": 642.7
+        },
+        "second": {
+          "w_fp8e5m2": 607.5,
+          "w_tnf16": 584.1
+        }
+      },
+      {
+        "pair": [
+          "w_fp8e5m2",
+          "w_tnf32"
+        ],
+        "first": {
+          "w_fp8e5m2": 594.2,
+          "w_tnf32": 642.7
+        },
+        "second": {
+          "w_fp8e5m2": 607.5,
+          "w_tnf32": 586.5
+        }
+      },
+      {
+        "pair": [
+          "w_gfternary",
+          "w_minifl"
+        ],
+        "first": {
+          "w_gfternary": 675.7,
+          "w_minifl": 500.8
+        },
+        "second": {
+          "w_gfternary": 509.9,
+          "w_minifl": 533.3
+        }
+      },
+      {
+        "pair": [
+          "w_gfternary",
+          "w_tnf16"
+        ],
+        "first": {
+          "w_gfternary": 675.7,
+          "w_tnf16": 642.7
+        },
+        "second": {
+          "w_gfternary": 509.9,
+          "w_tnf16": 584.1
+        }
+      },
+      {
+        "pair": [
+          "w_gfternary",
+          "w_tnf32"
+        ],
+        "first": {
+          "w_gfternary": 675.7,
+          "w_tnf32": 642.7
+        },
+        "second": {
+          "w_gfternary": 509.9,
+          "w_tnf32": 586.5
+        }
+      }
+    ],
+    "heap/router1 vs sa/router2": [
+      {
+        "pair": [
+          "w_bin16",
+          "w_gfplus8"
+        ],
+        "first": {
+          "w_bin16": 240.3,
+          "w_gfplus8": 352.9
+        },
+        "second": {
+          "w_bin16": 114.9,
+          "w_gfplus8": 106.0
+        }
+      },
+      {
+        "pair": [
+          "w_bin16",
+          "w_lns16"
+        ],
+        "first": {
+          "w_bin16": 240.3,
+          "w_lns16": 310.3
+        },
+        "second": {
+          "w_bin16": 114.9,
+          "w_lns16": 66.6
+        }
+      },
+      {
+        "pair": [
+          "w_bnf16",
+          "w_fp8e5m2"
+        ],
+        "first": {
+          "w_bnf16": 718.9,
+          "w_fp8e5m2": 594.2
+        },
+        "second": {
+          "w_bnf16": 418.4,
+          "w_fp8e5m2": 446.4
+        }
+      },
+      {
+        "pair": [
+          "w_fp8e4m3",
+          "w_fp8e5m2"
+        ],
+        "first": {
+          "w_fp8e4m3": 647.2,
+          "w_fp8e5m2": 594.2
+        },
+        "second": {
+          "w_fp8e4m3": 410.7,
+          "w_fp8e5m2": 446.4
+        }
+      },
+      {
+        "pair": [
+          "w_fp8e4m3",
+          "w_gfternary"
+        ],
+        "first": {
+          "w_fp8e4m3": 647.2,
+          "w_gfternary": 675.7
+        },
+        "second": {
+          "w_fp8e4m3": 410.7,
+          "w_gfternary": 182.3
+        }
+      },
+      {
+        "pair": [
+          "w_fp8e5m2",
+          "w_gfternary"
+        ],
+        "first": {
+          "w_fp8e5m2": 594.2,
+          "w_gfternary": 675.7
+        },
+        "second": {
+          "w_fp8e5m2": 446.4,
+          "w_gfternary": 182.3
+        }
+      },
+      {
+        "pair": [
+          "w_fp8e5m2",
+          "w_tnf16"
+        ],
+        "first": {
+          "w_fp8e5m2": 594.2,
+          "w_tnf16": 642.7
+        },
+        "second": {
+          "w_fp8e5m2": 446.4,
+          "w_tnf16": 148.3
+        }
+      },
+      {
+        "pair": [
+          "w_fp8e5m2",
+          "w_tnf32"
+        ],
+        "first": {
+          "w_fp8e5m2": 594.2,
+          "w_tnf32": 642.7
+        },
+        "second": {
+          "w_fp8e5m2": 446.4,
+          "w_tnf32": 201.7
+        }
+      },
+      {
+        "pair": [
+          "w_fp8e5m2",
+          "w_tnf64"
+        ],
+        "first": {
+          "w_fp8e5m2": 594.2,
+          "w_tnf64": 656.6
+        },
+        "second": {
+          "w_fp8e5m2": 446.4,
+          "w_tnf64": 179.3
+        }
+      },
+      {
+        "pair": [
+          "w_gf10",
+          "w_gf14"
+        ],
+        "first": {
+          "w_gf10": 423.9,
+          "w_gf14": 350.4
+        },
+        "second": {
+          "w_gf10": 123.7,
+          "w_gf14": 137.5
+        }
+      },
+      {
+        "pair": [
+          "w_gf14",
+          "w_minifl"
+        ],
+        "first": {
+          "w_gf14": 350.4,
+          "w_minifl": 500.8
+        },
+        "second": {
+          "w_gf14": 137.5,
+          "w_minifl": 127.8
+        }
+      },
+      {
+        "pair": [
+          "w_gf14",
+          "w_vaxf"
+        ],
+        "first": {
+          "w_gf14": 350.4,
+          "w_vaxf": 463.2
+        },
+        "second": {
+          "w_gf14": 137.5,
+          "w_vaxf": 128.9
+        }
+      },
+      {
+        "pair": [
+          "w_gfternary",
+          "w_tnf32"
+        ],
+        "first": {
+          "w_gfternary": 675.7,
+          "w_tnf32": 642.7
+        },
+        "second": {
+          "w_gfternary": 182.3,
+          "w_tnf32": 201.7
+        }
+      }
+    ],
+    "heap/router2 vs sa/router2": [
+      {
+        "pair": [
+          "w_bin16",
+          "w_gfplus8"
+        ],
+        "first": {
+          "w_bin16": 232.0,
+          "w_gfplus8": 304.8
+        },
+        "second": {
+          "w_bin16": 114.9,
+          "w_gfplus8": 106.0
+        }
+      },
+      {
+        "pair": [
+          "w_bin16",
+          "w_lns16"
+        ],
+        "first": {
+          "w_bin16": 232.0,
+          "w_lns16": 296.0
+        },
+        "second": {
+          "w_bin16": 114.9,
+          "w_lns16": 66.6
+        }
+      },
+      {
+        "pair": [
+          "w_bin32",
+          "w_int8"
+        ],
+        "first": {
+          "w_bin32": 878.7,
+          "w_int8": 749.1
+        },
+        "second": {
+          "w_bin32": 523.6,
+          "w_int8": 545.0
+        }
+      },
+      {
+        "pair": [
+          "w_bnf16",
+          "w_fp8e5m2"
+        ],
+        "first": {
+          "w_bnf16": 744.0,
+          "w_fp8e5m2": 607.5
+        },
+        "second": {
+          "w_bnf16": 418.4,
+          "w_fp8e5m2": 446.4
+        }
+      },
+      {
+        "pair": [
+          "w_fp8e4m3",
+          "w_tnf64"
+        ],
+        "first": {
+          "w_fp8e4m3": 597.4,
+          "w_tnf64": 643.9
+        },
+        "second": {
+          "w_fp8e4m3": 410.7,
+          "w_tnf64": 179.3
+        }
+      },
+      {
+        "pair": [
+          "w_fp8e5m2",
+          "w_tnf64"
+        ],
+        "first": {
+          "w_fp8e5m2": 607.5,
+          "w_tnf64": 643.9
+        },
+        "second": {
+          "w_fp8e5m2": 446.4,
+          "w_tnf64": 179.3
+        }
+      },
+      {
+        "pair": [
+          "w_gf10",
+          "w_gf14"
+        ],
+        "first": {
+          "w_gf10": 397.0,
+          "w_gf14": 342.0
+        },
+        "second": {
+          "w_gf10": 123.7,
+          "w_gf14": 137.5
+        }
+      },
+      {
+        "pair": [
+          "w_gf14",
+          "w_minifl"
+        ],
+        "first": {
+          "w_gf14": 342.0,
+          "w_minifl": 533.3
+        },
+        "second": {
+          "w_gf14": 137.5,
+          "w_minifl": 127.8
+        }
+      },
+      {
+        "pair": [
+          "w_gf14",
+          "w_vaxf"
+        ],
+        "first": {
+          "w_gf14": 342.0,
+          "w_vaxf": 437.2
+        },
+        "second": {
+          "w_gf14": 137.5,
+          "w_vaxf": 128.9
+        }
+      },
+      {
+        "pair": [
+          "w_gfternary",
+          "w_minifl"
+        ],
+        "first": {
+          "w_gfternary": 509.9,
+          "w_minifl": 533.3
+        },
+        "second": {
+          "w_gfternary": 182.3,
+          "w_minifl": 127.8
+        }
+      },
+      {
+        "pair": [
+          "w_gfternary",
+          "w_tnf16"
+        ],
+        "first": {
+          "w_gfternary": 509.9,
+          "w_tnf16": 584.1
+        },
+        "second": {
+          "w_gfternary": 182.3,
+          "w_tnf16": 148.3
+        }
+      },
+      {
+        "pair": [
+          "w_tnf32",
+          "w_tnf64"
+        ],
+        "first": {
+          "w_tnf32": 586.5,
+          "w_tnf64": 643.9
+        },
+        "second": {
+          "w_tnf32": 201.7,
+          "w_tnf64": 179.3
+        }
+      }
+    ]
+  },
+  "note": "Decoder harnesses on a different part and flow from any published table; absolute figures are not comparable and not offered as corrections. The RANKING property is the finding.",
+  "finding": "The placer/router configuration changes not only magnitudes but the ORDER. 21 designs, medians of five seeds per configuration, ties under 3% excluded: 7 pairwise inversions between heap/router1 and heap/router2 -- a router change alone -- and 13 between heap/router1 and sa/router2. The inversions include format-versus-format verdicts of the kind the paper adjudicates: fp8e5m2-vs-tnf16 flips from TNF ahead (594.2/642.7) to fp8 ahead threefold (446.4/148.3), and every one of the seven router-only inversions involves a TNF-family or GFTernary comparison against fp8. A comparison table whose caption does not name the placer and router pins its RANKING to an unstated choice."
+}

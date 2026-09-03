@@ -3,12 +3,17 @@
 // ⲤⲀⲔⲢⲀ ⲪⲞⲢⲘⲨⲖⲀ: V = n × 3^k × π^m × φ^p × e^q
 
 const std = @import("std");
-const tvc_hybrid = @import("hybrid.zig");
-const tvc_vsa = @import("vsa.zig");
+// ONE source for the type. src/vsa_hybrid/ is a local leftover of the same
+// HybridBigInt the `vsa` module already exports, and taking the type from one
+// while calling functions from the other makes two nominally distinct types
+// out of one structural type -- which is what every
+// "expected vsa_hybrid.hybrid_impl.HybridBigInt, found ternary.hybrid.HybridBigInt"
+// was. The module is the source of truth.
+const tvc_vsa = @import("vsa");
 
-pub const HybridBigInt = tvc_hybrid.HybridBigInt;
-pub const Trit = tvc_hybrid.Trit;
-pub const MAX_TRITS = tvc_hybrid.MAX_TRITS;
+pub const HybridBigInt = tvc_vsa.HybridBigInt;
+pub const Trit = tvc_vsa.Trit;
+pub const MAX_TRITS = tvc_vsa.MAX_TRITS;
 
 // Sacred opcodes module (v7.0)
 const sacred_opcodes = @import("vm/opcodes.zig");
@@ -127,19 +132,12 @@ pub const VSAInstruction = struct {
 // VSA VM
 // ═══════════════════════════════════════════════════════════════════════════════
 
-// Import JIT engine for accelerated operations
-const vsa_jit = @import("vsa_jit.zig");
-
 pub const VSAVM = struct {
     registers: VSARegisters,
     program: std.ArrayListUnmanaged(VSAInstruction),
     halted: bool = false,
     allocator: std.mem.Allocator,
     cycle_count: u64 = 0,
-
-    // JIT engine for accelerated VSA operations
-    jit_engine: ?vsa_jit.JitVSAEngine = null,
-    jit_enabled: bool = true,
 
     // Trinity: Sacred execution context
     sacred_ctx: SacredContext,
@@ -149,16 +147,12 @@ pub const VSAVM = struct {
             .registers = .{},
             .program = .{},
             .allocator = allocator,
-            .jit_engine = vsa_jit.JitVSAEngine.init(allocator),
             .sacred_ctx = SacredContext.init(allocator),
         };
     }
 
     pub fn deinit(self: *VSAVM) void {
         self.program.deinit(self.allocator);
-        if (self.jit_engine) |*engine| {
-            engine.deinit();
-        }
         self.sacred_ctx.deinit();
     }
 
@@ -249,7 +243,7 @@ pub const VSAVM = struct {
     fn execVStore(self: *VSAVM, inst: VSAInstruction) void {
         // Store vector to scalar
         const src = self.getVReg(inst.src1);
-        self.registers.s0 = src.toI64(std.heap.page_allocator);
+        self.registers.s0 = src.toI64();
     }
 
     fn execVConst(self: *VSAVM, inst: VSAInstruction) void {
@@ -269,20 +263,6 @@ pub const VSAVM = struct {
         var src1 = self.getVReg(inst.src1).*;
         var src2 = self.getVReg(inst.src2).*;
 
-        // Try JIT-accelerated bind if enabled
-        if (self.jit_enabled) {
-            if (self.jit_engine) |*engine| {
-                // Copy src1 to dst, then bind in place
-                dst.* = src1;
-                if (engine.bind(dst, &src2)) {
-                    return;
-                } else |_| {
-                    // JIT failed, fall through to scalar
-                }
-            }
-        }
-
-        // Scalar fallback
         dst.* = tvc_vsa.bind(&src1, &src2);
     }
 
@@ -291,19 +271,6 @@ pub const VSAVM = struct {
         var src1 = self.getVReg(inst.src1).*;
         var src2 = self.getVReg(inst.src2).*;
 
-        // Try JIT-accelerated unbind (same as bind) if enabled
-        if (self.jit_enabled) {
-            if (self.jit_engine) |*engine| {
-                dst.* = src1;
-                if (engine.bind(dst, &src2)) {
-                    return;
-                } else |_| {
-                    // JIT failed, fall through to scalar
-                }
-            }
-        }
-
-        // Scalar fallback
         dst.* = tvc_vsa.unbind(&src1, &src2);
     }
 
@@ -311,7 +278,7 @@ pub const VSAVM = struct {
         const dst = self.getVReg(inst.dst);
         var src1 = self.getVReg(inst.src1).*;
         var src2 = self.getVReg(inst.src2).*;
-        dst.* = tvc_vsa.bundle2(&src1, &src2, std.heap.page_allocator);
+        dst.* = tvc_vsa.bundle2(&src1, &src2);
     }
 
     fn execVBundle3(self: *VSAVM, inst: VSAInstruction) void {
@@ -319,46 +286,20 @@ pub const VSAVM = struct {
         var src1 = self.getVReg(inst.src1).*;
         var src2 = self.getVReg(inst.src2).*;
         var src3 = self.getVReg(inst.dst).*; // Use dst as third source
-        dst.* = tvc_vsa.bundle3(&src1, &src2, &src3, std.heap.page_allocator);
+        dst.* = tvc_vsa.bundle3(&src1, &src2, &src3);
     }
 
     fn execVDot(self: *VSAVM, inst: VSAInstruction) void {
         var src1 = self.getVReg(inst.src1).*;
         var src2 = self.getVReg(inst.src2).*;
 
-        // Try JIT-accelerated dot product if enabled
-        if (self.jit_enabled) {
-            if (self.jit_engine) |*engine| {
-                if (engine.dotProduct(&src1, &src2)) |result| {
-                    self.registers.s0 = result;
-                    return;
-                } else |_| {
-                    // JIT failed, fall through to scalar
-                }
-            }
-        }
-
-        // Scalar fallback
-        self.registers.s0 = src1.dotProduct(&src2, std.heap.page_allocator);
+        self.registers.s0 = src1.dotProduct(&src2);
     }
 
     fn execVCosine(self: *VSAVM, inst: VSAInstruction) void {
         var src1 = self.getVReg(inst.src1).*;
         var src2 = self.getVReg(inst.src2).*;
 
-        // Try JIT-accelerated cosine similarity if enabled
-        if (self.jit_enabled) {
-            if (self.jit_engine) |*engine| {
-                if (engine.cosineSimilarity(&src1, &src2)) |result| {
-                    self.registers.f0 = result;
-                    return;
-                } else |_| {
-                    // JIT failed, fall through to scalar
-                }
-            }
-        }
-
-        // Scalar fallback
         self.registers.f0 = tvc_vsa.cosineSimilarity(&src1, &src2);
     }
 
@@ -366,19 +307,6 @@ pub const VSAVM = struct {
         var src1 = self.getVReg(inst.src1).*;
         var src2 = self.getVReg(inst.src2).*;
 
-        // Try JIT-accelerated hamming distance if enabled
-        if (self.jit_enabled) {
-            if (self.jit_engine) |*engine| {
-                if (engine.hammingDistance(&src1, &src2)) |result| {
-                    self.registers.s0 = result;
-                    return;
-                } else |_| {
-                    // JIT failed, fall through to scalar
-                }
-            }
-        }
-
-        // Scalar fallback
         self.registers.s0 = @intCast(tvc_vsa.hammingDistance(&src1, &src2));
     }
 
@@ -386,20 +314,20 @@ pub const VSAVM = struct {
         const dst = self.getVReg(inst.dst);
         var src1 = self.getVReg(inst.src1).*;
         var src2 = self.getVReg(inst.src2).*;
-        dst.* = src1.add(&src2, std.heap.page_allocator);
+        dst.* = src1.add(&src2);
     }
 
     fn execVNeg(self: *VSAVM, inst: VSAInstruction) void {
         const dst = self.getVReg(inst.dst);
         const src = self.getVReg(inst.src1);
-        dst.* = src.negate(std.heap.page_allocator);
+        dst.* = src.negate();
     }
 
     fn execVMul(self: *VSAVM, inst: VSAInstruction) void {
         const dst = self.getVReg(inst.dst);
         var src1 = self.getVReg(inst.src1).*;
         var src2 = self.getVReg(inst.src2).*;
-        dst.* = src1.mul(&src2, std.heap.page_allocator);
+        dst.* = src1.mul(&src2);
     }
 
     fn execVMov(self: *VSAVM, inst: VSAInstruction) void {
@@ -451,7 +379,7 @@ pub const VSAVM = struct {
         var src2 = self.getVReg(inst.src2).*;
 
         var permuted = tvc_vsa.permute(&src2, 1);
-        dst.* = src1.add(&permuted, std.heap.page_allocator);
+        dst.* = src1.add(&permuted);
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
@@ -490,7 +418,7 @@ pub const VSAVM = struct {
         dst.ensureUnpacked();
         dst.trit_len = 16;
         inline for (0..16) |i| {
-            dst.unpacked_cache.?[i] = ternary_vec[i];
+            dst.unpacked_cache[i] = ternary_vec[i];
         }
     }
 
@@ -503,7 +431,7 @@ pub const VSAVM = struct {
         // Convert first 16 trits to f16
         var f16_vec: @Vector(16, f16) = undefined;
         inline for (0..16) |i| {
-            const trit: i8 = if (i < src.trit_len) src.unpacked_cache.?[i] else 0;
+            const trit: i8 = if (i < src.trit_len) src.unpacked_cache[i] else 0;
             f16_vec[i] = @floatCast(@as(f32, @floatFromInt(trit)));
         }
 
@@ -528,8 +456,8 @@ pub const VSAVM = struct {
         var a_f16: @Vector(16, f16) = undefined;
         var b_f16: @Vector(16, f16) = undefined;
         inline for (0..16) |i| {
-            const a_trit: i8 = if (i < a.trit_len) a.unpacked_cache.?[i] else 0;
-            const b_trit: i8 = if (i < b.trit_len) b.unpacked_cache.?[i] else 0;
+            const a_trit: i8 = if (i < a.trit_len) a.unpacked_cache[i] else 0;
+            const b_trit: i8 = if (i < b.trit_len) b.unpacked_cache[i] else 0;
             a_f16[i] = @floatCast(@as(f32, @floatFromInt(a_trit)));
             b_f16[i] = @floatCast(@as(f32, @floatFromInt(b_trit)));
         }
@@ -866,32 +794,6 @@ pub const VSAVM = struct {
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
-    // JIT CONTROL
-    // ═══════════════════════════════════════════════════════════════════════════
-
-    /// Enable or disable JIT acceleration
-    pub fn setJitEnabled(self: *VSAVM, enabled: bool) void {
-        self.jit_enabled = enabled;
-    }
-
-    /// Get JIT statistics (null if JIT not initialized)
-    pub fn getJitStats(self: *const VSAVM) ?vsa_jit.JitVSAEngine.Stats {
-        if (self.jit_engine) |*engine| {
-            return engine.getStats();
-        }
-        return null;
-    }
-
-    /// Print JIT statistics
-    pub fn printJitStats(self: *const VSAVM) void {
-        if (self.jit_engine) |*engine| {
-            engine.printStats();
-        } else {
-            std.debug.print("JIT engine not initialized\n", .{});
-        }
-    }
-
-    // ═══════════════════════════════════════════════════════════════════════════
     // DEBUG
     // ═══════════════════════════════════════════════════════════════════════════
 
@@ -916,14 +818,6 @@ pub const VSAVM = struct {
         std.debug.print("║  halted: {}                              ║\n", .{self.halted});
         std.debug.print("║  total memory: {} bytes                  ║\n", .{self.registers.total_packed_bytes});
         std.debug.print("╠══════════════════════════════════════════╣\n", .{});
-        std.debug.print("║ JIT ACCELERATION:                        ║\n", .{});
-        std.debug.print("║  enabled: {}                             ║\n", .{self.jit_enabled});
-        if (self.jit_engine) |*engine| {
-            const stats = engine.getStats();
-            std.debug.print("║  ops: {}, hits: {}, rate: {d:.1}%         ║\n", .{ stats.total_ops, stats.jit_hits, stats.hit_rate });
-        } else {
-            std.debug.print("║  engine: not initialized                 ║\n", .{});
-        }
         std.debug.print("╚══════════════════════════════════════════╝\n\n", .{});
     }
 };
@@ -971,7 +865,6 @@ test "VSA VM bind/unbind" {
 
 test "VSA VM bundle similarity" {
     var vm = VSAVM.init(std.testing.allocator);
-    vm.jit_enabled = false; // Disable JIT (has bug in cosineSimilarity)
     defer vm.deinit();
 
     const program = [_]VSAInstruction{
@@ -992,7 +885,6 @@ test "VSA VM bundle similarity" {
 
 test "VSA VM permute" {
     var vm = VSAVM.init(std.testing.allocator);
-    vm.jit_enabled = false; // Disable JIT (has bug in cosineSimilarity)
     defer vm.deinit();
 
     const program = [_]VSAInstruction{
@@ -1059,7 +951,7 @@ test "VSA VM dot product" {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 pub fn runBenchmarks() void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
@@ -1147,10 +1039,8 @@ test "VSA VM f16: v_f16_load quantizes correctly" {
 
     // All values should be in {-1, 0, +1}
     for (0..16) |i| {
-        if (v0.unpacked_cache) |cache| {
-            const val = cache[i];
-            try std.testing.expect(val == -1 or val == 0 or val == 1);
-        }
+        const val = v0.unpacked_cache[i];
+        try std.testing.expect(val == -1 or val == 0 or val == 1);
     }
 }
 

@@ -1,0 +1,100 @@
+blinky-run1: 39:Info: Annotating ports with timing budgets for target frequency 12.00 MHz
+blinky-run1: 120:Info: Max frequency for clock '$abc$2043$iopadmap$clk': 181.13 MHz (PASS at 12.00 MHz)
+blinky-run1: 341:Info: Max frequency for clock '$abc$2043$iopadmap$clk': 337.15 MHz (PASS at 12.00 MHz)
+blinky-run2: 39:Info: Annotating ports with timing budgets for target frequency 12.00 MHz
+blinky-run2: 120:Info: Max frequency for clock '$abc$2043$iopadmap$clk': 181.13 MHz (PASS at 12.00 MHz)
+blinky-run2: 341:Info: Max frequency for clock '$abc$2043$iopadmap$clk': 337.15 MHz (PASS at 12.00 MHz)
+blinky-run3: 39:Info: Annotating ports with timing budgets for target frequency 12.00 MHz
+blinky-run3: 120:Info: Max frequency for clock '$abc$2043$iopadmap$clk': 181.13 MHz (PASS at 12.00 MHz)
+blinky-run3: 341:Info: Max frequency for clock '$abc$2043$iopadmap$clk': 337.15 MHz (PASS at 12.00 MHz)
+blinky-run4: 39:Info: Annotating ports with timing budgets for target frequency 12.00 MHz
+blinky-run4: 120:Info: Max frequency for clock '$abc$2043$iopadmap$clk': 181.13 MHz (PASS at 12.00 MHz)
+blinky-run4: 341:Info: Max frequency for clock '$abc$2043$iopadmap$clk': 337.15 MHz (PASS at 12.00 MHz)
+blinky-run5: 39:Info: Annotating ports with timing budgets for target frequency 12.00 MHz
+blinky-run5: 120:Info: Max frequency for clock '$abc$2043$iopadmap$clk': 181.13 MHz (PASS at 12.00 MHz)
+blinky-run5: 341:Info: Max frequency for clock '$abc$2043$iopadmap$clk': 337.15 MHz (PASS at 12.00 MHz)
+litex-ddr-arty-s7-deephier-run1: 291:Info: Annotating ports with timing budgets for target frequency 12.00 MHz
+litex-ddr-arty-s7-deephier-run1: 380:Info: Max frequency for clock     'crg.clk100': 1086.96 MHz (PASS at 12.00 MHz)
+litex-ddr-arty-s7-deephier-run1: 381:Info: Max frequency for clock        'sys_clk': 74.21 MHz (PASS at 12.00 MHz)
+litex-ddr-arty-s7-deephier-run1: 382:Info: Max frequency for clock 'crg.idelay_clk': 256.87 MHz (PASS at 12.00 MHz)
+litex-ddr-arty-s7-deephier-run1: 1511:Info: Max frequency for clock     'crg.clk100': 1058.20 MHz (PASS at 12.00 MHz)
+litex-ddr-arty-s7-deephier-run1: 1512:Info: Max frequency for clock        'sys_clk': 69.72 MHz (PASS at 12.00 MHz)
+litex-ddr-arty-s7-deephier-run1: 1513:Info: Max frequency for clock 'crg.idelay_clk': 271.52 MHz (PASS at 12.00 MHz)
+litex-ddr-arty-s7-deephier-run2: 291:Info: Annotating ports with timing budgets for target frequency 12.00 MHz
+litex-ddr-arty-s7-deephier-run2: 380:Info: Max frequency for clock     'crg.clk100': 1086.96 MHz (PASS at 12.00 MHz)
+litex-ddr-arty-s7-deephier-run2: 381:Info: Max frequency for clock        'sys_clk': 74.21 MHz (PASS at 12.00 MHz)
+litex-ddr-arty-s7-deephier-run2: 382:Info: Max frequency for clock 'crg.idelay_clk': 256.87 MHz (PASS at 12.00 MHz)
+litex-ddr-arty-s7-deephier-run2: 1511:Info: Max frequency for clock     'crg.clk100': 1058.20 MHz (PASS at 12.00 MHz)
+litex-ddr-arty-s7-deephier-run2: 1512:Info: Max frequency for clock        'sys_clk': 69.72 MHz (PASS at 12.00 MHz)
+litex-ddr-arty-s7-deephier-run2: 1513:Info: Max frequency for clock 'crg.idelay_clk': 271.52 MHz (PASS at 12.00 MHz)
+litex-ddr-arty-s7-deephier-run3: 291:Info: Annotating ports with timing budgets for target frequency 12.00 MHz
+litex-ddr-arty-s7-deephier-run3: 380:Info: Max frequency for clock     'crg.clk100': 1086.96 MHz (PASS at 12.00 MHz)
+litex-ddr-arty-s7-deephier-run3: 381:Info: Max frequency for clock        'sys_clk': 74.21 MHz (PASS at 12.00 MHz)
+litex-ddr-arty-s7-deephier-run3: 382:Info: Max frequency for clock 'crg.idelay_clk': 256.87 MHz (PASS at 12.00 MHz)
+litex-ddr-arty-s7-deephier-run3: 1511:Info: Max frequency for clock     'crg.clk100': 1058.20 MHz (PASS at 12.00 MHz)
+litex-ddr-arty-s7-deephier-run3: 1512:Info: Max frequency for clock        'sys_clk': 69.72 MHz (PASS at 12.00 MHz)
+litex-ddr-arty-s7-deephier-run3: 1513:Info: Max frequency for clock 'crg.idelay_clk': 271.52 MHz (PASS at 12.00 MHz)
+litex-ddr-arty-s7-deephier-run4: 291:Info: Annotating ports with timing budgets for target frequency 12.00 MHz
+litex-ddr-arty-s7-deephier-run4: 380:Info: Max frequency for clock     'crg.clk100': 1086.96 MHz (PASS at 12.00 MHz)
+litex-ddr-arty-s7-deephier-run4: 381:Info: Max frequency for clock        'sys_clk': 74.21 MHz (PASS at 12.00 MHz)
+litex-ddr-arty-s7-deephier-run4: 382:Info: Max frequency for clock 'crg.idelay_clk': 256.87 MHz (PASS at 12.00 MHz)
+litex-ddr-arty-s7-deephier-run4: 1511:Info: Max frequency for clock     'crg.clk100': 1058.20 MHz (PASS at 12.00 MHz)
+litex-ddr-arty-s7-deephier-run4: 1512:Info: Max frequency for clock        'sys_clk': 69.72 MHz (PASS at 12.00 MHz)
+litex-ddr-arty-s7-deephier-run4: 1513:Info: Max frequency for clock 'crg.idelay_clk': 271.52 MHz (PASS at 12.00 MHz)
+litex-ddr-arty-s7-deephier-run5: 291:Info: Annotating ports with timing budgets for target frequency 12.00 MHz
+litex-ddr-arty-s7-deephier-run5: 380:Info: Max frequency for clock     'crg.clk100': 1086.96 MHz (PASS at 12.00 MHz)
+litex-ddr-arty-s7-deephier-run5: 381:Info: Max frequency for clock        'sys_clk': 74.21 MHz (PASS at 12.00 MHz)
+litex-ddr-arty-s7-deephier-run5: 382:Info: Max frequency for clock 'crg.idelay_clk': 256.87 MHz (PASS at 12.00 MHz)
+litex-ddr-arty-s7-deephier-run5: 1511:Info: Max frequency for clock     'crg.clk100': 1058.20 MHz (PASS at 12.00 MHz)
+litex-ddr-arty-s7-deephier-run5: 1512:Info: Max frequency for clock        'sys_clk': 69.72 MHz (PASS at 12.00 MHz)
+litex-ddr-arty-s7-deephier-run5: 1513:Info: Max frequency for clock 'crg.idelay_clk': 271.52 MHz (PASS at 12.00 MHz)
+litex-ddr-arty-s7-run1: 286:Info: Annotating ports with timing budgets for target frequency 12.00 MHz
+litex-ddr-arty-s7-run1: 372:Info: Max frequency for clock       'main_crg_clkin': 1111.11 MHz (PASS at 12.00 MHz)
+litex-ddr-arty-s7-run1: 373:Info: Max frequency for clock 'main_crg_clkout_buf0': 65.52 MHz (PASS at 12.00 MHz)
+litex-ddr-arty-s7-run1: 374:Info: Max frequency for clock           'idelay_clk': 320.10 MHz (PASS at 12.00 MHz)
+litex-ddr-arty-s7-run1: 1514:Info: Max frequency for clock       'main_crg_clkin': 1015.23 MHz (PASS at 12.00 MHz)
+litex-ddr-arty-s7-run1: 1515:Info: Max frequency for clock 'main_crg_clkout_buf0': 68.73 MHz (PASS at 12.00 MHz)
+litex-ddr-arty-s7-run1: 1516:Info: Max frequency for clock           'idelay_clk': 283.29 MHz (PASS at 12.00 MHz)
+litex-ddr-arty-s7-run2: 286:Info: Annotating ports with timing budgets for target frequency 12.00 MHz
+litex-ddr-arty-s7-run2: 372:Info: Max frequency for clock       'main_crg_clkin': 1111.11 MHz (PASS at 12.00 MHz)
+litex-ddr-arty-s7-run2: 373:Info: Max frequency for clock 'main_crg_clkout_buf0': 65.52 MHz (PASS at 12.00 MHz)
+litex-ddr-arty-s7-run2: 374:Info: Max frequency for clock           'idelay_clk': 320.10 MHz (PASS at 12.00 MHz)
+litex-ddr-arty-s7-run2: 1514:Info: Max frequency for clock       'main_crg_clkin': 1015.23 MHz (PASS at 12.00 MHz)
+litex-ddr-arty-s7-run2: 1515:Info: Max frequency for clock 'main_crg_clkout_buf0': 68.73 MHz (PASS at 12.00 MHz)
+litex-ddr-arty-s7-run2: 1516:Info: Max frequency for clock           'idelay_clk': 283.29 MHz (PASS at 12.00 MHz)
+litex-ddr-arty-s7-run3: 286:Info: Annotating ports with timing budgets for target frequency 12.00 MHz
+litex-ddr-arty-s7-run3: 372:Info: Max frequency for clock       'main_crg_clkin': 1111.11 MHz (PASS at 12.00 MHz)
+litex-ddr-arty-s7-run3: 373:Info: Max frequency for clock 'main_crg_clkout_buf0': 65.52 MHz (PASS at 12.00 MHz)
+litex-ddr-arty-s7-run3: 374:Info: Max frequency for clock           'idelay_clk': 320.10 MHz (PASS at 12.00 MHz)
+litex-ddr-arty-s7-run3: 1514:Info: Max frequency for clock       'main_crg_clkin': 1015.23 MHz (PASS at 12.00 MHz)
+litex-ddr-arty-s7-run3: 1515:Info: Max frequency for clock 'main_crg_clkout_buf0': 68.73 MHz (PASS at 12.00 MHz)
+litex-ddr-arty-s7-run3: 1516:Info: Max frequency for clock           'idelay_clk': 283.29 MHz (PASS at 12.00 MHz)
+litex-ddr-arty-s7-run4: 286:Info: Annotating ports with timing budgets for target frequency 12.00 MHz
+litex-ddr-arty-s7-run4: 372:Info: Max frequency for clock       'main_crg_clkin': 1111.11 MHz (PASS at 12.00 MHz)
+litex-ddr-arty-s7-run4: 373:Info: Max frequency for clock 'main_crg_clkout_buf0': 65.52 MHz (PASS at 12.00 MHz)
+litex-ddr-arty-s7-run4: 374:Info: Max frequency for clock           'idelay_clk': 320.10 MHz (PASS at 12.00 MHz)
+litex-ddr-arty-s7-run4: 1514:Info: Max frequency for clock       'main_crg_clkin': 1015.23 MHz (PASS at 12.00 MHz)
+litex-ddr-arty-s7-run4: 1515:Info: Max frequency for clock 'main_crg_clkout_buf0': 68.73 MHz (PASS at 12.00 MHz)
+litex-ddr-arty-s7-run4: 1516:Info: Max frequency for clock           'idelay_clk': 283.29 MHz (PASS at 12.00 MHz)
+litex-ddr-arty-s7-run5: 286:Info: Annotating ports with timing budgets for target frequency 12.00 MHz
+litex-ddr-arty-s7-run5: 372:Info: Max frequency for clock       'main_crg_clkin': 1111.11 MHz (PASS at 12.00 MHz)
+litex-ddr-arty-s7-run5: 373:Info: Max frequency for clock 'main_crg_clkout_buf0': 65.52 MHz (PASS at 12.00 MHz)
+litex-ddr-arty-s7-run5: 374:Info: Max frequency for clock           'idelay_clk': 320.10 MHz (PASS at 12.00 MHz)
+litex-ddr-arty-s7-run5: 1514:Info: Max frequency for clock       'main_crg_clkin': 1015.23 MHz (PASS at 12.00 MHz)
+litex-ddr-arty-s7-run5: 1515:Info: Max frequency for clock 'main_crg_clkout_buf0': 68.73 MHz (PASS at 12.00 MHz)
+litex-ddr-arty-s7-run5: 1516:Info: Max frequency for clock           'idelay_clk': 283.29 MHz (PASS at 12.00 MHz)
+picosoc-qmtech-run1: 66:Info: Annotating ports with timing budgets for target frequency 12.00 MHz
+picosoc-qmtech-run1: 171:Info: Max frequency for clock 'clk_bufg': 64.08 MHz (PASS at 12.00 MHz)
+picosoc-qmtech-run1: 1260:Info: Max frequency for clock 'clk_bufg': 69.46 MHz (PASS at 12.00 MHz)
+picosoc-qmtech-run2: 66:Info: Annotating ports with timing budgets for target frequency 12.00 MHz
+picosoc-qmtech-run2: 171:Info: Max frequency for clock 'clk_bufg': 64.08 MHz (PASS at 12.00 MHz)
+picosoc-qmtech-run2: 1260:Info: Max frequency for clock 'clk_bufg': 69.46 MHz (PASS at 12.00 MHz)
+picosoc-qmtech-run3: 66:Info: Annotating ports with timing budgets for target frequency 12.00 MHz
+picosoc-qmtech-run3: 171:Info: Max frequency for clock 'clk_bufg': 64.08 MHz (PASS at 12.00 MHz)
+picosoc-qmtech-run3: 1260:Info: Max frequency for clock 'clk_bufg': 69.46 MHz (PASS at 12.00 MHz)
+picosoc-qmtech-run4: 66:Info: Annotating ports with timing budgets for target frequency 12.00 MHz
+picosoc-qmtech-run4: 171:Info: Max frequency for clock 'clk_bufg': 64.08 MHz (PASS at 12.00 MHz)
+picosoc-qmtech-run4: 1260:Info: Max frequency for clock 'clk_bufg': 69.46 MHz (PASS at 12.00 MHz)
+picosoc-qmtech-run5: 66:Info: Annotating ports with timing budgets for target frequency 12.00 MHz
+picosoc-qmtech-run5: 171:Info: Max frequency for clock 'clk_bufg': 64.08 MHz (PASS at 12.00 MHz)
+picosoc-qmtech-run5: 1260:Info: Max frequency for clock 'clk_bufg': 69.46 MHz (PASS at 12.00 MHz)

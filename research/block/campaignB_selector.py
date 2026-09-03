@@ -2,8 +2,9 @@
 """Campaign B: when can the KL selector be trusted?
 
 The fact under investigation.  `PLACEMENT_AND_ASYMMETRY_2026-08-12.md` reports
-that the joint-KL score ranks the ten placements well on OPT (rho = +0.927) and
-Qwen (+0.758) and not at all on SmolLM2 (+0.188) and Pythia (-0.030), and calls
+that the joint-KL score ranks the ten arms -- nine placements plus the clipping
+arm MX-asym-TOP -- well on OPT (rho = +0.927) and Qwen (+0.758) and not at all
+on SmolLM2 (+0.188) and Pythia (-0.030), and calls
 this "same objective, same procedure, same corpus".  It is not the same
 procedure: the joint score for held-out model h is a sum of KL over a DIFFERENT
 set of three donor checkpoints for each h.  Four numbers, four objectives.
@@ -22,7 +23,7 @@ The four candidate explanations, and how each is tested:
     against the published campaignA_kl_<model>.json score, which gates the whole
     sweep on reproducing the number it is supposed to explain.
 
-  2 SPREAD OF THE JUDGE.  If the ten placements are nearly tied on a model, no
+  2 SPREAD OF THE JUDGE.  If the ten arms are nearly tied on a model, no
     selector can rank them there.  Measured as the SD of the ten held-out
     margins over the window-level noise SE of a pairwise margin difference.
 
@@ -34,11 +35,15 @@ The four candidate explanations, and how each is tested:
     (campaignD_pred_<model>.json), and whether fingerprint similarity explains
     which models' placement rankings agree.
 
-STATISTICS.  Rank correlations over the ten placements are WITHIN-model claims
-(n = 10) and carry a window-level bootstrap CI; the windows are resampled
-jointly for the three 40-window models because they read the same text, and
-separately for Qwen, which has 20.  Any statement comparing protocols across
-checkpoints is a CROSS-model claim with n = 4 and is reported as the tie it is.
+STATISTICS.  Rank correlations over the ten ARMS are WITHIN-model claims, and
+the replicate unit of a rho is the BOOK: n = 10 books, not 10 windows and not
+10 models.  Each rho carries a window-level bootstrap CI, which says how well
+each book's margin is MEASURED on this text -- NOT how it would transfer to a
+fifth checkpoint, which is a different question and is answered at n = 4 below.
+The windows are resampled jointly for the three 40-window models because they
+read the same text, and separately for Qwen, which has 20.  Any statement
+comparing protocols across checkpoints is a CROSS-model claim with n = 4 and is
+reported as the tie it is.
 
     python3 campaignB_selector.py
 """
@@ -56,7 +61,27 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 MODELS = ["smollm2", "qwen", "pythia", "opt"]
 LABEL = {"smollm2": "SmolLM2-135M", "qwen": "Qwen2.5-0.5B",
          "pythia": "Pythia-160M", "opt": "OPT-125M"}
-CANDS = [n for n, k, lv in A.candidates()]
+# THE SET THE RANK CORRELATIONS RANGE OVER, named, because it changed once
+# already and took this script down with it.
+#
+# Every rho below was published over TEN arms: the nine kind="sig" placements
+# plus the kind="clip" arm MX-asym-TOP. On 2026-08-12 the clipping
+# reclassification (CLIPPING_ARM_CORRECTION) removed TOP from
+# `campaignA_books.candidates()`, so `CANDS` silently became nine -- and this
+# file kept saying "the ten placements", kept `range(10)`, and kept
+# PUBLISHED_JOINT_RHO. Its own gate then failed with
+# "smollm2: +0.4333 != published +0.188", which reads like a measurement that
+# stopped reproducing and was in fact a SET that stopped matching its name.
+#
+# So the ranking set is spelled out here rather than inherited. It is still the
+# ten, because that is what the published numbers describe and what the prose
+# below interprets; section 1b already reports every rho with TOP dropped, which
+# is the sensitivity this reclassification calls for. What is fixed is that the
+# set is now named, counted, and gated -- not implied by an import.
+PLACEMENTS = [n for n, k, lv in A.candidates()]
+RANKSET = PLACEMENTS + [n for n, k, lv in A.clipping_arms()]
+CANDS = RANKSET
+NCAND = len(RANKSET)
 KS = [2, 4, 8, 16]
 B = 4000
 SEED = 20260812
@@ -157,7 +182,9 @@ def main():
     print("all four reproduce.\n")
 
     print("=" * 100)
-    print("1.  THE OBJECTIVE ON ITS OWN CHECKPOINT vs THE JOINT SUM  (n = 10 placements)")
+    print(f"1.  THE OBJECTIVE ON ITS OWN CHECKPOINT vs THE JOINT SUM  "
+          f"(n = {NCAND} books: {len(PLACEMENTS)} placements + "
+          f"{NCAND - len(PLACEMENTS)} clipping arm)")
     print("    own-KL   = rho( KL(fp32||book) on model m , perplexity margin on model m )")
     print("    joint-KL = rho( sum of KL over the OTHER three checkpoints , same margin )")
     print("=" * 100)
@@ -187,8 +214,8 @@ def main():
     print("    TOP is not an insertion -- it extends the ladder to 16/12, and the forced")
     print("    renormalisation moves every level and clips the negative extreme to -0.75.")
     print("=" * 100)
-    SUBSETS = [("all ten", CANDS),
-               ("without TOP", [c for c in CANDS if "TOP" not in c]),
+    SUBSETS = [(f"all {NCAND}", RANKSET),
+               (f"without TOP ({len(PLACEMENTS)} placements)", PLACEMENTS),
                ("seven positive-gap insertions only",
                 [c for c in CANDS if c.split("-")[-1]
                  in ("NEAR0", "G12", "G23", "G34", "MID2", "G68", "MID")])]
@@ -283,7 +310,7 @@ def main():
     for m in MODELS:
         v = 100 * (np.exp(pt[m]) - 1)
         ses = [100 * (marg[m][i] - marg[m][j]).std(ddof=1) / np.sqrt(nwin[m])
-               for i in range(10) for j in range(i + 1, 10)]
+               for i in range(NCAND) for j in range(i + 1, NCAND)]
         se = float(np.median(ses))
         sp[m] = {"spread_pp": float(v.max() - v.min()), "sd_pp": float(v.std(ddof=1)),
                  "noise_se_pp": se, "sd_over_se": float(v.std(ddof=1) / se)}
@@ -335,7 +362,14 @@ def main():
         d1.append(d)
         ag.append(agree[f"{a}|{b}"]["ppl"])
         print(f"{a + ' vs ' + b:<26}{d:>22.4f}{agree[f'{a}|{b}']['ppl']:>+20.3f}")
-    print(f"\nrho( fingerprint distance , agreement ) = {rho(d1, ag):+.3f}  (n = 6). The")
+    # n = 6 is the number of PAIRS, which is not the number of independent
+    # things: four models generate six pairs and every model appears in three of
+    # them, so the six rows are not exchangeable and no p-value is quoted for
+    # this rho or for the one two sections above. Both are read as descriptions
+    # of the table printed beside them, and the conjecture is refuted by its
+    # SIGN plus the named counterexample, not by this correlation.
+    print(f"\nrho( fingerprint distance , agreement ) = {rho(d1, ag):+.3f}  "
+          f"(6 pairs of 4 models -- not 6 independent units; no p). The")
     print("conjecture predicts NEGATIVE. The pair with the most similar weight distributions")
     print("(SmolLM2/Pythia) is the pair whose placement rankings agree LEAST.")
     out["fingerprint"] = {"l1_bin_mass": dict(zip([f"{a}|{b}" for a, b in pairs], d1)),

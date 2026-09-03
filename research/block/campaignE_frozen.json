@@ -1,0 +1,64 @@
+{
+ "frozen_utc": "2026-08-12T15:37:09Z",
+ "factor": 2.0,
+ "per_model": {
+  "smollm2": {
+   "R": 0.057553983207360875,
+   "occ_band_s2w": 0.07135822305709694,
+   "occ_band_raw": 0.05783716837565104,
+   "ruler_src": "published",
+   "fp32": 14.4874,
+   "MXFP4": 21.9397,
+   "L": 0.41501847495828414,
+   "pred_pct": -2.3602954460037795
+  },
+  "qwen": {
+   "R": 0.06014901292192812,
+   "occ_band_s2w": 0.07373982285921363,
+   "occ_band_raw": 0.05977754138764881,
+   "ruler_src": "published",
+   "fp32": 12.6999,
+   "MXFP4": 15.4374,
+   "L": 0.1951990172166247,
+   "pred_pct": -1.1672371300803563
+  },
+  "pythia": {
+   "R": 0.049347054370343,
+   "occ_band_s2w": 0.06383616031191669,
+   "occ_band_raw": 0.05738234814302421,
+   "ruler_src": "published",
+   "fp32": 25.9561,
+   "MXFP4": 47.6504,
+   "L": 0.6074843751832679,
+   "pred_pct": -2.9532693768043794
+  },
+  "opt": {
+   "R": 0.07524339528364599,
+   "occ_band_s2w": 0.08347985428334223,
+   "occ_band_raw": 0.06509491249367043,
+   "ruler_src": "published",
+   "fp32": 27.5678,
+   "MXFP4": 30.7871,
+   "L": 0.11044734610532814,
+   "pred_pct": -0.8275997129292945
+  },
+  "gpt2": {
+   "R": 0.06020821715909603,
+   "occ_band_s2w": 0.07200585604535906,
+   "occ_band_raw": 0.05884676803777247,
+   "ruler_src": null
+  },
+  "gptneo125m": {
+   "R": 0.06336466723796277,
+   "occ_band_s2w": 0.07470690765745035,
+   "occ_band_raw": 0.05970775933913243,
+   "ruler_src": null
+  }
+ },
+ "amendment_P4": {
+  "registered_utc": "2026-08-12T15:46:32Z",
+  "information_state": "registered AFTER the SmolLM2 (-4.994 %), Pythia (-8.074 %) and OPT (-2.734 %) margins were on screen and BEFORE any coherence number was computed; Qwen, GPT-2 and GPT-Neo margins not yet seen. It is therefore NOT blind and is a hypothesis for a larger checkpoint set, not a result.",
+  "claim": "P2 underpredicts. If the reason is that MXFP4 DELETES the band (everything below y = 1/24 reconstructs as exactly 0), the deletion errors are one-signed along an input row and add coherently, while squared error counts them as if they cancelled. P4: the measured excess-loss reduction Rhat is closer to the reduction in the COHERENT error sum_i (sum_j dw_ij)^2 than to the reduction in the incoherent sum dw^2 (= R), on a majority of checkpoints.",
+  "scored_by": "campaignE_zeroing.py"
+ }
+}

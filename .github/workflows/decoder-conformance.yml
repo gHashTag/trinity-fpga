@@ -15,6 +15,13 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: { python-version: '3.12' }
-      - run: sudo apt-get update && sudo apt-get install -y iverilog
+      # zsh, because conform.sh opens with `#!/bin/zsh` and ubuntu-latest ships
+      # no zsh. Missing interpreter reads as exit 127 -- "command not found" for
+      # a script that is right there and executable -- so this failed exactly
+      # like a broken gate, on every run since the gate was added. Installing
+      # the interpreter rather than rewriting the script: it runs on the author's
+      # machine, and a silent shell-dialect port is a worse bug than the one
+      # being fixed.
+      - run: sudo apt-get update && sudo apt-get install -y iverilog zsh
       - run: cd fpga/tnet && ./conform.sh
       - run: python3 conformance/check_decoders.py

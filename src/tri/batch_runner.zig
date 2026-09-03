@@ -5,6 +5,7 @@
 // ============================================================================
 
 const std = @import("std");
+const tri_mutex = @import("mutex.zig");
 const colors = @import("tri_colors.zig");
 
 const GREEN = colors.GREEN;
@@ -73,7 +74,7 @@ const FailureEntry = struct {
 // Thread-safe results collector
 const ThreadSafeResults = struct {
     items: std.ArrayListUnmanaged(PipelineResult),
-    mutex: std.Thread.Mutex,
+    mutex: tri_mutex.Mutex,
 
     fn init() ThreadSafeResults {
         return .{

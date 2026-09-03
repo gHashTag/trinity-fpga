@@ -10,6 +10,19 @@ decode; add/mul are decode -> exact Fraction -> re-encode (round-to-nearest-even
 
 Off-path conformance oracle (like gf_ref.py / tekum_ref.py). Supersedes the
 single-width tnf16_ref.py (TNF16 == TNFFormat(4, 9)).
+
+WIDTH NOTICE (2026-08-18, measured in conformance/true_width_ladder.py):
+the LADDER keys below are NAMES, not stored widths. The exponent field needs
+ceil(Et*log2 3) bits, so the stored widths are:
+
+    TNF4=6b(+2)  TNF8=10b(+2)  TNF16=17b(+1)  TNF32=30b(-2)  TNF64=65b(+1)
+    TNF128=129b  TNF256=258b   TNF512=514b    TNF1024=1025b
+
+Not one rung stores the width in its name. Use stored_width(fmt) before any
+"at N bits" comparison, or use TRUE_LADDER, whose rungs are exactly their
+named width. Measured consequence of the misnaming: the sign of the advantage
+over takum followed the sign of the width excess (+2 bits: 484x; +1: 2x;
+-2: 0.08x), and at true width with range to spare the advantage is 1.00x.
 """
 
 from fractions import Fraction

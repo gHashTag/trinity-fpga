@@ -18,6 +18,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_exit_codes = @import("tri_exit_codes.zig");
 const Allocator = std.mem.Allocator;
 const railway_api = @import("railway_api.zig");
 const RailwayApi = railway_api.RailwayApi;
@@ -7401,7 +7402,7 @@ fn runRestart(allocator: Allocator, args: []const []const u8) !void {
 fn runMirage(allocator: Allocator, args: []const []const u8) !void {
     if (args.len == 0) {
         print("{s}Usage: tri farm evolve mirage <service-name> [--reason <text>]{s}\n", .{ YELLOW, RESET });
-        return;
+        return tri_exit_codes.exitWithCode(.validation_error);
     }
 
     const target_name = args[0];

@@ -1,0 +1,180 @@
+{
+  "part": "xc7a200tfbg676-1",
+  "note": "QMTech Wukong V1 per fpga/HARDWARE_SSOT.md, generated per-bit IOSTANDARD xdc with no package pins, local yosys. NOT the part or flow behind any published table, and not offered as a replacement for one.",
+  "harness": "fpga/tnet/d_*.v. These observe q[7:0]^q[31:24] only, and are listed in tools/harness_baseline.txt as known partial-observation harnesses -- so their ABSOLUTE costs are cut, unequally, and are not comparable between formats. The dispersion below is a property of the placer, not of the cut.",
+  "designs": [
+    {
+      "top": "d_baseline",
+      "status": "routed",
+      "lc": 5,
+      "luts": 10,
+      "fmax_by_seed": [
+        936.33,
+        995.02,
+        1004.02,
+        1009.08,
+        1015.23
+      ],
+      "fmax_median_mhz": 1004.0,
+      "spread_pct": 7.9
+    },
+    {
+      "top": "d_bin16",
+      "status": "routed",
+      "lc": 57,
+      "luts": 76,
+      "fmax_by_seed": [
+        260.08,
+        261.57,
+        265.89,
+        274.42,
+        275.33
+      ],
+      "fmax_median_mhz": 265.9,
+      "spread_pct": 5.7
+    },
+    {
+      "top": "d_bin32",
+      "status": "routed",
+      "lc": 11,
+      "luts": 19,
+      "fmax_by_seed": [
+        950.57,
+        977.52,
+        985.22,
+        995.02,
+        1007.05
+      ],
+      "fmax_median_mhz": 985.2,
+      "spread_pct": 5.7
+    },
+    {
+      "top": "d_bnf16",
+      "status": "routed",
+      "lc": 7,
+      "luts": 12,
+      "fmax_by_seed": [
+        640.61,
+        671.59,
+        693.0,
+        718.39,
+        757.58
+      ],
+      "fmax_median_mhz": 693.0,
+      "spread_pct": 16.9
+    },
+    {
+      "top": "d_gfternary",
+      "status": "routed",
+      "lc": 6,
+      "luts": 12,
+      "fmax_by_seed": [
+        613.5,
+        620.73,
+        643.92,
+        666.67,
+        679.35
+      ],
+      "fmax_median_mhz": 643.9,
+      "spread_pct": 10.2
+    },
+    {
+      "top": "d_ibmhfp",
+      "status": "routed",
+      "lc": 143,
+      "luts": 169,
+      "fmax_by_seed": [
+        149.77,
+        154.89,
+        155.98,
+        162.07,
+        167.62
+      ],
+      "fmax_median_mhz": 156.0,
+      "spread_pct": 11.4
+    },
+    {
+      "top": "d_int8",
+      "status": "routed",
+      "lc": 5,
+      "luts": 10,
+      "fmax_by_seed": [
+        959.69,
+        983.28,
+        995.02,
+        998.0,
+        1015.23
+      ],
+      "fmax_median_mhz": 995.0,
+      "spread_pct": 5.6
+    },
+    {
+      "top": "d_lns16",
+      "status": "routed",
+      "lc": 115,
+      "luts": 132,
+      "fmax_by_seed": [
+        268.82,
+        278.47,
+        304.88,
+        306.65,
+        331.24
+      ],
+      "fmax_median_mhz": 304.9,
+      "spread_pct": 20.5
+    },
+    {
+      "top": "d_posit16",
+      "status": "routed",
+      "lc": 123,
+      "luts": 156,
+      "fmax_by_seed": [
+        123.47,
+        126.97,
+        129.08,
+        132.63,
+        133.6
+      ],
+      "fmax_median_mhz": 129.1,
+      "spread_pct": 7.8
+    },
+    {
+      "top": "d_posit32",
+      "status": "routed",
+      "lc": 312,
+      "luts": 396,
+      "fmax_by_seed": [
+        71.65,
+        73.07,
+        74.22,
+        75.44,
+        76.28
+      ],
+      "fmax_median_mhz": 74.2,
+      "spread_pct": 6.2
+    },
+    {
+      "top": "d_posit8",
+      "status": "synthesis-failed",
+      "note": "yosys error; excluded rather than scored zero"
+    },
+    {
+      "top": "d_tnf16",
+      "status": "routed",
+      "lc": 11,
+      "luts": 19,
+      "fmax_by_seed": [
+        628.93,
+        641.85,
+        719.42,
+        741.84,
+        757.58
+      ],
+      "fmax_median_mhz": 719.4,
+      "spread_pct": 17.9
+    }
+  ],
+  "spread_min_pct": 5.6,
+  "spread_max_pct": 20.5,
+  "finding": "Across 11 designs and 5 placer seeds each, Fmax dispersion runs 5.6% to 20.5% with no apparent relation to design size. Every hardware caption in the paper states median-of-five, which is the right estimator; none states the dispersion that median summarises. That is the only new observation here -- the partial-observation property of these harnesses was already found, quantified and gated by tools/check_harness.py."
+}

@@ -1,5 +1,6 @@
 // TRI Orchestrator v2.0 - Full Command Registry
 const std = @import("std");
+const tri_mutex = @import("mutex.zig");
 const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayListUnmanaged;
 
@@ -9,15 +10,27 @@ pub const PHI_SQ: f64 = 2.618033988749895;
 pub const TRINITY: f64 = 3.0;
 
 pub const CommandCategory = enum(u8) {
-    core, swe_agent, golden_chain, sacred_math, git, demo, bench,
-    tvc, intelligence, dev_util, analysis, autonomous, info, orchestrator,
+    core,
+    swe_agent,
+    golden_chain,
+    sacred_math,
+    git,
+    demo,
+    bench,
+    tvc,
+    intelligence,
+    dev_util,
+    analysis,
+    autonomous,
+    info,
+    orchestrator,
 };
 
 pub const RiskLevel = enum(u4) { safe, low, medium, high, critical };
 
 pub const Realm = enum(u2) { razum, materiya, dukh, universal };
 
-pub const CommandExecutor = *const fn(Allocator, [][]const u8) anyerror!OrchestratorResult;
+pub const CommandExecutor = *const fn (Allocator, [][]const u8) anyerror!OrchestratorResult;
 
 pub const OrchestratorResult = struct {
     success: bool,
@@ -188,9 +201,9 @@ pub fn registerAllCommands(allocator: Allocator) !CommandRegistry {
 
     // Core commands (15)
     const core_names = [_][]const u8{
-        "chat", "code", "gen", "convert", "serve", "bench", "evolve",
-        "multi_cluster", "test", "verify", "verdict", "distributed",
-        "orchestrate_v2", "spec_create", "loop_decide",
+        "chat",          "code", "gen",    "convert", "serve",       "bench",          "evolve",
+        "multi_cluster", "test", "verify", "verdict", "distributed", "orchestrate_v2", "spec_create",
+        "loop_decide",
     };
     for (core_names, 0..) |name, i| {
         const realm: Realm = if (i == 6 or i == 10 or i == 14) .dukh else if (i == 0 or i == 1 or i == 2 or i == 12 or i == 13) .razum else .materiya;
@@ -290,24 +303,24 @@ pub fn registerAllCommands(allocator: Allocator) !CommandRegistry {
 
     // Demo/Bench (70)
     const demo_names = [_][]const u8{
-        "agents_demo", "agents_bench", "context_demo", "context_bench",
-        "rag_demo", "rag_bench", "voice_demo", "voice_bench",
-        "sandbox_demo", "sandbox_bench", "stream_demo", "stream_bench",
-        "vision_demo", "vision_bench", "finetune_demo", "finetune_bench",
-        "batched_demo", "batched_bench", "priority_demo", "priority_bench",
-        "deadline_demo", "deadline_bench", "multimodal_demo", "multimodal_bench",
-        "tooluse_demo", "tooluse_bench", "unified_demo", "unified_bench",
+        "agents_demo",     "agents_bench",     "context_demo",       "context_bench",
+        "rag_demo",        "rag_bench",        "voice_demo",         "voice_bench",
+        "sandbox_demo",    "sandbox_bench",    "stream_demo",        "stream_bench",
+        "vision_demo",     "vision_bench",     "finetune_demo",      "finetune_bench",
+        "batched_demo",    "batched_bench",    "priority_demo",      "priority_bench",
+        "deadline_demo",   "deadline_bench",   "multimodal_demo",    "multimodal_bench",
+        "tooluse_demo",    "tooluse_bench",    "unified_demo",       "unified_bench",
         "autonomous_demo", "autonomous_bench", "orchestration_demo", "orchestration_bench",
-        "mm_orch_demo", "mm_orch_bench", "memory_demo", "memory_bench",
-        "persist_demo", "persist_bench", "spawn_demo", "spawn_bench",
-        "cluster_demo", "cluster_bench", "worksteal_demo", "worksteal_bench",
-        "plugin_demo", "plugin_bench", "comms_demo", "comms_bench",
-        "observe_demo", "observe_bench", "consensus_demo", "consensus_bench",
-        "specexec_demo", "specexec_bench", "governor_demo", "governor_bench",
-        "fedlearn_demo", "fedlearn_bench", "eventsrc_demo", "eventsrc_bench",
-        "capsec_demo", "capsec_bench", "dtxn_demo", "dtxn_bench",
-        "cache_demo", "cache_bench", "contract_demo", "contract_bench",
-        "workflow_demo", "workflow_bench",
+        "mm_orch_demo",    "mm_orch_bench",    "memory_demo",        "memory_bench",
+        "persist_demo",    "persist_bench",    "spawn_demo",         "spawn_bench",
+        "cluster_demo",    "cluster_bench",    "worksteal_demo",     "worksteal_bench",
+        "plugin_demo",     "plugin_bench",     "comms_demo",         "comms_bench",
+        "observe_demo",    "observe_bench",    "consensus_demo",     "consensus_bench",
+        "specexec_demo",   "specexec_bench",   "governor_demo",      "governor_bench",
+        "fedlearn_demo",   "fedlearn_bench",   "eventsrc_demo",      "eventsrc_bench",
+        "capsec_demo",     "capsec_bench",     "dtxn_demo",          "dtxn_bench",
+        "cache_demo",      "cache_bench",      "contract_demo",      "contract_bench",
+        "workflow_demo",   "workflow_bench",
     };
     for (demo_names) |name| {
         const is_demo = std.mem.endsWith(u8, name, "_demo");
@@ -386,7 +399,7 @@ pub fn runPipelineCommand(args: [][]const u8) !void {
 
     const task = args[0];
 
-    std.debug.print("\n{s} GOLDEN CHAIN PIPELINE {s}\n", .{"═" ** 30, "═" ** 30});
+    std.debug.print("\n{s} GOLDEN CHAIN PIPELINE {s}\n", .{ "═" ** 30, "═" ** 30 });
     std.debug.print("Task: {s}\n", .{task});
     std.debug.print("Links: 17\n", .{});
     std.debug.print("{s}\n", .{"═" ** 70});
@@ -395,7 +408,7 @@ pub fn runPipelineCommand(args: [][]const u8) !void {
     defer registry.deinit();
     registry.printStats();
 
-    std.debug.print("\n\x1b[33m{s} Golden Chain initiated for: {s} \x1b[0m\n", .{"✓", task});
+    std.debug.print("\n\x1b[33m{s} Golden Chain initiated for: {s} \x1b[0m\n", .{ "✓", task });
     std.debug.print("Trinity Verified: {s}\n", .{if (registry.trinity_verified) "YES ✓" else "NO ✗"});
     std.debug.print("Sacred Score: {d:.4}\n", .{registry.sacred_score});
 }
@@ -489,7 +502,7 @@ pub const WorkflowExecutor = struct {
     // ═══════════════════════════════════════════════════════════════════════════════
 
     const ParallelContext = struct {
-        mutex: std.Thread.Mutex,
+        mutex: tri_mutex.Mutex,
         results: []ExecutionResult,
         result_count: std.atomic.Value(usize),
         has_failure: std.atomic.Value(bool),
@@ -1095,9 +1108,7 @@ pub const WorkflowExecutor = struct {
         }
 
         if (analysis.parallelizable_ratio > PHI_INV and analysis.sacred_alignment > 0.7) {
-            std.debug.print("[Adaptive] Selected parallel execution (ratio: {d:.2}, sacred: {d:.2})\n", .{
-                analysis.parallelizable_ratio, analysis.sacred_alignment
-            });
+            std.debug.print("[Adaptive] Selected parallel execution (ratio: {d:.2}, sacred: {d:.2})\n", .{ analysis.parallelizable_ratio, analysis.sacred_alignment });
             return self.executeParallel();
         }
 

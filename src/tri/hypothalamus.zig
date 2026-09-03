@@ -2,6 +2,7 @@
 
 // TRI Orchestrator v2.0 - Full Command Registry
 const std = @import("std");
+const tri_mutex = @import("mutex.zig");
 const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayListUnmanaged;
 
@@ -520,7 +521,7 @@ pub const WorkflowExecutor = struct {
     // ═══════════════════════════════════════════════════════════════════════════════
 
     const ParallelContext = struct {
-        mutex: std.Thread.Mutex,
+        mutex: tri_mutex.Mutex,
         results: []ExecutionResult,
         result_count: std.atomic.Value(usize),
         has_failure: std.atomic.Value(bool),

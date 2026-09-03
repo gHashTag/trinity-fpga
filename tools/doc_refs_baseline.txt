@@ -8,7 +8,7 @@ AGENTS.md: names `math/sacred_physics.t27`, which does not exist
 AGENTS.md: names `nn/hslm.t27`, which does not exist
 AGENTS.md: names `queen/lotus.t27`, which does not exist
 CLAUDE.md: names `docs/zig-migration-rules.md`, which does not exist
-HANDOFF_2026_07_03.md: names `wave-loop-2026-07-paused.md`, which does not exist
+docs/handoff/HANDOFF_2026_07_03.md: names `wave-loop-2026-07-paused.md`, which does not exist
 README.md: names `research/goldenfloat-positioning.md`, which does not exist
 docs/DOCUMENTATION_INDEX.md: names `project_farm_patterns.md`, which does not exist
 docs/DOCUMENTATION_INDEX.md: names `src/vsa/README.md`, which does not exist
@@ -21,6 +21,7 @@ docs/L_DPC24_H_PRIME_5_LEVERS.md: names `workspace/trinity_tops_scan.md`, which 
 docs/PERFORMANCE.md: names `/docs/BRAIN_API.md`, which does not exist
 docs/PERFORMANCE.md: names `/docs/BRAIN_ARCHITECTURE.md`, which does not exist
 docs/QB_CHIPS_PHD_ROADMAP.md: names `TriosCoq.v`, which does not exist
+docs/QB_CHIPS_PHD_ROADMAP.md: names `check_no_star.sh`, which does not exist
 docs/QB_CHIPS_PHD_ROADMAP.md: names `docs/L-DPC23-W-IGLA-FALSIFICATION.md`, which does not exist
 docs/QUANTUM_BRAIN_TTSKY26C_LINEUP.md: names `Theorems/CassiniPost.v`, which does not exist
 docs/QUANTUM_BRAIN_TTSKY26C_LINEUP.md: names `assertions/igla_assertions.json`, which does not exist
@@ -56,6 +57,7 @@ docs/SOUL.md: names `.ralph/memory.json`, which does not exist
 docs/SOUL.md: names `plan.json`, which does not exist
 docs/TRINITY_S3AI_INTEGRATED_ARCHITECTURE.md: names `docs/docs/adr/002-ternary-presentation.md`, which does not exist
 docs/TRINITY_S3AI_INTEGRATED_ARCHITECTURE.md: names `docs/docs/internal/ACTIONS.md`, which does not exist
+docs/TRINITY_S3AI_INTEGRATED_ARCHITECTURE.md: names `docs/internal/agents.md`, which does not exist
 docs/TRINITY_S3AI_INTEGRATED_ARCHITECTURE.md: names `docs/trinity_s3ai_brain_maps.md`, which does not exist
 docs/TRINITY_TAMAGOTCHI_STAGE_1_EGG.md: names `.trinity/queen/heartbeat.json`, which does not exist
 docs/ZENODO_UPLOAD_GUIDE.md: names `docs/research/.zenodo.BXXX_v9.0.json`, which does not exist
@@ -63,6 +65,7 @@ docs/coordinator/zig_files_matrix.md: names `backoff.t27`, which does not exist
 docs/coordinator/zig_files_matrix.md: names `specs/tri27/math_exp.t27`, which does not exist
 docs/coordinator/zig_files_matrix.md: names `specs/tri27/math_sin.t27`, which does not exist
 docs/docs/RELEASES.md: names `synth_batch.sh`, which does not exist
+docs/docs/architecture/SA-2_EXECUTION_GRAPH.md: names `design.json`, which does not exist
 docs/docs/architecture/SA-2_EXECUTION_GRAPH.md: names `var/trinity/output/fpga/feature_fpga.v`, which does not exist
 docs/docs/architecture/agents-v2.md: names `phi-engine/docs/ARCHITECTURE_V1.md`, which does not exist
 docs/docs/architecture/dependency_map.md: names `docs/architecture/dependency_map.md`, which does not exist
@@ -205,6 +208,8 @@ docs/v3-squeeze/README.md: names `tools/check_no_star.sh`, which does not exist
 docs/v3-squeeze/S-16-sparse-zero-skip-activate.md: names `gl_test.v`, which does not exist
 docs/v3-squeeze/S-17-razor-ff.md: names `src/razor_ff_stub.v`, which does not exist
 docs/v3-squeeze/S-17-razor-ff.md: names `tools/check_no_star.sh`, which does not exist
+docs/v3-squeeze/S-19-dual-mac-pe.md: names `check_no_star.sh`, which does not exist
+docs/v3-squeeze/S-20-multi-vt-cells.md: names `check_no_star.sh`, which does not exist
 research/ARXIV_BODY_FIXES_READY_TO_PASTE.md: names `main_ru.tex`, which does not exist
 research/ARXIV_GFT16_SNIPPET.md: names `ARXIV_GFT16_v2.md`, which does not exist
 research/ARXIV_GFT16_SNIPPET.md: names `conformance/gft16_ref.py`, which does not exist
@@ -244,6 +249,17 @@ research/arxiv_v3_catalog_update.md: names `_quire.json`, which does not exist
 research/arxiv_v3_catalog_update.md: names `_sqrt.json`, which does not exist
 research/arxiv_v3_catalog_update.md: names `_sub.json`, which does not exist
 research/block/THEOREM_2026-08-09.md: names `mx_ops.py`, which does not exist
+research/frontier/ALIGNMENT_LAW_2026-08-11.md: names `frontier/ELEMENT_ONEADDER_2026-08-10.md`, which does not exist
+research/frontier/ALIGNMENT_LAW_2026-08-11.md: names `frontier/LADDER_COST_AND_LAW_2026-08-10.md`, which does not exist
+research/frontier/ALIGNMENT_LAW_2026-08-11.md: names `frontier/ONE_ADDER_FAMILY_2026-08-10.md`, which does not exist
+research/frontier/ALIGNMENT_LAW_2026-08-11.md: names `generation_config.json`, which does not exist
+research/frontier/ALIGNMENT_LAW_2026-08-11.md: names `tnf_paper_v2.tex`, which does not exist
+research/frontier/ALIGNMENT_LAW_2026-08-11.md: names `vocab.json`, which does not exist
+research/frontier/ALIGNMENT_LAW_DEAD_2026-08-11.md: names `tnf_paper_v2.tex`, which does not exist
+research/frontier/APPARATUS_AUDIT_2026-08-12.md: names `gf16_323mhz_withdrawn.md`, which does not exist
+research/frontier/APPARATUS_AUDIT_2026-08-12.md: names `t27/target/gf16-build/gf16_matmul4x4_top.json`, which does not exist
+research/frontier/BLOCK_AXIS_CLOSED_2026-08-10.md: names `block/BLOCK_AXIS_NOT_CLOSED_2026-08-11.md`, which does not exist
+research/frontier/BLOCK_AXIS_CLOSED_2026-08-10.md: names `block/METRIC_DISAGREEMENT_2026-08-11.md`, which does not exist
 research/lut_comparison.md: names `gf16_add_top.json`, which does not exist
 research/lut_comparison.md: names `gf16_mac_16.json`, which does not exist
 research/lut_comparison.md: names `gf16_mul_top.json`, which does not exist

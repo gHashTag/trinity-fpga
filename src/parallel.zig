@@ -16,8 +16,8 @@
 // φ² + 1/φ² = 3
 
 const std = @import("std");
-const hybrid = @import("hybrid.zig");
-const vsa = @import("vsa.zig");
+const hybrid = @import("vsa_hybrid/hybrid.zig");
+const vsa = @import("vsa");
 
 const HybridBigInt = hybrid.HybridBigInt;
 const Trit = hybrid.Trit;
@@ -66,7 +66,7 @@ pub const ThreadPool = struct {
 };
 
 /// Global allocator for pool
-var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+var gpa = std.heap.DebugAllocator(.{}){};
 
 /// Get or create global thread pool
 /// WARNING: NOT IMPLEMENTED - this was planned for a singleton pool pattern

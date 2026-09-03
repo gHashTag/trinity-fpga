@@ -198,3 +198,70 @@ Consequences, stated in advance so neither can be chosen after the fact:
   the disjointness has to be re-checked before any of it is claimed.
 * **u\* itself moves between Pythia's folds.** Then the argmin is not identified on that model at
   all, regardless of any floor, and Pythia cannot carry the disagreement.
+
+---
+
+# Result: OUTCOME A. And the prediction's range held while its direction did not.
+
+Pythia, three disjoint folds, same protocol. Fold 0 reproduces the stored sweep bitwise.
+
+    gpt2    u* per fold  [0.2500, 0.2500, 0.2500]    spread 0.0000
+    pythia  u* per fold  [0.4000, 0.3500, 0.4000]    spread 0.0500
+
+**Closest approach between the two models' fold sets is 0.10 — twice the largest within-model
+spread.** That sentence uses no floor, no curvature and no grid argument. The cross-family
+disagreement is not sampling noise. **OUTCOME A**, as pre-registered.
+
+## The prediction, scored honestly
+
+Registered before the folds ran: Pythia's differential floor in **[0.15, 0.60] ppl**, point
+estimate 0.31 from scaling GPT-2's 0.69 % of perplexity.
+
+| | GPT-2 | Pythia |
+|---|---|---|
+| marginal floor (level) | 6.7010 | 4.6044 |
+| **differential floor (shape)** | **0.2471** | **0.5770** |
+| as % of ppl at u\* | 0.714 % | 1.239 % |
+| tie-rule floor | 0.0003 | 0.5358 |
+| differential / tie | **800×** | **0.93×** |
+| common mode cancels | 27× | 8× |
+
+**0.5770 is inside the registered range** — but at its top edge, and the point estimate was off by
+1.9×. The relative floor is 1.24 % against GPT-2's 0.71 %, so "corpus sampling makes it
+model-independent in relative terms" is roughly right and not exactly right.
+
+**The registered consequence was wrong in its direction.** I wrote that landing inside the range
+would mean Pythia's tie floor was an *over*estimate and its interval would *narrow or hold*. In
+fact the tie floor (0.5358) is within 7 % of the differential floor (0.5770) — it was neither over
+nor under, it happened to be right — and the interval **widened**, 0.086 → 0.100.
+
+The correct statement is narrower than the one I registered:
+
+> The tie floor tracks the checkpoint dtype; the differential evaluation floor tracks the corpus
+> and sits near 0.7–1.2 % of perplexity for both models. On an **fp32** release the tie term is
+> negligible and the evaluation term dominates by 800×; on **fp16** the two are the same size and
+> the tie floor is accidentally adequate. **The floor to use is max(tie, differential-eval)**, and
+> the campaign used the tie term alone.
+
+## Intervals at the correct floor
+
+    gpt2    u* 0.2500   floor 0.2471   [0.2266, 0.2770]   width 0.0504
+    pythia  u* 0.4000   floor 0.5770   [0.3297, 0.4298]   width 0.1001
+
+**Still disjoint, gap 0.053.** OCP's u = 0.41504 remains inside Pythia's interval and outside
+GPT-2's.
+
+So the `k = 5` worry is resolved in the direction the corrected reasoning predicted: the floor was
+indeed understated — by 800× on GPT-2 — and the disjointness survived it, because an interval
+widens as the square root of the floor while `k` was applied as a linear offset.
+
+## What is now established, and what is not
+
+**Established.** Two models' alignment optima are individually stable under resampling to within
+one grid step, and they differ by twice that. No single alignment constant is optimal for both.
+The argument no longer depends on any floor.
+
+**Not established.** This is n = 2. OPT and SmolLM2 have not been fold-resampled; SmolLM2 has
+never been swept on the common grid; Qwen has never been swept at all. The three-model minimax
+result (u = 0.2042 at 1.488 % worst case against OCP's 5.025 %) rests on single-fold curves for
+OPT and should be re-derived once OPT is resampled.

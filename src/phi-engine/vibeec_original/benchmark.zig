@@ -45,7 +45,7 @@ pub fn main() !void {
     try stdout.print("║  JSON PARSER BENCHMARK ({d} iterations)                       ║\n", .{iterations});
     try stdout.print("║  ────────────────────────────────────────────────────────────── ║\n", .{});
 
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 

@@ -325,7 +325,7 @@ fn formatIslandSummary(allocator: std.mem.Allocator, island: Island) ![]const u8
 
 // CLI Entry Point
 pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 

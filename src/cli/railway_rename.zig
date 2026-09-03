@@ -15,7 +15,7 @@ const CYAN = "\x1b[36m";
 const GRAY = "\x1b[90m";
 
 pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 

@@ -23,12 +23,40 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      # The checker reads the catalogue from `ROOT.parent / "t27"`, i.e. a
+      # sibling directory next to this repository. `path: ../t27` expressed that
+      # directly and actions/checkout refuses it:
+      #
+      #   Repository path '/home/runner/work/trinity-fpga/t27' is not under
+      #   '/home/runner/work/trinity-fpga/trinity-fpga'
+      #
+      # so it must land inside the workspace first and be moved into place.
+      #
+      # `continue-on-error: true` is gone, and that is the substantive change.
+      # With it, a failed catalogue checkout did not stop the job -- it made
+      # every tnf16 comparison unrunnable, and the checker duly reported
+      #
+      #   note: RTL decoder tnf16 has no catalogue row -- not compared
+      #   12 baseline entry/entries no longer reproduce -- run with
+      #   --update-baseline to shrink the ratchet:
+      #     [fixed] [divergence] tnf16: RTL implements Et=4, catalogue declares e=6
+      #
+      # Those entries are not fixed. They were not checked. Following the job's
+      # own advice would have erased twelve recorded divergences on the strength
+      # of a checkout that never happened -- a ratchet running backwards. A
+      # missing input must fail loudly; it must never look like agreement.
       - name: Check out the SSOT catalogue
         uses: actions/checkout@v4
         with:
           repository: gHashTag/t27
-          path: ../t27
-        continue-on-error: true
+          path: t27-ssot
+
+      - name: Put the catalogue where the checker looks for it
+        run: |
+          mv t27-ssot ../t27
+          test -f ../t27/specs/numeric/formats_catalog.t27
+          echo "catalogue: $(wc -l < ../t27/specs/numeric/formats_catalog.t27) lines"
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'

@@ -1,0 +1,13 @@
+{
+ "smollm2": "/private/tmp/claude-501/-Users-ssdm4-Desktop-PROJECTS-CLAUDE/0e868af8-ab2d-4d00-be03-8fea94ba48e4/scratchpad/weights/smollm2",
+ "qwen": "/private/tmp/claude-501/-Users-ssdm4-Desktop-PROJECTS-CLAUDE/0e868af8-ab2d-4d00-be03-8fea94ba48e4/scratchpad/weights/qwen",
+ "pythia": "/private/tmp/claude-501/-Users-ssdm4-Desktop-PROJECTS-CLAUDE/0e868af8-ab2d-4d00-be03-8fea94ba48e4/scratchpad/weights/pythia",
+ "opt": "/private/tmp/claude-501/-Users-ssdm4-Desktop-PROJECTS-CLAUDE/0e868af8-ab2d-4d00-be03-8fea94ba48e4/scratchpad/weights/opt",
+ "gpt2": "/private/tmp/claude-501/-Users-ssdm4-Desktop-PROJECTS-CLAUDE/0e868af8-ab2d-4d00-be03-8fea94ba48e4/scratchpad/weights/gpt2",
+ "gptneo125m": "/private/tmp/claude-501/-Users-ssdm4-Desktop-PROJECTS-CLAUDE/4ee033a3-337b-4f3e-a701-150ecdcd58df/scratchpad/weights2/gptneo125m",
+ "cerebras111m": "/private/tmp/claude-501/-Users-ssdm4-Desktop-PROJECTS-CLAUDE/4ee033a3-337b-4f3e-a701-150ecdcd58df/scratchpad/weights2/cerebras111m",
+ "opt350m": "/private/tmp/claude-501/-Users-ssdm4-Desktop-PROJECTS-CLAUDE/4ee033a3-337b-4f3e-a701-150ecdcd58df/scratchpad/weights2/opt350m",
+ "smollm2_360": "/private/tmp/claude-501/-Users-ssdm4-Desktop-PROJECTS-CLAUDE/4ee033a3-337b-4f3e-a701-150ecdcd58df/scratchpad/weights2/smollm2_360",
+ "pythia410m": "/private/tmp/claude-501/-Users-ssdm4-Desktop-PROJECTS-CLAUDE/4ee033a3-337b-4f3e-a701-150ecdcd58df/scratchpad/weights2/pythia410m",
+ "bloom560m": "/private/tmp/claude-501/-Users-ssdm4-Desktop-PROJECTS-CLAUDE/4ee033a3-337b-4f3e-a701-150ecdcd58df/scratchpad/weights2/bloom560m"
+}

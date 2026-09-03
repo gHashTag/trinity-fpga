@@ -1,0 +1,62 @@
+{
+  "top": "tnf_cost_e2m11_add_top",
+  "status": "routed",
+  "part": "xc7a200tfbg676-1",
+  "note": "QMTech Wukong V1 per fpga/HARDWARE_SSOT.md. The CI sweep routes xc7a200tfbg484-2 (AX7203): DIFFERENT package AND speed grade, so these figures are not comparable to the CI's and are not offered as such.",
+  "flow": {
+    "yosys": "local yosys (CI uses docker regymm/openxc7)",
+    "nextpnr": "openXC7 nextpnr-xilinx, --placer heap --router router1",
+    "xdc": "generated, IOSTANDARD LVCMOS33 on all 54 pads, NO package pins -- the placer chose IO sites, which the CI's board xdc fixes",
+    "target_freq_mhz": 50.0
+  },
+  "seeds": [
+    {
+      "seed": 1,
+      "fmax_mhz": 408.16,
+      "fmax_preroute_mhz": 575.37,
+      "luts": 467,
+      "ffs": 17,
+      "log_sha256": "3ba6e01f4895a7c551bc086c6d59e149d73ff7a80a59dccd1e472f5122a13d9d"
+    },
+    {
+      "seed": 2,
+      "fmax_mhz": 379.65,
+      "fmax_preroute_mhz": 457.46,
+      "luts": 467,
+      "ffs": 17,
+      "log_sha256": "a98d13d5e4eecbbe4de0fbff2bfb74cffa13367bc169af4de8ffa9396340d036"
+    },
+    {
+      "seed": 3,
+      "fmax_mhz": 411.52,
+      "fmax_preroute_mhz": 498.5,
+      "luts": 467,
+      "ffs": 17,
+      "log_sha256": "62fb4dab0979d334730f296f7cabf6c2577452b082e3f36a8104feee3370c92d"
+    },
+    {
+      "seed": 4,
+      "fmax_mhz": 422.65,
+      "fmax_preroute_mhz": 506.07,
+      "luts": 467,
+      "ffs": 17,
+      "log_sha256": "e5c93d8d3a258af6aca888bd7ea1d3d46bd1a17d5ca4b10f59251712ecefc097"
+    },
+    {
+      "seed": 5,
+      "fmax_mhz": 384.91,
+      "fmax_preroute_mhz": 428.45,
+      "luts": 467,
+      "ffs": 17,
+      "log_sha256": "5af8ae7946c05cd095ec696ee20877fb3d37114bcef2ffc6eb74c650e81ca93a"
+    }
+  ],
+  "fmax_median_mhz": 408.16,
+  "fmax_min_mhz": 379.65,
+  "fmax_max_mhz": 422.65,
+  "fmax_spread_mhz": 43.0,
+  "fmax_spread_pct": 10.5,
+  "luts_identical_across_seeds": true,
+  "reproducibility": "Fmax reproduces exactly on a re-run; log_sha256 does not, because nextpnr logs wall-clock timings. The hashes pin the shipped logs rather than predicting a re-run.",
+  "finding": "5 placer seeds on ONE netlist give Fmax 379.65-422.65 MHz, a spread of 10.5% of the median, while the LUT count is identical in all of them. Area is seed-invariant here; timing is not. A frequency quoted to 0.01 MHz from an unstated number of seeds is over-precise against its own reproducibility."
+}

@@ -280,7 +280,7 @@ test "SwarmRuntime k8s heartbeat" {
 
 /// Main entry point for the swarm runtime executable
 pub fn main() !u8 {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 

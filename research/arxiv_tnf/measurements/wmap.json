@@ -1,0 +1,154 @@
+[
+ {
+  "wrapper": "w_baseline.v",
+  "top": "w_baseline",
+  "deps": []
+ },
+ {
+  "wrapper": "w_bin16.v",
+  "top": "w_bin16",
+  "deps": [
+   "binary16_decode.v"
+  ]
+ },
+ {
+  "wrapper": "w_bin32.v",
+  "top": "w_bin32",
+  "deps": [
+   "binary32_decode.v"
+  ]
+ },
+ {
+  "wrapper": "w_bnf16.v",
+  "top": "w_bnf16",
+  "deps": [
+   "bnf_decode.v"
+  ]
+ },
+ {
+  "wrapper": "w_fp8e4m3.v",
+  "top": "w_fp8e4m3",
+  "deps": [
+   "fp8_decode.v"
+  ]
+ },
+ {
+  "wrapper": "w_fp8e5m2.v",
+  "top": "w_fp8e5m2",
+  "deps": [
+   "fp8_decode.v"
+  ]
+ },
+ {
+  "wrapper": "w_gf10.v",
+  "top": "w_gf10",
+  "deps": [
+   "gf10_decode.v"
+  ]
+ },
+ {
+  "wrapper": "w_gf14.v",
+  "top": "w_gf14",
+  "deps": [
+   "gf14_decode.v"
+  ]
+ },
+ {
+  "wrapper": "w_gfplus8.v",
+  "top": "w_gfplus8",
+  "deps": [
+   "gfplus8_a_decode.v"
+  ]
+ },
+ {
+  "wrapper": "w_gfternary.v",
+  "top": "w_gfternary",
+  "deps": [
+   "gfternary_decode.v"
+  ]
+ },
+ {
+  "wrapper": "w_ibmhfp.v",
+  "top": "w_ibmhfp",
+  "deps": [
+   "ibm_hfp32_decode.v"
+  ]
+ },
+ {
+  "wrapper": "w_int8.v",
+  "top": "w_int8",
+  "deps": [
+   "fp8_decode.v"
+  ]
+ },
+ {
+  "wrapper": "w_lns16.v",
+  "top": "w_lns16",
+  "deps": [
+   "lns16_decode.v"
+  ]
+ },
+ {
+  "wrapper": "w_minifl.v",
+  "top": "w_minifl",
+  "deps": [
+   "minifloat_decode.v"
+  ]
+ },
+ {
+  "wrapper": "w_posit16.v",
+  "top": "w_posit16",
+  "deps": [
+   "posit16_decode.v"
+  ]
+ },
+ {
+  "wrapper": "w_posit32.v",
+  "top": "w_posit32",
+  "deps": [
+   "posit32_decode.v"
+  ]
+ },
+ {
+  "wrapper": "w_posit64.v",
+  "top": "w_posit64",
+  "deps": [
+   "posit64_decode.v"
+  ]
+ },
+ {
+  "wrapper": "w_posit8.v",
+  "top": "w_posit8",
+  "deps": [
+   "posit8_es2_decode.v"
+  ]
+ },
+ {
+  "wrapper": "w_tnf16.v",
+  "top": "w_tnf16",
+  "deps": [
+   "bnf_decode.v"
+  ]
+ },
+ {
+  "wrapper": "w_tnf32.v",
+  "top": "w_tnf32",
+  "deps": [
+   "tnf_wide_decode.v"
+  ]
+ },
+ {
+  "wrapper": "w_tnf64.v",
+  "top": "w_tnf64",
+  "deps": [
+   "tnf_wide_decode.v"
+  ]
+ },
+ {
+  "wrapper": "w_vaxf.v",
+  "top": "w_vaxf",
+  "deps": [
+   "vax_f_decode.v"
+  ]
+ }
+]

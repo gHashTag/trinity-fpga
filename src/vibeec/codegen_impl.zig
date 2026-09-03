@@ -8,7 +8,7 @@ const MAX_FIELDS = 32;
 const MAX_IMPL_LINES = 256;
 
 pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    var gpa = std.heap.DebugAllocator(.{}){};
     const allocator = gpa.allocator();
 
     const args = try std.process.argsAlloc(allocator);

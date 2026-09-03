@@ -13,6 +13,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_mutex = @import("mutex.zig");
 const Allocator = std.mem.Allocator;
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -64,7 +65,7 @@ pub const EventBus = struct {
     ring: [RING_SIZE]WsEvent = undefined,
     write_pos: usize = 0,
     read_pos: usize = 0,
-    mutex: std.Thread.Mutex = .{},
+    mutex: tri_mutex.Mutex = .{},
 
     pub fn push(self: *EventBus, event: WsEvent) void {
         self.mutex.lock();
@@ -97,7 +98,7 @@ pub const EventBus = struct {
 pub const WsClient = struct {
     stream: std.net.Stream,
     alive: std.atomic.Value(bool),
-    write_mutex: std.Thread.Mutex = .{},
+    write_mutex: tri_mutex.Mutex = .{},
 
     pub fn init(stream: std.net.Stream) WsClient {
         return .{
@@ -163,7 +164,7 @@ pub const Broadcaster = struct {
     clients: [MAX_CLIENTS]*WsClient = undefined,
     count: usize = 0,
     bus: *EventBus,
-    mutex: std.Thread.Mutex = .{},
+    mutex: tri_mutex.Mutex = .{},
     running: std.atomic.Value(bool),
 
     pub fn init(bus: *EventBus) Broadcaster {

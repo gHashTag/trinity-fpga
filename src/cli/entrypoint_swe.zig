@@ -217,7 +217,7 @@ fn postStepComment(allocator: std.mem.Allocator, issue_str: []const u8, step: u3
 }
 
 pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 

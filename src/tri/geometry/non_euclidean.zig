@@ -6,6 +6,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_exit_codes = @import("../tri_exit_codes.zig");
 const mod = @import("mod.zig");
 const fmt = @import("format.zig");
 
@@ -27,7 +28,7 @@ pub fn cmdSphere(args: []const []const u8) void {
         std.debug.print("Usage:\n", .{});
         std.debug.print("  tri geom sphere distance <lat1> <lon1> <lat2> <lon2>  Great circle (haversine)\n", .{});
         std.debug.print("  tri geom sphere triangle <a> <b> <c>                  Spherical triangle area\n", .{});
-        return;
+        return tri_exit_codes.exitWithCode(.validation_error);
     }
 
     const sub = args[0];
@@ -48,7 +49,7 @@ pub fn cmdHyper(args: []const []const u8) void {
     if (args.len == 0) {
         std.debug.print("Usage:\n", .{});
         std.debug.print("  tri geom hyper triangle <a> <b> <c>   Hyperbolic triangle area (angle defect)\n", .{});
-        return;
+        return tri_exit_codes.exitWithCode(.validation_error);
     }
 
     const sub = args[0];

@@ -6,7 +6,7 @@ const tri = @import("tri_inference.zig");
 const kv_cache = @import("kv_cache.zig");
 
 pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 

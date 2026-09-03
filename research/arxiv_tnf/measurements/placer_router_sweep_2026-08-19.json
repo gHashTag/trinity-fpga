@@ -1,0 +1,260 @@
+{
+  "part": "xc7a200tfbg676-1",
+  "harness": "fpga/tnet/w_*.v (full observation; see decoder_full_observation_2026-08-19.json)",
+  "configs": [
+    "heap/router1",
+    "heap/router2",
+    "sa/router2"
+  ],
+  "seeds": [
+    1,
+    2,
+    3,
+    4,
+    5
+  ],
+  "note": "The CI tries these three configurations IN ORDER and keeps the first that routes, so a published median is a median over seeds within whichever configuration happened to succeed. No caption in the paper names a placer or a router: `placer` occurs 0 times in tnf_paper.tex and so does `router`.",
+  "designs": [
+    {
+      "top": "w_baseline",
+      "configs": {
+        "heap/router1": {
+          "fmax_by_seed": [
+            977.52,
+            995.02,
+            997.01,
+            999.0,
+            1003.01
+          ],
+          "median_mhz": 997.0,
+          "within_spread_pct": 2.6
+        },
+        "heap/router2": {
+          "fmax_by_seed": [
+            796.81,
+            836.82,
+            874.89,
+            887.31,
+            998.0
+          ],
+          "median_mhz": 874.9,
+          "within_spread_pct": 23.0
+        },
+        "sa/router2": {
+          "fmax_by_seed": [
+            440.53,
+            781.25,
+            873.36,
+            1036.27,
+            1036.27
+          ],
+          "median_mhz": 873.4,
+          "within_spread_pct": 68.2
+        }
+      },
+      "between_config_spread_pct": 14.1,
+      "ratio_best_to_worst": 1.14
+    },
+    {
+      "top": "w_gfternary",
+      "configs": {
+        "heap/router1": {
+          "fmax_by_seed": [
+            622.67,
+            665.34,
+            675.68,
+            683.06,
+            711.74
+          ],
+          "median_mhz": 675.7,
+          "within_spread_pct": 13.2
+        },
+        "heap/router2": {
+          "fmax_by_seed": [
+            433.28,
+            486.85,
+            509.94,
+            511.51,
+            549.15
+          ],
+          "median_mhz": 509.9,
+          "within_spread_pct": 22.7
+        },
+        "sa/router2": {
+          "fmax_by_seed": [
+            132.98,
+            158.5,
+            182.35,
+            205.38,
+            247.28
+          ],
+          "median_mhz": 182.3,
+          "within_spread_pct": 62.7
+        }
+      },
+      "between_config_spread_pct": 96.7,
+      "ratio_best_to_worst": 3.71
+    },
+    {
+      "top": "w_tnf16",
+      "configs": {
+        "heap/router1": {
+          "fmax_by_seed": [
+            573.39,
+            599.16,
+            642.67,
+            746.27,
+            758.73
+          ],
+          "median_mhz": 642.7,
+          "within_spread_pct": 28.8
+        },
+        "heap/router2": {
+          "fmax_by_seed": [
+            528.26,
+            543.18,
+            584.11,
+            628.14,
+            745.71
+          ],
+          "median_mhz": 584.1,
+          "within_spread_pct": 37.2
+        },
+        "sa/router2": {
+          "fmax_by_seed": [
+            99.08,
+            134.72,
+            148.3,
+            199.24,
+            246.12
+          ],
+          "median_mhz": 148.3,
+          "within_spread_pct": 99.2
+        }
+      },
+      "between_config_spread_pct": 84.6,
+      "ratio_best_to_worst": 4.33
+    },
+    {
+      "top": "w_bnf16",
+      "configs": {
+        "heap/router1": {
+          "fmax_by_seed": [
+            549.75,
+            650.2,
+            718.91,
+            753.58,
+            849.62
+          ],
+          "median_mhz": 718.9,
+          "within_spread_pct": 41.7
+        },
+        "heap/router2": {
+          "fmax_by_seed": [
+            608.64,
+            653.59,
+            744.05,
+            786.78,
+            926.78
+          ],
+          "median_mhz": 744.0,
+          "within_spread_pct": 42.8
+        },
+        "sa/router2": {
+          "fmax_by_seed": [
+            339.56,
+            358.68,
+            418.41,
+            544.96,
+            735.84
+          ],
+          "median_mhz": 418.4,
+          "within_spread_pct": 94.7
+        }
+      },
+      "between_config_spread_pct": 45.3,
+      "ratio_best_to_worst": 1.78
+    },
+    {
+      "top": "w_bin16",
+      "configs": {
+        "heap/router1": {
+          "fmax_by_seed": [
+            206.02,
+            234.58,
+            240.33,
+            255.75,
+            260.62
+          ],
+          "median_mhz": 240.3,
+          "within_spread_pct": 22.7
+        },
+        "heap/router2": {
+          "fmax_by_seed": [
+            222.42,
+            228.68,
+            232.02,
+            232.07,
+            248.76
+          ],
+          "median_mhz": 232.0,
+          "within_spread_pct": 11.4
+        },
+        "sa/router2": {
+          "fmax_by_seed": [
+            75.83,
+            107.25,
+            114.92,
+            114.98,
+            116.75
+          ],
+          "median_mhz": 114.9,
+          "within_spread_pct": 35.6
+        }
+      },
+      "between_config_spread_pct": 54.1,
+      "ratio_best_to_worst": 2.09
+    },
+    {
+      "top": "w_posit16",
+      "configs": {
+        "heap/router1": {
+          "fmax_by_seed": [
+            129.08,
+            134.32,
+            134.75,
+            135.56,
+            139.59
+          ],
+          "median_mhz": 134.8,
+          "within_spread_pct": 7.8
+        },
+        "heap/router2": {
+          "fmax_by_seed": [
+            116.82,
+            119.27,
+            121.11,
+            122.19,
+            123.84
+          ],
+          "median_mhz": 121.1,
+          "within_spread_pct": 5.8
+        },
+        "sa/router2": {
+          "fmax_by_seed": [
+            31.05,
+            35.03,
+            38.75,
+            43.77,
+            45.26
+          ],
+          "median_mhz": 38.8,
+          "within_spread_pct": 36.7
+        }
+      },
+      "between_config_spread_pct": 79.3,
+      "ratio_best_to_worst": 3.48
+    }
+  ],
+  "finding": "Configuration moves Fmax far more than seed does. sa/router2 gives w_gfternary 182.3 MHz against heap/router1's 675.7 -- a factor of 3.7 -- and w_tnf16 148.3 against 642.7, a factor of 4.3. Between-configuration spread reaches 96.7% of the median where the widest within-configuration seed spread on this set is 41.7%. A caption stating the tool, the part, the DSP setting and the seed count, but not the placer and router, leaves the largest knob unnamed."
+}

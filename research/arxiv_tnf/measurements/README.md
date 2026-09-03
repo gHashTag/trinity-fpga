@@ -14,6 +14,7 @@ repository, copied verbatim. Nothing in this directory was edited by hand.
 | `inside_window_2026-08-13f.json` | rows inside the window | current |
 | `gpt2_window_2026-08-13e.json` | GPT-2 block-0 intermediates, the negative result inside neural inference | current |
 | `crossover_2026-08-13e.json`, `crossover2_2026-08-13e.json` | crossover computation before and after the straight-line fit was withdrawn | second file current |
+| `pnr_seed_sweep_2026-08-19.json` | five placer seeds on one netlist, `tnf_cost_e2m11_add_top` on xc7a200tfbg676-1; Fmax 379.65-422.65 MHz at an identical 467 LUTs. Raw nextpnr logs in `pnr_logs/`, sha256 of each recorded in the JSON. NOT the CI part (fbg484-2) and NOT a substitute for the sweep | current |
 
 Two earlier records are deliberately **not** copied here: an invariance record
 whose harness tested representability against zero rather than against the range

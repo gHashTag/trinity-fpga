@@ -346,13 +346,28 @@ pub const CLIState = struct {
             break :blk DEFAULT_MODEL_PATH;
         };
 
-        // Heap-allocate TVC corpus for self-learning (~26MB, must be on heap)
-        const corpus = try allocator.create(tvc.TVCCorpus);
-        corpus.initInPlace();
-        // Try loading existing corpus from disk (load into heap-allocated struct)
-        corpus.loadInto(TVC_CORPUS_PATH) catch |err| {
-            std.log.debug("corpus load: {s}", .{@errorName(err)});
-        };
+        // The TVC corpus is NOT allocated here. It used to be, unconditionally,
+        // on every invocation including `tri --help`, under the note
+        // "~26MB, must be on heap".
+        //
+        // It is not 26 MB. TVCCorpus is [10000]TVCEntry; each entry holds three
+        // HybridBigInt, and each of those carries unpacked_cache: [59049]Trit
+        // plus an 11810-byte packed buffer -- about 213 KB per entry, so
+        // roughly 2.1 GB for the array. Startup allocated that and then wrote
+        // self.count, which sits past the array, and the process died before
+        // main() had done anything:
+        //
+        //     Segmentation fault at address 0x7f6c835ee380
+        //     tvc_corpus.zig:145 in initInPlace   <- self.count = 0
+        //     tri_utils.zig:351   corpus.initInPlace()
+        //     main.zig:67         CLIState.init(allocator)
+        //
+        // Every tri command was fatal, --help included. The field is already
+        // `?*tvc.TVCCorpus`, and rna_polymerase.zig carries a null path with a
+        // test asserting it, so null is a supported state rather than a new
+        // one. Commands that need the corpus call ensureCorpus() below, which
+        // pays the 2.1 GB only when something actually reads it.
+        const corpus: ?*tvc.TVCCorpus = null;
 
         // Codebase Context Manager (Cycle 92)
         const ctx_mgr = try allocator.create(tri_context.ContextManager);
@@ -391,6 +406,30 @@ pub const CLIState = struct {
             .tvc_corpus = corpus,
             .context_mgr = ctx_mgr,
         };
+    }
+
+    /// Allocate the TVC corpus on first use and return it.
+    ///
+    /// Split out of init() because it costs roughly 2.1 GB (see the note
+    /// there) and almost no command needs it. Callers that want self-learning
+    /// ask for it; `tri --help` does not, and therefore no longer dies.
+    ///
+    /// Returns null if the allocation fails rather than propagating: a machine
+    /// that cannot spare 2.1 GB should lose the corpus feature, not the whole
+    /// CLI. That is the distinction the previous code did not make.
+    pub fn ensureCorpus(self: *Self) ?*tvc.TVCCorpus {
+        if (self.tvc_corpus) |c| return c;
+        const c = self.allocator.create(tvc.TVCCorpus) catch |err| {
+            std.log.warn("TVC corpus unavailable ({s}); self-learning is off", .{@errorName(err)});
+            return null;
+        };
+        c.initInPlace();
+        c.loadInto(TVC_CORPUS_PATH) catch |err| {
+            std.log.debug("corpus load: {s}", .{@errorName(err)});
+        };
+        self.tvc_corpus = c;
+        self.chat_agent.corpus = c;
+        return c;
     }
 
     pub fn deinit(self: *Self) void {

@@ -1,0 +1,356 @@
+{
+  "part": "xc7a200tfbg676-1",
+  "harness": "fpga/tnet/w_*.v -- folds ALL 32 output bits (q[3:0]^q[7:4]^...^q[31:28]) and is absent from tools/harness_baseline.txt, unlike the d_*.v family which observes 16 of 32 and is baselined as partial. An earlier measurement here used d_*.v by mistake; this is the corrected one.",
+  "note": "Generated per-bit IOSTANDARD xdc with no package pins, local yosys, QMTech part. NOT the part or flow behind any published table.",
+  "control": {
+    "top": "w_baseline",
+    "luts": 14,
+    "note": "empty harness; the floor every entry must exceed"
+  },
+  "designs": [
+    {
+      "top": "w_baseline",
+      "status": "routed",
+      "lc": 9,
+      "luts": 14,
+      "fmax_by_seed": [
+        977.52,
+        995.02,
+        997.01,
+        999.0,
+        1003.01
+      ],
+      "fmax_median_mhz": 997.0,
+      "spread_pct": 2.6,
+      "luts_over_control": 0
+    },
+    {
+      "top": "w_bin16",
+      "status": "routed",
+      "lc": 61,
+      "luts": 80,
+      "fmax_by_seed": [
+        206.02,
+        234.58,
+        240.33,
+        255.75,
+        260.62
+      ],
+      "fmax_median_mhz": 240.3,
+      "spread_pct": 22.7,
+      "luts_over_control": 66
+    },
+    {
+      "top": "w_bin32",
+      "status": "routed",
+      "lc": 15,
+      "luts": 23,
+      "fmax_by_seed": [
+        985.22,
+        990.1,
+        992.06,
+        1000.0,
+        1001.0
+      ],
+      "fmax_median_mhz": 992.1,
+      "spread_pct": 1.6,
+      "luts_over_control": 9
+    },
+    {
+      "top": "w_bnf16",
+      "status": "routed",
+      "lc": 11,
+      "luts": 16,
+      "fmax_by_seed": [
+        549.75,
+        650.2,
+        718.91,
+        753.58,
+        849.62
+      ],
+      "fmax_median_mhz": 718.9,
+      "spread_pct": 41.7,
+      "luts_over_control": 2
+    },
+    {
+      "top": "w_fp8e4m3",
+      "status": "routed",
+      "lc": 10,
+      "luts": 15,
+      "fmax_by_seed": [
+        609.38,
+        620.73,
+        647.25,
+        679.81,
+        751.31
+      ],
+      "fmax_median_mhz": 647.2,
+      "spread_pct": 21.9,
+      "luts_over_control": 1
+    },
+    {
+      "top": "w_fp8e5m2",
+      "status": "routed",
+      "lc": 10,
+      "luts": 15,
+      "fmax_by_seed": [
+        594.18,
+        594.18,
+        594.18,
+        597.73,
+        677.51
+      ],
+      "fmax_median_mhz": 594.2,
+      "spread_pct": 14.0,
+      "luts_over_control": 1
+    },
+    {
+      "top": "w_gf10",
+      "status": "routed",
+      "lc": 26,
+      "luts": 36,
+      "fmax_by_seed": [
+        408.66,
+        420.7,
+        423.91,
+        441.11,
+        488.04
+      ],
+      "fmax_median_mhz": 423.9,
+      "spread_pct": 18.7,
+      "luts_over_control": 22
+    },
+    {
+      "top": "w_gf14",
+      "status": "routed",
+      "lc": 38,
+      "luts": 51,
+      "fmax_by_seed": [
+        323.83,
+        344.23,
+        350.39,
+        357.4,
+        382.85
+      ],
+      "fmax_median_mhz": 350.4,
+      "spread_pct": 16.8,
+      "luts_over_control": 37
+    },
+    {
+      "top": "w_gfplus8",
+      "status": "routed",
+      "lc": 42,
+      "luts": 57,
+      "fmax_by_seed": [
+        319.8,
+        340.95,
+        352.86,
+        355.62,
+        360.49
+      ],
+      "fmax_median_mhz": 352.9,
+      "spread_pct": 11.5,
+      "luts_over_control": 43
+    },
+    {
+      "top": "w_gfternary",
+      "status": "routed",
+      "lc": 10,
+      "luts": 16,
+      "fmax_by_seed": [
+        622.67,
+        665.34,
+        675.68,
+        683.06,
+        711.74
+      ],
+      "fmax_median_mhz": 675.7,
+      "spread_pct": 13.2,
+      "luts_over_control": 2
+    },
+    {
+      "top": "w_ibmhfp",
+      "status": "routed",
+      "lc": 147,
+      "luts": 173,
+      "fmax_by_seed": [
+        149.79,
+        151.56,
+        154.99,
+        155.13,
+        161.37
+      ],
+      "fmax_median_mhz": 155.0,
+      "spread_pct": 7.5,
+      "luts_over_control": 159
+    },
+    {
+      "top": "w_int8",
+      "status": "routed",
+      "lc": 9,
+      "luts": 14,
+      "fmax_by_seed": [
+        971.82,
+        993.05,
+        1001.0,
+        1003.01,
+        1017.29
+      ],
+      "fmax_median_mhz": 1001.0,
+      "spread_pct": 4.5,
+      "luts_over_control": 0
+    },
+    {
+      "top": "w_lns16",
+      "status": "routed",
+      "lc": 119,
+      "luts": 136,
+      "fmax_by_seed": [
+        306.84,
+        307.6,
+        310.27,
+        323.31,
+        327.01
+      ],
+      "fmax_median_mhz": 310.3,
+      "spread_pct": 6.5,
+      "luts_over_control": 122
+    },
+    {
+      "top": "w_minifl",
+      "status": "routed",
+      "lc": 19,
+      "luts": 30,
+      "fmax_by_seed": [
+        488.52,
+        493.83,
+        500.75,
+        565.61,
+        589.97
+      ],
+      "fmax_median_mhz": 500.8,
+      "spread_pct": 20.3,
+      "luts_over_control": 16
+    },
+    {
+      "top": "w_posit16",
+      "status": "routed",
+      "lc": 127,
+      "luts": 160,
+      "fmax_by_seed": [
+        129.08,
+        134.32,
+        134.75,
+        135.56,
+        139.59
+      ],
+      "fmax_median_mhz": 134.8,
+      "spread_pct": 7.8,
+      "luts_over_control": 146
+    },
+    {
+      "top": "w_posit32",
+      "status": "routed",
+      "lc": 316,
+      "luts": 400,
+      "fmax_by_seed": [
+        72.86,
+        74.01,
+        75.69,
+        76.96,
+        77.89
+      ],
+      "fmax_median_mhz": 75.7,
+      "spread_pct": 6.6,
+      "luts_over_control": 386
+    },
+    {
+      "top": "w_posit64",
+      "status": "routed",
+      "lc": 520,
+      "luts": 679,
+      "fmax_by_seed": [
+        35.42,
+        36.33,
+        36.43,
+        36.44,
+        36.5
+      ],
+      "fmax_median_mhz": 36.4,
+      "spread_pct": 3.0,
+      "luts_over_control": 665
+    },
+    {
+      "top": "w_posit8",
+      "status": "synthesis-failed"
+    },
+    {
+      "top": "w_tnf16",
+      "status": "routed",
+      "lc": 15,
+      "luts": 23,
+      "fmax_by_seed": [
+        573.39,
+        599.16,
+        642.67,
+        746.27,
+        758.73
+      ],
+      "fmax_median_mhz": 642.7,
+      "spread_pct": 28.8,
+      "luts_over_control": 9
+    },
+    {
+      "top": "w_tnf32",
+      "status": "routed",
+      "lc": 14,
+      "luts": 23,
+      "fmax_by_seed": [
+        591.72,
+        598.09,
+        642.67,
+        702.74,
+        717.88
+      ],
+      "fmax_median_mhz": 642.7,
+      "spread_pct": 19.6,
+      "luts_over_control": 9
+    },
+    {
+      "top": "w_tnf64",
+      "status": "routed",
+      "lc": 14,
+      "luts": 23,
+      "fmax_by_seed": [
+        598.44,
+        625.0,
+        656.6,
+        689.18,
+        710.23
+      ],
+      "fmax_median_mhz": 656.6,
+      "spread_pct": 17.0,
+      "luts_over_control": 9
+    },
+    {
+      "top": "w_vaxf",
+      "status": "routed",
+      "lc": 34,
+      "luts": 56,
+      "fmax_by_seed": [
+        456.83,
+        458.72,
+        463.18,
+        486.38,
+        517.6
+      ],
+      "fmax_median_mhz": 463.2,
+      "spread_pct": 13.1,
+      "luts_over_control": 42
+    }
+  ],
+  "entries_below_control": [],
+  "spread_min_pct": 1.6,
+  "spread_max_pct": 41.7,
+  "finding": "21 designs on a full-observation harness: EVERY entry is at or above the 14-LUT empty control, as it must be -- adding a decoder cannot shrink an empty harness. w_int8 equals the control exactly, so int8's decode folds away even when nothing is pruned by partial observation. Seed dispersion runs 2.6% to 41.7%."
+}

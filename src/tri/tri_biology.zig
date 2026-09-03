@@ -8,6 +8,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_exit_codes = @import("tri_exit_codes.zig");
 const colors = @import("tri_colors.zig");
 const sacred_formula = @import("math/formula.zig");
 
@@ -66,7 +67,7 @@ fn cmdDna(allocator: std.mem.Allocator, args: []const []const u8) !void {
     if (args.len == 0) {
         std.debug.print("{s}Usage: tri bio dna <sequence>{s}\n", .{ RED, RESET });
         std.debug.print("  Analyze DNA sequence with sacred mathematics\n", .{});
-        return;
+        return tri_exit_codes.exitWithCode(.validation_error);
     }
 
     const sequence = args[0];
@@ -163,7 +164,7 @@ fn cmdRna(allocator: std.mem.Allocator, args: []const []const u8) !void {
     if (args.len == 0) {
         std.debug.print("{s}Usage: tri bio rna <sequence>{s}\n", .{ RED, RESET });
         std.debug.print("  Analyze RNA sequence with sacred mathematics\n", .{});
-        return;
+        return tri_exit_codes.exitWithCode(.validation_error);
     }
 
     const sequence = args[0];
@@ -221,7 +222,7 @@ fn cmdProtein(allocator: std.mem.Allocator, args: []const []const u8) !void {
     if (args.len == 0) {
         std.debug.print("{s}Usage: tri bio protein <sequence>{s}\n", .{ RED, RESET });
         std.debug.print("  Analyze protein sequence (1-letter codes) with sacred mathematics\n", .{});
-        return;
+        return tri_exit_codes.exitWithCode(.validation_error);
     }
 
     const sequence = args[0];
@@ -312,7 +313,7 @@ fn cmdCodon(allocator: std.mem.Allocator, args: []const []const u8) !void {
     if (args.len == 0) {
         std.debug.print("{s}Usage: tri bio codon <codon>{s}\n", .{ RED, RESET });
         std.debug.print("  Look up codon (RNA: U, DNA: T)\n", .{});
-        return;
+        return tri_exit_codes.exitWithCode(.validation_error);
     }
 
     const codon = args[0];

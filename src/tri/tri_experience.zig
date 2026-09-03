@@ -16,6 +16,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_exit_codes = @import("tri_exit_codes.zig");
 const Allocator = std.mem.Allocator;
 const tri_dev = @import("tri_dev.zig");
 const hippocampus = @import("hippocampus.zig");
@@ -1244,7 +1245,7 @@ fn runLogList(allocator: Allocator, args: []const []const u8) void {
 fn runLogRecall(allocator: Allocator, args: []const []const u8) void {
     if (args.len == 0) {
         print("{s}Usage: tri experience recall <query|--type TYPE|--category CAT|--impact HIGH>{s}\n", .{ YELLOW, RESET });
-        return;
+        return tri_exit_codes.exitWithCode(.validation_error);
     }
 
     // If first arg is --task, delegate to episode recall (old behavior)

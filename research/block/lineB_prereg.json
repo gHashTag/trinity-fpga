@@ -1,0 +1,90 @@
+{
+ "discovery": {
+  "opt": {
+   "D_MXFP4": 1638.3953495581748,
+   "G": 1521.551031416839,
+   "X": -3.0214589717974305,
+   "X_over_G": -0.001985775639075284,
+   "Y": 182.44070361976782,
+   "Y_over_G": 0.11990442637331891,
+   "dD": -185.46216259156517,
+   "dD_over_DB": -0.11319744202251225,
+   "n_blocks": 2654208,
+   "n_elements": 84934656,
+   "pred_sign_B2": -1,
+   "pred_sign_C1": -1
+  },
+  "pythia": {
+   "D_MXFP4": 1854.2428587137445,
+   "G": 1696.9320063249243,
+   "X": -5.501943872627461,
+   "X_over_G": -0.0032422889379894,
+   "Y": 120.56366911529356,
+   "Y_over_G": 0.07104802588784948,
+   "dD": -126.06561298792212,
+   "dD_over_DB": -0.06798764918818219,
+   "n_blocks": 2654208,
+   "n_elements": 84934656,
+   "pred_sign_B2": -1,
+   "pred_sign_C1": -1
+  },
+  "qwen": {
+   "D_MXFP4": 2112.8818774390325,
+   "G": 1936.7009201970059,
+   "X": -1.0030077070638979,
+   "X_over_G": -0.0005178949917377379,
+   "Y": 171.67148033306205,
+   "Y_over_G": 0.0886411931459191,
+   "dD": -172.6744880401252,
+   "dD_over_DB": -0.08172462922982676,
+   "n_blocks": 11182080,
+   "n_elements": 357826560,
+   "pred_sign_B2": -1,
+   "pred_sign_C1": -1
+  },
+  "smollm2": {
+   "D_MXFP4": 55478.34768826563,
+   "G": 50480.262402435896,
+   "X": 215.7653918095434,
+   "X_over_G": 0.0042742525799376934,
+   "Y": 4429.558571428934,
+   "Y_over_G": 0.08774832698205602,
+   "dD": -4213.7931796194025,
+   "dD_over_DB": -0.07595383343600683,
+   "n_blocks": 3317760,
+   "n_elements": 106168320,
+   "pred_sign_B2": 1,
+   "pred_sign_C1": -1
+  }
+ },
+ "registered": {
+  "mamba130m": {
+   "D_MXFP4": 18578.320076828335,
+   "G": 17294.274377385285,
+   "X": 15.195675463201164,
+   "X_over_G": 0.0008786535434566519,
+   "Y": 1707.550720270905,
+   "Y_over_G": 0.09873503120222087,
+   "dD": -1692.3550448077112,
+   "dD_over_DB": -0.09109300721535571,
+   "n_blocks": 2783232,
+   "n_elements": 89063424,
+   "pred_sign_B2": 1,
+   "pred_sign_C1": -1,
+   "registered_utc": "2026-08-12T15:47:04Z"
+  }
+ },
+ "rule": {
+  "B1_rank": "m = 100*(ppl_TOP/ppl_MXFP4 - 1) is INCREASING in X/G; predicted Spearman rho > 0 on the NEW checkpoints alone",
+  "B2_sign": "sign(m) = sign(X/G); threshold zero, read off the format",
+  "C1_control": "T41 primary dD/D_B; rank increasing, sign dD<0 => m<0",
+  "C2_control": "granular gain alone, -Y/G; rank only",
+  "arm": "MX-asym-TOP",
+  "beta": 0.875,
+  "c": 0.75,
+  "free_parameters": 0,
+  "nwin_preregistered": 40,
+  "parent": "MXFP4",
+  "predictor": "X / G  with X = sum_{y<-c}(e_A^2 - e_B^2), G = sum_rest e_B^2"
+ }
+}

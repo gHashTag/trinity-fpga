@@ -1,0 +1,4 @@
+design,run,synth_s,place_s,route_s,bitgen_s,total_s,wns,tns,timing_met
+blinky-digilent-arty,1,16.47,4.79,7.88,11.02,40.15,na,na,na
+blinky-digilent-arty,2,16.39,4.84,7.83,11.04,40.10,na,na,na
+blinky-digilent-arty,3,16.83,4.95,7.92,11.13,40.82,na,na,na

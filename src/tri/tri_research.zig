@@ -15,6 +15,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_exit_codes = @import("tri_exit_codes.zig");
 const SacredConstants = @import("sacred_constants.zig").SacredConstants;
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -305,7 +306,7 @@ fn runExplainQuery(allocator: std.mem.Allocator, args: []const []const u8) !void
     _ = allocator;
     if (args.len == 0) {
         std.debug.print("{s}Usage: tri research explain \"error message\"{s}\n", .{ RED, RESET });
-        return;
+        return tri_exit_codes.exitWithCode(.validation_error);
     }
 
     var query_buf: [2048]u8 = undefined;

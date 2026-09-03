@@ -8,6 +8,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_exit_codes = @import("../tri_exit_codes.zig");
 const colors = @import("../tri_colors.zig");
 
 // depin.zig is in src/firebird/ — inline constants to avoid cross-module import
@@ -611,7 +612,7 @@ fn runDiscover(allocator: std.mem.Allocator, args: []const []const u8) void {
 fn runAddNode(allocator: std.mem.Allocator, args: []const []const u8) void {
     if (args.len == 0) {
         std.debug.print("{s}Error:{s} Missing address. Usage: tri multi-cluster add-node <address> [--port N] [--role worker|storage] [--tier FREE|STAKER|POWER|WHALE]\n", .{ RED, RESET });
-        return;
+        return tri_exit_codes.exitWithCode(.validation_error);
     }
 
     var state = loadClusterState(allocator);
@@ -699,7 +700,7 @@ fn runAddNode(allocator: std.mem.Allocator, args: []const []const u8) void {
 fn runRemoveNode(allocator: std.mem.Allocator, args: []const []const u8) void {
     if (args.len == 0) {
         std.debug.print("{s}Error:{s} Missing node-id. Usage: tri multi-cluster remove-node <node-id>\n", .{ RED, RESET });
-        return;
+        return tri_exit_codes.exitWithCode(.validation_error);
     }
 
     var state = loadClusterState(allocator);
@@ -867,7 +868,7 @@ fn runSync(allocator: std.mem.Allocator, args: []const []const u8) void {
 fn runFederate(allocator: std.mem.Allocator, args: []const []const u8) void {
     if (args.len == 0) {
         std.debug.print("{s}Error:{s} Missing cluster address. Usage: tri multi-cluster federate <cluster-address> [--sync-mode crdt|raft|gossip]\n", .{ RED, RESET });
-        return;
+        return tri_exit_codes.exitWithCode(.validation_error);
     }
 
     var state = loadClusterState(allocator);

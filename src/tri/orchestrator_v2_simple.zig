@@ -59,10 +59,10 @@ pub const RiskLevel = enum {
 
 /// Sacred realm for command execution
 pub const Realm = enum {
-    razum,      // Mind - Gold
-    materiya,   // Matter - Cyan
-    dukh,       // Spirit - Purple
-    universal,  // All realms
+    razum, // Mind - Gold
+    materiya, // Matter - Cyan
+    dukh, // Spirit - Purple
+    universal, // All realms
 };
 
 /// Metadata for a TRI command in the registry
@@ -182,10 +182,10 @@ pub fn getCommandMetadata(registry: *const CommandRegistry, name: []const u8) ?C
 /// Calculate sacred weight based on realm
 pub fn calculateSacredWeight(realm: Realm) f64 {
     return switch (realm) {
-        .razum => PHI,           // 1.618
-        .materiya => 1.0,         // 1.0
-        .dukh => PHI_INV,        // 0.618
-        .universal => 1.0,       // 1.0
+        .razum => PHI, // 1.618
+        .materiya => 1.0, // 1.0
+        .dukh => PHI_INV, // 0.618
+        .universal => 1.0, // 1.0
     };
 }
 
@@ -367,11 +367,13 @@ test "All 20 commands registered with correct metadata" {
     try registerCoreCommands(&registry, allocator);
 
     const expected_commands = [_][]const u8{
-        "chat", "code", "gen",
-        "fix", "explain", "test_cmd",
-        "pipeline", "decompose", "plan", "verify", "verdict", "spec_create", "loop_decide",
-        "commit", "status", "diff",
-        "math", "phi", "constants_cmd", "fib",
+        "chat",          "code",      "gen",
+        "fix",           "explain",   "test_cmd",
+        "pipeline",      "decompose", "plan",
+        "verify",        "verdict",   "spec_create",
+        "loop_decide",   "commit",    "status",
+        "diff",          "math",      "phi",
+        "constants_cmd", "fib",
     };
 
     for (expected_commands) |cmd_name| {

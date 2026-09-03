@@ -1,0 +1,244 @@
+# Does the tri CLI build?
+#
+# It did not, for four months, and nothing said so. build.zig stopped parsing
+# on 2026-03-20 (0e9efbb93), was edited by 73 further commits that could never
+# have been validated, then renamed to build.zig.tri and deleted. The CLI that
+# this project's own documentation calls its entry point could not be compiled
+# by anyone, with any Zig version, and no gate noticed.
+#
+# This is that gate. It is deliberately dumb: fetch the pinned toolchain,
+# build, report. A build that fails here has failed for real users.
+#
+# Zig 0.15.2, not 0.16: the tree has ~951 std.fs call sites and ~383
+# std.process ones written against the 0.15 API, and 0.16 moved the filesystem
+# into std.Io with different semantics. Migrating is a real project; pinning
+# the toolchain the code was written for is the honest interim.
+#
+# Runs on Linux because Zig 0.15.2 cannot link against current macOS SDKs --
+# it fails on its own build runner there, before touching project code.
+#
+# phi^2 + 1/phi^2 = 3 = TRINITY
+
+name: tri builds
+
+on:
+  push:
+    paths:
+      - 'build.zig'
+      - 'build.zig.zon'
+      - 'src/tri/**'
+      - 'src/vsa**'
+      - '.github/workflows/tri-build.yml'
+  pull_request:
+    paths:
+      - 'build.zig'
+      - 'build.zig.zon'
+      - 'src/tri/**'
+      - 'src/vsa**'
+  workflow_dispatch:
+
+env:
+  ZIG_VERSION: '0.15.2'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: false   # the gitlink is unfetchable; see README
+
+      - name: Fetch Zig ${{ env.ZIG_VERSION }}
+        run: |
+          set -e
+          curl -sSL --retry 3 -o zig.tar.xz \
+            "https://ziglang.org/download/${ZIG_VERSION}/zig-x86_64-linux-${ZIG_VERSION}.tar.xz"
+          tar xf zig.tar.xz
+          echo "$PWD/zig-x86_64-linux-${ZIG_VERSION}" >> $GITHUB_PATH
+
+      - name: zig version
+        run: zig version
+
+      # Parsing is a separate question from linking, and it is the one that
+      # regressed unnoticed for four months. Ask it first and by name.
+      - name: Does build.zig parse?
+        run: |
+          zig ast-check build.zig
+          echo "build.zig parses" >> $GITHUB_STEP_SUMMARY
+
+      - name: Does the build graph load?
+        run: |
+          set -o pipefail
+          zig build --help 2>&1 | tee graph.log | head -40
+          echo '### Build graph' >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          grep -E '^  [a-z]' graph.log | head -25 >> $GITHUB_STEP_SUMMARY || true
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+      # -freference-trace: without it, a comptime error inside std (a format
+      # string, a bad @TypeOf) reports std's own line and hides the call site
+      # behind "8 reference(s) hidden" -- which points the reader at the
+      # standard library for a defect in this repository.
+      - name: Build tri
+        id: build
+        run: |
+          set -o pipefail
+          zig build tri-compile -freference-trace=12 2>&1 | tee build.log | tail -50
+
+      # Separate question, separate step. 'zig build tri' is a RUN step, so
+      # using it as the build gate conflated "does it compile" with "does it
+      # work" -- and the first successful link in four months arrived looking
+      # exactly like the ninety compile errors that preceded it. A crash here
+      # is reported, not fatal: the gate's job is the build.
+      - name: Does the binary start?
+        continue-on-error: true
+        run: |
+          set +e
+          mkdir -p out
+          BIN=$(find zig-out .zig-cache -name tri -type f -perm -u+x 2>/dev/null | head -1)
+          if [ -z "$BIN" ]; then echo "no binary produced"; exit 0; fi
+          echo '### `tri --help`' >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          "$BIN" --help > run.log 2>&1
+          RC=$?
+          head -30 run.log >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "exit code: $RC" >> $GITHUB_STEP_SUMMARY
+          exit 0
+
+      - name: What the binary reports
+        if: success()
+        run: |
+          mkdir -p out
+          BIN=$(find zig-out .zig-cache -name tri -type f -perm -u+x 2>/dev/null | head -1)
+          if [ -z "$BIN" ]; then
+            echo "::warning::built without error but no tri binary found"; exit 0
+          fi
+          echo '### tri --help' >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          "$BIN" --help 2>&1 | head -40 >> $GITHUB_STEP_SUMMARY || true
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+      - name: Where it stopped
+        if: failure()
+        run: |
+          echo '### First errors' >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          grep -E 'error:' build.log 2>/dev/null | head -12 >> $GITHUB_STEP_SUMMARY || \
+            tail -20 build.log >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Distinct files with errors: $(grep -oE '^[^:]+\.zig' build.log 2>/dev/null | sort -u | wc -l)" >> $GITHUB_STEP_SUMMARY
+
+
+      # Startup is not function. --help proves main() runs; it proves nothing
+      # about the 144 commands it advertises. This samples the ones that should
+      # be pure and side-effect free, and reports which answer.
+      #
+      # `verify` is deliberately NOT in the list. It shells out to
+      # `zig build test`, which legitimately takes minutes, and a 20-second
+      # timeout made it look flaky -- 124, then 0, then 124 across three runs.
+      # That was my measurement being wrong, not the command: a smoke list of
+      # "pure commands" containing one that builds the project measures the
+      # cache, not the command. It was nearly filed as 'verify hangs'.
+      # A convention, gated so it stays one. 49 sites across 15 files printed
+      # "Usage: ..." for a missing required argument and returned success --
+      # a caller could not tell a rejected invocation from a completed one.
+      # They were fixed over two iterations; without this they come back, one
+      # new command at a time, and the next person measures 49 again.
+      #
+      # Static, so it covers all 144 commands rather than the 18 the smoke
+      # test runs. It looks for the unambiguous shape only:
+      #
+      #     if (args.len == 0) { print("Usage: ..."); return; }
+      #
+      # A command asked for help EXPLICITLY should print usage and succeed, so
+      # matching every occurrence of the word would be wrong -- that
+      # distinction is why this is a shape and not a grep.
+      - name: Does any usage error still report success?
+        run: |
+          python3 - <<'PY' | tee usage-check.txt
+          import re, glob
+          bad = []
+          for p in glob.glob('src/tri/**/*.zig', recursive=True):
+              if 'backup' in p:
+                  continue
+              try:
+                  lines = open(p, encoding='utf8', errors='replace').read().split('\n')
+              except Exception:
+                  continue
+              for i, l in enumerate(lines):
+                  if not re.search(r'if \(args\.len == 0\)', l):
+                      continue
+                  blk = '\n'.join(lines[i:i + 8])
+                  if 'Usage:' in blk and 'return;' in blk \
+                     and 'exitWithCode' not in blk and 'return error' not in blk:
+                      bad.append(f"{p}:{i + 1}")
+          print(f"sites: {len(bad)}")
+          for b in bad:
+              print(f"  {b}")
+          PY
+          N=$(head -1 usage-check.txt | sed 's/sites: //')
+          echo "### Usage errors reporting success: $N" >> $GITHUB_STEP_SUMMARY
+          if [ "$N" != "0" ]; then
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            tail -n +2 usage-check.txt >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            echo "::error::$N usage error(s) return 0. Use tri_exit_codes.exitWithCode(.validation_error), as phi, fib, lucas and formula do."
+            exit 1
+          fi
+          echo 'None — the convention holds across all commands, not just the sampled ones.' >> $GITHUB_STEP_SUMMARY
+
+      - name: Do the commands work?
+        continue-on-error: true
+        run: |
+          set +e
+          mkdir -p out
+          BIN=$(find zig-out .zig-cache -name tri -type f -perm -u+x 2>/dev/null | head -1)
+          [ -z "$BIN" ] && { echo "no binary"; exit 0; }
+          # Both destinations. Writing only to the summary produced a report
+          # that could not be read from the job log -- the same shape of defect
+          # this repo's stale-reference skill warns about, committed twenty
+          # minutes after writing it.
+          say() { echo "$1" >> $GITHUB_STEP_SUMMARY; echo "$1"; }
+          say '### Command surface'
+          say ''
+          say '| command | exit | first line |'
+          say '|---|---|---|'
+          ok=0; bad=0
+          # Six added after reading their handlers rather than guessing: bio, cosmos,
+          # formula, intelligence, neuro and spiral have handlers that print and
+          # touch nothing else -- no Child.run, no file handles, no sockets. The
+          # scan that found them also pointed at three handlers in
+          # tri_math_backup.zig, a file nothing imports; see
+          # research/src-tri-reachability.md.
+          for c in version info status phi constants math fib lucas gematria sacred stats doctor \
+                   bio cosmos formula intelligence neuro spiral; do
+            out=$(timeout 20 "$BIN" "$c" 2>&1); rc=$?
+            # Keep the whole output of anything that did not exit 0. The first
+            # line is enough for a table and useless for a panic: `spiral`
+            # aborted with 'start index 1 is larger than end index' and the
+            # backtrace went in the bin, which is the instrument discarding
+            # exactly the case it exists to catch.
+            if [ $rc -ne 0 ]; then printf '%s\n' "$out" > "out/cmd-$c.log"; fi
+            first=$(printf '%s' "$out" | sed 's/\x1b\[[0-9;]*m//g' | grep -v '^[[:space:]]*$' | head -1 | cut -c1-58)
+            if [ $rc -eq 0 ]; then ok=$((ok+1)); else bad=$((bad+1)); fi
+            say "| \`$c\` | $rc | ${first:-(no output)} |"
+          done
+          say ''
+          say "**$ok exited 0, $bad did not** — of 18 sampled from 144 advertised."
+          say ''
+          say 'Exit 0 means it ran, not that it is correct. This is a smoke test.'
+          exit 0
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tri-build-logs
+          path: |
+            build.log
+            graph.log
+            run.log
+            out
+          retention-days: 30

@@ -1,0 +1,18 @@
+# openXC7-vs-Vivado benchmark — design table (fields separated by '|')
+# name | dir (relative to designs/) | top module | part | xdc | verilog sources (relative to dir) | data-file globs copied into the run dir
+#
+# Configurations mirror the openXC7 demo-projects CI (smoke.yml at the frozen
+# main revision). picosoc: BOARD=qmtech -> xc7k325tffg676-1, top module `top`
+# (in qmtech.v), XDC picosoc-qmtech.xdc. The previous kx2 config
+# (xc7k160tffg676-2, kx2.v) fails Vivado DRC PLIO-9 — the clock is LOCed to an
+# N-type CCIO — so it cannot produce a Vivado baseline (kept in
+# designs.tsv.bak-kx2). NOTE: picosoc-qmtech.xdc carries NO active
+# create_clock (line 4 is commented out; the clock lives in qmtech.sdc, which
+# this non-project XDC flow does not read) -> the picosoc row is unconstrained
+# and its wns/tns/timing_met columns are not meaningful (met=na, like blinky).
+# The litex designs reference ../vexriscv/VexRiscv.v
+# exactly as their Makefiles do (VexRiscv.v DIFFERS between the two revisions).
+blinky-digilent-arty|main/blinky-digilent-arty|blinky|xc7a35tcsg324-1|blinky.xdc|blinky.v|
+picosoc|main/picosoc|top|xc7k325tffg676-1|picosoc-qmtech.xdc|qmtech.v picosoc_noflash.v picorv32.v progmem.v simpleuart.v|
+litex-ddr-arty-s7|main/litex-ddr-arty-s7|digilent_arty_s7|xc7s50csga324-1|digilent_arty_s7.xdc|digilent_arty_s7.v ../vexriscv/VexRiscv.v|*.init
+litex-ddr-arty-s7-deephier|deephier/litex-ddr-arty-s7|digilent_arty_s7|xc7s50csga324-1|digilent_arty_s7.xdc|digilent_arty_s7.v ../vexriscv/VexRiscv.v|*.init

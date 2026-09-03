@@ -190,7 +190,7 @@ fn chatReflex(ctx: *Context, args: []const []const u8) !void {
 
 // --- MAIN LOOP ---
 pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 

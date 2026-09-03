@@ -1,0 +1,259 @@
+# Does BUFR_DIVIDE reach the bitstream?
+#
+# openXC7/nextpnr-xilinx#151 claims that nextpnr hardcodes
+# BUFR_Y<y>.BUFR_DIVIDE.BYPASS for every BUFR, so a design asking for a
+# division is silently built undivided. This proves or refutes that, on the
+# same two source files, by building each with the STOCK toolchain and with
+# the patched one:
+#
+#   MEASURED, run 32036508333:
+#
+#            stock 05aaa06   patched (PR #151)
+#   BYPASS   (nothing)       BUFR_Y1.IN_USE + BUFR_DIVIDE.BYPASS
+#   D5       (nothing)       BUFR_Y1.IN_USE + BUFR_DIVIDE.D5
+#            ^^^^^^^^^
+#            a placed BUFR gets no configuration at all: the real defect
+#
+# The probe drives an ODDR from the BUFR output. A fabric flip-flop would be
+# clocked through a BUFG and would never touch the regional-clock path; the
+# ODDR is an OLOGIC flop inside the IOI tile, so the clock has to arrive over
+# RCLK -- which is what makes the BUFR a placed cell rather than decoration.
+#
+# The first run of this probe refuted the first version of #151, and that is
+# how the larger defect surfaced: with a BUFR actually placed, the router goes
+# through the SITE, crosses no pip, and the pseudo-pip table that carries the
+# configuration never fires at all. The buffer came out placed, wired, clocked
+# and completely unconfigured -- no IN_USE either. #151 was rewritten to emit
+# from the cell, and this probe now checks that version.
+#
+# If NO BUFR feature appears in any of the four FASMs, the probe is wrong
+# rather than the claim, and this run says so instead of reporting green.
+# That branch has fired once already and was worth every minute.
+#
+# phi^2 + 1/phi^2 = 3 = TRINITY
+
+name: BUFR divide probe (nextpnr-xilinx#151)
+
+on:
+  workflow_dispatch:
+
+env:
+  OPENXC7_IMAGE: regymm/openxc7@sha256:eced1cdd4727549f2d983328e0cf170fb6f6f67d87f19b2bf24365163368c70c
+  NEXTPNR_STOCK: 05aaa06bce455ae6ed01efa1616ba7d3a9421ca7
+  NEXTPNR_FORK: https://github.com/gHashTag/nextpnr-xilinx
+  NEXTPNR_FORK_REF: fix/bufr-divide
+  PART: xc7a35tcsg324
+
+jobs:
+  probe:
+    name: Build both designs with both toolchains
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Pull the pinned image
+        run: |
+          for i in 1 2 3 4 5 6; do docker pull "$OPENXC7_IMAGE" && break; sleep $((i*20)); done
+
+      # Both binaries are built INSIDE the image: the runner is Ubuntu 24.04,
+      # the image is 20.04, and a binary built on one does not run on the
+      # other. Learned the expensive way on the benchmark harness.
+      - name: Build stock and patched nextpnr, in the image
+        run: |
+          mkdir -p bin
+          docker run --rm -v "$PWD:/w" "$OPENXC7_IMAGE" bash -c '
+            set -e
+            cd /nextpnr-xilinx
+            git fetch --depth 1 origin '"$NEXTPNR_STOCK"'
+            git checkout '"$NEXTPNR_STOCK"'
+            git submodule update --init --recursive --depth 1 || true
+            cmake . -DARCH=xilinx -DCMAKE_BUILD_TYPE=Release >/dev/null
+            make -j"$(nproc)" >/dev/null 2>&1
+            cp nextpnr-xilinx /w/bin/nextpnr-stock
+            cp "$(find . -name bbasm -type f -perm -u+x | head -1)" /w/bin/bbasm
+
+            git remote add fork '"$NEXTPNR_FORK"' 2>/dev/null || true
+            git fetch --depth 1 fork '"$NEXTPNR_FORK_REF"'
+            git checkout FETCH_HEAD
+            grep -q "void write_bufr" xilinx/fasm.cc \
+              || { echo "::error::the fork branch does not carry write_bufr(); the guard and the patch have drifted"; exit 1; }
+            cmake . -DARCH=xilinx -DCMAKE_BUILD_TYPE=Release >/dev/null
+            make -j"$(nproc)" >/dev/null 2>&1
+            cp nextpnr-xilinx /w/bin/nextpnr-patched
+          '
+          ls -l bin/
+
+      - name: Generate the chipdb
+        run: |
+          mkdir -p chipdb
+          docker run --rm -v "$PWD:/w" -w /w "$OPENXC7_IMAGE" bash -c "
+            set -e
+            cd /nextpnr-xilinx
+            git fetch --depth 1 origin $NEXTPNR_STOCK && git checkout $NEXTPNR_STOCK
+            cp /w/bin/bbasm /usr/local/bin/bbasm
+            python3 xilinx/python/bbaexport.py --device ${PART}-1 --bba /w/chipdb/${PART}.bba
+            bbasm -l /w/chipdb/${PART}.bba /w/chipdb/${PART}.bin
+          "
+          ls -lh chipdb/${PART}.bin
+
+      - name: Synthesise and place both designs with both binaries
+        run: |
+          set -o pipefail
+          mkdir -p out logs
+          docker run --rm -v "$PWD:/w" -w /w "$OPENXC7_IMAGE" bash -c '
+            set -e
+            cd /w/research/bufr-probe
+            for d in bufr_divide bufr_bypass; do
+              yosys -p "synth_xilinx -flatten -abc9 -arch xc7 -top top; write_json /w/out/$d.json" \
+                    ${d}_top.v > /w/logs/$d.synth.log 2>&1
+            done
+            for t in stock patched; do
+              cp /w/bin/nextpnr-$t /usr/local/bin/npnr
+              for d in bufr_divide bufr_bypass; do
+                npnr --chipdb /w/chipdb/'"$PART"'.bin --xdc bufr_probe.xdc \
+                     --json /w/out/$d.json --fasm /w/out/$d.$t.fasm \
+                     > /w/logs/$d.$t.pnr.log 2>&1
+              done
+            done
+          '
+          wc -l out/*.fasm
+
+      # Does the FASM become a bitstream? Separate question from "are the right
+      # features emitted", and the one that decides whether a BUFR fed from an
+      # input pin is usable at all today.
+      #
+      # The probe's FASM contains
+      #   HCLK_IOI3_*.HCLK_IOI_IO_PLL_CLK0_DMUX.HCLK_IOI_I2IOCLK_TOP0
+      # and segbits_hclk_ioi3.db at d17fea2 has ZERO rows matching I2IOCLK --
+      # fuzzer 047 has no IBUF specimen, so that leg is structurally unreachable
+      # in its design space (@cavearr's root cause). Whether that makes
+      # fasm2frames fail, or silently drop the feature, changes what the fix
+      # ordering has to be. Measure it rather than assert it.
+      - name: Can the FASM be turned into frames?
+        run: |
+          set +e
+          say() { echo "$1" >> $GITHUB_STEP_SUMMARY; echo "$1"; }
+          docker run --rm -v "$PWD:/w" -w /w "$OPENXC7_IMAGE" bash -c '
+            source /prjxray/env/bin/activate
+            DB=/nextpnr-xilinx/xilinx/external/prjxray-db/artix7
+            for t in stock patched; do
+              fasm2frames --part '"$PART"'-1 --db-root $DB \
+                /w/out/bufr_divide.$t.fasm > /w/out/$t.frames 2> /w/out/$t.f2f.err
+              echo "$t rc=$?" >> /w/out/f2f.status
+            done
+          '
+          say ""
+          say "### Does the FASM become a bitstream?"
+          say ""
+          cat out/f2f.status 2>/dev/null | while read -r line; do say "- \`$line\`"; done
+          # The exception, not the head of the file: the first lines are an
+          # antlr import warning that says nothing, and burying a decisive
+          # error under it is how that error comes to read as noise. Measured
+          # in run 32100921307:
+          #
+          #   FasmLookupError: Segment DB HCLK_IOI3, key
+          #   HCLK_IOI3.HCLK_IOI_IO_PLL_CLK0_DMUX.HCLK_IOI_I2IOCLK_TOP0 not found
+          #
+          # identically for stock and patched, so it is the database gap and
+          # not #151.
+          for t in stock patched; do
+            if [ -s "out/$t.f2f.err" ]; then
+              say ""
+              say "\`$t\`:"
+              say '```'
+              say "$(grep -aE 'Error|error:' "out/$t.f2f.err" | tail -2)"
+              say '```'
+            fi
+          done
+          I2=$(grep -c 'I2IOCLK' out/bufr_divide.patched.fasm)
+          say ""
+          say "The FASM contains $I2 \`I2IOCLK\` feature(s); the database has 0 rows for them."
+          say "This step reports what that costs — it does not gate the run."
+          exit 0
+
+      - name: The verdict
+        run: |
+          set +e
+          say() { echo "$1" >> $GITHUB_STEP_SUMMARY; echo "$1"; }
+          say "## BUFR_DIVIDE: does the parameter reach the bitstream?"
+          say ""
+
+          ANY=$(grep -h 'BUFR_Y' out/*.fasm | wc -l)
+          if [ "$ANY" -eq 0 ]; then
+            say "**The probe never routed a BUFR.** No \`BUFR_Y*\` feature in any of the"
+            say "four FASMs, so this run says nothing about #151 — the design is wrong,"
+            say "not the claim. The ODDR is meant to pull the regional clock into an IOI"
+            say "tile; it did not."
+            say ""
+            say '```'
+            grep -hE 'BUFR|RCLK|ERROR|Warning' logs/bufr_divide.patched.pnr.log | head -20 >> $GITHUB_STEP_SUMMARY
+            say '```'
+            exit 1
+          fi
+
+          say "| design | toolchain | BUFR feature emitted |"
+          say "|---|---|---|"
+          for d in bufr_divide bufr_bypass; do
+            for t in stock patched; do
+              F=$(grep -hoE 'BUFR_Y[0-9]\.BUFR_DIVIDE\.[A-Z0-9]+' out/$d.$t.fasm | sort -u | paste -sd' ' -)
+              say "| \`$d\` | $t | \`${F:-none}\` |"
+            done
+          done
+          say ""
+
+          # These assertions were rewritten after the first run.
+          #
+          # They originally tested the hypothesis in the first version of #151:
+          # that stock emits BUFR_DIVIDE.BYPASS where the design asks for 5.
+          # The probe refuted it. Stock emits NOTHING -- the pseudo-pip table
+          # that carries BUFR configuration only fires when the site is
+          # traversed as routing, and a placed BUFR is not. So the defect is
+          # larger than the divider, and the test now states what was measured
+          # rather than what was expected.
+          STOCK_ANY=$(grep -h 'BUFR_Y' out/bufr_divide.stock.fasm out/bufr_bypass.stock.fasm | wc -l)
+          P_IN_USE=$(grep -c 'BUFR_Y[0-9]\.IN_USE' out/bufr_divide.patched.fasm)
+          D5=$(grep -c 'BUFR_DIVIDE\.D5' out/bufr_divide.patched.fasm)
+          PB=$(grep -c 'BUFR_DIVIDE\.BYPASS' out/bufr_bypass.patched.fasm)
+          ONLY_ADDS=$(diff out/bufr_divide.stock.fasm out/bufr_divide.patched.fasm | grep -c '^<')
+
+          ok=0
+          if [ "$STOCK_ANY" -eq 0 ]; then
+            say "**Bug confirmed, and it is bigger than the divider**: stock emits no"
+            say "\`BUFR_Y*\` feature at all — not \`IN_USE\`, not a divide — for a BUFR that"
+            say "is placed (\`BUFR: 1/20\`), wired, and clocking an ODDR."
+          else
+            say "Stock emitted $STOCK_ANY BUFR feature(s); the defect is not as described."; ok=1
+          fi
+          if [ "$P_IN_USE" -gt 0 ] && [ "$D5" -gt 0 ]; then
+            say "**Fix confirmed**: patched emits \`IN_USE\` and \`D5\` for the same source."
+          else
+            say "Patched did not emit both IN_USE and D5 — the fix is incomplete."; ok=1
+          fi
+          if [ "$PB" -gt 0 ]; then
+            say "**Parameter honoured**: the BYPASS design gets BYPASS, not D5."
+          else
+            say "The BYPASS design did not get BYPASS."; ok=1
+          fi
+          if [ "$ONLY_ADDS" -eq 0 ]; then
+            say "**Additive only**: the patched FASM removes nothing stock emitted."
+          else
+            say "Patched REMOVED $ONLY_ADDS line(s) stock emitted — that is a regression."; ok=1
+          fi
+
+          say ""
+          say "Bits behind the features, from prjxray-db d17fea2:"
+          say '```'
+          say "HCLK_IOI3.BUFR_Y0.BUFR_DIVIDE.BYPASS !32_22 !33_18 !33_19 !33_20 !33_21"
+          say "HCLK_IOI3.BUFR_Y0.BUFR_DIVIDE.D5      32_22  33_18  33_19 !33_20 !33_21"
+          say '```'
+          exit $ok
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: bufr-probe
+          path: |
+            out
+            logs
+          retention-days: 90

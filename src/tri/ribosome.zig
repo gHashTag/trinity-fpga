@@ -11,6 +11,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_mutex = @import("mutex.zig");
 const Allocator = std.mem.Allocator;
 
 // Re-export from global constants for backward compatibility
@@ -256,7 +257,7 @@ var cache_state: struct {
     manifests: []const CellManifest = &.{},
 } = .{};
 
-var cache_mutex = std.Thread.Mutex{};
+var cache_mutex = tri_mutex.Mutex{};
 
 /// Discovery options for benchmarking and cache control
 pub const DiscoveryOptions = struct {

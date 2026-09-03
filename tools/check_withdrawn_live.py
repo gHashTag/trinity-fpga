@@ -33,7 +33,22 @@ for m in WD.finditer(t):
     # the paragraph containing it
     start = t.rfind("\n\n", 0, m.start()) + 2
     end = t.find("\n\n", m.end())
-    zones.append((start, end if end > 0 else len(t)))
+    end = end if end > 0 else len(t)
+    # A float has no blank line between \begin{table} and \end{table}, so a
+    # withdrawal sentence written in the \caption -- which is where a paper
+    # naturally puts one -- made the paragraph span the entire environment and
+    # swallowed the TABULAR BODY. Every current value in that table then read
+    # as withdrawn, and its legitimate appearance elsewhere was reported as a
+    # withdrawn number asserted live. That is how 0.1173, TNF16's live MHz/LUT,
+    # came to be flagged from a caption withdrawing 440, 895 and 5.1.
+    #
+    # A caption withdraws numbers it NAMES; it does not withdraw the rows it
+    # introduces -- a withdrawn table would be deleted, not captioned. So the
+    # zone stops where the data begins.
+    body = t.find(r"\begin{tabular}", m.end())
+    if body != -1 and body < end:
+        end = body
+    zones.append((start, end))
 
 # A number's UNIT is part of its identity. `2.44\%` (a retracted excess
 # reconstruction error) and `2.44\mathrm{e}{-4}` (a mean relative error in the
@@ -58,8 +73,10 @@ for s, e in zones:
         # withdrawn pair, so `against` following a number says nothing about it.
         # Putting the full set on both sides made this gate blind to an injected
         # 0.189 -- caught by the negative test the header demands, not by review.
+        # "measured identically" (from main) is the same root cause in prose:
+        # a withdrawal withdraws a CLAIM, not every number in its paragraph.
         BEFORE = ("against ", "median of", "is now", "corrected", "audited",
-                  "the two are")
+                  "the two are", "measured identically")
         AFTER = ("at a median of", "median of five", "seed median", "five-seed")
         if any(k in before for k in BEFORE) or any(k in after for k in AFTER):
             continue

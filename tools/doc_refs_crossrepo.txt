@@ -1,5 +1,3 @@
-HANDOFF_AGENT.md: names `conformance/vectors/INDEX_all_formats.json` -> resolves in t27
-HANDOFF_AGENT.md: names `docs/NOW.md` -> resolves in t27
 docs/HW_CAMPAIGN_AX7203_2026_07_30.md: names `gf16_matmul4x4_top.v` -> resolves in t27
 docs/ICA_W40_001.md: names `trios-coq/Physics/SparsityMask.v` -> resolves in t27
 docs/QB_CHIPS_PHD_ROADMAP.md: names `check_no_star.sh` -> resolves in t27
@@ -11,6 +9,8 @@ docs/docs/architecture/SA-2_EXECUTION_GRAPH.md: names `.github/workflows/release
 docs/docs/architecture/SA-2_EXECUTION_GRAPH.md: names `design.json` -> resolves in t27
 docs/docs/tri27/index.md: names `hello.t27` -> resolves in tri-net
 docs/funding/TRI-NET_grant_onepager_RU.md: names `specs/numeric/formats_catalog.t27` -> resolves in t27
+docs/handoff/HANDOFF_AGENT.md: names `conformance/vectors/INDEX_all_formats.json` -> resolves in t27
+docs/handoff/HANDOFF_AGENT.md: names `docs/NOW.md` -> resolves in t27
 docs/tri-cell-quick.md: names `.trinity/cells/registry.json` -> resolves in t27
 docs/tri-cell.md: names `.trinity/cells/registry.json` -> resolves in t27
 docs/v3-squeeze/S-19-dual-mac-pe.md: names `check_no_star.sh` -> resolves in t27
@@ -57,5 +57,10 @@ research/XC7A200T_GF16_DATAPOINT_2026-08-05.md: names `trinity-gf16.tex` -> reso
 research/arxiv_submission/submission_checklist.md: names `formats_catalog.t27` -> resolves in t27
 research/arxiv_v3_catalog_update.md: names `formats_catalog.t27` -> resolves in t27
 research/arxiv_v3_catalog_update.md: names `formats_catalog.t27` -> resolves in t27
+research/frontier/APPARATUS_AUDIT_2026-08-12.md: names `docs/arxiv-submission/trinity-gf16.tex` -> resolves in t27
+research/frontier/APPARATUS_AUDIT_2026-08-12.md: names `gf16_dot4.v` -> resolves in t27
+research/frontier/APPARATUS_AUDIT_2026-08-12.md: names `gf16_matmul4x4.v` -> resolves in t27
+research/frontier/APPARATUS_AUDIT_2026-08-12.md: names `gf16_matmul_top.v` -> resolves in t27
+research/frontier/APPARATUS_AUDIT_2026-08-12.md: names `gf16_top.v` -> resolves in t27
 research/frontier/DOCUMENT_TRACEABILITY_2026-08-10.md: names `cases.yaml` -> resolves in claim-audit-lab
 research/frontier/WITHDRAWAL_10_ARTEFACT_DIVERGENCE_2026-08-10.md: names `formats_catalog.t27` -> resolves in t27

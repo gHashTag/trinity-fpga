@@ -380,7 +380,7 @@ pub fn runEvalCommand(allocator: std.mem.Allocator, args: []const []const u8) !v
 pub fn runComputeCommand(allocator: std.mem.Allocator, args: []const []const u8) !void {
     if (args.len == 0) {
         std.debug.print("Usage: tri math compute [spiral|verify|compare] [args...]\n", .{});
-        return;
+        return tri_exit_codes.exitWithCode(.validation_error);
     }
 
     const operation = args[0];
@@ -467,7 +467,11 @@ pub fn runPhiCommand(allocator: std.mem.Allocator, args: []const []const u8) !vo
 pub fn runFibCommand(allocator: std.mem.Allocator, args: []const []const u8) !void {
     if (args.len == 0) {
         std.debug.print("Usage: tri fib <n>\n", .{});
-        return;
+        // Same exit code as runPhiCommand above, which handles the identical
+        // situation correctly. These two printed the usage line and returned
+        // normally, so a caller could not tell a missing argument from a
+        // successful run.
+        return tri_exit_codes.exitWithCode(.validation_error);
     }
     const n = try std.fmt.parseInt(usize, args[0], 10);
     var wr = DirectWriter{};
@@ -477,7 +481,11 @@ pub fn runFibCommand(allocator: std.mem.Allocator, args: []const []const u8) !vo
 pub fn runLucasCommand(allocator: std.mem.Allocator, args: []const []const u8) !void {
     if (args.len == 0) {
         std.debug.print("Usage: tri lucas <n>\n", .{});
-        return;
+        // Same exit code as runPhiCommand above, which handles the identical
+        // situation correctly. These two printed the usage line and returned
+        // normally, so a caller could not tell a missing argument from a
+        // successful run.
+        return tri_exit_codes.exitWithCode(.validation_error);
     }
     const n = try std.fmt.parseInt(usize, args[0], 10);
     var wr = DirectWriter{};
@@ -493,9 +501,14 @@ pub fn runSpiralCommand(allocator: std.mem.Allocator, args: []const []const u8) 
         n = try std.fmt.parseInt(u32, args[0], 10);
     }
 
-    for (args[1..]) |arg| {
-        if (std.mem.eql(u8, arg, "--plot") or std.mem.eql(u8, arg, "-p")) {
-            show_plot = true;
+    // args[1..] panics when args is empty -- args[0] was guarded above and
+    // this was not. n defaults to 12, so `tri spiral` with no arguments is a
+    // supported call and used to abort on it.
+    if (args.len > 1) {
+        for (args[1..]) |arg| {
+            if (std.mem.eql(u8, arg, "--plot") or std.mem.eql(u8, arg, "-p")) {
+                show_plot = true;
+            }
         }
     }
 
@@ -590,7 +603,10 @@ pub fn runFormulaCommand(allocator: std.mem.Allocator, args: []const []const u8)
     if (args.len == 0) {
         std.debug.print("Usage: tri formula <number>\n", .{});
         std.debug.print("  Decompose a number using Sacred Formula V = n × 3^k × π^m × φ^p × e^q\n", .{});
-        return;
+        // Third command in this file to have reported a usage error as
+        // success; phi, fib and lucas were the others. Unlike spiral, formula
+        // has no default, so a missing argument really is an error.
+        return tri_exit_codes.exitWithCode(.validation_error);
     }
     const value = std.fmt.parseFloat(f64, args[0]) catch {
         std.debug.print("Error: '{s}' is not a valid number\n", .{args[0]});
@@ -1059,7 +1075,7 @@ pub fn runEvidenceCommand(allocator: std.mem.Allocator, args: []const []const u8
         std.debug.print("  Show sacred formula evidence card for a constant or prediction\n", .{});
         std.debug.print("  Example: tri math evidence \"fine structure\"\n", .{});
         std.debug.print("  Example: tri math evidence Lambda_QCD\n", .{});
-        return;
+        return tri_exit_codes.exitWithCode(.validation_error);
     }
 
     // Join args into query, lowercase for matching
@@ -1203,7 +1219,7 @@ pub fn runSearchBestFitCommand(allocator: std.mem.Allocator, args: []const []con
     if (args.len == 0) {
         std.debug.print("Usage: tri math search <value>\n", .{});
         std.debug.print("  Find best sacred formula match for a numerical value\n", .{});
-        return;
+        return tri_exit_codes.exitWithCode(.validation_error);
     }
     const value = std.fmt.parseFloat(f64, args[0]) catch {
         std.debug.print("Error: '{s}' is not a valid number\n", .{args[0]});

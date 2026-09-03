@@ -20,9 +20,9 @@ micro-scale) into `[measured — SW proxy, CPU]`.
 
 Two implementations of one methodology:
 
-1. **`webterm_composition_bpb.py`** (in the `trinity-fpga` root) — a pod-ready harness on
+1. **`research/gfplus_line/webterm_composition_bpb.py`** (in the `trinity-fpga` root) — a pod-ready harness on
    a 29M-transformer + FineWeb sp1024, mirroring the methodology of inv. #18
-   (`webterm_gfplus_v2bpb.py`): quantizes Linear weights in three ways
+   (`research/gfplus_line/webterm_gfplus_v2bpb.py`): quantizes Linear weights in three ways
    (FP32 / axis1 GF+A / composition GF+A∘intra-pocket), runs a real forward pass on
    an independent val-stream, measures bits-per-token. Launch:
    ```
@@ -68,7 +68,7 @@ Two implementations of one methodology:
   strengthens the "does not pay off" conclusion.
 - bits-per-token is the primary metric; BPB = BPT/3.9 `[proxy coefficient]` (the sp1024 stream
   cannot be decoded by the 8192-BPE tokenizer, inv. #18).
-- The full GPU measurement on the 29M-model (`webterm_composition_bpb.py`) remains open —
+- The full GPU measurement on the 29M-model (`research/gfplus_line/webterm_composition_bpb.py`) remains open —
   that is exactly where invariant #18 previously showed that deep FFN layers give the greatest
   sensitivity; it is possible that on 29M the composition's ΔBPT becomes non-zero (but, per
   inv. #18, most likely remains <threshold). This is the MAIN recommendation for the next loop.

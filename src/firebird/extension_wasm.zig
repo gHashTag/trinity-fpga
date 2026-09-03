@@ -16,7 +16,7 @@ const depin = @import("depin.zig");
 // ═══════════════════════════════════════════════════════════════════════════════
 
 // Global allocator for WASM
-var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+var gpa = std.heap.DebugAllocator(.{}){};
 const allocator = gpa.allocator();
 
 // Global state

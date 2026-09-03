@@ -1,0 +1,9 @@
+hostname:   bit0
+date:       2026-08-15T14:22:40Z
+nproc:      20
+mem_gb:     125
+os:         Ubuntu 24.04.4 LTS
+cpu:        13th Gen Intel(R) Core(TM) i5-13500
+vivado:     vivado v2026.1 (64-bit)
+runs_per_design: 3
+designs:    blinky-digilent-arty 

@@ -1,0 +1,55 @@
+{
+ "model": "gptneo",
+ "src": "EleutherAI/gpt-neo-125m",
+ "nwin": 40,
+ "seqlen": 2048,
+ "nseed": 3,
+ "ppl_fp32": 24.48770460598396,
+ "eps": {
+  "0.06": {
+   "rels": [
+    0.3569648095595477,
+    0.3217189440516073,
+    0.30924040300604805
+   ],
+   "mean": 0.32930805220573434,
+   "sd": 0.024750771041569756
+  },
+  "0.09": {
+   "rels": [
+    1.2683400113379517,
+    1.2559800860958674,
+    1.1455724045967757
+   ],
+   "mean": 1.223297500676865,
+   "sd": 0.06759500616533597
+  },
+  "0.12": {
+   "rels": [
+    5.638037989335963,
+    5.752194001549898,
+    4.346879201625227
+   ],
+   "mean": 5.24570373083703,
+   "sd": 0.7804947466291882
+  }
+ },
+ "provenance": {
+  "corpus": {
+   "sha256": "696cca6b65a171b0a358a4be6732cdfdf2dd6164a32e20fd70e3c13fc4dfae83",
+   "chars": 1294336
+  },
+  "checkpoint": {
+   "src": "EleutherAI/gpt-neo-125m",
+   "kind": "hub",
+   "revision": "21def0189f5705e2521767faed922f1f15e7d7db"
+  },
+  "harness": {
+   "file": "block_tnf.py",
+   "sha256": "cd39ef2305ed6e0518a2b75851327158e206bef6b35c1f507fe3eeed902ad678"
+  }
+ },
+ "alpha_mean": 3.943936663943768,
+ "alpha_sd": 4.814690701396649,
+ "verdict": "seed-averaging does not restore alpha = 2; alpha < 2 survives"
+}

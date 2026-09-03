@@ -19,6 +19,9 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: { python-version: '3.12' }
-      - run: sudo apt-get update && sudo apt-get install -y iverilog
+      # zsh: both conform scripts open with `#!/bin/zsh` and ubuntu-latest has
+      # none, which surfaces as exit 127 and reads as a broken gate. See the
+      # note in decoder-conformance.yml.
+      - run: sudo apt-get update && sudo apt-get install -y iverilog zsh
       - run: cd fpga/tnet && ./conform.sh && ./conform_wide.sh
       - run: python3 tools/check_undefined_outputs.py

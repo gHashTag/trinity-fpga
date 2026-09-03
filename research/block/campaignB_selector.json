@@ -13,9 +13,9 @@
   "MX-asym-MID2",
   "MX-asym-G68",
   "MX-asym-MID",
-  "MX-asym-TOP",
   "MX-asym-MIDN",
-  "MX-asym-NEAR0N"
+  "MX-asym-NEAR0N",
+  "MX-asym-TOP"
  ],
  "bootstrap": 4000,
  "seed": 20260812,
@@ -78,7 +78,7 @@
   }
  },
  "robustness_subsets": {
-  "all ten": {
+  "all 10": {
    "smollm2": {
     "own": 0.9878787878787878,
     "joint": 0.18787878787878787
@@ -96,7 +96,7 @@
     "joint": 0.9272727272727272
    }
   },
-  "without TOP": {
+  "without TOP (9 placements)": {
    "smollm2": {
     "own": 0.9833333333333333,
     "joint": 0.43333333333333335
@@ -257,9 +257,9 @@
  "spread": {
   "smollm2": {
    "spread_pp": 9.721658659133393,
-   "sd_pp": 2.944924582065035,
+   "sd_pp": 2.9449245820650356,
    "noise_se_pp": 0.35037038744498145,
-   "sd_over_se": 8.405175458863445
+   "sd_over_se": 8.405175458863447
   },
   "qwen": {
    "spread_pp": 3.0398264026008426,
@@ -275,9 +275,9 @@
   },
   "opt": {
    "spread_pp": 5.061388918920429,
-   "sd_pp": 1.4214526779269812,
+   "sd_pp": 1.4214526779269814,
    "noise_se_pp": 0.13635437431349834,
-   "sd_over_se": 10.424694367771853
+   "sd_over_se": 10.424694367771854
   }
  },
  "spread_vs_joint_rho": 0.39999999999999997,

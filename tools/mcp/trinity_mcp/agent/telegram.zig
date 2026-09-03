@@ -89,7 +89,7 @@ fn sendToEndpoint(config: TelegramConfig, endpoint: []const u8, text: []const u8
     const body = body_buf[0..i];
 
     // Fire-and-forget HTTP POST (internal GPA per-call)
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
@@ -124,7 +124,7 @@ pub fn sendAndCapture(config: TelegramConfig, text: []const u8) ?i64 {
     var body_buf: [4096]u8 = undefined;
     const body = buildJsonBody(&body_buf, config.chat_id, null, text) orelse return null;
 
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
@@ -167,7 +167,7 @@ pub fn editMessage(config: TelegramConfig, message_id: i64, text: []const u8) vo
     var body_buf: [4096]u8 = undefined;
     const body = buildJsonBody(&body_buf, config.chat_id, message_id, text) orelse return;
 
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
@@ -201,7 +201,7 @@ pub fn pinMessage(config: TelegramConfig, message_id: i64) void {
     var body_buf: [256]u8 = undefined;
     const body = std.fmt.bufPrint(&body_buf, "{{\"chat_id\":\"{s}\",\"message_id\":{d}}}", .{ config.chat_id, message_id }) catch return;
 
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 

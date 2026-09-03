@@ -158,6 +158,22 @@ def main():
     print("=" * 100)
     print("4.  DOES JOINT SELECTION BEAT THE REFERENCES OUT OF SAMPLE?  "
           "(cross-model claim -> n = 4)")
+    # A rotation whose four folds pick the SAME book is not a rotation. Its
+    # "held-out mean" is then the plain four-model mean of that one book --
+    # algebraically identical, not merely close -- and the words "held out"
+    # carry no information at all. That is exactly what happened to
+    # MX-asym-NEAR0's "-4.74 %, 4/4" (NEAR0_HELD_OUT_LABEL_EMPTY_2026-08-12).
+    # Today the rotation is genuine, so the label is earned; the guard prints
+    # itself rather than waiting for a reader to re-derive it.
+    if stable:
+        print("   !! ALL FOUR FOLDS PICKED " + winners[0] + ". A unanimous")
+        print("   !! rotation is not a rotation: the row below is the plain "
+              "four-model mean of")
+        print("   !! that one book, and 'held out' is an empty label on it.")
+    else:
+        print(f"   Rotation is genuine: {len(set(winners))} distinct winners "
+              f"over four folds, so no row below")
+        print("   is the in-sample mean wearing a held-out label.")
     print("=" * 100)
     print(f"{'vs':<10}{'%':>9}{'95% CI':>23}{'t':>9}{'p':>11}{'models':>9}"
           f"  verdict   per-rotation %")

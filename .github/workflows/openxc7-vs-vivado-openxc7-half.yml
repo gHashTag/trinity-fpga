@@ -1,0 +1,556 @@
+# openXC7 half of the openXC7-vs-Vivado build-time benchmark
+#
+# The Vivado half is run by Carlos Venegas Arrabé on a 20-core / 125 GB
+# bare-metal Ubuntu box with Vivado ML 2026.1 Basic. This file is the other
+# half, and everything in it is frozen so the two are comparable.
+#
+# MEASURED, per design, by invoking demo-projects' own openXC7.mk targets so
+# that the numbers describe their flow and not a reimplementation of it:
+#     yosys synthesis            make <project>.json
+#     nextpnr place and route    make <project>.fasm
+#     bitstream                  make <project>.frames && make <project>.bit
+#
+# NOT MEASURED: image pull, checkout, nextpnr build, chipdb generation.
+# The chipdb is excluded deliberately and this is stated in the report rather
+# than left implicit: it is a per-part cacheable artifact, openXC7's analogue of
+# installing Vivado, and it has no counterpart on the Vivado side. Their own CI
+# spends ~37 minutes on the kintex7 one, so hiding it either way would dominate
+# the result.
+#
+# FROZEN TOOLCHAIN
+#   nextpnr-xilinx  05aaa06bce455ae6ed01efa1616ba7d3a9421ca7  (stable-backports)
+#   yosys           0.62 (git sha1 7326bb7d6)   from regymm/openxc7
+#   prjxray-db      d17fea26ebe46119606e875f012b9be122538aec
+#   base image      regymm/openxc7@sha256:eced1cdd4727549f2d983328e0cf170fb6f6f67d87f19b2bf24365163368c70c
+#
+# The prjxray-db line is NOT a free choice, which is the opposite of what the
+# first version of this file (and the mail that went with it) assumed. It said
+# 6c02fde, "as shipped in the image", and offered master as an alternative.
+# There is no alternative: checking nextpnr out at 05aaa06 moves its submodule
+# to the revision that commit records, and that is d17fea2 — which is master.
+# Measured, not assumed: the run reports the rev from the tree it built and
+# stamps it into every JSON, so this comment can never silently drift again.
+#
+# nextpnr is built from source rather than taken from the image ON PURPOSE.
+# The image's nextpnr is 45a986b, dated 2026-04-18 — four months before
+# openXC7/nextpnr-xilinx#142, #144, #145 and #146 merged. On it, picosoc does
+# not build (needs #142) and the deephier variant does not build (needs #142 +
+# #146). Benchmarking `regymm/openxc7:latest` would have produced a table with
+# two empty rows and no visible reason.
+#
+# FROZEN DESIGNS — note this spans two revisions and three silicon families.
+#   demo-projects main @ 547ffc59a398529041f8829f05b8887e41955150
+#     blinky-digilent-arty   artix7    xc7a35tcsg324-1
+#     picosoc                kintex7   xc7k325tffg676-1
+#     litex-ddr-arty-s7      spartan7  xc7s50csga324-1
+#   demo-projects litex-ddr-arty-s7-deephier @ f08d9e7bf364c9f5746825c1bdb8da4d948c2bf4
+#     litex-ddr-arty-s7      spartan7  xc7s50csga324-1   ← "deephier"; same
+#                                                          directory name, other
+#                                                          branch. There is no
+#                                                          `deephier` directory
+#                                                          at either revision.
+#
+# Five runs per design with the seed left at the design's own default. The
+# repeats measure the machine, not the placer: on a shared GitHub runner,
+# byte-identical work varied ~25% in our earlier calibration, so a single run
+# can sit a quarter from the median with nothing in it to say so.
+#
+# phi^2 + 1/phi^2 = 3 = TRINITY
+
+name: openXC7 build timing (benchmark half)
+
+on:
+  workflow_dispatch:
+
+env:
+  OPENXC7_IMAGE: regymm/openxc7@sha256:eced1cdd4727549f2d983328e0cf170fb6f6f67d87f19b2bf24365163368c70c
+  NEXTPNR_REV: 05aaa06bce455ae6ed01efa1616ba7d3a9421ca7
+  DEMO_MAIN: 547ffc59a398529041f8829f05b8887e41955150
+  DEMO_DEEPHIER: f08d9e7bf364c9f5746825c1bdb8da4d948c2bf4
+
+jobs:
+  nextpnr:
+    name: Build nextpnr-xilinx @ 05aaa06
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    # The prjxray-db revision is REPORTED, not asserted. The first attempt
+    # hardcoded 6c02fde — the revision the image ships — in the emitted JSON and
+    # in the report header. It was wrong: checking nextpnr out at 05aaa06 moves
+    # the submodule to whatever THAT commit records, which is d17fea2. Every
+    # measurement would have carried a false toolchain label, which is the one
+    # kind of error a receipt must not have. It now comes from the tree that was
+    # actually built.
+    outputs:
+      prjxray_db: ${{ steps.b.outputs.prjxray_db }}
+    steps:
+      - name: Pull the pinned image
+        run: |
+          for i in 1 2 3 4 5 6; do docker pull "$OPENXC7_IMAGE" && break; sleep $((i*20)); done
+          docker image inspect "$OPENXC7_IMAGE" >/dev/null
+
+      # Built INSIDE the image, not on the runner.
+      #
+      # The first attempt built it on ubuntu-latest and copied the binary in.
+      # It linked against the runner's boost (1.83, python 3.12) and the image
+      # is Ubuntu 20.04 with boost 1.71/python 3.8, so every P&R died with
+      #     nextpnr-xilinx: error while loading shared libraries:
+      #     libboost_python312.so.1.83.0: cannot open shared object file
+      # after synthesis had already succeeded. Building where it will run makes
+      # the ABI match by construction.
+      #
+      # The image ships cmake, g++, make and the nextpnr git tree, so the pinned
+      # revision is fetched into that tree rather than cloned fresh.
+      - name: Build nextpnr at the pinned revision, in the image
+        id: b
+        run: |
+          mkdir -p out/bin
+          docker run --rm -v "$PWD/out:/out" "$OPENXC7_IMAGE" bash -c '
+            set -e
+            cd /nextpnr-xilinx
+            git fetch --depth 1 origin '"$NEXTPNR_REV"'
+            git checkout '"$NEXTPNR_REV"'
+            git submodule update --init --recursive --depth 1 || true
+
+            # Fail loudly rather than benchmark a toolchain that cannot build
+            # two of the four designs.
+            grep -q "m256 ? 0" xilinx/pack_dram.cc \
+              || { echo "::error::#142 (m256 ? 0) missing from the checked-out tree"; exit 1; }
+            grep -q "placer1_refine" common/placer_heap.cc \
+              || { echo "::error::placer_heap.cc does not mention placer1_refine"; exit 1; }
+            echo "pinned tree carries the RAM256X1S fix"
+
+            cmake . -DARCH=xilinx -DCMAKE_BUILD_TYPE=Release
+            make -j"$(nproc)"
+            ./nextpnr-xilinx --version
+            cp nextpnr-xilinx /out/bin/nextpnr-xilinx
+
+            # bbasm travels with the binary. The image ships one at
+            # /usr/local/bin/bbasm built from 45a986b; the chipdb it assembles
+            # has to be read by the binary above, so it comes from the same
+            # tree or the pairing is unverified.
+            BBASM=$(find . -name bbasm -type f -perm -u+x | head -1)
+            if [ -n "$BBASM" ]; then
+              cp "$BBASM" /out/bin/bbasm
+              echo "bbasm: from the pinned tree ($BBASM)"
+            else
+              cp /usr/local/bin/bbasm /out/bin/bbasm
+              echo "bbasm: NOT built by this tree, fell back to the image copy"
+            fi
+
+            ( cd xilinx/external/prjxray-db && git rev-parse HEAD ) > /out/prjxray-db.rev
+          '
+          DB=$(cat out/prjxray-db.rev)
+          echo "prjxray-db pinned at: $DB"
+          echo "prjxray_db=$DB" >> $GITHUB_OUTPUT
+          ls -l out/bin/nextpnr-xilinx
+
+      - name: It must run in the image it was built for
+        run: |
+          docker run --rm -v "$PWD/out:/out" "$OPENXC7_IMAGE" \
+            bash -c 'cp /out/bin/nextpnr-xilinx /usr/local/bin/ && nextpnr-xilinx --version'
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nextpnr
+          path: out
+          retention-days: 7
+
+  chipdb:
+    name: chipdb ${{ matrix.part }}
+    needs: nextpnr
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - part: xc7a35tcsg324
+            family: artix7
+          - part: xc7k325tffg676
+            family: kintex7
+          - part: xc7s50csga324
+            family: spartan7
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: nextpnr
+          path: npnr
+
+      - name: Pull the pinned image
+        run: |
+          for i in 1 2 3 4 5 6; do docker pull "$OPENXC7_IMAGE" && break; sleep $((i*20)); done
+          docker image inspect "$OPENXC7_IMAGE" >/dev/null
+
+      # The chipdb must come from the SAME tree as the binary that reads it.
+      #
+      # The first attempt ran bbaexport.py straight out of the image, whose
+      # /nextpnr-xilinx is 45a986b, while the binary was built from 05aaa06.
+      # Different trees, different constids, and every one of the twenty
+      # measurement jobs died at place-and-route with
+      #
+      #   Assertion failure: The internal IDs of nextpnr are inconsistent with
+      #   the supplied chip database. (common/nextpnr.cc:57)
+      #
+      # after synthesis had succeeded — the same shape of mistake as building
+      # the binary on the runner, one layer up: a component silently taken from
+      # the image instead of from the freeze. So the pinned revision is checked
+      # out here too, the checkout is asserted rather than assumed, and bbasm
+      # comes from the build artifact.
+      - name: Generate
+        run: |
+          chmod +x npnr/bin/nextpnr-xilinx npnr/bin/bbasm
+          mkdir -p chipdb
+          docker run --rm -v "$PWD:/work" -w /work "$OPENXC7_IMAGE" bash -c '
+            set -e
+            cd /nextpnr-xilinx
+            git fetch --depth 1 origin '"$NEXTPNR_REV"'
+            git checkout '"$NEXTPNR_REV"'
+            git submodule update --init --recursive --depth 1 || true
+
+            HEAD_NOW=$(git rev-parse HEAD)
+            if [ "$HEAD_NOW" != "'"$NEXTPNR_REV"'" ]; then
+              echo "::error::chipdb tree is $HEAD_NOW, expected '"$NEXTPNR_REV"'"
+              exit 1
+            fi
+            echo "chipdb generated from $HEAD_NOW"
+
+            cp /work/npnr/bin/bbasm /usr/local/bin/bbasm
+            python3 xilinx/python/bbaexport.py \
+              --device ${{ matrix.part }}-1 \
+              --bba /work/chipdb/${{ matrix.part }}.bba
+            bbasm -l /work/chipdb/${{ matrix.part }}.bba /work/chipdb/${{ matrix.part }}.bin
+          '
+          ls -lh chipdb/${{ matrix.part }}.bin
+
+      # Reported, NOT gated — and the distinction is the whole point.
+      #
+      # I added `--test` as a guard so a constid mismatch would abort in one
+      # chipdb job rather than in all twenty measurement jobs. It failed on its
+      # first use, identically on artix7 and spartan7:
+      #
+      #   Info: Checking bel names..
+      #   ERROR: Assert `bel == bel2' failed in common/archcheck.cc:41
+      #
+      # That line is a name round-trip — getBelName(bel) fed back through
+      # getBelByName must return the same bel — and it runs before archcheck
+      # examines anything about the database/binary pairing. It is a property of
+      # the xilinx arch's naming code (getBelByName resolves a tile-qualified
+      # name by first match, ignoring the site), and it fails the same way on two
+      # different parts. So it is not evidence about this freeze, and gating on
+      # it would block a pipeline for a defect in a different component.
+      #
+      # It stays because the output is worth having, and because deleting a
+      # check that fired is how a real signal gets lost. The thing it was meant
+      # to catch is proven downstream anyway: the constid mismatch aborted at
+      # chipdb load in place-and-route, so a measurement job that reaches
+      # routing has demonstrated the pairing is sound.
+      - name: Architecture self-check (reported, not gated)
+        continue-on-error: true
+        run: |
+          docker run --rm -v "$PWD:/work" -w /work "$OPENXC7_IMAGE" bash -c "
+            cp /work/npnr/bin/nextpnr-xilinx /usr/local/bin/ &&
+            nextpnr-xilinx --chipdb /work/chipdb/${{ matrix.part }}.bin --test
+          " 2>&1 | tail -20 || echo "archcheck did not pass — see the note above"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: chipdb-${{ matrix.part }}
+          path: chipdb/${{ matrix.part }}.bin
+          retention-days: 7
+
+  measure:
+    name: ${{ matrix.design }} run ${{ matrix.run }}
+    # nextpnr is already an ancestor through chipdb; it is named here only so
+    # its prjxray_db output is readable from this job.
+    needs: [nextpnr, chipdb]
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      # Designs belong in the base matrix, not in `include`.
+      #
+      # The first attempt put them in `include` with only `run` as a base key.
+      # GitHub merged the LAST include entry into all five run values and
+      # dropped the other three, so the run produced five `deephier` jobs and
+      # nothing else — a silent 15-job hole that looked like a normal matrix.
+      matrix:
+        design: [blinky-digilent-arty, picosoc, litex-ddr-arty-s7, deephier]
+        run: [1, 2, 3, 4, 5]
+    steps:
+      # First, because checkout and download-artifact below consume its outputs.
+      - name: Select the design
+        id: d
+        run: |
+          case "${{ matrix.design }}" in
+            blinky-digilent-arty)
+              echo "dir=blinky-digilent-arty"            >> $GITHUB_OUTPUT
+              echo "project=blinky"                      >> $GITHUB_OUTPUT
+              echo "part=xc7a35tcsg324"                  >> $GITHUB_OUTPUT
+              echo "family=artix7"                       >> $GITHUB_OUTPUT
+              echo "sha=$DEMO_MAIN"                      >> $GITHUB_OUTPUT
+              ;;
+            picosoc)
+              echo "dir=picosoc"                         >> $GITHUB_OUTPUT
+              echo "project=picosoc"                     >> $GITHUB_OUTPUT
+              echo "part=xc7k325tffg676"                 >> $GITHUB_OUTPUT
+              echo "family=kintex7"                      >> $GITHUB_OUTPUT
+              echo "sha=$DEMO_MAIN"                      >> $GITHUB_OUTPUT
+              # picosoc is the one design whose Makefile does NOT set BOARD; it
+              # switches on four of them and, unset, TOP resolves to nothing and
+              # make asks for `UNKNOWN.v`. qmtech is the variant that carries the
+              # part in the frozen list, xc7k325tffg676-1 — genesys2 is ffg900,
+              # kx2 is xc7k160t, hpc_420t is xc7k420t. Worth stating to anyone
+              # reproducing this: "picosoc" alone does not name a build.
+              echo "board=qmtech"                        >> $GITHUB_OUTPUT
+              ;;
+            litex-ddr-arty-s7)
+              echo "dir=litex-ddr-arty-s7"               >> $GITHUB_OUTPUT
+              echo "project=digilent_arty_s7"            >> $GITHUB_OUTPUT
+              echo "part=xc7s50csga324"                  >> $GITHUB_OUTPUT
+              echo "family=spartan7"                     >> $GITHUB_OUTPUT
+              echo "sha=$DEMO_MAIN"                      >> $GITHUB_OUTPUT
+              ;;
+            deephier)
+              # Not a directory anywhere: the deephier variant is the same
+              # design on demo-projects branch litex-ddr-arty-s7-deephier.
+              echo "dir=litex-ddr-arty-s7"               >> $GITHUB_OUTPUT
+              echo "project=digilent_arty_s7"            >> $GITHUB_OUTPUT
+              echo "part=xc7s50csga324"                  >> $GITHUB_OUTPUT
+              echo "family=spartan7"                     >> $GITHUB_OUTPUT
+              echo "sha=$DEMO_DEEPHIER"                  >> $GITHUB_OUTPUT
+              ;;
+            *) echo "::error::unknown design ${{ matrix.design }}"; exit 1 ;;
+          esac
+
+      - name: Check out demo-projects at the frozen revision
+        uses: actions/checkout@v4
+        with:
+          repository: openXC7/demo-projects
+          ref: ${{ steps.d.outputs.sha }}
+          path: demo
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: nextpnr
+          path: npnr
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: chipdb-${{ steps.d.outputs.part }}
+          path: demo/chipdb
+
+      - name: Pull the pinned image
+        run: |
+          for i in 1 2 3 4 5 6; do docker pull "$OPENXC7_IMAGE" && break; sleep $((i*20)); done
+
+      # The bitstream phase reads the database from PRJXRAY_DB_DIR:
+      #
+      #   fasm2frames   --db-root  ${PRJXRAY_DB_DIR}/${FAMILY}
+      #   xc7frames2bit --part_file ${PRJXRAY_DB_DIR}/${FAMILY}/${PART}/part.yaml
+      #
+      # That pointed into the image, and a fresh container's copy is 6c02fde
+      # while this freeze is d17fea2. Synthesis and place-and-route would have
+      # been measured on the frozen toolchain and the bitstream on a different
+      # database, under a JSON stamped d17fea2 — and bitstream generation was
+      # 46-64% of the small builds in our calibration, so it is not a rounding
+      # detail. Carlos's condition was "no mixing anywhere".
+      #
+      # Fetched here rather than carried in the nextpnr artifact: the database
+      # is far too large to ship through actions/upload-artifact, and the
+      # revision comes from the built tree, so this cannot drift from it.
+      - name: Fetch the frozen prjxray-db
+        run: |
+          DB="${{ needs.nextpnr.outputs.prjxray_db }}"
+          test -n "$DB" || { echo "::error::no prjxray-db revision from the build job"; exit 1; }
+          mkdir -p prjxray-db && cd prjxray-db
+          git init -q
+          git remote add origin https://github.com/openXC7/prjxray-db
+          git fetch -q --depth 1 origin "$DB"
+          git checkout -q FETCH_HEAD
+          test "$(git rev-parse HEAD)" = "$DB" || { echo "::error::checkout is $(git rev-parse HEAD), expected $DB"; exit 1; }
+          echo "prjxray-db at $DB"
+          ls -d "${{ steps.d.outputs.family }}" >/dev/null
+
+      - name: Record the machine
+        run: |
+          { echo "cores=$(nproc)"
+            echo "mem_kb=$(grep MemTotal /proc/meminfo | awk '{print $2}')"
+            echo "model=$(grep -m1 'model name' /proc/cpuinfo | cut -d: -f2- | xargs)"
+          } | tee machine.txt
+
+      - name: Build, phase by phase
+        id: t
+        run: |
+          set -o pipefail
+          chmod +x npnr/bin/nextpnr-xilinx
+          mkdir -p logs
+
+          # yosys and the prjxray tools come from the pinned image; nextpnr is
+          # the one built above. Both are put on PATH inside the container so
+          # demo-projects' own makefile runs unmodified.
+          run() {
+            docker run --rm \
+              -v "$PWD:/work" -w "/work/demo/${{ steps.d.outputs.dir }}" \
+              -e NEXTPNR_XILINX_DIR=/nextpnr-xilinx \
+              -e PRJXRAY_DB_DIR=/work/prjxray-db \
+              -e BOARD="${{ steps.d.outputs.board }}" \
+              -e ARTIX7_CHIPDB=/work/demo/chipdb \
+              -e KINTEX7_CHIPDB=/work/demo/chipdb \
+              -e SPARTAN7_CHIPDB=/work/demo/chipdb \
+              "$OPENXC7_IMAGE" \
+              bash -c "cp /work/npnr/bin/nextpnr-xilinx /usr/local/bin/nextpnr-xilinx &&
+                       source /prjxray/env/bin/activate &&
+                       $1"
+          }
+
+          P=${{ steps.d.outputs.project }}
+
+          S=$(date +%s%3N); run "make ${P}.json"   2>&1 | tee logs/synth.log; E=$(date +%s%3N)
+          echo "synth_ms=$((E-S))" >> $GITHUB_OUTPUT
+
+          S=$(date +%s%3N); run "make ${P}.fasm"   2>&1 | tee logs/pnr.log;   E=$(date +%s%3N)
+          echo "pnr_ms=$((E-S))" >> $GITHUB_OUTPUT
+
+          S=$(date +%s%3N); run "make ${P}.bit"    2>&1 | tee logs/bit.log;   E=$(date +%s%3N)
+          echo "bit_ms=$((E-S))" >> $GITHUB_OUTPUT
+
+          ls -l "demo/${{ steps.d.outputs.dir }}/${P}.bit"
+
+      - name: Did timing close, and against what?
+        id: tc
+        run: |
+          # "closed=yes" from the presence of a PASS line was a bad instrument,
+          # and Carlos caught it. nextpnr's PASS is measured against ITS OWN
+          # default target of 12 MHz when the design does not give it one, so
+          # every row in the first campaign read "closed" while meaning
+          # "faster than 12 MHz". Measured on those very logs:
+          #
+          #   blinky   181.13 MHz PASS at 12.00   XDC has no create_clock
+          #   picosoc   64.08 MHz PASS at 12.00   create_clock is COMMENTED OUT
+          #   litex     65.52 MHz PASS at 12.00   XDC asks for 100 MHz
+          #   deephier  69.72 MHz PASS at 12.00   XDC asks for 100 MHz
+          #
+          # Two of the four miss the frequency their own design asks for, and
+          # the column said they closed. A pass against a target nobody set is
+          # not a pass; it is an unset target reported as a result.
+          #
+          # So this now records the worst achieved clock, its name, and the
+          # target the tool actually applied — and flags the 12 MHz default as
+          # "no real target" rather than laundering it into a verdict.
+          WORST=$(grep -aoE "Max frequency for clock +'[^']+': [0-9.]+ MHz \((PASS|FAIL) at [0-9.]+ MHz\)" logs/pnr.log \
+                  | sed -E "s/.*'([^']+)': ([0-9.]+) MHz \((PASS|FAIL) at ([0-9.]+) MHz\)/\2 \1 \3 \4/" \
+                  | sort -n | head -1)
+          if [ -z "$WORST" ]; then
+            echo "closed=unknown" >> $GITHUB_OUTPUT
+            echo "fmax_mhz=0" >> $GITHUB_OUTPUT
+            echo "target_mhz=0" >> $GITHUB_OUTPUT
+            echo "worst_clock=none" >> $GITHUB_OUTPUT
+          else
+            set -- $WORST
+            FMAX=$1; CLK=$2; VERDICT=$3; TARGET=$4
+            echo "fmax_mhz=$FMAX"      >> $GITHUB_OUTPUT
+            echo "worst_clock=$CLK"    >> $GITHUB_OUTPUT
+            echo "target_mhz=$TARGET"  >> $GITHUB_OUTPUT
+            # 12.00 is nextpnr's default. Treat it as "no target was set", not
+            # as a met constraint, whatever the tool printed next to it.
+            if [ "$TARGET" = "12.00" ]; then
+              echo "closed=no-target" >> $GITHUB_OUTPUT
+            elif [ "$VERDICT" = "PASS" ]; then
+              echo "closed=yes" >> $GITHUB_OUTPUT
+            else
+              echo "closed=no" >> $GITHUB_OUTPUT
+            fi
+            echo "worst: $CLK $FMAX MHz, tool target $TARGET MHz ($VERDICT)"
+          fi
+          grep -aiE "Max frequency|slack" logs/pnr.log | head -8 || true
+
+      - name: Emit the measurement
+        run: |
+          SY=${{ steps.t.outputs.synth_ms }}
+          PR=${{ steps.t.outputs.pnr_ms }}
+          BI=${{ steps.t.outputs.bit_ms }}
+          jq -n \
+            --arg design "${{ matrix.design }}" --arg part "${{ steps.d.outputs.part }}" \
+            --arg family "${{ steps.d.outputs.family }}" --arg closed "${{ steps.tc.outputs.closed }}" \
+            --arg worst_clock "${{ steps.tc.outputs.worst_clock }}" \
+            --argjson fmax_mhz ${{ steps.tc.outputs.fmax_mhz }} \
+            --argjson target_mhz ${{ steps.tc.outputs.target_mhz }} \
+            --argjson run ${{ matrix.run }} \
+            --argjson synth $SY --argjson pnr $PR --argjson bit $BI \
+            --argjson total $((SY+PR+BI)) --arg cores "$(nproc)" \
+            --arg db "${{ needs.nextpnr.outputs.prjxray_db }}" \
+            '{design:$design, part:$part, family:$family, run:$run,
+              synth_ms:$synth, pnr_ms:$pnr, bit_ms:$bit, total_ms:$total,
+              timing_closed:$closed, worst_clock:$worst_clock,
+              fmax_mhz:$fmax_mhz, target_mhz:$target_mhz,
+              cores:($cores|tonumber),
+              toolchain:{nextpnr:"05aaa06", yosys:"0.62", prjxray_db:$db}}' \
+            > timing-${{ matrix.design }}-${{ matrix.run }}.json
+          cat timing-${{ matrix.design }}-${{ matrix.run }}.json
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: timing-${{ matrix.design }}-${{ matrix.run }}
+          path: |
+            timing-${{ matrix.design }}-${{ matrix.run }}.json
+            logs
+            machine.txt
+          retention-days: 90
+
+  report:
+    name: Median and spread
+    needs: [nextpnr, measure]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: timing-*
+          merge-multiple: true
+          path: t
+
+      - name: Aggregate
+        run: |
+          {
+            echo "## openXC7 build time — benchmark half"
+            echo
+            echo "Runner: \`ubuntu-latest\`, $(nproc) cores. nextpnr-xilinx 05aaa06,"
+            echo "yosys 0.62, prjxray-db \`${{ needs.nextpnr.outputs.prjxray_db }}\`"
+            echo "(the revision nextpnr 05aaa06 itself records as its submodule —"
+            echo "not the one the published image ships)."
+            echo
+            echo "Measured: synthesis + place-and-route + bitstream, through"
+            echo "demo-projects' own openXC7.mk targets."
+            echo "Not measured: image pull, checkout, nextpnr build, chipdb generation."
+            echo
+            echo "| design | part | n | median | min | max | synth | p&r | bit | worst clock | achieved | tool target |"
+            echo "|---|---|---|---|---|---|---|---|---|---|---|---|"
+          } >> $GITHUB_STEP_SUMMARY
+
+          jq -s -r '
+            def med: sort | if length == 0 then 0
+                            elif length % 2 == 1 then .[length/2|floor]
+                            else ((.[length/2-1] + .[length/2]) / 2) end;
+            def s(x): (x/1000*10|round)/10 | tostring + "s";
+            group_by(.design)[]
+            | { d:.[0].design, p:.[0].part, n:length,
+                tot:[.[].total_ms], sy:[.[].synth_ms], pr:[.[].pnr_ms], bi:[.[].bit_ms],
+                tc:([.[].timing_closed]|unique|join("/")),
+                wc:(.[0].worst_clock // "?"), fm:(.[0].fmax_mhz // 0), tg:(.[0].target_mhz // 0) }
+            | "| \(.d) | \(.p) | \(.n) | \(.tot|med|s(.)) | \(.tot|min|s(.)) | \(.tot|max|s(.)) | \(.sy|med|s(.)) | \(.pr|med|s(.)) | \(.bi|med|s(.)) | \(.wc) | \(.fm) MHz | \(if .tg == 12 then "12 MHz — tool default, NO real target" else "\(.tg) MHz" end) |"
+          ' t/*.json >> $GITHUB_STEP_SUMMARY || echo "no measurements collected" >> $GITHUB_STEP_SUMMARY
+
+          {
+            echo
+            echo "No Vivado column: no licence, no install here. The designs are"
+            echo "unmodified demo-projects at the frozen revisions, so the other"
+            echo "half is re-runnable by anyone holding one."
+          } >> $GITHUB_STEP_SUMMARY
+          cat $GITHUB_STEP_SUMMARY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: timings-all
+          path: t
+          retention-days: 90

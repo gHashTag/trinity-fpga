@@ -23,19 +23,19 @@ pub const FittingError = error{
 /// Default grid search bounds for Savchenko parameters
 pub const DefaultBounds = struct {
     rho0_min: f64 = 0.001,
-    rho0_max: f64 = 1.0,      // M☉/pc³
+    rho0_max: f64 = 1.0, // M☉/pc³
     rho0_steps: usize = 20,
 
     r_mem_min: f64 = 1.0,
-    r_mem_max: f64 = 20.0,      // kpc
+    r_mem_max: f64 = 20.0, // kpc
     r_mem_steps: usize = 20,
 
     r_core_min: f64 = 0.1,
-    r_core_max: f64 = 5.0,       // kpc
+    r_core_max: f64 = 5.0, // kpc
     r_core_steps: usize = 20,
 
     upsilon_bul_min: f64 = 0.1,
-    upsilon_bul_max: f64 = 5.0,      // dimensionless
+    upsilon_bul_max: f64 = 5.0, // dimensionless
     upsilon_bul_steps: usize = 20,
 };
 
@@ -68,7 +68,7 @@ pub fn computeChiSquared(
             params.r_mem,
             params.r_core,
             point.velocity, // Assume V_obs ≈ V_disk at each radius
-            0,            // No bulge contribution (or estimate separately)
+            0, // No bulge contribution (or estimate separately)
             dr,
         );
 
@@ -107,7 +107,7 @@ pub fn gridSearchFit(
     std.debug.print("  Υ_bul: {d:.3}-{d:.3} ({d} steps)\n", .{ bounds.upsilon_bul_min, bounds.upsilon_bul_max, bounds.upsilon_bul_steps });
 
     const total_iterations = bounds.rho0_steps * bounds.r_mem_steps *
-                        bounds.r_core_steps * bounds.upsilon_bul_steps;
+        bounds.r_core_steps * bounds.upsilon_bul_steps;
     std.debug.print("Total iterations: {}\n", .{total_iterations});
 
     // Calculate step sizes

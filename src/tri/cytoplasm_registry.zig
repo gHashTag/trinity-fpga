@@ -74,6 +74,7 @@ fn runRepair(allocator: Allocator) !void {
     _ = allocator;
     std.debug.print("\n{s}REGISTRY REPAIR{s}\n\n", .{ YELLOW, RESET });
     std.debug.print("  Repair not implemented yet\n\n", .{});
+    return error.NotImplemented;
 }
 
 fn runBackup(allocator: Allocator, args: []const []const u8) !void {

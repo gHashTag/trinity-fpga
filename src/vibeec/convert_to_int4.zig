@@ -109,7 +109,7 @@ pub fn convert(allocator: std.mem.Allocator, input_path: []const u8, output_path
 }
 
 pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 

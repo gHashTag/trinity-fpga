@@ -1050,7 +1050,7 @@ fn formatDecisionReport(decision: Decision, result: qt.ActionResult) []const u8 
 // ═══════════════════════════════════════════════════════════════════════════════
 
 pub fn start(config: qt.QueenConfig) !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     try runUnifiedLoop(gpa.allocator(), config);
 }

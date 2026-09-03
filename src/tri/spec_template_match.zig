@@ -12,6 +12,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_exit_codes = @import("tri_exit_codes.zig");
 const Allocator = std.mem.Allocator;
 const print = std.debug.print;
 
@@ -296,7 +297,7 @@ pub fn cloneTemplate(allocator: Allocator, template_path: []const u8, new_name: 
 pub fn runSpecMatchCommand(allocator: Allocator, args: []const []const u8) void {
     if (args.len == 0) {
         print("\n{s}Usage: tri spec-match \"<issue title or text>\"{s}\n\n", .{ YELLOW, RESET });
-        return;
+        return tri_exit_codes.exitWithCode(.validation_error);
     }
 
     // Join all args as issue text

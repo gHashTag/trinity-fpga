@@ -1,0 +1,68 @@
+name: Gate ratchet
+
+# 142 gate-shaped scripts live in research/ and CI invokes fifteen.
+#
+# That is not an oversight anyone made once. `run_all_gates.py`'s own docstring
+# records two defects that survived a pass because nothing ran everything: a
+# regenerated pack whose specials legend was stale, and a LUT parser that summed
+# across a `stat` block boundary and produced a published table of deviations
+# that did not exist. Both would have been caught the next day by running the lot.
+#
+# So the lot runs here. `run_all_gates.py` fails only on CRASH — correctly, since
+# these scripts use exit codes with meanings and flattening them produces a
+# number that is mostly false. `gate_status_ratchet.py` covers what that leaves
+# open: a script going from `clean` to `findings` is a defect appearing, and the
+# aggregator returns 0 for it.
+#
+# A gate on the DIRECTION, per script, never on a total — the same shape the
+# website's typecheck ratchet uses, for the same reason: demanding that all 89
+# be clean first would mean the gate never lands, and a gate that never lands
+# catches nothing.
+#
+# --selftest runs first. A gate nobody has watched fail is a gate whose
+# behaviour nobody knows.
+
+on:
+  pull_request:
+    paths:
+      - 'research/**/*.py'
+      - 'research/gate_status_baseline.json'
+      - '.github/workflows/gate-ratchet.yml'
+  push:
+    branches: [main, master]
+    paths:
+      - 'research/**/*.py'
+      - 'research/gate_status_baseline.json'
+  # The path filter above cannot fire on a change to this file's own triggers,
+  # which is how a website workflow sat wired but unexecuted from the moment it
+  # merged. See gHashTag/trinity#721.
+  workflow_dispatch:
+
+jobs:
+  ratchet:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: research
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: The ratchet can fail
+        run: python3 gate_status_ratchet.py --selftest
+
+      # The timeout is read from the baseline, not passed here: a script that is
+      # TIMEOUT at 90s and clean at 300s has not changed, and comparing across
+      # two timeouts would report a fix or a regression that did not happen.
+      #
+      # --jobs 2 rather than 4. The first run of this gate against its own
+      # baseline, on an unchanged tree, reported two scripts degraded
+      # clean -> TIMEOUT and one improved TIMEOUT -> clean: with workers
+      # competing for cores, a wall-clock limit measures the machine. The script
+      # now re-runs any TIMEOUT-involved disagreement serially before believing
+      # it, and a two-core runner needs less contention to start with.
+      - name: No gate degraded
+        run: python3 gate_status_ratchet.py --jobs 2

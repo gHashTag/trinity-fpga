@@ -195,7 +195,7 @@ pub fn runDemo(allocator: std.mem.Allocator, config: DemoConfig) !void {
 
 /// to login
 pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 

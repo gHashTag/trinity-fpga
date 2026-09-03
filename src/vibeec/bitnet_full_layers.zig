@@ -764,7 +764,7 @@ pub const Tokenizer = @import("sentencepiece_tokenizer.zig").SentencePieceTokeni
 // ═══════════════════════════════════════════════════════════════════════════════
 
 pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 

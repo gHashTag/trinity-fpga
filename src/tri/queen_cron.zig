@@ -9,6 +9,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_mutex = @import("mutex.zig");
 const Allocator = std.mem.Allocator;
 const qt = @import("queen_types.zig");
 const ofc = @import("queen_ofc.zig");
@@ -261,7 +262,7 @@ pub const TamagotchiState = struct {
 // GLOBAL STATE (protected by mutex)
 // ═══════════════════════════════════════════════════════════════════════════════
 
-var cron_mutex = std.Thread.Mutex{};
+var cron_mutex = tri_mutex.Mutex{};
 var cron_state: CronState = .{
     .schedule = undefined,
     .tamagotchi = .{},
@@ -398,26 +399,26 @@ pub fn generateTamagotchiReport(allocator: Allocator) ![]const u8 {
         // Health
         health_emoji,    health_bar,
         tama.health,
-        // Hunger
+            // Hunger
             if (tama.hunger >= 70) qt.E_CHECK else if (tama.hunger >= 30) qt.E_WRENCH else qt.E_SIREN,
         hunger_bar,      tama.hunger,
         // Happiness
         mood_emoji,      happy_bar,
         tama.happiness,
-        // Discipline
+            // Discipline
          qt.E_GEAR,
         disc_bar,        tama.discipline,
         // Rest
         qt.E_TIMER,      rest_bar,
         tama.rest,
-        // Arousal
+            // Arousal
               qt.E_BOLT,
         tama.arousal,
-        // Stats
+            // Stats
            qt.E_CHART,
         tama.age_hours,  tama.feed_count,
         tama.play_count,
-        // Message
+            // Message
         qt.E_BRAIN,
         stage_message,
     });

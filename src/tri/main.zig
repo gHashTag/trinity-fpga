@@ -618,6 +618,21 @@ pub fn main() !void {
             printVersion(allocator);
             return;
         }
+        // Loop journal: `tri journal [latest|invariants|all]`
+        //
+        // NOT `tri loop`: that name is already taken. Bare `loop` routes to
+        // dev_workflow (main.zig:1532) and is documented in CLAUDE.md as step
+        // ten of the pipeline, `tri loop decide`. An early dispatch on `loop`
+        // would have silently stolen it -- the command would still exist, still
+        // be documented, and quietly do something else.
+        if (std.mem.eql(u8, first_arg, "journal")) {
+            const journal_args = if (arg_idx + 1 < args.len) args[arg_idx + 1 ..] else &[_][]const u8{};
+            // Named loop_journal, not tri_loop: line 29 already binds that
+            // name to heartbeat.zig at file scope, and Zig forbids shadowing.
+            const loop_journal = @import("tri_loop.zig");
+            try loop_journal.runLoopCommand(allocator, journal_args);
+            return;
+        }
         // Autocomplete: `tri autocomplete --print|--install|--uninstall`
         if (std.mem.eql(u8, first_arg, "autocomplete")) {
             const autocomplete_args = if (arg_idx + 1 < args.len) args[arg_idx + 1 ..] else &[_][]const u8{};

@@ -17,6 +17,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_mutex = @import("mutex.zig");
 const faculty_board = @import("cortex.zig");
 const faculty_types = @import("faculty_types.zig");
 const colors = @import("tri_colors.zig");
@@ -943,7 +944,7 @@ fn stopSupervisor() !void {
 
 const SupervisorLog = struct {
     file: std.fs.File,
-    mutex: std.Thread.Mutex,
+    mutex: tri_mutex.Mutex,
 
     fn init() !SupervisorLog {
         const dir = try std.fs.cwd().makeOpenPath(".trinity/queen", .{});
@@ -954,7 +955,7 @@ const SupervisorLog = struct {
 
         return SupervisorLog{
             .file = file,
-            .mutex = std.Thread.Mutex{},
+            .mutex = tri_mutex.Mutex{},
         };
     }
 
@@ -2272,7 +2273,7 @@ test "Phase 2 — MotorPlan.init for check_farm" {
 }
 
 test "Phase 2 — MotorExecutor.init and executePlan (no execute)" {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
@@ -2285,7 +2286,7 @@ test "Phase 2 — MotorExecutor.init and executePlan (no execute)" {
 }
 
 test "Phase 2 — PMC → M1 full integration (dry run)" {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
@@ -2362,7 +2363,7 @@ test "Phase 2 — PlanQueue wraparound" {
 }
 
 test "Phase 2 — Sequencer context updates" {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
@@ -2435,7 +2436,7 @@ test "Phase 2 — CommandBuilder fluent API" {
 }
 
 test "Phase 2 — MotorBatch sequential execution" {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 

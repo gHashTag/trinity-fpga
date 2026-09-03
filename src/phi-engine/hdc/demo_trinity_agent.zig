@@ -14,7 +14,7 @@ const agent_mod = @import("trinity_continual_agent.zig");
 const TrinityContinualAgent = agent_mod.TrinityContinualAgent;
 
 pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 

@@ -9,6 +9,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_mutex = @import("mutex.zig");
 const Allocator = std.mem.Allocator;
 const qt = @import("queen_types.zig");
 
@@ -158,12 +159,12 @@ pub const TaskClaim = struct {
 
 pub const Registry = struct {
     claims: std.StringHashMap(TaskClaim),
-    mutex: std.Thread.Mutex,
+    mutex: tri_mutex.Mutex,
 
     pub fn init(allocator: std.mem.Allocator) Registry {
         return Registry{
             .claims = std.StringHashMap(TaskClaim).init(allocator),
-            .mutex = std.Thread.Mutex{},
+            .mutex = tri_mutex.Mutex{},
         };
     }
 
@@ -347,7 +348,7 @@ pub const ClaimInfo = struct {
 
 // Global singleton
 var global_registry: ?*Registry = null;
-var global_mutex = std.Thread.Mutex{};
+var global_mutex = tri_mutex.Mutex{};
 
 pub fn getGlobal(allocator: std.mem.Allocator) !*Registry {
     global_mutex.lock();

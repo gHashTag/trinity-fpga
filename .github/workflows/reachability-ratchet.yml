@@ -1,0 +1,111 @@
+# Does the unreachable half of src/tri get any larger?
+#
+# research/src-tri-reachability.md measured 395 of 744 files under src/tri
+# reached by neither build.zig nor any relative import chain — 3.13 MB. That
+# number is not acted on here and nothing is deleted: removing 3 MB of someone
+# else's tree on one pass of static analysis is not a repair.
+#
+# This is the cheaper half of the problem. A ratchet does not fix the debt, it
+# stops the debt growing, and it needs no decision about the existing 395.
+#
+# WHY IT MATTERS, since "dead code" sounds harmless. A 228 KB orphan answers
+# grep with plausible, editable, unreachable code. This session nearly repaired
+# runFibCommand in tri_math_backup.zig — a file imported by nothing — instead of
+# the live copy in math/commands.zig. That repair would have looked correct,
+# passed review, and changed nothing.
+#
+# METHOD, and its weakness, which runs one way: reachability follows relative
+# @import between files under src/tri plus every b.path() named in build.zig. If
+# a dead file imports another dead file, the second counts as reached — so the
+# true unreachable set is LARGER than what this reports, never smaller. Do not
+# quote this number as an upper bound.
+#
+# phi^2 + 1/phi^2 = 3 = TRINITY
+
+name: reachability ratchet
+
+on:
+  push:
+    paths:
+      - 'src/tri/**'
+      - 'build.zig'
+      - '.github/workflows/reachability-ratchet.yml'
+  pull_request:
+    paths:
+      - 'src/tri/**'
+      - 'build.zig'
+  workflow_dispatch:
+
+jobs:
+  ratchet:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+
+      - name: Count what nothing reaches
+        id: count
+        run: |
+          python3 - <<'PY' | tee reach.txt
+          import os, re, glob, json
+
+          files = [os.path.normpath(p) for p in glob.glob('src/tri/**/*.zig', recursive=True)]
+          reach = set()
+          for p in files:
+              try:
+                  s = open(p, encoding='utf8', errors='replace').read()
+              except Exception:
+                  continue
+              for m in re.findall(r'@import\("([^"]+\.zig)"\)', s):
+                  reach.add(os.path.normpath(os.path.join(os.path.dirname(p), m)))
+          try:
+              b = open('build.zig', encoding='utf8', errors='replace').read()
+              for m in re.findall(r'b\.path\("([^"]+)"\)', b):
+                  reach.add(os.path.normpath(m))
+          except Exception:
+              pass
+
+          entry = os.path.normpath('src/tri/main.zig')
+          orphans = [p for p in files if p not in reach and p != entry]
+          print(json.dumps({
+              "files": len(files),
+              "unreachable": len(orphans),
+              "bytes": sum(os.path.getsize(p) for p in orphans),
+          }))
+          PY
+          echo "n=$(tail -1 reach.txt | python3 -c 'import json,sys; print(json.load(sys.stdin)["unreachable"])')" >> $GITHUB_OUTPUT
+
+      - name: Compare against the baseline
+        run: |
+          set +e
+          say() { echo "$1" >> $GITHUB_STEP_SUMMARY; echo "$1"; }
+          BASE=$(cat .github/reachability-baseline 2>/dev/null || echo 0)
+          NOW=${{ steps.count.outputs.n }}
+          say "## Unreachable files under \`src/tri\`"
+          say ''
+          say "| | |"
+          say "|---|---|"
+          say "| baseline | $BASE |"
+          say "| now | **$NOW** |"
+          say "| delta | $((NOW - BASE)) |"
+          say ''
+
+          if [ "$NOW" -gt "$BASE" ]; then
+            say "::error::$((NOW - BASE)) newly unreachable file(s)."
+            say 'A file that nothing imports still answers grep. If this is'
+            say 'deliberate — a module wired only through build.zig, say — add it'
+            say 'there and the count returns. If it is a leftover, delete it now,'
+            say 'while you remember what it was.'
+            exit 1
+          fi
+
+          if [ "$NOW" -lt "$BASE" ]; then
+            say "**$((BASE - NOW)) fewer.** Lower the baseline in"
+            say '`.github/reachability-baseline` in the same commit, so the'
+            say 'ratchet holds the ground that was gained.'
+          else
+            say 'No change.'
+          fi
+          exit 0

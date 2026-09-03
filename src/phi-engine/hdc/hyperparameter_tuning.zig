@@ -253,7 +253,7 @@ pub fn runGridSearch(allocator: std.mem.Allocator) !void {
 
 /// to login
 pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 

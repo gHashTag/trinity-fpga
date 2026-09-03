@@ -366,7 +366,8 @@ pub fn parseAllGalaxies(allocator: Allocator, content: []const u8) ![]GalaxyData
                         } else if (std.mem.eql(u8, key_trimmed, "Inclination")) {
                             inclination = std.fmt.parseFloat(f64, value_trimmed) catch 0.0;
                         } else if (std.mem.eql(u8, key_trimmed, "PA") or
-                                   std.mem.eql(u8, key_trimmed, "Position Angle")) {
+                            std.mem.eql(u8, key_trimmed, "Position Angle"))
+                        {
                             position_angle = std.fmt.parseFloat(f64, value_trimmed) catch 0.0;
                         }
                     }

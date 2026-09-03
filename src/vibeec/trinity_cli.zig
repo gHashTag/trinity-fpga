@@ -153,7 +153,7 @@ fn printStats(state: *CLIState) void {
     std.debug.print("  Requests: {d}\n", .{stats.total_requests});
     std.debug.print("  Total Time: {d}us ({d:.2}ms)\n", .{ stats.total_time_us, @as(f64, @floatFromInt(stats.total_time_us)) / 1000.0 });
     // Speed and vocabulary not available in stub module
-    std.debug.print("  Stats available in full implementation{s}\n", .{ GRAY, RESET });
+    std.debug.print("{s}  Stats available in full implementation{s}\n", .{ GRAY, RESET });
     std.debug.print("  Mode: 100%% LOCAL\n", .{});
     std.debug.print("\n", .{});
 }
@@ -180,13 +180,13 @@ fn processQuery(state: *CLIState, query: []const u8) void {
 
     // Print output (stub module only has output field)
     std.debug.print("\n", .{});
-    std.debug.print("{s}{s}\n", .{ GREEN, result.output, RESET });
+    std.debug.print("{s}{s}{s}\n", .{ GREEN, result.output, RESET });
 
     std.debug.print("\n", .{});
 }
 
 pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 

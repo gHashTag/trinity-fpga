@@ -17,7 +17,7 @@ const real_agent = @import("real_agent.zig");
 const http_client = @import("http_client.zig");
 
 pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 

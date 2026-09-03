@@ -1,3 +1,22 @@
+# Does the VIBEE/Zig codegen path build and generate?
+#
+# This gate installed Zig with `brew install zig` -- an UNPINNED dependency, so
+# it built a tree written for Zig 0.15.x with whatever Homebrew shipped that
+# morning, which is now 0.16.0. A toolchain fetched by name is not a pinned
+# toolchain, the same way a dependency pinned to a branch is not pinned.
+#
+# 0.16 moved the filesystem, clocks, sleeping and subprocesses behind an
+# explicit `Io` capability that must be threaded through call graphs. The tree
+# has 4,973 call sites across 865 of its 2,249 Zig files that would need it,
+# and no `Io` instance exists anywhere yet. That migration is a real project;
+# pinning the toolchain the code was actually written for is the honest interim,
+# and it is what .github/workflows/tri-build.yml already does.
+#
+# Ubuntu, not macOS: Zig 0.15.2 cannot link against current macOS SDKs -- it
+# fails inside its own build runner there, before reaching project code.
+#
+# phi^2 + 1/phi^2 = 3 = TRINITY
+
 name: Codegen Validation
 
 on:
@@ -6,131 +25,169 @@ on:
   pull_request:
     branches: [main]
   schedule:
-    # Daily run at 00:00 UTC
     - cron: '0 0 * * *'
   workflow_dispatch:
+
+env:
+  ZIG_VERSION: '0.15.2'
 
 jobs:
   validate:
     name: Validate VIBEE Codegen
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          submodules: false   # the gitlink was unfetchable until recently; see README
 
-      - name: Install Zig
+      - name: Fetch Zig ${{ env.ZIG_VERSION }}
         run: |
-          brew install zig
+          set -e
+          curl -sSL --retry 3 -o zig.tar.xz \
+            "https://ziglang.org/download/${ZIG_VERSION}/zig-x86_64-linux-${ZIG_VERSION}.tar.xz"
+          tar xf zig.tar.xz
+          echo "$PWD/zig-x86_64-linux-${ZIG_VERSION}" >> $GITHUB_PATH
 
-      # The VIBEE/Zig codegen build entry point (`build.zig` at repo root)
-      # is not present in the current RTL/HW-focused trinity-fpga tree; the
-      # only root build script is `build_minimal.zig` (hslm step only) and the
-      # `vibee` / `zig build test` targets and `scripts/validate_codegen.sh`
-      # no longer exist here. Guard on the entry point so this reports its
-      # true state instead of a hard `no build.zig` crash. When a root
-      # `build.zig` is (re)introduced, these steps activate automatically.
-      - name: Detect Zig build entry point
-        id: zigsetup
+      - name: zig version
+        run: zig version
+
+      # One question per step. The previous version asked "does it build and
+      # generate and test" with a single exit code, so a compile error and a
+      # codegen regression were the same red.
+      - name: Does build.zig parse?
         run: |
-          if [ -f build.zig ]; then
-            echo "present=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "present=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::No root build.zig in trinity-fpga; VIBEE/Zig codegen validation skipped (repo is RTL/HW-focused). Re-enable when a root build.zig returns."
-          fi
+          zig ast-check build.zig
+          echo 'build.zig parses' >> $GITHUB_STEP_SUMMARY
 
-      - name: Build Project
-        if: steps.zigsetup.outputs.present == 'true'
+      - name: Does the build graph load?
         run: |
-          zig build
+          set -o pipefail
+          zig build --help 2>&1 | tee graph.log | head -30
 
-      - name: Run Codegen Validation
-        if: steps.zigsetup.outputs.present == 'true' && hashFiles('scripts/validate_codegen.sh') != ''
+      # -Dci=true skips the GUI/raylib targets: that is what the option is for.
+      # -freference-trace so a comptime error names this repository's line
+      # rather than a line inside the standard library.
+      - name: Does it compile?
+        id: build
         run: |
-          bash scripts/validate_codegen.sh
+          set -o pipefail
+          zig build -Dci=true -freference-trace=12 2>&1 | tee build.log | tail -40
 
-      - name: Test E2E Specs
-        if: steps.zigsetup.outputs.present == 'true'
+      - name: Where it stopped
+        if: failure()
         run: |
-          # Core v4 specs
-          zig build vibee -- gen specs/tri/batch_processing.vibee
-          zig test generated/batch_processing.zig
+          echo '### First errors' >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          grep -E 'error:' build.log 2>/dev/null | head -15 >> $GITHUB_STEP_SUMMARY || \
+            tail -20 build.log >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "Distinct files with errors: $(grep -oE '^[^:]+\.zig' build.log 2>/dev/null | sort -u | wc -l)" >> $GITHUB_STEP_SUMMARY
 
-          zig build vibee -- gen specs/tri/ternary_mathematics.vibee
-          zig test generated/ternary_mathematics.zig
-
-          zig build vibee -- gen specs/tri/flash_attention.vibee
-          zig test generated/flash_attention.zig
-
-          zig build vibee -- gen specs/tri/ternary_embeddings.vibee
-          zig test generated/ternary_embeddings.zig
-
-          zig build vibee -- gen specs/tri/golden_chain.vibee
-          zig test generated/golden_chain.zig
-
-          # v5 Production Components
-          zig build vibee -- gen specs/tri/llm_full_inference.vibee
-          zig test generated/llm_full_inference.zig
-
-          zig build vibee -- gen specs/tri/vsa_swarm_agent.vibee
-          zig test generated/vsa_swarm_agent.zig
-
-      - name: Run Full Tests
-        if: steps.zigsetup.outputs.present == 'true'
+      # The spec list is checked against the tree BEFORE generating. Three of
+      # the seven specs this step used to name -- golden_chain,
+      # llm_full_inference, vsa_swarm_agent -- are not in the tree, and the old
+      # step would have died on the first missing one with a codegen error,
+      # which reads as a compiler fault rather than a missing file.
+      - name: Are the named specs present?
         run: |
-          zig build test 2>&1 | tail -20
+          set -e
+          missing=0
+          for s in batch_processing ternary_mathematics flash_attention ternary_embeddings; do
+            if [ -f "specs/tri/$s.vibee" ]; then
+              echo "  present  $s"
+            else
+              echo "::error::specs/tri/$s.vibee is named by this workflow and absent from the tree"
+              missing=$((missing+1))
+            fi
+          done
+          [ "$missing" -eq 0 ] || exit 1
 
-      - name: Check for TODO Stubs
+      - name: Does codegen produce compiling Zig?
         run: |
-          echo "=== Checking for TODO stub implementations ==="
-          TODO_COUNT=$(grep -r "TODO: implement" generated/*.zig 2>/dev/null | wc -l | tr -d ' ')
-          echo "TODO stubs: $TODO_COUNT"
-          if [ "$TODO_COUNT" -gt 0 ]; then
-            echo "::warning::Found $TODO_COUNT TODO stub implementations in generated files"
+          set -e
+          for s in batch_processing ternary_mathematics flash_attention ternary_embeddings; do
+            echo "::group::$s"
+            zig build vibee -- gen "specs/tri/$s.vibee"
+            zig test "generated/$s.zig"
+            echo "::endgroup::"
+          done
+
+      # This step was `continue-on-error: true`, which meant it could not fail
+      # and so reported green while `zig build test` was erroring on six test
+      # compilations. A step that cannot fail says nothing, and its tick is
+      # indistinguishable from a real pass -- which is the exact defect this
+      # repository's other gates were audited for on the same day.
+      #
+      # `set -o pipefail` so the exit code survives the pipe to tail; without
+      # it the step reports tail's success no matter what zig did.
+      - name: Do the tests pass?
+        run: |
+          set -o pipefail
+          zig build test 2>&1 | tail -40
+
+      - name: TODO stubs in generated code
+        if: always()
+        run: |
+          N=$(grep -r "TODO: implement" generated/*.zig 2>/dev/null | wc -l | tr -d ' ')
+          echo "### TODO stubs in generated code: $N" >> $GITHUB_STEP_SUMMARY
+          if [ "$N" -gt 0 ]; then
+            echo "::warning::$N TODO stub implementations in generated files"
             grep -r "TODO: implement" generated/*.zig 2>/dev/null | head -10 || true
-          else
-            echo "✅ No TODO stub implementations found!"
           fi
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: codegen-logs
+          path: |
+            build.log
+            graph.log
+          retention-days: 30
 
   count-patterns:
     name: Count Pattern Coverage
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Count Specs and Behaviors
         run: |
-          echo "=== VIBEE Statistics ==="
           SPECS=$(find specs/tri -name "*.vibee" 2>/dev/null | wc -l | tr -d ' ')
-          echo "Total specs: $SPECS"
-
           BEHAVIORS=$(grep -rh "^  - name:" specs/tri/*.vibee 2>/dev/null | wc -l | tr -d ' ')
-          echo "Total behaviors: $BEHAVIORS"
-
           IMPLEMENTATIONS=$(grep -rh "implementation: |" specs/tri/*.vibee 2>/dev/null | wc -l | tr -d ' ')
-          echo "Behaviors with implementations: $IMPLEMENTATIONS"
-
+          echo "### VIBEE corpus" >> $GITHUB_STEP_SUMMARY
+          echo "| | count |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|" >> $GITHUB_STEP_SUMMARY
+          echo "| specs | $SPECS |" >> $GITHUB_STEP_SUMMARY
+          echo "| behaviors | $BEHAVIORS |" >> $GITHUB_STEP_SUMMARY
+          echo "| with inline implementation | $IMPLEMENTATIONS |" >> $GITHUB_STEP_SUMMARY
           if [ -n "$BEHAVIORS" ] && [ "$BEHAVIORS" -gt 0 ]; then
             COVERAGE=$((IMPLEMENTATIONS * 100 / BEHAVIORS))
-            echo "Implementation coverage: $COVERAGE%"
-            echo "Target: 95%"
-            if [ $COVERAGE -ge 95 ]; then
-              echo "✅ Target met!"
-            else
-              # Aspirational target: 6053 behaviors span the whole spec corpus,
-              # only a fraction carry inline `implementation: |` blocks. This is
-              # a coverage aspiration, not a build/regression signal, so it is
-              # reported as a warning rather than a hard merge blocker (no
-              # fake-pass: the real number is always printed above).
-              echo "::warning::Implementation coverage ${COVERAGE}% is below the 95% aspiration (${IMPLEMENTATIONS}/${BEHAVIORS} behaviors). Tracked as coverage debt, non-blocking."
+            echo "| coverage | ${COVERAGE}% (aspiration 95%) |" >> $GITHUB_STEP_SUMMARY
+            if [ "$COVERAGE" -lt 95 ]; then
+              echo "::warning::Implementation coverage ${COVERAGE}% (${IMPLEMENTATIONS}/${BEHAVIORS}); tracked as coverage debt, non-blocking."
             fi
           fi
 
-      - name: Production Components Status
+      # This step used to print a hardcoded
+      #     echo "✅ llm_full_inference - 14 behaviors, 14 tests"
+      # for two components whose spec files are NOT in this tree. A green tick
+      # that is an `echo` is worse than no line at all: it reports a status
+      # nothing measured. It now reads the tree and says what is actually there.
+      - name: Production component specs — present or not
         run: |
-          echo "=== Production Components (v5) ==="
-          echo "✅ llm_full_inference - 14 behaviors, 14 tests"
-          echo "✅ vsa_swarm_agent - 17 behaviors, 18 tests"
+          echo "### v5 production components" >> $GITHUB_STEP_SUMMARY
+          echo "| spec | in tree | behaviors |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|---|" >> $GITHUB_STEP_SUMMARY
+          for s in llm_full_inference vsa_swarm_agent golden_chain; do
+            f="specs/tri/$s.vibee"
+            if [ -f "$f" ]; then
+              n=$(grep -c "^  - name:" "$f" 2>/dev/null || echo 0)
+              echo "| \`$s\` | yes | $n |" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "| \`$s\` | **no** | — |" >> $GITHUB_STEP_SUMMARY
+            fi
+          done

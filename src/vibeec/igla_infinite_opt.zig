@@ -538,7 +538,7 @@ fn runBenchmark(vocab: *OptimizedVocabMatrix) struct { ops_per_sec: f64, accurac
 // ═══════════════════════════════════════════════════════════════════════════════
 
 pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 

@@ -8,6 +8,26 @@ name: Document references
 # Ratcheted: 250 historical dangling references are baselined and the job fails
 # only on new ones. Temporary paths, sibling-repository paths, and files a
 # document names precisely to record their absence are excluded explicitly.
+#
+# THE SIBLINGS. check_doc_refs.py resolves references against sibling checkouts
+# next to this repository -- t27, trinity-s3ai, claim-audit-lab, tri-net,
+# trios-mesh, zig-golden-float -- and its own comment says why their absence is
+# a problem:
+#
+#   CI -- which has no siblings -- cannot tell them from rot; that is a reason
+#   to name them, not to drop them silently.
+#
+# So the baseline could only ever be generated somewhere the siblings exist, and
+# CI reported the difference as failures. Five of the six are public and are
+# now materialised below. The sixth, trios-mesh, is private: no arrangement of
+# this workflow can reach it with the default token, so references that resolve
+# only there remain unverifiable here. That is stated rather than hidden.
+#
+# NAMES ONLY, NOT CONTENT. The checker asks one question of a sibling -- does
+# this path exist -- so what it needs is the namespace, not 900 MB of blobs.
+# Each sibling is cloned blobless and no-checkout, its file list read with
+# `git ls-tree`, and empty files created at those paths. Nothing is fabricated
+# that the checker inspects: it never opens a sibling file, only tests for one.
 
 on:
   pull_request:
@@ -19,6 +39,29 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          path: trinity-fpga
+
       - uses: actions/setup-python@v5
         with: { python-version: '3.12' }
-      - run: python3 tools/check_doc_refs.py
+
+      - name: Materialise the sibling namespaces
+        working-directory: ${{ github.workspace }}
+        run: |
+          for s in t27 trinity-s3ai claim-audit-lab tri-net zig-golden-float; do
+            if git clone -q --filter=blob:none --no-checkout --depth 1 \
+                 "https://github.com/gHashTag/$s" "$s.git" 2>/dev/null; then
+              n=0
+              while IFS= read -r p; do
+                mkdir -p "$s/$(dirname "$p")" && : > "$s/$p" && n=$((n+1))
+              done < <(git -C "$s.git" ls-tree -r --name-only HEAD)
+              echo "$s: $n paths"
+            else
+              echo "$s: UNREACHABLE — references resolving only there will read as dangling"
+            fi
+          done
+          echo "trios-mesh: private, not reachable from CI — stated, not hidden"
+
+      - name: Check
+        working-directory: ${{ github.workspace }}/trinity-fpga
+        run: python3 tools/check_doc_refs.py
