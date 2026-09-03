@@ -1,0 +1,1255 @@
+{
+  "_read_me_first": "Single source of truth for the autonomous loop. Every iteration MUST read this before acting. Items in `done` are FINISHED — never redo them. Pick the highest-priority `backlog` item whose `blocked_by` is empty.",
+  "loop": {
+    "id": "two-track",
+    "cron_job": "947e19e4",
+    "interval": "15m",
+    "iteration": 76,
+    "status": "RUNNING (restarted 2026-09-02)",
+    "owner": "Dmitrii Vasilev / @gHashTag",
+    "tracks": [
+      "t27 emitter repair",
+      "openXC7 BUFR — waiting on cavearr's specimen design"
+    ],
+    "cron_note": "A second /loop invocation at 15m was declined rather than scheduled: 947e19e4 already runs this loop at */15. A duplicate would put two agents on the same compiler concurrently, breaking the loop's own one-patch-at-a-time rule."
+  },
+  "invariants": [
+    "Never force-push. Never rewrite published history.",
+    "Never post to a third-party repo a claim that has not been re-verified this session.",
+    "A grep is not evidence. Ask the artifact (binary --version, Makefile order, git remote), not the directory.",
+    "Observations of hardware are valid ONLY after the flash log shows exit=. See memory observe-only-a-ready-apparatus.",
+    "Local nextpnr/prjxray copies under build/fpga/openxc7 have no .git of their own; git there answers from parent t27.",
+    "Scope claims honestly: 1 of 4 db rows is silicon-verified, not 4."
+  ],
+  "environment": {
+    "nextpnr_clone": "/Users/playom/t27/build/fpga/openxc7/np-main",
+    "nextpnr_base": "a0410d5",
+    "prjxray_clone": "/Users/playom/t27/build/fpga/openxc7/px-main",
+    "probes": "/Users/playom/t27/build/fpga/openxc7/probe",
+    "chipdb_200t": "np-main/xilinx/xc7a200t484.bin",
+    "chipdb_35t": "np-main/xilinx/xc7a35t.bin",
+    "build_flags": "cmake -DARCH=xilinx -DUSE_OPENMP=OFF (Apple clang); prjxray needs -DCMAKE_POLICY_VERSION_MINIMUM=3.5",
+    "flash_seconds": 778,
+    "board": "AX7203 xc7a200tfbg484-2, IDCODE 0x13636093",
+    "prjxray_clone_CORRECTION": "The flow uses the prjxray-db INSIDE the nextpnr clone: np-main/xilinx/external/prjxray-db (77e52f1, 2026-08-26). The standalone px-main checkout recorded above is NOT what assembles anything. Grepping px-main for a row returns nothing and momentarily looks like evidence about the database when it is evidence about my bookkeeping."
+  },
+  "done": [
+    {
+      "id": "D1",
+      "what": "Fabric-sunk BUFR probe produces HCLK_L.ENABLE_BUFFER.HCLK_CK_BUFRCLK (35t + 200t)",
+      "evidence": "probe/bufr_spine.v, bufr_spine_ax7203.v"
+    },
+    {
+      "id": "D2",
+      "what": "fasm.cc emitter: BUFRCLK dropped by two filters; naive widen aborts (exit 134 std::out_of_range)",
+      "evidence": "measured 3 variants"
+    },
+    {
+      "id": "D3",
+      "what": "nextpnr PR #170 — pad-fed BUFR dedicated site",
+      "url": "https://github.com/openXC7/nextpnr-xilinx/pull/170"
+    },
+    {
+      "id": "D4",
+      "what": "nextpnr PR #171 — regional buffer sinks constrained to clock region",
+      "url": "https://github.com/openXC7/nextpnr-xilinx/pull/171"
+    },
+    {
+      "id": "D5",
+      "what": "issue #172 — PERFCLK db gap, plus correction retracting the tag_groups lead",
+      "url": "https://github.com/openXC7/nextpnr-xilinx/issues/172"
+    },
+    {
+      "id": "D6",
+      "what": "HARDWARE: 1-bit A/B on AX7203 confirms HCLK_L.ENABLE_BUFFER.HCLK_CK_BUFRCLK2 = 00_31. With bit: LED blinks 0.75Hz. Without: frozen.",
+      "evidence": "frame 0x00401C00 word 50 bit 31; flash logs /tmp/flash_A.log /tmp/flash_B.log"
+    },
+    {
+      "id": "D7",
+      "what": "Comment on #149 with the full result",
+      "url": "https://github.com/openXC7/nextpnr-xilinx/issues/149#issuecomment-5494347759"
+    },
+    {
+      "id": "D8",
+      "what": "Memory updated: openxc7-bufr-gap rewritten, openxc7-vivado-benchmark + observe-only-a-ready-apparatus created"
+    },
+    {
+      "id": "D9",
+      "what": "Correction posted on #172 retracting the tag_groups lead; cause is a specimen gap (047/I2IOCLK class)",
+      "url": "https://github.com/openXC7/nextpnr-xilinx/issues/172#issuecomment-5494493862"
+    },
+    {
+      "id": "D10",
+      "what": "Loop scaffolding: STATE.json, JOURNAL.md, dashboard + artifact, CI monitor"
+    },
+    {
+      "id": "D11",
+      "what": "tri CLI: src/tri/tri_loopstate.zig — loop-state reader (nextItem/isDone/renderStatus), 7/7 tests, contract cross-checked against the real STATE.json",
+      "evidence": "zig test src/tri/tri_loopstate.zig"
+    },
+    {
+      "id": "D12",
+      "what": "BUFR_DIVIDE reachable through the flow: div2/div4/div8 place, route and emit BUFR_DIVIDE.D2/.D4/.D8. Refutes my own August note that BYPASS is hardcoded (that was the stale tree; #151 fixed it).",
+      "evidence": "probe/div{2,4,8}.fasm"
+    },
+    {
+      "id": "D13",
+      "what": "Independent confirmation that #170 and #171 are needed together: divide variants on the #171-only branch fail at 'Failed to route arc 0 of net clk_bufr' (BUFR_X1Y11, unconstrained)"
+    },
+    {
+      "id": "D14",
+      "what": "CI GREEN on PR #170: artix7 + spartan7 + kintex7 all pass. The demos gate diffs FASM against committed goldens, so this is a real regression pass, not a build smoke test.",
+      "url": "https://github.com/openXC7/nextpnr-xilinx/pull/170"
+    },
+    {
+      "id": "D15",
+      "what": "CI GREEN on BOTH PRs: 6/6 jobs (artix7, spartan7, kintex7 x2). The demos gate diffs FASM against committed goldens, so neither placement patch caused golden drift on any family."
+    },
+    {
+      "id": "D16",
+      "what": "Skill captured: .claude/skills/fpga-bufr/SKILL.md — the one-bit A/B method, both placer fixes, AX7203 board facts, toolchain traps, and what is still open",
+      "evidence": ".claude/skills/fpga-bufr/SKILL.md"
+    },
+    {
+      "id": "D17",
+      "what": "Anomaly A1 diagnosed: Zig 0.16 moved the filesystem API to std.Io.Dir. std.fs.cwd() -> std.Io.Dir.cwd() and GeneralPurposeAllocator -> DebugAllocator, both verified by compiling probe files rather than by reading docs.",
+      "evidence": "scratchpad/probe_fs.zig fails, probe_fs2.zig compiles"
+    },
+    {
+      "id": "D18",
+      "what": "Sized the Zig 0.16 migration honestly and corrected my own instrument: zig test on a test-less file compiles nothing, so file counts and 'passes' were both meaningless. build-exe is the instrument. Three removed APIs found, one of them a redesign rather than a rename."
+    },
+    {
+      "id": "D19",
+      "what": "B9 landscape scan: gatecat/nextpnr-xilinx and YosysHQ/nextpnr (himbaechel xilinx) have ZERO BUFR/BUFIO packing — the name exists in constids.inc and nothing else. openXC7 is the only open flow that packs a regional clock buffer at all.",
+      "evidence": "gh api contents grep = 0 in both"
+    },
+    {
+      "id": "D20",
+      "what": "PRIOR ART found and disclosed on #170: freshmakerzhao/nextpnr-xilinx fixes the same bug with one line, try_preplace(ci, id_I). Measured on both probes: identical sites (BUFR_X1Y8 pad-fed, BUFR_Y3 MMCM-fed). My PR is more code for the same measured outcome; told the maintainers and offered to close it.",
+      "url": "https://github.com/openXC7/nextpnr-xilinx/pull/170#issuecomment-5495409382"
+    },
+    {
+      "id": "D21",
+      "what": "div8_clr.bit flashed (778.8 s, exit 0) with all three features verified present: ENABLE_BUFFER.HCLK_CK_BUFRCLK2, BUFR_DIVIDE.D8, and HCLK_IOI_BUFR2_CLR. Awaiting a human reading — this is the first VALID divide experiment."
+    },
+    {
+      "id": "D22",
+      "what": "B10 sized correctly: the Zig 0.16 migration is an Io-threading redesign (main takes std.process.Minimal; I/O entry points take an Io), not the two-rename job I reported earlier. Corrects my own estimate from iteration 1."
+    },
+    {
+      "id": "D23",
+      "what": "div2_clr.v and div4_clr.v generated from the corrected template — they carry neither the A5 (missing enable) nor the A6 (CLR tied low) defect. Verified each holds its own divide value. Not built or flashed: div8_clr is on the board awaiting a reading."
+    },
+    {
+      "id": "D24",
+      "what": "HARDWARE: BUFR_DIVIDE(\"8\") CONFIRMED on silicon. div8_clr.bit -> LED1 toggles with ~5 s on, i.e. period ~10.7 s = 200MHz/8/2^28 (predicted 0.093 Hz). Against ~1.3 s for BYPASS that is the 8x ratio. First verification of the BUFR divide ladder through any open flow.",
+      "caveat": "By eye this confirms the divider RUNS at roughly the commanded ratio; it cannot separate 8 from 7 or 9. div2/div4 would make it a curve."
+    },
+    {
+      "id": "D25",
+      "what": "Divide result published to #149 with both of my errors disclosed (void first build, CLR tied low) and the void run reframed as a second independent negative control for bit 00_31.",
+      "url": "https://github.com/openXC7/nextpnr-xilinx/issues/149#issuecomment-5496038292"
+    },
+    {
+      "id": "D26",
+      "what": "HARDWARE point 2: BUFR_DIVIDE(\"2\") -> LED1 blinks noticeably faster, ~4x the D8 rate, matching the commanded 8:2 ratio. Two points now establish that the divide ratio FOLLOWS THE PARAMETER, not merely that something divides.",
+      "evidence": "div2_clr.bit, flashed 778.7 s exit 0"
+    },
+    {
+      "id": "D27",
+      "what": "Consistency audit: all 8 claimed artifacts exist (STATE, JOURNAL, dashboard, skill, tri_loopstate.zig, three probes/bitstreams); tri_loopstate tests still 7/7. No maintainer response yet on #170/#171/#172 — every comment in all three threads is still mine."
+    },
+    {
+      "id": "D28",
+      "what": "HARDWARE point 3: BUFR_DIVIDE(\"4\") -> ~3 s lit, period ~5.4 s, predicted 5.37 s. The midpoint landed as predicted, so the ladder is confirmed across D2/D4/D8 — monotone and doubling per step, not just two endpoints."
+    },
+    {
+      "id": "D29",
+      "what": "Blog post written and submitted: trinity#886 'Two bitstreams, one bit apart', EN+RU complete, built clean against main, slug resolves in the emitted Blog chunk. PR states re-checked against the API first: #170/#171 named OPEN and unmerged, not 'accepted'.",
+      "url": "https://github.com/gHashTag/trinity/pull/886"
+    },
+    {
+      "id": "D30",
+      "what": "trinity#886 CI: the one red check is `pr-opened`, failing with `gh: Bad credentials (HTTP 401)` in a project-board automation step. Verified NOT caused by my change — the same workflow failed 38 minutes earlier on an unrelated branch. Did not read a red run as a verdict on my own work."
+    },
+    {
+      "id": "D31",
+      "what": "Reported the silent-failure consequence: today a fabric-clocking BUFR design assembles, flashes and configures cleanly with a dead clock — fasm2frames never complains because the emitter drops the wire first. Measured on the void div8 run (0 enable lines, bitstream built, flash exit 0, LED frozen). Reframes the two-repo gap from a completeness problem to a live correctness one.",
+      "url": "https://github.com/openXC7/nextpnr-xilinx/issues/149#issuecomment-5496722830"
+    },
+    {
+      "id": "D32",
+      "what": "PATH 1: asked hansfbaier directly in #149 whether hardware verification meets the standard he closed prjxray-db#1 on, with the exact row and three equally acceptable outcomes offered. Did not open a PR against his stated preference.",
+      "url": "https://github.com/openXC7/nextpnr-xilinx/issues/149#issuecomment-5496742610"
+    },
+    {
+      "id": "D33",
+      "what": "PATH 2: applied the method's reasoning to #114 and found a concrete asymmetry by reading fasm.cc — the IDDR branch writes IDELMUXE3 (combinatorial D path) and never IFFDELMUXE3 (flip-flop path), while the ISERDESE2 branch writes exactly the opposite. An IDDR is entirely the flip-flop path, so it sets the delay mux on the path it does not use. Reported as a reading, explicitly not as a measurement.",
+      "url": "https://github.com/openXC7/nextpnr-xilinx/issues/114#issuecomment-5496770163"
+    },
+    {
+      "id": "D34",
+      "what": "PATH 1 SETTLED without hardware. Built IBUF->IDELAYE2->IDDR on xc7a200t: the FASM contains IDELMUXE3.P0 (bit 29_101, delay on the COMBINATORIAL D path) and NO IFFDELMUXE3 at all, so bit 28_116 stays clear = P1 = direct path for the FLIP-FLOPS. Confirmed the two are separate muxes with separate bits. So an IDDR behind an IDELAYE2 delays the output it does not use and samples the undelayed input. My #114 reading is now backed by an emitted FASM, not just by reading fasm.cc.",
+      "evidence": "probe/iddr_delay.{v,xdc,fasm}"
+    },
+    {
+      "id": "D35",
+      "what": "cavearr replied on #149 (16:00). Independently verified the same fasm.cc sites and db counts; called the A/B the strongest evidence in the issue; is taking the fuzzer campaign with Vivado + the extended 039 machinery; identified my CLB-sink observation as the missing ingredient explaining why 058 never saw the pip used (their specimens also kept the clock in the IOI column); will post the specimen design before running it; offered a 23-design regression suite over #170/#171.",
+      "url": "https://github.com/openXC7/nextpnr-xilinx/issues/149#issuecomment-5496881106"
+    },
+    {
+      "id": "D36",
+      "what": "Replied: accepted the regression-suite offer, declined to open a database PR (his campaign answers my question to Hans better — a hand-added row would have provenance nobody could re-derive), and stated precisely what the bench can and cannot check so specimens can be aimed at it."
+    },
+    {
+      "id": "D37",
+      "what": "Sent the held IDDR/IDELAYE2 measurement to #114 — hold condition was 'a maintainer replies anywhere', and one did.",
+      "url": "https://github.com/openXC7/nextpnr-xilinx/issues/114#issuecomment-5496885556"
+    },
+    {
+      "id": "D38",
+      "what": "cavearr delivered the 23-design regression A/B over #170+#171. 37 test x part rows: identical status, LUT/FF and fmax; 36 canonical FASM byte-identical. Both congestion designs (12,288 FF) byte-identical, which is the specific over-constraint risk #171 carried. Arm A fails routing on xc7a200t, Arm B places and routes with both patches firing at the same site and region coordinates I reported from the AX7203 -- an independent, hardware-free reproduction.",
+      "url": "https://github.com/openXC7/nextpnr-xilinx/issues/149#issuecomment-5496881106"
+    },
+    {
+      "id": "D39",
+      "what": "VERIFIED cavearr's db explanation on my own tree, and it CORRECTS my D31 claim. D31 said a fabric-clocking BUFR design 'assembles, flashes and configures cleanly with a dead clock' -- unqualified. True only against a db carrying the 039 pseudo-pip `HCLK_IOI3.HCLK_IOI_IO_PLL_CLK3_DMUX.HCLK_IOI_I2IOCLK_BOT1 default`, which mine has and their packaged 0.9.3 db does not. My div8_clr.fasm emits exactly the row their assembly stops on. Correct statement: with the pseudo-pip the failure is SILENT; without it, LOUD one leg earlier."
+    },
+    {
+      "id": "D40",
+      "what": "Published the reply to cavearr on #149. Acknowledges the 23-design regression, verifies his database explanation on my own tree with the exact pseudo-pip row and revision (77e52f1), publicly corrects my own unqualified silent-failure claim from D31, names the two-prjxray-checkouts trap, keeps the try_preplace prior-art caveat visible, and restates the db-rows-before-emitter merge order.",
+      "url": "https://github.com/openXC7/nextpnr-xilinx/issues/149#issuecomment-5512500244",
+      "verified": "Posted with --body-file and read back: 3961 bytes, and all five spot-checked backticked strings survived (the db row, the ENABLE_BUFFER FASM line, the db revision, try_preplace(ci, id_I), 12,288 FF). The --body flag would have silently deleted them."
+    },
+    {
+      "id": "D41",
+      "what": "BOTH PRs MERGED by hansfbaier. #170 `xilinx: constrain a pad-fed BUFR to its dedicated site` at 2026-09-01T21:53Z (commit d6fc91f0d); #171 `xilinx: keep a regional buffer's sinks inside the region` at 2026-09-01T23:24Z (commit a9edfd6f6). cavearr's 23-design A/B sits on #170 and hansfbaier answered 'Thanks!'.",
+      "url": "https://github.com/openXC7/nextpnr-xilinx/pull/171"
+    },
+    {
+      "id": "D42",
+      "what": "House style recorded in .claude/skills/fpga-bufr/SKILL.md: extract every `if` condition into a named `const bool` phrased as a POSITIVE assertion, then branch on it. hansfbaier asked for this on #171 and demonstrated it by refactoring my own code (commit bd9c74c5): `if (bp.pin != id_CLK)` becomes `const bool pin_is_a_clock = (bp.pin == id_CLK); if (!pin_is_a_clock)`."
+    },
+    {
+      "id": "D43",
+      "what": "Swept EVERY open thread rather than the one I had been polling, applying A16's lesson. Result is modest and worth saying so: openXC7 #149, #172 and #114 all have my own comment last, no new replies. trinity#886 'blog: two bitstreams, one bit apart' merged 2026-09-01T16:22Z by the owner (never recorded in STATE, though it was not a missed event -- they merged it when they asked me to). trinity#877 is still OPEN and stale since 2026-08-31.",
+      "note": "Yesterday's merge discovery was the only external event hiding behind the wrong watch. The sweep found no second one."
+    },
+    {
+      "id": "D44",
+      "what": "Verified hansfbaier's refactor of my own merged code (commit bd9c74c5) rather than assuming a maintainer's cleanup is safe. All nine condition extractions are semantically identical, including the one that is not obvious: `if (clk == nullptr || clk->users.empty())` became `const bool clk_has_sinks = (clk != nullptr && !clk->users.empty()); if (!clk_has_sinks)` -- De Morgan holds AND the short-circuit is preserved, so a null `clk` still never reaches `clk->users`.",
+      "found_a_caveat": "Two of the nine sit INSIDE loops and read a variable the loop mutates (`first_clock_pin = !any`, `already_visited`). They are correct only because the const is declared adjacent to its `if` and re-evaluated each iteration. Hoisting them out of the loop -- the natural tidy-up -- would freeze a changing value and the loop would take the same branch forever. Recorded in the skill, because the rule as stated does not mention it."
+    },
+    {
+      "id": "D45",
+      "what": "Applied hansfbaier's boolean-extraction rule to my own held fasm.cc patch (B6) before sending it, rather than after being asked twice.",
+      "and_it_demonstrates_the_caveat": "The two conditions in that patch straddle a MUTATION of `p`: the first names the global-clock lookup, then `p` is reassigned to the BUFRCLK lookup, then the second must be recomputed. A const hoisted to sit beside the first would have answered for the wrong lookup -- exactly the failure mode I documented at iteration 48 from his own loops. Commented in place so the next reader does not tidy it into a bug.",
+      "caveat": "Not compiled. nextpnr is a large build and disk is at 542 MB; it must be built before the patch is offered."
+    },
+    {
+      "id": "D46",
+      "what": "cavearr posted the SPECIMEN DESIGN for the #149 enables + #172 PERFCLK campaign (15,538 bytes, 2026-09-03T06:53Z), explicitly asking for a go-ahead before the 58-Vivado-run mint. This is the real object of B13, which STATE had marked completed on the strength of the regression A/B instead.",
+      "url": "https://github.com/openXC7/nextpnr-xilinx/issues/149#issuecomment-5521789574"
+    },
+    {
+      "id": "D47",
+      "what": "REVIEWED the specimen design against the published db rather than against his prose, and every claim matched exactly: segbits_hclk_r.db carries 8 ENABLE_BUFFER rows BUFHCLK0..7 at 00_14 01_19 00_22 01_22 00_23 01_23 00_31 01_31 and ZERO BUFRCLK rows; segbits_hclk_l.db carries 4 rows BUFHCLK8..11 at the FIRST FOUR of that same layout, plus 48 BUFRCLK leaves. So ENABLE_BUFFER is one eight-hole layout shared by both tile types, HCLK_R fills all eight, HCLK_L only the low half.",
+      "new_check_he_did_not_run": "Scanned all 196 HCLK_L rows (100 distinct bit positions) for anything occupying the four predicted holes 00_23 / 01_23 / 00_31 / 01_31. All four unoccupied — no collision with an existing feature. A collision would have surfaced 58 Vivado runs later.",
+      "anchor_arithmetic": "My silicon BUFRCLK2 = 00_31 fixes index 2 to the third hole, eliminating 18 of the 24 index->hole assignments, including the global reversal and both cyclic shifts. Six survive. 0/1/3 stay genuinely open."
+    },
+    {
+      "id": "D48",
+      "what": "Posted the go-ahead with two substantive risks and one correction. RISK 1 (the load-bearing one): the budget puts a pad-ODDR fraction inside the randomised N=50 population, and if generate.py inherits 039's tag predicate (BUFR instantiated / IN_USE) those specimens are tagged 1 while the bit is 0 — segmatch's candidate set for the four enables empties and the campaign fails SILENTLY, looking like an honest negative. The tag must come from the routed pip dump (HCLK_L.HCLK_CK_BUFRCLKn->>HCLK_LEAF_CLK_B_*), which his own smoke run already dumps. RISK 2: neg-unconsumed is listed as 'recorded, not a gate', but its answer is what decides Risk 1's predicate — it belongs in the smoke stage. CORRECTION: scoped criterion 6 honestly — I can round-trip all four rows on fbg484, silicon-verify index 2 only (B8 blocker), and my bench is disk-blocked right now.",
+      "url": "https://github.com/openXC7/nextpnr-xilinx/issues/149#issuecomment-5523150454",
+      "verified": "Read back: 5,842 bytes, all five spot-checked backticked strings survived (--body-file, never --body)."
+    },
+    {
+      "id": "D49",
+      "what": "REPO-WIDE comment sweep (not the three watched threads) surfaced an external event I had missed entirely: AssassinK786 independently reproduced my draft PR #120 on xc7s25csga324-1 (spartan7) with a real 16450 UART design — applied both fixes, pad went DRIVE.I12_I8 -> DRIVE.I12_I16, routing and timing clean. Verified the direction against my own diff before affirming it.",
+      "and_i_checked_the_encoding": "The two competing DRIVE rows are BYTE-IDENTICAL between spartan7/segbits_liob33.db and artix7/segbits_liob33.db for both IOB_Y0 and IOB_Y1 — same bits, same names. So it is the same ambiguity, not an analogous one in a second family.",
+      "but_not_an_oracle": "prjxray-db ships Vivado-built harness bitstreams under artix7/harness/ ONLY — there is no spartan7/harness/. So their run confirms the defect's reach and the fix's safety; it does NOT add a second Vivado oracle point. Said so explicitly rather than banking the stronger reading.",
+      "url": "https://github.com/openXC7/nextpnr-xilinx/pull/120#issuecomment-5523173921"
+    },
+    {
+      "id": "D50",
+      "what": "Answered hansfbaier's standing request on #171 (open since 2026-09-02T00:16, never acknowledged): the boolean-extraction rule is in the agent config, and it was applied to the held fasm.cc patch before offering it. Re-verified D44's caveat on the live commit bd9c74c5 this session before publishing it, per the invariant — first_clock_pin reads `any` which its own branch sets, already_visited reads `visited` which is mutated two lines later. Proposed one clause for the rule: the const goes immediately before its `if` and is not hoisted out of a loop it depends on.",
+      "url": "https://github.com/openXC7/nextpnr-xilinx/pull/171#issuecomment-5523185551"
+    },
+    {
+      "id": "D51",
+      "what": "DIAGNOSED the disk exhaustion to its actual cause instead of trimming the loop's own trees. /System/Volumes/Data is 198Gi of 228Gi, 100% full, zero APFS local snapshots. The consumer is /Library/Developer/CoreSimulator at 49 GB (Volumes 35G, Cryptex 8.2G, Caches 6.6G) — iOS Simulator runtimes, nothing to do with FPGA work. For scale: the entire t27 tree is 5.5 GB and .claude/projects is 864 MB.",
+      "and_the_garbage_collection_does_not_apply": "simctl reports 16.1G of disk images while CoreSimulator occupies 49 GB, which looks like ~33 GB of orphans. It is not: Volumes holds exactly the two live runtimes (iOS_22E238 = 18.4, iOS_23F77 = 26.5); 16.1G is the compressed image size and 35G is the expanded one. So `runtime delete unusable` would free nothing, and reclaiming space means deleting a runtime the operator may want — their call, not mine."
+    },
+    {
+      "id": "D52",
+      "what": "t27 track resumed after six blind iterations and landed patch IMPORT: `import` lexes as KwUse, plus a glob-tail guard. Measured against the true baseline 128/430: files 128 -> 127, errors 430 -> 420, clean 74.2% -> 74.4%, gen failures 0, silent 1 unchanged, parse-discarded bodies 0 unchanged.",
+      "the_census_came_first_and_killed_the_obvious_patch": "The tempting fix was brace-list imports -- the parser deliberately DISCARDS the `{PHI, PHI_INV}` list, a real defect whose own comment claims 34 lines in 13 specs. Intersected those names with the 173 undeclared ones BEFORE writing anything: the intersection is 1, and it is std's HashMap. It would have been K4/L/U/X/AA a sixth time. Never written.",
+      "undo": "cp /tmp/compiler.rs.beforeIMPORT /Users/playom/t27/bootstrap/src/compiler.rs",
+      "operator_decision_taken": "The `use`-scope question was delegated to me this iteration and I took `unqualified`. It cost nothing to take, because the census shows almost nothing depends on it -- see REFUTED_the_200_claim."
+    }
+  ],
+  "backlog": [
+    {
+      "id": "B1",
+      "prio": 1,
+      "what": "Check CI status on PR #170/#171; fix anything red",
+      "blocked_by": [],
+      "status": "completed",
+      "note": "#170 3/3 green. #171 2/3 (artix7, spartan7); kintex7 still running. | CLOSED: 6/6 green."
+    },
+    {
+      "id": "B2",
+      "prio": 2,
+      "what": "Write the tri CLI subcommands (Zig, no shell) for loop state + dashboard regeneration",
+      "blocked_by": [],
+      "status": "completed",
+      "note": "module written+tested standalone; wiring into main.zig deferred — whole-CLI build is blocked on an unrelated zig-hdc API decision"
+    },
+    {
+      "id": "B3",
+      "prio": 3,
+      "what": "Capture this campaign as a reusable skill (fpga-bufr or extend fpga-synth)",
+      "blocked_by": [],
+      "status": "completed"
+    },
+    {
+      "id": "B4",
+      "prio": 4,
+      "what": "Regression-test PR #171 on a dense design (region constraint may over-constrain); the BFS has a 1M-wire cap — measure runtime cost",
+      "blocked_by": [],
+      "status": "completed",
+      "note": "Answered for artix7+spartan7: no over-constraint, goldens match. kintex7 outstanding — my code keys on id_BUFR_BUFR/id_BUFIO_BUFIO, which are 7-series, and I have never exercised another family. | CLOSED: 6/6 green. | CLOSED by D38: 23-design A/B, both 12,288-FF congestion designs byte-identical. The over-constraint risk is measured, not argued."
+    },
+    {
+      "id": "B5",
+      "prio": 5,
+      "what": "Hardware-test BUFR_DIVIDE D1..D8 — db has the ladder, nothing has ever driven it; blink rate is self-checking",
+      "blocked_by": [],
+      "status": "completed",
+      "note": "CLOSED. Three points on silicon (D2, D4, D8) plus BYPASS. Ratio follows the parameter across the whole measured range. D1/D3/D5/D6/D7 untested — the doubling steps were chosen because they are the ones an LED can separate."
+    },
+    {
+      "id": "B6",
+      "prio": 6,
+      "what": "Submit the fasm.cc BUFRCLK emitter fix (needs db rows to land first, or send as draft)",
+      "blocked_by": [
+        "B7"
+      ],
+      "status": "pending",
+      "note": "Deliberately NOT sent. With the emitter fixed and no db rows, the same designs go from silently wrong to loudly broken (FasmLookupError) — worse for users until rows exist. Ordering is now stated publicly: rows first, emitter second. | Iteration 49: converted to the maintainer's house style ahead of time, so it is ready in the accepted form when the db rows land. Both sites now read `const bool carries_a_global_clock` / `const bool carries_a_clock_spine` instead of bare npos comparisons. NOT COMPILED -- nextpnr is a large build and free disk is 542 MB, so it needs a build before it is sent."
+    },
+    {
+      "id": "B7",
+      "prio": 7,
+      "what": "Open a prjxray-db PR for the ONE verified row with the hardware evidence",
+      "blocked_by": [],
+      "status": "completed",
+      "note": "RESOLVED as 'no PR'. The rows should come from the specimen campaign; the A/B's useful role is a calibration point. Recorded as done because the question is answered, not because a PR exists."
+    },
+    {
+      "id": "B8",
+      "prio": 8,
+      "what": "Find any path to test the other three rows (BUFRCLK0/1/3) — needs a different pad or the MMCM path (#172)",
+      "blocked_by": [],
+      "status": "blocked",
+      "note": "BLOCKED on the AX7203 schematic. Tried to derive free clock-capable pins in banks 34/35 by subtracting pins named in the repo's xdc files: the result listed R4/T4 -- the 200 MHz oscillator I have been clocking the board from all evening -- so the method has a demonstrated false-positive rate and cannot answer the question. Banks 34/35 are largely DDR3 on this board; driving one of those fights the memory device. Needs the schematic, or a different board. | Searched the local disk for an AX7203 schematic: none. Declined to open unrelated personal PDFs in ~/Downloads. Genuinely blocked on the operator supplying it. | cavearr scopes #172's PERFCLK rows together with the enable rows as one campaign, precisely because PERFCLK is what would let a single-oscillator board reach the other BUFR sites. So B8's unblock now runs through that campaign rather than through a schematic."
+    },
+    {
+      "id": "B9",
+      "prio": 9,
+      "what": "Competitor/landscape scan: how Vivado, upstream nextpnr-xilinx, freshmakerzhao fork and other open flows handle regional clock buffers",
+      "blocked_by": [],
+      "status": "completed"
+    },
+    {
+      "id": "B10",
+      "prio": 10,
+      "what": "Survey src/tri for Zig 0.16 fs/allocator API breakage (anomaly A1) and size the migration",
+      "blocked_by": [],
+      "status": "pending",
+      "note": "Sized properly this iteration: it is an Io-threading redesign, not a rename. This is very likely the same wall recorded elsewhere as 'build blocked on an API decision'. Needs a human decision on how the CLI carries Io before any file is touched. Two probes stand: std.Io.Dir.cwd() and DebugAllocator compile; std.process.argsAlloc has no drop-in."
+    },
+    {
+      "id": "B11",
+      "prio": 11,
+      "what": "Tell the maintainer that #170 and #171 conflict textually in pack_clocking_xc7.cc (adjacent hunks); second merge needs a rebase",
+      "blocked_by": [],
+      "status": "completed",
+      "note": "Posted on both: #170 comment 5495075331, #171 comment 5495073046. State was stale — self-healed."
+    },
+    {
+      "id": "B12",
+      "prio": 12,
+      "what": "Settle the IDDR+IDELAYE2 case on hardware: build IBUF -> IDELAYE2 -> IDDR, diff the frames before flashing, and find out whether IFFDELMUXE3 is actually wrong there or already at the needed value",
+      "blocked_by": [],
+      "status": "completed",
+      "note": "Settled at the FASM level — no flash needed, and cheaper than predicted. Hardware would only add 'and the captured data is wrong', which does not change the finding."
+    },
+    {
+      "id": "B13",
+      "prio": 13,
+      "what": "Review cavearr's specimen design when he posts it — say whether it exercises what this bench can actually check",
+      "blocked_by": [],
+      "status": "completed",
+      "note": "CLOSED prematurely at iteration ~50: he had posted the regression A/B, not the specimen design, and I closed the item on the wrong artifact. REOPENED and genuinely closed at iteration 76 — the specimen design arrived 2026-09-03T06:53Z and was reviewed against the published db, not its prose (D46/D47/D48). Two risks raised, go-ahead given. What is now outstanding is HIS 58-run mint, not my review; #172/B8 remain blocked on that."
+    },
+    {
+      "id": "B14",
+      "prio": 14,
+      "what": "Criterion 6, my half of cavearr's campaign: round-trip all four ENABLE_BUFFER.HCLK_CK_BUFRCLK0..3 rows on xc7a200tfbg484-2 once they are minted, and re-run the silicon A/B on index 2 against the minted row",
+      "blocked_by": [
+        "cavearr's mint"
+      ],
+      "status": "go-ahead reciprocated 2026-09-03T15:07Z -- both risks conceded in full (tag predicate moves to the routed pip dump, neg-unconsumed moves to phase 0), hole-occupancy scan folded into campaign notes as the prior, permutation arithmetic agreed verbatim. Campaign task is being drawn up; results land in #149 before any db PR. Disk is no longer a blocker -- told him so on 2026-09-03T15:2xZ so he does not factor bench downtime into scheduling.",
+      "note": "Scoped honestly on #149: round-trip for all four (cheap, no flash), silicon for index 2 ONLY. Indices 0/1/3 need a second clock-capable pad, which is exactly the B8 blocker. Do not let this be read as four silicon checks."
+    },
+    {
+      "id": "B15",
+      "prio": 15,
+      "what": "Regenerate the six named demo-projects goldens and take draft PR #120 out of draft — offered to hansfbaier on the strength of AssassinK786's independent spartan7 reproduction",
+      "blocked_by": [
+        "hansfbaier's go-ahead",
+        "disk"
+      ],
+      "status": "offered",
+      "note": "Blast radius already measured 2026-08-18 and it is closed: blinky-digilent-arty, -basys-3, -zybo, blinky-genesys2, blinky-qmtech, litex-minimal-arty-s7 change; blinky-kc705 and blinky-stlv7325 do not. Six builds, named, not open-ended."
+    },
+    {
+      "id": "B16",
+      "prio": 16,
+      "what": "Disk: the operator must decide. 49 GB of the 198 GB in use is /Library/Developer/CoreSimulator, both runtimes live (iOS 18.4 + iOS 26.5); nothing in the FPGA trees is the cause and no garbage collection applies",
+      "blocked_by": [
+        "operator decision"
+      ],
+      "status": "diagnosed, not actionable by me",
+      "note": "Deleting the iOS 18.4 runtime is the single large reclaim (~15-20 GB) and it is a development-environment call, not a cleanup. Cheaper partial: CoreSimulator/Caches is 6.6 GB and regenerable. Everything I could have trimmed unilaterally in t27/build is either the live prjxray-db (831 MB), the expensive chipdb (407 MB), or a duplicate whose non-use I could not prove — px-main provides a second copy of fasm2frames.py and nothing proved which one the flow calls."
+    }
+  ],
+  "anomalies": [
+    {
+      "id": "A1",
+      "found": "iteration 1",
+      "what": "Zig 0.16 removed std.fs.cwd() and std.heap.GeneralPurposeAllocator; std/fs/ now contains only path.zig",
+      "impact": "any tri code doing file IO against 0.15 idioms will not compile; my verification harness hit both in one file",
+      "status": "diagnosed, migration path proven",
+      "next": "survey src/tri for std.fs.cwd / GeneralPurposeAllocator call sites and size the migration",
+      "scope": "125 files in src/tri/*.zig hold 751 std.fs.cwd() call sites; 17 use GeneralPurposeAllocator; std.process.argsAlloc is ALSO gone. Treat these as touch points, NOT as a size estimate.",
+      "fix": "std.fs.cwd() -> std.Io.Dir.cwd() and GeneralPurposeAllocator -> std.heap.DebugAllocator are renames. std.process.argsAlloc is NOT: it becomes std.process.Args with toSlice(arena)/iterate(), an Io-shaped redesign. So the migration is not mechanical and cannot be scripted wholesale.",
+      "caution": "151 files is the grep count, not the compile count — a file may use the call inside dead code or behind comptime. Size it by compiling, not by grepping. See memory pattern-defines-its-own-scope.",
+      "method_correction": "`zig test` on a file with NO test blocks analyses nothing -- main() is never compiled, so it reports success on code that cannot build. My first baseline was vacuous because of this. Use `zig build-exe <f> -femit-bin=/dev/null`. And each error masks the next: cell_trends.zig showed one trivial var/const error, and only after fixing it did the real argsAlloc breakage appear -- the fs.cwd() call on line 39 is still masked behind that.",
+      "real_shape": "NOT a rename job. Zig 0.16 introduced explicit Io passing: `Args` arrives as a parameter of main (`pub fn main(init: std.process.Minimal) !void`), and I/O entry points take an `Io` value (e.g. `std.process.currentPath(io, buffer)`). So every main() changes signature and `io` must be threaded to anything doing file or process I/O. File-by-file mechanical migration is not possible; this is an architectural decision about how the CLI carries Io.",
+      "revised_estimate": "Structural. The '751 call sites' figure describes touch points, not effort, and understates the coupling."
+    },
+    {
+      "id": "A2",
+      "found": "iteration 1b",
+      "what": "Permission layer began refusing compound shell commands (chained ';' plus inline python) mid-session",
+      "impact": "autonomous iterations must use one command per call",
+      "status": "worked around, not a defect"
+    },
+    {
+      "id": "A3",
+      "found": "iteration 2",
+      "what": "Derived a 'free pins' list from repo xdc files; it included R4/T4, the board's own oscillator",
+      "impact": "the list would have invited driving a pin that is already driven",
+      "status": "caught before use, method discarded",
+      "lesson": "constraint files describe designs, not boards. Asking what the repo names cannot answer what the PCB wires."
+    },
+    {
+      "id": "A4",
+      "found": "iteration 2",
+      "what": "I shipped PR #170 without searching for prior art; a fork had solved it in one line 16 months earlier",
+      "impact": "a needlessly large patch was offered to a third-party project as if it were the minimal fix",
+      "status": "disclosed publicly, offered to close",
+      "lesson": "before proposing a fix to someone else's project, grep the ecosystem for the symbol. One gh code-search would have found it."
+    },
+    {
+      "id": "A5",
+      "found": "iteration 2",
+      "what": "The div2/div4/div8 experiment was built on branches created AFTER I reverted the fasm.cc emitter patch for clean PRs. The flashed div8.bit contained ZERO ENABLE_BUFFER.HCLK_CK_BUFRCLK lines, so the BUFR clock never reached fabric at all.",
+      "impact": "The frozen LED the operator reported twice had a mundane cause — the missing enable bit — and nothing to do with BUFR_DIVIDE. I was about to report 'the divide is ignored on silicon' publicly.",
+      "caught_by": "Checking that the bitstream actually contains the feature the experiment is about, BEFORE interpreting the observation.",
+      "status": "corrected — div8_clr.bit rebuilt with the emitter patch restored and flashed",
+      "silver_lining": "It is a second, independent negative control: a bitstream built by a different route, for a different purpose, again shows a frozen counter with no enable bit."
+    },
+    {
+      "id": "A6",
+      "found": "iteration 2",
+      "what": "The original div8 probe tied BUFR CLR permanently low. A BUFR in divide mode needs its divider released by a CLR pulse; BYPASS does not.",
+      "impact": "Even with the enable present, that build could not have distinguished 'divide ignored' from 'divider never started'.",
+      "status": "fixed in div8_clr.v — CLR sequenced from a counter on a BUFG off the same pad, independent of the BUFR under test"
+    },
+    {
+      "id": "A7",
+      "found": "iteration 5",
+      "what": "STATE's iteration counter had drifted to 3 while the journal was on 4 — I updated the journal each time and the counter only sometimes",
+      "impact": "cosmetic here, but the counter is what a fresh cron firing reads first to orient itself",
+      "status": "corrected to 5; the lesson is that a field only some code paths update will drift",
+      "lesson": "either every write updates it or nothing should read it as authoritative"
+    },
+    {
+      "id": "A8",
+      "found": "iteration 6",
+      "what": "A second blog PR of mine, trinity#877 (2026-08-31), has been CONFLICTING against main since main moved and nobody noticed",
+      "impact": "it cannot merge as-is; both PRs touch the same two index files, so whichever lands second needs a rebase regardless",
+      "status": "flagged, not touched — #877 is a different post I did not write this session and have not read, so rebasing it is not mine to do blind",
+      "note": "#886 was branched from current main and is MERGEABLE",
+      "still_open_at_iteration_47": "trinity#877 'blog: 179 features that change no bits', open since 2026-08-31, still conflicting. Unchanged position: it is a post I did not write and have not read, so rebasing it blind is not mine to do."
+    },
+    {
+      "id": "A9",
+      "found": "loop2 iteration 1",
+      "what": "I wrote three variants of a patch the workflow had already written, without reading its patch_new field",
+      "impact": "three build+measure cycles wasted (169->235, ->169, ->225), each a new way to be wrong; the diagnosis's own patch worked first try",
+      "lesson": "When a diagnosis ships a patch, apply THAT before inventing one. My variants used indentation; the diagnosis used brace depth, and indentation is a formatting convention while depth is the actual nesting."
+    },
+    {
+      "id": "A10",
+      "found": "loop2 iteration 2",
+      "what": "I attributed base/benchmarking.zig and base/testing.zig regressing to my own shim patch, from timing alone",
+      "impact": "a wrong causal claim recorded in STATE and reported to the operator; the files never existed",
+      "caught_by": "reading the actual error text instead of the delta — `unable to load`, then `ls` showing no such spec",
+      "lesson": "A file appearing in a failing set is not evidence the file exists. Check the artifact before assigning blame for it."
+    },
+    {
+      "id": "A12",
+      "found": "loop2 iteration 14",
+      "what": "Two more instrument failures in ONE iteration, both caught before publishing. (a) Counting bare calls on assertion lines gave 366 'silent miscall sites' — it counted every legitimate free-function call in an assertion. (b) The 'sound' replacement gave 1, because it skipped any name the spec ever calls bare, and a DECLARATION line `pub fn to_i64(` looks exactly like a bare call — so it excluded every method by construction.",
+      "impact": "None externally: 366 and 1 were both discarded before they reached the operator or the journal. The true figure is 14.",
+      "status": "corrected in-iteration; the honest number is 14 sites across 3 files",
+      "lesson": "Errors six and seven in the same instrument family. The tell is unchanged: a count that is wildly larger OR wildly smaller than the handful of cases I can name by hand is measuring its own regex. Name three instances by hand first, then check the count contains them — `to_i64` was absent from the '1', which is what exposed it."
+    },
+    {
+      "id": "A11",
+      "found": "loop2 iteration 13",
+      "what": "I declared the emitter track exhausted and recommended stopping — while one concrete, unblocked patch remained (J, 8 errors, the last file-scope case).",
+      "impact": "Had the operator accepted the recommendation, a class that is now provably closed would have been left one patch short of closed, and the residue would have been described by a fuzzy '68' instead of a zero.",
+      "caught_by": "Testing my own claim before repeating it. Two greps: what shapes are left, and does the emitter ever emit one.",
+      "status": "corrected — patch J applied and measured, class closed",
+      "lesson": "Exhaustion is a measurement, not a mood. I inferred it from four iterations of correcting my own instrument, which is fatigue with the CLASSIFICATION, not evidence about the COMPILER. Cheapest possible check: ask what shapes remain and whether the emitter handles them."
+    },
+    {
+      "id": "A13",
+      "found": "loop2 iteration 19",
+      "what": "Free disk is falling steadily across iterations: 3.9 -> 3.5 -> 3.1 -> 2.8 -> 2.2 GB, roughly 400-600 MB per measure run.",
+      "impact": "measure.py aborts under 800 MB. At this rate the instrument stops working in 2-3 iterations, mid-loop.",
+      "what_i_did_not_do": "Did NOT free the two large consumers. /Users/playom/t27/build (3.0 GB) is the nextpnr/prjxray toolchain the whole openXC7 track depends on. /private/tmp/claude-501 (3.1 GB) is other sessions' scratchpads, not mine to delete. Did NOT prune ~/.cargo/registry either: the network is down, so removing re-downloadable .crate files could leave the next build unable to fetch them -- turning a disk warning into a hard stop.",
+      "status": "diagnosis corrected; genuinely needs the owner (something outside this volume is consuming the APFS container)",
+      "CORRECTED_iteration_20": "My diagnosis was WRONG. I attributed the drain to measure.py runs at 400-600 MB each. Iteration 19 ran NO build at all and free space still fell 2.2 -> 1.7 GB. A find for files >80 MB modified in the last 90 minutes returned NOTHING, and du on all three of my large directories returned figures identical to the previous iteration (3.1G scratchpads, 3.0G FPGA tree, 664M cargo target). My working set is static.",
+      "actual_shape": "df -H /: 245G volume, 12G used, 1509M available, 90% CAPACITY. That is an APFS container shared with other volumes -- free space is a container-level property, so the consumer is outside this volume entirely. No local Time Machine snapshots (tmutil listlocalsnapshots is empty). A 2.0G /private/var/vm/sleepimage exists but is dated Sep 1 and is not growing.",
+      "what_this_means_for_the_loop": "Freeing anything of mine would not have helped, and deleting the FPGA tree or the cargo registry would have cost the openXC7 track or the next build for no gain. The 800 MB guard will still fire, but the cause is not the loop and the loop cannot fix it."
+    },
+    {
+      "id": "A14",
+      "found": "loop2 iteration 27",
+      "what": "Free disk fell 2.6 -> 1.5 GB across one measure run, and NONE of my directories grew: scratchpad 4K, tasks 4M, target 664M unchanged, no local .zig-cache, ~/.cache/zig 51M. t27 total 6.1 GB with only bootstrap/src and target/release touched in the last hour.",
+      "what_i_did_not_do": "Did not invent a fifth explanation. Four consecutive disk diagnoses this session were wrong, each a plausible mechanism with a matching timeline and no check that the mechanism was running.",
+      "experiment_instead": "Recorded 1.5 GB with NO build this iteration. The next iteration's reading distinguishes 'my builds consume it' from 'something external does' at zero cost -- if it falls again with no build, it is not the loop.",
+      "status": "resolved by measurement; the loop is not the consumer and never needed to free anything",
+      "RESOLVED_iteration_28": "Disk is stable. The armed experiment read 1.5 GB -> 1.5 GB with NO build, and then a FULL build+measure run also finished at 1.5 GB with target (664M), gen/zig (28M) and ~/.cache/zig (52M) all unchanged. So builds consume nothing net either. My '1.1 GB per run' model was a fifth wrong disk claim; the real drain was the scratchpad, and it ended when that was cleared. Measured from both sides this time rather than inferred."
+    },
+    {
+      "id": "A15",
+      "found": "loop2 iteration 38",
+      "what": "Free disk fell 1.4 GB -> 474 MB across one iteration's builds, and my own directories were unchanged throughout (target 664 MB, gen/zig 28 MB, zig cache 52 MB -- identical before and after).",
+      "corrects": "My iteration-28 conclusion that 'builds consume nothing net' rested on a single before/after pair and is refuted.",
+      "not_explained": "Sixth attempt at locating the consumer, sixth failure. No zig temp cache in /private/var/folders or ~/Library/Caches. I am recording the observation without a mechanism rather than inventing a sixth explanation.",
+      "what_worked": "The 800 MB guard did exactly its job -- it refused to build instead of filling the volume, twice.",
+      "status": "open; needs the owner, and needs ~50 MB freed for the loop to measure again",
+      "trend_established_iteration_40": "1.4 GB -> 474 -> 798 (after cargo clean) -> 757 -> 580 MB. Between iterations 38, 39 and 40 I ran NO builds at all and the volume still lost ~180 MB per 15-minute cycle. The drain is TIME-based, not activity-based -- roughly 12 MB/min regardless of what the loop does.",
+      "projection": "At this rate the volume fills in about three more iterations, which wedges the session the way a full disk did for five iterations on 2026-09-02.",
+      "seventh_probe": "/private/var/db/diagnostics holds 2060 MB and IS actively written -- 5 files in the last 5 minutes. But only 26.8 MB in 30 minutes, about 0.9 MB/min, which is roughly a fourteenth of the observed drain. Active but NOT the cause. Recording it as a partial answer rather than promoting a large directory to an explanation, which is the mistake the previous six probes made.",
+      "what_the_loop_can_and_cannot_do": "Cannot: identify the consumer (seven attempts), or free enough. Cleaning target is circular -- it is 330 MB and measure.py rebuilds it, while zig test needs ~400 MB transient ON TOP of the 800 MB guard. Can: keep the guard, which has now refused to build twice instead of filling the volume.",
+      "trend_REFUTED_iteration_41": "Free disk read 584 MB, four megabytes MORE than the previous cycle. The drain stopped. My iteration-40 conclusion -- a steady time-based ~12 MB/min with the volume filling in three iterations -- was an extrapolation from three points, and the fourth broke it. Seventh wrong reading of this disk, and the first one I had stated with a projection attached."
+    },
+    {
+      "id": "A16",
+      "found": "loop2 iteration 46",
+      "what": "I watched the WRONG SIGNAL for about twenty iterations. Every check was `gh api repos/.../issues/149/comments`, which faithfully reported no change -- while both PRs were merged 19 and 17 hours earlier and a maintainer request addressed to me sat unanswered on #171.",
+      "why_it_hid": "A comment list on an ISSUE does not change when a PR merges, and PR-thread comments are not issue comments. The instrument was working perfectly and measuring something adjacent to the question.",
+      "cost": "Roughly twenty iterations reported 'no reply' as a fact. The merge and the request were each one API call away the whole time.",
+      "fix": "Poll `gh pr view <n> --json state,comments` for anything open, not just the issue thread. Recorded in the skill so it survives this session.",
+      "shape": "Same family as every instrument failure this session -- but this one was not a wrong count, it was a right count of the wrong thing."
+    },
+    {
+      "id": "A17",
+      "found": "loop2 iteration 47",
+      "what": "My first sweep command used `set -- $r` inside a shell loop and every openXC7 issue check failed with 'accepts 1 arg(s), received 0'. The trinity checks in the same command succeeded, so the output looked partially fine.",
+      "why_it_matters": "A command that half-fails is the shape that produced A16 in the first place -- a watch that reports something while measuring nothing. Caught immediately because three identical errors sat next to two real answers.",
+      "status": "rewritten as a plain loop; all three issues then answered"
+    },
+    {
+      "id": "A18",
+      "found": "iteration 76",
+      "what": "The disk filled to literally zero mid-iteration and the Bash tool itself died — not the command, the HARNESS: 'ENOSPC: no space left on device' creating the tool's own .output file. Three consecutive calls failed. WebFetch was independently broken (misconfigured model), so the two obvious instruments were down at once.",
+      "impact": "For a stretch of the iteration I had no shell and no fetch. The loop's own instruction ('under 800 MB, stop and free space instead of building') assumes a shell exists to free space with; at zero bytes it does not.",
+      "worked_around": "The in-app browser needs no local disk. Drove the GitHub REST API through it and did the entire specimen-design review — including fetching and scanning both segbits files — with no shell at all. Bash recovered on its own several minutes later (365 MB).",
+      "lesson": "A tool that has never failed is still an instrument. Keep a second, differently-grounded route to the same fact: the browser reads GitHub without touching the local filesystem, and that is what saved the iteration."
+    },
+    {
+      "id": "A19",
+      "found": "iteration 76",
+      "what": "I closed B13 on the wrong artifact. The item was 'review cavearr's specimen design'; he posted a 23-design regression A/B first, and I marked the item CLOSED on that. The specimen design — the actual object, with an explicit request for a go-ahead — arrived later and would have sat unanswered under a 'completed' flag.",
+      "caught_by": "Reading the new comment before trusting STATE's own status field.",
+      "second_instance_same_iteration": "A repo-wide comment sweep (all issues, since a date) found AssassinK786's independent reproduction of my draft PR #120, posted on #173 — a thread I do not watch. Polling three named threads would never have surfaced it. This is A16/D43's lesson recurring: D43 concluded 'the sweep found no second one', and today's sweep found exactly that second one.",
+      "lesson": "An item is closed by the artifact it names, not by a related artifact arriving. And a watch scoped to the threads I am party to cannot see corroboration of my own work posted elsewhere."
+    },
+    {
+      "id": "A20",
+      "found": "iteration 76",
+      "what": "The first measurement of the import patch reported files 128 -> 126, delta -2 BETTER, naming interop/gf_cross_language.zig as one of two files FIXED. It was not fixed: the patch PANICKED the generator on that spec (`byte index 1 is out of bounds of ''`), regen wrote no file, and a file that does not exist cannot be a file with errors -- so it dropped out of the failing set and read as a win.",
+      "the_tell": "`gen failures 0 -> 1` in the same output, one line above the headline. The only number that moved in the wrong direction was the one describing whether the compiler still works.",
+      "cause": "The glob guard was placed in split_use_path, which runs at EMIT time. The panic is earlier: `*` is not an Ident, so the parser's path loop stops before it and leaves a TRAILING `::`, and rsplit then yields an EMPTY final segment, not `*`. A guard testing for the star alone would have missed it -- the string to defend against was ''.",
+      "status": "fixed in the parser's import_name extraction, beside the brace-list rule it is a sibling of; re-measured with gen failures back to 0",
+      "lesson": "This is `parse-error-is-a-wall` in its purest form: not a file capped at one error, but a file capped at ZERO by not existing. Any metric counting 'files with >=1 error' rewards deleting the file. Read the generator's own health line before reading its output, and never accept a delta whose named beneficiary you have not opened."
+    }
+  ],
+  "collaboration_options": [
+    {
+      "name": "cautious",
+      "what": "Land what is open: both PRs are 6/6 green — ping for review, fix the #170/#171 textual conflict, run the Zig 0.16 survey (A1/B10). No new publishing.",
+      "fits": "if getting the two patches merged is what matters"
+    },
+    {
+      "name": "measured (recommended)",
+      "what": "Read div8, then flash div2 and div4 to turn one observation into a curve. BUFR_DIVIDE has never been driven by any open flow; the ratio is self-checking.",
+      "fits": "best evidence per hour; needs eyes on the LED"
+    },
+    {
+      "name": "bold",
+      "what": "Chase the remaining three rows. Needs a second clock-capable source: an external oscillator on a free bank-34/35 pin (needs the board schematic), or unblocking #172 on someone else's Vivado bench.",
+      "fits": "highest value, may yield nothing — and I will say so rather than fake progress"
+    }
+  ],
+  "artifacts": {
+    "dashboard_url": "https://claude.ai/code/artifact/79da57bc-f5aa-43cd-8bd9-adb82c554bd5",
+    "dashboard_file": ".trinity/loop/dashboard.html",
+    "note": "Republish the same file path in this session to keep the URL."
+  },
+  "autonomous_surface": {
+    "assessed": "iteration 6",
+    "actionable_now": [],
+    "blocked_on_user": [
+      "B6 and B7 are publishing decisions I will not take unprompted",
+      "B8 needs the AX7203 schematic",
+      "B10 needs an architectural decision on how the CLI carries Io",
+      "B5 needs a human to read an LED"
+    ],
+    "note": "Still empty for substantive work. This iteration produced one real finding (A8) by checking CI rather than by making work."
+  },
+  "ready_to_send": [],
+  "sent_at_iteration_76": [
+    {
+      "what": "The held #171 reply — SENT. The operator asked for replies this iteration, which is the per-action authorisation that was missing. Went beyond the held draft: re-verified D44's loop caveat on the live commit bd9c74c5 before publishing it, and proposed a clause for the rule (the const goes immediately before its `if` and is not hoisted out of a loop it depends on).",
+      "url": "https://github.com/openXC7/nextpnr-xilinx/pull/171#issuecomment-5523185551"
+    }
+  ],
+  "t27": {
+    "baseline_when_started": "184 failing / 313 clean (63.0%), 1058 errors",
+    "now": "116 failing / 381 clean (76.7%), 378 undeclared, 24 phantom import targets, 9 invalid builtin (true scope ~20+, see MAJOR_FINDING), 4 local-constant-shadows, 2 invalid-lhs-assignment, 1 silent receiver deletion, 1 silent copy-propagation bug FIXED (patch AP, blast radius measured at exactly 1 file corpus-wide). Twenty-one patches/edits total this session (AI/AJ/AK/AL/AN/AO/AP compiler patches; gf16.t27+sse.t27 intCast, sync/index.t27 for-capture, vsa_core.t27 floatCast, tritype-base x2, vsa::core+hybrid_arithmetic x3, formula_embed.t27 discard+@pow, gf16.t27 @pow, sdk_contract.t27 x4 missing-semicolon spec fixes) -- see done[] and anomalies[] for each, measured and verified individually. AM (local-constant-shadows) investigated and cleanly reverted, zero net change. All nine originally-censused small classes resolved (6 fixed, 3 correctly deferred). invalid-builtin class rescoped: not 9-12 small errors but a 6-file problem, most of it out-of-scope OS/network implementation work (see MAJOR_FINDING_invalid_builtin_class_is_far_bigger_than_visible).",
+    "re_measured_iteration_76": "CONFIRMED by the instrument after six blind iterations, not merely asserted: corpus 497, gen failures 0, 128 failing / 369 clean (74.2%), delta UNCHANGED, 430 undeclared, 24 phantom import targets (spec defects), 11 invalid builtin, 4 @intCast, 3 shadows, silent receiver deletions 1 unchanged, function bodies discarded by a parse error 0. No regression accumulated while the track was blocked -- the tree is exactly where STATE said it was.",
+    "REFUTED_the_200_claim": {
+      "what_state_said": "'The third [language decision] alone governs 200 of the 439 errors' -- the unqualified-`use` question, recorded as the single biggest lever and as blocked on the operator.",
+      "what_the_census_shows": "It is not. 430 errors across 173 DISTINCT names, long tail, largest single name 21. Of the 173, only 83 are declared anywhere in the generated corpus (239 errors -- an UPPER bound, since a name being declared somewhere does not mean the file imports it). The decisive test: intersect the 173 undeclared names with every name the corpus imports in brace-list form (`use m::{A, B}`), which is the only syntax whose meaning IS unqualified import. The intersection is 1, and it is `HashMap` (std). So an unqualified-import change fixes ~1 error, not 200.",
+      "why_the_claim_survived": "It was never measured against the error set -- it was inferred from the corpus containing both conventions. A grep for the convention answers a different question than a census of the failures.",
+      "consequence": "The operator's `use`-scope decision is NOT the t27 track's blocker and should stop being recorded as one. The decision was taken this iteration anyway (unqualified) and cost nothing, because almost nothing depends on it."
+    },
+    "patch_IMPORT_kept": {
+      "what": "`import` lexes as KwUse. 5 specs write `import numeric::gf16;` instead of `use`; nothing lexed the word, so the line fell to parse_top_level_decl, failed, and recovery discarded it -- hybrid_bigint.t27 declares three imports and emitted none. Second hunk: a glob tail (`import ffi::gf16::*;`) resolves to the module before the star, which is exactly what a glob means and what the existing whole-module pool branch already does.",
+      "measured": "vs the true baseline 128/430: files 128 -> 127, errors 430 -> 420, clean 369 -> 370 (74.2% -> 74.4%), gen failures 0 -> 0, silent 1 unchanged, parse-discarded bodies 0 unchanged. Phantom import targets 24 -> 27: the import lines now resolve and point at `ffi/gf16.zig`, which no spec provides -- a spec defect newly surfaced, correctly classified by the instrument rather than counted as a file error.",
+      "prediction_was_slightly_wrong": "Predicted 'at least 11' errors fixed by naming them individually (gf16 x4, Trit, TRIT_POS x4, constants, timestamp). Actual 10. Off by one in the optimistic direction -- recorded rather than rounded away.",
+      "safe_as_a_keyword_where_using_was_not": "`using` was reverted historically because it occurs in prose ('using different number formats' became an import of different.zig). Checked before adding `import`: zero occurrences in the corpus outside a leading declaration -- not in comments, behaviour text, or as an identifier."
+    },
+    "patch_AI_kept": {
+      "what": "parse_expr_range required a right-hand side after `..` UNCONDITIONALLY, so `a[0..]` (open-ended slice) and Zig's own `for (items, 0..) |item, i|` idiom both failed: parse_expr_bitor() choked on the closing `]` or `)`, the error propagated through the enclosing call's argument list or the for-loop's iterable list, and recovery discarded the whole STATEMENT. This is the census's #3 same-file case (isa/ternary_set.zig :: k) traced to its actual cause -- `var k = set_union(a[0..], ...)` vanished complete, leaving only the rewritten `try eq(k, 3)` two lines later referencing a k nothing declares. 99 sites corpus-wide: 98 closed by `]`, one -- `for (delta.operations, 0..) |op|` -- by `)`.",
+      "fix": "When `..` is followed immediately by RBracket or RParen, emit a one-child ExprBinary (open range) instead of requiring parse_expr_bitor() to parse a right side. gen_expr grew the matching one-child branch: `left..` with no trailing operand. Purely additive -- both tokens were parse errors here before, so no working parse can regress.",
+      "measured": "vs the true baseline: files 123 -> 120, undeclared 380 -> 371, clean 75.3% -> 75.9%, gen failures 0. Fixed (verified by opening each, not just counted): isa/ternary_hash.zig (159 lines, 0 errors), isa/ternary_set.zig (185 lines, 0 errors), pipeline/e2e_test.zig (155 lines, 0 errors). ternary_hash.zig was not in the predicted set -- same open-range shape, found by the fix rather than by the census.",
+      "undo": "cp /tmp/compiler.rs.beforeAI /Users/playom/t27/bootstrap/src/compiler.rs"
+    },
+    "patch_AJ_kept": {
+      "what": "parse_expr_unary had no arm for `Star`, so `*table` -- a PREFIX dereference matching the pointer TYPE syntax this corpus already writes (`table: *SymbolTable`) -- was a guaranteed parse error. `infer_expr(stmt.children[0], *table, reg)` and its `var ret_type =` vanished complete from compiler/typechecker.zig, leaving only the `if (check_assign(..., ret_type) ...)` that reads it two lines later -- the census's #2 same-file case (ret_type), traced to its cause. At least 8 sites corpus-wide (`*table` x5, `*target` x2, `*route` x1).",
+      "fix": "Added Star to parse_expr_unary's prefix-operator set. Codegen for ExprUnary special-cases extra_op == \"*\": Zig has no prefix deref (`*x` is not legal), only postfix `x.*`, so it swaps sides -- writes the child first, then `.*`. Purely additive: `*` opening an expression was a guaranteed error before.",
+      "measured": "vs the true baseline: files 120 -> 119, undeclared 371 -> 370, invalid-builtin 11 -> 12, gen failures 0. compiler/typechecker.zig fixed, VERIFIED by opening it: 719 lines, 0 errors.",
+      "the_invalid_builtin_rise_is_not_a_regression": "server/router.zig's spec writes `@ptrFrom(*route)` -- the SAME wall this patch tears down elsewhere. Before, `*route` failed to parse, the whole `best_match = @ptrFrom(*route);` statement vanished, and `@ptrFrom` never reached emitted output. Now the statement survives and Zig sees, for the first time, that `@ptrFrom` is not a real builtin -- a spec defect that was always there, unmasked rather than introduced. Checked against my own [[parse-error-is-a-wall]] rule: router.zig was NOT clean before (2 undeclared-identifier errors, MatchResult x2) and is NOT clean after (those 2 plus the newly visible one) -- no file moved from valid to invalid.",
+      "undo": "cp /tmp/compiler.rs.beforeAJ /Users/playom/t27/bootstrap/src/compiler.rs"
+    },
+    "patch_AK_kept_the_worst_one_today": {
+      "what": "Nothing in parse_expr_primary's `Dot` arm recognised `.{` (Zig's own anonymous struct/array literal, e.g. `.{ .opcode = .v_bind, .dst = 2 }`) -- only `.ident` (the enum-value shorthand) was handled. `try machine.loadProgram(&[_]vm.VSAInstruction{ .{...}, .{...}, .{...} });` was the whole call's only argument in conformance/e2e_scenarios.t27, so the parse error propagated through the call, then the statement, then RECOVERY MIS-TRACKED BRACE DEPTH across the multi-line argument and consumed the enclosing TEST's OWN CLOSING BRACE -- the census's #3 same-file case (machine), traced to a structural collapse far worse than a single undeclared name. A 264-line spec with 9 tests emitted 16 lines and 1 partial test; the other 8 tests and everything after the corruption point vanished, with three of the surviving statements leaking out to MODULE level.",
+      "isolation_method": "Binary-narrowed with disposable fixtures (t1/t2/t3/minimal.t27) rather than reading the parser blind: a plain `[_]i32{1,2,3}` parses fine (t1); a bare `.{ .field = val }` local vanishes as its OWN single-statement bug (t2, a second real defect found in passing); only the NESTED `[_]T{ .{...}, .{...} }` cascades past the statement into the next scope (t3, matching the real file exactly).",
+      "fix": "`.{` now delegates to the EXISTING parse_struct_literal(name) -- already generic over `.field = expr` pairs for `Name{ ... }` -- called with an empty name to mark the literal anonymous. Codegen: empty name means no type to write, so `.{}` for the empty case (not `std.mem.zeroes()`, which needs a type argument it would not have) and a leading `.` before `{` for the non-empty case. Scoped to NAMED fields only; a positional `.{ 1, 2, 3 }` is untouched (0 known corpus sites need it through the real parser).",
+      "verified_on_the_real_spec": "conformance/e2e_scenarios.t27: 16 lines / 1 partial test -> 108 lines / 9 fully-scoped tests, zero leaked statements. Also fixed the t2 defect for free (a bare `.{ .field = val }` local no longer vanishes) -- not counted separately since it shares the same root cause and fix.",
+      "measured": "files 119 -> 119 (measure.py printed neither a `fixed` nor a `BROKEN` list -- the failing-file SET is byte-identical before and after), undeclared 370 -> 372, gen failures 0.",
+      "the_plus_2_is_not_a_regression": "e2e_scenarios.zig had exactly 1 error before (`machine`) and has 6 now (`vsa`/`sdk`/`vm`, each declared nowhere): this spec has no `module`/`use` declarations at all, so those three names were ALWAYS going to be spec defects -- previously invisible only because the file was structurally destroyed before Zig could reach them. Checked against my own [[parse-error-is-a-wall]] rule: not clean before, not clean after, no file moved from valid to invalid. The corpus-wide +2 (not +5, matching this file's own -1+6 delta) means the same `.{` fix quietly cleaned up smaller instances of the same shape elsewhere.",
+      "undo": "cp /tmp/compiler.rs.beforeAK /Users/playom/t27/bootstrap/src/compiler.rs"
+    },
+    "OPEN_single_site_for_in_bracket_literal": {
+      "what": "ar/ternary_logic.zig :: result (census's #1 same-file case) is `for a in [K_TRUE, K_UNKNOWN, K_FALSE] { let result = k3_or(a, k3_not(a)); if result != K_UNKNOWN { assert false } }`. parse_array_literal assumes Zig's own `[N]Type{values}` shape; fed a bare comma list with no type prefix, it scans the list itself as a SIZE expression, then reads the for-loop's own `{` body as the array's VALUE block -- swallowing the loop body whole. Traced but not fixed.",
+      "why_not_fixed": "Corpus census: only ONE real code site (`for a in [K_TRUE, K_UNKNOWN, K_FALSE]`); the other 4 grep hits are inside comments or a different construct (`assert for b in [2,3], ... when ...`, a bounded-quantifier shape). Disambiguating 'bare bracket list used as a for-loop iterable' from 'Zig's own sized array literal' inside the general expression parser risks the 395+ working sites of real array literals for a single error. The safer fix scopes to the for-loop's OWN iterable-parsing branch (where the `in`-keyword handling already lives) rather than touching parse_array_literal globally -- not done this iteration.",
+      "value": "1 error, 1 file. Lowest priority of the original 8; left for a session with room to write and verify a narrowly-scoped parser branch rather than rush it."
+    },
+    "spec_fix_tritype_base_typo": {
+      "what": "2 of the 27 phantom-import entries (`unable to load ... tritype/Trit.zig: FileNotFound`) were the SAME spec-authoring typo in two files: specs/ternary/hybrid_bigint.t27:11 and specs/neural/forward_pass.t27:11 both write `import tritype::Trit;` (missing the `-base` suffix). The module that declares `Trit` calls itself `module tritype-base;` -- confirmed 17 OTHER specs correctly write `use tritype-base::Trit;` and resolve to `base/types.zig` without issue, so this was never an emitter/resolution bug, just two copies of the same missing suffix. Not the same case as the existing [[read-the-declaration-before-editing-the-caller]] memory (that one was `tritype-base::Trit` failing for a DIFFERENT reason across 14 specs); this is a plain spelling gap with a single unambiguous fix already proven correct 17 times over in the same corpus.",
+      "fix": "`import tritype::Trit;` -> `import tritype-base::Trit;` in both specs. Verified on the artifact before measuring: both now emit `const Trit = @import(\"../base/types.zig\").Trit;`, identical to the 17 working sites.",
+      "measured": "phantom import targets 27 -> 26 (one unique missing path eliminated; both files imported the SAME wrong target, so the count drops by one, not two). Files unchanged at 118 -- both hybrid_bigint.zig and forward_pass.zig have OTHER, unrelated undeclared-identifier errors (Vec32, Context, Roles -- already documented in this session's reachability census) and remain in the failing set for those reasons alone. Confirmed the Trit-related errors are gone from both files' current error lists.",
+      "undo": "revert the two one-line spec edits (git diff specs/ternary/hybrid_bigint.t27 specs/neural/forward_pass.t27)"
+    },
+    "spec_fix_vsa_core_and_hybrid_arithmetic_typos": {
+      "what": "3 more of the 27 phantom-import entries were the same family of spec-authoring path typo as tritype-base: `use vsa::core;` (3 specs: vsa/sdk.t27, server/vm.t27, vsa/similarity_search.t27) and bare `use hybrid_arithmetic;` (2 specs: vsa/sdk.t27, server/vm.t27, overlapping the first). The real module is specs/vsa/vsa_core.t27 (no `module` line at all, so its only known-key is its file path `vsa/vsa_core`) and specs/ternary/hybrid_arithmetic.t27 (declares `module HybridArithmetic {`, PascalCase, matching neither the bare lowercase import nor its own file path without the `ternary::` prefix).",
+      "MY_FIRST_ATTEMPT_WAS_WRONG_AND_I_CAUGHT_IT_BY_MEASURING": "Changed `use vsa::core;` to `use vsa::vsa_core;` and `use hybrid_arithmetic;` to `use ternary::hybrid_arithmetic;`, verified the import itself resolved on the artifact, and measured. undeclared identifier ROSE 372 -> 386 (+14) and local-constant-shadows rose 3 -> 4 -- looked like a plain unmasking, but checking the actual new errors showed 'use of undeclared identifier core' everywhere. Fixing the PATH also changed the bound ALIAS from `core` (the old broken import's last segment) to `vsa_core` (the new correct one's last segment) -- but the spec bodies call `core::bind(...)`, `core::random_vector(...)` etc. 24 times across both files, all written assuming the alias stays `core`. `use` aliasing syntax (`name: EXPR`) only accepts `@import(...)` or a single identifier, not a `::`-qualified path, so it could not preserve the old alias name directly.",
+      "real_fix": "Renamed the 24 `core::` call sites to `vsa_core::` in both specs (replace_all, verified zero leftover bare `core::` and zero false-positive prefix matches first). Rebuilt, verified on the artifact that `vsa_core.random_vector(...)` now resolves, re-measured: undeclared BACK DOWN to 372 (all 14 introduced errors gone), local-constant-shadows back to 3. sdk.zig: 16 errors -> 2 (one is another instance of the SAME self-referencing-test content bug documented earlier this session for `hypervector_inverse_permute_is_inverse`, at a different test; the other is a new, unrelated shadow). vm.zig: 2 -> 1 (unrelated v_neg).",
+      "measured": "phantom import targets 26 -> 24 (two more unique missing paths eliminated). Files unchanged at 118 -- vsa/similarity_search.zig is now genuinely CLEAN (verified: 0 errors) but was never counted in the failing-file total to begin with, since 'unable to load' errors attribute to the PHANTOM TARGET's own imaginary path, not the importing file -- fixing this class moves the phantom-target count, not necessarily the file count.",
+      "lesson": "A module path and its bound alias are the SAME identifier only when the fix changes nothing about the last path segment. tritype-base::Trit worked cleanly because both the wrong and right spellings share the same last segment (Trit); vsa::core -> vsa::vsa_core does not, because the whole point of the fix is that the last segment itself was wrong. Always regenerate AND re-measure after ANY import-path edit, even one that looks obviously safe -- the artifact caught this before it reached the corpus baseline as a false 'fix'.",
+      "undo": "revert the spec edits: git diff specs/vsa/sdk.t27 specs/server/vm.t27 specs/vsa/similarity_search.t27"
+    },
+    "INVESTIGATED_AND_REVERTED_local_constant_shadows_declaration": {
+      "what": "3 errors, 3 files, 3 different names (PHI_SQ, PI, std), 3 different root causes -- none mechanically fixable today. Attempted patch AM, built and verified on the artifact at each step, reverted in full when the artifact proved it did not work rather than leaving a plausible-looking but ineffective change.",
+      "std_in_pins_ir_zig": "`test lvcmos33_standard { given std = LVCMOS33 ... }` -- a reasonable domain name (IO STANDARD) colliding with the test's own unconditional `try std.testing.expect(...)`. Traced the existing rename_shadowing_locals mechanism (already fixes locals shadowing declared_top names) and confirmed it never catches this for TWO independent reasons: (1) std is injected by the separate auto_std path, never entering declared_top, and (2) a `given` clause parses as NodeKind::StmtExpr carrying its whole `std = LVCMOS33` as raw TEXT in `.name` -- NOT NodeKind::StmtLocal, which is the only kind the rename mechanism inspects. Extending the name-check alone (adding std/PI/E/abs/sqrt/ln/pow as always-reserved) compiled cleanly but had ZERO effect on the artifact, confirmed by regenerating and grepping the output -- the StmtExpr gap made it dead code. A real fix needs TEXT-level rewriting of the clause's LHS, a third, more fragile mechanism, for exactly one site.",
+      "PI_in_gamma_conjecture_zig": "`fn verify_gamma_conjecture(...) { const PI = PI; ... }` -- the spec's OWN self-reference, verbatim in specs/physics/gamma_conjecture.t27:95. This is content, same family as sdk.t27's `result = f(result, ...)` found earlier this session, not a naming collision: PI IS one of the six math shims (declared_top blind to it, same class as std), so extending the FUNCTION-BODY shadow-check (a second, sibling mechanism at a different line) to cover shim names compiled and DID fire -- but produced `const PI_local = PI_local;`, verified on the artifact. rename_ident cannot distinguish 'the read that meant the outer PI' from 'any other read of PI' within the same statement, so both sides of the self-reference get renamed together: the identical bug, wearing a different name. No mechanical fix exists for this one; the spec needs a human decision about what PI should actually reference.",
+      "PHI_SQ_in_e8_lie_algebra_zig": "`fn e9_eigenvalues() { const PHI_SQ = constants.PHI * constants.PHI; ... }` shadows a container-level `const PHI_SQ = constants.PHI_SQ;` that is itself a POOL-BOUND BARE ALIAS synthesized by the `use math::constants;` whole-module-import machinery (the same 'bind bare names this file uses' mechanism from the IMPORT patch earlier this session) -- a THIRD invisible-to-declared_top source, distinct from both auto_std and the math shims. This ONE is mechanically fixable in principle (the local's own initializer references `constants.PHI`, a qualified name, not `PHI_SQ` itself, so a rename would not create a new self-reference the way PI's did) -- but doing it right means giving the shadow-check visibility into the pool-alias set, which is built in a completely different function and not threaded through. Not attempted: one verified-safe-in-principle site is not enough evidence to justify wiring a third data source into a check that has already needed two different exemptions today.",
+      "net": "0 patches kept, 3 sites precisely diagnosed to their exact mechanism and exact reason no safe automatic fix exists. Reverted to the pristine pre-AM compiler.rs (confirmed byte-identical measurement: 118/372, local-constant-shadows back at 3 at that point in the iteration) -- no dead code, no half-finished helper left behind.",
+      "UPDATE_after_the_vsa_core_fix": "The class is now 4, not 3. The new one -- vsa/sdk.zig:245, `const zero = hypervector_zero(5);` inside test 'hypervector_set_extends_dimension' shadowing a container-level `const zero = hybrid_arithmetic.zero;` -- is the SAME pool-alias mechanism as PHI_SQ, not a fourth root cause. It only appeared because fixing the `use ternary::hybrid_arithmetic;` import (spec_fix_vsa_core_and_hybrid_arithmetic_typos) let that import's pool-binding actually run for the first time; previously the import failed entirely ('unable to load') and no pool aliases from that module were ever emitted, so nothing was there to shadow. Expected, correct side effect of a real fix -- not a regression, and not new evidence that changes today's decision to leave the pool-alias class alone.",
+      "lesson_for_next_session": "Three sibling 'local shadows a name declared_top does not track' bugs turned out to have three different SHAPES once actually built and checked against the artifact: (1) works and needs a text-level clause rewrite instead of an AST rename, (2) fires but cannot succeed because the shadowed reference IS the self-reference, (3) is a genuinely different alias source that would need real plumbing. A shared symptom does not imply a shared fix -- verify per-site."
+    },
+    "patch_AN_kept": {
+      "what": "`if (cond) { ... } else if (cond2) { ... } else { ... }` chains after the first branch are emitted by gen_if_stmt_inline, a SIBLING of gen_if_stmt that skips gen_scoped_stmts entirely -- it walks each statement with a raw `for stmt in ... { self.gen_stmt(stmt); }` loop instead. gen_scoped_stmts is where a `let` (parsed with extra_mutable=true UNCONDITIONALLY, matching `var`, per an intentional-looking but easy-to-misread design where only a later demotion pass tells them apart) gets demoted to `const` when nothing in the rest of the block assigns it, and where an unread local gets its `_ = &x;` discard. Every `let` inside an `else if` or the chain's final `else` skipped that pass completely.",
+      "found_via": "Two 'local variable is never mutated' errors that looked unrelated -- numeric/phi_ratio.zig's `k` (inside an `else if`) and vsa/jones_polynomial.zig's `power` (inside a final `else`) -- both traced to the identical root cause once the enclosing emitter function was checked rather than assumed. `phi_ratio.zig`'s OWN sibling `if` branch declares an IDENTICAL `let k = ...;` and correctly emits `const k`, which is what made the asymmetry obvious: same statement shape, two branches of the same if/else-if, one demoted and one not.",
+      "fix": "gen_if_stmt_inline's two raw per-statement loops (the `if`-branch body and the final `else` body) replaced with gen_scoped_stmts calls, matching gen_if_stmt's sibling branches exactly -- no other change, since both functions already carry identical indent state at that point (the only difference between them is whether the `if` keyword's OWN line gets a leading indent, unrelated to the body).",
+      "measured": "files 118 -> 117, gen failures 0. vsa/jones_polynomial.zig fixed, VERIFIED: 277 lines, 0 errors. numeric/phi_ratio.zig's own `const k` sites confirmed correct on the artifact but the file stays failing on an UNRELATED, pre-existing defect (`phi_optimality_proof`, declared nowhere in the corpus) that Zig could not previously reach -- confirmed empirically by rebuilding the OLD (pre-AN) compiler and regenerating: `phi_optimality_proof` was already referenced in the OLD output too, so this is Zig's analysis reaching further, not a defect this patch introduced. undeclared rose 372 -> 373 for exactly this one newly-visible reference.",
+      "undo": "cp /tmp/compiler.rs.beforeAN /Users/playom/t27/bootstrap/src/compiler.rs"
+    },
+    "spec_fix_for_loop_missing_second_capture": {
+      "what": "specs/sync/index.t27:338 -- `for (delta.operations, 0..) |op| { applied += 1; }` -- TWO iterables (`delta.operations` and the open range `0..`, itself resolved by this session's patch AI) but only ONE capture name. Zig requires a capture per iterable. Census: the only site in the corpus with this shape (every other `for (0..EXPR) |i|` has exactly one iterable and one capture already).",
+      "fix": "Added the missing index capture: `for (delta.operations, 0..) |op, i| { ... }`. Verified this session's own patch AL (unused-named-capture discard) fires automatically for BOTH names since the body reads neither -- confirmed on the artifact: `_ = &op; _ = &i;` both emitted.",
+      "measured": "closed the 'for input is not captured' error (1) cleanly; no other effect."
+    },
+    "spec_fix_floatCast_missing_result_type": {
+      "what": "specs/vsa/vsa_core.t27:816 -- `@compileAssert(norm <= @sqrt(@floatCast(v.len)));` -- the same Zig 0.15->0.16 tightening as this morning's @intCast class, on @floatCast this time. `v.len` is an integer (usize); three OTHER @floatCast calls on integer values in the SAME file (dot, dim) already compile because they are wrapped in `@as(gf16, ...)`, establishing the file's own working convention -- this one line was simply missed.",
+      "fix": "`@sqrt(@floatCast(v.len))` -> `@sqrt(@as(gf16, @floatCast(v.len)))`, matching the file's own established pattern exactly. Verified on the artifact before measuring.",
+      "measured": "closed the '@floatCast must have a known result type' error (1) cleanly."
+    },
+    "patch_AO_kept": {
+      "what": "`parse_array_literal`'s bracket_content loop -- which captures more than a size, per its own codegen's `elements_in_size` check: a Rust-style bracket literal `[if (c) 1u8 else 0u8, ...]` comes through here too, the WHOLE comma list as one raw-text blob -- joined tokens with ZERO separator. `if (bridge.spi_enabled) 1u8 else 0u8,` in the spec became `if(bridge.spi_enabled)1else0,` in the output (the lexer already strips the `u8` suffix from `1u8`/`0u8`, so the NUMBER token is bare `1`/`0`). Zig's own lexer then read `1else` as the start of a scientific-notation exponent (`1e...`) and died on `l` -- \"invalid digit 'l' for decimal base\", a symptom pointing nowhere near the actual defect.",
+      "found_via": "Read the raw spec text (`if (bridge.spi_enabled) 1u8 else 0u8,` -- correctly spaced) against the generated output (glued solid) side by side; traced to bracket_content by finding NO codegen path that could produce that exact zero-space pattern (gen_if_expr writes `if (` with a space; capture_to_semicolon joins with single spaces unconditionally -- neither matches). The size-only framing from an earlier read of this loop (this session, patch AK's `.{` investigation) was incomplete: it captures values too, whenever the bracket content contains a comma.",
+      "fix": "Ported the EXACT word-boundary spacing rule already proven safe in parse_behavior_clauses' own text capture (`wordish`: a space only between two tokens that both start alphanumeric/underscore/quote) into this loop. `f(x)`, `a.b`, `Err::X` stay glued -- `(`, `.`, `:` are not wordish -- so nothing that already worked can be resplit.",
+      "measured": "vs the true baseline: files 118 -> 117 -- wait, unchanged at 117 (this ran after patch AN already dropped it there) -- the 'invalid digit' class is fully GONE (was 1, corpus-wide). fpga/bridge.zig verified: was NOT clean before (mac_multiply/spi_is_busy/mac_get_accumulator/match all undeclared, the same not-pub visibility class documented in CENSUS_CORRECTED_TWICE) and is NOT clean after -- same four errors, none new, none removed by this fix alone. Pure syntax correctness win with no measurable file-count effect today, but a REAL defect (Rust-array-literal-as-.{}-conversion gluing tokens) that would bite any future spec using this construct.",
+      "undo": "cp /tmp/compiler.rs.beforeAO /Users/playom/t27/bootstrap/src/compiler.rs"
+    },
+    "spec_fix_normalize_l2_unused_binding": {
+      "what": "specs/memory/formula_embed.t27:121 -- `const normalized = normalize_l2(&vector);` -- the return value is never read anywhere in the function; `.normalized = true` two lines later is a HARDCODED literal, not a use of the local. The SAME function `normalize_l2` is called elsewhere in this exact file (line 142) as `_ = normalize_l2(&result);` -- an explicit discard, the established convention for this mutate-by-reference function whose return value the file's own author does not use.",
+      "why_not_wired_to_the_field_instead": "Whether `.normalized` SHOULD read the local `normalized` (rather than staying `true`) is unanswerable from this corpus: `normalize_l2` itself is one of the 24 phantom import targets (`base/math/normalize_l2` -- confirmed genuinely unimplemented anywhere in the corpus, not a near-miss typo like this session's tritype-base/vsa_core fixes), so its return TYPE is unknown and cannot even be checked against `Embedding.normalized: bool`. Deciding the field's true source is a content call for whoever writes normalize_l2; discarding the value the file already knows how to discard is not.",
+      "fix": "`const normalized = normalize_l2(&vector);` -> `_ = normalize_l2(&vector);`, matching the file's own line-142 convention exactly.",
+      "measured": "closed the 'unused local constant' error (1). The file remains in the failing set regardless (normalize_l2's own phantom import), so this is a real, independent, verified correctness fix with no effect on the file-clean count today."
+    },
+    "spec_fix_missing_semicolon_after_struct_a_wall_torn_down": {
+      "what": "specs/api/sdk_contract.t27 has FOUR `pub const X = struct { ... }` declarations closed with a bare `}` and no trailing `;` (lines 35, 113, 141, 160) -- likely from loose documentation formatting inside a markdown code fence. Zig requires the `;` after a const declaration's value regardless of the value's own shape. The FIRST one (line 35, Hypervector) sat immediately before a top-level PROSE block (`bind(self, other) -> Hypervector\\n    Bind two hypervectors...`) that cannot parse as any top-level declaration -- and that combination corrupted the struct's OWN preceding field, producing `label bind(self,other)->Hypervector Bind two hypervectors(creates association)...clone(self)->Hypervector Deep copy hypervector: ?[]const u8 = null,` as ONE glued mess: the entire VSA-operations documentation section (bind/unbind/bundle/bundle3/permute/inversePermute/similarity/hammingDistance/hammingSimilarity/dotSimilarity/countNonZero/density/clone) swallowed into what should have been a two-line struct.",
+      "isolation_method": "Binary-narrowed with disposable fixtures down to a 5-LINE minimal reproduction (struct_doc_probe7.t27 vs probe6.t27 in scratch): confirmed the trigger needs BOTH (a) the struct's `}` with no `;`, AND (b) unparseable prose-shaped content immediately following at top level -- neither alone reproduces it. A `};`-terminated struct followed by the SAME prose parses cleanly, with the prose correctly and silently dropped (matching the 'deliberately conservative' recovery philosophy already documented elsewhere in the emitter). Did NOT chase the exact parser line responsible for the corruption itself -- the semicolon is independently and unconditionally correct per Zig's own syntax, so the fix does not depend on understanding the recovery bug's precise mechanism, only on confirming (empirically, via the fixture) that supplying it avoids the trigger entirely.",
+      "fix": "Added `;` after all four bare `}` struct closings in the one spec, matching what Zig always requires there regardless of whether the missing semicolon happens to trigger visible corruption in a given file.",
+      "measured": "'expected ,  after field' (1) fully closed. undeclared identifier rose 373 -> 378 (+5) in this file alone -- checked against [[parse-error-is-a-wall]]: the file was NOT clean before (capped at exactly 1 reported error by the corruption) and is NOT clean now (5 real, previously-invisible undeclared-identifier defects, unrelated content gaps). Files unchanged at 117. This is the wall coming down, not a regression -- the file's actual defects are now visible for the first time rather than hidden behind one loud, misleading symptom."
+    },
+    "OPEN_rust_tagged_enum_payloads_same_class_as_reverted_C2": {
+      "what": "Both 'duplicate enum member name' errors (String in pins/parser.zig's PinToken, Vec in AstNode) trace to the SAME already-investigated-and-reverted feature gap as `INVESTIGATED_AND_REVERTED`'s note on 'C2 newtype lowering -- Info(u8) silenced': Rust enum-variant PAYLOADS. `enum PinToken { IDENTIFIER(String), STRING(String), NUMBER(u32), COLON, ... }` -- each `VARIANT(Type)` is a tagged-union member carrying a value of Type, not two bare variants. The emitter reads `IDENTIFIER(String)` as two separate variant names (`IDENTIFIER` and `String`), so `STRING(String)` collides with the FIRST `String` already emitted. `enum AstNode { Module { name: String, signals: Vec<SignalDecl>, ... }, ... }` is the same problem one level worse -- Rust's STRUCT-VARIANT syntax, where each field NAME and each field's TYPE both leak through as bare top-level variants, and `Vec` (the generic base of `Vec<SignalDecl>`/`Vec<Constraint>`) repeats across multiple struct-variants.",
+      "why_not_attempted": "C2 already tried the sibling construct (Rust tuple STRUCTS, `struct Info(u8);`) and was reverted for delivering semantic harm (4 types unified) while fixing 0 of its 2 promised files -- direct, documented evidence that a quick patch for this FAMILY of Rust construct backfires. A correct fix needs a real design: Zig's `union(enum)` with a payload TYPE per tag for the tuple case, and a distinct generated struct type per variant for the struct-variant case. Both are substantial language-feature work, not a parser tweak.",
+      "value": "3 errors total (2 duplicate-member here, 1 name-shadows-primitive from Info(u8) elsewhere in the same spec family) -- real, but the correct fix is a dedicated session with the C2 postmortem in hand, not a repeat attempt today."
+    },
+    "OPEN_rust_closures_out_of_scope": {
+      "what": "sandbox/https_enforce.t27 is genuine Rust source using `.iter().any(closure)` -- the emitter already, deliberately, emits `@compileError(\"t27: no gen_expr arm for ExprClosure\")` rather than guess at a translation. The file's 'unused function parameter' (host, in is_local_hostname) and its mangled `test \"https_not_redirected\" { input; expected; description; }` (a table-driven test whose rows collapsed to bare identifier statements) are minor symptoms sitting beside this much larger, deliberately-unhandled gap.",
+      "why_not_attempted": "Fixing the ONE surface symptom (a `_ = &host;` discard) would not move this file toward compiling at all -- the ExprClosure @compileError and the mangled test rendering both remain. Closure translation is a real, separate feature this emitter has explicitly declined to guess at elsewhere too; not attempted here for the same reason.",
+      "value": "1 error surfaced today (unused parameter); the file needs closure support to make any further progress, unrelated to today's session scope."
+    },
+    "spec_fix_at_pow_not_a_real_builtin": {
+      "what": "3 sites across 2 specs (memory/formula_embed.t27 x2, numeric/gf16.t27 x1) write `@pow(a, b)` verbatim, mistaking it for a Zig builtin -- Zig has no `@pow`. The corpus's OWN `pow` SHIM already exists and works everywhere else (`fn pow(x: f64, y: f64) f64 { return std.math.pow(f64, x, y); }`, auto-injected whenever `uses(\"pow\")` sees a BARE `pow(...)` call), but `mentions_identifier`'s match against the name `pow` requires the identifier to START with `pow` -- `@pow` starts with `@`, so the shim-need detection never fired, and `@pow` passed through `zig_expr_name`'s `@`-prefix passthrough rule unchanged, verbatim, straight to a Zig compiler that has no such builtin.",
+      "why_a_spec_edit_not_an_emitter_change": "The SAME specs correctly use REAL Zig builtins right next to the broken ones (`@log(value)`, `@round(log_phi)` on the same lines as the broken `@pow` call) -- so this is not a systemic `@`-prefix mishandling, just one wrong assumption repeated 3 times. The fix is dropping the `@`, which is a text-identical match to how the shim is invoked everywhere else in the 29+ specs that already call bare `pow(...)` successfully -- zero ambiguity, matching an established, working pattern rather than inventing new emitter logic for a spelling mistake.",
+      "measured": "invalid-builtin 12 -> 9 (all three @pow sites closed). memory/formula_embed.zig FIXED, verified: 0 real error lines (an earlier grep of mine falsely counted 3 -- those were `note: file imported here` continuation lines from an UNRELATED file's diagnostic, sharing the path prefix; re-checked with an anchored `error:` grep). numeric/gf16.zig stays failing on two unrelated, pre-existing undeclared identifiers (GF16_EXP_MAX, GF16_SIGN_MASK) -- not clean before, not clean after, not a regression.",
+      "undo": "revert specs/memory/formula_embed.t27 and specs/numeric/gf16.t27 @pow lines"
+    },
+    "patch_AP_kept_a_silent_infinite_loop_bug": {
+      "what": "Found by accident while verifying the @pow fix's artifact, not by any error message -- this class produces NO compiler error at all. `var i : usize = BASE_FEATURE_COUNT; while (i < EMBEDDING_DIM) : (i += 1) { ...i... }` in memory/formula_embed.t27 was emitted as `while (BASE_FEATURE_COUNT < EMBEDDING_DIM) : (i += 1) { ...BASE_FEATURE_COUNT... }` -- EVERY read of `i`, including the loop's OWN CONDITION, replaced by `BASE_FEATURE_COUNT`. Since `BASE_FEATURE_COUNT` never changes, the condition is constant: an infinite loop if true (the ordinary case -- EMBEDDING_DIM padding out from a smaller base count), dead code if false. Inside the body, `i - BASE_FEATURE_COUNT + 1` became `BASE_FEATURE_COUNT - BASE_FEATURE_COUNT + 1`, always exactly 1.",
+      "root_cause": "`copy_propagate`'s `collect_written` set is built from `assign_root`, which only recognises `NodeKind::StmtAssign` -- a while loop's CONTINUE EXPRESSION (`: (i += 1)`) is stored as raw TEXT in `extra_op` (patch Q, this project's convention), invisible to that walk. `var i = BASE_FEATURE_COUNT;` then looked like `i` was never written anywhere in the block, satisfying copy_propagate's safety check, and every subsequent read of `i` got substituted with `BASE_FEATURE_COUNT`. This is the EXACT SAME blind spot already fixed on the READ side for `dead_store_elim` (patch Z, earlier session): a continue expression's effect is invisible to any AST walk that only inspects `.children`.",
+      "fix": "Reused `while_continue_assigns` -- ALREADY proven correct for this blind spot on the read side -- verbatim, as an additional guard on copy_propagate's replacement candidates: `!stmts.iter().any(|s| while_continue_assigns(s, &stmt.name))`. No new text-scanning logic invented; the existing, tested helper answers exactly the question needed here too.",
+      "TRUE_BLAST_RADIUS_MEASURED_NOT_GUESSED": "Rebuilt with the pre-patch compiler, regenerated the ENTIRE 497-spec corpus to a scratch directory, and diffed byte-for-byte against the post-patch regeneration. Exactly ONE file changed corpus-wide: memory/formula_embed.zig. The defect is real and severe (a silent infinite loop that would have shipped with zero compiler diagnostic) but narrow in today's corpus -- and the fix is general, so any FUTURE spec hitting this exact shape is now protected too.",
+      "measured": "No error-count class moved (this defect produces no error at all -- it is invisible to every metric measure.py tracks, the same category as the already-documented 'receiver deleted but still compiles' silent class). Verified correctness directly on the artifact: `while (i < EMBEDDING_DIM)` and `(i - BASE_FEATURE_COUNT)` both restored.",
+      "undo": "cp /tmp/compiler.rs.beforeAP /Users/playom/t27/bootstrap/src/compiler.rs"
+    },
+    "SWEPT_all_six_optimizer_passes_for_the_same_blind_spot_as_patch_AP": {
+      "why": "Patch AP fixed one instance of 'an optimizer pass tracks writes via .children only, blind to a while-loop continue-expression stored as text' -- found by luck. Before calling the investigation done, swept the other five passes `optimize_stmts` runs, to know whether AP closed the ONLY live instance or just the one that happened to be found.",
+      "copy_propagate": "FIXED this session (patch AP) -- was vulnerable, now guarded with while_continue_assigns.",
+      "const_propagate": "Shares the same .children-only write-scan shape, but is NOT exploitable: its own target condition requires `!stmt.extra_mutable` (only true `const` bindings are considered), and Zig cannot compile a continue expression that mutates a const -- the vulnerable shape (a `var` used as a loop counter) can never reach this pass's candidate set in the first place. Its interaction with dead_store_elim deleting a read-only const that dead_store_elim can't see referenced in a continue expression is already covered by patch Z's while_continue_assigns guard, from an earlier session.",
+      "strength_reduce": "Inert. Read the function directly: the actual x*2^k -> x<<k rewrite was REMOVED in a prior session ('Zig's own backend strength-reduces, so the pass bought nothing and cost correctness') -- what remains is a no-op recursive walk kept only so the pass retains its shape if type information ever arrives. Poses no risk because it does nothing.",
+      "common_subexpr_elim": "REMOVED FROM THE ACTIVE PIPELINE ENTIRELY -- confirmed by reading optimize_stmts directly, not by testing. Its own removal comment documents the EXACT vulnerability class this session found in copy_propagate, already discovered and handled the decisive way: 'var p = x + 1; x = 99; var q = x + 1; -> the hoisted _cse local is inserted BEFORE the mutation, so q silently gets the stale value. Compiles perfectly... Soundness needs dataflow this emitter does not have.' Verified empirically too: three fixtures (a trivial repeated `x + y`, one straddling a mutation, one straddling a while loop) all produced ZERO cse hoisting in the generated output -- the function is simply never called.",
+      "dead_store_elim": "Already correctly protected (patch Z, an earlier session) -- this is the READ-side sibling of the bug patch AP fixed on the WRITE side, and where while_continue_assigns originates.",
+      "loop_unroll": "Per this session's STATE history (patch AA, reverted): 'loop_unroll never runs on this corpus -- ZERO for-loops with a range of 1..4 in any spec'. Confirmed non-firing today, so whatever risk its literal-substitution logic might carry is not live.",
+      "conclusion": "Patch AP closed the only LIVE instance of this bug class across all six optimizer passes. Two are provably inert or non-firing (no risk regardless), two are structurally immune by an unrelated guard, one was already fixed on its own side in a prior session, and the last (copy_propagate) is fixed now. This is a closed, swept class -- not just one lucky catch."
+    },
+    "CENSUS_RECONFIRMED_after_all_of_todays_patches_the_ceiling_holds": {
+      "what": "Re-ran the exact reachability method (declared-nowhere / module-not-imported / not-pub / same-file) against the CURRENT corpus state, after every patch and spec edit this session (AI/AJ/AK/AL/AN/AO/AP plus all spec fixes).",
+      "result": "378 undeclared errors. Emitter-fixable: 3 (0.8%) -- and all three are the SAME three content-decision items already precisely diagnosed and left for the operator: ar/ternary_logic.zig::result (bracket-list-as-for-iterable, deferred on cost/risk), ternary/packed_trit.zig::trits (missing test data, needs author judgment), vsa/sdk.zig::result (self-reference, needs semantic decision). Zero NEW emitter-fixable sites appeared; zero were missed.",
+      "conclusion": "The dominant error class's compiler-fixable ceiling is genuinely exhausted for this session, confirmed by measurement rather than by stopping the search. Everything remaining in 'use of undeclared identifier' (375 of 378) needs a SPEC edit -- a missing declaration, a missing import, or a missing `pub` -- and the 3 that don't need any of those need a human decision about test data or program semantics that no compiler change can supply."
+    },
+    "MAJOR_FINDING_invalid_builtin_class_is_far_bigger_than_visible": {
+      "headline": "The '9 invalid builtin function' count (after this session's @pow fix) drastically understates reality. Confirmed empirically (not guessed): Zig's semantic analyzer reports only the FIRST invalid builtin per function/expression chain and stops -- exactly the parse-error-is-a-wall pattern, but at TYPE-CHECK time instead of parse time. Fixing the first-reported builtin in a chain does not fix the file; it unmasks the NEXT equally-fake builtin sitting right behind it.",
+      "how_confirmed": "Minimal fixture: `fn f(x) { const t = @trim(x); const l = @toLower(t); const c = @contains(l, y); return c; }` reports ONLY '@trim' as invalid. Removing @trim's line (or fixing it) would surface @toLower next, then @contains -- verified by testing all suspicious names in SEPARATE functions in one file (so each gets its own analysis scope, immune to the masking): confirmed 11 MORE fake builtins invisible today -- @len, @contains, @some, @push, @enumToInt, @location, @startsWith, @charAt, @toLower, @unwrap, @indexOf -- on top of the 9 already visible (@pow now fixed, so @trim x2/@split x1/@concat x2/@langToCode x2/@langFromCode x1/@ptrFrom x1 remain visible). Also confirmed several LOOK-ALIKE names ARE real, working Zig 0.16 builtins and should not be touched: @trunc, @floor, @ceil, @hasDecl, @divTrunc, @divFloor, @intFromBool.",
+      "TRUE_SCOPE_MEASURED_BY_FILE_NOT_BY_ERROR_COUNT": "Census of the SPEC SOURCE directly (not the compiler's masked output) for every confirmed-fake and suspicious-by-shape builtin name: only 6 distinct spec files touch any of them. enrichment/youtube_transcript.t27 alone accounts for the overwhelming majority of distinct fake names (@trim/@split/@concat/@len/@contains/@some/@push/@startsWith/@charAt/@toLower/@unwrap/@indexOf/@substring, plus OS-interaction stubs: @subprocessRun/@tempDirCreate/@readFile/@httpPost/@glob/@base64Encode/@join). enrichment/audio_overview.t27 has @langToCode/@langFromCode/@concat/@contains/@len/@langFilename. physics/sacred_verification.t27 has @len/@enumToInt. pins/parser.t27 has @location/@iostd. config/migrate.t27 and server/router.t27 have @ptrFrom only.",
+      "why_youtube_transcript_is_out_of_scope_entirely": "Its fake builtins are not a syntax-translation problem -- @subprocessRun, @tempDirCreate, @readFile, @httpPost, @glob, @base64Encode describe SUBPROCESS EXECUTION, TEMP-DIRECTORY MANAGEMENT, and NETWORK I/O. Zig has real APIs for all of these (std.process.Child, std.fs, std.http.Client) but none are builtins, and each needs real implementation code with error handling, not a one-line rename. This spec describes an external tool/script, written as if Zig had scripting-language conveniences -- the same class of 'genuinely out of scope, needs real design work' as this session's Rust-closures and Rust-tagged-enum findings, just discovered from a different angle (masked builtins rather than a parse failure).",
+      "the_one_promising_lead_NOT_taken": "@ptrFrom (2 files) looked like the smallest, most tractable remainder -- but its two call sites have INCOMPATIBLE apparent meanings: server/router.t27's `@ptrFrom(*route)` is about pointer/dereference (plausibly `route` itself, undoing an unnecessary dereference), while config/migrate.t27's `@ptrFrom([]u8{\"version\":1})` wraps an ALREADY-malformed, JSON-shaped literal that isn't valid syntax on its own terms, in either file. No single translation serves both; guessing either would be a content decision, not a mechanical one.",
+      "recommendation_for_the_operator": "The invalid-builtin class, once fully unmasked, will show substantially more than 9-12 errors across these SAME 6 files -- not because anything regressed, but because today's count was always an undercount hidden behind the first hit. None of it moves the corpus's clean-file percentage regardless of how it's resolved: youtube_transcript.t27 needs a real implementation decision (or removal/rewrite as a stub), audio_overview.t27 and sacred_verification.t27 need per-name design (langToCode/langFromCode is a domain lookup table, not a Zig concept at all), and @ptrFrom needs the operator to say what each of its two call sites was meant to do."
+    },
+    "OPEN_slice_assignment_in_attention_zig": {
+      "what": "nn/attention.zig:279,287: `buffers.scores[0..4] = scores;` where `const buffers = std.mem.zeroes(AttentionBuffers);`. Two stacked spec defects in one line: (1) `buffers` is `const` but the line mutates a field of it -- needs `var`; (2) Zig has no slice-assignment operator (`a[x..y] = b` is not a valid l-value) -- needs `@memcpy(buffers.scores[0..4], &scores)` or an element-wise loop.",
+      "why_not_fixed": "Census: exactly 2 sites, both this shape, both in this one file (an earlier grep found 4 more that turned out to be a false positive -- `==` comparisons in provider/stream.zig, caught because `=` is a substring of `==` and the regex needed a trailing non-`=` guard). Not worth a general emitter lowering for 2 sites, and not a mechanical type-annotation fix like the intCast class -- it is a content decision (const->var changes the type's mutability contract) that changes what compiles, not just adds an unambiguous annotation. Also zero net benefit today: the file has THREE other unrelated undeclared-identifier errors (cos, rope_tables, exp) and stays in the failing set regardless of this fix.",
+      "value": "2 errors, 1 file, currently unfixable anyway without also resolving the file's other 3 defects. Recorded precisely rather than patched speculatively."
+    },
+    "patch_AL_kept": {
+      "what": "gen_for_stmt discards the loop's own bare-capture case (`for (xs) { }` -> `|_|`) but had no discard for a NAMED capture the body never reads. `for (server.clients) |client| { // Send formatted event to client }` -- a stub spelling its intent in a comment, doing nothing yet -- left `client` genuinely unused and Zig calls that \"unused capture\". Census: 6 corpus sites carry this shape (server/sse.zig x2, math/phi_universal_attractor.zig, test_framework/core.zig, sync/index.zig, neural/forward_pass.zig); only 3 were erroring, the other 3 masked by unrelated failures in the same files.",
+      "fix": "After indenting into the loop body and before emitting its statements, for each named (non-`_`) capture, check `mentions_identifier` against every body statement; if none, emit `_ = &name;` first. Reused `mentions_identifier` rather than a raw `==` scan specifically because it already carries the fix for a receiver read (`allocator.alloc(...)` not reading as `allocator` under exact equality) -- the same false-unused risk applies to a capture used only via `.field` or `[i]`.",
+      "measured": "vs the true baseline: files 119 -> 118, undeclared unchanged (372), gen failures 0. server/sse.zig fixed, VERIFIED by opening it: 396 lines, 0 errors. A new class appeared (`invalid left-hand side to assignment`, 2, in nn/attention.zig) -- checked and it is not a regression: that file was already failing on THREE unrelated undeclared-identifier errors (cos, rope_tables, exp) before this patch and remains failing now; not clean before, not clean after.",
+      "undo": "cp /tmp/compiler.rs.beforeAL /Users/playom/t27/bootstrap/src/compiler.rs"
+    },
+    "spec_fixes_intCast_class_closed": {
+      "what": "The `@intCast must have a known result type` class (4 errors, 2 files) is a Zig 0.15->0.16 tightening, exactly the kind CLAUDE.md's own migration notes warn about: `@intCast` needs a directly-inferrable target type, and older code that let it inherit one through an enclosing binary op or an untyped declaration no longer compiles. All three sites are the SPEC's own raw Zig code, faithfully reproduced by the emitter -- not a t27 parser/emitter defect.",
+      "sites_and_fix": [
+        "specs/numeric/gf16.t27 (2 identical lines, one per function): `var f32_exp: i8 = @intCast((f32_bits >> 23) & 0xFF) - 127;` -- the outer decl IS typed i8, but @intCast is only part of the initializer (a subtraction), so Zig's peer-type inference never reaches it. Fixed to `@as(i8, @intCast(...)) - 127` -- explicit, behaviourally identical to what the code always meant.",
+        "specs/server/sse.t27:220 `const retry_val = @intCast(event.retry.?);` -- untyped local, no inference source at all. int_to_string(value: u32) fixes the needed type; added `: u32` to the declaration.",
+        "specs/server/sse.t27:263 `const char = @intCast(48 + digit);` -- same shape. `&[_]u8{char}` on the next line fixes the type; added `: u8`."
+      ],
+      "why_this_is_not_the_same_as_the_two_deferred_spec_bugs": "packed_trit.t27 and sdk.t27 needed me to invent test DATA or fix test SEMANTICS -- content decisions with more than one defensible answer. These three needed only an explicit type annotation whose value is unambiguous from adjacent code (the enclosing decl's own type; the callee's parameter type; the literal's element type) and changes no behaviour. Verified on the artifact before measuring, not assumed.",
+      "measured": "vs the true baseline: files 119 -> 119 (unchanged), gen failures 0. The `@intCast` class dropped out of the top-5 entirely (4 -> 0). A `unused capture` class appeared (3) -- 2 in server/sse.zig (unmasked: that file was not clean before either, its 2 intCast errors just stopped Zig's analysis before reaching these lines) and 1 in math/phi_universal_attractor.zig (already failing before this patch on unrelated undeclared-identifier errors -- sqrt/round/pow, math shims not applying there, unrelated coincidence of the same error CLASS appearing). No file moved from valid to invalid.",
+      "undo": "git diff specs/numeric/gf16.t27 specs/server/sse.t27 -- revert those two spec files"
+    },
+    "the_8_ORIGINAL_same_file_cases_FINAL_TALLY": {
+      "1_isa_ternary_set_k": "FIXED by patch AI (open-ended range `a[0..]`). 3 of the 3 occurrences resolved.",
+      "2_ar_ternary_logic_result": "NOT fixed. Traced to `for a in [K_TRUE, K_UNKNOWN, K_FALSE] { ... }` -- a bare bracket list used as a for-loop iterable, which parse_array_literal misreads as a sized-array literal and then swallows the loop's own body as the array's value block. Single corpus site; recorded under OPEN_single_site_for_in_bracket_literal, deferred rather than risking the 395+ working array-literal sites on a general fix for one error.",
+      "3_compiler_typechecker_ret_type": "FIXED by patch AJ (prefix dereference `*table`).",
+      "4_conformance_e2e_scenarios_machine": "FIXED by patch AK (anonymous struct literal `.{ ... }`) -- and this one file alone went from 16 lines / 1 partial test to 108 lines / 9 fully-scoped tests. The worst single-file corruption found today.",
+      "5_ternary_packed_trit_trits": "SPEC DEFECT, not fixed. `test encode_pack_max_trits` calls `encodePack(trits, count)` but never declares `trits` anywhere in its own body -- confirmed in the spec source itself (specs/ternary/packed_trit.t27:193-198), not an emitter artifact. Fixing it means choosing what a max-size trit array should contain, which is test-authoring judgment, not a parse fix. Left for the operator.",
+      "6_vsa_sdk_result": "SPEC DEFECT, not fixed. specs/vsa/sdk.t27:362 writes `when result = hypervector_inverse_permute(result, 5)` -- `result` used on the right-hand side of its OWN declaration, verbatim in the spec source. The test name (`hypervector_inverse_permute_is_inverse`) and its `given a = hypervector_random(50, 123)` strongly suggest the intended body is `permuted = hypervector_permute(a, 5)` then `result = hypervector_inverse_permute(permuted, 5)` -- but adding that is a semantic fix to what the test verifies, not a syntax correction, so it was not made unilaterally.",
+      "net": "6 of 8 undeclared-identifier instances resolved by 3 verified, narrowly-scoped parser/emitter patches (AI, AJ, AK). The remaining 2 are confirmed spec-content defects; a 7th related site (case 2) is a confirmed emitter gap left unfixed on a cost/risk call. All three fixes together: files 123 -> 119, undeclared 380 -> 372 (the +2 net from AK's unmasking of e2e_scenarios' now-visible missing imports, on top of -10 from the three real fixes)."
+    },
+    "CENSUS_CORRECTED_TWICE_the_class_is_exhausted": {
+      "headline": "The emitter-fixable part of the undeclared-identifier class is 8 of 380 (2.1%). I reported ~221 of 430 (52%) earlier in this same iteration. That figure was wrong, and so was the 59 that replaced it.",
+      "pass_1_wrong_question": "'Does ANY generated file declare this name' -> 201 'reachable'. But vsa_core.zig reads TRIT_POS 17 times and imports exactly one module, `tritype-base`, which declares no TRIT_POS at all (only TRIT_MASK). Some OTHER file declaring it is irrelevant; resolving it means ADDING a dependency the spec never states, which is a spec change.",
+      "pass_2_still_wrong": "'Does the file import a module that declares it' -> 51 'emitter bugs'. Still wrong: fpga/mac.t27 writes `fn mac_multiply`, not `pub fn`, so the generated function is PRIVATE and no binding the emitter could invent would reach it. mac.t27 has ZERO pub declarations against 13 bare fn, while mac_tb imports from it.",
+      "pass_3_the_number": {
+        "declared_nowhere": 174,
+        "module_not_imported": 147,
+        "in_an_imported_module_but_not_pub": 51,
+        "pub_and_imported_but_unbound_EMITTER_BUG": 0,
+        "same_file_emitter_or_scoping_bug": 8
+      },
+      "and_pub_is_a_deliberate_signal": "1044 `pub fn` against 2707 bare `fn` corpus-wide, so auto-publishing everything would erase a distinction the specs make on purpose. The 51 are spec defects in specific files, not a language decision to take.",
+      "consequence_for_the_track": "STOP patching the emitter for undeclared identifiers -- 372 of the 380 need SPEC edits (a missing declaration, a missing import, or a missing `pub`). The remaining emitter work in this class is 8 same-file scoping bugs, spread one or three at a time across 6 files.",
+      "the_8": "isa/ternary_set.zig::k (3), ar/ternary_logic.zig::result, compiler/typechecker.zig::ret_type, conformance/e2e_scenarios.zig::machine, ternary/packed_trit.zig::trits, vsa/sdk.zig::result"
+    },
+    "REACHABILITY_CENSUS_superseded_see_CENSUS_CORRECTED_TWICE": {
+      "method": "For every one of the 420 undeclared-identifier errors, ask whether ANY generated file declares that name at container level. Not whether a SPEC mentions it -- prose inside a ``` fence matches that, which is how I mis-attributed trinity_vsa_vector_random to c_api_contract.t27 when the spec only DOCUMENTS the C API in a markdown block and never declares it.",
+      "result": "199 of 420 (47%) name something declared in NO generated file. No import, no alias, no scoping rule can reach them -- they are spec defects. 201 are declared in another file (an import or alias could resolve them). 20 are declared in the SAME file (emitter or scoping bugs).",
+      "so": "The emitter-fixable ceiling for this class is at most 221, not 430. Worst-carrying files: ml/optimizer/sgd_momentum.zig (13), ml/optimizer/adamw.zig (11), ternary/bigint.zig (10), api/c_api_contract.zig (9).",
+      "shape_census": "Grouped by the shape of the offending SOURCE LINE rather than the error text (which is one sentence for all 420): call-position 167, type-position 64, rhs-of-declaration 41, receiver/field-access 24, struct-literal 20, assertion 15, return 12, other 75."
+    },
+    "patch_AD_kept": {
+      "what": "parse_invariant_block now consumes a PARAMETER LIST. `invariant k3_and_associative(a, b, c: Trit) { ... }` left `(` where the brace branch wanted `{`, so the body was never parsed and the emitter wrote `// invariant NAME: no body in the spec, nothing asserted` -- a statement about the spec that is FALSE. Parameterised invariants now emit as `fn NAME(a: Trit, b: Trit, c: Trit) void { assert(...); }`, which is where a property over parameters belongs; a comptime block cannot bind them.",
+      "measured": "files 127, errors 420, clean 74.4% -- ALL UNCHANGED. gen failures 0, nothing broken. The metric is blind to this patch, exactly as it was to patch K: the broken blocks emitted no code, so they raised no error, and recovering them raises none either.",
+      "the_instrument_that_can_see_it": "corpus-wide count of the false line went 1139 -> 1137, and the artifact reads `fn k3_and_associative(a: Trit, b: Trit, c: Trit) void { assert(k3_and(k3_and(a, b), c) == k3_and(a, k3_and(b, c))); }`.",
+      "MY_CENSUS_WAS_WRONG_AND_I_PUT_IT_IN_THE_SOURCE": "I claimed 34 parameterised invariants in 6 specs and wrote that number into the code comment. It is 2, both in ar/ternary_logic.t27. My regex `^\\s*invariant\\s+\\w+\\s*\\(` also matched `invariant clog2(1) == 0;` -- an invariant EXPRESSION inside a test body, a different construct. Caught because only 2 of the false lines disappeared, not 34. The comment has been corrected; a patch whose purpose was removing a false statement from generated output had shipped with a false statement of its own.",
+      "undo": "cp /tmp/compiler.rs.beforeAD /Users/playom/t27/bootstrap/src/compiler.rs -- NOTE this reverts AD *and* AE together; the beforeAE copy was taken after the AE edit and is a duplicate of beforeAD. /tmp/compiler.rs.beforeIMPORT reverts all three of this iteration."
+    },
+    "patch_AE_kept": {
+      "what": "zig_type gained the WIDTH-SUFFIXED primitive spellings. The table lowered `Int`, `Bool`, `Float`, `String` and stopped, so `Int64` and `UInt32` reached Zig verbatim as undeclared identifiers. Added Int8/16/32/64, UInt8/16/32/64, Float32/64.",
+      "measured": "files 127 -> 125, errors 420 -> 410, clean 74.4% -> 74.8%, gen failures 0, nothing broken. Whole files cleared: tri/agent/governance_agent.zig and tri/agent/handoff.zig. PREDICTED EXACTLY 10 errors and measured exactly 10.",
+      "why_it_was_safe": "These sit in the UNREACHABLE half of the reachability census -- no spec declares any of them, so no import could ever have resolved them and nothing user-defined is shadowed. Verified by grep for struct/enum/type declarations of each name: zero. `Vec32` was deliberately excluded because it IS declared, in specs/ternary/hybrid_bigint.t27.",
+      "verified_not_just_counted": "The earlier panic taught this: both 'fixed' files were opened -- 83 and 56 lines, 0 errors each -- and the artifact reads `issue_number: u32`, `timestamp: i64`. A file that vanishes also reports zero errors."
+    },
+    "patch_AF_kept": {
+      "what": "The `inline` LOOP MODIFIER. Specs write `inline for (values) |val| { ... }`; `inline` is not a keyword in this lexer, so it arrived as an identifier and the expression parser took it as a whole statement, emitting `@\"inline\";` in front of an otherwise INTACT loop. Exactly the failure the `let` note in parse_body_stmt already describes, with a different word.",
+      "measured": "files 125 -> 124 (ternary/bigint.zig cleared), undeclared 410 -> 399, clean 74.8% -> 75.1% -- the corpus passes three quarters for the first time. gen failures 0.",
+      "the_first_attempt_was_worse_and_the_instrument_said_so": "Emitting `inline` unconditionally fixed the 11 undeclared identifiers and introduced SIXTEEN of `redundant inline keyword in comptime scope` -- Zig rejects the modifier inside `comptime {}`. Net worse. My emitter comment had asserted the opposite ('inside a comptime block it is what makes the loop unroll'), which was wrong. Added an `in_comptime` flag, set only around gen_invariant_block since that is the ONLY emitter writing `comptime {`, and the class went to zero.",
+      "verified_not_just_counted": "bigint.zig opened: 984 lines, 0 errors, 0 `@\"inline\"` statements.",
+      "undo": "cp /tmp/compiler.rs.beforeAF /Users/playom/t27/bootstrap/src/compiler.rs"
+    },
+    "patch_AG_kept": {
+      "what": "The approved 'documented skip plus a counter', applied ONLY where it is the honest answer. A statement-position `forall` is captured as text and emitted as `// unchecked property: <the property>`. The corpus's four are all UNBOUNDED -- `forall F, D : pred`, `forall D : pred`, two `forall x : T where g,` -- with no range, so rewrite_forall (which lowers only `forall i in A..B, P`) does not apply and there is no loop to emit. Lowering them would be inventing a semantics rather than translating one.",
+      "measured": "undeclared 399 -> 395 (exactly the four), invalid-builtin unchanged at 11, files 124, clean 75.1%, gen failures 0. Four properties now RECORDED in the artifact; `grep -c \"unchecked property\" ` is the counter.",
+      "why_intercepting_was_safe": "Statement-position `forall` never worked: two files emitted `forall;` and math/phi_universal_attractor dropped the property from its output entirely -- a silent loss, not even an error. The range form that DOES work sits in expression position and takes a different route.",
+      "my_first_version_broke_it_and_the_instrument_caught_it": "A line-bounded capture cut a two-line quantifier in half. `forall lang : str where g,` binds and the NEXT line is the predicate; the predicate leaked out as an orphan statement reading `lang`, a name the comment above had just taken out of scope. invalid-builtin went 11 -> 12 and audio_overview gained an error. The trailing comma is the structural continuation signal, so the capture now continues on it. Also: a string literal's lexeme carries no quotes, so `!= \"\"` had rendered as `!=` followed by nothing.",
+      "undo": "cp /tmp/compiler.rs.beforeAG /Users/playom/t27/bootstrap/src/compiler.rs"
+    },
+    "patch_AH_kept": {
+      "what": "An unparameterised invariant whose body reads names nothing declares is quantified too -- the spec just omitted the parameter list. collect_free_idents names them and the block becomes `fn NAME(a: anytype, b: anytype) void { assert(...); }`. The property is PRESERVED and compile-checked instead of emitting undeclared identifiers. This is better than the approved documented-skip fallback and was only reachable because a fixture proved the shape holds.",
+      "measured": "vs the pre-AH baseline: files 124 -> 123, undeclared 395 -> 380, clean 75.1% -> 75.3%, gen failures 0, no file BROKEN, and every regression class back at baseline (local-constant 3, invalid-builtin 11). 22 invariants converted -- comptime invariant blocks 1900 -> 1878, which reconciles with the 24 the name-based census finds minus the 2 patch AD had already converted.",
+      "guarded_so_the_732_are_untouched": "Conversion happens ONLY when at least one free name is found. 763 invariant blocks have a body and 732 COMPILE TODAY, evaluated at comptime; converting one of those would silently downgrade a real evaluation to a mere type-check, and no error would ever say so.",
+      "TWO_FALSE_POSITIVES_BOTH_CAUGHT_BY_THE_INSTRUMENT": {
+        "1_assert_eq": "The shims are injected by a DIFFERENT emitter than the one filling declared_top -- the exact split the import emitter warns about a hundred lines above, which I had read earlier the same day and still walked into. `assert_eq` was classified free, became a parameter, and Zig said 'function parameter shadows declaration'. math/gf_competitive.zig BROKEN while another file was fixed -- and the FILE COUNT REPORTED THIS AS UNCHANGED. Only measure.py's set-diff surfaced it.",
+        "2_behaviour_clause_bindings": "`given u = utilization(0,0,0,0)` binds `u`, but a clause carries its WHOLE TEXT in `name`, so binding it whole stored a string no identifier can equal. `u` looked free, became a parameter, and the clause then redeclared it in the body: `local constant shadows declaration` went 3 -> 7 in four files this patch had no business touching. Fixed by binding the head of the binding rather than the sentence, and for any node kind rather than StmtLocal alone -- over-binding classifies FEWER names as free, which is the safe direction."
+      },
+      "undo": "cp /tmp/compiler.rs.beforeAH /Users/playom/t27/bootstrap/src/compiler.rs"
+    },
+    "OPEN_DECISION_unparameterised_invariants": {
+      "what": "31 errors in 7 files come from invariants with NO parameter list whose bodies carry free variables -- `invariant k3_and_commutative { assert k3_and(a, b) == k3_and(b, a) }`. `a` and `b` are bound by the property, not declared, so the emitted comptime block references undeclared names. Names: a(12), inline(11), forall(4).",
+      "why_i_did_not_just_fix_it": "The count-fixing move is to emit them as a documented skip, like the empty-invariant precedent already in the emitter. But that DOWNGRADES real mathematical properties from assertions to comments, and it is a decision about what the language does with an unparameterised invariant, not a bug fix.",
+      "APPROVED_THEN_THE_CENSUS_CHANGED_THE_DESIGN": "The operator approved 'documented skip plus a counter'. Before writing it I counted what a blanket rule would touch: 763 invariant blocks have a BODY, and 732 of them COMPILE TODAY -- only 31 carried an error. Demoting every unparameterised invariant would have silenced 732 working compile-checked properties to fix 31, a trade of 24 to 1 against. The approved shape is right; it has to be TARGETED, and the targeting needs a scope table the emitter does not currently keep.",
+      "AND_MOST_OF_THE_31_WERE_NOT_FREE_VARIABLES_AT_ALL": "Splitting the 31 by actual cause instead of treating them as one class: `inline`(11) was the loop modifier (fixed, patch AF), `forall`(4) is a DISCARDED quantifier body -- the spec writes `forall F, D : NMSE(F, D) >= 0` and the emitter writes `forall;`, throwing the property away -- and only `a`(12) plus a handful are genuinely free variables in ar/ternary_logic.zig. So the population that needs the semantic decision is ~16, not 31.",
+      "RESOLVED_at_iteration_76": "Both follow-ups are done and the documented-skip fallback was needed for only one of them. (1) The four `forall` invariants are UNBOUNDED, so there is no loop to emit and recording them is the honest answer -- patch AG. (2) The genuine free-variable invariants became functions taking the free names as parameters -- patch AH -- so 22 properties are preserved and compile-checked rather than demoted to comments. The blanket demotion the operator approved was never written, because counting first showed it would have silenced 732 working properties to fix 31.",
+      "probe_result_uncalled_functions_ARE_analysed": "Fixture at scratchpad/probe_uncalled.zig: an uncalled non-generic fn with an undeclared name is an ERROR, and so is an `anytype` one -- name resolution does not wait for instantiation. So patch AD's recovered assertions are genuinely compile-checked, and the free-variable-as-parameter idea in (2) is viable because the parameters become bound."
+    },
+    "next_unblocked_candidate_UPDATED": "Not the undeclared class -- see CENSUS_CORRECTED_TWICE, 8 of 380 left for the emitter. The remaining classes are small and mostly spec defects too: `unable to load` 27 (phantom imports), `invalid builtin function` 11, `@intCast` 4, `local constant shadows` 3. Of the 11 builtins, 3 are domain-specific (@langToCode/@langFromCode) and thus spec defects; @pow(3) needs the existing pow shim to fire on `@pow`, which `uses()` does not currently see; @trim(2) needs argument rewriting (`std.mem.trim(u8, x, \" \")`), not a name mapping; @split/@concat need an allocator and an iterator, so lowering them would invent semantics -- the same reason the unbounded forall is recorded rather than translated. Honest read: the emitter is close to done on this corpus, and further movement is spec work.",
+    "next_unblocked_candidate_OLD": "NOT the use-scope decision (refuted above). The 430 undeclared are a long tail of 173 names with no single dominant mechanism found yet; the next honest step is to group them by the SHAPE of the offending source line rather than by the error text. `invalid builtin function` (11) is a small closed class. Do not start anywhere without a census -- K4, L, U, X and AA were all reverted for patching a shape the corpus does not contain, and the brace-list idea died the same way this iteration BEFORE any code was written.",
+    "measure": "python3 /Users/playom/t27/gen/zig/measure.py — the ONLY sanctioned instrument. REPAIRED at iteration 17: it now also reports `receiver deleted but still compiles`, with its own delta, because the error counts are structurally blind to that class and nearly cost patch K a revert.",
+    "disk_guard": "measure.py aborts under 800 MB free rather than filling the volume",
+    "patches_kept": [
+      "discard: names (_ = &x)",
+      "discard: bare-identifier expressions",
+      "A: identifier-syntax, 7 hunks",
+      "C': unused, 4 hunks",
+      "B: mut arity inflation",
+      "D: type_mentions_word",
+      "E1: reserve math-shim names before aliasing",
+      "E2-real: brace-depth guard in main.rs (the DIAGNOSIS's own patch, not my three guesses) — base_depth read from `module foo;` vs `module Foo {`",
+      "E1': reserve abs/sqrt/ln/PI/E/pow UNCONDITIONALLY — math_shims_for matches exactly and misses calls inside behaviour-clause text",
+      "F: assert_eq shim — specs write Rust macro syntax assert_eq!(a,b); emitter drops the ! and nothing declared it (-29 errors, -1 file)",
+      "G: type_mentions_word now reads extra_return_type — a Result's error type lives there, so GitError/StorageError/ShellError were invisible to the alias guard (-73 errors, -4 files)",
+      "H: enum-literal branch in parse_const_decl — `.pos` had no arm, fell to skip_to_semicolon, and the decl came back with no value child so the emitter wrote nothing (-10 errors)",
+      "I: capture_to_semicolon + LParen branch — a const value beginning with '(' had no arm, so the decl came back valueless and nothing was emitted (-15 errors)",
+      "J: function-TYPE branch in parse_const_decl (KwFn | Star) — `fn([]u8) HttpResponse` and `*const fn (...) void` had no arm, same family as H and I. Only 2 declarations corpus-wide but both are used: -8 errors, -1 file (jit/jit.zig), 0 broken. Predicted 8 before building and measured exactly 8.",
+      "K: ExprCall arm in flatten_field_access_name — a receiver that is itself a ZERO-ARG call was hitting the silent `_ => break`, discarding the whole receiver. The inner call's node already carries the qualified name ('remainder.abs'), so appending '()' rebuilds it verbatim. Receivers WITH arguments deliberately left alone: rebuilding those needs argument rendering, which lives in gen_expr, not in a function returning String.",
+      "K2: extended K to receivers WITH arguments, but only when every argument is a plain identifier or literal (`a.mul(b).add(c)`) -- collect() into Option<Vec<String>> yields None for anything else and the old behaviour stands. silent 28 -> 17, errors 443 -> 441, files unchanged. Verified on the artifact: gen/zig/ternary/bigint.zig:782 now matches specs/ternary/bigint.t27:1183 exactly, while line 798 correctly still drops `a.mul(b.add(c))` because that argument is a nested call.",
+      "K3: made render_simple_call RECURSIVE, so a receiver whose argument is itself a call (`a.mul(b.add(c)).compare(...)`) rebuilds too. Verified on the artifact: gen/zig/ternary/bigint.zig:798 now reproduces specs/ternary/bigint.t27:1201 exactly. silent 17 -> 16, errors 441 -> 440. Third time my 'this needs gen_expr' claim was wrong -- the argument is the same node kind as the receiver already being rebuilt, so recursion covers it.",
+      "K5: put the ExprBinary case where it is actually reached. K4 added it to render_simple_call, but an ExprBinary receiver never got there -- flatten_field_access_name's outer match sent it to `_ => break` first. K5 replaces that catch-all with a call to render_simple_call. silent 5 -> 1.",
+      "M: copy propagation now sees into CALL NAMES. propagate_ident rewrote only ExprIdentifier nodes, but a method call's receiver is baked into the call node's NAME as text (patches K..K5), so a local inlined at every AST use kept an unsubstituted use inside a call name -- while its declaration was removed. Added replace_whole_ident with identifier-boundary care (a naive replace turns `phi_sq` into `sacred_physics.PHI_sq` and `sacred_physics.phi` into a double path). files 137 -> 136, errors 441 -> 440, fixed exactly math/pellis_precision_verify.zig.",
+      "N: rename LOCALS that shadow a container declaration, not just parameters. Zig counts a shadowed container FUNCTION too -- specs/fpga/memory.t27 declares `fn addr_width(mem)` and then `var addr_width` inside make_bram/make_rom. The machinery already existed for params (`_arg`); locals get `_local`, and rename_local_decl was added because rename_ident rewrites USES (ExprIdentifier) while a StmtLocal keeps its name in `name`. files 136 -> 135, fixed fpga/memory.zig, shadow class 22 -> 19, no file BROKEN, zero dangling _local names.",
+      "O: apply the shadow rename to TEST BLOCKS as well. A test block is a scope and Zig's shadowing rule applies inside it, but the rename N added lives in the function emitter and a test block is emitted by a different path (gen_scoped_stmts, called directly at 7922). Factored N's logic into rename_shadowing_locals(&self, body) and called it there. files 135 -> 134, fixed storage/migrate.zig, shadow class 19 -> 17, nothing broken. Corpus passes 73% for the first time.",
+      "P: a behaviour clause binding a name the file ALREADY declares emits an ASSIGNMENT, not a `const`. `test top_tb_reset_sequence / given rst_n = false / and rst_n = true` was emitting two `const rst_n` in one scope, against a container `var rst_n` -- a shadow AND a redeclaration from a single cause. Renaming would have been wrong: the clause means 'set the module's variable', so a renamed copy leaves the real one untouched and the test asserts about the wrong thing. shadow class 17 -> 3.",
+      "Q: parse and re-emit the `while (cond) : (i += 1)` CONTINUE EXPRESSION. Nothing consumed the `:`, so expect(LBrace) failed, the error propagated, and the caller's recovery threw away THE ENTIRE FUNCTION BODY -- memory/semantic_search.zig kept only `return SearchResult{ .matches = top_matches, ... }` while two arrays, a counter, the loop and top_matches all vanished. Stored as text in extra_op and written back after the capture, which is where Zig puts it. Folding it into the body instead would compile and count wrong, because a continue expression also runs after `continue`. files 134 -> 133, fixed semantic_search.",
+      "R: teach the var/const decision to see the continue expression. Q stores it as TEXT, so node_assigns was blind to it and `while (i < n) : (i += 1)` demoted its own counter to `const i`. Added while_continue_assigns, reusing replace_whole_ident as a boundary-aware contains so `i` does not match inside `idx`. measure.py showed NO change -- Zig analyses lazily and never reached the assignment -- and the artifact did: gen/zig/memory/semantic_search.zig:51 now reads `var i` against its `: (i += 1)`.",
+      "S: skip a `const`/`var` marker inside a for iterable. The specs write `for (const names_seen) |name|` consistently (13 occurrences in 5 specs); Zig has no such form, nothing skipped it, parse_expr met a keyword where it wanted an expression, and the caller's recovery discarded THE WHOLE FUNCTION BODY. Same failure as the while continue expression, different token. files 133 -> 132, fixed numeric/goldenfloat_family.",
+      "W: the condition's parentheses in an IF-EXPRESSION are optional, exactly as they already were for `while`. Specs write `const abs_err = if abs_error < 0.0 { -abs_error } else { abs_error };` and `expect(LParen)` failed on the first token, so the error propagated and the caller's recovery discarded THE WHOLE FUNCTION BODY. The arms were never the problem -- parse_braced_or_bare_expr already accepts a block. errors 440 -> 436, no file broken. Verified on the artifact: sacred_verification.zig:63-64 now carries `abs_error` and `abs_err` where the function previously held only a return referencing them.",
+      "Y: dead-code elimination was deleting FORWARD DECLARATIONS. is_dead_local returned true for `StmtLocal && children.is_empty() && !extra_type.is_empty()` -- which is exactly `const success_rate : f64;` followed by assignment in both arms of an if/else. The statement was removed and the assignments left referencing a name nothing declared. files 133 -> 131, errors 436 -> 430, fixed compiler/stdlib.zig and queen/brain_summaries.zig, nothing broken.",
+      "Z: dead_store_elim now collects reads from a while CONTINUE EXPRESSION. Patch Q stores it as text in extra_op, which collect_reads cannot walk, so a variable read ONLY there was invisible and its declaration was deleted as a dead store -- `var step : usize = 2; while (i < n) : (i += step)` emitted the loop with no `step`. Predicted from the absence of extra_op in that match, then reproduced. Over-collects deliberately: a kept dead store costs a warning, a deleted live one costs a compile error.",
+      "AB: a parameter named `type` is DECLARED escaped and was USED bare. zig_ident lists `type` among ZIG_PRIMITIVES and escapes it; zig_expr_name only escapes ZIG_KEYWORDS_ALL, and `type` is a primitive type name rather than a keyword. So `pub fn make(@\"type\": u8) R { return R{ .kind = type }; }` -- Zig reports the parameter unused because nothing reads `@\"type\"`, and reads the body's `type` as the primitive. The field name on the same line IS escaped, which is what made the asymmetry visible. files 131 -> 129, fixed config/paths.zig and server/mdns.zig, the whole unused-parameter class gone.",
+      "AC: a behaviour clause binding a name an EARLIER CLAUSE in the same test already bound emits an assignment, and the first binding becomes `var`. `given a = X` then `when a = Y` is a setup and a change, not two declarations. Implemented exactly as planned at iteration 66: two HashSets on the emitter, a pre-scan in the test emitter using the same top_level_assign helper the clause emitter uses, and a branch beside patch P's declared_top check. files 129 -> 128, fixed fpga/mac.zig, nothing broken."
+    ],
+    "patches_reverted": [
+      "C2 newtype lowering — delivered its semantic harm (Info(u8) silenced, 4 types unified) and zero of its promised 2 files",
+      "E2 x3 — every variant of the pub-pool fix regressed hard",
+      "K4 (ExprBinary arm for `(a - b).abs()` receivers) — REVERTED. It fired ZERO times: silent 16 -> 16, errors 440 -> 440. I had inferred the remaining shape from a 3-line SAMPLE (my lister took one example per name) and wrote a patch for that inference. A full census showed all 16 were abs/round/pow, not parenthesised arithmetic. Dead code, removed rather than kept 'in case'. | CORRECTED at iteration 26: K4's SHAPE hypothesis was right after all -- 4 of the 5 remaining sites are parenthesised binaries, and parse_expr_primary returns the inner node for a parenthesised group, so the receiver really is a bare ExprBinary. K4 failed because I put the arm in render_simple_call, which an ExprBinary receiver never reaches. A zero-effect measurement looked like evidence against the hypothesis when it was evidence against the patch's placement.",
+      "L (module-path const values) — REVERTED. Fired zero times: files 137, errors 441, silent 1, all unchanged, and the 5 target sites were still 5. Same failure as K4 and for the same reason: I patched a location I ASSUMED. Body consts do not go through parse_const_decl at all -- parse_body_stmt:3698 sends them to parse_local_decl, which parses the value with the full parse_expr at 3991.",
+      "T (route statement-position `switch` to parse_switch_expr) — REVERTED, inert. The trigger is real and control-tested, but parse_switch_expr parses arms as EXPRESSIONS and the failing shape has ASSIGNMENTS in them (`0 => r = 1,`), so routing there changes nothing.",
+      "U (statement-position switch + assignment arms) — REVERTED. It WORKS: the fixture goes from an emptied function with statements leaking to container level, to `switch (k) { 0 => r = 1, else => r = 2, };` with the body intact, and the expression-switch path is untouched. But the corpus contains ZERO assignment arms, and its real statement switches (specs/server/vm.t27) use BLOCK-bodied arms -- `.v_load => { ... }` -- which U does not handle either. Verified on a shape the corpus lacks, useless for the shape it has.",
+      "X (optional parentheses on a switch subject) — REVERTED. The fixture proves the defect: `switch k { ... }` without parens empties the enclosing function body exactly like the other four triggers. But the corpus contains ZERO real instances -- my grep found 2, and both are the text `// switch act:` INSIDE COMMENTS. Same rule as K4, L and U: a passing fixture is not a reason to keep a change no real input exercises.",
+      "AA (substitute the loop variable into baked call names and continue expressions during unrolling) — REVERTED. The defect is real and reproduced: `for (0..2) |k| { t = t + (3.0 * k).pow(2.0); }` unrolls into two copies that both still read `k`, with the loop that declared it gone. But `loop_unroll` never runs on this corpus -- ZERO for-loops with a range of 1..4 in any spec. Same as X, not the same as Z."
+    ],
+    "classes_closed": {
+      "pointless discard": "86 -> 0",
+      "'_' as identifier": "37 -> 0",
+      "trailing digit separator": "4 -> 0",
+      "empty test name": "4 -> 0",
+      "mut": "18 -> 0",
+      "unused function parameter": "28 -> 5",
+      "local constant shadows declaration": "22 -> 3  (patches N, O, P)"
+    },
+    "big_class_blocked": {
+      "what": "791 'use of undeclared identifier' — three quarters of what is left",
+      "root_cause": "CONFIRMED: bootstrap/src/main.rs:3067 `strip_prefix(\"pub \")` starves the module name pool; .t27 has no privacy concept (2426 of 12849 decls carry pub; the file/git/storage/shell schemas have ZERO)",
+      "why_not_fixed": "RESOLVED by applying the diagnosis's OWN patch. My three failures were self-inflicted: I never read patch_new and invented indentation heuristics instead. The diagnosis had already anticipated the exact failure ('the scan is line-based, so a const inside a function body enters the pool') and solved it structurally with brace depth. Errors 791 -> 579, files 169 -> 166.",
+      "real_shape": "`taken` guards only against the file's own TOP-LEVEL declarations. Every alias emitted becomes a container-level name, and any same-named LOCAL inside a function then shadows it. This needs the alias emitter redesigned to know about locals — not a one-line pool change.",
+      "do_not": "Do not attempt a fourth one-line variant. Three consecutive attempts each found a NEW way to be wrong; that is guessing, not investigation."
+    },
+    "do_not_touch_blind": [
+      "unable to load (24)",
+      "local constant shadows declaration (21)",
+      "invalid builtin function (10)",
+      "@intCast (4)"
+    ],
+    "snapshots": "/tmp/compiler.rs.{pristine,beforeA,beforeC,beforeB,beforeD,beforeC2,beforeE1}, /tmp/main.rs.beforeE2",
+    "uncommitted": "compiler.rs carries 7 patches; main.rs is clean; nothing committed — that is the owner's call",
+    "open": [
+      "452 'use of undeclared identifier'. Emitter-fixable remainder is small: 31 self-declared (12 of which need the `type` FEATURE) plus ~55 import-related.",
+      "gf16 (16) needs an owner decision on representation",
+      "`type` aliases and `inline for` are language features, not repairs — both declined deliberately"
+    ],
+    "measurement_correction": "The 184/182/169/166 figures reported all evening INCLUDED 24 phantom paths — import targets like base/benchmarking.zig that no spec provides and that do not exist on disk. The plan flagged exactly 24 and I did not act on it. measure.py now separates them. The -24 delta at iteration 2 is the instrument being corrected, NOT a repair: no patch was applied.",
+    "mechanism_correction": "My iteration-4 note said the declaration was 'dropped'. More precisely: it is RETURNED, valueless — the `else` arm runs skip_to_semicolon() and `return Ok(decl)` with no value child, and the emitter then writes nothing. The distinction matters because it locates the fix in the parser's branch chain rather than in the emitter.",
+    "owner_decision_needed": {
+      "id": "gf16-representation",
+      "finding": "The Rust and Zig targets disagree about what `gf16` IS, and the Zig one simply does not know it.",
+      "detail": [
+        "compiler.rs:14661 (t27_type_to_rust) maps \"GF16\"|\"gf16\" -> \"u16\".",
+        "zig_type's primitive block (~6630) knows String/Float/Bool/Int and NOT gf16, so the name is emitted verbatim and Zig reports `use of undeclared identifier 'gf16'` — 16 errors across neural/forward_pass, ternary/hybrid_bigint, vsa/vsa_core.",
+        "Copying the Rust mapping would be wrong: the corpus assigns 5.0, 0.7, 0.8, PHI to gf16-typed constants, none of which fit u16.",
+        "f16 would accept every observed value — but that asserts the project's golden-float GF16 is interchangeable with IEEE half precision, which no spec says."
+      ],
+      "why_not_patched": "This is a statement about representation, and the codebase already has a precedent for refusing it: List<T> is left failing loudly because []T and std.ArrayList(T) are both defensible and the spec does not choose. Guessing here is the same trade I made with C2 today and reverted — a loud error for a silent wrong.",
+      "what_would_settle_it": "The owner saying which of u16 (bit pattern) or f16 (value) the Zig target should carry — or whether the Rust mapping is itself wrong."
+    },
+    "network": "NARROWED at iteration 13. Not a general outage: artifact publishing to claude.ai SUCCEEDS while api.github.com still fails on TLS handshake. So the block is GitHub-specific. Earlier iterations recorded 'the network is down' because both failed together and I never separated them — the same shape as every other aggregate error this session. Consequence: the dashboard is republished and current at its URL; only the GitHub-side work (checking for cavearr's specimen design, PR state) is actually blocked.",
+    "remainder_classified": {
+      "measured": "loop2 iteration 11, CORRECTED",
+      "total": 452,
+      "declared_nowhere_compiler_can_see": "234 — spec defects, plus names that only exist behind the `type` form the compiler does not implement",
+      "same_file": "13 — CORRECTED again. The 19 counted locals inside function bodies as file-level declarations, because the regex matched `const X` at any indent.",
+      "consumer_imports_a_declaring_module": "55 — emitter",
+      "declared_but_not_imported": "144 — spec",
+      "emitter_fixable": "68 of 452 (15%)",
+      "supersedes": "The iteration-7/8 figure of 103 of 467 (22%). That count listed `type` among declaration keywords; there is no KwType token, so every `type X = ...` name was counted as declared when the compiler cannot see it. The corrected split is smaller and is the one to quote."
+    },
+    "located_not_patched": {
+      "id": "receiver-dropped-when-the-receiver-is-itself-a-call",
+      "found": "loop2 iteration 14, CORRECTED and completed iteration 15",
+      "what": "The emitter drops the receiver of a method call exactly when that receiver is itself a call. spec `remainder.abs().compare_abs(b.abs())` -> gen `compare_abs(b.abs())`. A simple identifier receiver survives: `a.compare_abs(b)` emits intact.",
+      "exact_cause": "compiler.rs:4680 flatten_field_access_name matches ExprFieldAccess and ExprIdentifier and ends with `_ => break`. A call-shaped receiver is neither, so it hits the SILENT CATCH-ALL and every accumulated part is discarded but the trailing field. At the call site (4604) the flattened string becomes the whole call name and `expr` -- the receiver -- is thrown away.",
+      "why_structural": "The model represents `a.b.c` as a dotted NAME string. That works for `std.testing.expectEqual` and cannot represent `X.foo().bar` at all. Fixing it needs a node that carries the receiver as a child plus gen_expr support -- not a one-line change, and exactly what STATE's E2 rule says not to guess at.",
+      "size": "36 emitted sites across 6 specs (bigint 20, gamma_conjecture 6, phi_split_optimality 5, gi1_analysis 3, pellis_precision_verify 1, phi_universal_attractor 1).",
+      "severity": "Only 4 surface as errors. measure.py's top classes carry no arity class at all, so roughly 32 of the 36 COMPILE with the receiver silently removed. This is a correctness defect, not a count.",
+      "corrects_iteration_14": "Iteration 14 called this 'behaviour-clause text'. Wrong label: the trigger is the receiver's SHAPE, not the construct. gen/zig/ternary/bigint.zig:471 is an ordinary function body -- a `while` condition -- and loses its receiver too, which refutes the 'ordinary bodies are fine' claim recorded yesterday.",
+      "status": "MOSTLY FIXED. K closed the zero-arg receivers, K2 the identifier/literal-argument ones: 36 -> 17 silent sites. The 17 that remain have receivers whose arguments are themselves calls or operator expressions; those genuinely need gen_expr-side rendering and are the only part where the iteration-15 'structural' assessment still holds."
+    },
+    "design_note_for_next_time": "parse_expr exists and is tempting, but the const emitter writes its value VERBATIM — it reads v.name or v.value and never calls gen_expr — so a structured node emits nothing. Raw text is required, which is why capture_to_semicolon copies skip_to_semicolon's depth logic rather than reusing the expression parser. Checking that BEFORE writing the patch is what kept this one from being a fourth wasted variant.",
+    "multiline_const_resolved": "NOT a separate gap. patch I fixed it too — capture_to_semicolon walks TOKENS, so a newline is nothing to it. DELTA_GAMMA_1_PHI_PERCENT now emits and has zero errors. Refusing to assume they shared a fix was right; the measurement then said they did.",
+    "self_declared_group": "48 -> 31 after patch I (15 const, 12 type, 4 fn). Patch I closed 17 of the 32 consts.",
+    "language_feature_not_a_bug": [
+      {
+        "what": "`type X = Y;` aliases",
+        "evidence": "specs write `pub type Vec32 = [SIMD_WIDTH]Trit;` (and Context, Handler, JitVsaFn). There is NO KwType token: zero `KwType,` in the enum and no \"type\" keyword mapping. The word lexes as a plain identifier and the line is not a declaration form at all.",
+        "errors": 12,
+        "note": "My own classification regex listed `type` among declaration keywords, so it counted these names as declared. The corpus says `type`; the compiler has never had it."
+      },
+      {
+        "what": "`inline for (xs) |x|`",
+        "evidence": "specs/ternary/bigint.t27 writes raw Zig the parser does not accept",
+        "errors": 11
+      }
+    ],
+    "honest_position": "The emitter-fixable surface is now 74 errors. Of the rest: 144 are specs using what they never imported, 234 are names nothing declares in a form the compiler knows — and part of that 234 is the `type` alias feature, which is a language addition, not a repair. Continuing to grind this class yields less each iteration; the remaining leverage is in decisions (gf16 representation, whether `type` aliases should exist) rather than in patches.",
+    "instrument_was_wrong_four_ways": [
+      "24 phantom import targets counted as failing FILES (iteration 2) — headline inflated by 24 all evening",
+      "distinct NAMES quoted where ERRORS were meant (iteration 7) — would have overstated the spec share by 9 points",
+      "`type` listed as a declaration keyword (iteration 10) — there is no KwType token, so names only the corpus can see were counted as declared",
+      "LOCALS inside function bodies counted as file-level declarations (iteration 12) — inflated the unambiguous-emitter bucket from 13 to 19",
+      "The iteration-12 CORRECTION was itself wrong (iteration 13). `indent <= 4` still admits every function body: a top-level `fn` puts its body at exactly 4. Two of the five names it surfaced were struct METHODS (method-call lowering, a different class) and one was a plain local. The honest filter is indent 0.",
+      "PATTERN: every one of the FIVE inflated the EMITTER's share, and every one was caught by opening an artifact rather than reading an aggregate. The estimate went 103 -> 74 -> 68 -> 0-at-file-scope as each was corrected. A number that only ever moves one way under scrutiny was not a measurement — it was a hypothesis wearing a measurement's clothes.",
+      "COUNTED CHAINED CALLS IN SPECS AND CALLED IT THE DEFECT SIZE: 107 across 17 specs (iteration 15). Verified on bigint, then checked a SECOND file -- test_framework/runner.t27's 21 chained calls produce ZERO bare calls because runner.zig is 1606 bytes and that content is not emitted at all. A spec construct that never reaches the output cannot have lost anything. Counting only EMITTED sites gives 36. Error eight; caught by refusing to generalise from one file.",
+      "THE SILENT COUNTER I BUILT AND SHIPPED THE SAME DAY (iteration 18). silent() counted every bare `abs(`, `round(`, `pow(` in the output as a deleted receiver -- but those are math SHIMS the specs legitimately call as free functions (9, 15 and 1 times in three files). Reported 16; the truth is 5. Error nine, and the shortest gap yet between building an instrument and catching it lying. Fixed by subtracting the spec's own bare-call count per (file, name).",
+      "SPACED-DOT RECEIVERS (iteration 19). capture_to_semicolon joins TOKENS with single spaces, so an intact call emits as `( A - B ) . abs ( )`. The character before `abs` is a space, so a `(?<![\\w.])` lookbehind passes and a correct call is counted as a deleted receiver. Error ten. Fixed with an added `(?<!\\.\\s)`.",
+      "READ `head -6` AS A CENSUS, AGAIN (iteration 31). I recorded 'all 19 remaining shadow errors are in one file, top_tb.zig' from six lines of grep output and wrote it into a source comment. The real spread is six files: uart_tb 6, top_tb 6, lotus 2, ir 1, gamma_conjecture 1, e8_lie_algebra 1. Same shape as the K4 sample-as-census error. The patch was correct regardless, but a false claim had been committed to the codebase where a later reader would trust it -- corrected in the source rather than only in this file.",
+      "TRUNCATED-BODY DETECTOR COUNTED HONEST ONE-LINE FUNCTIONS (iteration 41): 49 published, 13 true. The signature cannot distinguish a body that was discarded from a body that was always one statement without consulting the spec. measure.py now consults it.",
+      "AND AGAIN, ONE ITERATION LATER (42): the corrected detector was still line-based, so a multi-line struct literal return counted as several statements. 49 -> 13 -> 0. Two consecutive corrections to the same number, each announced as the fix. The detector is now terminator-based and measure.py prints 0.",
+      "TWO BAD SUBSET-CARVINGS IN ONE ITERATION (43): 52, then 10, both from patterns that matched an import line without checking WHAT it imports. Both caught by reading a single instance before publishing. The rule that caught them is the same one as always -- name an instance by hand and see whether the count means what its label says.",
+      "GREP COUNTED COMMENT TEXT AS CODE (iteration 58): '2 unparenthesised switches in the corpus' were both `// switch act:`. The count was used to justify writing a patch. Caught by opening the file after the measurement showed nothing moved -- the measurement, not the grep, is what raised the doubt."
+    ],
+    "class_closed_at_file_scope": {
+      "measured": "loop2 iteration 13, after patch J",
+      "claim": "Zero. At true file scope (indent 0) there is NO name a spec declares and the emitter fails to emit.",
+      "method": "For every indent-0 `fn|const|struct|enum` name in specs/, check whether its own generated file reports it undeclared. Result: 0 names, 0 errors.",
+      "instrument_validated": "Not a broken-zero. `Handler` sits at indent 0 in specs/server/router.t27 and printed in this same listing BEFORE patch J; it is absent after. The instrument moved with a known change, which is the check that makes a zero believable.",
+      "consequence": "The class I chased for four iterations — 'the emitter silently drops a declaration the spec makes' — is CLOSED. The remaining 444 undeclared-identifier errors are not dropped file-scope declarations. They are phantom imports (24), names nothing declares in a form the compiler knows, struct-method call lowering, and locals."
+    },
+    "assessment": "Patch J closed the last file-scope case, and the class is now provably empty — a better stopping point than iteration 12's fuzzy '68 emitter-fixable'. My 'exhausted' call last iteration was premature by exactly one patch: I inferred it from fatigue with the classification rather than from testing it, and testing it took two greps. What remains still needs decisions that are not mine (gf16 representation, whether `type` aliases exist) plus cavearr's specimen design. Per-iteration yield: 86, 73, 29, 15, 10, 0, 0, 8.",
+    "patch_K_measurement": {
+      "measure_py": "136 files unchanged, errors 444 -> 443. By the sanctioned instrument this patch looks like nothing.",
+      "actual_effect": "Silent miscompilations 36 -> 28. Eight call sites that COMPILED with their receiver deleted now emit the receiver. Verified on the artifact: gen/zig/ternary/bigint.zig:471 now reads `remainder.abs().compare_abs(b.abs())`, matching specs/ternary/bigint.t27:789 exactly.",
+      "the_lesson": "measure.py counts ERRORS, and ~32 of this defect's 36 sites compile. It is the wrong instrument for this class and cannot grade a fix for it. I nearly read 'unchanged' as 'worthless'. The loop's rule 'revert anything that regresses' held -- nothing regressed -- but a naive reading of a flat file count would have thrown away a correctness repair.",
+      "remaining": "28 sites, all with-argument receivers. Those need gen_expr-side work; not attempted."
+    },
+    "instrument_repaired": {
+      "when": "loop2 iteration 17",
+      "what": "measure.py gained silent() -- counts call sites where the emitter deleted a method receiver, prints the count with its own delta, and warns not to judge a fix for that class by the error counts.",
+      "why": "Iteration 16's patch K moved the error count by 1 and reported `delta: unchanged` on files while repairing 8 silent miscompilations. The loop's rule 'revert anything that regresses' would have felt like the disciplined call. The instrument, not the rule, was the problem.",
+      "paid_for_itself_immediately": "The very next patch (K2) was graded by the new line: `receiver deleted but still compiles: 17 (in 6 specs) -11 better`. Nothing else in the output moved enough to justify it.",
+      "responsive": "The same expression gave 36 before patch K and 28 after, run by hand; embedded in measure.py it gives 28 then 17. It moves with known changes."
+    },
+    "silent_class_correction": {
+      "what": "Every silent figure quoted since iteration 15 -- 36, 28, 17, 16 -- was inflated by legitimate math-shim calls.",
+      "why_the_deltas_still_hold": "The contamination is an ADDITIVE CONSTANT per (file, name): the same specs make the same legitimate calls on every run. So -8 for K, -11 for K2 and -1 for K3 were all sound, and each was independently confirmed by opening the generated file. Only the absolute level was wrong.",
+      "current_truth": "4 sites, hand-verified against the artifact. gi1_analysis lines 55-56 `(ntr_x - LITEBIRD_...).abs()` -> `(abs(`, phi_universal_attractor `(...).round()` -> `round()`, pellis_precision_verify `(3.0*phi).pow(-5.0)` -> `pow(-5.0)`. Successive figures on this class: 36, 28, 17, 16, 5, 4 -- the last three were instrument corrections, not repairs.",
+      "the_-11_in_todays_output_is_not_a_repair": "Going from a contaminated 16 to a corrected 5 printed '-11 better'. That is a method change, not progress -- exactly what measure.py's own docstring warns about, and the same shape as the phantom-24 episode at iteration 2.",
+      "the_instrument_was_right_and_i_was_not": "I hand-counted 3 intact `.abs()` sites in gi1_analysis and expected the corrected counter to print 2; it printed 4. Opening the file settled it AGAINST me: only line 17 is intact (it is a FILE-SCOPE const and goes through capture_to_semicolon, which copies tokens verbatim). Lines 55-56 are consts inside a function BODY, go through parse_expr, and do lose the receiver. First time in this session the instrument was right and my hand count was wrong -- worth recording, because nine prior entries run the other way."
+    },
+    "next_actionable": {
+      "what": "1 silent site left, plus the newly-visible defect K5 unmasked: module-path const values (`sacred_physics::PHI`) inside function BODIES are not emitted.",
+      "note": "That second one is the same shape I waved off at iteration 13 as 'a local, not container-level'. It is a local, and it is still an emitter defect."
+    },
+    "patch_L_prepared_not_applied": {
+      "file": "scratchpad/patch_L_prepared.md",
+      "what": "A const whose value is a bare module path (`const phi = sacred_physics::PHI;`) disappears. The same path INSIDE an expression survives, because the operator forces another route -- `const phi_sq = sacred_physics::PHI * ...` emits as `sacred_physics.PHI * ...`.",
+      "cause": "parse_const_decl's Ident arm (2420) takes one identifier then handles only `(`. There is no PathSep token: `::` arrives as two TokenKind::Colon, nothing consumes them, and the declaration is lost. Same family as H, I and J.",
+      "size": "5 sites: sacred_physics (3), zamolodchikov_e8 (1), phi_universal_attractor (1). This is the defect K5 unmasked.",
+      "why_not_applied": "Free disk 1.5 GB and the previous measure run consumed 1.1 GB. Building risks dropping under the 800 MB guard mid-run, and a full volume already cost this loop five dead iterations. Writing a patch I cannot measure would also leave the tree carrying an unverified change.",
+      "must_check_before_believing_any_count": "grep the artifact for `const phi = ` and require a DOT (`sacred_physics.PHI`). The one unverified assumption is that this value path reaches zig_path() at 7896; if it does not, the output is invalid Zig and the patch trades a missing declaration for a syntax error -- revert in that case."
+    },
+    "K5_M_net_result": {
+      "before_K5": "136 files, 440 errors, 5 silent",
+      "after_K5": "137 files, 441 errors, 1 silent  (the +1 was a defect K5 UNMASKED, not one it caused)",
+      "after_M": "136 files, 440 errors, 1 silent",
+      "net": "Four silent miscompilations repaired at zero cost in files or errors. The tradeoff flagged for the owner at iteration 26 no longer exists -- keeping K5 was right, and M closed the exposure it created.",
+      "the_shape": "One defect was hiding inside another. K5 restored the receiver; the receiver referenced a local that copy propagation had already inlined-and-removed everywhere it could SEE. Deleting the receiver had also deleted the dangling use."
+    },
+    "method_that_worked": {
+      "what": "A 9-line spec fixture run through the already-built t27c -- one second per iteration instead of a ten-minute corpus measure.",
+      "why_it_mattered": "K4 and L both died from patching a location I ASSUMED. This time the fixture reproduced the defect exactly (`const a = phi + 1.0` substituted, `const b = (3.0 * phi).pow(-5.0)` not), which named the trigger before any edit and verified the fix before spending a corpus run.",
+      "keep": "scratchpad/probe_path.t27 and probe2.t27 -- and the habit: reproduce in a fixture, then patch, then measure.",
+      "second_use": "Patch N followed the same order: found a real instance, asked the compiler which declaration was shadowed (the `note: declared here` pointed at fn addr_width, which no grep of mine had found), reproduced in a 10-line fixture, patched, verified on the fixture in one second, then spent one corpus run. Two patches in two iterations, both landing, after two that died from patching an assumed location."
+    },
+    "module_path_const_was_not_a_defect": "CORRECTED. The '5 module-path consts missing from output' were not lost -- they are INLINED. The fixture shows a local const whose value is a simple atom is substituted at its uses and its declaration dropped, deliberately (OptStats.copies_propagated). My count was measuring an intentional optimisation. The real defect was that the inliner could not see into call-name text, which is what M fixes.",
+    "M_and_N_are_opposite_on_purpose": "Two passes that look identical need opposite treatment of call names, and getting this backwards would be silent in both directions. M had to reach INTO a call name, because patches K..K5 bake a method receiver there as text and a value being propagated must follow it. N must NOT: a call named `addr_width` is a call TO the container function that the local is being renamed away from, and rewriting it would redirect the call. rename_ident touching only ExprIdentifier is the bug in one and the correctness condition in the other.",
+    "fixture_first_paid_off_again": {
+      "what": "P's first version went to compiler.rs:8025 -- a `const {} = {}` emission I ASSUMED was the clause site. It was the multi-part path; single clauses are emitted at 8138.",
+      "cost": "One second. The fixture showed the output unchanged, so the patch was relocated before any corpus run.",
+      "contrast": "K4 and L died the same way and each cost a full build plus a measure. Same mistake, an order of magnitude cheaper, because the fixture runs against the already-built compiler.",
+      "rule": "Never measure a patch on the corpus until a fixture shows it changing the output it targets."
+    },
+    "undeclared_441_fully_classified": {
+      "measured": "loop2 iteration 33, and it sums exactly: 200 + 234 + 3 + 4 = 441",
+      "declared_in_another_spec_not_imported": "200 — OWNER DECISION. specs/fpga/bridge.t27 imports `fpga::mac::ZeroDSP_MAC` (the struct) and then calls `mac_multiply` from the same module without importing it. Either t27 requires every used symbol to be imported (fix 200 call sites across the specs) or the emitter should auto-import a name it can resolve in a sibling spec. That is language semantics, not a repair.",
+      "declared_in_no_spec_at_all": "234 — spec defects. `random_input` (15 errors) is declared nowhere in the corpus.",
+      "local_from_ANOTHER_function": "3 — spec defects. PI, DL_LOWER_BOUND and result are each declared inside one fn and used from a different one; the emitter is faithful and the scope is genuinely wrong.",
+      "emitter_fixable": "4 — top_matches, avg_dist, abs_err, success_rate. Same-function locals that copy propagation inlined-and-removed while leaving a use behind, i.e. the blind spot patch M fixed for call names, in some other node kind.",
+      "note": "This is the first complete decomposition of the class. Every previous figure I quoted for it was a fraction of a bucket I had not finished sorting.",
+      "bucket_of_200_is_HOMOGENEOUS": {
+        "audited": "loop2 iteration 43, twice, and both attempts to carve an emitter subset out of it failed on inspection.",
+        "attempt_1": "A loose test said 52 of the 200 were imported and lost by the emitter. Reading three: `mac_multiply` in bridge.t27 'imported' by `use fpga::mac::ZeroDSP_MAC;` -- that brings in ZeroDSP_MAC, not mac_multiply. The regex had matched the module name INSIDE a symbol-specific import. Discarded before it reached STATE.",
+        "attempt_2": "A strict test said 10. Reading one: `Kind` in diff.t27 under `use git::schema;` -- a WHOLE-MODULE import, so the name is reachable as `schema.Kind` and the spec writes it bare. Not an emitter defect either.",
+        "conclusion": "All 200 reduce to ONE question, which sharpens the owner decision considerably: does a t27 `use` bring names into scope UNQUALIFIED? If yes, the emitter should resolve `Kind` through `use git::schema;` and a large part of this class is emitter work. If no, 200 call sites across the specs need qualifying or importing. It is not a mix of the two.",
+        "why_this_matters": "I previously framed it as 'fix 200 specs OR auto-import'. The real question is narrower and answerable: what does `use` MEAN in t27."
+      },
+      "asked_the_corpus_about_use_semantics": {
+        "why": "The whole 200-error bucket reduces to one question -- does a t27 `use` bring names into scope unqualified -- and my memory says ask the corpus before treating a decision as unanswerable.",
+        "what_the_corpus_says": "It is INCONSISTENT, and that is the answer. Specs DO qualify after a whole-module import: 65 non-std references of the form `mod.Name` (lotus 35, gf16 28, ops 1), plus 277 `std.` which is Zig's own always-qualified convention. And specs also write the same kind of name BARE, which is precisely what produces the 200 errors.",
+        "a_number_i_did_NOT_publish": "My bare-reference count came out 15554, which is not a measurement -- the pattern counted every occurrence of each name anywhere in the file, including its own declaration, same-named locals and coincidences. Discarded rather than reported.",
+        "consequence_for_the_owner": "The corpus cannot settle this by majority; it contains both conventions. So the decision is genuinely a language decision, not an archaeology problem. Whichever way it goes, the 65 qualified sites and the 200 bare ones cannot both be right.",
+        "recommendation_if_asked": "Unqualified scope-injection is the cheaper direction: it makes 200 existing call sites correct and leaves the 65 qualified ones still valid, since `mod.Name` works either way. The reverse choice requires editing 200 sites."
+      }
+    },
+    "near_miss_this_iteration": "I grepped `^use ` in specs/fpga/bridge.t27, got nothing, and started building a theory that the emitter INFERS imports from usage -- because the generated file has four of them. The use lines are INDENTED, so my anchored pattern missed them. Caught before it reached STATE or a patch. Anchoring a pattern is the same class of error as reading `head -6` as a census: the pattern decided the answer.",
+    "latent_vs_loud": {
+      "what": "Patch R fixed a defect that produced ZERO errors, because `zig test` analyses lazily and the containing function is never referenced.",
+      "why_it_still_mattered": "Leaving it would have been relying on the instrument's REACH rather than on the output's correctness -- the same trap as judging a compiling defect by an error count, which nearly cost patch K. An unanalysed file is not a correct file.",
+      "how_it_was_checked": "By reading the artifact, both in the fixture and in the corpus, not by re-running the counter."
+    },
+    "new_defect_class_found": {
+      "id": "function-bodies-discarded-by-a-parse-error",
+      "signature": "A generated function reduced to parameter discards plus a single `return`, where the spec's body has several statements.",
+      "size": "ZERO. Final correction. Published 49, corrected to 13 at iteration 41, and the true count is 0. Both of my counters were LINE-based, and a single `return LoadResult{ .a = ..., .b = ... };` spans six lines -- every one of the 13 survivors was exactly that shape. Counting statement TERMINATORS at function depth gives 0.",
+      "why_it_matters": "MOSTLY SILENT. A body reduced to `return X` still compiles when X resolves, and the function simply does nothing. It only surfaces as an error when the return happens to reference something the discarded body declared -- which is how both triggers were found at all.",
+      "triggers_found": [
+        "while (i < n) : (i += 1) — the continue expression (patch Q)",
+        "for (const xs) |x| — the const marker (patch S)"
+      ],
+      "instrument": "measure.py now prints `function bodies discarded by a parse error` with its own delta, so the class is visible every run instead of being stumbled on.",
+      "next": "Find the remaining triggers. Each is a single token the parser has no arm for, and each one silently empties every function that uses it.",
+      "how_the_49_survived_a_check": "At iteration 35 I wrote 'verified against the specs rather than assumed' and reported 2 and 4 body statements for two samples. That awk matched from `/fn name/` to the next `^    }` and spilled across following functions, so it counted lines that were not in the body at all. The check was real in form and empty in substance -- worse than no check, because it retired the doubt.",
+      "what_this_does_NOT_undo": "The three real truncations were found through UNDECLARED IDENTIFIER errors, not through this detector, and their fixes were measured on the corpus: Q fixed memory/semantic_search (files 134 -> 133), S fixed numeric/goldenfloat_family (133 -> 132), V restored server/vm.zig from 95 to 407 lines. The class reading 0 now is consistent with those three having been the whole of it."
+    },
+    "third_trigger_located": {
+      "id": "switch-in-statement-position",
+      "confirmed_by_control": "`switch (k) { 0 => r = 1, else => r = 2, }` inside a body empties the function AND leaks every following statement to container level. The same fixture with the switch removed is clean, so the switch is the cause and not a coincidence.",
+      "symptom": "Function comes out with NO statements, which is the empty-body case, so the emitter writes `@panic(\"not yet implemented\")`. The switch's braces are never consumed, so the function's closing brace matches the switch's and the remainder escapes the function.",
+      "what_works_already": "switch as an EXPRESSION with expression arms is emitted perfectly: `const r = switch (k) { 0 => 1, else => 2, };`",
+      "what_the_fix_needs": "A statement-position switch whose arms may be ASSIGNMENTS. parse_switch_expr cannot be reused as-is; it needs an arm body that accepts a statement, or a sibling statement-level parser.",
+      "method_note": "`try` was over-represented 3.7x in the affected specs and is completely clean. A rate gap between file groups is a composition effect until a fixture says otherwise -- testing both candidates cost two fixtures and saved a patch aimed at the wrong construct.",
+      "real_shape_in_corpus": "BLOCK-bodied arms: `switch (instruction.opcode) { .v_load => { ... }, ... }`. 59 such arms corpus-wide. specs/server/vm.t27's vm_step does not appear in the generated file at all. A real fix must parse an arm body that is a BLOCK, and must emit a statement-position switch; the assignment-arm form U added is not the shape that occurs here."
+    },
+    "why_U_was_reverted_not_kept": "Same rule as K4, L and T, applied to a patch that is CORRECT rather than misplaced. A fixture passing is not a reason to keep a change that no real input exercises -- and the one real input it was aimed at (vm.t27) is still not emitted, so U is incomplete rather than merely unexercised. Keeping it would have meant reporting a fix that fixes nothing in this corpus.",
+    "v_neg_is_a_singleton": {
+      "what": "The error patch V unmasked in server/vm.zig -- `use of undeclared identifier 'v_neg'`, an enum variant used bare as a struct-literal field value where Zig wants `.v_neg`.",
+      "size": "ONE occurrence corpus-wide. Not a class, so not worth a patch of its own; the emitter already adds the dot in switch arms.",
+      "instrument_note": "My first count said ZERO. The regex was `enum\\s*\\{` and the declaration is `enum(u8) {`, so no variants were collected anywhere. Caught only because I knew one instance by hand -- the rule from iteration 18, and the fourth time this session a pattern decided the answer before the evidence did."
+    },
+    "silent_receiver_detector_PASSED_audit": {
+      "audited": "loop2 iteration 45, by hand, on the single remaining instance.",
+      "the_instance": "specs/math/phi_universal_attractor.t27 writes `(available_bits as f64 * current_ratio / (1.0 + current_ratio)).round() as u8`; the emitter writes `const exp = t27_cast(u8, round());`. The receiver is genuinely gone. REAL.",
+      "why_K_patches_left_it": "The receiver contains an `as` cast, and render_simple_call returns None for a cast node -- the deliberate limit those patches declared, so as never to emit a half-right name.",
+      "significance": "Of the instruments I built this session, this is the one that survives a hand audit unchanged. The truncated-body detector went 49 -> 13 -> 0 and never found anything; the import-subset carvings went 52 -> 10 -> 0. Worth recording that not every self-built number was wrong, because the honest record is not 'all my counts were junk' -- it is that counts I checked against a named instance held, and counts I did not check did not."
+    },
+    "loop_status_iteration_45": {
+      "blocked_on": [
+        "disk -- six consecutive iterations unable to build; measure.py's 800 MB guard, free space plateaued at ~570 MB, cause unidentified after seven probes",
+        "owner decision: what gf16 is in the Zig target",
+        "owner decision: whether `type X = Y;` aliases should exist",
+        "owner decision: whether a t27 `use` brings names into scope unqualified (the 200-error bucket)",
+        "cavearr's specimen design -- no reply in ~24h; the regression A/B already landed and was answered"
+      ],
+      "unmeasured_in_the_tree": "patch V. Verified on the real artifact (server/vm.zig 95 -> 407 lines), never on the corpus. Undo: cp /tmp/compiler.rs.beforeV",
+      "honest_assessment": "Track 1 cannot repair anything without a build; what remains after the classification is owner decisions. Track 2 is waiting on a person. The last three iterations produced audits of my own numbers rather than compiler repairs -- valuable, and now finished: every self-built figure has been checked."
+    },
+    "patch_V_MEASURED_at_last": {
+      "disk": "The operator freed space -- 9.3 GB. First build in fourteen iterations.",
+      "result": "132 -> 133 failing, 439 -> 440 errors. Exactly the +1 the partial run at iteration 38 predicted, and the +1 is server/vm.zig.",
+      "why_kept_despite_the_rule": "Same shape as K5. vm.zig was 'clean' only because its body had been deleted -- 95 lines. With V it is 407, and a file that passes because its code is missing was never passing. The remaining error is `use of undeclared identifier 'v_neg'`, a defect that predates V and was simply unreachable while the body was gone.",
+      "why_v_neg_was_NOT_patched": "ONE site corpus-wide. A general mechanism -- dot-prefix an identifier that matches a declared enum variant -- breaks on a name collision: a local called `v_neg` would silently become an enum literal. The compiler does track enum variants (compiler.rs:14198) so it is buildable, but the silent-wrong risk outweighs one error.",
+      "the_inconsistency_underneath": "The spec writes bare enum variants in both positions. The emitter adds the dot in a switch arm and not in a struct-literal field value. That asymmetry is the real defect; it is worth one site only, so it is recorded rather than fixed.",
+      "undo": "cp /tmp/compiler.rs.beforeV /Users/playom/t27/bootstrap/src/compiler.rs"
+    },
+    "spurious_delta_to_ignore": "measure.py printed `function bodies discarded by a parse error: 0  -49 better`. That -49 is the iteration-42 method change (line-based counting replaced by statement terminators), NOT progress. The class was empty before the fix too.",
+    "fourth_trigger_of_the_body_destroying_class": "if-EXPRESSION without parentheses. Joins the while continue-expression (Q), the `for (const x)` marker (S) and the statement-position switch (V). Every one is a single token the parser had no arm for, and every one silently emptied every function that used it. The pattern is now four for four: when a whole body vanishes, look for one token in a construct whose OTHER spellings work.",
+    "parser_is_now_inconsistent_on_purpose": "`while` and `if` (patch W) accept an unparenthesised condition; `switch` does not. That asymmetry is a latent trap -- the first spec to write `switch x {` will silently lose a function body -- and X is the two-line mirror that closes it. It was reverted for consistency with the no-unexercised-patches rule, not because it is wrong. If the rule is ever relaxed, this is the first patch to reinstate: /tmp/compiler.rs.beforeX is the pre-X state, so the diff is recoverable from the journal description alone.",
+    "why_four_passes_missed_it": "I searched the EMITTER for something that drops a declaration, and read gen_scoped_stmts and gen_stmt four times looking for a guard that was never there. The deletion happens in an OPTIMISATION pass between parse and emit -- optimize_stmts -> stmts.retain(|s| !is_dead_local(s)). Iteration 59 recorded the exact condition and refused to guess a site; the site turned out to be in a part of the pipeline I had not been reading at all. Recording the condition rather than patching a guess is what made this findable in one more pass.",
+    "a_wrong_first_attempt_worth_keeping": "My first version of Y also added ` = undefined` in gen_stmt and produced `var b: f64 = undefined = undefined` -- the emitter ALREADY emitted it. So the emitter was never wrong about this shape; only the optimiser was. Caught by the fixture in one second, before any corpus run.",
+    "why_Z_kept_where_X_was_reverted": {
+      "X": "Fixed a pre-existing gap in a construct the corpus does not contain AT ALL -- the two apparent sites were comment text.",
+      "Z": "Completes a change I made myself. Before patch Q the continue expression did not exist in the AST, extra_op was always empty, and dead_store_elim was CORRECT. Q made it real and has two consumers; R updated one (the var/const decision) and this updates the other. Leaving it would ship Q half-integrated.",
+      "corpus_does_exercise_the_path": "Six continue expressions in four specs. The bug does not fire today only because those variables are also read in the loop condition -- which is latency, not absence, and is exactly the argument for keeping R at zero measured change.",
+      "measurement": "131 files / 430 errors, unchanged. The fixture is the evidence, as it was for R."
+    },
+    "the_test_that_decided_it": "Z was kept and AA reverted on one question: does the corpus EXERCISE the pass? Six continue expressions across four specs mean dead_store_elim really walks that code and the bug is latent. Zero small-range for-loops mean the unroller never executes at all. I only thought to ask after the measurement showed nothing moved -- which is the third time this session the flat measurement, not the reasoning, is what prompted the right question.",
+    "blind_spot_census": "Call names are TEXT (patches K..K5 bake a method receiver into them) and a while continue expression is TEXT (patch Q). Four passes walk the AST and cannot see either: copy propagation (fixed, M), the var/const decision (fixed, R), dead-store reads (fixed, Z), and loop unrolling (real, reverted as unexercised, AA). That is the complete list of AST walkers in the optimiser -- the census is closed.",
+    "emitter_bucket_in_the_largest_class_is_EMPTY": {
+      "measured": "loop2 iteration 63, after the four fixes.",
+      "same_spec_bucket": "3 -- PI, DL_LOWER_BOUND, result. All three are the CROSS-FUNCTION references identified by reading at iteration 33: each is declared inside one fn and used from a different one, so the emitter is faithful and the scope is genuinely wrong in the spec.",
+      "the_four_that_were_real": "top_matches (fixed by Q, while continue expression), avg_dist (S, `for (const x)` marker), abs_err (W, unparenthesised if expression), success_rate (Y, dead-code elimination deleting a forward declaration). Every one was a whole construct the parser or optimiser mishandled, not a naming problem.",
+      "what_is_left": "197 declared in another spec and not imported -- the `use` semantics decision -- and 230 declared nowhere at all, which are spec defects. Neither is emitter work.",
+      "caveat": "197 + 230 + 3 = 430 exactly matches the error count, but I have not re-verified the bucket boundaries this iteration beyond the three names I read individually. The shape is what matters: the emitter's share is zero."
+    },
+    "invalid_builtin_class_characterised_and_left_alone": {
+      "size": "11 errors: @pow (3), @trim (2), @langToCode (2), @concat (2), @split (1).",
+      "the_emitter_is_faithful": "The SPECS write the `@`. specs/enrichment/audio_overview.t27:119 is `assert @langToCode(\"ru\") == \"ru\"`, and the emitter reproduces it. Zig reserves `@` for builtins, so the call is invalid there.",
+      "three_of_the_five_are_spec_functions": "pow is declared `fn` 10 times across the specs, concat 7, split 1. trim and langToCode are declared nowhere.",
+      "the_tempting_fix_is_harmful_and_here_is_the_number": "'Strip the @ when the name is declared as a fn in the corpus' would break 143 WORKING call sites to fix 6: @abs is emitted 106 times and `abs` is also a spec fn 9 times; @min 24 against 2; @sqrt 13 against 1. Zig's builtin names and the specs' function names overlap heavily.",
+      "what_a_real_fix_needs": "A whitelist of genuine Zig builtins, which the emitter does not have -- only per-name special cases in the Verilog and C backends. A missing entry in such a list silently breaks a working builtin, which is a poor trade for 11 loud errors.",
+      "verdict": "Left alone deliberately, with the 143-versus-6 measurement as the reason rather than a feeling. This is also a language question: what `@name` MEANS in t27, alongside gf16, `type` aliases and `use` semantics."
+    },
+    "risk_priced_before_writing_again": "Escaping every ZIG_PRIMITIVE in expression position would have touched 285 bare `type`, 1398 `bool`, 4012 `u8` and so on. Most of those are TYPE ANNOTATIONS, which do not come through zig_expr_name -- but I could not bound that cheaply, so the patch escapes ONLY `type` and only as a bare identifier. Measured: nothing broken, which is what the narrow scope bought.",
+    "planning_then_executing_worked": "Iteration 66 refused to start a three-site change to shared emitter state and wrote the plan instead. Iteration 67 executed it in ONE build with no wrong-location detour -- unlike K4, L, U, X and AA, every one of which was written and measured before the location was established. The plan cost one iteration and saved at least one wasted build.",
+    "intCast_class_characterised_and_declined": {
+      "size": "4 errors in 2 files -- numeric/gf16.zig (54, 104) and server/sse.zig (130, 162).",
+      "the_emitter_is_faithful": "specs/numeric/gf16.t27:120 writes `var f32_exp: i8 = @intCast((f32_bits >> 23) & 0xFF) - 127;` verbatim. Zig 0.16 will not infer the result type of an @intCast that is an OPERAND of a binary expression -- the `: i8` annotation does not propagate through the `- 127`. Zig's own note says to use @as.",
+      "so_it_is_a_spec_defect": "The spec is raw Zig written for a version where this inferred, or never compiled. Same shape as the @builtin class: the emitter reproduces what the spec says and Zig rejects it.",
+      "what_an_emitter_fix_would_need": "Knowing that the @intCast is an operand rather than the whole initialiser, AND that the declaration's type applies to it -- type propagation this emitter does not do. The alternative is a text transform on emitted expressions, which is a poor trade for four errors.",
+      "verdict": "Declined, consistent with the @builtin class at iteration 64 and with STATE's existing do_not_touch_blind entry. No build run: there was nothing to measure and free disk was 1.1 GB."
+    }
+  },
+  "UNBLOCK_LIST": {
+    "_why": "Consolidated at iteration 50. Every ask has been stated once somewhere across the journal; scattered, they are hard to act on. This is the whole list in one place.",
+    "1_disk_blocks_all_t27_work": {
+      "state": "Free space plateaued at ~540 MB. measure.py's guard needs 800, and `zig test` needs ~400 MB transient on top. Eleven iterations without a build.",
+      "what_i_tried": "cargo clean freed 656 MB and the rebuild took it back -- circular. Removing ~/.cache/zig was denied by the permission layer. Seven probes failed to identify the consumer; /private/var/db/diagnostics is 2 GB and actively written but only 0.9 MB/min, a fourteenth of what was observed.",
+      "you_can": "rm -rf /Users/playom/.cache/zig   (~50 MB, regenerates)   -- and if that is not enough, decide whether /Users/playom/t27/build (3.0 GB, the nextpnr/prjxray tree) can be rebuilt later. Track 2's PRs are merged, so that tree is no longer load-bearing.",
+      "reading_at_iteration_51": "487 MB, down 56 from the plateau at 543. Noted, NOT extrapolated -- building a trend from two points is the exact error of iteration 40, whose 'fills in three iterations' projection was broken by the next reading. If it keeps falling the wedge risk returns; if it plateaus again, this was noise.",
+      "INTERVENTION_iteration_52": "Free space fell 487 -> 132 MB in one cycle -- 355 MB, with no build of mine. At zero, Bash itself stops working; that already cost five iterations on 2026-09-02. So I ran cargo clean immediately: 325 MB freed, 444 MB now. The 'cleaning is circular' objection from iterations 39-45 did not apply, because I was not about to build -- the alternative was a wedge, not a rebuild.",
+      "cost_of_that_choice": "The built t27c binary went with it. Fixture work -- a nine-line spec through the existing compiler, one second per check -- was the ONLY t27 work still possible while measure.py was blocked, and it now needs a build like everything else. The loop is more blocked than it was an hour ago; the session is not wedged. That trade is the right way round, but it is a trade.",
+      "URGENT_iteration_53": "444 -> 118 MB in ONE cycle. The 325 MB freed last iteration is gone and more with it, and I built nothing in between -- so the consumer is definitively not the loop. Freed my remaining snapshots (~22 MB, keeping only /tmp/compiler.rs.beforeV) for 140 MB. That is marginal against 326 MB per cycle. A wedge -- Bash unable to create its own output file -- is likely within one or two cycles.",
+      "the_one_lever_i_did_not_pull": "/Users/playom/t27/build is 3.0 GB (nextpnr, prjxray, chipdb bins, probes). Both PRs are merged, so it is no longer load-bearing for track 2, and I have flagged it twice with no answer. I am NOT deleting it unilaterally: the chipdb .bin files are expensive to regenerate and this is the operator's build environment, not an artifact of mine. It is the only remaining lever large enough to matter.",
+      "record_is_safe": "STATE.json and JOURNAL.md are small writes on disk and the dashboard is published off-machine, so a wedge loses no work -- only the ability to act.",
+      "CORRECTION_iteration_54": "122 MB, down only 18 from the 140 I freed. The 326 MB/cycle drop was a SPIKE, not a rate, and my 'wedge within a cycle or two' projection was two points extrapolated again -- the identical error to iteration 40, whose three-point trend the fourth reading broke. The warning was proportionate to what I saw; the projection attached to it was not. Disk remains too low to build (122 vs an 800 MB guard plus ~400 transient), so nothing changes practically -- but the urgency I conveyed was overstated.",
+      "second_intervention_iteration_69": "1.1 GB -> 226 MB in one cycle, with no build of mine in between -- the same shape as iteration 52. Ran cargo clean again: 325 MB freed, 539 MB now. Still under the 800 MB guard, so no build either way, but the wedge is pushed back.",
+      "the_churn_this_creates": "A cycle has formed: measure -> target rebuilds to 330 MB -> the volume drops -> I delete target. Each clean also removes the built t27c, so the one-second fixture checks that made iterations 57-67 productive stop working until the next successful build. The churn is driven by a consumer outside the loop that eight probes have not identified.",
+      "SECOND_WEDGE_iteration_70": "The 539 MB freed at iteration 69 was gone within one cycle and the volume hit zero -- Bash could not create its own output file, so iteration 70 could neither run nor record. Space returned on its own to 127 MB by iteration 71.",
+      "ninth_probe_deleted_but_open_files": [
+        "New hypothesis, and the first one that FITS the central contradiction -- every directory measurement stayed constant while free space fell, which is exactly what deleted-but-still-open files look like, since du cannot see them. `lsof +L1` found 0.37 GB held that way. Real, and still not the ~500 MB per cycle. Ninth probe, ninth partial answer: several small contributors, no single culprit."
+      ],
+      "i_am_stopping_the_search": "Nine attempts, each finding something real and none finding enough. cargo clean has been spent twice and target is already empty, so I have no lever of the required size left. `sudo du -xh -d1 /` answers in one command what nine of mine could not.",
+      "THIRD_WEDGE": "Iterations 73 and 74 hit ENOSPC and could do nothing at all -- not even record. Space returned on its own to 154 MB. Three wedges now, and between them the volume has never risen far enough for a single build: the guard needs 800 MB and zig test another ~400 on top."
+    },
+    "2_three_language_decisions": {
+      "gf16": "What is it in the Zig target? compiler.rs maps GF16 to u16 for Rust, but the corpus assigns 5.0/0.7/0.8/PHI to gf16 constants, which only f16 accepts. 16 errors.",
+      "type_aliases": "Should `type X = Y;` exist? There is no KwType token at all -- the word lexes as a plain identifier. 12 errors.",
+      "use_semantics": "Does a t27 `use` bring names into scope UNQUALIFIED? The entire 200-error bucket turns on this. The corpus holds both conventions (65 qualified non-std sites, 200 bare ones), so it cannot answer for itself. My recommendation: unqualified, because `mod.Name` keeps working either way -- it makes 200 call sites correct at no cost to the 65."
+    },
+    "3_one_held_reply": {
+      "what": "scratchpad/reply171.md -- thanks hansfbaier for merging both PRs, confirms his boolean-extraction rule is recorded as house style, adds the loop caveat I found in his own refactor, and carries the database correction I owe him (silent vs loud depends on the 039 pseudo-pip).",
+      "post_with": "gh pr comment 171 --repo openXC7/nextpnr-xilinx --body-file <path>   (NEVER --body -- it silently deletes backticked SHAs)"
+    },
+    "4_patch_V_unmeasured": {
+      "what": "Statement-position switch with block arms. Verified on the artifact -- server/vm.zig went 95 -> 407 lines -- never on the corpus, because of item 1.",
+      "undo": "cp /tmp/compiler.rs.beforeV /Users/playom/t27/bootstrap/src/compiler.rs"
+    }
+  }
+}
