@@ -2,7 +2,7 @@
   "_read_me_first": "Single source of truth for the autonomous loop. Every iteration MUST read this before acting. Items in `done` are FINISHED — never redo them. Pick the highest-priority `backlog` item whose `blocked_by` is empty.",
   "loop": {
     "id": "two-track",
-    "cron_job": "947e19e4",
+    "cron_job": "eaa1cb07",
     "interval": "15m",
     "iteration": 76,
     "status": "RUNNING (restarted 2026-09-02)",
@@ -11,7 +11,7 @@
       "t27 emitter repair",
       "openXC7 BUFR — waiting on cavearr's specimen design"
     ],
-    "cron_note": "A second /loop invocation at 15m was declined rather than scheduled: 947e19e4 already runs this loop at */15. A duplicate would put two agents on the same compiler concurrently, breaking the loop's own one-patch-at-a-time rule.",
+    "cron_note": "947e19e4 (cited by this field until 2026-09-04) was a session-scoped cron from an earlier, now-terminated Claude Code session -- CronCreate jobs die when the session exits, so it could not have survived the restarts already logged in loop.status. The currently live cron is eaa1cb07, created by the /loop invocation that started this iteration. Correcting the field rather than leaving a dead ID as if it still fires. Still holds: do not schedule a second 15m cron on top of eaa1cb07 -- a duplicate would put two agents on the same compiler concurrently, breaking the loop's one-patch-at-a-time rule.",
     "continuity_protocol": "MANDATORY before doing anything else on a fresh firing: (1) do NOT re-run the Research/Decompose Workflow again -- it already ran once (wf_e3e8ce0c-8bc, 2026-09-04) and its full findings are recorded in done[D53..D57], anomalies[A1 update], and backlog[B17..B20] below; re-running it on an unchanged repo state is bookkeeping, not progress. (2) Run `zig build-exe src/tri/tri_loopstate_main.zig -femit-bin=/tmp/tri-loopstate && /tmp/tri-loopstate status` (rebuild if the source changed) to get the next actionable backlog item mechanically instead of re-deriving it by reading this whole file. (3) Run `/tmp/tri-loopstate check` before writing anything to JOURNAL.md or dashboard.html -- if it reports DRIFT, fix the dashboard's readout numbers before adding new narrative. (4) Never redo anything in done[] or completed backlog rows -- isDone()/nextItem() exist for exactly this and are now reachable via the binary above, not just as library calls."
   },
   "invariants": [
@@ -662,6 +662,15 @@
       "cause": "The glob guard was placed in split_use_path, which runs at EMIT time. The panic is earlier: `*` is not an Ident, so the parser's path loop stops before it and leaves a TRAILING `::`, and rsplit then yields an EMPTY final segment, not `*`. A guard testing for the star alone would have missed it -- the string to defend against was ''.",
       "status": "fixed in the parser's import_name extraction, beside the brace-list rule it is a sibling of; re-measured with gen failures back to 0",
       "lesson": "This is `parse-error-is-a-wall` in its purest form: not a file capped at one error, but a file capped at ZERO by not existing. Any metric counting 'files with >=1 error' rewards deleting the file. Read the generator's own health line before reading its output, and never accept a delta whose named beneficiary you have not opened."
+    },
+    {
+      "id": "A21",
+      "found": "iteration 76+ (2026-09-04), while finishing this iteration's work",
+      "what": "STATE.json's loop.cron_job had claimed 947e19e4 was the live 15-minute cron since an earlier iteration. CronList (session-scoped) shows only eaa1cb07 -- the job created by this iteration's own /loop invocation. 947e19e4 belonged to a prior, now-terminated session; CronCreate jobs do not survive session exit, so it could not have been firing across the restarts loop.status itself already records (\"RUNNING (restarted 2026-09-02)\").",
+      "impact": "The loop believed a specific, checkable fact about its own execution that was false for at least one restart cycle. Low practical impact (a human/cron manually re-invoking /loop kept the loop alive regardless of which ID was recorded), but it is exactly the kind of self-belief a self-critical loop should not carry uncorrected.",
+      "status": "fixed",
+      "fix": "loop.cron_job corrected to eaa1cb07; loop.cron_note rewritten to explain why the old ID could not have been live and to restate the still-valid no-duplicate-cron rule.",
+      "lesson": "A session-scoped resource ID (cron, monitor, task) recorded once in durable state does not remain valid across a session boundary just because the state file itself persists. Anything in STATE.json that names a live session resource should be re-verified (CronList / TaskList / Monitor list), not assumed current, whenever a fresh session picks the loop back up."
     }
   ],
   "collaboration_options": [

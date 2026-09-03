@@ -3800,3 +3800,13 @@ silicon, a different scale of proof, not a different idea).
 Cron continues at `947e19e4`, 15m. Next firing: read
 `loop.continuity_protocol`, run `tri-loopstate status`, continue the backlog
 (`B8` is next by priority) rather than repeat any of the above.
+
+**Correction, same iteration, minutes later (A21):** the `947e19e4` cited
+above is stale. `CronList` shows only one live job this session —
+`eaa1cb07`, created by this very `/loop` invocation. `947e19e4` belonged to
+an earlier, now-terminated session; session-scoped cron jobs do not survive
+a session exit, so it could not have been the thing keeping this loop alive
+across the restart `loop.status` already records. Fixed in
+`STATE.json.loop.cron_job`/`cron_note` and the dashboard masthead. Left the
+paragraph above uncorrected in place, per this file's own append-only
+convention, rather than silently editing what was already written.
