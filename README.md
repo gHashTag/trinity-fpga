@@ -1,6 +1,6 @@
 # Trinity-FPGA
 
-**Number formats, proven bit-exact on live silicon, with a toolchain that has no vendor licence in it — and 28 upstream patches that made that toolchain able to do it.**
+**Number formats, proven bit-exact on live FPGA hardware (Artix-7), with a toolchain that has no vendor licence in it — and 28 upstream patches that made that toolchain able to do it.**
 
 An 83-entry catalogue of numeric formats — IEEE binary16/32/64/128, posits, takums, Galois-field floats GF4–GF64, IBM/Cray/VAX historical formats, MX variants, LNS — each synthesised through `yosys` + `nextpnr` (openXC7) for the Artix-7 XC7A200T, flashed to a real board, and checked against an independent software oracle until every bit agrees.
 
@@ -19,15 +19,15 @@ Getting these results meant fixing the tools, not just running them. **26 merged
 
 They are real defects, not typo fixes. A clock-buffer placement search gave up after 50 000 wires when the buffer it needed was the 75 492nd, so "no legal placement" actually meant "did not finish counting" (#110). `set_multicycle_path -setup` was parsed and then never applied (#109). An `IDELAYCTRL` with no delays aborted the build instead of warning (#137). A `BUFR` emitted BYPASS regardless of the divide the design asked for (#151).
 
-One is deliberately **not** merged, and says why. A hardware `IDDR` does not deliver data until the flow writes one ILOGIC configuration bit — established by A/B/A reflashing on silicon, reproducible in both directions — but the polarity of the fix is not established, so it stays a draft.
+One is deliberately **not** merged, and says why. A hardware `IDDR` does not deliver data until the flow writes one ILOGIC configuration bit — established by A/B/A reflashing on the FPGA, reproducible in both directions — but the polarity of the fix is not established, so it stays a draft.
 
-### 2. Bit-exact on real silicon, with witnesses
+### 2. Bit-exact on real hardware (Artix-7 FPGA), with witnesses
 
 Not simulation, not an estimate: a bitstream on an AX7203 board (IDCODE `0x13636093`), fed vectors over UART at 160000 baud, every result compared against an independent oracle.
 
 Recomputed by the repository's own tool, [`research/measure_tier_e_cells.py`](research/measure_tier_e_cells.py), rather than counted once by hand:
 
-- **72 distinct (format, operation) cells** proven on silicon, over **49 distinct base formats**
+- **72 distinct (format, operation) cells** proven on FPGA (Artix-7), over **49 distinct base formats**
 - of 226 proof comments, **75 carry all four required links** — CI run URL, SHA-256, UART log, IDCODE
 - **compute: ADD, MUL and SUB across GF4–GF32**, every cell individually proof-backed
 
@@ -35,7 +35,7 @@ Recomputed by the repository's own tool, [`research/measure_tier_e_cells.py`](re
 
 A figure of "71 / 83" appeared here earlier and is withdrawn: it added 41 decode *formats* to 30 compute *operations* and double-counted gf10 and gf14, against a denominator of formats. The tool above is the source now, because it can be recomputed.
 
-The scale behind that: **107 per-format silicon harnesses**, **23 software oracles**, **110 CI workflows** of which **70 drive the openXC7 image**.
+The scale behind that: **107 per-format hardware harnesses**, **23 software oracles**, **110 CI workflows** of which **70 drive the openXC7 image**.
 
 ### 3. Reproducible without any hardware, in one command
 
@@ -58,7 +58,7 @@ Counts are traceable to the file named beside them. Where two internal sources d
 | Axis | Count | Source |
 |------|-------|--------|
 | Upstream patches merged | **28** | 26 nextpnr-xilinx + 2 demo-projects, verifiable on GitHub |
-| Cells proven on silicon | **72** (format, operation) pairs | `research/measure_tier_e_cells.py`, read live from issue #199 |
+| Cells proven on FPGA (Artix-7) | **72** (format, operation) pairs | `research/measure_tier_e_cells.py`, read live from issue #199 |
 | — distinct base formats | **49** | same tool |
 | — proofs with all four links | 75 of 226 | CI URL + SHA-256 + UART log + IDCODE |
 | SW bit-exact | **69 / 83** | `fpga/CATALOG_MATRIX_83.md`; a strict recount gives 62 — see limitations |
