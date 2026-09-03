@@ -649,8 +649,8 @@
   <header class="masthead">
     <h1>Two tracks — BUFR on openXC7, and the t27 emitter</h1>
     <div class="meta">
-      <span>loop 2 · iteration 76 · t27 74.2% → 76.7% · specimen design reviewed · disk consumer identified</span><span>cron 947e19e4 · 15m</span>
-      <span>2026-09-01 20:55 local</span><span>AX7203 · xc7a200tfbg484-2</span>
+      <span>loop 2 · iteration 76+ · RUNNING · t27 74.2% → 76.7% · specimen design reviewed · disk consumer identified</span><span>cron 947e19e4 · 15m</span>
+      <span>updated 2026-09-04, iteration 76 · AX7203 · xc7a200tfbg484-2</span>
     </div>
   </header>
 
@@ -830,9 +830,14 @@
     <div class="cellstat"><div class="n">2</div><div class="l">PRs open</div></div>
     <div class="cellstat"><div class="n">1/4</div><div class="l">rows on silicon</div></div>
   <div class="cellstat"><div class="n">6/6</div><div class="l">ci jobs green</div></div>
-    <div class="cellstat"><div class="n">8</div><div class="l">backlog open</div></div>
-    <div class="cellstat"><div class="n">1</div><div class="l">anomalies</div></div>
+    <div class="cellstat"><div class="n">10</div><div class="l">backlog open</div></div>
+    <div class="cellstat"><div class="n">5</div><div class="l">anomalies open</div></div>
   </div>
+  <p class="note" style="margin-top:-.5rem">
+    Readout recomputed live from STATE.json via <code>tri-loopstate check</code> (was 8/1 stale,
+    briefly 6/5, now 10/5 after 4 new backlog rows landed this iteration — see the closing
+    section below; the tool caught its own drift the moment those rows were added).
+  </p>
 
   <section>
     <h2>Published</h2>
@@ -1969,14 +1974,42 @@ grep -v 'ENABLE_BUFFER.HCLK_CK_BUFRCLK' ax.fasm &gt; ax_ctrl.fasm    # the contr
   </section>
 
   <section>
-    <h2>Why the BUFR loop stopped</h2>
+    <h2>Why the BUFR loop stopped <span style="font-weight:400;font-size:.85em;opacity:.7">— historical, loop 1 only, resolved 2026-09-02</span></h2>
     <p class="note">
-      Every remaining thread belongs to someone else: the specimen campaign is cavearr's, the choice
-      between #170 and a fork's one-liner is Hans's, the 23-design regression runs on their machine.
+      <b>Superseded.</b> This section describes why <i>loop 1</i> was cancelled on 2026-09-01 after
+      10 iterations found nothing actionable without a human. It does not describe the current state:
+      loop 2 restarted 2026-09-02 and has run continuously since (see the masthead above — iteration
+      76+, status RUNNING). Kept verbatim below for the record, not as a live status.
+    </p>
+    <p class="note">
+      Every remaining thread belonged to someone else: the specimen campaign is cavearr's, the choice
+      between #170 and a fork's one-liner was Hans's, the 23-design regression ran on their machine.
       Polling every fifteen minutes for inputs that arrive over days is not vigilance —
-      and seven comments went into their threads today against one reply, so an eighth before an answer
-      would be pressure rather than work.
-      <b>Resumes</b> when the specimen design is posted, or a maintainer replies anywhere.
+      and seven comments went into their threads that day against one reply, so an eighth before an answer
+      would have been pressure rather than work.
+      It resumed once the specimen design was posted and a maintainer replied — both happened by 2026-09-02.
+    </p>
+  </section>
+
+  <section>
+    <h2>2026-09-04 — an external audit found the loop's own bookkeeping was the weak point</h2>
+    <p class="note">
+      A structured weak-points audit (4-agent research workflow) was run against this exact loop and
+      found the compiler/hardware work solid but the loop's own memory fragile: <code>.trinity/loop/</code>
+      and <code>src/tri/tri_loopstate.zig</code> were untracked in git in this worktree — the same class
+      of worktree that sibling sessions have already had pruned — and this readout block above was stale
+      and self-contradictory (claimed 8 backlog-open/1 anomaly against a live 6/5, and this very section
+      you're reading was still asserting the loop had stopped, three days and 70 iterations after it
+      resumed). Both are fixed as of this iteration: the four files are committed
+      (<code>932cf5c33</code>, plus <code>tri_loopstate.zig</code> below), and the readout above is
+      recomputed from live STATE.json rather than hand-typed.
+    </p>
+    <p class="note">
+      <code>tri_loopstate.zig</code> (260 lines, 7/7 tests green) now has a runnable entry point —
+      <code>tri_loopstate_main.zig</code>, built standalone with <code>zig build-exe</code> since the
+      whole-CLI build is still blocked on the unrelated Zig-0.16 Io-threading migration — exposing
+      <code>status</code> and <code>check</code> subcommands so this drift is a command away from being
+      caught next time, not something an external audit has to find by hand.
     </p>
   </section>
 

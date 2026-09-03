@@ -11,7 +11,8 @@
       "t27 emitter repair",
       "openXC7 BUFR — waiting on cavearr's specimen design"
     ],
-    "cron_note": "A second /loop invocation at 15m was declined rather than scheduled: 947e19e4 already runs this loop at */15. A duplicate would put two agents on the same compiler concurrently, breaking the loop's own one-patch-at-a-time rule."
+    "cron_note": "A second /loop invocation at 15m was declined rather than scheduled: 947e19e4 already runs this loop at */15. A duplicate would put two agents on the same compiler concurrently, breaking the loop's own one-patch-at-a-time rule.",
+    "continuity_protocol": "MANDATORY before doing anything else on a fresh firing: (1) do NOT re-run the Research/Decompose Workflow again -- it already ran once (wf_e3e8ce0c-8bc, 2026-09-04) and its full findings are recorded in done[D53..D57], anomalies[A1 update], and backlog[B17..B20] below; re-running it on an unchanged repo state is bookkeeping, not progress. (2) Run `zig build-exe src/tri/tri_loopstate_main.zig -femit-bin=/tmp/tri-loopstate && /tmp/tri-loopstate status` (rebuild if the source changed) to get the next actionable backlog item mechanically instead of re-deriving it by reading this whole file. (3) Run `/tmp/tri-loopstate check` before writing anything to JOURNAL.md or dashboard.html -- if it reports DRIFT, fix the dashboard's readout numbers before adding new narrative. (4) Never redo anything in done[] or completed backlog rows -- isDone()/nextItem() exist for exactly this and are now reachable via the binary above, not just as library calls."
   },
   "invariants": [
     "Never force-push. Never rewrite published history.",
@@ -287,6 +288,32 @@
       "the_census_came_first_and_killed_the_obvious_patch": "The tempting fix was brace-list imports -- the parser deliberately DISCARDS the `{PHI, PHI_INV}` list, a real defect whose own comment claims 34 lines in 13 specs. Intersected those names with the 173 undeclared ones BEFORE writing anything: the intersection is 1, and it is std's HashMap. It would have been K4/L/U/X/AA a sixth time. Never written.",
       "undo": "cp /tmp/compiler.rs.beforeIMPORT /Users/playom/t27/bootstrap/src/compiler.rs",
       "operator_decision_taken": "The `use`-scope question was delegated to me this iteration and I took `unqualified`. It cost nothing to take, because the census shows almost nothing depends on it -- see REFUTED_the_200_claim."
+    },
+    {
+      "id": "D53",
+      "what": "Ran a 4-agent Workflow (weak-points audit + competitor/landscape research + loop-infra audit + decomposed-backlog synthesis, run wf_e3e8ce0c-8bc) against this exact loop, per the operator's overnight /loop mandate. The audit's top two findings (loop state untracked in git; compiler.rs uncommitted for 3+ days) were independently already fixed earlier this same iteration (commits 932cf5c33, 52e5d347a) before the audit result was even read -- cross-checked, both genuinely resolved, not just claimed.",
+      "cooperation_options_for_operator": "Supervised checkpoints (safest, throughput drops to operator availability) / Autonomous with tripwires (keeps ~today's throughput, commits every iteration, halts only at named tripwires: disk threshold, loopstate-check drift, needs_operator_decision items) / Narrow-scope full autonomy + weekly digest (fastest, but time-sensitive items like a stale PR wait up to a week). Recommended: Autonomous with tripwires -- closest to what this session already does, formalizes it."
+    },
+    {
+      "id": "D54",
+      "what": "Gave src/tri/tri_loopstate.zig a runnable standalone entry point (src/tri/tri_loopstate_main.zig, built directly with `zig build-exe`, sidestepping the whole-CLI build block per A1/B10) with two subcommands: `status` (wraps the already-tested renderStatus) and `check` (new: liveCounts()+extractReadoutNumber()+checkDrift(), 6 new unit tests, 13/13 total green). Ran `check` against the real STATE.json + dashboard.html and it correctly flagged the exact drift the audit found by hand (dashboard claimed 8 backlog-open/1 anomaly; live state says 6/5) before the dashboard fix below, and reports 'checked, consistent' after it.",
+      "verified": "zig test src/tri/tri_loopstate.zig -> 13/13 pass; zig build-exe src/tri/tri_loopstate_main.zig -femit-bin=/tmp/tri-loopstate succeeds; ./tri-loopstate status and ./tri-loopstate check both run correctly against the live files."
+    },
+    {
+      "id": "D55",
+      "what": "Fixed dashboard.html's stale readout (backlog-open 8->6, anomalies 1->5, now labeled 'anomalies open' for clarity) and its self-contradictory 'Why the BUFR loop stopped' section, which was still live-worded three days and 70 iterations after loop 2 resumed. Relabeled that section as historical (loop 1, resolved 2026-09-02) rather than deleting it, and appended a new section describing this audit and its fixes. Masthead timestamp corrected from the stale '2026-09-01 20:55' to reflect the actual update.",
+      "why_not_deleted": "Append-only narrative convention for this file (per its own footer and prior iterations) -- superseded content is labeled, not erased."
+    },
+    {
+      "id": "D56",
+      "what": "Cleaned t27 repo hygiene: .gitignore had literal, COMMITTED merge-conflict markers (<<<<<<< / ======= / >>>>>>>) at HEAD -- git never parses these, so each line was silently treated as one more ignore pathspec and nothing ever went red. Resolved (both non-overlapping sides kept), plus removed six zero-byte/rebuildable debris files at repo root (byte:, contains, invalid, literal, string, '.zig, libcompiler.rlib, t27c-built) from a prior broken shell command, and added *.aux/*.glob/*.rlib/t27c-built to .gitignore.",
+      "commit": "c7d902024, Closes t27#3039",
+      "left_alone_on_purpose": "22 other modified tracked files in t27 (hooks.rs, main.rs, fpga.rs, lexer.t27, README.md, etc.) are substantive, unreviewed changes from other agents/sessions -- per this project's own 'never git add -A in this shared tree' rule and the audit's needs_operator_decision flag, these were NOT bundled or committed."
+    },
+    {
+      "id": "D57",
+      "what": "Folded the copy_propagate silent-infinite-loop bug (D-item from #3038) into a durable reference doc, docs/COMPILER_BUGS.md in t27 -- states the defect shape generically (a mutated loop variable can be folded with its initializer by copy-prop), the fix, the six-pass sweep verification method, and a generalization note (grep extra_op for other text-encoded mutations) for the next author, independent of this session's specific line numbers.",
+      "commit": "14ad17608, Closes t27#3041"
     }
   ],
   "backlog": [
@@ -424,6 +451,37 @@
       ],
       "status": "diagnosed, not actionable by me",
       "note": "Deleting the iOS 18.4 runtime is the single large reclaim (~15-20 GB) and it is a development-environment call, not a cleanup. Cheaper partial: CoreSimulator/Caches is 6.6 GB and regenerable. Everything I could have trimmed unilaterally in t27/build is either the live prjxray-db (831 MB), the expensive chipdb (407 MB), or a duplicate whose non-use I could not prove — px-main provides a second copy of fasm2frames.py and nothing proved which one the flow calls."
+    },
+    {
+      "id": "B17",
+      "prio": 11,
+      "what": "Give measure.py a regression test suite (3-5 hand-verified fixture .zig files with known expected counts) -- it has been wrong in the same direction at least nine times, every one caught by manually opening a generated file, never by a test on the script itself",
+      "blocked_by": [],
+      "status": "pending"
+    },
+    {
+      "id": "B18",
+      "prio": 12,
+      "what": "Review and split t27's 53 currently-dirty tracked paths (hooks.rs, main.rs, fpga.rs, lexer.t27, README.md, Cargo.lock, etc.) into separate reviewed commits -- needs a human or an agent that has actually read each diff, not a bundle commit",
+      "blocked_by": [],
+      "status": "pending",
+      "needs_operator_decision": true
+    },
+    {
+      "id": "B19",
+      "prio": 13,
+      "what": "Escalate PR #877 (open since 2026-08-31, re-flagged at iterations 6 and 47 with no action beyond observation) with one direct nudge instead of re-observing it a further time",
+      "blocked_by": [],
+      "status": "pending",
+      "needs_operator_decision": true,
+      "note": "Posting a GitHub PR comment on the operator's behalf is a publish-to-a-third-party action; left for explicit operator go-ahead rather than sent autonomously this iteration."
+    },
+    {
+      "id": "B20",
+      "prio": 20,
+      "what": "Extend GitHub polling past issue comments to PR state/reviews/status checks (gh pr view --json state,comments,reviewDecision,statusCheckRollup) -- A16 showed a PR merge was missed for 19 hours because only issue comments were watched",
+      "blocked_by": [],
+      "status": "pending"
     }
   ],
   "anomalies": [
@@ -439,7 +497,8 @@
       "caution": "151 files is the grep count, not the compile count — a file may use the call inside dead code or behind comptime. Size it by compiling, not by grepping. See memory pattern-defines-its-own-scope.",
       "method_correction": "`zig test` on a file with NO test blocks analyses nothing -- main() is never compiled, so it reports success on code that cannot build. My first baseline was vacuous because of this. Use `zig build-exe <f> -femit-bin=/dev/null`. And each error masks the next: cell_trends.zig showed one trivial var/const error, and only after fixing it did the real argsAlloc breakage appear -- the fs.cwd() call on line 39 is still masked behind that.",
       "real_shape": "NOT a rename job. Zig 0.16 introduced explicit Io passing: `Args` arrives as a parameter of main (`pub fn main(init: std.process.Minimal) !void`), and I/O entry points take an `Io` value (e.g. `std.process.currentPath(io, buffer)`). So every main() changes signature and `io` must be threaded to anything doing file or process I/O. File-by-file mechanical migration is not possible; this is an architectural decision about how the CLI carries Io.",
-      "revised_estimate": "Structural. The '751 call sites' figure describes touch points, not effort, and understates the coupling."
+      "revised_estimate": "Structural. The '751 call sites' figure describes touch points, not effort, and understates the coupling.",
+      "resolved_pattern_2026-09-04": "PROVEN WORKING (first confirmed instance in this repo, verified by compiling and running, not just reading docs): `pub fn main(init: std.process.Init) !u8 { const argv = try init.minimal.args.toSlice(init.arena.allocator()); const bytes = try std.Io.Dir.cwd().readFileAlloc(init.io, path, init.gpa, .limited(n)); ... }`. init.io is a ready-to-use Io (std.Io.Threaded set up by start.zig automatically -- no manual Threaded.init/deinit needed). Used successfully in src/tri/tri_loopstate_main.zig (compiles, runs, reads real files). This resolves the PATTERN uncertainty for new standalone tools, not the scope: main.zig itself (1767 lines, old argsAlloc-based) and its ~650 siblings are unmigrated and this does not attempt that. B10's 'survey + size' work is still open."
     },
     {
       "id": "A2",
@@ -1251,5 +1310,37 @@
       "what": "Statement-position switch with block arms. Verified on the artifact -- server/vm.zig went 95 -> 407 lines -- never on the corpus, because of item 1.",
       "undo": "cp /tmp/compiler.rs.beforeV /Users/playom/t27/bootstrap/src/compiler.rs"
     }
-  }
+  },
+  "awaiting_operator_decision": [
+    {
+      "id": "OD1",
+      "question": "gf16: is the wire format a u16 bit-pattern or an f16 value? Rust and Zig targets currently disagree.",
+      "first_flagged": "2026-08-2x (exact date lost to history; carried forward across iterations)",
+      "impact": "blocks a clean compiler-fixable resolution for this class"
+    },
+    {
+      "id": "OD2",
+      "question": "Should the compiler gain `type X = Y;` alias support? 12 errors, zero parser support today ('there is no KwType token') -- a language-feature decision, not a bug.",
+      "first_flagged": "carried forward from t27 track diagnosis",
+      "impact": "12 undeclared-identifier errors stay open until decided either way"
+    },
+    {
+      "id": "OD3",
+      "question": "Escalate PR #877 (stale since 2026-08-31) -- comment on the operator's behalf, or wait for the operator to do it themselves?",
+      "first_flagged": "2026-09-04 (audit; originally observed iteration 6, 2026-09-01)",
+      "impact": "PR sits open and unrebased; see B19"
+    },
+    {
+      "id": "OD4",
+      "question": "t27's 53 dirty tracked paths outside compiler.rs (hooks.rs, main.rs, fpga.rs, lexer.t27, README.md, etc.) -- whose work is this, and how should it be split into commits?",
+      "first_flagged": "2026-09-04 (audit)",
+      "impact": "risk of silent divergence or clobbering across the repo's multiple live worktrees; see B18"
+    },
+    {
+      "id": "OD5",
+      "question": "Accept the current build-time guard as the interim mitigation for the disk-exhaustion root cause (identified as CoreSimulator, D51), or pursue further? Six attempts at a fix from inside the sandbox have failed; this likely needs system-level access the loop's tools don't have.",
+      "first_flagged": "2026-09-01 (A18), diagnosed 2026-09-0x (D51)",
+      "impact": "standing single point of failure that already caused one full harness outage"
+    }
+  ]
 }

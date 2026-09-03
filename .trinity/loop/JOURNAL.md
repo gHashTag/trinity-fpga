@@ -3701,3 +3701,102 @@ today's understanding, is fixed; everything left is either a spec-content
 decision the operator needs to make, or genuine future implementation work
 (OS/network builtins, Rust closures, Rust tagged-enum payloads) correctly
 scoped and left undisturbed.
+
+---
+
+## loop 2 · iteration 76+ — the operator went to sleep; a workflow audited the loop itself
+
+The operator's overnight instruction (verbatim, translated): research this
+task's weak points, research competitors, decompose a plan, implement it,
+report back with three cooperation options, keep it running unattended,
+never let a new cron firing undo past work, add `tri` CLI commands, keep a
+Claude-Code-styled dashboard current, self-critique, self-heal. Scheduled the
+15-minute cron (`947e19e4` continues; no duplicate registered — see
+`loop.cron_note`) and ran a 4-agent Workflow (`wf_e3e8ce0c-8bc`): a
+weak-points audit, competitor/landscape research, a loop-infrastructure
+audit, and a synthesis producing a prioritized backlog and three cooperation
+options.
+
+**The audit's own top finding was already half-fixed by the time it landed.**
+Before reading the result, this iteration had independently committed
+`.trinity/loop/{STATE.json,JOURNAL.md,dashboard.html}` (`932cf5c33`) and
+`compiler.rs`'s ~40 pending patches in t27 (`52e5d347a`, `Closes #3038`,
+after clearing both the NOW.md-freshness and L1-TRACEABILITY pre-commit
+gates for real, not bypassed). The audit still caught something real that
+survived: `src/tri/tri_loopstate.zig` — the one tested CLI module this loop
+produced — was NOT actually included in that first commit, still sitting as
+`??` in `git status`. Cross-checking an audit's claims against fresh
+`git status` output, not trusting either the audit or the earlier commit
+message at face value, is what caught it.
+
+**Second real finding, fixed this iteration: the dashboard was lying to
+itself.** Its one persistent numeric readout claimed "8 backlog open / 1
+anomaly" while live STATE.json said 6 and 5 — and a whole section titled
+"Why the BUFR loop stopped," written for loop 1's 2026-09-01 cancellation,
+sat unlabeled three days and 70 iterations after loop 2 resumed, right next
+to current iteration-76 content. Both fixed: the stale section is now
+explicitly marked historical/superseded rather than deleted (this file's own
+append-only convention), and the readout is now driven by a real tool
+instead of hand-typed.
+
+**That tool is new: `tri_loopstate_main.zig`.** `tri_loopstate.zig` already
+existed (260 lines, 7/7 tests) but had zero call sites and no way to run —
+the whole-CLI build is blocked on the Zig-0.16 Io-threading migration (A1).
+Rather than wait on that, gave it its own standalone `pub fn main`, built
+directly with `zig build-exe` (no root `build.zig` needed), exposing `status`
+and `check` subcommands (`liveCounts`/`extractReadoutNumber`/`checkDrift`,
+6 new tests, 13/13 green). This required actually solving A1's open question
+for one file: Zig 0.16's real signature is
+`pub fn main(init: std.process.Init) !u8`, argv comes from
+`init.minimal.args.toSlice(init.arena.allocator())`, and file I/O threads
+`init.io` explicitly (`std.Io.Dir.cwd().readFileAlloc(init.io, path, init.gpa,
+.limited(n))`) — confirmed by compiling and running it against the real
+files, not by reading a comment. `check` immediately proved its worth twice
+in one sitting: it caught the dashboard's stale 8/1 before the fix, and then
+caught its OWN new drift (6→10) the moment this iteration's four new backlog
+rows were added — self-checking, not just self-reporting.
+
+**Third: t27 had a real, invisible defect, not just untidy debris.**
+`.gitignore` contained literal, committed merge-conflict markers
+(`<<<<<<<`/`=======`/`>>>>>>>`) — git never parses these, so every marker
+line was silently read as one more ignore pathspec and nothing ever went
+red. Resolved (both non-overlapping sides kept), six zero-byte/rebuildable
+debris files removed, `*.aux`/`*.glob`/`*.rlib` gitignored (`c7d902024`,
+`Closes t27#3039`). Also folded the copy_propagate bug from #3038 into a
+durable `docs/COMPILER_BUGS.md` (`14ad17608`, `Closes t27#3041`), since
+`docs/NOW.md` prose doesn't survive as a reference the way a named doc does.
+
+**Deliberately NOT done this iteration, and why:** t27's other 53 dirty
+tracked paths (real, substantive, unreviewed changes from other
+agents/sessions — hooks.rs, main.rs, fpga.rs, lexer.t27, README.md, etc.)
+were left untouched; bundling them into one commit without reading each diff
+risks shipping incomplete work under an inaccurate message. PR #877 was not
+commented on — posting to GitHub on the operator's behalf is a publish
+action, left for an explicit go-ahead rather than sent autonomously. Both
+are now tracked explicitly in `STATE.json.awaiting_operator_decision`
+alongside the gf16 u16/f16 and `type`-alias language questions, each with a
+first-flagged date so they age visibly instead of silently.
+
+**Continuity, mechanically, not just as a habit:** `STATE.json.loop
+.continuity_protocol` now tells the next cron firing exactly what NOT to
+redo (the Workflow research/decompose phase; anything in `done[]`) and what
+to run first (`tri-loopstate status`, then `check` before writing anything).
+This is the direct fix for "a new cron firing must not break past work" —
+previously that guarantee was entirely social (a human-shaped reader
+following `_read_me_first` by convention); `isDone`/`nextItem` existed but
+had zero callers until this iteration.
+
+**Competitor/landscape research (from the same Workflow, condensed):**
+ternary computing has real hardware precedent this project doesn't claim to
+match (GargantuRAM's taped-out CPU, REBEL-2's ASIC) but is well ahead of the
+closest same-tier project (OpenTrits, pre-simulator); the Zig VSA core has
+no direct language precedent (a Torchhd/PyTorch-dominated field); the
+openXC7 BUFR/BUFIO gap is independently corroborated by upstream's own
+supported-primitive list, not a niche complaint, and the spec-first
+.tri→multi-target compile model has no exact match (nearest analogues —
+Amaranth/Chisel/SpinalHDL/Clash — are decade-plus ecosystems with taped-out
+silicon, a different scale of proof, not a different idea).
+
+Cron continues at `947e19e4`, 15m. Next firing: read
+`loop.continuity_protocol`, run `tri-loopstate status`, continue the backlog
+(`B8` is next by priority) rather than repeat any of the above.
