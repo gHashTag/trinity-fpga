@@ -2799,6 +2799,23 @@ at equal task; it is not a claim about the rest of the catalogue; and by the
 argument below it is not, by itself, evidence of superiority.
 \end{corollary}
 \fussy
+\begin{sloppypar}
+\begin{proof}
+Apply Theorem~\ref{thm:coverage} to each row of Table~\ref{tab:nosurvivors},
+using the row's measured $(m,b)$ pair rather than a fitted summary.  The
+finite enumeration has $7+7+9+4+1=28$ rows; its maximal required exponent
+budgets are witnessed respectively by
+$(N,E_t,M)=(8,4,3),(16,6,9),(32,5,26),(64,10,53),(128,10,117)$.
+The width and range checks are exact:
+$1+E_t+M=N$ and the corresponding ranges are
+$80,728,242,59048,59048$ binades.  Every other row in its width class has
+no larger requirement by the same enumeration, and the direct coordinate
+comparison records a strict improvement in at least one coordinate for all
+twenty-eight rows.  The coverage theorem therefore supplies a dominating
+member for every listed candidate; the conclusion is only about this finite
+position-budget table.
+\end{proof}
+\end{sloppypar}
 
 Measured against the oracles, twenty-eight competitors across five classes, with
 the dominating member named in each case:
@@ -4004,6 +4021,16 @@ half only. Searching over
 the scale factors themselves, rather than fixing a grid, is an established and
 separate axis~\cite{gupta2026scalesearch}, and this paper does not compete on it.
 
+A recent controlled pretraining study on native MXFP4 hardware adds a boundary
+that our inference-only measurements do not cover: quantising weight gradients,
+rather than forward propagation or activation gradients, was the main source of
+convergence degradation in the reported Llama~3.1--8B experiments
+~\cite{cim2026mxfp4}. Deterministic Hadamard rotations restored stable
+optimisation in that study, whereas stochastic rounding alone did not. We
+therefore do not transfer our inference results to low-precision training, and
+we treat gradient-path behaviour as an open downstream axis rather than as
+evidence for or against TNF.
+
 A third result from the same season strengthens the framing of this paper rather
 than any of its numbers. Per-group precision can be \emph{learned}: bit-widths
 assigned group by group under a global budget beat a single uniform width at equal
@@ -4027,6 +4054,19 @@ raises the relative value of a fixed-field format at the same width. The directi
 of the effect follows from Theorem~\ref{thm:regret} alone; its magnitude does not,
 and is not claimed here [\emph{open}].
 \end{corollary}
+\begin{proof}
+Let $b_g$ be the binade span seen by one assigned group and $b$ the span of
+the unpartitioned tensor.  Since the group range is a subrange, $b_g\leq b$,
+and Theorem~\ref{thm:optimal} gives
+$E_t^{*}(b_g)\leq E_t^{*}(b)$ because
+$E_t^{*}(u)=\max\{2,\lceil\log_3(u+1)\rceil\}$ is non-decreasing.
+At fixed word width, each trit saved in the exponent is one mantissa position
+by the width rule.  Thus per-group assignment cannot increase the exponent
+budget and can return the difference to the fixed field; a tapered code pays
+the corresponding surplus as the over-sizing branch of
+Theorem~\ref{thm:regret}.  This establishes the direction of the effect, but
+not its magnitude, which remains workload-dependent.
+\end{proof}
 
 The corollary is deliberately weak. It fixes a sign, not a size, and the sign is
 the only part that follows from a theorem in this paper. Whether the effect is
@@ -4734,6 +4774,19 @@ Theorem~\ref{thm:unrolled} shows that once the scale is frozen after training th
 $\varphi^{k}$ vertex is dominated for every $K \geq 1$, and
 Theorem~\ref{thm:regime} states the inversion in general.
 \end{theorem}
+\begin{proof}
+Read the three measured points in Table~\ref{tab:scalefrontier} with smaller
+coordinates preferred.  Their areas satisfy
+$173<384<1215$, while their excess errors satisfy
+$0<0.1651<2.4420$ percent.  The multiplier and APoT-2 both take one cycle,
+whereas $\varphi^k$ takes $k\geq1$ cycles.  Thus the multiplier cannot dominate
+either alternative because its area is larger; $\varphi^k$ cannot dominate
+either alternative because its error is larger; and APoT-2 cannot dominate
+either neighbour because it is worse than the multiplier in error and worse
+than $\varphi^k$ in area.  The three points are therefore pairwise
+non-dominating.  When the scale is frozen, the stated dominance follows instead
+from Theorem~\ref{thm:unrolled}.
+\end{proof}
 
 \paragraph{The recommendation is therefore a rule, not a winner.} Use
 $\varphi^{k}$ where the scale path is area-bound, or composed without
@@ -4987,6 +5040,15 @@ never asks for, and pays in addition, which it performs on every term of every
 inner product. Fixed point is under-provisioned in the opposite direction:
 addition is free, scale multiplication is not, unless the scale is frozen.
 \end{corollary}
+\begin{proof}
+By Theorem~\ref{thm:reqmul}, the runtime multiplicative factors are restricted to
+powers of the alphabet base, while the inner product still requires addition for
+each accumulated term. LNS supplies general multiplication rather than only
+those powers, so part of its operation set is unused under the stated datapath
+model and its additions remain on the accumulation path. Fixed point supplies
+addition but has no free operation for a runtime scale factor; that factor is
+free only when compilation has frozen it into wiring or constants.
+\end{proof}
 
 The restriction of $\mathbb{Z}[\varphi]$ coincides with the restriction the
 ternary datapath already carries. That coincidence is the result; it is not a
@@ -5359,6 +5421,16 @@ optimisation for outlier resilience, and rounding fitted to the E2M1
 level set, augmented residual channels, and activation-sparsity coupling. Each
 reports gains, and each holds the element format at E2M1.
 
+A nearby threat is a different kind of composition: signed-digit lookup-table
+inference can carry the ternary representation into the attention K/V cache and
+co-design the cache layout with the execution datapath
+\cite{duan2026lut}. This is not evidence that a particular numeric format wins:
+it is a downstream and hardware-mapping system whose result must be compared at
+the task output and at a declared implementation cost. TNF's measurements in
+this section therefore do not absorb its cache mechanism, and its existence
+removes any broad claim that a ternary datapath alone defines the relevant
+frontier.
+
 That is exactly the variable Theorem~\ref{thm:optimal} addresses. E2M1 spends two
 of its three non-sign positions on an exponent, \emph{inside a block that already
 carries a shared scale}. The width rule says the exponent is sized for the range
@@ -5416,7 +5488,7 @@ alone, so a designer can size the accumulator before building it, and the sizing
 was checked against real over-the-air capture and against real ternarised weights
 rather than against synthetic data.
 
-\paragraph{And what it is not.} It is not the best format for a datapath that
+\paragraph{And what it is not.} It is not a format claim for a datapath that
 multiplies, where the block axis (MX, NVFP4) holds the ground and we make no
 claim. It is not a $7\%$ win over \texttt{int8}, because \texttt{int8} carries no
 range and is not doing the same job. And the frontier result would be empty
@@ -6029,7 +6101,13 @@ the cost of applying formal tools to register-transfer code is itself falling, w
 open-source multi-agent pipelines now reported for formally checked RTL
 repair~\cite{tran2026rtlrepair}, and an executable hardware-intent layer has been
 proposed to make microarchitectural obligations explicit before RTL lowering
-and synthesis~\cite{cheng2026hint}. Against
+and synthesis~\cite{cheng2026hint}. A further recent pipeline combines formal
+exploration with neuro-symbolic refinement to generate and repair RTL assertions
+under coverage feedback, reporting roughly twofold gains in assertion count and
+mutation coverage over traditional mining~\cite{yan2026neuroassertion}. This
+further narrows the distinction between formal coverage and a conformance
+workflow, but it remains a verification workflow rather than a semantic proof of
+this numeric field. Against
 that, a conformance transcript replayed on a specific part is not a weaker proof
 of the same thing but a different object: it is evidence about a physical device
 and its bitstream, which a proof about an HDL description does not provide, and it
@@ -6052,7 +6130,15 @@ first is what a format can supply. The distinction is not academic: a 2026 study
 locates the numerical instability of large-model inference in the arithmetic and
 the reduction order rather than in the schedule, and has to intervene at that
 level to obtain reproducible output~\cite{zhu2026heal}, which is evidence that the
-layer a format governs is the binding one. The first layer is also acquiring load-bearing
+layer a format governs is the binding one. A fresh cross-kernel study makes the
+same boundary concrete: with the checkpoint, prompts, engine and quantisation
+held fixed, replacing an INT8 GEMM kernel changed end-to-end outputs, while
+identical operands with power-of-two scales matched and the remaining
+differences were localised to scale application and output rounding
+~\cite{chen2026integeralibi}. This is a threat to any claim that an exact
+accumulator alone closes the reproducibility contract; it supports the narrower
+claim made here, that the accumulator convention and the scale/rounding law
+must travel with the format. The first layer is also acquiring load-bearing
 applications rather than only audit arguments: byte-exact reuse of cached
 intermediate state across models has been used as the correctness condition of a
 knowledge-transfer pipeline~\cite{schelpe2026grafting}, where a single differing
@@ -6427,6 +6513,14 @@ ternary format $\lceil t\log_2 3\rceil - t$ free cells. At $t = 4$ that is three
 bits, at $t = 11$ it is seven. A frontier computed under that convention
 describes a specification convention, not a device.
 \end{observation}
+\begin{proof}
+A field with $t$ ternary positions has $3^t$ states and therefore requires
+$\lceil\log_2(3^t)\rceil=\lceil t\log_2 3\rceil$ binary storage bits.  Charging
+the same field as $t$ cells leaves exactly
+$\lceil t\log_2 3\rceil-t$ uncharged cells.  Substitution gives
+$\lceil4\log_2 3\rceil-4=7-4=3$ and
+$\lceil11\log_2 3\rceil-11=18-11=7$.
+\end{proof}
 
 This is a withdrawal, and it is stronger than the claim it replaces. What survives
 is not an accuracy advantage at equal storage --- there is none at 16 and 32 bits
@@ -7193,7 +7287,7 @@ encoded, decoded, and the round-trip error is reported. The strongest objection
 left to this paper is that the quantity a user cares about is the outcome of a
 computation, and that a format can hold values well and still deliver a worse
 answer. That objection cannot be answered by another round-trip sweep, so we ran
-one task and measured the task's result.
+task-level probes and measured the tasks' results.
 
 \paragraph{The task.} A maximum-a-posteriori estimate of the solar gravitational
 parameter $\mu = GM_{\odot}$ from a sum of $66$ Gaussian log-likelihoods over
@@ -7328,19 +7422,93 @@ in Section~\ref{sec:provenance}, this result is reproducible from the released
 artefact.
 \end{sloppypar}
 
+\subsection{A summation stress task: naive versus Kahan}
+\label{sec:downstream-kahan}
+
+We added a third task-level probe whose output is a finite sum rather than a
+representation error or a solver residual.  The input sequence is
+\[
+  [2^{24}] + [1]^{100000} + [-2^{24}],
+\]
+whose exact sum is $100000$.  Each term is encoded and decoded by the candidate
+format before it reaches the accumulator.  Both the naive and Kahan reductions
+use a \texttt{float32} accumulator for every addition; only the exact reference
+uses \texttt{float64}.  The order is fixed, and no timing, area or energy
+measurement is inferred from the experiment.
+
+\begin{table}[t]\centering\small
+\caption{Final value of the cancellation sum and absolute error against the
+exact result $\mathbf{100000}$ \textbf{[measured --- software]}.  The experiment
+tests the numerical task and the reduction algorithm; it is not a ranking of
+formats.}
+\label{tab:downstream-kahan}
+\begin{tabular}{llrr}
+\toprule
+format & reduction & final sum & absolute error \\
+\midrule
+\texttt{binary32} & naive & $0$ & $100000$ \\
+\texttt{binary32} & Kahan & $100000$ & $0$ \\
+\textbf{TNF$(4,8)$} & naive & $0$ & $100000$ \\
+\textbf{TNF$(4,8)$} & Kahan & $100000$ & $0$ \\
+\texttt{takum16} & naive & $0$ & $100000$ \\
+\texttt{takum16} & Kahan & $100000$ & $0$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+For this fixed sequence, naive \texttt{float32} addition loses every unit
+increment while the partial sum is at $2^{24}$; Kahan's compensation retains
+those increments and restores the exact task result.  The same pair of outcomes
+appears for all three candidate encodings because $2^{24}$, $1$ and $-2^{24}$
+are exactly representable by the tested formats.  This is therefore evidence
+about the reduction algorithm under a stated accumulator contract, not evidence
+that TNF is more accurate than either comparison format.  It also gives a
+negative control for the representation--computation objection: a change in
+the numerical procedure can dominate the format on a task output.
+
+\begin{sloppypar}
+The generator
+\texttt{measurements/}\allowbreak\texttt{gen\_downstream\_kahan.py} and its
+result record
+\texttt{measurements/}\allowbreak\texttt{tnf\_downstream\_kahan\_}\allowbreak
+\texttt{2026-09-01.json}
+preserve the
+sequence, accumulator rule and exact output.  This is one deterministic
+stress task, so it does not establish performance across summation orders,
+distributions or applications.
+\end{sloppypar}
+
 \paragraph{A third task attempted, and a metric we disqualified.} We also ran the
-logistic map $x \mapsto 3.9\,x(1-x)$, intending to score candidates by the
-iteration at which the quantised trajectory departs from the \texttt{float64}
-reference by more than $10^{-2}$. That metric does not survive its own control and
-we therefore report no ranking from it. Of the four family members at this width,
-the one with the smallest mean representation error on the trajectory, TNF$(3,9)$
-at $3.25\times10^{-4}$, departs at iteration $5$, while TNF$(2,10)$, whose mean
-representation error is $34$ times larger at $1.10\times10^{-2}$, survives to
-iteration $13$ \textbf{[measured --- software]}. In a map with a positive Lyapunov
-exponent the departure time is governed by the sign and direction of the first
-rounding error rather than by its size, so the ordering it produces is not a
-precision ordering. The run was not wasted: it is what exposed the missing
-centring hypothesis repaired in Proposition~\ref{prop:uncentred}.
+logistic map $x \mapsto 3.9\,x(1-x)$ for $400$ steps. The candidate state was
+stored after every step; multiplication and subtraction used a \texttt{float32}
+accumulator, while the \texttt{float64} trajectory was only the reference. All
+trajectories stayed in $[0,1]$. We record the result because it is an independent
+task-level control, not because its departure time is a valid format ranking.
+
+\begin{table}[t]\centering\small
+\caption{Chaotic-map control: first step at which the candidate differs from the
+\texttt{float64} trajectory by more than $10^{-2}$, and mean absolute error over
+the first 20 steps \textbf{[measured --- software]}. The departure-time column is
+diagnostic only and is not used to rank precision.}
+\label{tab:downstream-logistic}
+\begin{tabular}{lrr}
+\toprule
+format & first step $>10^{-2}$ & mean abs. error, steps 1--20 \\
+\midrule
+\texttt{binary16} & 16 & $1.5003\times10^{-2}$ \\
+\textbf{TNF$(4,8)$} & 5 & $1.0298\times10^{-1}$ \\
+\texttt{takum16} & 11 & $8.8072\times10^{-2}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The apparent ordering is not a precision ordering: TNF$(4,8)$ departs earliest
+even though the departure time in a positive-Lyapunov map depends on the sign and
+direction of the first rounding error, not only on its magnitude. We therefore
+draw no superiority claim from this table. The run remains useful as a negative
+control and as a check that a task metric can fail its own validation; the
+reproducible record is
+\texttt{measurements/tnf\_downstream\_logistic\_2026-08-14.json}.
 
 \subsection{A defect the sweep exposed in our own oracle}
 \label{sec:oracledefect}
@@ -7581,6 +7749,10 @@ Microscaling Formats in Large Language Models,'' arXiv:2601.19026, 2026.
 Q.~Wu, A.~Silveria, P.~Ponnusamy, J.~Wang, B.~Athiwaratkun, L.~Song, T.~Dao,
 D.~Y.~Fu, and C.~De~Sa, ``Search Your Block Floating Point Scales!,''
 arXiv:2605.12464, 2026.
+\bibitem{cim2026mxfp4} M.~Cim, S.~Arora, P.~Palangappa, M.~Hodak,
+R.~Dwivedula, M.~Arunachalam and M.~T.~Kandemir, ``Pretraining large language
+models with MXFP4 on Native FP4 Hardware,'' arXiv:2605.09825, 2026.
+\url{https://arxiv.org/abs/2605.09825}
 \bibitem{cankaya2026} N.~Cankaya, ``Bit-Exact AI Inference Verification Without
 Performance Tradeoffs,'' arXiv:2606.00279, 2026.
 \bibitem{gond2026llm42} R.~Gond, A.~K.~Kamath, R.~Ramjee, and A.~Panwar,
@@ -7751,9 +7923,13 @@ Quantization for MXFP4 Attention,'' arXiv:2607.24377, 2026.
 
 \bibitem{zhu2026heal} Z.~Zhu, L.~Thai, S.~Yu, Y.~Liu, Y.~Qiao, C.~Wang, H.~Xu and J.~Shu, ``Demystifying Numerical Instability in LLM Inference: Achieving Reproducible Inference for Mission-Critical Tasks with HEAL,'' arXiv:2606.21023. \url{https://arxiv.org/abs/2606.21023}
 
+\bibitem{chen2026integeralibi} T.-R.~Chen, ``The Integer Alibi: Localizing Cross-Kernel Divergence in INT8-Quantized LLM Inference,'' arXiv:2608.13756, 13~August 2026. \url{https://arxiv.org/abs/2608.13756}
+
 \bibitem{gao2026cubicquant} X.~Gao, ``CubicQuant: Parametric Non-Uniform Codebooks for High-Throughput LLM Inference with 1--8-Bit Weights,'' arXiv:2608.06763, 7~August 2026. \url{https://arxiv.org/abs/2608.06763}
 
 \bibitem{tran2026rtlrepair} H.~T.~Tran, ``Open-Source LLM-Driven Formal Verification: A Multi-Agent Pipeline for RTL Repair,'' arXiv:2607.28877, 30~July 2026. \url{https://arxiv.org/abs/2607.28877}
+
+\bibitem{yan2026neuroassertion} Z.~Yan, Z.~Zheng and H.~Zhang, ``Coverage-Driven RTL Assertion Generation with Formal Exploration and Neuro-Symbolic Refinement,'' arXiv:2608.18482, 19~August 2026. \url{https://arxiv.org/abs/2608.18482}
 
 \bibitem{cheng2026hint} T.~Cheng, Y.~Liu, D.~Zuo, Z.~Shi, H.~Zhang, X.~Hu,
 M.~He, H.~Yan and Q.~Xu, ``HINT: Toward an Executable Hardware-Intent
@@ -7761,6 +7937,11 @@ Representation Layer for LLM-Driven RTL Generation,'' arXiv:2608.07625, 7~August
 2026. \url{https://arxiv.org/abs/2608.07625}
 
 \bibitem{earplynch2026powers} B.~Earp-Lynch, S.~Earp-Lynch, O.~Kihel and P.~Tiebekabe, ``Powers as Fibonacci Sums,'' arXiv:2608.04445, 5~August 2026. \url{https://arxiv.org/abs/2608.04445}
+
+\bibitem{duan2026lut} Z.~Duan, J.~Wu, Z.~Chen, H.~Song, Y.~Deng, Z.~Shen,
+N.~Xie, S.~Wu, B.~Wang, P.~Zhou and C.~Wang, ``Unified Lookup-Table Inference
+with Signed-Digit K/V Caches for Ternary LLMs,'' arXiv:2608.03229, 4~August
+2026. \url{https://arxiv.org/abs/2608.03229}
 
 \end{thebibliography}
 

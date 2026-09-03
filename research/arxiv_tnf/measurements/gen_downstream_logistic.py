@@ -14,9 +14,14 @@ x_{n+1} = r x_n (1 - x_n) при r = 3.9 (хаотический режим). С
 """
 import json, math, os, sys
 from fractions import Fraction
+from pathlib import Path
 import numpy as np
 
-sys.path.insert(0, '/tmp/tfpga/conformance')
+# Resolve imports from the checkout rather than from a fixed temporary clone.
+# This keeps the command in the paper reproducible after the working directory
+# or the checkout path changes.
+REPO_ROOT = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(REPO_ROOT / 'conformance'))
 import tnf_ref as TNF
 import takum_ref as TAK
 
@@ -92,8 +97,8 @@ def main():
         'note': 'все значения в [0,1]; проба изолирует точность от запаса диапазона',
         'results': res,
     }
-    dst = '/home/user/workspace/wave_audit/tnf_downstream_logistic_2026-08-14.json'
-    json.dump(out, open(dst, 'w'), ensure_ascii=False, indent=2)
+    dst = Path(__file__).resolve().parent / 'tnf_downstream_logistic_2026-08-14.json'
+    dst.write_text(json.dumps(out, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
     print(json.dumps(out, ensure_ascii=False, indent=2))
     print('saved', dst)
 

@@ -1,0 +1,27 @@
+{
+  "task": "Устойчивость логистического отображения x_{n+1}=r x_n (1-x_n), r=3.9, x0=0.4",
+  "seed": 20260814,
+  "r": 3.9,
+  "x0": 0.4,
+  "steps": 400,
+  "divergence_threshold": 0.01,
+  "accumulator": "float32 for all candidates; float64 only for reference",
+  "note": "все значения в [0,1]; проба изолирует точность от запаса диапазона",
+  "results": {
+    "binary16": {
+      "steps_before_divergence": 16,
+      "mean_abs_error_first_20_steps": 0.015003119531296048,
+      "divergence_threshold": 0.01
+    },
+    "TNF(4,8)": {
+      "steps_before_divergence": 5,
+      "mean_abs_error_first_20_steps": 0.10298053961143669,
+      "divergence_threshold": 0.01
+    },
+    "takum16": {
+      "steps_before_divergence": 11,
+      "mean_abs_error_first_20_steps": 0.08807153418439694,
+      "divergence_threshold": 0.01
+    }
+  }
+}

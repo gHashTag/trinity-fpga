@@ -10,7 +10,7 @@
     ]
   ],
   "accumulator": "float32 for binary16/TNF16/takum16; float64 only for reference",
-  "artefact_sha256_of_canonical_payload": "fbfa9e4ee97f634b45a053171a4ffb7c94236327bd66ed6143a74070ff0ff294",
+  "artefact_sha256_of_canonical_payload": "36702904d162423f1fe1e71ae69e60260026b73db41cf8d749ecd355294772ed",
   "b_SI": [
     1560.4648237759998,
     0.06120244999999999
@@ -20,7 +20,7 @@
     "command": "python3 research/arxiv_tnf/measurements/gen_downstream_linear_cg.py",
     "cwd": "repository root (gHashTag/trinity-fpga)",
     "error_metric": "relative_solution_error = ||x_hat - x_true||_2 / ||x_true||_2, recomputed in float64",
-    "git_head": "ae868cfeeb729bcbb81e4b2f569cbe45ce417402",
+    "git_head": "5a8f024f8784101aebc4f307f84ed0d282203b8c",
     "numpy": "2.5.2",
     "oracle_sha256": {
       "conformance/takum_ref.py": "231586b5d69406b937d960a2044236908fc71d254941ed11bcd1be0c4b6804fd",

@@ -1,0 +1,52 @@
+{
+  "task": "Суммирование [2^24] + [1] * 100000 + [-2^24]",
+  "terms": 100002,
+  "expected_sum": 100000.0,
+  "accumulator": "float32 for every candidate and every addition",
+  "input_rounding": "each term encoded and decoded by the candidate format before accumulation",
+  "algorithms": [
+    "naive",
+    "kahan"
+  ],
+  "results": {
+    "binary32/naive": {
+      "format": "binary32",
+      "algorithm": "naive",
+      "final_sum": 0.0,
+      "absolute_error": 100000.0
+    },
+    "binary32/kahan": {
+      "format": "binary32",
+      "algorithm": "kahan",
+      "final_sum": 100000.0,
+      "absolute_error": 0.0
+    },
+    "TNF(4,8)/naive": {
+      "format": "TNF(4,8)",
+      "algorithm": "naive",
+      "final_sum": 0.0,
+      "absolute_error": 100000.0
+    },
+    "TNF(4,8)/kahan": {
+      "format": "TNF(4,8)",
+      "algorithm": "kahan",
+      "final_sum": 100000.0,
+      "absolute_error": 0.0
+    },
+    "takum16/naive": {
+      "format": "takum16",
+      "algorithm": "naive",
+      "final_sum": 0.0,
+      "absolute_error": 100000.0
+    },
+    "takum16/kahan": {
+      "format": "takum16",
+      "algorithm": "kahan",
+      "final_sum": 100000.0,
+      "absolute_error": 0.0
+    }
+  },
+  "status": "[измерено]",
+  "limitations": "стресс-тест отмены; не рейтинг форматов и не измерение скорости, площади или энергии",
+  "canonical_payload_sha256": "8c03f04392259dc662d72cc225faedb43031b982e97711237d41979f73b0c339"
+}
