@@ -342,6 +342,12 @@
     {
       "id": "D58-bugfix",
       "what": "Found and fixed a real bug while verifying D58 end-to-end (not caught by 24 passing unit tests, only by running against the live file): extractReadoutNumber/rewriteReadoutNumber did a WHOLE-DOCUMENT search for a label, so once a halt banner (sitting above the readout block) echoed a label's exact words in its own diagnostic text (e.g. \"MISSING backlog open: ...\"), the search matched that plain-text occurrence instead of the real <div class=\"l\">backlog open</div> cell -- a self-inflicted, compounding false MISSING report. Fixed by scoping both functions to start the search no earlier than the <div class=\"readout\"> anchor. Added a regression test reproducing the exact failure (a banner-shaped string containing the label words placed before test_readout) so this cannot silently regress."
+    },
+    {
+      "id": "D60",
+      "what": "Joint disk investigation with the operator (they ran commands directly on the halt notification, live). Ruled out two theories with real evidence: lsof +L1 shows no large deleted-but-open file descriptors (just ~250MB of small, duplicated LaunchServices .csstore handles -- not the cause); tmutil listlocalsnapshots returned empty, no APFS local snapshots holding blocks. Found a NEW, previously-unidentified consumer distinct from CoreSimulator: this session's OWN scratchpad directory had silently accumulated 3.1 GB of old FPGA probe/build artifacts (subdirs probe/pb/boot/cur/bs/bs2/tgt/base/sim/sim3) across however many iterations of this long session -- the operator cleared it. Also found CoreSimulator/Caches (6.6G) is NOT freely rm-able: the bulk is dyld shared-cache files that return \"Operation not permitted\" even for the file owner via plain rm -rf, a genuine dead end for that specific removal path.",
+      "measured_result": "Freeing the 3.1GB scratchpad had ZERO visible effect on df (still 1.28-1.30 GiB free, flat) -- CoreSimulator's three subdirectories (Caches 6.6G, Cryptex 8.2G, Volumes 35G) were independently re-measured afterward and are BYTE-IDENTICAL to the very first reading this session. This means the crisis is not an active real-time leak during this observation window -- the disk is simply near-legitimately-full (CoreSimulator ~49.8G + operator's own sudo du showing /System ~199G), and 3.1GB is just too small relative to needing ~4GB more to clear the halt threshold.",
+      "recommendation_given": "Handed the operator the correctly-sanctioned removal path instead of another rm attempt: `xcrun simctl runtime delete <identifier>` for either com.apple.CoreSimulator.SimRuntime.iOS-18-4 (22E238, ~18.4G) or -iOS-26-5 (23F77, ~26.5G) -- Apple's own API-level removal, which should not hit the same permission wall raw rm did. Left the choice of WHICH runtime to the operator, not decided by the loop, since their iOS testing needs are not something this loop can know."
     }
   ],
   "backlog": [
@@ -715,6 +721,14 @@
       "status": "fixed",
       "fix": "Scoped extractReadoutNumber/rewriteReadoutNumber to search only from the <div class=\"readout\"> anchor onward (src/tri/tri_loopstate.zig, findReadoutDigits helper); added a regression test reproducing the exact shape.",
       "lesson": "A unit-test suite built from synthetic fixtures (no banner text in front of the readout) cannot catch a bug that only exists when two of the tool's own outputs (banner text, readout parsing) interact on the real file. Running the new tool against the real, live artifact end-to-end -- including deliberately forcing the halt path, not just the clean path -- was what caught this, matching this session's standing rule to verify against the artifact, not the reasoning."
+    },
+    {
+      "id": "A23",
+      "found": "2026-09-04, during the live disk-halt investigation with the operator",
+      "what": "This session's own scratchpad directory (/private/tmp/claude-501/.../scratchpad) had silently grown to 3.1 GB of old FPGA probe/build artifacts, never cleaned across the session's many iterations -- a self-inflicted disk consumer distinct from and additional to the long-documented CoreSimulator issue.",
+      "impact": "Small relative to the current crisis (3.1G vs a ~4G shortfall) but establishes a real pattern: long-running sessions that write scratch build/probe artifacts (FPGA bitstreams, boot images) accumulate real disk usage that nothing currently cleans up, and it went completely unnoticed until a live df/du investigation, not caught by any of this loop's own tripwires (the disk tripwire only measures the SYMPTOM, free space, not this specific cause).",
+      "status": "partially addressed (operator manually cleared it this time)",
+      "lesson": "A future iteration doing FPGA probe/build work in scratch space should clean up its own large artifacts when done with them, not leave them for an eventual crisis to surface. Not automated yet -- recorded as a lesson, not yet a coded guard."
     }
   ],
   "collaboration_options": [

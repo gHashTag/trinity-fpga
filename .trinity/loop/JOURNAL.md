@@ -3940,3 +3940,21 @@ sent at onset — no-spam intent — but set an explicit `notify_threshold_gib`
 (1.0 GiB) in `loop.halt` so the next drop that actually matters re-notifies
 without needing a fresh judgment call each cycle, and recorded the rule
 that the threshold only ever tightens, never loosens.
+
+**Iteration 80 — the operator investigated live, and it advanced the real
+disk question (D60/A23), not just the halt bookkeeping.** They ran `lsof
++L1` (no large deleted-but-open descriptors — rules that theory out for
+this crisis) and `tmutil listlocalsnapshots` (empty). Then found something
+this loop's own tripwire could never have caught: this SESSION'S OWN
+scratchpad had quietly grown to 3.1 GB of old FPGA probe/build artifacts,
+cleared it — and `df` did not move at all afterward. Re-measuring
+CoreSimulator's three subdirectories confirmed they are byte-identical to
+the very first reading this session (Caches 6.6G, Cryptex 8.2G, Volumes
+35G) — this is not an active leak during this window, the disk is simply
+near-legitimately-full. A raw `rm -rf` on `Caches/*` mostly failed with
+"Operation not permitted" on the `dyld` shared-cache files — a genuine dead
+end, not a permissions fluke to retry. Handed the operator the correct tool
+instead: `xcrun simctl runtime delete <identifier>`, Apple's own API-level
+runtime removal, which should sidestep the permission wall raw `rm` hit.
+Left the choice of which runtime (iOS 18.4 vs 26.5) to them — not this
+loop's call.
