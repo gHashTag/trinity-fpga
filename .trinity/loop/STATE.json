@@ -4,7 +4,7 @@
     "id": "two-track",
     "cron_job": "eaa1cb07",
     "interval": "15m",
-    "iteration": 101,
+    "iteration": 102,
     "status": "RUNNING",
     "owner": "Dmitrii Vasilev / @gHashTag",
     "tracks": [
@@ -439,6 +439,11 @@
     {
       "id": "D78",
       "what": "Also fixed sacred_commands.zig, a 2-line pass-through wrapper (exported for main.zig, currently called by nothing since main.zig does not yet reference it and no build.zig anywhere defines the sacred_bench/sacred_synth_report module names it @imports) -- both its calls were already stale against the real functions' current signatures (one after today's sacred_bench.zig work, one from an earlier session's sacred_synth_report.zig migration), and neither call used `try` despite the callee returning !void, which is itself a compile error. Fixed both signatures and added `try`. Could not verify by compiling since the file is structurally unbuildable standalone (no module map resolves its @import targets) -- this is pre-existing and unrelated to today's change; noted here rather than silently left inconsistent for whenever main.zig eventually wires it up."
+    },
+    {
+      "id": "D79",
+      "what": "B22: surveyed main.zig's local-import dependency graph via BFS (not by trying zig build-exe repeatedly, which only ever surfaces the first error) before attempting any migration -- 249 of 250 reachable files resolve cleanly, exactly one broken import (tri_farm.zig -> local_farm.zig, deleted in 36f38639c, 5 dangling call sites) blocks the whole graph from compiling. First pass of the survey script had 3 false positives from matching @import(...) text inside comments rather than real code; caught by inspecting each hit's actual context before trusting the count, filtered them out, re-ran to confirm exactly 1 real broken import remains.",
+      "decision_needed": "Restore vs remove -- filed as OD10, not guessed. The deleted code (a Docker-based Wave-9 local worker-farm manager) is still fully intact in git history and trivially recoverable, but whether it should come back is a product call tied to the HSLM-extraction refactor's intent, not something inferable from the code alone."
     }
   ],
   "backlog": [
@@ -624,8 +629,12 @@
       "id": "B22",
       "prio": 22,
       "what": "Migrate main.zig (1767 lines) to Zig 0.16 Io-threading -- the one file this whole B10 survey deliberately deferred as a separate structural decision rather than folding into the same incremental pattern used for the 8 independent files (simple_synth_report/wave9_generator/sacred_synth_report/testnet_rewards/testnet_faucet/testnet_explorer/cyrillic_guard/sacred_bench, all done under B10). All four Zig 0.16 API families this migration needs (file I/O, Clock/Timestamp, sockets, subprocess) already have proven working patterns from those 8 files -- the risk here is scale and blast radius (main.zig is the tri CLI's entry point and dispatch hub, not a standalone tool), not unknown APIs. test_dev_runner.zig (shares DevSession with dev_commands.zig) likely needs to move together with this.",
-      "blocked_by": [],
-      "status": "pending"
+      "blocked_by": [
+        "operator decision: restore local_farm.zig vs remove its 5 dead call sites in tri_farm.zig, see OD10 -- main.zig cannot compile at all until this is resolved, so no Zig 0.16 API survey of main.zig itself is even possible yet"
+      ],
+      "status": "pending",
+      "needs_operator_decision": true,
+      "note": "First real finding: surveyed main.zig's full reachable local-import graph (BFS over @import(\"*.zig\") targets, code lines only -- comments matching the same regex text produced 3 false positives on the first naive pass, filtered out). Result: 249 of 250 distinct files in the graph resolve cleanly; exactly ONE broken import blocks the whole thing from compiling at all -- tri_farm.zig has 5 call sites doing `@import(\"local_farm.zig\")`, and that file does not exist. git blame: it was deleted in 36f38639c (\"refactor: extract HSLM training to trinity-training repository\"), a commit that removed local_farm.zig (332 lines, a Docker-based Wave-9 worker-farm manager: LocalFarm.init/addWorker/save, composeStop) but never touched tri_farm.zig, leaving 5 dangling call sites from an incomplete refactor. The pre-deletion file is still fully intact and trivially recoverable (`git show 36f38639c^:src/tri/local_farm.zig`), so this is not a hard technical blocker -- it is a product decision: restore the Docker worker-farm feature (if trinity-fpga still needs local wave9 farm management for something other than HSLM training, e.g. crypto-mining/DePIN work) vs. remove the 5 dead call sites in tri_farm.zig (if this feature was meant to go away along with the HSLM extraction and nobody's used it since). Filed as OD10 rather than guessing. Once this is resolved, main.zig's own Zig 0.16 API surface can actually be surveyed for the first time (right now nothing gets far enough to even reach that check) -- expect it to be large given ~1767 lines and CLI-dispatch-hub status, but the four API families needed are already proven from B10's 8 files."
     }
   ],
   "anomalies": [
@@ -1567,6 +1576,12 @@
       "question": "PR #877 escalation (B19): the operator asked to proceed on \"all three\" fronts including this one, but posting a comment on a third-party-adjacent PR on the operator's behalf is a publish action this loop has consistently held back on without a more specific go-ahead (distinct from the openXC7 issue-comment channel, which has standing authorization as this loop's core collaborative track). Not acted on. If the operator wants this sent, the exact text is ready to draft on request.",
       "first_flagged": "2026-09-04",
       "impact": "PR #877 remains stale (unchanged since 2026-08-31) with no escalation beyond repeated accurate observation, same as OD3 already noted."
+    },
+    {
+      "id": "OD10",
+      "question": "B22 (main.zig migration) is blocked on tri_farm.zig's 5 dangling @import(\"local_farm.zig\") call sites (LocalFarm.init/addWorker/save, composeStop -- a Docker-based Wave-9 local worker-farm manager). The file was deleted in 36f38639c during the HSLM-training-extraction refactor, but tri_farm.zig was never updated to match, so this has been silently broken since that commit landed. Restore the deleted feature (still fully intact in git history, git show 36f38639c^:src/tri/local_farm.zig), or remove the 5 dead call sites in tri_farm.zig and drop the local-wave9 CLI subcommands they back?",
+      "first_flagged": "2026-09-05",
+      "impact": "Blocks main.zig from compiling at all -- not just the Zig 0.16 migration (B22), everything downstream of main.zig. This is the single blocker for the entire 249-file reachable graph; every other import resolves cleanly."
     }
   ]
 }

@@ -4515,3 +4515,41 @@ Tripwire: disk warn (4.55 GiB free, still well above the 2.00 GiB halt line and 
 flat over the last two checks), drift consistent, decision some_gated (B19 only --
 B10's closure doesn't change the gate list, B18 still excluded via its own blocked_by
 path).
+
+## Iteration 102 — B22 (main.zig) sized properly, real blocker found and filed as OD10
+
+With B10 fully closed, `nextItem` surfaced B22 (main.zig's own migration) as the next
+item. Rather than diving into a 1767-line CLI entry point blind, surveyed its actual
+reachable local-import graph first with a small BFS script (not by repeatedly running
+`zig build-exe`, which only ever surfaces one error at a time and would have made this
+feel far larger and slower than it is). First pass flagged 4 broken imports; inspecting
+each one's actual context caught that 3 were false positives -- the regex matched
+`@import(...)`-shaped text sitting inside comments (`cytoplasm.zig`'s doc comments and
+a commented-out line in `math/commands.zig`), not real code. Filtered those out and
+re-ran: of 250 distinct files in the graph, exactly **one** broken import blocks the
+whole thing from compiling at all -- `tri_farm.zig` has 5 call sites doing
+`@import("local_farm.zig")`, and that file doesn't exist.
+
+`git log --diff-filter=D` traced it: `local_farm.zig` (332 lines, a Docker-based Wave-9
+local worker-farm manager -- `LocalFarm.init/addWorker/save`, `composeStop`) was deleted
+in `36f38639c` ("refactor: extract HSLM training to trinity-training repository"), a
+commit that touched only `local_farm.zig` and never touched `tri_farm.zig` -- leaving 5
+dangling call sites from an incomplete refactor, silently broken ever since. The
+deleted file is still fully intact in git history
+(`git show 36f38639c^:src/tri/local_farm.zig`) and trivially restorable, but whether it
+*should* come back is a real product question tied to the HSLM extraction's intent
+(was local-wave9 farm management meant to go away with it, or does trinity-fpga still
+need it for something else, e.g. crypto-mining/DePIN work?) -- not something inferable
+from the code alone. Filed as **OD10** rather than guessing either way; B22 marked
+`needs_operator_decision` with `blocked_by` naming the reason, same pattern as B18.
+
+This turns B22 from "1767 lines, unknown difficulty" into a precise, bounded picture:
+249 of 250 files resolve cleanly, one specific decision unblocks the rest, and once
+that lands, main.zig's own Zig 0.16 API surface can be surveyed for real for the first
+time (nothing currently gets far enough to even reach that check). All four API
+families it would need are already proven from B10's 8 files.
+
+Tripwire: disk warn (4.53 GiB free, continuing a slow, roughly linear decline but still
+well clear of the 2.00 GiB halt line), drift consistent, decision some_gated (B19 only
+in the gate list -- B18 and now B22 both correctly excluded via their own blocked_by
+paths, consistent with the established display nuance).
