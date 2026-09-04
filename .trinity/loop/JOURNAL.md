@@ -4404,3 +4404,56 @@ still open, unchanged since 2026-08-31, consistent with OD3/OD9.
 
 Tripwire clean: disk 5.76 GiB free, drift consistent (backlog 7 open / anomalies 13
 open), decision some_gated (B19, B18 still correctly excluded via its blocked_by path).
+
+## Iteration 100 — B10 7th file closes the last unknown API family, two real bugs found by running it
+
+Disk crossed into warn tier this cycle (5.76 -> 4.66 -> 4.62 GiB free over ~30 min,
+below the 5.00 GiB warn line but well above the 2.00 GiB halt line). CoreSimulator is
+still the dominant consumer at 30G with only one runtime left (iOS 18.4, down from two
+after this session's earlier authorized cleanup) -- not touching that without a fresh,
+specific go-ahead, since deleting the last remaining runtime is a different, more
+consequential ask than deleting a duplicate. Logged, not escalated: still well clear of
+the halt threshold that actually stops the loop.
+
+**B10.** Migrated `cyrillic_guard.zig` (7th file), which closes out subprocess spawn --
+the last of the four Zig 0.16 API families this migration needed (file I/O,
+Clock/Timestamp, sockets, subprocess). Researched `std.process.run(gpa,io,options) ->
+{term,stdout,stderr}` before touching real code: it turned out to be a near-exact
+drop-in for the old `Child.run()`, verified with a throwaway program spawning
+`/bin/echo` and reading back stdout. Applied it to `getStagedFiles()`'s single
+`git diff --cached` call, and migrated the file's `std.fs.cwd()` usages and `main()`
+signature alongside it.
+
+Running the actual built binary against real arguments (not just `zig test`, since
+`main()` is dead code under test) surfaced two genuine pre-existing bugs, neither a
+migration artifact:
+
+1. `checkPath` and `walkDirectory` each returned their own anonymous struct literal
+   with an identical field shape -- Zig treats those as distinct types, so
+   `return walkDirectory(...)` inside `checkPath` never actually type-checked. Only
+   `zig build-exe` catches this; `zig test` never touches `main()`'s call graph. Fixed
+   with a shared named `CheckPathResult` type.
+2. Directory detection relied on `statFile` throwing `error.IsDir` for a directory --
+   it doesn't (not in this stdlib, possibly never did). Pointing the tool at a directory
+   silently fell through to the single-file path, hit `error.IsDir` inside `checkFile`
+   instead, and reported a false "0 files checked, no Cyrillic found" -- a silent
+   false negative on the exact case ("scan this directory") the flag exists for. Fixed
+   by checking `stat.kind == .directory` explicitly.
+
+Fixing bug 2 exposed a third, related one: once directory-walking actually started
+running, `walkDirectory` read `entry.path` (relative to the walked directory) through
+`checkFile`'s cwd-relative file open -- which only happens to resolve correctly when
+scanning "." (the common `--all` case), and silently fails for any other directory
+argument. Fixed by joining `path` + `entry.path` before reading.
+
+Verified: `zig test` 3/3, `zig build-exe` clean, then ran the real binary through all
+three code paths -- no-staged-files (exit 0), a single file with genuine Cyrillic test
+literals (correctly flagged), and a 2-file scratch directory with one clean and one
+Cyrillic file (correctly flagged only the right one, correctly resolved both paths).
+
+Only `sacred_bench.zig` remains for B10 -- same `Child.exec()` -> `std.process.run` shape
+already proven, should be a fast repeat next cycle. `main.zig` stays the deferred
+structural blocker.
+
+Tripwire: disk warn (4.62 GiB free, above halt), drift consistent, decision some_gated
+(B19; B18 still correctly excluded via its blocked_by path).
