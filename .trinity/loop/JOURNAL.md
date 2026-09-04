@@ -4179,3 +4179,39 @@ the `PathAlreadyExists` branch), and the too-many-workers error path.
 Both pre-existing unit tests pass unmodified. 5 of the 6 pure-file-I/O
 quick wins remain; the 2 subprocess-using files and `main.zig` itself are
 each their own future pass.
+
+---
+
+## loop 2 · iteration 92 — B10 third file, and this one wasn't a clean migration
+
+No new GitHub activity. Migrated `sacred_synth_report.zig` — same
+args/fs pattern as the first two, but running the actual success path
+(three output formats against a real parsed JSON) **segfaulted**. Not a
+migration bug: `countCellTypes()` stored `entry.key_ptr.*` — a slice into
+whatever allocator parsed the JSON — directly into the returned
+`stats.module_name`, while `parseYosysJson`'s arena backing that parse is
+destroyed the instant the function returns. Printing the name afterward
+reads freed memory. This code path had apparently never run against real
+data before: the repo has no `fpga/openxc7-synth/sacred_alu.json`, the
+default input path.
+
+The tell was already sitting in the source: `countCellTypes` took an
+`allocator` parameter it never used (`_ = allocator;`) — the fix (dupe the
+string into an allocator that outlives the arena) was evidently the
+original intent, just never finished. Fixed by actually using that
+parameter, and passing `gpa` instead of the doomed arena allocator at the
+one call site that returns past the arena's lifetime. The existing test
+called `countCellTypes` but never asserted on `module_name` at all —
+exactly the field that was broken, and exactly why nobody caught it. Added
+the assertion along with the now-required free.
+
+**Second file in three where running the real success path — not just
+compiling, not just the pre-existing test suite — found a genuine bug the
+migration itself didn't cause** (`simple_synth_report.zig`'s leak was the
+first). Both predate this session's work and were invisible until actually
+exercised end to end with real-shaped data. Treating that as a mandatory
+step for the remaining files in this batch, not an optional nice-to-have.
+
+4 of the 6 pure-file-I/O files remain (test_dev_runner, testnet_faucet,
+testnet_explorer, testnet_rewards); the 2 subprocess-using files and
+`main.zig` are each their own future pass, unchanged from before.

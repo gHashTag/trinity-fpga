@@ -4,7 +4,7 @@
     "id": "two-track",
     "cron_job": "eaa1cb07",
     "interval": "15m",
-    "iteration": 91,
+    "iteration": 92,
     "status": "RUNNING",
     "owner": "Dmitrii Vasilev / @gHashTag",
     "tracks": [
@@ -380,6 +380,12 @@
       "what": "B10 progress: migrated wave9_generator.zig (2nd of the 6 pure-file-I/O quick wins). Verified by running, not just compiling: --help, a real 3-worker docker-compose generation into a fresh nested directory, a second run into the same directory (exercises PathAlreadyExists), and the too-many-workers error path. Both pre-existing unit tests still pass unmodified.",
       "new_api_findings_beyond_A1": "Three more Zig-0.16 breakage patterns found and confirmed, not previously catalogued in A1: (1) std.ArrayListUnmanaged(T){} no longer default-initializes -- needs `.empty` explicitly (same trap already independently hit and fixed in tri_loopstate.zig earlier this session -- now confirmed to recur elsewhere in the codebase, worth grepping for broadly); (2) ArrayList(u8).writer(allocator) no longer exists, replaced by .print(allocator, fmt, args) directly on the list; (3) GeneralPurposeAllocator -> DebugAllocator rename (A1 already knew this) is invisible to `zig build-exe` when only used inside `test` blocks -- only `zig test` catches it, confirmed live when build-exe compiled clean but zig test then failed on the exact same file.",
       "subprocess_finding": "std.process.Child.run() -- the one-call spawn+wait+capture convenience -- is GONE entirely in 0.16. Replaced by std.process.spawn(io, SpawnOptions) returning a bare Child, manual .stdout=.pipe + reading the resulting File + child.wait(io) for the Term. This affects 2 of the 12 standalone files (cyrillic_guard.zig, sacred_bench.zig) and is meaningfully more work than the file-I/O pattern -- checked before attempting either file, not discovered mid-migration."
+    },
+    {
+      "id": "D68",
+      "what": "B10 progress: migrated sacred_synth_report.zig (3rd of 6 pure-file-I/O quick wins). This one was not a clean migration -- running the success path (apparently never exercised before; the repo has no fpga/openxc7-synth/sacred_alu.json, so real data may never have flowed through this code) segfaulted on a genuine, pre-existing use-after-free: countCellTypes() stored a slice into the arena parseYosysJson destroys on return, directly into the returned stats.module_name. Fixed by duping into gpa instead at that one call site; the function already had an unused `allocator` parameter, suggesting this was the original intent, just never implemented.",
+      "test_gap_closed": "The existing unit test called countCellTypes() but never asserted on module_name at all -- exactly the field that was broken. Added defer-free (now needed since the function actually allocates) plus an assertion on the value, closing the coverage gap that let this ship unnoticed.",
+      "pattern_confirmed_again": "This is the second time in 3 files that RUNNING the success path (not just compiling, not just the existing test suite) surfaced a real bug the migration itself didn't cause -- simple_synth_report.zig's leak and now this segfault. Both existed before Zig 0.16 and were invisible until actually exercised end to end. Worth treating 'run the real success path with real-shaped data' as a mandatory step for every remaining file in this batch, not just the args/fs edges."
     }
   ],
   "backlog": [
@@ -461,7 +467,7 @@
       "what": "Survey src/tri for Zig 0.16 fs/allocator API breakage (anomaly A1) and size the migration",
       "blocked_by": [],
       "status": "pending",
-      "note": "Real sizing: 137 files use old APIs. 21 have their own main(); 12 of those also use the old APIs and are independently migratable without touching main.zig. Of those 12, only 6 are pure file-I/O (simple_synth_report.zig DONE, wave9_generator.zig DONE, sacred_synth_report/test_dev_runner/testnet_faucet/testnet_explorer/testnet_rewards remain); 2 also spawn subprocesses (cyrillic_guard.zig, sacred_bench.zig) via the now-removed std.process.Child.run() -- replaced by manual std.process.spawn(io, options) + pipe + wait, a meaningfully bigger port than file I/O, not yet attempted; cell_trends.zig has a pre-existing unrelated dirty diff, not touched; main.zig itself (1767 lines) is the real structural blocker the other 125 library files cascade from."
+      "note": "6 pure-file-I/O quick wins identified; 3 done (simple_synth_report.zig, wave9_generator.zig, sacred_synth_report.zig), 3 remain (test_dev_runner.zig, testnet_faucet.zig, testnet_explorer.zig, testnet_rewards.zig -- 4 actually). 2 subprocess-using files (cyrillic_guard.zig, sacred_bench.zig) sized but not attempted -- std.process.Child.run() is gone, replaced by manual spawn+pipe+wait. main.zig (1767 lines) is the real structural blocker the other 125 library files cascade from -- not yet attempted, correctly scoped as its own decision (architecture, not just API renames)."
     },
     {
       "id": "B11",
