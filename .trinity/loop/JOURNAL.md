@@ -3964,3 +3964,18 @@ time-based reminder notification (not severity-triggered — nothing got
 worse) since the design's own intent was a backstop reminder around the
 1-hour mark, not silence until either resolution or a worse reading. Next
 reminder only after another ~1h of continued no-change.
+
+**RESOLVED — the operator explicitly named the runtime to remove, roughly 2
+hours after onset.** Ran `xcrun simctl runtime delete <UUID>` for iOS 26.5
+(23F77) — one real gotcha worth keeping: `simctl list runtimes`'s
+identifier (`com.apple.CoreSimulator.SimRuntime.iOS-26-5`) is NOT what
+`simctl runtime delete` accepts; it needs the UUID from `simctl runtime
+list` instead (`19B8EB59-...`), and the first attempt with the wrong form
+failed cleanly with "No matching images found." The delete is async — free
+space was already 3.3 GiB within seconds of issuing it (status showed
+`(Deleting)`), and 13.49 GiB once it finished, confirmed with a fresh
+`tripwire` run rather than assumed from the `simctl` output alone.
+**Total halt: iterations 77→83, ~2 hours, zero backlog work attempted
+during it, zero autonomous disk remediation attempted before the operator
+named the exact runtime** — the mechanism did exactly what it was designed
+to do for its entire duration. Resuming real backlog work this iteration.
