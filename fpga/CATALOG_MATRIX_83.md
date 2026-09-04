@@ -1,5 +1,8 @@
 # Catalog matrix: 83 formats × {SW-conformance / FPGA port}
 
+> **Snapshot note (2026-09-05):** this matrix is the v2 (83-format) snapshot of the catalogue — t27 master `92f3506`, verified 2026-06-28 — and keeps its original name.
+> The catalogue has since grown: 109 formats in 12 clusters at v3 of arXiv:2606.09686 (Golden Ruler, announced 7 Sep 2026); the statuses below have not been recounted against v3.
+
 > **GF16 robustness: 4/4 ML workloads passed** (matmul, gradient accumulation, dynamic range, attention softmax). GF16 (E=6, M=9) is the minimum-width IEEE-style format achieving full robustness — FP16 fails dynamic range, BF16 fails matmul.
 
 > Starter map for the "flash the full catalog" focused session on AX7203 (XC7A200T).
