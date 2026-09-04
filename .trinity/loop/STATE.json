@@ -27,10 +27,10 @@
         "disk"
       ],
       "detail": "disk 1.29 GiB free (< 2.00 GiB threshold, warn<5.00), DECLINING (1.47 -> 1.45 -> 1.29 across 3 checks); decision-gated on: B18, B19; ",
-      "last_checked_iteration": 78,
+      "last_checked_iteration": 82,
       "_note": "no consecutive-count, no escalated_at, no episode history yet -- this object is a stateless snapshot of the last tripwire run, not a cadence tracker. See B21.",
       "notify_threshold_gib": 1.0,
-      "_notify_note": "Notified operator once at halt onset (1.47 GiB). Per no-spam design intent, do NOT re-notify on every unchanged or slightly-lower reading -- only re-notify if free space drops below notify_threshold_gib (a new, more severe tier) or when the halt resolves. Update this threshold down (never up) if it is crossed and the operator has not responded, so the bar keeps tightening rather than repeating."
+      "_notify_note": "Notified operator at onset (1.47 GiB) and again as a ~1h time-based reminder (2026-09-04, ~7 checks in) since nothing had changed. Per no-spam design intent, further time-based reminders only after another ~1h of no change; severity-based re-notify remains notify_threshold_gib=1.0 (tighten-only)."
     }
   },
   "invariants": [

@@ -3958,3 +3958,9 @@ instead: `xcrun simctl runtime delete <identifier>`, Apple's own API-level
 runtime removal, which should sidestep the permission wall raw `rm` hit.
 Left the choice of which runtime (iOS 18.4 vs 26.5) to them — not this
 loop's call.
+
+**~7 checks / ~1.5h into the halt, still 1.26-1.30 GiB, unchanged.** Sent one
+time-based reminder notification (not severity-triggered — nothing got
+worse) since the design's own intent was a backstop reminder around the
+1-hour mark, not silence until either resolution or a worse reading. Next
+reminder only after another ~1h of continued no-change.
