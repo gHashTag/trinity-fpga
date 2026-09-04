@@ -4,7 +4,7 @@
     "id": "two-track",
     "cron_job": "eaa1cb07",
     "interval": "15m",
-    "iteration": 88,
+    "iteration": 89,
     "status": "RUNNING",
     "owner": "Dmitrii Vasilev / @gHashTag",
     "tracks": [
@@ -369,6 +369,11 @@
       "id": "D65",
       "what": "Cross-posted the PERFCLK recommendation directly to #172 (tagging hansfbaier, who is named there but not on #149), per the self-audit's visibility-gap finding.",
       "url": "https://github.com/openXC7/nextpnr-xilinx/issues/172#issuecomment-5541358633"
+    },
+    {
+      "id": "D66",
+      "what": "B10 progress: precisely sized the Zig 0.16 migration instead of leaving it at the prior grep-only estimate (A1). 137 files use old APIs; 12 have their own main() and are independently migratable today; the remaining 125 cascade from src/tri/main.zig's own unmigrated Io-threading, which is the real structural blocker, not file count. Migrated one of the 12 (simple_synth_report.zig) end to end as proof: compiled, then RUN (--help, missing-file error path, and a real JSON parse all verified correct), surfacing and fixing a genuine pre-existing memory leak along the way (parsed.deinit() never called -- silent under the old page_allocator, loud under the new debug-tracked init.gpa).",
+      "remaining_quick_wins": "cell_trends.zig (has a pre-existing unrelated dirty diff, not touched), cyrillic_guard.zig, sacred_alu.zig, sacred_bench.zig, sacred_synth_report.zig, test_dev_runner.zig, testnet_faucet.zig, testnet_explorer.zig, testnet_rewards.zig, wave9_generator.zig -- 9 remaining standalone files using the exact same proven pattern, each independently migratable without touching main.zig."
     }
   ],
   "backlog": [
@@ -450,7 +455,7 @@
       "what": "Survey src/tri for Zig 0.16 fs/allocator API breakage (anomaly A1) and size the migration",
       "blocked_by": [],
       "status": "pending",
-      "note": "Sized properly this iteration: it is an Io-threading redesign, not a rename. This is very likely the same wall recorded elsewhere as 'build blocked on an API decision'. Needs a human decision on how the CLI carries Io before any file is touched. Two probes stand: std.Io.Dir.cwd() and DebugAllocator compile; std.process.argsAlloc has no drop-in."
+      "note": "Real sizing, not a grep count: 137 files use old APIs (std.fs.cwd/GeneralPurposeAllocator/argsAlloc). Of those, 21 have their own pub fn main() and 12 also use the old APIs -- these 12 are independently migratable NOW using the exact proven pattern (pub fn main(init: std.process.Init), no dependency on main.zig). The other 125 are library files imported by src/tri/main.zig (1767 lines, itself unmigrated) -- they cascade from main.zig's own migration, not independent work. simple_synth_report.zig (1 of the 12) migrated and verified 2026-09-04 as proof of the pattern on a real production file, not just the new tri_loopstate tooling; it also surfaced a real pre-existing leak (parsed.deinit() never called) invisible under the old page_allocator."
     },
     {
       "id": "B11",

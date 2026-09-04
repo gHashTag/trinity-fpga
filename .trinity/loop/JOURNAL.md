@@ -4094,3 +4094,35 @@ rather than attempted.
 
 36/36 tests pass (was 30 at the top of this iteration). 30/30 became
 stale the moment new code landed; caught that too, in passing.
+
+---
+
+## loop 2 · iteration 89 — B10, actually sized instead of left at a grep count
+
+No new GitHub activity. B6/B8/B15 still externally stuck, B18/B19 gated.
+`nextItem()` correctly returned B10 this time (not B8 — yesterday's fix
+holding). Picked it up for real, since this loop now has something A1's
+original author didn't: a *proven* Zig 0.16 Io-threaded pattern, not just
+a diagnosis that one was needed.
+
+Sized it properly instead of trusting the old "751 call sites, not an
+effort estimate" figure: 137 files still use the old APIs. Of those, only
+21 have their own `pub fn main()`, and only 12 of THOSE also use the old
+APIs — those 12 are independently migratable today, no dependency on
+`main.zig`. The other 125 are library files `main.zig` (1767 lines, itself
+unmigrated) imports — they cascade from main.zig's own Io-threading
+decision, not 125 separate small jobs. The real structural blocker is one
+file, not the count everyone's been quoting.
+
+Migrated one of the 12 end to end as proof: `simple_synth_report.zig`. Not
+just compiled — **run**, three ways: `--help`, a missing-file error path,
+and a real (synthetic) JSON parse, all verified correct. That last run
+surfaced a genuine pre-existing bug the old code had the whole time: no
+`parsed.deinit()`, invisible under `page_allocator`, printing four leak
+reports the instant `init.gpa`'s debug-tracked allocator took over. Fixed
+in the same commit — leaving a newly-visible pre-existing leak in place
+would have made the migration look like a regression it wasn't.
+
+Nine more of the twelve remain, each the same shape, each doable without
+touching `main.zig`. Left them for a future iteration rather than doing
+all nine in one sitting — a bounded, verified slice beats a rushed batch.
