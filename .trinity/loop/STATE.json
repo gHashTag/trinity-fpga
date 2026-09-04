@@ -26,8 +26,8 @@
       "reasons": [
         "disk"
       ],
-      "detail": "disk 1.47 GiB free (< 2.00 GiB threshold, warn<5.00); decision-gated on: B18, B19; ",
-      "last_checked_iteration": 76,
+      "detail": "disk 1.45 GiB free (< 2.00 GiB threshold, warn<5.00); decision-gated on: B18, B19; ",
+      "last_checked_iteration": 77,
       "_note": "no consecutive-count, no escalated_at, no episode history yet -- this object is a stateless snapshot of the last tripwire run, not a cadence tracker. See B21."
     }
   },

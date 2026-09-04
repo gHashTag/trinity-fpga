@@ -3928,3 +3928,8 @@ recording the halt: `loop.status`/`loop.halt` updated, this line, one
 commit (STATE.json + dashboard.html only), then stop. The very next firing
 re-checks disk fresh, per the same rule everything else in this mechanism
 follows — no value here is trusted from this write, only logged.
+
+**Iteration 78 — still HALTED (disk), 1.45 GiB free, essentially unchanged.**
+Not logging a full paragraph per repeat check — that's what B21's
+consecutive-count field is for once it exists; a one-line append here does
+the same job without turning this file into a 15-minute spam log.
