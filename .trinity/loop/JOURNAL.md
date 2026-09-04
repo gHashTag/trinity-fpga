@@ -4215,3 +4215,45 @@ step for the remaining files in this batch, not an optional nice-to-have.
 4 of the 6 pure-file-I/O files remain (test_dev_runner, testnet_faucet,
 testnet_explorer, testnet_rewards); the 2 subprocess-using files and
 `main.zig` are each their own future pass, unchanged from before.
+
+---
+
+## loop 2 · iteration 93 — B10's sizing was wrong, and finding that out was the real work this cycle
+
+No new GitHub activity. Went to pick up the next "quick win" and checked
+`test_dev_runner.zig` first, rather than assume the earlier grep-based
+categorization still held. Good thing: it imports `dev_state_machine.zig`
+for `DevSession.load`/`.save`, both of which use `std.fs.cwd()` internally
+— and those same two functions are called 9 more times from
+`dev_commands.zig`, which is almost certainly wired into the real
+`src/tri/main.zig`. A file having its own `main()` does not mean it's
+independent; this one shares mutating state with something that cascades
+into the deferred structural blocker. Not touched.
+
+Tried `testnet_faucet.zig` instead — clean on every check I'd been running
+(no `fs.cwd`, no `GeneralPurposeAllocator`, no `ArrayListUnmanaged`), until
+compiling past the `args` fix hit `std.posix.socket` — **gone**. Raw POSIX
+socket calls, which I'd assumed were low-level enough to survive the
+Io-threading migration untouched, moved too. Reverted rather than guess at
+an unexplored networking API mid-migration.
+
+Tried `testnet_rewards.zig` next — no sockets, no subprocess — and hit
+`std.time.timestamp()` — also gone, replaced by an `Io.Clock`/
+`Io.Timestamp`/`Duration` system that is a genuine redesign, not a rename,
+and used in four places across this file's actual business logic (reward
+vesting, claim eligibility), not just `main()`. Reverted the same way.
+
+**Re-checked all 7 remaining files against the full now-known API surface**
+(fs.cwd, GeneralPurposeAllocator, argsAlloc, process.Child, posix.socket,
+time.timestamp) instead of the narrower list I'd been using. Result:
+**zero of the 7 are pure quick wins.** Every one needs at least one of
+three separate, unexplored migrations — subprocess spawn, raw sockets, or
+Clock/Timestamp — none of which I've proven a working pattern for yet.
+The file-I/O pattern (3 files, fully done and verified) really was the
+easy tier; I'd been about to spend the next several cycles assuming the
+rest were the same shape.
+
+Two files touched and cleanly reverted, confirmed by `git status --short`
+showing zero diff — no half-migrated, non-compiling state left behind.
+This cycle's real output is the corrected map, not new code, and that's
+a legitimate outcome, not a wasted one.
