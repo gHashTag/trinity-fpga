@@ -7,6 +7,14 @@
 const std = @import("std");
 const testnet_config = @import("testnet_config.zig");
 
+/// Current unix time in whole seconds. Replaces the removed
+/// std.time.timestamp() -- Zig 0.16 moved wall-clock reads under the Io
+/// vtable (Clock.real.now(io).toSeconds()), verified against `date +%s`
+/// before use here, not assumed from the API shape alone.
+fn nowSeconds(io: std.Io) u64 {
+    return @intCast(std.Io.Clock.real.now(io).toSeconds());
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // REWARD TYPES
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -69,19 +77,19 @@ pub const RewardEntry = struct {
     /// Metadata (JSON string)
     metadata: ?[]const u8 = null,
 
-    pub fn isVested(self: RewardEntry) bool {
+    pub fn isVested(self: RewardEntry, io: std.Io) bool {
         if (self.vesting_timestamp == 0) return true;
-        const now = @as(u64, @intCast(std.time.timestamp()));
+        const now = nowSeconds(io);
         return now >= self.vesting_timestamp;
     }
 
-    pub fn canClaim(self: RewardEntry) bool {
-        return !self.claimed and self.isVested();
+    pub fn canClaim(self: RewardEntry, io: std.Io) bool {
+        return !self.claimed and self.isVested(io);
     }
 
-    pub fn timeUntilVesting(self: RewardEntry) ?u64 {
+    pub fn timeUntilVesting(self: RewardEntry, io: std.Io) ?u64 {
         if (self.vesting_timestamp == 0) return null;
-        const now = @as(u64, @intCast(std.time.timestamp()));
+        const now = nowSeconds(io);
         if (now >= self.vesting_timestamp) return null;
         return self.vesting_timestamp - now;
     }
@@ -117,7 +125,8 @@ pub const NodeRewardEntry = struct {
     /// Reward entries
     rewards: std.ArrayListUnmanaged(RewardEntry),
 
-    pub fn init(allocator: std.mem.Allocator, node_id: []const u8, address: []const u8) NodeRewardEntry {
+    pub fn init(allocator: std.mem.Allocator, node_id: []const u8, address: []const u8, io: std.Io) NodeRewardEntry {
+        const now = nowSeconds(io);
         return NodeRewardEntry{
             .node_id = allocator.dupe(u8, node_id) catch unreachable,
             .address = allocator.dupe(u8, address) catch unreachable,
@@ -128,9 +137,9 @@ pub const NodeRewardEntry = struct {
             .pending_rewards = 0,
             .tier = .free,
             .quality_score = 1.0,
-            .first_seen = @as(u64, @intCast(std.time.timestamp())),
-            .last_active = @as(u64, @intCast(std.time.timestamp())),
-            .rewards = .{},
+            .first_seen = now,
+            .last_active = now,
+            .rewards = .empty,
         };
     }
 
@@ -153,9 +162,10 @@ pub const NodeRewardEntry = struct {
     }
 
     /// Update uptime and recalculate rewards
-    pub fn updateUptime(self: *NodeRewardEntry, additional_hours: f64, allocator: std.mem.Allocator) !void {
+    pub fn updateUptime(self: *NodeRewardEntry, additional_hours: f64, allocator: std.mem.Allocator, io: std.Io) !void {
+        const now = nowSeconds(io);
         self.uptime_hours += additional_hours;
-        self.last_active = @as(u64, @intCast(std.time.timestamp()));
+        self.last_active = now;
 
         // Calculate reward for this period
         const reward = testnet_config.calculateNodeReward(
@@ -167,13 +177,13 @@ pub const NodeRewardEntry = struct {
         if (reward > 0) {
             const entry = RewardEntry{
                 .id = try std.fmt.allocPrint(allocator, "reward-{d}-{d}", .{
-                    @as(u64, @intCast(std.time.timestamp())),
+                    now,
                     self.rewards.items.len,
                 }),
                 .address = try allocator.dupe(u8, self.address),
                 .reward_type = .node_operator,
                 .amount = reward,
-                .timestamp = @as(u64, @intCast(std.time.timestamp())),
+                .timestamp = now,
                 .vesting_timestamp = 0, // Testnet rewards vest immediately
                 .claimed = false,
                 .claimed_timestamp = 0,
@@ -186,10 +196,10 @@ pub const NodeRewardEntry = struct {
     }
 
     /// Add job completion
-    pub fn addJob(self: *NodeRewardEntry, tokens_processed: u64) void {
+    pub fn addJob(self: *NodeRewardEntry, tokens_processed: u64, io: std.Io) void {
         self.jobs_completed += 1;
         self.tokens_processed += tokens_processed;
-        self.last_active = @as(u64, @intCast(std.time.timestamp()));
+        self.last_active = nowSeconds(io);
     }
 
     /// Update quality score
@@ -209,8 +219,8 @@ pub const NodeRewardEntry = struct {
     }
 
     /// Check if node is healthy (active in last hour)
-    pub fn isHealthy(self: NodeRewardEntry) bool {
-        const now = @as(u64, @intCast(std.time.timestamp()));
+    pub fn isHealthy(self: NodeRewardEntry, io: std.Io) bool {
+        const now = nowSeconds(io);
         const seconds_since_active = now - self.last_active;
         return seconds_since_active < 3600;
     }
@@ -288,14 +298,14 @@ pub const RewardsManager = struct {
     /// Testnet start timestamp
     testnet_start: u64,
 
-    pub fn init(allocator: std.mem.Allocator) RewardsManager {
+    pub fn init(allocator: std.mem.Allocator, io: std.Io) RewardsManager {
         return RewardsManager{
             .allocator = allocator,
             .node_rewards = .{},
-            .bug_bounties = .{},
+            .bug_bounties = .empty,
             .pool = .{},
             .total_dispensed = 0,
-            .testnet_start = @as(u64, @intCast(std.time.timestamp())),
+            .testnet_start = nowSeconds(io),
         };
     }
 
@@ -317,7 +327,7 @@ pub const RewardsManager = struct {
     }
 
     /// Register a node for rewards tracking
-    pub fn registerNode(self: *RewardsManager, node_id: []const u8, address: []const u8) !void {
+    pub fn registerNode(self: *RewardsManager, node_id: []const u8, address: []const u8, io: std.Io) !void {
         // Check if already registered
         if (self.node_rewards.get(node_id) != null) return error.NodeAlreadyRegistered;
 
@@ -326,7 +336,7 @@ pub const RewardsManager = struct {
         errdefer self.allocator.free(node_id_copy);
 
         // Initialize the entry with its own copy of node_id (separate from HashMap key)
-        const entry = NodeRewardEntry.init(self.allocator, node_id, address);
+        const entry = NodeRewardEntry.init(self.allocator, node_id, address, io);
 
         // Insert into HashMap (HashMap owns node_id_copy now)
         try self.node_rewards.put(self.allocator, node_id_copy, entry);
@@ -339,11 +349,12 @@ pub const RewardsManager = struct {
         uptime_hours: f64,
         jobs_completed: usize,
         quality_score: f64,
+        io: std.Io,
     ) !void {
         const entry = self.node_rewards.getPtr(node_id) orelse return error.NodeNotFound;
 
         const old_rewards = entry.total_rewards;
-        try entry.updateUptime(uptime_hours, self.allocator);
+        try entry.updateUptime(uptime_hours, self.allocator, io);
         entry.jobs_completed += jobs_completed;
         entry.quality_score = quality_score;
 
@@ -360,6 +371,7 @@ pub const RewardsManager = struct {
         severity: testnet_config.BugBounty.Severity,
         title: []const u8,
         description: []const u8,
+        io: std.Io,
     ) !void {
         const bounty = testnet_config.BugBounty{};
         const reward = bounty.getReward(severity);
@@ -371,7 +383,7 @@ pub const RewardsManager = struct {
             .title = try self.allocator.dupe(u8, title),
             .description = try self.allocator.dupe(u8, description),
             .reward = reward,
-            .awarded_at = @as(u64, @intCast(std.time.timestamp())),
+            .awarded_at = nowSeconds(io),
             .claimed = false,
             .status = .verified,
         };
@@ -448,38 +460,38 @@ pub const RewardsManager = struct {
     }
 
     /// Get statistics
-    pub fn getStats(self: *const RewardsManager) RewardsStats {
+    pub fn getStats(self: *const RewardsManager, io: std.Io) RewardsStats {
         return RewardsStats{
             .total_nodes = self.node_rewards.count(),
             .active_nodes = blk: {
                 var count: usize = 0;
                 var iter = self.node_rewards.iterator();
                 while (iter.next()) |node| {
-                    if (node.value_ptr.isHealthy()) count += 1;
+                    if (node.value_ptr.isHealthy(io)) count += 1;
                 }
                 break :blk count;
             },
             .total_rewards_dispensed = self.total_dispensed,
             .remaining_pool = self.pool.total() - self.total_dispensed,
             .bug_bounties_paid = self.bug_bounties.items.len,
-            .testnet_duration_hours = (@as(u64, @intCast(std.time.timestamp())) - self.testnet_start) / 3600,
+            .testnet_duration_hours = (nowSeconds(io) - self.testnet_start) / 3600,
         };
     }
 
     /// Export to JSON
-    pub fn exportToJson(self: *RewardsManager) ![]const u8 {
+    pub fn exportToJson(self: *RewardsManager, io: std.Io) ![]const u8 {
         var buffer = try std.ArrayList(u8).initCapacity(self.allocator, 256);
 
         try buffer.appendSlice(self.allocator, "{");
 
         // Add stats
-        const stats = self.getStats();
+        const stats = self.getStats(io);
         try buffer.appendSlice(self.allocator, "\"stats\":{");
-        try buffer.writer(self.allocator).print("{d}", .{stats.total_nodes});
+        try buffer.print(self.allocator, "{d}", .{stats.total_nodes});
         try buffer.appendSlice(self.allocator, ",\"active_nodes\":");
-        try buffer.writer(self.allocator).print("{d}", .{stats.active_nodes});
+        try buffer.print(self.allocator, "{d}", .{stats.active_nodes});
         try buffer.appendSlice(self.allocator, ",\"total_rewards\":");
-        try buffer.writer(self.allocator).print("{d}", .{stats.total_rewards_dispensed});
+        try buffer.print(self.allocator, "{d}", .{stats.total_rewards_dispensed});
         try buffer.appendSlice(self.allocator, "}");
 
         try buffer.appendSlice(self.allocator, "}");
@@ -526,7 +538,8 @@ test "RewardType toString/fromString" {
 }
 
 test "RewardEntry vesting" {
-    const now = @as(u64, @intCast(std.time.timestamp()));
+    const io = std.testing.io;
+    const now = nowSeconds(io);
 
     var entry = RewardEntry{
         .id = "test",
@@ -539,19 +552,20 @@ test "RewardEntry vesting" {
         .claimed_timestamp = 0,
     };
 
-    try std.testing.expect(entry.isVested());
-    try std.testing.expect(entry.canClaim());
-    try std.testing.expect(entry.timeUntilVesting() == null);
+    try std.testing.expect(entry.isVested(io));
+    try std.testing.expect(entry.canClaim(io));
+    try std.testing.expect(entry.timeUntilVesting(io) == null);
 
     entry.vesting_timestamp = now + 3600;
-    try std.testing.expect(!entry.isVested());
-    try std.testing.expect(!entry.canClaim());
-    try std.testing.expect(entry.timeUntilVesting() != null);
+    try std.testing.expect(!entry.isVested(io));
+    try std.testing.expect(!entry.canClaim(io));
+    try std.testing.expect(entry.timeUntilVesting(io) != null);
 }
 
 test "NodeRewardEntry init" {
     const allocator = std.testing.allocator;
-    var entry = NodeRewardEntry.init(allocator, "node-1", "0x123");
+    const io = std.testing.io;
+    var entry = NodeRewardEntry.init(allocator, "node-1", "0x123", io);
     defer entry.deinit(allocator);
 
     try std.testing.expectEqualStrings("node-1", entry.node_id);
@@ -561,21 +575,23 @@ test "NodeRewardEntry init" {
 
 test "NodeRewardEntry addJob" {
     const allocator = std.testing.allocator;
-    var entry = NodeRewardEntry.init(allocator, "node-1", "0x123");
+    const io = std.testing.io;
+    var entry = NodeRewardEntry.init(allocator, "node-1", "0x123", io);
     defer entry.deinit(allocator);
 
-    entry.addJob(1000);
+    entry.addJob(1000, io);
     try std.testing.expectEqual(@as(usize, 1), entry.jobs_completed);
     try std.testing.expectEqual(@as(u64, 1000), entry.tokens_processed);
 
-    entry.addJob(500);
+    entry.addJob(500, io);
     try std.testing.expectEqual(@as(usize, 2), entry.jobs_completed);
     try std.testing.expectEqual(@as(u64, 1500), entry.tokens_processed);
 }
 
 test "NodeRewardEntry updateQuality" {
     const allocator = std.testing.allocator;
-    var entry = NodeRewardEntry.init(allocator, "node-1", "0x123");
+    const io = std.testing.io;
+    var entry = NodeRewardEntry.init(allocator, "node-1", "0x123", io);
     defer entry.deinit(allocator);
 
     // First, reduce quality score so we can test increase
@@ -592,18 +608,20 @@ test "NodeRewardEntry updateQuality" {
 
 test "NodeRewardEntry isHealthy" {
     const allocator = std.testing.allocator;
-    var entry = NodeRewardEntry.init(allocator, "node-1", "0x123");
+    const io = std.testing.io;
+    var entry = NodeRewardEntry.init(allocator, "node-1", "0x123", io);
     defer entry.deinit(allocator);
 
-    try std.testing.expect(entry.isHealthy());
+    try std.testing.expect(entry.isHealthy(io));
 
-    entry.last_active = @as(u64, @intCast(std.time.timestamp())) - 7200;
-    try std.testing.expect(!entry.isHealthy());
+    entry.last_active = nowSeconds(io) - 7200;
+    try std.testing.expect(!entry.isHealthy(io));
 }
 
 test "NodeRewardEntry leaderboardScore" {
     const allocator = std.testing.allocator;
-    var entry = NodeRewardEntry.init(allocator, "node-1", "0x123");
+    const io = std.testing.io;
+    var entry = NodeRewardEntry.init(allocator, "node-1", "0x123", io);
     defer entry.deinit(allocator);
 
     const initial = entry.leaderboardScore();
@@ -618,7 +636,8 @@ test "NodeRewardEntry leaderboardScore" {
 
 test "RewardsManager init" {
     const allocator = std.testing.allocator;
-    var manager = RewardsManager.init(allocator);
+    const io = std.testing.io;
+    var manager = RewardsManager.init(allocator, io);
     defer manager.deinit();
 
     try std.testing.expectEqual(@as(usize, 0), manager.node_rewards.count());
@@ -627,10 +646,11 @@ test "RewardsManager init" {
 
 test "RewardsManager registerNode" {
     const allocator = std.testing.allocator;
-    var manager = RewardsManager.init(allocator);
+    const io = std.testing.io;
+    var manager = RewardsManager.init(allocator, io);
     defer manager.deinit();
 
-    try manager.registerNode("node-1", "0x123");
+    try manager.registerNode("node-1", "0x123", io);
 
     try std.testing.expectEqual(@as(usize, 1), manager.node_rewards.count());
 
@@ -640,21 +660,23 @@ test "RewardsManager registerNode" {
 
 test "RewardsManager registerNode duplicate" {
     const allocator = std.testing.allocator;
-    var manager = RewardsManager.init(allocator);
+    const io = std.testing.io;
+    var manager = RewardsManager.init(allocator, io);
     defer manager.deinit();
 
-    try manager.registerNode("node-1", "0x123");
-    const err = manager.registerNode("node-1", "0x456");
+    try manager.registerNode("node-1", "0x123", io);
+    const err = manager.registerNode("node-1", "0x456", io);
     try std.testing.expectError(error.NodeAlreadyRegistered, err);
 }
 
 test "RewardsManager recordNodeActivity" {
     const allocator = std.testing.allocator;
-    var manager = RewardsManager.init(allocator);
+    const io = std.testing.io;
+    var manager = RewardsManager.init(allocator, io);
     defer manager.deinit();
 
-    try manager.registerNode("node-1", "0x123");
-    try manager.recordNodeActivity("node-1", 10.0, 50, 0.9);
+    try manager.registerNode("node-1", "0x123", io);
+    try manager.recordNodeActivity("node-1", 10.0, 50, 0.9, io);
 
     const entry = manager.node_rewards.get("node-1").?;
     try std.testing.expectEqual(@as(usize, 50), entry.jobs_completed);
@@ -662,11 +684,12 @@ test "RewardsManager recordNodeActivity" {
 
 test "RewardsManager getLeaderboard" {
     const allocator = std.testing.allocator;
-    var manager = RewardsManager.init(allocator);
+    const io = std.testing.io;
+    var manager = RewardsManager.init(allocator, io);
     defer manager.deinit();
 
-    try manager.registerNode("node-1", "0x123");
-    try manager.registerNode("node-2", "0x456");
+    try manager.registerNode("node-1", "0x123", io);
+    try manager.registerNode("node-2", "0x456", io);
 
     const leaderboard = try manager.getLeaderboard(10);
     defer allocator.free(leaderboard);
@@ -676,19 +699,21 @@ test "RewardsManager getLeaderboard" {
 
 test "RewardsManager getStats" {
     const allocator = std.testing.allocator;
-    var manager = RewardsManager.init(allocator);
+    const io = std.testing.io;
+    var manager = RewardsManager.init(allocator, io);
     defer manager.deinit();
 
-    try manager.registerNode("node-1", "0x123");
+    try manager.registerNode("node-1", "0x123", io);
 
-    const stats = manager.getStats();
+    const stats = manager.getStats(io);
     try std.testing.expectEqual(@as(usize, 1), stats.total_nodes);
     try std.testing.expect(stats.remaining_pool > 0);
 }
 
 test "RewardsManager addBugBounty" {
     const allocator = std.testing.allocator;
-    var manager = RewardsManager.init(allocator);
+    const io = std.testing.io;
+    var manager = RewardsManager.init(allocator, io);
     defer manager.deinit();
 
     try manager.addBugBounty(
@@ -697,6 +722,7 @@ test "RewardsManager addBugBounty" {
         .minor,
         "Test bug",
         "This is a test bug",
+        io,
     );
 
     try std.testing.expectEqual(@as(usize, 1), manager.bug_bounties.items.len);
@@ -717,12 +743,10 @@ test "BugBounty severity rewards" {
 // MAIN ENTRYPOINT — testnet-rewards executable
 // ═══════════════════════════════════════════════════════════════════════════════
 
-pub fn main() !void {
-    const allocator = std.heap.page_allocator;
-
-    // Parse command line arguments
-    const args = try std.process.argsAlloc(allocator);
-    defer std.process.argsFree(allocator, args);
+pub fn main(init: std.process.Init) !void {
+    const allocator = init.gpa;
+    const io = init.io;
+    const args = try init.minimal.args.toSlice(init.arena.allocator());
 
     if (args.len < 2) {
         std.log.err("Usage: testnet-rewards <command>", .{});
@@ -742,7 +766,7 @@ pub fn main() !void {
         else
             50;
 
-        var manager = RewardsManager.init(allocator);
+        var manager = RewardsManager.init(allocator, io);
         defer manager.deinit();
 
         const leaderboard = try manager.getLeaderboard(n);
@@ -766,16 +790,16 @@ pub fn main() !void {
         const node_id = args[2];
         const address = args[3];
 
-        var manager = RewardsManager.init(allocator);
+        var manager = RewardsManager.init(allocator, io);
         defer manager.deinit();
 
-        try manager.registerNode(node_id, address);
+        try manager.registerNode(node_id, address, io);
         std.log.info("Registered node {s} with address {s}", .{ node_id, address });
     } else if (std.mem.eql(u8, command, "stats")) {
-        var manager = RewardsManager.init(allocator);
+        var manager = RewardsManager.init(allocator, io);
         defer manager.deinit();
 
-        const stats = manager.getStats();
+        const stats = manager.getStats(io);
         std.log.info("Reward Statistics:", .{});
         std.log.info("  Total nodes: {d}", .{stats.total_nodes});
         std.log.info("  Active nodes: {d}", .{stats.active_nodes});
@@ -790,7 +814,7 @@ pub fn main() !void {
 
         const address = args[2];
 
-        var manager = RewardsManager.init(allocator);
+        var manager = RewardsManager.init(allocator, io);
         defer manager.deinit();
 
         const rewards = try manager.getRewardsForAddress(address);
@@ -806,7 +830,7 @@ pub fn main() !void {
 
         var claimable: u64 = 0;
         for (rewards) |r| {
-            if (r.canClaim()) claimable += r.amount;
+            if (r.canClaim(io)) claimable += r.amount;
         }
 
         std.log.info("Claimable rewards for {s}: {d} $TRI", .{ address, claimable });
