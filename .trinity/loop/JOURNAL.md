@@ -4142,3 +4142,40 @@ B6's note to record this precisely rather than let it sit as the same
 stale text through another cycle — it stays correctly blocked, just for
 an accurately-described reason now. No comment posted back; nothing was
 asked, and re-acknowledging an agreement adds nothing.
+
+---
+
+## loop 2 · iteration 91 — B10, second quick win, and a subprocess wrinkle sized before touching it
+
+No new GitHub activity. Continued B10. Before picking the next file,
+checked which of the remaining 9 also call `std.process.Child.run()` —
+two do (`cyrillic_guard.zig`, `sacred_bench.zig`). Checked what that
+actually requires now rather than assume it's the same shape: `Child.run()`
+— the one-call spawn+wait+capture convenience — is gone entirely.
+Replaced by `std.process.spawn(io, options)` returning a bare `Child`,
+manual `.stdout = .pipe`, reading the resulting `File`, then
+`child.wait(io)` for the exit `Term`. Meaningfully more porting than file
+I/O — sized and set aside for its own pass rather than discovered
+mid-migration and rushed.
+
+Migrated `wave9_generator.zig` instead (pure file I/O, no subprocess).
+Surfaced three more 0.16 breakage patterns not in the original A1 catalog:
+
+- `std.ArrayListUnmanaged(T){}` no longer default-initializes — needs
+  `.empty` explicitly. The exact same trap already hit and fixed in
+  `tri_loopstate.zig` earlier this session, now confirmed to recur
+  elsewhere — worth a broader grep before calling this migration "sized."
+- `ArrayList(u8).writer(allocator)` no longer exists; `.print(allocator,
+  fmt, args)` directly on the list replaces it.
+- `GeneralPurposeAllocator` → `DebugAllocator` (A1 already knew the
+  rename) is invisible to `zig build-exe` when only used inside `test`
+  blocks — confirmed live: `build-exe` compiled clean, `zig test` on the
+  same file then failed on the identical line. `build-exe` alone is not
+  a migration checker; both must run.
+
+Verified by running: `--help`, a real 3-worker compose generation into a
+fresh nested directory, a second run into the same directory (exercises
+the `PathAlreadyExists` branch), and the too-many-workers error path.
+Both pre-existing unit tests pass unmodified. 5 of the 6 pure-file-I/O
+quick wins remain; the 2 subprocess-using files and `main.zig` itself are
+each their own future pass.
