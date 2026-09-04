@@ -173,7 +173,7 @@ pub const ExplorerDB = struct {
     pub fn init(allocator: std.mem.Allocator) ExplorerDB {
         return ExplorerDB{
             .allocator = allocator,
-            .blocks = .{},
+            .blocks = .empty,
             .block_index = .{},
             .transactions = .{},
             .address_txs = .{},
@@ -312,7 +312,7 @@ pub const ExplorerDB = struct {
     }
 
     fn indexTxByAddress(self: *ExplorerDB, address: []const u8, tx_hash: []const u8) !void {
-        const gop = try self.address_txs.getOrPutValue(self.allocator, address, .{});
+        const gop = try self.address_txs.getOrPutValue(self.allocator, address, .empty);
         // The address is already duplicated by caller, stored as key by getOrPutValue
 
         // The tx_hash is already duplicated by caller, just append it
@@ -444,7 +444,7 @@ pub const ExplorerServer = struct {
     allocator: std.mem.Allocator,
     db: ExplorerDB,
     port: u16,
-    socket: ?std.posix.socket_t = null,
+    server: ?std.Io.net.Server = null,
     running: bool = false,
 
     pub fn init(allocator: std.mem.Allocator, port: u16) ExplorerServer {
@@ -455,31 +455,17 @@ pub const ExplorerServer = struct {
         };
     }
 
-    pub fn deinit(self: *ExplorerServer) void {
-        if (self.socket) |s| {
-            std.posix.close(s);
+    pub fn deinit(self: *ExplorerServer, io: std.Io) void {
+        if (self.server) |*s| {
+            s.deinit(io);
         }
         self.db.deinit();
     }
 
     /// Start the server
-    pub fn start(self: *ExplorerServer) !void {
-        const sock = try std.posix.socket(std.posix.AF.INET, std.posix.SOCK.STREAM, std.posix.IPPROTO.TCP);
-
-        const reuse_value: u32 = 1;
-        _ = std.posix.setsockopt(sock, std.posix.SOL.SOCKET, std.posix.SO.REUSEADDR, &std.mem.toBytes(@as(c_int, @intCast(reuse_value)))) catch |err| {
-            std.posix.close(sock);
-            return err;
-        };
-
-        const addr = std.net.Address.initIp4(.{ 0, 0, 0, 0 }, self.port);
-        std.posix.bind(sock, &addr.any, addr.getOsSockLen()) catch |err| {
-            std.posix.close(sock);
-            return err;
-        };
-
-        try std.posix.listen(sock, 128);
-        self.socket = sock;
+    pub fn start(self: *ExplorerServer, io: std.Io) !void {
+        const addr = try std.Io.net.IpAddress.parse("0.0.0.0", self.port);
+        self.server = try std.Io.net.IpAddress.listen(&addr, io, .{ .reuse_address = true });
         self.running = true;
     }
 
@@ -594,11 +580,11 @@ pub const ExplorerServer = struct {
             try buffer.appendSlice(self.allocator, "\",\"address\":\"");
             try buffer.appendSlice(self.allocator, node.address);
             try buffer.appendSlice(self.allocator, "\",\"earned\":");
-            try buffer.writer(self.allocator).print("{d}", .{node.earned_tri});
+            try buffer.print(self.allocator, "{d}", .{node.earned_tri});
             try buffer.appendSlice(self.allocator, ",\"jobs\":");
-            try buffer.writer(self.allocator).print("{d}", .{node.jobs_completed});
+            try buffer.print(self.allocator, "{d}", .{node.jobs_completed});
             try buffer.appendSlice(self.allocator, ",\"quality\":");
-            try buffer.writer(self.allocator).print("{d:.2}", .{node.quality_score});
+            try buffer.print(self.allocator, "{d:.2}", .{node.quality_score});
             try buffer.append(self.allocator, '}');
         }
 
@@ -764,8 +750,9 @@ test "ExplorerDB getStats" {
 
 test "ExplorerServer init" {
     const allocator = std.testing.allocator;
+    const io = std.testing.io;
     var server = ExplorerServer.init(allocator, 8080);
-    defer server.deinit();
+    defer server.deinit(io);
 
     try std.testing.expectEqual(@as(u16, 8080), server.port);
     try std.testing.expect(!server.running);
@@ -840,12 +827,10 @@ test "TransactionInfo toJson" {
 // MAIN ENTRYPOINT — testnet-explorer executable
 // ═══════════════════════════════════════════════════════════════════════════════
 
-pub fn main() !void {
-    const allocator = std.heap.page_allocator;
-
-    // Parse command line arguments
-    const args = try std.process.argsAlloc(allocator);
-    defer std.process.argsFree(allocator, args);
+pub fn main(init: std.process.Init) !void {
+    const allocator = init.gpa;
+    const io = init.io;
+    const args = try init.minimal.args.toSlice(init.arena.allocator());
 
     if (args.len < 2) {
         std.log.err("Usage: testnet-explorer <command>", .{});
@@ -866,15 +851,15 @@ pub fn main() !void {
         else
             8080;
         var server = ExplorerServer.init(allocator, port);
-        defer server.deinit();
+        defer server.deinit(io);
 
-        try server.start();
+        try server.start(io);
         std.log.info("Testnet explorer listening on port {d}", .{port});
 
         // Main loop - run until interrupted
         server.running = true;
         while (server.running) {
-            std.Thread.sleep(1 * std.time.ns_per_s);
+            try std.Io.sleep(io, .fromSeconds(1), .real);
         }
     } else if (std.mem.eql(u8, command, "block")) {
         if (args.len < 3) {
@@ -883,21 +868,21 @@ pub fn main() !void {
         }
         const height = try std.fmt.parseInt(u64, args[2], 10);
         var server = ExplorerServer.init(allocator, 8080);
-        defer server.deinit();
+        defer server.deinit(io);
 
         const json = try server.handleGetBlock(height);
         defer allocator.free(json);
         std.log.info("{s}", .{json});
     } else if (std.mem.eql(u8, command, "stats")) {
         var server = ExplorerServer.init(allocator, 8080);
-        defer server.deinit();
+        defer server.deinit(io);
 
         const json = try server.handleGetStats();
         defer allocator.free(json);
         std.log.info("{s}", .{json});
     } else if (std.mem.eql(u8, command, "nodes")) {
         var server = ExplorerServer.init(allocator, 8080);
-        defer server.deinit();
+        defer server.deinit(io);
 
         const json = try server.handleGetNodes();
         defer allocator.free(json);
@@ -908,7 +893,7 @@ pub fn main() !void {
         else
             50;
         var server = ExplorerServer.init(allocator, 8080);
-        defer server.deinit();
+        defer server.deinit(io);
 
         const json = try server.handleGetLeaderboard(limit);
         defer allocator.free(json);

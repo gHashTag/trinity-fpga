@@ -4,7 +4,7 @@
     "id": "two-track",
     "cron_job": "eaa1cb07",
     "interval": "15m",
-    "iteration": 98,
+    "iteration": 99,
     "status": "RUNNING",
     "owner": "Dmitrii Vasilev / @gHashTag",
     "tracks": [
@@ -414,6 +414,16 @@
       "id": "D73",
       "what": "B18: did the actual review (reading diffs, not just counting files) rather than guessing. Found the 22(->17 after cleanup) dirty tracked paths are NOT independent litter -- they are one large, coherent, in-progress body of work (a formal-verification/Coq proposition-numbering effort spanning hooks.rs, main.rs x2, cli-mcp, README, a new 581-line FORMAL_FOUNDATIONS.md doc, Cargo.lock). This directly corroborates OD8 (t27 branch diverged from origin/master, which already has merged PRs #3017-3027 touching these same files) -- strongly suggesting this local diff is stale/redundant with already-merged upstream work, not new work to author commits for. Did NOT commit or discard any of it -- that specific judgment call needs the operator (updated B18's blocked_by accordingly), consistent with the standing rule against destructive git actions on ambiguous uncommitted work.",
       "safe_action_taken": "The one clearly-separable, zero-risk item was untracked: 6 Coq .aux/.glob build byproducts that were tracked before the *.aux/*.glob gitignore pattern landed (c7d902024), each diff verified as pure regeneration noise (line/hash shifts, no content). git rm --cached (files kept on disk), issue #3188, commit 8d980d937, pushed."
+    },
+    {
+      "id": "D74",
+      "what": "B10: migrated testnet_explorer.zig (6th file) to Zig 0.16 Io-threading. Confirmed the socket pattern proven in D72 (testnet_faucet.zig) generalizes cleanly: field type ?std.posix.socket_t -> ?std.Io.net.Server, deinit/start take an added io param, std.Thread.sleep -> std.Io.sleep. Found one thing zig test could not see because main() is unreachable in test builds: three ArrayList(u8).writer(allocator).print(...) call sites in handleGetNodes() only broke under zig build-exe. Fixed with the already-proven .print(allocator,fmt,args) form.",
+      "verified": "zig test 24/24. zig build-exe clean. Ran the real binary against every subcommand (stats/nodes/leaderboard/block), and the server subcommand -- confirmed genuinely listening via lsof -iTCP:PORT -sTCP:LISTEN, then killed cleanly. No new leaks found this time (unlike the three files before it)."
+    },
+    {
+      "id": "D75",
+      "what": "openXC7 collaboration milestone (informational, no action needed): cavearr posted the two PRs this thread has been building toward -- openXC7/prjxray-db#13 (the HCLK_L BUFRCLK0-3 enable rows, 44 insertions/0 deletions, added-only contract) and openXC7/prjxray#14 (the 039a-hclk-bufrclk-perfclk fuzzer that mints them), cross-referenced, both tagged for @hansfbaier review, with @gHashTag credited by name in both PR bodies for the silicon A/B on index 2 and the bit-level round-trip verification on xc7a200tfbg484-2. Read both PR bodies in full -- content matches this thread's findings exactly, nothing to correct. Review request is addressed to hansfbaier, not this loop, so no comment posted; the standing openXC7 authorization covers participating in this thread, not inserting an unsolicited review into someone else's requested-reviewer slot.",
+      "checked": "PR #877 (gHashTag/trinity) re-checked per standing practice: still OPEN, unchanged since 2026-08-31 -- consistent with OD3/OD9, no new information, no action."
     }
   ],
   "backlog": [
@@ -495,7 +505,7 @@
       "what": "Survey src/tri for Zig 0.16 fs/allocator API breakage (anomaly A1) and size the migration",
       "blocked_by": [],
       "status": "pending",
-      "note": "5 files fully migrated and verified by running: simple_synth_report.zig, wave9_generator.zig, sacred_synth_report.zig (file I/O), testnet_rewards.zig (Clock/Timestamp), testnet_faucet.zig (sockets -- std.Io.net.IpAddress.listen/connect, verified via lsof against a real bound port). All three previously-unexplored Zig 0.16 API families for this migration (subprocess-adjacent patterns still open, Clock/Timestamp, raw networking) now have proven, working patterns. Remaining: cyrillic_guard.zig/sacred_bench.zig need std.process.spawn(io,options)+pipe+wait (Child.run() gone, not yet attempted); testnet_explorer.zig needs the now-proven socket pattern only (should be a straightforward repeat); test_dev_runner.zig is not independent (shares DevSession with dev_commands.zig, likely main.zig-invoked); cell_trends.zig untouched (pre-existing unrelated dirty diff); main.zig (1767 lines) remains the deferred structural blocker."
+      "note": "6 files fully migrated and verified by running: simple_synth_report.zig, wave9_generator.zig, sacred_synth_report.zig (file I/O), testnet_rewards.zig (Clock/Timestamp), testnet_faucet.zig + testnet_explorer.zig (sockets -- std.Io.net.IpAddress.listen/connect, both verified via lsof against a real bound port). The explorer migration was the clean repeat the faucet one predicted: same server-never-calls-accept() shape, same deinit(io)/start(io) signature change, zero new leaks found this time. One new wrinkle caught only by zig build-exe (not zig test, since main() is dead code under test): ArrayList(u8).writer(allocator).print(...) is gone too, needs .print(allocator,fmt,args) directly -- same fix already known from wave9_generator.zig, just not yet applied here since this file was untouched until now. Remaining: cyrillic_guard.zig/sacred_bench.zig need std.process.spawn(io,options)+pipe+wait (Child.run() gone, still not attempted -- the only unexplored API family left); test_dev_runner.zig is not independent (shares DevSession with dev_commands.zig, likely main.zig-invoked); cell_trends.zig untouched (pre-existing unrelated dirty diff); main.zig (1767 lines) remains the deferred structural blocker."
     },
     {
       "id": "B11",

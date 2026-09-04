@@ -4370,3 +4370,37 @@ both thresholds), drift ok (backlog 7 open / anomalies 13 open, checked+consiste
 decision some_gated (B19 — B18 is excluded from the gated list because its non-empty
 `blocked_by` routes it through the blocked-item path rather than the decision-gate path;
 both fields are set correctly, this is just a display nuance, not a bug).
+
+## Iteration 99 — B10 6th file (clean repeat) + openXC7 collaboration milestone
+
+**B10.** Migrated `testnet_explorer.zig`, the file this session's own notes predicted
+would be a straightforward repeat of the faucet's socket pattern — and it was: same
+`?std.posix.socket_t` → `?std.Io.net.Server` field swap, same `deinit(io)`/`start(io)`
+signature change, same `std.Thread.sleep` → `std.Io.sleep` swap, no accept()/read/write
+loop to migrate since this server also never calls `accept()`. One thing `zig test`
+could not see because `main()` is dead code under test: three
+`ArrayList(u8).writer(allocator).print(...)` call sites in `handleGetNodes()` only broke
+under `zig build-exe` — a reminder that "tests pass" and "the binary builds" are two
+different claims, and only the second one exercises `main()`. Fixed with the
+already-proven `.print(allocator,fmt,args)` form. Verified: `zig test` 24/24, `zig
+build-exe` clean, ran every subcommand against the real binary, confirmed the `server`
+subcommand genuinely listening via `lsof -iTCP:PORT -sTCP:LISTEN` then killed it cleanly.
+No new leaks this time — the first of the six migrated files with a clean bill on the
+first pass. Only `cyrillic_guard.zig`/`sacred_bench.zig` (subprocess spawn) remain as
+the one genuinely unexplored API family in this migration.
+
+**openXC7 collaboration.** Checked #149 for movement since the last read: cavearr posted
+the two PRs the whole thread has been building toward — `openXC7/prjxray-db#13` (the
+HCLK_L BUFRCLK0-3 enable rows, added-only, 44 insertions/0 deletions) and
+`openXC7/prjxray#14` (the `039a-hclk-bufrclk-perfclk` fuzzer that mints them),
+cross-referenced, both addressed to @hansfbaier for review, crediting @gHashTag by name
+in both bodies for the silicon A/B on index 2 and the bit-level round-trip verification
+on `xc7a200tfbg484-2`. Read both PR bodies in full — everything in them matches this
+thread's findings, nothing to correct, nothing missing. No comment posted: the review
+request is addressed to hansfbaier specifically, and the standing openXC7 authorization
+covers participating in this collaborative thread, not inserting an unsolicited review
+into someone else's requested-reviewer slot. PR #877 re-checked per standing practice —
+still open, unchanged since 2026-08-31, consistent with OD3/OD9.
+
+Tripwire clean: disk 5.76 GiB free, drift consistent (backlog 7 open / anomalies 13
+open), decision some_gated (B19, B18 still correctly excluded via its blocked_by path).
