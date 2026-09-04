@@ -181,8 +181,12 @@ hansfbaier answered "Thanks!".
 **Watch the right signal.** For twenty iterations I polled `gh api .../issues/149/comments`
 and reported "no reply" while both PRs sat merged. A comment list on an ISSUE does
 not change when a PR merges, and a maintainer's request addressed to me lived on
-the PR, not the issue. Poll `gh pr view <n> --json state,comments` for anything you
-have open.
+the PR, not the issue. Poll `gh pr view <n> --json state,comments,reviewDecision,
+statusCheckRollup` for anything you have open — comments alone still misses a review
+verdict or a CI status flip with no new comment attached, the same blind spot one
+level down. Every sweep since 2026-09-04 checks issue comments AND `gh pr view` for
+every tracked PR (#120, #171, #877) in the same pass — habit, not automation; there
+is no coded poller, this is a checklist to run by hand each time.
 
 ### One caveat the rule does not state
 

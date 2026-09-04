@@ -4024,3 +4024,17 @@ re-inclusion no matter how specific the negation (git's own documented
 behavior); fixed with the `gen/*`+`!gen/zig/`+`gen/zig/*` wildcard chain
 instead. Same failure shape as this loop's own STATE.json being untracked
 for 76 iterations, just in the other repo.
+
+**Small cleanup pass.** No new GitHub replies yet, B6/B8 still externally
+stuck. Corrected a stale blocker on B15: `blocked_by` still listed "disk",
+resolved hours ago — left it in place it would have quietly worked either
+way (one blocker is enough to skip `nextItem()`), but a false reason is
+worth fixing on sight, matching the same discipline as the cron-ID
+correction earlier. hansfbaier genuinely hasn't commented on #120 yet, so
+the item stays correctly blocked, just for the real reason now. Then
+closed B20: the A16 "watch PR state, not just issue comments" lesson was
+already in `.claude/skills/fpga-bufr/SKILL.md` and already practiced every
+sweep — extended the documented poll to `reviewDecision`+
+`statusCheckRollup` (a review verdict or CI flip with no new comment is the
+same blind spot one level down) and stated plainly that this is a manual
+checklist habit, not coded automation.

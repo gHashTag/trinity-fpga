@@ -482,8 +482,7 @@
       "prio": 15,
       "what": "Regenerate the six named demo-projects goldens and take draft PR #120 out of draft — offered to hansfbaier on the strength of AssassinK786's independent spartan7 reproduction",
       "blocked_by": [
-        "hansfbaier's go-ahead",
-        "disk"
+        "hansfbaier's go-ahead"
       ],
       "status": "offered",
       "note": "Blast radius already measured 2026-08-18 and it is closed: blinky-digilent-arty, -basys-3, -zybo, blinky-genesys2, blinky-qmtech, litex-minimal-arty-s7 change; blinky-kc705 and blinky-stlv7325 do not. Six builds, named, not open-ended."
@@ -529,7 +528,8 @@
       "prio": 20,
       "what": "Extend GitHub polling past issue comments to PR state/reviews/status checks (gh pr view --json state,comments,reviewDecision,statusCheckRollup) -- A16 showed a PR merge was missed for 19 hours because only issue comments were watched",
       "blocked_by": [],
-      "status": "pending"
+      "status": "completed",
+      "resolution": "The A16 lesson (watch PR state, not just issue comments) was already in .claude/skills/fpga-bufr/SKILL.md and already practiced every sweep since. Extended the documented poll to reviewDecision+statusCheckRollup (a review verdict or CI flip with no new comment is the same blind spot one level down) and made explicit that this is a manual checklist habit, not coded automation -- no poller exists, and building one is a different, unstarted task if ever wanted."
     },
     {
       "id": "B21",
