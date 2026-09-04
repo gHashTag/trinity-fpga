@@ -3894,3 +3894,37 @@ fresh every firing (closes a staleness gap the design review itself
 flagged — a stale binary could make every check agree while being wrong),
 run `tripwire` before touching the backlog, and only proceed to `status`/
 real work if it exits 0.
+
+---
+
+## loop 2 · iteration 77 — HALT: disk (the mechanism's first real firing, and it worked)
+
+The recurring cron re-fired the same standing overnight prompt, exactly as
+designed. Followed `loop.continuity_protocol` to the letter for the first
+time on a real cycle: rebuilt `tri_loopstate_main` fresh, ran `tripwire`
+before touching anything else. It reported **HALT: disk, 1.47 GiB free**
+(threshold 2.00 GiB) — corroborated independently with `df -h` (1.5Gi
+available on both `/` and `/System/Volumes/Data`, both 100%/89% used).
+Free space was 9.77–9.81 GiB across every reading earlier this session;
+something consumed roughly 8+ GiB across the elapsed cron cycles since —
+the same class of unattributed, multi-GB swing this loop's D51/A13-A18
+history already documents (CoreSimulator churn, not this loop's own
+builds), now recurring at real scale while unsupervised.
+
+**Did exactly what the design specifies, nothing more:** no `nextItem()`
+call, no backlog work, no attempt at disk remediation (no cache deletion,
+no touching CoreSimulator, no `rm -rf` anything) — B16 already ruled that
+call an operator-only one, and an unsupervised loop guessing at disk
+cleanup under pressure is itself a risk the tripwire design exists to avoid.
+The dashboard's halt banner (written automatically by `tripwire` itself)
+and this line are, today, the only two places this is visible — `OD6`
+(a GitHub escalation channel) is still unanswered, so there is no
+notification path outside this repo's own files yet.
+
+**Did NOT re-run the research/decompose Workflow** despite receiving the
+identical verbatim overnight prompt again — `continuity_protocol`'s first
+rule held on its first real test. This iteration's entire output is
+recording the halt: `loop.status`/`loop.halt` updated, this line, one
+commit (STATE.json + dashboard.html only), then stop. The very next firing
+re-checks disk fresh, per the same rule everything else in this mechanism
+follows — no value here is trusted from this write, only logged.

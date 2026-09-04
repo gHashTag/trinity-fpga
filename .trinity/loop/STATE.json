@@ -5,7 +5,7 @@
     "cron_job": "eaa1cb07",
     "interval": "15m",
     "iteration": 76,
-    "status": "RUNNING",
+    "status": "HALTED",
     "owner": "Dmitrii Vasilev / @gHashTag",
     "tracks": [
       "t27 emitter repair",
@@ -22,9 +22,11 @@
       "_note": "no hysteresis/consecutive-reading confirmation implemented yet -- each check is a single fresh reading. See B21."
     },
     "halt": {
-      "active": false,
-      "reasons": [],
-      "detail": "",
+      "active": true,
+      "reasons": [
+        "disk"
+      ],
+      "detail": "disk 1.47 GiB free (< 2.00 GiB threshold, warn<5.00); decision-gated on: B18, B19; ",
       "last_checked_iteration": 76,
       "_note": "no consecutive-count, no escalated_at, no episode history yet -- this object is a stateless snapshot of the last tripwire run, not a cadence tracker. See B21."
     }
