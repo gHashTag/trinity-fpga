@@ -3979,3 +3979,24 @@ space was already 3.3 GiB within seconds of issuing it (status showed
 during it, zero autonomous disk remediation attempted before the operator
 named the exact runtime** — the mechanism did exactly what it was designed
 to do for its entire duration. Resuming real backlog work this iteration.
+
+**B14 delivered — the actual payoff of resuming.** A manual GitHub sweep
+(issue comments plus `gh pr view` on the tracked PRs — same ad hoc method
+as every earlier sweep this session, B20's actual polling extension is
+still unbuilt) found cavearr had posted the full BUFRCLK0/1/3 fuzzing
+campaign results on #149 while this loop was halted: 58 Vivado specimens,
+phase-0 reordered, tag taken from the routed pip dump — both changes I'd
+asked for, taken in full. Their minted rows: `HCLK_L.ENABLE_BUFFER.
+HCLK_CK_BUFRCLK{0,1,2,3}` at `00_23`/`01_23`/`00_31`/`01_31`. The local
+patched db already carried these exact four values — my own earlier
+pattern-based prediction, now independently cross-validated by their
+fuzzer. Built a synthetic FASM and ran it through `fasm2frames` against
+`xc7a200tfbg484-2` (AX7203's actual part, not their fuzzer's
+`xc7a100tfgg676-1`): exit 0, and — checked the real bits, not just the
+return code — frame `0x00421400` word 50 and frame `0x00421401` word 50
+both read `0x80800000` (bits 23+31), exactly the four minted positions,
+symmetric, no surprises. Posted the result to #149 with the recommendation
+to ship the verified enables and not force the still-unverified #172 pip
+(never taken in 58 specimens plus two dedicated runs — forcing it would
+repeat the exact fuzzer-tag mistake the phase-0 reorder exists to catch,
+one level up). B14 and B16 (disk) both closed this iteration.

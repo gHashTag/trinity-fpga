@@ -348,6 +348,11 @@
     {
       "id": "D61",
       "what": "Disk halt RESOLVED, operator-directed: `xcrun simctl runtime delete <UUID>` (correct form needed the UUID from `simctl runtime list`, not the SimRuntime.iOS-26-5 identifier `simctl list runtimes` reports -- the two commands use different identifier formats, a real gotcha for next time) removed the iOS 26.5 (23F77) runtime. Async delete: `simctl runtime list` showed status (Deleting) immediately after, free space rose 1.2 -> 3.3 GiB within seconds and continued to 13.49 GiB once the delete finished -- confirmed via a fresh `tripwire` run, not assumed. Total halt duration: iteration 77 to 83, roughly 2 hours, all recorded mechanically with zero backlog work attempted during it and zero autonomous remediation attempted before the operator explicitly named the runtime to remove."
+    },
+    {
+      "id": "D62",
+      "what": "Delivered B14 (my committed half of cavearr's BUFRCLK0/1/3 fuzzing campaign) the moment the mint landed on #149. Local patched db (np-main/xilinx/external/prjxray-db/artix7/segbits_hclk_l.db) already carried the exact same 4 rows cavearr's independent Vivado-fuzzer campaign minted -- a real, valuable cross-validation between my own earlier pattern-based prediction and their fuzzer-confirmed result, both landing on 00_23/01_23/00_31/01_31. Built a synthetic FASM (HCLK_L_X102Y78.ENABLE_BUFFER.HCLK_CK_BUFRCLK0..3) and ran fasm2frames against xc7a200tfbg484-2 (AX7203's exact part, not the fuzzer's xc7a100tfgg676-1): exit 0, 26 frames. Verified the actual bit pattern, not just the return code -- frame 0x00421400 word 50 = 0x80800000 (bits 23+31, the two \"00\" rows) and frame 0x00421401 word 50 = 0x80800000 (bits 23+31, the two \"01\" rows), exactly matching the minted positions with no surprises.",
+      "recommendation_posted": "On the PERFCLK/#172 half cavearr also asked about: recommended shipping only the verified enables, not forcing the unverified #172 pip, since it was never taken in 58 Vivado specimens plus two dedicated CLKOUTn-only runs -- inventing a ppips default for it would repeat the exact fuzzer-tag-predicate mistake the phase-0 reorder was built to catch, one level up the pipeline."
     }
   ],
   "backlog": [
@@ -462,8 +467,9 @@
       "blocked_by": [
         "cavearr's mint"
       ],
-      "status": "go-ahead reciprocated 2026-09-03T15:07Z -- both risks conceded in full (tag predicate moves to the routed pip dump, neg-unconsumed moves to phase 0), hole-occupancy scan folded into campaign notes as the prior, permutation arithmetic agreed verbatim. Campaign task is being drawn up; results land in #149 before any db PR. Disk is no longer a blocker -- told him so on 2026-09-03T15:2xZ so he does not factor bench downtime into scheduling.",
-      "note": "Scoped honestly on #149: round-trip for all four (cheap, no flash), silicon for index 2 ONLY. Indices 0/1/3 need a second clock-capable pad, which is exactly the B8 blocker. Do not let this be read as four silicon checks."
+      "status": "completed",
+      "note": "Scoped honestly on #149: round-trip for all four (cheap, no flash), silicon for index 2 ONLY. Indices 0/1/3 need a second clock-capable pad, which is exactly the B8 blocker. Do not let this be read as four silicon checks.",
+      "resolution": "Round-trip confirmed on xc7a200tfbg484-2, bit-level (frame 0x00421400/0x00421401, word 50, bits 23+31 both halves) -- not just exit 0. Posted to #149: https://github.com/openXC7/nextpnr-xilinx/issues/149#issuecomment-5540105394. Silicon index-2 status unchanged (already confirmed); 0/1/3 still correctly scoped as needing the MMCM path or a second pad (B8), not claimed."
     },
     {
       "id": "B15",
@@ -483,8 +489,9 @@
       "blocked_by": [
         "operator decision"
       ],
-      "status": "diagnosed, not actionable by me",
-      "note": "Deleting the iOS 18.4 runtime is the single large reclaim (~15-20 GB) and it is a development-environment call, not a cleanup. Cheaper partial: CoreSimulator/Caches is 6.6 GB and regenerable. Everything I could have trimmed unilaterally in t27/build is either the live prjxray-db (831 MB), the expensive chipdb (407 MB), or a duplicate whose non-use I could not prove — px-main provides a second copy of fasm2frames.py and nothing proved which one the flow calls."
+      "status": "completed",
+      "note": "Deleting the iOS 18.4 runtime is the single large reclaim (~15-20 GB) and it is a development-environment call, not a cleanup. Cheaper partial: CoreSimulator/Caches is 6.6 GB and regenerable. Everything I could have trimmed unilaterally in t27/build is either the live prjxray-db (831 MB), the expensive chipdb (407 MB), or a duplicate whose non-use I could not prove — px-main provides a second copy of fasm2frames.py and nothing proved which one the flow calls.",
+      "resolution": "Operator explicitly named the runtime (iOS 26.5) and I removed it via `xcrun simctl runtime delete <UUID>`, 2026-09-04. Freed 1.2 -> 13.49 GiB. See D61."
     },
     {
       "id": "B17",
