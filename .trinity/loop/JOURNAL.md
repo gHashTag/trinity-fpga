@@ -4126,3 +4126,19 @@ would have made the migration look like a regression it wasn't.
 Nine more of the twelve remain, each the same shape, each doable without
 touching `main.zig`. Left them for a future iteration rather than doing
 all nine in one sitting — a bounded, verified slice beats a rushed batch.
+
+---
+
+## loop 2 · iteration 90 — cavearr confirms the round-trip, PR now "being prepared"
+
+New reply on #149: cavearr agrees in full on both the round-trip
+confirmation and the PERFCLK recommendation — "checking the frame words
+rather than the exit code is exactly the difference between a round-trip
+and a green checkmark" — and states the prjxray-db PR plus a companion
+fuzzer PR are being prepared now, this thread linked as the review record.
+Explicitly: rows have not landed yet, and the next action is
+hansfbaier's ("the rows land on your desk next"), not this loop's. Updated
+B6's note to record this precisely rather than let it sit as the same
+stale text through another cycle — it stays correctly blocked, just for
+an accurately-described reason now. No comment posted back; nothing was
+asked, and re-acknowledging an agreement adds nothing.

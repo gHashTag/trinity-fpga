@@ -4,7 +4,7 @@
     "id": "two-track",
     "cron_job": "eaa1cb07",
     "interval": "15m",
-    "iteration": 89,
+    "iteration": 90,
     "status": "RUNNING",
     "owner": "Dmitrii Vasilev / @gHashTag",
     "tracks": [
@@ -424,7 +424,7 @@
         "cavearr/hansfbaier's prjxray-db PR for the BUFRCLK enable rows -- not B7, which is now completed for an unrelated reason (found stale by the periodic self-audit)"
       ],
       "status": "pending",
-      "note": "Deliberately NOT sent. With the emitter fixed and no db rows, the same designs go from silently wrong to loudly broken (FasmLookupError) — worse for users until rows exist. Ordering is now stated publicly: rows first, emitter second. | Iteration 49: converted to the maintainer's house style ahead of time, so it is ready in the accepted form when the db rows land. Both sites now read `const bool carries_a_global_clock` / `const bool carries_a_clock_spine` instead of bare npos comparisons. NOT COMPILED -- nextpnr is a large build and free disk is 542 MB, so it needs a build before it is sent."
+      "note": "cavearr confirmed the round-trip + PERFCLK recommendation on #149 (2026-09-04T13:59:35Z) and states the prjxray-db PR + companion fuzzer PR are now being prepared, cross-referenced like the 039 pair. Rows have NOT landed yet -- still correctly blocked until an actual PR opens/merges, not just \"being prepared\". Next action is hansfbaier's, per cavearr's own comment (\"the rows land on your desk next\") -- nothing further for this loop to do here right now."
     },
     {
       "id": "B7",
