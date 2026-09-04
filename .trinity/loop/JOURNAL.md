@@ -3933,3 +3933,10 @@ follows — no value here is trusted from this write, only logged.
 Not logging a full paragraph per repeat check — that's what B21's
 consecutive-count field is for once it exists; a one-line append here does
 the same job without turning this file into a 15-minute spam log.
+
+**Iteration 79 — still HALTED, and now confirmed DECLINING**: 1.47 → 1.45 →
+1.29 GiB across three checks. Not re-sending the push notification already
+sent at onset — no-spam intent — but set an explicit `notify_threshold_gib`
+(1.0 GiB) in `loop.halt` so the next drop that actually matters re-notifies
+without needing a fresh judgment call each cycle, and recorded the rule
+that the threshold only ever tightens, never loosens.
