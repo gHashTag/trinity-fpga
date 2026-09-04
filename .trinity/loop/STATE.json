@@ -4,7 +4,7 @@
     "id": "two-track",
     "cron_job": "eaa1cb07",
     "interval": "15m",
-    "iteration": 93,
+    "iteration": 94,
     "status": "RUNNING",
     "owner": "Dmitrii Vasilev / @gHashTag",
     "tracks": [
@@ -392,6 +392,12 @@
       "what": "B10: attempted 2 more files (testnet_faucet.zig, testnet_rewards.zig), found both needed unexplored API surfaces mid-migration (raw posix sockets, Io.Clock/Timestamp respectively) rather than the already-proven file-I/O pattern. Correctly reverted both rather than commit incomplete, non-compiling changes -- verified via `git status --short` showing zero diff after checkout. Also found test_dev_runner.zig, despite having its own main(), is NOT independently migratable: it shares DevSession.load/save with dev_commands.zig (9 call sites), which almost certainly cascades into the deferred main.zig migration.",
       "corrected_sizing": "Re-checked all 7 remaining files against the FULL known API-migration surface (fs.cwd, GeneralPurposeAllocator, argsAlloc, process.Child, posix.socket, time.timestamp) rather than the narrower original checklist. Result: zero of the 7 are pure quick wins anymore. Two entirely new, unexplored migration surfaces identified and NOT yet attempted: raw posix socket APIs (std.posix.socket/bind/listen -- replacement unknown), and Io.Clock/Io.Timestamp (replaces std.time.timestamp(), a genuine redesign not a rename). Both are legitimately separate investigations, correctly not rushed into this cycle.",
       "discipline_note": "This is the value of checking before claiming, not after: two files were touched, found to need unexplored surfaces, and cleanly reverted rather than left half-migrated. `git status --short` after each revert confirmed zero net change -- no partial, non-compiling state was left in the tree."
+    },
+    {
+      "id": "D70",
+      "what": "B10: migrated testnet_rewards.zig, proving the Io.Clock/Timestamp replacement pattern for std.time.timestamp() (verified empirically against `date +%s` before use, not assumed). Threaded io through 12 functions/methods and all 15 affected tests, using std.testing.io (a ready-made stdlib Io for tests) rather than hand-rolling test infrastructure. Centralized the cast pattern into one nowSeconds(io) helper. Also fixed the same ArrayListUnmanaged(.{}) and .writer(allocator) traps found in earlier files this session, proactively this time rather than by compile error.",
+      "verified": "zig test: 28/28 (was already-passing testnet_config tests plus all 15 testnet_rewards tests, now io-threaded). Ran the actual binary against all four real subcommands (leaderboard/register/stats/claim) plus the no-args error path.",
+      "unblocks": "testnet_faucet.zig also needs Clock (now solved) but separately needs raw posix sockets (still unknown) -- this migration removes one of its two open questions, not both."
     }
   ],
   "backlog": [
@@ -473,7 +479,7 @@
       "what": "Survey src/tri for Zig 0.16 fs/allocator API breakage (anomaly A1) and size the migration",
       "blocked_by": [],
       "status": "pending",
-      "note": "CORRECTED sizing after checking all 7 remaining files against the full known API-migration surface (not just fs/GPA/argsAlloc): 3 done (simple_synth_report.zig, wave9_generator.zig, sacred_synth_report.zig) were the only genuinely pure-file-I/O files. Every one of the other 7 needs at least one of three separate, unexplored API migrations: std.process.Child.run() -> manual spawn+pipe+wait (cyrillic_guard.zig, sacred_bench.zig); std.posix.socket/bind/listen -> unknown replacement, raw posix networking also moved under Zig 0.16's Io model, not yet investigated (testnet_faucet.zig, testnet_explorer.zig); std.time.timestamp() -> Io.Clock/Io.Timestamp, a genuinely redesigned API (not a rename) used pervasively through business logic, not just main() (testnet_rewards.zig, testnet_faucet.zig); test_dev_runner.zig additionally has a hidden cascade into dev_state_machine.zig's DevSession.load/save, itself also called from dev_commands.zig (9 sites) which is very likely invoked by the real src/tri/main.zig -- not actually independent despite having its own main(). cell_trends.zig remains untouched (pre-existing unrelated dirty diff). Net: the file-I/O pattern is fully proven and documented; sockets and Clock/Timestamp are each their own future investigation, not yet started."
+      "note": "4 files fully migrated and verified: simple_synth_report.zig, wave9_generator.zig, sacred_synth_report.zig (pure file-I/O), testnet_rewards.zig (the Clock/Timestamp system, first proof of that pattern). Remaining: cyrillic_guard.zig/sacred_bench.zig need std.process.spawn(io,options)+pipe+wait (Child.run() gone); testnet_faucet.zig/testnet_explorer.zig need a raw posix socket API investigation (std.posix.socket is also gone, replacement not yet found) -- testnet_faucet.zig ALSO needs the now-proven Clock pattern, so only its socket half remains unknown; test_dev_runner.zig is not independent (shares DevSession with dev_commands.zig, likely main.zig-invoked); cell_trends.zig untouched (pre-existing unrelated dirty diff); main.zig (1767 lines) remains the deferred structural blocker."
     },
     {
       "id": "B11",

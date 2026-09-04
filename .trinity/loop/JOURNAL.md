@@ -4257,3 +4257,35 @@ Two files touched and cleanly reverted, confirmed by `git status --short`
 showing zero diff — no half-migrated, non-compiling state left behind.
 This cycle's real output is the corrected map, not new code, and that's
 a legitimate outcome, not a wasted one.
+
+---
+
+## loop 2 · iteration 94 — the Clock/Timestamp research pays off
+
+No new GitHub activity. Rather than leave last cycle's Clock/Timestamp
+discovery as an unused finding, investigated it properly: `Io.Clock` is
+an enum (`real`/`awake`/`boot`/`cpu_process`/`cpu_thread`); `Clock.real.now(io)`
+returns an `Io.Timestamp` with `.toSeconds() -> i64`. Verified empirically
+before trusting it — a throwaway program printing
+`Clock.real.now(io).toSeconds()` matched `date +%s` exactly, same
+discipline as every other API claim this session.
+
+Migrated `testnet_rewards.zig` — 12 functions/methods and 15 tests needed
+`io` threaded through, since `std.time.timestamp()` was called throughout
+the file's actual business logic (reward vesting, node health, leaderboard
+duration), not just at the edges. Found `std.testing.io` — the stdlib's
+own ready-made `Io` for test contexts — so none of the 15 tests needed
+hand-rolled test infrastructure. Proactively fixed the by-now-familiar
+`ArrayListUnmanaged(.{})` and `.writer(allocator)` traps this time,
+instead of waiting to hit them.
+
+Verified with `zig test` (28/28) and by running the real binary against
+all four subcommands plus the error path. This closes one of
+`testnet_faucet.zig`'s two open questions (Clock: solved; sockets: still
+unknown) — B10 now has 4 files done, a proven pattern for a second API
+family, and an accurately narrowed remaining scope.
+
+Noted in passing: disk has drifted from the post-cleanup high back down
+into the WARN tier (4.95 GiB, just under the 5.0 threshold) — not a halt,
+10+ GiB above the crash zone, not investigated further this cycle since
+it isn't yet actionable. Worth a glance next cycle if it keeps falling.
