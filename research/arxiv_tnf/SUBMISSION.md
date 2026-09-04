@@ -81,3 +81,21 @@ Kept in the paper where they were made:
 2. *One trit per tripling is a new regime class* — it is takum's, off by an additive 1
 3. *The gap is empty because an intermediate regime is too expensive* — it costs 18% more than posit's, which ships
 4. *TNF64 will cost 4,762 LUTs* — it costs 7,479; the single power law was low by 36%
+
+## Journal submission record (added 2026-09-05)
+
+The section above predates the journal submission and its "nothing has been
+submitted" no longer holds for the journal route.
+
+| event | date | manuscript | tree |
+|---|---|---|---|
+| submitted to *Microprocessors and Microsystems* | 2026-09-03 00:25 (+07) | MICPRO-D-26-00839 | last commit before submission `a0fb006`; `tnf_paper.tex` last changed in `64400a1` (2026-08-26) |
+| revision R1 prepared, not yet submitted | 2026-09-05 | same number | this commit |
+
+R1 changes, all in `tnf_paper.tex`: a paragraph naming the repository and the
+root each cited path is relative to (the `measurements/…` paths are relative to
+this directory, not to the repository root); the Lloyd–Max paragraph states the
+scale rule it used and no longer calls its row a ceiling; the "2026 literature
+varies the transform" sentence now names the work that varies the scale field
+(HBQ, M2XFP, VS-Quant, shared microexponents) and cites it; four `\bibitem`s
+added. No number in any table changed.
