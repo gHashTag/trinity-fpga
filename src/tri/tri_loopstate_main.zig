@@ -20,11 +20,14 @@ const loopstate = @import("tri_loopstate.zig");
 
 fn usage() void {
     std.debug.print(
-        \\usage: tri-loopstate <status|check> [--state PATH] [--dashboard PATH]
+        \\usage: tri-loopstate <status|check|tripwire> [--state PATH] [--dashboard PATH]
         \\
         \\  status     print the current iteration, done count, and next actionable backlog item
         \\  check      recompute live backlog/anomaly counts from STATE.json and diff them
         \\             against the dashboard's readout block; exits 1 if a drift is found
+        \\  tripwire   fresh disk/drift/decision-gridlock reading, updates the dashboard's
+        \\             halt banner accordingly, and exits 1 if any tripwire is active
+        \\             (exit 1 also on any read/parse failure -- treat that as a halt too)
         \\
     , .{});
 }
@@ -84,6 +87,91 @@ pub fn main(init: std.process.Init) !u8 {
         defer gpa.free(report);
         std.debug.print("{s}", .{report});
         return if (std.mem.indexOf(u8, report, "DRIFT") != null or std.mem.indexOf(u8, report, "MISSING") != null) 1 else 0;
+    }
+
+    if (std.mem.eql(u8, cmd, "tripwire")) {
+        const dashboard_bytes = std.Io.Dir.cwd().readFileAlloc(init.io, dashboard_path, gpa, .limited(16 << 20)) catch |err| {
+            std.debug.print("error: could not read {s}: {t}\n", .{ dashboard_path, err });
+            return 1;
+        };
+        defer gpa.free(dashboard_bytes);
+
+        const thresholds = loopstate.readDiskThresholds(&st);
+        var disk_error: ?anyerror = null;
+        const free_gib: f64 = loopstate.freeGiB(".") catch |err| blk: {
+            disk_error = err;
+            break :blk 0.0;
+        };
+        const disk_tier: loopstate.DiskTier = if (disk_error != null) .halt else loopstate.evalDiskTier(free_gib, thresholds);
+
+        const live = loopstate.liveCounts(&st);
+        const first_report = try loopstate.checkDrift(gpa, live, dashboard_bytes);
+        defer gpa.free(first_report);
+
+        // A plain numeric mismatch is mechanical and safe to fix every time
+        // it's found -- both inputs are entirely under the loop's own
+        // control. Only a heal that DOESN'T stick (a MISSING label, or one
+        // that's still wrong after the rewrite) counts as a real drift
+        // tripwire; a heal that works is not a halt.
+        var heal = try loopstate.autoHealDrift(gpa, live, dashboard_bytes);
+        defer heal.deinit(gpa);
+        const drift_report = heal.final_report;
+        const dashboard_for_banner = heal.healed_html;
+        const healed = !std.mem.eql(u8, first_report, "checked, consistent\n") and
+            std.mem.eql(u8, drift_report, "checked, consistent\n");
+
+        var gate = try loopstate.decisionGateStatus(gpa, &st);
+        defer gate.deinit(gpa);
+
+        const reasons = loopstate.evaluateTripwires(disk_tier, drift_report, gate.status);
+
+        var detail: std.ArrayList(u8) = .empty;
+        defer detail.deinit(gpa);
+        if (disk_error != null) {
+            try detail.print(gpa, "disk read FAILED ({t}), treating as halt; ", .{disk_error.?});
+        } else if (reasons.disk) {
+            try detail.print(gpa, "disk {d:.2} GiB free (< {d:.2} threshold); ", .{ free_gib, thresholds.halt_gib });
+        }
+        if (reasons.drift) try detail.print(gpa, "drift (unrecoverable, did not auto-heal): {s}; ", .{std.mem.trim(u8, drift_report, "\n")});
+        if (reasons.decision) {
+            try detail.print(gpa, "decision-gated on: ", .{});
+            for (gate.gated_ids.items, 0..) |id, idx| {
+                if (idx > 0) try detail.print(gpa, ", ", .{});
+                try detail.print(gpa, "{s}", .{id});
+            }
+            try detail.print(gpa, "; ", .{});
+        }
+
+        const banner = try loopstate.renderHaltBanner(gpa, reasons, detail.items);
+        defer gpa.free(banner);
+        const new_dashboard = loopstate.injectHaltBanner(gpa, dashboard_for_banner, banner) catch |err| {
+            std.debug.print("error: could not update halt banner in {s}: {t}\n", .{ dashboard_path, err });
+            return 1;
+        };
+        defer gpa.free(new_dashboard);
+        std.Io.Dir.cwd().writeFile(init.io, .{ .sub_path = dashboard_path, .data = new_dashboard }) catch |err| {
+            std.debug.print("error: could not write {s}: {t}\n", .{ dashboard_path, err });
+            return 1;
+        };
+
+        std.debug.print("disk:     {s} ({d:.2} GiB free, halt<{d:.2} warn<{d:.2})\n", .{ @tagName(disk_tier), free_gib, thresholds.halt_gib, thresholds.warn_gib });
+        if (healed) {
+            std.debug.print("drift:    auto-healed this run -- was: {s}\n", .{std.mem.trim(u8, first_report, "\n")});
+        }
+        std.debug.print("drift:    {s}", .{drift_report});
+        std.debug.print("decision: {s}", .{@tagName(gate.status)});
+        if (gate.gated_ids.items.len > 0) {
+            std.debug.print(" (gated: ", .{});
+            for (gate.gated_ids.items, 0..) |id, idx| {
+                if (idx > 0) std.debug.print(", ", .{});
+                std.debug.print("{s}", .{id});
+            }
+            std.debug.print(")", .{});
+        }
+        std.debug.print("\n", .{});
+        std.debug.print("verdict:  {s}\n", .{if (reasons.any()) "HALTED" else "RUNNING"});
+
+        return if (reasons.any()) 1 else 0;
     }
 
     usage();

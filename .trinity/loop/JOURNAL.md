@@ -3810,3 +3810,87 @@ across the restart `loop.status` already records. Fixed in
 `STATE.json.loop.cron_job`/`cron_note` and the dashboard masthead. Left the
 paragraph above uncorrected in place, per this file's own append-only
 convention, rather than silently editing what was already written.
+
+---
+
+## loop 2 · iteration 76+ — the operator chose, from bed: "autonomous with tripwires"
+
+Woke to a one-line reply to the three cooperation options offered earlier:
+option 2. Rather than hand-wave what "must halt and wait for the operator
+only when it hits a named tripwire" means for a loop that has no process to
+pause — each firing is a fresh session with no memory but this file — ran a
+second, smaller 4-agent Workflow (`wf_6d0ae440-b92`): three independent
+designers (safety-first, throughput-preserving, operator-experience) each
+proposed exact trigger/halt/resume semantics for all three tripwires, then a
+synthesis pass merged them into one implementable spec, explicitly resolving
+where the three disagreed (e.g. safety-first's 10 GiB disk-halt threshold
+would have halted the loop on the spot at today's 9.8 GiB free, directly
+against the operator's stated intent to keep running — the synthesis took
+the other two proposals' tighter 2/4 GiB band instead, still >2x the worst
+disk swing this loop has already measured).
+
+**Built the synthesized design, not just documented it.** New library code
+in `src/tri/tri_loopstate.zig`:
+
+- `freeGiB()` — a direct libc `statvfs` binding, no shell `df`. The struct
+  layout (`fsblkcnt_t`/`fsfilcnt_t` are 32-bit `unsigned int` on Darwin, not
+  the 64-bit I'd have assumed) came from reading the actual macOS SDK header,
+  then verified by compiling a throwaway test and comparing its output
+  against `df -h` for the same path — 9.82 GiB from the syscall, "9.8Gi" from
+  `df`. Verified, not assumed, exactly the standing rule for every artifact
+  claim this session.
+- `decisionGateStatus()` — `clear` / `some_gated` / `all_gated`. `nextItem()`
+  now skips any row with `needs_operator_decision: true` silently, every
+  time — a decision-gated row never starves unrelated work (B17/B8 keep
+  flowing past B18/B19 today). Only `all_gated` (nothing left to pick at all)
+  is the real tripwire. This is the direct fix for the #877 shape: that bug
+  was re-observing the same fact six times with zero behavior change: here,
+  a gated row is either silently and correctly skipped forever while other
+  work proceeds, or the loudest possible signal — never the silent middle.
+- `autoHealDrift()` / `rewriteReadoutNumber()` — a plain numeric mismatch
+  (both sides live and under the loop's own control) self-heals the same
+  run; a MISSING label (the dashboard's structure itself broken) is left
+  alone rather than guessed at.
+- `renderHaltBanner()` / `injectHaltBanner()` — marker-based
+  (`<!-- LOOP_HALT_BANNER_START/END -->`, added once to dashboard.html),
+  idempotent: re-running with a clear verdict actively erases a stale
+  banner rather than merely not adding a new one.
+- A new `tripwire` subcommand ties all three readings together, updates the
+  dashboard banner, and exits 1 if anything is active — 30/30 tests pass.
+
+**Then broke it against the real file, and that was the point.** Forced a
+halt by temporarily raising `loop.tripwires.disk_halt_free_gib` past today's
+free space, confirmed the banner appeared on the live dashboard.html with
+the correct detail text, reverted, confirmed it cleared on its own. On the
+very next real (unforced) run, it reported **MISSING for both labels** —
+wrong, since the live numbers were intact at lines 835-836. Root cause: the
+banner's own diagnostic text, sitting ABOVE the readout block, contained the
+literal words "backlog open" ("MISSING backlog open: ..."), and
+`extractReadoutNumber`'s whole-document search matched that plain-text
+occurrence instead of the real `<div class="l">backlog open</div>` cell.
+This is a self-inflicted, compounding bug: it would have wedged the loop
+permanently HALTED the first time it ever legitimately halted for drift,
+since MISSING doesn't self-clear by design. None of 24 passing unit tests
+caught it — they used synthetic fixtures with no banner text in front of the
+readout, so the interaction between the tool's own two outputs never arose.
+Fixed by scoping both label-lookup functions to start no earlier than
+`<div class="readout">`; added a regression test reproducing the exact
+shape (banner prose containing the label words, placed before a synthetic
+readout) so this specific failure can't return silently. 30/30 tests pass
+with the fix; re-ran against the real, now-fixed file and it correctly
+reports 11 backlog-open / 5 anomalies-open, `checked, consistent`, RUNNING.
+
+**Deliberately not built, and recorded as such rather than silently
+skipped**: hysteresis/consecutive-reading confirmation and flap-detection
+(today's tripwires are stateless single-reading snapshots — B21). GitHub
+Tier-2 escalation (one comment posted/edited on a tracking issue when a halt
+can't self-clear) needs an operator-designated issue and explicit
+autonomous-posting authorization that don't exist yet — recorded as OD6
+rather than assumed or silently left out. Today the only two escalation
+channels are the dashboard's halt banner and one JOURNAL.md line.
+
+`STATE.json.loop.continuity_protocol` now says, in order: rebuild the CLI
+fresh every firing (closes a staleness gap the design review itself
+flagged — a stale binary could make every check agree while being wrong),
+run `tripwire` before touching the backlog, and only proceed to `status`/
+real work if it exits 0.

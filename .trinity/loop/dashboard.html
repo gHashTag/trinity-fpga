@@ -103,6 +103,8 @@
 
 <div class="wrap">
 
+  <!-- LOOP_HALT_BANNER_START --><!-- LOOP_HALT_BANNER_END -->
+
   <section class="exhibit">
     <h2>Iteration 76k — closing the loop on today's own biggest find</h2>
     <p class="note">
@@ -830,13 +832,14 @@
     <div class="cellstat"><div class="n">2</div><div class="l">PRs open</div></div>
     <div class="cellstat"><div class="n">1/4</div><div class="l">rows on silicon</div></div>
   <div class="cellstat"><div class="n">6/6</div><div class="l">ci jobs green</div></div>
-    <div class="cellstat"><div class="n">10</div><div class="l">backlog open</div></div>
+    <div class="cellstat"><div class="n">11</div><div class="l">backlog open</div></div>
     <div class="cellstat"><div class="n">5</div><div class="l">anomalies open</div></div>
   </div>
   <p class="note" style="margin-top:-.5rem">
-    Readout recomputed live from STATE.json via <code>tri-loopstate check</code> (was 8/1 stale,
-    briefly 6/5, now 10/5 after 4 new backlog rows landed this iteration — see the closing
-    section below; the tool caught its own drift the moment those rows were added).
+    Readout is recomputed live from STATE.json every iteration by <code>tri-loopstate tripwire</code>
+    and rewritten if it drifts — these two numbers should never go stale again (2026-09-04; was
+    caught stale at 8/1 by an external audit before this mechanism existed — see the closing
+    section below).
   </p>
 
   <section>
@@ -2010,6 +2013,31 @@ grep -v 'ENABLE_BUFFER.HCLK_CK_BUFRCLK' ax.fasm &gt; ax_ctrl.fasm    # the contr
       whole-CLI build is still blocked on the unrelated Zig-0.16 Io-threading migration — exposing
       <code>status</code> and <code>check</code> subcommands so this drift is a command away from being
       caught next time, not something an external audit has to find by hand.
+    </p>
+  </section>
+
+  <section>
+    <h2>2026-09-04 — the operator chose "autonomous with tripwires"; three tripwires now actually exist</h2>
+    <p class="note">
+      A second small design workflow turned that choice into exact semantics (a real disk syscall,
+      a decision-gridlock detector, a self-healing drift check), implemented in
+      <code>tri_loopstate.zig</code>'s new <code>tripwire</code> subcommand — 30/30 tests green,
+      run for real against this file, including a deliberately forced halt to confirm the banner
+      above actually appears and clears. A decision-gated backlog row (<code>needs_operator_decision</code>,
+      currently B18/B19) no longer sits ambiguously in the list: <code>nextItem()</code> now skips it
+      silently so unrelated work keeps flowing, and only total gridlock — nothing left to pick at
+      all — is a real halt.
+    </p>
+    <p class="note">
+      <b>Verifying it against the real file, not just synthetic tests, caught a real bug within
+      the hour:</b> the halt banner's own diagnostic text sat above this readout and could echo a
+      label's exact words, which a whole-document search matched instead of the real cell —
+      reporting the readout MISSING even though the numbers above were fine. Fixed by scoping the
+      search to this readout block specifically; a regression test now pins the exact failure
+      shape. Left honestly unbuilt, not silently skipped: hysteresis/flap-detection (B21) and a
+      GitHub escalation channel, which needs an operator-designated tracking issue that doesn't
+      exist yet (OD6) — today, this banner and one <code>JOURNAL.md</code> line are the only two
+      places a halt becomes visible.
     </p>
   </section>
 

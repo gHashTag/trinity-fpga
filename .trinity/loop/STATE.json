@@ -5,14 +5,29 @@
     "cron_job": "eaa1cb07",
     "interval": "15m",
     "iteration": 76,
-    "status": "RUNNING (restarted 2026-09-02)",
+    "status": "RUNNING",
     "owner": "Dmitrii Vasilev / @gHashTag",
     "tracks": [
       "t27 emitter repair",
       "openXC7 BUFR — waiting on cavearr's specimen design"
     ],
     "cron_note": "947e19e4 (cited by this field until 2026-09-04) was a session-scoped cron from an earlier, now-terminated Claude Code session -- CronCreate jobs die when the session exits, so it could not have survived the restarts already logged in loop.status. The currently live cron is eaa1cb07, created by the /loop invocation that started this iteration. Correcting the field rather than leaving a dead ID as if it still fires. Still holds: do not schedule a second 15m cron on top of eaa1cb07 -- a duplicate would put two agents on the same compiler concurrently, breaking the loop's one-patch-at-a-time rule.",
-    "continuity_protocol": "MANDATORY before doing anything else on a fresh firing: (1) do NOT re-run the Research/Decompose Workflow again -- it already ran once (wf_e3e8ce0c-8bc, 2026-09-04) and its full findings are recorded in done[D53..D57], anomalies[A1 update], and backlog[B17..B20] below; re-running it on an unchanged repo state is bookkeeping, not progress. (2) Run `zig build-exe src/tri/tri_loopstate_main.zig -femit-bin=/tmp/tri-loopstate && /tmp/tri-loopstate status` (rebuild if the source changed) to get the next actionable backlog item mechanically instead of re-deriving it by reading this whole file. (3) Run `/tmp/tri-loopstate check` before writing anything to JOURNAL.md or dashboard.html -- if it reports DRIFT, fix the dashboard's readout numbers before adding new narrative. (4) Never redo anything in done[] or completed backlog rows -- isDone()/nextItem() exist for exactly this and are now reachable via the binary above, not just as library calls."
+    "continuity_protocol": "MANDATORY, IN ORDER, on every fresh firing: (1) do NOT re-run the Research/Decompose Workflow again -- see done[D53..D57] and the tripwire-design workflow (2026-09-04) recorded below. (2) Rebuild the CLI fresh -- never trust a previous binary: `zig build-exe src/tri/tri_loopstate_main.zig -femit-bin=/tmp/tri-loopstate`. This is cheap (a few seconds) and closes a real gap the tripwire design's own review flagged: a stale binary can make every check look consistent while being wrong. (3) Run `/tmp/tri-loopstate tripwire` FIRST, before touching the backlog. It takes a fresh disk reading (no shell, direct statvfs), re-runs the drift check, and re-scans the backlog for decision-gridlock -- never trusting this file's own previous loop.halt value, only using it for reference. It also rewrites dashboard.html's halt banner to match (safe: idempotent, mechanical, always correct to re-apply). (4) If tripwire exits 1 (HALTED): do NOT call nextItem() or touch the backlog this iteration. Update loop.halt/status here in STATE.json to match tripwire's printed report, append one JOURNAL.md line naming the reason(s), commit (STATE.json + dashboard.html only), and stop -- this iteration's entire output is recording the halt. A genuinely non-self-clearing reason (decision:all_gated, or a disk/drift read that errors outright) should also get ONE line posted or updated wherever the operator will see it if that channel exists -- currently NONE does (see OD6 below); until OD6 is answered, the dashboard banner + JOURNAL.md are the only escalation channel, so check both if you suspect a halt. (5) If tripwire exits 0 (RUNNING): proceed exactly as before -- run `/tmp/tri-loopstate status` for the next actionable backlog item (already skips needs_operator_decision rows) and do the real track work. (6) Never redo anything in done[] or completed backlog rows.",
+    "status_note": "restarted 2026-09-02; cooperation mode set to \"autonomous with tripwires\" 2026-09-04 (operator's explicit choice, option 2 of 3 offered)",
+    "cooperation_mode": "autonomous_with_tripwires",
+    "tripwires": {
+      "disk_halt_free_gib": 2.0,
+      "disk_warn_free_gib": 5.0,
+      "disk_resume_free_gib": 4.0,
+      "_note": "no hysteresis/consecutive-reading confirmation implemented yet -- each check is a single fresh reading. See B21."
+    },
+    "halt": {
+      "active": false,
+      "reasons": [],
+      "detail": "",
+      "last_checked_iteration": 76,
+      "_note": "no consecutive-count, no escalated_at, no episode history yet -- this object is a stateless snapshot of the last tripwire run, not a cadence tracker. See B21."
+    }
   },
   "invariants": [
     "Never force-push. Never rewrite published history.",
@@ -314,6 +329,15 @@
       "id": "D57",
       "what": "Folded the copy_propagate silent-infinite-loop bug (D-item from #3038) into a durable reference doc, docs/COMPILER_BUGS.md in t27 -- states the defect shape generically (a mutated loop variable can be folded with its initializer by copy-prop), the fix, the six-pass sweep verification method, and a generalization note (grep extra_op for other text-encoded mutations) for the next author, independent of this session's specific line numbers.",
       "commit": "14ad17608, Closes t27#3041"
+    },
+    {
+      "id": "D58",
+      "what": "Implemented the full three-tripwire mechanism (disk/drift/decision) the operator chose (cooperation option 2, autonomous with tripwires), per a 4-agent design workflow (3 independent proposals + synthesis, run wf_6d0ae440-b92). New library functions in src/tri/tri_loopstate.zig: freeGiB() (real libc statvfs binding, struct layout verified against the macOS SDK header AND cross-checked live against df -- no shell), evalDiskTier/readDiskThresholds, decisionGateStatus() (clear/some_gated/all_gated -- a decision-gated backlog row never blocks unrelated work, only total gridlock halts), autoHealDrift/rewriteReadoutNumber (numeric drift self-heals same-run; a MISSING label is left alone rather than guessed at), evaluateTripwires (pure combinator), renderHaltBanner/injectHaltBanner (marker-based, idempotent). Wired into a new `tripwire` subcommand in tri_loopstate_main.zig. 30/30 tests pass; verified end-to-end against the REAL STATE.json/dashboard.html, including a deliberate forced-halt test (raised the disk threshold above current free space, confirmed the banner appeared with correct detail text, then confirmed it cleared automatically once the threshold reverted).",
+      "deferred_on_purpose": "Hysteresis/consecutive-reading confirmation and flap-detection (backlog B21) -- todays tripwires are correct single-reading snapshots with no memory across iterations. GitHub Tier-2 escalation (posting/editing one comment on a tracking issue) is NOT wired -- it needs an operator-designated issue and explicit autonomous-posting authorization, tracked as a new decision (OD6) rather than assumed. Escalation today is exactly two channels: the dashboard halt banner and one JOURNAL.md line."
+    },
+    {
+      "id": "D58-bugfix",
+      "what": "Found and fixed a real bug while verifying D58 end-to-end (not caught by 24 passing unit tests, only by running against the live file): extractReadoutNumber/rewriteReadoutNumber did a WHOLE-DOCUMENT search for a label, so once a halt banner (sitting above the readout block) echoed a label's exact words in its own diagnostic text (e.g. \"MISSING backlog open: ...\"), the search matched that plain-text occurrence instead of the real <div class=\"l\">backlog open</div> cell -- a self-inflicted, compounding false MISSING report. Fixed by scoping both functions to start the search no earlier than the <div class=\"readout\"> anchor. Added a regression test reproducing the exact failure (a banner-shaped string containing the label words placed before test_readout) so this cannot silently regress."
     }
   ],
   "backlog": [
@@ -480,6 +504,13 @@
       "id": "B20",
       "prio": 20,
       "what": "Extend GitHub polling past issue comments to PR state/reviews/status checks (gh pr view --json state,comments,reviewDecision,statusCheckRollup) -- A16 showed a PR merge was missed for 19 hours because only issue comments were watched",
+      "blocked_by": [],
+      "status": "pending"
+    },
+    {
+      "id": "B21",
+      "prio": 30,
+      "what": "Add hysteresis (2 consecutive confirming readings before disk-halt auto-resumes) and flap-detection (3+ halt episodes in a rolling window -> anomalies[] row even while currently clear) to the tripwire mechanism -- today's evalDiskTier/decisionGateStatus are correct single-reading snapshots with no memory across iterations, which is intentionally simpler but can flap on noise near a threshold boundary",
       "blocked_by": [],
       "status": "pending"
     }
@@ -671,6 +702,15 @@
       "status": "fixed",
       "fix": "loop.cron_job corrected to eaa1cb07; loop.cron_note rewritten to explain why the old ID could not have been live and to restate the still-valid no-duplicate-cron rule.",
       "lesson": "A session-scoped resource ID (cron, monitor, task) recorded once in durable state does not remain valid across a session boundary just because the state file itself persists. Anything in STATE.json that names a live session resource should be re-verified (CronList / TaskList / Monitor list), not assumed current, whenever a fresh session picks the loop back up."
+    },
+    {
+      "id": "A22",
+      "found": "2026-09-04, while verifying the newly-built tripwire mechanism against the live dashboard.html",
+      "what": "A halt banner rendered by the new tool sits above the readout block and can textually contain a label's exact words in its own error message; the label-lookup functions searched the WHOLE document, not just the readout block, so the banner's own text shadowed the real cell and produced a false MISSING report the very first time a real halt occurred.",
+      "impact": "Would have made the tripwire mechanism unable to recover from its own first drift-halt: MISSING is treated as non-self-clearing by design, so this bug would have wedged the loop in a permanent false HALTED state the moment it ever legitimately halted for drift once.",
+      "status": "fixed",
+      "fix": "Scoped extractReadoutNumber/rewriteReadoutNumber to search only from the <div class=\"readout\"> anchor onward (src/tri/tri_loopstate.zig, findReadoutDigits helper); added a regression test reproducing the exact shape.",
+      "lesson": "A unit-test suite built from synthetic fixtures (no banner text in front of the readout) cannot catch a bug that only exists when two of the tool's own outputs (banner text, readout parsing) interact on the real file. Running the new tool against the real, live artifact end-to-end -- including deliberately forcing the halt path, not just the clean path -- was what caught this, matching this session's standing rule to verify against the artifact, not the reasoning."
     }
   ],
   "collaboration_options": [
@@ -1350,6 +1390,12 @@
       "question": "Accept the current build-time guard as the interim mitigation for the disk-exhaustion root cause (identified as CoreSimulator, D51), or pursue further? Six attempts at a fix from inside the sandbox have failed; this likely needs system-level access the loop's tools don't have.",
       "first_flagged": "2026-09-01 (A18), diagnosed 2026-09-0x (D51)",
       "impact": "standing single point of failure that already caused one full harness outage"
+    },
+    {
+      "id": "OD6",
+      "question": "Should the loop have a GitHub tracking issue it can post/edit ONE escalation comment on when a tripwire halts for a non-self-clearing reason (decision-gridlock, or an unrecoverable dashboard-parse failure)? This needs an issue number/URL to write to, and explicit authorization to post there autonomously (distinct from the existing ask-first rule for third-party PRs/issues) -- neither exists yet. Until answered, the ONLY escalation channels are the dashboard's halt banner and one JOURNAL.md line; a halt that lasts hours produces no notification outside this repo.",
+      "first_flagged": "2026-09-04",
+      "impact": "A genuinely stuck halt (e.g. all actionable backlog items gated) is currently silent outside this repo's own files -- exactly the visibility gap the tripwire design was built to close, not yet fully closed"
     }
   ]
 }
