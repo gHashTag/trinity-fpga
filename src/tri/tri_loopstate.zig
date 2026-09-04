@@ -458,6 +458,13 @@ pub const DiskThresholds = struct {
     halt_gib: f64 = 2.0,
     warn_gib: f64 = 5.0,
     resume_gib: f64 = 4.0,
+    /// Consecutive non-halt readings required before a halt is reported as
+    /// resolved. See applyDiskHysteresis.
+    recovery_confirmations: u32 = 2,
+    /// Rolling window, in iterations, that flap detection looks back over.
+    flap_window_iterations: i64 = 20,
+    /// Halt episodes within the window at or above this count count as a flap.
+    flap_threshold: u32 = 3,
 };
 
 pub const DiskTier = enum { full, warn, halt };
@@ -475,6 +482,22 @@ fn floatField(obj: std.json.ObjectMap, key: []const u8, fallback: f64) f64 {
     return switch (v) {
         .float => |f| f,
         .integer => |i| @floatFromInt(i),
+        else => fallback,
+    };
+}
+
+fn u32Field(obj: std.json.ObjectMap, key: []const u8, fallback: u32) u32 {
+    const v = obj.get(key) orelse return fallback;
+    return switch (v) {
+        .integer => |i| if (i < 0) fallback else @intCast(i),
+        else => fallback,
+    };
+}
+
+fn i64Field(obj: std.json.ObjectMap, key: []const u8, fallback: i64) i64 {
+    const v = obj.get(key) orelse return fallback;
+    return switch (v) {
+        .integer => |i| i,
         else => fallback,
     };
 }
@@ -501,6 +524,9 @@ pub fn readDiskThresholds(st: *const State) DiskThresholds {
         .halt_gib = floatField(tw, "disk_halt_free_gib", d.halt_gib),
         .warn_gib = floatField(tw, "disk_warn_free_gib", d.warn_gib),
         .resume_gib = floatField(tw, "disk_resume_free_gib", d.resume_gib),
+        .recovery_confirmations = u32Field(tw, "disk_recovery_confirmations_needed", d.recovery_confirmations),
+        .flap_window_iterations = i64Field(tw, "flap_window_iterations", d.flap_window_iterations),
+        .flap_threshold = u32Field(tw, "flap_threshold", d.flap_threshold),
     };
 }
 
@@ -532,6 +558,330 @@ pub fn freeGiB(path: [*:0]const u8) !f64 {
     if (statvfs(path, &buf) != 0) return error.StatvfsFailed;
     const free_bytes: u64 = @as(u64, buf.f_bavail) * @as(u64, buf.f_frsize);
     return @as(f64, @floatFromInt(free_bytes)) / (1024.0 * 1024.0 * 1024.0);
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// DISK HYSTERESIS + FLAP DETECTION (B21)
+//
+// evalDiskTier alone is a correct single-reading snapshot with no memory
+// across iterations: a free-space reading that oscillates by a few hundred
+// MB right at a threshold boundary flaps the verdict every cycle even
+// though nothing about the underlying disk pressure changed. Two
+// independent, small state machines fix that:
+//
+//   - Hysteresis: once a reading crosses into .halt, do not report a clean
+//     recovery on the very next reading that crosses back out. Require
+//     `confirmations_needed` CONSECUTIVE non-halt readings first. A single
+//     bounce back over the line is not "resolved."
+//   - Flap detection: even when currently clear, 3+ halt episodes within a
+//     short window of iterations is itself an anomaly worth surfacing --
+//     the disk is not stable, it is oscillating, and "currently fine" is
+//     the wrong takeaway to leave in the dashboard.
+//
+// Both are pure functions over explicit state; the caller (tri-loopstate
+// tripwire) is responsible for reading the persisted counters from
+// STATE.json before calling in, and writing the returned new counters back
+// after -- these functions never touch a file themselves, matching every
+// other pure/impure split in this module.
+// ─────────────────────────────────────────────────────────────────────────
+
+pub const DiskHysteresisState = struct {
+    was_halted: bool = false,
+    recovery_streak: u32 = 0,
+};
+
+/// Reads loop.tripwires.{was_halted,disk_recovery_streak}, defaulting to a
+/// fresh (never-halted) state when either is absent -- so this works
+/// unchanged on a STATE.json written before B21 existed.
+pub fn readDiskHysteresisState(st: *const State) DiskHysteresisState {
+    const d = DiskHysteresisState{};
+    const obj = switch (st.root()) {
+        .object => |o| o,
+        else => return d,
+    };
+    const loop = switch (obj.get("loop") orelse return d) {
+        .object => |o| o,
+        else => return d,
+    };
+    const tw = switch (loop.get("tripwires") orelse return d) {
+        .object => |o| o,
+        else => return d,
+    };
+    return .{
+        .was_halted = boolField(tw, "was_halted", d.was_halted),
+        .recovery_streak = u32Field(tw, "disk_recovery_streak", d.recovery_streak),
+    };
+}
+
+pub const HysteresisResult = struct {
+    /// What the caller should actually report/act on this reading.
+    effective_tier: DiskTier,
+    new_state: DiskHysteresisState,
+};
+
+/// A raw .halt reading always wins immediately (never delay entering halt --
+/// hysteresis only guards the exit, not the entrance, since a false-negative
+/// halt is far cheaper than a false-negative recovery). Recovering out of
+/// halt requires `confirmations_needed` consecutive non-halt raw readings;
+/// a reading that dips back to .halt before that count is reached resets
+/// the streak to zero, same as a fresh halt.
+pub fn applyDiskHysteresis(raw_tier: DiskTier, prev: DiskHysteresisState, confirmations_needed: u32) HysteresisResult {
+    if (raw_tier == .halt) {
+        return .{ .effective_tier = .halt, .new_state = .{ .was_halted = true, .recovery_streak = 0 } };
+    }
+    if (!prev.was_halted) {
+        return .{ .effective_tier = raw_tier, .new_state = .{ .was_halted = false, .recovery_streak = 0 } };
+    }
+    const streak = prev.recovery_streak + 1;
+    if (streak >= confirmations_needed) {
+        return .{ .effective_tier = raw_tier, .new_state = .{ .was_halted = false, .recovery_streak = 0 } };
+    }
+    return .{ .effective_tier = .halt, .new_state = .{ .was_halted = true, .recovery_streak = streak } };
+}
+
+/// Reads loop.tripwires.halt_episode_iterations (a plain array of integer
+/// iteration numbers, one per iteration at which a NEW halt episode began),
+/// defaulting to empty when absent. Iteration numbers are used as the
+/// rolling-window unit instead of wall-clock time so this stays a pure
+/// function with no Io.Clock dependency, consistent with the rest of this
+/// module.
+pub fn readHaltEpisodes(allocator: std.mem.Allocator, st: *const State) ![]i64 {
+    const obj = switch (st.root()) {
+        .object => |o| o,
+        else => return &.{},
+    };
+    const loop = switch (obj.get("loop") orelse return &.{}) {
+        .object => |o| o,
+        else => return &.{},
+    };
+    const tw = switch (loop.get("tripwires") orelse return &.{}) {
+        .object => |o| o,
+        else => return &.{},
+    };
+    const arr = switch (tw.get("halt_episode_iterations") orelse return &.{}) {
+        .array => |a| a,
+        else => return &.{},
+    };
+    var out = try std.ArrayList(i64).initCapacity(allocator, arr.items.len);
+    errdefer out.deinit(allocator);
+    for (arr.items) |item| {
+        switch (item) {
+            .integer => |i| try out.append(allocator, i),
+            else => {},
+        }
+    }
+    return out.toOwnedSlice(allocator);
+}
+
+/// True when `threshold` or more entries in `episode_iterations` fall
+/// within `window` iterations of `current_iteration` (inclusive) -- the
+/// disk is oscillating across the halt boundary repeatedly, not merely
+/// having had one bad moment.
+pub fn detectFlap(episode_iterations: []const i64, current_iteration: i64, window: i64, threshold: usize) bool {
+    var count: usize = 0;
+    for (episode_iterations) |it| {
+        if (current_iteration - it <= window and current_iteration - it >= 0) count += 1;
+    }
+    return count >= threshold;
+}
+
+/// Appends `current_iteration` to `existing` when `starting_new_episode` is
+/// true (transition from not-halted into halted this reading), then prunes
+/// entries older than `window` so the array does not grow forever. Caller
+/// owns the returned slice.
+pub fn updateHaltEpisodes(allocator: std.mem.Allocator, existing: []const i64, current_iteration: i64, starting_new_episode: bool, window: i64) ![]i64 {
+    var out: std.ArrayList(i64) = .empty;
+    errdefer out.deinit(allocator);
+    for (existing) |it| {
+        if (current_iteration - it <= window and current_iteration - it >= 0) try out.append(allocator, it);
+    }
+    if (starting_new_episode) try out.append(allocator, current_iteration);
+    return out.toOwnedSlice(allocator);
+}
+
+/// Writes the hysteresis counters and episode list into a mutable copy of
+/// `st`'s parsed tree and re-serializes the whole document. This is the one
+/// function in this module that produces a full STATE.json replacement --
+/// callers write the result back to disk themselves (same read-compute-
+/// write split as `injectHaltBanner` for dashboard.html). Creates
+/// loop.tripwires if it was absent.
+pub fn writeTripwireHysteresis(
+    allocator: std.mem.Allocator,
+    st: *State,
+    hysteresis: DiskHysteresisState,
+    episodes: []const i64,
+) ![]u8 {
+    // Mutations to the parsed tree use the document's own arena, not the
+    // caller-supplied `allocator` -- the tree was built entirely from that
+    // arena by std.json.parseFromSlice, and st.deinit() only frees the
+    // arena. Allocating additions from a different allocator would leak
+    // them silently (found by the round-trip test actually leaking under
+    // std.testing.allocator, not by inspection).
+    const tree_allocator = st.doc.arena.allocator();
+
+    const obj = switch (st.doc.value) {
+        .object => |o| o,
+        else => return Error.MalformedState,
+    };
+    const loop_ptr = obj.getPtr("loop") orelse return Error.MalformedState;
+    var loop_obj = switch (loop_ptr.*) {
+        .object => |o| o,
+        else => return Error.MalformedState,
+    };
+    var tw_obj: std.json.ObjectMap = switch (loop_obj.get("tripwires") orelse std.json.Value{ .object = .{} }) {
+        .object => |o| o,
+        else => .{},
+    };
+
+    try tw_obj.put(tree_allocator, "was_halted", .{ .bool = hysteresis.was_halted });
+    try tw_obj.put(tree_allocator, "disk_recovery_streak", .{ .integer = hysteresis.recovery_streak });
+
+    var episodes_arr = try std.json.Array.initCapacity(tree_allocator, episodes.len);
+    for (episodes) |it| episodes_arr.appendAssumeCapacity(.{ .integer = it });
+    try tw_obj.put(tree_allocator, "halt_episode_iterations", .{ .array = episodes_arr });
+
+    loop_obj.put(tree_allocator, "tripwires", .{ .object = tw_obj }) catch return error.OutOfMemory;
+    loop_ptr.* = .{ .object = loop_obj };
+
+    return std.json.Stringify.valueAlloc(allocator, st.doc.value, .{ .whitespace = .indent_2 });
+}
+
+test "readDiskHysteresisState defaults to never-halted when tripwires is absent or partial" {
+    var default_st = try parse(std.testing.allocator, test_state);
+    defer default_st.deinit();
+    const d = readDiskHysteresisState(&default_st);
+    try std.testing.expectEqual(false, d.was_halted);
+    try std.testing.expectEqual(@as(u32, 0), d.recovery_streak);
+
+    const partial =
+        \\{"loop":{"iteration":1,"tripwires":{"was_halted":true}},"done":[],"backlog":[]}
+    ;
+    var st = try parse(std.testing.allocator, partial);
+    defer st.deinit();
+    const p = readDiskHysteresisState(&st);
+    try std.testing.expectEqual(true, p.was_halted);
+    try std.testing.expectEqual(@as(u32, 0), p.recovery_streak); // untouched field keeps the default
+}
+
+test "applyDiskHysteresis: a raw halt reading always wins immediately" {
+    const fresh = DiskHysteresisState{};
+    const r = applyDiskHysteresis(.halt, fresh, 2);
+    try std.testing.expectEqual(DiskTier.halt, r.effective_tier);
+    try std.testing.expectEqual(true, r.new_state.was_halted);
+    try std.testing.expectEqual(@as(u32, 0), r.new_state.recovery_streak);
+}
+
+test "applyDiskHysteresis: a non-halt reading passes through untouched when never halted" {
+    const fresh = DiskHysteresisState{};
+    const r = applyDiskHysteresis(.full, fresh, 2);
+    try std.testing.expectEqual(DiskTier.full, r.effective_tier);
+    try std.testing.expectEqual(false, r.new_state.was_halted);
+}
+
+test "applyDiskHysteresis: recovery needs N consecutive confirming readings, not one" {
+    const halted = DiskHysteresisState{ .was_halted = true, .recovery_streak = 0 };
+
+    // First non-halt reading after a halt: still reported as halted (1 of 2 confirmations).
+    const r1 = applyDiskHysteresis(.warn, halted, 2);
+    try std.testing.expectEqual(DiskTier.halt, r1.effective_tier);
+    try std.testing.expectEqual(true, r1.new_state.was_halted);
+    try std.testing.expectEqual(@as(u32, 1), r1.new_state.recovery_streak);
+
+    // Second consecutive non-halt reading: now genuinely recovered.
+    const r2 = applyDiskHysteresis(.warn, r1.new_state, 2);
+    try std.testing.expectEqual(DiskTier.warn, r2.effective_tier);
+    try std.testing.expectEqual(false, r2.new_state.was_halted);
+    try std.testing.expectEqual(@as(u32, 0), r2.new_state.recovery_streak);
+}
+
+test "applyDiskHysteresis: a dip back to halt before confirmation resets the streak" {
+    const halted = DiskHysteresisState{ .was_halted = true, .recovery_streak = 0 };
+    const r1 = applyDiskHysteresis(.warn, halted, 2); // streak = 1
+    const r2 = applyDiskHysteresis(.halt, r1.new_state, 2); // bounces back
+    try std.testing.expectEqual(DiskTier.halt, r2.effective_tier);
+    try std.testing.expectEqual(@as(u32, 0), r2.new_state.recovery_streak);
+}
+
+test "readHaltEpisodes reads the array and defaults to empty when absent" {
+    var default_st = try parse(std.testing.allocator, test_state);
+    defer default_st.deinit();
+    const empty = try readHaltEpisodes(std.testing.allocator, &default_st);
+    defer std.testing.allocator.free(empty);
+    try std.testing.expectEqual(@as(usize, 0), empty.len);
+
+    const with_history =
+        \\{"loop":{"iteration":10,"tripwires":{"halt_episode_iterations":[3,7,9]}},"done":[],"backlog":[]}
+    ;
+    var st = try parse(std.testing.allocator, with_history);
+    defer st.deinit();
+    const eps = try readHaltEpisodes(std.testing.allocator, &st);
+    defer std.testing.allocator.free(eps);
+    try std.testing.expectEqualSlices(i64, &.{ 3, 7, 9 }, eps);
+}
+
+test "detectFlap: below threshold within the window is not a flap" {
+    try std.testing.expect(!detectFlap(&.{ 1, 2 }, 10, 20, 3));
+}
+
+test "detectFlap: threshold-or-more entries within the window is a flap" {
+    try std.testing.expect(detectFlap(&.{ 1, 2, 3 }, 10, 20, 3));
+}
+
+test "detectFlap: entries outside the window do not count" {
+    // Three old episodes, all outside a 5-iteration window from iteration 100.
+    try std.testing.expect(!detectFlap(&.{ 1, 2, 3 }, 100, 5, 3));
+}
+
+test "updateHaltEpisodes appends a new episode and prunes ones outside the window" {
+    const allocator = std.testing.allocator;
+
+    // Not starting a new episode: existing entries pass through, pruned by window.
+    const kept = try updateHaltEpisodes(allocator, &.{ 1, 50, 95 }, 100, false, 10);
+    defer allocator.free(kept);
+    try std.testing.expectEqualSlices(i64, &.{95}, kept);
+
+    // Starting a new episode: current iteration is appended.
+    const appended = try updateHaltEpisodes(allocator, &.{95}, 100, true, 10);
+    defer allocator.free(appended);
+    try std.testing.expectEqualSlices(i64, &.{ 95, 100 }, appended);
+}
+
+test "writeTripwireHysteresis round-trips hysteresis fields while preserving unrelated content" {
+    const allocator = std.testing.allocator;
+    var st = try parse(allocator, test_state);
+    defer st.deinit();
+
+    const out = try writeTripwireHysteresis(allocator, &st, .{ .was_halted = true, .recovery_streak = 1 }, &.{ 5, 12 });
+    defer allocator.free(out);
+
+    var reparsed = try parse(allocator, out);
+    defer reparsed.deinit();
+    try std.testing.expectEqual(st.iteration, reparsed.iteration); // unrelated content survived
+
+    const hyst = readDiskHysteresisState(&reparsed);
+    try std.testing.expectEqual(true, hyst.was_halted);
+    try std.testing.expectEqual(@as(u32, 1), hyst.recovery_streak);
+
+    const eps = try readHaltEpisodes(allocator, &reparsed);
+    defer allocator.free(eps);
+    try std.testing.expectEqualSlices(i64, &.{ 5, 12 }, eps);
+}
+
+test "writeTripwireHysteresis creates loop.tripwires when it was entirely absent" {
+    const allocator = std.testing.allocator;
+    const no_tripwires =
+        \\{"loop":{"iteration":1},"done":[],"backlog":[]}
+    ;
+    var st = try parse(allocator, no_tripwires);
+    defer st.deinit();
+
+    const out = try writeTripwireHysteresis(allocator, &st, .{ .was_halted = false, .recovery_streak = 0 }, &.{});
+    defer allocator.free(out);
+
+    var reparsed = try parse(allocator, out);
+    defer reparsed.deinit();
+    const hyst = readDiskHysteresisState(&reparsed);
+    try std.testing.expectEqual(false, hyst.was_halted);
 }
 
 pub const TripwireReasons = struct {
@@ -942,6 +1292,25 @@ test "readDiskThresholds falls back per-field when loop.tripwires is partial or 
     const p = readDiskThresholds(&st);
     try std.testing.expectEqual(@as(f64, 3.5), p.halt_gib);
     try std.testing.expectEqual(@as(f64, 5.0), p.warn_gib); // untouched field keeps the default
+}
+
+test "readDiskThresholds reads the B21 hysteresis/flap config fields with defaults" {
+    var default_st = try parse(std.testing.allocator, test_state);
+    defer default_st.deinit();
+    const d = readDiskThresholds(&default_st);
+    try std.testing.expectEqual(@as(u32, 2), d.recovery_confirmations);
+    try std.testing.expectEqual(@as(i64, 20), d.flap_window_iterations);
+    try std.testing.expectEqual(@as(u32, 3), d.flap_threshold);
+
+    const tuned =
+        \\{"loop":{"iteration":1,"tripwires":{"disk_recovery_confirmations_needed":4,"flap_window_iterations":50,"flap_threshold":5}},"done":[],"backlog":[]}
+    ;
+    var st = try parse(std.testing.allocator, tuned);
+    defer st.deinit();
+    const p = readDiskThresholds(&st);
+    try std.testing.expectEqual(@as(u32, 4), p.recovery_confirmations);
+    try std.testing.expectEqual(@as(i64, 50), p.flap_window_iterations);
+    try std.testing.expectEqual(@as(u32, 5), p.flap_threshold);
 }
 
 test "freeGiB reads the real filesystem and roughly matches df" {

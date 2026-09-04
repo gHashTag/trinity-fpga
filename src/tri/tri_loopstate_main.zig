@@ -102,7 +102,32 @@ pub fn main(init: std.process.Init) !u8 {
             disk_error = err;
             break :blk 0.0;
         };
-        const disk_tier: loopstate.DiskTier = if (disk_error != null) .halt else loopstate.evalDiskTier(free_gib, thresholds);
+        const raw_disk_tier: loopstate.DiskTier = if (disk_error != null) .halt else loopstate.evalDiskTier(free_gib, thresholds);
+
+        // B21: hysteresis + flap detection. A read failure is always
+        // reported as an immediate halt (matches the pre-B21 behavior) --
+        // hysteresis only smooths the exit out of a genuine disk-halt, it
+        // never delays or masks a fresh failure to read the disk at all.
+        const prev_hysteresis = loopstate.readDiskHysteresisState(&st);
+        const hyst_result = if (disk_error != null)
+            loopstate.HysteresisResult{ .effective_tier = .halt, .new_state = .{ .was_halted = true, .recovery_streak = 0 } }
+        else
+            loopstate.applyDiskHysteresis(raw_disk_tier, prev_hysteresis, thresholds.recovery_confirmations);
+        const disk_tier = hyst_result.effective_tier;
+
+        const prev_episodes = try loopstate.readHaltEpisodes(gpa, &st);
+        defer gpa.free(prev_episodes);
+        const starting_new_episode = raw_disk_tier == .halt and !prev_hysteresis.was_halted;
+        const new_episodes = try loopstate.updateHaltEpisodes(gpa, prev_episodes, st.iteration, starting_new_episode, thresholds.flap_window_iterations);
+        defer gpa.free(new_episodes);
+        const is_flapping = loopstate.detectFlap(new_episodes, st.iteration, thresholds.flap_window_iterations, thresholds.flap_threshold);
+
+        const new_state_bytes = try loopstate.writeTripwireHysteresis(gpa, &st, hyst_result.new_state, new_episodes);
+        defer gpa.free(new_state_bytes);
+        std.Io.Dir.cwd().writeFile(init.io, .{ .sub_path = state_path, .data = new_state_bytes }) catch |err| {
+            std.debug.print("error: could not write {s}: {t}\n", .{ state_path, err });
+            return 1;
+        };
 
         const live = loopstate.liveCounts(&st);
         const first_report = try loopstate.checkDrift(gpa, live, dashboard_bytes);
@@ -129,8 +154,13 @@ pub fn main(init: std.process.Init) !u8 {
         defer detail.deinit(gpa);
         if (disk_error != null) {
             try detail.print(gpa, "disk read FAILED ({t}), treating as halt; ", .{disk_error.?});
-        } else if (reasons.disk) {
+        } else if (reasons.disk and raw_disk_tier == .halt) {
             try detail.print(gpa, "disk {d:.2} GiB free (< {d:.2} threshold); ", .{ free_gib, thresholds.halt_gib });
+        } else if (reasons.disk) {
+            try detail.print(gpa, "disk recovered to {d:.2} GiB free but held at halt pending confirmation ({d}/{d} consecutive non-halt readings); ", .{ free_gib, hyst_result.new_state.recovery_streak, thresholds.recovery_confirmations });
+        }
+        if (is_flapping) {
+            try detail.print(gpa, "disk halt is flapping ({d}+ episodes within the last {d} iterations); ", .{ thresholds.flap_threshold, thresholds.flap_window_iterations });
         }
         if (reasons.drift) try detail.print(gpa, "drift (unrecoverable, did not auto-heal): {s}; ", .{std.mem.trim(u8, drift_report, "\n")});
         if (reasons.decision) {
@@ -154,7 +184,14 @@ pub fn main(init: std.process.Init) !u8 {
             return 1;
         };
 
-        std.debug.print("disk:     {s} ({d:.2} GiB free, halt<{d:.2} warn<{d:.2})\n", .{ @tagName(disk_tier), free_gib, thresholds.halt_gib, thresholds.warn_gib });
+        if (disk_tier != raw_disk_tier) {
+            std.debug.print("disk:     {s} (raw reading: {s}, held by hysteresis -- {d}/{d} confirmations) ({d:.2} GiB free, halt<{d:.2} warn<{d:.2})\n", .{ @tagName(disk_tier), @tagName(raw_disk_tier), hyst_result.new_state.recovery_streak, thresholds.recovery_confirmations, free_gib, thresholds.halt_gib, thresholds.warn_gib });
+        } else {
+            std.debug.print("disk:     {s} ({d:.2} GiB free, halt<{d:.2} warn<{d:.2})\n", .{ @tagName(disk_tier), free_gib, thresholds.halt_gib, thresholds.warn_gib });
+        }
+        if (is_flapping) {
+            std.debug.print("flap:     WARNING -- {d}+ halt episodes within the last {d} iterations ({d} tracked)\n", .{ thresholds.flap_threshold, thresholds.flap_window_iterations, new_episodes.len });
+        }
         if (healed) {
             std.debug.print("drift:    auto-healed this run -- was: {s}\n", .{std.mem.trim(u8, first_report, "\n")});
         }
