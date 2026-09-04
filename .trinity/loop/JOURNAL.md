@@ -4457,3 +4457,61 @@ structural blocker.
 
 Tripwire: disk warn (4.62 GiB free, above halt), drift consistent, decision some_gated
 (B19; B18 still correctly excluded via its blocked_by path).
+
+## Iteration 101 — B10 complete: 8th and final file, five real bugs in one file, closes out with B22 for main.zig
+
+**B10 is now complete.** `sacred_bench.zig` was the last file needing the subprocess-spawn
+API family, and turned out to be the richest single find of this whole migration: five
+distinct pre-existing defects, none of them Zig-version mechanics, all findable only by
+actually building and running the binary rather than trusting `zig test` (this file's
+`main()` and both print functions had zero prior test coverage):
+
+1. Two `print_row` closures used C `printf`-style specifiers (`%-11s`, `%8.2f`) inside
+   Zig format strings, with argument counts that didn't match the `{s}`/`{d}`
+   placeholders actually present -- a guaranteed compile-time failure in *any* Zig
+   version. This file had, as far as can be told, never once compiled successfully.
+2. Both closures did `if (result != null) { ...result.cycles_per_op... }` -- Zig does
+   not narrow an optional's type on a `!= null` comparison the way `if (result) |r|`
+   does, so this also never compiled.
+3. Two call sites (one test, one real) declared `const results` then called
+   `results.deinit()`, which needs a mutable receiver -- another compile failure.
+4. The test's own CSV fixture included an uncommented header row
+   (`mode,cycles_per_op,...`) that the parser's `#`-only comment-skip logic tried to
+   parse as real data, crashing `parseFloat` at runtime the moment the compile
+   failures above were fixed enough to let the test actually execute.
+5. Two bugs with nothing to do with Zig at all: the installed `iverilog` (13.0) doesn't
+   recognize `--version` (wants `-V`), and doesn't recognize `+define+NAME=VAL` (wants
+   `-D`) -- both confirmed by running the real binaries directly, both meaning the
+   benchmark path could never have succeeded even after every Zig-level fix.
+
+Added a new test exercising both print functions against populated and all-null results
+(previously zero coverage of either). Verified end-to-end with real `iverilog`/`vvp`
+installed: the fixed binary's availability check passes, the compile step actually
+invokes iverilog, and a genuine failure (three RTL modules -- `gf16_adder`,
+`gf16_multiplier`, `tf3_alu` -- referenced but not among the compiled sources) is
+captured and reported correctly through the new `std.process.run`-based path. That
+missing-RTL problem is a real, separate FPGA-domain gap, not something this migration
+owns -- noted, not chased.
+
+Also fixed `sacred_commands.zig`, a tiny orphaned pass-through wrapper (nothing calls it
+yet -- not even `main.zig` -- and no `build.zig` anywhere defines the module names it
+`@import`s, so it has been unbuildable independent of anything done today): both its
+calls were stale against the real function signatures, and neither used `try` despite
+the callee returning `!void`, which is itself a compile error. Fixed both for whenever
+this file eventually gets wired up; could not verify by compiling since it's not a
+resolvable standalone unit.
+
+**B10 backlog item closed as `completed`.** All four Zig 0.16 API families this survey
+set out to map (file I/O, Clock/Timestamp, sockets, subprocess) now have proven,
+independently-verified patterns across 8 files. The one deliberately-deferred piece,
+`main.zig` (1767 lines, the tri CLI's entry point and dispatch hub), is no longer folded
+into B10's language -- it's now its own tracked item, **B22**, since migrating it is a
+different scale and risk profile (blast radius, not unknown APIs) than anything done
+under this survey. `test_dev_runner.zig` is noted as likely needing to move together
+with whatever eventually tackles B22, since it shares mutable state with
+`dev_commands.zig`.
+
+Tripwire: disk warn (4.55 GiB free, still well above the 2.00 GiB halt line and roughly
+flat over the last two checks), drift consistent, decision some_gated (B19 only --
+B10's closure doesn't change the gate list, B18 still excluded via its own blocked_by
+path).
