@@ -4,8 +4,8 @@
     "id": "two-track",
     "cron_job": "eaa1cb07",
     "interval": "15m",
-    "iteration": 95,
-    "status": "HALTED",
+    "iteration": 96,
+    "status": "RUNNING",
     "owner": "Dmitrii Vasilev / @gHashTag",
     "tracks": [
       "t27 emitter repair",
@@ -22,12 +22,10 @@
       "_note": "no hysteresis/consecutive-reading confirmation implemented yet -- each check is a single fresh reading. See B21."
     },
     "halt": {
-      "active": true,
-      "reasons": [
-        "disk"
-      ],
-      "detail": "disk 0.23 GiB free (< 2.00 GiB threshold, warn<5.00) -- CRITICAL, closer to zero than the last crisis's low point (1.2 GiB); decision-gated on: B18, B19; ",
-      "last_checked_iteration": 95,
+      "active": false,
+      "reasons": [],
+      "detail": "",
+      "last_checked_iteration": 96,
       "_note": "no consecutive-count, no escalated_at, no episode history yet -- this object is a stateless snapshot of the last tripwire run, not a cadence tracker. See B21."
     }
   },
@@ -400,6 +398,11 @@
       "what": "B10: migrated testnet_rewards.zig, proving the Io.Clock/Timestamp replacement pattern for std.time.timestamp() (verified empirically against `date +%s` before use, not assumed). Threaded io through 12 functions/methods and all 15 affected tests, using std.testing.io (a ready-made stdlib Io for tests) rather than hand-rolling test infrastructure. Centralized the cast pattern into one nowSeconds(io) helper. Also fixed the same ArrayListUnmanaged(.{}) and .writer(allocator) traps found in earlier files this session, proactively this time rather than by compile error.",
       "verified": "zig test: 28/28 (was already-passing testnet_config tests plus all 15 testnet_rewards tests, now io-threaded). Ran the actual binary against all four real subcommands (leaderboard/register/stats/claim) plus the no-args error path.",
       "unblocks": "testnet_faucet.zig also needs Clock (now solved) but separately needs raw posix sockets (still unknown) -- this migration removes one of its two open questions, not both."
+    },
+    {
+      "id": "D71",
+      "what": "Second disk halt resolved. This time the operator asked me to free it, and the cause was different from the first episode: iOS 26.5 had somehow reappeared since the first cleanup (24.0G total disk images, 3 entries), one of them an explicit orphaned duplicate marked (Unusable - Other Failure: Duplicate of <other-uuid>). Deleted only that unusable duplicate via `xcrun simctl runtime delete <UUID>` -- zero functional loss, no real runtime touched -- and it alone freed 0.2 -> 6.0 GiB, clearing every tripwire threshold without needing to sacrifice either working runtime (iOS 18.4 or the remaining good iOS 26.5).",
+      "lesson": "Before deleting a real runtime again, always run `xcrun simctl runtime list` first and check for an already-marked-unusable/duplicate entry -- it is free, safe space with no tradeoff, and this time it was enough on its own."
     }
   ],
   "backlog": [

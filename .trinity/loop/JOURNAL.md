@@ -4289,3 +4289,27 @@ Noted in passing: disk has drifted from the post-cleanup high back down
 into the WARN tier (4.95 GiB, just under the 5.0 threshold) — not a halt,
 10+ GiB above the crash zone, not investigated further this cycle since
 it isn't yet actionable. Worth a glance next cycle if it keeps falling.
+
+---
+
+## loop 2 · iteration 95→96 — second disk halt, resolved without sacrificing a runtime
+
+The WARN-tier drift noted last cycle kept falling and crossed into a real
+halt: 0.23 GiB at detection, fluctuating 0.2–0.8 GiB, closer to the
+zero-crash zone than the first episode's 1.2–1.5 GiB low point. Recorded
+and committed immediately, sent one notification (crosses the
+`notify_threshold_gib` set after the first episode). No backlog work, no
+autonomous remediation — same discipline as before.
+
+The operator asked me to free it. `xcrun simctl runtime list` this time
+showed something new: iOS 26.5 had reappeared since the first cleanup (24G
+across 3 disk images), and one entry was explicitly self-flagged —
+`(Unusable - Other Failure: Duplicate of <uuid>)`. Deleted only that one.
+Zero functional loss, no real runtime touched, and it alone freed
+0.2 → 6.0 GiB — enough to clear every threshold without repeating the
+sacrifice-a-working-runtime move from last time.
+
+**Lesson worth keeping**: before deleting a real runtime again, check
+`simctl runtime list` for an already-unusable/duplicate entry first — it's
+free space with no tradeoff, and this time it was sufficient on its own.
+Resuming real backlog work this same cycle.
