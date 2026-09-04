@@ -509,7 +509,7 @@
     {
       "id": "B18",
       "prio": 12,
-      "what": "Review and split t27's 53 currently-dirty tracked paths (hooks.rs, main.rs, fpga.rs, lexer.t27, README.md, Cargo.lock, etc.) into separate reviewed commits -- needs a human or an agent that has actually read each diff, not a bundle commit",
+      "what": "Review and split t27's currently-dirty tracked paths (down to 23 as of 2026-09-04, was 53 at last count -- other sessions cleaning up independently) into separate reviewed commits",
       "blocked_by": [],
       "status": "pending",
       "needs_operator_decision": true
