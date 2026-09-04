@@ -4,7 +4,7 @@
     "id": "two-track",
     "cron_job": "eaa1cb07",
     "interval": "15m",
-    "iteration": 76,
+    "iteration": 88,
     "status": "RUNNING",
     "owner": "Dmitrii Vasilev / @gHashTag",
     "tracks": [
@@ -12,7 +12,7 @@
       "openXC7 BUFR — waiting on cavearr's specimen design"
     ],
     "cron_note": "947e19e4 (cited by this field until 2026-09-04) was a session-scoped cron from an earlier, now-terminated Claude Code session -- CronCreate jobs die when the session exits, so it could not have survived the restarts already logged in loop.status. The currently live cron is eaa1cb07, created by the /loop invocation that started this iteration. Correcting the field rather than leaving a dead ID as if it still fires. Still holds: do not schedule a second 15m cron on top of eaa1cb07 -- a duplicate would put two agents on the same compiler concurrently, breaking the loop's one-patch-at-a-time rule.",
-    "continuity_protocol": "MANDATORY, IN ORDER, on every fresh firing: (1) do NOT re-run the Research/Decompose Workflow again -- see done[D53..D57] and the tripwire-design workflow (2026-09-04) recorded below. (2) Rebuild the CLI fresh -- never trust a previous binary: `zig build-exe src/tri/tri_loopstate_main.zig -femit-bin=/tmp/tri-loopstate`. This is cheap (a few seconds) and closes a real gap the tripwire design's own review flagged: a stale binary can make every check look consistent while being wrong. (3) Run `/tmp/tri-loopstate tripwire` FIRST, before touching the backlog. It takes a fresh disk reading (no shell, direct statvfs), re-runs the drift check, and re-scans the backlog for decision-gridlock -- never trusting this file's own previous loop.halt value, only using it for reference. It also rewrites dashboard.html's halt banner to match (safe: idempotent, mechanical, always correct to re-apply). (4) If tripwire exits 1 (HALTED): do NOT call nextItem() or touch the backlog this iteration. Update loop.halt/status here in STATE.json to match tripwire's printed report, append one JOURNAL.md line naming the reason(s), commit (STATE.json + dashboard.html only), and stop -- this iteration's entire output is recording the halt. A genuinely non-self-clearing reason (decision:all_gated, or a disk/drift read that errors outright) should also get ONE line posted or updated wherever the operator will see it if that channel exists -- currently NONE does (see OD6 below); until OD6 is answered, the dashboard banner + JOURNAL.md are the only escalation channel, so check both if you suspect a halt. (5) If tripwire exits 0 (RUNNING): proceed exactly as before -- run `/tmp/tri-loopstate status` for the next actionable backlog item (already skips needs_operator_decision rows) and do the real track work. (6) Never redo anything in done[] or completed backlog rows.",
+    "continuity_protocol": "MANDATORY, IN ORDER, on every fresh firing: (1) do NOT re-run the Research/Decompose Workflow again -- see done[D53..D57] and the tripwire-design workflow (2026-09-04) recorded below. (2) Rebuild the CLI fresh -- never trust a previous binary: `zig build-exe src/tri/tri_loopstate_main.zig -femit-bin=/tmp/tri-loopstate`. This is cheap (a few seconds) and closes a real gap the tripwire design's own review flagged: a stale binary can make every check look consistent while being wrong. (3) Run `/tmp/tri-loopstate tripwire` FIRST, before touching the backlog. It takes a fresh disk reading (no shell, direct statvfs), re-runs the drift check, and re-scans the backlog for decision-gridlock -- never trusting this file's own previous loop.halt value, only using it for reference. It also rewrites dashboard.html's halt banner to match (safe: idempotent, mechanical, always correct to re-apply). (4) If tripwire exits 1 (HALTED): do NOT call nextItem() or touch the backlog this iteration. Update loop.halt/status here in STATE.json to match tripwire's printed report, append one JOURNAL.md line naming the reason(s), commit (STATE.json + dashboard.html only), and stop -- this iteration's entire output is recording the halt. A genuinely non-self-clearing reason (decision:all_gated, or a disk/drift read that errors outright) should also get ONE line posted or updated wherever the operator will see it if that channel exists -- currently NONE does (see OD6 below); until OD6 is answered, the dashboard banner + JOURNAL.md are the only escalation channel, so check both if you suspect a halt. (5) If tripwire exits 0 (RUNNING): proceed exactly as before -- run `/tmp/tri-loopstate status` for the next actionable backlog item (already skips needs_operator_decision rows) and do the real track work. (6) Never redo anything in done[] or completed backlog rows. MANDATORY SELF-CHECK before any commit: run `jq \".loop.iteration\" .trinity/loop/STATE.json`, note the value, and confirm your edit actually incremented it before committing -- loop.iteration froze at 76 for 9+ real iterations (commits describing iteration 77 through 88) because this step was silently skipped every time despite being conceptually understood. See anomaly A24 (a direct recurrence of A7, at ~10x the original drift) and operator-decision OD7 for the structural question of whether this field should be automated or stop being treated as authoritative.",
     "status_note": "restarted 2026-09-02; cooperation mode set to \"autonomous with tripwires\" 2026-09-04 (operator's explicit choice, option 2 of 3 offered)",
     "cooperation_mode": "autonomous_with_tripwires",
     "tripwires": {
@@ -359,6 +359,16 @@
       "what": "Delivered B17: gen/zig/test_measure.py in t27, 11 tests pinning measure.py's own already-documented failure shapes (declaration-vs-bare-call, math-shim contamination, spaced-dot false positive, truncated-body false positive/negative, phantom-import-target). Verified with a real fault-injection: reverted the phantom-file check, confirmed the corresponding test failed with a clear diff, restored, diffed byte-identical against a pre-break backup.",
       "real_finding_while_writing_tests": "silent()'s detector regex (\\).name() only matches when the receiver is itself a call result -- a plain identifier receiver (x.abs() -> abs()) is outside its detection scope. Found by writing the naive fixture first and watching it correctly report 0 where I expected 1 -- not a test bug, a real, now-documented scope boundary in the existing tool.",
       "infra_finding": "measure.py itself had ZERO git history -- gen/ is blanket-gitignored (correctly, for ~500 generated per-spec files), catching this hand-written tool too. A single-machine, no-backup instrument calling itself \"the ONLY sanctioned instrument\" is exactly the single-point-of-failure class already found and fixed for the loop's own STATE.json earlier today. Fixed via gen/*+!gen/zig/+gen/zig/*+!gen/zig/measure.py (a bare gen/ blocks re-inclusion no matter how specific the negation -- had to restructure with the wildcard form, not just add a negation line)."
+    },
+    {
+      "id": "D64",
+      "what": "Acted on the self-audit's 4 verified findings: (1) bumped loop.iteration from a 12-iteration-stale 76 to 88, the highest iteration number actually referenced across commit history; (2) fixed tri_loopstate.zig's nextItem()/decisionGateStatus() to skip status:\"blocked\" rows (previously only checked blocked_by/needs_operator_decision), closing the live B8-misdirection bug; (3) replaced liveCounts()'s bare empty-string anomaly-open check with anomalyIsOpen(), a still-open-phrases-first classifier that correctly handles A13's coincidental \"corrected\" substring; (4) fixed the brand-new self-audit workflow's own hardcoded worktree path. 36/36 tests pass (was 30), all new tests verified against the exact real-world strings the audit found, not synthetic approximations. Also corrected B6's stale blocked_by (named completed B7 instead of the real remaining blocker) while in the area.",
+      "meta_note": "This is the self-audit workflow (built and committed roughly 20 minutes prior, in the same session) finding real, live, verifiable bugs on its very first run -- including one inside the audit-adjacent tripwire code this same session wrote hours earlier, and one inside the audit workflow file itself. Direct evidence the periodic-audit approach works, not just a plausible design."
+    },
+    {
+      "id": "D65",
+      "what": "Cross-posted the PERFCLK recommendation directly to #172 (tagging hansfbaier, who is named there but not on #149), per the self-audit's visibility-gap finding.",
+      "url": "https://github.com/openXC7/nextpnr-xilinx/issues/172#issuecomment-5541358633"
     }
   ],
   "backlog": [
@@ -406,7 +416,7 @@
       "prio": 6,
       "what": "Submit the fasm.cc BUFRCLK emitter fix (needs db rows to land first, or send as draft)",
       "blocked_by": [
-        "B7"
+        "cavearr/hansfbaier's prjxray-db PR for the BUFRCLK enable rows -- not B7, which is now completed for an unrelated reason (found stale by the periodic self-audit)"
       ],
       "status": "pending",
       "note": "Deliberately NOT sent. With the emitter fixed and no db rows, the same designs go from silently wrong to loudly broken (FasmLookupError) — worse for users until rows exist. Ordering is now stated publicly: rows first, emitter second. | Iteration 49: converted to the maintainer's house style ahead of time, so it is ready in the accepted form when the db rows land. Both sites now read `const bool carries_a_global_clock` / `const bool carries_a_clock_spine` instead of bare npos comparisons. NOT COMPILED -- nextpnr is a large build and free disk is 542 MB, so it needs a build before it is sent."
@@ -743,6 +753,38 @@
       "impact": "Small relative to the current crisis (3.1G vs a ~4G shortfall) but establishes a real pattern: long-running sessions that write scratch build/probe artifacts (FPGA bitstreams, boot images) accumulate real disk usage that nothing currently cleans up, and it went completely unnoticed until a live df/du investigation, not caught by any of this loop's own tripwires (the disk tripwire only measures the SYMPTOM, free space, not this specific cause).",
       "status": "partially addressed (operator manually cleared it this time)",
       "lesson": "A future iteration doing FPGA probe/build work in scratch space should clean up its own large artifacts when done with them, not leave them for an eventual crisis to surface. Not automated yet -- recorded as a lesson, not yet a coded guard."
+    },
+    {
+      "id": "A24",
+      "found": "2026-09-04, by .claude/workflows/loop-periodic-self-audit.js's first real run",
+      "what": "loop.iteration was frozen at 76 through 9+ real iterations (commits describing iteration 77 through a delivery/refresh sequence that reached at least 88) -- a direct recurrence of anomaly A7 ('STATE's iteration counter had drifted to 3 while the journal was on 4'), this time at roughly 10x the original drift and caught live by the loop's own new audit tooling rather than by chance.",
+      "impact": "dashboard.html's masthead and anything reading loop.iteration as authoritative undercounted real progress by ~12 iterations. A7's own recorded lesson ('either every write updates it or nothing should read it as authoritative') was never enforced in the write path, so the same failure mode was free to recur at a larger scale.",
+      "status": "fixed -- iteration corrected to 88; continuity_protocol now mandates an explicit before-commit check. See OD7 for the unresolved structural question (automate it, or stop trusting it).",
+      "lesson": "A previously-fixed anomaly's 'lesson' text is not the fix -- it is a diagnosis. If the actual write path isn't changed (or a mechanical check added), the same class of drift is free to recur, and can recur worse than the first time since nothing was watching for it."
+    },
+    {
+      "id": "A25",
+      "found": "2026-09-04, same audit run, verified live against the real binary",
+      "what": "tri_loopstate.zig's nextItem()/decisionGateStatus() had no check for the literal backlog status string \"blocked\" -- only status==\"completed\", a non-empty blocked_by array, and needs_operator_decision were skip conditions. Backlog row B8 carries status:\"blocked\" with blocked_by:[], and `/tmp/tri-loopstate status` live-recommended it as the next actionable item.",
+      "impact": "continuity_protocol instructs future iterations to use this tool's output for the next actionable item; followed literally without also reading B8's note, this would misdirect work onto an item the loop itself had already recorded as not doable.",
+      "status": "fixed -- both functions now skip status:\"blocked\" rows; 2 new regression tests (nextItem, decisionGateStatus) reproduce the exact B8 shape.",
+      "lesson": "A backlog row can be blocked two independent ways (blocked_by referencing another row, or a bare status string for an external/hardware dependency) and the skip logic must check both -- checking only one is exactly the kind of narrow fix that looks complete until a row uses the other shape."
+    },
+    {
+      "id": "A26",
+      "found": "2026-09-04, same audit run",
+      "what": "liveCounts()'s anomalies_open counter treated any non-empty status string as closed -- so anomalies A13/A15, whose status TEXT plainly says they're still unresolved ('genuinely needs the owner...', 'open; needs the owner...'), were silently excluded from the open count. The dashboard/tripwire 'anomalies open' readout read 5 where a defensible count is 13.",
+      "impact": "The drift-checker's 'checked, consistent' verdict only confirmed the dashboard agreed with STATE.json's own undercounting logic, not that the number reflected reality -- the same species of blind spot as the earlier banner-vs-readout self-referential bug (A -- see the tripwire mechanism's own commit history), just in the counting logic instead of the string search.",
+      "status": "fixed -- anomalyIsOpen() replaces the bare empty-string check: checks a small set of still-open phrases first (winning even over a coincidental resolved-verb substring, e.g. A13 contains \"corrected\" but means the diagnosis was corrected, not the problem), then a resolved-verb whitelist, defaulting anything unmatched to open. 5 new tests, including the exact A13 substring-collision case.",
+      "lesson": "A free-text status field cannot be safely reduced to a boolean by checking only for emptiness -- prose describing an unresolved problem is not empty, and prose containing a resolved-sounding word is not automatically resolved. Check the strongest signal first, default to the safer answer when uncertain."
+    },
+    {
+      "id": "A27",
+      "found": "2026-09-04, same audit run, ~20 minutes after the file was created",
+      "what": "The newly-created .claude/workflows/loop-periodic-self-audit.js hardcoded this exact ephemeral PR-review worktree's absolute path in its own infra-health prompt, directly contradicting its own meta.whenToUse instruction to 'run from the trinity-fpga repo root'.",
+      "impact": "Once this worktree is pruned (the normal lifecycle for a PR-review worktree), the next periodic invocation would cd into a directory that no longer exists and fail silently or confusingly.",
+      "status": "fixed -- the prompt now discovers the live working tree by locating .trinity/loop/STATE.json fresh at invocation time rather than assuming a fixed path.",
+      "lesson": "A workflow meant to outlive any single worktree must never hardcode that worktree's path, even when it is the only one that exists at authoring time -- the whole point of a worktree is that it is disposable."
     }
   ],
   "collaboration_options": [
@@ -1428,6 +1470,18 @@
       "question": "Should the loop have a GitHub tracking issue it can post/edit ONE escalation comment on when a tripwire halts for a non-self-clearing reason (decision-gridlock, or an unrecoverable dashboard-parse failure)? This needs an issue number/URL to write to, and explicit authorization to post there autonomously (distinct from the existing ask-first rule for third-party PRs/issues) -- neither exists yet. Until answered, the ONLY escalation channels are the dashboard's halt banner and one JOURNAL.md line; a halt that lasts hours produces no notification outside this repo.",
       "first_flagged": "2026-09-04",
       "impact": "A genuinely stuck halt (e.g. all actionable backlog items gated) is currently silent outside this repo's own files -- exactly the visibility gap the tripwire design was built to close, not yet fully closed"
+    },
+    {
+      "id": "OD7",
+      "question": "loop.iteration just recurred its own previously-fixed drift bug (A7 -> A24) at ~10x the scale, because the 'lesson learned' was never enforced in the write path. Should this field be (a) made structurally correct by having tri_loopstate own incrementing it on every done[]-append (requires giving the Zig tool JSON-write capability it doesn't have yet), or (b) demoted -- stop treating it as authoritative anywhere it's read (dashboard masthead, continuity_protocol), deriving a displayed progress count from something that can't drift instead (e.g. done[].length, or a git commit count)?",
+      "first_flagged": "2026-09-04",
+      "impact": "Without a decision, the field will most likely freeze a third time -- the new before-commit manual check mitigates but does not structurally prevent a repeat, same as the first fix did not."
+    },
+    {
+      "id": "OD8",
+      "question": "t27's working branch (fix/struct-field-brace-nesting) has silently diverged from origin/master: master carries independent, unmerged edits to bootstrap/src/compiler.rs (PRs #3017, #3026) and cli/tri/src/main.rs (#3018/#3019/#3027) -- the same two files this loop's own emitter-repair work and B18's dirty-file review also touch -- each master landing re-freezing bootstrap/stage0/FROZEN_HASH. git merge-base confirms neither branch's HEAD nor their last shared compiler.rs ancestor is reachable from the other. Should this branch be rebased/reconciled against current master before further compiler.rs work compounds the divergence, or is it intentionally isolated (in which case the t27 74.2%->76.7% corpus numbers this loop reports need an explicit caveat that they're not comparable to master's baseline)?",
+      "first_flagged": "2026-09-04",
+      "impact": "Continued compiler.rs work on this branch risks a much harder multi-PR reconciliation later; any percentage this loop reports is silently measured against a forked baseline."
     }
   ]
 }

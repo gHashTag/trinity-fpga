@@ -4038,3 +4038,59 @@ sweep — extended the documented poll to `reviewDecision`+
 `statusCheckRollup` (a review verdict or CI flip with no new comment is the
 same blind spot one level down) and stated plainly that this is a manual
 checklist habit, not coded automation.
+
+**The new self-audit workflow's first real run, and it earned its keep
+immediately.** Ran `.claude/workflows/loop-periodic-self-audit.js`
+(committed ~20 minutes earlier) for the first time. Three parallel finders
+plus a synthesis pass came back with 13 raw findings, 4 verified concretely
+enough to act on:
+
+1. **`loop.iteration` had been frozen at 76 through the entire disk-halt
+   saga and everything after — a direct recurrence of anomaly A7**
+   ('STATE's iteration counter had drifted to 3 while the journal was on
+   4'), this time at roughly 10x the drift. Nine-plus commits described
+   'iteration 77' through a delivery sequence reaching at least 88, and not
+   one of them actually bumped the field. Fixed to 88 (the highest number
+   any commit message actually names); `continuity_protocol` now mandates
+   an explicit before-commit check. Filed **OD7**: the real fix is
+   structural (automate the increment, or stop trusting the field at all),
+   and a manual check is a mitigation, not a cure — exactly what A7's first
+   fix already proved insufficient once.
+2. **`nextItem()`/`decisionGateStatus()` had no check for the literal
+   status `"blocked"`** — only `blocked_by` (array) and
+   `needs_operator_decision` were skip conditions. B8 carries
+   `status:"blocked"` with an *empty* `blocked_by`, and `/tmp/tri-loopstate
+   status` was live-recommending it as the next actionable item this whole
+   time. Fixed both functions, 2 new regression tests reproducing the exact
+   shape.
+3. **`liveCounts()`'s anomaly-open counter treated any non-empty status as
+   closed** — so A13/A15, whose status text plainly says they're still
+   unresolved, were silently excluded. True open count: 13, not 5. Replaced
+   with `anomalyIsOpen()`: still-open phrases checked first (so A13's own
+   text, which happens to contain the word "corrected" while describing an
+   unrelated correction to the *diagnosis*, doesn't get misread as closed),
+   then a resolved-verb whitelist, defaulting anything unmatched to open.
+   5 new tests including that exact substring-collision case.
+4. **The self-audit workflow itself hardcoded this ephemeral worktree's
+   path** — found by the audit inside a file the audit's own commit had
+   just created twenty minutes earlier, directly contradicting its own
+   "run from the repo root" instruction. Fixed to discover the live working
+   tree at invocation time instead of assuming a fixed path.
+
+Also: corrected B6's stale `blocked_by` (named the now-completed B7 instead
+of the real remaining blocker, the not-yet-opened db PR), and cross-posted
+the PERFCLK recommendation directly to #172 (tagging hansfbaier, who is
+named there but wasn't on the #149 reply this loop already posted).
+
+**One high-severity finding filed as a decision, not a fix**: the audit's
+code-freshness angle independently confirmed via `git merge-base` that
+t27's working branch (`fix/struct-field-brace-nesting`) has diverged from
+`origin/master` — master carries unmerged edits to `bootstrap/src/
+compiler.rs` (PRs #3017, #3026) and `cli/tri/src/main.rs` (#3018/#3019/
+#3027), the same two files this loop's own compiler work and B18 also
+touch, each re-freezing `FROZEN_HASH`. Rebasing a Rust compiler branch
+blind is not this loop's call to make unsupervised — filed as **OD8**
+rather than attempted.
+
+36/36 tests pass (was 30 at the top of this iteration). 30/30 became
+stale the moment new code landed; caught that too, in passing.

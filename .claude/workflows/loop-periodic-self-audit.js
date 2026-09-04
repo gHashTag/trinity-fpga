@@ -54,8 +54,18 @@ const angles = [
   {
     key: 'infra-health',
     prompt: CONTEXT + `
-Angle: LOOP INFRASTRUCTURE HEALTH. Run and inspect:
-- 'cd /Users/playom/trinity-fpga/.claude/worktrees/bufr-support-pr-review-07c0ee && zig test src/tri/tri_loopstate.zig' -- must be all-green; a failing test here is the highest-severity finding possible.
+Angle: LOOP INFRASTRUCTURE HEALTH. This loop's working tree location is NOT
+fixed -- it has run from different git worktrees of trinity-fpga across its
+lifetime, and a worktree that hosted it before has already been pruned once
+(found live by a prior self-audit: this exact file used to hardcode a path
+that no longer exists by the time you read this). Do not hardcode a path.
+First locate the live working tree yourself: run
+'find /Users/playom -maxdepth 5 -path "*/.trinity/loop/STATE.json" 2>/dev/null'
+and treat the directory three levels up from whichever STATE.json that finds
+(there should be exactly one) as the root for every command below. If more
+than one turns up, prefer the one whose STATE.json has the most recent mtime.
+Run and inspect (all paths relative to that discovered root):
+- 'zig test src/tri/tri_loopstate.zig' -- must be all-green; a failing test here is the highest-severity finding possible.
 - jq '.loop, .backlog | length, .anomalies | length' on STATE.json -- does loop.status match what dashboard.html's masthead/banner claims? Read the dashboard's <!-- LOOP_HALT_BANNER_START/END --> region and its readout numbers directly and compare to a fresh 'tripwire' run.
 - Do backlog rows' 'blocked_by' reasons still hold, or has something they depend on quietly resolved (check git log / gh pr view / gh issue view for anything a blocked_by reason names)?
 - Is JOURNAL.md's most recent entry consistent with STATE.json's current iteration/done count, or has one been updated without the other?

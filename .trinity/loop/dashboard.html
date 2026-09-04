@@ -651,8 +651,8 @@
   <header class="masthead">
     <h1>Two tracks — BUFR on openXC7, and the t27 emitter</h1>
     <div class="meta">
-      <span>loop 2 · iteration 76+ · RUNNING · t27 74.2% → 76.7% · specimen design reviewed · disk consumer identified</span><span>cron eaa1cb07 · 15m</span>
-      <span>updated 2026-09-04, iteration 76 · AX7203 · xc7a200tfbg484-2</span>
+      <span>loop 2 · iteration 88+ · RUNNING · t27 74.2% → 76.7% · disk halt survived and resolved · BUFRCLK0-3 confirmed on fbg484</span><span>cron eaa1cb07 · 15m</span>
+      <span>updated 2026-09-04, iteration 88 · AX7203 · xc7a200tfbg484-2</span>
     </div>
   </header>
 
@@ -833,7 +833,7 @@
     <div class="cellstat"><div class="n">1/4</div><div class="l">rows on silicon</div></div>
   <div class="cellstat"><div class="n">6/6</div><div class="l">ci jobs green</div></div>
     <div class="cellstat"><div class="n">7</div><div class="l">backlog open</div></div>
-    <div class="cellstat"><div class="n">5</div><div class="l">anomalies open</div></div>
+    <div class="cellstat"><div class="n">13</div><div class="l">anomalies open</div></div>
   </div>
   <p class="note" style="margin-top:-.5rem">
     Readout is recomputed live from STATE.json every iteration by <code>tri-loopstate tripwire</code>
@@ -2062,6 +2062,22 @@ grep -v 'ENABLE_BUFFER.HCLK_CK_BUFRCLK' ax.fasm &gt; ax_ctrl.fasm    # the contr
       pattern (not just exit 0), and
       <a href="https://github.com/openXC7/nextpnr-xilinx/issues/149#issuecomment-5540105394">posted the confirmation</a>.
       B14 and B16 both closed.
+    </p>
+  </section>
+
+  <section>
+    <h2>2026-09-04 — a saved workflow found real bugs in its own hour-old code</h2>
+    <p class="note">
+      Built <code>.claude/workflows/loop-periodic-self-audit.js</code> to close a gap from the
+      operator's own audit request: a "dynamic workflow" had only ever run ad hoc, never saved.
+      Ran it for the first time about twenty minutes later — it found <code>loop.iteration</code>
+      frozen at 76 through nine-plus real iterations (a 10x recurrence of an already-fixed
+      anomaly), a live bug where <code>status:"blocked"</code> rows were still being recommended
+      as "next actionable," an anomaly-counter that silently miscounted A13/A15 as closed, and
+      a hardcoded worktree path inside <b>the audit workflow file itself</b>, written minutes
+      earlier. All four fixed, all four now regression-tested (36/36). A fifth finding — t27's
+      branch has quietly diverged from <code>origin/master</code>, including unmerged edits to
+      the exact compiler file this loop patches — was filed as a decision, not fixed blind.
     </p>
   </section>
 

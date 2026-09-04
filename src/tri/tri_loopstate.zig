@@ -124,6 +124,12 @@ pub fn nextItem(allocator: std.mem.Allocator, st: *const State) !?Item {
         };
         const status = strField(r, "status", "pending");
         if (std.mem.eql(u8, status, "completed")) continue;
+        // A row can carry status:"blocked" in its own right, independent of
+        // (and sometimes with an empty) blocked_by -- e.g. blocked on an
+        // external campaign or missing hardware rather than another backlog
+        // row. Found live by a self-audit: B8 had status:"blocked" and
+        // blocked_by:[], so this function returned it as "next" anyway.
+        if (std.mem.eql(u8, status, "blocked")) continue;
 
         var blocked = false;
         if (r.get("blocked_by")) |bb| {
@@ -198,7 +204,9 @@ pub fn decisionGateStatus(allocator: std.mem.Allocator, st: *const State) !Decis
             .object => |o| o,
             else => continue,
         };
-        if (std.mem.eql(u8, strField(r, "status", "pending"), "completed")) continue;
+        const status = strField(r, "status", "pending");
+        if (std.mem.eql(u8, status, "completed")) continue;
+        if (std.mem.eql(u8, status, "blocked")) continue;
         var blocked = false;
         if (r.get("blocked_by")) |bb| switch (bb) {
             .array => |a| blocked = a.items.len > 0,
@@ -252,9 +260,34 @@ pub const LiveCounts = struct {
     done_count: usize = 0,
 };
 
+/// An anomaly's status is free-form prose, not a fixed enum -- classifying
+/// it as open/closed by keyword is inherently approximate. Found live by a
+/// self-audit: the prior rule ("open iff status is empty") silently counted
+/// A13/A15 as closed even though their text plainly says otherwise ("...
+/// genuinely needs the owner", "open; needs the owner..."). "Still needs
+/// attention" phrases are checked FIRST and win even when the same string
+/// also contains a resolved-verb substring -- A13's own text contains
+/// "corrected" (it means the DIAGNOSIS was corrected, not the underlying
+/// problem), which a naive single-pass keyword match would misread as
+/// closed. Anything matching neither list defaults to open, not closed --
+/// the safer direction when the classifier is uncertain.
+fn anomalyIsOpen(status: []const u8) bool {
+    if (status.len == 0) return true;
+    const still_open_phrases = [_][]const u8{ "needs the owner", "not touched", "genuinely needs" };
+    for (still_open_phrases) |p| {
+        if (std.mem.indexOf(u8, status, p) != null) return true;
+    }
+    if (status.len >= 4 and std.mem.eql(u8, status[0..4], "open")) return true;
+    const resolved_verbs = [_][]const u8{ "fixed", "corrected", "resolved", "closed" };
+    for (resolved_verbs) |v| {
+        if (std.mem.indexOf(u8, status, v) != null) return false;
+    }
+    return true;
+}
+
 /// A backlog row counts as open unless its status is exactly "completed".
-/// An anomaly counts as open when its `status` field is absent, empty, or
-/// JSON null -- the same convention STATE.json's own anomaly rows already use.
+/// An anomaly counts as open per `anomalyIsOpen` above -- no longer a bare
+/// empty-string check, see that function's own history.
 pub fn liveCounts(st: *const State) LiveCounts {
     var out = LiveCounts{ .done_count = st.done_count };
     const obj = switch (st.root()) {
@@ -276,7 +309,7 @@ pub fn liveCounts(st: *const State) LiveCounts {
             if (row != .object) continue;
             out.anomalies_total += 1;
             const status = strField(row.object, "status", "");
-            if (status.len == 0) out.anomalies_open += 1;
+            if (anomalyIsOpen(status)) out.anomalies_open += 1;
         }
     };
 
@@ -624,6 +657,22 @@ test "nextItem returns null when nothing is actionable" {
     try std.testing.expect((try nextItem(std.testing.allocator, &st)) == null);
 }
 
+test "nextItem skips a row with status:\"blocked\" even when blocked_by is empty" {
+    // Regression: found live by a self-audit. B8 carried status:"blocked"
+    // (an external campaign/hardware dependency) with blocked_by:[], and
+    // nextItem() -- which only checked status=="completed" and a non-empty
+    // blocked_by array -- returned it as "next" anyway.
+    const with_status_blocked =
+        \\{"loop":{"iteration":1},"done":[],
+        \\ "backlog":[{"id":"B8","prio":1,"what":"externally stuck","blocked_by":[],"status":"blocked"},
+        \\            {"id":"B9","prio":5,"what":"doable","blocked_by":[],"status":"pending"}]}
+    ;
+    var st = try parse(std.testing.allocator, with_status_blocked);
+    defer st.deinit();
+    const it = (try nextItem(std.testing.allocator, &st)).?;
+    try std.testing.expectEqualStrings("B9", it.id);
+}
+
 test "nextItem skips completed rows" {
     const one_done =
         \\{"loop":{"iteration":1},"done":[],
@@ -681,6 +730,37 @@ test "liveCounts treats a missing or empty anomaly status as open" {
     const c = liveCounts(&st);
     try std.testing.expectEqual(@as(usize, 3), c.anomalies_total);
     try std.testing.expectEqual(@as(usize, 2), c.anomalies_open);
+}
+
+test "anomalyIsOpen recognizes prose that plainly says still-open" {
+    try std.testing.expect(anomalyIsOpen(""));
+    try std.testing.expect(anomalyIsOpen("open; needs the owner, and needs ~50 MB freed"));
+    try std.testing.expect(anomalyIsOpen("flagged, not touched -- a post I have not read"));
+}
+
+test "anomalyIsOpen a still-open phrase wins even when a resolved-verb substring also matches" {
+    // Regression: found live by a self-audit. This exact text was silently
+    // counted as closed under the old rule because it isn't empty; a naive
+    // single-pass keyword scan would ALSO get it wrong the other direction,
+    // since "corrected" appears inside it -- but it means the DIAGNOSIS was
+    // corrected, not that the underlying problem is resolved.
+    try std.testing.expect(anomalyIsOpen("diagnosis corrected; genuinely needs the owner (something outside this volume is consuming the APFS container)"));
+}
+
+test "anomalyIsOpen recognizes an actually-resolved verb as closed" {
+    try std.testing.expect(!anomalyIsOpen("fixed in div8_clr.v"));
+    try std.testing.expect(!anomalyIsOpen("corrected to 5; the lesson is..."));
+    try std.testing.expect(!anomalyIsOpen("resolved by measurement; the loop is not the consumer"));
+    try std.testing.expect(!anomalyIsOpen("corrected -- patch J applied and measured, class closed"));
+}
+
+test "anomalyIsOpen defaults unmatched text to open, not closed" {
+    // "worked around, not a defect" and similar prose that doesn't use one
+    // of the recognized resolved-verbs defaults to open -- the safer
+    // direction when the classifier can't tell, matching this function's
+    // own stated design.
+    try std.testing.expect(anomalyIsOpen("worked around, not a defect"));
+    try std.testing.expect(anomalyIsOpen("partially addressed (operator manually cleared it this time)"));
 }
 
 const test_readout =
@@ -788,6 +868,22 @@ test "decisionGateStatus reports clear when the backlog is empty of candidates" 
     defer gate.deinit(std.testing.allocator);
     try std.testing.expectEqual(DecisionGateStatus.clear, gate.status);
     try std.testing.expectEqual(@as(usize, 0), gate.gated_ids.items.len);
+}
+
+test "decisionGateStatus excludes a status:\"blocked\" row from the candidate set entirely" {
+    const with_status_blocked =
+        \\{"loop":{"iteration":1},"done":[],
+        \\ "backlog":[{"id":"B8","prio":1,"what":"externally stuck","blocked_by":[],"status":"blocked"}]}
+    ;
+    var st = try parse(std.testing.allocator, with_status_blocked);
+    defer st.deinit();
+    var gate = try decisionGateStatus(std.testing.allocator, &st);
+    defer gate.deinit(std.testing.allocator);
+    // Not all_gated: a status:"blocked" row is excluded from the candidate
+    // set, not counted as a gated-but-present candidate -- there are zero
+    // real candidates here, so this is plain exhaustion (clear), the same
+    // as an empty backlog.
+    try std.testing.expectEqual(DecisionGateStatus.clear, gate.status);
 }
 
 test "decisionGateStatus reports some_gated when unrelated work is still actionable" {
