@@ -7,6 +7,13 @@
 const std = @import("std");
 const testnet_config = @import("testnet_config.zig");
 
+/// Current unix time in whole seconds. Replaces the removed
+/// std.time.timestamp() -- see testnet_rewards.zig for the same helper and
+/// the verification against `date +%s` that justified it.
+fn nowSeconds(io: std.Io) u64 {
+    return @intCast(std.Io.Clock.real.now(io).toSeconds());
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // FAUCET STATE — Tracks requests per address
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -114,23 +121,23 @@ pub const FaucetState = struct {
     }
 
     /// Check if address can request funds
-    pub fn canRequest(self: *const FaucetState, address: []const u8) !bool {
+    pub fn canRequest(self: *const FaucetState, address: []const u8, io: std.Io) !bool {
         const entry = self.rate_limits.get(address) orelse return true;
-        const now = @as(u64, @intCast(std.time.timestamp()));
+        const now = nowSeconds(io);
         return entry.canRequest(now);
     }
 
     /// Get time until next request for address
-    pub fn timeUntilNext(self: *const FaucetState, address: []const u8) ?u64 {
+    pub fn timeUntilNext(self: *const FaucetState, address: []const u8, io: std.Io) ?u64 {
         const entry = self.rate_limits.get(address) orelse return 0;
-        const now = @as(u64, @intCast(std.time.timestamp()));
+        const now = nowSeconds(io);
         const wait = entry.timeUntilNextRequest(now);
         return if (wait > 0) wait else null;
     }
 
     /// Record a faucet request
-    pub fn recordRequest(self: *FaucetState, address: []const u8) !void {
-        const now = @as(u64, @intCast(std.time.timestamp()));
+    pub fn recordRequest(self: *FaucetState, address: []const u8, io: std.Io) !void {
+        const now = nowSeconds(io);
         const address_copy = try self.allocator.dupe(u8, address);
         errdefer self.allocator.free(address_copy);
 
@@ -210,7 +217,7 @@ pub const FaucetServer = struct {
     allocator: std.mem.Allocator,
     state: FaucetState,
     port: u16,
-    socket: ?std.posix.socket_t = null,
+    server: ?std.Io.net.Server = null,
     running: bool = false,
 
     pub fn init(allocator: std.mem.Allocator, port: u16, state_file: []const u8) FaucetServer {
@@ -221,31 +228,17 @@ pub const FaucetServer = struct {
         };
     }
 
-    pub fn deinit(self: *FaucetServer) void {
-        if (self.socket) |s| {
-            std.posix.close(s);
+    pub fn deinit(self: *FaucetServer, io: std.Io) void {
+        if (self.server) |*s| {
+            s.deinit(io);
         }
         self.state.deinit();
     }
 
     /// Start the faucet server
-    pub fn start(self: *FaucetServer) !void {
-        const sock = try std.posix.socket(std.posix.AF.INET, std.posix.SOCK.STREAM, std.posix.IPPROTO.TCP);
-
-        const reuse_value: u32 = 1;
-        _ = std.posix.setsockopt(sock, std.posix.SOL.SOCKET, std.posix.SO.REUSEADDR, &std.mem.toBytes(@as(c_int, @intCast(reuse_value)))) catch |err| {
-            std.posix.close(sock);
-            return err;
-        };
-
-        const addr = std.net.Address.initIp4(.{ 0, 0, 0, 0 }, self.port);
-        std.posix.bind(sock, &addr.any, addr.getOsSockLen()) catch |err| {
-            std.posix.close(sock);
-            return err;
-        };
-
-        try std.posix.listen(sock, 128);
-        self.socket = sock;
+    pub fn start(self: *FaucetServer, io: std.Io) !void {
+        const addr = try std.Io.net.IpAddress.parse("0.0.0.0", self.port);
+        self.server = try std.Io.net.IpAddress.listen(&addr, io, .{ .reuse_address = true });
         self.running = true;
     }
 
@@ -255,7 +248,7 @@ pub const FaucetServer = struct {
     }
 
     /// Process a faucet request
-    pub fn processRequest(self: *FaucetServer, request: FaucetRequest) !FaucetResponse {
+    pub fn processRequest(self: *FaucetServer, request: FaucetRequest, io: std.Io) !FaucetResponse {
         // Validate amount
         if (request.amount == 0 or request.amount > testnet_config.FAUCET_DRIP_AMOUNT) {
             return FaucetResponse{
@@ -277,14 +270,14 @@ pub const FaucetServer = struct {
         }
 
         // Check rate limit
-        if (!try self.state.canRequest(request.address)) {
-            const wait = self.state.timeUntilNext(request.address) orelse 0;
+        if (!try self.state.canRequest(request.address, io)) {
+            const wait = self.state.timeUntilNext(request.address, io) orelse 0;
             return FaucetResponse{
                 .success = false,
                 .amount = 0,
                 .tx_hash = "",
                 .message = "Rate limit exceeded. Please try again later.",
-                .next_available_at = if (wait > 0) @as(u64, @intCast(std.time.timestamp())) + wait else null,
+                .next_available_at = if (wait > 0) nowSeconds(io) + wait else null,
             };
         }
 
@@ -299,11 +292,11 @@ pub const FaucetServer = struct {
         }
 
         // Record request and dispense
-        try self.state.recordRequest(request.address);
+        try self.state.recordRequest(request.address, io);
         try self.state.recordDispense(request.amount);
 
         // Generate mock transaction hash
-        const tx_hash = try self.generateTxHash();
+        const tx_hash = try self.generateTxHash(io);
 
         return FaucetResponse{
             .success = true,
@@ -314,14 +307,14 @@ pub const FaucetServer = struct {
     }
 
     /// Generate a mock transaction hash
-    fn generateTxHash(self: *FaucetServer) ![]const u8 {
-        const timestamp = std.time.timestamp();
-        const random = @as(u64, @truncate(@as(u128, @bitCast(std.time.nanoTimestamp()))));
+    fn generateTxHash(self: *FaucetServer, io: std.Io) ![]const u8 {
+        const timestamp = nowSeconds(io);
+        const random = @as(u64, @bitCast(@as(i64, @truncate(std.Io.Clock.real.now(io).toNanoseconds()))));
         return std.fmt.allocPrint(self.allocator, "0x{x}{x}", .{ timestamp, random });
     }
 
     /// Handle HTTP POST /faucet/drip
-    pub fn handleDrip(self: *FaucetServer, body: []const u8) ![]const u8 {
+    pub fn handleDrip(self: *FaucetServer, body: []const u8, io: std.Io) ![]const u8 {
         // Parse JSON body (simplified)
         // Expected: {"address":"0x...","amount":10000}
 
@@ -337,11 +330,11 @@ pub const FaucetServer = struct {
         const request = FaucetRequest{
             .address = address,
             .amount = amount,
-            .timestamp = @as(u64, @intCast(std.time.timestamp())),
+            .timestamp = nowSeconds(io),
             .ip = "unknown",
         };
 
-        const response = try self.processRequest(request);
+        const response = try self.processRequest(request, io);
         return response.toJson(self.allocator);
     }
 
@@ -352,9 +345,9 @@ pub const FaucetServer = struct {
     }
 
     /// Handle HTTP GET /faucet/status/:address
-    pub fn handleStatus(self: *FaucetServer, address: []const u8) ![]const u8 {
-        const can = try self.state.canRequest(address);
-        const wait = self.state.timeUntilNext(address);
+    pub fn handleStatus(self: *FaucetServer, address: []const u8, io: std.Io) ![]const u8 {
+        const can = try self.state.canRequest(address, io);
+        const wait = self.state.timeUntilNext(address, io);
 
         if (can) {
             return std.fmt.allocPrint(self.allocator,
@@ -362,7 +355,7 @@ pub const FaucetServer = struct {
             , .{address});
         } else {
             const wait_secs = wait orelse 0;
-            const next = @as(u64, @intCast(std.time.timestamp())) + wait_secs;
+            const next = nowSeconds(io) + wait_secs;
             return std.fmt.allocPrint(self.allocator,
                 \\{{"address":"{s}","can_request":false,"next_available_at":{d},"wait_seconds":{d}}}
             , .{ address, next, wait_secs });
@@ -374,34 +367,37 @@ pub const FaucetServer = struct {
 // CLI ENTRYPOINT — tri testnet faucet
 // ═══════════════════════════════════════════════════════════════════════════════
 
-pub fn runFaucetServer(allocator: std.mem.Allocator, port: u16) !void {
+pub fn runFaucetServer(allocator: std.mem.Allocator, port: u16, io: std.Io) !void {
     const state_file = ".trinity/testnet_faucet.json";
     var server = FaucetServer.init(allocator, port, state_file);
-    defer server.deinit();
+    defer server.deinit(io);
 
-    try server.start();
+    try server.start(io);
     std.log.info("Testnet faucet listening on port {d}", .{port});
 
     // Main loop
     while (server.running) {
-        std.Thread.sleep(1 * std.time.ns_per_s);
+        try std.Io.sleep(io, .fromSeconds(1), .real);
     }
 }
 
-pub fn runFaucetCli(allocator: std.mem.Allocator, address: []const u8, amount: u64) !void {
+pub fn runFaucetCli(allocator: std.mem.Allocator, address: []const u8, amount: u64, io: std.Io) !void {
     // Direct CLI faucet request
     const state_file = ".trinity/testnet_faucet.json";
     var server = FaucetServer.init(allocator, 8080, state_file);
-    defer server.deinit();
+    defer server.deinit(io);
 
     const request = FaucetRequest{
         .address = address,
         .amount = amount,
-        .timestamp = @as(u64, @intCast(std.time.timestamp())),
+        .timestamp = nowSeconds(io),
         .ip = "cli",
     };
 
-    const response = try server.processRequest(request);
+    const response = try server.processRequest(request, io);
+    // tx_hash is heap-allocated (generateTxHash) only on the success path;
+    // failure paths return a static "" literal, which must not be freed.
+    defer if (response.success) allocator.free(response.tx_hash);
     const json = try response.toJson(allocator);
     defer allocator.free(json);
 
@@ -428,20 +424,22 @@ test "FaucetState init" {
 
 test "FaucetState first request allowed" {
     const allocator = std.testing.allocator;
+    const io = std.testing.io;
     var state = FaucetState.init(allocator, "test.json");
     defer state.deinit();
 
     const addr = "0x1234567890abcdef";
-    try std.testing.expect(state.canRequest(addr) catch false);
+    try std.testing.expect(state.canRequest(addr, io) catch false);
 }
 
 test "FaucetState record request" {
     const allocator = std.testing.allocator;
+    const io = std.testing.io;
     var state = FaucetState.init(allocator, "test.json");
     defer state.deinit();
 
     const addr = "0x1234567890abcdef";
-    try state.recordRequest(addr);
+    try state.recordRequest(addr, io);
 
     const entry = state.rate_limits.get(addr).?;
     try std.testing.expectEqual(@as(u32, 1), entry.request_count);
@@ -449,16 +447,17 @@ test "FaucetState record request" {
 
 test "FaucetState rate limit enforcement" {
     const allocator = std.testing.allocator;
+    const io = std.testing.io;
     var state = FaucetState.init(allocator, "test.json");
     defer state.deinit();
 
     const addr = "0x1234567890abcdef";
 
     // Record request
-    try state.recordRequest(addr);
+    try state.recordRequest(addr, io);
 
     // Check rate limit (should be blocked since we just requested)
-    const can = state.canRequest(addr) catch false;
+    const can = state.canRequest(addr, io) catch false;
     try std.testing.expect(!can);
 }
 
@@ -486,12 +485,13 @@ test "FaucetState record dispense" {
 
 test "FaucetState stats" {
     const allocator = std.testing.allocator;
+    const io = std.testing.io;
     var state = FaucetState.init(allocator, "test.json");
     defer state.deinit();
 
-    try state.recordRequest("0xAAA");
-    try state.recordRequest("0xBBB");
-    try state.recordRequest("0xCCC");
+    try state.recordRequest("0xAAA", io);
+    try state.recordRequest("0xBBB", io);
+    try state.recordRequest("0xCCC", io);
     try state.recordDispense(30_000);
 
     const stats = state.getStats();
@@ -502,8 +502,9 @@ test "FaucetState stats" {
 
 test "FaucetServer init" {
     const allocator = std.testing.allocator;
+    const io = std.testing.io;
     var server = FaucetServer.init(allocator, 8080, "test.json");
-    defer server.deinit();
+    defer server.deinit(io);
 
     try std.testing.expectEqual(@as(u16, 8080), server.port);
     try std.testing.expect(!server.running);
@@ -511,17 +512,18 @@ test "FaucetServer init" {
 
 test "FaucetServer process valid request" {
     const allocator = std.testing.allocator;
+    const io = std.testing.io;
     var server = FaucetServer.init(allocator, 8080, "test.json");
-    defer server.deinit();
+    defer server.deinit(io);
 
     const request = FaucetRequest{
         .address = "0x1234567890abcdef1234567890abcdef12345678",
         .amount = 10_000,
-        .timestamp = @as(u64, @intCast(std.time.timestamp())),
+        .timestamp = nowSeconds(io),
         .ip = "127.0.0.1",
     };
 
-    const response = try server.processRequest(request);
+    const response = try server.processRequest(request, io);
     try std.testing.expect(response.success);
     try std.testing.expectEqual(@as(u64, 10_000), response.amount);
     allocator.free(response.tx_hash);
@@ -529,64 +531,67 @@ test "FaucetServer process valid request" {
 
 test "FaucetServer process invalid amount" {
     const allocator = std.testing.allocator;
+    const io = std.testing.io;
     var server = FaucetServer.init(allocator, 8080, "test.json");
-    defer server.deinit();
+    defer server.deinit(io);
 
     const request = FaucetRequest{
         .address = "0x1234567890abcdef1234567890abcdef12345678",
         .amount = 100_000, // Too much
-        .timestamp = @as(u64, @intCast(std.time.timestamp())),
+        .timestamp = nowSeconds(io),
         .ip = "127.0.0.1",
     };
 
-    const response = try server.processRequest(request);
+    const response = try server.processRequest(request, io);
     try std.testing.expect(!response.success);
 }
 
 test "FaucetServer process invalid address" {
     const allocator = std.testing.allocator;
+    const io = std.testing.io;
     var server = FaucetServer.init(allocator, 8080, "test.json");
-    defer server.deinit();
+    defer server.deinit(io);
 
     const request = FaucetRequest{
         .address = "short",
         .amount = 10_000,
-        .timestamp = @as(u64, @intCast(std.time.timestamp())),
+        .timestamp = nowSeconds(io),
         .ip = "127.0.0.1",
     };
 
-    const response = try server.processRequest(request);
+    const response = try server.processRequest(request, io);
     try std.testing.expect(!response.success);
 }
 
 test "FaucetServer rate limit" {
     const allocator = std.testing.allocator;
+    const io = std.testing.io;
     var server = FaucetServer.init(allocator, 8080, "test.json");
-    defer server.deinit();
+    defer server.deinit(io);
 
     const addr = "0x1234567890abcdef1234567890abcdef12345678";
 
     const request1 = FaucetRequest{
         .address = addr,
         .amount = 10_000,
-        .timestamp = @as(u64, @intCast(std.time.timestamp())),
+        .timestamp = nowSeconds(io),
         .ip = "127.0.0.1",
     };
 
     // First request succeeds
-    const response1 = try server.processRequest(request1);
+    const response1 = try server.processRequest(request1, io);
     defer allocator.free(response1.tx_hash);
     try std.testing.expect(response1.success);
 
     const request2 = FaucetRequest{
         .address = addr,
         .amount = 10_000,
-        .timestamp = @as(u64, @intCast(std.time.timestamp())),
+        .timestamp = nowSeconds(io),
         .ip = "127.0.0.1",
     };
 
     // Second request fails (rate limited)
-    const response2 = try server.processRequest(request2);
+    const response2 = try server.processRequest(request2, io);
     try std.testing.expect(!response2.success);
 }
 
@@ -643,12 +648,10 @@ test "FaucetResponse JSON failure" {
 // MAIN ENTRYPOINT — testnet-faucet executable
 // ═══════════════════════════════════════════════════════════════════════════════
 
-pub fn main() !void {
-    const allocator = std.heap.page_allocator;
-
-    // Parse command line arguments
-    const args = try std.process.argsAlloc(allocator);
-    defer std.process.argsFree(allocator, args);
+pub fn main(init: std.process.Init) !void {
+    const allocator = init.gpa;
+    const io = init.io;
+    const args = try init.minimal.args.toSlice(init.arena.allocator());
 
     if (args.len < 2) {
         std.log.err("Usage: testnet-faucet <command>", .{});
@@ -666,7 +669,7 @@ pub fn main() !void {
             try std.fmt.parseInt(u16, args[2], 10)
         else
             8080;
-        try runFaucetServer(allocator, port);
+        try runFaucetServer(allocator, port, io);
     } else if (std.mem.eql(u8, command, "drip")) {
         if (args.len < 3) {
             std.log.err("Usage: testnet-faucet drip <address> [amount]", .{});
@@ -677,7 +680,7 @@ pub fn main() !void {
             try std.fmt.parseInt(u64, args[3], 10)
         else
             testnet_config.FAUCET_DRIP_AMOUNT;
-        try runFaucetCli(allocator, address, amount);
+        try runFaucetCli(allocator, address, amount, io);
     } else if (std.mem.eql(u8, command, "status")) {
         if (args.len < 3) {
             std.log.err("Usage: testnet-faucet status <address>", .{});
@@ -686,9 +689,9 @@ pub fn main() !void {
         const address = args[2];
         const state_file = ".trinity/testnet_faucet.json";
         var server = FaucetServer.init(allocator, 8080, state_file);
-        defer server.deinit();
+        defer server.deinit(io);
 
-        const json = try server.handleStatus(address);
+        const json = try server.handleStatus(address, io);
         defer allocator.free(json);
         std.log.info("{s}", .{json});
     } else {
