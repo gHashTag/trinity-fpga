@@ -2041,6 +2041,30 @@ grep -v 'ENABLE_BUFFER.HCLK_CK_BUFRCLK' ax.fasm &gt; ax_ctrl.fasm    # the contr
     </p>
   </section>
 
+  <section>
+    <h2>2026-09-04 — the tripwire halted for real, held for ~2 hours, then paid off</h2>
+    <p class="note">
+      Free disk actually crashed 9.8 → 1.2 GiB across the elapsed cron cycles (CoreSimulator
+      churn, not this loop's own work) — the mechanism above halted on its first live firing,
+      exactly as designed: no backlog work, no autonomous disk cleanup, one banner, one push
+      notification. The operator investigated live (<code>lsof</code>, <code>tmutil</code>,
+      <code>du</code>), found this session's own scratchpad had separately grown to 3.1 GB of
+      stale FPGA probe artifacts (cleared), then named the exact runtime to remove —
+      <code>xcrun simctl runtime delete &lt;UUID&gt;</code> freed iOS 26.5, 1.2 → 13.5 GiB,
+      confirmed with a fresh tripwire run, not assumed.
+    </p>
+    <p class="note">
+      The moment it resumed, a GitHub sweep found cavearr had posted the full BUFRCLK0/1/3
+      fuzzing campaign on #149 — the exact mint this loop's B14 had been waiting on. The locally
+      patched db already carried the identical four rows from an earlier pattern-based
+      prediction; built a synthetic FASM and round-tripped it through <code>fasm2frames</code>
+      against <code>xc7a200tfbg484-2</code> (AX7203's actual part), verified the real bit
+      pattern (not just exit 0), and
+      <a href="https://github.com/openXC7/nextpnr-xilinx/issues/149#issuecomment-5540105394">posted the confirmation</a>.
+      B14 and B16 both closed.
+    </p>
+  </section>
+
   <footer>
     <div>State <code>.trinity/loop/STATE.json</code> · journal <code>.trinity/loop/JOURNAL.md</code>.</div>
     <div>Every iteration reads STATE first and never redoes a done item. A hardware reading counts only after the flash log shows <code>exit=</code>.</div>
