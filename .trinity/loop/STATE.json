@@ -353,6 +353,12 @@
       "id": "D62",
       "what": "Delivered B14 (my committed half of cavearr's BUFRCLK0/1/3 fuzzing campaign) the moment the mint landed on #149. Local patched db (np-main/xilinx/external/prjxray-db/artix7/segbits_hclk_l.db) already carried the exact same 4 rows cavearr's independent Vivado-fuzzer campaign minted -- a real, valuable cross-validation between my own earlier pattern-based prediction and their fuzzer-confirmed result, both landing on 00_23/01_23/00_31/01_31. Built a synthetic FASM (HCLK_L_X102Y78.ENABLE_BUFFER.HCLK_CK_BUFRCLK0..3) and ran fasm2frames against xc7a200tfbg484-2 (AX7203's exact part, not the fuzzer's xc7a100tfgg676-1): exit 0, 26 frames. Verified the actual bit pattern, not just the return code -- frame 0x00421400 word 50 = 0x80800000 (bits 23+31, the two \"00\" rows) and frame 0x00421401 word 50 = 0x80800000 (bits 23+31, the two \"01\" rows), exactly matching the minted positions with no surprises.",
       "recommendation_posted": "On the PERFCLK/#172 half cavearr also asked about: recommended shipping only the verified enables, not forcing the unverified #172 pip, since it was never taken in 58 Vivado specimens plus two dedicated CLKOUTn-only runs -- inventing a ppips default for it would repeat the exact fuzzer-tag-predicate mistake the phase-0 reorder was built to catch, one level up the pipeline."
+    },
+    {
+      "id": "D63",
+      "what": "Delivered B17: gen/zig/test_measure.py in t27, 11 tests pinning measure.py's own already-documented failure shapes (declaration-vs-bare-call, math-shim contamination, spaced-dot false positive, truncated-body false positive/negative, phantom-import-target). Verified with a real fault-injection: reverted the phantom-file check, confirmed the corresponding test failed with a clear diff, restored, diffed byte-identical against a pre-break backup.",
+      "real_finding_while_writing_tests": "silent()'s detector regex (\\).name() only matches when the receiver is itself a call result -- a plain identifier receiver (x.abs() -> abs()) is outside its detection scope. Found by writing the naive fixture first and watching it correctly report 0 where I expected 1 -- not a test bug, a real, now-documented scope boundary in the existing tool.",
+      "infra_finding": "measure.py itself had ZERO git history -- gen/ is blanket-gitignored (correctly, for ~500 generated per-spec files), catching this hand-written tool too. A single-machine, no-backup instrument calling itself \"the ONLY sanctioned instrument\" is exactly the single-point-of-failure class already found and fixed for the loop's own STATE.json earlier today. Fixed via gen/*+!gen/zig/+gen/zig/*+!gen/zig/measure.py (a bare gen/ blocks re-inclusion no matter how specific the negation -- had to restructure with the wildcard form, not just add a negation line)."
     }
   ],
   "backlog": [
@@ -498,7 +504,8 @@
       "prio": 11,
       "what": "Give measure.py a regression test suite (3-5 hand-verified fixture .zig files with known expected counts) -- it has been wrong in the same direction at least nine times, every one caught by manually opening a generated file, never by a test on the script itself",
       "blocked_by": [],
-      "status": "pending"
+      "status": "completed",
+      "resolution": "Added gen/zig/test_measure.py (t27), 11 stdlib-only unittest tests over silent()/truncated_bodies()/a newly-extracted parse_zig_test_output(). Verified the suite catches a real injected regression, not just passes. Also fixed measure.py itself having NO git history (caught by a blanket gen/ ignore) via a gen/*+gen/zig/* wildcard .gitignore restructure. Commit e38b8a449, Closes t27#3171."
     },
     {
       "id": "B18",

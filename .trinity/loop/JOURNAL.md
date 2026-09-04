@@ -4000,3 +4000,27 @@ to ship the verified enables and not force the still-unverified #172 pip
 (never taken in 58 specimens plus two dedicated runs — forcing it would
 repeat the exact fuzzer-tag mistake the phase-0 reorder exists to catch,
 one level up). B14 and B16 (disk) both closed this iteration.
+
+**B17 delivered, plus a real infra find.** No new GitHub activity yet (too
+soon), and B8/B6 remain externally stuck, so picked up B17 — a regression
+suite for `measure.py`, which has been wrong nine documented times with
+nothing testing it. Extracted a pure `parse_zig_test_output()` out of
+`measure()` (needed for testability, not scope creep) and wrote 11
+stdlib-only tests pinning `silent()`/`truncated_bodies()`'s own already-
+documented failure shapes. Writing the first fixture surfaced something
+real: `silent()`'s `\).name(` regex only catches a deleted receiver when
+the receiver is itself a call result — a plain `x.abs()` is outside its
+detection scope. My fixture used the wrong shape and correctly reported 0
+where I expected 1; not a test bug, a real, now-documented boundary of the
+existing tool. Verified the suite has teeth with a real fault injection
+(reverted the phantom-file check, watched the test fail, restored, diffed
+byte-identical against a backup).
+
+Then found `measure.py` itself had **zero git history** — `gen/` is
+blanket-gitignored for the ~500 generated per-spec files, and this
+hand-written tool ("the ONLY sanctioned instrument") was caught by the
+same pattern the whole time. A bare `gen/` blocks `!gen/zig/measure.py`
+re-inclusion no matter how specific the negation (git's own documented
+behavior); fixed with the `gen/*`+`!gen/zig/`+`gen/zig/*` wildcard chain
+instead. Same failure shape as this loop's own STATE.json being untracked
+for 76 iterations, just in the other repo.
