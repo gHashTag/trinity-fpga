@@ -41,19 +41,19 @@ fn generateWorker(allocator: Allocator, worker_id: usize) ![]const u8 {
     const seed_str = try std.fmt.allocPrint(allocator, "{d}", .{seed});
     defer allocator.free(seed_str);
 
-    var buf = std.ArrayListUnmanaged(u8){};
+    var buf: std.ArrayListUnmanaged(u8) = .empty;
     defer buf.deinit(allocator);
 
     try buf.appendSlice(allocator, "  w9-");
-    try buf.writer(allocator).print("{d}:\n", .{worker_id});
+    try buf.print(allocator, "{d}:\n", .{worker_id});
     try buf.appendSlice(allocator, "    build:\n");
     try buf.appendSlice(allocator, "      context: ../../\n");
     try buf.appendSlice(allocator, "      dockerfile: deploy/Dockerfile.hslm-train-local.arm64-test\n");
     try buf.appendSlice(allocator, "    container_name: wave9-w");
-    try buf.writer(allocator).print("{d}\n", .{worker_id});
+    try buf.print(allocator, "{d}\n", .{worker_id});
     try buf.appendSlice(allocator, "    volumes:\n");
     try buf.appendSlice(allocator, "      - ../../data/wave9/worker-");
-    try buf.writer(allocator).print("{d}:/data/checkpoints\n", .{worker_id});
+    try buf.print(allocator, "{d}:/data/checkpoints\n", .{worker_id});
     try buf.appendSlice(allocator, "      - ../../data/tinystories:/data/tinystories:ro\n");
     try buf.appendSlice(allocator, "    environment:\n");
 
@@ -76,13 +76,13 @@ fn generateWorker(allocator: Allocator, worker_id: usize) ![]const u8 {
 }
 
 pub fn generateCompose(allocator: Allocator, num_workers: usize) ![]const u8 {
-    var buf = std.ArrayListUnmanaged(u8){};
+    var buf: std.ArrayListUnmanaged(u8) = .empty;
     defer buf.deinit(allocator);
 
     try buf.appendSlice(allocator, "# Wave 9 — S3 MultiObj Local Training\n");
     try buf.appendSlice(allocator, "# φ² + 1/φ² = 3 = TRINITY\n");
     try buf.appendSlice(allocator, "#\n");
-    try buf.writer(allocator).print("# {d} workers with NTP 50% + JEPA 25% + NCA 25% objective\n", .{num_workers});
+    try buf.print(allocator, "# {d} workers with NTP 50% + JEPA 25% + NCA 25% objective\n", .{num_workers});
     try buf.appendSlice(allocator, "#\n");
     try buf.appendSlice(allocator, "# Usage:\n");
     try buf.appendSlice(allocator, "#   docker-compose -f docker-compose.wave9.yml up -d              # Start all\n");
@@ -112,13 +112,9 @@ pub fn generateCompose(allocator: Allocator, num_workers: usize) ![]const u8 {
     return buf.toOwnedSlice(allocator);
 }
 
-pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa.deinit();
-    const allocator = gpa.allocator();
-
-    const args = try std.process.argsAlloc(allocator);
-    defer std.process.argsFree(allocator, args);
+pub fn main(init: std.process.Init) !void {
+    const allocator = init.gpa;
+    const args = try init.minimal.args.toSlice(init.arena.allocator());
 
     var num_workers: usize = 48;
     var output_path: []const u8 = "deploy/docker/docker-compose.wave9.yml";
@@ -161,21 +157,19 @@ pub fn main() !void {
 
     // Ensure output directory exists
     const output_dir = std.fs.path.dirname(output_path) orelse ".";
-    std.fs.cwd().makeDir(output_dir) catch |err| switch (err) {
+    std.Io.Dir.cwd().createDir(init.io, output_dir, .default_dir) catch |err| switch (err) {
         error.PathAlreadyExists => {},
         else => return err,
     };
 
     // Write compose file
-    const file = try std.fs.cwd().createFile(output_path, .{});
-    defer file.close();
-    try file.writeAll(compose);
+    try std.Io.Dir.cwd().writeFile(init.io, .{ .sub_path = output_path, .data = compose });
 
     std.debug.print("✓ Generated docker-compose for {d} workers: {s}\n", .{ num_workers, output_path });
 }
 
 test "generateWorker" {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const worker = try generateWorker(gpa.allocator(), 1);
     defer gpa.allocator().free(worker);
@@ -183,7 +177,7 @@ test "generateWorker" {
 }
 
 test "generateCompose minimal" {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const compose = try generateCompose(gpa.allocator(), 2);
     defer gpa.allocator().free(compose);
