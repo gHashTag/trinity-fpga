@@ -304,11 +304,28 @@ pub fn render(
             switch (c) {
                 .string => |s| try escape(a, &out, s),
                 .object => {
-                    try escape(a, &out, strField(c, "title", strField(c, "option", "—")));
-                    const body = strField(c, "detail", strField(c, "what", ""));
+                    // "name" first: that is what STATE.json actually uses. The
+                    // first version of this checked "title"/"option" only and
+                    // rendered an em-dash for every real row, because its test
+                    // fixture had been written to match the code instead of the
+                    // data. Fixture and file now agree.
+                    try escape(a, &out, strField(c, "name", strField(c, "title", strField(c, "option", "—"))));
+                    const body = strField(c, "what", strField(c, "detail", ""));
                     if (body.len > 0) {
                         try out.appendSlice(a, "<span class=\"by\">");
                         try escape(a, &out, body);
+                        try out.appendSlice(a, "</span>");
+                    }
+                    const fits = strField(c, "fits", "");
+                    if (fits.len > 0) {
+                        try out.appendSlice(a, "<span class=\"by\">fits: ");
+                        try escape(a, &out, fits);
+                        try out.appendSlice(a, "</span>");
+                    }
+                    const needs = strField(c, "needs_from_you", "");
+                    if (needs.len > 0) {
+                        try out.appendSlice(a, "<span class=\"by\">needs from you: ");
+                        try escape(a, &out, needs);
                         try out.appendSlice(a, "</span>");
                     }
                 },
@@ -343,7 +360,7 @@ const fixture =
     \\    {"id":"B3","prio":3,"what":"finished","blocked_by":[],"status":"completed"}
     \\  ],
     \\  "anomalies": [{"id":"A1","status":""},{"id":"A2","status":"fixed"}],
-    \\  "collaboration_options": ["keep going", {"title":"pick one","detail":"and say why"}]
+    \\  "collaboration_options": ["keep going", {"name":"pick one","what":"and say why","fits":"when it fits","needs_from_you":"one answer"}]
     \\}
 ;
 
@@ -429,6 +446,28 @@ test "render omits completed rows from the table but still counts them in totals
     try std.testing.expect(std.mem.indexOf(u8, html, "\"id\">B2<") != null);
     try std.testing.expect(std.mem.indexOf(u8, html, "\"id\">B3<") == null);
     try std.testing.expectEqual(@as(?i64, 3), loopstate.extractReadoutNumber(html, "backlog total"));
+}
+
+test "render reads collaboration options under the key names STATE.json actually uses" {
+    var st = try loopstate.parse(std.testing.allocator, fixture);
+    defer st.deinit();
+    const html = try render(std.testing.allocator, &st, "test");
+    defer std.testing.allocator.free(html);
+
+    // Regression: this rendered an em-dash for every option because the code
+    // looked for "title"/"detail" while the file has always used "name"/"what",
+    // and the fixture had been written to match the code rather than the data.
+    // A test whose fixture is derived from the implementation cannot catch that.
+    try std.testing.expect(std.mem.indexOf(u8, html, "pick one") != null);
+    try std.testing.expect(std.mem.indexOf(u8, html, "and say why") != null);
+    try std.testing.expect(std.mem.indexOf(u8, html, "fits: when it fits") != null);
+    try std.testing.expect(std.mem.indexOf(u8, html, "needs from you: one answer") != null);
+
+    // A bare string option still renders as itself.
+    try std.testing.expect(std.mem.indexOf(u8, html, "keep going") != null);
+
+    // And no option fell back to the placeholder.
+    try std.testing.expect(std.mem.indexOf(u8, html, "<li>&mdash;<") == null);
 }
 
 test "render survives a state file missing every optional section" {

@@ -20,7 +20,7 @@ FORMAT="${1:---text}"
 notify() {
     local title="$1" msg="$2"
     if command -v osascript &>/dev/null; then
-        osascript -e "display notification \"$msg\" with title \"$title\" sound name \"Glass\"" 2>/dev/null || true
+        osascript -e "display notification \"$msg\" with title \"$title\"" 2>/dev/null || true
     elif command -v notify-send &>/dev/null; then
         notify-send "$title" "$msg" 2>/dev/null || true
     else

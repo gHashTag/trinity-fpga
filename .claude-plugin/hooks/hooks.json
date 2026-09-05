@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "osascript -e 'display notification \"Claude finished the task\" with title \"Claude Code\" sound name \"Glass\"' 2>/dev/null || true",
+            "command": "osascript -e 'display notification \"Claude finished the task\" with title \"Claude Code\"' 2>/dev/null || true",
             "timeout": 5
           },
           {
@@ -21,23 +21,12 @@
         ]
       }
     ],
-    "Notification": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "afplay /System/Library/Sounds/Ping.aiff &",
-            "timeout": 5
-          }
-        ]
-      }
-    ],
     "SubagentStop": [
       {
         "hooks": [
           {
             "type": "command",
-            "command": "osascript -e 'display notification \"Subagent completed\" with title \"Claude Code\" sound name \"Glass\"' 2>/dev/null || true",
+            "command": "osascript -e 'display notification \"Subagent completed\" with title \"Claude Code\"' 2>/dev/null || true",
             "timeout": 5
           }
         ]
