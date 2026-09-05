@@ -4,7 +4,7 @@
     "id": "two-track",
     "cron_job": "1cd7dda4",
     "interval": "15m",
-    "iteration": 106,
+    "iteration": 107,
     "status": "RUNNING",
     "owner": "Dmitrii Vasilev / @gHashTag",
     "tracks": [
@@ -495,6 +495,15 @@
       "correction_a": "The audit said loop_decide reads 'consecutive_failures' from a file whose writer emits wake/ok/fail/decision/ts. True but incomplete -- the real state is a THREE-WAY dead end. (1) The code opens .trinity/loop_state.json and scans for \"consecutive_failures\": -- absent, so readConsecutiveFailures() returns 0 always. (2) The SPEC, which CLAUDE.md makes the source of truth, names a different path at specs/tri/loop_decide.tri:24 -- .trinity/consecutive_failures -- which does not exist on disk at all. (3) The key DOES exist, in .trinity/auto_action_failures.json, a 64-byte file that nothing in src/ reads and nothing in src/ writes (zero grep hits), last touched 2026-08-14 with last_success 2026-03-17. So priority guard #2 of 9 in the decision engine has no producer anywhere in the system, not merely a mistyped key. Also checked: 'fail' in loop_state.json is NOT a candidate rename -- heartbeat.zig:167-169 computes it per-invocation (for r in results: if r.success ok+=1 else fail+=1), so it is neither consecutive nor cumulative.",
       "correction_b": "The audit's proposed fix for dev_scan would have INVERTED the bug. scanPipeline (dev_scan.zig:342-365) opens .trinity/loop_state.json and searches for the quoted literal \"failed\" / \"FAILED\". That file is {\"wake\":7,\"ok\":3,\"fail\":1,\"decision\":\"EXIT\",\"ts\":1774237550} -- it contains \"fail\" as a KEY but never \"failed\", so the counter never fires. The audit noted the spec points at pipeline_state.json, 'which does contain the literal'. It does -- as a KEY name: {\"groups\":[{\"failed\":0,...}]}. A substring search there matches the key regardless of its value, so simply redirecting the path would make the counter fire on EVERY scan including a completely healthy pipeline. The correct fix is to parse the JSON and test failed > 0, not to change which file the substring search runs against.",
       "not_shipped": "No code change. (a) needs a design decision on where the count should come from -- filed as OD11. (b) is mechanically fixable but its fix is a behaviour change to a scanner whose output feeds 'tri dev pick', and no tri binary exists to verify against (neither toolchain builds one), so it goes to the operator with the corrected recipe rather than being applied blind. Same standing rule that kept B23-B27 unapplied."
+    },
+    {
+      "id": "D87",
+      "what": "B24 done: wired tools/check_gates_can_fail.py into CI as .github/workflows/gates-can-fail.yml (PR #750). The meta-gate injects, per gate, the exact defect that gate exists to catch and requires the gate to go red -- and it had been invoked by nothing, two grep hits on main both inside the file itself, while two of the gates it covers had already gone blind in production and been caught by hand.",
+      "the_caution_was_unnecessary": "Last iteration I planned to land this non-blocking, reasoning that it would surface red gates and turn main red. Running it first showed that assumption was wrong: 7 of 10 gates reject their injected defect, 3 are UNTESTABLE because already red on a clean tree, and the script exits 0. So it landed BLOCKING. The whole hedge existed because I had reasoned about the script instead of executing it -- the same error as A28/A29/A31/A33, arrived at from the opposite direction: excessive caution rather than excessive confidence, both from not running the thing.",
+      "the_real_content": "The coverage floor, not the wiring. check_gates_can_fail.py reports UNTESTABLE for any gate already red and still exits 0 -- correct on its own terms, since a red gate is a finding about the tree rather than about the gate -- but it means the check DEGRADES SILENTLY: every gate that goes red drops out of the tested set while the summary line stays green with a smaller denominator. Ten red gates would print '0 of 10 tested' and pass. The workflow therefore parses 'gates tested: N of M' and fails if N < 7, and fails loudly if that line ever stops parsing, because an unenforced floor is the same silent degradation one level up. This is the 'count over the set the instrument uses' lesson applied to a gate rather than to a census.",
+      "verified": "Step body extracted from the YAML and run verbatim under local bash 3.2, both directions: floor=7 -> exit 0 with 'testable gates: 7 (floor: 7)'; floor=9 -> exit 1 with '::error::Only 7 gate(s) could be tested; the floor is 9.'",
+      "noted_not_fixed": "Running the harness leaves tools/doc_refs_crossrepo.txt and tools/doc_refs_upstream.txt modified. Attributed by running check_doc_refs.py alone and reproducing it: that gate regenerates its own baselines. Not the harness failing to clean up. Harmless on an ephemeral runner, mildly annoying locally.",
+      "pr": "#750"
     }
   ],
   "backlog": [
@@ -700,11 +709,12 @@
     {
       "id": "B24",
       "prio": 4,
-      "status": "pending",
+      "status": "completed",
       "blocked_by": [],
       "title": "tools/check_gates_can_fail.py is invoked by nothing. 'git grep check_gates_can_fail origin/main' returns 2 hits, both inside the file itself. It is a meta-gate that injects, per gate, the exact defect that gate exists to catch and requires red -- and it covers 10 gates including 5 others found vacuous by this sweep. Two of its targets have ALREADY gone blind in production and were caught by hand (pre-#649 check_self_consistency passed both injected defects; pre-#650 check_paper_numbers ended in an unconditional sys.exit(0)).",
       "fix": "Add 'python3 tools/check_gates_can_fail.py' as a workflow on push + pull_request. The script is self-cleaning and asserts each injection actually changed the file. Cheapest high-value item on this list: the instrument already exists and is already written; it simply runs nowhere.",
-      "note": "Would report check_orphan_artefacts and check_withdrawn_live as UNTESTABLE rather than proven, since those gates are already red on main -- the script handles already-red gates explicitly. Consider landing it non-blocking (continue-on-error) first to get the signal without changing what blocks a merge."
+      "note": "Would report check_orphan_artefacts and check_withdrawn_live as UNTESTABLE rather than proven, since those gates are already red on main -- the script handles already-red gates explicitly. Consider landing it non-blocking (continue-on-error) first to get the signal without changing what blocks a merge.",
+      "completed_note": "Landed as gates-can-fail.yml in PR #750, blocking rather than non-blocking -- measuring first showed the script exits 0 on main, so the planned hedge was unnecessary. Shipped with a coverage floor because the script passes green as its own denominator shrinks."
     },
     {
       "id": "B25",
@@ -1020,6 +1030,14 @@
       "impact": "None shipped: the gate was tested before landing, which is the only reason this is a note rather than a sixth vacuous checker in tools/. Had I wired it in on the strength of a well-argued recommendation, this repo would have gained exactly the kind of gate the same sweep had just spent 25 agents finding.",
       "status": "gate refuted and NOT landed; the four underlying defects it targeted are unaffected and remain filed under B26 with their own execution evidence.",
       "lesson": "A recommendation produced by a careful process is still a hypothesis. This one came with reasoning, a worked mechanism and an explicit cost argument ('pure shell, seconds, no Zig toolchain'), and was wrong in a way no amount of reading it would reveal -- only running it did. Implement the proposed check against the real tree and hand-verify its first hit before believing either its findings or its own fitness."
+    },
+    {
+      "id": "A34",
+      "found": "2026-09-05, iteration 107, about my own reasoning rather than about the code",
+      "what": "I had planned to land the meta-gate non-blocking, on the reasoning that it would surface already-red gates and so turn main red. That reasoning was never checked. Running the script took under a minute and showed it exits 0 on main's tree: the hedge protected against nothing.",
+      "impact": "None shipped -- the plan was corrected before it became a commit. But it would have added a permanently non-blocking gate, which is a gate whose failures nobody has to act on, i.e. another member of the exact class this iteration is cataloguing.",
+      "status": "corrected before landing; the workflow is blocking, with a coverage floor.",
+      "lesson": "The same root cause as A28, A29, A31 and A33 -- reasoning about a thing instead of running it -- but reached from the opposite direction. Those four were overconfidence; this was overcaution. Both are the same failure to execute, and overcaution is harder to notice because its output looks like prudence and produces no red build to argue with."
     }
   ],
   "collaboration_options": [

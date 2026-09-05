@@ -72,18 +72,18 @@
 <!-- LOOP_HALT_BANNER_START --><!-- LOOP_HALT_BANNER_END -->
   <div class="masthead">
     <h1>TRINITY LOOP</h1>
-    <span class="it">iteration 106</span>
+    <span class="it">iteration 107</span>
     <span class="pill run">RUNNING</span>
     <span class="pill">autonomous_with_tripwires</span>
-    <span class="stamp">iteration 106 · 2026-09-06</span>
+    <span class="stamp">iteration 107 · 2026-09-06</span>
   </div>
 
   <div class="readout">
-    <div class="cellstat"><div class="n">86</div><div class="l">done</div></div>
-    <div class="cellstat"><div class="n">10</div><div class="l">backlog open</div></div>
+    <div class="cellstat"><div class="n">87</div><div class="l">done</div></div>
+    <div class="cellstat"><div class="n">9</div><div class="l">backlog open</div></div>
     <div class="cellstat"><div class="n">27</div><div class="l">backlog total</div></div>
     <div class="cellstat"><div class="n">15</div><div class="l">anomalies open</div></div>
-    <div class="cellstat"><div class="n">33</div><div class="l">anomalies total</div></div>
+    <div class="cellstat"><div class="n">34</div><div class="l">anomalies total</div></div>
   </div>
 
   <h2>Decision gate</h2>
@@ -97,7 +97,6 @@
     <div class="row"><div class="id">B18</div><div class="st blocked">pending</div><div class="wt">Reconcile t27&#39;s remaining 17 dirty tracked paths -- NOT scattered litter (confirmed by review): one large, coherent, active body of work (Cargo.lock -1313 lines, bootstrap/src/hooks.rs +318, cli/tri/src/main.rs +283, cli/tri-mcp/src/main.rs&hellip;<span class="by">blocked by: operator decision: reconcile against origin/master (see OD8) before any of these 17 files are touched -- committing or discarding them blind risks&hellip;</span></div></div>
     <div class="row"><div class="id">B22</div><div class="st blocked">pending</div><div class="wt">Migrate main.zig (1767 lines) to Zig 0.16 Io-threading -- the one file this whole B10 survey deliberately deferred as a separate structural decision rather than folding into the same incremental pattern used for the 8 independent files&hellip;<span class="by">blocked by: operator decision: restore local_farm.zig vs remove its 5 dead call sites in tri_farm.zig, see OD10 -- main.zig cannot compile at all until this is&hellip;</span></div></div>
     <div class="row"><div class="id">B23</div><div class="st">pending</div><div class="wt">overfull.yml has never measured anything: 298 green runs, zero measurements. &#39;cargo install tectonic || true&#39; fails on the runner (tectonic_bridge_png, libpng), and tools/check_overfull.py:24-25 turns the resulting FileNotFoundError into&hellip;</div></div>
-    <div class="row"><div class="id">B24</div><div class="st">pending</div><div class="wt">tools/check_gates_can_fail.py is invoked by nothing. &#39;git grep check_gates_can_fail origin/main&#39; returns 2 hits, both inside the file itself. It is a meta-gate that injects, per gate, the exact defect that gate exists to catch and requires&hellip;</div></div>
     <div class="row"><div class="id">B25</div><div class="st">pending</div><div class="wt">9 dead paths: entries across 5 workflows, so those triggers can never fire. wrapper-conversion-conformance.yml:19,25 watch a BRACE pattern (&#39;corona_compute_gf*_{div,sqrt,quire}_ax7203.v&#39;) -- GitHub&#39;s path filter supports only * ** ? + [],&hellip;</div></div>
     <div class="row"><div class="id">B26</div><div class="st">pending</div><div class="wt">Four live wrong values in tri output, all one class: a Zig reader looking for a JSON key its real data file does not contain -- the same defect as the loop_dashboard title/detail bug found earlier this iteration, which means the class has&hellip;</div></div>
     <div class="row"><div class="id">B27</div><div class="st">pending</div><div class="wt">Six glob-scoped tools/check_*.py print OK on an EMPTY scope; only check_harness.py goes red. check_script_rot.py&#39;s scope is fpga/**/*.sh, and .claude/rules/no-shell-scripts.md marks exactly those for deletion -- so the project roadmap ends&hellip;</div></div>

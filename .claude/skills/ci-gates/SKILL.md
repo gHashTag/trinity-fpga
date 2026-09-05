@@ -93,6 +93,48 @@ The local `/bin/bash` is **3.2** — no `mapfile`, no `${x@Q}`. Anything you
 cannot run here is untested until CI says so. Prefer
 `while IFS= read -r x; do arr+=("$x"); done < <(...)`.
 
+**Pin the ABI, not just the OS.** `-target x86_64-linux` means **musl** — Zig
+defaults a Linux target with no ABI suffix. Measured, compiling with `-lc`:
+
+| target | result |
+|---|---|
+| `x86_64-linux` | statically linked — musl |
+| `x86_64-linux-gnu` | dynamically linked, `/lib64/ld-linux` — glibc |
+
+The runner is glibc, and `std.c` carries ~12 `isGnu()`/`isMusl()` switches. A
+gate pinned to the bare form compiles against a libc no real build uses.
+
+## A green gate is not a working gate
+
+Eight gates in this repo have been found reporting success while measuring
+nothing. Before trusting one, ask whether it has ever emitted its own
+measurement line.
+
+- **`overfull.yml`: 298 green runs, zero measurements.** `cargo install tectonic
+  || true` fails on the runner; `check_overfull.py` turns the resulting
+  `FileNotFoundError` into `sys.exit(0)`. The string `overfull boxes over` has
+  never appeared in any run log.
+- **Six glob-scoped `tools/check_*.py` print OK on an empty scope.**
+  `check_script_rot.py` scans `fpga/**/*.sh` — files this repo's own rules mark
+  for deletion, so the roadmap ends with it scanning zero files and passing.
+- **`reachability-ratchet.yml` reports `No change.` green when its own
+  measurement crashes** — no `pipefail` anywhere in this repo's workflows, so
+  `python3 … | tee` discards the exit status.
+
+**The instrument already exists: `tools/check_gates_can_fail.py`.** It injects,
+per gate, the defect that gate exists to catch and requires red. Run it before
+trusting any gate:
+
+```bash
+python3 tools/check_gates_can_fail.py
+```
+
+It reports `UNTESTABLE` for gates already red on a clean tree, and **still exits
+0** — correct on its own terms, but it means the check degrades silently as the
+tree worsens. `gates-can-fail.yml` therefore enforces a floor on the *tested
+count*, not just the exit code. When you add a gate of this shape, gate the
+denominator too: **a derived scope that shrinks to zero passes green.**
+
 ## Reading a red PR
 
 Four checks are **red on `main`** and are not yours:
