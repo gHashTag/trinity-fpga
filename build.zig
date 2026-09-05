@@ -3279,4 +3279,38 @@ pub fn build(b: *std.Build) void {
     const sacred_synth_report_step = b.step("sacred-synth-report", "Parse Yosys JSON synthesis output for Sacred ALU");
     sacred_synth_report_step.dependOn(&sacred_synth_report.step);
 
+    // ═══════════════════════════════════════════════════════════════════════════
+    // tri-github-collab — OAuth + webhook backend for the Spec Explorer
+    //
+    // Declared here rather than only in deploy/Dockerfile.github-collab: the
+    // reachability ratchet walks @import chains from src/tri/main.zig plus every
+    // b.path() named in this file, and an entry point reachable through neither
+    // is exactly the "plausible, editable, unreachable code" it exists to catch.
+    // Being buildable with `zig build github-collab` is worth having anyway --
+    // otherwise the only way to compile it is inside Docker.
+    // ═══════════════════════════════════════════════════════════════════════════
+    // Skipped under -Dci: this service uses std.process.Init, std.Io.net and
+    // std.Io.randomSecure, all Zig 0.16. CI still runs 0.15.2, so declaring the
+    // target unconditionally fails the whole build there -- which is exactly
+    // what happened when this was first added to satisfy the ratchet.
+    //
+    // The b.path() stays literal inside the guard, so the ratchet still sees
+    // the entry point: it reads this file as text rather than running it.
+    if (!ci_mode) {
+        const github_collab = b.addExecutable(.{
+            .name = "tri-github-collab",
+            .root_module = b.createModule(.{
+                .root_source_file = b.path("src/tri/github_collab_server.zig"),
+                .target = target,
+                // ReleaseSafe, not ReleaseFast: this parses attacker-supplied
+                // HTTP and JSON, and bounds checks beat the throughput.
+                .optimize = .ReleaseSafe,
+            }),
+        });
+        b.installArtifact(github_collab);
+
+        const github_collab_step = b.step("github-collab", "Build the Spec Explorer GitHub collaboration backend");
+        github_collab_step.dependOn(&github_collab.step);
+    } // end if (!ci_mode) — Zig 0.16 entry point
+
 }

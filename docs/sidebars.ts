@@ -36,6 +36,7 @@ const sidebars: SidebarsConfig = {
       label: 'Reference',
       description: 'Technical specifications and API documentation',
       items: [
+        'reference/spec-corpus-synthesis',
         {
           type: 'category',
           label: 'TRI CLI',

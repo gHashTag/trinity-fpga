@@ -1,0 +1,38 @@
+# Railway service: GitHub collaboration backend for the Spec Explorer.
+# phi^2 + 1/phi^2 = 3 = TRINITY
+
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "deploy/Dockerfile.github-collab"
+
+[deploy]
+# No startCommand key: Railway then uses the Dockerfile ENTRYPOINT.
+# Do NOT write `startCommand = null` -- TOML has no null type, so that is a
+# parse error and the deployment fails before any build, reporting only
+# "does not have an associated build".
+healthcheckPath = "/health"
+healthcheckTimeout = 60
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
+# One replica: /auth/github stores its CSRF state in a cookie the callback
+# reads back, so no cross-instance state is needed -- but the connection loop
+# is single-threaded, so scale by replicas rather than expecting concurrency
+# from one.
+numReplicas = 1
+
+[[services]]
+type = "web"
+name = "t27-github-collab"
+env = "PORT"
+
+# Variables to set in the Railway dashboard (never in this file):
+#
+#   GITHUB_CLIENT_ID       OAuth app client id
+#   GITHUB_CLIENT_SECRET   OAuth app client secret   <- secret
+#   GITHUB_WEBHOOK_SECRET  webhook shared secret     <- secret
+#   PUBLIC_ORIGIN          https://<this-service>.up.railway.app
+#   ALLOWED_ORIGIN         https://t27.ai
+#
+# PORT is injected by Railway. The service exits at boot if any required
+# variable is missing, rather than starting and failing every request -- a
+# process that stays up while broken is invisible to the restart policy.

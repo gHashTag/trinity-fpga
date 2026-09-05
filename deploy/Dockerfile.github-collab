@@ -1,0 +1,61 @@
+# GitHub collaboration backend for the Spec Explorer.
+#
+# Two stages. The builder needs a shell for apt/tar (unavoidable in Docker);
+# the runtime stage has no shell, no bash, no python -- the entrypoint is the
+# Zig binary itself, per .claude/rules/no-shell-scripts.md.
+
+FROM debian:bookworm-slim AS builder
+
+ARG ZIG_VERSION=0.16.0
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        ca-certificates curl xz-utils \
+    && rm -rf /var/lib/apt/lists/*
+
+# Zig's own tarball, not a distro package: the code targets 0.16 APIs
+# (std.process.Init, std.Io.net, Io-threaded main) that older Zig does not have.
+#
+# Note the filename order: zig-<arch>-<os>-<version>, NOT zig-<os>-<arch>-...
+# Zig swapped these around, and the old spelling 404s -- which surfaces as a
+# curl exit 22 partway through the build rather than as anything that mentions
+# a name. Verified against https://ziglang.org/download/index.json.
+RUN set -eu; \
+    arch="$(dpkg --print-architecture)"; \
+    case "$arch" in \
+      amd64) zarch=x86_64 ;; \
+      arm64) zarch=aarch64 ;; \
+      *) echo "unsupported architecture: $arch" >&2; exit 1 ;; \
+    esac; \
+    curl -fsSL "https://ziglang.org/download/${ZIG_VERSION}/zig-${zarch}-linux-${ZIG_VERSION}.tar.xz" \
+        -o /tmp/zig.tar.xz; \
+    mkdir -p /opt/zig; \
+    tar -xJf /tmp/zig.tar.xz -C /opt/zig --strip-components=1; \
+    rm /tmp/zig.tar.xz
+
+ENV PATH="/opt/zig:${PATH}"
+
+WORKDIR /build
+COPY src/tri/github_collab.zig src/tri/github_collab.zig
+COPY src/tri/github_collab_server.zig src/tri/github_collab_server.zig
+
+# ReleaseSafe, not ReleaseFast: this service parses attacker-supplied HTTP and
+# JSON, and keeping bounds checks on is worth more than the throughput.
+RUN zig build-exe src/tri/github_collab_server.zig \
+        -O ReleaseSafe \
+        -femit-bin=/build/tri-github-collab
+
+# --- runtime ---------------------------------------------------------------
+FROM gcr.io/distroless/cc-debian12:nonroot
+
+# ca-certificates comes from the distroless base; the service needs it to make
+# HTTPS calls to api.github.com.
+COPY --from=builder /build/tri-github-collab /usr/local/bin/tri-github-collab
+
+USER nonroot
+EXPOSE 8080
+
+# No shell form: there is no shell in this image to interpret it.
+ENTRYPOINT ["/usr/local/bin/tri-github-collab"]
+
+LABEL description="GitHub collaboration backend for the t27 Spec Explorer" \
+      trinity.identity="phi^2 + 1/phi^2 = 3"
