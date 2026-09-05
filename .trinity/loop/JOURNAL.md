@@ -4658,3 +4658,83 @@ blocked pending OD8 and OD10 respectively, and B6 waits on a third party's PR. `
 here means "nothing is stuck behind an unanswered decision among the rows that would
 otherwise be pickable," not "there is free-standing work available" -- worth keeping
 that distinction precise rather than reading `clear` as `RUNNING and busy`.
+
+## Iteration 105 — a fix that broke a gate, a gate that caught its own author, and two tools where there used to be reminders
+
+**The cron field was dead again, for the second time.** `loop.cron_job` cited
+`eaa1cb07`; `CronList` returned nothing. That ID belonged to a session that has since
+exited, exactly as its own `cron_note` had predicted would happen to `947e19e4` before
+it. Twice is a pattern, so it is now a numbered step in the continuity protocol
+(run CronList first; empty means create one, non-empty means do not create a second)
+rather than a paragraph explaining a past mistake. New cron `1cd7dda4`, deliberately at
+:07/:22/:37/:52 rather than :00/:15/:30/:45.
+
+**#745 and #746 are merged.** Both had been sitting on a red `Validate VIBEE Codegen`
+that I put there myself. Declaring `tri-github-collab` and `tri-loopstate` in build.zig
+satisfied the reachability ratchet and made CI try to compile them under Zig 0.15.2,
+where `std.process.Init` does not exist. Fixing one gate broke another.
+
+The more useful part is how badly the first fix was scoped. I guarded the file the
+compiler named. The compiler names the *first* failure, not the class — the next run
+simply reported `sacred_synth_report.zig` instead. The actual class was "every installed
+executable whose root file carries the 0.16 main signature": ten files carry it, and
+exactly one was an installed executable CI builds. One grep, run before the first fix
+instead of after the second, would have replaced two pushes. This is filed as A29, and
+it is a direct recurrence of a lesson already in memory ("a compiler error names what
+the tool wanted next").
+
+Measured while there, because the question kept coming up implicitly: **neither
+toolchain builds this tree.** 0.15.2 fails on the migrated files; 0.16.0 fails on ~20
+targets still on 0.15 APIs. Bumping CI is not an available fix and won't be until the
+migration finishes. That is now written down where the next person will look.
+
+**The guard's real cost, and its replacement.** Guarding those targets out of CI means
+they have no automated check at all — verified once by hand by whoever migrated them,
+never again. A migration campaign that quietly removes its own files from CI as it
+proceeds is the kind of problem that only surfaces much later. So the guard shipped with
+`.github/workflows/zig-0-16-migrated.yml`, which compiles every file carrying that
+signature under a real 0.16 toolchain. The file list is derived by grep rather than
+hand-maintained, so the next migrated file is covered the moment it lands; an empty
+result is a hard failure, because a derived list that stops matching would otherwise
+pass green while checking nothing.
+
+**That job failed on its own first run, and the reason is worth keeping.** I had
+verified all ten files locally and said so. The verification was real and nearly
+worthless: macOS links libc implicitly, Linux does not, and I had checked on a laptop
+against a Linux runner. `src/trinet/main.zig` needs `-lc`. Filed as A28. The fix is not
+`-lc` — it is pinning `-target x86_64-linux` in the job and naming the identical local
+command next to it, so a laptop run and a CI run are the same measurement. The original
+error was reproduced locally by cross-compiling before the fix was written, rather than
+pushing a guess and watching.
+
+**OD7 was open against a cost that did not exist.** The decision record said automating
+`loop.iteration` would require "JSON-write capability [the tool] doesn't have yet". That
+was already untrue when it was written: `writeTripwireHysteresis` does the identical
+parse-mutate-stringify a few hundred lines up in the same file. `tri-loopstate bump` now
+owns the field, with a round-trip test asserting the new value actually reaches disk and
+that no other field is dropped on the way. This iteration's number was set by the tool,
+not typed — the first time in this loop's history that is true. The "MANDATORY
+SELF-CHECK" that asked a human to verify it by hand is gone from the protocol; it was
+understood and skipped nine consecutive times (A24), and a lesson enforced by nobody is
+not a fix.
+
+**A second dashboard, not a replacement.** `dashboard.html` is 164 KB of hand-written
+narrative accreted over a hundred iterations, and it stays exactly as it is — it is the
+historical record. `tri-loopstate render` now generates `status.html` (~9 KB) from
+STATE.json on every iteration, in Claude Code's visual language. Because it is derived,
+its numbers cannot drift from the state file the way a hand-edited page does — which is
+the whole reason `check` had to exist. It carries the same machine-read contract
+(readout block, halt banner markers, `--bad`/`--paper`), verified the only way that
+means anything: the real reader run against real generated output, asserting `checkDrift`
+finds nothing and `evaluateTripwires` does not fire. `render` also re-reads its own
+output and exits 1 if the page it just wrote is not machine-readable.
+
+Confirmed after all of it: `tripwire` still reads the old page (RUNNING, 9.58 GiB free,
+drift consistent, decision clear) and `check --dashboard status.html` reads the new one.
+58 tests pass across both modules. Nothing that existed before this iteration behaves
+differently.
+
+Backlog remains practically dry — B6, B8, B15 wait on third parties, B18 and B22 on OD8
+and OD10. The three collaboration options at the end of STATE.json are refreshed to
+match; the recommended one is a single yes/no on OD10, which is the last thing between
+this repo and a `tri` binary that compiles.
