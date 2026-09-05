@@ -4,7 +4,7 @@
     "id": "two-track",
     "cron_job": "1cd7dda4",
     "interval": "15m",
-    "iteration": 105,
+    "iteration": 106,
     "status": "RUNNING",
     "owner": "Dmitrii Vasilev / @gHashTag",
     "tracks": [
@@ -488,6 +488,13 @@
       "merged": [
         "#747"
       ]
+    },
+    {
+      "id": "D86",
+      "what": "B26 partially investigated: took the two defects whose files actually compile standalone under local Zig 0.16 (loop_decide.zig and dev_scan.zig both `zig test` clean; perf_benchmark.zig and pathology.zig do NOT -- both die on 0.15-era std.fs APIs, so (c) and (d) remain unverifiable on this machine and are untouched). Verifying rather than accepting corrected BOTH findings materially.",
+      "correction_a": "The audit said loop_decide reads 'consecutive_failures' from a file whose writer emits wake/ok/fail/decision/ts. True but incomplete -- the real state is a THREE-WAY dead end. (1) The code opens .trinity/loop_state.json and scans for \"consecutive_failures\": -- absent, so readConsecutiveFailures() returns 0 always. (2) The SPEC, which CLAUDE.md makes the source of truth, names a different path at specs/tri/loop_decide.tri:24 -- .trinity/consecutive_failures -- which does not exist on disk at all. (3) The key DOES exist, in .trinity/auto_action_failures.json, a 64-byte file that nothing in src/ reads and nothing in src/ writes (zero grep hits), last touched 2026-08-14 with last_success 2026-03-17. So priority guard #2 of 9 in the decision engine has no producer anywhere in the system, not merely a mistyped key. Also checked: 'fail' in loop_state.json is NOT a candidate rename -- heartbeat.zig:167-169 computes it per-invocation (for r in results: if r.success ok+=1 else fail+=1), so it is neither consecutive nor cumulative.",
+      "correction_b": "The audit's proposed fix for dev_scan would have INVERTED the bug. scanPipeline (dev_scan.zig:342-365) opens .trinity/loop_state.json and searches for the quoted literal \"failed\" / \"FAILED\". That file is {\"wake\":7,\"ok\":3,\"fail\":1,\"decision\":\"EXIT\",\"ts\":1774237550} -- it contains \"fail\" as a KEY but never \"failed\", so the counter never fires. The audit noted the spec points at pipeline_state.json, 'which does contain the literal'. It does -- as a KEY name: {\"groups\":[{\"failed\":0,...}]}. A substring search there matches the key regardless of its value, so simply redirecting the path would make the counter fire on EVERY scan including a completely healthy pipeline. The correct fix is to parse the JSON and test failed > 0, not to change which file the substring search runs against.",
+      "not_shipped": "No code change. (a) needs a design decision on where the count should come from -- filed as OD11. (b) is mechanically fixable but its fix is a behaviour change to a scanner whose output feeds 'tri dev pick', and no tri binary exists to verify against (neither toolchain builds one), so it goes to the operator with the corrected recipe rather than being applied blind. Same standing rule that kept B23-B27 unapplied."
     }
   ],
   "backlog": [
@@ -1729,6 +1736,11 @@
       "question": "B22 (main.zig migration) is blocked on tri_farm.zig's 5 dangling @import(\"local_farm.zig\") call sites (LocalFarm.init/addWorker/save, composeStop -- a Docker-based Wave-9 local worker-farm manager). The file was deleted in 36f38639c during the HSLM-training-extraction refactor, but tri_farm.zig was never updated to match, so this has been silently broken since that commit landed. Restore the deleted feature (still fully intact in git history, git show 36f38639c^:src/tri/local_farm.zig), or remove the 5 dead call sites in tri_farm.zig and drop the local-wave9 CLI subcommands they back?",
       "first_flagged": "2026-09-05",
       "impact": "Blocks main.zig from compiling at all -- not just the Zig 0.16 migration (B22), everything downstream of main.zig. This is the single blocker for the entire 249-file reachable graph; every other import resolves cleanly."
+    },
+    {
+      "id": "OD11",
+      "question": "Where should DecisionInput.consecutive_failures come from? It currently has no producer anywhere: the code reads a key absent from the file it opens, the spec names a path that does not exist, and the one file carrying the key is unread, unwritten and six months stale. Priority guard #2 of the decision engine's 9 has therefore never fired in production. Three options, in ascending order of work: (a) point the reader at .trinity/auto_action_failures.json, which already has the exact key -- cheapest, but nothing writes that file, so the value stays 0 forever and the guard remains dead while LOOKING alive, which is worse than the current honest breakage; (b) derive it from the episode history the way heartbeat.zig:319-346 already computes recent_fails (fails within the last hour) -- the logic exists and is exercised, this is mostly a matter of lifting it into a shared helper, and it gives the guard a real signal; (c) have heartbeat.zig maintain a true consecutive counter across runs and write it into loop_state.json, resetting on any success -- most faithful to the name and to the spec's intent, most new state to get right. Recommend (b): it reuses working code, needs no new persisted state, and 'failures in the last hour >= 5' is arguably what an escalation guard should mean anyway. Whichever is chosen, specs/tri/loop_decide.tri:24 needs updating to match, since it currently names a path that has never existed.",
+      "status": "open, raised 2026-09-05 iteration 106"
     }
   ]
 }

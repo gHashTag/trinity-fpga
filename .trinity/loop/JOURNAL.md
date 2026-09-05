@@ -4738,3 +4738,53 @@ Backlog remains practically dry — B6, B8, B15 wait on third parties, B18 and B
 and OD10. The three collaboration options at the end of STATE.json are refreshed to
 match; the recommended one is a single yes/no on OD10, which is the last thing between
 this repo and a `tri` binary that compiles.
+
+## Iteration 106 — two findings corrected by checking them, and a guard with no producer
+
+Continuity protocol ran clean: CronList showed exactly one job (1cd7dda4, no duplicate),
+the binary was rebuilt from source rather than reused, and `tripwire` came back RUNNING
+before anything touched the backlog. Disk had recovered on its own from 2.62 GiB to
+5.42 GiB -- back to full tier, cause outside this loop's surface, noted rather than
+chased. All five of last iteration's PRs are on main and the Zig 0.16 job is green there
+at the corrected glibc target.
+
+`status` returned B26, the four wrong-value defects in `tri` output. Two of the four
+live in files that actually compile standalone under local Zig 0.16 (`loop_decide.zig`
+and `dev_scan.zig` both `zig test` clean); the other two do not -- `perf_benchmark.zig`
+and `pathology.zig` both die on 0.15-era `std.fs` APIs. So (c) and (d) stay unverifiable
+on this machine and were left alone rather than guessed at.
+
+Verifying the two that could be checked corrected **both** of them.
+
+**(a) is not a mistyped key, it is a guard with no producer anywhere.** The audit said
+`loop_decide` reads `consecutive_failures` from a file whose writer emits
+`wake/ok/fail/decision/ts`. True, and incomplete. The real state is a three-way dead
+end: the code opens `.trinity/loop_state.json` and scans for a key that is not in it;
+the spec -- which CLAUDE.md makes the source of truth -- names `.trinity/consecutive_failures`
+at `loop_decide.tri:24`, a path that does not exist on disk at all; and the key does
+exist, in `.trinity/auto_action_failures.json`, a 64-byte file that nothing in `src/`
+reads and nothing in `src/` writes, carrying `last_success: 2026-03-17`. Priority guard
+#2 of the decision engine's 9 has therefore never fired in production, and could not
+have. Also ruled out the obvious rename: `fail` in `loop_state.json` is computed
+per-invocation at `heartbeat.zig:167-169`, so it is neither consecutive nor cumulative.
+Filed as OD11 with three options; the recommendation is to lift the `recent_fails`
+computation that already works at `heartbeat.zig:319-346` rather than invent new state.
+
+**(b) the proposed fix would have inverted the bug.** `scanPipeline` searches
+`.trinity/loop_state.json` for the quoted literal `"failed"`. That file contains `"fail"`
+as a key and never `"failed"`, so the counter never fires -- as reported. The audit then
+noted the spec points at `pipeline_state.json`, "which does contain the literal". It
+does: as a **key name**, `{"groups":[{"failed":0,...}]}`. A substring search there matches
+the key whatever its value, so simply redirecting the path would make the counter fire on
+every scan of a completely healthy pipeline. The correct fix is to parse the JSON and test
+`failed > 0`, not to change which file the substring search runs against.
+
+Nothing shipped from either. (a) needs a design decision. (b) is mechanically fixable but
+changes the behaviour of a scanner feeding `tri dev pick`, and no `tri` binary exists to
+verify against because neither toolchain builds one -- the same standing rule that kept
+B23-B27 unapplied last iteration. Both go to the operator with corrected recipes.
+
+The pattern is now three iterations old and worth stating plainly: every recommendation
+this loop has received tonight -- including from a 25-agent sweep with execution evidence
+-- has been wrong in some material detail that only running it exposed. Twice the proposed
+fix would have made things worse than the bug. Reading a finding is not checking it.
