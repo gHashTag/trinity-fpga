@@ -4,7 +4,7 @@
     "id": "two-track",
     "cron_job": "eaa1cb07",
     "interval": "15m",
-    "iteration": 103,
+    "iteration": 104,
     "status": "RUNNING",
     "owner": "Dmitrii Vasilev / @gHashTag",
     "tracks": [
@@ -22,7 +22,9 @@
       "_note": "hysteresis (disk_recovery_confirmations_needed, default 2) and flap detection (flap_window_iterations/flap_threshold, defaults 20/3) implemented in B21 -- was_halted/disk_recovery_streak/halt_episode_iterations below are live state written by tri-loopstate tripwire each run, not hand-edited",
       "was_halted": false,
       "disk_recovery_streak": 0,
-      "halt_episode_iterations": []
+      "halt_episode_iterations": [
+        103
+      ]
     },
     "halt": {
       "active": false,
@@ -452,6 +454,11 @@
       "id": "D80",
       "what": "B21: added disk-halt hysteresis and flap detection to tri_loopstate.zig/tri_loopstate_main.zig. 9 new tests (49 total, all passing, no leaks -- one real leak found and fixed along the way: mutating the parsed JSON tree with the caller's allocator instead of the document's own arena, caught by the round-trip test actually leaking under std.testing.allocator rather than by inspection). Verified end-to-end against real STATE.json in a scratch copy before touching the live file: forced halt -> 1/2 confirmation (stays halted) -> 2/2 confirmation (clears); seeded a 3-episode flap and confirmed the warning fires while verdict correctly stays RUNNING; confirmed episode pruning drops entries once they age out of the configured window.",
       "deferred": "Auto-appending a formal anomalies[] row on flap detection -- ID numbering, dedup, and narrative authoring are a distinct, larger task from the detection+persistence machinery; flap currently surfaces as a printed warning + persisted history, not a silent anomalies[] entry. Not attempted this cycle, documented rather than left ambiguous."
+    },
+    {
+      "id": "D81",
+      "what": "B19/OD9: drafted and, per explicit operator go-ahead, posted a status-check comment on PR #877. Along the way corrected a standing mischaracterization: OD3/OD9 both described this as a \"third-party-adjacent PR\" requiring extra publish caution, but it is the operator's own PR (authored by gHashTag via an earlier Claude Code session) in the operator's own repo -- the caution was over-applied by analogy to the openXC7 external-collaboration channel, not something this specific PR actually warranted. Also found the real reason it looked stuck: two CI gates (Brain Health Check, claude-review) failed at open time, but Brain Health Check appears to be a repo-wide gate irrelevant to a docs-only blog post, and its own failure-notification bot hit an unrelated 403 permissions bug.",
+      "posted": "https://github.com/gHashTag/trinity/pull/877#issuecomment-5549722873"
     }
   ],
   "backlog": [
@@ -614,9 +621,9 @@
       "prio": 13,
       "what": "Escalate PR #877 (open since 2026-08-31, re-flagged at iterations 6 and 47 with no action beyond observation) with one direct nudge instead of re-observing it a further time",
       "blocked_by": [],
-      "status": "pending",
+      "status": "completed",
       "needs_operator_decision": true,
-      "note": "Posting a GitHub PR comment on the operator's behalf is a publish-to-a-third-party action; left for explicit operator go-ahead rather than sent autonomously this iteration."
+      "note": "Posted 2026-09-05 per explicit operator go-ahead (\"post it as-is\", after the operator asked to draft the text). Comment: https://github.com/gHashTag/trinity/pull/877#issuecomment-5549722873. Correcting a mischaracterization carried since OD3/OD9: this is NOT a third-party-adjacent PR -- #877 was authored by gHashTag (the operator's own account) via an earlier Claude Code session, in the operator's own repo. The standing caution about publish actions on third-party PRs never actually applied here; it was over-applied by analogy. Investigated why it's stuck before drafting: two CI checks failed at open time -- Brain Health Check (a repo-wide gate that ran full brain-region tests against a blog-post-only diff with no brain code touched; its own failure-comment bot hit a 403 Resource not accessible by integration, a workflow token-permission bug unrelated to the PR content) and claude-review (failed, but the fetched log only showed cleanup steps, not the actual verdict -- not chased further). The PR body itself already said \"Not merging -- publication is the operator's decision\", so this was never neglect, just a parked proposal. The posted comment restates that plainly and flags the CI gate as likely inapplicable to docs-only changes, without claiming to have fixed anything."
     },
     {
       "id": "B20",
@@ -1584,7 +1591,9 @@
       "id": "OD9",
       "question": "PR #877 escalation (B19): the operator asked to proceed on \"all three\" fronts including this one, but posting a comment on a third-party-adjacent PR on the operator's behalf is a publish action this loop has consistently held back on without a more specific go-ahead (distinct from the openXC7 issue-comment channel, which has standing authorization as this loop's core collaborative track). Not acted on. If the operator wants this sent, the exact text is ready to draft on request.",
       "first_flagged": "2026-09-04",
-      "impact": "PR #877 remains stale (unchanged since 2026-08-31) with no escalation beyond repeated accurate observation, same as OD3 already noted."
+      "impact": "PR #877 remains stale (unchanged since 2026-08-31) with no escalation beyond repeated accurate observation, same as OD3 already noted.",
+      "resolution": "Resolved 2026-09-05: operator said \"draft the PR #877 escalation comment text\", was shown the draft plus the corrected third-party framing, then said \"post it as-is\". Posted. See B19 for the full account, including the correction that this was never actually a third-party PR.",
+      "resolved": true
     },
     {
       "id": "OD10",

@@ -4612,3 +4612,49 @@ Tripwire (before hysteresis/flap were live) showed a healthy RUNNING; the very n
 (the one exercising the new code against real production data) is the one that
 surfaced the all_gated finding above -- both are accurate readings of two different,
 real moments, not a contradiction.
+
+## Iteration 104 — a real disk crisis, B21's hysteresis proving itself live, and B19/OD9 resolved
+
+**Disk crisis, third time this session, and the first time B21 got to prove itself for
+real.** This cycle opened with `tripwire` reading 0.18 GiB free -- critical, worse than
+either of the two earlier crises. A direct `df -h` moments later showed 127 MiB.
+Investigation commands (`du -sh` on CoreSimulator, caches, etc.) timed out entirely,
+consistent with a system this close to full behaving erratically rather than a new
+finding to chase. Something outside this loop's control resolved it: by the next
+`tripwire` run, real free space was 19.58 GiB, and the previous session's `/tmp` state
+(including the compiled `tri-loopstate` binary) was gone -- both point at a reboot or a
+large cache-clear event, not anything this loop did or could explain further. Not
+investigated past that point, per the standing practice of not chasing causes outside
+this loop's own surface.
+
+What made this cycle notable: B21's hysteresis, shipped last cycle and only ever tested
+against synthetic scratch data until now, got to run against a **real** halt-then-recover
+sequence for the first time. First post-crisis reading: raw tier already back to `full`
+(19.58 GiB), but the effective verdict correctly held at HALT for one more confirmation
+(1/2) rather than clearing immediately on the first good reading -- exactly the behavior
+the whole feature was built for. Second reading: 2/2 confirmed, verdict cleared to
+RUNNING. This is the first real-world proof of the mechanism, not just a scratch-copy
+test.
+
+**B19 / OD9 resolved.** The operator asked to draft the PR #877 escalation text, was
+shown a draft, then said "post it as-is." Posted:
+https://github.com/gHashTag/trinity/pull/877#issuecomment-5549722873. Investigating
+before drafting corrected a mischaracterization this loop had carried since OD3: #877
+is not a third-party-adjacent PR needing extra publish caution -- it's the operator's
+own PR, authored by their own account via an earlier Claude Code session, in their own
+repo. The caution had been over-applied by analogy to the openXC7 external-collaboration
+channel, where it genuinely matters. Also found the real reason the PR looked stuck:
+two CI checks failed at open time, but "Brain Health Check" is a repo-wide gate that ran
+full brain-region tests against a blog-post-only diff touching no brain code, and its
+own failure-comment bot hit an unrelated `403 Resource not accessible by integration`
+permissions bug trying to post about it. The PR body had already deferred the merge
+call to the operator from the start ("Not merging -- publication is the operator's
+decision") -- this was a parked proposal, not neglect. B19 marked completed; OD9 marked
+resolved.
+
+Decision gate is now `clear` (no candidate rows carry `needs_operator_decision` with an
+empty `blocked_by`) -- but the backlog is still practically dry: B18 and B22 remain
+blocked pending OD8 and OD10 respectively, and B6 waits on a third party's PR. `clear`
+here means "nothing is stuck behind an unanswered decision among the rows that would
+otherwise be pickable," not "there is free-standing work available" -- worth keeping
+that distinction precise rather than reading `clear` as `RUNNING and busy`.
