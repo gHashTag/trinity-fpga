@@ -329,8 +329,12 @@ fpga/openxc7-synth/fpga/
 fpga/tools/weight_col2wide
 fpga/tools/weight_pack_wide
 
-# Docker files in root (use deploy/ subdirectory instead)
-Dockerfile*
+# Docker files in root (use deploy/ subdirectory instead).
+# Anchored: an unanchored `Dockerfile*` matches at every depth, so it was also
+# ignoring deploy/Dockerfile.*, which is exactly where this rule tells you to
+# put them. The existing deploy Dockerfiles are tracked only because they
+# predate the rule; a new one silently failed to add.
+/Dockerfile*
 
 # Fly deploy config
 fly.toml
