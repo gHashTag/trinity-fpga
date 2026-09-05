@@ -116,7 +116,7 @@ def script_gaps(tracked: set) -> list:
         if not watched:
             continue
         run = {m for m in RUNS.findall(text) if m in tracked}
-        miss = [r for r in sorted(run) if not any(matches(r, p) for p in watched)]
+        miss = [r for r in sorted(run) if not any(matches(p, r) for p in watched)]
         if miss:
             out.append((fn, miss))
     return out
