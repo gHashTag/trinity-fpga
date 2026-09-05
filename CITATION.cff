@@ -2,7 +2,7 @@ cff-version: 1.2.0
 message: "If you use this FPGA synthesis stack, please cite it as below."
 title: "trinity-fpga: openxc7-synth + T27 VM + GF16 ternary matmul FPGA stack"
 doi: "10.5281/zenodo.19227877"
-abstract: "trinity-fpga is the FPGA synthesis and hardware deployment branch of the Trinity S³AI programme. It packages openxc7-synth flows for Artix-7 / Kintex-7, the T27 ternary VM bitstream, the GF16 ternary matmul macro (XOR-popcount, zero multipliers), and the Sacred ALU 352-LUT pre-image prepared for the TTSKY26a Tiny Tapeout submission (Wave-15-TT-E; withdrawn and refunded 6 Aug 2026 — no die was fabricated, all hardware results are on the Artix-7 FPGA). Companion FPGA release artefacts live under the parent gHashTag/trinity repository at 10.5281/zenodo.18947017 (v2.0.2) and 10.5281/zenodo.18950696 (v2.0.3); trinity-fpga itself has no independent DOI deposit and inherits the canonical anchor 10.5281/zenodo.19227877 (φ²+φ⁻²=3). Statistical claims and Coq witnesses for the Trinity Identity live in gHashTag/t27/coq and gHashTag/trios/docs/phd — not asserted by this CITATION.cff. PASS-9 R5-honest fix 2026-05-15."
+abstract: "trinity-fpga is the FPGA synthesis and hardware deployment branch of the Trinity S³AI programme. It packages openxc7-synth flows for Artix-7 / Kintex-7, the T27 ternary VM bitstream, the GF16 ternary matmul macro (XOR-popcount, zero multipliers), and the Sacred ALU 352-LUT pre-image prepared for the TTSKY26a Tiny Tapeout submission (Wave-15-TT-E; withdrawn and refunded 6 Aug 2026 — no die was fabricated, all hardware results are on the Artix-7 FPGA). Companion FPGA release artefacts live under the parent gHashTag/trinity repository at 10.5281/zenodo.18947017 (v2.0.2) and 10.5281/zenodo.18950696 (v2.0.3); trinity-fpga itself has no independent DOI deposit and inherits the canonical anchor 10.5281/zenodo.19227877 (φ²+φ⁻²=3). Statistical claims and Coq witnesses for the Trinity Identity live in gHashTag/t27/coq and gHashTag/trios/docs/phd — not asserted by this CITATION.cff. PASS-9 R5-honest fix 2026-05-15; hardware-status correction 2026-09-05 (no die was fabricated)."
 authors:
   - family-names: "Vasilev"
     given-names: "Dmitrii"
@@ -45,3 +45,7 @@ keywords:
 # title/abstract/url/keywords with the actual FPGA-synthesis scope of trinity-fpga
 # and removes the incorrect independent DOI claim — trinity-fpga has no
 # independent Zenodo deposit and inherits the parent Trinity anchor.
+# 2026-09-05: abstract, license (MIT, per LICENSE), identifiers and keywords
+# corrected — no die of any Trinity chip was fabricated; all hardware results are
+# on the Artix-7 FPGA. `version` and `date-released` describe the last recorded
+# software release, not this metadata correction, and are unchanged.

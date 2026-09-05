@@ -216,9 +216,10 @@ from the very beginning in both implementations).
   repository — checked 2026-09-05).
 - extended (gf96…gf1024) — SW-conformance / fixed-point ONLY, never
   claim FP-decode on HW.
-- Catalog = 83 formats at the time of this note (2026-07-04); 109 at v3 of the
-  catalogue paper (Sep 2026) — the count grows. This work = a 17-cell
-  GF-subfamily inside the catalog. No "first/best".
+- Catalog = the t27 SSOT, whose count is an invariant that grows (109 formats
+  at v3 of the catalogue paper, Sep 2026; this note was written 2026-07-04
+  against an earlier snapshot). This work = a 17-cell GF-subfamily inside the
+  catalog. No "first/best".
 - Every format remains decode-HW **[requires confirmation]** until a full 4/4
   chain (CI GREEN + SHA256 + UART `HW RESULT: N/N bit-exact (fails=0)`
   @160000 + IDCODE `0x13636093`) on AX7203 — the Tier-E bar is stated in the

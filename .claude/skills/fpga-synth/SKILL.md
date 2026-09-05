@@ -6,6 +6,8 @@ allowed-tools: Bash(docker *), Bash(ls *), Read, Grep, Glob, Write, Edit
 
 # FPGA Pipeline — AX7203 XC7A200T
 
+> **Terminology (2026-09-05):** wherever this skill says "on silicon", "silicon-proven" or the like, it means the AX7203 (Artix-7 XC7A200T) FPGA boards. No die of any Trinity ASIC exists — the Tiny Tapeout submissions TTSKY26a and TTSKY26b were withdrawn before fabrication.
+
 ## 🔥 3-BOARD FLEET — all independently flashable + a working inference cluster (2026-08-08)
 
 **Fleet = 3× AX7203 (XC7A200T), each with its OWN onboard FT232H JTAG *and* CP2102N UART.**

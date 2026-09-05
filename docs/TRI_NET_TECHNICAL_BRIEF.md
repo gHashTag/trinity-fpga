@@ -24,7 +24,7 @@ The whole flow is open: yosys plus nextpnr-xilinx (openXC7), no vendor tools.
 
 | | |
 |---|---|
-| Correctness on silicon | 512/512 jobs, each requiring both a bit-exact result against an independent oracle and a matching receipt tag |
+| Correctness on the FPGA (Artix-7 XC7A200T) | 512/512 jobs, each requiring both a bit-exact result against an independent oracle and a matching receipt tag |
 | Independence of the result | a second host, written in a different language with a different serial implementation, reaches the same board and agrees |
 | Logic cost | 429 logic cells, 296 + 125 flip-flops, **0 DSP48** — the datapath is popcount and an adder tree, no multiplier |
 | Simulation agreement | 128/128 golden vectors through the full UART frame path, gating synthesis in CI |
@@ -36,7 +36,7 @@ The whole flow is open: yosys plus nextpnr-xilinx (openXC7), no vendor tools.
   supply. Any efficiency comparison would be fabricated.
 - **No multi-board result.** One board exists. Every distributed property is
   demonstrated with one physical node and software peers, and the tooling
-  reports the silicon share of each run rather than rounding it up.
+  reports the share of each run dispatched to serial-attached nodes rather than rounding it up.
 - **Throughput is transport-bound, not compute-bound.** The node speaks UART at
   160 kbaud. That is a property of the current I/O, not of the cell.
 - **The receipt does not prove where the work ran.** The checksum is keyless and

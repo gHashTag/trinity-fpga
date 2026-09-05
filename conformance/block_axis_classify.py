@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Put the block formats on the taper map, which they fell off.
 
-`taper_classify.py` classified the catalogue's formats (83 at catalog v2 -- the
-count is a catalogue invariant that grows) and put five of the six MX entries
-in a bin called "range < 6, not classifiable". That was read as a limit of the
+`taper_classify.py` classified every format in the catalogue snapshot of the
+time (the count is a catalogue invariant that grows -- 109 at v3, Sep 2026 --
+and is not hard-coded here) and put five of the six MX entries in a bin
+called "range < 6, not classifiable". That was read as a limit of the
 instrument. It is not: it is the instrument measuring the wrong half of the
 format.
 
