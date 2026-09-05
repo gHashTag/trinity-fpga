@@ -15,6 +15,16 @@ Every check below exists because one specific lookup went wrong that night:
     were searched                                 -> a code search locates it before
                                                      anything is called missing
 
+Two more were found by running this script against the paper it was written
+for, which is the only reason they are here:
+
+  * tags were resolved only against repositories the paper links to, so the
+    paper's OWN repository was never asked   -> it is always a candidate
+  * only the name after the word "tag" was checked, so a second tag named
+    later in the same passage went unseen    -> siblings of a confirmed tag,
+                                                differing only in a trailing
+                                                number, are checked too
+
 Usage:
     check_paper_refs.py PAPER.tex --repo OWNER/NAME [--dir research/arxiv_tnf]
     check_paper_refs.py PAPER.tex --repo OWNER/NAME --json
@@ -126,8 +136,48 @@ def locate(basename):
 
 
 PATH_RE = re.compile(r'(?<![\w/])((?:measurements|research|data|proofs|tools|oracle|rtl|tests|specs|src|docs)/[A-Za-z0-9_][A-Za-z0-9_./-]*)')
-TAG_RE = re.compile(r'tag\s*\\?texttt\{([^}]+)\}|tag\s+`([^`]+)`|tag\s+([A-Za-z0-9][\w.-]*)')
+TT_RE = re.compile(r'\\texttt\{([^}]+)\}')
+# Markdown fallback only. In LaTeX a lone ` is an opening quote, so this
+# pattern spans from one quote to the next and swallows any \texttt{} between
+# them -- which is how the first version of this check silently stopped seeing
+# tnf-vectors-3. It is used only for sources that contain no \texttt at all.
+CODE_RE = re.compile(r'`([^`\n]+)`')
+TAG_WORD_RE = re.compile(r'\btags?\b')
+REFNAME_RE = re.compile(r'^[A-Za-z0-9][A-Za-z0-9._-]*$')
+STEM_RE = re.compile(r'[0-9]+$')
 URL_RE = re.compile(r'github\.com/([A-Za-z0-9._-]+/[A-Za-z0-9._-]+?)(?=[\s,;)}\\/]|$)')
+
+
+def cited_tags(text, window=300):
+    """Every name the paper presents as a tag.
+
+    Two passes. The first takes verbatim names within `window` characters after
+    the word "tag". The second takes their siblings: a passage may introduce
+    tnf-vectors-2 as a tag and then name tnf-vectors-3 a page later without
+    repeating the word, and the second name is exactly as capable of pointing
+    nowhere as the first. Siblings are recognised only by a shared stem and a
+    differing trailing number, which is narrow on purpose -- a looser rule
+    would start checking every monospaced word in the paper.
+    """
+    verbatim = TT_RE if '\\texttt{' in text else CODE_RE
+
+    def names(fragment):
+        for m in verbatim.finditer(fragment):
+            t = m.group(1)
+            if (REFNAME_RE.match(t) and '/' not in t
+                    and not t.endswith(('.py', '.json', '.md', '.tex', '.v', '.sv', '.txt'))):
+                yield t
+
+    tags = set()
+    for m in TAG_WORD_RE.finditer(text):
+        tags.update(names(text[m.start():m.start() + window]))
+
+    stems = {STEM_RE.sub('', t) for t in tags if STEM_RE.search(t)}
+    if stems:
+        for t in names(text):
+            if any(t != st and t.startswith(st) and STEM_RE.fullmatch(t[len(st):]) for st in stems):
+                tags.add(t)
+    return tags
 
 
 def strip_tex(s):
@@ -178,10 +228,11 @@ def main():
                 bad += 1
 
     # --- tags --------------------------------------------------------------
-    for m in TAG_RE.finditer(text):
-        tag = next(g for g in m.groups() if g)
-        # a tag is cited next to a repo URL; check every repo the paper names
-        repos = set(URL_RE.findall(text)) or {a.repo}
+    # The paper's own repository is always a candidate, whether or not the text
+    # links to it. Leaving it out reported a tag as missing everywhere while
+    # never asking the one repository most likely to hold it.
+    repos = set(URL_RE.findall(text)) | {a.repo}
+    for tag in sorted(cited_tags(text)):
         ok_in = [r for r in repos if tag_exists(r, tag)]
         if ok_in:
             findings.append({'kind': 'tag', 'cited': tag, 'status': 'ok', 'resolved': ok_in[0]})

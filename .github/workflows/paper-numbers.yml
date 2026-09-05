@@ -23,6 +23,7 @@ on:
       # the one change it could not see.
       - 'tools/check_paper_numbers.py'
       - 'tools/paper_numbers_baseline.txt'
+      - 'tools/check_paper_refs.py'
   push:
     branches: [main, master]
 
@@ -34,3 +35,30 @@ jobs:
       - uses: actions/setup-python@v5
         with: { python-version: '3.12' }
       - run: python3 tools/check_paper_numbers.py
+
+      # The gate above compares numbers in the paper against numbers in the
+      # tree. It cannot see a pointer that leads nowhere. An audit on
+      # 2026-09-05 found tag v4.0-trinity cited in the text and never created,
+      # and a measurement record cited at a path that 404s -- neither is a
+      # number, so neither was ever in scope for it.
+      - name: Paper references resolve
+        env:
+          # 60 anonymous requests an hour is fewer than this paper has
+          # references; without a token almost everything returns unchecked.
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set +e
+          python3 tools/check_paper_refs.py research/arxiv_tnf/tnf_paper.tex \
+            --repo ${{ github.repository }} --dir research/arxiv_tnf
+          code=$?
+          set -e
+          # Exit 1 is a reference that is genuinely absent -- the defect this
+          # exists to catch, so it fails. Exit 3 is the API not answering,
+          # which is not evidence of absence and must not redden a pull
+          # request; the whole point of the script is that those two verdicts
+          # stay apart, and collapsing them here would undo that.
+          case $code in
+            0) echo "All references resolved." ;;
+            1) echo "::error::A cited path, tag or repository does not exist. Quote the commit, never a version name." ; exit 1 ;;
+            *) echo "::warning::Some references could not be checked (exit $code). Not the same as missing -- re-run before acting on it." ;;
+          esac
