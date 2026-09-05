@@ -79,11 +79,30 @@ fixed -- it has run from different git worktrees of trinity-fpga across its
 lifetime, and a worktree that hosted it before has already been pruned once
 (found live by a prior self-audit: this exact file used to hardcode a path
 that no longer exists by the time you read this). Do not hardcode a path.
-First locate the live working tree yourself: run
-'find /Users/playom -maxdepth 5 -path "*/.trinity/loop/STATE.json" 2>/dev/null'
-and treat the directory three levels up from whichever STATE.json that finds
-(there should be exactly one) as the root for every command below. If more
-than one turns up, prefer the one whose STATE.json has the most recent mtime.
+Locate the live working tree yourself, with THIS command -- git already knows
+where every worktree is, so ask it instead of searching the filesystem:
+
+  git -C /Users/playom/trinity-fpga worktree list --porcelain 2>/dev/null \\
+    | awk '/^worktree /{print $2}' \\
+    | while read -r wt; do
+        [ -f "$wt/.trinity/loop/STATE.json" ] && echo "$wt"
+      done
+
+That returns in ~0.1s. The previous instruction here was a bare
+'find /Users/playom -maxdepth 5 ...', which was measured at OVER TWO MINUTES on
+this machine and timed out before printing anything -- an audit step that
+reliably times out is an audit step that never runs.
+
+Treat the single result as the root for every command below. If MORE THAN ONE
+turns up, do NOT simply take the most recent mtime -- that rule was wrong and
+picked a scratch worktree over the live one, because staging a PR touches a
+copy of STATE.json and makes it newer than the real thing. Instead, in order:
+  1. Discard any candidate under /tmp or /private/tmp. Those are scratch trees
+     for PR staging, never the live loop.
+  2. If several remain, prefer the one whose git branch is NOT a short-lived
+     topic branch (the live loop runs from a long-lived claude/* worktree).
+  3. Only then fall back to most recent mtime, and SAY in your finding that you
+     had to guess -- an ambiguous tree is itself worth reporting.
 Run and inspect (all paths relative to that discovered root):
 - 'zig test src/tri/tri_loopstate.zig' -- must be all-green; a failing test here is the highest-severity finding possible.
 - jq '.loop, .backlog | length, .anomalies | length' on STATE.json -- does loop.status match what dashboard.html's masthead/banner claims? Read the dashboard's <!-- LOOP_HALT_BANNER_START/END --> region and its readout numbers directly and compare to a fresh 'tripwire' run.
