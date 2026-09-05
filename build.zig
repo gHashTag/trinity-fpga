@@ -3266,18 +3266,29 @@ pub fn build(b: *std.Build) void {
     // ═══════════════════════════════════════════════════════════════════════════
     // tri-sacred-synth-report — Parse Yosys JSON synthesis output (Phase 6.4)
     // ═════════════════════════════════════════════════════════════════════════════
-    const sacred_synth_report = b.addExecutable(.{
-        .name = "tri-sacred-synth-report",
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("src/tri/sacred_synth_report.zig"),
-            .target = target,
-            .optimize = .ReleaseFast,
-        }),
-    });
-    b.installArtifact(sacred_synth_report);
+    // Skipped under -Dci for the same reason as tri-loopstate below: this branch
+    // migrated sacred_synth_report.zig to Zig 0.16's `main(init: std.process.Init)`
+    // and CI still runs 0.15.2, where that signature does not exist. It is the one
+    // target in this branch that CI actually builds and cannot.
+    //
+    // Guarding it alone would delete its only automated check, so it did not go in
+    // alone: .github/workflows/zig-0-16-migrated.yml compiles every file carrying
+    // that signature under a real 0.16 toolchain. The guard moves the coverage, it
+    // does not drop it.
+    if (!ci_mode) {
+        const sacred_synth_report = b.addExecutable(.{
+            .name = "tri-sacred-synth-report",
+            .root_module = b.createModule(.{
+                .root_source_file = b.path("src/tri/sacred_synth_report.zig"),
+                .target = target,
+                .optimize = .ReleaseFast,
+            }),
+        });
+        b.installArtifact(sacred_synth_report);
 
-    const sacred_synth_report_step = b.step("sacred-synth-report", "Parse Yosys JSON synthesis output for Sacred ALU");
-    sacred_synth_report_step.dependOn(&sacred_synth_report.step);
+        const sacred_synth_report_step = b.step("sacred-synth-report", "Parse Yosys JSON synthesis output for Sacred ALU");
+        sacred_synth_report_step.dependOn(&sacred_synth_report.step);
+    }
 
     // ═══════════════════════════════════════════════════════════════════════════
     // tri-loopstate — disk-halt hysteresis and flap detection
