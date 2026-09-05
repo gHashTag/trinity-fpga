@@ -6315,16 +6315,21 @@ TNF1024 & 11 & 1006 & 1018 $\times$ & 11 & 1012 \\
 \end{tabular}
 \end{table}
 
-The repair is not a patch. Both ladders now ship as named objects,
+The repair is not a patch. Both ladders now ship as named ladder versions,
 \texttt{v1-research} and \texttt{v2-spec}, and every conformance vector carries
-the ladder version in its filename and in a SHA-256 manifest under the tag
-\texttt{tnf-vectors-2}. A figure computed at v1 stays reproducible at v1; a
-specification claim is checked against v2. Eighteen vector files, 1{,}038 rows
-each, were generated from a self-contained \textsc{splitmix64} stream rather than
+that name in its filename and in its own header, beside the vector specification
+version --- \texttt{tnf-vectors-2} when this repair was made --- which also names
+the SHA-256 manifest that pins the digest of every file in the set. A figure
+computed at v1 stays reproducible at v1; a specification claim is checked against
+v2. Eighteen vector files per specification version, 1{,}038 rows each, were
+generated from a self-contained \textsc{splitmix64} stream rather than
 the language's own generator --- a standard-library PRNG is an implementation
 detail and not a contract --- with the per-rung seed derived by hashing
 \texttt{version|width|trits|mantissa|op}, so adding a tenth rung cannot shift the
-stream of an existing one. Regeneration reproduces the manifest byte for byte.
+stream of an existing one. Regeneration reproduces the manifest of the current
+specification version byte for byte; that version string is hashed into every
+per-rung seed, so a superseded set stands on the digests recorded for it rather
+than on re-execution.
 
 The oracle also gained the check whose absence produced the sign defect. Add/mul
 commutativity is blind to an inverted sign, because the inversion survives on both
@@ -7483,13 +7488,16 @@ change the round-trip and ladder-invariant self-tests pass unchanged, and no
 negative code word is produced at any rung.
 
 The consequence for the artefacts is the part worth stating. Between $47$ and
-$86$ of the $1038$ rows in each of the eighteen published vector files, five to
-eight per cent, are multiplications whose expected result was recorded as a
-negative code word, which no hardware can produce. Those rows were unsatisfiable.
-Rather than overwrite files whose digests are cited, we bumped the vector
-specification version: the affected files remain in place under
-\texttt{tnf-vectors-2} and the repaired set is published alongside them as
-\texttt{tnf-vectors-3}, with its own manifest of SHA-256 digests. Any transcript
+$86$ of the $1038$ rows in each of the eighteen files published at
+\texttt{tnf-vectors-2}, four and a half to eight and a third per cent, have an
+expected result recorded as a negative code word, which no hardware can produce.
+Of the $1{,}206$ affected rows, $1{,}170$ are multiplications and $36$ are
+additions spread over fifteen of the eighteen files. Those rows were
+unsatisfiable. Rather than overwrite files whose digests are cited, we bumped the
+vector specification version: the affected files remain in place at
+\texttt{tnf-vectors-2} and a repaired set is published beside them at
+\texttt{tnf-vectors-3}, with its own manifest of SHA-256 digests and no negative
+code word at any rung. Any transcript
 claiming conformance against the older manifest should be re-read with this in
 mind.
 
