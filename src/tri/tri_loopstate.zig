@@ -968,6 +968,95 @@ pub fn renderStatus(allocator: std.mem.Allocator, st: *const State) ![]u8 {
     return std.mem.concat(allocator, u8, &.{ head, tail });
 }
 
+/// Increment `loop.iteration` and return the re-serialised document. Caller
+/// owns the returned slice; `st.iteration` is updated to match so a caller can
+/// keep using the parsed view afterwards.
+///
+/// This exists because the field could not be trusted. `loop.iteration` froze
+/// at 76 across nine real iterations -- nine commits each describing a number
+/// the file did not contain -- because incrementing it was a step a human had
+/// to remember, and the continuity protocol's answer was to add a MANDATORY
+/// SELF-CHECK telling that human to remember harder. It had already drifted
+/// once before (anomaly A7); the second occurrence (A24) was ~10x larger.
+///
+/// A lesson recorded in prose and enforced by nobody is not a fix. This is
+/// OD7's option (a). That decision was written up as needing "JSON-write
+/// capability [the tool] doesn't have yet", which was already untrue when it
+/// was written -- `writeTripwireHysteresis` above does exactly this
+/// read-modify-write, so the capability existed and the option was cheaper
+/// than the record claimed.
+pub fn bumpIteration(allocator: std.mem.Allocator, st: *State) ![]u8 {
+    // Same arena discipline as writeTripwireHysteresis -- see its comment.
+    const tree_allocator = st.doc.arena.allocator();
+
+    const obj = switch (st.doc.value) {
+        .object => |o| o,
+        else => return Error.MalformedState,
+    };
+    const loop_ptr = obj.getPtr("loop") orelse return Error.MalformedState;
+    var loop_obj = switch (loop_ptr.*) {
+        .object => |o| o,
+        else => return Error.MalformedState,
+    };
+    const current = switch (loop_obj.get("iteration") orelse return Error.MalformedState) {
+        .integer => |i| i,
+        // A non-integer iteration is corruption, not something to coerce: a
+        // string "104" silently becoming 105 would hide the real problem.
+        else => return Error.MalformedState,
+    };
+
+    try loop_obj.put(tree_allocator, "iteration", .{ .integer = current + 1 });
+    loop_ptr.* = .{ .object = loop_obj };
+    st.iteration = current + 1;
+
+    return std.json.Stringify.valueAlloc(allocator, st.doc.value, .{ .whitespace = .indent_2 });
+}
+
+test "bumpIteration increments and survives a parse round-trip" {
+    var st = try parse(std.testing.allocator, test_state);
+    defer st.deinit();
+    try std.testing.expectEqual(@as(i64, 7), st.iteration);
+
+    const out = try bumpIteration(std.testing.allocator, &st);
+    defer std.testing.allocator.free(out);
+
+    // The in-memory view is updated...
+    try std.testing.expectEqual(@as(i64, 8), st.iteration);
+
+    // ...and so is what actually gets written to disk. Checking only the
+    // former would pass while the file on disk never changed, which is the
+    // exact failure mode this function exists to end.
+    var reparsed = try parse(std.testing.allocator, out);
+    defer reparsed.deinit();
+    try std.testing.expectEqual(@as(i64, 8), reparsed.iteration);
+}
+
+test "bumpIteration preserves every other field in the document" {
+    var st = try parse(std.testing.allocator, test_state);
+    defer st.deinit();
+    const out = try bumpIteration(std.testing.allocator, &st);
+    defer std.testing.allocator.free(out);
+
+    var reparsed = try parse(std.testing.allocator, out);
+    defer reparsed.deinit();
+
+    // A round-trip that quietly dropped backlog rows or done entries would be
+    // far worse than the drift it replaces.
+    try std.testing.expectEqual(@as(usize, 2), reparsed.done_count);
+    const live = liveCounts(&reparsed);
+    try std.testing.expectEqual(@as(usize, 3), live.backlog_total);
+    try std.testing.expect(std.mem.indexOf(u8, out, "\"id\": \"t\"") != null);
+}
+
+test "bumpIteration refuses a malformed iteration rather than coercing it" {
+    const bad =
+        \\{"loop":{"iteration":"104"},"done":[],"backlog":[]}
+    ;
+    // parse() rejects it first, which is itself the guarantee we want: there is
+    // no path where a string iteration silently becomes a number.
+    try std.testing.expectError(Error.MalformedState, parse(std.testing.allocator, bad));
+}
+
 // ---------------------------------------------------------------------------
 
 const test_state =

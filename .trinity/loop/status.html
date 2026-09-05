@@ -1,0 +1,110 @@
+<title>Trinity Loop — status</title>
+<style>
+  :root {
+    --paper: #FAF9F5; --panel: #FFFFFF; --ink: #141413; --dim: #73716C;
+    --rule: #E8E5DC; --accent: #D97757; --ok: #5F8A6B; --warn: #C08A2E;
+    --bad: #BF4722; --mono: ui-monospace, "SF Mono", Menlo, "JetBrains Mono", monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #1F1E1D; --panel: #262624; --ink: #F0EEE6; --dim: #9A968D;
+      --rule: #35332F; --accent: #E08A6B; --ok: #7FA98A; --warn: #D6A445;
+      --bad: #E0674080;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #1F1E1D; --panel: #262624; --ink: #F0EEE6; --dim: #9A968D;
+    --rule: #35332F; --accent: #E08A6B; --ok: #7FA98A; --warn: #D6A445;
+    --bad: #E06740;
+  }
+  :root[data-theme="light"] {
+    --paper: #FAF9F5; --panel: #FFFFFF; --ink: #141413; --dim: #73716C;
+    --rule: #E8E5DC; --accent: #D97757; --ok: #5F8A6B; --warn: #C08A2E;
+    --bad: #BF4722;
+  }
+  body {
+    margin: 0; padding: 2.2rem 1.4rem 4rem; background: var(--paper); color: var(--ink);
+    font: 15px/1.6 ui-sans-serif, -apple-system, "Segoe UI", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 62rem; margin: 0 auto; }
+  .masthead { display: flex; flex-wrap: wrap; align-items: baseline; gap: .6rem 1rem;
+    padding-bottom: 1rem; border-bottom: 1px solid var(--rule); }
+  .masthead h1 { font: 600 1.05rem/1.2 var(--mono); margin: 0; letter-spacing: -.01em; }
+  .masthead .it { font: 600 1.05rem/1.2 var(--mono); color: var(--accent); }
+  .pill { font: 500 11px/1 var(--mono); text-transform: uppercase; letter-spacing: .08em;
+    padding: .32rem .55rem; border-radius: 3px; border: 1px solid var(--rule); color: var(--dim); }
+  .pill.run { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 42%, transparent); }
+  .pill.halt { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 50%, transparent); }
+  .stamp { margin-left: auto; font: 11px/1 var(--mono); color: var(--dim); }
+  .readout { display: grid; grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+    gap: 1px; background: var(--rule); border: 1px solid var(--rule);
+    border-radius: 4px; overflow: hidden; margin: 1.6rem 0 2.2rem; }
+  .cellstat { background: var(--panel); padding: .95rem 1rem; }
+  .cellstat .n { font: 600 1.55rem/1.05 var(--mono); letter-spacing: -.02em; }
+  .cellstat .l { font: 11px/1.35 var(--mono); color: var(--dim); text-transform: uppercase;
+    letter-spacing: .07em; margin-top: .3rem; }
+  h2 { font: 600 12px/1 var(--mono); text-transform: uppercase; letter-spacing: .1em;
+    color: var(--dim); margin: 2.2rem 0 .85rem; }
+  .rows { border: 1px solid var(--rule); border-radius: 4px; overflow: hidden; }
+  .row { display: grid; grid-template-columns: 4.2rem 6.5rem 1fr; gap: .85rem;
+    padding: .7rem .9rem; background: var(--panel); border-top: 1px solid var(--rule); }
+  .row:first-child { border-top: 0; }
+  .row .id { font: 600 12px/1.5 var(--mono); color: var(--accent); }
+  .row .st { font: 11px/1.5 var(--mono); color: var(--dim); text-transform: uppercase;
+    letter-spacing: .05em; }
+  .row .st.blocked { color: var(--warn); }
+  .row .wt { font-size: 13.5px; min-width: 0; overflow-wrap: anywhere; }
+  .row .wt .by { display: block; margin-top: .3rem; font: 11.5px/1.5 var(--mono); color: var(--dim); }
+  .empty { padding: .9rem; border: 1px dashed var(--rule); border-radius: 4px;
+    color: var(--dim); font: 12px/1.5 var(--mono); }
+  ol.coop { counter-reset: c; list-style: none; padding: 0; margin: 0; display: grid; gap: .6rem; }
+  ol.coop li { counter-increment: c; background: var(--panel); border: 1px solid var(--rule);
+    border-radius: 4px; padding: .8rem .95rem .8rem 2.6rem; position: relative; font-size: 13.5px; }
+  ol.coop li::before { content: counter(c); position: absolute; left: .95rem; top: .8rem;
+    font: 600 12px/1.5 var(--mono); color: var(--accent); }
+  footer { margin-top: 2.6rem; padding-top: 1rem; border-top: 1px solid var(--rule);
+    font: 11px/1.7 var(--mono); color: var(--dim); }
+  @media (max-width: 34rem) { .row { grid-template-columns: 3.6rem 1fr; }
+    .row .st { grid-column: 2; margin-top: -.4rem; } }
+</style>
+<div class="wrap">
+<!-- LOOP_HALT_BANNER_START --><!-- LOOP_HALT_BANNER_END -->
+  <div class="masthead">
+    <h1>TRINITY LOOP</h1>
+    <span class="it">iteration 105</span>
+    <span class="pill run">RUNNING</span>
+    <span class="pill">autonomous_with_tripwires</span>
+    <span class="stamp">iteration 105 · 2026-09-05</span>
+  </div>
+
+  <div class="readout">
+    <div class="cellstat"><div class="n">85</div><div class="l">done</div></div>
+    <div class="cellstat"><div class="n">5</div><div class="l">backlog open</div></div>
+    <div class="cellstat"><div class="n">22</div><div class="l">backlog total</div></div>
+    <div class="cellstat"><div class="n">14</div><div class="l">anomalies open</div></div>
+    <div class="cellstat"><div class="n">30</div><div class="l">anomalies total</div></div>
+  </div>
+
+  <h2>Decision gate</h2>
+  <div class="empty">gate: clear</div>
+
+  <h2>Backlog &mdash; open</h2>
+  <div class="rows">
+    <div class="row"><div class="id">B6</div><div class="st blocked">pending</div><div class="wt">Submit the fasm.cc BUFRCLK emitter fix (needs db rows to land first, or send as draft)<span class="by">blocked by: cavearr/hansfbaier&#39;s prjxray-db PR for the BUFRCLK enable rows -- not B7, which is now completed for an unrelated reason (found stale by the periodic&hellip;</span></div></div>
+    <div class="row"><div class="id">B8</div><div class="st">blocked</div><div class="wt">Find any path to test the other three rows (BUFRCLK0/1/3) — needs a different pad or the MMCM path (#172)</div></div>
+    <div class="row"><div class="id">B15</div><div class="st blocked">offered</div><div class="wt">Regenerate the six named demo-projects goldens and take draft PR #120 out of draft — offered to hansfbaier on the strength of AssassinK786&#39;s independent spartan7 reproduction<span class="by">blocked by: hansfbaier&#39;s go-ahead</span></div></div>
+    <div class="row"><div class="id">B18</div><div class="st blocked">pending</div><div class="wt">Reconcile t27&#39;s remaining 17 dirty tracked paths -- NOT scattered litter (confirmed by review): one large, coherent, active body of work (Cargo.lock -1313 lines, bootstrap/src/hooks.rs +318, cli/tri/src/main.rs +283, cli/tri-mcp/src/main.rs&hellip;<span class="by">blocked by: operator decision: reconcile against origin/master (see OD8) before any of these 17 files are touched -- committing or discarding them blind risks&hellip;</span></div></div>
+    <div class="row"><div class="id">B22</div><div class="st blocked">pending</div><div class="wt">Migrate main.zig (1767 lines) to Zig 0.16 Io-threading -- the one file this whole B10 survey deliberately deferred as a separate structural decision rather than folding into the same incremental pattern used for the 8 independent files&hellip;<span class="by">blocked by: operator decision: restore local_farm.zig vs remove its 5 dead call sites in tri_farm.zig, see OD10 -- main.zig cannot compile at all until this is&hellip;</span></div></div>
+  </div>
+
+  <h2>Collaboration options for the next loop</h2>
+  <ol class="coop">
+    <li>consolidate (recommended)<span class="by">Finish what merging #745/#746 exposed: the tri CLI&#39;s own entry point (main.zig, B22) still cannot compile, blocked on OD10 -- five dangling call sites into a file deleted in 36f38639c. That is a yes/no question with a known answer either way (restore from git history, or delete the five sites), and it is the last thing standing between this repo and a tri binary that builds. The new 0.16 CI job means the migration now has a safety net it lacked for all eight files that came before.</span><span class="by">fits: the highest-leverage single decision available; unblocks the largest remaining backlog row</span><span class="by">needs from you: one answer on OD10: restore local_farm.zig, or remove its 5 call sites</span></li>
+    <li>harden<span class="by">Turn this iteration&#39;s two anomalies into gates rather than lessons. A28 (platform-blind verification) and A29 (fixing the named file instead of the class) are both recurrences of patterns already written down. Written-down lessons have now failed twice in one session; the loop could instead grow a pre-push check that refuses a build.zig change whose new target has never been compiled under the CI toolchain.</span><span class="by">fits: if you would rather the loop stop repeating itself than move faster</span><span class="by">needs from you: nothing -- this is autonomous work</span></li>
+    <li>reconcile<span class="by">OD8/B18: t27&#39;s working branch has silently diverged from origin/master, which carries independently-merged PRs touching the same two files this loop&#39;s compiler work edits. Every corpus number this loop reports is measured against a branch that is not master. Resolving it is mechanical but destructive if done wrong, which is why it has sat open.</span><span class="by">fits: if the t27 track matters more than the FPGA track this week</span><span class="by">needs from you: a decision on OD8: rebase against master, or declare the branch intentionally isolated</span></li>
+  </ol>
+
+  <footer>Generated by <code>tri-loopstate render</code> from .trinity/loop/STATE.json.<br>Numbers here are read from that file at render time, so they cannot drift from it.
+  The narrative record lives in dashboard.html and JOURNAL.md.</footer>
+</div>
