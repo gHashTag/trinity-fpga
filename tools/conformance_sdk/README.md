@@ -21,14 +21,20 @@ python3 -m tools.conformance_sdk report
 ```
 Reports every golden oracle (`conformance/*_ref.py`) discovered in this repo. The
 count is computed dynamically at runtime as `len(catalog())` (not hard-coded), so
-it tracks whatever oracles are present. As of this writing that is a superset of
-the **83-format SSOT catalog** (canonical list: t27 `specs/numeric/formats_catalog.t27`):
-it additionally carries GF width-extensions (gf48/64/96/128/256/512/1024),
-legacy/historical floats (VAX, x87, Cray, PDP-11, IBM HFP, MS-MBF), decimal and
-extended-precision oracles that live in this repo for testing but are outside the
-83-format SSOT. Do not read the reported number as "the catalog size" — it is the
-repo's oracle count; the SSOT is 83. The report also runs a golden-decode sanity
-check per discovered format, grouped by family.
+it tracks whatever oracles are present. Do not read the reported number as "the
+catalog size" — it is the repo's oracle count. The catalogue itself is the t27
+SSOT (canonical list: the `// CATALOG:` entries in t27
+`specs/numeric/formats_catalog.t27`, from which `tools/gen_formats_catalog.py`
+generates every downstream target and prints "parsed N formats"); that count is
+an invariant that grows — 109 formats in 12 clusters at v3 of arXiv:2606.09686
+(Golden Ruler, Sep 2026) — and is deliberately not written down here. The oracle
+set and the catalogue do not coincide: this repo carries oracles for testing (GF
+width-extensions gf48/64/96/128/256/512/1024; legacy/historical floats — VAX, x87,
+Cray, PDP-11, IBM HFP, MS-MBF; decimal and extended-precision) whose membership in
+the catalogue is decided by the t27 list, not by their presence here (on t27
+master `10889fc7`, 2026-09-05, every one of those families except PDP-11 has a
+`// CATALOG:` entry). The report also runs a golden-decode sanity check per
+discovered format, grouped by family.
 
 ## Audit your decoder
 ```

@@ -34,7 +34,6 @@ keywords:
   - "T27 VM"
   - "GF16 ternary matmul"
   - "Sacred ALU 352-LUT"
-  - "Tiny Tapeout"
   - "XOR-popcount"
   - "zero multipliers"
   - "ternary computing"

@@ -20,6 +20,8 @@ falsification_witness:
 
 # S-18 — Multi-Tile NoC: Mesh 8×4 → 16×4
 
+> **Status (2026-09-05):** the shuttle targets and silicon-return gates in this document are planning statements from the time of writing, not results. No die of any Trinity chip exists: the Tiny Tapeout submissions TTSKY26a and TTSKY26b were withdrawn before fabrication (TTSKY26a refunded 6 Aug 2026), all hardware results to date are on the Artix-7 (XC7A200T) FPGA prototype, and no silicon return has happened.
+
 > **Target shuttle:** TTSKY26c (~2026-09)
 > **Performance target:** 2× cells in same footprint (same TT tile area)
 > **Lane risk:** MED — mesh fold requires tight placement within existing tile boundary

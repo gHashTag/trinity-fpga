@@ -5,6 +5,8 @@
 > sandbox was down (500: Failed to place sandbox). Promote to the skill via
 > `save_custom_skill` when sandbox returns. Memory has the gist; this is the
 > portable, copy-pasteable version.
+>
+> **2026-09-05:** the 71/83 and 73/83 figures below are the cell sum of 2026-07-03, withdrawn in README §2 (decode *formats* were added to compute *operations*; gf10 and gf14 double-counted; the recomputable figure is 72 cells over 49 base formats). The denominator 83 is the catalogue snapshot of 2026-06-28; the catalogue is 109 formats at v3 (Sep 2026).
 
 ## 1. Sandbox-fallback recipe (when Bash/gh return 500: Failed to place sandbox)
 

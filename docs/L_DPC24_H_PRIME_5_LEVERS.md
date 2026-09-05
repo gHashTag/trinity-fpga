@@ -5,7 +5,7 @@
 **ONE SHOT:** [trios#832 L-DPC24](https://github.com/gHashTag/trios/issues/832)
 **Author:** Vasilev Dmitrii \<admin@t27.ai\>
 **Anchor:** φ²+φ⁻²=3 · DOI 10.5281/zenodo.19227877
-**R5-HONEST disclaimer:** Trinity v9 = **2000-3000 TOPS/W is a PROJECTION** under H₉ pre-registration. Falsifiable @ first die return; gate v9-G1 deadline 2026-06-30.
+**R5-HONEST disclaimer:** Trinity v9 = **2000-3000 TOPS/W is a PROJECTION** under H₉ pre-registration. Falsifiable only by silicon measurement, and no die of any Trinity chip exists (2026-09-05: the Tiny Tapeout submissions TTSKY26a and TTSKY26b were withdrawn before fabrication); the v9-G1 gate deadline of 2026-06-30 passed with nothing to measure.
 
 ---
 
@@ -56,7 +56,7 @@ Multi-die NoC (Lane A') is what unlocks **3×** on top via spatial bandwidth —
 
 ## Falsification (R5-HONEST)
 
-This entire matrix is **PROJECTION** until the first fabricated holo die returns from TTSKY26c (~2026-12 expected return for a 2026-09 submit). The numerical claims are bound to:
+This entire matrix is **PROJECTION**: no die of any Trinity chip exists (2026-09-05 — TTSKY26a and TTSKY26b were withdrawn before fabrication), so nothing in it is a measured figure, and the "~2026-12 expected return" that once stood here is withdrawn. The numerical claims are bound to:
 
 | Predicate | Refuted if |
 |---|---|

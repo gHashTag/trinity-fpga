@@ -474,7 +474,7 @@ The vendor Ethernet design has **no UART and no LED**, so a dead link was indist
 held-in-reset PHY, a wrong pin, or an unplugged cable — hours of blind guessing. The fix that
 actually moved things: build a **probe** that reports over UART.
 
-**Reusable skeleton: `trinity-fpga/build/gft_mul/gft_mul_ax7203.v`** (silicon-proven). Key trick —
+**Reusable skeleton: `trinity-fpga/build/gft_mul/gft_mul_ax7203.v`** (proven on the AX7203 FPGA). Key trick —
 it clocks off **`STARTUPE2` CFGMCLK, so it needs NO external clock pin**:
 - `STARTUPE2 → CFGMCLK` ≈ 65–70 MHz (uncalibrated ring oscillator; **varies per board by ±5%**,
   so use it for ratios, not absolute frequency)
@@ -1141,13 +1141,13 @@ encoding.
 |------|-------|--------|
 | SW-bitexact | ~62-69/83 | (CATALOG_MATRIX: strict 62, self-consistent 69) |
 | decode-HW Tier-E | 41 formats | 41 unique formats with bit-exact decode cells |
-| compute-HW Tier-E | 10 GF formats × {ADD,MUL} | GF4-GF32 (10 formats), 0 failures on silicon (vectors vary by run) |
+| compute-HW Tier-E | 10 GF formats × {ADD,MUL} | GF4-GF32 (10 formats), 0 failures on the FPGA (AX7203; vectors vary by run) |
 | GF64 ADD | 70.1% (359/512) | timing closure failure; clamp reverted (regressed to 48.9%) |
 | DIV/SQRT | binary32 proxy | NOT native GF, stale output bug, no conformance |
 | QUIRE | untested | no conformance vectors |
 
 **Honest catalog**: 10 formats bit-exact (add/mul) + 2 proxy (div/sqrt) + 1 untested (quire)
-**Paper**: ~41/83 formats (NOT 71 — that was cell count, not format count)
+**Paper**: ~41 of the 83 in the 2026-06-28 catalogue snapshot (NOT 71 — that was cell count, not format count; the catalogue is 109 formats at v3, Sep 2026, so the denominator has moved)
 
 ## Synthesis Flags (MEASURED, not assumed)
 
@@ -1202,7 +1202,7 @@ Timeline:
 14. takum16 adder RTL does NOT EXIST
 15. **div/sqrt = binary32 proxy** — NOT native, hardcoded, stale output
 16. **gf_mul_param same timing risk** as adder for GF64+
-17. **"71/83 formats" was wrong** — double-counted cells as formats (real: ~41)
+17. **"71/83" was wrong as a format count** — it double-counted cells as formats (real: ~41 of the 83 in the 2026-06-28 snapshot; that denominator is the snapshot's, not the current catalogue count)
 18. **"-nodsp mandatory" was wrong** — only MUL uses -nodsp, ADD doesn't
 19. **Clamp regressed** — reverted to make HEAD reproducible at 70.1%
 20. **build-matrix.yml was dead code** — both if/else branches identical, now fixed

@@ -2,7 +2,7 @@
 
 **Number formats, proven bit-exact on live FPGA hardware (Artix-7), with a toolchain that has no vendor licence in it — and 31 upstream patches (29 in nextpnr-xilinx, 2 in demo-projects; count as of 5 Sep 2026) that made that toolchain able to do it.**
 
-A catalogue of numeric formats — IEEE binary16/32/64/128, posits, takums, Galois-field floats GF4–GF64, IBM/Cray/VAX historical formats, MX variants, LNS — of which 49 base formats (72 format–operation cells) have been synthesised through `yosys` + `nextpnr` (openXC7) for the Artix-7 XC7A200T, flashed to a real board, and checked against an independent software oracle until every bit agrees. The catalogue count is a moving invariant, not a fixed number: 83 formats in the v2 snapshot this repository's matrix was taken from, 109 formats in 12 clusters at v3 of the companion paper (Sep 2026).
+A catalogue of numeric formats — IEEE binary16/32/64/128, posits, takums, Galois-field floats GF4–GF64, IBM/Cray/VAX historical formats, MX variants, LNS — of which 49 base formats (72 format–operation cells) have been synthesised through `yosys` + `nextpnr` (openXC7) for the Artix-7 XC7A200T, flashed to a real board, and checked against an independent software oracle until every bit agrees. The catalogue count is a moving invariant, not a fixed number — 109 formats in 12 clusters at v3 of the companion paper (Sep 2026); the matrix in this repository was taken from an earlier snapshot of the catalogue (2026-06-28) and has not been recounted against v3.
 
 No Vivado. No licence server. Runs on a Mac.
 
@@ -47,7 +47,7 @@ make oracle
 
 ### 4. Publications
 
-- **Golden Ruler: A Numeric Format Catalog with Bit-Exact Conformance Vectors for FP8, BF16, MXFP4, and Microscaling Formats** — [arXiv:2606.09686](https://arxiv.org/abs/2606.09686) (v3, announced 7 Sep 2026; 109 formats in 12 clusters). The catalogue paper; v2 carried 83 formats under the earlier title "An 83-Format Numeric Catalog …".
+- **Golden Ruler: A Numeric Format Catalog with Bit-Exact Conformance Vectors for FP8, BF16, MXFP4, and Microscaling Formats** — [arXiv:2606.09686](https://arxiv.org/abs/2606.09686) (v3, announced 7 Sep 2026; 109 formats in 12 clusters). The catalogue paper; v2 appeared under an earlier title.
 - **GoldenFloat: A Phi-Derived Static-Split Floating-Point Family from GF4 to GF1024 with a Lucas-Exact Integer Identity** — [arXiv:2606.05017](https://arxiv.org/abs/2606.05017) (v3 live; v4 erratum announced 7 Sep 2026: the Tiny Tapeout submissions were withdrawn before fabrication, no die exists, and all hardware results are on the Artix-7 FPGA prototype). The companion GF16 format paper.
 - **Ternary Network Floats** — under review, Microprocessors and Microsystems (Elsevier), submitted 3 Sep 2026 (manuscript MICPRO-D-26-00839). Not on arXiv; source in [`research/arxiv_tnf/`](research/arxiv_tnf/).
 
@@ -63,7 +63,7 @@ Counts are traceable to the file named beside them. Where two internal sources d
 | Cells proven on FPGA (Artix-7) | **72** (format, operation) pairs | `research/measure_tier_e_cells.py`, read live from issue #199 |
 | — distinct base formats | **49** | same tool |
 | — proofs with all four links | 75 of 226 | CI URL + SHA-256 + UART log + IDCODE |
-| SW bit-exact | **69 / 83** (v2 snapshot) | `fpga/CATALOG_MATRIX_83.md`, taken against the 83-format v2 catalogue (2026-06-28); a strict recount gives 62; not yet recounted against the 109-format v3 — see limitations |
+| SW bit-exact | **69 / 83** (snapshot 2026-06-28) | `fpga/CATALOG_MATRIX_83.md`; the denominator is the catalogue snapshot the matrix was taken from (t27 master `92f3506`, 2026-06-28); a strict recount gives 62; not yet recounted against v3 (109 formats) — see limitations |
 | Oracle self-tests | 18 pass, 0 fail | `make oracle`, run 2026-08-18 |
 | Catalogue paper (Golden Ruler) | published | [arXiv:2606.09686](https://arxiv.org/abs/2606.09686), v3 announced 7 Sep 2026 |
 | TNF manuscript | under review | Microprocessors and Microsystems (Elsevier), submitted 3 Sep 2026 — [`research/arxiv_tnf/`](research/arxiv_tnf/) |
@@ -139,7 +139,7 @@ Worth being precise, because the repository looks self-contained and is not:
 | `yosys`, `nextpnr-xilinx`, `prjxray` | the `regymm/openxc7` Docker image, pinned by digest |
 | Fixes to those tools | upstream, in openXC7's repositories |
 | Numerical core (GF16, TF3, VSA) | `external/zig-golden-float` submodule |
-| Catalogue status (v2, 83-format snapshot) | [`fpga/CATALOG_MATRIX_83.md`](fpga/CATALOG_MATRIX_83.md) |
+| Catalogue status (snapshot 2026-06-28) | [`fpga/CATALOG_MATRIX_83.md`](fpga/CATALOG_MATRIX_83.md) |
 | Measurement records, LUT comparison, paper | [`research/`](research/) |
 | Flashing, bitstream provenance, FTDI rules | [`hardware/tools/`](hardware/tools/) |
 
@@ -151,8 +151,8 @@ Everything is reproducible from a pinned image digest; nothing about the toolcha
 
 Stated because they are true, not because they are small.
 
-- **SW bit-exact is 69 / 83 against the v2 snapshot, and a strict recount gives 62.** An earlier figure of 75 stood in this README; it is withdrawn. Four internal sources including the catalogue matrix say 69, and one of them prescribed this correction on 2026-07-14 and was never applied. The remaining formats are structural or parametric with no independent decode law to witness against; they need a bit-exact generator, not a port. The denominator is the 83-format v2 catalogue the matrix was taken from (2026-06-28); the catalogue is 109 formats at v3 (Sep 2026) and the matrix has not been recounted against it.
-- **The catalogue matrix enumerates 19 formats in table form**, the rest carried in prose summaries. It is the best source available and is not yet a per-format table for all formats (83 in the v2 snapshot it covers; 109 at v3).
+- **SW bit-exact is 69 / 83 against the 2026-06-28 snapshot, and a strict recount gives 62.** An earlier figure of 75 stood in this README; it is withdrawn. Four internal sources including the catalogue matrix say 69, and one of them prescribed this correction on 2026-07-14 and was never applied. The remaining formats are structural or parametric with no independent decode law to witness against; they need a bit-exact generator, not a port. The denominator is the catalogue snapshot the matrix was taken from (t27 master `92f3506`, 2026-06-28); the catalogue is 109 formats at v3 (Sep 2026) and the matrix has not been recounted against it.
+- **The catalogue matrix enumerates 19 formats in table form**, the rest carried in prose summaries. It is the best source available and is not yet a per-format table for the whole catalogue (109 formats at v3).
 - **GF64 does not close timing.** Best on-board (Artix-7) score 359 / 512 vectors (70.1%). Two critical paths identified — a 43-bit barrel shifter driven by a 25-bit amount, and an 8-branch priority encoder over 64-bit data. The 2-stage pipeline fix is designed, not yet proven on the FPGA.
 - **GF16 does not beat tekum16 on area by the margin once claimed.** On one toolchain (yosys 0.63, `synth_xilinx -abc9 -nocarry -arch xc7`): GF16 486 LUT / 18 decades against tekum16 573 LUT / 153 decades — 0.85×, 15% smaller, not "4–11× smaller". Different points on the area-versus-range trade-off; neither dominates. The tekum16 side is a stub (65% bit-exact, truncation not RNE) and a corrected version may be larger. Details: [`research/LUT_COMPARISON_MEASURED.md`](research/LUT_COMPARISON_MEASURED.md).
 - **`takum16/32/64` have no adder RTL here** — only `takum16_decode.v`. Any LUT comparison involving takum is N/A.
