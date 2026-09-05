@@ -9,10 +9,9 @@ const GREEN = colors.GREEN;
 const RED = colors.RED;
 const RESET = colors.RESET;
 
-pub fn main() !u8 {
-    const allocator = std.heap.page_allocator;
-    const args = try std.process.argsAlloc(allocator);
-    defer std.process.argsFree(allocator, args);
+pub fn main(init: std.process.Init) !u8 {
+    const allocator = init.gpa;
+    const args = try init.minimal.args.toSlice(init.arena.allocator());
 
     var json_path: []const u8 = "fpga/openxc7-synth/sacred_alu.json";
     var i: usize = 0;
@@ -22,7 +21,7 @@ pub fn main() !u8 {
             i += 1;
         } else if (std.mem.eql(u8, args[i], "--help") or std.mem.eql(u8, args[i], "-h")) {
             try printHelp();
-            return;
+            return 0;
         }
     }
 
@@ -32,20 +31,17 @@ pub fn main() !u8 {
     std.debug.print("{s}Input:{s} {s}\n", .{ CYAN, RESET, json_path });
 
     // Read JSON file
-    const file = std.fs.cwd().openFile(json_path, .{}) catch |err| {
+    const buffer = std.Io.Dir.cwd().readFileAlloc(init.io, json_path, allocator, .limited(64 << 20)) catch |err| {
         std.debug.print("{s}Error:{s} Failed to read file: {s}\n", .{ RED, RESET, @errorName(err) });
-        return;
+        return 1;
     };
-    defer file.close();
-
-    const stat = try file.stat();
-    const buffer = try allocator.alloc(u8, @intCast(stat.size));
     defer allocator.free(buffer);
 
     const parsed = std.json.parseFromSlice(std.json.Value, allocator, buffer, .{}) catch {
         std.debug.print("{s}Error:{s} Failed to parse JSON\n", .{ RED, RESET });
-        return;
+        return 1;
     };
+    defer parsed.deinit();
 
     // Count cell types
     var luts: u32 = 0;
@@ -117,6 +113,7 @@ pub fn main() !u8 {
     std.debug.print("  BRAM:  {d:6}/{d:6} ({d:5.1}%)\n\n", .{ bram, artix_bram_max, bram_util });
 
     std.debug.print("{s}φ² + 1/φ² = 3 = TRINITY{s}\n", .{ GOLD, RESET });
+    return 0;
 }
 
 fn printHelp() !void {

@@ -37,18 +37,19 @@ fn isCyrillic(cp: u21) bool {
     return false;
 }
 
-fn checkFile(allocator: std.mem.Allocator, path: []const u8) !struct {
+const CheckFileResult = struct {
     has_cyrillic: bool,
     line_count: usize,
     first_line: usize,
-} {
-    const file = std.fs.cwd().openFile(path, .{}) catch |err| {
-        std.debug.print("Error opening {s}: {}\n", .{ path, err });
-        return error.FileReadError;
-    };
-    defer file.close();
+};
 
-    const content = file.readToEndAlloc(allocator, 10 * 1024 * 1024) catch |err| {
+const CheckPathResult = struct {
+    files_with_cyrillic: usize,
+    total_files: usize,
+};
+
+fn checkFile(allocator: std.mem.Allocator, io: std.Io, path: []const u8) !CheckFileResult {
+    const content = std.Io.Dir.cwd().readFileAlloc(io, path, allocator, .limited(10 * 1024 * 1024)) catch |err| {
         std.debug.print("Error reading {s}: {}\n", .{ path, err });
         return error.FileReadError;
     };
@@ -81,26 +82,22 @@ fn checkFile(allocator: std.mem.Allocator, path: []const u8) !struct {
     };
 }
 
-fn checkPath(allocator: std.mem.Allocator, path: []const u8) !struct {
-    files_with_cyrillic: usize,
-    total_files: usize,
-} {
+fn checkPath(allocator: std.mem.Allocator, io: std.Io, path: []const u8) !CheckPathResult {
     var files_with_cyrillic: usize = 0;
     var total_files: usize = 0;
 
     // Check if path is a file or directory
-    const is_dir = std.fs.cwd().statFile(path) catch |err| {
-        if (err == error.IsDir) {
-            // It's a directory - walk it
-            return walkDirectory(allocator, path);
-        }
+    const stat = std.Io.Dir.cwd().statFile(io, path, .{}) catch |err| {
         std.debug.print("Error accessing {s}: {}\n", .{ path, err });
         return .{ .files_with_cyrillic = 0, .total_files = 0 };
     };
+    if (stat.kind == .directory) {
+        return walkDirectory(allocator, io, path);
+    }
 
     // Single file
     total_files = 1;
-    const result = checkFile(allocator, path) catch {
+    const result = checkFile(allocator, io, path) catch {
         return .{ .files_with_cyrillic = 0, .total_files = 0 };
     };
 
@@ -112,18 +109,15 @@ fn checkPath(allocator: std.mem.Allocator, path: []const u8) !struct {
     return .{ .files_with_cyrillic = files_with_cyrillic, .total_files = total_files };
 }
 
-fn walkDirectory(allocator: std.mem.Allocator, path: []const u8) !struct {
-    files_with_cyrillic: usize,
-    total_files: usize,
-} {
+fn walkDirectory(allocator: std.mem.Allocator, io: std.Io, path: []const u8) !CheckPathResult {
     var files_with_cyrillic: usize = 0;
     var total_files: usize = 0;
 
-    var dir = std.fs.cwd().openDir(path, .{ .iterate = true }) catch |err| {
+    var dir = std.Io.Dir.cwd().openDir(io, path, .{ .iterate = true }) catch |err| {
         std.debug.print("Error opening {s}: {}\n", .{ path, err });
         return .{ .files_with_cyrillic = 0, .total_files = 0 };
     };
-    defer dir.close();
+    defer dir.close(io);
 
     var walker = dir.walk(allocator) catch |err| {
         std.debug.print("Error walking {s}: {}\n", .{ path, err });
@@ -132,7 +126,7 @@ fn walkDirectory(allocator: std.mem.Allocator, path: []const u8) !struct {
     defer walker.deinit();
 
     while (true) {
-        const entry_opt = walker.next() catch |err| {
+        const entry_opt = walker.next(io) catch |err| {
             std.debug.print("Error during walk: {}\n", .{err});
             break;
         };
@@ -163,22 +157,26 @@ fn walkDirectory(allocator: std.mem.Allocator, path: []const u8) !struct {
         }
 
         total_files += 1;
-        const result = checkFile(allocator, entry.path) catch continue;
+        // entry.path is relative to `dir` (the directory being walked), not
+        // to the process cwd -- join with the walk root so checkFile's
+        // cwd-relative read resolves correctly for any path != ".".
+        const full_path = std.fs.path.join(allocator, &.{ path, entry.path }) catch continue;
+        defer allocator.free(full_path);
+        const result = checkFile(allocator, io, full_path) catch continue;
 
         if (result.has_cyrillic) {
             files_with_cyrillic += 1;
-            std.debug.print("  ❌ {s}:{d}\n", .{ entry.path, result.first_line });
+            std.debug.print("  ❌ {s}:{d}\n", .{ full_path, result.first_line });
         }
     }
 
     return .{ .files_with_cyrillic = files_with_cyrillic, .total_files = total_files };
 }
 
-fn getStagedFiles(allocator: std.mem.Allocator) !std.ArrayListUnmanaged([]const u8) {
-    var files = std.ArrayListUnmanaged([]const u8){};
+fn getStagedFiles(allocator: std.mem.Allocator, io: std.Io) !std.ArrayListUnmanaged([]const u8) {
+    var files: std.ArrayListUnmanaged([]const u8) = .empty;
 
-    const result = std.process.Child.run(.{
-        .allocator = allocator,
+    const result = std.process.run(allocator, io, .{
         .argv = &.{ "git", "diff", "--cached", "--name-only", "--diff-filter=ACM" },
     }) catch |err| {
         std.debug.print("Error running git: {}\n", .{err});
@@ -203,11 +201,10 @@ fn getStagedFiles(allocator: std.mem.Allocator) !std.ArrayListUnmanaged([]const 
     return files;
 }
 
-pub fn main() !u8 {
-    const allocator = std.heap.page_allocator;
-
-    const args = try std.process.argsAlloc(allocator);
-    defer std.process.argsFree(allocator, args);
+pub fn main(init: std.process.Init) !u8 {
+    const allocator = init.gpa;
+    const io = init.io;
+    const args = try init.minimal.args.toSlice(init.arena.allocator());
 
     if (args.len > 2) {
         std.debug.print(
@@ -227,7 +224,7 @@ pub fn main() !u8 {
 
     if (args.len == 1) {
         // Check only staged files
-        var staged = try getStagedFiles(allocator);
+        var staged = try getStagedFiles(allocator, io);
         defer {
             for (staged.items) |f| allocator.free(f);
             staged.deinit(allocator);
@@ -240,7 +237,7 @@ pub fn main() !u8 {
 
         for (staged.items) |file| {
             total_files += 1;
-            const result = checkFile(allocator, file) catch continue;
+            const result = checkFile(allocator, io, file) catch continue;
             if (result.has_cyrillic) {
                 files_with_cyrillic += 1;
                 std.debug.print("  ❌ {s}:{d}\n", .{ file, result.first_line });
@@ -249,12 +246,12 @@ pub fn main() !u8 {
     } else if (args.len == 2 and std.mem.eql(u8, args[1], "--all")) {
         // Check entire repo
         std.debug.print("Scanning entire repository...\n", .{});
-        const result = try checkPath(allocator, ".");
+        const result = try checkPath(allocator, io, ".");
         files_with_cyrillic = result.files_with_cyrillic;
         total_files = result.total_files;
     } else {
         // Check specific path
-        const result = try checkPath(allocator, args[1]);
+        const result = try checkPath(allocator, io, args[1]);
         files_with_cyrillic = result.files_with_cyrillic;
         total_files = result.total_files;
     }

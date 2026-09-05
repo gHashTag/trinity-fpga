@@ -36,7 +36,6 @@ pub const SynthesisStats = struct {
 
 /// Count cell types from Yosys JSON modules
 fn countCellTypes(allocator: std.mem.Allocator, modules: std.json.Value) !SynthesisStats {
-    _ = allocator;
     var stats = SynthesisStats{
         .luts = 0,
         .dffs = 0,
@@ -54,8 +53,15 @@ fn countCellTypes(allocator: std.mem.Allocator, modules: std.json.Value) !Synthe
         while (module_iter.next()) |entry| {
             const module_data = entry.value_ptr.*;
 
-            // Extract module name (use key directly)
-            stats.module_name = entry.key_ptr.*;
+            // Copy the module name into `allocator` -- `entry.key_ptr.*` points
+            // into whatever the caller parsed the JSON with, which in
+            // parseYosysJson's case is an arena that gets destroyed the
+            // instant this function returns. A bare slice-copy here left the
+            // caller with a dangling pointer that only crashed once real
+            // Yosys JSON was ever run through this path (found live: it
+            // segfaults printing "Module:", not caught by the existing test
+            // since that test never checks module_name).
+            stats.module_name = try allocator.dupe(u8, entry.key_ptr.*);
 
             // Get cells array
             const cells_opt = module_data.object.get("cells");
@@ -116,19 +122,13 @@ fn countCellTypes(allocator: std.mem.Allocator, modules: std.json.Value) !Synthe
 }
 
 /// Parse Yosys JSON file and return synthesis statistics
-fn parseYosysJson(gpa: std.mem.Allocator, json_path: []const u8) !SynthesisStats {
+fn parseYosysJson(gpa: std.mem.Allocator, io: std.Io, json_path: []const u8) !SynthesisStats {
     var arena = std.heap.ArenaAllocator.init(gpa);
     defer arena.deinit();
 
     const allocator = arena.allocator();
 
-    const file = try std.fs.cwd().openFile(json_path, .{});
-    defer file.close();
-
-    const stat = try file.stat();
-    const buffer = try allocator.alloc(u8, @intCast(stat.size));
-
-    _ = try file.readAll(buffer);
+    const buffer = try std.Io.Dir.cwd().readFileAlloc(io, json_path, allocator, .limited(64 << 20));
 
     const parsed = try std.json.parseFromSliceLeaky(std.json.Value, allocator, buffer, .{});
 
@@ -136,8 +136,10 @@ fn parseYosysJson(gpa: std.mem.Allocator, json_path: []const u8) !SynthesisStats
     const modules = parsed.object.get("modules");
 
     if (modules) |mod| {
-        // Copy stats to return value (they're just numbers, no allocations)
-        const stats = try countCellTypes(allocator, mod);
+        // module_name must be duped into `gpa`, not the arena `allocator`
+        // above -- the arena is destroyed when this function returns, but
+        // module_name is part of the returned value.
+        const stats = try countCellTypes(gpa, mod);
         return stats;
     } else {
         return error.NoModulesKey;
@@ -149,7 +151,7 @@ fn parseYosysJson(gpa: std.mem.Allocator, json_path: []const u8) !SynthesisStats
 // =============================================================================
 
 /// Parse Yosys synthesis JSON and output resource statistics
-pub fn runSacredSynthReportCommand(args: []const []const u8) !void {
+pub fn runSacredSynthReportCommand(args: []const []const u8, io: std.Io) !void {
     // Parse arguments
     var json_path: []const u8 = "fpga/openxc7-synth/sacred_alu.json";
     var output_format: []const u8 = "human"; // human | csv | json
@@ -176,7 +178,7 @@ pub fn runSacredSynthReportCommand(args: []const []const u8) !void {
     std.debug.print("{s}Output:{s} {s}\n\n", .{ CYAN, RESET, output_format });
 
     // Parse Yosys JSON
-    const stats = parseYosysJson(std.heap.page_allocator, json_path) catch |err| {
+    const stats = parseYosysJson(std.heap.page_allocator, io, json_path) catch |err| {
         std.debug.print("{s}Error:{s} Failed to parse Yosys JSON: {s}\n", .{ RED, RESET, @errorName(err) });
         std.debug.print("{s}Hint:{s} Run synthesis first: tri fpga synth ... --top sacred_alu\n\n", .{ CYAN, RESET });
         return;
@@ -273,14 +275,12 @@ pub const SynthesisReportError = error{
 // MAIN ENTRY POINT — tri-sacred-synth-report executable
 // =============================================================================
 
-pub fn main() !u8 {
-    const allocator = std.heap.page_allocator;
-    const args = try std.process.argsAlloc(allocator);
-    defer std.process.argsFree(allocator, args);
+pub fn main(init: std.process.Init) !u8 {
+    const args = try init.minimal.args.toSlice(init.arena.allocator());
 
     // Skip binary name
     if (args.len > 1) {
-        try runSacredSynthReportCommand(args[1..]);
+        try runSacredSynthReportCommand(args[1..], init.io);
         return 0;
     }
 
@@ -301,10 +301,12 @@ test "sacred synth-report: parse JSON" {
     defer parsed.deinit();
     const modules = parsed.value.object.get("modules").?;
     const stats = try countCellTypes(allocator, modules);
+    defer if (stats.module_name) |name| allocator.free(name);
 
     try std.testing.expectEqual(stats.luts, 2);
     try std.testing.expectEqual(stats.dffs, 1);
     try std.testing.expectEqual(stats.dsp, 1);
     try std.testing.expectEqual(stats.bram, 1);
     try std.testing.expectEqual(stats.cells, 5);
+    try std.testing.expectEqualStrings("sacred_alu", stats.module_name.?);
 }

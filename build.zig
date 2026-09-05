@@ -3266,18 +3266,59 @@ pub fn build(b: *std.Build) void {
     // ═══════════════════════════════════════════════════════════════════════════
     // tri-sacred-synth-report — Parse Yosys JSON synthesis output (Phase 6.4)
     // ═════════════════════════════════════════════════════════════════════════════
-    const sacred_synth_report = b.addExecutable(.{
-        .name = "tri-sacred-synth-report",
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("src/tri/sacred_synth_report.zig"),
-            .target = target,
-            .optimize = .ReleaseFast,
-        }),
-    });
-    b.installArtifact(sacred_synth_report);
+    // Skipped under -Dci for the same reason as tri-loopstate below: this branch
+    // migrated sacred_synth_report.zig to Zig 0.16's `main(init: std.process.Init)`
+    // and CI still runs 0.15.2, where that signature does not exist. It is the one
+    // target in this branch that CI actually builds and cannot.
+    //
+    // Guarding it alone would delete its only automated check, so it did not go in
+    // alone: .github/workflows/zig-0-16-migrated.yml compiles every file carrying
+    // that signature under a real 0.16 toolchain. The guard moves the coverage, it
+    // does not drop it.
+    if (!ci_mode) {
+        const sacred_synth_report = b.addExecutable(.{
+            .name = "tri-sacred-synth-report",
+            .root_module = b.createModule(.{
+                .root_source_file = b.path("src/tri/sacred_synth_report.zig"),
+                .target = target,
+                .optimize = .ReleaseFast,
+            }),
+        });
+        b.installArtifact(sacred_synth_report);
 
-    const sacred_synth_report_step = b.step("sacred-synth-report", "Parse Yosys JSON synthesis output for Sacred ALU");
-    sacred_synth_report_step.dependOn(&sacred_synth_report.step);
+        const sacred_synth_report_step = b.step("sacred-synth-report", "Parse Yosys JSON synthesis output for Sacred ALU");
+        sacred_synth_report_step.dependOn(&sacred_synth_report.step);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // tri-loopstate — disk-halt hysteresis and flap detection
+    //
+    // src/tri/tri_loopstate_main.zig says in its own header that "there is no
+    // build.zig anywhere in this repo that targets it", which was true when it
+    // was written and is not any more. Declaring it here is the step that
+    // header asks for, and it is what the reachability ratchet needs: an entry
+    // point nothing imports is invisible to both the @import walk and the
+    // b.path() seed list.
+    // ═══════════════════════════════════════════════════════════════════════════
+    // Skipped under -Dci: this file uses `std.process.Init`, which is Zig 0.16.
+    // CI still runs 0.15.2, so declaring the target unconditionally makes the
+    // whole build fail there. The b.path() below stays literal either way, so
+    // the reachability ratchet -- which reads this file as text rather than
+    // running it -- still sees the entry point.
+    if (!ci_mode) {
+        const loopstate = b.addExecutable(.{
+            .name = "tri-loopstate",
+            .root_module = b.createModule(.{
+                .root_source_file = b.path("src/tri/tri_loopstate_main.zig"),
+                .target = target,
+                .optimize = optimize,
+            }),
+        });
+        b.installArtifact(loopstate);
+
+        const loopstate_step = b.step("loopstate", "Build the loop disk-halt state tool");
+        loopstate_step.dependOn(&loopstate.step);
+    } // end if (!ci_mode) — Zig 0.16 entry point
 
     // ═══════════════════════════════════════════════════════════════════════════
     // tri-github-collab — OAuth + webhook backend for the Spec Explorer

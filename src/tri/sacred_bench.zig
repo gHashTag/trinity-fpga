@@ -112,7 +112,11 @@ fn parseCsvOutput(allocator: std.mem.Allocator, output: []const u8) !BenchmarkRe
 // IVERILOG EXECUTION
 // =============================================================================
 
-fn runIverilogBenchmark(allocator: std.mem.Allocator, ops: u32) ![]const u8 {
+fn termOk(term: std.process.Child.Term) bool {
+    return term == .exited and term.exited == 0;
+}
+
+fn runIverilogBenchmark(allocator: std.mem.Allocator, io: std.Io, ops: u32) ![]const u8 {
     const fpga_dir = "fpga/openxc7-synth";
     const sacred_alu_v = try std.fs.path.join(allocator, &.{ fpga_dir, "sacred_alu.v" });
     defer allocator.free(sacred_alu_v);
@@ -133,24 +137,28 @@ fn runIverilogBenchmark(allocator: std.mem.Allocator, ops: u32) ![]const u8 {
     defer allocator.free(tb_bench_v);
 
     // Check if iverilog is available
-    const result_iverilog = try std.process.Child.exec(.{
-        .allocator = allocator,
-        .argv = &.{ "iverilog", "--version" },
+    const result_iverilog = try std.process.run(allocator, io, .{
+        .argv = &.{ "iverilog", "-V" },
     });
-    if (result_iverilog.term != .Exited or result_iverilog.exit_code != 0) {
+    defer allocator.free(result_iverilog.stdout);
+    defer allocator.free(result_iverilog.stderr);
+    if (!termOk(result_iverilog.term)) {
         return error.IverilogNotFound;
     }
 
-    // Compile testbench with +define+ for BENCH_OPS
+    // Compile testbench with -D for BENCH_OPS
     const sim_output = try std.fs.path.join(allocator, &.{ fpga_dir, "tb_bench_sim" });
     defer allocator.free(sim_output);
+
+    const define_arg = try std.fmt.allocPrint(allocator, "-DBENCH_OPS={d}", .{ops});
+    defer allocator.free(define_arg);
 
     const compile_args = &[_][]const u8{
         "iverilog",
         "-o",
         sim_output,
         "-g2012", // Use SystemVerilog 2012
-        try std.fmt.allocPrint(allocator, "+define+BENCH_OPS={d}", .{ops}),
+        define_arg,
         sacred_alu_v,
         gf16_alu_v,
         tf3_add_v,
@@ -158,24 +166,28 @@ fn runIverilogBenchmark(allocator: std.mem.Allocator, ops: u32) ![]const u8 {
         tb_bench_v,
     };
 
-    const result_compile = try std.process.Child.exec(.{
-        .allocator = allocator,
+    const result_compile = try std.process.run(allocator, io, .{
         .argv = compile_args,
     });
-    if (result_compile.term != .Exited or result_compile.exit_code != 0) {
+    defer allocator.free(result_compile.stdout);
+    if (!termOk(result_compile.term)) {
         std.debug.print("{s}iverilog failed:{s}\n{s}\n", .{ RED, RESET, result_compile.stderr });
+        allocator.free(result_compile.stderr);
         return error.IverilogCompileFailed;
     }
+    allocator.free(result_compile.stderr);
 
     // Run simulation
-    const result_sim = try std.process.Child.exec(.{
-        .allocator = allocator,
+    const result_sim = try std.process.run(allocator, io, .{
         .argv = &.{ "vvp", sim_output },
     });
-    if (result_sim.term != .Exited or result_sim.exit_code != 0) {
+    if (!termOk(result_sim.term)) {
         std.debug.print("{s}vvp failed:{s}\n{s}\n", .{ RED, RESET, result_sim.stderr });
+        allocator.free(result_sim.stdout);
+        allocator.free(result_sim.stderr);
         return error.VvpRunFailed;
     }
+    allocator.free(result_sim.stderr);
 
     return result_sim.stdout;
 }
@@ -193,10 +205,10 @@ fn printHumanReport(results: BenchmarkResults) void {
 
     const print_row = struct {
         fn print(mode: []const u8, result: ?BenchmarkResult) void {
-            if (result != null) {
-                std.debug.print("{s}║ %-11s │ %8.2f  │ %8.2f M │ %8.2f   ║{s}\n", .{ GREEN, mode, result.cycles_per_op, result.ops_per_sec / 1e6, result.gops_per_sec, RESET });
+            if (result) |r| {
+                std.debug.print("{s}║ {s: <11} │ {d: >8.2}  │ {d: >8.2} M │ {d: >8.2}   ║{s}\n", .{ GREEN, mode, r.cycles_per_op, r.ops_per_sec / 1e6, r.gops_per_sec, RESET });
             } else {
-                std.debug.print("{s}║ %-11s │ %-8s  │ %-8s │ %-8s ║{s}\n", .{ RED, mode, "N/A", "N/A", "N/A", RESET });
+                std.debug.print("{s}║ {s: <11} │ {s: >8}  │ {s: >8} │ {s: >8} ║{s}\n", .{ RED, mode, "N/A", "N/A", "N/A", RESET });
             }
         }
     }.print;
@@ -214,8 +226,8 @@ fn printCsvReport(results: BenchmarkResults) void {
     std.debug.print("mode,cycles_per_op,ops_per_sec,gops_per_sec\n", .{});
     const print_row = struct {
         fn print(result: ?BenchmarkResult) void {
-            if (result != null) {
-                std.debug.print("{s},{d:.2},{d:.0},{d:.4}\n", .{ result.mode, result.cycles_per_op, result.ops_per_sec, result.gops_per_sec });
+            if (result) |r| {
+                std.debug.print("{s},{d:.2},{d:.0},{d:.4}\n", .{ r.mode, r.cycles_per_op, r.ops_per_sec, r.gops_per_sec });
             }
         }
     }.print;
@@ -230,7 +242,7 @@ fn printCsvReport(results: BenchmarkResults) void {
 // MAIN COMMAND
 // =============================================================================
 
-pub fn runSacredBenchCommand(allocator: std.mem.Allocator, args: []const []const u8) !void {
+pub fn runSacredBenchCommand(allocator: std.mem.Allocator, io: std.Io, args: []const []const u8) !void {
     var num_ops: u32 = 100000;
     var output_format: []const u8 = "human";
 
@@ -249,7 +261,7 @@ pub fn runSacredBenchCommand(allocator: std.mem.Allocator, args: []const []const
     }
 
     std.debug.print("\n{s}══════════════════════════════════════════════{s}\n", .{ GOLD, RESET });
-    std.debug.print("{s}SACRED ALU BENCHMARK{ s}\n", .{ GOLD, RESET });
+    std.debug.print("{s}SACRED ALU BENCHMARK{s}\n", .{ GOLD, RESET });
     std.debug.print("{s}════════════════════════════════════════{s}\n\n", .{ GOLD, RESET });
 
     std.debug.print("{s}Configuration:{s}\n", .{ CYAN, RESET });
@@ -258,10 +270,10 @@ pub fn runSacredBenchCommand(allocator: std.mem.Allocator, args: []const []const
 
     std.debug.print("{s}Running iverilog benchmark...{s}\n", .{ GREEN, RESET });
 
-    const output = try runIverilogBenchmark(allocator, num_ops);
+    const output = try runIverilogBenchmark(allocator, io, num_ops);
     defer allocator.free(output);
 
-    const results = try parseCsvOutput(allocator, output);
+    var results = try parseCsvOutput(allocator, output);
     defer results.deinit(allocator);
 
     if (std.mem.eql(u8, output_format, "csv")) {
@@ -295,7 +307,6 @@ fn printBenchHelp() !void {
 test "sacred bench: parse CSV output" {
     const csv_output =
         \\# CSV OUTPUT
-        \\mode,cycles_per_op,ops_per_sec,gops_per_sec
         \\gf16_add,1.50,2000000000.0,2.00
         \\gf16_mul,1.25,2500000000.0,2.50
         \\tf3_add,2.00,1500000000.0,1.50
@@ -303,7 +314,7 @@ test "sacred bench: parse CSV output" {
     ;
 
     const allocator = std.testing.allocator;
-    const results = try parseCsvOutput(allocator, csv_output);
+    var results = try parseCsvOutput(allocator, csv_output);
     defer results.deinit(allocator);
 
     try std.testing.expect(results.gf16_add != null);
@@ -315,17 +326,32 @@ test "sacred bench: parse CSV output" {
     try std.testing.expectEqual(@as(f64, 2.50), results.gf16_mul.?.gops_per_sec);
 }
 
+test "sacred bench: print reports do not crash on populated and missing results" {
+    const populated = BenchmarkResults{
+        .gf16_add = .{ .mode = "gf16_add", .cycles_per_op = 1.5, .ops_per_sec = 2e9, .gops_per_sec = 2.0 },
+        .gf16_mul = .{ .mode = "gf16_mul", .cycles_per_op = 1.25, .ops_per_sec = 2.5e9, .gops_per_sec = 2.5 },
+        .tf3_add = null,
+        .tf3_dot = null,
+    };
+    printHumanReport(populated);
+    printCsvReport(populated);
+
+    const empty = BenchmarkResults{ .gf16_add = null, .gf16_mul = null, .tf3_add = null, .tf3_dot = null };
+    printHumanReport(empty);
+    printCsvReport(empty);
+}
+
 // =============================================================================
 // MAIN ENTRY POINT
 // =============================================================================
 
-pub fn main() !u8 {
-    const allocator = std.heap.page_allocator;
-    const args = try std.process.argsAlloc(allocator);
-    defer std.process.argsFree(allocator, args);
+pub fn main(init: std.process.Init) !u8 {
+    const allocator = init.gpa;
+    const io = init.io;
+    const args = try init.minimal.args.toSlice(init.arena.allocator());
 
     if (args.len > 1) {
-        try runSacredBenchCommand(allocator, args[1..]);
+        try runSacredBenchCommand(allocator, io, args[1..]);
         return 0;
     }
 
