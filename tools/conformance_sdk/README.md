@@ -26,7 +26,7 @@ catalog size" — it is the repo's oracle count. The catalogue itself is the t27
 SSOT (canonical list: the `// CATALOG:` entries in t27
 `specs/numeric/formats_catalog.t27`, from which `tools/gen_formats_catalog.py`
 generates every downstream target and prints "parsed N formats"); that count is
-an invariant that grows — 109 formats in 12 clusters at v3 of arXiv:2606.09686
+an invariant that grows — 109 formats at v3 of arXiv:2606.09686
 (Golden Ruler, Sep 2026) — and is deliberately not written down here. The oracle
 set and the catalogue do not coincide: this repo carries oracles for testing (GF
 width-extensions gf48/64/96/128/256/512/1024; legacy/historical floats — VAX, x87,

@@ -2,7 +2,7 @@
 
 **Number formats, proven bit-exact on live FPGA hardware (Artix-7), with a toolchain that has no vendor licence in it — and 31 upstream patches (29 in nextpnr-xilinx, 2 in demo-projects; count as of 5 Sep 2026) that made that toolchain able to do it.**
 
-A catalogue of numeric formats — IEEE binary16/32/64/128, posits, takums, Galois-field floats GF4–GF64, IBM/Cray/VAX historical formats, MX variants, LNS — of which 49 base formats (72 format–operation cells) have been synthesised through `yosys` + `nextpnr` (openXC7) for the Artix-7 XC7A200T, flashed to a real board, and checked against an independent software oracle until every bit agrees. The catalogue count is a moving invariant, not a fixed number — 109 formats in 12 clusters at v3 of the companion paper (Sep 2026); the matrix in this repository was taken from an earlier snapshot of the catalogue (2026-06-28) and has not been recounted against v3.
+A catalogue of numeric formats — IEEE binary16/32/64/128, posits, takums, Galois-field floats GF4–GF64, IBM/Cray/VAX historical formats, MX variants, LNS — of which 49 base formats (72 format–operation cells) have been synthesised through `yosys` + `nextpnr` (openXC7) for the Artix-7 XC7A200T, flashed to a real board, and checked against an independent software oracle until every bit agrees. The catalogue count is a moving invariant, not a fixed number — 109 formats at v3 of the companion paper (Sep 2026); the matrix in this repository was taken from an earlier snapshot of the catalogue (2026-06-28) and has not been recounted against v3.
 
 No Vivado. No licence server. Runs on a Mac.
 
@@ -35,7 +35,7 @@ Recomputed by the repository's own tool, [`research/measure_tier_e_cells.py`](re
 
 A figure of "71 / 83" appeared here earlier and is withdrawn: it added 41 decode *formats* to 30 compute *operations* and double-counted gf10 and gf14, against a denominator of formats. The tool above is the source now, because it can be recomputed.
 
-The scale behind that: **107 per-format hardware harnesses**, **23 software oracles**, **116 CI workflows** of which **74 reference the openXC7 image** (counted 5 Sep 2026).
+The scale behind that: **107 per-format hardware harnesses**, **23 software oracles**, **116 CI workflows**, 74 of which mention openXC7 and 64 of which pull or run the regymm/openxc7 image (counted 5 Sep 2026).
 
 ### 3. Reproducible without any hardware, in one command
 
@@ -47,7 +47,7 @@ make oracle
 
 ### 4. Publications
 
-- **Golden Ruler: A Numeric Format Catalog with Bit-Exact Conformance Vectors for FP8, BF16, MXFP4, and Microscaling Formats** — [arXiv:2606.09686](https://arxiv.org/abs/2606.09686) (v3, announced 7 Sep 2026; 109 formats in 12 clusters). The catalogue paper; v2 appeared under an earlier title.
+- **Golden Ruler: A Numeric Format Catalog with Bit-Exact Conformance Vectors for FP8, BF16, MXFP4, and Microscaling Formats** — [arXiv:2606.09686](https://arxiv.org/abs/2606.09686) (v3, announced 7 Sep 2026; 109 formats). The catalogue paper; v2 appeared under an earlier title.
 - **GoldenFloat: A Phi-Derived Static-Split Floating-Point Family from GF4 to GF1024 with a Lucas-Exact Integer Identity** — [arXiv:2606.05017](https://arxiv.org/abs/2606.05017) (v3 live; v4 erratum announced 7 Sep 2026: the Tiny Tapeout submissions were withdrawn before fabrication, no die exists, and all hardware results are on the Artix-7 FPGA prototype). The companion GF16 format paper.
 - **Ternary Network Floats** — under review, Microprocessors and Microsystems (Elsevier), submitted 3 Sep 2026 (manuscript MICPRO-D-26-00839). Not on arXiv; source in [`research/arxiv_tnf/`](research/arxiv_tnf/).
 
@@ -134,7 +134,7 @@ Worth being precise, because the repository looks self-contained and is not:
 
 | Part | Where |
 |---|---|
-| Orchestration, CI, measurement harnesses | here — 116 workflows, 74 referencing the openXC7 image (5 Sep 2026) |
+| Orchestration, CI, measurement harnesses | here — 116 CI workflows, 74 of which mention openXC7 and 64 of which pull or run the regymm/openxc7 image (counted 5 Sep 2026) |
 | RTL, constraints, conformance oracles | here — [`fpga/`](fpga/), [`conformance/`](conformance/) |
 | `yosys`, `nextpnr-xilinx`, `prjxray` | the `regymm/openxc7` Docker image, pinned by digest |
 | Fixes to those tools | upstream, in openXC7's repositories |
