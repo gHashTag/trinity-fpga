@@ -1,5 +1,7 @@
 # One page for a referee — claim, record, limitation
 
+> **Terminology (2026-09-05):** "silicon", "the die" and "die reads" in this page mean the Xilinx 7-series FPGA the wrappers were placed on and read back over BSCANE2 (rows 1aa–1bp), not an ASIC. No die of any Trinity chip has been fabricated: the Tiny Tapeout submissions TTSKY26a and TTSKY26b were withdrawn before fabrication.
+
 Every row is a claim this project currently makes, the committed record that
 supports it, and the limitation that bounds it. Nothing here is a claim from the
 manuscript; these are the measurements produced by the autonomous audit

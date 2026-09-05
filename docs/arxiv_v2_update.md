@@ -1,8 +1,10 @@
 # arXiv:2606.05017 — GoldenFloat v2 Update Notes
 
+> **Terminology (2026-09-05):** "silicon" in these notes means the AX7203 (Artix-7 XC7A200T) FPGA board. No die of any Trinity chip exists — the Tiny Tapeout submissions were withdrawn before fabrication — and GoldenFloat v4 (announced 7 Sep 2026) states that all hardware results are on the Artix-7 FPGA prototype.
+
 ## What changed since v3 (2026-06-22)
 
-### New: Silicon Tier-E Proof (Section 5 addition)
+### New: FPGA (AX7203) Tier-E Proof (Section 5 addition)
 
 16 compute cells verified on AX7203 (XC7A200T-FBG484-2):
 
@@ -25,7 +27,7 @@
 | GF32 | ADD | sampled | UART conformance |
 | GF32 | MUL | sampled | UART conformance |
 
-All 16 cells passed with 0 failures on silicon. Exact vector counts vary
+All 16 cells passed with 0 failures on the FPGA. Exact vector counts vary
 by run (scripts use `--n` flag, default 64-512 sampled pairs per cell;
 GF4 is exhaustive at 256). The previously reported "11392/11392" total
 was a sum of per-run vector counts that varied across sessions and
@@ -53,7 +55,7 @@ without Vivado. This is a yosys/nextpnr interaction, not an FPGA limitation.
 
 ### Falsification Ledger Update (FL-002)
 
-(c1) GF256 bias: unchanged — GF256 not yet on silicon
+(c1) GF256 bias: unchanged — GF256 not yet on the FPGA
 (c2) Count drift: SSOT total_formats = 83 (unchanged). Catalog RTL has
     452+ compute families, but canonical format count per SSOT = 83.
     Canonical GF family remains GF4-GF256 (9 formats per paper).
@@ -72,7 +74,7 @@ correct per SSOT. No count correction needed.
 4. "BF16 bit-exact" — 11 rounding tie-break mismatches (oracle limitation)
 5. "GF64+ on silicon" — GF64/GF128 ADD smoke tests only (0+0=0), not
    full UART conformance. GF256 CI-built, not flashed. Only 8 formats
-   (GF4-GF32) have full Tier-E 4/4 on silicon.
+   (GF4-GF32) have full Tier-E 4/4 on the FPGA.
 
 ### Proposed v2 submission text
 
@@ -86,7 +88,7 @@ optimization and nextpnr-xilinx is identified and resolved."
 
 ### GF64+ Verification (future work)
 
-GF64 ADD tested on silicon: 87/128 bit-exact. Root cause under investigation.
+GF64 ADD tested on the FPGA: 87/128 bit-exact. Root cause under investigation.
 RTL gf_adder_param uses native full-width arithmetic (E=24, M=39).
 Python bit-model of the core shows 8032/8032 bit-exact — suggests issue is
 in the compute wrapper or bitstream provenance, not the parametric core itself.

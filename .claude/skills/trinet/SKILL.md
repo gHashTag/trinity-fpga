@@ -162,11 +162,11 @@ wherever it is published.
 
 `RECEIPT_KEY` used to be a synthesis parameter. It was committed to a public
 repository, the fix was applied to the source, and **the fix never reached the
-silicon** — the fleet ran for a day signing with keys any reader of the git log
+boards** — the fleet ran for a day signing with keys any reader of the git log
 could compute, and every test stayed green because a compromised key and a good
 key are indistinguishable to anything that only asks "does the tag match".
 
-The reason it never reached the silicon is the part worth keeping. Re-keying a
+The reason it never reached the boards is the part worth keeping. Re-keying a
 baked-in key needs a place-and-route run **this workstation cannot perform** —
 an XC7A200T chipdb OOMs at Docker's 4 GB default, and raising it to 6 GB on an
 8 GB host stops Docker starting at all — plus 13 minutes of flashing, per board.

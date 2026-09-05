@@ -1,5 +1,7 @@
 # Quantum Brain Chips × PhD × TOPS/W Roadmap
 
+> **Status (2026-09-05):** the shuttle targets and silicon-return gates in this document are planning statements from the time of writing, not results. No die of any Trinity chip exists: the Tiny Tapeout submissions TTSKY26a and TTSKY26b were withdrawn before fabrication (TTSKY26a refunded 6 Aug 2026), all hardware results to date are on the Artix-7 (XC7A200T) FPGA prototype, and no silicon return has happened.
+
 
 **Document ID:** QB-CHIPS-PHD-ROADMAP-2026-05-15-001
 **Author:** Vasilev Dmitrii \<admin@t27.ai\> · ORCID 0009-0008-4294-6159

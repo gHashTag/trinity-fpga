@@ -4,6 +4,8 @@
 > **Shuttle target:** TTSKY26c (~2026-09)
 > **R5-HONEST:** All 6 squeeze vectors (S-15..S-20) are **R6-CONJECTURE** until TTSKY26c silicon return.
 
+> **Status (2026-09-05):** the shuttle targets and silicon-return gates in this document are planning statements from the time of writing, not results. No die of any Trinity chip exists: the Tiny Tapeout submissions TTSKY26a and TTSKY26b were withdrawn before fabrication (TTSKY26a refunded 6 Aug 2026), all hardware results to date are on the Artix-7 (XC7A200T) FPGA prototype, and no silicon return has happened.
+
 ---
 
 ## Overview

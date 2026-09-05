@@ -128,7 +128,7 @@ has been through a P&R tool or met timing, and locally only
 `nextpnr-himbaechel` is installed — no `nextpnr-ice40`, no `nextpnr-ecp5`, no
 `icepack`, no `ecppack` — so P&R on non-Xilinx families could not be attempted
 here. Only the xc7 path has produced a bitstream, and only the xc7 path has run
-on silicon. A design that synthesises everywhere can still fail timing
+on hardware (the Artix-7 board). A design that synthesises everywhere can still fail timing
 somewhere, and until that is measured this is portability of *source*, not
 portability of *product*.
 

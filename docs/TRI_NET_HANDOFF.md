@@ -155,11 +155,11 @@ is the single most valuable missing measurement and it blocks the paper.
 
 `RECEIPT_KEY` used to be a synthesis parameter. It was committed to a public
 repository, the fix was applied to the source, and **the fix never reached the
-silicon** — the fleet ran for a day signing with keys any reader of the git log
+boards** — the fleet ran for a day signing with keys any reader of the git log
 could compute, while every test stayed green, because a compromised key and a
 good key are indistinguishable to anything that only asks "does the tag match".
 
-The reason it never reached the silicon is the part to keep: rotating a baked-in
+The reason it never reached the boards is the part to keep: rotating a baked-in
 key needs a place-and-route run **this workstation cannot do** (see §5), plus 13
 minutes of flashing, per board. *A key that costs an hour to rotate is a key
 nobody rotates.*
@@ -170,8 +170,8 @@ So the node takes its key over the wire:
   bytes, so the frame parser and `conformance/frame_alignment_check.py` are
   untouched.
 - **Write-once per configuration.** A second `setkey` returns `0x03 KEY_LOCKED`
-  and changes nothing. Proven on silicon against an attacker's key, not only in
-  simulation.
+  and changes nothing. Proven on the Artix-7 boards (AX7203) against an attacker's
+  key, not only in simulation.
 - The acknowledgement is **signed with the key just installed**, so acceptance
   is distinguishable from an echo. `Node.setKey` checks the tag, not the status.
 - An unkeyed board answers `0x04 NO_KEY` with a **real** dot product. Anything
@@ -335,7 +335,8 @@ default to safe, or does it default to accusing an honest operator?*
 1. **Option B — the TernaryCore issue.** Draft written and *held* at
    `docs/outreach/ternarycore-issue-draft.md`. It was held because its strongest
    line ("per-job verifiable receipts, demonstrated on silicon") was false. **It
-   is now true.** Needs the operator's go-ahead — it is outward-facing to a third
+   is now true** of the Artix-7 boards; there is no Trinity ASIC, so the draft
+   should say "on FPGA", not "on silicon". Needs the operator's go-ahead — it is outward-facing to a third
    party. Falsifier: no substantive reply in 30 days.
 2. **Re-key the fleet — blocked on an operator, not on work.** The keys
    installed on these boards exist nowhere: `trinet-keys.txt` is not on this
@@ -378,7 +379,7 @@ run since it was added. The claim reproduces under 0.62 and 0.65; the gate that
 was supposed to protect it had never gone green. CI now pins the toolchain.
 
 This does not establish portability of *product*: synthesis is not P&R, no
-non-Xilinx mapping has met timing, and only xc7 has run on silicon. And it does
+non-Xilinx mapping has met timing, and only xc7 has run on hardware (the Artix-7 boards). And it does
 not make anyone want the IP — C's real obstacles were never engineering. The
 recommendation to defer C stands.
 

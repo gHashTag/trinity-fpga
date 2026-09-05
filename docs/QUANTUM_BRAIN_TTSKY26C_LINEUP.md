@@ -1,5 +1,7 @@
 # 🧠 Quantum Brain TTSKY26c Lineup — 1:1 Silicon Mapping
 
+> **Status (2026-09-05):** the shuttle targets and silicon-return gates in this document are planning statements from the time of writing, not results. No die of any Trinity chip exists: the Tiny Tapeout submissions TTSKY26a and TTSKY26b were withdrawn before fabrication (TTSKY26a refunded 6 Aug 2026), all hardware results to date are on the Artix-7 (XC7A200T) FPGA prototype, and no silicon return has happened.
+
 > **Anchor:** φ² + φ⁻² = 3 · DOI [10.5281/zenodo.19227877](https://zenodo.org/records/19227877)
 > **Sprint:** TT V15 MAX-TRUE TURBO · W15-TT-E shuttle close T−54h
 > **One-shot ref:** [trinity-fpga#93](https://github.com/gHashTag/trinity-fpga/issues/93)

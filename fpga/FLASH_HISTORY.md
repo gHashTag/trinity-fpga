@@ -3,6 +3,8 @@
 **Location:** `fpga/FLASH_HISTORY.md`  
 **Purpose:** Track all FPGA programming attempts with full characteristics
 
+**Terminology (2026-09-05):** every entry below is an FPGA flash (AX7203 / Artix-7); "on silicon" in the entries means the FPGA, not an ASIC — no die of any Trinity chip exists.
+
 ---
 
 ## Flash Attempt #001 — TERNARY_DOT Quantum Design ✅ SUCCESS
