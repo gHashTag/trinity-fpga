@@ -3289,19 +3289,28 @@ pub fn build(b: *std.Build) void {
     // Being buildable with `zig build github-collab` is worth having anyway --
     // otherwise the only way to compile it is inside Docker.
     // ═══════════════════════════════════════════════════════════════════════════
-    const github_collab = b.addExecutable(.{
-        .name = "tri-github-collab",
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("src/tri/github_collab_server.zig"),
-            .target = target,
-            // ReleaseSafe, not ReleaseFast: this parses attacker-supplied HTTP
-            // and JSON, and bounds checks are worth more than the throughput.
-            .optimize = .ReleaseSafe,
-        }),
-    });
-    b.installArtifact(github_collab);
+    // Skipped under -Dci: this service uses std.process.Init, std.Io.net and
+    // std.Io.randomSecure, all Zig 0.16. CI still runs 0.15.2, so declaring the
+    // target unconditionally fails the whole build there -- which is exactly
+    // what happened when this was first added to satisfy the ratchet.
+    //
+    // The b.path() stays literal inside the guard, so the ratchet still sees
+    // the entry point: it reads this file as text rather than running it.
+    if (!ci_mode) {
+        const github_collab = b.addExecutable(.{
+            .name = "tri-github-collab",
+            .root_module = b.createModule(.{
+                .root_source_file = b.path("src/tri/github_collab_server.zig"),
+                .target = target,
+                // ReleaseSafe, not ReleaseFast: this parses attacker-supplied
+                // HTTP and JSON, and bounds checks beat the throughput.
+                .optimize = .ReleaseSafe,
+            }),
+        });
+        b.installArtifact(github_collab);
 
-    const github_collab_step = b.step("github-collab", "Build the Spec Explorer GitHub collaboration backend");
-    github_collab_step.dependOn(&github_collab.step);
+        const github_collab_step = b.step("github-collab", "Build the Spec Explorer GitHub collaboration backend");
+        github_collab_step.dependOn(&github_collab.step);
+    } // end if (!ci_mode) — Zig 0.16 entry point
 
 }
