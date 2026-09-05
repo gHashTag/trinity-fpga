@@ -17,10 +17,12 @@
 
 const std = @import("std");
 const loopstate = @import("tri_loopstate.zig");
+const dashboard = @import("loop_dashboard.zig");
 
 fn usage() void {
     std.debug.print(
-        \\usage: tri-loopstate <status|check|tripwire> [--state PATH] [--dashboard PATH]
+        \\usage: tri-loopstate <status|check|tripwire|bump|render> [--state PATH] [--dashboard PATH]
+        \\                     [--out PATH] [--note TEXT]
         \\
         \\  status     print the current iteration, done count, and next actionable backlog item
         \\  check      recompute live backlog/anomaly counts from STATE.json and diff them
@@ -28,6 +30,13 @@ fn usage() void {
         \\  tripwire   fresh disk/drift/decision-gridlock reading, updates the dashboard's
         \\             halt banner accordingly, and exits 1 if any tripwire is active
         \\             (exit 1 also on any read/parse failure -- treat that as a halt too)
+        \\  bump       increment loop.iteration in STATE.json and print the new value.
+        \\             Replaces the "MANDATORY SELF-CHECK" in the continuity protocol that
+        \\             asked a human to remember; it did not, for nine consecutive
+        \\             iterations (anomaly A24, a recurrence of A7 at ~10x the scale).
+        \\  render     regenerate the status dashboard from STATE.json (default --out
+        \\             .trinity/loop/status.html). Derived, so its numbers cannot drift
+        \\             from the state file the way a hand-edited page does.
         \\
     , .{});
 }
@@ -45,6 +54,8 @@ pub fn main(init: std.process.Init) !u8 {
 
     var state_path: []const u8 = loopstate.default_state_path;
     var dashboard_path: []const u8 = ".trinity/loop/dashboard.html";
+    var out_path: []const u8 = dashboard.default_output_path;
+    var note: []const u8 = "";
     var i: usize = 2;
     while (i < argv.len) : (i += 1) {
         if (std.mem.eql(u8, argv[i], "--state") and i + 1 < argv.len) {
@@ -53,6 +64,12 @@ pub fn main(init: std.process.Init) !u8 {
         } else if (std.mem.eql(u8, argv[i], "--dashboard") and i + 1 < argv.len) {
             i += 1;
             dashboard_path = argv[i];
+        } else if (std.mem.eql(u8, argv[i], "--out") and i + 1 < argv.len) {
+            i += 1;
+            out_path = argv[i];
+        } else if (std.mem.eql(u8, argv[i], "--note") and i + 1 < argv.len) {
+            i += 1;
+            note = argv[i];
         }
     }
 
@@ -72,6 +89,52 @@ pub fn main(init: std.process.Init) !u8 {
         const s = try loopstate.renderStatus(gpa, &st);
         defer gpa.free(s);
         std.debug.print("{s}", .{s});
+        return 0;
+    }
+
+    if (std.mem.eql(u8, cmd, "bump")) {
+        const before = st.iteration;
+        const updated = loopstate.bumpIteration(gpa, &st) catch |err| {
+            std.debug.print("error: could not increment loop.iteration: {t}\n", .{err});
+            return 1;
+        };
+        defer gpa.free(updated);
+
+        std.Io.Dir.cwd().writeFile(init.io, .{ .sub_path = state_path, .data = updated }) catch |err| {
+            // Reported, never swallowed: a bump that silently failed to write
+            // would reproduce the exact drift this command exists to end, while
+            // printing the number that proves it worked.
+            std.debug.print("error: could not write {s}: {t}\n", .{ state_path, err });
+            return 1;
+        };
+        std.debug.print("iteration {d} -> {d}\n", .{ before, st.iteration });
+        return 0;
+    }
+
+    if (std.mem.eql(u8, cmd, "render")) {
+        const html = dashboard.render(gpa, &st, note) catch |err| {
+            std.debug.print("error: could not render dashboard: {t}\n", .{err});
+            return 1;
+        };
+        defer gpa.free(html);
+
+        std.Io.Dir.cwd().writeFile(init.io, .{ .sub_path = out_path, .data = html }) catch |err| {
+            std.debug.print("error: could not write {s}: {t}\n", .{ out_path, err });
+            return 1;
+        };
+
+        // Verify what was actually written, not what was about to be: the whole
+        // point of a generated page is that the tooling can read it back, and
+        // the cheapest moment to find out it cannot is right now.
+        const live = loopstate.liveCounts(&st);
+        const report = try loopstate.checkDrift(gpa, live, html);
+        defer gpa.free(report);
+        if (std.mem.indexOf(u8, report, "DRIFT") != null or std.mem.indexOf(u8, report, "MISSING") != null) {
+            std.debug.print("error: rendered {s} but it does not read back cleanly:\n{s}", .{ out_path, report });
+            return 1;
+        }
+
+        std.debug.print("rendered {s} ({d} bytes) at iteration {d}\n", .{ out_path, html.len, st.iteration });
         return 0;
     }
 

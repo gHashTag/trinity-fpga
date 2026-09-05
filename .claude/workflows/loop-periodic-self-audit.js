@@ -14,18 +14,38 @@ repo, t27 companion repo) that repairs a Rust-to-Zig compiler and verifies
 openXC7 FPGA clock-buffer behavior on real hardware. Its state lives in
 .trinity/loop/STATE.json (backlog[], done[], anomalies[], loop{status,halt,
 continuity_protocol}), narrated in .trinity/loop/JOURNAL.md, and shown on
-.trinity/loop/dashboard.html. A companion tool (src/tri/tri_loopstate_main.zig,
+TWO dashboards, on purpose: .trinity/loop/dashboard.html is a 164 KB
+hand-written historical record, and .trinity/loop/status.html is generated from
+STATE.json every iteration. A companion tool (src/tri/tri_loopstate_main.zig,
 built via 'zig build-exe src/tri/tri_loopstate_main.zig -femit-bin=/tmp/tri-loopstate')
-exposes 'status'/'check'/'tripwire' subcommands for mechanical status checks.
+exposes 'status'/'check'/'tripwire'/'bump'/'render'. Always rebuild that binary
+before using it -- a stale one makes every reading look consistent while being
+wrong.
 
-This is NOT the loop's first audit -- a prior audit already found and fixed:
+This is NOT the loop's first audit. Prior audits already found and fixed:
 untracked loop state, uncommitted compiler patches, a stale/self-contradictory
-dashboard, no measure.py tests, a stale cron-job-ID belief, and a self-
-referential bug in the tripwire mechanism's own banner-vs-readout parsing.
-Your job is to find what's drifted or gone wrong SINCE, not to repeat that
-work -- read the current state fresh and report only genuinely new findings.
-A clean "nothing new" result is a valid and useful answer; do not manufacture
-findings to justify the audit's own existence.
+dashboard, no measure.py tests, a stale cron-job-ID belief, a self-referential
+bug in the tripwire mechanism's own banner-vs-readout parsing, and (iteration
+105) a CI gate broken by the fix for another CI gate. Your job is to find what
+has drifted SINCE, not to repeat that work -- read the current state fresh and
+report only genuinely new findings. A clean "nothing new" result is a valid and
+useful answer; do not manufacture findings to justify the audit's own existence.
+
+Two failure modes this loop has now repeated often enough to check for by name:
+
+  1. A claim verified in the wrong environment. "Verified locally" on a macOS
+     laptop said nothing about an ubuntu-latest runner, and a CI job shipped on
+     that basis failed on its first run (anomaly A28). When you see a
+     verification claim, ask where it ran, not just whether it ran.
+
+  2. A defect fixed at the position the tool named rather than across the class
+     it belongs to. A compiler reports its FIRST failure; fixing that file leaves
+     the class live and the next run reports the next member (anomaly A29). When
+     you see a one-file fix, ask how wide the class is.
+
+Both are recurrences of lessons that were already written down. Prose in a
+protocol has now failed twice; prefer findings whose recommended_action is a
+mechanical gate over ones that add another instruction for someone to remember.
 `
 
 phase('Audit')
