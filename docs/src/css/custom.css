@@ -1107,3 +1107,35 @@ table tr {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ==========================================================================
+   Spec-corpus pipeline diagram (docs/reference/spec-corpus-synthesis.mdx)
+   One dot travelling the pipeline. It marks the direction of flow once and
+   then repeats quietly -- the reader is here to read numbers, not to watch
+   something move, so nothing else on the page animates.
+   ========================================================================== */
+
+.t27-pipeline-anim {
+  margin: 1.5rem 0;
+}
+
+@keyframes t27-travel {
+  0%   { transform: translateX(0);     opacity: 0; }
+  8%   { opacity: 1; }
+  85%  { opacity: 1; }
+  100% { transform: translateX(560px); opacity: 0; }
+}
+
+.t27-pipeline-anim .t27-pulse {
+  animation: t27-travel 4.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+/* Vestibular triggers are exactly what this setting is for: the dot is
+   decoration, so it stops entirely rather than merely slowing down. The
+   diagram still reads without it -- the arrow already shows direction. */
+@media (prefers-reduced-motion: reduce) {
+  .t27-pipeline-anim .t27-pulse {
+    animation: none;
+    opacity: 1;
+  }
+}

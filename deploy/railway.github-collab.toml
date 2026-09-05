@@ -6,9 +6,10 @@ builder = "DOCKERFILE"
 dockerfilePath = "deploy/Dockerfile.github-collab"
 
 [deploy]
-# Use the Dockerfile ENTRYPOINT (the Zig binary). There is no shell in the
-# runtime image, so a startCommand string would have nothing to run it.
-startCommand = null
+# No startCommand key: Railway then uses the Dockerfile ENTRYPOINT.
+# Do NOT write `startCommand = null` -- TOML has no null type, so that is a
+# parse error and the deployment fails before any build, reporting only
+# "does not have an associated build".
 healthcheckPath = "/health"
 healthcheckTimeout = 60
 restartPolicyType = "ON_FAILURE"
