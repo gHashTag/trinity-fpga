@@ -478,6 +478,16 @@
       "id": "D84",
       "what": "tri-loopstate gained `bump` and `render`. `bump` increments loop.iteration and writes the file -- this is OD7's option (a), which the record described as needing 'JSON-write capability [the tool] doesn't have yet'. That was already untrue when written: writeTripwireHysteresis does the identical parse-mutate-stringify. The decision had been sitting open against a cost that did not exist. `render` generates .trinity/loop/status.html from STATE.json in Claude Code's visual language and then reads its own output back through checkDrift, exiting 1 if the page it just wrote is not machine-readable.",
       "tests": "58 passing across tri_loopstate.zig (+3) and the new loop_dashboard.zig (+6). The load-bearing one runs the REAL reader against REAL generated output -- checkDrift must find no DRIFT/MISSING and evaluateTripwires must not fire -- so a rendered page can never itself trip the drift tripwire. Asserting that by reading the HTML is what the old page did."
+    },
+    {
+      "id": "D85",
+      "what": "PR #747: corrected the Zig 0.16 CI job's predicate from the TYPE to the ENTRY POINT. The job went red on main immediately after #745 and #746 merged, on src/tri/github_collab.zig -- 'root source file struct has no member named main'. #745 contributed a library that names std.process.Init in a doc comment; #746 contributed a job that greps for std.process.Init. Neither is wrong alone, and no single branch contained both halves, so both PRs were green when merged and main was red one minute later.",
+      "why_it_matters": "Third instance in one iteration of the same shape: a set defined by the wrong predicate (A29 was the first, the dashboard's title/detail vs name/what fixture was the second). Also the first demonstration that this class of defect can be invisible to per-PR CI entirely -- it only exists in the merge result, which nothing tested until it was main.",
+      "fix": "Narrowed to '^pub fn main\\\\(init: std\\\\.process\\\\.Init', the exact signature 0.15.2 rejects and therefore the exact set needing an if (!ci_mode) guard. Library files using 0.16 APIs keep coverage: they compile as dependencies of whichever entry point imports them, and github_collab.zig is imported by github_collab_server.zig, which is in the list.",
+      "verified": "Extracted the step body from the YAML and ran it verbatim against main's tree at the pinned CI target: 11 ok / 0 fail, src/trinet/main.zig correctly flagged as needing -lc.",
+      "merged": [
+        "#747"
+      ]
     }
   ],
   "backlog": [
