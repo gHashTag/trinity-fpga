@@ -1,0 +1,94 @@
+# Can the gates themselves fail?
+#
+# tools/check_gates_can_fail.py has existed in this repo, fully written, and been
+# invoked by NOTHING. `git grep check_gates_can_fail` returns two hits, both
+# inside the file itself. Meanwhile two of the gates it covers had already gone
+# blind in production and were caught by hand instead:
+#
+#   - check_self_consistency passed a paper claiming "Ninety-nine retractions are
+#     marked in place below" and again one claiming "Three" (pre-#649)
+#   - check_paper_numbers ended in an unconditional sys.exit(0) (pre-#650)
+#
+# The instrument that would have caught both was sitting in tools/. This runs it.
+#
+# Measured before landing, on main's tree: 7 of 10 gates reject their injected
+# defect, 3 are UNTESTABLE because they are already red on a clean tree, and the
+# script exits 0. So this is safe as a blocking gate today -- it is not being
+# added in the hope that it passes.
+#
+# ## The coverage floor, and why it is not optional
+#
+# The script reports UNTESTABLE for any gate already failing on a clean tree, and
+# still exits 0. That is the right call for it to make -- a red gate is a finding
+# about the tree, not about the gate -- but it means this check DEGRADES SILENTLY:
+# every gate that goes red drops out of the tested set, and the summary line stays
+# green with a smaller and smaller denominator. Taken to its limit, ten red gates
+# would produce "0 of 10 tested" and a pass.
+#
+# So the floor below is the actual gate. If fewer than MIN_TESTABLE gates can be
+# tested, this job fails and names the drop. Raise the floor when the three
+# currently-red gates are fixed; never lower it to make a red build green.
+#
+# phi^2 + 1/phi^2 = 3 = TRINITY
+
+name: Gates can fail
+
+on:
+  push:
+    paths:
+      - 'tools/check_*.py'
+      - 'research/arxiv_tnf/**'
+      - '.github/workflows/gates-can-fail.yml'
+  pull_request:
+    paths:
+      - 'tools/check_*.py'
+      - 'research/arxiv_tnf/**'
+      - '.github/workflows/gates-can-fail.yml'
+  workflow_dispatch:
+
+env:
+  # Measured on main at f32467d4f. Ratchet upward only.
+  MIN_TESTABLE: '7'
+
+jobs:
+  gates-can-fail:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: false   # the gitlink is unfetchable; see README
+
+      - name: Every gate must reject its own defect
+        run: |
+          set -o pipefail
+          python3 tools/check_gates_can_fail.py 2>&1 | tee gates.log
+          rc=$?
+          echo
+
+          # The script's own verdict comes first: a gate that PASSES a defect it
+          # is supposed to catch is the finding this file exists for.
+          if [ "$rc" -ne 0 ]; then
+            echo "::error::A gate accepted the defect it exists to catch. See the log above."
+            exit "$rc"
+          fi
+
+          # Then the floor. Parse the summary line: "gates tested: N of M".
+          tested=$(sed -n 's/^gates tested: \([0-9]\{1,\}\) of [0-9]\{1,\}$/\1/p' gates.log | head -1)
+          if [ -z "$tested" ]; then
+            echo "::error::Could not read the 'gates tested: N of M' summary line."
+            echo "The script's output format changed, so the coverage floor is not being"
+            echo "enforced -- which is exactly the silent degradation this floor exists to"
+            echo "prevent. Fix the parse, do not delete the check."
+            exit 1
+          fi
+
+          echo "testable gates: $tested (floor: $MIN_TESTABLE)"
+          if [ "$tested" -lt "$MIN_TESTABLE" ]; then
+            echo "::error::Only $tested gate(s) could be tested; the floor is $MIN_TESTABLE."
+            echo "A gate becomes UNTESTABLE when it is already red on a clean tree, so this"
+            echo "means the tree got worse, not that this check got stricter. The script"
+            echo "would have exited 0 regardless -- that is why this floor is here."
+            grep 'UNTESTABLE' gates.log || true
+            exit 1
+          fi
