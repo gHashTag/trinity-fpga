@@ -6,7 +6,10 @@ builder = "DOCKERFILE"
 dockerfilePath = "Dockerfile.railway"
 
 [deploy]
-startCommand = null  # Use Dockerfile ENTRYPOINT (trinity-mcp Zig binary)
+# No startCommand key: Railway then uses the Dockerfile ENTRYPOINT.
+# Do NOT write `startCommand = null` -- TOML has no null type, so that is a
+# parse error and the deployment fails before any build, reporting only
+# "does not have an associated build".
 healthcheckPath = "/health"
 healthcheckTimeout = 300
 restartPolicyType = "ON_FAILURE"
