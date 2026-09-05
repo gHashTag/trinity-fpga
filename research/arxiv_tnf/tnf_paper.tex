@@ -869,6 +869,8 @@ requires probes wider than we generated. That leaves $53$ classified, and the
 four class counts below sum to $53$: the total closes on $83$ and is asserted in
 the harness rather than trusted to the reader's addition.
 
+\paragraph{Where the record files are.} Every path of the form \texttt{measurements/\ldots}, \texttt{research/\ldots} or \texttt{tools/\ldots} cited in this paper is a file in the public repository \texttt{github.com/gHashTag/trinity-fpga}. Paths beginning \texttt{measurements/} are relative to the paper's own directory, \texttt{research/arxiv\_tnf/}; paths beginning \texttt{research/} or \texttt{tools/} are relative to the repository root. The journal submission of 2026-09-03 was made from the tree at commit \texttt{a0fb006}, in which \texttt{tnf\_paper.tex} last changed at \texttt{64400a1}; the commit of each later revision is recorded in \texttt{research/arxiv\_tnf/SUBMISSION.md}.
+
 \begin{table}[t]\centering
 \caption{The catalogue by staircase form. The parameter is the taper constant in
 the units natural to each form. Measured against each format's own usable range.
@@ -3896,11 +3898,9 @@ log-spacing.
 
 Everything above concerns per-channel scaling. The other deployed axis shares
 one scale across a short block, and there our formats lose. It is worth stating
-how thoroughly, because the answer is not a ranking but a ceiling.
+how thoroughly. What follows is a ranking under one distortion measure, not a ceiling on perplexity: Lloyd--Max minimises squared error, and squared error does not order perplexity across codebook families on this table, so the Lloyd--Max perplexity is one more row rather than a bound.
 
-Lloyd--Max on the within-block distribution --- $18{,}850{,}950$ values, block of
-$32$ along the contraction axis, E8M0 shared scale as the MX specification
-mandates --- gives the eight-level codebook minimising squared error. It is
+Lloyd--Max on the within-block distribution gives the eight-level codebook minimising squared error. The distribution is $18{,}850{,}950$ values: every linear weight tensor of SmolLM2-135M except the output head, cut into blocks of $32$ along the contraction axis ($3{,}317{,}760$ blocks in full), each block divided by its own maximum, then a strided subsample of at most about $80{,}000$ values per tensor --- a sample of values, not of whole blocks (\texttt{research/block/block\_bound.py}). The shared scale is E8M0 as the MX specification mandates, assigned as $s=2^{\lceil\log_2(a_{\max}/\mathrm{top})\rceil}$ with $\mathrm{top}$ the codebook's largest magnitude ($6.0$ for E2M1), so that no element saturates. The specification's own alignment, $s=2^{\lfloor\log_2 a_{\max}\rfloor-2}$, permits saturation and gives $23.5380$ for MXFP4 on the same run; the convention is stated because every perplexity below moves with it (\texttt{research/block/MXFP4\_SCALE\_CONVENTION\_2026-08-11.md}). It is
 neither multiply-free nor a ladder; it is the best any eight magnitudes can do.
 The territory between a learned codebook and a fixed field layout is being
 occupied from the other side as well: parametric non-uniform codebooks for one- to
@@ -5498,11 +5498,9 @@ becomes an E4M3 float rather than a power of two. Both are hardware-resident on
 current accelerators, which is why the stop condition for this work is stated
 against them and not against posit or takum.
 
-What the 2026 literature then varies is almost entirely the \emph{transform}
-applied before quantisation, not the format underneath it: learnable block-wise
-optimisation for outlier resilience, and rounding fitted to the E2M1
-level set, augmented residual channels, and activation-sparsity coupling. Each
-reports gains, and each holds the element format at E2M1.
+Much of the 2026 literature varies the \emph{transform} applied before quantisation while holding the element format at E2M1: learnable block-wise
+optimisation for outlier resilience, rounding fitted to the E2M1
+level set, augmented residual channels, and activation-sparsity coupling. Not all of it does. HBQ~\cite{hbq2026} refines the scale grid with a shift-and-add second level, M2XFP~\cite{m2xfp2026} ships a sub-binade scale set $\{1.0,1.25,1.5,1.75\}\cdot2^{E}$ per subgroup, and VS-Quant~\cite{vsquant2021} ablated 3-, 4- and 6-bit per-vector scales in 2021; the shared-microexponent framework~\cite{bdr2023} makes the level-1 scale width a design variable before pinning it. The scale field, then, is not a closed axis, and the claim below is about the element field only.
 
 That is exactly the variable Theorem~\ref{thm:optimal} addresses. E2M1 spends two
 of its three non-sign positions on an exponent, \emph{inside a block that already
@@ -5834,12 +5832,10 @@ TNF frequencies trace to
 rows have records and the rows they are ranked above do not is not evidence of the
 ordering, and is presented here as illustrative.
 
-Worse, and decisive for the release question: \textbf{no place-and-route log is in
-the repository tree at all}. \texttt{git ls-files} finds zero \texttt{*.log} files;
-the only one in the working tree is the \LaTeX{} log of this document. A
-withdrawal note in \texttt{research/frontier/} states that the ladder frequencies
+Worse, and decisive for the release question: \textbf{no place-and-route log behind
+any frequency quoted in this paper is in the repository tree}. At commit \texttt{a0fb006}, \texttt{git ls-files} finds five \texttt{*.log} files, all under \texttt{measurements/pnr\_logs/} and all five seeds of one design (\texttt{e2m11\_add}) that no frequency here is sourced to; beyond those, the only log in the working tree is the \LaTeX{} log of this document. The note \texttt{research/frontier/WITHDRAWAL\_FMAX\_UNSOURCED\_2026-08-10.md}, which retracts itself in its own heading, states that the ladder frequencies
 rest on $298$ \texttt{nextpnr-xilinx} logs under \texttt{fpga/phiscale/}; that
-directory holds $145$ files and none of them is a log. So even the twenty-four
+directory holds $163$ files at the same commit and none of them is a log. So even the twenty-four
 sourced frequencies are sourced to a \emph{document that reports a measurement},
 not to the tool output that produced it. Under the standard this paper applies
 elsewhere --- a claim is closed by a command, its inputs, its log and a hash --- the
@@ -7914,6 +7910,14 @@ Representation Layer for LLM-Driven RTL Generation,'' arXiv:2608.07625, 7~August
 2026. \url{https://arxiv.org/abs/2608.07625}
 
 \bibitem{earplynch2026powers} B.~Earp-Lynch, S.~Earp-Lynch, O.~Kihel and P.~Tiebekabe, ``Powers as Fibonacci Sums,'' arXiv:2608.04445, 5~August 2026. \url{https://arxiv.org/abs/2608.04445}
+
+\bibitem{hbq2026} Chen et al., ``HBQ: Hierarchical Block Quantization,'' MICRO 2026, arXiv:2609.00450, 2026.
+
+\bibitem{m2xfp2026} Hu et al., ``M2XFP,'' arXiv:2601.19213, 2026.
+
+\bibitem{vsquant2021} S.~Dai, R.~Venkatesan, H.~Ren, B.~Zimmer, W.~J.~Dally, and B.~Khailany, ``VS-Quant: Per-vector scaled quantization for accurate low-precision neural network inference,'' MLSys 2021, arXiv:2102.04503.
+
+\bibitem{bdr2023} B.~Darvish Rouhani et al., ``With shared microexponents, a little shifting goes a long way,'' ISCA 2023, arXiv:2302.08007.
 
 \end{thebibliography}
 
