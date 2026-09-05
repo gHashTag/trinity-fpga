@@ -45,8 +45,18 @@ env:
   ZIG_VERSION: '0.16.0'
   # Pinned so this job means the same thing on a laptop as it does here.
   # Reproduce locally with the identical command:
-  #   zig build-exe <file> -target x86_64-linux
-  ZIG_TARGET: 'x86_64-linux'
+  #   zig build-exe <file> -target x86_64-linux-gnu
+  #
+  # The -gnu suffix is load-bearing, not decoration. Zig defaults a Linux target
+  # with no ABI to MUSL, so the first version of this line -- plain
+  # 'x86_64-linux' -- was silently compiling against a different libc than the
+  # runner and every real build use. Measured, with -lc:
+  #     x86_64-linux       -> statically linked        (musl)
+  #     x86_64-linux-gnu   -> dynamically linked, /lib64/ld-linux  (glibc)
+  #     x86_64-linux-musl  -> statically linked        (identical to the first)
+  # std.c has a dozen isGnu()/isMusl() switches, so a file using a musl-only
+  # symbol would have passed this gate and failed a real build.
+  ZIG_TARGET: 'x86_64-linux-gnu'
 
 jobs:
   compile:
@@ -113,9 +123,14 @@ jobs:
             # 0.16 at all while the rest of the tree is still on 0.15 APIs.
             #
             # -target is pinned rather than left native so this reproduces
-            # anywhere. It is a no-op on this runner and the whole point off it:
-            # the first version of this job passed on a macOS laptop and failed
-            # here, because macOS links libc implicitly and Linux does not.
+            # anywhere: the first version of this job passed on a macOS laptop
+            # and failed here, because macOS links libc implicitly and Linux
+            # does not.
+            #
+            # This comment used to claim the pin was "a no-op on this runner".
+            # That was wrong -- see ZIG_TARGET above. It is only a no-op now
+            # that the ABI is spelled out; without the suffix it silently
+            # retargeted the whole job to musl.
             if zig build-exe "$f" -target "$ZIG_TARGET" -femit-bin="/tmp/z16/$name" > "/tmp/z16/$name.log" 2>&1; then
               echo "  ok    $f"
             elif grep -q 'dependency on libc must be explicitly specified' "/tmp/z16/$name.log" \
