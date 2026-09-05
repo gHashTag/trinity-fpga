@@ -680,6 +680,50 @@
       "status": "pending",
       "needs_operator_decision": true,
       "note": "First real finding: surveyed main.zig's full reachable local-import graph (BFS over @import(\"*.zig\") targets, code lines only -- comments matching the same regex text produced 3 false positives on the first naive pass, filtered out). Result: 249 of 250 distinct files in the graph resolve cleanly; exactly ONE broken import blocks the whole thing from compiling at all -- tri_farm.zig has 5 call sites doing `@import(\"local_farm.zig\")`, and that file does not exist. git blame: it was deleted in 36f38639c (\"refactor: extract HSLM training to trinity-training repository\"), a commit that removed local_farm.zig (332 lines, a Docker-based Wave-9 worker-farm manager: LocalFarm.init/addWorker/save, composeStop) but never touched tri_farm.zig, leaving 5 dangling call sites from an incomplete refactor. The pre-deletion file is still fully intact and trivially recoverable (`git show 36f38639c^:src/tri/local_farm.zig`), so this is not a hard technical blocker -- it is a product decision: restore the Docker worker-farm feature (if trinity-fpga still needs local wave9 farm management for something other than HSLM training, e.g. crypto-mining/DePIN work) vs. remove the 5 dead call sites in tri_farm.zig (if this feature was meant to go away along with the HSLM extraction and nobody's used it since). Filed as OD10 rather than guessing. Once this is resolved, main.zig's own Zig 0.16 API surface can actually be surveyed for the first time (right now nothing gets far enough to even reach that check) -- expect it to be large given ~1767 lines and CLI-dispatch-hub status, but the four API families needed are already proven from B10's 8 files."
+    },
+    {
+      "id": "B23",
+      "prio": 4,
+      "status": "pending",
+      "blocked_by": [],
+      "title": "overfull.yml has never measured anything: 298 green runs, zero measurements. 'cargo install tectonic || true' fails on the runner (tectonic_bridge_png, libpng), and tools/check_overfull.py:24-25 turns the resulting FileNotFoundError into sys.exit(0). Every run in the workflow's history prints 'tectonic not on PATH -- cannot check'; the string 'overfull boxes over' has never appeared once. A second vacuity path is behind it: out.returncode is never inspected, so a tectonic that installs but dies still yields an empty log, zero regex hits, and a green 'OK'.",
+      "fix": "Three edits, all specified: (1) check_overfull.py:24-25 exit 1 with 'the gate cannot measure'; (2) after line 29, fail on out.returncode != 0 and dump the last 4000 bytes of log; (3) overfull.yml:18 drop '|| true', apt-get install pkg-config libpng-dev libfontconfig1-dev libgraphite2-dev libharfbuzz-dev libicu-dev libssl-dev zlib1g-dev, then 'cargo install --locked tectonic'. Success is the appearance of 'overfull boxes over 2.0pt: N' in a run log -- a string absent from all 298 prior runs. Then a negative control: add a deliberate 60pt overfull box on a scratch branch, confirm red, drop the branch.",
+      "needs_operator_decision": "This turns a currently-green gate red until tectonic installs cleanly on the runner, and that install cannot be tested from this machine. Deliberately not applied unattended: it is a change to the project's CI posture, not a bug fix, and the gate has already been vacuous for 298 runs so one more night costs nothing."
+    },
+    {
+      "id": "B24",
+      "prio": 4,
+      "status": "pending",
+      "blocked_by": [],
+      "title": "tools/check_gates_can_fail.py is invoked by nothing. 'git grep check_gates_can_fail origin/main' returns 2 hits, both inside the file itself. It is a meta-gate that injects, per gate, the exact defect that gate exists to catch and requires red -- and it covers 10 gates including 5 others found vacuous by this sweep. Two of its targets have ALREADY gone blind in production and were caught by hand (pre-#649 check_self_consistency passed both injected defects; pre-#650 check_paper_numbers ended in an unconditional sys.exit(0)).",
+      "fix": "Add 'python3 tools/check_gates_can_fail.py' as a workflow on push + pull_request. The script is self-cleaning and asserts each injection actually changed the file. Cheapest high-value item on this list: the instrument already exists and is already written; it simply runs nowhere.",
+      "note": "Would report check_orphan_artefacts and check_withdrawn_live as UNTESTABLE rather than proven, since those gates are already red on main -- the script handles already-red gates explicitly. Consider landing it non-blocking (continue-on-error) first to get the signal without changing what blocks a merge."
+    },
+    {
+      "id": "B25",
+      "prio": 5,
+      "status": "pending",
+      "blocked_by": [],
+      "title": "9 dead paths: entries across 5 workflows, so those triggers can never fire. wrapper-conversion-conformance.yml:19,25 watch a BRACE pattern ('corona_compute_gf*_{div,sqrt,quire}_ax7203.v') -- GitHub's path filter supports only * ** ? + [], not brace expansion, and zero of 18,788 tracked paths contain a brace, so all 12 wrappers trigger nothing. fpga-bitstream.yml has no OTHER entry, making it unfirable since 2026-04-19. Four distinct rot causes, each with a named commit: .vibee->.tri (7ed113c3c), trinity-nexus->deploy/trinity-nexus (430b43921), synth*.sh deleted (6f6840d52), and a gitlink path (external/tt-trinity-corona/src/rtl/posit8_decode.v, 32af5c242) that can never appear in a superproject diff.",
+      "fix": "research/audit_workflow_paths.py already parses paths: blocks and already runs in gate-ratchet.yml -- but its matches() at line 95 EMULATES brace expansion (\\{ -> (, , -> \\|), which is precisely why it is blind to this. Fix that one line to use real GitHub glob semantics and add a zero-match assertion; that catches all 9. Report gitlink-prefixed entries as their own category (watch the gitlink, not a path under it)."
+    },
+    {
+      "id": "B26",
+      "prio": 3,
+      "status": "pending",
+      "blocked_by": [],
+      "title": "Four live wrong values in tri output, all one class: a Zig reader looking for a JSON key its real data file does not contain -- the same defect as the loop_dashboard title/detail bug found earlier this iteration, which means the class has now surfaced five times. (a) loop_decide.zig:414-435 reads 'consecutive_failures' from .trinity/loop_state.json; the sole writer heartbeat.zig:535-544 emits only wake/ok/fail/decision/ts, so the >= 5 escalate branch at :133 is unreachable in production while 4 green tests build DecisionInput by struct literal. (b) dev_scan.zig:342-365 gates its only total_pipeline += 1 on 'failed'/'FAILED' in a file whose only string values are CONTINUE/IDLE/EXIT -- specs/tri/dev_scan.tri:88-90 says it should read pipeline_state.json, which does contain the literal; loop failures never reach 'tri dev pick'. (c) perf_benchmark.zig extractors match only the compact writer's byte form ('\"version\":\"' occurs 1x, '\"version\": \"' 4x), so 'tri bench history' renders all four recorded baselines as '? 0 0 0 0 0ms'; both unit tests use compact-only fixtures. (d) two 4096-byte fixed reads -- pathology.zig:332 and the duplicate at loop_decide.zig:348-375, whose value GATES a real branch (< 30.0 -> .spec_revise at :155): five consecutive DISASTER verdicts (15.0) in a 4966-byte file read back as 50.0, so the branch never fires.",
+      "fix": "One CI check covers all four and would have caught the loop_dashboard bug: for every Zig file hard-coding a path to a repo-tracked JSON, extract each get(\"K\") / getPtr(\"K\") / \"\\\"K\\\":\" literal and assert K occurs somewhere in that file. Pure shell over git ls-files '*.json' -- seconds, and crucially NO Zig toolchain, which matters because neither 0.15.2 nor 0.16.0 builds this tree. Extend it to assert every fixed-size read buffer for a tracked file exceeds that file's size by a stated margin.",
+      "note": "Read from source plus committed data, not observed on a live run: no tri binary exists on disk and neither toolchain builds one. The evidence is committed artefacts (e.g. episode 0_1774237550.json records verdict FAIL at ts 1774237550 while scan_results.json written 5.1h later says pipeline:0), not execution."
+    },
+    {
+      "id": "B27",
+      "prio": 5,
+      "status": "pending",
+      "blocked_by": [],
+      "title": "Six glob-scoped tools/check_*.py print OK on an EMPTY scope; only check_harness.py goes red. check_script_rot.py's scope is fpga/**/*.sh, and .claude/rules/no-shell-scripts.md marks exactly those for deletion -- so the project roadmap ends with this gate scanning zero files and printing OK. Verified by deleting all 58 .sh in a copy: 25 -> 0, still green. Same shape in reachability-ratchet.yml (empty scope -> '395 fewer. Lower the baseline', exit 0) and tri-build.yml:159-191 ('sites: 0' -> 'the convention holds across all commands'). Separately, reachability-ratchet.yml swallows its own measurement failure: no shell: key anywhere in this repo's workflows means default bash -e with NO pipefail, so 'python3 ... | tee reach.txt' discards the exit status, and os.path.getsize at line 75 sits outside the try/except -- one dangling .zig symlink crashes it, n= comes back empty, two '[: : integer expression expected' errors print, and the job reports 'No change.' green. 50 genuinely new unreachable files pass.",
+      "fix": "Every glob-scoped checker asserts a non-empty scope BEFORE reporting; tools/check_undefined_outputs.py (if not SWEEPS: FAIL) is the model already in tree. For reachability-ratchet.yml specifically: add 'set -o pipefail' (measured: makes the same fixture exit 1), move getsize inside the try, and add case \"$NOW\" in ''|*[!0-9]*) exit 1;; esac.",
+      "note": "MEASURED CAVEAT: the 'gone-set' remedy is inert for check_ref_kinds.py -- tools/ref_kinds_baseline.txt does not exist, so 'known' is always empty. That one needs a floor on the denominator, not a baseline diff."
     }
   ],
   "anomalies": [
@@ -942,26 +986,42 @@
       "impact": "Committed work was never at risk (a1d59fd25/0facfe3a8 were already pushed). The loss was confined to other people's uncommitted edits. Three of the five were recoverable by inference: .bak-nosound-<timestamp> siblings existed, and the restored files turned out to be byte-identical to those backups, which pinned the lost change precisely -- it was the 'remove notification sounds' edit. Rebuilt it exactly (dropped both afplay hooks, stripped `sound name \"Glass\"` from three osascript calls); notifications still display, silently. Cargo.lock regenerates from a build. src/tri/cell_trends.zig (75 lines) is genuinely lost and needs the operator to say whether anything was in flight there.",
       "status": "worktree restored to branch HEAD via `git reset --hard HEAD`; the sound edit reconstructed and verified (grep finds no afplay or `sound name` in any of the three files; both JSON files still parse). cell_trends.zig is unrecovered and flagged for the operator.",
       "lesson": "`git checkout <ref> -- .` is a write to the whole subtree, and reads like a read. It is the same family as the recorded rule against a bare `git stash` in a shared tree: both sweep up uncommitted work belonging to someone else. To inspect another ref, use `git show <ref>:<path>` or `git diff <ref> -- <path>`, which cannot write. If files must be materialised, scope the pathspec to files you own and check `git status --short` first. The session-start git status listed all five modified files; the information needed to avoid this was already in context and went unread."
+    },
+    {
+      "id": "A31",
+      "found": "2026-09-05, iteration 105, self-inflicted, third correction to the same job",
+      "what": "The Zig 0.16 gate pinned -target x86_64-linux, and I wrote a comment asserting the pin was 'a no-op on this runner'. Zig defaults a Linux target with no ABI suffix to MUSL. Reproduced with -lc: x86_64-linux -> statically linked, x86_64-linux-gnu -> dynamically linked against /lib64/ld-linux, x86_64-linux-musl -> byte-identical to the first. The gate compiled every migrated file against a libc no real build of this project uses.",
+      "impact": "The gate added to catch platform-blind verification was itself platform-blind, one layer down. std.c has ~12 isGnu()/isMusl() switches, so a file using a musl-only symbol would have passed this gate and failed a real build. No such file exists today, so nothing was actually wrong -- but the comment claiming otherwise was a false statement in the repo, which is worse than an unexamined line.",
+      "status": "fixed in PR #749 -- pinned to x86_64-linux-gnu, false claim corrected in place rather than deleted, measurement recorded in the comment. Verified: 11 ok / 0 fail against main's tree at the corrected target.",
+      "lesson": "Third correction to one workflow in as many attempts: predicate (matched the type, not the entry point), then platform (macOS vs Linux), now ABI (musl vs glibc). Each was found by RUNNING the thing. The compounding lesson is not about any of the three -- it is that I kept shipping CI changes I could not execute on the target platform, and each fix was authored with the same confidence as the one before it. Stop writing CI that cannot be run before pushing; where that is impossible, say so in the PR instead of asserting the change is safe."
+    },
+    {
+      "id": "A32",
+      "found": "2026-09-05, iteration 105, by a 25-agent adversarial sweep",
+      "what": "A gate can be green for hundreds of runs while measuring nothing, and this repo has at least eight. The clearest: .github/workflows/overfull.yml -- 298 green runs, and the string 'overfull boxes over' has NEVER appeared in any run log, because 'cargo install tectonic || true' fails and check_overfull.py turns the resulting FileNotFoundError into sys.exit(0). Six more tools/check_*.py print OK on an empty scope; reachability-ratchet.yml reports 'No change.' green when its own measurement crashes; conformance-selftest.yml hardcodes 7 of 10 golden models and prints 'ALL CONFORMANCE GOLDEN SELF-TESTS: PASS' with three formats unchecked.",
+      "impact": "Green CI has been carrying less information than assumed, for a long time, in a repo whose whole working method is 'the gate is the evidence'. Every claim of the form 'CI is green so X holds' is weaker than it reads, in proportion to how many of the relevant gates are in this set.",
+      "status": "characterised, not fixed. Filed as B23-B27 with exact recipes. Deliberately NOT applied unattended: the fixes turn currently-green gates red, which is a change to the project's CI posture rather than a bug fix, and cannot be tested from this machine -- the same condition that produced A28, A29 and A31 tonight.",
+      "lesson": "The repo ALREADY contains the right instrument: tools/check_gates_can_fail.py injects, per gate, the exact defect that gate exists to catch and requires red. It is invoked by nothing -- 2 grep hits on main, both inside the file itself -- and two of its targets had already gone blind in production and been caught by hand instead. The general form: a gate that has never once emitted its own measurement line has not been tested, and 'it passes' is not evidence it can fail."
     }
   ],
   "collaboration_options": [
     {
-      "name": "consolidate (recommended)",
-      "what": "Finish what merging #745/#746 exposed: the tri CLI's own entry point (main.zig, B22) still cannot compile, blocked on OD10 -- five dangling call sites into a file deleted in 36f38639c. That is a yes/no question with a known answer either way (restore from git history, or delete the five sites), and it is the last thing standing between this repo and a tri binary that builds. The new 0.16 CI job means the migration now has a safety net it lacked for all eight files that came before.",
-      "fits": "the highest-leverage single decision available; unblocks the largest remaining backlog row",
-      "needs_from_you": "one answer on OD10: restore local_farm.zig, or remove its 5 call sites"
+      "name": "un-blind the gates (recommended)",
+      "what": "B24 first, because it is nearly free: tools/check_gates_can_fail.py already exists, already injects the defect each gate exists to catch, and runs nowhere. Wire it in -- non-blocking first if you want the signal without changing what blocks a merge. Then B23 (overfull.yml: 298 green runs, zero measurements) and B27 (six checkers that pass on an empty scope). Everything is specified to the line; none of it is applied, because each turns a green gate red and none can be tested off the runner.",
+      "fits": "if you want green CI to mean what it appears to mean before more is built on it",
+      "needs_from_you": "a yes on turning currently-green gates red, and whether B24 lands blocking or informational"
     },
     {
-      "name": "harden",
-      "what": "Turn this iteration's two anomalies into gates rather than lessons. A28 (platform-blind verification) and A29 (fixing the named file instead of the class) are both recurrences of patterns already written down. Written-down lessons have now failed twice in one session; the loop could instead grow a pre-push check that refuses a build.zig change whose new target has never been compiled under the CI toolchain.",
-      "fits": "if you would rather the loop stop repeating itself than move faster",
-      "needs_from_you": "nothing -- this is autonomous work"
+      "name": "consolidate",
+      "what": "OD10 remains the single decision blocking a tri binary that compiles: restore local_farm.zig from 36f38639c^, or delete the 5 dangling call sites in tri_farm.zig. This also unblocks B26's verification -- four wrong-value defects in tri output are currently read from source and committed artefacts only, because no tri binary exists on disk and neither toolchain builds one.",
+      "fits": "the smallest input from you with the largest unblock; one yes/no",
+      "needs_from_you": "one answer on OD10"
     },
     {
       "name": "reconcile",
-      "what": "OD8/B18: t27's working branch has silently diverged from origin/master, which carries independently-merged PRs touching the same two files this loop's compiler work edits. Every corpus number this loop reports is measured against a branch that is not master. Resolving it is mechanical but destructive if done wrong, which is why it has sat open.",
-      "fits": "if the t27 track matters more than the FPGA track this week",
-      "needs_from_you": "a decision on OD8: rebase against master, or declare the branch intentionally isolated"
+      "what": "OD8/B18: t27's working branch has diverged from origin/master, which carries independently-merged PRs touching the same files this loop's compiler work edits, so every corpus number this loop reports is measured against a non-master baseline. Mechanical but destructive if done wrong, which is why it has sat open.",
+      "fits": "if the t27 track matters more than the FPGA and CI tracks this week",
+      "needs_from_you": "rebase against master, or declare the branch intentionally isolated"
     }
   ],
   "artifacts": {
