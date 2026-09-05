@@ -41,6 +41,10 @@ on:
 
 env:
   ZIG_VERSION: '0.16.0'
+  # Pinned so this job means the same thing on a laptop as it does here.
+  # Reproduce locally with the identical command:
+  #   zig build-exe <file> -target x86_64-linux
+  ZIG_TARGET: 'x86_64-linux'
 
 jobs:
   compile:
@@ -93,8 +97,19 @@ jobs:
             # Compile each file on its own rather than through build.zig: these
             # are standalone entry points, and build.zig cannot be evaluated by
             # 0.16 at all while the rest of the tree is still on 0.15 APIs.
-            if zig build-exe "$f" -femit-bin="/tmp/z16/$name" > "/tmp/z16/$name.log" 2>&1; then
+            #
+            # -target is pinned rather than left native so this reproduces
+            # anywhere. It is a no-op on this runner and the whole point off it:
+            # the first version of this job passed on a macOS laptop and failed
+            # here, because macOS links libc implicitly and Linux does not.
+            if zig build-exe "$f" -target "$ZIG_TARGET" -femit-bin="/tmp/z16/$name" > "/tmp/z16/$name.log" 2>&1; then
               echo "  ok    $f"
+            elif grep -q 'dependency on libc must be explicitly specified' "/tmp/z16/$name.log" \
+                 && zig build-exe "$f" -target "$ZIG_TARGET" -lc -femit-bin="/tmp/z16/$name" > "/tmp/z16/$name.log" 2>&1; then
+              # Retried rather than passing -lc to everything: a file that needs
+              # libc is a fact about that file worth showing, and linking it into
+              # the ones that don't would quietly weaken what this job proves.
+              echo "  ok    $f  (needs -lc)"
             else
               echo "  FAIL  $f"
               failed+=("$f")
