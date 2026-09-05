@@ -1,0 +1,112 @@
+[
+ {
+  "name": "token+position embedding",
+  "n": 62976,
+  "median": -3.9454827048274677,
+  "p99_9": 0.1495302209667607,
+  "maxv": 2.189791085484799,
+  "p0_1": -12.632081935918748,
+  "note": "block input",
+  "inside": false
+ },
+ {
+  "name": "ln_1 variance (accumulator)",
+  "n": 82,
+  "median": -5.135099254328646,
+  "p99_9": -4.299452016227918,
+  "maxv": -2.9037595366580624,
+  "p0_1": -5.401924776116137,
+  "note": "sum of squares / d",
+  "inside": false
+ },
+ {
+  "name": "attention scores Q.K^T, unscaled",
+  "n": 80688,
+  "median": 4.2026708129263,
+  "p99_9": 7.134793378753203,
+  "maxv": 7.546940487964669,
+  "p0_1": -4.1849455068179084,
+  "note": "before 1/sqrt(d_h)",
+  "inside": false
+ },
+ {
+  "name": "attention scores, scaled",
+  "n": 80688,
+  "median": 1.2026708129262995,
+  "p99_9": 4.134793378753203,
+  "maxv": 4.546940487964669,
+  "p0_1": -7.1849455068179084,
+  "note": "as used",
+  "inside": false
+ },
+ {
+  "name": "softmax numerator exp(.)",
+  "n": 40836,
+  "median": -3.9756695575591436,
+  "p99_9": 0.0,
+  "maxv": 0.0,
+  "p0_1": -42.309779349471334,
+  "note": "unnormalised",
+  "inside": false
+ },
+ {
+  "name": "softmax denominator (accumulator)",
+  "n": 984,
+  "median": 2.1174563113780187,
+  "p99_9": 4.9531959344484875,
+  "maxv": 4.983138179704766,
+  "p0_1": 0.0,
+  "note": "sum over row",
+  "inside": false
+ },
+ {
+  "name": "residual after attention",
+  "n": 62976,
+  "median": -3.179029440586804,
+  "p99_9": 3.6923619019513048,
+  "maxv": 4.019619570786199,
+  "p0_1": -12.565404348034535,
+  "note": "",
+  "inside": false
+ },
+ {
+  "name": "MLP pre-activation (c_fc out)",
+  "n": 251904,
+  "median": 0.23624051813742283,
+  "p99_9": 2.2100538598344674,
+  "maxv": 3.5224454015581985,
+  "p0_1": -8.785069070351009,
+  "note": "before GELU",
+  "inside": false
+ },
+ {
+  "name": "block output residual",
+  "n": 62976,
+  "median": -0.8128037308442058,
+  "p99_9": 4.618893578192622,
+  "maxv": 6.581975281910712,
+  "p0_1": -9.804723924200887,
+  "note": "",
+  "inside": false
+ },
+ {
+  "name": "GEMM running partial sums",
+  "n": 768,
+  "median": -4.6539229277413625,
+  "p99_9": -2.5987047065150324,
+  "maxv": -2.59137819720909,
+  "p0_1": -14.472003824668326,
+  "note": "prefixes of one dot product",
+  "inside": false
+ },
+ {
+  "name": "vocabulary logits (50257 wide)",
+  "n": 4121074,
+  "median": 3.6753269998928353,
+  "p99_9": 5.15493489321756,
+  "maxv": 5.631532563582377,
+  "p0_1": -5.3825612327761005,
+  "note": "pre-softmax, real head",
+  "inside": false
+ }
+]

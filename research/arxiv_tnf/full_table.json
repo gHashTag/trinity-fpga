@@ -1,0 +1,233 @@
+[
+ {
+  "rank": 1,
+  "format": "GFTernary",
+  "ours": true,
+  "storage": "2 bits",
+  "lut": 463,
+  "mhz": 83.19,
+  "mhz_per_lut": 0.1797,
+  "spread": 6.61,
+  "checked": "all 4 codes"
+ },
+ {
+  "rank": 2,
+  "format": "binary32",
+  "ours": false,
+  "storage": "32 bits",
+  "lut": 472,
+  "mhz": 77.0,
+  "mhz_per_lut": 0.1631,
+  "spread": 6.37,
+  "checked": "not swept"
+ },
+ {
+  "rank": 3,
+  "format": "fp8 e5m2",
+  "ours": false,
+  "storage": "8 bits",
+  "lut": 480,
+  "mhz": 67.06,
+  "mhz_per_lut": 0.1397,
+  "spread": 5.46,
+  "checked": "6 of 256 wrong"
+ },
+ {
+  "rank": 4,
+  "format": "VAX F",
+  "ours": false,
+  "storage": "32 bits",
+  "lut": 527,
+  "mhz": 73.51,
+  "mhz_per_lut": 0.1395,
+  "spread": 4.43,
+  "checked": "not swept"
+ },
+ {
+  "rank": 5,
+  "format": "fp8 e4m3",
+  "ours": false,
+  "storage": "8 bits",
+  "lut": 485,
+  "mhz": 67.02,
+  "mhz_per_lut": 0.1382,
+  "spread": 6.78,
+  "checked": "14 of 256 wrong"
+ },
+ {
+  "rank": 6,
+  "format": "GF10",
+  "ours": true,
+  "storage": "10 bits",
+  "lut": 533,
+  "mhz": 72.16,
+  "mhz_per_lut": 0.1354,
+  "spread": 5.08,
+  "checked": "all 1{,}024"
+ },
+ {
+  "rank": 7,
+  "format": "binary16",
+  "ours": false,
+  "storage": "16 bits",
+  "lut": 522,
+  "mhz": 63.3,
+  "mhz_per_lut": 0.1213,
+  "spread": 7.74,
+  "checked": "all 65{,}536"
+ },
+ {
+  "rank": 8,
+  "format": "GF14",
+  "ours": true,
+  "storage": "14 bits",
+  "lut": 587,
+  "mhz": 71.15,
+  "mhz_per_lut": 0.1212,
+  "spread": 4.54,
+  "checked": "all 16{,}384"
+ },
+ {
+  "rank": 9,
+  "format": "minifloat",
+  "ours": false,
+  "storage": "8 bits",
+  "lut": 558,
+  "mhz": 67.06,
+  "mhz_per_lut": 0.1202,
+  "spread": 5.49,
+  "checked": "not swept"
+ },
+ {
+  "rank": 10,
+  "format": "BNF16",
+  "ours": true,
+  "storage": "17 bits",
+  "lut": 571,
+  "mhz": 67.13,
+  "mhz_per_lut": 0.1176,
+  "spread": 3.3,
+  "checked": "all 131{,}072, 0 wrong"
+ },
+ {
+  "rank": 11,
+  "format": "TNF32",
+  "ours": true,
+  "storage": "36 bits",
+  "lut": 569,
+  "mhz": 66.91,
+  "mhz_per_lut": 0.1176,
+  "spread": 6.03,
+  "checked": "sampled 9{,}997, 0 wrong"
+ },
+ {
+  "rank": 12,
+  "format": "TNF16",
+  "ours": true,
+  "storage": "17 bits",
+  "lut": 565,
+  "mhz": 66.28,
+  "mhz_per_lut": 0.1173,
+  "spread": 8.56,
+  "checked": "all 131{,}072"
+ },
+ {
+  "rank": 13,
+  "format": "TNF64",
+  "ours": true,
+  "storage": "65 bits",
+  "lut": 572,
+  "mhz": 65.38,
+  "mhz_per_lut": 0.1143,
+  "spread": 8.73,
+  "checked": "sampled, 0 wrong"
+ },
+ {
+  "rank": 14,
+  "format": "TNF8",
+  "ours": true,
+  "storage": "10 bits",
+  "lut": 545,
+  "mhz": 62.13,
+  "mhz_per_lut": 0.114,
+  "spread": 3.63,
+  "checked": "all 1{,}024, 0 wrong"
+ },
+ {
+  "rank": 15,
+  "format": "GF+8",
+  "ours": true,
+  "storage": "8 bits",
+  "lut": 628,
+  "mhz": 63.05,
+  "mhz_per_lut": 0.1004,
+  "spread": 1.08,
+  "checked": "selector live; no reference"
+ },
+ {
+  "rank": 16,
+  "format": "posit8",
+  "ours": false,
+  "storage": "8 bits",
+  "lut": 540,
+  "mhz": 44.33,
+  "mhz_per_lut": 0.0821,
+  "spread": 4.02,
+  "checked": "not swept"
+ },
+ {
+  "rank": 17,
+  "format": "takum16",
+  "ours": false,
+  "storage": "16 bits",
+  "lut": 789,
+  "mhz": 58.96,
+  "mhz_per_lut": 0.0747,
+  "spread": 5.75,
+  "checked": "not swept"
+ },
+ {
+  "rank": 18,
+  "format": "IBM hex32",
+  "ours": false,
+  "storage": "32 bits",
+  "lut": 687,
+  "mhz": 46.78,
+  "mhz_per_lut": 0.0681,
+  "spread": 3.78,
+  "checked": "not swept"
+ },
+ {
+  "rank": 19,
+  "format": "LNS16",
+  "ours": false,
+  "storage": "16 bits",
+  "lut": 658,
+  "mhz": 43.04,
+  "mhz_per_lut": 0.0654,
+  "spread": 0.45,
+  "checked": "not swept"
+ },
+ {
+  "rank": 20,
+  "format": "posit16",
+  "ours": false,
+  "storage": "16 bits",
+  "lut": 712,
+  "mhz": 40.38,
+  "mhz_per_lut": 0.0567,
+  "spread": 1.02,
+  "checked": "4 of 65{,}536 wrong"
+ },
+ {
+  "rank": 21,
+  "format": "posit32",
+  "ours": false,
+  "storage": "32 bits",
+  "lut": 953,
+  "mhz": 28.16,
+  "mhz_per_lut": 0.0295,
+  "spread": 2.29,
+  "checked": "not swept"
+ }
+]

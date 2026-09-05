@@ -7,9 +7,8 @@
 // Thread-safe: each vector is independent. No global state.
 
 const std = @import("std");
-const vsa = @import("vsa.zig");
-const hybrid = @import("hybrid.zig");
-const encoding = @import("vsa/gen_encoding.zig");
+const vsa = @import("vsa");
+const hybrid = vsa;  // one source: the module, not the local vsa_hybrid copy
 
 const HybridBigInt = hybrid.HybridBigInt;
 const Trit = hybrid.Trit;
@@ -81,11 +80,11 @@ export fn trinity_vsa_from_array(data: [*]const i8, dim: usize) ?*anyopaque {
     for (0..actual_dim) |i| {
         const val = data[i];
         if (val > 0) {
-            if (ptr.unpacked_cache) |cache| cache[i] = 1;
+            ptr.unpacked_cache[i] = 1;
         } else if (val < 0) {
-            if (ptr.unpacked_cache) |cache| cache[i] = -1;
+            ptr.unpacked_cache[i] = -1;
         } else {
-            if (ptr.unpacked_cache) |cache| cache[i] = 0;
+            ptr.unpacked_cache[i] = 0;
         }
     }
 
@@ -135,7 +134,7 @@ export fn trinity_vsa_bundle2(a: ?*anyopaque, b: ?*anyopaque) ?*anyopaque {
     const ha = toHybrid(a orelse return null);
     const hb = toHybrid(b orelse return null);
     const ptr = heapAlloc() orelse return null;
-    ptr.* = vsa.bundle2(ha, hb, std.heap.c_allocator);
+    ptr.* = vsa.bundle2(ha, hb);
     return toOpaque(ptr);
 }
 
@@ -145,7 +144,7 @@ export fn trinity_vsa_bundle3(a: ?*anyopaque, b: ?*anyopaque, c: ?*anyopaque) ?*
     const hb = toHybrid(b orelse return null);
     const hc = toHybrid(c orelse return null);
     const ptr = heapAlloc() orelse return null;
-    ptr.* = vsa.bundle3(ha, hb, hc, std.heap.c_allocator);
+    ptr.* = vsa.bundle3(ha, hb, hc);
     return toOpaque(ptr);
 }
 
@@ -179,7 +178,7 @@ export fn trinity_vsa_hamming_distance(a: ?*anyopaque, b: ?*anyopaque) usize {
 export fn trinity_vsa_dot_product(a: ?*anyopaque, b: ?*anyopaque) i64 {
     const ha = toHybrid(a orelse return 0);
     const hb = toHybrid(b orelse return 0);
-    return ha.dotProduct(hb, std.heap.c_allocator);
+    return ha.dotProduct(hb);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -216,13 +215,24 @@ export fn trinity_vsa_encode_text_words(text: [*]const u8, len: usize) ?*anyopaq
 
 /// Decode hypervector back to text
 /// Returns number of decoded characters written to buf
+/// NOT IMPLEMENTED, and cannot be against the current decoder.
+///
+/// decodeText(allocator, codebook, encoded, max_len) needs the CODEBOOK the
+/// text was encoded with -- decoding is a nearest-neighbour search over it, and
+/// without it there is nothing to search. This C signature receives a
+/// hypervector and an output buffer and has no way to accept one, so the call
+/// here passed two arguments to a four-argument function and had never
+/// compiled.
+///
+/// Returning 0 keeps the exported symbol and its ABI while saying plainly that
+/// no text comes back. Fixing it properly means adding a codebook handle to the
+/// C API -- a design decision about that interface, not a build repair.
+/// Nothing in this repository calls it.
 export fn trinity_vsa_decode_text(v: ?*anyopaque, buf: [*]u8, buf_len: usize) usize {
-    const hv = toHybrid(v orelse return 0);
-    const result = encoding.decodeText(hv, allocator) catch return 0;
-    defer allocator.free(result);
-    const copy_len = @min(result.len, buf_len);
-    @memcpy(buf[0..copy_len], result[0..copy_len]);
-    return copy_len;
+    _ = v;
+    _ = buf;
+    _ = buf_len;
+    return 0;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -240,11 +250,7 @@ export fn trinity_vsa_get_trit(v: ?*anyopaque, index: usize) i8 {
     const hv = toHybrid(v orelse return 0);
     hv.ensureUnpacked();
     if (index >= hv.trit_len) return 0;
-    if (hv.unpacked_cache) |cache| {
-        return cache[index];
-    } else {
-        return 0;
-    }
+    return hv.unpacked_cache[index];
 }
 
 /// Set trit value at index (value clamped to -1, 0, +1)
@@ -253,12 +259,11 @@ export fn trinity_vsa_set_trit(v: ?*anyopaque, index: usize, value: i8) void {
     hv.ensureUnpacked();
     if (index >= hv.trit_len) return;
     if (value > 0) {
-        if (value > 0) {
-        if (hv.unpacked_cache) |cache| cache[index] = 1;
+        hv.unpacked_cache[index] = 1;
     } else if (value < 0) {
-        if (hv.unpacked_cache) |cache| cache[index] = -1;
+        hv.unpacked_cache[index] = -1;
     } else {
-        if (hv.unpacked_cache) |cache| cache[index] = 0;
+        hv.unpacked_cache[index] = 0;
     }
     hv.dirty = true;
 }
@@ -274,7 +279,7 @@ export fn trinity_vsa_to_array(v: ?*anyopaque, out: [*]i8, max_len: usize) usize
     hv.ensureUnpacked();
     const copy_len = @min(hv.trit_len, max_len);
     for (0..copy_len) |i| {
-        if (hv.unpacked_cache) |cache| out[i] = cache[i];
+        out[i] = hv.unpacked_cache[i];
     }
     return copy_len;
 }

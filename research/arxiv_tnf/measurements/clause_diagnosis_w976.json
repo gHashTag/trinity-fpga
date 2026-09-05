@@ -1,0 +1,51 @@
+{
+ "wave": "W976",
+ "word": "0xa5a5334e",
+ "layout": "{16'hA5A5, 4'd3, 6'd13, c_zero, c_comm, c_cancel, c_ind, beat, ok}",
+ "decoded": {
+  "magic": "0xA5A5",
+  "version": 3,
+  "design": 13,
+  "c_zero": 0,
+  "c_comm": 0,
+  "c_cancel": 1,
+  "c_ind": 1,
+  "beat": 1,
+  "ok": 0
+ },
+ "clauses": {
+  "ZERO": {
+   "asserts": "mac(0, live, 0, live2) == 0",
+   "die": "FALSE",
+   "sim": "FALSE -- 64 violations in 64 points",
+   "observed": "512 + 4*live, independent of live2 in the range probed",
+   "diagnosis": "genuine logic defect: zero is not an annihilator in the generated GftSignedMac. Reproducible without hardware."
+  },
+  "COMM": {
+   "asserts": "mac(live, TWO, live2, ONE) == mac(TWO, live, ONE, live2)",
+   "die": "FALSE",
+   "sim": "TRUE -- no violation found",
+   "attempts": [
+    "64-point dense sweep of live/live2: 0 violations",
+    "32 diverse probes incl. 0, 1, 2^k, spec constants, 0x7FFFFFFF, 0x80000000, 0xFFFFFFFF: 0 violations",
+    "per-cycle sampling for 40 cycles after each of 23 operand changes (960 samples): 0 transients, 0 ready skew"
+   ],
+   "diagnosis": "confirmed on the die with the control satisfied, NOT reproduced in simulation after three targeted attempts. Unexplained."
+  },
+  "CANCEL": {
+   "asserts": "mac(ONE, live, NEG, live) == 0",
+   "die": "TRUE",
+   "sim": "covered by test cancel"
+  },
+  "IND": {
+   "asserts": "mac(live, ONE, live2, ONE) != 0",
+   "die": "TRUE",
+   "sim": "nearest cover: test pp"
+  }
+ },
+ "spec_tests": [
+  "test pp     { assert_eq(on_comb(20480, 20480, 86016, 86016), 20992); }",
+  "test cancel { assert_eq(on_comb(20480, 20480, 20480, 86016), 0); }"
+ ],
+ "coverage_finding": "the spec's two tests use FIXED constants and cover exactly the two clauses that PASS on the die. The two that fail -- ZERO and COMM -- are untested, and the die drives LIVE operands the spec never varies. Two independent weaknesses in one suite: fewer properties, and constant inputs."
+}

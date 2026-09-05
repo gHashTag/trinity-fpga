@@ -7,8 +7,8 @@
 // φ² + 1/φ² = 3
 
 const std = @import("std");
-const hybrid = @import("hybrid.zig");
-const vsa = @import("vsa.zig");
+const hybrid = vsa;  // one source: the module, not the local vsa_hybrid copy
+const vsa = @import("vsa");
 
 const HybridBigInt = hybrid.HybridBigInt;
 const Trit = hybrid.Trit;
@@ -257,7 +257,18 @@ pub const JitCompiler = struct {
     // ═══════════════════════════════════════════════════════════════════════════
 
     /// Make code executable and return function pointer
-    pub fn finalize(self: *Self) !*const fn (*anyopaque, *anyopaque) void {
+    /// The emitted code is System V AMD64: first argument in rdi, second in rsi.
+    /// The returned pointer must therefore say callconv(.c) -- lower case: this
+    /// toolchain's CallingConvention has no `C` member. The tree holds 53
+    /// `callconv(.C)` against 2 `callconv(.c)`, I took the majority, and one of
+    /// those two is 200 lines below in THIS file. Frequency across a tree where
+    /// most files are not in the build graph is not evidence of correctness.
+    /// Without a convention the type
+    /// is `.auto`, Zig's own convention, which is explicitly unspecified -- the
+    /// caller is free to pass the two pointers anywhere, and the machine code
+    /// reads rdi/rsi regardless. That is one root cause under all three
+    /// correctness tests: the emitter is right, the handshake was not.
+    pub fn finalize(self: *Self) !*const fn (*anyopaque, *anyopaque) callconv(.c) void {
         const code_size = self.code.items.len;
         if (code_size == 0) return error.EmptyCode;
 
@@ -471,7 +482,7 @@ pub const JitCompiler = struct {
 /// Cache for JIT-compiled functions
 pub const JitCache = struct {
     /// Cached bind functions by dimension
-    bind_cache: std.AutoHashMap(usize, *const fn (*anyopaque, *anyopaque) void),
+    bind_cache: std.AutoHashMap(usize, *const fn (*anyopaque, *anyopaque) callconv(.c) void),
     /// Compiler instance
     compiler: JitCompiler,
     /// Allocator
@@ -481,7 +492,7 @@ pub const JitCache = struct {
 
     pub fn init(allocator: std.mem.Allocator) Self {
         return Self{
-            .bind_cache = std.AutoHashMap(usize, *const fn (*anyopaque, *anyopaque) void).init(allocator),
+            .bind_cache = std.AutoHashMap(usize, *const fn (*anyopaque, *anyopaque) callconv(.c) void).init(allocator),
             .compiler = JitCompiler.init(allocator),
             .allocator = allocator,
         };
@@ -493,7 +504,7 @@ pub const JitCache = struct {
     }
 
     /// Get or compile bind function for dimension
-    pub fn getBind(self: *Self, dimension: usize) !*const fn (*anyopaque, *anyopaque) void {
+    pub fn getBind(self: *Self, dimension: usize) !*const fn (*anyopaque, *anyopaque) callconv(.c) void {
         if (self.bind_cache.get(dimension)) |func| {
             return func;
         }

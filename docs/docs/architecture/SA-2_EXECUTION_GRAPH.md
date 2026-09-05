@@ -642,7 +642,7 @@ b.step("bench", "Run performance benchmarks")
 **GitHub Actions workflows:**
 - `.github/workflows/ci.yml` - SA-4, SA-6 (build + test)
 - `.github/workflows/fpga-ci.yml` - SA-5, SA-6 (FPGA synthesis + test)
-- `.github/workflows/release.yml` - SA-9 (deployment)
+- `gHashTag/t27/.github/workflows/release.yml` - SA-9 (deployment)
 
 ### Ralph Integration
 

@@ -95,9 +95,7 @@ pub fn startSession(allocator: Allocator, options: StartOptions) !void {
     } else {
         const meets_min = try runtime.compareVersions(allocator, version, MIN_CHANNELS_VERSION);
         if (!meets_min) {
-            std.debug.print("{s}⚠ WARNING: Claude {s} is below Channels minimum ({s}){s}\n", .{
-                YELLOW, version, MIN_CHANNELS_VERSION, RESET
-            });
+            std.debug.print("{s}⚠ WARNING: Claude {s} is below Channels minimum ({s}){s}\n", .{ YELLOW, version, MIN_CHANNELS_VERSION, RESET });
             std.debug.print("  Channels may not work correctly. Please update Claude Code.\n", .{});
         } else {
             std.debug.print("  Version {s} ✓ (Channels requires {s}+)\n", .{ version, MIN_CHANNELS_VERSION });
@@ -304,7 +302,7 @@ pub fn configureTelegramBot(allocator: Allocator, cli_token: ?[]const u8) ![]con
     }
 
     std.debug.print("\n{s}Telegram bot token configuration:{s}\n", .{ CYAN, RESET });
-    std.debug.print("  Token: {s}***{s}\n", .{ actual_token[0..3], actual_token[actual_token.len - 3..] });
+    std.debug.print("  Token: {s}***{s}\n", .{ actual_token[0..3], actual_token[actual_token.len - 3 ..] });
 
     // Note about persistence
     std.debug.print("\n{s}Note:{s} Token is NOT persisted to Railway automatically.\n", .{ YELLOW, RESET });
@@ -392,12 +390,18 @@ fn showChannelsHelp() !void {
         \\  tri railway telegram logs 50
         \\
     , .{
-        CYAN, RESET,
-        CYAN, RESET, CYAN, RESET,
-        CYAN, RESET, CYAN, RESET, CYAN, RESET,
-        CYAN, RESET, CYAN, RESET, CYAN, RESET,
-        CYAN, RESET, CYAN, RESET,
-        YELLOW, RESET,
+        CYAN,                 RESET,
+        CYAN,                 RESET,
+        CYAN,                 RESET,
+        CYAN,                 RESET,
+        CYAN,                 RESET,
+        CYAN,                 RESET,
+        CYAN,                 RESET,
+        CYAN,                 RESET,
+        CYAN,                 RESET,
+        CYAN,                 RESET,
+        CYAN,                 RESET,
+        YELLOW,               RESET,
         MIN_CHANNELS_VERSION,
     });
 }

@@ -1,0 +1,38 @@
+{
+ "campaign_tile512": {
+  "rows": 328320,
+  "max": 13,
+  "p99": 9,
+  "p50": 7,
+  "mean": 7.03,
+  "worst_tensor": "model.layers.1.mlp.down_proj",
+  "worst_case_bits": 25
+ },
+ "campaign_fullrow": {
+  "rows": 155520,
+  "max": 13,
+  "p99": 9,
+  "p50": 7,
+  "mean": 7.099,
+  "worst_tensor": "model.layers.1.mlp.down_proj",
+  "worst_case_bits": 25
+ },
+ "raw_tile512": {
+  "rows": 328320,
+  "max": 43,
+  "p99": 25,
+  "p50": 16,
+  "mean": 16.398,
+  "worst_tensor": "model.layers.11.self_attn.q_proj",
+  "worst_case_bits": 46
+ },
+ "raw_fullrow": {
+  "rows": 155520,
+  "max": 43,
+  "p99": 26,
+  "p50": 16,
+  "mean": 16.909,
+  "worst_tensor": "model.layers.11.self_attn.q_proj",
+  "worst_case_bits": 46
+ }
+}

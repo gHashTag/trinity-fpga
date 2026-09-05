@@ -1,0 +1,295 @@
+name: TNF format throughput (tnet tract sweep)
+
+# The instrument G8-INSTRUMENT-MAP.md names as missing: synthesize and
+# place-and-route the fpga/tnet single-tract harnesses -- the SAME experiment
+# whose numbers tab:untraced and fpga/tnet/MATRIX.md print -- on CI, one
+# fabric (xc7a200tfbg484-2), no DSP, honest routing-pending accounting.
+#
+# Honest caveats, stated up front:
+#  - Fmax here is nextpnr's estimate at --freq 50 with --timing-allow-fail;
+#    the audited seed-dispersion figure for this toolchain is 1.6-41.7%, so a
+#    single CI number REPRODUCES a published row only within that band. The
+#    per-arm seed is recorded; refit prints CI-vs-MATRIX-vs-untraced deltas
+#    and NEVER declares equality, only bands.
+#  - The tract includes the harness (accumulate + LED sink); the published
+#    rows came from the same tract, so the comparison is like-for-like.
+
+on:
+  workflow_dispatch:
+    inputs:
+      pnr_arms:
+        description: 'Comma-separated tops to P&R (empty = ALL tnet arms)'
+        required: false
+        default: ''
+      fmax_search:
+        description: 'Binary-search the highest --freq that still routes (reference config only; multiplies runtime)'
+        required: false
+        default: 'false'
+
+# Container pinned by digest (W945): regymm/openxc7:latest resolved to
+# sha256:eced1cdd4727549f2d983328e0cf170fb6f6f67d87f19b2bf24365163368c70c on 2026-08-20. An unpinned tag means a rerun next month can
+# silently produce different numbers, which the TRETS artifact-evaluation
+# editorial names as one of the field's two defining reproducibility hurdles.
+env:
+  ALL_ARMS: 's_bin16,s_bin32,s_bnf16,s_fp8e4m3,s_fp8e5m2,s_gf10,s_gf14,s_gfplus8,s_gfternary,s_ibmhfp,s_int8,s_lns16,s_minifl,s_posit16,s_posit32,s_posit8,s_takum16,s_tnf16,s_vaxf'
+
+jobs:
+  yosys:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        top: [s_bin16, s_bin32, s_bnf16, s_fp8e4m3, s_fp8e5m2, s_gf10, s_gf14, s_gfplus8, s_gfternary, s_ibmhfp, s_int8, s_lns16, s_minifl, s_posit16, s_posit32, s_posit8, s_takum16, s_tnf16, s_vaxf]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Docker pull regymm/openxc7@sha256:eced1cdd4727549f2d983328e0cf170fb6f6f67d87f19b2bf24365163368c70c (retry on transient 5xx)
+        run: |
+          for i in 1 2 3 4 5 6; do
+            docker pull regymm/openxc7@sha256:eced1cdd4727549f2d983328e0cf170fb6f6f67d87f19b2bf24365163368c70c && break
+            echo "::warning::docker pull attempt $i failed, sleeping $((i*20))s"; sleep $((i*20))
+          done
+          docker image inspect regymm/openxc7@sha256:eced1cdd4727549f2d983328e0cf170fb6f6f67d87f19b2bf24365163368c70c >/dev/null 2>&1 || { echo "::error::docker pull failed"; exit 1; }
+      - name: Yosys synth
+        run: |
+          TOP=${{ matrix.top }}
+          mkdir -p build/tnet metrics
+          # W924: tw_*.v are elaboration-time self-checks -- they execute
+          # $finish inside the frontend and killed yosys before write_json,
+          # which the pnr stage then reported as 'Failed to open JSON'.
+          SRCS=$(ls fpga/tnet/*.v | grep -v '/tb_' | grep -v '/tw_' | tr '\n' ' ')
+          docker run --rm -v "$PWD:/work" -w /work regymm/openxc7@sha256:eced1cdd4727549f2d983328e0cf170fb6f6f67d87f19b2bf24365163368c70c yosys -p "
+            read_verilog ${SRCS};
+            hierarchy -top ${TOP};
+            synth_xilinx -abc9 -nocarry -arch xc7 -top ${TOP};
+            setundef -zero -params; stat; write_json build/tnet/${TOP}.json" 2>&1 | tee /tmp/y.log
+          # W924: yosys errors carry the FILE PATH first ("file.v:12: ERROR:"),
+          # so anchored ^ERROR missed a fatal death. Match anywhere, and
+          # require the json to actually exist.
+          ! grep -q "ERROR" /tmp/y.log
+          test -f build/tnet/${TOP}.json
+          {
+            echo "top=${TOP}"
+            echo "lc=$(grep -oE 'Estimated number of LCs: *[0-9]+' /tmp/y.log | grep -oE '[0-9]+' | tail -1)"
+            echo "lut6=$(grep -oE 'LUT6 +[0-9]+' /tmp/y.log | grep -oE '[0-9]+' | tail -1)"
+            echo "ff=$(grep -oE 'FDRE +[0-9]+' /tmp/y.log | grep -oE '[0-9]+' | tail -1)"
+          } | tee metrics/${TOP}.yosys.txt
+      - uses: actions/upload-artifact@v4
+        with: {name: 'tnet-yosys-${{ matrix.top }}', path: 'metrics/${{ matrix.top }}.yosys.txt'}
+      - uses: actions/upload-artifact@v4
+        with: {name: 'tnet-json-${{ matrix.top }}', path: 'build/tnet/${{ matrix.top }}.json'}
+
+  pnr:
+    needs: [yosys]
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with: {pattern: 'tnet-json-*', merge-multiple: true, path: build/tnet}
+      - name: Docker pull
+        run: |
+          for i in 1 2 3 4 5 6; do docker pull regymm/openxc7@sha256:eced1cdd4727549f2d983328e0cf170fb6f6f67d87f19b2bf24365163368c70c && break; sleep $((i*20)); done
+      - uses: actions/cache@v4
+        id: chipdb
+        with:
+          path: build/tnet/chipdb/xc7a200tfbg484-2.bin
+          key: chipdb-xc7a200tfbg484-2-regymm-${{ github.run_id }}
+          restore-keys: chipdb-xc7a200tfbg484-2-regymm-
+      - if: steps.chipdb.outputs.cache-hit != 'true'
+        name: Build chipdb
+        run: |
+          mkdir -p build/tnet/chipdb
+          docker run --rm -v "$PWD:/work" -w /work regymm/openxc7@sha256:eced1cdd4727549f2d983328e0cf170fb6f6f67d87f19b2bf24365163368c70c bash -c "cd /nextpnr-xilinx && python3 xilinx/python/bbaexport.py --device xc7a200tfbg484-2 --bba /work/build/tnet/chipdb/xc7a200tfbg484-2.bba && bbasm -l /work/build/tnet/chipdb/xc7a200tfbg484-2.bba /work/build/tnet/chipdb/xc7a200tfbg484-2.bin"
+      - name: Place and route the arms
+        run: |
+          ARMS="${{ github.event.inputs.pnr_arms }}"
+          [ -z "$ARMS" ] && ARMS="$ALL_ARMS"
+          mkdir -p metrics
+          # W935: the ladder takes the FIRST configuration that routes, so two
+          # arms can be measured under two different placers -- and this
+          # project's own sweep puts the configuration effect at 3.71x-4.33x,
+          # unequal across candidates. A cross-format Fmax ordering that mixes
+          # configurations is therefore not a ranking. The ladder stays (an arm
+          # that only routes on "sa" must still be reported, not dropped), but
+          # every row now says which configuration produced it and whether that
+          # is the reference one, and the report refuses to rank across them.
+          REF_CFG="heap router1"
+          for TOP in $(echo "$ARMS" | tr ',' ' '); do
+            CLEAN=0
+            for CFG in "heap router1" "heap router2" "sa router2"; do
+              set -- $CFG; P=$1; R=$2
+              for s in 1 2 3 4; do
+                rm -f build/tnet/${TOP}_routed.json
+                docker run --rm -v "$PWD:/work" -w /work regymm/openxc7@sha256:eced1cdd4727549f2d983328e0cf170fb6f6f67d87f19b2bf24365163368c70c timeout --signal=KILL 1800 nextpnr-xilinx \
+                  --chipdb /work/build/tnet/chipdb/xc7a200tfbg484-2.bin \
+                  --xdc /work/fpga/tnet/bench.xdc \
+                  --json /work/build/tnet/${TOP}.json \
+                  --write /work/build/tnet/${TOP}_routed.json \
+                  --freq 50.0 --seed $s --placer $P --router $R --timing-allow-fail > /tmp/np_${TOP}.log 2>&1 || true
+                if [ -f build/tnet/${TOP}_routed.json ] && ! grep -q "Failed to find a route" /tmp/np_${TOP}.log; then
+                  CLEAN="$P/$R/seed$s"; break 2
+                fi
+              done
+            done
+            if [ "$CLEAN" = "0" ]; then
+              # W922: "routing-pending" must carry its REASON and its log --
+              # a tiny arm that cannot route is an infrastructure failure, not
+              # a fabric limit, and the two were indistinguishable before.
+              REASON=$(grep -m1 -E "ERROR|error:|Segmentation|Killed|failed" /tmp/np_${TOP}.log | cut -c1-200)
+              {
+                echo "top=${TOP}"
+                echo "status=routing-pending"
+                echo "reason=${REASON:-no-error-line-found}"
+              } | tee metrics/${TOP}.pnr.txt
+              cp /tmp/np_${TOP}.log metrics/${TOP}.nextpnr.log
+              echo "::warning::${TOP} routing-pending: ${REASON:-see log}"
+              continue
+            fi
+            {
+              # W937: --freq is not decoration under router1 -- it is consumed
+              # through criticality and budgets, so the figure harvested at
+              # --freq 50 is the slack the router happened to leave, not the
+              # design's limit. The field's practice is the opposite: target 1-2 ns
+              # periods so the tool is pushed. When fmax_search is on, binary-search
+              # the highest constraint that still routes cleanly and report THAT
+              # with the constraint beside it. Reference configuration only,
+              # because a search across configurations would not be one quantity.
+              FMAX_SEARCH="${{ github.event.inputs.fmax_search }}"
+              SEARCH_HI=""
+              if [ "$FMAX_SEARCH" = "true" ] && [ "$COMPARABLE" = "1" ]; then
+                set -- $CFG_USED; SP=$1; SR=$2
+                SEED_N="${CLEAN##*seed}"
+                LO=50; HI=800
+                while [ $((HI - LO)) -gt 10 ]; do
+                  MID=$(( (LO + HI) / 2 ))
+                  rm -f build/tnet/${TOP}_srch.json
+                  docker run --rm -v "$PWD:/work" -w /work regymm/openxc7@sha256:eced1cdd4727549f2d983328e0cf170fb6f6f67d87f19b2bf24365163368c70c timeout --signal=KILL 1800 nextpnr-xilinx \
+                    --chipdb /work/build/tnet/chipdb/xc7a200tfbg484-2.bin \
+                    --xdc /work/fpga/tnet/bench.xdc \
+                    --json /work/build/tnet/${TOP}.json \
+                    --write /work/build/tnet/${TOP}_srch.json \
+                    --freq ${MID}.0 --seed $SEED_N --placer $SP --router $SR > /tmp/srch_${TOP}.log 2>&1 || true
+                  if [ -f build/tnet/${TOP}_srch.json ] && ! grep -q "Failed to find a route" /tmp/srch_${TOP}.log \
+                     && ! grep -qi "timing.*not met\|Max frequency.*FAIL" /tmp/srch_${TOP}.log; then
+                    LO=$MID
+                  else
+                    HI=$MID
+                  fi
+                done
+                SEARCH_HI="$LO"
+                echo "::notice::${TOP} highest clean constraint ~${LO} MHz (binary search, ${CFG_USED})"
+              fi
+              CFG_USED="${CLEAN%/seed*}"
+              CFG_USED="${CFG_USED//\// }"
+              COMPARABLE=0
+              [ "$CFG_USED" = "$REF_CFG" ] && COMPARABLE=1
+              echo "top=${TOP}"
+              echo "status=routed"
+              echo "seed=${CLEAN}"
+              echo "config=${CFG_USED// //}"
+              echo "reference_config=${REF_CFG// //}"
+              echo "comparable=${COMPARABLE}"
+              # W936, read out of nextpnr-xilinx's source rather than guessed:
+              # router1 runs its own post-route timing analysis (router1.cc), and
+              # consumes --freq through criticality/budgets. router2 -- the xc7
+              # default -- did NOT run a timing analysis until openXC7's
+              # 2026-08-11 commit, so the only "Max frequency" lines in a router2
+              # log came from placer1's mid-flow PRE-ROUTE estimates, in
+              # identically formatted text. A `tail -1` scraper therefore reads a
+              # post-route number under router1 and an estimate under router2.
+              case "$CFG_USED" in
+                *router1*) FSRC="router1-postroute" ;;
+                *)         FSRC="router2-unverified-may-be-placer-estimate" ;;
+              esac
+              echo "fmax_source=${FSRC}"
+              [ -n "$SEARCH_HI" ] && echo "fmax_highest_clean_constraint_mhz=${SEARCH_HI}"
+              [ -n "$SEARCH_HI" ] && echo "fmax_search_note=highest --freq that still routed cleanly at the reference configuration; the 50 MHz figure above is headroom at a relaxed target"
+              echo "luts=$(grep -E 'SLICE_LUTX' /tmp/np_${TOP}.log | tail -1 | grep -oE '[0-9]+/' | head -1 | tr -d /)"
+              echo "ffs=$(grep -E 'SLICE_FFX' /tmp/np_${TOP}.log | tail -1 | grep -oE '[0-9]+/' | head -1 | tr -d /)"
+              echo "fmax=$(grep -E 'Max frequency for clock' /tmp/np_${TOP}.log | tail -1 | sed 's/^.*: //')"
+              echo "target_freq_mhz=50.0"
+              echo "log_sha256=$(sha256sum /tmp/np_${TOP}.log | cut -d' ' -f1)"
+            } | tee metrics/${TOP}.pnr.txt
+            cp /tmp/np_${TOP}.log metrics/${TOP}.nextpnr.log
+          done
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: {name: tnet-pnr, path: metrics}
+
+  report:
+    needs: [yosys, pnr]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with: {pattern: 'tnet-*', merge-multiple: true, path: metrics}
+      - name: Compare CI rows against MATRIX.md and tab:untraced
+        run: |
+          python3 - <<'PY' | tee report.md
+          import glob, re
+          # published references: (format-key) -> (untraced MHz, MATRIX MHz)
+          # W935: six of these carried None for the MATRIX column while
+          # fpga/tnet/MATRIX.md listed all six, and s_minifl had no entry at all
+          # although the sweep routes it. The blanks were not neutral: the G8
+          # verdict read "no in-tree record" off this table and reported LNS16 as
+          # the one row that does not reproduce -- against a MATRIX value 0.16%
+          # from the published one. An instrument that prints a blank for data it
+          # was never given will be read as evidence of absence.
+          REF = {
+            "s_int8": (78.83, 84.86), "s_gfternary": (83.19, 82.51),
+            "s_bin32": (77.00, 78.23), "s_vaxf": (73.51, 73.88),
+            "s_gf10": (72.16, 73.14), "s_gf14": (71.15, 73.13),
+            "s_fp8e4m3": (67.02, 71.95), "s_fp8e5m2": (67.06, 65.33),
+            "s_bin16": (63.30, 62.69), "s_takum16": (58.96, 64.16),
+            "s_posit8": (44.33, 43.55), "s_lns16": (43.04, 43.11),
+            "s_posit16": (40.38, 36.30), "s_posit32": (28.16, 28.33),
+            "s_ibmhfp": (46.78, 49.71), "s_minifl": (67.06, 62.38),
+          }
+          print("## tnet tract sweep: CI-synth vs published\n")
+          print("| top | status | config | CI Fmax | untraced | MATRIX | CI/untraced |")
+          print("|---|---|---|---|---|---|---|")
+          off_ref = []
+          for f in sorted(glob.glob("metrics/*.pnr.txt")):
+              kv = dict(l.split("=",1) for l in open(f).read().splitlines() if "=" in l)
+              top = kv.get("top","?"); st = kv.get("status","?")
+              fm = kv.get("fmax","")
+              m = re.search(r"([0-9.]+)\s*MHz", fm)
+              ci = float(m.group(1)) if m else None
+              u, x = REF.get(top, (None, None))
+              rat = f"{ci/u:.2f}x" if (ci and u) else "-"
+              cfg = kv.get("config", "-")
+              if st == "routed" and kv.get("comparable") != "1":
+                  off_ref.append((top, cfg))
+                  cfg += " (off-ref)"
+              print(f"| {top} | {st} | {cfg} | {fm or '-'} | {u or '-'} | {x or '-'} | {rat} |")
+          print("\nSeed dispersion for this toolchain is 1.6-41.7% (audited);")
+          print("a ratio inside that band is REPRODUCED-WITHIN-NOISE, not equality.")
+          if off_ref:
+              print(f"\n**{len(off_ref)} routed row(s) are OFF the reference configuration "
+                    f"({', '.join(t + ':' + c for t, c in off_ref)}).** Configuration moves Fmax "
+                    "by up to 4.3x on this fabric, unequally across candidates, so these rows may "
+                    "be compared against their own published value and NOT against each other or "
+                    "against reference-configuration rows.")
+          else:
+              print("\nAll routed rows are on the reference configuration (heap/router1), so "
+                    "cross-row comparison is at least configuration-controlled -- still subject "
+                    "to the seed band above.")
+          print("\nWhat an Fmax here is, precisely (nextpnr-xilinx source, W936). `--freq 50.0` "
+                "reaches place-and-route only through criticality and budgets: **router1 consumes "
+                "it, router2 does not**, so a router1 row is a design shaped by a 50 MHz target "
+                "and reported at the slack it was left with, while a router2 row is an "
+                "unconstrained critical path. Neither is a vendor-flow Fmax pushed to the limit, "
+                "and the two are not comparable to each other. Rows carry `fmax_source`: router2 "
+                "rows may be placer PRE-ROUTE estimates, because that flow ran no timing analysis "
+                "before openXC7's 2026-08-11 commit.")
+          print("\nAnd the timing model itself: every flip-flop carries a hardcoded 0.1 ns setup, "
+                "hold and clock-to-Q (xilinx/arch.cc:2507-2509) and the chipdb holds one speed "
+                "grade (bbaexport.py:356). Speed grade is decorative here, and the constant "
+                "endpoint delay favours shallow register-dominated designs over deep ones -- a "
+                "bias that reorders rather than offsets.")
+          PY
+          cat report.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with: {name: tnet-report, path: report.md}

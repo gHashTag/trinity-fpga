@@ -19,7 +19,7 @@ The Quantum Brain HOLOGRAPHIC SKU implements a 4×4 PE mesh with multi-die holog
 | **Clock** | 250 MHz |
 | **Performance** | 4–25 TOPS |
 | **Efficiency** | 55 TOPS/W |
-| **Target shuttle** | TTSKY26c (~2026-09) |
+| **Target shuttle** | TTSKY26c (~2026-09 at the time of writing — a planning target, not a submission; see Status) |
 | **SKU codename** | 🌌 HOLOGRAPHIC |
 
 ## Architecture
@@ -67,12 +67,14 @@ The Quantum Brain HOLOGRAPHIC SKU implements a 4×4 PE mesh with multi-die holog
 ## Status
 
 > ⚠️ **R5-HONEST — SKELETON**: RTL is a placeholder stub. Full Edition III / HOLOGRAPHIC I implementation is a future RTL wave. This repository hosts configuration and structural scaffold for the TTSKY26c shuttle submission.
+>
+> **Status (2026-09-05):** the shuttle target in this document is a planning statement from the time of writing, not a submission record or a result. No die of any Trinity chip exists: the Tiny Tapeout submissions TTSKY26a and TTSKY26b were withdrawn before fabrication (TTSKY26a refunded 6 Aug 2026), all hardware results to date are on the Artix-7 (XC7A200T) FPGA prototype, and no silicon return has happened.
 
 ## Roadmap Reference
 
 - [QB-CHIPS-PHD-ROADMAP-2026-05-15-001](https://github.com/gHashTag/trinity-fpga/pull/96) — source-of-truth chip roadmap
-- Shuttle: TTSKY26c (~2026-09)
-- Predecessor: TTSKY26b (Quantum Brain CLASSIC / EDITION III)
+- Shuttle: TTSKY26c (~2026-09 at the time of writing — a planning target; no die exists, 2026-09-05)
+- Predecessor: TTSKY26b (Quantum Brain CLASSIC / EDITION III — withdrawn before fabrication)
 
 ## Algebraic Anchor
 

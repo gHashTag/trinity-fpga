@@ -1,7 +1,7 @@
 # Missing formats — oracle coverage of the 83-format catalog
 
 **AGENT F (conformance) finding.** Verified 2026-07-15 against:
-- SSOT catalog `specs/numeric/formats_catalog.t27` (repo `gHashTag/t27`, master — 83 `// CATALOG: id=` records, no dupes; family count 13).
+- SSOT catalog `gHashTag/t27/specs/numeric/formats_catalog.t27` (repo `gHashTag/t27`, master — 83 `// CATALOG: id=` records, no dupes; family count 13).
 - The 15 oracle modules in `conformance/`: `gf_ref`, `tekum_ref`, `posit_ref`, `bf16_ref`, `fp8_ref`, `mxfp_ref`, `takum_ref`, `decimal_ref`, `ieee_ref`, `legacy_ref`, `lns_ref`, `int_ref`, `nf4_ref`, `gfternary_ref`, `extended_ref` (84 `FORMATS` entries total).
 
 > Companion to `conformance/generate_vectors.py` (now emits both `{format}_add.json` and `{format}_mul.json`). The generator's per-format seeds are op-independent, so ADD and MUL vectors exercise the **same** `(a, b)` input pairs.
@@ -12,7 +12,7 @@
 
 | Quantity | Count | Notes |
 |---|---|---|
-| Catalog rows (SSOT) | **83** | `formats_catalog.t27`, 13 families |
+| Catalog rows (SSOT) | **83** | `gHashTag/t27/specs/numeric/formats_catalog.t27`, 13 families |
 | Oracle format-names (15 modules) | **84** | what `generate_vectors.py` iterates |
 | Catalog rows **covered** by an oracle | **72 / 83** | strict, by id (incl. `mxfp8` ← `mxfp8_e4m3`) — theoretical maximum |
 | Catalog rows **without** an oracle | **11** | itemised in §3A — all structural |
@@ -26,7 +26,7 @@
 
 ## 2. How the diff was computed
 
-1. Pulled the 83 `// CATALOG: id=…` records from the SSOT `formats_catalog.t27` (the catalog matrix `fpga/CATALOG_MATRIX_83.md` and the catalog paper draft do **not** enumerate all 83 by name; only the `.t27` SSOT does).
+1. Pulled the 83 `// CATALOG: id=…` records from the SSOT `gHashTag/t27/specs/numeric/formats_catalog.t27` (the catalog matrix `fpga/CATALOG_MATRIX_83.md` and the catalog paper draft do **not** enumerate all 83 by name; only the `.t27` SSOT does).
 2. Imported each of the 15 oracle modules and listed `FORMATS.keys()` → 84 names.
 3. Set difference. One fuzzy merge applied: the catalog row `mxfp8` is covered by the oracle entry `mxfp8_e4m3` (same Microscaling family / same element encoding, OCP MX v1.0). Unsigned-int oracle entries (`uint4/8/16/32`) map to the catalog's combined `int4/8/16/32` rows (catalog uses one `INTn / UINTn` row per width), so they do **not** add catalog coverage — they are extra granularity.
 
@@ -122,7 +122,7 @@ For papers / READMEs, the recommended wording (updated 2026-07-15 after the last
 
 ## 6. Cross-references
 
-- SSOT: `specs/numeric/formats_catalog.t27` (gHashTag/t27 master).
+- SSOT: `gHashTag/t27/specs/numeric/formats_catalog.t27` (gHashTag/t27 master).
 - Count erratum: `research/ERRATUM_arXiv_2606.09686_catalog_count.md` (the 84→83 E8M0 correction; E8M0 is a Microscaling **component**, not a standalone row — so it is rightly absent from both the 83 and the oracle set).
 - Generator: `conformance/generate_vectors.py` (emits `_add.json` + `_mul.json`).
 - Oracle modules: `conformance/{gf,tekum,posit,bf16,fp8,mxfp,takum,decimal,ieee,legacy,lns,int,nf4,gfternary,extended}_ref.py` (15 modules, 84 `FORMATS`).

@@ -32,7 +32,7 @@ a special case; a separate core for gf16 is not needed.
 | File | Role |
 |---|---|
 | `gf_decode_ref.py` | Golden oracle: decode/encode on exact `fractions.Fraction` arithmetic, a catalog of all 17 GF cells, verification of the φ-rule against the SSOT |
-| `gf_decode_param.v` | Parametric Verilog decode module `#(N,E,M,BIAS,OUT_REG)` → IEEE binary32 |
+| `gf_decode_param.v` | Parametric Verilog decode module `#(N,E,M,BIAS,OUT_REG)` → IEEE binary32 — lives at [`fpga/openxc7-synth/gf_decode_param.v`](../../openxc7-synth/gf_decode_param.v), not in this folder |
 | `rtl_bit_model.py` | Exact Python bit-model of the `gf_decode_param.v` algorithm (the same integer semantics, field-width masks) — proves golden==RTL WITHOUT hardware |
 | `gen_vectors.py` | Generator of check vectors (`vectors/vectors_<name>.txt`) from the golden oracle |
 | `tb_gf_decode.v` | Verilog testbench template: reads a vector file, compares the DUT output, prints `HW RESULT: N/N bit-exact (fails=0)` |
@@ -212,15 +212,19 @@ from the very beginning in both implementations).
 - gf16-decode from this generator closes **#237** as a special case.
 - 1-ULP subnormal residuals — were not encountered in the runs performed for
   Phase A (0 divergences across all classes); if they appear on real hardware,
-  this will be a `KNOWN_LIMITATION`, not a hard-fail (see gf_decode_lineup_spec.md).
+  this will be a `KNOWN_LIMITATION`, not a hard-fail (the `gf_decode_lineup_spec.md` once cited here is not in the
+  repository — checked 2026-09-05).
 - extended (gf96…gf1024) — SW-conformance / fixed-point ONLY, never
   claim FP-decode on HW.
-- Catalog = 83 formats (this work = a 17-cell GF-subfamily inside
-  the catalog). No "first/best".
+- Catalog = the t27 SSOT, whose count is an invariant that grows (109 formats
+  at v3 of the catalogue paper, Sep 2026; this note was written 2026-07-04
+  against an earlier snapshot). This work = a 17-cell GF-subfamily inside the
+  catalog. No "first/best".
 - Every format remains decode-HW **[requires confirmation]** until a full 4/4
   chain (CI GREEN + SHA256 + UART `HW RESULT: N/N bit-exact (fails=0)`
-  @160000 + IDCODE `0x13636093`) on AX7203 — see the Tier-E criteria in
-  gf_decode_lineup_spec.md.
+  @160000 + IDCODE `0x13636093`) on AX7203 — the Tier-E bar is stated in the
+  repository README, §2 (`gf_decode_lineup_spec.md` is not in the repository —
+  checked 2026-09-05).
 
 ## What remained for the user (outside the sandbox)
 

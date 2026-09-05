@@ -1,0 +1,71 @@
+{
+  "record": "8-bit exponent-width regret sweep (paper's E=1..E=5 asymmetry sentence and the falsified width-rule predictions)",
+  "date": "2026-08-20",
+  "generator": "research/arxiv_tnf/measurements/gen_regret_sweep.py",
+  "generating_experiment": "research/block/four_families.py (record: research/block/FOUR_FAMILIES_2026-08-10.md)",
+  "model": "HuggingFaceTB/SmolLM2-135M",
+  "snapshot": "93efa2f097d58c2a74874c7e644dbc9b0cee75a2",
+  "data": "Salesforce/wikitext wikitext-2-raw-v1 test, snapshot b08601e04326c79dfdd32d625aee71d232d685c3",
+  "windows": 40,
+  "seqlen": 2048,
+  "scale": "per-tensor",
+  "span_estimator": {
+    "definition": "median over layers of log2(amax / q0.001 of nonzero magnitudes)",
+    "binades": 13.3727,
+    "predicts": {
+      "BNF8_E": 4,
+      "TNF8_Et": 3
+    }
+  },
+  "arms": {
+    "baseline": {
+      "ppl": 14.4874,
+      "paper": 14.4874
+    },
+    "BNF8 E=1": {
+      "ppl": 4574409.0026,
+      "magnitudes": 129,
+      "paper": 4574409.0
+    },
+    "BNF8 E=2": {
+      "ppl": 288.5224,
+      "magnitudes": 129,
+      "paper": 288.5224
+    },
+    "BNF8 E=3": {
+      "ppl": 14.613,
+      "magnitudes": 129,
+      "paper": 14.613
+    },
+    "BNF8 E=4": {
+      "ppl": 14.6592,
+      "magnitudes": 129,
+      "paper": 14.6592
+    },
+    "BNF8 E=5": {
+      "ppl": 15.5147,
+      "magnitudes": 129,
+      "paper": 15.5147
+    },
+    "TNF8 Et=1": {
+      "ppl": 270015.1594,
+      "magnitudes": 97,
+      "paper": 270015.0
+    },
+    "TNF8 Et=2": {
+      "ppl": 14.7012,
+      "magnitudes": 73,
+      "paper": 14.7012
+    },
+    "TNF8 Et=3": {
+      "ppl": 15.5147,
+      "magnitudes": 109,
+      "paper": 15.5147
+    }
+  },
+  "derived": {
+    "E4_over_E3_pct": 0.32,
+    "E5_over_E3_pct": 6.17,
+    "paper_says": "E=4 costs 0.3%, E=5 costs 6%"
+  }
+}

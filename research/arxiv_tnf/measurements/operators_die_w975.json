@@ -1,0 +1,47 @@
+{
+ "wave": "W975",
+ "part": "xc7a200tfbg676-1",
+ "idcode": "0x3636093",
+ "board": "1:5",
+ "control": {
+  "A1_wrong_part_done": 0,
+  "A1_expected": 0,
+  "note": "a foreign bitstream forced Done to 0 first, so Done=1 afterwards is meaningful"
+ },
+ "operators": {
+  "gft_sadd": {
+   "spec": "specs/ternary/gft_sadd.t27",
+   "LUT": 1312,
+   "CARRY4": 257,
+   "fmax_mhz": 18.24,
+   "clock": "slowclk",
+   "target_mhz": 8.85,
+   "sim_passed": 3,
+   "sim_failed": 0,
+   "die_word": "0xa5a5307f",
+   "die_design": 1,
+   "die_clauses": "1111",
+   "ok": 1,
+   "beat": 1,
+   "verdict": "PASS -- 4 of 4 clauses on the die"
+  },
+  "gft_signed_mac": {
+   "spec": "specs/ternary/gft_signed_mac.t27",
+   "LUT": 6466,
+   "CARRY4": 1237,
+   "fmax_mhz": 9.14,
+   "clock": "slowclk",
+   "target_mhz": 2.21,
+   "sim_passed": 2,
+   "sim_failed": 0,
+   "die_word": "0xa5a5334e",
+   "die_design": 13,
+   "die_clauses": "0011",
+   "ok": 0,
+   "beat": 1,
+   "verdict": "FAIL -- 2 of 4 clauses on the die, with the control satisfied",
+   "control_run": true
+  }
+ },
+ "finding": "gft_signed_mac passes every test it has in simulation (2/2) and satisfies only 2 of the 4 clauses its on-die check evaluates. The die check is STRONGER than the simulation suite the spec ships with -- the failing clauses are not covered in simulation, so this is a coverage gap made visible by hardware, not a simulator that lies. beat=1 and Done=1 with a wrong-part control at Done=0: the design is alive, loaded, and answering incorrectly. Timing closed with 4.1x margin (9.14 MHz against a 2.21 MHz target), so a timing violation is not the obvious explanation."
+}

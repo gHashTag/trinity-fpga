@@ -5,7 +5,7 @@
 ```
 [IMAGE: FPGA board with LED blinking]
 
-The sacred equation lives on silicon. 🔥
+The sacred equation lives on an FPGA. 🔥
 
 φ² + 1/φ² = 3 = TRINITY
 

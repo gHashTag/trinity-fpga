@@ -1,0 +1,13 @@
+{
+ "model": "smollm2",
+ "n_cal_windows": 1,
+ "coh_MXFP4": 2716.979200381088,
+ "inc_MXFP4": 7668.432688736874,
+ "coh_TOP": 2503.626675452962,
+ "inc_TOP": 5345.377244092326,
+ "total_MXFP4": 10385.411889117962,
+ "total_TOP": 7849.003919545288,
+ "coherent_share_MXFP4": 0.2616149681292845,
+ "coherent_share_TOP": 0.3189738087935626,
+ "gated_ratio_TOP_over_MXFP4": 0.7557720390242421
+}

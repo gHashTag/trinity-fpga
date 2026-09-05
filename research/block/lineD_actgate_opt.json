@@ -1,0 +1,13 @@
+{
+ "model": "opt",
+ "n_cal_windows": 1,
+ "coh_MXFP4": 88.91351021568249,
+ "inc_MXFP4": 304.1621576840516,
+ "coh_TOP": 94.77495873158477,
+ "inc_TOP": 318.35346324659906,
+ "total_MXFP4": 393.07566789973407,
+ "total_TOP": 413.12842197818384,
+ "coherent_share_MXFP4": 0.226199476275806,
+ "coherent_share_TOP": 0.22940798475634672,
+ "gated_ratio_TOP_over_MXFP4": 1.051014997152062
+}

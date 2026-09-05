@@ -180,7 +180,7 @@ pub fn measureState(
 ) !InternalState {
     _ = cycle_start; // Reserved for future use (cycle start timestamp)
     // Get allocator stats (if available)
-    // Note: std.heap.GeneralPurposeAllocator doesn't expose current usage
+    // Note: std.heap.DebugAllocator doesn't expose current usage
     // We'll use estimated values based on typical patterns
     const alloc_bytes = estimateAllocatedBytes(allocator);
     const alloc_count = estimateAllocCount(allocator);

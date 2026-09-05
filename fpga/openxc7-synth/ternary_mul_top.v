@@ -38,9 +38,17 @@ module ternary_mul_top (
     //  0  0  0   0
     // +1 -1  0  +1
 
-    // Check for zero (either input is 0 → result is 0)
+    // Check for zero (either input is 0 -> result is 0)
+    // NOTE the two encodings are DIFFERENT and the port comments say so:
+    //   INPUT   00 = -1, 01 = 0, 10 = +1
+    //   OUTPUT  01 = -1, 10 = 0, 11 = +1   (see mul_result below)
+    // b_is_zero compared b_reg against 2'b10, which is +1 on the INPUT side --
+    // the output table's code for zero, applied to an input. Four of the nine
+    // exhaustive cases were wrong; the shipped testbench printed
+    // "ALL TESTS PASSED (8 tests)" beside its own contradicting output because
+    // it compares nothing. See ternary_mul_exhaustive_tb.v, which does.
     wire a_is_zero = (a_reg == 2'b01);
-    wire b_is_zero = (b_reg == 2'b10);
+    wire b_is_zero = (b_reg == 2'b01);
     wire mul_is_zero = a_is_zero | b_is_zero;
 
     // Check signs: 00=-1 (negative), 10=+1 (positive)

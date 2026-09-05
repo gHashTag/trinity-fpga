@@ -328,7 +328,7 @@ const TEST_WASM_SUM = [_]u8{
 const TEST_WASM = TEST_WASM_ADD;
 
 pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 

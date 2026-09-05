@@ -103,17 +103,13 @@ pub const SignedAttestation = struct {
 /// This hash is the attestation key — the cryptographic commitment to
 /// (source, toolchain, routing).
 pub fn computeBitstreamHash(path: []const u8) ![32]u8 {
-    const io = std.Options.debug_io;
-    const file = try std.Io.Dir.cwd().openFile(io, path, .{});
-    defer file.close(io);
+    const file = try std.fs.cwd().openFile(path, .{});
+    defer file.close();
 
     var hasher = Sha256.init(.{});
-    var read_buf: [65536]u8 = undefined;
-    var fr = file.reader(io, &read_buf);
-    const reader = &fr.interface;
     var buf: [65536]u8 = undefined;
     while (true) {
-        const bytes_read = try reader.readSliceShort(&buf);
+        const bytes_read = try file.read(&buf);
         if (bytes_read == 0) break;
         hasher.update(buf[0..bytes_read]);
     }
@@ -129,17 +125,13 @@ pub fn computeBitstreamHashHex(allocator: std.mem.Allocator, path: []const u8) !
 
 /// Compute SHA256 of a conformance vectors file.
 pub fn computeVectorsHash(allocator: std.mem.Allocator, vectors_path: []const u8) ![]u8 {
-    const io = std.Options.debug_io;
-    const file = try std.Io.Dir.cwd().openFile(io, vectors_path, .{});
-    defer file.close(io);
+    const file = try std.fs.cwd().openFile(vectors_path, .{});
+    defer file.close();
 
     var hasher = Sha256.init(.{});
-    var read_buf: [65536]u8 = undefined;
-    var fr = file.reader(io, &read_buf);
-    const reader = &fr.interface;
     var buf: [65536]u8 = undefined;
     while (true) {
-        const bytes_read = try reader.readSliceShort(&buf);
+        const bytes_read = try file.read(&buf);
         if (bytes_read == 0) break;
         hasher.update(buf[0..bytes_read]);
     }
@@ -435,8 +427,7 @@ pub fn writeSignedAttestation(
     const json = try serializeSignedAttestation(allocator, signed);
     defer allocator.free(json);
 
-    const io = std.Options.debug_io;
-    try std.Io.Dir.cwd().writeFile(io, .{ .sub_path = path, .data = json });
+    try std.fs.cwd().writeFile(.{ .sub_path = path, .data = json });
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -550,13 +541,12 @@ pub fn defaultToolchain() ToolchainProvenance {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 test "compute bitstream hash of known data" {
-    const io = std.Options.debug_io;
     const tmp = "test_bitstream_hash.tmp";
-    defer std.Io.Dir.cwd().deleteFile(io, tmp) catch {};
+    defer std.fs.cwd().deleteFile(tmp) catch {};
 
     // Write known data
     const data = "Trinity DePIN Trust Anchor";
-    try std.Io.Dir.cwd().writeFile(io, .{ .sub_path = tmp, .data = data });
+    try std.fs.cwd().writeFile(.{ .sub_path = tmp, .data = data });
 
     const hash = try computeBitstreamHash(tmp);
     const expected = crypto.sha256(data);

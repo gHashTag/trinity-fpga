@@ -1,0 +1,98 @@
+{
+  "A_SI": [
+    [
+      1264.196608,
+      0.07925
+    ],
+    [
+      0.07925,
+      0.0156171875
+    ]
+  ],
+  "accumulator": "float32 for binary16/TNF16/takum16; float64 only for reference",
+  "artefact_sha256_of_canonical_payload": "6d135cf691d4291daaeeb52d1cc42676aa1ae723cc31a0ec0667989d496ed578",
+  "b_SI": [
+    1560.4648237759998,
+    0.06120244999999999
+  ],
+  "max_iterations": 80,
+  "reproduction": {
+    "command": "python3 research/arxiv_tnf/measurements/gen_downstream_linear_cg.py",
+    "cwd": "repository root (gHashTag/trinity-fpga)",
+    "error_metric": "relative_solution_error = ||x_hat - x_true||_2 / ||x_true||_2, recomputed in float64",
+    "git_head": "9ce0d1129da503240461b46d329ce8c7f71f8879",
+    "numpy": "2.5.2",
+    "oracle_sha256": {
+      "conformance/takum_ref.py": "231586b5d69406b937d960a2044236908fc71d254941ed11bcd1be0c4b6804fd",
+      "conformance/tnf_ref.py": "b2f78821a368c4d4e402a2d6e68acb5896b2ba132c00c3ce6b58cca57fb1e9c8",
+      "this_generator": "bce8537c3f5775558327f5f8a7474526bed5d09a208460391bad89e3d3f47265"
+    },
+    "platform": "Linux-6.1.155+-x86_64-with-glibc2.43",
+    "python": "3.14.3",
+    "residual_metric": "relative_residual_64 = ||A64 x_hat - b64||_2 / ||b64||_2, recomputed in float64 from unrounded A and b",
+    "stopping_rule": "loop stops when the stored residual reaches exactly zero, when the stored curvature denominator ceases to be finite and non-zero, or at max_iterations; the relative-residual tolerance is recorded but does not terminate the loop",
+    "takum16_reference": "conformance/takum_ref.py, TakumFormat(\"takum16\", 16)",
+    "tnf_parameters": {
+      "E_t": 4,
+      "M": 8,
+      "note": "physical-cell budget rung, not the reconciled TNF16 (4,11)"
+    },
+    "x0": [
+      0.0,
+      0.0
+    ]
+  },
+  "results": {
+    "TNF16_(4,8)": {
+      "final_relative_residual": 0.0,
+      "iterations_run": 7,
+      "iterations_to_relative_residual_1e-6": 3,
+      "relative_residual_64": 0.00010157046481972967,
+      "relative_solution_error": 0.0022499610592042734,
+      "x_hat": [
+        1.234375,
+        -2.3515625
+      ]
+    },
+    "binary16": {
+      "final_relative_residual": 0.0,
+      "iterations_run": 5,
+      "iterations_to_relative_residual_1e-6": 3,
+      "relative_residual_64": 0.00010107448984612224,
+      "relative_solution_error": 0.0014355761941544363,
+      "x_hat": [
+        1.234375,
+        -2.341796875
+      ]
+    },
+    "float64_reference": {
+      "final_relative_residual": 0.0,
+      "iterations_run": 32,
+      "iterations_to_relative_residual_1e-6": 2,
+      "relative_residual_64": 1.4570894020005636e-16,
+      "relative_solution_error": 8.377056004714743e-17,
+      "x_hat": [
+        1.2344999999999997,
+        -2.3456
+      ]
+    },
+    "takum16": {
+      "final_relative_residual": 0.0,
+      "iterations_run": 15,
+      "iterations_to_relative_residual_1e-6": 3,
+      "relative_residual_64": 0.00029460140002867416,
+      "relative_solution_error": 0.0021759755609464535,
+      "x_hat": [
+        1.23486328125,
+        -2.33984375
+      ]
+    }
+  },
+  "seed": 20260814,
+  "task": "Итерационное решение SPD-системы 2x2 методом сопряжённых градиентов в сырых масштабах без нормировки",
+  "tolerance_relative_residual": 1e-06,
+  "x_true": [
+    1.2345,
+    -2.3456
+  ]
+}

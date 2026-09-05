@@ -1,0 +1,25 @@
+{
+ "model": "gptneo",
+ "src": "EleutherAI/gpt-neo-125m",
+ "n_tensors": 72,
+ "n_conv1d": 0,
+ "n_elements": 84934656,
+ "eps_eff": 0.11991345960179128,
+ "eps_eff_per_tensor": {
+  "min": 0.11400183568495748,
+  "median": 0.11739597090632145,
+  "max": 0.1521971073162529
+ },
+ "error_kurtosis": 14.604031302523802,
+ "provenance": {
+  "checkpoint": {
+   "src": "EleutherAI/gpt-neo-125m",
+   "kind": "hub",
+   "revision": "21def0189f5705e2521767faed922f1f15e7d7db"
+  },
+  "harness": {
+   "file": "block_tnf.py",
+   "sha256": "cd39ef2305ed6e0518a2b75851327158e206bef6b35c1f507fe3eeed902ad678"
+  }
+ }
+}

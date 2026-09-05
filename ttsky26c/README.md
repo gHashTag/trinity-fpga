@@ -1,7 +1,9 @@
 # TTSKY26c — Quantum Brain SKU Overview
 
-> Target shuttle: **TTSKY26c** (~2026-09)
+> Target shuttle: **TTSKY26c** (~2026-09 at the time of writing — a planning target, not a submission; see the status note)
 > Roadmap reference: [QB-CHIPS-PHD-ROADMAP-2026-05-15-001](https://github.com/gHashTag/trinity-fpga/pull/96)
+>
+> **Status (2026-09-05):** the shuttle target in this document is a planning statement from the time of writing, not a submission record or a result. No die of any Trinity chip exists: the Tiny Tapeout submissions TTSKY26a and TTSKY26b were withdrawn before fabrication (TTSKY26a refunded 6 Aug 2026), all hardware results to date are on the Artix-7 (XC7A200T) FPGA prototype, and no silicon return has happened.
 
 ```
 // phi^2 + phi^-2 = 3 · QUANTUM BRAIN 1:1 SILICON
@@ -30,7 +32,7 @@
 
 ## Roadmap Context
 
-These two SKUs are the **not-yet-taped-out** entries from [QB-CHIPS-PHD-ROADMAP-2026-05-15-001](https://github.com/gHashTag/trinity-fpga/pull/96), following the TTSKY26b wave (Quantum Brain CLASSIC / EDITION III).
+These two SKUs are the **not-yet-taped-out** entries from [QB-CHIPS-PHD-ROADMAP-2026-05-15-001](https://github.com/gHashTag/trinity-fpga/pull/96), following the TTSKY26b wave (Quantum Brain CLASSIC / EDITION III; that submission was withdrawn before fabrication).
 
 Related issues:
 - [#93 — Quantum Brain ISA specification](https://github.com/gHashTag/trinity-fpga/issues/93)

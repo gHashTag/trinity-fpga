@@ -9,7 +9,7 @@ const bytecode_compiler = @import("bytecode_compiler.zig");
 const vm_runtime = @import("vm_runtime.zig");
 
 pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 

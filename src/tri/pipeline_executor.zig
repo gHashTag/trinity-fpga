@@ -543,7 +543,7 @@ pub const PipelineExecutor = struct {
 // ============================================================================
 
 test "PipelineExecutor initialization" {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
@@ -557,7 +557,7 @@ test "PipelineExecutor initialization" {
 }
 
 test "PipelineExecutor with TVC" {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 

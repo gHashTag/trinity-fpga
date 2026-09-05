@@ -1,0 +1,182 @@
+{
+ "metric": "LUT1-6 + CARRY4",
+ "ns": [
+  1,
+  2,
+  4,
+  8
+ ],
+ "style": "float: odd-mantissa multiply + shift",
+ "fields": {
+  "fp6_e1m4": {
+   "odd_bits": 5,
+   "max_shift": 4,
+   "aligned": 18,
+   "acc": 24,
+   "binades": 4.954,
+   "values": 63,
+   "width": 6
+  },
+  "fp6_e2m3": {
+   "odd_bits": 4,
+   "max_shift": 5,
+   "aligned": 18,
+   "acc": 24,
+   "binades": 5.907,
+   "values": 63,
+   "width": 6
+  },
+  "fp6_e3m2": {
+   "odd_bits": 3,
+   "max_shift": 8,
+   "aligned": 22,
+   "acc": 28,
+   "binades": 8.807,
+   "values": 63,
+   "width": 6
+  },
+  "fp6_e4m1": {
+   "odd_bits": 2,
+   "max_shift": 15,
+   "aligned": 34,
+   "acc": 40,
+   "binades": 15.585,
+   "values": 63,
+   "width": 6
+  },
+  "fp10_e3m6": {
+   "odd_bits": 7,
+   "max_shift": 12,
+   "aligned": 38,
+   "acc": 44,
+   "binades": 12.989,
+   "values": 1023,
+   "width": 10
+  },
+  "fp10_e4m5": {
+   "odd_bits": 6,
+   "max_shift": 19,
+   "aligned": 50,
+   "acc": 56,
+   "binades": 19.977,
+   "values": 1023,
+   "width": 10
+  },
+  "fp10_e5m4": {
+   "odd_bits": 5,
+   "max_shift": 34,
+   "aligned": 78,
+   "acc": 84,
+   "binades": 34.954,
+   "values": 1023,
+   "width": 10
+  },
+  "fp10_e6m3": {
+   "odd_bits": 4,
+   "max_shift": 65,
+   "aligned": 138,
+   "acc": 144,
+   "binades": 65.907,
+   "values": 1023,
+   "width": 10
+  }
+ },
+ "cost": {
+  "fp6_e1m4": {
+   "per_lane": 80.0,
+   "fixture": 0.0,
+   "r2": 1.0,
+   "points": [
+    80,
+    160,
+    320,
+    640
+   ],
+   "mux_per_lane": 1.0
+  },
+  "fp6_e2m3": {
+   "per_lane": 74.0,
+   "fixture": 0.0,
+   "r2": 1.0,
+   "points": [
+    74,
+    148,
+    296,
+    592
+   ],
+   "mux_per_lane": 4.0
+  },
+  "fp6_e3m2": {
+   "per_lane": 82.0,
+   "fixture": 0.0,
+   "r2": 1.0,
+   "points": [
+    82,
+    164,
+    328,
+    656
+   ],
+   "mux_per_lane": 1.0
+  },
+  "fp6_e4m1": {
+   "per_lane": 106.0,
+   "fixture": 0.0,
+   "r2": 1.0,
+   "points": [
+    106,
+    212,
+    424,
+    848
+   ],
+   "mux_per_lane": 5.0
+  },
+  "fp10_e3m6": {
+   "per_lane": 230.0,
+   "fixture": 0.0,
+   "r2": 1.0,
+   "points": [
+    230,
+    460,
+    920,
+    1840
+   ],
+   "mux_per_lane": 25.0
+  },
+  "fp10_e4m5": {
+   "per_lane": 215.0,
+   "fixture": 0.0,
+   "r2": 1.0,
+   "points": [
+    215,
+    430,
+    860,
+    1720
+   ],
+   "mux_per_lane": 45.0
+  },
+  "fp10_e5m4": {
+   "per_lane": 376.0,
+   "fixture": 0.0,
+   "r2": 1.0,
+   "points": [
+    376,
+    752,
+    1504,
+    3008
+   ],
+   "mux_per_lane": 159.0
+  },
+  "fp10_e6m3": {
+   "per_lane": 447.0,
+   "fixture": 0.0,
+   "r2": 1.0,
+   "points": [
+    447,
+    894,
+    1788,
+    3576
+   ],
+   "mux_per_lane": 180.0
+  }
+ }
+}

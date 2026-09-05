@@ -1,6 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom'
+import Domovoy from './pages/Domovoy'
 import './index.css'
 import App from './App.tsx'
 import QuantumLab from './pages/QuantumLab.tsx'
@@ -26,6 +27,7 @@ createRoot(document.getElementById('root')!).render(
           <Route path="/play" element={<Playground />} />
           <Route path="/chat" element={<CosmicChat />} />
           <Route path="/wasm" element={<TrinityCanvasWasm />} />
+          <Route path="/domovoy" element={<Domovoy />} />
           <Route path="/viz/*" element={<Navigate to="/quantum" replace />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

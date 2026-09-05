@@ -1,0 +1,19 @@
+name: Overfull boxes
+
+# The build reported zero errors and zero undefined references while a display
+# equation stuck 57.5pt past the right margin and seven paragraphs and table
+# rows did the same. LaTeX calls an overfull box a warning, prints it among
+# hundreds of lines of engine chatter, and typesets the page anyway. It is not a
+# warning to a reader -- it is text they cannot see.
+
+on: [pull_request, push]
+
+jobs:
+  overfull:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: cargo install tectonic || true
+      - run: python3 tools/check_overfull.py

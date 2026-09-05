@@ -21,6 +21,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_exit_codes = @import("tri_exit_codes.zig");
 const Allocator = std.mem.Allocator;
 const railway_api = @import("railway_api.zig");
 const RailwayApi = railway_api.RailwayApi;
@@ -457,7 +458,7 @@ fn runDevStatus(allocator: Allocator) !void {
 fn runDevSpawn(allocator: Allocator, args: []const []const u8) !void {
     if (args.len == 0) {
         print("{s}Usage: tri dev spawn <issue-number> [--role coder] [--model claude-sonnet-4-20250514]{s}\n", .{ YELLOW, RESET });
-        return;
+        return tri_exit_codes.exitWithCode(.validation_error);
     }
 
     const issue_num = std.fmt.parseInt(u32, args[0], 10) catch {
@@ -610,7 +611,7 @@ fn runDevSpawn(allocator: Allocator, args: []const []const u8) !void {
 fn runDevKill(allocator: Allocator, args: []const []const u8) !void {
     if (args.len == 0) {
         print("{s}Usage: tri dev kill <issue-number>{s}\n", .{ YELLOW, RESET });
-        return;
+        return tri_exit_codes.exitWithCode(.validation_error);
     }
 
     const issue_num = std.fmt.parseInt(u32, args[0], 10) catch {

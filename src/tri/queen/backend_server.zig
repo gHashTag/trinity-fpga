@@ -93,7 +93,8 @@ pub const Tri27Config = struct {
     /// tri_gen output (stdout or error message)
     codegen_output: ?[]const u8 = null,
     /// Whether auto-adapt is enabled
-    auto_adapt: bool = false,};
+    auto_adapt: bool = false,
+};
 
 // ============================================================================
 // BACKEND SERVER

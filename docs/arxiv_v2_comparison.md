@@ -82,5 +82,5 @@ at small widths, decode/quantize datapath dominates at large widths.
 2. SQRT v2 uses DSP48E1 blocks (8 per instance) — competes with other DSP users
 3. QUIRE is simplified (register-based, not true wide-add with exp alignment)
 4. DIV latency = MANT_BITS+1 cycles (multi-cycle, not pipelined)
-5. HW verification pending (0/77 decode + 0/25 compute on silicon)
+5. HW verification pending (0/77 decode + 0/25 compute on the FPGA)
 6. Golden models use fp32 proxy (not correctly-rounded reference)

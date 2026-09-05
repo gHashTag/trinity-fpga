@@ -11,7 +11,7 @@
 > Every layer `L0..L5` MUST maintain a `LAYER_FROZEN_HASH` (SHA-256 over the layer's Verilog source files in canonical UTF-8 sorted-path order).
 > CI workflow `layer-frozen-{N}.yml` recomputes the hash on each PR; mismatch **without an explicit M5-style ceremony commit** blocks the PR.
 
-Adopted from [t27 `CANON.md`](https://github.com/gHashTag/t27/blob/master/CANON.md) §M1–M6 and [`FROZEN.md`](https://github.com/gHashTag/t27/blob/master/FROZEN.md) §4–5.
+Adopted from [t27 `gHashTag/t27/CANON.md`](https://github.com/gHashTag/t27/blob/master/CANON.md) §M1–M6 and [`gHashTag/t27/FROZEN.md`](https://github.com/gHashTag/t27/blob/master/FROZEN.md) §4–5.
 
 ## Layer hashes (genesis seal, v25.1)
 

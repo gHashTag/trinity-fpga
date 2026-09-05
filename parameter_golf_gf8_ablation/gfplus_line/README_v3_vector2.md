@@ -50,7 +50,7 @@ strongly non-uniform input importance (attention-projections of large models) th
 
 ## GPU-confirmation on 29M — hypothesis CONFIRMED `[measured — GPU, seed=42]`
 
-`webterm_gfplus_v2select.py` (RTX PRO 4500 Blackwell, torch 2.11.0+cu128, 9L d=512,
+`research/gfplus_line/webterm_gfplus_v2select.py` (RTX PRO 4500 Blackwell, torch 2.11.0+cu128, 9L d=512,
 3000 steps FineWeb, 27 Linear) captured real activations via forward-hooks,
 compared MSE-selection vs Hessian-selection by downstream-SQNR on holdout. Full summary —
 `v2select_gpu_29M_seed42.md`.

@@ -1,0 +1,324 @@
+# Disassemble the two Vivado reference bitstreams for nextpnr-xilinx#114.
+#
+# Hans Baier built them on 2026-08-11 and attached them to the issue. They are
+# the artefact that #65, #100, #101 and #114 were all waiting on, and they have
+# sat undisassembled since. This does the disassembly in public so the result
+# carries a run URL rather than a claim.
+#
+# THE QUESTION. IFFDELMUXE3 is a three-position mux -- Vivado's own site model
+# (nextpnr-xilinx-meta/artix7/site_type_ILOGICE3.json) lists from_pin 0/1/2 --
+# and prjxray's fuzzer says what the positions mean
+# (fuzzers/035-iob-ilogic/generate.py:216-227):
+#
+#     'direct' -> P1=1        'idelay' -> P0=1        'none' -> all 0
+#
+# segbits_lioi3.db documented only P0 (28_116). P1 is the position a plain IDDR
+# needs, so with no bit to name we wrote nothing, the mux sat in 'none', and the
+# IFF had no data path selected. That is #114.
+#
+#   Build A  IDDR with D straight from the pad          -> should be P1
+#   Build B  identical, but D through an IDELAYE2       -> should be P0
+#
+# Same pads in both, so the only difference is the mux position. Whatever bit is
+# set in one and clear in the other is the answer.
+#
+# WHY THIS RUNS IN CI AND NOT ON A LAPTOP. `bitread` segfaults under QEMU on an
+# arm64 host -- rc=139 right after "Bitstream size: 2192111 bytes", with every
+# flag combination. Native amd64 settles whether that is emulation or a real
+# bitread bug, and if it segfaults here too, that is itself worth reporting.
+#
+# phi^2 + 1/phi^2 = 3 = TRINITY
+
+name: IDDR Vivado reference diff (#114)
+
+on:
+  workflow_dispatch:
+
+env:
+  OPENXC7_IMAGE: regymm/openxc7@sha256:eced1cdd4727549f2d983328e0cf170fb6f6f67d87f19b2bf24365163368c70c
+  PRJXRAY_DB_REV: d17fea26ebe46119606e875f012b9be122538aec
+  PRJXRAY_REV: 15fa018e
+  NEXTPNR_REV: 05aaa06bce455ae6ed01efa1616ba7d3a9421ca7
+  REF_URL: https://github.com/user-attachments/files/30959493/iddr-probe-xc7a35tcsg324-1.tar.gz
+
+jobs:
+  diff:
+    name: Disassemble and diff
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      # Needed for research/iddr-probe/. There was no checkout at all until the
+      # probe sources moved into the repository.
+      - uses: actions/checkout@v4
+
+      - name: Fetch the Vivado reference bitstreams
+        run: |
+          curl -sSL -o ref.tar.gz "$REF_URL"
+          tar xzf ref.tar.gz
+          ls -l A_direct B_idelay
+          echo "sha256:"
+          sha256sum A_direct/top.bit B_idelay/top.bit
+
+      # d17fea2, the revision the frozen nextpnr records, so the names in the
+      # output are the ones the toolchain would use. It is also the revision
+      # that just gained IFFDELMUXE3.P1 from Carlos's 035 fuzzer run -- which is
+      # precisely the row this diff is meant to check against silicon.
+      - name: Fetch prjxray-db at the frozen revision
+        run: |
+          mkdir -p pdb && cd pdb
+          git init -q
+          git remote add origin https://github.com/openXC7/prjxray-db
+          git fetch -q --depth 1 origin "$PRJXRAY_DB_REV"
+          git checkout -q FETCH_HEAD
+          test "$(git rev-parse HEAD)" = "$PRJXRAY_DB_REV"
+          echo "prjxray-db at $PRJXRAY_DB_REV"
+          grep -n 'IFFDELMUXE3' artix7/segbits_lioi3.db || echo "(no IFFDELMUXE3 rows)"
+
+      - name: Pull the pinned image
+        run: |
+          for i in 1 2 3 4 5 6; do docker pull "$OPENXC7_IMAGE" && break; sleep $((i*20)); done
+
+      # The container's bitread cannot read ANY 7-series bitstream.
+      #
+      # Established by controlled test, not by inference. It segfaults (rc=139,
+      # immediately after printing "Bitstream size: 2192111 bytes") on:
+      #   - Hans's Vivado bitstream, and
+      #   - a bitstream built seconds earlier by the image's OWN xc7frames2bit
+      #     from an empty FASM, with the same part.yaml,
+      # with and without --part_file, under every flag combination, on an arm64
+      # host under QEMU and on a native amd64 runner alike. No missing shared
+      # libraries. So it is neither the Vivado file, nor the database, nor the
+      # emulation.
+      #
+      # The image carries openXC7/prjxray 132342f7, dated 2026-03-24 — five
+      # months stale, and its last merge is a gflags bump. Upstream has moved
+      # to 15fa018e including two MemoryMappedFile/Database ports. That is very
+      # likely why nobody has disassembled this reference in the four days it
+      # has been attached to the issue: the standard tool in the standard
+      # container does not work, and it fails as a crash rather than as a
+      # message.
+      - name: Build bitread from current prjxray
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq cmake g++ libboost-all-dev >/dev/null
+          git clone -q https://github.com/openXC7/prjxray xray
+          cd xray
+          git checkout -q "$PRJXRAY_REV"
+          git submodule update -q --init --recursive
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release >/dev/null
+          make -C build -j"$(nproc)" bitread 2>&1 | tail -5
+          find build -name bitread -type f -perm -u+x | head -1
+
+      # openXC7's fork at 15fa018e segfaults identically to the container's
+      # March build, so "stale binary" is dead as an explanation. The remaining
+      # candidates are the fork itself and prjxray proper, so build both and
+      # try each with and without the database. Whichever combination reads a
+      # bitstream is the one the disassembly uses; if none does, that is a
+      # reportable prjxray bug and the matrix below is the report.
+      - name: Build bitread from f4pga/prjxray too
+        continue-on-error: true
+        run: |
+          git clone -q https://github.com/f4pga/prjxray xray-upstream
+          cd xray-upstream
+          git submodule update -q --init --recursive
+          echo "f4pga/prjxray at $(git rev-parse --short HEAD)"
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release >/dev/null 2>&1
+          make -C build -j"$(nproc)" bitread 2>&1 | tail -3
+
+      # openXC7/prjxray#6, at Carlos's request. Its diagnosis matches the
+      # symptom exactly: fcd561fb replaced a copying std::vector with an
+      # absl::Span but left both owners scoped to their if/else blocks, so the
+      # MemoryMappedFile is unmapped before the bitstream is parsed and every
+      # invocation dies in the sync-word search. Use-after-free, which is why it
+      # crashes on WELL-FORMED bitstreams and why f4pga -- predating that
+      # refactor -- reads them fine.
+      #
+      # A separate build rather than a patched one, so the matrix compares three
+      # real binaries and the PR either clears the row or does not.
+      - name: Build bitread with openXC7/prjxray#6 applied
+        continue-on-error: true
+        run: |
+          git clone -q https://github.com/openXC7/prjxray xray-pr6
+          cd xray-pr6
+          git fetch -q origin pull/6/head:pr6
+          git checkout -q pr6
+          echo "PR#6 head: $(git rev-parse --short HEAD)"
+          git submodule update -q --init --recursive
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release >/dev/null 2>&1
+          make -C build -j"$(nproc)" bitread 2>&1 | tail -3
+
+      - name: Which bitread can read a 7-series bitstream?
+        run: |
+          # set +e, because the whole point of this step is to RECORD failures.
+          # GitHub runs `run:` under `bash -e`, so the first segfaulting bitread
+          # killed the step at line 10 and the matrix never printed — a probe
+          # that cannot survive the thing it is probing.
+          set +e
+          P=$PWD/pdb/artix7/xc7a35tcsg324-1/part.yaml
+          WORKING=""
+          {
+            echo "### Can any bitread read this bitstream?"
+            echo
+            echo "| build | with --part_file | without |"
+            echo "|---|---|---|"
+          } >> $GITHUB_STEP_SUMMARY
+
+          for src in xray xray-pr6 xray-upstream; do
+            BR=$(find $src/build -name bitread -type f -perm -u+x 2>/dev/null | head -1)
+            [ -n "$BR" ] || { echo "| $src | not built | not built |" >> $GITHUB_STEP_SUMMARY; continue; }
+            "$BR" --part_file "$P" -o /tmp/t1.bits -z -y A_direct/top.bit >/dev/null 2>&1; a=$?
+            "$BR" -o /tmp/t2.bits A_direct/top.bit                        >/dev/null 2>&1; b=$?
+            echo "| $src | rc=$a | rc=$b |" >> $GITHUB_STEP_SUMMARY
+            [ "$a" = 0 ] && [ -z "$WORKING" ] && WORKING="$BR"
+          done
+
+          if [ -z "$WORKING" ]; then
+            echo >> $GITHUB_STEP_SUMMARY
+            echo "**No bitread build can read it.** Segfault immediately after \`Bitstream size:\`, on the Vivado file and on one produced by the image's own \`xc7frames2bit\` from an empty FASM. Reportable as a prjxray bug." >> $GITHUB_STEP_SUMMARY
+            cat $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+
+          echo "BITREAD=$WORKING" >> $GITHUB_ENV
+          echo "WORKING_SRC=${WORKING%%/build*}" >> $GITHUB_ENV
+          echo "working bitread: $WORKING"
+
+      # f4pga's bitread has to be built INSIDE the image, for the same reason
+      # nextpnr is: the runner is Ubuntu 24.04 and the image is 20.04, and a
+      # binary built on one does not run on the other.
+      #
+      # And bit2fasm must be pointed at it with --bitread. The previous attempt
+      # passed --bits-file expecting it to mean "read the bits from here". It
+      # means "write them here": bit2fasm re-ran the image's own broken bitread,
+      # which segfaulted, and left the good .bits files truncated to zero. The
+      # artefact was four empty files -- a step that destroyed its own input and
+      # still uploaded something.
+      - name: Build f4pga bitread inside the image
+        run: |
+          mkdir -p bin
+          docker run --rm -v "$PWD:/w" -w /w "$OPENXC7_IMAGE" bash -c '
+            set -e
+            cp -r "/w/'"$WORKING_SRC"'" /tmp/x && cd /tmp/x
+            # build-img, not build: the copied tree already carries the runner
+            # build, and CMakeCache.txt records absolute paths, so reusing the
+            # directory fails with "the current CMakeCache.txt directory ... is
+            # different than the directory".
+            cmake -S . -B build-img -DCMAKE_BUILD_TYPE=Release >/dev/null
+            make -C build-img -j"$(nproc)" bitread >/dev/null 2>&1
+            cp "$(find build-img -name bitread -type f -perm -u+x | head -1)" /w/bin/bitread
+          '
+          docker run --rm -v "$PWD:/w" "$OPENXC7_IMAGE" \
+            /w/bin/bitread --part_file /w/pdb/artix7/xc7a35tcsg324-1/part.yaml \
+            -o /tmp/probe.bits -z -y /w/A_direct/top.bit && echo "in-image bitread works"
+
+      - name: bit2fasm both builds
+        run: |
+          docker run --rm -v "$PWD:/w" -w /w "$OPENXC7_IMAGE" bash -c '
+            set -e
+            source /prjxray/env/bin/activate
+            for b in A_direct B_idelay; do
+              python3 /prjxray/utils/bit2fasm.py \
+                --db-root /w/pdb/artix7 --part xc7a35tcsg324-1 \
+                --bitread /w/bin/bitread /w/$b/top.bit > /w/$b.fasm
+            done
+          '
+          wc -l A_direct.fasm B_idelay.fasm
+          test -s A_direct.fasm && test -s B_idelay.fasm
+
+      - name: The diff
+        run: |
+          {
+            echo "## nextpnr-xilinx#114 — Vivado reference disassembly"
+            echo
+            echo "prjxray-db \`${PRJXRAY_DB_REV:0:7}\`, part xc7a35tcsg324-1."
+            echo "A = IDDR direct from pad (expect IFFDELMUXE3 P1);"
+            echo "B = same through IDELAYE2 (expect P0)."
+            echo
+            echo '### Every line that differs, whole bitstream'
+            echo '```diff'
+            diff <(sort A_direct.fasm) <(sort B_idelay.fasm) || true
+            echo '```'
+            echo
+            echo '### IOI3 / ILOGIC / IDELAY only'
+            echo '```diff'
+            diff <(grep -iE 'IOI3|ILOGIC|IDELAY' A_direct.fasm | sort) \
+                 <(grep -iE 'IOI3|ILOGIC|IDELAY' B_idelay.fasm | sort) || true
+            echo '```'
+            echo
+            echo '### Lines naming IFFDELMUXE3 or IDELMUXE3, either build'
+            echo '```'
+            grep -inE 'DELMUXE3' A_direct.fasm | sed 's/^/A: /' || echo "A: none"
+            grep -inE 'DELMUXE3' B_idelay.fasm | sed 's/^/B: /' || echo "B: none"
+            echo '```'
+          } >> $GITHUB_STEP_SUMMARY
+          cat $GITHUB_STEP_SUMMARY
+
+      # The Vivado-vs-Vivado diff answers what the mux positions are. It does
+      # NOT answer #114. For that the comparison has to be Vivado's build A
+      # against OUR build of the same file: whatever Vivado sets and we do not
+      # is the candidate list.
+      #
+      # Uses the frozen toolchain, nextpnr built in the image, chipdb generated
+      # from the same tree -- the same construction as the benchmark harness,
+      # for the same reason.
+      - name: Build the same design with openXC7
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # From the repository, not from the gist. The default GITHUB_TOKEN
+          # cannot read gists — "Resource not accessible by integration (HTTP
+          # 403)" — and more to the point, a benchmark whose input lives in an
+          # editable gist is not reproducible. research/iddr-probe/ holds the
+          # same four files Hans built from.
+          mkdir -p ours
+          cp research/iddr-probe/A_direct_top.v   ours/top.v
+          cp research/iddr-probe/A_direct_top.xdc ours/top.xdc
+          docker run --rm -v "$PWD:/w" -w /w/ours "$OPENXC7_IMAGE" bash -c '
+            set -e
+            cd /nextpnr-xilinx
+            git fetch --depth 1 origin '"$NEXTPNR_REV"'
+            git checkout '"$NEXTPNR_REV"'
+            cmake . -DARCH=xilinx -DCMAKE_BUILD_TYPE=Release >/dev/null
+            make -j"$(nproc)" >/dev/null 2>&1
+            cp nextpnr-xilinx bbasm /usr/local/bin/
+            python3 xilinx/python/bbaexport.py --device xc7a35tcsg324-1 --bba /tmp/db.bba
+            bbasm -l /tmp/db.bba /tmp/db.bin
+            cd /w/ours
+            yosys -p "synth_xilinx -flatten -abc9 -arch xc7 -top top; write_json top.json" top.v
+            nextpnr-xilinx --chipdb /tmp/db.bin --xdc top.xdc --json top.json --fasm ours.fasm
+          '
+          wc -l ours/ours.fasm
+
+      - name: What Vivado sets that we do not
+        if: always()
+        run: |
+          [ -s ours/ours.fasm ] || { echo "our build did not produce FASM — see the step above"; exit 0; }
+          {
+            echo
+            echo '### #114: Vivado build A vs openXC7, same source'
+            echo
+            echo 'ILOGIC lines Vivado emits and we do not:'
+            echo '```'
+            comm -23 <(grep -E 'ILOGIC' A_direct.fasm | sed "s/^[A-Z0-9_]*X[0-9]*Y[0-9]*\.//" | sort -u) \
+                     <(grep -E 'ILOGIC' ours/ours.fasm | sed "s/^[A-Z0-9_]*X[0-9]*Y[0-9]*\.//" | sort -u)
+            echo '```'
+            echo 'and the reverse — ours and not Vivado:'
+            echo '```'
+            comm -13 <(grep -E 'ILOGIC' A_direct.fasm | sed "s/^[A-Z0-9_]*X[0-9]*Y[0-9]*\.//" | sort -u) \
+                     <(grep -E 'ILOGIC' ours/ours.fasm | sed "s/^[A-Z0-9_]*X[0-9]*Y[0-9]*\.//" | sort -u)
+            echo '```'
+          } >> $GITHUB_STEP_SUMMARY
+          tail -40 $GITHUB_STEP_SUMMARY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: iddr-fasm
+          path: |
+            A_direct.fasm
+            ours/ours.fasm
+            B_idelay.fasm
+            A_direct.bits
+            B_idelay.bits
+          retention-days: 90

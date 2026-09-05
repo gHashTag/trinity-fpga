@@ -1,0 +1,1217 @@
+[
+ {
+  "task": "fashion",
+  "mode": "computed",
+  "blk": 0,
+  "fmt": "TNF4",
+  "acc": 85.42,
+  "failed": false,
+  "sat": 1.9997
+ },
+ {
+  "task": "fashion",
+  "mode": "computed",
+  "blk": 0,
+  "fmt": "TNF4",
+  "acc": 85.85,
+  "failed": false,
+  "sat": 1.9996
+ },
+ {
+  "task": "fashion",
+  "mode": "computed",
+  "blk": 0,
+  "fmt": "TNF4",
+  "acc": 84.32,
+  "failed": false,
+  "sat": 1.9984
+ },
+ {
+  "task": "fashion",
+  "mode": "computed",
+  "blk": 0,
+  "fmt": "TNF4",
+  "acc": 85.5,
+  "failed": false,
+  "sat": 1.9993
+ },
+ {
+  "task": "fashion",
+  "mode": "computed",
+  "blk": 0,
+  "fmt": "TNF4",
+  "acc": 85.71,
+  "failed": false,
+  "sat": 1.9999
+ },
+ {
+  "task": "fashion",
+  "mode": "computed",
+  "blk": 0,
+  "fmt": "fp6e2m3",
+  "acc": 86.04,
+  "failed": false,
+  "sat": 2.0
+ },
+ {
+  "task": "fashion",
+  "mode": "computed",
+  "blk": 0,
+  "fmt": "fp6e2m3",
+  "acc": 86.21,
+  "failed": false,
+  "sat": 1.9998
+ },
+ {
+  "task": "fashion",
+  "mode": "computed",
+  "blk": 0,
+  "fmt": "fp6e2m3",
+  "acc": 84.82,
+  "failed": false,
+  "sat": 2.0
+ },
+ {
+  "task": "fashion",
+  "mode": "computed",
+  "blk": 0,
+  "fmt": "fp6e2m3",
+  "acc": 86.08,
+  "failed": false,
+  "sat": 1.9991
+ },
+ {
+  "task": "fashion",
+  "mode": "computed",
+  "blk": 0,
+  "fmt": "fp6e2m3",
+  "acc": 85.97,
+  "failed": false,
+  "sat": 1.9995
+ },
+ {
+  "task": "fashion",
+  "mode": "computed",
+  "blk": 0,
+  "fmt": "fp6e3m2",
+  "acc": 85.57,
+  "failed": false,
+  "sat": 1.9974
+ },
+ {
+  "task": "fashion",
+  "mode": "computed",
+  "blk": 0,
+  "fmt": "fp6e3m2",
+  "acc": 86.35,
+  "failed": false,
+  "sat": 1.9997
+ },
+ {
+  "task": "fashion",
+  "mode": "computed",
+  "blk": 0,
+  "fmt": "fp6e3m2",
+  "acc": 85.15,
+  "failed": false,
+  "sat": 1.9999
+ },
+ {
+  "task": "fashion",
+  "mode": "computed",
+  "blk": 0,
+  "fmt": "fp6e3m2",
+  "acc": 86.1,
+  "failed": false,
+  "sat": 1.9995
+ },
+ {
+  "task": "fashion",
+  "mode": "computed",
+  "blk": 0,
+  "fmt": "fp6e3m2",
+  "acc": 86.16,
+  "failed": false,
+  "sat": 1.9995
+ },
+ {
+  "task": "fashion",
+  "mode": "computed",
+  "blk": 32,
+  "fmt": "TNF4",
+  "acc": 85.03,
+  "failed": false,
+  "sat": 2.0
+ },
+ {
+  "task": "fashion",
+  "mode": "computed",
+  "blk": 32,
+  "fmt": "TNF4",
+  "acc": 85.19,
+  "failed": false,
+  "sat": 2.0
+ },
+ {
+  "task": "fashion",
+  "mode": "computed",
+  "blk": 32,
+  "fmt": "TNF4",
+  "acc": 84.01,
+  "failed": false,
+  "sat": 2.0
+ },
+ {
+  "task": "fashion",
+  "mode": "computed",
+  "blk": 32,
+  "fmt": "TNF4",
+  "acc": 85.15,
+  "failed": false,
+  "sat": 2.0
+ },
+ {
+  "task": "fashion",
+  "mode": "computed",
+  "blk": 32,
+  "fmt": "TNF4",
+  "acc": 85.37,
+  "failed": false,
+  "sat": 2.0
+ },
+ {
+  "task": "fashion",
+  "mode": "computed",
+  "blk": 32,
+  "fmt": "fp6e2m3",
+  "acc": 85.2,
+  "failed": false,
+  "sat": 2.0
+ },
+ {
+  "task": "fashion",
+  "mode": "computed",
+  "blk": 32,
+  "fmt": "fp6e2m3",
+  "acc": 85.33,
+  "failed": false,
+  "sat": 2.0
+ },
+ {
+  "task": "fashion",
+  "mode": "computed",
+  "blk": 32,
+  "fmt": "fp6e2m3",
+  "acc": 84.32,
+  "failed": false,
+  "sat": 2.0
+ },
+ {
+  "task": "fashion",
+  "mode": "computed",
+  "blk": 32,
+  "fmt": "fp6e2m3",
+  "acc": 85.22,
+  "failed": false,
+  "sat": 2.0
+ },
+ {
+  "task": "fashion",
+  "mode": "computed",
+  "blk": 32,
+  "fmt": "fp6e2m3",
+  "acc": 85.31,
+  "failed": false,
+  "sat": 2.0
+ },
+ {
+  "task": "fashion",
+  "mode": "computed",
+  "blk": 32,
+  "fmt": "fp6e3m2",
+  "acc": 85.15,
+  "failed": false,
+  "sat": 2.0
+ },
+ {
+  "task": "fashion",
+  "mode": "computed",
+  "blk": 32,
+  "fmt": "fp6e3m2",
+  "acc": 85.43,
+  "failed": false,
+  "sat": 2.0
+ },
+ {
+  "task": "fashion",
+  "mode": "computed",
+  "blk": 32,
+  "fmt": "fp6e3m2",
+  "acc": 84.37,
+  "failed": false,
+  "sat": 2.0
+ },
+ {
+  "task": "fashion",
+  "mode": "computed",
+  "blk": 32,
+  "fmt": "fp6e3m2",
+  "acc": 85.01,
+  "failed": false,
+  "sat": 2.0
+ },
+ {
+  "task": "fashion",
+  "mode": "computed",
+  "blk": 32,
+  "fmt": "fp6e3m2",
+  "acc": 85.26,
+  "failed": false,
+  "sat": 2.0
+ },
+ {
+  "task": "fashion",
+  "mode": "learned",
+  "blk": 0,
+  "fmt": "TNF4",
+  "acc": 85.98,
+  "failed": false,
+  "sat": 5.2125
+ },
+ {
+  "task": "fashion",
+  "mode": "learned",
+  "blk": 0,
+  "fmt": "TNF4",
+  "acc": 85.4,
+  "failed": false,
+  "sat": 2.7528
+ },
+ {
+  "task": "fashion",
+  "mode": "learned",
+  "blk": 0,
+  "fmt": "TNF4",
+  "acc": 84.72,
+  "failed": false,
+  "sat": 16.2442
+ },
+ {
+  "task": "fashion",
+  "mode": "learned",
+  "blk": 0,
+  "fmt": "TNF4",
+  "acc": 85.8,
+  "failed": false,
+  "sat": 3.1746
+ },
+ {
+  "task": "fashion",
+  "mode": "learned",
+  "blk": 0,
+  "fmt": "TNF4",
+  "acc": 86.41,
+  "failed": false,
+  "sat": 211.7865
+ },
+ {
+  "task": "fashion",
+  "mode": "learned",
+  "blk": 0,
+  "fmt": "fp6e2m3",
+  "acc": 85.94,
+  "failed": false,
+  "sat": 163.6908
+ },
+ {
+  "task": "fashion",
+  "mode": "learned",
+  "blk": 0,
+  "fmt": "fp6e2m3",
+  "acc": 86.12,
+  "failed": false,
+  "sat": 174.1458
+ },
+ {
+  "task": "fashion",
+  "mode": "learned",
+  "blk": 0,
+  "fmt": "fp6e2m3",
+  "acc": 10.19,
+  "failed": true,
+  "sat": 144142.9531
+ },
+ {
+  "task": "fashion",
+  "mode": "learned",
+  "blk": 0,
+  "fmt": "fp6e2m3",
+  "acc": 85.68,
+  "failed": false,
+  "sat": 180.4595
+ },
+ {
+  "task": "fashion",
+  "mode": "learned",
+  "blk": 0,
+  "fmt": "fp6e2m3",
+  "acc": 85.29,
+  "failed": false,
+  "sat": 184.2443
+ },
+ {
+  "task": "fashion",
+  "mode": "learned",
+  "blk": 0,
+  "fmt": "fp6e3m2",
+  "acc": 86.01,
+  "failed": false,
+  "sat": 52.9543
+ },
+ {
+  "task": "fashion",
+  "mode": "learned",
+  "blk": 0,
+  "fmt": "fp6e3m2",
+  "acc": 85.98,
+  "failed": false,
+  "sat": 35.4254
+ },
+ {
+  "task": "fashion",
+  "mode": "learned",
+  "blk": 0,
+  "fmt": "fp6e3m2",
+  "acc": 84.71,
+  "failed": false,
+  "sat": 36.735
+ },
+ {
+  "task": "fashion",
+  "mode": "learned",
+  "blk": 0,
+  "fmt": "fp6e3m2",
+  "acc": 86.38,
+  "failed": false,
+  "sat": 32.5021
+ },
+ {
+  "task": "fashion",
+  "mode": "learned",
+  "blk": 0,
+  "fmt": "fp6e3m2",
+  "acc": 86.21,
+  "failed": false,
+  "sat": 19.8504
+ },
+ {
+  "task": "kmnist",
+  "mode": "computed",
+  "blk": 0,
+  "fmt": "TNF4",
+  "acc": 86.74,
+  "failed": false,
+  "sat": 2.0
+ },
+ {
+  "task": "kmnist",
+  "mode": "computed",
+  "blk": 0,
+  "fmt": "TNF4",
+  "acc": 86.77,
+  "failed": false,
+  "sat": 1.9997
+ },
+ {
+  "task": "kmnist",
+  "mode": "computed",
+  "blk": 0,
+  "fmt": "TNF4",
+  "acc": 87.16,
+  "failed": false,
+  "sat": 1.9998
+ },
+ {
+  "task": "kmnist",
+  "mode": "computed",
+  "blk": 0,
+  "fmt": "TNF4",
+  "acc": 86.57,
+  "failed": false,
+  "sat": 1.9998
+ },
+ {
+  "task": "kmnist",
+  "mode": "computed",
+  "blk": 0,
+  "fmt": "TNF4",
+  "acc": 86.87,
+  "failed": false,
+  "sat": 1.9997
+ },
+ {
+  "task": "kmnist",
+  "mode": "computed",
+  "blk": 0,
+  "fmt": "fp6e2m3",
+  "acc": 86.99,
+  "failed": false,
+  "sat": 2.0
+ },
+ {
+  "task": "kmnist",
+  "mode": "computed",
+  "blk": 0,
+  "fmt": "fp6e2m3",
+  "acc": 87.45,
+  "failed": false,
+  "sat": 2.0
+ },
+ {
+  "task": "kmnist",
+  "mode": "computed",
+  "blk": 0,
+  "fmt": "fp6e2m3",
+  "acc": 87.63,
+  "failed": false,
+  "sat": 1.9994
+ },
+ {
+  "task": "kmnist",
+  "mode": "computed",
+  "blk": 0,
+  "fmt": "fp6e2m3",
+  "acc": 86.71,
+  "failed": false,
+  "sat": 1.9999
+ },
+ {
+  "task": "kmnist",
+  "mode": "computed",
+  "blk": 0,
+  "fmt": "fp6e2m3",
+  "acc": 87.79,
+  "failed": false,
+  "sat": 1.9998
+ },
+ {
+  "task": "kmnist",
+  "mode": "computed",
+  "blk": 0,
+  "fmt": "fp6e3m2",
+  "acc": 86.78,
+  "failed": false,
+  "sat": 1.9996
+ },
+ {
+  "task": "kmnist",
+  "mode": "computed",
+  "blk": 0,
+  "fmt": "fp6e3m2",
+  "acc": 87.16,
+  "failed": false,
+  "sat": 1.9999
+ },
+ {
+  "task": "kmnist",
+  "mode": "computed",
+  "blk": 0,
+  "fmt": "fp6e3m2",
+  "acc": 87.13,
+  "failed": false,
+  "sat": 1.9989
+ },
+ {
+  "task": "kmnist",
+  "mode": "computed",
+  "blk": 0,
+  "fmt": "fp6e3m2",
+  "acc": 87.27,
+  "failed": false,
+  "sat": 1.9998
+ },
+ {
+  "task": "kmnist",
+  "mode": "computed",
+  "blk": 0,
+  "fmt": "fp6e3m2",
+  "acc": 87.26,
+  "failed": false,
+  "sat": 1.9989
+ },
+ {
+  "task": "kmnist",
+  "mode": "computed",
+  "blk": 32,
+  "fmt": "TNF4",
+  "acc": 83.86,
+  "failed": false,
+  "sat": 2.0
+ },
+ {
+  "task": "kmnist",
+  "mode": "computed",
+  "blk": 32,
+  "fmt": "TNF4",
+  "acc": 84.6,
+  "failed": false,
+  "sat": 2.0
+ },
+ {
+  "task": "kmnist",
+  "mode": "computed",
+  "blk": 32,
+  "fmt": "TNF4",
+  "acc": 84.66,
+  "failed": false,
+  "sat": 2.0
+ },
+ {
+  "task": "kmnist",
+  "mode": "computed",
+  "blk": 32,
+  "fmt": "TNF4",
+  "acc": 85.03,
+  "failed": false,
+  "sat": 2.0
+ },
+ {
+  "task": "kmnist",
+  "mode": "computed",
+  "blk": 32,
+  "fmt": "TNF4",
+  "acc": 85.3,
+  "failed": false,
+  "sat": 2.0
+ },
+ {
+  "task": "kmnist",
+  "mode": "computed",
+  "blk": 32,
+  "fmt": "fp6e2m3",
+  "acc": 84.63,
+  "failed": false,
+  "sat": 2.0
+ },
+ {
+  "task": "kmnist",
+  "mode": "computed",
+  "blk": 32,
+  "fmt": "fp6e2m3",
+  "acc": 85.49,
+  "failed": false,
+  "sat": 2.0
+ },
+ {
+  "task": "kmnist",
+  "mode": "computed",
+  "blk": 32,
+  "fmt": "fp6e2m3",
+  "acc": 85.31,
+  "failed": false,
+  "sat": 2.0
+ },
+ {
+  "task": "kmnist",
+  "mode": "computed",
+  "blk": 32,
+  "fmt": "fp6e2m3",
+  "acc": 84.92,
+  "failed": false,
+  "sat": 2.0
+ },
+ {
+  "task": "kmnist",
+  "mode": "computed",
+  "blk": 32,
+  "fmt": "fp6e2m3",
+  "acc": 85.73,
+  "failed": false,
+  "sat": 2.0
+ },
+ {
+  "task": "kmnist",
+  "mode": "computed",
+  "blk": 32,
+  "fmt": "fp6e3m2",
+  "acc": 84.95,
+  "failed": false,
+  "sat": 2.0
+ },
+ {
+  "task": "kmnist",
+  "mode": "computed",
+  "blk": 32,
+  "fmt": "fp6e3m2",
+  "acc": 85.37,
+  "failed": false,
+  "sat": 2.0
+ },
+ {
+  "task": "kmnist",
+  "mode": "computed",
+  "blk": 32,
+  "fmt": "fp6e3m2",
+  "acc": 85.16,
+  "failed": false,
+  "sat": 2.0
+ },
+ {
+  "task": "kmnist",
+  "mode": "computed",
+  "blk": 32,
+  "fmt": "fp6e3m2",
+  "acc": 85.05,
+  "failed": false,
+  "sat": 2.0
+ },
+ {
+  "task": "kmnist",
+  "mode": "computed",
+  "blk": 32,
+  "fmt": "fp6e3m2",
+  "acc": 85.92,
+  "failed": false,
+  "sat": 2.0
+ },
+ {
+  "task": "kmnist",
+  "mode": "learned",
+  "blk": 0,
+  "fmt": "TNF4",
+  "acc": 87.21,
+  "failed": false,
+  "sat": 12.2696
+ },
+ {
+  "task": "kmnist",
+  "mode": "learned",
+  "blk": 0,
+  "fmt": "TNF4",
+  "acc": 86.99,
+  "failed": false,
+  "sat": 89.9682
+ },
+ {
+  "task": "kmnist",
+  "mode": "learned",
+  "blk": 0,
+  "fmt": "TNF4",
+  "acc": 87.09,
+  "failed": false,
+  "sat": 15.724
+ },
+ {
+  "task": "kmnist",
+  "mode": "learned",
+  "blk": 0,
+  "fmt": "TNF4",
+  "acc": 87.34,
+  "failed": false,
+  "sat": 7.5376
+ },
+ {
+  "task": "kmnist",
+  "mode": "learned",
+  "blk": 0,
+  "fmt": "TNF4",
+  "acc": 87.0,
+  "failed": false,
+  "sat": 39.7261
+ },
+ {
+  "task": "kmnist",
+  "mode": "learned",
+  "blk": 0,
+  "fmt": "fp6e2m3",
+  "acc": 16.77,
+  "failed": true,
+  "sat": 248543.5781
+ },
+ {
+  "task": "kmnist",
+  "mode": "learned",
+  "blk": 0,
+  "fmt": "fp6e2m3",
+  "acc": 84.78,
+  "failed": false,
+  "sat": 430.579
+ },
+ {
+  "task": "kmnist",
+  "mode": "learned",
+  "blk": 0,
+  "fmt": "fp6e2m3",
+  "acc": 12.64,
+  "failed": true,
+  "sat": 176958.4844
+ },
+ {
+  "task": "kmnist",
+  "mode": "learned",
+  "blk": 0,
+  "fmt": "fp6e2m3",
+  "acc": 85.43,
+  "failed": false,
+  "sat": 438.1762
+ },
+ {
+  "task": "kmnist",
+  "mode": "learned",
+  "blk": 0,
+  "fmt": "fp6e2m3",
+  "acc": 84.92,
+  "failed": false,
+  "sat": 1509.6763
+ },
+ {
+  "task": "kmnist",
+  "mode": "learned",
+  "blk": 0,
+  "fmt": "fp6e3m2",
+  "acc": 86.02,
+  "failed": false,
+  "sat": 53.6776
+ },
+ {
+  "task": "kmnist",
+  "mode": "learned",
+  "blk": 0,
+  "fmt": "fp6e3m2",
+  "acc": 86.77,
+  "failed": false,
+  "sat": 133.5072
+ },
+ {
+  "task": "kmnist",
+  "mode": "learned",
+  "blk": 0,
+  "fmt": "fp6e3m2",
+  "acc": 22.97,
+  "failed": true,
+  "sat": 217549.0156
+ },
+ {
+  "task": "kmnist",
+  "mode": "learned",
+  "blk": 0,
+  "fmt": "fp6e3m2",
+  "acc": 87.31,
+  "failed": false,
+  "sat": 240.6229
+ },
+ {
+  "task": "kmnist",
+  "mode": "learned",
+  "blk": 0,
+  "fmt": "fp6e3m2",
+  "acc": 30.58,
+  "failed": true,
+  "sat": 1804231.625
+ },
+ {
+  "task": "mnist",
+  "mode": "computed",
+  "blk": 0,
+  "fmt": "TNF4",
+  "acc": 96.78,
+  "failed": false,
+  "sat": 1.9997
+ },
+ {
+  "task": "mnist",
+  "mode": "computed",
+  "blk": 0,
+  "fmt": "TNF4",
+  "acc": 96.64,
+  "failed": false,
+  "sat": 1.9995
+ },
+ {
+  "task": "mnist",
+  "mode": "computed",
+  "blk": 0,
+  "fmt": "TNF4",
+  "acc": 96.31,
+  "failed": false,
+  "sat": 1.9995
+ },
+ {
+  "task": "mnist",
+  "mode": "computed",
+  "blk": 0,
+  "fmt": "TNF4",
+  "acc": 96.21,
+  "failed": false,
+  "sat": 2.0
+ },
+ {
+  "task": "mnist",
+  "mode": "computed",
+  "blk": 0,
+  "fmt": "TNF4",
+  "acc": 96.89,
+  "failed": false,
+  "sat": 1.9999
+ },
+ {
+  "task": "mnist",
+  "mode": "computed",
+  "blk": 0,
+  "fmt": "fp6e2m3",
+  "acc": 97.06,
+  "failed": false,
+  "sat": 1.9994
+ },
+ {
+  "task": "mnist",
+  "mode": "computed",
+  "blk": 0,
+  "fmt": "fp6e2m3",
+  "acc": 97.08,
+  "failed": false,
+  "sat": 1.9997
+ },
+ {
+  "task": "mnist",
+  "mode": "computed",
+  "blk": 0,
+  "fmt": "fp6e2m3",
+  "acc": 96.85,
+  "failed": false,
+  "sat": 1.9998
+ },
+ {
+  "task": "mnist",
+  "mode": "computed",
+  "blk": 0,
+  "fmt": "fp6e2m3",
+  "acc": 96.57,
+  "failed": false,
+  "sat": 1.9999
+ },
+ {
+  "task": "mnist",
+  "mode": "computed",
+  "blk": 0,
+  "fmt": "fp6e2m3",
+  "acc": 97.15,
+  "failed": false,
+  "sat": 2.0
+ },
+ {
+  "task": "mnist",
+  "mode": "computed",
+  "blk": 0,
+  "fmt": "fp6e3m2",
+  "acc": 96.92,
+  "failed": false,
+  "sat": 1.9999
+ },
+ {
+  "task": "mnist",
+  "mode": "computed",
+  "blk": 0,
+  "fmt": "fp6e3m2",
+  "acc": 96.88,
+  "failed": false,
+  "sat": 1.9997
+ },
+ {
+  "task": "mnist",
+  "mode": "computed",
+  "blk": 0,
+  "fmt": "fp6e3m2",
+  "acc": 96.55,
+  "failed": false,
+  "sat": 1.9995
+ },
+ {
+  "task": "mnist",
+  "mode": "computed",
+  "blk": 0,
+  "fmt": "fp6e3m2",
+  "acc": 96.64,
+  "failed": false,
+  "sat": 1.9997
+ },
+ {
+  "task": "mnist",
+  "mode": "computed",
+  "blk": 0,
+  "fmt": "fp6e3m2",
+  "acc": 97.09,
+  "failed": false,
+  "sat": 1.9999
+ },
+ {
+  "task": "mnist",
+  "mode": "computed",
+  "blk": 32,
+  "fmt": "TNF4",
+  "acc": 96.34,
+  "failed": false,
+  "sat": 2.0
+ },
+ {
+  "task": "mnist",
+  "mode": "computed",
+  "blk": 32,
+  "fmt": "TNF4",
+  "acc": 96.16,
+  "failed": false,
+  "sat": 2.0
+ },
+ {
+  "task": "mnist",
+  "mode": "computed",
+  "blk": 32,
+  "fmt": "TNF4",
+  "acc": 95.78,
+  "failed": false,
+  "sat": 2.0
+ },
+ {
+  "task": "mnist",
+  "mode": "computed",
+  "blk": 32,
+  "fmt": "TNF4",
+  "acc": 96.02,
+  "failed": false,
+  "sat": 2.0
+ },
+ {
+  "task": "mnist",
+  "mode": "computed",
+  "blk": 32,
+  "fmt": "TNF4",
+  "acc": 96.23,
+  "failed": false,
+  "sat": 2.0
+ },
+ {
+  "task": "mnist",
+  "mode": "computed",
+  "blk": 32,
+  "fmt": "fp6e2m3",
+  "acc": 96.09,
+  "failed": false,
+  "sat": 2.0
+ },
+ {
+  "task": "mnist",
+  "mode": "computed",
+  "blk": 32,
+  "fmt": "fp6e2m3",
+  "acc": 96.08,
+  "failed": false,
+  "sat": 2.0
+ },
+ {
+  "task": "mnist",
+  "mode": "computed",
+  "blk": 32,
+  "fmt": "fp6e2m3",
+  "acc": 96.02,
+  "failed": false,
+  "sat": 2.0
+ },
+ {
+  "task": "mnist",
+  "mode": "computed",
+  "blk": 32,
+  "fmt": "fp6e2m3",
+  "acc": 95.88,
+  "failed": false,
+  "sat": 2.0
+ },
+ {
+  "task": "mnist",
+  "mode": "computed",
+  "blk": 32,
+  "fmt": "fp6e2m3",
+  "acc": 96.41,
+  "failed": false,
+  "sat": 2.0
+ },
+ {
+  "task": "mnist",
+  "mode": "computed",
+  "blk": 32,
+  "fmt": "fp6e3m2",
+  "acc": 96.17,
+  "failed": false,
+  "sat": 2.0
+ },
+ {
+  "task": "mnist",
+  "mode": "computed",
+  "blk": 32,
+  "fmt": "fp6e3m2",
+  "acc": 96.2,
+  "failed": false,
+  "sat": 2.0
+ },
+ {
+  "task": "mnist",
+  "mode": "computed",
+  "blk": 32,
+  "fmt": "fp6e3m2",
+  "acc": 96.22,
+  "failed": false,
+  "sat": 2.0
+ },
+ {
+  "task": "mnist",
+  "mode": "computed",
+  "blk": 32,
+  "fmt": "fp6e3m2",
+  "acc": 96.08,
+  "failed": false,
+  "sat": 2.0
+ },
+ {
+  "task": "mnist",
+  "mode": "computed",
+  "blk": 32,
+  "fmt": "fp6e3m2",
+  "acc": 96.4,
+  "failed": false,
+  "sat": 2.0
+ },
+ {
+  "task": "mnist",
+  "mode": "learned",
+  "blk": 0,
+  "fmt": "TNF4",
+  "acc": 97.06,
+  "failed": false,
+  "sat": 34.8977
+ },
+ {
+  "task": "mnist",
+  "mode": "learned",
+  "blk": 0,
+  "fmt": "TNF4",
+  "acc": 96.9,
+  "failed": false,
+  "sat": 26.2818
+ },
+ {
+  "task": "mnist",
+  "mode": "learned",
+  "blk": 0,
+  "fmt": "TNF4",
+  "acc": 96.59,
+  "failed": false,
+  "sat": 16.8733
+ },
+ {
+  "task": "mnist",
+  "mode": "learned",
+  "blk": 0,
+  "fmt": "TNF4",
+  "acc": 96.1,
+  "failed": false,
+  "sat": 11.9286
+ },
+ {
+  "task": "mnist",
+  "mode": "learned",
+  "blk": 0,
+  "fmt": "TNF4",
+  "acc": 96.86,
+  "failed": false,
+  "sat": 268.0126
+ },
+ {
+  "task": "mnist",
+  "mode": "learned",
+  "blk": 0,
+  "fmt": "fp6e2m3",
+  "acc": 11.35,
+  "failed": true,
+  "sat": 90418.6328
+ },
+ {
+  "task": "mnist",
+  "mode": "learned",
+  "blk": 0,
+  "fmt": "fp6e2m3",
+  "acc": 96.22,
+  "failed": false,
+  "sat": 95.9855
+ },
+ {
+  "task": "mnist",
+  "mode": "learned",
+  "blk": 0,
+  "fmt": "fp6e2m3",
+  "acc": 20.57,
+  "failed": true,
+  "sat": 439222.375
+ },
+ {
+  "task": "mnist",
+  "mode": "learned",
+  "blk": 0,
+  "fmt": "fp6e2m3",
+  "acc": 11.35,
+  "failed": true,
+  "sat": 378483.0938
+ },
+ {
+  "task": "mnist",
+  "mode": "learned",
+  "blk": 0,
+  "fmt": "fp6e2m3",
+  "acc": 11.45,
+  "failed": true,
+  "sat": 84775.3984
+ },
+ {
+  "task": "mnist",
+  "mode": "learned",
+  "blk": 0,
+  "fmt": "fp6e3m2",
+  "acc": 96.89,
+  "failed": false,
+  "sat": 30.9338
+ },
+ {
+  "task": "mnist",
+  "mode": "learned",
+  "blk": 0,
+  "fmt": "fp6e3m2",
+  "acc": 97.0,
+  "failed": false,
+  "sat": 20.3726
+ },
+ {
+  "task": "mnist",
+  "mode": "learned",
+  "blk": 0,
+  "fmt": "fp6e3m2",
+  "acc": 96.87,
+  "failed": false,
+  "sat": 18.6543
+ },
+ {
+  "task": "mnist",
+  "mode": "learned",
+  "blk": 0,
+  "fmt": "fp6e3m2",
+  "acc": 96.53,
+  "failed": false,
+  "sat": 39.3373
+ },
+ {
+  "task": "mnist",
+  "mode": "learned",
+  "blk": 0,
+  "fmt": "fp6e3m2",
+  "acc": 95.63,
+  "failed": false,
+  "sat": 24.8853
+ }
+]

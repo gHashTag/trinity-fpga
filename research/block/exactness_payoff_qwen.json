@@ -1,0 +1,20 @@
+{
+ "tag": "qwen",
+ "windows": 40,
+ "layers": 168,
+ "threads": 4,
+ "runs": {
+  "fp32acc/natural": 17.270456804931666,
+  "fp32acc/reverse": 17.270457422571344,
+  "fp32acc/rand1": 17.27047718705267,
+  "fp32acc/rand2": 17.270446202120663,
+  "exact/natural": 17.27046730480918,
+  "exact/rand1": 17.27046833420928
+ },
+ "repeat": 17.270456804931666,
+ "determinism_floor": 0.0,
+ "order_spread_fp32acc": 3.0984932006816734e-05,
+ "order_sd_fp32acc": 1.2925527660404258e-05,
+ "exactness_payoff": -1.0499877515002254e-05,
+ "exact_arm_order_effect": 1.0294000993837926e-06
+}

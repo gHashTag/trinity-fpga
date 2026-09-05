@@ -19,7 +19,7 @@ has been caught merging two claims before, and the fix is not to do it again qui
 
 ---
 
-## `takum8_conformance_v0.json`
+## `gHashTag/t27/conformance/vectors/takum8_conformance_v0.json`
 
 > **Note:** paste this only alongside the regenerated vectors — see
 > `research/TAKUM8_HANDOVER.md`. The witness describes the corrected pack, and the
@@ -34,7 +34,7 @@ has been caught merging two claims before, and the fix is not to do it again qui
 }
 ```
 
-## `takum16_conformance_v0.json`
+## `gHashTag/t27/conformance/vectors/takum16_conformance_v0.json`
 
 ```json
 {
@@ -45,7 +45,7 @@ has been caught merging two claims before, and the fix is not to do it again qui
 }
 ```
 
-## `lns8_conformance_v0.json`
+## `gHashTag/t27/conformance/vectors/lns8_conformance_v0.json`
 
 ```json
 {

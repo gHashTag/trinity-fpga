@@ -124,7 +124,7 @@ pipelined use would emit garbage.
 ### 2.3 No conformance vectors and no CI for div/sqrt
 
 `t27/conformance/` contains golden vectors for ADD/MUL-adjacent formats
-(`gf4/gf8/gf12/gf16/gf20/gf24_vectors.json`, `sacred_physics*.json`,
+(`t27:conformance/gf{4,8,12,16,20,24}_vectors.json`, `sacred_physics*.json`,
 `gf_family_bench.json`, `arch_bench.json`) but **zero** files referencing
 division or square root:
 

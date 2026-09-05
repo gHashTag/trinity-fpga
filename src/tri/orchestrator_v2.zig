@@ -211,10 +211,10 @@ pub fn getCommandMetadata(registry: *const CommandRegistry, name: []const u8) ?C
 /// Calculate sacred weight based on realm
 pub fn calculateSacredWeight(realm: WorkflowRealm) f64 {
     return switch (realm) {
-        .razum => PHI,           // 1.618
-        .materiya => 1.0,         // 1.0
-        .dukh => PHI_INV,        // 0.618
-        .universal => 1.0,       // 1.0
+        .razum => PHI, // 1.618
+        .materiya => 1.0, // 1.0
+        .dukh => PHI_INV, // 0.618
+        .universal => 1.0, // 1.0
     };
 }
 
@@ -277,7 +277,8 @@ pub fn parseWorkflowFromJSON(allocator: Allocator, file_path: []const u8) !Workf
 /// Detect workflow format from file extension
 pub fn detectWorkflowFormat(file_path: []const u8) WorkflowFormat {
     if (std.mem.endsWith(u8, file_path, ".yaml") or
-        std.mem.endsWith(u8, file_path, ".yml")) {
+        std.mem.endsWith(u8, file_path, ".yml"))
+    {
         return .yaml;
     }
     if (std.mem.endsWith(u8, file_path, ".json")) {
@@ -349,7 +350,7 @@ fn executeParallel(allocator: Allocator, wf: *const Workflow, result: *Orchestra
 
     while (completed < wf.steps.items.len) {
         const batch_size = @min(max_concurrent, wf.steps.items.len - completed);
-        const batch = wf.steps.items[completed..completed + batch_size];
+        const batch = wf.steps.items[completed .. completed + batch_size];
 
         for (batch) |step| {
             const step_output = try executeWorkflowStep(allocator, step);
@@ -445,8 +446,8 @@ pub fn displayOrchestratorResult(result: *const OrchestratorResult) !void {
     try stdout.print("  Workflow: {s}\n", .{result.workflow_id});
     try stdout.print("  Status: {s}\n", .{if (result.success) "SUCCESS" else "FAILED"});
     try stdout.print("  Steps: {d}/{d}\n", .{ result.steps_completed, result.steps_total });
-    try stdout.print("  Duration: {d}ms\n", .{result.duration_ms });
-    try stdout.print("  Sacred Score: {d:.3}\n", .{result.sacred_score });
+    try stdout.print("  Duration: {d}ms\n", .{result.duration_ms});
+    try stdout.print("  Sacred Score: {d:.3}\n", .{result.sacred_score});
 
     if (result.output.len > 0) {
         try stdout.print("\n  Output:\n{s}\n", .{result.output});

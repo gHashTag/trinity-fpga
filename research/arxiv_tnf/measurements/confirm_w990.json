@@ -1,0 +1,83 @@
+{
+ "wave": "W990",
+ "board": "1:5",
+ "idcode": "0x3636093",
+ "request": "the Architect asked, mid-wave: confirm both fixes on silicon",
+ "which_fixes": {
+  "gft_signed_mac": "W978 -- the missing zero guards in the flat MAC (root_cause_w977.json)",
+  "gft_signed_dot4": "W979 -- the last unguarded private copy of smul (guard_audit_w979.json)"
+ },
+ "already_confirmed_in_w987": {
+  "gft_signed_mac": {
+   "word": "0xa5a5337f",
+   "clauses": "1111",
+   "ok": 1,
+   "pnr_s": 482.42,
+   "before": "0011 ok=0 in W975/W977 against the pre-W978 spec, c_zero real and FALSE"
+  },
+  "gft_signed_dot4": {
+   "word": "0xa5a530ff",
+   "clauses": "1111",
+   "ok": 1,
+   "pnr_s": 395.61,
+   "before": "ABSENT since W977 -- the 600 s cap and a BSCAN chain/site mismatch; never reached hardware"
+  },
+  "caveat": "one placement each, which T841/T842 say cannot distinguish a passing design from one whose failure is not reachable at that seed"
+ },
+ "confirmation_sweep": {
+  "gft_signed_mac": {
+   "placements": 4,
+   "seeds": [
+    1,
+    7,
+    42,
+    1234
+   ],
+   "sites": [
+    3,
+    2,
+    2,
+    4
+   ],
+   "clauses": [
+    "1111",
+    "1111",
+    "1111",
+    "1111"
+   ],
+   "ok": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "word": "0xa5a5337f",
+   "identical_in_every_build": true,
+   "verdict": "CONFIRMED across four placements, three distinct BSCAN sites, identical word",
+   "tool_note": "tri seeds prints it plainly: not a proof of placement-independence, the absence of a counterexample in 4 tries"
+  },
+  "gft_signed_dot4": {
+   "placements_done": 1,
+   "seeds_done": [
+    1
+   ],
+   "sites": [
+    2
+   ],
+   "clauses": [
+    "1111"
+   ],
+   "ok": [
+    1
+   ],
+   "word": "0xa5a530ff",
+   "repeatability": "seed 1 read twice -- W987 and W990 -- same word both times",
+   "status": "IN FLIGHT: seeds 7, 42 and 1234 still placing when this record was written"
+  }
+ },
+ "what_was_given_up_for_it": "the speculative gft_xorpercep run under a 3600 s cap was killed at ~50 minutes elapsed (nextpnr 20 min into placement) to free the board. It is re-runnable and W989 already recorded it as IN FLIGHT; the Architect's request outranked it.",
+ "a_finding_from_the_interruption": "t27c runs nextpnr TWICE when the BSCAN chain fixed-point loop has to correct the parameter, so a design at the cap costs up to 2x the cap in wall clock. gft_xorpercep had used ~50 minutes without reaching a verdict against a 3600 s stage cap.",
+ "environment": {
+  "web_search": "unavailable all session"
+ }
+}

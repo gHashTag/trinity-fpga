@@ -10,6 +10,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_exit_codes = @import("tri_exit_codes.zig");
 const Allocator = std.mem.Allocator;
 const cell_parser = @import("ribosome.zig");
 
@@ -75,7 +76,7 @@ fn runList(allocator: Allocator, args: []const []const u8) !void {
 fn runInfo(allocator: Allocator, args: []const []const u8) !void {
     if (args.len == 0) {
         std.debug.print("Usage: tri plugin info <plugin-id>\n", .{});
-        return;
+        return tri_exit_codes.exitWithCode(.validation_error);
     }
     const target_id = args[0];
 
@@ -106,7 +107,7 @@ fn runInfo(allocator: Allocator, args: []const []const u8) !void {
 fn runSearch(allocator: Allocator, args: []const []const u8) !void {
     if (args.len == 0) {
         std.debug.print("Usage: tri plugin search <query>\n", .{});
-        return;
+        return tri_exit_codes.exitWithCode(.validation_error);
     }
     const query = args[0];
 

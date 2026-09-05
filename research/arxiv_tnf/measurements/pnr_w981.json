@@ -1,0 +1,229 @@
+{
+ "wave": "W981",
+ "board": "1:5",
+ "idcode": "0x3636093",
+ "part": "xc7a200tfbg676-1",
+ "design": "specs/ternary/gft_smul.t27 under fpga/verilog/gft_dup_jtag.v -- design 14, clauses c_init c_self c_comm c_ind",
+ "bench_note": "W977 measured this on a THREE-cable bench addressed 1:4. That bench no longer exists; today there is exactly one cable at 1:5. The reproduction below therefore crosses a physical bench change.",
+ "control": "every row bracketed by a wrong-part bitstream forcing Done=0 before the load, then Done=1 after",
+ "reproduction_of_w977": {
+  "seed42": {
+   "w977": "1111 PASS",
+   "w981": "1111 PASS",
+   "fmax_w977": 18.15,
+   "fmax_w981": 18.15
+  },
+  "seed7": {
+   "w977": "1101 FAIL",
+   "w981": "1101 FAIL",
+   "fmax_w977": 17.36,
+   "fmax_w981": 17.36
+  },
+  "seed31337": {
+   "w977": "1111 PASS",
+   "w981": "1111 PASS"
+  },
+  "verdict": "reproduced exactly, including Fmax to two decimals, on a different cable and a different bus address"
+ },
+ "die_reads": [
+  {
+   "n": 1,
+   "seed": 42,
+   "variant": "repo wrapper (3-bit divider counter, slowclk = cfgmclk/8)",
+   "site": 3,
+   "fmax": 18.15,
+   "word": "0xa5a533bf",
+   "clauses": "1111",
+   "ok": 1,
+   "verdict": "PASS"
+  },
+  {
+   "n": 2,
+   "seed": 7,
+   "variant": "repo wrapper (3-bit divider counter, slowclk = cfgmclk/8)",
+   "site": 1,
+   "fmax": 17.36,
+   "word": "0xa5a533b6",
+   "clauses": "1101",
+   "ok": 0,
+   "verdict": "FAIL"
+  },
+  {
+   "n": 3,
+   "seed": 31337,
+   "variant": "repo wrapper (3-bit divider counter, slowclk = cfgmclk/8)",
+   "site": 3,
+   "fmax": 16.41,
+   "word": "0xa5a533bf",
+   "clauses": "1111",
+   "ok": 1,
+   "verdict": "PASS"
+  },
+  {
+   "n": 4,
+   "seed": 7,
+   "variant": "5-bit divider counter, slowclk = cfgmclk/8",
+   "site": 3,
+   "fmax": 18.14,
+   "word": "0xa5a533b6",
+   "clauses": "1101",
+   "ok": 0,
+   "verdict": "FAIL"
+  },
+  {
+   "n": 5,
+   "seed": 7,
+   "variant": "5-bit divider counter, slowclk = cfgmclk/16",
+   "site": 3,
+   "fmax": 17.91,
+   "word": "0xa5a533b6",
+   "clauses": "1101",
+   "ok": 0,
+   "verdict": "FAIL"
+  },
+  {
+   "n": 6,
+   "seed": 7,
+   "variant": "5-bit divider counter, slowclk = cfgmclk/32",
+   "site": 2,
+   "fmax": 18.57,
+   "word": "0xa5a533bf",
+   "clauses": "1111",
+   "ok": 1,
+   "verdict": "PASS"
+  },
+  {
+   "n": 7,
+   "seed": 1234,
+   "variant": "5-bit divider counter, slowclk = cfgmclk/8",
+   "site": 1,
+   "fmax": 17.64,
+   "word": "0xa5a533bf",
+   "clauses": "1111",
+   "ok": 1,
+   "verdict": "PASS"
+  },
+  {
+   "n": 8,
+   "seed": 1234,
+   "variant": "5-bit divider counter, slowclk = cfgmclk/16",
+   "site": 3,
+   "fmax": 17.59,
+   "word": "0xa5a533bf",
+   "clauses": "1111",
+   "ok": 1,
+   "verdict": "PASS"
+  },
+  {
+   "n": 9,
+   "seed": 1234,
+   "variant": "5-bit divider counter, slowclk = cfgmclk/32",
+   "site": 2,
+   "fmax": 17.68,
+   "word": "0xa5a533bf",
+   "clauses": "1111",
+   "ok": 1,
+   "verdict": "PASS"
+  }
+ ],
+ "hypotheses_tested": {
+  "bscan_site_decides": {
+   "why_it_looked_true": "across the five W977 seeds the partition was perfect: PASS at BSCAN3 (seeds 1, 42, 31337), FAIL at BSCAN1 (seed 7) and BSCAN2 (seed 1234). 5 of 5.",
+   "test": "hold the seed, perturb the design so the placer lands the cell elsewhere",
+   "result": "REFUTED by three of the six new reads: FAIL at BSCAN3 (rows 4, 5), PASS at BSCAN1 (row 7), PASS at BSCAN2 (rows 6, 9)",
+   "lesson": "the site moved together with the placement, so it could not be separated from it by the sweep that suggested it"
+  },
+  "timing": {
+   "test": "halve the physical clock at a FIXED BSCAN site -- rows 4 and 5 are the same seed, the same site, and differ only in slowclk (cfgmclk/8 vs cfgmclk/16)",
+   "result": "NO CHANGE -- 1101 both times",
+   "significance": "every previous timing argument on this bench rested on nextpnr's own model (W977: the failing seeds hold the BETTER reported margin). This is the first test that changed the physical period instead of reading the model, and the failure did not move."
+  },
+  "fmax_predicts": {
+   "fail_rows_mhz": [
+    17.36,
+    18.14,
+    17.91
+   ],
+   "pass_rows_mhz": [
+    18.15,
+    16.41,
+    18.57,
+    17.64,
+    17.59,
+    17.68
+   ],
+   "result": "the ranges interleave completely; reported Fmax carries no signal about the verdict"
+  },
+  "netlist_perturbation": {
+   "observation": "seed 1234 FAILED in W977 with a 3-bit divider counter and PASSES here with a 5-bit one at the same divider ratio (row 7)",
+   "significance": "two bits of a counter that cannot reach the arithmetic flip the verdict -- T614 (W841), now on a second design"
+  }
+ },
+ "fasm_diff_is_not_decisive": {
+  "w977_plan": "the two FASM files (passing seed vs failing seed) have not been diffed, so the specific net that routes differently is unidentified. That diff is the next step.",
+  "measured": {
+   "seed42_PASS": {
+    "logic_luts": 1164,
+    "route_through": 164,
+    "uniq_logic_init": 527
+   },
+   "seed1_PASS": {
+    "logic_luts": 1165,
+    "route_through": 166,
+    "uniq_logic_init": 537
+   },
+   "seed7_FAIL": {
+    "logic_luts": 1180,
+    "route_through": 169,
+    "uniq_logic_init": 558
+   },
+   "seed1234_FAIL": {
+    "logic_luts": 1195,
+    "route_through": 170,
+    "uniq_logic_init": 562
+   }
+  },
+  "why_it_fails": "the multiset of logic LUT INIT words differs between seed 42 and seed 1 -- TWO BUILDS THAT BOTH COMPUTE THE RIGHT ANSWER (+508 / -509). Pin permutation rewrites INIT bits without changing the function, and nextpnr inserts route-through LUTs freely, so INIT equality is not a function-preservation invariant and inequality is not evidence of a logic change.",
+  "consequence": "W977's named next step cannot decide the question it was chosen for. A decision needs a formal equivalence check between the pre- and post-place-and-route netlists, not a textual diff of configuration bits."
+ },
+ "what_survives": "seed 7 is the only persistent failure: 2 reads in W977 and 3 today, across a bench change, a netlist perturbation and a 2x clock slowdown. Its cause is below the front end and is not the placer seed, the BSCAN site, the reported Fmax or the clock period.",
+ "environment": {
+  "web_search": "unavailable all session (model-config error); competitor and literature work analytic only"
+ },
+ "self_heal": {
+  "tri_audit_was_dying_at_its_own_new_line": {
+   "introduced": "W980",
+   "mechanism": "cov=$(\"$0\" coverage | ...) -- tri coverage exits 1 whenever a wrapper is weak, which is always. Under set -e a failing command substitution ends the shell.",
+   "consequence": "for one full wave the audit never reached the rungs, base, rigs, guards or numbers rows, and printed neither 'audit: pass' nor 'audit: FAIL'",
+   "fix": "wrap the substitution; the identical shape was already fixed three lines below for grep -l"
+  },
+  "oracles_were_only_in_a_scratchpad": {
+   "symptom": "tri rungs: oracles not found; set T27_CONFORMANCE -- on a bench where the files existed",
+   "cause": "discovery globbed a path containing a per-session identifier",
+   "deeper": "the seven reference implementations every published comparison derives from had never been committed, so a referee could not open them",
+   "fix": "conformance/oracles/ with a README; tri searches it first. tri rungs now answers 34 instantiations, 0 non-rung."
+  },
+  "xorpercep_lfsr": {
+   "symptom": "tri domain: the ind clause was fed a 32-bit LFSR word that is never a representable GF-T16 value",
+   "fix": "the LFSR bits now fill the sign and mantissa with the offset pinned in range; four independent sources preserved (T555)",
+   "validated": "the gate fires on the pre-fix corpus (exit 1) and passes on the fixed one (exit 0)"
+  }
+ },
+ "audit_after": {
+  "rows_green": [
+   "disk",
+   "push",
+   "lessons",
+   "theorems",
+   "rungs",
+   "domain",
+   "guards",
+   "rigs",
+   "numbers"
+  ],
+  "rows_red": [
+   "base -- origin/master has no merge-base; awaiting a human, see MASTER-ORPHANED-W971.md"
+  ],
+  "numbers": "369 derived checks, 0 discrepancies"
+ }
+}

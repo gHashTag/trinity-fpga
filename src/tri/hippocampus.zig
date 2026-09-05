@@ -17,6 +17,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_exit_codes = @import("tri_exit_codes.zig");
 const Allocator = std.mem.Allocator;
 
 const agent_roles = @import("agent_roles.zig");
@@ -947,7 +948,7 @@ fn runMemoryList(allocator: Allocator, args: []const []const u8) !void {
 fn runMemoryRead(allocator: Allocator, args: []const []const u8) !void {
     if (args.len == 0) {
         print("{s}Usage: tri memory read <id>{s}\n", .{ RED, RESET });
-        return;
+        return tri_exit_codes.exitWithCode(.validation_error);
     }
     const target_id = args[0];
 
@@ -1043,7 +1044,7 @@ fn runMemoryWrite(allocator: Allocator, args: []const []const u8) !void {
 fn runMemorySearch(allocator: Allocator, args: []const []const u8) !void {
     if (args.len == 0) {
         print("{s}Usage: tri memory search <query> [--limit 20]{s}\n", .{ RED, RESET });
-        return;
+        return tri_exit_codes.exitWithCode(.validation_error);
     }
 
     const query = args[0];

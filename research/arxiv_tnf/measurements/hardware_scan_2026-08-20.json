@@ -1,0 +1,21 @@
+{
+ "measured_by": "openFPGALoader on the bench, read-only JTAG scan (no programming)",
+ "date": "2026-08-20",
+ "cables_found": [
+  {
+   "bus": "001",
+   "device": "005",
+   "vid_pid": "0x0403:0x6014",
+   "probe": "ft232H",
+   "manufacturer": "Digilent",
+   "serial": "210512180081"
+  }
+ ],
+ "idcode": "0x3636093",
+ "family": "artix a7 200t",
+ "corrections": [
+  "CLAUDE.md documents three cables addressable as --busdev-num 1:4 / 1:6 / 1:8; the bench now presents exactly ONE cable, at bus 001 device 005.",
+  "The IDCODE reads 0x3636093, confirming the t27 hardware SSOT and confirming that the acceptance criterion 0x13636093 in trinity-fpga (issue #633) would reject this board.",
+  "openFPGALoader needs no Docker: the JTAG scan is available now. Only the BITSTREAM BUILD is blocked on the daemon."
+ ]
+}

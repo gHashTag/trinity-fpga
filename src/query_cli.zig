@@ -14,10 +14,9 @@
 // Level 11.25 — Interactive REPL Mode for Trinity Symbolic Reasoning
 
 const std = @import("std");
-const vsa = @import("vsa.zig");
-const hybrid = @import("hybrid.zig");
+const vsa = @import("vsa");
 
-const HybridBigInt = hybrid.HybridBigInt;
+const HybridBigInt = vsa.HybridBigInt;
 
 const DIM = 1024;
 const NUM_ENTITIES = 30;
@@ -70,15 +69,13 @@ fn bipolarRandom(dim: usize, seed: u64) HybridBigInt {
     var result = HybridBigInt.zero();
     result.mode = .unpacked_mode;
     result.dirty = true;
-    result.trit_len = @min(dim, hybrid.MAX_TRITS);
+    result.trit_len = @min(dim, vsa.MAX_TRITS);
 
     var rng = std.Random.DefaultPrng.init(seed);
     const random = rng.random();
 
     for (0..result.trit_len) |i| {
-        if (result.unpacked_cache) |cache| {
-            cache[i] = if (random.boolean()) @as(i8, 1) else @as(i8, -1);
-        }
+        result.unpacked_cache[i] = if (random.boolean()) @as(i8, 1) else @as(i8, -1);
     }
     return result;
 }
@@ -96,7 +93,7 @@ fn hvSimilarity(a: *HybridBigInt, b: *HybridBigInt) f64 {
 }
 
 fn hvBundle2(a: *HybridBigInt, b: *HybridBigInt) HybridBigInt {
-    return vsa.bundle2(a, b, std.heap.page_allocator);
+    return vsa.bundle2(a, b);
 }
 
 fn treeBundleN(items: []HybridBigInt) HybridBigInt {

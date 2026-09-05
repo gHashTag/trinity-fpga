@@ -1,0 +1,269 @@
+{
+  "part": "xc7a200tfbg676-1",
+  "harness": "fpga/tnet/w_*.v (full observation)",
+  "method": "For each configuration and each of 210 design pairs, count in how many of the five seeds design X beats design Y. A verdict is UNSTABLE if neither 0/5 nor 5/5. Compare against the pair's median margin.",
+  "configs": {
+    "heap/router1": {
+      "pairs": 210,
+      "unstable": 25,
+      "max_unstable_margin_pct": 17.3,
+      "unstable_pairs": [
+        {
+          "pair": [
+            "w_bnf16",
+            "w_fp8e5m2"
+          ],
+          "wins_x": 4,
+          "median_margin_pct": 17.3
+        },
+        {
+          "pair": [
+            "w_fp8e5m2",
+            "w_gfternary"
+          ],
+          "wins_x": 1,
+          "median_margin_pct": 12.1
+        },
+        {
+          "pair": [
+            "w_bnf16",
+            "w_tnf16"
+          ],
+          "wins_x": 3,
+          "median_margin_pct": 10.6
+        },
+        {
+          "pair": [
+            "w_bnf16",
+            "w_tnf32"
+          ],
+          "wins_x": 3,
+          "median_margin_pct": 10.6
+        },
+        {
+          "pair": [
+            "w_bnf16",
+            "w_fp8e4m3"
+          ],
+          "wins_x": 3,
+          "median_margin_pct": 10.0
+        },
+        {
+          "pair": [
+            "w_fp8e5m2",
+            "w_tnf64"
+          ],
+          "wins_x": 1,
+          "median_margin_pct": 9.5
+        },
+        {
+          "pair": [
+            "w_bnf16",
+            "w_tnf64"
+          ],
+          "wins_x": 4,
+          "median_margin_pct": 8.7
+        },
+        {
+          "pair": [
+            "w_gf10",
+            "w_vaxf"
+          ],
+          "wins_x": 1,
+          "median_margin_pct": 8.5
+        },
+        {
+          "pair": [
+            "w_fp8e5m2",
+            "w_tnf16"
+          ],
+          "wins_x": 1,
+          "median_margin_pct": 7.5
+        },
+        {
+          "pair": [
+            "w_fp8e5m2",
+            "w_tnf32"
+          ],
+          "wins_x": 2,
+          "median_margin_pct": 7.5
+        }
+      ]
+    },
+    "heap/router2": {
+      "pairs": 210,
+      "unstable": 27,
+      "max_unstable_margin_pct": 21.5,
+      "unstable_pairs": [
+        {
+          "pair": [
+            "w_bnf16",
+            "w_tnf16"
+          ],
+          "wins_x": 4,
+          "median_margin_pct": 21.5
+        },
+        {
+          "pair": [
+            "w_fp8e4m3",
+            "w_int8"
+          ],
+          "wins_x": 2,
+          "median_margin_pct": 20.3
+        },
+        {
+          "pair": [
+            "w_bnf16",
+            "w_fp8e4m3"
+          ],
+          "wins_x": 4,
+          "median_margin_pct": 19.7
+        },
+        {
+          "pair": [
+            "w_bnf16",
+            "w_fp8e5m2"
+          ],
+          "wins_x": 4,
+          "median_margin_pct": 18.3
+        },
+        {
+          "pair": [
+            "w_bin32",
+            "w_bnf16"
+          ],
+          "wins_x": 4,
+          "median_margin_pct": 15.3
+        },
+        {
+          "pair": [
+            "w_baseline",
+            "w_bnf16"
+          ],
+          "wins_x": 4,
+          "median_margin_pct": 15.0
+        },
+        {
+          "pair": [
+            "w_fp8e4m3",
+            "w_gfternary"
+          ],
+          "wins_x": 4,
+          "median_margin_pct": 14.6
+        },
+        {
+          "pair": [
+            "w_gfternary",
+            "w_vaxf"
+          ],
+          "wins_x": 4,
+          "median_margin_pct": 14.3
+        },
+        {
+          "pair": [
+            "w_int8",
+            "w_tnf64"
+          ],
+          "wins_x": 4,
+          "median_margin_pct": 14.0
+        },
+        {
+          "pair": [
+            "w_bnf16",
+            "w_tnf64"
+          ],
+          "wins_x": 3,
+          "median_margin_pct": 13.5
+        }
+      ]
+    },
+    "sa/router2": {
+      "pairs": 210,
+      "unstable": 37,
+      "max_unstable_margin_pct": 37.6,
+      "unstable_pairs": [
+        {
+          "pair": [
+            "w_baseline",
+            "w_int8"
+          ],
+          "wins_x": 4,
+          "median_margin_pct": 37.6
+        },
+        {
+          "pair": [
+            "w_minifl",
+            "w_tnf32"
+          ],
+          "wins_x": 1,
+          "median_margin_pct": 36.6
+        },
+        {
+          "pair": [
+            "w_tnf32",
+            "w_vaxf"
+          ],
+          "wins_x": 4,
+          "median_margin_pct": 36.1
+        },
+        {
+          "pair": [
+            "w_gf14",
+            "w_tnf32"
+          ],
+          "wins_x": 1,
+          "median_margin_pct": 31.8
+        },
+        {
+          "pair": [
+            "w_gfternary",
+            "w_minifl"
+          ],
+          "wins_x": 4,
+          "median_margin_pct": 29.9
+        },
+        {
+          "pair": [
+            "w_gfplus8",
+            "w_tnf16"
+          ],
+          "wins_x": 1,
+          "median_margin_pct": 28.5
+        },
+        {
+          "pair": [
+            "w_tnf16",
+            "w_tnf32"
+          ],
+          "wins_x": 2,
+          "median_margin_pct": 26.5
+        },
+        {
+          "pair": [
+            "w_gf14",
+            "w_tnf64"
+          ],
+          "wins_x": 1,
+          "median_margin_pct": 23.3
+        },
+        {
+          "pair": [
+            "w_bnf16",
+            "w_int8"
+          ],
+          "wins_x": 1,
+          "median_margin_pct": 23.2
+        },
+        {
+          "pair": [
+            "w_bin32",
+            "w_bnf16"
+          ],
+          "wins_x": 3,
+          "median_margin_pct": 20.1
+        }
+      ]
+    }
+  },
+  "finding": "Within a single configuration, 20-34 of 210 pairwise verdicts change winner from seed to seed. Median-of-five is the right magnitude estimator, but a pairwise VERDICT whose median margin is below the seed noise is decided by the seed, not by the formats. Unstable verdicts here reach median margins of up to ~30%, so 'A is faster than B' at margins under that is not established by five seeds of one configuration. This is the project's own three-seed rule (a silicon verdict must agree across placer seeds) applied to throughput comparisons."
+}

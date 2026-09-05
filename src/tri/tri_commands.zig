@@ -199,6 +199,9 @@ pub fn runBenchCommandAsync(allocator: std.mem.Allocator, args: []const []const 
     const job_system = @import("job_system.zig");
     _ = job_system;
     std.debug.print("⚠️  bench async: TODO - job system not configured\n", .{});
+    // Every path through this function prints a TODO and does nothing, so
+    // reporting success left callers unable to tell it apart from a run.
+    return error.NotImplemented;
 }
 /// Internal benchmark execution (runs when --_internal-job-exec flag is set)
 pub fn runBenchCommandInternal(allocator: std.mem.Allocator) !void {
@@ -271,6 +274,7 @@ fn runBrainStateRecoveryCommand(allocator: std.mem.Allocator, args: []const []co
     _ = allocator;
     _ = args;
     std.debug.print("⚠️  brain state recovery: TODO - not implemented yet\n", .{});
+    return error.NotImplemented;
 }
 /// Brain Health Check - Shows status of all brain regions (implemented elsewhere)
 /// Usage: tri brain health [--json]
@@ -488,18 +492,21 @@ pub fn runBrainSimulateCommand(allocator: std.mem.Allocator, args: []const []con
     _ = allocator;
     _ = args;
     std.debug.print("⚠️  brain simulate: TODO - not implemented yet\n", .{});
+    return error.NotImplemented;
 }
 /// Stub: Brain Viz Command (TODO: implement)
 pub fn runBrainVizCommand(allocator: std.mem.Allocator, args: []const []const u8) !void {
     _ = allocator;
     _ = args;
     std.debug.print("⚠️  brain viz: TODO - not implemented yet\n", .{});
+    return error.NotImplemented;
 }
 /// Stub: REPL Test Command (TODO: implement)
 pub fn runReplTestCommand(allocator: std.mem.Allocator, args: []const []const u8) !void {
     _ = allocator;
     _ = args;
     std.debug.print("⚠️  repl test: TODO - not implemented yet\n", .{});
+    return error.NotImplemented;
 }
 /// SEBO Command - Sacred Evolutionary Bayesian Optimization
 pub fn runSeboCommand(allocator: std.mem.Allocator, args: []const []const u8) !void {
@@ -623,10 +630,13 @@ pub fn runDeployCommand(allocator: std.mem.Allocator, subcommand: []const u8, ar
     _ = args;
     if (std.mem.eql(u8, subcommand, "status")) {
         std.debug.print("{s}⚠️  deploy status: TODO - not implemented yet{s}\n", .{ YELLOW, RESET });
+        return error.NotImplemented;
     } else if (std.mem.eql(u8, subcommand, "push")) {
         std.debug.print("{s}⚠️  deploy push: TODO - not implemented yet{s}\n", .{ YELLOW, RESET });
+        return error.NotImplemented;
     } else if (std.mem.eql(u8, subcommand, "list")) {
         std.debug.print("{s}⚠️  deploy list: TODO - not implemented yet{s}\n", .{ YELLOW, RESET });
+        return error.NotImplemented;
     } else {
         std.debug.print("{s}Error: unknown deploy subcommand '{s}'{s}\n", .{ RED, subcommand, RESET });
     }
@@ -640,6 +650,7 @@ pub fn runNotifyCommand(allocator: std.mem.Allocator, msg: []const u8, chat_id_o
     _ = edit_message_id;
     std.debug.print("{s}⚠️  notify: TODO - not implemented yet{s}\n", .{ YELLOW, RESET });
     std.debug.print("  Message: {s}\n", .{msg});
+    return error.NotImplemented;
 }
 /// Doctor Command - Health and migration tool
 /// Usage: tri doctor [subcommand] [args]
@@ -648,6 +659,7 @@ pub fn runDoctorCommand(allocator: std.mem.Allocator, args: []const []const u8) 
     _ = args;
     std.debug.print("{s}⚠️  doctor: TODO - not implemented yet{s}\n", .{ YELLOW, RESET });
     std.debug.print("  Use: tri doctor [init|scan|mark|report|plan|heal|enforce]\n", .{});
+    return error.NotImplemented;
 }
 /// Sim Command - Simulation commands
 /// Usage: tri sim <subcommand> [args]
@@ -663,6 +675,7 @@ pub fn runCleanCommand(allocator: std.mem.Allocator, args: []const []const u8) !
     _ = allocator;
     _ = args;
     std.debug.print("{s}⚠️  clean: TODO - not implemented yet{s}\n", .{ YELLOW, RESET });
+    return error.NotImplemented;
 }
 
 /// Format Command - Run zig fmt on source files
@@ -683,6 +696,7 @@ pub fn runStatsCommand(allocator: std.mem.Allocator, args: []const []const u8) !
     _ = allocator;
     _ = args;
     std.debug.print("{s}📊 Stats: TODO - not implemented yet{s}\n", .{ YELLOW, RESET });
+    return error.NotImplemented;
 }
 
 /// IGLA Command - IGLA related operations
@@ -691,6 +705,7 @@ pub fn runIglaCommand(allocator: std.mem.Allocator, args: []const []const u8) !v
     _ = allocator;
     _ = args;
     std.debug.print("{s}⚠️  igla: TODO - not implemented yet{s}\n", .{ YELLOW, RESET });
+    return error.NotImplemented;
 }
 
 /// Needle Command - Code search and replace (STUB)
@@ -699,6 +714,7 @@ pub fn runNeedleCommand(allocator: std.mem.Allocator, args: []const []const u8) 
     _ = allocator;
     _ = args;
     std.debug.print("{s}🔍 needle: TODO - not implemented yet{s}\n", .{ YELLOW, RESET });
+    return error.NotImplemented;
 }
 
 /// Needle Search Command - Search code (STUB)
@@ -707,6 +723,7 @@ pub fn runNeedleSearchCommand(allocator: std.mem.Allocator, args: []const []cons
     _ = allocator;
     _ = args;
     std.debug.print("{s}🔍 needle-search: TODO - not implemented yet{s}\n", .{ YELLOW, RESET });
+    return error.NotImplemented;
 }
 
 /// Needle Check Command - Check code (STUB)
@@ -715,6 +732,7 @@ pub fn runNeedleCheckCommand(allocator: std.mem.Allocator, args: []const []const
     _ = allocator;
     _ = args;
     std.debug.print("{s}🔍 needle-check: TODO - not implemented yet{s}\n", .{ YELLOW, RESET });
+    return error.NotImplemented;
 }
 /// Info Command - System information
 /// Usage: tri info [subcommand]
@@ -722,6 +740,7 @@ pub fn runInfoCommand(allocator: std.mem.Allocator, args: []const []const u8) !v
     _ = allocator;
     _ = args;
     std.debug.print("{s}⚠️  info: TODO - not implemented yet{s}\n", .{ YELLOW, RESET });
+    return error.NotImplemented;
 }
 /// Lint Command - Spec Linter
 /// Usage: tri lint <target>
@@ -729,6 +748,7 @@ pub fn runLintCommand(allocator: std.mem.Allocator, args: []const []const u8) !v
     _ = allocator;
     _ = args;
     std.debug.print("{s}⚠️  lint: TODO - not implemented yet{s}\n", .{ YELLOW, RESET });
+    return error.NotImplemented;
 }
 /// Event Stream Command - Event streaming
 /// Usage: tri event-stream <action>
@@ -736,6 +756,7 @@ pub fn runEventStreamCommand(allocator: std.mem.Allocator, args: []const []const
     _ = allocator;
     _ = args;
     std.debug.print("{s}⚠️  event-stream: TODO - not implemented yet{s}\n", .{ YELLOW, RESET });
+    return error.NotImplemented;
 }
 
 /// Task Claim Command - Async task claiming
@@ -790,10 +811,12 @@ pub fn runTaskClaimCommand(allocator: std.mem.Allocator, args: []const []const u
     _ = allocator;
     _ = args;
     std.debug.print("{s}⚠️  task-claim: TODO - not implemented yet{s}\n", .{ YELLOW, RESET });
+    return error.NotImplemented;
 }
 /// Stress Test Command - Run stress tests
 /// Usage: tri stress-test [options]
 pub fn runStressTestCommand(args: []const []const u8) !void {
     _ = args;
     std.debug.print("{s}⚠️  stress-test: TODO - not implemented yet{s}\n", .{ YELLOW, RESET });
+    return error.NotImplemented;
 }

@@ -1,0 +1,109 @@
+# Issue #726: `jit.test.JitCompiler dot product correctness` does not fail an
+# assertion -- it kills the test process. zig reports "the following test command
+# failed" with no stack trace and no error name, because a fault inside emitted
+# machine code never reaches zig's panic handler.
+#
+# That leaves nothing to reason from, and guessing at a segfault with no
+# instrument is how a session becomes twenty hours of repairing hardware that was
+# never broken. This workflow exists to produce the missing observation -- the
+# signal, the faulting address, the backtrace -- before anyone edits the emitter.
+#
+# It is not a gate on the JIT. It is a gate on the *instrument*: it fails when it
+# cannot say what happened, and succeeds when it can, whichever way that reads.
+# src/jit.zig imports the `vsa` module, so it cannot be built standalone with
+# `zig test`; the whole suite runs and the core file is recovered afterwards.
+
+name: JIT crash forensics
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'src/jit.zig'
+      - '.github/workflows/jit-forensics.yml'
+
+env:
+  ZIG_VERSION: '0.15.2'
+
+jobs:
+  forensics:
+    name: What kills the JIT test process?
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+
+      - name: Fetch Zig ${{ env.ZIG_VERSION }}
+        run: |
+          set -e
+          curl -sSL --retry 3 -o zig.tar.xz \
+            "https://ziglang.org/download/${ZIG_VERSION}/zig-x86_64-linux-${ZIG_VERSION}.tar.xz"
+          tar xf zig.tar.xz
+          echo "$PWD/zig-x86_64-linux-${ZIG_VERSION}" >> $GITHUB_PATH
+
+      - name: Install gdb
+        run: sudo apt-get update && sudo apt-get install -y gdb
+
+      # The runner pipes cores to apport by default, which discards them for a
+      # process apport does not recognise. Write them to a plain path instead.
+      - name: Enable core dumps
+        run: |
+          sudo sysctl -w kernel.core_pattern=/tmp/core.%e.%p
+          sudo sysctl -w kernel.core_uses_pid=1
+          ulimit -c unlimited
+          cat /proc/sys/kernel/core_pattern
+
+      - name: Run the suite and keep whatever dies
+        run: |
+          ulimit -c unlimited
+          zig build test --summary all > test.log 2>&1 || true
+          echo "--- exit path ---"
+          grep -E "the following test command failed|Build Summary" test.log || true
+
+      - name: Did the crash reproduce?
+        id: repro
+        run: |
+          if grep -q "the following test command failed" test.log; then
+            echo "crashed=yes" >> $GITHUB_OUTPUT
+            echo "The test process died. Looking for a core." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "crashed=no" >> $GITHUB_OUTPUT
+            echo "No test command died in this run -- #726 did not reproduce." >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Read the core
+        if: steps.repro.outputs.crashed == 'yes'
+        run: |
+          shopt -s nullglob
+          cores=(/tmp/core.*)
+          if [ ${#cores[@]} -eq 0 ]; then
+            echo "::error::the process died and no core was written -- the instrument failed, not the subject"
+            exit 1
+          fi
+          for c in "${cores[@]}"; do
+            echo "## core: $c" | tee -a $GITHUB_STEP_SUMMARY
+            # the exec path lives in the core's own notes; gdb needs it to symbolise
+            exe=$(file "$c" | grep -oE "execfn: '[^']+'" | head -1 | cut -d"'" -f2)
+            echo "exec: ${exe:-unknown}" | tee -a $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            gdb -batch \
+                -ex 'bt full' \
+                -ex 'info registers rip rsp rbp' \
+                -ex 'info threads' \
+                -ex 'x/8i $rip' \
+                ${exe:+"$exe"} -c "$c" 2>&1 | head -80 | tee -a $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          done
+
+      - name: Keep the evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jit-forensics
+          path: |
+            test.log
+            /tmp/core.*
+          if-no-files-found: warn

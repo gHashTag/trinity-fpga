@@ -16,6 +16,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_exit_codes = @import("tri_exit_codes.zig");
 const Allocator = std.mem.Allocator;
 const colors = @import("tri_colors.zig");
 const spec_match = @import("spec_template_match.zig");
@@ -456,7 +457,7 @@ pub fn runSpecCreateCommand(allocator: Allocator, args: []const []const u8) void
         print("{s}Usage: tri spec create <name> [--issue N] [--description \"...\"]{s}\n", .{ RED, RESET });
         print("Example: tri spec create dev_metrics --issue 42 --description \"Track agent performance\"\n", .{});
         print("       tri spec create --help — Show detailed help\n", .{});
-        return;
+        return tri_exit_codes.exitWithCode(.validation_error);
     }
 
     // Check for --help flag before parsing

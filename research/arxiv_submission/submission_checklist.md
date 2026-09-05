@@ -114,4 +114,4 @@ grep -ni 'bit-exact' research/arxiv_submission/paper.tex | grep -i '30 compute' 
       (contingent on the ID assigned above):
       - stamp the arXiv ID into the `paper.tex` / `CATALOG_PAPER_DRAFT.md` header
       - add the arXiv ID to `docs/migration-map.md` / bibliography README
-      - open an issue to back-link from the `formats_catalog.t27` repo
+      - open an issue to back-link from the `gHashTag/t27/specs/numeric/formats_catalog.t27` repo

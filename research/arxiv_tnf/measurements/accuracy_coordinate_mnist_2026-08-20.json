@@ -1,0 +1,284 @@
+{
+ "generated_by": "W938 accuracy coordinate",
+ "task": "MNIST, 784-32-10 MLP, 4 epochs Adam, seed 20260820",
+ "quantisation": "weights-only post-training round-trip through the shipped conformance oracles; activations fp32",
+ "runs": {
+  "16": {
+   "baseline_fp32_accuracy": 0.933899998664856,
+   "empirical_prior": {
+    "n_params": 25450,
+    "median_abs": 0.055785663425922394,
+    "p01_abs": 0.0009595274459570646,
+    "p99_abs": 0.2586059272289276,
+    "log2_span_p01_p99": 8.07421588897705,
+    "binades_covered": 15.873619079589844
+   },
+   "formats": {
+    "TNF16": {
+     "top1": 0.933899998664856,
+     "drop_pp": 0.0,
+     "median_rel_err_on_real_weights": 8.485603757435456e-05,
+     "zeroed": 0,
+     "seconds": 0.3
+    },
+    "GF16": {
+     "top1": 0.933899998664856,
+     "drop_pp": 0.0,
+     "median_rel_err_on_real_weights": 0.0003408427583053708,
+     "zeroed": 0,
+     "seconds": 0.3
+    },
+    "takum16": {
+     "top1": 0.933899998664856,
+     "drop_pp": 0.0,
+     "median_rel_err_on_real_weights": 0.0003055131819564849,
+     "zeroed": 0,
+     "seconds": 0.6
+    },
+    "posit16": {
+     "top1": 0.933899998664856,
+     "drop_pp": 0.0,
+     "median_rel_err_on_real_weights": 0.00011828938295366243,
+     "zeroed": 0,
+     "seconds": 2.1
+    },
+    "bfloat16": {
+     "top1": 0.9340000152587891,
+     "drop_pp": -0.010001659393310547,
+     "median_rel_err_on_real_weights": 0.0013519662898033857,
+     "zeroed": 0,
+     "seconds": 0.3
+    },
+    "binary16": {
+     "top1": 0.9340000152587891,
+     "drop_pp": -0.010001659393310547,
+     "median_rel_err_on_real_weights": 0.00016711970965843648,
+     "zeroed": 0,
+     "seconds": 0.0
+    }
+   }
+  },
+  "16_scaled": {
+   "baseline_fp32_accuracy": 0.933899998664856,
+   "empirical_prior": {
+    "n_params": 25450,
+    "median_abs": 0.055785663425922394,
+    "p01_abs": 0.0009595274459570646,
+    "p99_abs": 0.2586059272289276,
+    "log2_span_p01_p99": 8.07421588897705,
+    "binades_covered": 15.873619079589844
+   },
+   "per_tensor_scale": true,
+   "formats": {
+    "TNF16": {
+     "top1": 0.933899998664856,
+     "drop_pp": 0.0,
+     "median_rel_err_on_real_weights": 8.471932233078405e-05,
+     "zeroed": 0,
+     "seconds": 0.3
+    },
+    "GF16": {
+     "top1": 0.9340000152587891,
+     "drop_pp": -0.010001659393310547,
+     "median_rel_err_on_real_weights": 0.00034028332447633147,
+     "zeroed": 0,
+     "seconds": 0.3
+    },
+    "takum16": {
+     "top1": 0.933899998664856,
+     "drop_pp": 0.0,
+     "median_rel_err_on_real_weights": 0.00021844709408469498,
+     "zeroed": 0,
+     "seconds": 0.6
+    },
+    "posit16": {
+     "top1": 0.933899998664856,
+     "drop_pp": 0.0,
+     "median_rel_err_on_real_weights": 9.858811972662807e-05,
+     "zeroed": 0,
+     "seconds": 2.2
+    },
+    "bfloat16": {
+     "top1": 0.9337999820709229,
+     "drop_pp": 0.010001659393310547,
+     "median_rel_err_on_real_weights": 0.0013642878038808703,
+     "zeroed": 0,
+     "seconds": 0.3
+    },
+    "binary16": {
+     "top1": 0.9340000152587891,
+     "drop_pp": -0.010001659393310547,
+     "median_rel_err_on_real_weights": 0.00016824310296215117,
+     "zeroed": 0,
+     "seconds": 0.0
+    }
+   }
+  },
+  "4": {
+   "baseline_fp32_accuracy": 0.933899998664856,
+   "empirical_prior": {
+    "n_params": 25450,
+    "median_abs": 0.055785663425922394,
+    "p01_abs": 0.0009595274459570646,
+    "p99_abs": 0.2586059272289276,
+    "log2_span_p01_p99": 8.07421588897705,
+    "binades_covered": 15.873619079589844
+   },
+   "formats": {
+    "TNF4 (E_t=2,M=1)": {
+     "top1": 0.9226999878883362,
+     "drop_pp": 1.1200010776519775,
+     "median_rel_err_on_real_weights": 1.0,
+     "zeroed": 13714,
+     "seconds": 0.2
+    },
+    "GF4": {
+     "top1": 0.21719999611377716,
+     "drop_pp": 71.67000025510788,
+     "median_rel_err_on_real_weights": 1.0,
+     "zeroed": 25142,
+     "seconds": 0.2
+    },
+    "fp4 e2m1": {
+     "top1": 0.21719999611377716,
+     "drop_pp": 71.67000025510788,
+     "median_rel_err_on_real_weights": 1.0,
+     "zeroed": 25142,
+     "seconds": 0.2
+    }
+   }
+  },
+  "4_scaled": {
+   "baseline_fp32_accuracy": 0.933899998664856,
+   "empirical_prior": {
+    "n_params": 25450,
+    "median_abs": 0.055785663425922394,
+    "p01_abs": 0.0009595274459570646,
+    "p99_abs": 0.2586059272289276,
+    "log2_span_p01_p99": 8.07421588897705,
+    "binades_covered": 15.873619079589844
+   },
+   "per_tensor_scale": true,
+   "formats": {
+    "TNF4 (E_t=2,M=1)": {
+     "top1": 0.9337999820709229,
+     "drop_pp": 0.010001659393310547,
+     "median_rel_err_on_real_weights": 0.15222957730293274,
+     "zeroed": 6698,
+     "seconds": 0.2
+    },
+    "GF4": {
+     "top1": 0.8790000081062317,
+     "drop_pp": 5.489999055862427,
+     "median_rel_err_on_real_weights": 1.0,
+     "zeroed": 18900,
+     "seconds": 0.2
+    },
+    "fp4 e2m1": {
+     "top1": 0.8790000081062317,
+     "drop_pp": 5.489999055862427,
+     "median_rel_err_on_real_weights": 1.0,
+     "zeroed": 18900,
+     "seconds": 0.2
+    }
+   }
+  },
+  "8": {
+   "baseline_fp32_accuracy": 0.933899998664856,
+   "empirical_prior": {
+    "n_params": 25450,
+    "median_abs": 0.055785663425922394,
+    "p01_abs": 0.0009595274459570646,
+    "p99_abs": 0.2586059272289276,
+    "log2_span_p01_p99": 8.07421588897705,
+    "binades_covered": 15.873619079589844
+   },
+   "formats": {
+    "TNF8 (E_t=4,M=3)": {
+     "top1": 0.9340000152587891,
+     "drop_pp": -0.010001659393310547,
+     "median_rel_err_on_real_weights": 0.021441856399178505,
+     "zeroed": 0,
+     "seconds": 0.3
+    },
+    "GF8": {
+     "top1": 0.9337999820709229,
+     "drop_pp": 0.010001659393310547,
+     "median_rel_err_on_real_weights": 0.06268817186355591,
+     "zeroed": 2134,
+     "seconds": 0.3
+    },
+    "posit8": {
+     "top1": 0.9332000017166138,
+     "drop_pp": 0.06999969482421875,
+     "median_rel_err_on_real_weights": 0.06268817186355591,
+     "zeroed": 0,
+     "seconds": 1.1
+    },
+    "fp8 e4m3": {
+     "top1": 0.9340000152587891,
+     "drop_pp": -0.010001659393310547,
+     "median_rel_err_on_real_weights": 0.024196241050958633,
+     "zeroed": 262,
+     "seconds": 0.3
+    },
+    "fp8 e5m2": {
+     "top1": 0.9327999949455261,
+     "drop_pp": 0.1100003719329834,
+     "median_rel_err_on_real_weights": 0.043460115790367126,
+     "zeroed": 0,
+     "seconds": 0.3
+    }
+   }
+  },
+  "8_scaled": {
+   "baseline_fp32_accuracy": 0.933899998664856,
+   "empirical_prior": {
+    "n_params": 25450,
+    "median_abs": 0.055785663425922394,
+    "p01_abs": 0.0009595274459570646,
+    "p99_abs": 0.2586059272289276,
+    "log2_span_p01_p99": 8.07421588897705,
+    "binades_covered": 15.873619079589844
+   },
+   "per_tensor_scale": true,
+   "formats": {
+    "TNF8 (E_t=4,M=3)": {
+     "top1": 0.9329000115394592,
+     "drop_pp": 0.09999871253967285,
+     "median_rel_err_on_real_weights": 0.021492909640073776,
+     "zeroed": 0,
+     "seconds": 0.3
+    },
+    "GF8": {
+     "top1": 0.9348000288009644,
+     "drop_pp": -0.09000301361083984,
+     "median_rel_err_on_real_weights": 0.02550891600549221,
+     "zeroed": 868,
+     "seconds": 0.3
+    },
+    "posit8": {
+     "top1": 0.933899998664856,
+     "drop_pp": 0.0,
+     "median_rel_err_on_real_weights": 0.02535809762775898,
+     "zeroed": 0,
+     "seconds": 1.2
+    },
+    "fp8 e4m3": {
+     "top1": 0.9329000115394592,
+     "drop_pp": 0.09999871253967285,
+     "median_rel_err_on_real_weights": 0.022476831451058388,
+     "zeroed": 101,
+     "seconds": 0.3
+    },
+    "fp8 e5m2": {
+     "top1": 0.9329000115394592,
+     "drop_pp": 0.09999871253967285,
+     "median_rel_err_on_real_weights": 0.043447185307741165,
+     "zeroed": 0,
+     "seconds": 0.3
+    }
+   }
+  }
+ }
+}

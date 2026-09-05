@@ -1,5 +1,5 @@
 # Tiny Tapeout project info — Quantum Brain MINI
-# Target shuttle: TTSKY26c (~2026-09)
+# Planning target: TTSKY26c (not submitted; no slot purchased as of 2026-09-05)
 # phi^2 + phi^-2 = 3 · QUANTUM BRAIN 1:1 SILICON
 
 project:
@@ -11,6 +11,12 @@ project:
     Hold a quantum brain in your hand for EUR 17.
   language:    "Verilog"
   top_module:  "tt_um_qbrain_mini"
+  # Declared explicitly: a Tiny Tapeout shuttle builds from this list, and
+  # leaving it out means the build depends on whatever the tooling happens
+  # to glob. Found by pointing our own checker at our own chips.
+  source_files:
+    - "tt_um_qbrain_mini.v"
+
   tiles:       "1x1"
 
   # I/O usage

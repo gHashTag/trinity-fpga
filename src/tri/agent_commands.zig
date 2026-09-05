@@ -149,7 +149,7 @@ pub fn spawnAgent(allocator: Allocator, issue_number: u32) !void {
 
     try std.fs.cwd().makePath(soul_dir);
 
-    const soul_path = try std.fmt.allocPrint(allocator, "{s}/SOUL.md", .{ soul_dir });
+    const soul_path = try std.fmt.allocPrint(allocator, "{s}/SOUL.md", .{soul_dir});
     defer allocator.free(soul_path);
 
     const soul_content = try generateSoulContent(allocator, issue_number, agent_id);
@@ -167,7 +167,7 @@ pub fn spawnAgent(allocator: Allocator, issue_number: u32) !void {
     const service_id = ""; // Placeholder
 
     // 6. Create session
-    const session_name = try std.fmt.allocPrint(allocator, "issue-{d}", .{ issue_number });
+    const session_name = try std.fmt.allocPrint(allocator, "issue-{d}", .{issue_number});
     defer allocator.free(session_name);
 
     const session = try sessions.createSession(allocator, undefined, session_name, service_id);

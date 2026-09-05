@@ -4,17 +4,18 @@
 
 const std = @import("std");
 
+const tri_mutex = @import("mutex.zig");
 /// Mutable memory cell
 pub fn Cell(comptime T: type) type {
     return struct {
         value: T,
-        mutex: std.Thread.Mutex,
+        mutex: tri_mutex.Mutex,
 
         const Self = @This();
 
         /// Create cell with initial value
         pub fn init(initial: T) Self {
-            return .{ .value = initial, .mutex = std.Thread.Mutex{} };
+            return .{ .value = initial, .mutex = tri_mutex.Mutex{} };
         }
 
         /// Read current value

@@ -1,0 +1,42 @@
+{
+ "tag": "smollm2",
+ "windows": 40,
+ "rows": [
+  {
+   "threads": 1,
+   "ppl": 28.328966647675156,
+   "weight_sha": "4ab8ea7594416a8a",
+   "gemm_sha": "2cc9babe0778af1a",
+   "torch_threads": 1,
+   "seconds": 339.4
+  },
+  {
+   "threads": 2,
+   "ppl": 28.328966647675156,
+   "weight_sha": "4ab8ea7594416a8a",
+   "gemm_sha": "2cc9babe0778af1a",
+   "torch_threads": 2,
+   "seconds": 349.0
+  },
+  {
+   "threads": 4,
+   "ppl": 28.328966647675156,
+   "weight_sha": "4ab8ea7594416a8a",
+   "gemm_sha": "2cc9babe0778af1a",
+   "torch_threads": 4,
+   "seconds": 312.7
+  },
+  {
+   "threads": 8,
+   "ppl": 28.328966647675156,
+   "weight_sha": "4ab8ea7594416a8a",
+   "gemm_sha": "2cc9babe0778af1a",
+   "torch_threads": 8,
+   "seconds": 237.3
+  }
+ ],
+ "spread": 0.0,
+ "sd": 0.0,
+ "distinct_gemm_hashes": 1,
+ "weights_identical": true
+}

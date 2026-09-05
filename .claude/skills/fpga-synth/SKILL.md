@@ -6,6 +6,8 @@ allowed-tools: Bash(docker *), Bash(ls *), Read, Grep, Glob, Write, Edit
 
 # FPGA Pipeline — AX7203 XC7A200T
 
+> **Terminology (2026-09-05):** wherever this skill says "on silicon", "silicon-proven" or the like, it means the AX7203 (Artix-7 XC7A200T) FPGA boards. No die of any Trinity ASIC exists — the Tiny Tapeout submissions TTSKY26a and TTSKY26b were withdrawn before fabrication.
+
 ## 🔥 3-BOARD FLEET — all independently flashable + a working inference cluster (2026-08-08)
 
 **Fleet = 3× AX7203 (XC7A200T), each with its OWN onboard FT232H JTAG *and* CP2102N UART.**
@@ -312,6 +314,42 @@ remedy** until it survives several cold starts in a row.
 until an independent signal confirms it took, and report the attempt count so the retry is visible
 rather than assumed.
 
+### 🧷 Vary ONE parameter, and build the control with the others held identical
+
+Bisecting frame length against bring-up nearly produced an uninterpretable result: the test builds
+differed from the known-good one in **four** parameters at once (frame length, sweep mode, skew,
+request interval). A failure could not have been attributed to any of them. Building the control —
+same everything, frame length back at its original value — is what made the measurement mean
+something, and it exonerated two of the four parameters for free.
+
+Measured (node link-ups, all other parameters identical): 74 bytes on the wire ~48%, 314 bytes 3/8,
+714 bytes 4/8, **1514 bytes 0/20**. A sharp threshold, ordinary lottery rate either side of it.
+Mechanism still open: 1024 sits in the gap, but the RX and TX indices are both 11-bit, so no
+10-bit bound exists in the datapath.
+
+**Watch parameter widths:** `parameter [13:0] IVL0` silently truncated 25 000 to 8 616, so an
+interval quoted as 200 µs was really 69 µs.
+
+### 📏 Check frame duty cycle before choosing a request interval
+
+A 1514-byte frame occupies **12.1 µs** at 1 Gbit/s. A design whose request interval sweeps down to
+10 µs and 6 µs runs at **121% and 202% duty** at full MTU — saturated, no inter-frame gap, on every
+node at once. The same table is fine at 64 bytes (~5%). Compute
+`frame_time = (FLEN + 14) * 8 / 1e9` against the interval before believing a load figure: a
+throughput number from a saturated transmitter measures the transmitter, not the link.
+
+### 🔁 Audit MDIO designs for HOW OFTEN they write, not just what they write
+
+"Rewriting the PHY configuration restarts auto-negotiation" invalidated **three separate designs**
+here: an uncapped 1 s retry (0 links in 4), a 6 s runtime skew sweep built to measure the timing
+window, and a *supposedly fixed-skew* build that gated the skew **stepping** but not the
+**reprogramming** — its state machine still re-entered the MDIO write sequence every 6 s.
+
+The third is the instructive one: the parameter was named `SWEEP`, the intent was "do not disturb
+the PHY", and it disturbed it every six seconds. **Grep every path that can re-enter the programming
+state, not just the one that changes the value.** A measurement procedure that perturbs what it
+measures yields no data, and looks exactly like broken hardware.
+
 ### 🧪 Assume the instrument is wrong until a second signal agrees
 
 Three separate instrument defects surfaced in one investigation on this project:
@@ -438,7 +476,7 @@ The vendor Ethernet design has **no UART and no LED**, so a dead link was indist
 held-in-reset PHY, a wrong pin, or an unplugged cable — hours of blind guessing. The fix that
 actually moved things: build a **probe** that reports over UART.
 
-**Reusable skeleton: `trinity-fpga/build/gft_mul/gft_mul_ax7203.v`** (silicon-proven). Key trick —
+**Reusable skeleton: `trinity-fpga/build/gft_mul/gft_mul_ax7203.v`** (proven on the AX7203 FPGA). Key trick —
 it clocks off **`STARTUPE2` CFGMCLK, so it needs NO external clock pin**:
 - `STARTUPE2 → CFGMCLK` ≈ 65–70 MHz (uncalibrated ring oscillator; **varies per board by ±5%**,
   so use it for ratios, not absolute frequency)
@@ -1105,13 +1143,13 @@ encoding.
 |------|-------|--------|
 | SW-bitexact | ~62-69/83 | (CATALOG_MATRIX: strict 62, self-consistent 69) |
 | decode-HW Tier-E | 41 formats | 41 unique formats with bit-exact decode cells |
-| compute-HW Tier-E | 10 GF formats × {ADD,MUL} | GF4-GF32 (10 formats), 0 failures on silicon (vectors vary by run) |
+| compute-HW Tier-E | 10 GF formats × {ADD,MUL} | GF4-GF32 (10 formats), 0 failures on the FPGA (AX7203; vectors vary by run) |
 | GF64 ADD | 70.1% (359/512) | timing closure failure; clamp reverted (regressed to 48.9%) |
 | DIV/SQRT | binary32 proxy | NOT native GF, stale output bug, no conformance |
 | QUIRE | untested | no conformance vectors |
 
 **Honest catalog**: 10 formats bit-exact (add/mul) + 2 proxy (div/sqrt) + 1 untested (quire)
-**Paper**: ~41/83 formats (NOT 71 — that was cell count, not format count)
+**Paper**: ~41 of the 83 in the 2026-06-28 catalogue snapshot (NOT 71 — that was cell count, not format count; the catalogue is 109 formats at v3, Sep 2026, so the denominator has moved)
 
 ## Synthesis Flags (MEASURED, not assumed)
 
@@ -1166,7 +1204,7 @@ Timeline:
 14. takum16 adder RTL does NOT EXIST
 15. **div/sqrt = binary32 proxy** — NOT native, hardcoded, stale output
 16. **gf_mul_param same timing risk** as adder for GF64+
-17. **"71/83 formats" was wrong** — double-counted cells as formats (real: ~41)
+17. **"71/83" was wrong as a format count** — it double-counted cells as formats (real: ~41 of the 83 in the 2026-06-28 snapshot; that denominator is the snapshot's, not the current catalogue count)
 18. **"-nodsp mandatory" was wrong** — only MUL uses -nodsp, ADD doesn't
 19. **Clamp regressed** — reverted to make HEAD reproducible at 70.1%
 20. **build-matrix.yml was dead code** — both if/else branches identical, now fixed

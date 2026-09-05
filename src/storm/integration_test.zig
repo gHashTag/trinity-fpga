@@ -582,7 +582,7 @@ pub const IntegrationTest = struct {
 
 /// Main entry point for integration test
 pub fn main() !u8 {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
@@ -593,7 +593,7 @@ pub fn main() !u8 {
 }
 
 test "integration: golden_chain_init" {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
@@ -604,7 +604,7 @@ test "integration: golden_chain_init" {
 }
 
 test "integration: experience_consult" {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
@@ -616,7 +616,7 @@ test "integration: experience_consult" {
 }
 
 test "integration: checkpoint_structure" {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 

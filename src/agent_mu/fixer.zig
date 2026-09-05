@@ -43,7 +43,7 @@ const common_imports = [_]ImportMapping{
     .{ .identifier = "StringHashMap", .import_statement = "const std = @import(\"std\");\nconst StringHashMap = std.StringHashMap;" },
     .{ .identifier = "Allocator", .import_statement = "const std = @import(\"std\");\nconst Allocator = std.mem.Allocator;" },
     .{ .identifier = "ArenaAllocator", .import_statement = "const std = @import(\"std\");\nconst ArenaAllocator = std.heap.ArenaAllocator;" },
-    .{ .identifier = "GeneralPurposeAllocator", .import_statement = "const std = @import(\"std\");\nconst GeneralPurposeAllocator = std.heap.GeneralPurposeAllocator;" },
+    .{ .identifier = "GeneralPurposeAllocator", .import_statement = "const std = @import(\"std\");\nconst GeneralPurposeAllocator = std.heap.DebugAllocator;" },
     .{ .identifier = "testing", .import_statement = "const testing = @import(\"std\").testing;" },
     .{ .identifier = "mem", .import_statement = "const std = @import(\"std\");\nconst mem = std.mem;" },
 };

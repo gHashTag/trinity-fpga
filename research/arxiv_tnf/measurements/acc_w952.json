@@ -1,0 +1,46 @@
+{
+ "metric": "LUT1-6 + CARRY4",
+ "ns": [
+  1,
+  2,
+  4,
+  8
+ ],
+ "acc_bits": {
+  "TNF4": 38,
+  "fp6e3m2": 24,
+  "fp6e2m3": 18
+ },
+ "cost": {
+  "TNF4": {
+   "per_acc": 48.0,
+   "fixture": 0.0,
+   "points": [
+    48,
+    96,
+    192,
+    384
+   ]
+  },
+  "fp6e3m2": {
+   "per_acc": 30.0,
+   "fixture": 0.0,
+   "points": [
+    30,
+    60,
+    120,
+    240
+   ]
+  },
+  "fp6e2m3": {
+   "per_acc": 23.0,
+   "fixture": 0.0,
+   "points": [
+    23,
+    46,
+    92,
+    184
+   ]
+  }
+ }
+}

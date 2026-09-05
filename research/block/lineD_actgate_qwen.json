@@ -1,0 +1,13 @@
+{
+ "model": "qwen",
+ "n_cal_windows": 1,
+ "coh_MXFP4": 746.211725643948,
+ "inc_MXFP4": 1486.0802249715325,
+ "coh_TOP": 732.1577147321782,
+ "inc_TOP": 1381.3683138626307,
+ "total_MXFP4": 2232.2919506154803,
+ "total_TOP": 2113.526028594809,
+ "coherent_share_MXFP4": 0.334280525196628,
+ "coherent_share_TOP": 0.3464152817739169,
+ "gated_ratio_TOP_over_MXFP4": 0.9467964206080097
+}

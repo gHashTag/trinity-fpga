@@ -1,0 +1,64 @@
+name: Artefact agreement
+
+# Every other check in this repository verifies an artefact against ITSELF: the
+# oracle round-trips, the RTL simulates, the catalogue validates. All of them
+# passed while the oracle and the RTL implemented different formats under the
+# name TNF16, and while a synthesised, measured format had no catalogue row at
+# all. No within-artefact test can catch either. This one compares declared
+# PARAMETERS across artefacts.
+#
+# It runs as a ratchet: the known divergences are recorded in
+# conformance/artefact_agreement_baseline.txt and the job fails only on NEW
+# ones, or when a baseline entry stops reproducing (so the file cannot rot into
+# a permanent excuse). Background: research/frontier/WITHDRAWAL_10_*.md and
+# WITHDRAWAL_11_*.md.
+
+on:
+  pull_request:
+  push:
+    branches: [main, master]
+
+jobs:
+  artefact-agreement:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # The checker reads the catalogue from `ROOT.parent / "t27"`, i.e. a
+      # sibling directory next to this repository. `path: ../t27` expressed that
+      # directly and actions/checkout refuses it:
+      #
+      #   Repository path '/home/runner/work/trinity-fpga/t27' is not under
+      #   '/home/runner/work/trinity-fpga/trinity-fpga'
+      #
+      # so it must land inside the workspace first and be moved into place.
+      #
+      # `continue-on-error: true` is gone, and that is the substantive change.
+      # With it, a failed catalogue checkout did not stop the job -- it made
+      # every tnf16 comparison unrunnable, and the checker duly reported
+      #
+      #   note: RTL decoder tnf16 has no catalogue row -- not compared
+      #   12 baseline entry/entries no longer reproduce -- run with
+      #   --update-baseline to shrink the ratchet:
+      #     [fixed] [divergence] tnf16: RTL implements Et=4, catalogue declares e=6
+      #
+      # Those entries are not fixed. They were not checked. Following the job's
+      # own advice would have erased twelve recorded divergences on the strength
+      # of a checkout that never happened -- a ratchet running backwards. A
+      # missing input must fail loudly; it must never look like agreement.
+      - name: Check out the SSOT catalogue
+        uses: actions/checkout@v4
+        with:
+          repository: gHashTag/t27
+          path: t27-ssot
+
+      - name: Put the catalogue where the checker looks for it
+        run: |
+          mv t27-ssot ../t27
+          test -f ../t27/specs/numeric/formats_catalog.t27
+          echo "catalogue: $(wc -l < ../t27/specs/numeric/formats_catalog.t27) lines"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compare declared parameters across artefacts
+        run: python3 conformance/check_artefact_agreement.py

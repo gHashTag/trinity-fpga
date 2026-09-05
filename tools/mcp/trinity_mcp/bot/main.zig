@@ -5,7 +5,7 @@ const bot_loop = @import("bot_loop.zig");
 const telegram_api = @import("telegram_api.zig");
 
 pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 

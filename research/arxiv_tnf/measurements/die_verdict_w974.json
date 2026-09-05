@@ -1,0 +1,37 @@
+{
+ "wave": "W974",
+ "event": "FIRST VERDICT READ OFF THE DIE",
+ "spec": "specs/igla/race/mvp_ternary_classifier.t27",
+ "tops": [
+  "fpga/verilog/mvp_ternary_classifier_check.v",
+  "fpga/verilog/mvp_ternary_classifier_jtag_noport.v"
+ ],
+ "part": "xc7a200tfbg676-1",
+ "idcode": "0x3636093",
+ "board": "1:5",
+ "build": {
+  "LUT": 123,
+  "CARRY4": 52,
+  "DSP48E1": 0,
+  "dut_equivalents": 1.19,
+  "fmax_mhz": 80.35,
+  "clock": "cfgmclk",
+  "target_mhz": 70.77,
+  "bitstream_bytes": 9730834
+ },
+ "hardware": {
+  "B1_done": 1,
+  "B1_expected": 1,
+  "B2_word": "0xa5a5a5a7",
+  "B2_magic": "0xA5A5A5A",
+  "ok": 1,
+  "beat": 1,
+  "cable_index": 0,
+  "verdict": "PASS -- the silicon answered, and its answer is ok=1"
+ },
+ "first_attempt_failure": {
+  "board": "1:4",
+  "cause": "the service defaults to the three-cable bench (1:4/1:6/1:8); this bench now has ONE cable at 1:5. index 1 and 2: usb_open rc=-3 device not found; index 0 read ALL ZERO. Fixed by passing --busdev-num 1:5 explicitly."
+ },
+ "note": "Twenty-three waves reported the hardware axis blocked. It was not blocked by Docker (never used), nor by the toolchain (native and present), nor by the cable. The final gate was the JTAG chain, which was empty earlier this wave and answered later; and the default cable address, which points at a bench configuration that no longer exists."
+}

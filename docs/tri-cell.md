@@ -397,7 +397,7 @@ Run `tri cell health` for breakdown.
 
 ## Registry
 
-The cell registry lives at `.trinity/cells/registry.json`. It's auto-generated from all `cell.tri` manifests.
+The cell registry lives at `.trinity/registry.json`. It's auto-generated from all `cell.tri` manifests.
 
 Run `tri cell check --sync` to regenerate.
 

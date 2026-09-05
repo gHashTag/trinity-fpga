@@ -1,0 +1,25 @@
+{
+ "model": "opt",
+ "src": "facebook/opt-125m",
+ "n_tensors": 72,
+ "n_conv1d": 0,
+ "n_elements": 84934656,
+ "eps_eff": 0.12248085355534599,
+ "eps_eff_per_tensor": {
+  "min": 0.1161918702760017,
+  "median": 0.11999737171668895,
+  "max": 0.13548694603508826
+ },
+ "error_kurtosis": 13.65083798968894,
+ "provenance": {
+  "checkpoint": {
+   "src": "facebook/opt-125m",
+   "kind": "hub",
+   "revision": "27dcfa74d334bc871f3234de431e71c6eeba5dd6"
+  },
+  "harness": {
+   "file": "block_tnf.py",
+   "sha256": "cd39ef2305ed6e0518a2b75851327158e206bef6b35c1f507fe3eeed902ad678"
+  }
+ }
+}

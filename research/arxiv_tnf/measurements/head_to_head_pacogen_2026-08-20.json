@@ -1,0 +1,107 @@
+{
+ "pacogen_data_extract_n16_es2": {
+  "cells_per_unit": 92.0,
+  "fixture": 75.0,
+  "r2": 1.0,
+  "points": {
+   "1": {
+    "lut": 165,
+    "carry4": 2,
+    "muxf": 0,
+    "ff": 160,
+    "cells": 167
+   },
+   "2": {
+    "lut": 256,
+    "carry4": 3,
+    "muxf": 0,
+    "ff": 192,
+    "cells": 259
+   },
+   "4": {
+    "lut": 438,
+    "carry4": 5,
+    "muxf": 0,
+    "ff": 256,
+    "cells": 443
+   },
+   "8": {
+    "lut": 802,
+    "carry4": 9,
+    "muxf": 0,
+    "ff": 384,
+    "cells": 811
+   }
+  }
+ },
+ "pacogen_posit_add_n16_es2": {
+  "cells_per_unit": 693.0,
+  "fixture": 472.0,
+  "r2": 1.0,
+  "points": {
+   "1": {
+    "lut": 1087,
+    "carry4": 78,
+    "muxf": 20,
+    "ff": 160,
+    "cells": 1165
+   },
+   "2": {
+    "lut": 1736,
+    "carry4": 122,
+    "muxf": 30,
+    "ff": 192,
+    "cells": 1858
+   },
+   "4": {
+    "lut": 3034,
+    "carry4": 210,
+    "muxf": 50,
+    "ff": 256,
+    "cells": 3244
+   },
+   "8": {
+    "lut": 5630,
+    "carry4": 386,
+    "muxf": 90,
+    "ff": 384,
+    "cells": 6016
+   }
+  }
+ },
+ "tnf_e4m8_add_16cells": {
+  "cells_per_unit": 561.67,
+  "fixture": 575.74,
+  "r2": 0.999999,
+  "points": {
+   "1": {
+    "lut": 1038,
+    "carry4": 98,
+    "muxf": 166,
+    "ff": 160,
+    "cells": 1136
+   },
+   "2": {
+    "lut": 1552,
+    "carry4": 147,
+    "muxf": 249,
+    "ff": 192,
+    "cells": 1699
+   },
+   "4": {
+    "lut": 2580,
+    "carry4": 245,
+    "muxf": 415,
+    "ff": 256,
+    "cells": 2825
+   },
+   "8": {
+    "lut": 4627,
+    "carry4": 441,
+    "muxf": 747,
+    "ff": 384,
+    "cells": 5068
+   }
+  }
+ }
+}

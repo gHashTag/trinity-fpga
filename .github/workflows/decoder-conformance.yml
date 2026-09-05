@@ -1,0 +1,27 @@
+name: Decoder conformance
+
+# The throughput table prices twenty decoders by area and frequency. Neither
+# says anything about whether the circuit computes the right value, and a
+# decoder that is wrong is small for a reason. Four in the table do not
+# implement their formats fully -- three theirs, one ours, and ours is the one
+# whose every code is wrong.
+
+on: [pull_request, push]
+
+jobs:
+  decoder-conformance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      # zsh, because conform.sh opens with `#!/bin/zsh` and ubuntu-latest ships
+      # no zsh. Missing interpreter reads as exit 127 -- "command not found" for
+      # a script that is right there and executable -- so this failed exactly
+      # like a broken gate, on every run since the gate was added. Installing
+      # the interpreter rather than rewriting the script: it runs on the author's
+      # machine, and a silent shell-dialect port is a worse bug than the one
+      # being fixed.
+      - run: sudo apt-get update && sudo apt-get install -y iverilog zsh
+      - run: cd fpga/tnet && ./conform.sh
+      - run: python3 conformance/check_decoders.py

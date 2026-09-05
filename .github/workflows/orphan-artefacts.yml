@@ -1,0 +1,18 @@
+name: Orphaned artefacts
+
+# Two of the paper's six figures had no generator: the PDFs sat in the tree and
+# the code that drew them did not. They were also the only two still carrying
+# the format's name from two renames ago, and the two facts are one fact -- a
+# file nobody regenerates is a file nobody renames. An orphaned artefact is not
+# merely a reproducibility gap; it is where staleness accumulates.
+
+on: [pull_request, push]
+
+jobs:
+  orphan-artefacts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: python3 tools/check_orphan_artefacts.py

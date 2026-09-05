@@ -1,0 +1,26 @@
+name: Reproduction scripts
+
+# fpga/tnet/mk8.sh -- the script that produced the 21-format silicon table --
+# instantiated `gft_add_w` while the file it reads defines `tef_add_w`. The
+# TEF-to-TNF rename changed the module name and left the script, so yosys
+# errored, no JSON was produced, and every run reported empty fields. The table
+# had already been written, so nobody ran it again. mkgf.sh, which produced the
+# GF rows, carried the identical defect.
+#
+# A reproduction path that is never run is a claim, not a capability.
+
+on:
+  pull_request:
+  push:
+    branches: [main, master]
+
+jobs:
+  script-rot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Every instantiated module must exist in the files its script reads
+        run: python3 tools/check_script_rot.py

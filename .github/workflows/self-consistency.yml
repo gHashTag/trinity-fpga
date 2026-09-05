@@ -1,0 +1,20 @@
+name: Document self-consistency
+
+# Every other gate compares a document against something else -- data files, the
+# tree, a sibling artefact. None compared a document against itself, and the
+# paper carried three different counts of its own retractions: four in the
+# roadmap, eleven in the abstract, sixteen in the method section.
+#
+# A number a document states about its own contents is checkable against those
+# contents.
+
+on: [pull_request, push]
+
+jobs:
+  self-consistency:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: python3 tools/check_self_consistency.py

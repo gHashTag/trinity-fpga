@@ -13,7 +13,7 @@ const CYAN = "\x1b[36m";
 const DIM = "\x1b[2m";
 
 pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 

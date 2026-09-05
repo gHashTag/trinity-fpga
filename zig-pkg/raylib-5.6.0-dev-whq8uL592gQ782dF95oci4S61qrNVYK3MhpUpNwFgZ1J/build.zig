@@ -106,9 +106,9 @@ const config_h_flags = outer: {
         if (std.mem.startsWith(u8, line, "//")) continue;
         if (std.mem.startsWith(u8, line, "#if")) continue;
 
-        var flag = std.mem.trimLeft(u8, line, " \t"); // Trim whitespace
+        var flag = std.mem.trimStart(u8, line, " \t"); // Trim whitespace
         flag = flag["#define ".len - 1 ..]; // Remove #define
-        flag = std.mem.trimLeft(u8, flag, " \t"); // Trim whitespace
+        flag = std.mem.trimStart(u8, flag, " \t"); // Trim whitespace
         flag = flag[0 .. std.mem.indexOf(u8, flag, " ") orelse continue]; // Flag is only one word, so capture till space
         flag = "-D" ++ flag; // Prepend with -D
 
@@ -193,7 +193,7 @@ fn compileRaylib(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.
 
     // No GLFW required on PLATFORM_DRM
     if (options.platform != .drm) {
-        raylib.addIncludePath(b.path("src/external/glfw/include"));
+        raylib.root_module.addIncludePath(b.path("src/external/glfw/include"));
     }
 
     var c_source_files: std.ArrayList([]const u8) = try .initCapacity(b.allocator, 2);
@@ -224,7 +224,7 @@ fn compileRaylib(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.
         raylib.root_module.addCMacro(options.opengl_version.toCMacroStr(), "");
     }
 
-    raylib.addIncludePath(b.path("src/platforms"));
+    raylib.root_module.addIncludePath(b.path("src/platforms"));
     switch (target.result.os.tag) {
         .windows => {
             switch (options.platform) {
@@ -448,7 +448,7 @@ pub const Options = struct {
             .linux_display_backend = b.option(LinuxDisplayBackend, "linux_display_backend", "Linux display backend to use") orelse defaults.linux_display_backend,
             .opengl_version = b.option(OpenglVersion, "opengl_version", "OpenGL version to use") orelse defaults.opengl_version,
             .config = b.option([]const u8, "config", "Compile with custom define macros overriding config.h") orelse &.{},
-            .android_ndk = b.option([]const u8, "android_ndk", "specify path to android ndk") orelse std.process.getEnvVarOwned(b.allocator, "ANDROID_NDK_HOME") catch "",
+            .android_ndk = b.option([]const u8, "android_ndk", "specify path to android ndk") orelse (b.graph.environ_map.get("ANDROID_NDK_HOME") orelse ""),
             .android_api_version = b.option([]const u8, "android_api_version", "specify target android API level") orelse defaults.android_api_version,
         };
     }
@@ -523,11 +523,15 @@ fn addExamples(
 ) !*std.Build.Step {
     const all = b.step(module, "All " ++ module ++ " examples");
     const module_subpath = b.pathJoin(&.{ "examples", module });
-    var dir = try std.fs.cwd().openDir(b.pathFromRoot(module_subpath), .{ .iterate = true });
-    defer dir.close();
+    // Zig 0.16: the filesystem moved into std.Io, and Dir operations now take
+    // an Io. build_root.handle is already an Io.Dir, so the subpath can stay
+    // relative instead of going through pathFromRoot.
+    const io = b.graph.io;
+    var dir = try b.build_root.handle.openDir(io, module_subpath, .{ .iterate = true });
+    defer dir.close(io);
 
     var iter = dir.iterate();
-    while (try iter.next()) |entry| {
+    while (try iter.next(io)) |entry| {
         if (entry.kind != .file) continue;
         const extension_idx = std.mem.lastIndexOf(u8, entry.name, ".c") orelse continue;
         const name = entry.name[0..extension_idx];

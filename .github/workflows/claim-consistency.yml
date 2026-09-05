@@ -1,0 +1,38 @@
+name: Claim consistency
+
+# The site has 48 automated checks; the research corpus had none. On 2026-08-11
+# that cost a day: 21.9397 and 22.4998 were both published as MXFP4's perplexity
+# in different documents. Both were correct — the same format at two headroom
+# phases, see research/block/SCALE_PHASE_THEOREM_2026-08-11.md — but nothing
+# flagged the collision, so it was found by a script refusing to run.
+#
+# This runs research/check_claim_consistency.py, which fails only when the same
+# format is quoted with different perplexities and NO side names a convention, a
+# model, a window count or a block size that distinguishes them. Two numbers can
+# be two legitimate conditions; a silent difference is the bug.
+#
+# It is deliberately narrow. An earlier draft matched "14.97x" (a ratio) and
+# "91.36 dB" (an SNR) as perplexities — 31 spurious values — and an instrument
+# that noisy is worse than none.
+
+on:
+  pull_request:
+    paths:
+      - 'research/**/*.md'
+      - 'research/check_claim_consistency.py'
+  push:
+    branches: [main, master]
+    paths:
+      - 'research/**/*.md'
+      - 'research/check_claim_consistency.py'
+
+jobs:
+  claim-consistency:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Same format, two numbers, nothing to distinguish them
+        run: python3 research/check_claim_consistency.py --strict

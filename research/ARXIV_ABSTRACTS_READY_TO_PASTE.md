@@ -71,7 +71,7 @@ manuscript's own v4→v5 changelog records that the submitted body already descr
 the set as 49 bit-exact / 34 structural, and the local v5 manuscript states "all
 83 packs" — so this brings the abstract into line with the paper's own body, not
 with new work. Counts (75 bit-exact + 8 structural) are from
-`INDEX_all_formats.json` (in the **`t27`** repository, `conformance/vectors/`).
+`gHashTag/t27/conformance/vectors/INDEX_all_formats.json` (in the **`t27`** repository, `conformance/vectors/`).
 
 ```
 Numeric format proliferation in machine learning hardware -- FP8 (E4M3 and
@@ -102,7 +102,7 @@ available at https://github.com/gHashTag/t27 under an open license.
 | now | …spanning 13 families, **a catalog-wide suite of 83 conformance packs — one per format, of which 75 are bit-exact and 8 structural**, and an IEEE P3109… |
 
 **Optional second change**, not applied above. §2.2 verified the SHA-256
-fingerprints exist — all 83 of them — but they live in `t27`'s `conformance/vectors/INDEX_all_formats.json`,
+fingerprints exist — all 83 of them — but they live in `t27`'s `gHashTag/t27/conformance/vectors/INDEX_all_formats.json`,
 one entry per pack, rather than inside each pack. The current phrasing is
 substantively true; if precision is wanted, *"a self-contained JSON document with
 a SHA-256 fingerprint"* could become *"a self-contained JSON document whose

@@ -1,0 +1,17 @@
+bench-openxc7 campaign 20260816-000221
+host:             bit0 (container hostname 78d14d099f7e)
+image:            docker.io/regymm/openxc7@sha256:eced1cdd4727549f2d983328e0cf170fb6f6f67d87f19b2bf24365163368c70c
+kernel:           Linux 6.8.0-111-generic
+cpu:              13th Gen Intel(R) Core(TM) i5-13500
+cores:            20
+mem_total:        125.6 GiB
+loadavg_at_start: 0.58 0.60 0.91
+runs_per_design:  5
+designs:          blinky picosoc-qmtech litex-ddr-arty-s7 litex-ddr-arty-s7-deephier
+--- revisions (read from the built tree at run time):
+nextpnr-xilinx:   05aaa06bce455ae6ed01efa1616ba7d3a9421ca7
+nextpnr version:  "nextpnr-xilinx" -- Next Generation Place and Route (Version 0.9.2-98-g05aaa06b)
+prjxray-db:       d17fea26ebe46119606e875f012b9be122538aec (gitlink-verified)
+yosys:            Yosys 0.62 (git sha1 7326bb7d6, g++ 9.4.0-1ubuntu1~20.04.2 -fPIC -O3)
+demo-projects main:     547ffc59a398529041f8829f05b8887e41955150 (openXC7/demo-projects main)
+demo-projects deephier: f08d9e7bf364c9f5746825c1bdb8da4d948c2bf4 (openXC7/demo-projects branch litex-ddr-arty-s7-deephier)

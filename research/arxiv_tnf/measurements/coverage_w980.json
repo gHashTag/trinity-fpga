@@ -1,0 +1,101 @@
+{
+ "wave": "W980",
+ "tool": "tri coverage",
+ "method": "clause NAMES from each wrapper's `wire X_ok =` lines, matched against test NAMES in the spec that defines the instantiated module. Name correspondence, not semantics.",
+ "totals": {
+  "wrappers": 9,
+  "clauses": 36,
+  "without_same_named_test": 30,
+  "pct": 83
+ },
+ "per_wrapper": {
+  "gft_signed_mac_jtag.v": {
+   "clauses": 4,
+   "tests": 4,
+   "uncovered": [
+    "ind"
+   ],
+   "note": "was 2 tests before W978; zero_annihilates and commutes were added there"
+  },
+  "gft_xorpercep_jtag.v": {
+   "clauses": 4,
+   "tests": 1,
+   "uncovered": [
+    "eta0",
+    "gold",
+    "ind",
+    "non"
+   ]
+  },
+  "gft_signed_dot4_jtag.v": {
+   "clauses": 4,
+   "tests": 2,
+   "uncovered": [
+    "com",
+    "non"
+   ]
+  },
+  "gft_smul_jtag.v": {
+   "clauses": 4,
+   "tests": 3,
+   "uncovered": [
+    "comm",
+    "gold",
+    "ind",
+    "zero"
+   ]
+  },
+  "gft_sadd_jtag.v": {
+   "clauses": 4,
+   "tests": 3,
+   "uncovered": [
+    "abs",
+    "gold",
+    "ind",
+    "move"
+   ]
+  },
+  "gft_train1_jtag.v": {
+   "clauses": 4,
+   "tests": 3,
+   "uncovered": [
+    "fix",
+    "mov",
+    "non"
+   ]
+  },
+  "gft_dup_jtag.v": {
+   "clauses": 4,
+   "tests": 3,
+   "uncovered": [
+    "comm",
+    "ind",
+    "init",
+    "self"
+   ]
+  },
+  "gft_dup2_jtag.v": {
+   "clauses": 4,
+   "tests": 3,
+   "uncovered": [
+    "comm",
+    "ind",
+    "init",
+    "self"
+   ]
+  },
+  "gft_dup3_jtag.v": {
+   "clauses": 4,
+   "tests": 3,
+   "uncovered": [
+    "comm",
+    "ind",
+    "init",
+    "self"
+   ]
+  }
+ },
+ "limit": "the tool OVER-REPORTS. gft_sadd lists four uncovered clauses and passes 1111 on the die, so a name mismatch does not imply a semantic gap. The output is a ranking of exposure, not a verdict.",
+ "hard_signal": "where an uncovered clause coincides with a measured die FAILURE the link is confirmed: gft_smul's comm and ind are both listed here and both false on silicon (clauses 1010).",
+ "corroboration": "gft_signed_mac is the only wrapper at 4 tests for 4 clauses, and it is the one whose suite was strengthened by hand in W978 from the die's own clauses -- the tool ranks it best, which is the expected direction."
+}

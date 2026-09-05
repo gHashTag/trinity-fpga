@@ -20,6 +20,8 @@ falsification_witness:
 
 # S-17 — Razor Flip-Flop Integration
 
+> **Status (2026-09-05):** the shuttle targets and silicon-return gates in this document are planning statements from the time of writing, not results. No die of any Trinity chip exists: the Tiny Tapeout submissions TTSKY26a and TTSKY26b were withdrawn before fabrication (TTSKY26a refunded 6 Aug 2026), all hardware results to date are on the Artix-7 (XC7A200T) FPGA prototype, and no silicon return has happened.
+
 > **Target shuttle:** TTSKY26c (~2026-09)
 > **Performance target:** +30% TOPS/W through voltage scaling (VDD reduction below nominal)
 > **Lane risk:** MED — STA stub and CI gate exist (Lane U); full Razor integration not yet synthesised

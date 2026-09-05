@@ -45,7 +45,7 @@ pub fn main() !void {
     try stdout.print("║                    φ² + 1/φ² = 3                                 ║\n", .{});
     try stdout.print("╠══════════════════════════════════════════════════════════════════╣\n", .{});
 
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 

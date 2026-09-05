@@ -1,0 +1,13 @@
+[capacity] tnf16 field holds 81 exponents, bnf16 holds 128 (36.7% less) -- an area comparison between them is not at equal capability
+[catalogue] GF-T1024: e=391 trits, m=632 needs 1253 bits but declares 1024
+[catalogue] GF-T128: e=49 trits, m=78 needs 157 bits but declares 128
+[catalogue] GF-T16: e=6 trits, m=9 needs 20 bits but declares 16
+[catalogue] GF-T256: e=97 trits, m=158 needs 313 bits but declares 256
+[catalogue] GF-T32: e=12 trits, m=19 needs 40 bits but declares 32
+[catalogue] GF-T4: e=1 trits, m=2 needs 5 bits but declares 4
+[catalogue] GF-T512: e=195 trits, m=316 needs 627 bits but declares 512
+[catalogue] GF-T64: e=24 trits, m=39 needs 79 bits but declares 64
+[catalogue] GF-T8: e=3 trits, m=4 needs 10 bits but declares 8
+[divergence] tnf16: RTL implements Et=4, catalogue declares e=6
+[divergence] tnf16: RTL mantissa 8 bits, catalogue declares m=9
+[orphan] tnf16 implements Et=4, M=8 in 16 bits, which matches no catalogue row -- synthesised and measured but specified nowhere

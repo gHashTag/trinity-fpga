@@ -9,6 +9,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_exit_codes = @import("../tri_exit_codes.zig");
 const mod = @import("mod.zig");
 const fmt = @import("format.zig");
 const sacred_formula = @import("../math/formula.zig");
@@ -115,7 +116,7 @@ pub fn cmdFormulaPredict(args: []const []const u8) void {
     if (args.len == 0) {
         std.debug.print("Usage: tri geom formula-predict <value>\n", .{});
         std.debug.print("  Fits any number to V = n * 3^k * pi^m * phi^p * e^q\n", .{});
-        return;
+        return tri_exit_codes.exitWithCode(.validation_error);
     }
 
     const value = std.fmt.parseFloat(f64, args[0]) catch {

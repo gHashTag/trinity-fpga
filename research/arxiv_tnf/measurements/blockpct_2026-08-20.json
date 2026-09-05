@@ -1,0 +1,48 @@
+{
+  "record": "within-block span percentiles behind tab:blockpct",
+  "date": "2026-08-20",
+  "generator": "research/arxiv_tnf/measurements/gen_blockpct.py",
+  "model": "HuggingFaceTB/SmolLM2-135M",
+  "snapshot": "93efa2f097d58c2a74874c7e644dbc9b0cee75a2",
+  "model_safetensors_sha256": "80521b40281d6ce74e35c9282c22539e75aa0ac8578892b2a59955ef78d55da1",
+  "tensor_set": "2-D weights, name contains neither 'embed' nor 'norm' (= conformance/ppl_scale_axis.py quantisable set)",
+  "n_tensors": 210,
+  "block": 32,
+  "block_axis": "contraction (last) axis",
+  "n_blocks": 3317760,
+  "n_blocks_excluded_zero_lower_median": 0,
+  "span_definition": "log2(max|w| / lower-median|w|), lower-median = 16th of 32 sorted magnitudes (torch.median convention for even counts; = the spread computation of research/block/block_tnf.py)",
+  "percentile_method": "numpy linear interpolation over blocks",
+  "generating_computation": "research/block/block_tnf.py prints these same four percentiles from the same definition; this record reproduces them checkpoint-side without the model forward",
+  "percentiles": {
+    "p50": {
+      "span_binades": 1.890771,
+      "paper_prints": 1.89,
+      "matches_at_printed_precision": true,
+      "Estar_ceil_log2_span": 1,
+      "element": "E1M2"
+    },
+    "p90": {
+      "span_binades": 2.453366,
+      "paper_prints": 2.45,
+      "matches_at_printed_precision": true,
+      "Estar_ceil_log2_span": 2,
+      "element": "E2M1"
+    },
+    "p99": {
+      "span_binades": 3.041519,
+      "paper_prints": 3.04,
+      "matches_at_printed_precision": true,
+      "Estar_ceil_log2_span": 2,
+      "element": "E2M1"
+    },
+    "p99.9": {
+      "span_binades": 3.747099,
+      "paper_prints": 3.75,
+      "matches_at_printed_precision": true,
+      "Estar_ceil_log2_span": 2,
+      "element": "E2M1"
+    }
+  },
+  "note": "the paper's prose does not name the model for this table; the lineage (research/block/block_tnf.py, research/block/BLOCK_AXIS_VERDICT_2026-08-10.md, research/block/kkt_element.py) and this reproduction pin it to SmolLM2-135M"
+}

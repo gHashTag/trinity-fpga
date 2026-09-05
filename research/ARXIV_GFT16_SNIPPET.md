@@ -60,5 +60,5 @@ $\sigma{=}10$ log-exponent workload): $E_t{=}3$ ($M{=}10$) is most precise
   \emph{architectural} argument (no regime decode + native ternary exponent),
   not a synthesized number --- no ternary process exists to synthesize on.
 - Range is bounded by $E_t$; raise $E_t$ for $>$24-decade workloads.
-- Oracle: `conformance/gft16_ref.py` (bit-exact, RNE); spec `t27/specs/numeric/gft16.t27`.
+- Oracle: `conformance/gft16_ref.py` (bit-exact, RNE); spec `gHashTag/t27/specs/numeric/gft16.t27`.
 Backing: `research/GFT16_BEATS_TEKUM16_2026-08-05.md`.

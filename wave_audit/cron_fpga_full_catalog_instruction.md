@@ -13,7 +13,7 @@
 - **Tier E is counted ONLY with a complete chain on #199:** (a) CI run URL (bitstream GREEN) + (b) bitstream SHA256 + (c) UART-log `HW RESULT: N/N bit-exact (fails=0)` @160000 baud + (d) confirmed IDCODE `0x13636093`. Missing any one of the four → it is NOT Tier E.
 - **encoding ≠ compute ≠ FPGA.** A 2-oracle SW (Python golden == Corona RTL in simulation) is `[verified SW]`, NOT decode-HW. A `sim N/N bit-exact` simulation ≠ HW.
 - **Ceiling = 73/83** (10 structural-formats are un-flashable — there is no single-value decode law). Never chase 83/83.
-- **The catalog = 83 formats** (NOT 84). SSOT = `specs/numeric/formats_catalog.t27` in the t27 repo.
+- **The catalog count is an invariant that grows — never hard-code it** (the 84 once quoted was wrong). SSOT = `specs/numeric/formats_catalog.t27` in the t27 repo; `tools/gen_formats_catalog.py` there prints "parsed N formats" (109 formats at v3 of the catalogue paper, Sep 2026). The `/83` ratios in this instruction use the denominator of the 2026-07-03 snapshot it was drafted against.
 - **No categorical claims.** Status tags: `[proven]`/`[verified SW]`/`[measured on silicon]`/`[routing-pending]`/`[REQUIRES USER ACTION]`.
 - `confirm_action` before any push/merge to a public repo. Synthesis/flashing runs on the user's local machine (outside the sandbox) → always `[REQUIRES USER ACTION]`, the cron cannot flash on its own.
 

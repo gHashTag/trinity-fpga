@@ -26,7 +26,7 @@ IEEE 1149.1 IDCODE breakdown (32-bit, read LSB-first from JTAG DR):
 The QMTech Wukong board (package FGG676) is labelled **XC7A100T** and the
 silicon confirms it: part number 0x3631 = XC7A100T, version 1. This matches the
 tested value in `t27 cli/dlc10/tests/idcode.rs` and the FPGA SSOT
-(`t27/fpga/HARDWARE_SSOT.md`).
+(`gHashTag/t27/fpga/HARDWARE_SSOT.md`).
 
 ## Related part IDCODEs (for reference)
 

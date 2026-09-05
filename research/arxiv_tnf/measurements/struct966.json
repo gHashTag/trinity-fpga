@@ -1,0 +1,55 @@
+{
+ "fp19_e7m11": {
+  "physical_bits": 19,
+  "codes_checked": 524288,
+  "mismatches": 0,
+  "outside_fp32": 0,
+  "decoder_cells": 18.0,
+  "consumer_cells": 441.286,
+  "r2_bare": 1.0,
+  "r2_fused": 1.0,
+  "kind": "ftz_float"
+ },
+ "fp19_e6m12": {
+  "physical_bits": 19,
+  "codes_checked": 524288,
+  "mismatches": 0,
+  "outside_fp32": 0,
+  "decoder_cells": 22.0,
+  "consumer_cells": 445.286,
+  "r2_bare": 1.0,
+  "r2_fused": 1.0,
+  "kind": "ftz_float"
+ },
+ "fp10_e5m4": {
+  "physical_bits": 10,
+  "codes_checked": 1024,
+  "mismatches": 0,
+  "outside_fp32": 0,
+  "decoder_cells": 13.0,
+  "consumer_cells": 225.571,
+  "r2_bare": 1.0,
+  "r2_fused": 0.999187,
+  "kind": "ftz_float"
+ },
+ "tnf16_v2spec": {
+  "physical_bits": 19,
+  "codes_checked": 524288,
+  "mismatches": 0,
+  "outside_fp32": 0,
+  "decoder_cells": 27.0,
+  "consumer_cells": 450.286,
+  "r2_bare": 1.0,
+  "r2_fused": 1.0
+ },
+ "tnf8_true": {
+  "physical_bits": 10,
+  "codes_checked": 1024,
+  "mismatches": 0,
+  "outside_fp32": 0,
+  "decoder_cells": 18.0,
+  "consumer_cells": 230.571,
+  "r2_bare": 1.0,
+  "r2_fused": 0.999222
+ }
+}

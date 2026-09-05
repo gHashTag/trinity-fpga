@@ -5,6 +5,12 @@
 **Scope:** Six research axes relevant to Trinity — number formats, open-source FPGA toolchains, FPGA FP arithmetic, VSA/HDC hardware, HSLM/attention on FPGA, DePIN.
 **Method:** arXiv + F4PGA/openXC7 primary sources, cross-checked against Trinity's own catalog (`fpga/`, EPIC #199 Tier-E 71/83, `LOOP_REPORT_2026_07_03_takum64_routing.md`).
 
+> **Read `COMPETITIVE_LANDSCAPE_2026-08-11.md` alongside this.** This scan counts
+> 32 mentions of posit and 21 of takum against 2 of MXFP4 and none of NVFP4 — it
+> surveys the opposition we win against, not the one that threatens us. The
+> companion note covers MXFP4/NVFP4, MR-GPTQ (ICLR 2026), HiFloat4, SharQ and
+> SOAR, and states which of our results survive contact with them.
+
 ---
 
 ## TL;DR — Three findings that change the strategy
@@ -112,7 +118,7 @@
 
 ### 3.2 Relation to Trinity
 
-- Trinity's GF MAC (`fpga/mac.t27`, zero-DSP) is the right idea *given the openXC7 `-nodsp` constraint*. The literature baseline to beat is **PERI's 3507 LUTs @ 100 MHz on the identical Artix-7-100T** — Trinity should publish GF16-MAC numbers against this directly.
+- Trinity's GF MAC (`t27:specs/fpga/mac.t27`, zero-DSP) is the right idea *given the openXC7 `-nodsp` constraint*. The literature baseline to beat is **PERI's 3507 LUTs @ 100 MHz on the identical Artix-7-100T** — Trinity should publish GF16-MAC numbers against this directly.
 - **EULER-ADAS (2026)** is the strongest contemporary datapoint: bounded-posit + logarithmic mul gives −41% LUT. Trinity's φ-structured approach should be benchmarked against bounded-posit, not just exact posit.
 - Trinity's "transcendental decode via BRAM table + Taylor correction" template is consistent with **Crdkovic/Milenkovic** (2^x via small table + degree-2 poly) cited in its own loop report — solid prior-art grounding.
 

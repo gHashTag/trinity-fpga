@@ -292,7 +292,7 @@ Zenodo automatically:
 
 ### Automatic Deposit from GitHub Actions
 
-Add `.github/workflows/zenodo-publish.yml`:
+Add `gHashTag/t27/.github/workflows/zenodo-publish.yml`:
 
 ```yaml
 name: Zenodo Publish

@@ -1,0 +1,16 @@
+name: LaTeX hygiene
+
+# Defects LaTeX resolves silently. Four duplicate \label definitions sent twelve
+# \ref commands to the wrong theorems and tables while the build reported zero
+# errors and zero undefined references.
+
+on: [pull_request, push]
+
+jobs:
+  latex-hygiene:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: python3 tools/check_latex_hygiene.py

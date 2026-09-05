@@ -1,0 +1,43 @@
+{
+ "smollm2": {
+  "kurtosis": 4.963250637054443,
+  "kurtosis_blocknorm": 2.84835147857666,
+  "n": 106168320
+ },
+ "qwen": {
+  "kurtosis": 12.857624053955078,
+  "kurtosis_blocknorm": 2.9046194553375244,
+  "n": 357826560
+ },
+ "pythia": {
+  "kurtosis": 55.333797454833984,
+  "kurtosis_blocknorm": 2.7953836917877197,
+  "n": 84934656
+ },
+ "opt": {
+  "kurtosis": 13.210874557495117,
+  "kurtosis_blocknorm": 2.9853856563568115,
+  "n": 84934656
+ },
+ "gptneo": {
+  "kurtosis": 12.982160568237305,
+  "kurtosis_blocknorm": 2.915842056274414,
+  "n": 84934656
+ },
+ "bloom": {
+  "kurtosis": 41.25654602050781,
+  "kurtosis_blocknorm": 2.9425265789031982,
+  "n": 301989888
+ },
+ "mamba": {
+  "kurtosis": 3.7861135005950928,
+  "kurtosis_blocknorm": 2.837275743484497,
+  "n": 89653248
+ },
+ "gpt2": {
+  "kurtosis": 32.88161849975586,
+  "kurtosis_blocknorm": 2.8412461280822754,
+  "n": 84934656,
+  "note": "Conv1D transposed to [out,in] so blocks run along the contraction axis, as in lineC_fifth G1"
+ }
+}

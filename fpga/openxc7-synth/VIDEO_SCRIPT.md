@@ -72,7 +72,7 @@ Test: BITNET → Token: '!' ✅
 
 ╔════════════════════════════════════════════════════════════════════════════╗
 ║  ✅ TRINITY V1 — ALL TESTS PASSED                                            ║
-║  The sacred system lives on silicon.                                         ║
+║  The sacred system lives on the FPGA.                                        ║
 ╚════════════════════════════════════════════════════════════════════════════╝
 ```
 

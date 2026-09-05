@@ -1,0 +1,42 @@
+{
+ "tnf4": {
+  "physical_bits": 6,
+  "codes": 64,
+  "distinct_values": 58,
+  "decoder_cells": 8.0,
+  "consumer_cells": 51.286,
+  "multiply_alone": 43.286,
+  "r2_bare": 1.0,
+  "r2_fused": 0.999977
+ },
+ "fp6_e2m3": {
+  "physical_bits": 6,
+  "codes": 64,
+  "distinct_values": 63,
+  "decoder_cells": 7.0,
+  "consumer_cells": 50.286,
+  "multiply_alone": 43.286,
+  "r2_bare": 1.0,
+  "r2_fused": 0.999976
+ },
+ "fp6_e3m2": {
+  "physical_bits": 6,
+  "codes": 64,
+  "distinct_values": 63,
+  "decoder_cells": 7.0,
+  "consumer_cells": 50.286,
+  "multiply_alone": 43.286,
+  "r2_bare": 1.0,
+  "r2_fused": 0.999976
+ },
+ "fp4_e2m1": {
+  "physical_bits": 4,
+  "codes": 16,
+  "distinct_values": 15,
+  "decoder_cells": 3.0,
+  "consumer_cells": 19.143,
+  "multiply_alone": 16.143,
+  "r2_bare": 1.0,
+  "r2_fused": 0.998499
+ }
+}

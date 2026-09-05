@@ -14,12 +14,14 @@
 > **Notation:** "Measured" = silicon-validated result from peer-reviewed publication or vendor datasheet.  
 > "Public estimate / vendor brief" = derived from publicly available marketing materials or analyst reports.  
 > "TARGET (pre-registered)" = design goal, not yet silicon-validated.
+>
+> **Status (2026-09-05):** no die of any Trinity chip exists — the Tiny Tapeout submissions TTSKY26a and TTSKY26b were withdrawn before fabrication (TTSKY26a refunded 6 Aug 2026), and all Trinity hardware results to date are on the Artix-7 (XC7A200T) FPGA prototype. Every Trinity row below is therefore a target or an estimate; none is "Measured" in the sense of the notation above.
 
 | Vendor | Chip | Process | TOPS | TOPS/W | Source / Confidence |
 |--------|------|---------|------|--------|---------------------|
-| **Trinity** | TTSKY25b (v2) | SKY130 (130 nm) | ~0.9 | **55** | Measured baseline — internal tape-out result |
-| **Trinity** | TTSKY26b (v2.1) | SKY130 (130 nm) | ~1.4 | **~75** | TARGET +36% projection over v2; not yet silicon-measured |
-| **Trinity** | TTSKY26c (v9 HOLO) | SKY130 + SG13G2 multi-die (130 nm) | TBD | **≥2000 (target)** | Pre-registered TARGET; measured verdict gated 2026-06-30 per H₉ |
+| **Trinity** | TTSKY25b (v2) | SKY130 (130 nm) | ~0.9 | **55** | **Not measured** (the "Measured" label is withdrawn, 2026-09-05: no die of any Trinity chip exists); kept only as the baseline the projections below are computed from |
+| **Trinity** | TTSKY26b (v2.1) | SKY130 (130 nm) | ~1.4 | **~75** | TARGET +36% projection over v2; the TTSKY26b submission was withdrawn before fabrication — no silicon |
+| **Trinity** | TTSKY26c (v9 HOLO) | SKY130 + SG13G2 multi-die (130 nm) | TBD | **≥2000 (target)** | Pre-registered TARGET; no die exists (2026-09-05), so there is no measured verdict |
 | Hailo | Hailo-8 | 16 nm (TSMC) | 26 | **~10** | [Hailo product page](https://hailo.ai/products/ai-accelerators/hailo-8-ai-accelerator/); 26 TOPS at 2.5 W typ → ~10 TOPS/W |
 | Hailo | Hailo-15H | 7 nm (TSMC) | 20 | **~5–7** | [Hailo-15 product page](https://hailo.ai/products/ai-vision-processors/hailo-15-ai-vision-processor/); 20 TOPS, <3 W typ; exact TOPS/W ~5–7. Public estimate per vendor brief 2024 |
 | Tenstorrent | Blackhole (P150/P300) | 12 nm (TSMC) | 745 (FP8 TFLOPS) | **~10–20** | [The Register — Hot Chips 2024](https://www.theregister.com/on-prem/2024/08/27/tenstorrent-details-its-risc-v-packed-blackhole-chips/1322990); 745 TFLOPS FP8, TDP ~300 W est. Public estimate — final TOPS/W depends on INT8 workload mix |
@@ -43,7 +45,7 @@
 |-------|-------------|-----------------|------------|--------------|
 | **L1** | E·L (nJ/op) — energy × latency product | **< 0.5 nJ/op (target)** | Hailo-15: ~5 nJ/op est. | ≥10× advantage (TARGET) |
 | **L2** | Bits-per-weight (bpw) — model compression ratio | **1.58 bpw (ternary {–1, 0, +1})** | INT8 standard (8 bpw) | ~5× density; ternary arithmetic replaces MAC with XNOR+popcount |
-| **L3** | Verifiable compute — formal proof of correctness | **∞ moat: Coq + Rust formal verification** | None in any commercial edge AI chip | Infinite: no rival offers silicon-proven formal verification stack |
+| **L3** | Verifiable compute — formal proof of correctness | **∞ moat: Coq + Rust formal verification** | None in any commercial edge AI chip | Infinite: no rival offers a formal verification stack (and Trinity's is not silicon-proven either — no die exists, 2026-09-05) |
 | **L4** | Functional-safety certification | **ASIL-B planned (IEC 61508 SIL-2 pathway)** | None shipping commercially at edge tier | First-mover advantage in open-PDK safety-certified AI silicon |
 | **L5** | Open PDK / supply-chain sovereignty | **SKY130 (SkyWater) + SG13G2 (IHP) — 100% open** | TSMC N7/N5: proprietary NDA-locked | Full sovereign reproducibility; any fab with open licence can manufacture |
 
@@ -95,11 +97,11 @@ No open-PDK AI accelerator has achieved automotive or industrial safety certific
 >
 > All Trinity v9 HOLO numbers above (≥2000 TOPS/W, <0.5 nJ/op, ASIL-B) are **pre-registered TARGETS**, not measurements.
 >
-> - Trinity **v2 (TTSKY25b)** baseline of **55 TOPS/W** is the only **silicon-measured** Trinity figure.
-> - Trinity **v2.1 (TTSKY26b)** projection of **~75 TOPS/W** (+36%) is an engineering estimate, not measured.
+> - Trinity **v2 (TTSKY25b)** baseline of **55 TOPS/W** was labelled the only **silicon-measured** Trinity figure; that label is withdrawn (2026-09-05) — no die of any Trinity chip exists, so **no Trinity figure in this document is a measurement**.
+> - Trinity **v2.1 (TTSKY26b)** projection of **~75 TOPS/W** (+36%) is an engineering estimate, not measured; the TTSKY26b submission was withdrawn before fabrication.
 > - Trinity **v9 HOLO (TTSKY26c)** target of **≥2000 TOPS/W** is a pre-registered design goal.
 >
-> **Measured verdict gated on 2026-06-30 deadline per H₉.**
+> **Measured verdict gated on 2026-06-30 deadline per H₉.** No silicon existed to measure at that date, and none exists as of 2026-09-05.
 >
 > Rival figures (Hailo-15 ~5–7 TOPS/W, IBM NorthPole ~75–100 TOPS/W, EnCharge EN100 ~24 TOPS/W, etc.) are derived from publicly available vendor spec sheets, product briefs, and peer-reviewed publications as of 2025-07-29. Where exact TOPS/W was not published, figures are clearly marked "public estimate." No figures have been independently silicon-validated by the Trinity team.
 >

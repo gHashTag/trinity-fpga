@@ -96,7 +96,7 @@ openxc7 synthesis → .bitstream → .bit file
 - `docs/docs/adr/003-sacred-constants-unified.md`
 - `docs/docs/adr/001-vibee-compiler.md`
 - `docs/docs/adr/002-ternary-presentation.md`
-- `docs/internal/agents.md`
+- `docs/docs/internal/AGENTS.md`
 
 #### Upcoming Specifications
 - **Behavior** — `docs/docs/internal/ACTIONS.md` (dictionary format of behavior)

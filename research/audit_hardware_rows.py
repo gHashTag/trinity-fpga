@@ -30,6 +30,7 @@ not there.
 from __future__ import annotations
 
 import base64
+import pathlib
 import json
 import re
 import subprocess
@@ -37,7 +38,13 @@ import sys
 
 ISSUE = 199
 REPO = "gHashTag/trinity-fpga"
-SPEC = "specs/numeric/catalog_coverage_delta.t27"
+# Anchored to the repository, not to the caller's working directory. As a bare
+# relative path this resolved from the repo root and not from research/, which
+# is where Gate ratchet runs every script -- so the audit was scored "needs
+# input" there for four weeks while passing by hand. A path that depends on
+# where you stood is a measurement of where you stood.
+ROOT = pathlib.Path(__file__).resolve().parents[1]
+SPEC = str(ROOT / "specs/numeric/catalog_coverage_delta.t27")
 
 CI = re.compile(r"actions/runs/\d+")
 SHA = re.compile(r"\b[0-9a-f]{64}\b")

@@ -7,7 +7,7 @@
 ## Headline new result (strongest for the paper)
 - **GF-T16 — a ternary-native GoldenFloat that beats tekum16** (measured ×3 mid-range,
   ×5.5 far-range; uniform 9-bit vs tekum's tapered 4-bit; no regime decode; exponent
-  added natively in balanced ternary). Spec `t27/specs/numeric/gft16.t27`, oracle
+  added natively in balanced ternary). Spec `gHashTag/t27/specs/numeric/gft16.t27`, oracle
   `conformance/gft16_ref.py`, RTL-sim conformance 30/30, adder 461 LC / 0 DSP.
   → `GFT16_BEATS_TEKUM16_2026-08-05.md`, `ARXIV_GFT16_SNIPPET.md` (ready LaTeX),
   full ladder GF-T4…GF-T1024 in `GF_T_GOLD_STANDARD_LADDER_2026-08-05.md`.

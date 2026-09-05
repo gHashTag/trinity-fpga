@@ -16,6 +16,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_exit_codes = @import("tri_exit_codes.zig");
 const github_client = @import("github_client.zig");
 const jsonl_logger = @import("jsonl_logger.zig");
 
@@ -100,7 +101,7 @@ fn runIssueSubcommand(allocator: std.mem.Allocator, subcmd: []const u8, args: []
 fn issueCreate(allocator: std.mem.Allocator, args: []const []const u8, dry_run: bool) !void {
     if (args.len == 0) {
         std.debug.print("{s}Usage: tri issue create <title> [--body <body>] [--labels <l1,l2>] [--agent <name>]{s}\n", .{ GOLDEN, RESET });
-        return;
+        return tri_exit_codes.exitWithCode(.validation_error);
     }
 
     const title = args[0];
@@ -173,7 +174,7 @@ fn issueCreate(allocator: std.mem.Allocator, args: []const []const u8, dry_run: 
 fn issueComment(allocator: std.mem.Allocator, args: []const []const u8, dry_run: bool) !void {
     if (args.len == 0) {
         std.debug.print("{s}Usage: tri issue comment <N> [--agent <name>] [--step <text>] [--status <STATUS>] [--phase <N/M>]{s}\n", .{ GOLDEN, RESET });
-        return;
+        return tri_exit_codes.exitWithCode(.validation_error);
     }
 
     const number = std.fmt.parseInt(u32, args[0], 10) catch {
@@ -308,7 +309,7 @@ fn issueComment(allocator: std.mem.Allocator, args: []const []const u8, dry_run:
 fn issueClose(allocator: std.mem.Allocator, args: []const []const u8, dry_run: bool) !void {
     if (args.len == 0) {
         std.debug.print("{s}Usage: tri issue close <N> [--reason <reason>] [--summary <text>]{s}\n", .{ GOLDEN, RESET });
-        return;
+        return tri_exit_codes.exitWithCode(.validation_error);
     }
 
     const number = std.fmt.parseInt(u32, args[0], 10) catch {
@@ -352,7 +353,7 @@ fn issueClose(allocator: std.mem.Allocator, args: []const []const u8, dry_run: b
 fn issueDecompose(allocator: std.mem.Allocator, args: []const []const u8, dry_run: bool) !void {
     if (args.len == 0) {
         std.debug.print("{s}Usage: tri issue decompose <N> [--template standard|bugfix|spike] [--agent <name>]{s}\n", .{ GOLDEN, RESET });
-        return;
+        return tri_exit_codes.exitWithCode(.validation_error);
     }
 
     const parent_number = std.fmt.parseInt(u32, args[0], 10) catch {
@@ -564,7 +565,7 @@ fn printIssueTable(json_data: []const u8) void {
 fn issueView(allocator: std.mem.Allocator, args: []const []const u8, dry_run: bool) !void {
     if (args.len == 0) {
         std.debug.print("{s}Usage: tri issue view <number>{s}\n", .{ GOLDEN, RESET });
-        return;
+        return tri_exit_codes.exitWithCode(.validation_error);
     }
 
     const number_str = args[0];
@@ -599,7 +600,7 @@ fn issueView(allocator: std.mem.Allocator, args: []const []const u8, dry_run: bo
 fn issueAssign(allocator: std.mem.Allocator, args: []const []const u8, dry_run: bool) !void {
     if (args.len == 0) {
         std.debug.print("{s}Usage: tri issue assign <number> [--to <user>] [--label <label>]{s}\n", .{ GOLDEN, RESET });
-        return;
+        return tri_exit_codes.exitWithCode(.validation_error);
     }
 
     const number = std.fmt.parseInt(u32, args[0], 10) catch {
@@ -1086,7 +1087,7 @@ fn agentList(allocator: std.mem.Allocator) !void {
 fn agentStop(allocator: std.mem.Allocator, args: []const []const u8) !void {
     if (args.len == 0) {
         std.debug.print("{s}Usage: tri agent stop <name>{s}\n", .{ GOLDEN, RESET });
-        return;
+        return tri_exit_codes.exitWithCode(.validation_error);
     }
     const name = args[0];
 
@@ -1157,7 +1158,7 @@ fn agentStop(allocator: std.mem.Allocator, args: []const []const u8) !void {
 fn agentRestart(allocator: std.mem.Allocator, args: []const []const u8) !void {
     if (args.len == 0) {
         std.debug.print("{s}Usage: tri agent restart <name>{s}\n", .{ GOLDEN, RESET });
-        return;
+        return tri_exit_codes.exitWithCode(.validation_error);
     }
     const name = args[0];
 
@@ -1203,7 +1204,7 @@ fn agentRestart(allocator: std.mem.Allocator, args: []const []const u8) !void {
 fn runProtocolCommand(allocator: std.mem.Allocator, args: []const []const u8) !void {
     if (args.len == 0) {
         std.debug.print("{s}Usage: tri protocol <log|verify> [flags]{s}\n", .{ GOLDEN, RESET });
-        return;
+        return tri_exit_codes.exitWithCode(.validation_error);
     }
 
     if (std.mem.eql(u8, args[0], "log")) {
@@ -1577,7 +1578,7 @@ fn prList(allocator: std.mem.Allocator, args: []const []const u8, dry_run: bool)
 fn prMerge(allocator: std.mem.Allocator, args: []const []const u8, dry_run: bool) !void {
     if (args.len == 0) {
         std.debug.print("{s}Usage: tri pr merge <N> [--method squash|merge|rebase]{s}\n", .{ GOLDEN, RESET });
-        return;
+        return tri_exit_codes.exitWithCode(.validation_error);
     }
 
     const number = std.fmt.parseInt(u32, args[0], 10) catch {
@@ -1607,7 +1608,7 @@ fn prMerge(allocator: std.mem.Allocator, args: []const []const u8, dry_run: bool
 fn prView(allocator: std.mem.Allocator, args: []const []const u8, dry_run: bool) !void {
     if (args.len == 0) {
         std.debug.print("{s}Usage: tri pr view <N>{s}\n", .{ GOLDEN, RESET });
-        return;
+        return tri_exit_codes.exitWithCode(.validation_error);
     }
 
     const number = std.fmt.parseInt(u32, args[0], 10) catch {
@@ -1630,7 +1631,7 @@ fn prView(allocator: std.mem.Allocator, args: []const []const u8, dry_run: bool)
 fn prReview(allocator: std.mem.Allocator, args: []const []const u8, dry_run: bool) !void {
     if (args.len == 0) {
         std.debug.print("{s}Usage: tri pr review <N> --approve|--comment|--changes [--body <text>]{s}\n", .{ GOLDEN, RESET });
-        return;
+        return tri_exit_codes.exitWithCode(.validation_error);
     }
 
     const number = std.fmt.parseInt(u32, args[0], 10) catch {
@@ -1667,7 +1668,7 @@ fn prReview(allocator: std.mem.Allocator, args: []const []const u8, dry_run: boo
 fn prDiff(allocator: std.mem.Allocator, args: []const []const u8, dry_run: bool) !void {
     if (args.len == 0) {
         std.debug.print("{s}Usage: tri pr diff <N>{s}\n", .{ GOLDEN, RESET });
-        return;
+        return tri_exit_codes.exitWithCode(.validation_error);
     }
 
     const number = std.fmt.parseInt(u32, args[0], 10) catch {
@@ -1713,7 +1714,7 @@ fn runCheckCommand(allocator: std.mem.Allocator, args: []const []const u8, dry_r
 fn checkCreate(allocator: std.mem.Allocator, args: []const []const u8, dry_run: bool) !void {
     if (args.len == 0) {
         std.debug.print("{s}Usage: tri check create <name> --sha <sha>{s}\n", .{ GOLDEN, RESET });
-        return;
+        return tri_exit_codes.exitWithCode(.validation_error);
     }
 
     const name = args[0];
@@ -1762,7 +1763,7 @@ fn checkCreate(allocator: std.mem.Allocator, args: []const []const u8, dry_run: 
 fn checkUpdate(allocator: std.mem.Allocator, args: []const []const u8, dry_run: bool, conclusion: []const u8) !void {
     if (args.len == 0) {
         std.debug.print("{s}Usage: tri check pass|fail <id> [--title <t>] [--summary <s>]{s}\n", .{ GOLDEN, RESET });
-        return;
+        return tri_exit_codes.exitWithCode(.validation_error);
     }
 
     const check_id = std.fmt.parseInt(i64, args[0], 10) catch {
@@ -1800,7 +1801,7 @@ fn checkUpdate(allocator: std.mem.Allocator, args: []const []const u8, dry_run: 
 fn runDispatchCommand(allocator: std.mem.Allocator, args: []const []const u8, dry_run: bool) !void {
     if (args.len == 0) {
         std.debug.print("{s}Usage: tri dispatch <event-type> [--payload <json>]{s}\n", .{ GOLDEN, RESET });
-        return;
+        return tri_exit_codes.exitWithCode(.validation_error);
     }
 
     const event_type = args[0];
@@ -1830,7 +1831,7 @@ fn runDispatchCommand(allocator: std.mem.Allocator, args: []const []const u8, dr
 fn runGraphqlCommand(allocator: std.mem.Allocator, args: []const []const u8, dry_run: bool) !void {
     if (args.len == 0) {
         std.debug.print("{s}Usage: tri graphql <query-string> [--vars <json>]{s}\n", .{ GOLDEN, RESET });
-        return;
+        return tri_exit_codes.exitWithCode(.validation_error);
     }
 
     const query = args[0];

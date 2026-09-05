@@ -35,7 +35,7 @@ Decode gf16→fp32 ≈ parsing + LZC(9) + rebias + class multiplexers. A referen
 
 ## Honesty (binding)
 - No "first/best". gf16-decode ≠ gf16-compute — these are different cells; tag both honestly.
-- Until the cell is flashed on silicon — the status is [REQUIRES USER ACTION] (synth+flash is outside the sandbox).
+- Until the cell is flashed on the FPGA — the status is [REQUIRES USER ACTION] (synth+flash is outside the sandbox).
 - 1-ULP subnormal residuals (if they appear) = KNOWN_LIMITATION, not a hard-fail.
 
 *The gf16 parameters are cross-checked against the live SSOT 2026-07-04. This is a spec for the next design-loop, not a result of this session.*

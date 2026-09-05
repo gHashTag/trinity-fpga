@@ -1,0 +1,8 @@
+binary16:0
+fp8e4m3:14
+fp8e5m2:6
+gf10:0
+gf14:0
+gfternary:0
+posit16:4
+tnf16:65536

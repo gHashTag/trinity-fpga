@@ -165,6 +165,7 @@ trinity                 ← Orchestrator (links all via build.zig.zon)
 
 - Do not create, edit, or reference `.sh`/`.bash` files. Legacy scripts in `scripts/`, `deploy/`, `.ralph/scripts/`, and `fpga/` are marked for deletion.
 - Add new tooling as `tri` subcommands or Zig binaries, not shell scripts.
+- **One exemption**: `research/benchmark/**/harness/` retains the shell harnesses that produced published measurements. They are evidence, not tooling — never sourced, extended, or copied from, and never included in a sweep that deletes `.sh` files. See `.claude/rules/no-shell-scripts.md`.
 
 ### Author Attribution
 
@@ -198,8 +199,19 @@ trinity                 ← Orchestrator (links all via build.zig.zon)
 ### FPGA
 
 - Target board: Artix-7 `xc7a200tfbg484-2` (ALINX AX7203).
-- Canonical UART bridge constraints: `fpga/constraints/uart_bridge_j2.xdc`.
-- LED on pin T23 is active-low.
+- Canonical AX7203 constraints: `specs/fpga/constraints/ax7203.xdc`. Every pin in it
+  is checked against the package: clock `R4`/`T4` (200 MHz differential,
+  `DIFF_SSTL15`, both `MRCC`), LEDs `B13`/`C13`/`D14`/`D15` (bank 16, `LVCMOS18`),
+  UART `N15`/`P20`, reset `T6`.
+- `fpga/constraints/uart_bridge_j2.xdc` is **not** for this board — its own header says
+  QMTech `XC7A100T-1FGG676C`, and the pins it declares (`T23`, `R5`, `T8`, `T9`) do
+  not exist in the `fbg484` package at all. The `T23` LED that used to be documented
+  here was one of them; the `fbg484` T-row ends at `T21`. Check a pin against
+  `prjxray-db/artix7/xc7a200tfbg484-2/package_pins.csv` before trusting any xdc in
+  `fpga/`.
+- Bank 34 is the DDR3 bank (1.5 V — `DIFF_SSTL15` clock, `LVCMOS15` reset). Of its 50
+  pins only `R4`/`T4`/`T6` are accounted for; do not drive the others as outputs
+  without the board schematic, or you risk contending with the memory.
 - After modifying Verilog, run synthesis via the openXC7 Docker flow or the `/fpga-synth` skill.
 
 ## Key Reference Files

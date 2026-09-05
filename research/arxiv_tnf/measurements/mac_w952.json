@@ -1,0 +1,82 @@
+{
+ "metric": "LUT1-6 + CARRY4",
+ "ns": [
+  1,
+  2,
+  4,
+  8
+ ],
+ "widths": {
+  "TNF4": {
+   "value": 17,
+   "product": 33,
+   "acc32": 38
+  },
+  "fp6e3m2": {
+   "value": 10,
+   "product": 19,
+   "acc32": 24
+  },
+  "fp6e2m3": {
+   "value": 7,
+   "product": 13,
+   "acc32": 18
+  }
+ },
+ "cost": {
+  "TNF4": {
+   "per_lane": 768.0,
+   "fixture": 0.0,
+   "r2": 1.0,
+   "points": [
+    768,
+    1536,
+    3072,
+    6144
+   ],
+   "mux_per_lane": 120.0,
+   "mux_points": [
+    120,
+    240,
+    480,
+    960
+   ]
+  },
+  "fp6e3m2": {
+   "per_lane": 308.0,
+   "fixture": 0.0,
+   "r2": 1.0,
+   "points": [
+    308,
+    616,
+    1232,
+    2464
+   ],
+   "mux_per_lane": 71.0,
+   "mux_points": [
+    71,
+    142,
+    284,
+    568
+   ]
+  },
+  "fp6e2m3": {
+   "per_lane": 159.0,
+   "fixture": 0.0,
+   "r2": 1.0,
+   "points": [
+    159,
+    318,
+    636,
+    1272
+   ],
+   "mux_per_lane": 46.0,
+   "mux_points": [
+    46,
+    92,
+    184,
+    368
+   ]
+  }
+ }
+}

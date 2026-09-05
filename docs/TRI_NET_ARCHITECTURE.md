@@ -18,7 +18,7 @@ distance between them is the entire risk in a project like this.
 | The TRI-NET node — ternary dot product **and** its receipt tag — is bit-exact on an XC7A200T | **measured on hardware** | 512/512 receipts verified, `trinet_mac32`, flashed 2026-08-01 |
 | The same board answers a second, independent host | **measured on hardware** | Zig CLI `probe` 64/64, separate serial implementation |
 | The node cell synthesises with zero DSP48 | **measured** | 429 LCs, CI run `30702638896` |
-| An agent's inference ran partly on that board | **measured** | `demo`: 288 jobs, 96 on silicon, mesh result equals local recomputation |
+| An agent's inference ran partly on that board | **measured** | `demo`: 288 jobs, 96 dispatched to serial-attached nodes (the earlier label "96 on silicon" was a transport-type label, not a measurement of hardware origin — `docs/TRI_NET_REPORT_2026-08-02.md`, W03), mesh result equals local recomputation |
 | `gfternary MUL` bit-exact on hardware | **measured, but see below** | 16/16 exhaustive, CI run `30702513394` |
 | Mesh, settlement, adversary rejection | **verified in software** | 42 Zig tests |
 | GF8 ADD re-verified after the frame fix | **measured on hardware** | 4096/4096 bit-exact, CI run `30704172264` |
@@ -28,7 +28,7 @@ distance between them is the entire risk in a project like this.
 | A receipt proves work ran on specific silicon | **false, and not claimed** | see §5 |
 
 Before this session the ternary column of the format matrix had no compute
-entry backed by silicon. There is now one.
+entry backed by hardware (the Artix-7 board). There is now one.
 
 **The gfternary result needs a caveat, and it matters.** That cell is not a
 ternary datapath: it expands each 2-bit code into a full FP32 constant, runs a
@@ -69,7 +69,7 @@ multiplier in the first place.
 | `0b10` | −1 |
 | `0b11` | 0 (reserved, canonicalised) |
 
-The reserved code decodes to zero in silicon, in Zig and in Python, so a
+The reserved code decodes to zero in the FPGA cell, in Zig and in Python, so a
 malformed operand degrades to a well-defined answer rather than an
 implementation-specific one.
 
@@ -104,7 +104,7 @@ unchanged) but the CRC failed immediately.
 ## 4. Layers
 
 ```
-silicon      trinet_mac32_ax7203.v         ternary MAC + CRC receipt engine
+fpga         trinet_mac32_ax7203.v         ternary MAC + CRC receipt engine
 protocol     src/trinet/protocol.zig       framing, verification
 transport    serial.zig / net.zig          UART to a board, TCP to a peer
 node         node.zig                      fpga | remote | emulated backends
@@ -193,7 +193,7 @@ weights are loaded. Loading them is a file path, not a rewrite.
 The design supports N nodes. One board is currently attached.
 
 `trinet demo` stands up a mesh with the physical node plus emulated peers, and
-its report states what fraction of jobs touched silicon. With one board and two
+its report states what fraction of jobs was dispatched to serial-attached nodes (the board). With one board and two
 emulated peers that fraction is about a third, and the report says so rather
 than rounding it to "a three-node hardware mesh".
 

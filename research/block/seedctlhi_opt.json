@@ -1,0 +1,55 @@
+{
+ "model": "opt",
+ "src": "facebook/opt-125m",
+ "nwin": 40,
+ "seqlen": 2048,
+ "nseed": 3,
+ "ppl_fp32": 27.567799964179088,
+ "eps": {
+  "0.06": {
+   "rels": [
+    0.06633445132175941,
+    0.059915545779899215,
+    0.04946712971923595
+   ],
+   "mean": 0.058572375606964856,
+   "sd": 0.008513501870313654
+  },
+  "0.09": {
+   "rels": [
+    0.15525045201320475,
+    0.14647405666886515,
+    0.127357860667757
+   ],
+   "mean": 0.1430274564499423,
+   "sd": 0.014262133528783338
+  },
+  "0.12": {
+   "rels": [
+    0.31023810118232964,
+    0.3084689009919326,
+    0.2733688483341621
+   ],
+   "mean": 0.29735861683614145,
+   "sd": 0.020794572895646252
+  }
+ },
+ "provenance": {
+  "corpus": {
+   "sha256": "696cca6b65a171b0a358a4be6732cdfdf2dd6164a32e20fd70e3c13fc4dfae83",
+   "chars": 1294336
+  },
+  "checkpoint": {
+   "src": "facebook/opt-125m",
+   "kind": "hub",
+   "revision": "27dcfa74d334bc871f3234de431e71c6eeba5dd6"
+  },
+  "harness": {
+   "file": "block_tnf.py",
+   "sha256": "cd39ef2305ed6e0518a2b75851327158e206bef6b35c1f507fe3eeed902ad678"
+  }
+ },
+ "alpha_mean": 2.334587402899273,
+ "alpha_sd": 1.2873400767443066,
+ "verdict": "the linear term is present and single-seed numbers are contaminated"
+}

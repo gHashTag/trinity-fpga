@@ -1,0 +1,166 @@
+name: Gate ratchet
+
+# 142 gate-shaped scripts live in research/ and CI invokes fifteen.
+#
+# That is not an oversight anyone made once. `run_all_gates.py`'s own docstring
+# records two defects that survived a pass because nothing ran everything: a
+# regenerated pack whose specials legend was stale, and a LUT parser that summed
+# across a `stat` block boundary and produced a published table of deviations
+# that did not exist. Both would have been caught the next day by running the lot.
+#
+# So the lot runs here. `run_all_gates.py` fails only on CRASH — correctly, since
+# these scripts use exit codes with meanings and flattening them produces a
+# number that is mostly false. `gate_status_ratchet.py` covers what that leaves
+# open: a script going from `clean` to `findings` is a defect appearing, and the
+# aggregator returns 0 for it.
+#
+# A gate on the DIRECTION, per script, never on a total — the same shape the
+# website's typecheck ratchet uses, for the same reason: demanding that all 89
+# be clean first would mean the gate never lands, and a gate that never lands
+# catches nothing.
+#
+# --selftest runs first. A gate nobody has watched fail is a gate whose
+# behaviour nobody knows.
+
+on:
+  pull_request:
+    paths:
+      - 'research/**/*.py'
+      - 'research/gate_status_baseline.json'
+      - '.github/workflows/gate-ratchet.yml'
+  push:
+    branches: [main, master]
+    paths:
+      - 'research/**/*.py'
+      - 'research/gate_status_baseline.json'
+  # The path filter above cannot fire on a change to this file's own triggers,
+  # which is how a website workflow sat wired but unexecuted from the moment it
+  # merged. See gHashTag/trinity#721.
+  workflow_dispatch:
+    inputs:
+      rebaseline:
+        description: >-
+          Re-measure every gate here and upload the resulting baseline as an
+          artifact. Nothing is committed; the file is for review.
+        type: boolean
+        default: false
+      timeout:
+        description: >-
+          Seconds per gate for that re-measurement. The recorded 120 is part of
+          the measurement, not a convenience knob -- changing it makes the new
+          statuses incomparable with the old ones, which is the point of running
+          this deliberately rather than by accident.
+        type: string
+        default: '120'
+
+jobs:
+  ratchet:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    # audit_gf64_chain.py and audit_hardware_rows.py call `gh` to read issues, and
+    # without a token `gh` exits non-zero, the script reports "needs input" (exit 2)
+    # and the ratchet calls it a degradation from the recorded `clean`. That is the
+    # gate honestly saying it could not look, but the diagnosis reads as a broken
+    # subject rather than a missing credential -- both PRs open today show it, and
+    # so does one that changes no gate at all. GITHUB_TOKEN is the built-in
+    # per-run token; it needs no secret and reads only this repository.
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    defaults:
+      run:
+        working-directory: research
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # witness_tekum_decode_equiv walks `git log --all` over one RTL file
+          # to find the revision that still carries the pre-fix loop, so it can
+          # compare before against after. checkout@v4 fetches depth 1 by
+          # default, so only HEAD exists, the search finds nothing, and the
+          # witness honestly reports it cannot compare -- exit 2, which the
+          # ratchet records as "needs input" against a baseline that was taken
+          # on a full clone.
+          #
+          # The file has three revisions. One of them is the whole point.
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # Nine of the fifteen scripts this gate reported as degraded need
+      # iverilog or yosys, and this job installed neither -- so their status
+      # was recorded on a machine that has the RTL toolchain and compared
+      # against a runner that does not. "needs input" there is a fact about
+      # the runner, not about the script, which is why this gate had never
+      # passed on the default branch. The sibling conformance workflow already
+      # installs iverilog the same way.
+      - name: The toolchain the scripts are scored with
+        run: sudo apt-get update && sudo apt-get install -y iverilog yosys
+
+      # Three of the six scripts this gate still reports as degraded need
+      # mpmath, and nothing installed it. Measured in a clean 3.12 venv against
+      # a pristine checkout of main: without mpmath they exit 1, 1 and 2 --
+      # exactly the statuses CI reports -- and with it all three exit 0.
+      #
+      # They do not fail quietly about it either. audit_host_importability says
+      # "imports something absent: No module named 'mpmath'" and
+      # witness_takum_small says "mpmath is not installed; this witness needs
+      # it". The message was in the log for weeks; nobody was reading the log,
+      # because the ratchet only prints the STATUS.
+      - name: The Python packages the scripts are scored with
+        run: python3 -m pip install --quiet mpmath
+
+      - name: The ratchet can fail
+        run: python3 gate_status_ratchet.py --selftest
+
+      # The timeout is read from the baseline, not passed here: a script that is
+      # TIMEOUT at 90s and clean at 300s has not changed, and comparing across
+      # two timeouts would report a fix or a regression that did not happen.
+      #
+      # --jobs 2 rather than 4. The first run of this gate against its own
+      # baseline, on an unchanged tree, reported two scripts degraded
+      # clean -> TIMEOUT and one improved TIMEOUT -> clean: with workers
+      # competing for cores, a wall-clock limit measures the machine. The script
+      # now re-runs any TIMEOUT-involved disagreement serially before believing
+      # it, and a two-core runner needs less contention to start with.
+      - name: No gate degraded
+        run: python3 gate_status_ratchet.py --jobs 2
+
+      # A baseline measured on a laptop is a laptop's baseline. Six gates are
+      # TIMEOUT at 120 s here and five of those six finish on a ten-core machine
+      # -- three of them clean -- so the recorded status is partly a property of
+      # this runner. `--update` therefore belongs on the runner, and its output
+      # is an artifact for a human to read rather than a commit: raising the
+      # timeout does not fix a gate, it changes what the number means, and that
+      # is a decision, not a repair.
+      - name: Re-measure the baseline (manual, uploaded, never committed)
+        # `always()` because the step before this one fails whenever a gate has
+        # degraded -- which is the only situation in which anybody asks for a
+        # re-measurement. Without it the instrument is available exactly when it
+        # is not needed and skipped exactly when it is.
+        if: always() && github.event_name == 'workflow_dispatch' && inputs.rebaseline
+        run: |
+          cp gate_status_baseline.json /tmp/baseline_before.json
+          python3 gate_status_ratchet.py --update --jobs 2 --timeout "${{ inputs.timeout }}" || true
+          cp gate_status_baseline.json /tmp/baseline_after.json
+          python3 - <<'EOF' >> $GITHUB_STEP_SUMMARY
+          import json
+          b = json.load(open("/tmp/baseline_before.json"))["scripts"]
+          a = json.load(open("/tmp/baseline_after.json"))["scripts"]
+          moved = [(k, b.get(k, "-"), a.get(k, "-")) for k in sorted(set(b) | set(a))
+                   if b.get(k) != a.get(k)]
+          print(f"### Re-measured at {json.load(open('/tmp/baseline_after.json'))['timeout']}s\n")
+          print(f"{len(moved)} of {len(a)} gates moved\n")
+          if moved:
+              print("| gate | was | now |")
+              print("|---|---|---|")
+              for k, was, now in moved:
+                  print(f"| `{k}` | {was} | {now} |")
+          EOF
+          git checkout -- gate_status_baseline.json
+
+      - name: Keep the re-measured baseline
+        if: always() && github.event_name == 'workflow_dispatch' && inputs.rebaseline
+        uses: actions/upload-artifact@v4
+        with:
+          name: gate-baseline-remeasured
+          path: /tmp/baseline_after.json

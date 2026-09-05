@@ -1,0 +1,2 @@
+research/arxiv_submission/paper.tex: \ref{sec:holdout} has no \label in this file
+research/arxiv_submission/paper.tex: \ref{tab:lutlaw} has no \label in this file

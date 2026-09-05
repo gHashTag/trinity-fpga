@@ -1,0 +1,50 @@
+{
+ "model": "qwen",
+ "nw": 4,
+ "tie": "even",
+ "baseline": 14.568627852141912,
+ "ntensor": 168,
+ "nparam": 357826560,
+ "rows": [
+  {
+   "model": "qwen",
+   "K": 32,
+   "fmt": "INT4",
+   "u": 0.0,
+   "ppl": 22.443375023848358,
+   "c": 3.5,
+   "blk_clamp": 0.0,
+   "el_clamp": 0.0,
+   "el_zero": 20.552642878158625,
+   "nblk": 11182080,
+   "npart": 0,
+   "nelem": 357826560,
+   "nelem_part": 0,
+   "rmin": 3.5,
+   "rmax": 6.96875,
+   "fp": "393d800e7c5bbcf72f5114c2ced8ded1",
+   "nw": 4,
+   "tie": "even"
+  },
+  {
+   "model": "qwen",
+   "K": 32,
+   "fmt": "E3M0",
+   "u": 0.0,
+   "ppl": 25.403604083618383,
+   "c": 8.0,
+   "blk_clamp": 0.0,
+   "el_clamp": 0.0,
+   "el_zero": 2.3233524084964516,
+   "nblk": 11182080,
+   "npart": 0,
+   "nelem": 357826560,
+   "nelem_part": 0,
+   "rmin": 8.0,
+   "rmax": 15.9375,
+   "fp": "d8339b7cc4798b779e6d6a78137cf267",
+   "nw": 4,
+   "tie": "even"
+  }
+ ]
+}

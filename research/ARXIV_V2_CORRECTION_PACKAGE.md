@@ -154,7 +154,7 @@ Published abstract:
 > bit-exact conformance packs** covering GF16, MXFP4 element, BF16, FP8 E4M3,
 > FP8 E5M2, and E8M0 block scale ...
 
-Live artefact, `t27/conformance/vectors/INDEX_all_formats.json`:
+Live artefact, `gHashTag/t27/conformance/vectors/INDEX_all_formats.json`:
 
 ```json
 "schema": "t27-conformance-index/v0.1",
@@ -206,7 +206,7 @@ contribution is currently reported at **7 % of its actual coverage**.
 
 The abstract says *"Each pack is a self-contained JSON document with a SHA-256
 fingerprint"*. The fingerprints exist — 83 of them — but they live in
-`INDEX_all_formats.json`, one entry per pack:
+`gHashTag/t27/conformance/vectors/INDEX_all_formats.json`, one entry per pack:
 
 ```json
 { "id": "binary16", "file": "binary16_conformance_v0.json", "kind": "bitexact",
@@ -832,7 +832,7 @@ version history. Its v4→v5 entry reads:
 
 > v4→v5: в v4 (**8 июня 2026 г.**) набор пакетов делился как **49 битоточных /
 > 34 структурных**. К v5 покрытие пересчитано по живому SSOT-индексу
-> `INDEX_all_formats.json` …
+> `gHashTag/t27/conformance/vectors/INDEX_all_formats.json` …
 
 8 June 2026 is the arXiv submission date. So the **submitted body already
 described 49 bit-exact + 34 structural = 83 packs**, while the **abstract of the
@@ -1132,8 +1132,8 @@ and then states plainly:
 
 > **Canonical count going forward: 83.** The number 84 in the paper is superseded.
 
-Four artefacts now agree on 83 — the SSOT `formats_catalog.t27`, a fresh codegen
-re-run, `INDEX_all_formats.json`, and the **v2 abstract**, whose only change from v1
+Four artefacts now agree on 83 — the SSOT `gHashTag/t27/specs/numeric/formats_catalog.t27`, a fresh codegen
+re-run, `gHashTag/t27/conformance/vectors/INDEX_all_formats.json`, and the **v2 abstract**, whose only change from v1
 was the single token `84` → `83` (§14 of this package). If the title still reads
 *84-Format*, the paper's most visible number contradicts its own abstract, its own
 repository, and its own erratum.
@@ -1150,7 +1150,7 @@ title change on replacement.
 
 ### 16.1 A related standing warning in CI
 
-`tools/check_catalog_count.py` hardcodes
+`gHashTag/t27/tools/check_catalog_count.py` hardcodes
 
 ```python
 # The count claimed in arXiv:2606.09686 Table 1 abstract ("exactly 84").
@@ -1191,7 +1191,7 @@ question rather than a finding.
 Two consequences.
 
 **The CI constant is now unambiguously stale.** With title and abstract both at 83,
-`PAPER_DECLARED_COUNT = 84` in `tools/check_catalog_count.py` describes only the
+`PAPER_DECLARED_COUNT = 84` in `gHashTag/t27/tools/check_catalog_count.py` describes only the
 withdrawn v1, and its permanent `WARN: an erratum is required` refers to work the v2
 replacement already performed.
 

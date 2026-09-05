@@ -18,10 +18,28 @@ on:
     paths:
       - 'research/audit_pack_layouts.py'
       - '.github/workflows/pack-layout-gate.yml'
+      # An answer in a pack is a function of the oracle that produced it, so
+      # this gate has to wake when an oracle moves -- not only when its own
+      # script is edited. takum_ref.py was corrected on 2026-08-18 and four
+      # division packs kept the broken decode's answers for four more days,
+      # because nothing that watched them ran.
+      - 'conformance/*_ref.py'
+      - 'conformance/exact_ops.py'
+      - 'conformance/refresh_exact_answers.py'
+      - 'conformance/vectors/*_exact.json'
   pull_request:
     paths:
       - 'research/audit_pack_layouts.py'
       - '.github/workflows/pack-layout-gate.yml'
+      # An answer in a pack is a function of the oracle that produced it, so
+      # this gate has to wake when an oracle moves -- not only when its own
+      # script is edited. takum_ref.py was corrected on 2026-08-18 and four
+      # division packs kept the broken decode's answers for four more days,
+      # because nothing that watched them ran.
+      - 'conformance/*_ref.py'
+      - 'conformance/exact_ops.py'
+      - 'conformance/refresh_exact_answers.py'
+      - 'conformance/vectors/*_exact.json'
   workflow_dispatch:
 
 jobs:
@@ -32,6 +50,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Do the exact packs still agree with their own oracles?
+        run: python3 conformance/refresh_exact_answers.py --check
+
       - name: The gate must still catch the layouts it was written for
         run: |
           python3 research/audit_pack_layouts.py --self-check

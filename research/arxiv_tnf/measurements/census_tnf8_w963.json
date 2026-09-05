@@ -1,0 +1,42 @@
+{
+ "tnf8_ladder_10b": {
+  "physical_bits": 10,
+  "codes": 1024,
+  "distinct_values": 962,
+  "decoder_cells": 12.0,
+  "consumer_cells": 212.571,
+  "multiply_alone": 200.571,
+  "r2_bare": 1.0,
+  "r2_fused": 0.999653
+ },
+ "fp10_e5m4": {
+  "physical_bits": 10,
+  "codes": 1024,
+  "distinct_values": 1023,
+  "decoder_cells": 14.0,
+  "consumer_cells": 214.571,
+  "multiply_alone": 200.571,
+  "r2_bare": 1.0,
+  "r2_fused": 0.99966
+ },
+ "tnf8_as_measured_11b": {
+  "physical_bits": 11,
+  "codes": 2048,
+  "distinct_values": 2018,
+  "decoder_cells": 29.0,
+  "consumer_cells": 270.571,
+  "multiply_alone": 241.571,
+  "r2_bare": 1.0,
+  "r2_fused": 0.999979
+ },
+ "fp11_e6m4": {
+  "physical_bits": 11,
+  "codes": 2048,
+  "distinct_values": 2047,
+  "decoder_cells": 16.0,
+  "consumer_cells": 257.571,
+  "multiply_alone": 241.571,
+  "r2_bare": 1.0,
+  "r2_fused": 0.999977
+ }
+}

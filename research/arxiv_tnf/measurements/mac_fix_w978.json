@@ -1,0 +1,51 @@
+{
+ "wave": "W978",
+ "spec": "specs/ternary/gft_signed_mac.t27",
+ "fix": {
+  "smul_guards_added": [
+   "if (a == 0) { return 0; }",
+   "if (b == 0) { return 0; }",
+   "if (mag == 0) { return 0; }"
+  ],
+  "sadd_guards_added": [
+   "if (a == 0) { return b; }",
+   "if (b == 0) { return a; }"
+  ],
+  "source": "both sets exist verbatim in gft_smul.t27 and gft_sadd.t27; the MAC's private copies had neither",
+  "iterations": "fixing smul alone turned the residue from 512 + 4*live into a constant 512 -- the new zero_annihilates test caught that immediately, which is exactly why it was derived from the die clause"
+ },
+ "tests_added": {
+  "zero_annihilates": "3 asserts, derived from the die's ZERO clause",
+  "commutes": "2 asserts, derived from the die's COMM clause",
+  "before": "2 tests, both on fixed constants",
+  "after": "4 tests, multiple operand values"
+ },
+ "verification": {
+  "spec_tests": "4 PASSED, 0 FAILED",
+  "testbench": "0 ZERO violations and 0 COMM violations in 64 points (was 64 ZERO violations)",
+  "die": "NOT OBTAINED -- nextpnr hit the 600 s cap (ABSENT), and the BSCAN chain/site check then failed: JTAG_CHAIN(3) enabled, BSCAN2 wired"
+ },
+ "side_effect": {
+  "LUT": {
+   "before": 6466,
+   "after": 5484,
+   "delta_pct": -15.2
+  },
+  "CARRY4": {
+   "before": 1237,
+   "after": 961,
+   "delta_pct": -22.3
+  },
+  "dut_equivalents": {
+   "before": 3.1,
+   "after": 2.41
+  },
+  "fmax_mhz": {
+   "before": 9.14,
+   "after": 9.85,
+   "delta_pct": 7.8
+  },
+  "note": "the missing special case was not only wrong, it was EXPENSIVE: adding the guards let the synthesiser prune 15 % of the LUTs and 22 % of the carry chain, and the design got 7.8 % faster"
+ },
+ "honest_state": "the fix is verified in simulation and unverified on silicon"
+}

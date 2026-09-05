@@ -1,0 +1,32 @@
+{
+ "tnf4": {
+  "physical_bits": 6,
+  "codes_checked": 64,
+  "mismatches": 0,
+  "outside_fp32": 0,
+  "decoder_cells": 12.0,
+  "consumer_cells": 55.286,
+  "r2_bare": 1.0,
+  "r2_fused": 0.99998
+ },
+ "tnf8": {
+  "physical_bits": 11,
+  "codes_checked": 2048,
+  "mismatches": 0,
+  "outside_fp32": 0,
+  "decoder_cells": 16.0,
+  "consumer_cells": 260.571,
+  "r2_bare": 1.0,
+  "r2_fused": 0.999996
+ },
+ "tnf16": {
+  "physical_bits": 19,
+  "codes_checked": 524288,
+  "mismatches": 0,
+  "outside_fp32": 0,
+  "decoder_cells": 27.0,
+  "consumer_cells": 450.286,
+  "r2_bare": 1.0,
+  "r2_fused": 1.0
+ }
+}

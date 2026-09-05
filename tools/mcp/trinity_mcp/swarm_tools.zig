@@ -1328,7 +1328,7 @@ pub fn swarmStatus(buf: []u8) []const u8 {
     offset = swarm_msg.len;
 
     // Append GitHub section (graceful: skipped if no token)
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const gh = collectGitHubCounts(gpa.allocator());
     if (gh.fetch_ok) {
@@ -1461,7 +1461,7 @@ pub fn swarmTaskAdd(buf: []u8, id: []const u8, slug_str: []const u8, description
         // Write-through to GitHub (best-effort, non-blocking on failure)
         // Skip if this is already a gh- task (came from GitHub)
         if (!std.mem.startsWith(u8, tid, "gh-")) {
-            var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+            var gpa = std.heap.DebugAllocator(.{}){};
             defer _ = gpa.deinit();
             const allocator = gpa.allocator();
 
@@ -1767,7 +1767,7 @@ test "github on_fail returns error comment" {
 
 test "createGitHubIssue returns null without token" {
     // No GH_TOKEN in test env → returns null
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const result = createGitHubIssue(gpa.allocator(), "test title", "test body", "P1");
     try std.testing.expectEqual(@as(?u32, null), result);

@@ -1,0 +1,36 @@
+name: RTL check
+
+# Calls the check from the other repository, the way a customer would. Until
+# this existed the workflow had only ever been called from inside the repo that
+# defines it, which exercises none of what a cross-repo `uses:` actually does —
+# resolving the ref, reading the inputs across the boundary, checking out the
+# CALLER's code rather than the callee's.
+#
+# It also means these two chips are checked on every push by the same thing that
+# is offered to strangers, which is the only honest way to offer it.
+
+on:
+  push:
+    paths:
+      - 'ttsky26c/**'
+      - '.github/workflows/rtl-check.yml'
+  pull_request:
+    paths:
+      - 'ttsky26c/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  mini:
+    uses: gHashTag/trinity/.github/workflows/rtl-check.yml@main
+    with:
+      top: tt_um_qbrain_mini
+      path: ttsky26c/mini
+
+  holo:
+    uses: gHashTag/trinity/.github/workflows/rtl-check.yml@main
+    with:
+      top: tt_um_qbrain_holo
+      path: ttsky26c/holo

@@ -14,7 +14,7 @@ const RED = "\x1b[31m";
 const RESET = "\x1b[0m";
 
 pub fn main() !u8 {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 

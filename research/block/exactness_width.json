@@ -1,0 +1,52 @@
+{
+ "n": 2048,
+ "trials": 64,
+ "perms": 24,
+ "rows": [
+  {
+   "accumulator": "float64 (53)",
+   "mantissa_bits": 53,
+   "order_sd_rel": 9.539042084142657e-16,
+   "ppl_spread_derived": 1.2301636950915437e-14,
+   "reaches_margin": false
+  },
+  {
+   "accumulator": "float32 (24)",
+   "mantissa_bits": 24,
+   "order_sd_rel": 5.234143579824261e-07,
+   "ppl_spread_derived": 6.75e-06,
+   "reaches_margin": false
+  },
+  {
+   "accumulator": "float16 (11)",
+   "mantissa_bits": 11,
+   "order_sd_rel": 0.004432109808389565,
+   "ppl_spread_derived": 0.057156898259245,
+   "reaches_margin": false
+  },
+  {
+   "accumulator": "bfloat16 (8)",
+   "mantissa_bits": 8,
+   "order_sd_rel": 0.03464252021416124,
+   "ppl_spread_derived": 0.4467531466789445,
+   "reaches_margin": true
+  },
+  {
+   "accumulator": "6-bit",
+   "mantissa_bits": 6,
+   "order_sd_rel": 0.14342195802333102,
+   "ppl_spread_derived": 1.8495828436750463,
+   "reaches_margin": true
+  },
+  {
+   "accumulator": "4-bit",
+   "mantissa_bits": 4,
+   "order_sd_rel": 0.4671886447046356,
+   "ppl_spread_derived": 6.02490799815272,
+   "reaches_margin": true
+  }
+ ],
+ "ppl_spread_fp32_measured": 6.75e-06,
+ "smallest_margin": 0.0935,
+ "growth_needed": 13851.851851851852
+}
