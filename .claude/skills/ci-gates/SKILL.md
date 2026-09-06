@@ -266,6 +266,51 @@ When a file already carries a diagnosis, argue with it explicitly and say what
 would settle it. Replacing it silently destroys the only record of why the
 surrounding workaround exists.
 
+## "Flaky" is a diagnosis, and usually the wrong one
+
+A gate that fails on some branches and passes on others is almost never a timing
+problem you can tune away. Before touching a timeout, establish **what the gate
+is measuring**.
+
+`qa/browser-audit.mjs` failed the RU language audit on `/dashboard` on some
+branches and not others while nothing about `/dashboard` changed. It navigated
+with `Page.navigate` to a **hash-only** URL — which does not reload, it fires
+`hashchange` and the SPA re-renders asynchronously — then waited a flat `700ms`.
+On a heavy route the budget expired while the **previous route's DOM was still
+mounted**, so the harness stored route A's text under route B's key.
+
+That is not slowness, it is **misattribution**, and it fails both ways: a
+translated page captured under an untranslated route's name passes it; an English
+page captured under a translated route's name fails the wrong route.
+
+**A fixed sleep after an async navigation is not a wait, it is a bet** — and when
+it loses, the harness does not error, it silently reports the wrong subject. Wait
+for the *thing*: require the app to commit the route, then require the DOM to stop
+changing across two samples, with a budget to fall through.
+
+Cost is real — the EN audit went 23s → 198s. Waiting for a settled DOM is not
+free; guessing was.
+
+And note what this does to history: every green run of that gate before the fix is
+weaker evidence than it looked, because the gate was not checking the routes it
+named.
+
+## The PASS that had nothing to do with your change
+
+Same session, one step earlier. I found the genuine defect under that flaky gate
+(`ProductionDashboard.tsx` had zero `useI18n` calls while sitting in the audit's
+ROUTES list from the start), translated the page, rebuilt, ran the audit, got
+**PASS** — and nearly committed on it.
+
+Then I checked *which strings the capture actually contained*: neither my new
+Russian ones nor the original English ones. The PASS was the harness handing me
+another route's DOM. My fix was real; the evidence for it was not.
+
+**Before believing a green that follows your change, confirm the check saw your
+change.** One probe — does the captured artifact contain a string only my version
+has? — separates a fix from a story. Then close it with a negative control:
+revert *only* your file, rebuild, and require the gate to go red.
+
 ## Related
 
 - `.github/reachability-baseline` — the ratchet's stored count

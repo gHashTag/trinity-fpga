@@ -4,7 +4,7 @@
     "id": "two-track",
     "cron_job": "1cd7dda4",
     "interval": "15m",
-    "iteration": 119,
+    "iteration": 120,
     "status": "RUNNING",
     "owner": "Dmitrii Vasilev / @gHashTag",
     "tracks": [
@@ -1268,6 +1268,18 @@
       "verified": "Ran the step's logic over five inputs rather than reading it through: the real current output (not measured), a decimal score (pass), an integer score (pass -- the old pattern broke here), a genuine 41.2 (still fails, as it must), and an unparseable Score: line (not measured). Then confirmed on the runner: the new '::error::brain health was NOT MEASURED' text appears in run 34026074855 in place of the old fabricated number.",
       "self_correction": "My first commit message and PR body claimed the 404 was WHY Brain Health Report failed on every push. That was an overstatement. 'Generate Health Report' is an aggregator and exits 1 whenever an upstream job failed, which is correct -- the job would go red regardless. The 404 fired on top and buried the verdict. Caught by reading the aggregator's own body after the fix ran, rather than concluding the fix worked because a job name dropped off a check list. Corrected in a follow-up commit and a PR comment before merging.",
       "lesson": "'The job stopped appearing in the failure list' is not evidence that the thing you fixed was the cause. Read the body of what remains."
+    },
+    {
+      "id": "A46",
+      "found": "2026-09-06, iteration 120, taking B29's third item -- the RU-audit failure on /dashboard that fired on some branches and not others.",
+      "what": "qa/browser-audit.mjs navigated with Page.navigate to a hash-only URL and then waited a flat 700ms. A hash change does not reload; it fires hashchange and the SPA re-renders asynchronously. On a heavy route (Queen, /dashboard with its motion sections) the budget expired while the PREVIOUS route's DOM was still mounted, so the harness stored route A's text under route B's key.",
+      "why_it_is_worse_than_flake": "Misattribution fails in BOTH directions. A translated page captured under an untranslated route's name passes it; an English page captured under a translated route's name fails the wrong route. Every route's verdict was potentially about a different route. The 'intermittent' RU failure on /dashboard was this: sometimes it captured Queen (Cyrillic, pass), sometimes the real dashboard (English, fail).",
+      "the_near_miss": "I found the real untranslated page first, translated it, rebuilt, ran the audit and got PASS -- and almost committed on that. Then I checked WHICH strings the dashboard capture actually contained: neither my new Russian ones NOR the original English ones. The PASS had nothing to do with my change. One probe of the trigger, not the shape, was the difference between a fix and a story.",
+      "fix": "Wait for the ROUTE, not for a duration: the SPA must commit the hash, then body text must stop changing across two samples, with a budget to fall through so an animating page is still audited. Plus the genuine defect underneath -- ProductionDashboard.tsx had zero useI18n calls while sitting in ROUTES from the start, and its clock called toLocaleString() with no locale so it followed the machine (9/6/2026 on the runner, 06.09.2026 locally) rather than the page.",
+      "negative_control": "Reverting ONLY ProductionDashboard.tsx to origin/main and rebuilding makes the RU audit fail deterministically, with exactly the line CI reported; restoring the translation makes it pass. Before the harness fix the same test was non-deterministic, which is the whole point.",
+      "cost": "EN audit 23s -> 198s. Waiting for a settled DOM is not free; guessing was.",
+      "second_order": "Both locales pass today, but from this commit the audits are checking routes they were not actually checking before. Every green run of this gate before today is weaker evidence than it looked.",
+      "lesson": "A fixed sleep after an async navigation is not a wait, it is a bet -- and when it loses, the harness does not error, it silently reports the wrong subject. When a gate is called flaky, check whether it is measuring what it names before you tune its timing."
     }
   ],
   "collaboration_options": [
