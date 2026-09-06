@@ -4,7 +4,7 @@
     "id": "two-track",
     "cron_job": "1cd7dda4",
     "interval": "15m",
-    "iteration": 128,
+    "iteration": 129,
     "status": "RUNNING",
     "owner": "Dmitrii Vasilev / @gHashTag",
     "tracks": [
@@ -693,6 +693,13 @@
       "renames_confirmed_against_the_stdlib": "std.fs.Dir/File -> std.Io.Dir/File; makeOpenPath -> createDirPath then openDir; writeAll -> writeStreamingAll(io, ...); close()/stat() -> close(io)/stat(io). Each was looked up rather than guessed, and two of my first attempts were wrong -- makeOpenPath and writeAll both do not exist.",
       "b22_untouched_on_purpose": "main.zig keeps `pub fn main() !void`. Using std.Io.Mutex or process.Init would have settled B22's design as a side effect of a compile fix; the spinlock and Io.Threaded avoid that.",
       "verified": "structured_log.zig compiles standalone. main.zig moves off it entirely, onto env_loader.zig:48 and main.zig:72 -- different files, same 0.16 family. The Io pattern was proven end to end in a scratch program first, including reading back the written line."
+    },
+    {
+      "id": "D111",
+      "what": "env_loader.zig migrated to std.Io (commit 31f7405e5): readFileAlloc replaces open+readToEndAlloc+close, trimLeft/trimRight become trimStart/trimEnd, and loadDotEnv takes an Io that main.zig already builds.",
+      "verified": "zig test src/tri/env_loader.zig -- 10 of 10 pass. main.zig compiled through: it now stops only on std.posix.getenv and std.process.argsAlloc, both process.Init APIs and both B22's real scope.",
+      "measured_surface": "std.fs 938 sites/154 files, posix.getenv 47/21, trimRight 35/19, trimLeft 15/9, argsAlloc 8/8. Only the 50 trim sites are renames; the rest need a value plumbed to each call site.",
+      "two_claims_of_mine_corrected": "B22 is a phantom for file I/O and real for args and environment (A56). And per-file `zig build-obj` on a library file analyses nothing without a root, so the rc=0 checks I quoted were weak (A55)."
     }
   ],
   "backlog": [
@@ -1449,6 +1456,24 @@
       "what_changed_materially": "structured_log.zig is fully migrated to std.Io rather than worked around, and main.zig constructs the Io and hands it down. main.zig now fails on two errors in OTHER files (env_loader std.fs.cwd, main.zig std.process.argsAlloc) instead of on the logger.",
       "the_real_size": "155 of 749 files in src/tri touch std.fs, across 939 call sites; 19 already use std.Io. A program-wide mechanical migration, not a short chain. The shape of the work changed from 'blocked on a decision nobody made' to '939 call sites anyone can start on, in any order, knowing four renames'.",
       "lesson": "When a dependency looks structural, check whether the thing you need can simply be constructed. I reasoned from one function's signature to a whole-program prerequisite without ever asking where the value comes from."
+    },
+    {
+      "id": "A55",
+      "found": "2026-09-07, iteration 129, while migrating env_loader.zig.",
+      "what": "`zig build-obj somefile.zig` on a LIBRARY file proves almost nothing. With no root reference nothing is semantically analysed, so the command returns rc=0 on code that cannot possibly compile. env_loader.zig returned rc=0 while still containing four calls to std.mem.trimLeft, a function 0.16 does not have -- the same call that main.zig had just reported as an error.",
+      "how_i_caught_it": "By accident. I replaced one of four trimLeft calls, re-ran build-obj, got rc=0, and only noticed the other three because the linter echoed the file back at me. If it had not, I would have committed a file with three impossible calls and a green check beside it.",
+      "what_it_invalidates": "Every per-file `zig build-obj ... rc=0` I quoted for a library file this session is weak evidence, including 'structured_log.zig compiles standalone' in the previous iteration. That claim happened to be true -- main.zig moved past it -- but the evidence I gave for it was not the evidence I thought.",
+      "what_actually_checks": "`zig test file.zig`, which synthesises a root and analyses the tests and everything they reach; and compiling through main.zig, which has a real root. env_loader's 10 tests pass and main.zig now stops only on the two process.Init errors.",
+      "lesson": "A compiler invoked without a root is a syntax checker wearing a compiler's exit code. Same family as ast-check not being a compiler, one level subtler: this one IS the compiler, just given nothing to analyse."
+    },
+    {
+      "id": "A56",
+      "found": "2026-09-07, iteration 129, verifying what remained after the logger migration.",
+      "what": "I over-corrected last iteration. Having discovered that std.Io.Threaded.init(gpa, .{}) supplies an Io to a plain main, I wrote that B22 -- migrating main.zig to main(init: std.process.Init) -- was 'a phantom prerequisite'. It is a phantom for FILE I/O only. std.posix.getenv and std.process.argsAlloc are both gone in 0.16, and their replacements std.process.Environ and std.process.Args are values that come from process.Init. There is no portable standalone constructor for either.",
+      "so_the_boundary_is": "File I/O: unblocked, proven, two files migrated. Arguments and environment: genuinely require B22. Those are precisely the two errors main.zig now stops on -- env_loader.zig:64 posix.getenv and main.zig:72 process.argsAlloc.",
+      "the_size_was_also_wrong": "I said '939 call sites, four renames'. Measured across src/tri: std.fs 938 sites in 154 files (each needs an Io in scope), posix.getenv 47 in 21 (needs process.Init), trimRight 35 in 19 and trimLeft 15 in 9 (pure renames), argsAlloc 8 in 8 (needs process.Init). Only 50 of 1043 are renames. The rest are signature changes per function and per caller.",
+      "pattern": "Two iterations, two over-broad claims in opposite directions: first 'blocked on a structural decision' when file I/O was not, then 'not blocked at all' when args and environment are. Both times I generalised from the one API I happened to be holding.",
+      "lesson": "When correcting an over-broad claim, check whether the correction is over-broad too. The honest unit is per-namespace: Io is constructible, process.Init is not."
     }
   ],
   "collaboration_options": [
