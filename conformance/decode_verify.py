@@ -20,9 +20,22 @@ def _enc(val):
     return struct.unpack('<I', struct.pack('<f', val))[0]
 
 
-def _fp(sign, exp, mant, ebits, mbits, bias, code, exp_max, has_inf):
-    # generic fp decode -> fp32 bits (numeric codes only)
-    if exp == 0:
+def _fp(sign, exp, mant, ebits, mbits, bias, code, exp_max, has_inf,
+        saturates=False):
+    """Generic fp decode -> fp32 bits (numeric codes only).
+
+    `saturates` implements the OCP MX rule that a format with no Inf/NaN clamps
+    e == EM to the largest finite value, (1 + MMAX/2**M) * 2**(EM-1-bias),
+    rather than treating EM as an ordinary exponent.
+
+    It is OFF by default and set per format. Every caller here passes
+    has_inf=False, so keying off that would silently change fp8_e4m3, fp6_e2m3
+    and fp4_e2m1 as well -- none of whose RTL was touched by the change this
+    tracks (#250 modified fp6_e3m2 only).
+    """
+    if saturates and exp == exp_max:
+        val = (1.0 + ((1 << mbits) - 1) / (1 << mbits)) * (2.0 ** (exp_max - 1 - bias))
+    elif exp == 0:
         if mant == 0:
             return sign << 31                       # zero
         val = (mant / (1 << mbits)) * (2.0 ** (1 - bias))   # denormal
@@ -63,8 +76,15 @@ def oracle(fmt, code):
         return _fp((code >> 7) & 1, exp, code & 3, 5, 2, 15, code, 0x1F, True), False
     if fmt == 'fp6_e2m3':       # bias=1
         return _fp((code >> 5) & 1, (code >> 3) & 3, code & 7, 2, 3, 1, code, 3, False), False
-    if fmt == 'fp6_e3m2':       # bias=3
-        return _fp((code >> 5) & 1, (code >> 2) & 7, code & 3, 3, 2, 3, code, 7, False), False
+    if fmt == 'fp6_e3m2':       # bias=3, OCP MX: e==EM saturates (no Inf/NaN)
+        # The RTL saturates here and this oracle did not, which is why
+        # decode-verify has failed on every run since 2026-07-07. Commit
+        # 66989dba3 (#250) added the saturate branch to fp6_e3m2_decode.v AND to
+        # conformance/mxfp6_decode_conformance_ax7203.py, but not to this shared
+        # oracle, so codes 0x1c-0x1f and 0x3c-0x3f disagreed: RTL 14.0 for all
+        # four, oracle 16/20/24/28.
+        return _fp((code >> 5) & 1, (code >> 2) & 7, code & 3, 3, 2, 3, code, 7, False,
+                   saturates=True), False
     if fmt == 'fp4_e2m1':       # bias=1
         return _fp((code >> 3) & 1, (code >> 1) & 3, code & 1, 2, 1, 1, code, 3, False), False
     if fmt == 'posit8':         # es=0, useed=2; value = 2^k * (1+fraction)
