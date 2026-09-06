@@ -8,6 +8,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 const tri_env = @import("tri_env.zig");
@@ -778,7 +779,7 @@ fn sendFacultyTelegram(snapshot: FacultySnapshot, delta: FacultyDelta) void {
     // Fire-and-forget HTTP POST
     var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
-    var client = std.http.Client{ .allocator = gpa.allocator() };
+    var client = std.http.Client{ .allocator = gpa.allocator(), .io = tri_io.get() };
     defer client.deinit();
 
     const result = client.fetch(.{

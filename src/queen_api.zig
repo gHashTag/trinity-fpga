@@ -7,6 +7,7 @@
 
 const std = @import("std");
 
+const tri_io = @import("tri_io");
 const allocator = std.heap.c_allocator;
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -22,7 +23,7 @@ export fn trinity_queen_version() [*:0]const u8 {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn readFileIntoBuffer(path: []const u8, buf: [*]u8, len: usize) usize {
-    const file = std.fs.openFileAbsolute(path, .{}) catch return 0;
+    const file = std.Io.Dir.openFileAbsolute(tri_io.get(), path, .{}) catch return 0;
     defer file.close();
     const bytes_read = file.readAll(buf[0..len]) catch return 0;
     return bytes_read;

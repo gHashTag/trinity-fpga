@@ -14,6 +14,7 @@
 
 const std = @import("std");
 
+const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 const tri_env = @import("tri_env.zig");
 // Phase 3: Dynamic Memory & Learning Loops
@@ -714,14 +715,14 @@ const HebbianState = struct {
         defer std.heap.page_allocator.free(data_dir);
 
         // Create directory if needed
-        std.fs.makeDirAbsolute(data_dir) catch |err| {
+        std.Io.Dir.makeDirAbsolute(tri_io.get(), data_dir) catch |err| {
             if (err != error.PathAlreadyExists) return err;
         };
 
         const state_path = try std.fmt.allocPrint(std.heap.page_allocator, "{s}/hebbian.bin", .{data_dir});
         defer std.heap.page_allocator.free(state_path);
 
-        const file = try std.fs.createFileAbsolute(state_path, .{});
+        const file = try std.Io.Dir.createFileAbsolute(tri_io.get(), state_path, .{});
         defer file.close();
 
         // Binary format:
@@ -794,7 +795,7 @@ const HebbianState = struct {
         const state_path = try std.fmt.allocPrint(std.heap.page_allocator, "{s}/hebbian.bin", .{data_dir});
         defer std.heap.page_allocator.free(state_path);
 
-        const file = try std.fs.openFileAbsolute(state_path, .{});
+        const file = try std.Io.Dir.openFileAbsolute(tri_io.get(), state_path, .{});
         defer file.close();
 
         const MAGIC: u64 = 0x5472696E69747921;

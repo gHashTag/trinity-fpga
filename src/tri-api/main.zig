@@ -2,6 +2,7 @@
 // No claude CLI dependency. Talks to api.anthropic.com/v1/messages directly.
 // Self-contained in src/tri-api/. Issues #60, #64, #66, #67.
 const std = @import("std");
+const tri_io = @import("tri_io");
 const proto = @import("tool_protocol.zig");
 const executor = @import("tool_executor.zig");
 const session_store = @import("session_store.zig");
@@ -494,7 +495,7 @@ fn extractContentArray(body: []const u8) ?[]const u8 {
 
 /// POST JSON to Anthropic Messages API using Zig 0.15 std.http.Client.
 fn httpPost(allocator: std.mem.Allocator, url: []const u8, body: []const u8, rotator_opt: ?*token_rotator.TokenRotator) ![]const u8 {
-    var client = std.http.Client{ .allocator = allocator };
+    var client = std.http.Client{ .allocator = allocator, .io = tri_io.get() };
     defer client.deinit();
 
     const uri = std.Uri.parse(url) catch |err| {

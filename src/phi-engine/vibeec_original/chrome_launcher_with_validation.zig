@@ -3,6 +3,7 @@
 // φ² + 1/φ² = 3 | PHOENIX = 999
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const registry_mod = @import("bogatyr_registry.zig");
@@ -324,7 +325,7 @@ pub const ChromeLauncher = struct {
             return ChromeLauncherError.OutOfMemory;
         };
 
-        try std.fs.makeDirAbsolute(dir_path) catch |err| {
+        try std.Io.Dir.makeDirAbsolute(tri_io.get(), dir_path) catch |err| {
             _ = err;
             return ChromeLauncherError.OutOfMemory;
         };

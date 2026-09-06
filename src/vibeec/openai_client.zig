@@ -217,10 +217,12 @@ pub const OpenAIClient = struct {
     }
 
     fn buildRequestJson(self: *Self, system_prompt: ?[]const u8, user_message: []const u8) ![]u8 {
-        var buffer = try std.ArrayList(u8).initCapacity(self.allocator, 256);
-        errdefer buffer.deinit(self.allocator);
+        // 0.16 removed ArrayList.writer(); an Allocating writer replaces it.
+        // initCapacity keeps the original 256-byte pre-allocation.
+        var aw: std.Io.Writer.Allocating = try .initCapacity(self.allocator, 256);
+        errdefer aw.deinit();
 
-        const writer = buffer.writer(self.allocator);
+        const writer = &aw.writer;
 
         try writer.writeAll("{\"model\":\"");
         try writer.writeAll(self.model);
@@ -238,7 +240,7 @@ pub const OpenAIClient = struct {
 
         try writer.writeAll("],\"max_tokens\":1024}");
 
-        return try buffer.toOwnedSlice(self.allocator);
+        return try aw.toOwnedSlice();
     }
 
     fn writeEscaped(self: *Self, writer: anytype, str: []const u8) !void {

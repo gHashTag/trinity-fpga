@@ -21,6 +21,7 @@
 
 const std = @import("std");
 
+const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 // ═══════════════════════════════════════════════════════════════════════════════
 // CONSTANTS
@@ -251,7 +252,7 @@ pub const FPGADevice = struct {
     /// Try to open FPGA device (tries multiple paths)
     pub fn open(allocator: std.mem.Allocator) !FPGADevice {
         for (DEFAULT_DEVICES) |path| {
-            if (std.fs.openFileAbsolute(path, .{ .mode = .read_write })) |file| {
+            if (std.Io.Dir.openFileAbsolute(tri_io.get(), path, .{ .mode = .read_write })) |file| {
                 const fd = file.handle;
                 // Keep file open, will be closed by FPGADevice.close()
                 std.log.info("VSA FPGA: Opened device {s}", .{path});

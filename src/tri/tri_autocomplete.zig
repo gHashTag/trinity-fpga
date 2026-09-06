@@ -18,6 +18,7 @@
 
 const std = @import("std");
 
+const tri_io = @import("tri_io");
 const tri_env = @import("tri_env.zig");
 const Allocator = std.mem.Allocator;
 
@@ -82,7 +83,7 @@ fn loadConfig(allocator: Allocator) !?Config {
     const config_path = try getConfigPath(allocator);
     defer allocator.free(config_path);
 
-    const file = std.fs.openFileAbsolute(config_path, .{}) catch |err| {
+    const file = std.Io.Dir.openFileAbsolute(tri_io.get(), config_path, .{}) catch |err| {
         if (err == error.FileNotFound) return null;
         return err;
     };
@@ -148,7 +149,7 @@ fn saveConfig(allocator: Allocator, config: *const Config) !void {
     const stringified = try std.json.allocPrintZ(allocator, root, options);
     defer allocator.free(stringified);
 
-    const file = try std.fs.createFileAbsolute(config_path, .{ .read = true });
+    const file = try std.Io.Dir.createFileAbsolute(tri_io.get(), config_path, .{ .read = true });
     defer file.close();
     try file.writeAll(stringified);
 }
@@ -771,10 +772,10 @@ fn installCompletion(shell: Shell) !void {
     defer std.heap.page_allocator.free(script);
 
     // Check if already installed
-    const file = std.fs.openFileAbsolute(config_file, .{}) catch |err| {
+    const file = std.Io.Dir.openFileAbsolute(tri_io.get(), config_file, .{}) catch |err| {
         if (err == error.FileNotFound) {
             // Create new file
-            const new_file = try std.fs.createFileAbsolute(config_file, .{ .read = true });
+            const new_file = try std.Io.Dir.createFileAbsolute(tri_io.get(), config_file, .{ .read = true });
             defer new_file.close();
             try new_file.writeAll(script);
             std.debug.print("{s}Installed tri autocomplete to {s}{s}\n", .{ GREEN, config_file, RESET });
@@ -808,7 +809,7 @@ fn uninstallCompletion(shell: Shell) !void {
     const marker = "# >>> tri autocomplete >>>";
     const marker_end = "# <<< tri autocomplete <<<";
 
-    const file = std.fs.openFileAbsolute(config_file, .{}) catch |err| {
+    const file = std.Io.Dir.openFileAbsolute(tri_io.get(), config_file, .{}) catch |err| {
         if (err == error.FileNotFound) {
             std.debug.print("{s}No shell config file found: {s}{s}\n", .{ YELLOW, config_file, RESET });
             return;

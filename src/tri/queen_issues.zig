@@ -6,6 +6,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 const qt = @import("queen_types.zig");
@@ -167,7 +168,7 @@ pub const IssueTracker = struct {
 
         const request_body = body_buf[0..body_len];
 
-        var client = std.http.Client{ .allocator = self.allocator };
+        var client = std.http.Client{ .allocator = self.allocator, .io = tri_io.get() };
         defer client.deinit();
 
         const uri = try std.Uri.parse(url);
@@ -326,7 +327,7 @@ pub const IssueTracker = struct {
 
         const request_body = body_buf[0..body_len];
 
-        var client = std.http.Client{ .allocator = self.allocator };
+        var client = std.http.Client{ .allocator = self.allocator, .io = tri_io.get() };
         defer client.deinit();
 
         const uri = try std.Uri.parse(url);
@@ -417,7 +418,7 @@ pub const IssueTracker = struct {
 
         const request_body = "{\"state\":\"closed\"}";
 
-        var client = std.http.Client{ .allocator = self.allocator };
+        var client = std.http.Client{ .allocator = self.allocator, .io = tri_io.get() };
         defer client.deinit();
 
         const uri = try std.Uri.parse(url);
@@ -495,7 +496,7 @@ pub const IssueTracker = struct {
         const url = try std.fmt.allocPrint(self.allocator, "https://{s}/repos/{s}/{s}/issues/{d}", .{ GITHUB_API_HOST, self.owner, self.repo, issue_number });
         defer self.allocator.free(url);
 
-        var client = std.http.Client{ .allocator = self.allocator };
+        var client = std.http.Client{ .allocator = self.allocator, .io = tri_io.get() };
         defer client.deinit();
 
         const uri = try std.Uri.parse(url);
@@ -619,7 +620,7 @@ pub const IssueTracker = struct {
         var url_buf: [256]u8 = undefined;
         const url = try std.fmt.bufPrint(&url_buf, "https://{s}/repos/{s}/{s}/issues?state=open&per_page=100", .{ GITHUB_API_HOST, self.owner, self.repo });
 
-        var client = std.http.Client{ .allocator = self.allocator };
+        var client = std.http.Client{ .allocator = self.allocator, .io = tri_io.get() };
         defer client.deinit();
 
         const uri = try std.Uri.parse(url);

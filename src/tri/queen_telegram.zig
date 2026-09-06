@@ -5,6 +5,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const qt = @import("queen_types.zig");
 const queen_senses = @import("queen_senses.zig");
 const queen_actions = @import("queen_actions.zig");
@@ -87,7 +88,7 @@ fn pollOnce(allocator: Allocator, ctx: *PollContext, offset: i64) void {
     var url_buf: [512]u8 = undefined;
     const url = std.fmt.bufPrint(&url_buf, "https://api.telegram.org/bot{s}/getUpdates?offset={d}&timeout=5&allowed_updates=[\"message\"]", .{ ctx.tg.bot_token, offset }) catch return;
 
-    var client = std.http.Client{ .allocator = allocator };
+    var client = std.http.Client{ .allocator = allocator, .io = tri_io.get() };
     defer client.deinit();
 
     var aw: std.Io.Writer.Allocating = .init(allocator);
@@ -435,7 +436,7 @@ pub fn tgSendCapture(config: qt.TgConfig, text: []const u8) ?i64 {
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    var client = std.http.Client{ .allocator = allocator };
+    var client = std.http.Client{ .allocator = allocator, .io = tri_io.get() };
     defer client.deinit();
 
     var aw: std.Io.Writer.Allocating = .init(allocator);
@@ -481,7 +482,7 @@ pub fn tgPin(config: qt.TgConfig, message_id: i64) void {
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    var client = std.http.Client{ .allocator = allocator };
+    var client = std.http.Client{ .allocator = allocator, .io = tri_io.get() };
     defer client.deinit();
 
     _ = client.fetch(.{
@@ -505,7 +506,7 @@ fn tgPost(config: qt.TgConfig, endpoint: []const u8, text: []const u8, message_i
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    var client = std.http.Client{ .allocator = allocator };
+    var client = std.http.Client{ .allocator = allocator, .io = tri_io.get() };
     defer client.deinit();
 
     _ = client.fetch(.{

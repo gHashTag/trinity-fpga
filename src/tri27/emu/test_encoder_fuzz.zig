@@ -74,10 +74,13 @@ test "fuzz: decode-encode roundtrip for random words" {
         const reencoded_opcode = @as(u8, @truncate(reencoded & 0xFF));
 
         // Only verify if opcode is in our enum
+        // std.meta.intToEnum returned an error union, so this was `else |_|`.
+        // std.enums.fromInt returns an optional, so the invalid-opcode branch
+        // is a plain else -- there is no error to capture.
         if (std.enums.fromInt(Opcode, original_opcode)) |opcode| {
             _ = opcode;
             try testing.expectEqual(original_opcode, reencoded_opcode);
-        } else |_| {
+        } else {
             // Invalid opcode - decoder returns NOP, reencoded should be 0
             try testing.expectEqual(@as(u8, 0), reencoded_opcode);
         }

@@ -10,6 +10,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const qt = @import("queen_types.zig");
@@ -330,7 +331,7 @@ fn sendRaw(allocator: Allocator, bot_token: []const u8, chat_id: []const u8, tex
     var body_buf: [8192]u8 = undefined;
     const body = try buildBody(&body_buf, chat_id, text);
 
-    var client = std.http.Client{ .allocator = allocator };
+    var client = std.http.Client{ .allocator = allocator, .io = tri_io.get() };
     defer client.deinit();
 
     const uri = try std.Uri.parse(url);

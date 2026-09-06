@@ -15,6 +15,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
@@ -403,7 +404,7 @@ fn runQueenStart(allocator: std.mem.Allocator, args: []const []const u8) !void {
         const pid_str = try std.fmt.bufPrint(&buf, "{d}", .{pid});
         try f.writeAll(pid_str);
     }
-    defer std.fs.deleteFileAbsolute(PID_FILE) catch {};
+    defer std.Io.Dir.deleteFileAbsolute(tri_io.get(), PID_FILE) catch {};
 
     // Create heartbeat directory
     std.fs.cwd().makePath(".trinity/queen") catch {};

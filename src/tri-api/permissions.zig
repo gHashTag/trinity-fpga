@@ -2,6 +2,7 @@
 // deny > allow, project overrides user. Same model as Claude Code.
 // Issue #65: Phase 6 permissions + checkpoints
 const std = @import("std");
+const tri_io = @import("tri_io");
 const proto = @import("tool_protocol.zig");
 
 const user_settings = ".trinity/api/settings.json";
@@ -144,7 +145,7 @@ fn parseRuleString(s: []const u8) ?Rule {
 /// Read a file, trying both absolute and relative paths.
 fn readFile(allocator: std.mem.Allocator, path: []const u8) ![]const u8 {
     if (path.len > 0 and path[0] == '/') {
-        const file = try std.fs.openFileAbsolute(path, .{});
+        const file = try std.Io.Dir.openFileAbsolute(tri_io.get(), path, .{});
         defer file.close();
         return file.readToEndAlloc(allocator, 1024 * 1024);
     }

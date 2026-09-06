@@ -123,10 +123,12 @@ pub const AnthropicClient = struct {
 
     /// Build vision request with image content
     fn buildVisionRequestJson(self: *Self, prompt: []const u8, image_base64: []const u8) ![]u8 {
-        var buffer: std.ArrayListUnmanaged(u8) = .empty;
-        errdefer buffer.deinit(self.allocator);
+        // 0.16 removed ArrayList.writer(). The replacement is an Allocating
+        // writer, which owns its own ArrayList and hands out an Io.Writer.
+        var aw: std.Io.Writer.Allocating = .init(self.allocator);
+        errdefer aw.deinit();
 
-        const writer = buffer.writer(self.allocator);
+        const writer = &aw.writer;
 
         // Anthropic vision format:
         // {"model":"...", "max_tokens":..., "messages":[{"role":"user","content":[
@@ -150,7 +152,7 @@ pub const AnthropicClient = struct {
         try self.writeEscaped(writer, prompt);
         try writer.writeAll("\"}]}]}");
 
-        return buffer.toOwnedSlice(self.allocator);
+        return aw.toOwnedSlice();
     }
 
     /// Chat with optional system prompt (Anthropic-specific: system is separate field)
@@ -179,10 +181,12 @@ pub const AnthropicClient = struct {
 
     /// Build Anthropic Messages API request JSON
     fn buildRequestJson(self: *Self, system_prompt: ?[]const u8, user_message: []const u8) ![]u8 {
-        var buffer: std.ArrayListUnmanaged(u8) = .empty;
-        errdefer buffer.deinit(self.allocator);
+        // Same 0.16 change as buildRequestJson above: ArrayList.writer() is
+        // gone, so this uses an Allocating writer.
+        var aw: std.Io.Writer.Allocating = .init(self.allocator);
+        errdefer aw.deinit();
 
-        const writer = buffer.writer(self.allocator);
+        const writer = &aw.writer;
 
         // Start JSON object
         try writer.writeAll("{\"model\":\"");
@@ -202,7 +206,7 @@ pub const AnthropicClient = struct {
         try self.writeEscaped(writer, user_message);
         try writer.writeAll("\"}]}");
 
-        return buffer.toOwnedSlice(self.allocator);
+        return aw.toOwnedSlice();
     }
 
     /// Make HTTP request with Anthropic headers

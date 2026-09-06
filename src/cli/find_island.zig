@@ -3,6 +3,7 @@
 // ═════════════════════════════════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const print = std.debug.print;
 
 // ANSI Colors
@@ -148,7 +149,7 @@ const PREDEFINED_ISLANDS = [_]Island{
 
 // Load islands from storage
 fn loadIslands(allocator: std.mem.Allocator) !std.ArrayList(Island) {
-    const islands_file = std.fs.openFileAbsolute(allocator, ISLANDS_FILE, .{}) catch |err| return error.FileNotFound;
+    const islands_file = std.Io.Dir.openFileAbsolute(tri_io.get(), allocator, ISLANDS_FILE, .{}) catch |err| return error.FileNotFound;
     defer islands_file.close();
 
     const content = try islands_file.readToEndAlloc(allocator, allocator) catch |err| {
@@ -187,7 +188,7 @@ fn loadIslands(allocator: std.mem.Allocator) !std.ArrayList(Island) {
 
 // Save discovery progress
 fn saveDiscovery(allocator: std.mem.Allocator, island_id: []const u8, discovery: Discovery) !void {
-    const discoveries_file = std.fs.openFileAbsolute(allocator, DISCOVERIES_FILE, .{ .read = true, .write = true, .create_if_not_exists = true }) catch |err| {
+    const discoveries_file = std.Io.Dir.openFileAbsolute(tri_io.get(), allocator, DISCOVERIES_FILE, .{ .read = true, .write = true, .create_if_not_exists = true }) catch |err| {
         defer discoveries_file.close();
 
         var existing = try loadIslands(allocator, allocator);

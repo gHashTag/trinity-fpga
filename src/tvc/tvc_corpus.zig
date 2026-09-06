@@ -13,6 +13,12 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+// Zig 0.16 puts file I/O behind an `Io`. TVCCorpus is a fixed-layout struct
+// built by init()/initInPlace()/initHeap(), none of which take an Io, so it
+// cannot carry an `io` field without changing those signatures. The three
+// functions that touch the filesystem ask the process for its Io instead --
+// once each, not once per call site.
+const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 const vsa = @import("vsa");
 
@@ -321,43 +327,50 @@ pub const TVCCorpus = struct {
 
     /// Save corpus to file (.tvc format)
     pub fn save(self: *Self, path: []const u8) !void {
-        const file = try std.fs.cwd().createFile(path, .{});
-        defer file.close();
+        // One Io for the whole function (see the tri_io note at the top).
+        const io = tri_io.get();
+        const file = try std.Io.Dir.cwd().createFile(io, path, .{});
+        defer file.close(io);
 
         // Header (64 bytes)
-        try file.writeAll(&TVC_MAGIC);
+        // 0.15 File.writeAll -> 0.16 File.writeStreamingAll: same "write every
+        // byte or fail" contract, so the byte stream on disk is unchanged.
+        // Kept unbuffered, exactly as before, rather than wrapping a
+        // File.Writer -- a buffered writer here would need a flush whose
+        // failure mode (silently truncated .tvc) is worse than the syscalls.
+        try file.writeStreamingAll(io, &TVC_MAGIC);
 
         var buf4: [4]u8 = undefined;
         var buf8: [8]u8 = undefined;
 
         std.mem.writeInt(u32, &buf4, TVC_VERSION, .little);
-        try file.writeAll(&buf4);
+        try file.writeStreamingAll(io, &buf4);
 
         std.mem.writeInt(u32, &buf4, @intCast(self.count), .little);
-        try file.writeAll(&buf4);
+        try file.writeStreamingAll(io, &buf4);
 
         std.mem.writeInt(u32, &buf4, @intCast(self.memory_vector.trit_len), .little);
-        try file.writeAll(&buf4);
+        try file.writeStreamingAll(io, &buf4);
 
-        try file.writeAll(&self.node_id);
+        try file.writeStreamingAll(io, &self.node_id);
 
         std.mem.writeInt(u64, &buf8, self.next_entry_id, .little);
-        try file.writeAll(&buf8);
+        try file.writeStreamingAll(io, &buf8);
 
         std.mem.writeInt(u64, &buf8, self.total_queries, .little);
-        try file.writeAll(&buf8);
+        try file.writeStreamingAll(io, &buf8);
 
         std.mem.writeInt(u64, &buf8, self.total_hits, .little);
-        try file.writeAll(&buf8);
+        try file.writeStreamingAll(io, &buf8);
 
         std.mem.writeInt(u64, &buf8, self.total_stores, .little);
-        try file.writeAll(&buf8);
+        try file.writeStreamingAll(io, &buf8);
 
         // Memory vector (packed)
         self.memory_vector.ensureUnpacked();
         for (0..self.memory_vector.trit_len) |i| {
             const byte: [1]u8 = .{@bitCast(self.memory_vector.getTrit(i))};
-            try file.writeAll(&byte);
+            try file.writeStreamingAll(io, &byte);
         }
 
         // Entries
@@ -366,68 +379,88 @@ pub const TVCCorpus = struct {
 
             // Entry ID and metadata
             std.mem.writeInt(u64, &buf8, entry.entry_id, .little);
-            try file.writeAll(&buf8);
+            try file.writeStreamingAll(io, &buf8);
 
             std.mem.writeInt(i64, @ptrCast(&buf8), entry.timestamp, .little);
-            try file.writeAll(&buf8);
+            try file.writeStreamingAll(io, &buf8);
 
             std.mem.writeInt(u32, &buf4, entry.usage_count, .little);
-            try file.writeAll(&buf4);
+            try file.writeStreamingAll(io, &buf4);
 
-            try file.writeAll(std.mem.asBytes(&entry.avg_similarity));
-            try file.writeAll(&entry.source_node);
+            try file.writeStreamingAll(io, std.mem.asBytes(&entry.avg_similarity));
+            try file.writeStreamingAll(io, &entry.source_node);
 
             // Query vector
             entry.query_vec.ensureUnpacked();
             std.mem.writeInt(u32, &buf4, @intCast(entry.query_vec.trit_len), .little);
-            try file.writeAll(&buf4);
+            try file.writeStreamingAll(io, &buf4);
             for (0..entry.query_vec.trit_len) |j| {
                 const byte: [1]u8 = .{@bitCast(entry.query_vec.getTrit(j))};
-                try file.writeAll(&byte);
+                try file.writeStreamingAll(io, &byte);
             }
 
             // Response vector
             entry.response_vec.ensureUnpacked();
             std.mem.writeInt(u32, &buf4, @intCast(entry.response_vec.trit_len), .little);
-            try file.writeAll(&buf4);
+            try file.writeStreamingAll(io, &buf4);
             for (0..entry.response_vec.trit_len) |j| {
                 const byte: [1]u8 = .{@bitCast(entry.response_vec.getTrit(j))};
-                try file.writeAll(&byte);
+                try file.writeStreamingAll(io, &byte);
             }
 
             // Bound vector
             entry.bound_vec.ensureUnpacked();
             std.mem.writeInt(u32, &buf4, @intCast(entry.bound_vec.trit_len), .little);
-            try file.writeAll(&buf4);
+            try file.writeStreamingAll(io, &buf4);
             for (0..entry.bound_vec.trit_len) |j| {
                 const byte: [1]u8 = .{@bitCast(entry.bound_vec.getTrit(j))};
-                try file.writeAll(&byte);
+                try file.writeStreamingAll(io, &byte);
             }
 
             // Query text
             var buf2: [2]u8 = undefined;
             std.mem.writeInt(u16, &buf2, entry.query_len, .little);
-            try file.writeAll(&buf2);
-            try file.writeAll(entry.query_text[0..entry.query_len]);
+            try file.writeStreamingAll(io, &buf2);
+            try file.writeStreamingAll(io, entry.query_text[0..entry.query_len]);
 
             // Response text
             std.mem.writeInt(u16, &buf2, entry.response_len, .little);
-            try file.writeAll(&buf2);
-            try file.writeAll(entry.response_text[0..entry.response_len]);
+            try file.writeStreamingAll(io, &buf2);
+            try file.writeStreamingAll(io, entry.response_text[0..entry.response_len]);
         }
     }
 
     /// Load corpus from file
     pub fn load(path: []const u8) !Self {
-        const file = try std.fs.cwd().openFile(path, .{});
-        defer file.close();
+        // One Io for the whole function (see the tri_io note at the top).
+        const io = tri_io.get();
+        const file = try std.Io.Dir.cwd().openFile(io, path, .{});
+        defer file.close(io);
 
         var corpus: Self = undefined;
         corpus.initInPlace();
 
+        // 0.16 removed File.readAll. Every field below is a fixed-width binary
+        // field whose decode assumes the whole field arrived, so the reads go
+        // through a File.Reader obtained once here: its readSliceAll loops
+        // until the buffer is full or the stream ends, which is what 0.15's
+        // readAll did. file.readStreaming would be the wrong translation -- it
+        // is a single attempt that may return fewer bytes than asked for
+        // without being at EOF, which would silently decode a corrupt value.
+        //
+        // Condition change: readAll returned a short count at EOF and every
+        // call site here discarded it with `_ =`, so a truncated .tvc used to
+        // decode leftover/undefined buffer bytes as data. readSliceAll returns
+        // error.EndOfStream instead, so truncation now fails loudly. Read
+        // failures surface as error.ReadFailed, with the underlying cause in
+        // file_reader.err.
+        var read_buf: [4096]u8 = undefined;
+        var file_reader = file.reader(io, &read_buf);
+        const r = &file_reader.interface;
+
         // Header
         var magic: [4]u8 = undefined;
-        _ = try file.readAll(&magic);
+        try r.readSliceAll(&magic);
         if (!std.mem.eql(u8, &magic, &TVC_MAGIC)) {
             return error.InvalidMagic;
         }
@@ -436,33 +469,33 @@ pub const TVCCorpus = struct {
         var buf8: [8]u8 = undefined;
         var buf2: [2]u8 = undefined;
 
-        _ = try file.readAll(&buf4);
+        try r.readSliceAll(&buf4);
         const version = std.mem.readInt(u32, &buf4, .little);
         if (version != TVC_VERSION) {
             return error.UnsupportedVersion;
         }
 
-        _ = try file.readAll(&buf4);
+        try r.readSliceAll(&buf4);
         const count = std.mem.readInt(u32, &buf4, .little);
         if (count > TVC_MAX_ENTRIES) {
             return error.CorpusTooLarge;
         }
 
-        _ = try file.readAll(&buf4);
+        try r.readSliceAll(&buf4);
         const mem_vec_len = std.mem.readInt(u32, &buf4, .little);
 
-        _ = try file.readAll(&corpus.node_id);
+        try r.readSliceAll(&corpus.node_id);
 
-        _ = try file.readAll(&buf8);
+        try r.readSliceAll(&buf8);
         corpus.next_entry_id = std.mem.readInt(u64, &buf8, .little);
 
-        _ = try file.readAll(&buf8);
+        try r.readSliceAll(&buf8);
         corpus.total_queries = std.mem.readInt(u64, &buf8, .little);
 
-        _ = try file.readAll(&buf8);
+        try r.readSliceAll(&buf8);
         corpus.total_hits = std.mem.readInt(u64, &buf8, .little);
 
-        _ = try file.readAll(&buf8);
+        try r.readSliceAll(&buf8);
         corpus.total_stores = std.mem.readInt(u64, &buf8, .little);
 
         // Memory vector
@@ -471,7 +504,7 @@ pub const TVCCorpus = struct {
         corpus.memory_vector.trit_len = mem_vec_len;
         for (0..mem_vec_len) |i| {
             var byte: [1]u8 = undefined;
-            _ = try file.readAll(&byte);
+            try r.readSliceAll(&byte);
             corpus.memory_vector.unpacked_cache[i] = @bitCast(byte[0]);
         }
 
@@ -480,66 +513,66 @@ pub const TVCCorpus = struct {
             var entry = &corpus.entries[i];
 
             // Metadata
-            _ = try file.readAll(&buf8);
+            try r.readSliceAll(&buf8);
             entry.entry_id = std.mem.readInt(u64, &buf8, .little);
 
-            _ = try file.readAll(&buf8);
+            try r.readSliceAll(&buf8);
             entry.timestamp = std.mem.readInt(i64, &buf8, .little);
 
-            _ = try file.readAll(&buf4);
+            try r.readSliceAll(&buf4);
             entry.usage_count = std.mem.readInt(u32, &buf4, .little);
 
             var avg_sim_bytes: [4]u8 = undefined;
-            _ = try file.readAll(&avg_sim_bytes);
+            try r.readSliceAll(&avg_sim_bytes);
             entry.avg_similarity = @bitCast(avg_sim_bytes);
 
-            _ = try file.readAll(&entry.source_node);
+            try r.readSliceAll(&entry.source_node);
 
             // Query vector
-            _ = try file.readAll(&buf4);
+            try r.readSliceAll(&buf4);
             const q_len = std.mem.readInt(u32, &buf4, .little);
             entry.query_vec = HybridBigInt.zero();
             entry.query_vec.mode = .unpacked_mode;
             entry.query_vec.trit_len = q_len;
             for (0..q_len) |j| {
                 var byte: [1]u8 = undefined;
-                _ = try file.readAll(&byte);
+                try r.readSliceAll(&byte);
                 entry.query_vec.unpacked_cache[j] = @bitCast(byte[0]);
             }
 
             // Response vector
-            _ = try file.readAll(&buf4);
+            try r.readSliceAll(&buf4);
             const r_len = std.mem.readInt(u32, &buf4, .little);
             entry.response_vec = HybridBigInt.zero();
             entry.response_vec.mode = .unpacked_mode;
             entry.response_vec.trit_len = r_len;
             for (0..r_len) |j| {
                 var byte: [1]u8 = undefined;
-                _ = try file.readAll(&byte);
+                try r.readSliceAll(&byte);
                 entry.response_vec.unpacked_cache[j] = @bitCast(byte[0]);
             }
 
             // Bound vector
-            _ = try file.readAll(&buf4);
+            try r.readSliceAll(&buf4);
             const b_len = std.mem.readInt(u32, &buf4, .little);
             entry.bound_vec = HybridBigInt.zero();
             entry.bound_vec.mode = .unpacked_mode;
             entry.bound_vec.trit_len = b_len;
             for (0..b_len) |j| {
                 var byte: [1]u8 = undefined;
-                _ = try file.readAll(&byte);
+                try r.readSliceAll(&byte);
                 entry.bound_vec.unpacked_cache[j] = @bitCast(byte[0]);
             }
 
             // Query text
-            _ = try file.readAll(&buf2);
+            try r.readSliceAll(&buf2);
             entry.query_len = std.mem.readInt(u16, &buf2, .little);
-            _ = try file.readAll(entry.query_text[0..entry.query_len]);
+            try r.readSliceAll(entry.query_text[0..entry.query_len]);
 
             // Response text
-            _ = try file.readAll(&buf2);
+            try r.readSliceAll(&buf2);
             entry.response_len = std.mem.readInt(u16, &buf2, .little);
-            _ = try file.readAll(entry.response_text[0..entry.response_len]);
+            try r.readSliceAll(entry.response_text[0..entry.response_len]);
         }
 
         corpus.count = count;
@@ -551,12 +584,21 @@ pub const TVCCorpus = struct {
     /// Load corpus from file into existing (heap-allocated) struct.
     /// Avoids stack overflow from ~26MB Self return value.
     pub fn loadInto(self: *Self, path: []const u8) !void {
-        const file = try std.fs.cwd().openFile(path, .{});
-        defer file.close();
+        // One Io for the whole function (see the tri_io note at the top).
+        const io = tri_io.get();
+        const file = try std.Io.Dir.cwd().openFile(io, path, .{});
+        defer file.close(io);
+
+        // Same read strategy as load(): one File.Reader, readSliceAll for every
+        // fixed-width field. See the comment there for why readStreaming is not
+        // the right translation of 0.15's readAll, and for the EOF change.
+        var read_buf: [4096]u8 = undefined;
+        var file_reader = file.reader(io, &read_buf);
+        const r = &file_reader.interface;
 
         // Header
         var magic: [4]u8 = undefined;
-        _ = try file.readAll(&magic);
+        try r.readSliceAll(&magic);
         if (!std.mem.eql(u8, &magic, &TVC_MAGIC)) {
             return error.InvalidMagic;
         }
@@ -565,33 +607,33 @@ pub const TVCCorpus = struct {
         var buf8: [8]u8 = undefined;
         var buf2: [2]u8 = undefined;
 
-        _ = try file.readAll(&buf4);
+        try r.readSliceAll(&buf4);
         const version = std.mem.readInt(u32, &buf4, .little);
         if (version != TVC_VERSION) {
             return error.UnsupportedVersion;
         }
 
-        _ = try file.readAll(&buf4);
+        try r.readSliceAll(&buf4);
         const count = std.mem.readInt(u32, &buf4, .little);
         if (count > TVC_MAX_ENTRIES) {
             return error.CorpusTooLarge;
         }
 
-        _ = try file.readAll(&buf4);
+        try r.readSliceAll(&buf4);
         const mem_vec_len = std.mem.readInt(u32, &buf4, .little);
 
-        _ = try file.readAll(&self.node_id);
+        try r.readSliceAll(&self.node_id);
 
-        _ = try file.readAll(&buf8);
+        try r.readSliceAll(&buf8);
         self.next_entry_id = std.mem.readInt(u64, &buf8, .little);
 
-        _ = try file.readAll(&buf8);
+        try r.readSliceAll(&buf8);
         self.total_queries = std.mem.readInt(u64, &buf8, .little);
 
-        _ = try file.readAll(&buf8);
+        try r.readSliceAll(&buf8);
         self.total_hits = std.mem.readInt(u64, &buf8, .little);
 
-        _ = try file.readAll(&buf8);
+        try r.readSliceAll(&buf8);
         self.total_stores = std.mem.readInt(u64, &buf8, .little);
 
         // Memory vector
@@ -600,7 +642,7 @@ pub const TVCCorpus = struct {
         self.memory_vector.trit_len = mem_vec_len;
         for (0..mem_vec_len) |i| {
             var byte: [1]u8 = undefined;
-            _ = try file.readAll(&byte);
+            try r.readSliceAll(&byte);
             self.memory_vector.unpacked_cache[i] = @bitCast(byte[0]);
         }
 
@@ -608,66 +650,66 @@ pub const TVCCorpus = struct {
         for (0..count) |i| {
             var entry = &self.entries[i];
 
-            _ = try file.readAll(&buf8);
+            try r.readSliceAll(&buf8);
             entry.entry_id = std.mem.readInt(u64, &buf8, .little);
 
-            _ = try file.readAll(&buf8);
+            try r.readSliceAll(&buf8);
             entry.timestamp = std.mem.readInt(i64, &buf8, .little);
 
-            _ = try file.readAll(&buf4);
+            try r.readSliceAll(&buf4);
             entry.usage_count = std.mem.readInt(u32, &buf4, .little);
 
             var avg_sim_bytes: [4]u8 = undefined;
-            _ = try file.readAll(&avg_sim_bytes);
+            try r.readSliceAll(&avg_sim_bytes);
             entry.avg_similarity = @bitCast(avg_sim_bytes);
 
-            _ = try file.readAll(&entry.source_node);
+            try r.readSliceAll(&entry.source_node);
 
             // Query vector
-            _ = try file.readAll(&buf4);
+            try r.readSliceAll(&buf4);
             const q_len = std.mem.readInt(u32, &buf4, .little);
             entry.query_vec = HybridBigInt.zero();
             entry.query_vec.mode = .unpacked_mode;
             entry.query_vec.trit_len = q_len;
             for (0..q_len) |j| {
                 var byte: [1]u8 = undefined;
-                _ = try file.readAll(&byte);
+                try r.readSliceAll(&byte);
                 entry.query_vec.unpacked_cache[j] = @bitCast(byte[0]);
             }
 
             // Response vector
-            _ = try file.readAll(&buf4);
+            try r.readSliceAll(&buf4);
             const r_len = std.mem.readInt(u32, &buf4, .little);
             entry.response_vec = HybridBigInt.zero();
             entry.response_vec.mode = .unpacked_mode;
             entry.response_vec.trit_len = r_len;
             for (0..r_len) |j| {
                 var byte: [1]u8 = undefined;
-                _ = try file.readAll(&byte);
+                try r.readSliceAll(&byte);
                 entry.response_vec.unpacked_cache[j] = @bitCast(byte[0]);
             }
 
             // Bound vector
-            _ = try file.readAll(&buf4);
+            try r.readSliceAll(&buf4);
             const b_len = std.mem.readInt(u32, &buf4, .little);
             entry.bound_vec = HybridBigInt.zero();
             entry.bound_vec.mode = .unpacked_mode;
             entry.bound_vec.trit_len = b_len;
             for (0..b_len) |j| {
                 var byte: [1]u8 = undefined;
-                _ = try file.readAll(&byte);
+                try r.readSliceAll(&byte);
                 entry.bound_vec.unpacked_cache[j] = @bitCast(byte[0]);
             }
 
             // Query text
-            _ = try file.readAll(&buf2);
+            try r.readSliceAll(&buf2);
             entry.query_len = std.mem.readInt(u16, &buf2, .little);
-            _ = try file.readAll(entry.query_text[0..entry.query_len]);
+            try r.readSliceAll(entry.query_text[0..entry.query_len]);
 
             // Response text
-            _ = try file.readAll(&buf2);
+            try r.readSliceAll(&buf2);
             entry.response_len = std.mem.readInt(u16, &buf2, .little);
-            _ = try file.readAll(entry.response_text[0..entry.response_len]);
+            try r.readSliceAll(entry.response_text[0..entry.response_len]);
         }
 
         self.count = count;
@@ -787,7 +829,7 @@ test "TVCCorpus save and load" {
     try std.testing.expect(std.mem.eql(u8, loaded.entries[0].getResponse(), "Test response"));
 
     // Cleanup
-    std.fs.cwd().deleteFile("test_corpus.tvc") catch |err| {
+    std.Io.Dir.cwd().deleteFile(tri_io.get(), "test_corpus.tvc") catch |err| {
         std.log.debug("tvc_corpus: cleanup test_corpus.tvc: {}", .{err});
     };
 }

@@ -273,9 +273,17 @@ pub fn formatInstruction(inst: Instruction, writer: anytype) !void {
 
 /// Get short format string for disassembly output
 pub fn formatInstructionShort(inst: Instruction, buffer: []u8) []const u8 {
-    var fbs = std.io.fixedBufferStream(buffer);
-    formatInstruction(inst, fbs.writer()) catch return buffer;
-    return fbs.getWritten();
+    // Zig 0.16: std.io.fixedBufferStream is gone. std.Io.Writer.fixed(buffer)
+    // is the direct replacement: it writes straight into `buffer` and reports
+    // overflow as error.WriteFailed (0.15's fixedBufferStream reported
+    // error.NoSpaceLeft). Both are swallowed identically by the untyped
+    // `catch return buffer` below, and both fill the available space before
+    // failing, so the overflow behaviour is unchanged.
+    // getWritten() -> .buffered(); no flush is needed because `fixed` drains
+    // into the caller's buffer, so w.buffer[0..w.end] is the written slice.
+    var w = std.Io.Writer.fixed(buffer);
+    formatInstruction(inst, &w) catch return buffer;
+    return w.buffered();
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

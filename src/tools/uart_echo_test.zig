@@ -33,6 +33,7 @@
 
 const std = @import("std");
 
+const tri_io = @import("tri_io");
 const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 // Constants
@@ -7883,7 +7884,7 @@ fn parseArgs() Config {
 
 // v3.15: Load TOML config file and merge with command-line config
 fn loadConfigFile(path: []const u8, config: *Config) !bool {
-    const file = std.fs.openFileAbsolute(path, .{}) catch |err| {
+    const file = std.Io.Dir.openFileAbsolute(tri_io.get(), path, .{}) catch |err| {
         printErr("[!] Cannot open config file: {any}\n", .{err});
         return false;
     };
@@ -8626,7 +8627,7 @@ pub fn main() !void {
 // v3.24: List all available serial devices with detailed info
 fn listSerialPorts() void {
     printInfo("\n[*] Scanning for serial devices...\n", .{});
-    var dir = std.fs.openDirAbsolute("/dev", .{}) catch |err| {
+    var dir = std.Io.Dir.openDirAbsolute(tri_io.get(), "/dev", .{}) catch |err| {
         printError("[!] Cannot open /dev: {any}\n", .{err});
         return;
     };
@@ -10342,7 +10343,7 @@ fn runStressTest(fd: std.posix.fd_t, config: Config) !void {
 }
 
 fn findFT232Device() ?[]const u8 {
-    var dir = std.fs.openDirAbsolute("/dev", .{}) catch return null;
+    var dir = std.Io.Dir.openDirAbsolute(tri_io.get(), "/dev", .{}) catch return null;
     defer dir.close();
 
     var iterator = dir.iterate();
@@ -10410,7 +10411,7 @@ fn configureSerialWithFlow(fd: std.posix.fd_t, baud: u64, enable_rtscts: bool) b
 
 // Export test results to CSV file
 fn exportToCSV(path: []const u8, results: []const DetailedTestResult, passed: usize, total: usize) void {
-    const file = std.fs.createFileAbsolute(path, .{}) catch |err| {
+    const file = std.Io.Dir.createFileAbsolute(tri_io.get(), path, .{}) catch |err| {
         printErr("[!] Failed to create CSV file: {any}\n", .{err});
         return;
     };

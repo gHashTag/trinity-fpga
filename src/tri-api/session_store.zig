@@ -2,6 +2,7 @@
 // Storage: ~/.tri-api/sessions/ with index.json + per-session {id}.json
 // Issue #64: Phase 5 native sessions
 const std = @import("std");
+const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 const proto = @import("tool_protocol.zig");
 
@@ -197,14 +198,14 @@ pub const SessionStore = struct {
 
 /// Read a file at an absolute path.
 fn readFileAbs(allocator: std.mem.Allocator, path: []const u8) ![]const u8 {
-    const file = try std.fs.openFileAbsolute(path, .{});
+    const file = try std.Io.Dir.openFileAbsolute(tri_io.get(), path, .{});
     defer file.close();
     return file.readToEndAlloc(allocator, max_file_size);
 }
 
 /// Write a file at an absolute path.
 fn writeFileAbs(path: []const u8, data: []const u8) !void {
-    const file = try std.fs.createFileAbsolute(path, .{});
+    const file = try std.Io.Dir.createFileAbsolute(tri_io.get(), path, .{});
     defer file.close();
     try file.writeAll(data);
 }

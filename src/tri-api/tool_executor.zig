@@ -3,6 +3,7 @@
 // Phase 6: Permission checks + git checkpoints before writes.
 // Phase 7: MCP tool routing.
 const std = @import("std");
+const tri_io = @import("tri_io");
 const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 const json = @import("tool_protocol.zig");
@@ -56,7 +57,7 @@ pub const ToolExecutor = struct {
                 defer allocator.free(h);
                 const dir_path = std.fmt.allocPrint(allocator, "{s}/.tri-api", .{h}) catch break :blk null;
                 defer allocator.free(dir_path);
-                std.fs.makeDirAbsolute(dir_path) catch {};
+                std.Io.Dir.makeDirAbsolute(tri_io.get(), dir_path) catch {};
                 break :blk std.fmt.allocPrint(allocator, "{s}/.tri-api/audit.jsonl", .{h}) catch null;
             }
             break :blk null;
@@ -65,7 +66,7 @@ pub const ToolExecutor = struct {
         defer if (audit_path == null) if (path) |p| allocator.free(p);
 
         const audit = if (path) |p|
-            std.fs.createFileAbsolute(p, .{ .truncate = false }) catch null
+            std.Io.Dir.createFileAbsolute(tri_io.get(), p, .{ .truncate = false }) catch null
         else
             null;
         if (audit) |f| f.seekFromEnd(0) catch {};

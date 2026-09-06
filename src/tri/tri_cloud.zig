@@ -18,6 +18,7 @@
 
 const std = @import("std");
 
+const tri_io = @import("tri_io");
 const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 const tri_env = @import("tri_env.zig");
@@ -1517,7 +1518,7 @@ fn cloudApiCheck(allocator: Allocator) !void {
     };
 
     // Use std.http.Client (Zig 0.15 API)
-    var client = std.http.Client{ .allocator = allocator };
+    var client = std.http.Client{ .allocator = allocator, .io = tri_io.get() };
     defer client.deinit();
 
     const uri = std.Uri.parse(url) catch {

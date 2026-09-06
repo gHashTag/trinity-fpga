@@ -6,6 +6,7 @@
 // Uses raw TCP — minimal HTTP parsing without std.http.Server complexity.
 const std = @import("std");
 
+const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 const max_output = 64 * 1024;
 const max_body = 128 * 1024; // POST body limit for /px/done
@@ -45,7 +46,7 @@ pub const Bridge = struct {
 
     fn ensureQueueDir(self: *Bridge) void {
         if (self.queue_dir[0] == '/') {
-            std.fs.makeDirAbsolute(self.queue_dir) catch |err| {
+            std.Io.Dir.makeDirAbsolute(tri_io.get(), self.queue_dir) catch |err| {
                 std.log.debug("perplexity_bridge: failed to create queue dir (abs): {}", .{err});
             };
         } else {

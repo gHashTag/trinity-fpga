@@ -12,6 +12,7 @@
 
 const std = @import("std");
 
+const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 pub const io = std.io;
 
@@ -370,13 +371,13 @@ const QueueItem = struct {
 
 fn getStartDate(allocator: std.mem.Allocator) !i64 {
     // Read start date from config file
-    const file = std.fs.openFileAbsolute(
+    const file = std.Io.Dir.openFileAbsolute(tri_io.get(), 
         ".trinity/outreach_start_date.txt",
         .{},
     ) catch {
         // Create default start date (today)
         const now = tri_time.timestamp();
-        const file = try std.fs.createFileAbsolute(
+        const file = try std.Io.Dir.createFileAbsolute(tri_io.get(), 
             ".trinity/outreach_start_date.txt",
             .{},
         );

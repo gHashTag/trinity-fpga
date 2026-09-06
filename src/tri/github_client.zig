@@ -12,6 +12,7 @@
 
 const std = @import("std");
 
+const tri_io = @import("tri_io");
 const tri_proc = @import("tri_proc");
 const tri_env = @import("tri_env.zig");
 pub const Mode = enum {
@@ -110,7 +111,7 @@ pub const GitHubClient = struct {
         // Determine mode: preferred_mode -> GITHUB_USE_CLI env var -> auto-detect based on token
         const mode: Mode = blk: {
             if (preferred_mode) |m| break :blk m;
-            const use_cli = std.process.hasEnvVarConstant("GITHUB_USE_CLI");
+            const use_cli = tri_env.hasConstant("GITHUB_USE_CLI");
             break :blk if (use_cli or token == null) .gh_cli else .native_http;
         };
 
@@ -833,7 +834,7 @@ pub const GitHubClient = struct {
         else
             .GET;
 
-        var client = std.http.Client{ .allocator = self.allocator };
+        var client = std.http.Client{ .allocator = self.allocator, .io = tri_io.get() };
         defer client.deinit();
 
         const uri_str = try std.fmt.allocPrint(self.allocator, "https://{s}{s}", .{ GITHUB_API_HOST, path });
@@ -896,7 +897,7 @@ pub const GitHubClient = struct {
     fn ghCliRun(self: *Self, argv: []const []const u8) ![]const u8 {
         // Pass GH_TOKEN to gh CLI subprocess for authentication
         // This works around keyring access issues in subprocesses
-        var child_env = try std.process.getEnvMap(self.allocator);
+        var child_env = try tri_env.getEnvMap(self.allocator);
         defer child_env.deinit();
 
         // If we have a token from init, pass it to gh CLI

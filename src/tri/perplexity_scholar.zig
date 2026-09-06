@@ -7,6 +7,7 @@
 // ============================================================================
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const Allocator = std.mem.Allocator;
 const hippocampus = @import("hippocampus.zig");
 
@@ -113,7 +114,7 @@ pub const PerplexityScholar = struct {
             return error.OutOfMemory;
 
         // Use std.http.Client directly (same pattern as http_client.zig)
-        var client = std.http.Client{ .allocator = self.allocator };
+        var client = std.http.Client{ .allocator = self.allocator, .io = tri_io.get() };
         defer client.deinit();
 
         const uri = std.Uri.parse(url) catch return error.InvalidUrl;

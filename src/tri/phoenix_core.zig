@@ -16,6 +16,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayListUnmanaged;
@@ -247,7 +248,7 @@ pub const PhoenixCore = struct {
         const status_file = try std.fs.path.join(self.allocator, &.{ self.config.project_root, ".phoenix", "status_report.json" });
         defer self.allocator.free(status_file);
 
-        const file = std.fs.openFileAbsolute(status_file, .{}) catch |err| {
+        const file = std.Io.Dir.openFileAbsolute(tri_io.get(), status_file, .{}) catch |err| {
             if (err == error.FileNotFound) {
                 // No status file yet, use defaults
                 return;
@@ -278,7 +279,7 @@ pub const PhoenixCore = struct {
         const fix_plan_file = try std.fs.path.join(self.allocator, &.{ self.config.project_root, ".phoenix", "fix_plan.md" });
         defer self.allocator.free(fix_plan_file);
 
-        const file = std.fs.openFileAbsolute(fix_plan_file, .{}) catch |err| {
+        const file = std.Io.Dir.openFileAbsolute(tri_io.get(), fix_plan_file, .{}) catch |err| {
             if (err == error.FileNotFound) return;
             return err;
         };

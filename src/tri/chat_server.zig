@@ -17,6 +17,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 const igla_hybrid_chat = @import("igla_hybrid_chat");
 const tvc = @import("tvc_corpus");
@@ -748,7 +749,7 @@ pub const ChatServer = struct {
         const base_path = worktree_paths[@min(agent_idx, 3)];
 
         // Open worktree directory (absolute path)
-        var base_dir = std.fs.openDirAbsolute(base_path, .{}) catch {
+        var base_dir = std.Io.Dir.openDirAbsolute(tri_io.get(), base_path, .{}) catch {
             try self.sendJsonResponse(connection, "{\"loop\":{\"status\":\"offline\"},\"circuit_breaker\":{\"state\":\"UNKNOWN\"},\"logs\":[],\"agent\":" ++ "0" ++ ",\"reachable\":false}");
             return;
         };

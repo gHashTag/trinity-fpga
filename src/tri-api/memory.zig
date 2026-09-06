@@ -3,6 +3,7 @@
 // Issue #67: Phase 8 Context Management
 const std = @import("std");
 
+const tri_io = @import("tri_io");
 const max_lines = 200;
 const max_file_size = 256 * 1024; // 256KB
 
@@ -31,7 +32,7 @@ pub const Memory = struct {
         var path_buf: [560]u8 = undefined;
         const path = std.fmt.bufPrint(&path_buf, "{s}/MEMORY.md", .{self.base_dir[0..self.base_dir_len]}) catch return null;
 
-        const file = std.fs.openFileAbsolute(path, .{}) catch return null;
+        const file = std.Io.Dir.openFileAbsolute(tri_io.get(), path, .{}) catch return null;
         defer file.close();
 
         const content = file.readToEndAlloc(self.allocator, max_file_size) catch return null;
@@ -69,7 +70,7 @@ pub const Memory = struct {
 
         // Ensure directory exists
         const dir_path = self.base_dir[0..self.base_dir_len];
-        std.fs.makeDirAbsolute(dir_path) catch |err| {
+        std.Io.Dir.makeDirAbsolute(tri_io.get(), dir_path) catch |err| {
             std.log.debug("memory: failed to create dir {s}: {}", .{ dir_path, err });
         };
 
@@ -77,7 +78,7 @@ pub const Memory = struct {
         const path = std.fmt.bufPrint(&path_buf, "{s}/MEMORY.md", .{dir_path}) catch return;
 
         // Open for appending (create if needed)
-        const file = std.fs.createFileAbsolute(path, .{ .truncate = false }) catch return;
+        const file = std.Io.Dir.createFileAbsolute(tri_io.get(), path, .{ .truncate = false }) catch return;
         defer file.close();
 
         // Seek to end

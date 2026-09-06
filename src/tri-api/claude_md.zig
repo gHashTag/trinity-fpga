@@ -3,6 +3,7 @@
 // Issue #67: Phase 8 Context Management
 const std = @import("std");
 
+const tri_io = @import("tri_io");
 const max_file_size = 256 * 1024; // 256KB per CLAUDE.md
 
 /// Load and merge CLAUDE.md files into a system prompt.
@@ -60,7 +61,7 @@ fn appendFile(allocator: std.mem.Allocator, parts: *std.ArrayList(u8), path: []c
 fn readFile(allocator: std.mem.Allocator, path: []const u8) ?[]const u8 {
     // Try as absolute path first, then relative
     if (path.len > 0 and path[0] == '/') {
-        const file = std.fs.openFileAbsolute(path, .{}) catch return null;
+        const file = std.Io.Dir.openFileAbsolute(tri_io.get(), path, .{}) catch return null;
         defer file.close();
         return file.readToEndAlloc(allocator, max_file_size) catch null;
     }

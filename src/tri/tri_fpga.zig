@@ -20,6 +20,7 @@
 // =============================================================================
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 const posix = std.posix;
@@ -84,12 +85,12 @@ pub fn findSerialDevice(allocator: std.mem.Allocator) !?[]const u8 {
         "ttyACM", // Linux ACM (CDC)
     };
 
-    var dev_dir = std.fs.openDirAbsolute("/dev", .{ .iterate = true }) catch return null;
+    var dev_dir = std.Io.Dir.openDirAbsolute(tri_io.get(), "/dev", .{ .iterate = true }) catch return null;
     defer dev_dir.close();
 
     // Try each prefix in priority order
     for (prefixes) |prefix| {
-        var dir2 = std.fs.openDirAbsolute("/dev", .{ .iterate = true }) catch continue;
+        var dir2 = std.Io.Dir.openDirAbsolute(tri_io.get(), "/dev", .{ .iterate = true }) catch continue;
         defer dir2.close();
         var iter = dir2.iterate();
         while (iter.next() catch null) |entry| {
@@ -137,7 +138,7 @@ fn uartScan(allocator: std.mem.Allocator) !void {
     std.debug.print("\n{s}{s}=== TRI FPGA UART SCAN ==={s}\n\n", .{ BOLD, CYAN, RESET });
 
     var found: usize = 0;
-    var dev_dir = std.fs.openDirAbsolute("/dev", .{ .iterate = true }) catch {
+    var dev_dir = std.Io.Dir.openDirAbsolute(tri_io.get(), "/dev", .{ .iterate = true }) catch {
         std.debug.print("  {s}Cannot open /dev{s}\n", .{ RED, RESET });
         return;
     };

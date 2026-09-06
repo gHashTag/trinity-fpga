@@ -12,6 +12,7 @@
 
 const std = @import("std");
 
+const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 const ALERTS_LOG = ".trinity/brain_alerts.jsonl";
 
@@ -578,7 +579,7 @@ pub const AlertManager = struct {
         var body_buf: [4096]u8 = undefined;
         const body = try std.fmt.bufPrint(&body_buf, "{{\"chat_id\":\"{s}\",\"text\":\"{s}\",\"parse_mode\":\"HTML\"}}", .{ self.telegram_chat_id, message });
 
-        var client = std.http.Client{ .allocator = self.allocator };
+        var client = std.http.Client{ .allocator = self.allocator, .io = tri_io.get() };
         defer client.deinit();
 
         var aw: std.Io.Writer.Allocating = .init(self.allocator);

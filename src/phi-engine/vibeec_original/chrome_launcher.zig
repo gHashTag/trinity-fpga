@@ -4,6 +4,7 @@
 // φ² + 1/φ² = 3
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const cdp = @import("cdp_client.zig");
@@ -120,7 +121,7 @@ pub const ChromeLauncher = struct {
         const full_path = try std.fs.path.join(self.allocator, &[_][]const u8{ temp_dir, dir_name });
         errdefer self.allocator.free(full_path);
 
-        std.fs.makeDirAbsolute(full_path) catch |err| {
+        std.Io.Dir.makeDirAbsolute(tri_io.get(), full_path) catch |err| {
             if (err != error.PathAlreadyExists) return ChromeLauncherError.CommandFailed;
         };
 

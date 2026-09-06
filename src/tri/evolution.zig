@@ -18,6 +18,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 const tri_exit_codes = @import("tri_exit_codes.zig");
@@ -7867,11 +7868,11 @@ test "parseMockConfigJson fields" {
 
     const tmp_path = "/tmp/trinity_test_deploy_configs.json";
     {
-        var f = try std.fs.createFileAbsolute(tmp_path, .{});
+        var f = try std.Io.Dir.createFileAbsolute(tri_io.get(), tmp_path, .{});
         defer f.close();
         try f.writeAll(test_json);
     }
-    defer std.fs.deleteFileAbsolute(tmp_path) catch {};
+    defer std.Io.Dir.deleteFileAbsolute(tri_io.get(), tmp_path) catch {};
 
     var configs: [MAX_SERVICES]MutatedConfig = undefined;
     var cnames: [MAX_SERVICES][64]u8 = undefined;

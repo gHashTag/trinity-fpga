@@ -6,6 +6,7 @@
 // ============================================================================
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 const tri_env = @import("tri_env.zig");
@@ -1858,7 +1859,7 @@ fn callProviderFix(allocator: std.mem.Allocator, provider: Provider, api_key: []
     // Write body to temp file
     const tmp_path = "/tmp/trinity_claude_fix.json";
     {
-        const tmp = std.fs.createFileAbsolute(tmp_path, .{}) catch return null;
+        const tmp = std.Io.Dir.createFileAbsolute(tri_io.get(), tmp_path, .{}) catch return null;
         defer tmp.close();
         tmp.writeAll(body) catch return null;
     }

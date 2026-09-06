@@ -1428,6 +1428,8 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
         .imports = &.{
             .{ .name = "vsa", .module = vsa_tri },
+            .{ .name = "tri_time", .module = tri_time_mod },
+            .{ .name = "tri_io", .module = tri_io_mod },
         },
     });
 

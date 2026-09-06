@@ -18,6 +18,7 @@
 
 const std = @import("std");
 
+const tri_io = @import("tri_io");
 const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 const tri_env = @import("tri_env.zig");
@@ -127,9 +128,10 @@ pub const GitHubAppAuth = struct {
 
         // Write payload
         {
-            var file = try std.fs.createFileAbsolute(tmp_path, .{});
-            defer file.close();
-            try file.writeAll(data);
+            const io = tri_io.get();
+            var file = try std.Io.Dir.createFileAbsolute(io, tmp_path, .{});
+            defer file.close(io);
+            try file.writeStreamingAll(io, data);
         }
 
         // Sign with openssl
@@ -153,9 +155,10 @@ pub const GitHubAppAuth = struct {
         }
 
         // Read signature binary
-        var sig_file = try std.fs.openFileAbsolute(sig_path, .{});
-        defer sig_file.close();
-        const sig_bytes = try sig_file.readToEndAlloc(self.allocator, 8192);
+        // 0.16 puts the whole-file read on the DIRECTORY, not the file, so the
+        // open/read/close trio collapses into one call.
+        const sig_io = tri_io.get();
+        const sig_bytes = try std.Io.Dir.cwd().readFileAlloc(sig_io, sig_path, self.allocator, .limited(8192));
         defer self.allocator.free(sig_bytes);
 
         // Base64url encode signature
@@ -167,7 +170,7 @@ pub const GitHubAppAuth = struct {
         const url = try std.fmt.allocPrint(self.allocator, "https://api.github.com/app/installations/{s}/access_tokens", .{self.installation_id});
         defer self.allocator.free(url);
 
-        var client = std.http.Client{ .allocator = self.allocator };
+        var client = std.http.Client{ .allocator = self.allocator, .io = tri_io.get() };
         defer client.deinit();
 
         const uri = std.Uri.parse(url) catch return error.InvalidUrl;

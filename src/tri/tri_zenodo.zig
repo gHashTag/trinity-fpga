@@ -14,6 +14,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 const tri_env = @import("tri_env.zig");
@@ -1759,7 +1760,7 @@ fn publishOneDiscovery(allocator: std.mem.Allocator, d: Discovery) !void {
     print("  {s}[{s}] DOI: {s}{s}\n\n", .{ GREEN, d.id, doi, RESET });
 
     // Cleanup
-    std.fs.deleteFileAbsolute(zip_path) catch {};
+    std.Io.Dir.deleteFileAbsolute(tri_io.get(), zip_path) catch {};
 }
 
 fn printHelp() void {
@@ -2340,7 +2341,7 @@ fn runPublish(allocator: std.mem.Allocator, version: []const u8, do_publish: boo
     }
 
     // Cleanup
-    std.fs.deleteFileAbsolute(zip_path) catch |err| {
+    std.Io.Dir.deleteFileAbsolute(tri_io.get(), zip_path) catch |err| {
         std.log.debug("tri_zenodo: failed to cleanup zip file: {}", .{err});
     };
 }

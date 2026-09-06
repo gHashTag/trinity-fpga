@@ -7,6 +7,7 @@
 //! Generated code is written to a separate file for review before integration.
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 const diagnostic = @import("diagnostic.zig");
 const FixType = diagnostic.FixType;
@@ -146,7 +147,7 @@ pub const SelfModification = struct {
         defer self.allocator.free(code);
 
         // Write to output file
-        const file = try std.fs.createFileAbsolute(self.output_path, .{ .read = true });
+        const file = try std.Io.Dir.createFileAbsolute(tri_io.get(), self.output_path, .{ .read = true });
         defer file.close();
 
         try file.writeAll(code);
@@ -246,7 +247,7 @@ pub const SelfModification = struct {
 
     /// Export patterns for manual review
     pub fn exportForReview(self: *const SelfModification, path: []const u8) !void {
-        const file = try std.fs.createFileAbsolute(path, .{ .read = true });
+        const file = try std.Io.Dir.createFileAbsolute(tri_io.get(), path, .{ .read = true });
         defer file.close();
 
         const writer = file.writer();

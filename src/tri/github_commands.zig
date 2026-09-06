@@ -16,6 +16,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 const tri_exit_codes = @import("tri_exit_codes.zig");
@@ -1029,9 +1030,11 @@ fn agentList(allocator: std.mem.Allocator) !void {
         var status: []const u8 = "stopped";
         var pid_buf: [20]u8 = undefined;
 
-        if (std.fs.cwd().openFile(pid_path, .{})) |file| {
-            defer file.close();
-            const n = file.readAll(&pid_buf) catch 0;
+        // 0.16 puts the whole-file read on the directory: open + readAll +
+        // close collapse into one call, and a short read stays a short read
+        // (readFile loops to EOF, as readAll did).
+        if (std.Io.Dir.cwd().readFile(tri_io.get(), pid_path, &pid_buf)) |slice| {
+            const n = slice.len;
             if (n > 0) {
                 const trimmed = std.mem.trimEnd(u8, pid_buf[0..n], "\n\r ");
                 pid_str = trimmed;
@@ -1100,9 +1103,8 @@ fn agentStop(allocator: std.mem.Allocator, args: []const []const u8) !void {
     var pid_str: ?[]const u8 = null;
     var pid_buf: [20]u8 = undefined;
 
-    if (std.fs.cwd().openFile(pid_path, .{})) |file| {
-        defer file.close();
-        const n = file.readAll(&pid_buf) catch 0;
+    if (std.Io.Dir.cwd().readFile(tri_io.get(), pid_path, &pid_buf)) |slice| {
+        const n = slice.len;
         if (n > 0) {
             pid_str = std.mem.trimEnd(u8, pid_buf[0..n], "\n\r ");
         }
@@ -1145,7 +1147,7 @@ fn agentStop(allocator: std.mem.Allocator, args: []const []const u8) !void {
         }) == 0) {
             std.debug.print("{s}Stopped {s} (PID {s}){s}\n", .{ GREEN, name, pid, RESET });
             // Clean up PID file
-            std.fs.cwd().deleteFile(pid_path) catch |err| {
+            std.Io.Dir.cwd().deleteFile(tri_io.get(), pid_path) catch |err| {
                 std.log.debug("github_commands: deleteFile PID cleanup ({s}) failed: {}", .{ pid_path, err });
             };
         } else {
@@ -1249,15 +1251,16 @@ fn protocolLog(allocator: std.mem.Allocator, args: []const []const u8) !void {
         try displayLogFile(filename, filter_issue, filter_agent);
     } else {
         // List all log files
-        var dir = std.fs.cwd().openDir(protocol_dir, .{ .iterate = true }) catch {
+        const io = tri_io.get();
+        var dir = std.Io.Dir.cwd().openDir(io, protocol_dir, .{ .iterate = true }) catch {
             std.debug.print("{s}No protocol logs found in {s}/{s}\n", .{ GOLDEN, protocol_dir, RESET });
             return;
         };
-        defer dir.close();
+        defer dir.close(io);
 
         var iter = dir.iterate();
         var found = false;
-        while (try iter.next()) |entry| {
+        while (try iter.next(io)) |entry| {
             if (std.mem.endsWith(u8, entry.name, ".jsonl")) {
                 const filepath = try std.fmt.allocPrint(allocator, "{s}/{s}", .{ protocol_dir, entry.name });
                 defer allocator.free(filepath);
@@ -1296,18 +1299,19 @@ fn protocolVerify(allocator: std.mem.Allocator, args: []const []const u8) !void 
     var has_comment = false;
     var has_close = false;
 
-    var dir = std.fs.cwd().openDir(protocol_dir, .{ .iterate = true }) catch {
+    const io = tri_io.get();
+    var dir = std.Io.Dir.cwd().openDir(io, protocol_dir, .{ .iterate = true }) catch {
         std.debug.print("{s}✗ No protocol logs found — compliance FAILED{s}\n", .{ RED, RESET });
         return;
     };
-    defer dir.close();
+    defer dir.close(io);
 
     var iter = dir.iterate();
-    while (try iter.next()) |entry| {
+    while (try iter.next(io)) |entry| {
         if (std.mem.endsWith(u8, entry.name, ".jsonl")) {
             const filepath = try std.fmt.allocPrint(allocator, "{s}/{s}", .{ protocol_dir, entry.name });
             defer allocator.free(filepath);
-            const content = std.fs.cwd().readFileAlloc(allocator, filepath, 1024 * 1024) catch continue;
+            const content = std.Io.Dir.cwd().readFileAlloc(io, filepath, allocator, .limited(1024 * 1024)) catch continue;
             defer allocator.free(content);
             const issue_str = try std.fmt.allocPrint(allocator, "\"issue\":{d}", .{issue_num.?});
             defer allocator.free(issue_str);
@@ -1353,8 +1357,9 @@ fn appendProtocolLog(allocator: std.mem.Allocator, action: []const u8, issue: u3
     const protocol_dir = ".trinity/protocol";
 
     // Ensure directory exists
-    std.fs.cwd().makePath(protocol_dir) catch |err| {
-        std.log.warn("github_commands: makePath ({s}) failed: {}", .{ protocol_dir, err });
+    const io = tri_io.get();
+    std.Io.Dir.cwd().createDirPath(io, protocol_dir) catch |err| {
+        std.log.warn("github_commands: createDirPath ({s}) failed: {}", .{ protocol_dir, err });
     };
 
     const date_str = try getTodayDateStr(allocator);
@@ -1371,16 +1376,18 @@ fn appendProtocolLog(allocator: std.mem.Allocator, action: []const u8, issue: u3
         timestamp, action, issue, agent_str, ok_str,
     });
 
-    const file = try std.fs.cwd().createFile(filepath, .{ .truncate = false });
-    defer file.close();
-    try file.seekFromEnd(0);
-    try file.writeAll(line);
+    const file = try std.Io.Dir.cwd().createFile(io, filepath, .{ .truncate = false });
+    defer file.close(io);
+    // 0.16 has no seekFromEnd on File. Appending is now an explicit positional
+    // write at the current length, which is what seekFromEnd(0) + writeAll did.
+    const end = try file.length(io);
+    try file.writePositionalAll(io, line, end);
 }
 
 fn displayLogFile(filepath: []const u8, filter_issue: ?u32, filter_agent: ?[]const u8) !void {
     // Use page_allocator for simplicity in this CLI display function
     const allocator = std.heap.page_allocator;
-    const content = std.fs.cwd().readFileAlloc(allocator, filepath, 1024 * 1024) catch {
+    const content = std.Io.Dir.cwd().readFileAlloc(tri_io.get(), filepath, allocator, .limited(1024 * 1024)) catch {
         std.debug.print("{s}No log file: {s}{s}\n", .{ GOLDEN, filepath, RESET });
         return;
     };
