@@ -2,7 +2,9 @@
 # AUTOMATED BITSTREAM GENERATION
 # ═══════════════════════════════════════════════════════════════════════════════
 #
-# Generates bitstreams when .vibee specs change.
+# Generates bitstreams when .tri specs change.
+# (Renamed from .vibee in 7ed113c3c. The paths: filter was corrected in #751;
+#  these body references were missed, and the workflow then found zero specs.)
 # Uploads bitstreams as artifacts for hardware testing.
 #
 # Note: Full synthesis requires Docker with openXC7 toolchain.
@@ -72,7 +74,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Detect changed .vibee files
+      - name: Detect changed .tri specs
         id: changed
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ inputs.spec }}" ]; then
@@ -81,13 +83,22 @@ jobs:
             echo "count=1" >> $GITHUB_OUTPUT
           else
             # Detect changes
-            specs=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep 'specs/fpga/.*\.vibee$' | sed 's|specs/fpga/||' | sed 's|\.vibee$||' | tr '\n' ' ')
+            specs=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep 'specs/fpga/.*\.tri$' | sed 's|specs/fpga/||' | sed 's|\.tri$||' | tr '\n' ' ')
             if [ -z "$specs" ]; then
               # Fallback: all specs
-              specs=$(ls specs/fpga/*.vibee 2>/dev/null | xargs -n1 basename | sed 's|\.vibee$||' | tr '\n' ' ')
+              specs=$(ls specs/fpga/*.tri 2>/dev/null | xargs -n1 basename | sed 's|\.tri$||' | tr '\n' ' ')
             fi
             echo "specs=$specs" >> $GITHUB_OUTPUT
-            echo "count=$(echo $specs | wc -w)" >> $GITHUB_OUTPUT
+            n=$(echo $specs | wc -w)
+            echo "count=$n" >> $GITHUB_OUTPUT
+            if [ "$n" -eq 0 ]; then
+              # Loudly, here. An empty matrix marks the RUN failed while
+              # attaching no failing job to it, so nothing appears in the
+              # checks list and the red is invisible to every reviewer.
+              echo "::error::No .tri specs found under specs/fpga -- nothing to build."
+              ls -la specs/fpga 2>/dev/null || echo "specs/fpga does not exist"
+              exit 1
+            fi
           fi
 
       - name: Show detected specs
@@ -119,7 +130,7 @@ jobs:
 
       - name: Generate Verilog
         run: |
-          ./zig-out/bin/vibee gen specs/fpga/${{ matrix.spec }}.vibee
+          ./zig-out/bin/vibee gen specs/fpga/${{ matrix.spec }}.tri
 
       - name: Check outputs
         run: |

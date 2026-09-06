@@ -29,6 +29,7 @@ and its `read_verilog` arguments, because names and comments are what went stale
 from __future__ import annotations
 
 import argparse
+import yaml
 import os
 import re
 
@@ -60,21 +61,46 @@ VFILE = re.compile(r"(?<![\w./-])[A-Za-z0-9][\w./-]*\.v\b")
 
 
 def paths_block(text: str) -> list[str]:
-    """Every quoted path under a `paths:` key, push and pull_request alike."""
-    out, in_paths = [], False
-    for line in text.splitlines():
-        if re.match(r"\s*paths:\s*$", line):
-            in_paths = True
-            continue
-        if in_paths:
-            m = re.match(r"\s*-\s*'([^']+)'\s*$", line) or \
-                re.match(r'\s*-\s*"([^"]+)"\s*$', line)
-            if m:
-                out.append(m.group(1))
-                continue
-            if line.strip().startswith("#"):
-                continue
-            in_paths = False
+    """Every path under a `paths:` key, push and pull_request alike.
+
+    Parsed, not scanned. The line-based version this replaces required `paths:`
+    to END its line, so it saw only the block form:
+
+        paths:
+          - 'a/b.v'
+
+    and silently skipped the inline flow-sequence form:
+
+        paths: ['a/b.v', 'c/d.v']
+
+    Measured on this tree: 345 of 432 entries visible, 87 invisible across 29
+    workflows -- a fifth of everything the gate is supposed to police, including
+    every ax7203-gf* board workflow. Worse, self_check() plants its probe into
+    wrapper-fsm-sim.yml, which uses the BLOCK form, so the negative control ran
+    entirely through code the blind spot did not touch. A control that cannot
+    reach the gap is not evidence there is none.
+
+    YAML 1.1 turns a bare `on:` key into the boolean True, which is why both
+    spellings are looked up.
+    """
+    try:
+        doc = yaml.safe_load(text)
+    except Exception:
+        # A workflow this file cannot parse is a finding for whoever wrote it,
+        # not something to guess at with a regex.
+        return []
+    if not isinstance(doc, dict):
+        return []
+    on = doc.get("on") or doc.get(True)
+    if not isinstance(on, dict):
+        return []
+    out = []
+    for evt in ("push", "pull_request"):
+        blk = on.get(evt)
+        if isinstance(blk, dict):
+            for p in (blk.get("paths") or []):
+                if isinstance(p, str):
+                    out.append(p)
     return out
 
 
@@ -175,20 +201,39 @@ def self_check() -> int:
         return 0
     orig = open(path, encoding="utf-8").read()
 
-    # Negative control for dead_paths(), same principle as the one below: plant an
-    # entry that cannot match anything and require it to be seen. Without this,
-    # "0 dead entries" is indistinguishable from a check that never looks.
+    # Negative control for dead_paths(): plant an entry that cannot match
+    # anything and require it to be seen. Without this, "0 dead entries" is
+    # indistinguishable from a check that never looks.
+    #
+    # Planted in BOTH `paths:` spellings, and that is the whole point. The first
+    # version of this control only ever planted the block form, into a victim
+    # that uses the block form -- while paths_block() was blind to the inline
+    # flow-sequence form and missed 87 of 432 entries across 29 workflows. The
+    # control ran entirely through code the gap did not touch and reported PASS.
+    # A control that cannot reach the blind spot is not evidence there is none.
     dead_probe = "specs/does-not-exist/**/*.nope"
     dp_before = len(dead_paths(tracked))
-    open(path, "w", encoding="utf-8").write(
-        orig.replace("    paths:", f"    paths:\n      - '{dead_probe}'", 1))
-    dp_seen = any(p == dead_probe for _, p in dead_paths(tracked))
-    open(path, "w", encoding="utf-8").write(orig)
-    print(f"  planted a dead paths entry -> flagged: {dp_seen}"
-          f"  (baseline dead entries: {dp_before})")
-    if not dp_seen:
-        print("self-check: FAIL -- dead_paths() cannot see a planted dead entry")
-        return 1
+
+    forms = [
+        ("block", lambda t: t.replace("    paths:", f"    paths:\n      - '{dead_probe}'", 1)),
+        ("inline", lambda t: t.replace("    paths:", f"    paths: ['{dead_probe}']\n    _unused:", 1)),
+    ]
+    for form_name, mutate in forms:
+        mutated = mutate(orig)
+        if mutated == orig:
+            open(path, "w", encoding="utf-8").write(orig)
+            print(f"self-check: FAIL -- could not plant the {form_name} probe "
+                  f"into {victim}; a no-op injection proves nothing")
+            return 1
+        open(path, "w", encoding="utf-8").write(mutated)
+        seen = any(p == dead_probe for _, p in dead_paths(tracked))
+        open(path, "w", encoding="utf-8").write(orig)
+        print(f"  planted a dead paths entry ({form_name} form) -> flagged: {seen}")
+        if not seen:
+            print(f"self-check: FAIL -- dead_paths() cannot see a planted dead "
+                  f"entry in the {form_name} form")
+            return 1
+    print(f"  (baseline dead entries: {dp_before})")
 
     before = {f for f, _ in script_gaps(tracked)}
     probe = "research/audit_workflow_paths.py"

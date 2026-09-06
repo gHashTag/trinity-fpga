@@ -16,7 +16,14 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: ['.github/workflows/ax7203-format-cost.yml']
+    # This synthesises gf_adder_param.v and gf_mul_param.v and watched neither,
+    # so editing the RTL it measures triggered nothing -- it was the only
+    # workflow in the repo watching solely its own file. Invisible until
+    # paths_block() stopped skipping the inline form this very line uses.
+    paths:
+      - '.github/workflows/ax7203-format-cost.yml'
+      - 'fpga/openxc7-synth/gf_adder_param.v'
+      - 'fpga/openxc7-synth/gf_mul_param.v'
 
 jobs:
   synth:
