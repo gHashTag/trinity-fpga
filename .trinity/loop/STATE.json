@@ -4,7 +4,7 @@
     "id": "two-track",
     "cron_job": "1cd7dda4",
     "interval": "15m",
-    "iteration": 108,
+    "iteration": 109,
     "status": "RUNNING",
     "owner": "Dmitrii Vasilev / @gHashTag",
     "tracks": [
@@ -516,6 +516,15 @@
         "#750",
         "#751"
       ]
+    },
+    {
+      "id": "D89",
+      "what": "B27 partially done in #752: empty-scope floors for three of the gates that report OK when they inspect nothing -- check_script_rot, check_figure_names, check_latex_hygiene. Each now fails with a message saying it could not measure, rather than that it found nothing.",
+      "design": "Floored at 1, not at today's count. Retiring one script or figure is legitimate and must not fail CI; losing ALL of them means the gate went blind, which is the only thing worth alarming on. The floor sits on the set the INSTRUMENT uses -- check_script_rot counts scripts invoking yosys (25), not the raw .sh count (58) -- because a floor on a wider set than the gate inspects can still let it go blind inside its own scope. check_script_rot's scope is fpga/**/*.sh and .claude/rules/no-shell-scripts.md marks exactly those for deletion, so the project's own roadmap ends with that gate inspecting zero scripts and printing OK.",
+      "new_finding_not_in_the_sweep": "check_figure_names.py carried a SECOND vacuity path: 'except FileNotFoundError: print(\"pdftotext not available -- cannot check\"); sys.exit(0)'. That is the exact shape of check_overfull.py's missing-tectonic exit(0), which has produced 298 green runs without measuring anything. Now exits 1. Found by reading the file, not by the survey script I started with.",
+      "verified": "Both directions against the REAL tree, not fixtures: 25 scripts -> exit 0 / 58 .sh moved away -> exit 1 FAIL; 9 figures -> exit 0 / 9 pdf moved -> exit 1 FAIL; 4 tex -> exit 0 / 4 tex moved -> exit 1 FAIL. Each restored and re-run, with git status --porcelain asserted to show no stray path. A floor that only fires on a synthetic empty directory has not been shown to fire on the real one. And the regression that mattered: tools/check_gates_can_fail.py -- which tests these very gates -- still reports 7 of 10 rejecting their injected defect, exit 0.",
+      "left_alone_and_why": "check_doc_refs.py is already red on a clean tree, so a floor there cannot be verified in either direction today. check_ref_kinds.py needs a floor on its DENOMINATOR rather than an empty-scope guard: tools/ref_kinds_baseline.txt does not exist, so its `known` set is always empty -- a different defect deserving its own change and its own evidence. check_pack_specials.py has the same shape but was not reached this iteration.",
+      "pr": "#752"
     }
   ],
   "backlog": [
@@ -1080,6 +1089,14 @@
       "impact": "Generalises beyond this one workflow: for every dead trigger found in #751, 'the workflow never fires' was the OPTIMISTIC reading. The pessimistic one -- that the job behind it is also broken and nobody can tell -- was true in the one case that got tested. The other four fixed workflows fired and passed, so this was not universal, but it was not rare either: one in five.",
       "status": "characterised. The docker case is filed as B28 with three options, all needing an operator decision. dead_paths() now prevents new instances of the trigger half.",
       "lesson": "When a gate is found inert, the question is not only 'what did it stop catching' but 'is the thing behind it still working at all'. Waking a dormant job is itself a measurement, and it should be expected to fail rather than treated as a regression when it does."
+    },
+    {
+      "id": "A37",
+      "found": "2026-09-06, iteration 109, third unreliable instrument of the session",
+      "what": "I wrote a regex survey to find which tools/check_*.py guard an empty scope. Its output was visibly wrong: scope=18789 for a '*.md' glob (that is every file in the repo) and scope=0 with a GUARDED verdict for check_undefined_outputs, which passes in CI and therefore cannot have an empty guarded scope. Both impossibilities were on screen in the first run.",
+      "impact": "None shipped -- the numbers were discarded and each checker was read directly instead. But had the survey been subtly wrong rather than obviously wrong, it would have driven the whole change. Reading the files found a defect the survey could not have (check_figure_names' pdftotext exit(0)), because that path is not a scope question at all.",
+      "status": "instrument discarded; findings derived by reading each checker's verdict logic.",
+      "lesson": "Third instrument I built this session that was wrong -- after the JSON-key detector (A33) and the line-based paths scanner (iteration 108). The common shape: a regex over source code, used to answer a question about behaviour. Regex finds text; behaviour needs the control flow. When the answer is 'what does this do on input X', run it on input X. Every verified result this session came from executing something, and every wrong one came from matching a pattern."
     }
   ],
   "collaboration_options": [
