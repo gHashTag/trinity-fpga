@@ -153,6 +153,18 @@ def _fp6_e3m2(code):
         else:                               # 01
             fe, fm = 123, 0
         return (sign << 31) | (fe << 23) | fm
+    if exp == 0x7:                          # e==EM saturates (OCP MX: no Inf/NaN)
+        # All four e==EM codes clamp to the largest finite value,
+        # (1+3/4)*2^(6-3) = 14.0, rather than treating EM as an ordinary
+        # exponent. fp32 exp = 6-3+127 = 130, mant = 3.
+        #
+        # Added 2026-09-06. Commit 66989dba3 (#250) introduced this rule to
+        # fp6_e3m2_decode.v and to mxfp6_decode_conformance_ax7203.py but not
+        # here, nor to decode_verify.py. decode-verify failed on every run for
+        # two months as a result. Fixing decode_verify.py alone then made THIS
+        # golden the odd one out, which conformance/golden_consistency.py caught
+        # immediately -- exactly what its docstring promises it exists to catch.
+        return (sign << 31) | (130 << 23) | (3 << 21)
     # normal: value = (1+M/4) * 2^(E-3); fp32 exp = E-3+127 = E+124
     return (sign << 31) | ((exp + 124) << 23) | (mant << 21)
 
@@ -281,7 +293,10 @@ def self_test():
         (FMT_FP6_E2M3, 0x20, 0x80000000), # -0
         (FMT_FP6_E2M3, 0x01, 0x3E000000), # subnormal 1.0*2^-3
         (FMT_FP6_E3M2, 0x14, 0x40800000), # 4.0
-        (FMT_FP6_E3M2, 0x1C, 0x41800000), # 16.0
+        # e==EM saturates (OCP MX, no Inf/NaN): (1+3/4)*2^(6-3) = 14.0, not
+        # 1.0*2^(7-3) = 16.0. This vector was the last of FIVE artefacts
+        # carrying the pre-#250 rule; see _fp6_e3m2 above.
+        (FMT_FP6_E3M2, 0x1C, 0x41600000), # 14.0 (saturated)
         (FMT_FP6_E3M2, 0x20, 0x80000000), # -0
         (FMT_LNS8, 0x00, 0x00000000),     # zero (sign0, mag0)
         (FMT_LNS8, 0x10, 0x00000200),     # 256<<1
