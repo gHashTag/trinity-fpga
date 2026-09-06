@@ -4,7 +4,7 @@
     "id": "two-track",
     "cron_job": "1cd7dda4",
     "interval": "15m",
-    "iteration": 116,
+    "iteration": 117,
     "status": "RUNNING",
     "owner": "Dmitrii Vasilev / @gHashTag",
     "tracks": [
@@ -582,6 +582,16 @@
       "self_criticism": "I merged #755 with 21 checks still pending, using --admin, which deviates from how every other PR tonight was handled. The justification is narrow and I state it rather than gloss it: the diff touches exactly one workflow file (38+/5-), I had already run that workflow to completion on the branch, and the pending checks do not read it. Low risk, but a shortcut.",
       "second_self_criticism": "Immediately after merging I ran the A40-correct wide-window query and it returned ONE red on main, down from five. I nearly reported that. It is the A40 trap again from the other direction: main had just absorbed many runs, so a 200-run window now spans less TIME and workflows drop out of it. Querying per workflow showed four of the six still in flight. The correct statement was 'I cannot give a count yet', and that is what was reported.",
       "third_self_criticism": "My settle-monitor declared 'main settled' while four workflows were still queued. The predicate was `.[0].conclusion // \"pending\"` -- but jq's // substitutes only on null or false, and GitHub returns an EMPTY STRING for an in-flight run, which passes straight through. So the pending branch never fired and the loop exited on its first pass. Fourth instrument I have written tonight that was wrong, after the JSON-key detector (A33), the line-based paths scanner, and the empty-scope survey (A37). Corrected by querying `status` -- the field that actually says whether a run finished -- rather than inferring it from conclusion's absence."
+    },
+    {
+      "id": "D97",
+      "what": "decode-verify repaired. #756 merged (shared oracle), #757 opened (host golden + its self-test vector). decode-verify had 49 successes then failed 13 consecutive runs from 2026-07-07; it now passes all ten formats exhaustively, fp6_e3m2 included, verified against the REAL submodule RTL that CI compiles and I cannot read locally.",
+      "root_cause": "Commit 66989dba3 (#250) introduced the OCP MX saturate rule for fp6_e3m2 (e==EM clamps to (1+3/4)*2^(6-3)=14.0 rather than treating EM as an ordinary exponent) and applied it to the RTL and to mxfp6_decode_conformance_ax7203.py. It was incomplete in THREE further places, discovered one at a time because each fix exposed the next: conformance/decode_verify.py (the shared oracle decode-verify runs), conformance/corona_decode_host_ax7203.py (the HW-conformance host golden), and a hardcoded vector inside that golden's own --self-test, (FMT_FP6_E3M2, 0x1C, 0x41800000) # 16.0, which only surfaced once the function beside it started returning 14.0.",
+      "the_gate_that_worked": "conformance/golden_consistency.py cross-checks the host golden against the decode_verify oracle over the full code space. Its docstring says it exists so 'a future edit to either can't make the HW-conformance golden diverge from the RTL-verified oracle', and that is exactly what it did: 66720 codes checked, 8 mismatches, within minutes of my merging #756. It is the ONLY gate this entire session that caught a real regression at the moment of introduction -- everything else found tonight had been broken for months.",
+      "self_criticism_merged_blind": "I merged #756 while `selftest` was in the fail list and did NOT check whether that failure was mine. It was: selftest had been green on main the day before. Second haste-merge in three iterations. The cost was small only because golden_consistency is a real gate.",
+      "self_criticism_pipe": "While diagnosing, I reported the host self-test as vacuous -- 'prints FAIL and exits 0'. Wrong. Line 373 is sys.exit(0 if self_test() else 1) and it propagates correctly; my measurement used `$?` after `| tail`, which reports tail's status. This is the SAME defect I had fixed in two CI workflows earlier in the session and written into the ci-gates skill. Knowing the bug did not prevent typing it. The near-miss was publishing 'this gate is broken' about a gate that works.",
+      "verified": "Exit codes taken without a pipe: host self-test 53/53 exit 0 (was 52/53); golden_consistency 66720 codes 0 mismatches exit 0 (was 8); oracle-vs-CI 8/8 match, 56/56 other codes unchanged, fp6_e2m3 confirmed still non-saturating. And end to end on CI, run 34019226908, dispatched on the branch because decode-verify is another push-to-main-only workflow: all ten formats PASS, fp6_e3m2 checked=64 numeric_mismatches=0.",
+      "not_established": "Whether saturation is what OCP MX actually mandates. I have not read the spec. What is established is that four artefacts now agree with the RTL where before three disagreed with it. If the spec says otherwise, the correction belongs in the RTL and all four oracles together."
     }
   ],
   "backlog": [

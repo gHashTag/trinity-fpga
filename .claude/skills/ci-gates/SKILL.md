@@ -68,6 +68,29 @@ If you add a guard, you do not need to touch that workflow. If you change the
 0.16 main signature, you do — and its empty-result check will fail loudly rather
 than pass green on an empty list.
 
+## When the exit code IS the measurement, never pipe
+
+```bash
+python3 tools/check_x.py 2>&1 | tail -4; echo "exit=$?"   # WRONG: reads tail
+```
+
+`$?` after a pipeline is the last command's status. This reported a working gate
+as vacuous — *"prints FAIL and exits 0"* — when its last line was
+`sys.exit(0 if ok else 1)` and it exits 1 correctly. Nothing errors; you just get
+a plausible number for the wrong process.
+
+The failure mode is asymmetric and therefore dangerous: it turns **failures into
+successes**, so it always reads as reassuring.
+
+```bash
+cmd >/tmp/out.log 2>&1; rc=$?          # RIGHT
+tail -4 /tmp/out.log; echo "exit=$rc"
+```
+
+This is the same defect as the `measurer | tee` one in the workflows above,
+committed at the shell instead of in YAML. Knowing the bug does not prevent
+typing it — before publishing "this gate is broken", re-measure without the pipe.
+
 ## Verify the way CI will, not the way your laptop will
 
 **Pin the target.** This is not pedantry; it cost a red CI run:
