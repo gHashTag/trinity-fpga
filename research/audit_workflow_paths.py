@@ -79,11 +79,19 @@ def paths_block(text: str) -> list[str]:
 
 
 def matches(pattern: str, path: str) -> bool:
-    """A `paths:` glob against a repo-relative file, loosely but not wrongly.
+    r"""A `paths:` glob against a repo-relative file, loosely but not wrongly.
 
-    Only the forms this tree actually uses are handled -- ** and * -- and a pattern
-    with no wildcard has to match exactly. Being loose here would turn a real finding
-    into a false clean.
+    Only the forms GitHub actually supports are handled -- * ** ? + [] -- and a
+    pattern with no wildcard has to match exactly. Being loose here would turn a real
+    finding into a false clean.
+
+    This used to emulate brace expansion (`\{`->`(`, `,`->`|`). GitHub's path filter
+    does NOT support braces, so that emulation made the auditor agree with a pattern
+    GitHub itself would never match: `corona_compute_gf*_{div,sqrt,quire}_ax7203.v`
+    looked like it matched 12 files here and matched 0 on GitHub, which is why the
+    workflow it belonged to had never once been triggered by the wrappers it exists to
+    check. Emulating a feature the target does not have is not leniency, it is
+    measuring a different system.
     """
     # A pattern naming a directory covers everything beneath it, which is how
     # GitHub Actions reads it -- and is the only way to watch a submodule, whose
@@ -91,8 +99,8 @@ def matches(pattern: str, path: str) -> bool:
     if "*" not in pattern and not pattern.endswith(".v"):
         if path == pattern or path.startswith(pattern.rstrip("/") + "/"):
             return True
-    rx = re.escape(pattern).replace(r"\*\*", ".*").replace(r"\*", "[^/]*")
-    rx = rx.replace(r"\{", "(").replace(r"\}", ")").replace(",", "|")
+    rx = (re.escape(pattern).replace(r"\*\*", ".*")
+          .replace(r"\*", "[^/]*").replace(r"\?", "[^/]"))
     return re.fullmatch(rx, path) is not None
 
 
@@ -122,6 +130,32 @@ def script_gaps(tracked: set) -> list:
     return out
 
 
+def dead_paths(tracked: set) -> list:
+    """`paths:` entries that match no tracked file, so the trigger can never fire.
+
+    Nothing checked this before. Nine such entries had accumulated across five
+    workflows -- four distinct causes, each with a named commit: a .vibee->.tri
+    rename, a trinity-nexus->deploy/trinity-nexus move, deleted synth*.sh
+    scripts, and a path *inside* a gitlink, which can never appear in a
+    superproject diff because git reports the submodule as one entry.
+
+    One workflow (fpga-bitstream.yml) had NO other entry, so it had been
+    unfirable since 2026-04-19 while looking perfectly healthy in the sidebar.
+
+    Negated (`!`) entries are excluded: an exclusion matching nothing today is
+    not a defect, it is a filter that has nothing to exclude yet.
+    """
+    out = []
+    for fn in sorted(f for f in os.listdir(WF) if f.endswith((".yml", ".yaml"))):
+        text = open(os.path.join(WF, fn), encoding="utf-8", errors="replace").read()
+        for pat in paths_block(text):
+            if pat.startswith("!"):
+                continue
+            if not any(matches(pat, f) for f in tracked):
+                out.append((fn, pat))
+    return out
+
+
 def tracked_files() -> set:
     import subprocess
     r = subprocess.run(["git", "-C", os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "ls-files"], capture_output=True,
@@ -140,6 +174,22 @@ def self_check() -> int:
         print(f"self-check: SKIP -- {victim} is gone")
         return 0
     orig = open(path, encoding="utf-8").read()
+
+    # Negative control for dead_paths(), same principle as the one below: plant an
+    # entry that cannot match anything and require it to be seen. Without this,
+    # "0 dead entries" is indistinguishable from a check that never looks.
+    dead_probe = "specs/does-not-exist/**/*.nope"
+    dp_before = len(dead_paths(tracked))
+    open(path, "w", encoding="utf-8").write(
+        orig.replace("    paths:", f"    paths:\n      - '{dead_probe}'", 1))
+    dp_seen = any(p == dead_probe for _, p in dead_paths(tracked))
+    open(path, "w", encoding="utf-8").write(orig)
+    print(f"  planted a dead paths entry -> flagged: {dp_seen}"
+          f"  (baseline dead entries: {dp_before})")
+    if not dp_seen:
+        print("self-check: FAIL -- dead_paths() cannot see a planted dead entry")
+        return 1
+
     before = {f for f, _ in script_gaps(tracked)}
     probe = "research/audit_workflow_paths.py"
     try:
@@ -274,7 +324,15 @@ are exactly what went stale in the case that prompted this, so neither is consul
     # first version's behaviour, and the negative control caught it: that is the
     # direction which found the unwatched parametric cores behind the Tier-E proofs,
     # so a gate blind to it would be a gate blind to the worst case so far.
-    return 1 if (watch_not_build or build_not_watch or gaps) else 0
+    # Dead `paths:` entries -- see dead_paths(). Reported separately from the
+    # watch/build findings because the failure is different in kind: not a
+    # workflow watching the wrong thing, but a trigger that cannot fire at all.
+    dead = dead_paths(tracked_files())
+    print(f"dead paths: entries                : {len(dead)}")
+    for fn, pat in dead:
+        print(f"  {fn}: {pat} -- matches no tracked file")
+
+    return 1 if (dead or watch_not_build or build_not_watch or gaps) else 0
 
 
 if __name__ == "__main__":

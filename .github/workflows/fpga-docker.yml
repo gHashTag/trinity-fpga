@@ -18,13 +18,11 @@ on:
     branches: [main]
     paths:
       - 'fpga/openxc7-synth/Dockerfile*'
-      - 'fpga/openxc7-synth/synth*.sh'
       - '.github/workflows/fpga-docker.yml'
   pull_request:
     branches: [main]
     paths:
       - 'fpga/openxc7-synth/Dockerfile*'
-      - 'fpga/openxc7-synth/synth*.sh'
       - '.github/workflows/fpga-docker.yml'
   workflow_dispatch:
     inputs:
@@ -80,7 +78,8 @@ jobs:
             type=ref,event=pr
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
-            type=sha,prefix={{branch}}-
+            type=sha,prefix={{branch}}-,enable=${{ github.event_name != 'pull_request' }}
+            type=sha,enable=${{ github.event_name == 'pull_request' }}
             type=raw,value=latest,enable={{is_default_branch}}
             type=raw,value=conscious-${{ github.event.inputs.consciousness_level || 'aware' }}
           labels: |

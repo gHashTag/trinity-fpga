@@ -21,7 +21,7 @@ on:
       - 'specs/fpga/**'
       - 'src/vibeec/**'
       - 'fpga/openxc7-synth/**'
-      - 'trinity-nexus/lang/src/**'
+      - 'deploy/trinity-nexus/lang/src/**'
       - '.github/workflows/fpga-ci.yml'
   pull_request:
     branches: [main]
@@ -29,7 +29,7 @@ on:
       - 'specs/fpga/**'
       - 'src/vibeec/**'
       - 'fpga/openxc7-synth/**'
-      - 'trinity-nexus/lang/src/**'
+      - 'deploy/trinity-nexus/lang/src/**'
       - '.github/workflows/fpga-ci.yml'
   workflow_dispatch:
 

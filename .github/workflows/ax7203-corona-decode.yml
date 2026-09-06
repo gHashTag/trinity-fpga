@@ -24,7 +24,9 @@ on:
       - 'fpga/openxc7-synth/corona_decode_posit8_es2_ax7203.v'
       - 'fpga/openxc7-synth/posit8_es2_decode.v'
       - 'fpga/openxc7-synth/posit16_decode.v'
-      - 'external/tt-trinity-corona/src/rtl/posit8_decode.v'
+      # A path *inside* a submodule never appears in this repo's diff: git
+      # reports the gitlink as a single entry. Watch the gitlink.
+      - 'external/tt-trinity-corona'
       - 'fpga/openxc7-synth/corona_decode_ax7203.xdc'
       - '.github/workflows/ax7203-corona-decode.yml'
 jobs:
