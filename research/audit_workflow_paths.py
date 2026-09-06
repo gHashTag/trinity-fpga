@@ -60,21 +60,90 @@ VFILE = re.compile(r"(?<![\w./-])[A-Za-z0-9][\w./-]*\.v\b")
 
 
 def paths_block(text: str) -> list[str]:
-    """Every quoted path under a `paths:` key, push and pull_request alike."""
-    out, in_paths = [], False
-    for line in text.splitlines():
-        if re.match(r"\s*paths:\s*$", line):
-            in_paths = True
+    r"""Every path under a `paths:` key, push and pull_request alike.
+
+    NO third-party imports. This file is invoked by workflow-path-gate.yml and,
+    indirectly, by gate_status_ratchet.py across 95 scripts, on a runner whose
+    actions/setup-python toolchain has no PyYAML. An earlier version of this
+    function used yaml.safe_load and died with ModuleNotFoundError on CI while
+    passing on the author's machine -- the same "verified in the wrong
+    environment" mistake recorded as anomaly A28.
+
+    Two spellings, and the second is why this was rewritten. The line-based
+    predecessor required `paths:` to END its line, so it saw
+
+        paths:
+          - 'a/b.v'
+
+    and silently skipped
+
+        paths: ['a/b.v', 'c/d.v']
+
+    which 29 workflows use -- 87 of 432 entries, a fifth of what the gate is
+    supposed to police, including every ax7203-gf* board workflow.
+
+    A file containing `paths:` from which nothing is extracted is a PARSE GAP,
+    not an empty filter, and callers are expected to treat it as a finding --
+    see parse_gaps(). Silently returning [] is how the previous blind spot
+    stayed invisible.
+    """
+    out: list[str] = []
+    lines = text.splitlines()
+    i = 0
+    while i < len(lines):
+        m = re.match(r"(\s*)paths:\s*(.*)$", lines[i])
+        if not m:
+            i += 1
             continue
-        if in_paths:
-            m = re.match(r"\s*-\s*'([^']+)'\s*$", line) or \
-                re.match(r'\s*-\s*"([^"]+)"\s*$', line)
-            if m:
-                out.append(m.group(1))
+        indent, rest = m.group(1), m.group(2).strip()
+
+        if rest.startswith("["):
+            # Inline flow sequence, possibly spanning lines until the closing ].
+            buf = rest
+            while "]" not in buf and i + 1 < len(lines):
+                i += 1
+                buf += " " + lines[i].strip()
+            inner = buf[buf.index("[") + 1: buf.rindex("]")] if "]" in buf else ""
+            for item in re.findall(r"'([^']*)'|\"([^\"]*)\"|([^,\s][^,]*)", inner):
+                val = (item[0] or item[1] or item[2]).strip()
+                if val:
+                    out.append(val)
+            i += 1
+            continue
+
+        # Block form: subsequent `- item` lines indented deeper than the key.
+        i += 1
+        while i < len(lines):
+            line = lines[i]
+            if not line.strip() or line.strip().startswith("#"):
+                i += 1
                 continue
-            if line.strip().startswith("#"):
-                continue
-            in_paths = False
+            cur = len(line) - len(line.lstrip())
+            if cur <= len(indent) or not line.strip().startswith("-"):
+                break
+            item = line.strip()[1:].strip()
+            if item.startswith("'") and item.endswith("'") and len(item) > 1:
+                item = item[1:-1]
+            elif item.startswith('"') and item.endswith('"') and len(item) > 1:
+                item = item[1:-1]
+            if item:
+                out.append(item)
+            i += 1
+    return out
+
+
+def parse_gaps() -> list:
+    """Workflows that declare `paths:` but from which nothing could be read.
+
+    The point of the gate is coverage, so a file the parser cannot read is a
+    finding about the parser, reported rather than skipped. The previous blind
+    spot survived precisely because unreadable meant invisible.
+    """
+    out = []
+    for fn in sorted(f for f in os.listdir(WF) if f.endswith((".yml", ".yaml"))):
+        text = open(os.path.join(WF, fn), encoding="utf-8", errors="replace").read()
+        if re.search(r"^\s*paths:", text, re.M) and not paths_block(text):
+            out.append(fn)
     return out
 
 
@@ -175,20 +244,39 @@ def self_check() -> int:
         return 0
     orig = open(path, encoding="utf-8").read()
 
-    # Negative control for dead_paths(), same principle as the one below: plant an
-    # entry that cannot match anything and require it to be seen. Without this,
-    # "0 dead entries" is indistinguishable from a check that never looks.
+    # Negative control for dead_paths(): plant an entry that cannot match
+    # anything and require it to be seen. Without this, "0 dead entries" is
+    # indistinguishable from a check that never looks.
+    #
+    # Planted in BOTH `paths:` spellings, and that is the whole point. The first
+    # version of this control only ever planted the block form, into a victim
+    # that uses the block form -- while paths_block() was blind to the inline
+    # flow-sequence form and missed 87 of 432 entries across 29 workflows. The
+    # control ran entirely through code the gap did not touch and reported PASS.
+    # A control that cannot reach the blind spot is not evidence there is none.
     dead_probe = "specs/does-not-exist/**/*.nope"
     dp_before = len(dead_paths(tracked))
-    open(path, "w", encoding="utf-8").write(
-        orig.replace("    paths:", f"    paths:\n      - '{dead_probe}'", 1))
-    dp_seen = any(p == dead_probe for _, p in dead_paths(tracked))
-    open(path, "w", encoding="utf-8").write(orig)
-    print(f"  planted a dead paths entry -> flagged: {dp_seen}"
-          f"  (baseline dead entries: {dp_before})")
-    if not dp_seen:
-        print("self-check: FAIL -- dead_paths() cannot see a planted dead entry")
-        return 1
+
+    forms = [
+        ("block", lambda t: t.replace("    paths:", f"    paths:\n      - '{dead_probe}'", 1)),
+        ("inline", lambda t: t.replace("    paths:", f"    paths: ['{dead_probe}']\n    _unused:", 1)),
+    ]
+    for form_name, mutate in forms:
+        mutated = mutate(orig)
+        if mutated == orig:
+            open(path, "w", encoding="utf-8").write(orig)
+            print(f"self-check: FAIL -- could not plant the {form_name} probe "
+                  f"into {victim}; a no-op injection proves nothing")
+            return 1
+        open(path, "w", encoding="utf-8").write(mutated)
+        seen = any(p == dead_probe for _, p in dead_paths(tracked))
+        open(path, "w", encoding="utf-8").write(orig)
+        print(f"  planted a dead paths entry ({form_name} form) -> flagged: {seen}")
+        if not seen:
+            print(f"self-check: FAIL -- dead_paths() cannot see a planted dead "
+                  f"entry in the {form_name} form")
+            return 1
+    print(f"  (baseline dead entries: {dp_before})")
 
     before = {f for f, _ in script_gaps(tracked)}
     probe = "research/audit_workflow_paths.py"

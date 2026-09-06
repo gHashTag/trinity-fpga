@@ -2,7 +2,9 @@
 # AUTOMATED BITSTREAM GENERATION
 # ═══════════════════════════════════════════════════════════════════════════════
 #
-# Generates bitstreams when .vibee specs change.
+# Generates bitstreams when .tri specs change.
+# (Renamed from .vibee in 7ed113c3c. The paths: filter was corrected in #751;
+#  these body references were missed, and the workflow then found zero specs.)
 # Uploads bitstreams as artifacts for hardware testing.
 #
 # Note: Full synthesis requires Docker with openXC7 toolchain.
@@ -68,26 +70,63 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       specs: ${{ steps.changed.outputs.specs }}
+      specs_json: ${{ steps.changed.outputs.specs_json }}
       count: ${{ steps.changed.outputs.count }}
     steps:
       - uses: actions/checkout@v4
 
-      - name: Detect changed .vibee files
+      - name: Detect changed .tri specs
         id: changed
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ inputs.spec }}" ]; then
             # Manual trigger with specific spec
             echo "specs=${{ inputs.spec }}" >> $GITHUB_OUTPUT
+            echo "specs_json=$(printf '%s\n' "${{ inputs.spec }}" | jq -R . | jq -sc .)" >> $GITHUB_OUTPUT
             echo "count=1" >> $GITHUB_OUTPUT
           else
-            # Detect changes
-            specs=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep 'specs/fpga/.*\.vibee$' | sed 's|specs/fpga/||' | sed 's|\.vibee$||' | tr '\n' ' ')
-            if [ -z "$specs" ]; then
-              # Fallback: all specs
-              specs=$(ls specs/fpga/*.vibee 2>/dev/null | xargs -n1 basename | sed 's|\.vibee$||' | tr '\n' ' ')
+            # Only specs that TARGET Verilog. `vibee gen` emits for the target a
+            # spec declares, so a spec with no `language:` line produces no .v and
+            # the next step reports "Verilog not found".
+            #
+            # Measured when this job first became visible: 14 .tri under
+            # specs/fpga, 10 declaring `language: varlog`, 4 declaring nothing --
+            # mac, rmsnorm, synthesis, uart_test_workflow -- and those 4 were
+            # exactly the 4 that failed. Building every .tri and expecting Verilog
+            # from all of them was the bug; the 4 are not broken Verilog specs,
+            # they are not Verilog specs.
+            #
+            # Filtered by content rather than by an exclude-list, so a spec that
+            # gains or loses a target moves itself between the sets.
+            is_verilog() { grep -qE '^[[:space:]]*language:[[:space:]]*varlog' "specs/fpga/$1.tri" 2>/dev/null; }
+
+            changed=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep 'specs/fpga/.*\.tri$' | sed 's|specs/fpga/||' | sed 's|\.tri$||' | tr '\n' ' ')
+            if [ -z "$changed" ]; then
+              # Fallback: every spec
+              changed=$(ls specs/fpga/*.tri 2>/dev/null | xargs -n1 basename | sed 's|\.tri$||' | tr '\n' ' ')
             fi
+
+            specs=""
+            skipped=""
+            for s in $changed; do
+              if is_verilog "$s"; then specs="$specs $s"; else skipped="$skipped $s"; fi
+            done
+            specs=$(echo $specs)
+            # Named, never silent: a shrinking scope that nobody can see is the
+            # defect this whole workflow has been demonstrating.
+            [ -n "$skipped" ] && echo "::notice::skipped (no 'language: varlog'):$skipped"
             echo "specs=$specs" >> $GITHUB_OUTPUT
-            echo "count=$(echo $specs | wc -w)" >> $GITHUB_OUTPUT
+            # A JSON ARRAY, not a bare word list. See the matrix note below.
+            echo "specs_json=$(printf '%s\n' $specs | jq -R . | jq -sc .)" >> $GITHUB_OUTPUT
+            n=$(echo $specs | wc -w)
+            echo "count=$n" >> $GITHUB_OUTPUT
+            if [ "$n" -eq 0 ]; then
+              # Loudly, here. An empty matrix marks the RUN failed while
+              # attaching no failing job to it, so nothing appears in the
+              # checks list and the red is invisible to every reviewer.
+              echo "::error::No .tri specs found under specs/fpga -- nothing to build."
+              ls -la specs/fpga 2>/dev/null || echo "specs/fpga does not exist"
+              exit 1
+            fi
           fi
 
       - name: Show detected specs
@@ -104,7 +143,14 @@ jobs:
     needs: detect-changes
     strategy:
       matrix:
-        spec: ${{ fromJson(format('[{0}]', needs.detect-changes.outputs.specs)) }}
+        # format('[{0}]', specs) built `[blink counter mac]` from a
+        # space-separated list -- not valid JSON, so fromJson() failed and this
+        # job never instantiated. GitHub then marked the RUN failed with no
+        # failing job attached to it: `gh run view` showed every job success or
+        # skipped, `--log-failed` printed nothing, and the workflow never
+        # appeared in the PR checks list at all. Invisible for its whole life.
+        # The detect step now emits a real JSON array via jq.
+        spec: ${{ fromJson(needs.detect-changes.outputs.specs_json) }}
       fail-fast: false
     steps:
       - uses: actions/checkout@v4
@@ -119,7 +165,7 @@ jobs:
 
       - name: Generate Verilog
         run: |
-          ./zig-out/bin/vibee gen specs/fpga/${{ matrix.spec }}.vibee
+          ./zig-out/bin/vibee gen specs/fpga/${{ matrix.spec }}.tri
 
       - name: Check outputs
         run: |
@@ -148,7 +194,7 @@ jobs:
     if: false  # Disabled by default - enable with self-hosted runner
     strategy:
       matrix:
-        spec: ${{ fromJson(format('[{0}]', needs.detect-changes.outputs.specs)) }}
+        spec: ${{ fromJson(needs.detect-changes.outputs.specs_json) }}
       fail-fast: false
     steps:
       - uses: actions/checkout@v4
