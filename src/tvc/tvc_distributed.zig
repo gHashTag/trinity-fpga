@@ -13,6 +13,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const tvc_corpus = @import("tvc_corpus");
 
 const TVCCorpus = tvc_corpus.TVCCorpus;
@@ -77,7 +78,7 @@ pub const TVCDistributor = struct {
     pub fn exportToFile(self: *Self, path: []const u8) !void {
         try self.corpus.save(path);
         self.total_exported += 1;
-        self.last_sync = std.time.timestamp();
+        self.last_sync = tri_time.timestamp();
     }
 
     /// Export to sync directory with node ID filename
@@ -104,7 +105,7 @@ pub const TVCDistributor = struct {
         var other = try TVCCorpus.load(path);
         const added = try self.corpus.merge(&other);
         self.total_imported += added;
-        self.last_sync = std.time.timestamp();
+        self.last_sync = tri_time.timestamp();
         return added;
     }
 
@@ -168,7 +169,7 @@ pub const TVCDistributor = struct {
             .entries_before = start_count,
             .entries_after = self.corpus.count,
             .imported = imported,
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
         };
     }
 
@@ -181,7 +182,7 @@ pub const TVCDistributor = struct {
             .entries_before = start_count,
             .entries_after = self.corpus.count,
             .imported = imported,
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
         };
     }
 

@@ -7,6 +7,7 @@
 //! Compares performance across all brain regions with detailed metrics.
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 const baseline_basal = @import("basal_ganglia.zig");
 const baseline_reticular = @import("reticular_formation.zig");
 const baseline_amygdala = @import("amygdala.zig");
@@ -34,14 +35,14 @@ test "perf.comparison.basal" {
         var registry = baseline_basal.Registry.init(allocator);
         defer registry.deinit();
 
-        const start = std.time.nanoTimestamp();
+        const start = tri_time.nanoTimestamp();
         var i: u64 = 0;
         while (i < iterations) : (i += 1) {
             const task_id = try std.fmt.allocPrint(allocator, "task-{d}", .{i});
             defer allocator.free(task_id);
             _ = try registry.claim(allocator, task_id, "agent-001", 300000);
         }
-        const elapsed_ns = @as(u64, @intCast(std.time.nanoTimestamp() - start));
+        const elapsed_ns = @as(u64, @intCast(tri_time.nanoTimestamp() - start));
         const ops_per_sec = @as(f64, @floatFromInt(iterations)) / @as(f64, @floatFromInt(elapsed_ns)) * 1_000_000_000.0;
         const ns_per_op = @as(f64, @floatFromInt(elapsed_ns)) / @as(f64, @floatFromInt(iterations));
         _ = std.debug.print("║  Basal Ganglia   │ {d:>9.0}/s │ {d:>9.0}/s │ {s:>9.2}%  ║\n", .{ ops_per_sec, 0.0, "-" });
@@ -54,13 +55,13 @@ test "perf.comparison.basal" {
         defer registry.deinit();
 
         var task_buf: [32]u8 = undefined;
-        const start = std.time.nanoTimestamp();
+        const start = tri_time.nanoTimestamp();
         var i: u64 = 0;
         while (i < iterations) : (i += 1) {
             const task_id = try std.fmt.bufPrintZ(&task_buf, "task-{d}", .{i});
             _ = try registry.claimStack(allocator, task_id, "agent-001", 300000);
         }
-        const elapsed_ns = @as(u64, @intCast(std.time.nanoTimestamp() - start));
+        const elapsed_ns = @as(u64, @intCast(tri_time.nanoTimestamp() - start));
         const ops_per_sec = @as(f64, @floatFromInt(iterations)) / @as(f64, @floatFromInt(elapsed_ns)) * 1_000_000_000.0;
         const ns_per_op = @as(f64, @floatFromInt(elapsed_ns)) / @as(f64, @floatFromInt(iterations));
         _ = std.debug.print("║  Basal Ganglia   │ {d:>9.0}/s │ {d:>9.0}/s │ {s:>9.2}%  ║\n", .{ 0.0, ops_per_sec, "-" });
@@ -77,7 +78,7 @@ test "perf.comparison.reticular" {
         var bus = baseline_reticular.EventBus.init(allocator);
         defer bus.deinit();
 
-        const start = std.time.nanoTimestamp();
+        const start = tri_time.nanoTimestamp();
         var i: u64 = 0;
         while (i < iterations) : (i += 1) {
             const task_id = try std.fmt.allocPrint(allocator, "task-{d}", .{i});
@@ -91,7 +92,7 @@ test "perf.comparison.reticular" {
             };
             try bus.publish(.task_claimed, event_data);
         }
-        const elapsed_ns = @as(u64, @intCast(std.time.nanoTimestamp() - start));
+        const elapsed_ns = @as(u64, @intCast(tri_time.nanoTimestamp() - start));
         const ops_per_sec = @as(f64, @floatFromInt(iterations)) / @as(f64, @floatFromInt(elapsed_ns)) * 1_000_000_000.0;
         const ns_per_op = @as(f64, @floatFromInt(elapsed_ns)) / @as(f64, @floatFromInt(iterations));
         _ = std.debug.print("║  Reticular       │ {d:>9.0}/s │ {d:>9.0}/s │ {s:>9.2}%  ║\n", .{ ops_per_sec, 0.0, "-" });
@@ -104,7 +105,7 @@ test "perf.comparison.reticular" {
         defer bus.deinit();
 
         var task_buf: [32]u8 = undefined;
-        const start = std.time.nanoTimestamp();
+        const start = tri_time.nanoTimestamp();
         var i: u64 = 0;
         while (i < iterations) : (i += 1) {
             const task_id = try std.fmt.bufPrintZ(&task_buf, "task-{d}", .{i});
@@ -117,7 +118,7 @@ test "perf.comparison.reticular" {
             };
             try bus.publish(.task_claimed, event_data);
         }
-        const elapsed_ns = @as(u64, @intCast(std.time.nanoTimestamp() - start));
+        const elapsed_ns = @as(u64, @intCast(tri_time.nanoTimestamp() - start));
         const ops_per_sec = @as(f64, @floatFromInt(iterations)) / @as(f64, @floatFromInt(elapsed_ns)) * 1_000_000_000.0;
         const ns_per_op = @as(f64, @floatFromInt(elapsed_ns)) / @as(f64, @floatFromInt(iterations));
         _ = std.debug.print("║  Reticular       │ {d:>9.0}/s │ {d:>9.0}/s │ {s:>9.2}%  ║\n", .{ 0.0, ops_per_sec, "-" });
@@ -130,12 +131,12 @@ test "perf.comparison.amygdala" {
 
     // Baseline
     {
-        const start = std.time.nanoTimestamp();
+        const start = tri_time.nanoTimestamp();
         var i: u64 = 0;
         while (i < iterations) : (i += 1) {
             _ = baseline_amygdala.Amygdala.analyzeTask("task-urgent", "dukh", "critical");
         }
-        const elapsed_ns = @as(u64, @intCast(std.time.nanoTimestamp() - start));
+        const elapsed_ns = @as(u64, @intCast(tri_time.nanoTimestamp() - start));
         const ops_per_sec = @as(f64, @floatFromInt(iterations)) / @as(f64, @floatFromInt(elapsed_ns)) * 1_000_000_000.0;
         const ns_per_op = @as(f64, @floatFromInt(elapsed_ns)) / @as(f64, @floatFromInt(iterations));
         _ = std.debug.print("║  Amygdala        │ {d:>9.0}/s │ {d:>9.0}/s │ {s:>9.2}%  ║\n", .{ ops_per_sec, 0.0, "-" });
@@ -144,12 +145,12 @@ test "perf.comparison.amygdala" {
 
     // Optimized
     {
-        const start = std.time.nanoTimestamp();
+        const start = tri_time.nanoTimestamp();
         var i: u64 = 0;
         while (i < iterations) : (i += 1) {
             _ = opt_amygdala.Amygdala.analyzeTask("task-urgent", "dukh", "critical");
         }
-        const elapsed_ns = @as(u64, @intCast(std.time.nanoTimestamp() - start));
+        const elapsed_ns = @as(u64, @intCast(tri_time.nanoTimestamp() - start));
         const ops_per_sec = @as(f64, @floatFromInt(iterations)) / @as(f64, @floatFromInt(elapsed_ns)) * 1_000_000_000.0;
         const ns_per_op = @as(f64, @floatFromInt(elapsed_ns)) / @as(f64, @floatFromInt(iterations));
         _ = std.debug.print("║  Amygdala        │ {d:>9.0}/s │ {d:>9.0}/s │ {s:>9.2}%  ║\n", .{ 0.0, ops_per_sec, "-" });

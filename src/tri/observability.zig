@@ -12,6 +12,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 /// Exit code convention following POSIX standards
 pub const ExitCode = enum(u8) {
     success = 0,
@@ -117,11 +118,10 @@ pub const ArtifactHash = struct {
 };
 
 /// Compute hash of file content
-pub fn hashFile(allocator: std.mem.Allocator, path: []const u8, algorithm: HashAlgorithm) !ArtifactHash {
-    const file = try std.fs.cwd().openFile(path, .{});
-    defer file.close();
-
-    const content = try file.readToEndAlloc(allocator, 1024 * 1024 * 100); // Max 100MB
+pub fn hashFile(io: std.Io, allocator: std.mem.Allocator, path: []const u8, algorithm: HashAlgorithm) !ArtifactHash {
+    // Whole-file reads live on the directory in the 0.16 Io API, so the explicit
+    // open/close pair is gone; the 100MB cap is now the read limit.
+    const content = try std.Io.Dir.cwd().readFileAlloc(io, path, allocator, .limited(1024 * 1024 * 100));
     defer allocator.free(content);
 
     return hashBytes(content, algorithm);
@@ -260,7 +260,7 @@ pub const RequestId = struct {
 
     fn generateUuid() [16]u8 {
         var uuid: [16]u8 = undefined;
-        var rng = std.Random.DefaultPrng.init(@intCast(std.time.microTimestamp()));
+        var rng = std.Random.DefaultPrng.init(@intCast(tri_time.microTimestamp()));
         rng.fill(&uuid);
 
         // Set version (4) and variant bits
@@ -293,7 +293,7 @@ pub const OperationContext = struct {
             .exit_code = .success,
             .artifacts = std.StringHashMap(ArtifactHash).init(allocator),
             .metadata = std.StringHashMap([]const u8).init(allocator),
-            .start_time = std.time.timestamp(),
+            .start_time = tri_time.timestamp(),
         };
     }
 
@@ -317,8 +317,8 @@ pub const OperationContext = struct {
         self.exit_code = code;
     }
 
-    pub fn addArtifact(self: *OperationContext, path: []const u8, algorithm: HashAlgorithm) !void {
-        const hash = try hashFile(self.allocator, path, algorithm);
+    pub fn addArtifact(self: *OperationContext, io: std.Io, path: []const u8, algorithm: HashAlgorithm) !void {
+        const hash = try hashFile(io, self.allocator, path, algorithm);
         const path_copy = try self.allocator.dupe(u8, path);
         try self.artifacts.put(path_copy, hash);
     }

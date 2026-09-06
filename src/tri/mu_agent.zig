@@ -1,6 +1,7 @@
 // @origin(spec:mu_agent.tri) @regen(manual-impl)
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 /// MU Agent — Memory Unit for the Trinity swarm.
 /// Detects error patterns from compile output, logs them to JSONL storage,
 /// suggests fixes based on known patterns, and reports statistics.
@@ -107,7 +108,7 @@ pub const MuAgent = struct {
     pub fn detect(self: *MuAgent, compile_output: []const u8, spec_file: []const u8) !DetectResult {
         var new_count: usize = 0;
         var updated_count: usize = 0;
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
 
         // Pattern detection rules
         const rules = [_]struct { needle: []const u8, category: ErrorCategory, suggestion: []const u8, fixable: bool }{

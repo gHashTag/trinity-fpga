@@ -6,6 +6,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const crypto = @import("crypto.zig");
 const protocol = @import("protocol.zig");
 const storage_mod = @import("storage.zig");
@@ -302,7 +303,7 @@ pub const ShardManager = struct {
             .shard_size = @intCast(shard_size),
             .encryption_nonce = nonce,
             .encryption_tag = tag,
-            .created_at = std.time.timestamp(),
+            .created_at = tri_time.timestamp(),
             .parity_hash = parity_hash,
             .rs_data_shards = rs_data_shards,
             .rs_parity_shards = rs_parity_shards,

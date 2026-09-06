@@ -7,6 +7,7 @@
 //
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const fs = std.fs;
 
@@ -92,7 +93,7 @@ pub const DevSession = struct {
             return error.InvalidTransition;
         }
         self.state = to;
-        self.last_updated = std.time.timestamp();
+        self.last_updated = tri_time.timestamp();
     }
 
     /// Save session state to JSON file

@@ -17,6 +17,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const igla_hybrid_chat = @import("igla_hybrid_chat");
 const tvc = @import("tvc_corpus");
 const pas_orchestrator = @import("pas_orchestrator");
@@ -138,7 +139,7 @@ pub const PasWebSocketServer = struct {
             allocator,
             \\{{"type":"recommendation","id":"{s}","action":"{s}","priority":{d},"rationale":"{s}","timestamp":{d}}}
         ,
-            .{ uuid, action, priority, rationale, std.time.timestamp() },
+            .{ uuid, action, priority, rationale, tri_time.timestamp() },
         );
     }
 
@@ -157,7 +158,7 @@ pub const PasWebSocketServer = struct {
             allocator,
             \\{{"type":"progress","task":"{s}","baseline":{d},"pas":{d},"attempts":{d},"energy":{d:.2},"timestamp":{d}}}
         ,
-            .{ task, baseline, pas, attempts, energy, std.time.timestamp() },
+            .{ task, baseline, pas, attempts, energy, tri_time.timestamp() },
         );
     }
 
@@ -173,7 +174,7 @@ pub const PasWebSocketServer = struct {
             allocator,
             \\{{"type":"alert","level":"{s}","message":"{s}","timestamp":{d}}}
         ,
-            .{ level, message, std.time.timestamp() },
+            .{ level, message, tri_time.timestamp() },
         );
     }
 };
@@ -297,7 +298,7 @@ pub const ChatServer = struct {
             .port = port,
             .chat_engine = null,
             .corpus = null,
-            .startup_time = std.time.timestamp(),
+            .startup_time = tri_time.timestamp(),
             .log_ring = [_]LogEntry{LogEntry{
                 .timestamp = 0,
                 .source = "none",
@@ -333,7 +334,7 @@ pub const ChatServer = struct {
 
     fn addLogEntry(self: *Self, source: []const u8, query: []const u8, confidence: f32, latency_us: u64, learned: bool) void {
         var entry = &self.log_ring[self.log_index];
-        entry.timestamp = std.time.timestamp();
+        entry.timestamp = tri_time.timestamp();
         entry.source = source;
         const copy_len = @min(query.len, 64);
         @memcpy(entry.query_preview[0..copy_len], query[0..copy_len]);
@@ -514,7 +515,7 @@ pub const ChatServer = struct {
     // ═══════════════════════════════════════════════════════════════════════════
 
     fn handleChat(self: *Self, connection: *std.net.Server.Connection, body: []const u8) !void {
-        const start = std.time.microTimestamp();
+        const start = tri_time.microTimestamp();
 
         // Lazy-init engine
         const engine = self.ensureEngine() catch {
@@ -568,7 +569,7 @@ pub const ChatServer = struct {
                 };
             };
 
-        const elapsed = @as(u64, @intCast(std.time.microTimestamp() - start));
+        const elapsed = @as(u64, @intCast(tri_time.microTimestamp() - start));
         const source_name = @tagName(result.source);
 
         std.debug.print("[ChatServer] Source: {s} | Confidence: {d:.2} | Latency: {d}μs\n", .{ source_name, result.confidence, elapsed });
@@ -1071,7 +1072,7 @@ pub const ChatServer = struct {
     }
 
     fn sendHealth(self: *Self, connection: *std.net.Server.Connection) !void {
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
         const uptime = now - self.startup_time;
 
         // Build JSON using ArrayList for flexibility
@@ -1352,7 +1353,7 @@ pub const ChatServer = struct {
             self.allocator,
             \\{{"type":"connected","endpoint":"/ws/pas","timestamp":{d},"message":"PAS WebSocket connected"}}
         ,
-            .{std.time.timestamp()},
+            .{tri_time.timestamp()},
         );
         defer self.allocator.free(welcome);
         _ = self.ws_server.sendWsFrame(connection.stream, welcome);

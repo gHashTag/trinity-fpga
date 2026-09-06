@@ -6,6 +6,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const protocol = @import("protocol.zig");
 const discovery = @import("discovery.zig");
 const wallet_mod = @import("wallet.zig");
@@ -220,7 +221,7 @@ pub const NetworkNode = struct {
 
         self.running.store(true, .release);
         self.status = .connecting;
-        self.start_time = std.time.timestamp();
+        self.start_time = tri_time.timestamp();
 
         // Start discovery
         try self.discovery_service.start();
@@ -318,7 +319,7 @@ pub const NetworkNode = struct {
                 // Add to queue
                 const pending = PendingJob{
                     .job = job,
-                    .received_at = std.time.timestamp(),
+                    .received_at = tri_time.timestamp(),
                     .client_addr = client_addr,
                 };
                 _ = self.job_queue.push(pending);
@@ -332,9 +333,9 @@ pub const NetworkNode = struct {
                 // Respond with our heartbeat
                 const hb = protocol.Heartbeat{
                     .node_id = self.wallet.getNodeId(),
-                    .timestamp = std.time.timestamp(),
+                    .timestamp = tri_time.timestamp(),
                     .jobs_completed = self.jobs_completed,
-                    .uptime_seconds = @intCast(std.time.timestamp() - self.start_time),
+                    .uptime_seconds = @intCast(tri_time.timestamp() - self.start_time),
                     .status = if (self.job_queue.size() > 0) .busy else .online,
                 };
                 const payload = try hb.serialize(self.allocator);
@@ -410,7 +411,7 @@ pub const NetworkNode = struct {
     /// Get network stats
     pub fn getStats(self: *NetworkNode) NetworkStats {
         const uptime = if (self.start_time > 0)
-            @as(u64, @intCast(std.time.timestamp() - self.start_time))
+            @as(u64, @intCast(tri_time.timestamp() - self.start_time))
         else
             0;
 
@@ -455,7 +456,7 @@ test "job queue operations" {
 
     const job = PendingJob{
         .job = undefined,
-        .received_at = std.time.timestamp(),
+        .received_at = tri_time.timestamp(),
         .client_addr = std.net.Address.initIp4(.{ 127, 0, 0, 1 }, 9334),
     };
 

@@ -1,4 +1,5 @@
 const std = @import("std");
+const tri_time = @import("tri_time");
 const ReplTester = @import("repl_tester.zig").ReplTester;
 const CommandInvoker = @import("command_invoker.zig").CommandInvoker;
 const sacred = @import("testing/assertions.zig");
@@ -231,7 +232,7 @@ test "performance: fast command execution" {
     var tester = try ReplTester.init(std.testing.allocator, &invoker);
     defer tester.deinit();
 
-    const start = std.time.nanoTimestamp();
+    const start = tri_time.nanoTimestamp();
 
     // Execute commands quickly
     var i: usize = 0;
@@ -240,7 +241,7 @@ test "performance: fast command execution" {
         _ = try tester.runCommand("phi 1");
     }
 
-    const end = std.time.nanoTimestamp();
+    const end = tri_time.nanoTimestamp();
     const elapsed_ms = @divTrunc(end - start, 1_000_000);
 
     // Should complete 5 commands in reasonable time (< 10 seconds)

@@ -3,6 +3,7 @@
 // ═════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 
 // Queen episode integration
@@ -328,7 +329,7 @@ fn logCommand(args: []const []const u8) !void {
     const operation_str = if (args.len > 1) args[1] else "RUN";
 
     var event = Tri27Event{};
-    event.timestamp = std.time.timestamp();
+    event.timestamp = tri_time.timestamp();
     event.operation = parseOperation(operation_str);
 
     var i: usize = 0;

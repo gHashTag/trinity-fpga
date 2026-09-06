@@ -14,6 +14,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_env = @import("tri_env.zig");
 const Allocator = std.mem.Allocator;
 const crypto = std.crypto.random;
 
@@ -84,12 +85,12 @@ pub const RailwayApi = struct {
     pub fn initWithSuffix(allocator: Allocator, suffix: []const u8) RailwayApiError!RailwayApi {
         var token_name: [64]u8 = undefined;
         const token_key = buildEnvKey(&token_name, "RAILWAY_API_TOKEN", suffix);
-        const token = std.process.getEnvVarOwned(allocator, token_key) catch
+        const token = tri_env.getEnvVarOwned(allocator, token_key) catch
             return error.MissingToken;
 
         var proj_name: [64]u8 = undefined;
         const proj_key = buildEnvKey(&proj_name, "RAILWAY_PROJECT_ID", suffix);
-        const project_id = std.process.getEnvVarOwned(allocator, proj_key) catch blk: {
+        const project_id = tri_env.getEnvVarOwned(allocator, proj_key) catch blk: {
             if (suffix.len == 0) {
                 break :blk readProjectIdFromFile(allocator) catch return error.MissingProjectId;
             }
@@ -98,7 +99,7 @@ pub const RailwayApi = struct {
 
         var env_name: [64]u8 = undefined;
         const env_key = buildEnvKey(&env_name, "RAILWAY_ENVIRONMENT_ID", suffix);
-        const environment_id = std.process.getEnvVarOwned(allocator, env_key) catch blk: {
+        const environment_id = tri_env.getEnvVarOwned(allocator, env_key) catch blk: {
             const empty = allocator.dupe(u8, "") catch return error.OutOfMemory;
             break :blk empty;
         };

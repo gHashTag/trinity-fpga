@@ -20,6 +20,7 @@
 //!   try JobManager.cancel(job_id);
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const builtin = @import("builtin");
 
 // =============================================================================
@@ -420,7 +421,7 @@ pub const JobManager = struct {
             .command = try self.allocator.dupe(u8, command),
             .args = try duplicateStringSlice(self.allocator, args),
             .state = .pending,
-            .start_time = std.time.timestamp(),
+            .start_time = tri_time.timestamp(),
             .end_time = 0,
             .pid = 0,
             .working_dir = self.project_root, // P0.3: Use project root
@@ -585,7 +586,7 @@ pub const JobManager = struct {
     /// Clean up completed jobs older than specified seconds
     pub fn cleanup(self: *JobManager, older_than_seconds: u64) !usize {
         var cleaned: usize = 0;
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
 
         // Collect job IDs to remove (can't modify map while iterating)
         var to_remove: std.ArrayList([]const u8) = .empty;
@@ -785,7 +786,7 @@ pub const Job = struct {
             std.log.err("Job {s} wait failed: {}", .{ self.metadata.id, err });
             self.metadata.state = .failed;
             self.metadata.error_message = try std.fmt.allocPrint(self.allocator, "Process wait failed: {s}", .{@errorName(err)});
-            self.metadata.end_time = std.time.timestamp();
+            self.metadata.end_time = tri_time.timestamp();
             try self.writeMetadata();
             return err;
         };
@@ -794,7 +795,7 @@ pub const Job = struct {
         if (watchdog) |w| w.detach();
 
         // Update metadata with final status
-        self.metadata.end_time = std.time.timestamp();
+        self.metadata.end_time = tri_time.timestamp();
 
         if (timed_out) {
             self.metadata.state = .failed;
@@ -841,7 +842,7 @@ pub const Job = struct {
                 std.log.warn("Job {s} wait failed: {}", .{ self.metadata.id, err });
                 self.metadata.state = .failed;
                 self.metadata.error_message = try std.fmt.allocPrint(self.allocator, "Process wait failed: {s}", .{@errorName(err)});
-                self.metadata.end_time = std.time.timestamp();
+                self.metadata.end_time = tri_time.timestamp();
                 try self.writeMetadata();
                 return self.toStatus();
             };
@@ -853,7 +854,7 @@ pub const Job = struct {
                     else => .failed,
                 };
 
-                self.metadata.end_time = std.time.timestamp();
+                self.metadata.end_time = tri_time.timestamp();
                 switch (result) {
                     .Exited => |code| {
                         self.metadata.exit_code = @as(i32, @intCast(code));
@@ -930,7 +931,7 @@ pub const Job = struct {
 
             // Update metadata
             self.metadata.state = .cancelled;
-            self.metadata.end_time = std.time.timestamp();
+            self.metadata.end_time = tri_time.timestamp();
 
             if (wait_result == .Exited) {
                 self.metadata.exit_code = @as(i32, @intCast(wait_result.Exited));
@@ -968,12 +969,12 @@ pub const Job = struct {
                 std.log.err("Job {s} wait failed: {}", .{ self.metadata.id, err });
                 self.metadata.state = .failed;
                 self.metadata.error_message = try std.fmt.allocPrint(self.allocator, "Wait failed: {s}", .{@errorName(err)});
-                self.metadata.end_time = std.time.timestamp();
+                self.metadata.end_time = tri_time.timestamp();
                 try self.writeMetadata();
                 return;
             };
 
-            self.metadata.end_time = std.time.timestamp();
+            self.metadata.end_time = tri_time.timestamp();
             self.metadata.state = switch (result) {
                 .Exited => |code| if (code == 0) .completed else .failed,
                 else => .failed,
@@ -1042,7 +1043,7 @@ pub const StartOptions = struct {
 
 /// Generate a unique job ID
 fn generateJobId(allocator: std.mem.Allocator) ![]const u8 {
-    const timestamp = std.time.timestamp();
+    const timestamp = tri_time.timestamp();
     const random = std.crypto.random.int(u32);
     return std.fmt.allocPrint(allocator, "job_{d}_{x}", .{ timestamp, random });
 }

@@ -8,6 +8,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const types = @import("faculty_types.zig");
 const AgentState = types.AgentState;
 const FacultySnapshot = types.FacultySnapshot;
@@ -358,7 +359,7 @@ pub fn readScholarHeartbeat() ScholarHeartbeat {
     hb.fed_mu = parseJsonU32(data, "\"fed_mu\":");
     const ts = parseJsonI64(data, "\"timestamp\":");
     if (ts > 0) {
-        hb.age_s = std.time.timestamp() - ts;
+        hb.age_s = tri_time.timestamp() - ts;
         if (hb.age_s < 0) hb.age_s = 0;
     }
     return hb;
@@ -381,7 +382,7 @@ pub fn readMuHeartbeat() MuHeartbeat {
     hb.build_ok = parseJsonBool(data, "\"build_ok\":");
     const ts = parseJsonI64(data, "\"timestamp\":");
     if (ts > 0) {
-        hb.age_s = std.time.timestamp() - ts;
+        hb.age_s = tri_time.timestamp() - ts;
         if (hb.age_s < 0) hb.age_s = 0;
     }
     return hb;

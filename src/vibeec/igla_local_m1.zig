@@ -21,6 +21,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 // ═══════════════════════════════════════════════════════════════════════════════
 // CONSTANTS - Optimized for M1 Pro
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -558,7 +559,7 @@ fn runBenchmark(vocab: *const VocabMatrix) !void {
     std.debug.print("═══════════════════════════════════════════════════════════════\n", .{});
 
     var correct: usize = 0;
-    const start = std.time.nanoTimestamp();
+    const start = tri_time.nanoTimestamp();
 
     for (ANALOGY_TESTS) |test_case| {
         if (computeAnalogy(vocab, test_case.a, test_case.b, test_case.c)) |result| {
@@ -580,7 +581,7 @@ fn runBenchmark(vocab: *const VocabMatrix) !void {
         }
     }
 
-    const end = std.time.nanoTimestamp();
+    const end = tri_time.nanoTimestamp();
     const elapsed_ns = @as(u64, @intCast(end - start));
     const elapsed_ms = @as(f64, @floatFromInt(elapsed_ns)) / 1_000_000.0;
     const ops_per_sec = @as(f64, @floatFromInt(ANALOGY_TESTS.len)) / (elapsed_ms / 1000.0);

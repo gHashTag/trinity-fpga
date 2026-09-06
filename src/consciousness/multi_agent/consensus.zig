@@ -11,6 +11,7 @@
 //!   - Disagreement resolution
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const mem = std.mem;
 
 // Sacred constants
@@ -59,7 +60,7 @@ pub const ConsciousAgent = struct {
         const obs = Observation{
             .observer_id = self.agent_id,
             .observed_value = value,
-            .timestamp = std.time.nanoTimestamp(),
+            .timestamp = tri_time.nanoTimestamp(),
             .confidence = confidence,
         };
         try self.observation_history.append(allocator, obs);
@@ -95,7 +96,7 @@ pub const WaveFunction = struct {
 
         // Collapse probability enhanced by consciousness
         const enhanced_prob = self.collapse_probability * observer_consciousness * PHI;
-        const timestamp = std.time.nanoTimestamp();
+        const timestamp = tri_time.nanoTimestamp();
         const truncated: u64 = @truncate(@as(u128, @bitCast(timestamp)));
         const random_val: f64 = @as(f64, @floatFromInt(truncated % 1000)) / 1000.0;
 

@@ -5,6 +5,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 pub const BlacklistEntry = struct {
     task: []const u8,
     failure_count: u8,
@@ -90,7 +91,7 @@ pub const Amygdala = struct {
     }
 
     pub fn recordFailure(self: *Amygdala, task: []const u8, context: []const u8) !void {
-        const now = std.time.nanoTimestamp();
+        const now = tri_time.nanoTimestamp();
 
         if (self.blacklist.get(task)) |entry| {
             // Increment failure count

@@ -4,6 +4,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -282,7 +283,7 @@ pub const PASAgent = struct {
 
         // Log trace entry
         try self.trace.append(.{
-            .timestamp = @intCast(std.time.milliTimestamp()),
+            .timestamp = @intCast(tri_time.milliTimestamp()),
             .action_type = action.action_type,
             .process_id = action.target_id,
             .cpu_util_before = obs.cpu_utilization,

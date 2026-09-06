@@ -10,6 +10,7 @@
 //! Returns JSON for dashboard consumption with mock fallbacks.
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const ArrayList = std.array_list.Managed;
 
 const Allocator = std.mem.Allocator;
@@ -59,7 +60,7 @@ pub const AgentMuStatus = struct {
 
 /// Generate AGENT MU status JSON (mock data)
 pub fn generateAgentMuStatus(allocator: Allocator) ![]const u8 {
-    const uptime = std.time.timestamp();
+    const uptime = tri_time.timestamp();
 
     const status = AgentMuStatus{
         .total_fixes = 100,
@@ -83,7 +84,7 @@ pub fn generateIntelligenceHistory(allocator: Allocator, count: usize) ![]const 
     var buffer = ArrayList(u8).init(allocator);
     defer buffer.deinit();
 
-    const now = std.time.timestamp();
+    const now = tri_time.timestamp();
     var current_mu: f64 = 0.0382;
 
     for (0..@min(count, 100)) |i| {
@@ -151,7 +152,7 @@ pub fn generateEvolutionTree(allocator: Allocator) ![]const u8 {
         "COLLAB",
     };
 
-    const now = std.time.timestamp();
+    const now = tri_time.timestamp();
 
     for (0..50) |i| {
         if (i > 0) try buffer.appendSlice(",");
@@ -188,7 +189,7 @@ pub fn generateEvolutionTree(allocator: Allocator) ![]const u8 {
 
 /// Generate sacred math JSON (mock data)
 pub fn generateSacredMath(allocator: Allocator) ![]const u8 {
-    const now = std.time.timestamp();
+    const now = tri_time.timestamp();
     // Sacred constants
     const phi: f64 = 1.6180339887498948482; // Golden ratio
     const mu: f64 = 0.0382; // 1/φ²/10

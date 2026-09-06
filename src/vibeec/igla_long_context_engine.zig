@@ -12,6 +12,7 @@
 // =============================================================================
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const tool_use = @import("igla_tool_use_engine.zig");
 const personality = @import("igla_personality_engine.zig");
 const learning = @import("igla_learning_engine.zig");
@@ -58,7 +59,7 @@ pub const Message = struct {
         return Self{
             .role = role,
             .content = content,
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
             .token_estimate = estimateTokens(content),
             .importance = calculateImportance(content),
         };
@@ -320,7 +321,7 @@ pub const Summarizer = struct {
 
         summary.summary_len = buf_pos;
         summary.total_turns_summarized += turn_count;
-        summary.last_updated = std.time.timestamp();
+        summary.last_updated = tri_time.timestamp();
     }
 
     fn extractFacts(msg: Message, summary: *ConversationSummary, turn: usize) void {
@@ -663,7 +664,7 @@ pub fn runBenchmark() !void {
     var summarized_count: usize = 0;
     var fact_extractions: usize = 0;
 
-    const start = std.time.nanoTimestamp();
+    const start = tri_time.nanoTimestamp();
 
     for (conversation) |c| {
         const response = engine.respond(c.query);
@@ -675,7 +676,7 @@ pub fn runBenchmark() !void {
         engine.recordFeedback(c.feedback);
     }
 
-    const elapsed_ns = std.time.nanoTimestamp() - start;
+    const elapsed_ns = tri_time.nanoTimestamp() - start;
     const ops_per_sec = @as(f64, @floatFromInt(conversation.len)) / (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
 
     const stats = engine.getStats();

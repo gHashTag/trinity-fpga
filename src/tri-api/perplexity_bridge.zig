@@ -6,6 +6,7 @@
 // Uses raw TCP — minimal HTTP parsing without std.http.Server complexity.
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 const max_output = 64 * 1024;
 const max_body = 128 * 1024; // POST body limit for /px/done
 const job_ttl_secs: i64 = 3600; // 1 hour TTL for jobs
@@ -223,7 +224,7 @@ pub const Bridge = struct {
 
     fn genJobId(self: *Bridge) ![]const u8 {
         self.job_counter +%= 1;
-        const raw_ts = std.time.timestamp();
+        const raw_ts = tri_time.timestamp();
         const ts: u64 = if (raw_ts >= 0) @intCast(raw_ts) else 0;
         return try std.fmt.allocPrint(self.allocator, "j_{x}_{d}", .{ ts, self.job_counter });
     }
@@ -235,7 +236,7 @@ pub const Bridge = struct {
     fn createJob(self: *Bridge, cmd: []const u8) ![]const u8 {
         const id = try self.genJobId();
 
-        const ts: i64 = std.time.timestamp();
+        const ts: i64 = tri_time.timestamp();
 
         var json = std.ArrayList(u8).empty;
         defer json.deinit(self.allocator);
@@ -274,7 +275,7 @@ pub const Bridge = struct {
         // Extract cmd and created_at from existing JSON (simple parsing)
         const cmd = extractJsonString(existing, "cmd") orelse "unknown";
         const created_at = extractJsonInt(existing, "created_at") orelse 0;
-        const ts: i64 = std.time.timestamp();
+        const ts: i64 = tri_time.timestamp();
 
         var json = std.ArrayList(u8).empty;
         defer json.deinit(self.allocator);
@@ -393,7 +394,7 @@ pub const Bridge = struct {
         const cmd = extractJsonString(content, "cmd") orelse "unknown";
 
         // Update status to running
-        const ts: i64 = std.time.timestamp();
+        const ts: i64 = tri_time.timestamp();
         const created_at = extractJsonInt(content, "created_at") orelse ts;
 
         var json = std.ArrayList(u8).empty;

@@ -3,6 +3,7 @@
 //! Continuously monitors system health using φ-based intervals
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const math = std.math;
 const time = std.time;
 
@@ -562,8 +563,8 @@ pub const EternalMonitor = struct {
 
 /// Get current timestamp in milliseconds
 pub fn timestamp_ms() i64 {
-    // Placeholder - in real implementation, use std.time.nanoTimestamp() / 1_000_000
-    const ns = std.time.nanoTimestamp();
+    // Placeholder - in real implementation, use tri_time.nanoTimestamp() / 1_000_000
+    const ns = tri_time.nanoTimestamp();
     return @intCast(@divFloor(ns, 1_000_000));
 }
 

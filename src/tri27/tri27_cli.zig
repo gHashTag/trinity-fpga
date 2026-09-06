@@ -2,6 +2,7 @@
 // ═══════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 
 const Decoder = @import("emu/decoder.zig");
@@ -293,7 +294,7 @@ fn runExperienceCommand(_: Allocator, args: []const []const u8) !void {
             .error_msg = [_]u8{0} ** 512,
             .has_error = false,
         };
-        event.timestamp = std.time.timestamp();
+        event.timestamp = tri_time.timestamp();
         event.operation = tri27_experience.parseOperation(operation_str);
 
         var i: usize = 0;

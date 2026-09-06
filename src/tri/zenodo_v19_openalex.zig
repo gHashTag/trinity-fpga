@@ -12,6 +12,7 @@
 //! - Indexing service integration
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 
 // ============================================================================
@@ -260,7 +261,7 @@ pub fn createZenodoNotification(
 /// Get current timestamp in ISO 8601 format
 fn getCurrentTimestamp(allocator: Allocator) ![]const u8 {
     // Get current time
-    const now = std.time.nanoTimestamp();
+    const now = tri_time.nanoTimestamp();
     const seconds = @divFloor(now, 1_000_000_000);
 
     // Format as ISO 8601 (simplified - Zig doesn't have datetime formatting yet)

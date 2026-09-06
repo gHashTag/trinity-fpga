@@ -12,6 +12,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 const ALERTS_LOG = ".trinity/brain_alerts.jsonl";
 
 /// Alert manager errors
@@ -358,7 +359,7 @@ pub const AlertHistory = struct {
         self.mutex.lock();
         defer self.mutex.unlock();
 
-        const now = std.time.milliTimestamp();
+        const now = tri_time.milliTimestamp();
         const day_ago = now - (24 * 60 * 60 * 1000);
 
         var result: Stats = .{
@@ -430,7 +431,7 @@ pub const AlertManager = struct {
         self.mutex.lock();
         defer self.mutex.unlock();
 
-        const now = std.time.milliTimestamp();
+        const now = tri_time.milliTimestamp();
 
         // Check health score
         if (health_score < self.thresholds.health_critical) {
@@ -503,7 +504,7 @@ pub const AlertManager = struct {
         self.mutex.lock();
         defer self.mutex.unlock();
 
-        const now = std.time.milliTimestamp();
+        const now = tri_time.milliTimestamp();
         const msg = try std.fmt.allocPrint(self.allocator, "Region unavailable", .{});
         defer self.allocator.free(msg);
         try self.processAlert(.{
@@ -520,7 +521,7 @@ pub const AlertManager = struct {
         self.mutex.lock();
         defer self.mutex.unlock();
 
-        const now = std.time.milliTimestamp();
+        const now = tri_time.milliTimestamp();
         const msg = try std.fmt.allocPrint(self.allocator, "Health declining: {d:.1} -> {d:.1} ({d:.1}/interval)", .{ previous, current, rate });
         defer self.allocator.free(msg);
         try self.processAlert(.{
@@ -534,7 +535,7 @@ pub const AlertManager = struct {
 
     /// Process an alert (check suppression, send notification, record)
     fn processAlert(self: *Self, alert_param: Alert) !void {
-        const now = std.time.milliTimestamp();
+        const now = tri_time.milliTimestamp();
 
         // Check suppression (5 min for warnings, 1 min for critical)
         const min_interval: i64 = switch (alert_param.level) {

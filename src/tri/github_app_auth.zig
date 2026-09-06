@@ -18,6 +18,8 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
+const tri_env = @import("tri_env.zig");
 pub const GitHubAppAuth = struct {
     app_id: []const u8,
     private_key_path: []const u8,
@@ -31,13 +33,13 @@ pub const GitHubAppAuth = struct {
     /// Initialize from environment variables:
     /// GITHUB_APP_ID, GITHUB_APP_PRIVATE_KEY_PATH, GITHUB_APP_INSTALLATION_ID
     pub fn init(allocator: std.mem.Allocator) !Self {
-        const app_id = std.process.getEnvVarOwned(allocator, "GITHUB_APP_ID") catch
+        const app_id = tri_env.getEnvVarOwned(allocator, "GITHUB_APP_ID") catch
             return error.AppIdNotSet;
-        const key_path = std.process.getEnvVarOwned(allocator, "GITHUB_APP_PRIVATE_KEY_PATH") catch {
+        const key_path = tri_env.getEnvVarOwned(allocator, "GITHUB_APP_PRIVATE_KEY_PATH") catch {
             allocator.free(app_id);
             return error.PrivateKeyPathNotSet;
         };
-        const install_id = std.process.getEnvVarOwned(allocator, "GITHUB_APP_INSTALLATION_ID") catch {
+        const install_id = tri_env.getEnvVarOwned(allocator, "GITHUB_APP_INSTALLATION_ID") catch {
             allocator.free(app_id);
             allocator.free(key_path);
             return error.InstallationIdNotSet;
@@ -62,7 +64,7 @@ pub const GitHubAppAuth = struct {
 
     /// Get a valid installation token (cached or refreshed)
     pub fn getToken(self: *Self) ![]const u8 {
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
         // Refresh if expired or within 60s of expiry
         if (self.cached_token != null and now < self.token_expires_at - 60) {
             return self.cached_token.?;
@@ -81,14 +83,14 @@ pub const GitHubAppAuth = struct {
 
     /// Check if GitHub App auth is available (env vars set)
     pub fn isAvailable() bool {
-        const app_id = std.process.getEnvVarOwned(std.heap.page_allocator, "GITHUB_APP_ID") catch return false;
+        const app_id = tri_env.getEnvVarOwned(std.heap.page_allocator, "GITHUB_APP_ID") catch return false;
         std.heap.page_allocator.free(app_id);
         return true;
     }
 
     /// Generate a JWT signed with RS256 using openssl
     fn generateJwt(self: *Self) ![]const u8 {
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
         const iat = now - 60; // Allow clock drift
         const exp = now + (10 * 60); // 10 min max for GitHub
 

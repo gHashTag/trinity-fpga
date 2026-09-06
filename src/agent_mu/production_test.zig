@@ -10,6 +10,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const ArrayList = std.array_list.Managed;
 
@@ -84,15 +85,15 @@ pub const TestRunner = struct {
     /// Run single test with and without AGENT MU
     fn runTest(self: *TestRunner, test_name: []const u8) !ProductionTest {
         // Run baseline (no AGENT MU)
-        const baseline_start = std.time.nanoTimestamp();
+        const baseline_start = tri_time.nanoTimestamp();
         _ = try self.runBaseline(test_name);
-        const baseline_end = std.time.nanoTimestamp();
+        const baseline_end = tri_time.nanoTimestamp();
         const baseline_ms = @as(u64, @intCast(@divTrunc(baseline_end - baseline_start, 1_000_000)));
 
         // Run with AGENT MU
-        const agent_mu_start = std.time.nanoTimestamp();
+        const agent_mu_start = tri_time.nanoTimestamp();
         const agent_mu_passed = try self.runWithAgentMu(test_name);
-        const agent_mu_end = std.time.nanoTimestamp();
+        const agent_mu_end = tri_time.nanoTimestamp();
         const agent_mu_ms = @as(u64, @intCast(@divTrunc(agent_mu_end - agent_mu_start, 1_000_000)));
 
         const speedup: f64 = if (agent_mu_ms > 0)
@@ -117,7 +118,7 @@ pub const TestRunner = struct {
         _ = test_name;
 
         // Simulate baseline execution (no actual delay for testing)
-        _ = std.time.nanoTimestamp();
+        _ = tri_time.nanoTimestamp();
 
         return true;
     }
@@ -128,7 +129,7 @@ pub const TestRunner = struct {
         _ = test_name;
 
         // Simulate AGENT MU assisted execution (no actual delay for testing)
-        _ = std.time.nanoTimestamp();
+        _ = tri_time.nanoTimestamp();
 
         return true;
     }
@@ -201,7 +202,7 @@ pub const TestRunner = struct {
             \\
             \\**Generated:** \\
         );
-        const timestamp = std.time.timestamp();
+        const timestamp = tri_time.timestamp();
         try writer.print("{d}]\n\n", .{timestamp});
 
         try writer.writeAll(

@@ -10,6 +10,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const array_list = std.array_list;
 
@@ -207,7 +208,7 @@ pub const PredictionKind = enum {
 
 /// Get detailed metrics from faculty_board
 pub fn getFacultyMetrics(allocator: Allocator) !FacultyMetrics {
-    const now = std.time.timestamp();
+    const now = tri_time.timestamp();
 
     // Collect current snapshot from faculty_board
     const snapshot = try faculty_cortex.collectSnapshot(allocator);
@@ -464,13 +465,13 @@ pub const CycleState = struct {
 
     pub fn init() CycleState {
         return .{
-            .start_time = std.time.timestamp(),
+            .start_time = tri_time.timestamp(),
             .timing = insula.TimingSnapshot.init(),
         };
     }
 
     pub fn uptimeSeconds(self: *const CycleState) i64 {
-        return std.time.timestamp() - self.start_time;
+        return tri_time.timestamp() - self.start_time;
     }
 };
 
@@ -480,7 +481,7 @@ pub const CycleState = struct {
 
 pub fn runUnifiedLoop(allocator: Allocator, config: qt.QueenConfig) !void {
     var state = qt.QueenState{
-        .started_at = std.time.timestamp(),
+        .started_at = tri_time.timestamp(),
     };
     var counters = queen_policy.ActionCounters{};
     var incidents = queen_policy.IncidentMemory.init();
@@ -1063,7 +1064,7 @@ pub fn health() CellHealth {
     return CellHealth{
         .status = .healthy,
         .cycle = 0,
-        .last_check = std.time.timestamp(),
+        .last_check = tri_time.timestamp(),
     };
 }
 
@@ -1133,7 +1134,7 @@ test "dlpfc — decide detects crashed workers" {
 
     var ctx = DecisionContext{
         .allocator = std.testing.allocator,
-        .farm = .{ .total_services = 10, .active = 5, .crashed = 5, .timestamp = std.time.timestamp() },
+        .farm = .{ .total_services = 10, .active = 5, .crashed = 5, .timestamp = tri_time.timestamp() },
         .issues = .{},
         .mu_heartbeat = .{ .build_ok = true },
         .config = .{ .allow_auto_actions = true, .daemon = true, .max_auto_level = 2 },
@@ -1614,7 +1615,7 @@ test "dlpfc — CycleState default values" {
 
 test "dlpfc — CycleState timing" {
     var state = CycleState{};
-    state.start_time = std.time.timestamp();
+    state.start_time = tri_time.timestamp();
 
     const uptime = state.uptimeSeconds();
     try std.testing.expect(uptime >= 0);
@@ -2116,7 +2117,7 @@ test "dlpfc — DecisionContext hasWarningTrends checks" {
 }
 
 test "dlpfc — CycleState uptimeSeconds calculates" {
-    const state = CycleState{ .start_ts = std.time.timestamp() - 3600 };
+    const state = CycleState{ .start_ts = tri_time.timestamp() - 3600 };
     const uptime = state.uptimeSeconds();
     try std.testing.expect(uptime >= 3590 and uptime <= 3610); // ~1 hour
 }

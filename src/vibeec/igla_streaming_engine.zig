@@ -13,6 +13,7 @@
 // =============================================================================
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const fluent = @import("igla_fluent_chat_engine.zig");
 
 // =============================================================================
@@ -73,7 +74,7 @@ pub const Token = struct {
             .content = undefined,
             .content_len = @min(content.len, MAX_TOKEN_SIZE),
             .index = index,
-            .timestamp_ns = @intCast(std.time.nanoTimestamp()),
+            .timestamp_ns = @intCast(tri_time.nanoTimestamp()),
             .is_last = is_last,
         };
         @memcpy(token.content[0..token.content_len], content[0..token.content_len]);
@@ -205,14 +206,14 @@ pub const StreamProgress = struct {
             .tokens_generated = 0,
             .tokens_delivered = 0,
             .bytes_streamed = 0,
-            .start_time_ns = @intCast(std.time.nanoTimestamp()),
-            .current_time_ns = @intCast(std.time.nanoTimestamp()),
+            .start_time_ns = @intCast(tri_time.nanoTimestamp()),
+            .current_time_ns = @intCast(tri_time.nanoTimestamp()),
             .estimated_remaining_tokens = 0,
         };
     }
 
     pub fn update(self: *StreamProgress) void {
-        self.current_time_ns = @intCast(std.time.nanoTimestamp());
+        self.current_time_ns = @intCast(tri_time.nanoTimestamp());
     }
 
     pub fn getElapsedMs(self: *const StreamProgress) i64 {
@@ -266,7 +267,7 @@ pub const CallbackContext = struct {
         if (self.callback) |cb| {
             cb(token, self.user_data);
             self.tokens_received += 1;
-            self.last_token_time = @intCast(std.time.nanoTimestamp());
+            self.last_token_time = @intCast(tri_time.nanoTimestamp());
         }
     }
 
@@ -444,7 +445,7 @@ pub const StreamingEngine = struct {
     }
 
     pub fn streamResponse(self: *StreamingEngine, input: []const u8) StreamingResponse {
-        const start = std.time.nanoTimestamp();
+        const start = tri_time.nanoTimestamp();
 
         self.total_streams += 1;
         self.state = .Generating;
@@ -481,7 +482,7 @@ pub const StreamingEngine = struct {
         response.buffer = self.buffer;
         response.total_text_len = @min(fluent_response.text_len, 512);
         @memcpy(response.total_text[0..response.total_text_len], fluent_response.text[0..response.total_text_len]);
-        response.execution_time_ns = @intCast(std.time.nanoTimestamp() - start);
+        response.execution_time_ns = @intCast(tri_time.nanoTimestamp() - start);
 
         self.state = .Complete;
         self.successful_streams += 1;
@@ -490,7 +491,7 @@ pub const StreamingEngine = struct {
     }
 
     pub fn streamWithYield(self: *StreamingEngine, input: []const u8) StreamingResponse {
-        const start = std.time.nanoTimestamp();
+        const start = tri_time.nanoTimestamp();
 
         self.total_streams += 1;
         self.state = .Generating;
@@ -531,7 +532,7 @@ pub const StreamingEngine = struct {
         response.buffer = self.buffer;
         response.total_text_len = @min(fluent_response.text_len, 512);
         @memcpy(response.total_text[0..response.total_text_len], fluent_response.text[0..response.total_text_len]);
-        response.execution_time_ns = @intCast(std.time.nanoTimestamp() - start);
+        response.execution_time_ns = @intCast(tri_time.nanoTimestamp() - start);
 
         self.state = .Complete;
         self.successful_streams += 1;

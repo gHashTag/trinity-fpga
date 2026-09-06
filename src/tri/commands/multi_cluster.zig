@@ -8,6 +8,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const tri_exit_codes = @import("../tri_exit_codes.zig");
 const colors = @import("../tri_colors.zig");
 
@@ -269,7 +270,7 @@ fn saveClusterState(_: std.mem.Allocator, state: *const ClusterState) void {
     file.writeAll(n_written) catch return;
     n_written = std.fmt.bufPrint(&tmp, "  \"created_at\": {d},\n", .{state.created_at}) catch return;
     file.writeAll(n_written) catch return;
-    n_written = std.fmt.bufPrint(&tmp, "  \"last_modified\": {d},\n", .{std.time.timestamp()}) catch return;
+    n_written = std.fmt.bufPrint(&tmp, "  \"last_modified\": {d},\n", .{tri_time.timestamp()}) catch return;
     file.writeAll(n_written) catch return;
     n_written = std.fmt.bufPrint(&tmp, "  \"is_running\": {s},\n", .{if (state.is_running) "true" else "false"}) catch return;
     file.writeAll(n_written) catch return;
@@ -533,7 +534,7 @@ fn runInitialize(allocator: std.mem.Allocator, args: []const []const u8) void {
     state = ClusterState.init();
     state.coordinator_port = port;
     state.discovery_port = discovery_port;
-    state.created_at = std.time.timestamp();
+    state.created_at = tri_time.timestamp();
     state.is_running = true;
 
     // Generate cluster ID
@@ -664,7 +665,7 @@ fn runAddNode(allocator: std.mem.Allocator, args: []const []const u8) void {
     copyToFixed(32, &node.role, &node.role_len, role);
     copyToFixed(16, &node.status, &node.status_len, "online");
     node.tier = tier;
-    node.added_at = std.time.timestamp();
+    node.added_at = tri_time.timestamp();
 
     // Calculate reward with tier multiplier using RewardCalculator
     const base_reward = REWARD_PER_OPERATION;
@@ -830,7 +831,7 @@ fn runSync(allocator: std.mem.Allocator, args: []const []const u8) void {
     }
 
     state.sync_count += 1;
-    state.last_sync_timestamp = std.time.timestamp();
+    state.last_sync_timestamp = tri_time.timestamp();
 
     // Accrue sync reward to each online node
     const sync_reward = REWARD_PER_SYNC;
@@ -891,7 +892,7 @@ fn runFederate(allocator: std.mem.Allocator, args: []const []const u8) void {
     var link = FederationLink.empty();
     copyToFixed(128, &link.address, &link.address_len, cluster_addr);
     copyToFixed(16, &link.sync_mode, &link.sync_mode_len, sync_mode);
-    link.linked_at = std.time.timestamp();
+    link.linked_at = tri_time.timestamp();
 
     state.federations[state.federation_count] = link;
     state.federation_count += 1;

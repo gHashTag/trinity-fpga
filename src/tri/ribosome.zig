@@ -11,6 +11,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const tri_mutex = @import("mutex.zig");
 const Allocator = std.mem.Allocator;
 
@@ -494,7 +495,7 @@ pub const DiscoveryResultEx = struct {
 
 /// Discover and parse all cell.tri manifests with persistent file cache.
 pub fn discoverCached(allocator: Allocator, options: DiscoveryOptionsEx) !DiscoveryResultEx {
-    const total_start = std.time.nanoTimestamp();
+    const total_start = tri_time.nanoTimestamp();
 
     var result = DiscoveryResultEx{ .cells = &.{} };
     var cache_hits: usize = 0;
@@ -536,7 +537,7 @@ pub fn discoverCached(allocator: Allocator, options: DiscoveryOptionsEx) !Discov
     const cwd = std.fs.cwd();
 
     // Scan filesystem for all cell.tri files
-    const parse_start = std.time.nanoTimestamp();
+    const parse_start = tri_time.nanoTimestamp();
     var cell_files = std.array_list.Managed(struct { path: []const u8, mtime: i128 }).initCapacity(allocator, 128) catch unreachable;
     defer {
         for (cell_files.items) |cf| allocator.free(cf.path);
@@ -571,7 +572,7 @@ pub fn discoverCached(allocator: Allocator, options: DiscoveryOptionsEx) !Discov
         }
     }
 
-    const parse_end = std.time.nanoTimestamp();
+    const parse_end = tri_time.nanoTimestamp();
     parse_time_ns = @as(u64, @intCast(parse_end - parse_start));
 
     var new_cache_cells = std.array_list.Managed(CachedCell).initCapacity(allocator, cell_files.items.len) catch unreachable;
@@ -630,7 +631,7 @@ pub fn discoverCached(allocator: Allocator, options: DiscoveryOptionsEx) !Discov
         }
     }
 
-    const total_end = std.time.nanoTimestamp();
+    const total_end = tri_time.nanoTimestamp();
 
     // Save new cache
     if (options.use_cache) {
@@ -695,7 +696,7 @@ pub fn discoverCached(allocator: Allocator, options: DiscoveryOptionsEx) !Discov
     return result;
 }
 pub fn discoverAllEx(allocator: Allocator, options: DiscoveryOptions) !DiscoveryResult {
-    const total_start = std.time.nanoTimestamp();
+    const total_start = tri_time.nanoTimestamp();
 
     // Check if we can use the cache
     var cache_hits: usize = 0;
@@ -733,7 +734,7 @@ pub fn discoverAllEx(allocator: Allocator, options: DiscoveryOptions) !Discovery
 
     if (!needs_refresh and options.use_cache) {
         // Use cached manifests
-        const parse_start = std.time.nanoTimestamp();
+        const parse_start = tri_time.nanoTimestamp();
         for (cache_state.cell_paths, cache_state.manifests) |path, manifest| {
             const content = try allocator.dupe(u8, "");
             const dir_path = try allocator.dupe(u8, path);
@@ -744,11 +745,11 @@ pub fn discoverAllEx(allocator: Allocator, options: DiscoveryOptions) !Discovery
             });
             cache_hits += 1;
         }
-        const parse_end = std.time.nanoTimestamp();
+        const parse_end = tri_time.nanoTimestamp();
         parse_time_ns = @as(u64, @intCast(parse_end - parse_start));
     } else {
         // Full scan
-        const parse_start = std.time.nanoTimestamp();
+        const parse_start = tri_time.nanoTimestamp();
 
         const cwd = std.fs.cwd();
 
@@ -809,7 +810,7 @@ pub fn discoverAllEx(allocator: Allocator, options: DiscoveryOptions) !Discovery
             }
         }
 
-        const parse_end = std.time.nanoTimestamp();
+        const parse_end = tri_time.nanoTimestamp();
         parse_time_ns = @as(u64, @intCast(parse_end - parse_start));
 
         // Update cache
@@ -835,12 +836,12 @@ pub fn discoverAllEx(allocator: Allocator, options: DiscoveryOptions) !Discovery
 
             cache_state.cell_paths = try paths.toOwnedSlice();
             cache_state.manifests = try manifests.toOwnedSlice();
-            cache_state.mtime = std.time.nanoTimestamp();
+            cache_state.mtime = tri_time.nanoTimestamp();
             cache_state.initialized = true;
         }
     }
 
-    const total_end = std.time.nanoTimestamp();
+    const total_end = tri_time.nanoTimestamp();
 
     return .{
         .cells = try scan_results.toOwnedSlice(),

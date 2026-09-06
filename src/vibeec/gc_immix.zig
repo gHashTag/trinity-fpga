@@ -9,6 +9,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayList;
 
@@ -246,7 +247,7 @@ pub const ImmixCollector = struct {
     }
 
     pub fn collect(self: *ImmixCollector) !void {
-        const start = std.time.nanoTimestamp();
+        const start = tri_time.nanoTimestamp();
 
         // Flip mark bit
         self.current_mark = 1 - self.current_mark;
@@ -258,7 +259,7 @@ pub const ImmixCollector = struct {
         const reclaimed = self.sweep();
 
         const duration: u64 = @intCast(@as(u128, @bitCast(
-            std.time.nanoTimestamp() - start,
+            tri_time.nanoTimestamp() - start,
         )));
         self.stats.recordCollection(reclaimed, duration);
     }

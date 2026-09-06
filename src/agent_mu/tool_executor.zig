@@ -11,6 +11,7 @@
 //! - Memory: Vector storage and retrieval
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const tool_coordinator = @import("tool_coordinator.zig");
 
 /// MCP tool types that AGENT MU can invoke
@@ -112,7 +113,7 @@ pub const MCPToolExecutor = struct {
             };
         }
 
-        const start_time = std.time.nanoTimestamp();
+        const start_time = tri_time.nanoTimestamp();
 
         // Route to appropriate MCP tool handler
         const result = switch (req.tool_type) {
@@ -125,7 +126,7 @@ pub const MCPToolExecutor = struct {
             .memory_search => try self.executeMemorySearch(req),
         };
 
-        const elapsed_ns = std.time.nanoTimestamp() - start_time;
+        const elapsed_ns = tri_time.nanoTimestamp() - start_time;
         const elapsed_ms: u64 = if (elapsed_ns > 0) @intCast(@divTrunc(elapsed_ns, 1_000_000)) else 0;
 
         return MCPResponse{

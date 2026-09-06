@@ -10,6 +10,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const types = @import("types.zig");
 const elo = @import("elo.zig");
 const external_api = @import("external_api.zig");
@@ -85,7 +86,7 @@ pub const Arena = struct {
             .fighter_a = fighter_a_name,
             .fighter_b = fighter_b_name,
             .status = .running,
-            .created_at = std.time.timestamp(),
+            .created_at = tri_time.timestamp(),
             .allocator = self.allocator,
         };
         self.next_battle_id += 1;
@@ -129,7 +130,7 @@ pub const Arena = struct {
         if (result_b.error_msg) |em| self.allocator.free(em);
 
         battle.status = .complete;
-        battle.completed_at = std.time.timestamp();
+        battle.completed_at = tri_time.timestamp();
 
         // Auto-judge if requested
         if (auto_judge) {
@@ -501,7 +502,7 @@ fn writeHippocampusEpisode(battle: types.Battle, data_line: []const u8) void {
     // Ensure directory
     std.fs.cwd().makePath(MEMORY_ROOT ++ "/" ++ agent_name) catch return;
 
-    const ts: u64 = @intCast(std.time.timestamp());
+    const ts: u64 = @intCast(tri_time.timestamp());
     var id_buf: [64]u8 = undefined;
     const id = std.fmt.bufPrint(&id_buf, "mem_{d}_arena_{x:0>8}", .{ ts, @as(u32, @truncate(ts)) }) catch return;
 

@@ -18,6 +18,8 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
+const tri_env = @import("tri_env.zig");
 // Import DIM for styling (debug print colors)
 const DIM = std.debug.print;
 const Allocator = std.mem.Allocator;
@@ -675,7 +677,7 @@ fn cloudAgents(allocator: Allocator) !void {
 
     // Display
     const STUCK_THRESHOLD = 600; // 10 minutes
-    const now = std.time.timestamp();
+    const now = tri_time.timestamp();
     var count: u32 = 0;
     var stuck_count: u32 = 0;
 
@@ -1059,7 +1061,7 @@ fn cloudPipeline(allocator: Allocator, args: []const []const u8) !void {
     const STUCK_TIMEOUT = 600; // 10 minutes
     const MAX_RETRIES: u32 = 3;
     var retry_count: u32 = 0;
-    var last_status_update: i64 = std.time.timestamp();
+    var last_status_update: i64 = tri_time.timestamp();
     var last_agent_status: [32]u8 = [_]u8{0} ** 32;
     var last_status_len: usize = 0;
 
@@ -1101,7 +1103,7 @@ fn cloudPipeline(allocator: Allocator, args: []const []const u8) !void {
                 current_status = status_str;
 
                 // Check if stuck (no status change for >10min and not done)
-                const now = std.time.timestamp();
+                const now = tri_time.timestamp();
                 const ts_needle = "\"ts\":";
                 if (std.mem.indexOf(u8, last_line, ts_needle)) |tidx| {
                     const tstart = tidx + ts_needle.len;
@@ -1134,7 +1136,7 @@ fn cloudPipeline(allocator: Allocator, args: []const []const u8) !void {
             }
         } else |_| {
             // No events yet, agent just starting
-            const now = std.time.timestamp();
+            const now = tri_time.timestamp();
             if (now - last_status_update > STUCK_TIMEOUT) {
                 is_stuck = true;
             }
@@ -1159,7 +1161,7 @@ fn cloudPipeline(allocator: Allocator, args: []const []const u8) !void {
                 break;
             };
             print("  {s}✓ Respawned (retry {d}){s}\n", .{ GREEN, retry_count, RESET });
-            last_status_update = std.time.timestamp();
+            last_status_update = tri_time.timestamp();
             // Wait for new agent to start
             std.Thread.sleep(5 * std.time.ns_per_s);
             continue;
@@ -2190,7 +2192,7 @@ fn cloudIde(allocator: Allocator, args: []const []const u8) !void {
 
         // Query for code-server service
         const gql = "query($projectId: String!) { project(id: $projectId) { services { edges { node { name id serviceInstances { edges { node { domains { serviceDomains { domain } } latestDeployment { status } } } } } } } } }";
-        const project_id = std.process.getEnvVarOwned(allocator, "RAILWAY_PROJECT_ID") catch {
+        const project_id = tri_env.getEnvVarOwned(allocator, "RAILWAY_PROJECT_ID") catch {
             print("  {s}⚠️  RAILWAY_PROJECT_ID not set{s}\n", .{ YELLOW, RESET });
             return;
         };

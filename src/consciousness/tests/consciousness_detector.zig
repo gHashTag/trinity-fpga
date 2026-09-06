@@ -13,6 +13,7 @@
 //! The detector produces a unified consciousness score and state.
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const mem = std.mem;
 
 // Import unified state
@@ -206,7 +207,7 @@ pub const ConsciousnessDetector = struct {
 
     /// Detect consciousness from unified state
     pub fn detect(self: *ConsciousnessDetector, state: *const UnifiedState) !DetectionResult {
-        const timestamp = @as(i64, @intCast(std.time.nanoTimestamp()));
+        const timestamp = @as(i64, @intCast(tri_time.nanoTimestamp()));
 
         // Detect each theory
         const iit_result = TheoryDetection{

@@ -19,6 +19,7 @@
 //! ```
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const builtin = @import("builtin");
 const mem = std.mem;
 const fs = std.fs;
@@ -123,7 +124,7 @@ pub const AutoGitCommit = struct {
         , .{
             self.commit_hash,
             self.author,
-            std.time.timestamp(), // Unix timestamp (use `date -r @N` for human-readable)
+            tri_time.timestamp(), // Unix timestamp (use `date -r @N` for human-readable)
             self.branch,
             self.confidence,
         });
@@ -282,7 +283,7 @@ pub const CommitSession = struct {
         const session_id = try generateSessionId(allocator);
         return .{
             .current_branch = try allocator.dupe(u8, branch),
-            .start_time = std.time.timestamp(),
+            .start_time = tri_time.timestamp(),
             .session_id = session_id,
         };
     }
@@ -309,13 +310,13 @@ pub const CommitSession = struct {
     }
 
     pub fn getDuration(self: *const CommitSession) i64 {
-        return std.time.timestamp() - self.start_time;
+        return tri_time.timestamp() - self.start_time;
     }
 };
 
 /// Generate unique session ID
 fn generateSessionId(allocator: Allocator) ![]const u8 {
-    const timestamp = std.time.timestamp();
+    const timestamp = tri_time.timestamp();
     const random = std.crypto.random.int(u64);
     return std.fmt.allocPrint(allocator, "session-{d}-{x}", .{ timestamp, random });
 }
@@ -398,7 +399,7 @@ pub fn analyzeAndCommit(
                 },
                 .branch = try allocator.dupe(u8, current_branch),
                 .author = "sacred-intelligence-auto",
-                .timestamp = std.time.timestamp(),
+                .timestamp = tri_time.timestamp(),
                 .confidence = patch.confidence,
             };
             try commits.append(commit);
@@ -420,7 +421,7 @@ pub fn analyzeAndCommit(
                 },
                 .branch = try allocator.dupe(u8, current_branch),
                 .author = "sacred-intelligence-auto",
-                .timestamp = std.time.timestamp(),
+                .timestamp = tri_time.timestamp(),
                 .confidence = patch.confidence,
             };
             try commits.append(commit);
@@ -536,7 +537,7 @@ pub fn validateCommitSafety(
 /// Create feature branch with sacred prefix
 pub fn createFeatureBranch(allocator: Allocator, name: []const u8) ![]const u8 {
     _ = name;
-    const timestamp = std.time.timestamp();
+    const timestamp = tri_time.timestamp();
     const branch_name = try std.fmt.allocPrint(
         allocator,
         "sacred/auto-patch-{d}",

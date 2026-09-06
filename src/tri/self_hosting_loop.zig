@@ -20,6 +20,7 @@
 //! 8. Comprehensive testing: Run full test suite after each patch
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const mem = std.mem;
 const fs = std.fs;
 const process = std.process;
@@ -156,7 +157,7 @@ pub const SelfHostingSession = struct {
         const session_id = try generateSessionId(allocator);
         errdefer allocator.free(session_id);
 
-        const start_time = std.time.timestamp();
+        const start_time = tri_time.timestamp();
 
         const backup_dir = try std.fmt.allocPrint(allocator, ".trinity/ralph/self-hosting/{s}", .{session_id});
         errdefer allocator.free(backup_dir);
@@ -240,14 +241,14 @@ pub const SelfHostingSession = struct {
 
     pub fn log(self: *const SelfHostingSession, comptime fmt: []const u8, args: anytype) void {
         if (self.verbose) {
-            const timestamp = std.time.timestamp() - self.start_time;
+            const timestamp = tri_time.timestamp() - self.start_time;
             std.debug.print("[SELF-HOST +{d}s] " ++ fmt ++ "\n", args ++ .{timestamp});
         }
     }
 };
 
 fn generateSessionId(allocator: Allocator) ![]const u8 {
-    const timestamp = std.time.timestamp();
+    const timestamp = tri_time.timestamp();
     const random = std.crypto.random.int(u64);
     return std.fmt.allocPrint(allocator, "session-{d}-{x}", .{ timestamp, random });
 }
@@ -479,7 +480,7 @@ pub fn applySelfPatch(allocator: Allocator, session: *SelfHostingSession, patch:
     try fs.cwd().writeFile(.{ .sub_path = patch.file_path, .data = patched_content });
 
     patch.applied = true;
-    patch.applied_at = std.time.timestamp();
+    patch.applied_at = tri_time.timestamp();
 
     session.metrics.patches_applied += 1;
     session.metrics.lines_changed += patch.end_line - patch.start_line + 1;
@@ -518,7 +519,7 @@ fn applyPatchToContent(allocator: Allocator, content: []const u8, patch: *const 
 pub fn testSelfPatch(allocator: Allocator, session: *SelfHostingSession, patch: *SelfPatch) !TestResult {
     session.log("Testing patch to {s}...", .{patch.file_path});
 
-    const start_ms = std.time.milliTimestamp();
+    const start_ms = tri_time.milliTimestamp();
 
     const result = try process.Child.run(.{
         .allocator = allocator,
@@ -532,7 +533,7 @@ pub fn testSelfPatch(allocator: Allocator, session: *SelfHostingSession, patch: 
         .max_output_bytes = 10 * 1024 * 1024,
     });
 
-    const duration_ms = std.time.milliTimestamp() - start_ms;
+    const duration_ms = tri_time.milliTimestamp() - start_ms;
 
     var tests_run: u32 = 0;
     var tests_passed: u32 = 0;
@@ -585,7 +586,7 @@ pub fn testSelfPatch(allocator: Allocator, session: *SelfHostingSession, patch: 
 pub fn runReplValidation(allocator: Allocator, session: *SelfHostingSession) !ReplValidationResult {
     session.log("Running REPL test validation...", .{});
 
-    const start_ms = std.time.milliTimestamp();
+    const start_ms = tri_time.milliTimestamp();
 
     // Run the tri test --repl command
     const result = try process.Child.run(.{
@@ -603,7 +604,7 @@ pub fn runReplValidation(allocator: Allocator, session: *SelfHostingSession) !Re
         allocator.free(result.stderr);
     }
 
-    const duration_ms = std.time.milliTimestamp() - start_ms;
+    const duration_ms = tri_time.milliTimestamp() - start_ms;
 
     // Check if validation passed
     const passed = result.term.Exited == 0 and
@@ -766,7 +767,7 @@ pub fn learnFromSelfPatch(session: *SelfHostingSession, outcome: PatchOutcome) !
 }
 
 pub fn generateSessionReport(allocator: Allocator, session: *SelfHostingSession) ![]const u8 {
-    const duration_ms = @as(i64, @intCast(std.time.milliTimestamp())) - session.start_time;
+    const duration_ms = @as(i64, @intCast(tri_time.milliTimestamp())) - session.start_time;
     session.metrics.session_duration_ms = duration_ms;
 
     var report = try std.ArrayList(u8).initCapacity(allocator, 4096);

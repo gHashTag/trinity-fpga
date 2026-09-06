@@ -2,6 +2,7 @@
 
 // TRI Orchestrator v2.0 - Full Command Registry
 const std = @import("std");
+const tri_time = @import("tri_time");
 const tri_mutex = @import("mutex.zig");
 const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayListUnmanaged;
@@ -479,7 +480,7 @@ pub const WorkflowExecutor = struct {
 
         for (ordered_steps) |step_idx| {
             const step = &self.workflow.steps[step_idx];
-            const start_time = std.time.milliTimestamp();
+            const start_time = tri_time.milliTimestamp();
 
             const cmd = self.registry.getCommand(step.command) orelse {
                 std.debug.print("Command not found: {s}\n", .{step.command});
@@ -496,7 +497,7 @@ pub const WorkflowExecutor = struct {
             };
 
             const result = try cmd.executor(self.allocator, step.args);
-            const end_time = std.time.milliTimestamp();
+            const end_time = tri_time.milliTimestamp();
 
             try results.append(self.allocator, .{
                 .step_name = step.name,
@@ -566,7 +567,7 @@ pub const WorkflowExecutor = struct {
             const executor = context.executor;
             const step = &executor.workflow.steps[step_index];
 
-            const start_time = std.time.milliTimestamp();
+            const start_time = tri_time.milliTimestamp();
 
             const cmd = if (context.executor.registry.getCommand(step.command)) |cmd| cmd else {
                 context.mutex.lock();
@@ -585,7 +586,7 @@ pub const WorkflowExecutor = struct {
             };
 
             const result = try cmd.executor(context.allocator, step.args);
-            const duration = @as(u64, @intCast(std.time.milliTimestamp() - start_time));
+            const duration = @as(u64, @intCast(tri_time.milliTimestamp() - start_time));
 
             context.mutex.lock();
             defer context.mutex.unlock();
@@ -707,13 +708,13 @@ pub const WorkflowExecutor = struct {
                 // Single step - execute directly
                 const idx = level.items[0];
                 const step = &self.workflow.steps[idx];
-                const start_time = std.time.milliTimestamp();
+                const start_time = tri_time.milliTimestamp();
 
                 const cmd = self.registry.getCommand(step.command) orelse {
                     return error.CommandNotFound;
                 };
                 const result = try cmd.executor(self.allocator, step.args);
-                const duration = @as(u64, @intCast(std.time.milliTimestamp() - start_time));
+                const duration = @as(u64, @intCast(tri_time.milliTimestamp() - start_time));
 
                 try all_results.append(.{
                     .step_name = step.name,
@@ -753,13 +754,13 @@ pub const WorkflowExecutor = struct {
                 const step_idx = level.items[i];
                 const pos = i;
                 const step = &self.workflow.steps[step_idx];
-                const start_time = std.time.milliTimestamp();
+                const start_time = tri_time.milliTimestamp();
 
                 const cmd = self.registry.getCommand(step.command) orelse {
                     return error.CommandNotFound;
                 };
                 const result = try cmd.executor(self.allocator, step.args);
-                const duration = @as(u64, @intCast(std.time.milliTimestamp() - start_time));
+                const duration = @as(u64, @intCast(tri_time.milliTimestamp() - start_time));
 
                 context.mutex.lock();
                 defer context.mutex.unlock();
@@ -892,7 +893,7 @@ pub const WorkflowExecutor = struct {
 
             const op_end = std.mem.indexOfScalar(u8, rest, ' ') orelse return error.InvalidCondition;
             const op = rest[0..op_end];
-            const threshold = std.mem.trimLeft(u8, rest[op_end + 1 ..], &std.ascii.whitespace);
+            const threshold = std.mem.trimStart(u8, rest[op_end + 1 ..], &std.ascii.whitespace);
 
             return .{ .phi_call = .{ .n = n_str, .comparison = op, .threshold = threshold } };
         }
@@ -902,8 +903,8 @@ pub const WorkflowExecutor = struct {
         for (ops) |op| {
             if (std.mem.indexOf(u8, trimmed, op)) |idx| {
                 if (idx == 0) continue;
-                const left = std.mem.trimRight(u8, trimmed[0..idx], &std.ascii.whitespace);
-                const right = std.mem.trimLeft(u8, trimmed[idx + op.len ..], &std.ascii.whitespace);
+                const left = std.mem.trimEnd(u8, trimmed[0..idx], &std.ascii.whitespace);
+                const right = std.mem.trimStart(u8, trimmed[idx + op.len ..], &std.ascii.whitespace);
                 return .{ .comparison = .{ .left = left, .op = op, .right = right } };
             }
         }
@@ -1041,13 +1042,13 @@ pub const WorkflowExecutor = struct {
                 }
             }
 
-            const start_time = std.time.milliTimestamp();
+            const start_time = tri_time.milliTimestamp();
 
             const cmd = self.registry.getCommand(step.command) orelse {
                 return error.CommandNotFound;
             };
             const result = try cmd.executor(self.allocator, step.args);
-            const duration = @as(u64, @intCast(std.time.milliTimestamp() - start_time));
+            const duration = @as(u64, @intCast(tri_time.milliTimestamp() - start_time));
 
             const exec_result = ExecutionResult{
                 .step_name = step.name,

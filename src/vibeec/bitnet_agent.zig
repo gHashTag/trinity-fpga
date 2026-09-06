@@ -11,6 +11,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const bitnet_ffi = @import("bitnet_ffi.zig");
 
 pub const BitNetAgentError = error{
@@ -149,7 +150,7 @@ pub const BitNetAgent = struct {
 
     /// Run agent on a task with ReAct loop
     pub fn run(self: *Self, task: []const u8) BitNetAgentError!AgentResult {
-        const start_time = std.time.nanoTimestamp();
+        const start_time = tri_time.nanoTimestamp();
 
         // Clear history for new task
         for (self.history.items) |item| {
@@ -201,7 +202,7 @@ pub const BitNetAgent = struct {
             }
         }
 
-        const end_time = std.time.nanoTimestamp();
+        const end_time = tri_time.nanoTimestamp();
         const total_ns = @as(f64, @floatFromInt(end_time - start_time));
 
         const tok_per_sec = if (self.total_time_ms > 0)
@@ -260,7 +261,7 @@ pub const TrinityNode = struct {
             .node_id = node_id,
             .total_requests = 0,
             .total_tokens_generated = 0,
-            .uptime_start = std.time.timestamp(),
+            .uptime_start = tri_time.timestamp(),
         };
     }
 
@@ -285,7 +286,7 @@ pub const TrinityNode = struct {
 
     /// Get node statistics
     pub fn getStats(self: *Self) NodeStats {
-        const uptime = std.time.timestamp() - self.uptime_start;
+        const uptime = tri_time.timestamp() - self.uptime_start;
         return NodeStats{
             .node_id = self.node_id,
             .total_requests = self.total_requests,

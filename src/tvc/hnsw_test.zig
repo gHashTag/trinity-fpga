@@ -9,6 +9,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const testing = std.testing;
 const Allocator = std.mem.Allocator;
 
@@ -440,7 +441,7 @@ test "HNSW benchmark insert 1000" {
 
     var rng = std.Random.DefaultPrng.init(42);
 
-    var timer = try std.time.Timer.start();
+    var timer = try tri_time.Timer.start();
     var i: u64 = 1;
     while (i <= 1000) : (i += 1) {
         const vec = try randomVector(allocator, rng.random(), DIM);
@@ -477,7 +478,7 @@ test "HNSW benchmark search 100k" {
 
     const query = try randomVector(allocator, rng.random(), DIM);
 
-    var timer = try std.time.Timer.start();
+    var timer = try tri_time.Timer.start();
     var results = try index.search(query, 50);
     defer results.deinit();
     const elapsed_ms = timer.read() / 1_000_000;

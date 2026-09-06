@@ -2,6 +2,7 @@
 // Testing centralized logging module
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const logging_mod = @import("logging");
 
 pub fn main() !void {
@@ -28,7 +29,7 @@ pub fn main() !void {
 
     // Test log writing
     std.debug.print("[+] Testing log writing...\n", .{});
-    const timestamp_raw = std.time.nanoTimestamp();
+    const timestamp_raw = tri_time.nanoTimestamp();
     const entry: logging_mod.LogEntry = .{
         .timestamp = @intCast(timestamp_raw),
         .level = logging_mod.LogLevel.Info,

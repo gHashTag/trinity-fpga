@@ -10,6 +10,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const types = @import("types.zig");
 const Allocator = std.mem.Allocator;
 
@@ -23,7 +24,7 @@ pub const CompletionResult = struct {
 
 /// Get current time in milliseconds
 fn nowMs() i64 {
-    return @divTrunc(std.time.milliTimestamp(), 1);
+    return @divTrunc(tri_time.milliTimestamp(), 1);
 }
 
 /// Call an external LLM to complete a prompt

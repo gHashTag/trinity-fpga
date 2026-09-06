@@ -7,6 +7,7 @@
 // phi^2 + 1/phi^2 = 3 = TRINITY
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 
 pub const WeightFormat = enum {
@@ -174,12 +175,12 @@ pub fn runInference(allocator: Allocator, haystack: Haystack, question: Question
     _ = allocator;
     _ = format;
 
-    const start = std.time.nanoTimestamp();
+    const start = tri_time.nanoTimestamp();
     // Mock inference - simulate 85% accuracy
     const ts_mod = @abs(@mod(@as(i128, start), 100));
     const truncated: u8 = @truncate(ts_mod);
     const mock_correct = @as(f32, @floatFromInt(truncated)) < 15.0;
-    const latency_ns = std.time.nanoTimestamp() - start;
+    const latency_ns = tri_time.nanoTimestamp() - start;
 
     var tok_per_sec: f32 = 0;
     if (latency_ns > 0) {
@@ -236,7 +237,7 @@ pub fn runSingleConfig(allocator: Allocator, format: WeightFormat, context_lengt
         allocator.free(haystack.questions);
     }
 
-    const start = std.time.nanoTimestamp();
+    const start = tri_time.nanoTimestamp();
     var correct_count: usize = 0;
     var total_latency_ms: f32 = 0;
 
@@ -246,7 +247,7 @@ pub fn runSingleConfig(allocator: Allocator, format: WeightFormat, context_lengt
         total_latency_ms += result.latency_ms;
     }
 
-    const elapsed_ms = @as(f32, @floatFromInt(@divFloor(std.time.nanoTimestamp() - start, 1_000_000)));
+    const elapsed_ms = @as(f32, @floatFromInt(@divFloor(tri_time.nanoTimestamp() - start, 1_000_000)));
 
     const accuracy = if (haystack.questions.len > 0)
         @as(f32, @floatFromInt(correct_count)) / @as(f32, @floatFromInt(haystack.questions.len))

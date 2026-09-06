@@ -6,6 +6,7 @@
 // =============================================================================
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const auto_repair_mod = @import("auto_repair.zig");
 const storage_mod = @import("storage.zig");
 const shard_scrubber_mod = @import("shard_scrubber.zig");
@@ -67,7 +68,7 @@ pub const RepairRateLimiter = struct {
             .allocator = allocator,
             .config = config,
             .repair_engine = auto_repair_mod.AutoRepairEngine.init(allocator),
-            .window_start = std.time.timestamp(),
+            .window_start = tri_time.timestamp(),
             .window_repairs = 0,
             .consecutive_failures = 0,
             .circuit_breaker_open = false,
@@ -91,7 +92,7 @@ pub const RepairRateLimiter = struct {
     }
 
     fn canRepairUnlocked(self: *RepairRateLimiter) bool {
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
 
         // Check circuit breaker
         if (self.circuit_breaker_open) {
@@ -196,7 +197,7 @@ pub const RepairRateLimiter = struct {
     fn checkCircuitBreaker(self: *RepairRateLimiter) void {
         if (self.consecutive_failures >= self.config.max_consecutive_failures) {
             self.circuit_breaker_open = true;
-            self.circuit_break_time = std.time.timestamp();
+            self.circuit_break_time = tri_time.timestamp();
             self.total_circuit_breaks += 1;
         }
     }

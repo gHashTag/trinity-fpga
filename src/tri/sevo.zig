@@ -15,6 +15,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 
 const evolution_mod = @import("evolution.zig");
@@ -247,7 +248,7 @@ fn runSevoInject(allocator: Allocator, args: []const []const u8) !void {
     // Inject configs
     var injected_count: u32 = 0;
     var api_calls: u32 = 0;
-    const base_seed: u32 = @truncate(@as(u64, @intCast(std.time.milliTimestamp())));
+    const base_seed: u32 = @truncate(@as(u64, @intCast(tri_time.milliTimestamp())));
 
     const configs_to_inject = @min(wave.configs.len, cand_count);
 
@@ -302,7 +303,7 @@ fn runSevoInject(allocator: Allocator, args: []const []const u8) !void {
 
     // Save lineage (append to JSONL)
     {
-        const ts = std.time.milliTimestamp();
+        const ts = tri_time.milliTimestamp();
         for (wave.configs[0..configs_to_inject]) |cfg| {
             var line_buf: [256]u8 = undefined;
             const line = std.fmt.bufPrint(&line_buf, "{{\"ts\":{d},\"wave\":\"{s}\",\"config\":\"{s}\",\"lr\":\"{s}\",\"batch\":{d},\"warmup\":{d}}}\n", .{ ts, wave.name, cfg.name, cfg.lr, cfg.batch, cfg.warmup }) catch continue;

@@ -7,6 +7,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 // ═══════════════════════════════════════════════════════════════════════════════
 // POOLED CONNECTION
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -90,7 +91,7 @@ pub const ConnectionPool = struct {
             for (pool.connections.items) |*conn| {
                 if (!conn.in_use) {
                     conn.in_use = true;
-                    conn.last_used = std.time.nanoTimestamp();
+                    conn.last_used = tri_time.nanoTimestamp();
                     self.total_acquired += 1;
                     return conn.stream;
                 }
@@ -107,7 +108,7 @@ pub const ConnectionPool = struct {
 
         const pooled = PooledConnection{
             .stream = stream,
-            .last_used = std.time.nanoTimestamp(),
+            .last_used = tri_time.nanoTimestamp(),
             .in_use = true,
         };
 
@@ -132,7 +133,7 @@ pub const ConnectionPool = struct {
             for (pool.connections.items) |*conn| {
                 if (conn.stream.handle == stream.handle and conn.in_use) {
                     conn.in_use = false;
-                    conn.last_used = std.time.nanoTimestamp();
+                    conn.last_used = tri_time.nanoTimestamp();
                     self.total_released += 1;
                     return;
                 }
@@ -164,7 +165,7 @@ pub const ConnectionPool = struct {
         self.mutex.lock();
         defer self.mutex.unlock();
 
-        const now = std.time.nanoTimestamp();
+        const now = tri_time.nanoTimestamp();
         var pruned: u32 = 0;
 
         var it = self.pools.iterator();

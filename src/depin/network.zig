@@ -5,6 +5,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const bootstrap = @import("bootstrap");
 const persistence = @import("persistence");
 const metrics_mod = @import("metrics");
@@ -139,7 +140,7 @@ pub const ClusterNode = struct {
 
     /// Check if node is healthy (seen in last hour, quality > 0.3)
     pub fn isHealthy(self: *const ClusterNode) bool {
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
         const hours_since_seen: f64 = if (self.last_heartbeat > 0)
             @as(f64, @floatFromInt(now - self.last_heartbeat)) / 3600.0
         else
@@ -150,7 +151,7 @@ pub const ClusterNode = struct {
 
     /// Update quality score based on interaction
     pub fn updateQuality(self: *ClusterNode, success: bool, latency_ms: u64) void {
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
         if (self.first_seen == 0) self.first_seen = now;
         self.last_heartbeat = now;
 
@@ -215,7 +216,7 @@ pub const UDPDiscovery = struct {
     pub fn broadcastDiscovery(self: *const UDPDiscovery, cluster_id: []const u8, node_id: []const u8) !void {
         const packet = try std.fmt.allocPrint(self.allocator,
             \\{{"type":"discovery","cluster_id":"{s}","node_id":"{s}","timestamp":{d}}}
-        , .{ cluster_id, node_id, std.time.milliTimestamp() });
+        , .{ cluster_id, node_id, tri_time.milliTimestamp() });
         defer self.allocator.free(packet);
 
         const broadcast_addr = std.net.Address.initIp4(.{ 255, 255, 255, 255 }, self.port);
@@ -227,7 +228,7 @@ pub const UDPDiscovery = struct {
     pub fn directedDiscovery(self: *const UDPDiscovery, target_ip: []const u8, target_port: u16, cluster_id: []const u8, node_id: []const u8) !void {
         const packet = try std.fmt.allocPrint(self.allocator,
             \\{{"type":"discovery","cluster_id":"{s}","node_id":"{s}","timestamp":{d}}}
-        , .{ cluster_id, node_id, std.time.milliTimestamp() });
+        , .{ cluster_id, node_id, tri_time.milliTimestamp() });
         defer self.allocator.free(packet);
 
         // Parse IP address
@@ -315,14 +316,14 @@ pub const UDPDiscovery = struct {
             },
             .role = .worker, // Default
             .tier = .free, // Default
-            .timestamp = @as(u64, @intCast(std.time.milliTimestamp())),
+            .timestamp = @as(u64, @intCast(tri_time.milliTimestamp())),
         };
     }
 
     pub fn respondToDiscovery(self: *const UDPDiscovery, dest_addr: std.net.Address, cluster_id: []const u8, node_id: []const u8, role: NodeRole, tier: NodeTier) !void {
         const packet = try std.fmt.allocPrint(self.allocator,
             \\{{"type":"discovery_response","cluster_id":"{s}","node_id":"{s}","role":"{s}","tier":"{s}","timestamp":{d}}}
-        , .{ cluster_id, node_id, role.toString(), tier.toString(), @as(u64, @intCast(std.time.milliTimestamp())) });
+        , .{ cluster_id, node_id, role.toString(), tier.toString(), @as(u64, @intCast(tri_time.milliTimestamp())) });
         defer self.allocator.free(packet);
 
         _ = try std.posix.sendto(self.socket, packet, 0, &dest_addr.any, dest_addr.getOsSockLen());
@@ -496,7 +497,7 @@ pub const TCPJobClient = struct {
             .job_id = try self.allocator.dupe(u8, job_id),
             .payload = try self.allocator.dupe(u8, payload),
             .reward = reward,
-            .timestamp = std.time.milliTimestamp(),
+            .timestamp = tri_time.milliTimestamp(),
         };
     }
 
@@ -612,7 +613,7 @@ pub const ClusterManager = struct {
         );
         defer state.deinit(self.allocator);
 
-        const now = @as(u64, @intCast(std.time.timestamp()));
+        const now = @as(u64, @intCast(tri_time.timestamp()));
 
         for (self.nodes.items) |node| {
             const peer = persistence.PeerState{
@@ -669,9 +670,9 @@ pub const ClusterManager = struct {
         try self.udp.?.broadcastDiscovery(self.cluster_id, self.node_id);
 
         var discovered: usize = 0;
-        const start_time = std.time.milliTimestamp();
+        const start_time = tri_time.milliTimestamp();
 
-        while (std.time.milliTimestamp() - start_time < timeout_ms) {
+        while (tri_time.milliTimestamp() - start_time < timeout_ms) {
             const discovery = try self.udp.?.receiveDiscovery(1000);
             if (discovery) |d| {
                 // Check if node already exists
@@ -738,9 +739,9 @@ pub const ClusterManager = struct {
         // Wait for responses
         var discovered: usize = 0;
         const timeout_ms = 5000;
-        const start_time = std.time.milliTimestamp();
+        const start_time = tri_time.milliTimestamp();
 
-        while (std.time.milliTimestamp() - start_time < timeout_ms) {
+        while (tri_time.milliTimestamp() - start_time < timeout_ms) {
             const recv_result = self.udp.?.receiveDiscovery(1000) catch |err| {
                 if (err == error.WouldBlock) continue;
                 return err;
@@ -796,14 +797,14 @@ pub const ClusterManager = struct {
         defer conn.deinit();
 
         // Create job packet
-        const job_id = try std.fmt.allocPrint(self.allocator, "job-{d}", .{std.time.milliTimestamp()});
+        const job_id = try std.fmt.allocPrint(self.allocator, "job-{d}", .{tri_time.milliTimestamp()});
         defer self.allocator.free(job_id);
 
         const job = JobPacket{
             .job_id = job_id,
             .payload = payload,
             .reward = base_reward,
-            .timestamp = std.time.milliTimestamp(),
+            .timestamp = tri_time.milliTimestamp(),
         };
 
         try conn.sendJob(job);

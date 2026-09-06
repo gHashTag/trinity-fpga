@@ -4,6 +4,7 @@
 // Golden Identity: phi^2 + 1/phi^2 = 3
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const interface = @import("plugin_interface.zig");
 const registry_mod = @import("plugin_registry.zig");
@@ -132,7 +133,7 @@ pub const PluginLoader = struct {
 
     /// Load plugin from filesystem path
     pub fn loadFromPath(self: *Self, path: []const u8) !LoadResult {
-        const start_time = std.time.nanoTimestamp();
+        const start_time = tri_time.nanoTimestamp();
 
         // Detect file type
         const strategy = detectStrategy(path);
@@ -148,7 +149,7 @@ pub const PluginLoader = struct {
             },
         };
 
-        const end_time = std.time.nanoTimestamp();
+        const end_time = tri_time.nanoTimestamp();
         const load_time = end_time - start_time;
 
         if (result.plugin) |plugin| {

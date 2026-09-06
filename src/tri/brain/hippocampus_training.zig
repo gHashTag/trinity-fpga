@@ -16,6 +16,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const thalamus_logs = @import("thalamus_logs.zig");
 const contracts = @import("contracts.zig");
@@ -36,7 +37,7 @@ pub const CachedWorkerStatus = struct {
     cached: bool = true, // Flag indicating this is cache, NOT live truth
 
     pub fn ageSec(self: *const CachedWorkerStatus) i64 {
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
         return now - self.last_updated;
     }
 
@@ -76,7 +77,7 @@ pub const PopulationCache = struct {
 
     /// Update or add worker in cache (optimized: avoids key allocation on update)
     pub fn updateWorker(self: *Self, allocator: Allocator, service_name: []const u8, status: LiveStatus, step: u32, ppl: f32) !void {
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
 
         // First try get existing entry to avoid allocation
         if (self.workers.getEntry(service_name)) |entry| {
@@ -152,7 +153,7 @@ pub const PopulationCache = struct {
 
     /// Check if refresh is needed
     pub fn needsRefresh(self: *const Self) bool {
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
         return (now - self.last_refresh) > self.refresh_interval_sec;
     }
 };
@@ -187,7 +188,7 @@ pub const Hippocampus = struct {
 
     /// Refresh cache from Thalamus (expensive Railway API call!)
     pub fn refreshFromThalamus(self: *Self, thalamus: *const thalamus_logs.Thalamus) !void {
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
 
         // Get all sacred workers live state
         var live_states = try thalamus.getSacredWorkersLive();
@@ -332,7 +333,7 @@ pub const Hippocampus = struct {
 
     /// Get cache age in seconds
     pub fn getCacheAge(self: *const Self) i64 {
-        return std.time.timestamp() - self.cache.last_refresh;
+        return tri_time.timestamp() - self.cache.last_refresh;
     }
 
     /// Check if worker exists in cache
@@ -413,7 +414,7 @@ test "hippocampus_stale_detection" {
     defer cache.deinit(allocator);
 
     // Simulate old entry (100 seconds ago)
-    _ = std.time.timestamp() - 100; // Would be used to set last_updated timestamp
+    _ = tri_time.timestamp() - 100; // Would be used to set last_updated timestamp
     try cache.updateWorker(allocator, "old-worker", .training, 500, 5.0);
 
     // Hack the last_updated timestamp
@@ -553,7 +554,7 @@ test "hippocampus_needs_refresh" {
     try std.testing.expect(cache.needsRefresh());
 
     // Set last_refresh to now
-    cache.last_refresh = std.time.timestamp();
+    cache.last_refresh = tri_time.timestamp();
 
     // Should not need refresh immediately
     try std.testing.expect(!cache.needsRefresh());
@@ -600,12 +601,12 @@ test "hippocampus_custom_refresh_interval" {
     defer cache.deinit(allocator);
 
     cache.refresh_interval_sec = 60; // 1 minute
-    cache.last_refresh = std.time.timestamp();
+    cache.last_refresh = tri_time.timestamp();
 
     try std.testing.expect(!cache.needsRefresh());
 
     // Simulate time passing (by setting last_refresh to past)
-    cache.last_refresh = std.time.timestamp() - 61;
+    cache.last_refresh = tri_time.timestamp() - 61;
 
     try std.testing.expect(cache.needsRefresh());
 }

@@ -8,6 +8,8 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
+const tri_env = @import("tri_env.zig");
 const Allocator = std.mem.Allocator;
 const types = @import("faculty_types.zig");
 const voice_engine = @import("voice_engine.zig");
@@ -533,7 +535,7 @@ fn renderRaw(ctx: RawContext, buf: []u8) usize {
 
     // Pipeline (with timestamp guard)
     if (ctx.pipeline) |p| {
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
         const age_s: i64 = if (now > p.timestamp) now - p.timestamp else 0;
         const age_h = @divTrunc(age_s, 3600);
         append(buf, &pos, "pipeline={s}:link{d}:{d}h\n", .{ p.status, p.last_link, age_h });
@@ -924,7 +926,7 @@ fn loadPrevDelta(allocator: Allocator, snapshot: FacultySnapshot) FacultyDelta {
     const prev_compile_total = std.fmt.parseInt(u16, lines.next() orelse "0", 10) catch 0;
     const prev_issues = std.fmt.parseInt(u16, lines.next() orelse "0", 10) catch 0;
 
-    const now = std.time.timestamp();
+    const now = tri_time.timestamp();
     const seconds_ago = now - prev_ts;
     const cur_active = snapshot.activeFaculty();
 
@@ -955,7 +957,7 @@ fn savePrevSnapshot(snapshot: FacultySnapshot) void {
     const active = snapshot.activeFaculty();
     var buf: [256]u8 = undefined;
     const content = std.fmt.bufPrint(&buf, "{d}\n{d}\n{d}\n{d}\n{d}\n{d}\n{d}\n", .{
-        std.time.timestamp(),
+        tri_time.timestamp(),
         @as(u16, snapshot.compile_rate),
         @as(u16, active),
         snapshot.dirty_files,
@@ -1055,8 +1057,8 @@ fn getGhToken(allocator: Allocator) ?[]u8 {
     // Prefer `gh auth token` — always returns current token from keyring.
     // Env vars (loaded from .env) may contain stale/revoked tokens.
     if (getGhAuthToken(allocator)) |t| return t;
-    if (std.process.getEnvVarOwned(allocator, "GH_TOKEN") catch null) |t| return t;
-    if (std.process.getEnvVarOwned(allocator, "GITHUB_TOKEN") catch null) |t| return t;
+    if (tri_env.getEnvVarOwned(allocator, "GH_TOKEN") catch null) |t| return t;
+    if (tri_env.getEnvVarOwned(allocator, "GITHUB_TOKEN") catch null) |t| return t;
     return null;
 }
 
@@ -1066,10 +1068,10 @@ fn getGhAuthToken(allocator: Allocator) ?[]u8 {
     var clean_env = std.process.EnvMap.init(allocator);
     defer clean_env.deinit();
     // EnvMap.put copies the value, so we can use string literals for fallbacks
-    const path = std.process.getEnvVarOwned(allocator, "PATH") catch null;
+    const path = tri_env.getEnvVarOwned(allocator, "PATH") catch null;
     defer if (path) |p| allocator.free(p);
     clean_env.put("PATH", path orelse "/usr/bin:/usr/local/bin") catch return null;
-    const home = std.process.getEnvVarOwned(allocator, "HOME") catch null;
+    const home = tri_env.getEnvVarOwned(allocator, "HOME") catch null;
     defer if (home) |h| allocator.free(h);
     clean_env.put("HOME", home orelse "/tmp") catch return null;
     const result = std.process.Child.run(.{

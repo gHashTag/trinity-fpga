@@ -3,6 +3,7 @@
 // φ² + 1/φ² = 3
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const real_agent = @import("real_agent.zig");
 const planning_agent = @import("planning_agent.zig");
@@ -81,7 +82,7 @@ pub const E2ETestSuite = struct {
 
     /// Run navigation test
     pub fn testNavigation(self: *Self) !void {
-        const start = std.time.milliTimestamp();
+        const start = tri_time.milliTimestamp();
 
         var agent = real_agent.RealAgent.init(self.allocator, .{});
         defer agent.deinit();
@@ -108,7 +109,7 @@ pub const E2ETestSuite = struct {
         };
         defer self.allocator.free(url);
 
-        const elapsed = std.time.milliTimestamp() - start;
+        const elapsed = tri_time.milliTimestamp() - start;
 
         // Check result
         if (std.mem.indexOf(u8, url, "example.com") != null) {
@@ -120,7 +121,7 @@ pub const E2ETestSuite = struct {
 
     /// Run title extraction test
     pub fn testGetTitle(self: *Self) !void {
-        const start = std.time.milliTimestamp();
+        const start = tri_time.milliTimestamp();
 
         var agent = real_agent.RealAgent.init(self.allocator, .{});
         defer agent.deinit();
@@ -143,7 +144,7 @@ pub const E2ETestSuite = struct {
         };
         defer self.allocator.free(title);
 
-        const elapsed = std.time.milliTimestamp() - start;
+        const elapsed = tri_time.milliTimestamp() - start;
 
         if (std.mem.indexOf(u8, title, "Example") != null) {
             try self.addResult("GetTitle", true, 1, @intCast(elapsed), null);
@@ -154,7 +155,7 @@ pub const E2ETestSuite = struct {
 
     /// Run click test
     pub fn testClick(self: *Self) !void {
-        const start = std.time.milliTimestamp();
+        const start = tri_time.milliTimestamp();
 
         var agent = real_agent.RealAgent.init(self.allocator, .{});
         defer agent.deinit();
@@ -186,7 +187,7 @@ pub const E2ETestSuite = struct {
         };
         defer self.allocator.free(url);
 
-        const elapsed = std.time.milliTimestamp() - start;
+        const elapsed = tri_time.milliTimestamp() - start;
 
         // Should navigate to iana.org
         if (std.mem.indexOf(u8, url, "iana.org") != null) {
@@ -198,7 +199,7 @@ pub const E2ETestSuite = struct {
 
     /// Run full agent test with Ollama - ISOLATED with new page
     pub fn testPlanningAgent(self: *Self) !void {
-        const start = std.time.milliTimestamp();
+        const start = tri_time.milliTimestamp();
 
         // Create NEW page for isolation
         const new_ws_url = self.createNewPage() catch {
@@ -228,7 +229,7 @@ pub const E2ETestSuite = struct {
             return;
         };
 
-        const elapsed = std.time.milliTimestamp() - start;
+        const elapsed = tri_time.milliTimestamp() - start;
 
         // Check if goal was achieved
         // Success if: done AND (result contains "Example" OR URL contains "example.com")
@@ -251,7 +252,7 @@ pub const E2ETestSuite = struct {
         const unique_goal = "Go to wikipedia.org";
 
         // First run - cache miss (LLM call)
-        const start1 = std.time.milliTimestamp();
+        const start1 = tri_time.milliTimestamp();
 
         const ws_url1 = self.createNewPage() catch {
             try self.addResult("CacheHit", false, 0, 0, "Failed to create page 1");
@@ -276,11 +277,11 @@ pub const E2ETestSuite = struct {
             return;
         };
 
-        const elapsed1 = std.time.milliTimestamp() - start1;
+        const elapsed1 = tri_time.milliTimestamp() - start1;
         std.debug.print("[CACHE TEST] First run (miss): {d}ms\n", .{elapsed1});
 
         // Second run - should hit cache (no LLM call)
-        const start2 = std.time.milliTimestamp();
+        const start2 = tri_time.milliTimestamp();
 
         const ws_url2 = self.createNewPage() catch {
             try self.addResult("CacheHit", false, 0, 0, "Failed to create page 2");
@@ -305,7 +306,7 @@ pub const E2ETestSuite = struct {
             return;
         };
 
-        const elapsed2 = std.time.milliTimestamp() - start2;
+        const elapsed2 = tri_time.milliTimestamp() - start2;
         std.debug.print("[CACHE TEST] Second run (hit): {d}ms\n", .{elapsed2});
 
         // Calculate speedup
@@ -324,7 +325,7 @@ pub const E2ETestSuite = struct {
 
     /// Test search functionality
     pub fn testSearch(self: *Self) !void {
-        const start = std.time.milliTimestamp();
+        const start = tri_time.milliTimestamp();
 
         // Create new page for isolation
         const new_ws_url = self.createNewPage() catch {
@@ -370,7 +371,7 @@ pub const E2ETestSuite = struct {
         };
         defer self.allocator.free(url);
 
-        const elapsed = std.time.milliTimestamp() - start;
+        const elapsed = tri_time.milliTimestamp() - start;
 
         if (std.mem.indexOf(u8, url, "q=") != null or
             std.mem.indexOf(u8, url, "search") != null or
@@ -384,7 +385,7 @@ pub const E2ETestSuite = struct {
 
     /// Test typing in input field
     pub fn testTypeInput(self: *Self) !void {
-        const start = std.time.milliTimestamp();
+        const start = tri_time.milliTimestamp();
 
         const new_ws_url = self.createNewPage() catch {
             try self.addResult("TypeInput", false, 0, 0, "Failed to create new page");
@@ -421,13 +422,13 @@ pub const E2ETestSuite = struct {
             return;
         }
 
-        const elapsed = std.time.milliTimestamp() - start;
+        const elapsed = tri_time.milliTimestamp() - start;
         try self.addResult("TypeInput", true, 1, @intCast(elapsed), null);
     }
 
     /// Test form submission (httpbin.org)
     pub fn testFormSubmit(self: *Self) !void {
-        const start = std.time.milliTimestamp();
+        const start = tri_time.milliTimestamp();
 
         const new_ws_url = self.createNewPage() catch {
             try self.addResult("FormSubmit", false, 0, 0, "Failed to create new page");
@@ -472,7 +473,7 @@ pub const E2ETestSuite = struct {
         };
         defer self.allocator.free(url);
 
-        const elapsed = std.time.milliTimestamp() - start;
+        const elapsed = tri_time.milliTimestamp() - start;
 
         // Check if search was performed (URL should contain q= or search)
         if (std.mem.indexOf(u8, url, "q=") != null or
@@ -487,7 +488,7 @@ pub const E2ETestSuite = struct {
 
     /// Test multi-step workflow: navigate -> search -> click result
     pub fn testMultiStep(self: *Self) !void {
-        const start = std.time.milliTimestamp();
+        const start = tri_time.milliTimestamp();
 
         const new_ws_url = self.createNewPage() catch {
             try self.addResult("MultiStep", false, 0, 0, "Failed to create new page");
@@ -512,7 +513,7 @@ pub const E2ETestSuite = struct {
             return;
         };
 
-        const elapsed = std.time.milliTimestamp() - start;
+        const elapsed = tri_time.milliTimestamp() - start;
 
         // Success if we navigated away from duckduckgo (clicked a result)
         const url = agent.state.current_page.url;
@@ -531,7 +532,7 @@ pub const E2ETestSuite = struct {
 
     /// Test error recovery: handle non-existent element gracefully
     pub fn testErrorRecovery(self: *Self) !void {
-        const start = std.time.milliTimestamp();
+        const start = tri_time.milliTimestamp();
 
         const new_ws_url = self.createNewPage() catch {
             try self.addResult("ErrorRecovery", false, 0, 0, "Failed to create new page");
@@ -574,7 +575,7 @@ pub const E2ETestSuite = struct {
         };
         defer self.allocator.free(url);
 
-        const elapsed = std.time.milliTimestamp() - start;
+        const elapsed = tri_time.milliTimestamp() - start;
 
         if (std.mem.indexOf(u8, url, "example.com") != null) {
             try self.addResult("ErrorRecovery", true, 2, @intCast(elapsed), null);

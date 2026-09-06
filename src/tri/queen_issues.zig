@@ -6,6 +6,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const qt = @import("queen_types.zig");
 const github_client = @import("github_client.zig");
 const github_app_auth = @import("github_app_auth.zig");
@@ -892,7 +893,7 @@ pub const StepStatus = enum {
 };
 
 fn timestampStr() []const u8 {
-    const timestamp = std.time.timestamp();
+    const timestamp = tri_time.timestamp();
     const secs = @mod(timestamp, 60);
     const mins = @mod(@divTrunc(timestamp, 60), 60);
     const hours = @mod(@divTrunc(timestamp, 3600), 24);

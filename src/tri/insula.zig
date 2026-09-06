@@ -9,6 +9,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const hippocampus = @import("hippocampus.zig");
 
@@ -200,7 +201,7 @@ pub fn measureState(
         .actions_taken = actions_taken,
         .actions_suppressed = actions_suppressed,
         .action_rate = action_rate,
-        .measured_at = std.time.timestamp(),
+        .measured_at = tri_time.timestamp(),
     };
 }
 
@@ -411,7 +412,7 @@ pub fn health() CellHealth {
     return CellHealth{
         .status = .healthy,
         .cycle = 0,
-        .last_check = std.time.timestamp(),
+        .last_check = tri_time.timestamp(),
     };
 }
 
@@ -695,7 +696,7 @@ test "insula — InternalState activity threshold" {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 test "insula — measureState returns valid state" {
-    const start = @as(i64, @intCast(std.time.nanoTimestamp()));
+    const start = @as(i64, @intCast(tri_time.nanoTimestamp()));
     var timing = TimingSnapshot.init();
     // Add delay to ensure measurable time passes
     std.Thread.sleep(1 * std.time.ns_per_ms);
@@ -705,7 +706,7 @@ test "insula — measureState returns valid state" {
 }
 
 test "insula — measureState has timing data" {
-    const start = @as(i64, @intCast(std.time.nanoTimestamp()));
+    const start = @as(i64, @intCast(tri_time.nanoTimestamp()));
     var timing = TimingSnapshot.init();
     const state = try measureState(std.testing.allocator, start, &timing, 5, 1, 10);
     // Timing fields should be populated

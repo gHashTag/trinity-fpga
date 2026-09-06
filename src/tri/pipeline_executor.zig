@@ -4,6 +4,7 @@
 // ============================================================================
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const golden_chain = @import("golden_chain.zig");
 const tvc_gate_mod = @import("tvc_gate.zig");
 const tvc_corpus = @import("tvc_corpus");
@@ -94,13 +95,13 @@ pub const PipelineExecutor = struct {
             self.printLinkStart(link);
 
             // Execute link
-            const start_time = std.time.milliTimestamp();
+            const start_time = tri_time.milliTimestamp();
             var result = LinkResult.init(link);
             result.started_at = start_time;
             result.status = .in_progress;
 
             const link_result = self.executeLink(link);
-            result.completed_at = std.time.milliTimestamp();
+            result.completed_at = tri_time.milliTimestamp();
 
             if (link_result) |metrics| {
                 result.status = .completed;
@@ -332,13 +333,13 @@ pub const PipelineExecutor = struct {
         var metrics = LinkMetrics{};
 
         // Simple benchmark
-        const start = std.time.nanoTimestamp();
+        const start = tri_time.nanoTimestamp();
         var sum: u64 = 0;
         var i: u64 = 0;
         while (i < 1000) : (i += 1) {
             sum += i * i;
         }
-        const elapsed = std.time.nanoTimestamp() - start;
+        const elapsed = tri_time.nanoTimestamp() - start;
         std.mem.doNotOptimizeAway(&sum);
 
         metrics.duration_ms = @intCast(@divFloor(elapsed, 1_000_000));

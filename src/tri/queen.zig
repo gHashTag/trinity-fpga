@@ -17,6 +17,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const tri_mutex = @import("mutex.zig");
 const faculty_board = @import("cortex.zig");
 const faculty_types = @import("faculty_types.zig");
@@ -208,7 +209,7 @@ fn cmdTamagotchiReport(allocator: Allocator) !void {
 
     // 1. Read Queen state
     const state = loadState();
-    const now = std.time.timestamp();
+    const now = tri_time.timestamp();
     const uptime = if (state.started_at > 0) now - state.started_at else 0;
 
     // 2. Get farm status
@@ -517,7 +518,7 @@ fn runManualAction(allocator: Allocator, kind_str: []const u8) !void {
 
 fn runQueenLoop(allocator: Allocator, config: QueenConfig) !void {
     var state = loadState();
-    if (state.started_at == 0) state.started_at = std.time.timestamp();
+    if (state.started_at == 0) state.started_at = tri_time.timestamp();
 
     const tg = qt.initTelegram();
 
@@ -582,7 +583,7 @@ fn runQueenLoop(allocator: Allocator, config: QueenConfig) !void {
 
     while (true) {
         state.cycle += 1;
-        const cycle_start = std.time.timestamp();
+        const cycle_start = tri_time.timestamp();
 
         if (!config.daemon) {
             print("{s}=== Queen #{d} ==={s}\n", .{ GOLDEN, state.cycle, RESET });
@@ -963,7 +964,7 @@ const SupervisorLog = struct {
         self.mutex.lock();
         defer self.mutex.unlock();
 
-        const timestamp = std.time.timestamp();
+        const timestamp = tri_time.timestamp();
         var buf: [4096]u8 = undefined;
         const msg = std.fmt.bufPrint(&buf, "[{d}] {s}\n", .{ timestamp, std.fmt.fmtFmt(fmt, args) }) catch return;
         try self.file.writeAll(msg);
@@ -1002,7 +1003,7 @@ pub fn runSupervisorMode(allocator: Allocator) !void {
 
     while (true) {
         cycle += 1;
-        const cycle_start = std.time.timestamp();
+        const cycle_start = tri_time.timestamp();
 
         print("{s}=== Supervisor Cycle #{d} ==={s}\n", .{ GOLDEN, cycle, RESET });
 
@@ -1513,7 +1514,7 @@ fn fmtHeartbeat(buf: []u8, snap: FacultySnapshot, evo: EvolutionInfo, arena: Are
 }
 
 fn fmtDaily(buf: []u8, snap: FacultySnapshot, evo: EvolutionInfo, arena: ArenaInfo, senses: qt.SenseResult, state: QueenState) []const u8 {
-    const uptime_h = @divTrunc(std.time.timestamp() - state.started_at, 3600);
+    const uptime_h = @divTrunc(tri_time.timestamp() - state.started_at, 3600);
 
     return std.fmt.bufPrint(buf, qt.E_CROWN ++ " Queen v2 Daily\n" ++
         "\n" ++
@@ -1596,7 +1597,7 @@ fn determineGoal(snap: FacultySnapshot, evo: EvolutionInfo, incidents: *const qu
     if (evo.service_count == 0) return .check_farm;
     if (snap.dirty_files > 100) return .cleanup_cloud;
 
-    const ts = std.time.timestamp();
+    const ts = tri_time.timestamp();
     const hour: u64 = @intCast(@mod(@divTrunc(ts, 3600), 24));
     if (hour == 9) return .research_update;
 
@@ -1664,7 +1665,7 @@ fn showStatus(allocator: Allocator) !void {
     const senses = queen_senses.collectAllSenses(allocator, snap);
     const evo = queen_senses.readEvolutionInfo();
 
-    const uptime = std.time.timestamp() - state.started_at;
+    const uptime = tri_time.timestamp() - state.started_at;
     const hours = @divTrunc(uptime, 3600);
     const minutes = @divTrunc(@mod(uptime, 3600), 60);
 
@@ -1720,7 +1721,7 @@ fn printCycleSummary(snap: FacultySnapshot, evo: EvolutionInfo, arena: ArenaInfo
     if (alert_count > 0) {
         print("  {s}" ++ qt.E_FIRE ++ " {d} alert(s){s}\n", .{ RED, alert_count, RESET });
     }
-    const since_hb = std.time.timestamp() - state.last_heartbeat;
+    const since_hb = tri_time.timestamp() - state.last_heartbeat;
     const next_hb_min = if (state.last_heartbeat == 0) @as(i64, 0) else @divTrunc(@as(i64, 3600) - since_hb, 60);
     print("  " ++ qt.E_CYCLE ++ " #{d} | Heartbeat in {d}m\n\n", .{ state.cycle, next_hb_min });
 }
@@ -1740,7 +1741,7 @@ fn logEvent(state: *QueenState, snap: FacultySnapshot, alert_count: usize) void 
         \\{{"ts":{d},"seq":{d},"agent":"queen","kind":"queen_cycle","event":"queen_cycle","cycle":{d},"build_ok":{s},"dirty":{d},"issues":{d},"alerts":{d}}}
         \\
     , .{
-        std.time.timestamp(),
+        tri_time.timestamp(),
         state.event_seq,
         state.cycle,
         if (snap.build_ok) "true" else "false",
@@ -1762,7 +1763,7 @@ fn emitEvent(state: *QueenState, kind: []const u8, text: []const u8) void {
         \\{{"ts":{d},"seq":{d},"agent":"queen","kind":"{s}","text":"{s}"}}
         \\
     , .{
-        std.time.timestamp(),
+        tri_time.timestamp(),
         state.event_seq,
         kind,
         text,
@@ -1781,7 +1782,7 @@ fn emitStep(state: *QueenState, step: u8, total: u8, text: []const u8) void {
         \\{{"ts":{d},"seq":{d},"agent":"queen","kind":"queen_cycle","step":{d},"total":{d},"text":"{s}"}}
         \\
     , .{
-        std.time.timestamp(),
+        tri_time.timestamp(),
         state.event_seq,
         step,
         total,
@@ -1801,7 +1802,7 @@ fn emitSupervisorStep(step: u8, total: u8, text: []const u8) void {
         \\{{"ts":{d},"agent":"supervisor","kind":"supervisor_cycle","step":{d},"total":{d},"text":"{s}"}}
         \\
     , .{
-        std.time.timestamp(),
+        tri_time.timestamp(),
         step,
         total,
         text,
@@ -1905,7 +1906,7 @@ fn writeTodosFile(senses: qt.SenseResult) void {
     var fbs = std.io.fixedBufferStream(&buf);
     const w = fbs.writer();
 
-    w.print("{{\"generated_at\":{d},\"items\":[", .{std.time.timestamp()}) catch return;
+    w.print("{{\"generated_at\":{d},\"items\":[", .{tri_time.timestamp()}) catch return;
 
     var count: usize = 0;
 
@@ -1966,7 +1967,7 @@ fn writeSensesFile(s: qt.SenseResult) void {
     const data = std.fmt.bufPrint(&buf,
         \\{{"ts":{d},"build_ok":{s},"test_rate":{d},"dirty_files":{d},"open_issues":{d},"agent_count":{d},"farm_services":{d},"farm_best_ppl":{d:.2},"arena_battles":{d},"ouroboros_score":{d:.1},"disk_free_gb":{d:.1},"keys_present":{d},"keys_total":{d},"experience_episodes":{d},"network_ok":{s},"farm_idle_count":{d},"stale_arena_hours":{d},"agent_spawn_issues":{d},"finished_containers":{d},"last_git_push_ts":{d}}}
     , .{
-        std.time.timestamp(),
+        tri_time.timestamp(),
         if (s.build_ok) "true" else "false",
         s.test_rate,
         s.dirty_files,
@@ -1999,7 +2000,7 @@ fn writeActionsFile() void {
     var fbs = std.io.fixedBufferStream(&buf);
     const w = fbs.writer();
 
-    w.print("{{\"version\":4,\"generated_at\":{d},\"actions\":[", .{std.time.timestamp()}) catch return;
+    w.print("{{\"version\":4,\"generated_at\":{d},\"actions\":[", .{tri_time.timestamp()}) catch return;
 
     for (0..qt.ActionKind.COUNT) |i| {
         if (i > 0) w.print(",", .{}) catch return;

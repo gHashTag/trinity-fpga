@@ -2,6 +2,7 @@
 //! Git commit, GitHub API, experience save, phoenix lineage
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const storm = @import("../golden_chain.zig");
 
 pub const gitCommitLinkID = 25;
@@ -53,7 +54,7 @@ pub fn executeGitCommit(allocator: std.mem.Allocator, phase: []const u8, task: [
     const stderr = try allocator.dupe(u8, commit_result.stderr.items);
     defer allocator.free(stderr);
 
-    const duration: u64 = @intCast(std.time.nanoTimestamp() - commit_result.start_time);
+    const duration: u64 = @intCast(tri_time.nanoTimestamp() - commit_result.start_time);
 
     const exit_code: u32 = switch (commit_result.term) {
         .Exited => |code| code,
@@ -203,7 +204,7 @@ pub fn executeExperienceSave(allocator: std.mem.Allocator, task: []const u8, res
     std.fs.cwd().makePath(".trinity/experience/episodes") catch {};
 
     // Create episode filename
-    const timestamp = std.time.nanoTimestamp();
+    const timestamp = tri_time.nanoTimestamp();
     const episode_file = try std.fmt.allocPrint(allocator, ".trinity/experience/episodes/{d}_{s}.json", .{ timestamp, task });
     defer allocator.free(episode_file);
 

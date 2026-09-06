@@ -10,6 +10,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 const needle = @import("mod.zig");
 const zig_parser = needle.zig_parser;
 const vsa = needle.vsa;
@@ -69,14 +70,14 @@ fn benchmarkCachedSearch(allocator: std.mem.Allocator, n_symbols: usize, first_c
     }
 
     const iterations: usize = if (first_call) 1 else 50;
-    const start_time = std.time.nanoTimestamp();
+    const start_time = tri_time.nanoTimestamp();
 
     for (0..iterations) |_| {
         const matches = try vsa.semanticFindCached(&graph, "parse function", 10, allocator);
         defer allocator.free(matches);
     }
 
-    const total_time = std.time.nanoTimestamp() - start_time;
+    const total_time = tri_time.nanoTimestamp() - start_time;
     const avg_time = @divTrunc(total_time, iterations);
 
     const ms = @as(f64, @floatFromInt(avg_time)) / 1_000_000.0;
@@ -107,12 +108,12 @@ fn benchmarkMultipleCachedCalls(allocator: std.mem.Allocator, n_symbols: usize, 
     _ = try vsa.semanticFindCached(&graph, "parse", 5, allocator);
 
     // Benchmark cached calls
-    const start_time = std.time.nanoTimestamp();
+    const start_time = tri_time.nanoTimestamp();
     for (0..n_calls) |_| {
         const matches = try vsa.semanticFindCached(&graph, "parse function", 10, allocator);
         defer allocator.free(matches);
     }
-    const total_time = std.time.nanoTimestamp() - start_time;
+    const total_time = tri_time.nanoTimestamp() - start_time;
 
     const avg_time = @divTrunc(total_time, n_calls);
     const ms = @as(f64, @floatFromInt(avg_time)) / 1_000_000.0;

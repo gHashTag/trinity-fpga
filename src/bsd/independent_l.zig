@@ -18,6 +18,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const print = std.debug.print;
 const math = std.math;
 
@@ -538,7 +539,7 @@ pub fn main() !void {
 
     var line_iter = std.mem.tokenizeScalar(u8, content, '\n');
     const max_conductor: u64 = 500;
-    const start_time = std.time.nanoTimestamp();
+    const start_time = tri_time.nanoTimestamp();
 
     print("{s:<10} {s:>14} {s:>14} {s:>12} {s:>6}\n", .{
         "Label", "Omega_Cremona", "Omega_Indep", "Rel_Error", "OK?",
@@ -598,7 +599,7 @@ pub fn main() !void {
         }
     }
 
-    const end_time = std.time.nanoTimestamp();
+    const end_time = tri_time.nanoTimestamp();
     const duration = @as(f64, @floatFromInt(end_time - start_time)) / 1_000_000_000.0;
 
     const omega_f: f64 = if (omega_total > 0) @floatFromInt(omega_total) else 1.0;

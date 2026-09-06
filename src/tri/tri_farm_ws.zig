@@ -13,6 +13,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const tri_mutex = @import("mutex.zig");
 const Allocator = std.mem.Allocator;
 
@@ -416,7 +417,7 @@ fn clientReadLoop(client: *WsClient, broadcaster: *Broadcaster) void {
 pub fn makeEvent(kind: WsEventKind, name: []const u8, detail: []const u8) WsEvent {
     var ev = WsEvent{
         .kind = kind,
-        .timestamp = std.time.milliTimestamp(),
+        .timestamp = tri_time.milliTimestamp(),
     };
     // Build payload as JSON fragment: {"target":"name","detail":"detail"}
     const json = std.fmt.bufPrint(

@@ -14,6 +14,8 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
+const tri_env = @import("tri_env.zig");
 const print = std.debug.print;
 
 // V16 Scientific Documentation Framework
@@ -2005,7 +2007,7 @@ fn publishOneBundleV8(allocator: std.mem.Allocator, bundle: BundleV8) !void {
 
 fn loadToken(allocator: std.mem.Allocator) ![]const u8 {
     // Try env var first
-    if (std.process.getEnvVarOwned(allocator, "ZENODO_TOKEN")) |token| {
+    if (tri_env.getEnvVarOwned(allocator, "ZENODO_TOKEN")) |token| {
         return token;
     } else |_| {}
 
@@ -2236,9 +2238,9 @@ fn runPublish(allocator: std.mem.Allocator, version: []const u8, do_publish: boo
         \\{{"metadata":{{"title":"gHashTag/trinity: Trinity {s} — FPGA Autoregressive Ternary LLM + Training Results","description":"HSLM: 1.95M-parameter ternary language model with zero-DSP FPGA inference. PPL=125 on TinyStories, 1,872KB model, 0 DSP48, $30 FPGA.","creators":[{{"person_or_org":{{"family_name":"Vasilev","given_name":"Dmitrii","type":"personal"}}}}],"publication_date":"{d}-{d:0>2}-{d:0>2}","version":"{s}","resource_type":{{"id":"software"}},"publisher":"Zenodo","related_identifiers":[{{"identifier":"https://github.com/gHashTag/trinity","relation_type":{{"id":"issupplementto"}},"scheme":"url"}}]}}}}
     , .{
         version,
-        @as(u16, @intCast(std.time.epoch.EpochSeconds.getEpochDay(@as(std.time.epoch.EpochSeconds, .{ .secs = @intCast(std.time.timestamp()) })).calculateYearDay().year)),
-        @as(u9, @intCast(std.time.epoch.EpochSeconds.getEpochDay(@as(std.time.epoch.EpochSeconds, .{ .secs = @intCast(std.time.timestamp()) })).calculateYearDay().calculateMonthDay().month.numeric())),
-        @as(u5, @intCast(std.time.epoch.EpochSeconds.getEpochDay(@as(std.time.epoch.EpochSeconds, .{ .secs = @intCast(std.time.timestamp()) })).calculateYearDay().calculateMonthDay().day_index + 1)),
+        @as(u16, @intCast(std.time.epoch.EpochSeconds.getEpochDay(@as(std.time.epoch.EpochSeconds, .{ .secs = @intCast(tri_time.timestamp()) })).calculateYearDay().year)),
+        @as(u9, @intCast(std.time.epoch.EpochSeconds.getEpochDay(@as(std.time.epoch.EpochSeconds, .{ .secs = @intCast(tri_time.timestamp()) })).calculateYearDay().calculateMonthDay().month.numeric())),
+        @as(u5, @intCast(std.time.epoch.EpochSeconds.getEpochDay(@as(std.time.epoch.EpochSeconds, .{ .secs = @intCast(tri_time.timestamp()) })).calculateYearDay().calculateMonthDay().day_index + 1)),
         version,
     });
     defer allocator.free(metadata_json);

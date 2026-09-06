@@ -6,6 +6,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 /// Fly.io deployment regions for global edge
 pub const FlyRegion = enum {
     ams, // Amsterdam (Europe)
@@ -113,7 +114,7 @@ pub const FlyDeployer = struct {
 
     /// Deploy to Fly.io (main entry point)
     pub fn deploy(self: *FlyDeployer) !DeployResult {
-        const start_time = std.time.nanoTimestamp();
+        const start_time = tri_time.nanoTimestamp();
 
         // Step 1: Validate prerequisites
         try self.validatePrerequisites();
@@ -145,7 +146,7 @@ pub const FlyDeployer = struct {
             try self.configureDomain(domain);
         }
 
-        const end_time = std.time.nanoTimestamp();
+        const end_time = tri_time.nanoTimestamp();
         const deployment_time_ms = @as(u64, @intFromFloat((@as(f64, @floatFromInt(end_time - start_time)) / 1_000_000.0)));
 
         return .{

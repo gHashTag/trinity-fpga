@@ -20,6 +20,21 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
+    // Wall-clock timestamps. Zig 0.16 removed std.time's timestamp functions
+    // and Timer; src/tri/tri_time.zig restores those names on top of libc.
+    //
+    // It is a module rather than a plain path import because three separate
+    // modules need it (root, tri27_cli, igla_hybrid_chat), and a single file
+    // cannot belong to two modules -- importing it by relative path from a
+    // second module fails with "file exists in modules 'root' and '...'".
+    // Everything imports it by name instead.
+    const tri_time_mod = b.createModule(.{
+        .root_source_file = b.path("src/tri/tri_time.zig"),
+        .target = target,
+        .optimize = optimize,
+        .link_libc = true,
+    });
+
     // VIBEEC compiler module — single source of truth from trinity-nexus/lang
     // FIXME: trinity-nexus submodule missing
     // const trinity_lang_mod = b.createModule(.{
@@ -1319,6 +1334,9 @@ pub fn build(b: *std.Build) void {
         .root_source_file = b.path("src/tri27/tri27_cli.zig"),
         .target = target,
         .optimize = optimize,
+        .imports = &.{
+            .{ .name = "tri_time", .module = tri_time_mod },
+        },
     });
 
     // VSA module for TRI (moved up: needed by tvc_corpus_mod and fluent CLI)
@@ -2041,6 +2059,7 @@ pub fn build(b: *std.Build) void {
             .{ .name = "tvc_corpus", .module = tvc_corpus_mod },
             .{ .name = "igla_kg", .module = igla_kg_mod },
             .{ .name = "triples_parser", .module = triples_parser_mod },
+            .{ .name = "tri_time", .module = tri_time_mod },
         },
     });
     // Golden Chain Agent (8-node unified pipeline)
@@ -2468,6 +2487,7 @@ pub fn build(b: *std.Build) void {
                 .{ .name = "ternary_complexity", .module = ternary_complexity_mod },
                 .{ .name = "golden_chain", .module = golden_chain_storm_mod },
                 .{ .name = "tri27_cli", .module = tri27_cli_mod },
+                .{ .name = "tri_time", .module = tri_time_mod },
                 .{ .name = "trinity_swe", .module = vibeec_swe },
                 .{ .name = "igla_chat", .module = vibeec_chat },
                 .{ .name = "igla_hybrid_chat", .module = vibeec_hybrid_chat },

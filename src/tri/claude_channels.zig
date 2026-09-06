@@ -515,7 +515,7 @@ fn runLogsCommand(allocator: Allocator, args: []const []const u8) !void {
     std.debug.print("{s}Claude session logs (last {d} lines):{s}\n", .{ CYAN, lines, RESET });
     std.debug.print("─{s}\n", .{"─" ** 60});
 
-    const output = std.mem.trimRight(u8, logs, "\n\r ");
+    const output = std.mem.trimEnd(u8, logs, "\n\r ");
     std.debug.print("{s}\n", .{output});
 }
 

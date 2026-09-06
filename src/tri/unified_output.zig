@@ -44,6 +44,7 @@
 //! - https://bettercli.org/design/exit-codes/
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const tri_config = @import("tri_config.zig");
 const exit_codes = @import("tri_exit_codes.zig");
 
@@ -271,7 +272,7 @@ pub const UnifiedOutput = struct {
             .command_name = command_name,
             .namespace = namespace,
             .summary = "",
-            .start_time = std.time.timestamp(),
+            .start_time = tri_time.timestamp(),
             .end_time = 0,
             .metrics = std.StringHashMap(u64).init(allocator),
             .artifacts = try std.ArrayList(ArtifactInfo).initCapacity(allocator, 4),
@@ -429,7 +430,7 @@ pub const UnifiedOutput = struct {
 
     /// Finalize the output (record end time and add duration metric)
     pub fn finalize(self: *UnifiedOutput) void {
-        self.end_time = std.time.timestamp();
+        self.end_time = tri_time.timestamp();
         const duration_ms: u64 = @intCast((self.end_time - self.start_time) * 1000);
         // Add or update duration_ms metric
         const result = self.metrics.getOrPut("duration_ms") catch return;

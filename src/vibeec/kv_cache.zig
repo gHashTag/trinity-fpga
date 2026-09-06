@@ -4,6 +4,7 @@
 // φ² + 1/φ² = 3 = TRINITY
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const simd = @import("simd_trit_ops.zig");
 
 pub const PHI: f64 = 1.618033988749895;
@@ -2063,8 +2064,8 @@ pub const CachedPrefix = struct {
             .block_ids = std.ArrayList(usize){},
             .num_tokens = 0,
             .hit_count = 0,
-            .last_access = std.time.milliTimestamp(),
-            .created_at = std.time.milliTimestamp(),
+            .last_access = tri_time.milliTimestamp(),
+            .created_at = tri_time.milliTimestamp(),
         };
     }
 
@@ -2164,7 +2165,7 @@ pub const PrefixCache = struct {
                 }
                 if (match) {
                     entry.hit_count += 1;
-                    entry.last_access = std.time.milliTimestamp();
+                    entry.last_access = tri_time.milliTimestamp();
                     self.total_hits += 1;
                     return entry;
                 }

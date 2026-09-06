@@ -17,6 +17,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const crypto = @import("crypto.zig");
 const Ed25519 = std.crypto.sign.Ed25519;
 const Sha256 = std.crypto.hash.sha2.Sha256;
@@ -476,7 +477,7 @@ fn getGitCommit(allocator: std.mem.Allocator) ![]u8 {
 
 /// Get the current UTC timestamp as ISO 8601.
 fn getTimestamp(allocator: std.mem.Allocator) ![]u8 {
-    const ts: i64 = std.time.timestamp();
+    const ts: i64 = tri_time.timestamp();
     const epoch_secs: u64 = @intCast(@max(ts, 0));
 
     const es = std.time.epoch.EpochSeconds{ .secs = epoch_secs };

@@ -3,6 +3,7 @@
 // φ² + 1/φ² = 3 | PHOENIX = 999
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const registry_mod = @import("bogatyr_registry.zig");
 
@@ -315,7 +316,7 @@ pub const ChromeLauncher = struct {
     fn createTempUserDataDir(self: *Self) ![]const u8 {
         const temp_dir = std.fs.getenv("TMPDIR") orelse "/tmp";
 
-        const dir_name_buf = try self.allocator.allocPrint(u8, "vibee_chrome_{}", .{std.time.timestamp()}) catch return ChromeLauncherError.OutOfMemory;
+        const dir_name_buf = try self.allocator.allocPrint(u8, "vibee_chrome_{}", .{tri_time.timestamp()}) catch return ChromeLauncherError.OutOfMemory;
         defer self.allocator.free(dir_name_buf);
 
         const dir_path = try std.fs.path.join(self.allocator, &[_][]const u8{ temp_dir, dir_name_buf }) catch |err| {

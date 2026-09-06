@@ -9,6 +9,7 @@
 //! Sacred Formula: φ² + 1/φ² = 3 = TRINITY
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const fs = std.fs;
 const mem = std.mem;
 const json = std.json;
@@ -112,7 +113,7 @@ pub const BrainEventLog = struct {
         self.mutex.lock();
         defer self.mutex.unlock();
 
-        const timestamp = std.time.nanoTimestamp();
+        const timestamp = tri_time.nanoTimestamp();
 
         // Build JSON line: {"ts":<timestamp>,"event":"<event>"}
         var buffer: [1024]u8 = undefined;

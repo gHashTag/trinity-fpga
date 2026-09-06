@@ -16,6 +16,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const testing = std.testing;
 const Allocator = std.mem.Allocator;
 const circuit_breaker = @import("circuit_breaker.zig");
@@ -274,7 +275,7 @@ pub const RalphLoop = struct {
             .total_errors = 0,
             .total_duration_ms = 0,
             .api_calls_this_hour = 0,
-            .hour_start = std.time.timestamp(),
+            .hour_start = tri_time.timestamp(),
         };
     }
 
@@ -306,7 +307,7 @@ pub const RalphLoop = struct {
 
         // Check rate limiting
         if (self.config.enable_rate_limiting) {
-            const now = std.time.timestamp();
+            const now = tri_time.timestamp();
             if (now - self.hour_start >= 3600) {
                 // Reset hourly counter
                 self.hour_start = now;
@@ -586,7 +587,7 @@ test "golden identity" {
 /// This is the main entry point for Ralph Loop to work with AGENT MU.
 /// It generates code from a spec file, then runs AGENT MU verification.
 pub fn runIterationWithAgentMu(self: *RalphLoop, spec_file: []const u8) !AgentMuIterationResult {
-    const start_time = std.time.timestamp();
+    const start_time = tri_time.timestamp();
 
     // Generate code (would call VIBEE codegen here)
     const generated_file = try self.generateCodeFromSpec(spec_file);
@@ -603,7 +604,7 @@ pub fn runIterationWithAgentMu(self: *RalphLoop, spec_file: []const u8) !AgentMu
 
     const verify_result = try agent_mu.verifyAndFix(self.allocator, generated_file, config);
 
-    const duration_ms: u64 = @intCast((std.time.timestamp() - start_time) * 1000);
+    const duration_ms: u64 = @intCast((tri_time.timestamp() - start_time) * 1000);
 
     // Update iteration metrics
     const iter_result = IterationResult{
@@ -657,7 +658,7 @@ fn generateCodeFromSpec(self: *RalphLoop, spec_file: []const u8) ![]const u8 {
 pub fn logRegression(self: *RalphLoop, error_message: []const u8, fix_type: anytype) !void {
     _ = fix_type;
 
-    const timestamp = std.time.timestamp();
+    const timestamp = tri_time.timestamp();
     const datetime = std.time.timestampToDateTime(timestamp);
 
     const pattern = try std.fmt.allocPrint(

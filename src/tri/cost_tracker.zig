@@ -10,6 +10,7 @@
 // =============================================================================
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const golden_chain = @import("dna_polymerase.zig");
 
 const AgentRole = golden_chain.AgentRole;
@@ -104,7 +105,7 @@ pub const CostTracker = struct {
         return .{
             .issue_number = issue_number,
             .entries = entries,
-            .started_at = std.time.timestamp(),
+            .started_at = tri_time.timestamp(),
         };
     }
 
@@ -169,7 +170,7 @@ pub const CostTracker = struct {
         try std.fmt.format(w, "  \"total_tokens_in\": {d},\n", .{self.totalTokensIn()});
         try std.fmt.format(w, "  \"total_tokens_out\": {d},\n", .{self.totalTokensOut()});
         try std.fmt.format(w, "  \"total_usd\": {d:.6},\n", .{self.totalUSD()});
-        try std.fmt.format(w, "  \"timestamp\": {d},\n", .{std.time.timestamp()});
+        try std.fmt.format(w, "  \"timestamp\": {d},\n", .{tri_time.timestamp()});
         try w.writeAll("  \"roles\": [\n");
 
         for (self.entries, 0..) |entry, i| {

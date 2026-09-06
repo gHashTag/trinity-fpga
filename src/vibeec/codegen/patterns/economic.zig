@@ -7,6 +7,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const types = @import("../types.zig");
 const builder_mod = @import("../builder.zig");
 
@@ -210,7 +211,7 @@ pub fn match(builder: *CodeBuilder, b: *const Behavior) !bool {
         try builder.writeLine("    .hourly_rate_tri = hourly_rate,");
         try builder.writeLine("    .reputation_score = agent.reputation_score,");
         try builder.writeLine("    .status = .active,");
-        try builder.writeLine("    .created_at = std.time.timestamp(),");
+        try builder.writeLine("    .created_at = tri_time.timestamp(),");
         try builder.writeLine("};");
         builder.decIndent();
         try builder.writeLine("}");
@@ -296,7 +297,7 @@ pub fn match(builder: *CodeBuilder, b: *const Behavior) !bool {
         try builder.writeLine("    .tenant_id = tenant_wallet.address,");
         try builder.writeLine("    .escrow_tri = escrow_amount,");
         try builder.writeLine("    .hourly_rate = offer.hourly_rate,");
-        try builder.writeLine("    .started_at = std.time.timestamp(),");
+        try builder.writeLine("    .started_at = tri_time.timestamp(),");
         try builder.writeLine("    .status = .active,");
         try builder.writeLine("};");
         builder.decIndent();
@@ -331,7 +332,7 @@ pub fn match(builder: *CodeBuilder, b: *const Behavior) !bool {
         try builder.writeLine("    .isolation_key = generateIsolationKey(tenant.id),");
         try builder.writeLine("    .resource_limits = tenant.resource_limits,");
         try builder.writeLine("    .task = task,");
-        try builder.writeLine("    .created_at = std.time.timestamp(),");
+        try builder.writeLine("    .created_at = tri_time.timestamp(),");
         try builder.writeLine("};");
         try builder.writeLine("");
         try builder.writeLine("// Enforce resource isolation");
@@ -395,7 +396,7 @@ pub fn match(builder: *CodeBuilder, b: *const Behavior) !bool {
         try builder.writeLine("    .line_items = line_items.toOwnedSlice(),");
         try builder.writeLine("    .total_tri = total_tri,");
         try builder.writeLine("    .status = .pending,");
-        try builder.writeLine("    .created_at = std.time.timestamp(),");
+        try builder.writeLine("    .created_at = tri_time.timestamp(),");
         try builder.writeLine("};");
         builder.decIndent();
         try builder.writeLine("}");

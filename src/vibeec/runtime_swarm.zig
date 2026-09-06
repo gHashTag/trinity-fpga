@@ -3,6 +3,7 @@
 //! φ² + 1/φ² = 3
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 
 // Import generated production swarm module
@@ -73,7 +74,7 @@ pub const SwarmRuntime = struct {
         const max_iterations = 5; // Limited iterations for demo/testing
         while (self.running and iteration < max_iterations) {
             iteration += 1;
-            const now = std.time.nanoTimestamp();
+            const now = tri_time.nanoTimestamp();
 
             // Health check every iteration
             try self.healthCheck();
@@ -93,8 +94,8 @@ pub const SwarmRuntime = struct {
             std.log.info("📊 Consensus round {d}: agreement={d:.3}%", .{ iteration, result.agreement * 100 });
 
             // Small sleep to prevent busy-waiting (simple busy-wait)
-            const sleep_start = std.time.nanoTimestamp();
-            while (std.time.nanoTimestamp() - sleep_start < 100_000_000) {
+            const sleep_start = tri_time.nanoTimestamp();
+            while (tri_time.nanoTimestamp() - sleep_start < 100_000_000) {
                 // DEFERRED (v12): Replace with std.Thread.sleep or nanosleep
             }
         }
@@ -132,7 +133,7 @@ pub const SwarmRuntime = struct {
         if (health.failed_agents > 0) {
             std.log.warn("⚠️  Detected {d} failed agents, triggering self-heal", .{health.failed_agents});
             // In production, we would collect actual failed agent IDs
-            const result = try vsa_swarm.autoSelfHeal(&self.cluster, &.{}, @intCast(std.time.timestamp()));
+            const result = try vsa_swarm.autoSelfHeal(&self.cluster, &.{}, @intCast(tri_time.timestamp()));
             std.log.info("🔧 Self-heal complete: {d} failed -> 0", .{health.failed_agents});
             _ = result;
         }
@@ -155,7 +156,7 @@ pub const SwarmRuntime = struct {
                 .before_real_pct = 73.5,
                 .after_real_pct = 73.5,
                 .patterns_improved = 0,
-                .timestamp = @as(u64, @intCast(std.time.nanoTimestamp())),
+                .timestamp = @as(u64, @intCast(tri_time.nanoTimestamp())),
             });
             std.log.info("📊 Live metrics: {d}/{d} online, {d} tasks completed", .{
                 default_metrics.online_agents,
@@ -186,7 +187,7 @@ pub const SwarmRuntime = struct {
             .before_real_pct = 73.5,
             .after_real_pct = 95.0,
             .patterns_improved = 0,
-            .timestamp = @as(u64, @intCast(std.time.nanoTimestamp())),
+            .timestamp = @as(u64, @intCast(tri_time.nanoTimestamp())),
         });
 
         return try vsa_swarm.prometheusMetrics(self.allocator, metrics);
@@ -194,7 +195,7 @@ pub const SwarmRuntime = struct {
 
     /// K8s heartbeat - send heartbeat to Kubernetes API
     pub fn k8sHeartbeat(self: *Self, agent_id: vsa_swarm.AgentId) !bool {
-        const now = @as(u64, @intCast(std.time.nanoTimestamp()));
+        const now = @as(u64, @intCast(tri_time.nanoTimestamp()));
         return try vsa_swarm.k8sHeartbeat(&self.cluster, agent_id, now);
     }
 

@@ -1,5 +1,6 @@
 // Queen Episodes — Episode Management & JSONL Persistence
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 
 pub const Context = @import("observe.zig").Context;
@@ -116,9 +117,9 @@ fn parseTri27Operation(str: []const u8) Tri27Operation {
 
 /// Helper function for creating test Episode with minimal fields
 pub fn createTestEpisode(allocator: Allocator, outcome: Outcome) !Episode {
-    const now_ns = std.time.nanoTimestamp();
+    const now_ns = tri_time.nanoTimestamp();
     const id: u64 = @as(u64, @intCast(@mod(now_ns, 1_000_000_000_000_000_000)));
-    const ms = std.time.milliTimestamp();
+    const ms = tri_time.milliTimestamp();
     const timestamp: u64 = @intCast(@divTrunc(ms, 1000));
 
     return Episode{
@@ -147,8 +148,8 @@ pub fn createTestEpisode(allocator: Allocator, outcome: Outcome) !Episode {
 pub fn recordEpisode(allocator: std.mem.Allocator, context: Context, plan: Plan, result: Result, outcome: Outcome) !Episode {
     _ = allocator;
     return Episode{
-        .id = @as(u64, @intCast(std.time.nanoTimestamp())),
-        .timestamp = @as(u64, @intCast(std.time.nanoTimestamp())),
+        .id = @as(u64, @intCast(tri_time.nanoTimestamp())),
+        .timestamp = @as(u64, @intCast(tri_time.nanoTimestamp())),
         .source = .lotus_cycle,
         .context = context,
         .action = if (plan.action == .scale_up)
@@ -166,7 +167,7 @@ pub fn recordEpisode(allocator: std.mem.Allocator, context: Context, plan: Plan,
 
 /// Record TRI-27 operation as Episode
 pub fn recordTri27Episode(allocator: std.mem.Allocator, tri27_event: Tri27Event) !EpisodeSummary {
-    const now_ns_i128 = std.time.nanoTimestamp();
+    const now_ns_i128 = tri_time.nanoTimestamp();
     const now_ns = @as(u64, @intCast(@abs(now_ns_i128)));
 
     // Create minimal context
@@ -524,7 +525,7 @@ pub fn getEpisodeStats(allocator: std.mem.Allocator) !EpisodeStats {
     const episodes = try loadEpisodes(allocator);
     defer allocator.free(episodes);
 
-    const now_ns = std.time.nanoTimestamp();
+    const now_ns = tri_time.nanoTimestamp();
     const day_ns: u64 = 24 * 60 * 60 * 1_000_000_000;
 
     var stats = EpisodeStats{

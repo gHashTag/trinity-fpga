@@ -15,6 +15,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -413,7 +414,7 @@ fn runQueenStart(allocator: std.mem.Allocator, args: []const []const u8) !void {
     // DAEMON LOOP — infinite until killed
     while (true) {
         cycle += 1;
-        const now = std.time.milliTimestamp();
+        const now = tri_time.milliTimestamp();
 
         // OBSERVE: check system state
         const dirty = countDirtyFiles(allocator) catch 0;
@@ -487,7 +488,7 @@ fn updateHeartbeat(allocator: std.mem.Allocator, cycle: u64, timestamp: i64) !vo
 
 fn logToHive(allocator: std.mem.Allocator, cycle: u64, msg: []const u8, args: anytype) !void {
     _ = args;
-    const timestamp = std.time.milliTimestamp();
+    const timestamp = tri_time.milliTimestamp();
     const formatted = try std.fmt.allocPrint(allocator, "[{d}] Cycle {d}: {s}\n", .{ timestamp, cycle, msg });
     defer allocator.free(formatted);
 

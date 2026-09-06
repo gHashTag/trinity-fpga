@@ -10,6 +10,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const cell_parser = @import("ribosome.zig");
 
@@ -206,7 +207,7 @@ fn logEvent(allocator: Allocator, event: []const u8, data: []const u8) void {
     defer file.close();
     file.seekFromEnd(0) catch return;
 
-    const timestamp = std.time.timestamp();
+    const timestamp = tri_time.timestamp();
     const line = std.fmt.allocPrint(
         allocator,
         "{{\"ts\":{d},\"event\":\"{s}\",\"data\":{s}}}\n",

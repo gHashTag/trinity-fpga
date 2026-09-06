@@ -16,6 +16,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayListUnmanaged;
 const StringHashMap = std.StringHashMapUnmanaged;
@@ -127,7 +128,7 @@ pub const PhoenixCore = struct {
     tasks: ArrayList(PhoenixTask),
 
     pub fn init(allocator: Allocator, config: PhoenixCoreConfig) !PhoenixCore {
-        const current_time: i64 = @intCast(@divTrunc(std.time.nanoTimestamp(), 1_000_000_000));
+        const current_time: i64 = @intCast(@divTrunc(tri_time.nanoTimestamp(), 1_000_000_000));
 
         return PhoenixCore{
             .allocator = allocator,
@@ -157,7 +158,7 @@ pub const PhoenixCore = struct {
 
     /// Main orchestration loop — call this periodically
     pub fn tick(self: *PhoenixCore) !OrchestratorResult {
-        const current_time: i64 = @intCast(@divTrunc(std.time.nanoTimestamp(), 1_000_000_000));
+        const current_time: i64 = @intCast(@divTrunc(tri_time.nanoTimestamp(), 1_000_000_000));
 
         // Check if it's time to wake up
         if (current_time < self.status.wake_time) {
@@ -377,7 +378,7 @@ pub const PhoenixCore = struct {
         self.status.active_task = task.*;
         task.status = .in_progress;
 
-        const start_time = std.time.nanoTimestamp();
+        const start_time = tri_time.nanoTimestamp();
 
         // Dispatch based on task type
         const success = if (std.mem.indexOf(u8, task.id, "FPGA") != null)
@@ -387,7 +388,7 @@ pub const PhoenixCore = struct {
         else
             try self.executeGenericTask(task);
 
-        const duration_ms = @as(u64, @intCast(@divTrunc(std.time.nanoTimestamp() - start_time, 1_000_000)));
+        const duration_ms = @as(u64, @intCast(@divTrunc(tri_time.nanoTimestamp() - start_time, 1_000_000)));
 
         task.status = if (success) .completed else .failed;
 
@@ -493,7 +494,7 @@ pub const PhoenixCore = struct {
 
     /// Schedule next wake time
     fn scheduleNextWake(self: *PhoenixCore) !void {
-        const current_time: i64 = @intCast(@divTrunc(std.time.nanoTimestamp(), 1_000_000_000));
+        const current_time: i64 = @intCast(@divTrunc(tri_time.nanoTimestamp(), 1_000_000_000));
 
         const fib_n = fibonacci(self.status.total_cycles + 3);
         const interval_sec = (self.config.wake_interval_sec * fib_n) / 2;
@@ -532,7 +533,7 @@ pub const PhoenixCore = struct {
         };
         defer old_episodes.deinit(self.allocator);
 
-        const now_ts: u64 = @intCast(std.time.timestamp());
+        const now_ts: u64 = @intCast(tri_time.timestamp());
         const week_ago = now_ts -| (7 * 24 * 3600);
         var old_count: u32 = 0;
         for (old_episodes.items) |ep| {
@@ -1198,7 +1199,7 @@ test "phoenix_core — PhoenixCore wake time calculation" {
     defer core.deinit();
 
     // Wake time should be in the future
-    const current_time: i64 = @intCast(@divTrunc(std.time.nanoTimestamp(), 1_000_000_000));
+    const current_time: i64 = @intCast(@divTrunc(tri_time.nanoTimestamp(), 1_000_000_000));
     try std.testing.expect(core.status.wake_time > current_time);
 }
 

@@ -6,6 +6,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const storage_mod = @import("storage.zig");
 const shard_rebalancer_mod = @import("shard_rebalancer.zig");
 
@@ -71,7 +72,7 @@ pub const GracefulShutdownManager = struct {
             .node_id = node_id,
             .shards_to_move = shard_count,
             .shards_moved = 0,
-            .initiated_at = std.time.timestamp(),
+            .initiated_at = tri_time.timestamp(),
             .completed = false,
         };
 

@@ -15,6 +15,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const tri_exit_codes = @import("tri_exit_codes.zig");
 const SacredConstants = @import("sacred_constants.zig").SacredConstants;
 
@@ -43,7 +44,7 @@ pub fn runIdempotencyCommand(allocator: std.mem.Allocator, args: []const []const
     const CYCLES: usize = 100;
     std.debug.print("{s}Running {d}-cycle idempotency test...{s}\n\n", .{ CYAN, CYCLES, RESET });
 
-    const start_time = std.time.nanoTimestamp();
+    const start_time = tri_time.nanoTimestamp();
 
     // Sacred constants verification
     std.debug.print("{s}1. Sacred Constants Verification{s}\n", .{ GOLDEN, RESET });
@@ -68,7 +69,7 @@ pub fn runIdempotencyCommand(allocator: std.mem.Allocator, args: []const []const
     std.debug.print("   {s}✓{s} Hash-based O(1) pattern lookup (deterministic)\n", .{ GREEN, RESET });
     std.debug.print("   {s}✓{s} No HNSW randomness in current implementation\n\n", .{ GREEN, RESET });
 
-    const elapsed_ns = std.time.nanoTimestamp() - start_time;
+    const elapsed_ns = tri_time.nanoTimestamp() - start_time;
     const elapsed_ms = @as(f64, @floatFromInt(elapsed_ns)) / 1_000_000.0;
 
     std.debug.print("{s}═════════════════════════════════════════════════════════════{s}\n", .{ GOLDEN, RESET });
@@ -87,7 +88,7 @@ pub fn runIdempotencyCommand(allocator: std.mem.Allocator, args: []const []const
         \\  "elapsed_ms": {d:.2}
         \\}}}}
     , .{
-        std.time.timestamp(),
+        tri_time.timestamp(),
         CYCLES,
         elapsed_ms,
     });

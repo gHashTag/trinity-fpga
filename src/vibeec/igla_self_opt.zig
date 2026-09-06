@@ -12,6 +12,7 @@
 // =============================================================================
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const enhanced_chat = @import("igla_enhanced_chat.zig");
 
 // =============================================================================
@@ -200,7 +201,7 @@ pub const PatternOptimizer = struct {
             .pattern_idx = pattern_idx,
             .feedback = feedback,
             .query = query,
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
             .needle_score = needle_score,
         };
         self.feedback_count += 1;
@@ -209,7 +210,7 @@ pub const PatternOptimizer = struct {
         if (pattern_idx < self.pattern_success.len) {
             var stats = &self.pattern_success[pattern_idx];
             stats.uses += 1;
-            stats.last_used = std.time.timestamp();
+            stats.last_used = tri_time.timestamp();
 
             switch (feedback) {
                 .Positive => stats.positive += 1,

@@ -14,6 +14,8 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
+const tri_env = @import("tri_env.zig");
 // Phase 3: Dynamic Memory & Learning Loops
 // Implementing inline for VSA query memory tracking
 pub const MAX_MEMORY_ENTRIES = 100;
@@ -82,7 +84,7 @@ const DynamicMemory = struct {
             .vector_hash = 0, // Simplified - would store vector hash in full implementation
             .similarity = similarity,
             .consciousness_level = consciousness,
-            .timestamp = @as(i64, @intCast(@divTrunc(std.time.nanoTimestamp(), 1_000_000_000))), // Convert ns to s for i64
+            .timestamp = @as(i64, @intCast(@divTrunc(tri_time.nanoTimestamp(), 1_000_000_000))), // Convert ns to s for i64
             .access_count = 0,
             .importance = importance,
         };
@@ -545,7 +547,7 @@ const UnifiedState = struct {
     }
 
     pub fn touch(self: *UnifiedState) void {
-        self.last_update = @as(i64, @intCast(std.time.nanoTimestamp()));
+        self.last_update = @as(i64, @intCast(tri_time.nanoTimestamp()));
         self.generation += 1;
     }
 };
@@ -643,7 +645,7 @@ const HebbianState = struct {
 
     /// Long-term potentiation: strengthen important memories
     pub fn consolidate(self: *HebbianState, memory: *DynamicMemory) void {
-        const now = @as(i64, @intCast(@divTrunc(std.time.nanoTimestamp(), 1_000_000_000)));
+        const now = @as(i64, @intCast(@divTrunc(tri_time.nanoTimestamp(), 1_000_000_000)));
 
         // Check if consolidation is needed
         if (now - self.last_consolidation < CONSOLIDATION_INTERVAL) return;
@@ -697,7 +699,7 @@ const HebbianState = struct {
 
     /// Get Trinity data directory path (~/.trinity/)
     fn getDataDir() ![]const u8 {
-        const home = std.process.getEnvVarOwned(std.heap.page_allocator, "HOME") catch |err| {
+        const home = tri_env.getEnvVarOwned(std.heap.page_allocator, "HOME") catch |err| {
             std.debug.print("Error: HOME env var not found: {}\n", .{err});
             return err;
         };

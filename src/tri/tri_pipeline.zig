@@ -11,6 +11,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const colors = @import("tri_colors.zig");
 const golden_chain = @import("dna_polymerase.zig");
 const pipeline_executor = @import("rna_polymerase.zig");
@@ -317,7 +318,7 @@ pub fn runPipelineAudit(allocator: std.mem.Allocator, args: []const []const u8) 
     }
 
     // Shuffle using simple Fisher-Yates with timestamp seed
-    const seed: u64 = @bitCast(@as(i64, @truncate(std.time.nanoTimestamp())));
+    const seed: u64 = @bitCast(@as(i64, @truncate(tri_time.nanoTimestamp())));
     var rng = std.Random.DefaultPrng.init(seed);
     const random = rng.random();
     var si: usize = spec_names.items.len;
@@ -340,7 +341,7 @@ pub fn runPipelineAudit(allocator: std.mem.Allocator, args: []const []const u8) 
     report.appendSlice(allocator, "# Regeneration Audit Report\n\n") catch |err| {
         std.log.debug("report appendSlice header failed: {}", .{err});
     };
-    const date_header = std.fmt.allocPrint(allocator, "**Date:** {d}\n**Sample:** {d} specs\n**Tool:** vibee gen + zig ast-check\n\n## Results\n\n| # | Spec | Status |\n|---|------|--------|\n", .{ std.time.timestamp(), actual_count }) catch "";
+    const date_header = std.fmt.allocPrint(allocator, "**Date:** {d}\n**Sample:** {d} specs\n**Tool:** vibee gen + zig ast-check\n\n## Results\n\n| # | Spec | Status |\n|---|------|--------|\n", .{ tri_time.timestamp(), actual_count }) catch "";
     defer if (date_header.len > 0) allocator.free(date_header);
     report.appendSlice(allocator, date_header) catch |err| {
         std.log.debug("report appendSlice date_header failed: {}", .{err});
@@ -967,13 +968,13 @@ pub fn runVerifyCommand(allocator: std.mem.Allocator) void {
 
     // Link 8: Simple benchmark
     std.debug.print("{s}Link 8: Running Benchmarks...{s}\n", .{ CYAN, RESET });
-    const start = std.time.nanoTimestamp();
+    const start = tri_time.nanoTimestamp();
     var sum: u64 = 0;
     var i: u64 = 0;
     while (i < 1000) : (i += 1) {
         sum += i * i;
     }
-    const elapsed = std.time.nanoTimestamp() - start;
+    const elapsed = tri_time.nanoTimestamp() - start;
     std.mem.doNotOptimizeAway(&sum);
 
     const elapsed_us = @divFloor(elapsed, 1000);

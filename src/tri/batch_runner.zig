@@ -5,6 +5,7 @@
 // ============================================================================
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const tri_mutex = @import("mutex.zig");
 const colors = @import("tri_colors.zig");
 
@@ -162,7 +163,7 @@ fn parseFilterMode(s: []const u8) FilterMode {
 // ============================================================================
 
 fn runBatch(allocator: std.mem.Allocator, config: BatchConfig) void {
-    const start_ts = std.time.nanoTimestamp();
+    const start_ts = tri_time.nanoTimestamp();
 
     // Header
     std.debug.print("\n{s}BATCH PIPELINE RUNNER{s}\n", .{ GOLDEN, RESET });
@@ -253,7 +254,7 @@ fn runBatch(allocator: std.mem.Allocator, config: BatchConfig) void {
     // Wait for all workers
     wg.wait();
 
-    const end_ts = std.time.nanoTimestamp();
+    const end_ts = tri_time.nanoTimestamp();
     const total_duration_ns = end_ts - start_ts;
 
     // Phase 5: Aggregate results
@@ -434,7 +435,7 @@ fn runLintCheck(allocator: std.mem.Allocator, spec_path: []const u8) bool {
 // ============================================================================
 
 fn runSinglePipeline(ctx: *WorkerContext) void {
-    const timer_start = std.time.nanoTimestamp();
+    const timer_start = tri_time.nanoTimestamp();
     const allocator = ctx.allocator;
 
     // If filter is lint_pass, we already validated — skip re-lint
@@ -446,7 +447,7 @@ fn runSinglePipeline(ctx: *WorkerContext) void {
                 .spec_path = ctx.spec_path,
                 .success = false,
                 .status = .lint_fail,
-                .duration_ns = std.time.nanoTimestamp() - timer_start,
+                .duration_ns = tri_time.nanoTimestamp() - timer_start,
                 .error_msg = "",
             });
             return;
@@ -462,7 +463,7 @@ fn runSinglePipeline(ctx: *WorkerContext) void {
             .spec_path = ctx.spec_path,
             .success = false,
             .status = .gen_fail,
-            .duration_ns = std.time.nanoTimestamp() - timer_start,
+            .duration_ns = tri_time.nanoTimestamp() - timer_start,
             .error_msg = "",
         });
         return;
@@ -481,7 +482,7 @@ fn runSinglePipeline(ctx: *WorkerContext) void {
             .spec_path = ctx.spec_path,
             .success = false,
             .status = .gen_fail,
-            .duration_ns = std.time.nanoTimestamp() - timer_start,
+            .duration_ns = tri_time.nanoTimestamp() - timer_start,
             .error_msg = "",
         });
         return;
@@ -499,7 +500,7 @@ fn runSinglePipeline(ctx: *WorkerContext) void {
             .spec_path = ctx.spec_path,
             .success = false,
             .status = .gen_fail,
-            .duration_ns = std.time.nanoTimestamp() - timer_start,
+            .duration_ns = tri_time.nanoTimestamp() - timer_start,
             .error_msg = "",
         });
         return;
@@ -511,7 +512,7 @@ fn runSinglePipeline(ctx: *WorkerContext) void {
             .spec_path = ctx.spec_path,
             .success = true,
             .status = .pass,
-            .duration_ns = std.time.nanoTimestamp() - timer_start,
+            .duration_ns = tri_time.nanoTimestamp() - timer_start,
             .error_msg = "",
         });
         return;
@@ -527,7 +528,7 @@ fn runSinglePipeline(ctx: *WorkerContext) void {
             .spec_path = ctx.spec_path,
             .success = false,
             .status = .ast_fail,
-            .duration_ns = std.time.nanoTimestamp() - timer_start,
+            .duration_ns = tri_time.nanoTimestamp() - timer_start,
             .error_msg = "",
         });
         return;
@@ -549,7 +550,7 @@ fn runSinglePipeline(ctx: *WorkerContext) void {
         .spec_path = ctx.spec_path,
         .success = ast_ok,
         .status = if (ast_ok) .pass else .ast_fail,
-        .duration_ns = std.time.nanoTimestamp() - timer_start,
+        .duration_ns = tri_time.nanoTimestamp() - timer_start,
         .error_msg = stderr_copy,
     });
 }
@@ -647,7 +648,7 @@ fn writeProtocolLog(allocator: std.mem.Allocator, report: BatchReport) void {
 
     const total = report.passed + report.failed + report.skipped;
     const rate: usize = if (total > 0) (report.passed * 100) / total else 0;
-    const ts = std.time.timestamp();
+    const ts = tri_time.timestamp();
 
     // Append JSONL entry
     const log_name = std.fmt.allocPrint(allocator, ".trinity/batch/{d}.jsonl", .{ts}) catch return;
@@ -702,7 +703,7 @@ fn writeReportJson(allocator: std.mem.Allocator, report: BatchReport) void {
         \\  "failures": [
         \\
     , .{
-        std.time.timestamp(),
+        tri_time.timestamp(),
         report.total_specs,
         report.filtered_specs,
         report.passed,

@@ -6,6 +6,8 @@
 // ============================================================================
 
 const std = @import("std");
+const tri_time = @import("tri_time");
+const tri_env = @import("tri_env.zig");
 const tri_mutex = @import("mutex.zig");
 const golden_chain = @import("dna_polymerase.zig");
 const tvc_gate_mod = @import("tvc_gate.zig");
@@ -184,7 +186,7 @@ pub const PipelineExecutor = struct {
         self.state.phase = link;
         self.printLinkStart(link);
 
-        const start_time = std.time.milliTimestamp();
+        const start_time = tri_time.milliTimestamp();
         var result = LinkResult.init(link);
         result.started_at = start_time;
         result.status = .in_progress;
@@ -194,7 +196,7 @@ pub const PipelineExecutor = struct {
         const span_id = self.tracer.startSpan(link_name, self.root_span_id, link, 0);
 
         const link_result = self.executeLink(link);
-        result.completed_at = std.time.milliTimestamp();
+        result.completed_at = tri_time.milliTimestamp();
         const duration = result.completed_at - start_time;
 
         if (link_result) |metrics| {
@@ -347,13 +349,13 @@ pub const PipelineExecutor = struct {
     }
 
     fn parallelLinkWorker(ctx: *ParallelLinkContext) void {
-        const start_time = std.time.milliTimestamp();
+        const start_time = tri_time.milliTimestamp();
         ctx.result.started_at = start_time;
         ctx.result.status = .in_progress;
 
         // executeLink is read-only for parallel-safe links
         const link_result = ctx.executor.executeLink(ctx.link);
-        ctx.result.completed_at = std.time.milliTimestamp();
+        ctx.result.completed_at = tri_time.milliTimestamp();
 
         if (link_result) |metrics| {
             ctx.result.status = .completed;
@@ -391,7 +393,7 @@ pub const PipelineExecutor = struct {
             .last_link = @intCast(link_num),
             .task = self.state.task_description,
             .status = status,
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
         };
         // Populate per-link results from pipeline state
         for (self.state.results, 0..) |result, i| {
@@ -418,7 +420,7 @@ pub const PipelineExecutor = struct {
             .last_link = link_idx,
             .task = self.state.task_description,
             .status = "running",
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
         };
         // Copy existing results
         for (self.state.results, 0..) |result, i| {
@@ -465,7 +467,7 @@ pub const PipelineExecutor = struct {
     /// Execute a single chain link standalone (for `tri chain <cmd>`).
     /// Wraps executeLink with timing and state updates.
     pub fn executeSingleLink(self: *PipelineExecutor, link: ChainLink) ChainError!LinkMetrics {
-        const start_time = std.time.timestamp();
+        const start_time = tri_time.timestamp();
         self.state.phase = link;
         self.state.status = .in_progress;
 
@@ -473,7 +475,7 @@ pub const PipelineExecutor = struct {
             var result = LinkResult.init(link);
             result.status = .failed;
             result.started_at = start_time;
-            result.completed_at = std.time.timestamp();
+            result.completed_at = tri_time.timestamp();
             self.state.setResult(link, result);
             self.state.status = .failed;
             return err;
@@ -482,7 +484,7 @@ pub const PipelineExecutor = struct {
         var result = LinkResult.init(link);
         result.status = .completed;
         result.started_at = start_time;
-        result.completed_at = std.time.timestamp();
+        result.completed_at = tri_time.timestamp();
         result.metrics = metrics;
         self.state.setResult(link, result);
 
@@ -1043,13 +1045,13 @@ pub const PipelineExecutor = struct {
         var metrics = LinkMetrics{};
 
         // Simple benchmark
-        const start = std.time.nanoTimestamp();
+        const start = tri_time.nanoTimestamp();
         var sum: u64 = 0;
         var i: u64 = 0;
         while (i < 1000) : (i += 1) {
             sum += i * i;
         }
-        const elapsed = std.time.nanoTimestamp() - start;
+        const elapsed = tri_time.nanoTimestamp() - start;
         std.mem.doNotOptimizeAway(&sum);
 
         metrics.duration_ms = @intCast(@divFloor(elapsed, 1_000_000));
@@ -1829,7 +1831,7 @@ fn callClaudeFix(allocator: std.mem.Allocator, error_text: []const u8, source_co
 
     // Try each provider in fallback chain
     for (providers) |provider| {
-        const api_key = std.process.getEnvVarOwned(allocator, provider.key_env) catch continue;
+        const api_key = tri_env.getEnvVarOwned(allocator, provider.key_env) catch continue;
         defer allocator.free(api_key);
 
         std.debug.print("  [CLAUDE-FIX] Trying {s} ({s})...\n", .{ provider.key_env, provider.base_url });

@@ -1,4 +1,5 @@
 const std = @import("std");
+const tri_time = @import("tri_time");
 const colors = @import("../tri_colors.zig");
 
 const GREEN = colors.GREEN;
@@ -105,7 +106,7 @@ pub fn runStreamBench() void {
     var successful: usize = 0;
 
     for (test_cases, 0..) |test_case, i| {
-        const start = std.time.milliTimestamp();
+        const start = tri_time.milliTimestamp();
 
         // Simulate streaming with delay
         var tokens_streamed: usize = 0;
@@ -122,7 +123,7 @@ pub fn runStreamBench() void {
         // Simulate delay
         std.Thread.sleep(@as(u64, test_case.delay_ms) * tokens_streamed * std.time.ns_per_ms / 10);
 
-        const elapsed = std.time.milliTimestamp() - start;
+        const elapsed = tri_time.milliTimestamp() - start;
         const tokens_per_sec = if (elapsed > 0) @as(f64, @floatFromInt(tokens_streamed)) * 1000.0 / @as(f64, @floatFromInt(elapsed)) else 0;
 
         std.debug.print("  [{d}] [{s}] \"{s}\"\n", .{ i + 1, test_case.mode, test_case.input });

@@ -11,6 +11,7 @@
 // =============================================================================
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const golden_chain = @import("dna_polymerase.zig");
 
 // =============================================================================
@@ -128,7 +129,7 @@ pub const Tracer = struct {
                 .span_id = span_id,
                 .parent_span_id = parent_id,
                 .name = name,
-                .start_time_ns = std.time.nanoTimestamp(),
+                .start_time_ns = tri_time.nanoTimestamp(),
                 .end_time_ns = 0,
                 .status = .unset,
                 .attributes = .{},
@@ -333,7 +334,7 @@ fn printTraceHelp() void {
 // =============================================================================
 
 fn generateTraceId() u64 {
-    const ts: u64 = @intCast(@as(u128, @intCast(std.time.nanoTimestamp())) & 0xFFFFFFFFFFFFFFFF);
+    const ts: u64 = @intCast(@as(u128, @intCast(tri_time.nanoTimestamp())) & 0xFFFFFFFFFFFFFFFF);
     return ts;
 }
 

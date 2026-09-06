@@ -8,6 +8,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayList;
 
@@ -159,7 +160,7 @@ pub const Compiler = struct {
     }
 
     pub fn compile(self: *Self, source: []const u8) !CompileResult {
-        const start_time = std.time.nanoTimestamp();
+        const start_time = tri_time.nanoTimestamp();
         var metrics = CompileMetrics{
             .parse_time_ns = 0,
             .type_check_time_ns = 0,
@@ -177,7 +178,7 @@ pub const Compiler = struct {
         };
 
         // Phase 1: Parse
-        const parse_start = std.time.nanoTimestamp();
+        const parse_start = tri_time.nanoTimestamp();
         var spec = self.parser.parse(source) catch |err| {
             const stderr = std.fs.File.stderr().deprecatedWriter();
             var writer = error_reporter.ColorWriter.init(stderr.any(), true);
@@ -192,13 +193,13 @@ pub const Compiler = struct {
                 .allocator = self.allocator,
             };
         };
-        const parse_end = std.time.nanoTimestamp();
+        const parse_end = tri_time.nanoTimestamp();
         metrics.parse_time_ns = @intCast(parse_end - parse_start);
         metrics.lines_parsed = self.parser.lines_parsed;
 
         // Phase 2: Type Check
         if (self.options.enable_type_check) {
-            const tc_start = std.time.nanoTimestamp();
+            const tc_start = tri_time.nanoTimestamp();
             var tc_result = self.type_checker.check(&spec) catch |err| {
                 const stderr = std.fs.File.stderr().deprecatedWriter();
                 var writer = error_reporter.ColorWriter.init(stderr.any(), true);
@@ -215,7 +216,7 @@ pub const Compiler = struct {
                 };
             };
             defer tc_result.deinit(self.allocator);
-            const tc_end = std.time.nanoTimestamp();
+            const tc_end = tri_time.nanoTimestamp();
             metrics.type_check_time_ns = @intCast(tc_end - tc_start);
             metrics.types_checked = self.type_checker.types_checked;
 
@@ -229,7 +230,7 @@ pub const Compiler = struct {
         }
 
         // Phase 3: Code Generation
-        const cg_start = std.time.nanoTimestamp();
+        const cg_start = tri_time.nanoTimestamp();
         var cg = CodegenV4.init(self.allocator, self.options.target) catch |err| {
             const stderr = std.fs.File.stderr().deprecatedWriter();
             var writer = error_reporter.ColorWriter.init(stderr.any(), true);
@@ -259,7 +260,7 @@ pub const Compiler = struct {
                 .allocator = self.allocator,
             };
         };
-        const cg_end = std.time.nanoTimestamp();
+        const cg_end = tri_time.nanoTimestamp();
         metrics.codegen_time_ns = @intCast(cg_end - cg_start);
 
         // Collect codegen metrics
@@ -270,7 +271,7 @@ pub const Compiler = struct {
         metrics.code999_bytes = gen_result.metrics.code999_bytes;
 
         // Total time
-        const end_time = std.time.nanoTimestamp();
+        const end_time = tri_time.nanoTimestamp();
         metrics.total_time_ns = @intCast(end_time - start_time);
 
         // Update statistics

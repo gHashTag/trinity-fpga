@@ -16,6 +16,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const tri_exit_codes = @import("tri_exit_codes.zig");
 const github_client = @import("github_client.zig");
 const jsonl_logger = @import("jsonl_logger.zig");
@@ -290,7 +291,7 @@ fn issueComment(allocator: std.mem.Allocator, args: []const []const u8, dry_run:
     try appendProtocolLog(allocator, "issue_comment", number, agent_name, true);
 
     // Log to agent_events.jsonl
-    const event_ts = std.time.timestamp();
+    const event_ts = tri_time.timestamp();
     const comment_event = jsonl_logger.Event{
         .ts = @intCast(event_ts),
         .event_type = "issue_comment",
@@ -1360,7 +1361,7 @@ fn appendProtocolLog(allocator: std.mem.Allocator, action: []const u8, issue: u3
     const filepath = try std.fmt.allocPrint(allocator, "{s}/{s}.jsonl", .{ protocol_dir, date_str });
     defer allocator.free(filepath);
 
-    const timestamp = std.time.timestamp();
+    const timestamp = tri_time.timestamp();
     const agent_str = agent orelse "unknown";
     const ok_str = if (ok) "true" else "false";
 
@@ -1447,7 +1448,7 @@ fn getAgentEmoji(agent: []const u8) []const u8 {
 }
 
 fn getTodayDateStr(allocator: std.mem.Allocator) ![]u8 {
-    const timestamp = std.time.timestamp();
+    const timestamp = tri_time.timestamp();
     const epoch_seconds = std.time.epoch.EpochSeconds{ .secs = @intCast(timestamp) };
     const epoch_day = epoch_seconds.getEpochDay();
     const year_day = epoch_day.calculateYearDay();

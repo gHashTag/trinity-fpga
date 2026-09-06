@@ -11,6 +11,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 
 const CsvRow = @import("csv_parser.zig").CsvRow;
@@ -160,7 +161,7 @@ pub const Evaluator = struct {
     /// Generate mock responses for testing (use actual model in production)
     pub fn mockResponse(self: *Evaluator, row: CsvRow) ![]const u8 {
         // For testing: return correct answer 70% of time
-        const timestamp = std.time.nanoTimestamp();
+        const timestamp = tri_time.nanoTimestamp();
         const seed = @as(u64, @intCast(@abs(timestamp)));
         var rng = std.Random.DefaultPrng.init(seed);
         if (rng.random().float(f64) < 0.7) {

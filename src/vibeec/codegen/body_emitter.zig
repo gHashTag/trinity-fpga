@@ -10,6 +10,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const types = @import("types.zig");
 const builder_mod = @import("builder.zig");
 const signature_mod = @import("signature.zig");
@@ -84,7 +85,7 @@ pub fn generateRealBody(builder: *CodeBuilder, b: *const Behavior) !void {
             try builder.writeLine("\"Hey! What's on your mind?\",");
             builder.decIndent();
             try builder.writeLine("};");
-            try builder.writeLine("const idx = @as(usize, @intCast(@mod(std.time.timestamp(), responses.len)));");
+            try builder.writeLine("const idx = @as(usize, @intCast(@mod(tri_time.timestamp(), responses.len)));");
             try builder.writeLine("_ = responses[idx];");
         } else if (mem.indexOf(u8, name, "Farewell") != null) {
             try builder.writeLine("const responses = [_][]const u8{");
@@ -94,7 +95,7 @@ pub fn generateRealBody(builder: *CodeBuilder, b: *const Behavior) !void {
             try builder.writeLine("\"Take care! Good luck!\",");
             builder.decIndent();
             try builder.writeLine("};");
-            try builder.writeLine("const idx = @as(usize, @intCast(@mod(std.time.timestamp(), responses.len)));");
+            try builder.writeLine("const idx = @as(usize, @intCast(@mod(tri_time.timestamp(), responses.len)));");
             try builder.writeLine("_ = responses[idx];");
         } else if (mem.indexOf(u8, name, "Weather") != null or mem.indexOf(u8, name, "Unknown") != null) {
             try builder.writeLine("// Honest response: acknowledge limitation");
@@ -223,9 +224,9 @@ pub fn generateRealBody(builder: *CodeBuilder, b: *const Behavior) !void {
     // --- Process/run/execute behaviors: orchestration ---
     if (mem.startsWith(u8, name, "process") or mem.startsWith(u8, name, "run") or mem.startsWith(u8, name, "execute")) {
         try builder.writeFmt("// Process: {s}\n", .{then});
-        try builder.writeLine("const start_time = std.time.timestamp();");
+        try builder.writeLine("const start_time = tri_time.timestamp();");
         try builder.writeFmt("// Pipeline: {s}\n", .{then});
-        try builder.writeLine("const elapsed = std.time.timestamp() - start_time;");
+        try builder.writeLine("const elapsed = tri_time.timestamp() - start_time;");
         try builder.writeLine("_ = elapsed;");
         // Reference params to suppress unused warnings - check signature directly
         const sig = signature_mod.inferSignatureFromSpec(b.given, b.then, b.name);

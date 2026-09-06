@@ -24,6 +24,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_env = @import("tri_env.zig");
 const Allocator = std.mem.Allocator;
 
 // Import kaggle module (configured in build.zig)
@@ -335,7 +336,7 @@ fn runAuthCommand(allocator: Allocator) !void {
     print("\n{s}🔑 KAGGLE AUTHENTICATION CHECK{s}\n", .{ BOLD, RESET });
     print("{s}════════════════════════════════════════════════════════════{s}\n\n", .{ DIM, RESET });
 
-    const home = std.process.getEnvVarOwned(allocator, "HOME") catch {
+    const home = tri_env.getEnvVarOwned(allocator, "HOME") catch {
         print("{s}❌ Cannot determine HOME directory{s}\n", .{ RED, RESET });
         return error.HomeNotFound;
     };

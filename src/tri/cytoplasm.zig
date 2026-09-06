@@ -13,6 +13,8 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
+const tri_env = @import("tri_env.zig");
 const colors = @import("tri_colors.zig");
 // Top-level binding for the eight usage-error paths below. The file already
 // imported this module once, function-locally at line ~2480 and under the name
@@ -3445,7 +3447,7 @@ fn runHealthJSON(allocator: Allocator) !void {
     // Output JSON
     std.debug.print("{{\n", .{});
     std.debug.print("  \"version\": \"10.0\",\n", .{});
-    std.debug.print("  \"timestamp\": {d},\n", .{std.time.timestamp()});
+    std.debug.print("  \"timestamp\": {d},\n", .{tri_time.timestamp()});
     std.debug.print("  \"summary\": {{\n", .{});
     std.debug.print("    \"cells\": {d},\n", .{cell_count});
     std.debug.print("    \"sub_cells\": {d},\n", .{sub_count});
@@ -4113,7 +4115,7 @@ fn outputTrendsJson(trends: []CellTrend, days: u32) !void {
     std.debug.print("{{\n", .{});
     std.debug.print("  \"version\": \"1.0\",\n", .{});
     std.debug.print("  \"days_analyzed\": {d},\n", .{days});
-    std.debug.print("  \"timestamp\": {d},\n", .{std.time.timestamp()});
+    std.debug.print("  \"timestamp\": {d},\n", .{tri_time.timestamp()});
     std.debug.print("  \"cells\": [\n", .{});
 
     for (trends, 0..) |t, i| {
@@ -4143,7 +4145,7 @@ fn outputTrendsJson(trends: []CellTrend, days: u32) !void {
 /// Output trends in Markdown format
 fn outputTrendsMarkdown(trends: []CellTrend, days: u32) !void {
     std.debug.print("# Cell Health Trends ({d} days)\n\n", .{days});
-    std.debug.print("*Generated: {}*\n\n", .{std.time.timestamp()});
+    std.debug.print("*Generated: {}*\n\n", .{tri_time.timestamp()});
 
     // Sort by slope
     var sorted = try std.ArrayList(CellTrend).initCapacity(std.heap.page_allocator, trends.len);
@@ -6585,7 +6587,7 @@ fn runWatch(allocator: Allocator, args: []const []const u8) !void {
         std.debug.print("{s}", .{CLEAR_SCREEN});
 
         // Header with ISO timestamp
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
         const secs = @rem(now, 86400);
         const hrs: u32 = @intCast(@divTrunc(secs, 3600));
         const mins: u32 = @intCast(@divTrunc(@rem(secs, 3600), 60));
@@ -6760,7 +6762,7 @@ fn runWatchJSON(allocator: Allocator) !void {
     defer allocator.free(all_cells);
 
     std.debug.print("{{\n", .{});
-    std.debug.print("  \"timestamp\": {d},\n", .{std.time.timestamp()});
+    std.debug.print("  \"timestamp\": {d},\n", .{tri_time.timestamp()});
     std.debug.print("  \"cells\": [\n", .{});
 
     var first = true;
@@ -9465,7 +9467,7 @@ fn writeRegistry(allocator: Allocator, all_cells: anytype) !void {
 
     const writer = buf.writer();
     try writer.writeAll("{\n  \"version\": \"1.0.0\",\n  \"updated\": \"");
-    try writer.print("{d}", .{std.time.timestamp()});
+    try writer.print("{d}", .{tri_time.timestamp()});
     try writer.writeAll("\",\n  \"core_version\": \"");
     try writer.writeAll(CORE_VERSION);
     try writer.writeAll("\",\n  \"core_files\": [\n    \"src/vsa.zig\", \"src/vm.zig\", \"src/hybrid.zig\", \"src/sdk.zig\",\n    \"src/sparse.zig\", \"src/jit.zig\", \"src/science.zig\", \"src/c_api.zig\"\n  ],\n  \"cells\": [\n");
@@ -9555,7 +9557,7 @@ fn runTemplates(allocator: Allocator, args: []const []const u8) !void {
     }
 
     // List user templates if they exist
-    const home_dir = std.process.getEnvVarOwned(allocator, "HOME") catch {
+    const home_dir = tri_env.getEnvVarOwned(allocator, "HOME") catch {
         std.debug.print("\n  {s}No HOME dir, skipping user templates{s}\n", .{ YELLOW, RESET });
         return;
     };
@@ -9618,7 +9620,7 @@ fn getTemplateDescription(name: []const u8) []const u8 {
 
 /// Load template from user directory
 fn loadUserTemplate(allocator: Allocator, name: []const u8) !?[]const u8 {
-    const home_dir = std.process.getEnvVarOwned(allocator, "HOME") catch return null;
+    const home_dir = tri_env.getEnvVarOwned(allocator, "HOME") catch return null;
     defer allocator.free(home_dir);
 
     const user_templates_dir = std.fmt.allocPrint(allocator, "{s}/.tri/templates", .{home_dir}) catch return null;

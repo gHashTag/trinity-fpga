@@ -5,6 +5,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 // Import episode types
 const EpisodeRequest = @import("episode_handler.zig").EpisodeRequest;
 const EpisodeType = @import("episode_handler.zig").EpisodeType;
@@ -137,7 +138,7 @@ fn loadJsonlFile(
 /// Convert EpisodeRequest to Episode
 fn convertToEpisode(allocator: Allocator, req: EpisodeRequest, agent_name: []const u8) !episodes.Episode {
     // Parse episode_id as timestamp (or use current time if not numeric)
-    const timestamp = std.fmt.parseInt(i64, req.episode_id, 10) catch std.time.timestamp();
+    const timestamp = std.fmt.parseInt(i64, req.episode_id, 10) catch tri_time.timestamp();
 
     // Map EpisodeType to Source
     const source: episodes.Source = switch (req.episode_type) {

@@ -7,6 +7,7 @@
 // phi^2 + 1/phi^2 = 3 = TRINITY
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const posix = std.posix;
 const log = std.log.scoped(.swe_entrypoint);
 
@@ -285,7 +286,7 @@ pub fn main() !void {
     postStepComment(allocator, issue_num_str, 3, 8, "\xe2\x9a\x99\xef\xb8\x8f", "ACTING", "Coding");
 
     log.info("Step 3: Running pipeline with links {s}...", .{config.pipeline_links});
-    const start_time = std.time.timestamp();
+    const start_time = tri_time.timestamp();
 
     var pipeline_ok = false;
     if (runCmd(allocator, &.{
@@ -303,7 +304,7 @@ pub fn main() !void {
     log.info("Step 4: Validating build...", .{});
     var report = validateBuild(allocator, config.work_dir);
     report.issue_number = config.issue_number;
-    report.time_seconds = @intCast(@as(u64, @intCast(std.time.timestamp() - start_time)));
+    report.time_seconds = @intCast(@as(u64, @intCast(tri_time.timestamp() - start_time)));
 
     // ── Step 5/8: Testing ──
     postStepComment(allocator, issue_num_str, 5, 8, "\xf0\x9f\xa7\xaa", "ACTING", "Testing");

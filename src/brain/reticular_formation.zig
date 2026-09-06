@@ -31,6 +31,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 /// Maximum number of events that can be buffered in memory.
 /// When exceeded, oldest events are auto-trimmed (FIFO eviction).
 const MAX_EVENTS: usize = 10_000;
@@ -239,7 +240,7 @@ pub const EventBus = struct {
     /// - Reduced lock scope (only for buffer ops)
     /// - Early error propagation on alloc failure
     pub fn publish(self: *EventBus, event_type: AgentEventType, data: EventData) !void {
-        const timestamp = std.time.milliTimestamp();
+        const timestamp = tri_time.milliTimestamp();
 
         // Extract and duplicate strings based on event type
         var task_id: []const u8 = undefined;
@@ -343,7 +344,7 @@ pub const EventBus = struct {
             self.allocator.free(batch);
         }
 
-        const timestamp = std.time.milliTimestamp();
+        const timestamp = tri_time.milliTimestamp();
 
         // Prepare all events outside lock
         for (events, 0..) |evt, i| {
@@ -767,7 +768,7 @@ test "EventBus poll with timestamp filter" {
     std.Thread.sleep(10 * std.time.ns_per_ms);
 
     // Get current time before second event
-    const mid_time = std.time.milliTimestamp();
+    const mid_time = tri_time.milliTimestamp();
 
     // Small sleep to ensure next event has strictly greater timestamp
     std.Thread.sleep(5 * std.time.ns_per_ms);
@@ -1475,7 +1476,7 @@ test "Reticular: poll with future timestamp returns empty" {
     });
 
     // Poll with future timestamp (events are in the past)
-    const future_time = std.time.milliTimestamp() + 1000000; // 1000 seconds in future
+    const future_time = tri_time.milliTimestamp() + 1000000; // 1000 seconds in future
     const events = try bus.poll(future_time, allocator, 100);
     defer allocator.free(events);
 

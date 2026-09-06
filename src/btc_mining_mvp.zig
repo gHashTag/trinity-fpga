@@ -8,6 +8,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const pas = @import("pas_mining_core.zig");
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -74,7 +75,7 @@ pub const MiningStats = struct {
             .tri_bonus_earned = 0.0,
             .energy_harvested = 0.0,
             .uptime_seconds = 0,
-            .start_time = std.time.timestamp(),
+            .start_time = tri_time.timestamp(),
             .last_share_time = 0,
         };
     }
@@ -106,14 +107,14 @@ pub const IdleMonitor = struct {
             .cpu_usage = 0.0,
             .is_idle = true,
             .threshold = threshold,
-            .last_check = std.time.timestamp(),
+            .last_check = tri_time.timestamp(),
         };
     }
 
     pub fn checkIdle(self: *IdleMonitor) bool {
         // Simulate CPU usage check (in real impl, read from /proc/stat or similar)
         // For MVP, we use a simple heuristic
-        self.last_check = std.time.timestamp();
+        self.last_check = tri_time.timestamp();
 
         // Simulated: assume idle if no recent activity
         // In production: read actual CPU stats
@@ -219,7 +220,7 @@ pub const BTCMiningMVP = struct {
 
                 if (batch_result.found) {
                     self.stats.shares_submitted += 1;
-                    self.stats.last_share_time = std.time.timestamp();
+                    self.stats.last_share_time = tri_time.timestamp();
                 }
             },
         }
@@ -258,7 +259,7 @@ pub const BTCMiningMVP = struct {
         }
 
         // Time (4 bytes)
-        const time: u32 = @truncate(@as(u64, @intCast(std.time.timestamp())));
+        const time: u32 = @truncate(@as(u64, @intCast(tri_time.timestamp())));
         header[68] = @truncate(time >> 0);
         header[69] = @truncate(time >> 8);
         header[70] = @truncate(time >> 16);
@@ -306,14 +307,14 @@ pub const BTCMiningMVP = struct {
     /// Stop mining
     pub fn stop(self: *BTCMiningMVP) void {
         self.state = .stopping;
-        self.stats.uptime_seconds = @intCast(std.time.timestamp() - self.stats.start_time);
+        self.stats.uptime_seconds = @intCast(tri_time.timestamp() - self.stats.start_time);
         _ = self.stats.calculateTriBonus();
         self.state = .stopped;
     }
 
     /// Get current stats
     pub fn getStats(self: *BTCMiningMVP) MiningStats {
-        self.stats.uptime_seconds = @intCast(std.time.timestamp() - self.stats.start_time);
+        self.stats.uptime_seconds = @intCast(tri_time.timestamp() - self.stats.start_time);
         _ = self.stats.calculateTriBonus();
         return self.stats;
     }
@@ -490,7 +491,7 @@ pub fn main() !void {
     // Run for a few iterations
     var total_hashes: u64 = 0;
     const iterations: u32 = 100;
-    const start_time = std.time.milliTimestamp();
+    const start_time = tri_time.milliTimestamp();
 
     for (0..iterations) |i| {
         const result = try miner.tick();
@@ -505,7 +506,7 @@ pub fn main() !void {
         }
     }
 
-    const elapsed_ms = std.time.milliTimestamp() - start_time;
+    const elapsed_ms = tri_time.milliTimestamp() - start_time;
 
     // Stop and get final stats
     miner.stop();
@@ -536,14 +537,14 @@ pub fn main() !void {
     try dist_miner.startAll();
 
     var dist_total: u64 = 0;
-    const dist_start = std.time.milliTimestamp();
+    const dist_start = tri_time.milliTimestamp();
 
     for (0..10) |_| {
         const result = try dist_miner.tickAll();
         dist_total += result.total_hashes;
     }
 
-    const dist_elapsed = std.time.milliTimestamp() - dist_start;
+    const dist_elapsed = tri_time.milliTimestamp() - dist_start;
     const dist_hashrate = @as(f64, @floatFromInt(dist_total)) / (@as(f64, @floatFromInt(dist_elapsed)) / 1000.0);
 
     dist_miner.stopAll();

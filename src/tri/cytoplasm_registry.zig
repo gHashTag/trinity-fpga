@@ -1,5 +1,6 @@
 // @origin(manual) @regen(pending)
 const std = @import("std");
+const tri_time = @import("tri_time");
 const colors = @import("tri_colors.zig");
 
 const Allocator = std.mem.Allocator;
@@ -85,7 +86,7 @@ fn runBackup(allocator: Allocator, args: []const []const u8) !void {
     const backup_dir = "data/cells/backups";
     std.fs.cwd().makePath(backup_dir) catch {};
 
-    const now = std.time.timestamp();
+    const now = tri_time.timestamp();
     const ts_fmt = try std.fmt.allocPrint(allocator, "{d}", .{now});
     defer allocator.free(ts_fmt);
 

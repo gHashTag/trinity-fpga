@@ -16,6 +16,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const types = @import("train_types.zig");
 const diag = @import("train_diagnostics.zig");
 const hippocampus = @import("hippocampus.zig");
@@ -1612,7 +1613,7 @@ fn runDashboard(allocator: std.mem.Allocator, quick: bool) !void {
                     const prev_alive_v = jsonU32(pv, "alive");
                     const prev_mean = jsonF32(pv, "mean_ppl");
                     const prev_g0 = jsonU32(pv, "g0_count");
-                    const now_ts: u32 = @intCast(@min(@as(u64, @intCast(@max(0, std.time.timestamp()))), std.math.maxInt(u32)));
+                    const now_ts: u32 = @intCast(@min(@as(u64, @intCast(@max(0, tri_time.timestamp()))), std.math.maxInt(u32)));
                     const delta_sec: u32 = if (now_ts > prev_ts) now_ts - prev_ts else 0;
                     const delta_h = @as(f32, @floatFromInt(delta_sec)) / 3600.0;
 
@@ -1653,7 +1654,7 @@ fn runDashboard(allocator: std.mem.Allocator, quick: bool) !void {
 
         // Save current snapshot for next run
         var snap_buf: [256]u8 = undefined;
-        const now_ts2: u32 = @intCast(@min(@as(u64, @intCast(@max(0, std.time.timestamp()))), std.math.maxInt(u32)));
+        const now_ts2: u32 = @intCast(@min(@as(u64, @intCast(@max(0, tri_time.timestamp()))), std.math.maxInt(u32)));
         const snap = std.fmt.bufPrint(&snap_buf, "{{\"ts\":{d},\"best_ppl\":{d:.4},\"alive\":{d},\"mean_ppl\":{d:.4},\"g0_count\":{d}}}", .{ now_ts2, cur_best, alive, cur_mean, g0_count }) catch "";
         if (snap.len > 0) {
             if (std.fs.cwd().createFile(".trinity/dashboard_prev.json", .{})) |sf| {

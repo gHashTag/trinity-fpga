@@ -5,6 +5,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const model_mod = @import("gguf_model.zig");
 const tokenizer_mod = @import("gguf_tokenizer.zig");
 const inference = @import("gguf_inference.zig");
@@ -250,7 +251,7 @@ pub const HttpServer = struct {
         model.printConfig();
 
         std.debug.print("\nLoading weights...\n", .{});
-        var timer = try std.time.Timer.start();
+        var timer = try tri_time.Timer.start();
         model.loadWeights() catch |err| {
             std.debug.print("Failed to load weights: {}\n", .{err});
             model.deinit();
@@ -320,7 +321,7 @@ pub const HttpServer = struct {
     }
 
     fn handleConnection(self: *HttpServer, connection: *std.net.Server.Connection, model: *FullModel, tokenizer: *Tokenizer) !void {
-        var timer = std.time.Timer.start() catch return;
+        var timer = tri_time.Timer.start() catch return;
         self.recordRequestStart();
 
         var buf: [16384]u8 = undefined;
@@ -649,7 +650,7 @@ pub const HttpServer = struct {
         std.debug.print("  Prompt: {s}\n", .{prompt});
 
         // Start timing for tok/s measurement
-        var gen_timer = std.time.Timer.start() catch null;
+        var gen_timer = tri_time.Timer.start() catch null;
 
         // Use greedy decoding for testing
         const sampling = SamplingParams{
@@ -762,7 +763,7 @@ pub const HttpServer = struct {
         }
 
         // Build JSON response
-        const timestamp = std.time.timestamp();
+        const timestamp = tri_time.timestamp();
         const json_body = try std.fmt.allocPrint(self.allocator, "{{\"id\":\"chatcmpl-trinity\",\"object\":\"chat.completion\",\"created\":{d},\"model\":\"trinity-llm\",\"choices\":[{{\"index\":0,\"message\":{{\"role\":\"assistant\",\"content\":\"{s}\"}},\"finish_reason\":\"stop\"}}],\"usage\":{{\"prompt_tokens\":10,\"completion_tokens\":20,\"total_tokens\":30}}}}", .{ timestamp, escaped.items });
         defer self.allocator.free(json_body);
 

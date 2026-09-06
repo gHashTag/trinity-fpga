@@ -4,6 +4,7 @@
 // φ² + 1/φ² = 3
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const openai = @import("openai_client.zig");
 
@@ -127,7 +128,7 @@ pub const Agent = struct {
 
     /// Run agent on a task
     pub fn run(self: *Self, task: []const u8) AgentError!AgentResult {
-        const start_time = std.time.nanoTimestamp();
+        const start_time = tri_time.nanoTimestamp();
 
         // Clear history for new task
         for (self.history.items) |item| {
@@ -166,7 +167,7 @@ pub const Agent = struct {
             // Check for final answer
             if (std.mem.eql(u8, parsed.action, "final_answer")) {
                 const answer = self.allocator.dupe(u8, parsed.action_input) catch return AgentError.OutOfMemory;
-                const end_time = std.time.nanoTimestamp();
+                const end_time = tri_time.nanoTimestamp();
 
                 return AgentResult{
                     .success = true,
@@ -189,7 +190,7 @@ pub const Agent = struct {
             try self.history.append(self.allocator, obs_msg);
         }
 
-        const end_time = std.time.nanoTimestamp();
+        const end_time = tri_time.nanoTimestamp();
         return AgentResult{
             .success = false,
             .answer = null,

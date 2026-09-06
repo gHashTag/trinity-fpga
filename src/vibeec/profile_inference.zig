@@ -1,5 +1,6 @@
 // Profile inference to find bottlenecks
 const std = @import("std");
+const tri_time = @import("tri_time");
 const model_mod = @import("gguf_model.zig");
 
 pub fn main() !void {
@@ -32,7 +33,7 @@ pub fn main() !void {
     std.debug.print("Profiling {d} forward passes...\n", .{num_tokens});
 
     for (0..num_tokens) |pos| {
-        var timer = try std.time.Timer.start();
+        var timer = try tri_time.Timer.start();
 
         const logits = try model.forward(1, pos); // token 1
         allocator.free(logits);

@@ -19,6 +19,7 @@ const EpisodePattern = auto_improve.EpisodePattern;
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 // ============================================================================
 // CONSTANTS
 // ============================================================================
@@ -119,7 +120,7 @@ pub const QueenBackend = struct {
             .server = null,
             .logger = EpisodeLogger.init(".trinity/logs"),
             .health = .{
-                .started_at = @intCast(std.time.nanoTimestamp()),
+                .started_at = @intCast(tri_time.nanoTimestamp()),
                 .improve_cycles = 0,
                 .last_improve_time = 0,
             },
@@ -134,7 +135,7 @@ pub const QueenBackend = struct {
             .server = null,
             .logger = EpisodeLogger.init(".trinity/logs"),
             .health = .{
-                .started_at = @intCast(std.time.nanoTimestamp()),
+                .started_at = @intCast(tri_time.nanoTimestamp()),
                 .improve_cycles = 0,
                 .last_improve_time = 0,
             },
@@ -260,7 +261,7 @@ pub const QueenBackend = struct {
 
     /// Handle GET / - Root endpoint with API info
     fn handleRoot(self: *const QueenBackend) ![]const u8 {
-        const uptime = std.time.nanoTimestamp() - self.health.started_at;
+        const uptime = tri_time.nanoTimestamp() - self.health.started_at;
         const uptime_s = @as(u64, @intCast(@divTrunc(uptime, 1_000_000_000)));
 
         const body = try std.fmt.allocPrint(self.allocator,
@@ -274,7 +275,7 @@ pub const QueenBackend = struct {
 
     /// Handle GET /health - Health check for Railway
     fn handleHealth(self: *const QueenBackend) ![]const u8 {
-        const uptime = std.time.nanoTimestamp() - self.health.started_at;
+        const uptime = tri_time.nanoTimestamp() - self.health.started_at;
         const uptime_s = @as(u64, @intCast(@divTrunc(uptime, 1_000_000_000)));
 
         const health = HealthResponse{
@@ -436,7 +437,7 @@ pub const QueenBackend = struct {
 
         // Update health stats
         self.health.improve_cycles += 1;
-        self.health.last_improve_time = @truncate(std.time.nanoTimestamp());
+        self.health.last_improve_time = @truncate(tri_time.nanoTimestamp());
 
         // Generate .tri spec and compile with tri_gen
         // TODO: Need to analyze patterns from episodes - passing empty for now

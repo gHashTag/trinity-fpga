@@ -5,6 +5,7 @@
 //! This JSON is consumed by the MCP server to auto-generate tools.
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const command_def = @import("command_def.zig");
 const command_table = @import("command_table.zig");
 
@@ -18,7 +19,7 @@ pub fn generateRegistryJson(allocator: std.mem.Allocator) ![]const u8 {
     errdefer buf.deinit(allocator);
 
     // Get current timestamp
-    const timestamp = std.time.timestamp();
+    const timestamp = tri_time.timestamp();
 
     // Header
     try buf.appendSlice(allocator,

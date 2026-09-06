@@ -2,6 +2,7 @@
 //! AST check, format check, and build verification
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const storm = @import("../golden_chain.zig");
 
 pub const astCheckLinkID = 7;
@@ -32,7 +33,7 @@ pub fn executeAstCheck(allocator: std.mem.Allocator, task: []const u8, file: []c
     const stderr = try allocator.dupe(u8, result.stderr.items);
     defer allocator.free(stderr);
 
-    const duration: u64 = @intCast(std.time.nanoTimestamp() - result.start_time);
+    const duration: u64 = @intCast(tri_time.nanoTimestamp() - result.start_time);
 
     // Check exit code (Zig 0.15: term is Term enum)
     const exit_code: u32 = switch (result.term) {
@@ -106,7 +107,7 @@ pub fn executeFmtCheck(allocator: std.mem.Allocator, task: []const u8, file: []c
     const stderr = try allocator.dupe(u8, result.stderr.items);
     defer allocator.free(stderr);
 
-    const duration: u64 = @intCast(std.time.nanoTimestamp() - result.start_time);
+    const duration: u64 = @intCast(tri_time.nanoTimestamp() - result.start_time);
 
     const exit_code: u32 = switch (result.term) {
         .Exited => |code| code,
@@ -158,7 +159,7 @@ pub fn executeBuild(allocator: std.mem.Allocator, task: []const u8, file: []cons
     const stderr = try allocator.dupe(u8, result.stderr.items);
     defer allocator.free(stderr);
 
-    const duration: u64 = @intCast(std.time.nanoTimestamp() - result.start_time);
+    const duration: u64 = @intCast(tri_time.nanoTimestamp() - result.start_time);
 
     // Parse build output for errors
     var has_errors = false;

@@ -63,14 +63,17 @@ pub const ContextResult = struct {
 // FIND RELEVANT SPECS
 // =============================================================================
 
-pub fn findRelevantSpecs(allocator: std.mem.Allocator, words: []const []const u8) ContextResult {
+// The types in this file are plain data with no constructor, so the Io the
+// 0.16 filesystem API needs arrives as a parameter rather than as a field.
+pub fn findRelevantSpecs(io: std.Io, allocator: std.mem.Allocator, words: []const []const u8) ContextResult {
     var result = ContextResult{};
 
-    var dir = std.fs.cwd().openDir("specs/tri", .{ .iterate = true }) catch return result;
-    defer dir.close();
+    // const, not var: Io.Dir takes itself by value in close/iterate/readFileAlloc.
+    const dir = std.Io.Dir.cwd().openDir(io, "specs/tri", .{ .iterate = true }) catch return result;
+    defer dir.close(io);
 
     var dir_iter = dir.iterate();
-    while (dir_iter.next() catch null) |entry| {
+    while (dir_iter.next(io) catch null) |entry| {
         if (entry.kind != .file) continue;
         if (!std.mem.endsWith(u8, entry.name, ".tri")) continue;
 
@@ -87,7 +90,7 @@ pub fn findRelevantSpecs(allocator: std.mem.Allocator, words: []const []const u8
 
         // Also check file content for description matches
         if (score == 0) {
-            const content = dir.readFileAlloc(allocator, entry.name, 4096) catch continue;
+            const content = dir.readFileAlloc(io, entry.name, allocator, .limited(4096)) catch continue;
             defer allocator.free(content);
 
             for (words) |word| {
@@ -109,7 +112,7 @@ pub fn findRelevantSpecs(allocator: std.mem.Allocator, words: []const []const u8
 
             // Read first line of description if available
             if (score >= 10) {
-                const content = dir.readFileAlloc(allocator, entry.name, 4096) catch "";
+                const content = dir.readFileAlloc(io, entry.name, allocator, .limited(4096)) catch "";
                 defer if (content.len > 0) allocator.free(content);
 
                 if (std.mem.indexOf(u8, content, "description:")) |desc_start| {
@@ -143,18 +146,19 @@ pub fn findRelevantSpecs(allocator: std.mem.Allocator, words: []const []const u8
 // FIND RELEVANT EXPERIENCE
 // =============================================================================
 
-pub fn findRelevantExperience(allocator: std.mem.Allocator, words: []const []const u8) ContextResult {
+pub fn findRelevantExperience(io: std.Io, allocator: std.mem.Allocator, words: []const []const u8) ContextResult {
     var result = ContextResult{};
 
-    var dir = std.fs.cwd().openDir(".trinity/experience/episodes", .{ .iterate = true }) catch return result;
-    defer dir.close();
+    // const, not var: Io.Dir takes itself by value in close/iterate/readFileAlloc.
+    const dir = std.Io.Dir.cwd().openDir(io, ".trinity/experience/episodes", .{ .iterate = true }) catch return result;
+    defer dir.close(io);
 
     var dir_iter = dir.iterate();
-    while (dir_iter.next() catch null) |entry| {
+    while (dir_iter.next(io) catch null) |entry| {
         if (entry.kind != .file) continue;
         if (!std.mem.endsWith(u8, entry.name, ".json")) continue;
 
-        const content = dir.readFileAlloc(allocator, entry.name, 64 * 1024) catch continue;
+        const content = dir.readFileAlloc(io, entry.name, allocator, .limited(64 * 1024)) catch continue;
         defer allocator.free(content);
 
         var score: u32 = 0;
@@ -205,7 +209,7 @@ pub fn findRelevantExperience(allocator: std.mem.Allocator, words: []const []con
 // BUILD CONTEXT — combines specs + experience
 // =============================================================================
 
-pub fn buildContext(allocator: std.mem.Allocator, task: []const u8) ContextResult {
+pub fn buildContext(io: std.Io, allocator: std.mem.Allocator, task: []const u8) ContextResult {
     // Split task into words
     var words_buf: [32][]const u8 = undefined;
     var word_count: usize = 0;
@@ -218,8 +222,8 @@ pub fn buildContext(allocator: std.mem.Allocator, task: []const u8) ContextResul
     }
     const words = words_buf[0..word_count];
 
-    var specs = findRelevantSpecs(allocator, words);
-    const exp = findRelevantExperience(allocator, words);
+    var specs = findRelevantSpecs(io, allocator, words);
+    const exp = findRelevantExperience(io, allocator, words);
 
     // Merge into specs result
     var i: u8 = 0;
@@ -239,7 +243,7 @@ pub fn buildContext(allocator: std.mem.Allocator, task: []const u8) ContextResul
 // CLI COMMAND: tri context <task>
 // =============================================================================
 
-pub fn runContextCommand(allocator: std.mem.Allocator, args: []const []const u8) void {
+pub fn runContextCommand(io: std.Io, allocator: std.mem.Allocator, args: []const []const u8) void {
     if (args.len == 0) {
         printContextHelp();
         return;
@@ -259,7 +263,7 @@ pub fn runContextCommand(allocator: std.mem.Allocator, args: []const []const u8)
     }
     const task = task_buf[0..task_len];
 
-    const result = buildContext(allocator, task);
+    const result = buildContext(io, allocator, task);
 
     // Render
     std.debug.print("\n\x1b[1mCONTEXT LOADER\x1b[0m — task: \"{s}\"\n", .{task});
@@ -363,7 +367,9 @@ fn extractJsonValue(content: []const u8, key: []const u8) ?[]const u8 {
 test "findRelevantSpecs returns results for matching keywords" {
     const allocator = std.testing.allocator;
     const words = [_][]const u8{ "dashboard", "faculty" };
-    const result = findRelevantSpecs(allocator, &words);
+    // The test runner owns this Io instance, so taking it here does not spin up
+    // a second event loop the way constructing an Io.Threaded would.
+    const result = findRelevantSpecs(std.testing.io, allocator, &words);
     // Should find at least dashboard.tri if specs exist
     // In test environment, specs may not exist — just verify no crash
     _ = result;
@@ -371,7 +377,7 @@ test "findRelevantSpecs returns results for matching keywords" {
 
 test "buildContext combines specs and experience" {
     const allocator = std.testing.allocator;
-    const result = buildContext(allocator, "implement VSA benchmark test");
+    const result = buildContext(std.testing.io, allocator, "implement VSA benchmark test");
     // Verify structure is valid
     try std.testing.expect(result.spec_count <= 5);
     try std.testing.expect(result.episode_count <= 3);
@@ -386,7 +392,7 @@ test "containsInsensitive works" {
 
 test "empty task returns empty context" {
     const allocator = std.testing.allocator;
-    const result = buildContext(allocator, "");
+    const result = buildContext(std.testing.io, allocator, "");
     try std.testing.expectEqual(@as(u8, 0), result.spec_count);
     try std.testing.expectEqual(@as(u8, 0), result.episode_count);
     try std.testing.expectEqual(@as(u32, 0), result.total_score);

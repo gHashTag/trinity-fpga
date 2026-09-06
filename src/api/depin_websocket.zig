@@ -2,6 +2,7 @@
 // DePIN WebSocket Server — Real-time events (Phase 3)
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const net = std.net;
 
@@ -27,12 +28,12 @@ pub fn init(allocator: Allocator, stream: net.Stream, address: net.Address) Clie
     _ = allocator;
     _ = stream;
     _ = address;
-    _ = std.time.timestamp();
+    _ = tri_time.timestamp();
     _ = .{};
     return ClientConnection{
         .stream = stream,
         .address = address,
-        .connected_at = std.time.timestamp(),
+        .connected_at = tri_time.timestamp(),
         .subscribed_channels = .{},
     };
 }

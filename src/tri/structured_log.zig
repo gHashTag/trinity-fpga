@@ -7,6 +7,7 @@
 //! φ² + 1/φ² = 3 = TRINITY
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const tri_mutex = @import("mutex.zig");
 const observability = @import("observability.zig");
 
@@ -50,7 +51,7 @@ pub const LogEntry = struct {
 
     pub fn init(allocator: std.mem.Allocator, level: Level, message: []const u8) LogEntry {
         return LogEntry{
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
             .level = level,
             .request_id = null,
             .message = message,
@@ -286,7 +287,7 @@ pub const Logger = struct {
     }
 
     fn rotateLogFileIfNeeded(self: *Logger) !void {
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
         const current_date = @divTrunc(now, 24 * 60 * 60); // Days since epoch
 
         if (self.current_date == current_date and self.current_file != null) {
@@ -570,12 +571,17 @@ fn writeJsonString(allocator: std.mem.Allocator, writer: anytype, str: []const u
 
 // Tests
 test "Logger creates log directory" {
-    var logger = try Logger.init(std.testing.allocator, .info);
+    // The test runner owns this Io instance, so taking it here does not spin up
+    // a second event loop the way constructing an Io.Threaded would.
+    const io = std.testing.io;
+
+    var logger = try Logger.init(io, std.testing.allocator, .info);
     defer logger.deinit();
 
     // Verify directory exists
-    var dir = try std.fs.cwd().openDir(".trinity/logs", .{});
-    defer dir.close();
+    // const, not var: Io.Dir.close takes the Dir by value, so it is never mutated.
+    const dir = try std.Io.Dir.cwd().openDir(io, ".trinity/logs", .{});
+    defer dir.close(io);
 }
 
 test "LogEntry JSON serialization" {

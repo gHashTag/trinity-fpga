@@ -15,6 +15,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const colors = @import("tri_colors.zig");
 const print = std.debug.print;
@@ -239,7 +240,7 @@ fn postStepComment(allocator: Allocator, issue_num: u32, phase: LoopPhase, detai
 fn executePhase(allocator: Allocator, phase: LoopPhase, issue_num: u32) LoopStep {
     var step = LoopStep{
         .phase = phase,
-        .started_at = std.time.timestamp(),
+        .started_at = tri_time.timestamp(),
     };
 
     switch (phase) {
@@ -267,7 +268,7 @@ fn executePhase(allocator: Allocator, phase: LoopPhase, issue_num: u32) LoopStep
             const file = std.fs.cwd().openFile(".trinity/pick_result.json", .{}) catch {
                 step.setOutput("No pick result found");
                 step.success = false;
-                step.finished_at = std.time.timestamp();
+                step.finished_at = tri_time.timestamp();
                 postStepComment(allocator, issue_num, phase, "no pick result found");
                 return step;
             };
@@ -348,7 +349,7 @@ fn executePhase(allocator: Allocator, phase: LoopPhase, issue_num: u32) LoopStep
         },
     }
 
-    step.finished_at = std.time.timestamp();
+    step.finished_at = tri_time.timestamp();
     return step;
 }
 
@@ -359,7 +360,7 @@ fn saveMistakeForIssue(issue_num: u32, err_msg: []const u8) void {
     var path_buf: [128]u8 = undefined;
     const path = std.fmt.bufPrint(&path_buf, ".trinity/mistakes/{d}_{d}.json", .{
         issue_num,
-        std.time.timestamp(),
+        tri_time.timestamp(),
     }) catch return;
 
     const file = std.fs.cwd().createFile(path, .{}) catch return;
@@ -367,7 +368,7 @@ fn saveMistakeForIssue(issue_num: u32, err_msg: []const u8) void {
 
     var buf: [2048]u8 = undefined;
     const json = std.fmt.bufPrint(&buf, "{{\"issue\":{d},\"error\":\"{s}\",\"timestamp\":{d},\"source\":\"dev_loop\"}}", .{
-        issue_num, err_msg, std.time.timestamp(),
+        issue_num, err_msg, tri_time.timestamp(),
     }) catch return;
     file.writeAll(json) catch return;
 }
@@ -387,7 +388,7 @@ fn runOnce(allocator: Allocator, state: *DevLoopState) LoopIteration {
         .number = state.current_iteration,
     };
 
-    const start_time = std.time.timestamp();
+    const start_time = tri_time.timestamp();
 
     print("\n{s}LOOP ITERATION {d}{s}\n", .{ GOLDEN, state.current_iteration, RESET });
     print("{s}════════════════════════════════════════════{s}\n\n", .{ GRAY, RESET });
@@ -440,7 +441,7 @@ fn runOnce(allocator: Allocator, state: *DevLoopState) LoopIteration {
         }
     }
 
-    iteration.total_seconds = @intCast(std.time.timestamp() - start_time);
+    iteration.total_seconds = @intCast(tri_time.timestamp() - start_time);
 
     if (all_passed) {
         state.consecutive_failures = 0;
@@ -515,7 +516,7 @@ fn saveState(state: *const DevLoopState) void {
         state.consecutive_failures,
         state.total_commits,
         state.total_specs_created,
-        std.time.timestamp(),
+        tri_time.timestamp(),
     }) catch return;
     file.writeAll(content) catch return;
 }
@@ -560,7 +561,7 @@ fn saveMistake(phase: LoopPhase, err_msg: []const u8) void {
     var path_buf: [128]u8 = undefined;
     const path = std.fmt.bufPrint(&path_buf, ".trinity/mistakes/{s}_{d}.txt", .{
         phase.label(),
-        std.time.timestamp(),
+        tri_time.timestamp(),
     }) catch return;
 
     const file = std.fs.cwd().createFile(path, .{}) catch return;
@@ -572,7 +573,7 @@ fn saveMistake(phase: LoopPhase, err_msg: []const u8) void {
     file.writeAll(err_msg) catch return;
     file.writeAll("\ntimestamp: ") catch return;
     var ts_buf: [20]u8 = undefined;
-    const ts = std.fmt.bufPrint(&ts_buf, "{d}", .{std.time.timestamp()}) catch return;
+    const ts = std.fmt.bufPrint(&ts_buf, "{d}", .{tri_time.timestamp()}) catch return;
     file.writeAll(ts) catch return;
     file.writeAll("\n") catch return;
 }

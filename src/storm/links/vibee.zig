@@ -2,6 +2,7 @@
 //! Executes vibee binary to generate Zig code from .tri specification
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const storm = @import("../golden_chain.zig");
 
 pub const LinkID = 6;
@@ -49,7 +50,7 @@ pub fn execute(allocator: std.mem.Allocator, task: []const u8, spec_file: []cons
     const stderr = try allocator.dupe(u8, result.stderr.items);
     defer allocator.free(stderr);
 
-    const duration: u64 = @intCast(std.time.nanoTimestamp() - result.start_time);
+    const duration: u64 = @intCast(tri_time.nanoTimestamp() - result.start_time);
 
     // Check exit code (Zig 0.15: term is Term enum)
     const exit_code: u32 = switch (result.term) {

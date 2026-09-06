@@ -17,6 +17,7 @@
 //! φ² + 1/φ² = 3 = TRINITY
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const mem = std.mem;
 const math = std.math;
 const fs = std.fs;
@@ -392,7 +393,7 @@ pub const LearningSystem = struct {
             @as(f64, @floatFromInt(total_duration)) / @as(f64, @floatFromInt(self.history.items.len))
         else
             0;
-        self.stats.last_update = std.time.milliTimestamp();
+        self.stats.last_update = tri_time.milliTimestamp();
     }
 
     fn getSuccessRate(self: *const Self) f32 {
@@ -708,7 +709,7 @@ test "LearningSystem init and record" {
     var learning = try LearningSystem.init(allocator);
     defer learning.deinit();
 
-    const now = std.time.milliTimestamp();
+    const now = tri_time.milliTimestamp();
 
     try learning.recordEvent(.{
         .timestamp = now,
@@ -790,7 +791,7 @@ test "LearningSystem stats tracking" {
     var learning = try LearningSystem.init(allocator);
     defer learning.deinit();
 
-    const now = std.time.milliTimestamp();
+    const now = tri_time.milliTimestamp();
 
     // Add some records
     try learning.recordEvent(.{
@@ -819,7 +820,7 @@ test "LearningSystem pattern detection" {
     var learning = try LearningSystem.init(allocator);
     defer learning.deinit();
 
-    const now = std.time.milliTimestamp();
+    const now = tri_time.milliTimestamp();
 
     // Add records that should trigger failure pattern
     var i: usize = 0;
@@ -857,7 +858,7 @@ test "LearningSystem pattern recognition - optimal backoff" {
     var learning = try LearningSystem.init(allocator);
     defer learning.deinit();
 
-    const now = std.time.milliTimestamp();
+    const now = tri_time.milliTimestamp();
 
     // Add records showing 5000ms backoff has high success rate
     var i: usize = 0;
@@ -895,7 +896,7 @@ test "LearningSystem adaptive backoff tuning" {
     var learning = try LearningSystem.init(allocator);
     defer learning.deinit();
 
-    const now = std.time.milliTimestamp();
+    const now = tri_time.milliTimestamp();
 
     // Add records to train the adaptive backoff
     // Note: recordEvent calls learnPatterns every PATTERN_WINDOW_SIZE events
@@ -929,7 +930,7 @@ test "LearningSystem performance tracking" {
     var learning = try LearningSystem.init(allocator);
     defer learning.deinit();
 
-    const now = std.time.milliTimestamp();
+    const now = tri_time.milliTimestamp();
 
     // Add records with varying durations
     const durations = [_]u64{ 50, 100, 150, 200, 250, 300, 350, 400, 450, 500 };
@@ -965,7 +966,7 @@ test "LearningSystem failure prediction with history" {
     var learning = try LearningSystem.init(allocator);
     defer learning.deinit();
 
-    const now = std.time.milliTimestamp();
+    const now = tri_time.milliTimestamp();
 
     // Add high failure rate for task_claim
     var i: usize = 0;
@@ -998,7 +999,7 @@ test "LearningSystem export insights" {
     var learning = try LearningSystem.init(allocator);
     defer learning.deinit();
 
-    const now = std.time.milliTimestamp();
+    const now = tri_time.milliTimestamp();
 
     try learning.recordEvent(.{
         .timestamp = now,
@@ -1171,7 +1172,7 @@ test "LearningSystem detectPerformanceDegradation" {
     var learning = try LearningSystem.init(allocator);
     defer learning.deinit();
 
-    const now = std.time.milliTimestamp();
+    const now = tri_time.milliTimestamp();
 
     // First half: fast operations (10ms)
     var i: usize = 0;
@@ -1211,7 +1212,7 @@ test "LearningSystem pattern detection insufficient data" {
     var learning = try LearningSystem.init(allocator);
     defer learning.deinit();
 
-    const now = std.time.milliTimestamp();
+    const now = tri_time.milliTimestamp();
 
     // Add fewer than minimum for pattern detection
     var i: usize = 0;
@@ -1236,7 +1237,7 @@ test "LearningSystem optimal backoff pattern" {
     var learning = try LearningSystem.init(allocator);
     defer learning.deinit();
 
-    const now = std.time.milliTimestamp();
+    const now = tri_time.milliTimestamp();
 
     // Create high success rate for 3000ms backoff
     var i: usize = 0;
@@ -1293,7 +1294,7 @@ test "LearningSystem stats update accuracy" {
     var learning = try LearningSystem.init(allocator);
     defer learning.deinit();
 
-    const now = std.time.milliTimestamp();
+    const now = tri_time.milliTimestamp();
 
     // Add 3 successful, 2 failed events
     const durations = [_]u64{ 100, 200, 150, 300, 250 };
@@ -1333,7 +1334,7 @@ test "LearningSystem getRecentFailureRate all failures" {
     var learning = try LearningSystem.init(allocator);
     defer learning.deinit();
 
-    const now = std.time.milliTimestamp();
+    const now = tri_time.milliTimestamp();
 
     // Add 10 failures
     var i: usize = 0;
@@ -1363,7 +1364,7 @@ test "LearningSystem getSuccessRate" {
     var learning = try LearningSystem.init(allocator);
     defer learning.deinit();
 
-    const now = std.time.milliTimestamp();
+    const now = tri_time.milliTimestamp();
 
     // 7 success, 3 failure = 70% success rate
     var i: usize = 0;
@@ -1396,7 +1397,7 @@ test "LearningSystem history trimming at limit" {
     var learning = try LearningSystem.init(allocator);
     defer learning.deinit();
 
-    const now = std.time.milliTimestamp();
+    const now = tri_time.milliTimestamp();
 
     // Add exactly MAX_HISTORY_SIZE + 1 events
     var i: usize = 0;
@@ -1490,7 +1491,7 @@ test "LearningSystem getRecommendation moderate failure rate" {
     var learning = try LearningSystem.init(allocator);
     defer learning.deinit();
 
-    const now = std.time.milliTimestamp();
+    const now = tri_time.milliTimestamp();
 
     // Create 40% failure rate (below 0.5 threshold)
     var i: usize = 0;
@@ -1595,7 +1596,7 @@ test "LearningSystem timestamp tracking" {
     var learning = try LearningSystem.init(allocator);
     defer learning.deinit();
 
-    const before = std.time.milliTimestamp();
+    const before = tri_time.milliTimestamp();
 
     try learning.recordEvent(.{
         .timestamp = before,
@@ -1605,7 +1606,7 @@ test "LearningSystem timestamp tracking" {
         .metadata = .{ .task_id = "", .agent_id = "", .attempt = 0, .backoff_ms = 0, .error_msg = "", .health_score = 100.0 },
     });
 
-    const after = std.time.milliTimestamp();
+    const after = tri_time.milliTimestamp();
 
     // Last update should be within expected window
     try std.testing.expect(learning.stats.last_update >= before);
@@ -1617,7 +1618,7 @@ test "LearningSystem pattern retraining trigger" {
     var learning = try LearningSystem.init(allocator);
     defer learning.deinit();
 
-    const now = std.time.milliTimestamp();
+    const now = tri_time.milliTimestamp();
 
     // Add exactly PATTERN_WINDOW_SIZE - 1 events (should not trigger)
     var i: usize = 0;

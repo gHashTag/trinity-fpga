@@ -3,6 +3,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 /// Sacred constants — the bridge between spirit and matter
 pub const Sacred = struct {
     /// Golden ratio: φ = (1 + √5) / 2
@@ -158,7 +159,7 @@ pub const PhiGate = struct {
             .phi_weighted = false,
             .sona_q_value = 0.0,
             .confidence = 0.0,
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
         };
     }
 
@@ -319,7 +320,7 @@ test "ProgressTracker completion" {
         .failed_links = 40,
         .skipped_links = 10,
         .average_pas_score = 0.92,
-        .start_time = std.time.timestamp(),
+        .start_time = tri_time.timestamp(),
     };
 
     try std.testing.expectApproxEqAbs(tracker.completionPercentage(), 50.0, 0.1);

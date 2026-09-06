@@ -3,6 +3,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 /// Import from Plan stage
 pub const Plan = @import("plan.zig").Plan;
 pub const Step = @import("plan.zig").Step;
@@ -52,7 +53,7 @@ pub const CycleResult = struct {
 
 /// Helper to get u64 from i128 timestamp
 fn timestampToU64() u64 {
-    return @as(u64, @intCast(std.time.nanoTimestamp()));
+    return @as(u64, @intCast(tri_time.nanoTimestamp()));
 }
 
 /// Execute action and capture result - simplified for Zig 0.15

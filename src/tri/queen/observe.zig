@@ -3,6 +3,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 pub const Episode = @import("episodes.zig").Episode;
 
 pub const PolicySnapshot = struct {
@@ -175,7 +176,7 @@ pub fn updateSensorsFromFarm(allocator: std.mem.Allocator, farm_metrics: anytype
 /// Observe: gather current state from sensors and policy
 /// Caller owns returned slices: free active_issues and recalled_episodes
 pub fn observe(allocator: std.mem.Allocator) !Context {
-    const now_ns: u64 = @as(u64, @intCast(std.time.nanoTimestamp()));
+    const now_ns: u64 = @as(u64, @intCast(tri_time.nanoTimestamp()));
 
     const senses = try loadSensors(allocator);
     const policy = try loadPolicy(allocator);

@@ -6,6 +6,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const colors = @import("../tri_colors.zig");
 
 const CYAN = colors.CYAN;
@@ -224,7 +225,7 @@ fn runBenchmarkKoschei() void {
     var total_ns: u64 = 0;
 
     for (ops) |op| {
-        const start = std.time.nanoTimestamp();
+        const start = tri_time.nanoTimestamp();
         var acc: f64 = 0;
         for (0..iters) |i| {
             const fi = @as(f64, @floatFromInt(i));
@@ -236,7 +237,7 @@ fn runBenchmarkKoschei() void {
                 else => 0,
             };
         }
-        const elapsed = @as(u64, @intCast(std.time.nanoTimestamp() - start));
+        const elapsed = @as(u64, @intCast(tri_time.nanoTimestamp() - start));
         total_ns += elapsed;
         const per_op = elapsed / iters;
         const ops_sec = if (per_op > 0) 1_000_000_000 / per_op else 999_999_999;

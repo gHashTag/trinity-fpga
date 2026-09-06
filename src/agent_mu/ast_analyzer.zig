@@ -4,6 +4,7 @@
 //! identifies bug patterns, extracts metadata.
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const ArrayListManaged = std.array_list.Managed;
 
 /// AST node type
@@ -184,7 +185,7 @@ fn extractTemplateMetadata(allocator: std.mem.Allocator, line: []const u8, file_
         .line_end = 0,
         .parameters = params,
         .bug_patterns = bugs,
-        .last_modified = std.time.timestamp(),
+        .last_modified = tri_time.timestamp(),
     };
 }
 

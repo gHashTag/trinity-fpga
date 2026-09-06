@@ -10,6 +10,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 // Sacred constants (inline to avoid import issues)
 const PHI: f64 = 1.6180339887498948482;
 const PHI_INV: f64 = 1.0 / PHI;
@@ -148,7 +149,7 @@ pub fn normalizeLZc(raw_lzc: usize, signal_length: usize) f64 {
 
 /// Compute full LZ result with timing
 pub fn computeLZResult(signal: []const u8) !LZResult {
-    const start = std.time.nanoTimestamp();
+    const start = tri_time.nanoTimestamp();
 
     const raw_lzc = lempelZiv76(signal);
     const normalized = normalizeLZc(raw_lzc, signal.len);
@@ -156,7 +157,7 @@ pub fn computeLZResult(signal: []const u8) !LZResult {
     // Entropy rate approximation from LZc
     const entropy_rate = normalized * std.math.log2(@as(f64, @floatFromInt(signal.len)));
 
-    const end = std.time.nanoTimestamp();
+    const end = tri_time.nanoTimestamp();
 
     return LZResult{
         .raw_complexity = raw_lzc,

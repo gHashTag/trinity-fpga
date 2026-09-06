@@ -7,6 +7,7 @@
 //
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const state_machine = @import("dev_state_machine.zig");
 const dev_scan = @import("dev_scan.zig");
@@ -27,7 +28,7 @@ fn cmdStatus(allocator: Allocator, args: []const []const u8) !void {
         }
     }
 
-    const ts = std.time.timestamp();
+    const ts = tri_time.timestamp();
     std.debug.print("  Started: {}", .{ts});
     std.debug.print("  Files: {}", .{session.files_count});
     const test_status = if (session.tests_passed) "passed" else "pending";
@@ -64,7 +65,7 @@ fn cmdStart(allocator: Allocator, args: []const []const u8) !void {
 
     try session.transition(.active);
     session.issue_number = issue_number;
-    session.started_at = std.time.timestamp();
+    session.started_at = tri_time.timestamp();
 
     try session.save();
 
@@ -86,7 +87,7 @@ fn cmdTest(allocator: Allocator, args: []const []const u8) !void {
 
     try session.transition(.tested);
     session.tests_passed = true;
-    session.last_updated = std.time.timestamp();
+    session.last_updated = tri_time.timestamp();
     try session.save();
 
     std.debug.print("Tests passed", .{});
@@ -134,7 +135,7 @@ fn cmdCommit(allocator: Allocator, args: []const []const u8) !void {
 
     // Update session state after successful commit
     session.state = .committed;
-    session.last_updated = std.time.timestamp();
+    session.last_updated = tri_time.timestamp();
     try session.save();
 
     std.debug.print("Committed", .{});
@@ -159,7 +160,7 @@ fn cmdShip(allocator: Allocator, args: []const []const u8) !void {
     std.debug.print("Shipping...", .{});
 
     session.state = .shipped;
-    session.last_updated = std.time.timestamp();
+    session.last_updated = tri_time.timestamp();
     try session.save();
 
     std.debug.print("Shipped (simulated)", .{});
@@ -181,7 +182,7 @@ fn cmdReset(allocator: Allocator, args: []const []const u8) !void {
     // Reset to IDLE state (not ACTIVE) to allow starting new issue
     try session.transition(.idle);
     session.tests_passed = false;
-    session.last_updated = std.time.timestamp();
+    session.last_updated = tri_time.timestamp();
     try session.save();
 
     std.debug.print("Reset complete (simulated)", .{});
@@ -201,7 +202,7 @@ fn cmdUnblock(allocator: Allocator, args: []const []const u8) !void {
     std.debug.print("Unblocking session...", .{});
 
     session.state = .idle;
-    session.last_updated = std.time.timestamp();
+    session.last_updated = tri_time.timestamp();
     try session.save();
 
     std.debug.print("Unblocked", .{});

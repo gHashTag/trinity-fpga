@@ -1,4 +1,5 @@
 const std = @import("std");
+const tri_time = @import("tri_time");
 const colors = @import("../tri_colors.zig");
 
 const GREEN = colors.GREEN;
@@ -222,7 +223,7 @@ pub fn runToolUseBench() void {
     var passed_tests: usize = 0;
     var chain_tests: usize = 0;
     var chain_passed: usize = 0;
-    const start_time = std.time.milliTimestamp();
+    const start_time = tri_time.milliTimestamp();
 
     std.debug.print("{s}Running Tool Use Tests:{s}\n\n", .{ CYAN, RESET });
 
@@ -262,7 +263,7 @@ pub fn runToolUseBench() void {
         total_ops += 1;
     }
 
-    const elapsed = std.time.milliTimestamp() - start_time;
+    const elapsed = tri_time.milliTimestamp() - start_time;
     const avg_accuracy = total_accuracy / total_ops;
     const throughput = total_ops * 1000.0 / @as(f64, @floatFromInt(@max(1, elapsed)));
 
@@ -616,7 +617,7 @@ pub fn runVisionBench() void {
     var ocr_count: usize = 0;
     var scene_accuracy_sum: f64 = 0;
     var scene_count: usize = 0;
-    const start_time = std.time.milliTimestamp();
+    const start_time = tri_time.milliTimestamp();
 
     std.debug.print("{s}Running Vision Understanding Tests:{s}\n\n", .{ CYAN, RESET });
 
@@ -667,7 +668,7 @@ pub fn runVisionBench() void {
         total_ops += 1;
     }
 
-    const elapsed = std.time.milliTimestamp() - start_time;
+    const elapsed = tri_time.milliTimestamp() - start_time;
     const avg_accuracy = total_accuracy / total_ops;
     const throughput = total_ops * 1000.0 / @as(f64, @floatFromInt(@max(1, elapsed)));
 

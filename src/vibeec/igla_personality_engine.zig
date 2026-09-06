@@ -13,6 +13,7 @@
 // =============================================================================
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const learning = @import("igla_learning_engine.zig");
 const unified = @import("igla_unified_chat.zig");
 const multilingual = @import("igla_multilingual_coder.zig");
@@ -308,7 +309,7 @@ pub const CharacterMemory = struct {
                 .key = key,
                 .value = value,
                 .confidence = 1.0,
-                .timestamp = std.time.timestamp(),
+                .timestamp = tri_time.timestamp(),
             };
             self.fact_count += 1;
         }
@@ -451,7 +452,8 @@ pub const PersonalityEngine = struct {
             "hello",        "hi",           "hey",
             "good morning", "good evening", "good day",
             "greetings",    "andin",        "inwithin",
-            "你好",       "hola",         "guten tag",
+            "你好",
+            "hola",         "guten tag",
         };
 
         for (greetings) |g| {
@@ -472,10 +474,12 @@ pub const PersonalityEngine = struct {
         };
 
         const farewells = [_][]const u8{
-            "goodbye", "bye",                    "farewell",
-            "see you", "later",                  "take care",
-            "byto",    "before withinandyesand", "",
-            "再见",  "adiós",                 "auf wiedersehen",
+            "goodbye",         "bye",                    "farewell",
+            "see you",         "later",                  "take care",
+            "byto",            "before withinandyesand", "",
+            "再见",
+            "adiós",
+            "auf wiedersehen",
         };
 
         for (farewells) |f| {
@@ -592,7 +596,7 @@ pub fn runBenchmark() !void {
     var high_warmth: usize = 0;
     var total_warmth: f32 = 0;
 
-    const start = std.time.nanoTimestamp();
+    const start = tri_time.nanoTimestamp();
 
     for (session) |s| {
         const response = engine.respond(s.query);
@@ -607,7 +611,7 @@ pub fn runBenchmark() !void {
         engine.recordFeedback(s.feedback);
     }
 
-    const elapsed_ns = std.time.nanoTimestamp() - start;
+    const elapsed_ns = tri_time.nanoTimestamp() - start;
     const ops_per_sec = @as(f64, @floatFromInt(session.len)) / (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
 
     const stats = engine.getStats();

@@ -4,6 +4,7 @@
 // φ² + 1/φ² = 3 = TRINITY
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const trit = @import("trit.zig");
 const tekum = @import("tekum.zig");
 const tnn = @import("tnn.zig");
@@ -43,7 +44,7 @@ const BenchmarkResult = struct {
 };
 
 fn runBenchmark(name: []const u8, comptime func: anytype, iterations: usize) BenchmarkResult {
-    var timer = std.time.Timer.start() catch unreachable;
+    var timer = tri_time.Timer.start() catch unreachable;
 
     // Warmup
     var i: usize = 0;

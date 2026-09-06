@@ -18,6 +18,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const RalphLoop = @import("ralph_loop.zig").RalphLoop;
 const agent_mu = @import("agent_mu");
 const allocator = std.heap.page_allocator;
@@ -155,7 +156,7 @@ pub const Orchestrator = struct {
 
     /// Run autonomous development cycle
     pub fn run(self: *Self, task_filter: ?[]const u8) !CycleReport {
-        const start_time = std.time.milliTimestamp();
+        const start_time = tri_time.milliTimestamp();
 
         // Step 1: Read fix_plan.md
         var tasks = try self.readFixPlan();
@@ -219,7 +220,7 @@ pub const Orchestrator = struct {
                 .tests_total = 0,
                 .errors_found = 0,
                 .errors_fixed = 0,
-                .duration_ms = @intCast(std.time.milliTimestamp() - start_time),
+                .duration_ms = @intCast(tri_time.milliTimestamp() - start_time),
                 .message = try std.fmt.allocPrint(self.alloc, "Task blocked by: {s}", .{task.blocked_by}),
             };
         }
@@ -291,7 +292,7 @@ pub const Orchestrator = struct {
                     .errors = 0,
                     .confidence = 100,
                     .exit_signal = true,
-                    .duration_ms = @intCast(std.time.milliTimestamp() - start_time),
+                    .duration_ms = @intCast(tri_time.milliTimestamp() - start_time),
                 });
 
                 if (verify_result.fix_applied) {
@@ -299,7 +300,7 @@ pub const Orchestrator = struct {
                 }
 
                 // Success!
-                const duration = std.time.milliTimestamp() - start_time;
+                const duration = tri_time.milliTimestamp() - start_time;
 
                 return CycleReport{
                     .result = .success,
@@ -325,7 +326,7 @@ pub const Orchestrator = struct {
                 .errors = 1,
                 .confidence = 0,
                 .exit_signal = false,
-                .duration_ms = @intCast(std.time.milliTimestamp() - start_time),
+                .duration_ms = @intCast(tri_time.milliTimestamp() - start_time),
             });
 
             if (self.config.verbose) {
@@ -345,7 +346,7 @@ pub const Orchestrator = struct {
                 .tests_total = 0,
                 .errors_found = 1,
                 .errors_fixed = errors_fixed,
-                .duration_ms = @intCast(std.time.milliTimestamp() - start_time),
+                .duration_ms = @intCast(tri_time.milliTimestamp() - start_time),
                 .message = try self.alloc.dupe(u8, "Circuit breaker opened - too many failures"),
             };
         }
@@ -360,7 +361,7 @@ pub const Orchestrator = struct {
             .tests_total = 0,
             .errors_found = 1,
             .errors_fixed = errors_fixed,
-            .duration_ms = @intCast(std.time.milliTimestamp() - start_time),
+            .duration_ms = @intCast(tri_time.milliTimestamp() - start_time),
             .message = try std.fmt.allocPrint(self.alloc, "Max iterations reached ({d})", .{self.config.max_iterations}),
         };
     }

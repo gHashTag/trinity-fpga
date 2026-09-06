@@ -62,7 +62,7 @@
 //!
 //! // Record metrics
 //! try tel.record(.{
-//!     .timestamp = std.time.nanoTimestamp(),
+//!     .timestamp = tri_time.nanoTimestamp(),
 //!     .active_claims = 5,
 //!     .events_published = 1000,
 //!     .events_buffered = 10,
@@ -94,6 +94,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 pub const TelemetryPoint = struct {
     timestamp: i64,
     active_claims: usize,

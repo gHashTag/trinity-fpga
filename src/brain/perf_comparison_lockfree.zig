@@ -10,6 +10,7 @@
 //! 3. Lock-Free: Sharded HashMap with per-shard RwLock
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const builtin = @import("builtin");
 
 const Baseline = @import("basal_ganglia.zig").Registry;
@@ -86,13 +87,13 @@ fn benchmarkClaim(registry: anytype, iterations: u64, name: []const u8) u64 {
     var task_buf: [32]u8 = undefined;
     const allocator = std.heap.page_allocator;
 
-    const start = std.time.nanoTimestamp();
+    const start = tri_time.nanoTimestamp();
     var i: u64 = 0;
     while (i < iterations) : (i += 1) {
         const task_id = std.fmt.bufPrintZ(&task_buf, "task-{d}", .{i}) catch unreachable;
         _ = registry.claim(allocator, task_id, "agent-001", 300000) catch {};
     }
-    const elapsed = @as(u64, @intCast(std.time.nanoTimestamp() - start));
+    const elapsed = @as(u64, @intCast(tri_time.nanoTimestamp() - start));
 
     const ops_per_sec = @as(f64, @floatFromInt(iterations)) / @as(f64, @floatFromInt(elapsed));
     std.debug.print("{s}: {d:.0} OP/s ({d:.2} ns/op)\n", .{ name, ops_per_sec * 1_000_000_000.0, @as(f64, @floatFromInt(elapsed)) / @as(f64, @floatFromInt(iterations)) });

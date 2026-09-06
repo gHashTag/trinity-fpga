@@ -4,6 +4,7 @@
 //! Clusters similar patterns for better organization.
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const ArrayListManaged = std.array_list.Managed;
 const diagnostic = @import("diagnostic.zig");
 const embeddings = @import("embeddings.zig");
@@ -226,7 +227,7 @@ test "NeuralSearchEngine: basic search" {
         .vector = embedding,
         .confidence = 0.9,
         .fix_type = .TYPE_FIX,
-        .timestamp = std.time.timestamp(),
+        .timestamp = tri_time.timestamp(),
     };
 
     try engine.addPattern(&pattern);

@@ -17,6 +17,7 @@
 //! Sacred Formula: phi^2 + 1/phi^2 = 3 = TRINITY
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const builtin = @import("builtin");
 
 // Direct imports - use module names, not file paths
@@ -171,10 +172,10 @@ pub const ResultChannel = struct {
 
         if (self.ready) return self.result;
 
-        const deadline = std.time.milliTimestamp() + @as(i64, @intCast(timeout_ms));
+        const deadline = tri_time.milliTimestamp() + @as(i64, @intCast(timeout_ms));
 
         while (!self.ready) {
-            const now = std.time.milliTimestamp();
+            const now = tri_time.milliTimestamp();
             if (now >= deadline) return null;
 
             const remaining = deadline - now;
@@ -363,12 +364,12 @@ pub const AsyncProcessor = struct {
         self.queue_mutex.lock();
         defer self.queue_mutex.unlock();
 
-        const deadline = std.time.milliTimestamp() + @as(i64, @intCast(timeout_ms));
+        const deadline = tri_time.milliTimestamp() + @as(i64, @intCast(timeout_ms));
 
         while (self.task_queue.items.len == 0) {
             if (!self.running.load(.acquire)) return null;
 
-            const now = std.time.milliTimestamp();
+            const now = tri_time.milliTimestamp();
             if (now >= deadline) return error.Timeout;
 
             const remaining = deadline - now;
@@ -466,7 +467,7 @@ pub const AsyncProcessor = struct {
             .active_claims = @as(u64, @intCast(basal_stats.active_claims)),
             .events_published = stats.published,
             .events_buffered = stats.buffered,
-            .timestamp = std.time.milliTimestamp(),
+            .timestamp = tri_time.milliTimestamp(),
         } };
     }
 
@@ -524,7 +525,7 @@ pub const AsyncProcessor = struct {
                 .ttl_ms = ttl_ms,
                 .result_channel = channel,
             } },
-            .allocated_at = std.time.milliTimestamp(),
+            .allocated_at = tri_time.milliTimestamp(),
             .timeout_ms = self.config.task_timeout_ms,
         };
 
@@ -552,7 +553,7 @@ pub const AsyncProcessor = struct {
                 .agent_id = agent_id_copy,
                 .result_channel = channel,
             } },
-            .allocated_at = std.time.milliTimestamp(),
+            .allocated_at = tri_time.milliTimestamp(),
             .timeout_ms = self.config.task_timeout_ms,
         };
 
@@ -578,7 +579,7 @@ pub const AsyncProcessor = struct {
                 .data = cloned_data,
                 .result_channel = channel,
             } },
-            .allocated_at = std.time.milliTimestamp(),
+            .allocated_at = tri_time.milliTimestamp(),
             .timeout_ms = self.config.task_timeout_ms,
         };
 
@@ -593,7 +594,7 @@ pub const AsyncProcessor = struct {
             .data = .{ .health_check = .{
                 .result_channel = channel,
             } },
-            .allocated_at = std.time.milliTimestamp(),
+            .allocated_at = tri_time.milliTimestamp(),
             .timeout_ms = self.config.task_timeout_ms,
         };
 
@@ -608,7 +609,7 @@ pub const AsyncProcessor = struct {
             .data = .{ .telemetry_snapshot = .{
                 .result_channel = channel,
             } },
-            .allocated_at = std.time.milliTimestamp(),
+            .allocated_at = tri_time.milliTimestamp(),
             .timeout_ms = self.config.task_timeout_ms,
         };
 
@@ -1242,9 +1243,9 @@ test "AsyncProcessor publish event non-blocking" {
     defer channel.deinit(allocator);
 
     // Publish should return immediately (non-blocking)
-    const before_publish = std.time.milliTimestamp();
+    const before_publish = tri_time.milliTimestamp();
     try processor.asyncPublishEvent(.task_claimed, event_data, &channel);
-    const after_publish = std.time.milliTimestamp();
+    const after_publish = tri_time.milliTimestamp();
 
     // Should take less than 10ms (just enqueue)
     const elapsed = after_publish - before_publish;
@@ -1570,7 +1571,7 @@ test "AsyncProcessor telemetry snapshot" {
         switch (result.?) {
             .telemetry => |tel| {
                 // Timestamp should be recent
-                const now = std.time.milliTimestamp();
+                const now = tri_time.milliTimestamp();
                 try std.testing.expect(tel.timestamp > 0);
                 try std.testing.expect(tel.timestamp <= now);
             },
@@ -2163,12 +2164,12 @@ test "ResultChannel very long timeout" {
     var channel = ResultChannel.init();
     defer channel.deinit(std.testing.allocator);
 
-    const before = std.time.milliTimestamp();
+    const before = tri_time.milliTimestamp();
 
     // Very long timeout without result
     const result = channel.wait(100000);
 
-    const elapsed = std.time.milliTimestamp() - before;
+    const elapsed = tri_time.milliTimestamp() - before;
 
     try std.testing.expect(result == null);
     try std.testing.expect(elapsed < 100); // Should return quickly

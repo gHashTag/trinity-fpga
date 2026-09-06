@@ -14,6 +14,8 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
+const tri_env = @import("tri_env.zig");
 const Allocator = std.mem.Allocator;
 
 const FARM_STATE_FILE = ".trinity/fly_farm.json";
@@ -33,7 +35,7 @@ pub const FlyAccount = struct {
     max_daily_creates: u16, // No documented daily limit
 
     pub fn canSpawn(self: *const FlyAccount) bool {
-        const now_day = @divTrunc(std.time.timestamp(), 86400) * 86400;
+        const now_day = @divTrunc(tri_time.timestamp(), 86400) * 86400;
         var mutable = @constCast(self);
         if (now_day > self.daily_reset_epoch) {
             mutable.daily_creates = 0;
@@ -133,7 +135,7 @@ pub const FlyFarm = struct {
         const key = key_buf[0 .. base.len + suffix.len];
 
         // Just check existence — getEnvVarOwned needs allocator, so use a temp check
-        const val = std.process.getEnvVarOwned(std.heap.page_allocator, key) catch return;
+        const val = tri_env.getEnvVarOwned(std.heap.page_allocator, key) catch return;
         std.heap.page_allocator.free(val);
 
         if (self.account_count >= MAX_ACCOUNTS) return;
@@ -145,7 +147,7 @@ pub const FlyFarm = struct {
         account.env_suffix_len = @min(suffix.len, 8);
         @memcpy(account.env_suffix[0..account.env_suffix_len], suffix[0..account.env_suffix_len]);
         account.daily_creates = 0;
-        account.daily_reset_epoch = @divTrunc(std.time.timestamp(), 86400) * 86400;
+        account.daily_reset_epoch = @divTrunc(tri_time.timestamp(), 86400) * 86400;
         account.active_apps = 0;
         account.max_concurrent = 3; // Fly.io free tier limit
         account.max_daily_creates = 50; // Conservative daily limit
@@ -178,7 +180,7 @@ pub const FlyFarm = struct {
                 @memcpy(key_buf[base.len .. base.len + acct.env_suffix_len], acct.env_suffix[0..acct.env_suffix_len]);
                 const key = key_buf[0 .. base.len + acct.env_suffix_len];
 
-                return std.process.getEnvVarOwned(allocator, key) orelse return error.TokenNotFound;
+                return tri_env.getEnvVarOwned(allocator, key) orelse return error.TokenNotFound;
             }
         }
         return error.AccountNotFound;
@@ -367,7 +369,7 @@ test "FlyAccount availableSlots" {
         .env_suffix = undefined,
         .env_suffix_len = 0,
         .daily_creates = 10,
-        .daily_reset_epoch = @divTrunc(std.time.timestamp(), 86400) * 86400,
+        .daily_reset_epoch = @divTrunc(tri_time.timestamp(), 86400) * 86400,
         .active_apps = 1,
         .max_concurrent = 3,
         .max_daily_creates = 50,
@@ -385,7 +387,7 @@ test "FlyAccount canSpawn at limit" {
         .env_suffix = undefined,
         .env_suffix_len = 0,
         .daily_creates = 50,
-        .daily_reset_epoch = @divTrunc(std.time.timestamp(), 86400) * 86400,
+        .daily_reset_epoch = @divTrunc(tri_time.timestamp(), 86400) * 86400,
         .active_apps = 0,
         .max_concurrent = 3,
         .max_daily_creates = 50,

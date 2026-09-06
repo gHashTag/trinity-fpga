@@ -3,6 +3,7 @@
 // Phase 6: Permission checks + git checkpoints before writes.
 // Phase 7: MCP tool routing.
 const std = @import("std");
+const tri_time = @import("tri_time");
 const json = @import("tool_protocol.zig");
 const permissions = @import("permissions.zig");
 const checkpoint_mod = @import("checkpoint.zig");
@@ -128,7 +129,7 @@ pub const ToolExecutor = struct {
     /// Append audit entry (tool name + result status, never file contents)
     fn auditLog(self: *ToolExecutor, tool: []const u8, arg: []const u8, ok: bool) void {
         const f = self.audit_file orelse return;
-        const ts = std.time.timestamp();
+        const ts = tri_time.timestamp();
         const status: []const u8 = if (ok) "ok" else "error";
         // Truncate arg to 200 chars to avoid logging secrets
         const safe_arg = arg[0..@min(arg.len, 200)];

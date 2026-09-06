@@ -7,6 +7,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const EllipticCurve = @import("curve.zig").EllipticCurve;
 const CurveLabel = @import("curve.zig").CurveLabel;
 const importFromLMFDB = @import("lmfdb.zig").importFromLMFDB;
@@ -67,11 +68,11 @@ pub const ScanStats = struct {
     }
 
     pub fn start(self: *ScanStats) void {
-        self.start_time = std.time.nanoTimestamp();
+        self.start_time = tri_time.nanoTimestamp();
     }
 
     pub fn finish(self: *ScanStats) void {
-        self.end_time = std.time.nanoTimestamp();
+        self.end_time = tri_time.nanoTimestamp();
     }
 
     pub fn duration(self: *const ScanStats) f64 {
@@ -249,7 +250,7 @@ pub fn processCurve(
     config: ScanConfig,
     _: *ScanStats,
 ) !ScanResult {
-    const start_time = std.time.nanoTimestamp();
+    const start_time = tri_time.nanoTimestamp();
 
     // Create curve from entry
     var curve = try EllipticCurve.fromLabel(
@@ -273,7 +274,7 @@ pub fn processCurve(
     // Step 4: Verify BSD formula
     const bsd_result = try verifyBSD(&curve, analytic_rank, config.bsd_config);
 
-    const end_time = std.time.nanoTimestamp();
+    const end_time = tri_time.nanoTimestamp();
     const elapsed_ns = end_time - start_time;
     const elapsed_ms = @as(u64, @intCast(@divTrunc(elapsed_ns, 1_000_000)));
 

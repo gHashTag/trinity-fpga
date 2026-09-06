@@ -9,6 +9,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const qt = @import("queen_types.zig");
 const thalamus = @import("thalamus.zig");
@@ -122,7 +123,7 @@ pub fn health() CellHealth {
     return CellHealth{
         .status = .healthy,
         .cycle = 0,
-        .last_check = std.time.timestamp(),
+        .last_check = tri_time.timestamp(),
     };
 }
 
@@ -444,7 +445,7 @@ test "vmpfc — phiWeightedScore handles fractional inputs" {
 
 test "vmpfc — health returns valid timestamp" {
     const h = health();
-    const now = std.time.timestamp();
+    const now = tri_time.timestamp();
 
     // Timestamp should be recent (within last second)
     try std.testing.expect(h.last_check > 0);

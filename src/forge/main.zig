@@ -14,6 +14,7 @@
 // =============================================================================
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const types = @import("types.zig");
 const json_parser = @import("json_parser.zig");
 const xdc_parser = @import("xdc_parser.zig");
@@ -149,7 +150,7 @@ fn forgeRun(allocator: std.mem.Allocator, args: []const []const u8) !void {
     else
         .xc7a35t;
 
-    const timer_start = std.time.milliTimestamp();
+    const timer_start = tri_time.milliTimestamp();
 
     // =========================================================================
     // Phase 1: Parse Yosys JSON netlist
@@ -375,7 +376,7 @@ fn forgeRun(allocator: std.mem.Allocator, args: []const []const u8) !void {
     // =========================================================================
     // Final Report
     // =========================================================================
-    const timer_end = std.time.milliTimestamp();
+    const timer_end = tri_time.milliTimestamp();
     const total_ms = timer_end - timer_start;
 
     std.debug.print("\n", .{});

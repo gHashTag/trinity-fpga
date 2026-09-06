@@ -12,6 +12,7 @@
 
 const std = @import("std");
 
+const tri_env = @import("tri_env.zig");
 const ArrayListManaged = std.array_list.Managed;
 
 // Global JSON output flag - set from main.zig before command dispatch
@@ -72,7 +73,7 @@ pub const Config = struct {
         var config = Config.init(allocator);
 
         // Try global config first
-        const home_dir = std.process.getEnvVarOwned(allocator, "HOME") catch |err| {
+        const home_dir = tri_env.getEnvVarOwned(allocator, "HOME") catch |err| {
             std.debug.print("Warning: Could not get HOME directory: {}\n", .{err});
             return config;
         };

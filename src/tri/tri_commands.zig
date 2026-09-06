@@ -8,6 +8,7 @@
 // φ² + 1/φ² = 3 = TRINITY
 // ═══════════════════════════════════════════════════════════════════════════════
 const std = @import("std");
+const tri_time = @import("tri_time");
 const colors = @import("tri_colors.zig");
 const chat_server = @import("chat_server.zig");
 // depin.zig is in src/firebird/ — inline constants to avoid cross-module import
@@ -72,7 +73,9 @@ pub const BackoffPolicy = locus_coeruleus.BackoffPolicy;
 // ═══════════════════════════════════════════════════════════════════════════════
 // GEN COMMAND - Code Generation
 // ═══════════════════════════════════════════════════════════════════════════════
-pub fn runGenCommand(allocator: std.mem.Allocator, args: []const []const u8) !void {
+// This file is a flat namespace of free functions with no enclosing type to
+// hang an `io` field on, so the Io the 0.16 filesystem API needs is passed in.
+pub fn runGenCommand(io: std.Io, allocator: std.mem.Allocator, args: []const []const u8) !void {
     if (args.len < 1) {
         printGenHelp();
         return;
@@ -101,7 +104,7 @@ pub fn runGenCommand(allocator: std.mem.Allocator, args: []const []const u8) !vo
     };
     var backend_path: ?[]const u8 = null;
     for (backend_paths) |path| {
-        std.fs.cwd().access(path, .{}) catch continue;
+        std.Io.Dir.cwd().access(io, path, .{}) catch continue;
         backend_path = path;
         break;
     }
@@ -208,12 +211,12 @@ pub fn runBenchCommandInternal(allocator: std.mem.Allocator) !void {
     std.debug.print("\n{s}TRINITY BENCHMARK SUITE{s}\n", .{ YELLOW, RESET });
     std.debug.print("{s}Running benchmarks...{s}\n\n", .{ CYAN, RESET });
     // VSA benchmarks
-    const start = std.time.nanoTimestamp();
+    const start = tri_time.nanoTimestamp();
     std.debug.print("{s}VSA Operations:{s}\n", .{ GREEN, RESET });
     std.debug.print("  - bind/unbind: {d} ops/ms\n", .{1000});
     std.debug.print("  - bundle3: {d} ops/ms\n", .{500});
     std.debug.print("  - cosineSimilarity: {d} ops/ms\n", .{2500});
-    const elapsed = std.time.nanoTimestamp() - start;
+    const elapsed = tri_time.nanoTimestamp() - start;
     const elapsed_ms = @divFloor(elapsed, 1_000_000);
     std.debug.print("\n{s}Total time: {d}ms{s}\n", .{ YELLOW, elapsed_ms, RESET });
     _ = allocator;
@@ -223,12 +226,12 @@ pub fn runBenchCommand(allocator: std.mem.Allocator) !void {
     std.debug.print("\n{s}TRINITY BENCHMARK SUITE{s}\n", .{ YELLOW, RESET });
     std.debug.print("{s}Running benchmarks...{s}\n\n", .{ CYAN, RESET });
     // VSA benchmarks
-    const start = std.time.nanoTimestamp();
+    const start = tri_time.nanoTimestamp();
     std.debug.print("{s}VSA Operations:{s}\n", .{ GREEN, RESET });
     std.debug.print("  - bind/unbind: {d} ops/ms\n", .{1000});
     std.debug.print("  - bundle3: {d} ops/ms\n", .{500});
     std.debug.print("  - cosineSimilarity: {d} ops/ms\n", .{2500});
-    const elapsed = std.time.nanoTimestamp() - start;
+    const elapsed = tri_time.nanoTimestamp() - start;
     const elapsed_ms = @divFloor(elapsed, 1_000_000);
     std.debug.print("\n{s}Total time: {d}ms{s}\n", .{ YELLOW, elapsed_ms, RESET });
     _ = allocator;

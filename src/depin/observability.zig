@@ -5,6 +5,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 
 // ═════════════════════════════════════════════════════════════════════════════════════════
@@ -85,7 +86,7 @@ pub const ObservabilityManager = struct {
             .name = name,
             .mtype = mtype,
             .value = value,
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
             .labels = .{},
         };
         try self.metrics.append(self.allocator, metric);
@@ -111,7 +112,7 @@ pub const ObservabilityManager = struct {
             .name = name,
             .mtype = mtype,
             .value = value,
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
             .labels = label_map,
         };
         try self.metrics.append(self.allocator, metric);

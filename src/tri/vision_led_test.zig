@@ -24,6 +24,7 @@
 // ============================================================================
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const golden_chain = @import("dna_polymerase.zig");
 
 pub const PipelineExecutor = @import("rna_polymerase.zig").PipelineExecutor;
@@ -120,7 +121,7 @@ pub const VisionLedEngine = struct {
         // 2. Call MCP vision API to analyze LED state
         // 3. Sample multiple frames to detect blinking
 
-        const timestamp = std.time.milliTimestamp();
+        const timestamp = tri_time.milliTimestamp();
 
         // Placeholder result - vision API integration pending
         return LedDetectionResult{

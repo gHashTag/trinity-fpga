@@ -16,6 +16,8 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
+const tri_env = @import("tri_env.zig");
 const Allocator = std.mem.Allocator;
 const railway_api = @import("railway_api.zig");
 const RailwayApi = railway_api.RailwayApi;
@@ -944,7 +946,7 @@ fn saveHealthCache(allocator: Allocator) !void {
 fn updateAccountHealth(allocator: Allocator, acct_name: []const u8, err: anyerror) !void {
     try initHealthCache(allocator);
 
-    const now = std.time.timestamp();
+    const now = tri_time.timestamp();
     const err_name = @errorName(err);
 
     const status: AccountStatus = if (err == error.NotAuthorized or err == error.ConnectionFailed)
@@ -974,7 +976,7 @@ fn updateAccountHealth(allocator: Allocator, acct_name: []const u8, err: anyerro
 fn markAccountAlive(allocator: Allocator, acct_name: []const u8) !void {
     try initHealthCache(allocator);
 
-    const now = std.time.timestamp();
+    const now = tri_time.timestamp();
 
     // Free old value if exists
     if (health_cache.get(acct_name)) |old| {
@@ -1000,7 +1002,7 @@ fn shouldSkipAccount(allocator: Allocator, acct_name: []const u8) bool {
     const health = health_cache.get(acct_name) orelse return false;
     if (health.status != .dead) return false;
 
-    const now = std.time.timestamp();
+    const now = tri_time.timestamp();
     const elapsed = now - health.last_check;
 
     // Retry dead accounts after DEAD_ACCOUNT_RETRY_SEC (30 minutes)
@@ -1013,7 +1015,7 @@ fn getHealthInfo(allocator: Allocator, acct_name: []const u8) struct { status: A
 
     const health = health_cache.get(acct_name) orelse return .{ .status = .unknown, .elapsed = 0 };
 
-    const now = std.time.timestamp();
+    const now = tri_time.timestamp();
     return .{
         .status = health.status,
         .elapsed = now - health.last_check,
@@ -1039,7 +1041,7 @@ fn deinitHealthCache(allocator: Allocator) void {
 
 fn logDaemonEvent(allocator: Allocator, event_type: []const u8, event: []const u8, data: []const u8) !void {
     _ = allocator;
-    const timestamp = std.time.timestamp();
+    const timestamp = tri_time.timestamp();
     var msg_buf: [512]u8 = undefined;
     const msg = try std.fmt.bufPrint(&msg_buf,
         \\{{"type":"{s}","event":"{s}","data":"{s}","timestamp":{d}}}
@@ -1117,7 +1119,7 @@ fn daemonStart(allocator: Allocator) !void {
 
     while (true) {
         sweep_count += 1;
-        const sweep_start = std.time.nanoTimestamp();
+        const sweep_start = tri_time.nanoTimestamp();
 
         print("{s}🔄 Sweep #{d}{s}\n", .{ DIM, sweep_count, RESET });
 
@@ -1134,7 +1136,7 @@ fn daemonStart(allocator: Allocator) !void {
             // Continue to next sweep — DON'T crash
         };
 
-        const elapsed_ms = @as(u64, @intCast(@divTrunc(@as(i128, std.time.nanoTimestamp() - sweep_start), 1_000_000)));
+        const elapsed_ms = @as(u64, @intCast(@divTrunc(@as(i128, tri_time.nanoTimestamp() - sweep_start), 1_000_000)));
         print("   {s}Sweep done in {d}ms{s}\n", .{ DIM, elapsed_ms, RESET });
 
         // Log sweep event to JSONL for "brain" integration
@@ -1273,10 +1275,10 @@ fn sendTelegramAlert(allocator: Allocator, comptime fmt: []const u8, args: anyty
     const msg = std.fmt.allocPrint(allocator, fmt, args) catch return;
     defer allocator.free(msg);
 
-    const token = std.process.getEnvVarOwned(allocator, "TELEGRAM_BOT_TOKEN") catch return;
+    const token = tri_env.getEnvVarOwned(allocator, "TELEGRAM_BOT_TOKEN") catch return;
     defer allocator.free(token);
 
-    const chat_id = std.process.getEnvVarOwned(allocator, "TELEGRAM_CHAT_ID") catch {
+    const chat_id = tri_env.getEnvVarOwned(allocator, "TELEGRAM_CHAT_ID") catch {
         allocator.free(token);
         return;
     };

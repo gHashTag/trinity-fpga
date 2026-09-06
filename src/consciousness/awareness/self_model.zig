@@ -10,6 +10,7 @@
 //!   - Self-prediction
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const mem = std.mem;
 
 // Import unified state (from src/consciousness/core/)
@@ -145,7 +146,7 @@ pub const SelfModel = struct {
             .how_i_got_here = causal_chain,
             .likely_next_states = &.{},
             .confidence = consciousness,
-            .timestamp = std.time.nanoTimestamp(),
+            .timestamp = tri_time.nanoTimestamp(),
         };
 
         // Store in history

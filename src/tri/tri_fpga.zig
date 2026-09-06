@@ -20,6 +20,7 @@
 // =============================================================================
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const posix = std.posix;
 const c = std.c;
 
@@ -1652,7 +1653,7 @@ fn powerMeasure(allocator: std.mem.Allocator, device_arg: ?[]const u8) !void {
 
         try json_writer.print(
             \\{{"timestamp": "{d}", "device": "{s}", "readings": [
-        , .{ std.time.timestamp(), dev_path });
+        , .{ tri_time.timestamp(), dev_path });
 
         for (readings_buf[0..readings_len], 0..) |r, i| {
             const comma = if (i < readings_len - 1) "," else "";
@@ -1760,8 +1761,8 @@ fn powerStatus(allocator: std.mem.Allocator, device_arg: ?[]const u8) !void {
 
     var buf: [256]u8 = undefined;
 
-    const start_ms = std.time.milliTimestamp();
-    while (std.time.milliTimestamp() - start_ms < 5000) {
+    const start_ms = tri_time.milliTimestamp();
+    while (tri_time.milliTimestamp() - start_ms < 5000) {
         const n = port.readBytes(&buf) catch break;
         if (n > 0) {
             for (0..n - 4) |i| {

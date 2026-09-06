@@ -2,6 +2,7 @@
 // Storage: ~/.tri-api/sessions/ with index.json + per-session {id}.json
 // Issue #64: Phase 5 native sessions
 const std = @import("std");
+const tri_time = @import("tri_time");
 const proto = @import("tool_protocol.zig");
 
 const sessions_subdir = ".trinity/api/sessions";
@@ -31,7 +32,7 @@ pub const SessionStore = struct {
         std.fs.cwd().makePath(self.base_dir) catch return;
 
         // Generate session ID from timestamp (hex, 8 chars)
-        const ts = std.time.timestamp();
+        const ts = tri_time.timestamp();
         var id_buf: [8]u8 = undefined;
         _ = std.fmt.bufPrint(&id_buf, "{x:0>8}", .{@as(u32, @truncate(@as(u64, @intCast(ts))))}) catch return;
         const id = &id_buf;

@@ -16,6 +16,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 
 pub const CLUSTER_STATE_FILE = ".tri-cluster.json";
@@ -117,7 +118,7 @@ pub const PeerState = struct {
 
     /// Check if peer is healthy (seen in last hour, quality > 0.3)
     pub fn isHealthy(self: *const PeerState) bool {
-        const now = @as(u64, @intCast(std.time.timestamp()));
+        const now = @as(u64, @intCast(tri_time.timestamp()));
         const hours_since_seen: f64 = if (self.last_seen > 0)
             @as(f64, @floatFromInt(now - self.last_seen)) / 3600.0
         else
@@ -128,7 +129,7 @@ pub const PeerState = struct {
 
     /// Update quality score based on interaction
     pub fn updateQuality(self: *PeerState, success: bool, latency_ms: u64) void {
-        const now = @as(u64, @intCast(std.time.timestamp()));
+        const now = @as(u64, @intCast(tri_time.timestamp()));
         self.last_seen = now;
 
         if (success) {
@@ -171,7 +172,7 @@ pub const ClusterState = struct {
             .node_id = node_id, // Caller owns memory
             .peers = .{},
             .version = 1,
-            .last_updated = @as(u64, @intCast(@as(u64, @intCast(std.time.timestamp())))),
+            .last_updated = @as(u64, @intCast(@as(u64, @intCast(tri_time.timestamp())))),
         };
     }
 
@@ -231,7 +232,7 @@ pub const ClusterState = struct {
         };
 
         try self.peers.append(allocator, new_peer);
-        self.last_updated = @as(u64, @intCast(std.time.timestamp()));
+        self.last_updated = @as(u64, @intCast(tri_time.timestamp()));
     }
 
     /// Remove a peer
@@ -242,7 +243,7 @@ pub const ClusterState = struct {
                 allocator.free(peer.host);
                 allocator.free(peer.cluster_id);
                 _ = self.peers.orderedRemove(i);
-                self.last_updated = @as(u64, @intCast(std.time.timestamp()));
+                self.last_updated = @as(u64, @intCast(tri_time.timestamp()));
                 return true;
             }
         }
@@ -411,7 +412,7 @@ pub const PersistenceManager = struct {
             .node_id = state.node_id,
             .peers = peer_list.items,
             .version = state.version,
-            .last_updated = @as(u64, @intCast(std.time.timestamp())),
+            .last_updated = @as(u64, @intCast(tri_time.timestamp())),
         };
 
         // Atomic write: write to temp file, then rename
@@ -505,7 +506,7 @@ test "ClusterState init and add peer" {
     var state = ClusterState.init("test-cluster", "test-node");
     defer state.deinit(allocator);
 
-    const now = @as(u64, @intCast(std.time.timestamp()));
+    const now = @as(u64, @intCast(tri_time.timestamp()));
     const peer = PeerState{
         .node_id = "peer-1",
         .host = "1.2.3.4",
@@ -529,7 +530,7 @@ test "ClusterState get peer" {
     var state = ClusterState.init("test-cluster", "test-node");
     defer state.deinit(allocator);
 
-    const now = @as(u64, @intCast(std.time.timestamp()));
+    const now = @as(u64, @intCast(tri_time.timestamp()));
     const peer = PeerState{
         .node_id = "peer-1",
         .host = "1.2.3.4",
@@ -554,7 +555,7 @@ test "ClusterState healthy peers filter" {
     var state = ClusterState.init("test-cluster", "test-node");
     defer state.deinit(allocator);
 
-    const now = @as(u64, @intCast(std.time.timestamp()));
+    const now = @as(u64, @intCast(tri_time.timestamp()));
     const healthy_peer = PeerState{
         .node_id = "healthy-1",
         .host = "1.2.3.4",

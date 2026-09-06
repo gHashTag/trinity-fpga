@@ -40,6 +40,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 /// BackoffPolicy implements exponential, linear, and constant retry strategies
 /// with optional jitter for distributed system coordination.
 pub const BackoffPolicy = struct {
@@ -134,7 +135,7 @@ pub const BackoffPolicy = struct {
             .uniform => blk: {
                 // Random factor in [1.0, 2.0) - simple uniform distribution
                 // Uses nanosecond timestamp as seed (good enough for jitter)
-                const ts = std.time.nanoTimestamp();
+                const ts = tri_time.nanoTimestamp();
                 // Use more bits for better distribution
                 const seed = @as(u32, @intCast((ts ^ (ts >> 32)) & 0xFFFFFFFF));
                 const factor = @as(f32, @floatFromInt(seed % 1000)) / 1000.0;
@@ -151,7 +152,7 @@ pub const BackoffPolicy = struct {
                 // Factor is either 0.618 (1/phi) or 1.618 (phi)
                 // Creates interesting retry patterns with golden ratio spacing
                 // Vary seed using attempt to get better distribution in loops
-                const ts = std.time.nanoTimestamp() + @as(i128, @intCast(attempt)) * 1000000000; // 1 second offset
+                const ts = tri_time.nanoTimestamp() + @as(i128, @intCast(attempt)) * 1000000000; // 1 second offset
                 const seed = @as(u32, @intCast((ts ^ (ts >> 32)) & 0xFFFFFFFF));
                 const factor: f32 = if (seed % 2 == 0) 0.618 else 1.618;
                 // Use f64 to avoid overflow

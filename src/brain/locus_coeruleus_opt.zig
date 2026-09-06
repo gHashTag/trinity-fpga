@@ -14,6 +14,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 pub const BackoffPolicy = struct {
     // Precomputed backoff table for exponential strategy (64 entries)
     const EXPONENTIAL_TABLE_SIZE: usize = 64;
@@ -56,14 +57,14 @@ pub const BackoffPolicy = struct {
         return switch (self.jitter_type) {
             .none => base_delay,
             .uniform => blk: {
-                const ts = std.time.nanoTimestamp();
+                const ts = tri_time.nanoTimestamp();
                 const seed = @as(u32, @intCast(ts & 0xFFFFFFFF));
                 const factor = @as(f32, @floatFromInt(seed % 1000)) / 1000.0;
                 const jittered = @as(u64, @intFromFloat(@as(f32, @floatFromInt(base_delay)) * (1.0 + factor)));
                 break :blk jittered;
             },
             .phi_weighted => blk: {
-                const ts = std.time.nanoTimestamp();
+                const ts = tri_time.nanoTimestamp();
                 const seed = @as(u32, @intCast(ts & 0xFFFFFFFF));
                 const factor: f32 = if (seed % 2 == 0) 0.618 else 1.618;
                 const jittered = @as(u64, @intFromFloat(@as(f32, @floatFromInt(base_delay)) * factor));
@@ -314,13 +315,13 @@ test "Optimized: performance benchmark" {
     const policy = BackoffPolicy.init();
     const iterations = 10_000_000;
 
-    const start = std.time.nanoTimestamp();
+    const start = tri_time.nanoTimestamp();
     var i: u64 = 0;
     while (i < iterations) : (i += 1) {
         const attempt = @as(u32, @intCast(i % 100));
         _ = policy.nextDelay(attempt);
     }
-    const end = std.time.nanoTimestamp();
+    const end = tri_time.nanoTimestamp();
 
     const elapsed_ns = @as(u64, @intCast(end - start));
     const ops_per_sec = @as(f64, @floatFromInt(iterations)) / (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);

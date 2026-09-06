@@ -8,6 +8,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const graph = @import("graph.zig");
 const vsa = @import("vsa.zig");
 const refactor = @import("refactor.zig");
@@ -553,7 +554,7 @@ pub fn applySafeCrossRefactor(
     var result = CrossFileResult.init(allocator);
     errdefer result.deinit();
 
-    const start_time = std.time.nanoTimestamp();
+    const start_time = tri_time.nanoTimestamp();
 
     // Find semantically similar symbols
     var matches = try vsa.semanticSearch(
@@ -593,7 +594,7 @@ pub fn applySafeCrossRefactor(
     }
 
     if (file_list.items.len == 0) {
-        const end_time = std.time.nanoTimestamp();
+        const end_time = tri_time.nanoTimestamp();
         result.duration_ms = @intCast((end_time - start_time) / 1_000_000);
         return result;
     }
@@ -612,7 +613,7 @@ pub fn applySafeCrossRefactor(
     txn.begin(file_list.items) catch |err| {
         try result.addViolation("Failed to create backups for atomic refactor");
         _ = err;
-        const end_time = std.time.nanoTimestamp();
+        const end_time = tri_time.nanoTimestamp();
         result.duration_ms = @intCast((end_time - start_time) / 1_000_000);
         return result;
     };
@@ -653,7 +654,7 @@ pub fn applySafeCrossRefactor(
                 txn.rollback() catch {};
                 result.rollback_triggered = true;
                 try result.addViolation("Safety gate failed — rolled back all changes");
-                const end_time = std.time.nanoTimestamp();
+                const end_time = tri_time.nanoTimestamp();
                 result.duration_ms = @intCast((end_time - start_time) / 1_000_000);
                 return result;
             }
@@ -681,7 +682,7 @@ pub fn applySafeCrossRefactor(
     result.files_modified = files_changed;
     result.total_changes = total_edits;
 
-    const end_time = std.time.nanoTimestamp();
+    const end_time = tri_time.nanoTimestamp();
     result.duration_ms = @intCast((end_time - start_time) / 1_000_000);
 
     return result;

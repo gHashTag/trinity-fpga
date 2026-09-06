@@ -6,6 +6,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const builtin = @import("builtin");
 const protocol = @import("protocol.zig");
 const crypto = @import("crypto.zig");
@@ -891,7 +892,7 @@ fn runHeadless(allocator: std.mem.Allocator, network: *network_mod.NetworkNode, 
             });
         }
 
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
 
         // Broadcast storage announce periodically
         // TODO: Implement broadcastStorageAnnounce in NetworkNode

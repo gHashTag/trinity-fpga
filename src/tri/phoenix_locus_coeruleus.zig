@@ -9,6 +9,7 @@
 // ═══════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const qt = @import("queen_types.zig");
 const hippocampus = @import("hippocampus.zig");
@@ -100,7 +101,7 @@ pub const Alert = struct {
         const len = @min(text.len, self.message.len);
         @memcpy(self.message[0..len], text[0..len]);
         self.message_len = len;
-        self.timestamp = std.time.timestamp();
+        self.timestamp = tri_time.timestamp();
     }
 };
 
@@ -212,7 +213,7 @@ pub fn evaluateInteroception(state: insula.InternalState) ArousalLevel {
 /// Decay arousal over time (natural relaxation)
 pub fn decayArousal(state: *LocusState, decay_sec: u32) void {
     _ = decay_sec;
-    const now = std.time.timestamp();
+    const now = tri_time.timestamp();
     const last_alert_age = now - state.last_alert.timestamp;
 
     // Fast decay: lose 1 level per 5 minutes of no alerts
@@ -327,7 +328,7 @@ pub fn health() CellHealth {
     return CellHealth{
         .status = .healthy,
         .cycle = 0,
-        .last_check = std.time.timestamp(),
+        .last_check = tri_time.timestamp(),
     };
 }
 
@@ -575,9 +576,9 @@ test "locus_coeruleus — Alert setMessage updates timestamp" {
 
     try std.testing.expectEqual(@as(i64, 0), alert.timestamp);
 
-    const before = std.time.timestamp();
+    const before = tri_time.timestamp();
     alert.setMessage("Test");
-    const after = std.time.timestamp();
+    const after = tri_time.timestamp();
 
     try std.testing.expect(alert.timestamp >= before);
     try std.testing.expect(alert.timestamp <= after);
@@ -695,7 +696,7 @@ test "locus_coeruleus — triggerAlarm only raises arousal if higher" {
 test "locus_coeruleus — decayArousal from emergency" {
     var state = init(sinkFn);
     state.arousal = .emergency;
-    state.last_alert.timestamp = std.time.timestamp() - 400; // 400 seconds ago
+    state.last_alert.timestamp = tri_time.timestamp() - 400; // 400 seconds ago
 
     decayArousal(&state, 300);
 
@@ -715,7 +716,7 @@ test "locus_coeruleus — decayArousal from sleep stays sleep" {
 test "locus_coeruleus — decayArousal recent alert no decay" {
     var state = init(sinkFn);
     state.arousal = .alarm;
-    state.last_alert.timestamp = std.time.timestamp(); // Just now
+    state.last_alert.timestamp = tri_time.timestamp(); // Just now
 
     decayArousal(&state, 300);
 

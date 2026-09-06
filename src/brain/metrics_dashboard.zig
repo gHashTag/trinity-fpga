@@ -12,6 +12,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 // Import brain region modules
 const basal_ganglia = @import("basal_ganglia");
 const reticular_formation = @import("reticular_formation");
@@ -178,7 +179,7 @@ pub const AggregateMetrics = struct {
             },
             .overall_health = 100.0,
             .overall_trend = .stable,
-            .timestamp = std.time.milliTimestamp(),
+            .timestamp = tri_time.milliTimestamp(),
             .critical_alerts = std.ArrayList([]const u8).initCapacity(allocator, 5) catch |err| {
                 std.log.err("Failed to allocate alerts ArrayList: {}", .{err});
                 @panic("AggregateMetrics init failed");
@@ -303,7 +304,7 @@ pub const AggregateMetrics = struct {
 
     /// Collect metrics from all brain regions
     pub fn collect(self: *Self) !void {
-        self.timestamp = std.time.milliTimestamp();
+        self.timestamp = tri_time.milliTimestamp();
 
         // Collect from regions with external state
         for (region_collectors) |collector| {
@@ -1235,14 +1236,14 @@ test "AggregateMetrics timestamp updates on collect" {
     var metrics = AggregateMetrics.init(allocator);
     defer metrics.deinit();
 
-    const before = std.time.milliTimestamp();
+    const before = tri_time.milliTimestamp();
 
     // Collect will update timestamp
     // Note: collect() may fail if brain regions aren't available,
     // but timestamp should still be set
-    metrics.timestamp = std.time.milliTimestamp();
+    metrics.timestamp = tri_time.milliTimestamp();
 
-    const after = std.time.milliTimestamp();
+    const after = tri_time.milliTimestamp();
 
     try std.testing.expect(metrics.timestamp >= before);
     try std.testing.expect(metrics.timestamp <= after);

@@ -13,6 +13,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const net = std.net;
 const http = std.http;
 
@@ -95,7 +96,7 @@ const DownloadState = struct {
             .total_size = total_size,
             .downloaded = std.atomic.Value(usize).init(0),
             .chunks = chunks,
-            .start_time = std.time.milliTimestamp(),
+            .start_time = tri_time.milliTimestamp(),
             .active_workers = std.atomic.Value(u32).init(0),
             .stop_flag = std.atomic.Value(bool).init(false),
             .allocator = allocator,
@@ -118,7 +119,7 @@ const DownloadState = struct {
     }
 
     pub fn getSpeed(self: *const DownloadState) f64 {
-        const elapsed_ms = std.time.milliTimestamp() - self.start_time;
+        const elapsed_ms = tri_time.milliTimestamp() - self.start_time;
         if (elapsed_ms <= 0) return 0;
         const downloaded = self.downloaded.load(.seq_cst);
         const elapsed_sec = @max(1, @divFloor(elapsed_ms, 1000));

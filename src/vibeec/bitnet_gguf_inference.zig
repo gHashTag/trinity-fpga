@@ -5,6 +5,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const gguf = @import("gguf_reader.zig");
 
 pub const PHI: f64 = 1.618033988749895;
@@ -477,7 +478,7 @@ pub const BitNetGGUFModel = struct {
         max_new_tokens: usize,
         temperature: f32,
     ) ![]u32 {
-        var rng = std.Random.DefaultPrng.init(@intCast(std.time.milliTimestamp()));
+        var rng = std.Random.DefaultPrng.init(@intCast(tri_time.milliTimestamp()));
         var generated = std.ArrayList(u32).init(self.allocator);
 
         // Process prompt
@@ -540,7 +541,7 @@ pub fn main() !void {
 
     std.debug.print("Generating {d} tokens (temp={d:.1})...\n", .{ max_tokens, temperature });
 
-    var timer = try std.time.Timer.start();
+    var timer = try tri_time.Timer.start();
     const generated = try model.generate(&prompt_tokens, max_tokens, temperature);
     defer allocator.free(generated);
     const gen_time = timer.read();

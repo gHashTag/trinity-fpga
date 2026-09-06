@@ -2,6 +2,7 @@
 // phi^2 + 1/phi^2 = 3 = TRINITY
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const gguf = @import("gguf_reader.zig");
 const inference = @import("gguf_inference.zig");
 const transformer = @import("gguf_transformer.zig");
@@ -209,8 +210,8 @@ pub const FullModel = struct {
         // ═══════════════════════════════════════════════════════════════════
         // PROFILING: Track time for each phase
         // ═══════════════════════════════════════════════════════════════════
-        var total_timer = std.time.Timer.start() catch unreachable;
-        var phase_timer = std.time.Timer.start() catch unreachable;
+        var total_timer = tri_time.Timer.start() catch unreachable;
+        var phase_timer = tri_time.Timer.start() catch unreachable;
 
         var time_thread_pool: u64 = 0;
         var time_embeddings: u64 = 0;

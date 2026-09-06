@@ -9,6 +9,7 @@
 //! Used by Trinity AI Core for cognitive operations.
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const mem = std.mem;
 
 // Sacred constants
@@ -266,14 +267,14 @@ pub const SemanticMemory = struct {
             existing_ptr.*.value.deinit();
             existing_ptr.*.value = value; // Move ownership
             existing_ptr.*.access_count += 1;
-            existing_ptr.*.last_access = @intCast(std.time.nanoTimestamp());
+            existing_ptr.*.last_access = @intCast(tri_time.nanoTimestamp());
         } else {
             const entry = try self.allocator.create(MemoryEntry);
             entry.* = .{
                 .key = try key_vec.clone(),
                 .value = value, // Move ownership
                 .access_count = 1,
-                .last_access = @intCast(std.time.nanoTimestamp()),
+                .last_access = @intCast(tri_time.nanoTimestamp()),
             };
             try self.entries.put(self.allocator, key, entry);
         }
@@ -285,7 +286,7 @@ pub const SemanticMemory = struct {
 
         // Update access stats
         entry.access_count += 1;
-        entry.last_access = std.time.nanoTimestamp();
+        entry.last_access = tri_time.nanoTimestamp();
 
         return entry;
     }

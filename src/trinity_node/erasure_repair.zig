@@ -6,6 +6,7 @@
 // =============================================================================
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const storage_mod = @import("storage.zig");
 const shard_scrubber_mod = @import("shard_scrubber.zig");
 const reed_solomon_mod = @import("reed_solomon.zig");
@@ -304,7 +305,7 @@ test "RS repair recovers missing data shard from parity" {
     var scrubber = shard_scrubber_mod.ShardScrubber.init(allocator);
     defer scrubber.deinit();
     try scrubber.corrupted_shards.put(hashes[1], .{
-        .detected_at = std.time.timestamp(),
+        .detected_at = tri_time.timestamp(),
         .expected_hash = hashes[1],
         .actual_hash = [_]u8{0} ** 32,
     });

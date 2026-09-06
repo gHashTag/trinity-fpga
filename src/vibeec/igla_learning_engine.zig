@@ -12,6 +12,7 @@
 // =============================================================================
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const unified_chat = @import("igla_unified_chat.zig");
 const self_opt = @import("igla_self_opt.zig");
 const multilingual = @import("igla_multilingual_coder.zig");
@@ -88,7 +89,7 @@ pub const LearnedPattern = struct {
 
     pub fn updateWithFeedback(self: *Self, feedback: FeedbackType) void {
         self.usage_count += 1;
-        self.last_used = std.time.timestamp();
+        self.last_used = tri_time.timestamp();
 
         // Update quality score with learning rate
         const weight = feedback.getWeight();
@@ -185,7 +186,7 @@ pub const LearningMemory = struct {
                 .response_quality = 0.5, // Neutral start
                 .usage_count = 0,
                 .success_count = 0,
-                .last_used = std.time.timestamp(),
+                .last_used = tri_time.timestamp(),
                 .mode = mode,
                 .topics = [_]?[]const u8{ null, null, null },
             };
@@ -208,7 +209,7 @@ pub const LearningMemory = struct {
             .response_quality = 0.5,
             .usage_count = 0,
             .success_count = 0,
-            .last_used = std.time.timestamp(),
+            .last_used = tri_time.timestamp(),
             .mode = mode,
             .topics = [_]?[]const u8{ null, null, null },
         };
@@ -330,7 +331,7 @@ pub const LearningEngine = struct {
             .feedback_type = feedback_type,
             .query = self.current_query.?,
             .response = self.current_response.?.text,
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
             .mode = self.current_response.?.mode,
             .language = self.current_response.?.language,
         };
@@ -427,7 +428,7 @@ pub fn runBenchmark() !void {
     var high_confidence: usize = 0;
     var learned_count: usize = 0;
 
-    const start = std.time.nanoTimestamp();
+    const start = tri_time.nanoTimestamp();
 
     for (session) |s| {
         const response = engine.respond(s.query);
@@ -445,7 +446,7 @@ pub fn runBenchmark() !void {
         engine.recordFeedback(s.feedback);
     }
 
-    const elapsed_ns = std.time.nanoTimestamp() - start;
+    const elapsed_ns = tri_time.nanoTimestamp() - start;
     const ops_per_sec = @as(f64, @floatFromInt(session.len)) / (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
 
     const stats = engine.getStats();
@@ -546,7 +547,7 @@ test "learning memory feedback" {
         .feedback_type = .ThumbsUp,
         .query = "test query",
         .response = "test response",
-        .timestamp = std.time.timestamp(),
+        .timestamp = tri_time.timestamp(),
         .mode = .General,
         .language = .English,
     };

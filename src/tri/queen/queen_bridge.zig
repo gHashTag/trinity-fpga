@@ -9,6 +9,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 
 pub const StepType = enum {
@@ -55,7 +56,7 @@ pub fn logStep(allocator: Allocator, step: AgentStep) !void {
     });
 
     // Build episode_id: issue-{N}-{step}-{timestamp}
-    const ts = if (step.timestamp == 0) std.time.timestamp() else step.timestamp;
+    const ts = if (step.timestamp == 0) tri_time.timestamp() else step.timestamp;
     var id_buf: [128]u8 = undefined;
     const episode_id = try std.fmt.bufPrint(&id_buf, "issue-{d}-{s}-{d}", .{
         step.issue_number,

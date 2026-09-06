@@ -13,6 +13,7 @@
 // φ² + 1/φ² = 3 | TRINITY
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const token_types = @import("token_types.zig");
 
@@ -77,12 +78,12 @@ pub const StakeInfo = struct {
 
     pub fn canUnstake(self: *const StakeInfo) bool {
         if (!self.is_active) return false;
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
         return now >= self.unlock_time;
     }
 
     pub fn unlockProgress(self: *const StakeInfo) f64 {
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
         const stake_time = self.stake_time;
         const unlock = self.unlock_time;
 
@@ -169,7 +170,7 @@ pub const StakingState = struct {
             };
         }
 
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
         const unlock_time = now + (@as(i64, @intCast(lock_period_days * SECONDS_PER_DAY)));
 
         const stake_info = StakeInfo{
@@ -475,7 +476,7 @@ test "unstake after lock period" {
 
     state.mutex.lock();
     if (state.stakes.getPtr(staker)) |info_ptr| {
-        info_ptr.unlock_time = std.time.timestamp() - 1;
+        info_ptr.unlock_time = tri_time.timestamp() - 1;
     }
     state.mutex.unlock();
 
@@ -672,7 +673,7 @@ test "unlockProgress calculation" {
 
     state.mutex.lock();
     if (state.stakes.getPtr(staker)) |info_ptr| {
-        info_ptr.unlock_time = std.time.timestamp() - 1;
+        info_ptr.unlock_time = tri_time.timestamp() - 1;
     }
     state.mutex.unlock();
 

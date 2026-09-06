@@ -6,6 +6,7 @@
 // =============================================================================
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const node_reputation_mod = @import("node_reputation.zig");
 
 // =============================================================================
@@ -104,7 +105,7 @@ pub const ReputationConsensus = struct {
             .voter_id = voter_id,
             .target_id = target_id,
             .reported_score = clamped,
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
         });
         self.total_votes_cast += 1;
     }

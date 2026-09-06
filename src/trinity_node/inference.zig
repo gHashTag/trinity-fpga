@@ -6,6 +6,7 @@
 // =============================================================================
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const ArrayList = std.array_list.Managed;
 const protocol = @import("protocol.zig");
 const wallet_mod = @import("wallet.zig");
@@ -123,7 +124,7 @@ pub const InferenceEngine = struct {
     /// Process an inference job
     /// MVP: Uses simulation mode. Connect to gguf_model for real inference.
     pub fn processJob(self: *InferenceEngine, job: protocol.InferenceJob) !InferenceResult {
-        const start_time = std.time.milliTimestamp();
+        const start_time = tri_time.milliTimestamp();
 
         // Ensure model is loaded
         if (self.status != .ready) {
@@ -144,7 +145,7 @@ pub const InferenceEngine = struct {
         // Generate a simulated response
         const response = try self.allocator.dupe(u8, "[Trinity Node Response] Inference complete.");
 
-        const end_time = std.time.milliTimestamp();
+        const end_time = tri_time.milliTimestamp();
         const latency_ms: u32 = @intCast(end_time - start_time);
 
         // Update stats

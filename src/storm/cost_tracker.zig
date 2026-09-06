@@ -4,6 +4,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 pub const Cost = struct {
     api_tokens: u64 = 0,
     cpu_ms: u64 = 0,
@@ -35,7 +36,7 @@ pub const CostTracker = struct {
     start_time_ns: i64,
 
     pub fn init(allocator: std.mem.Allocator) !CostTracker {
-        const now = std.time.nanoTimestamp();
+        const now = tri_time.nanoTimestamp();
         const costs = std.StringHashMap(Cost).init(allocator);
         return .{
             .allocator = allocator,
@@ -104,7 +105,7 @@ pub const CostTracker = struct {
 
     /// Get elapsed time since tracker start
     pub fn getElapsedTimeMs(self: *const CostTracker) u64 {
-        const now = std.time.nanoTimestamp();
+        const now = tri_time.nanoTimestamp();
         return @as(u64, @intFromFloat(@divTrunc(@as(f128, @floatFromInt(now - self.start_time_ns)), 1_000_000)));
     }
 
@@ -195,7 +196,7 @@ pub const CostTracker = struct {
         while (iter.next()) |entry| {
             entry.value_ptr.* = .{};
         }
-        self.start_time_ns = std.time.nanoTimestamp();
+        self.start_time_ns = tri_time.nanoTimestamp();
     }
 
     /// Export to JSON for persistence

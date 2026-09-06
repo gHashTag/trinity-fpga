@@ -12,6 +12,7 @@
 // =============================================================================
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const enhanced_chat = @import("igla_enhanced_chat.zig");
 const self_opt = @import("igla_self_opt.zig");
 
@@ -416,7 +417,7 @@ pub const ConversationContext = struct {
             .response = response,
             .language = lang,
             .code_lang = code_lang,
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
         };
         self.turn_count += 1;
 
@@ -720,7 +721,7 @@ pub fn runBenchmark() !void {
     var chat_count: usize = 0;
     var high_confidence: usize = 0;
 
-    const start = std.time.nanoTimestamp();
+    const start = tri_time.nanoTimestamp();
 
     for (test_queries) |q| {
         const response = engine.respond(q);
@@ -734,7 +735,7 @@ pub fn runBenchmark() !void {
         }
     }
 
-    const elapsed_ns = std.time.nanoTimestamp() - start;
+    const elapsed_ns = tri_time.nanoTimestamp() - start;
     const ops_per_sec = @as(f64, @floatFromInt(test_queries.len)) / (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
 
     const stats = engine.getStats();

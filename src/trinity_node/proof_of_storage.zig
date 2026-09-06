@@ -6,6 +6,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const protocol = @import("protocol.zig");
 const storage_mod = @import("storage.zig");
 const storage_discovery = @import("storage_discovery.zig");
@@ -70,12 +71,12 @@ pub const ProofOfStorageEngine = struct {
             .shard_hash = shard_hash,
             .byte_offset = byte_offset,
             .byte_length = byte_length,
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
         };
 
         try self.pending_challenges.put(challenge_id, challenge);
         self.challenges_issued += 1;
-        self.last_challenge_time = std.time.timestamp();
+        self.last_challenge_time = tri_time.timestamp();
 
         return challenge;
     }
@@ -103,7 +104,7 @@ pub const ProofOfStorageEngine = struct {
             .challenge_id = challenge.challenge_id,
             .prover_id = responder_id,
             .proof_hash = proof_hash,
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
         };
     }
 
@@ -150,7 +151,7 @@ pub const ProofOfStorageEngine = struct {
 
     /// Check if it's time to issue a new challenge round
     pub fn shouldChallenge(self: *ProofOfStorageEngine) bool {
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
         return (now - self.last_challenge_time) >= self.challenge_interval_secs;
     }
 
@@ -233,7 +234,7 @@ test "respond to challenge produces correct proof" {
         .shard_hash = shard_hash,
         .byte_offset = 10,
         .byte_length = 64,
-        .timestamp = std.time.timestamp(),
+        .timestamp = tri_time.timestamp(),
     };
 
     const responder_id = [_]u8{0xBB} ** 32;
@@ -311,7 +312,7 @@ test "verify proof fails for tampered data" {
         .challenge_id = challenge.challenge_id,
         .prover_id = target_id,
         .proof_hash = [_]u8{0xFF} ** 32, // Wrong hash
-        .timestamp = std.time.timestamp(),
+        .timestamp = tri_time.timestamp(),
     };
 
     const valid = try engine.verifyProof(fake_proof, &challenger_provider);
@@ -351,7 +352,7 @@ test "unreliable after max failures" {
             .challenge_id = challenge.challenge_id,
             .prover_id = target_id,
             .proof_hash = [_]u8{0x00} ** 32,
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
         };
         _ = try engine.verifyProof(fake_proof, &provider);
     }
@@ -375,6 +376,6 @@ test "challenge timing respects interval" {
     try std.testing.expect(engine.shouldChallenge());
 
     // After issuing a challenge, should not challenge again immediately
-    engine.last_challenge_time = std.time.timestamp();
+    engine.last_challenge_time = tri_time.timestamp();
     try std.testing.expect(!engine.shouldChallenge());
 }

@@ -14,11 +14,12 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const builtin = @import("builtin");
 const vsa = @import("vsa");
 const vm = @import("vm.zig");
 const sdk = @import("sdk.zig");
-const hybrid = vsa;  // one source: the module, not the local vsa_hybrid copy
+const hybrid = vsa; // one source: the module, not the local vsa_hybrid copy
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // E2E TEST 1: VSA → VM → SDK Full Pipeline
@@ -256,7 +257,7 @@ test "BENCH: VSA bind throughput" {
     var a = vsa.randomVector(BENCH_DIM, 1);
     var b = vsa.randomVector(BENCH_DIM, 2);
 
-    var timer = try std.time.Timer.start();
+    var timer = try tri_time.Timer.start();
     for (0..BENCH_ITERS) |_| {
         _ = vsa.bind(&a, &b);
     }
@@ -275,7 +276,7 @@ test "BENCH: VSA bundle2 throughput" {
     var a = vsa.randomVector(BENCH_DIM, 3);
     var b = vsa.randomVector(BENCH_DIM, 4);
 
-    var timer = try std.time.Timer.start();
+    var timer = try tri_time.Timer.start();
     for (0..BENCH_ITERS) |_| {
         _ = vsa.bundle2(&a, &b);
     }
@@ -290,7 +291,7 @@ test "BENCH: VSA cosineSimilarity throughput" {
     var a = vsa.randomVector(BENCH_DIM, 5);
     var b = vsa.randomVector(BENCH_DIM, 6);
 
-    var timer = try std.time.Timer.start();
+    var timer = try tri_time.Timer.start();
     for (0..BENCH_ITERS) |_| {
         _ = vsa.cosineSimilarity(&a, &b);
     }
@@ -305,7 +306,7 @@ test "BENCH: VSA hammingDistance throughput" {
     var a = vsa.randomVector(BENCH_DIM, 7);
     var b = vsa.randomVector(BENCH_DIM, 8);
 
-    var timer = try std.time.Timer.start();
+    var timer = try tri_time.Timer.start();
     for (0..BENCH_ITERS) |_| {
         _ = vsa.hammingDistance(&a, &b);
     }
@@ -319,7 +320,7 @@ test "BENCH: VSA hammingDistance throughput" {
 test "BENCH: VSA permute throughput" {
     var a = vsa.randomVector(BENCH_DIM, 9);
 
-    var timer = try std.time.Timer.start();
+    var timer = try tri_time.Timer.start();
     for (0..BENCH_ITERS) |_| {
         _ = vsa.permute(&a, 7);
     }
@@ -345,7 +346,7 @@ test "BENCH: VM program execution (6 instructions)" {
         .{ .opcode = .halt },
     };
 
-    var timer = try std.time.Timer.start();
+    var timer = try tri_time.Timer.start();
     for (0..100) |_| {
         try machine.loadProgram(&program);
         try machine.run();
@@ -364,7 +365,7 @@ test "BENCH: VM program execution (6 instructions)" {
 test "BENCH: HybridBigInt pack/unpack cycle" {
     var v = vsa.randomVector(BENCH_DIM, 99);
 
-    var timer = try std.time.Timer.start();
+    var timer = try tri_time.Timer.start();
     for (0..BENCH_ITERS) |_| {
         v.pack();
         v.ensureUnpacked();
@@ -650,7 +651,7 @@ fn runVerdict(allocator: std.mem.Allocator) !VerdictResult {
     {
         var a = vsa.randomVector(1024, 1);
         var b = vsa.randomVector(1024, 2);
-        var timer = try std.time.Timer.start();
+        var timer = try tri_time.Timer.start();
         for (0..100) |_| {
             _ = vsa.bind(&a, &b);
         }
@@ -662,7 +663,7 @@ fn runVerdict(allocator: std.mem.Allocator) !VerdictResult {
     {
         var a = vsa.randomVector(1024, 3);
         var b = vsa.randomVector(1024, 4);
-        var timer = try std.time.Timer.start();
+        var timer = try tri_time.Timer.start();
         for (0..100) |_| {
             _ = vsa.cosineSimilarity(&a, &b);
         }

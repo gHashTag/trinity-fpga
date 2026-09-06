@@ -9,6 +9,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const qt = @import("queen_types.zig");
 const hippocampus = @import("hippocampus.zig");
@@ -90,7 +91,7 @@ fn detectConflicts(allocator: Allocator) bool {
 /// Run self-check diagnostics
 pub fn selfCheck(allocator: Allocator) !SelfCheck {
     var check = SelfCheck{
-        .timestamp = std.time.timestamp(),
+        .timestamp = tri_time.timestamp(),
     };
 
     // Check 1: Loop running (check if we can write to hippocampus)
@@ -197,7 +198,7 @@ pub fn health() CellHealth {
     return CellHealth{
         .status = .healthy,
         .cycle = 0,
-        .last_check = std.time.timestamp(),
+        .last_check = tri_time.timestamp(),
     };
 }
 
@@ -493,7 +494,7 @@ test "dmpfc — SelfCheck with all issues" {
         .telegram_reachable = false,
         .thalamus_responding = false,
         .conflict_detected = true,
-        .timestamp = std.time.timestamp(),
+        .timestamp = tri_time.timestamp(),
     };
     check.health_score = 0.0; // All checks failed
 
@@ -559,7 +560,7 @@ test "dmpfc — Issue setDescription unicode" {
 test "dmpfc — SelfCheck issues array" {
     const check = SelfCheck{
         .issues = &.{},
-        .timestamp = std.time.timestamp(),
+        .timestamp = tri_time.timestamp(),
     };
 
     try std.testing.expectEqual(@as(usize, 0), check.issues.len);
@@ -618,7 +619,7 @@ test "dmpfc — health returns populated CellHealth" {
     const cell_health = health();
     try std.testing.expect(cell_health.last_check > 0);
     // Verify timestamp is recent (within last 10 seconds)
-    const now = std.time.timestamp();
+    const now = tri_time.timestamp();
     try std.testing.expect(now - cell_health.last_check >= 0);
     try std.testing.expect(now - cell_health.last_check < 10);
 }
@@ -649,7 +650,7 @@ test "dmpfc — selfCheck returns valid timestamp" {
         std.testing.allocator.free(check.issues);
     }
     // Verify timestamp is recent
-    const now = std.time.timestamp();
+    const now = tri_time.timestamp();
     try std.testing.expect(check.timestamp > 0);
     try std.testing.expect(now - check.timestamp >= 0);
     try std.testing.expect(now - check.timestamp < 5); // Within 5 seconds

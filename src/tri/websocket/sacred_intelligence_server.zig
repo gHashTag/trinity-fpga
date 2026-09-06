@@ -4,6 +4,7 @@
 //! patches, gematria calculations, and evolution progress.
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const net = std.net;
 const Thread = std.Thread;
 const Allocator = std.mem.Allocator;
@@ -507,7 +508,7 @@ pub const WSServer = struct {
 
         const msg = WSMessage{
             .type = .METRICS,
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
             .data = data,
         };
 
@@ -529,7 +530,7 @@ pub const WSServer = struct {
 
         const msg = WSMessage{
             .type = .PATCH,
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
             .data = data,
         };
 
@@ -551,7 +552,7 @@ pub const WSServer = struct {
 
         const msg = WSMessage{
             .type = .GEMATRIA,
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
             .data = data,
         };
 
@@ -573,7 +574,7 @@ pub const WSServer = struct {
 
         const msg = WSMessage{
             .type = .EVOLUTION,
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
             .data = data,
         };
 

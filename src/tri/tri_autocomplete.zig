@@ -18,6 +18,7 @@
 
 const std = @import("std");
 
+const tri_env = @import("tri_env.zig");
 const Allocator = std.mem.Allocator;
 
 // ANSI colors
@@ -72,7 +73,7 @@ const Config = struct {
 };
 
 fn getConfigPath(allocator: Allocator) ![]const u8 {
-    const home_dir = std.process.getEnvVarOwned(allocator, "HOME") catch return error.HomeNotFound;
+    const home_dir = tri_env.getEnvVarOwned(allocator, "HOME") catch return error.HomeNotFound;
     defer allocator.free(home_dir);
     return std.fs.path.join(allocator, &.{ home_dir, TRI_CONFIG_DIR, TRI_CONFIG_FILE });
 }
@@ -121,7 +122,7 @@ fn saveConfig(allocator: Allocator, config: *const Config) !void {
     const config_path = try getConfigPath(allocator);
     defer allocator.free(config_path);
 
-    const home_dir = std.process.getEnvVarOwned(allocator, "HOME") catch return error.HomeNotFound;
+    const home_dir = tri_env.getEnvVarOwned(allocator, "HOME") catch return error.HomeNotFound;
     defer allocator.free(home_dir);
 
     const config_dir = try std.fs.path.join(allocator, &.{ home_dir, TRI_CONFIG_DIR });
@@ -712,7 +713,7 @@ const Shell = enum {
     auto,
 
     fn detect() Shell {
-        const shell_env = std.process.getEnvVarOwned(std.heap.page_allocator, "SHELL") catch return .auto;
+        const shell_env = tri_env.getEnvVarOwned(std.heap.page_allocator, "SHELL") catch return .auto;
         defer std.heap.page_allocator.free(shell_env);
 
         if (std.mem.indexOf(u8, shell_env, "zsh") != null) return .zsh;
@@ -721,7 +722,7 @@ const Shell = enum {
     }
 
     fn getConfigFile(shell: Shell) ![]const u8 {
-        const home = try std.process.getEnvVarOwned(std.heap.page_allocator, "HOME");
+        const home = try tri_env.getEnvVarOwned(std.heap.page_allocator, "HOME");
         defer std.heap.page_allocator.free(home);
 
         return switch (shell) {

@@ -12,6 +12,8 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
+const tri_env = @import("tri_env.zig");
 const Allocator = std.mem.Allocator;
 const railway_api = @import("railway_api.zig");
 const circuit_breaker = @import("railway_circuit_breaker.zig");
@@ -36,7 +38,7 @@ pub const RailwayAccount = struct {
     health: ?circuit_breaker.AccountHealth = null,
 
     pub fn canSpawn(self: *const RailwayAccount) bool {
-        const now_day = @divTrunc(std.time.timestamp(), 86400) * 86400;
+        const now_day = @divTrunc(tri_time.timestamp(), 86400) * 86400;
         var mutable = @constCast(self);
         if (now_day > self.daily_reset_epoch) {
             mutable.daily_creates = 0;
@@ -135,7 +137,7 @@ pub const RailwayFarm = struct {
         const key = key_buf[0 .. base.len + suffix.len];
 
         // Just check existence — getEnvVarOwned needs allocator, so use a temp check
-        const val = std.process.getEnvVarOwned(std.heap.page_allocator, key) catch return;
+        const val = tri_env.getEnvVarOwned(std.heap.page_allocator, key) catch return;
         std.heap.page_allocator.free(val);
 
         if (self.account_count >= MAX_ACCOUNTS) return;
@@ -147,7 +149,7 @@ pub const RailwayFarm = struct {
         account.env_suffix_len = @min(suffix.len, 8);
         @memcpy(account.env_suffix[0..account.env_suffix_len], suffix[0..account.env_suffix_len]);
         account.daily_creates = 0;
-        account.daily_reset_epoch = @divTrunc(std.time.timestamp(), 86400) * 86400;
+        account.daily_reset_epoch = @divTrunc(tri_time.timestamp(), 86400) * 86400;
         account.active_services = 0;
         account.max_concurrent = 25; // Railway PRO allows 100/project, 25 conservative
         account.max_daily_creates = 50; // PRO has no documented daily limit
@@ -174,7 +176,7 @@ pub const RailwayFarm = struct {
     /// Returns account with highest health score that can spawn.
     /// Falls back to selectAccount() if health tracking not initialized.
     pub fn selectHealthyAccount(self: *Self) ?*RailwayAccount {
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
 
         // Build AccountHealth array for selectBest()
         var health_accounts: [MAX_ACCOUNTS]circuit_breaker.AccountHealth = undefined;
@@ -225,7 +227,7 @@ pub const RailwayFarm = struct {
     /// Record API call result in Circuit Breaker health tracking.
     /// Call after each Railway API request.
     pub fn recordApiResult(self: *Self, account_id: u8, latency_ms: u32, success: bool) void {
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
         for (self.accounts[0..self.account_count]) |*acct| {
             if (acct.id == account_id) {
                 if (acct.health) |*h| {
@@ -311,11 +313,11 @@ pub const RailwayFarm = struct {
             defer api.deinit();
 
             // Measure latency for Circuit Breaker
-            const start = std.time.nanoTimestamp();
+            const start = tri_time.nanoTimestamp();
 
             const response = api.createService(service_name) catch {
                 // Rate limited or daily cap — mark full, try next
-                const end_fail = std.time.nanoTimestamp();
+                const end_fail = tri_time.nanoTimestamp();
                 const latency_fail = @as(u32, @intCast((end_fail - start) / 1_000_000));
                 self.recordApiResult(account.id, latency_fail, false);
 
@@ -333,7 +335,7 @@ pub const RailwayFarm = struct {
             self.recordAgent(issue, account.id, service_id);
 
             // Record success in Circuit Breaker
-            const end = std.time.nanoTimestamp();
+            const end = tri_time.nanoTimestamp();
             const latency_ms = @as(u32, @intCast((end - start) / 1_000_000));
             self.recordApiResult(account.id, latency_ms, true);
             self.saveState();
@@ -528,7 +530,7 @@ test "RailwayAccount availableSlots" {
         .env_suffix = undefined,
         .env_suffix_len = 0,
         .daily_creates = 10,
-        .daily_reset_epoch = @divTrunc(std.time.timestamp(), 86400) * 86400,
+        .daily_reset_epoch = @divTrunc(tri_time.timestamp(), 86400) * 86400,
         .active_services = 3,
         .max_concurrent = 10,
         .max_daily_creates = 25,
@@ -546,7 +548,7 @@ test "RailwayAccount canSpawn at limit" {
         .env_suffix = undefined,
         .env_suffix_len = 0,
         .daily_creates = 25,
-        .daily_reset_epoch = @divTrunc(std.time.timestamp(), 86400) * 86400,
+        .daily_reset_epoch = @divTrunc(tri_time.timestamp(), 86400) * 86400,
         .active_services = 0,
         .max_concurrent = 10,
         .max_daily_creates = 25,
@@ -573,7 +575,7 @@ test "FarmCapacity aggregate" {
         .env_suffix = undefined,
         .env_suffix_len = 0,
         .daily_creates = 5,
-        .daily_reset_epoch = @divTrunc(std.time.timestamp(), 86400) * 86400,
+        .daily_reset_epoch = @divTrunc(tri_time.timestamp(), 86400) * 86400,
         .active_services = 3,
         .max_concurrent = 10,
         .max_daily_creates = 25,
@@ -587,7 +589,7 @@ test "FarmCapacity aggregate" {
         .env_suffix = undefined,
         .env_suffix_len = 2,
         .daily_creates = 0,
-        .daily_reset_epoch = @divTrunc(std.time.timestamp(), 86400) * 86400,
+        .daily_reset_epoch = @divTrunc(tri_time.timestamp(), 86400) * 86400,
         .active_services = 0,
         .max_concurrent = 10,
         .max_daily_creates = 25,

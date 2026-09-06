@@ -13,6 +13,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 
 pub const DEFAULT_DISCOVERY_PORT = 9333;
@@ -51,7 +52,7 @@ pub const BootstrapPeer = struct {
     }
 
     pub fn isHealthy(self: *const BootstrapPeer) bool {
-        const now: i64 = std.time.timestamp();
+        const now: i64 = tri_time.timestamp();
         const hours_since_seen: f64 = if (self.last_seen > 0)
             @as(f64, @floatFromInt(now - @as(i64, @intCast(self.last_seen)))) / 3600.0
         else
@@ -187,7 +188,7 @@ pub const BootstrapManager = struct {
         for (self.discovered.items) |*peer| {
             if (std.mem.eql(u8, peer.node_id, node_id)) {
                 // Update last_seen
-                peer.last_seen = @intCast(std.time.timestamp());
+                peer.last_seen = @intCast(tri_time.timestamp());
                 return;
             }
         }
@@ -207,7 +208,7 @@ pub const BootstrapManager = struct {
             .cluster_id = cluster_copy,
             .node_id = node_copy,
             .trust_score = 0.5, // Start with medium trust
-            .last_seen = @intCast(std.time.timestamp()),
+            .last_seen = @intCast(tri_time.timestamp()),
         });
     }
 
@@ -215,7 +216,7 @@ pub const BootstrapManager = struct {
     pub fn markPeerSeen(self: *BootstrapManager, host: []const u8) void {
         for (self.peers.items) |*peer| {
             if (std.mem.eql(u8, peer.host, host)) {
-                peer.last_seen = @intCast(std.time.timestamp());
+                peer.last_seen = @intCast(tri_time.timestamp());
                 peer.failures = 0;
                 // Increase trust score
                 peer.trust_score = @min(1.0, peer.trust_score + 0.1);
@@ -346,14 +347,14 @@ test "BootstrapPeer health check" {
         .host = "1.2.3.4",
         .port = 9333,
         .trust_score = 1.0,
-        .last_seen = @intCast(std.time.timestamp()),
+        .last_seen = @intCast(tri_time.timestamp()),
         .failures = 0,
     };
 
     try std.testing.expect(peer.isHealthy());
 
     // Old peer (seen 25 hours ago)
-    const now = std.time.timestamp();
+    const now = tri_time.timestamp();
     peer.last_seen = @intCast(now - @as(i64, @intCast(25 * 3600)));
     try std.testing.expect(!peer.isHealthy());
 }

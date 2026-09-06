@@ -12,6 +12,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 // ═══════════════════════════════════════════════════════════════════════════════
 // CONSTANTS
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1011,24 +1012,24 @@ pub fn runBenchmarks() void {
     std.debug.print("Addition ({} + {}) x {} iterations:\n", .{ val_a, val_b, iterations });
 
     // Native i64
-    var native_start = std.time.nanoTimestamp();
+    var native_start = tri_time.nanoTimestamp();
     var native_sum: i64 = 0;
     var i: u64 = 0;
     while (i < iterations) : (i += 1) {
         native_sum +%= val_a +% val_b;
     }
-    var native_end = std.time.nanoTimestamp();
+    var native_end = tri_time.nanoTimestamp();
     std.mem.doNotOptimizeAway(native_sum);
     const native_add_ns = @as(u64, @intCast(native_end - native_start));
 
     // BigInt
-    var bigint_start = std.time.nanoTimestamp();
+    var bigint_start = tri_time.nanoTimestamp();
     var bigint_sum = TVCBigInt.zero();
     i = 0;
     while (i < iterations) : (i += 1) {
         bigint_sum = big_a.add(&big_b);
     }
-    var bigint_end = std.time.nanoTimestamp();
+    var bigint_end = tri_time.nanoTimestamp();
     std.mem.doNotOptimizeAway(bigint_sum);
     const bigint_add_ns = @as(u64, @intCast(bigint_end - bigint_start));
 
@@ -1040,24 +1041,24 @@ pub fn runBenchmarks() void {
     std.debug.print("Multiplication ({} * {}) x {} iterations:\n", .{ val_a, val_b, iterations / 10 });
 
     // Native i64
-    native_start = std.time.nanoTimestamp();
+    native_start = tri_time.nanoTimestamp();
     var native_prod: i64 = 0;
     i = 0;
     while (i < iterations / 10) : (i += 1) {
         native_prod +%= val_a *% val_b;
     }
-    native_end = std.time.nanoTimestamp();
+    native_end = tri_time.nanoTimestamp();
     std.mem.doNotOptimizeAway(native_prod);
     const native_mul_ns = @as(u64, @intCast(native_end - native_start));
 
     // BigInt (simple)
-    bigint_start = std.time.nanoTimestamp();
+    bigint_start = tri_time.nanoTimestamp();
     var bigint_prod = TVCBigInt.zero();
     i = 0;
     while (i < iterations / 10) : (i += 1) {
         bigint_prod = big_a.mulSimple(&big_b);
     }
-    bigint_end = std.time.nanoTimestamp();
+    bigint_end = tri_time.nanoTimestamp();
     std.mem.doNotOptimizeAway(bigint_prod);
     const bigint_mul_ns = @as(u64, @intCast(bigint_end - bigint_start));
 
@@ -1069,24 +1070,24 @@ pub fn runBenchmarks() void {
     std.debug.print("Division ({} / {}) x {} iterations:\n", .{ val_a, val_b, iterations / 100 });
 
     // Native i64
-    native_start = std.time.nanoTimestamp();
+    native_start = tri_time.nanoTimestamp();
     var native_div: i64 = 0;
     i = 0;
     while (i < iterations / 100) : (i += 1) {
         native_div +%= @divTrunc(val_a, val_b);
     }
-    native_end = std.time.nanoTimestamp();
+    native_end = tri_time.nanoTimestamp();
     std.mem.doNotOptimizeAway(native_div);
     const native_div_ns = @as(u64, @intCast(native_end - native_start));
 
     // BigInt division
-    bigint_start = std.time.nanoTimestamp();
+    bigint_start = tri_time.nanoTimestamp();
     var bigint_div = TVCBigInt.zero();
     i = 0;
     while (i < iterations / 100) : (i += 1) {
         bigint_div = big_a.div(&big_b);
     }
-    bigint_end = std.time.nanoTimestamp();
+    bigint_end = tri_time.nanoTimestamp();
     std.mem.doNotOptimizeAway(bigint_div);
     const bigint_div_ns = @as(u64, @intCast(bigint_end - bigint_start));
 
@@ -1140,24 +1141,24 @@ pub fn runBenchmarks() void {
     std.debug.print("Large number addition (trits: {} + {}) x {} iterations:\n", .{ big_num.len, big_num2.len, simd_iterations });
 
     // Scalar addition (force scalar path)
-    const scalar_start = std.time.nanoTimestamp();
+    const scalar_start = tri_time.nanoTimestamp();
     var scalar_result = TVCBigInt.zero();
     i = 0;
     while (i < simd_iterations) : (i += 1) {
         scalar_result = big_num.addScalar(&big_num2);
     }
-    const scalar_end = std.time.nanoTimestamp();
+    const scalar_end = tri_time.nanoTimestamp();
     std.mem.doNotOptimizeAway(scalar_result);
     const scalar_ns = @as(u64, @intCast(scalar_end - scalar_start));
 
     // SIMD addition
-    const simd_start = std.time.nanoTimestamp();
+    const simd_start = tri_time.nanoTimestamp();
     var simd_result = TVCBigInt.zero();
     i = 0;
     while (i < simd_iterations) : (i += 1) {
         simd_result = big_num.addSIMD(&big_num2);
     }
-    const simd_end = std.time.nanoTimestamp();
+    const simd_end = tri_time.nanoTimestamp();
     std.mem.doNotOptimizeAway(simd_result);
     const simd_ns = @as(u64, @intCast(simd_end - simd_start));
 

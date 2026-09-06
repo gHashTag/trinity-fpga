@@ -24,6 +24,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const protocol = @import("protocol.zig");
 const gguf_model = @import("gguf_model");
 pub const auto_shard = @import("auto_shard.zig");
@@ -203,13 +204,13 @@ pub const PipelineWorker = struct {
     /// Logs specific disconnect reasons for diagnosis.
     fn handleSession(self: *PipelineWorker, sock: std.posix.socket_t) void {
         var tokens_processed: u32 = 0;
-        const session_start = std.time.milliTimestamp();
-        var last_activity = std.time.milliTimestamp();
+        const session_start = tri_time.milliTimestamp();
+        var last_activity = tri_time.milliTimestamp();
         const heartbeat_timeout_ms: i64 = 120_000; // 2 minutes
 
         while (self.running.load(.acquire)) {
             // Check heartbeat timeout
-            const now = std.time.milliTimestamp();
+            const now = tri_time.milliTimestamp();
             if (now - last_activity > heartbeat_timeout_ms) {
                 std.debug.print("\x1b[38;2;239;68;68m[Worker] Heartbeat timeout ({d}s with no message) — closing session\x1b[0m\n", .{@divTrunc(now - last_activity, 1000)});
                 break;
@@ -230,7 +231,7 @@ pub const PipelineWorker = struct {
                 break;
             }
 
-            last_activity = std.time.milliTimestamp();
+            last_activity = tri_time.milliTimestamp();
 
             const header = protocol.MessageHeader.deserialize(&header_buf) catch |err| {
                 std.debug.print("\x1b[38;2;239;68;68m[Worker] Invalid header (magic/type): {}\x1b[0m\n", .{err});
@@ -259,7 +260,7 @@ pub const PipelineWorker = struct {
             }
         }
 
-        const elapsed = std.time.milliTimestamp() - session_start;
+        const elapsed = tri_time.milliTimestamp() - session_start;
         std.debug.print("\x1b[38;2;0;229;153m[Worker] Session complete: {d} tokens in {d}ms\x1b[0m\n", .{ tokens_processed, elapsed });
     }
 
@@ -498,12 +499,12 @@ pub const PipelineRelay = struct {
 
     fn handleSession(self: *PipelineRelay, sock: std.posix.socket_t) void {
         var tokens_processed: u32 = 0;
-        const session_start = std.time.milliTimestamp();
-        var last_activity = std.time.milliTimestamp();
+        const session_start = tri_time.milliTimestamp();
+        var last_activity = tri_time.milliTimestamp();
         const heartbeat_timeout_ms: i64 = 120_000;
 
         while (self.running.load(.acquire)) {
-            const now = std.time.milliTimestamp();
+            const now = tri_time.milliTimestamp();
             if (now - last_activity > heartbeat_timeout_ms) {
                 std.debug.print("\x1b[38;2;239;68;68m[Relay] Heartbeat timeout ({d}s) — closing session\x1b[0m\n", .{@divTrunc(now - last_activity, 1000)});
                 break;
@@ -523,7 +524,7 @@ pub const PipelineRelay = struct {
                 break;
             }
 
-            last_activity = std.time.milliTimestamp();
+            last_activity = tri_time.milliTimestamp();
 
             const header = protocol.MessageHeader.deserialize(&header_buf) catch |err| {
                 std.debug.print("\x1b[38;2;239;68;68m[Relay] Invalid header: {}\x1b[0m\n", .{err});
@@ -552,7 +553,7 @@ pub const PipelineRelay = struct {
             }
         }
 
-        const elapsed = std.time.milliTimestamp() - session_start;
+        const elapsed = tri_time.milliTimestamp() - session_start;
         std.debug.print("\x1b[38;2;0;229;153m[Relay] Session complete: {d} tokens in {d}ms\x1b[0m\n", .{ tokens_processed, elapsed });
     }
 
@@ -909,13 +910,13 @@ pub const PipelineCoordinator = struct {
         const shard_output = try self.allocator.alloc(f32, hidden_size);
         defer self.allocator.free(shard_output);
 
-        const total_start = std.time.milliTimestamp();
+        const total_start = tri_time.milliTimestamp();
 
         // Connect to worker
         try self.connect();
 
         // ─── Phase 1: Prefill (BATCHED — 1 TCP round-trip for all tokens) ───
-        const prefill_start = std.time.milliTimestamp();
+        const prefill_start = tri_time.milliTimestamp();
         std.debug.print("\x1b[38;2;0;255;255m[Coordinator] Prefill {d} tokens (batched): \x1b[0m", .{prompt_tokens.len});
 
         const batch_size: u32 = @intCast(prompt_tokens.len);
@@ -925,7 +926,7 @@ pub const PipelineCoordinator = struct {
         defer self.allocator.free(positions);
 
         // Local compute: embed + forwardShard for all prompt tokens
-        const local_start = std.time.milliTimestamp();
+        const local_start = tri_time.milliTimestamp();
         for (prompt_tokens, 0..) |token, i| {
             const emb_offset = @as(usize, token) * hidden_size;
             @memcpy(hidden, self.model.token_embedding[emb_offset..][0..hidden_size]);
@@ -938,16 +939,16 @@ pub const PipelineCoordinator = struct {
 
             if (i % 5 == 0) std.debug.print(".", .{});
         }
-        self.time_prefill_local_ms = std.time.milliTimestamp() - local_start;
+        self.time_prefill_local_ms = tri_time.milliTimestamp() - local_start;
         std.debug.print(" local done ({d}ms), ", .{self.time_prefill_local_ms});
 
         // Network: send entire batch at once
-        const net_start = std.time.milliTimestamp();
+        const net_start = tri_time.milliTimestamp();
         const batch_tokens = try self.batchForwardRemote(all_hidden, positions, batch_size, temperature);
         defer self.allocator.free(batch_tokens);
-        self.time_prefill_net_ms = std.time.milliTimestamp() - net_start;
+        self.time_prefill_net_ms = tri_time.milliTimestamp() - net_start;
 
-        const prefill_time = std.time.milliTimestamp() - prefill_start;
+        const prefill_time = tri_time.milliTimestamp() - prefill_start;
         std.debug.print("batch ok ({d}ms, net={d}ms)\n", .{ prefill_time, self.time_prefill_net_ms });
 
         // Use last sampled token as starting point for decode
@@ -966,12 +967,12 @@ pub const PipelineCoordinator = struct {
             @memcpy(hidden, self.model.token_embedding[emb_offset..][0..hidden_size]);
 
             // Local compute
-            const compute_start = std.time.milliTimestamp();
+            const compute_start = tri_time.milliTimestamp();
             self.model.forwardShard(shard_output, hidden, pos);
-            self.time_decode_compute_ms += std.time.milliTimestamp() - compute_start;
+            self.time_decode_compute_ms += tri_time.milliTimestamp() - compute_start;
 
             // Network (with reconnection on failure)
-            const decode_net_start = std.time.milliTimestamp();
+            const decode_net_start = tri_time.milliTimestamp();
             const remote_result = self.forwardRemote(shard_output, @intCast(pos), temperature);
             if (remote_result) |token| {
                 last_token = token;
@@ -987,7 +988,7 @@ pub const PipelineCoordinator = struct {
                     break;
                 };
             }
-            const decode_net_time = std.time.milliTimestamp() - decode_net_start;
+            const decode_net_time = tri_time.milliTimestamp() - decode_net_start;
             self.time_decode_net_ms += decode_net_time;
 
             try output_tokens.append(self.allocator, last_token);
@@ -997,7 +998,7 @@ pub const PipelineCoordinator = struct {
             if (last_token == 2) break;
         }
 
-        const total_time = std.time.milliTimestamp() - total_start;
+        const total_time = tri_time.milliTimestamp() - total_start;
 
         // ─── Performance Summary ───
         std.debug.print("\n", .{});

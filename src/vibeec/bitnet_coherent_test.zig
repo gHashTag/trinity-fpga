@@ -5,6 +5,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const full_model = @import("bitnet_full_model.zig");
 const tokenizer_mod = @import("sentencepiece_tokenizer.zig");
 const json = std.json;
@@ -95,13 +96,13 @@ pub fn main() !void {
         model.resetKVCache();
 
         // Generate with full model
-        const start_time = std.time.milliTimestamp();
+        const start_time = tri_time.milliTimestamp();
         const generated = model.generate(prompt_tokens, 50, 0.7) catch |err| {
             std.debug.print("  Generation failed: {}\n", .{err});
             continue;
         };
         defer allocator.free(generated);
-        const end_time = std.time.milliTimestamp();
+        const end_time = tri_time.milliTimestamp();
 
         // Decode with proper SentencePiece handling
         const text = try tokenizer.decode(generated);

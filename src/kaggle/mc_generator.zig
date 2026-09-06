@@ -15,6 +15,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const CsvRow = @import("csv_parser.zig").CsvRow;
 
@@ -34,7 +35,7 @@ pub const McGenerator = struct {
     rng: std.Random.DefaultPrng,
 
     pub fn init(allocator: Allocator) McGenerator {
-        const timestamp = std.time.nanoTimestamp();
+        const timestamp = tri_time.nanoTimestamp();
         const seed = @as(u64, @intCast(@abs(timestamp)));
         return .{
             .allocator = allocator,

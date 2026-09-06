@@ -14,6 +14,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const colors = @import("tri_colors.zig");
 const print = std.debug.print;
@@ -121,7 +122,7 @@ pub fn collectCurrent(allocator: Allocator) Baseline {
 
     // Version = today's date
     var date_buf: [16]u8 = undefined;
-    const ts = std.time.timestamp();
+    const ts = tri_time.timestamp();
     const epoch_day = @divTrunc(ts, 86400);
     const date_str = std.fmt.bufPrint(&date_buf, "v{d}", .{epoch_day}) catch "v0";
     baseline.setVersion(date_str);
@@ -223,13 +224,13 @@ fn countLoc(allocator: Allocator) u32 {
 }
 
 fn measureBuildTime(allocator: Allocator) u32 {
-    const start = std.time.milliTimestamp();
+    const start = tri_time.milliTimestamp();
     _ = std.process.Child.run(.{
         .allocator = allocator,
         .argv = &[_][]const u8{ "zig", "build" },
         .max_output_bytes = 65536,
     }) catch return 0;
-    const end = std.time.milliTimestamp();
+    const end = tri_time.milliTimestamp();
     return @intCast(@as(u64, @bitCast(end - start)));
 }
 
@@ -309,7 +310,7 @@ fn writeBaselineJson(file: std.fs.File, baseline: *const Baseline) void {
         baseline.loc,
         baseline.binaries,
         baseline.build_time_ms,
-        std.time.timestamp(),
+        tri_time.timestamp(),
     }) catch return;
     file.writeAll(content) catch return;
 }

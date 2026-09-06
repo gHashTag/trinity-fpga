@@ -4,6 +4,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 // GGUF Constants
 pub const GGUF_MAGIC: u32 = 0x46554747; // "GGUF" little-endian
 pub const GGUF_VERSION: u32 = 3;
@@ -1567,7 +1568,7 @@ test "benchmark_mmap_vs_read" {
     const iterations: usize = 100;
 
     // Benchmark standard file read
-    var timer = std.time.Timer.start() catch unreachable;
+    var timer = tri_time.Timer.start() catch unreachable;
     for (0..iterations) |_| {
         const file = try std.fs.cwd().openFile(test_path, .{});
         defer file.close();

@@ -9,6 +9,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 // Import submodules
 const verifier = @import("verifier.zig");
 const diagnostic = @import("diagnostic.zig");
@@ -344,7 +345,7 @@ pub fn logFeedbackToHistory(
         \\- **Priority:** {d}
         \\
     , .{
-        std.time.timestamp(), // Unix timestamp - could format as ISO date if needed
+        tri_time.timestamp(), // Unix timestamp - could format as ISO date if needed
         feedback.template_name,
         feedback.issue_type,
         feedback.suggested_fix,

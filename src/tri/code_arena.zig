@@ -17,6 +17,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const colors = @import("tri_colors.zig");
 const toxic_verdict = @import("pathology.zig");
@@ -257,7 +258,7 @@ fn printDryRun(task: []const u8) void {
 }
 
 fn runBattle(allocator: Allocator, task: []const u8, timeout_ms: u64) !void {
-    const timestamp = std.time.timestamp();
+    const timestamp = tri_time.timestamp();
 
     // Format branch names
     var base_branch_buf: [64]u8 = undefined;
@@ -338,7 +339,7 @@ fn runBattle(allocator: Allocator, task: []const u8, timeout_ms: u64) !void {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn spawnContestant(allocator: Allocator, contestant: Contestant, task: []const u8, timeout_ms: u64) u64 {
-    const start = std.time.milliTimestamp();
+    const start = tri_time.milliTimestamp();
 
     const argv: []const []const u8 = switch (contestant) {
         .baseline => &.{ "claude", "--dangerously-skip-permissions", "-p", task },
@@ -369,7 +370,7 @@ fn spawnContestant(allocator: Allocator, contestant: Contestant, task: []const u
         print("    {s}{s} exited with error{s}\n", .{ YELLOW, contestant.label(), RESET });
     }
 
-    const elapsed: u64 = @intCast(@max(0, std.time.milliTimestamp() - start));
+    const elapsed: u64 = @intCast(@max(0, tri_time.milliTimestamp() - start));
     return elapsed;
 }
 

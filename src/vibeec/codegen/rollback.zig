@@ -10,6 +10,7 @@
 //! - Human-approval gates for critical patches
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const PatchValidator = @import("validator.zig").PatchValidator;
 
 /// Rollback manager for transaction-safe patching
@@ -32,7 +33,7 @@ pub const RollbackManager = struct {
         defer self.allocator.free(source);
 
         // Create backup filename with timestamp
-        const timestamp = std.time.timestamp();
+        const timestamp = tri_time.timestamp();
         const backup_path = try std.fmt.allocPrint(self.allocator, "{s}/{s}.{d}.bak", .{ self.backup_dir, std.fs.path.basename(file_path), timestamp });
         errdefer self.allocator.free(backup_path);
 

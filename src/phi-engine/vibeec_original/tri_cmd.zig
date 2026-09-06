@@ -4,6 +4,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 pub const PHI: f64 = 1.6180339887498948482;
 pub const TRINITY: u32 = 27;
 
@@ -206,7 +207,7 @@ fn handleCommit(allocator: std.mem.Allocator, message: ?[]const u8) !void {
     const commit_msg = message orelse "Commit";
 
     // Generate commit ID (timestamp-based)
-    const timestamp = std.time.nanoTimestamp();
+    const timestamp = tri_time.nanoTimestamp();
     const commit_id = try std.fmt.allocPrint(allocator, "{d}", .{timestamp});
 
     // Create commit file

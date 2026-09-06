@@ -17,6 +17,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 // ═══════════════════════════════════════════════════════════════════════════════
 // NATIVE SIMD (faster than Accelerate vDSP for 300d vectors)
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -661,7 +662,7 @@ pub fn runBenchmarks(allocator: std.mem.Allocator, vocab: *VocabStore) !void {
     var correct: usize = 0;
     var total: usize = 0;
 
-    const start_time = std.time.nanoTimestamp();
+    const start_time = tri_time.nanoTimestamp();
 
     for (ANALOGY_TESTS) |test_case| {
         const result = try computeAnalogyAccelerate(allocator, vocab, test_case.a, test_case.b, test_case.c);
@@ -694,7 +695,7 @@ pub fn runBenchmarks(allocator: std.mem.Allocator, vocab: *VocabStore) !void {
         total += 1;
     }
 
-    const end_time = std.time.nanoTimestamp();
+    const end_time = tri_time.nanoTimestamp();
     const elapsed_ns = @as(u64, @intCast(end_time - start_time));
     const elapsed_ms = @as(f64, @floatFromInt(elapsed_ns)) / 1_000_000.0;
     const ops_per_sec = @as(f64, @floatFromInt(total)) / (elapsed_ms / 1000.0);

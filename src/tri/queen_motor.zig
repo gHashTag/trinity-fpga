@@ -7,6 +7,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const qt = @import("queen_types.zig");
 const queen_premotor = @import("queen_premotor.zig");
 
@@ -133,7 +134,7 @@ pub const MotorExecutor = struct {
             self.allocator.free(argv);
         }
 
-        const start = std.time.milliTimestamp();
+        const start = tri_time.milliTimestamp();
 
         const result = std.process.Child.run(.{
             .allocator = self.allocator,
@@ -149,7 +150,7 @@ pub const MotorExecutor = struct {
             self.allocator.free(result.stderr);
         }
 
-        const duration = std.time.milliTimestamp() - start;
+        const duration = tri_time.milliTimestamp() - start;
         const success = result.term == .Exited and result.term.Exited == 0;
 
         // Check if command produced output
@@ -354,7 +355,7 @@ pub const MotorExecutor = struct {
             const ts_str = std.mem.trim(u8, after_colon[0..ts_end2], &std.ascii.whitespace);
             const last_ts = std.fmt.parseInt(i64, ts_str, 10) catch return 0;
 
-            const now = std.time.timestamp();
+            const now = tri_time.timestamp();
             const hours_ago = @as(u16, @intCast(@divTrunc(now - last_ts, 3600)));
             return hours_ago;
         }

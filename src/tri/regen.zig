@@ -16,6 +16,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 
 const hippocampus = @import("hippocampus.zig");
@@ -142,7 +143,7 @@ pub const RegenAnalysis = struct {
 /// Analyze codebase health and generate fix items
 pub fn analyze(allocator: Allocator) !RegenAnalysis {
     var result = RegenAnalysis{
-        .timestamp = std.time.timestamp(),
+        .timestamp = tri_time.timestamp(),
     };
 
     // 1. Scan doctor violations
@@ -238,7 +239,7 @@ pub fn showStatus(allocator: Allocator) !void {
     print("{s}Recent immune responses:{s}\n\n", .{ CYAN, RESET });
     for (results.items) |rec| {
         const rec_ts: i64 = @intCast(rec.ts);
-        const dt = std.time.timestamp() - rec_ts;
+        const dt = tri_time.timestamp() - rec_ts;
         var ago_buf: [32]u8 = undefined;
         const ago = if (dt < 60) "just now" else if (dt < 3600) std.fmt.bufPrint(&ago_buf, "{d}m ago", .{@divTrunc(dt, 60)}) catch "?" else std.fmt.bufPrint(&ago_buf, "{d}h ago", .{@divTrunc(dt, 3600)}) catch "?";
         print("  {s}{s}{s} {s}\n", .{ DIM, ago, RESET, rec.summary() });
@@ -330,7 +331,7 @@ fn scanErrorMemories(allocator: Allocator, result: *RegenAnalysis) !void {
     result.error_memories = @intCast(errors.items.len);
 
     // Add recent errors to fix plan
-    const now: i64 = std.time.timestamp();
+    const now: i64 = tri_time.timestamp();
     for (errors.items) |err| {
         if (result.fix_count >= 32) break;
         const err_ts: i64 = @intCast(err.ts);

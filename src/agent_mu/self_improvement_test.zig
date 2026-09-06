@@ -7,6 +7,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 // Import AGENT MU modules
 const agent_mu = @import("agent_mu.zig");
 const diagnostic = @import("diagnostic.zig");
@@ -259,14 +260,14 @@ test "AGENT MU benchmark: Intelligence curve" {
     var tracker = try mu_tracker.MuTracker.init(allocator);
     defer tracker.deinit();
 
-    const start_time = std.time.nanoTimestamp();
+    const start_time = tri_time.nanoTimestamp();
 
     // Simulate 100 fixes
     for (0..100) |_| {
         try tracker.recordFix("TYPE_FIX", true, "Test error", 100, 0.9);
     }
 
-    const end_time = std.time.nanoTimestamp();
+    const end_time = tri_time.nanoTimestamp();
     const elapsed_ms = @as(f64, @floatFromInt(end_time - start_time)) / 1_000_000.0;
 
     const multiplier = tracker.getIntelligenceMultiplier();

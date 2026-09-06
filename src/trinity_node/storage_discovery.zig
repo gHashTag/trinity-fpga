@@ -6,6 +6,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const protocol = @import("protocol.zig");
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -81,7 +82,7 @@ pub const StoragePeerRegistry = struct {
         self.mutex.lock();
         defer self.mutex.unlock();
 
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
         var result = std.ArrayListUnmanaged(StoragePeerInfo){};
         errdefer result.deinit(allocator);
 
@@ -100,7 +101,7 @@ pub const StoragePeerRegistry = struct {
         self.mutex.lock();
         defer self.mutex.unlock();
 
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
         var count: u32 = 0;
         var to_remove = std.ArrayListUnmanaged([32]u8){};
         defer to_remove.deinit(self.allocator);
@@ -153,7 +154,7 @@ pub const StoragePeerRegistry = struct {
         self.mutex.lock();
         defer self.mutex.unlock();
 
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
         var result = std.ArrayListUnmanaged(StoragePeerInfo){};
         errdefer result.deinit(allocator);
 
@@ -199,7 +200,7 @@ test "registry add and find peers" {
     var registry = StoragePeerRegistry.init(allocator);
     defer registry.deinit();
 
-    const now = std.time.timestamp();
+    const now = tri_time.timestamp();
 
     // Add 3 peers with different capacities
     var id1: [32]u8 = undefined;
@@ -251,7 +252,7 @@ test "registry prune stale peers" {
     var registry = StoragePeerRegistry.init(allocator);
     defer registry.deinit();
 
-    const now = std.time.timestamp();
+    const now = tri_time.timestamp();
 
     // Add a fresh peer
     var id_fresh: [32]u8 = undefined;
@@ -295,7 +296,7 @@ test "registry update from announce" {
     var registry = StoragePeerRegistry.init(allocator);
     defer registry.deinit();
 
-    const now = std.time.timestamp();
+    const now = tri_time.timestamp();
 
     var id: [32]u8 = undefined;
     @memset(&id, 0xCC);
@@ -334,7 +335,7 @@ test "registry mark unreliable and check reliability" {
     var registry = StoragePeerRegistry.init(allocator);
     defer registry.deinit();
 
-    const now = std.time.timestamp();
+    const now = tri_time.timestamp();
 
     var id: [32]u8 = undefined;
     @memset(&id, 0xDD);
@@ -375,7 +376,7 @@ test "registry findReliablePeersWithCapacity skips unreliable" {
     var registry = StoragePeerRegistry.init(allocator);
     defer registry.deinit();
 
-    const now = std.time.timestamp();
+    const now = tri_time.timestamp();
 
     // Add 3 peers
     for (0..3) |i| {
@@ -417,7 +418,7 @@ test "v1.6: updateReputation and getReputation" {
     var registry = StoragePeerRegistry.init(allocator);
     defer registry.deinit();
 
-    const now = std.time.timestamp();
+    const now = tri_time.timestamp();
 
     var id: [32]u8 = undefined;
     @memset(&id, 0xAA);

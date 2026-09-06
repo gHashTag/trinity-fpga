@@ -15,6 +15,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const verdict = @import("pathology.zig");
 const colors = @import("tri_colors.zig");
 const experience = @import("experience_hooks.zig");
@@ -131,7 +132,7 @@ pub fn runOuroborosCommand(allocator: std.mem.Allocator, args: []const []const u
 
 fn runOuroboros(allocator: std.mem.Allocator, config: OuroborosConfig) !void {
     var state = loadState();
-    if (state.started_at == 0) state.started_at = std.time.timestamp();
+    if (state.started_at == 0) state.started_at = tri_time.timestamp();
 
     const hard_limit = @min(config.max_cycles, 50);
 
@@ -243,7 +244,7 @@ fn runOuroboros(allocator: std.mem.Allocator, config: OuroborosConfig) !void {
 
 fn runQueen(allocator: std.mem.Allocator, config: OuroborosConfig) !void {
     var state = loadState();
-    if (state.started_at == 0) state.started_at = std.time.timestamp();
+    if (state.started_at == 0) state.started_at = tri_time.timestamp();
 
     // Initial diagnosis
     const input = verdict.collectInputs(allocator);
@@ -388,7 +389,7 @@ fn selectAction(rx: *const verdict.VerdictPrescription, strategy: Strategy, focu
                 if (rx.actions[i].is_auto) auto_count += 1;
             }
             if (auto_count > 0) {
-                const ts: u64 = @intCast(std.time.timestamp());
+                const ts: u64 = @intCast(tri_time.timestamp());
                 var target = ts % auto_count;
                 for (0..rx.action_count) |i| {
                     if (rx.actions[i].is_auto) {
@@ -398,7 +399,7 @@ fn selectAction(rx: *const verdict.VerdictPrescription, strategy: Strategy, focu
                 }
             }
             // Fallback: any action
-            const ts: u64 = @intCast(std.time.timestamp());
+            const ts: u64 = @intCast(tri_time.timestamp());
             const idx = ts % rx.action_count;
             break :blk &rx.actions[idx];
         },

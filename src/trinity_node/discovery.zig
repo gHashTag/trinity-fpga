@@ -6,6 +6,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const ArrayList = std.array_list.Managed;
 const protocol = @import("protocol.zig");
 const crypto = @import("crypto.zig");
@@ -39,12 +40,12 @@ pub const Peer = struct {
     capabilities_hash: [32]u8,
 
     pub fn isAlive(self: *const Peer) bool {
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
         return (now - self.last_seen) * 1000 < PEER_TIMEOUT_MS;
     }
 
     pub fn updateLastSeen(self: *Peer) void {
-        self.last_seen = std.time.timestamp();
+        self.last_seen = tri_time.timestamp();
     }
 };
 
@@ -299,7 +300,7 @@ pub const DiscoveryService = struct {
             .public_key = self.public_key,
             .listen_port = self.listen_port,
             .capabilities_hash = crypto.sha256(&self.node_id), // DEFERRED (v12): Real capabilities hash from actual supported features
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
         };
 
         const bytes = announce.serialize();
@@ -331,7 +332,7 @@ pub const DiscoveryService = struct {
             .public_key = announce.public_key,
             .address = src_addr,
             .listen_port = announce.listen_port,
-            .last_seen = std.time.timestamp(),
+            .last_seen = tri_time.timestamp(),
             .latency_ms = 0, // DEFERRED (v12): Measure latency via ping/pong exchange
             .capabilities_hash = announce.capabilities_hash,
         };
@@ -359,7 +360,7 @@ pub const DiscoveryService = struct {
             .available_bytes = available_bytes,
             .total_bytes = total_bytes,
             .shard_count = shard_count,
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
         };
         self.storage_announce_data = announce.serialize();
     }
@@ -392,7 +393,7 @@ test "peer list operations" {
         .public_key = undefined,
         .address = std.net.Address.initIp4(.{ 127, 0, 0, 1 }, 9333),
         .listen_port = 9334,
-        .last_seen = std.time.timestamp(),
+        .last_seen = tri_time.timestamp(),
         .latency_ms = 100,
         .capabilities_hash = undefined,
     };
@@ -418,7 +419,7 @@ test "storage announce serialize roundtrip via discovery" {
         .available_bytes = 1024 * 1024 * 1024,
         .total_bytes = 10 * 1024 * 1024 * 1024,
         .shard_count = 42,
-        .timestamp = std.time.timestamp(),
+        .timestamp = tri_time.timestamp(),
     };
 
     const serialized = announce.serialize();
@@ -437,7 +438,7 @@ test "peer alive check" {
         .public_key = undefined,
         .address = std.net.Address.initIp4(.{ 127, 0, 0, 1 }, 9333),
         .listen_port = 9334,
-        .last_seen = std.time.timestamp(),
+        .last_seen = tri_time.timestamp(),
         .latency_ms = 100,
         .capabilities_hash = undefined,
     };
@@ -445,6 +446,6 @@ test "peer alive check" {
     try std.testing.expect(peer.isAlive());
 
     // Simulate old peer
-    peer.last_seen = std.time.timestamp() - 60; // 60 seconds ago
+    peer.last_seen = tri_time.timestamp() - 60; // 60 seconds ago
     try std.testing.expect(!peer.isAlive());
 }

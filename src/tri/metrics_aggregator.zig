@@ -11,6 +11,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 // =============================================================================
 // TYPES
 // =============================================================================
@@ -68,7 +69,7 @@ pub const MetricsCollector = struct {
     /// Record a metric
     pub fn record(self: *Self, link: []const u8, name: []const u8, value: f64) !void {
         try self.entries.append(self.allocator, .{
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
             .link = link,
             .name = name,
             .value = value,
@@ -91,7 +92,7 @@ pub const MetricsCollector = struct {
 
         var json_buf: [1024]u8 = undefined;
         const json = std.fmt.bufPrint(&json_buf, "{{\"timestamp\":{d},\"link\":\"{s}\",\"name\":\"{s}\",\"value\":{d:.4}}}\n", .{
-            std.time.timestamp(),
+            tri_time.timestamp(),
             link,
             name,
             value,
@@ -229,7 +230,7 @@ fn runVersionSnapshot(allocator: std.mem.Allocator, args: []const []const u8) vo
     var json_buf: [1024]u8 = undefined;
     const json = std.fmt.bufPrint(&json_buf, "{{\"version\":\"{s}\",\"date\":\"{d}\",\"compile_rate\":100,\"binary_count\":9}}\n", .{
         version,
-        std.time.timestamp(),
+        tri_time.timestamp(),
     }) catch return;
     file.writeAll(json) catch return;
 

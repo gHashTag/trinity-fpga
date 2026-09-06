@@ -9,6 +9,7 @@
 // ============================================================================
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 
 // ============================================================================
@@ -320,7 +321,7 @@ fn fetchSubIssues(allocator: Allocator, parent_number: u32, out: *[16]SubTask) !
 // ============================================================================
 
 fn executeTask(allocator: Allocator, task: *const SubTask) TaskResult {
-    const timer = std.time.milliTimestamp();
+    const timer = tri_time.milliTimestamp();
     const title = task.title[0..task.title_len];
 
     // Extract task description from title (remove "[Sub] Phase: " prefix)
@@ -333,7 +334,7 @@ fn executeTask(allocator: Allocator, task: *const SubTask) TaskResult {
 
     // For RESEARCH and PLAN phases, just mark as done (they're documentation)
     if (task.phase == .research or task.phase == .plan) {
-        const elapsed: u64 = @intCast(@max(0, std.time.milliTimestamp() - timer));
+        const elapsed: u64 = @intCast(@max(0, tri_time.milliTimestamp() - timer));
         return .{
             .task = task.*,
             .success = true,
@@ -352,7 +353,7 @@ fn executeTask(allocator: Allocator, task: *const SubTask) TaskResult {
         },
         .max_output_bytes = 65536,
     }) catch {
-        const elapsed: u64 = @intCast(@max(0, std.time.milliTimestamp() - timer));
+        const elapsed: u64 = @intCast(@max(0, tri_time.milliTimestamp() - timer));
         return .{
             .task = task.*,
             .success = false,
@@ -366,7 +367,7 @@ fn executeTask(allocator: Allocator, task: *const SubTask) TaskResult {
         .Exited => |code| code,
         else => @as(u32, 1),
     }) == 0;
-    const elapsed: u64 = @intCast(std.time.milliTimestamp() - timer);
+    const elapsed: u64 = @intCast(tri_time.milliTimestamp() - timer);
 
     var res = TaskResult{
         .task = task.*,

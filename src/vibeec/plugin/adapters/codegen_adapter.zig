@@ -7,6 +7,7 @@
 // Supports all 42 programming languages via single Plugin interface.
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 
 // Import via build.zig module or relative path fallback
@@ -106,7 +107,7 @@ fn codegenInvoke(ctx: *anyopaque, operation: []const u8, input: []const u8) anye
     context.clearBuffer();
     context.last_spec_path = input;
 
-    const timer_start = std.time.nanoTimestamp();
+    const timer_start = tri_time.nanoTimestamp();
 
     // Generate code header based on language
     const lang_name = context.language.name();
@@ -127,7 +128,7 @@ fn codegenInvoke(ctx: *anyopaque, operation: []const u8, input: []const u8) anye
     // Add language-specific stub
     try generateLanguageStub(context);
 
-    const duration: i64 = @intCast(std.time.nanoTimestamp() - timer_start);
+    const duration: i64 = @intCast(tri_time.nanoTimestamp() - timer_start);
 
     return PluginResult{
         .success = true,

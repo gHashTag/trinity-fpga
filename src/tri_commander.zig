@@ -17,6 +17,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 
 /// Task priority levels
@@ -72,7 +73,7 @@ pub const Task = struct {
     subtasks: []const u64,
 
     pub fn init(allocator: Allocator, id: u64, name: []const u8, description: []const u8) !Task {
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
         return Task{
             .id = id,
             .parent_id = null,
@@ -155,9 +156,9 @@ pub const TaskQueue = struct {
         if (self.tasks.getPtr(id)) |task| {
             task.status = status;
             if (status == .in_progress and task.started_at == null) {
-                task.started_at = std.time.timestamp();
+                task.started_at = tri_time.timestamp();
             } else if (status == .completed or status == .failed) {
-                task.completed_at = std.time.timestamp();
+                task.completed_at = tri_time.timestamp();
             }
         }
     }

@@ -1,5 +1,6 @@
 // Detailed profiling of inference components
 const std = @import("std");
+const tri_time = @import("tri_time");
 const simd = @import("simd_matmul.zig");
 const inference = @import("gguf_inference.zig");
 
@@ -49,7 +50,7 @@ pub fn main() !void {
     // Profile QKV projection (3x per layer)
     var qkv_time: u64 = 0;
     {
-        var timer = try std.time.Timer.start();
+        var timer = try tri_time.Timer.start();
         for (0..iterations * 3) |_| {
             simd.simdMatVec(out_hidden, mat_qkv, vec, hidden_size, hidden_size);
         }
@@ -59,7 +60,7 @@ pub fn main() !void {
     // Profile FFN (3x per layer: gate, up, down)
     var ffn_time: u64 = 0;
     {
-        var timer = try std.time.Timer.start();
+        var timer = try tri_time.Timer.start();
         for (0..iterations * 2) |_| {
             simd.simdMatVec(out_inter, mat_ffn, vec, intermediate_size, hidden_size);
         }
@@ -72,7 +73,7 @@ pub fn main() !void {
     // Profile output projection (1x total)
     var output_time: u64 = 0;
     {
-        var timer = try std.time.Timer.start();
+        var timer = try tri_time.Timer.start();
         simd.simdMatVec(out_vocab, mat_output, vec, vocab_size, hidden_size);
         output_time = timer.read();
     }
@@ -81,7 +82,7 @@ pub fn main() !void {
     const seq_len: usize = 10;
     var attn_time: u64 = 0;
     {
-        var timer = try std.time.Timer.start();
+        var timer = try tri_time.Timer.start();
         for (0..iterations * num_heads * seq_len) |_| {
             _ = simd.simdDot(vec[0..head_dim], vec[0..head_dim]);
         }

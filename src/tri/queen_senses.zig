@@ -5,6 +5,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const qt = @import("queen_types.zig");
 const faculty_types = @import("faculty_types.zig");
 const thalamus = @import("thalamus.zig");
@@ -99,7 +100,7 @@ fn countAliveAgents() u8 {
     };
 
     var count: u8 = 0;
-    const now = std.time.timestamp();
+    const now = tri_time.timestamp();
 
     for (heartbeat_paths) |path| {
         const file = std.fs.cwd().openFile(path, .{}) catch continue;
@@ -261,7 +262,7 @@ fn calcStaleArenaHours() u16 {
     defer file.close();
     const stat = file.stat() catch return 999;
     const mtime_s: i64 = @intCast(@divTrunc(stat.mtime, std.time.ns_per_s));
-    const now = std.time.timestamp();
+    const now = tri_time.timestamp();
     const diff = now - mtime_s;
     if (diff < 0) return 0;
     return @intCast(@min(@divTrunc(diff, 3600), 65535));

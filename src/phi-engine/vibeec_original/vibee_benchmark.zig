@@ -3,6 +3,7 @@
 // φ² + 1/φ² = 3
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const json_parser = @import("json_parser.zig");
 const simd_json = @import("simd_json.zig");
 
@@ -90,7 +91,7 @@ pub fn main() !void {
     }
 
     // Benchmark
-    const json_start = std.time.nanoTimestamp();
+    const json_start = tri_time.nanoTimestamp();
     var total_bytes: usize = 0;
 
     for (0..iterations) |_| {
@@ -99,7 +100,7 @@ pub fn main() !void {
         result.deinit(allocator);
     }
 
-    const json_end = std.time.nanoTimestamp();
+    const json_end = tri_time.nanoTimestamp();
     const json_elapsed_ns: u64 = @intCast(json_end - json_start);
     const json_elapsed_ms = @as(f64, @floatFromInt(json_elapsed_ns)) / 1_000_000.0;
     const json_ops_per_sec = @as(f64, @floatFromInt(iterations)) / (json_elapsed_ms / 1000.0);
@@ -120,12 +121,12 @@ pub fn main() !void {
     var parse_result = try parser.parse(test_json);
     defer parse_result.deinit(allocator);
 
-    const path_start = std.time.nanoTimestamp();
+    const path_start = tri_time.nanoTimestamp();
     for (0..iterations) |_| {
         const content = json_parser.queryPath(parse_result.value, "$.choices[0].message.content");
         std.mem.doNotOptimizeAway(&content);
     }
-    const path_end = std.time.nanoTimestamp();
+    const path_end = tri_time.nanoTimestamp();
     const path_elapsed: u64 = @intCast(path_end - path_start);
     const path_ops_per_sec = @as(f64, @floatFromInt(iterations)) / (@as(f64, @floatFromInt(path_elapsed)) / 1_000_000_000.0);
     const path_avg_ns = @as(f64, @floatFromInt(path_elapsed)) / @as(f64, @floatFromInt(iterations));

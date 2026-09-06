@@ -10,6 +10,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const websocket = @import("websocket.zig");
 const http_client = @import("http_client.zig");
@@ -245,7 +246,7 @@ pub const RetryConfig = struct {
         const base_delay = self.getDelay(attempt);
         if (base_delay == 0) return 0;
 
-        const now = std.time.milliTimestamp();
+        const now = tri_time.milliTimestamp();
         const seed: u64 = @bitCast(now);
         var prng = std.Random.DefaultPrng.init(seed);
         const random = prng.random();
@@ -261,7 +262,7 @@ pub const RetryConfig = struct {
         const base_delay = self.initial_delay_ms;
         const effective_prev = if (prev_delay == 0) base_delay else prev_delay;
 
-        const now = std.time.milliTimestamp();
+        const now = tri_time.milliTimestamp();
         const seed: u64 = @bitCast(now);
         var prng = std.Random.DefaultPrng.init(seed);
         const random = prng.random();
@@ -302,7 +303,7 @@ pub const RetryConfig = struct {
     /// Get delay with adaptive strategy and record failure (v23.33)
     pub fn getDelayWithAdaptive(self: *RetryConfig, attempt: u32) u32 {
         // Record failure timestamp for pattern detection
-        self.failure_history.recordFailure(std.time.milliTimestamp());
+        self.failure_history.recordFailure(tri_time.milliTimestamp());
         return self.getDelayWithJitter(attempt);
     }
 
@@ -317,7 +318,7 @@ pub const RetryConfig = struct {
         const base_delay = self.getDelay(attempt);
 
         // Generate pseudo-random jitter using timestamp
-        const now = std.time.milliTimestamp();
+        const now = tri_time.milliTimestamp();
         const seed: u64 = @bitCast(now);
         var prng = std.Random.DefaultPrng.init(seed);
         const random = prng.random();
@@ -641,7 +642,7 @@ pub const MetricsTrend = struct {
     /// Record a new success rate sample (v23.39)
     pub fn record(self: *Self, success_rate: f32) void {
         self.success_rates[self.current_index] = success_rate;
-        self.timestamps[self.current_index] = std.time.milliTimestamp();
+        self.timestamps[self.current_index] = tri_time.milliTimestamp();
         self.current_index = (self.current_index + 1) % WINDOW_SIZE;
         if (self.sample_count < WINDOW_SIZE) {
             self.sample_count += 1;
@@ -2110,7 +2111,7 @@ pub const ActionExecutor = struct {
             return ActionResult.fail(action, "Invalid action: missing required fields");
         }
 
-        const start_time = std.time.milliTimestamp();
+        const start_time = tri_time.milliTimestamp();
 
         const result = switch (action.action_type) {
             .click => self.executeClick(action),
@@ -2133,7 +2134,7 @@ pub const ActionExecutor = struct {
         };
 
         var final_result = result;
-        final_result.duration_ms = @intCast(std.time.milliTimestamp() - start_time);
+        final_result.duration_ms = @intCast(tri_time.milliTimestamp() - start_time);
         return final_result;
     }
 
@@ -2289,7 +2290,7 @@ pub const CircuitBreaker = struct {
             .closed => return true,
             .open => {
                 // Check if reset timeout has passed
-                const now = std.time.milliTimestamp();
+                const now = tri_time.milliTimestamp();
                 const elapsed: u64 = @intCast(@max(0, now - self.last_failure_time));
                 if (elapsed >= self.reset_timeout_ms) {
                     // Transition to half-open
@@ -2327,7 +2328,7 @@ pub const CircuitBreaker = struct {
 
     /// Record failed operation
     pub fn recordFailure(self: *Self) void {
-        self.last_failure_time = std.time.milliTimestamp();
+        self.last_failure_time = tri_time.milliTimestamp();
 
         switch (self.state) {
             .closed => {
@@ -2626,13 +2627,13 @@ pub const HealthCheck = struct {
     pub fn init(allocator: Allocator) Self {
         return Self{
             .allocator = allocator,
-            .start_time = std.time.milliTimestamp(),
+            .start_time = tri_time.milliTimestamp(),
         };
     }
 
     /// Get current health status from agent (v23.28)
     pub fn getStatus(self: Self, agent: *RealAgent) HealthStatus {
-        const now = std.time.milliTimestamp();
+        const now = tri_time.milliTimestamp();
         const uptime = now - self.start_time;
 
         var status = HealthStatus{
@@ -3266,7 +3267,7 @@ pub const RetryExecutor = struct {
             .max_delay_ms = self.config.max_delay_ms,
             .backoff_factor = self.config.backoff_factor,
             .jitter_strategy = self.config.jitter_strategy,
-            .seed = @bitCast(std.time.milliTimestamp()),
+            .seed = @bitCast(tri_time.milliTimestamp()),
         };
     }
 
@@ -3901,7 +3902,7 @@ pub const WebArenaBenchmark = struct {
 
     /// Run a single task (v23.48)
     pub fn runTask(self: *Self, task: WebArenaTask) TaskResult {
-        const start_time = std.time.milliTimestamp();
+        const start_time = tri_time.milliTimestamp();
 
         // Reset agent metrics for this task
         self.agent.resetLLMMetrics();
@@ -3911,18 +3912,18 @@ pub const WebArenaBenchmark = struct {
 
         // Navigate to start URL
         self.agent.navigate(task.start_url) catch |err| {
-            const duration = @as(u64, @intCast(std.time.milliTimestamp() - start_time));
+            const duration = @as(u64, @intCast(tri_time.milliTimestamp() - start_time));
             return TaskResult.failed(task.id, 0, duration, @errorName(err));
         };
 
         // Run the task
         const action_results = self.agent.runTask(task.instruction, task.max_steps) catch |err| {
-            const duration = @as(u64, @intCast(std.time.milliTimestamp() - start_time));
+            const duration = @as(u64, @intCast(tri_time.milliTimestamp() - start_time));
             return TaskResult.failed(task.id, 0, duration, @errorName(err));
         };
         defer self.allocator.free(action_results);
 
-        const duration = @as(u64, @intCast(std.time.milliTimestamp() - start_time));
+        const duration = @as(u64, @intCast(tri_time.milliTimestamp() - start_time));
         const metrics = self.agent.getLLMMetricsSummary();
 
         // Count successful actions
@@ -4282,7 +4283,7 @@ pub const RealAgent = struct {
             .message_id = 1,
             .domain_stats = std.StringHashMap(DomainStats).init(allocator),
             .domain_circuit_breakers = std.StringHashMap(CircuitBreaker).init(allocator),
-            .start_time = std.time.milliTimestamp(),
+            .start_time = tri_time.milliTimestamp(),
         };
 
         // v23.21: Auto-load domain stats from file
@@ -4835,10 +4836,10 @@ pub const RealAgent = struct {
         }
 
         // v23.15: Use adaptive timeout based on page load history
-        const start = std.time.milliTimestamp();
+        const start = tri_time.milliTimestamp();
         const timeout = self.getAdaptiveTimeout();
         const loaded = self.waitForPageLoad(timeout) catch false;
-        const elapsed = std.time.milliTimestamp() - start;
+        const elapsed = tri_time.milliTimestamp() - start;
         const elapsed_u32: u32 = @intCast(@min(elapsed, std.math.maxInt(u32)));
 
         if (loaded) {
@@ -5084,10 +5085,10 @@ pub const RealAgent = struct {
     pub fn waitForSelector(self: *Self, selector: []const u8, timeout_ms: u32) AgentError!bool {
         if (!self.connected) return AgentError.BrowserConnectionFailed;
 
-        const start_time = std.time.milliTimestamp();
+        const start_time = tri_time.milliTimestamp();
         const timeout_end = start_time + @as(i64, timeout_ms);
 
-        while (std.time.milliTimestamp() < timeout_end) {
+        while (tri_time.milliTimestamp() < timeout_end) {
             // Check if element exists
             var cmd_buf: [1024]u8 = undefined;
 
@@ -5131,7 +5132,7 @@ pub const RealAgent = struct {
         if (!self.connected) return AgentError.BrowserConnectionFailed;
         if (selectors.len == 0) return true;
 
-        const start_time = std.time.milliTimestamp();
+        const start_time = tri_time.milliTimestamp();
         const timeout_end = start_time + @as(i64, timeout_ms);
 
         // Track which selectors are found
@@ -5139,7 +5140,7 @@ pub const RealAgent = struct {
         const count = @min(selectors.len, 16);
         var all_found: usize = 0;
 
-        while (std.time.milliTimestamp() < timeout_end) {
+        while (tri_time.milliTimestamp() < timeout_end) {
             // Check all unfound selectors in one iteration
             for (selectors[0..count], 0..) |selector, i| {
                 if (found[i]) continue;
@@ -5175,7 +5176,7 @@ pub const RealAgent = struct {
 
             // All found?
             if (all_found == count) {
-                const elapsed = std.time.milliTimestamp() - start_time;
+                const elapsed = tri_time.milliTimestamp() - start_time;
                 std.debug.print("    [WAIT] All {d} selectors found in {d}ms\n", .{ count, elapsed });
                 return true;
             }
@@ -5194,11 +5195,11 @@ pub const RealAgent = struct {
         if (!self.connected) return AgentError.BrowserConnectionFailed;
         if (selectors.len == 0) return null;
 
-        const start_time = std.time.milliTimestamp();
+        const start_time = tri_time.milliTimestamp();
         const timeout_end = start_time + @as(i64, timeout_ms);
         const count = @min(selectors.len, 16);
 
-        while (std.time.milliTimestamp() < timeout_end) {
+        while (tri_time.milliTimestamp() < timeout_end) {
             for (selectors[0..count], 0..) |selector, i| {
                 var cmd_buf: [1024]u8 = undefined;
                 var escaped: [256]u8 = undefined;
@@ -5237,10 +5238,10 @@ pub const RealAgent = struct {
     pub fn waitForPageLoad(self: *Self, timeout_ms: u32) AgentError!bool {
         if (!self.connected) return AgentError.BrowserConnectionFailed;
 
-        const start_time = std.time.milliTimestamp();
+        const start_time = tri_time.milliTimestamp();
         const timeout_end = start_time + @as(i64, timeout_ms);
 
-        while (std.time.milliTimestamp() < timeout_end) {
+        while (tri_time.milliTimestamp() < timeout_end) {
             var cmd_buf: [512]u8 = undefined;
 
             // Check document.readyState
@@ -5255,7 +5256,7 @@ pub const RealAgent = struct {
             // Check if complete
             if (std.mem.indexOf(u8, frame.payload, "\"value\":\"complete\"") != null) {
                 // v23.14: Update adaptive timing
-                const elapsed = std.time.milliTimestamp() - start_time;
+                const elapsed = tri_time.milliTimestamp() - start_time;
                 self.updatePageLoadStats(@intCast(elapsed));
                 return true;
             }
@@ -5272,11 +5273,11 @@ pub const RealAgent = struct {
     pub fn waitForNetworkIdle(self: *Self, timeout_ms: u32, idle_time_ms: u32) AgentError!bool {
         if (!self.connected) return AgentError.BrowserConnectionFailed;
 
-        const start_time = std.time.milliTimestamp();
+        const start_time = tri_time.milliTimestamp();
         const timeout_end = start_time + @as(i64, timeout_ms);
         var idle_start: ?i64 = null;
 
-        while (std.time.milliTimestamp() < timeout_end) {
+        while (tri_time.milliTimestamp() < timeout_end) {
             // Check pending requests via JS (simpler than CDP events)
             var cmd_buf: [512]u8 = undefined;
             const js = std.fmt.bufPrint(&cmd_buf, "{{\"id\":{d},\"method\":\"Runtime.evaluate\",\"params\":{{\"expression\":\"window.performance.getEntriesByType('resource').filter(r => !r.responseEnd).length\"}}}}", .{self.message_id}) catch return AgentError.OutOfMemory;
@@ -5291,7 +5292,7 @@ pub const RealAgent = struct {
             const is_idle = std.mem.indexOf(u8, frame.payload, "\"value\":0") != null;
 
             if (is_idle) {
-                const now = std.time.milliTimestamp();
+                const now = tri_time.milliTimestamp();
                 if (idle_start == null) {
                     idle_start = now;
                 } else if (now - idle_start.? >= idle_time_ms) {

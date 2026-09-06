@@ -7,6 +7,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const types = @import("types.zig");
 const builder_mod = @import("builder.zig");
 const patterns_mod = @import("patterns.zig");
@@ -1809,7 +1810,7 @@ pub const ZigCodeGen = struct {
                 try self.builder.writeLine("\"Hey! What's on your mind?\",");
                 self.builder.decIndent();
                 try self.builder.writeLine("};");
-                try self.builder.writeLine("const idx = @as(usize, @intCast(@mod(std.time.timestamp(), responses.len)));");
+                try self.builder.writeLine("const idx = @as(usize, @intCast(@mod(tri_time.timestamp(), responses.len)));");
                 try self.builder.writeLine("_ = responses[idx];");
             } else if (mem.indexOf(u8, name, "Farewell") != null) {
                 try self.builder.writeLine("const responses = [_][]const u8{");
@@ -1819,7 +1820,7 @@ pub const ZigCodeGen = struct {
                 try self.builder.writeLine("\"Take care! Good luck!\",");
                 self.builder.decIndent();
                 try self.builder.writeLine("};");
-                try self.builder.writeLine("const idx = @as(usize, @intCast(@mod(std.time.timestamp(), responses.len)));");
+                try self.builder.writeLine("const idx = @as(usize, @intCast(@mod(tri_time.timestamp(), responses.len)));");
                 try self.builder.writeLine("_ = responses[idx];");
             } else if (mem.indexOf(u8, name, "Weather") != null or mem.indexOf(u8, name, "Unknown") != null) {
                 try self.builder.writeLine("// Honest response: acknowledge limitation");
@@ -1911,9 +1912,9 @@ pub const ZigCodeGen = struct {
         // --- Process/run/execute behaviors: orchestration ---
         if (mem.startsWith(u8, name, "process") or mem.startsWith(u8, name, "run") or mem.startsWith(u8, name, "execute")) {
             try self.builder.writeFmt("// Process: {s}\n", .{then});
-            try self.builder.writeLine("const start_time = std.time.timestamp();");
+            try self.builder.writeLine("const start_time = tri_time.timestamp();");
             try self.builder.writeFmt("// Pipeline: {s}\n", .{then});
-            try self.builder.writeLine("const elapsed = std.time.timestamp() - start_time;");
+            try self.builder.writeLine("const elapsed = tri_time.timestamp() - start_time;");
             try self.builder.writeLine("_ = elapsed;");
             return;
         }

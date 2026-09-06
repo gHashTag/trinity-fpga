@@ -7,6 +7,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const jit_tier2 = @import("jit_tier2.zig");
 const SSAFunction = jit_tier2.SSAFunction;
@@ -284,9 +285,9 @@ pub fn runE2EBenchmark(allocator: Allocator) !void {
         var result_unopt: i64 = 0;
 
         for (0..runs) |_| {
-            const start = std.time.nanoTimestamp();
+            const start = tri_time.nanoTimestamp();
             result_unopt = interp_unopt.execute(&func_unopt);
-            const end = std.time.nanoTimestamp();
+            const end = tri_time.nanoTimestamp();
             time_unopt += @intCast(@max(0, end - start));
         }
 
@@ -296,9 +297,9 @@ pub fn runE2EBenchmark(allocator: Allocator) !void {
         var result_opt: i64 = 0;
 
         for (0..runs) |_| {
-            const start = std.time.nanoTimestamp();
+            const start = tri_time.nanoTimestamp();
             result_opt = interp_opt.execute(&func_opt);
-            const end = std.time.nanoTimestamp();
+            const end = tri_time.nanoTimestamp();
             time_opt += @intCast(@max(0, end - start));
         }
 
@@ -332,9 +333,9 @@ pub fn runE2EBenchmark(allocator: Allocator) !void {
         var result_unopt: i64 = 0;
 
         for (0..runs) |_| {
-            const start = std.time.nanoTimestamp();
+            const start = tri_time.nanoTimestamp();
             result_unopt = interp_unopt.execute(&func_unopt);
-            const end = std.time.nanoTimestamp();
+            const end = tri_time.nanoTimestamp();
             time_unopt += @intCast(@max(0, end - start));
         }
 
@@ -343,9 +344,9 @@ pub fn runE2EBenchmark(allocator: Allocator) !void {
         var result_opt: i64 = 0;
 
         for (0..runs) |_| {
-            const start = std.time.nanoTimestamp();
+            const start = tri_time.nanoTimestamp();
             result_opt = interp_opt.execute(&func_opt);
-            const end = std.time.nanoTimestamp();
+            const end = tri_time.nanoTimestamp();
             time_opt += @intCast(@max(0, end - start));
         }
 
@@ -379,9 +380,9 @@ pub fn runE2EBenchmark(allocator: Allocator) !void {
         var result_unopt: i64 = 0;
 
         for (0..runs) |_| {
-            const start = std.time.nanoTimestamp();
+            const start = tri_time.nanoTimestamp();
             result_unopt = interp_unopt.execute(&func_unopt);
-            const end = std.time.nanoTimestamp();
+            const end = tri_time.nanoTimestamp();
             time_unopt += @intCast(@max(0, end - start));
         }
 
@@ -390,9 +391,9 @@ pub fn runE2EBenchmark(allocator: Allocator) !void {
         var result_opt: i64 = 0;
 
         for (0..runs) |_| {
-            const start = std.time.nanoTimestamp();
+            const start = tri_time.nanoTimestamp();
             result_opt = interp_opt.execute(&func_opt);
-            const end = std.time.nanoTimestamp();
+            const end = tri_time.nanoTimestamp();
             time_opt += @intCast(@max(0, end - start));
         }
 
@@ -426,9 +427,9 @@ pub fn runE2EBenchmark(allocator: Allocator) !void {
         var result_unopt: i64 = 0;
 
         for (0..runs) |_| {
-            const start = std.time.nanoTimestamp();
+            const start = tri_time.nanoTimestamp();
             result_unopt = interp_unopt.execute(&func_unopt);
-            const end = std.time.nanoTimestamp();
+            const end = tri_time.nanoTimestamp();
             time_unopt += @intCast(@max(0, end - start));
         }
 
@@ -437,9 +438,9 @@ pub fn runE2EBenchmark(allocator: Allocator) !void {
         var result_opt: i64 = 0;
 
         for (0..runs) |_| {
-            const start = std.time.nanoTimestamp();
+            const start = tri_time.nanoTimestamp();
             result_opt = interp_opt.execute(&func_opt);
-            const end = std.time.nanoTimestamp();
+            const end = tri_time.nanoTimestamp();
             time_opt += @intCast(@max(0, end - start));
         }
 

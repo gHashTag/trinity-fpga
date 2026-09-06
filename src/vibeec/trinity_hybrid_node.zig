@@ -6,6 +6,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const oss = @import("oss_api_client.zig");
 const genesis = @import("mainnet_genesis.zig");
 
@@ -124,7 +125,7 @@ pub const TrinityHybridNode = struct {
         hasher.update("TRINITY_NODE");
         node_id = hasher.finalResult();
 
-        const timestamp = @as(u64, @intCast(std.time.timestamp()));
+        const timestamp = @as(u64, @intCast(tri_time.timestamp()));
 
         return TrinityHybridNode{
             .config = config,
@@ -150,7 +151,7 @@ pub const TrinityHybridNode = struct {
     /// Join mainnet with stake
     pub fn joinMainnet(self: *TrinityHybridNode, stake_amount: u64) void {
         self.node_state.stake = stake_amount;
-        self.node_state.joined_at = @as(u64, @intCast(std.time.timestamp()));
+        self.node_state.joined_at = @as(u64, @intCast(tri_time.timestamp()));
     }
 
     /// Calculate and claim inference reward

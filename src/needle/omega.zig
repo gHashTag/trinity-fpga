@@ -8,6 +8,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const graph = @import("graph.zig");
 const vsa = @import("vsa.zig");
 const safe_cross = @import("safe_cross.zig");
@@ -375,7 +376,7 @@ pub const OmegaAgent = struct {
             return result;
         }
 
-        const start_time = std.time.nanoTimestamp();
+        const start_time = tri_time.nanoTimestamp();
 
         // Execute each step
         for (refactor_plan.steps.items) |step| {
@@ -383,7 +384,7 @@ pub const OmegaAgent = struct {
             result.operations_performed += 1;
         }
 
-        const end_time = std.time.nanoTimestamp();
+        const end_time = tri_time.nanoTimestamp();
         const diff_ns = end_time - start_time;
         result.duration_ms = @intCast(@divTrunc(diff_ns, 1_000_000));
 
@@ -400,7 +401,7 @@ pub const OmegaAgent = struct {
         var history = RefactorHistory.init(self.allocator);
         defer history.deinit();
 
-        history.timestamp = std.time.nanoTimestamp();
+        history.timestamp = tri_time.nanoTimestamp();
         history.success = refactor_result.success;
         history.safety_score = refactor_result.safety_score;
         history.vsa_confidence = refactor_result.confidence;

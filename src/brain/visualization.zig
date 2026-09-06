@@ -18,6 +18,7 @@
 //! Visual style: Retro-futuristic terminal art
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const mem = std.mem;
 const math = std.math;
 
@@ -991,7 +992,7 @@ test "brainMap generates valid output" {
 
     const state = BrainState{
         .regions = &regions,
-        .timestamp = std.time.milliTimestamp(),
+        .timestamp = tri_time.milliTimestamp(),
         .overall_health = 65.0,
     };
 

@@ -6,6 +6,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const storage_mod = @import("storage.zig");
 const shard_rebalancer_mod = @import("shard_rebalancer.zig");
 const proof_of_storage_mod = @import("proof_of_storage.zig");
@@ -89,7 +90,7 @@ pub const NetworkStatsReporter = struct {
             .reputation_avg = 0.0,
             .reputation_min = 0.0,
             .reputation_max = 0.0,
-            .generated_at = std.time.timestamp(),
+            .generated_at = tri_time.timestamp(),
         };
 
         // Aggregate storage stats from all peers

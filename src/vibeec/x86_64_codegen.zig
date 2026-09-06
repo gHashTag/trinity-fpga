@@ -7,6 +7,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const jit = @import("jit.zig");
 const IROpcode = jit.IROpcode;
@@ -3132,12 +3133,12 @@ test "Benchmark: native code vs IR interpreter" {
 
     // Benchmark native code
     const iterations: usize = 10000;
-    const native_start = std.time.nanoTimestamp();
+    const native_start = tri_time.nanoTimestamp();
     var native_result: i64 = 0;
     for (0..iterations) |_| {
         native_result = exec.call();
     }
-    const native_end = std.time.nanoTimestamp();
+    const native_end = tri_time.nanoTimestamp();
     const native_time = native_end - native_start;
 
     // Verify result
@@ -3235,21 +3236,21 @@ test "Benchmark: native SHL vs MUL (strength reduction)" {
     const iterations: usize = 100000;
 
     // Benchmark MUL
-    const mul_start = std.time.nanoTimestamp();
+    const mul_start = tri_time.nanoTimestamp();
     var mul_result: i64 = 0;
     for (0..iterations) |_| {
         mul_result = exec_mul.call();
     }
-    const mul_end = std.time.nanoTimestamp();
+    const mul_end = tri_time.nanoTimestamp();
     const mul_time: u64 = @intCast(@max(0, mul_end - mul_start));
 
     // Benchmark SHL
-    const shl_start = std.time.nanoTimestamp();
+    const shl_start = tri_time.nanoTimestamp();
     var shl_result: i64 = 0;
     for (0..iterations) |_| {
         shl_result = exec_shl.call();
     }
-    const shl_end = std.time.nanoTimestamp();
+    const shl_end = tri_time.nanoTimestamp();
     const shl_time: u64 = @intCast(@max(0, shl_end - shl_start));
 
     // Both should produce same result: 40
@@ -3374,21 +3375,21 @@ test "Benchmark: native LEA vs MUL (multiply by 3)" {
     const iterations: usize = 100000;
 
     // Benchmark MUL
-    const mul_start = std.time.nanoTimestamp();
+    const mul_start = tri_time.nanoTimestamp();
     var mul_result: i64 = 0;
     for (0..iterations) |_| {
         mul_result = exec_mul.call();
     }
-    const mul_end = std.time.nanoTimestamp();
+    const mul_end = tri_time.nanoTimestamp();
     const mul_time: u64 = @intCast(@max(0, mul_end - mul_start));
 
     // Benchmark LEA
-    const lea_start = std.time.nanoTimestamp();
+    const lea_start = tri_time.nanoTimestamp();
     var lea_result: i64 = 0;
     for (0..iterations) |_| {
         lea_result = exec_lea.call();
     }
-    const lea_end = std.time.nanoTimestamp();
+    const lea_end = tri_time.nanoTimestamp();
     const lea_time: u64 = @intCast(@max(0, lea_end - lea_start));
 
     // Both should produce same result: 21
@@ -3863,11 +3864,11 @@ test "Benchmark SIMD: PADDD vs scalar addition" {
     const iterations: usize = 100000;
 
     // Benchmark SIMD
-    const simd_start = std.time.nanoTimestamp();
+    const simd_start = tri_time.nanoTimestamp();
     for (0..iterations) |_| {
         simd_func(&input_a, &input_b, &result);
     }
-    const simd_end = std.time.nanoTimestamp();
+    const simd_end = tri_time.nanoTimestamp();
     const simd_time: u64 = @intCast(@max(0, simd_end - simd_start));
 
     const simd_per_iter = @as(f64, @floatFromInt(simd_time)) / @as(f64, @floatFromInt(iterations));
@@ -4140,11 +4141,11 @@ test "Benchmark: SIMD array_add vs scalar (16 elements)" {
     const iterations: usize = 100000;
 
     // Benchmark SIMD array add
-    const start = std.time.nanoTimestamp();
+    const start = tri_time.nanoTimestamp();
     for (0..iterations) |_| {
         func(&a, &b, &result, 16);
     }
-    const end = std.time.nanoTimestamp();
+    const end = tri_time.nanoTimestamp();
     const time: u64 = @intCast(@max(0, end - start));
     const per_iter = @as(f64, @floatFromInt(time)) / @as(f64, @floatFromInt(iterations));
 
@@ -4179,20 +4180,20 @@ test "Benchmark: SIMD vs SIMD+Unroll (64 elements)" {
     const iterations: usize = 100000;
 
     // Benchmark SIMD only
-    const start_simd = std.time.nanoTimestamp();
+    const start_simd = tri_time.nanoTimestamp();
     for (0..iterations) |_| {
         func_simd(&a, &b, &result, 64);
     }
-    const end_simd = std.time.nanoTimestamp();
+    const end_simd = tri_time.nanoTimestamp();
     const time_simd: u64 = @intCast(@max(0, end_simd - start_simd));
     const per_iter_simd = @as(f64, @floatFromInt(time_simd)) / @as(f64, @floatFromInt(iterations));
 
     // Benchmark SIMD + Unroll
-    const start_unrolled = std.time.nanoTimestamp();
+    const start_unrolled = tri_time.nanoTimestamp();
     for (0..iterations) |_| {
         func_unrolled(&a, &b, &result, 64);
     }
-    const end_unrolled = std.time.nanoTimestamp();
+    const end_unrolled = tri_time.nanoTimestamp();
     const time_unrolled: u64 = @intCast(@max(0, end_unrolled - start_unrolled));
     const per_iter_unrolled = @as(f64, @floatFromInt(time_unrolled)) / @as(f64, @floatFromInt(iterations));
 

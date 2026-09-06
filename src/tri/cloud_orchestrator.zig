@@ -11,6 +11,8 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
+const tri_env = @import("tri_env.zig");
 const Allocator = std.mem.Allocator;
 const railway_api = @import("railway_api.zig");
 const railway_farm = @import("railway_farm.zig");
@@ -164,7 +166,7 @@ pub fn spawnAgentOnAccount(allocator: Allocator, issue_number: u32, account_hint
     const env_id = if (api.environment_id.len > 0)
         api.environment_id
     else
-        std.process.getEnvVarOwned(allocator, "RAILWAY_ENVIRONMENT_ID") catch {
+        tri_env.getEnvVarOwned(allocator, "RAILWAY_ENVIRONMENT_ID") catch {
             std.log.err("cloud_orchestrator: RAILWAY_ENVIRONMENT_ID not set — cannot spawn agent", .{});
             return error.MissingEnvVar;
         };
@@ -180,8 +182,8 @@ pub fn spawnAgentOnAccount(allocator: Allocator, issue_number: u32, account_hint
     };
 
     // Forward tokens from env (prefer AGENT_GH_TOKEN PAT over ephemeral GITHUB_TOKEN)
-    const gh_token = std.process.getEnvVarOwned(allocator, "AGENT_GH_TOKEN") catch
-        std.process.getEnvVarOwned(allocator, "GITHUB_TOKEN") catch {
+    const gh_token = tri_env.getEnvVarOwned(allocator, "AGENT_GH_TOKEN") catch
+        tri_env.getEnvVarOwned(allocator, "GITHUB_TOKEN") catch {
         std.log.err("cloud_orchestrator: neither AGENT_GH_TOKEN nor GITHUB_TOKEN set — cannot spawn agent", .{});
         return error.MissingEnvVar;
     };
@@ -191,7 +193,7 @@ pub fn spawnAgentOnAccount(allocator: Allocator, issue_number: u32, account_hint
         return error.EnvVarSetFailed;
     };
 
-    const api_key = std.process.getEnvVarOwned(allocator, "ANTHROPIC_API_KEY") catch {
+    const api_key = tri_env.getEnvVarOwned(allocator, "ANTHROPIC_API_KEY") catch {
         std.log.err("cloud_orchestrator: ANTHROPIC_API_KEY not set — cannot spawn agent", .{});
         return error.MissingEnvVar;
     };
@@ -202,7 +204,7 @@ pub fn spawnAgentOnAccount(allocator: Allocator, issue_number: u32, account_hint
     };
 
     // Non-critical vars: warn but continue
-    const ws_url = std.process.getEnvVarOwned(allocator, "WS_MONITOR_URL") catch "";
+    const ws_url = tri_env.getEnvVarOwned(allocator, "WS_MONITOR_URL") catch "";
     if (ws_url.len > 0) {
         api.upsertVariable(service_id, env_id, "WS_MONITOR_URL", ws_url) catch |err| {
             std.log.warn("cloud_orchestrator: failed to set WS_MONITOR_URL: {}", .{err});
@@ -210,7 +212,7 @@ pub fn spawnAgentOnAccount(allocator: Allocator, issue_number: u32, account_hint
         allocator.free(ws_url);
     }
 
-    const tg_token = std.process.getEnvVarOwned(allocator, "TELEGRAM_BOT_TOKEN") catch "";
+    const tg_token = tri_env.getEnvVarOwned(allocator, "TELEGRAM_BOT_TOKEN") catch "";
     if (tg_token.len > 0) {
         api.upsertVariable(service_id, env_id, "TELEGRAM_BOT_TOKEN", tg_token) catch |err| {
             std.log.warn("cloud_orchestrator: failed to set TELEGRAM_BOT_TOKEN: {}", .{err});
@@ -218,7 +220,7 @@ pub fn spawnAgentOnAccount(allocator: Allocator, issue_number: u32, account_hint
         allocator.free(tg_token);
     }
 
-    const tg_chat = std.process.getEnvVarOwned(allocator, "TELEGRAM_CHAT_ID") catch "";
+    const tg_chat = tri_env.getEnvVarOwned(allocator, "TELEGRAM_CHAT_ID") catch "";
     if (tg_chat.len > 0) {
         api.upsertVariable(service_id, env_id, "TELEGRAM_CHAT_ID", tg_chat) catch |err| {
             std.log.warn("cloud_orchestrator: failed to set TELEGRAM_CHAT_ID: {}", .{err});
@@ -231,7 +233,7 @@ pub fn spawnAgentOnAccount(allocator: Allocator, issue_number: u32, account_hint
         std.log.warn("cloud_orchestrator: failed to set TELEGRAM_STREAM: {}", .{err});
     };
 
-    const mon_token = std.process.getEnvVarOwned(allocator, "MONITOR_TOKEN") catch "";
+    const mon_token = tri_env.getEnvVarOwned(allocator, "MONITOR_TOKEN") catch "";
     if (mon_token.len > 0) {
         api.upsertVariable(service_id, env_id, "MONITOR_TOKEN", mon_token) catch |err| {
             std.log.warn("cloud_orchestrator: failed to set MONITOR_TOKEN: {}", .{err});
@@ -245,7 +247,7 @@ pub fn spawnAgentOnAccount(allocator: Allocator, issue_number: u32, account_hint
         entry.issue = issue_number;
         entry.account_id = target_account_id;
         entry.active = true;
-        entry.created_at = std.time.timestamp();
+        entry.created_at = tri_time.timestamp();
         entry.service_id_len = @min(service_id.len, 128);
         @memcpy(entry.service_id[0..entry.service_id_len], service_id[0..entry.service_id_len]);
         agent_count += 1;
@@ -471,7 +473,7 @@ pub fn recordMetrics(
         entry.lines_added = lines_added;
         entry.lines_removed = lines_removed;
         entry.pr_number = pr_number;
-        entry.created_at = std.time.timestamp();
+        entry.created_at = tri_time.timestamp();
         metrics_count += 1;
     }
 

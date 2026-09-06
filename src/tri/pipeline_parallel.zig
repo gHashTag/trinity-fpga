@@ -11,6 +11,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const colors = @import("tri_colors.zig");
 
@@ -171,7 +172,7 @@ pub fn executeDag(allocator: Allocator, dag: *PipelineDAG) void {
 
         if (count == 0) continue;
 
-        const group_start = std.time.milliTimestamp();
+        const group_start = tri_time.milliTimestamp();
         std.debug.print("  {s}Group {d}{s} ({d} jobs):\n", .{ CYAN, g, RESET, count });
 
         var group_result = GroupResult{
@@ -197,7 +198,7 @@ pub fn executeDag(allocator: Allocator, dag: *PipelineDAG) void {
             if (result.failed > 0) any_failed = true;
         }
 
-        const group_elapsed: u64 = @intCast(@max(0, std.time.milliTimestamp() - group_start));
+        const group_elapsed: u64 = @intCast(@max(0, tri_time.milliTimestamp() - group_start));
         group_result.duration_ms = group_elapsed;
         dag.groups[g] = group_result;
 
@@ -295,14 +296,14 @@ fn spawnGroup(allocator: Allocator, dag: *PipelineDAG, job_indices: []const u8) 
     // Wait for all children
     for (job_indices, 0..) |idx, i| {
         if (children[i]) |*child| {
-            const start = std.time.milliTimestamp();
+            const start = tri_time.milliTimestamp();
             const term = child.wait() catch {
                 dag.jobs[idx].status = .failed;
                 dag.jobs[idx].exit_code = 1;
                 result.failed += 1;
                 continue;
             };
-            const elapsed: u64 = @intCast(@max(0, std.time.milliTimestamp() - start));
+            const elapsed: u64 = @intCast(@max(0, tri_time.milliTimestamp() - start));
             dag.jobs[idx].duration_ms = elapsed;
 
             const code: u8 = switch (term) {
@@ -357,7 +358,7 @@ fn runSingleJob(allocator: Allocator, job: *DagJob) void {
 
     std.debug.print("    {s}\xe2\x96\xb6 [{d}] {s} {s}{s}\n", .{ CYAN, job.id, cmd, args_str, RESET });
 
-    const start = std.time.milliTimestamp();
+    const start = tri_time.milliTimestamp();
 
     // Build argv
     var argv_buf: [4][]const u8 = undefined;
@@ -380,7 +381,7 @@ fn runSingleJob(allocator: Allocator, job: *DagJob) void {
     }) catch {
         job.status = .failed;
         job.exit_code = 1;
-        const elapsed: u64 = @intCast(@max(0, std.time.milliTimestamp() - start));
+        const elapsed: u64 = @intCast(@max(0, tri_time.milliTimestamp() - start));
         job.duration_ms = elapsed;
         std.debug.print("    {s}\xe2\x9d\x8c [{d}] spawn failed{s}\n", .{ RED, job.id, RESET });
         return;
@@ -388,7 +389,7 @@ fn runSingleJob(allocator: Allocator, job: *DagJob) void {
     defer allocator.free(result.stdout);
     defer allocator.free(result.stderr);
 
-    const elapsed: u64 = @intCast(@max(0, std.time.milliTimestamp() - start));
+    const elapsed: u64 = @intCast(@max(0, tri_time.milliTimestamp() - start));
     job.duration_ms = elapsed;
 
     const code: u8 = switch (result.term) {

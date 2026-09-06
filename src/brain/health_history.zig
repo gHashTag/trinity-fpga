@@ -11,6 +11,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 const BRAIN_HEALTH_LOG = ".trinity/brain_health_history.jsonl";
 
 pub const HealthSnapshot = struct {
@@ -167,7 +168,7 @@ test "BrainHealthHistory.record_and_recent" {
     const testing = std.testing;
 
     // Create test snapshots
-    const now: i64 = @intCast(std.time.timestamp());
+    const now: i64 = @intCast(tri_time.timestamp());
     const snapshots = [_]HealthSnapshot{
         .{ .timestamp = now - 3600, .health_score = 50.0, .healthy = false, .active_claims = 5, .events_published = 100, .events_buffered = 20, .stress_test_passed = false, .stress_test_score = 30 },
         .{ .timestamp = now - 1800, .health_score = 75.0, .healthy = true, .active_claims = 3, .events_published = 200, .events_buffered = 10, .stress_test_passed = true, .stress_test_score = 70 },
@@ -266,7 +267,7 @@ test "BrainHealthHistory.retention_policy" {
 
     // Simulate retention calculation
     // Old entries (< 7 days) should be pruned, recent ones kept
-    const now: i64 = @intCast(std.time.timestamp());
+    const now: i64 = @intCast(tri_time.timestamp());
     const day_seconds: i64 = 86400;
     const retention_days: i64 = 7;
 

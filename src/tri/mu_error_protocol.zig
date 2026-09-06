@@ -8,6 +8,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const hippocampus = @import("hippocampus.zig");
 
@@ -249,7 +250,7 @@ fn ensureDir() !void {
 
 /// Generate a timestamp string for filenames.
 fn getTimestamp(allocator: Allocator) ![]u8 {
-    const epoch = std.time.timestamp();
+    const epoch = tri_time.timestamp();
     return std.fmt.allocPrint(allocator, "{d}", .{epoch});
 }
 
@@ -336,7 +337,7 @@ pub fn logError(allocator: Allocator, err: MuError) ![]u8 {
 // Dual-write helper to avoid shadowing local ts variable
 fn writeToHippocampusDual(allocator: Allocator, spec: []const u8, fix_result: []const u8, generator: []const u8) !void {
     var record: hippocampus.MemoryRecord = .{ .kind = .observation, .ttl = 30 * 24 * 3600 };
-    const mem_ts: u64 = @intCast(std.time.timestamp());
+    const mem_ts: u64 = @intCast(tri_time.timestamp());
     hippocampus.generateId(&record.id_buf, &record.id_len, mem_ts, "mu_resolved");
     hippocampus.copyToFixed(32, &record.agent_buf, &record.agent_len, "mu_resolved");
     record.ts = mem_ts;

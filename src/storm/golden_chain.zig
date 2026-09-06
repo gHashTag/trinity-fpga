@@ -6,6 +6,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 // P10: Import real link modules
 const vibee_link = @import("links/vibee.zig");
 const zig_tools_link = @import("links/zig_tools.zig");
@@ -281,7 +282,7 @@ pub const GoldenChain = struct {
             }
         } else {
             // Fallback: direct execution
-            const start_time = std.time.nanoTimestamp();
+            const start_time = tri_time.nanoTimestamp();
             var child = std.process.Child.init(cmd.argv, self.allocator);
             try child.spawn();
 
@@ -294,7 +295,7 @@ pub const GoldenChain = struct {
                 };
             };
 
-            const end_time = std.time.nanoTimestamp();
+            const end_time = tri_time.nanoTimestamp();
             const elapsed_ns = end_time - start_time;
             result.duration_ms = @as(u64, @intFromFloat(@divTrunc(@as(f128, @floatFromInt(elapsed_ns)), 1_000_000)));
 
@@ -445,7 +446,7 @@ pub const GoldenChain = struct {
 
     /// Save checkpoint to disk (P11: Full JSON serialization)
     pub fn saveCheckpoint(self: *GoldenChain, task: []const u8) !void {
-        const timestamp = std.time.timestamp();
+        const timestamp = tri_time.timestamp();
 
         // Create checkpoint filename
         const filename = try std.fmt.allocPrint(
@@ -608,7 +609,7 @@ pub const GoldenChain = struct {
 
     /// Run full chain
     pub fn run(self: *GoldenChain, task: []const u8) !u8 {
-        self.state.start_time = std.time.timestamp();
+        self.state.start_time = tri_time.timestamp();
         self.state.current_link = 1;
         self.results.clearRetainingCapacity();
 

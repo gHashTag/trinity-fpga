@@ -2,6 +2,7 @@
 //! : HSH (O(1) object lookup), D&C (generational collection), PRE (write barriers)
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 
 pub const PHI: f64 = 1.6180339887498948482;
@@ -366,7 +367,7 @@ pub const GarbageCollector = struct {
         self.is_collecting = true;
         defer self.is_collecting = false;
 
-        const start_time = std.time.nanoTimestamp();
+        const start_time = tri_time.nanoTimestamp();
         const before_used = self.young_gen.usedBytes();
 
         // Mark phase
@@ -377,7 +378,7 @@ pub const GarbageCollector = struct {
 
         const after_used = self.young_gen.usedBytes();
         const freed = if (before_used > after_used) before_used - after_used else 0;
-        const duration: u64 = @intCast(@as(u128, @bitCast(std.time.nanoTimestamp() - start_time)));
+        const duration: u64 = @intCast(@as(u128, @bitCast(tri_time.nanoTimestamp() - start_time)));
 
         self.stats.recordCollection(freed, duration, false);
         self.write_barrier.clearDirtyCards();
@@ -389,7 +390,7 @@ pub const GarbageCollector = struct {
         self.is_collecting = true;
         defer self.is_collecting = false;
 
-        const start_time = std.time.nanoTimestamp();
+        const start_time = tri_time.nanoTimestamp();
         const before_used = self.totalUsedBytes();
 
         // Mark phase
@@ -402,7 +403,7 @@ pub const GarbageCollector = struct {
 
         const after_used = self.totalUsedBytes();
         const freed = if (before_used > after_used) before_used - after_used else 0;
-        const duration: u64 = @intCast(@as(u128, @bitCast(std.time.nanoTimestamp() - start_time)));
+        const duration: u64 = @intCast(@as(u128, @bitCast(tri_time.nanoTimestamp() - start_time)));
 
         self.stats.recordCollection(freed, duration, true);
         self.write_barrier.clearDirtyCards();

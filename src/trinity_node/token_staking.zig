@@ -6,6 +6,7 @@
 // =============================================================================
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const node_reputation_mod = @import("node_reputation.zig");
 
 // =============================================================================
@@ -123,7 +124,7 @@ pub const TokenStakingEngine = struct {
         self.stakes.put(node_id, .{
             .staked_wei = amount_wei,
             .slashed_wei = 0,
-            .stake_time = std.time.timestamp(),
+            .stake_time = tri_time.timestamp(),
             .pos_failures = 0,
             .corruptions = 0,
             .is_active = true,

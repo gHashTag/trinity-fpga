@@ -17,6 +17,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const enhanced_chat = @import("igla_enhanced_chat.zig");
 const hybrid_chat = @import("igla_hybrid_chat.zig");
 const local_chat = @import("igla_chat");
@@ -97,7 +98,7 @@ pub const ConversationHistory = struct {
         try self.messages.append(self.allocator, Message{
             .role = role,
             .content = content_copy,
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
         });
 
         // Truncate history if needed
@@ -206,7 +207,7 @@ pub const FluentChatEngine = struct {
 
     /// Process query with history context
     pub fn chat(self: *Self, query: []const u8) ![]const u8 {
-        const start = std.time.microTimestamp();
+        const start = tri_time.microTimestamp();
         self.total_queries += 1;
 
         // Add user message to history
@@ -222,7 +223,7 @@ pub const FluentChatEngine = struct {
             // Add response to history
             try self.history.addMessage(.Assistant, symbolic_result.response);
 
-            const elapsed = @as(u64, @intCast(std.time.microTimestamp() - start));
+            const elapsed = @as(u64, @intCast(tri_time.microTimestamp() - start));
             self.total_time_us += elapsed;
 
             return symbolic_result.response;
@@ -246,7 +247,7 @@ pub const FluentChatEngine = struct {
 
             try self.history.addMessage(.Assistant, response.response);
 
-            const elapsed = @as(u64, @intCast(std.time.microTimestamp() - start));
+            const elapsed = @as(u64, @intCast(tri_time.microTimestamp() - start));
             self.total_time_us += elapsed;
 
             return response.response;
@@ -255,7 +256,7 @@ pub const FluentChatEngine = struct {
         // Step 3: Fallback to symbolic anyway
         try self.history.addMessage(.Assistant, symbolic_result.response);
 
-        const elapsed = @as(u64, @intCast(std.time.microTimestamp() - start));
+        const elapsed = @as(u64, @intCast(tri_time.microTimestamp() - start));
         self.total_time_us += elapsed;
 
         return symbolic_result.response;
@@ -410,14 +411,14 @@ fn processCommand(state: *CLIState, cmd: []const u8) void {
 }
 
 fn processQuery(state: *CLIState, query: []const u8) void {
-    const start = std.time.microTimestamp();
+    const start = tri_time.microTimestamp();
 
     const response = state.engine.chat(query) catch |err| {
         std.debug.print("{s}Error: {}{s}\n", .{ RED, err, RESET });
         return;
     };
 
-    const elapsed = @as(u64, @intCast(std.time.microTimestamp() - start));
+    const elapsed = @as(u64, @intCast(tri_time.microTimestamp() - start));
 
     // Print response
     std.debug.print("\n{s}{s}{s}\n", .{ GREEN, response, RESET });

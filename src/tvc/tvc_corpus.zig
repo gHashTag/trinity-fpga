@@ -13,6 +13,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const vsa = @import("vsa");
 
 const HybridBigInt = vsa.HybridBigInt;
@@ -151,7 +152,7 @@ pub const TVCCorpus = struct {
         self.total_stores = 0;
 
         // Generate random node ID
-        var prng = std.Random.DefaultPrng.init(@bitCast(std.time.timestamp()));
+        var prng = std.Random.DefaultPrng.init(@bitCast(tri_time.timestamp()));
         prng.fill(&self.node_id);
     }
 
@@ -229,7 +230,7 @@ pub const TVCCorpus = struct {
 
         // Metadata
         entry.entry_id = self.next_entry_id;
-        entry.timestamp = std.time.timestamp();
+        entry.timestamp = tri_time.timestamp();
         entry.usage_count = 0;
         entry.avg_similarity = 0.0;
         entry.source_node = self.node_id;

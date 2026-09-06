@@ -12,6 +12,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 pub const TaskClaim = struct {
     task_id: []const u8,
     agent_id: []const u8,
@@ -23,7 +24,7 @@ pub const TaskClaim = struct {
 
     pub fn isValid(self: *const TaskClaim) bool {
         if (self.status != .active) return false;
-        const now_ms = std.time.timestamp() * 1000;
+        const now_ms = tri_time.timestamp() * 1000;
         const age_ms = @as(u64, @intCast(now_ms - self.claimed_at));
         if (age_ms > self.ttl_ms) return false;
         const heartbeat_age_ms = @as(u64, @intCast(now_ms - self.last_heartbeat));
@@ -59,7 +60,7 @@ pub const Registry = struct {
         self.mutex.lock();
         defer self.mutex.unlock();
 
-        const now_ms = std.time.timestamp() * 1000;
+        const now_ms = tri_time.timestamp() * 1000;
 
         // Fast path: check if already claimed and valid
         if (self.claims.get(task_id)) |existing| {
@@ -105,7 +106,7 @@ pub const Registry = struct {
             if (entry_claim.agent_id.len == agent_id.len and
                 std.mem.eql(u8, entry_claim.agent_id, agent_id) and entry_claim.isValid())
             {
-                entry_claim.last_heartbeat = std.time.timestamp() * 1000;
+                entry_claim.last_heartbeat = tri_time.timestamp() * 1000;
                 return true;
             }
         }
@@ -122,7 +123,7 @@ pub const Registry = struct {
                 std.mem.eql(u8, entry_claim.agent_id, agent_id) and entry_claim.isValid())
             {
                 entry_claim.status = .completed;
-                entry_claim.completed_at = std.time.timestamp() * 1000;
+                entry_claim.completed_at = tri_time.timestamp() * 1000;
                 return true;
             }
         }
@@ -139,7 +140,7 @@ pub const Registry = struct {
                 std.mem.eql(u8, entry_claim.agent_id, agent_id) and entry_claim.isValid())
             {
                 entry_claim.status = .abandoned;
-                entry_claim.completed_at = std.time.timestamp() * 1000;
+                entry_claim.completed_at = tri_time.timestamp() * 1000;
                 return true;
             }
         }
@@ -486,13 +487,13 @@ test "Optimized: claimStack throughput benchmark" {
     const iterations = 100_000;
     var task_buf: [32]u8 = undefined;
 
-    const start = std.time.nanoTimestamp();
+    const start = tri_time.nanoTimestamp();
     var i: u64 = 0;
     while (i < iterations) : (i += 1) {
         const task_id = try std.fmt.bufPrintZ(&task_buf, "task-{d}", .{i});
         _ = try registry.claimStack(allocator, task_id, "agent-001", 300000);
     }
-    const elapsed_ns = @as(u64, @intCast(std.time.nanoTimestamp() - start));
+    const elapsed_ns = @as(u64, @intCast(tri_time.nanoTimestamp() - start));
     const ops_per_sec = @as(f64, @floatFromInt(iterations)) / @as(f64, @floatFromInt(elapsed_ns));
     _ = std.debug.print("Optimized Basal Ganglia: {d:.0} OP/s ({d:.2} ns/op)\n", .{ ops_per_sec * 1_000_000_000.0, @as(f64, @floatFromInt(elapsed_ns)) / @as(f64, @floatFromInt(iterations)) });
 }
@@ -514,12 +515,12 @@ test "Optimized: heartbeat throughput benchmark" {
 
     // Benchmark heartbeat
     i = 0;
-    const start = std.time.nanoTimestamp();
+    const start = tri_time.nanoTimestamp();
     while (i < iterations) : (i += 1) {
         const task_id = try std.fmt.bufPrintZ(&task_buf, "task-{d}", .{i});
         _ = registry.heartbeat(task_id, "agent-001");
     }
-    const elapsed_ns = @as(u64, @intCast(std.time.nanoTimestamp() - start));
+    const elapsed_ns = @as(u64, @intCast(tri_time.nanoTimestamp() - start));
     const ops_per_sec = @as(f64, @floatFromInt(iterations)) / @as(f64, @floatFromInt(elapsed_ns));
     _ = std.debug.print("Optimized Basal Ganglia Heartbeat: {d:.0} OP/s ({d:.2} ns/op)\n", .{ ops_per_sec * 1_000_000_000.0, @as(f64, @floatFromInt(elapsed_ns)) / @as(f64, @floatFromInt(iterations)) });
 }

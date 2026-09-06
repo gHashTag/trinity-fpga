@@ -13,6 +13,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const needle = @import("needle.zig");
 
 const Violation = needle.Violation;
@@ -366,7 +367,7 @@ pub const TestResult = struct {
 
 /// Run parse check using Zig's AST parser (Phase 1: Production-grade)
 pub fn runParseCheck(allocator: std.mem.Allocator, file_path: []const u8) !ParseResult {
-    const start_time = std.time.nanoTimestamp();
+    const start_time = tri_time.nanoTimestamp();
     var result = ParseResult.init(allocator);
     errdefer result.deinit();
 
@@ -402,7 +403,7 @@ pub fn runParseCheck(allocator: std.mem.Allocator, file_path: []const u8) !Parse
     }
 
     result.valid = result.ast_valid and result.error_count == 0;
-    const diff_ns = std.time.nanoTimestamp() - start_time;
+    const diff_ns = tri_time.nanoTimestamp() - start_time;
     result.duration_ms = @intCast(@divTrunc(diff_ns, 1_000_000));
 
     return result;
@@ -413,7 +414,7 @@ pub fn runCompileCheck(
     allocator: std.mem.Allocator,
     project_root: []const u8,
 ) !CompileResult {
-    const start_time = std.time.nanoTimestamp();
+    const start_time = tri_time.nanoTimestamp();
     var result = CompileResult.init(allocator);
     errdefer result.deinit();
 
@@ -438,7 +439,7 @@ pub fn runCompileCheck(
     });
 
     result.success = result.exit_code == 0;
-    const compile_diff = std.time.nanoTimestamp() - start_time;
+    const compile_diff = tri_time.nanoTimestamp() - start_time;
     result.compile_time_ms = @intCast(@divTrunc(compile_diff, 1_000_000));
 
     return result;

@@ -16,6 +16,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayListUnmanaged;
 const StringHashMap = std.StringHashMapUnmanaged;
@@ -130,7 +131,7 @@ pub const RalphOrchestrator = struct {
     tasks: ArrayList(RalphTask),
 
     pub fn init(allocator: Allocator, config: OrchestratorConfig) !RalphOrchestrator {
-        const current_time: i64 = @intCast(@divTrunc(std.time.nanoTimestamp(), 1_000_000_000));
+        const current_time: i64 = @intCast(@divTrunc(tri_time.nanoTimestamp(), 1_000_000_000));
 
         return RalphOrchestrator{
             .allocator = allocator,
@@ -163,7 +164,7 @@ pub const RalphOrchestrator = struct {
 
     /// Main orchestration loop — call this periodically
     pub fn tick(self: *RalphOrchestrator) !OrchestratorResult {
-        const current_time: i64 = @intCast(@divTrunc(std.time.nanoTimestamp(), 1_000_000_000));
+        const current_time: i64 = @intCast(@divTrunc(tri_time.nanoTimestamp(), 1_000_000_000));
 
         // Check if it's time to wake up
         if (current_time < self.status.wake_time) {
@@ -284,7 +285,7 @@ pub const RalphOrchestrator = struct {
         self.status.active_task = task;
         task.status = .in_progress;
 
-        const start_time = std.time.nanoTimestamp();
+        const start_time = tri_time.nanoTimestamp();
 
         // Dispatch based on task type
         const success = if (std.mem.indexOf(u8, task.id, "FPGA") != null)
@@ -294,7 +295,7 @@ pub const RalphOrchestrator = struct {
         else
             try self.executeGenericTask(task);
 
-        const duration_ms = @as(u64, @intCast((std.time.nanoTimestamp() - start_time) / 1_000_000));
+        const duration_ms = @as(u64, @intCast((tri_time.nanoTimestamp() - start_time) / 1_000_000));
 
         task.status = if (success) .completed else .failed;
 
@@ -393,7 +394,7 @@ pub const RalphOrchestrator = struct {
 
     /// Schedule next wake time
     fn scheduleNextWake(self: *RalphOrchestrator) !void {
-        const current_time: i64 = @intCast(@divTrunc(std.time.nanoTimestamp(), 1_000_000_000));
+        const current_time: i64 = @intCast(@divTrunc(tri_time.nanoTimestamp(), 1_000_000_000));
 
         // Use fibonacci-based interval scaling
         const fib_n = fibonacci(self.status.total_cycles + 3);

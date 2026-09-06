@@ -14,6 +14,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const colors = @import("tri_colors.zig");
 const print = std.debug.print;
@@ -247,7 +248,7 @@ fn scanGithub(allocator: Allocator, result: *ScanResult) void {
         var item = ScanItem{
             .source = .github_issues,
             .priority = priority,
-            .created_at = std.time.timestamp(),
+            .created_at = tri_time.timestamp(),
         };
         const id_str = std.fmt.bufPrint(&item.id, "#{d}", .{num}) catch continue;
         item.id_len = id_str.len;
@@ -293,7 +294,7 @@ fn scanDirty(allocator: Allocator, result: *ScanResult) void {
         var item = ScanItem{
             .source = .dirty_files,
             .priority = .high,
-            .created_at = std.time.timestamp(),
+            .created_at = tri_time.timestamp(),
         };
         const id_str = std.fmt.bufPrint(&item.id, "{d} .zig", .{dirty_zig}) catch return;
         item.id_len = id_str.len;
@@ -306,7 +307,7 @@ fn scanDirty(allocator: Allocator, result: *ScanResult) void {
         var item = ScanItem{
             .source = .dirty_files,
             .priority = .medium,
-            .created_at = std.time.timestamp(),
+            .created_at = tri_time.timestamp(),
         };
         const id_str = std.fmt.bufPrint(&item.id, "{d} .tri", .{dirty_spec}) catch return;
         item.id_len = id_str.len;
@@ -327,7 +328,7 @@ fn scanDoctor(result: *ScanResult) void {
     var item = ScanItem{
         .source = .doctor_violations,
         .priority = .medium,
-        .created_at = std.time.timestamp(),
+        .created_at = tri_time.timestamp(),
     };
     item.setId("doctor");
     item.setTitle("Doctor violations pending");
@@ -355,7 +356,7 @@ fn scanPipeline(result: *ScanResult) void {
         var item = ScanItem{
             .source = .pipeline_failures,
             .priority = .high,
-            .created_at = std.time.timestamp(),
+            .created_at = tri_time.timestamp(),
         };
         item.setId("pipeline");
         item.setTitle("Pipeline has failed state — needs investigation");
@@ -477,7 +478,7 @@ fn addSimilarTaskItems(result: *ScanResult, tasks_json: []const u8) void {
                     .source = .experience_similar,
                     .priority = .low,
                     .has_experience = true,
-                    .created_at = std.time.timestamp(),
+                    .created_at = tri_time.timestamp(),
                 };
                 item.setId(tid);
                 if (extractEpisodeString(obj, "title")) |t| item.setTitle(t);
@@ -590,7 +591,7 @@ fn saveResults(result: *const ScanResult) void {
     file.writeAll(pl_str) catch return;
 
     file.writeAll(",\"timestamp\":") catch return;
-    const ts_str = std.fmt.bufPrint(&count_buf, "{d}", .{std.time.timestamp()}) catch return;
+    const ts_str = std.fmt.bufPrint(&count_buf, "{d}", .{tri_time.timestamp()}) catch return;
     file.writeAll(ts_str) catch return;
 
     file.writeAll("}\n") catch return;

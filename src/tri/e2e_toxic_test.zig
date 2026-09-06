@@ -14,6 +14,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const colors = @import("tri_colors.zig");
 const toxic_verdict = @import("pathology.zig");
@@ -213,7 +214,7 @@ fn discoverScenarios(allocator: Allocator, threshold: f32) DiscoveryResult {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn runScenario(scenario: *const E2EScenario) E2EResult {
-    const start = std.time.milliTimestamp();
+    const start = tri_time.milliTimestamp();
 
     var result = E2EResult{};
     result.setScenario(scenario.nameStr());
@@ -222,7 +223,7 @@ fn runScenario(scenario: *const E2EScenario) E2EResult {
     var zig_path_buf: [128]u8 = undefined;
     const zig_path = std.fmt.bufPrint(&zig_path_buf, "src/tri/{s}.zig", .{scenario.nameStr()}) catch {
         result.setError("Failed to build .zig path");
-        result.duration_ms = @intCast(@as(u64, @bitCast(std.time.milliTimestamp() - start)));
+        result.duration_ms = @intCast(@as(u64, @bitCast(tri_time.milliTimestamp() - start)));
         return result;
     };
 
@@ -266,7 +267,7 @@ fn runScenario(scenario: *const E2EScenario) E2EResult {
         }
     }
 
-    const end = std.time.milliTimestamp();
+    const end = tri_time.milliTimestamp();
     result.duration_ms = @intCast(@as(u64, @bitCast(end - start)));
 
     return result;
@@ -351,7 +352,7 @@ fn saveResults(suite: *const E2ESuite) void {
         suite.failed,
         suite.avg_verdict,
         suite.total_duration_ms,
-        std.time.timestamp(),
+        tri_time.timestamp(),
     }) catch return;
     file.writeAll(content) catch return;
 }

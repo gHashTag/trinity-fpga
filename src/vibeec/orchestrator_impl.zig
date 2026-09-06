@@ -3,6 +3,7 @@
 //! φ² + 1/φ² = 3
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const orchestrator = @import("trinity_orchestrator");
 
 /// Result from invoking a subsystem
@@ -56,14 +57,14 @@ pub const CycleResult = struct {
 
 /// Invoke VIBEE compiler to generate code from spec
 pub fn invokeVibee(allocator: std.mem.Allocator, spec_path: []const u8) !VibeeResult {
-    const start_time = std.time.nanoTimestamp();
+    const start_time = tri_time.nanoTimestamp();
 
     // Run: zig build vibee -- gen <spec_path>
     const result = try runCommand(allocator, &.{
         "zig", "build", "vibee", "--", "gen", spec_path,
     });
 
-    const duration = @as(u64, @intCast(@divTrunc(std.time.nanoTimestamp() - start_time, 1_000_000)));
+    const duration = @as(u64, @intCast(@divTrunc(tri_time.nanoTimestamp() - start_time, 1_000_000)));
 
     // Parse output path from VIBEE output
     var output_path: ?[]const u8 = null;
@@ -183,7 +184,7 @@ pub fn orchestrateSelfImprovement(
     link_number: u32,
     verbose: bool,
 ) !CycleResult {
-    const cycle_start = std.time.nanoTimestamp();
+    const cycle_start = tri_time.nanoTimestamp();
 
     if (verbose) {
         std.debug.print("\n┌─────────────────────────────────────────────────────────────┐\n", .{});
@@ -205,7 +206,7 @@ pub fn orchestrateSelfImprovement(
             .consensus_score = 0,
             .trinity_verified = false,
             .next_action = .retry,
-            .total_duration_ms = @as(u64, @intCast(@divTrunc(std.time.nanoTimestamp() - cycle_start, 1_000_000))),
+            .total_duration_ms = @as(u64, @intCast(@divTrunc(tri_time.nanoTimestamp() - cycle_start, 1_000_000))),
         };
     }
     if (verbose) std.debug.print("      ✓ Generated in {d}ms\n", .{vibee_result.duration_ms});
@@ -242,7 +243,7 @@ pub fn orchestrateSelfImprovement(
     const consensus_score = calculateConsensus(&vibee_result, &agent_mu_result, &symbolic_result, &pas_result);
     if (verbose) std.debug.print("[5/5] CONSENSUS → φ-weighted score: {d:.3}\n", .{consensus_score});
 
-    const total_duration = @as(u64, @intCast(@divTrunc(std.time.nanoTimestamp() - cycle_start, 1_000_000)));
+    const total_duration = @as(u64, @intCast(@divTrunc(tri_time.nanoTimestamp() - cycle_start, 1_000_000)));
 
     // Determine next action
     const next_action: CycleResult.NextAction = if (!vibee_result.success)
@@ -314,7 +315,7 @@ fn calculateConsensus(
 
 /// Run a command and capture output (Zig 0.15 API)
 fn runCommand(allocator: std.mem.Allocator, argv: []const []const u8) !InvocationResult {
-    const start_time = std.time.nanoTimestamp();
+    const start_time = tri_time.nanoTimestamp();
 
     var child = std.process.Child.init(argv, allocator);
     child.stdout_behavior = .Pipe;
@@ -350,11 +351,11 @@ fn runCommand(allocator: std.mem.Allocator, argv: []const []const u8) !Invocatio
             .output = stdout,
             .error_message = try std.fmt.allocPrint(allocator, "Failed to wait: {}", .{err}),
             .exit_code = 1,
-            .duration_ms = @as(u64, @intCast(@divTrunc(std.time.nanoTimestamp() - start_time, 1_000_000))),
+            .duration_ms = @as(u64, @intCast(@divTrunc(tri_time.nanoTimestamp() - start_time, 1_000_000))),
         };
     };
 
-    const duration = @as(u64, @intCast(@divTrunc(std.time.nanoTimestamp() - start_time, 1_000_000)));
+    const duration = @as(u64, @intCast(@divTrunc(tri_time.nanoTimestamp() - start_time, 1_000_000)));
 
     if (term.Exited == 0) {
         return InvocationResult{

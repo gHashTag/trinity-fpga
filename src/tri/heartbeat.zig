@@ -11,6 +11,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const tri_experience = @import("tri_experience.zig");
 const tri_dev = @import("tri_dev.zig");
@@ -319,7 +320,7 @@ pub fn runLoopDecide(allocator: Allocator) !void {
     var fails: u32 = 0;
     var recent_fails: u32 = 0;
 
-    const now = std.time.timestamp();
+    const now = tri_time.timestamp();
     const one_hour_ago = now - 3600;
 
     var dir_iter = episodes_dir.iterate();
@@ -410,7 +411,7 @@ fn saveDecideState(energy: f32, total: u32, passes: u32, fails: u32, decision: [
         \\{{"energy":{d},"total":{d},"passes":{d},"fails":{d},"decision":"{s}","timestamp":{d}}}
     , .{
         energy_pct,                          total,                passes, fails,
-        decision[0..@min(decision.len, 64)], std.time.timestamp(),
+        decision[0..@min(decision.len, 64)], tri_time.timestamp(),
     }) catch return;
     file.writeAll(json) catch {};
 }
@@ -490,7 +491,7 @@ fn incrementWakeCount() u32 {
 
 fn saveLoopEpisode(wake_count: u32, results: []const StepResult, decision: LoopDecision) void {
     var episode = tri_experience.Episode{};
-    episode.timestamp = std.time.timestamp();
+    episode.timestamp = tri_time.timestamp();
     episode.issue = 0;
     episode.iterations = wake_count;
 
@@ -533,7 +534,7 @@ fn saveLoopEpisode(wake_count: u32, results: []const StepResult, decision: LoopD
 }
 
 fn saveLoopState(wake: u32, ok: usize, fail: usize, decision: LoopDecision) void {
-    const ts = @as(u64, @intCast(std.time.timestamp()));
+    const ts = @as(u64, @intCast(tri_time.timestamp()));
     var file = std.fs.cwd().createFile(STATE_PATH, .{}) catch return;
     defer file.close();
     var buf: [512]u8 = undefined;
@@ -659,11 +660,11 @@ fn runRetryLoop(allocator: Allocator, config: RetryConfig) !void {
     episode.issue = config.issue;
     @memcpy(episode.task[0..config.task_len], config.task[0..config.task_len]);
     episode.task_len = config.task_len;
-    episode.timestamp = std.time.timestamp();
+    episode.timestamp = tri_time.timestamp();
 
     var final_verdict: RetryVerdict = .fail;
     var final_result: RetryIterationResult = .{};
-    const loop_start = std.time.milliTimestamp();
+    const loop_start = tri_time.milliTimestamp();
 
     var iteration: u32 = 1;
     while (iteration <= config.max_iterations) : (iteration += 1) {
@@ -720,7 +721,7 @@ fn runRetryLoop(allocator: Allocator, config: RetryConfig) !void {
     }
 
     // Compute fitness
-    const elapsed_ms = std.time.milliTimestamp() - loop_start;
+    const elapsed_ms = tri_time.milliTimestamp() - loop_start;
     const elapsed_hours: f32 = @as(f32, @floatFromInt(elapsed_ms)) / (1000.0 * 3600.0);
     episode.iterations = iteration;
     episode.fitness = .{

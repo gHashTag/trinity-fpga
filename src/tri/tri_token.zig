@@ -4,6 +4,7 @@
 // Commands: status, rotate, reset
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const token_rotator = @import("../tri/token_rotator.zig");
 
 pub fn runTokenCommand(allocator: std.mem.Allocator, args: []const []const u8) !void {
@@ -46,7 +47,7 @@ fn showUsage() !void {
 
 fn showStatus(allocator: std.mem.Allocator, rotator: *const token_rotator.TokenRotator) !void {
     const stats = rotator.getStats();
-    const now = std.time.timestamp();
+    const now = tri_time.timestamp();
 
     std.debug.print("\n  🔄 Token Rotator Status\n", .{});
     std.debug.print("  {s}\n", .{"=" ** 35});

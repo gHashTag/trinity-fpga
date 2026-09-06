@@ -10,6 +10,7 @@
 //!   - Supports both synchronous and asynchronous message delivery
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const mem = std.mem;
 
 // Sacred constants
@@ -80,7 +81,7 @@ pub const Event = struct {
         };
 
         // Age decay: newer events have higher priority
-        const age_ns = @as(f64, @floatFromInt(std.time.nanoTimestamp() - self.timestamp));
+        const age_ns = @as(f64, @floatFromInt(tri_time.nanoTimestamp() - self.timestamp));
         const age_factor = @exp(-age_ns / 1e9); // 1 second decay
 
         return base_priority * age_factor;
@@ -351,7 +352,7 @@ pub const ConsciousnessBus = struct {
 
 /// Create a new event
 pub fn createEvent(allocator: mem.Allocator, event_type: EventType, source: []const u8, data: EventData) !Event {
-    const timestamp = @as(i64, @intCast(std.time.nanoTimestamp()));
+    const timestamp = @as(i64, @intCast(tri_time.nanoTimestamp()));
     return Event{
         .type = event_type,
         .timestamp = timestamp,
@@ -436,7 +437,7 @@ test "ConsciousnessBus: priority ordering" {
     var bus = ConsciousnessBus.init(allocator);
     defer bus.deinit();
 
-    const ts = std.time.nanoTimestamp();
+    const ts = tri_time.nanoTimestamp();
     const high_priority = Event{
         .type = .consciousness_emergence,
         .timestamp = @intCast(ts),
@@ -461,7 +462,7 @@ test "ConsciousnessBus: priority ordering" {
 }
 
 test "ConsciousnessBus: phi-based priority" {
-    const ts = std.time.nanoTimestamp();
+    const ts = tri_time.nanoTimestamp();
     const event1 = Event{
         .type = .consciousness_emergence,
         .timestamp = @intCast(ts),

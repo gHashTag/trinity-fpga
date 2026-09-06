@@ -5,6 +5,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -115,7 +116,7 @@ pub const SlashingEngine = struct {
             .node_id = duped_id,
             .violation = violation,
             .amount = amount,
-            .timestamp = @as(u64, @intCast(std.time.timestamp())),
+            .timestamp = @as(u64, @intCast(tri_time.timestamp())),
             .context = null,
         };
 

@@ -6,6 +6,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const ArrayList = std.array_list.Managed;
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1401,7 +1402,7 @@ test "peer announce serialize/deserialize" {
         .public_key = undefined,
         .listen_port = 9333,
         .capabilities_hash = undefined,
-        .timestamp = std.time.timestamp(),
+        .timestamp = tri_time.timestamp(),
     };
     @memset(&announce.node_id, 0xAB);
     @memset(&announce.public_key, 0xCD);

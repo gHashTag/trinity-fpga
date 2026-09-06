@@ -16,6 +16,7 @@
 //! Sacred Formula: phi^2 + 1/phi^2 = 3 = TRINITY
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const builtin = @import("builtin");
 const fs = std.fs;
 const mem = std.mem;
@@ -338,7 +339,7 @@ pub const StateManager = struct {
         defer metrics.deinit(self.allocator);
 
         // Add basic health metrics
-        const now = std.time.milliTimestamp();
+        const now = tri_time.milliTimestamp();
 
         try metrics.append(self.allocator, MetricSnapshot{
             .name = try self.allocator.dupe(u8, "brain.claims.count"),
@@ -371,7 +372,7 @@ pub const StateManager = struct {
 
         return BrainState{
             .version = CURRENT_VERSION,
-            .saved_at = std.time.milliTimestamp(),
+            .saved_at = tri_time.milliTimestamp(),
             .task_claims = try claims.toOwnedSlice(self.allocator),
             .events = try events.toOwnedSlice(self.allocator),
             .metrics = try metrics.toOwnedSlice(self.allocator),
@@ -524,7 +525,7 @@ pub const StateManager = struct {
             file.close();
 
             // Create backup filename with timestamp
-            const now = std.time.timestamp();
+            const now = tri_time.timestamp();
             const backup_name = try std.fmt.allocPrint(self.allocator, "brain_state_{d}.json", .{now});
             defer self.allocator.free(backup_name);
 
@@ -644,7 +645,7 @@ pub const StateManager = struct {
             if (status != .active) continue;
 
             // Check if claim is still valid (not expired)
-            const now_ms = std.time.timestamp() * 1000;
+            const now_ms = tri_time.timestamp() * 1000;
             const age_ms = @as(u64, @intCast(now_ms - claim_state.claimed_at));
 
             if (age_ms < claim_state.ttl_ms) {
@@ -829,7 +830,7 @@ pub fn runBrainRecoveryCommand(allocator: mem.Allocator, args: []const []const u
             std.debug.print("  Size: {d} bytes\n", .{info.size_bytes orelse 0});
 
             if (info.modified_at) |mtime| {
-                const modified = std.time.timestamp();
+                const modified = tri_time.timestamp();
                 const age_sec = modified - mtime;
                 std.debug.print("  Modified: {d} seconds ago\n", .{age_sec});
             }
@@ -1571,7 +1572,7 @@ test "Backup: filename includes timestamp" {
             };
 
             // Timestamp should be relatively recent (within last hour)
-            const now = std.time.timestamp();
+            const now = tri_time.timestamp();
             try std.testing.expect(timestamp > now - 3600);
             try std.testing.expect(timestamp <= now);
         }

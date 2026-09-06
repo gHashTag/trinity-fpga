@@ -12,6 +12,7 @@
 // =============================================================================
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const finetune = @import("igla_finetune_engine.zig");
 
 // =============================================================================
@@ -238,7 +239,7 @@ pub const Task = struct {
             .input_len = @min(input.len, MAX_TASK_SIZE),
             .priority = .Normal,
             .parent_id = null,
-            .created_at = @intCast(std.time.nanoTimestamp()),
+            .created_at = @intCast(tri_time.nanoTimestamp()),
             .assigned_agent = null,
             .is_complete = false,
         };
@@ -334,7 +335,7 @@ pub const Agent = struct {
     }
 
     pub fn process(self: *Agent, task: *const Task) TaskResult {
-        const start_time: i64 = @intCast(std.time.nanoTimestamp());
+        const start_time: i64 = @intCast(tri_time.nanoTimestamp());
         self.state = .Working;
 
         var result = TaskResult.init(task.id, self.agent_type);
@@ -343,7 +344,7 @@ pub const Agent = struct {
         const response = self.generateResponse(task);
         result.setOutput(response.content, response.confidence);
 
-        const end_time: i64 = @intCast(std.time.nanoTimestamp());
+        const end_time: i64 = @intCast(tri_time.nanoTimestamp());
         result.setProcessingTime(end_time - start_time);
 
         self.state = .Complete;
@@ -1253,9 +1254,9 @@ pub fn runBenchmark() void {
         }
     }
 
-    const start: i64 = @intCast(std.time.nanoTimestamp());
+    const start: i64 = @intCast(tri_time.nanoTimestamp());
     const processed = system.processAllTasks();
-    const end: i64 = @intCast(std.time.nanoTimestamp());
+    const end: i64 = @intCast(tri_time.nanoTimestamp());
 
     std.debug.print("  Task Results:\n", .{});
 

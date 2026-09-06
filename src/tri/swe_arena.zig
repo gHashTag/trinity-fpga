@@ -10,6 +10,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 
 const print = std.debug.print;
@@ -324,7 +325,7 @@ pub fn parseTestOutput(output: []const u8) TestStats {
 fn runLocalBenchmark(allocator: Allocator) !void {
     print("  {s}Running local benchmark (zig build + zig build test)...{s}\n\n", .{ DIM, RESET });
 
-    const start_time = std.time.milliTimestamp();
+    const start_time = tri_time.milliTimestamp();
 
     // Step 1: zig build
     print("  [1/2] zig build...", .{});
@@ -389,7 +390,7 @@ fn runLocalBenchmark(allocator: Allocator) !void {
         print(" {s}FAIL{s}\n", .{ RED, RESET });
     }
 
-    const elapsed_ms: u64 = @intCast(std.time.milliTimestamp() - start_time);
+    const elapsed_ms: u64 = @intCast(tri_time.milliTimestamp() - start_time);
     const stats = parseTestOutput(test_output);
 
     print("\n  {s}════════════════════════════════════════════{s}\n", .{ DIM, RESET });

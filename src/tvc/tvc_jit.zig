@@ -1,4 +1,5 @@
 const std = @import("std");
+const tri_time = @import("tri_time");
 const tvc_ir = @import("tvc_ir.zig");
 const tvc_vm = @import("tvc_vm.zig");
 const builtin = @import("builtin");
@@ -152,7 +153,7 @@ pub const CompiledFunction = struct {
 
 // and TSC for orinand (andwithby std.time how fallback)
 fn rdtsc() u64 {
-    return @intCast(std.time.nanoTimestamp());
+    return @intCast(tri_time.nanoTimestamp());
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

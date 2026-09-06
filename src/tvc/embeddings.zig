@@ -12,6 +12,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 
 // Import VSA/TVC components
@@ -71,7 +72,7 @@ pub const TVCEmbedding = struct {
             .ternary = ternary,
             .float32 = float32,
             .mode = mode,
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
         };
     }
 
@@ -137,7 +138,7 @@ pub const TVCEngine = struct {
     pub fn init(allocator: Allocator) TVCEngine {
         var seed: u64 = undefined;
         std.posix.getrandom(std.mem.asBytes(&seed)) catch {
-            seed = @as(u64, @truncate(std.time.microTimestamp()));
+            seed = @as(u64, @truncate(tri_time.microTimestamp()));
         };
 
         return TVCEngine{
@@ -374,7 +375,7 @@ pub fn nameMatchScore(query: []const u8, symbol_name: []const u8) f32 {
 
 /// Calculate recency boost based on timestamp
 pub fn recencyBoost(timestamp: i64) f32 {
-    const now = std.time.timestamp();
+    const now = tri_time.timestamp();
     const age_seconds = now - timestamp;
 
     // Decay over 30 days
@@ -468,7 +469,7 @@ test "nameMatchScore" {
 }
 
 test "recencyBoost" {
-    const now = std.time.timestamp();
+    const now = tri_time.timestamp();
     const boost = recencyBoost(now);
     try std.testing.expectEqual(@as(f32, 1.0), boost);
 }

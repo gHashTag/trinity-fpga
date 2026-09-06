@@ -16,6 +16,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -100,7 +101,7 @@ pub const SystemEvent = struct {
         message: []const u8,
     ) !SystemEvent {
         return .{
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
             .level = level,
             .component = try allocator.dupe(u8, component),
             .event_type = event_type,
@@ -119,7 +120,7 @@ pub const SystemEvent = struct {
         metadata: ?std.json.Value,
     ) !SystemEvent {
         return .{
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
             .level = level,
             .component = try allocator.dupe(u8, component),
             .event_type = event_type,
@@ -636,7 +637,7 @@ test "insula_log_event" {
 
 test "insula_buffer_serialization" {
     var buffer: EventBuffer = .{};
-    buffer.timestamp = std.time.timestamp();
+    buffer.timestamp = tri_time.timestamp();
     buffer.level = .info;
     copyToFixed(32, &buffer.component_len, buffer.component_buf, "test");
     buffer.event_type = .state_change;
@@ -746,7 +747,7 @@ test "insula_event_all_types" {
 
 test "insula_event_timestamp" {
     const allocator = std.testing.allocator;
-    const before = std.time.timestamp();
+    const before = tri_time.timestamp();
 
     const event = try SystemEvent.create(
         allocator,
@@ -757,7 +758,7 @@ test "insula_event_timestamp" {
     );
     defer event.deinit(allocator);
 
-    const after = std.time.timestamp();
+    const after = tri_time.timestamp();
     try std.testing.expect(event.timestamp >= before);
     try std.testing.expect(event.timestamp <= after);
 }

@@ -18,6 +18,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const colors = @import("tri_colors.zig");
 const swe_arena = @import("swe_arena.zig");
 const thalamus = @import("thalamus.zig");
@@ -469,7 +470,7 @@ pub fn runVerdictCommand(allocator: std.mem.Allocator) void {
     const score = computeScore(input);
     const level = classifyLevel(score.total);
     const comparison = compareWithPast(allocator, score.total);
-    const timestamp = std.time.timestamp();
+    const timestamp = tri_time.timestamp();
 
     const v = ToxicVerdict{
         .score = score,
@@ -1380,7 +1381,7 @@ pub fn runVerdictCommandEx(allocator: std.mem.Allocator, args: []const []const u
     const score = computeScore(input);
     const level = classifyLevel(score.total);
     const comparison = compareWithPast(allocator, score.total);
-    const timestamp = std.time.timestamp();
+    const timestamp = tri_time.timestamp();
 
     const v = ToxicVerdict{
         .score = score,
@@ -1597,7 +1598,7 @@ pub fn autoCollectAndVerdict(allocator: std.mem.Allocator, threshold: f32) Pipel
     const score = computeScore(input);
     const level = classifyLevel(score.total);
     const comparison = compareWithPast(allocator, score.total);
-    const timestamp = std.time.timestamp();
+    const timestamp = tri_time.timestamp();
 
     // Immune system: read cell health and potentially create doctor task
     const cell_health = readCellHealthFromHippocampus(allocator) catch CellHealth{
@@ -1722,7 +1723,7 @@ pub fn createDoctorTaskIfNeeded(allocator: std.mem.Allocator, score: f32, cell_h
         score,                threshold,
         cell_health.healthy,  cell_health.weak,
         cell_health.broken,   if (score < 50) "CRITICAL" else "HIGH",
-        std.time.timestamp(),
+        tri_time.timestamp(),
     }) catch return;
 
     // Create GitHub issue
@@ -1746,7 +1747,7 @@ test "createDoctorTaskIfNeeded_skips_when_healthy" {
         .weak = 10,
         .broken = 0,
         .total = 110,
-        .timestamp = std.time.timestamp(),
+        .timestamp = tri_time.timestamp(),
     };
 
     // Score 80, no broken cells — should skip (no error = skipped)
@@ -1759,7 +1760,7 @@ test "createDoctorTaskIfNeeded_creates_on_low_score" {
         .weak = 20,
         .broken = 0,
         .total = 70,
-        .timestamp = std.time.timestamp(),
+        .timestamp = tri_time.timestamp(),
     };
 
     // Score 60 < 70 — should create task (dry run in test env)
@@ -1772,7 +1773,7 @@ test "createDoctorTaskIfNeeded_creates_on_broken_cells" {
         .weak = 10,
         .broken = 5,
         .total = 95,
-        .timestamp = std.time.timestamp(),
+        .timestamp = tri_time.timestamp(),
     };
 
     // Score 75 but broken > 0 — should create task
@@ -1983,7 +1984,7 @@ test "pathology — CellHealth timestamp" {
         .weak = 5,
         .broken = 0,
         .total = 55,
-        .timestamp = std.time.timestamp(),
+        .timestamp = tri_time.timestamp(),
     };
     try std.testing.expect(health.timestamp > 0);
 }
@@ -2073,7 +2074,7 @@ test "pathology — ToxicVerdict structure" {
         .level = level,
         .input = input,
         .comparison = comparison,
-        .timestamp = std.time.timestamp(),
+        .timestamp = tri_time.timestamp(),
     };
 
     // With minimal input, score will be mediocre (around 50-60 range)

@@ -2,6 +2,7 @@
 //! φ² + 1/φ² = 3 | TRINITY
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 
 const PostgresClient = @import("client.zig").PostgresClient;
@@ -31,7 +32,7 @@ pub fn createSession(allocator: Allocator, client: *PostgresClient, name: []cons
     if (name.len == 0) return error.InvalidInput;
     if (service_id.len == 0) return error.InvalidInput;
 
-    const now = std.time.timestamp();
+    const now = tri_time.timestamp();
     const session_id = try generateSessionId(allocator);
 
     const sql = try std.fmt.allocPrint(allocator,
@@ -70,7 +71,7 @@ pub fn getSession(allocator: Allocator, client: *PostgresClient, session_id: []c
         \\EXTRACT(EPOCH FROM created_at) as created_at,
         \\EXTRACT(EPOCH FROM updated_at) as updated_at
         \\FROM sessions WHERE id = '{s}'
-    , .{ session_id });
+    , .{session_id});
 
     defer allocator.free(sql);
 
@@ -91,12 +92,14 @@ pub fn getSession(allocator: Allocator, client: *PostgresClient, session_id: []c
 
     // Parse created_at and updated_at from epoch
     const created_at = if (row.values.items.len > 5)
-        std.fmt.parseInt(i64, row.values.items[5], 10) catch std.time.timestamp()
-    else std.time.timestamp();
+        std.fmt.parseInt(i64, row.values.items[5], 10) catch tri_time.timestamp()
+    else
+        tri_time.timestamp();
 
     const updated_at = if (row.values.items.len > 6)
-        std.fmt.parseInt(i64, row.values.items[6], 10) catch std.time.timestamp()
-    else std.time.timestamp();
+        std.fmt.parseInt(i64, row.values.items[6], 10) catch tri_time.timestamp()
+    else
+        tri_time.timestamp();
 
     return Session{
         .id = try allocator.dupe(u8, session_id),
@@ -126,12 +129,14 @@ pub fn listSessions(allocator: Allocator, client: *PostgresClient) !std.ArrayLis
 
     for (result.rows.items) |*row| {
         const created_at = if (row.values.items.len > 4)
-            std.fmt.parseInt(i64, row.values.items[4], 10) catch std.time.timestamp()
-        else std.time.timestamp();
+            std.fmt.parseInt(i64, row.values.items[4], 10) catch tri_time.timestamp()
+        else
+            tri_time.timestamp();
 
         const updated_at = if (row.values.items.len > 5)
-            std.fmt.parseInt(i64, row.values.items[5], 10) catch std.time.timestamp()
-        else std.time.timestamp();
+            std.fmt.parseInt(i64, row.values.items[5], 10) catch tri_time.timestamp()
+        else
+            tri_time.timestamp();
 
         try sessions.append(allocator, Session{
             .id = try allocator.dupe(u8, row.values.items[0]),
@@ -155,7 +160,7 @@ pub fn updateSession(allocator: Allocator, client: *PostgresClient, session_id: 
 }) !void {
     if (session_id.len == 0) return error.InvalidInput;
 
-    const now = std.time.timestamp();
+    const now = tri_time.timestamp();
     var updates = try std.ArrayList(u8).initCapacity(allocator, 0);
     defer updates.deinit(allocator);
 
@@ -204,7 +209,7 @@ pub fn deleteSession(client: *PostgresClient, session_id: []const u8) !void {
 
     const sql = try std.fmt.allocPrint(std.heap.page_allocator,
         \\DELETE FROM sessions WHERE id = '{s}'
-    , .{ session_id });
+    , .{session_id});
 
     defer std.heap.page_allocator.free(sql);
 
@@ -213,7 +218,7 @@ pub fn deleteSession(client: *PostgresClient, session_id: []const u8) !void {
 
 /// Generate a unique session ID
 fn generateSessionId(allocator: Allocator) ![]const u8 {
-    const now = std.time.nanoTimestamp();
+    const now = tri_time.nanoTimestamp();
     const random = std.crypto.random.intRangeAtMost(usize, 0, std.math.maxInt(usize));
 
     return try std.fmt.allocPrint(allocator, "sess_{d}_{x}", .{ now, random });
@@ -222,7 +227,7 @@ fn generateSessionId(allocator: Allocator) ![]const u8 {
 test "sessions: create and get" {
     // Test only creates Session struct directly - no DB connection needed
     const id = "sess_123_456";
-    const now = std.time.timestamp();
+    const now = tri_time.timestamp();
 
     const session = Session{
         .id = id,

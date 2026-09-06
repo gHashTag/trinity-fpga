@@ -7,6 +7,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -47,7 +48,7 @@ pub const StreamingOutput = struct {
             .state = .{
                 .is_streaming = false,
                 .chars_written = 0,
-                .start_time = std.time.milliTimestamp(),
+                .start_time = tri_time.milliTimestamp(),
             },
         };
     }
@@ -65,7 +66,7 @@ pub const StreamingOutput = struct {
     /// Stream text with real-time output effect
     pub fn streamText(self: *Self, text: []const u8) void {
         self.state.is_streaming = true;
-        self.state.start_time = std.time.milliTimestamp();
+        self.state.start_time = tri_time.milliTimestamp();
 
         for (text) |char| {
             self.streamChar(char);
@@ -88,7 +89,7 @@ pub const StreamingOutput = struct {
 
     /// Get streaming statistics
     pub fn getStats(self: *const Self) StreamStats {
-        const now = std.time.milliTimestamp();
+        const now = tri_time.milliTimestamp();
         const duration = @as(u64, @intCast(@max(0, now - self.state.start_time)));
         const chars_per_sec = if (duration > 0)
             @as(f64, @floatFromInt(self.state.chars_written)) / (@as(f64, @floatFromInt(duration)) / 1000.0)

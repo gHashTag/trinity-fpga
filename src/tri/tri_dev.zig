@@ -21,6 +21,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const tri_exit_codes = @import("tri_exit_codes.zig");
 const Allocator = std.mem.Allocator;
 const railway_api = @import("railway_api.zig");
@@ -409,7 +410,7 @@ fn runDevStatus(allocator: Allocator) !void {
                         entry.role = .coder; // default, can't know from Railway
                         copyToFixed(&entry.account_name, &entry.account_name_len, acct.name);
                         copyToFixed(&entry.status, &entry.status_len, dep_status);
-                        entry.started_at = @intCast(std.time.timestamp());
+                        entry.started_at = @intCast(tri_time.timestamp());
                         state_changed = true;
                     }
                 }
@@ -598,7 +599,7 @@ fn runDevSpawn(allocator: Allocator, args: []const []const u8) !void {
             entry.role = role;
             copyToFixed(&entry.account_name, &entry.account_name_len, acct.name);
             copyToFixed(&entry.status, &entry.status_len, "BUILDING");
-            entry.started_at = @intCast(std.time.timestamp());
+            entry.started_at = @intCast(tri_time.timestamp());
             saveState(state) catch {};
         }
     }

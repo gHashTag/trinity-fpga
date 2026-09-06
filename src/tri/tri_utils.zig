@@ -9,6 +9,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_env = @import("tri_env.zig");
 const colors = @import("tri_colors.zig");
 const trinity_swe_agent_mod = @import("trinity_swe");
 const igla_hybrid_chat = @import("igla_hybrid_chat");
@@ -375,15 +376,15 @@ pub const CLIState = struct {
 
         // Codebase Context Manager (Cycle 92)
         const ctx_mgr = try allocator.create(tri_context.ContextManager);
-        ctx_mgr.* = tri_context.ContextManager.init(allocator);
+        ctx_mgr.* = tri_context.ContextManager.init(io, allocator);
         ctx_mgr.loadIndex() catch |err| {
             std.log.debug("context index load: {s}", .{@errorName(err)});
         };
 
         // Read API keys from environment
-        const groq_key = std.process.getEnvVarOwned(allocator, "GROQ_API_KEY") catch null;
-        const claude_key = std.process.getEnvVarOwned(allocator, "ANTHROPIC_API_KEY") catch null;
-        const openai_key = std.process.getEnvVarOwned(allocator, "OPENAI_API_KEY") catch null;
+        const groq_key = tri_env.getEnvVarOwned(allocator, "GROQ_API_KEY") catch null;
+        const claude_key = tri_env.getEnvVarOwned(allocator, "ANTHROPIC_API_KEY") catch null;
+        const openai_key = tri_env.getEnvVarOwned(allocator, "OPENAI_API_KEY") catch null;
 
         // Build hybrid config with TVC + multi-provider + multi-modal (v2.1)
         const config = igla_hybrid_chat.HybridConfig{
@@ -399,6 +400,7 @@ pub const CLIState = struct {
 
         return Self{
             .allocator = allocator,
+            .io = io,
             .agent = try trinity_swe_agent_mod.TrinitySWEAgent.init(allocator),
             .chat_agent = chat,
             .coder = igla_coder.IglaLocalCoder.init(allocator),
@@ -1472,11 +1474,21 @@ pub fn runInteractiveMode(state: *CLIState) !void {
         var line_len: usize = 0;
         var eof_reached = false;
         while (line_len < buf.len - 1) {
-            const read_result = stdin_file.read(buf[line_len .. line_len + 1]) catch break;
-            if (read_result == 0) {
-                eof_reached = true;
-                break; // EOF
-            }
+            // 0.16 inverts this contract. `read` is gone; `readStreaming` is
+            // vectored (hence the slice-of-slices), it signals end-of-stream
+            // with error.EndOfStream, and it documents that returning 0 is a
+            // legitimate short read rather than EOF. The 0.15 loop below read
+            // exactly the opposite meaning out of both, so translating the
+            // call without translating the conditions would quietly turn every
+            // short read into an EOF.
+            const read_result = stdin_file.readStreaming(state.io, &.{buf[line_len .. line_len + 1]}) catch |err| switch (err) {
+                error.EndOfStream => {
+                    eof_reached = true;
+                    break;
+                },
+                else => break,
+            };
+            if (read_result == 0) continue; // short read, not EOF -- ask again
             if (buf[line_len] == '\n') break;
             line_len += 1;
         }

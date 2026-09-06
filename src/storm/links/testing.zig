@@ -2,6 +2,7 @@
 //! Unit tests and VSA verification
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const storm = @import("../golden_chain.zig");
 
 pub const unitTestLinkID = 10;
@@ -35,7 +36,7 @@ pub fn executeUnitTest(allocator: std.mem.Allocator, task: []const u8, file: []c
     const stderr = try allocator.dupe(u8, result.stderr.items);
     defer allocator.free(stderr);
 
-    const duration: u64 = @intCast(std.time.nanoTimestamp() - result.start_time);
+    const duration: u64 = @intCast(tri_time.nanoTimestamp() - result.start_time);
 
     const exit_code: u32 = switch (result.term) {
         .Exited => |code| code,
@@ -109,7 +110,7 @@ pub fn executeVsaVerify(allocator: std.mem.Allocator, task: []const u8, spec_fil
     const stderr = try allocator.dupe(u8, result.stderr.items);
     defer allocator.free(stderr);
 
-    const duration: u64 = @intCast(std.time.nanoTimestamp() - result.start_time);
+    const duration: u64 = @intCast(tri_time.nanoTimestamp() - result.start_time);
 
     const exit_code: u32 = switch (result.term) {
         .Exited => |code| code,
@@ -183,7 +184,7 @@ pub fn executeIntegrationTest(allocator: std.mem.Allocator, task: []const u8, co
     const stderr = try allocator.dupe(u8, result.stderr.items);
     defer allocator.free(stderr);
 
-    const duration: u64 = @intCast(std.time.nanoTimestamp() - result.start_time);
+    const duration: u64 = @intCast(tri_time.nanoTimestamp() - result.start_time);
 
     const exit_code: u32 = switch (result.term) {
         .Exited => |code| code,

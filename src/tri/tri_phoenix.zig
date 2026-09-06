@@ -15,6 +15,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const cell_parser = @import("ribosome.zig");
 const colors = @import("tri_colors.zig");
 
@@ -424,7 +425,7 @@ fn appendGenomeLog(allocator: Allocator, cell_dir: []const u8, cell_id: []const 
     // Seek to end for append
     file.seekFromEnd(0) catch {};
 
-    const ts = std.time.timestamp();
+    const ts = tri_time.timestamp();
     const status_str: []const u8 = switch (status) {
         .ok => "OK",
         .failed => "FAILED",

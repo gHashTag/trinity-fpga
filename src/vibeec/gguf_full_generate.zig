@@ -3,6 +3,7 @@
 // phi^2 + 1/phi^2 = 3 = TRINITY
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const gguf = @import("gguf_reader.zig");
 const model_mod = @import("gguf_model.zig");
 const inference = @import("gguf_inference.zig");
@@ -31,7 +32,7 @@ pub fn main() !void {
     model.printConfig();
 
     std.debug.print("\nLoading all weights (this may take a while)...\n", .{});
-    var timer = try std.time.Timer.start();
+    var timer = try tri_time.Timer.start();
 
     model.loadWeights() catch |err| {
         std.debug.print("Error loading weights: {}\n", .{err});

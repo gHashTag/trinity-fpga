@@ -12,6 +12,7 @@
 // =============================================================================
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const personality = @import("igla_personality_engine.zig");
 const learning = @import("igla_learning_engine.zig");
 const multilingual = @import("igla_multilingual_coder.zig");
@@ -399,7 +400,7 @@ pub const ToolExecutor = struct {
 
     /// Execute a tool call and return result
     pub fn execute(self: *Self, call: *const ToolCall) ToolResult {
-        const start = std.time.nanoTimestamp();
+        const start = tri_time.nanoTimestamp();
         self.total_executions += 1;
 
         const result = switch (call.tool_type) {
@@ -412,7 +413,7 @@ pub const ToolExecutor = struct {
             .WebFetch => self.executeWebFetch(call),
         };
 
-        const elapsed = std.time.nanoTimestamp() - start;
+        const elapsed = tri_time.nanoTimestamp() - start;
 
         if (result.success) {
             self.successful_executions += 1;
@@ -677,7 +678,7 @@ pub fn runBenchmark() !void {
     var successful_tools: usize = 0;
     var high_confidence: usize = 0;
 
-    const start = std.time.nanoTimestamp();
+    const start = tri_time.nanoTimestamp();
 
     for (session) |s| {
         const response = engine.respond(s.query);
@@ -697,7 +698,7 @@ pub fn runBenchmark() !void {
         engine.recordFeedback(s.feedback);
     }
 
-    const elapsed_ns = std.time.nanoTimestamp() - start;
+    const elapsed_ns = tri_time.nanoTimestamp() - start;
     const ops_per_sec = @as(f64, @floatFromInt(session.len)) / (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
 
     const stats = engine.getStats();

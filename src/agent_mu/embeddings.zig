@@ -4,6 +4,7 @@
 //! Provides O(log n) similarity search for pattern matching.
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const ArrayListManaged = std.array_list.Managed;
 const diagnostic = @import("diagnostic.zig");
 
@@ -250,7 +251,7 @@ test "HNSWIndex: insert and search" {
         .vector = embedding,
         .confidence = 1.0,
         .fix_type = .TYPE_FIX,
-        .timestamp = std.time.timestamp(),
+        .timestamp = tri_time.timestamp(),
     };
 
     try index.insert(allocator, &error_emb);

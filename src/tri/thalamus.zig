@@ -7,6 +7,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const hippocampus = @import("hippocampus.zig");
 const voice_engine = @import("voice_engine.zig");
@@ -36,7 +37,7 @@ pub const VerdictCounts = struct {
 pub fn getMuHeartbeat(allocator: Allocator) voice_engine.MuHeartbeat {
     if (hippocampus.latestHeartbeat(allocator, "phoenix") catch null) |hb| {
         if (hb.ts > 0) {
-            const now: u64 = @intCast(std.time.timestamp());
+            const now: u64 = @intCast(tri_time.timestamp());
             const age: i64 = @intCast(now -| hb.ts);
             if (age < FRESHNESS_THRESHOLD) {
                 // Parse hippocampus data fields
@@ -62,7 +63,7 @@ pub fn getMuHeartbeat(allocator: Allocator) voice_engine.MuHeartbeat {
 pub fn getScholarHeartbeat(allocator: Allocator) voice_engine.ScholarHeartbeat {
     if (hippocampus.latestHeartbeat(allocator, "scholar") catch null) |hb| {
         if (hb.ts > 0) {
-            const now: u64 = @intCast(std.time.timestamp());
+            const now: u64 = @intCast(tri_time.timestamp());
             const age: i64 = @intCast(now -| hb.ts);
             if (age < FRESHNESS_THRESHOLD) {
                 const d = hb.data();
@@ -524,7 +525,7 @@ pub fn getLastSleepInfo(allocator: Allocator) ?SleepInfo {
     // Get most recent SLEEP observation
     const rec = results.items[0];
     const d = rec.data();
-    const now: i64 = @intCast(std.time.timestamp());
+    const now: i64 = @intCast(tri_time.timestamp());
 
     return .{
         .timestamp = @as(i64, @intCast(rec.ts)),
@@ -570,7 +571,7 @@ pub const FarmStatus = struct {
 };
 
 pub fn getFarmStatus(allocator: Allocator) !FarmStatus {
-    var status = FarmStatus{ .timestamp = std.time.timestamp() };
+    var status = FarmStatus{ .timestamp = tri_time.timestamp() };
 
     // Read from evolution state
     const evo_file = std.fs.cwd().openFile(".trinity/evolution_state.json", .{}) catch return status;
@@ -643,7 +644,7 @@ pub const GitHubCache = struct {
     const TTL: i64 = 300; // 5 minutes
 
     pub fn get(self: *GitHubCache, allocator: Allocator) !GitHubIssues {
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
 
         // Return cached if fresh
         if (self.issues) |*cached| {
@@ -746,9 +747,9 @@ test "thalamus getFarmStatus returns defaults when file missing" {
 
 test "thalamus GitHubCache TTL works" {
     var cache = GitHubCache{};
-    const dummy_issues = GitHubIssues{ .open = 5, .timestamp = std.time.timestamp() };
+    const dummy_issues = GitHubIssues{ .open = 5, .timestamp = tri_time.timestamp() };
     cache.issues = dummy_issues;
-    cache.cached_ts = std.time.timestamp();
+    cache.cached_ts = tri_time.timestamp();
 
     // First get should return cached
     const result1 = try cache.get(std.testing.allocator);

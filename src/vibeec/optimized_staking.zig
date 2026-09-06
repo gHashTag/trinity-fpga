@@ -1,4 +1,5 @@
 const std = @import("std");
+const tri_time = @import("tri_time");
 const dao = @import("dao_integration.zig");
 
 // ============================================================================
@@ -102,7 +103,7 @@ pub const OptimizedStakingManager = struct {
             .amount = amount,
             .tier = tier,
             .latency_tier = latency_tier,
-            .start_time = std.time.timestamp(),
+            .start_time = tri_time.timestamp(),
             .base_apy = base_apy,
             .effective_apy = effective_apy,
         };
@@ -124,7 +125,7 @@ pub const OptimizedStakingManager = struct {
     /// Calculate rewards with auto-compound
     pub fn calculateRewards(self: *Self) f64 {
         var total: f64 = 0;
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
 
         for (self.stakes.items) |stake| {
             const duration_secs: f64 = @floatFromInt(now - stake.start_time);

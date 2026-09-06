@@ -17,6 +17,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const tri_exit_codes = @import("tri_exit_codes.zig");
 const Allocator = std.mem.Allocator;
 
@@ -280,7 +281,7 @@ pub const GcResult = struct {
 /// Garbage collect expired records
 pub fn gc(allocator: Allocator, agent_filter: ?[]const u8) !GcResult {
     var result = GcResult{};
-    const now_ts: u64 = @intCast(std.time.timestamp());
+    const now_ts: u64 = @intCast(tri_time.timestamp());
 
     if (agent_filter) |agent_name| {
         try gcAgent(allocator, agent_name, now_ts, &result);
@@ -304,7 +305,7 @@ pub fn gc(allocator: Allocator, agent_filter: ?[]const u8) !GcResult {
 
 pub fn writeHeartbeat(allocator: Allocator, agent_name: []const u8, data_json: []const u8) !void {
     var record = MemoryRecord{};
-    const ts: u64 = @intCast(std.time.timestamp());
+    const ts: u64 = @intCast(tri_time.timestamp());
     generateId(&record.id_buf, &record.id_len, ts, agent_name);
     copyToFixed(32, &record.agent_buf, &record.agent_len, agent_name);
     record.kind = .heartbeat;
@@ -321,7 +322,7 @@ pub fn writeHeartbeat(allocator: Allocator, agent_name: []const u8, data_json: [
 
 pub fn writeLearning(allocator: Allocator, agent_name: []const u8, summary_text: []const u8, data_json: []const u8) !void {
     var record = MemoryRecord{};
-    const ts: u64 = @intCast(std.time.timestamp());
+    const ts: u64 = @intCast(tri_time.timestamp());
     generateId(&record.id_buf, &record.id_len, ts, agent_name);
     copyToFixed(32, &record.agent_buf, &record.agent_len, agent_name);
     record.kind = .learning;
@@ -335,7 +336,7 @@ pub fn writeLearning(allocator: Allocator, agent_name: []const u8, summary_text:
 
 pub fn writeEpisode(allocator: Allocator, agent_name: []const u8, summary_text: []const u8, data_json: []const u8) !void {
     var record = MemoryRecord{};
-    const ts: u64 = @intCast(std.time.timestamp());
+    const ts: u64 = @intCast(tri_time.timestamp());
     generateId(&record.id_buf, &record.id_len, ts, agent_name);
     copyToFixed(32, &record.agent_buf, &record.agent_len, agent_name);
     record.kind = .episode;
@@ -349,7 +350,7 @@ pub fn writeEpisode(allocator: Allocator, agent_name: []const u8, summary_text: 
 
 pub fn writeError(allocator: Allocator, agent_name: []const u8, summary_text: []const u8, data_json: []const u8) !void {
     var record = MemoryRecord{};
-    const ts: u64 = @intCast(std.time.timestamp());
+    const ts: u64 = @intCast(tri_time.timestamp());
     generateId(&record.id_buf, &record.id_len, ts, agent_name);
     copyToFixed(32, &record.agent_buf, &record.agent_len, agent_name);
     record.kind = .@"error";
@@ -363,7 +364,7 @@ pub fn writeError(allocator: Allocator, agent_name: []const u8, summary_text: []
 
 pub fn writeObservation(allocator: Allocator, agent_name: []const u8, summary_text: []const u8, data_json: []const u8) !void {
     var record = MemoryRecord{};
-    const ts: u64 = @intCast(std.time.timestamp());
+    const ts: u64 = @intCast(tri_time.timestamp());
     generateId(&record.id_buf, &record.id_len, ts, agent_name);
     copyToFixed(32, &record.agent_buf, &record.agent_len, agent_name);
     record.kind = .observation;
@@ -419,7 +420,7 @@ pub fn writeCellHealth(allocator: Allocator, cell_data: CellHealthData) !void {
 
     // Create and write record
     var record = MemoryRecord{};
-    const ts: u64 = @intCast(std.time.timestamp());
+    const ts: u64 = @intCast(tri_time.timestamp());
     generateId(&record.id_buf, &record.id_len, ts, "cytoplasm");
     copyToFixed(32, &record.agent_buf, &record.agent_len, "cytoplasm");
     record.kind = .cellhealth;
@@ -440,7 +441,7 @@ pub fn writeCellHealth(allocator: Allocator, cell_data: CellHealthData) !void {
 
 /// Query cell health history for a specific cell
 pub fn getCellHistory(allocator: Allocator, cell_id: []const u8, days: u32) !std.ArrayList(MemoryRecord) {
-    const now = std.time.timestamp();
+    const now = tri_time.timestamp();
     const since_ts: u64 = @intCast(now - (@as(u64, days) * 24 * 3600));
 
     var records = try read(allocator, .{
@@ -549,7 +550,7 @@ pub const ParsedCellHealth = struct {
 /// Get all cell health records within the given time period
 /// Returns records sorted by timestamp (newest first)
 pub fn getAllCellHealth(allocator: Allocator, days: u32) !std.ArrayList(MemoryRecord) {
-    const now: i64 = std.time.timestamp();
+    const now: i64 = tri_time.timestamp();
     const seconds_back: i64 = @as(i64, days) * 24 * 3600;
     const since_ts: u64 = @intCast(@max(0, now - seconds_back));
 
@@ -563,7 +564,7 @@ pub fn getAllCellHealth(allocator: Allocator, days: u32) !std.ArrayList(MemoryRe
 
 pub fn writeRule(allocator: Allocator, agent_name: []const u8, summary_text: []const u8, data_json: []const u8) !void {
     var record = MemoryRecord{};
-    const ts: u64 = @intCast(std.time.timestamp());
+    const ts: u64 = @intCast(tri_time.timestamp());
     generateId(&record.id_buf, &record.id_len, ts, agent_name);
     copyToFixed(32, &record.agent_buf, &record.agent_len, agent_name);
     record.kind = .rule;
@@ -823,7 +824,7 @@ fn rotateFile(allocator: Allocator, agent_name: []const u8) !void {
     defer allocator.free(archive_dir);
     std.fs.cwd().makePath(archive_dir) catch {};
 
-    const ts: u64 = @intCast(std.time.timestamp());
+    const ts: u64 = @intCast(tri_time.timestamp());
     // Simple date: use ts / seconds_per_month approximation
     const days = ts / 86400;
     const approx_year = 1970 + days / 365;
@@ -985,7 +986,7 @@ fn runMemoryRead(allocator: Allocator, args: []const []const u8) !void {
 
 fn runMemoryWrite(allocator: Allocator, args: []const []const u8) !void {
     var record = MemoryRecord{};
-    const ts: u64 = @intCast(std.time.timestamp());
+    const ts: u64 = @intCast(tri_time.timestamp());
     record.ts = ts;
 
     var i: usize = 0;
@@ -1096,7 +1097,7 @@ fn runMemoryGc(allocator: Allocator, args: []const []const u8) !void {
 
     if (dry_run) {
         // Just count expired records
-        const now_ts: u64 = @intCast(std.time.timestamp());
+        const now_ts: u64 = @intCast(tri_time.timestamp());
         var result = GcResult{};
 
         var all = try read(allocator, .{ .agent = agent_filter, .limit = 100000 });
@@ -1186,7 +1187,7 @@ fn runMemoryDashboard(allocator: Allocator) !void {
     };
     defer dir.close();
 
-    const now_ts: u64 = @intCast(std.time.timestamp());
+    const now_ts: u64 = @intCast(tri_time.timestamp());
 
     print("\n{s}  Agent         ROLE     Records   Last Active{s}\n", .{ BOLD, RESET });
     print("{s}  ─────────────────────────────────────────────{s}\n", .{ DIM, RESET });
@@ -1255,7 +1256,7 @@ fn runMemoryConsolidate(allocator: Allocator) !void {
     print("\n{s}🧠 HIPPOCAMPUS CONSOLIDATION{s}\n", .{ BOLD, RESET });
     print("{s}═══════════════════════════════════════════════════════════{s}\n\n", .{ DIM, RESET });
 
-    const now_ts: u64 = @intCast(std.time.timestamp());
+    const now_ts: u64 = @intCast(tri_time.timestamp());
     const week_ago = now_ts -| (7 * 24 * 3600);
 
     // Read all episodes older than 7 days
@@ -1402,7 +1403,7 @@ fn importArenaBattles(allocator: Allocator) !void {
 
         // Create temp record for hash check
         var temp_rec: MemoryRecord = undefined;
-        const ts: u64 = @intCast(std.time.timestamp());
+        const ts: u64 = @intCast(tri_time.timestamp());
         temp_rec.ts = ts;
         copyToFixed(32, &temp_rec.agent_buf, &temp_rec.agent_len, "arena");
         copyToFixed(256, &temp_rec.summary_buf, &temp_rec.summary_len, try std.fmt.allocPrint(allocator, "arena: {s} vs {s} → {s}", .{ winner, loser, result }));
@@ -2155,7 +2156,7 @@ test "getCellHistory time calculation" {
 test "getCellHistory uses correct filters" {
     const days: u32 = 30;
 
-    const now = std.time.timestamp();
+    const now = tri_time.timestamp();
     const since_ts: u64 = @intCast(@max(0, now - @as(i64, days) * 24 * 3600));
 
     const opts = ReadOptions{
@@ -2174,7 +2175,7 @@ test "getCellHistory uses correct filters" {
 
 test "getAllCellHealth time window" {
     const days: u32 = 90;
-    const now: i64 = std.time.timestamp();
+    const now: i64 = tri_time.timestamp();
     const seconds_back: i64 = @as(i64, days) * 24 * 3600;
     const since_ts: u64 = @intCast(@max(0, now - seconds_back));
 

@@ -14,6 +14,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const colors = @import("tri_colors.zig");
 const dev_scan = @import("dev_scan.zig");
 const tri_experience = @import("tri_experience.zig");
@@ -122,7 +123,7 @@ fn loadScanResults() ?dev_scan.ScanResult {
     if (stat.size < 10) return null;
 
     // Check staleness: >1h old = stale
-    const now = std.time.timestamp();
+    const now = tri_time.timestamp();
     const mtime: i64 = @intCast(@divTrunc(stat.mtime, std.time.ns_per_s));
     if (now - mtime > 3600) return null;
 
@@ -367,7 +368,7 @@ pub fn pickRandom(result: *const dev_scan.ScanResult) PickResult {
     }
 
     // Simple "random" based on timestamp
-    const ts: u64 = @intCast(std.time.timestamp());
+    const ts: u64 = @intCast(tri_time.timestamp());
     const idx = ts % cand_count;
     pick.chosen_idx = candidates[idx];
     pick.final_score = baseScore(result.items[pick.chosen_idx].priority);
@@ -524,7 +525,7 @@ fn savePickResult(result: *const dev_scan.ScanResult, pick: *const PickResult) v
 
     const chosen = &result.items[pick.chosen_idx];
     const score_int: u32 = @intFromFloat(pick.final_score);
-    const timestamp = std.time.timestamp();
+    const timestamp = tri_time.timestamp();
 
     // Manual JSON string escaping (Zig 0.15 doesn't have jsonEscape)
     var id_escaped: [128]u8 = undefined;

@@ -10,6 +10,7 @@
 // =============================================================================
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const golden_chain = @import("dna_polymerase.zig");
 
 // =============================================================================
@@ -207,7 +208,7 @@ fn saveEvalRun(allocator: std.mem.Allocator, run_id: []const u8, issues: []const
     var json_buf: [1024]u8 = undefined;
     const json = std.fmt.bufPrint(&json_buf, "{{\"run_id\":\"{s}\",\"timestamp\":{d},\"issues\":\"{s}\",\"status\":\"queued\"}}\n", .{
         run_id,
-        std.time.timestamp(),
+        tri_time.timestamp(),
         issues,
     }) catch return error.PathTooLong;
     try file.writeAll(json);
@@ -216,7 +217,7 @@ fn saveEvalRun(allocator: std.mem.Allocator, run_id: []const u8, issues: []const
 }
 
 fn generateRunId(allocator: std.mem.Allocator) ![]const u8 {
-    const ts = std.time.timestamp();
+    const ts = tri_time.timestamp();
     return std.fmt.allocPrint(allocator, "eval_{d}", .{ts});
 }
 

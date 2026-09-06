@@ -8,6 +8,7 @@
 // ============================================================================
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const task_decomposer = @import("task_decomposer.zig");
 
@@ -213,7 +214,7 @@ fn runDecompose(allocator: Allocator, args: []const []const u8) !void {
         if (exited_ok) {
             created += 1;
             // Extract issue URL from stdout
-            const url = std.mem.trimRight(u8, result.stdout, "\n\r ");
+            const url = std.mem.trimEnd(u8, result.stdout, "\n\r ");
             std.debug.print("    {s}✅ Created: {s}{s}\n", .{ GREEN, url, RESET });
         } else {
             std.debug.print("    {s}❌ Failed: {s}{s}\n", .{ RED, result.stderr[0..@min(result.stderr.len, 200)], RESET });
@@ -462,7 +463,7 @@ fn runLog(allocator: Allocator) !void {
 
     // Read today's protocol file
     var date_buf: [32]u8 = undefined;
-    const timestamp = std.time.timestamp();
+    const timestamp = tri_time.timestamp();
     const epoch_day = @divFloor(timestamp, 86400);
     const date_str = std.fmt.bufPrint(&date_buf, ".trinity/protocol/{d}.jsonl", .{epoch_day}) catch {
         std.debug.print("  {s}No protocol log for today{s}\n\n", .{ GRAY, RESET });
@@ -544,7 +545,7 @@ fn runEscalate(allocator: Allocator, args: []const []const u8) !void {
     for (result.stdout, 0..) |c, i| {
         if (c == '\n' or i == result.stdout.len - 1) {
             const line = result.stdout[line_start..if (c == '\n') i else i + 1];
-            const trimmed = std.mem.trimRight(u8, line, "\r\n ");
+            const trimmed = std.mem.trimEnd(u8, line, "\r\n ");
             if (AgentRole.fromLabel(trimmed)) |role| {
                 current_agent = role;
             }
@@ -646,7 +647,7 @@ fn ghGetIssueTitle(allocator: Allocator, issue_num: []const u8, buf: []u8) ![]co
         else => @as(u32, 1),
     }) != 0) return error.ProcessFailed;
 
-    const title = std.mem.trimRight(u8, result.stdout, "\n\r ");
+    const title = std.mem.trimEnd(u8, result.stdout, "\n\r ");
     const len = @min(title.len, buf.len);
     @memcpy(buf[0..len], title[0..len]);
     return buf[0..len];
@@ -756,7 +757,7 @@ fn runSync(allocator: Allocator) !void {
     // Write updated swarm_state.json with real issue counts
     // Keep existing agents, update task list from GitHub
     var buf: [4096]u8 = undefined;
-    const now_ms = @as(u64, @intCast(std.time.milliTimestamp()));
+    const now_ms = @as(u64, @intCast(tri_time.milliTimestamp()));
     const state_json = std.fmt.bufPrint(&buf,
         \\{{"id_counter":{d},"agents":[
         \\{{"id":"ralph","hostname":"mac-local","status":"idle","paused":false,"task_id":"","branch":"main","hb_ms":{d},"reg_ms":{d},"tasks_done":0,"tasks_failed":0,"no_progress":0,"sha":""}},

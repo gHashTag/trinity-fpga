@@ -13,6 +13,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const tri_commands = @import("tri_commands.zig");
 
 const NodeTier = tri_commands.NodeTier;
@@ -33,7 +34,7 @@ fn createMockNode(allocator: std.mem.Allocator, id: []const u8, tier: NodeTier) 
         .earned_tri = 0.1,
         .pending_tri = 0.05,
         .tier = tier,
-        .added_at = @intCast(@divTrunc(std.time.nanoTimestamp(), 1_000_000)),
+        .added_at = @intCast(@divTrunc(tri_time.nanoTimestamp(), 1_000_000)),
     };
 }
 
@@ -248,13 +249,13 @@ test "MultiCluster: benchmark state persistence" {
 
     // Benchmark 1: Cluster creation (1000 iterations)
     {
-        const start = std.time.nanoTimestamp();
+        const start = tri_time.nanoTimestamp();
         var i: usize = 0;
         while (i < 1000) : (i += 1) {
             var cluster = try ClusterState.init(allocator, 9334, 9333);
             cluster.deinit();
         }
-        const elapsed = std.time.nanoTimestamp() - start;
+        const elapsed = tri_time.nanoTimestamp() - start;
         const avg_ns = @divTrunc(elapsed, 1000);
         std.debug.print("  Cluster creation (1000x): {d:.2} μs avg ({d:.0} ops/s)\n", .{ @as(f64, @floatFromInt(avg_ns)) / 1000.0, 1_000_000_000_000 / @max(1, elapsed) });
     }
@@ -264,7 +265,7 @@ test "MultiCluster: benchmark state persistence" {
         var cluster = try ClusterState.init(allocator, 9334, 9333);
         defer cluster.deinit();
 
-        const start = std.time.nanoTimestamp();
+        const start = tri_time.nanoTimestamp();
         var i: usize = 0;
         while (i < 200) : (i += 1) {
             const node_id = try std.fmt.allocPrint(allocator, "node-{d}", .{i});
@@ -284,7 +285,7 @@ test "MultiCluster: benchmark state persistence" {
             };
             try cluster.addNode(allocator, node);
         }
-        const elapsed = std.time.nanoTimestamp() - start;
+        const elapsed = tri_time.nanoTimestamp() - start;
         const avg_ns = @divTrunc(elapsed, 200);
         std.debug.print("  Add node (200x): {d:.2} μs avg ({d:.0} ops/s)\n", .{ @as(f64, @floatFromInt(avg_ns)) / 1000.0, 200_000_000_000 / @max(1, elapsed) });
     }
@@ -306,14 +307,14 @@ test "MultiCluster: benchmark state persistence" {
         };
         const base_reward: f64 = 0.001;
 
-        const start = std.time.nanoTimestamp();
+        const start = tri_time.nanoTimestamp();
         var i: usize = 0;
         while (i < 100000) : (i += 1) {
             const result = node.calculateReward(base_reward);
             if (result > 1000) {} // prevent optimization
             else {}
         }
-        const elapsed = std.time.nanoTimestamp() - start;
+        const elapsed = tri_time.nanoTimestamp() - start;
         const avg_ns = @divTrunc(elapsed, 100000);
         std.debug.print("  Tier reward calc (100000x): {d:.2} ns avg ({d:.0} ops/s)\n", .{ @as(f64, @floatFromInt(avg_ns)), 100_000_000_000_000 / @max(1, elapsed) });
     }
@@ -345,13 +346,13 @@ test "MultiCluster: benchmark state persistence" {
             try cluster.addNode(allocator, node);
         }
 
-        const start = std.time.nanoTimestamp();
+        const start = tri_time.nanoTimestamp();
         var i: usize = 0;
         while (i < 10000) : (i += 1) {
             const result = cluster.calculateTotalPending();
             if (result > 1000) {} else {}
         }
-        const elapsed = std.time.nanoTimestamp() - start;
+        const elapsed = tri_time.nanoTimestamp() - start;
         const avg_ns = @divTrunc(elapsed, 10000);
         std.debug.print("  Pending calc (10000x): {d:.2} ns avg ({d:.0} ops/s)\n", .{ @as(f64, @floatFromInt(avg_ns)), 10_000_000_000_000 / @max(1, elapsed) });
     }
@@ -383,13 +384,13 @@ test "MultiCluster: benchmark state persistence" {
             try cluster.addNode(allocator, node);
         }
 
-        const start = std.time.nanoTimestamp();
+        const start = tri_time.nanoTimestamp();
         var i: usize = 0;
         while (i < 10000) : (i += 1) {
             const result = cluster.claimAllPending();
             if (result > 1000) {} else {}
         }
-        const elapsed = std.time.nanoTimestamp() - start;
+        const elapsed = tri_time.nanoTimestamp() - start;
         const avg_ns = @divTrunc(elapsed, 10000);
         std.debug.print("  Claim rewards (10000x): {d:.2} ns avg ({d:.0} ops/s)\n", .{ @as(f64, @floatFromInt(avg_ns)), 10_000_000_000_000 / @max(1, elapsed) });
     }
@@ -421,12 +422,12 @@ test "MultiCluster: benchmark state persistence" {
             try cluster.addNode(allocator, node);
         }
 
-        const start = std.time.nanoTimestamp();
+        const start = tri_time.nanoTimestamp();
         var i: usize = 0;
         while (i < 100) : (i += 1) {
             try cluster.saveClusterState();
         }
-        const elapsed = std.time.nanoTimestamp() - start;
+        const elapsed = tri_time.nanoTimestamp() - start;
         const avg_ns = @divTrunc(elapsed, 100);
         std.debug.print("  Save state (100x): {d:.2} μs avg ({d:.0} ops/s)\n", .{ @as(f64, @floatFromInt(avg_ns)) / 1000.0, 100_000_000_000 / @max(1, elapsed) });
     }

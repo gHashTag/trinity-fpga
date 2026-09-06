@@ -11,6 +11,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 // Import brain regions for metrics collection
 const basal_ganglia = @import("basal_ganglia");
 const reticular_formation = @import("reticular_formation");
@@ -91,7 +92,7 @@ pub const Metric = struct {
             .metric_type = metric_type,
             .value = value,
             .labels = std.StringHashMap([]const u8).init(allocator),
-            .timestamp = std.time.milliTimestamp(),
+            .timestamp = tri_time.milliTimestamp(),
         };
     }
 
@@ -199,7 +200,7 @@ pub const ObservabilityExporter = struct {
     /// Helper to export Prometheus format from dashboard
     fn exportPrometheusFromMetrics(self: *const Self, writer: anytype, dashboard: *const metrics_dashboard.AggregateMetrics) !void {
         try writer.writeAll("# S³AI Brain Observability Export\n");
-        try writer.print("# Generated at: {d}\n", .{std.time.milliTimestamp()});
+        try writer.print("# Generated at: {d}\n", .{tri_time.milliTimestamp()});
 
         // Overall health
         try writer.print("# HELP s3ai_brain_health_score Overall brain health (0-100)\n", .{});
@@ -225,7 +226,7 @@ pub const ObservabilityExporter = struct {
     /// Helper to export JSON format from dashboard
     fn exportJsonFromMetrics(self: *const Self, writer: anytype, dashboard: *const metrics_dashboard.AggregateMetrics) !void {
         try writer.writeAll("{\n");
-        try writer.print("  \"timestamp\": {d},\n", .{std.time.milliTimestamp()});
+        try writer.print("  \"timestamp\": {d},\n", .{tri_time.milliTimestamp()});
         try writer.print("  \"service\": \"{s}\",\n", .{self.service_name});
         try writer.print("  \"overall_health\": {d:.1},\n", .{dashboard.overall_health});
         try writer.writeAll("  \"regions\": [\n");
@@ -255,7 +256,7 @@ pub const ObservabilityExporter = struct {
 
     /// Export OpenTelemetry JSON format from dashboard
     fn exportOpenTelemetryFromMetrics(self: *const Self, writer: anytype, dashboard: *const metrics_dashboard.AggregateMetrics) !void {
-        const timestamp_ms = std.time.milliTimestamp();
+        const timestamp_ms = tri_time.milliTimestamp();
 
         try writer.writeAll("{\n");
         try writer.print("  \"resourceMetrics\": [\n", .{});

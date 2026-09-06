@@ -3,6 +3,7 @@
 //! Records successful fixes and unfixable errors to Ralph memory files.
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const ArrayListManaged = std.array_list.Managed;
 const diagnostic = @import("diagnostic.zig");
 
@@ -141,7 +142,7 @@ pub fn logRegression(
 
 /// Get current timestamp in ISO 8601 format
 fn getTimestamp(allocator: std.mem.Allocator) ![]const u8 {
-    const timestamp = std.time.timestamp();
+    const timestamp = tri_time.timestamp();
 
     // Convert to broken-down time
     var epoch: std.time.epoch.EpochSeconds = .{ .secs = @intCast(timestamp) };

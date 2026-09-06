@@ -13,6 +13,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayListUnmanaged;
 const StringHashMap = std.StringHashMapUnmanaged;
@@ -196,8 +197,8 @@ pub const Workflow = struct {
     variables: StringHashMap(WorkflowVariable) = StringHashMap(WorkflowVariable).init(std.testing.allocator),
     steps: ArrayList(WorkflowStep) = ArrayList(WorkflowStep).init(std.testing.allocator),
     version: []const u8 = "1.0.0",
-    created_at: i64 = std.time.timestamp(),
-    updated_at: i64 = std.time.timestamp(),
+    created_at: i64 = tri_time.timestamp(),
+    updated_at: i64 = tri_time.timestamp(),
 
     pub fn init(allocator: Allocator) Workflow {
         return Workflow{
@@ -283,7 +284,7 @@ pub const StepExecutionState = struct {
 
     pub fn duration(self: *const StepExecutionState) ?u64 {
         if (self.start_time) |start| {
-            const end = self.end_time orelse std.time.timestamp();
+            const end = self.end_time orelse tri_time.timestamp();
             return @intCast(end - start);
         }
         return null;
@@ -306,7 +307,7 @@ pub const ExecutionState = struct {
     error_msg: ?[]const u8 = null,
     progress: f32 = 0.0,
     paused_at: ?i64 = null,
-    created_at: i64 = std.time.timestamp(),
+    created_at: i64 = tri_time.timestamp(),
 
     pub const LogEntry = struct {
         timestamp: i64,
@@ -374,7 +375,7 @@ pub const ExecutionState = struct {
 
     pub fn duration(self: *const ExecutionState) ?u64 {
         if (self.start_time) |start| {
-            const end = self.end_time orelse std.time.timestamp();
+            const end = self.end_time orelse tri_time.timestamp();
             return @intCast(end - start);
         }
         return null;
@@ -382,7 +383,7 @@ pub const ExecutionState = struct {
 
     pub fn addLog(self: *ExecutionState, level: LogEntry.LogLevel, message: []const u8, step_id: ?[]const u8) !void {
         const log = LogEntry{
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
             .level = level,
             .message = try self.allocator.dupe(u8, message),
             .step_id = if (step_id) |sid| try self.allocator.dupe(u8, sid) else null,
@@ -760,14 +761,14 @@ test "StepExecutionState duration calculation" {
     try std.testing.expect(state.duration() == null);
 
     // Test with start time but no end time
-    state.start_time = std.time.timestamp() - 5000;
+    state.start_time = tri_time.timestamp() - 5000;
     try std.testing.expect(state.duration() != null);
     if (state.duration()) |duration| {
         try std.testing.expect(duration >= 4000); // Allow small margin
     }
 
     // Test with both start and end times
-    state.end_time = std.time.timestamp();
+    state.end_time = tri_time.timestamp();
     if (state.duration()) |duration| {
         try std.testing.expect(duration >= 4000);
     }

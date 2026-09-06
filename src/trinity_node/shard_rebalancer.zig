@@ -6,6 +6,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const storage_mod = @import("storage.zig");
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -185,7 +186,7 @@ pub const ShardRebalancer = struct {
         }
 
         self.shards_rebalanced += rebalanced;
-        self.last_rebalance_time = std.time.timestamp();
+        self.last_rebalance_time = tri_time.timestamp();
 
         return rebalanced;
     }
@@ -203,7 +204,7 @@ pub const ShardRebalancer = struct {
 
     /// Check if rebalance is needed
     pub fn shouldRebalance(self: *ShardRebalancer) bool {
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
         return (now - self.last_rebalance_time) >= self.rebalance_interval_secs;
     }
 

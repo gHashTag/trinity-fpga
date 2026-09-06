@@ -3,6 +3,7 @@
 // All pipeline steps return symbolic-only responses (no network calls)
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const igla_hybrid = @import("igla_hybrid_chat");
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -4171,23 +4172,23 @@ pub const GoldenChainAgent = struct {
     // v2.8: DAO Full Governance v1.0 — Delegation + Time-locked Voting + Yield Farming
     pub fn delegateVotingPower(self: *Self) void {
         self.dao_delegation_state.active_delegations += 1;
-        self.dao_delegation_state.last_delegation_us = std.time.microTimestamp();
+        self.dao_delegation_state.last_delegation_us = tri_time.microTimestamp();
         self.dao_governance_v2_active = true;
     }
 
     pub fn castTimelockVote(self: *Self) void {
         self.timelock_voting_state.votes_cast += 1;
-        self.timelock_voting_state.last_vote_us = std.time.microTimestamp();
+        self.timelock_voting_state.last_vote_us = tri_time.microTimestamp();
     }
 
     pub fn executeProposal(self: *Self) void {
         self.proposal_execution_state.proposals_executed += 1;
-        self.proposal_execution_state.last_execution_us = std.time.microTimestamp();
+        self.proposal_execution_state.last_execution_us = tri_time.microTimestamp();
     }
 
     pub fn distributeYield(self: *Self) void {
         self.yield_farming_state.farming_epochs += 1;
-        self.yield_farming_state.last_yield_us = std.time.microTimestamp();
+        self.yield_farming_state.last_yield_us = tri_time.microTimestamp();
     }
 
     pub fn daoGovernanceVerify(self: *const Self) bool {
@@ -4203,23 +4204,23 @@ pub const GoldenChainAgent = struct {
     // v2.9: Cross-Chain Bridge v1.0 — Atomic Swaps + Multi-Chain State Replication
     pub fn initCrossChainBridge(self: *Self) void {
         self.cross_chain_bridge_state.active_bridges += 1;
-        self.cross_chain_bridge_state.last_bridge_us = std.time.microTimestamp();
+        self.cross_chain_bridge_state.last_bridge_us = tri_time.microTimestamp();
         self.cross_chain_bridge_active = true;
     }
 
     pub fn executeAtomicSwap(self: *Self) void {
         self.atomic_swap_state.completed_swaps += 1;
-        self.atomic_swap_state.last_swap_us = std.time.microTimestamp();
+        self.atomic_swap_state.last_swap_us = tri_time.microTimestamp();
     }
 
     pub fn replicateState(self: *Self) void {
         self.state_replication_state.replicated_states += 1;
-        self.state_replication_state.last_replication_us = std.time.microTimestamp();
+        self.state_replication_state.last_replication_us = tri_time.microTimestamp();
     }
 
     pub fn relayBridgeMessage(self: *Self) void {
         self.bridge_relay_state.messages_relayed += 1;
-        self.bridge_relay_state.last_relay_us = std.time.microTimestamp();
+        self.bridge_relay_state.last_relay_us = tri_time.microTimestamp();
     }
 
     pub fn crossChainVerify(self: *const Self) bool {

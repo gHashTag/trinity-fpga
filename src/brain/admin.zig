@@ -18,6 +18,7 @@
 //! Safety: All destructive operations require explicit confirmation
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const fs = std.fs;
 const mem = std.mem;
 
@@ -175,7 +176,7 @@ pub const AdminManager = struct {
 
     /// Run diagnostic checks on brain components
     pub fn doctor(self: *Self) !DiagnosticReport {
-        const start = std.time.nanoTimestamp();
+        const start = tri_time.nanoTimestamp();
         var checks = std.ArrayList(DiagnosticCheck).init(self.allocator);
 
         // Check 1: Basal Ganglia (Task Claims)
@@ -351,19 +352,19 @@ pub const AdminManager = struct {
         else
             DiagnosticStatus.healthy;
 
-        _ = std.time.nanoTimestamp() - start; // Track diagnostic duration
+        _ = tri_time.nanoTimestamp() - start; // Track diagnostic duration
 
         return DiagnosticReport{
             .overall_status = overall_status,
             .checks = try checks.toOwnedSlice(),
-            .timestamp = std.time.milliTimestamp(),
+            .timestamp = tri_time.milliTimestamp(),
             .brain_version = "5.1.0",
         };
     }
 
     /// Prune old events and expired claims
     pub fn prune(self: *Self) !PruneStats {
-        const start = std.time.nanoTimestamp();
+        const start = tri_time.nanoTimestamp();
         var stats = PruneStats{
             .expired_claims = 0,
             .old_events = 0,
@@ -412,7 +413,7 @@ pub const AdminManager = struct {
             stats.old_backups = before_backups - after_backups;
         }
 
-        stats.duration_ms = @intCast((std.time.nanoTimestamp() - start) / 1_000_000);
+        stats.duration_ms = @intCast((tri_time.nanoTimestamp() - start) / 1_000_000);
 
         if (stats.expired_claims == 0 and stats.old_backups == 0) {
             return AdminError.NothingToPrune;
@@ -423,7 +424,7 @@ pub const AdminManager = struct {
 
     /// Create backup of current state
     pub fn backup(self: *Self, name: ?[]const u8) ![]const u8 {
-        const timestamp = std.time.timestamp();
+        const timestamp = tri_time.timestamp();
         const backup_name = if (name) |n|
             try std.fmt.allocPrint(self.allocator, "{s}_{d}", .{ n, timestamp })
         else
@@ -902,7 +903,7 @@ test "AdminManager doctor - all checks" {
     try std.testing.expect(report.brain_version.len > 0);
 
     // Verify timestamp is recent (within last minute)
-    const now = std.time.milliTimestamp();
+    const now = tri_time.milliTimestamp();
     const age_ms = now - report.timestamp;
     try std.testing.expect(age_ms >= 0 and age_ms < 60_000);
 }
@@ -972,7 +973,7 @@ test "AdminManager prune - with expired claims" {
     registry.mutex.lock();
     defer registry.mutex.unlock();
 
-    const now_ms = std.time.timestamp() * 1000;
+    const now_ms = tri_time.timestamp() * 1000;
     const expired_claim = basal_ganglia.TaskClaim{
         .task_id = try allocator.dupe(u8, "test_task_expired"),
         .agent_id = try allocator.dupe(u8, "test_agent"),

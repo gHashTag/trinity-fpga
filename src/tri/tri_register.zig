@@ -347,11 +347,22 @@ const execute_map = [_]ExecuteEntry{
     }.f },
 
     // ── VIBEE / Dev ──
-    .{ .name = "gen", .execute = struct {
-        fn f(a: std.mem.Allocator, args: []const []const u8) !void {
-            return commands.runGenCommand(a, args);
-        }
-    }.f },
+    .{
+        .name = "gen",
+        .execute = struct {
+            fn f(a: std.mem.Allocator, args: []const []const u8) !void {
+                // Same reason as forge-bench below: runGenCommand needs an Io in
+                // 0.16 and CommandFn has no slot for one, so take the process's
+                // Io off CLIState, which registerAllCommands installs before any
+                // dispatch happens.
+                const state = g_state orelse {
+                    std.debug.print("Error: CLIState not initialized\n", .{});
+                    return;
+                };
+                return commands.runGenCommand(state.io, a, args);
+            }
+        }.f,
+    },
     .{ .name = "convert", .execute = struct {
         fn f(_: std.mem.Allocator, args: []const []const u8) !void {
             return commands.runConvertCommand(args);
@@ -1208,12 +1219,22 @@ const execute_map = [_]ExecuteEntry{
             return tri_zenodo.runZenodoCommand(a, args);
         }
     }.f },
-    .{ .name = "forge-bench", .execute = struct {
-        fn f(a: std.mem.Allocator, args: []const []const u8) !void {
-            _ = args;
-            return runForgeBenchCommand(a);
-        }
-    }.f },
+    .{
+        .name = "forge-bench",
+        .execute = struct {
+            fn f(a: std.mem.Allocator, args: []const []const u8) !void {
+                _ = args;
+                // The FORGE binary probe needs an Io in 0.16, and CommandFn has no
+                // slot for one; take the process's Io off CLIState, which
+                // registerAllCommands installs before any dispatch happens.
+                const state = g_state orelse {
+                    std.debug.print("Error: CLIState not initialized\n", .{});
+                    return;
+                };
+                return runForgeBenchCommand(state.io, a);
+            }
+        }.f,
+    },
     .{ .name = "forge-verdict", .execute = struct {
         fn f(a: std.mem.Allocator, args: []const []const u8) !void {
             return runForgeVerdictCommand(a, args);
@@ -1516,8 +1537,8 @@ pub fn runCommand(allocator: std.mem.Allocator, name: []const u8, args: []const 
 }
 
 /// Run forge-bench command - FORGE regression suite
-fn runForgeBenchCommand(allocator: std.mem.Allocator) !void {
-    const forge_bin = findForgeBinary(allocator) orelse {
+fn runForgeBenchCommand(io: std.Io, allocator: std.mem.Allocator) !void {
+    const forge_bin = findForgeBinary(io, allocator) orelse {
         std.debug.print("{s}Error:{s} FORGE binary not found. Run 'zig build forge' first.\n", .{ RED, RESET });
         return error.ForgeNotFound;
     };
@@ -1655,14 +1676,14 @@ fn runForgeVerdictCommand(allocator: std.mem.Allocator, args: []const []const u8
 }
 
 /// Helper: find FORGE binary
-fn findForgeBinary(allocator: std.mem.Allocator) ?[]const u8 {
+fn findForgeBinary(io: std.Io, allocator: std.mem.Allocator) ?[]const u8 {
     const paths = [_][]const u8{
         "zig-out/bin/forge",
         "./zig-out/bin/forge",
     };
 
     for (paths) |path| {
-        if (std.fs.cwd().access(path, .{})) |_| {
+        if (std.Io.Dir.cwd().access(io, path, .{})) |_| {
             return allocator.dupe(u8, path) catch return null;
         } else |_| continue;
     }

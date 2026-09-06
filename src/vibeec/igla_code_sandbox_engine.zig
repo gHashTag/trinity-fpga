@@ -13,6 +13,7 @@
 // =============================================================================
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const multi_agent = @import("igla_multi_agent_engine.zig");
 const learning = @import("igla_learning_engine.zig");
 
@@ -349,7 +350,7 @@ pub const SandboxExecutor = struct {
         }
 
         // Simulate execution based on language
-        const start = std.time.nanoTimestamp();
+        const start = tri_time.nanoTimestamp();
 
         const result = switch (language) {
             .Zig => self.executeZig(code),
@@ -359,7 +360,7 @@ pub const SandboxExecutor = struct {
             .Unknown => ExecutionResult.failure(.LanguageNotSupported, "Unknown", language),
         };
 
-        const elapsed = std.time.nanoTimestamp() - start;
+        const elapsed = tri_time.nanoTimestamp() - start;
 
         if (result.isSuccess()) {
             self.successful += 1;
@@ -750,7 +751,7 @@ pub fn runBenchmark() void {
     var success_count: usize = 0;
     var security_blocked: usize = 0;
 
-    const start = std.time.nanoTimestamp();
+    const start = tri_time.nanoTimestamp();
 
     for (scenarios) |s| {
         const response = engine.respond(s.query);
@@ -771,7 +772,7 @@ pub fn runBenchmark() void {
         engine.recordFeedback(s.feedback);
     }
 
-    const elapsed_ns = std.time.nanoTimestamp() - start;
+    const elapsed_ns = tri_time.nanoTimestamp() - start;
     const ops_per_sec = @as(f64, @floatFromInt(scenarios.len)) / (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
 
     const stats = engine.getStats();

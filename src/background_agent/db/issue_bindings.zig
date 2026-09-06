@@ -2,6 +2,7 @@
 //! φ² + 1/φ² = 3 | TRINITY
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 
 /// Issue binding structure
@@ -120,7 +121,7 @@ pub fn saveBindings(allocator: Allocator, bindings_file: *BindingsFile) !void {
 
     try root_obj.put("bindings", std.json.Value{ .array = bindings.toOwnedSlice() });
     try root_obj.put("version", std.json.Value{ .string = bindings_file.version });
-    try root_obj.put("last_updated", std.json.Value{ .integer = std.time.timestamp() });
+    try root_obj.put("last_updated", std.json.Value{ .integer = tri_time.timestamp() });
 
     const json_string = try std.json.stringifyAlloc(allocator, std.json.Value{ .object = root_obj }, .{ .whitespace = .indent });
     defer allocator.free(json_string);

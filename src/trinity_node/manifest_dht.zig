@@ -6,6 +6,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const storage_discovery = @import("storage_discovery.zig");
 const protocol = @import("protocol.zig");
 
@@ -258,7 +259,7 @@ test "ManifestDHT findResponsiblePeers ordering" {
             .available_bytes = 1024 * 1024,
             .total_bytes = 10 * 1024 * 1024,
             .shard_count = 0,
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
         };
         registry.updateFromAnnounce(announce, addr);
     }

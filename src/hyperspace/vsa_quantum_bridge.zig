@@ -16,6 +16,7 @@
 //! - Hypervector dimension D = 1024 (power of 2 for efficient operations)
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const math = std.math;
 
 // Import VSA core functions
@@ -348,7 +349,7 @@ pub const QuantumVSABridge = struct {
         var result = try hv.clone();
 
         // Get qutrit state from hypervector (via measurement)
-        var rng = std.Random.DefaultPrng.init(@intCast(std.time.nanoTimestamp()));
+        var rng = std.Random.DefaultPrng.init(@intCast(tri_time.nanoTimestamp()));
         const measured_trit = measureQutritFromHypervector(hv, &rng);
 
         // Apply gate transformation
@@ -377,7 +378,7 @@ pub const QuantumVSABridge = struct {
 
         // "Entangle" qutrit amplitudes with hypervector
         // Each trit value appears proportionally to its amplitude
-        var rng = std.Random.DefaultPrng.init(@intCast(std.time.nanoTimestamp()));
+        var rng = std.Random.DefaultPrng.init(@intCast(tri_time.nanoTimestamp()));
 
         for (0..HYPERVECTOR_DIM) |i| {
             const rand_val = rng.random().float(f64);

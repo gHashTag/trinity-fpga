@@ -9,6 +9,7 @@
 //! - PHI LOOP → tracks spawn events in consciousness chain
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const cluster = @import("cluster.zig");
 const mcp_nexus = @import("../agent_mu/mcp_nexus.zig");
 const sub_agent_orchestrator = @import("../agent_mu/sub_agent_orchestrator.zig");
@@ -110,7 +111,7 @@ pub const AutonomousSpawner = struct {
     pub fn handleSpawnRequest(self: *AutonomousSpawner, request: SpawnRequest) !SpawnResult {
         self.total_spawns += 1;
 
-        const start_time = std.time.nanoTimestamp();
+        const start_time = tri_time.nanoTimestamp();
 
         // Validate request
         if (!self.validateRequest(&request)) {
@@ -137,7 +138,7 @@ pub const AutonomousSpawner = struct {
         // Spawn the sub-agent via MCP
         const agent_id = try self.spawnViaMCP(&request);
 
-        const end_time = std.time.nanoTimestamp();
+        const end_time = tri_time.nanoTimestamp();
         const spawn_time_ms = @as(u64, @intCast((end_time - start_time) / 1_000_000));
 
         const result = SpawnResult{
@@ -218,7 +219,7 @@ pub const AutonomousSpawner = struct {
         const agent_id = try std.fmt.allocPrint(
             self.allocator,
             "agent-{d}",
-            .{std.time.nanoTimestamp()},
+            .{tri_time.nanoTimestamp()},
         );
 
         return agent_id;
@@ -286,7 +287,7 @@ pub const AutonomousSpawner = struct {
         allocator: std.mem.Allocator,
         task_description: []const u8,
     ) !SpawnRequest {
-        const request_id = try std.fmt.allocPrint(allocator, "mu-auto-{d}", .{std.time.nanoTimestamp()});
+        const request_id = try std.fmt.allocPrint(allocator, "mu-auto-{d}", .{tri_time.nanoTimestamp()});
 
         return SpawnRequest{
             .request_id = request_id,

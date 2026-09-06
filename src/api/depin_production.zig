@@ -5,6 +5,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 
 // ═════════════════════════════════════════════════════════════════════════════════════════════════
@@ -73,7 +74,7 @@ pub const ProductionApiServer = struct {
 
     /// Create governance proposal
     pub fn createProposal(self: *ProductionApiServer, proposal: GovernanceProposal) ![]const u8 {
-        const proposal_id = try std.fmt.allocPrint(self.allocator, "gov_{d}", .{std.time.timestamp()});
+        const proposal_id = try std.fmt.allocPrint(self.allocator, "gov_{d}", .{tri_time.timestamp()});
         try self.governance.put(self.allocator, proposal_id, proposal);
         return proposal_id;
     }
@@ -84,7 +85,7 @@ pub const ProductionApiServer = struct {
             const vote_record = VoteRecord{
                 .voter = voter,
                 .support = support,
-                .timestamp = std.time.timestamp(),
+                .timestamp = tri_time.timestamp(),
             };
             try entry.value_ptr.votes.append(self.allocator, vote_record);
         }
@@ -234,7 +235,7 @@ test "add and get stake" {
         .address = address,
         .amount = 1000,
         .lock_period = "6M",
-        .unlock_time = std.time.timestamp() + 86400,
+        .unlock_time = tri_time.timestamp() + 86400,
         .is_delegated = false,
         .quality_score = 0.85,
     };
@@ -263,8 +264,8 @@ test "governance proposal" {
         .description = description,
         .proposal_type = .parameter_change,
         .proposer = proposer,
-        .start_time = std.time.timestamp(),
-        .end_time = std.time.timestamp() + 86400,
+        .start_time = tri_time.timestamp(),
+        .end_time = tri_time.timestamp() + 86400,
         .status = .active,
         .votes = .{},
     };

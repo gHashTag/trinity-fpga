@@ -10,6 +10,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const qt = @import("queen_types.zig");
 const thalamus = @import("thalamus.zig");
@@ -70,7 +71,7 @@ pub fn init(alert_sink: locus.AlertSink) ArasState {
 /// Run single sweep over farm workers
 pub fn sweepOnce(allocator: Allocator, state: *ArasState) !SweepResult {
     var result = SweepResult{
-        .timestamp = std.time.timestamp(),
+        .timestamp = tri_time.timestamp(),
     };
 
     // Get farm status
@@ -142,7 +143,7 @@ pub fn sweepOnce(allocator: Allocator, state: *ArasState) !SweepResult {
     }
 
     // Count stale workers (stuck > 30 minutes)
-    _ = std.time.timestamp(); // For future timeout calculation
+    _ = tri_time.timestamp(); // For future timeout calculation
     for (state.workers[0..state.workers_len]) |w| {
         if (std.mem.eql(u8, w.state, "stale")) {
             // Check step stuck via evolution state timestamps
@@ -157,7 +158,7 @@ pub fn sweepOnce(allocator: Allocator, state: *ArasState) !SweepResult {
 /// Main sweep loop — runs every interval_sec
 pub fn sweepLoop(allocator: Allocator, state: *ArasState) !void {
     state.sweep_count += 1;
-    state.last_sweep = std.time.timestamp();
+    state.last_sweep = tri_time.timestamp();
 
     // Run sweep
     const result = try sweepOnce(allocator, state);
@@ -232,7 +233,7 @@ pub fn health() CellHealth {
     return CellHealth{
         .status = .healthy,
         .cycle = 0,
-        .last_check = std.time.timestamp(),
+        .last_check = tri_time.timestamp(),
     };
 }
 
@@ -282,11 +283,11 @@ test "aras — SweepResult hasProblems" {
 }
 
 test "aras — SweepResult timestamp" {
-    const before = std.time.timestamp();
+    const before = tri_time.timestamp();
     var result = SweepResult{};
     try std.testing.expectEqual(@as(i64, 0), result.timestamp);
 
-    result.timestamp = std.time.timestamp();
+    result.timestamp = tri_time.timestamp();
     try std.testing.expect(result.timestamp >= before);
 }
 

@@ -16,6 +16,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const tri_exit_codes = @import("tri_exit_codes.zig");
 const Allocator = std.mem.Allocator;
 const tri_dev = @import("tri_dev.zig");
@@ -132,7 +133,7 @@ pub fn runExperienceCommand(allocator: Allocator, args: []const []const u8) !voi
 
 fn runExperienceSave(_: Allocator, args: []const []const u8) !void {
     var episode = Episode{};
-    episode.timestamp = std.time.timestamp();
+    episode.timestamp = tri_time.timestamp();
 
     // Parse flags
     var i: usize = 0;

@@ -15,6 +15,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 
 const RESET = "\x1b[0m";
@@ -123,7 +124,7 @@ pub fn analyzeWorkerLogs(
         if (last_log.object.get("timestamp")) |ts| {
             if (ts == .integer) {
                 const log_ts_ms = ts.integer;
-                const now_ms = std.time.milliTimestamp();
+                const now_ms = tri_time.milliTimestamp();
                 const age_ms = now_ms - log_ts_ms;
                 result.log_age_sec = @divTrunc(age_ms, 1000);
 

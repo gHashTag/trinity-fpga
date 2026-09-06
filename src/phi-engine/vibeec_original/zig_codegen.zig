@@ -9,6 +9,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayList;
 const vibee_parser = @import("vibee_parser.zig");
@@ -637,7 +638,7 @@ pub const ZigCodeGen = struct {
             self.builder.incIndent();
             try self.builder.writeLine("_ = path;");
             try self.builder.writeLine("_ = message;");
-            try self.builder.writeLine("return CommitResult{ .success = true, .commit_id = \"test-commit\", .timestamp = std.time.timestamp() };");
+            try self.builder.writeLine("return CommitResult{ .success = true, .commit_id = \"test-commit\", .timestamp = tri_time.timestamp() };");
             self.builder.decIndent();
             try self.builder.writeLine("}");
             return true;
@@ -1553,7 +1554,7 @@ pub const ZigCodeGen = struct {
             try self.builder.writeLine("    .path = file_path,");
             try self.builder.writeLine("    .trit_hash = \"\", // DEFERRED (v12): calculate trit hash");
             try self.builder.writeLine("    .size = @as(i64, stat.size),");
-            try self.builder.writeLine("    .modified = std.time.timestamp(),");
+            try self.builder.writeLine("    .modified = tri_time.timestamp(),");
             try self.builder.writeLine("    .trit_count = 0, // DEFERRED (v12): calculate trit count");
             try self.builder.writeLine("    .compressed = false,");
             try self.builder.writeLine("};");

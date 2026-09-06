@@ -11,6 +11,7 @@
 //! The state is synchronized across all modules via the ConsciousnessBus.
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const mem = std.mem;
 
 // Sacred constants
@@ -303,7 +304,7 @@ pub const UnifiedState = struct {
 
     /// Update timestamp and generation
     pub fn touch(self: *UnifiedState) void {
-        self.last_update = @as(i64, @intCast(std.time.nanoTimestamp()));
+        self.last_update = @as(i64, @intCast(tri_time.nanoTimestamp()));
         self.generation += 1;
     }
 

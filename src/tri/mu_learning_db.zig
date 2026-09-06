@@ -1,6 +1,7 @@
 // @origin(spec:mu_learning_db.tri) @regen(manual-impl)
 // MU LEARNING DB — Pattern database with hippocampus dual-write
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const hippocampus = @import("hippocampus.zig");
 
@@ -36,7 +37,7 @@ pub fn saveDB(allocator: Allocator, rules: []const AutoFixRule) !void {
 
     // Hippocampus dual-write
     var record: hippocampus.MemoryRecord = undefined;
-    const ts: u64 = @intCast(std.time.timestamp());
+    const ts: u64 = @intCast(tri_time.timestamp());
     hippocampus.generateId(&record.id_buf, &record.id_len, ts, "mu_pattern");
     hippocampus.copyToFixed(32, &record.agent_buf, &record.agent_len, "mu_pattern");
     record.kind = .learning;
@@ -57,7 +58,7 @@ pub fn saveDB(allocator: Allocator, rules: []const AutoFixRule) !void {
 pub fn applyFixes(allocator: Allocator, fixes_made: usize, total_errors: usize) !void {
     // Hippocampus dual-write
     var record: hippocampus.MemoryRecord = undefined;
-    const ts: u64 = @intCast(std.time.timestamp());
+    const ts: u64 = @intCast(tri_time.timestamp());
     hippocampus.generateId(&record.id_buf, &record.id_len, ts, "mu_fix");
     hippocampus.copyToFixed(32, &record.agent_buf, &record.agent_len, "mu");
     record.kind = .learning;

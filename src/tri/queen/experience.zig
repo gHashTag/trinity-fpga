@@ -3,6 +3,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 pub const Episode = @import("episodes.zig").Episode;
 pub const Context = @import("observe.zig").Context;
 
@@ -98,7 +99,7 @@ pub fn recallSimilarEpisodes(
     var scores = try std.ArrayList(SimilarityScore).initCapacity(allocator, episodes.len);
     defer scores.deinit(allocator);
 
-    const now_ns: u64 = @as(u64, @intCast(std.time.nanoTimestamp()));
+    const now_ns: u64 = @as(u64, @intCast(tri_time.nanoTimestamp()));
 
     for (episodes) |episode| {
         // Calculate context similarity
@@ -182,7 +183,7 @@ test "experience: recallSimilarEpisodes returns sorted results" {
     const allocator = std.testing.allocator;
 
     const context = Context{
-        .timestamp_ns = @as(u64, @intCast(std.time.nanoTimestamp())),
+        .timestamp_ns = @as(u64, @intCast(tri_time.nanoTimestamp())),
         .policy = .{},
         .senses = .{},
         .active_issues = &[_]u64{},

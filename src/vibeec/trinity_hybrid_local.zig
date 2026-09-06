@@ -16,6 +16,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const local_chat = @import("igla_local_chat.zig");
 
 const VERSION = "1.0.2";
@@ -143,7 +144,7 @@ fn interactiveMode(allocator: std.mem.Allocator) !void {
         }
 
         total_queries += 1;
-        const start = std.time.microTimestamp();
+        const start = tri_time.microTimestamp();
 
         // Try symbolic first
         const sym_result = symbolic.respond(input);
@@ -151,7 +152,7 @@ fn interactiveMode(allocator: std.mem.Allocator) !void {
         if (sym_result.category != .Unknown and sym_result.confidence >= 0.3) {
             // Symbolic hit
             symbolic_hits += 1;
-            const elapsed = @as(u64, @intCast(std.time.microTimestamp() - start));
+            const elapsed = @as(u64, @intCast(tri_time.microTimestamp() - start));
             std.debug.print("[Trinity] (Symbolic, {d:.0}%, {d}μs)\n", .{ sym_result.confidence * 100, elapsed });
             std.debug.print("{s}\n\n", .{sym_result.response});
         } else {
@@ -160,14 +161,14 @@ fn interactiveMode(allocator: std.mem.Allocator) !void {
             std.debug.print("[Trinity] Calling Ollama...\n", .{});
 
             const llm_response = callOllama(allocator, input) catch |err| {
-                const elapsed = @as(u64, @intCast(std.time.microTimestamp() - start));
+                const elapsed = @as(u64, @intCast(tri_time.microTimestamp() - start));
                 std.debug.print("[Trinity] (Error: {}, {d}ms)\n", .{ err, elapsed / 1000 });
                 std.debug.print("Fallback: {s}\n\n", .{sym_result.response});
                 continue;
             };
             defer allocator.free(llm_response);
 
-            const elapsed = @as(u64, @intCast(std.time.microTimestamp() - start));
+            const elapsed = @as(u64, @intCast(tri_time.microTimestamp() - start));
             std.debug.print("[Trinity] (LLM, {d}ms)\n", .{elapsed / 1000});
             std.debug.print("{s}\n\n", .{llm_response});
         }
@@ -178,13 +179,13 @@ fn interactiveMode(allocator: std.mem.Allocator) !void {
 
 fn processQuery(allocator: std.mem.Allocator, query: []const u8) !void {
     var symbolic = local_chat.IglaLocalChat.init();
-    const start = std.time.microTimestamp();
+    const start = tri_time.microTimestamp();
 
     // Try symbolic first
     const sym_result = symbolic.respond(query);
 
     if (sym_result.category != .Unknown and sym_result.confidence >= 0.3) {
-        const elapsed = @as(u64, @intCast(std.time.microTimestamp() - start));
+        const elapsed = @as(u64, @intCast(tri_time.microTimestamp() - start));
         std.debug.print("[Symbolic, {d:.0}%, {d}μs]\n", .{ sym_result.confidence * 100, elapsed });
         std.debug.print("{s}\n", .{sym_result.response});
     } else {
@@ -196,7 +197,7 @@ fn processQuery(allocator: std.mem.Allocator, query: []const u8) !void {
         };
         defer allocator.free(llm_response);
 
-        const elapsed = @as(u64, @intCast(std.time.microTimestamp() - start));
+        const elapsed = @as(u64, @intCast(tri_time.microTimestamp() - start));
         std.debug.print("[LLM, {d}ms]\n", .{elapsed / 1000});
         std.debug.print("{s}\n", .{llm_response});
     }

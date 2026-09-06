@@ -12,6 +12,7 @@
 
 const std = @import("std");
 
+const tri_env = @import("tri_env.zig");
 pub const Mode = enum {
     native_http,
     gh_cli,
@@ -98,8 +99,8 @@ pub const GitHubClient = struct {
                 break :blk @as(?[]const u8, duped);
             }
             // Fall back to PAT
-            break :blk std.process.getEnvVarOwned(allocator, "GITHUB_TOKEN") catch
-                std.process.getEnvVarOwned(allocator, "GH_TOKEN") catch
+            break :blk tri_env.getEnvVarOwned(allocator, "GITHUB_TOKEN") catch
+                tri_env.getEnvVarOwned(allocator, "GH_TOKEN") catch
                 @as(?[]const u8, null);
         };
 
@@ -902,7 +903,7 @@ pub const GitHubClient = struct {
             try child_env.put("GH_TOKEN", tok);
         } else {
             // Otherwise try to get GH_TOKEN from environment for the subprocess
-            if (std.process.getEnvVarOwned(self.allocator, "GH_TOKEN")) |tok| {
+            if (tri_env.getEnvVarOwned(self.allocator, "GH_TOKEN")) |tok| {
                 defer self.allocator.free(tok);
                 try child_env.put("GH_TOKEN", tok);
             } else |_| {}

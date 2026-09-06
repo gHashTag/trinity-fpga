@@ -9,6 +9,7 @@
 // ═════════════════════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const qt = @import("queen_types.zig");
 const hippocampus = @import("hippocampus.zig");
@@ -34,7 +35,7 @@ pub fn sleepCycle(allocator: Allocator) !void {
     var old_episodes = try hippocampus.read(allocator, .{
         .agent = "phoenix",
         .kind = .episode,
-        .since_ts = @intCast(std.time.timestamp() - (7 * 24 * 3600)),
+        .since_ts = @intCast(tri_time.timestamp() - (7 * 24 * 3600)),
         .limit = 10000,
     });
     defer old_episodes.deinit(allocator);
@@ -88,7 +89,7 @@ pub fn heartbeatPing(allocator: Allocator) !void {
     const data = try std.fmt.allocPrint(
         allocator,
         "{{\"wake\":{d},\"fixes_applied\":0,\"errors_scanned\":0,\"test_ok\":true,\"build_ok\":true}}",
-        .{std.time.timestamp()},
+        .{tri_time.timestamp()},
     );
     defer allocator.free(data);
 
@@ -111,7 +112,7 @@ pub fn health() CellHealth {
     return CellHealth{
         .status = .healthy,
         .cycle = 0,
-        .last_check = std.time.timestamp(),
+        .last_check = tri_time.timestamp(),
     };
 }
 

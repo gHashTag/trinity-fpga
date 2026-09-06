@@ -18,6 +18,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const tri_exit_codes = @import("tri_exit_codes.zig");
 const Allocator = std.mem.Allocator;
 const railway_api = @import("railway_api.zig");
@@ -388,7 +389,7 @@ pub const EvolutionState = struct {
         if (self.event_count >= MAX_EVENTS) return;
         var ev = &self.events[self.event_count];
         ev.* = .{};
-        ev.timestamp = std.time.milliTimestamp();
+        ev.timestamp = tri_time.milliTimestamp();
         ev.event_type = etype;
         const nlen: u8 = @intCast(@min(name.len, 64));
         @memcpy(ev.service_name[0..nlen], name[0..nlen]);
@@ -694,7 +695,7 @@ fn runMock(allocator: Allocator, args: []const []const u8) !void {
     var parent_names_buf: [MAX_SERVICES][64]u8 = undefined;
     var parent_name_lens: [MAX_SERVICES]u8 = undefined;
 
-    var seed_counter: u32 = @truncate(@as(u64, @intCast(std.time.milliTimestamp())));
+    var seed_counter: u32 = @truncate(@as(u64, @intCast(tri_time.milliTimestamp())));
 
     for (0..num_children) |ci| {
         // Pick parent: round-robin among top parents
@@ -822,7 +823,7 @@ fn appendMockLineage(
     // Seek to end for append
     lineage_file.seekFromEnd(0) catch {};
 
-    const ts = std.time.milliTimestamp();
+    const ts = tri_time.milliTimestamp();
     for (0..num_children) |ci| {
         const c = &configs_buf[ci];
         const child_name = config_names[ci][0..config_name_lens[ci]];
@@ -1163,7 +1164,7 @@ fn runStep(allocator: Allocator, args: []const []const u8) !void {
     if (!diagnose_mode and !dry_run and total_killed > 0) {
         // Check kills in last hour from event log
         var recent_kills: usize = 0;
-        const one_hour_ago = std.time.timestamp() - 3600;
+        const one_hour_ago = tri_time.timestamp() - 3600;
         for (state.events[0..state.event_count]) |*ev| {
             if (ev.event_type == .kill and ev.timestamp >= one_hour_ago) {
                 recent_kills += 1;
@@ -1183,7 +1184,7 @@ fn runStep(allocator: Allocator, args: []const []const u8) !void {
                 // Create circuit breaker marker with timestamp
                 if (std.fs.cwd().createFile(circuit_breaker_file, .{})) |cb_file| {
                     defer cb_file.close();
-                    const timestamp = std.time.timestamp();
+                    const timestamp = tri_time.timestamp();
                     const content = std.fmt.allocPrint(allocator, "Circuit breaker tripped at {d}\nRecent kills (1h): {d}\nThreshold: {d}\n", .{ timestamp, recent_kills, CIRCUIT_BREAKER_THRESHOLD }) catch "";
                     defer allocator.free(content);
                     cb_file.writeAll(content) catch {};
@@ -1579,7 +1580,7 @@ fn buildBatchLogQuery(allocator: Allocator, entries: []const BatchLogEntry) !Bat
 /// Skip if estimated step delta < 500 since last poll.
 fn shouldSkipByProgress(svc: *const ServiceEntry) bool {
     if (svc.last_poll_ts == 0 or svc.tok_per_sec <= 0) return false;
-    const now: i128 = std.time.nanoTimestamp();
+    const now: i128 = tri_time.nanoTimestamp();
     const elapsed_ns: i128 = now - svc.last_poll_ts;
     if (elapsed_ns <= 0) return false;
     // Convert to seconds as f64
@@ -1810,7 +1811,7 @@ fn collectMetricsForAccount(
                     .stall_count = tmp_svc.stall_count,
                     .last_ckpt_step = tmp_svc.last_ckpt_step,
                     .last_poll_step = tmp_svc.last_poll_step,
-                    .last_poll_ts = std.time.nanoTimestamp(),
+                    .last_poll_ts = tri_time.nanoTimestamp(),
                     .loss_history = tmp_svc.loss_history,
                     .loss_history_len = tmp_svc.loss_history_len,
                 };
@@ -1897,7 +1898,7 @@ pub fn collectMetricsParallel(allocator: Allocator, state: *EvolutionState, api_
     {
         var joined: [MAX_FARM_ACCOUNTS]bool = undefined;
         for (0..MAX_FARM_ACCOUNTS) |i| joined[i] = false;
-        const start_ns = std.time.nanoTimestamp();
+        const start_ns = tri_time.nanoTimestamp();
         const TIMEOUT_NS = 120 * std.time.ns_per_s; // 2 minute hard timeout
         while (true) {
             std.Thread.sleep(500 * std.time.ns_per_ms);
@@ -1919,7 +1920,7 @@ pub fn collectMetricsParallel(allocator: Allocator, state: *EvolutionState, api_
             if (accounts_reported >= account_count) break;
             if (done >= expected) break;
             // Timeout safeguard: if stuck for >2 minutes, force join
-            const elapsed = std.time.nanoTimestamp() - start_ns;
+            const elapsed = tri_time.nanoTimestamp() - start_ns;
             if (elapsed > TIMEOUT_NS) {
                 print("\n  {s}⏱️ Timeout after 120s, forcing join...{s}\n", .{ YELLOW, RESET });
                 break;
@@ -2022,7 +2023,7 @@ fn appendEventJsonl(svc_name: []const u8, detail: []const u8, step: u32) void {
     file.seekFromEnd(0) catch return;
     var buf: [512]u8 = undefined;
     const line = std.fmt.bufPrint(&buf, "{{\"ts\":{d},\"type\":\"health\",\"svc\":\"{s}\",\"detail\":\"{s}\",\"step\":{d}}}\n", .{
-        std.time.milliTimestamp(), svc_name, detail, step,
+        tri_time.milliTimestamp(), svc_name, detail, step,
     }) catch return;
     file.writeAll(line) catch {};
 
@@ -2416,7 +2417,7 @@ fn processRung(allocator: Allocator, state: *EvolutionState, rung_idx: u8, rung:
         }
 
         // Pick parent via truncation selection (diverse parents per child)
-        const prng_seed: u32 = @truncate(@as(u64, @intCast(std.time.milliTimestamp())) +% ki);
+        const prng_seed: u32 = @truncate(@as(u64, @intCast(tri_time.milliTimestamp())) +% ki);
         const leader_idx = selectParentTruncation(state, prng_seed) orelse eligible_indices[0];
         const leader = &state.services[leader_idx];
 
@@ -4511,7 +4512,7 @@ fn appendDeployLineage(
     defer lineage_file.close();
     lineage_file.seekFromEnd(0) catch {};
 
-    const ts = std.time.milliTimestamp();
+    const ts = tri_time.milliTimestamp();
     const sched: []const u8 = config.lr_schedule.toStr();
     const sacred_str: []const u8 = if (config.sacred) "true" else "false";
     const ok_str: []const u8 = if (success) "true" else "false";
@@ -5567,7 +5568,7 @@ fn saveLiveLogState(svc_name: []const u8, step: u32, ppl_val: f32, best_ppl_val:
     const content = std.fmt.bufPrint(&buf,
         \\{{"service":"{s}","step":{d},"ppl":{d:.2},"best_ppl":{d:.2},"polls":{d},"ts":{d}}}
     ++ "\n", .{
-        svc_name, step, ppl_val, best_ppl_val, polls, std.time.timestamp(),
+        svc_name, step, ppl_val, best_ppl_val, polls, tri_time.timestamp(),
     }) catch return;
     f.writeAll(content) catch {};
 }
@@ -5617,7 +5618,7 @@ fn writeAbResults(
     var f = std.fs.cwd().createFile(path, .{}) catch return;
     defer f.close();
 
-    const ts = std.time.milliTimestamp();
+    const ts = tri_time.milliTimestamp();
     var hdr_buf: [256]u8 = undefined;
     const hdr = std.fmt.bufPrint(&hdr_buf,
         \\{{"timestamp":{d},"configs":[
@@ -5841,7 +5842,7 @@ fn runInject(allocator: Allocator, args: []const []const u8) !void {
         };
     } else {
         // Auto-select via binary tournament (PBT)
-        const seed_ts: u32 = @truncate(@as(u64, @intCast(std.time.milliTimestamp())));
+        const seed_ts: u32 = @truncate(@as(u64, @intCast(tri_time.milliTimestamp())));
         parent_idx = selectParentTournament(&state, seed_ts) orelse {
             print("{s}ERROR: No running parents found. Need at least 1 active training service.{s}\n", .{ RED, RESET });
             return;
@@ -5849,7 +5850,7 @@ fn runInject(allocator: Allocator, args: []const []const u8) !void {
     }
 
     const parent = &state.services[parent_idx];
-    const seed: u32 = @truncate(@as(u64, @intCast(std.time.milliTimestamp())));
+    const seed: u32 = @truncate(@as(u64, @intCast(tri_time.milliTimestamp())));
     var config = if (sacred)
         mutateConfigSacred(parent, seed, false)
     else
@@ -5970,7 +5971,7 @@ pub fn runInjectBatch(
     if (override_sched) |sched| print("   schedule override: {s}\n", .{sched.toStr()});
 
     var total_api_calls: u32 = 0;
-    const seed_base: u32 = @truncate(@as(u64, @intCast(std.time.milliTimestamp())));
+    const seed_base: u32 = @truncate(@as(u64, @intCast(tri_time.milliTimestamp())));
 
     var injected: u32 = 0;
     var ji: u32 = 0;
@@ -6130,7 +6131,7 @@ fn runWatch(allocator: Allocator, args: []const []const u8) !void {
 
             print("   Candidates: {d} dead/finished slots, injecting up to {d} (truncation selection)\n\n", .{ cand_count, max_inject });
 
-            var seed: u32 = @truncate(@as(u64, @intCast(std.time.milliTimestamp())));
+            var seed: u32 = @truncate(@as(u64, @intCast(tri_time.milliTimestamp())));
             for (candidates[0..max_inject]) |ci| {
                 const svc = &state.services[ci];
                 seed = mulberry32(seed);
@@ -6184,7 +6185,7 @@ fn runWatch(allocator: Allocator, args: []const []const u8) !void {
         if (kill_live) {
             const first_rung_step = if (sacred) SACRED_RUNGS[0].step_threshold else DEFAULT_RUNGS[0].step_threshold;
             var live_kills: u32 = 0;
-            var kill_seed: u32 = @truncate(@as(u64, @intCast(std.time.milliTimestamp())) +% 7777);
+            var kill_seed: u32 = @truncate(@as(u64, @intCast(tri_time.milliTimestamp())) +% 7777);
             while (live_kills < 2) { // max 2 live kills per sweep
                 kill_seed = mulberry32(kill_seed);
                 const victim_idx = findKillTournamentVictim(&state, first_rung_step, kill_seed) orelse break;
@@ -6539,7 +6540,7 @@ fn runNotify(allocator: Allocator, args: []const []const u8) !void {
     ns.last_best_ppl = state.best_ppl;
     copyToFixed(&ns.last_best_name, &ns.last_best_name_len, state.bestNameStr());
     ns.last_event_count = state.event_count;
-    ns.last_timestamp = std.time.milliTimestamp();
+    ns.last_timestamp = tri_time.milliTimestamp();
     ns.last_leader_step = health.leader_step;
     saveNotifyState(&ns);
 }
@@ -7005,7 +7006,7 @@ fn runTuneInternal(allocator: Allocator, state: *EvolutionState, sacred: bool, d
 
     print("   🔧 Tune: {d} eligible, bottom {d}, tuning {d}\n", .{ cand_count, bottom_count, tune_count });
 
-    var seed: u32 = @truncate(@as(u64, @intCast(std.time.milliTimestamp())) +% 3333);
+    var seed: u32 = @truncate(@as(u64, @intCast(tri_time.milliTimestamp())) +% 3333);
     for (candidates[0..tune_count]) |ci| {
         const svc = &state.services[ci];
         seed = mulberry32(seed);

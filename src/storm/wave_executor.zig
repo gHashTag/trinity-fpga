@@ -3,6 +3,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 pub const WaveConfig = struct {
     num_agents: u8 = 32,
     max_concurrent: u8 = 4,
@@ -104,12 +105,12 @@ pub const WaveExecutor = struct {
     }
 
     fn executeSingle(self: *WaveExecutor, task: []const u8) !storm.golden_chain.LinkResult {
-        const start_time = std.time.nanoTimestamp();
+        const start_time = tri_time.nanoTimestamp();
 
         // Simulate task execution
         // In real implementation, this would call the actual link executor
 
-        const duration = std.time.nanoTimestamp() - start_time;
+        const duration = tri_time.nanoTimestamp() - start_time;
 
         return .{
             .success = true,

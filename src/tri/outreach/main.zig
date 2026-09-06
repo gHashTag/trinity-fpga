@@ -12,6 +12,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 pub const io = std.io;
 
 const types = @import("types.zig");
@@ -138,8 +139,8 @@ fn cmdStatus(allocator: std.mem.Allocator) !void {
     const stdout = std.io.getStdOut().writer();
 
     // Calculate current warming week
-    const start_date = getStartDate(allocator) catch std.time.timestamp();
-    const current_week = warming.getCurrentWeek(start_date, std.time.timestamp());
+    const start_date = getStartDate(allocator) catch tri_time.timestamp();
+    const current_week = warming.getCurrentWeek(start_date, tri_time.timestamp());
     const daily_limit = warming.getDailyLimit(current_week);
     const focus = warming.getFocus(current_week);
 
@@ -203,8 +204,8 @@ fn cmdSend(allocator: std.mem.Allocator, args: []const []const u8) !void {
         try stdout.print("\n📧 DRY RUN MODE — Previewing emails (not sending)\n\n", .{});
     }
 
-    const start_date = getStartDate(allocator) catch std.time.timestamp();
-    const current_week = warming.getCurrentWeek(start_date, std.time.timestamp());
+    const start_date = getStartDate(allocator) catch tri_time.timestamp();
+    const current_week = warming.getCurrentWeek(start_date, tri_time.timestamp());
     const daily_limit = warming.getDailyLimit(current_week);
 
     const queue = getTodayQueue(allocator, current_week);
@@ -374,7 +375,7 @@ fn getStartDate(allocator: std.mem.Allocator) !i64 {
         .{},
     ) catch {
         // Create default start date (today)
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
         const file = try std.fs.createFileAbsolute(
             ".trinity/outreach_start_date.txt",
             .{},

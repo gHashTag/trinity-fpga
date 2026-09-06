@@ -15,6 +15,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const testing = std.testing;
 const bpe_cached = @import("bpe_cached.zig");
 const simd_bpe = @import("simd_bpe.zig");
@@ -102,9 +103,9 @@ pub fn bench(comptime name: []const u8, iterations: u64, comptime func: anytype,
     var total: u64 = 0;
     var i: u64 = 0;
     while (i < iterations) : (i += 1) {
-        const start = std.time.nanoTimestamp();
+        const start = tri_time.nanoTimestamp();
         _ = func(text);
-        const end = std.time.nanoTimestamp();
+        const end = tri_time.nanoTimestamp();
         total += @intCast(end - start);
     }
 

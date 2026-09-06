@@ -3,6 +3,7 @@
 // phi^2 + 1/phi^2 = 3 = TRINITY
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 
 // LATENCY MEASUREMENT
@@ -99,7 +100,7 @@ pub const UptimeTracker = struct {
     const UPTIME_HEALTH_THRESHOLD: f64 = 0.99; // 99%
 
     pub fn init(allocator: Allocator) UptimeTracker {
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
         return UptimeTracker{
             .allocator = allocator,
             .start_time = null,
@@ -111,7 +112,7 @@ pub const UptimeTracker = struct {
     }
 
     pub fn markOnline(self: *UptimeTracker) !void {
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
 
         if (!self.is_online) {
             // Was offline, calculate downtime
@@ -139,7 +140,7 @@ pub const UptimeTracker = struct {
     }
 
     pub fn markOffline(self: *UptimeTracker) void {
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
         self.is_online = false;
         self.last_check = now;
     }
@@ -156,7 +157,7 @@ pub const UptimeTracker = struct {
 
     pub fn getTotalHours(self: *const UptimeTracker) f64 {
         if (self.start_time) |start| {
-            const elapsed = std.time.timestamp() - start;
+            const elapsed = tri_time.timestamp() - start;
             return @as(f64, @floatFromInt(elapsed)) / 3600.0;
         }
         return 0.0;

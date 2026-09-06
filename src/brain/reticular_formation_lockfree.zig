@@ -16,6 +16,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 const MAX_EVENTS: usize = 10_000;
 const MAX_STRING_LEN: usize = 64; // Fixed-size inline strings
 
@@ -159,7 +160,7 @@ pub const EventBus = struct {
 
     /// Fast publish with inline string storage
     pub fn publish(self: *EventBus, event_type: AgentEventType, data: EventData) !void {
-        const timestamp = std.time.milliTimestamp();
+        const timestamp = tri_time.milliTimestamp();
 
         // Extract data BEFORE any atomic operations
         var task_id_str: []const u8 = "";
@@ -235,7 +236,7 @@ pub const EventBus = struct {
 
     /// Batch publish - amortize synchronization
     pub fn publishBatch(self: *EventBus, events: []const struct { AgentEventType, EventData }) !void {
-        const timestamp = std.time.milliTimestamp();
+        const timestamp = tri_time.milliTimestamp();
 
         for (events) |ev| {
             const event_type, const data = ev;
@@ -515,7 +516,7 @@ test "LockFree: publish throughput benchmark" {
     const iterations = 100_000;
     var task_buf: [32]u8 = undefined;
 
-    const start = std.time.nanoTimestamp();
+    const start = tri_time.nanoTimestamp();
     var i: u64 = 0;
     while (i < iterations) : (i += 1) {
         const task_id = std.fmt.bufPrintZ(&task_buf, "task-{d}", .{i}) catch "task-x";
@@ -527,7 +528,7 @@ test "LockFree: publish throughput benchmark" {
             },
         });
     }
-    const elapsed_ns = @as(u64, @intCast(std.time.nanoTimestamp() - start));
+    const elapsed_ns = @as(u64, @intCast(tri_time.nanoTimestamp() - start));
     const ops_per_sec = @as(f64, @floatFromInt(iterations)) / @as(f64, @floatFromInt(elapsed_ns));
     _ = std.debug.print("LockFree Reticular Formation Publish: {d:.0} OP/s ({d:.2} ns/op)\n", .{ ops_per_sec * 1_000_000_000.0, @as(f64, @floatFromInt(elapsed_ns)) / @as(f64, @floatFromInt(iterations)) });
 }
@@ -542,7 +543,7 @@ test "LockFree: batch publish throughput benchmark" {
     var batch_buf: [batch_size]struct { AgentEventType, EventData } = undefined;
     var task_buf: [32]u8 = undefined;
 
-    const start = std.time.nanoTimestamp();
+    const start = tri_time.nanoTimestamp();
     var batch_i: u64 = 0;
     while (batch_i < iterations) : (batch_i += 1) {
         var i: usize = 0;
@@ -552,7 +553,7 @@ test "LockFree: batch publish throughput benchmark" {
         }
         try bus.publishBatch(&batch_buf);
     }
-    const elapsed_ns = @as(u64, @intCast(std.time.nanoTimestamp() - start));
+    const elapsed_ns = @as(u64, @intCast(tri_time.nanoTimestamp() - start));
     const total_events = iterations * batch_size;
     const ops_per_sec = @as(f64, @floatFromInt(total_events)) / @as(f64, @floatFromInt(elapsed_ns));
     _ = std.debug.print("LockFree Reticular Formation Batch Publish: {d:.0} OP/s ({d:.2} ns/op)\n", .{ ops_per_sec * 1_000_000_000.0, @as(f64, @floatFromInt(elapsed_ns)) / @as(f64, @floatFromInt(total_events)) });
@@ -575,12 +576,12 @@ test "LockFree: poll throughput benchmark" {
 
     // Benchmark poll
     i = 0;
-    const start = std.time.nanoTimestamp();
+    const start = tri_time.nanoTimestamp();
     while (i < 1000) : (i += 1) {
         const events = try bus.poll(0, allocator, 100);
         allocator.free(events);
     }
-    const elapsed_ns = @as(u64, @intCast(std.time.nanoTimestamp() - start));
+    const elapsed_ns = @as(u64, @intCast(tri_time.nanoTimestamp() - start));
     const ops_per_sec = @as(f64, @floatFromInt(i)) / @as(f64, @floatFromInt(elapsed_ns));
     _ = std.debug.print("LockFree Reticular Formation Poll: {d:.0} OP/s ({d:.2} ns/op)\n", .{ ops_per_sec * 1_000_000_000.0, @as(f64, @floatFromInt(elapsed_ns)) / @as(f64, @floatFromInt(i)) });
 }
@@ -615,7 +616,7 @@ test "LockFree: timestamp filter" {
     try bus.publish(.task_claimed, .{ .task_claimed = .{ .task_id = "task-1", .agent_id = "agent-1" } });
 
     std.Thread.sleep(10 * std.time.ns_per_ms);
-    const mid_time = std.time.milliTimestamp();
+    const mid_time = tri_time.milliTimestamp();
     std.Thread.sleep(5 * std.time.ns_per_ms);
 
     try bus.publish(.task_claimed, .{ .task_claimed = .{ .task_id = "task-2", .agent_id = "agent-2" } });

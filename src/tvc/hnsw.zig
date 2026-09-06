@@ -10,6 +10,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const AutoHashMap = std.AutoHashMap;
 const math = std.math;
@@ -319,7 +320,7 @@ pub fn HNSW(comptime dim: usize, comptime _: usize) type {
         pub fn search(self: *Self, query: []const f32, k: usize) !SearchResults {
             if (query.len != dim) return error.DimensionMismatch;
 
-            var timer = try std.time.Timer.start();
+            var timer = try tri_time.Timer.start();
 
             if (self.entry_point == null or self.nodes.count() == 0) {
                 return SearchResults{

@@ -10,6 +10,7 @@
 //!   TRI_REC_OVERWRITE - Skip existing files (default: false)
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const builtin = @import("builtin");
 
 const allocator = std.heap.page_allocator;
@@ -98,7 +99,7 @@ pub fn main() !u8 {
     const cast_path = try std.fmt.allocPrint(
         allocator,
         "/tmp/tri-record-{x}.cast",
-        .{std.time.nanoTimestamp()},
+        .{tri_time.nanoTimestamp()},
     );
     defer allocator.free(cast_path);
     std.fs.cwd().deleteFile(cast_path) catch {};

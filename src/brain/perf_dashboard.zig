@@ -19,6 +19,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 // Import brain region modules for metric collection
 const basal_ganglia = @import("basal_ganglia.zig");
 const reticular_formation = @import("reticular_formation.zig");
@@ -49,7 +50,7 @@ pub const PerformanceSnapshot = struct {
     /// Initialize a new snapshot
     pub fn init(allocator: std.mem.Allocator, operation: []const u8, region: []const u8) PerformanceSnapshot {
         return PerformanceSnapshot{
-            .timestamp = std.time.nanoTimestamp(),
+            .timestamp = tri_time.nanoTimestamp(),
             .operation = operation,
             .region = region,
             .latency_ns = 0,
@@ -109,7 +110,7 @@ pub const PerformanceStats = struct {
             .total_latency_ns = 0,
             .min_latency_ns = std.math.maxInt(u64),
             .max_latency_ns = 0,
-            .last_update = std.time.milliTimestamp(),
+            .last_update = tri_time.milliTimestamp(),
             .p50_ns = 0,
             .p95_ns = 0,
             .p99_ns = 0,
@@ -273,7 +274,7 @@ pub const PerformanceHistory = struct {
 
     /// Record a latency value
     pub fn record(self: *PerformanceHistory, latency_ns: u64) !void {
-        const now = std.time.milliTimestamp();
+        const now = tri_time.milliTimestamp();
 
         if (self.latencies.items.len < self.max_size) {
             // Buffer not full, just append
@@ -388,8 +389,8 @@ pub const PerformanceDashboard = struct {
             .current_stats = std.StringHashMap(PerformanceStats).init(allocator),
             .baseline_stats = std.StringHashMap(PerformanceStats).init(allocator),
             .slas = std.StringHashMap(SLATarget).init(allocator),
-            .start_time = std.time.milliTimestamp(),
-            .last_update = std.time.milliTimestamp(),
+            .start_time = tri_time.milliTimestamp(),
+            .last_update = tri_time.milliTimestamp(),
         };
     }
 
@@ -448,7 +449,7 @@ pub const PerformanceDashboard = struct {
             try history.record(latency_ns);
         }
 
-        self.last_update = std.time.milliTimestamp();
+        self.last_update = tri_time.milliTimestamp();
     }
 
     /// Get current stats for a metric
@@ -465,7 +466,7 @@ pub const PerformanceDashboard = struct {
 
     /// Collect metrics from all brain regions
     pub fn collectFromBrain(self: *PerformanceDashboard) !void {
-        const now = std.time.milliTimestamp();
+        const now = tri_time.milliTimestamp();
         _ = now;
 
         // Collect Basal Ganglia metrics
@@ -482,7 +483,7 @@ pub const PerformanceDashboard = struct {
             _ = stats;
         } else |_| {}
 
-        self.last_update = std.time.milliTimestamp();
+        self.last_update = tri_time.milliTimestamp();
     }
 
     /// Save current stats as baseline

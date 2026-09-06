@@ -13,6 +13,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 pub const BitNetFFI = struct {
     allocator: std.mem.Allocator,
     llama_cli_path: []const u8,
@@ -42,7 +43,7 @@ pub const BitNetFFI = struct {
         max_tokens: u32,
         temperature: f32,
     ) !GenerationResult {
-        var timer = try std.time.Timer.start();
+        var timer = try tri_time.Timer.start();
 
         // Build command arguments
         var args: std.ArrayListUnmanaged([]const u8) = .empty;

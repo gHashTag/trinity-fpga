@@ -1,6 +1,7 @@
 //! P10: Timeout Handler — simplified for P10
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 pub const TimeoutHandler = struct {
     allocator: std.mem.Allocator,
     default_timeout_ms: u64 = 300_000,
@@ -23,7 +24,7 @@ pub const TimeoutHandler = struct {
         args: anytype,
         timeout_ms: u64,
     ) !TimeoutResult {
-        const start = std.time.nanoTimestamp();
+        const start = tri_time.nanoTimestamp();
 
         // Execute function and check for errors
         if (func(args)) |_| {
@@ -32,7 +33,7 @@ pub const TimeoutHandler = struct {
             return err;
         }
 
-        const elapsed = std.time.nanoTimestamp() - start;
+        const elapsed = tri_time.nanoTimestamp() - start;
         const duration_ms = @as(u64, @intFromFloat(@divTrunc(@as(f128, @floatFromInt(elapsed)), 1_000_000)));
         const timed_out = duration_ms > timeout_ms;
 
@@ -54,7 +55,7 @@ pub const TimeoutHandler = struct {
         stdout: []const u8,
         stderr: []const u8,
     } {
-        const start = std.time.nanoTimestamp();
+        const start = tri_time.nanoTimestamp();
 
         var child = std.process.Child.init(argv, std.heap.page_allocator);
         child.stdout_behavior = .Ignore;
@@ -72,7 +73,7 @@ pub const TimeoutHandler = struct {
             };
         };
 
-        const end = std.time.nanoTimestamp();
+        const end = tri_time.nanoTimestamp();
         const duration_ms = @as(u64, @intFromFloat(@divTrunc(@as(f128, @floatFromInt(end - start)), 1_000_000)));
 
         var exit_code: u8 = 1;

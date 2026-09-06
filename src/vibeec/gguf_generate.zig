@@ -3,6 +3,7 @@
 // phi^2 + 1/phi^2 = 3 = TRINITY
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const gguf = @import("gguf_reader.zig");
 const inference = @import("gguf_inference.zig");
 
@@ -33,7 +34,7 @@ pub fn main() !void {
     std.debug.print("\n", .{});
     std.debug.print("Loading embeddings...\n", .{});
 
-    var timer = try std.time.Timer.start();
+    var timer = try tri_time.Timer.start();
     model.loadEmbeddings() catch |err| {
         std.debug.print("Error loading embeddings: {}\n", .{err});
         return;

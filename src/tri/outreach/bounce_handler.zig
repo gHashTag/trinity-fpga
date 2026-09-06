@@ -8,6 +8,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 pub const BounceType = enum {
     /// Permanent bounce — invalid email, domain doesn't exist
     permanent,
@@ -95,7 +96,7 @@ pub const BounceHandler = struct {
                     .email = email,
                     .bounce_type = .spam_complaint,
                     .reason = "Recipient marked as spam",
-                    .timestamp = std.time.timestamp(),
+                    .timestamp = tri_time.timestamp(),
                     .do_not_email = true,
                 };
             }
@@ -108,7 +109,7 @@ pub const BounceHandler = struct {
                     .email = email,
                     .bounce_type = .permanent,
                     .reason = extractReason(response),
-                    .timestamp = std.time.timestamp(),
+                    .timestamp = tri_time.timestamp(),
                     .do_not_email = true,
                 };
             }
@@ -121,7 +122,7 @@ pub const BounceHandler = struct {
                     .email = email,
                     .bounce_type = .temporary,
                     .reason = extractReason(response),
-                    .timestamp = std.time.timestamp(),
+                    .timestamp = tri_time.timestamp(),
                     .do_not_email = false, // Retry later
                 };
             }

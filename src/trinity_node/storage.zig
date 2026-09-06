@@ -6,6 +6,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const crypto = @import("crypto.zig");
 const protocol = @import("protocol.zig");
 
@@ -95,7 +96,7 @@ pub const RewardTracker = struct {
         return .{
             .shards_hosted = 0,
             .retrievals_served = 0,
-            .hosting_start = std.time.timestamp(),
+            .hosting_start = tri_time.timestamp(),
             .bytes_uploaded = 0,
             .bytes_downloaded = 0,
         };
@@ -120,7 +121,7 @@ pub const RewardTracker = struct {
 
     /// Calculate total earned TRI (in wei)
     pub fn calculateEarnedWei(self: *const RewardTracker) u128 {
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
         const elapsed_secs: u64 = if (now > self.hosting_start)
             @intCast(now - self.hosting_start)
         else
@@ -142,7 +143,7 @@ pub const RewardTracker = struct {
 
     /// Get reward stats
     pub fn getStats(self: *const RewardTracker) RewardStats {
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
         const elapsed_secs: u64 = if (now > self.hosting_start)
             @intCast(now - self.hosting_start)
         else
@@ -909,7 +910,7 @@ test "reward tracker calculation" {
     var tracker = RewardTracker{
         .shards_hosted = 100,
         .retrievals_served = 10,
-        .hosting_start = std.time.timestamp() - 3600, // 1 hour ago
+        .hosting_start = tri_time.timestamp() - 3600, // 1 hour ago
         .bytes_uploaded = 0,
         .bytes_downloaded = 0,
     };
@@ -1456,7 +1457,7 @@ test "bandwidth reward calculation" {
     var tracker = RewardTracker{
         .shards_hosted = 0,
         .retrievals_served = 0,
-        .hosting_start = std.time.timestamp(),
+        .hosting_start = tri_time.timestamp(),
         .bytes_uploaded = 1024 * 1024 * 1024, // 1 GB uploaded
         .bytes_downloaded = 1024 * 1024 * 1024, // 1 GB downloaded
     };
