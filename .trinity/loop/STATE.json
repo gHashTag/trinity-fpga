@@ -4,7 +4,7 @@
     "id": "two-track",
     "cron_job": "1cd7dda4",
     "interval": "15m",
-    "iteration": 122,
+    "iteration": 123,
     "status": "RUNNING",
     "owner": "Dmitrii Vasilev / @gHashTag",
     "tracks": [
@@ -635,6 +635,15 @@
       "what": "gHashTag/trinity#959 merged (9118ee0c). The corpus manifest now names every t27-sourced spec that is not on the default ref, records which ref was checked and how many specs were checked, and excludes submodule-owned paths explicitly.",
       "why": "t27 is vendored from a local working copy, so `specsOrCompilerDirty: true` was the only signal -- accurate, undiffable, and it would have flipped to false while nine specs silently disappeared.",
       "verified": "529 checked, 11 unreachable, matching a hand census taken before the code existed. website-checks green, including the silicon-coverage gate from iteration 119 and the language audits fixed in iteration 120. Report-only: no vendored byte changes."
+    },
+    {
+      "id": "D103",
+      "what": "The Spec Explorer works on a phone. gHashTag/trinity#961 merged (f21a0260), published, verified live on t27.ai at 375x812.",
+      "the_defect": "At 375px the desktop layout was kept whole: a 300px library beside the detail pane, leaving ~150px for the detail. Every word of the description wrapped onto its own line, and the row still overflowed, so the page scrolled sideways and the search box was clipped off the top.",
+      "the_fix": "Below 760px it is master-detail: library full width as the landing view, tap opens the spec, a 44px back control returns. Above 760px nothing changes. The threshold is chosen against the layout -- where a 300px library stops leaving room for a readable line -- not against a device, so tablets in landscape keep both panes.",
+      "three_judgement_calls": "(1) The pane switch lives in the list item's onClick, not inside pick(): the explorer also picks on load, and routing that through pick() dropped a first-time visitor into a file they had not chosen. A shared ?spec= link still opens its spec, because that one was asked for. (2) The back control is 44px, the smallest reliably tappable target. (3) The new flag is `phone`, not the `narrow` already in the file -- `narrow` means <1100px and only trims chrome, so reusing it would have tied a layout change to a threshold picked for something else. tsc caught the duplicate declaration.",
+      "verified": "Measured in a real browser against the built artifact rather than reasoned from CSS. At 375x812: horizontal overflow 0px on both panes (scrollWidth === clientWidth === 375), library lands first, tap opens the detail with the back control, back returns with the selection still highlighted. At 1280x800: two panes, no back control, Chip tab present, unchanged. website-checks green, including the silicon-coverage gate and both language audits. Then live on t27.ai in Russian: the served chunk carried the mobile code while the page was still running a cached one, so the first look was misleading -- checking the bytes before the pixels is what settled it.",
+      "note": "Third time this session a substring probe misled me: `textContent.includes('Search specs')` was false because the search box is an input with a PLACEHOLDER, not text content. The screenshot was the truth."
     }
   ],
   "backlog": [
@@ -1333,6 +1342,16 @@
       "fix": "gHashTag/trinity#959 -- the manifest now names the unreachable specs, records the ref they were checked against and how many were checked. Submodule-owned paths are excluded explicitly rather than silently passing. A list can be diffed between two syncs; a count cannot say which nine disappeared. Report-only, changes no vendored byte.",
       "verified": "Ran the same computation over the live corpus: 529 checked, 11 unreachable, matching a hand census done before the code existed.",
       "lesson": "A follow-up I proposed while confident is exactly where to look for the next defect. And when a census returns a shocking number, suspect the instrument before the world -- twice in one session the shocking number was my own shell."
+    },
+    {
+      "id": "A49",
+      "found": "2026-09-06, iteration 123, checking whether yesterday's parser fix could actually reach the site.",
+      "the_refutation": "It could not, and worse, I had overstated what it does. yosys 0.63 synthesises hello_world's Verilog to 0 cells, 4 wires, 4 ports BOTH with and without the fix, and it never rejected the old output: it printed `Lexer warning: The SystemVerilog keyword 'packed' is not recognized unless read_verilog is called with -sv!` and carried on. So `parameter [31:0] Greeting = packed;` was never a cause of the corpus's yosys failures. In iteration 121 I had speculated it was a major contributor to the 315 rejections, then narrowed that to 'zero specs on master declare it'; this is the third and final correction, and the one that measures rather than counts.",
+      "what_the_fix_actually_does": "The struct was ALREADY being emitted -- anonymously, because the declaration was a ConstDecl: `// struct` with `reg [7:0] _length; // .length`. The fix removes the invalid parameter and restores the name: `// struct Greeting`, `reg [7:0] greeting_length;`. A readability and correctness fix in generated Verilog, not a synthesis one.",
+      "the_branch_topology": "master and fix/struct-field-brace-nesting have diverged BOTH ways -- 1327 commits on the branch master lacks, 586 on master the branch lacks, both active this week. t27.ai vendors from the branch, so #3384 on master alone can never reach the site. And master's corpus contains no `packed struct` at all, so master could not test the fix; the branch is where hello_world lives and is the first place it was verifiable end to end. Cherry-picked as #3385, keeping the branch's union(enum) case beside the new packed case.",
+      "process_errors_caught": "Two. (1) I updated the root NOW.md when the gate reads docs/NOW.md -- guessing the rule instead of reading check_now_sync, which names the path on its second line. (2) Undoing that, `git checkout -- NOW.md` restored from the INDEX, which held my staged edit, so the discard silently re-applied -- exactly the trap already in my notes as git-checkout-staged-trap. `git restore --staged --worktree` was the correct form.",
+      "incidental": "`cargo build -p t27c` prunes ~1000 lines from Cargo.lock. The main t27 checkout's 17 dirty paths (B18/OD8) include `Cargo.lock -1313 lines`, which is very likely the same build artifact rather than deliberate work -- worth knowing before anyone reconciles that branch.",
+      "lesson": "Ask what the fix DOES before asking where it should land. Three iterations carried a claim about yosys rejections that one yosys invocation refuted -- and yosys was installed the whole time."
     }
   ],
   "collaboration_options": [
