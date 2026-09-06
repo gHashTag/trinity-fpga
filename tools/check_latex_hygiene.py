@@ -44,6 +44,12 @@ for f in TEX:
 # stop the gate being run; fail only on NEW defects.
 BASE = pathlib.Path(__file__).with_name("latex_hygiene_baseline.txt")
 print(f"tex files scanned: {len(TEX)}")
+if not TEX:
+    # With an empty scope every downstream check is vacuously satisfied and this
+    # prints OK. That is indistinguishable from a clean paper.
+    print("\nFAIL: no .tex files were scanned -- an empty scope reports OK "
+          "without inspecting anything.")
+    sys.exit(1)
 uniq = sorted(set(fails))
 if "--update-baseline" in sys.argv:
     BASE.write_text("\n".join(uniq) + ("\n" if uniq else ""))
