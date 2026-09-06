@@ -41,6 +41,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 const local_chat = @import("igla_chat");
 const model_mod = @import("gguf_model.zig");
@@ -1091,7 +1092,7 @@ pub const IglaHybridChat = struct {
         }
 
         // Build augmented prompt: base + separator + context + recent messages
-        var buf: std.ArrayListUnmanaged(u8) = .{};
+        var buf: std.ArrayList(u8) = .empty;
 
         buf.appendSlice(self.allocator, self.config.system_prompt) catch return self.config.system_prompt;
         buf.appendSlice(self.allocator, "\n\n--- Context ---\n") catch return self.config.system_prompt;
@@ -1514,8 +1515,12 @@ pub const IglaHybridChat = struct {
         };
 
         // Format: "expression = result"
-        var fbs = std.io.fixedBufferStream(&math_result_buf);
-        const writer = fbs.writer();
+        // A fixed Writer's own buffer IS math_result_buf, so `buffered()` returns
+        // the written prefix of that static buffer -- same aliasing the old
+        // FixedBufferStream.getWritten() had, which the callers rely on. On
+        // overflow it fills what fits and then fails, so a truncated result is
+        // still returned rather than an empty one.
+        var writer = std.Io.Writer.fixed(&math_result_buf);
 
         // Write trimmed expression
         var trimmed = expr;
@@ -1532,7 +1537,7 @@ pub const IglaHybridChat = struct {
             writer.print("{d:.6}", .{result}) catch {};
         }
 
-        return fbs.getWritten();
+        return writer.buffered();
     }
 
     const MathError = error{ DivisionByZero, InvalidExpression, Overflow };
@@ -1680,7 +1685,12 @@ pub const IglaHybridChat = struct {
         self.energy.total_queries += 1;
 
         // 1. Read image file
-        const file = std.fs.cwd().openFile(image_path, .{}) catch {
+        // Public signature, called from other modules, so the Io comes from the
+        // process handle rather than a parameter. Kept as open-then-read (not
+        // Dir.readFileAlloc) so an open failure and a read failure keep their
+        // two distinct error messages.
+        const io = tri_io.get();
+        const file = std.Io.Dir.cwd().openFile(io, image_path, .{}) catch {
             return HybridResponse{
                 .response = "Error: could not open image file",
                 .source = .Error,
@@ -1689,9 +1699,10 @@ pub const IglaHybridChat = struct {
                 .latency_us = @intCast(tri_time.microTimestamp() - start),
             };
         };
-        defer file.close();
+        defer file.close(io);
 
-        const file_data = file.readToEndAlloc(self.allocator, 10 * 1024 * 1024) catch {
+        var file_reader = file.reader(io, &.{});
+        const file_data = file_reader.interface.allocRemaining(self.allocator, .limited(10 * 1024 * 1024)) catch {
             return HybridResponse{
                 .response = "Error: image file too large or read error (max 10MB)",
                 .source = .Error,
@@ -1798,7 +1809,10 @@ pub const IglaHybridChat = struct {
         };
 
         // 1. Read audio file
-        const file = std.fs.cwd().openFile(audio_path, .{}) catch {
+        // See respondWithImage: process Io, and open/read stay separate so the
+        // two failure messages remain distinguishable.
+        const io = tri_io.get();
+        const file = std.Io.Dir.cwd().openFile(io, audio_path, .{}) catch {
             return HybridResponse{
                 .response = "Error: could not open audio file",
                 .source = .Error,
@@ -1807,9 +1821,10 @@ pub const IglaHybridChat = struct {
                 .latency_us = @intCast(tri_time.microTimestamp() - start),
             };
         };
-        defer file.close();
+        defer file.close(io);
 
-        const audio_data = file.readToEndAlloc(self.allocator, 25 * 1024 * 1024) catch {
+        var file_reader = file.reader(io, &.{});
+        const audio_data = file_reader.interface.allocRemaining(self.allocator, .limited(25 * 1024 * 1024)) catch {
             return HybridResponse{
                 .response = "Error: audio file too large (max 25MB for Whisper)",
                 .source = .Error,
@@ -1956,7 +1971,7 @@ pub const IglaHybridChat = struct {
         const tokenizer = self.tokenizer orelse return error.TokenizerNotLoaded;
 
         // Format prompt with system message
-        var prompt: std.ArrayListUnmanaged(u8) = .{};
+        var prompt: std.ArrayList(u8) = .empty;
         defer prompt.deinit(self.allocator);
 
         // ChatML format for TinyLlama
@@ -1973,7 +1988,7 @@ pub const IglaHybridChat = struct {
         // Generate
         model.resetKVCache();
 
-        var response: std.ArrayListUnmanaged(u8) = .{};
+        var response: std.ArrayList(u8) = .empty;
         errdefer response.deinit(self.allocator);
 
         const sampling_params = inference.SamplingParams{
@@ -1984,7 +1999,7 @@ pub const IglaHybridChat = struct {
         };
 
         // Token history for repeat penalty (last 64 tokens)
-        var token_history: std.ArrayListUnmanaged(u32) = .{};
+        var token_history: std.ArrayList(u32) = .empty;
         defer token_history.deinit(self.allocator);
 
         // Process prompt tokens (prefill)

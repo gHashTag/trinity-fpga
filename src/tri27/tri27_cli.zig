@@ -3,6 +3,10 @@
 
 const std = @import("std");
 const tri_time = @import("tri_time");
+// The tri27 commands are reached from main.zig through a module boundary and
+// none of them carry an Io, so the file I/O below asks for the process handle
+// rather than growing an `io:` parameter on every signature in between.
+const tri_io = @import("tri_io");
 const Allocator = std.mem.Allocator;
 
 const Decoder = @import("emu/decoder.zig");
@@ -71,16 +75,18 @@ fn runAssembleCommand(allocator: Allocator, all_args: []const []const u8) !void 
         }
     }
 
-    const asm_content = std.fs.cwd().readFileAlloc(allocator, input_file, 1024 * 1024) catch |e| {
+    const io = tri_io.get();
+
+    const asm_content = std.Io.Dir.cwd().readFileAlloc(io, input_file, allocator, .limited(1024 * 1024)) catch |e| {
         print("Error reading {s}: {}\n", .{ input_file, e });
         return error.ReadFileFailed;
     };
     defer allocator.free(asm_content);
 
     const bytecode = try Assembler.assemble(allocator, asm_content);
-    const file = try std.fs.cwd().createFile(output_file, .{});
-    defer file.close();
-    try file.writeAll(bytecode);
+    const file = try std.Io.Dir.cwd().createFile(io, output_file, .{});
+    defer file.close(io);
+    try file.writeStreamingAll(io, bytecode);
     allocator.free(bytecode);
 
     // Save episode to Episode/JSONL
@@ -107,7 +113,8 @@ fn runDisassembleCommand(allocator: Allocator, all_args: []const []const u8) !vo
     }
 
     const input_file = all_args[0];
-    const tbin_content = std.fs.cwd().readFileAlloc(allocator, input_file, 1024 * 1024) catch |e| {
+    const io = tri_io.get();
+    const tbin_content = std.Io.Dir.cwd().readFileAlloc(io, input_file, allocator, .limited(1024 * 1024)) catch |e| {
         print("Error reading {s}: {}\n", .{ input_file, e });
         return error.ReadFileFailed;
     };
@@ -159,7 +166,8 @@ fn runRunCommand(allocator: Allocator, args: []const []const u8) !void {
     }
 
     const input_file = args[0];
-    const tbin_content = std.fs.cwd().readFileAlloc(allocator, input_file, 1024 * 1024) catch |e| {
+    const io = tri_io.get();
+    const tbin_content = std.Io.Dir.cwd().readFileAlloc(io, input_file, allocator, .limited(1024 * 1024)) catch |e| {
         print("Error reading {s}: {}\n", .{ input_file, e });
         return error.ReadFileFailed;
     };
@@ -205,7 +213,8 @@ fn runValidateCommand(allocator: Allocator, args: []const []const u8) !void {
     }
 
     const input_file = args[0];
-    const tri_content = std.fs.cwd().readFileAlloc(allocator, input_file, 4096) catch |e| {
+    const io = tri_io.get();
+    const tri_content = std.Io.Dir.cwd().readFileAlloc(io, input_file, allocator, .limited(4096)) catch |e| {
         print("Error reading {s}: {}\n", .{ input_file, e });
         return error.ReadFileFailed;
     };
@@ -367,6 +376,12 @@ fn printHelp() void {
     print("  tri27 disassemble prog.tbin\n", .{});
 }
 
+// Stale standalone entry point. This file is built as a module and reached via
+// runTri27Command, so nothing references this `main` and Zig never analyses it.
+// It is left at 0.15 because 0.16 removed std.process.argsAlloc: argv is only
+// reachable through the `main(init: std.process.Init)` parameter, and adding
+// that parameter is a signature change. Fix the signature before wiring this up
+// as an executable root.
 pub fn main() !void {
     var arena_state = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     defer arena_state.deinit();

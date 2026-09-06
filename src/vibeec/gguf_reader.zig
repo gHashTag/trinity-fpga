@@ -4,6 +4,7 @@
 
 const std = @import("std");
 
+const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 // GGUF Constants
 pub const GGUF_MAGIC: u32 = 0x46554747; // "GGUF" little-endian
@@ -307,18 +308,25 @@ pub const MetadataValue = union(enum) {
 // GGUF Reader
 pub const GGUFReader = struct {
     allocator: std.mem.Allocator,
-    file: std.fs.File,
+    file: std.Io.File,
     header: GGUFHeader,
     metadata: std.StringHashMap(MetadataValue),
     tensors: std.ArrayListUnmanaged(TensorInfo),
     alignment: u32,
     data_offset: u64,
     tensor_names: std.ArrayListUnmanaged([]u8),
+    /// Byte offset of the next sequential read.
+    ///
+    /// A 0.16 `File` carries no cursor of its own -- there is no `getPos` or
+    /// `seekTo` on it, and reads are positional -- so the file position that
+    /// the parser walked forward through the header, metadata and tensor
+    /// table now lives here instead of in the descriptor.
+    pos: u64,
 
     /// Read u8 from file
     fn readU8(self: *GGUFReader) !u8 {
         var buf: [1]u8 = undefined;
-        const n = try self.file.readAll(&buf);
+        const n = try self.readBytes(&buf);
         if (n != 1) return error.UnexpectedEof;
         return buf[0];
     }
@@ -331,7 +339,7 @@ pub const GGUFReader = struct {
     /// Read u16 from file (little-endian)
     fn readU16(self: *GGUFReader) !u16 {
         var buf: [2]u8 = undefined;
-        const n = try self.file.readAll(&buf);
+        const n = try self.readBytes(&buf);
         if (n != 2) return error.UnexpectedEof;
         return std.mem.readInt(u16, &buf, .little);
     }
@@ -339,7 +347,7 @@ pub const GGUFReader = struct {
     /// Read i16 from file (little-endian)
     fn readI16(self: *GGUFReader) !i16 {
         var buf: [2]u8 = undefined;
-        const n = try self.file.readAll(&buf);
+        const n = try self.readBytes(&buf);
         if (n != 2) return error.UnexpectedEof;
         return std.mem.readInt(i16, &buf, .little);
     }
@@ -347,7 +355,7 @@ pub const GGUFReader = struct {
     /// Read u32 from file (little-endian)
     fn readU32(self: *GGUFReader) !u32 {
         var buf: [4]u8 = undefined;
-        const n = try self.file.readAll(&buf);
+        const n = try self.readBytes(&buf);
         if (n != 4) return error.UnexpectedEof;
         return std.mem.readInt(u32, &buf, .little);
     }
@@ -355,7 +363,7 @@ pub const GGUFReader = struct {
     /// Read u64 from file (little-endian)
     fn readU64(self: *GGUFReader) !u64 {
         var buf: [8]u8 = undefined;
-        const n = try self.file.readAll(&buf);
+        const n = try self.readBytes(&buf);
         if (n != 8) return error.UnexpectedEof;
         return std.mem.readInt(u64, &buf, .little);
     }
@@ -363,7 +371,7 @@ pub const GGUFReader = struct {
     /// Read i32 from file (little-endian)
     fn readI32(self: *GGUFReader) !i32 {
         var buf: [4]u8 = undefined;
-        const n = try self.file.readAll(&buf);
+        const n = try self.readBytes(&buf);
         if (n != 4) return error.UnexpectedEof;
         return std.mem.readInt(i32, &buf, .little);
     }
@@ -371,7 +379,7 @@ pub const GGUFReader = struct {
     /// Read i64 from file (little-endian)
     fn readI64(self: *GGUFReader) !i64 {
         var buf: [8]u8 = undefined;
-        const n = try self.file.readAll(&buf);
+        const n = try self.readBytes(&buf);
         if (n != 8) return error.UnexpectedEof;
         return std.mem.readInt(i64, &buf, .little);
     }
@@ -379,7 +387,7 @@ pub const GGUFReader = struct {
     /// Read f32 from file (little-endian)
     fn readF32(self: *GGUFReader) !f32 {
         var buf: [4]u8 = undefined;
-        const n = try self.file.readAll(&buf);
+        const n = try self.readBytes(&buf);
         if (n != 4) return error.UnexpectedEof;
         return @bitCast(std.mem.readInt(u32, &buf, .little));
     }
@@ -387,29 +395,40 @@ pub const GGUFReader = struct {
     /// Read f64 from file (little-endian)
     fn readF64(self: *GGUFReader) !f64 {
         var buf: [8]u8 = undefined;
-        const n = try self.file.readAll(&buf);
+        const n = try self.readBytes(&buf);
         if (n != 8) return error.UnexpectedEof;
         return @bitCast(std.mem.readInt(u64, &buf, .little));
     }
 
-    /// Read bytes from file
+    /// Read bytes from file at the current position, advancing it.
+    ///
+    /// `readPositionalAll` keeps the contract the 0.15 `readAll` had: it loops
+    /// until `buf` is full and returns a short count only at end of file, so
+    /// every "n != len => UnexpectedEof" check above still means what it did.
+    /// (This is not `readStreaming`, whose 0 return is a legitimate short read
+    /// and whose end of stream is `error.EndOfStream`.)
     fn readBytes(self: *GGUFReader, buf: []u8) !usize {
-        return self.file.readAll(buf);
+        const io = tri_io.get();
+        const n = try self.file.readPositionalAll(io, buf, self.pos);
+        self.pos += n;
+        return n;
     }
 
     pub fn init(allocator: std.mem.Allocator, path: []const u8) !GGUFReader {
-        const file = try std.fs.cwd().openFile(path, .{});
-        errdefer file.close();
+        const io = tri_io.get();
+        const file = try std.Io.Dir.cwd().openFile(io, path, .{});
+        errdefer file.close(io);
 
         var reader = GGUFReader{
             .allocator = allocator,
             .file = file,
             .header = undefined,
             .metadata = std.StringHashMap(MetadataValue).init(allocator),
-            .tensors = .{},
+            .tensors = .empty,
             .alignment = DEFAULT_ALIGNMENT,
             .data_offset = 0,
-            .tensor_names = .{},
+            .tensor_names = .empty,
+            .pos = 0,
         };
 
         try reader.parseHeader();
@@ -434,7 +453,7 @@ pub const GGUFReader = struct {
             }
         }
         self.metadata.deinit();
-        self.file.close();
+        self.file.close(tri_io.get());
     }
 
     fn parseHeader(self: *GGUFReader) !void {
@@ -539,8 +558,7 @@ pub const GGUFReader = struct {
         }
 
         // Calculate data offset (aligned)
-        const pos = try self.file.getPos();
-        self.data_offset = alignOffset(pos, self.alignment);
+        self.data_offset = alignOffset(self.pos, self.alignment);
     }
 
     fn alignOffset(offset: u64, alignment: u32) u64 {
@@ -564,7 +582,8 @@ pub const GGUFReader = struct {
         const data = try self.allocator.alloc(u8, @intCast(size));
         errdefer self.allocator.free(data);
 
-        try self.file.seekTo(self.data_offset + info.offset);
+        // Was a seekTo on the descriptor; the position is now the reader's own.
+        self.pos = self.data_offset + info.offset;
         const bytes_read = try self.readBytes(data);
         if (bytes_read != data.len) {
             return error.UnexpectedEof;
@@ -1246,20 +1265,24 @@ pub const MmapFile = struct {
     size: usize,
 
     pub fn init(path: []const u8) !MmapFile {
-        const file = try std.fs.cwd().openFile(path, .{});
-        defer file.close();
+        const io = tri_io.get();
+        const file = try std.Io.Dir.cwd().openFile(io, path, .{});
+        defer file.close(io);
 
-        const stat = try file.stat();
+        const stat = try file.stat(io);
         const size = stat.size;
 
         if (size == 0) {
             return error.EmptyFile;
         }
 
+        // PROT is a packed flag struct in 0.16 (macOS `vm_prot_t`, and the same
+        // shape on Linux), not a namespace of integer constants, so the old
+        // `std.posix.PROT.READ` no longer names anything.
         const data = try std.posix.mmap(
             null,
             size,
-            std.posix.PROT.READ,
+            .{ .READ = true },
             .{ .TYPE = .SHARED },
             file.handle,
             0,
@@ -1315,8 +1338,8 @@ pub const MmapGGUFReader = struct {
             .mmap = mmap,
             .header = undefined,
             .metadata = std.StringHashMap(MetadataValue).init(allocator),
-            .tensors = .{},
-            .tensor_names = .{},
+            .tensors = .empty,
+            .tensor_names = .empty,
             .data_offset = 0,
         };
 
@@ -1530,12 +1553,14 @@ pub const MmapGGUFReader = struct {
 };
 
 test "mmap_file" {
+    const io = tri_io.get();
+
     // Create a test file
     const test_data = "Hello, mmap!";
     {
-        const file = try std.fs.cwd().createFile("/tmp/mmap_test.bin", .{});
-        defer file.close();
-        try file.writeAll(test_data);
+        const file = try std.Io.Dir.cwd().createFile(io, "/tmp/mmap_test.bin", .{});
+        defer file.close(io);
+        try file.writeStreamingAll(io, test_data);
     }
 
     // Test mmap
@@ -1546,35 +1571,39 @@ test "mmap_file" {
     try std.testing.expectEqualStrings(test_data, mmap.slice(0, test_data.len));
 
     // Cleanup
-    try std.fs.cwd().deleteFile("/tmp/mmap_test.bin");
+    try std.Io.Dir.cwd().deleteFile(io, "/tmp/mmap_test.bin");
 }
 
 test "benchmark_mmap_vs_read" {
     const allocator = std.testing.allocator;
+    const io = tri_io.get();
 
     // Create a test file (1MB)
     const file_size: usize = 1024 * 1024;
     const test_path = "/tmp/mmap_bench.bin";
     {
-        const file = try std.fs.cwd().createFile(test_path, .{});
-        defer file.close();
+        const file = try std.Io.Dir.cwd().createFile(io, test_path, .{});
+        defer file.close(io);
         const data = try allocator.alloc(u8, file_size);
         defer allocator.free(data);
         for (data, 0..) |*b, i| b.* = @truncate(i);
-        try file.writeAll(data);
+        try file.writeStreamingAll(io, data);
     }
-    defer std.fs.cwd().deleteFile(test_path) catch {};
+    defer std.Io.Dir.cwd().deleteFile(io, test_path) catch {};
 
     const iterations: usize = 100;
 
     // Benchmark standard file read
-    var timer = tri_time.Timer.start() catch unreachable;
+    // `tri_time.Timer.start` cannot fail, unlike the std.time.Timer it replaces.
+    var timer = tri_time.Timer.start();
     for (0..iterations) |_| {
-        const file = try std.fs.cwd().openFile(test_path, .{});
-        defer file.close();
+        const file = try std.Io.Dir.cwd().openFile(io, test_path, .{});
+        defer file.close(io);
         const data = try allocator.alloc(u8, file_size);
         defer allocator.free(data);
-        _ = try file.readAll(data);
+        // Deliberately still an open + whole-file read, not Dir.readFileAlloc:
+        // this half of the benchmark is the thing being compared against mmap.
+        _ = try file.readPositionalAll(io, data, 0);
         std.mem.doNotOptimizeAway(data);
     }
     const read_time = timer.read();

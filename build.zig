@@ -35,6 +35,15 @@ pub fn build(b: *std.Build) void {
         .link_libc = true,
     });
 
+    // The process-wide Io handle, for leaves that cannot be reached by an Io
+    // parameter without changing signatures across module boundaries. Shared
+    // by the same modules as tri_time, and for the same reason.
+    const tri_io_mod = b.createModule(.{
+        .root_source_file = b.path("src/tri/tri_io.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+
     // VIBEEC compiler module — single source of truth from trinity-nexus/lang
     // FIXME: trinity-nexus submodule missing
     // const trinity_lang_mod = b.createModule(.{
@@ -198,7 +207,6 @@ pub fn build(b: *std.Build) void {
     const run_main_tests = b.addRunArtifact(main_tests);
     const test_step = b.step("test", "Run library tests");
     test_step.dependOn(&run_main_tests.step);
-
 
     // Queen API tests
     const queen_api_tests = b.addTest(.{
@@ -1336,6 +1344,7 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
         .imports = &.{
             .{ .name = "tri_time", .module = tri_time_mod },
+            .{ .name = "tri_io", .module = tri_io_mod },
         },
     });
 
@@ -2016,7 +2025,6 @@ pub fn build(b: *std.Build) void {
     const swe_deploy_step = b.step("swe-deploy", "Build swe-entrypoint for Railway dev agent deploy");
     swe_deploy_step.dependOn(&swe_entrypoint.step);
 
-
     // ═══════════════════════════════════════════════════════════════════════════
     // Trinity Orchestrator — REMOVED (generated.old/ deleted)
     // ═══════════════════════════════════════════════════════════════════════════
@@ -2060,6 +2068,7 @@ pub fn build(b: *std.Build) void {
             .{ .name = "igla_kg", .module = igla_kg_mod },
             .{ .name = "triples_parser", .module = triples_parser_mod },
             .{ .name = "tri_time", .module = tri_time_mod },
+            .{ .name = "tri_io", .module = tri_io_mod },
         },
     });
     // Golden Chain Agent (8-node unified pipeline)
@@ -2488,6 +2497,7 @@ pub fn build(b: *std.Build) void {
                 .{ .name = "golden_chain", .module = golden_chain_storm_mod },
                 .{ .name = "tri27_cli", .module = tri27_cli_mod },
                 .{ .name = "tri_time", .module = tri_time_mod },
+                .{ .name = "tri_io", .module = tri_io_mod },
                 .{ .name = "trinity_swe", .module = vibeec_swe },
                 .{ .name = "igla_chat", .module = vibeec_chat },
                 .{ .name = "igla_hybrid_chat", .module = vibeec_hybrid_chat },
@@ -2869,7 +2879,6 @@ pub fn build(b: *std.Build) void {
         }
         const node_gui_step = b.step("node-gui", "Run Trinity Node with Raylib GUI");
         node_gui_step.dependOn(&run_node_gui.step);
-
     } // end if (!ci_mode) — GUI targets
 
     // Emergent Photon AI v0.4 - TRINITY COSMIC CANVAS
@@ -3038,7 +3047,6 @@ pub fn build(b: *std.Build) void {
             }
         }
     } // end if (!ci_mode) — raylib canvas targets
-
 
     // VSA module (re-exports HybridBigInt from hybrid.zig) — REMOVED (unused after generated.old/ cleanup)
 

@@ -37,8 +37,16 @@ const std = @import("std");
 /// an error path, so an unreadable clock degrades to the epoch rather than
 /// propagating.
 fn read(clock: std.c.clockid_t) std.c.timespec {
+    return readChecked(clock) orelse .{ .sec = 0, .nsec = 0 };
+}
+
+/// Same read, but reports failure instead of degrading to the epoch. Only
+/// `Timer.start` wants this: the stdlib's Timer could fail to find a monotonic
+/// clock and said so, and every one of this codebase's ~130 call sites is
+/// written against that -- they all `try` it or `catch` it.
+fn readChecked(clock: std.c.clockid_t) ?std.c.timespec {
     var ts: std.c.timespec = undefined;
-    if (std.c.clock_gettime(clock, &ts) != 0) return .{ .sec = 0, .nsec = 0 };
+    if (std.c.clock_gettime(clock, &ts) != 0) return null;
     return ts;
 }
 
@@ -88,8 +96,18 @@ pub fn monotonicNanos() u64 {
 pub const Timer = struct {
     started_ns: u64,
 
-    pub fn start() Timer {
-        return .{ .started_ns = monotonicNanos() };
+    /// Mirrors the error set of the removed `std.time.Timer`.
+    pub const Error = error{TimerUnsupported};
+
+    /// Fallible, exactly as the stdlib's was. Making this infallible looked
+    /// tidier and was wrong: all ~130 call sites in this tree were written
+    /// against an error union -- 102 `try` it and 28 `catch` it -- so an
+    /// infallible version breaks every one of them.
+    pub fn start() Error!Timer {
+        const ts = readChecked(.MONOTONIC) orelse return error.TimerUnsupported;
+        const secs: u64 = @intCast(@max(ts.sec, 0));
+        const nsecs: u64 = @intCast(@max(ts.nsec, 0));
+        return .{ .started_ns = secs * std.time.ns_per_s + nsecs };
     }
 
     /// Nanoseconds since `start`. Saturates at zero rather than wrapping if
@@ -163,8 +181,19 @@ test "monotonic clock does not go backwards" {
     }
 }
 
+test "Timer.start is fallible, matching the API it replaces" {
+    // The call sites are the specification here: `try` must compile against
+    // this signature. An infallible start() would break 130 of them.
+    var t = try Timer.start();
+    _ = t.read();
+
+    // And `catch` must work too -- 28 sites use that form instead.
+    var t2 = Timer.start() catch unreachable;
+    _ = t2.read();
+}
+
 test "Timer measures a non-negative elapsed time and laps reset it" {
-    var t = Timer.start();
+    var t = try Timer.start();
     var sink: u64 = 0;
     var i: usize = 0;
     while (i < 100_000) : (i += 1) sink +%= i;

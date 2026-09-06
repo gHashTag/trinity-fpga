@@ -3,6 +3,7 @@
 
 const std = @import("std");
 
+const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 // Decomposed modules
 const utils = @import("tri_utils.zig");
@@ -66,6 +67,13 @@ pub fn main(init: std.process.Init.Minimal) !void {
     var threaded: std.Io.Threaded = .init(allocator, .{});
     defer threaded.deinit();
     const io = threaded.io();
+
+    // Publish it for the leaves that cannot take an Io parameter without
+    // changing signatures across module boundaries (see src/tri/tri_io.zig).
+    // This must happen before any command dispatch, and it shares this Io
+    // rather than creating a second one -- code that has an `io` in scope
+    // should keep using the parameter.
+    tri_io.install(io);
 
     try structured_log.initGlobalLogger(io, allocator, .info);
     defer structured_log.deinitGlobalLogger();
@@ -1197,8 +1205,15 @@ fn logAgentCommand(io: std.Io, environ: std.process.Environ, cmd_args: []const [
 
     // Build log line: "TIMESTAMP EMOJI tri arg1 arg2..."
     var line_buf: [512]u8 = undefined;
-    var stream = std.io.fixedBufferStream(&line_buf);
-    const w = stream.writer();
+    // 0.16 removed the lowercase std.io namespace along with fixedBufferStream.
+    // Writer.fixed is the same thing: it fills the buffer and, once full, copies
+    // what still fits before reporting the overflow -- so a truncated line is
+    // still recoverable via .buffered(), exactly as getWritten() gave it before.
+    // The only visible change is the error name (WriteFailed, not NoSpaceLeft);
+    // every catch below is untyped, so the arms keep their original meaning:
+    // abandon the line on a truncated header/terminator, stop appending on a
+    // truncated argument.
+    var w: std.Io.Writer = .fixed(&line_buf);
 
     const ts = tri_time.timestamp();
     // HH:MM from unix timestamp (rough — offset not critical for log)
@@ -1223,7 +1238,7 @@ fn logAgentCommand(io: std.Io, environ: std.process.Environ, cmd_args: []const [
     }
     w.print("\n", .{}) catch return;
 
-    const line = stream.getWritten();
+    const line = w.buffered();
 
     // Append to log file
     const file = std.Io.Dir.cwd().openFile(io, AGENT_CMD_LOG, .{ .mode = .write_only }) catch blk: {

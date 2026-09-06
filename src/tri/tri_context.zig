@@ -448,8 +448,10 @@ pub const ContextManager = struct {
 
         // Format context header
         var buf: [16384]u8 = undefined; // Increased for sacred information
-        var fbs = std.io.fixedBufferStream(&buf);
-        const writer = fbs.writer();
+        // A full buffer now surfaces as error.WriteFailed rather than
+        // error.NoSpaceLeft. Every write below already catches, so an
+        // over-long context is still silently truncated, as before.
+        var writer = std.Io.Writer.fixed(&buf);
 
         writer.writeAll("// === CODEBASE CONTEXT (auto-retrieved) ===\n") catch return null;
         writer.writeAll("// Relevant code from repository:\n") catch return null;
@@ -459,40 +461,40 @@ pub const ContextManager = struct {
             const sym = self.symbols.items[hit.symbol_idx];
             const analysis = self.analyzeSacredSymbol(sym.name);
             if (analysis) |sacred| {
-                std.fmt.format(writer, "//   {s}: gematria={d}\n", .{ sym.name, sacred.gematria_value }) catch |err| {
+                writer.print("//   {s}: gematria={d}\n", .{ sym.name, sacred.gematria_value }) catch |err| {
                     std.log.debug("tri_context: write gematria failed: {}", .{err});
                 };
                 if (sacred.recognized_constant) |rc| {
-                    std.fmt.format(writer, "//   {s}: recognized as {s}\n", .{ sym.name, rc }) catch |err| {
+                    writer.print("//   {s}: recognized as {s}\n", .{ sym.name, rc }) catch |err| {
                         std.log.debug("tri_context: write recognized constant failed: {}", .{err});
                     };
                 }
             }
-            std.fmt.format(writer, "//   {s}\n", .{sym.snippet}) catch break;
+            writer.print("//   {s}\n", .{sym.snippet}) catch break;
 
             // Add sacred intelligence information
             if (sym.sacred_gematria) |gem| {
-                std.fmt.format(writer, "//   Sacred Gematria: {d} (mod 27 = {d})\n", .{
+                writer.print("//   Sacred Gematria: {d} (mod 27 = {d})\n", .{
                     gem, gem % 27,
                 }) catch break;
             }
             if (sym.hebrew_gematria) |gem| {
-                std.fmt.format(writer, "//   Hebrew Gematria: {d}\n", .{gem}) catch break;
+                writer.print("//   Hebrew Gematria: {d}\n", .{gem}) catch break;
             }
             if (sym.greek_gematria) |gem| {
-                std.fmt.format(writer, "//   Greek Gematria: {d}\n", .{gem}) catch break;
+                writer.print("//   Greek Gematria: {d}\n", .{gem}) catch break;
             }
             if (sym.arabic_gematria) |gem| {
-                std.fmt.format(writer, "//   Arabic Gematria: {d}\n", .{gem}) catch break;
+                writer.print("//   Arabic Gematria: {d}\n", .{gem}) catch break;
             }
             if (sym.sacred_formula) |formula| {
-                std.fmt.format(writer, "//   Sacred Formula: V = {s}\n", .{formula}) catch break;
+                writer.print("//   Sacred Formula: V = {s}\n", .{formula}) catch break;
             }
             if (sym.sacred_constant_match) |match| {
-                std.fmt.format(writer, "//   Sacred Constant Match: {s}\n", .{match}) catch break;
+                writer.print("//   Sacred Constant Match: {s}\n", .{match}) catch break;
             }
             if (sym.patch_candidate) {
-                std.fmt.format(writer, "//   PATCH CANDIDATE (confidence: {d:.2})\n", .{
+                writer.print("//   PATCH CANDIDATE (confidence: {d:.2})\n", .{
                     sym.confidence_score,
                 }) catch break;
             }
@@ -500,12 +502,12 @@ pub const ContextManager = struct {
 
         // Add evolution progress
         const metrics = self.sacred_metrics;
-        std.fmt.format(writer, "// === EVOLUTION PROGRESS: {d:.1}% ===\n", .{
+        writer.print("// === EVOLUTION PROGRESS: {d:.1}% ===\n", .{
             metrics.evolution_progress * 100.0,
         }) catch |err| {
             std.log.debug("tri_context: write evolution progress failed: {}", .{err});
         };
-        std.fmt.format(writer, "// Patch Candidates: {d} / {d} symbols\n", .{
+        writer.print("// Patch Candidates: {d} / {d} symbols\n", .{
             metrics.patch_candidates_found,
             metrics.total_symbols_analyzed,
         }) catch |err| {
@@ -514,7 +516,7 @@ pub const ContextManager = struct {
 
         writer.writeAll("// === END CONTEXT ===\n\n") catch return null;
 
-        const written = fbs.getWritten();
+        const written = writer.buffered();
         const result = self.allocator.alloc(u8, written.len) catch return null;
         @memcpy(result, written);
         return result;
@@ -663,7 +665,7 @@ pub const ContextManager = struct {
         defer file.close(self.io);
 
         // Build index in memory, then write at once
-        var buf = std.ArrayListUnmanaged(u8){};
+        var buf: std.ArrayListUnmanaged(u8) = .empty;
         defer buf.deinit(self.allocator);
 
         // Header (32 bytes)
