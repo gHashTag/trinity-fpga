@@ -4,7 +4,7 @@
     "id": "two-track",
     "cron_job": "1cd7dda4",
     "interval": "15m",
-    "iteration": 118,
+    "iteration": 119,
     "status": "RUNNING",
     "owner": "Dmitrii Vasilev / @gHashTag",
     "tracks": [
@@ -865,6 +865,14 @@
       "why_it_matters_beyond_ci": "deploy/reproducible/REPRODUCIBILITY.md and fpga/openxc7-synth/CI_CD_README.md both cite this image as available. Those documents currently promise an artifact that cannot be built. That is a claim problem, not only a CI problem.",
       "options": "(a) restore both scripts from 6f6840d52^ -- cheapest, but conflicts with .claude/rules/no-shell-scripts.md, which marks exactly these for deletion; (b) rewrite Dockerfile.conscious to not need them -- requires knowing what they did, and changes the image's published interface; (c) delete the workflow and Dockerfile as obsolete -- defensible, but the two docs above must be corrected in the same change or they keep promising it.",
       "note": "#751 is deliberately NOT merged. Merging adds a fifth permanently-red check to main. The check would be TRUE, and hiding it is the exact disease this work is treating -- but it changes the operator's CI posture, which is theirs to decide. Full diagnosis posted at https://github.com/gHashTag/trinity-fpga/pull/751#issuecomment-5556496255"
+    },
+    {
+      "id": "B29",
+      "title": "Three CI defects on gHashTag/trinity that fail on every branch and nobody reads",
+      "status": "pending",
+      "detail": "Found while checking whether red checks on my own PRs were mine. Each was verified against run history rather than assumed. (1) project-auto-status.yml ('pr-opened'): `gh: Bad credentials (HTTP 401)` on the project-board GraphQL call -- 12 of the last 12 runs failed, across unrelated branches. The token is expired or unscoped; needs an operator with project permissions to reissue it. (2) claude-code-review.yml: 12 of 12 failed, 'result is_error:true'. Note blog/t27-spec-explorer carries a commit b255fe75 'fix(ci): claude-review could never post its review -- read-scoped token' that has never reached main, so the fix may already exist on that branch. (3) The RU language audit in website-checks fails with an identical 'RU-аудит: найдено английских строк: 1' on /dashboard across at least three unrelated branches (fix/silicon-coverage, feat/queen-cycle-048-working, feat/queen-cycle-047-scene) while passing on push-to-main -- reproducible on re-run, so not flake. An untranslated English string on /dashboard, or a race with the live clock the audit captures.",
+      "why_it_matters": "Between them these three put four red checks on every pull request in the repo. Four permanent reds is how a team learns to merge past red, which is exactly the state that let brain-ci fabricate a health score for months without anyone reading the log.",
+      "needs": "operator: reissue the project-board token (1); decide whether to cherry-pick b255fe75 to main or fix claude-review separately (2). (3) is diagnosable without permissions and is the one I can take next."
     }
   ],
   "anomalies": [
@@ -1238,6 +1246,28 @@
       "second_order": "The repo's tsc has a 179-error pre-existing baseline (hence typecheck:ratchet), so 'did it pass' was never the right question -- it never passes. The right question is whether the error set gained a row naming a file I touched. I had been reading exit codes on a checker that cannot exit 0.",
       "lesson": "When a change does not appear, do not re-read your source. Identify the artefact actually being served and prove your bytes are in it: `grep -rl '<a string only my version contains>' dist/` answers in one command, and performance.getEntriesByType('resource') in the page says which chunk hash the browser really loaded. If those disagree, it is cache, not code. And treat any 'clean' from an incremental checker as unverified until run with --force.",
       "status": "Recorded in memory a-build-cache-can-grade-deleted-code, which already holds this family."
+    },
+    {
+      "id": "A44",
+      "found": "2026-09-06, iteration 119, auditing the Chip tab I had shipped hours earlier.",
+      "what": "SPEC_TO_FORMAT listed six spec paths. The corpus carries the GoldenFloat ladder THREE times -- under specs/, chips/euler/ and trinity-fpga/t27/ -- so twelve specs describing formats measured on silicon rendered 'No hardware run', plus tri-net/specs/gf16_format.t27, which declares the format outright. Thirteen wrong readouts shipped to a public site.",
+      "cause": "The wrong-denominator class, third recurrence. My census globbed specs/; the app indexes the whole tree (760 specs across twelve roots). The defect lived exactly in the gap I never looked at. I even ran the census twice -- the second time only because the first felt too small -- and both runs used the same wrong glob.",
+      "direction_matters_less_than_i_assumed": "I built the whole feature around not OVER-claiming: path-keyed rather than name-matched, levels shown at the strength earned, SUB labelled 'prepared' rather than done. The defect ran the other way -- it understated verified work. A wrong readout in the quiet direction is still wrong, and I had no guard against it at all because I was only watching one direction.",
+      "why_nothing_caught_it": "From inside the app, 'considered and excluded' and 'never looked at' are indistinguishable: both fall through to the same empty branch. There was no representation for a decision, so there was nothing for a test to check.",
+      "fix": "19 paths mapped, each verified by its declared module name and bit layout before adding, not inferred from the filename. An EXCLUDED table of 13 paths, each with a reason, so a decision is now a thing that exists in the data -- and the UI shows the reason instead of a bare 'no hardware run'. scripts/check-silicon-coverage.mjs fails when a corpus spec names a verified format and is in none of the three tables, and when a table entry names a path the corpus lacks. It reads the tables by compiling siliconHistory.ts with esbuild, not by regexing its source.",
+      "the_guard_paid_immediately": "On its first run it found three specs no pattern of mine would have -- chips/euler gf64, gf128, gf256 -- caught by their `triformat-gf<N>` module declaration rather than any filename rule. I checked WHY they matched instead of accepting the hit, because a detector firing for the wrong reason would have made my 'over-inclusive' claim untested.",
+      "negative_control": "The --self-test runs in CI, and separately I dropped a real unclassified gf6.t27 into the corpus: exit 1, names the file; removed it: exit 0. Corpus left clean.",
+      "lesson": "When a feature keys off a set, the guard belongs on the set, not on the keys. And build the census over the set the CONSUMER uses -- I have now paid for this three times, and the tell each time was a count that felt smaller than the thing it described."
+    },
+    {
+      "id": "A45",
+      "found": "2026-09-06, iteration 119, while checking whether four red checks on my own PR were mine.",
+      "what": "brain-ci.yml has failed on EVERY run in its history, including on main, and neither failure was a health regression. (1) `tri stress --health` prints 'stress-test: TODO - not implemented yet' and emits no Score: line; the step's `grep 'Score:' ... || echo \"0\"` turned that ABSENCE into the number 0, which the threshold check reported as 'Brain health 0 below threshold 80' -- a fabricated measurement of a command that measured nothing. (2) 'Critical State Notification' carried only `if: failure()`, so on a push context.issue.number is undefined and the call became POST /repos/.../issues//comments -> 404, burying the real verdict under a 30-line octokit dump.",
+      "class": "Same as A36/A37 -- an unmeasured field rendered as a measurement. The inverse of B23/B27, where gates pass on an empty scope. Both ends are the same disease: a gate whose output does not depend on the thing it claims to measure. A check that is always red carries as little information as one that is always green, and this one had trained everyone to ignore it.",
+      "fix": "The step now distinguishes 'not measured' from 'measured zero' and prints what the command actually said. It STILL FAILS -- an unimplemented health check is a real deficiency -- but for the true reason. Also fixed a latent parse bug: the pattern required [0-9]+\\.[0-9]+, so 'Score: 92' would have parsed empty and reached bc as an empty string. The notification is now guarded on pull_request, matching two sibling steps that already were; I audited all four context.issue.number uses in the file and this was the only unguarded one.",
+      "verified": "Ran the step's logic over five inputs rather than reading it through: the real current output (not measured), a decimal score (pass), an integer score (pass -- the old pattern broke here), a genuine 41.2 (still fails, as it must), and an unparseable Score: line (not measured). Then confirmed on the runner: the new '::error::brain health was NOT MEASURED' text appears in run 34026074855 in place of the old fabricated number.",
+      "self_correction": "My first commit message and PR body claimed the 404 was WHY Brain Health Report failed on every push. That was an overstatement. 'Generate Health Report' is an aggregator and exits 1 whenever an upstream job failed, which is correct -- the job would go red regardless. The 404 fired on top and buried the verdict. Caught by reading the aggregator's own body after the fix ran, rather than concluding the fix worked because a job name dropped off a check list. Corrected in a follow-up commit and a PR comment before merging.",
+      "lesson": "'The job stopped appearing in the failure list' is not evidence that the thing you fixed was the cause. Read the body of what remains."
     }
   ],
   "collaboration_options": [

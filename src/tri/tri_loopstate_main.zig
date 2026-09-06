@@ -23,7 +23,7 @@ fn usage() void {
     std.debug.print(
         \\usage: tri-loopstate <status|check|tripwire|bump|render|record> [--state PATH]
         \\                     [--dashboard PATH] [--out PATH] [--note TEXT]
-        \\                     [--kind done|anomaly] [--entry PATH]
+        \\                     [--kind done|anomaly|backlog] [--entry PATH]
         \\
         \\  status     print the current iteration, done count, and next actionable backlog item
         \\  check      recompute live backlog/anomaly counts from STATE.json and diff them
@@ -35,7 +35,7 @@ fn usage() void {
         \\             Replaces the "MANDATORY SELF-CHECK" in the continuity protocol that
         \\             asked a human to remember; it did not, for nine consecutive
         \\             iterations (anomaly A24, a recurrence of A7 at ~10x the scale).
-        \\  record     append a done[] or anomalies[] entry from --entry PATH (a JSON
+        \\  record     append a done[], anomalies[] or backlog[] entry from --entry PATH (a JSON
         \\             object), assigning the next free id itself. The id is DERIVED, never
         \\             passed in: every iteration used to append these by hand through a
         \\             throwaway script that also hand-asserted the id was free, which is
@@ -112,8 +112,15 @@ pub fn main(init: std.process.Init) !u8 {
                 .{ "done", "D" }
             else if (std.mem.eql(u8, kind, "anomaly"))
                 .{ "anomalies", "A" }
+                // Backlog was missing here for eleven iterations, and the gap only
+                // showed when an iteration produced one: `record` refused it, so the
+                // item went into the report prose and nowhere else. That is A42's
+                // shape -- work that exists in narration and not in the file -- and
+                // the counter cannot see it either.
+            else if (std.mem.eql(u8, kind, "backlog"))
+                .{ "backlog", "B" }
             else {
-                std.debug.print("error: --kind must be 'done' or 'anomaly', got '{s}'\n", .{kind});
+                std.debug.print("error: --kind must be 'done', 'anomaly' or 'backlog', got '{s}'\n", .{kind});
                 return 1;
             };
 
