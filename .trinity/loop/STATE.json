@@ -4,7 +4,7 @@
     "id": "two-track",
     "cron_job": "1cd7dda4",
     "interval": "15m",
-    "iteration": 125,
+    "iteration": 126,
     "status": "RUNNING",
     "owner": "Dmitrii Vasilev / @gHashTag",
     "tracks": [
@@ -671,6 +671,15 @@
       "fix": "On a phone the detail column scrolls as one document: main takes overflowY:auto, the layer body asks for 70vh instead of competing for leftovers, and the pane drops its nested scroller so exactly one scroll region remains. Above 760px unchanged.",
       "verified_live": "On t27.ai at 375px: main scrollHeight 1197 vs client 760 = 437px of real page scroll, pane overflow computed 'visible', pane scrollHeight - clientHeight = 0 (no nested scroller), code element 482px inside a 554px pane so nothing is clipped. Re-checked at 1280x800 after reload: two panes, pane overflow back to 'auto' with 91px internal scroll, main overflowY 'visible' -- desktop unchanged. mobile_audit still 28/28.",
       "incidental": "Also listens to resize as well as matchMedia change: a programmatic viewport change did not deliver a change event in the headless browser, which read as the layout being stuck until reload."
+    },
+    {
+      "id": "D108",
+      "what": "Reachability on a phone, in four merged changes: a visible language switcher on /specs (#965), the header title that my own switcher fix collapsed to 'О...' (#966), the Playground back link off-screen in Russian and RUN moved into thumb reach (#967).",
+      "the_user_asks_answered": "'у нас два языка? где переключить не видно' -- the site has five locales and /specs was the only page with no control, because it renders its own header instead of <Navigation>. 'кнопку RUN внизу сделай' -- the inline RUN sits at the top of a column that scrolls, so it left the screen after any reading; it is now a 48px pill fixed bottom-right, clear of the text and off the home indicator, with the inline one hidden so there are not two.",
+      "the_gate_grew_a_second_question": "qa/mobile_audit.mjs measured documentElement.scrollWidth, which an ancestor's overflow:hidden CLAMPS -- so a control pushed off the edge inside a clipping header was invisible to it. It now also asks, per route, whether any INTERACTIVE element lies outside the viewport. That question immediately found /queen (two buttons, one at left 850px) and /tree (one at 912px), which land as a NAMED baseline rather than a count, because a count admits a new offender each time an old one is fixed.",
+      "and_a_second_locale": "The audit now runs EN and RU in CI. The defect that prompted all this fitted in English and did not in Russian; a single-locale run would have passed it. It then caught /play the same way.",
+      "self_check_that_worked": "One audit run reported the baseline routes as 'now clean'. Nothing in that change touched them, so I declined to remove them; the next run reported them bad again. The baseline held because I did not act on one green.",
+      "not_caught_by_any_gate": "The 'О...' title regression. A truncated heading is neither an overflow nor an unreachable control -- it is legible-or-not, which the audit deliberately does not judge. Found by looking at the published page."
     }
   ],
   "backlog": [
@@ -1398,6 +1407,15 @@
       "second_error_avoided": "Cherry-picking b255fe75 verbatim would have reintroduced `show_full_output: true`, which a LATER commit on the same branch (be6b654f) removed as an input the action does not accept. main already carries that correction, as a comment explaining why the input is absent. So the naive fix would have regressed a fix.",
       "real_cause_still_unknown": "claude-review fails with `\"subtype\": \"success\", \"is_error\": true` and no diagnostic beyond it -- num_turns 1, modelUsage {}, duration 2.1s. Permissions are correct and the token is present. That points at the action or the credential rather than the workflow file, which is operator territory.",
       "lesson": "An ancestor check answers 'is this commit on main', not 'is this change on main'. For squash-merged repositories they are different questions, and I recorded the answer to the wrong one as a backlog item that then sat open for days. Diff the file, not the history."
+    },
+    {
+      "id": "A52",
+      "found": "2026-09-06, iteration 126. Third haste-merge of this session, and the first that actually left main red.",
+      "what": "I merged gHashTag/trinity#966 while website-checks was FAILING. My wait loop polled until the run completed, printed `website-checks: completed failure`, and then ran `gh pr merge` on the next line unconditionally. The conclusion was fetched, displayed, and ignored -- the shell had no branch on it at all.",
+      "what_it_let_through": "A real defect the gate had just caught: /play's `← Назад` link at right edge 387px on a 375px screen, unreachable. Not caused by #966 -- it is the same locale-width class, newly visible because that same PR added the Russian run of the mobile audit. So the gate worked exactly as designed and I overrode it by not reading my own output.",
+      "repaired": "gHashTag/trinity#967 fixes it (brand gives way, controls do not) and was merged only after checking both locales green -- verified before merging, not after.",
+      "the_pattern": "Twice earlier this session I merged with checks pending and recorded it. Both times the lesson was written as 'check before merging'. It did not hold, because the failure is not forgetting to check -- I did check, and printed the answer. It is that the check and the merge were in the same unconditional command sequence. A rule that depends on me reading a line I just printed is not a control.",
+      "lesson": "Never put `gh pr merge` in the same command as the wait that determines whether it should run. Make the merge a separate call whose input is the conclusion I have already read, so declining is the default rather than an extra step."
     }
   ],
   "collaboration_options": [
