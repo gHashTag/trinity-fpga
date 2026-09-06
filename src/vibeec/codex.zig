@@ -6,6 +6,7 @@
 //  4:  (The Soul - LLM Integration)
 
 const std = @import("std");
+const tri_env = @import("tri_env");
 const tri_proc = @import("tri_proc");
 const llm = @import("llm_provider.zig");
 const Validator = @import("validation_engine.zig").Validator;
@@ -38,7 +39,7 @@ pub const Config = struct {
         var model_owned = try allocator.dupe(u8, default_config.model);
 
         // 2. Try Config File (JSON)
-        const home = std.process.getEnvVarOwned(allocator, "HOME") catch null;
+        const home = tri_env.getEnvVarOwned(allocator, "HOME") catch null;
         if (home) |h| {
             defer allocator.free(h);
             const config_path = try std.fs.path.join(allocator, &[_][]const u8{ h, ".tric", "config.json" });
@@ -75,17 +76,17 @@ pub const Config = struct {
         // 3. Try Environment Variables (Highest Priority)
         // We use process.getEnvVarOwned which uses allocator.
         // We assign directly after freeing the previous owned value.
-        if (std.process.getEnvVarOwned(allocator, "VIBEEC_API_KEY")) |env_key| {
+        if (tri_env.getEnvVarOwned(allocator, "VIBEEC_API_KEY")) |env_key| {
             allocator.free(api_key_owned);
             api_key_owned = env_key;
         } else |_| {}
 
-        if (std.process.getEnvVarOwned(allocator, "VIBEEC_MODEL")) |env_model| {
+        if (tri_env.getEnvVarOwned(allocator, "VIBEEC_MODEL")) |env_model| {
             allocator.free(model_owned);
             model_owned = env_model;
         } else |_| {}
 
-        if (std.process.getEnvVarOwned(allocator, "VIBEEC_BASE_URL")) |env_url| {
+        if (tri_env.getEnvVarOwned(allocator, "VIBEEC_BASE_URL")) |env_url| {
             allocator.free(base_url_owned);
             base_url_owned = env_url;
         } else |_| {}
@@ -98,7 +99,7 @@ pub const Config = struct {
     }
 
     pub fn save(allocator: std.mem.Allocator, new_api_key: ?[]const u8, new_model: ?[]const u8, new_base_url: ?[]const u8) !void {
-        const home = try std.process.getEnvVarOwned(allocator, "HOME");
+        const home = try tri_env.getEnvVarOwned(allocator, "HOME");
         defer allocator.free(home);
 
         const dir_path = try std.fs.path.join(allocator, &[_][]const u8{ home, ".tric" });

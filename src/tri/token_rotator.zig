@@ -1,4 +1,10 @@
 const std = @import("std");
+
+const c_chmod = struct {
+    extern "c" fn chmod(path: [*:0]const u8, mode: c_uint) c_int;
+};
+const tri_time = @import("tri_time");
+const tri_io = @import("tri_io");
 const tri_env = @import("tri_env");
 const fs = std.fs;
 const time = std.time;
@@ -71,7 +77,7 @@ pub const TokenRotator = struct {
             return error.NoTokensAvailable;
         }
 
-        self.last_rotation = time.timestamp();
+        self.last_rotation = tri_time.timestamp();
     }
 
     pub fn getActiveToken(self: *TokenRotator) ![]const u8 {
@@ -79,7 +85,7 @@ pub const TokenRotator = struct {
 
         const token = &self.tokens.items[self.current_index];
 
-        const now = time.timestamp();
+        const now = tri_time.timestamp();
         if (token.status == .rate_limited) {
             if (token.reset_at) |reset_time| {
                 if (reset_time <= now) {
@@ -100,7 +106,7 @@ pub const TokenRotator = struct {
     pub fn getNextToken(self: *TokenRotator) ![]const u8 {
         if (self.tokens.items.len == 0) return error.NoTokensAvailable;
 
-        const now = time.timestamp();
+        const now = tri_time.timestamp();
 
         for (0..self.tokens.items.len) |_| {
             self.current_index = (self.current_index + 1) % self.tokens.items.len;
@@ -132,7 +138,7 @@ pub const TokenRotator = struct {
         if (self.tokens.items.len == 0) return;
 
         const token = &self.tokens.items[self.current_index];
-        const now = time.timestamp();
+        const now = tri_time.timestamp();
         token.status = .rate_limited;
         token.last_429 = now;
 
@@ -150,7 +156,7 @@ pub const TokenRotator = struct {
 
         self.current_index = (self.current_index + 1) % self.tokens.items.len;
         self.total_rotations += 1;
-        self.last_rotation = time.timestamp();
+        self.last_rotation = tri_time.timestamp();
 
         try self.save();
     }
@@ -166,8 +172,10 @@ pub const TokenRotator = struct {
     }
 
     pub fn save(self: *const TokenRotator) !void {
+        // std.fs.path survives in 0.16; only Dir/File moved to std.Io.
         const state_dir = std.fs.path.dirname(self.state_file) orelse ".";
-        try fs.cwd().makePath(state_dir);
+        const io = tri_io.get();
+        try std.Io.Dir.cwd().createDirPath(io, state_dir);
 
         var buffer = std.ArrayList(u8).initCapacity(self.allocator, 1024) catch return error.OutOfMemory;
         defer buffer.deinit(self.allocator);
@@ -205,16 +213,25 @@ pub const TokenRotator = struct {
         try buffer.appendSlice(self.allocator, "  ]\n");
         try buffer.appendSlice(self.allocator, "}\n");
 
-        var file = try fs.cwd().createFile(self.state_file, .{ .mode = 0o600 });
-        defer file.close();
-        try file.writeAll(buffer.items);
+        // 0.16's CreateFileOptions dropped `mode`. This file holds API tokens,
+        // so the 0600 was doing real work -- it is applied after creation with
+        // chmod rather than silently lost.
+        var file = try std.Io.Dir.cwd().createFile(io, self.state_file, .{});
+        defer file.close(io);
+        try file.writeStreamingAll(io, buffer.items);
+        {
+            const path_z = try self.allocator.dupeZ(u8, self.state_file);
+            defer self.allocator.free(path_z);
+            _ = c_chmod.chmod(path_z.ptr, 0o600);
+        }
     }
 
     pub fn load(self: *TokenRotator) !void {
-        const file_obj = fs.cwd().openFile(self.state_file, .{}) catch return error.FileNotFound;
-        defer file_obj.close();
-
-        const content = try std.fs.cwd().readFileAlloc(self.allocator, self.state_file, 10 * 1024);
+        // The open was only ever a existence probe; readFileAlloc does the
+        // read and reports a missing file itself, so the separate handle goes.
+        const io = tri_io.get();
+        const content = std.Io.Dir.cwd().readFileAlloc(io, self.state_file, self.allocator, .limited(10 * 1024)) catch
+            return error.FileNotFound;
         defer self.allocator.free(content);
 
         var pos: usize = 0;
@@ -309,12 +326,13 @@ pub fn extractRetryAfter(response_body: []const u8) ?[]const u8 {
 
 fn logEvent(timestamp: i64, token_name: []const u8, event_type: []const u8, duration: i64) !void {
     const log_path = ".trinity/event_log.jsonl";
-    std.fs.cwd().makePath(".trinity") catch {};
+    const io = tri_io.get();
+    std.Io.Dir.cwd().createDirPath(io, ".trinity") catch {};
 
-    var file_obj = std.fs.cwd().openFile(log_path, .{}) catch |err| {
+    var file_obj = std.Io.Dir.cwd().openFile(io, log_path, .{}) catch |err| {
         if (err == error.FileNotFound) {
-            const new_file = try std.fs.cwd().createFile(log_path, .{});
-            new_file.close();
+            const new_file = try std.Io.Dir.cwd().createFile(io, log_path, .{});
+            new_file.close(io);
             return;
         } else {
             return err;

@@ -11,6 +11,7 @@
 // =============================================================================
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 const golden_chain = @import("dna_polymerase.zig");
 
@@ -229,11 +230,12 @@ pub const Tracer = struct {
         const path = std.fmt.bufPrint(&path_buf, ".trinity/traces/{d}.json", .{trace.trace_id}) catch return error.PathTooLong;
 
         // Ensure directory exists
-        std.fs.cwd().makePath(".trinity/traces") catch {};
+        const io = tri_io.get();
+        std.Io.Dir.cwd().createDirPath(io, ".trinity/traces") catch {};
 
-        var file = std.fs.cwd().createFile(path, .{}) catch return error.FileCreateFailed;
-        defer file.close();
-        file.writeAll(json) catch return error.WriteFailed;
+        var file = std.Io.Dir.cwd().createFile(io, path, .{}) catch return error.FileCreateFailed;
+        defer file.close(io);
+        file.writeStreamingAll(io, json) catch return error.WriteFailed;
     }
 };
 

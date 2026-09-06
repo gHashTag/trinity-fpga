@@ -188,18 +188,17 @@ pub fn fitToJson(allocator: Allocator, target: f64, fit: SacredFit) Allocator.Er
 /// Serialize constants list to JSON (for GET /api/sacred-formula/constants)
 pub fn constantsToJson(allocator: Allocator, spec: *const tri_spec.SacredSpec) Allocator.Error![]u8 {
     var buf: std.ArrayListUnmanaged(u8) = .empty;
-    const w = buf.writer(allocator);
 
-    w.writeAll("{\"constants\":[") catch return error.OutOfMemory;
+    buf.appendSlice(allocator, "{\"constants\":[") catch return error.OutOfMemory;
 
     for (spec.constants.items, 0..) |c, i| {
-        if (i > 0) w.writeAll(",") catch return error.OutOfMemory;
-        std.fmt.format(w,
+        if (i > 0) buf.appendSlice(allocator, ",") catch return error.OutOfMemory;
+        buf.print(allocator,
             \\{{"name":"{s}","symbol":"{s}","value":{d},"category":"{s}","description":"{s}"}}
         , .{ c.name, c.symbol, c.value, c.category, c.description }) catch return error.OutOfMemory;
     }
 
-    w.writeAll("]}") catch return error.OutOfMemory;
+    buf.appendSlice(allocator, "]}") catch return error.OutOfMemory;
     return buf.toOwnedSlice(allocator);
 }
 
@@ -211,13 +210,12 @@ pub fn fullResultsToJson(
     bounds: tri_spec.SearchBounds,
 ) Allocator.Error![]u8 {
     var buf: std.ArrayListUnmanaged(u8) = .empty;
-    const w = buf.writer(allocator);
 
-    w.writeAll("{\"formula\":\"V = n * 3^k * pi^m * phi^p * e^q\",\"constants\":[") catch return error.OutOfMemory;
+    buf.appendSlice(allocator, "{\"formula\":\"V = n * 3^k * pi^m * phi^p * e^q\",\"constants\":[") catch return error.OutOfMemory;
 
     for (fits, 0..) |f, i| {
-        if (i > 0) w.writeAll(",") catch return error.OutOfMemory;
-        std.fmt.format(w,
+        if (i > 0) buf.appendSlice(allocator, ",") catch return error.OutOfMemory;
+        buf.print(allocator,
             \\{{"name":"{s}","symbol":"{s}","target":{d},"category":"{s}","fit":{{"n":{d},"k":{d},"m":{d},"p":{d},"q":{d}}},"computed":{d:.10},"error_pct":{d:.6}}}
         , .{
             f.name,  f.symbol,    f.target,        f.category,
@@ -226,11 +224,11 @@ pub fn fullResultsToJson(
         }) catch return error.OutOfMemory;
     }
 
-    w.writeAll("],\"predictions\":[") catch return error.OutOfMemory;
+    buf.appendSlice(allocator, "],\"predictions\":[") catch return error.OutOfMemory;
 
     for (preds, 0..) |p, i| {
-        if (i > 0) w.writeAll(",") catch return error.OutOfMemory;
-        std.fmt.format(w,
+        if (i > 0) buf.appendSlice(allocator, ",") catch return error.OutOfMemory;
+        buf.print(allocator,
             \\{{"name":"{s}","formula":"{s}","value":{d:.10},"unit":"{s}","n":{d},"k":{d},"m":{d},"p":{d},"q":{d}}}
         , .{
             p.name, p.formula, p.value, p.unit,
@@ -239,7 +237,7 @@ pub fn fullResultsToJson(
         }) catch return error.OutOfMemory;
     }
 
-    std.fmt.format(w,
+    buf.print(allocator,
         \\],"search_bounds":{{"n":[{d},{d}],"k":[{d},{d}],"m":[{d},{d}],"p":[{d},{d}],"q":[{d},{d}]}}}}
     , .{
         bounds.n_range[0], bounds.n_range[1],

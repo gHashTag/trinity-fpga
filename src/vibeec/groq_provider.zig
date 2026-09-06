@@ -7,6 +7,7 @@
 
 const std = @import("std");
 
+const tri_env = @import("tri_env");
 pub const GroqProvider = struct {
     allocator: std.mem.Allocator,
     api_key: []const u8,
@@ -17,7 +18,7 @@ pub const GroqProvider = struct {
 
     pub fn init(allocator: std.mem.Allocator) Self {
         // Read API key from environment
-        const api_key = std.process.getEnvVarOwned(allocator, "GROQ_API_KEY") catch
+        const api_key = tri_env.getEnvVarOwned(allocator, "GROQ_API_KEY") catch
             allocator.dupe(u8, "") catch "";
 
         return Self{

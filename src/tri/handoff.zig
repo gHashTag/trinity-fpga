@@ -317,11 +317,11 @@ fn writeJsonValue(w: anytype, comptime T: type, value: T) !void {
     } else if (T == bool) {
         try w.writeAll(if (value) "true" else "false");
     } else if (T == u8 or T == u32 or T == u64) {
-        try std.fmt.format(w, "{d}", .{value});
+        try w.print("{d}", .{value});
     } else if (T == i64) {
-        try std.fmt.format(w, "{d}", .{value});
+        try w.print("{d}", .{value});
     } else if (T == f64) {
-        try std.fmt.format(w, "{d:.4}", .{value});
+        try w.print("{d:.4}", .{value});
     } else if (T == []const []const u8) {
         try w.writeByte('[');
         for (value, 0..) |item, idx| {
@@ -335,13 +335,13 @@ fn writeJsonValue(w: anytype, comptime T: type, value: T) !void {
             try w.writeAll("{\"name\": ");
             try writeJsonEscapedStr(w, entry.name);
             try w.writeAll(", \"value\": ");
-            try std.fmt.format(w, "{d:.4}", .{entry.value});
+            try w.print("{d:.4}", .{entry.value});
             try w.writeAll(", \"unit\": ");
             try writeJsonEscapedStr(w, entry.unit);
             try w.writeAll(", \"baseline\": ");
-            try std.fmt.format(w, "{d:.4}", .{entry.baseline});
+            try w.print("{d:.4}", .{entry.baseline});
             try w.writeAll(", \"delta_pct\": ");
-            try std.fmt.format(w, "{d:.4}", .{entry.delta_pct});
+            try w.print("{d:.4}", .{entry.delta_pct});
             try w.writeByte('}');
             if (idx < value.len - 1) try w.writeAll(", ");
         }

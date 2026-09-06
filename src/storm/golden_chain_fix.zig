@@ -1,6 +1,6 @@
 /// Save checkpoint to disk (P11: Full JSON serialization)
 pub fn saveCheckpoint(self: *GoldenChain, task: []const u8) !void {
-    const timestamp = std.time.timestamp();
+    const timestamp = tri_time.timestamp();
 
     // Create checkpoint filename
     const filename = try std.fmt.allocPrint(

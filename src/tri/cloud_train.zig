@@ -316,7 +316,7 @@ fn cloudFarmCapacity() void {
     var fbs = std.io.fixedBufferStream(&buf);
     const w = fbs.writer();
 
-    std.fmt.format(w, "{{\"total_slots\":{d},\"total_active\":{d},\"total_daily_remaining\":{d},\"accounts\":[", .{
+    w.print("{{\"total_slots\":{d},\"total_active\":{d},\"total_daily_remaining\":{d},\"accounts\":[", .{
         cap.total_slots,
         cap.total_active,
         cap.total_daily_remaining,
@@ -326,7 +326,7 @@ fn cloudFarmCapacity() void {
     for (farm.accounts[0..farm.account_count]) |*acct| {
         if (!first) w.writeAll(",") catch return;
         first = false;
-        std.fmt.format(w, "\n  {{\"id\":{d},\"alias\":\"{s}\",\"active\":{d},\"slots\":{d},\"daily_remaining\":{d}}}", .{
+        w.print("\n  {{\"id\":{d},\"alias\":\"{s}\",\"active\":{d},\"slots\":{d},\"daily_remaining\":{d}}}", .{
             acct.id,
             acct.getAlias(),
             acct.active_services,

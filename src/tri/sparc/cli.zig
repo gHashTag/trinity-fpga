@@ -373,36 +373,36 @@ fn runBatchFit(allocator: Allocator, data_content: []const u8, options: SparcOpt
             var root = std.json.Array.init(allocator);
             defer root.deinit();
 
-            var summary_obj = std.json.ObjectMap.init(allocator);
-            defer summary_obj.deinit();
+            var summary_obj = std.json.ObjectMap.empty;
+            defer summary_obj.deinit(allocator);
 
-            try summary_obj.put("total_galaxies", json.Value{ .integer = @intCast(results.items.len) });
-            try summary_obj.put("good_fits", json.Value{ .integer = @intCast(total_good) });
-            try summary_obj.put("good_fit_percentage", json.Value{ .float = success_rate * 100 });
-            try summary_obj.put("mean_reduced_chi_squared", json.Value{ .float = mean_chi });
-            try summary_obj.put("median_reduced_chi_squared", json.Value{ .float = median_chi });
+            try summary_obj.put(allocator, "total_galaxies", json.Value{ .integer = @intCast(results.items.len) });
+            try summary_obj.put(allocator, "good_fits", json.Value{ .integer = @intCast(total_good) });
+            try summary_obj.put(allocator, "good_fit_percentage", json.Value{ .float = success_rate * 100 });
+            try summary_obj.put(allocator, "mean_reduced_chi_squared", json.Value{ .float = mean_chi });
+            try summary_obj.put(allocator, "median_reduced_chi_squared", json.Value{ .float = median_chi });
 
             var results_array = std.json.Array.init(allocator);
             defer results_array.deinit();
 
             for (results.items) |r| {
-                var r_obj = std.json.ObjectMap.init(allocator);
-                defer r_obj.deinit();
+                var r_obj = std.json.ObjectMap.empty;
+                defer r_obj.deinit(allocator);
 
-                try r_obj.put("name", json.Value{ .string = r.name });
-                try r_obj.put("chi_squared", json.Value{ .float = r.chi_sq });
-                try r_obj.put("reduced_chi_squared", json.Value{ .float = r.reduced_chi_sq });
-                try r_obj.put("is_good_fit", json.Value{ .bool = r.is_good });
-                try r_obj.put("num_points", json.Value{ .integer = @intCast(r.num_points) });
+                try r_obj.put(allocator, "name", json.Value{ .string = r.name });
+                try r_obj.put(allocator, "chi_squared", json.Value{ .float = r.chi_sq });
+                try r_obj.put(allocator, "reduced_chi_squared", json.Value{ .float = r.reduced_chi_sq });
+                try r_obj.put(allocator, "is_good_fit", json.Value{ .bool = r.is_good });
+                try r_obj.put(allocator, "num_points", json.Value{ .integer = @intCast(r.num_points) });
 
                 try results_array.append(json.Value{ .object = r_obj });
             }
 
-            var output_obj = std.json.ObjectMap.init(allocator);
-            defer output_obj.deinit();
+            var output_obj = std.json.ObjectMap.empty;
+            defer output_obj.deinit(allocator);
 
-            try output_obj.put("summary", json.Value{ .object = summary_obj });
-            try output_obj.put("results", json.Value{ .array = results_array });
+            try output_obj.put(allocator, "summary", json.Value{ .object = summary_obj });
+            try output_obj.put(allocator, "results", json.Value{ .array = results_array });
 
             {
                 const json_str = try stringifyJson(allocator, json.Value{ .object = output_obj });
@@ -456,44 +456,44 @@ fn outputJson(allocator: Allocator, result: mod.FitResult, points: []const mod.G
     defer root.deinit();
 
     // Parameters object - use ObjectMap for JSON compatibility
-    var params_obj = std.json.ObjectMap.init(allocator);
-    defer params_obj.deinit();
+    var params_obj = std.json.ObjectMap.empty;
+    defer params_obj.deinit(allocator);
 
-    try params_obj.put("rho0", json.Value{ .float = result.params.rho0 });
-    try params_obj.put("r_mem", json.Value{ .float = result.params.r_mem });
-    try params_obj.put("r_core", json.Value{ .float = result.params.r_core });
-    try params_obj.put("upsilon_bul", json.Value{ .float = result.params.upsilon_bul });
+    try params_obj.put(allocator, "rho0", json.Value{ .float = result.params.rho0 });
+    try params_obj.put(allocator, "r_mem", json.Value{ .float = result.params.r_mem });
+    try params_obj.put(allocator, "r_core", json.Value{ .float = result.params.r_core });
+    try params_obj.put(allocator, "upsilon_bul", json.Value{ .float = result.params.upsilon_bul });
 
     // Result object
-    var result_obj = std.json.ObjectMap.init(allocator);
-    defer result_obj.deinit();
+    var result_obj = std.json.ObjectMap.empty;
+    defer result_obj.deinit(allocator);
 
-    try result_obj.put("params", json.Value{ .object = params_obj });
-    try result_obj.put("chi_squared", json.Value{ .float = result.chi_squared });
-    try result_obj.put("degrees_of_freedom", json.Value{ .integer = @intCast(result.dof) });
-    try result_obj.put("reduced_chi_squared", json.Value{ .float = result.reduced_chi_squared });
-    try result_obj.put("is_good_fit", json.Value{ .bool = Fitting.isGoodFit(result) });
+    try result_obj.put(allocator, "params", json.Value{ .object = params_obj });
+    try result_obj.put(allocator, "chi_squared", json.Value{ .float = result.chi_squared });
+    try result_obj.put(allocator, "degrees_of_freedom", json.Value{ .integer = @intCast(result.dof) });
+    try result_obj.put(allocator, "reduced_chi_squared", json.Value{ .float = result.reduced_chi_squared });
+    try result_obj.put(allocator, "is_good_fit", json.Value{ .bool = Fitting.isGoodFit(result) });
 
     // Output array
     var data_array = std.json.Array.init(allocator);
     defer data_array.deinit();
 
     for (points) |*point| {
-        var data_obj = std.json.ObjectMap.init(allocator);
-        defer data_obj.deinit();
+        var data_obj = std.json.ObjectMap.empty;
+        defer data_obj.deinit(allocator);
 
-        try data_obj.put("radius_kpc", json.Value{ .float = point.radius });
-        try data_obj.put("velocity_kms", json.Value{ .float = point.velocity });
-        try data_obj.put("velocity_err_kms", json.Value{ .float = point.velocity_err });
+        try data_obj.put(allocator, "radius_kpc", json.Value{ .float = point.radius });
+        try data_obj.put(allocator, "velocity_kms", json.Value{ .float = point.velocity });
+        try data_obj.put(allocator, "velocity_err_kms", json.Value{ .float = point.velocity_err });
 
         try data_array.append(json.Value{ .object = data_obj });
     }
 
-    var output_obj = std.json.ObjectMap.init(allocator);
-    defer output_obj.deinit();
+    var output_obj = std.json.ObjectMap.empty;
+    defer output_obj.deinit(allocator);
 
-    try output_obj.put("result", json.Value{ .object = result_obj });
-    try output_obj.put("data_points", json.Value{ .array = data_array });
+    try output_obj.put(allocator, "result", json.Value{ .object = result_obj });
+    try output_obj.put(allocator, "data_points", json.Value{ .array = data_array });
 
     // Write as compact JSON
     {
@@ -582,14 +582,14 @@ fn runList(allocator: Allocator, options: SparcOptions) !void {
             defer root.deinit();
 
             for (galaxies) |galaxy| {
-                var galaxy_obj = std.json.ObjectMap.init(allocator);
-                defer galaxy_obj.deinit();
+                var galaxy_obj = std.json.ObjectMap.empty;
+                defer galaxy_obj.deinit(allocator);
 
-                try galaxy_obj.put("name", json.Value{ .string = galaxy.name });
-                try galaxy_obj.put("points", json.Value{ .integer = @intCast(galaxy.points.len) });
-                try galaxy_obj.put("distance_mpc", json.Value{ .float = galaxy.distance });
-                try galaxy_obj.put("inclination_deg", json.Value{ .float = galaxy.inclination });
-                try galaxy_obj.put("position_angle_deg", json.Value{ .float = galaxy.position_angle });
+                try galaxy_obj.put(allocator, "name", json.Value{ .string = galaxy.name });
+                try galaxy_obj.put(allocator, "points", json.Value{ .integer = @intCast(galaxy.points.len) });
+                try galaxy_obj.put(allocator, "distance_mpc", json.Value{ .float = galaxy.distance });
+                try galaxy_obj.put(allocator, "inclination_deg", json.Value{ .float = galaxy.inclination });
+                try galaxy_obj.put(allocator, "position_angle_deg", json.Value{ .float = galaxy.position_angle });
 
                 try root.append(json.Value{ .object = galaxy_obj });
             }

@@ -8,6 +8,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const time = std.time;
 const http = std.http;
@@ -198,7 +199,7 @@ pub const HealthServer = struct {
     pub fn setReady(self: *HealthServer, ready: bool) void {
         self.health.ready = ready;
         self.health.healthy = ready;
-        self.health.last_check = time.timestamp();
+        self.health.last_check = tri_time.timestamp();
     }
 
     pub fn handleRequest(self: *HealthServer, path: []const u8, writer: anytype) !void {
@@ -273,7 +274,7 @@ pub const HealthServer = struct {
         try writer.writeAll("{\n");
         try writer.writeAll("  \"service\": \"Trinity Inference\",\n");
         try writer.writeAll("  \"version\": \"1.0.0\",\n");
-        try writer.print("  \"uptime_seconds\": {d},\n", .{time.timestamp() - self.health.last_check});
+        try writer.print("  \"uptime_seconds\": {d},\n", .{tri_time.timestamp() - self.health.last_check});
         try writer.writeAll("  \"health\": {\n");
         try writer.print("    \"healthy\": {s},\n", .{if (self.health.healthy) "true" else "false"});
         try writer.print("    \"ready\": {s},\n", .{if (self.health.ready) "true" else "false"});
@@ -322,7 +323,7 @@ pub fn evaluateScaling(metrics: *const MetricsRegistry, config: ScalingConfig) S
         .current_instances = current,
         .target_instances = current,
         .reason = "No scaling needed",
-        .timestamp = time.timestamp(),
+        .timestamp = tri_time.timestamp(),
     };
 
     // Scale up conditions

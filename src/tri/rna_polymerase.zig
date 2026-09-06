@@ -307,28 +307,33 @@ pub const PipelineExecutor = struct {
 
         if (active_count == 0) return null;
 
-        // Use thread pool for parallel execution
-        var pool: std.Thread.Pool = undefined;
-        pool.init(.{
-            .allocator = self.allocator,
-            .n_jobs = @intCast(@min(active_count, 4)),
-        }) catch {
-            // Fallback to sequential if pool init fails
+        // 0.16 removed std.Thread.Pool and std.Thread.WaitGroup together.
+        // std.Io.Group replaces the pair: `async` spawns into the group and
+        // `await` joins, so the separate wait-group disappears. The worker
+        // count is no longer ours to choose -- concurrency belongs to the Io
+        // implementation, which main builds as a thread pool.
+        //
+        // Group.async cannot fail, so the old "fall back to sequential if the
+        // pool will not start" branch has nothing left to catch. The sequential
+        // path is kept for the single-link case, where spawning is pure
+        // overhead.
+        const io = tri_io.get();
+
+        if (active_count == 1) {
+            const maybe_err = self.runSingleLinkInPipeline(contexts_buf[0].link);
+            if (maybe_err) |err| return err;
+        } else {
+            var group: std.Io.Group = .init;
+            defer group.cancel(io);
+
             for (contexts_buf[0..active_count]) |*ctx| {
-                const maybe_err = self.runSingleLinkInPipeline(ctx.link);
-                if (maybe_err) |err| return err;
+                group.async(io, parallelLinkWorker, .{ctx});
             }
-            return null;
-        };
-        defer pool.deinit();
 
-        var wg: std.Thread.WaitGroup = .{};
-
-        for (contexts_buf[0..active_count]) |*ctx| {
-            pool.spawnWg(&wg, parallelLinkWorker, .{ctx});
+            // await propagates cancelation only; the workers themselves record
+            // their outcome in ctx, which the collection loop below reads.
+            group.await(io) catch {};
         }
-
-        wg.wait();
 
         // Collect results
         var first_critical_err: ?ChainError = null;

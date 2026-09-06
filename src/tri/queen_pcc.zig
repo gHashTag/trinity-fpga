@@ -10,6 +10,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_env = @import("tri_env");
 const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const qt = @import("queen_types.zig");
@@ -499,7 +500,7 @@ fn binaryExistsInPath(bin_name: []const u8) bool {
 /// Check if GitHub connectivity is working
 fn checkGitHubConnectivity() bool {
     // Simple check: try to read git config
-    if (std.process.getEnvVarOwned(std.heap.page_allocator, "GITHUB_TOKEN")) |token| {
+    if (tri_env.getEnvVarOwned(std.heap.page_allocator, "GITHUB_TOKEN")) |token| {
         defer std.heap.page_allocator.free(token);
         return token.len > 0;
     } else |_| {}
@@ -509,11 +510,11 @@ fn checkGitHubConnectivity() bool {
 /// Check if Railway connectivity is working
 fn checkRailwayConnectivity() bool {
     // Check for Railway tokens
-    if (std.process.getEnvVarOwned(std.heap.page_allocator, "RAILWAY_TOKEN_1")) |token| {
+    if (tri_env.getEnvVarOwned(std.heap.page_allocator, "RAILWAY_TOKEN_1")) |token| {
         defer std.heap.page_allocator.free(token);
         return token.len > 0;
     } else |_| {}
-    if (std.process.getEnvVarOwned(std.heap.page_allocator, "RAILWAY_TOKEN_2")) |token| {
+    if (tri_env.getEnvVarOwned(std.heap.page_allocator, "RAILWAY_TOKEN_2")) |token| {
         defer std.heap.page_allocator.free(token);
         return token.len > 0;
     } else |_| {}
@@ -522,7 +523,7 @@ fn checkRailwayConnectivity() bool {
 
 /// Check if Telegram connectivity is working
 fn checkTelegramConnectivity() bool {
-    if (std.process.getEnvVarOwned(std.heap.page_allocator, "TELEGRAM_BOT_TOKEN")) |token| {
+    if (tri_env.getEnvVarOwned(std.heap.page_allocator, "TELEGRAM_BOT_TOKEN")) |token| {
         defer std.heap.page_allocator.free(token);
         return token.len > 0;
     } else |_| {}

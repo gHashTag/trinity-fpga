@@ -1594,7 +1594,7 @@ test "benchmark_mmap_vs_read" {
     const iterations: usize = 100;
 
     // Benchmark standard file read
-    // `tri_time.Timer.start` cannot fail, unlike the std.time.Timer it replaces.
+    // `tri_time.Timer.start` cannot fail, unlike the tri_time.Timer it replaces.
     var timer = tri_time.Timer.start();
     for (0..iterations) |_| {
         const file = try std.Io.Dir.cwd().openFile(io, test_path, .{});

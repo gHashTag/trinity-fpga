@@ -223,10 +223,10 @@ pub fn savePipelineCheckpoint(allocator: std.mem.Allocator, checkpoint: Pipeline
     const w = &fbs;
 
     w.writeAll("{\n") catch return error.NameTooLong;
-    std.fmt.format(w, "  \"last_link\": {d},\n", .{checkpoint.last_link}) catch return error.NameTooLong;
-    std.fmt.format(w, "  \"task\": \"{s}\",\n", .{checkpoint.task}) catch return error.NameTooLong;
-    std.fmt.format(w, "  \"status\": \"{s}\",\n", .{checkpoint.status}) catch return error.NameTooLong;
-    std.fmt.format(w, "  \"timestamp\": {d},\n", .{checkpoint.timestamp}) catch return error.NameTooLong;
+    w.print("  \"last_link\": {d},\n", .{checkpoint.last_link}) catch return error.NameTooLong;
+    w.print("  \"task\": \"{s}\",\n", .{checkpoint.task}) catch return error.NameTooLong;
+    w.print("  \"status\": \"{s}\",\n", .{checkpoint.status}) catch return error.NameTooLong;
+    w.print("  \"timestamp\": {d},\n", .{checkpoint.timestamp}) catch return error.NameTooLong;
 
     // Write per-link results array
     w.writeAll("  \"link_results\": [") catch return error.NameTooLong;
@@ -237,7 +237,7 @@ pub fn savePipelineCheckpoint(allocator: std.mem.Allocator, checkpoint: Pipeline
                 .fail => "fail",
                 .skip => "skip",
             };
-            std.fmt.format(w, "{{\"status\":\"{s}\",\"duration_ms\":{d}}}", .{ status_str, snap.duration_ms }) catch return error.NameTooLong;
+            w.print("{{\"status\":\"{s}\",\"duration_ms\":{d}}}", .{ status_str, snap.duration_ms }) catch return error.NameTooLong;
         } else {
             w.writeAll("null") catch return error.NameTooLong;
         }

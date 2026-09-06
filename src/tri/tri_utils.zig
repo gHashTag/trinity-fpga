@@ -1793,13 +1793,13 @@ fn generateSacredIntelligenceContext(allocator: std.mem.Allocator, prompt: []con
     writer.writeAll("// ═══════════════════════════════════════════════════════════════════════════════\n") catch return error.BufferTooSmall;
 
     // Gematria info
-    std.fmt.format(writer, "// Prompt Gematria: {d} (mod 27 = {d})\n", .{ gematria_sum, gematria_sum % 27 }) catch return error.BufferTooSmall;
+    writer.print("// Prompt Gematria: {d} (mod 27 = {d})\n", .{ gematria_sum, gematria_sum % 27 }) catch return error.BufferTooSmall;
 
     // Sacred formula fit
     var formula_buf: [128]u8 = undefined;
     const formula_str = sacred_formula.formatFormulaString(&formula_buf, fit);
-    std.fmt.format(writer, "// Sacred Formula: V = {s}\n", .{formula_str}) catch return error.BufferTooSmall;
-    std.fmt.format(writer, "// Formula Error: {d:.2}%\n", .{fit.error_pct}) catch return error.BufferTooSmall;
+    writer.print("// Sacred Formula: V = {s}\n", .{formula_str}) catch return error.BufferTooSmall;
+    writer.print("// Formula Error: {d:.2}%\n", .{fit.error_pct}) catch return error.BufferTooSmall;
 
     // Recognized constants (basic pattern matching)
     writer.writeAll("// Recognized Constants: ") catch return error.BufferTooSmall;

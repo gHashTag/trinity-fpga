@@ -21,6 +21,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const tri_rand = @import("tri_rand");
 const Allocator = std.mem.Allocator;
 const time = std.time;
@@ -341,7 +342,7 @@ pub const Prediction = struct {
         const within_bounds = (measured_value >= self.uncertainty_lower and
             measured_value <= self.uncertainty_upper);
 
-        self.verified_at = time.timestamp();
+        self.verified_at = tri_time.timestamp();
         self.verified_value = measured_value;
         self.verification_source = source;
         self.status = if (within_bounds) .verified else .falsified;
@@ -371,7 +372,7 @@ pub const PredictionRegistry = struct {
 
         // Parse JSON (simplified - use std.json in real implementation)
         const registry = Self{
-            .last_updated = time.timestamp(),
+            .last_updated = tri_time.timestamp(),
             .predictions = std.ArrayList(Prediction).init(allocator),
         };
 
@@ -392,7 +393,7 @@ pub const PredictionRegistry = struct {
         defer file.close();
 
         try file.writeAll(json);
-        self.last_updated = time.timestamp();
+        self.last_updated = tri_time.timestamp();
     }
 
     /// Add new prediction (idempotent by UUID)
@@ -519,7 +520,7 @@ pub fn createPrediction(allocator: Allocator, params: PredictionParams) !Predict
     const id = try generateUUID(allocator);
     errdefer allocator.free(id);
 
-    const created_at = time.timestamp();
+    const created_at = tri_time.timestamp();
 
     // Compute predicted value from formula
     const predicted_value = sacred_formula.computeSacredFormula(
@@ -582,7 +583,7 @@ pub const PredictionParams = struct {
 /// Generate UUID v4
 fn generateUUID(allocator: Allocator) ![]u8 {
     // Use timestamp + random for simple UUID-like string
-    _ = time.timestamp();
+    _ = tri_time.timestamp();
 
     var buf: [16]u8 = undefined;
     tri_rand.random().bytes(&buf);

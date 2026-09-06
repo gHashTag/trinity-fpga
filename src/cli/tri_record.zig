@@ -10,6 +10,7 @@
 //!   TRI_REC_OVERWRITE - Skip existing files (default: false)
 
 const std = @import("std");
+const tri_env = @import("tri_env");
 const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 const builtin = @import("builtin");
@@ -51,16 +52,16 @@ pub fn main() !u8 {
 
     // Load config from environment
     var config = Config{};
-    if (std.process.getEnvVarOwned(allocator, "TRI_REC_COLS")) |cols| {
+    if (tri_env.getEnvVarOwned(allocator, "TRI_REC_COLS")) |cols| {
         config.cols = std.fmt.parseInt(u16, cols, 10) catch config.cols;
     } else |_| {}
-    if (std.process.getEnvVarOwned(allocator, "TRI_REC_ROWS")) |rows| {
+    if (tri_env.getEnvVarOwned(allocator, "TRI_REC_ROWS")) |rows| {
         config.rows = std.fmt.parseInt(u16, rows, 10) catch config.rows;
     } else |_| {}
-    if (std.process.getEnvVarOwned(allocator, "TRI_REC_IDLE_MAX")) |idle| {
+    if (tri_env.getEnvVarOwned(allocator, "TRI_REC_IDLE_MAX")) |idle| {
         config.idle_max = std.fmt.parseInt(u16, idle, 10) catch config.idle_max;
     } else |_| {}
-    if (std.process.getEnvVarOwned(allocator, "TRI_REC_OVERWRITE")) |_| {
+    if (tri_env.getEnvVarOwned(allocator, "TRI_REC_OVERWRITE")) |_| {
         config.overwrite = true;
     } else |_| {}
 

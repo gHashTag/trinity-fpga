@@ -3,6 +3,7 @@
 
 const std = @import("std");
 
+const tri_env = @import("tri_env");
 const tri_proc = @import("tri_proc");
 const Allocator = std.mem.Allocator;
 
@@ -49,7 +50,7 @@ pub fn main() !void {
     const dry_run = if (args.len > 1 and std.mem.eql(u8, args[1], "--dry-run")) true else false;
 
     // Load RAILWAY_TOKEN from .env
-    const token = std.process.getEnvVarOwned(allocator, "RAILWAY_API_TOKEN") catch {
+    const token = tri_env.getEnvVarOwned(allocator, "RAILWAY_API_TOKEN") catch {
         std.debug.print("{s}Error{s}: RAILWAY_API_TOKEN not found in environment\n", .{ YELLOW, RESET });
         std.debug.print("{s}Hint{s}: Run 'export $(cat .env | xargs)' or 'set -a && source .env && set +a'\n", .{ GRAY, RESET });
         std.debug.print("Or run with --help for more info.\n", .{});
@@ -57,7 +58,7 @@ pub fn main() !void {
     };
     defer allocator.free(token);
 
-    const project_id = std.process.getEnvVarOwned(allocator, "RAILWAY_PROJECT_ID") catch {
+    const project_id = tri_env.getEnvVarOwned(allocator, "RAILWAY_PROJECT_ID") catch {
         std.debug.print("{s}Error{s}: RAILWAY_PROJECT_ID not found in environment\n", .{ YELLOW, RESET });
         std.debug.print("{s}Hint{s}: Run 'export $(cat .env | xargs)' or 'set -a && source .env && set +a'\n", .{ GRAY, RESET });
         std.process.exit(1);

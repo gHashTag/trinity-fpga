@@ -5,6 +5,7 @@
 //! configurations, health checks, and rollback capabilities.
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const mem = std.mem;
 const fs = std.fs;
 const process = std.process;
@@ -169,7 +170,7 @@ pub const DeployConfig = struct {
 
 /// Build the dashboard for a specific deployment target
 pub fn buildDashboard(allocator: mem.Allocator, target: DeployTarget) !BuildResult {
-    const start_time = time.nanoTimestamp();
+    const start_time = tri_time.nanoTimestamp();
 
     // Determine build command based on target
     const build_cmd = switch (target) {
@@ -181,7 +182,7 @@ pub fn buildDashboard(allocator: mem.Allocator, target: DeployTarget) !BuildResu
     // Execute build command
     const result = try executeCommand(allocator, build_cmd);
 
-    const build_time_ms = (time.nanoTimestamp() - start_time) / 1_000_000;
+    const build_time_ms = (tri_time.nanoTimestamp() - start_time) / 1_000_000;
 
     if (result.exit_code != 0) {
         return BuildResult{
@@ -206,14 +207,14 @@ pub fn buildDashboard(allocator: mem.Allocator, target: DeployTarget) !BuildResu
 
 /// Deploy dashboard to the specified target
 pub fn deployDashboard(allocator: mem.Allocator, config: DeployConfig) !DeployResult {
-    const start_time = time.nanoTimestamp();
+    const start_time = tri_time.nanoTimestamp();
 
     // Step 1: Build the dashboard
     const build_result = try buildDashboard(allocator, config.target);
     if (!build_result.success) {
         return DeployResult{
             .success = false,
-            .deploy_time_ms = (time.nanoTimestamp() - start_time) / 1_000_000,
+            .deploy_time_ms = (tri_time.nanoTimestamp() - start_time) / 1_000_000,
             .error_message = build_result.error_message,
         };
     }
@@ -232,7 +233,7 @@ pub fn deployDashboard(allocator: mem.Allocator, config: DeployConfig) !DeployRe
         .local => DeployResult{
             .success = true,
             .url = "http://localhost:3000",
-            .deploy_time_ms = (time.nanoTimestamp() - start_time) / 1_000_000,
+            .deploy_time_ms = (tri_time.nanoTimestamp() - start_time) / 1_000_000,
         },
         else => try executeExternalDeploy(allocator, &config),
     };
@@ -249,7 +250,7 @@ pub fn deployDashboard(allocator: mem.Allocator, config: DeployConfig) !DeployRe
 
             return DeployResult{
                 .success = false,
-                .deploy_time_ms = (time.nanoTimestamp() - start_time) / 1_000_000,
+                .deploy_time_ms = (tri_time.nanoTimestamp() - start_time) / 1_000_000,
                 .error_message = try allocator.dupe(u8, "Health check failed"),
                 .rollback_performed = true,
             };
@@ -261,11 +262,11 @@ pub fn deployDashboard(allocator: mem.Allocator, config: DeployConfig) !DeployRe
 
 /// Execute deployment to external platform (Vercel/Netlify)
 fn executeExternalDeploy(allocator: mem.Allocator, config: *const DeployConfig) !DeployResult {
-    const start_time = time.nanoTimestamp();
+    const start_time = tri_time.nanoTimestamp();
 
     const result = try executeCommand(allocator, config.deploy_command);
 
-    const deploy_time_ms = (time.nanoTimestamp() - start_time) / 1_000_000;
+    const deploy_time_ms = (tri_time.nanoTimestamp() - start_time) / 1_000_000;
 
     if (result.exit_code != 0) {
         return DeployResult{
@@ -288,14 +289,14 @@ fn executeExternalDeploy(allocator: mem.Allocator, config: *const DeployConfig) 
 
 /// Deploy using built-in HTTP server
 pub fn deployBuiltinServer(allocator: mem.Allocator, config: DeployConfig) !DeployResult {
-    const start_time = time.nanoTimestamp();
+    const start_time = tri_time.nanoTimestamp();
 
     var server = try BuiltinServer.init(allocator, "127.0.0.1", config.builtin_port);
     defer server.deinit();
 
     try server.start();
 
-    const deploy_time_ms = (time.nanoTimestamp() - start_time) / 1_000_000;
+    const deploy_time_ms = (tri_time.nanoTimestamp() - start_time) / 1_000_000;
 
     const url = try std.fmt.allocPrint(allocator, "http://127.0.0.1:{d}", .{config.builtin_port});
 
@@ -309,7 +310,7 @@ pub fn deployBuiltinServer(allocator: mem.Allocator, config: DeployConfig) !Depl
 
 /// Run health check on deployed dashboard
 pub fn runHealthCheck(url: []const u8) !HealthStatus {
-    const start_time = time.nanoTimestamp();
+    const start_time = tri_time.nanoTimestamp();
 
     // Parse URL
     const uri = try std.Uri.parse(url);
@@ -335,7 +336,7 @@ pub fn runHealthCheck(url: []const u8) !HealthStatus {
     try response.send();
     try response.wait();
 
-    const response_time_ms = (time.nanoTimestamp() - start_time) / 1_000_000;
+    const response_time_ms = (tri_time.nanoTimestamp() - start_time) / 1_000_000;
 
     // Check status code
     const status_code = response.status.code;

@@ -10,6 +10,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_env = @import("tri_env");
 const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 const types = @import("types.zig");
@@ -60,11 +61,11 @@ pub fn complete(
         .anthropic => {
             const mdl = model orelse blk_m: {
                 // Use CLAUDE_MODEL env if set (z.ai uses glm-5)
-                break :blk_m std.process.getEnvVarOwned(allocator, "CLAUDE_MODEL") catch "claude-sonnet-4-20250514";
+                break :blk_m tri_env.getEnvVarOwned(allocator, "CLAUDE_MODEL") catch "claude-sonnet-4-20250514";
             };
             const ep = endpoint orelse blk_e: {
                 // Use ANTHROPIC_BASE_URL env if set (z.ai proxy)
-                if (std.process.getEnvVarOwned(allocator, "ANTHROPIC_BASE_URL") catch null) |base| {
+                if (tri_env.getEnvVarOwned(allocator, "ANTHROPIC_BASE_URL") catch null) |base| {
                     defer allocator.free(base);
                     break :blk_e std.fmt.allocPrint(allocator, "{s}/v1/messages", .{base}) catch "https://api.anthropic.com/v1/messages";
                 }
@@ -134,7 +135,7 @@ fn callOpenAI(
     prompt: []const u8,
     start_ms: i64,
 ) !CompletionResult {
-    const api_key = std.process.getEnvVarOwned(allocator, "OPENAI_API_KEY") catch |err| switch (err) {
+    const api_key = tri_env.getEnvVarOwned(allocator, "OPENAI_API_KEY") catch |err| switch (err) {
         error.EnvironmentVariableNotFound => return makeError(allocator, "OPENAI_API_KEY not set", start_ms),
         else => return err,
     };
@@ -181,10 +182,10 @@ fn callAnthropic(
     prompt: []const u8,
     start_ms: i64,
 ) !CompletionResult {
-    const api_key = std.process.getEnvVarOwned(allocator, "ANTHROPIC_API_KEY") catch |err| switch (err) {
+    const api_key = tri_env.getEnvVarOwned(allocator, "ANTHROPIC_API_KEY") catch |err| switch (err) {
         error.EnvironmentVariableNotFound => {
             // Try ZAI_KEY_1 as fallback
-            const zai = std.process.getEnvVarOwned(allocator, "ZAI_KEY_1") catch
+            const zai = tri_env.getEnvVarOwned(allocator, "ZAI_KEY_1") catch
                 return makeError(allocator, "ANTHROPIC_API_KEY not set", start_ms);
             return callAnthropicWithKey(allocator, endpoint, model, prompt, zai, start_ms);
         },

@@ -302,27 +302,27 @@ const CellCache = struct {
 
     /// Serialize cache to JSON
     fn toJson(self: *const CellCache, allocator: Allocator) ![]const u8 {
-        var root = std.json.ObjectMap.init(allocator);
-        defer root.deinit();
+        var root = std.json.ObjectMap.empty;
+        defer root.deinit(allocator);
 
-        try root.put("version", std.json.Value{ .integer = self.version });
+        try root.put(allocator, "version", std.json.Value{ .integer = self.version });
 
         var cells_array = std.json.Array.init(allocator);
         defer cells_array.deinit();
 
         for (self.cells) |cell| {
-            var cell_obj = std.json.ObjectMap.init(allocator);
-            defer cell_obj.deinit();
+            var cell_obj = std.json.ObjectMap.empty;
+            defer cell_obj.deinit(allocator);
 
-            try cell_obj.put("path", std.json.Value{ .string = cell.path });
-            try cell_obj.put("mtime", std.json.Value{ .integer = @as(i64, @intCast(cell.mtime)) });
-            try cell_obj.put("dir_path", std.json.Value{ .string = cell.dir_path });
-            try cell_obj.put("content", std.json.Value{ .string = cell.content });
+            try cell_obj.put(allocator, "path", std.json.Value{ .string = cell.path });
+            try cell_obj.put(allocator, "mtime", std.json.Value{ .integer = @as(i64, @intCast(cell.mtime)) });
+            try cell_obj.put(allocator, "dir_path", std.json.Value{ .string = cell.dir_path });
+            try cell_obj.put(allocator, "content", std.json.Value{ .string = cell.content });
 
             try cells_array.append(std.json.Value{ .object = cell_obj });
         }
 
-        try root.put("cells", std.json.Value{ .array = cells_array });
+        try root.put(allocator, "cells", std.json.Value{ .array = cells_array });
 
         const root_value = std.json.Value{ .object = root };
         return std.json.Stringify.valueAlloc(allocator, root_value, .{ .whitespace = .indent_2 });

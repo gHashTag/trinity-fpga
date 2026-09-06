@@ -7,6 +7,7 @@
 
 const std = @import("std");
 
+const tri_env = @import("tri_env");
 pub const AnthropicProvider = struct {
     allocator: std.mem.Allocator,
     api_key: []const u8,
@@ -16,7 +17,7 @@ pub const AnthropicProvider = struct {
     const Self = @This();
 
     pub fn init(allocator: std.mem.Allocator) Self {
-        const api_key = std.process.getEnvVarOwned(allocator, "ANTHROPIC_API_KEY") catch
+        const api_key = tri_env.getEnvVarOwned(allocator, "ANTHROPIC_API_KEY") catch
             allocator.dupe(u8, "") catch "";
 
         return Self{

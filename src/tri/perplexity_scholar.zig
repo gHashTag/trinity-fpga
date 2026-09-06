@@ -77,9 +77,13 @@ pub const PerplexityScholar = struct {
 
     /// Build the JSON request body for Perplexity chat/completions API
     pub fn buildRequestBody(self: *Self, question: []const u8, context: []const u8) ![]const u8 {
-        var body: std.ArrayListUnmanaged(u8) = .empty;
-        errdefer body.deinit(self.allocator);
-        const w = body.writer(self.allocator);
+        // 0.16 removed ArrayList.writer(). This one is handed to
+        // writeJsonEscaped, so it has to stay a real writer rather than
+        // becoming list append calls: an Allocating writer owns its buffer and
+        // exposes an Io.Writer.
+        var aw: std.Io.Writer.Allocating = .init(self.allocator);
+        errdefer aw.deinit();
+        const w = &aw.writer;
 
         try w.writeAll("{\"model\":\"");
         try w.writeAll(self.model);
@@ -94,12 +98,12 @@ pub const PerplexityScholar = struct {
         }
         try writeJsonEscaped(w, question);
         try w.writeAll("\"}],\"max_tokens\":");
-        try std.fmt.format(w, "{d}", .{MAX_TOKENS});
+        try w.print("{d}", .{MAX_TOKENS});
         try w.writeAll(",\"temperature\":");
-        try std.fmt.format(w, "{d:.1}", .{TEMPERATURE});
+        try w.print("{d:.1}", .{TEMPERATURE});
         try w.writeAll("}");
 
-        return body.toOwnedSlice(self.allocator);
+        return aw.toOwnedSlice();
     }
 
     /// Call Perplexity chat/completions API

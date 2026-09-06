@@ -101,27 +101,27 @@ pub fn saveBindings(allocator: Allocator, bindings_file: *BindingsFile) !void {
     defer bindings.deinit();
 
     for (bindings_file.bindings.items) |binding| {
-        var binding_obj = std.json.ObjectMap.init(allocator);
-        defer binding_obj.deinit();
+        var binding_obj = std.json.ObjectMap.empty;
+        defer binding_obj.deinit(allocator);
 
-        try binding_obj.put("issue_number", std.json.Value{ .integer = @intCast(binding.issue_number) });
-        try binding_obj.put("agent_id", std.json.Value{ .string = binding.agent_id });
-        try binding_obj.put("soul_file", std.json.Value{ .string = binding.soul_file });
-        try binding_obj.put("session_id", std.json.Value{ .string = binding.session_id });
-        try binding_obj.put("railway_service_id", std.json.Value{ .string = binding.railway_service_id });
-        try binding_obj.put("deployment_id", std.json.Value{ .string = binding.deployment_id });
-        try binding_obj.put("experience_file", std.json.Value{ .string = binding.experience_file });
-        try binding_obj.put("status", std.json.Value{ .string = binding.status });
+        try binding_obj.put(allocator, "issue_number", std.json.Value{ .integer = @intCast(binding.issue_number) });
+        try binding_obj.put(allocator, "agent_id", std.json.Value{ .string = binding.agent_id });
+        try binding_obj.put(allocator, "soul_file", std.json.Value{ .string = binding.soul_file });
+        try binding_obj.put(allocator, "session_id", std.json.Value{ .string = binding.session_id });
+        try binding_obj.put(allocator, "railway_service_id", std.json.Value{ .string = binding.railway_service_id });
+        try binding_obj.put(allocator, "deployment_id", std.json.Value{ .string = binding.deployment_id });
+        try binding_obj.put(allocator, "experience_file", std.json.Value{ .string = binding.experience_file });
+        try binding_obj.put(allocator, "status", std.json.Value{ .string = binding.status });
 
         try bindings.append(std.json.Value{ .object = binding_obj });
     }
 
-    var root_obj = std.json.ObjectMap.init(allocator);
-    defer root_obj.deinit();
+    var root_obj = std.json.ObjectMap.empty;
+    defer root_obj.deinit(allocator);
 
-    try root_obj.put("bindings", std.json.Value{ .array = bindings.toOwnedSlice() });
-    try root_obj.put("version", std.json.Value{ .string = bindings_file.version });
-    try root_obj.put("last_updated", std.json.Value{ .integer = tri_time.timestamp() });
+    try root_obj.put(allocator, "bindings", std.json.Value{ .array = bindings.toOwnedSlice() });
+    try root_obj.put(allocator, "version", std.json.Value{ .string = bindings_file.version });
+    try root_obj.put(allocator, "last_updated", std.json.Value{ .integer = tri_time.timestamp() });
 
     const json_string = try std.json.stringifyAlloc(allocator, std.json.Value{ .object = root_obj }, .{ .whitespace = .indent });
     defer allocator.free(json_string);
