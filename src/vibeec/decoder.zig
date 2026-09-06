@@ -88,7 +88,7 @@ pub const Decoder = struct {
 
     /// Generate text from initial activation
     pub fn generate(self: *Decoder, activation: f32, max_tokens: usize) ![]const u8 {
-        var result = std.ArrayListUnmanaged(u8){};
+        var result = @as(std.ArrayListUnmanaged(u8), .empty);
         errdefer result.deinit(self.allocator);
 
         var state: f32 = activation;

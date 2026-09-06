@@ -315,7 +315,7 @@ pub const StakingManager = struct {
         if (self.staker_stakes.getEntry(key)) |entry| {
             try entry.value_ptr.append(self.allocator, duped_id);
         } else {
-            var list = std.ArrayListUnmanaged([]const u8){};
+            var list = @as(std.ArrayListUnmanaged([]const u8), .empty);
             try list.append(self.allocator, duped_id);
             try self.staker_stakes.put(self.allocator, key, list);
         }

@@ -203,7 +203,7 @@ pub const CostTracker = struct {
     pub fn exportToJson(self: *CostTracker) ![]const u8 {
         const total = self.getTotal();
 
-        var json_buf = std.ArrayListUnmanaged(u8){};
+        var json_buf = @as(std.ArrayListUnmanaged(u8), .empty);
         defer json_buf.deinit(self.allocator);
 
         try json_buf.appendSlice(self.allocator, &[_]u8{'{'});

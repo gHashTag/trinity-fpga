@@ -289,7 +289,7 @@ pub fn discoverCached(allocator: Allocator, options: DiscoveryOptionsEx) !Discov
                 continue;
             };
 
-            try cell_files.append(.{ .path = full_path, .mtime = stat.mtime });
+            try cell_files.append(.{ .path = full_path, .mtime = @as(i128, stat.mtime.nanoseconds) });
         }
     }
 

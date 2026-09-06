@@ -263,7 +263,7 @@ pub const ClusterState = struct {
 
     /// Get only healthy peers
     pub fn getHealthyPeers(self: *const ClusterState, allocator: Allocator) ![]const *const PeerState {
-        var healthy = std.ArrayListUnmanaged(*const PeerState){};
+        var healthy = @as(std.ArrayListUnmanaged(*const PeerState), .empty);
         defer healthy.deinit(allocator);
         try healthy.ensureTotalCapacity(allocator, self.peers.items.len);
 
@@ -390,7 +390,7 @@ pub const PersistenceManager = struct {
     /// Save cluster state to .tri-cluster.json (atomic write)
     pub fn save(self: *PersistenceManager, state: *const ClusterState) !void {
         // Convert to JSON
-        var peer_list = std.ArrayListUnmanaged(PeerStateJson){};
+        var peer_list = @as(std.ArrayListUnmanaged(PeerStateJson), .empty);
         defer peer_list.deinit(self.allocator);
 
         for (state.peers.items) |peer| {

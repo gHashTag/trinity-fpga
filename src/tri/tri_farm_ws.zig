@@ -13,6 +13,8 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const net = std.Io.net;
+const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 const tri_mutex = @import("tri_mutex");
 const Allocator = std.mem.Allocator;
@@ -96,12 +98,35 @@ pub const EventBus = struct {
 // WsClient — one connected WebSocket peer
 // ═══════════════════════════════════════════════════════════════════════════════
 
+/// Zig 0.16: `net.Stream` has no `writeAll`. Writes go through a
+/// `net.Stream.Writer`, whose `Io.Writer` interface needs a caller-supplied
+/// buffer, so each write site builds one on the stack and flushes it. Frames
+/// here are small (headers, pings, one JSON payload), so 8 KiB covers them and
+/// the flush keeps the old "one payload, one send" behaviour.
+fn streamWriteAll(stream: net.Stream, bytes: []const u8) !void {
+    var write_buf: [8192]u8 = undefined;
+    var w = stream.writer(tri_io.get(), &write_buf);
+    try w.interface.writeAll(bytes);
+    try w.interface.flush();
+}
+
+/// Zig 0.16 replacement for `stream.read(buf)`: one underlying `netRead`
+/// returning whatever arrived. The zero-length reader buffer stops `readVec`
+/// from filling an internal buffer first, so exactly one read happens, as
+/// before. `error.EndOfStream` stands in for the old "returned 0 bytes".
+fn streamReadOnce(stream: net.Stream, buf: []u8) !usize {
+    var reader_buf: [0]u8 = .{};
+    var r = stream.reader(tri_io.get(), &reader_buf);
+    var data: [1][]u8 = .{buf};
+    return r.interface.readVec(&data);
+}
+
 pub const WsClient = struct {
-    stream: std.net.Stream,
+    stream: net.Stream,
     alive: std.atomic.Value(bool),
     write_mutex: tri_mutex.Mutex = .{},
 
-    pub fn init(stream: std.net.Stream) WsClient {
+    pub fn init(stream: net.Stream) WsClient {
         return .{
             .stream = stream,
             .alive = std.atomic.Value(bool).init(true),
@@ -136,11 +161,11 @@ pub const WsClient = struct {
             hlen = 10;
         }
 
-        self.stream.writeAll(header[0..hlen]) catch {
+        streamWriteAll(self.stream, header[0..hlen]) catch {
             self.alive.store(false, .release);
             return;
         };
-        self.stream.writeAll(payload) catch {
+        streamWriteAll(self.stream, payload) catch {
             self.alive.store(false, .release);
         };
     }
@@ -150,7 +175,7 @@ pub const WsClient = struct {
         self.write_mutex.lock();
         defer self.write_mutex.unlock();
         const close_frame = [_]u8{ 0x88, 0x00 };
-        self.stream.writeAll(&close_frame) catch {};
+        streamWriteAll(self.stream, &close_frame) catch {};
         self.alive.store(false, .release);
     }
 };
@@ -275,7 +300,7 @@ pub const Broadcaster = struct {
                 for (snap[0..cc]) |c| {
                     if (c.alive.load(.acquire)) {
                         c.write_mutex.lock();
-                        c.stream.writeAll(&ping_frame) catch {
+                        streamWriteAll(c.stream, &ping_frame) catch {
                             c.alive.store(false, .release);
                         };
                         c.write_mutex.unlock();
@@ -295,7 +320,7 @@ pub const Broadcaster = struct {
         var i: usize = 0;
         while (i < self.count) {
             if (!self.clients[i].alive.load(.acquire)) {
-                self.clients[i].stream.close();
+                self.clients[i].stream.close(tri_io.get());
                 // Shift
                 var j: usize = i;
                 while (j + 1 < self.count) : (j += 1) {
@@ -316,7 +341,7 @@ pub const Broadcaster = struct {
 /// Handle WS upgrade: do SHA-1 handshake, send snapshot, register in broadcaster, start reader.
 /// Returns true if upgrade succeeded (stream is now owned by WS), false if not a WS request.
 pub fn handleUpgrade(
-    stream: std.net.Stream,
+    stream: net.Stream,
     request: []const u8,
     broadcaster: *Broadcaster,
     state_json: []const u8,
@@ -354,11 +379,11 @@ pub fn handleUpgrade(
         .{accept_key},
     ) catch return false;
 
-    stream.writeAll(response) catch return false;
+    streamWriteAll(stream, response) catch return false;
 
     // Backpressure: 3s write timeout — slow clients get disconnected, not stall broadcaster
     const snd_timeout = std.posix.timeval{ .sec = 3, .usec = 0 };
-    std.posix.setsockopt(stream.handle, std.posix.SOL.SOCKET, std.posix.SO.SNDTIMEO, std.mem.asBytes(&snd_timeout)) catch {};
+    std.posix.setsockopt(stream.socket.handle, std.posix.SOL.SOCKET, std.posix.SO.SNDTIMEO, std.mem.asBytes(&snd_timeout)) catch {};
 
     // Create client (static — lives on the reader thread stack via the broadcaster)
     var client = WsClient.init(stream);
@@ -389,7 +414,7 @@ fn clientReadLoop(client: *WsClient, broadcaster: *Broadcaster) void {
     var buf: [256]u8 = undefined;
 
     while (client.alive.load(.acquire)) {
-        const n = client.stream.read(&buf) catch break;
+        const n = streamReadOnce(client.stream, &buf) catch break;
         if (n == 0) break;
 
         // Parse minimal WS frame
@@ -399,7 +424,7 @@ fn clientReadLoop(client: *WsClient, broadcaster: *Broadcaster) void {
                 0x8 => break, // Close
                 0x9 => { // Ping → Pong
                     const pong = [_]u8{ 0x8A, 0x00 };
-                    client.stream.writeAll(&pong) catch break;
+                    streamWriteAll(client.stream, &pong) catch break;
                 },
                 else => {}, // Ignore text/binary in Phase 1
             }

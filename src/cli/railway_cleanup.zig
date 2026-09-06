@@ -36,7 +36,7 @@ pub fn main() !void {
     std.debug.print("🔍 Found {d} services\n", .{services.items.len});
 
     // Step 2: Find base services to delete
-    var to_delete = std.ArrayListUnmanaged(Service){};
+    var to_delete = @as(std.ArrayListUnmanaged(Service), .empty);
     defer {
         for (to_delete.items) |svc| {
             allocator.free(svc.id);
@@ -91,7 +91,7 @@ fn isBaseService(name: []const u8) bool {
 }
 
 fn listServices(allocator: std.mem.Allocator, token: []const u8, project_id: []const u8) !std.ArrayListUnmanaged(Service) {
-    var services = std.ArrayListUnmanaged(Service){};
+    var services = @as(std.ArrayListUnmanaged(Service), .empty);
 
     const query_fmt = "{{\"query\":\"{{project(id:\\\"{s}\\\"){{services{{edges{{node{{id name}}}}}}}}}}\"}}";
     const query = try std.fmt.allocPrint(allocator, query_fmt, .{project_id});

@@ -61,30 +61,55 @@ pub const Bridge = struct {
     pub fn serve(self: *Bridge) !void {
         self.ensureQueueDir();
 
-        const address = std.net.Address.parseIp4("127.0.0.1", self.port) catch |err| {
+        const io = tri_io.get();
+
+        // 0.16: std.net is gone. `std.Io.net.IpAddress.parseIp4` replaces
+        // `std.net.Address.parseIp4`, and `listen` takes the `io` the server
+        // will run on.
+        const address = std.Io.net.IpAddress.parseIp4("127.0.0.1", self.port) catch |err| {
             std.log.err("perplexity_bridge: failed to parse address: {}", .{err});
             return error.SocketError;
         };
-        var server = try address.listen(.{ .reuse_address = true });
-        defer server.deinit();
+        var server = try address.listen(io, .{ .reuse_address = true });
+        defer server.deinit(io);
 
         std.debug.print("[px-bridge] listening on 127.0.0.1:{d}\n", .{self.port});
         std.debug.print("[px-bridge] queue dir: {s}\n", .{self.queue_dir});
         std.debug.print("[px-bridge] routes: /px/status /px/exec /px/result /px/queue /px/done /px/jobs /px/issues /px/log\n", .{});
 
         while (true) {
-            const conn = server.accept() catch continue;
-            defer conn.stream.close();
-            self.handleRequest(conn.stream) catch |err| {
+            // 0.16: `Server.accept` yields the `Stream` itself -- there is no
+            // `Server.Connection` wrapper any more.
+            const stream = server.accept(io) catch continue;
+            defer stream.close(io);
+            self.handleRequest(stream) catch |err| {
                 std.debug.print("[px-bridge] request error: {s}\n", .{@errorName(err)});
             };
         }
     }
 
-    fn handleRequest(self: *Bridge, stream: std.net.Stream) !void {
-        // Read HTTP request headers (up to 8KB)
+    fn handleRequest(self: *Bridge, stream: std.Io.net.Stream) !void {
+        const io = tri_io.get();
+
+        // Read HTTP request headers (up to 8KB).
+        //
+        // 0.16: `Stream` has no `read`; reads go through `Stream.Reader`. Of
+        // the reader methods, `readVec` is the one that matches the old
+        // `stream.read` -- it does a single underlying read and returns
+        // however many bytes arrived, instead of blocking until the
+        // destination is full. `readSliceShort` would hang here waiting for a
+        // request that will never be 8KB long.
+        //
+        // The reader's own buffer is deliberately small: `readVec` fills the
+        // caller's slice first and only spills the remainder into it, and
+        // whatever spills is handed back by the body read below.
         var buf: [8192]u8 = undefined;
-        const n = stream.read(&buf) catch return;
+        var spill_buf: [256]u8 = undefined;
+        var stream_reader = stream.reader(io, &spill_buf);
+        const reader = &stream_reader.interface;
+
+        var first_read: [1][]u8 = .{&buf};
+        const n = reader.readVec(&first_read) catch return;
         if (n == 0) return;
         const request = buf[0..n];
 
@@ -169,10 +194,14 @@ pub const Bridge = struct {
                         const already_read = @min(n - body_start, content_length);
                         @memcpy(full_body[0..already_read], request[body_start .. body_start + already_read]);
 
-                        // Read remaining body from stream
+                        // Read remaining body from stream. Same reader as
+                        // above, so anything the first read spilled into its
+                        // buffer is returned here before the socket is
+                        // touched again.
                         var total: usize = already_read;
                         while (total < content_length) {
-                            const r = stream.read(full_body[total..content_length]) catch break;
+                            var body_dest: [1][]u8 = .{full_body[total..content_length]};
+                            const r = reader.readVec(&body_dest) catch break;
                             if (r == 0) break;
                             total += r;
                         }
@@ -335,7 +364,7 @@ pub const Bridge = struct {
 
     // ─── Async Exec Handler ─────────────────────────────────────
 
-    fn handleExecAsync(self: *Bridge, stream: std.net.Stream, cmd: []const u8) !void {
+    fn handleExecAsync(self: *Bridge, stream: std.Io.net.Stream, cmd: []const u8) !void {
         // Full URL-decode: %XX hex sequences and '+' as spaces
         const decoded = try urlDecode(self.allocator, cmd);
         defer self.allocator.free(decoded);
@@ -374,7 +403,7 @@ pub const Bridge = struct {
         try writeResponse(stream, "202", resp.written());
     }
 
-    fn handleResult(self: *Bridge, stream: std.net.Stream, id: []const u8) !void {
+    fn handleResult(self: *Bridge, stream: std.Io.net.Stream, id: []const u8) !void {
         const content = self.readJobFile(id) catch {
             try writeResponse(stream, "404", "{\"error\":\"job not found\"}");
             return;
@@ -384,7 +413,7 @@ pub const Bridge = struct {
         try writeResponse(stream, "200", content);
     }
 
-    fn handleQueuePoll(self: *Bridge, stream: std.net.Stream) !void {
+    fn handleQueuePoll(self: *Bridge, stream: std.Io.net.Stream) !void {
         const id = (try self.findPendingJob()) orelse {
             try writeResponse(stream, "200", "{\"status\":\"empty\",\"id\":null}");
             return;
@@ -431,7 +460,7 @@ pub const Bridge = struct {
         try writeResponse(stream, "200", resp.written());
     }
 
-    fn handleDone(self: *Bridge, stream: std.net.Stream, id: []const u8, result: []const u8, exit_code: i32) !void {
+    fn handleDone(self: *Bridge, stream: std.Io.net.Stream, id: []const u8, result: []const u8, exit_code: i32) !void {
         self.updateJob(id, "done", result, exit_code) catch {
             try writeResponse(stream, "404", "{\"error\":\"job not found\"}");
             return;
@@ -440,7 +469,7 @@ pub const Bridge = struct {
         try writeResponse(stream, "200", "{\"status\":\"ok\",\"updated\":true}");
     }
 
-    fn handleJobsList(self: *Bridge, stream: std.net.Stream) !void {
+    fn handleJobsList(self: *Bridge, stream: std.Io.net.Stream) !void {
         const io = tri_io.get();
         var dir = std.Io.Dir.cwd().openDir(io, self.queue_dir, .{ .iterate = true }) catch {
             try writeResponse(stream, "200", "{\"jobs\":[]}");
@@ -474,7 +503,7 @@ pub const Bridge = struct {
 
     // ─── Legacy Direct Handlers (local exec fallback) ───────────
 
-    fn handleStatus(self: *Bridge, stream: std.net.Stream) !void {
+    fn handleStatus(self: *Bridge, stream: std.Io.net.Stream) !void {
         const compile = self.runCmd("PASS=$(grep -c '✅' specs/REGENERATION_REPORT.md 2>/dev/null || echo 0) && FAIL=$(grep -c '❌' specs/REGENERATION_REPORT.md 2>/dev/null || echo 0) && TOTAL=$((PASS+FAIL)) && RATE=$((TOTAL>0?PASS*100/TOTAL:0)) && echo $PASS/$TOTAL=$RATE%") catch "N/A";
         defer self.allocator.free(compile);
 
@@ -533,7 +562,7 @@ pub const Bridge = struct {
         try writeResponse(stream, "200", resp.written());
     }
 
-    fn handleIssues(self: *Bridge, stream: std.net.Stream) !void {
+    fn handleIssues(self: *Bridge, stream: std.Io.net.Stream) !void {
         const output = self.runCmd("gh issue list --state open --json number,title,labels --limit 20 2>/dev/null || echo '[]'") catch "[]";
         defer self.allocator.free(output);
 
@@ -547,7 +576,7 @@ pub const Bridge = struct {
         try writeResponse(stream, "200", resp.written());
     }
 
-    fn handleLog(self: *Bridge, stream: std.net.Stream, count: u32) !void {
+    fn handleLog(self: *Bridge, stream: std.Io.net.Stream, count: u32) !void {
         var cmd_buf: [128]u8 = undefined;
         const safe_n = @min(count, 100);
         const cmd = std.fmt.bufPrint(&cmd_buf, "git log --oneline -{d}", .{safe_n}) catch "git log --oneline -20";
@@ -688,11 +717,21 @@ fn extractJsonInt(json: []const u8, key: []const u8) ?i64 {
 
 // ─── HTTP Helpers ────────────────────────────────────────────
 
-fn writeResponse(stream: std.net.Stream, status: []const u8, body: []const u8) !void {
+fn writeResponse(stream: std.Io.net.Stream, status: []const u8, body: []const u8) !void {
     var header_buf: [512]u8 = undefined;
     const header = std.fmt.bufPrint(&header_buf, "HTTP/1.1 {s} OK\r\nContent-Type: application/json\r\nContent-Length: {d}\r\nConnection: close\r\n\r\n", .{ status, body.len }) catch return;
-    _ = stream.write(header) catch return;
-    _ = stream.write(body) catch return;
+
+    // 0.16: `Stream` has no `write`; writes go through `Stream.Writer`, which
+    // buffers, so the closing `flush` is what actually puts the bytes on the
+    // socket. `writeAll` also replaces the old short-write hazard of a bare
+    // `write` whose return value was discarded.
+    const io = tri_io.get();
+    var write_buf: [1024]u8 = undefined;
+    var stream_writer = stream.writer(io, &write_buf);
+    const w = &stream_writer.interface;
+    w.writeAll(header) catch return;
+    w.writeAll(body) catch return;
+    w.flush() catch return;
 }
 
 fn getQueryParam(query: []const u8, name: []const u8) ?[]const u8 {

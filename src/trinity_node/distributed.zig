@@ -24,6 +24,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 const protocol = @import("protocol.zig");
 const gguf_model = @import("gguf_model");
@@ -158,35 +159,28 @@ pub const PipelineWorker = struct {
     }
 
     fn serverLoop(self: *PipelineWorker) void {
-        const addr = std.net.Address.initIp4(.{ 0, 0, 0, 0 }, self.listen_port);
-        const sock = std.posix.socket(std.posix.AF.INET, std.posix.SOCK.STREAM, 0) catch |err| {
-            std.debug.print("\x1b[38;2;239;68;68m[Worker] Socket error: {}\x1b[0m\n", .{err});
+        const io = tri_io.get();
+
+        // Zig 0.16: socket + SO_REUSEADDR + bind + listen collapse into
+        // `IpAddress.listen`, which returns a `std.Io.net.Server`.
+        const addr: std.Io.net.IpAddress = .{ .ip4 = .unspecified(self.listen_port) };
+        var server = addr.listen(io, .{
+            .reuse_address = true,
+            .kernel_backlog = 10,
+            .mode = .stream,
+            .protocol = .tcp,
+        }) catch |err| {
+            std.debug.print("\x1b[38;2;239;68;68m[Worker] Listen error on port {d}: {}\x1b[0m\n", .{ self.listen_port, err });
             return;
         };
-        defer std.posix.close(sock);
-
-        // Enable SO_REUSEADDR
-        const optval: u32 = 1;
-        std.posix.setsockopt(sock, std.posix.SOL.SOCKET, std.posix.SO.REUSEADDR, std.mem.asBytes(&optval)) catch |err| {
-            std.log.debug("distributed: setsockopt SO_REUSEADDR failed: {}", .{err});
-        };
-
-        std.posix.bind(sock, &addr.any, addr.getOsSockLen()) catch |err| {
-            std.debug.print("\x1b[38;2;239;68;68m[Worker] Bind error on port {d}: {}\x1b[0m\n", .{ self.listen_port, err });
-            return;
-        };
-
-        std.posix.listen(sock, 10) catch |err| {
-            std.debug.print("\x1b[38;2;239;68;68m[Worker] Listen error: {}\x1b[0m\n", .{err});
-            return;
-        };
+        defer server.deinit(io);
 
         std.debug.print("\x1b[38;2;0;229;153m[Worker] Listening on 127.0.0.1:{d} — ready for forward requests\x1b[0m\n", .{self.listen_port});
 
         while (self.running.load(.acquire)) {
-            var client_addr: std.net.Address = undefined;
-            var addr_len: std.posix.socklen_t = @sizeOf(std.posix.sockaddr);
-            const client = std.posix.accept(sock, &client_addr.any, &addr_len, 0) catch |err| {
+            // 0.16 `Server.accept` yields a `Stream`; the peer address is on
+            // `stream.socket.address` rather than an out-parameter.
+            const client = server.accept(io) catch |err| {
                 if (!self.running.load(.acquire)) break;
                 std.debug.print("\x1b[38;2;239;68;68m[Worker] Accept error: {}\x1b[0m\n", .{err});
                 continue;
@@ -195,14 +189,14 @@ pub const PipelineWorker = struct {
             setTcpNodelay(client);
             std.debug.print("\x1b[38;2;0;255;255m[Worker] Connection from coordinator\x1b[0m\n", .{});
             self.handleSession(client);
-            std.posix.close(client);
+            client.close(io);
             std.debug.print("\x1b[38;2;156;156;160m[Worker] Session ended\x1b[0m\n", .{});
         }
     }
 
     /// Handle a persistent session — dispatches single and batch forward requests.
     /// Logs specific disconnect reasons for diagnosis.
-    fn handleSession(self: *PipelineWorker, sock: std.posix.socket_t) void {
+    fn handleSession(self: *PipelineWorker, sock: std.Io.net.Stream) void {
         var tokens_processed: u32 = 0;
         const session_start = tri_time.milliTimestamp();
         var last_activity = tri_time.milliTimestamp();
@@ -265,7 +259,7 @@ pub const PipelineWorker = struct {
     }
 
     /// Handle a single-token forward request (used during decode phase)
-    fn handleSingleForward(self: *PipelineWorker, sock: std.posix.socket_t, payload_len: u32) !void {
+    fn handleSingleForward(self: *PipelineWorker, sock: std.Io.net.Stream, payload_len: u32) !void {
         // Read payload
         const payload = try self.allocator.alloc(u8, payload_len);
         defer self.allocator.free(payload);
@@ -301,11 +295,11 @@ pub const PipelineWorker = struct {
         const resp_bytes = resp.serialize();
         @memcpy(combined[0..protocol.MessageHeader.SIZE], &hdr_bytes);
         @memcpy(combined[protocol.MessageHeader.SIZE..], &resp_bytes);
-        _ = try std.posix.write(sock, &combined);
+        try writeAllTo(sock, &combined);
     }
 
     /// Handle a batched forward request (used during prefill phase)
-    fn handleBatchForward(self: *PipelineWorker, sock: std.posix.socket_t, payload_len: u32) !u32 {
+    fn handleBatchForward(self: *PipelineWorker, sock: std.Io.net.Stream, payload_len: u32) !u32 {
         // Read full payload
         const payload = try self.allocator.alloc(u8, payload_len);
         defer self.allocator.free(payload);
@@ -357,8 +351,8 @@ pub const PipelineWorker = struct {
             .length = @intCast(resp_payload.len),
         };
         const hdr_bytes = resp_header.serialize();
-        _ = try std.posix.write(sock, &hdr_bytes);
-        _ = try std.posix.write(sock, resp_payload);
+        try writeAllTo(sock, &hdr_bytes);
+        try writeAllTo(sock, resp_payload);
 
         return req.batch_size;
     }
@@ -385,7 +379,7 @@ pub const PipelineRelay = struct {
     running: std.atomic.Value(bool),
     server_thread: ?std.Thread = null,
     // Downstream connection (persistent)
-    downstream_sock: ?std.posix.socket_t = null,
+    downstream_sock: ?std.Io.net.Stream = null,
     // Pre-allocated hot-path buffer
     output_buf: []f32,
 
@@ -447,7 +441,7 @@ pub const PipelineRelay = struct {
 
     fn disconnectDownstream(self: *PipelineRelay) void {
         if (self.downstream_sock) |s| {
-            std.posix.close(s);
+            s.close(tri_io.get());
             self.downstream_sock = null;
         }
     }
@@ -455,34 +449,26 @@ pub const PipelineRelay = struct {
     // ─── Upstream server (Worker-like) ───
 
     pub fn serverLoop(self: *PipelineRelay) void {
-        const addr = std.net.Address.initIp4(.{ 0, 0, 0, 0 }, self.listen_port);
-        const sock = std.posix.socket(std.posix.AF.INET, std.posix.SOCK.STREAM, 0) catch |err| {
-            std.debug.print("\x1b[38;2;239;68;68m[Relay] Socket error: {}\x1b[0m\n", .{err});
+        const io = tri_io.get();
+
+        // Zig 0.16: socket + SO_REUSEADDR + bind + listen collapse into
+        // `IpAddress.listen`, which returns a `std.Io.net.Server`.
+        const addr: std.Io.net.IpAddress = .{ .ip4 = .unspecified(self.listen_port) };
+        var server = addr.listen(io, .{
+            .reuse_address = true,
+            .kernel_backlog = 10,
+            .mode = .stream,
+            .protocol = .tcp,
+        }) catch |err| {
+            std.debug.print("\x1b[38;2;239;68;68m[Relay] Listen error on port {d}: {}\x1b[0m\n", .{ self.listen_port, err });
             return;
         };
-        defer std.posix.close(sock);
-
-        const optval: u32 = 1;
-        std.posix.setsockopt(sock, std.posix.SOL.SOCKET, std.posix.SO.REUSEADDR, std.mem.asBytes(&optval)) catch |err| {
-            std.log.debug("distributed: setsockopt SO_REUSEADDR failed: {}", .{err});
-        };
-
-        std.posix.bind(sock, &addr.any, addr.getOsSockLen()) catch |err| {
-            std.debug.print("\x1b[38;2;239;68;68m[Relay] Bind error on port {d}: {}\x1b[0m\n", .{ self.listen_port, err });
-            return;
-        };
-
-        std.posix.listen(sock, 10) catch |err| {
-            std.debug.print("\x1b[38;2;239;68;68m[Relay] Listen error: {}\x1b[0m\n", .{err});
-            return;
-        };
+        defer server.deinit(io);
 
         std.debug.print("\x1b[38;2;0;229;153m[Relay] Listening on 127.0.0.1:{d} — ready for relay\x1b[0m\n", .{self.listen_port});
 
         while (self.running.load(.acquire)) {
-            var client_addr: std.net.Address = undefined;
-            var addr_len: std.posix.socklen_t = @sizeOf(std.posix.sockaddr);
-            const client = std.posix.accept(sock, &client_addr.any, &addr_len, 0) catch |err| {
+            const client = server.accept(io) catch |err| {
                 if (!self.running.load(.acquire)) break;
                 std.debug.print("\x1b[38;2;239;68;68m[Relay] Accept error: {}\x1b[0m\n", .{err});
                 continue;
@@ -491,13 +477,13 @@ pub const PipelineRelay = struct {
             setTcpNodelay(client);
             std.debug.print("\x1b[38;2;0;255;255m[Relay] Connection from upstream\x1b[0m\n", .{});
             self.handleSession(client);
-            std.posix.close(client);
+            client.close(io);
             self.disconnectDownstream();
             std.debug.print("\x1b[38;2;156;156;160m[Relay] Session ended\x1b[0m\n", .{});
         }
     }
 
-    fn handleSession(self: *PipelineRelay, sock: std.posix.socket_t) void {
+    fn handleSession(self: *PipelineRelay, sock: std.Io.net.Stream) void {
         var tokens_processed: u32 = 0;
         const session_start = tri_time.milliTimestamp();
         var last_activity = tri_time.milliTimestamp();
@@ -559,7 +545,7 @@ pub const PipelineRelay = struct {
 
     // ─── Single-token relay (decode phase) ───
 
-    fn handleSingleForward(self: *PipelineRelay, upstream_sock: std.posix.socket_t, payload_len: u32) !void {
+    fn handleSingleForward(self: *PipelineRelay, upstream_sock: std.Io.net.Stream, payload_len: u32) !void {
         // Read request from upstream
         const payload = try self.allocator.alloc(u8, payload_len);
         defer self.allocator.free(payload);
@@ -590,7 +576,7 @@ pub const PipelineRelay = struct {
         const resp_bytes = resp.serialize();
         @memcpy(combined[0..protocol.MessageHeader.SIZE], &hdr_bytes);
         @memcpy(combined[protocol.MessageHeader.SIZE..], &resp_bytes);
-        _ = try std.posix.write(upstream_sock, &combined);
+        try writeAllTo(upstream_sock, &combined);
     }
 
     /// Forward hidden state to downstream node, get sampled token back
@@ -617,7 +603,7 @@ pub const PipelineRelay = struct {
         defer self.allocator.free(fwd_combined);
         @memcpy(fwd_combined[0..protocol.MessageHeader.SIZE], &hdr_bytes);
         @memcpy(fwd_combined[protocol.MessageHeader.SIZE..], fwd_payload);
-        _ = try std.posix.write(sock, fwd_combined);
+        try writeAllTo(sock, fwd_combined);
 
         // Read response
         var resp_buf: [protocol.MessageHeader.SIZE + protocol.ForwardResponse.SIZE]u8 = undefined;
@@ -631,7 +617,7 @@ pub const PipelineRelay = struct {
 
     // ─── Batch relay (prefill phase) ───
 
-    fn handleBatchForward(self: *PipelineRelay, upstream_sock: std.posix.socket_t, payload_len: u32) !u32 {
+    fn handleBatchForward(self: *PipelineRelay, upstream_sock: std.Io.net.Stream, payload_len: u32) !u32 {
         // Read batch request from upstream
         const payload = try self.allocator.alloc(u8, payload_len);
         defer self.allocator.free(payload);
@@ -686,8 +672,8 @@ pub const PipelineRelay = struct {
             .length = @intCast(resp_payload.len),
         };
         const resp_hdr_bytes = resp_header.serialize();
-        _ = try std.posix.write(upstream_sock, &resp_hdr_bytes);
-        _ = try std.posix.write(upstream_sock, resp_payload);
+        try writeAllTo(upstream_sock, &resp_hdr_bytes);
+        try writeAllTo(upstream_sock, resp_payload);
 
         return req.batch_size;
     }
@@ -719,8 +705,8 @@ pub const PipelineRelay = struct {
             .length = @intCast(fwd_payload.len),
         };
         const hdr_bytes = header.serialize();
-        _ = try std.posix.write(sock, &hdr_bytes);
-        _ = try std.posix.write(sock, fwd_payload);
+        try writeAllTo(sock, &hdr_bytes);
+        try writeAllTo(sock, fwd_payload);
 
         // Read batch response
         var resp_hdr_buf: [protocol.MessageHeader.SIZE]u8 = undefined;
@@ -747,7 +733,7 @@ pub const PipelineCoordinator = struct {
     shard: ShardConfig,
     peer_host: []const u8,
     peer_port: u16,
-    sock: ?std.posix.socket_t = null,
+    sock: ?std.Io.net.Stream = null,
     // Timing instrumentation
     time_prefill_local_ms: i64 = 0,
     time_prefill_net_ms: i64 = 0,
@@ -804,7 +790,7 @@ pub const PipelineCoordinator = struct {
 
     fn disconnect(self: *PipelineCoordinator) void {
         if (self.sock) |s| {
-            std.posix.close(s);
+            s.close(tri_io.get());
             self.sock = null;
         }
     }
@@ -835,7 +821,7 @@ pub const PipelineCoordinator = struct {
         defer self.allocator.free(combined);
         @memcpy(combined[0..protocol.MessageHeader.SIZE], &hdr_bytes);
         @memcpy(combined[protocol.MessageHeader.SIZE..], payload);
-        _ = try std.posix.write(sock, combined);
+        try writeAllTo(sock, combined);
 
         // Read response (header + payload coalesced read)
         var resp_buf: [protocol.MessageHeader.SIZE + protocol.ForwardResponse.SIZE]u8 = undefined;
@@ -875,8 +861,8 @@ pub const PipelineCoordinator = struct {
             .length = @intCast(payload.len),
         };
         const hdr_bytes = header.serialize();
-        _ = try std.posix.write(sock, &hdr_bytes);
-        _ = try std.posix.write(sock, payload);
+        try writeAllTo(sock, &hdr_bytes);
+        try writeAllTo(sock, payload);
 
         // Read batch response header
         var resp_hdr_buf: [protocol.MessageHeader.SIZE]u8 = undefined;
@@ -1031,52 +1017,58 @@ pub const PipelineCoordinator = struct {
 // HELPERS
 // ═══════════════════════════════════════════════════════════════════════════════
 
-/// Read exactly `buf.len` bytes from socket, blocking until complete.
-/// Retries on EINTR (signal interruption). Returns error on true failures.
-fn readExact(sock: std.posix.socket_t, buf: []u8) !usize {
-    var total: usize = 0;
-    var consecutive_zero: u32 = 0;
-    while (total < buf.len) {
-        const n = std.posix.read(sock, buf[total..]) catch |err| {
-            if (err == error.Interrupted) continue; // EINTR — retry
-            if (total > 0) {
-                std.debug.print("\x1b[38;2;239;68;68m[Net] Read error after {d}/{d} bytes: {}\x1b[0m\n", .{ total, buf.len, err });
-                return error.IncompleteRead;
-            }
-            return err;
-        };
-        if (n == 0) {
-            consecutive_zero += 1;
-            if (consecutive_zero > 3) {
-                if (total > 0) {
-                    std.debug.print("\x1b[38;2;239;68;68m[Net] EOF after {d}/{d} bytes\x1b[0m\n", .{ total, buf.len });
-                }
-                return total; // true EOF
-            }
-            continue;
-        }
-        consecutive_zero = 0;
-        total += n;
+/// Read exactly `buf.len` bytes from the stream, blocking until complete.
+/// Returns a short count only at end of stream, which is what the callers
+/// test for. EINTR retrying lives inside the `Io` implementation in 0.16, so
+/// the explicit `error.Interrupted` loop is gone.
+///
+/// The reader is deliberately given an empty buffer: a session issues several
+/// `readExact` calls in a row on the same stream, and a per-call buffer would
+/// swallow bytes belonging to the next call.
+fn readExact(sock: std.Io.net.Stream, buf: []u8) !usize {
+    const io = tri_io.get();
+
+    var stream_reader = sock.reader(io, &.{});
+    const r = &stream_reader.interface;
+
+    const total = r.readSliceShort(buf) catch {
+        std.debug.print("\x1b[38;2;239;68;68m[Net] Read error on {d}-byte read\x1b[0m\n", .{buf.len});
+        return stream_reader.err orelse error.ReadFailed;
+    };
+    if (total > 0 and total < buf.len) {
+        std.debug.print("\x1b[38;2;239;68;68m[Net] EOF after {d}/{d} bytes\x1b[0m\n", .{ total, buf.len });
     }
     return total;
+}
+
+/// Write all of `bytes` to the stream. Replaces `std.posix.write`, which no
+/// longer exists in Zig 0.16. Unbuffered, so one call is one drain of the
+/// given slice -- which preserves the coalesced-write intent of the callers.
+fn writeAllTo(sock: std.Io.net.Stream, bytes: []const u8) !void {
+    const io = tri_io.get();
+
+    var stream_writer = sock.writer(io, &.{});
+    const w = &stream_writer.interface;
+
+    w.writeAll(bytes) catch return stream_writer.err orelse error.WriteFailed;
+    w.flush() catch return stream_writer.err orelse error.WriteFailed;
 }
 
 /// Connect to a TCP endpoint with exponential backoff.
 /// Starts at 200ms delay, doubles each retry, caps at 30s.
 /// Returns the connected socket or error after max_retries attempts.
-fn connectWithRetry(ip_parts: [4]u8, port: u16, max_retries: u32, label: []const u8) !std.posix.socket_t {
+fn connectWithRetry(ip_parts: [4]u8, port: u16, max_retries: u32, label: []const u8) !std.Io.net.Stream {
+    const io = tri_io.get();
+
     var delay_ms: u64 = 200;
     var attempt: u32 = 0;
 
     while (true) {
-        const addr = std.net.Address.initIp4(ip_parts, port);
-        const sock = std.posix.socket(std.posix.AF.INET, std.posix.SOCK.STREAM, 0) catch |err| {
-            std.debug.print("\x1b[38;2;239;68;68m[{s}] Socket creation failed: {}\x1b[0m\n", .{ label, err });
-            return err;
-        };
+        // Zig 0.16: socket() + connect() become `IpAddress.connect`, which
+        // returns an open `Stream` and closes the fd itself on failure.
+        const addr: std.Io.net.IpAddress = .{ .ip4 = .{ .bytes = ip_parts, .port = port } };
 
-        std.posix.connect(sock, &addr.any, addr.getOsSockLen()) catch |err| {
-            std.posix.close(sock);
+        const sock = addr.connect(io, .{ .mode = .stream, .protocol = .tcp }) catch |err| {
             attempt += 1;
             if (attempt >= max_retries) {
                 std.debug.print("\x1b[38;2;239;68;68m[{s}] Connection failed after {d} attempts: {}\x1b[0m\n", .{ label, attempt, err });
@@ -1115,9 +1107,12 @@ fn parseIpv4(host: []const u8) [4]u8 {
 }
 
 /// Set TCP_NODELAY to disable Nagle's algorithm (reduces latency for small writes)
-fn setTcpNodelay(sock: std.posix.socket_t) void {
+fn setTcpNodelay(sock: std.Io.net.Stream) void {
     const optval: u32 = 1;
-    std.posix.setsockopt(sock, std.posix.IPPROTO.TCP, std.posix.TCP.NODELAY, std.mem.asBytes(&optval)) catch |err| {
+    // `std.posix.setsockopt` survives in 0.16 and still takes a raw fd, which
+    // a 0.16 `Stream` exposes as `socket.handle`. There is no socket-option
+    // entry point on `std.Io.net` itself.
+    std.posix.setsockopt(sock.socket.handle, std.posix.IPPROTO.TCP, std.posix.TCP.NODELAY, std.mem.asBytes(&optval)) catch |err| {
         std.log.debug("distributed: setsockopt TCP_NODELAY failed: {}", .{err});
     };
 }

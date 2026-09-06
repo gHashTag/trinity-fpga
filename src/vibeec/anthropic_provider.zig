@@ -43,7 +43,7 @@ pub const AnthropicProvider = struct {
         }
 
         // Anthropic uses different JSON format
-        var json_body = std.ArrayListUnmanaged(u8){};
+        var json_body = @as(std.ArrayListUnmanaged(u8), .empty);
         defer json_body.deinit(self.allocator);
 
         try json_body.appendSlice(self.allocator, "{\"model\":\"");
@@ -54,7 +54,7 @@ pub const AnthropicProvider = struct {
         try self.appendEscaped(&json_body, user_prompt);
         try json_body.appendSlice(self.allocator, "\"}]}");
 
-        var auth_header = std.ArrayListUnmanaged(u8){};
+        var auth_header = @as(std.ArrayListUnmanaged(u8), .empty);
         defer auth_header.deinit(self.allocator);
         try auth_header.appendSlice(self.allocator, "x-api-key: ");
         try auth_header.appendSlice(self.allocator, self.api_key);
@@ -74,9 +74,9 @@ pub const AnthropicProvider = struct {
 
         try child.spawn();
 
-        var stdout_list = std.ArrayListUnmanaged(u8){};
+        var stdout_list = @as(std.ArrayListUnmanaged(u8), .empty);
         defer stdout_list.deinit(self.allocator);
-        var stderr_list = std.ArrayListUnmanaged(u8){};
+        var stderr_list = @as(std.ArrayListUnmanaged(u8), .empty);
         defer stderr_list.deinit(self.allocator);
 
         try child.collectOutput(self.allocator, &stdout_list, &stderr_list, 10 * 1024 * 1024);
@@ -123,7 +123,7 @@ pub const AnthropicProvider = struct {
         const start_idx = last_idx orelse return error.NoContentField;
         const content_start = start_idx + marker.len;
 
-        var result = std.ArrayListUnmanaged(u8){};
+        var result = @as(std.ArrayListUnmanaged(u8), .empty);
         errdefer result.deinit(self.allocator);
 
         var i = content_start;
@@ -183,7 +183,7 @@ pub const AnthropicProvider = struct {
     }
 
     pub fn generateWithReasoning(self: *Self, user_prompt: []const u8, reasoning_context: []const u8) ![]const u8 {
-        var system_prompt = std.ArrayListUnmanaged(u8){};
+        var system_prompt = @as(std.ArrayListUnmanaged(u8), .empty);
         defer system_prompt.deinit(self.allocator);
 
         try system_prompt.appendSlice(self.allocator,

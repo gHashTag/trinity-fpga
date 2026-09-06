@@ -115,7 +115,7 @@ pub const Mentor = struct {
     }
 
     pub fn formatGuidance(self: *Mentor, allocator: std.mem.Allocator) ![]const u8 {
-        var result = std.ArrayListUnmanaged(u8){};
+        var result = @as(std.ArrayListUnmanaged(u8), .empty);
 
         try result.appendSlice(allocator, "🌿 MENTOR'S GUIDANCE:\n");
 

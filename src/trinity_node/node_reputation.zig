@@ -253,7 +253,7 @@ pub const NodeReputationSystem = struct {
         self.mutex.lock();
         defer self.mutex.unlock();
 
-        var result = std.ArrayListUnmanaged(ReputationScore){};
+        var result = @as(std.ArrayListUnmanaged(ReputationScore), .empty);
         errdefer result.deinit(allocator);
 
         var iter = self.entries.keyIterator();
@@ -281,7 +281,7 @@ pub const NodeReputationSystem = struct {
         const ranked = try self.rankNodes(allocator);
         defer allocator.free(ranked);
 
-        var result = std.ArrayListUnmanaged([32]u8){};
+        var result = @as(std.ArrayListUnmanaged([32]u8), .empty);
         errdefer result.deinit(allocator);
 
         for (ranked) |entry| {

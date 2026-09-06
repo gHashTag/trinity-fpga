@@ -378,7 +378,7 @@ pub const Orchestrator = struct {
         const file = std.Io.Dir.cwd().openFile(io, self.fix_plan_path, .{}) catch |err| {
             if (err == error.FileNotFound) {
                 std.debug.print("⚠️  fix_plan.md not found at: {s}\n", .{self.fix_plan_path});
-                const empty = std.ArrayList(Task){};
+                const empty = @as(std.ArrayList(Task), .empty);
                 return empty;
             }
             return err;

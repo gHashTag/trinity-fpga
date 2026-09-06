@@ -29,9 +29,9 @@ pub const OllamaProvider = struct {
         try child.spawn();
 
         // Collect output using Zig 0.15 API with ArrayListUnmanaged
-        var stdout_list = std.ArrayListUnmanaged(u8){};
+        var stdout_list = @as(std.ArrayListUnmanaged(u8), .empty);
         defer stdout_list.deinit(self.allocator);
-        var stderr_list = std.ArrayListUnmanaged(u8){};
+        var stderr_list = @as(std.ArrayListUnmanaged(u8), .empty);
         defer stderr_list.deinit(self.allocator);
 
         try child.collectOutput(self.allocator, &stdout_list, &stderr_list, 10 * 1024 * 1024);
@@ -54,7 +54,7 @@ pub const OllamaProvider = struct {
 
     /// Generate Zig code with system prompt
     pub fn generateZigCode(self: *OllamaProvider, user_prompt: []const u8, penance: ?[]const u8) ![]const u8 {
-        var full_prompt = std.ArrayListUnmanaged(u8){};
+        var full_prompt = @as(std.ArrayListUnmanaged(u8), .empty);
         defer full_prompt.deinit(self.allocator);
 
         // System instruction

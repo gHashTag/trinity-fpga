@@ -226,7 +226,7 @@ const Service = struct {
 };
 
 fn listServices(allocator: std.mem.Allocator, token: []const u8, project_id: []const u8) !std.ArrayListUnmanaged(Service) {
-    var services = std.ArrayListUnmanaged(Service){};
+    var services = @as(std.ArrayListUnmanaged(Service), .empty);
 
     const query_fmt = "{{\"query\":\"{{project(id:\\\"{s}\\\"){{services{{edges{{node{{id name}}}}}}}}}}\"}}";
     const query = try std.fmt.allocPrint(allocator, query_fmt, .{project_id});

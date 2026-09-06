@@ -144,7 +144,7 @@ pub const HybridCodeGen = struct {
         self.groq_calls += 1;
 
         // Build context from analysis
-        var context = std.ArrayListUnmanaged(u8){};
+        var context = @as(std.ArrayListUnmanaged(u8), .empty);
         defer context.deinit(self.allocator);
 
         try context.appendSlice(self.allocator, "Task: ");

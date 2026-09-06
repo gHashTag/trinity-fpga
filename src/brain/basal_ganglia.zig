@@ -115,12 +115,12 @@ pub const TaskClaim = struct {
 /// - This prevents deadlocks in concurrent scenarios
 const Shard = struct {
     claims: std.StringHashMap(TaskClaim),
-    rwlock: std.Thread.RwLock,
+    rwlock: tri_mutex.RwLock,
 
     fn init(allocator: std.mem.Allocator) Shard {
         return Shard{
             .claims = std.StringHashMap(TaskClaim).init(allocator),
-            .rwlock = std.Thread.RwLock{},
+            .rwlock = tri_mutex.RwLock{},
         };
     }
 

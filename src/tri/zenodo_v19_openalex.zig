@@ -162,7 +162,7 @@ pub const CoarNotification = struct {
 
     /// Generate COAR notification JSON-LD
     pub fn toJsonLd(self: *const CoarNotification, allocator: Allocator) ![]const u8 {
-        var buffer = std.ArrayListUnmanaged(u8){};
+        var buffer = @as(std.ArrayListUnmanaged(u8), .empty);
         defer buffer.deinit(allocator);
 
         const writer = buffer.writer(allocator);
@@ -307,7 +307,7 @@ pub const OpenAlexWork = struct {
 
     /// Generate OpenAlex JSON
     pub fn toJson(self: *const OpenAlexWork, allocator: Allocator) ![]const u8 {
-        var buffer = std.ArrayListUnmanaged(u8){};
+        var buffer = @as(std.ArrayListUnmanaged(u8), .empty);
         defer buffer.deinit(allocator);
 
         const writer = buffer.writer(allocator);

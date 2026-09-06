@@ -712,7 +712,7 @@ pub const StateManager = struct {
             .exists = true,
             .path = self.state_file_path,
             .size_bytes = @intCast(stat.size),
-            .modified_at = std.math.cast(i64, stat.mtime),
+            .modified_at = std.math.cast(i64, @as(i128, stat.mtime.nanoseconds)),
             .backup_count = backup_count,
         };
     }

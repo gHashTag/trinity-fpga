@@ -420,7 +420,7 @@ fn handleDecode(allocator: std.mem.Allocator, trits_str: []const u8) !void {
     printInfo("Decoding trits to text...");
 
     // Parse trit string
-    var trit_stream = std.ArrayListUnmanaged(i8){};
+    var trit_stream = @as(std.ArrayListUnmanaged(i8), .empty);
     defer trit_stream.deinit(allocator);
 
     for (trits_str) |c| {
@@ -449,7 +449,7 @@ fn handlePack(allocator: std.mem.Allocator, file: []const u8) !void {
     defer allocator.free(content);
 
     // Assume file contains trit representation
-    var trit_stream = std.ArrayListUnmanaged(i8){};
+    var trit_stream = @as(std.ArrayListUnmanaged(i8), .empty);
     defer trit_stream.deinit(allocator);
 
     for (content) |c| {
@@ -563,7 +563,7 @@ fn readFile(allocator: std.mem.Allocator, path: []const u8) ![]u8 {
 
 /// Helper: Encode string to trits (simplified)
 fn encodeStringToTrits(allocator: std.mem.Allocator, str: []const u8) ![]i8 {
-    var list = std.ArrayListUnmanaged(i8){};
+    var list = @as(std.ArrayListUnmanaged(i8), .empty);
     defer list.deinit(allocator);
 
     try list.ensureTotalCapacity(allocator, str.len * 5);
@@ -583,7 +583,7 @@ fn encodeStringToTrits(allocator: std.mem.Allocator, str: []const u8) ![]i8 {
 
 /// Helper: Pack trits to bytes (simplified)
 fn packTritsToBytes(allocator: std.mem.Allocator, trits: []const i8) ![]u8 {
-    var list = std.ArrayListUnmanaged(u8){};
+    var list = @as(std.ArrayListUnmanaged(u8), .empty);
     defer list.deinit(allocator);
 
     try list.ensureTotalCapacity(allocator, trits.len / 5);
@@ -605,7 +605,7 @@ fn packTritsToBytes(allocator: std.mem.Allocator, trits: []const i8) ![]u8 {
 
 /// Helper: Unpack bytes to trits (simplified)
 fn unpackBytesToTrits(allocator: std.mem.Allocator, bytes: []const u8) ![]i8 {
-    var list = std.ArrayListUnmanaged(i8){};
+    var list = @as(std.ArrayListUnmanaged(i8), .empty);
     defer list.deinit(allocator);
 
     try list.ensureTotalCapacity(allocator, bytes.len * 5);
@@ -624,7 +624,7 @@ fn unpackBytesToTrits(allocator: std.mem.Allocator, bytes: []const u8) ![]i8 {
 
 /// Helper: Decode trits to string (simplified)
 fn decodeTritsToString(allocator: std.mem.Allocator, trits: []const i8) ![]u8 {
-    var list = std.ArrayListUnmanaged(u8){};
+    var list = @as(std.ArrayListUnmanaged(u8), .empty);
     defer list.deinit(allocator);
 
     try list.ensureTotalCapacity(allocator, trits.len / 5);

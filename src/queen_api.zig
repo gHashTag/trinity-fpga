@@ -137,7 +137,7 @@ export fn trinity_queen_farm_events(buf: [*]u8, len: usize, last_n: usize) usize
     if (total == 0) return 0;
 
     // Find last N newlines
-    var line_starts = std.ArrayListUnmanaged(usize){};
+    var line_starts = @as(std.ArrayListUnmanaged(usize), .empty);
     defer line_starts.deinit(allocator);
 
     line_starts.append(allocator, 0) catch return 0;
@@ -291,7 +291,7 @@ export fn trinity_queen_audit_recent(n: usize, buf: [*]u8, len: usize) usize {
     if (total == 0) return 0;
 
     // Find last N newlines
-    var line_starts = std.ArrayListUnmanaged(usize){};
+    var line_starts = @as(std.ArrayListUnmanaged(usize), .empty);
     defer line_starts.deinit(allocator);
 
     line_starts.append(allocator, 0) catch return 0;

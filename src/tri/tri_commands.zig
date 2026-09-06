@@ -8,6 +8,7 @@
 // φ² + 1/φ² = 3 = TRINITY
 // ═══════════════════════════════════════════════════════════════════════════════
 const std = @import("std");
+const tri_env = @import("tri_env");
 const tri_io = @import("tri_io");
 const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
@@ -785,7 +786,7 @@ pub fn runUiCommand(allocator: std.mem.Allocator, args: []const []const u8) !voi
     const queen_dir = "apps/queen";
 
     // Get current environment for subprocess inheritance
-    var env_map = try std.process.getEnvMap(allocator);
+    var env_map = try tri_env.getEnvMap(allocator);
     defer env_map.deinit();
 
     // Kill any running swift processes

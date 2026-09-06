@@ -2,8 +2,9 @@
 //! φ² + 1/φ² = 3 | TRINITY
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const Allocator = std.mem.Allocator;
-const net = std.net;
+const net = std.Io.net;
 
 /// Railway GraphQL endpoint
 pub const RAILWAY_GRAPHQL_URL = "https://backboard.railway.app/graphql/v2";
@@ -27,12 +28,7 @@ pub const ServiceDeleteResponse = struct {
 };
 
 /// Railway error
-pub const Error = error{
-    ConnectionFailed,
-    InvalidResponse,
-    AuthFailed,
-    GraphQL
-};
+pub const Error = error{ ConnectionFailed, InvalidResponse, AuthFailed, GraphQL };
 
 /// Railway client
 pub const RailwayClient = struct {
@@ -108,7 +104,9 @@ fn sendGraphQLRequest(client: *RailwayClient, query: []const u8) ![]const u8 {
         std.heap.page_allocator.free(bytes);
     }
 
-    try request.writer(std.heap.page_allocator).print(
+    // ArrayList(u8) has no `.writer(gpa)` in 0.16; `print(gpa, fmt, args)` is the
+    // replacement and formats straight into the list.
+    try request.print(std.heap.page_allocator,
         \\POST {s} HTTP/1.1\r
         \\Host: backboard.railway.app\r
         \\Content-Type: application/json\r
@@ -119,19 +117,36 @@ fn sendGraphQLRequest(client: *RailwayClient, query: []const u8) ![]const u8 {
         \\{s}
     , .{ RAILWAY_GRAPHQL_URL, query.len, client.api_token, query });
 
-    // Resolve address
-    const address = try std.net.Address.parseIp("backboard.railway.app", 443);
+    const io = tri_io.get();
 
-    // Connect via TCP (HTTPS would need TLS)
-    var stream = try net.tcpConnectToAddress(address);
-    defer stream.close();
+    // Resolve address.
+    // NOTE: this is a literal port of the 0.15 call. `parseIp` never resolved
+    // host names either -- it parses an IP literal -- so this still fails at
+    // runtime on "backboard.railway.app". `std.Io.net.HostName` is where 0.16
+    // puts name resolution, but wiring it in is a behaviour change, not a
+    // migration, so it is left as-is.
+    const address = try net.IpAddress.parse("backboard.railway.app", 443);
 
-    // Send request
-    _ = try stream.writeAll(request.items);
+    // Connect via TCP (HTTPS would need TLS).
+    // 0.16 replaces `tcpConnectToAddress` with `IpAddress.connect`, which takes
+    // the Io and an explicit socket mode/protocol.
+    const stream = try address.connect(io, .{ .mode = .stream, .protocol = .tcp });
+    defer stream.close(io);
 
-    // Read response
+    // Send request. 0.16 `Stream` has no `writeAll`; it hands out an
+    // `Io.Writer` that must be flushed.
+    var send_buf: [4096]u8 = undefined;
+    var stream_writer = stream.writer(io, &send_buf);
+    try stream_writer.interface.writeAll(request.items);
+    try stream_writer.interface.flush();
+
+    // Read response. `fillMore` does exactly one underlying read into the
+    // reader's buffer, which is what the 0.15 `stream.read(&buffer)` did;
+    // `buffered()` is the slice that was filled, so it is `buffer[0..n]`.
     var buffer: [16384]u8 = undefined;
-    const response_len = try stream.read(&buffer);
+    var stream_reader = stream.reader(io, &buffer);
+    try stream_reader.interface.fillMore();
+    const response_len = stream_reader.interface.buffered().len;
 
     // Extract body (skip headers)
     const body_start = findBodyStart(buffer[0..response_len]);

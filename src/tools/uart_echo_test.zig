@@ -2522,7 +2522,7 @@ const JitterTracker = struct {
         const std_dev = stats.jitter;
 
         // Calculate empirical CDF for K-S test
-        var sorted_samples = std.ArrayList(i64){};
+        var sorted_samples = @as(std.ArrayList(i64), .empty);
         defer sorted_samples.deinit(self.allocator);
         try sorted_samples.appendSlice(self.allocator, self.samples[0..self.count]);
 

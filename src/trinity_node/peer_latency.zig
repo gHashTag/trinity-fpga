@@ -140,7 +140,7 @@ pub const PeerLatencyTracker = struct {
         self.mutex.lock();
         defer self.mutex.unlock();
 
-        var scores = std.ArrayListUnmanaged(PeerLatencyScore){};
+        var scores = @as(std.ArrayListUnmanaged(PeerLatencyScore), .empty);
         var iter = self.entries.iterator();
         while (iter.next()) |kv| {
             try scores.append(allocator, .{
@@ -174,7 +174,7 @@ pub const PeerLatencyTracker = struct {
         const ranked = try self.rankByLatency(allocator);
         defer allocator.free(ranked);
 
-        var result = std.ArrayListUnmanaged([32]u8){};
+        var result = @as(std.ArrayListUnmanaged([32]u8), .empty);
         for (ranked) |score| {
             if (result.items.len >= count) break;
             if (exclude_id) |excl| {

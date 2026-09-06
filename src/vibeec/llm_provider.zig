@@ -102,7 +102,7 @@ pub const LLMClient = struct {
         std.debug.print("🌿 [GOLEM 3.1] Evolutionary Ritual initiated...\n", .{});
 
         // Extract user prompt from messages
-        var prompt_buf = std.ArrayListUnmanaged(u8){};
+        var prompt_buf = @as(std.ArrayListUnmanaged(u8), .empty);
         defer prompt_buf.deinit(self.allocator);
         for (messages) |msg| {
             if (std.mem.eql(u8, msg.role, "user")) {
@@ -216,7 +216,7 @@ pub const LLMClient = struct {
     /// Decode logits to text - RAW NEURAL OUTPUT (NO TEMPLATES)
     /// This is the TRUE test of neural capability
     fn decode_to_text(self: *LLMClient, logits: []f32) ![]const u8 {
-        var result = std.ArrayListUnmanaged(u8){};
+        var result = @as(std.ArrayListUnmanaged(u8), .empty);
         errdefer result.deinit(self.allocator);
 
         // Vocabulary for token generation
@@ -282,7 +282,7 @@ pub const LLMClient = struct {
         // If nothing useful, return minimal valid code
         if (result.items.len < 20) {
             result.deinit(self.allocator);
-            var fallback = std.ArrayListUnmanaged(u8){};
+            var fallback = @as(std.ArrayListUnmanaged(u8), .empty);
             try fallback.appendSlice(self.allocator, "const std = @import(\"std\");\npub fn main() void {\n    std.debug.print(\"raw neural output\\n\", .{});\n}\n");
             return try fallback.toOwnedSlice(self.allocator);
         }

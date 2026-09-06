@@ -27,7 +27,7 @@ pub const StoragePeerInfo = struct {
     total_bytes: u64,
     shard_count: u32,
     last_seen: i64,
-    address: ?std.net.Address,
+    address: ?std.Io.net.IpAddress,
     reliable: bool = true, // v1.5: false if proof-of-storage challenges failed
     reputation_score: f64 = 0.0, // v1.6: composite reputation score
 
@@ -59,7 +59,7 @@ pub const StoragePeerRegistry = struct {
     }
 
     /// Update or insert a peer from a StorageAnnounce message
-    pub fn updateFromAnnounce(self: *StoragePeerRegistry, announce: protocol.StorageAnnounce, addr: ?std.net.Address) void {
+    pub fn updateFromAnnounce(self: *StoragePeerRegistry, announce: protocol.StorageAnnounce, addr: ?std.Io.net.IpAddress) void {
         self.mutex.lock();
         defer self.mutex.unlock();
 
@@ -84,7 +84,7 @@ pub const StoragePeerRegistry = struct {
         defer self.mutex.unlock();
 
         const now = tri_time.timestamp();
-        var result = std.ArrayListUnmanaged(StoragePeerInfo){};
+        var result: std.ArrayListUnmanaged(StoragePeerInfo) = .empty;
         errdefer result.deinit(allocator);
 
         var iter = self.peers.valueIterator();
@@ -104,7 +104,7 @@ pub const StoragePeerRegistry = struct {
 
         const now = tri_time.timestamp();
         var count: u32 = 0;
-        var to_remove = std.ArrayListUnmanaged([32]u8){};
+        var to_remove: std.ArrayListUnmanaged([32]u8) = .empty;
         defer to_remove.deinit(self.allocator);
 
         var iter = self.peers.iterator();
@@ -156,7 +156,7 @@ pub const StoragePeerRegistry = struct {
         defer self.mutex.unlock();
 
         const now = tri_time.timestamp();
-        var result = std.ArrayListUnmanaged(StoragePeerInfo){};
+        var result: std.ArrayListUnmanaged(StoragePeerInfo) = .empty;
         errdefer result.deinit(allocator);
 
         var iter = self.peers.valueIterator();

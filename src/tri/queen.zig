@@ -901,7 +901,7 @@ fn isSupervisorRunning() bool {
 
     // Check if process is running by sending signal 0
     // Returns void on success (process exists), error on failure
-    std.posix.kill(pid, 0) catch return false;
+    std.posix.kill(pid, @enumFromInt(0)) catch return false;
     return true;
 }
 
@@ -921,7 +921,7 @@ fn stopSupervisor() !void {
     print("{s}" ++ qt.E_STOP ++ " Stopping supervisor (PID {d})...{s}\n", .{ GOLDEN, pid, RESET });
 
     // Send SIGTERM (15) for graceful shutdown
-    if (std.posix.kill(pid, 15)) |_| {
+    if (std.posix.kill(pid, .TERM)) |_| {
         // Success
     } else |err| {
         print("  {s}" ++ qt.E_CROSS ++ " Failed to stop supervisor: {s}{s}\n", .{ RED, @errorName(err), RESET });
@@ -933,7 +933,7 @@ fn stopSupervisor() !void {
 
     if (isSupervisorRunning()) {
         print("  {s}" ++ qt.E_SIREN ++ " Supervisor still running, try SIGKILL{s}\n", .{ RED, RESET });
-        _ = std.posix.kill(pid, 9) catch {}; // SIGKILL
+        _ = std.posix.kill(pid, .KILL) catch {}; // SIGKILL
     } else {
         print("  {s}" ++ qt.E_CHECK ++ " Supervisor stopped{s}\n", .{ GREEN, RESET });
     }
@@ -1908,8 +1908,7 @@ fn writeTodosFile(senses: qt.SenseResult) void {
     defer file.close(io);
 
     var buf: [4096]u8 = undefined;
-    var fbs = std.io.fixedBufferStream(&buf);
-    const w = fbs.writer();
+    var w: std.Io.Writer = .fixed(&buf);
 
     w.print("{{\"generated_at\":{d},\"items\":[", .{tri_time.timestamp()}) catch return;
 
@@ -1951,7 +1950,7 @@ fn writeTodosFile(senses: qt.SenseResult) void {
     }
 
     w.writeAll("]}") catch {};
-    const data = fbs.getWritten();
+    const data = w.buffered();
     file.writeStreamingAll(io, data) catch {};
 }
 
@@ -2004,8 +2003,7 @@ fn writeActionsFile() void {
     defer file.close(io);
 
     var buf: [8192]u8 = undefined;
-    var fbs = std.io.fixedBufferStream(&buf);
-    const w = fbs.writer();
+    var w: std.Io.Writer = .fixed(&buf);
 
     w.print("{{\"version\":4,\"generated_at\":{d},\"actions\":[", .{tri_time.timestamp()}) catch return;
 
@@ -2025,7 +2023,7 @@ fn writeActionsFile() void {
     }
 
     w.print("]}}", .{}) catch return;
-    file.writeStreamingAll(io, fbs.getWritten()) catch {};
+    file.writeStreamingAll(io, w.buffered()) catch {};
 }
 
 fn writeAuditSummary(config: qt.QueenConfig, counters: *const queen_policy.ActionCounters) void {
@@ -2035,8 +2033,7 @@ fn writeAuditSummary(config: qt.QueenConfig, counters: *const queen_policy.Actio
     defer file.close(io);
 
     var buf: [4096]u8 = undefined;
-    var fbs = std.io.fixedBufferStream(&buf);
-    const w = fbs.writer();
+    var w: std.Io.Writer = .fixed(&buf);
 
     w.print("{{\"max_auto_level\":{d},\"require_human_approval\":{s},\"god_mode\":{s},\"rate_limits\":{{", .{
         config.max_auto_level,
@@ -2060,7 +2057,7 @@ fn writeAuditSummary(config: qt.QueenConfig, counters: *const queen_policy.Actio
     }
 
     w.print("}}}}", .{}) catch return;
-    file.writeStreamingAll(io, fbs.getWritten()) catch {};
+    file.writeStreamingAll(io, w.buffered()) catch {};
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -2095,7 +2092,7 @@ fn isPidFileValid() bool {
     const pid = std.fmt.parseInt(i32, pid_str, 10) catch return false;
 
     // Check if process exists by sending signal 0
-    const result = std.posix.kill(pid, 0);
+    const result = std.posix.kill(pid, @enumFromInt(0));
     return result == 0;
 }
 

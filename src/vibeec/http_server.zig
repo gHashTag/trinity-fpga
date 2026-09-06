@@ -5,6 +5,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 const model_mod = @import("gguf_model.zig");
 const tokenizer_mod = @import("gguf_tokenizer.zig");
@@ -12,6 +13,33 @@ const inference = @import("gguf_inference.zig");
 const agent_mu_api = @import("agent_mu_api.zig");
 
 const Allocator = std.mem.Allocator;
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ZIG 0.16 NETWORKING
+// ═══════════════════════════════════════════════════════════════════════════════
+//
+// `std.net` is gone. `std.Io.net.Server.accept` now yields a `std.Io.net.Stream`
+// directly -- there is no `Server.Connection` wrapper -- so every handler that
+// used to take a pointer to the old Connection now takes a
+// `*std.Io.net.Stream` under the same parameter name.
+//
+// `Stream` also has no `read`/`writeAll`; those live on `Stream.Reader` /
+// `Stream.Writer`, which need an `Io` and a buffer. None of these handlers has
+// an `io` parameter and their signatures are fixed, so the `Io` comes from
+// `tri_io.get()`.
+
+/// One `writeAll` against a `std.Io.net.Stream`.
+///
+/// Creates a `Stream.Writer` for the call and flushes it, so a single call maps
+/// to a single write, exactly as the old `stream.writeAll` did.
+fn streamWriteAll(stream: *const std.Io.net.Stream, bytes: []const u8) !void {
+    const io = tri_io.get();
+    var buf: [4096]u8 = undefined;
+    var stream_writer = stream.writer(io, &buf);
+    try stream_writer.interface.writeAll(bytes);
+    try stream_writer.interface.flush();
+}
+
 const FullModel = model_mod.FullModel;
 const Tokenizer = tokenizer_mod.Tokenizer;
 const SamplingParams = inference.SamplingParams;
@@ -168,7 +196,7 @@ const WorkerPool = struct {
     running: std.atomic.Value(bool),
 
     const RequestJob = struct {
-        connection: *std.net.Server.Connection,
+        connection: *std.Io.net.Stream,
         body: []const u8,
         model: *FullModel,
         tokenizer: *Tokenizer,
@@ -296,18 +324,20 @@ pub const HttpServer = struct {
         std.debug.print("  - Request batching for VSA operations\n", .{});
         std.debug.print("\n", .{});
 
-        const address = std.net.Address.initIp4(.{ 0, 0, 0, 0 }, self.port);
-        var server = try address.listen(.{
+        const io = tri_io.get();
+        const address: std.Io.net.IpAddress = .{ .ip4 = .{ .bytes = .{ 0, 0, 0, 0 }, .port = self.port } };
+        var server = try address.listen(io, .{
             .reuse_address = true,
         });
-        defer server.deinit();
+        defer server.deinit(io);
         defer model.deinit();
         defer tokenizer.deinit();
 
         std.debug.print("Server ready! Listening on port {d}...\n\n", .{self.port});
 
         while (true) {
-            var connection = server.accept() catch |err| {
+            // 0.16: accept yields the Stream itself, not a Connection.
+            var connection = server.accept(io) catch |err| {
                 std.debug.print("Accept error: {}\n", .{err});
                 continue;
             };
@@ -316,19 +346,27 @@ pub const HttpServer = struct {
                 std.debug.print("Request error: {}\n", .{err});
             };
 
-            connection.stream.close();
+            connection.close(io);
         }
     }
 
-    fn handleConnection(self: *HttpServer, connection: *std.net.Server.Connection, model: *FullModel, tokenizer: *Tokenizer) !void {
+    fn handleConnection(self: *HttpServer, connection: *std.Io.net.Stream, model: *FullModel, tokenizer: *Tokenizer) !void {
         var timer = tri_time.Timer.start() catch return;
         self.recordRequestStart();
 
+        // 0.16: Stream has no `read`. `Stream.Reader.fillMore` does exactly one
+        // underlying read into the reader's own buffer, which is what
+        // `stream.read(&buf)` did; end of stream is an error rather than 0.
         var buf: [16384]u8 = undefined;
-        const n = try connection.stream.read(&buf);
-        if (n == 0) return;
+        var stream_reader = connection.reader(tri_io.get(), &buf);
+        stream_reader.interface.fillMore() catch |err| switch (err) {
+            error.EndOfStream => return,
+            else => return err,
+        };
 
-        const request = buf[0..n];
+        const request = stream_reader.interface.buffered();
+        const n = request.len;
+        if (n == 0) return;
 
         // Parse HTTP request line
         var lines = std.mem.splitScalar(u8, request, '\n');
@@ -420,22 +458,22 @@ pub const HttpServer = struct {
         }
     }
 
-    fn sendHealth(self: *HttpServer, connection: *std.net.Server.Connection) !void {
+    fn sendHealth(self: *HttpServer, connection: *std.Io.net.Stream) !void {
         _ = self;
         const body_str = "{\"status\":\"ok\",\"model\":\"loaded\"}";
         const response = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: 32\r\nConnection: close\r\n\r\n" ++ body_str;
-        try connection.stream.writeAll(response);
+        try streamWriteAll(connection, response);
     }
 
-    fn sendHealthz(self: *HttpServer, connection: *std.net.Server.Connection) !void {
+    fn sendHealthz(self: *HttpServer, connection: *std.Io.net.Stream) !void {
         // Liveness probe - returns 200 if server is alive
         _ = self;
         const body_str = "{\"status\":\"alive\"}";
         const response = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: 18\r\nConnection: close\r\n\r\n" ++ body_str;
-        try connection.stream.writeAll(response);
+        try streamWriteAll(connection, response);
     }
 
-    fn sendReadyz(self: *HttpServer, connection: *std.net.Server.Connection) !void {
+    fn sendReadyz(self: *HttpServer, connection: *std.Io.net.Stream) !void {
         // Readiness probe - checks if dependencies are ready
         const active = self.prometheus.active_connections.load(.monotonic);
         const pending = self.prometheus.vsa_operations_pending.load(.monotonic);
@@ -452,11 +490,11 @@ pub const HttpServer = struct {
         const header = try std.fmt.allocPrint(self.allocator, "HTTP/1.1 {d} {s}\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: {d}\r\nConnection: close\r\n\r\n", .{ status_code, status_str, body_str.len });
         defer self.allocator.free(header);
 
-        try connection.stream.writeAll(header);
-        try connection.stream.writeAll(body_str);
+        try streamWriteAll(connection, header);
+        try streamWriteAll(connection, body_str);
     }
 
-    fn sendMetrics(self: *HttpServer, connection: *std.net.Server.Connection) !void {
+    fn sendMetrics(self: *HttpServer, connection: *std.Io.net.Stream) !void {
         // Prometheus metrics endpoint
         const metrics_text = try self.prometheus.formatPrometheus(self.allocator);
         defer self.allocator.free(metrics_text);
@@ -464,11 +502,11 @@ pub const HttpServer = struct {
         const header = try std.fmt.allocPrint(self.allocator, "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: {d}\r\nConnection: close\r\n\r\n", .{metrics_text.len});
         defer self.allocator.free(header);
 
-        try connection.stream.writeAll(header);
-        try connection.stream.writeAll(metrics_text);
+        try streamWriteAll(connection, header);
+        try streamWriteAll(connection, metrics_text);
     }
 
-    fn sendInfo(self: *HttpServer, connection: *std.net.Server.Connection) !void {
+    fn sendInfo(self: *HttpServer, connection: *std.Io.net.Stream) !void {
         // Include metrics in info response (INF-004)
         const total = self.metrics.total_requests.load(.monotonic);
         const active = self.metrics.active_requests.load(.monotonic);
@@ -478,7 +516,7 @@ pub const HttpServer = struct {
         const body = std.fmt.allocPrint(self.allocator, "{{\"name\":\"TRINITY LLM\",\"version\":\"1.4.0\",\"endpoints\":[\"/v1/chat/completions\",\"/health\",\"/metrics\"],\"metrics\":{{\"total_requests\":{d},\"active_requests\":{d},\"total_tokens\":{d},\"throughput_tok_s\":{d:.2}}}}}", .{ total, active, total_tokens, throughput }) catch {
             const body_str = "{\"name\":\"TRINITY LLM\",\"version\":\"1.4.0\",\"endpoints\":[\"/v1/chat/completions\",\"/health\"]}";
             const response = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: 85\r\nConnection: close\r\n\r\n" ++ body_str;
-            try connection.stream.writeAll(response);
+            try streamWriteAll(connection, response);
             return;
         };
         defer self.allocator.free(body);
@@ -486,11 +524,11 @@ pub const HttpServer = struct {
         const header = std.fmt.allocPrint(self.allocator, "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: {d}\r\nConnection: close\r\n\r\n", .{body.len}) catch return;
         defer self.allocator.free(header);
 
-        try connection.stream.writeAll(header);
-        try connection.stream.writeAll(body);
+        try streamWriteAll(connection, header);
+        try streamWriteAll(connection, body);
     }
 
-    fn sendCors(self: *HttpServer, connection: *std.net.Server.Connection) !void {
+    fn sendCors(self: *HttpServer, connection: *std.Io.net.Stream) !void {
         _ = self;
         const response =
             "HTTP/1.1 200 OK\r\n" ++
@@ -499,19 +537,19 @@ pub const HttpServer = struct {
             "Access-Control-Allow-Headers: Content-Type, Authorization\r\n" ++
             "Content-Length: 0\r\n" ++
             "Connection: close\r\n\r\n";
-        try connection.stream.writeAll(response);
+        try streamWriteAll(connection, response);
     }
 
-    fn sendNotFound(self: *HttpServer, connection: *std.net.Server.Connection) !void {
+    fn sendNotFound(self: *HttpServer, connection: *std.Io.net.Stream) !void {
         _ = self;
         const response = "HTTP/1.1 404 Not Found\r\nContent-Type: application/json\r\nContent-Length: 20\r\nConnection: close\r\n\r\n{\"error\":\"Not Found\"}";
-        try connection.stream.writeAll(response);
+        try streamWriteAll(connection, response);
     }
 
-    fn sendMethodNotAllowed(self: *HttpServer, connection: *std.net.Server.Connection) !void {
+    fn sendMethodNotAllowed(self: *HttpServer, connection: *std.Io.net.Stream) !void {
         _ = self;
         const response = "HTTP/1.1 405 Method Not Allowed\r\nContent-Type: application/json\r\nContent-Length: 30\r\nConnection: close\r\n\r\n{\"error\":\"Method Not Allowed\"}";
-        try connection.stream.writeAll(response);
+        try streamWriteAll(connection, response);
     }
 
     // ═══════════════════════════════════════════════════════════════════════════════
@@ -519,7 +557,7 @@ pub const HttpServer = struct {
     // ═══════════════════════════════════════════════════════════════════════════════
 
     /// Handle AGENT MU status request
-    fn handleAgentMuStatus(self: *HttpServer, connection: *std.net.Server.Connection) !void {
+    fn handleAgentMuStatus(self: *HttpServer, connection: *std.Io.net.Stream) !void {
         const body = agent_mu_api.handleAgentMuStatus(self.allocator) catch |err| {
             std.debug.print("AGENT MU status error: {}\n", .{err});
             try self.sendAgentMuError(connection, 500, "Internal error");
@@ -529,11 +567,11 @@ pub const HttpServer = struct {
 
         const response = try agent_mu_api.sendJsonResponse(self.allocator, body);
         defer self.allocator.free(response);
-        try connection.stream.writeAll(response);
+        try streamWriteAll(connection, response);
     }
 
     /// Handle intelligence history request
-    fn handleAgentMuHistory(self: *HttpServer, connection: *std.net.Server.Connection, query: []const u8) !void {
+    fn handleAgentMuHistory(self: *HttpServer, connection: *std.Io.net.Stream, query: []const u8) !void {
         // Parse count from query string (default: 50)
         var count: usize = 50;
         if (std.mem.indexOf(u8, query, "count=")) |idx| {
@@ -551,11 +589,11 @@ pub const HttpServer = struct {
 
         const response = try agent_mu_api.sendJsonResponse(self.allocator, body);
         defer self.allocator.free(response);
-        try connection.stream.writeAll(response);
+        try streamWriteAll(connection, response);
     }
 
     /// Handle forecast request
-    fn handleAgentMuForecast(self: *HttpServer, connection: *std.net.Server.Connection, query: []const u8) !void {
+    fn handleAgentMuForecast(self: *HttpServer, connection: *std.Io.net.Stream, query: []const u8) !void {
         // Parse horizon from query string (default: 10,50,100)
         const default_horizon = "10,50,100";
         var horizon_str: []const u8 = default_horizon;
@@ -574,11 +612,11 @@ pub const HttpServer = struct {
 
         const response = try agent_mu_api.sendJsonResponse(self.allocator, body);
         defer self.allocator.free(response);
-        try connection.stream.writeAll(response);
+        try streamWriteAll(connection, response);
     }
 
     /// Handle evolution tree request
-    fn handleAgentMuEvolutionTree(self: *HttpServer, connection: *std.net.Server.Connection) !void {
+    fn handleAgentMuEvolutionTree(self: *HttpServer, connection: *std.Io.net.Stream) !void {
         const body = agent_mu_api.handleEvolutionTree(self.allocator) catch |err| {
             std.debug.print("AGENT MU evolution tree error: {}\n", .{err});
             try self.sendAgentMuError(connection, 500, "Internal error");
@@ -588,11 +626,11 @@ pub const HttpServer = struct {
 
         const response = try agent_mu_api.sendJsonResponse(self.allocator, body);
         defer self.allocator.free(response);
-        try connection.stream.writeAll(response);
+        try streamWriteAll(connection, response);
     }
 
     /// Handle sacred math request
-    fn handleAgentMuSacredMath(self: *HttpServer, connection: *std.net.Server.Connection) !void {
+    fn handleAgentMuSacredMath(self: *HttpServer, connection: *std.Io.net.Stream) !void {
         const body = agent_mu_api.handleSacredMath(self.allocator) catch |err| {
             std.debug.print("AGENT MU sacred math error: {}\n", .{err});
             try self.sendAgentMuError(connection, 500, "Internal error");
@@ -602,11 +640,11 @@ pub const HttpServer = struct {
 
         const response = try agent_mu_api.sendJsonResponse(self.allocator, body);
         defer self.allocator.free(response);
-        try connection.stream.writeAll(response);
+        try streamWriteAll(connection, response);
     }
 
     /// Send AGENT MU error response
-    fn sendAgentMuError(self: *HttpServer, connection: *std.net.Server.Connection, status_code: u16, message: []const u8) !void {
+    fn sendAgentMuError(self: *HttpServer, connection: *std.Io.net.Stream, status_code: u16, message: []const u8) !void {
         const status_str = switch (status_code) {
             400 => "400 Bad Request",
             500 => "500 Internal Server Error",
@@ -616,11 +654,11 @@ pub const HttpServer = struct {
         defer self.allocator.free(json_body);
         const header = std.fmt.allocPrint(self.allocator, "HTTP/1.1 {s}\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: {d}\r\nConnection: close\r\n\r\n", .{ status_str, json_body.len }) catch return;
         defer self.allocator.free(header);
-        try connection.stream.writeAll(header);
-        try connection.stream.writeAll(json_body);
+        try streamWriteAll(connection, header);
+        try streamWriteAll(connection, json_body);
     }
 
-    fn handleChatCompletion(self: *HttpServer, connection: *std.net.Server.Connection, body: []const u8, model: *FullModel, tokenizer: *Tokenizer) !void {
+    fn handleChatCompletion(self: *HttpServer, connection: *std.Io.net.Stream, body: []const u8, model: *FullModel, tokenizer: *Tokenizer) !void {
         // Record request for metrics (INF-004)
         self.metrics.recordRequest();
 
@@ -770,13 +808,13 @@ pub const HttpServer = struct {
         const header = try std.fmt.allocPrint(self.allocator, "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: {d}\r\nConnection: close\r\n\r\n", .{json_body.len});
         defer self.allocator.free(header);
 
-        try connection.stream.writeAll(header);
-        try connection.stream.writeAll(json_body);
+        try streamWriteAll(connection, header);
+        try streamWriteAll(connection, json_body);
         std.debug.print("  Sent: {d} bytes\n", .{json_body.len});
     }
 
     /// Handle streaming chat completion (SSE)
-    fn handleStreamingCompletion(self: *HttpServer, connection: *std.net.Server.Connection, body: []const u8, model: *FullModel, tokenizer: *Tokenizer) !void {
+    fn handleStreamingCompletion(self: *HttpServer, connection: *std.Io.net.Stream, body: []const u8, model: *FullModel, tokenizer: *Tokenizer) !void {
         // Extract prompt
         var prompt: []const u8 = "Hello";
         if (std.mem.lastIndexOf(u8, body, "\"content\"")) |idx| {
@@ -798,7 +836,7 @@ pub const HttpServer = struct {
             "Cache-Control: no-cache\r\n" ++
             "Access-Control-Allow-Origin: *\r\n" ++
             "Connection: keep-alive\r\n\r\n";
-        try connection.stream.writeAll(sse_header);
+        try streamWriteAll(connection, sse_header);
 
         // Build full prompt with TinyLlama format
         const system_prompt = "You are a helpful AI assistant. Be concise and direct.";
@@ -866,7 +904,7 @@ pub const HttpServer = struct {
                         const event = std.fmt.allocPrint(self.allocator, "data: {{\"choices\":[{{\"delta\":{{\"content\":\"{s}\"}},\"index\":0}}]}}\n\n", .{escaped.items}) catch continue;
                         defer self.allocator.free(event);
 
-                        connection.stream.writeAll(event) catch break;
+                        streamWriteAll(connection, event) catch break;
                     }
 
                     // Get logits for next token
@@ -883,7 +921,7 @@ pub const HttpServer = struct {
         }
 
         // Send done event
-        try connection.stream.writeAll("data: [DONE]\n\n");
+        try streamWriteAll(connection, "data: [DONE]\n\n");
         std.debug.print("  Streaming complete\n", .{});
     }
 
@@ -892,7 +930,7 @@ pub const HttpServer = struct {
     // ═══════════════════════════════════════════════════════════════════════════════
 
     /// Handle VSA bundle operation with batching
-    fn handleVsaBundle(self: *HttpServer, connection: *std.net.Server.Connection, body: []const u8) !void {
+    fn handleVsaBundle(self: *HttpServer, connection: *std.Io.net.Stream, body: []const u8) !void {
         // Parse JSON body for vectors array
         // Expected format: {"vectors": [[-1,0,1,...], [-1,0,1,...], ...]}
         var vectors: std.ArrayList([]const i8) = .empty;
@@ -985,13 +1023,13 @@ pub const HttpServer = struct {
         const header = try std.fmt.allocPrint(self.allocator, "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: {d}\r\nConnection: close\r\n\r\n", .{response_body.len});
         defer self.allocator.free(header);
 
-        try connection.stream.writeAll(header);
-        try connection.stream.writeAll(response_body);
+        try streamWriteAll(connection, header);
+        try streamWriteAll(connection, response_body);
         std.debug.print("  VSA Bundle: processed {d} vectors\n", .{results.items.len});
     }
 
     /// Handle VSA bind operation
-    fn handleVsaBind(self: *HttpServer, connection: *std.net.Server.Connection, body: []const u8) !void {
+    fn handleVsaBind(self: *HttpServer, connection: *std.Io.net.Stream, body: []const u8) !void {
         _ = body;
 
         // Placeholder implementation
@@ -999,13 +1037,13 @@ pub const HttpServer = struct {
         const header = try std.fmt.allocPrint(self.allocator, "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: {d}\r\nConnection: close\r\n\r\n", .{body_str.len});
         defer self.allocator.free(header);
 
-        try connection.stream.writeAll(header);
-        try connection.stream.writeAll(body_str);
+        try streamWriteAll(connection, header);
+        try streamWriteAll(connection, body_str);
         std.debug.print("  VSA Bind: operation complete\n", .{});
     }
 
     /// Handle VSA unbind operation
-    fn handleVsaUnbind(self: *HttpServer, connection: *std.net.Server.Connection, body: []const u8) !void {
+    fn handleVsaUnbind(self: *HttpServer, connection: *std.Io.net.Stream, body: []const u8) !void {
         _ = body;
 
         // Placeholder implementation
@@ -1013,8 +1051,8 @@ pub const HttpServer = struct {
         const header = try std.fmt.allocPrint(self.allocator, "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: {d}\r\nConnection: close\r\n\r\n", .{body_str.len});
         defer self.allocator.free(header);
 
-        try connection.stream.writeAll(header);
-        try connection.stream.writeAll(body_str);
+        try streamWriteAll(connection, header);
+        try streamWriteAll(connection, body_str);
         std.debug.print("  VSA Unbind: operation complete\n", .{});
     }
 

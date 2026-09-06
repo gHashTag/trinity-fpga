@@ -283,7 +283,7 @@ pub const AdversarialTest = struct {
 
     /// Identify outlier theories
     pub fn identifyOutliers(self: *AdversarialTest, threshold: f64) !std.ArrayListUnmanaged([]const u8) {
-        var outliers = std.ArrayListUnmanaged([]const u8){};
+        var outliers = @as(std.ArrayListUnmanaged([]const u8), .empty);
 
         for (self.theories.items, 0..) |theory, i| {
             var avg_agreement: f64 = 0.0;

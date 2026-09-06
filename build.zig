@@ -686,6 +686,7 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
         .imports = &.{
+            .{ .name = "tri_io", .module = tri_io_mod },
             .{ .name = "tri_time", .module = tri_time_mod },
             .{ .name = "tri_rand", .module = tri_rand_mod },
             .{ .name = "bootstrap", .module = depin_bootstrap_mod },
@@ -2396,6 +2397,7 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
         .imports = &.{
+            .{ .name = "tri_io", .module = tri_io_mod },
             .{ .name = "tri_time", .module = tri_time_mod },
             .{ .name = "tri_rand", .module = tri_rand_mod },
             .{ .name = "basal_ganglia", .module = basal_ganglia_mod },

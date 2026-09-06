@@ -81,7 +81,7 @@ pub const LoadedBinary = struct {
     }
 
     pub fn getCodeSections(self: *const LoadedBinary) []const Section {
-        var code_sections = std.ArrayListUnmanaged(Section){};
+        var code_sections = @as(std.ArrayListUnmanaged(Section), .empty);
         defer code_sections.deinit(self.allocator);
 
         for (self.sections.items) |section| {

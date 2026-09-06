@@ -99,7 +99,7 @@ pub const ErasureRepairEngine = struct {
         var shard_data = try self.allocator.alloc(?[]const u8, total);
         defer self.allocator.free(shard_data);
 
-        var missing_list = std.ArrayListUnmanaged(u32){};
+        var missing_list = @as(std.ArrayListUnmanaged(u32), .empty);
         defer missing_list.deinit(self.allocator);
 
         var present_count: u32 = 0;

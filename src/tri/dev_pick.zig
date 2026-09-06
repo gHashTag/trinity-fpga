@@ -126,7 +126,7 @@ fn loadScanResults() ?dev_scan.ScanResult {
 
     // Check staleness: >1h old = stale
     const now = tri_time.timestamp();
-    const mtime: i64 = @intCast(@divTrunc(stat.mtime, std.time.ns_per_s));
+    const mtime: i64 = @intCast(@divTrunc(@as(i128, stat.mtime.nanoseconds), std.time.ns_per_s));
     if (now - mtime > 3600) return null;
 
     // Parse the JSON scan results

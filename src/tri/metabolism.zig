@@ -1425,7 +1425,7 @@ fn runDashboard(allocator: std.mem.Allocator, quick: bool) !void {
         var buf: [256]u8 = undefined;
 
         // Load sacred workers list for live verification
-        var sacred_list = std.ArrayList([]const u8){};
+        var sacred_list = @as(std.ArrayList([]const u8), .empty);
         defer {
             for (sacred_list.items) |s| allocator.free(s);
             sacred_list.deinit(allocator);
@@ -1446,7 +1446,7 @@ fn runDashboard(allocator: std.mem.Allocator, quick: bool) !void {
         } else |_| {}
 
         // Pre-check sacred workers via live API
-        var sacred_training = std.ArrayList(bool){};
+        var sacred_training = @as(std.ArrayList(bool), .empty);
         defer sacred_training.deinit(allocator);
         try sacred_training.ensureTotalCapacity(allocator, sacred_list.items.len);
         for (sacred_list.items) |_| {

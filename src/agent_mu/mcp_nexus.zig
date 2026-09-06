@@ -245,7 +245,7 @@ pub const McpNexus = struct {
         var a_count: usize = 0;
         var match_count: usize = 0;
 
-        var a_list = std.ArrayListUnmanaged([]const u8){};
+        var a_list = @as(std.ArrayListUnmanaged([]const u8), .empty);
         defer {
             for (a_list.items) |w| {
                 self.allocator.free(w);

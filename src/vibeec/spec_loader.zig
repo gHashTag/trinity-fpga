@@ -3,7 +3,7 @@ const std = @import("std");
 /// Loads all .tri specification files from the specs directory
 /// Returns concatenated content as "Divine Mandate"
 pub fn loadSpecs(allocator: std.mem.Allocator, base_path: []const u8) ![]const u8 {
-    var result = std.ArrayListUnmanaged(u8){};
+    var result = @as(std.ArrayListUnmanaged(u8), .empty);
     errdefer result.deinit(allocator);
 
     // Header

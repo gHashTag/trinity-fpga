@@ -1598,7 +1598,7 @@ pub fn runCodeCommand(state: *CLIState, args: []const []const u8) void {
                 defer state.allocator.free(sacred_ctx);
 
                 // Combine sacred context with prompt
-                var combined = std.ArrayListUnmanaged(u8){};
+                var combined = @as(std.ArrayListUnmanaged(u8), .empty);
                 defer {
                     if (combined.items.len > 0) {
                         combined.deinit(state.allocator);
@@ -1720,7 +1720,7 @@ pub fn runChatCommand(state: *CLIState, args: []const []const u8) void {
                     defer state.allocator.free(sacred_ctx);
 
                     // Combine sacred context with message
-                    var combined = std.ArrayListUnmanaged(u8){};
+                    var combined = @as(std.ArrayListUnmanaged(u8), .empty);
                     defer {
                         if (combined.items.len > 0) {
                             combined.deinit(state.allocator);
@@ -1901,7 +1901,7 @@ pub fn runSWECommand(state: *CLIState, task_type: trinity_swe_agent_mod.SWETaskT
             }
 
             // Try to build combined context
-            var combined_buf = std.ArrayListUnmanaged(u8){};
+            var combined_buf = @as(std.ArrayListUnmanaged(u8), .empty);
             defer {
                 if (combined_buf.items.len > 0) {
                     combined_buf.deinit(state.allocator);

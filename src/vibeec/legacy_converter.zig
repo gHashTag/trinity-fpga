@@ -104,7 +104,7 @@ fn convertFile(allocator: Allocator, input_path: []const u8, output_path: []cons
 
 /// Parse legacy format and convert to VIBEE format
 fn convertLegacyToVibee(allocator: Allocator, source: []const u8) ![]const u8 {
-    var buffer = std.ArrayListUnmanaged(u8){};
+    var buffer = @as(std.ArrayListUnmanaged(u8), .empty);
     defer buffer.deinit(allocator);
     try buffer.ensureTotalCapacity(allocator, 16384);
 
@@ -245,7 +245,7 @@ fn convertLegacyToVibee(allocator: Allocator, source: []const u8) ![]const u8 {
     }
 
     // Write header at beginning (we delayed it to get metadata first)
-    var output_buffer = std.ArrayListUnmanaged(u8){};
+    var output_buffer = @as(std.ArrayListUnmanaged(u8), .empty);
     defer output_buffer.deinit(allocator);
     try output_buffer.ensureTotalCapacity(allocator, buffer.items.len + 256);
 

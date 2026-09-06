@@ -186,7 +186,7 @@ pub const Architect = struct {
     }
 
     pub fn scanProject(self: *Architect, root_path: []const u8) ![]const u8 {
-        var context = std.ArrayListUnmanaged(u8){};
+        var context = @as(std.ArrayListUnmanaged(u8), .empty);
         defer context.deinit(self.allocator);
 
         try context.appendSlice(self.allocator, "Project Context:\n");
@@ -262,7 +262,7 @@ pub const Scribe = struct {
         std.debug.print("📜 [Scribe] Sending prompt to {s}...\n", .{self.config.model});
 
         // Prepare User Content
-        var user_content = std.ArrayListUnmanaged(u8){};
+        var user_content = @as(std.ArrayListUnmanaged(u8), .empty);
         defer user_content.deinit(self.allocator);
         try user_content.appendSlice(self.allocator, "Context:\n");
         try user_content.appendSlice(self.allocator, context);
@@ -286,7 +286,7 @@ pub const Scribe = struct {
 
         std.debug.print("🚑 [Scribe] Requesting fix from LLM...\n", .{});
 
-        var prompt = std.ArrayListUnmanaged(u8){};
+        var prompt = @as(std.ArrayListUnmanaged(u8), .empty);
         defer prompt.deinit(self.allocator);
         try prompt.writer(self.allocator).print("Code:\n```zig\n{s}\n```\nErrors:\n{s}\n", .{ code, errors });
 
@@ -303,7 +303,7 @@ pub const Scribe = struct {
         std.debug.print("📜 [Scribe] Channeling the Rebellion via {s}...\n", .{self.config.model});
 
         // Prepare User Content
-        var user_content = std.ArrayListUnmanaged(u8){};
+        var user_content = @as(std.ArrayListUnmanaged(u8), .empty);
         defer user_content.deinit(self.allocator);
         try user_content.appendSlice(self.allocator, "Context:\n");
         try user_content.appendSlice(self.allocator, context);
@@ -322,7 +322,7 @@ pub const Scribe = struct {
     }
 
     fn createChatRequest(self: *Scribe, system_prompt: []const u8, user_prompt: []const u8) !std.ArrayListUnmanaged(llm.Message) {
-        var messages = std.ArrayListUnmanaged(llm.Message){};
+        var messages = @as(std.ArrayListUnmanaged(llm.Message), .empty);
 
         try messages.append(self.allocator, .{
             .role = "system",
@@ -454,7 +454,7 @@ pub fn main() !void {
         }
     }
 
-    var prompt_list = std.ArrayListUnmanaged(u8){};
+    var prompt_list = @as(std.ArrayListUnmanaged(u8), .empty);
     defer prompt_list.deinit(allocator);
     for (args[1..]) |arg| {
         try prompt_list.appendSlice(allocator, arg);
@@ -491,7 +491,7 @@ pub fn main() !void {
         std.debug.print("⚠️ Skipping Validation and Compilation for Divine Revelation.\n", .{});
 
         // Custom generation for Prophet Mode - LIMITED CONTEXT to avoid 600k token overflow
-        var rebel_context_list = std.ArrayListUnmanaged(u8){};
+        var rebel_context_list = @as(std.ArrayListUnmanaged(u8), .empty);
         defer rebel_context_list.deinit(allocator);
 
         // Context selection based on mode
@@ -546,7 +546,7 @@ pub fn main() !void {
 
     // Filtered context scan (The Great Migration)
     // Avoid full scan to prevent token overflow (specifically trinity_corpus.txt)
-    var context_list = std.ArrayListUnmanaged(u8){};
+    var context_list = @as(std.ArrayListUnmanaged(u8), .empty);
     defer context_list.deinit(allocator);
 
     const crucial_dirs = [_][]const u8{ "src/vibeec", "specs" };

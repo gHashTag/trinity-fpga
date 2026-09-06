@@ -103,7 +103,7 @@ fn readPidFile(path: []const u8) !struct {
 }
 
 fn processAlive(pid: u32) bool {
-    std.posix.kill(@intCast(pid), 0) catch return false;
+    std.posix.kill(@intCast(pid), @enumFromInt(0)) catch return false;
     return true;
 }
 

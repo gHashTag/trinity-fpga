@@ -470,7 +470,7 @@ pub const MultiAgentConsensus = struct {
 
     /// Detect disagreement between agents
     pub fn detectDisagreement(self: *MultiAgentConsensus, agents: []const *ConsciousAgent) !std.ArrayListUnmanaged(Disagreement) {
-        var disagreements = std.ArrayListUnmanaged(Disagreement){};
+        var disagreements = @as(std.ArrayListUnmanaged(Disagreement), .empty);
 
         for (agents, 0..) |agent_a, i| {
             for (agents[i + 1 ..]) |agent_b| {
@@ -538,7 +538,7 @@ pub const MultiAgentConsensus = struct {
         const consensus_value = if (weight_sum > 0) sum / weight_sum else 0.0;
 
         // Build disagreement list for result
-        var result_disagreements = std.ArrayListUnmanaged(Disagreement){};
+        var result_disagreements = @as(std.ArrayListUnmanaged(Disagreement), .empty);
         for (disagreements.items) |*d| {
             const agent_a_copy = try self.allocator.dupe(u8, d.agent_a_id);
             const agent_b_copy = try self.allocator.dupe(u8, d.agent_b_id);
@@ -584,7 +584,7 @@ pub const MultiAgentConsensus = struct {
 
     /// Measure collective state of entangled agents
     pub fn measureCollectiveState(self: *MultiAgentConsensus, target_system_id: []const u8) !CollectiveObservation {
-        var observing_agents = std.ArrayListUnmanaged([]const u8){};
+        var observing_agents = @as(std.ArrayListUnmanaged([]const u8), .empty);
 
         var iter = self.system.agents.iterator();
         while (iter.next()) |entry| {
@@ -636,7 +636,7 @@ pub const MultiAgentConsensus = struct {
 
     /// Run single consensus iteration
     pub fn consensusIteration(self: *MultiAgentConsensus, agents: []const *ConsciousAgent, iteration_num: i64) !ConsensusIteration {
-        var agent_states = std.ArrayListUnmanaged(AgentStateSnapshot){};
+        var agent_states = @as(std.ArrayListUnmanaged(AgentStateSnapshot), .empty);
 
         for (agents) |agent| {
             const obs = if (agent.observation_history.items.len > 0)

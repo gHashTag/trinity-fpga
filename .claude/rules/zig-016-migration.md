@@ -13,23 +13,23 @@ personally verified.**
 
 ## The shim modules
 
-Four modules restore removed stdlib surface. They exist so that call sites
-change by one word instead of by a signature:
+Six modules restore removed stdlib surface. They exist so that call sites change
+by one word instead of by a signature:
 
-| Module | Replaces | Import |
-|---|---|---|
-| `src/tri/tri_time.zig` | `std.time.timestamp` / `milli` / `micro` / `nanoTimestamp`, `std.time.Timer` | `@import("tri_time")` |
-| `src/tri/tri_env.zig` | `std.process.getEnvVarOwned`, `hasEnvVarConstant`, `getEnvMap`, `std.posix.getenv` | `@import("tri_env")` |
-| `src/tri/tri_proc.zig` | `std.process.Child.run` | `@import("tri_proc")` |
-| `src/tri/tri_io.zig` | the process-wide `Io` handle | `@import("tri_io")` |
+| Module | Replaces |
+|---|---|
+| `tri_time` | `std.time.timestamp` / `milli` / `micro` / `nanoTimestamp`, `std.time.Timer`, `std.Thread.sleep` |
+| `tri_env` | `std.process.getEnvVarOwned`, `hasEnvVarConstant`, `getEnvMap`, `std.posix.getenv` |
+| `tri_proc` | `std.process.Child.run` |
+| `tri_io` | the process-wide `Io` handle |
+| `tri_mutex` | `std.Thread.Mutex` (this is `src/tri/mutex.zig`, which predates the rest) |
+| `tri_rand` | `std.crypto.random` |
 
-`tri_time`, `tri_io` and `tri_proc` are **build modules**, imported by name.
-They cannot be path-imported: a single file may not belong to two modules, and
-doing so fails with `file exists in modules 'root' and '...'`. If a new module
-needs one, add it to that module's `.imports` in `build.zig`.
-
-`tri_env` is a plain path import (`@import("tri_env.zig")`) because all its
-users live in `src/tri/`.
+**All six are build modules, imported by name** — `@import("tri_time")`, never
+a relative path. A single file may not belong to two modules; path-importing
+one of these from a second module fails with
+`file exists in modules 'root' and '...'`. If a new module needs one, add it to
+that module's `.imports` in `build.zig`.
 
 ## When to shim and when to thread
 
@@ -171,3 +171,74 @@ but a `catch` that matches on the old name will not fire.
 - Before any tree-wide rewrite: back the file up, and gate the restore on a
   parse check **in the same shell command**, so a broken result cannot outlive
   the invocation that produced it.
+
+## Before writing a shim: check whether the tree already has one
+
+Search for the **name of the removed API**, not just its call sites. An
+existing replacement will usually mention it — in a comment, or in a
+`@hasDecl` version guard — even when no call site uses it any more:
+
+```bash
+grep -rn "std.Thread.Mutex" src/ | grep -v "std.Thread.Mutex;"
+```
+
+This was learned the expensive way. `src/tri/mutex.zig` already replaced
+`std.Thread.Mutex` behind a version guard and already had 12 users; a second
+implementation was written, tested, wired into six modules and swept across 44
+files before anyone noticed. One grep, up front, would have found it.
+
+## Never apply a bare text replacement to an identifier
+
+Scope it to code. The text most likely to contain the string you are replacing
+is **a comment explaining the very migration you are doing**, and the second
+most likely is **a string literal in a code generator**. Both were corrupted in
+this migration:
+
+- `mutex.zig`'s own `@hasDecl(std.Thread, "Mutex")` guard became
+  self-referential nonsense.
+- Four generators would have emitted `@import("tri_io")` into standalone files
+  that have no such module.
+
+Neither is visible to `zig ast-check`: one is a comment, the other is inside a
+string.
+
+## Automate behind a gate, never in front of one
+
+Every tree-wide pass in this migration now follows the same shape:
+
+1. Count what the pattern matches, then **sample** what it matches.
+2. Refuse the file outright if it contains a shape the transform does not model
+   (e.g. a writer passed as a bare argument to `std.fmt.format`).
+3. Transform, re-run `zig ast-check`, and **restore the original on failure**.
+
+That gate skipped 14 files and auto-reverted 3 across two passes, with nothing
+damaged. The passes that ran *without* it are the ones that had to be reverted
+wholesale afterwards.
+
+## Deriving module dependencies instead of guessing them
+
+When a shim becomes a build module, every module whose file set imports it
+needs the dependency. Compute this rather than chasing `no module named` errors
+one build at a time: for each `createModule` in `build.zig`, walk its own
+`@import` graph and collect which shims appear, then add exactly what is
+missing. That resolved 55 modules in a single pass.
+
+Two failure modes to expect, neither of which `zig fmt` catches — they are
+build-graph errors, not parse errors:
+
+- **Declaration order.** A module referenced before it is declared fails with
+  `use of undeclared identifier`. Put the shim modules at the very top.
+- **`.imports` in the wrong struct.** `addExecutable` has no `imports` field; it
+  belongs to the `createModule` nested inside it.
+
+And note that an error grep anchored to `^src/` will silently miss a
+`build.zig:` error entirely, which looks exactly like success.
+
+## Scope every sweep to the tree you mean
+
+A sweep that walked `.` instead of `src/` rewrote 19 files in
+`deploy/trinity-nexus/` and `fpga/tools/` — **separate Zig workspaces** whose
+`build.zig` declares none of these modules. Every one of them would have
+broken. This repo contains more than one build graph; a migration belongs to
+exactly one of them.
+

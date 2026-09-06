@@ -1547,9 +1547,11 @@ const BatchLogQueryResult = struct {
 };
 
 fn buildBatchLogQuery(allocator: Allocator, entries: []const BatchLogEntry) !BatchLogQueryResult {
-    var gql_buf = std.ArrayListUnmanaged(u8){};
+    // Zig 0.16: ArrayList has no default field values; `{}` is a missing-field
+    // error. The empty value is the `.empty` declaration.
+    var gql_buf: std.ArrayListUnmanaged(u8) = .empty;
     errdefer gql_buf.deinit(allocator);
-    var vars_buf = std.ArrayListUnmanaged(u8){};
+    var vars_buf: std.ArrayListUnmanaged(u8) = .empty;
     errdefer vars_buf.deinit(allocator);
 
     // Build variable declarations: query($d0id: String!, $d0lim: Int, ...)
@@ -6586,12 +6588,15 @@ fn runServe(allocator: Allocator, args: []const []const u8) !void {
         if (pi == 4) addr_buf = parts;
     }
 
-    const address = std.net.Address.initIp4(addr_buf, port);
-    var server = address.listen(.{ .reuse_address = true }) catch |err| {
+    // Zig 0.16: `std.net` is gone. Addresses are `std.Io.net.IpAddress`, and
+    // both `listen` and `deinit` take the `Io` explicitly.
+    const io = tri_io.get();
+    const address: std.Io.net.IpAddress = .{ .ip4 = .{ .bytes = addr_buf, .port = port } };
+    var server = address.listen(io, .{ .reuse_address = true }) catch |err| {
         print("{s}Failed to bind {s}:{d}: {}{s}\n", .{ RED, host, port, err, RESET });
         return err;
     };
-    defer server.deinit();
+    defer server.deinit(io);
 
     // Initialize WebSocket infrastructure
     var event_bus = farm_ws.EventBus{};
@@ -6615,17 +6620,42 @@ fn runServe(allocator: Allocator, args: []const []const u8) !void {
     print("   Ctrl+C to stop\n\n", .{});
 
     while (true) {
-        const conn = server.accept() catch continue;
-        const taken = serveRequest(allocator, conn.stream, &broadcaster) catch false;
-        if (!taken) conn.stream.close();
+        // 0.16: `Server.accept` yields the `Stream` itself -- there is no
+        // `Server.Connection` wrapper any more -- and `close` takes the `Io`.
+        const conn = server.accept(io) catch continue;
+        const taken = serveRequest(allocator, conn, &broadcaster) catch false;
+        if (!taken) conn.close(io);
     }
 }
 
+/// Zig 0.16: `std.Io.net.Stream` has no `writeAll`. Writes go through a
+/// `Stream.Writer`, whose `Io.Writer` interface needs a caller-supplied
+/// buffer, so each write site builds one on the stack and flushes it. Keeping
+/// one call to one flush preserves the old "one payload, one send" behaviour.
+/// Same shape as the helper in tri_farm_ws.zig, which serves the same sockets.
+fn streamWriteAll(stream: std.Io.net.Stream, bytes: []const u8) !void {
+    var write_buf: [8192]u8 = undefined;
+    var w = stream.writer(tri_io.get(), &write_buf);
+    try w.interface.writeAll(bytes);
+    try w.interface.flush();
+}
+
+/// Zig 0.16 replacement for `stream.read(buf)`: one underlying read returning
+/// whatever arrived. The zero-length reader buffer stops `readVec` from
+/// filling an internal buffer first, so exactly one read happens, as before.
+/// `error.EndOfStream` stands in for the old "returned 0 bytes".
+fn streamReadOnce(stream: std.Io.net.Stream, buf: []u8) !usize {
+    var reader_buf: [0]u8 = .{};
+    var r = stream.reader(tri_io.get(), &reader_buf);
+    var data: [1][]u8 = .{buf};
+    return r.interface.readVec(&data);
+}
+
 /// Returns true if stream was taken by WebSocket (caller must NOT close it)
-fn serveRequest(allocator: Allocator, stream: std.net.Stream, broadcaster: *farm_ws.Broadcaster) !bool {
+fn serveRequest(allocator: Allocator, stream: std.Io.net.Stream, broadcaster: *farm_ws.Broadcaster) !bool {
     // Read request (first line is enough)
     var req_buf: [1024]u8 = undefined;
-    const n = stream.read(&req_buf) catch return false;
+    const n = streamReadOnce(stream, &req_buf) catch return false;
     if (n == 0) return false;
     const request = req_buf[0..n];
 
@@ -6680,21 +6710,21 @@ fn serveRequest(allocator: Allocator, stream: std.net.Stream, broadcaster: *farm
     return false;
 }
 
-fn sendJson(stream: std.net.Stream, body: []const u8) void {
+fn sendJson(stream: std.Io.net.Stream, body: []const u8) void {
     var header_buf: [256]u8 = undefined;
     const header = std.fmt.bufPrint(&header_buf, "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {d}\r\nConnection: close\r\n\r\n", .{body.len}) catch return;
-    stream.writeAll(header) catch return;
-    stream.writeAll(body) catch return;
+    streamWriteAll(stream, header) catch return;
+    streamWriteAll(stream, body) catch return;
 }
 
-fn sendJsonStatus(stream: std.net.Stream, status: []const u8, body: []const u8) void {
+fn sendJsonStatus(stream: std.Io.net.Stream, status: []const u8, body: []const u8) void {
     var header_buf: [256]u8 = undefined;
     const header = std.fmt.bufPrint(&header_buf, "HTTP/1.1 {s}\r\nContent-Type: application/json\r\nContent-Length: {d}\r\nConnection: close\r\n\r\n", .{ status, body.len }) catch return;
-    stream.writeAll(header) catch return;
-    stream.writeAll(body) catch return;
+    streamWriteAll(stream, header) catch return;
+    streamWriteAll(stream, body) catch return;
 }
 
-fn serveStatus(allocator: Allocator, stream: std.net.Stream) void {
+fn serveStatus(allocator: Allocator, stream: std.Io.net.Stream) void {
     const state = loadState(allocator) catch {
         sendJson(stream, "{\"error\":\"no evolution state\"}");
         return;
@@ -6715,7 +6745,7 @@ fn serveStatus(allocator: Allocator, stream: std.net.Stream) void {
     sendJson(stream, json);
 }
 
-fn serveLeaderboard(allocator: Allocator, stream: std.net.Stream) void {
+fn serveLeaderboard(allocator: Allocator, stream: std.Io.net.Stream) void {
     const state = loadState(allocator) catch {
         sendJson(stream, "{\"error\":\"no evolution state\"}");
         return;
@@ -6763,7 +6793,7 @@ fn serveLeaderboard(allocator: Allocator, stream: std.net.Stream) void {
     sendJson(stream, buf[0..pos]);
 }
 
-fn serveEvents(allocator: Allocator, stream: std.net.Stream) void {
+fn serveEvents(allocator: Allocator, stream: std.Io.net.Stream) void {
     const state = loadState(allocator) catch {
         sendJson(stream, "{\"error\":\"no evolution state\"}");
         return;
@@ -6796,7 +6826,7 @@ fn serveEvents(allocator: Allocator, stream: std.net.Stream) void {
     sendJson(stream, buf[0..pos]);
 }
 
-fn serveLineage(allocator: Allocator, stream: std.net.Stream) void {
+fn serveLineage(allocator: Allocator, stream: std.Io.net.Stream) void {
     const contents = std.Io.Dir.cwd().readFileAlloc(tri_io.get(), LINEAGE_PATH, allocator, .limited(256 * 1024)) catch {
         sendJson(stream, "[]");
         return;

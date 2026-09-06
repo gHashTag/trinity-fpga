@@ -86,7 +86,7 @@ pub const AutonomousSpawner = struct {
             .orchestrator = orchestrator,
             .cluster_state = cluster_state,
             .active_spawns = std.StringHashMap(SpawnResult).init(allocator),
-            .spawn_history = std.ArrayListUnmanaged(SpawnResult){},
+            .spawn_history = @as(std.ArrayListUnmanaged(SpawnResult), .empty),
             .total_spawns = 0,
             .successful_spawns = 0,
         };

@@ -133,7 +133,7 @@ pub const MultiLanguageGematria = struct {
 
     /// Serialize gematria to JSON
     pub fn toJson(gem: MultiLanguageGematria, allocator: Allocator) ![]u8 {
-        var buffer = std.ArrayList(u8){};
+        var buffer = @as(std.ArrayList(u8), .empty);
         defer buffer.deinit(allocator);
 
         try buffer.appendSlice(allocator, "{\"input\":\"");
@@ -224,7 +224,7 @@ pub const WSClient = struct {
         if (!client.connected) return error.Disconnected;
 
         // Create WebSocket frame
-        var frame = std.ArrayList(u8){};
+        var frame = @as(std.ArrayList(u8), .empty);
         defer frame.deinit(client.allocator);
 
         // FIN + text frame
@@ -294,7 +294,7 @@ pub const WSServer = struct {
             .port = port,
             .running = false,
             .server = null,
-            .clients = std.ArrayList(*WSClient){},
+            .clients = @as(std.ArrayList(*WSClient), .empty),
             .metrics = SacredMetrics{},
             .mutex = tri_mutex.Mutex{},
             .listener_thread = null,

@@ -152,7 +152,7 @@ pub const NetworkStatsReporter = struct {
 
     /// Format report as human-readable text
     pub fn formatText(self: *NetworkStatsReporter, report: NetworkHealthReport) ![]u8 {
-        var buf = std.ArrayListUnmanaged(u8){};
+        var buf = @as(std.ArrayListUnmanaged(u8), .empty);
         errdefer buf.deinit(self.allocator);
         const w = buf.writer(self.allocator);
 
@@ -172,7 +172,7 @@ pub const NetworkStatsReporter = struct {
 
     /// Format report as JSON
     pub fn formatJson(self: *NetworkStatsReporter, report: NetworkHealthReport) ![]u8 {
-        var buf = std.ArrayListUnmanaged(u8){};
+        var buf = @as(std.ArrayListUnmanaged(u8), .empty);
         errdefer buf.deinit(self.allocator);
         const w = buf.writer(self.allocator);
 

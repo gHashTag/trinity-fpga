@@ -6,7 +6,39 @@
 
 const std = @import("std");
 const Allocator = std.mem.Allocator;
-const net = std.net;
+const net = std.Io.net;
+const tri_io = @import("tri_io");
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// STREAM HELPERS (Zig 0.16)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// Zig 0.16: `net.Stream` has no `writeAll` of its own. Writing goes through a
+/// `net.Stream.Writer`, whose `Io.Writer` interface needs a caller-supplied
+/// buffer, so each write site builds one on the stack and flushes it. Startup
+/// and Query messages are the only payloads written here.
+fn streamWriteAll(stream: net.Stream, bytes: []const u8) !void {
+    var write_buf: [4096]u8 = undefined;
+    var w = stream.writer(tri_io.get(), &write_buf);
+    try w.interface.writeAll(bytes);
+    try w.interface.flush();
+}
+
+/// Zig 0.16 replacement for `stream.read(buf)`. Reads go through a
+/// `net.Stream.Reader`; a zero-length reader buffer keeps `readVec` from
+/// filling an internal buffer first, so this performs exactly one underlying
+/// read like the old call. The old API reported end-of-stream by returning 0,
+/// and every caller below tests the returned length, so `error.EndOfStream` is
+/// mapped back to 0 rather than propagated.
+fn streamRead(stream: net.Stream, buf: []u8) !usize {
+    var reader_buf: [0]u8 = .{};
+    var r = stream.reader(tri_io.get(), &reader_buf);
+    var data: [1][]u8 = .{buf};
+    return r.interface.readVec(&data) catch |err| switch (err) {
+        error.EndOfStream => 0,
+        else => |e| return e,
+    };
+}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // CONSTANTS - PostgreSQL Wire Protocol v3.0
@@ -29,9 +61,9 @@ pub const MessageType = enum(u8) {
 
 /// Transaction status in ReadyForQuery
 pub const TransactionStatus = enum(u8) {
-    Idle = 'I',              // Not in transaction
-    InTransaction = 'T',      // In transaction
-    Failed = 'E',            // Failed transaction
+    Idle = 'I', // Not in transaction
+    InTransaction = 'T', // In transaction
+    Failed = 'E', // Failed transaction
 };
 
 /// PostgreSQL OIDs (Object Identifiers) for common types
@@ -107,15 +139,20 @@ pub const PostgresClient = struct {
         self.database = if (db_name.len > 0) db_name else "postgres";
 
         // Connect via TCP
-        const address = try net.Address.resolveIp(self.host, self.port);
-        var stream = try std.net.tcpConnectToAddress(address);
+        // 0.16: `Address.resolveIp` -> `IpAddress.resolve`, which takes an `Io`
+        // because an IPv6 scope name has to be turned into an interface index
+        // by the OS. Like the old call it parses a literal; it is not DNS.
+        // `tcpConnectToAddress` -> `IpAddress.connect` with `.mode = .stream`.
+        const io = tri_io.get();
+        const address = try net.IpAddress.resolve(io, self.host, self.port);
+        var stream = try address.connect(io, .{ .mode = .stream });
         self.stream = stream;
 
         // Send startup message
         const startup_msg = try buildStartupMessage(self.allocator, self.user, self.database);
         defer self.allocator.free(startup_msg);
 
-        _ = try stream.writeAll(startup_msg);
+        try streamWriteAll(stream, startup_msg);
 
         // Handle authentication
         try handleAuthentication(&stream);
@@ -143,7 +180,7 @@ pub const PostgresClient = struct {
         const query_msg = try buildQueryMessage(self.allocator, sql);
         defer self.allocator.free(query_msg);
 
-        _ = try self.stream.?.writeAll(query_msg);
+        try streamWriteAll(self.stream.?, query_msg);
 
         // Read response
         try self.readQueryResponse(&self.stream.?, &result);
@@ -155,9 +192,9 @@ pub const PostgresClient = struct {
     pub fn close(self: *PostgresClient) void {
         if (self.stream) |stream| {
             // Send terminate message
-            const terminate_msg = [_]u8{@intFromEnum(MessageType.Terminate), 0, 0, 0, 4};
-            _ = stream.writeAll(&terminate_msg) catch {};
-            stream.close();
+            const terminate_msg = [_]u8{ @intFromEnum(MessageType.Terminate), 0, 0, 0, 4 };
+            streamWriteAll(stream, &terminate_msg) catch {};
+            stream.close(tri_io.get());
             self.stream = null;
         }
     }
@@ -165,12 +202,12 @@ pub const PostgresClient = struct {
     /// Handle authentication response from server
     fn handleAuthentication(stream: *net.Stream) !void {
         var len_buf: [4]u8 = undefined;
-        const bytes_read = try stream.read(&len_buf);
+        const bytes_read = try streamRead(stream.*, &len_buf);
         if (bytes_read < 4) return error.InvalidMessage;
         const msg_len_u32 = std.mem.readInt(u32, &len_buf, .big);
 
         var type_buf: [1]u8 = undefined;
-        const read_bytes = try stream.read(&type_buf);
+        const read_bytes = try streamRead(stream.*, &type_buf);
         if (read_bytes != 1) return error.InvalidMessage;
         const msg_type = type_buf[0];
 
@@ -180,7 +217,7 @@ pub const PostgresClient = struct {
             const remaining_len = msg_len_u32 - 4;
             if (remaining_len >= 4) {
                 var auth_buf: [4]u8 = undefined;
-                const auth_bytes_read = try stream.read(&auth_buf);
+                const auth_bytes_read = try streamRead(stream.*, &auth_buf);
                 if (auth_bytes_read < 4) return error.InvalidMessage;
                 const auth_code = std.mem.readInt(u32, &auth_buf, .big);
 
@@ -198,19 +235,19 @@ pub const PostgresClient = struct {
     /// Wait for ReadyForQuery message
     fn waitForReady(self: *PostgresClient, stream: *net.Stream) !void {
         var type_buf: [1]u8 = undefined;
-        const type_bytes = try stream.read(type_buf[0..]);
+        const type_bytes = try streamRead(stream.*, type_buf[0..]);
         if (type_bytes != 1) return error.InvalidMessage;
         const msg_type = type_buf[0];
 
         var len_buf: [4]u8 = undefined;
-        const len_bytes = try stream.read(len_buf[0..]);
+        const len_bytes = try streamRead(stream.*, len_buf[0..]);
         if (len_bytes != 4) return error.InvalidMessage;
         const msg_len_u32 = std.mem.readInt(u32, &len_buf, .big);
 
         if (msg_type == @intFromEnum(MessageType.BackendKeyData)) {
             // Read backend key data
             var buf: [8]u8 = undefined;
-            const buf_bytes = try stream.read(buf[0..]);
+            const buf_bytes = try streamRead(stream.*, buf[0..]);
             if (buf_bytes != 8) return error.InvalidMessage;
             self.backend_pid = std.mem.readInt(i32, buf[0..4], .big);
             self.backend_key = std.mem.readInt(i32, buf[4..8], .big);
@@ -221,7 +258,7 @@ pub const PostgresClient = struct {
 
         if (msg_type == @intFromEnum(MessageType.ReadyForQuery)) {
             var status_buf: [1]u8 = undefined;
-            const status_bytes = try stream.read(status_buf[0..]);
+            const status_bytes = try streamRead(stream.*, status_buf[0..]);
             if (status_bytes != 1) return error.InvalidMessage;
             self.transaction_status = @as(TransactionStatus, @enumFromInt(status_buf[0]));
             return;
@@ -239,13 +276,13 @@ pub const PostgresClient = struct {
         _ = result; // autofix
         while (true) {
             var type_buf: [1]u8 = undefined;
-            const n = try stream.read(type_buf[0..]);
+            const n = try streamRead(stream.*, type_buf[0..]);
             if (n == 0) break;
 
             const msg_type = type_buf[0];
 
             var len_buf: [4]u8 = undefined;
-            const len_bytes = try stream.read(len_buf[0..]);
+            const len_bytes = try streamRead(stream.*, len_buf[0..]);
             if (len_bytes != 4) return error.InvalidMessage;
             const msg_len_u32 = std.mem.readInt(u32, &len_buf, .big);
 
@@ -255,7 +292,7 @@ pub const PostgresClient = struct {
                 },
                 @intFromEnum(MessageType.ReadyForQuery) => {
                     var status_buf: [1]u8 = undefined;
-                    const status_bytes = try stream.read(status_buf[0..]);
+                    const status_bytes = try streamRead(stream.*, status_buf[0..]);
                     if (status_bytes != 1) return error.InvalidMessage;
                     self.transaction_status = @as(TransactionStatus, @enumFromInt(status_buf[0]));
                     break;
@@ -273,7 +310,7 @@ pub const PostgresClient = struct {
     /// Read a DataRow message
     fn readDataRow(self: *PostgresClient, stream: *net.Stream, len: u32, result: *QueryResult) !void {
         var col_count_buf: [2]u8 = undefined;
-        const col_count_bytes = try stream.read(col_count_buf[0..]);
+        const col_count_bytes = try streamRead(stream.*, col_count_buf[0..]);
         if (col_count_bytes != 2) return error.InvalidMessage;
         const col_count = std.mem.readInt(u16, &col_count_buf, .big);
 
@@ -286,7 +323,7 @@ pub const PostgresClient = struct {
         var remaining: u32 = len - 2;
         for (0..col_count) |_| {
             var value_len_buf: [4]u8 = undefined;
-            const value_len_bytes = try stream.read(value_len_buf[0..]);
+            const value_len_bytes = try streamRead(stream.*, value_len_buf[0..]);
             if (value_len_bytes != 4) return error.InvalidMessage;
             const value_len = std.mem.readInt(i32, &value_len_buf, .big);
             remaining -= 4;
@@ -298,7 +335,7 @@ pub const PostgresClient = struct {
             } else {
                 const value_len_usize = @as(usize, @intCast(value_len));
                 const value_buf = try self.allocator.alloc(u8, value_len_usize);
-                const value_bytes = try stream.read(value_buf[0..value_len_usize]);
+                const value_bytes = try streamRead(stream.*, value_buf[0..value_len_usize]);
                 if (value_bytes != value_len_usize) return error.InvalidMessage;
                 try row.values.append(value_buf[0..value_len_usize]);
                 try row.columns.append(""); // Column name not in DataRow
@@ -318,7 +355,7 @@ pub const PostgresClient = struct {
         var remaining: u32 = len;
         while (remaining > 0) {
             var type_buf: [1]u8 = undefined;
-            const type_bytes = try stream.read(type_buf[0..]);
+            const type_bytes = try streamRead(stream.*, type_buf[0..]);
             if (type_bytes != 1) return error.InvalidMessage;
             remaining -= 1;
 
@@ -327,7 +364,7 @@ pub const PostgresClient = struct {
             // Read string until null terminator
             while (true) {
                 var byte_buf: [1]u8 = undefined;
-                const byte_bytes = try stream.read(byte_buf[0..]);
+                const byte_bytes = try streamRead(stream.*, byte_buf[0..]);
                 if (byte_bytes != 1) return error.InvalidMessage;
                 remaining -= 1;
 
@@ -339,10 +376,10 @@ pub const PostgresClient = struct {
             }
         }
 
-    if (message_len > 0) {
-        return error.PostgresError;
+        if (message_len > 0) {
+            return error.PostgresError;
+        }
     }
-}
 
     /// Skip a message
     fn skipMessage(stream: *net.Stream, len: u32) !void {
@@ -351,7 +388,7 @@ pub const PostgresClient = struct {
 
         while (remaining > 0) {
             const to_read = @min(remaining, buf.len);
-            const n = try stream.read(buf[0..to_read]);
+            const n = try streamRead(stream.*, buf[0..to_read]);
             if (n == 0) return error.ConnectionClosed;
             remaining -= @intCast(n);
         }
@@ -442,21 +479,21 @@ pub fn buildStartupMessage(allocator: Allocator, user: []const u8, database: []c
     offset += 4;
 
     // User parameter
-    @memcpy(msg[offset..offset+5], "user");
+    @memcpy(msg[offset .. offset + 5], "user");
     offset += 5;
     msg[offset] = 0;
     offset += 1;
-    @memcpy(msg[offset..offset+user.len], user);
+    @memcpy(msg[offset .. offset + user.len], user);
     offset += user.len;
     msg[offset] = 0;
     offset += 1;
 
     // Database parameter
-    @memcpy(msg[offset..offset+9], "database");
+    @memcpy(msg[offset .. offset + 9], "database");
     offset += 9;
     msg[offset] = 0;
     offset += 1;
-    @memcpy(msg[offset..offset+database.len], database);
+    @memcpy(msg[offset .. offset + database.len], database);
     offset += database.len;
     msg[offset] = 0;
     offset += 1;
@@ -477,7 +514,7 @@ pub fn buildQueryMessage(allocator: Allocator, sql: []const u8) ![]u8 {
 
     msg[0] = @intFromEnum(MessageType.Query);
     std.mem.writeInt(u32, msg[1..5], @intCast(sql.len + 1), .big);
-    @memcpy(msg[5..5+sql.len], sql);
+    @memcpy(msg[5 .. 5 + sql.len], sql);
     msg[5 + sql.len] = 0;
 
     return msg;
@@ -542,7 +579,7 @@ pub fn buildCommandComplete(allocator: Allocator, tag: []const u8) ![]u8 {
 
     msg[0] = @intFromEnum(MessageType.CommandComplete);
     std.mem.writeInt(u32, msg[1..5], @intCast(tag.len + 1), .big);
-    @memcpy(msg[5..5+tag.len], tag);
+    @memcpy(msg[5 .. 5 + tag.len], tag);
     msg[5 + tag.len] = 0;
 
     return msg;
@@ -561,7 +598,7 @@ pub fn buildErrorResponse(allocator: Allocator, message: []const u8) ![]u8 {
     msg[0] = @intFromEnum(MessageType.ErrorResponse);
     std.mem.writeInt(u32, msg[1..5], @intCast(size - 5), .big);
     msg[5] = 'M'; // Message field
-    @memcpy(msg[6..6+message.len], message);
+    @memcpy(msg[6 .. 6 + message.len], message);
     msg[6 + message.len] = 0; // Null terminator for value
     msg[6 + message.len + 1] = 0; // Terminator
 

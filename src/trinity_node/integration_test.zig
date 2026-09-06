@@ -143,7 +143,7 @@ test "12-node RS store and retrieve with progressive failures" {
     // Test 3: Kill more shards (up to parity_shards total) — RS still recovers
     // We already removed 1. Remove parity_shards - 1 more = total parity_shards missing.
     {
-        var removed_extras = std.ArrayListUnmanaged([]const u8){};
+        var removed_extras = @as(std.ArrayListUnmanaged([]const u8), .empty);
         defer {
             for (removed_extras.items) |d| allocator.free(d);
             removed_extras.deinit(allocator);
@@ -285,7 +285,9 @@ test "10-node manifest DHT resilience" {
 
     const NODE_COUNT = 10;
     var node_ids: [NODE_COUNT][32]u8 = undefined;
-    const addr = std.net.Address.initIp4(.{ 127, 0, 0, 1 }, 9333);
+    // Zig 0.16: `std.net.Address.initIp4` is gone; the replacement is the
+    // `std.Io.net.IpAddress` union, which is what `updateFromAnnounce` takes.
+    const addr: std.Io.net.IpAddress = .{ .ip4 = .{ .bytes = .{ 127, 0, 0, 1 }, .port = 9333 } };
 
     for (0..NODE_COUNT) |i| {
         @memset(&node_ids[i], @intCast(i + 1));

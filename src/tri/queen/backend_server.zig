@@ -106,7 +106,7 @@ pub const Tri27Config = struct {
 pub const QueenBackend = struct {
     allocator: std.mem.Allocator,
     config: BackendConfig,
-    server: ?std.net.Server,
+    server: ?std.Io.net.Server,
     logger: EpisodeLogger,
     health: struct {
         started_at: i64,
@@ -147,8 +147,9 @@ pub const QueenBackend = struct {
 
     /// Start HTTP server
     pub fn start(self: *QueenBackend) !void {
-        const address = try std.net.Address.parseIp("0.0.0.0", self.config.port);
-        self.server = try address.listen(.{
+        const io = tri_io.get();
+        const address = try std.Io.net.IpAddress.parse("0.0.0.0", self.config.port);
+        self.server = try address.listen(io, .{
             .reuse_address = true,
         });
 
@@ -174,30 +175,41 @@ pub const QueenBackend = struct {
         // Main server loop
         var server = self.server.?;
         while (true) {
-            const connection = server.accept() catch |err| {
+            // 0.16: Server.accept yields the Stream itself; there is no
+            // Server.Connection wrapper any more.
+            const stream = server.accept(io) catch |err| {
                 std.debug.print("Accept failed: {}\n", .{err});
                 continue;
             };
 
             // Handle connection in blocking mode for simplicity
-            self.handleConnection(connection.stream) catch |err| {
+            self.handleConnection(stream) catch |err| {
                 std.debug.print("Connection error: {}\n", .{err});
             };
         }
     }
 
     /// Handle single HTTP connection
-    fn handleConnection(self: *QueenBackend, stream: std.net.Stream) !void {
+    fn handleConnection(self: *QueenBackend, stream: std.Io.net.Stream) !void {
+        const io = tri_io.get();
         var buffer: [4096]u8 = undefined;
-        const request_data = stream.read(&buffer) catch |err| {
-            std.debug.print("Read failed: {}\n", .{err});
+
+        // 0.16: Stream has no `read`; go through Stream.Reader. `fillMore`
+        // performs exactly one underlying read, which is what `stream.read`
+        // used to do, and reports end-of-stream as an error rather than 0.
+        var stream_reader = stream.reader(io, &buffer);
+        const reader = &stream_reader.interface;
+        reader.fillMore() catch {
+            if (stream_reader.err) |read_err| {
+                std.debug.print("Read failed: {}\n", .{read_err});
+            }
             return;
         };
 
-        if (request_data == 0) return;
+        const request_text = reader.buffered();
+        if (request_text.len == 0) return;
 
         // Parse HTTP request
-        const request_text = buffer[0..request_data];
         var lines = std.mem.splitScalar(u8, request_text, '\n');
 
         const request_line = lines.next() orelse return;
@@ -209,8 +221,12 @@ pub const QueenBackend = struct {
         // Route request (pass path with query string for /api/episodes filtering)
         const response = try self.routeRequest(method, path, request_text);
 
-        // Send response
-        _ = try stream.writeAll(response);
+        // Send response. 0.16: Stream has no `writeAll`; write through
+        // Stream.Writer and flush what is still buffered.
+        var write_buf: [4096]u8 = undefined;
+        var stream_writer = stream.writer(io, &write_buf);
+        try stream_writer.interface.writeAll(response);
+        try stream_writer.interface.flush();
     }
 
     /// Route HTTP request to handler

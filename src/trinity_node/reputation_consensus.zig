@@ -120,7 +120,7 @@ pub const ReputationConsensus = struct {
         self.total_rounds += 1;
 
         // Collect all votes for this target
-        var target_scores = std.ArrayListUnmanaged(f64){};
+        var target_scores = @as(std.ArrayListUnmanaged(f64), .empty);
         defer target_scores.deinit(self.allocator);
 
         for (self.votes.items) |vote| {
@@ -202,7 +202,7 @@ pub const ReputationConsensus = struct {
         node_ids: []const [32]u8,
         reputation: *node_reputation_mod.NodeReputationSystem,
     ) ![]ConsensusResult {
-        var results = std.ArrayListUnmanaged(ConsensusResult){};
+        var results = @as(std.ArrayListUnmanaged(ConsensusResult), .empty);
         errdefer results.deinit(self.allocator);
 
         for (node_ids) |nid| {

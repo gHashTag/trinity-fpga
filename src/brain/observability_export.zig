@@ -11,6 +11,10 @@
 
 const std = @import("std");
 
+// 0.16 puts networking and file I/O behind an `Io`. Nothing in this file's
+// public API carries one -- MetricsServer.start/handleConnection and
+// exportToFile are all fixed signatures -- so the process Io is fetched here.
+const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 // Import brain regions for metrics collection
 const basal_ganglia = @import("basal_ganglia");
@@ -375,13 +379,19 @@ pub const ObservabilityExporter = struct {
 
     /// Export metrics to a file
     pub fn exportToFile(self: *const Self, format: ExportFormat, path: []const u8) !void {
-        const file = try std.fs.cwd().createFile(path, .{ .read = true });
-        defer file.close();
+        // 0.16: std.fs.cwd() -> std.Io.Dir.cwd(), and every call takes the io.
+        const io = tri_io.get();
+        const file = try std.Io.Dir.cwd().createFile(io, path, .{ .read = true });
+        defer file.close(io);
 
         var buffer: [65536]u8 = undefined;
-        const writer = file.writer(buffer[0..]);
+        var file_writer = file.writer(io, buffer[0..]);
 
-        try self.collectAndExport(writer, format);
+        // `collectAndExport` takes the writer as `anytype` and calls
+        // `writeAll`/`print` on it; in 0.16 those live on the `Io.Writer`
+        // interface, and it buffers, so the flush is required.
+        try self.collectAndExport(&file_writer.interface, format);
+        try file_writer.interface.flush();
     }
 };
 
@@ -475,20 +485,26 @@ pub const MetricsStreamer = struct {
 
     /// Stream thread function
     fn streamThread(self: *Self) void {
+        // 0.16: std.fs.File -> std.Io.File, and `writer` takes the io.
+        const io = tri_io.get();
         var stdout_buffer: [4096]u8 = undefined;
-        const stdout = std.fs.File.stdout().writer(&stdout_buffer);
+        var stdout_writer = std.Io.File.stdout().writer(io, &stdout_buffer);
+        const stdout = &stdout_writer.interface;
 
         while (self.running.load(.acquire)) {
+            // 0.16 removed std.io entirely; `std.Io.Writer.fixed` is the
+            // fixed-buffer writer, and `buffered()` replaces `getWritten()`.
             var buffer: [65536]u8 = undefined;
-            var fbs = std.io.fixedBufferStream(&buffer);
-            const writer = fbs.writer();
+            var fbs = std.Io.Writer.fixed(&buffer);
+            const writer = &fbs;
 
             self.exporter.collectAndExport(writer, .prometheus) catch |err| {
                 std.log.err("Stream error: {}", .{err});
             };
 
             // Print the output
-            stdout.writeAll(fbs.getWritten()) catch {};
+            stdout.writeAll(fbs.buffered()) catch {};
+            stdout.flush() catch {};
 
             // Sleep for interval
             tri_time.sleep(self.interval_ms * 1_000_000); // Convert ms to ns
@@ -504,13 +520,15 @@ pub const MetricsStreamer = struct {
 pub const MetricsServer = struct {
     allocator: std.mem.Allocator,
     exporter: *ObservabilityExporter,
-    address: std.net.Address,
-    server: ?std.net.Server,
+    // 0.16: std.net.Address -> std.Io.net.IpAddress (a union of Ip4/Ip6),
+    // std.net.Server -> std.Io.net.Server.
+    address: std.Io.net.IpAddress,
+    server: ?std.Io.net.Server,
 
     const Self = @This();
 
     pub fn init(allocator: std.mem.Allocator, exporter: *ObservabilityExporter, port: u16) !Self {
-        const address = try std.net.Address.parseIp4("0.0.0.0", port);
+        const address = try std.Io.net.IpAddress.parseIp4("0.0.0.0", port);
         return Self{
             .allocator = allocator,
             .exporter = exporter,
@@ -521,19 +539,22 @@ pub const MetricsServer = struct {
 
     pub fn deinit(self: *Self) void {
         if (self.server) |*s| {
-            s.deinit();
+            s.deinit(tri_io.get());
         }
     }
 
     /// Start the HTTP server
     pub fn start(self: *Self) !void {
-        var server = try self.address.listen(.{ .reuse_address = true });
+        const io = tri_io.get();
+        var server = try self.address.listen(io, .{ .reuse_address = true });
         self.server = server;
 
         std.log.info("Brain metrics server listening on http://0.0.0.0:{d}/metrics", .{self.address.getPort()});
 
         while (true) {
-            const conn = server.accept() catch |err| {
+            // `accept` yields a `std.Io.net.Stream` directly -- 0.16 has no
+            // `Server.Connection` wrapper.
+            const conn = server.accept(io) catch |err| {
                 std.log.err("Accept error: {}", .{err});
                 continue;
             };
@@ -541,41 +562,55 @@ pub const MetricsServer = struct {
             // Handle connection in a thread
             _ = std.Thread.spawn(.{}, handleConnection, .{ self, conn }) catch |err| {
                 std.log.err("Spawn error: {}", .{err});
-                conn.stream.close();
+                conn.close(io);
                 continue;
             };
         }
     }
 
     /// Handle a single HTTP connection
-    fn handleConnection(self: *Self, conn: std.net.Server.Connection) void {
-        defer conn.stream.close();
+    fn handleConnection(self: *Self, conn: std.Io.net.Stream) void {
+        const io = tri_io.get();
+        defer conn.close(io);
 
+        // 0.16 `Stream` has no `read`/`writeAll`; it hands out `Io.Reader` and
+        // `Io.Writer`. `fillMore` is one underlying read into the reader's
+        // buffer -- the same shape as the old `read` -- and `buffered()` is the
+        // slice it filled, so it replaces the old `buffer[0..n]`.
         var buffer: [4096]u8 = undefined;
-        const request = conn.stream.read(&buffer) catch return;
+        var conn_reader = conn.reader(io, &buffer);
+        conn_reader.interface.fillMore() catch return;
+        const request = conn_reader.interface.buffered();
+
+        var out_buf: [4096]u8 = undefined;
+        var conn_writer = conn.writer(io, &out_buf);
+        const out = &conn_writer.interface;
 
         // Simple GET /metrics handler
-        if (std.mem.indexOf(u8, buffer[0..request], "GET /metrics")) |_| {
+        if (std.mem.indexOf(u8, request, "GET /metrics")) |_| {
             var response_buf: [65536]u8 = undefined;
-            var fbs = std.io.fixedBufferStream(&response_buf);
-            const writer = fbs.writer();
+            var fbs = std.Io.Writer.fixed(&response_buf);
+            const writer = &fbs;
 
             // Export metrics
             self.exporter.collectAndExport(writer, .prometheus) catch {
                 // Send 500 error
                 const header = "HTTP/1.1 500 Internal Server Error\r\nContent-Type: text/plain\r\n\r\nExport failed";
-                _ = conn.stream.writeAll(header) catch {};
+                out.writeAll(header) catch {};
+                out.flush() catch {};
                 return;
             };
 
             // Send 200 OK
             const header = "HTTP/1.1 200 OK\r\nContent-Type: text/plain; version=0.0.4\r\n\r\n";
-            _ = conn.stream.writeAll(header) catch {};
-            _ = conn.stream.writeAll(fbs.getWritten()) catch {};
+            out.writeAll(header) catch {};
+            out.writeAll(fbs.buffered()) catch {};
+            out.flush() catch {};
         } else {
             // 404 Not Found
             const header = "HTTP/1.1 404 Not Found\r\nContent-Type: text/plain\r\n\r\nNot Found. Try /metrics";
-            _ = conn.stream.writeAll(header) catch {};
+            out.writeAll(header) catch {};
+            out.flush() catch {};
         }
     }
 };

@@ -1070,7 +1070,7 @@ fn getGhToken(allocator: Allocator) ?[]u8 {
 fn getGhAuthToken(allocator: Allocator) ?[]u8 {
     // Run with clean env (only PATH + HOME) so gh reads from keyring,
     // not from a possibly-stale GH_TOKEN in the process environment.
-    var clean_env = std.process.EnvMap.init(allocator);
+    var clean_env = std.process.Environ.Map.init(allocator);
     defer clean_env.deinit();
     // EnvMap.put copies the value, so we can use string literals for fallbacks
     const path = tri_env.getEnvVarOwned(allocator, "PATH") catch null;

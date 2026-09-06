@@ -29,7 +29,7 @@ pub const PrometheusExporter = struct {
 
     /// Export a NetworkHealthReport as Prometheus exposition format text
     pub fn exportMetrics(self: *PrometheusExporter, report: network_stats_mod.NetworkHealthReport) ![]u8 {
-        var buf = std.ArrayListUnmanaged(u8){};
+        var buf = @as(std.ArrayListUnmanaged(u8), .empty);
         errdefer buf.deinit(self.allocator);
         const w = buf.writer(self.allocator);
 

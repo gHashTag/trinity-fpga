@@ -161,13 +161,13 @@ pub const LearningSystem = struct {
     /// Initialize the learning system
     pub fn init(allocator: mem.Allocator) !Self {
         // Use ArrayListUnmanaged for better compatibility
-        var history = std.ArrayListUnmanaged(PerformanceRecord){};
+        var history = @as(std.ArrayListUnmanaged(PerformanceRecord), .empty);
         try history.ensureTotalCapacity(allocator, 100);
 
-        var patterns = std.ArrayListUnmanaged(Pattern){};
+        var patterns = @as(std.ArrayListUnmanaged(Pattern), .empty);
         try patterns.ensureTotalCapacity(allocator, 10);
 
-        var failure_models = std.ArrayListUnmanaged(FailureModel){};
+        var failure_models = @as(std.ArrayListUnmanaged(FailureModel), .empty);
         try failure_models.ensureTotalCapacity(allocator, 10);
 
         return Self{

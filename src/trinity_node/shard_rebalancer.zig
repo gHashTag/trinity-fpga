@@ -109,7 +109,7 @@ pub const ShardRebalancer = struct {
         self.mutex.lock();
         defer self.mutex.unlock();
 
-        var result = std.ArrayListUnmanaged(UnderReplicatedShard){};
+        var result = @as(std.ArrayListUnmanaged(UnderReplicatedShard), .empty);
         errdefer result.deinit(allocator);
 
         var iter = self.shard_locations.iterator();
@@ -214,7 +214,7 @@ pub const ShardRebalancer = struct {
         self.mutex.lock();
         defer self.mutex.unlock();
 
-        var result = std.ArrayListUnmanaged([32]u8){};
+        var result = @as(std.ArrayListUnmanaged([32]u8), .empty);
         errdefer result.deinit(allocator);
 
         var iter = self.shard_locations.iterator();

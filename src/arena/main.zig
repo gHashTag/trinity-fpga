@@ -332,33 +332,44 @@ fn serveHttp(allocator: Allocator) !void {
         defer allocator.free(port_str);
         break :blk std.fmt.parseInt(u16, port_str, 10) catch 8080;
     };
-    const address = std.net.Address.parseIp("127.0.0.1", port) catch unreachable;
-    var server = try address.listen(.{
+    // 0.16: std.net is gone. `std.Io.net.IpAddress.parse` is the pure v4-then-v6
+    // parse that `std.net.Address.parseIp` used to be, and `listen` now takes
+    // the Io it will do the accept on.
+    const io = tri_io.get();
+    const address = std.Io.net.IpAddress.parse("127.0.0.1", port) catch unreachable;
+    var server = try address.listen(io, .{
         .reuse_address = true,
     });
-    defer server.deinit();
+    defer server.deinit(io);
 
     print("\n{s}{s}\xe2\x9a\x94 TRINITY ARENA SERVER{s}\n", .{ BOLD, GOLDEN, RESET });
     print("{s}   Listening on http://127.0.0.1:{d}{s}\n", .{ DIM, port, RESET });
     print("{s}   Ctrl+C to stop{s}\n\n", .{ DIM, RESET });
 
     while (true) {
-        const conn = server.accept() catch continue;
+        const conn = server.accept(io) catch continue;
         handleConnection(allocator, conn, &arena_state) catch |err| {
             print("{s}Connection error: {s}{s}\n", .{ RED, @errorName(err), RESET });
         };
     }
 }
 
-fn handleConnection(allocator: Allocator, conn: std.net.Server.Connection, arena_state: *battle_mod.Arena) !void {
+// 0.16 has no `std.net.Server.Connection`: `Server.accept` yields a
+// `std.Io.net.Stream` directly, so the connection *is* the stream.
+fn handleConnection(allocator: Allocator, conn: std.Io.net.Stream, arena_state: *battle_mod.Arena) !void {
     _ = allocator;
-    const stream = conn.stream;
-    defer stream.close();
+    const io = tri_io.get();
+    const stream = conn;
+    defer stream.close(io);
 
-    // Read HTTP request
+    // Read HTTP request. 0.16 `Stream` has no `read`; it hands out an
+    // `Io.Reader`. `fillMore` performs exactly one underlying read into the
+    // reader's buffer -- the same single-syscall shape as the old `read` -- and
+    // `buffered()` is the slice it filled.
     var req_buf: [8192]u8 = undefined;
-    const n = stream.read(&req_buf) catch return;
-    const request = req_buf[0..n];
+    var stream_reader = stream.reader(io, &req_buf);
+    stream_reader.interface.fillMore() catch return;
+    const request = stream_reader.interface.buffered();
 
     // OPTIONS preflight
     if (std.mem.startsWith(u8, request, "OPTIONS ")) {
@@ -384,18 +395,28 @@ fn handleConnection(allocator: Allocator, conn: std.net.Server.Connection, arena
     }
 }
 
-fn sendResponse(stream: std.net.Stream, status: []const u8, content_type: []const u8, body: []const u8) !void {
+fn sendResponse(stream: std.Io.net.Stream, status: []const u8, content_type: []const u8, body: []const u8) !void {
     var header_buf: [512]u8 = undefined;
     const header = std.fmt.bufPrint(
         &header_buf,
         "HTTP/1.1 {s}\r\nContent-Type: {s}\r\nContent-Length: {d}\r\nAccess-Control-Allow-Origin: *\r\nAccess-Control-Allow-Methods: GET, POST, OPTIONS\r\nAccess-Control-Allow-Headers: Content-Type\r\nConnection: close\r\n\r\n",
         .{ status, content_type, body.len },
     ) catch return;
-    _ = stream.write(header) catch return;
-    _ = stream.write(body) catch return;
+
+    // 0.16 `Stream` has no `write`. Writes go through an `Io.Writer`, which
+    // buffers, so the flush is what actually puts the response on the wire.
+    // `writeAll` also removes the partial-write bug the old `_ = stream.write`
+    // pair had.
+    const io = tri_io.get();
+    var out_buf: [4096]u8 = undefined;
+    var stream_writer = stream.writer(io, &out_buf);
+    const out = &stream_writer.interface;
+    out.writeAll(header) catch return;
+    out.writeAll(body) catch return;
+    out.flush() catch return;
 }
 
-fn handleTasks(stream: std.net.Stream) !void {
+fn handleTasks(stream: std.Io.net.Stream) !void {
     var buf: [16384]u8 = undefined;
     var fbs = std.Io.Writer.fixed(&buf);
     const writer = &fbs;
@@ -417,7 +438,7 @@ fn handleTasks(stream: std.net.Stream) !void {
     try sendResponse(stream, "200 OK", "application/json", writer.buffered());
 }
 
-fn handleLeaderboard(stream: std.net.Stream, arena_state: *battle_mod.Arena) !void {
+fn handleLeaderboard(stream: std.Io.net.Stream, arena_state: *battle_mod.Arena) !void {
     var buf: [4096]u8 = undefined;
     var fbs = std.Io.Writer.fixed(&buf);
     const writer = &fbs;
@@ -445,7 +466,7 @@ fn handleLeaderboard(stream: std.net.Stream, arena_state: *battle_mod.Arena) !vo
     try sendResponse(stream, "200 OK", "application/json", writer.buffered());
 }
 
-fn handleCreateBattle(stream: std.net.Stream, request: []const u8, arena_state: *battle_mod.Arena) !void {
+fn handleCreateBattle(stream: std.Io.net.Stream, request: []const u8, arena_state: *battle_mod.Arena) !void {
     // Find body (after \r\n\r\n)
     const body_start = std.mem.indexOf(u8, request, "\r\n\r\n") orelse return;
     const body = request[body_start + 4 ..];
@@ -486,7 +507,7 @@ fn handleCreateBattle(stream: std.net.Stream, request: []const u8, arena_state: 
     try sendResponse(stream, "200 OK", "application/json", resp);
 }
 
-fn handleVote(stream: std.net.Stream, arena_state: *battle_mod.Arena, request: []const u8) !void {
+fn handleVote(stream: std.Io.net.Stream, arena_state: *battle_mod.Arena, request: []const u8) !void {
     _ = arena_state;
 
     // Parse POST body: {"battle_id":N,"verdict":"a_wins|b_wins|tie"}
@@ -531,7 +552,7 @@ fn handleVote(stream: std.net.Stream, arena_state: *battle_mod.Arena, request: [
     try sendResponse(stream, "200 OK", "application/json", "{\"status\":\"vote_recorded\"}");
 }
 
-fn handleGetBattle(stream: std.net.Stream, arena_state: *battle_mod.Arena) !void {
+fn handleGetBattle(stream: std.Io.net.Stream, arena_state: *battle_mod.Arena) !void {
     // Return last battle info
     if (arena_state.total_battles == 0) {
         try sendResponse(stream, "404 Not Found", "application/json", "{\"error\":\"no battles yet\"}");
@@ -544,7 +565,7 @@ fn handleGetBattle(stream: std.net.Stream, arena_state: *battle_mod.Arena) !void
     try sendResponse(stream, "200 OK", "application/json", resp);
 }
 
-fn serveStaticFile(stream: std.net.Stream, path: []const u8, content_type: []const u8) !void {
+fn serveStaticFile(stream: std.Io.net.Stream, path: []const u8, content_type: []const u8) !void {
     var buf: [65536]u8 = undefined;
     // Dir.readFile is openFile + read-to-end + close; it stops short only at
     // end-of-file, matching the 0.15 openFile/readAll pair it replaces. The two

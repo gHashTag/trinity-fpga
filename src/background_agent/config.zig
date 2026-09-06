@@ -76,7 +76,7 @@ pub const Error = error{
 
 test "config: load defaults" {
     const allocator = std.testing.allocator;
-    var env = std.process.EnvMap.init(allocator);
+    var env = std.process.Environ.Map.init(allocator);
     defer env.deinit();
 
     try env.put("PORT", "8080");
@@ -97,7 +97,7 @@ test "config: load defaults" {
 
 test "config: optional api token and auth secret" {
     const allocator = std.testing.allocator;
-    var env = std.process.EnvMap.init(allocator);
+    var env = std.process.Environ.Map.init(allocator);
     defer env.deinit();
 
     try env.put("PORT", "3000");
@@ -115,7 +115,7 @@ test "config: optional api token and auth secret" {
 
 test "config: missing database url" {
     const allocator = std.testing.allocator;
-    var env = std.process.EnvMap.init(allocator);
+    var env = std.process.Environ.Map.init(allocator);
     defer env.deinit();
 
     try env.put("PORT", "3000");

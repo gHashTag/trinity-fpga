@@ -287,7 +287,7 @@ fn runEvalCommand(allocator: Allocator, args: []const []const u8) !void {
         var evaluator = Evaluator.init(allocator);
 
         // Generate mock responses
-        var responses = std.ArrayList([]const u8){};
+        var responses = @as(std.ArrayList([]const u8), .empty);
         defer {
             for (responses.items) |r| allocator.free(r);
             responses.deinit(allocator);

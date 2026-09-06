@@ -42,7 +42,7 @@ fn transmuteFile(path: []const u8, allocator: std.mem.Allocator) !void {
 
     std.debug.print("💎 TRANSMUTING SPEC: {s} -> .tri\n", .{path});
 
-    var triads = std.ArrayListUnmanaged(u21){};
+    var triads = @as(std.ArrayListUnmanaged(u21), .empty);
     defer triads.deinit(allocator);
 
     var i: usize = 0;

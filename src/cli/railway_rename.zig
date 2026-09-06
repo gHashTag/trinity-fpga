@@ -134,7 +134,7 @@ fn fetchServices(allocator: Allocator, token: []const u8, project_id: []const u8
     const response = try executeGraphql(allocator, token, gql, vars);
 
     // Parse JSON response manually (simplified)
-    var services = std.ArrayListUnmanaged(Service){};
+    var services = @as(std.ArrayListUnmanaged(Service), .empty);
     try services.ensureTotalCapacity(allocator, 32);
 
     var it = std.mem.splitScalar(u8, response, '"');

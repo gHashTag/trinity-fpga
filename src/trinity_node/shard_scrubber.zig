@@ -110,7 +110,7 @@ pub const ShardScrubber = struct {
         self.mutex.lock();
         defer self.mutex.unlock();
 
-        var result = std.ArrayListUnmanaged([32]u8){};
+        var result = @as(std.ArrayListUnmanaged([32]u8), .empty);
         errdefer result.deinit(allocator);
 
         var iter = self.corrupted_shards.keyIterator();

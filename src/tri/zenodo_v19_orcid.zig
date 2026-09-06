@@ -304,7 +304,7 @@ pub const AuthorList = struct {
             return allocator.dupe(u8, "");
         }
 
-        var buffer = std.ArrayListUnmanaged(u8){};
+        var buffer = @as(std.ArrayListUnmanaged(u8), .empty);
         defer buffer.deinit(allocator);
 
         for (self.authors.items, 0..) |author, i| {

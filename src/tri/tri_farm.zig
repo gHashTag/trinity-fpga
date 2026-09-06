@@ -1207,7 +1207,7 @@ fn getExistingPid() !u32 {
 
 fn isProcessAlive(pid: u32) bool {
     // Send signal 0 to check if process exists
-    std.posix.kill(@intCast(pid), 0) catch |err| {
+    std.posix.kill(@intCast(pid), @enumFromInt(0)) catch |err| {
         if (err == error.ProcessNotFound) return false;
         // Other errors might mean process exists
         return true;

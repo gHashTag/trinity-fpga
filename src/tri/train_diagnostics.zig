@@ -349,7 +349,7 @@ pub fn scanCheckpoints(
             .loss = header.loss,
             .ppl = @exp(header.loss),
             .file_size = stat.size,
-            .mtime_sec = @divFloor(stat.mtime, std.time.ns_per_s),
+            .mtime_sec = @divFloor(@as(i128, stat.mtime.nanoseconds), std.time.ns_per_s),
         };
         out[count].setPath(name);
         count += 1;

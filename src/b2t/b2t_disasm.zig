@@ -245,7 +245,7 @@ pub fn disassembleWasm(allocator: std.mem.Allocator, binary: *const b2t_loader.L
     }
 
     // Parse function types from function section
-    var func_types = std.ArrayListUnmanaged(u32){};
+    var func_types = @as(std.ArrayListUnmanaged(u32), .empty);
     defer func_types.deinit(allocator);
 
     if (func_section) |fs| {
