@@ -220,7 +220,7 @@ pub fn run(allocator: std.mem.Allocator, config: Config) !void {
         if (config.max_wakes > 0 and wake >= config.max_wakes) break;
 
         std.debug.print("[scholar] Sleeping {d}s...\n", .{config.sleep_interval_s});
-        std.Thread.sleep(config.sleep_interval_s * std.time.ns_per_s);
+        tri_time.sleep(config.sleep_interval_s * std.time.ns_per_s);
     }
 
     std.debug.print("[scholar] Done.\n", .{});

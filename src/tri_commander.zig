@@ -241,7 +241,7 @@ pub const Commander = struct {
 
         // Simulate execution (real implementation would delegate to agent)
         // DEFERRED (v12): Use proper sleep (std.Thread.sleep or nanosleep) when simulation needed
-        // std.Thread.sleep(10 * std.time.ns_per_ms);
+        // tri_time.sleep(10 * std.time.ns_per_ms);
 
         try self.task_queue.updateStatus(task.id, .completed);
         try self.task_queue.updatePasScore(task.id, 0.95); // Simulate PAS score

@@ -952,7 +952,7 @@ fn runInit(allocator: Allocator) !void {
             count += 1;
 
             // Rate limiting between API calls
-            std.Thread.sleep(100 * std.time.ns_per_ms);
+            tri_time.sleep(100 * std.time.ns_per_ms);
         }
 
         print("  Found {d} training services\n\n", .{count});
@@ -1375,7 +1375,7 @@ pub fn collectMetrics(allocator: Allocator, state: *EvolutionState, api_calls: *
             print("  {s}  {s}...{s}", .{ DIM, svc_name, RESET });
 
             // Rate limit — 300ms between calls (safe for new accounts with stricter limits)
-            std.Thread.sleep(300 * std.time.ns_per_ms);
+            tri_time.sleep(300 * std.time.ns_per_ms);
 
             // Fresh API client per log call (reusing clients causes TLS hangs)
             // Retry with exponential backoff on failure (429 rate limit on new accounts)
@@ -1395,7 +1395,7 @@ pub fn collectMetrics(allocator: Allocator, state: *EvolutionState, api_calls: *
                     got_logs = true;
                     break;
                 } else |_| {
-                    std.Thread.sleep(backoff_ms * std.time.ns_per_ms);
+                    tri_time.sleep(backoff_ms * std.time.ns_per_ms);
                     backoff_ms *= 2; // 600 → 1200 → 2400ms
                 }
             }
@@ -1719,7 +1719,7 @@ fn collectMetricsForAccount(
         const chunk = batch_entries[chunk_start..chunk_end];
 
         // Rate limit — one 200ms sleep per chunk (not per service)
-        std.Thread.sleep(200 * std.time.ns_per_ms);
+        tri_time.sleep(200 * std.time.ns_per_ms);
 
         // Build aliased query with variables
         const batch_q = buildBatchLogQuery(allocator, chunk) catch {
@@ -1747,7 +1747,7 @@ fn collectMetricsForAccount(
                 got_logs = true;
                 break;
             } else |_| {
-                std.Thread.sleep(backoff_ms * std.time.ns_per_ms);
+                tri_time.sleep(backoff_ms * std.time.ns_per_ms);
                 backoff_ms *= 2;
             }
         }
@@ -1905,7 +1905,7 @@ pub fn collectMetricsParallel(allocator: Allocator, state: *EvolutionState, api_
         const start_ns = tri_time.nanoTimestamp();
         const TIMEOUT_NS = 120 * std.time.ns_per_s; // 2 minute hard timeout
         while (true) {
-            std.Thread.sleep(500 * std.time.ns_per_ms);
+            tri_time.sleep(500 * std.time.ns_per_ms);
             const done = progress.load(.monotonic);
             print("\r  Collecting... {d}/{d} services  ", .{ done, expected });
             // Try joining completed threads (non-blocking check via status)
@@ -3308,7 +3308,7 @@ pub fn recycleService(allocator: Allocator, state: *EvolutionState, victim_idx: 
         api_calls.* += 1;
     }
 
-    std.Thread.sleep(100 * std.time.ns_per_ms);
+    tri_time.sleep(100 * std.time.ns_per_ms);
 
     // Set builder config
     const builder_gql = "mutation($serviceId: String!, $environmentId: String!, $input: ServiceInstanceUpdateInput!) { serviceInstanceUpdate(serviceId: $serviceId, environmentId: $environmentId, input: $input) }";
@@ -3322,7 +3322,7 @@ pub fn recycleService(allocator: Allocator, state: *EvolutionState, victim_idx: 
     } else |_| {}
     api_calls.* += 1;
 
-    std.Thread.sleep(100 * std.time.ns_per_ms);
+    tri_time.sleep(100 * std.time.ns_per_ms);
 
     // Redeploy
     if (api.redeployService(svc_id, acct.env_id)) |resp| {
@@ -4473,7 +4473,7 @@ fn deployConfigToService(
         return false;
     }
 
-    std.Thread.sleep(100 * std.time.ns_per_ms);
+    tri_time.sleep(100 * std.time.ns_per_ms);
 
     // 2. Set builder config (startCommand: null, builder: NIXPACKS)
     const builder_gql = "mutation($serviceId: String!, $environmentId: String!, $input: ServiceInstanceUpdateInput!) { serviceInstanceUpdate(serviceId: $serviceId, environmentId: $environmentId, input: $input) }";
@@ -4486,7 +4486,7 @@ fn deployConfigToService(
         allocator.free(resp);
     } else |_| {}
 
-    std.Thread.sleep(100 * std.time.ns_per_ms);
+    tri_time.sleep(100 * std.time.ns_per_ms);
 
     // 3. Redeploy
     if (api.redeployService(svc_id, acct.env_id)) |resp| {
@@ -4803,7 +4803,7 @@ fn runCollect(allocator: Allocator, args: []const []const u8) !void {
         }
 
         // Rate limit between calls
-        if (ti > 0) std.Thread.sleep(1000 * std.time.ns_per_ms);
+        if (ti > 0) tri_time.sleep(1000 * std.time.ns_per_ms);
 
         // Get deployment ID for this service
         var api = RailwayApi.initWithSuffix(allocator, accounts_buf[dt.acct_idx].suffix) catch {
@@ -4843,7 +4843,7 @@ fn runCollect(allocator: Allocator, args: []const []const u8) !void {
         };
 
         // Fetch logs (fresh API client per call — TLS hang prevention)
-        std.Thread.sleep(DEPLOY_RATE_LIMIT_MS * std.time.ns_per_ms);
+        tri_time.sleep(DEPLOY_RATE_LIMIT_MS * std.time.ns_per_ms);
 
         var log_api = RailwayApi.initWithSuffix(allocator, accounts_buf[dt.acct_idx].suffix) catch {
             print(" {s}no token for logs{s}\n", .{ RED, RESET });
@@ -5162,7 +5162,7 @@ fn runInspect(allocator: Allocator, args: []const []const u8) !void {
     };
 
     // Fetch logs
-    std.Thread.sleep(DEPLOY_RATE_LIMIT_MS * std.time.ns_per_ms);
+    tri_time.sleep(DEPLOY_RATE_LIMIT_MS * std.time.ns_per_ms);
     var log_api = RailwayApi.initWithSuffix(allocator, accounts_buf[found_acct_idx].suffix) catch return;
     const log_resp = log_api.getDeploymentLogs(dep_id, log_lines) catch {
         print("{s}❌ Log fetch failed{s}\n", .{ RED, RESET });
@@ -5318,7 +5318,7 @@ fn runLogs(allocator: Allocator, args: []const []const u8) !void {
     }
 
     // Fetch logs with fresh client
-    std.Thread.sleep(DEPLOY_RATE_LIMIT_MS * std.time.ns_per_ms);
+    tri_time.sleep(DEPLOY_RATE_LIMIT_MS * std.time.ns_per_ms);
     var log_api = RailwayApi.initWithSuffix(allocator, accounts_buf[found_acct_idx].suffix) catch {
         print("{s}❌ Cannot init API for logs{s}\n", .{ RED, RESET });
         return;
@@ -5445,7 +5445,7 @@ fn runLiveLogs(allocator: Allocator, svc_name: []const u8, initial_lines: u32, i
 
     // Live loop
     while (true) {
-        std.Thread.sleep(if (poll_count == 0) 0 else interval_sec * std.time.ns_per_s);
+        tri_time.sleep(if (poll_count == 0) 0 else interval_sec * std.time.ns_per_s);
         poll_count += 1;
 
         const lines_to_fetch = if (poll_count == 1) initial_lines else 20;
@@ -6249,7 +6249,7 @@ fn runWatch(allocator: Allocator, args: []const []const u8) !void {
         if (once) return;
 
         print("   Sleeping {d}s until next sweep...\n", .{interval});
-        std.Thread.sleep(interval * std.time.ns_per_s);
+        tri_time.sleep(interval * std.time.ns_per_s);
     }
 }
 
@@ -6940,7 +6940,7 @@ fn tuneService(allocator: Allocator, state: *EvolutionState, svc_idx: usize, con
     }
     api_calls.* += 1;
 
-    std.Thread.sleep(100 * std.time.ns_per_ms);
+    tri_time.sleep(100 * std.time.ns_per_ms);
 
     // Redeploy
     if (api.redeployService(svc_id, acct.env_id)) |resp| {
@@ -7257,7 +7257,7 @@ fn resumeService(allocator: Allocator, state: *EvolutionState, svc_idx: usize, a
     }
     api_calls.* += 1;
 
-    std.Thread.sleep(100 * std.time.ns_per_ms);
+    tri_time.sleep(100 * std.time.ns_per_ms);
 
     // Redeploy
     if (api.redeployService(svc_id, acct.env_id)) |resp| {
@@ -7366,7 +7366,7 @@ fn runRestart(allocator: Allocator, args: []const []const u8) !void {
         return;
     }
 
-    std.Thread.sleep(100 * std.time.ns_per_ms);
+    tri_time.sleep(100 * std.time.ns_per_ms);
 
     // Redeploy
     if (api.redeployService(svc_id, acct.env_id)) |resp| {

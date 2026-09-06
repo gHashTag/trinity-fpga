@@ -216,7 +216,7 @@ pub const BatchValidator = struct {
     pub fn init(allocator: std.mem.Allocator) BatchValidator {
         return BatchValidator{
             .allocator = allocator,
-            .gates = .{},
+            .gates = .empty,
         };
     }
 

@@ -322,8 +322,8 @@ pub const PhoenixCore = struct {
                     .status = .pending,
                     .tech_tree_id = null,
                     .acceptance_criteria = self.allocator.dupe(u8, "") catch continue,
-                    .files = .{},
-                    .blocked_by = .{},
+                    .files = .empty,
+                    .blocked_by = .empty,
                 }) catch continue;
 
                 task_idx += 1;
@@ -365,8 +365,8 @@ pub const PhoenixCore = struct {
                 .status = .pending,
                 .tech_tree_id = null,
                 .acceptance_criteria = self.allocator.dupe(u8, "") catch continue,
-                .files = .{},
-                .blocked_by = .{},
+                .files = .empty,
+                .blocked_by = .empty,
             }) catch continue;
         }
     }
@@ -994,8 +994,8 @@ test "phoenix_core — PhoenixTask creation and deinit" {
         .status = .pending,
         .tech_tree_id = try allocator.dupe(u8, "TECH-001"),
         .acceptance_criteria = try allocator.dupe(u8, "Must pass tests"),
-        .files = .{},
-        .blocked_by = .{},
+        .files = .empty,
+        .blocked_by = .empty,
     };
     defer task.deinit(allocator);
 
@@ -1015,8 +1015,8 @@ test "phoenix_core — PhoenixTask with null tech_tree_id" {
         .status = .pending,
         .tech_tree_id = null,
         .acceptance_criteria = try allocator.dupe(u8, ""),
-        .files = .{},
-        .blocked_by = .{},
+        .files = .empty,
+        .blocked_by = .empty,
     };
     defer task.deinit(allocator);
 

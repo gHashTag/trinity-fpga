@@ -67,9 +67,9 @@ pub const LoadedBinary = struct {
             .format = .unknown,
             .architecture = .unknown,
             .entry_point = 0,
-            .sections = .{},
-            .symbols = .{},
-            .relocations = .{},
+            .sections = .empty,
+            .symbols = .empty,
+            .relocations = .empty,
             .raw_data = &[_]u8{},
         };
     }

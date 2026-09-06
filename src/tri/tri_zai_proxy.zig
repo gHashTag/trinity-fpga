@@ -3,7 +3,7 @@
 
 const std = @import("std");
 const tri_io = @import("tri_io");
-const tri_env = @import("tri_env.zig");
+const tri_env = @import("tri_env");
 const builtin = @import("builtin");
 
 const Allocator = std.mem.Allocator;
@@ -44,7 +44,7 @@ fn launchAgentDstPath(allocator: Allocator, home: []const u8) ![]const u8 {
 }
 
 fn envDefaultPort() u16 {
-    const raw = std.posix.getenv("ZAI_PROXY_PORT") orelse return DEFAULT_PORT;
+    const raw = tri_env.getPosix("ZAI_PROXY_PORT") orelse return DEFAULT_PORT;
     return std.fmt.parseInt(u16, raw, 10) catch DEFAULT_PORT;
 }
 
@@ -361,7 +361,7 @@ fn printUsage() void {
 }
 
 pub fn runZaiProxyCommand(allocator: Allocator, args: []const []const u8) !void {
-    const home = std.posix.getenv("HOME") orelse {
+    const home = tri_env.getPosix("HOME") orelse {
         print("{s}error:{s} HOME is not set\n", .{ RED, RESET });
         return error.NoHome;
     };

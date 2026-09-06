@@ -5,6 +5,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const tri_io = @import("tri_io");
 const qt = @import("queen_types.zig");
 const queen_senses = @import("queen_senses.zig");
@@ -80,7 +81,7 @@ fn pollLoop(ctx: *PollContext) void {
     while (ctx.running.load(.acquire)) {
         const offset = ctx.last_update_id.load(.acquire) + 1;
         pollOnce(allocator, ctx, offset);
-        std.Thread.sleep(5 * std.time.ns_per_s);
+        tri_time.sleep(5 * std.time.ns_per_s);
     }
 }
 

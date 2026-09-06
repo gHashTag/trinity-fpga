@@ -146,7 +146,7 @@ pub const VSAVM = struct {
     pub fn init(allocator: std.mem.Allocator) VSAVM {
         return VSAVM{
             .registers = .{},
-            .program = .{},
+            .program = .empty,
             .allocator = allocator,
             .sacred_ctx = SacredContext.init(allocator),
         };

@@ -12,7 +12,7 @@
 
 const std = @import("std");
 
-const tri_env = @import("tri_env.zig");
+const tri_env = @import("tri_env");
 const tri_io = @import("tri_io");
 const ArrayListManaged = std.array_list.Managed;
 

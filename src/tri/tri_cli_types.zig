@@ -307,8 +307,8 @@ pub const CLIState = struct {
     pub fn init(allocator: std.mem.Allocator) !CLIState {
         return .{
             .allocator = allocator,
-            .history = .{},
-            .command_history = .{},
+            .history = .empty,
+            .command_history = .empty,
             .context = tri_context.ContextManager.init(allocator),
             .current_language = "en",
             .streaming_mode = false,

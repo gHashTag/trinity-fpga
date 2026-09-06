@@ -80,7 +80,7 @@ pub const EnhancedMoE = struct {
             .base_router = router,
             .hardware = hardware,
             .metrics = .{},
-            .optimization_history = .{},
+            .optimization_history = .empty,
         };
 
         // Auto-enable SIMD if available

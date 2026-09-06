@@ -223,39 +223,38 @@ pub const HttpClient = struct {
         // Build multipart body
         var body_buf: std.ArrayListUnmanaged(u8) = .empty;
         defer body_buf.deinit(self.allocator);
-        const w = body_buf.writer(self.allocator);
 
         // File part
-        w.writeAll("--") catch return HttpError.OutOfMemory;
-        w.writeAll(boundary) catch return HttpError.OutOfMemory;
-        w.writeAll("\r\n") catch return HttpError.OutOfMemory;
-        w.writeAll("Content-Disposition: form-data; name=\"") catch return HttpError.OutOfMemory;
-        w.writeAll(file_field_name) catch return HttpError.OutOfMemory;
-        w.writeAll("\"; filename=\"") catch return HttpError.OutOfMemory;
-        w.writeAll(file_name) catch return HttpError.OutOfMemory;
-        w.writeAll("\"\r\n") catch return HttpError.OutOfMemory;
-        w.writeAll("Content-Type: ") catch return HttpError.OutOfMemory;
-        w.writeAll(file_content_type) catch return HttpError.OutOfMemory;
-        w.writeAll("\r\n\r\n") catch return HttpError.OutOfMemory;
-        w.writeAll(file_data) catch return HttpError.OutOfMemory;
-        w.writeAll("\r\n") catch return HttpError.OutOfMemory;
+        body_buf.appendSlice(self.allocator, "--") catch return HttpError.OutOfMemory;
+        body_buf.appendSlice(self.allocator, boundary) catch return HttpError.OutOfMemory;
+        body_buf.appendSlice(self.allocator, "\r\n") catch return HttpError.OutOfMemory;
+        body_buf.appendSlice(self.allocator, "Content-Disposition: form-data; name=\"") catch return HttpError.OutOfMemory;
+        body_buf.appendSlice(self.allocator, file_field_name) catch return HttpError.OutOfMemory;
+        body_buf.appendSlice(self.allocator, "\"; filename=\"") catch return HttpError.OutOfMemory;
+        body_buf.appendSlice(self.allocator, file_name) catch return HttpError.OutOfMemory;
+        body_buf.appendSlice(self.allocator, "\"\r\n") catch return HttpError.OutOfMemory;
+        body_buf.appendSlice(self.allocator, "Content-Type: ") catch return HttpError.OutOfMemory;
+        body_buf.appendSlice(self.allocator, file_content_type) catch return HttpError.OutOfMemory;
+        body_buf.appendSlice(self.allocator, "\r\n\r\n") catch return HttpError.OutOfMemory;
+        body_buf.appendSlice(self.allocator, file_data) catch return HttpError.OutOfMemory;
+        body_buf.appendSlice(self.allocator, "\r\n") catch return HttpError.OutOfMemory;
 
         // Extra string fields
         for (extra_fields) |field| {
-            w.writeAll("--") catch return HttpError.OutOfMemory;
-            w.writeAll(boundary) catch return HttpError.OutOfMemory;
-            w.writeAll("\r\n") catch return HttpError.OutOfMemory;
-            w.writeAll("Content-Disposition: form-data; name=\"") catch return HttpError.OutOfMemory;
-            w.writeAll(field[0]) catch return HttpError.OutOfMemory;
-            w.writeAll("\"\r\n\r\n") catch return HttpError.OutOfMemory;
-            w.writeAll(field[1]) catch return HttpError.OutOfMemory;
-            w.writeAll("\r\n") catch return HttpError.OutOfMemory;
+            body_buf.appendSlice(self.allocator, "--") catch return HttpError.OutOfMemory;
+            body_buf.appendSlice(self.allocator, boundary) catch return HttpError.OutOfMemory;
+            body_buf.appendSlice(self.allocator, "\r\n") catch return HttpError.OutOfMemory;
+            body_buf.appendSlice(self.allocator, "Content-Disposition: form-data; name=\"") catch return HttpError.OutOfMemory;
+            body_buf.appendSlice(self.allocator, field[0]) catch return HttpError.OutOfMemory;
+            body_buf.appendSlice(self.allocator, "\"\r\n\r\n") catch return HttpError.OutOfMemory;
+            body_buf.appendSlice(self.allocator, field[1]) catch return HttpError.OutOfMemory;
+            body_buf.appendSlice(self.allocator, "\r\n") catch return HttpError.OutOfMemory;
         }
 
         // Closing boundary
-        w.writeAll("--") catch return HttpError.OutOfMemory;
-        w.writeAll(boundary) catch return HttpError.OutOfMemory;
-        w.writeAll("--\r\n") catch return HttpError.OutOfMemory;
+        body_buf.appendSlice(self.allocator, "--") catch return HttpError.OutOfMemory;
+        body_buf.appendSlice(self.allocator, boundary) catch return HttpError.OutOfMemory;
+        body_buf.appendSlice(self.allocator, "--\r\n") catch return HttpError.OutOfMemory;
 
         // Build content-type header with boundary
         var ct_buf: [128]u8 = undefined;

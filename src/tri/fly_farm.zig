@@ -16,7 +16,7 @@
 const std = @import("std");
 const tri_time = @import("tri_time");
 const tri_io = @import("tri_io");
-const tri_env = @import("tri_env.zig");
+const tri_env = @import("tri_env");
 const Allocator = std.mem.Allocator;
 
 const FARM_STATE_FILE = ".trinity/fly_farm.json";

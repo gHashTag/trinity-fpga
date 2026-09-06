@@ -2,6 +2,7 @@
 // deny > allow, project overrides user. Same model as Claude Code.
 // Issue #65: Phase 6 permissions + checkpoints
 const std = @import("std");
+const tri_env = @import("tri_env");
 const tri_io = @import("tri_io");
 const proto = @import("tool_protocol.zig");
 
@@ -72,7 +73,7 @@ pub fn loadConfig(allocator: std.mem.Allocator) PermissionConfig {
     };
 
     // Try user settings first (~/.tri-api/settings.json)
-    const home = std.posix.getenv("HOME") orelse "";
+    const home = tri_env.getPosix("HOME") orelse "";
     if (home.len > 0) {
         var user_path_buf: [512]u8 = undefined;
         if (std.fmt.bufPrint(&user_path_buf, "{s}/{s}", .{ home, user_settings })) |user_path| {

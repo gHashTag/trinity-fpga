@@ -71,7 +71,7 @@ pub const ConversationHistory = struct {
 
     pub fn init(allocator: std.mem.Allocator) Self {
         return Self{
-            .messages = .{},
+            .messages = .empty,
             .allocator = allocator,
             .total_truncated = 0,
         };

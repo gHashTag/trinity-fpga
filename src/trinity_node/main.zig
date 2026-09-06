@@ -881,7 +881,7 @@ fn runHeadless(allocator: std.mem.Allocator, network: *network_mod.NetworkNode, 
                 std.debug.print("Generated {d} tokens in {d}ms\n", .{ tokens_generated, latency_ms });
             } else {
                 // Simulate processing
-                std.Thread.sleep(1 * std.time.ns_per_s);
+                tri_time.sleep(1 * std.time.ns_per_s);
             }
 
             // Record job completion
@@ -915,7 +915,7 @@ fn runHeadless(allocator: std.mem.Allocator, network: *network_mod.NetworkNode, 
         }
 
         // Sleep to avoid busy loop
-        std.Thread.sleep(100 * std.time.ns_per_ms);
+        tri_time.sleep(100 * std.time.ns_per_ms);
     }
 }
 

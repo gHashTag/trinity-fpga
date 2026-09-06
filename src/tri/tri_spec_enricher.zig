@@ -205,27 +205,26 @@ pub fn extractTests(allocator: Allocator, source: []const u8) ![]ExtractedTest {
 pub fn renderTypesSection(allocator: Allocator, types: []const ExtractedType) ![]u8 {
     var buf: std.ArrayList(u8) = .empty;
     errdefer buf.deinit(allocator);
-    const w = buf.writer(allocator);
 
     if (types.len == 0) return buf.toOwnedSlice(allocator);
 
-    try w.writeAll("# ═══════════════════════════════════════════════════════════════════════════════\n");
-    try w.writeAll("# TYPE SYSTEM (enriched from .zig source)\n");
-    try w.writeAll("# ═══════════════════════════════════════════════════════════════════════════════\n\n");
-    try w.writeAll("types:\n");
+    try buf.appendSlice(allocator, "# ═══════════════════════════════════════════════════════════════════════════════\n");
+    try buf.appendSlice(allocator, "# TYPE SYSTEM (enriched from .zig source)\n");
+    try buf.appendSlice(allocator, "# ═══════════════════════════════════════════════════════════════════════════════\n\n");
+    try buf.appendSlice(allocator, "types:\n");
 
     for (types) |t| {
         if (std.mem.eql(u8, t.kind, "enum")) {
-            try w.print("  {s}:\n", .{t.name});
-            try w.writeAll("    variants:\n");
-            try w.writeAll("      - placeholder\n");
+            try buf.print(allocator, "  {s}:\n", .{t.name});
+            try buf.appendSlice(allocator, "    variants:\n");
+            try buf.appendSlice(allocator, "      - placeholder\n");
         } else {
-            try w.print("  {s}:\n", .{t.name});
-            try w.writeAll("    fields:\n");
-            try w.writeAll("      placeholder: String\n");
+            try buf.print(allocator, "  {s}:\n", .{t.name});
+            try buf.appendSlice(allocator, "    fields:\n");
+            try buf.appendSlice(allocator, "      placeholder: String\n");
         }
     }
-    try w.writeByte('\n');
+    try buf.append(allocator, '\n');
 
     return buf.toOwnedSlice(allocator);
 }
@@ -234,7 +233,6 @@ pub fn renderTypesSection(allocator: Allocator, types: []const ExtractedType) ![
 pub fn renderBehaviorsSection(allocator: Allocator, fns: []const ExtractedFunction) ![]u8 {
     var buf: std.ArrayList(u8) = .empty;
     errdefer buf.deinit(allocator);
-    const w = buf.writer(allocator);
 
     // Only include public functions
     var pub_count: usize = 0;
@@ -243,24 +241,24 @@ pub fn renderBehaviorsSection(allocator: Allocator, fns: []const ExtractedFuncti
     }
     if (pub_count == 0) return buf.toOwnedSlice(allocator);
 
-    try w.writeAll("# ═══════════════════════════════════════════════════════════════════════════════\n");
-    try w.writeAll("# BEHAVIORS (enriched from .zig source)\n");
-    try w.writeAll("# ═══════════════════════════════════════════════════════════════════════════════\n\n");
-    try w.writeAll("behaviors:\n");
+    try buf.appendSlice(allocator, "# ═══════════════════════════════════════════════════════════════════════════════\n");
+    try buf.appendSlice(allocator, "# BEHAVIORS (enriched from .zig source)\n");
+    try buf.appendSlice(allocator, "# ═══════════════════════════════════════════════════════════════════════════════\n\n");
+    try buf.appendSlice(allocator, "behaviors:\n");
 
     for (fns) |f| {
         if (!f.is_public) continue;
-        try w.print("  {s}:\n", .{f.name});
-        try w.print("    description: \"Auto-extracted from .zig\"\n", .{});
+        try buf.print(allocator, "  {s}:\n", .{f.name});
+        try buf.print(allocator, "    description: \"Auto-extracted from .zig\"\n", .{});
         if (f.params.len > 0) {
-            try w.writeAll("    inputs:\n");
-            try w.print("      - args: String\n", .{});
+            try buf.appendSlice(allocator, "    inputs:\n");
+            try buf.print(allocator, "      - args: String\n", .{});
         }
-        try w.print("    output: {s}\n", .{if (std.mem.eql(u8, f.return_type, "void")) "Void" else "String"});
-        try w.writeAll("    steps:\n");
-        try w.writeAll("      - Implementation exists in .zig\n");
+        try buf.print(allocator, "    output: {s}\n", .{if (std.mem.eql(u8, f.return_type, "void")) "Void" else "String"});
+        try buf.appendSlice(allocator, "    steps:\n");
+        try buf.appendSlice(allocator, "      - Implementation exists in .zig\n");
     }
-    try w.writeByte('\n');
+    try buf.append(allocator, '\n');
 
     return buf.toOwnedSlice(allocator);
 }
@@ -269,19 +267,18 @@ pub fn renderBehaviorsSection(allocator: Allocator, fns: []const ExtractedFuncti
 pub fn renderTestsSection(allocator: Allocator, tests: []const ExtractedTest) ![]u8 {
     var buf: std.ArrayList(u8) = .empty;
     errdefer buf.deinit(allocator);
-    const w = buf.writer(allocator);
 
     if (tests.len == 0) return buf.toOwnedSlice(allocator);
 
-    try w.writeAll("# ═══════════════════════════════════════════════════════════════════════════════\n");
-    try w.writeAll("# TESTS (enriched from .zig source)\n");
-    try w.writeAll("# ═══════════════════════════════════════════════════════════════════════════════\n\n");
-    try w.writeAll("tests:\n");
+    try buf.appendSlice(allocator, "# ═══════════════════════════════════════════════════════════════════════════════\n");
+    try buf.appendSlice(allocator, "# TESTS (enriched from .zig source)\n");
+    try buf.appendSlice(allocator, "# ═══════════════════════════════════════════════════════════════════════════════\n\n");
+    try buf.appendSlice(allocator, "tests:\n");
 
     for (tests) |t| {
-        try w.print("  - name: \"{s}\"\n", .{t.name});
-        try w.writeAll("    input: {}\n");
-        try w.writeAll("    expected: {}\n");
+        try buf.print(allocator, "  - name: \"{s}\"\n", .{t.name});
+        try buf.appendSlice(allocator, "    input: {}\n");
+        try buf.appendSlice(allocator, "    expected: {}\n");
     }
 
     return buf.toOwnedSlice(allocator);
@@ -328,7 +325,6 @@ pub fn enrichSpec(allocator: Allocator, spec_path: []const u8) !EnrichResult {
     // Generate enriched spec
     var out: std.ArrayList(u8) = .empty;
     errdefer out.deinit(allocator);
-    const w = out.writer(allocator);
 
     // Copy existing spec header (everything up to "types:" or "behaviors:" or end)
     const stem = extractStem(spec_path);
@@ -341,35 +337,35 @@ pub fn enrichSpec(allocator: Allocator, spec_path: []const u8) !EnrichResult {
             // Check if this is preceded by a comment about enrichment
             cut_point = pos;
         }
-        try w.writeAll(existing_spec[0..cut_point]);
+        try out.appendSlice(allocator, existing_spec[0..cut_point]);
     } else {
         // Generate header
-        try w.writeAll("# ═══════════════════════════════════════════════════════════════════════════════\n");
-        try w.print("# VIBEE Specification — {s}\n", .{stem});
-        try w.writeAll("# ═══════════════════════════════════════════════════════════════════════════════\n");
-        try w.writeAll("# φ² + 1/φ² = 3 = TRINITY\n");
-        try w.writeAll("# Enriched by Spec Enricher (Issue #69)\n");
-        try w.writeAll("# ═══════════════════════════════════════════════════════════════════════════════\n\n");
-        try w.print("name: {s}\n", .{stem});
-        try w.writeAll("version: \"1.0.0\"\n");
-        try w.writeAll("language: zig\n");
-        try w.print("module: {s}\n\n", .{stem});
-        try w.writeAll("description: |\n");
-        try w.print("  Auto-enriched spec for {s}\n\n", .{stem});
+        try out.appendSlice(allocator, "# ═══════════════════════════════════════════════════════════════════════════════\n");
+        try out.print(allocator, "# VIBEE Specification — {s}\n", .{stem});
+        try out.appendSlice(allocator, "# ═══════════════════════════════════════════════════════════════════════════════\n");
+        try out.appendSlice(allocator, "# φ² + 1/φ² = 3 = TRINITY\n");
+        try out.appendSlice(allocator, "# Enriched by Spec Enricher (Issue #69)\n");
+        try out.appendSlice(allocator, "# ═══════════════════════════════════════════════════════════════════════════════\n\n");
+        try out.print(allocator, "name: {s}\n", .{stem});
+        try out.appendSlice(allocator, "version: \"1.0.0\"\n");
+        try out.appendSlice(allocator, "language: zig\n");
+        try out.print(allocator, "module: {s}\n\n", .{stem});
+        try out.appendSlice(allocator, "description: |\n");
+        try out.print(allocator, "  Auto-enriched spec for {s}\n\n", .{stem});
     }
 
     // Append enriched sections
     const types_section = try renderTypesSection(allocator, types);
     defer allocator.free(types_section);
-    if (types_section.len > 0) try w.writeAll(types_section);
+    if (types_section.len > 0) try out.appendSlice(allocator, types_section);
 
     const fns_section = try renderBehaviorsSection(allocator, fns);
     defer allocator.free(fns_section);
-    if (fns_section.len > 0) try w.writeAll(fns_section);
+    if (fns_section.len > 0) try out.appendSlice(allocator, fns_section);
 
     const tests_section = try renderTestsSection(allocator, tests);
     defer allocator.free(tests_section);
-    if (tests_section.len > 0) try w.writeAll(tests_section);
+    if (tests_section.len > 0) try out.appendSlice(allocator, tests_section);
 
     // Write enriched spec
     const enriched = try out.toOwnedSlice(allocator);

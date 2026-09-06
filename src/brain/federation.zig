@@ -855,7 +855,7 @@ test "LWWRegister last write wins" {
     try std.testing.expectEqualStrings("value2", reg.get());
 
     // Simulate time passing
-    std.Thread.sleep(1_000_000_000); // 1 second in nanoseconds
+    tri_time.sleep(1_000_000_000); // 1 second in nanoseconds
 
     const id2 = InstanceId.generate();
     try reg.set(allocator, "value3", id2);
@@ -872,7 +872,7 @@ test "LWWRegister merge" {
     var reg2 = try LWWRegister.init(allocator, "value2");
     defer reg2.deinit(allocator);
 
-    std.Thread.sleep(1_000_000_000); // 1 second in nanoseconds
+    tri_time.sleep(1_000_000_000); // 1 second in nanoseconds
 
     const id = InstanceId.generate();
     try reg2.set(allocator, "value3", id);
@@ -1130,7 +1130,7 @@ test "LWWRegister timestamp precedence" {
     defer reg2.deinit(allocator);
 
     // reg1 has earlier timestamp
-    std.Thread.sleep(1_000_000); // 1ms
+    tri_time.sleep(1_000_000); // 1ms
 
     const id = InstanceId.generate();
     try reg2.set(allocator, "value3", id);
@@ -1174,7 +1174,7 @@ test "LWWRegister merge idempotent" {
     var reg2 = try LWWRegister.init(allocator, "value2");
     defer reg2.deinit(allocator);
 
-    std.Thread.sleep(1_000_000);
+    tri_time.sleep(1_000_000);
 
     const id = InstanceId.generate();
     try reg2.set(allocator, "value3", id);
@@ -1196,7 +1196,7 @@ test "LWWRegister merge no-op when earlier" {
     var reg1 = try LWWRegister.init(allocator, "value1");
     defer reg1.deinit(allocator);
 
-    std.Thread.sleep(1_000_000);
+    tri_time.sleep(1_000_000);
 
     const id = InstanceId.generate();
     try reg1.set(allocator, "value2", id);

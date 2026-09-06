@@ -929,7 +929,7 @@ fn stopSupervisor() !void {
     }
 
     // Wait a bit for process to exit
-    std.Thread.sleep(2 * std.time.ns_per_s);
+    tri_time.sleep(2 * std.time.ns_per_s);
 
     if (isSupervisorRunning()) {
         print("  {s}" ++ qt.E_SIREN ++ " Supervisor still running, try SIGKILL{s}\n", .{ RED, RESET });
@@ -1280,7 +1280,7 @@ fn executeSelfHealing(
         }
 
         // Small delay between actions
-        std.Thread.sleep(1 * std.time.ns_per_s);
+        tri_time.sleep(1 * std.time.ns_per_s);
     }
 
     return result;
@@ -2068,7 +2068,7 @@ fn writeAuditSummary(config: qt.QueenConfig, counters: *const queen_policy.Actio
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn sleepInterval(sec: u64) void {
-    std.Thread.sleep(sec * std.time.ns_per_s);
+    tri_time.sleep(sec * std.time.ns_per_s);
 }
 
 // Sleep that can be interrupted by checking running flag
@@ -2081,7 +2081,7 @@ fn sleepInterruptible(running: *const std.atomic.Value(bool), interval_sec: u64)
         if (!running.load(.acquire)) return;
         const remain = total_ns - elapsed;
         const sleep_time = if (remain > chunk_ns) chunk_ns else remain;
-        std.Thread.sleep(sleep_time);
+        tri_time.sleep(sleep_time);
         elapsed += sleep_time;
     }
 }

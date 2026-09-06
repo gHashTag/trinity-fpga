@@ -275,7 +275,7 @@ pub const Sequencer = struct {
 
             // Delay if specified
             if (step.delay_ms > 0) {
-                std.Thread.sleep(step.delay_ms * std.time.ns_per_ms);
+                tri_time.sleep(step.delay_ms * std.time.ns_per_ms);
             }
 
             // Execute action (will be handled by M1 cortex)

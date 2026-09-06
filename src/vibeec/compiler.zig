@@ -8,6 +8,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_env = @import("tri_env");
 const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayList;
@@ -585,10 +586,10 @@ fn printAgentStatus() void {
     const stdout = std.io.getStdOut().writer();
 
     // Check API keys
-    const anthropic_key = std.posix.getenv("ANTHROPIC_API_KEY");
-    const openai_key = std.posix.getenv("OPENAI_API_KEY");
-    const ollama_host = std.posix.getenv("OLLAMA_HOST");
-    const eden_key = std.posix.getenv("EDEN_AI_API_KEY");
+    const anthropic_key = tri_env.getPosix("ANTHROPIC_API_KEY");
+    const openai_key = tri_env.getPosix("OPENAI_API_KEY");
+    const ollama_host = tri_env.getPosix("OLLAMA_HOST");
+    const eden_key = tri_env.getPosix("EDEN_AI_API_KEY");
 
     const has_anthropic = anthropic_key != null and anthropic_key.?.len > 0;
     const has_openai = openai_key != null and openai_key.?.len > 0;
@@ -630,10 +631,10 @@ fn printAgentStatus() void {
 fn printConfig() void {
     const stdout = std.io.getStdOut().writer();
 
-    const anthropic_key = std.posix.getenv("ANTHROPIC_API_KEY");
-    const openai_key = std.posix.getenv("OPENAI_API_KEY");
-    const ollama_host = std.posix.getenv("OLLAMA_HOST") orelse "http://localhost:11434";
-    const eden_key = std.posix.getenv("EDEN_AI_API_KEY");
+    const anthropic_key = tri_env.getPosix("ANTHROPIC_API_KEY");
+    const openai_key = tri_env.getPosix("OPENAI_API_KEY");
+    const ollama_host = tri_env.getPosix("OLLAMA_HOST") orelse "http://localhost:11434";
+    const eden_key = tri_env.getPosix("EDEN_AI_API_KEY");
 
     const has_anthropic = anthropic_key != null and anthropic_key.?.len > 0;
     const has_openai = openai_key != null and openai_key.?.len > 0;
@@ -683,10 +684,10 @@ fn runChat(allocator: std.mem.Allocator) !u8 {
     const stdin = std.io.getStdIn().reader();
 
     // Check for API keys
-    const anthropic_key = std.posix.getenv("ANTHROPIC_API_KEY");
-    const openai_key = std.posix.getenv("OPENAI_API_KEY");
-    const ollama_host = std.posix.getenv("OLLAMA_HOST");
-    const eden_key = std.posix.getenv("EDEN_AI_API_KEY");
+    const anthropic_key = tri_env.getPosix("ANTHROPIC_API_KEY");
+    const openai_key = tri_env.getPosix("OPENAI_API_KEY");
+    const ollama_host = tri_env.getPosix("OLLAMA_HOST");
+    const eden_key = tri_env.getPosix("EDEN_AI_API_KEY");
 
     const has_anthropic = anthropic_key != null and anthropic_key.?.len > 0;
     const has_openai = openai_key != null and openai_key.?.len > 0;

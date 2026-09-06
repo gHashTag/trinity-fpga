@@ -7462,7 +7462,7 @@ fn autoDetectBaud(fd: std.posix.fd_t) ?u64 {
             const test_byte: u8 = 0x55;
             _ = std.posix.write(fd, &[_]u8{test_byte}) catch {};
 
-            std.Thread.sleep(100_000); // 100ms wait
+            tri_time.sleep(100_000); // 100ms wait
 
             // Try to read response
             var read_buf: [8]u8 = undefined;
@@ -8186,7 +8186,7 @@ fn healthCheck(port_path: ?[]const u8, baud: u64, config: Config) !bool {
         }
 
         // Small delay for echo
-        std.Thread.sleep(50_000); // 50ms
+        tri_time.sleep(50_000); // 50ms
 
         // Read response with short timeout
         var read_buffer: [8]u8 = undefined;
@@ -8199,7 +8199,7 @@ fn healthCheck(port_path: ?[]const u8, baud: u64, config: Config) !bool {
                 bytes_read += n;
             } else |err| {
                 if (err == error.OperationWouldBlock) {
-                    std.Thread.sleep(5_000); // 5ms
+                    tri_time.sleep(5_000); // 5ms
                     continue;
                 }
                 printErr("[!] Extended health check: Read error: {any}\n", .{err});
@@ -8339,14 +8339,14 @@ const FpgaXvcClient = struct {
                     return true;
                 } else if (std.mem.indexOf(u8, response, "BUSY") != null) {
                     printWarning("[XVC] ESP32 busy, waiting...\n", .{});
-                    std.Thread.sleep(1 * std.time.ns_per_s);
+                    tri_time.sleep(1 * std.time.ns_per_s);
                     continue;
                 } else if (std.mem.indexOf(u8, response, "ERROR") != null) {
                     printError("[XVC] Flash error: {s}\n", .{response});
                     return error.FpgaFlashError;
                 }
             }
-            std.Thread.sleep(1 * std.time.ns_per_s);
+            tri_time.sleep(1 * std.time.ns_per_s);
         }
 
         printError("[XVC] Flash timeout after {d}s\n", .{elapsed});
@@ -8402,7 +8402,7 @@ fn runFpgaTestCycle(config: Config) !void {
 
         // Wait for FPGA to initialize
         printInfo("[3/4] Waiting for FPGA initialization (2s)...\n", .{});
-        std.Thread.sleep(2 * std.time.ns_per_s);
+        tri_time.sleep(2 * std.time.ns_per_s);
     } else {
         printInfo("[2/4] Skipping bitstream flash (none specified)\n", .{});
         printInfo("[3/4] Using current FPGA configuration\n", .{});
@@ -8829,7 +8829,7 @@ fn testEcho(port_path: []const u8, config: Config) void {
                         if (recovery.shouldRetry(retry_count)) {
                             const delay = recovery.getDelay(retry_count);
                             printWarning("[i] Auto-recovery: retry {d}/{d} after {d}ms delay\n", .{ retry_count, config.retries, delay });
-                            std.Thread.sleep(delay * 1_000);
+                            tri_time.sleep(delay * 1_000);
                         }
                     }
                 }
@@ -8876,7 +8876,7 @@ fn testEcho(port_path: []const u8, config: Config) void {
                 .rtt_us = 0, // Not available from result
             }) catch {};
 
-            std.Thread.sleep(config.delay_ms * 1_000_000);
+            tri_time.sleep(config.delay_ms * 1_000_000);
             test_idx += 1;
         }
 
@@ -8927,7 +8927,7 @@ fn testEcho(port_path: []const u8, config: Config) void {
             }
             printErr("\n", .{});
             cycle += 1;
-            std.Thread.sleep(2_000_000); // 2 second delay between cycles
+            tri_time.sleep(2_000_000); // 2 second delay between cycles
         }
     }
 
@@ -8968,7 +8968,7 @@ fn testEchoByte(fd: std.posix.fd_t, data: []const u8, test_name: []const u8, tes
             .rtt_us = 0,
         };
     }
-    std.Thread.sleep(config.delay_ms * 500_000);
+    tri_time.sleep(config.delay_ms * 500_000);
 
     if (config.verbose) {
         const mode_name = if (config.loopback_mode) "LOOPBACK" else if (config.ping_mode) "PING/PONG" else "Echo";
@@ -8998,7 +8998,7 @@ fn testEchoByte(fd: std.posix.fd_t, data: []const u8, test_name: []const u8, tes
             }
         } else |err| {
             if (err == error.OperationWouldBlock) {
-                std.Thread.sleep(10_000);
+                tri_time.sleep(10_000);
                 continue;
             }
             if (config.verbose) {
@@ -9500,7 +9500,7 @@ fn runSimulation(config: Config) !void {
 
         // Simulate delay with random jitter
         const sim_delay = 5 + std.crypto.random.intRangeAtMost(u32, 0, 20);
-        std.Thread.sleep(sim_delay * 1_000_000);
+        tri_time.sleep(sim_delay * 1_000_000);
 
         const elapsed_ns = tri_time.nanoTimestamp() - start;
         const elapsed_ms: i64 = @intCast(@divTrunc(elapsed_ns, 1_000_000));
@@ -10044,7 +10044,7 @@ fn runBatchTest(fd: std.posix.fd_t, config: Config) !void {
                         if (recovery.shouldRetry(retry_count)) {
                             const delay = recovery.getDelay(retry_count);
                             printWarning("[i] Auto-recovery: retry {d}/{d} after {d}ms delay\n", .{ retry_count, config.retries, delay });
-                            std.Thread.sleep(delay * 1_000);
+                            tri_time.sleep(delay * 1_000);
                         }
                         results.failed += 1;
                     }
@@ -10055,7 +10055,7 @@ fn runBatchTest(fd: std.posix.fd_t, config: Config) !void {
                     if (recovery.shouldRetry(retry_count)) {
                         const delay = recovery.getDelay(retry_count);
                         printWarning("[i] Auto-recovery: retry {d}/{d} after {d}ms delay (partial)\n", .{ retry_count, config.retries, delay });
-                        std.Thread.sleep(delay * 1_000);
+                        tri_time.sleep(delay * 1_000);
                     }
                     results.failed += 1;
                 } else {
@@ -10064,7 +10064,7 @@ fn runBatchTest(fd: std.posix.fd_t, config: Config) !void {
                     if (recovery.shouldRetry(retry_count)) {
                         const delay = recovery.getDelay(retry_count);
                         printWarning("[i] Auto-recovery: retry {d}/{d} after {d}ms delay (timeout)\n", .{ retry_count, config.retries, delay });
-                        std.Thread.sleep(delay * 1_000);
+                        tri_time.sleep(delay * 1_000);
                     }
                     results.timeouts += 1;
                 }
@@ -10302,7 +10302,7 @@ fn runStressTest(fd: std.posix.fd_t, config: Config) !void {
         }
 
         // Minimal delay (stress mode)
-        std.Thread.sleep(1_000); // 1ms
+        tri_time.sleep(1_000); // 1ms
 
         // Try to read (non-blocking, optional in stress mode)
         var read_buf: [256]u8 = undefined;

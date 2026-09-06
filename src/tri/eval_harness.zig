@@ -247,7 +247,7 @@ test "EvalRun computeSummary empty" {
     var run = EvalRun{
         .run_id = "test",
         .timestamp = 0,
-        .results = .{},
+        .results = .empty,
         .summary = null,
     };
     defer run.results.deinit(std.testing.allocator);
@@ -261,7 +261,7 @@ test "EvalRun computeSummary with results" {
     var run = EvalRun{
         .run_id = "test",
         .timestamp = 0,
-        .results = .{},
+        .results = .empty,
         .summary = null,
     };
     defer run.results.deinit(std.testing.allocator);

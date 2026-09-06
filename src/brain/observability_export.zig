@@ -491,7 +491,7 @@ pub const MetricsStreamer = struct {
             stdout.writeAll(fbs.getWritten()) catch {};
 
             // Sleep for interval
-            std.Thread.sleep(self.interval_ms * 1_000_000); // Convert ms to ns
+            tri_time.sleep(self.interval_ms * 1_000_000); // Convert ms to ns
         }
     }
 };
@@ -839,7 +839,7 @@ test "MetricsStreamer start and stop" {
     try std.testing.expect(streamer.thread != null);
 
     // Let it run briefly
-    std.Thread.sleep(50_000_000); // 50ms
+    tri_time.sleep(50_000_000); // 50ms
 
     // Stop the streamer
     streamer.stop();

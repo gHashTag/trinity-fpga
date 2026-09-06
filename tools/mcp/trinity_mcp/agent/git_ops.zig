@@ -1,6 +1,7 @@
 // git_ops.zig — Git operations via child process for agent entrypoint
 // Replaces bash git commands with typed Zig wrappers.
 const std = @import("std");
+const tri_time = @import("tri_time");
 const tri_io = @import("tri_io");
 const tri_proc = @import("tri_proc");
 
@@ -147,7 +148,7 @@ fn runGitRetry(allocator: std.mem.Allocator, argv: []const []const u8, max_attem
         if (runGit(allocator, argv)) |output| return output else |err| {
             if (attempt + 1 < max_attempts) {
                 std.debug.print("[git] attempt {d}/{d} failed: {s}, retrying...\n", .{ attempt + 1, max_attempts, @errorName(err) });
-                std.Thread.sleep(2 * std.time.ns_per_s);
+                tri_time.sleep(2 * std.time.ns_per_s);
             } else return err;
         }
     }

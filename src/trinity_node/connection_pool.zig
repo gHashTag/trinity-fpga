@@ -28,7 +28,7 @@ pub const PeerPool = struct {
 
     pub fn init(address: std.net.Address) PeerPool {
         return PeerPool{
-            .connections = .{},
+            .connections = .empty,
             .address = address,
         };
     }

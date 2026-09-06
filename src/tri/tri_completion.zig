@@ -9,7 +9,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
-const tri_env = @import("tri_env.zig");
+const tri_env = @import("tri_env");
 const tri_io = @import("tri_io");
 const CommandRegistry = @import("tri_command_registry.zig").CommandRegistry;
 const CommandMetadata = @import("tri_command_registry.zig").CommandMetadata;

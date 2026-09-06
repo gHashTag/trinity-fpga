@@ -219,8 +219,8 @@ pub const CognitiveModel = struct {
     pub fn init(allocator: mem.Allocator, dimension: usize) !CognitiveModel {
         return CognitiveModel{
             .allocator = allocator,
-            .working_memory = .{},
-            .long_term_memory = .{},
+            .working_memory = .empty,
+            .long_term_memory = .empty,
             .attention_vector = null,
             .dimension = dimension,
         };

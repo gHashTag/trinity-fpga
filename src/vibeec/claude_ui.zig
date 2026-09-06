@@ -10,6 +10,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const tui = @import("trinity_ui.zig");
 
 pub const ClaudeUI = struct {
@@ -27,7 +28,7 @@ pub const ClaudeUI = struct {
         return ClaudeUI{
             .ctx = ctx,
             .allocator = allocator,
-            .messages = .{},
+            .messages = .empty,
         };
     }
 
@@ -154,6 +155,6 @@ pub fn main() !void {
         renderer.render(&ctx);
         renderer.print();
 
-        std.Thread.sleep(100 * std.time.ns_per_ms);
+        tri_time.sleep(100 * std.time.ns_per_ms);
     }
 }

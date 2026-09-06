@@ -248,25 +248,24 @@ pub fn generateDiscoveryReport(allocator: Allocator) ![]u8 {
     const BOLD = "\x1b[1m";
 
     var buffer = try std.ArrayList(u8).initCapacity(allocator, 8192);
-    const writer = buffer.writer(allocator);
 
-    try writer.print("\n{s}{s}╔════════════════════════════════════════════════════════════════╗{s}\n", .{ MAGENTA, BOLD, RESET });
-    try writer.print("{s}{s}║       BLIND SPOTS DISCOVERY ENGINE v1.0                        ║{s}\n", .{ MAGENTA, BOLD, RESET });
-    try writer.print("{s}{s}║       Registry of Human Knowledge Gaps                      ║{s}\n", .{ MAGENTA, BOLD, RESET });
-    try writer.print("{s}{s}╚════════════════════════════════════════════════════════════════╝{s}\n\n", .{ MAGENTA, BOLD, RESET });
+    try buffer.print(allocator, "\n{s}{s}╔════════════════════════════════════════════════════════════════╗{s}\n", .{ MAGENTA, BOLD, RESET });
+    try buffer.print(allocator, "{s}{s}║       BLIND SPOTS DISCOVERY ENGINE v1.0                        ║{s}\n", .{ MAGENTA, BOLD, RESET });
+    try buffer.print(allocator, "{s}{s}║       Registry of Human Knowledge Gaps                      ║{s}\n", .{ MAGENTA, BOLD, RESET });
+    try buffer.print(allocator, "{s}{s}╚════════════════════════════════════════════════════════════════╝{s}\n\n", .{ MAGENTA, BOLD, RESET });
 
     // Summary Statistics
-    try writer.print("{s}📊 KNOWLEDGE REGISTRY SUMMARY{s}\n", .{ CYAN, RESET });
-    try writer.print("{s}═══════════════════════════════{s}\n\n", .{ GRAY, RESET });
+    try buffer.print(allocator, "{s}📊 KNOWLEDGE REGISTRY SUMMARY{s}\n", .{ CYAN, RESET });
+    try buffer.print(allocator, "{s}═══════════════════════════════{s}\n\n", .{ GRAY, RESET });
 
-    try writer.print("  {s}VERIFIED:{s}   {s}{d}{s} entries (Theory + Experiment agree)\n", .{ GREEN, RESET, WHITE, registry.len, RESET });
-    try writer.print("  {s}PREDICTED:{s}  {s}{d}{s} entries (Theory predicts, not measured)\n", .{ CYAN, RESET, WHITE, 3, RESET });
-    try writer.print("  {s}BLIND:{s}      {s}{d}{s} entries (Completely unknown)\n", .{ RED, RESET, WHITE, 3, RESET });
-    try writer.print("  {s}ANOMALY:{s}    {s}{d}{s} entries (Contradicts theory)\n\n", .{ MAGENTA, RESET, WHITE, 4, RESET });
+    try buffer.print(allocator, "  {s}VERIFIED:{s}   {s}{d}{s} entries (Theory + Experiment agree)\n", .{ GREEN, RESET, WHITE, registry.len, RESET });
+    try buffer.print(allocator, "  {s}PREDICTED:{s}  {s}{d}{s} entries (Theory predicts, not measured)\n", .{ CYAN, RESET, WHITE, 3, RESET });
+    try buffer.print(allocator, "  {s}BLIND:{s}      {s}{d}{s} entries (Completely unknown)\n", .{ RED, RESET, WHITE, 3, RESET });
+    try buffer.print(allocator, "  {s}ANOMALY:{s}    {s}{d}{s} entries (Contradicts theory)\n\n", .{ MAGENTA, RESET, WHITE, 4, RESET });
 
     // BLIND SPOTS - Priority Research Targets
-    try writer.print("{s}🔬 PRIORITY BLIND SPOTS (Top 5){s}\n", .{ GOLDEN, RESET });
-    try writer.print("{s}═════════════════════════════════{s}\n\n", .{ GRAY, RESET });
+    try buffer.print(allocator, "{s}🔬 PRIORITY BLIND SPOTS (Top 5){s}\n", .{ GOLDEN, RESET });
+    try buffer.print(allocator, "{s}═════════════════════════════════{s}\n\n", .{ GRAY, RESET });
 
     const sorted_spots = [_]BlindSpot{
         blind_spots[0], // Neutrino Mass
@@ -277,66 +276,66 @@ pub fn generateDiscoveryReport(allocator: Allocator) ![]u8 {
     };
 
     for (sorted_spots, 0..) |spot, i| {
-        try writer.print("  {s}[{d}]{s} {s}{s}{s}\n", .{ GRAY, i + 1, RESET, BOLD, spot.name, RESET });
-        try writer.print("      Domain: {s}{s}{s}\n", .{ CYAN, spot.domain, RESET });
-        try writer.print("      Importance: {s}{d:.0}%{s} | Feasibility: {s}{d:.0}%{s}\n", .{
+        try buffer.print(allocator, "  {s}[{d}]{s} {s}{s}{s}\n", .{ GRAY, i + 1, RESET, BOLD, spot.name, RESET });
+        try buffer.print(allocator, "      Domain: {s}{s}{s}\n", .{ CYAN, spot.domain, RESET });
+        try buffer.print(allocator, "      Importance: {s}{d:.0}%{s} | Feasibility: {s}{d:.0}%{s}\n", .{
             GREEN, spot.importance, RESET, WHITE, spot.feasibility, RESET,
         });
-        try writer.print("      {s}Description:{s} {s}\n", .{ GRAY, RESET, spot.description });
-        try writer.print("\n", .{});
+        try buffer.print(allocator, "      {s}Description:{s} {s}\n", .{ GRAY, RESET, spot.description });
+        try buffer.print(allocator, "\n", .{});
     }
 
     // DISCOVERY PREDICTIONS
-    try writer.print("{s}🔮 SACRED FORMULA PREDICTIONS (Unverified){s}\n", .{ GOLDEN, RESET });
-    try writer.print("{s}═════════════════════════════════════════{s}\n\n", .{ GRAY, RESET });
+    try buffer.print(allocator, "{s}🔮 SACRED FORMULA PREDICTIONS (Unverified){s}\n", .{ GOLDEN, RESET });
+    try buffer.print(allocator, "{s}═════════════════════════════════════════{s}\n\n", .{ GRAY, RESET });
 
-    try writer.print("  {s}1. Neutrino Mass:{s} {s}m_nu = 0.0057 eV{s}\n", .{ WHITE, RESET, CYAN, RESET });
-    try writer.print("     Formula: V = 1x3^-1xpi^-1xphi^-4xe^-1\n", .{});
-    try writer.print("     Test: KATRIN experiment (current limit 0.8 eV)\n", .{});
-    try writer.print("     Status: {s}BLIND{s} - below current sensitivity\n\n", .{ RED, RED });
+    try buffer.print(allocator, "  {s}1. Neutrino Mass:{s} {s}m_nu = 0.0057 eV{s}\n", .{ WHITE, RESET, CYAN, RESET });
+    try buffer.print(allocator, "     Formula: V = 1x3^-1xpi^-1xphi^-4xe^-1\n", .{});
+    try buffer.print(allocator, "     Test: KATRIN experiment (current limit 0.8 eV)\n", .{});
+    try buffer.print(allocator, "     Status: {s}BLIND{s} - below current sensitivity\n\n", .{ RED, RED });
 
-    try writer.print("  {s}2. Proton Lifetime:{s} {s}tau_p = 2.82x10^34 years{s}\n", .{ WHITE, RESET, CYAN, RESET });
-    try writer.print("     Formula: V = 3x3^4xpi^3xphi^4xe^4\n", .{});
-    try writer.print("     Test: Super-Kamiokande, Hyper-Kamiokande\n", .{});
-    try writer.print("     Status: {s}BLIND{s} - prediction below current limit\n\n", .{ RED, RED });
+    try buffer.print(allocator, "  {s}2. Proton Lifetime:{s} {s}tau_p = 2.82x10^34 years{s}\n", .{ WHITE, RESET, CYAN, RESET });
+    try buffer.print(allocator, "     Formula: V = 3x3^4xpi^3xphi^4xe^4\n", .{});
+    try buffer.print(allocator, "     Test: Super-Kamiokande, Hyper-Kamiokande\n", .{});
+    try buffer.print(allocator, "     Status: {s}BLIND{s} - prediction below current limit\n\n", .{ RED, RED });
 
-    try writer.print("  {s}3. Dark Matter Mass:{s} {s}M_DM = 817 GeV{s}\n", .{ WHITE, RESET, CYAN, RESET });
-    try writer.print("     Formula: V = 4x3^4xphi^4\n", .{});
-    try writer.print("     Test: Xenon-nT, LZ experiments\n", .{});
-    try writer.print("     Status: {s}BLIND{s} - no WIMP signal seen yet\n\n", .{ RED, RED });
+    try buffer.print(allocator, "  {s}3. Dark Matter Mass:{s} {s}M_DM = 817 GeV{s}\n", .{ WHITE, RESET, CYAN, RESET });
+    try buffer.print(allocator, "     Formula: V = 4x3^4xphi^4\n", .{});
+    try buffer.print(allocator, "     Test: Xenon-nT, LZ experiments\n", .{});
+    try buffer.print(allocator, "     Status: {s}BLIND{s} - no WIMP signal seen yet\n\n", .{ RED, RED });
 
     // ANOMALIES
-    try writer.print("{s}⚠️  ACTIVE ANOMALIES (New Physics?){s}\n", .{ MAGENTA, RESET });
-    try writer.print("{s}════════════════════════════════════{s}\n\n", .{ GRAY, RESET });
+    try buffer.print(allocator, "{s}⚠️  ACTIVE ANOMALIES (New Physics?){s}\n", .{ MAGENTA, RESET });
+    try buffer.print(allocator, "{s}════════════════════════════════════{s}\n\n", .{ GRAY, RESET });
 
     const high_sigma_anomalies = try findAnomaliesAboveSigma(allocator, 3.0);
     defer allocator.free(high_sigma_anomalies);
     for (high_sigma_anomalies) |anom| {
         const color = if (anom.deviation >= 5.0) RED else if (anom.deviation >= 4.0) MAGENTA else GOLDEN;
-        try writer.print("  {s}{s}{s}\n", .{ BOLD, anom.name, RESET });
-        try writer.print("     Expected: {s}{d:.6}{s} | Observed: {s}{d:.6}{s}\n", .{
+        try buffer.print(allocator, "  {s}{s}{s}\n", .{ BOLD, anom.name, RESET });
+        try buffer.print(allocator, "     Expected: {s}{d:.6}{s} | Observed: {s}{d:.6}{s}\n", .{
             WHITE, anom.expected, RESET, CYAN, anom.observed, RESET,
         });
-        try writer.print("     Deviation: {s}{d:.1}sigma{s}\n\n", .{ color, anom.deviation, RESET });
+        try buffer.print(allocator, "     Deviation: {s}{d:.1}sigma{s}\n\n", .{ color, anom.deviation, RESET });
     }
 
     // FUNDAMENTAL QUESTION
-    try writer.print("{s}🌌 THE FUNDAMENTAL QUESTION{s}\n", .{ GOLDEN, RESET });
-    try writer.print("{s}════════════════════════════════{s}\n\n", .{ GRAY, RESET });
-    try writer.print("  {s}Why does the Sacred Formula work so well?{s}\n\n", .{ BOLD, RESET });
-    try writer.print("  {s}V = n x 3^k x pi^m x phi^p x e^q{s}\n\n", .{ CYAN, RESET });
-    try writer.print("  This formula fits {s}100+ physical constants{s} with <1% error.\n", .{ GOLDEN, RESET });
-    try writer.print("  Is it:\n", .{});
-    try writer.print("    - Numerical coincidence? (unlikely given 100+ fits)\n", .{});
-    try writer.print("    - Reflection of deeper mathematical structure?\n", .{});
-    try writer.print("    - Evidence that phi, pi, e are more fundamental than suspected?\n\n", .{});
+    try buffer.print(allocator, "{s}🌌 THE FUNDAMENTAL QUESTION{s}\n", .{ GOLDEN, RESET });
+    try buffer.print(allocator, "{s}════════════════════════════════{s}\n\n", .{ GRAY, RESET });
+    try buffer.print(allocator, "  {s}Why does the Sacred Formula work so well?{s}\n\n", .{ BOLD, RESET });
+    try buffer.print(allocator, "  {s}V = n x 3^k x pi^m x phi^p x e^q{s}\n\n", .{ CYAN, RESET });
+    try buffer.print(allocator, "  This formula fits {s}100+ physical constants{s} with <1% error.\n", .{ GOLDEN, RESET });
+    try buffer.print(allocator, "  Is it:\n", .{});
+    try buffer.print(allocator, "    - Numerical coincidence? (unlikely given 100+ fits)\n", .{});
+    try buffer.print(allocator, "    - Reflection of deeper mathematical structure?\n", .{});
+    try buffer.print(allocator, "    - Evidence that phi, pi, e are more fundamental than suspected?\n\n", .{});
 
-    try writer.print("  {s}phi^2 + 1/phi^2 = 3{s} suggests ternary logic is fundamental.\n", .{ GOLDEN, RESET });
-    try writer.print("  This may explain why we have {s}3 spatial dimensions{s}, ", .{ GOLDEN, RESET });
-    try writer.print(" {s}3 states of matter{s}, ", .{ GOLDEN, RESET });
-    try writer.print(" {s}3 quark colors{s}...\n\n", .{ GOLDEN, RESET });
+    try buffer.print(allocator, "  {s}phi^2 + 1/phi^2 = 3{s} suggests ternary logic is fundamental.\n", .{ GOLDEN, RESET });
+    try buffer.print(allocator, "  This may explain why we have {s}3 spatial dimensions{s}, ", .{ GOLDEN, RESET });
+    try buffer.print(allocator, " {s}3 states of matter{s}, ", .{ GOLDEN, RESET });
+    try buffer.print(allocator, " {s}3 quark colors{s}...\n\n", .{ GOLDEN, RESET });
 
-    try writer.print("{s}phi^2 + 1/phi^2 = 3 = TRINITY{s}\n\n", .{ GOLDEN, RESET });
+    try buffer.print(allocator, "{s}phi^2 + 1/phi^2 = 3 = TRINITY{s}\n\n", .{ GOLDEN, RESET });
 
     return buffer.toOwnedSlice(allocator);
 }

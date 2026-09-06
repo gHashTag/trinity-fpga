@@ -458,7 +458,7 @@ fn loadMcpServers(allocator: std.mem.Allocator, mcp: *mcp_client.McpManager) voi
     const io = tri_io.get();
     const settings_data = blk: {
         break :blk std.Io.Dir.cwd().readFileAlloc(io, ".trinity/api/settings.json", allocator, .limited(64 * 1024)) catch {
-            const home = std.posix.getenv("HOME") orelse break :blk @as(?[]const u8, null);
+            const home = tri_env.getPosix("HOME") orelse break :blk @as(?[]const u8, null);
             var path_buf: [512]u8 = undefined;
             const path = std.fmt.bufPrint(&path_buf, "{s}/.tri-api/settings.json", .{home}) catch break :blk @as(?[]const u8, null);
             break :blk std.Io.Dir.cwd().readFileAlloc(io, path, allocator, .limited(64 * 1024)) catch @as(?[]const u8, null);

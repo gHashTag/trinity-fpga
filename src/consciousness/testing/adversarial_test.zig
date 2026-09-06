@@ -86,7 +86,7 @@ pub const TestResult = struct {
             .confidence = 0.0,
             .verdict = .MORTAL,
             .consensus_theory = "",
-            .outlier_theories = .{},
+            .outlier_theories = .empty,
         };
     }
 

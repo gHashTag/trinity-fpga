@@ -1,6 +1,7 @@
 // handlers.zig — Command handlers for tri-bot
 // No claude CLI dependency. /status uses git directly.
 const std = @import("std");
+const tri_env = @import("tri_env");
 const tri_io = @import("tri_io");
 const tri_proc = @import("tri_proc");
 const telegram_api = @import("telegram_api.zig");
@@ -308,7 +309,7 @@ pub fn handleTriCommand(allocator: std.mem.Allocator, config: BotConfig, args: [
 
 /// /sessions — List saved sessions from ~/.tri-api/sessions/index.json
 pub fn handleSessions(allocator: std.mem.Allocator, config: BotConfig) void {
-    const home = std.posix.getenv("HOME") orelse "/tmp";
+    const home = tri_env.getPosix("HOME") orelse "/tmp";
     var path_buf: [512]u8 = undefined;
     const index_path = std.fmt.bufPrint(&path_buf, "{s}/.tri-api/sessions/index.json", .{home}) catch {
         telegram_api.sendMessage(allocator, config.bot_token, config.chat_id, "\xe2\x9a\xa0 Cannot resolve sessions path");
@@ -369,7 +370,7 @@ pub fn handleSessions(allocator: std.mem.Allocator, config: BotConfig) void {
 /// /resume [id] — Load session messages from ~/.tri-api/sessions/{id}.json.
 /// Returns messages JSON (caller owns memory) or null if not found.
 pub fn loadSessionMessages(allocator: std.mem.Allocator, session_id: []const u8) ?[]const u8 {
-    const home = std.posix.getenv("HOME") orelse "/tmp";
+    const home = tri_env.getPosix("HOME") orelse "/tmp";
 
     // If no ID provided, load latest
     if (session_id.len == 0) {

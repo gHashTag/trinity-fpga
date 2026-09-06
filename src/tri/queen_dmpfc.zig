@@ -9,6 +9,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_env = @import("tri_env");
 const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const qt = @import("queen_types.zig");
@@ -68,8 +69,8 @@ pub const IssueKind = enum {
 fn detectConflicts(allocator: Allocator) bool {
     // Check for basic conflicts without requiring full faculty board
     // Conflict: Telegram token set but chat_id missing (or vice versa)
-    const bot_token = std.posix.getenv("TELEGRAM_BOT_TOKEN");
-    const chat_id = std.posix.getenv("TELEGRAM_CHAT_ID");
+    const bot_token = tri_env.getPosix("TELEGRAM_BOT_TOKEN");
+    const chat_id = tri_env.getPosix("TELEGRAM_CHAT_ID");
     const has_token = bot_token != null and bot_token.?.len > 0;
     const has_chat = chat_id != null and chat_id.?.len > 0;
 
@@ -154,8 +155,8 @@ fn checkLoopRunning(allocator: Allocator) !bool {
 }
 
 fn checkTelegramReachable() bool {
-    const bot_token = std.posix.getenv("TELEGRAM_BOT_TOKEN") orelse return false;
-    const chat_id = std.posix.getenv("TELEGRAM_CHAT_ID") orelse return false;
+    const bot_token = tri_env.getPosix("TELEGRAM_BOT_TOKEN") orelse return false;
+    const chat_id = tri_env.getPosix("TELEGRAM_CHAT_ID") orelse return false;
     return bot_token.len > 0 and chat_id.len > 0;
 }
 

@@ -47,7 +47,7 @@ pub const CodegenPluginContext = struct {
         return .{
             .language = language,
             .allocator = allocator,
-            .output_buffer = .{},
+            .output_buffer = .empty,
             .last_spec_path = null,
         };
     }

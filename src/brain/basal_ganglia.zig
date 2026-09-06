@@ -902,7 +902,7 @@ test "LockFree: claim expiration by TTL" {
     _ = try registry.claim(allocator, task_id, "agent-001", 50); // 50ms TTL
 
     // Wait for expiration
-    std.Thread.sleep(100 * std.time.ns_per_ms);
+    tri_time.sleep(100 * std.time.ns_per_ms);
 
     // Old claim should now be expired
     const check = registry.checkClaim(task_id);
@@ -947,7 +947,7 @@ test "LockFree: re-claim after expiration" {
     _ = try registry.claim(allocator, task_id, "agent-001", 50); // 50ms TTL
 
     // Wait for expiration
-    std.Thread.sleep(100 * std.time.ns_per_ms);
+    tri_time.sleep(100 * std.time.ns_per_ms);
 
     // Should be claimable by different agent
     const claimed = try registry.claim(allocator, task_id, "agent-002", 60000);
@@ -995,7 +995,7 @@ test "LockFree: cleanup removes expired claims" {
     try std.testing.expectEqual(@as(usize, 6), registry.count());
 
     // Wait for expiration
-    std.Thread.sleep(100 * std.time.ns_per_ms);
+    tri_time.sleep(100 * std.time.ns_per_ms);
 
     // Cleanup should remove expired claim
     const removed = registry.cleanupExpired();
@@ -1184,7 +1184,7 @@ test "Claim: expiration handling" {
     _ = try registry.claim(allocator, "task-short", "agent-B", 50);
 
     // Wait for TTL to expire
-    std.Thread.sleep(100 * std.time.ns_per_ms);
+    tri_time.sleep(100 * std.time.ns_per_ms);
 
     // Try to claim again with same task_id (should succeed)
     const reclaim_result = try registry.claim(allocator, "task-short", "agent-C", 8000);
@@ -1302,7 +1302,7 @@ test "BasalGanglia: TTL zero - claim expires immediately" {
     try std.testing.expect(claimed);
 
     // Small sleep to ensure time advances
-    std.Thread.sleep(10 * std.time.ns_per_ms);
+    tri_time.sleep(10 * std.time.ns_per_ms);
 
     // Claim should be expired (age > 0 TTL)
     const check_result = registry.checkClaim(task_id);
@@ -1416,14 +1416,14 @@ test "BasalGanglia: heartbeat at expiration boundary" {
     _ = try registry.claim(allocator, task_id, agent_id, ttl_ms);
 
     // Sleep to well before expiration (75% of TTL)
-    std.Thread.sleep(75 * std.time.ns_per_ms);
+    tri_time.sleep(75 * std.time.ns_per_ms);
 
     // Heartbeat should succeed
     const hb1 = registry.heartbeat(task_id, agent_id);
     try std.testing.expect(hb1);
 
     // Sleep well past TTL (another 50ms = 125ms total, > 100ms TTL)
-    std.Thread.sleep(50 * std.time.ns_per_ms);
+    tri_time.sleep(50 * std.time.ns_per_ms);
 
     // Heartbeat should fail (task expired)
     const hb2 = registry.heartbeat(task_id, agent_id);
@@ -1618,7 +1618,7 @@ test "BasalGanglia: cleanup removes multiple expired claims" {
     try std.testing.expectEqual(@as(usize, 5 + num_short), registry.count());
 
     // Wait for expiration
-    std.Thread.sleep(100 * std.time.ns_per_ms);
+    tri_time.sleep(100 * std.time.ns_per_ms);
 
     // Cleanup should remove only expired claims
     const removed = registry.cleanupExpired();
@@ -1811,7 +1811,7 @@ test "BasalGanglia: high contention scenario" {
                     if (result) {
                         _ = succ.fetchAdd(1, .monotonic);
                         // Sleep to allow others to try claiming after we release
-                        std.Thread.sleep(1 * std.time.ns_per_ms);
+                        tri_time.sleep(1 * std.time.ns_per_ms);
                         // Abandon to free for next round
                         _ = reg_ptr.abandon(task, "agent-contest");
                     }

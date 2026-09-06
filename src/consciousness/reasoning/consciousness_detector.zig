@@ -191,8 +191,8 @@ pub const ConsciousnessDetector = struct {
     pub fn init(allocator: mem.Allocator) ConsciousnessDetector {
         return .{
             .allocator = allocator,
-            .threshold_history = .{},
-            .detection_history = .{},
+            .threshold_history = .empty,
+            .detection_history = .empty,
             .adaptive = true,
         };
     }

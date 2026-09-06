@@ -308,7 +308,7 @@ test "getElapsedTimeMs" {
     var tracker = try CostTracker.init(allocator);
     defer tracker.deinit();
 
-    std.Thread.sleep(10_000_000); // 10ms
+    tri_time.sleep(10_000_000); // 10ms
     const elapsed = tracker.getElapsedTimeMs();
 
     try std.testing.expect(elapsed >= 10);

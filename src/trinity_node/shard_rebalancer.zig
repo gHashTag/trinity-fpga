@@ -70,7 +70,7 @@ pub const ShardRebalancer = struct {
 
         const result = try self.shard_locations.getOrPut(shard_hash);
         if (!result.found_existing) {
-            result.value_ptr.* = .{ .node_ids = .{} };
+            result.value_ptr.* = .{ .node_ids = .empty };
         }
 
         // Don't add duplicate node_ids

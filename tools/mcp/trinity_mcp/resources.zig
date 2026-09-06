@@ -40,8 +40,8 @@ pub fn generateResourcesList(allocator: std.mem.Allocator) ![]const u8 {
 
     for (resources, 0..) |r, i| {
         if (i > 0) try buf.appendSlice(allocator, ",");
-        const writer = buf.writer(allocator);
-        try writer.print(
+        try buf.print(
+            allocator,
             "{{\"uri\":\"{s}\",\"name\":\"{s}\",\"description\":\"{s}\",\"mimeType\":\"{s}\"}}",
             .{ r.uri, r.name, r.description, r.mime_type },
         );

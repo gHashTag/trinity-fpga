@@ -201,7 +201,7 @@ pub const KgTripleDHT = struct {
             .replication_factor = REPLICATION_FACTOR,
             .local_node_id = local_node_id,
             .stats = std.mem.zeroes(KgDHTStats),
-            .peer_nodes = .{},
+            .peer_nodes = .empty,
         };
     }
 

@@ -7,6 +7,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const tri_io = @import("tri_io");
 const types = @import("types.zig");
 const builder_mod = @import("builder.zig");
@@ -1860,7 +1861,7 @@ pub const TestGenerator = struct {
             try self.builder.writeLine("const t = try std.Thread.spawn(.{}, RecvCtx.run, .{&recv_ctx});");
             try self.builder.writeLine("");
             try self.builder.writeLine("// Small delay to let listener start accepting");
-            try self.builder.writeLine("std.Thread.sleep(10 * std.time.ns_per_ms);");
+            try self.builder.writeLine("tri_time.sleep(10 * std.time.ns_per_ms);");
             try self.builder.writeLine("");
             try self.builder.writeLine("// Send from nodeA");
             try self.builder.writeLine("try nodeA.sendShard(bound_port, &hex, payload);");
@@ -1909,7 +1910,7 @@ pub const TestGenerator = struct {
             try self.builder.writeLine("    };");
             try self.builder.writeLine("    var recv_ctx = RecvCtx{ .node = &nodeB, .srv = &server };");
             try self.builder.writeLine("    const t = try std.Thread.spawn(.{}, RecvCtx.run, .{&recv_ctx});");
-            try self.builder.writeLine("    std.Thread.sleep(10 * std.time.ns_per_ms);");
+            try self.builder.writeLine("    tri_time.sleep(10 * std.time.ns_per_ms);");
             try self.builder.writeLine("    try nodeA.sendShard(bp, &hashes[idx], pl);");
             try self.builder.writeLine("    t.join();");
             try self.builder.writeLine("}");
@@ -1954,7 +1955,7 @@ pub const TestGenerator = struct {
             try self.builder.writeLine("};");
             try self.builder.writeLine("var recv_ctx = RecvCtx{ .node = &nodeB, .srv = &server };");
             try self.builder.writeLine("const t = try std.Thread.spawn(.{}, RecvCtx.run, .{&recv_ctx});");
-            try self.builder.writeLine("std.Thread.sleep(10 * std.time.ns_per_ms);");
+            try self.builder.writeLine("tri_time.sleep(10 * std.time.ns_per_ms);");
             try self.builder.writeLine("try nodeA.sendShard(bp, &hex, &big_data);");
             try self.builder.writeLine("t.join();");
             try self.builder.writeLine("");
@@ -1999,7 +2000,7 @@ pub const TestGenerator = struct {
             try self.builder.writeLine("};");
             try self.builder.writeLine("var recv_ctx = RecvCtx{ .node = &nodeB, .srv = &server };");
             try self.builder.writeLine("const t = try std.Thread.spawn(.{}, RecvCtx.run, .{&recv_ctx});");
-            try self.builder.writeLine("std.Thread.sleep(10 * std.time.ns_per_ms);");
+            try self.builder.writeLine("tri_time.sleep(10 * std.time.ns_per_ms);");
             try self.builder.writeLine("try nodeA.sendShard(bp, &hex, payload);");
             try self.builder.writeLine("t.join();");
             try self.builder.writeLine("");
@@ -2048,7 +2049,7 @@ pub const TestGenerator = struct {
             try self.builder.writeLine("};");
             try self.builder.writeLine("var recv_ctx = RecvCtx{ .node = &nodeB, .srv = &server };");
             try self.builder.writeLine("const t = try std.Thread.spawn(.{}, RecvCtx.run, .{&recv_ctx});");
-            try self.builder.writeLine("std.Thread.sleep(10 * std.time.ns_per_ms);");
+            try self.builder.writeLine("tri_time.sleep(10 * std.time.ns_per_ms);");
             try self.builder.writeLine("try nodeA.sendShard(bp, &hex, payload);");
             try self.builder.writeLine("t.join();");
             try self.builder.writeLine("");
@@ -2465,7 +2466,7 @@ pub const TestGenerator = struct {
             try self.builder.writeLine("}");
             try self.builder.writeLine("");
             try self.builder.writeLine("// Small delay for listeners to be ready");
-            try self.builder.writeLine("std.Thread.sleep(10 * std.time.ns_per_ms);");
+            try self.builder.writeLine("tri_time.sleep(10 * std.time.ns_per_ms);");
             try self.builder.writeLine("");
             try self.builder.writeLine("// TCP-send each shard with a unique hex hash");
             try self.builder.writeLine("n = 0;");
@@ -2555,7 +2556,7 @@ pub const TestGenerator = struct {
             try self.builder.writeLine("        }");
             try self.builder.writeLine("    }.run, .{&ctxs[n]});");
             try self.builder.writeLine("}");
-            try self.builder.writeLine("std.Thread.sleep(10 * std.time.ns_per_ms);");
+            try self.builder.writeLine("tri_time.sleep(10 * std.time.ns_per_ms);");
             try self.builder.writeLine("");
             try self.builder.writeLine("// TCP-send shards with shard-index-based deterministic hash");
             try self.builder.writeLine("var shard_hexes: [5][64]u8 = undefined;");
@@ -2664,7 +2665,7 @@ pub const TestGenerator = struct {
             try self.builder.writeLine("        fn run(ctx: *RecvCtx) void { ctx.node.receiveOne(ctx.server) catch {}; }");
             try self.builder.writeLine("    }.run, .{&ctxs[n]});");
             try self.builder.writeLine("}");
-            try self.builder.writeLine("std.Thread.sleep(10 * std.time.ns_per_ms);");
+            try self.builder.writeLine("tri_time.sleep(10 * std.time.ns_per_ms);");
             try self.builder.writeLine("n = 0;");
             try self.builder.writeLine("while (n < 5) : (n += 1) {");
             try self.builder.writeLine("    var hash: [32]u8 = undefined;");
@@ -2764,7 +2765,7 @@ pub const TestGenerator = struct {
             try self.builder.writeLine("        fn run(ctx: *RecvCtx) void { ctx.node.receiveOne(ctx.server) catch {}; }");
             try self.builder.writeLine("    }.run, .{&ctxs[n]});");
             try self.builder.writeLine("}");
-            try self.builder.writeLine("std.Thread.sleep(10 * std.time.ns_per_ms);");
+            try self.builder.writeLine("tri_time.sleep(10 * std.time.ns_per_ms);");
             try self.builder.writeLine("");
             try self.builder.writeLine("// TCP distribute");
             try self.builder.writeLine("n = 0;");

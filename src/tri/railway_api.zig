@@ -16,7 +16,7 @@
 const std = @import("std");
 const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
-const tri_env = @import("tri_env.zig");
+const tri_env = @import("tri_env");
 const Allocator = std.mem.Allocator;
 const crypto = std.crypto.random;
 
@@ -429,7 +429,7 @@ pub const RailwayApi = struct {
                 std.debug.print("Railway API: retry {d}/{d}, waiting {d}ms...\n", .{
                     retry_count, MAX_RETRIES, delay_ms,
                 });
-                std.Thread.sleep(delay_ms * 1000 * 1000); // Convert ms to ns (1ms = 1,000,000ns)
+                tri_time.sleep(delay_ms * 1000 * 1000); // Convert ms to ns (1ms = 1,000,000ns)
             }
 
             const result = self.httpPostOnce(body);

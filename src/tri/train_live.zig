@@ -10,6 +10,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_env = @import("tri_env");
 const tri_io = @import("tri_io");
 const Allocator = std.mem.Allocator;
 const print = std.debug.print;
@@ -126,7 +127,7 @@ pub fn checkSacredWorker(allocator: Allocator, service_name: []const u8, suffix:
     const project_env_key = if (suffix.len == 0) "RAILWAY_PROJECT_ID" else std.fmt.allocPrint(allocator, "RAILWAY_PROJECT_ID{s}", .{suffix}) catch "RAILWAY_PROJECT_ID";
     defer if (suffix.len > 0) allocator.free(@constCast(project_env_key));
 
-    const project_id = std.posix.getenv(project_env_key) orelse return result;
+    const project_id = tri_env.getPosix(project_env_key) orelse return result;
 
     var api = railway_api.RailwayApi.initWithSuffix(allocator, suffix) catch return result;
     defer api.deinit();

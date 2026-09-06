@@ -70,7 +70,7 @@ pub const ReplAgent = struct {
             .router = router,
             .agent_loop = agent_loop,
             .config = config,
-            .command_history = .{},
+            .command_history = .empty,
             .session_start = tri_time.timestamp(),
         };
 

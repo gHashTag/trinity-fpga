@@ -402,7 +402,7 @@ pub const MotorExecutor = struct {
 
             // Apply delay if specified
             if (step.delay_ms > 0) {
-                std.Thread.sleep(step.delay_ms * std.time.ns_per_ms);
+                tri_time.sleep(step.delay_ms * std.time.ns_per_ms);
             }
 
             // Execute the action

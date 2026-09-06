@@ -800,7 +800,7 @@ pub fn runUiCommand(allocator: std.mem.Allocator, args: []const []const u8) !voi
     };
 
     // Wait a moment for processes to terminate
-    std.Thread.sleep(100_000_000); // 100ms
+    tri_time.sleep(100_000_000); // 100ms
 
     // Run swift run
     std.debug.print("{s}🚀 Launching Queen UI...{s}\n", .{ GREEN, RESET });

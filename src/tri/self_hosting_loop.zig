@@ -771,9 +771,8 @@ pub fn generateSessionReport(allocator: Allocator, session: *SelfHostingSession)
     session.metrics.session_duration_ms = duration_ms;
 
     var report = try std.ArrayList(u8).initCapacity(allocator, 4096);
-    const writer = report.writer(allocator);
 
-    try writer.print(
+    try report.print(allocator,
         \\=======================================
         \\SACRED INTELLIGENCE SELF-HOSTING REPORT
         \\=======================================
@@ -817,7 +816,7 @@ pub fn generateSessionReport(allocator: Allocator, session: *SelfHostingSession)
     });
 
     for (session.patch_history.items, 0..) |patch, idx| {
-        try writer.print(
+        try report.print(allocator,
             \\[Patch {d}] {s}
             \\  File:     {s}
             \\  Lines:    {d}-{d}
@@ -837,14 +836,14 @@ pub fn generateSessionReport(allocator: Allocator, session: *SelfHostingSession)
         });
     }
 
-    try writer.writeAll(
+    try report.appendSlice(allocator,
         \\=======================================
         \\SAFEGUARDS STATUS
         \\=======================================
         \\
     );
 
-    try writer.print(
+    try report.print(allocator,
         \\Confidence Threshold:  {d:.3}
         \\Max Patches:           {d} / {d}
         \\Protected Files:       {d}
@@ -868,7 +867,7 @@ pub fn generateSessionReport(allocator: Allocator, session: *SelfHostingSession)
     else
         0.0;
 
-    try writer.print(
+    try report.print(allocator,
         \\Success Rate:          {d:.1}%
         \\Overall Status:        {s}
         \\

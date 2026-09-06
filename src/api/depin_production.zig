@@ -267,7 +267,7 @@ test "governance proposal" {
         .start_time = tri_time.timestamp(),
         .end_time = tri_time.timestamp() + 86400,
         .status = .active,
-        .votes = .{},
+        .votes = .empty,
     };
 
     const proposal_id = try server.createProposal(proposal);

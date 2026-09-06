@@ -2,6 +2,7 @@
 // @origin(manual) @regen(pending)
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 // ============================================================================
 // TRINITY: THE NETWORKED CODEX (PHASE 13) - 2.0
 // ============================================================================
@@ -30,7 +31,7 @@ pub const AdaptiveCache = struct {
             .entries = std.StringHashMap(CacheEntry).init(allocator),
             .capacity = capacity,
             .current_type = .LRU,
-            .access_patterns = .{},
+            .access_patterns = .empty,
             .access_counter = 0,
             .allocator = allocator,
             .cpu_load = 0.1,
@@ -186,7 +187,7 @@ fn chatReflex(ctx: *Context, args: []const []const u8) !void {
 
     std.debug.print("🤖: ", .{});
     for (0..5) |_| {
-        std.Thread.sleep(50 * std.time.ns_per_ms);
+        tri_time.sleep(50 * std.time.ns_per_ms);
         std.debug.print("... ", .{});
     }
     std.debug.print("\n", .{});
@@ -219,7 +220,7 @@ fn networkReflex(ctx: *Context, args: []const []const u8) !void {
     }
 
     std.debug.print("🌐 [Network] Connected to node: {s}\n", .{node});
-    std.Thread.sleep(100 * std.time.ns_per_ms);
+    tri_time.sleep(100 * std.time.ns_per_ms);
     ctx.app.tri_balance += 0.5;
     std.debug.print("💰 [Economy] Job completed. Balance: {d:.2} $TRI\n", .{ctx.app.tri_balance});
 }

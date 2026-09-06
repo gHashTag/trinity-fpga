@@ -34,7 +34,7 @@ pub fn init(allocator: Allocator, stream: net.Stream, address: net.Address) Clie
         .stream = stream,
         .address = address,
         .connected_at = tri_time.timestamp(),
-        .subscribed_channels = .{},
+        .subscribed_channels = .empty,
     };
 }
 

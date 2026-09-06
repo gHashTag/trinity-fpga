@@ -14,7 +14,7 @@ const std = @import("std");
 
 const tri_io = @import("tri_io");
 const tri_proc = @import("tri_proc");
-const tri_env = @import("tri_env.zig");
+const tri_env = @import("tri_env");
 pub const Mode = enum {
     native_http,
     gh_cli,

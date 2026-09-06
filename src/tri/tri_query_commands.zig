@@ -16,7 +16,7 @@ const std = @import("std");
 
 const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
-const tri_env = @import("tri_env.zig");
+const tri_env = @import("tri_env");
 // Phase 3: Dynamic Memory & Learning Loops
 // Implementing inline for VSA query memory tracking
 pub const MAX_MEMORY_ENTRIES = 100;

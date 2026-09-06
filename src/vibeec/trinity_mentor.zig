@@ -35,7 +35,7 @@ pub const Mentor = struct {
     pub fn init(allocator: std.mem.Allocator) Mentor {
         return Mentor{
             .allocator = allocator,
-            .insights = .{},
+            .insights = .empty,
         };
     }
 

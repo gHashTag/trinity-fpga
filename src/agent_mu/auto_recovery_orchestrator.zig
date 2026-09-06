@@ -168,7 +168,7 @@ pub const FailoverPlan = struct {
         _ = allocator;
         return .{
             .primary_node = primary,
-            .backup_nodes = .{},
+            .backup_nodes = .empty,
             .state_sync_required = true,
             .rollback_on_failure = true,
         };

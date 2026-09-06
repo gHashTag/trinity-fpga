@@ -645,7 +645,7 @@ pub fn runDevLoopCommand(allocator: Allocator, args: []const []const u8) !void {
         // Sleep between iterations if interval set
         if (interval > 0 and (max_iterations == 0 or iter_count < max_iterations)) {
             print("{s}Sleeping {d}s before next iteration...{s}\n", .{ DIM, interval, RESET });
-            std.Thread.sleep(@as(u64, interval) * std.time.ns_per_s);
+            tri_time.sleep(@as(u64, interval) * std.time.ns_per_s);
         }
     }
 

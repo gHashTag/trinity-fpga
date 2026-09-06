@@ -127,7 +127,7 @@ pub const AgentLoop = struct {
             .router = router,
             .dao_manager = dao.DAOManager.init(allocator),
             .config = config,
-            .history = .{},
+            .history = .empty,
         };
         return self;
     }

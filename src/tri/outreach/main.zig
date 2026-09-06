@@ -12,6 +12,7 @@
 
 const std = @import("std");
 
+const tri_env = @import("tri_env");
 const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 pub const io = std.io;
@@ -93,7 +94,7 @@ fn cmdInit(allocator: std.mem.Allocator, args: []const []const u8) !void {
     const stderr = std.io.getStdErr().writer();
 
     // Check for environment variables
-    const zoho_password = std.posix.getenv("ZOHO_APP_PASSWORD");
+    const zoho_password = tri_env.getPosix("ZOHO_APP_PASSWORD");
     if (zoho_password == null) {
         try stderr.print(
             \\ERROR: ZOHO_APP_PASSWORD not set

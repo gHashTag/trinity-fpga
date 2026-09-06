@@ -16,6 +16,7 @@
 //! Sacred Formula: phi^2 + 1/phi^2 = 3 = TRINITY
 
 const std = @import("std");
+const tri_env = @import("tri_env");
 const tri_time = @import("tri_time");
 const builtin = @import("builtin");
 const fs = std.fs;
@@ -356,7 +357,7 @@ pub const StateManager = struct {
 
         // Get hostname (use environment or fallback)
         // NOTE: We dupe the hostname to ensure we own the memory
-        const env_hostname = std.posix.getenv("HOSTNAME") orelse std.posix.getenv("HOST") orelse "localhost";
+        const env_hostname = tri_env.getPosix("HOSTNAME") orelse tri_env.getPosix("HOST") orelse "localhost";
         const hostname = try self.allocator.dupe(u8, env_hostname);
 
         // Get PID (platform-specific)
@@ -1142,7 +1143,7 @@ test "Crash recovery: expired claims not restored" {
     try manager.save(&registry, &event_bus);
 
     // Wait for expiration (sleep a bit)
-    std.Thread.sleep(10 * std.time.ns_per_ms);
+    tri_time.sleep(10 * std.time.ns_per_ms);
 
     // Load and restore - expired claim should not be restored
     var loaded = try manager.load();

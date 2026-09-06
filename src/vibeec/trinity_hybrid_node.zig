@@ -6,6 +6,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_env = @import("tri_env");
 const tri_time = @import("tri_time");
 const oss = @import("oss_api_client.zig");
 const genesis = @import("mainnet_genesis.zig");
@@ -35,10 +36,10 @@ pub const NodeConfig = struct {
 
     pub fn fromEnv() NodeConfig {
         return .{
-            .groq_key = std.posix.getenv("GROQ_API_KEY"),
-            .zhipu_key = std.posix.getenv("ZHIPU_API_KEY"),
-            .anthropic_key = std.posix.getenv("ANTHROPIC_API_KEY"),
-            .cohere_key = std.posix.getenv("COHERE_API_KEY"),
+            .groq_key = tri_env.getPosix("GROQ_API_KEY"),
+            .zhipu_key = tri_env.getPosix("ZHIPU_API_KEY"),
+            .anthropic_key = tri_env.getPosix("ANTHROPIC_API_KEY"),
+            .cohere_key = tri_env.getPosix("COHERE_API_KEY"),
         };
     }
 

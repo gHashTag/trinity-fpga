@@ -269,55 +269,54 @@ pub fn logError(allocator: Allocator, err: MuError) ![]u8 {
     // Build JSON manually (no std.json.stringify in Zig 0.15)
     var buf: std.ArrayList(u8) = .empty;
     errdefer buf.deinit(allocator);
-    const w = buf.writer(allocator);
 
-    try w.writeAll("{\n");
-    try w.print("  \"timestamp\": \"{s}\",\n", .{ts});
-    try w.print("  \"spec\": \"{s}\",\n", .{err.spec});
-    try w.print("  \"link\": {d},\n", .{err.link});
-    try w.print("  \"link_name\": \"{s}\",\n", .{err.link_name});
-    try w.print("  \"error_category\": \"{s}\",\n", .{err.error_category.toString()});
+    try buf.appendSlice(allocator, "{\n");
+    try buf.print(allocator, "  \"timestamp\": \"{s}\",\n", .{ts});
+    try buf.print(allocator, "  \"spec\": \"{s}\",\n", .{err.spec});
+    try buf.print(allocator, "  \"link\": {d},\n", .{err.link});
+    try buf.print(allocator, "  \"link_name\": \"{s}\",\n", .{err.link_name});
+    try buf.print(allocator, "  \"error_category\": \"{s}\",\n", .{err.error_category.toString()});
     // Escape error message for JSON
-    try w.writeAll("  \"error_message\": \"");
+    try buf.appendSlice(allocator, "  \"error_message\": \"");
     for (err.error_message) |c| {
         switch (c) {
-            '"' => try w.writeAll("\\\""),
-            '\\' => try w.writeAll("\\\\"),
-            '\n' => try w.writeAll("\\n"),
-            '\r' => try w.writeAll("\\r"),
-            '\t' => try w.writeAll("\\t"),
+            '"' => try buf.appendSlice(allocator, "\\\""),
+            '\\' => try buf.appendSlice(allocator, "\\\\"),
+            '\n' => try buf.appendSlice(allocator, "\\n"),
+            '\r' => try buf.appendSlice(allocator, "\\r"),
+            '\t' => try buf.appendSlice(allocator, "\\t"),
             0x00...0x08, 0x0b, 0x0c, 0x0e...0x1f => {
-                try w.print("\\u{x:0>4}", .{c});
+                try buf.print(allocator, "\\u{x:0>4}", .{c});
             },
-            else => try w.writeByte(c),
+            else => try buf.append(allocator, c),
         }
     }
-    try w.writeAll("\",\n");
-    try w.print("  \"error_line\": {d},\n", .{err.error_line});
-    try w.print("  \"generated_file\": \"{s}\",\n", .{err.generated_file});
-    try w.print("  \"fix_attempted\": {s},\n", .{if (err.fix_attempted) "true" else "false"});
-    try w.print("  \"fix_result\": \"{s}\",\n", .{err.fix_result});
+    try buf.appendSlice(allocator, "\",\n");
+    try buf.print(allocator, "  \"error_line\": {d},\n", .{err.error_line});
+    try buf.print(allocator, "  \"generated_file\": \"{s}\",\n", .{err.generated_file});
+    try buf.print(allocator, "  \"fix_attempted\": {s},\n", .{if (err.fix_attempted) "true" else "false"});
+    try buf.print(allocator, "  \"fix_result\": \"{s}\",\n", .{err.fix_result});
     // v2 fields
-    try w.print("  \"severity\": \"{s}\",\n", .{err.severity.toString()});
-    try w.writeAll("  \"root_cause\": \"");
+    try buf.print(allocator, "  \"severity\": \"{s}\",\n", .{err.severity.toString()});
+    try buf.appendSlice(allocator, "  \"root_cause\": \"");
     for (err.root_cause) |c| {
         switch (c) {
-            '"' => try w.writeAll("\\\""),
-            '\\' => try w.writeAll("\\\\"),
-            '\n' => try w.writeAll("\\n"),
-            '\r' => try w.writeAll("\\r"),
-            '\t' => try w.writeAll("\\t"),
+            '"' => try buf.appendSlice(allocator, "\\\""),
+            '\\' => try buf.appendSlice(allocator, "\\\\"),
+            '\n' => try buf.appendSlice(allocator, "\\n"),
+            '\r' => try buf.appendSlice(allocator, "\\r"),
+            '\t' => try buf.appendSlice(allocator, "\\t"),
             0x00...0x08, 0x0b, 0x0c, 0x0e...0x1f => {
-                try w.print("\\u{x:0>4}", .{c});
+                try buf.print(allocator, "\\u{x:0>4}", .{c});
             },
-            else => try w.writeByte(c),
+            else => try buf.append(allocator, c),
         }
     }
-    try w.writeAll("\",\n");
-    try w.print("  \"resolution_status\": \"{s}\",\n", .{err.resolution_status.toString()});
-    try w.print("  \"fix_commit\": \"{s}\",\n", .{err.fix_commit});
-    try w.print("  \"generator_component\": \"{s}\"\n", .{err.generator_component});
-    try w.writeAll("}\n");
+    try buf.appendSlice(allocator, "\",\n");
+    try buf.print(allocator, "  \"resolution_status\": \"{s}\",\n", .{err.resolution_status.toString()});
+    try buf.print(allocator, "  \"fix_commit\": \"{s}\",\n", .{err.fix_commit});
+    try buf.print(allocator, "  \"generator_component\": \"{s}\"\n", .{err.generator_component});
+    try buf.appendSlice(allocator, "}\n");
 
     const json = try buf.toOwnedSlice(allocator);
     defer allocator.free(json);

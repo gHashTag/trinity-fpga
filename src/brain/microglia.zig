@@ -796,7 +796,7 @@ test "SurveillanceReport timestamp increases" {
     const microglia = Microglia{};
 
     const report1 = try microglia.patrol(allocator);
-    std.Thread.sleep(1 * std.time.ns_per_ms); // Small delay (1ms)
+    tri_time.sleep(1 * std.time.ns_per_ms); // Small delay (1ms)
     const report2 = try microglia.patrol(allocator);
 
     try std.testing.expect(report2.timestamp >= report1.timestamp);

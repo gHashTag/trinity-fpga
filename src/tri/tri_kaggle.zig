@@ -24,8 +24,9 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const tri_proc = @import("tri_proc");
-const tri_env = @import("tri_env.zig");
+const tri_env = @import("tri_env");
 const Allocator = std.mem.Allocator;
 
 // Import kaggle module (configured in build.zig)
@@ -531,9 +532,7 @@ fn generateMetadata(allocator: Allocator, track: Track, notebook_name: []const u
     var json_buf = try std.ArrayList(u8).initCapacity(allocator, 512);
     defer json_buf.deinit(allocator);
 
-    const writer = json_buf.writer(allocator);
-
-    try writer.print(
+    try json_buf.print(allocator,
         \\{{"id":"{s}","title":"{s}","code_file":"{s}.ipynb","language":"python","kernel_type":"notebook","is_private":"false","enable_gpu":"false","enable_internet":"true","dataset_sources":["playra/{s}"],"competition_sources":["kaggle-measuring-agi"],"kernel_sources":[],"model_sources":[]}}
     , .{ kernel_id, title, notebook_name, track.dataset });
 
@@ -639,7 +638,7 @@ fn runPushCommand(allocator: Allocator, args: []const []const u8) !void {
             }
 
             // Rate limit delay
-            std.Thread.sleep(500 * std.time.ns_per_ms);
+            tri_time.sleep(500 * std.time.ns_per_ms);
         }
 
         print("  Pushed: {d}/{d}\n\n", .{ pushed, track.notebook_count });

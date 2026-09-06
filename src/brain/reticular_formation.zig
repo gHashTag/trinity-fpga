@@ -765,13 +765,13 @@ test "EventBus poll with timestamp filter" {
     });
 
     // Sleep to ensure timestamp advances (milliseconds may not be enough for time resolution)
-    std.Thread.sleep(10 * std.time.ns_per_ms);
+    tri_time.sleep(10 * std.time.ns_per_ms);
 
     // Get current time before second event
     const mid_time = tri_time.milliTimestamp();
 
     // Small sleep to ensure next event has strictly greater timestamp
-    std.Thread.sleep(5 * std.time.ns_per_ms);
+    tri_time.sleep(5 * std.time.ns_per_ms);
 
     // Publish second event
     try bus.publish(.task_claimed, .{

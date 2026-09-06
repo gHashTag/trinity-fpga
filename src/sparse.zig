@@ -35,8 +35,8 @@ pub const SparseVector = struct {
     /// Create empty sparse vector
     pub fn init(allocator: std.mem.Allocator, dimension: u32) Self {
         return Self{
-            .indices = .{},
-            .values = .{},
+            .indices = .empty,
+            .values = .empty,
             .dimension = dimension,
             .allocator = allocator,
         };

@@ -986,7 +986,7 @@ test "BenchmarkConfig parse" {
 test "benchmark accuracy: nanoTimestamp precision" {
     // Verify that tri_time.nanoTimestamp() provides nanosecond precision
     const t1 = tri_time.nanoTimestamp();
-    std.Thread.sleep(1_000_000); // Sleep 1ms
+    tri_time.sleep(1_000_000); // Sleep 1ms
     const t2 = tri_time.nanoTimestamp();
 
     const elapsed_ns = t2 - t1;

@@ -3,6 +3,7 @@
 // Issue #67: Phase 8 Context Management
 const std = @import("std");
 
+const tri_env = @import("tri_env");
 const tri_io = @import("tri_io");
 const max_file_size = 256 * 1024; // 256KB per CLAUDE.md
 
@@ -13,7 +14,7 @@ pub fn loadSystemPrompt(allocator: std.mem.Allocator) ?[]const u8 {
     var parts = std.ArrayList(u8).empty;
 
     // 1. Global: ~/.claude/CLAUDE.md
-    if (std.posix.getenv("HOME")) |home| {
+    if (tri_env.getPosix("HOME")) |home| {
         var path_buf: [512]u8 = undefined;
         if (std.fmt.bufPrint(&path_buf, "{s}/.claude/CLAUDE.md", .{home})) |path| {
             appendFile(allocator, &parts, path);

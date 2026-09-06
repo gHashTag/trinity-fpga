@@ -15,7 +15,7 @@ pub const LatencyWindow = struct {
     pub fn init(allocator: Allocator, max_samples: usize) LatencyWindow {
         return LatencyWindow{
             .allocator = allocator,
-            .samples = .{},
+            .samples = .empty,
             .max_samples = max_samples,
         };
     }
@@ -106,7 +106,7 @@ pub const UptimeTracker = struct {
             .start_time = null,
             .total_online_seconds = 0,
             .last_check = now,
-            .downtime_windows = .{},
+            .downtime_windows = .empty,
             .is_online = false,
         };
     }

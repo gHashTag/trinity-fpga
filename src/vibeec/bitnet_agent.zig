@@ -94,7 +94,7 @@ pub const BitNetAgent = struct {
                 config.model_path,
                 config.threads,
             ),
-            .history = .{},
+            .history = .empty,
             .total_tokens = 0,
             .total_time_ms = 0,
         };

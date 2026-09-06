@@ -12,7 +12,7 @@
 
 const std = @import("std");
 
-const tri_env = @import("tri_env.zig");
+const tri_env = @import("tri_env");
 pub const MAX_ACCOUNTS = 8;
 
 pub const Account = struct {

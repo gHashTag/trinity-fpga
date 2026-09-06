@@ -531,7 +531,7 @@ fn cronLoop() void {
         }
 
         // Sleep until next check
-        std.Thread.sleep(interval_ns);
+        tri_time.sleep(interval_ns);
     }
 }
 

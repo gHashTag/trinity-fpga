@@ -171,7 +171,7 @@ pub const ClusterState = struct {
         return ClusterState{
             .cluster_id = cluster_id, // Caller owns memory
             .node_id = node_id, // Caller owns memory
-            .peers = .{},
+            .peers = .empty,
             .version = 1,
             .last_updated = @as(u64, @intCast(@as(u64, @intCast(tri_time.timestamp())))),
         };
@@ -348,7 +348,7 @@ pub const PersistenceManager = struct {
         var state = ClusterState{
             .cluster_id = try self.allocator.dupe(u8, parsed.value.cluster_id),
             .node_id = try self.allocator.dupe(u8, parsed.value.node_id),
-            .peers = .{},
+            .peers = .empty,
             .version = parsed.value.version,
             .last_updated = parsed.value.last_updated,
         };

@@ -250,7 +250,7 @@ test "Stress: Reticular Formation - poll under load" {
         });
 
         // Small delay to ensure different timestamps
-        std.Thread.sleep(1 * std.time.ns_per_us);
+        tri_time.sleep(1 * std.time.ns_per_us);
     }
 
     // Poll in batches

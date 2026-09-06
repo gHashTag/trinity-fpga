@@ -53,9 +53,9 @@ pub const BasicBlock = struct {
         return BasicBlock{
             .start_address = start,
             .end_address = start,
-            .instructions = .{},
-            .successors = .{},
-            .predecessors = .{},
+            .instructions = .empty,
+            .successors = .empty,
+            .predecessors = .empty,
         };
     }
 
@@ -77,9 +77,9 @@ pub const WasmFunction = struct {
         return WasmFunction{
             .index = idx,
             .type_index = type_idx,
-            .locals = .{},
+            .locals = .empty,
             .code = &[_]u8{},
-            .instructions = .{},
+            .instructions = .empty,
         };
     }
 
@@ -104,7 +104,7 @@ pub const DisassemblyResult = struct {
         return DisassemblyResult{
             .allocator = allocator,
             .architecture = .unknown,
-            .functions = .{},
+            .functions = .empty,
             .entry_point = 0,
         };
     }

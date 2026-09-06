@@ -165,8 +165,7 @@ fn cmdAdd(allocator: Allocator, args: []const []const u8) !void {
     }
 
     // Append new entry
-    const writer = entries_json.writer(allocator);
-    try writer.print(
+    try entries_json.print(allocator,
         \\{{
         \\    "id": "{s}",
         \\    "date": "2026-03-14",

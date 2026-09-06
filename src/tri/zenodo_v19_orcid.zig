@@ -244,7 +244,7 @@ pub const AuthorList = struct {
     /// Initialize empty author list
     pub fn init(_: Allocator) AuthorList {
         return .{
-            .authors = .{},
+            .authors = .empty,
         };
     }
 

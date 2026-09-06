@@ -7,6 +7,7 @@
 
 const std = @import("std");
 
+const tri_env = @import("tri_env");
 // ═══════════════════════════════════════════════════════════════════════════════
 // EMOJI CONSTANTS (regular strings — escapes work here, not in multiline \\)
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -478,8 +479,8 @@ pub fn buildTgBody(buf: []u8, chat_id: []const u8, message_id: ?i64, text: []con
 }
 
 pub fn initTelegram() TgConfig {
-    const bot_token = std.posix.getenv("TELEGRAM_BOT_TOKEN") orelse "";
-    const chat_id = std.posix.getenv("TELEGRAM_CHAT_ID") orelse "";
+    const bot_token = tri_env.getPosix("TELEGRAM_BOT_TOKEN") orelse "";
+    const chat_id = tri_env.getPosix("TELEGRAM_CHAT_ID") orelse "";
     return .{
         .bot_token = bot_token,
         .chat_id = chat_id,

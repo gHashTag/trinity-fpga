@@ -117,7 +117,7 @@ pub const InferenceEngine = struct {
         // For now, we mark as ready and use simulation mode
 
         // Simulate model loading delay
-        std.Thread.sleep(100 * std.time.ns_per_ms);
+        tri_time.sleep(100 * std.time.ns_per_ms);
 
         self.model_loaded = true;
         self.status = .ready;
@@ -142,7 +142,7 @@ pub const InferenceEngine = struct {
 
         // Simulate token generation (10ms per token)
         const tokens_to_generate: u32 = @min(max_new_tokens, 50);
-        std.Thread.sleep(@as(u64, tokens_to_generate) * 10 * std.time.ns_per_ms);
+        tri_time.sleep(@as(u64, tokens_to_generate) * 10 * std.time.ns_per_ms);
 
         // Generate a simulated response
         const response = try self.allocator.dupe(u8, "[Trinity Node Response] Inference complete.");
@@ -368,7 +368,7 @@ pub const InferenceWorker = struct {
                 );
             } else {
                 // No jobs, sleep
-                std.Thread.sleep(100 * std.time.ns_per_ms);
+                tri_time.sleep(100 * std.time.ns_per_ms);
             }
         }
     }

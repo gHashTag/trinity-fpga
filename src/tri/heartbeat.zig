@@ -439,7 +439,7 @@ fn runContinuous(allocator: Allocator, interval_sec: u32) !void {
         }
 
         print("  {s}Sleeping {d}s...{s}\n\n", .{ DIM, interval_sec, RESET });
-        std.Thread.sleep(@as(u64, interval_sec) * std.time.ns_per_s);
+        tri_time.sleep(@as(u64, interval_sec) * std.time.ns_per_s);
     }
 }
 

@@ -19,7 +19,7 @@ const std = @import("std");
 const tri_io = @import("tri_io");
 const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
-const tri_env = @import("tri_env.zig");
+const tri_env = @import("tri_env");
 const Allocator = std.mem.Allocator;
 const railway_api = @import("railway_api.zig");
 const RailwayApi = railway_api.RailwayApi;
@@ -1143,7 +1143,7 @@ fn daemonStart(allocator: Allocator) !void {
         logDaemonEvent(allocator, "sweep", "sweep_completed", std.fmt.allocPrint(allocator, "sweep_{d}_ms_{d}", .{ sweep_count, elapsed_ms }) catch "") catch {};
 
         print("   Sleeping {d}s...\n\n", .{DAEMON_INTERVAL_SEC});
-        std.Thread.sleep(@as(u64, DAEMON_INTERVAL_SEC) * std.time.ns_per_s);
+        tri_time.sleep(@as(u64, DAEMON_INTERVAL_SEC) * std.time.ns_per_s);
     }
 }
 
@@ -1172,7 +1172,7 @@ fn daemonStop() !void {
     };
 
     // Wait a bit for graceful shutdown
-    std.Thread.sleep(2 * std.time.ns_per_s);
+    tri_time.sleep(2 * std.time.ns_per_s);
 
     // Force kill if still alive
     if (isProcessAlive(pid)) {

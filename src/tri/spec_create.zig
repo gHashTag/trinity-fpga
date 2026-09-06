@@ -16,6 +16,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const tri_exit_codes = @import("tri_exit_codes.zig");
 const Allocator = std.mem.Allocator;
 const colors = @import("tri_colors.zig");
@@ -173,7 +174,7 @@ pub fn parseInput(args: []const []const u8) ?SpecCreateInput {
 pub fn checkDuplicate(name: []const u8) bool {
     var path_buf: [128]u8 = undefined;
     const path = std.fmt.bufPrint(&path_buf, "specs/tri/{s}.tri", .{name}) catch return false;
-    std.fs.cwd().access(path, .{}) catch return false;
+    std.Io.Dir.cwd().access(tri_io.get(), path, .{}) catch return false;
     return true; // exists = duplicate
 }
 
@@ -246,14 +247,14 @@ fn enrichFromExperience(input: *const SpecCreateInput) ExperienceResult {
     var result = ExperienceResult{};
 
     // Read experience log for keyword matching
-    const exp_file = std.fs.cwd().openFile("EXPERIENCE_LOG.md", .{}) catch return result;
-    defer exp_file.close();
-
+    const exp_io = tri_io.get();
     var exp_buf: [16384]u8 = undefined;
-    const bytes = exp_file.readAll(&exp_buf) catch return result;
-    if (bytes == 0) return result;
-
-    const exp_content = exp_buf[0..bytes];
+    // 0.16 has no File.readAll; the whole-file read lives on the directory and
+    // returns the slice actually read, so open/read/close collapse into one
+    // call. A file shorter than the buffer is normal here, and readFile keeps
+    // the 0.15 "fill or stop at EOF" behaviour rather than a single attempt.
+    const exp_content = std.Io.Dir.cwd().readFile(exp_io, "EXPERIENCE_LOG.md", &exp_buf) catch return result;
+    if (exp_content.len == 0) return result;
     const name = input.nameStr();
 
     // Split name into keyword tokens
@@ -298,81 +299,79 @@ fn generateSpec(allocator: Allocator, input: *const SpecCreateInput, template_pa
     var content: std.ArrayList(u8) = .empty;
     errdefer content.deinit(allocator);
 
-    const w = content.writer(allocator);
-
     // Header
-    w.print("# ═══════════════════════════════════════════════════════════════════════════════\n", .{}) catch return null;
-    w.print("# {s} v1.0.0\n", .{input.nameStr()}) catch return null;
-    w.print("# ═══════════════════════════════════════════════════════════════════════════════\n", .{}) catch return null;
+    content.print(allocator, "# ═══════════════════════════════════════════════════════════════════════════════\n", .{}) catch return null;
+    content.print(allocator, "# {s} v1.0.0\n", .{input.nameStr()}) catch return null;
+    content.print(allocator, "# ═══════════════════════════════════════════════════════════════════════════════\n", .{}) catch return null;
 
     if (input.description_len > 0) {
-        w.print("# {s}\n", .{input.descStr()}) catch return null;
+        content.print(allocator, "# {s}\n", .{input.descStr()}) catch return null;
     }
     if (input.issue_number > 0) {
-        w.print("# Closes #{d}\n", .{input.issue_number}) catch return null;
+        content.print(allocator, "# Closes #{d}\n", .{input.issue_number}) catch return null;
     }
-    w.print("#\n# phi^2 + 1/phi^2 = 3 = TRINITY\n", .{}) catch return null;
-    w.print("# ═══════════════════════════════════════════════════════════════════════════════\n\n", .{}) catch return null;
+    content.print(allocator, "#\n# phi^2 + 1/phi^2 = 3 = TRINITY\n", .{}) catch return null;
+    content.print(allocator, "# ═══════════════════════════════════════════════════════════════════════════════\n\n", .{}) catch return null;
 
     // Metadata
-    w.print("name: {s}\nversion: \"1.0.0\"\nlanguage: zig\nmodule: {s}\n\n", .{ input.nameStr(), input.nameStr() }) catch return null;
+    content.print(allocator, "name: {s}\nversion: \"1.0.0\"\nlanguage: zig\nmodule: {s}\n\n", .{ input.nameStr(), input.nameStr() }) catch return null;
 
     // Experience hints as comments
     if (hint_count > 0) {
-        w.print("# Experience hints:\n", .{}) catch return null;
+        content.print(allocator, "# Experience hints:\n", .{}) catch return null;
         for (hints[0..hint_count]) |hint| {
-            w.print("# HINT: {s}\n", .{hint.textStr()}) catch return null;
+            content.print(allocator, "# HINT: {s}\n", .{hint.textStr()}) catch return null;
         }
-        w.print("\n", .{}) catch return null;
+        content.print(allocator, "\n", .{}) catch return null;
     }
 
     // Template info
     if (template_score > 0.1 and template_path.len > 0) {
-        w.print("# Template: {s} (score: {d:.2})\n\n", .{ template_path, template_score }) catch return null;
+        content.print(allocator, "# Template: {s} (score: {d:.2})\n\n", .{ template_path, template_score }) catch return null;
     }
 
     // Types section
-    w.print("types:\n", .{}) catch return null;
-    w.print("  {s}Config:\n", .{input.nameStr()}) catch return null;
-    w.print("    fields:\n", .{}) catch return null;
-    w.print("      name: String\n", .{}) catch return null;
-    w.print("      enabled: Bool\n\n", .{}) catch return null;
+    content.print(allocator, "types:\n", .{}) catch return null;
+    content.print(allocator, "  {s}Config:\n", .{input.nameStr()}) catch return null;
+    content.print(allocator, "    fields:\n", .{}) catch return null;
+    content.print(allocator, "      name: String\n", .{}) catch return null;
+    content.print(allocator, "      enabled: Bool\n\n", .{}) catch return null;
 
-    w.print("  {s}Result:\n", .{input.nameStr()}) catch return null;
-    w.print("    fields:\n", .{}) catch return null;
-    w.print("      success: Bool\n", .{}) catch return null;
-    w.print("      message: String\n\n", .{}) catch return null;
+    content.print(allocator, "  {s}Result:\n", .{input.nameStr()}) catch return null;
+    content.print(allocator, "    fields:\n", .{}) catch return null;
+    content.print(allocator, "      success: Bool\n", .{}) catch return null;
+    content.print(allocator, "      message: String\n\n", .{}) catch return null;
 
     // Behaviors section
-    w.print("behaviors:\n", .{}) catch return null;
-    w.print("  - name: init\n", .{}) catch return null;
-    w.print("    given: allocator\n", .{}) catch return null;
-    w.print("    when: Module initializes\n", .{}) catch return null;
-    w.print("    then: Returns ready state\n\n", .{}) catch return null;
+    content.print(allocator, "behaviors:\n", .{}) catch return null;
+    content.print(allocator, "  - name: init\n", .{}) catch return null;
+    content.print(allocator, "    given: allocator\n", .{}) catch return null;
+    content.print(allocator, "    when: Module initializes\n", .{}) catch return null;
+    content.print(allocator, "    then: Returns ready state\n\n", .{}) catch return null;
 
-    w.print("  - name: run\n", .{}) catch return null;
-    w.print("    given: {s}Config\n", .{input.nameStr()}) catch return null;
-    w.print("    when: Execution requested\n", .{}) catch return null;
-    w.print("    then: Returns {s}Result\n\n", .{input.nameStr()}) catch return null;
+    content.print(allocator, "  - name: run\n", .{}) catch return null;
+    content.print(allocator, "    given: {s}Config\n", .{input.nameStr()}) catch return null;
+    content.print(allocator, "    when: Execution requested\n", .{}) catch return null;
+    content.print(allocator, "    then: Returns {s}Result\n\n", .{input.nameStr()}) catch return null;
 
     // Tests section
-    w.print("tests:\n", .{}) catch return null;
-    w.print("  test_init:\n", .{}) catch return null;
-    w.print("    description: Module initializes without error\n", .{}) catch return null;
-    w.print("  test_run:\n", .{}) catch return null;
-    w.print("    description: Run behavior produces valid result\n\n", .{}) catch return null;
+    content.print(allocator, "tests:\n", .{}) catch return null;
+    content.print(allocator, "  test_init:\n", .{}) catch return null;
+    content.print(allocator, "    description: Module initializes without error\n", .{}) catch return null;
+    content.print(allocator, "  test_run:\n", .{}) catch return null;
+    content.print(allocator, "    description: Run behavior produces valid result\n\n", .{}) catch return null;
 
     // Exit criteria
-    w.print("exit_criteria:\n", .{}) catch return null;
-    w.print("  compiles: true\n", .{}) catch return null;
-    w.print("  tests_pass: true\n\n", .{}) catch return null;
+    content.print(allocator, "exit_criteria:\n", .{}) catch return null;
+    content.print(allocator, "  compiles: true\n", .{}) catch return null;
+    content.print(allocator, "  tests_pass: true\n\n", .{}) catch return null;
 
     // Metadata
-    w.print("metadata:\n", .{}) catch return null;
-    w.print("  author: Trinity SWE Pipeline\n", .{}) catch return null;
-    w.print("  phase: 1\n", .{}) catch return null;
+    content.print(allocator, "metadata:\n", .{}) catch return null;
+    content.print(allocator, "  author: Trinity SWE Pipeline\n", .{}) catch return null;
+    content.print(allocator, "  phase: 1\n", .{}) catch return null;
     if (input.issue_number > 0) {
-        w.print("  closes: \"#{d}\"\n", .{input.issue_number}) catch return null;
+        content.print(allocator, "  closes: \"#{d}\"\n", .{input.issue_number}) catch return null;
     }
 
     return content.toOwnedSlice(allocator) catch null;
@@ -383,15 +382,16 @@ fn generateSpec(allocator: Allocator, input: *const SpecCreateInput, template_pa
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn writeSpec(name: []const u8, spec_content: []const u8) ?[128]u8 {
-    std.fs.cwd().makePath("specs/tri") catch return null;
+    const io = tri_io.get();
+    std.Io.Dir.cwd().createDirPath(io, "specs/tri") catch return null;
 
     var path_buf: [128]u8 = undefined;
     const path = std.fmt.bufPrint(&path_buf, "specs/tri/{s}.tri", .{name}) catch return null;
 
-    const file = std.fs.cwd().createFile(path, .{}) catch return null;
-    defer file.close();
+    const file = std.Io.Dir.cwd().createFile(io, path, .{}) catch return null;
+    defer file.close(io);
 
-    file.writeAll(spec_content) catch return null;
+    file.writeStreamingAll(io, spec_content) catch return null;
 
     var result: [128]u8 = undefined;
     @memcpy(result[0..path.len], path);

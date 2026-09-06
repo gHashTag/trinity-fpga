@@ -9,7 +9,7 @@ const std = @import("std");
 const tri_io = @import("tri_io");
 const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
-const tri_env = @import("tri_env.zig");
+const tri_env = @import("tri_env");
 const tri_mutex = @import("mutex.zig");
 const golden_chain = @import("dna_polymerase.zig");
 const tvc_gate_mod = @import("tvc_gate.zig");
@@ -1564,7 +1564,7 @@ pub const PipelineExecutor = struct {
         std.debug.print("  [VISION] Starting camera-based LED verification...\n", .{});
 
         // Check if we have a camera configured
-        const camera_url = std.posix.getenv("TRI_CAMERA_URL") orelse {
+        const camera_url = tri_env.getPosix("TRI_CAMERA_URL") orelse {
             std.debug.print("  [VISION] No camera configured (set TRI_CAMERA_URL), skipping\n", .{});
             return LinkMetrics{ .duration_ms = 10 };
         };
@@ -1581,7 +1581,7 @@ pub const PipelineExecutor = struct {
         std.debug.print("  [SCHOLAR] Perplexity Scholar Agent starting...\n", .{});
 
         // 1. Get API key from env (skip if missing)
-        const api_key = std.posix.getenv("PERPLEXITY_API_KEY") orelse {
+        const api_key = tri_env.getPosix("PERPLEXITY_API_KEY") orelse {
             std.debug.print("  [SCHOLAR] No PERPLEXITY_API_KEY set, skipping\n", .{});
             return LinkMetrics{ .duration_ms = 0 };
         };

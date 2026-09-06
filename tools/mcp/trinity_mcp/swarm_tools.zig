@@ -9,6 +9,7 @@
 // @origin(manual) @regen(pending)
 
 const std = @import("std");
+const tri_env = @import("tri_env");
 const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 
@@ -568,10 +569,10 @@ pub fn extractPriority(labels_csv: []const u8) []const u8 {
 /// Create a GitHub issue via REST API. Returns issue number or null.
 /// Graceful degradation: returns null if GH_TOKEN not set.
 pub fn createGitHubIssue(allocator: std.mem.Allocator, title: []const u8, body_text: []const u8, priority: []const u8) ?u32 {
-    const gh_token = std.posix.getenv("GH_TOKEN") orelse
-        std.posix.getenv("GITHUB_TOKEN") orelse return null;
-    const owner = std.posix.getenv("GITHUB_OWNER") orelse "gHashTag";
-    const repo = std.posix.getenv("GITHUB_REPO") orelse "trinity";
+    const gh_token = tri_env.getPosix("GH_TOKEN") orelse
+        tri_env.getPosix("GITHUB_TOKEN") orelse return null;
+    const owner = tri_env.getPosix("GITHUB_OWNER") orelse "gHashTag";
+    const repo = tri_env.getPosix("GITHUB_REPO") orelse "trinity";
 
     // URL
     var url_buf: [256]u8 = undefined;
@@ -634,11 +635,11 @@ pub fn createGitHubIssue(allocator: std.mem.Allocator, title: []const u8, body_t
 /// Link an issue as sub-issue of the swarm parent via GraphQL.
 /// Best-effort: failure = no link, issue still exists standalone.
 pub fn linkAsSubIssue(allocator: std.mem.Allocator, child_number: u32) void {
-    const gh_token = std.posix.getenv("GH_TOKEN") orelse
-        std.posix.getenv("GITHUB_TOKEN") orelse return;
-    const owner = std.posix.getenv("GITHUB_OWNER") orelse "gHashTag";
-    const repo = std.posix.getenv("GITHUB_REPO") orelse "trinity";
-    const parent_num_str = std.posix.getenv("SWARM_PARENT_ISSUE") orelse "38";
+    const gh_token = tri_env.getPosix("GH_TOKEN") orelse
+        tri_env.getPosix("GITHUB_TOKEN") orelse return;
+    const owner = tri_env.getPosix("GITHUB_OWNER") orelse "gHashTag";
+    const repo = tri_env.getPosix("GITHUB_REPO") orelse "trinity";
+    const parent_num_str = tri_env.getPosix("SWARM_PARENT_ISSUE") orelse "38";
     const parent_num = std.fmt.parseInt(u32, parent_num_str, 10) catch return;
 
     // Step 1: Get parent and child node IDs via GraphQL
@@ -719,10 +720,10 @@ const GitHubCounts = struct {
 fn collectGitHubCounts(allocator: std.mem.Allocator) GitHubCounts {
     var result = GitHubCounts{};
 
-    const gh_token = std.posix.getenv("GH_TOKEN") orelse
-        std.posix.getenv("GITHUB_TOKEN") orelse return result;
-    const owner = std.posix.getenv("GITHUB_OWNER") orelse "gHashTag";
-    const repo = std.posix.getenv("GITHUB_REPO") orelse "trinity";
+    const gh_token = tri_env.getPosix("GH_TOKEN") orelse
+        tri_env.getPosix("GITHUB_TOKEN") orelse return result;
+    const owner = tri_env.getPosix("GITHUB_OWNER") orelse "gHashTag";
+    const repo = tri_env.getPosix("GITHUB_REPO") orelse "trinity";
 
     var url_buf: [512]u8 = undefined;
     const url = std.fmt.bufPrint(&url_buf, "https://api.github.com/repos/{s}/{s}/issues?labels=assign:ralph&state=open&per_page=100", .{ owner, repo }) catch return result;

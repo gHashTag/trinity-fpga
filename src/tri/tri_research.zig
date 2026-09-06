@@ -15,6 +15,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_env = @import("tri_env");
 const tri_io = @import("tri_io");
 const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
@@ -208,7 +209,7 @@ fn runPerplexityQuery(allocator: std.mem.Allocator, args: []const []const u8) !v
     }
 
     // Try Perplexity API via PERPLEXITY_API_KEY
-    const api_key = std.posix.getenv("PERPLEXITY_API_KEY") orelse {
+    const api_key = tri_env.getPosix("PERPLEXITY_API_KEY") orelse {
         // No API key — fall back to offline
         std.debug.print("  {s}No PERPLEXITY_API_KEY. Using offline patterns.{s}\n\n", .{ GOLDEN, RESET });
         const answer = offlineAnswer(query);

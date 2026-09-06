@@ -351,7 +351,7 @@ pub const StateHistory = struct {
     pub fn init(allocator: mem.Allocator) StateHistory {
         return .{
             .allocator = allocator,
-            .snapshots = .{},
+            .snapshots = .empty,
         };
     }
 

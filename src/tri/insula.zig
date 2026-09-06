@@ -703,7 +703,7 @@ test "insula — measureState returns valid state" {
     const start = @as(i64, @intCast(tri_time.nanoTimestamp()));
     var timing = TimingSnapshot.init();
     // Add delay to ensure measurable time passes
-    std.Thread.sleep(1 * std.time.ns_per_ms);
+    tri_time.sleep(1 * std.time.ns_per_ms);
     const state = try measureState(std.testing.allocator, start, &timing, 1, 0, 1);
     // Should have non-zero latency at minimum
     try std.testing.expect(state.cycle_latency_us >= 1000); // At least 1ms
@@ -734,9 +734,9 @@ test "insula — CellHealth status enum" {
 test "insula — TimingSnapshot measures latencies" {
     var snap = TimingSnapshot.init();
     // Add small delay to ensure measurable time passes
-    std.Thread.sleep(1 * std.time.ns_per_ms);
+    tri_time.sleep(1 * std.time.ns_per_ms);
     snap.markThalamus();
-    std.Thread.sleep(1 * std.time.ns_per_ms);
+    tri_time.sleep(1 * std.time.ns_per_ms);
     snap.markDlpfc();
 
     const cycle_us = snap.cycleLatencyUs();

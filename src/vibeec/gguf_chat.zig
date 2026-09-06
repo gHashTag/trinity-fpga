@@ -36,7 +36,7 @@ const ConversationHistory = struct {
     pub fn init(allocator: std.mem.Allocator, max_messages: usize) ConversationHistory {
         return .{
             .allocator = allocator,
-            .messages = .{},
+            .messages = .empty,
             .max_messages = max_messages,
         };
     }

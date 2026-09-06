@@ -5,6 +5,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_env = @import("tri_env");
 const tri_io = @import("tri_io");
 const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
@@ -198,7 +199,7 @@ fn countEnvKeys() KeyCheck {
     };
     var present: u8 = 0;
     for (required_keys) |key| {
-        if (std.posix.getenv(key)) |v| {
+        if (tri_env.getPosix(key)) |v| {
             if (v.len > 0) present += 1;
         }
     }

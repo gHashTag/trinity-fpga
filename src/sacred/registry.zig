@@ -209,7 +209,7 @@ pub const SacredFormula = struct {
         _ = _pi;
         _ = _e;
 
-        var parts = std.ArrayList([]const u8){};
+        var parts = @as(std.ArrayList([]const u8), .empty);
 
         // Always show n
         if (self.params.n != 1.0) {

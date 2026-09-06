@@ -75,7 +75,7 @@ pub const ReputationConsensus = struct {
         return .{
             .allocator = allocator,
             .config = config,
-            .votes = .{},
+            .votes = .empty,
             .total_rounds = 0,
             .successful_rounds = 0,
             .failed_rounds = 0,

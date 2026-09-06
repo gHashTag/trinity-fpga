@@ -12,6 +12,7 @@
 // φ² + 1/φ² = 3 = TRINITY
 
 const std = @import("std");
+const tri_env = @import("tri_env");
 const http = std.http;
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -99,7 +100,7 @@ pub const LLMConfig = struct {
             .OpenAI => "OPENAI_API_KEY",
         };
 
-        if (std.posix.getenv(env_var)) |key| {
+        if (tri_env.getPosix(env_var)) |key| {
             self.api_key = try allocator.dupe(u8, key);
         }
 

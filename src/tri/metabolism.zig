@@ -16,6 +16,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_env = @import("tri_env");
 const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 const types = @import("train_types.zig");
@@ -753,8 +754,8 @@ fn runDashboard(allocator: std.mem.Allocator, quick: bool) !void {
 
     // ═══════ SACRED WORKERS LIVE STATUS ═══════
     // Primary source of truth — NOT evolution_state.json cache!
-    const token_2 = std.posix.getenv("RAILWAY_API_TOKEN_2") orelse "";
-    const project_id_2 = std.posix.getenv("RAILWAY_PROJECT_ID_2") orelse "";
+    const token_2 = tri_env.getPosix("RAILWAY_API_TOKEN_2") orelse "";
+    const project_id_2 = tri_env.getPosix("RAILWAY_PROJECT_ID_2") orelse "";
     if (token_2.len > 0 and project_id_2.len > 0) {
         train_live.checkSacredWorkersLive(allocator, "_2") catch {};
     } else {

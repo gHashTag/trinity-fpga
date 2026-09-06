@@ -54,8 +54,8 @@ pub const WasmFunction = struct {
     pub fn init(allocator: std.mem.Allocator, type_idx: u32) WasmFunction {
         return WasmFunction{
             .type_idx = type_idx,
-            .locals = .{},
-            .code = .{},
+            .locals = .empty,
+            .code = .empty,
             .allocator = allocator,
         };
     }
@@ -73,8 +73,8 @@ pub const WasmFuncType = struct {
 
     pub fn init(allocator: std.mem.Allocator) WasmFuncType {
         return WasmFuncType{
-            .params = .{},
-            .results = .{},
+            .params = .empty,
+            .results = .empty,
             .allocator = allocator,
         };
     }
@@ -96,9 +96,9 @@ pub const WasmModule = struct {
     pub fn init(allocator: std.mem.Allocator) WasmModule {
         return WasmModule{
             .allocator = allocator,
-            .types = .{},
-            .functions = .{},
-            .func_type_indices = .{},
+            .types = .empty,
+            .functions = .empty,
+            .func_type_indices = .empty,
             .memory_min = 0,
             .memory_max = null,
         };

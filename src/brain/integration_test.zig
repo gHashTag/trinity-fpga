@@ -228,12 +228,12 @@ test "Integration: Event filtering by timestamp" {
     });
 
     // Sleep longer to ensure timestamp advances
-    std.Thread.sleep(100 * std.time.ns_per_ms);
+    tri_time.sleep(100 * std.time.ns_per_ms);
 
     const middle = tri_time.milliTimestamp();
 
     // Small sleep to ensure next event has later timestamp
-    std.Thread.sleep(10 * std.time.ns_per_ms);
+    tri_time.sleep(10 * std.time.ns_per_ms);
 
     try event_bus.publish(.task_completed, .{
         .task_completed = .{
@@ -1689,7 +1689,7 @@ const ConcurrentClaimContext = struct {
         const agent_id = std.fmt.bufPrint(&agent_buf, "concurrent-agent-{d}", .{self.thread_id}) catch return;
 
         // Small delay to increase chance of true concurrent execution
-        std.Thread.sleep(std.time.ns_per_ms);
+        tri_time.sleep(std.time.ns_per_ms);
 
         // Claim the task
         const claimed = self.registry.claim(allocator, task_id, agent_id, 60000) catch false;
@@ -1750,7 +1750,7 @@ const EventPublisherContext = struct {
             const task_id = std.fmt.bufPrint(&task_buf, "pub-{d}-task-{d}", .{ self.publisher_id, i }) catch continue;
 
             // Small delay to increase interleaving
-            std.Thread.sleep(std.time.ns_per_ms / 10);
+            tri_time.sleep(std.time.ns_per_ms / 10);
 
             // Publish event, ignore errors in stress test
             self.event_bus.publish(.task_claimed, .{
@@ -1777,7 +1777,7 @@ const EventPollerContext = struct {
         var i: usize = 0;
         while (i < 5) : (i += 1) {
             // Small delay before each poll
-            std.Thread.sleep(std.time.ns_per_ms / 5);
+            tri_time.sleep(std.time.ns_per_ms / 5);
 
             const events = self.event_bus.poll(0, allocator, 100) catch break;
             defer allocator.free(events);
@@ -1796,7 +1796,7 @@ const BackoffComputeContext = struct {
 
     pub fn run(self: *BackoffComputeContext) void {
         // Small delay to allow threads to start simultaneously
-        std.Thread.sleep(std.time.ns_per_ms / 100);
+        tri_time.sleep(std.time.ns_per_ms / 100);
 
         // All threads call nextDelay() concurrently
         // This tests thread safety of EXP_TABLE access
@@ -3218,7 +3218,7 @@ test "Full Agent Workflow: complete telemetry capture throughout lifecycle" {
     });
 
     // Simulate work with heartbeat
-    std.Thread.sleep(50 * std.time.ns_per_ms);
+    tri_time.sleep(50 * std.time.ns_per_ms);
     _ = registry.heartbeat(task_id, agent_id);
 
     // Record working state

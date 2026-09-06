@@ -260,7 +260,7 @@ pub const DiscoveryService = struct {
             self.broadcastAnnounce() catch |err| {
                 std.log.debug("discovery: broadcastAnnounce failed: {}", .{err});
             };
-            std.Thread.sleep(BROADCAST_INTERVAL_MS * std.time.ns_per_ms);
+            tri_time.sleep(BROADCAST_INTERVAL_MS * std.time.ns_per_ms);
         }
     }
 

@@ -9,6 +9,7 @@
 
 const std = @import("std");
 
+const tri_env = @import("tri_env");
 const tri_time = @import("tri_time");
 // Import sacred constants from sacred module
 const sacred = @import("sacred");
@@ -742,14 +743,14 @@ pub fn getModelForRole(role: AgentRole) [64]u8 {
         .integrator => "TRINITY_MODEL_INTEGRATOR",
     };
 
-    if (std.posix.getenv(env_name)) |val| {
+    if (tri_env.getPosix(env_name)) |val| {
         const len = @min(val.len, result.len);
         @memcpy(result[0..len], val[0..len]);
         return result;
     }
 
     // 2. Fallback to CLAUDE_MODEL
-    if (std.posix.getenv("CLAUDE_MODEL")) |val| {
+    if (tri_env.getPosix("CLAUDE_MODEL")) |val| {
         const len = @min(val.len, result.len);
         @memcpy(result[0..len], val[0..len]);
         return result;

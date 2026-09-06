@@ -72,7 +72,7 @@ pub const AstNode = struct {
         return .{
             .kind = kind,
             .token = token,
-            .children = .{},
+            .children = .empty,
             .allocator = allocator,
         };
     }

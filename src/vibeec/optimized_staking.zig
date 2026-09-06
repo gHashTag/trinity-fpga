@@ -72,7 +72,7 @@ pub const OptimizedStakingManager = struct {
     pub fn init(allocator: std.mem.Allocator) Self {
         return .{
             .allocator = allocator,
-            .stakes = .{},
+            .stakes = .empty,
         };
     }
 

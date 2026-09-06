@@ -449,7 +449,7 @@ fn runQueenStart(allocator: std.mem.Allocator, args: []const []const u8) !void {
         try updateHeartbeat(allocator, cycle, now);
 
         // SLEEP until next cycle
-        std.Thread.sleep(DAEMON_SLEEP_SEC * 1000_000_000);
+        tri_time.sleep(DAEMON_SLEEP_SEC * 1000_000_000);
     }
 }
 

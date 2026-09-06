@@ -198,10 +198,9 @@ pub fn sparkline(allocator: mem.Allocator, data: []const f32, opts: SparklineOpt
     const blocks = [_][]const u8{ " ", "▁", "▂", "▃", "▄", "▅", "▆", "▇", "█" };
 
     var result: std.ArrayList(u8) = .empty;
-    const writer = result.writer(allocator);
 
     if (opts.color) {
-        try writer.writeAll(Ansi.CYAN);
+        try result.appendSlice(allocator, Ansi.CYAN);
     }
 
     // Generate sparkline
@@ -211,15 +210,15 @@ pub fn sparkline(allocator: mem.Allocator, data: []const f32, opts: SparklineOpt
         else
             0.5;
         const block_idx = @min(8, @as(usize, @intFromFloat(normalized * 8.0)));
-        try writer.writeAll(blocks[block_idx]);
+        try result.appendSlice(allocator, blocks[block_idx]);
     }
 
     if (opts.color) {
-        try writer.writeAll(Ansi.RESET);
+        try result.appendSlice(allocator, Ansi.RESET);
     }
 
     if (opts.show_min_max) {
-        try writer.print(" [{d:.1}-{d:.1}]", .{ min_val, max_val });
+        try result.print(allocator, " [{d:.1}-{d:.1}]", .{ min_val, max_val });
     }
 
     return result.toOwnedSlice(allocator);
@@ -239,7 +238,6 @@ pub const BrainMapOptions = struct {
 /// Generate ASCII brain map
 pub fn brainMap(allocator: mem.Allocator, state: BrainState, opts: BrainMapOptions) ![]const u8 {
     var result: std.ArrayList(u8) = .empty;
-    const writer = result.writer(allocator);
 
     // Brain outline with regions
     // This is a simplified sagittal view
@@ -274,56 +272,56 @@ pub fn brainMap(allocator: mem.Allocator, state: BrainState, opts: BrainMapOptio
         }
     }.get;
 
-    try writer.writeAll("\n  ");
-    if (opts.color) try writer.writeAll(Ansi.BOLD);
-    try writer.writeAll("S³AI BRAIN MAP — SAGITTAL VIEW");
-    if (opts.color) try writer.writeAll(Ansi.RESET);
-    try writer.writeAll("\n\n");
+    try result.appendSlice(allocator, "\n  ");
+    if (opts.color) try result.appendSlice(allocator, Ansi.BOLD);
+    try result.appendSlice(allocator, "S³AI BRAIN MAP — SAGITTAL VIEW");
+    if (opts.color) try result.appendSlice(allocator, Ansi.RESET);
+    try result.appendSlice(allocator, "\n\n");
 
     for (brain_outline) |line| {
-        try writer.writeAll("  ");
-        if (opts.color) try writer.writeAll(Ansi.CYAN);
-        try writer.writeAll(line);
-        if (opts.color) try writer.writeAll(Ansi.RESET);
-        try writer.writeAll("\n");
+        try result.appendSlice(allocator, "  ");
+        if (opts.color) try result.appendSlice(allocator, Ansi.CYAN);
+        try result.appendSlice(allocator, line);
+        if (opts.color) try result.appendSlice(allocator, Ansi.RESET);
+        try result.appendSlice(allocator, "\n");
     }
 
     // Region status legend
     if (opts.show_labels) {
-        try writer.writeAll("\n  ");
-        if (opts.color) try writer.writeAll(Ansi.BOLD);
-        try writer.writeAll("REGION STATUS");
-        if (opts.color) try writer.writeAll(Ansi.RESET);
-        try writer.writeAll("\n");
+        try result.appendSlice(allocator, "\n  ");
+        if (opts.color) try result.appendSlice(allocator, Ansi.BOLD);
+        try result.appendSlice(allocator, "REGION STATUS");
+        if (opts.color) try result.appendSlice(allocator, Ansi.RESET);
+        try result.appendSlice(allocator, "\n");
 
         for (state.regions) |region| {
-            try writer.writeAll("  ");
-            if (opts.color) try writer.writeAll(health_color(region.health));
+            try result.appendSlice(allocator, "  ");
+            if (opts.color) try result.appendSlice(allocator, health_color(region.health));
             const status = if (region.health >= 80) "●" else if (region.health >= 50) "◐" else "○";
-            try writer.print("{s} {s:<20} {d:5.1}%\n", .{ status, region.name, region.health });
-            if (opts.color) try writer.writeAll(Ansi.RESET);
+            try result.print(allocator, "{s} {s:<20} {d:5.1}%\n", .{ status, region.name, region.health });
+            if (opts.color) try result.appendSlice(allocator, Ansi.RESET);
         }
     }
 
     // Overall health
-    try writer.writeAll("\n  ");
-    if (opts.color) try writer.writeAll(Ansi.BOLD);
-    try writer.writeAll("OVERALL HEALTH: ");
+    try result.appendSlice(allocator, "\n  ");
+    if (opts.color) try result.appendSlice(allocator, Ansi.BOLD);
+    try result.appendSlice(allocator, "OVERALL HEALTH: ");
     if (state.overall_health >= 80) {
-        if (opts.color) try writer.writeAll(Ansi.GREEN);
-        try writer.print("{d:.1}% ", .{state.overall_health});
-        try writer.writeAll("✓");
+        if (opts.color) try result.appendSlice(allocator, Ansi.GREEN);
+        try result.print(allocator, "{d:.1}% ", .{state.overall_health});
+        try result.appendSlice(allocator, "✓");
     } else if (state.overall_health >= 50) {
-        if (opts.color) try writer.writeAll(Ansi.YELLOW);
-        try writer.print("{d:.1}% ", .{state.overall_health});
-        try writer.writeAll("⚠");
+        if (opts.color) try result.appendSlice(allocator, Ansi.YELLOW);
+        try result.print(allocator, "{d:.1}% ", .{state.overall_health});
+        try result.appendSlice(allocator, "⚠");
     } else {
-        if (opts.color) try writer.writeAll(Ansi.RED);
-        try writer.print("{d:.1}% ", .{state.overall_health});
-        try writer.writeAll("✗");
+        if (opts.color) try result.appendSlice(allocator, Ansi.RED);
+        try result.print(allocator, "{d:.1}% ", .{state.overall_health});
+        try result.appendSlice(allocator, "✗");
     }
-    if (opts.color) try writer.writeAll(Ansi.RESET);
-    try writer.writeAll("\n");
+    if (opts.color) try result.appendSlice(allocator, Ansi.RESET);
+    try result.appendSlice(allocator, "\n");
 
     return result.toOwnedSlice(allocator);
 }
@@ -347,24 +345,23 @@ pub const ConnectionDiagramOptions = struct {
 /// Generate ASCII connection diagram
 pub fn connectionDiagram(allocator: mem.Allocator, connections: []const Connection, opts: ConnectionDiagramOptions) ![]const u8 {
     var result: std.ArrayList(u8) = .empty;
-    const writer = result.writer(allocator);
 
-    try writer.writeAll("\n  ");
-    if (opts.color) try writer.writeAll(Ansi.BOLD);
-    try writer.writeAll("BRAIN REGION CONNECTIONS");
-    if (opts.color) try writer.writeAll(Ansi.RESET);
-    try writer.writeAll("\n\n");
+    try result.appendSlice(allocator, "\n  ");
+    if (opts.color) try result.appendSlice(allocator, Ansi.BOLD);
+    try result.appendSlice(allocator, "BRAIN REGION CONNECTIONS");
+    if (opts.color) try result.appendSlice(allocator, Ansi.RESET);
+    try result.appendSlice(allocator, "\n\n");
 
     for (connections) |conn| {
         if (!opts.show_inactive and !conn.active) continue;
 
-        try writer.writeAll("  ");
+        try result.appendSlice(allocator, "  ");
 
         if (opts.color) {
             if (conn.active) {
-                if (conn.strength > 0.7) try writer.writeAll(Ansi.GREEN) else if (conn.strength > 0.4) try writer.writeAll(Ansi.YELLOW) else try writer.writeAll(Ansi.RED);
+                if (conn.strength > 0.7) try result.appendSlice(allocator, Ansi.GREEN) else if (conn.strength > 0.4) try result.appendSlice(allocator, Ansi.YELLOW) else try result.appendSlice(allocator, Ansi.RED);
             } else {
-                try writer.writeAll(Ansi.DIM);
+                try result.appendSlice(allocator, Ansi.DIM);
             }
         }
 
@@ -374,9 +371,9 @@ pub fn connectionDiagram(allocator: mem.Allocator, connections: []const Connecti
         else
             "  ·";
 
-        try writer.print("{s:<20} {s} {s}\n", .{ conn.from, arrow, conn.to });
+        try result.print(allocator, "{s:<20} {s} {s}\n", .{ conn.from, arrow, conn.to });
 
-        if (opts.color) try writer.writeAll(Ansi.RESET);
+        if (opts.color) try result.appendSlice(allocator, Ansi.RESET);
     }
 
     return result.toOwnedSlice(allocator);
@@ -396,18 +393,17 @@ pub const HeatmapOptions = struct {
 /// Generate activity heatmap
 pub fn activityHeatmap(allocator: mem.Allocator, data: []const f32, opts: HeatmapOptions) ![]const u8 {
     var result: std.ArrayList(u8) = .empty;
-    const writer = result.writer(allocator);
 
     if (data.len == 0) {
-        try writer.writeAll("No data for heatmap\n");
+        try result.appendSlice(allocator, "No data for heatmap\n");
         return result.toOwnedSlice(allocator);
     }
 
-    try writer.writeAll("\n  ");
-    if (opts.color) try writer.writeAll(Ansi.BOLD);
-    try writer.writeAll("ACTIVITY HEATMAP");
-    if (opts.color) try writer.writeAll(Ansi.RESET);
-    try writer.writeAll("\n\n");
+    try result.appendSlice(allocator, "\n  ");
+    if (opts.color) try result.appendSlice(allocator, Ansi.BOLD);
+    try result.appendSlice(allocator, "ACTIVITY HEATMAP");
+    if (opts.color) try result.appendSlice(allocator, Ansi.RESET);
+    try result.appendSlice(allocator, "\n\n");
 
     // Find min/max for normalization
     const min_val = blk: {
@@ -433,7 +429,7 @@ pub fn activityHeatmap(allocator: mem.Allocator, data: []const f32, opts: Heatma
     // Generate heatmap
     var row: usize = 0;
     while (row < opts.height) : (row += 1) {
-        try writer.writeAll("  ");
+        try result.appendSlice(allocator, "  ");
         var col: usize = 0;
         while (col < opts.width) : (col += 1) {
             const idx = row * opts.width + col;
@@ -455,33 +451,33 @@ pub fn activityHeatmap(allocator: mem.Allocator, data: []const f32, opts: Heatma
                     3 => Ansi.YELLOW,
                     else => Ansi.RED,
                 };
-                try writer.writeAll(color);
+                try result.appendSlice(allocator, color);
             }
 
             const block_idx = @min(blocks.len - 1, @as(usize, @intFromFloat(normalized * @as(f32, @floatFromInt(blocks.len - 1)))));
-            try writer.writeByte(blocks[block_idx]);
+            try result.append(allocator, blocks[block_idx]);
 
-            if (opts.color) try writer.writeAll(Ansi.RESET);
+            if (opts.color) try result.appendSlice(allocator, Ansi.RESET);
         }
-        try writer.writeAll("\n");
+        try result.appendSlice(allocator, "\n");
     }
 
     // Show scale
     if (opts.show_scale) {
-        try writer.writeAll("\n  Scale: ");
-        if (opts.color) try writer.writeAll(Ansi.BLUE);
-        try writer.writeAll("●");
-        if (opts.color) try writer.writeAll(Ansi.RESET);
-        try writer.writeAll(" low ");
-        if (opts.color) try writer.writeAll(Ansi.GREEN);
-        try writer.writeAll("●");
-        if (opts.color) try writer.writeAll(Ansi.RESET);
-        try writer.writeAll(" medium ");
-        if (opts.color) try writer.writeAll(Ansi.RED);
-        try writer.writeAll("●");
-        if (opts.color) try writer.writeAll(Ansi.RESET);
-        try writer.writeAll(" high\n");
-        try writer.print("  Range: [{d:.2} - {d:.2}]\n", .{ min_val, max_val });
+        try result.appendSlice(allocator, "\n  Scale: ");
+        if (opts.color) try result.appendSlice(allocator, Ansi.BLUE);
+        try result.appendSlice(allocator, "●");
+        if (opts.color) try result.appendSlice(allocator, Ansi.RESET);
+        try result.appendSlice(allocator, " low ");
+        if (opts.color) try result.appendSlice(allocator, Ansi.GREEN);
+        try result.appendSlice(allocator, "●");
+        if (opts.color) try result.appendSlice(allocator, Ansi.RESET);
+        try result.appendSlice(allocator, " medium ");
+        if (opts.color) try result.appendSlice(allocator, Ansi.RED);
+        try result.appendSlice(allocator, "●");
+        if (opts.color) try result.appendSlice(allocator, Ansi.RESET);
+        try result.appendSlice(allocator, " high\n");
+        try result.print(allocator, "  Range: [{d:.2} - {d:.2}]\n", .{ min_val, max_val });
     }
 
     return result.toOwnedSlice(allocator);
@@ -536,13 +532,12 @@ fn project(p: Point3D, zoom: f32, width: usize, height: usize) struct { x: usize
 /// Generate 3D brain visualization
 pub fn brain3D(allocator: mem.Allocator, opts: Brain3DOptions) ![]const u8 {
     var result: std.ArrayList(u8) = .empty;
-    const writer = result.writer(allocator);
 
-    try writer.writeAll("\n  ");
-    if (opts.color) try writer.writeAll(Ansi.BOLD);
-    try writer.writeAll("3D BRAIN VISUALIZATION");
-    if (opts.color) try writer.writeAll(Ansi.RESET);
-    try writer.writeAll("\n\n");
+    try result.appendSlice(allocator, "\n  ");
+    if (opts.color) try result.appendSlice(allocator, Ansi.BOLD);
+    try result.appendSlice(allocator, "3D BRAIN VISUALIZATION");
+    if (opts.color) try result.appendSlice(allocator, Ansi.RESET);
+    try result.appendSlice(allocator, "\n\n");
 
     // Generate ellipsoid points for brain shape
     var points: std.ArrayList(Point3D) = .empty;
@@ -586,7 +581,7 @@ pub fn brain3D(allocator: mem.Allocator, opts: Brain3DOptions) ![]const u8 {
     const density = " .:-=+*#%@";
     var y: usize = 0;
     while (y < opts.height) : (y += 1) {
-        try writer.writeAll("  ");
+        try result.appendSlice(allocator, "  ");
         var x: usize = 0;
         while (x < opts.width) : (x += 1) {
             const idx = y * opts.width + x;
@@ -605,20 +600,20 @@ pub fn brain3D(allocator: mem.Allocator, opts: Brain3DOptions) ![]const u8 {
                         4 => Ansi.YELLOW,
                         else => Ansi.RED,
                     };
-                    try writer.writeAll(color);
+                    try result.appendSlice(allocator, color);
                 }
 
-                try writer.writeByte(density[char_idx]);
+                try result.append(allocator, density[char_idx]);
 
-                if (opts.color) try writer.writeAll(Ansi.RESET);
+                if (opts.color) try result.appendSlice(allocator, Ansi.RESET);
             } else {
-                try writer.writeByte(' ');
+                try result.append(allocator, ' ');
             }
         }
-        try writer.writeAll("\n");
+        try result.appendSlice(allocator, "\n");
     }
 
-    try writer.writeAll("\n  Use --rotate-x and --rotate-y to change view angle\n");
+    try result.appendSlice(allocator, "\n  Use --rotate-x and --rotate-y to change view angle\n");
 
     return result.toOwnedSlice(allocator);
 }
@@ -654,72 +649,71 @@ pub fn preset(allocator: mem.Allocator, preset_type: Preset, opts: PresetOptions
 
 fn generateDashboard(allocator: mem.Allocator, opts: PresetOptions) ![]const u8 {
     var result: std.ArrayList(u8) = .empty;
-    const writer = result.writer(allocator);
 
     // Clear screen for dashboard
-    try writer.writeAll(Ansi.CLEAR_SCREEN);
-    try writer.writeAll(Ansi.HOME);
+    try result.appendSlice(allocator, Ansi.CLEAR_SCREEN);
+    try result.appendSlice(allocator, Ansi.HOME);
 
-    try writer.writeAll(Ansi.BOLD);
-    try writer.writeAll(Ansi.CYAN);
-    try writer.writeAll("╔══════════════════════════════════════════════════════════════════╗\n");
-    try writer.writeAll("║         S³AI BRAIN DASHBOARD — Real-Time Monitoring          ║\n");
-    try writer.writeAll("╚══════════════════════════════════════════════════════════════════╝\n");
-    try writer.writeAll(Ansi.RESET);
-    try writer.writeAll("\n");
+    try result.appendSlice(allocator, Ansi.BOLD);
+    try result.appendSlice(allocator, Ansi.CYAN);
+    try result.appendSlice(allocator, "╔══════════════════════════════════════════════════════════════════╗\n");
+    try result.appendSlice(allocator, "║         S³AI BRAIN DASHBOARD — Real-Time Monitoring          ║\n");
+    try result.appendSlice(allocator, "╚══════════════════════════════════════════════════════════════════╝\n");
+    try result.appendSlice(allocator, Ansi.RESET);
+    try result.appendSlice(allocator, "\n");
 
     // Health sparkline
     if (opts.health_data) |data| {
-        try writer.writeAll(Ansi.BOLD);
-        try writer.writeAll("Health Trend: ");
-        try writer.writeAll(Ansi.RESET);
+        try result.appendSlice(allocator, Ansi.BOLD);
+        try result.appendSlice(allocator, "Health Trend: ");
+        try result.appendSlice(allocator, Ansi.RESET);
         const spark = try sparkline(allocator, data, .{ .width = 50, .color = true });
         defer allocator.free(spark);
-        try writer.writeAll(spark);
-        try writer.writeAll("\n\n");
+        try result.appendSlice(allocator, spark);
+        try result.appendSlice(allocator, "\n\n");
     }
 
     // Quick stats
-    try writer.writeAll(Ansi.BOLD);
-    try writer.writeAll("Quick Stats:\n");
-    try writer.writeAll(Ansi.RESET);
-    try writer.writeAll("  Active Regions: ");
-    try writer.writeAll(Ansi.GREEN);
-    try writer.writeAll("14/17");
-    try writer.writeAll(Ansi.RESET);
-    try writer.writeAll("\n");
-    try writer.writeAll("  Overall Health: ");
-    try writer.writeAll(Ansi.GREEN);
-    try writer.writeAll("87.3%");
-    try writer.writeAll(Ansi.RESET);
-    try writer.writeAll("\n");
-    try writer.writeAll("  Events/sec: ");
-    try writer.writeAll(Ansi.CYAN);
-    try writer.writeAll("142");
-    try writer.writeAll(Ansi.RESET);
-    try writer.writeAll("\n");
-    try writer.writeAll("  Memory Usage: ");
-    try writer.writeAll(Ansi.YELLOW);
-    try writer.writeAll("2.4 MB");
-    try writer.writeAll(Ansi.RESET);
-    try writer.writeAll("\n\n");
+    try result.appendSlice(allocator, Ansi.BOLD);
+    try result.appendSlice(allocator, "Quick Stats:\n");
+    try result.appendSlice(allocator, Ansi.RESET);
+    try result.appendSlice(allocator, "  Active Regions: ");
+    try result.appendSlice(allocator, Ansi.GREEN);
+    try result.appendSlice(allocator, "14/17");
+    try result.appendSlice(allocator, Ansi.RESET);
+    try result.appendSlice(allocator, "\n");
+    try result.appendSlice(allocator, "  Overall Health: ");
+    try result.appendSlice(allocator, Ansi.GREEN);
+    try result.appendSlice(allocator, "87.3%");
+    try result.appendSlice(allocator, Ansi.RESET);
+    try result.appendSlice(allocator, "\n");
+    try result.appendSlice(allocator, "  Events/sec: ");
+    try result.appendSlice(allocator, Ansi.CYAN);
+    try result.appendSlice(allocator, "142");
+    try result.appendSlice(allocator, Ansi.RESET);
+    try result.appendSlice(allocator, "\n");
+    try result.appendSlice(allocator, "  Memory Usage: ");
+    try result.appendSlice(allocator, Ansi.YELLOW);
+    try result.appendSlice(allocator, "2.4 MB");
+    try result.appendSlice(allocator, Ansi.RESET);
+    try result.appendSlice(allocator, "\n\n");
 
     // Mini connection diagram
     if (opts.connections) |conns| {
-        try writer.writeAll(Ansi.BOLD);
-        try writer.writeAll("Active Connections:\n");
-        try writer.writeAll(Ansi.RESET);
+        try result.appendSlice(allocator, Ansi.BOLD);
+        try result.appendSlice(allocator, "Active Connections:\n");
+        try result.appendSlice(allocator, Ansi.RESET);
 
         var active_count: usize = 0;
         for (conns) |conn| {
             if (conn.active) active_count += 1;
         }
-        try writer.print("  {d} connections active\n\n", .{active_count});
+        try result.print(allocator, "  {d} connections active\n\n", .{active_count});
     }
 
-    try writer.writeAll(Ansi.DIM);
-    try writer.writeAll("Press Ctrl+C to exit | tri brain --viz monitor for live updates\n");
-    try writer.writeAll(Ansi.RESET);
+    try result.appendSlice(allocator, Ansi.DIM);
+    try result.appendSlice(allocator, "Press Ctrl+C to exit | tri brain --viz monitor for live updates\n");
+    try result.appendSlice(allocator, Ansi.RESET);
 
     return result.toOwnedSlice(allocator);
 }
@@ -728,40 +722,38 @@ fn generateMinimal(allocator: mem.Allocator, opts: PresetOptions) ![]const u8 {
     _ = opts;
 
     var result: std.ArrayList(u8) = .empty;
-    const writer = result.writer(allocator);
 
-    try writer.writeAll(Ansi.GREEN);
-    try writer.writeAll("●");
-    try writer.writeAll(Ansi.RESET);
-    try writer.writeAll(" Brain: ");
+    try result.appendSlice(allocator, Ansi.GREEN);
+    try result.appendSlice(allocator, "●");
+    try result.appendSlice(allocator, Ansi.RESET);
+    try result.appendSlice(allocator, " Brain: ");
 
-    try writer.writeAll(Ansi.BOLD);
-    try writer.writeAll("HEALTHY");
-    try writer.writeAll(Ansi.RESET);
+    try result.appendSlice(allocator, Ansi.BOLD);
+    try result.appendSlice(allocator, "HEALTHY");
+    try result.appendSlice(allocator, Ansi.RESET);
 
-    try writer.writeAll(" | 14/17 regions | ");
+    try result.appendSlice(allocator, " | 14/17 regions | ");
 
-    try writer.writeAll(Ansi.CYAN);
-    try writer.writeAll("87%");
-    try writer.writeAll(Ansi.RESET);
+    try result.appendSlice(allocator, Ansi.CYAN);
+    try result.appendSlice(allocator, "87%");
+    try result.appendSlice(allocator, Ansi.RESET);
 
     return result.toOwnedSlice(allocator);
 }
 
 fn generateDetailed(allocator: mem.Allocator, _: PresetOptions) ![]const u8 {
     var result: std.ArrayList(u8) = .empty;
-    const writer = result.writer(allocator);
 
-    try writer.writeAll(Ansi.CLEAR_SCREEN);
-    try writer.writeAll(Ansi.HOME);
+    try result.appendSlice(allocator, Ansi.CLEAR_SCREEN);
+    try result.appendSlice(allocator, Ansi.HOME);
 
-    try writer.writeAll(Ansi.BOLD);
-    try writer.writeAll(Ansi.CYAN);
-    try writer.writeAll("╔══════════════════════════════════════════════════════════════════════════╗\n");
-    try writer.writeAll("║                   S³AI BRAIN — DETAILED VIEW                          ║\n");
-    try writer.writeAll("╚══════════════════════════════════════════════════════════════════════════╝\n");
-    try writer.writeAll(Ansi.RESET);
-    try writer.writeAll("\n");
+    try result.appendSlice(allocator, Ansi.BOLD);
+    try result.appendSlice(allocator, Ansi.CYAN);
+    try result.appendSlice(allocator, "╔══════════════════════════════════════════════════════════════════════════╗\n");
+    try result.appendSlice(allocator, "║                   S³AI BRAIN — DETAILED VIEW                          ║\n");
+    try result.appendSlice(allocator, "╚══════════════════════════════════════════════════════════════════════════╝\n");
+    try result.appendSlice(allocator, Ansi.RESET);
+    try result.appendSlice(allocator, "\n");
 
     // Brain regions table
     const regions = [_]struct { name: []const u8, health: f32, status: []const u8 }{
@@ -784,9 +776,9 @@ fn generateDetailed(allocator: mem.Allocator, _: PresetOptions) ![]const u8 {
         .{ .name = "Observability Export", .health = 85.0, .status = "Exporting" },
     };
 
-    try writer.writeAll("┌─────────────────────────────┬────────┬─────────────┐\n");
-    try writer.writeAll("│ Region                      │ Health │ Status      │\n");
-    try writer.writeAll("├─────────────────────────────┼────────┼─────────────┤\n");
+    try result.appendSlice(allocator, "┌─────────────────────────────┬────────┬─────────────┐\n");
+    try result.appendSlice(allocator, "│ Region                      │ Health │ Status      │\n");
+    try result.appendSlice(allocator, "├─────────────────────────────┼────────┼─────────────┤\n");
 
     for (regions) |region| {
         const color = if (region.health >= 80)
@@ -796,25 +788,25 @@ fn generateDetailed(allocator: mem.Allocator, _: PresetOptions) ![]const u8 {
         else
             Ansi.RED;
 
-        try writer.writeAll("│ ");
-        try writer.writeAll(Ansi.RESET);
-        try writer.print("{s:<27}", .{region.name});
-        try writer.writeAll("│ ");
+        try result.appendSlice(allocator, "│ ");
+        try result.appendSlice(allocator, Ansi.RESET);
+        try result.print(allocator, "{s:<27}", .{region.name});
+        try result.appendSlice(allocator, "│ ");
 
-        try writer.writeAll(color);
-        try writer.print("{d:5.1}%", .{region.health});
-        try writer.writeAll(Ansi.RESET);
+        try result.appendSlice(allocator, color);
+        try result.print(allocator, "{d:5.1}%", .{region.health});
+        try result.appendSlice(allocator, Ansi.RESET);
 
-        try writer.writeAll(" │ ");
+        try result.appendSlice(allocator, " │ ");
 
-        try writer.writeAll(Ansi.CYAN);
-        try writer.print("{s:<11}", .{region.status});
-        try writer.writeAll(Ansi.RESET);
+        try result.appendSlice(allocator, Ansi.CYAN);
+        try result.print(allocator, "{s:<11}", .{region.status});
+        try result.appendSlice(allocator, Ansi.RESET);
 
-        try writer.writeAll("│\n");
+        try result.appendSlice(allocator, "│\n");
     }
 
-    try writer.writeAll("└─────────────────────────────┴────────┴─────────────┘\n");
+    try result.appendSlice(allocator, "└─────────────────────────────┴────────┴─────────────┘\n");
 
     return result.toOwnedSlice(allocator);
 }
@@ -823,19 +815,18 @@ fn generateScan(allocator: mem.Allocator, opts: PresetOptions) ![]const u8 {
     _ = opts;
 
     var result: std.ArrayList(u8) = .empty;
-    const writer = result.writer(allocator);
 
-    try writer.writeAll(Ansi.CLEAR_SCREEN);
-    try writer.writeAll(Ansi.HOME);
+    try result.appendSlice(allocator, Ansi.CLEAR_SCREEN);
+    try result.appendSlice(allocator, Ansi.HOME);
 
-    try writer.writeAll(Ansi.BOLD);
-    try writer.writeAll(Ansi.CYAN);
-    try writer.writeAll("\n");
-    try writer.writeAll("                    ╔═══════════════════════════╗                    \n");
-    try writer.writeAll("                    ║   BRAIN SCAN IN PROGRESS   ║                    \n");
-    try writer.writeAll("                    ╚═══════════════════════════╝                    \n");
-    try writer.writeAll(Ansi.RESET);
-    try writer.writeAll("\n");
+    try result.appendSlice(allocator, Ansi.BOLD);
+    try result.appendSlice(allocator, Ansi.CYAN);
+    try result.appendSlice(allocator, "\n");
+    try result.appendSlice(allocator, "                    ╔═══════════════════════════╗                    \n");
+    try result.appendSlice(allocator, "                    ║   BRAIN SCAN IN PROGRESS   ║                    \n");
+    try result.appendSlice(allocator, "                    ╚═══════════════════════════╝                    \n");
+    try result.appendSlice(allocator, Ansi.RESET);
+    try result.appendSlice(allocator, "\n");
 
     // Animated scan line effect
     const scan_lines = [_][]const u8{
@@ -853,96 +844,95 @@ fn generateScan(allocator: mem.Allocator, opts: PresetOptions) ![]const u8 {
     };
 
     for (scan_lines) |line| {
-        try writer.writeAll("                    ");
-        try writer.writeAll(Ansi.GREEN);
-        try writer.writeAll(line);
-        try writer.writeAll(Ansi.RESET);
-        try writer.writeAll("\n");
+        try result.appendSlice(allocator, "                    ");
+        try result.appendSlice(allocator, Ansi.GREEN);
+        try result.appendSlice(allocator, line);
+        try result.appendSlice(allocator, Ansi.RESET);
+        try result.appendSlice(allocator, "\n");
     }
 
-    try writer.writeAll("\n");
-    try writer.writeAll(Ansi.BOLD);
-    try writer.writeAll("                       SCANNING...                       \n");
-    try writer.writeAll(Ansi.RESET);
+    try result.appendSlice(allocator, "\n");
+    try result.appendSlice(allocator, Ansi.BOLD);
+    try result.appendSlice(allocator, "                       SCANNING...                       \n");
+    try result.appendSlice(allocator, Ansi.RESET);
 
     return result.toOwnedSlice(allocator);
 }
 
 fn generateMonitor(allocator: mem.Allocator, opts: PresetOptions) ![]const u8 {
     var result: std.ArrayList(u8) = .empty;
-    const writer = result.writer(allocator);
 
-    try writer.writeAll(Ansi.CLEAR_SCREEN);
-    try writer.writeAll(Ansi.HOME);
+    try result.appendSlice(allocator, Ansi.CLEAR_SCREEN);
+    try result.appendSlice(allocator, Ansi.HOME);
 
     // Header
-    try writer.writeAll(Ansi.BOLD);
-    try writer.writeAll(Ansi.CYAN);
-    try writer.writeAll("╔══════════════════════════════════════════════════════════════════╗\n");
-    try writer.writeAll("║              S³AI BRAIN — LIVE MONITOR (1s refresh)            ║\n");
-    try writer.writeAll("╚══════════════════════════════════════════════════════════════════╝\n");
-    try writer.writeAll(Ansi.RESET);
-    try writer.writeAll("\n");
+    try result.appendSlice(allocator, Ansi.BOLD);
+    try result.appendSlice(allocator, Ansi.CYAN);
+    try result.appendSlice(allocator, "╔══════════════════════════════════════════════════════════════════╗\n");
+    try result.appendSlice(allocator, "║              S³AI BRAIN — LIVE MONITOR (1s refresh)            ║\n");
+    try result.appendSlice(allocator, "╚══════════════════════════════════════════════════════════════════╝\n");
+    try result.appendSlice(allocator, Ansi.RESET);
+    try result.appendSlice(allocator, "\n");
 
     // Time
-    try writer.writeAll(Ansi.DIM);
-    try writer.writeAll("Last update: now");
-    try writer.writeAll(Ansi.RESET);
-    try writer.writeAll("\n\n");
+    try result.appendSlice(allocator, Ansi.DIM);
+    try result.appendSlice(allocator, "Last update: now");
+    try result.appendSlice(allocator, Ansi.RESET);
+    try result.appendSlice(allocator, "\n\n");
 
     // Metrics grid
-    try writer.writeAll("┌──────────────────────────────────┬──────────────────────────────────┐\n");
+    try result.appendSlice(allocator, "┌──────────────────────────────────┬──────────────────────────────────┐\n");
 
     // Left column
-    try writer.writeAll("│ ");
-    try writer.writeAll(Ansi.BOLD);
-    try writer.writeAll("Health");
-    try writer.writeAll(Ansi.RESET);
-    try writer.writeAll("                          │ ");
+    try result.appendSlice(allocator, "│ ");
+    try result.appendSlice(allocator, Ansi.BOLD);
+    try result.appendSlice(allocator, "Health");
+    try result.appendSlice(allocator, Ansi.RESET);
+    try result.appendSlice(allocator, "                          │ ");
 
-    try writer.writeAll(Ansi.BOLD);
-    try writer.writeAll("Activity");
-    try writer.writeAll(Ansi.RESET);
-    try writer.writeAll("                        │\n");
-    try writer.writeAll("│ ");
+    try result.appendSlice(allocator, Ansi.BOLD);
+    try result.appendSlice(allocator, "Activity");
+    try result.appendSlice(allocator, Ansi.RESET);
+    try result.appendSlice(allocator, "                        │\n");
+    try result.appendSlice(allocator, "│ ");
 
     if (opts.health_data) |data| {
         const spark = try sparkline(allocator, data, .{ .width = 32, .color = true });
         defer allocator.free(spark);
-        try writer.print("{s:<32}", .{spark});
+        try result.print(allocator, "{s:<32}", .{spark});
     } else {
-        try writer.writeAll("████████████████████████████████    ");
+        try result.appendSlice(allocator, "████████████████████████████████    ");
     }
 
-    try writer.writeAll("│ ");
+    try result.appendSlice(allocator, "│ ");
 
     if (opts.activity_data) |data| {
         const spark = try sparkline(allocator, data, .{ .width = 32, .color = true });
         defer allocator.free(spark);
-        try writer.print("{s:<32}", .{spark});
+        try result.print(allocator, "{s:<32}", .{spark});
     } else {
-        try writer.writeAll("▁▂▃▅▆▇█▇▆▅▃▂▁▂▃▅▆▇█▇▆▅▃▂▁▂▃▅▆▇█▇▆▅  ");
+        try result.appendSlice(allocator, "▁▂▃▅▆▇█▇▆▅▃▂▁▂▃▅▆▇█▇▆▅▃▂▁▂▃▅▆▇█▇▆▅  ");
     }
 
-    try writer.writeAll("│\n");
-    try writer.writeAll("└──────────────────────────────────┴──────────────────────────────────┘\n");
+    try result.appendSlice(allocator, "│\n");
+    try result.appendSlice(allocator, "└──────────────────────────────────┴──────────────────────────────────┘\n");
 
     // Alert box
-    try writer.writeAll("\n");
-    try writer.writeAll(Ansi.BOLD);
-    try writer.writeAll("Recent Alerts:\n");
-    try writer.writeAll(Ansi.RESET);
-    try writer.writeAll("  ");
-    try writer.writeAll(Ansi.GREEN);
-    try writer.writeAll("✓");
-    try writer.writeAll(Ansi.RESET);
-    try writer.writeAll(" All systems operational\n");
+    try result.appendSlice(allocator, "\n");
+    try result.appendSlice(allocator, Ansi.BOLD);
+    try result.appendSlice(allocator, "Recent Alerts:\n");
+    try result.appendSlice(allocator, Ansi.RESET);
+    try result.appendSlice(allocator, "  ");
+    try result.appendSlice(allocator, Ansi.GREEN);
+    try result.appendSlice(allocator, "✓");
+    try result.appendSlice(allocator, Ansi.RESET);
+    try result.appendSlice(allocator, " All systems operational\n");
 
     // Footer
-    try writer.writeAll("\n");
-    try writer.writeAll(Ansi.DIM);
-    try writer.writeAll("Press Ctrl+C to exit\n");
-    try writer.writeAll(Ansi.RESET);
+    try result.appendSlice(allocator, "\n");
+    try result.appendSlice(allocator, Ansi.DIM);
+    try result.appendSlice(allocator, "Press Ctrl+C to exit\n");
+    try result.appendSlice(allocator, Ansi.RESET);
 
     return result.toOwnedSlice(allocator);
 }

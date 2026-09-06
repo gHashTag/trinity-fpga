@@ -101,7 +101,7 @@ pub const FasmResult = struct {
 /// Generate FASM features from a placed and routed design.
 pub fn generate(allocator: Allocator, db: *const ForgeDB) !FasmResult {
     var result = FasmResult{
-        .features = .{},
+        .features = .empty,
         .allocator = allocator,
     };
     errdefer result.deinit();

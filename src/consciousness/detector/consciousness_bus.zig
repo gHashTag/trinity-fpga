@@ -222,8 +222,8 @@ pub const ConsciousnessBus = struct {
     pub fn init(allocator: mem.Allocator) ConsciousnessBus {
         return .{
             .allocator = allocator,
-            .subscriptions = .{},
-            .event_queue = .{},
+            .subscriptions = .empty,
+            .event_queue = .empty,
             .running = false,
             .mutex = .{},
         };

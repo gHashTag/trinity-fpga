@@ -59,7 +59,7 @@ pub const StreamingOutput = struct {
         self.state.chars_written += 1;
 
         if (self.config.delay_ms > 0) {
-            std.Thread.sleep(self.config.delay_ms * std.time.ns_per_ms);
+            tri_time.sleep(self.config.delay_ms * std.time.ns_per_ms);
         }
     }
 

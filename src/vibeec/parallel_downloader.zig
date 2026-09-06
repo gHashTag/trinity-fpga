@@ -373,7 +373,7 @@ fn workerThread(
         for (0..state.config.retry_count) |_| {
             downloadChunk(allocator, url, output_path, chunk, state) catch {
                 _ = chunk.retries.fetchAdd(1, .seq_cst);
-                std.Thread.sleep(state.config.retry_delay_ms * std.time.ns_per_ms);
+                tri_time.sleep(state.config.retry_delay_ms * std.time.ns_per_ms);
                 continue;
             };
             success = true;
@@ -476,7 +476,7 @@ pub fn download(allocator: std.mem.Allocator, url: []const u8, output_path: []co
         }
         if (all_done) break;
 
-        std.Thread.sleep(200 * std.time.ns_per_ms);
+        tri_time.sleep(200 * std.time.ns_per_ms);
     }
 
     // Wait for all threads

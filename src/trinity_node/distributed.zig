@@ -1083,7 +1083,7 @@ fn connectWithRetry(ip_parts: [4]u8, port: u16, max_retries: u32, label: []const
                 return err;
             }
             std.debug.print("\x1b[38;2;255;165;0m[{s}] Connect attempt {d}/{d} failed ({}), retry in {d}ms\x1b[0m\n", .{ label, attempt, max_retries, err, delay_ms });
-            std.Thread.sleep(delay_ms * std.time.ns_per_ms);
+            tri_time.sleep(delay_ms * std.time.ns_per_ms);
             delay_ms = @min(delay_ms * 2, 30_000); // cap at 30s
             continue;
         };

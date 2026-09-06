@@ -91,6 +91,34 @@ pub fn monotonicNanos() u64 {
     return secs * std.time.ns_per_s + nsecs;
 }
 
+/// Replaces the removed `std.Thread.sleep`. Same signature and same meaning:
+/// block this thread for at least `nanoseconds`.
+///
+/// 0.16 moved sleeping behind `Io` (`Clock.Duration.sleep`), which is right for
+/// code that should be cancelable. These 153 call sites are all "pause before
+/// retrying", reached from functions with no Io in scope, so they use libc's
+/// nanosleep directly.
+///
+/// Restarts on EINTR, because the 0.15 function callers were written against
+/// did not return early on a signal.
+pub fn sleep(nanoseconds: u64) void {
+    const ns_per_s_u: u64 = @intCast(std.time.ns_per_s);
+    var req: std.c.timespec = .{
+        .sec = @intCast(nanoseconds / ns_per_s_u),
+        .nsec = @intCast(nanoseconds % ns_per_s_u),
+    };
+    var rem: std.c.timespec = undefined;
+    while (nanosleep(&req, &rem) != 0) {
+        // Any failure other than "interrupted" would repeat forever; the only
+        // errno nanosleep returns with a valid `rem` is EINTR, so resume from
+        // whatever is left and give up if it stops making progress.
+        if (rem.sec == req.sec and rem.nsec == req.nsec) return;
+        req = rem;
+    }
+}
+
+extern "c" fn nanosleep(req: *const std.c.timespec, rem: ?*std.c.timespec) c_int;
+
 /// Elapsed-time measurement. Replaces the removed `std.time.Timer` for the
 /// one thing this codebase used it for: start it, read it, print a duration.
 pub const Timer = struct {
@@ -207,4 +235,20 @@ test "Timer measures a non-negative elapsed time and laps reset it" {
     // the work above rather than cumulative.
     const after = t.read();
     try std.testing.expect(after <= lapped + std.time.ns_per_s);
+}
+
+test "sleep blocks for at least the requested time" {
+    const before = monotonicNanos();
+    sleep(5 * std.time.ns_per_ms);
+    const elapsed = monotonicNanos() - before;
+    // At least the requested interval; generous upper bound so a loaded
+    // machine does not fail the suite.
+    try std.testing.expect(elapsed >= 4 * std.time.ns_per_ms);
+    try std.testing.expect(elapsed < 2 * std.time.ns_per_s);
+}
+
+test "sleep of zero returns promptly" {
+    const before = monotonicNanos();
+    sleep(0);
+    try std.testing.expect(monotonicNanos() - before < std.time.ns_per_s);
 }

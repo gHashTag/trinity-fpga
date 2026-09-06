@@ -174,10 +174,10 @@ pub const Codegen = struct {
     pub fn init(allocator: std.mem.Allocator) Codegen {
         return Codegen{
             .allocator = allocator,
-            .output = .{},
-            .function_offsets = .{},
+            .output = .empty,
+            .function_offsets = .empty,
             .label_addresses = std.AutoHashMap(u32, u32).init(allocator),
-            .branch_fixups = .{},
+            .branch_fixups = .empty,
         };
     }
 

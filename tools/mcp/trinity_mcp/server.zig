@@ -1977,8 +1977,7 @@ fn processMessage(server: *TrinityMCPServer, request: []const u8, writer: anytyp
         // Send as text content
         var resp_buf: std.ArrayList(u8) = .{};
         defer resp_buf.deinit(allocator);
-        const w = resp_buf.writer(allocator);
-        try w.print("{{\"jsonrpc\":\"2.0\",\"id\":{s},\"result\":{{\"contents\":[{{\"uri\":\"{s}\",\"text\":\"", .{ id_str, uri });
+        try resp_buf.print(allocator, "{{\"jsonrpc\":\"2.0\",\"id\":{s},\"result\":{{\"contents\":[{{\"uri\":\"{s}\",\"text\":\"", .{ id_str, uri });
         // JSON-escape content
         for (content) |c| {
             switch (c) {

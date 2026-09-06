@@ -69,7 +69,7 @@ pub const SlashingEngine = struct {
     pub fn init(allocator: Allocator) SlashingEngine {
         return SlashingEngine{
             .allocator = allocator,
-            .violations = .{},
+            .violations = .empty,
             .node_stakes = .{},
         };
     }

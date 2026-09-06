@@ -6,6 +6,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_env = @import("tri_env");
 const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 const colors = @import("../tri_colors.zig");
@@ -261,10 +262,10 @@ fn runEternalDaemon() void {
 
     // Create log directory
     const io = tri_io.get();
-    std.Io.Dir.cwd().createDirPath(io, std.posix.getenv("HOME") orelse "/tmp") catch |err| {
+    std.Io.Dir.cwd().createDirPath(io, tri_env.getPosix("HOME") orelse "/tmp") catch |err| {
         std.log.debug("failed to create HOME dir: {}", .{err});
     };
-    const home = std.posix.getenv("HOME") orelse "/tmp";
+    const home = tri_env.getPosix("HOME") orelse "/tmp";
     var path_buf: [512]u8 = undefined;
     const log_dir = std.fmt.bufPrint(&path_buf, "{s}/.tri/log", .{home}) catch "/tmp";
     std.Io.Dir.cwd().createDirPath(io, log_dir) catch |err| {
@@ -310,7 +311,7 @@ fn runEternalDaemon() void {
             std.log.debug("failed to write log line: {}", .{err});
         }
 
-        std.Thread.sleep(1_618_000_000); // phi seconds
+        tri_time.sleep(1_618_000_000); // phi seconds
     }
 }
 
@@ -367,7 +368,7 @@ fn runSSEServer() void {
             }) catch continue;
             out.writeAll(evt) catch break;
             out.flush() catch break;
-            std.Thread.sleep(1_618_000_000);
+            tri_time.sleep(1_618_000_000);
         }
     }
 }
@@ -416,7 +417,7 @@ fn runQuantumStream() void {
             }) catch continue;
             out.writeAll(evt) catch break;
             out.flush() catch break;
-            std.Thread.sleep(1_618_000_000);
+            tri_time.sleep(1_618_000_000);
         }
     }
 }
@@ -458,7 +459,7 @@ pub fn runInstallCommand(allocator: std.mem.Allocator) void {
     }
 
     // Copy binary
-    const home = std.posix.getenv("HOME") orelse "/tmp";
+    const home = tri_env.getPosix("HOME") orelse "/tmp";
     var dest_buf: [512]u8 = undefined;
     const dest_dir = std.fmt.bufPrint(&dest_buf, "{s}/.local/bin", .{home}) catch return;
     std.Io.Dir.cwd().createDirPath(io, dest_dir) catch |err| {

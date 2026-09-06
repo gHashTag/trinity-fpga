@@ -22,13 +22,12 @@ pub fn saveDB(allocator: Allocator, rules: []const AutoFixRule) !void {
     std.fs.cwd().makePath(".trinity/mu") catch {};
     var buf: std.ArrayList(u8) = .empty;
     errdefer buf.deinit(allocator);
-    const w = buf.writer(allocator);
-    try w.writeAll("[\n");
+    try buf.appendSlice(allocator, "[\n");
     for (rules, 0..) |rule, i| {
-        try w.print("  {{\"id\":\"{s}\",\"pattern\":\"{s}\",\"replacement\":\"{s}\"", .{ rule.id, rule.pattern, rule.replacement });
-        try w.print(",\"category\":\"{s}\",\"description\":\"{s}\",\"apply_count\":{d},\"success_count\":{d}}}\n", .{ rule.category, rule.description, rule.apply_count, rule.success_count });
+        try buf.print(allocator, "  {{\"id\":\"{s}\",\"pattern\":\"{s}\",\"replacement\":\"{s}\"", .{ rule.id, rule.pattern, rule.replacement });
+        try buf.print(allocator, ",\"category\":\"{s}\",\"description\":\"{s}\",\"apply_count\":{d},\"success_count\":{d}}}\n", .{ rule.category, rule.description, rule.apply_count, rule.success_count });
     }
-    try w.writeAll("]\n");
+    try buf.appendSlice(allocator, "]\n");
     const json = try buf.toOwnedSlice(allocator);
     defer allocator.free(json);
     const file = try std.fs.cwd().createFile(DB_PATH, .{});

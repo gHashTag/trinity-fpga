@@ -7,6 +7,7 @@
 // ============================================================================
 
 const std = @import("std");
+const tri_env = @import("tri_env");
 const tri_io = @import("tri_io");
 const Allocator = std.mem.Allocator;
 const hippocampus = @import("hippocampus.zig");
@@ -325,6 +326,6 @@ test "writeJsonEscaped" {
 
 test "graceful skip without key" {
     // Verify env-based skip logic works
-    const key = std.posix.getenv("PERPLEXITY_API_KEY_NONEXISTENT");
+    const key = tri_env.getPosix("PERPLEXITY_API_KEY_NONEXISTENT");
     try std.testing.expect(key == null);
 }

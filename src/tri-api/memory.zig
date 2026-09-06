@@ -3,6 +3,7 @@
 // Issue #67: Phase 8 Context Management
 const std = @import("std");
 
+const tri_env = @import("tri_env");
 const tri_io = @import("tri_io");
 const max_lines = 200;
 const max_file_size = 256 * 1024; // 256KB
@@ -16,7 +17,7 @@ pub const Memory = struct {
         var mem = Memory{ .allocator = allocator };
 
         // Resolve ~/.tri-api/
-        if (std.posix.getenv("HOME")) |home| {
+        if (tri_env.getPosix("HOME")) |home| {
             if (std.fmt.bufPrint(&mem.base_dir, "{s}/.tri-api", .{home})) |path| {
                 mem.base_dir_len = path.len;
             } else |_| {}
@@ -105,7 +106,7 @@ test "Memory init" {
     const allocator = std.testing.allocator;
     const mem = Memory.init(allocator);
     // Should resolve base_dir if HOME is set
-    if (std.posix.getenv("HOME")) |_| {
+    if (tri_env.getPosix("HOME")) |_| {
         try std.testing.expect(mem.base_dir_len > 0);
     }
 }

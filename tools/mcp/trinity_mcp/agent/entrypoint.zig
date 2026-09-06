@@ -2,6 +2,7 @@
 // Single binary: clone → read issue → Claude Code → self-review → PR
 // Telegram UX: 1 card per agent (edit-in-place), 1 summary at completion.
 const std = @import("std");
+const tri_time = @import("tri_time");
 const tri_io = @import("tri_io");
 const tri_env = @import("tri_env");
 const telegram = @import("telegram.zig");
@@ -249,7 +250,7 @@ pub fn main() !void {
             std.debug.print("[agent] {s}\n", .{backoff_msg});
 
             if (attempt + 1 < max_attempts) {
-                std.Thread.sleep(wait * std.time.ns_per_s);
+                tri_time.sleep(wait * std.time.ns_per_s);
                 continue;
             }
 
@@ -280,7 +281,7 @@ pub fn main() !void {
             }) catch "\xe2\x9a\xa0 Retrying...";
             card.appendStep(backoff_msg);
             std.debug.print("[agent] {s}\n", .{backoff_msg});
-            std.Thread.sleep(wait * std.time.ns_per_s);
+            tri_time.sleep(wait * std.time.ns_per_s);
         }
     }
 
@@ -384,7 +385,7 @@ pub fn main() !void {
 /// Background ticker: refreshes card every 30s.
 fn updateTicker(card: *telegram_card.TelegramCard) void {
     while (card.final_status == null) {
-        std.Thread.sleep(30 * std.time.ns_per_s);
+        tri_time.sleep(30 * std.time.ns_per_s);
         if (card.final_status != null) break;
         card.refresh();
         touchAlive();

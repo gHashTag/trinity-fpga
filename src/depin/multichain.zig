@@ -83,7 +83,7 @@ pub const MultiChainManager = struct {
     pub fn init(allocator: Allocator) MultiChainManager {
         var manager = MultiChainManager{
             .allocator = allocator,
-            .delegations = .{},
+            .delegations = .empty,
             .active_chains = .{},
         };
 

@@ -21,7 +21,7 @@ const std = @import("std");
 const tri_io = @import("tri_io");
 const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
-const tri_env = @import("tri_env.zig");
+const tri_env = @import("tri_env");
 // Import DIM for styling (debug print colors)
 const DIM = std.debug.print;
 const Allocator = std.mem.Allocator;
@@ -252,7 +252,7 @@ fn cloudVars(allocator: Allocator, args: []const []const u8) !void {
 
         // Need service_id and environment_id — get from args or default
         const service_id = if (args.len >= 3) args[2] else "";
-        const env_id = std.posix.getenv("RAILWAY_ENVIRONMENT_ID") orelse "";
+        const env_id = tri_env.getPosix("RAILWAY_ENVIRONMENT_ID") orelse "";
 
         if (service_id.len == 0 or env_id.len == 0) {
             print("{s}Error: Need service ID and RAILWAY_ENVIRONMENT_ID{s}\n", .{ RED, RESET });
@@ -271,7 +271,7 @@ fn cloudVars(allocator: Allocator, args: []const []const u8) !void {
 
     // List variables
     const service_id = if (args.len >= 1) args[0] else "";
-    const env_id = std.posix.getenv("RAILWAY_ENVIRONMENT_ID") orelse "";
+    const env_id = tri_env.getPosix("RAILWAY_ENVIRONMENT_ID") orelse "";
 
     if (service_id.len == 0 or env_id.len == 0) {
         print("{s}Error: Need service ID and RAILWAY_ENVIRONMENT_ID{s}\n", .{ RED, RESET });
@@ -299,7 +299,7 @@ fn cloudDeploy(allocator: Allocator, args: []const []const u8) !void {
     defer api.deinit();
 
     const service_id = if (args.len >= 1) args[0] else "";
-    const env_id = std.posix.getenv("RAILWAY_ENVIRONMENT_ID") orelse "";
+    const env_id = tri_env.getPosix("RAILWAY_ENVIRONMENT_ID") orelse "";
 
     if (service_id.len == 0 or env_id.len == 0) {
         print("{s}Error: Need service ID and RAILWAY_ENVIRONMENT_ID{s}\n", .{ RED, RESET });
@@ -545,7 +545,7 @@ fn cloudSpawnAll(allocator: Allocator, args: []const []const u8) !void {
 
         // 2s delay between spawns to respect Railway rate limits
         if (spawned + skipped + failed < issue_count) {
-            std.Thread.sleep(2 * std.time.ns_per_s);
+            tri_time.sleep(2 * std.time.ns_per_s);
         }
     }
 
@@ -1168,7 +1168,7 @@ fn cloudPipeline(allocator: Allocator, args: []const []const u8) !void {
             print("  {s}✓ Respawned (retry {d}){s}\n", .{ GREEN, retry_count, RESET });
             last_status_update = tri_time.timestamp();
             // Wait for new agent to start
-            std.Thread.sleep(5 * std.time.ns_per_s);
+            tri_time.sleep(5 * std.time.ns_per_s);
             continue;
         }
 
@@ -1199,7 +1199,7 @@ fn cloudPipeline(allocator: Allocator, args: []const []const u8) !void {
         }
 
         // Wait before next check
-        std.Thread.sleep(10 * std.time.ns_per_s);
+        tri_time.sleep(10 * std.time.ns_per_s);
     }
 
     // Step 6: Cleanup
@@ -1494,17 +1494,17 @@ fn cloudRecordMetrics(allocator: Allocator, args: []const []const u8) !void {
 fn cloudApiCheck(allocator: Allocator) !void {
     print("\n{s}{s}═══ API CONNECTIVITY CHECK ══════════════════════{s}\n", .{ GOLDEN, BOLD, RESET });
 
-    const api_key = std.posix.getenv("ANTHROPIC_API_KEY") orelse {
+    const api_key = tri_env.getPosix("ANTHROPIC_API_KEY") orelse {
         print(" {s}ANTHROPIC_API_KEY not set{s}\n", .{ RED, RESET });
         return;
     };
-    const base_url = std.posix.getenv("ANTHROPIC_BASE_URL") orelse "https://api.anthropic.com";
+    const base_url = tri_env.getPosix("ANTHROPIC_BASE_URL") orelse "https://api.anthropic.com";
 
     print(" Key: {s}...{s}{s}\n", .{ GRAY, if (api_key.len > 8) api_key[0..8] else api_key, RESET });
     print(" URL: {s}{s}{s}\n", .{ CYAN, base_url, RESET });
 
     // Build test request body — use CLAUDE_MODEL env var or default glm-5
-    const model_name = std.posix.getenv("CLAUDE_MODEL") orelse "glm-5";
+    const model_name = tri_env.getPosix("CLAUDE_MODEL") orelse "glm-5";
     var body_buf: [256]u8 = undefined;
     const body = std.fmt.bufPrint(&body_buf,
         \\{{"model":"{s}","max_tokens":10,"messages":[{{"role":"user","content":"hi"}}]}}
@@ -1617,7 +1617,7 @@ fn cloudRedeploy(allocator: Allocator, args: []const []const u8) !void {
         return;
     };
 
-    const env_id = std.posix.getenv("RAILWAY_ENVIRONMENT_ID") orelse {
+    const env_id = tri_env.getPosix("RAILWAY_ENVIRONMENT_ID") orelse {
         print("{s}Error: RAILWAY_ENVIRONMENT_ID not set{s}\n", .{ RED, RESET });
         return;
     };
@@ -2858,7 +2858,7 @@ fn mailTest(allocator: Allocator, args: []const []const u8) !void {
     defer allocator.free(server_str);
 
     // Create a temporary file for the password to avoid passing it in command line
-    const tmp_dir = std.posix.getenv("TMPDIR") orelse "/tmp";
+    const tmp_dir = tri_env.getPosix("TMPDIR") orelse "/tmp";
     const pass_file = try std.fmt.allocPrint(allocator, "{s}/tri_mail_test_XXXXXX", .{tmp_dir});
     defer allocator.free(pass_file);
 

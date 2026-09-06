@@ -22,7 +22,7 @@ pub const DAOManager = struct {
     pub fn init(allocator: std.mem.Allocator) DAOManager {
         return DAOManager{
             .allocator = allocator,
-            .stakes = .{},
+            .stakes = .empty,
             .tri_balance = 0.0,
         };
     }
@@ -51,7 +51,7 @@ pub const DAOManager = struct {
     pub fn vote(self: *DAOManager, proposal_id: []const u8, choice: bool) !void {
         _ = self;
         std.debug.print("🗳️ [DAO] Casting vote on proposal {s}: {s}\n", .{ proposal_id, if (choice) "YES" else "NO" });
-        std.Thread.sleep(100 * std.time.ns_per_ms);
+        tri_time.sleep(100 * std.time.ns_per_ms);
         std.debug.print("✅ [DAO] Vote recorded on Trinity L2.\n", .{});
     }
 

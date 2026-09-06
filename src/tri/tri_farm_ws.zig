@@ -285,7 +285,7 @@ pub const Broadcaster = struct {
                 self.cleanDead();
             }
 
-            std.Thread.sleep(100 * std.time.ns_per_ms);
+            tri_time.sleep(100 * std.time.ns_per_ms);
         }
     }
 

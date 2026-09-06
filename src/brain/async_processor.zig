@@ -230,7 +230,7 @@ const Worker = struct {
                 }
             } else |err| {
                 std.log.err("Worker {d} dequeue error: {}", .{ worker.id, err });
-                std.Thread.sleep(100 * std.time.ns_per_ms);
+                tri_time.sleep(100 * std.time.ns_per_ms);
             }
         }
 
@@ -807,7 +807,7 @@ pub const BackgroundCollector = struct {
         std.log.debug("Background telemetry collector started", .{});
 
         while (collector.running.load(.acquire)) {
-            std.Thread.sleep(collector.interval_ms * std.time.ns_per_ms);
+            tri_time.sleep(collector.interval_ms * std.time.ns_per_ms);
 
             // Collect telemetry snapshot in background
             var channel = ResultChannel.init();
@@ -1796,7 +1796,7 @@ test "BackgroundCollector short run" {
     try collector.start();
 
     // Let it run for a bit
-    std.Thread.sleep(150 * std.time.ns_per_ms);
+    tri_time.sleep(150 * std.time.ns_per_ms);
 
     collector.stop();
 }
@@ -2263,7 +2263,7 @@ test "BackgroundCollector zero interval" {
 
     // Zero interval is valid (polls continuously)
     try collector.start();
-    std.Thread.sleep(50_000_000); // 50ms
+    tri_time.sleep(50_000_000); // 50ms
     collector.stop();
 
     try std.testing.expect(!collector.running.load(.acquire));
@@ -2405,11 +2405,11 @@ test "BackgroundCollector start stop cycle" {
 
     // Multiple start/stop cycles
     try collector.start();
-    std.Thread.sleep(25_000_000);
+    tri_time.sleep(25_000_000);
     collector.stop();
 
     try collector.start();
-    std.Thread.sleep(25_000_000);
+    tri_time.sleep(25_000_000);
     collector.stop();
 
     try collector.start();

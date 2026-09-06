@@ -1056,7 +1056,7 @@ test "LocusCoeruleus: jitter uniform full range coverage" {
         if (delay < min_delay) min_delay = delay;
         if (delay > max_delay) max_delay = delay;
         // Tiny sleep to vary timestamp between samples
-        std.Thread.sleep(1000);
+        tri_time.sleep(1000);
     }
 
     // Should cover most of the range [10000, 20000)

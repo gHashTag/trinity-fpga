@@ -1405,20 +1405,19 @@ pub fn runFpgaCommand(allocator: std.mem.Allocator, args: []const []const u8) !v
         // Build subcommands list for data field
         var data_json = try std.ArrayList(u8).initCapacity(allocator, 512);
         defer data_json.deinit(allocator);
-        const data_writer = data_json.writer(allocator);
 
         try data_json.append(allocator, '{');
-        try data_writer.print("\"subcommands\":[", .{});
+        try data_json.print(allocator, "\"subcommands\":[", .{});
         const subcommands = &[_][]const u8{
             "synth",  "flash",      "build",     "verify",        "snap", "status", "gen", "test", "jtag", "uart", "power",
             "fxload", "verify-pid", "flash-bit", "mac-uart-test", "pins",
         };
         for (subcommands, 0..) |sc, i| {
             if (i > 0) try data_json.append(allocator, ',');
-            try data_writer.print("\"{s}\"", .{sc});
+            try data_json.print(allocator, "\"{s}\"", .{sc});
         }
         try data_json.appendSlice(allocator, "],");
-        try data_writer.print("\"examples\":[", .{});
+        try data_json.print(allocator, "\"examples\":[", .{});
         const examples = &[_][]const u8{
             "tri fpga gen specs/fpga/blink.tri",
             "tri fpga gen-tri fpga/specs/uart.tri",
@@ -1429,7 +1428,7 @@ pub fn runFpgaCommand(allocator: std.mem.Allocator, args: []const []const u8) !v
         };
         for (examples, 0..) |ex, i| {
             if (i > 0) try data_json.append(allocator, ',');
-            try data_writer.print("\"{s}\"", .{ex});
+            try data_json.print(allocator, "\"{s}\"", .{ex});
         }
         try data_json.appendSlice(allocator, "]}");
 
@@ -1501,14 +1500,13 @@ pub fn runFpgaCommand(allocator: std.mem.Allocator, args: []const []const u8) !v
 
         var data_json = try std.ArrayList(u8).initCapacity(allocator, 128);
         defer data_json.deinit(allocator);
-        const data_writer = data_json.writer(allocator);
 
         try data_json.append(allocator, '{');
-        try data_writer.print("\"subcommand\":\"{s}\",\"valid_subcommands\":[", .{subcommand});
+        try data_json.print(allocator, "\"subcommand\":\"{s}\",\"valid_subcommands\":[", .{subcommand});
         const valid_subs = &[_][]const u8{ "gen", "gen-tri", "synth", "verdict", "flash", "test", "verify", "eye", "snap", "status", "build", "read", "experience", "probe", "jtag", "mount", "unmount", "uart", "build-uart", "flash-uart", "uart-test", "power", "pins" };
         for (valid_subs, 0..) |vs, i| {
             if (i > 0) try data_json.append(allocator, ',');
-            try data_writer.print("\"{s}\"", .{vs});
+            try data_json.print(allocator, "\"{s}\"", .{vs});
         }
         try data_json.appendSlice(allocator, "]}");
 

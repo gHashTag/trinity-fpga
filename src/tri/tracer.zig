@@ -110,7 +110,7 @@ pub const Tracer = struct {
         const trace_id = generateTraceId();
         self.active_trace = .{
             .trace_id = trace_id,
-            .spans = .{},
+            .spans = .empty,
             .service_name = "trinity",
             .service_version = "5.2",
         };
@@ -132,8 +132,8 @@ pub const Tracer = struct {
                 .start_time_ns = tri_time.nanoTimestamp(),
                 .end_time_ns = 0,
                 .status = .unset,
-                .attributes = .{},
-                .events = .{},
+                .attributes = .empty,
+                .events = .empty,
                 .issue_number = issue_number,
                 .link = link,
             }) catch {};
@@ -167,54 +167,53 @@ pub const Tracer = struct {
     pub fn exportTrace(self: *Self) ![]const u8 {
         const trace = self.active_trace orelse return error.NoActiveTrace;
         var buf: std.ArrayListUnmanaged(u8) = .empty;
-        const writer = buf.writer(self.allocator);
 
-        try writer.writeAll("{\"resourceSpans\":[{");
-        try writer.print("\"resource\":{{\"attributes\":[", .{});
-        try writer.print("{{\"key\":\"service.name\",\"value\":{{\"stringValue\":\"{s}\"}}}},", .{trace.service_name});
-        try writer.print("{{\"key\":\"service.version\",\"value\":{{\"stringValue\":\"{s}\"}}}}", .{trace.service_version});
-        try writer.writeAll("]}},");
+        try buf.appendSlice(self.allocator, "{\"resourceSpans\":[{");
+        try buf.print(self.allocator, "\"resource\":{{\"attributes\":[", .{});
+        try buf.print(self.allocator, "{{\"key\":\"service.name\",\"value\":{{\"stringValue\":\"{s}\"}}}},", .{trace.service_name});
+        try buf.print(self.allocator, "{{\"key\":\"service.version\",\"value\":{{\"stringValue\":\"{s}\"}}}}", .{trace.service_version});
+        try buf.appendSlice(self.allocator, "]}},");
 
-        try writer.writeAll("\"scopeSpans\":[{\"spans\":[");
+        try buf.appendSlice(self.allocator, "\"scopeSpans\":[{\"spans\":[");
 
         for (trace.spans.items, 0..) |span, i| {
-            if (i > 0) try writer.writeAll(",");
-            try writer.writeAll("{");
-            try writer.print("\"traceId\":\"{d}\",", .{span.trace_id});
-            try writer.print("\"spanId\":\"{d}\",", .{span.span_id});
+            if (i > 0) try buf.appendSlice(self.allocator, ",");
+            try buf.appendSlice(self.allocator, "{");
+            try buf.print(self.allocator, "\"traceId\":\"{d}\",", .{span.trace_id});
+            try buf.print(self.allocator, "\"spanId\":\"{d}\",", .{span.span_id});
             if (span.parent_span_id != 0) {
-                try writer.print("\"parentSpanId\":\"{d}\",", .{span.parent_span_id});
+                try buf.print(self.allocator, "\"parentSpanId\":\"{d}\",", .{span.parent_span_id});
             }
-            try writer.print("\"name\":\"{s}\",", .{span.name});
-            try writer.print("\"startTimeUnixNano\":\"{d}\",", .{@as(u128, @intCast(span.start_time_ns))});
+            try buf.print(self.allocator, "\"name\":\"{s}\",", .{span.name});
+            try buf.print(self.allocator, "\"startTimeUnixNano\":\"{d}\",", .{@as(u128, @intCast(span.start_time_ns))});
             if (span.end_time_ns > 0) {
-                try writer.print("\"endTimeUnixNano\":\"{d}\",", .{@as(u128, @intCast(span.end_time_ns))});
+                try buf.print(self.allocator, "\"endTimeUnixNano\":\"{d}\",", .{@as(u128, @intCast(span.end_time_ns))});
             }
-            try writer.print("\"status\":{{\"code\":\"{s}\"}},", .{span.status.toString()});
-            try writer.print("\"durationMs\":{d}", .{span.durationMs()});
+            try buf.print(self.allocator, "\"status\":{{\"code\":\"{s}\"}},", .{span.status.toString()});
+            try buf.print(self.allocator, "\"durationMs\":{d}", .{span.durationMs()});
 
             // Attributes
             if (span.attributes.items.len > 0) {
-                try writer.writeAll(",\"attributes\":[");
+                try buf.appendSlice(self.allocator, ",\"attributes\":[");
                 for (span.attributes.items, 0..) |attr, j| {
-                    if (j > 0) try writer.writeAll(",");
-                    try writer.writeAll("{");
-                    try writer.print("\"key\":\"{s}\",\"value\":", .{attr.key});
+                    if (j > 0) try buf.appendSlice(self.allocator, ",");
+                    try buf.appendSlice(self.allocator, "{");
+                    try buf.print(self.allocator, "\"key\":\"{s}\",\"value\":", .{attr.key});
                     switch (attr.value) {
-                        .string => |s| try writer.print("{{\"stringValue\":\"{s}\"}}", .{s}),
-                        .int => |n| try writer.print("{{\"intValue\":\"{d}\"}}", .{n}),
-                        .float => |f| try writer.print("{{\"doubleValue\":{d}}}", .{f}),
-                        .boolean => |b| try writer.print("{{\"boolValue\":{}}}", .{b}),
+                        .string => |s| try buf.print(self.allocator, "{{\"stringValue\":\"{s}\"}}", .{s}),
+                        .int => |n| try buf.print(self.allocator, "{{\"intValue\":\"{d}\"}}", .{n}),
+                        .float => |f| try buf.print(self.allocator, "{{\"doubleValue\":{d}}}", .{f}),
+                        .boolean => |b| try buf.print(self.allocator, "{{\"boolValue\":{}}}", .{b}),
                     }
-                    try writer.writeAll("}");
+                    try buf.appendSlice(self.allocator, "}");
                 }
-                try writer.writeAll("]");
+                try buf.appendSlice(self.allocator, "]");
             }
 
-            try writer.writeAll("}");
+            try buf.appendSlice(self.allocator, "}");
         }
 
-        try writer.writeAll("]}]}]}");
+        try buf.appendSlice(self.allocator, "]}]}]}");
         return buf.toOwnedSlice(self.allocator);
     }
 
@@ -410,8 +409,8 @@ test "Span durationMs" {
         .start_time_ns = 1_000_000_000,
         .end_time_ns = 1_500_000_000,
         .status = .ok,
-        .attributes = .{},
-        .events = .{},
+        .attributes = .empty,
+        .events = .empty,
         .issue_number = 1,
         .link = null,
     };

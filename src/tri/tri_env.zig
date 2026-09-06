@@ -81,6 +81,20 @@ pub fn hasConstant(comptime key: [:0]const u8) bool {
     return c.getenv(key.ptr) != null;
 }
 
+/// Replaces the removed `std.posix.getenv`. Takes a runtime name and needs no
+/// allocator: the name is copied into a stack buffer to null-terminate it for
+/// libc. Names longer than the buffer return null, which is the same answer
+/// the caller gets for "not set" -- no environment variable name in this tree
+/// comes close.
+pub fn getPosix(name: []const u8) ?[]const u8 {
+    var buf: [256]u8 = undefined;
+    if (name.len >= buf.len) return null;
+    @memcpy(buf[0..name.len], name);
+    buf[name.len] = 0;
+    const raw = c.getenv(@ptrCast(&buf)) orelse return null;
+    return std.mem.span(raw);
+}
+
 /// Replaces the removed `std.process.getEnvMap`. Returns a copy of the current
 /// environment as a `std.process.Environ.Map`, which is what
 /// `tri_proc.run`'s `env_map` field wants.
@@ -217,4 +231,18 @@ test "a value containing '=' survives the split" {
     defer map.deinit();
     // Split on the FIRST '=' only -- the rest belongs to the value.
     try std.testing.expectEqualStrings("a=b=c", map.get("TRI_ENV_TEST_EQ").?);
+}
+
+test "getPosix reads a runtime-named variable without an allocator" {
+    _ = c_test.setenv("TRI_ENV_TEST_POSIX", "value", 1);
+    defer _ = c_test.unsetenv("TRI_ENV_TEST_POSIX");
+
+    const name: []const u8 = "TRI_ENV_TEST_POSIX"; // runtime slice, not a literal
+    try std.testing.expectEqualStrings("value", getPosix(name).?);
+}
+
+test "getPosix returns null when unset and for an over-long name" {
+    _ = c_test.unsetenv("TRI_ENV_TEST_POSIX2");
+    try std.testing.expect(getPosix("TRI_ENV_TEST_POSIX2") == null);
+    try std.testing.expect(getPosix("X" ** 300) == null);
 }

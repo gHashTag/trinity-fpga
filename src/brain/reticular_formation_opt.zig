@@ -312,9 +312,9 @@ test "Optimized: poll with timestamp filter" {
 
     try bus.publish(.task_claimed, .{ .task_claimed = .{ .task_id = "task-1", .agent_id = "agent-1" } });
 
-    std.Thread.sleep(10 * std.time.ns_per_ms);
+    tri_time.sleep(10 * std.time.ns_per_ms);
     const mid_time = tri_time.milliTimestamp();
-    std.Thread.sleep(5 * std.time.ns_per_ms);
+    tri_time.sleep(5 * std.time.ns_per_ms);
 
     try bus.publish(.task_claimed, .{ .task_claimed = .{ .task_id = "task-2", .agent_id = "agent-2" } });
 

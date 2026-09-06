@@ -1,4 +1,5 @@
 const std = @import("std");
+const tri_env = @import("tri_env");
 const fs = std.fs;
 const time = std.time;
 
@@ -25,7 +26,7 @@ pub const TokenRotator = struct {
         var rotator = TokenRotator{
             .allocator = allocator,
             .current_index = 0,
-            .tokens = .{},
+            .tokens = .empty,
             .total_rotations = 0,
             .last_rotation = 0,
             .state_file = try allocator.dupe(u8, state_path),
@@ -54,7 +55,7 @@ pub const TokenRotator = struct {
         };
 
         for (TOKEN_ENV_VARS) |env_var| {
-            const key = std.posix.getenv(env_var) orelse continue;
+            const key = tri_env.getPosix(env_var) orelse continue;
             if (key.len == 0) continue;
 
             try self.tokens.append(allocator, TokenInfo{
@@ -91,7 +92,7 @@ pub const TokenRotator = struct {
             return try self.getNextToken();
         }
 
-        const key = std.posix.getenv(token.name) orelse return error.TokenNotFound;
+        const key = tri_env.getPosix(token.name) orelse return error.TokenNotFound;
         token.usage_count += 1;
         return self.allocator.dupe(u8, key);
     }
@@ -113,7 +114,7 @@ pub const TokenRotator = struct {
             }
 
             if (token.status == .active) {
-                const key = std.posix.getenv(token.name) orelse continue;
+                const key = tri_env.getPosix(token.name) orelse continue;
                 if (key.len == 0) continue;
 
                 token.usage_count += 1;
@@ -171,39 +172,38 @@ pub const TokenRotator = struct {
         var buffer = std.ArrayList(u8).initCapacity(self.allocator, 1024) catch return error.OutOfMemory;
         defer buffer.deinit(self.allocator);
 
-        const writer = buffer.writer(self.allocator);
-        try writer.print("{{\n", .{});
-        try writer.print("  \"current_index\": {},\n", .{self.current_index});
-        try writer.print("  \"total_rotations\": {},\n", .{self.total_rotations});
-        try writer.print("  \"last_rotation\": {},\n", .{self.last_rotation});
-        try writer.writeAll("  \"tokens\": [\n");
+        try buffer.print(self.allocator, "{{\n", .{});
+        try buffer.print(self.allocator, "  \"current_index\": {},\n", .{self.current_index});
+        try buffer.print(self.allocator, "  \"total_rotations\": {},\n", .{self.total_rotations});
+        try buffer.print(self.allocator, "  \"last_rotation\": {},\n", .{self.last_rotation});
+        try buffer.appendSlice(self.allocator, "  \"tokens\": [\n");
 
         for (self.tokens.items, 0..) |token, i| {
-            try writer.print("    {{\"name\": \"{s}\", \"status\": {}, ", .{ token.name, @intFromEnum(token.status) });
+            try buffer.print(self.allocator, "    {{\"name\": \"{s}\", \"status\": {}, ", .{ token.name, @intFromEnum(token.status) });
 
             if (token.last_429) |ts| {
-                try writer.print("\"last_429\": {}, ", .{ts});
+                try buffer.print(self.allocator, "\"last_429\": {}, ", .{ts});
             } else {
-                try writer.writeAll("\"last_429\": null, ");
+                try buffer.appendSlice(self.allocator, "\"last_429\": null, ");
             }
 
             if (token.reset_at) |ts| {
-                try writer.print("\"reset_at\": {}, ", .{ts});
+                try buffer.print(self.allocator, "\"reset_at\": {}, ", .{ts});
             } else {
-                try writer.writeAll("\"reset_at\": null, ");
+                try buffer.appendSlice(self.allocator, "\"reset_at\": null, ");
             }
 
-            try writer.print("\"usage_count\": {}}}", .{token.usage_count});
+            try buffer.print(self.allocator, "\"usage_count\": {}}}", .{token.usage_count});
 
             if (i < self.tokens.items.len - 1) {
-                try writer.writeAll(",\n");
+                try buffer.appendSlice(self.allocator, ",\n");
             } else {
-                try writer.writeAll("\n");
+                try buffer.appendSlice(self.allocator, "\n");
             }
         }
 
-        try writer.writeAll("  ]\n");
-        try writer.writeAll("}\n");
+        try buffer.appendSlice(self.allocator, "  ]\n");
+        try buffer.appendSlice(self.allocator, "}\n");
 
         var file = try fs.cwd().createFile(self.state_file, .{ .mode = 0o600 });
         defer file.close();

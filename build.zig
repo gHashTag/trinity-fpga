@@ -38,6 +38,16 @@ pub fn build(b: *std.Build) void {
     // The process-wide Io handle, for leaves that cannot be reached by an Io
     // parameter without changing signatures across module boundaries. Shared
     // by the same modules as tri_time, and for the same reason.
+    // Environment access. Now a module rather than a path import, because
+    // files outside src/tri/ reach for it and a file cannot belong to two
+    // modules.
+    const tri_env_mod = b.createModule(.{
+        .root_source_file = b.path("src/tri/tri_env.zig"),
+        .target = target,
+        .optimize = optimize,
+        .link_libc = true,
+    });
+
     const tri_io_mod = b.createModule(.{
         .root_source_file = b.path("src/tri/tri_io.zig"),
         .target = target,
@@ -1356,6 +1366,7 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
         .imports = &.{
             .{ .name = "tri_time", .module = tri_time_mod },
+            .{ .name = "tri_env", .module = tri_env_mod },
             .{ .name = "tri_io", .module = tri_io_mod },
             .{ .name = "tri_proc", .module = tri_proc_mod },
         },
@@ -1429,6 +1440,7 @@ pub fn build(b: *std.Build) void {
         .imports = &.{
             .{ .name = "vsa", .module = vsa_tri },
             .{ .name = "tri_time", .module = tri_time_mod },
+            .{ .name = "tri_env", .module = tri_env_mod },
             .{ .name = "tri_io", .module = tri_io_mod },
         },
     });
@@ -2083,6 +2095,7 @@ pub fn build(b: *std.Build) void {
             .{ .name = "igla_kg", .module = igla_kg_mod },
             .{ .name = "triples_parser", .module = triples_parser_mod },
             .{ .name = "tri_time", .module = tri_time_mod },
+            .{ .name = "tri_env", .module = tri_env_mod },
             .{ .name = "tri_io", .module = tri_io_mod },
             .{ .name = "tri_proc", .module = tri_proc_mod },
         },
@@ -2403,6 +2416,9 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
         .imports = &.{
             .{ .name = "const", .module = sacred_const_mod },
+            .{ .name = "tri_time", .module = tri_time_mod },
+            .{ .name = "tri_env", .module = tri_env_mod },
+            .{ .name = "tri_io", .module = tri_io_mod },
         },
     });
 
@@ -2421,6 +2437,11 @@ pub fn build(b: *std.Build) void {
         .root_source_file = b.path("src/bsd/scanner.zig"),
         .target = target,
         .optimize = optimize,
+        .imports = &.{
+            .{ .name = "tri_time", .module = tri_time_mod },
+            .{ .name = "tri_env", .module = tri_env_mod },
+            .{ .name = "tri_io", .module = tri_io_mod },
+        },
     });
 
     // Firebird Slashing module (DePIN slashing conditions)
@@ -2513,6 +2534,7 @@ pub fn build(b: *std.Build) void {
                 .{ .name = "golden_chain", .module = golden_chain_storm_mod },
                 .{ .name = "tri27_cli", .module = tri27_cli_mod },
                 .{ .name = "tri_time", .module = tri_time_mod },
+                .{ .name = "tri_env", .module = tri_env_mod },
                 .{ .name = "tri_io", .module = tri_io_mod },
                 .{ .name = "tri_proc", .module = tri_proc_mod },
                 .{ .name = "trinity_swe", .module = vibeec_swe },

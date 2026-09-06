@@ -74,8 +74,8 @@ pub const ObservabilityManager = struct {
     pub fn init(allocator: Allocator) ObservabilityManager {
         return ObservabilityManager{
             .allocator = allocator,
-            .metrics = .{},
-            .alert_thresholds = .{},
+            .metrics = .empty,
+            .alert_thresholds = .empty,
             .alerts_triggered = 0,
         };
     }

@@ -11,6 +11,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const tri_proc = @import("tri_proc");
 const Allocator = std.mem.Allocator;
 
@@ -98,7 +99,7 @@ pub const RailwaySSH = struct {
             return self.exec(allocator, command) catch |err| {
                 if (attempt == 2) return err;
                 std.debug.print("SSH attempt {d}/3 failed: {}, retrying...\n", .{ attempt + 1, err });
-                std.Thread.sleep(std.time.ns_per_s * (@as(u64, 1) << @intCast(attempt)));
+                tri_time.sleep(std.time.ns_per_s * (@as(u64, 1) << @intCast(attempt)));
                 continue;
             };
         }

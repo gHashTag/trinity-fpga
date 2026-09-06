@@ -17,6 +17,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_env = @import("tri_env");
 const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 const igla_hybrid_chat = @import("igla_hybrid_chat");
@@ -58,7 +59,7 @@ pub const PasWebSocketServer = struct {
 
     pub fn init(allocator: Allocator) Self {
         return Self{
-            .clients = .{},
+            .clients = .empty,
             .allocator = allocator,
         };
     }
@@ -373,9 +374,9 @@ pub const ChatServer = struct {
         var config = igla_hybrid_chat.HybridConfig{};
 
         // Read API keys from environment
-        config.groq_api_key = std.posix.getenv("GROQ_API_KEY");
-        config.claude_api_key = std.posix.getenv("ANTHROPIC_API_KEY");
-        config.openai_api_key = std.posix.getenv("OPENAI_API_KEY");
+        config.groq_api_key = tri_env.getPosix("GROQ_API_KEY");
+        config.claude_api_key = tri_env.getPosix("ANTHROPIC_API_KEY");
+        config.openai_api_key = tri_env.getPosix("OPENAI_API_KEY");
         config.enable_context = true;
         config.system_prompt = "You are Trinity, a helpful AI assistant with multi-modal capabilities. Be concise and insightful.";
 
@@ -727,7 +728,7 @@ pub const ChatServer = struct {
     fn handleRalphStatus(self: *Self, connection: *std.net.Server.Connection, path: []const u8) !void {
         // Parse ?agent=N from path (default to 0 = main worktree)
         // Derive worktree paths from HOME env var
-        const home = std.posix.getenv("HOME") orelse "/tmp";
+        const home = tri_env.getPosix("HOME") orelse "/tmp";
         var wt_bufs: [4][256]u8 = undefined;
         var worktree_paths: [4][]const u8 = undefined;
         const suffixes = [_][]const u8{ "/trinity", "/trinity-w1", "/trinity-w2", "/trinity-w3" };

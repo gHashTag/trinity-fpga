@@ -9,7 +9,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
-const tri_env = @import("tri_env.zig");
+const tri_env = @import("tri_env");
 const colors = @import("tri_colors.zig");
 const trinity_swe_agent_mod = @import("trinity_swe");
 const igla_hybrid_chat = @import("igla_hybrid_chat");

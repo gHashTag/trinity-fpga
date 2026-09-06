@@ -127,8 +127,8 @@ pub const BootstrapManager = struct {
     pub fn init(allocator: Allocator) BootstrapManager {
         return BootstrapManager{
             .allocator = allocator,
-            .peers = .{},
-            .discovered = .{},
+            .peers = .empty,
+            .discovered = .empty,
             .dns_seed = null,
         };
     }

@@ -118,7 +118,7 @@ pub const PluginLoader = struct {
             .allocator = allocator,
             .registry = registry,
             .security_config = config,
-            .loaded_modules = .{},
+            .loaded_modules = .empty,
         };
     }
 

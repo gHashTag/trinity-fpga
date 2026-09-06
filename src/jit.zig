@@ -38,7 +38,7 @@ pub const JitCompiler = struct {
 
     pub fn init(allocator: std.mem.Allocator) Self {
         return Self{
-            .code = .{},
+            .code = .empty,
             .allocator = allocator,
         };
     }
