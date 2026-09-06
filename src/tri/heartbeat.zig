@@ -543,16 +543,17 @@ fn saveLoopState(wake: u32, ok: usize, fail: usize, decision: LoopDecision) void
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn runChild(allocator: Allocator, argv: []const []const u8) u8 {
-    var child = std.process.Child.init(argv, allocator);
-    child.stdout_behavior = .Pipe;
-    child.stderr_behavior = .Pipe;
-    child.spawn() catch return 255;
+    var child = try std.process.spawn(tri_io.get(), .{
+        .argv = argv,
+        .stdout = .pipe,
+        .stderr = .pipe,
+    });
     var stdout_buf: std.ArrayList(u8) = .empty;
     var stderr_buf: std.ArrayList(u8) = .empty;
     child.collectOutput(allocator, &stdout_buf, &stderr_buf, 8 * 1024 * 1024) catch return 255;
     defer stdout_buf.deinit(allocator);
     defer stderr_buf.deinit(allocator);
-    const term = child.wait() catch return 255;
+    const term = child.wait(tri_io.get()) catch return 255;
     return switch (term) {
         .exited => |code| code,
         else => 1,
@@ -761,16 +762,18 @@ fn runRetryBuildAndTest(allocator: Allocator) RetryIterationResult {
 
     // Step 1: zig build
     result.build_ok = blk: {
-        var child = std.process.Child.init(&.{ "zig", "build" }, allocator);
-        child.stdout_behavior = .Pipe;
-        child.stderr_behavior = .Pipe;
+        var child = try std.process.spawn(tri_io.get(), .{
+            .argv = &.{ "zig", "build" },
+            .stdout = .pipe,
+            .stderr = .pipe,
+        });
         _ = child.spawn() catch break :blk false;
         var stdout_buf: std.ArrayList(u8) = .empty;
         var stderr_buf: std.ArrayList(u8) = .empty;
         defer stdout_buf.deinit(allocator);
         defer stderr_buf.deinit(allocator);
         child.collectOutput(allocator, &stdout_buf, &stderr_buf, 4 * 1024 * 1024) catch break :blk false;
-        const term = child.wait() catch break :blk false;
+        const term = child.wait(tri_io.get()) catch break :blk false;
         const ok = switch (term) {
             .exited => |code| code == 0,
             else => false,
@@ -788,16 +791,18 @@ fn runRetryBuildAndTest(allocator: Allocator) RetryIterationResult {
 
     // Step 2: zig build test
     {
-        var child = std.process.Child.init(&.{ "zig", "build", "test" }, allocator);
-        child.stdout_behavior = .Pipe;
-        child.stderr_behavior = .Pipe;
+        var child = try std.process.spawn(tri_io.get(), .{
+            .argv = &.{ "zig", "build", "test" },
+            .stdout = .pipe,
+            .stderr = .pipe,
+        });
         _ = child.spawn() catch return result;
         var stdout_buf: std.ArrayList(u8) = .empty;
         var stderr_buf: std.ArrayList(u8) = .empty;
         defer stdout_buf.deinit(allocator);
         defer stderr_buf.deinit(allocator);
         child.collectOutput(allocator, &stdout_buf, &stderr_buf, 4 * 1024 * 1024) catch return result;
-        const term = child.wait() catch return result;
+        const term = child.wait(tri_io.get()) catch return result;
         result.test_ok = switch (term) {
             .exited => |code| code == 0,
             else => false,
@@ -854,18 +859,22 @@ fn retryParseTestCounts(output: []const u8, result: *RetryIterationResult) void 
 }
 
 fn retryCommentOnIssue(allocator: Allocator, issue: u32, iteration: u32, max_iter: u32) void {
+    _ = allocator; // 0.16: std.process.spawn takes no allocator
     var body_buf: [256]u8 = undefined;
     const body = std.fmt.bufPrint(&body_buf, "🔄 **[LOOP RETRY]** Iteration {d}/{d}", .{ iteration, max_iter }) catch return;
     var issue_buf: [16]u8 = undefined;
     const issue_str = std.fmt.bufPrint(&issue_buf, "{d}", .{issue}) catch return;
-    var child = std.process.Child.init(&.{ "gh", "issue", "comment", issue_str, "--body", body }, allocator);
-    child.stdout_behavior = .Ignore;
-    child.stderr_behavior = .Ignore;
+    var child = try std.process.spawn(tri_io.get(), .{
+        .argv = &.{ "gh", "issue", "comment", issue_str, "--body", body },
+        .stdout = .ignore,
+        .stderr = .ignore,
+    });
     _ = child.spawn() catch return;
-    _ = child.wait() catch {};
+    _ = child.wait(tri_io.get()) catch {};
 }
 
 fn retryCommentFinal(allocator: Allocator, issue: u32, verdict: RetryVerdict, iterations: u32, result: RetryIterationResult) void {
+    _ = allocator; // 0.16: std.process.spawn takes no allocator
     const emoji: []const u8 = if (verdict == .pass) "✅" else "❌";
     var body_buf: [512]u8 = undefined;
     const body = std.fmt.bufPrint(&body_buf, "{s} **[LOOP RETRY COMPLETE]** {s} after {d} iterations (tests: {d}/{d}, rate: {d:.0}%)", .{
@@ -878,11 +887,13 @@ fn retryCommentFinal(allocator: Allocator, issue: u32, verdict: RetryVerdict, it
     }) catch return;
     var issue_buf: [16]u8 = undefined;
     const issue_str = std.fmt.bufPrint(&issue_buf, "{d}", .{issue}) catch return;
-    var child = std.process.Child.init(&.{ "gh", "issue", "comment", issue_str, "--body", body }, allocator);
-    child.stdout_behavior = .Ignore;
-    child.stderr_behavior = .Ignore;
+    var child = try std.process.spawn(tri_io.get(), .{
+        .argv = &.{ "gh", "issue", "comment", issue_str, "--body", body },
+        .stdout = .ignore,
+        .stderr = .ignore,
+    });
     _ = child.spawn() catch return;
-    _ = child.wait() catch {};
+    _ = child.wait(tri_io.get()) catch {};
 }
 
 pub fn extractRetryErrorSummary(error_output: []const u8) []const u8 {

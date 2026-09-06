@@ -315,8 +315,8 @@ pub const PostgresClient = struct {
         const col_count = std.mem.readInt(u16, &col_count_buf, .big);
 
         var row = Row{
-            .columns = std.ArrayList([]const u8).init(self.allocator),
-            .values = std.ArrayList([]const u8).init(self.allocator),
+            .columns = .empty,
+            .values = .empty,
         };
         errdefer row.deinit(self.allocator);
 
@@ -330,20 +330,20 @@ pub const PostgresClient = struct {
 
             if (value_len == -1) {
                 // NULL value
-                try row.columns.append("");
-                try row.values.append("");
+                try row.columns.append(self.allocator, "");
+                try row.values.append(self.allocator, "");
             } else {
                 const value_len_usize = @as(usize, @intCast(value_len));
                 const value_buf = try self.allocator.alloc(u8, value_len_usize);
                 const value_bytes = try streamRead(stream.*, value_buf[0..value_len_usize]);
                 if (value_bytes != value_len_usize) return error.InvalidMessage;
-                try row.values.append(value_buf[0..value_len_usize]);
-                try row.columns.append(""); // Column name not in DataRow
+                try row.values.append(self.allocator, value_buf[0..value_len_usize]);
+                try row.columns.append(self.allocator, ""); // Column name not in DataRow
                 remaining -= value_len_usize;
             }
         }
 
-        try result.rows.append(try row.clone(self.allocator));
+        try result.rows.append(self.allocator, try row.clone(self.allocator));
         row.deinit(self.allocator);
     }
 
@@ -404,7 +404,7 @@ pub const QueryResult = struct {
         for (self.rows.items) |*row| {
             row.deinit(allocator);
         }
-        self.rows.deinit();
+        self.rows.deinit(allocator);
     }
 };
 
@@ -429,10 +429,10 @@ pub const Row = struct {
         var new_values = try std.ArrayList([]const u8).initCapacity(allocator, self.values.items.len);
 
         for (self.columns.items) |col| {
-            try new_columns.append(try allocator.dupe(u8, col));
+            try new_columns.append(allocator, try allocator.dupe(u8, col));
         }
         for (self.values.items) |val| {
-            try new_values.append(try allocator.dupe(u8, val));
+            try new_values.append(allocator, try allocator.dupe(u8, val));
         }
 
         return Row{

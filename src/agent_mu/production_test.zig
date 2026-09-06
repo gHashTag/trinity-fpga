@@ -361,12 +361,12 @@ test "Production test: generate markdown report" {
     const results = try runner.runAll();
     defer runner.freeResults(results);
 
-    var buffer = ArrayList(u8).init(allocator);
-    defer buffer.deinit();
+    var aw: std.Io.Writer.Allocating = .init(allocator);
+    defer aw.deinit();
 
-    try TestRunner.generateReportFromSlice(allocator, results, buffer.writer());
+    try TestRunner.generateReportFromSlice(allocator, results, &aw.writer);
 
-    const output = buffer.items;
+    const output = aw.written();
     try std.testing.expect(std.mem.indexOf(u8, output, "AGENT MU Production Test Report") != null);
     try std.testing.expect(std.mem.indexOf(u8, output, "## Test Results") != null);
     try std.testing.expect(std.mem.indexOf(u8, output, "## Summary") != null);

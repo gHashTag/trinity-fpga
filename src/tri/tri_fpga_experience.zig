@@ -18,6 +18,8 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+// 0.16 puts file I/O behind an `Io`; no signature here carries one.
+const tri_io = @import("tri_io");
 const Allocator = std.mem.Allocator;
 const print = std.debug.print;
 
@@ -182,13 +184,14 @@ fn cmdAdd(allocator: Allocator, args: []const []const u8) !void {
     try entries_json.appendSlice(allocator, "\n]\n");
 
     // Write back
-    const cwd = std.fs.cwd();
-    const file = cwd.createFile(EXPERIENCE_PATH, .{}) catch {
+    const io = tri_io.get();
+    const cwd = std.Io.Dir.cwd();
+    const file = cwd.createFile(io, EXPERIENCE_PATH, .{}) catch {
         print("{s}Error:{s} Cannot write {s}\n", .{ RED, RESET, EXPERIENCE_PATH });
         return;
     };
-    defer file.close();
-    file.writeAll(entries_json.items) catch {
+    defer file.close(io);
+    file.writeStreamingAll(io, entries_json.items) catch {
         print("{s}Error:{s} Write failed\n", .{ RED, RESET });
         return;
     };
@@ -401,10 +404,10 @@ fn cmdCheckBlockers(allocator: Allocator, test_name: []const u8) !void {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn readFile(allocator: Allocator, path: []const u8) ?[]u8 {
-    const cwd = std.fs.cwd();
-    const file = cwd.openFile(path, .{}) catch return null;
-    defer file.close();
-    return file.readToEndAlloc(allocator, 1024 * 1024) catch null;
+    // 0.16 dropped File.readToEndAlloc; Dir.readFileAlloc opens, reads to EOF
+    // and closes. Argument order changed to (io, path, gpa, limit).
+    const cwd = std.Io.Dir.cwd();
+    return cwd.readFileAlloc(tri_io.get(), path, allocator, .limited(1024 * 1024)) catch null;
 }
 
 fn jsonStr(val: std.json.Value) []const u8 {

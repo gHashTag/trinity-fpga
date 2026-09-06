@@ -191,7 +191,7 @@ pub const IssueTracker = struct {
 
         req.transfer_encoding = .{ .content_length = request_body.len };
         var body_writer = try req.sendBodyUnflushed(&.{});
-        try body_writer.writer().writeAll(request_body);
+        try body_writer.writer.writeAll(request_body);
         try body_writer.end();
         if (req.connection) |conn| try conn.flush();
 
@@ -229,8 +229,8 @@ pub const IssueTracker = struct {
     /// Create issue using gh CLI fallback
     fn createIssueGh(self: *Self, title: []const u8, issue_body: []const u8, labels: []const []const u8) !IssueResult {
         // Build gh CLI command
-        var argv_list = std.ArrayList([]const u8).init(self.allocator);
-        defer argv_list.deinit();
+        var argv_list: std.ArrayList([]const u8) = .empty;
+        defer argv_list.deinit(self.allocator);
 
         try argv_list.appendSlice(self.allocator, &.{ "gh", "issue", "create", "--title", title, "--body", issue_body });
 
@@ -240,8 +240,8 @@ pub const IssueTracker = struct {
             try argv_list.appendSlice(self.allocator, &.{ "--label", labels_str });
         }
 
-        try argv_list.append("--json");
-        try argv_list.append("number,url");
+        try argv_list.append(self.allocator, "--json");
+        try argv_list.append(self.allocator, "number,url");
 
         const result = try tri_proc.run(.{
             .allocator = self.allocator,
@@ -350,7 +350,7 @@ pub const IssueTracker = struct {
 
         req.transfer_encoding = .{ .content_length = request_body.len };
         var body_writer = try req.sendBodyUnflushed(&.{});
-        try body_writer.writer().writeAll(request_body);
+        try body_writer.writer.writeAll(request_body);
         try body_writer.end();
         if (req.connection) |conn| try conn.flush();
 
@@ -441,7 +441,7 @@ pub const IssueTracker = struct {
 
         req.transfer_encoding = .{ .content_length = request_body.len };
         var body_writer = try req.sendBodyUnflushed(&.{});
-        try body_writer.writer().writeAll(request_body);
+        try body_writer.writer.writeAll(request_body);
         try body_writer.end();
         if (req.connection) |conn| try conn.flush();
 

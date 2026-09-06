@@ -8,6 +8,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const Allocator = std.mem.Allocator;
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -67,6 +68,7 @@ pub fn extractStem(path: []const u8) []const u8 {
 /// Find the .zig file corresponding to a .tri spec.
 /// Checks: generated/{stem}.zig, src/tri/{stem}.zig, src/tri/tri_{stem}.zig
 pub fn findZigSource(allocator: Allocator, spec_path: []const u8) !?[]const u8 {
+    const io = tri_io.get();
     const stem = extractStem(spec_path);
 
     // Candidate paths to check
@@ -78,7 +80,7 @@ pub fn findZigSource(allocator: Allocator, spec_path: []const u8) !?[]const u8 {
 
     for (candidates) |c| {
         const path = try std.fmt.allocPrint(allocator, "{s}{s}.zig", .{ c.fmt, stem });
-        std.fs.cwd().access(path, .{}) catch {
+        std.Io.Dir.cwd().access(io, path, .{}) catch {
             allocator.free(path);
             continue;
         };
@@ -286,6 +288,7 @@ pub fn renderTestsSection(allocator: Allocator, tests: []const ExtractedTest) ![
 
 /// Enrich a .tri spec by reading the corresponding .zig file.
 pub fn enrichSpec(allocator: Allocator, spec_path: []const u8) !EnrichResult {
+    const io = tri_io.get();
     // Find corresponding .zig
     const zig_path = try findZigSource(allocator, spec_path) orelse {
         std.debug.print("  \x1b[33mWARN:\x1b[0m No .zig source found for {s}\n", .{spec_path});
@@ -300,7 +303,7 @@ pub fn enrichSpec(allocator: Allocator, spec_path: []const u8) !EnrichResult {
     };
 
     // Read .zig source
-    const source = std.fs.cwd().readFileAlloc(allocator, zig_path, 10 * 1024 * 1024) catch |err| {
+    const source = std.Io.Dir.cwd().readFileAlloc(io, zig_path, allocator, .limited(10 * 1024 * 1024)) catch |err| {
         std.debug.print("  \x1b[31mERROR:\x1b[0m Cannot read {s}: {}\n", .{ zig_path, err });
         return .{
             .spec_path = spec_path,
@@ -319,7 +322,7 @@ pub fn enrichSpec(allocator: Allocator, spec_path: []const u8) !EnrichResult {
     const tests = try extractTests(allocator, source);
 
     // Read existing spec
-    const existing_spec = std.fs.cwd().readFileAlloc(allocator, spec_path, 1024 * 1024) catch "";
+    const existing_spec = std.Io.Dir.cwd().readFileAlloc(io, spec_path, allocator, .limited(1024 * 1024)) catch "";
     defer if (existing_spec.len > 0) allocator.free(existing_spec);
 
     // Generate enriched spec
@@ -371,9 +374,9 @@ pub fn enrichSpec(allocator: Allocator, spec_path: []const u8) !EnrichResult {
     const enriched = try out.toOwnedSlice(allocator);
     defer allocator.free(enriched);
 
-    const spec_file = try std.fs.cwd().createFile(spec_path, .{});
-    defer spec_file.close();
-    try spec_file.writeAll(enriched);
+    const spec_file = try std.Io.Dir.cwd().createFile(io, spec_path, .{});
+    defer spec_file.close(io);
+    try spec_file.writeStreamingAll(io, enriched);
 
     return .{
         .spec_path = spec_path,
@@ -391,6 +394,7 @@ pub fn enrichSpec(allocator: Allocator, spec_path: []const u8) !EnrichResult {
 
 /// Run the enrich command: `tri enrich <spec.tri>` or `tri enrich --all`
 pub fn runEnrichCommand(allocator: Allocator, args: []const []const u8) !void {
+    const io = tri_io.get();
     std.debug.print("\n\x1b[33m🔱 TRI SPEC ENRICHER\x1b[0m — φ² + 1/φ² = 3\n", .{});
     std.debug.print("\x1b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\x1b[0m\n\n", .{});
 
@@ -441,14 +445,14 @@ pub fn runEnrichCommand(allocator: Allocator, args: []const []const u8) !void {
         var total_fns: usize = 0;
         var total_tests: usize = 0;
 
-        var dir = std.fs.cwd().openDir("specs/tri", .{ .iterate = true }) catch {
+        var dir = std.Io.Dir.cwd().openDir(io, "specs/tri", .{ .iterate = true }) catch {
             std.debug.print("  \x1b[31mERROR:\x1b[0m Cannot open specs/tri/\n", .{});
             return;
         };
-        defer dir.close();
+        defer dir.close(io);
 
         var iter = dir.iterate();
-        while (try iter.next()) |entry| {
+        while (try iter.next(io)) |entry| {
             if (entry.kind != .file) continue;
             if (!std.mem.endsWith(u8, entry.name, ".tri")) continue;
 

@@ -781,11 +781,12 @@ pub const ChatServer = struct {
         const base_path = worktree_paths[@min(agent_idx, 3)];
 
         // Open worktree directory (absolute path)
-        var base_dir = std.Io.Dir.openDirAbsolute(tri_io.get(), base_path, .{}) catch {
+        const io = tri_io.get();
+        var base_dir = std.Io.Dir.openDirAbsolute(io, base_path, .{}) catch {
             try self.sendJsonResponse(connection, "{\"loop\":{\"status\":\"offline\"},\"circuit_breaker\":{\"state\":\"UNKNOWN\"},\"logs\":[],\"agent\":" ++ "0" ++ ",\"reachable\":false}");
             return;
         };
-        defer base_dir.close();
+        defer base_dir.close(io);
 
         var json: std.ArrayListUnmanaged(u8) = .empty;
         defer json.deinit(self.allocator);
@@ -799,7 +800,7 @@ pub const ChatServer = struct {
         try json.appendSlice(self.allocator, agent_buf[0..agent_str_len]);
 
         // 1. Read .ralph/logs/status.json
-        const status_json = base_dir.readFileAlloc(self.allocator, ".trinity/ralph/logs/status.json", 4096) catch |err| s_blk: {
+        const status_json = base_dir.readFileAlloc(io, ".trinity/ralph/logs/status.json", self.allocator, .limited(4096)) catch |err| s_blk: {
             std.debug.print("[ChatServer] Ralph agent {d} status read error: {}\n", .{ agent_idx, err });
             break :s_blk "{\"status\":\"offline\"}";
         };
@@ -812,7 +813,7 @@ pub const ChatServer = struct {
         try json.appendSlice(self.allocator, status_json);
 
         // 2. Read .ralph/internal/.circuit_breaker_state
-        const cb_json = base_dir.readFileAlloc(self.allocator, ".trinity/ralph/internal/.circuit_breaker_state", 4096) catch |err| cb_blk: {
+        const cb_json = base_dir.readFileAlloc(io, ".trinity/ralph/internal/.circuit_breaker_state", self.allocator, .limited(4096)) catch |err| cb_blk: {
             std.debug.print("[ChatServer] Ralph agent {d} CB read error: {}\n", .{ agent_idx, err });
             break :cb_blk "{\"state\":\"UNKNOWN\"}";
         };
@@ -825,16 +826,16 @@ pub const ChatServer = struct {
         // 3. Tail latest log
         try json.appendSlice(self.allocator, ",\"logs\":[");
         {
-            var dir = base_dir.openDir(".trinity/ralph/logs", .{ .iterate = true }) catch null;
+            var dir = base_dir.openDir(io, ".trinity/ralph/logs", .{ .iterate = true }) catch null;
             if (dir) |*d| {
-                defer d.close();
+                defer d.close(io);
                 var latest_time: i128 = 0;
                 var latest_name: [128]u8 = undefined;
                 var latest_len: usize = 0;
                 var it = d.iterate();
-                while (it.next() catch null) |entry| {
+                while (it.next(io) catch null) |entry| {
                     if (std.mem.startsWith(u8, entry.name, "claude_output_")) {
-                        const stat = d.statFile(entry.name) catch continue;
+                        const stat = d.statFile(io, entry.name, .{}) catch continue;
                         if (@as(i128, stat.mtime.nanoseconds) > latest_time) {
                             latest_time = @as(i128, stat.mtime.nanoseconds);
                             @memcpy(latest_name[0..entry.name.len], entry.name);
@@ -844,7 +845,7 @@ pub const ChatServer = struct {
                 }
 
                 if (latest_len > 0) {
-                    const log_content = d.readFileAlloc(self.allocator, latest_name[0..latest_len], 16384) catch null;
+                    const log_content = d.readFileAlloc(io, latest_name[0..latest_len], self.allocator, .limited(16384)) catch null;
                     if (log_content) |content| {
                         defer self.allocator.free(content);
                         var line_it = std.mem.splitBackwardsScalar(u8, content, '\n');
@@ -1275,7 +1276,8 @@ pub const ChatServer = struct {
 
         if (self.chat_engine) |engine| {
             const energy = engine.energy;
-            try json.writer(self.allocator).print(
+            try json.print(
+                self.allocator,
                 "\"tool_hits\":{d},\"symbolic_hits\":{d},\"kg_hits\":{d},\"tvc_hits\":{d},\"llm_calls\":{d},\"error_fallbacks\":{d},\"total_queries\":{d}",
                 .{ energy.tool_hits, energy.symbolic_hits, energy.kg_hits, energy.tvc_hits, engine.llm_calls, engine.error_fallbacks, energy.total_queries },
             );
@@ -1286,7 +1288,8 @@ pub const ChatServer = struct {
         try json.appendSlice(self.allocator, "},\"llm_status\":{");
 
         if (self.chat_engine) |engine| {
-            try json.writer(self.allocator).print(
+            try json.print(
+                self.allocator,
                 "\"groq_key\":{s},\"claude_key\":{s},\"local_model\":{s}",
                 .{
                     if (engine.config.groq_api_key != null) "true" else "false",
@@ -1313,7 +1316,7 @@ pub const ChatServer = struct {
                 try json.appendSlice(self.allocator, "{\"q\":\"");
                 const qlen = @min(entry.query_len, 64);
                 try json.appendSlice(self.allocator, entry.query[0..qlen]);
-                try json.writer(self.allocator).print("\",\"src\":\"{s}\",\"conf\":{d:.2},\"lat\":{d}}}", .{
+                try json.print(self.allocator, "\",\"src\":\"{s}\",\"conf\":{d:.2},\"lat\":{d}}}", .{
                     @tagName(entry.source),
                     entry.confidence,
                     entry.latency_us,

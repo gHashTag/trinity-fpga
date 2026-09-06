@@ -603,13 +603,17 @@ fn flashBitstream(bitstream_path: []const u8, device_str: []const u8) void {
         bitstream_path,
     };
 
-    var child = std.process.Child.init(&argv, std.heap.page_allocator);
+    var child = try std.process.spawn(tri_io.get(), .{
+        .argv = &argv,
+        .stdout = .inherit,
+        .stderr = .inherit,
+    });
     child.spawn() catch {
         printManualFlash(bitstream_path);
         return;
     };
 
-    const term = child.wait() catch {
+    const term = child.wait(tri_io.get()) catch {
         printManualFlash(bitstream_path);
         return;
     };
@@ -640,21 +644,24 @@ fn printManualFlash(bitstream_path: []const u8) void {
 // =============================================================================
 
 fn forgeDetect(allocator: std.mem.Allocator) !void {
+    _ = allocator; // 0.16: std.process.spawn takes no allocator
     std.debug.print("{s}", .{FORGE_BANNER});
     std.debug.print("{s}", .{FORGE_DEPRECATION});
     std.debug.print("[FORGE] JTAG Device Detection\n\n", .{});
     std.debug.print("  Scanning JTAG chain...\n", .{});
 
     const argv = [_][]const u8{ "openFPGALoader", "--detect" };
-    var child = std.process.Child.init(&argv, allocator);
-    child.stderr_behavior = .Pipe;
-    child.stdout_behavior = .Pipe;
+    var child = try std.process.spawn(tri_io.get(), .{
+        .argv = &argv,
+        .stdout = .pipe,
+        .stderr = .pipe,
+    });
     child.spawn() catch {
         std.debug.print("  openFPGALoader not found.\n", .{});
         printIdcodeTable();
         return;
     };
-    _ = child.wait() catch {
+    _ = child.wait(tri_io.get()) catch {
         printIdcodeTable();
         return;
     };

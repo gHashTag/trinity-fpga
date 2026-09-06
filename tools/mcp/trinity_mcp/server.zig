@@ -6,6 +6,10 @@
 
 const std = @import("std");
 const trinity_workspace = @import("trinity_workspace");
+// 0.16 puts file I/O behind an `Io` and removed `std.process.Child.run`.
+// Nothing in this file's signatures carries an Io, so the process one is used.
+const tri_io = @import("tri_io");
+const tri_proc = @import("tri_proc");
 const posix = std.posix;
 const needle = @import("needle");
 const resources_mod = @import("resources.zig");
@@ -516,7 +520,8 @@ const TrinityMCPServer = struct {
                 try writeJsonResponse(writer, "Error: Missing file_path", true);
                 return;
             };
-            const source = std.fs.cwd().readFileAlloc(self.allocator, file_path, 10_000_000) catch |err| {
+            // 0.16 reordered readFileAlloc: (io, path, gpa, limit).
+            const source = std.Io.Dir.cwd().readFileAlloc(tri_io.get(), file_path, self.allocator, .limited(10_000_000)) catch |err| {
                 const msg = std.fmt.allocPrint(self.allocator, "Error reading file: {s}", .{@errorName(err)}) catch {
                     try writeJsonResponse(writer, "Error reading file", true);
                     return;
@@ -1612,7 +1617,7 @@ const TrinityMCPServer = struct {
             argv[i + 2] = arg;
         }
 
-        const result = std.process.Child.run(.{
+        const result = tri_proc.run(.{
             .allocator = self.allocator,
             .argv = argv,
         }) catch |err| {
@@ -1794,7 +1799,8 @@ const StdoutWriter = struct {
 
     pub fn writeAll(self: *Self, bytes: []const u8) !void {
         _ = self;
-        _ = try posix.write(1, bytes);
+        // 0.16 removed std.posix.write; stdout is reached through std.Io.File.
+        try std.Io.File.stdout().writeStreamingAll(tri_io.get(), bytes);
     }
 };
 
@@ -1812,11 +1818,13 @@ pub fn main() !void {
     var server = TrinityMCPServer.init(allocator);
 
     // Debug to stderr (best-effort: stderr may not be available)
-    const stderr_fd: posix.fd_t = 2;
-    _ = posix.write(stderr_fd, "TRINITY MCP Server v2.0.0 started\n") catch |err| {
+    // 0.16 removed std.posix.write; stderr is reached through std.Io.File.
+    const io = tri_io.get();
+    const stderr_file = std.Io.File.stderr();
+    stderr_file.writeStreamingAll(io, "TRINITY MCP Server v2.0.0 started\n") catch |err| {
         std.log.debug("server: stderr write failed: {}", .{err});
     };
-    _ = posix.write(stderr_fd, "38+ tools + resources + prompts | Content-Length framing\n\n") catch |err| {
+    stderr_file.writeStreamingAll(io, "38+ tools + resources + prompts | Content-Length framing\n\n") catch |err| {
         std.log.debug("server: stderr write failed: {}", .{err});
     };
 
@@ -1873,7 +1881,7 @@ pub fn main() !void {
                 const line_end = std.mem.indexOfPos(u8, headers, line_start, "\r\n") orelse headers.len;
                 const hdr_line = headers[line_start..line_end];
                 if (std.ascii.startsWithIgnoreCase(hdr_line, "content-length:")) {
-                    const val_str = std.mem.trimLeft(u8, hdr_line["content-length:".len..], " ");
+                    const val_str = std.mem.trimStart(u8, hdr_line["content-length:".len..], " ");
                     content_length = std.fmt.parseInt(usize, val_str, 10) catch null;
                 }
                 line_start = if (line_end + 2 <= headers.len) line_end + 2 else headers.len;
@@ -1975,7 +1983,7 @@ fn processMessage(server: *TrinityMCPServer, request: []const u8, writer: anytyp
         };
         defer allocator.free(content);
         // Send as text content
-        var resp_buf: std.ArrayList(u8) = .{};
+        var resp_buf: std.ArrayList(u8) = .empty;
         defer resp_buf.deinit(allocator);
         try resp_buf.print(allocator, "{{\"jsonrpc\":\"2.0\",\"id\":{s},\"result\":{{\"contents\":[{{\"uri\":\"{s}\",\"text\":\"", .{ id_str, uri });
         // JSON-escape content
@@ -2019,7 +2027,8 @@ fn processMessage(server: *TrinityMCPServer, request: []const u8, writer: anytyp
 /// Returns a string fragment to append after static tools: ",{tool1},{tool2}..."
 /// Returns empty string if file doesn't exist or is invalid.
 fn loadCellMcpTools(allocator: std.mem.Allocator) []const u8 {
-    const content = std.fs.cwd().readFileAlloc(allocator, "data/cells/mcp_tools.json", 524288) catch return "";
+    // 0.16 reordered readFileAlloc: (io, path, gpa, limit).
+    const content = std.Io.Dir.cwd().readFileAlloc(tri_io.get(), "data/cells/mcp_tools.json", allocator, .limited(524288)) catch return "";
 
     // Find the tools array content between "tools":[ and ]
     const tools_start = std.mem.indexOf(u8, content, "[") orelse return "";

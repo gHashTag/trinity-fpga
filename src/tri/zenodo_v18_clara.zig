@@ -99,41 +99,39 @@ pub const ClaraMetadata = struct {
         var json_list = try std.ArrayList(u8).initCapacity(allocator, 4096);
         defer json_list.deinit(allocator);
 
-        const json = json_list.writer(allocator);
-
-        try json.print("{{\n", .{});
-        try json.print("  \"title\": \"{s}\",\n", .{self.title});
-        try json.print("  \"description\": \"{s}\\n\\nCLARA Submission: {s} | Track: {s}\",\n", .{ self.description, self.ba_number, self.track });
-        try json.print("  \"keywords\": [", .{});
+        try json_list.print(allocator, "{{\n", .{});
+        try json_list.print(allocator, "  \"title\": \"{s}\",\n", .{self.title});
+        try json_list.print(allocator, "  \"description\": \"{s}\\n\\nCLARA Submission: {s} | Track: {s}\",\n", .{ self.description, self.ba_number, self.track });
+        try json_list.print(allocator, "  \"keywords\": [", .{});
         for (CLARA_KEYWORDS, 0..) |kw, i| {
-            if (i > 0) try json.print(", ", .{});
-            try json.print("\"{s}\"", .{kw});
+            if (i > 0) try json_list.print(allocator, ", ", .{});
+            try json_list.print(allocator, "\"{s}\"", .{kw});
         }
         for (self.extra_keywords) |kw| {
-            try json.print(", \"{s}\"", .{kw});
+            try json_list.print(allocator, ", \"{s}\"", .{kw});
         }
-        try json.print("],\n", .{});
+        try json_list.print(allocator, "],\n", .{});
 
-        try json.print("  \"communities\": [", .{});
+        try json_list.print(allocator, "  \"communities\": [", .{});
         for (CLARA_COMMUNITIES, 0..) |comm, i| {
-            if (i > 0) try json.print(", ", .{});
-            try json.print("{{\"identifier\": \"{s}\"}}", .{comm});
+            if (i > 0) try json_list.print(allocator, ", ", .{});
+            try json_list.print(allocator, "{{\"identifier\": \"{s}\"}}", .{comm});
         }
-        try json.print("],\n", .{});
+        try json_list.print(allocator, "],\n", .{});
 
-        try json.print("  \"upload_type\": \"software\",\n", .{});
-        try json.print("  \"license\": \"apache-2.0\",\n", .{});
-        try json.print("  \"metadata\": {{\n", .{});
-        try json.print("    \"clara_submission\": {{\n", .{});
-        try json.print("      \"ba_number\": \"{s}\",\n", .{self.ba_number});
-        try json.print("      \"track\": \"{s}\",\n", .{self.track});
-        try json.print("      \"polynomial_time_guarantee\": {s},\n", .{if (self.polynomial_time) "true" else "false"});
-        try json.print("      \"formally_verified\": {s},\n", .{if (self.verified) "true" else "false"});
-        try json.print("      \"fpga_synthesized\": {s},\n", .{if (self.fpga_synthesized) "true" else "false"});
-        try json.print("      \"open_source\": {s}\n", .{if (self.open_source) "true" else "false"});
-        try json.print("    }}\n", .{});
-        try json.print("  }}\n", .{});
-        try json.print("}}\n", .{});
+        try json_list.print(allocator, "  \"upload_type\": \"software\",\n", .{});
+        try json_list.print(allocator, "  \"license\": \"apache-2.0\",\n", .{});
+        try json_list.print(allocator, "  \"metadata\": {{\n", .{});
+        try json_list.print(allocator, "    \"clara_submission\": {{\n", .{});
+        try json_list.print(allocator, "      \"ba_number\": \"{s}\",\n", .{self.ba_number});
+        try json_list.print(allocator, "      \"track\": \"{s}\",\n", .{self.track});
+        try json_list.print(allocator, "      \"polynomial_time_guarantee\": {s},\n", .{if (self.polynomial_time) "true" else "false"});
+        try json_list.print(allocator, "      \"formally_verified\": {s},\n", .{if (self.verified) "true" else "false"});
+        try json_list.print(allocator, "      \"fpga_synthesized\": {s},\n", .{if (self.fpga_synthesized) "true" else "false"});
+        try json_list.print(allocator, "      \"open_source\": {s}\n", .{if (self.open_source) "true" else "false"});
+        try json_list.print(allocator, "    }}\n", .{});
+        try json_list.print(allocator, "  }}\n", .{});
+        try json_list.print(allocator, "}}\n", .{});
 
         return json_list.toOwnedSlice(allocator);
     }
@@ -313,15 +311,14 @@ pub const ClaraDiscovery = struct {
         var result = try std.ArrayList(u8).initCapacity(allocator, 512);
         defer result.deinit(allocator);
 
-        const writer = result.writer(allocator);
-        try writer.print("# CLARA Discovery Record\n\n", .{});
-        try writer.print("Title: {s}\n\nKeywords:\n", .{self.title});
+        try result.print(allocator, "# CLARA Discovery Record\n\n", .{});
+        try result.print(allocator, "Title: {s}\n\nKeywords:\n", .{self.title});
         for (self.keywords.*) |kw| {
-            try writer.print("  - {s}\n", .{kw});
+            try result.print(allocator, "  - {s}\n", .{kw});
         }
-        try writer.print("\nCommunities:\n", .{});
+        try result.print(allocator, "\nCommunities:\n", .{});
         for (self.communities.*) |comm| {
-            try writer.print("  - {s}\n", .{comm});
+            try result.print(allocator, "  - {s}\n", .{comm});
         }
         return result.toOwnedSlice(allocator);
     }

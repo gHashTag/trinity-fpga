@@ -188,7 +188,7 @@ pub fn updateSession(allocator: Allocator, client: *PostgresClient, session_id: 
         updates.items.len -= 2;
     }
 
-    try updates.writer(allocator).print(", updated_at = {d}", .{now});
+    try updates.print(allocator, ", updated_at = {d}", .{now});
 
     const set_clause = try updates.toOwnedSlice(allocator);
 

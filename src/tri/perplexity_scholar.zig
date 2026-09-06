@@ -321,11 +321,11 @@ test "agent card valid" {
 
 test "writeJsonEscaped" {
     const allocator = std.testing.allocator;
-    var buf: std.ArrayListUnmanaged(u8) = .empty;
-    defer buf.deinit(allocator);
+    var buf: std.Io.Writer.Allocating = .init(allocator);
+    defer buf.deinit();
 
-    try writeJsonEscaped(buf.writer(allocator), "hello \"world\"\nnewline");
-    try std.testing.expectEqualStrings("hello \\\"world\\\"\\nnewline", buf.items);
+    try writeJsonEscaped(&buf.writer, "hello \"world\"\nnewline");
+    try std.testing.expectEqualStrings("hello \\\"world\\\"\\nnewline", buf.written());
 }
 
 test "graceful skip without key" {

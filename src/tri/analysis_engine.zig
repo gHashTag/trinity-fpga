@@ -16,8 +16,10 @@ const FacultyDelta = types.FacultyDelta;
 /// Generate a causal analysis narrative from the snapshot + delta.
 /// Returns a slice into `buf`.
 pub fn generateAnalysis(snapshot: FacultySnapshot, delta: FacultyDelta, buf: []u8) []const u8 {
-    var stream = std.io.fixedBufferStream(buf);
-    const w = stream.writer();
+    // 0.16: std.io is gone; a fixed Writer over the caller's buffer replaces
+    // fixedBufferStream. Overflow now surfaces as error.WriteFailed, which the
+    // existing catch-and-log arms already handle.
+    var w: std.Io.Writer = .fixed(buf);
 
     const active = snapshot.activeFaculty();
     const faculty_pct: u8 = if (active == 6) 100 else @intCast((@as(u16, active) * 100) / 6);
@@ -33,7 +35,7 @@ pub fn generateAnalysis(snapshot: FacultySnapshot, delta: FacultyDelta, buf: []u
         w.print("While build not fixed, no engine works. ", .{}) catch |err| {
             std.log.debug("analysis_engine: write build block message failed: {}", .{err});
         };
-        return stream.getWritten();
+        return w.buffered();
     }
 
     // 2. Compile rate low
@@ -49,7 +51,7 @@ pub fn generateAnalysis(snapshot: FacultySnapshot, delta: FacultyDelta, buf: []u
                 std.log.debug("analysis_engine: write faculty count failed: {}", .{err});
             };
         }
-        return stream.getWritten();
+        return w.buffered();
     }
 
     // 3. Faculty count + delta
@@ -172,9 +174,9 @@ pub fn generateAnalysis(snapshot: FacultySnapshot, delta: FacultyDelta, buf: []u
     }
 
     // 7. Causal chains — link agent states to metric dynamics
-    appendCausalChain(w, snapshot, delta);
+    appendCausalChain(&w, snapshot, delta);
 
-    return stream.getWritten();
+    return w.buffered();
 }
 
 /// Append causal chain linking agent states to metric implications.

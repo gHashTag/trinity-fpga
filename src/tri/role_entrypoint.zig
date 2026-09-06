@@ -19,6 +19,7 @@
 // =============================================================================
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 const golden_chain = @import("dna_polymerase.zig");
 const pipeline_executor = @import("rna_polymerase.zig");
@@ -136,15 +137,18 @@ pub fn detectRoleFromLabels(labels: []const []const u8) ?AgentRole {
 
 /// Run a subprocess, print status, return true if exit code == 0.
 fn runSubprocess(allocator: std.mem.Allocator, argv: []const []const u8, desc: []const u8, step: []const u8) bool {
+    _ = allocator; // 0.16: std.process.spawn takes no allocator
     std.debug.print("  [{s}] {s} ... ", .{ step, desc });
-    var child = std.process.Child.init(argv, allocator);
-    child.stdout_behavior = .Ignore;
-    child.stderr_behavior = .Ignore;
+    var child = try std.process.spawn(tri_io.get(), .{
+        .argv = argv,
+        .stdout = .ignore,
+        .stderr = .ignore,
+    });
     _ = child.spawn() catch {
         std.debug.print("{s}FAIL (spawn){s}\n", .{ RED, RESET });
         return false;
     };
-    const term = child.wait() catch {
+    const term = child.wait(tri_io.get()) catch {
         std.debug.print("{s}FAIL (wait){s}\n", .{ RED, RESET });
         return false;
     };

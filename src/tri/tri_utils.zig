@@ -1784,8 +1784,8 @@ fn generateSacredIntelligenceContext(allocator: std.mem.Allocator, prompt: []con
 
     // Format output buffer
     var buf: [2048]u8 = undefined;
-    var fbs = std.io.fixedBufferStream(&buf);
-    const writer = fbs.writer();
+    var w: std.Io.Writer = .fixed(&buf);
+    const writer = &w;
 
     // Write sacred intelligence header
     writer.writeAll("\n// ═══════════════════════════════════════════════════════════════════════════════\n") catch return error.BufferTooSmall;
@@ -1827,7 +1827,7 @@ fn generateSacredIntelligenceContext(allocator: std.mem.Allocator, prompt: []con
 
     writer.writeAll("// ═══════════════════════════════════════════════════════════════════════════════\n\n") catch return error.BufferTooSmall;
 
-    const written = fbs.getWritten();
+    const written = w.buffered();
     const result = try allocator.alloc(u8, written.len);
     @memcpy(result, written);
     return result;

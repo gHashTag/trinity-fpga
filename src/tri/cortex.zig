@@ -617,7 +617,7 @@ pub fn runFacultyCommand(allocator: Allocator, args: []const []const u8) !void {
     }
 
     var buf: [16384]u8 = undefined;
-    var stream = std.io.fixedBufferStream(&buf);
+    var stream: std.Io.Writer = .fixed(&buf);
 
     if (raw_mode) {
         const mu_hb = thalamus.getMuHeartbeat(allocator);
@@ -632,9 +632,9 @@ pub fn runFacultyCommand(allocator: Allocator, args: []const []const u8) !void {
             .swarm = swarm,
             .pipeline = pipeline,
         }, &buf);
-        stream.pos = raw_len;
+        stream.end = raw_len;
     } else if (full_mode) {
-        renderCompact(snapshot, delta, stream.writer()) catch {
+        renderCompact(snapshot, delta, &stream) catch {
             std.debug.print("Faculty Board render error\n", .{});
             return;
         };
@@ -642,7 +642,7 @@ pub fn runFacultyCommand(allocator: Allocator, args: []const []const u8) !void {
         const mu_hb = thalamus.getMuHeartbeat(allocator);
         const scholar_hb = thalamus.getScholarHeartbeat(allocator);
         const thought_len = renderThoughtLang(snapshot, delta, mu_hb, scholar_hb, &buf, lang);
-        stream.pos = thought_len;
+        stream.end = thought_len;
 
         // Stale report detection: hash thought output, compare with previous
         const thought_hash = std.hash.Fnv1a_64.hash(buf[0..thought_len]);
@@ -652,11 +652,11 @@ pub fn runFacultyCommand(allocator: Allocator, args: []const []const u8) !void {
                 std.fmt.bufPrint(buf[thought_len..], "\n\xe2\x9a\xa0\xef\xb8\x8f STALE: report repeats {d}x in a row. Agents stuck?\n", .{stale.count}) catch ""
             else
                 std.fmt.bufPrint(buf[thought_len..], "\n\xe2\x9a\xa0\xef\xb8\x8f STALE: \xd0\xbe\xd1\x82\xd1\x87\xd1\x91\xd1\x82 \xd0\xbf\xd0\xbe\xd0\xb2\xd1\x82\xd0\xbe\xd1\x80\xd1\x8f\xd0\xb5\xd1\x82\xd1\x81\xd1\x8f {d}\xd1\x85 \xd0\xbf\xd0\xbe\xd0\xb4\xd1\x80\xd1\x8f\xd0\xb4. \xd0\x90\xd0\xb3\xd0\xb5\xd0\xbd\xd1\x82\xd1\x8b \xd0\xb7\xd0\xb0\xd1\x81\xd1\x82\xd1\x80\xd1\x8f\xd0\xbb\xd0\xb8?\n", .{stale.count}) catch "";
-            stream.pos = thought_len + stale_msg.len;
+            stream.end = thought_len + stale_msg.len;
         }
     }
 
-    std.debug.print("{s}", .{stream.getWritten()});
+    std.debug.print("{s}", .{stream.buffered()});
     savePrevSnapshot(snapshot);
     sendFacultyTelegram(snapshot, delta);
 }
@@ -677,8 +677,8 @@ fn sendFacultyTelegram(snapshot: FacultySnapshot, delta: FacultyDelta) void {
 
     // Build plain-text message (no ANSI)
     var msg_buf: [3072]u8 = undefined;
-    var msg_stream = std.io.fixedBufferStream(&msg_buf);
-    const w = msg_stream.writer();
+    var msg_stream: std.Io.Writer = .fixed(&msg_buf);
+    const w = &msg_stream;
 
     // Header with stats
     w.print("\xe2\x95\x90\xe2\x95\x90\xe2\x95\x90 TRI \xd0\xa1\xd0\xa2\xd0\x90\xd0\xa2\xd0\xa3\xd0\xa1 \xe2\x95\x90\xe2\x95\x90\xe2\x95\x90\n", .{}) catch return;
@@ -716,7 +716,7 @@ fn sendFacultyTelegram(snapshot: FacultySnapshot, delta: FacultyDelta) void {
         std.log.debug("faculty_board: write analysis failed: {}", .{err});
     };
 
-    const msg = msg_stream.getWritten();
+    const msg = msg_stream.buffered();
 
     // Deduplication: FNV-1a hash → skip if unchanged
     const hash = std.hash.Fnv1a_64.hash(msg);
@@ -1422,9 +1422,9 @@ test "renderCompact produces output" {
     };
 
     var out_buf: [8192]u8 = undefined;
-    var stream = std.io.fixedBufferStream(&out_buf);
-    try renderCompact(snap, .{}, stream.writer());
-    const output = stream.getWritten();
+    var stream: std.Io.Writer = .fixed(&out_buf);
+    try renderCompact(snap, .{}, &stream);
+    const output = stream.buffered();
     try std.testing.expect(output.len > 100);
     try std.testing.expect(std.mem.indexOf(u8, output, "TRINITY") != null);
     try std.testing.expect(std.mem.indexOf(u8, output, "compile") != null);

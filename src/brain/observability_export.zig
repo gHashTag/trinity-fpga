@@ -126,16 +126,16 @@ pub const Metric = struct {
         var buffer = std.ArrayList(u8).empty;
         errdefer buffer.deinit(allocator);
 
-        const writer = buffer.writer(allocator);
-        try writer.writeAll("{");
+        // 0.16 removed ArrayList.writer; the writer was local, so append directly.
+        try buffer.appendSlice(allocator, "{");
         var first = true;
         var iter = self.labels.iterator();
         while (iter.next()) |entry| {
-            if (!first) try writer.writeAll(",");
-            try writer.print("{s}=\"{s}\"", .{ entry.key_ptr.*, entry.value_ptr.* });
+            if (!first) try buffer.appendSlice(allocator, ",");
+            try buffer.print(allocator, "{s}=\"{s}\"", .{ entry.key_ptr.*, entry.value_ptr.* });
             first = false;
         }
-        try writer.writeAll("}");
+        try buffer.appendSlice(allocator, "}");
 
         return buffer.toOwnedSlice(allocator);
     }
@@ -726,17 +726,19 @@ test "Prometheus export format contains required elements" {
     var exporter = try ObservabilityExporter.init(allocator, "test-service");
     defer exporter.deinit();
 
-    var buffer = try std.ArrayList(u8).initCapacity(allocator, 4096);
+    // 0.16: ArrayList.writer is gone; the writer is handed to another function,
+    // so an Allocating writer is the replacement.
+    var buffer: std.Io.Writer.Allocating = .init(allocator);
     defer buffer.deinit();
 
     // Collect and export in Prometheus format
-    exporter.collectAndExport(buffer.writer(allocator), .prometheus) catch |err| {
+    exporter.collectAndExport(&buffer.writer, .prometheus) catch |err| {
         // If metrics_dashboard is not available, skip this test
         if (err == error.FileNotFound or err == error.UnknownFileType) return error.SkipZigTest;
         return err;
     };
 
-    const output = buffer.items;
+    const output = buffer.written();
 
     // Verify Prometheus format elements
     try std.testing.expect(std.mem.indexOf(u8, output, "# HELP") != null);
@@ -768,17 +770,17 @@ test "OpenTelemetry export format contains required elements" {
     var exporter = try ObservabilityExporter.init(allocator, "test-service");
     defer exporter.deinit();
 
-    var buffer = try std.ArrayList(u8).initCapacity(allocator, 4096);
+    var buffer: std.Io.Writer.Allocating = .init(allocator);
     defer buffer.deinit();
 
     // Collect and export in OpenTelemetry format
-    exporter.collectAndExport(buffer.writer(allocator), .opentelemetry) catch |err| {
+    exporter.collectAndExport(&buffer.writer, .opentelemetry) catch |err| {
         // If metrics_dashboard is not available, skip this test
         if (err == error.FileNotFound or err == error.UnknownFileType) return error.SkipZigTest;
         return err;
     };
 
-    const output = buffer.items;
+    const output = buffer.written();
 
     // Verify OpenTelemetry JSON format elements
     try std.testing.expect(std.mem.indexOf(u8, output, "resourceMetrics") != null);
@@ -800,15 +802,15 @@ test "OpenTelemetry JSON structure is valid" {
     var exporter = try ObservabilityExporter.init(allocator, "test-service");
     defer exporter.deinit();
 
-    var buffer = try std.ArrayList(u8).initCapacity(allocator, 4096);
+    var buffer: std.Io.Writer.Allocating = .init(allocator);
     defer buffer.deinit();
 
-    exporter.collectAndExport(buffer.writer(allocator), .opentelemetry) catch |err| {
+    exporter.collectAndExport(&buffer.writer, .opentelemetry) catch |err| {
         if (err == error.FileNotFound or err == error.UnknownFileType) return error.SkipZigTest;
         return err;
     };
 
-    const output = buffer.items;
+    const output = buffer.written();
 
     // Check for valid JSON structure (braces, quotes)
     try std.testing.expect(output[0] == '{');
@@ -825,15 +827,15 @@ test "JSON export format contains required elements" {
     var exporter = try ObservabilityExporter.init(allocator, "test-service");
     defer exporter.deinit();
 
-    var buffer = try std.ArrayList(u8).initCapacity(allocator, 4096);
+    var buffer: std.Io.Writer.Allocating = .init(allocator);
     defer buffer.deinit();
 
-    exporter.collectAndExport(buffer.writer(allocator), .json) catch |err| {
+    exporter.collectAndExport(&buffer.writer, .json) catch |err| {
         if (err == error.FileNotFound or err == error.UnknownFileType) return error.SkipZigTest;
         return err;
     };
 
-    const output = buffer.items;
+    const output = buffer.written();
 
     // Verify JSON format elements
     try std.testing.expect(std.mem.indexOf(u8, output, "\"timestamp\"") != null);

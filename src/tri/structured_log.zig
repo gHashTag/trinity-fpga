@@ -79,64 +79,68 @@ pub const LogEntry = struct {
     }
 
     pub fn toJson(self: *const LogEntry, allocator: std.mem.Allocator) ![]const u8 {
-        var buffer = try std.ArrayList(u8).initCapacity(allocator, 256);
-        defer buffer.deinit();
+        // 0.16 removed ArrayList.writer(). writeJsonString below takes a writer
+        // by value, so the buffer has to be something that can hand one out:
+        // an Allocating writer, which owns the growing byte buffer itself.
+        var aw: std.Io.Writer.Allocating = try .initCapacity(allocator, 256);
+        errdefer aw.deinit();
+        const w = &aw.writer;
 
-        try buffer.append(allocator, '{');
+        try w.writeByte('{');
 
         // Timestamp
-        try buffer.appendSlice(allocator, "\"timestamp\":");
-        try buffer.print(allocator, "{d}", .{self.timestamp});
+        try w.writeAll("\"timestamp\":");
+        try w.print("{d}", .{self.timestamp});
 
         // Level
-        try buffer.appendSlice(allocator, ",\"level\":\"");
-        try buffer.appendSlice(allocator, self.level.toString());
-        try buffer.append(allocator, '"');
+        try w.writeAll(",\"level\":\"");
+        try w.writeAll(self.level.toString());
+        try w.writeByte('"');
 
         // Request ID (optional)
         if (self.request_id) |id| {
-            try buffer.appendSlice(allocator, ",\"request_id\":\"");
+            try w.writeAll(",\"request_id\":\"");
             // Slice to actual content length (stop at first null byte)
             const id_slice: []const u8 = &id;
             const id_len = std.mem.indexOfScalar(u8, id_slice, 0) orelse id_slice.len;
-            try buffer.appendSlice(allocator, id_slice[0..id_len]);
-            try buffer.append(allocator, '"');
+            try w.writeAll(id_slice[0..id_len]);
+            try w.writeByte('"');
         }
 
         // Message
-        try buffer.appendSlice(allocator, ",\"message\":");
-        try writeJsonString(allocator, buffer.writer(), self.message);
+        try w.writeAll(",\"message\":");
+        try writeJsonString(allocator, w, self.message);
 
         // Context
         if (self.context.count() > 0) {
-            try buffer.appendSlice(allocator, ",\"context\":{");
+            try w.writeAll(",\"context\":{");
             var first = true;
             var iter = self.context.iterator();
             while (iter.next()) |entry| {
-                if (!first) try buffer.append(allocator, ',');
+                if (!first) try w.writeByte(',');
                 first = false;
-                try writeJsonString(allocator, buffer.writer(), entry.key_ptr.*);
-                try buffer.appendSlice(allocator, ":");
-                try writeJsonString(allocator, buffer.writer(), entry.value_ptr.*);
+                try writeJsonString(allocator, w, entry.key_ptr.*);
+                try w.writeAll(":");
+                try writeJsonString(allocator, w, entry.value_ptr.*);
             }
-            try buffer.append(allocator, '}');
+            try w.writeByte('}');
         }
 
         // Error code (optional)
         if (self.error_code) |code| {
-            try buffer.appendSlice(allocator, ",\"error_code\":");
-            try writeJsonString(allocator, buffer.writer(), code);
+            try w.writeAll(",\"error_code\":");
+            try writeJsonString(allocator, w, code);
         }
 
         // Stack trace (optional)
         if (self.stack_trace) |trace| {
-            try buffer.appendSlice(allocator, ",\"stack_trace\":");
-            try writeJsonString(allocator, buffer.writer(), trace);
+            try w.writeAll(",\"stack_trace\":");
+            try writeJsonString(allocator, w, trace);
         }
 
-        try buffer.append(allocator, '}');
+        try w.writeByte('}');
 
-        return buffer.toOwnedSlice();
+        return aw.toOwnedSlice();
     }
 };
 
@@ -252,7 +256,7 @@ pub const Logger = struct {
         defer entry.deinit();
 
         // Add context from anytype
-        inline for (@typeInfo(@TypeOf(context)).Struct.fields) |field| {
+        inline for (@typeInfo(@TypeOf(context)).@"struct".fields) |field| {
             const value = @field(context, field.name);
             const value_str = try self.formatValue(value);
             defer self.allocator.free(value_str);
@@ -265,23 +269,23 @@ pub const Logger = struct {
     fn formatValue(self: *Logger, value: anytype) ![]const u8 {
         const T = @TypeOf(value);
         return switch (@typeInfo(T)) {
-            .Int, .Float, .ComptimeInt, .ComptimeFloat => std.fmt.allocPrint(self.allocator, "{d}", .{value}),
-            .Optional => if (value) |v| self.formatValue(v) else self.allocator.dupe(u8, "null"),
-            .Pointer => |ptr| switch (ptr.size) {
-                .Slice => std.fmt.allocPrint(
+            .int, .float, .comptime_int, .comptime_float => std.fmt.allocPrint(self.allocator, "{d}", .{value}),
+            .optional => if (value) |v| self.formatValue(v) else self.allocator.dupe(u8, "null"),
+            .pointer => |ptr| switch (ptr.size) {
+                .slice => std.fmt.allocPrint(
                     self.allocator,
                     "{s}",
                     .{if (ptr.child == u8) value else "([...])"},
                 ),
-                .One => switch (@typeInfo(ptr.child)) {
-                    .Array => std.fmt.allocPrint(self.allocator, "{s}", .{value}),
+                .one => switch (@typeInfo(ptr.child)) {
+                    .array => std.fmt.allocPrint(self.allocator, "{s}", .{value}),
                     else => std.fmt.allocPrint(self.allocator, "{*}", .{value}),
                 },
                 else => std.fmt.allocPrint(self.allocator, "{*}", .{value}),
             },
-            .Bool => self.allocator.dupe(u8, if (value) "true" else "false"),
-            .Void => self.allocator.dupe(u8, "void"),
-            .Enum => std.fmt.allocPrint(self.allocator, "{s}", .{@tagName(value)}),
+            .bool => self.allocator.dupe(u8, if (value) "true" else "false"),
+            .void => self.allocator.dupe(u8, "void"),
+            .@"enum" => std.fmt.allocPrint(self.allocator, "{s}", .{@tagName(value)}),
             else => std.fmt.allocPrint(self.allocator, "{any}", .{value}),
         };
     }
@@ -307,7 +311,9 @@ pub const Logger = struct {
 
         // Open new log file: tri-YYYY-MM-DD.jsonl
         var buffer: [32]u8 = undefined;
-        const date_str = std.fmt.formatIntBuf(buffer[0..], @intCast(current_date), 10, .lower, .{});
+        // std.fmt.formatIntBuf is gone in 0.16. bufPrint with {d} produces the
+        // same base-10 rendering and returns the written slice directly.
+        const date_str = try std.fmt.bufPrint(buffer[0..], "{d}", .{current_date});
 
         const filename = try std.fmt.allocPrint(self.allocator, "tri-{s}.jsonl", .{date_str});
         defer self.allocator.free(filename);
@@ -604,11 +610,13 @@ test "Level string conversion" {
 }
 
 test "writeJsonString escapes special characters" {
-    var buffer = try std.ArrayList(u8).initCapacity(std.testing.allocator, 100);
-    defer buffer.deinit();
+    // Same 0.16 change as LogEntry.toJson: the buffer is an Allocating writer
+    // because writeJsonString needs a real Io.Writer to hand to.
+    var aw: std.Io.Writer.Allocating = try .initCapacity(std.testing.allocator, 100);
+    defer aw.deinit();
 
-    try writeJsonString(std.testing.allocator, buffer.writer(std.testing.allocator), "Hello\nWorld\"");
-    const result = try buffer.toOwnedSlice();
+    try writeJsonString(std.testing.allocator, &aw.writer, "Hello\nWorld\"");
+    const result = try aw.toOwnedSlice();
     defer std.testing.allocator.free(result);
 
     try std.testing.expectEqualStrings("\"Hello\\nWorld\\\"\"", result);

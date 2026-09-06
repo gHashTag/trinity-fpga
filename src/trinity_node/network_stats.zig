@@ -154,18 +154,17 @@ pub const NetworkStatsReporter = struct {
     pub fn formatText(self: *NetworkStatsReporter, report: NetworkHealthReport) ![]u8 {
         var buf = @as(std.ArrayListUnmanaged(u8), .empty);
         errdefer buf.deinit(self.allocator);
-        const w = buf.writer(self.allocator);
 
-        try w.print("=== Trinity Network Health Report ===\n", .{});
-        try w.print("Nodes: {d}\n", .{report.node_count});
-        try w.print("Shards: {d} ({d} tracked by rebalancer)\n", .{ report.total_shards, report.shards_tracked });
-        try w.print("Storage: {d} bytes used, {d} bytes available\n", .{ report.total_bytes_used, report.total_bytes_available });
-        try w.print("Replication target: {d}, shards rebalanced: {d}\n", .{ report.target_replication, report.shards_rebalanced });
-        try w.print("PoS: {d} issued, {d} passed, {d} failed\n", .{ report.pos_challenges_issued, report.pos_challenges_passed, report.pos_challenges_failed });
-        try w.print("Bandwidth: {d} up, {d} down\n", .{ report.total_upload, report.total_download });
-        try w.print("Scrubber: {d} rounds, {d} corruptions\n", .{ report.scrub_total, report.scrub_corruptions });
-        try w.print("Reputation: avg={d:.3}, min={d:.3}, max={d:.3}\n", .{ report.reputation_avg, report.reputation_min, report.reputation_max });
-        try w.print("Generated at: {d}\n", .{report.generated_at});
+        try buf.print(self.allocator, "=== Trinity Network Health Report ===\n", .{});
+        try buf.print(self.allocator, "Nodes: {d}\n", .{report.node_count});
+        try buf.print(self.allocator, "Shards: {d} ({d} tracked by rebalancer)\n", .{ report.total_shards, report.shards_tracked });
+        try buf.print(self.allocator, "Storage: {d} bytes used, {d} bytes available\n", .{ report.total_bytes_used, report.total_bytes_available });
+        try buf.print(self.allocator, "Replication target: {d}, shards rebalanced: {d}\n", .{ report.target_replication, report.shards_rebalanced });
+        try buf.print(self.allocator, "PoS: {d} issued, {d} passed, {d} failed\n", .{ report.pos_challenges_issued, report.pos_challenges_passed, report.pos_challenges_failed });
+        try buf.print(self.allocator, "Bandwidth: {d} up, {d} down\n", .{ report.total_upload, report.total_download });
+        try buf.print(self.allocator, "Scrubber: {d} rounds, {d} corruptions\n", .{ report.scrub_total, report.scrub_corruptions });
+        try buf.print(self.allocator, "Reputation: avg={d:.3}, min={d:.3}, max={d:.3}\n", .{ report.reputation_avg, report.reputation_min, report.reputation_max });
+        try buf.print(self.allocator, "Generated at: {d}\n", .{report.generated_at});
 
         return buf.toOwnedSlice(self.allocator);
     }
@@ -174,28 +173,27 @@ pub const NetworkStatsReporter = struct {
     pub fn formatJson(self: *NetworkStatsReporter, report: NetworkHealthReport) ![]u8 {
         var buf = @as(std.ArrayListUnmanaged(u8), .empty);
         errdefer buf.deinit(self.allocator);
-        const w = buf.writer(self.allocator);
 
-        try w.print("{{", .{});
-        try w.print("\"node_count\":{d},", .{report.node_count});
-        try w.print("\"total_shards\":{d},", .{report.total_shards});
-        try w.print("\"total_bytes_used\":{d},", .{report.total_bytes_used});
-        try w.print("\"total_bytes_available\":{d},", .{report.total_bytes_available});
-        try w.print("\"shards_tracked\":{d},", .{report.shards_tracked});
-        try w.print("\"shards_rebalanced\":{d},", .{report.shards_rebalanced});
-        try w.print("\"target_replication\":{d},", .{report.target_replication});
-        try w.print("\"pos_challenges_issued\":{d},", .{report.pos_challenges_issued});
-        try w.print("\"pos_challenges_passed\":{d},", .{report.pos_challenges_passed});
-        try w.print("\"pos_challenges_failed\":{d},", .{report.pos_challenges_failed});
-        try w.print("\"total_upload\":{d},", .{report.total_upload});
-        try w.print("\"total_download\":{d},", .{report.total_download});
-        try w.print("\"scrub_total\":{d},", .{report.scrub_total});
-        try w.print("\"scrub_corruptions\":{d},", .{report.scrub_corruptions});
-        try w.print("\"reputation_avg\":{d:.3},", .{report.reputation_avg});
-        try w.print("\"reputation_min\":{d:.3},", .{report.reputation_min});
-        try w.print("\"reputation_max\":{d:.3},", .{report.reputation_max});
-        try w.print("\"generated_at\":{d}", .{report.generated_at});
-        try w.print("}}", .{});
+        try buf.print(self.allocator, "{{", .{});
+        try buf.print(self.allocator, "\"node_count\":{d},", .{report.node_count});
+        try buf.print(self.allocator, "\"total_shards\":{d},", .{report.total_shards});
+        try buf.print(self.allocator, "\"total_bytes_used\":{d},", .{report.total_bytes_used});
+        try buf.print(self.allocator, "\"total_bytes_available\":{d},", .{report.total_bytes_available});
+        try buf.print(self.allocator, "\"shards_tracked\":{d},", .{report.shards_tracked});
+        try buf.print(self.allocator, "\"shards_rebalanced\":{d},", .{report.shards_rebalanced});
+        try buf.print(self.allocator, "\"target_replication\":{d},", .{report.target_replication});
+        try buf.print(self.allocator, "\"pos_challenges_issued\":{d},", .{report.pos_challenges_issued});
+        try buf.print(self.allocator, "\"pos_challenges_passed\":{d},", .{report.pos_challenges_passed});
+        try buf.print(self.allocator, "\"pos_challenges_failed\":{d},", .{report.pos_challenges_failed});
+        try buf.print(self.allocator, "\"total_upload\":{d},", .{report.total_upload});
+        try buf.print(self.allocator, "\"total_download\":{d},", .{report.total_download});
+        try buf.print(self.allocator, "\"scrub_total\":{d},", .{report.scrub_total});
+        try buf.print(self.allocator, "\"scrub_corruptions\":{d},", .{report.scrub_corruptions});
+        try buf.print(self.allocator, "\"reputation_avg\":{d:.3},", .{report.reputation_avg});
+        try buf.print(self.allocator, "\"reputation_min\":{d:.3},", .{report.reputation_min});
+        try buf.print(self.allocator, "\"reputation_max\":{d:.3},", .{report.reputation_max});
+        try buf.print(self.allocator, "\"generated_at\":{d}", .{report.generated_at});
+        try buf.print(self.allocator, "}}", .{});
 
         return buf.toOwnedSlice(self.allocator);
     }

@@ -12,6 +12,7 @@
 // See: specs/pins/README.md for migration plan.
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 
 // BOOTSTRAP: Migration to .tri specs in progress
 // This file is bootstrap implementation pending migration to proper .tri specs.
@@ -975,7 +976,8 @@ pub fn parseDesignFile(allocator: std.mem.Allocator, path: []const u8) !struct {
     board: BoardDecl,
     fpga: FpgaDecl,
 } {
-    const content = std.fs.cwd().readFileAlloc(allocator, path, 1024 * 1024) catch |err| {
+    const io = tri_io.get();
+    const content = std.Io.Dir.cwd().readFileAlloc(io, path, allocator, .limited(1024 * 1024)) catch |err| {
         std.debug.print("Failed to read {s}: {}\n", .{ path, err });
         return error.FileNotFound;
     };
@@ -1001,7 +1003,7 @@ pub fn parseDesignFile(allocator: std.mem.Allocator, path: []const u8) !struct {
     else
         "fpga/boards/qmtech_xc7a100t.board.tri";
 
-    const board_content = std.fs.cwd().readFileAlloc(allocator, board_path, 1024 * 1024) catch |err| {
+    const board_content = std.Io.Dir.cwd().readFileAlloc(io, board_path, allocator, .limited(1024 * 1024)) catch |err| {
         std.debug.print("Failed to read {s}: {}\n", .{ board_path, err });
         return error.FileNotFound;
     };
@@ -1022,7 +1024,7 @@ pub fn parseDesignFile(allocator: std.mem.Allocator, path: []const u8) !struct {
     else
         "fpga/fabric/xc7a100t_fgg676.fabric.tri";
 
-    const fpga_content = std.fs.cwd().readFileAlloc(allocator, fpga_path, 1024 * 1024) catch |err| {
+    const fpga_content = std.Io.Dir.cwd().readFileAlloc(io, fpga_path, allocator, .limited(1024 * 1024)) catch |err| {
         std.debug.print("Failed to read {s}: {}\n", .{ fpga_path, err });
         return error.FileNotFound;
     };

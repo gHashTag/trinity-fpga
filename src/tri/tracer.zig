@@ -265,19 +265,23 @@ pub fn runTraceCommand(allocator: std.mem.Allocator, args: []const []const u8) v
 }
 
 fn showTrace(allocator: std.mem.Allocator, issue_number: u32) void {
+    // This is a CLI leaf reached from runTraceCommand, which has no Io to pass
+    // down, so it takes the process one.
+    const io = tri_io.get();
+
     // Read all trace files, find spans with matching issue
-    var dir = std.fs.cwd().openDir(".trinity/traces", .{ .iterate = true }) catch {
+    var dir = std.Io.Dir.cwd().openDir(io, ".trinity/traces", .{ .iterate = true }) catch {
         std.debug.print("\x1b[33mNo traces found. Run a pipeline first.\x1b[0m\n", .{});
         return;
     };
-    defer dir.close();
+    defer dir.close(io);
 
     var found = false;
     var iter = dir.iterate();
-    while (iter.next() catch null) |entry| {
+    while (iter.next(io) catch null) |entry| {
         if (!std.mem.endsWith(u8, entry.name, ".json")) continue;
 
-        const content = dir.readFileAlloc(allocator, entry.name, 1024 * 1024) catch continue;
+        const content = dir.readFileAlloc(io, entry.name, allocator, .limited(1024 * 1024)) catch continue;
         defer allocator.free(content);
 
         // Simple check: does this trace contain the issue number?
@@ -298,16 +302,17 @@ fn showTrace(allocator: std.mem.Allocator, issue_number: u32) void {
 
 fn listTraces(allocator: std.mem.Allocator) void {
     _ = allocator;
-    var dir = std.fs.cwd().openDir(".trinity/traces", .{ .iterate = true }) catch {
+    const io = tri_io.get();
+    var dir = std.Io.Dir.cwd().openDir(io, ".trinity/traces", .{ .iterate = true }) catch {
         std.debug.print("\x1b[33mNo traces directory. Run a pipeline first.\x1b[0m\n", .{});
         return;
     };
-    defer dir.close();
+    defer dir.close(io);
 
     std.debug.print("\x1b[36m=== Traces ===\x1b[0m\n", .{});
     var count: u32 = 0;
     var iter = dir.iterate();
-    while (iter.next() catch null) |entry| {
+    while (iter.next(io) catch null) |entry| {
         if (std.mem.endsWith(u8, entry.name, ".json")) {
             std.debug.print("  {s}\n", .{entry.name});
             count += 1;

@@ -627,13 +627,13 @@ test "AggregateMetrics exportJson is valid" {
 
     try metrics.collect();
 
-    var buffer: std.ArrayList(u8) = .empty;
-    defer buffer.deinit(allocator);
+    var buffer: std.Io.Writer.Allocating = .init(allocator);
+    defer buffer.deinit();
 
-    try metrics.exportJson(buffer.writer(allocator));
+    try metrics.exportJson(&buffer.writer);
 
     // JSON should contain expected keys
-    const json = buffer.items;
+    const json = buffer.written();
     try std.testing.expect(std.mem.indexOf(u8, json, "\"timestamp\"") != null);
     try std.testing.expect(std.mem.indexOf(u8, json, "\"overall_health\"") != null);
     try std.testing.expect(std.mem.indexOf(u8, json, "\"regions\"") != null);
@@ -1095,12 +1095,12 @@ test "AggregateMetrics formatAscii basic structure" {
     region.trend = .improving;
     try metrics.regions.append(allocator, region);
 
-    var buffer: std.ArrayList(u8) = .empty;
-    defer buffer.deinit(allocator);
+    var buffer: std.Io.Writer.Allocating = .init(allocator);
+    defer buffer.deinit();
 
-    try metrics.formatAscii(buffer.writer(allocator));
+    try metrics.formatAscii(&buffer.writer);
 
-    const output = buffer.items;
+    const output = buffer.written();
 
     // Verify ASCII table borders
     try std.testing.expect(std.mem.indexOf(u8, output, "╔") != null);
@@ -1129,12 +1129,12 @@ test "AggregateMetrics formatDetailed finds region" {
 
     try metrics.regions.append(allocator, region);
 
-    var buffer: std.ArrayList(u8) = .empty;
-    defer buffer.deinit(allocator);
+    var buffer: std.Io.Writer.Allocating = .init(allocator);
+    defer buffer.deinit();
 
-    try metrics.formatDetailed(buffer.writer(allocator), "DetailTest");
+    try metrics.formatDetailed(&buffer.writer, "DetailTest");
 
-    const output = buffer.items;
+    const output = buffer.written();
 
     // Verify detailed output contains all expected fields
     try std.testing.expect(std.mem.indexOf(u8, output, "DetailTest") != null);
@@ -1153,12 +1153,12 @@ test "AggregateMetrics formatDetailed missing region" {
     var metrics = AggregateMetrics.init(allocator);
     defer metrics.deinit();
 
-    var buffer: std.ArrayList(u8) = .empty;
-    defer buffer.deinit(allocator);
+    var buffer: std.Io.Writer.Allocating = .init(allocator);
+    defer buffer.deinit();
 
-    try metrics.formatDetailed(buffer.writer(allocator), "NonExistent");
+    try metrics.formatDetailed(&buffer.writer, "NonExistent");
 
-    const output = buffer.items;
+    const output = buffer.written();
 
     // Should indicate region not found
     try std.testing.expect(std.mem.indexOf(u8, output, "not found") != null);
@@ -1181,12 +1181,12 @@ test "AggregateMetrics exportJson complete structure" {
     try metrics.regions.append(allocator, region);
     try metrics.calculateOverall();
 
-    var buffer: std.ArrayList(u8) = .empty;
-    defer buffer.deinit(allocator);
+    var buffer: std.Io.Writer.Allocating = .init(allocator);
+    defer buffer.deinit();
 
-    try metrics.exportJson(buffer.writer(allocator));
+    try metrics.exportJson(&buffer.writer);
 
-    const json = buffer.items;
+    const json = buffer.written();
 
     // Verify JSON structure
     try std.testing.expect(std.mem.indexOf(u8, json, "\"timestamp\"") != null);
@@ -1438,12 +1438,12 @@ test "AggregateMetrics formatAscii empty" {
 
     metrics.regions.clearRetainingCapacity();
 
-    var buffer: std.ArrayList(u8) = .empty;
-    defer buffer.deinit(allocator);
+    var buffer: std.Io.Writer.Allocating = .init(allocator);
+    defer buffer.deinit();
 
-    try metrics.formatAscii(buffer.writer(allocator));
+    try metrics.formatAscii(&buffer.writer);
 
-    const output = buffer.items;
+    const output = buffer.written();
 
     // Should still have table structure even with no regions
     try std.testing.expect(std.mem.indexOf(u8, output, "BRAIN DASHBOARD") != null);
@@ -1465,12 +1465,12 @@ test "AggregateMetrics formatAscii long names" {
     region.trend = .stable;
     try metrics.regions.append(allocator, region);
 
-    var buffer: std.ArrayList(u8) = .empty;
-    defer buffer.deinit(allocator);
+    var buffer: std.Io.Writer.Allocating = .init(allocator);
+    defer buffer.deinit();
 
-    try metrics.formatAscii(buffer.writer(allocator));
+    try metrics.formatAscii(&buffer.writer);
 
-    const output = buffer.items;
+    const output = buffer.written();
 
     // Should truncate or handle long name
     try std.testing.expect(std.mem.indexOf(u8, output, "VeryLongRegionNameThatE") != null);
@@ -1494,12 +1494,12 @@ test "AggregateMetrics formatDetailed with all fields" {
 
     try metrics.regions.append(allocator, region);
 
-    var buffer: std.ArrayList(u8) = .empty;
-    defer buffer.deinit(allocator);
+    var buffer: std.Io.Writer.Allocating = .init(allocator);
+    defer buffer.deinit();
 
-    try metrics.formatDetailed(buffer.writer(allocator), "FullDetail");
+    try metrics.formatDetailed(&buffer.writer, "FullDetail");
 
-    const output = buffer.items;
+    const output = buffer.written();
 
     try std.testing.expect(std.mem.indexOf(u8, output, "FullDetail") != null);
     try std.testing.expect(std.mem.indexOf(u8, output, "Complete Region") != null);
@@ -1535,12 +1535,12 @@ test "AggregateMetrics exportJson all result types" {
 
     try metrics.calculateOverall();
 
-    var buffer: std.ArrayList(u8) = .empty;
-    defer buffer.deinit(allocator);
+    var buffer: std.Io.Writer.Allocating = .init(allocator);
+    defer buffer.deinit();
 
-    try metrics.exportJson(buffer.writer(allocator));
+    try metrics.exportJson(&buffer.writer);
 
-    const json = buffer.items;
+    const json = buffer.written();
 
     // Verify JSON structure
     try std.testing.expect(std.mem.indexOf(u8, json, "\"regions\"") != null);

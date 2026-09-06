@@ -3,6 +3,10 @@
 //! V = n × 3^k × π^m × φ^p × e^q | φ² + 1/φ² = 3 = TRINITY
 // @origin(manual) @regen(pending)
 const std = @import("std");
+// 0.16 routes file reads through an Io. This file is reached from the MCP
+// server's request dispatch, which has no Io to hand down, so it asks for the
+// process one -- the same thing server.zig does.
+const tri_io = @import("tri_io");
 
 /// Sacred mathematical constants
 const PHI: f64 = 1.6180339887498948482;
@@ -33,7 +37,7 @@ pub const resources = [_]Resource{
 
 /// Generate JSON list of all available resources (MCP format)
 pub fn generateResourcesList(allocator: std.mem.Allocator) ![]const u8 {
-    var buf: std.ArrayList(u8) = .{};
+    var buf: std.ArrayList(u8) = .empty;
     errdefer buf.deinit(allocator);
 
     try buf.appendSlice(allocator, "{\"resources\":[");
@@ -114,7 +118,7 @@ fn loadPaper(allocator: std.mem.Allocator, uri: []const u8) ![]const u8 {
     else
         return error.ResourceNotFound;
 
-    return std.fs.cwd().readFileAlloc(allocator, rel_path, 1_000_000) catch {
+    return std.Io.Dir.cwd().readFileAlloc(tri_io.get(), rel_path, allocator, .limited(1_000_000)) catch {
         return std.fmt.allocPrint(allocator, "Paper not found: {s}", .{topic});
     };
 }
@@ -132,13 +136,13 @@ fn loadDocs(allocator: std.mem.Allocator, uri: []const u8) ![]const u8 {
     else
         return error.ResourceNotFound;
 
-    return std.fs.cwd().readFileAlloc(allocator, rel_path, 100_000) catch {
+    return std.Io.Dir.cwd().readFileAlloc(tri_io.get(), rel_path, allocator, .limited(100_000)) catch {
         return std.fmt.allocPrint(allocator, "Documentation not found: {s}", .{page});
     };
 }
 
 fn loadFile(allocator: std.mem.Allocator, file_path: []const u8) ![]const u8 {
-    return std.fs.cwd().readFileAlloc(allocator, file_path, 1_000_000) catch {
+    return std.Io.Dir.cwd().readFileAlloc(tri_io.get(), file_path, allocator, .limited(1_000_000)) catch {
         return std.fmt.allocPrint(allocator, "File not found: {s}", .{file_path});
     };
 }

@@ -201,7 +201,10 @@ pub const ObservabilityManager = struct {
             };
             defer allocator.free(value_str);
 
-            try buffer.writer(allocator).print(
+            // 0.16 removed ArrayList.writer(); the writer never left this
+            // statement, so the list is formatted into directly.
+            try buffer.print(
+                allocator,
                 "{s}_{s} {s}\n",
                 .{ "depin", metric.name, value_str },
             );

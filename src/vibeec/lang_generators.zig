@@ -729,7 +729,7 @@ pub fn generateForLanguage(allocator: Allocator, spec: ParsedSpec, lang: []const
 
     // Default: return stub
     var result: std.ArrayListUnmanaged(u8) = .empty;
-    try result.writer(allocator).print("// {s} v{s} - {s}\n// DEFERRED (v12): implement generator\n", .{ spec.name, spec.version, lang });
+    try result.print(allocator, "// {s} v{s} - {s}\n// DEFERRED (v12): implement generator\n", .{ spec.name, spec.version, lang });
     return result.toOwnedSlice(allocator);
 }
 

@@ -582,18 +582,18 @@ test "Simulation: result format" {
 
     // Test format doesn't crash
     var buffer: [4096]u8 = undefined;
-    var fbs = std.io.fixedBufferStream(&buffer);
-    try result.format(fbs.writer());
-    try std.testing.expect(fbs.getWritten().len > 0);
+    var w: std.Io.Writer = .fixed(&buffer);
+    try result.format(&w);
+    try std.testing.expect(w.buffered().len > 0);
 }
 
 test "Simulation: result json" {
     const result = try runSmokeTest(std.testing.allocator);
 
     var buffer: [4096]u8 = undefined;
-    var fbs = std.io.fixedBufferStream(&buffer);
-    try result.toJson(fbs.writer());
-    const output = fbs.getWritten();
+    var w: std.Io.Writer = .fixed(&buffer);
+    try result.toJson(&w);
+    const output = w.buffered();
 
     // Verify JSON structure
     try std.testing.expect(std.mem.startsWith(u8, output, "{"));
@@ -1045,9 +1045,9 @@ test "Simulation: analysis - result format output" {
 
     // Test formatted output contains expected sections
     var buffer: [8192]u8 = undefined;
-    var fbs = std.io.fixedBufferStream(&buffer);
-    try result.format(fbs.writer());
-    const output = fbs.getWritten();
+    var w: std.Io.Writer = .fixed(&buffer);
+    try result.format(&w);
+    const output = w.buffered();
 
     // Check for key sections in formatted output
     try std.testing.expect(std.mem.indexOf(u8, output, "S³AI BRAIN SIMULATION REPORT") != null);
@@ -1061,9 +1061,9 @@ test "Simulation: analysis - result JSON completeness" {
     const result = try runSmokeTest(std.testing.allocator);
 
     var buffer: [8192]u8 = undefined;
-    var fbs = std.io.fixedBufferStream(&buffer);
-    try result.toJson(fbs.writer());
-    const json = fbs.getWritten();
+    var w: std.Io.Writer = .fixed(&buffer);
+    try result.toJson(&w);
+    const json = w.buffered();
 
     // Verify all required fields are present
     const required_fields = [_][]const u8{
@@ -1087,9 +1087,9 @@ test "Simulation: analysis - config nested in JSON" {
     const result = try runAgentCompetition(std.testing.allocator);
 
     var buffer: [8192]u8 = undefined;
-    var fbs = std.io.fixedBufferStream(&buffer);
-    try result.toJson(fbs.writer());
-    const json = fbs.getWritten();
+    var w: std.Io.Writer = .fixed(&buffer);
+    try result.toJson(&w);
+    const json = w.buffered();
 
     // Verify nested config fields
     const config_fields = [_][]const u8{

@@ -188,13 +188,13 @@ pub const BrainEventLog = struct {
             const new_path = try std.fmt.allocPrint(self.allocator, "{s}/{s}.{d}", .{ dir, basename, i });
             defer self.allocator.free(new_path);
 
-            fs.cwd().rename(io, old_path, new_path) catch {};
+            fs.cwd().rename(old_path, fs.cwd(), new_path, io) catch {};
         }
 
         // Move current log to .1
         const backup_path = try std.fmt.allocPrint(self.allocator, "{s}/{s}.1", .{ dir, basename });
         defer self.allocator.free(backup_path);
-        fs.cwd().rename(io, base_path, backup_path) catch {};
+        fs.cwd().rename(base_path, fs.cwd(), backup_path, io) catch {};
 
         // Open new log file
         self.file = try fs.cwd().createFile(io, base_path, .{ .read = true });

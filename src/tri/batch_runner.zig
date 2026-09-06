@@ -235,26 +235,21 @@ fn runBatch(allocator: std.mem.Allocator, config: BatchConfig) void {
         }) catch continue;
     }
 
-    // Init thread pool + wait group
-    var pool: std.Thread.Pool = undefined;
-    pool.init(.{
-        .allocator = allocator,
-        .n_jobs = config.parallel,
-    }) catch {
-        std.debug.print("{s}  Failed to init thread pool{s}\n", .{ RED, RESET });
-        return;
-    };
-    defer pool.deinit();
-
-    var wg: std.Thread.WaitGroup = .{};
+    // 0.16 replaced std.Thread.Pool + WaitGroup with std.Io.Group. Group needs
+    // no start-up, so the "failed to init thread pool" bail-out is gone, and the
+    // worker count now belongs to the io implementation rather than to
+    // config.parallel.
+    const io = tri_io.get();
+    var group: std.Io.Group = .init;
+    defer group.cancel(io);
 
     // Spawn all workers
     for (contexts.items) |*ctx| {
-        pool.spawnWg(&wg, runSinglePipeline, .{ctx});
+        group.async(io, runSinglePipeline, .{ctx});
     }
 
     // Wait for all workers
-    wg.wait();
+    group.await(io) catch {};
 
     const end_ts = tri_time.nanoTimestamp();
     const total_duration_ns = end_ts - start_ts;

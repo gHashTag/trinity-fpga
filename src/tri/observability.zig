@@ -177,30 +177,37 @@ fn xxhash64(bytes: []const u8) ArtifactHash {
 
 /// High-precision duration tracking
 pub const Duration = struct {
-    start_time: std.time.Instant,
-    end_time: ?std.time.Instant,
+    // 0.16 emptied `std.time` down to unit constants: `Instant` is gone along
+    // with `now`/`since`. `tri_time.monotonicNanos` reads the same monotonic
+    // clock `Instant` used, so the instants become plain nanosecond counts and
+    // `since` becomes a subtraction. Saturating (`-|`), because `since`
+    // returned an unsigned elapsed time and never wrapped.
+    start_time: u64,
+    end_time: ?u64,
     elapsed_ns: u64,
 
+    // `start` and `stop` stay fallible: the clock read cannot fail any more,
+    // but the call sites are written against an error union.
     pub fn start() !Duration {
         return Duration{
-            .start_time = try std.time.Instant.now(),
+            .start_time = tri_time.monotonicNanos(),
             .end_time = null,
             .elapsed_ns = 0,
         };
     }
 
     pub fn stop(self: *Duration) !void {
-        self.end_time = try std.time.Instant.now();
-        self.elapsed_ns = self.end_time.?.since(self.start_time);
+        self.end_time = tri_time.monotonicNanos();
+        self.elapsed_ns = self.end_time.? -| self.start_time;
     }
 
     pub fn elapsed(self: *const Duration) u64 {
         if (self.end_time) |end| {
-            return end.since(self.start_time);
+            return end -| self.start_time;
         }
         // If not stopped, return current elapsed
-        const now = std.time.Instant.now() catch return 0;
-        return now.since(self.start_time);
+        const now = tri_time.monotonicNanos();
+        return now -| self.start_time;
     }
 
     pub fn elapsedMs(self: *const Duration) u64 {
@@ -456,10 +463,10 @@ test "ArtifactHash formatTo" {
     hash.bytes[1] = 0xCD;
 
     var buffer: [16]u8 = undefined;
-    var stream = std.io.fixedBufferStream(&buffer);
-    try hash.formatTo(stream.writer());
+    var w: std.Io.Writer = .fixed(&buffer);
+    try hash.formatTo(&w);
 
-    try std.testing.expectEqualStrings("abcd", stream.getWritten());
+    try std.testing.expectEqualStrings("abcd", w.buffered());
 }
 
 test "OperationContext init and deinit" {

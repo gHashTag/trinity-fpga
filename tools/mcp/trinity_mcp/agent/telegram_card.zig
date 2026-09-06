@@ -2,6 +2,7 @@
 // Creates ONE message on init, then edits it on every step change.
 // Timeline accumulates inside the card. Zero spam.
 const std = @import("std");
+const tri_time = @import("tri_time");
 const telegram = @import("telegram.zig");
 
 pub const TelegramCard = struct {
@@ -30,7 +31,7 @@ pub const TelegramCard = struct {
             .title = title,
             .timeline = .empty,
             .allocator = allocator,
-            .start_time = @intCast(@divTrunc(std.time.nanoTimestamp(), std.time.ns_per_s)),
+            .start_time = @intCast(@divTrunc(tri_time.nanoTimestamp(), std.time.ns_per_s)),
         };
     }
 
@@ -115,8 +116,7 @@ pub const TelegramCard = struct {
         const mins: u64 = @intCast(@divTrunc(elapsed, 60));
         const secs: u64 = @intCast(@mod(elapsed, 60));
 
-        const writer = self.timeline.writer(self.allocator);
-        try writer.print("{d:0>2}:{d:0>2} {s}\n", .{ mins, secs, text });
+        try self.timeline.print(self.allocator, "{d:0>2}:{d:0>2} {s}\n", .{ mins, secs, text });
     }
 
     fn buildCard(self: *TelegramCard, buf: []u8) ?[]const u8 {
@@ -152,7 +152,7 @@ pub const TelegramCard = struct {
     }
 
     fn elapsedSecs(self: *const TelegramCard) i64 {
-        const now: i64 = @intCast(@divTrunc(std.time.nanoTimestamp(), std.time.ns_per_s));
+        const now: i64 = @intCast(@divTrunc(tri_time.nanoTimestamp(), std.time.ns_per_s));
         return now - self.start_time;
     }
 };

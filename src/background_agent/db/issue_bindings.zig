@@ -3,6 +3,9 @@
 
 const std = @import("std");
 const tri_time = @import("tri_time");
+// 0.16 puts file I/O behind an `Io`; none of the public signatures here carry
+// one, so the process Io is used.
+const tri_io = @import("tri_io");
 const Allocator = std.mem.Allocator;
 
 /// Issue binding structure
@@ -43,13 +46,14 @@ pub const Status = struct {
 pub fn loadBindings(allocator: Allocator) !BindingsFile {
     const file_path = ".trinity/issue_bindings.json";
 
-    const file = std.fs.cwd().openFile(file_path, .{}) catch |err| switch (err) {
+    const io = tri_io.get();
+
+    // 0.16 dropped File.readToEndAlloc; Dir.readFileAlloc opens, reads to EOF
+    // and closes for us.
+    const content = std.Io.Dir.cwd().readFileAlloc(io, file_path, allocator, .limited(16 * 1024 * 1024)) catch |err| switch (err) {
         error.FileNotFound => return error.FileNotFound,
         else => return err,
     };
-    defer file.close();
-
-    const content = try file.readToEndAlloc(allocator);
     defer allocator.free(content);
 
     var parsed = try std.json.parseFromSlice(allocator, content);
@@ -62,7 +66,7 @@ pub fn loadBindings(allocator: Allocator) !BindingsFile {
     const bindings_array = try root_obj.get("bindings");
     const bindings = try bindings_array.array;
 
-    var bindings_list = std.ArrayList(IssueBinding).init(allocator);
+    var bindings_list: std.ArrayList(IssueBinding) = .empty;
 
     for (bindings.items) |binding_obj| {
         const issue_num = try binding_obj.object.get("issue_number");
@@ -74,7 +78,7 @@ pub fn loadBindings(allocator: Allocator) !BindingsFile {
         const experience_file = try binding_obj.object.get("experience_file");
         const status = try binding_obj.object.get("status");
 
-        try bindings_list.append(IssueBinding{
+        try bindings_list.append(allocator, IssueBinding{
             .issue_number = @intCast(issue_num.integer),
             .agent_id = try allocator.dupe(u8, agent_id.string),
             .soul_file = try allocator.dupe(u8, soul_file.string),
@@ -97,7 +101,11 @@ pub fn loadBindings(allocator: Allocator) !BindingsFile {
 pub fn saveBindings(allocator: Allocator, bindings_file: *BindingsFile) !void {
     const file_path = ".trinity/issue_bindings.json";
 
-    var bindings = std.ArrayList(std.json.Value).init(allocator);
+    const io = tri_io.get();
+
+    // `std.json.Array` is the type the `.array` payload wants, and it is still a
+    // managed ArrayList in 0.16, so build it directly instead of a bare list.
+    var bindings: std.json.Array = .init(allocator);
     defer bindings.deinit();
 
     for (bindings_file.bindings.items) |binding| {
@@ -119,14 +127,15 @@ pub fn saveBindings(allocator: Allocator, bindings_file: *BindingsFile) !void {
     var root_obj = std.json.ObjectMap.empty;
     defer root_obj.deinit(allocator);
 
-    try root_obj.put(allocator, "bindings", std.json.Value{ .array = bindings.toOwnedSlice() });
+    try root_obj.put(allocator, "bindings", std.json.Value{ .array = bindings });
     try root_obj.put(allocator, "version", std.json.Value{ .string = bindings_file.version });
     try root_obj.put(allocator, "last_updated", std.json.Value{ .integer = tri_time.timestamp() });
 
-    const json_string = try std.json.stringifyAlloc(allocator, std.json.Value{ .object = root_obj }, .{ .whitespace = .indent });
+    // 0.16 moved stringify under `std.json.Stringify`.
+    const json_string = try std.json.Stringify.valueAlloc(allocator, std.json.Value{ .object = root_obj }, .{ .whitespace = .indent_2 });
     defer allocator.free(json_string);
 
-    try std.fs.cwd().writeFile(.{
+    try std.Io.Dir.cwd().writeFile(io, .{
         .sub_path = file_path,
         .data = json_string,
     });
@@ -153,7 +162,7 @@ pub fn upsertBinding(allocator: Allocator, bindings_file: *BindingsFile, binding
         }
     }
 
-    try bindings_file.bindings.append(binding);
+    try bindings_file.bindings.append(allocator, binding);
 }
 
 /// Remove binding by issue number
@@ -187,10 +196,12 @@ test "issue_bindings: load and save" {
     // Test file structure
     const content = "{\"bindings\":[{\"issue_number\":505,\"agent_id\":\"ralph-505-a1\",\"soul_file\":\".trinity/souls/issue-505/SOUL.md\",\"session_id\":\"sess_123\",\"railway_service_id\":\"svc_abc\",\"deployment_id\":\"dep_xyz\",\"experience_file\":\".trinity/experience/issue-505-run-001.jsonl\",\"status\":\"ACTIVE\"}],\"version\":\"1.0.0\",\"last_updated\":1234567890}";
 
-    const file = try std.fs.cwd().makeOpenPath("test_bindings.json", .{ .read = false });
-    defer file.close();
+    const io = tri_io.get();
 
-    try file.writeAll(content);
+    const file = try std.Io.Dir.cwd().createFile(io, "test_bindings.json", .{});
+    defer file.close(io);
+
+    try file.writeStreamingAll(io, content);
 
     // Parse and verify
     const bindings = try loadBindings(allocator);
@@ -204,7 +215,8 @@ test "issue_bindings: load and save" {
             allocator.free(b.experience_file);
             allocator.free(b.status);
         }
-        bindings.bindings.deinit();
+        var list = bindings.bindings;
+        list.deinit(allocator);
         allocator.free(bindings.version);
     }
 
@@ -212,5 +224,5 @@ test "issue_bindings: load and save" {
     try std.testing.expectEqual(bindings.bindings.items[0].issue_number, 505);
     try std.testing.expectEqualStrings(bindings.bindings.items[0].status, "ACTIVE");
 
-    std.fs.cwd().deleteFile("test_bindings.json") catch {};
+    std.Io.Dir.cwd().deleteFile(io, "test_bindings.json") catch {};
 }

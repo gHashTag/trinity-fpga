@@ -631,10 +631,10 @@ test "BrainTelemetry exportJson" {
     try tel.record(.{ .timestamp = now, .active_claims = 5, .events_published = 100, .events_buffered = 10, .health_score = 90.5 });
 
     var buffer: [256]u8 = undefined;
-    var fbs = std.io.fixedBufferStream(&buffer);
-    try tel.exportJson(fbs.writer());
+    var w: std.Io.Writer = .fixed(&buffer);
+    try tel.exportJson(&w);
 
-    const output = fbs.getWritten();
+    const output = w.buffered();
     try std.testing.expectEqual(@as(usize, 85), output.len);
     try std.testing.expectEqualStrings("{\"telemetry\":[{\"ts\":1234567890,\"claims\":5,\"events\":100,\"buffered\":10,\"health\":90.5}]}", output);
 }
@@ -650,10 +650,10 @@ test "BrainTelemetry exportJson: multiple points" {
     try tel.record(.{ .timestamp = now + 1, .active_claims = 3, .events_published = 150, .events_buffered = 5, .health_score = 95.0 });
 
     var buffer: [512]u8 = undefined;
-    var fbs = std.io.fixedBufferStream(&buffer);
-    try tel.exportJson(fbs.writer());
+    var w: std.Io.Writer = .fixed(&buffer);
+    try tel.exportJson(&w);
 
-    const output = fbs.getWritten();
+    const output = w.buffered();
     try std.testing.expect(output.len > 80);
     try std.testing.expect(std.mem.indexOf(u8, output, "\"claims\":5") != null);
     try std.testing.expect(std.mem.indexOf(u8, output, "\"claims\":3") != null);
@@ -787,10 +787,10 @@ test "BrainTelemetry exportJson: empty" {
     defer tel.deinit();
 
     var buffer: [64]u8 = undefined;
-    var fbs = std.io.fixedBufferStream(&buffer);
-    try tel.exportJson(fbs.writer());
+    var w: std.Io.Writer = .fixed(&buffer);
+    try tel.exportJson(&w);
 
-    const output = fbs.getWritten();
+    const output = w.buffered();
     try std.testing.expectEqualStrings("{\"telemetry\":[]}", output);
 }
 

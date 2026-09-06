@@ -29,6 +29,7 @@ const types = @import("types.zig");
 const device_db = @import("device_db.zig");
 const segbits = @import("segbits.zig");
 const far_table = @import("far_table.zig");
+const tri_io = @import("tri_io");
 
 const DeviceId = types.DeviceId;
 const FasmFeature = types.FasmFeature;
@@ -107,17 +108,19 @@ pub fn generateBitstream(allocator: Allocator, device: DeviceId, output_path: []
 /// avoiding dependency on auto-increment padding details.
 fn writeBitFile(allocator: Allocator, path: []const u8, device: DeviceId, frames: []const u32, params: device_db.DeviceParams) !void {
     _ = params;
-    var buf: std.ArrayList(u8) = .empty;
-    defer buf.deinit(allocator);
-    const writer = buf.writer(allocator);
+    // 0.16 dropped `ArrayList.writer()`; the writer is handed to writeHeader/
+    // writeWord/..., so it has to stay a real writer -> Allocating.
+    var aw: std.Io.Writer.Allocating = .init(allocator);
+    defer aw.deinit();
+    const writer = &aw.writer;
 
     const frame_words: u32 = 101;
     const frame_count = far_table.frame_count;
 
     // Header (field 'e' length will be patched after all data is written)
     try writeHeader(writer, device);
-    const e_field_offset = buf.items.len - 4; // position of the 4-byte length we just wrote
-    const data_start_offset = buf.items.len; // data starts right after 'e' field
+    const e_field_offset = aw.written().len - 4; // position of the 4-byte length we just wrote
+    const data_start_offset = aw.written().len; // data starts right after 'e' field
 
     // Sync word sequence
     try writeWord(writer, types.XILINX_DUMMY);
@@ -296,17 +299,19 @@ fn writeBitFile(allocator: Allocator, path: []const u8, device: DeviceId, frames
 
     // Patch field 'e' length with actual data size
     {
-        const data_length: u32 = @intCast(buf.items.len - data_start_offset);
-        buf.items[e_field_offset + 0] = @intCast((data_length >> 24) & 0xFF);
-        buf.items[e_field_offset + 1] = @intCast((data_length >> 16) & 0xFF);
-        buf.items[e_field_offset + 2] = @intCast((data_length >> 8) & 0xFF);
-        buf.items[e_field_offset + 3] = @intCast(data_length & 0xFF);
+        const bytes = aw.written();
+        const data_length: u32 = @intCast(bytes.len - data_start_offset);
+        bytes[e_field_offset + 0] = @intCast((data_length >> 24) & 0xFF);
+        bytes[e_field_offset + 1] = @intCast((data_length >> 16) & 0xFF);
+        bytes[e_field_offset + 2] = @intCast((data_length >> 8) & 0xFF);
+        bytes[e_field_offset + 3] = @intCast(data_length & 0xFF);
     }
 
     // Write buffer to file
-    const file = try std.fs.cwd().createFile(path, .{});
-    defer file.close();
-    try file.writeAll(buf.items);
+    const io = tri_io.get();
+    const file = try std.Io.Dir.cwd().createFile(io, path, .{});
+    defer file.close(io);
+    try file.writeStreamingAll(io, aw.written());
 }
 
 fn writeHeader(writer: anytype, device: DeviceId) !void {
@@ -455,10 +460,10 @@ fn updateFrameEcc(frame: []u32) void {
 
 /// Generate bitstream to a buffer (for testing without file I/O).
 pub fn generateToBuffer(allocator: Allocator, device: DeviceId) ![]u8 {
-    var buf: std.ArrayList(u8) = .empty;
-    errdefer buf.deinit(allocator);
+    var aw: std.Io.Writer.Allocating = .init(allocator);
+    errdefer aw.deinit();
 
-    const writer = buf.writer(allocator);
+    const writer = &aw.writer;
     const params = device_db.getDeviceParams(device);
 
     // Sync
@@ -471,7 +476,7 @@ pub fn generateToBuffer(allocator: Allocator, device: DeviceId) ![]u8 {
     // DESYNC
     try writeType1(writer, REG_CMD, CMD_DESYNC);
 
-    return buf.toOwnedSlice(allocator);
+    return aw.toOwnedSlice();
 }
 
 // =============================================================================

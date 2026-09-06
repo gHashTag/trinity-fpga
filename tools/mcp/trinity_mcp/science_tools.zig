@@ -374,7 +374,7 @@ pub fn bellStates(buf: []u8) []const u8 {
 
 pub fn phiSpiral(allocator: std.mem.Allocator, n: u32) ![]const u8 {
     const points = if (n == 0) @as(u32, 100) else n;
-    var buf: std.ArrayList(u8) = .{};
+    var buf: std.ArrayList(u8) = .empty;
     errdefer buf.deinit(allocator);
 
     try buf.appendSlice(allocator, "{\"points\":[");
@@ -386,8 +386,7 @@ pub fn phiSpiral(allocator: std.mem.Allocator, n: u32) ![]const u8 {
         const r = if (i > 0) @sqrt(fi) else 0.0;
         const x = r * @cos(angle);
         const y = r * @sin(angle);
-        const w = buf.writer(allocator);
-        try w.print("[{d:.4},{d:.4}]", .{ x, y });
+        try buf.print(allocator, "[{d:.4},{d:.4}]", .{ x, y });
     }
     try buf.appendSlice(allocator, "]}");
     return buf.toOwnedSlice(allocator);

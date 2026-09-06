@@ -368,35 +368,35 @@ pub const GPT4V_MODEL = "gpt-4o"; // Vision-capable model
 
 /// Build vision request with image
 pub fn buildVisionRequest(allocator: Allocator, model: []const u8, prompt: []const u8, image_base64: []const u8) ![]u8 {
+    // 0.16 removed ArrayList.writer(); the writer never leaves this function,
+    // so the list is appended to directly.
     var buffer = try std.ArrayList(u8).initCapacity(allocator, 256);
     errdefer buffer.deinit(allocator);
 
-    const writer = buffer.writer(allocator);
-
-    try writer.writeAll("{\"model\":\"");
-    try writer.writeAll(model);
-    try writer.writeAll("\",\"messages\":[{\"role\":\"user\",\"content\":[");
+    try buffer.appendSlice(allocator, "{\"model\":\"");
+    try buffer.appendSlice(allocator, model);
+    try buffer.appendSlice(allocator, "\",\"messages\":[{\"role\":\"user\",\"content\":[");
 
     // Text content
-    try writer.writeAll("{\"type\":\"text\",\"text\":\"");
+    try buffer.appendSlice(allocator, "{\"type\":\"text\",\"text\":\"");
     for (prompt) |c| {
         switch (c) {
-            '"' => try writer.writeAll("\\\""),
-            '\\' => try writer.writeAll("\\\\"),
-            '\n' => try writer.writeAll("\\n"),
-            '\r' => try writer.writeAll("\\r"),
-            '\t' => try writer.writeAll("\\t"),
-            else => try writer.writeByte(c),
+            '"' => try buffer.appendSlice(allocator, "\\\""),
+            '\\' => try buffer.appendSlice(allocator, "\\\\"),
+            '\n' => try buffer.appendSlice(allocator, "\\n"),
+            '\r' => try buffer.appendSlice(allocator, "\\r"),
+            '\t' => try buffer.appendSlice(allocator, "\\t"),
+            else => try buffer.append(allocator, c),
         }
     }
-    try writer.writeAll("\"},");
+    try buffer.appendSlice(allocator, "\"},");
 
     // Image content
-    try writer.writeAll("{\"type\":\"image_url\",\"image_url\":{\"url\":\"data:image/png;base64,");
-    try writer.writeAll(image_base64);
-    try writer.writeAll("\"}}");
+    try buffer.appendSlice(allocator, "{\"type\":\"image_url\",\"image_url\":{\"url\":\"data:image/png;base64,");
+    try buffer.appendSlice(allocator, image_base64);
+    try buffer.appendSlice(allocator, "\"}}");
 
-    try writer.writeAll("]}],\"max_tokens\":1024}");
+    try buffer.appendSlice(allocator, "]}],\"max_tokens\":1024}");
 
     return try buffer.toOwnedSlice(allocator);
 }
@@ -417,28 +417,28 @@ test "buildVisionRequest" {
 
 /// Build streaming request (adds "stream": true)
 pub fn buildStreamingRequest(allocator: Allocator, model: []const u8, prompt: []const u8) ![]u8 {
+    // 0.16 removed ArrayList.writer(); the writer never leaves this function,
+    // so the list is appended to directly.
     var buffer = try std.ArrayList(u8).initCapacity(allocator, 256);
     errdefer buffer.deinit(allocator);
 
-    const writer = buffer.writer(allocator);
-
-    try writer.writeAll("{\"model\":\"");
-    try writer.writeAll(model);
-    try writer.writeAll("\",\"messages\":[{\"role\":\"user\",\"content\":\"");
+    try buffer.appendSlice(allocator, "{\"model\":\"");
+    try buffer.appendSlice(allocator, model);
+    try buffer.appendSlice(allocator, "\",\"messages\":[{\"role\":\"user\",\"content\":\"");
 
     // Escape prompt
     for (prompt) |c| {
         switch (c) {
-            '"' => try writer.writeAll("\\\""),
-            '\\' => try writer.writeAll("\\\\"),
-            '\n' => try writer.writeAll("\\n"),
-            '\r' => try writer.writeAll("\\r"),
-            '\t' => try writer.writeAll("\\t"),
-            else => try writer.writeByte(c),
+            '"' => try buffer.appendSlice(allocator, "\\\""),
+            '\\' => try buffer.appendSlice(allocator, "\\\\"),
+            '\n' => try buffer.appendSlice(allocator, "\\n"),
+            '\r' => try buffer.appendSlice(allocator, "\\r"),
+            '\t' => try buffer.appendSlice(allocator, "\\t"),
+            else => try buffer.append(allocator, c),
         }
     }
 
-    try writer.writeAll("\"}],\"stream\":true,\"max_tokens\":1024}");
+    try buffer.appendSlice(allocator, "\"}],\"stream\":true,\"max_tokens\":1024}");
 
     return try buffer.toOwnedSlice(allocator);
 }

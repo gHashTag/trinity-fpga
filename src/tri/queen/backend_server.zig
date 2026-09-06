@@ -640,6 +640,14 @@ pub const QueenBackend = struct {
 // CLI ENTRY POINT
 // ============================================================================
 
+// Stale standalone entry point. This file is built as a module and reached via
+// runBackendCommand (see src/tri/queen_trinity.zig:runQueenBackend), so nothing
+// references this `main` and Zig never analyses it. It is left at 0.15 because
+// 0.16 removed std.process.argsAlloc/argsFree and left no global argv in std.os
+// or std.posix: argv is only reachable through a `main(init: std.process.Init)`
+// parameter, and adding that parameter is a signature change. Fix the signature
+// before wiring this up as an executable root. Same treatment as
+// src/tri27/tri27_cli.zig.
 pub fn main() !void {
     const allocator = std.heap.page_allocator;
 

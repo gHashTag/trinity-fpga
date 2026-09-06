@@ -19,6 +19,9 @@
 
 const std = @import("std");
 const tri_time = @import("tri_time");
+const tri_io = @import("tri_io");
+// 0.16 emptied std.fs of Dir/File/cwd -- only the path helpers are left, and
+// this file still uses fs.path.join. Everything else here goes through std.Io.
 const fs = std.fs;
 const mem = std.mem;
 
@@ -103,13 +106,14 @@ pub const AdminManager = struct {
 
     /// Initialize admin manager with default paths
     pub fn init(allocator: mem.Allocator) !Self {
+        const io = tri_io.get();
         const state_dir = DEFAULT_STATE_DIR;
-        try fs.cwd().makePath(state_dir);
+        try std.Io.Dir.cwd().createDirPath(io, state_dir);
 
         const backup_dir = try fs.path.join(allocator, &.{ state_dir, "backups" });
         errdefer allocator.free(backup_dir);
 
-        try fs.cwd().makePath(backup_dir);
+        try std.Io.Dir.cwd().createDirPath(io, backup_dir);
 
         return Self{
             .allocator = allocator,
@@ -139,14 +143,14 @@ pub const AdminManager = struct {
             registry.mutex.lock();
             defer registry.mutex.unlock();
             // Remove all claims
-            var to_remove = std.ArrayList([]const u8).init(self.allocator);
+            var to_remove: std.ArrayList([]const u8) = .empty;
             defer {
                 for (to_remove.items) |key| self.allocator.free(key);
-                to_remove.deinit();
+                to_remove.deinit(self.allocator);
             }
             var iter = registry.claims.iterator();
             while (iter.next()) |entry| {
-                try to_remove.append(try self.allocator.dupe(u8, entry.key_ptr.*));
+                try to_remove.append(self.allocator, try self.allocator.dupe(u8, entry.key_ptr.*));
             }
             for (to_remove.items) |key| {
                 if (registry.claims.fetchRemove(key)) |removed| {
@@ -176,8 +180,9 @@ pub const AdminManager = struct {
 
     /// Run diagnostic checks on brain components
     pub fn doctor(self: *Self) !DiagnosticReport {
+        const io = tri_io.get();
         const start = tri_time.nanoTimestamp();
-        var checks = std.ArrayList(DiagnosticCheck).init(self.allocator);
+        var checks: std.ArrayList(DiagnosticCheck) = .empty;
 
         // Check 1: Basal Ganglia (Task Claims)
         {
@@ -209,7 +214,7 @@ pub const AdminManager = struct {
             else
                 null;
 
-            try checks.append(DiagnosticCheck{
+            try checks.append(self.allocator, DiagnosticCheck{
                 .name = "Basal Ganglia",
                 .status = status,
                 .message = message,
@@ -236,7 +241,7 @@ pub const AdminManager = struct {
             else
                 null;
 
-            try checks.append(DiagnosticCheck{
+            try checks.append(self.allocator, DiagnosticCheck{
                 .name = "Reticular Formation",
                 .status = status,
                 .message = message,
@@ -262,7 +267,7 @@ pub const AdminManager = struct {
             else
                 try self.allocator.dupe(u8, "No state file found");
 
-            try checks.append(DiagnosticCheck{
+            try checks.append(self.allocator, DiagnosticCheck{
                 .name = "State File",
                 .status = status,
                 .message = message,
@@ -271,23 +276,24 @@ pub const AdminManager = struct {
         }
 
         // Check 4: Event Log
-        {
+        // Labelled so the missing-file case can record its check and leave.
+        // The catch block has to produce a File, so it cannot simply fall
+        // through after appending -- it breaks out of the whole check.
+        check_event_log: {
             const event_log_path = ".trinity/brain/events.jsonl";
-            const file = fs.cwd().openFile(event_log_path, .{}) catch |err| {
-                if (err == error.FileNotFound) {
-                    try checks.append(DiagnosticCheck{
-                        .name = "Event Log",
-                        .status = DiagnosticStatus.warning,
-                        .message = try self.allocator.dupe(u8, "No event log found"),
-                        .suggestion = null,
-                    });
-                } else {
-                    return err;
-                }
+            const file = std.Io.Dir.cwd().openFile(io, event_log_path, .{}) catch |err| {
+                if (err != error.FileNotFound) return err;
+                try checks.append(self.allocator, DiagnosticCheck{
+                    .name = "Event Log",
+                    .status = DiagnosticStatus.warning,
+                    .message = try self.allocator.dupe(u8, "No event log found"),
+                    .suggestion = null,
+                });
+                break :check_event_log;
             };
-            defer file.close();
+            defer file.close(io);
 
-            const stat = try file.stat();
+            const stat = try file.stat(io);
             const size_mb = @as(f32, @floatFromInt(stat.size)) / (1024 * 1024);
 
             const status = if (size_mb < 10.0)
@@ -303,7 +309,7 @@ pub const AdminManager = struct {
             else
                 null;
 
-            try checks.append(DiagnosticCheck{
+            try checks.append(self.allocator, DiagnosticCheck{
                 .name = "Event Log",
                 .status = status,
                 .message = message,
@@ -326,7 +332,7 @@ pub const AdminManager = struct {
 
             const message = try std.fmt.allocPrint(self.allocator, "Average health: {d:.1}", .{avg_health});
 
-            try checks.append(DiagnosticCheck{
+            try checks.append(self.allocator, DiagnosticCheck{
                 .name = "Telemetry",
                 .status = status,
                 .message = message,
@@ -356,7 +362,7 @@ pub const AdminManager = struct {
 
         return DiagnosticReport{
             .overall_status = overall_status,
-            .checks = try checks.toOwnedSlice(),
+            .checks = try checks.toOwnedSlice(self.allocator),
             .timestamp = tri_time.milliTimestamp(),
             .brain_version = "5.1.0",
         };
@@ -379,16 +385,16 @@ pub const AdminManager = struct {
             registry.mutex.lock();
             defer registry.mutex.unlock();
 
-            var to_remove = std.ArrayList([]const u8).init(self.allocator);
+            var to_remove: std.ArrayList([]const u8) = .empty;
             defer {
                 for (to_remove.items) |key| self.allocator.free(key);
-                to_remove.deinit();
+                to_remove.deinit(self.allocator);
             }
 
             var iter = registry.claims.iterator();
             while (iter.next()) |entry| {
                 if (!entry.value_ptr.isValid()) {
-                    try to_remove.append(try self.allocator.dupe(u8, entry.key_ptr.*));
+                    try to_remove.append(self.allocator, try self.allocator.dupe(u8, entry.key_ptr.*));
                 }
             }
 
@@ -447,17 +453,18 @@ pub const AdminManager = struct {
         defer self.allocator.free(state_file_path);
 
         {
-            const src = try fs.cwd().openFile(state_file_path, .{});
-            defer src.close();
-
-            const dst = try fs.cwd().createFile(backup_path, .{ .read = true });
-            defer dst.close();
-
-            const content = try src.readToEndAlloc(self.allocator, 10 * 1024 * 1024);
+            const io = tri_io.get();
+            // 0.16 dropped File.readToEndAlloc. A whole-file read is
+            // Dir.readFileAlloc, which opens and closes the source itself, so
+            // the explicit src handle is gone.
+            const content = try std.Io.Dir.cwd().readFileAlloc(io, state_file_path, self.allocator, .limited(10 * 1024 * 1024));
             defer self.allocator.free(content);
 
-            try dst.writeAll(content);
-            try dst.sync();
+            const dst = try std.Io.Dir.cwd().createFile(io, backup_path, .{ .read = true });
+            defer dst.close(io);
+
+            try dst.writeStreamingAll(io, content);
+            try dst.sync(io);
         }
 
         std.log.info("Backup created: {s}", .{backup_path});
@@ -475,9 +482,11 @@ pub const AdminManager = struct {
         const backup_path = try fs.path.join(self.allocator, &.{ self.backup_dir, backup_name });
         defer self.allocator.free(backup_path);
 
+        const io = tri_io.get();
+
         // Verify backup exists
-        if (fs.cwd().openFile(backup_path, .{})) |file| {
-            file.close();
+        if (std.Io.Dir.cwd().openFile(io, backup_path, .{})) |file| {
+            file.close(io);
         } else |_| {
             return AdminError.BackupNotFound;
         }
@@ -494,17 +503,15 @@ pub const AdminManager = struct {
         defer self.allocator.free(state_file_path);
 
         {
-            const src = try fs.cwd().openFile(backup_path, .{});
-            defer src.close();
-
-            const dst = try fs.cwd().createFile(state_file_path, .{ .read = true });
-            defer dst.close();
-
-            const content = try src.readToEndAlloc(self.allocator, 10 * 1024 * 1024);
+            // Same whole-file copy as backup(), in the other direction.
+            const content = try std.Io.Dir.cwd().readFileAlloc(io, backup_path, self.allocator, .limited(10 * 1024 * 1024));
             defer self.allocator.free(content);
 
-            try dst.writeAll(content);
-            try dst.sync();
+            const dst = try std.Io.Dir.cwd().createFile(io, state_file_path, .{ .read = true });
+            defer dst.close(io);
+
+            try dst.writeStreamingAll(io, content);
+            try dst.sync(io);
         }
 
         // Load and restore state
@@ -548,24 +555,26 @@ pub const AdminManager = struct {
 
     /// List available backups
     pub fn listBackups(self: *Self) ![][]const u8 {
-        var backups = std.ArrayList(struct {
+        const io = tri_io.get();
+
+        var backups: std.ArrayList(struct {
             name: []const u8,
             timestamp: i64,
-        }).init(self.allocator);
+        }) = .empty;
 
         defer {
             for (backups.items) |b| self.allocator.free(b.name);
-            backups.deinit();
+            backups.deinit(self.allocator);
         }
 
-        var dir = try fs.cwd().openDir(self.backup_dir, .{ .iterate = true });
-        defer dir.close();
+        var dir = try std.Io.Dir.cwd().openDir(io, self.backup_dir, .{ .iterate = true });
+        defer dir.close(io);
 
         var iter = dir.iterate();
-        while (try iter.next()) |entry| {
+        while (try iter.next(io)) |entry| {
             if (entry.kind == .file) {
                 const name_copy = try self.allocator.dupe(u8, entry.name);
-                try backups.append(.{ .name = name_copy, .timestamp = 0 });
+                try backups.append(self.allocator, .{ .name = name_copy, .timestamp = 0 });
             }
         }
 
@@ -576,12 +585,12 @@ pub const AdminManager = struct {
             }
         }.lessThan);
 
-        var result = std.ArrayList([]const u8).init(self.allocator);
+        var result: std.ArrayList([]const u8) = .empty;
         for (backups.items) |b| {
-            try result.append(try self.allocator.dupe(u8, b.name));
+            try result.append(self.allocator, try self.allocator.dupe(u8, b.name));
         }
 
-        return result.toOwnedSlice();
+        return result.toOwnedSlice(self.allocator);
     }
 
     /// Migrate state to current version
@@ -638,12 +647,13 @@ pub const AdminManager = struct {
 
     /// Count backup files
     fn countBackups(self: *Self) !usize {
+        const io = tri_io.get();
         var count: usize = 0;
-        var dir = try fs.cwd().openDir(self.backup_dir, .{ .iterate = true });
-        defer dir.close();
+        var dir = try std.Io.Dir.cwd().openDir(io, self.backup_dir, .{ .iterate = true });
+        defer dir.close(io);
 
         var iter = dir.iterate();
-        while (try iter.next()) |entry| {
+        while (try iter.next(io)) |entry| {
             if (entry.kind == .file) {
                 count += 1;
             }
@@ -941,7 +951,10 @@ test "AdminManager doctor - check names" {
                 break;
             }
         }
-        try std.testing.expect(found, "Expected check '{s}' not found", .{expected});
+        // std.testing.expect takes only the condition; the message arguments
+        // were never accepted by any Zig version.
+        if (!found) std.debug.print("Expected check '{s}' not found\n", .{expected});
+        try std.testing.expect(found);
     }
 }
 

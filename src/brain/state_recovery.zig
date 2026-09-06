@@ -18,6 +18,7 @@
 const std = @import("std");
 const tri_env = @import("tri_env");
 const tri_time = @import("tri_time");
+const tri_io = @import("tri_io");
 const builtin = @import("builtin");
 const fs = std.fs;
 const mem = std.mem;
@@ -132,8 +133,9 @@ pub const StateManager = struct {
 
     /// Initialize state manager with default paths
     pub fn init(allocator: mem.Allocator) !Self {
+        const io = tri_io.get();
         const state_dir = DEFAULT_STATE_DIR;
-        try fs.cwd().makePath(state_dir);
+        try std.Io.Dir.cwd().createDirPath(io, state_dir);
 
         const state_file_path = try fs.path.join(allocator, &.{ state_dir, "brain_state.json" });
         errdefer allocator.free(state_file_path);
@@ -141,7 +143,7 @@ pub const StateManager = struct {
         const backup_dir = try fs.path.join(allocator, &.{ state_dir, "backups" });
         errdefer allocator.free(backup_dir);
 
-        try fs.cwd().makePath(backup_dir);
+        try std.Io.Dir.cwd().createDirPath(io, backup_dir);
 
         return Self{
             .allocator = allocator,
@@ -160,6 +162,7 @@ pub const StateManager = struct {
     /// Save current brain state to disk
     /// Returns error if save fails (caller should retry)
     pub fn save(self: *Self, registry: *basal_ganglia.Registry, event_bus: *reticular_formation.EventBus) !void {
+        const io = tri_io.get();
         const state = try self.captureState(registry, event_bus);
         defer self.freeState(state);
 
@@ -170,8 +173,8 @@ pub const StateManager = struct {
         const tmp_path = try std.fmt.allocPrint(self.allocator, "{s}.tmp", .{self.state_file_path});
         defer self.allocator.free(tmp_path);
 
-        const file = try fs.cwd().createFile(tmp_path, .{ .read = true });
-        defer file.close();
+        const file = try std.Io.Dir.cwd().createFile(io, tmp_path, .{ .read = true });
+        defer file.close(io);
 
         // Write JSON with pretty formatting
         var json_buffer = std.ArrayList(u8).initCapacity(self.allocator, 8192) catch |err| {
@@ -179,14 +182,14 @@ pub const StateManager = struct {
             return error.OutOfMemory;
         };
         defer json_buffer.deinit(self.allocator);
-        try json_buffer.writer(self.allocator).print("{f}", .{json.fmt(state, .{ .whitespace = .indent_2 })});
-        try file.writeAll(json_buffer.items);
+        try json_buffer.print(self.allocator, "{f}", .{json.fmt(state, .{ .whitespace = .indent_2 })});
+        try file.writeStreamingAll(io, json_buffer.items);
 
         // Sync to disk
-        try file.sync();
+        try file.sync(io);
 
         // Atomic rename
-        try fs.cwd().rename(tmp_path, self.state_file_path);
+        try std.Io.Dir.cwd().rename(tmp_path, std.Io.Dir.cwd(), self.state_file_path, io);
 
         std.log.info("Brain state saved to {s}", .{self.state_file_path});
     }
@@ -194,13 +197,18 @@ pub const StateManager = struct {
     /// Load brain state from disk
     /// Returns error if file not found or corrupted (caller should use defaults)
     pub fn load(self: *Self) !LoadedState {
-        const file = fs.cwd().openFile(self.state_file_path, .{}) catch |err| {
+        const io = tri_io.get();
+        const file = std.Io.Dir.cwd().openFile(io, self.state_file_path, .{}) catch |err| {
             std.log.warn("Failed to open brain state file: {}", .{err});
             return error.FileNotFound;
         };
-        defer file.close();
+        defer file.close(io);
 
-        const content = file.readToEndAlloc(self.allocator, 10 * 1024 * 1024) catch |err| {
+        // Whole-file read: a short read here means the state file is truncated,
+        // which is exactly the corruption this path reports.
+        var read_buf: [4096]u8 = undefined;
+        var file_reader = file.reader(io, &read_buf);
+        const content = file_reader.interface.allocRemaining(self.allocator, .limited(10 * 1024 * 1024)) catch |err| {
             std.log.warn("Failed to read brain state file: {}", .{err});
             return error.CorruptedData;
         };
@@ -521,9 +529,10 @@ pub const StateManager = struct {
 
     /// Create backup of current state file
     fn createBackup(self: *Self) !void {
+        const io = tri_io.get();
         // Check if state file exists
-        if (fs.cwd().openFile(self.state_file_path, .{})) |file| {
-            file.close();
+        if (std.Io.Dir.cwd().openFile(io, self.state_file_path, .{})) |file| {
+            file.close(io);
 
             // Create backup filename with timestamp
             const now = tri_time.timestamp();
@@ -535,16 +544,18 @@ pub const StateManager = struct {
 
             // Copy file to backup
             {
-                const src = try fs.cwd().openFile(self.state_file_path, .{});
-                defer src.close();
+                const src = try std.Io.Dir.cwd().openFile(io, self.state_file_path, .{});
+                defer src.close(io);
 
-                const dst = try fs.cwd().createFile(backup_path, .{});
-                defer dst.close();
+                const dst = try std.Io.Dir.cwd().createFile(io, backup_path, .{});
+                defer dst.close(io);
 
-                const content = try src.readToEndAlloc(self.allocator, 10 * 1024 * 1024);
+                var read_buf: [4096]u8 = undefined;
+                var src_reader = src.reader(io, &read_buf);
+                const content = try src_reader.interface.allocRemaining(self.allocator, .limited(10 * 1024 * 1024));
                 defer self.allocator.free(content);
 
-                try dst.writeAll(content);
+                try dst.writeStreamingAll(io, content);
             }
 
             // Clean up old backups (keep last 10)
@@ -558,6 +569,7 @@ pub const StateManager = struct {
 
     /// Prune old backups, keeping only the most recent N
     fn pruneBackups(self: *Self, keep: usize) !void {
+        const io = tri_io.get();
         var backups = std.ArrayList(struct {
             name: []const u8,
             timestamp: i64,
@@ -572,11 +584,11 @@ pub const StateManager = struct {
         }
 
         // List backup files
-        var dir = try fs.cwd().openDir(self.backup_dir, .{ .iterate = true });
-        defer dir.close();
+        var dir = try std.Io.Dir.cwd().openDir(io, self.backup_dir, .{ .iterate = true });
+        defer dir.close(io);
 
         var iter = dir.iterate();
-        while (try iter.next()) |entry| {
+        while (try iter.next(io)) |entry| {
             if (entry.kind == .file) {
                 // Parse timestamp from filename: brain_state_<timestamp>.json
                 if (mem.startsWith(u8, entry.name, "brain_state_") and mem.endsWith(u8, entry.name, ".json")) {
@@ -603,7 +615,7 @@ pub const StateManager = struct {
                 const path = try fs.path.join(self.allocator, &.{ self.backup_dir, old_backup.name });
                 defer self.allocator.free(path);
 
-                fs.cwd().deleteFile(path) catch |err| {
+                std.Io.Dir.cwd().deleteFile(io, path) catch |err| {
                     std.log.warn("Failed to delete old backup {s}: {}", .{ path, err });
                 };
             }
@@ -665,8 +677,9 @@ pub const StateManager = struct {
 
     /// Check if state file exists and is valid
     pub fn hasValidState(self: *Self) bool {
-        if (fs.cwd().openFile(self.state_file_path, .{})) |file| {
-            file.close();
+        const io = tri_io.get();
+        if (std.Io.Dir.cwd().openFile(io, self.state_file_path, .{})) |file| {
+            file.close(io);
             return true;
         } else |_| {
             return false;
@@ -683,7 +696,8 @@ pub const StateManager = struct {
     };
 
     pub fn getStateInfo(self: *Self) !StateInfo {
-        const stat = fs.cwd().statFile(self.state_file_path) catch |err| {
+        const io = tri_io.get();
+        const stat = std.Io.Dir.cwd().statFile(io, self.state_file_path, .{}) catch |err| {
             if (err == error.FileNotFound) {
                 return StateInfo{
                     .exists = false,
@@ -698,11 +712,11 @@ pub const StateManager = struct {
 
         // Count backups
         var backup_count: usize = 0;
-        var dir = try fs.cwd().openDir(self.backup_dir, .{ .iterate = true });
-        defer dir.close();
+        var dir = try std.Io.Dir.cwd().openDir(io, self.backup_dir, .{ .iterate = true });
+        defer dir.close(io);
 
         var iter = dir.iterate();
-        while (try iter.next()) |entry| {
+        while (try iter.next(io)) |entry| {
             if (entry.kind == .file and mem.startsWith(u8, entry.name, "brain_state_")) {
                 backup_count += 1;
             }
@@ -719,7 +733,8 @@ pub const StateManager = struct {
 
     /// Delete state file (for cleanup or reset)
     pub fn deleteState(self: *Self) !void {
-        fs.cwd().deleteFile(self.state_file_path) catch |err| {
+        const io = tri_io.get();
+        std.Io.Dir.cwd().deleteFile(io, self.state_file_path) catch |err| {
             if (err == error.FileNotFound) {
                 return; // Already deleted
             }
@@ -730,19 +745,20 @@ pub const StateManager = struct {
 
     /// Wipe all state including backups (use with caution!)
     pub fn wipeAll(self: *Self) !void {
+        const io = tri_io.get();
         // Delete state file
         self.deleteState() catch {};
 
         // Delete backup directory
-        var dir = try fs.cwd().openDir(self.backup_dir, .{ .iterate = true });
-        defer dir.close();
+        var dir = try std.Io.Dir.cwd().openDir(io, self.backup_dir, .{ .iterate = true });
+        defer dir.close(io);
 
         var iter = dir.iterate();
-        while (try iter.next()) |entry| {
+        while (try iter.next(io)) |entry| {
             if (entry.kind == .file) {
                 const path = try fs.path.join(self.allocator, &.{ self.backup_dir, entry.name });
                 defer self.allocator.free(path);
-                fs.cwd().deleteFile(path) catch |err| {
+                std.Io.Dir.cwd().deleteFile(io, path) catch |err| {
                     std.log.warn("Failed to delete {s}: {}", .{ path, err });
                 };
             }
@@ -870,23 +886,25 @@ fn printBrainRecoveryHelp() !void {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 test "StateManager init" {
+    const io = tri_io.get();
     const allocator = std.testing.allocator;
 
     // Use temporary directory for testing
     const tmp_dir = "test_brain_state_tmp";
-    try fs.cwd().makePath(tmp_dir);
-    defer fs.cwd().deleteTree(tmp_dir) catch {};
+    try std.Io.Dir.cwd().createDirPath(io, tmp_dir);
+    defer std.Io.Dir.cwd().deleteTree(io, tmp_dir) catch {};
 
     const manager = try StateManager.init(allocator);
     _ = manager;
 }
 
 test "StateManager save and load cycle" {
+    const io = tri_io.get();
     const allocator = std.testing.allocator;
 
     // Create temporary state directory
     const tmp_dir = ".trinity/brain/state";
-    try fs.cwd().makePath(tmp_dir);
+    try std.Io.Dir.cwd().createDirPath(io, tmp_dir);
 
     var manager = try StateManager.init(allocator);
     defer manager.deinit();
@@ -916,11 +934,12 @@ test "StateManager save and load cycle" {
 }
 
 test "StateManager restore recovers task claims" {
+    const io = tri_io.get();
     const allocator = std.testing.allocator;
 
     // Setup
     const tmp_dir = ".trinity/brain/state";
-    try fs.cwd().makePath(tmp_dir);
+    try std.Io.Dir.cwd().createDirPath(io, tmp_dir);
 
     var manager = try StateManager.init(allocator);
     defer manager.deinit();
@@ -956,19 +975,20 @@ test "StateManager restore recovers task claims" {
 }
 
 test "StateManager handles corrupted state file" {
+    const io = tri_io.get();
     const allocator = std.testing.allocator;
 
     const tmp_dir = ".trinity/brain/state";
-    try fs.cwd().makePath(tmp_dir);
+    try std.Io.Dir.cwd().createDirPath(io, tmp_dir);
 
     var manager = try StateManager.init(allocator);
     defer manager.deinit();
 
     // Write corrupted data to state file
     {
-        const file = try fs.cwd().createFile(manager.state_file_path, .{ .read = true });
-        defer file.close();
-        try file.writeAll("corrupted json {{}}");
+        const file = try std.Io.Dir.cwd().createFile(io, manager.state_file_path, .{ .read = true });
+        defer file.close(io);
+        try file.writeStreamingAll(io, "corrupted json {{}}");
     }
 
     // Load should return error
@@ -980,10 +1000,11 @@ test "StateManager handles corrupted state file" {
 }
 
 test "StateManager getStateInfo" {
+    const io = tri_io.get();
     const allocator = std.testing.allocator;
 
     const tmp_dir = ".trinity/brain/state";
-    try fs.cwd().makePath(tmp_dir);
+    try std.Io.Dir.cwd().createDirPath(io, tmp_dir);
 
     var manager = try StateManager.init(allocator);
     defer manager.deinit();
@@ -1016,10 +1037,11 @@ test "StateManager getStateInfo" {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 test "Crash recovery: mid-task agent crash recovery" {
+    const io = tri_io.get();
     const allocator = std.testing.allocator;
 
     const tmp_dir = ".trinity/brain/state";
-    try fs.cwd().makePath(tmp_dir);
+    try std.Io.Dir.cwd().createDirPath(io, tmp_dir);
 
     var manager = try StateManager.init(allocator);
     defer manager.deinit();
@@ -1067,10 +1089,11 @@ test "Crash recovery: mid-task agent crash recovery" {
 }
 
 test "Crash recovery: partial task completion state preserved" {
+    const io = tri_io.get();
     const allocator = std.testing.allocator;
 
     const tmp_dir = ".trinity/brain/state";
-    try fs.cwd().makePath(tmp_dir);
+    try std.Io.Dir.cwd().createDirPath(io, tmp_dir);
 
     var manager = try StateManager.init(allocator);
     defer manager.deinit();
@@ -1122,10 +1145,11 @@ test "Crash recovery: partial task completion state preserved" {
 }
 
 test "Crash recovery: expired claims not restored" {
+    const io = tri_io.get();
     const allocator = std.testing.allocator;
 
     const tmp_dir = ".trinity/brain/state";
-    try fs.cwd().makePath(tmp_dir);
+    try std.Io.Dir.cwd().createDirPath(io, tmp_dir);
 
     var manager = try StateManager.init(allocator);
     defer manager.deinit();
@@ -1168,10 +1192,11 @@ test "Crash recovery: expired claims not restored" {
 }
 
 test "Crash recovery: multiple agents with separate claims" {
+    const io = tri_io.get();
     const allocator = std.testing.allocator;
 
     const tmp_dir = ".trinity/brain/state";
-    try fs.cwd().makePath(tmp_dir);
+    try std.Io.Dir.cwd().createDirPath(io, tmp_dir);
 
     var manager = try StateManager.init(allocator);
     defer manager.deinit();
@@ -1218,10 +1243,11 @@ test "Crash recovery: multiple agents with separate claims" {
 }
 
 test "Crash recovery: state survives incomplete write (atomic rename)" {
+    const io = tri_io.get();
     const allocator = std.testing.allocator;
 
     const tmp_dir = ".trinity/brain/state";
-    try fs.cwd().makePath(tmp_dir);
+    try std.Io.Dir.cwd().createDirPath(io, tmp_dir);
 
     var manager = try StateManager.init(allocator);
     defer manager.deinit();
@@ -1241,9 +1267,9 @@ test "Crash recovery: state survives incomplete write (atomic rename)" {
     defer allocator.free(tmp_path);
 
     {
-        const tmp_file = try fs.cwd().createFile(tmp_path, .{ .read = true });
-        defer tmp_file.close();
-        try tmp_file.writeAll("{\"incomplete\": \"data\"");
+        const tmp_file = try std.Io.Dir.cwd().createFile(io, tmp_path, .{ .read = true });
+        defer tmp_file.close(io);
+        try tmp_file.writeStreamingAll(io, "{\"incomplete\": \"data\"");
     }
 
     // Original state should still be intact
@@ -1255,7 +1281,7 @@ test "Crash recovery: state survives incomplete write (atomic rename)" {
 
     // Clean up
     manager.deleteState() catch {};
-    fs.cwd().deleteFile(tmp_path) catch {};
+    std.Io.Dir.cwd().deleteFile(io, tmp_path) catch {};
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1263,10 +1289,11 @@ test "Crash recovery: state survives incomplete write (atomic rename)" {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 test "State versioning: current version saved correctly" {
+    const io = tri_io.get();
     const allocator = std.testing.allocator;
 
     const tmp_dir = ".trinity/brain/state";
-    try fs.cwd().makePath(tmp_dir);
+    try std.Io.Dir.cwd().createDirPath(io, tmp_dir);
 
     var manager = try StateManager.init(allocator);
     defer manager.deinit();
@@ -1290,18 +1317,19 @@ test "State versioning: current version saved correctly" {
 }
 
 test "State versioning: future version rejected" {
+    const io = tri_io.get();
     const allocator = std.testing.allocator;
 
     const tmp_dir = ".trinity/brain/state";
-    try fs.cwd().makePath(tmp_dir);
+    try std.Io.Dir.cwd().createDirPath(io, tmp_dir);
 
     var manager = try StateManager.init(allocator);
     defer manager.deinit();
 
     // Manually write a state file with future version
     {
-        const file = try fs.cwd().createFile(manager.state_file_path, .{ .read = true });
-        defer file.close();
+        const file = try std.Io.Dir.cwd().createFile(io, manager.state_file_path, .{ .read = true });
+        defer file.close(io);
 
         const future_version = CURRENT_VERSION + 1;
         const json_str = try std.fmt.allocPrint(allocator,
@@ -1320,7 +1348,7 @@ test "State versioning: future version rejected" {
         , .{future_version});
         defer allocator.free(json_str);
 
-        try file.writeAll(json_str);
+        try file.writeStreamingAll(io, json_str);
     }
 
     // Load should fail with UnsupportedVersion
@@ -1332,18 +1360,19 @@ test "State versioning: future version rejected" {
 }
 
 test "State versioning: zero version (legacy) migrated to current" {
+    const io = tri_io.get();
     const allocator = std.testing.allocator;
 
     const tmp_dir = ".trinity/brain/state";
-    try fs.cwd().makePath(tmp_dir);
+    try std.Io.Dir.cwd().createDirPath(io, tmp_dir);
 
     var manager = try StateManager.init(allocator);
     defer manager.deinit();
 
     // Write a v0 (legacy) state file
     {
-        const file = try fs.cwd().createFile(manager.state_file_path, .{ .read = true });
-        defer file.close();
+        const file = try std.Io.Dir.cwd().createFile(io, manager.state_file_path, .{ .read = true });
+        defer file.close(io);
 
         // Version 0 state (simplified format)
         const json_str =
@@ -1360,7 +1389,7 @@ test "State versioning: zero version (legacy) migrated to current" {
             \\  }
             \\}
         ;
-        try file.writeAll(json_str);
+        try file.writeStreamingAll(io, json_str);
     }
 
     // Load should succeed and migrate
@@ -1375,18 +1404,19 @@ test "State versioning: zero version (legacy) migrated to current" {
 }
 
 test "State versioning: metadata preserved during migration" {
+    const io = tri_io.get();
     const allocator = std.testing.allocator;
 
     const tmp_dir = ".trinity/brain/state";
-    try fs.cwd().makePath(tmp_dir);
+    try std.Io.Dir.cwd().createDirPath(io, tmp_dir);
 
     var manager = try StateManager.init(allocator);
     defer manager.deinit();
 
     // Write state with metadata
     {
-        const file = try fs.cwd().createFile(manager.state_file_path, .{ .read = true });
-        defer file.close();
+        const file = try std.Io.Dir.cwd().createFile(io, manager.state_file_path, .{ .read = true });
+        defer file.close(io);
 
         const json_str =
             \\{
@@ -1410,7 +1440,7 @@ test "State versioning: metadata preserved during migration" {
             \\  }
             \\}
         ;
-        try file.writeAll(json_str);
+        try file.writeStreamingAll(io, json_str);
     }
 
     var loaded = try manager.load();
@@ -1430,10 +1460,11 @@ test "State versioning: metadata preserved during migration" {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 test "Backup: created before state overwrite" {
+    const io = tri_io.get();
     const allocator = std.testing.allocator;
 
     const tmp_dir = ".trinity/brain/state";
-    try fs.cwd().makePath(tmp_dir);
+    try std.Io.Dir.cwd().createDirPath(io, tmp_dir);
 
     var manager = try StateManager.init(allocator);
     defer manager.deinit();
@@ -1465,10 +1496,11 @@ test "Backup: created before state overwrite" {
 }
 
 test "Backup: backup file contains previous state" {
+    const io = tri_io.get();
     const allocator = std.testing.allocator;
 
     const tmp_dir = ".trinity/brain/state";
-    try fs.cwd().makePath(tmp_dir);
+    try std.Io.Dir.cwd().createDirPath(io, tmp_dir);
 
     var manager = try StateManager.init(allocator);
     defer manager.deinit();
@@ -1488,12 +1520,12 @@ test "Backup: backup file contains previous state" {
     try manager.save(&registry, &event_bus);
 
     // Verify backup directory has files
-    var backup_dir = try fs.cwd().openDir(manager.backup_dir, .{ .iterate = true });
-    defer backup_dir.close();
+    var backup_dir = try std.Io.Dir.cwd().openDir(io, manager.backup_dir, .{ .iterate = true });
+    defer backup_dir.close(io);
 
     var backup_count: usize = 0;
     var iter = backup_dir.iterate();
-    while (try iter.next()) |entry| {
+    while (try iter.next(io)) |entry| {
         if (entry.kind == .file and mem.startsWith(u8, entry.name, "brain_state_")) {
             backup_count += 1;
         }
@@ -1506,10 +1538,11 @@ test "Backup: backup file contains previous state" {
 }
 
 test "Backup: old backups pruned automatically" {
+    const io = tri_io.get();
     const allocator = std.testing.allocator;
 
     const tmp_dir = ".trinity/brain/state";
-    try fs.cwd().makePath(tmp_dir);
+    try std.Io.Dir.cwd().createDirPath(io, tmp_dir);
 
     var manager = try StateManager.init(allocator);
     defer manager.deinit();
@@ -1538,10 +1571,11 @@ test "Backup: old backups pruned automatically" {
 }
 
 test "Backup: filename includes timestamp" {
+    const io = tri_io.get();
     const allocator = std.testing.allocator;
 
     const tmp_dir = ".trinity/brain/state";
-    try fs.cwd().makePath(tmp_dir);
+    try std.Io.Dir.cwd().createDirPath(io, tmp_dir);
 
     var manager = try StateManager.init(allocator);
     defer manager.deinit();
@@ -1556,11 +1590,11 @@ test "Backup: filename includes timestamp" {
     try manager.save(&registry, &event_bus);
 
     // Check backup files have correct naming pattern
-    var backup_dir = try fs.cwd().openDir(manager.backup_dir, .{ .iterate = true });
-    defer backup_dir.close();
+    var backup_dir = try std.Io.Dir.cwd().openDir(io, manager.backup_dir, .{ .iterate = true });
+    defer backup_dir.close(io);
 
     var iter = backup_dir.iterate();
-    while (try iter.next()) |entry| {
+    while (try iter.next(io)) |entry| {
         if (entry.kind == .file and mem.startsWith(u8, entry.name, "brain_state_")) {
             // Filename should be brain_state_<timestamp>.json
             try std.testing.expect(mem.endsWith(u8, entry.name, ".json"));
@@ -1584,10 +1618,11 @@ test "Backup: filename includes timestamp" {
 }
 
 test "Restore: only active claims restored" {
+    const io = tri_io.get();
     const allocator = std.testing.allocator;
 
     const tmp_dir = ".trinity/brain/state";
-    try fs.cwd().makePath(tmp_dir);
+    try std.Io.Dir.cwd().createDirPath(io, tmp_dir);
 
     var manager = try StateManager.init(allocator);
     defer manager.deinit();
@@ -1634,10 +1669,11 @@ test "Restore: only active claims restored" {
 }
 
 test "Restore: heartbeat timestamp preserved" {
+    const io = tri_io.get();
     const allocator = std.testing.allocator;
 
     const tmp_dir = ".trinity/brain/state";
-    try fs.cwd().makePath(tmp_dir);
+    try std.Io.Dir.cwd().createDirPath(io, tmp_dir);
 
     var manager = try StateManager.init(allocator);
     defer manager.deinit();
@@ -1680,11 +1716,12 @@ test "Restore: heartbeat timestamp preserved" {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 test "Auto-recovery: returns false when no state exists" {
+    const io = tri_io.get();
     const allocator = std.testing.allocator;
 
     // Ensure clean state
     const tmp_dir = ".trinity/brain/state";
-    fs.cwd().deleteTree(tmp_dir) catch {};
+    std.Io.Dir.cwd().deleteTree(io, tmp_dir) catch {};
 
     var registry = basal_ganglia.Registry.init(allocator);
     defer registry.deinit();
@@ -1698,10 +1735,11 @@ test "Auto-recovery: returns false when no state exists" {
 }
 
 test "Auto-recovery: recovers valid state" {
+    const io = tri_io.get();
     const allocator = std.testing.allocator;
 
     const tmp_dir = ".trinity/brain/state";
-    try fs.cwd().makePath(tmp_dir);
+    try std.Io.Dir.cwd().createDirPath(io, tmp_dir);
 
     // First, create a state to recover
     var manager = try StateManager.init(allocator);
@@ -1733,19 +1771,20 @@ test "Auto-recovery: recovers valid state" {
 }
 
 test "Auto-recovery: handles corrupted state gracefully" {
+    const io = tri_io.get();
     const allocator = std.testing.allocator;
 
     const tmp_dir = ".trinity/brain/state";
-    try fs.cwd().makePath(tmp_dir);
+    try std.Io.Dir.cwd().createDirPath(io, tmp_dir);
 
     var manager = try StateManager.init(allocator);
     defer manager.deinit();
 
     // Write corrupted state
     {
-        const file = try fs.cwd().createFile(manager.state_file_path, .{ .read = true });
-        defer file.close();
-        try file.writeAll("definitely not valid json {{{");
+        const file = try std.Io.Dir.cwd().createFile(io, manager.state_file_path, .{ .read = true });
+        defer file.close(io);
+        try file.writeStreamingAll(io, "definitely not valid json {{{");
     }
 
     var registry = basal_ganglia.Registry.init(allocator);
@@ -1769,10 +1808,11 @@ test "Auto-recovery: handles corrupted state gracefully" {
 }
 
 test "Auto-recovery: multiple sequential recoveries" {
+    const io = tri_io.get();
     const allocator = std.testing.allocator;
 
     const tmp_dir = ".trinity/brain/state";
-    try fs.cwd().makePath(tmp_dir);
+    try std.Io.Dir.cwd().createDirPath(io, tmp_dir);
 
     var manager = try StateManager.init(allocator);
     defer manager.deinit();
@@ -1821,10 +1861,11 @@ test "Auto-recovery: multiple sequential recoveries" {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 test "Edge case: empty state (no claims, no events)" {
+    const io = tri_io.get();
     const allocator = std.testing.allocator;
 
     const tmp_dir = ".trinity/brain/state";
-    try fs.cwd().makePath(tmp_dir);
+    try std.Io.Dir.cwd().createDirPath(io, tmp_dir);
 
     var manager = try StateManager.init(allocator);
     defer manager.deinit();
@@ -1854,10 +1895,11 @@ test "Edge case: empty state (no claims, no events)" {
 }
 
 test "Edge case: very long task IDs and agent IDs" {
+    const io = tri_io.get();
     const allocator = std.testing.allocator;
 
     const tmp_dir = ".trinity/brain/state";
-    try fs.cwd().makePath(tmp_dir);
+    try std.Io.Dir.cwd().createDirPath(io, tmp_dir);
 
     var manager = try StateManager.init(allocator);
     defer manager.deinit();
@@ -1888,10 +1930,11 @@ test "Edge case: very long task IDs and agent IDs" {
 }
 
 test "Edge case: special characters in task IDs" {
+    const io = tri_io.get();
     const allocator = std.testing.allocator;
 
     const tmp_dir = ".trinity/brain/state";
-    try fs.cwd().makePath(tmp_dir);
+    try std.Io.Dir.cwd().createDirPath(io, tmp_dir);
 
     var manager = try StateManager.init(allocator);
     defer manager.deinit();
@@ -1928,10 +1971,11 @@ test "Edge case: special characters in task IDs" {
 }
 
 test "Edge case: concurrent save and load (basic test)" {
+    const io = tri_io.get();
     const allocator = std.testing.allocator;
 
     const tmp_dir = ".trinity/brain/state";
-    try fs.cwd().makePath(tmp_dir);
+    try std.Io.Dir.cwd().createDirPath(io, tmp_dir);
 
     var manager = try StateManager.init(allocator);
     defer manager.deinit();
@@ -1967,10 +2011,11 @@ test "Edge case: concurrent save and load (basic test)" {
 }
 
 test "Edge case: state file with UTF-8 content" {
+    const io = tri_io.get();
     const allocator = std.testing.allocator;
 
     const tmp_dir = ".trinity/brain/state";
-    try fs.cwd().makePath(tmp_dir);
+    try std.Io.Dir.cwd().createDirPath(io, tmp_dir);
 
     var manager = try StateManager.init(allocator);
     defer manager.deinit();
@@ -2001,10 +2046,11 @@ test "Edge case: state file with UTF-8 content" {
 }
 
 test "Edge case: deleteState on non-existent file" {
+    const io = tri_io.get();
     const allocator = std.testing.allocator;
 
     const tmp_dir = ".trinity/brain/state";
-    try fs.cwd().makePath(tmp_dir);
+    try std.Io.Dir.cwd().createDirPath(io, tmp_dir);
 
     var manager = try StateManager.init(allocator);
     defer manager.deinit();
@@ -2017,10 +2063,11 @@ test "Edge case: deleteState on non-existent file" {
 }
 
 test "Edge case: wipeAll removes everything" {
+    const io = tri_io.get();
     const allocator = std.testing.allocator;
 
     const tmp_dir = ".trinity/brain/state";
-    try fs.cwd().makePath(tmp_dir);
+    try std.Io.Dir.cwd().createDirPath(io, tmp_dir);
 
     var manager = try StateManager.init(allocator);
     defer manager.deinit();

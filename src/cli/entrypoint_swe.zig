@@ -7,6 +7,7 @@
 // phi^2 + 1/phi^2 = 3 = TRINITY
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 const posix = std.posix;
 const log = std.log.scoped(.swe_entrypoint);
@@ -60,11 +61,13 @@ fn readConfig() EntrypointConfig {
 
 /// Run a child process and return exit code
 fn runCmd(allocator: std.mem.Allocator, argv: []const []const u8) !u8 {
-    var child = std.process.Child.init(argv, allocator);
-    child.stdout_behavior = .Inherit;
-    child.stderr_behavior = .Inherit;
-    try child.spawn();
-    const term = try child.wait();
+    _ = allocator; // 0.16: std.process.spawn takes no allocator
+    var child = try std.process.spawn(tri_io.get(), .{
+        .argv = argv,
+        .stdout = .inherit,
+        .stderr = .inherit,
+    });
+    const term = try child.wait(tri_io.get());
     return switch (term) {
         .exited => |code| code,
         else => 1,
@@ -73,9 +76,11 @@ fn runCmd(allocator: std.mem.Allocator, argv: []const []const u8) !u8 {
 
 /// Run a child process and capture stdout
 fn runCmdCapture(allocator: std.mem.Allocator, argv: []const []const u8) ![]const u8 {
-    var child = std.process.Child.init(argv, allocator);
-    child.stdout_behavior = .Pipe;
-    child.stderr_behavior = .Pipe;
+    var child = try std.process.spawn(tri_io.get(), .{
+        .argv = argv,
+        .stdout = .pipe,
+        .stderr = .pipe,
+    });
 
     _ = try child.spawn();
 
@@ -84,7 +89,7 @@ fn runCmdCapture(allocator: std.mem.Allocator, argv: []const []const u8) ![]cons
     defer stderr_buf.deinit(allocator);
 
     try child.collectOutput(allocator, &stdout_buf, &stderr_buf, 1 * 1024 * 1024);
-    _ = try child.wait();
+    _ = try child.wait(tri_io.get());
 
     return try stdout_buf.toOwnedSlice(allocator);
 }
