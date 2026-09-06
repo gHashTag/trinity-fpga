@@ -141,8 +141,13 @@ pub const LogEntry = struct {
 /// Logger with file rotation
 pub const Logger = struct {
     allocator: std.mem.Allocator,
-    base_dir: std.fs.Dir,
-    current_file: ?std.fs.File,
+    // Zig 0.16 moved file I/O behind an Io: std.fs declares neither Dir nor
+    // File nor cwd any more, and every operation on std.Io.Dir/File takes one.
+    // The Logger stores its Io rather than threading it through each call,
+    // because its lifetime is exactly the Logger's.
+    io: std.Io,
+    base_dir: std.Io.Dir,
+    current_file: ?std.Io.File,
     current_date: i64,
     min_level: Level,
     stdout_enabled: bool,
@@ -150,12 +155,15 @@ pub const Logger = struct {
     const LOG_DIR = ".trinity/logs";
     const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB per file
 
-    pub fn init(allocator: std.mem.Allocator, min_level: Level) !Logger {
-        // Create logs directory
-        const logs_dir = try std.fs.cwd().makeOpenPath(LOG_DIR, .{});
+    pub fn init(io: std.Io, allocator: std.mem.Allocator, min_level: Level) !Logger {
+        // makeOpenPath is gone in 0.16; it is createDirPath then openDir.
+        const cwd = std.Io.Dir.cwd();
+        try cwd.createDirPath(io, LOG_DIR);
+        const logs_dir = try cwd.openDir(io, LOG_DIR, .{});
 
         return Logger{
             .allocator = allocator,
+            .io = io,
             .base_dir = logs_dir,
             .current_file = null,
             .current_date = 0,
@@ -166,9 +174,9 @@ pub const Logger = struct {
 
     pub fn deinit(self: *Logger) void {
         if (self.current_file) |f| {
-            f.close();
+            f.close(self.io);
         }
-        self.base_dir.close();
+        self.base_dir.close(self.io);
     }
 
     pub fn setStdoutEnabled(self: *Logger, enabled: bool) void {
@@ -192,8 +200,8 @@ pub const Logger = struct {
             const json = try entry.toJson(self.allocator);
             defer self.allocator.free(json);
 
-            try file.writeAll(json);
-            try file.writeAll("\n");
+            try file.writeStreamingAll(self.io, json);
+            try file.writeStreamingAll(self.io, "\n");
         }
 
         // Also print to stdout if enabled (for human readability)
@@ -283,12 +291,12 @@ pub const Logger = struct {
         if (self.current_date == current_date and self.current_file != null) {
             // Check file size
             if (self.current_file) |file| {
-                const stat = file.stat() catch return;
+                const stat = file.stat(self.io) catch return;
                 if (stat.size < MAX_FILE_SIZE) {
                     return; // File is still good
                 }
                 // File too large, close and rotate
-                file.close();
+                file.close(self.io);
                 self.current_file = null;
             }
         }
@@ -302,7 +310,7 @@ pub const Logger = struct {
         const filename = try std.fmt.allocPrint(self.allocator, "tri-{s}.jsonl", .{date_str});
         defer self.allocator.free(filename);
 
-        const file = try self.base_dir.createFile(filename, .{ .read = true });
+        const file = try self.base_dir.createFile(self.io, filename, .{ .read = true });
         self.current_file = file;
     }
 
@@ -373,12 +381,12 @@ fn unlockGlobalLogger() void {
     global_logger_lock.store(false, .release);
 }
 
-pub fn initGlobalLogger(allocator: std.mem.Allocator, min_level: Level) !void {
+pub fn initGlobalLogger(io: std.Io, allocator: std.mem.Allocator, min_level: Level) !void {
     lockGlobalLogger();
     defer unlockGlobalLogger();
 
     if (global_logger == null) {
-        global_logger = try Logger.init(allocator, min_level);
+        global_logger = try Logger.init(io, allocator, min_level);
     }
 }
 
@@ -593,12 +601,18 @@ fn writeJsonString(allocator: std.mem.Allocator, writer: anytype, str: []const u
 
 // Tests
 test "Logger creates log directory" {
-    var logger = try Logger.init(std.testing.allocator, .info);
+    // The test owns an Io of its own: Io.Threaded builds one from an allocator
+    // alone, so nothing here depends on main.zig's signature.
+    var threaded: std.Io.Threaded = .init(std.testing.allocator, .{});
+    defer threaded.deinit();
+    const io = threaded.io();
+
+    var logger = try Logger.init(io, std.testing.allocator, .info);
     defer logger.deinit();
 
     // Verify directory exists
-    var dir = try std.fs.cwd().openDir(".trinity/logs", .{});
-    defer dir.close();
+    var dir = try std.Io.Dir.cwd().openDir(io, ".trinity/logs", .{});
+    defer dir.close(io);
 }
 
 test "LogEntry JSON serialization" {

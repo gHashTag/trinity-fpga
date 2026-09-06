@@ -54,8 +54,16 @@ pub fn main() !void {
     // Use page_allocator to avoid leak-check spam from GGUF reader metadata strings
     const allocator = std.heap.page_allocator;
 
+    // Zig 0.16 puts file I/O behind an Io. This does NOT require migrating
+    // main to `main(init: std.process.Init)`: std.Io.Threaded.init builds one
+    // from an allocator alone, so the signature question (B22) stays open and
+    // is not settled here as a side effect.
+    var threaded: std.Io.Threaded = .init(allocator, .{});
+    defer threaded.deinit();
+    const io = threaded.io();
+
     // P2.10: Initialize structured logging
-    try structured_log.initGlobalLogger(allocator, .info);
+    try structured_log.initGlobalLogger(io, allocator, .info);
     defer structured_log.deinitGlobalLogger();
 
     // Auto-load .env into process environment (process env wins over .env)
