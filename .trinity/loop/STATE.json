@@ -4,7 +4,7 @@
     "id": "two-track",
     "cron_job": "1cd7dda4",
     "interval": "15m",
-    "iteration": 121,
+    "iteration": 122,
     "status": "RUNNING",
     "owner": "Dmitrii Vasilev / @gHashTag",
     "tracks": [
@@ -629,6 +629,12 @@
       "scope_corrected": "I first framed this as a likely major cause of the 315 yosys rejections. Counted: zero specs on master declare the construct. The fix changes no corpus number in either direction and the commit, the PR and the NOW entry all say so.",
       "protocol": "Two NOW gates refused the first push: every change to master must ADD a docs/now/ entry, while the local pre-commit hook only checks that an EXISTING entry is fresh -- so the hook passed and CI did not. The second gate exists precisely to report two gates disagreeing, and it did. FROZEN_HASH resealed per FROZEN.md §5 with the digest computed by shasum, never transcribed. Worked in a worktree off origin/master; the main t27 checkout's 17 dirty paths (B18/OD8) were left untouched and are still 17.",
       "still_open": "The website vendors an older corpus snapshot, so t27.ai still shows `= packed;` under hello_world's Verilog tab until the snapshot is re-vendored. That re-vendor is the follow-up, not this PR."
+    },
+    {
+      "id": "D102",
+      "what": "gHashTag/trinity#959 merged (9118ee0c). The corpus manifest now names every t27-sourced spec that is not on the default ref, records which ref was checked and how many specs were checked, and excludes submodule-owned paths explicitly.",
+      "why": "t27 is vendored from a local working copy, so `specsOrCompilerDirty: true` was the only signal -- accurate, undiffable, and it would have flipped to false while nine specs silently disappeared.",
+      "verified": "529 checked, 11 unreachable, matching a hand census taken before the code existed. website-checks green, including the silicon-coverage gate from iteration 119 and the language audits fixed in iteration 120. Report-only: no vendored byte changes."
     }
   ],
   "backlog": [
@@ -891,6 +897,15 @@
       "detail": "Found while checking whether red checks on my own PRs were mine. Each was verified against run history rather than assumed. (1) project-auto-status.yml ('pr-opened'): `gh: Bad credentials (HTTP 401)` on the project-board GraphQL call -- 12 of the last 12 runs failed, across unrelated branches. The token is expired or unscoped; needs an operator with project permissions to reissue it. (2) claude-code-review.yml: 12 of 12 failed, 'result is_error:true'. Note blog/t27-spec-explorer carries a commit b255fe75 'fix(ci): claude-review could never post its review -- read-scoped token' that has never reached main, so the fix may already exist on that branch. (3) The RU language audit in website-checks fails with an identical 'RU-аудит: найдено английских строк: 1' on /dashboard across at least three unrelated branches (fix/silicon-coverage, feat/queen-cycle-048-working, feat/queen-cycle-047-scene) while passing on push-to-main -- reproducible on re-run, so not flake. An untranslated English string on /dashboard, or a race with the live clock the audit captures.",
       "why_it_matters": "Between them these three put four red checks on every pull request in the repo. Four permanent reds is how a team learns to merge past red, which is exactly the state that let brain-ci fabricate a health score for months without anyone reading the log.",
       "needs": "operator: reissue the project-board token (1); decide whether to cherry-pick b255fe75 to main or fix claude-review separately (2). (3) is diagnosable without permissions and is the one I can take next."
+    },
+    {
+      "id": "B30",
+      "title": "The site's teaching Course is served from an unmerged t27 branch",
+      "status": "pending",
+      "detail": "hello_world.t27 and all eight tutorial lessons -- the nine specs the Spec Explorer opens on and counts in its 'Course' facet -- exist only on the t27 branch fix/struct-field-brace-nesting, not on origin/master. requant_boundary.t27 and vscode-trinity-swe/test_highlight.t27 are in the same position. gHashTag/trinity#959 now names them in the manifest at every sync, so the condition is visible, but naming it does not resolve it.",
+      "why_it_matters": "The corpus t27.ai serves cannot be reproduced by anyone else from a committed ref, and the packed-struct fix (t27#3384, merged to master) cannot reach the site by a re-vendor from master without deleting the Course. Those two facts are locked together: the fix and the teaching content are on opposite sides of the merge.",
+      "options": "(a) merge fix/struct-field-brace-nesting into t27 master, after which a re-vendor is mechanical and the site gains both the Course and the parser fix; (b) cherry-pick the nine Course specs onto master; (c) leave as is and accept that the published corpus is not reproducible, in which case the manifest's new list is the honest record of that.",
+      "needs": "operator decision on (a)/(b)/(c). This is the same shape as OD8/B18 -- a branch carrying real work that nobody has decided about -- and it now blocks a user-visible improvement."
     }
   ],
   "anomalies": [
@@ -1308,6 +1323,16 @@
       "verification": "No spec exercises the construct, so the two regression tests are the only guard. Checked against the defect rather than merely run: with the new parser branch disabled the packed test FAILS and the plain-struct test still passes; enabled, both pass; full suite 1694 passed, 0 failed.",
       "process_notes": "compiler.rs is guarded by a FROZEN_HASH seal (build.rs:254). Resealed per FROZEN.md §5 / CANON.md M5, with the digest computed by shasum and written by the shell -- never transcribed. Worked in a git worktree off origin/master because the main t27 checkout carries 17 dirty tracked paths from another session, which is B18/OD8 and not mine to disturb.",
       "lesson": "Competitor research is not a formality -- it is a way of being told what your artefact actually is. Two searches placed the Chip tab behind netlistsvg, and the reason it is behind (our Verilog is shells) led directly to a real emitter defect on the most-read spec in the corpus. I had skipped this step twice because a tool was broken, and both times the honest move would have been to change surface rather than omit the work."
+    },
+    {
+      "id": "A48",
+      "found": "2026-09-06, iteration 122, starting on the follow-up I had proposed the iteration before: re-vendor the corpus so the packed-struct fix becomes visible on t27.ai.",
+      "what": "That follow-up would have deleted the site's entire teaching Course. t27 is the one corpus source vendored from a LOCAL WORKING COPY rather than a tarball of a committed ref. Measured against origin/master, 11 of 529 t27-sourced specs are on no committed ref of that branch: specs/demos/hello_world.t27, all eight specs/tutorial/01..08 lessons, requant_boundary.t27 and a vscode test file. That is exactly the nine specs the Spec Explorer opens on and counts in its 'Course' facet. They live on the unmerged branch fix/struct-field-brace-nesting.",
+      "why_nothing_showed_it": "The manifest recorded `specsOrCompilerDirty: true` -- accurate and useless. It does not say WHAT, and a boolean cannot be diffed between syncs. A re-vendor from master would have flipped that boolean to false and read as an improvement while nine specs vanished.",
+      "two_measurement_errors_i_made_and_caught": "First I reported 46 specs 'in no commit anywhere'. All 46 were under chips/euler, a git SUBMODULE -- asking the superproject's history about another repository's paths returns 'no commit' for files that are perfectly well committed. Same family as the worktrees-lack-submodules note. Then, fixing that, my classifier said 0 of 46 were under a submodule: zsh does not word-split an unquoted $subs, so `for s in $subs` ran ONCE against the whole newline-joined string. Two wrong numbers in one investigation, both caught only because the results were absurd in opposite directions.",
+      "fix": "gHashTag/trinity#959 -- the manifest now names the unreachable specs, records the ref they were checked against and how many were checked. Submodule-owned paths are excluded explicitly rather than silently passing. A list can be diffed between two syncs; a count cannot say which nine disappeared. Report-only, changes no vendored byte.",
+      "verified": "Ran the same computation over the live corpus: 529 checked, 11 unreachable, matching a hand census done before the code existed.",
+      "lesson": "A follow-up I proposed while confident is exactly where to look for the next defect. And when a census returns a shocking number, suspect the instrument before the world -- twice in one session the shocking number was my own shell."
     }
   ],
   "collaboration_options": [
