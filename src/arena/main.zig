@@ -17,6 +17,8 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_env = @import("tri_env");
+const tri_io = @import("tri_io");
 const tri_proc = @import("tri_proc");
 const types = @import("types.zig");
 const battle_mod = @import("battle.zig");
@@ -326,7 +328,7 @@ fn serveHttp(allocator: Allocator) !void {
 
     // Read port from PORT env (Railway) or default 8080
     const port: u16 = blk: {
-        const port_str = std.process.getEnvVarOwned(allocator, "PORT") catch break :blk 8080;
+        const port_str = tri_env.getEnvVarOwned(allocator, "PORT") catch break :blk 8080;
         defer allocator.free(port_str);
         break :blk std.fmt.parseInt(u16, port_str, 10) catch 8080;
     };
@@ -395,8 +397,8 @@ fn sendResponse(stream: std.net.Stream, status: []const u8, content_type: []cons
 
 fn handleTasks(stream: std.net.Stream) !void {
     var buf: [16384]u8 = undefined;
-    var fbs = std.io.fixedBufferStream(&buf);
-    const writer = fbs.writer();
+    var fbs = std.Io.Writer.fixed(&buf);
+    const writer = &fbs;
 
     try writer.writeAll("{\"categories\":[\"math\",\"coding\",\"reasoning\"],\"tasks\":[");
 
@@ -406,19 +408,19 @@ fn handleTasks(stream: std.net.Stream) !void {
         first = false;
 
         const preview_len = @min(task.prompt.len, 80);
-        try std.fmt.format(writer,
+        try writer.print(
             \\{{"id":"{s}","category":"{s}","difficulty":"{s}","preview":"{s}"}}
         , .{ task.id, task.category.toString(), task.difficulty.toString(), task.prompt[0..preview_len] });
     }
     try writer.writeAll("]}");
 
-    try sendResponse(stream, "200 OK", "application/json", fbs.getWritten());
+    try sendResponse(stream, "200 OK", "application/json", writer.buffered());
 }
 
 fn handleLeaderboard(stream: std.net.Stream, arena_state: *battle_mod.Arena) !void {
     var buf: [4096]u8 = undefined;
-    var fbs = std.io.fixedBufferStream(&buf);
-    const writer = fbs.writer();
+    var fbs = std.Io.Writer.fixed(&buf);
+    const writer = &fbs;
 
     try writer.writeAll("{\"fighters\":[");
 
@@ -431,16 +433,16 @@ fn handleLeaderboard(stream: std.net.Stream, arena_state: *battle_mod.Arena) !vo
         const elo_str = try elo.formatElo(f.elo, arena_state.allocator);
         defer arena_state.allocator.free(elo_str);
 
-        try std.fmt.format(writer,
+        try writer.print(
             \\{{"name":"{s}","elo":{s},"wins":{d},"losses":{d},"ties":{d}}}
         , .{ f.getName(), elo_str, f.wins, f.losses, f.ties });
     }
 
-    try std.fmt.format(writer,
+    try writer.print(
         \\],"total_battles":{d}}}
     , .{arena_state.total_battles});
 
-    try sendResponse(stream, "200 OK", "application/json", fbs.getWritten());
+    try sendResponse(stream, "200 OK", "application/json", writer.buffered());
 }
 
 fn handleCreateBattle(stream: std.net.Stream, request: []const u8, arena_state: *battle_mod.Arena) !void {
@@ -543,19 +545,21 @@ fn handleGetBattle(stream: std.net.Stream, arena_state: *battle_mod.Arena) !void
 }
 
 fn serveStaticFile(stream: std.net.Stream, path: []const u8, content_type: []const u8) !void {
-    const file = std.fs.cwd().openFile(path, .{}) catch {
-        try sendResponse(stream, "404 Not Found", "application/json", "{\"error\":\"file not found\"}");
-        return;
-    };
-    defer file.close();
-
     var buf: [65536]u8 = undefined;
-    const size = file.readAll(&buf) catch {
-        try sendResponse(stream, "500 Internal Server Error", "application/json", "{\"error\":\"read error\"}");
+    // Dir.readFile is openFile + read-to-end + close; it stops short only at
+    // end-of-file, matching the 0.15 openFile/readAll pair it replaces. The two
+    // failure paths are collapsed because both open and read now report through
+    // one call; a missing file still 404s via error.FileNotFound.
+    const contents = std.Io.Dir.cwd().readFile(tri_io.get(), path, &buf) catch |err| {
+        if (err == error.FileNotFound) {
+            try sendResponse(stream, "404 Not Found", "application/json", "{\"error\":\"file not found\"}");
+        } else {
+            try sendResponse(stream, "500 Internal Server Error", "application/json", "{\"error\":\"read error\"}");
+        }
         return;
     };
 
-    try sendResponse(stream, "200 OK", content_type, buf[0..size]);
+    try sendResponse(stream, "200 OK", content_type, contents);
 }
 
 /// Extract a string value from JSON given a field prefix like "\"key\":\""

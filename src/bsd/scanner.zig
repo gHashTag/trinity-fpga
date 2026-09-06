@@ -7,6 +7,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 const EllipticCurve = @import("curve.zig").EllipticCurve;
 const CurveLabel = @import("curve.zig").CurveLabel;
@@ -298,16 +299,22 @@ pub fn exportResults(
     path: []const u8,
     format: ExportFormat,
 ) !void {
-    const file = try std.fs.cwd().createFile(path, .{});
-    defer file.close();
+    const io = tri_io.get();
+    const file = try std.Io.Dir.cwd().createFile(io, path, .{});
+    defer file.close(io);
 
-    const writer = file.writer();
+    var write_buf: [4096]u8 = undefined;
+    var file_writer = file.writer(io, &write_buf);
+    const writer = &file_writer.interface;
 
     switch (format) {
         .json => try exportJson(allocator, writer, results),
         .csv => try exportCsv(writer, results),
         .text => try exportText(writer, results),
     }
+
+    // 0.16 writers are buffered; nothing reaches the file without this.
+    try writer.flush();
 }
 
 fn exportJson(_: std.mem.Allocator, writer: anytype, results: []const ScanResult) !void {
@@ -488,14 +495,14 @@ test "exportResults - json" {
 
     const tmp_path = "test_output.json";
     defer {
-        std.fs.cwd().deleteFile(tmp_path) catch |err| {
+        std.Io.Dir.cwd().deleteFile(tri_io.get(), tmp_path) catch |err| {
             std.log.debug("scanner: failed to delete temp file: {}", .{err});
         };
     }
 
     try exportResults(allocator, &results, tmp_path, .json);
 
-    const content = try std.fs.cwd().readFileAlloc(allocator, tmp_path, 1024);
+    const content = try std.Io.Dir.cwd().readFileAlloc(tri_io.get(), tmp_path, allocator, .limited(1024));
     defer allocator.free(content);
 
     try std.testing.expect(content.len > 0);

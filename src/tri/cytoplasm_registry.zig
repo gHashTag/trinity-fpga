@@ -1,5 +1,6 @@
 // @origin(manual) @regen(pending)
 const std = @import("std");
+const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 const colors = @import("tri_colors.zig");
 
@@ -33,9 +34,10 @@ pub fn runRegistry(allocator: Allocator, args: []const []const u8) !void {
 }
 
 fn runValidate(allocator: Allocator) !void {
+    const io = tri_io.get();
     std.debug.print("\n{s}REGISTRY VALIDATE{s}\n\n", .{ CYAN, RESET });
 
-    const registry = std.fs.cwd().readFileAlloc(allocator, "data/cells/registry.json", 262144) catch {
+    const registry = std.Io.Dir.cwd().readFileAlloc(io, "data/cells/registry.json", allocator, .limited(262144)) catch {
         std.debug.print("  {s}FAIL{s}: Cannot read registry.json\n", .{ RED, RESET });
         return;
     };
@@ -80,11 +82,12 @@ fn runRepair(allocator: Allocator) !void {
 
 fn runBackup(allocator: Allocator, args: []const []const u8) !void {
     _ = args;
+    const io = tri_io.get();
 
     std.debug.print("\n{s}REGISTRY BACKUP{s}\n\n", .{ GOLDEN, RESET });
 
     const backup_dir = "data/cells/backups";
-    std.fs.cwd().makePath(backup_dir) catch {};
+    std.Io.Dir.cwd().createDirPath(io, backup_dir) catch {};
 
     const now = tri_time.timestamp();
     const ts_fmt = try std.fmt.allocPrint(allocator, "{d}", .{now});
@@ -93,33 +96,34 @@ fn runBackup(allocator: Allocator, args: []const []const u8) !void {
     const backup_path = try std.fmt.allocPrint(allocator, "{s}/registry-{s}.json", .{ backup_dir, ts_fmt });
     defer allocator.free(backup_path);
 
-    const registry = std.fs.cwd().readFileAlloc(allocator, "data/cells/registry.json", 262144) catch {
+    const registry = std.Io.Dir.cwd().readFileAlloc(io, "data/cells/registry.json", allocator, .limited(262144)) catch {
         std.debug.print("  {s}FAIL{s}: Cannot read registry.json\n", .{ RED, RESET });
         return;
     };
     defer allocator.free(registry);
 
-    const file = try std.fs.cwd().createFile(backup_path, .{});
-    defer file.close();
-    _ = try file.writeAll(registry);
+    const file = try std.Io.Dir.cwd().createFile(io, backup_path, .{});
+    defer file.close(io);
+    try file.writeStreamingAll(io, registry);
 
     std.debug.print("  {s}DONE{s}: Backup created\n\n", .{ GREEN, RESET });
 }
 
 fn runListBackups(allocator: Allocator) !void {
     _ = allocator;
+    const io = tri_io.get();
 
     std.debug.print("\n{s}REGISTRY BACKUPS{s}\n\n", .{ CYAN, RESET });
 
-    var backup_dir = std.fs.cwd().openDir("data/cells/backups", .{ .iterate = true }) catch {
+    var backup_dir = std.Io.Dir.cwd().openDir(io, "data/cells/backups", .{ .iterate = true }) catch {
         std.debug.print("  No backups found\n\n", .{});
         return;
     };
-    defer backup_dir.close();
+    defer backup_dir.close(io);
 
     var iter = backup_dir.iterate();
     var count: usize = 0;
-    while (try iter.next()) |entry| {
+    while (try iter.next(io)) |entry| {
         if (entry.kind == .file and std.mem.startsWith(u8, entry.name, "registry-")) {
             std.debug.print("  {s}\n", .{entry.name});
             count += 1;

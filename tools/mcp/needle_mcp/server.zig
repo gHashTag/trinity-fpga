@@ -5,6 +5,7 @@
 //! Usage: ./zig-out/bin/needle-mcp
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const posix = std.posix;
 const os = std.os;
 const fs = std.fs;
@@ -163,7 +164,7 @@ const NeedleMCPServer = struct {
         };
 
         // Single file search
-        const source = std.fs.cwd().readFileAlloc(self.allocator, file_path, 10_000_000) catch |err| {
+        const source = std.Io.Dir.cwd().readFileAlloc(tri_io.get(), file_path, self.allocator, .limited(10_000_000)) catch |err| {
             const err_name = @errorName(err);
             var buffer: [512]u8 = undefined;
             const msg = std.fmt.bufPrint(&buffer, "Error reading file: {s}", .{err_name}) catch "Error";
@@ -228,7 +229,7 @@ const NeedleMCPServer = struct {
             return;
         };
 
-        const source = std.fs.cwd().readFileAlloc(self.allocator, file_path, 10_000_000) catch |err| {
+        const source = std.Io.Dir.cwd().readFileAlloc(tri_io.get(), file_path, self.allocator, .limited(10_000_000)) catch |err| {
             const err_name = @errorName(err);
             var buffer: [512]u8 = undefined;
             const msg = std.fmt.bufPrint(&buffer, "Error reading file: {s}", .{err_name}) catch "Error";
@@ -307,24 +308,25 @@ const NeedleMCPServer = struct {
         defer graph.deinit();
 
         // Parse all .zig files in current directory
-        var dir = std.fs.cwd().openDir(".", .{}) catch |err| {
+        const io = tri_io.get();
+        var dir = std.Io.Dir.cwd().openDir(io, ".", .{}) catch |err| {
             const err_name = @errorName(err);
             var buffer: [512]u8 = undefined;
             const msg = std.fmt.bufPrint(&buffer, "Error opening directory: {s}", .{err_name}) catch "Error";
             try writeJsonResponse(writer, msg, true);
             return;
         };
-        defer dir.close();
+        defer dir.close(io);
 
         var walker = try dir.walk(self.allocator);
         defer walker.deinit();
 
-        while (try walker.next()) |entry| {
+        while (try walker.next(io)) |entry| {
             if (entry.kind != .file) continue;
             if (!std.mem.endsWith(u8, entry.path, ".zig")) continue;
 
             const file_path = try self.allocator.dupe(u8, entry.path);
-            const source = dir.readFileAlloc(self.allocator, entry.path, 10_000_000) catch continue;
+            const source = dir.readFileAlloc(io, entry.path, self.allocator, .limited(10_000_000)) catch continue;
             defer self.allocator.free(source);
 
             var parser = needle.zig_parser.ZigParser.init(self.allocator, source);
@@ -471,13 +473,14 @@ fn writeJsonResponse(writer: anytype, text: []const u8, is_error: bool) !void {
 // Main Entry Point - stdio transport
 // ─────────────────────────────────────────────────────────────────────────────
 
-// StdoutWriter wrapper for posix.write
+// StdoutWriter wrapper: 0.16 removed std.posix.write, so this goes through
+// std.Io.File.stdout() instead of the raw fd.
 const StdoutWriter = struct {
     const Self = @This();
 
     pub fn writeAll(self: *Self, bytes: []const u8) !void {
         _ = self;
-        _ = try posix.write(1, bytes);
+        try std.Io.File.stdout().writeStreamingAll(tri_io.get(), bytes);
     }
 };
 
@@ -488,15 +491,16 @@ pub fn main() !void {
 
     var server = NeedleMCPServer.init(allocator);
 
-    // Debug output goes to stderr (fd 2) so we don't interfere with MCP protocol on stdout
-    const stderr_fd: posix.fd_t = 2;
+    // Debug output goes to stderr so we don't interfere with MCP protocol on stdout
+    const io = tri_io.get();
+    const stderr_file = std.Io.File.stderr();
     var debug_buffer: [512]u8 = undefined;
     const debug_msg = std.fmt.bufPrint(&debug_buffer, "NEEDLE MCP Server v{s} started\n", .{SERVER_VERSION}) catch "";
-    _ = try posix.write(stderr_fd, debug_msg);
+    try stderr_file.writeStreamingAll(io, debug_msg);
     const debug_msg2 = std.fmt.bufPrint(&debug_buffer, "φ² + 1/φ² = {d:.3} = TRINITY\n", .{TRINITY_SUM}) catch "";
-    _ = try posix.write(stderr_fd, debug_msg2);
+    try stderr_file.writeStreamingAll(io, debug_msg2);
     const debug_msg3 = std.fmt.bufPrint(&debug_buffer, "PHOENIX = {d}\n\n", .{PHOENIX}) catch "";
-    _ = try posix.write(stderr_fd, debug_msg3);
+    try stderr_file.writeStreamingAll(io, debug_msg3);
 
     var stdout_writer = StdoutWriter{};
 
@@ -507,7 +511,7 @@ pub fn main() !void {
         const bytes_read = posix.read(0, &read_buffer) catch |err| {
             if (err == error.EndOfStream) break;
             const err_msg = std.fmt.bufPrint(&debug_buffer, "Error reading: {}\n", .{err}) catch "";
-            _ = try posix.write(stderr_fd, err_msg);
+            try stderr_file.writeStreamingAll(io, err_msg);
             continue;
         };
 
@@ -515,7 +519,7 @@ pub fn main() !void {
 
         const line = read_buffer[0..bytes_read];
         const bytes_msg = std.fmt.bufPrint(&debug_buffer, "Read {d} bytes\n", .{bytes_read}) catch "";
-        _ = try posix.write(stderr_fd, bytes_msg);
+        try stderr_file.writeStreamingAll(io, bytes_msg);
 
         // Find newline and process only up to it
         const newline_idx = std.mem.indexOfScalar(u8, line, '\n') orelse line.len;
@@ -525,7 +529,7 @@ pub fn main() !void {
 
         // Debug: log request
         const debug_req = std.fmt.bufPrint(&debug_buffer, "Got request: {s}\n", .{request}) catch "";
-        _ = try posix.write(stderr_fd, debug_req);
+        try stderr_file.writeStreamingAll(io, debug_req);
 
         // Simple JSON-RPC parsing
         if (std.mem.indexOf(u8, request, "\"initialize\"") != null) {
@@ -535,23 +539,23 @@ pub fn main() !void {
         } else if (std.mem.indexOf(u8, request, "\"tools/call\"") != null) {
             // MCP tools/call format: {"params":{"name":"tool_name","arguments":{...}}}
             const params_idx = std.mem.indexOf(u8, request, "\"params\":") orelse {
-                _ = try posix.write(stderr_fd, "Error: params not found\n");
+                try stderr_file.writeStreamingAll(io, "Error: params not found\n");
                 continue;
             };
             const name_after_params = std.mem.indexOf(u8, request[params_idx..], "\"name\":") orelse {
-                _ = try posix.write(stderr_fd, "Error: name not found after params\n");
+                try stderr_file.writeStreamingAll(io, "Error: name not found after params\n");
                 continue;
             };
             const name_idx = params_idx + name_after_params;
             const name_start = name_idx + 8;
             const name_end = std.mem.indexOfScalarPos(u8, request, name_start, '"') orelse {
-                _ = try posix.write(stderr_fd, "Error: name end quote not found\n");
+                try stderr_file.writeStreamingAll(io, "Error: name end quote not found\n");
                 continue;
             };
             const tool_name = request[name_start..name_end];
 
             const arguments_idx = std.mem.indexOf(u8, request[params_idx..], "\"arguments\":") orelse {
-                _ = try posix.write(stderr_fd, "Error: arguments not found after params\n");
+                try stderr_file.writeStreamingAll(io, "Error: arguments not found after params\n");
                 continue;
             };
             const args_absolute_idx = params_idx + arguments_idx;
@@ -562,7 +566,7 @@ pub fn main() !void {
             }
             // The next character should be { or " (for stringified JSON)
             if (args_search_start >= request.len or (request[args_search_start] != '{' and request[args_search_start] != '"')) {
-                _ = try posix.write(stderr_fd, "Error: arguments { not found\n");
+                try stderr_file.writeStreamingAll(io, "Error: arguments { not found\n");
                 continue;
             }
             const args_start = args_search_start;
@@ -578,7 +582,7 @@ pub fn main() !void {
             try server.handleToolsCall(tool_name, arguments_json, &stdout_writer);
         } else {
             const unknown_msg = std.fmt.bufPrint(&debug_buffer, "Unknown request\n", .{}) catch "";
-            _ = try posix.write(stderr_fd, unknown_msg);
+            try stderr_file.writeStreamingAll(io, unknown_msg);
         }
     }
 }

@@ -8,6 +8,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 const types = @import("faculty_types.zig");
@@ -71,11 +72,8 @@ pub fn readRecentCommits(out: *[3][80]u8) u8 {
 
 /// Read last agent command for a given emoji prefix from agent_commands.log.
 fn readLastAgentCmd(emoji: []const u8, buf: []u8) []const u8 {
-    const file = std.fs.cwd().openFile(".trinity/agent_commands.log", .{}) catch return "";
-    defer file.close();
     var file_buf: [4096]u8 = undefined;
-    const n = file.readAll(&file_buf) catch return "";
-    const data = file_buf[0..n];
+    const data = std.Io.Dir.cwd().readFile(tri_io.get(), ".trinity/agent_commands.log", &file_buf) catch return "";
 
     // Find last line containing the emoji
     var last_line: ?[]const u8 = null;
@@ -347,11 +345,8 @@ pub const ScholarHeartbeat = struct {
 };
 
 pub fn readScholarHeartbeat() ScholarHeartbeat {
-    const file = std.fs.cwd().openFile(".trinity/scholar/heartbeat.json", .{}) catch return .{};
-    defer file.close();
     var buf: [512]u8 = undefined;
-    const n = file.readAll(&buf) catch return .{};
-    const data = buf[0..n];
+    const data = std.Io.Dir.cwd().readFile(tri_io.get(), ".trinity/scholar/heartbeat.json", &buf) catch return .{};
 
     var hb: ScholarHeartbeat = .{};
     hb.wake = parseJsonU32(data, "\"wake\":");
@@ -369,11 +364,8 @@ pub fn readScholarHeartbeat() ScholarHeartbeat {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 pub fn readMuHeartbeat() MuHeartbeat {
-    const file = std.fs.cwd().openFile(".trinity/mu/heartbeat.json", .{}) catch return .{};
-    defer file.close();
     var buf: [512]u8 = undefined;
-    const n = file.readAll(&buf) catch return .{};
-    const data = buf[0..n];
+    const data = std.Io.Dir.cwd().readFile(tri_io.get(), ".trinity/mu/heartbeat.json", &buf) catch return .{};
 
     var hb: MuHeartbeat = .{};
     hb.wake = parseJsonU32(data, "\"wake\":");
@@ -396,11 +388,8 @@ const SwarmCounts = struct {
 };
 
 fn readSwarmCounts() SwarmCounts {
-    const file = std.fs.cwd().openFile(".trinity/swarm_state.json", .{}) catch return .{ .agents = 0, .tasks = 0, .assigned = 0 };
-    defer file.close();
     var buf: [8192]u8 = undefined;
-    const n = file.readAll(&buf) catch return .{ .agents = 0, .tasks = 0, .assigned = 0 };
-    const data = buf[0..n];
+    const data = std.Io.Dir.cwd().readFile(tri_io.get(), ".trinity/swarm_state.json", &buf) catch return .{ .agents = 0, .tasks = 0, .assigned = 0 };
 
     var agent_count: u16 = 0;
     var task_count: u16 = 0;

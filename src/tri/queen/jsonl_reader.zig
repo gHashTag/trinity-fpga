@@ -4,6 +4,7 @@
 // φ² + 1/φ² = 3 = TRINITY
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 
 const tri_time = @import("tri_time");
 // Import episode types
@@ -30,13 +31,14 @@ pub const AgentStats = struct {
 
 /// Load all episodes from JSONL files, optionally filtered by agent/type
 pub fn loadJsonlEpisodes(allocator: Allocator, config: JsonlEpisodesConfig) ![]episodes.Episode {
-    var dir = std.fs.cwd().openDir(config.logs_dir, .{ .iterate = true }) catch |err| {
+    const io = tri_io.get();
+    var dir = std.Io.Dir.cwd().openDir(io, config.logs_dir, .{ .iterate = true }) catch |err| {
         if (err == error.FileNotFound) {
             return try allocator.alloc(episodes.Episode, 0);
         }
         return err;
     };
-    defer dir.close();
+    defer dir.close(io);
 
     var all_episodes = try std.ArrayList(episodes.Episode).initCapacity(allocator, 0);
     defer {
@@ -50,7 +52,7 @@ pub fn loadJsonlEpisodes(allocator: Allocator, config: JsonlEpisodesConfig) ![]e
     var walker = try dir.walk(allocator);
     defer walker.deinit();
 
-    while (try walker.next()) |entry| {
+    while (try walker.next(io)) |entry| {
         // Skip directories and non-.jsonl files
         if (entry.kind != .file) continue;
         if (!std.mem.endsWith(u8, entry.basename, ".jsonl")) continue;
@@ -82,17 +84,20 @@ pub fn loadJsonlEpisodes(allocator: Allocator, config: JsonlEpisodesConfig) ![]e
 /// Load episodes from a single JSONL file
 fn loadJsonlFile(
     allocator: Allocator,
-    dir: std.fs.Dir,
+    dir: std.Io.Dir,
     filename: []const u8,
     agent_name: []const u8,
     config: JsonlEpisodesConfig,
 ) ![]episodes.Episode {
-    const file = dir.openFile(filename, .{}) catch {
+    const io = tri_io.get();
+    const file = dir.openFile(io, filename, .{}) catch {
         return try allocator.alloc(episodes.Episode, 0);
     };
-    defer file.close();
+    defer file.close(io);
 
-    const contents = file.readToEndAlloc(allocator, 1024 * 1024) catch {
+    var scratch: [4096]u8 = undefined;
+    var fr = file.reader(io, &scratch);
+    const contents = fr.interface.allocRemaining(allocator, .limited(1024 * 1024)) catch {
         return try allocator.alloc(episodes.Episode, 0);
     };
     defer allocator.free(contents);
@@ -225,13 +230,14 @@ fn extractAgentName(filename: []const u8) ?[]const u8 {
 
 /// Get statistics for all agents from JSONL files
 pub fn getAgentStats(allocator: Allocator) ![]AgentStats {
-    var dir = std.fs.cwd().openDir(logs_dir, .{ .iterate = true }) catch |err| {
+    const io = tri_io.get();
+    var dir = std.Io.Dir.cwd().openDir(io, logs_dir, .{ .iterate = true }) catch |err| {
         if (err == error.FileNotFound) {
             return try allocator.alloc(AgentStats, 0);
         }
         return err;
     };
-    defer dir.close();
+    defer dir.close(io);
 
     var stats_map = std.StringHashMap(AgentStatsData).init(allocator);
     defer {
@@ -245,17 +251,19 @@ pub fn getAgentStats(allocator: Allocator) ![]AgentStats {
     var walker = try dir.walk(allocator);
     defer walker.deinit();
 
-    while (try walker.next()) |entry| {
+    while (try walker.next(io)) |entry| {
         if (entry.kind != .file) continue;
         if (!std.mem.endsWith(u8, entry.basename, ".jsonl")) continue;
 
         const agent_name = extractAgentName(entry.basename) orelse continue;
 
         // Count episodes in this file
-        const file = dir.openFile(entry.basename, .{}) catch continue;
-        defer file.close();
+        const file = dir.openFile(io, entry.basename, .{}) catch continue;
+        defer file.close(io);
 
-        const contents = file.readToEndAlloc(allocator, 1024 * 1024) catch continue;
+        var scratch: [4096]u8 = undefined;
+        var fr = file.reader(io, &scratch);
+        const contents = fr.interface.allocRemaining(allocator, .limited(1024 * 1024)) catch continue;
         defer allocator.free(contents);
 
         var total: usize = 0;

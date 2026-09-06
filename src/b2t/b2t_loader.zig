@@ -5,6 +5,7 @@
 // φ² + 1/φ² = 3 = TRINITY
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TYPES
@@ -156,12 +157,15 @@ pub fn detectFormat(data: []const u8) BinaryFormat {
 
 pub fn load(allocator: std.mem.Allocator, path: []const u8) LoadError!LoadedBinary {
     // Read file
-    const file = std.fs.cwd().openFile(path, .{}) catch return LoadError.FileNotFound;
-    defer file.close();
+    const io = tri_io.get();
+    const file = std.Io.Dir.cwd().openFile(io, path, .{}) catch return LoadError.FileNotFound;
+    defer file.close(io);
 
-    const stat = file.stat() catch return LoadError.FileNotFound;
+    const stat = file.stat(io) catch return LoadError.FileNotFound;
     const data = allocator.alloc(u8, stat.size) catch return LoadError.OutOfMemory;
-    _ = file.readAll(data) catch return LoadError.CorruptedBinary;
+    var read_buf: [4096]u8 = undefined;
+    var file_reader = file.reader(io, &read_buf);
+    file_reader.interface.readSliceAll(data) catch return LoadError.CorruptedBinary;
 
     return loadFromMemory(allocator, data);
 }
@@ -676,8 +680,7 @@ const TEST_ELF64 = [_]u8{
     0x00, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // p_align = 0x1000
 
     // Padding to offset 128 (8 bytes)
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 
     // Section Header 0: NULL (64 bytes) at offset 128
     0x00, 0x00, 0x00, 0x00, // sh_name = 0

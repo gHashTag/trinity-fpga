@@ -5,6 +5,7 @@
 // ============================================================================
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 const tri_mutex = @import("mutex.zig");
@@ -307,12 +308,13 @@ fn scanSpecs(allocator: std.mem.Allocator, directory: []const u8) std.ArrayListU
     var paths: std.ArrayListUnmanaged([]const u8) = .empty;
 
     // Open directory
-    var dir = std.fs.cwd().openDir(directory, .{ .iterate = true }) catch return paths;
-    defer dir.close();
+    const io = tri_io.get();
+    var dir = std.Io.Dir.cwd().openDir(io, directory, .{ .iterate = true }) catch return paths;
+    defer dir.close(io);
 
     // Walk entries (non-recursive for specs/tri/ — subdirs handled separately)
     var iter = dir.iterate();
-    while (iter.next() catch |err| {
+    while (iter.next(io) catch |err| {
         std.log.warn("batch_runner: dir iteration error in {s}: {}", .{ directory, err });
         return paths;
     }) |entry| {
@@ -569,11 +571,9 @@ fn extractStem(path: []const u8) []const u8 {
 }
 
 fn detectVerilog(spec_path: []const u8) bool {
-    const file = std.fs.cwd().openFile(spec_path, .{}) catch return false;
-    defer file.close();
     var buf: [512]u8 = undefined;
-    const n = file.read(&buf) catch return false;
-    const header = buf[0..n];
+    // Header sniff: whole (small) prefix into a fixed buffer, short read is normal.
+    const header = std.Io.Dir.cwd().readFile(tri_io.get(), spec_path, &buf) catch return false;
     return (std.mem.indexOf(u8, header, "language: varlog") != null or
         std.mem.indexOf(u8, header, "language: verilog") != null);
 }
@@ -645,7 +645,8 @@ fn printReport(report: BatchReport) void {
 
 fn writeProtocolLog(allocator: std.mem.Allocator, report: BatchReport) void {
     // Ensure directory exists
-    std.fs.cwd().makePath(".trinity/batch") catch return;
+    const io = tri_io.get();
+    std.Io.Dir.cwd().createDirPath(io, ".trinity/batch") catch return;
 
     const total = report.passed + report.failed + report.skipped;
     const rate: usize = if (total > 0) (report.passed * 100) / total else 0;
@@ -672,9 +673,9 @@ fn writeProtocolLog(allocator: std.mem.Allocator, report: BatchReport) void {
     ) catch return;
     defer allocator.free(entry);
 
-    const file = std.fs.cwd().createFile(log_name, .{}) catch return;
-    defer file.close();
-    file.writeAll(entry) catch |err| {
+    const file = std.Io.Dir.cwd().createFile(io, log_name, .{}) catch return;
+    defer file.close(io);
+    file.writeStreamingAll(io, entry) catch |err| {
         std.log.debug("batch_runner: write log entry failed: {}", .{err});
     };
 
@@ -735,9 +736,10 @@ fn writeReportJson(allocator: std.mem.Allocator, report: BatchReport) void {
     };
 
     // Write latest.json
-    const latest = std.fs.cwd().createFile(".trinity/batch/latest.json", .{}) catch return;
-    defer latest.close();
-    latest.writeAll(buf.items) catch |err| {
+    const io = tri_io.get();
+    const latest = std.Io.Dir.cwd().createFile(io, ".trinity/batch/latest.json", .{}) catch return;
+    defer latest.close(io);
+    latest.writeStreamingAll(io, buf.items) catch |err| {
         std.log.debug("batch_runner: write latest.json failed: {}", .{err});
     };
 
@@ -749,7 +751,7 @@ fn writeReportJson(allocator: std.mem.Allocator, report: BatchReport) void {
 // ============================================================================
 
 fn showLastReport(allocator: std.mem.Allocator) void {
-    const content = std.fs.cwd().readFileAlloc(allocator, ".trinity/batch/latest.json", 1024 * 1024) catch {
+    const content = std.Io.Dir.cwd().readFileAlloc(tri_io.get(), ".trinity/batch/latest.json", allocator, .limited(1024 * 1024)) catch {
         std.debug.print("{s}No batch report found. Run: tri pipeline batch{s}\n", .{ RED, RESET });
         return;
     };

@@ -6,6 +6,7 @@
 // =============================================================================
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 const ArrayList = std.array_list.Managed;
 const protocol = @import("protocol.zig");
@@ -104,11 +105,12 @@ pub const InferenceEngine = struct {
         errdefer self.status = .error_state;
 
         // Check if model file exists
-        const file = std.fs.cwd().openFile(self.config.model_path, .{}) catch |err| {
+        const io = tri_io.get();
+        const file = std.Io.Dir.cwd().openFile(io, self.config.model_path, .{}) catch |err| {
             self.setError("Model file not found");
             return err;
         };
-        file.close();
+        file.close(io);
 
         // MVP: Model loading simulation
         // In production, this would use gguf_model.FullModel

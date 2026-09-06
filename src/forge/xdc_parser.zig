@@ -15,6 +15,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const Allocator = std.mem.Allocator;
 const types = @import("types.zig");
 
@@ -30,10 +31,13 @@ pub const XdcError = error{
 
 /// Parse an XDC file and return extracted constraints.
 pub fn parseXdc(allocator: Allocator, file_path: []const u8) !Constraints {
-    const file = try std.fs.cwd().openFile(file_path, .{});
-    defer file.close();
+    const io = tri_io.get();
+    const file = try std.Io.Dir.cwd().openFile(io, file_path, .{});
+    defer file.close(io);
 
-    const content = try file.readToEndAlloc(allocator, 1 * 1024 * 1024);
+    var scratch: [4096]u8 = undefined;
+    var fr = file.reader(io, &scratch);
+    const content = try fr.interface.allocRemaining(allocator, .limited(1 * 1024 * 1024));
     defer allocator.free(content);
 
     return parseXdcFromSlice(allocator, content);

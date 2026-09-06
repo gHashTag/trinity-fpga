@@ -6,6 +6,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 const vsa = @import("vsa.zig");
 const vsa_simd = @import("vsa_simd.zig");
@@ -529,17 +530,18 @@ fn cmdEvolve(allocator: std.mem.Allocator, args: []const []const u8) !void {
 
     // Save fingerprint if output specified
     if (opts.output) |out_path| {
-        const file = try std.fs.cwd().createFile(out_path, .{});
-        defer file.close();
+        const io = tri_io.get();
+        const file = try std.Io.Dir.cwd().createFile(io, out_path, .{});
+        defer file.close(io);
 
         // Write fingerprint as binary trit data
-        try file.writeAll("FP01"); // Magic
+        try file.writeStreamingAll(io, "FP01"); // Magic
         var len_bytes: [4]u8 = undefined;
         std.mem.writeInt(u32, &len_bytes, @intCast(best.chromosome.len), .little);
-        try file.writeAll(&len_bytes);
+        try file.writeStreamingAll(io, &len_bytes);
         for (best.chromosome.data) |trit| {
             const byte: [1]u8 = .{@as(u8, @bitCast(trit))};
-            try file.writeAll(&byte);
+            try file.writeStreamingAll(io, &byte);
         }
         std.debug.print("  Saved to:         {s}\n", .{out_path});
     }

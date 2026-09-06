@@ -10,6 +10,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const qt = @import("queen_types.zig");
@@ -79,12 +80,13 @@ pub fn sweepOnce(allocator: Allocator, state: *ArasState) !SweepResult {
     result.total_services = farm.total_services;
 
     // Read evolution state for detailed worker info
-    const evo_file = std.fs.cwd().openFile(".trinity/evolution_state.json", .{}) catch return result;
-    defer evo_file.close();
-
+    // 0.16's File has no `read`; `Dir.readFile` is open + read-until-full-or-EOF
+    // + close in one call. A file smaller than the buffer is the normal case
+    // here, so a short result is legitimate -- and unlike the single `read`
+    // this replaces, a file larger than one syscall's worth is no longer
+    // silently truncated mid-JSON.
     var evo_buf: [16384]u8 = undefined;
-    const evo_n = evo_file.read(&evo_buf) catch return result;
-    const evo_data = evo_buf[0..evo_n];
+    const evo_data = std.Io.Dir.cwd().readFile(tri_io.get(), ".trinity/evolution_state.json", &evo_buf) catch return result;
 
     // Parse worker states from evolution state
     // Format: "workers": [ {"name": "...", "status": "...", "ppl": 1.23, "step": 1000}, ...]

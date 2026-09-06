@@ -10,6 +10,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 const types = @import("types.zig");
@@ -204,16 +205,16 @@ pub const Arena = struct {
         _ = self;
 
         // Ensure data/arena/ directory exists
-        std.fs.cwd().makePath("data/arena") catch {};
+        const io = tri_io.get();
+        std.Io.Dir.cwd().createDirPath(io, "data/arena") catch {};
 
         // Open in append mode or create
-        const file = std.fs.cwd().openFile(RESULTS_PATH, .{ .mode = .read_write }) catch
-            std.fs.cwd().createFile(RESULTS_PATH, .{}) catch return;
-        defer file.close();
+        const file = std.Io.Dir.cwd().openFile(io, RESULTS_PATH, .{ .mode = .read_write }) catch
+            std.Io.Dir.cwd().createFile(io, RESULTS_PATH, .{}) catch return;
+        defer file.close(io);
 
-        // Seek to end
-        const stat = file.stat() catch return;
-        file.seekTo(stat.size) catch {};
+        // Append at the current end of file
+        var end = file.length(io) catch return;
 
         var buf: [4096]u8 = undefined;
         const line = std.fmt.bufPrint(&buf,
@@ -231,8 +232,9 @@ pub const Arena = struct {
             battle.created_at,
         }) catch return;
 
-        file.writeAll(line) catch {};
-        file.writeAll("\n") catch {};
+        file.writePositionalAll(io, line, end) catch {};
+        end += line.len;
+        file.writePositionalAll(io, "\n", end) catch {};
 
         // Dual-write: battle result → hippocampus memory (episode)
         writeHippocampusEpisode(battle, line);
@@ -290,12 +292,13 @@ pub const Arena = struct {
 
         // Write to temp file for gh
         const tmp_path = "/tmp/arena_battle_comment.md";
-        const tmp_file = std.fs.cwd().createFile(tmp_path, .{}) catch return;
-        tmp_file.writeAll(comment) catch {
-            tmp_file.close();
+        const io = tri_io.get();
+        const tmp_file = std.Io.Dir.cwd().createFile(io, tmp_path, .{}) catch return;
+        tmp_file.writeStreamingAll(io, comment) catch {
+            tmp_file.close(io);
             return;
         };
-        tmp_file.close();
+        tmp_file.close(io);
 
         // Post to GitHub via tri issue comment (uses existing github_client.zig)
         const result = tri_proc.run(.{
@@ -319,12 +322,12 @@ pub const Arena = struct {
 
     /// Write leaderboard to JSON
     pub fn writeLeaderboard(self: *Arena) !void {
-        std.fs.cwd().makePath("data/arena") catch {};
+        const io = tri_io.get();
+        std.Io.Dir.cwd().createDirPath(io, "data/arena") catch {};
 
         // Build JSON in a buffer
         var buf: [4096]u8 = undefined;
-        var fbs = std.io.fixedBufferStream(&buf);
-        const writer = fbs.writer();
+        var writer = std.Io.Writer.fixed(&buf);
 
         writer.writeAll("{\"fighters\":[") catch return;
 
@@ -337,7 +340,7 @@ pub const Arena = struct {
             const elo_str = elo.formatElo(f.elo, self.allocator) catch continue;
             defer self.allocator.free(elo_str);
 
-            std.fmt.format(writer,
+            writer.print(
                 \\{{"name":"{s}","elo":{s},"wins":{d},"losses":{d},"ties":{d}}}
             , .{
                 f.getName(),
@@ -348,29 +351,33 @@ pub const Arena = struct {
             }) catch continue;
         }
 
-        std.fmt.format(writer,
+        writer.print(
             \\],"total_battles":{d}}}
         , .{self.total_battles}) catch return;
 
-        const file = std.fs.cwd().createFile(LEADERBOARD_PATH, .{}) catch return;
-        defer file.close();
-        file.writeAll(fbs.getWritten()) catch {};
+        const file = std.Io.Dir.cwd().createFile(io, LEADERBOARD_PATH, .{}) catch return;
+        defer file.close(io);
+        file.writeStreamingAll(io, writer.buffered()) catch {};
     }
 
     /// Load leaderboard from JSON file
     pub fn loadLeaderboard(self: *Arena) !void {
-        const file = std.fs.cwd().openFile(LEADERBOARD_PATH, .{}) catch {
+        const io = tri_io.get();
+        const file = std.Io.Dir.cwd().openFile(io, LEADERBOARD_PATH, .{}) catch {
             // File doesn't exist yet, use defaults
             return;
         };
-        defer file.close();
+        defer file.close(io);
 
-        const stat = file.stat() catch return;
+        const stat = file.stat(io) catch return;
         if (stat.size == 0) return;
 
         const contents = try self.allocator.alloc(u8, stat.size);
         defer self.allocator.free(contents);
-        _ = file.readAll(contents) catch return;
+        // The buffer is sized to the file, so a short read means truncation.
+        var lb_read_buf: [4096]u8 = undefined;
+        var lb_reader = file.reader(io, &lb_read_buf);
+        lb_reader.interface.readSliceAll(contents) catch return;
 
         // Simple JSON parsing for {"fighters":[...],"total_battles":N}
         const fighters_start = std.mem.indexOf(u8, contents, "\"fighters\":[") orelse return;
@@ -501,7 +508,8 @@ fn writeHippocampusEpisode(battle: types.Battle, data_line: []const u8) void {
     const agent_name = "arena";
 
     // Ensure directory
-    std.fs.cwd().makePath(MEMORY_ROOT ++ "/" ++ agent_name) catch return;
+    const io = tri_io.get();
+    std.Io.Dir.cwd().createDirPath(io, MEMORY_ROOT ++ "/" ++ agent_name) catch return;
 
     const ts: u64 = @intCast(tri_time.timestamp());
     var id_buf: [64]u8 = undefined;
@@ -521,10 +529,10 @@ fn writeHippocampusEpisode(battle: types.Battle, data_line: []const u8) void {
     ++ "\n", .{ id, ts, data_line, summary }) catch return;
 
     const file_path = MEMORY_ROOT ++ "/" ++ agent_name ++ "/current.jsonl";
-    const file = std.fs.cwd().createFile(file_path, .{ .truncate = false }) catch return;
-    defer file.close();
-    file.seekFromEnd(0) catch return;
-    file.writeAll(rec_json) catch {};
+    const file = std.Io.Dir.cwd().createFile(io, file_path, .{ .truncate = false }) catch return;
+    defer file.close(io);
+    const end = file.length(io) catch return;
+    file.writePositionalAll(io, rec_json, end) catch {};
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

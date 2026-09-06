@@ -8,6 +8,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 const graph = @import("graph.zig");
 const vsa = @import("vsa.zig");
@@ -291,14 +292,15 @@ pub const AtomicRefactor = struct {
 
     /// Begin transaction - backup all affected files
     pub fn begin(self: *AtomicRefactor, files: []const []const u8) !void {
+        const io = tri_io.get();
         self.state = .backing_up;
 
         for (files) |file| {
             // Read file content
-            const content = try std.fs.cwd().readFileAlloc(self.allocator, file, 10_000_000);
+            const content = try std.Io.Dir.cwd().readFileAlloc(io, file, self.allocator, .limited(10_000_000));
 
             // Get file metadata for verification
-            const stat = try std.fs.cwd().statFile(file);
+            const stat = try std.Io.Dir.cwd().statFile(io, file, .{});
 
             // Calculate checksum for verification
             const checksum = std.hash.XxHash32.hash(content);
@@ -307,7 +309,7 @@ pub const AtomicRefactor = struct {
             try self.backups.put(file, .{
                 .content = content,
                 .checksum = checksum,
-                .mtime = stat.mtime,
+                .mtime = @intCast(stat.mtime.nanoseconds),
             });
 
             // Track affected file
@@ -322,7 +324,7 @@ pub const AtomicRefactor = struct {
         // Verify all files were modified successfully
         for (self.affected_files.items) |file| {
             // Verify file exists and is readable
-            _ = std.fs.cwd().statFile(file) catch {
+            _ = std.Io.Dir.cwd().statFile(tri_io.get(), file, .{}) catch {
                 return error.FileVerificationFailed;
             };
         }
@@ -353,10 +355,11 @@ pub const AtomicRefactor = struct {
             const backup = entry.value_ptr.*;
 
             // Restore file content
-            try std.fs.cwd().writeFile(.{ .sub_path = file }, backup.content);
+            const io = tri_io.get();
+            try std.Io.Dir.cwd().writeFile(io, .{ .sub_path = file, .data = backup.content });
 
             // Verify restore by comparing checksums
-            const restored = try std.fs.cwd().readFileAlloc(self.allocator, file, 10_000_000);
+            const restored = try std.Io.Dir.cwd().readFileAlloc(io, file, self.allocator, .limited(10_000_000));
             defer self.allocator.free(restored);
 
             const restored_checksum = std.hash.XxHash32.hash(restored);
@@ -622,7 +625,7 @@ pub fn applySafeCrossRefactor(
     var files_changed: usize = 0;
     var total_edits: usize = 0;
     for (file_list.items) |file| {
-        const content = std.fs.cwd().readFileAlloc(allocator, file, 10_000_000) catch continue;
+        const content = std.Io.Dir.cwd().readFileAlloc(tri_io.get(), file, allocator, .limited(10_000_000)) catch continue;
         defer allocator.free(content);
 
         // Simple find-replace: intent → new_intent
@@ -638,7 +641,7 @@ pub fn applySafeCrossRefactor(
             const replaced = std.mem.replaceOwned(u8, allocator, content, intent, new_intent) catch continue;
             defer allocator.free(replaced);
 
-            std.fs.cwd().writeFile(.{ .sub_path = file, .data = replaced }) catch continue;
+            std.Io.Dir.cwd().writeFile(tri_io.get(), .{ .sub_path = file, .data = replaced }) catch continue;
 
             // 4. Run safety gates after each edit
             const gate = SafetyGate{};
@@ -700,10 +703,11 @@ pub fn rollbackAll(
         const backup_content = entry.value_ptr.*;
 
         // Restore file from backup content
-        try std.fs.cwd().writeFile(.{ .sub_path = file }, backup_content);
+        const io = tri_io.get();
+        try std.Io.Dir.cwd().writeFile(io, .{ .sub_path = file, .data = backup_content });
 
         // Verify restore
-        const restored = try std.fs.cwd().readFileAlloc(allocator, file, 10_000_000);
+        const restored = try std.Io.Dir.cwd().readFileAlloc(io, file, allocator, .limited(10_000_000));
         defer allocator.free(restored);
 
         if (!std.mem.eql(u8, restored, backup_content)) {

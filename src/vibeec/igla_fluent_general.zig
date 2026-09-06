@@ -12,6 +12,7 @@
 // =============================================================================
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 const multilingual = @import("igla_multilingual_coder.zig");
 const self_opt = @import("igla_self_opt.zig");
@@ -774,12 +775,13 @@ fn endsWithAny(text: []const u8, suffixes: []const []const u8) bool {
 // =============================================================================
 
 pub fn runBenchmark() !void {
-    const stdout = std.fs.File.stdout();
+    const io = tri_io.get();
+    const stdout = std.Io.File.stdout();
 
-    _ = try stdout.write("\n");
-    _ = try stdout.write("===============================================================================\n");
-    _ = try stdout.write("     IGLA FLUENT GENERAL BENCHMARK (CYCLE 7)                                  \n");
-    _ = try stdout.write("===============================================================================\n");
+    try stdout.writeStreamingAll(io, "\n");
+    try stdout.writeStreamingAll(io, "===============================================================================\n");
+    try stdout.writeStreamingAll(io, "     IGLA FLUENT GENERAL BENCHMARK (CYCLE 7)                                  \n");
+    try stdout.writeStreamingAll(io, "===============================================================================\n");
 
     var engine = FluentGeneralEngine.init();
 
@@ -834,56 +836,56 @@ pub fn runBenchmark() !void {
     const avg_confidence = total_confidence / @as(f32, @floatFromInt(test_queries.len));
     const improvement_rate = @as(f32, @floatFromInt(high_confidence)) / @as(f32, @floatFromInt(test_queries.len));
 
-    _ = try stdout.write("\n");
+    try stdout.writeStreamingAll(io, "\n");
 
     var buf: [256]u8 = undefined;
 
     var len = std.fmt.bufPrint(&buf, "  Total queries: {d}\n", .{test_queries.len}) catch return;
-    _ = try stdout.write(len);
+    try stdout.writeStreamingAll(io, len);
 
     len = std.fmt.bufPrint(&buf, "  Fluent responses: {d}\n", .{stats.fluent_responses}) catch return;
-    _ = try stdout.write(len);
+    try stdout.writeStreamingAll(io, len);
 
     len = std.fmt.bufPrint(&buf, "  Fluent rate: {d:.1}%\n", .{stats.fluent_rate * 100}) catch return;
-    _ = try stdout.write(len);
+    try stdout.writeStreamingAll(io, len);
 
     len = std.fmt.bufPrint(&buf, "  High confidence: {d}/{d}\n", .{ high_confidence, test_queries.len }) catch return;
-    _ = try stdout.write(len);
+    try stdout.writeStreamingAll(io, len);
 
     len = std.fmt.bufPrint(&buf, "  Avg confidence: {d:.2}\n", .{avg_confidence}) catch return;
-    _ = try stdout.write(len);
+    try stdout.writeStreamingAll(io, len);
 
     len = std.fmt.bufPrint(&buf, "  Speed: {d:.0} ops/s\n", .{ops_per_sec}) catch return;
-    _ = try stdout.write(len);
+    try stdout.writeStreamingAll(io, len);
 
     len = std.fmt.bufPrint(&buf, "  Generic avoided: {d}\n", .{stats.generic_avoided}) catch return;
-    _ = try stdout.write(len);
+    try stdout.writeStreamingAll(io, len);
 
-    _ = try stdout.write("\n  Language breakdown:\n");
+    try stdout.writeStreamingAll(io, "\n  Language breakdown:\n");
     len = std.fmt.bufPrint(&buf, "    Russian: {d}\n", .{stats.language_breakdown.russian}) catch return;
-    _ = try stdout.write(len);
+    try stdout.writeStreamingAll(io, len);
     len = std.fmt.bufPrint(&buf, "    English: {d}\n", .{stats.language_breakdown.english}) catch return;
-    _ = try stdout.write(len);
+    try stdout.writeStreamingAll(io, len);
     len = std.fmt.bufPrint(&buf, "    Chinese: {d}\n", .{stats.language_breakdown.chinese}) catch return;
-    _ = try stdout.write(len);
+    try stdout.writeStreamingAll(io, len);
     len = std.fmt.bufPrint(&buf, "    Spanish: {d}\n", .{stats.language_breakdown.spanish}) catch return;
-    _ = try stdout.write(len);
+    try stdout.writeStreamingAll(io, len);
     len = std.fmt.bufPrint(&buf, "    German: {d}\n", .{stats.language_breakdown.german}) catch return;
-    _ = try stdout.write(len);
+    try stdout.writeStreamingAll(io, len);
 
     len = std.fmt.bufPrint(&buf, "\n  Improvement rate: {d:.2}\n", .{improvement_rate}) catch return;
-    _ = try stdout.write(len);
+    try stdout.writeStreamingAll(io, len);
 
     if (improvement_rate > 0.618) {
-        _ = try stdout.write("  Golden Ratio Gate: PASSED (>0.618)\n");
+        try stdout.writeStreamingAll(io, "  Golden Ratio Gate: PASSED (>0.618)\n");
     } else {
-        _ = try stdout.write("  Golden Ratio Gate: NEEDS IMPROVEMENT (<0.618)\n");
+        try stdout.writeStreamingAll(io, "  Golden Ratio Gate: NEEDS IMPROVEMENT (<0.618)\n");
     }
 
-    _ = try stdout.write("\n");
-    _ = try stdout.write("===============================================================================\n");
-    _ = try stdout.write("  phi^2 + 1/phi^2 = 3 = TRINITY | FLUENT GENERAL CYCLE 7                      \n");
-    _ = try stdout.write("===============================================================================\n");
+    try stdout.writeStreamingAll(io, "\n");
+    try stdout.writeStreamingAll(io, "===============================================================================\n");
+    try stdout.writeStreamingAll(io, "  phi^2 + 1/phi^2 = 3 = TRINITY | FLUENT GENERAL CYCLE 7                      \n");
+    try stdout.writeStreamingAll(io, "===============================================================================\n");
 }
 
 // =============================================================================

@@ -5,13 +5,14 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 
 const tri_proc = @import("tri_proc");
 const TRINITY_DIR = ".trinity";
 
 /// Ensure .trinity/ directory exists
 pub fn ensureTrinityDir() !void {
-    std.fs.cwd().makeDir(TRINITY_DIR) catch |err| {
+    std.Io.Dir.cwd().createDir(tri_io.get(), TRINITY_DIR, .default_dir) catch |err| {
         if (err != error.PathAlreadyExists) return err;
     };
 }
@@ -34,11 +35,14 @@ pub fn runProcessAndCapture(allocator: std.mem.Allocator, argv: []const []const 
 
 /// Run a subprocess, inherit stdio, return exit code
 pub fn runProcessInherit(allocator: std.mem.Allocator, argv: []const []const u8) !u8 {
-    var child = std.process.Child.init(argv, allocator);
-    child.stdout_behavior = .Inherit;
-    child.stderr_behavior = .Inherit;
-    _ = try child.spawn();
-    const result = try child.wait();
+    _ = allocator;
+    const io = tri_io.get();
+    var child = try std.process.spawn(io, .{
+        .argv = argv,
+        .stdout = .inherit,
+        .stderr = .inherit,
+    });
+    const result = try child.wait(io);
     return switch (result) {
         .exited => |c| c,
         else => 1,
@@ -47,16 +51,15 @@ pub fn runProcessInherit(allocator: std.mem.Allocator, argv: []const []const u8)
 
 /// Read file contents
 pub fn readFile(allocator: std.mem.Allocator, path: []const u8) ![]const u8 {
-    const file = try std.fs.cwd().openFile(path, .{});
-    defer file.close();
-    return try file.readToEndAlloc(allocator, 1024 * 1024);
+    return try std.Io.Dir.cwd().readFileAlloc(tri_io.get(), path, allocator, .limited(1024 * 1024));
 }
 
 /// Write content to file (creates dirs if needed)
 pub fn writeFile(path: []const u8, content: []const u8) !void {
-    const file = try std.fs.cwd().createFile(path, .{});
-    defer file.close();
-    try file.writeAll(content);
+    const io = tri_io.get();
+    const file = try std.Io.Dir.cwd().createFile(io, path, .{});
+    defer file.close(io);
+    try file.writeStreamingAll(io, content);
 }
 
 /// Read .trinity/ state file
@@ -77,11 +80,12 @@ pub fn writeStateFile(name: []const u8, content: []const u8) !void {
 /// Count files with given extension in directory (recursive)
 pub fn countFiles(allocator: std.mem.Allocator, dir_path: []const u8, extension: []const u8) !usize {
     var count: usize = 0;
-    var dir = std.fs.cwd().openDir(dir_path, .{ .iterate = true }) catch return 0;
-    defer dir.close();
+    const io = tri_io.get();
+    var dir = std.Io.Dir.cwd().openDir(io, dir_path, .{ .iterate = true }) catch return 0;
+    defer dir.close(io);
     var walker = try dir.walk(allocator);
     defer walker.deinit();
-    while (try walker.next()) |entry| {
+    while (try walker.next(io)) |entry| {
         if (entry.kind == .file) {
             if (std.mem.endsWith(u8, entry.basename, extension)) {
                 count += 1;
@@ -215,8 +219,8 @@ pub fn loadPipelineCheckpoint(allocator: std.mem.Allocator) ?PipelineCheckpoint 
 pub fn savePipelineCheckpoint(allocator: std.mem.Allocator, checkpoint: PipelineCheckpoint) !void {
     // Build JSON with per-link results
     var buf: [4096]u8 = undefined;
-    var fbs = std.io.fixedBufferStream(&buf);
-    const w = fbs.writer();
+    var fbs = std.Io.Writer.fixed(&buf);
+    const w = &fbs;
 
     w.writeAll("{\n") catch return error.NameTooLong;
     std.fmt.format(w, "  \"last_link\": {d},\n", .{checkpoint.last_link}) catch return error.NameTooLong;
@@ -242,21 +246,20 @@ pub fn savePipelineCheckpoint(allocator: std.mem.Allocator, checkpoint: Pipeline
     w.writeAll("]\n}\n") catch return error.NameTooLong;
 
     _ = allocator;
-    try writeStateFile("pipeline_state.json", fbs.getWritten());
+    try writeStateFile("pipeline_state.json", fbs.buffered());
 }
 
 /// Count lines in all files with given extension
 pub fn countLines(allocator: std.mem.Allocator, dir_path: []const u8, extension: []const u8) !usize {
     var total: usize = 0;
-    var dir = std.fs.cwd().openDir(dir_path, .{ .iterate = true }) catch return 0;
-    defer dir.close();
+    const io = tri_io.get();
+    var dir = std.Io.Dir.cwd().openDir(io, dir_path, .{ .iterate = true }) catch return 0;
+    defer dir.close(io);
     var walker = try dir.walk(allocator);
     defer walker.deinit();
-    while (try walker.next()) |entry| {
+    while (try walker.next(io)) |entry| {
         if (entry.kind == .file and std.mem.endsWith(u8, entry.basename, extension)) {
-            const file = dir.openFile(entry.path, .{}) catch continue;
-            defer file.close();
-            const content = file.readToEndAlloc(allocator, 10 * 1024 * 1024) catch continue;
+            const content = dir.readFileAlloc(io, entry.path, allocator, .limited(10 * 1024 * 1024)) catch continue;
             defer allocator.free(content);
             var lines: usize = 0;
             for (content) |c| {

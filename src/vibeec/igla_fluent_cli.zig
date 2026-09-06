@@ -17,6 +17,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 const enhanced_chat = @import("igla_enhanced_chat.zig");
 const hybrid_chat = @import("igla_hybrid_chat.zig");
@@ -117,8 +118,9 @@ pub const ConversationHistory = struct {
 
     /// Get recent context for LLM (last N messages as string)
     pub fn getContextString(self: *const Self, max_messages: usize) ![]const u8 {
-        var context: std.ArrayListUnmanaged(u8) = .empty;
-        errdefer context.deinit(self.allocator);
+        // 0.16 ArrayList has no writer(); the allocating Io.Writer replaces it.
+        var context: std.Io.Writer.Allocating = .init(self.allocator);
+        errdefer context.deinit();
 
         const start_idx = if (self.messages.items.len > max_messages)
             self.messages.items.len - max_messages
@@ -131,10 +133,10 @@ pub const ConversationHistory = struct {
                 .Assistant => "Assistant",
                 .System => "System",
             };
-            try context.writer(self.allocator).print("{s}: {s}\n", .{ role_str, msg.content });
+            try context.writer.print("{s}: {s}\n", .{ role_str, msg.content });
         }
 
-        return context.toOwnedSlice(self.allocator);
+        return context.toOwnedSlice();
     }
 
     /// Get message count
@@ -473,25 +475,33 @@ pub fn main() !void {
 
     printHelp();
 
-    const stdin_file = std.fs.File.stdin();
+    const io = tri_io.get();
+    const stdin_file = std.Io.File.stdin();
     var buf: [1024]u8 = undefined;
+
+    // 0.16 File has no read(); a streaming reader is the replacement. It is
+    // built once and reused so its buffer is not dropped between lines. The
+    // 0.15 "read returned 0" end-of-input signal is now error.EndOfStream.
+    var stdin_scratch: [1024]u8 = undefined;
+    var stdin_reader = stdin_file.readerStreaming(io, &stdin_scratch);
+    const stdin_in = &stdin_reader.interface;
 
     while (state.running) {
         printPrompt(&state);
 
-        // Read input line using low-level read (like trinity_cli)
+        // Read input line one byte at a time
         var line_len: usize = 0;
         while (line_len < buf.len - 1) {
-            const read_result = stdin_file.read(buf[line_len .. line_len + 1]) catch |err| {
-                std.debug.print("{s}Input error: {}{s}\n", .{ RED, err, RESET });
+            const byte = stdin_in.takeByte() catch |err| {
+                if (err == error.EndOfStream) {
+                    state.running = false;
+                } else {
+                    std.debug.print("{s}Input error: {}{s}\n", .{ RED, err, RESET });
+                }
                 break;
             };
-            if (read_result == 0) {
-                // EOF
-                state.running = false;
-                break;
-            }
-            if (buf[line_len] == '\n') {
+            buf[line_len] = byte;
+            if (byte == '\n') {
                 break;
             }
             line_len += 1;

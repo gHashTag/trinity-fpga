@@ -13,6 +13,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 const qt = @import("queen_types.zig");
 
@@ -418,23 +419,23 @@ pub fn writeAuditEntry(
     success: bool,
     detail: []const u8,
 ) void {
+    const io = tri_io.get();
     // Ensure directory exists
-    std.fs.cwd().makePath(".trinity/queen") catch {};
+    std.Io.Dir.cwd().createDirPath(io, ".trinity/queen") catch {};
 
-    const file = std.fs.cwd().openFile(AUDIT_PATH, .{ .mode = .read_write }) catch {
+    const file = std.Io.Dir.cwd().openFile(io, AUDIT_PATH, .{ .mode = .read_write }) catch {
         // Create if not exists
-        const new_file = std.fs.cwd().createFile(AUDIT_PATH, .{}) catch return;
+        const new_file = std.Io.Dir.cwd().createFile(io, AUDIT_PATH, .{}) catch return;
         writeAuditLine(new_file, kind, action, verdict, success, detail);
-        new_file.close();
+        new_file.close(io);
         return;
     };
-    defer file.close();
-    file.seekFromEnd(0) catch return;
+    defer file.close(io);
     writeAuditLine(file, kind, action, verdict, success, detail);
 }
 
 fn writeAuditLine(
-    file: std.fs.File,
+    file: std.Io.File,
     kind: []const u8,
     action: qt.ActionKind,
     verdict: PolicyVerdict,
@@ -458,7 +459,12 @@ fn writeAuditLine(
         if (success) "true" else "false",
         d,
     }) catch return;
-    _ = file.write(line) catch {};
+    // 0.16 has no seek-then-write on File: the append offset is taken here
+    // instead of by a seekFromEnd in the caller. A freshly created file has
+    // length 0, so the create branch still writes at the start.
+    const io = tri_io.get();
+    const end = file.length(io) catch return;
+    file.writePositionalAll(io, line, end) catch {};
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

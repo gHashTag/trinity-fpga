@@ -13,6 +13,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 const tvc_corpus = @import("tvc_corpus");
 
@@ -117,11 +118,12 @@ pub const TVCDistributor = struct {
 
         var total_added: usize = 0;
 
-        var dir = try std.fs.cwd().openDir(self.sync_dir.?, .{ .iterate = true });
-        defer dir.close();
+        const io = tri_io.get();
+        var dir = try std.Io.Dir.cwd().openDir(io, self.sync_dir.?, .{ .iterate = true });
+        defer dir.close(io);
 
         var iter = dir.iterate();
-        while (try iter.next()) |entry| {
+        while (try iter.next(io)) |entry| {
             if (entry.kind != .file) continue;
 
             // Check for .tvc extension
@@ -325,10 +327,10 @@ pub fn simulateTwoNodes() !void {
     }
 
     // Cleanup
-    std.fs.cwd().deleteFile("node1.tvc") catch |err| {
+    std.Io.Dir.cwd().deleteFile(tri_io.get(), "node1.tvc") catch |err| {
         std.log.debug("tvc_distributed: cleanup node1.tvc: {}", .{err});
     };
-    std.fs.cwd().deleteFile("node2.tvc") catch |err| {
+    std.Io.Dir.cwd().deleteFile(tri_io.get(), "node2.tvc") catch |err| {
         std.log.debug("tvc_distributed: cleanup node2.tvc: {}", .{err});
     };
 
@@ -358,7 +360,7 @@ test "TVCDistributor export and import" {
     try std.testing.expect(added == 1);
     try std.testing.expect(corpus2.count == 1);
 
-    std.fs.cwd().deleteFile("test_dist.tvc") catch |err| {
+    std.Io.Dir.cwd().deleteFile(tri_io.get(), "test_dist.tvc") catch |err| {
         std.log.debug("tvc_distributed: cleanup test_dist.tvc: {}", .{err});
     };
 }
@@ -392,10 +394,10 @@ test "TVCDistributor sync" {
     try std.testing.expect(corpus1.count == 2);
     try std.testing.expect(corpus2.count == 2);
 
-    std.fs.cwd().deleteFile("sync_test1.tvc") catch |err| {
+    std.Io.Dir.cwd().deleteFile(tri_io.get(), "sync_test1.tvc") catch |err| {
         std.log.debug("tvc_distributed: cleanup sync_test1.tvc: {}", .{err});
     };
-    std.fs.cwd().deleteFile("sync_test2.tvc") catch |err| {
+    std.Io.Dir.cwd().deleteFile(tri_io.get(), "sync_test2.tvc") catch |err| {
         std.log.debug("tvc_distributed: cleanup sync_test2.tvc: {}", .{err});
     };
 }

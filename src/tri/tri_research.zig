@@ -15,6 +15,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 const tri_exit_codes = @import("tri_exit_codes.zig");
@@ -192,16 +193,18 @@ fn runPerplexityQuery(allocator: std.mem.Allocator, args: []const []const u8) !v
     const cache_path = std.fmt.bufPrint(&cache_path_buf, "{s}/{x}.txt", .{ CACHE_DIR, hash }) catch "";
 
     if (cache_path.len > 0) {
-        if (std.fs.cwd().openFile(cache_path, .{})) |f| {
-            defer f.close();
-            const cached = f.readToEndAlloc(allocator, 64 * 1024) catch null;
-            if (cached) |content| {
-                defer allocator.free(content);
-                std.debug.print("{s}  [cached]{s}\n  {s}\n\n", .{ GREEN, RESET, content });
-                std.debug.print("RESEARCH_RESULT:cached=true:hash={x}\n", .{hash});
-                return;
-            }
-        } else |_| {}
+        const cached = std.Io.Dir.cwd().readFileAlloc(
+            tri_io.get(),
+            cache_path,
+            allocator,
+            .limited(64 * 1024),
+        ) catch null;
+        if (cached) |content| {
+            defer allocator.free(content);
+            std.debug.print("{s}  [cached]{s}\n  {s}\n\n", .{ GREEN, RESET, content });
+            std.debug.print("RESEARCH_RESULT:cached=true:hash={x}\n", .{hash});
+            return;
+        }
     }
 
     // Try Perplexity API via PERPLEXITY_API_KEY
@@ -269,12 +272,13 @@ fn runPerplexityQuery(allocator: std.mem.Allocator, args: []const []const u8) !v
 fn cacheAnswer(allocator: std.mem.Allocator, path: []const u8, answer: []const u8) !void {
     _ = allocator;
     if (path.len == 0) return;
-    std.fs.cwd().makePath(CACHE_DIR) catch |err| {
+    const io = tri_io.get();
+    std.Io.Dir.cwd().createDirPath(io, CACHE_DIR) catch |err| {
         std.log.warn("failed to create cache dir: {s}", .{@errorName(err)});
     };
-    const file = std.fs.cwd().createFile(path, .{}) catch return;
-    defer file.close();
-    file.writeAll(answer) catch |err| {
+    const file = std.Io.Dir.cwd().createFile(io, path, .{}) catch return;
+    defer file.close(io);
+    file.writeStreamingAll(io, answer) catch |err| {
         std.log.warn("failed to write cache: {s}", .{@errorName(err)});
     };
 }
@@ -337,21 +341,25 @@ fn runCacheList(allocator: std.mem.Allocator) !void {
     _ = allocator;
     std.debug.print("\n{s}\xf0\x9f\x93\x9a Scholar Cache{s}\n\n", .{ GOLDEN, RESET });
 
-    var dir = std.fs.cwd().openDir(CACHE_DIR, .{ .iterate = true }) catch {
+    const io = tri_io.get();
+    var dir = std.Io.Dir.cwd().openDir(io, CACHE_DIR, .{ .iterate = true }) catch {
         std.debug.print("  {s}No cache directory yet.{s}\n\n", .{ GOLDEN, RESET });
         return;
     };
-    defer dir.close();
+    defer dir.close(io);
 
     var count: u32 = 0;
     var iter = dir.iterate();
-    while (iter.next() catch null) |entry| {
+    while (iter.next(io) catch null) |entry| {
         if (entry.kind == .file and std.mem.endsWith(u8, entry.name, ".txt")) {
             // Read first 80 chars as preview
-            const file = dir.openFile(entry.name, .{}) catch continue;
-            defer file.close();
+            const file = dir.openFile(io, entry.name, .{}) catch continue;
+            defer file.close(io);
             var preview_buf: [80]u8 = undefined;
-            const n = file.readAll(&preview_buf) catch 0;
+            // Preview only: a short read is legitimate here.
+            var preview_scratch: [128]u8 = undefined;
+            var preview_reader = file.reader(io, &preview_scratch);
+            const n = preview_reader.interface.readSliceShort(&preview_buf) catch 0;
             std.debug.print("  {s}{s}{s}: {s}\n", .{ CYAN, entry.name, RESET, preview_buf[0..n] });
             count += 1;
         }

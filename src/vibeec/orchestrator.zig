@@ -18,6 +18,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 const RalphLoop = @import("ralph_loop.zig").RalphLoop;
@@ -373,7 +374,8 @@ pub const Orchestrator = struct {
 
     /// Read and parse fix_plan.md
     fn readFixPlan(self: *Self) !std.ArrayList(Task) {
-        const file = std.fs.cwd().openFile(self.fix_plan_path, .{}) catch |err| {
+        const io = tri_io.get();
+        const file = std.Io.Dir.cwd().openFile(io, self.fix_plan_path, .{}) catch |err| {
             if (err == error.FileNotFound) {
                 std.debug.print("⚠️  fix_plan.md not found at: {s}\n", .{self.fix_plan_path});
                 const empty = std.ArrayList(Task){};
@@ -381,9 +383,11 @@ pub const Orchestrator = struct {
             }
             return err;
         };
-        defer file.close();
+        defer file.close(io);
 
-        const content = try file.readToEndAlloc(self.alloc, 1024 * 1024); // Max 1MB
+        var scratch: [4096]u8 = undefined;
+        var fr = file.reader(io, &scratch);
+        const content = try fr.interface.allocRemaining(self.alloc, .limited(1024 * 1024)); // Max 1MB
         defer self.alloc.free(content);
 
         var tasks = std.ArrayList(Task).initCapacity(self.alloc, 16) catch return error.OutOfMemory;
@@ -503,8 +507,9 @@ pub const Orchestrator = struct {
         const spec_file = try std.fmt.allocPrint(self.alloc, "specs/tri/{s}.tri", .{sanitized});
 
         // Check if spec file exists
-        if (std.fs.cwd().openFile(spec_file, .{})) |file| {
-            file.close();
+        const io = tri_io.get();
+        if (std.Io.Dir.cwd().openFile(io, spec_file, .{})) |file| {
+            file.close(io);
             // File exists, generate output path
             return deriveOutputPath(self.alloc, spec_file);
         } else |_| {

@@ -11,6 +11,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 const tri_env = @import("tri_env.zig");
 const Allocator = std.mem.Allocator;
@@ -295,8 +296,8 @@ pub fn killAgent(allocator: Allocator, issue_number: u32) !void {
 pub fn listAgents(buf: []u8) []const u8 {
     loadState();
 
-    var fbs = std.io.fixedBufferStream(buf);
-    const w = fbs.writer();
+    var fbs = std.Io.Writer.fixed(buf);
+    const w = &fbs;
     w.writeAll("{\"agents\":[") catch return "{}";
 
     var first = true;
@@ -306,7 +307,7 @@ pub fn listAgents(buf: []u8) []const u8 {
             std.log.debug("cloud_orchestrator: JSON write comma failed: {}", .{err});
         };
         first = false;
-        std.fmt.format(w, "{{\"issue\":{d},\"service_id\":\"{s}\",\"account_id\":{d},\"created_at\":{d}}}", .{
+        w.print("{{\"issue\":{d},\"service_id\":\"{s}\",\"account_id\":{d},\"created_at\":{d}}}", .{
             a.issue,
             a.getServiceId(),
             a.account_id,
@@ -321,11 +322,11 @@ pub fn listAgents(buf: []u8) []const u8 {
     for (agents[0..agent_count]) |*a| {
         if (a.active) active += 1;
     }
-    std.fmt.format(w, "{d},\"max\":{d}}}", .{ active, MAX_CONCURRENT_AGENTS }) catch |err| {
+    w.print("{d},\"max\":{d}}}", .{ active, MAX_CONCURRENT_AGENTS }) catch |err| {
         std.log.debug("cloud_orchestrator: JSON format count failed: {}", .{err});
     };
 
-    return fbs.getWritten();
+    return w.buffered();
 }
 
 /// Cleanup all agents marked as done (inactive). Returns count cleaned.
@@ -368,12 +369,8 @@ fn loadState() void {
     if (state_loaded) return;
     state_loaded = true;
 
-    const file = std.fs.cwd().openFile(STATE_FILE, .{}) catch return;
-    defer file.close();
-
     var buf: [16384]u8 = undefined;
-    const len = file.readAll(&buf) catch return;
-    const content = buf[0..len];
+    const content = std.Io.Dir.cwd().readFile(tri_io.get(), STATE_FILE, &buf) catch return;
 
     // Simple parse: find issue/service_id pairs
     var offset: usize = 0;
@@ -414,13 +411,15 @@ fn loadState() void {
 }
 
 fn saveState() void {
+    const io = tri_io.get();
+
     // Ensure .trinity/ directory exists
-    std.fs.cwd().makePath(".trinity") catch return;
+    std.Io.Dir.cwd().createDirPath(io, ".trinity") catch return;
 
     // Build JSON in memory, then write at once
     var buf: [16384]u8 = undefined;
-    var fbs = std.io.fixedBufferStream(&buf);
-    const w = fbs.writer();
+    var fbs = std.Io.Writer.fixed(&buf);
+    const w = &fbs;
     w.writeAll("[") catch return;
 
     var first = true;
@@ -430,7 +429,7 @@ fn saveState() void {
             std.log.debug("cloud_orchestrator: history JSON comma failed: {}", .{err});
         };
         first = false;
-        std.fmt.format(w, "\n  {{\"issue\":{d},\"service_id\":\"{s}\",\"account_id\":{d},\"created_at\":{d}}}", .{
+        w.print("\n  {{\"issue\":{d},\"service_id\":\"{s}\",\"account_id\":{d},\"created_at\":{d}}}", .{
             a.issue,
             a.getServiceId(),
             a.account_id,
@@ -440,9 +439,9 @@ fn saveState() void {
 
     w.writeAll("\n]\n") catch return;
 
-    const file = std.fs.cwd().createFile(STATE_FILE, .{}) catch return;
-    defer file.close();
-    file.writeAll(fbs.getWritten()) catch return;
+    const file = std.Io.Dir.cwd().createFile(io, STATE_FILE, .{}) catch return;
+    defer file.close(io);
+    file.writeStreamingAll(io, w.buffered()) catch return;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -529,8 +528,8 @@ pub fn getMetrics() MetricsSummary {
 pub fn listMetrics(buf: []u8) []const u8 {
     loadMetrics();
 
-    var fbs = std.io.fixedBufferStream(buf);
-    const w = fbs.writer();
+    var fbs = std.Io.Writer.fixed(buf);
+    const w = &fbs;
     w.writeAll("{\"metrics\":[") catch return "{}";
 
     var first = true;
@@ -540,7 +539,7 @@ pub fn listMetrics(buf: []u8) []const u8 {
         };
         first = false;
 
-        std.fmt.format(w, "{{\"issue\":{d},\"result\":\"{s}\",\"files_changed\":{d},\"lines_added\":{d},\"lines_removed\":{d},\"created_at\":{d}}}", .{
+        w.print("{{\"issue\":{d},\"result\":\"{s}\",\"files_changed\":{d},\"lines_added\":{d},\"lines_removed\":{d},\"created_at\":{d}}}", .{
             m.issue,
             m.getResult(),
             m.files_changed,
@@ -553,23 +552,19 @@ pub fn listMetrics(buf: []u8) []const u8 {
     w.writeAll("],\"count\":") catch |err| {
         std.log.debug("cloud_orchestrator: metrics JSON tail failed: {}", .{err});
     };
-    std.fmt.format(w, "{d}}}", .{metrics_count}) catch |err| {
+    w.print("{d}}}", .{metrics_count}) catch |err| {
         std.log.debug("cloud_orchestrator: metrics count write failed: {}", .{err});
     };
 
-    return fbs.getWritten();
+    return w.buffered();
 }
 
 fn loadMetrics() void {
     if (metrics_loaded) return;
     metrics_loaded = true;
 
-    const file = std.fs.cwd().openFile(METRICS_FILE, .{}) catch return;
-    defer file.close();
-
     var buf: [65536]u8 = undefined;
-    const len = file.readAll(&buf) catch return;
-    const content = buf[0..len];
+    const content = std.Io.Dir.cwd().readFile(tri_io.get(), METRICS_FILE, &buf) catch return;
 
     var offset: usize = 0;
     metrics_count = 0;
@@ -604,14 +599,15 @@ fn loadMetrics() void {
 }
 
 fn saveMetrics() void {
-    std.fs.cwd().makePath(".trinity") catch |err| {
+    const io = tri_io.get();
+    std.Io.Dir.cwd().createDirPath(io, ".trinity") catch |err| {
         std.log.warn("cloud_orchestrator: failed to create .trinity dir: {}", .{err});
         return;
     };
 
     var buf: [131072]u8 = undefined;
-    var fbs = std.io.fixedBufferStream(&buf);
-    const w = fbs.writer();
+    var fbs = std.Io.Writer.fixed(&buf);
+    const w = &fbs;
     w.writeAll("[") catch return;
 
     var first = true;
@@ -619,7 +615,7 @@ fn saveMetrics() void {
         if (!first) w.writeAll(",") catch return;
         first = false;
 
-        std.fmt.format(w, "\n  {{\"issue\":{d},\"result\":\"{s}\",\"files_changed\":{d},\"lines_added\":{d},\"lines_removed\":{d},\"created_at\":{d}}}", .{
+        w.print("\n  {{\"issue\":{d},\"result\":\"{s}\",\"files_changed\":{d},\"lines_added\":{d},\"lines_removed\":{d},\"created_at\":{d}}}", .{
             m.issue,
             m.getResult(),
             m.files_changed,
@@ -631,9 +627,9 @@ fn saveMetrics() void {
 
     w.writeAll("\n]\n") catch return;
 
-    const file = std.fs.cwd().createFile(METRICS_FILE, .{}) catch return;
-    defer file.close();
-    file.writeAll(fbs.getWritten()) catch return;
+    const file = std.Io.Dir.cwd().createFile(io, METRICS_FILE, .{}) catch return;
+    defer file.close(io);
+    file.writeStreamingAll(io, w.buffered()) catch return;
 }
 
 fn parseU32(content: []const u8, start: usize, needle: []const u8) !u32 {

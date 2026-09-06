@@ -15,6 +15,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 
@@ -303,14 +304,17 @@ fn runSevoInject(allocator: Allocator, args: []const []const u8) !void {
 
     // Save lineage (append to JSONL)
     {
+        const io = tri_io.get();
         const ts = tri_time.milliTimestamp();
         for (wave.configs[0..configs_to_inject]) |cfg| {
             var line_buf: [256]u8 = undefined;
             const line = std.fmt.bufPrint(&line_buf, "{{\"ts\":{d},\"wave\":\"{s}\",\"config\":\"{s}\",\"lr\":\"{s}\",\"batch\":{d},\"warmup\":{d}}}\n", .{ ts, wave.name, cfg.name, cfg.lr, cfg.batch, cfg.warmup }) catch continue;
-            const file = try std.fs.cwd().openFile(".trinity/evolution_lineage.jsonl", .{ .mode = .write_only });
-            defer file.close();
-            try file.seekFromEnd(0);
-            try file.writeAll(line);
+            const file = try std.Io.Dir.cwd().openFile(io, ".trinity/evolution_lineage.jsonl", .{ .mode = .write_only });
+            defer file.close(io);
+            // 0.16 has no seek-then-write on File: read the end offset once and
+            // place the write positionally there.
+            const end = try file.length(io);
+            try file.writePositionalAll(io, line, end);
         }
     }
 

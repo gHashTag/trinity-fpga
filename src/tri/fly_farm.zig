@@ -15,6 +15,7 @@
 
 const std = @import("std");
 const tri_time = @import("tri_time");
+const tri_io = @import("tri_io");
 const tri_env = @import("tri_env.zig");
 const Allocator = std.mem.Allocator;
 
@@ -180,7 +181,9 @@ pub const FlyFarm = struct {
                 @memcpy(key_buf[base.len .. base.len + acct.env_suffix_len], acct.env_suffix[0..acct.env_suffix_len]);
                 const key = key_buf[0 .. base.len + acct.env_suffix_len];
 
-                return tri_env.getEnvVarOwned(allocator, key) orelse return error.TokenNotFound;
+                // getEnvVarOwned returns an error union, not an optional, so the
+                // missing-variable case is a catch rather than an orelse.
+                return tri_env.getEnvVarOwned(allocator, key) catch return error.TokenNotFound;
             }
         }
         return error.AccountNotFound;
@@ -255,12 +258,10 @@ pub const FlyFarm = struct {
         if (self.state_loaded) return;
         self.state_loaded = true;
 
-        const file = std.fs.cwd().openFile(FARM_STATE_FILE, .{}) catch return;
-        defer file.close();
-
+        // readFile is open + fill-the-buffer + close, stopping short only at
+        // end of file -- exactly what the 0.15 openFile + readAll pair did.
         var buf: [16384]u8 = undefined;
-        const len = file.readAll(&buf) catch return;
-        const content = buf[0..len];
+        const content = std.Io.Dir.cwd().readFile(tri_io.get(), FARM_STATE_FILE, &buf) catch return;
 
         // Parse account daily_creates from saved state
         var offset: usize = 0;
@@ -319,18 +320,22 @@ pub const FlyFarm = struct {
     }
 
     pub fn saveState(self: *Self) void {
-        std.fs.cwd().makePath(".trinity") catch return;
+        const io = tri_io.get();
+        std.Io.Dir.cwd().createDirPath(io, ".trinity") catch return;
 
+        // std.io.fixedBufferStream is gone; Io.Writer.fixed is the 0.16
+        // non-allocating writer over a caller-owned buffer, and .buffered()
+        // replaces fbs.getWritten().
         var buf: [16384]u8 = undefined;
-        var fbs = std.io.fixedBufferStream(&buf);
-        const w = fbs.writer();
+        var stream = std.Io.Writer.fixed(&buf);
+        const w = &stream;
 
         w.writeAll("{\"accounts\":[") catch return;
         var first = true;
         for (self.accounts[0..self.account_count]) |*acct| {
             if (!first) w.writeAll(",") catch return;
             first = false;
-            std.fmt.format(w, "\n  {{\"account_id\":{d},\"alias\":\"{s}\",\"daily_creates\":{d},\"active_apps\":{d},\"daily_reset_epoch\":{d}}}", .{
+            w.print("\n  {{\"account_id\":{d},\"alias\":\"{s}\",\"daily_creates\":{d},\"active_apps\":{d},\"daily_reset_epoch\":{d}}}", .{
                 acct.id,
                 acct.getAlias(),
                 acct.daily_creates,
@@ -344,16 +349,16 @@ pub const FlyFarm = struct {
         for (self.app_map[0..self.app_map_count]) |*m| {
             if (!first) w.writeAll(",") catch return;
             first = false;
-            std.fmt.format(w, "\n  {{\"app_name\":\"{s}\",\"account_id\":{d}}}", .{
+            w.print("\n  {{\"app_name\":\"{s}\",\"account_id\":{d}}}", .{
                 m.getAppName(),
                 m.account_id,
             }) catch return;
         }
         w.writeAll("\n]}\n") catch return;
 
-        const file = std.fs.cwd().createFile(FARM_STATE_FILE, .{}) catch return;
-        defer file.close();
-        file.writeAll(fbs.getWritten()) catch return;
+        const file = std.Io.Dir.cwd().createFile(io, FARM_STATE_FILE, .{}) catch return;
+        defer file.close(io);
+        file.writeStreamingAll(io, stream.buffered()) catch return;
     }
 };
 

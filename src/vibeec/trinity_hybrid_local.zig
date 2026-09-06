@@ -16,6 +16,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 const local_chat = @import("igla_local_chat.zig");
@@ -100,16 +101,22 @@ fn interactiveMode(allocator: std.mem.Allocator) !void {
     var symbolic_hits: usize = 0;
     var llm_calls: usize = 0;
 
-    const stdin_file = std.fs.File.stdin();
+    // The reader is built once, outside the loop: it owns a buffer, so rebuilding
+    // it per iteration would discard bytes already pulled off the pipe.
+    const io = tri_io.get();
+    const stdin_file = std.Io.File.stdin();
+    var stdin_scratch: [4096]u8 = undefined;
+    var stdin_reader = stdin_file.reader(io, &stdin_scratch);
     var buf: [4096]u8 = undefined;
 
     while (true) {
         std.debug.print("[You] > ", .{});
 
-        // Read line using low-level read
+        // Read the line one byte at a time. readSliceShort returns a short count
+        // (here: 0) only at end-of-stream, matching 0.15's File.read returning 0.
         var line_len: usize = 0;
         while (line_len < buf.len - 1) {
-            const read_result = stdin_file.read(buf[line_len .. line_len + 1]) catch break;
+            const read_result = stdin_reader.interface.readSliceShort(buf[line_len .. line_len + 1]) catch break;
             if (read_result == 0) break; // EOF
             if (buf[line_len] == '\n') break;
             line_len += 1;

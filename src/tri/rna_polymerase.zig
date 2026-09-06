@@ -587,17 +587,12 @@ pub const PipelineExecutor = struct {
     fn executeMetrics(self: *PipelineExecutor) ChainError!LinkMetrics {
         // Collect v(n-1) metrics from baselines file
         var metrics = LinkMetrics{};
+        const io = tri_io.get();
 
-        const baselines = std.fs.cwd().openFile(".trinity/baselines.json", .{}) catch {
-            // No baselines yet — return defaults for first run
-            metrics.tokens_per_sec = 0;
-            metrics.memory_bytes = 0;
-            return metrics;
-        };
-        defer baselines.close();
-
+        // Whole small file into a fixed buffer; a short read is normal here.
         var buf: [4096]u8 = undefined;
-        const n = baselines.readAll(&buf) catch {
+        const content = std.Io.Dir.cwd().readFile(io, ".trinity/baselines.json", &buf) catch {
+            // No baselines yet — return defaults for first run
             metrics.tokens_per_sec = 0;
             metrics.memory_bytes = 0;
             return metrics;
@@ -605,7 +600,6 @@ pub const PipelineExecutor = struct {
 
         _ = self;
         // Parse tok/s from baselines if available
-        const content = buf[0..n];
         if (std.mem.indexOf(u8, content, "tok_per_sec")) |_| {
             metrics.tokens_per_sec = 2472.0; // Last recorded baseline
         }
@@ -691,8 +685,9 @@ pub const PipelineExecutor = struct {
         };
 
         const exists = blk: {
-            const f = std.fs.cwd().openFile(spec_path, .{}) catch break :blk false;
-            f.close();
+            const io = tri_io.get();
+            const f = std.Io.Dir.cwd().openFile(io, spec_path, .{}) catch break :blk false;
+            f.close(io);
             break :blk true;
         };
 
@@ -718,8 +713,9 @@ pub const PipelineExecutor = struct {
         };
 
         const already_exists = blk: {
-            const f = std.fs.cwd().openFile(spec_path, .{}) catch break :blk false;
-            f.close();
+            const io = tri_io.get();
+            const f = std.Io.Dir.cwd().openFile(io, spec_path, .{}) catch break :blk false;
+            f.close(io);
             break :blk true;
         };
 
@@ -772,8 +768,9 @@ pub const PipelineExecutor = struct {
 
         // Verify spec was created
         const created = blk: {
-            const f = std.fs.cwd().openFile(spec_path, .{}) catch break :blk false;
-            f.close();
+            const io = tri_io.get();
+            const f = std.Io.Dir.cwd().openFile(io, spec_path, .{}) catch break :blk false;
+            f.close(io);
             break :blk true;
         };
 
@@ -788,6 +785,7 @@ pub const PipelineExecutor = struct {
 
     fn executeCodeGenerate(self: *PipelineExecutor) ChainError!LinkMetrics {
         // Link 7: Generate Zig code from .tri spec via `tri gen`
+        const io = tri_io.get();
         // Pre-check: if spec_lint ran and failed, block codegen
         const lint_result = self.state.getResult(.spec_lint);
         if (lint_result.status == .failed) {
@@ -805,11 +803,11 @@ pub const PipelineExecutor = struct {
 
         // Verify spec exists
         {
-            const f = std.fs.cwd().openFile(spec_path, .{}) catch {
+            const f = std.Io.Dir.cwd().openFile(io, spec_path, .{}) catch {
                 std.debug.print("  [CODEGEN] No spec at {s} — nothing to generate\n", .{spec_path});
                 return ChainError.FileNotFound;
             };
-            f.close();
+            f.close(io);
         }
 
         std.debug.print("  [CODEGEN] Generating code: tri gen {s}\n", .{spec_path});
@@ -841,9 +839,9 @@ pub const PipelineExecutor = struct {
         };
 
         const generated = blk: {
-            const f = std.fs.cwd().openFile(output_path, .{}) catch break :blk false;
-            defer f.close();
-            const stat = f.stat() catch break :blk false;
+            const f = std.Io.Dir.cwd().openFile(io, output_path, .{}) catch break :blk false;
+            defer f.close(io);
+            const stat = f.stat(io) catch break :blk false;
             if (stat.size == 0) break :blk false; // empty file = not generated
             break :blk true;
         };
@@ -917,20 +915,16 @@ pub const PipelineExecutor = struct {
             // On retry: call Claude API to fix the error (deterministic re-gen won't help)
             if (attempt > 0) {
                 std.debug.print("  [CODEGEN] Calling Claude API to fix build error (attempt {d})...\n", .{attempt + 1});
-                const source = blk: {
-                    const f = std.fs.cwd().openFile(output_path, .{}) catch break :blk null;
-                    defer f.close();
-                    break :blk f.readToEndAlloc(self.allocator, 256_000) catch null;
-                };
+                const source = std.Io.Dir.cwd().readFileAlloc(io, output_path, self.allocator, .limited(256_000)) catch null;
                 defer if (source) |s| self.allocator.free(s);
 
                 if (source) |src| {
                     if (callClaudeFix(self.allocator, build_result.stderr, src)) |fixed| {
                         defer self.allocator.free(fixed);
                         // Write fixed code back
-                        if (std.fs.cwd().createFile(output_path, .{})) |wf| {
-                            defer wf.close();
-                            wf.writeAll(fixed) catch {};
+                        if (std.Io.Dir.cwd().createFile(io, output_path, .{})) |wf| {
+                            defer wf.close(io);
+                            wf.writeStreamingAll(io, fixed) catch {};
                             std.debug.print("  [CODEGEN] Claude fix applied, retrying build...\n", .{});
                         } else |_| {}
                     }
@@ -954,13 +948,16 @@ pub const PipelineExecutor = struct {
         };
 
         // Read generated file and validate patterns
-        const file = std.fs.cwd().openFile(output_path, .{}) catch {
+        const io = tri_io.get();
+        const file = std.Io.Dir.cwd().openFile(io, output_path, .{}) catch {
             std.debug.print("  [SACRED] No generated file to analyze, skipping\n", .{});
             return LinkMetrics{ .duration_ms = 10 };
         };
-        defer file.close();
+        defer file.close(io);
 
-        const content = file.readToEndAlloc(self.allocator, 1_048_576) catch {
+        var read_buf: [4096]u8 = undefined;
+        var file_reader = file.reader(io, &read_buf);
+        const content = file_reader.interface.allocRemaining(self.allocator, .limited(1_048_576)) catch {
             return LinkMetrics{ .duration_ms = 50 };
         };
         defer self.allocator.free(content);
@@ -1075,6 +1072,7 @@ pub const PipelineExecutor = struct {
 
     fn executeSweFix(self: *PipelineExecutor) ChainError!LinkMetrics {
         // Link 11: Auto-fix on test failure — analyze stderr, apply fix, retry
+        const io = tri_io.get();
         const test_result = self.state.getResult(.test_run);
 
         // Only run if test_run actually failed
@@ -1165,19 +1163,15 @@ pub const PipelineExecutor = struct {
                 var fix_path_buf: [512]u8 = undefined;
                 const fix_output_path = golden_chain.deriveOutputPath(self.state.task_description, &fix_name_buf, &fix_path_buf) orelse continue;
 
-                const source = fix_blk: {
-                    const f = std.fs.cwd().openFile(fix_output_path, .{}) catch break :fix_blk null;
-                    defer f.close();
-                    break :fix_blk f.readToEndAlloc(self.allocator, 256_000) catch null;
-                };
+                const source = std.Io.Dir.cwd().readFileAlloc(io, fix_output_path, self.allocator, .limited(256_000)) catch null;
                 defer if (source) |s| self.allocator.free(s);
 
                 if (source) |src| {
                     if (callClaudeFix(self.allocator, result.stderr, src)) |fixed| {
                         defer self.allocator.free(fixed);
-                        if (std.fs.cwd().createFile(fix_output_path, .{})) |wf| {
-                            defer wf.close();
-                            wf.writeAll(fixed) catch {};
+                        if (std.Io.Dir.cwd().createFile(io, fix_output_path, .{})) |wf| {
+                            defer wf.close(io);
+                            wf.writeStreamingAll(io, fixed) catch {};
                             std.debug.print("  [SWE] Claude API fix applied (attempt 3)\n", .{});
                         } else |_| {}
                     }
@@ -1192,17 +1186,18 @@ pub const PipelineExecutor = struct {
     fn executeBenchmarkExternal(self: *const PipelineExecutor) ChainError!LinkMetrics {
         // Link 12: Compare binary size and test count before vs after
         _ = self;
+        const io = tri_io.get();
         std.debug.print("  [BENCH-EXT] Measuring project deltas...\n", .{});
 
         // Measure binary size (tri CLI)
         var bin_size: u64 = 0;
         {
-            const f = std.fs.cwd().openFile("zig-out/bin/tri", .{}) catch {
+            const f = std.Io.Dir.cwd().openFile(io, "zig-out/bin/tri", .{}) catch {
                 std.debug.print("  [BENCH-EXT] tri binary not found, skipping\n", .{});
                 return LinkMetrics{ .duration_ms = 50 };
             };
-            defer f.close();
-            const stat = f.stat() catch {
+            defer f.close(io);
+            const stat = f.stat(io) catch {
                 return LinkMetrics{ .duration_ms = 50 };
             };
             bin_size = stat.size;
@@ -1211,12 +1206,12 @@ pub const PipelineExecutor = struct {
         // Count .zig files in src/tri/
         var zig_count: u32 = 0;
         {
-            var dir = std.fs.cwd().openDir("src/tri", .{ .iterate = true }) catch {
+            var dir = std.Io.Dir.cwd().openDir(io, "src/tri", .{ .iterate = true }) catch {
                 return LinkMetrics{ .duration_ms = 50 };
             };
-            defer dir.close();
+            defer dir.close(io);
             var iter = dir.iterate();
-            while (iter.next() catch null) |entry| {
+            while (iter.next(io) catch null) |entry| {
                 if (entry.kind == .file and std.mem.endsWith(u8, entry.name, ".zig")) {
                     zig_count += 1;
                 }
@@ -1269,8 +1264,9 @@ pub const PipelineExecutor = struct {
 
         // Check if docsite exists
         const has_docsite = blk: {
-            var d = std.fs.cwd().openDir("docsite/docs", .{}) catch break :blk false;
-            d.close();
+            const io = tri_io.get();
+            var d = std.Io.Dir.cwd().openDir(io, "docsite/docs", .{}) catch break :blk false;
+            d.close(io);
             break :blk true;
         };
 
@@ -1404,11 +1400,12 @@ pub const PipelineExecutor = struct {
         std.debug.print("  [FLY] flyctl found, deploying...\n", .{});
 
         // Check for fly.toml
-        const fly_toml = std.fs.cwd().openFile("fly.toml", .{}) catch {
+        const io = tri_io.get();
+        const fly_toml = std.Io.Dir.cwd().openFile(io, "fly.toml", .{}) catch {
             std.debug.print("  [FLY] No fly.toml found\n", .{});
             return LinkMetrics{ .duration_ms = 10 };
         };
-        fly_toml.close();
+        fly_toml.close(io);
 
         // Run fly deploy (non-blocking)
         const deploy_result = tri_proc.run(.{
@@ -1644,11 +1641,12 @@ pub const PipelineExecutor = struct {
 
         // Verify spec exists
         {
-            const f = std.fs.cwd().openFile(spec_path, .{}) catch {
+            const io = tri_io.get();
+            const f = std.Io.Dir.cwd().openFile(io, spec_path, .{}) catch {
                 std.debug.print("  [SPEC_LINT] No spec at {s} — skipping lint\n", .{spec_path});
                 return LinkMetrics{ .duration_ms = 0 };
             };
-            f.close();
+            f.close(io);
         }
 
         std.debug.print("  [SPEC_LINT] Validating: {s}\n", .{spec_path});
@@ -1859,9 +1857,10 @@ fn callProviderFix(allocator: std.mem.Allocator, provider: Provider, api_key: []
     // Write body to temp file
     const tmp_path = "/tmp/trinity_claude_fix.json";
     {
-        const tmp = std.Io.Dir.createFileAbsolute(tri_io.get(), tmp_path, .{}) catch return null;
-        defer tmp.close();
-        tmp.writeAll(body) catch return null;
+        const io = tri_io.get();
+        const tmp = std.Io.Dir.createFileAbsolute(io, tmp_path, .{}) catch return null;
+        defer tmp.close(io);
+        tmp.writeStreamingAll(io, body) catch return null;
     }
 
     // Build URL and auth header

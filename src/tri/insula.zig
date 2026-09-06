@@ -9,6 +9,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const hippocampus = @import("hippocampus.zig");
@@ -234,23 +235,23 @@ pub fn reportState(allocator: Allocator, state: InternalState) !void {
     defer allocator.free(json);
 
     // Ensure directory exists
-    std.fs.cwd().makePath(".trinity/memory/insula") catch |err| {
+    const io = tri_io.get();
+    std.Io.Dir.cwd().createDirPath(io, ".trinity/memory/insula") catch |err| {
         if (err != error.PathAlreadyExists) return err;
     };
 
     // Append to JSONL file
-    const file = try std.fs.cwd().openFile(INSULA_MEMORY_PATH, .{ .mode = .write_only });
-    defer file.close();
+    const file = try std.Io.Dir.cwd().openFile(io, INSULA_MEMORY_PATH, .{ .mode = .write_only });
+    defer file.close(io);
 
-    // Seek to end
-    const stat = file.stat() catch return error.FileAccess;
-    try file.seekTo(stat.size);
+    // 0.16 has no seek-then-write; write at the current end offset instead.
+    const append_at = file.length(io) catch return error.FileAccess;
 
     // Write JSONL entry
     const line = try std.fmt.allocPrint(allocator, "{s}\n", .{json});
     defer allocator.free(line);
 
-    try file.writeAll(line);
+    try file.writePositionalAll(io, line, append_at);
 
     // Also write to Hippocampus for cross-module access
     const summary = "Internal state metrics captured";
@@ -259,23 +260,26 @@ pub fn reportState(allocator: Allocator, state: InternalState) !void {
 
 /// Load recent states from file
 pub fn loadStates(allocator: Allocator, limit: usize) ![]InternalState {
-    const file = std.fs.cwd().openFile(INSULA_MEMORY_PATH, .{}) catch {
+    const io = tri_io.get();
+    const file = std.Io.Dir.cwd().openFile(io, INSULA_MEMORY_PATH, .{}) catch {
         return allocator.alloc(InternalState, 0);
     };
-    defer file.close();
+    defer file.close(io);
 
-    const stat = file.stat() catch return allocator.alloc(InternalState, 0);
+    const stat = file.stat(io) catch return allocator.alloc(InternalState, 0);
     if (stat.size == 0) return allocator.alloc(InternalState, 0);
 
     const contents = try allocator.alloc(u8, stat.size);
     defer allocator.free(contents);
 
-    const n = file.readAll(contents) catch return allocator.alloc(InternalState, 0);
+    var read_scratch: [4096]u8 = undefined;
+    var file_reader = file.reader(io, &read_scratch);
+    const n = file_reader.interface.readSliceShort(contents) catch return allocator.alloc(InternalState, 0);
     if (n == 0) return allocator.alloc(InternalState, 0);
 
     // Parse JSONL (simplified parsing for robustness)
-    var states = std.ArrayList(InternalState).init(allocator);
-    errdefer states.deinit();
+    var states: std.ArrayList(InternalState) = .empty;
+    errdefer states.deinit(allocator);
 
     var line_iter = std.mem.splitScalar(u8, contents[0..n], '\n');
     var count: usize = 0;
@@ -286,7 +290,7 @@ pub fn loadStates(allocator: Allocator, limit: usize) ![]InternalState {
 
         // Parse JSON manually (avoid full JSON parser for simplicity)
         if (parseInternalStateFromJson(line)) |state| {
-            try states.append(state);
+            try states.append(allocator, state);
             count += 1;
         } else |_| {
             // Skip malformed lines
@@ -294,7 +298,7 @@ pub fn loadStates(allocator: Allocator, limit: usize) ![]InternalState {
         }
     }
 
-    return states.toOwnedSlice();
+    return states.toOwnedSlice(allocator);
 }
 
 /// Parse InternalState from JSON string (simplified parser)

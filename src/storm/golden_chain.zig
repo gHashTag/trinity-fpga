@@ -6,6 +6,7 @@
 
 const std = @import("std");
 
+const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 // P10: Import real link modules
 const vibee_link = @import("links/vibee.zig");
@@ -158,7 +159,7 @@ pub const GoldenChain = struct {
         errdefer allocator.free(checkpoint_dir);
 
         // Ensure checkpoint directory exists
-        std.fs.cwd().makePath(checkpoint_dir) catch |e| {
+        std.Io.Dir.cwd().createDirPath(tri_io.get(), checkpoint_dir) catch |e| {
             std.log.warn("Failed to create checkpoint dir: {}", .{e});
         };
 
@@ -282,11 +283,11 @@ pub const GoldenChain = struct {
             }
         } else {
             // Fallback: direct execution
+            const io = tri_io.get();
             const start_time = tri_time.nanoTimestamp();
-            var child = std.process.Child.init(cmd.argv, self.allocator);
-            try child.spawn();
+            var child = try std.process.spawn(io, .{ .argv = cmd.argv });
 
-            const wait_result = child.wait() catch |err| {
+            const wait_result = child.wait(io) catch |err| {
                 return .{
                     .success = false,
                     .exit_code = 1,
@@ -305,9 +306,9 @@ pub const GoldenChain = struct {
                     result.exit_code = code;
                     result.message = try std.fmt.allocPrint(self.allocator, "Exit {d}", .{code});
                 },
-                .Signal => |sig| {
-                    result.exit_code = 128 + @as(u8, @truncate(sig));
-                    result.message = try std.fmt.allocPrint(self.allocator, "Signal {d}", .{sig});
+                .signal => |sig| {
+                    result.exit_code = 128 + @as(u8, @truncate(@intFromEnum(sig)));
+                    result.message = try std.fmt.allocPrint(self.allocator, "Signal {d}", .{@intFromEnum(sig)});
                 },
                 else => {
                     result.message = try self.allocator.dupe(u8, "Unknown termination");
@@ -472,7 +473,7 @@ pub const GoldenChain = struct {
         defer self.allocator.free(json_str);
 
         // Write to file
-        try std.fs.cwd().writeFile(.{
+        try std.Io.Dir.cwd().writeFile(tri_io.get(), .{
             .sub_path = filename,
             .data = json_str,
         });
@@ -488,11 +489,8 @@ pub const GoldenChain = struct {
     pub fn loadCheckpoint(self: *GoldenChain, filename: []const u8) !CheckpointData {
         self.log(.info, "📂 Loading checkpoint from {s}", .{filename});
 
-        // Read checkpoint file
-        const file = try std.fs.cwd().openFile(filename, .{});
-        defer file.close();
-
-        const content = try file.readToEndAlloc(self.allocator, 1024 * 1024); // Max 1MB
+        // Read checkpoint file (max 1MB, same cap the 0.15 readToEndAlloc had)
+        const content = try std.Io.Dir.cwd().readFileAlloc(tri_io.get(), filename, self.allocator, .limited(1024 * 1024));
         defer self.allocator.free(content);
 
         // P11: Parse JSON using std.json.parseFromSlice

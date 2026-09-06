@@ -12,6 +12,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 const tri_env = @import("tri_env.zig");
 const Allocator = std.mem.Allocator;
@@ -397,12 +398,9 @@ pub const RailwayFarm = struct {
         if (self.state_loaded) return;
         self.state_loaded = true;
 
-        const file = std.fs.cwd().openFile(FARM_STATE_FILE, .{}) catch return;
-        defer file.close();
-
         var buf: [16384]u8 = undefined;
-        const len = file.readAll(&buf) catch return;
-        const content = buf[0..len];
+        // Whole state file into a fixed buffer; a short read is normal.
+        const content = std.Io.Dir.cwd().readFile(tri_io.get(), FARM_STATE_FILE, &buf) catch return;
 
         // Parse account daily_creates from saved state
         var offset: usize = 0;
@@ -471,18 +469,19 @@ pub const RailwayFarm = struct {
     }
 
     pub fn saveState(self: *Self) void {
-        std.fs.cwd().makePath(".trinity") catch return;
+        const io = tri_io.get();
+        std.Io.Dir.cwd().createDirPath(io, ".trinity") catch return;
 
         var buf: [16384]u8 = undefined;
-        var fbs = std.io.fixedBufferStream(&buf);
-        const w = fbs.writer();
+        var fixed_writer: std.Io.Writer = .fixed(&buf);
+        const w = &fixed_writer;
 
         w.writeAll("{\"accounts\":[") catch return;
         var first = true;
         for (self.accounts[0..self.account_count]) |*acct| {
             if (!first) w.writeAll(",") catch return;
             first = false;
-            std.fmt.format(w, "\n  {{\"account_id\":{d},\"alias\":\"{s}\",\"daily_creates\":{d},\"active_services\":{d},\"daily_reset_epoch\":{d}}}", .{
+            w.print("\n  {{\"account_id\":{d},\"alias\":\"{s}\",\"daily_creates\":{d},\"active_services\":{d},\"daily_reset_epoch\":{d}}}", .{
                 acct.id,
                 acct.getAlias(),
                 acct.daily_creates,
@@ -496,7 +495,7 @@ pub const RailwayFarm = struct {
         for (self.agent_map[0..self.agent_map_count]) |*m| {
             if (!first) w.writeAll(",") catch return;
             first = false;
-            std.fmt.format(w, "\n  {{\"issue\":{d},\"account_id\":{d},\"service_id\":\"{s}\"}}", .{
+            w.print("\n  {{\"issue\":{d},\"account_id\":{d},\"service_id\":\"{s}\"}}", .{
                 m.issue,
                 m.account_id,
                 m.getServiceId(),
@@ -504,9 +503,9 @@ pub const RailwayFarm = struct {
         }
         w.writeAll("\n]}\n") catch return;
 
-        const file = std.fs.cwd().createFile(FARM_STATE_FILE, .{}) catch return;
-        defer file.close();
-        file.writeAll(fbs.getWritten()) catch return;
+        const file = std.Io.Dir.cwd().createFile(io, FARM_STATE_FILE, .{}) catch return;
+        defer file.close(io);
+        file.writeStreamingAll(io, w.buffered()) catch return;
     }
 };
 

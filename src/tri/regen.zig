@@ -16,6 +16,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
@@ -266,15 +267,13 @@ pub fn showStatus(allocator: Allocator) !void {
 
 fn scanDoctorViolations(allocator: Allocator, result: *RegenAnalysis) !void {
     _ = allocator; // Not used, but kept for API consistency
-    const file = std.fs.cwd().openFile(".trinity/scan_results.json", .{}) catch {
+    const io = tri_io.get();
+    var buf: [16384]u8 = undefined;
+    // Whole small file into a fixed buffer; a short read is normal.
+    const content = std.Io.Dir.cwd().readFile(io, ".trinity/scan_results.json", &buf) catch {
         // No scan results yet
         return;
     };
-    defer file.close();
-
-    var buf: [16384]u8 = undefined;
-    const content_len = try file.readAll(&buf);
-    const content = buf[0..content_len];
 
     // Simple JSON parsing for doctor results
     // Looking for patterns like "violations": N, "infected": N
@@ -490,15 +489,13 @@ fn renderAnalysis(analysis: *const RegenAnalysis) !void {
 }
 
 fn showFixPlan() !void {
-    const file = std.fs.cwd().openFile(".phoenix/fix_plan.md", .{}) catch {
+    const io = tri_io.get();
+    var buf: [16384]u8 = undefined;
+    // Whole small file into a fixed buffer; a short read is normal.
+    const content = std.Io.Dir.cwd().readFile(io, ".phoenix/fix_plan.md", &buf) catch {
         print("\n{s}⊙{s} No fix plan exists yet\n", .{ DIM, RESET });
         return;
     };
-    defer file.close();
-
-    var buf: [16384]u8 = undefined;
-    const content_len = try file.readAll(&buf);
-    const content = buf[0..content_len];
 
     print("\n{s}📋 FIX PLAN{s}\n", .{ BOLD, RESET });
     print("{s}═══════════════════════════════════════════════════════════{s}\n\n", .{ DIM, RESET });

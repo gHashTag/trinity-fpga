@@ -11,6 +11,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const tri_experience = @import("tri_experience.zig");
@@ -309,11 +310,12 @@ pub fn runLoopDecide(allocator: Allocator) !void {
     print("\n{s}LOOP DECIDE{s} — Episode-based energy calculation\n", .{ BOLD, RESET });
     print("{s}════════════════════════════════════════════════════════════════{s}\n\n", .{ DIM, RESET });
 
-    var episodes_dir = std.fs.cwd().openDir(".trinity/experience/episodes", .{ .iterate = true }) catch {
+    const io = tri_io.get();
+    var episodes_dir = std.Io.Dir.cwd().openDir(io, ".trinity/experience/episodes", .{ .iterate = true }) catch {
         print("  {s}No episodes found. Default: CONTINUE{s}\n\n", .{ YELLOW, RESET });
         return;
     };
-    defer episodes_dir.close();
+    defer episodes_dir.close(io);
 
     var total: u32 = 0;
     var passes: u32 = 0;
@@ -324,13 +326,13 @@ pub fn runLoopDecide(allocator: Allocator) !void {
     const one_hour_ago = now - 3600;
 
     var dir_iter = episodes_dir.iterate();
-    while (try dir_iter.next()) |entry| {
+    while (try dir_iter.next(io)) |entry| {
         if (entry.kind != .file) continue;
         if (!std.mem.endsWith(u8, entry.name, ".json")) continue;
         // Skip JSONL file
         if (std.mem.eql(u8, entry.name, "activity.jsonl")) continue;
 
-        const contents = episodes_dir.readFileAlloc(allocator, entry.name, 64 * 1024) catch continue;
+        const contents = episodes_dir.readFileAlloc(io, entry.name, allocator, .limited(64 * 1024)) catch continue;
         defer allocator.free(contents);
 
         total += 1;
@@ -401,9 +403,10 @@ fn extractEpisodeTimestamp(json: []const u8) i64 {
 }
 
 fn saveDecideState(energy: f32, total: u32, passes: u32, fails: u32, decision: []const u8) void {
-    std.fs.cwd().makePath(".trinity/state") catch {};
-    const file = std.fs.cwd().createFile(".trinity/state/loop_state.json", .{}) catch return;
-    defer file.close();
+    const io = tri_io.get();
+    std.Io.Dir.cwd().createDirPath(io, ".trinity/state") catch {};
+    const file = std.Io.Dir.cwd().createFile(io, ".trinity/state/loop_state.json", .{}) catch return;
+    defer file.close(io);
 
     const energy_pct: u32 = @intFromFloat(energy * 100.0);
     var buf: [512]u8 = undefined;
@@ -413,7 +416,7 @@ fn saveDecideState(energy: f32, total: u32, passes: u32, fails: u32, decision: [
         energy_pct,                          total,                passes, fails,
         decision[0..@min(decision.len, 64)], tri_time.timestamp(),
     }) catch return;
-    file.writeAll(json) catch {};
+    file.writeStreamingAll(io, json) catch {};
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -441,11 +444,9 @@ fn runContinuous(allocator: Allocator, interval_sec: u32) !void {
 }
 
 fn checkExitState() bool {
-    const file = std.fs.cwd().openFile(STATE_PATH, .{}) catch return false;
-    defer file.close();
     var buf: [1024]u8 = undefined;
-    const n = file.readAll(&buf) catch return false;
-    return std.mem.indexOf(u8, buf[0..n], "\"EXIT\"") != null;
+    const data = std.Io.Dir.cwd().readFile(tri_io.get(), STATE_PATH, &buf) catch return false;
+    return std.mem.indexOf(u8, data, "\"EXIT\"") != null;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -456,17 +457,12 @@ fn runStatus() void {
     print("\n{s}🔄 TRI LOOP — STATUS{s}\n", .{ BOLD, RESET });
     print("{s}════════════════════════════════════════════════════════════════{s}\n\n", .{ DIM, RESET });
 
-    const file = std.fs.cwd().openFile(STATE_PATH, .{}) catch {
+    var buf: [1024]u8 = undefined;
+    const data = std.Io.Dir.cwd().readFile(tri_io.get(), STATE_PATH, &buf) catch {
         print("  {s}No loop state found. Run: tri loop{s}\n\n", .{ DIM, RESET });
         return;
     };
-    defer file.close();
-    var buf: [1024]u8 = undefined;
-    const n = file.readAll(&buf) catch {
-        print("  {s}Failed to read state{s}\n\n", .{ DIM, RESET });
-        return;
-    };
-    print("  {s}\n\n", .{buf[0..n]});
+    print("  {s}\n\n", .{data});
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -474,11 +470,8 @@ fn runStatus() void {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn incrementWakeCount() u32 {
-    const file = std.fs.cwd().openFile(STATE_PATH, .{}) catch return 1;
-    defer file.close();
     var buf: [1024]u8 = undefined;
-    const n = file.readAll(&buf) catch return 1;
-    const data = buf[0..n];
+    const data = std.Io.Dir.cwd().readFile(tri_io.get(), STATE_PATH, &buf) catch return 1;
 
     // Parse "wake":N
     const key = "\"wake\":";
@@ -535,13 +528,14 @@ fn saveLoopEpisode(wake_count: u32, results: []const StepResult, decision: LoopD
 
 fn saveLoopState(wake: u32, ok: usize, fail: usize, decision: LoopDecision) void {
     const ts = @as(u64, @intCast(tri_time.timestamp()));
-    var file = std.fs.cwd().createFile(STATE_PATH, .{}) catch return;
-    defer file.close();
+    const io = tri_io.get();
+    var file = std.Io.Dir.cwd().createFile(io, STATE_PATH, .{}) catch return;
+    defer file.close(io);
     var buf: [512]u8 = undefined;
     const json = std.fmt.bufPrint(&buf,
         \\{{"wake":{d},"ok":{d},"fail":{d},"decision":"{s}","ts":{d}}}
     , .{ wake, ok, fail, decision.toString(), ts }) catch return;
-    file.writeAll(json) catch {};
+    file.writeStreamingAll(io, json) catch {};
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

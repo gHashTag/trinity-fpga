@@ -14,6 +14,7 @@
 // =============================================================================
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 const types = @import("types.zig");
 const json_parser = @import("json_parser.zig");
@@ -443,7 +444,7 @@ fn forgeFasm2Bit(allocator: std.mem.Allocator, args: []const []const u8) !void {
     std.debug.print("  Output:  {s}\n", .{output_path});
 
     // Read FASM file
-    const fasm_content = std.fs.cwd().readFileAlloc(allocator, input_path.?, 10 * 1024 * 1024) catch |err| {
+    const fasm_content = std.Io.Dir.cwd().readFileAlloc(tri_io.get(), input_path.?, allocator, .limited(10 * 1024 * 1024)) catch |err| {
         std.debug.print("  Error: Failed to read {s}: {}\n", .{ input_path.?, err });
         return;
     };

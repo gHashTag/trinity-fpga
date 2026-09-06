@@ -15,6 +15,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const tri_proc = @import("tri_proc");
 const Allocator = std.mem.Allocator;
 const tri_farm = @import("tri_farm.zig");
@@ -260,10 +261,11 @@ fn hubPipeline(allocator: Allocator, force: bool) !void {
     defer if (notify_msg.len > 0 and notify_msg.ptr != "Hub Pipeline complete".ptr) allocator.free(notify_msg);
 
     // Fire-and-forget: spawn tri notify in background
-    var notify_child = std.process.Child.init(&.{ "tri", "notify", notify_msg }, allocator);
-    notify_child.spawn() catch |err| {
+    if (std.process.spawn(tri_io.get(), .{
+        .argv = &.{ "tri", "notify", notify_msg },
+    })) |_| {} else |err| {
         print("  {s}⚠️  Notify spawn failed: {s} (non-fatal){s}\n", .{ YELLOW, @errorName(err), RESET });
-    };
+    }
 
     print("\n{s}════════════════════════════════════════════════════════════{s}\n", .{ DIM, RESET });
     print("{s}✅ HUB PIPELINE COMPLETE{s}\n", .{ GREEN, RESET });
@@ -286,10 +288,7 @@ const HubState = struct {
 };
 
 fn readState(allocator: Allocator) !HubState {
-    const file = try std.fs.cwd().openFile(STATE_PATH, .{});
-    defer file.close();
-
-    const contents = try file.readToEndAlloc(allocator, 16 * 1024);
+    const contents = try std.Io.Dir.cwd().readFileAlloc(tri_io.get(), STATE_PATH, allocator, .limited(16 * 1024));
     defer allocator.free(contents);
 
     const parsed = try std.json.parseFromSlice(std.json.Value, allocator, contents, .{});
@@ -341,11 +340,12 @@ fn saveState(allocator: Allocator, state: HubState) void {
     defer allocator.free(json);
 
     // Ensure .trinity directory exists
-    std.fs.cwd().makePath(".trinity") catch {};
+    const io = tri_io.get();
+    std.Io.Dir.cwd().createDirPath(io, ".trinity") catch {};
 
-    const file = std.fs.cwd().createFile(STATE_PATH, .{}) catch return;
-    defer file.close();
-    file.writeAll(json) catch {};
+    const file = std.Io.Dir.cwd().createFile(io, STATE_PATH, .{}) catch return;
+    defer file.close(io);
+    file.writeStreamingAll(io, json) catch {};
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

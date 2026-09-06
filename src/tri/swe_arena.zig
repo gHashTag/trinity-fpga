@@ -10,6 +10,8 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
+const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 
@@ -330,17 +332,14 @@ fn runLocalBenchmark(allocator: Allocator) !void {
     // Step 1: zig build
     print("  [1/2] zig build...", .{});
     const build_ok = blk: {
-        var child = std.process.Child.init(&.{ "zig", "build" }, allocator);
-        child.stdout_behavior = .Pipe;
-        child.stderr_behavior = .Pipe;
-        _ = child.spawn() catch break :blk false;
-        var stdout_buf: std.ArrayList(u8) = .empty;
-        var stderr_buf: std.ArrayList(u8) = .empty;
-        defer stdout_buf.deinit(allocator);
-        defer stderr_buf.deinit(allocator);
-        child.collectOutput(allocator, &stdout_buf, &stderr_buf, 4 * 1024 * 1024) catch break :blk false;
-        const term = child.wait() catch break :blk false;
-        break :blk switch (term) {
+        const r = tri_proc.run(.{
+            .allocator = allocator,
+            .argv = &.{ "zig", "build" },
+            .max_output_bytes = 4 * 1024 * 1024,
+        }) catch break :blk false;
+        defer allocator.free(r.stdout);
+        defer allocator.free(r.stderr);
+        break :blk switch (r.term) {
             .exited => |code| code == 0,
             else => false,
         };
@@ -355,17 +354,15 @@ fn runLocalBenchmark(allocator: Allocator) !void {
     print("  [2/2] zig build test...", .{});
     var test_output: []const u8 = "";
     const test_ok = blk: {
-        var child = std.process.Child.init(&.{ "zig", "build", "test" }, allocator);
-        child.stdout_behavior = .Pipe;
-        child.stderr_behavior = .Pipe;
-        _ = child.spawn() catch break :blk false;
-        var stdout_buf: std.ArrayList(u8) = .empty;
-        var stderr_buf: std.ArrayList(u8) = .empty;
-        child.collectOutput(allocator, &stdout_buf, &stderr_buf, 4 * 1024 * 1024) catch break :blk false;
-        const term = child.wait() catch break :blk false;
+        const r = tri_proc.run(.{
+            .allocator = allocator,
+            .argv = &.{ "zig", "build", "test" },
+            .max_output_bytes = 4 * 1024 * 1024,
+        }) catch break :blk false;
+        const term = r.term;
         // Zig build test output may go to stdout or stderr — merge both
-        const stdout_data = stdout_buf.toOwnedSlice(allocator) catch "";
-        const stderr_data = stderr_buf.toOwnedSlice(allocator) catch "";
+        const stdout_data = r.stdout;
+        const stderr_data = r.stderr;
         if (stdout_data.len > 0 and stderr_data.len > 0) {
             test_output = std.fmt.allocPrint(allocator, "{s}\n{s}", .{ stdout_data, stderr_data }) catch stderr_data;
             allocator.free(stdout_data);
@@ -426,8 +423,9 @@ fn runLocalBenchmark(allocator: Allocator) !void {
 }
 
 fn saveResult(result: ArenaResult) !void {
-    var file = try std.fs.cwd().createFile(RESULTS_PATH, .{});
-    defer file.close();
+    const io = tri_io.get();
+    var file = try std.Io.Dir.cwd().createFile(io, RESULTS_PATH, .{});
+    defer file.close(io);
 
     var buf: [4096]u8 = undefined;
     const json = std.fmt.bufPrint(&buf, "{{\"task_id\":\"{s}\",\"solver\":\"{s}\",\"solved\":{},\"time_seconds\":{d},\"tokens_used\":{d},\"test_pass_rate\":{d:.4},\"code_quality\":{d:.4},\"cost_usd\":{d:.4}}}", .{
@@ -441,7 +439,7 @@ fn saveResult(result: ArenaResult) !void {
         result.cost_usd,
     }) catch return error.OutOfMemory;
 
-    try file.writeAll(json);
+    try file.writeStreamingAll(io, json);
 }
 
 fn runCompare(allocator: Allocator) void {
@@ -449,14 +447,13 @@ fn runCompare(allocator: Allocator) void {
     print("{s}════════════════════════════════════════════════════════════════{s}\n\n", .{ DIM, RESET });
 
     // Read results from file
-    const file = std.fs.cwd().openFile(RESULTS_PATH, .{}) catch {
-        print("  {s}No results found in {s}{s}\n", .{ DIM, RESULTS_PATH, RESET });
-        print("  {s}Run benchmarks first: tri arena run local{s}\n\n", .{ DIM, RESET });
-        return;
-    };
-    defer file.close();
-
-    const data = file.readToEndAlloc(allocator, 256 * 1024) catch {
+    const io = tri_io.get();
+    const data = std.Io.Dir.cwd().readFileAlloc(io, RESULTS_PATH, allocator, .limited(256 * 1024)) catch |err| {
+        if (err == error.FileNotFound) {
+            print("  {s}No results found in {s}{s}\n", .{ DIM, RESULTS_PATH, RESET });
+            print("  {s}Run benchmarks first: tri arena run local{s}\n\n", .{ DIM, RESET });
+            return;
+        }
         print("  {s}Failed to read results{s}\n\n", .{ DIM, RESET });
         return;
     };

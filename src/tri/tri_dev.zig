@@ -21,6 +21,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 const tri_exit_codes = @import("tri_exit_codes.zig");
@@ -183,8 +184,9 @@ fn copyToFixed(dest: anytype, len_ptr: *u8, src: []const u8) void {
 }
 
 fn saveState(state: DevFarmState) !void {
-    var file = try std.fs.cwd().createFile(STATE_PATH, .{});
-    defer file.close();
+    const io = tri_io.get();
+    var file = try std.Io.Dir.cwd().createFile(io, STATE_PATH, .{});
+    defer file.close(io);
 
     var buf: [32768]u8 = undefined;
     var pos: usize = 0;
@@ -215,14 +217,11 @@ fn saveState(state: DevFarmState) !void {
 
     pos += (std.fmt.bufPrint(buf[pos..], "]}}", .{}) catch return error.OutOfMemory).len;
 
-    try file.writeAll(buf[0..pos]);
+    try file.writeStreamingAll(io, buf[0..pos]);
 }
 
 pub fn loadState(allocator: Allocator) DevFarmState {
-    const file = std.fs.cwd().openFile(STATE_PATH, .{}) catch return .{};
-    defer file.close();
-
-    const contents = file.readToEndAlloc(allocator, 64 * 1024) catch return .{};
+    const contents = std.Io.Dir.cwd().readFileAlloc(tri_io.get(), STATE_PATH, allocator, .limited(64 * 1024)) catch return .{};
     defer allocator.free(contents);
 
     const parsed = std.json.parseFromSlice(std.json.Value, allocator, contents, .{}) catch return .{};
@@ -1111,20 +1110,14 @@ fn printApiError(val: std.json.Value) void {
 }
 
 fn runProcess(allocator: Allocator, argv: []const []const u8) ![]const u8 {
-    var child = std.process.Child.init(argv, allocator);
-    child.stdout_behavior = .Pipe;
-    child.stderr_behavior = .Pipe;
+    const r = try tri_proc.run(.{
+        .allocator = allocator,
+        .argv = argv,
+        .max_output_bytes = 1 * 1024 * 1024,
+    });
+    defer allocator.free(r.stderr);
 
-    _ = try child.spawn();
-
-    var stdout_buf: std.ArrayList(u8) = .empty;
-    var stderr_buf: std.ArrayList(u8) = .empty;
-    defer stderr_buf.deinit(allocator);
-
-    try child.collectOutput(allocator, &stdout_buf, &stderr_buf, 1 * 1024 * 1024);
-    _ = try child.wait();
-
-    return try stdout_buf.toOwnedSlice(allocator);
+    return r.stdout;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1223,13 +1216,13 @@ test "saveState and loadState roundtrip" {
     try std.testing.expect(!loaded.agents[1].has_fitness);
 
     // Cleanup
-    std.fs.cwd().deleteFile(STATE_PATH) catch {};
+    std.Io.Dir.cwd().deleteFile(tri_io.get(), STATE_PATH) catch {};
 }
 
 test "loadState empty returns default" {
     const allocator = std.testing.allocator;
     // Ensure file doesn't exist
-    std.fs.cwd().deleteFile(STATE_PATH) catch {};
+    std.Io.Dir.cwd().deleteFile(tri_io.get(), STATE_PATH) catch {};
     const state = loadState(allocator);
     try std.testing.expectEqual(@as(usize, 0), state.agent_count);
 }

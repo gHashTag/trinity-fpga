@@ -16,6 +16,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 
@@ -182,7 +183,7 @@ pub const Insula = struct {
     /// Initialize Insula logging system
     pub fn init(allocator: Allocator) Self {
         // Ensure directory exists
-        std.fs.cwd().makePath(".trinity") catch {};
+        std.Io.Dir.cwd().createDirPath(tri_io.get(), ".trinity") catch {};
         return .{
             .allocator = allocator,
             .arena = std.heap.ArenaAllocator.init(allocator),
@@ -206,11 +207,12 @@ pub const Insula = struct {
         const json_line = try serializeEvent(&buf, event);
 
         // Append to file (create if not exists)
-        const file = try std.fs.cwd().createFile(self.file_path, .{ .truncate = false });
-        defer file.close();
-        try file.seekFromEnd(0);
-        try file.writeAll(json_line);
-        try file.writeAll("\n");
+        const io = tri_io.get();
+        const file = try std.Io.Dir.cwd().createFile(io, self.file_path, .{ .truncate = false });
+        defer file.close(io);
+        const end = try file.length(io);
+        try file.writePositionalAll(io, json_line, end);
+        try file.writePositionalAll(io, "\n", end + json_line.len);
     }
 
     /// Log event without allocation (buffer-based)
@@ -220,24 +222,28 @@ pub const Insula = struct {
         const json_line = try serializeEventBuffer(&buf, buffer);
 
         // Append to file
-        const file = try std.fs.cwd().createFile(self.file_path, .{ .truncate = false });
-        defer file.close();
-        try file.seekFromEnd(0);
-        try file.writeAll(json_line);
-        try file.writeAll("\n");
+        const io = tri_io.get();
+        const file = try std.Io.Dir.cwd().createFile(io, self.file_path, .{ .truncate = false });
+        defer file.close(io);
+        const end = try file.length(io);
+        try file.writePositionalAll(io, json_line, end);
+        try file.writePositionalAll(io, "\n", end + json_line.len);
     }
 
     /// Get recent events for debugging (optimized with arena allocator)
     pub fn getRecentEvents(self: *Self, limit: usize) !std.ArrayList(SystemEvent) {
-        const file = std.fs.cwd().openFile(self.file_path, .{}) catch {
+        const io = tri_io.get();
+        const file = std.Io.Dir.cwd().openFile(io, self.file_path, .{}) catch {
             return .{ .items = &.{}, .capacity = 0 };
         };
-        defer file.close();
+        defer file.close(io);
 
         const arena_allocator = self.arena.allocator();
 
         // Read entire file into arena (single allocation)
-        const content = try file.readToEndAlloc(arena_allocator, 65536);
+        var read_buf: [4096]u8 = undefined;
+        var file_reader = file.reader(io, &read_buf);
+        const content = try file_reader.interface.allocRemaining(arena_allocator, .limited(65536));
 
         // Use arena for line storage and parsing
         var results = std.ArrayList(SystemEvent).empty;
@@ -301,15 +307,18 @@ pub const Insula = struct {
 
     /// Get events by component filter (optimized: filter during parse)
     pub fn getEventsByComponent(self: *Self, component: []const u8, limit: usize) !std.ArrayList(SystemEvent) {
-        const file = std.fs.cwd().openFile(self.file_path, .{}) catch {
+        const io = tri_io.get();
+        const file = std.Io.Dir.cwd().openFile(io, self.file_path, .{}) catch {
             return .{ .items = &.{}, .capacity = 0 };
         };
-        defer file.close();
+        defer file.close(io);
 
         const arena_allocator = self.arena.allocator();
 
         // Read entire file into arena (single allocation)
-        const content = try file.readToEndAlloc(arena_allocator, 65536);
+        var read_buf: [4096]u8 = undefined;
+        var file_reader = file.reader(io, &read_buf);
+        const content = try file_reader.interface.allocRemaining(arena_allocator, .limited(65536));
 
         var results = std.ArrayList(SystemEvent).empty;
 
@@ -374,15 +383,18 @@ pub const Insula = struct {
 
     /// Get events by event type filter (optimized: filter during parse)
     pub fn getEventsByType(self: *Self, event_type: EventType, limit: usize) !std.ArrayList(SystemEvent) {
-        const file = std.fs.cwd().openFile(self.file_path, .{}) catch {
+        const io = tri_io.get();
+        const file = std.Io.Dir.cwd().openFile(io, self.file_path, .{}) catch {
             return .{ .items = &.{}, .capacity = 0 };
         };
-        defer file.close();
+        defer file.close(io);
 
         const arena_allocator = self.arena.allocator();
 
         // Read entire file into arena (single allocation)
-        const content = try file.readToEndAlloc(arena_allocator, 65536);
+        var read_buf: [4096]u8 = undefined;
+        var file_reader = file.reader(io, &read_buf);
+        const content = try file_reader.interface.allocRemaining(arena_allocator, .limited(65536));
 
         var results = std.ArrayList(SystemEvent).empty;
 
@@ -450,15 +462,18 @@ pub const Insula = struct {
 
     /// Get events by log level filter (optimized: filter during parse)
     pub fn getEventsByLevel(self: *Self, level: LogLevel, limit: usize) !std.ArrayList(SystemEvent) {
-        const file = std.fs.cwd().openFile(self.file_path, .{}) catch {
+        const io = tri_io.get();
+        const file = std.Io.Dir.cwd().openFile(io, self.file_path, .{}) catch {
             return .{ .items = &.{}, .capacity = 0 };
         };
-        defer file.close();
+        defer file.close(io);
 
         const arena_allocator = self.arena.allocator();
 
         // Read entire file into arena (single allocation)
-        const content = try file.readToEndAlloc(arena_allocator, 65536);
+        var read_buf: [4096]u8 = undefined;
+        var file_reader = file.reader(io, &read_buf);
+        const content = try file_reader.interface.allocRemaining(arena_allocator, .limited(65536));
 
         var results = std.ArrayList(SystemEvent).empty;
 
@@ -632,7 +647,7 @@ test "insula_log_event" {
     try insula.logEvent(&event);
 
     // Clean up test file
-    std.fs.cwd().deleteFile(insula.file_path) catch {};
+    std.Io.Dir.cwd().deleteFile(tri_io.get(), insula.file_path) catch {};
 }
 
 test "insula_buffer_serialization" {
@@ -802,16 +817,19 @@ test "insula_log_multiple_events" {
         try insula.logEvent(&event);
     }
 
-    const file = std.fs.cwd().openFile(insula.file_path, .{}) catch {
+    const io = tri_io.get();
+    const file = std.Io.Dir.cwd().openFile(io, insula.file_path, .{}) catch {
         try std.testing.expect(false);
         return;
     };
     defer {
-        file.close();
-        std.fs.cwd().deleteFile(insula.file_path) catch {};
+        file.close(io);
+        std.Io.Dir.cwd().deleteFile(io, insula.file_path) catch {};
     }
 
-    const content = try file.readToEndAlloc(allocator, 4096);
+    var read_buf: [4096]u8 = undefined;
+    var file_reader = file.reader(io, &read_buf);
+    const content = try file_reader.interface.allocRemaining(allocator, .limited(4096));
     defer allocator.free(content);
 
     var line_count: usize = 0;
@@ -869,16 +887,17 @@ test "insula_get_recent_events_empty" {
 
 test "insula_init_creates_directory" {
     const allocator = std.testing.allocator;
-    std.fs.cwd().deleteTree(".trinity") catch {};
+    const io = tri_io.get();
+    std.Io.Dir.cwd().deleteTree(io, ".trinity") catch {};
 
     const insula = Insula.init(allocator);
     _ = insula; // Initialize creates .trinity directory
 
-    const dir = std.fs.cwd().openDir(".trinity", .{}) catch {
+    const dir = std.Io.Dir.cwd().openDir(io, ".trinity", .{}) catch {
         try std.testing.expect(false);
         return;
     };
-    dir.close();
+    dir.close(io);
 
-    std.fs.cwd().deleteTree(".trinity") catch {};
+    std.Io.Dir.cwd().deleteTree(io, ".trinity") catch {};
 }

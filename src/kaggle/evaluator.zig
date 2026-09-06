@@ -11,6 +11,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 
@@ -249,11 +250,12 @@ pub const BatchEvaluator = struct {
             std.debug.print("\n{s}Track: {s} — {s}{s}\n", .{ "\x1b[36m", track.id, track.name, "\x1b[0m" });
 
             // Check if file exists
-            const file = std.fs.cwd().openFile(path, .{}) catch |err| {
+            const io = tri_io.get();
+            const file = std.Io.Dir.cwd().openFile(io, path, .{}) catch |err| {
                 std.debug.print("  {s}✗ File not found: {}{s}\n", .{ "\x1b[31m", err, "\x1b[0m" });
                 continue;
             };
-            file.close();
+            file.close(io);
 
             // Parse CSV
             const CsvParser = @import("csv_parser.zig").CsvParser;

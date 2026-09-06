@@ -1,9 +1,10 @@
 // tool_executor.zig — Execute tools (read_file, write_file, bash, grep, MCP) via std
-// Self-contained: no cross-directory imports. Uses std.fs + std.process.Child only.
+// Self-contained: no cross-directory imports. Uses std.Io + tri_proc only.
 // Phase 6: Permission checks + git checkpoints before writes.
 // Phase 7: MCP tool routing.
 const std = @import("std");
 const tri_io = @import("tri_io");
+const tri_env = @import("tri_env");
 const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 const json = @import("tool_protocol.zig");
@@ -45,19 +46,22 @@ pub const ToolExecutor = struct {
     perms: ?*const permissions.PermissionConfig = null,
     checkpoint: checkpoint_mod.Checkpoint = undefined,
     mcp: ?*mcp_client.McpManager = null,
-    audit_file: ?std.fs.File = null,
+    audit_file: ?std.Io.File = null,
+    /// 0.16 has no seek-to-end, and its positional writes need an explicit
+    /// offset, so the append point of the audit log is tracked here.
+    audit_pos: u64 = 0,
 
     pub fn init(allocator: std.mem.Allocator, perms: ?*const permissions.PermissionConfig, mcp: ?*mcp_client.McpManager) ToolExecutor {
         // Open audit log (append-only JSONL)
-        const audit_path = std.process.getEnvVarOwned(allocator, "AUDIT_LOG_PATH") catch null;
+        const audit_path = tri_env.getEnvVarOwned(allocator, "AUDIT_LOG_PATH") catch null;
         const path = audit_path orelse blk: {
             // Default: ~/.tri-api/audit.jsonl
-            const home = std.process.getEnvVarOwned(allocator, "HOME") catch null;
+            const home = tri_env.getEnvVarOwned(allocator, "HOME") catch null;
             if (home) |h| {
                 defer allocator.free(h);
                 const dir_path = std.fmt.allocPrint(allocator, "{s}/.tri-api", .{h}) catch break :blk null;
                 defer allocator.free(dir_path);
-                std.Io.Dir.makeDirAbsolute(tri_io.get(), dir_path) catch {};
+                std.Io.Dir.createDirAbsolute(tri_io.get(), dir_path, .default_dir) catch {};
                 break :blk std.fmt.allocPrint(allocator, "{s}/.tri-api/audit.jsonl", .{h}) catch null;
             }
             break :blk null;
@@ -69,7 +73,7 @@ pub const ToolExecutor = struct {
             std.Io.Dir.createFileAbsolute(tri_io.get(), p, .{ .truncate = false }) catch null
         else
             null;
-        if (audit) |f| f.seekFromEnd(0) catch {};
+        const audit_pos: u64 = if (audit) |f| (f.length(tri_io.get()) catch 0) else 0;
 
         return .{
             .allocator = allocator,
@@ -77,11 +81,12 @@ pub const ToolExecutor = struct {
             .checkpoint = .{ .allocator = allocator },
             .mcp = mcp,
             .audit_file = audit,
+            .audit_pos = audit_pos,
         };
     }
 
     pub fn deinit(self: *ToolExecutor) void {
-        if (self.audit_file) |f| f.close();
+        if (self.audit_file) |f| f.close(tri_io.get());
     }
 
     /// SEC-05: Secret patterns that must be redacted from logs/output
@@ -142,7 +147,8 @@ pub const ToolExecutor = struct {
         const line = std.fmt.bufPrint(&buf, "{{\"ts\":{d},\"tool\":\"{s}\",\"arg\":\"{s}\",\"result\":\"{s}\"}}\n", .{
             ts, tool, redacted, status,
         }) catch return;
-        _ = f.write(line) catch {};
+        f.writePositionalAll(tri_io.get(), line, self.audit_pos) catch return;
+        self.audit_pos += line.len;
     }
 
     /// Execute a tool by string name — routes to built-in or MCP.
@@ -235,12 +241,7 @@ pub const ToolExecutor = struct {
         if (!isPathSafe(path))
             return .{ .output = "error: path traversal blocked", .is_error = true };
 
-        const file = std.fs.cwd().openFile(path, .{}) catch |err|
-            return self.errResult("read_file: open failed: ", err);
-
-        defer file.close();
-
-        const content = file.readToEndAlloc(self.allocator, 512 * 1024) catch |err|
+        const content = std.Io.Dir.cwd().readFileAlloc(tri_io.get(), path, self.allocator, .limited(512 * 1024)) catch |err|
             return self.errResult("read_file: read failed: ", err);
 
         return .{ .output = content, .is_error = false };
@@ -261,11 +262,12 @@ pub const ToolExecutor = struct {
             return .{ .output = "error: unescape failed", .is_error = true };
         defer self.allocator.free(unescaped);
 
-        const file = std.fs.cwd().createFile(path, .{}) catch |err|
+        const io = tri_io.get();
+        const file = std.Io.Dir.cwd().createFile(io, path, .{}) catch |err|
             return self.errResult("write_file: create failed: ", err);
-        defer file.close();
+        defer file.close(io);
 
-        file.writeAll(unescaped) catch |err|
+        file.writeStreamingAll(io, unescaped) catch |err|
             return self.errResult("write_file: write failed: ", err);
 
         const msg = std.fmt.allocPrint(self.allocator, "wrote {d} bytes to {s}", .{ unescaped.len, path }) catch

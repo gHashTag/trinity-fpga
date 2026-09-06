@@ -547,14 +547,12 @@ fn runMock(allocator: Allocator, args: []const []const u8) !void {
     print("  Parents: {d} | Children: {d} | Ctx mutation: {} | Mode: {s}\n\n", .{ num_parents, num_children, allow_ctx, mode_str });
 
     // Load snapshot JSON
-    const file = std.fs.cwd().openFile(snapshot_path, .{}) catch {
-        print("{s}❌ Cannot open snapshot: {s}{s}\n", .{ RED, snapshot_path, RESET });
-        print("  Generate with: python3 tools/farm_leaderboard.py --json > {s}\n", .{snapshot_path});
-        return;
-    };
-    defer file.close();
-
-    const contents = file.readToEndAlloc(allocator, 1024 * 1024) catch {
+    const contents = std.Io.Dir.cwd().readFileAlloc(tri_io.get(), snapshot_path, allocator, .limited(1024 * 1024)) catch |err| {
+        if (err == error.FileNotFound) {
+            print("{s}❌ Cannot open snapshot: {s}{s}\n", .{ RED, snapshot_path, RESET });
+            print("  Generate with: python3 tools/farm_leaderboard.py --json > {s}\n", .{snapshot_path});
+            return;
+        }
         print("{s}❌ Failed to read snapshot{s}\n", .{ RED, RESET });
         return;
     };
@@ -769,15 +767,16 @@ fn writeMockConfigsJson(
     parent_name_lens: *const [MAX_SERVICES]u8,
     num_children: usize,
 ) void {
-    var out_file = std.fs.cwd().createFile(out_path, .{}) catch {
+    const io = tri_io.get();
+    var out_file = std.Io.Dir.cwd().createFile(io, out_path, .{}) catch {
         print("\n{s}❌ Failed to create {s}{s}\n", .{ RED, out_path, RESET });
         return;
     };
-    defer out_file.close();
+    defer out_file.close(io);
 
-    out_file.writeAll("[\n") catch return;
+    out_file.writeStreamingAll(io, "[\n") catch return;
     for (0..num_children) |ci| {
-        if (ci > 0) out_file.writeAll(",\n") catch return;
+        if (ci > 0) out_file.writeStreamingAll(io, ",\n") catch return;
         const c = &configs_buf[ci];
         const child_name = config_names[ci][0..config_name_lens[ci]];
         const parent_name = parent_names_buf[ci][0..parent_name_lens[ci]];
@@ -798,9 +797,9 @@ fn writeMockConfigsJson(
             c.kill_ppl_30k,
             sacred_str,
         }) catch return;
-        out_file.writeAll(line) catch return;
+        out_file.writeStreamingAll(io, line) catch return;
     }
-    out_file.writeAll("\n]\n") catch return;
+    out_file.writeStreamingAll(io, "\n]\n") catch return;
     print("\n  {s}✅ Configs written → {s}{s}\n", .{ GREEN, out_path, RESET });
 }
 
@@ -816,14 +815,15 @@ fn appendMockLineage(
     sorted_idx: *const [MAX_SERVICES]usize,
     actual_parents: usize,
 ) void {
-    var lineage_file = std.fs.cwd().createFile(lineage_path, .{ .truncate = false }) catch {
+    const io = tri_io.get();
+    var lineage_file = std.Io.Dir.cwd().createFile(io, lineage_path, .{ .truncate = false }) catch {
         print("  {s}⚠️  Failed to open lineage file{s}\n", .{ YELLOW, RESET });
         return;
     };
-    defer lineage_file.close();
+    defer lineage_file.close(io);
 
-    // Seek to end for append
-    lineage_file.seekFromEnd(0) catch {};
+    // Append at end of file
+    var lineage_off = lineage_file.length(io) catch 0;
 
     const ts = tri_time.milliTimestamp();
     for (0..num_children) |ci| {
@@ -852,7 +852,8 @@ fn appendMockLineage(
             c.context,
             ts,
         }) catch continue;
-        lineage_file.writeAll(line) catch continue;
+        lineage_file.writePositionalAll(io, line, lineage_off) catch continue;
+        lineage_off += line.len;
 
         // Dual-write: mutation → hippocampus (permanent learning)
         var ml_summary_buf: [256]u8 = undefined;
@@ -1179,17 +1180,18 @@ fn runStep(allocator: Allocator, args: []const []const u8) !void {
             print("  {s}Action: Auto-enabling NIGHT MODE to prevent further damage{s}\n", .{ DIM, RESET });
 
             // Create night_mode flag
-            if (std.fs.cwd().createFile(".trinity/night_mode", .{})) |night_flag| {
-                defer night_flag.close();
+            const cb_io = tri_io.get();
+            if (std.Io.Dir.cwd().createFile(cb_io, ".trinity/night_mode", .{})) |night_flag| {
+                defer night_flag.close(cb_io);
                 print("  {s}✅ Created .trinity/night_mode — evolution blocked until manual review{s}\n", .{ GREEN, RESET });
 
                 // Create circuit breaker marker with timestamp
-                if (std.fs.cwd().createFile(circuit_breaker_file, .{})) |cb_file| {
-                    defer cb_file.close();
+                if (std.Io.Dir.cwd().createFile(cb_io, circuit_breaker_file, .{})) |cb_file| {
+                    defer cb_file.close(cb_io);
                     const timestamp = tri_time.timestamp();
                     const content = std.fmt.allocPrint(allocator, "Circuit breaker tripped at {d}\nRecent kills (1h): {d}\nThreshold: {d}\n", .{ timestamp, recent_kills, CIRCUIT_BREAKER_THRESHOLD }) catch "";
                     defer allocator.free(content);
-                    cb_file.writeAll(content) catch {};
+                    cb_file.writeStreamingAll(cb_io, content) catch {};
                 } else |err| {
                     print("  {s}❌ Failed to create circuit breaker marker: {s}{s}\n", .{ RED, @errorName(err), RESET });
                 }
@@ -1554,13 +1556,13 @@ fn buildBatchLogQuery(allocator: Allocator, entries: []const BatchLogEntry) !Bat
     try gql_buf.appendSlice(allocator, "query(");
     for (entries, 0..) |_, i| {
         if (i > 0) try gql_buf.appendSlice(allocator, ", ");
-        try gql_buf.writer(allocator).print("$d{d}id: String!, $d{d}lim: Int", .{ i, i });
+        try gql_buf.print(allocator, "$d{d}id: String!, $d{d}lim: Int", .{ i, i });
     }
     try gql_buf.appendSlice(allocator, ") {");
 
     // Build aliased fields: d0: deploymentLogs(deploymentId: $d0id, limit: $d0lim) { ... }
     for (0..entries.len) |i| {
-        try gql_buf.writer(allocator).print(" d{d}: deploymentLogs(deploymentId: $d{d}id, limit: $d{d}lim) {{ timestamp message severity }}", .{ i, i, i });
+        try gql_buf.print(allocator, " d{d}: deploymentLogs(deploymentId: $d{d}id, limit: $d{d}lim) {{ timestamp message severity }}", .{ i, i, i });
     }
     try gql_buf.appendSlice(allocator, " }");
 
@@ -1568,7 +1570,7 @@ fn buildBatchLogQuery(allocator: Allocator, entries: []const BatchLogEntry) !Bat
     try vars_buf.appendSlice(allocator, "{");
     for (entries, 0..) |entry, i| {
         if (i > 0) try vars_buf.appendSlice(allocator, ",");
-        try vars_buf.writer(allocator).print("\"d{d}id\":\"{s}\",\"d{d}lim\":{d}", .{ i, entry.dep_id, i, entry.log_limit });
+        try vars_buf.print(allocator, "\"d{d}id\":\"{s}\",\"d{d}lim\":{d}", .{ i, entry.dep_id, i, entry.log_limit });
     }
     try vars_buf.appendSlice(allocator, "}");
 
@@ -2019,15 +2021,16 @@ pub fn collectMetricsParallel(allocator: Allocator, state: *EvolutionState, api_
 
 /// I6: Append event to JSONL file (append-only, never truncated)
 fn appendEventJsonl(svc_name: []const u8, detail: []const u8, step: u32) void {
-    const file = std.fs.cwd().createFile(EVENTS_JSONL_PATH, .{ .truncate = false }) catch return;
-    defer file.close();
-    // Seek to end for append
-    file.seekFromEnd(0) catch return;
+    const io = tri_io.get();
+    const file = std.Io.Dir.cwd().createFile(io, EVENTS_JSONL_PATH, .{ .truncate = false }) catch return;
+    defer file.close(io);
+    // Append at end of file
+    const evt_off = file.length(io) catch return;
     var buf: [512]u8 = undefined;
     const line = std.fmt.bufPrint(&buf, "{{\"ts\":{d},\"type\":\"health\",\"svc\":\"{s}\",\"detail\":\"{s}\",\"step\":{d}}}\n", .{
         tri_time.milliTimestamp(), svc_name, detail, step,
     }) catch return;
-    file.writeAll(line) catch {};
+    file.writePositionalAll(io, line, evt_off) catch {};
 
     // Dual-write: farm event → hippocampus (observation for routine, error for failures)
     var summary_buf: [256]u8 = undefined;
@@ -2062,52 +2065,32 @@ fn curlGraphQL(allocator: Allocator, token: []const u8, deployment_id: []const u
     const auth_hdr = std.fmt.allocPrint(allocator, "Authorization: Bearer {s}", .{token}) catch return error.OutOfMemory;
     defer allocator.free(auth_hdr);
 
-    var child = std.process.Child.init(&.{
-        "curl",                           "-s",     "--max-time", "15",
-        "-X",                             "POST",   "-H",         "Content-Type: application/json",
-        "-H",                             auth_hdr, "-d",         body,
-        "https://railway.com/graphql/v2",
-    }, allocator);
-    child.stdout_behavior = .Pipe;
-    child.stderr_behavior = .Pipe;
+    const result = tri_proc.run(.{
+        .allocator = allocator,
+        .argv = &.{
+            "curl",                           "-s",     "--max-time", "15",
+            "-X",                             "POST",   "-H",         "Content-Type: application/json",
+            "-H",                             auth_hdr, "-d",         body,
+            "https://railway.com/graphql/v2",
+        },
+        .max_output_bytes = 1 * 1024 * 1024,
+    }) catch return error.ConnectionFailed;
+    allocator.free(result.stderr);
+    errdefer allocator.free(result.stdout);
 
-    _ = child.spawn() catch return error.ConnectionFailed;
-    errdefer {
-        _ = child.kill() catch {};
-        _ = child.wait() catch {};
-    }
-
-    // Read stdout via poll
-    var stdout_buf: std.ArrayList(u8) = .empty;
-    var stderr_buf: std.ArrayList(u8) = .empty;
-    defer stderr_buf.deinit(allocator);
-
-    child.collectOutput(allocator, &stdout_buf, &stderr_buf, 1 * 1024 * 1024) catch {
-        stdout_buf.deinit(allocator);
-        return error.RequestFailed;
-    };
-
-    const term = child.wait() catch {
-        stdout_buf.deinit(allocator);
-        return error.RequestFailed;
-    };
-
-    if (term.exited != 0) {
-        stdout_buf.deinit(allocator);
+    if (result.term != .exited or result.term.exited != 0) {
+        allocator.free(result.stdout);
         return error.RequestFailed;
     }
 
     // Debug: empty response check
-    if (stdout_buf.items.len == 0) {
-        stdout_buf.deinit(allocator);
+    if (result.stdout.len == 0) {
+        allocator.free(result.stdout);
         return error.RequestFailed;
     }
 
     // Transfer ownership of the buffer
-    return stdout_buf.toOwnedSlice(allocator) catch {
-        stdout_buf.deinit(allocator);
-        return error.OutOfMemory;
-    };
+    return result.stdout;
 }
 
 fn extractDeploymentId(root: std.json.Value) ?[]const u8 {
@@ -2843,16 +2826,13 @@ pub fn mutateConfigEx(leader: *const ServiceEntry, prng_seed: u32, allow_ctx_mut
 /// Returns list of worker names that must NEVER be killed by evolution
 fn loadSacredList(allocator: std.mem.Allocator) ![][]const u8 {
     const file_path = ".trinity/sacred_workers.txt";
-    const file = std.fs.cwd().openFile(file_path, .{}) catch |err| {
+    const content = std.Io.Dir.cwd().readFileAlloc(tri_io.get(), file_path, allocator, .limited(1024 * 64)) catch |err| {
         if (err == error.FileNotFound) {
             // No sacred list = no protection
             return allocator.alloc([]const u8, 0);
         }
         return err;
-    };
-    defer file.close();
-
-    const content = try file.readToEndAlloc(allocator, 1024 * 64); // Max 64KB
+    }; // Max 64KB
     defer allocator.free(content);
 
     // Count non-empty, non-comment lines first
@@ -2882,7 +2862,7 @@ fn loadSacredList(allocator: std.mem.Allocator) ![][]const u8 {
 /// Check if .trinity/night_mode flag exists (blocks destructive actions 22:00-08:00)
 fn isNightModeActive() bool {
     const flag_path = ".trinity/night_mode";
-    std.fs.cwd().access(flag_path, .{}) catch |err| {
+    std.Io.Dir.cwd().access(tri_io.get(), flag_path, .{}) catch |err| {
         if (err == error.FileNotFound) return false;
         return false;
     };
@@ -3419,8 +3399,9 @@ pub fn mulberry32(seed: u32) u32 {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 pub fn saveState(state: EvolutionState) !void {
-    var file = try std.fs.cwd().createFile(STATE_PATH, .{});
-    defer file.close();
+    const io = tri_io.get();
+    var file = try std.Io.Dir.cwd().createFile(io, STATE_PATH, .{});
+    defer file.close(io);
 
     // Increased buffer: loss_history adds ~600B/service, 160 services = ~96KB extra
     var buf: [262144]u8 = undefined;
@@ -3482,14 +3463,14 @@ pub fn saveState(state: EvolutionState) !void {
 
     pos += (std.fmt.bufPrint(buf[pos..], "]}}", .{}) catch return error.OutOfMemory).len;
 
-    try file.writeAll(buf[0..pos]);
+    try file.writeStreamingAll(io, buf[0..pos]);
 }
 
 pub fn loadState(allocator: Allocator) !EvolutionState {
-    const file = std.fs.cwd().openFile(STATE_PATH, .{}) catch return error.FileNotFound;
-    defer file.close();
-
-    const contents = file.readToEndAlloc(allocator, 512 * 1024) catch return error.OutOfMemory;
+    const contents = std.Io.Dir.cwd().readFileAlloc(tri_io.get(), STATE_PATH, allocator, .limited(512 * 1024)) catch |err| switch (err) {
+        error.FileNotFound => return error.FileNotFound,
+        else => return error.OutOfMemory,
+    };
     defer allocator.free(contents);
 
     const parsed = std.json.parseFromSlice(std.json.Value, allocator, contents, .{}) catch return error.InvalidJson;
@@ -3657,7 +3638,7 @@ fn printDashboard(state: *const EvolutionState) void {
 
     // Circuit breaker status
     const night_mode = isNightModeActive();
-    const cb_tripped = std.fs.cwd().access(".trinity/circuit_breaker_tripped", .{}) catch null != null;
+    const cb_tripped = std.Io.Dir.cwd().access(tri_io.get(), ".trinity/circuit_breaker_tripped", .{}) catch null != null;
     if (night_mode) {
         print("  {s}🛡️ NIGHT MODE ACTIVE{s} — Destructive actions blocked\n", .{ CYAN, RESET });
         if (cb_tripped) {
@@ -3883,12 +3864,13 @@ fn postToIssue(allocator: Allocator, issue_num: []const u8, state: *const Evolut
 
     // Write to temp file (body may contain special chars)
     const tmp_path = "/tmp/sevo_step_comment.md";
-    const tmp_file = std.fs.cwd().createFile(tmp_path, .{}) catch return;
-    tmp_file.writeAll(body) catch {
-        tmp_file.close();
+    const tmp_io = tri_io.get();
+    const tmp_file = std.Io.Dir.cwd().createFile(tmp_io, tmp_path, .{}) catch return;
+    tmp_file.writeStreamingAll(tmp_io, body) catch {
+        tmp_file.close(tmp_io);
         return;
     };
-    tmp_file.close();
+    tmp_file.close(tmp_io);
 
     // Use tri issue comment (existing CLI) with fallback to gh
     const result = tri_proc.run(.{
@@ -3897,8 +3879,13 @@ fn postToIssue(allocator: Allocator, issue_num: []const u8, state: *const Evolut
         .max_output_bytes = 4096,
     }) catch {
         // Fallback: gh with --repo
-        var child = std.process.Child.init(&.{ "gh", "issue", "comment", issue_num, "--repo", "gHashTag/trinity", "-F", tmp_path }, allocator);
-        _ = child.spawnAndWait() catch {
+        var child = std.process.spawn(tmp_io, .{
+            .argv = &.{ "gh", "issue", "comment", issue_num, "--repo", "gHashTag/trinity", "-F", tmp_path },
+        }) catch {
+            print("  {s}\xe2\x9a\xa0\xef\xb8\x8f  Failed to post to issue #{s}{s}\n", .{ YELLOW, issue_num, RESET });
+            return;
+        };
+        _ = child.wait(tmp_io) catch {
             print("  {s}\xe2\x9a\xa0\xef\xb8\x8f  Failed to post to issue #{s}{s}\n", .{ YELLOW, issue_num, RESET });
             return;
         };
@@ -4285,10 +4272,15 @@ fn runDeploy(allocator: Allocator, args: []const []const u8) !void {
     if (!skip_ci) {
         print("  {s}🔧 Running CI gate (zig build test)...{s}\n", .{ DIM, RESET });
         const ci_argv = [_][]const u8{ "zig", "build", "test" };
-        var child = std.process.Child.init(&ci_argv, allocator);
-        child.stderr_behavior = .Ignore;
-        child.stdout_behavior = .Ignore;
-        _ = child.spawnAndWait() catch {
+        var child = std.process.spawn(tri_io.get(), .{
+            .argv = &ci_argv,
+            .stdout = .ignore,
+            .stderr = .ignore,
+        }) catch {
+            print("  {s}❌ CI gate failed — zig build test error. Use --skip-ci to bypass.{s}\n", .{ RED, RESET });
+            return;
+        };
+        _ = child.wait(tri_io.get()) catch {
             print("  {s}❌ CI gate failed — zig build test error. Use --skip-ci to bypass.{s}\n", .{ RED, RESET });
             return;
         };
@@ -4338,12 +4330,19 @@ fn runDeploy(allocator: Allocator, args: []const []const u8) !void {
         defer allocator.free(num_str);
 
         const gh_argv = [_][]const u8{ "gh", "issue", "comment", num_str, "--body", body };
-        var gh_child = std.process.Child.init(&gh_argv, allocator);
-        gh_child.stderr_behavior = .Ignore;
-        gh_child.stdout_behavior = .Ignore;
-        _ = gh_child.spawnAndWait() catch {
+        const gh_io = tri_io.get();
+        if (std.process.spawn(gh_io, .{
+            .argv = &gh_argv,
+            .stdout = .ignore,
+            .stderr = .ignore,
+        })) |spawned| {
+            var gh_child = spawned;
+            _ = gh_child.wait(gh_io) catch {
+                print("  {s}⚠️  Failed to post to issue #{d}{s}\n", .{ YELLOW, num, RESET });
+            };
+        } else |_| {
             print("  {s}⚠️  Failed to post to issue #{d}{s}\n", .{ YELLOW, num, RESET });
-        };
+        }
         print("  {s}📝 Posted to issue #{d}{s}\n", .{ GREEN, num, RESET });
     }
 }
@@ -4357,10 +4356,7 @@ fn parseMockConfigJson(
     parent_names: *[MAX_SERVICES][64]u8,
     parent_lens: *[MAX_SERVICES]u8,
 ) !usize {
-    const file = try std.fs.cwd().openFile(path, .{});
-    defer file.close();
-
-    const contents = try file.readToEndAlloc(allocator, 1024 * 1024);
+    const contents = try std.Io.Dir.cwd().readFileAlloc(tri_io.get(), path, allocator, .limited(1024 * 1024));
     defer allocator.free(contents);
 
     const parsed = try std.json.parseFromSlice(std.json.Value, allocator, contents, .{});
@@ -4510,9 +4506,10 @@ fn appendDeployLineage(
     success: bool,
 ) void {
     const lineage_path = ".trinity/evolution_lineage.jsonl";
-    var lineage_file = std.fs.cwd().createFile(lineage_path, .{ .truncate = false }) catch return;
-    defer lineage_file.close();
-    lineage_file.seekFromEnd(0) catch {};
+    const io = tri_io.get();
+    var lineage_file = std.Io.Dir.cwd().createFile(io, lineage_path, .{ .truncate = false }) catch return;
+    defer lineage_file.close(io);
+    const lineage_off = lineage_file.length(io) catch 0;
 
     const ts = tri_time.milliTimestamp();
     const sched: []const u8 = config.lr_schedule.toStr();
@@ -4534,7 +4531,7 @@ fn appendDeployLineage(
         config.seed,
         ts,
     }) catch return;
-    lineage_file.writeAll(line) catch return;
+    lineage_file.writePositionalAll(io, line, lineage_off) catch return;
 
     // Dual-write: lineage mutation → hippocampus (permanent learning)
     var lsummary_buf: [256]u8 = undefined;
@@ -4559,10 +4556,11 @@ fn writeDeployTargets(
     accounts_buf: anytype,
 ) void {
     const path = ".trinity/farm/deploy_targets.json";
-    var f = std.fs.cwd().createFile(path, .{}) catch return;
-    defer f.close();
+    const io = tri_io.get();
+    var f = std.Io.Dir.cwd().createFile(io, path, .{}) catch return;
+    defer f.close(io);
 
-    f.writeAll("[\n") catch return;
+    f.writeStreamingAll(io, "[\n") catch return;
     for (0..deploy_count) |di| {
         const ci = selected_indices[di];
         const c = &configs[ci];
@@ -4577,10 +4575,10 @@ fn writeDeployTargets(
         const line = std.fmt.bufPrint(&line_buf,
             \\  {{"config":"{s}","service":"{s}","svc_id":"{s}","acct_idx":{d},"acct_name":"{s}","sacred":{s}}}
         , .{ cfg_name, tgt_name, tgt_id, t.acct_idx, acct_name[0..@min(acct_name.len, 16)], sacred_str }) catch continue;
-        f.writeAll(line) catch continue;
-        if (di + 1 < deploy_count) f.writeAll(",\n") catch {} else f.writeAll("\n") catch {};
+        f.writeStreamingAll(io, line) catch continue;
+        if (di + 1 < deploy_count) f.writeStreamingAll(io, ",\n") catch {} else f.writeStreamingAll(io, "\n") catch {};
     }
-    f.writeAll("]\n") catch return;
+    f.writeStreamingAll(io, "]\n") catch return;
     print("  {s}📄 Wrote {s}{s}\n", .{ GREEN, path, RESET });
 }
 
@@ -4713,14 +4711,12 @@ fn runCollect(allocator: Allocator, args: []const []const u8) !void {
     }
 
     // Load deploy targets JSON
-    const targets_file = std.fs.cwd().openFile(targets_path, .{}) catch {
-        print("{s}❌ Cannot open deploy targets: {s}{s}\n", .{ RED, targets_path, RESET });
-        print("   Run `tri farm evolve deploy --execute` first to generate deploy_targets.json\n", .{});
-        return;
-    };
-    defer targets_file.close();
-
-    const targets_data = targets_file.readToEndAlloc(allocator, 1024 * 1024) catch {
+    const targets_data = std.Io.Dir.cwd().readFileAlloc(tri_io.get(), targets_path, allocator, .limited(1024 * 1024)) catch |err| {
+        if (err == error.FileNotFound) {
+            print("{s}❌ Cannot open deploy targets: {s}{s}\n", .{ RED, targets_path, RESET });
+            print("   Run `tri farm evolve deploy --execute` first to generate deploy_targets.json\n", .{});
+            return;
+        }
         print("{s}❌ Failed to read {s}{s}\n", .{ RED, targets_path, RESET });
         return;
     };
@@ -5084,13 +5080,10 @@ fn runInspect(allocator: Allocator, args: []const []const u8) !void {
     };
 
     // Load deploy targets
-    const targets_file = std.fs.cwd().openFile(targets_path, .{}) catch {
+    const targets_data = std.Io.Dir.cwd().readFileAlloc(tri_io.get(), targets_path, allocator, .limited(1024 * 1024)) catch {
         print("{s}❌ Cannot open {s}. Run deploy first.{s}\n", .{ RED, targets_path, RESET });
         return;
     };
-    defer targets_file.close();
-
-    const targets_data = targets_file.readToEndAlloc(allocator, 1024 * 1024) catch return;
     defer allocator.free(targets_data);
 
     const targets_parsed = std.json.parseFromSlice(std.json.Value, allocator, targets_data, .{}) catch return;
@@ -5562,9 +5555,10 @@ fn parseLiveMetrics(msg: []const u8, step: *u32, ppl: *f32, best: *f32) void {
 /// Save live state to JSON for /tri skill integration
 fn saveLiveLogState(svc_name: []const u8, step: u32, ppl_val: f32, best_ppl_val: f32, polls: u32) void {
     const path = ".trinity/farm/live_logs.json";
-    std.fs.cwd().makePath(".trinity/farm") catch {};
-    var f = std.fs.cwd().createFile(path, .{}) catch return;
-    defer f.close();
+    const io = tri_io.get();
+    std.Io.Dir.cwd().createDirPath(io, ".trinity/farm") catch {};
+    var f = std.Io.Dir.cwd().createFile(io, path, .{}) catch return;
+    defer f.close(io);
 
     var buf: [512]u8 = undefined;
     const content = std.fmt.bufPrint(&buf,
@@ -5572,7 +5566,7 @@ fn saveLiveLogState(svc_name: []const u8, step: u32, ppl_val: f32, best_ppl_val:
     ++ "\n", .{
         svc_name, step, ppl_val, best_ppl_val, polls, tri_time.timestamp(),
     }) catch return;
-    f.writeAll(content) catch {};
+    f.writeStreamingAll(io, content) catch {};
 }
 
 /// Send Telegram notification with live stats
@@ -5596,9 +5590,10 @@ fn sendLiveTelegram(allocator: Allocator, svc_name: []const u8, step: u32, ppl_v
 
 fn writeHypotheses() void {
     const hyp_path = ".trinity/farm/hypotheses.json";
-    var f = std.fs.cwd().createFile(hyp_path, .{}) catch return;
-    defer f.close();
-    f.writeAll(
+    const io = tri_io.get();
+    var f = std.Io.Dir.cwd().createFile(io, hyp_path, .{}) catch return;
+    defer f.close(io);
+    f.writeStreamingAll(io,
         \\[
         \\  {"id":"H1","name":"Sacred early convergence","criterion":"sacred avg PPL@10K < random by ≥1.0"},
         \\  {"id":"H2","name":"Sacred reduces spikes","criterion":"sacred avg spikes < random avg spikes"}
@@ -5617,15 +5612,16 @@ fn writeAbResults(
     random_avg: f32,
 ) void {
     _ = allocator;
-    var f = std.fs.cwd().createFile(path, .{}) catch return;
-    defer f.close();
+    const io = tri_io.get();
+    var f = std.Io.Dir.cwd().createFile(io, path, .{}) catch return;
+    defer f.close(io);
 
     const ts = tri_time.milliTimestamp();
     var hdr_buf: [256]u8 = undefined;
     const hdr = std.fmt.bufPrint(&hdr_buf,
         \\{{"timestamp":{d},"configs":[
     ++ "\n", .{ts}) catch return;
-    f.writeAll(hdr) catch return;
+    f.writeStreamingAll(io, hdr) catch return;
 
     for (0..count) |ci| {
         const dt = &targets[ci];
@@ -5646,15 +5642,15 @@ fn writeAbResults(
             m.ppl_20k,                   m.best_ppl, m.spikes,
             status_str,
         }) catch continue;
-        f.writeAll(line) catch continue;
-        if (ci + 1 < count) f.writeAll(",\n") catch {} else f.writeAll("\n") catch {};
+        f.writeStreamingAll(io, line) catch continue;
+        if (ci + 1 < count) f.writeStreamingAll(io, ",\n") catch {} else f.writeStreamingAll(io, "\n") catch {};
     }
 
     var summary_buf: [256]u8 = undefined;
     const summary = std.fmt.bufPrint(&summary_buf,
         \\],"summary":{{"sacred_avg_20k":{d:.1},"random_avg_20k":{d:.1}}}}}
     ++ "\n", .{ sacred_avg, random_avg }) catch return;
-    f.writeAll(summary) catch return;
+    f.writeStreamingAll(io, summary) catch return;
 
     print("  {s}📄 Wrote {s}{s}\n", .{ GREEN, path, RESET });
 }
@@ -5698,10 +5694,16 @@ fn postAbToIssue(
     defer allocator.free(num_str);
 
     const gh_argv = [_][]const u8{ "gh", "issue", "comment", num_str, "--body", body_buf[0..pos] };
-    var gh_child = std.process.Child.init(&gh_argv, allocator);
-    gh_child.stderr_behavior = .Ignore;
-    gh_child.stdout_behavior = .Ignore;
-    _ = gh_child.spawnAndWait() catch {
+    const gh_io = tri_io.get();
+    var gh_child = std.process.spawn(gh_io, .{
+        .argv = &gh_argv,
+        .stdout = .ignore,
+        .stderr = .ignore,
+    }) catch {
+        print("  {s}⚠️  Failed to post to issue #{d}{s}\n", .{ YELLOW, issue_num, RESET });
+        return;
+    };
+    _ = gh_child.wait(gh_io) catch {
         print("  {s}⚠️  Failed to post to issue #{d}{s}\n", .{ YELLOW, issue_num, RESET });
         return;
     };
@@ -6265,9 +6267,7 @@ const NotifyState = struct {
 };
 
 fn loadNotifyState(allocator: Allocator) NotifyState {
-    const file = std.fs.cwd().openFile(NOTIFY_STATE_PATH, .{}) catch return .{};
-    defer file.close();
-    const contents = file.readToEndAlloc(allocator, 4096) catch return .{};
+    const contents = std.Io.Dir.cwd().readFileAlloc(tri_io.get(), NOTIFY_STATE_PATH, allocator, .limited(4096)) catch return .{};
     defer allocator.free(contents);
     const parsed = std.json.parseFromSlice(std.json.Value, allocator, contents, .{}) catch return .{};
     defer parsed.deinit();
@@ -6284,9 +6284,10 @@ fn loadNotifyState(allocator: Allocator) NotifyState {
 
 fn saveNotifyState(ns: *const NotifyState) void {
     // Ensure directory exists
-    std.fs.cwd().makePath(".trinity/farm") catch {};
-    var file = std.fs.cwd().createFile(NOTIFY_STATE_PATH, .{}) catch return;
-    defer file.close();
+    const io = tri_io.get();
+    std.Io.Dir.cwd().createDirPath(io, ".trinity/farm") catch {};
+    var file = std.Io.Dir.cwd().createFile(io, NOTIFY_STATE_PATH, .{}) catch return;
+    defer file.close(io);
     var buf: [512]u8 = undefined;
     const name = if (ns.last_best_name_len > 0)
         ns.last_best_name[0..ns.last_best_name_len]
@@ -6295,7 +6296,7 @@ fn saveNotifyState(ns: *const NotifyState) void {
     const json = std.fmt.bufPrint(&buf, "{{\"last_best_ppl\":{d:.2},\"last_best_name\":\"{s}\",\"last_event_count\":{d},\"last_timestamp\":{d},\"last_leader_step\":{d}}}", .{
         ns.last_best_ppl, name, ns.last_event_count, ns.last_timestamp, ns.last_leader_step,
     }) catch return;
-    file.writeAll(json) catch {};
+    file.writeStreamingAll(io, json) catch {};
 }
 
 fn runNotify(allocator: Allocator, args: []const []const u8) !void {
@@ -6792,12 +6793,7 @@ fn serveEvents(allocator: Allocator, stream: std.net.Stream) void {
 }
 
 fn serveLineage(allocator: Allocator, stream: std.net.Stream) void {
-    const file = std.fs.cwd().openFile(LINEAGE_PATH, .{}) catch {
-        sendJson(stream, "[]");
-        return;
-    };
-    defer file.close();
-    const contents = file.readToEndAlloc(allocator, 256 * 1024) catch {
+    const contents = std.Io.Dir.cwd().readFileAlloc(tri_io.get(), LINEAGE_PATH, allocator, .limited(256 * 1024)) catch {
         sendJson(stream, "[]");
         return;
     };
@@ -7868,9 +7864,10 @@ test "parseMockConfigJson fields" {
 
     const tmp_path = "/tmp/trinity_test_deploy_configs.json";
     {
-        var f = try std.Io.Dir.createFileAbsolute(tri_io.get(), tmp_path, .{});
-        defer f.close();
-        try f.writeAll(test_json);
+        const io = tri_io.get();
+        var f = try std.Io.Dir.createFileAbsolute(io, tmp_path, .{});
+        defer f.close(io);
+        try f.writeStreamingAll(io, test_json);
     }
     defer std.Io.Dir.deleteFileAbsolute(tri_io.get(), tmp_path) catch {};
 

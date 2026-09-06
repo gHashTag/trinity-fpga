@@ -13,6 +13,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 const needle = @import("needle.zig");
@@ -164,10 +165,10 @@ pub const NeedleChecker = struct {
         }
 
         // Try to parse (not compile to avoid dependency issues)
-        const result = std.process.Child.exec(
-            self.allocator,
-            &.{ "zig", "build", "-n", "--summary", "all", "-Mstandard", "-femit-bin=null", tmp_path },
-        ) catch |err| {
+        const result = tri_proc.run(.{
+            .allocator = self.allocator,
+            .argv = &.{ "zig", "build", "-n", "--summary", "all", "-Mstandard", "-femit-bin=null", tmp_path },
+        }) catch |err| {
             if (err == error.FileNotFound) {
                 // zig not found in PATH
                 return true; // Assume OK if zig not available
@@ -179,7 +180,11 @@ pub const NeedleChecker = struct {
             self.allocator.free(result.stderr);
         }
 
-        return result.term == .exited and result.exit_code == 0;
+        // RunResult carries the status inside `term`; there is no exit_code field.
+        return switch (result.term) {
+            .exited => |code| code == 0,
+            else => false,
+        };
     }
 };
 
@@ -195,7 +200,7 @@ pub fn checkSource(allocator: std.mem.Allocator, source: []const u8, file_path: 
 
 /// Check file on disk
 pub fn checkFile(allocator: std.mem.Allocator, file_path: []const u8) !needle.EditReport {
-    const source = try std.fs.cwd().readFileAlloc(allocator, file_path, 10_000_000);
+    const source = try std.Io.Dir.cwd().readFileAlloc(tri_io.get(), file_path, allocator, .limited(10_000_000));
     defer allocator.free(source);
 
     return checkSource(allocator, source, file_path);
@@ -373,7 +378,7 @@ pub fn runParseCheck(allocator: std.mem.Allocator, file_path: []const u8) !Parse
     errdefer result.deinit();
 
     // Read source file with null-terminator for Zig AST parser
-    const source = try std.fs.cwd().readFileAllocOptions(allocator, file_path, 10_000_000, null, .@"1", 0);
+    const source = try std.Io.Dir.cwd().readFileAllocOptions(tri_io.get(), file_path, allocator, .limited(10_000_000), .@"1", 0);
     defer allocator.free(source);
 
     // Use Zig's AST parser for real parse checking

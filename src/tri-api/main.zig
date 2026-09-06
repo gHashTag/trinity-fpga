@@ -2,6 +2,7 @@
 // No claude CLI dependency. Talks to api.anthropic.com/v1/messages directly.
 // Self-contained in src/tri-api/. Issues #60, #64, #66, #67.
 const std = @import("std");
+const tri_env = @import("tri_env");
 const tri_io = @import("tri_io");
 const proto = @import("tool_protocol.zig");
 const executor = @import("tool_executor.zig");
@@ -75,14 +76,14 @@ pub fn main() !void {
     defer store.deinit();
 
     // Read API key (required for all modes except --serve)
-    const api_key = std.process.getEnvVarOwned(allocator, "ANTHROPIC_API_KEY") catch {
+    const api_key = tri_env.getEnvVarOwned(allocator, "ANTHROPIC_API_KEY") catch {
         std.debug.print("error: ANTHROPIC_API_KEY not set\n", .{});
         std.process.exit(1);
     };
     defer allocator.free(api_key);
 
     // Read base URL (supports z.ai, custom proxies)
-    const api_base_owned = std.process.getEnvVarOwned(allocator, "ANTHROPIC_BASE_URL") catch null;
+    const api_base_owned = tri_env.getEnvVarOwned(allocator, "ANTHROPIC_BASE_URL") catch null;
     defer if (api_base_owned) |b| allocator.free(b);
     const api_base = if (api_base_owned) |b| b else default_api_base;
 
@@ -94,9 +95,9 @@ pub fn main() !void {
     if (do_list_sessions) {
         if (store.listSessions()) |list| {
             defer allocator.free(list);
-            const stdout_file = std.fs.File.stdout();
+            const stdout_file = std.Io.File.stdout();
             var write_buf: [4096]u8 = undefined;
-            var w = stdout_file.writer(&write_buf);
+            var w = stdout_file.writer(tri_io.get(), &write_buf);
             std.Io.Writer.writeAll(&w.interface, list) catch |err| {
                 std.log.debug("tri-api/main: failed to write session list: {}", .{err});
             };
@@ -196,7 +197,13 @@ pub fn main() !void {
                 }
                 try messages.appendSlice(allocator, ",{\"role\":\"user\",\"content\":\"");
             }
-            try proto.writeJsonEscaped(messages.writer(allocator), input);
+            {
+                // 0.16 ArrayList has no writer(); Allocating borrows the list's
+                // buffer and toArrayList hands it back with the appended bytes.
+                var aw: std.Io.Writer.Allocating = .fromArrayList(allocator, &messages);
+                defer messages = aw.toArrayList();
+                try proto.writeJsonEscaped(&aw.writer, input);
+            }
             try messages.appendSlice(allocator, "\"}");
 
             // Run agentic loop for this prompt
@@ -256,7 +263,11 @@ pub fn main() !void {
     } else {
         try messages.appendSlice(allocator, "[{\"role\":\"user\",\"content\":\"");
     }
-    try proto.writeJsonEscaped(messages.writer(allocator), prompt);
+    {
+        var aw: std.Io.Writer.Allocating = .fromArrayList(allocator, &messages);
+        defer messages = aw.toArrayList();
+        try proto.writeJsonEscaped(&aw.writer, prompt);
+    }
     try messages.appendSlice(allocator, "\"}");
 
     var tool_exec = executor.ToolExecutor.init(allocator, &perms, &mcp);
@@ -331,21 +342,29 @@ fn runAgenticLoop(
         // System prompt (CLAUDE.md + memory)
         if (system_prompt) |sp| {
             request_body.appendSlice(allocator, ",\"system\":\"") catch break;
-            proto.writeJsonEscaped(request_body.writer(allocator), sp) catch break;
+            {
+                var aw: std.Io.Writer.Allocating = .fromArrayList(allocator, &request_body);
+                defer request_body = aw.toArrayList();
+                proto.writeJsonEscaped(&aw.writer, sp) catch break;
+            }
             request_body.appendSlice(allocator, "\"") catch break;
         }
 
         request_body.appendSlice(allocator, ",\"tools\":") catch break;
 
         // Write built-in + MCP tool definitions
-        const rw = request_body.writer(allocator);
-        rw.writeByte('[') catch break;
-        proto.writeToolDefinitions(rw) catch break;
-        if (mcp.tools.items.len > 0) {
-            rw.writeByte(',') catch break;
-            mcp.writeToolDefinitions(rw) catch break;
+        {
+            var aw: std.Io.Writer.Allocating = .fromArrayList(allocator, &request_body);
+            defer request_body = aw.toArrayList();
+            const rw = &aw.writer;
+            rw.writeByte('[') catch break;
+            proto.writeToolDefinitions(rw) catch break;
+            if (mcp.tools.items.len > 0) {
+                rw.writeByte(',') catch break;
+                mcp.writeToolDefinitions(rw) catch break;
+            }
+            rw.writeByte(']') catch break;
         }
-        rw.writeByte(']') catch break;
 
         request_body.appendSlice(allocator, ",\"messages\":") catch break;
         request_body.appendSlice(allocator, messages.items) catch break;
@@ -385,11 +404,12 @@ fn runAgenticLoop(
                     if (ui_opt) |ui| {
                         ui.printAssistant(text);
                     } else {
-                        const stdout = std.fs.File.stdout();
-                        stdout.writeAll(text) catch |err| {
+                        const out_io = tri_io.get();
+                        const stdout = std.Io.File.stdout();
+                        stdout.writeStreamingAll(out_io, text) catch |err| {
                             std.log.debug("tri-api/main: failed to write text output: {}", .{err});
                         };
-                        stdout.writeAll("\n") catch |err| {
+                        stdout.writeStreamingAll(out_io, "\n") catch |err| {
                             std.log.debug("tri-api/main: failed to write newline: {}", .{err});
                         };
                     }
@@ -411,7 +431,11 @@ fn runAgenticLoop(
 
                     // Append tool result to messages
                     messages.appendSlice(allocator, ",{\"role\":\"user\",\"content\":[") catch break;
-                    proto.writeToolResult(messages.writer(allocator), tool.id, result.output, result.is_error) catch break;
+                    {
+                        var aw: std.Io.Writer.Allocating = .fromArrayList(allocator, messages);
+                        defer messages.* = aw.toArrayList();
+                        proto.writeToolResult(&aw.writer, tool.id, result.output, result.is_error) catch break;
+                    }
                     messages.appendSlice(allocator, "]}") catch break;
                 },
             }
@@ -431,12 +455,13 @@ fn runAgenticLoop(
 /// Load MCP servers from user + project settings.json.
 fn loadMcpServers(allocator: std.mem.Allocator, mcp: *mcp_client.McpManager) void {
     // Try project-local .tri-api/settings.json first, then user ~/.tri-api/settings.json
+    const io = tri_io.get();
     const settings_data = blk: {
-        break :blk std.fs.cwd().readFileAlloc(allocator, ".trinity/api/settings.json", 64 * 1024) catch {
+        break :blk std.Io.Dir.cwd().readFileAlloc(io, ".trinity/api/settings.json", allocator, .limited(64 * 1024)) catch {
             const home = std.posix.getenv("HOME") orelse break :blk @as(?[]const u8, null);
             var path_buf: [512]u8 = undefined;
             const path = std.fmt.bufPrint(&path_buf, "{s}/.tri-api/settings.json", .{home}) catch break :blk @as(?[]const u8, null);
-            break :blk std.fs.cwd().readFileAlloc(allocator, path, 64 * 1024) catch @as(?[]const u8, null);
+            break :blk std.Io.Dir.cwd().readFileAlloc(io, path, allocator, .limited(64 * 1024)) catch @as(?[]const u8, null);
         };
     };
     if (settings_data == null) return;
@@ -511,7 +536,7 @@ fn httpPost(allocator: std.mem.Allocator, url: []const u8, body: []const u8, rot
         break :blk key;
     } else blk: {
         // Fallback to direct ANTHROPIC_API_KEY (for --serve mode or no rotator)
-        const key = std.process.getEnvVarOwned(allocator, "ANTHROPIC_API_KEY") catch {
+        const key = tri_env.getEnvVarOwned(allocator, "ANTHROPIC_API_KEY") catch {
             std.debug.print("error: ANTHROPIC_API_KEY not set\n", .{});
             std.process.exit(1);
         };

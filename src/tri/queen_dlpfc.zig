@@ -10,6 +10,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const array_list = std.array_list;
@@ -2042,7 +2043,7 @@ test "dlpfc — generateGoalsFromTrends v-zone trend" {
 /// Check if .trinity/night_mode flag exists (blocks destructive actions 22:00-08:00)
 fn isNightModeActive() bool {
     const flag_path = ".trinity/night_mode";
-    std.fs.cwd().access(flag_path, .{}) catch |err| {
+    std.Io.Dir.cwd().access(tri_io.get(), flag_path, .{}) catch |err| {
         if (err == error.FileNotFound) return false;
         return false;
     };
@@ -2052,7 +2053,7 @@ fn isNightModeActive() bool {
 /// Check if circuit breaker was tripped (auto-enabled night mode after too many kills)
 fn isCircuitBreakerTripped() bool {
     const cb_path = ".trinity/circuit_breaker_tripped";
-    std.fs.cwd().access(cb_path, .{}) catch |err| {
+    std.Io.Dir.cwd().access(tri_io.get(), cb_path, .{}) catch |err| {
         if (err == error.FileNotFound) return false;
         return false;
     };
@@ -2062,11 +2063,9 @@ fn isCircuitBreakerTripped() bool {
 /// Check if a service name is in the sacred workers list
 fn isSacredWorker(svc_name: []const u8) bool {
     const file_path = ".trinity/sacred_workers.txt";
-    const file = std.fs.cwd().openFile(file_path, .{}) catch return false;
-    defer file.close();
 
     var buf: [4096]u8 = undefined;
-    const content = file.readAll(&buf) catch return false;
+    const content = std.Io.Dir.cwd().readFile(tri_io.get(), file_path, &buf) catch return false;
 
     var iter = std.mem.splitScalar(u8, content, '\n');
     while (iter.next()) |line| {

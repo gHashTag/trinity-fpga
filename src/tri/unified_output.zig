@@ -44,6 +44,7 @@
 //! - https://bettercli.org/design/exit-codes/
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 const tri_config = @import("tri_config.zig");
 const exit_codes = @import("tri_exit_codes.zig");
@@ -471,118 +472,121 @@ pub const UnifiedOutput = struct {
 
     /// Generate JSON output (P0.2 compliant)
     pub fn toJson(self: *const UnifiedOutput) ![]const u8 {
-        var buf = try std.ArrayList(u8).initCapacity(self.allocator, 4096);
-        defer buf.deinit(self.allocator);
+        // 0.16 removed ArrayList.writer; an Allocating writer is the
+        // replacement and owns the same growable buffer.
+        var aw: std.Io.Writer.Allocating = try .initCapacity(self.allocator, 4096);
+        defer aw.deinit();
+        const w = &aw.writer;
 
         // Opening brace
-        try buf.append(self.allocator, '{');
+        try w.writeByte('{');
 
         // schema_version (immutable identifier)
-        try buf.print(self.allocator, "\"schema_version\":\"{s}\"", .{SCHEMA_VERSION});
+        try w.print("\"schema_version\":\"{s}\"", .{SCHEMA_VERSION});
 
         // status
-        try buf.print(self.allocator, ",\"status\":\"{s}\"", .{self.status.toString()});
+        try w.print(",\"status\":\"{s}\"", .{self.status.toString()});
 
         // command
-        try buf.print(self.allocator, ",\"command\":\"{s}\"", .{self.command_name});
+        try w.print(",\"command\":\"{s}\"", .{self.command_name});
 
         // namespace
-        try buf.print(self.allocator, ",\"namespace\":\"{s}\"", .{self.namespace.toString()});
+        try w.print(",\"namespace\":\"{s}\"", .{self.namespace.toString()});
 
         // exit_code
-        try buf.print(self.allocator, ",\"exit_code\":{d}", .{@intFromEnum(self.getExitCode())});
+        try w.print(",\"exit_code\":{d}", .{@intFromEnum(self.getExitCode())});
 
         // summary (JSON-escaped)
-        try buf.appendSlice(self.allocator, ",\"summary\":\"");
-        try jsonEscapeString(buf.writer(self.allocator), self.summary);
-        try buf.appendSlice(self.allocator, "\"");
+        try w.writeAll(",\"summary\":\"");
+        try jsonEscapeString(w, self.summary);
+        try w.writeAll("\"");
 
         // started_at, finished_at (Unix epoch timestamps)
-        try buf.print(self.allocator, ",\"started_at\":{d}", .{formatTimestamp(self.start_time)});
-        try buf.print(self.allocator, ",\"finished_at\":{d}", .{formatTimestamp(self.end_time)});
+        try w.print(",\"started_at\":{d}", .{formatTimestamp(self.start_time)});
+        try w.print(",\"finished_at\":{d}", .{formatTimestamp(self.end_time)});
 
         // duration_ms
         if (self.metrics.get("duration_ms")) |duration| {
-            try buf.print(self.allocator, ",\"duration_ms\":{d}", .{duration});
+            try w.print(",\"duration_ms\":{d}", .{duration});
         }
 
         // metrics
-        try buf.appendSlice(self.allocator, ",\"metrics\":{");
+        try w.writeAll(",\"metrics\":{");
         var first_metric = true;
         var metrics_iter = self.metrics.iterator();
         while (metrics_iter.next()) |entry| {
-            if (!first_metric) try buf.append(self.allocator, ',');
+            if (!first_metric) try w.writeByte(',');
             first_metric = false;
-            try buf.print(self.allocator, "\"{s}\":{d}", .{ entry.key_ptr.*, entry.value_ptr.* });
+            try w.print("\"{s}\":{d}", .{ entry.key_ptr.*, entry.value_ptr.* });
         }
-        try buf.append(self.allocator, '}');
+        try w.writeByte('}');
 
         // artifacts (optional, only if present)
         if (self.artifacts.items.len > 0) {
-            try buf.appendSlice(self.allocator, ",\"artifacts\":[");
+            try w.writeAll(",\"artifacts\":[");
             for (self.artifacts.items, 0..) |artifact, i| {
-                if (i > 0) try buf.append(self.allocator, ',');
-                try buf.append(self.allocator, '{');
-                try buf.print(self.allocator, "\"filename\":\"{s}\",\"size\":{d}", .{ artifact.filename, artifact.size });
+                if (i > 0) try w.writeByte(',');
+                try w.writeByte('{');
+                try w.print("\"filename\":\"{s}\",\"size\":{d}", .{ artifact.filename, artifact.size });
                 if (artifact.checksum) |cs| {
-                    try buf.print(self.allocator, ",\"checksum\":\"{s}\"", .{cs});
+                    try w.print(",\"checksum\":\"{s}\"", .{cs});
                 }
                 if (!std.mem.eql(u8, artifact.artifact_type, "unknown")) {
-                    try buf.print(self.allocator, ",\"type\":\"{s}\"", .{artifact.artifact_type});
+                    try w.print(",\"type\":\"{s}\"", .{artifact.artifact_type});
                 }
-                try buf.append(self.allocator, '}');
+                try w.writeByte('}');
             }
-            try buf.append(self.allocator, ']');
+            try w.writeByte(']');
         }
 
         // warnings (optional, only if present)
         if (self.warnings.items.len > 0) {
-            try buf.appendSlice(self.allocator, ",\"warnings\":[");
+            try w.writeAll(",\"warnings\":[");
             for (self.warnings.items, 0..) |warn, i| {
-                if (i > 0) try buf.append(self.allocator, ',');
-                try buf.append(self.allocator, '{');
-                try buf.print(self.allocator, "\"code\":\"{s}\",\"message\":\"", .{warn.code});
-                try jsonEscapeString(buf.writer(self.allocator), warn.message);
-                try buf.appendSlice(self.allocator, "\"}");
+                if (i > 0) try w.writeByte(',');
+                try w.writeByte('{');
+                try w.print("\"code\":\"{s}\",\"message\":\"", .{warn.code});
+                try jsonEscapeString(w, warn.message);
+                try w.writeAll("\"}");
             }
-            try buf.append(self.allocator, ']');
+            try w.writeByte(']');
         }
 
         // errors (optional, only if present)
         if (self.errors.items.len > 0) {
-            try buf.appendSlice(self.allocator, ",\"errors\":[");
+            try w.writeAll(",\"errors\":[");
             for (self.errors.items, 0..) |err, i| {
-                if (i > 0) try buf.append(self.allocator, ',');
-                try buf.append(self.allocator, '{');
-                try buf.print(self.allocator, "\"code\":\"{s}\",\"message\":\"", .{err.code});
-                try jsonEscapeString(buf.writer(self.allocator), err.message);
-                try buf.appendSlice(self.allocator, "\"}");
+                if (i > 0) try w.writeByte(',');
+                try w.writeByte('{');
+                try w.print("\"code\":\"{s}\",\"message\":\"", .{err.code});
+                try jsonEscapeString(w, err.message);
+                try w.writeAll("\"}");
             }
-            try buf.append(self.allocator, ']');
+            try w.writeByte(']');
         }
 
         // data (optional) - raw JSON string directly appended
         if (self.data_raw) |raw_json| {
-            try buf.appendSlice(self.allocator, ",\"data\":");
-            try buf.appendSlice(self.allocator, raw_json);
+            try w.writeAll(",\"data\":");
+            try w.writeAll(raw_json);
         }
 
         // next_actions (optional, only if present)
         if (self.next_actions.items.len > 0) {
-            try buf.appendSlice(self.allocator, ",\"next_actions\":[");
+            try w.writeAll(",\"next_actions\":[");
             for (self.next_actions.items, 0..) |action, i| {
-                if (i > 0) try buf.append(self.allocator, ',');
-                try buf.append(self.allocator, '"');
-                try jsonEscapeString(buf.writer(self.allocator), action);
-                try buf.append(self.allocator, '"');
+                if (i > 0) try w.writeByte(',');
+                try w.writeByte('"');
+                try jsonEscapeString(w, action);
+                try w.writeByte('"');
             }
-            try buf.append(self.allocator, ']');
+            try w.writeByte(']');
         }
 
         // Closing brace
-        try buf.append(self.allocator, '}');
+        try w.writeByte('}');
 
-        return buf.toOwnedSlice(self.allocator);
+        return aw.toOwnedSlice();
     }
 
     /// Generate human-readable text output
@@ -645,22 +649,23 @@ pub const UnifiedOutput = struct {
     pub fn print(self: *const UnifiedOutput) !void {
         const json_mode = tri_config.isJsonOutput();
 
-        // Use direct file writes (Zig 0.15 compatible)
-        const stdout_file = std.fs.File.stdout();
+        // Use direct file writes
+        const io = tri_io.get();
+        const stdout_file = std.Io.File.stdout();
 
         if (json_mode) {
             // JSON mode: ONLY JSON to stdout, nothing else
             const json_output = try self.toJson();
             defer self.allocator.free(json_output);
 
-            try stdout_file.writeAll(json_output);
-            try stdout_file.writeAll("\n");
+            try stdout_file.writeStreamingAll(io, json_output);
+            try stdout_file.writeStreamingAll(io, "\n");
         } else {
             // Text mode: human-readable to stdout
             const text_output = try self.toText();
             defer self.allocator.free(text_output);
 
-            try stdout_file.writeAll(text_output);
+            try stdout_file.writeStreamingAll(io, text_output);
         }
     }
 

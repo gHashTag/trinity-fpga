@@ -17,6 +17,7 @@
 
 const std = @import("std");
 const tri_io = @import("tri_io");
+const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayListUnmanaged;
@@ -248,16 +249,19 @@ pub const PhoenixCore = struct {
         const status_file = try std.fs.path.join(self.allocator, &.{ self.config.project_root, ".phoenix", "status_report.json" });
         defer self.allocator.free(status_file);
 
-        const file = std.Io.Dir.openFileAbsolute(tri_io.get(), status_file, .{}) catch |err| {
+        const io = tri_io.get();
+        const file = std.Io.Dir.openFileAbsolute(io, status_file, .{}) catch |err| {
             if (err == error.FileNotFound) {
                 // No status file yet, use defaults
                 return;
             }
             return err;
         };
-        defer file.close();
+        defer file.close(io);
 
-        const content = try file.readToEndAlloc(self.allocator, 1024 * 1024);
+        var scratch: [4096]u8 = undefined;
+        var fr = file.reader(io, &scratch);
+        const content = try fr.interface.allocRemaining(self.allocator, .limited(1024 * 1024));
         defer self.allocator.free(content);
 
         // Parse health_score from JSON
@@ -279,13 +283,16 @@ pub const PhoenixCore = struct {
         const fix_plan_file = try std.fs.path.join(self.allocator, &.{ self.config.project_root, ".phoenix", "fix_plan.md" });
         defer self.allocator.free(fix_plan_file);
 
-        const file = std.Io.Dir.openFileAbsolute(tri_io.get(), fix_plan_file, .{}) catch |err| {
+        const io = tri_io.get();
+        const file = std.Io.Dir.openFileAbsolute(io, fix_plan_file, .{}) catch |err| {
             if (err == error.FileNotFound) return;
             return err;
         };
-        defer file.close();
+        defer file.close(io);
 
-        const content = try file.readToEndAlloc(self.allocator, 1024 * 100);
+        var scratch: [4096]u8 = undefined;
+        var fr = file.reader(io, &scratch);
+        const content = try fr.interface.allocRemaining(self.allocator, .limited(1024 * 100));
         defer self.allocator.free(content);
 
         // Parse markdown checklist: "- [ ] text" = pending, "- [x] text" = done (skip)
@@ -409,24 +416,21 @@ pub const PhoenixCore = struct {
         _ = task;
 
         if (self.config.enable_fpga_mode) {
-            var child = std.process.Child.init(&.{
-                self.config.phoenix_path,
-                "--fpga-mode",
-            }, self.allocator);
-            child.cwd = self.config.project_root;
-            child.stdout_behavior = .Pipe;
-            child.stderr_behavior = .Pipe;
-
-            child.spawn() catch |err| {
-                std.debug.print("Failed to spawn PhoenixCore: {}\n", .{err});
+            const result = tri_proc.run(.{
+                .allocator = self.allocator,
+                .argv = &.{
+                    self.config.phoenix_path,
+                    "--fpga-mode",
+                },
+                .cwd = self.config.project_root,
+            }) catch |err| {
+                std.debug.print("Failed to run PhoenixCore: {}\n", .{err});
                 return false;
             };
-            const term = child.wait() catch |err| {
-                std.debug.print("Failed to wait for PhoenixCore: {}\n", .{err});
-                return false;
-            };
+            defer self.allocator.free(result.stdout);
+            defer self.allocator.free(result.stderr);
 
-            return term.exited == 0;
+            return result.term == .exited and result.term.exited == 0;
         }
 
         return true;
@@ -436,17 +440,15 @@ pub const PhoenixCore = struct {
     fn executeVibeetask(self: *PhoenixCore, task: *PhoenixTask) !bool {
         _ = task;
 
-        var child = std.process.Child.init(&.{
-            "zig", "build", "vibee", "--",
-        }, self.allocator);
-        child.cwd = self.config.project_root;
-        child.stdout_behavior = .Ignore;
-        child.stderr_behavior = .Ignore;
+        const result = tri_proc.run(.{
+            .allocator = self.allocator,
+            .argv = &.{ "zig", "build", "vibee", "--" },
+            .cwd = self.config.project_root,
+        }) catch return false;
+        defer self.allocator.free(result.stdout);
+        defer self.allocator.free(result.stderr);
 
-        child.spawn() catch return false;
-        const term = child.wait() catch return false;
-
-        return term.exited == 0;
+        return result.term == .exited and result.term.exited == 0;
     }
 
     /// Execute generic task
@@ -593,20 +595,21 @@ pub const PhoenixCore = struct {
                 const fix_plan_path = try std.fs.path.join(self.allocator, &.{ self.config.project_root, ".phoenix", "fix_plan.md" });
                 defer self.allocator.free(fix_plan_path);
 
-                const fix_file = std.fs.cwd().openFile(fix_plan_path, .{ .mode = .write_only }) catch {
+                const io = tri_io.get();
+                const fix_file = std.Io.Dir.cwd().openFile(io, fix_plan_path, .{ .mode = .write_only }) catch {
                     // Create directory and file if not exists
-                    try std.fs.cwd().makePath(".phoenix");
-                    const file = try std.fs.cwd().createFile(fix_plan_path, .{});
-                    try file.writeAll("# Phoenix Fix Plan (Dream Replay)\n\n");
-                    file.close();
+                    try std.Io.Dir.cwd().createDirPath(io, ".phoenix");
+                    const file = try std.Io.Dir.cwd().createFile(io, fix_plan_path, .{});
+                    try file.writeStreamingAll(io, "# Phoenix Fix Plan (Dream Replay)\n\n");
+                    file.close(io);
                     return error.FileNotFound; // Force retry
                 };
 
-                defer fix_file.close();
-                try fix_file.seekFromEnd(0);
+                defer fix_file.close(io);
                 var line_buf: [512]u8 = undefined;
                 const line = std.fmt.bufPrint(&line_buf, "- [ ] 💭 DREAM: {s}\n", .{err.summary()}) catch continue;
-                try fix_file.writeAll(line);
+                const end = try fix_file.length(io);
+                try fix_file.writePositionalAll(io, line, end);
                 written += 1;
             }
             std.debug.print("  {s}✅{s} Dreamed {d} errors → fix_plan.md\n\n", .{ GREEN, RESET, written });
@@ -656,12 +659,9 @@ pub const PhoenixCore = struct {
         const fix_plan_path = try std.fs.path.join(self.allocator, &.{ self.config.project_root, ".phoenix", "fix_plan.md" });
         defer self.allocator.free(fix_plan_path);
 
-        const file = std.fs.cwd().openFile(fix_plan_path, .{}) catch return false;
-        defer file.close();
-
         var buf: [8192]u8 = undefined;
-        const content_len = try file.readAll(buf[0..]);
-        return std.mem.indexOf(u8, buf[0..content_len], summary) != null;
+        const content = std.Io.Dir.cwd().readFile(tri_io.get(), fix_plan_path, &buf) catch return false;
+        return std.mem.indexOf(u8, content, summary) != null;
     }
 
     /// Calculate nth Fibonacci number

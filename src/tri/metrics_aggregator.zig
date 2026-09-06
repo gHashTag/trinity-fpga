@@ -11,6 +11,7 @@
 
 const std = @import("std");
 
+const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 // =============================================================================
 // TYPES
@@ -58,7 +59,7 @@ pub const MetricsCollector = struct {
     pub fn init(allocator: std.mem.Allocator) Self {
         return .{
             .allocator = allocator,
-            .entries = .{},
+            .entries = .empty,
         };
     }
 
@@ -80,15 +81,13 @@ pub const MetricsCollector = struct {
     pub fn persist(self: *Self, link: []const u8, name: []const u8, value: f64) !void {
         try self.record(link, name, value);
 
-        std.fs.cwd().makePath(".trinity/metrics") catch {};
+        const io = tri_io.get();
+        std.Io.Dir.cwd().createDirPath(io, ".trinity/metrics") catch {};
 
-        var file = std.fs.cwd().createFile(".trinity/metrics/raw.jsonl", .{
+        var file = std.Io.Dir.cwd().createFile(io, ".trinity/metrics/raw.jsonl", .{
             .truncate = false,
         }) catch return error.FileCreateFailed;
-        defer file.close();
-
-        // Seek to end
-        file.seekFromEnd(0) catch {};
+        defer file.close(io);
 
         var json_buf: [1024]u8 = undefined;
         const json = std.fmt.bufPrint(&json_buf, "{{\"timestamp\":{d},\"link\":\"{s}\",\"name\":\"{s}\",\"value\":{d:.4}}}\n", .{
@@ -97,7 +96,10 @@ pub const MetricsCollector = struct {
             name,
             value,
         }) catch return error.BufferOverflow;
-        file.writeAll(json) catch return error.WriteFailed;
+
+        // Append: write at the current end of the file.
+        const end = file.length(io) catch 0;
+        file.writePositionalAll(io, json, end) catch return error.WriteFailed;
     }
 
     /// Compute aggregated metrics from collected entries
@@ -191,7 +193,13 @@ pub fn runMetricsCommand(allocator: std.mem.Allocator, args: []const []const u8)
 }
 
 fn showMetrics(allocator: std.mem.Allocator) void {
-    const content = std.fs.cwd().readFileAlloc(allocator, ".trinity/metrics/raw.jsonl", 10 * 1024 * 1024) catch {
+    const io = tri_io.get();
+    const content = std.Io.Dir.cwd().readFileAlloc(
+        io,
+        ".trinity/metrics/raw.jsonl",
+        allocator,
+        .limited(10 * 1024 * 1024),
+    ) catch {
         std.debug.print("\x1b[33mNo metrics data. Pipeline hasn't recorded metrics yet.\x1b[0m\n", .{});
         std.debug.print("\x1b[90mMetrics are auto-recorded during `tri pipeline run`\x1b[0m\n", .{});
         return;
@@ -214,16 +222,17 @@ fn runVersionSnapshot(allocator: std.mem.Allocator, args: []const []const u8) vo
     std.debug.print("\x1b[36m=== Version Snapshot: {s} ===\x1b[0m\n", .{version});
 
     // Collect current data
-    std.fs.cwd().makePath(".trinity/versions") catch {};
+    const io = tri_io.get();
+    std.Io.Dir.cwd().createDirPath(io, ".trinity/versions") catch {};
 
     var path_buf: [256]u8 = undefined;
     const path = std.fmt.bufPrint(&path_buf, ".trinity/versions/{s}.json", .{version}) catch return;
 
-    var file = std.fs.cwd().createFile(path, .{}) catch {
+    var file = std.Io.Dir.cwd().createFile(io, path, .{}) catch {
         std.debug.print("\x1b[31mFailed to create version file\x1b[0m\n", .{});
         return;
     };
-    defer file.close();
+    defer file.close(io);
 
     _ = allocator;
 
@@ -232,23 +241,24 @@ fn runVersionSnapshot(allocator: std.mem.Allocator, args: []const []const u8) vo
         version,
         tri_time.timestamp(),
     }) catch return;
-    file.writeAll(json) catch return;
+    file.writeStreamingAll(io, json) catch return;
 
     std.debug.print("\x1b[32mSaved: {s}\x1b[0m\n", .{path});
 }
 
 fn runTrend(allocator: std.mem.Allocator) void {
     _ = allocator;
-    var dir = std.fs.cwd().openDir(".trinity/versions", .{ .iterate = true }) catch {
+    const io = tri_io.get();
+    var dir = std.Io.Dir.cwd().openDir(io, ".trinity/versions", .{ .iterate = true }) catch {
         std.debug.print("\x1b[33mNo version snapshots. Run `tri pipeline metrics version-snapshot` first.\x1b[0m\n", .{});
         return;
     };
-    defer dir.close();
+    defer dir.close(io);
 
     std.debug.print("\x1b[36m=== Version Trend ===\x1b[0m\n", .{});
     var count: u32 = 0;
     var iter = dir.iterate();
-    while (iter.next() catch null) |entry| {
+    while (iter.next(io) catch null) |entry| {
         if (std.mem.endsWith(u8, entry.name, ".json")) {
             std.debug.print("  {s}\n", .{entry.name});
             count += 1;

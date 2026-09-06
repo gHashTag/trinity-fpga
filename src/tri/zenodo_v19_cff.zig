@@ -11,6 +11,7 @@
 //! - Zenodo DOI linking
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const Allocator = std.mem.Allocator;
 
 const orcid = @import("zenodo_v19_orcid.zig");
@@ -48,10 +49,10 @@ pub const CffFile = struct {
 
     /// Generate CFF YAML content
     pub fn generate(self: *const CffFile, allocator: Allocator) ![]const u8 {
-        var buffer = std.ArrayListUnmanaged(u8){};
-        defer buffer.deinit(allocator);
+        var buffer: std.Io.Writer.Allocating = .init(allocator);
+        defer buffer.deinit();
 
-        const writer = buffer.writer(allocator);
+        const writer = &buffer.writer;
 
         // CFF version
         try writer.writeAll("cff-version: \"1.2.0\"\n");
@@ -129,24 +130,24 @@ pub const CffFile = struct {
             try writer.print("commit: \"{s}\"\n", .{commit});
         }
 
-        return buffer.toOwnedSlice(allocator);
+        return buffer.toOwnedSlice();
     }
 
     /// Escape special YAML characters in string
     fn escapeYaml(s: []const u8, allocator: Allocator) ![]const u8 {
         // Simple escaping for quotes and backslashes
-        var escaped = std.ArrayList(u8).init(allocator);
-        errdefer escaped.deinit();
+        var escaped: std.ArrayList(u8) = .empty;
+        errdefer escaped.deinit(allocator);
 
         for (s) |c| {
             switch (c) {
-                '\\', '"' => try escaped.append('\\'),
+                '\\', '"' => try escaped.append(allocator, '\\'),
                 else => {},
             }
-            try escaped.append(c);
+            try escaped.append(allocator, c);
         }
 
-        return escaped.toOwnedSlice();
+        return escaped.toOwnedSlice(allocator);
     }
 };
 
@@ -248,10 +249,11 @@ pub fn writeCffFile(cff: *const CffFile, allocator: Allocator, path: []const u8)
     const content = try cff.generate(allocator);
     defer allocator.free(content);
 
-    const file = try std.fs.cwd().createFile(path, .{});
-    defer file.close();
+    const io = tri_io.get();
+    const file = try std.Io.Dir.cwd().createFile(io, path, .{});
+    defer file.close(io);
 
-    try file.writeAll(content);
+    try file.writeStreamingAll(io, content);
 }
 
 // ============================================================================

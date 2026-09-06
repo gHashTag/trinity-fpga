@@ -9,6 +9,7 @@
 // ═══════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const qt = @import("queen_types.zig");
@@ -245,18 +246,18 @@ const LOCUS_STATE_PATH = ".trinity/queen/locus_state.json";
 
 /// Save LC state to file
 pub fn saveState(state: LocusState) void {
-    var file = std.fs.cwd().openFile(LOCUS_STATE_PATH, .{ .mode = .write_only }) catch {
+    const io = tri_io.get();
+    const file = std.Io.Dir.cwd().openFile(io, LOCUS_STATE_PATH, .{ .mode = .write_only }) catch {
         // Create parent dirs if missing
-        std.fs.cwd().makePath(".trinity/queen") catch return;
-        return std.fs.cwd().createFile(LOCUS_STATE_PATH, .{}) catch |err| {
-            _ = err;
-            return;
-        };
+        std.Io.Dir.cwd().createDirPath(io, ".trinity/queen") catch return;
+        const created = std.Io.Dir.cwd().createFile(io, LOCUS_STATE_PATH, .{}) catch return;
+        created.close(io);
+        return;
     };
-    defer file.close();
+    defer file.close(io);
 
     // Truncate existing file
-    file.setEndPos(0) catch {};
+    file.setLength(io, 0) catch {};
 
     var buf: [512]u8 = undefined;
     const msg = std.fmt.bufPrint(&buf,
@@ -267,19 +268,17 @@ pub fn saveState(state: LocusState) void {
         state.last_alert.timestamp,
     }) catch return;
 
-    file.writeAll(msg) catch {};
+    file.writeStreamingAll(io, msg) catch {};
 }
 
 /// Load LC state from file (returns default if missing)
 pub fn loadState() LocusState {
-    const file = std.fs.cwd().openFile(LOCUS_STATE_PATH, .{}) catch return LocusState{};
-    defer file.close();
-
+    // Whole small file into a fixed buffer; a short read is normal.
+    const io = tri_io.get();
     var buf: [512]u8 = undefined;
-    const n = file.readAll(&buf) catch return LocusState{};
-    if (n == 0) return LocusState{};
+    const data = std.Io.Dir.cwd().readFile(io, LOCUS_STATE_PATH, &buf) catch return LocusState{};
+    if (data.len == 0) return LocusState{};
 
-    const data = buf[0..n];
     var state = LocusState{};
 
     // Parse JSON manually (avoid full JSON parser for simplicity)

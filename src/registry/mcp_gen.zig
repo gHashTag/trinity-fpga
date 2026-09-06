@@ -5,6 +5,7 @@
 //! This JSON is consumed by the MCP server to auto-generate tools.
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 const command_def = @import("command_def.zig");
 const command_table = @import("command_table.zig");
@@ -260,13 +261,14 @@ pub fn exportRegistry(allocator: std.mem.Allocator, path: []const u8) !void {
     const json = try generateRegistryJson(allocator);
     defer allocator.free(json);
 
+    const io = tri_io.get();
     const dir = std.fs.path.dirname(path) orelse ".";
-    std.fs.cwd().makePath(dir) catch |err| {
+    std.Io.Dir.cwd().createDirPath(io, dir) catch |err| {
         std.log.err("Failed to create directory: {}", .{err});
         return err;
     };
 
-    try std.fs.cwd().writeFile(.{ .sub_path = path, .data = json });
+    try std.Io.Dir.cwd().writeFile(io, .{ .sub_path = path, .data = json });
     std.log.info("Exported registry to {s} ({d} bytes)", .{ path, json.len });
 }
 
@@ -275,13 +277,14 @@ pub fn exportMcpSchemas(allocator: std.mem.Allocator, path: []const u8) !void {
     const json = try generateAllMcpSchemas(allocator);
     defer allocator.free(json);
 
+    const io = tri_io.get();
     const dir = std.fs.path.dirname(path) orelse ".";
-    std.fs.cwd().makePath(dir) catch |err| {
+    std.Io.Dir.cwd().createDirPath(io, dir) catch |err| {
         std.log.err("Failed to create directory: {}", .{err});
         return err;
     };
 
-    try std.fs.cwd().writeFile(.{ .sub_path = path, .data = json });
+    try std.Io.Dir.cwd().writeFile(io, .{ .sub_path = path, .data = json });
     std.log.info("Exported MCP schemas to {s} ({d} bytes)", .{ path, json.len });
 }
 

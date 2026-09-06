@@ -6,6 +6,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 const crypto = @import("crypto.zig");
 const protocol = @import("protocol.zig");
@@ -348,7 +349,7 @@ pub const ShardManager = struct {
         };
 
         // Padded shards must live until reassembly (after RS decode block)
-        var rs_padded_shards = std.ArrayListUnmanaged([]u8){};
+        var rs_padded_shards: std.ArrayListUnmanaged([]u8) = .empty;
         defer {
             for (rs_padded_shards.items) |p| self.allocator.free(p);
             rs_padded_shards.deinit(self.allocator);
@@ -691,13 +692,15 @@ test "5-node simulation with disk persistence" {
         "/tmp/trinity_test_5node/node4",
     };
 
+    const io = tri_io.get();
+
     // Clean up from previous run
-    std.fs.cwd().deleteTree(base_dir) catch |err| {
+    std.Io.Dir.cwd().deleteTree(io, base_dir) catch |err| {
         std.log.debug("shard_manager: pre-test cleanup failed: {}", .{err});
     };
 
     // Create base directory first
-    std.fs.cwd().makePath(base_dir) catch |err| {
+    std.Io.Dir.cwd().createDirPath(io, base_dir) catch |err| {
         std.log.debug("shard_manager: failed to create base dir: {}", .{err});
         return error.SetupFailed;
     };
@@ -705,17 +708,17 @@ test "5-node simulation with disk persistence" {
     for (dirs) |dir| {
         // Use the base directory handle for creating subdirectories
         const basename = std.fs.path.basename(dir);
-        var base_dir_handle = std.fs.cwd().openDir(base_dir, .{}) catch {
+        var base_dir_handle = std.Io.Dir.cwd().openDir(io, base_dir, .{}) catch {
             std.log.debug("shard_manager: failed to open base dir", .{});
             return error.SetupFailed;
         };
-        defer base_dir_handle.close();
-        base_dir_handle.makePath(basename) catch |err| {
+        defer base_dir_handle.close(io);
+        base_dir_handle.createDirPath(io, basename) catch |err| {
             std.log.debug("shard_manager: failed to create node dir {s}: {}", .{ basename, err });
             return error.SetupFailed;
         };
     }
-    defer std.fs.cwd().deleteTree(base_dir) catch |err| {
+    defer std.Io.Dir.cwd().deleteTree(io, base_dir) catch |err| {
         std.log.debug("shard_manager: post-test cleanup failed: {}", .{err});
     };
 

@@ -15,6 +15,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 const verdict = @import("pathology.zig");
@@ -472,12 +473,8 @@ fn runChild(allocator: std.mem.Allocator, argv: []const []const u8) u8 {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn loadState() OuroborosState {
-    const file = std.fs.cwd().openFile(STATE_PATH, .{}) catch return OuroborosState{};
-    defer file.close();
-
     var buf: [1024]u8 = undefined;
-    const n = file.readAll(&buf) catch return OuroborosState{};
-    const content = buf[0..n];
+    const content = std.Io.Dir.cwd().readFile(tri_io.get(), STATE_PATH, &buf) catch return OuroborosState{};
 
     return OuroborosState{
         .cycle = parseJsonU32(content, "\"cycle\":") orelse 0,
@@ -490,11 +487,13 @@ fn loadState() OuroborosState {
 }
 
 fn saveState(state: OuroborosState) void {
-    // Ensure .trinity/ exists
-    std.fs.cwd().makePath(".trinity") catch {};
+    const io = tri_io.get();
 
-    const file = std.fs.cwd().createFile(STATE_PATH, .{}) catch return;
-    defer file.close();
+    // Ensure .trinity/ exists
+    std.Io.Dir.cwd().createDirPath(io, ".trinity") catch {};
+
+    const file = std.Io.Dir.cwd().createFile(io, STATE_PATH, .{}) catch return;
+    defer file.close(io);
 
     var buf: [512]u8 = undefined;
     const json = std.fmt.bufPrint(&buf,
@@ -507,11 +506,11 @@ fn saveState(state: OuroborosState) void {
         state.strategy.label(),
         state.started_at,
     }) catch return;
-    file.writeAll(json) catch {};
+    file.writeStreamingAll(io, json) catch {};
 }
 
 fn resetState() void {
-    std.fs.cwd().deleteFile(STATE_PATH) catch {};
+    std.Io.Dir.cwd().deleteFile(tri_io.get(), STATE_PATH) catch {};
     print("  {s}⟳ Ouroboros state reset{s}\n", .{ CYAN, RESET });
 }
 

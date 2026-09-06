@@ -301,15 +301,16 @@ pub const AlertHistory = struct {
 
     /// Persist alert to log file
     fn persist(self: *Self, alert: Alert) !void {
-        const file = try std.fs.cwd().createFile(ALERTS_LOG, .{ .read = true });
-        defer file.close();
-
-        try file.seekFromEnd(0);
+        const io = tri_io.get();
+        const file = try std.Io.Dir.cwd().createFile(io, ALERTS_LOG, .{ .read = true });
+        defer file.close(io);
 
         const log_line = try alert.formatLog(self.allocator);
         defer self.allocator.free(log_line);
 
-        try file.writeAll(log_line);
+        // Append at the current end of the file (the old seekFromEnd(0) + writeAll).
+        const end = try file.length(io);
+        try file.writePositionalAll(io, log_line, end);
     }
 
     /// Get recent alerts (last N)

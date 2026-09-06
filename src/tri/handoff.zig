@@ -16,6 +16,7 @@
 // =============================================================================
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const golden_chain = @import("dna_polymerase.zig");
 
 const AgentRole = golden_chain.AgentRole;
@@ -100,7 +101,7 @@ pub fn getHandoffDir(buf: *[256]u8, issue_number: u32) []const u8 {
 pub fn ensureHandoffDir(issue_number: u32) !void {
     var buf: [256]u8 = undefined;
     const dir_path = getHandoffDir(&buf, issue_number);
-    try std.fs.cwd().makePath(dir_path);
+    try std.Io.Dir.cwd().createDirPath(tri_io.get(), dir_path);
 }
 
 /// Get the artifact filename for a given role.
@@ -256,13 +257,18 @@ pub fn validateTesterReport(report: TesterReport) HandoffError!void {
 // =============================================================================
 
 fn writeJsonFile(path: []const u8, comptime T: type, value: T) !void {
-    const file = try std.fs.cwd().createFile(path, .{});
-    defer file.close();
-    const w = file.writer();
+    const io = tri_io.get();
+    const file = try std.Io.Dir.cwd().createFile(io, path, .{});
+    defer file.close(io);
+    // 0.16's file writer is buffered and must be flushed before close.
+    var write_buf: [4096]u8 = undefined;
+    var fw = file.writer(io, &write_buf);
+    const w = &fw.interface;
 
     try w.writeAll("{\n");
     try writeJsonFields(w, T, value);
     try w.writeAll("}\n");
+    try fw.flush();
 }
 
 /// Write struct fields as JSON key-value pairs.
@@ -346,13 +352,16 @@ fn writeJsonValue(w: anytype, comptime T: type, value: T) !void {
 }
 
 fn readJsonFile(allocator: std.mem.Allocator, path: []const u8, comptime T: type) !?T {
-    const file = std.fs.cwd().openFile(path, .{}) catch |err| {
+    const io = tri_io.get();
+    const file = std.Io.Dir.cwd().openFile(io, path, .{}) catch |err| {
         if (err == error.FileNotFound) return null;
         return err;
     };
-    defer file.close();
+    defer file.close(io);
 
-    const content = file.readToEndAlloc(allocator, 256 * 1024) catch |err| {
+    var scratch: [4096]u8 = undefined;
+    var fr = file.reader(io, &scratch);
+    const content = fr.interface.allocRemaining(allocator, .limited(256 * 1024)) catch |err| {
         std.debug.print("warn: failed to read {s}: {}\n", .{ path, err });
         return null;
     };
@@ -395,8 +404,9 @@ pub fn printHandoffStatus(issue_number: u32) void {
         const path = getArtifactPath(&path_buf, issue_number, role);
 
         const exists = blk: {
-            const f = std.fs.cwd().openFile(path, .{}) catch break :blk false;
-            f.close();
+            const io = tri_io.get();
+            const f = std.Io.Dir.cwd().openFile(io, path, .{}) catch break :blk false;
+            f.close(io);
             break :blk true;
         };
 

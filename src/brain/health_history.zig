@@ -11,6 +11,7 @@
 
 const std = @import("std");
 
+const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 const BRAIN_HEALTH_LOG = ".trinity/brain_health_history.jsonl";
 
@@ -37,15 +38,18 @@ pub const BrainHealthHistory = struct {
     /// Record a health snapshot
     pub fn record(snapshot_ptr: *BrainHealthHistory, snapshot: HealthSnapshot) !void {
         _ = snapshot_ptr;
-        const file = try std.fs.cwd().createFile(BRAIN_HEALTH_LOG, .{ .read = true });
-        defer file.close();
+        const io = tri_io.get();
+        const file = try std.Io.Dir.cwd().createFile(io, BRAIN_HEALTH_LOG, .{ .read = true });
+        defer file.close(io);
 
-        try file.seekFromEnd(0);
+        // 0.16 has no seek-then-write on File: the end offset is read once and
+        // the write is placed positionally there.
+        const end = try file.length(io);
 
         // Build JSON line manually to avoid format string issues
         var buffer: [512]u8 = undefined;
-        var fbs = std.io.fixedBufferStream(&buffer);
-        const writer = fbs.writer();
+        var fbs = std.Io.Writer.fixed(&buffer);
+        const writer = &fbs;
 
         // Write JSON opening
         try writer.writeAll("{\"ts\":");
@@ -76,16 +80,15 @@ pub const BrainHealthHistory = struct {
 
         try writer.writeAll("}\n");
 
-        try file.writeAll(fbs.getWritten());
+        try file.writePositionalAll(io, fbs.buffered(), end);
     }
 
     /// Read recent history (last N entries)
     pub fn recent(self: *BrainHealthHistory, n: usize) ![]HealthSnapshot {
-        const file = try std.fs.cwd().openFile(BRAIN_HEALTH_LOG, .{});
-        defer file.close();
+        const io = tri_io.get();
 
         // Read all lines
-        const content = try file.readToEndAlloc(self.allocator, 1024 * 1024);
+        const content = try std.Io.Dir.cwd().readFileAlloc(io, BRAIN_HEALTH_LOG, self.allocator, .limited(1024 * 1024));
         defer self.allocator.free(content);
 
         // Collect all non-empty lines
@@ -178,8 +181,8 @@ test "BrainHealthHistory.record_and_recent" {
     // Note: record() writes to BRAIN_HEALTH_LOG constant, so we test with actual file
     // For this test, we'll verify the JSON structure generation
     var buffer: [512]u8 = undefined;
-    var fbs = std.io.fixedBufferStream(&buffer);
-    const writer = fbs.writer();
+    var fbs = std.Io.Writer.fixed(&buffer);
+    const writer = &fbs;
 
     try writer.writeAll("{\"ts\":");
     try writer.print("{d}", .{snapshots[0].timestamp});
@@ -197,7 +200,7 @@ test "BrainHealthHistory.record_and_recent" {
     try writer.writeAll(if (snapshots[0].stress_test_passed) "true" else "false");
     try writer.writeAll("}\n");
 
-    const output = fbs.getWritten();
+    const output = fbs.buffered();
     try testing.expect(output.len > 0);
     try testing.expect(std.mem.indexOf(u8, output, "\"health\":50.0") != null);
     try testing.expect(std.mem.indexOf(u8, output, "\"ok\":false") != null);

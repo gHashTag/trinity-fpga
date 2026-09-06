@@ -1,6 +1,9 @@
 // scholar_loop.zig — Core Scholar research loop
 // Each cycle: SCAN → RESEARCH → FEED MU → NOTIFY → SLEEP
 const std = @import("std");
+const tri_io = @import("tri_io");
+const tri_time = @import("tri_time");
+const tri_proc = @import("tri_proc");
 const telegram = @import("telegram");
 
 pub const Config = struct {
@@ -31,7 +34,7 @@ fn runTriCmd(allocator: std.mem.Allocator, project_root: []const u8, args: []con
         argv_buf[3 + i] = args[i];
     }
 
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = argv_buf[0 .. 3 + n],
         .cwd = project_root,
@@ -41,7 +44,7 @@ fn runTriCmd(allocator: std.mem.Allocator, project_root: []const u8, args: []con
     allocator.free(result.stderr);
 
     const code: u8 = switch (result.term) {
-        .Exited => |c| c,
+        .exited => |c| c,
         else => 1,
     };
 
@@ -57,16 +60,17 @@ fn writeHeartbeat(
     researched: u32,
     fed_mu: u32,
 ) void {
+    const io = tri_io.get();
     var path_buf: [512]u8 = undefined;
     const dir_path = std.fmt.bufPrint(&path_buf, "{s}/.trinity/scholar", .{project_root}) catch return;
-    std.fs.cwd().makePath(dir_path) catch |err| {
+    std.Io.Dir.cwd().createDirPath(io, dir_path) catch |err| {
         std.log.debug("writeHeartbeat: makePath failed: {s}", .{@errorName(err)});
     };
 
     var file_buf: [512]u8 = undefined;
     const file_path = std.fmt.bufPrint(&file_buf, "{s}/.trinity/scholar/heartbeat.json", .{project_root}) catch return;
 
-    const timestamp = @as(u64, @intCast(std.time.timestamp()));
+    const timestamp = @as(u64, @intCast(tri_time.timestamp()));
     const json = std.fmt.allocPrint(
         allocator,
         "{{\"agent\":\"scholar\",\"wake\":{d},\"timestamp\":{d},\"fails_found\":{d},\"researched\":{d},\"fed_mu\":{d}}}",
@@ -74,16 +78,16 @@ fn writeHeartbeat(
     ) catch return;
     defer allocator.free(json);
 
-    const file = std.fs.cwd().createFile(file_path, .{}) catch return;
-    defer file.close();
-    file.writeAll(json) catch |err| {
+    const file = std.Io.Dir.cwd().createFile(io, file_path, .{}) catch return;
+    defer file.close(io);
+    file.writeStreamingAll(io, json) catch |err| {
         std.log.debug("writeHeartbeat: writeAll failed: {s}", .{@errorName(err)});
     };
 }
 
 /// Parse failed spec names from tri test report output
 fn parseFailedSpecs(allocator: std.mem.Allocator, output: []const u8) !std.ArrayList([]const u8) {
-    var specs = std.ArrayList([]const u8){};
+    var specs: std.ArrayList([]const u8) = .empty;
     var lines = std.mem.splitScalar(u8, output, '\n');
     while (lines.next()) |line| {
         // Look for "❌" lines with spec names: "| N | spec_name | ❌ ..."
@@ -115,9 +119,10 @@ fn parseFailedSpecs(allocator: std.mem.Allocator, output: []const u8) !std.Array
 
 /// Increment wake count in .trinity/scholar/state/wake_count
 fn incrementWake(project_root: []const u8) u32 {
+    const io = tri_io.get();
     var path_buf: [512]u8 = undefined;
     const dir_path = std.fmt.bufPrint(&path_buf, "{s}/.trinity/scholar/state", .{project_root}) catch return 1;
-    std.fs.cwd().makePath(dir_path) catch |err| {
+    std.Io.Dir.cwd().createDirPath(io, dir_path) catch |err| {
         std.log.debug("incrementWake: makePath failed: {s}", .{@errorName(err)});
     };
 
@@ -125,19 +130,17 @@ fn incrementWake(project_root: []const u8) u32 {
     const file_path = std.fmt.bufPrint(&file_path_buf, "{s}/wake_count", .{dir_path}) catch return 1;
 
     var count: u32 = 0;
-    if (std.fs.cwd().openFile(file_path, .{})) |f| {
-        defer f.close();
-        var buf: [32]u8 = undefined;
-        const n = f.readAll(&buf) catch 0;
-        count = std.fmt.parseInt(u32, std.mem.trim(u8, buf[0..n], " \t\n\r"), 10) catch 0;
+    var buf: [32]u8 = undefined;
+    if (std.Io.Dir.cwd().readFile(io, file_path, &buf)) |slice| {
+        count = std.fmt.parseInt(u32, std.mem.trim(u8, slice, " \t\n\r"), 10) catch 0;
     } else |_| {}
 
     count += 1;
-    if (std.fs.cwd().createFile(file_path, .{})) |f| {
-        defer f.close();
+    if (std.Io.Dir.cwd().createFile(io, file_path, .{})) |f| {
+        defer f.close(io);
         var num_buf: [32]u8 = undefined;
         const s = std.fmt.bufPrint(&num_buf, "{d}", .{count}) catch return count;
-        f.writeAll(s) catch |err| {
+        f.writeStreamingAll(io, s) catch |err| {
             std.log.debug("incrementWake: writeAll failed: {s}", .{@errorName(err)});
         };
     } else |_| {}
@@ -146,6 +149,7 @@ fn incrementWake(project_root: []const u8) u32 {
 }
 
 pub fn run(allocator: std.mem.Allocator, config: Config) !void {
+    const io = tri_io.get();
     while (true) {
         const wake = incrementWake(config.project_root);
         std.debug.print("[scholar] Wake #{d}\n", .{wake});
@@ -156,7 +160,7 @@ pub fn run(allocator: std.mem.Allocator, config: Config) !void {
         var researched: u32 = 0;
         var fed_mu: u32 = 0;
 
-        var failed_specs = parseFailedSpecs(allocator, report.stdout) catch std.ArrayList([]const u8){};
+        var failed_specs = parseFailedSpecs(allocator, report.stdout) catch std.ArrayList([]const u8).empty;
         defer {
             for (failed_specs.items) |s| allocator.free(s);
             failed_specs.deinit(allocator);
@@ -181,16 +185,16 @@ pub fn run(allocator: std.mem.Allocator, config: Config) !void {
                 // 3. FEED MU: save to inbox
                 var inbox_dir_buf: [512]u8 = undefined;
                 const inbox_dir = std.fmt.bufPrint(&inbox_dir_buf, "{s}/.trinity/mu/inbox", .{config.project_root}) catch continue;
-                std.fs.cwd().makePath(inbox_dir) catch |err| {
+                std.Io.Dir.cwd().createDirPath(io, inbox_dir) catch |err| {
                     std.log.debug("research: makePath failed for inbox: {s}", .{@errorName(err)});
                 };
 
                 var inbox_path_buf: [512]u8 = undefined;
                 const inbox_path = std.fmt.bufPrint(&inbox_path_buf, "{s}/{s}.txt", .{ inbox_dir, spec_name }) catch continue;
 
-                if (std.fs.cwd().createFile(inbox_path, .{})) |f| {
-                    defer f.close();
-                    f.writeAll(res.stdout) catch |err| {
+                if (std.Io.Dir.cwd().createFile(io, inbox_path, .{})) |f| {
+                    defer f.close(io);
+                    f.writeStreamingAll(io, res.stdout) catch |err| {
                         std.log.debug("research: writeAll failed for inbox file: {s}", .{@errorName(err)});
                     };
                     fed_mu += 1;

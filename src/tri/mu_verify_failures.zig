@@ -7,6 +7,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const tri_proc = @import("tri_proc");
 const Allocator = std.mem.Allocator;
 const mu_proto = @import("mu_error_protocol.zig");
@@ -60,7 +61,12 @@ pub fn runVerification(allocator: Allocator) !VerifyResult {
     };
 
     // Read batch runner latest.json for known failures
-    const batch_data = std.fs.cwd().readFileAlloc(allocator, ".trinity/batch/latest.json", 10 * 1024 * 1024) catch {
+    const batch_data = std.Io.Dir.cwd().readFileAlloc(
+        tri_io.get(),
+        ".trinity/batch/latest.json",
+        allocator,
+        .limited(10 * 1024 * 1024),
+    ) catch {
         std.debug.print("  \x1b[33mNo batch data found. Running fresh verification...\x1b[0m\n", .{});
         return result;
     };

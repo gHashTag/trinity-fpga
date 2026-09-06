@@ -11,6 +11,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 const tri_mutex = @import("mutex.zig");
 const Allocator = std.mem.Allocator;
@@ -386,12 +387,10 @@ const CellCache = struct {
 
 /// Load cache from file, returns null if file doesn't exist or is invalid
 fn loadCache(allocator: Allocator) ?CellCache {
-    const cwd = std.fs.cwd();
+    const io = tri_io.get();
+    const cwd = std.Io.Dir.cwd();
 
-    const file = cwd.openFile(CACHE_FILE, .{}) catch return null;
-    defer file.close();
-
-    const content = file.readToEndAlloc(allocator, 10 * 1024 * 1024) catch return null;
+    const content = cwd.readFileAlloc(io, CACHE_FILE, allocator, .limited(10 * 1024 * 1024)) catch return null;
     defer allocator.free(content);
 
     return CellCache.fromJson(allocator, content) catch null;
@@ -399,10 +398,11 @@ fn loadCache(allocator: Allocator) ?CellCache {
 
 /// Save cache to file, creates directory if needed
 fn saveCache(allocator: Allocator, cache: *const CellCache) !void {
-    const cwd = std.fs.cwd();
+    const io = tri_io.get();
+    const cwd = std.Io.Dir.cwd();
 
     // Create cache directory if it doesn't exist
-    cwd.makePath(CACHE_DIR) catch |err| {
+    cwd.createDirPath(io, CACHE_DIR) catch |err| {
         std.debug.print("Warning: failed to create cache directory: {}\n", .{err});
         return err;
     };
@@ -410,20 +410,21 @@ fn saveCache(allocator: Allocator, cache: *const CellCache) !void {
     const json_str = try cache.toJson(allocator);
     defer allocator.free(json_str);
 
-    const file = try cwd.createFile(CACHE_FILE, .{ .truncate = true });
-    defer file.close();
+    const file = try cwd.createFile(io, CACHE_FILE, .{ .truncate = true });
+    defer file.close(io);
 
-    try file.writeAll(json_str);
+    try file.writeStreamingAll(io, json_str);
 }
 
 /// Clear the cache file
 pub fn clearCache() !void {
-    const cwd = std.fs.cwd();
-    cwd.deleteFile(CACHE_FILE) catch |err| {
+    const io = tri_io.get();
+    const cwd = std.Io.Dir.cwd();
+    cwd.deleteFile(io, CACHE_FILE) catch |err| {
         // Ignore error if file doesn't exist
         if (err != error.FileNotFound) return err;
     };
-    _ = cwd.deleteDir(CACHE_DIR) catch {};
+    _ = cwd.deleteDir(io, CACHE_DIR) catch {};
 }
 
 /// Get cache statistics
@@ -440,18 +441,21 @@ pub const CacheStats = struct {
 pub fn getCacheStats(allocator: Allocator) !CacheStats {
     var stats = CacheStats{ .enabled = true };
 
-    const cwd = std.fs.cwd();
+    const io = tri_io.get();
+    const cwd = std.Io.Dir.cwd();
 
-    const file = cwd.openFile(CACHE_FILE, .{}) catch {
+    const file = cwd.openFile(io, CACHE_FILE, .{}) catch {
         return stats;
     };
-    defer file.close();
+    defer file.close(io);
 
     stats.file_exists = true;
-    const stat = try file.stat();
+    const stat = try file.stat(io);
     stats.file_size = @intCast(stat.size);
 
-    const content = try file.readToEndAlloc(allocator, 10 * 1024 * 1024);
+    var cache_read_buf: [4096]u8 = undefined;
+    var cache_reader = file.reader(io, &cache_read_buf);
+    const content = try cache_reader.interface.allocRemaining(allocator, .limited(10 * 1024 * 1024));
     defer allocator.free(content);
 
     var cache = CellCache.fromJson(allocator, content) catch return stats;
@@ -461,8 +465,8 @@ pub fn getCacheStats(allocator: Allocator) !CacheStats {
 
     // Check which entries are still valid
     for (cache.cells) |cell| {
-        if (cwd.statFile(cell.path)) |file_stat| {
-            if (file_stat.mtime <= cell.mtime) {
+        if (cwd.statFile(io, cell.path, .{})) |file_stat| {
+            if (@as(i128, file_stat.mtime.nanoseconds) <= cell.mtime) {
                 stats.valid_entries += 1;
             } else {
                 stats.stale_entries += 1;
@@ -534,7 +538,8 @@ pub fn discoverCached(allocator: Allocator, options: DiscoveryOptionsEx) !Discov
         }
     }
 
-    const cwd = std.fs.cwd();
+    const io = tri_io.get();
+    const cwd = std.Io.Dir.cwd();
 
     // Scan filesystem for all cell.tri files
     const parse_start = tri_time.nanoTimestamp();
@@ -545,13 +550,13 @@ pub fn discoverCached(allocator: Allocator, options: DiscoveryOptionsEx) !Discov
     }
 
     for (CELL_SCAN_DIRS) |scan_dir| {
-        var dir = cwd.openDir(scan_dir, .{ .iterate = true }) catch continue;
-        defer dir.close();
+        var dir = cwd.openDir(io, scan_dir, .{ .iterate = true }) catch continue;
+        defer dir.close(io);
 
         var walker = dir.walk(allocator) catch continue;
         defer walker.deinit();
 
-        while (walker.next() catch null) |entry| {
+        while (walker.next(io) catch null) |entry| {
             if (entry.kind != .file) continue;
             if (!std.mem.eql(u8, entry.basename, "cell.tri")) continue;
 
@@ -562,13 +567,13 @@ pub fn discoverCached(allocator: Allocator, options: DiscoveryOptionsEx) !Discov
                 try allocator.dupe(u8, scan_dir);
 
             const full_path = try std.fmt.allocPrint(allocator, "{s}/{s}", .{ scan_dir, entry.path });
-            const stat = cwd.statFile(full_path) catch {
+            const stat = cwd.statFile(io, full_path, .{}) catch {
                 allocator.free(cell_dir);
                 allocator.free(full_path);
                 continue;
             };
 
-            try cell_files.append(.{ .path = full_path, .mtime = stat.mtime });
+            try cell_files.append(.{ .path = full_path, .mtime = @as(i128, stat.mtime.nanoseconds) });
         }
     }
 
@@ -602,7 +607,7 @@ pub fn discoverCached(allocator: Allocator, options: DiscoveryOptionsEx) !Discov
 
         if (!hit) {
             // Cache miss or stale, parse from file
-            const content = cwd.readFileAlloc(allocator, cf.path, 65536) catch {
+            const content = cwd.readFileAlloc(io, cf.path, allocator, .limited(65536)) catch {
                 allocator.free(cell_dir);
                 continue;
             };
@@ -648,8 +653,8 @@ pub fn discoverCached(allocator: Allocator, options: DiscoveryOptionsEx) !Discov
 
                 if (!already_added) {
                     // Check if this entry is still valid
-                    if (cwd.statFile(old_cell.path)) |file_stat| {
-                        if (file_stat.mtime <= old_cell.mtime) {
+                    if (cwd.statFile(io, old_cell.path, .{})) |file_stat| {
+                        if (@as(i128, file_stat.mtime.nanoseconds) <= old_cell.mtime) {
                             // Cache hit, add to new cache
                             const path_copy = try allocator.dupe(u8, old_cell.path);
                             const dir_copy = try allocator.dupe(u8, old_cell.dir_path);
@@ -707,10 +712,11 @@ pub fn discoverAllEx(allocator: Allocator, options: DiscoveryOptions) !Discovery
         if (!cache_state.initialized) break :blk true;
 
         // Check if any scan directory was modified
-        const cwd = std.fs.cwd();
+        const io = tri_io.get();
+        const cwd = std.Io.Dir.cwd();
         for (CELL_SCAN_DIRS) |scan_dir| {
-            if (cwd.statFile(scan_dir)) |stat| {
-                if (stat.mtime > cache_state.mtime) break :blk true;
+            if (cwd.statFile(io, scan_dir, .{})) |stat| {
+                if (@as(i128, stat.mtime.nanoseconds) > cache_state.mtime) break :blk true;
             } else |_| {
                 break :blk true;
             }
@@ -751,7 +757,8 @@ pub fn discoverAllEx(allocator: Allocator, options: DiscoveryOptions) !Discovery
         // Full scan
         const parse_start = tri_time.nanoTimestamp();
 
-        const cwd = std.fs.cwd();
+        const io = tri_io.get();
+        const cwd = std.Io.Dir.cwd();
 
         // Collect all cell.tri files first
         var cell_files = try std.array_list.Managed(struct { path: []const u8, mtime: i128 }).initCapacity(allocator, 64);
@@ -761,13 +768,13 @@ pub fn discoverAllEx(allocator: Allocator, options: DiscoveryOptions) !Discovery
         }
 
         for (CELL_SCAN_DIRS) |scan_dir| {
-            var dir = cwd.openDir(scan_dir, .{ .iterate = true }) catch continue;
-            defer dir.close();
+            var dir = cwd.openDir(io, scan_dir, .{ .iterate = true }) catch continue;
+            defer dir.close(io);
 
             var walker = dir.walk(allocator) catch continue;
             defer walker.deinit();
 
-            while (walker.next() catch null) |entry| {
+            while (walker.next(io) catch null) |entry| {
                 if (entry.kind != .file) continue;
                 if (!std.mem.eql(u8, entry.basename, "cell.tri")) continue;
 
@@ -778,20 +785,20 @@ pub fn discoverAllEx(allocator: Allocator, options: DiscoveryOptions) !Discovery
                     try allocator.dupe(u8, scan_dir);
 
                 const full_path = try std.fmt.allocPrint(allocator, "{s}/{s}", .{ scan_dir, entry.path });
-                const stat = cwd.statFile(full_path) catch {
+                const stat = cwd.statFile(io, full_path, .{}) catch {
                     allocator.free(cell_dir);
                     allocator.free(full_path);
                     continue;
                 };
 
-                try cell_files.append(.{ .path = full_path, .mtime = stat.mtime });
+                try cell_files.append(.{ .path = full_path, .mtime = @as(i128, stat.mtime.nanoseconds) });
                 cache_misses += 1;
             }
         }
 
         // Parse all cells
         for (cell_files.items) |cf| {
-            const content = cwd.readFileAlloc(allocator, cf.path, 65536) catch continue;
+            const content = cwd.readFileAlloc(io, cf.path, allocator, .limited(65536)) catch continue;
             const manifest = parse(content);
 
             if (manifest.id.len > 0) {

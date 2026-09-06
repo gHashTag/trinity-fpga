@@ -6,6 +6,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const b2t = @import("b2t_integration.zig");
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -397,14 +398,17 @@ fn readLEB128i32FromSlice(data: []const u8) struct { value: i32, bytes_read: usi
 
 /// Load WASM file from disk
 pub fn loadWasmFile(allocator: std.mem.Allocator, path: []const u8) ![]u8 {
-    const file = try std.fs.cwd().openFile(path, .{});
-    defer file.close();
+    const io = tri_io.get();
+    const file = try std.Io.Dir.cwd().openFile(io, path, .{});
+    defer file.close(io);
 
-    const stat = try file.stat();
+    const stat = try file.stat(io);
     const data = try allocator.alloc(u8, stat.size);
     errdefer allocator.free(data);
 
-    const bytes_read = try file.readAll(data);
+    // Fills `data` or stops at end of file, exactly as 0.15's readAll did --
+    // the short-read check below is the file-truncated-under-us guard.
+    const bytes_read = try file.readPositionalAll(io, data, 0);
     if (bytes_read != stat.size) {
         return error.IncompleteRead;
     }
@@ -415,56 +419,65 @@ pub fn loadWasmFile(allocator: std.mem.Allocator, path: []const u8) ![]u8 {
 /// Save TVC IR to file (simple binary format)
 pub fn saveTVCFile(allocator: std.mem.Allocator, module: *const b2t.TVCModule, path: []const u8) !void {
     _ = allocator;
-    const file = try std.fs.cwd().createFile(path, .{});
-    defer file.close();
+    const io = tri_io.get();
+    const file = try std.Io.Dir.cwd().createFile(io, path, .{});
+    defer file.close(io);
+
+    // 0.16's file writer is buffered; flushed at the end of this function.
+    var write_buf: [4096]u8 = undefined;
+    var fw = file.writer(io, &write_buf);
+    const w = &fw.interface;
 
     // Write header
-    try file.writeAll("TVC1"); // Magic
+    try w.writeAll("TVC1"); // Magic
     var block_count: [4]u8 = undefined;
     std.mem.writeInt(u32, &block_count, @intCast(module.blocks.items.len), .little);
-    try file.writeAll(&block_count);
+    try w.writeAll(&block_count);
 
     // Write each block
     for (module.blocks.items) |*block| {
         // Write label length and label
         var label_len: [2]u8 = undefined;
         std.mem.writeInt(u16, &label_len, @intCast(block.label.len), .little);
-        try file.writeAll(&label_len);
-        try file.writeAll(block.label);
+        try w.writeAll(&label_len);
+        try w.writeAll(block.label);
 
         // Write instruction count
         var instr_count: [4]u8 = undefined;
         std.mem.writeInt(u32, &instr_count, @intCast(block.instructions.items.len), .little);
-        try file.writeAll(&instr_count);
+        try w.writeAll(&instr_count);
 
         // Write instructions
         for (block.instructions.items) |*instr| {
             const opcode_byte: [1]u8 = .{@intFromEnum(instr.opcode)};
-            try file.writeAll(&opcode_byte);
+            try w.writeAll(&opcode_byte);
             var op1: [4]u8 = undefined;
             var op2: [4]u8 = undefined;
             var op3: [4]u8 = undefined;
             std.mem.writeInt(i32, &op1, instr.operand1, .little);
             std.mem.writeInt(i32, &op2, instr.operand2, .little);
             std.mem.writeInt(i32, &op3, instr.operand3, .little);
-            try file.writeAll(&op1);
-            try file.writeAll(&op2);
-            try file.writeAll(&op3);
+            try w.writeAll(&op1);
+            try w.writeAll(&op2);
+            try w.writeAll(&op3);
         }
     }
+    try fw.flush();
 }
 
 /// Load TVC IR from file
 pub fn loadTVCFile(allocator: std.mem.Allocator, path: []const u8) !b2t.TVCModule {
-    const file = try std.fs.cwd().openFile(path, .{});
-    defer file.close();
+    const io = tri_io.get();
+    const file = try std.Io.Dir.cwd().openFile(io, path, .{});
+    defer file.close(io);
 
     // Read entire file into memory
-    const stat = try file.stat();
+    const stat = try file.stat(io);
     const data = try allocator.alloc(u8, stat.size);
     defer allocator.free(data);
 
-    const bytes_read = try file.readAll(data);
+    // Fills `data` or stops at end of file, exactly as 0.15's readAll did.
+    const bytes_read = try file.readPositionalAll(io, data, 0);
     if (bytes_read != stat.size) {
         return error.InvalidTVCFile;
     }

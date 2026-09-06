@@ -8,6 +8,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const graph_mod = @import("graph.zig");
 const symbols = @import("symbols.zig");
 const matcher = @import("matcher.zig");
@@ -121,7 +122,7 @@ pub const RefactorContext = struct {
     /// Rollback all changes
     pub fn rollback(self: *RefactorContext) !void {
         for (self.backups.items) |backup| {
-            try std.fs.cwd().writeFile(.{ .sub_path = backup.file_path }, backup.original_content);
+            try std.Io.Dir.cwd().writeFile(tri_io.get(), .{ .sub_path = backup.file_path, .data = backup.original_content });
         }
     }
 };
@@ -216,7 +217,7 @@ pub fn applyRename(
 
     // Process each file in topological order
     for (edit_order.items) |file_path| {
-        const content = std.fs.cwd().readFileAlloc(allocator, file_path, 10 * 1024 * 1024) catch |err| {
+        const content = std.Io.Dir.cwd().readFileAlloc(tri_io.get(), file_path, allocator, .limited(10 * 1024 * 1024)) catch |err| {
             try result.addError(try std.fmt.allocPrint(allocator, "Failed to read {s}: {}", .{ file_path, err }));
             continue;
         };
@@ -264,7 +265,7 @@ pub fn applyRename(
             defer allocator.free(new_content);
 
             // Write back
-            try std.fs.cwd().writeFile(.{ .sub_path = file_path }, new_content);
+            try std.Io.Dir.cwd().writeFile(tri_io.get(), .{ .sub_path = file_path, .data = new_content });
 
             changes_this_file += 1;
         }
@@ -315,7 +316,7 @@ pub fn extractFunction(
     var result = MultiFileEditResult.init(allocator);
     errdefer result.deinit();
 
-    const content = std.fs.cwd().readFileAlloc(allocator, file_path, 10 * 1024 * 1024) catch |err| {
+    const content = std.Io.Dir.cwd().readFileAlloc(tri_io.get(), file_path, allocator, .limited(10 * 1024 * 1024)) catch |err| {
         try result.addError(try std.fmt.allocPrint(allocator, "Failed to read {s}: {}", .{ file_path, err }));
         result.success = false;
         return result;
@@ -499,7 +500,7 @@ pub fn renameSymbol(
     while (file_iter.next()) |entry| {
         const file_path = entry.key_ptr.*;
 
-        const content = std.fs.cwd().readFileAlloc(allocator, file_path, 10 * 1024 * 1024) catch |err| {
+        const content = std.Io.Dir.cwd().readFileAlloc(tri_io.get(), file_path, allocator, .limited(10 * 1024 * 1024)) catch |err| {
             try result.addError(allocator, try std.fmt.allocPrint(allocator, "Failed to read {s}: {}", .{ file_path, err }));
             continue;
         };
@@ -522,7 +523,7 @@ pub fn renameSymbol(
 
         if (replaced) {
             if (!preview_only) {
-                try std.fs.cwd().writeFile(.{ .sub_path = file_path }, new_content.items);
+                try std.Io.Dir.cwd().writeFile(tri_io.get(), .{ .sub_path = file_path, .data = new_content.items });
             }
 
             result.files_modified += 1;
@@ -537,7 +538,7 @@ pub fn renameSymbol(
     // Also rename the definition
     if (graph.findSymbol(old_name)) |defs| {
         for (defs) |def| {
-            const content = std.fs.cwd().readFileAlloc(allocator, def.file, 10 * 1024 * 1024) catch |err| {
+            const content = std.Io.Dir.cwd().readFileAlloc(tri_io.get(), def.file, allocator, .limited(10 * 1024 * 1024)) catch |err| {
                 try result.addError(allocator, try std.fmt.allocPrint(allocator, "Failed to read {s}: {}", .{ def.file, err }));
                 continue;
             };
@@ -559,7 +560,7 @@ pub fn renameSymbol(
             try new_content.appendSlice(content_copy);
 
             if (replaced and !preview_only) {
-                try std.fs.cwd().writeFile(.{ .sub_path = def.file }, new_content.items);
+                try std.Io.Dir.cwd().writeFile(tri_io.get(), .{ .sub_path = def.file, .data = new_content.items });
                 result.total_changes += 1;
             }
         }

@@ -16,6 +16,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 
@@ -330,15 +331,14 @@ pub const PersistenceManager = struct {
     /// Load cluster state from .tri-cluster.json
     /// Returns error if file doesn't exist (not an error, just first run)
     pub fn load(self: *PersistenceManager) !?ClusterState {
-        const file = std.fs.cwd().openFile(CLUSTER_STATE_FILE, .{}) catch |err| {
+        const io = tri_io.get();
+        // Max 1MB, same cap the 0.15 readToEndAlloc had.
+        const content = std.Io.Dir.cwd().readFileAlloc(io, CLUSTER_STATE_FILE, self.allocator, .limited(1024 * 1024)) catch |err| {
             if (err == error.FileNotFound) {
                 return null; // First run, no state yet
             }
             return err;
         };
-        defer file.close();
-
-        const content = try file.readToEndAlloc(self.allocator, 1024 * 1024); // Max 1MB
         defer self.allocator.free(content);
 
         const parsed = try std.json.parseFromSlice(ClusterStateJson, self.allocator, content, .{ .ignore_unknown_fields = true });
@@ -421,45 +421,48 @@ pub const PersistenceManager = struct {
         // Rotate backups
         self.rotateBackups() catch {};
 
-        // Write JSON manually (Zig 0.15 JSON API is complex)
-        var json_buffer = std.ArrayListUnmanaged(u8){};
-        defer json_buffer.deinit(self.allocator);
+        // Write JSON manually (the std.json writer API is more machinery than
+        // this needs)
+        var json_buffer: std.Io.Writer.Allocating = .init(self.allocator);
+        defer json_buffer.deinit();
+        const jw = &json_buffer.writer;
 
         // Build JSON manually
-        try json_buffer.appendSlice(self.allocator, "{\n");
-        try json_buffer.writer(self.allocator).print("  \"cluster_id\": \"{s}\",\n", .{json_obj.cluster_id});
-        try json_buffer.writer(self.allocator).print("  \"node_id\": \"{s}\",\n", .{json_obj.node_id});
-        try json_buffer.appendSlice(self.allocator, "  \"peers\": [\n");
+        try jw.writeAll("{\n");
+        try jw.print("  \"cluster_id\": \"{s}\",\n", .{json_obj.cluster_id});
+        try jw.print("  \"node_id\": \"{s}\",\n", .{json_obj.node_id});
+        try jw.writeAll("  \"peers\": [\n");
         for (json_obj.peers, 0..) |peer, i| {
-            if (i > 0) try json_buffer.appendSlice(self.allocator, ",\n");
-            try json_buffer.appendSlice(self.allocator, "    {\n");
-            try json_buffer.writer(self.allocator).print("      \"node_id\": \"{s}\",\n", .{peer.node_id});
-            try json_buffer.writer(self.allocator).print("      \"host\": \"{s}\",\n", .{peer.host});
-            try json_buffer.writer(self.allocator).print("      \"port\": {d},\n", .{peer.port});
-            try json_buffer.writer(self.allocator).print("      \"cluster_id\": \"{s}\",\n", .{peer.cluster_id});
-            try json_buffer.writer(self.allocator).print("      \"quality_score\": {d:.5},\n", .{peer.quality_score});
-            try json_buffer.writer(self.allocator).print("      \"last_seen\": {d},\n", .{peer.last_seen});
-            try json_buffer.writer(self.allocator).print("      \"first_seen\": {d},\n", .{peer.first_seen});
-            try json_buffer.writer(self.allocator).print("      \"role\": \"{s}\",\n", .{peer.role});
-            try json_buffer.writer(self.allocator).print("      \"tier\": \"{s}\"\n", .{peer.tier});
-            try json_buffer.appendSlice(self.allocator, "    }");
+            if (i > 0) try jw.writeAll(",\n");
+            try jw.writeAll("    {\n");
+            try jw.print("      \"node_id\": \"{s}\",\n", .{peer.node_id});
+            try jw.print("      \"host\": \"{s}\",\n", .{peer.host});
+            try jw.print("      \"port\": {d},\n", .{peer.port});
+            try jw.print("      \"cluster_id\": \"{s}\",\n", .{peer.cluster_id});
+            try jw.print("      \"quality_score\": {d:.5},\n", .{peer.quality_score});
+            try jw.print("      \"last_seen\": {d},\n", .{peer.last_seen});
+            try jw.print("      \"first_seen\": {d},\n", .{peer.first_seen});
+            try jw.print("      \"role\": \"{s}\",\n", .{peer.role});
+            try jw.print("      \"tier\": \"{s}\"\n", .{peer.tier});
+            try jw.writeAll("    }");
         }
-        try json_buffer.appendSlice(self.allocator, "\n  ],\n");
-        try json_buffer.writer(self.allocator).print("  \"version\": {d},\n", .{json_obj.version});
-        try json_buffer.writer(self.allocator).print("  \"last_updated\": {d}\n", .{json_obj.last_updated});
-        try json_buffer.appendSlice(self.allocator, "}\n");
+        try jw.writeAll("\n  ],\n");
+        try jw.print("  \"version\": {d},\n", .{json_obj.version});
+        try jw.print("  \"last_updated\": {d}\n", .{json_obj.last_updated});
+        try jw.writeAll("}\n");
 
-        const json_string = try json_buffer.toOwnedSlice(self.allocator);
+        const json_string = try json_buffer.toOwnedSlice();
         defer self.allocator.free(json_string);
 
         // Write to file
-        const file = try std.fs.cwd().createFile(temp_file, .{ .read = true });
-        defer file.close();
+        const io = tri_io.get();
+        const file = try std.Io.Dir.cwd().createFile(io, temp_file, .{ .read = true });
+        defer file.close(io);
 
-        try file.writeAll(json_string);
+        try file.writeStreamingAll(io, json_string);
 
         // Atomic rename
-        try std.fs.cwd().rename(temp_file, CLUSTER_STATE_FILE);
+        try std.Io.Dir.cwd().rename(temp_file, std.Io.Dir.cwd(), CLUSTER_STATE_FILE, io);
 
         self.state = undefined; // Will need to reload to get owned strings
     }
@@ -467,22 +470,23 @@ pub const PersistenceManager = struct {
     /// Rotate backup files (.bak -> .bak2, current -> .bak)
     fn rotateBackups(self: *PersistenceManager) !void {
         _ = self;
+        const io = tri_io.get();
 
         // .bak2 -> delete
-        std.fs.cwd().deleteFile(CLUSTER_BACKUP2_FILE) catch {};
+        std.Io.Dir.cwd().deleteFile(io, CLUSTER_BACKUP2_FILE) catch {};
 
         // .bak -> .bak2
-        if (std.fs.cwd().openFile(CLUSTER_BACKUP_FILE, .{})) |file| {
-            file.close();
-            std.fs.cwd().rename(CLUSTER_BACKUP_FILE, CLUSTER_BACKUP2_FILE) catch {};
+        if (std.Io.Dir.cwd().openFile(io, CLUSTER_BACKUP_FILE, .{})) |file| {
+            file.close(io);
+            std.Io.Dir.cwd().rename(CLUSTER_BACKUP_FILE, std.Io.Dir.cwd(), CLUSTER_BACKUP2_FILE, io) catch {};
         } else |err| {
             _ = err catch {};
         }
 
         // current -> .bak
-        if (std.fs.cwd().openFile(CLUSTER_STATE_FILE, .{})) |file| {
-            file.close();
-            std.fs.cwd().rename(CLUSTER_STATE_FILE, CLUSTER_BACKUP_FILE) catch {};
+        if (std.Io.Dir.cwd().openFile(io, CLUSTER_STATE_FILE, .{})) |file| {
+            file.close(io);
+            std.Io.Dir.cwd().rename(CLUSTER_STATE_FILE, std.Io.Dir.cwd(), CLUSTER_BACKUP_FILE, io) catch {};
         } else |err| {
             _ = err catch {};
         }

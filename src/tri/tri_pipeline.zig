@@ -11,6 +11,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 const colors = @import("tri_colors.zig");
@@ -290,11 +291,12 @@ pub fn runPipelineAudit(allocator: std.mem.Allocator, args: []const []const u8) 
     std.debug.print("  Method: vibee gen + zig ast-check\n\n", .{});
 
     // Collect .tri spec paths
-    var specs_dir = std.fs.cwd().openDir("specs/tri", .{ .iterate = true }) catch {
+    const io = tri_io.get();
+    var specs_dir = std.Io.Dir.cwd().openDir(io, "specs/tri", .{ .iterate = true }) catch {
         std.debug.print("{s}Error: Cannot open specs/tri/{s}\n", .{ RED, RESET });
         return;
     };
-    defer specs_dir.close();
+    defer specs_dir.close(io);
 
     var spec_names: std.ArrayListUnmanaged([]const u8) = .empty;
     defer {
@@ -303,7 +305,7 @@ pub fn runPipelineAudit(allocator: std.mem.Allocator, args: []const []const u8) 
     }
 
     var iter = specs_dir.iterate();
-    while (iter.next() catch null) |entry| {
+    while (iter.next(io) catch null) |entry| {
         if (entry.kind == .file and std.mem.endsWith(u8, entry.name, ".tri")) {
             const name_copy = allocator.dupe(u8, entry.name) catch continue;
             spec_names.append(allocator, name_copy) catch {
@@ -357,11 +359,9 @@ pub fn runPipelineAudit(allocator: std.mem.Allocator, args: []const []const u8) 
 
         // Detect Verilog specs — skip zig ast-check for non-Zig languages
         const is_verilog = blk: {
-            const spec_file = std.fs.cwd().openFile(spec_path, .{}) catch break :blk false;
-            defer spec_file.close();
+            // Header sniff: a short read is the normal case for any spec under 512 bytes.
             var buf: [512]u8 = undefined;
-            const bytes_read = spec_file.read(&buf) catch break :blk false;
-            const header = buf[0..bytes_read];
+            const header = std.Io.Dir.cwd().readFile(io, spec_path, &buf) catch break :blk false;
             break :blk (std.mem.indexOf(u8, header, "language: varlog") != null or
                 std.mem.indexOf(u8, header, "language: verilog") != null);
         };
@@ -415,9 +415,9 @@ pub fn runPipelineAudit(allocator: std.mem.Allocator, args: []const []const u8) 
         }
 
         // Check if output exists
-        const file_exists = std.fs.cwd().openFile(out_path, .{}) catch null;
+        const file_exists = std.Io.Dir.cwd().openFile(io, out_path, .{}) catch null;
         if (file_exists) |f| {
-            f.close();
+            f.close(io);
         } else {
             std.debug.print("  {d:>2}. {s}❌{s} {s} — no output\n", .{ idx + 1, RED, RESET, name });
             fail += 1;
@@ -501,12 +501,12 @@ pub fn runPipelineAudit(allocator: std.mem.Allocator, args: []const []const u8) 
     };
 
     // Write report to specs/REGENERATION_REPORT.md
-    const report_file = std.fs.cwd().createFile("specs/REGENERATION_REPORT.md", .{}) catch {
+    const report_file = std.Io.Dir.cwd().createFile(io, "specs/REGENERATION_REPORT.md", .{}) catch {
         std.debug.print("{s}Warning: Could not write REGENERATION_REPORT.md{s}\n", .{ YELLOW, RESET });
         return;
     };
-    defer report_file.close();
-    report_file.writeAll(report.items) catch |err| {
+    defer report_file.close(io);
+    report_file.writeStreamingAll(io, report.items) catch |err| {
         std.log.warn("Failed to write REGENERATION_REPORT.md: {}", .{err});
     };
     std.debug.print("  Report saved: specs/REGENERATION_REPORT.md\n\n", .{});
@@ -644,6 +644,7 @@ pub fn runDecomposeCommand(allocator: std.mem.Allocator, args: []const []const u
 }
 
 pub fn runPlanCommand(allocator: std.mem.Allocator, args: []const []const u8) void {
+    const io = tri_io.get();
     // Check for flags
     var show_help = false;
     var show_list = false;
@@ -796,8 +797,8 @@ pub fn runPlanCommand(allocator: std.mem.Allocator, args: []const []const u8) vo
 
     // Check if spec already exists
     if (!force) {
-        if (std.fs.cwd().openFile(spec_path, .{})) |f| {
-            f.close();
+        if (std.Io.Dir.cwd().openFile(io, spec_path, .{})) |f| {
+            f.close(io);
             std.debug.print("{s}Spec already exists: {s}{s}\n", .{ YELLOW, spec_path, RESET });
             std.debug.print("Use --force to overwrite.\n", .{});
             return;
@@ -805,11 +806,11 @@ pub fn runPlanCommand(allocator: std.mem.Allocator, args: []const []const u8) vo
     }
 
     // Create spec file
-    const file = std.fs.cwd().createFile(spec_path, .{}) catch |err| {
+    const file = std.Io.Dir.cwd().createFile(io, spec_path, .{}) catch |err| {
         std.debug.print("{s}Error creating spec file: {}{s}\n", .{ RED, err, RESET });
         return;
     };
-    defer file.close();
+    defer file.close(io);
 
     // Extract first line as short description for the spec
     var first_line: []const u8 = task;
@@ -869,7 +870,7 @@ pub fn runPlanCommand(allocator: std.mem.Allocator, args: []const []const u8) vo
     };
     defer allocator.free(formatted_content);
 
-    file.writeAll(formatted_content) catch |err| {
+    file.writeStreamingAll(io, formatted_content) catch |err| {
         std.debug.print("{s}Error writing spec file: {}{s}\n", .{ RED, err, RESET });
         return;
     };
@@ -907,16 +908,17 @@ fn printPlanList() void {
     std.debug.print("{s}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━{s}\n\n", .{ GRAY, RESET });
 
     const specs_dir = "specs/tri";
-    var dir = std.fs.cwd().openDir(specs_dir, .{ .iterate = true }) catch {
+    const io = tri_io.get();
+    var dir = std.Io.Dir.cwd().openDir(io, specs_dir, .{ .iterate = true }) catch {
         std.debug.print("{s}No specs directory found{s}\n", .{ GRAY, RESET });
         return;
     };
-    defer dir.close();
+    defer dir.close(io);
 
     var iter = dir.iterate();
     var count: usize = 0;
 
-    while (iter.next() catch |err| {
+    while (iter.next(io) catch |err| {
         std.debug.print("{s}Error reading directory: {}{s}\n", .{ RED, err, RESET });
         return;
     }) |entry| {
@@ -1047,9 +1049,10 @@ fn runPipelineCost(allocator: std.mem.Allocator, args: []const []const u8) void 
     };
 
     // Check if cost summary exists
+    const io = tri_io.get();
     const exists = blk: {
-        const f = std.fs.cwd().openFile(cost_path, .{}) catch break :blk false;
-        f.close();
+        const f = std.Io.Dir.cwd().openFile(io, cost_path, .{}) catch break :blk false;
+        f.close(io);
         break :blk true;
     };
 
@@ -1058,17 +1061,14 @@ fn runPipelineCost(allocator: std.mem.Allocator, args: []const []const u8) void 
         std.debug.print("{s}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━{s}\n", .{ GRAY, RESET });
         std.debug.print("  File: {s}\n", .{cost_path});
 
-        // Read and display the file
-        const file = std.fs.cwd().openFile(cost_path, .{}) catch {
+        // Read and display the file — a short read is normal for a small JSON summary.
+        var read_buf: [4096]u8 = undefined;
+        const contents = std.Io.Dir.cwd().readFile(io, cost_path, &read_buf) catch {
             std.debug.print("  {s}Could not read cost file{s}\n", .{ RED, RESET });
             return;
         };
-        defer file.close();
-
-        var read_buf: [4096]u8 = undefined;
-        const n = file.readAll(&read_buf) catch 0;
-        if (n > 0) {
-            std.debug.print("\n{s}\n", .{read_buf[0..n]});
+        if (contents.len > 0) {
+            std.debug.print("\n{s}\n", .{contents});
         }
     } else {
         std.debug.print("\n{s}No cost data for issue #{d}{s}\n", .{ YELLOW, issue_number, RESET });
@@ -1079,8 +1079,8 @@ fn runPipelineCost(allocator: std.mem.Allocator, args: []const []const u8) void 
         const handoff_exists = blk: {
             var artifact_buf: [512]u8 = undefined;
             const planner_path = handoff_mod.getArtifactPath(&artifact_buf, issue_number, .planner);
-            const f = std.fs.cwd().openFile(planner_path, .{}) catch break :blk false;
-            f.close();
+            const f = std.Io.Dir.cwd().openFile(io, planner_path, .{}) catch break :blk false;
+            f.close(io);
             break :blk true;
         };
 
@@ -1110,16 +1110,17 @@ fn runPipelineVersionList(allocator: std.mem.Allocator) void {
     std.debug.print("{s}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━{s}\n\n", .{ GRAY, RESET });
 
     // List version files from .trinity/versions/
-    var dir = std.fs.cwd().openDir(".trinity/versions", .{ .iterate = true }) catch {
+    const io = tri_io.get();
+    var dir = std.Io.Dir.cwd().openDir(io, ".trinity/versions", .{ .iterate = true }) catch {
         std.debug.print("{s}No version history found. Creating baseline...{s}\n", .{ GRAY, RESET });
         std.debug.print("Run 'tri pipeline run \"<task>\"' to generate first version.\n\n", .{});
         return;
     };
-    defer dir.close();
+    defer dir.close(io);
 
     var iter = dir.iterate();
     var count: usize = 0;
-    while (iter.next() catch null) |entry| {
+    while (iter.next(io) catch null) |entry| {
         if (entry.kind == .file and std.mem.endsWith(u8, entry.name, ".json")) {
             std.debug.print("  {s}\xe2\x97\x8f{s} {s}\n", .{ GREEN, RESET, entry.name });
             count += 1;
@@ -1176,10 +1177,8 @@ fn readVersionFile(allocator: std.mem.Allocator, name: []const u8) ?ParsedVersio
     var path_buf: [256]u8 = undefined;
     const path = std.fmt.bufPrint(&path_buf, ".trinity/versions/{s}.json", .{name}) catch return null;
 
-    const file = std.fs.cwd().openFile(path, .{}) catch return null;
-    defer file.close();
-
-    const content = file.readToEndAlloc(allocator, 256 * 1024) catch return null;
+    const io = tri_io.get();
+    const content = std.Io.Dir.cwd().readFileAlloc(io, path, allocator, .limited(256 * 1024)) catch return null;
 
     const parsed = std.json.parseFromSlice(std.json.Value, allocator, content, .{ .allocate = .alloc_always }) catch {
         allocator.free(content);
@@ -1400,19 +1399,20 @@ fn logSacredCall(command: []const u8, arg: []const u8) void {
     var line_buf: [512]u8 = undefined;
     const line = std.fmt.bufPrint(&line_buf, "[phi] | tri {s} {s}\n", .{ command, arg }) catch return;
 
-    const file = std.fs.cwd().openFile(log_path, .{ .mode = .write_only }) catch {
+    const io = tri_io.get();
+    const file = std.Io.Dir.cwd().openFile(io, log_path, .{ .mode = .write_only }) catch {
         // Create directory and file if not exists
-        std.fs.cwd().makePath("deploy/trinity-nexus/.ralph") catch return;
-        const new_file = std.fs.cwd().createFile(log_path, .{}) catch return;
-        defer new_file.close();
-        new_file.writeAll(line) catch return;
+        std.Io.Dir.cwd().createDirPath(io, "deploy/trinity-nexus/.ralph") catch return;
+        const new_file = std.Io.Dir.cwd().createFile(io, log_path, .{}) catch return;
+        defer new_file.close(io);
+        new_file.writeStreamingAll(io, line) catch return;
         return;
     };
-    defer file.close();
+    defer file.close(io);
 
-    // Seek to end and append
-    file.seekFromEnd(0) catch return;
-    file.writeAll(line) catch return;
+    // Append at the current end of file
+    const end = file.length(io) catch return;
+    file.writePositionalAll(io, line, end) catch return;
 }
 
 test "pipeline color imports" {

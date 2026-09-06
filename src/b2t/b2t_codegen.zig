@@ -5,6 +5,7 @@
 // φ² + 1/φ² = 3 = TRINITY
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const b2t_lifter = @import("b2t_lifter.zig");
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -560,10 +561,11 @@ pub fn writeToFile(allocator: std.mem.Allocator, module: *const b2t_lifter.TVCMo
 
     const code = try codegen.generate(module);
 
-    const file = try std.fs.cwd().createFile(path, .{});
-    defer file.close();
+    const io = tri_io.get();
+    const file = try std.Io.Dir.cwd().createFile(io, path, .{});
+    defer file.close(io);
 
-    try file.writeAll(code);
+    try file.writeStreamingAll(io, code);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -602,10 +604,10 @@ pub const TritFile = struct {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 pub fn disassembleTrit(allocator: std.mem.Allocator, code: []const u8) ![]const u8 {
-    var output = std.ArrayListUnmanaged(u8){};
-    errdefer output.deinit(allocator);
-
-    var writer = output.writer(allocator);
+    // 0.16 removed ArrayList.writer; an Allocating writer owns the buffer.
+    var aw: std.Io.Writer.Allocating = .init(allocator);
+    errdefer aw.deinit();
+    const writer = &aw.writer;
     var offset: usize = 0;
 
     while (offset < code.len) {
@@ -654,7 +656,7 @@ pub fn disassembleTrit(allocator: std.mem.Allocator, code: []const u8) ![]const 
         }
     }
 
-    return try output.toOwnedSlice(allocator);
+    return try aw.toOwnedSlice();
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

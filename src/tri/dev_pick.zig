@@ -14,6 +14,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 const colors = @import("tri_colors.zig");
 const dev_scan = @import("dev_scan.zig");
@@ -116,10 +117,11 @@ const ScoredItem = struct {
 /// Load scan results from .trinity/scan_results.json
 /// If file missing or empty, returns null (caller should trigger scan)
 fn loadScanResults() ?dev_scan.ScanResult {
-    const file = std.fs.cwd().openFile(".trinity/scan_results.json", .{}) catch return null;
-    defer file.close();
+    const io = tri_io.get();
+    const file = std.Io.Dir.cwd().openFile(io, ".trinity/scan_results.json", .{}) catch return null;
+    defer file.close(io);
 
-    const stat = file.stat() catch return null;
+    const stat = file.stat(io) catch return null;
     if (stat.size < 10) return null;
 
     // Check staleness: >1h old = stale
@@ -130,8 +132,11 @@ fn loadScanResults() ?dev_scan.ScanResult {
     // Parse the JSON scan results
     var result = dev_scan.ScanResult{};
 
+    // Whole file into a fixed buffer; a short read is normal.
     var buf: [65536]u8 = undefined;
-    const n = file.readAll(&buf) catch return null;
+    var scan_read_buf: [4096]u8 = undefined;
+    var scan_reader = file.reader(io, &scan_read_buf);
+    const n = scan_reader.interface.readSliceShort(&buf) catch return null;
     const content = buf[0..n];
 
     // Simple JSON array parser: find each {"source":..., "id":..., "title":..., "priority":...}
@@ -518,10 +523,11 @@ pub fn runPickCommand(allocator: Allocator, args: []const []const u8) void {
 fn savePickResult(result: *const dev_scan.ScanResult, pick: *const PickResult) void {
     if (result.count == 0 or pick.chosen_idx >= result.count) return;
 
-    std.fs.cwd().makePath(".trinity") catch return;
+    const io = tri_io.get();
+    std.Io.Dir.cwd().createDirPath(io, ".trinity") catch return;
 
-    const file = std.fs.cwd().createFile(".trinity/pick_result.json", .{}) catch return;
-    defer file.close();
+    const file = std.Io.Dir.cwd().createFile(io, ".trinity/pick_result.json", .{}) catch return;
+    defer file.close(io);
 
     const chosen = &result.items[pick.chosen_idx];
     const score_int: u32 = @intFromFloat(pick.final_score);
@@ -603,7 +609,7 @@ fn savePickResult(result: *const dev_scan.ScanResult, pick: *const PickResult) v
         timestamp,
     }) catch return;
 
-    file.writeAll(content) catch return;
+    file.writeStreamingAll(io, content) catch return;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

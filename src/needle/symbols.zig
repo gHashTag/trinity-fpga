@@ -9,6 +9,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const graph = @import("graph.zig");
 const Symbol = graph.Symbol;
 const SymbolKind = graph.SymbolKind;
@@ -34,22 +35,21 @@ pub const ExtractionResult = struct {
             .graph = CallGraph.init(allocator),
             .symbols_found = 0,
             .files_processed = 0,
-            .errors = std.ArrayList([]const u8).init(allocator),
+            .errors = .empty,
             .allocator = allocator,
         };
     }
 
     pub fn deinit(self: *ExtractionResult) void {
         self.graph.deinit();
-        var iter = self.errors.iterator();
-        while (iter.next()) |msg| {
-            self.allocator.free(msg.*);
+        for (self.errors.items) |msg| {
+            self.allocator.free(msg);
         }
-        self.errors.deinit();
+        self.errors.deinit(self.allocator);
     }
 
     pub fn addError(self: *ExtractionResult, msg: []const u8) !void {
-        try self.errors.append(try self.allocator.dupe(u8, msg));
+        try self.errors.append(self.allocator, try self.allocator.dupe(u8, msg));
     }
 };
 
@@ -329,17 +329,21 @@ pub fn buildCallGraph(
     errdefer result.deinit();
 
     // Walk directory for .zig files
-    var walker = try std.fs.cwd().walk(allocator, root_path);
+    const io = tri_io.get();
+    var root_dir = try std.Io.Dir.cwd().openDir(io, root_path, .{ .iterate = true });
+    defer root_dir.close(io);
+
+    var walker = try root_dir.walk(allocator);
     defer walker.deinit();
 
-    while (try walker.next()) |entry| {
+    while (try walker.next(io)) |entry| {
         if (entry.kind != .file) continue;
 
         if (std.mem.endsWith(u8, entry.path, ".zig")) {
             const full_path = try std.fs.path.join(allocator, &[_][]const u8{ root_path, entry.path });
             defer allocator.free(full_path);
 
-            const source = std.fs.cwd().readFileAlloc(allocator, full_path, 10 * 1024 * 1024) catch |err| {
+            const source = std.Io.Dir.cwd().readFileAlloc(io, full_path, allocator, .limited(10 * 1024 * 1024)) catch |err| {
                 try result.addError(try std.fmt.allocPrint(allocator, "Failed to read {s}: {}", .{ full_path, err }));
                 continue;
             };
@@ -366,7 +370,7 @@ pub fn buildCallGraphSingleFile(
     var result = ExtractionResult.init(allocator);
     errdefer result.deinit();
 
-    const source = try std.fs.cwd().readFileAlloc(allocator, file_path, 10 * 1024 * 1024);
+    const source = try std.Io.Dir.cwd().readFileAlloc(tri_io.get(), file_path, allocator, .limited(10 * 1024 * 1024));
     defer allocator.free(source);
 
     const extractor = ZigSymbolExtractor.init(allocator, file_path, source);

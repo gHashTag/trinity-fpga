@@ -8,6 +8,7 @@
 // φ² + 1/φ² = 3 = TRINITY
 // ═══════════════════════════════════════════════════════════════════════════════
 const std = @import("std");
+const tri_io = @import("tri_io");
 const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 const colors = @import("tri_colors.zig");
@@ -77,6 +78,9 @@ pub const BackoffPolicy = locus_coeruleus.BackoffPolicy;
 // This file is a flat namespace of free functions with no enclosing type to
 // hang an `io` field on, so the Io the 0.16 filesystem API needs is passed in.
 pub fn runGenCommand(io: std.Io, allocator: std.mem.Allocator, args: []const []const u8) !void {
+    // 0.16's std.process.spawn takes no allocator, where Child.init did. The
+    // parameter stays for the callers and the command-table signature.
+    _ = allocator;
     if (args.len < 1) {
         printGenHelp();
         return;
@@ -127,10 +131,17 @@ pub fn runGenCommand(io: std.Io, allocator: std.mem.Allocator, args: []const []c
         argv_buf[argc] = arg;
         argc += 1;
     }
-    var child = std.process.Child.init(argv_buf[0..argc], allocator);
-    child.stderr_behavior = .Inherit;
-    child.stdout_behavior = .Inherit;
-    const term = try child.spawnAndWait();
+    // 0.16 removed Child.init/spawnAndWait. Spawning is now io.processSpawn via
+    // std.process.spawn, with the stdio behaviour given up front instead of
+    // assigned to fields afterwards, and the wait is a separate call.
+    // This function already receives an `io`, so use it rather than the
+    // ambient handle.
+    var child = try std.process.spawn(io, .{
+        .argv = argv_buf[0..argc],
+        .stdout = .inherit,
+        .stderr = .inherit,
+    });
+    const term = try child.wait(io);
     switch (term) {
         .exited => |code| if (code != 0) {
             std.debug.print("{s} exited with code {d}\n", .{ backend_name, code });

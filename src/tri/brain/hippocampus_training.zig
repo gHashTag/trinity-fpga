@@ -16,6 +16,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const thalamus_logs = @import("thalamus_logs.zig");
@@ -122,10 +123,10 @@ pub const PopulationCache = struct {
 
     /// Get all worker keys in cache (fixed: uses passed allocator, not page_allocator)
     pub fn listWorkers(self: *const Self, allocator: Allocator) !std.ArrayList([]const u8) {
-        var list = std.ArrayList([]const u8).init(allocator);
+        var list: std.ArrayList([]const u8) = .empty;
         var iter = self.workers.iterator();
         while (iter.next()) |entry| {
-            try list.append(allocator.dupe(u8, entry.key_ptr.*) catch |err| {
+            try list.append(allocator, allocator.dupe(u8, entry.key_ptr.*) catch |err| {
                 // On error, clean up what we've allocated
                 for (list.items) |k| allocator.free(k);
                 return err;
@@ -247,7 +248,7 @@ pub const Hippocampus = struct {
 
     /// Get all cached workers
     pub fn getAllCachedWorkers(self: *const Self) !std.ArrayList(CachedWorkerStatus) {
-        var results = std.ArrayList(CachedWorkerStatus).init(self.allocator);
+        var results: std.ArrayList(CachedWorkerStatus) = .empty;
 
         var iter = self.cache.workers.iterator();
         while (iter.next()) |entry| {
@@ -259,7 +260,7 @@ pub const Hippocampus = struct {
 
     /// Get workers that are stale (older than max_age_sec)
     pub fn getStaleWorkers(self: *const Self, max_age_sec: i64) !std.ArrayList(CachedWorkerStatus) {
-        var results = std.ArrayList(CachedWorkerStatus).init(self.allocator);
+        var results: std.ArrayList(CachedWorkerStatus) = .empty;
 
         var iter = self.cache.workers.iterator();
         while (iter.next()) |entry| {
@@ -321,9 +322,10 @@ pub const Hippocampus = struct {
             root.deinit(self.allocator);
         }
 
-        const file = try std.fs.cwd().createFile(self.file_path, .{});
-        defer file.close();
-        try file.writeAll(json_str);
+        const io = tri_io.get();
+        const file = try std.Io.Dir.cwd().createFile(io, self.file_path, .{});
+        defer file.close(io);
+        try file.writeStreamingAll(io, json_str);
     }
 
     /// Force refresh of cache (ignores refresh interval)
@@ -347,10 +349,12 @@ pub const Hippocampus = struct {
 // ═══════════════════════════════════════════════════════════════════════════
 
 fn loadCacheFromFile(allocator: Allocator, cache: *PopulationCache) !void {
-    const file = std.fs.cwd().openFile(".trinity/evolution_state.json", .{}) catch return;
-    defer file.close();
-
-    const content = try file.readToEndAlloc(allocator, 65536);
+    const content = std.Io.Dir.cwd().readFileAlloc(
+        tri_io.get(),
+        ".trinity/evolution_state.json",
+        allocator,
+        .limited(65536),
+    ) catch return;
     defer allocator.free(content);
 
     const parsed = try std.json.parseFromSlice(allocator, content);

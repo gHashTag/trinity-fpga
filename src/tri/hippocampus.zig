@@ -17,6 +17,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 const tri_exit_codes = @import("tri_exit_codes.zig");
 const Allocator = std.mem.Allocator;
@@ -150,10 +151,12 @@ pub fn write(allocator: Allocator, record: *const MemoryRecord) !void {
     const agent_name = record.agent();
     if (agent_name.len == 0) return error.EmptyAgent;
 
+    const io = tri_io.get();
+
     // Ensure directory exists
     const dir_path = try std.fmt.allocPrint(allocator, "{s}/{s}", .{ MEMORY_ROOT, agent_name });
     defer allocator.free(dir_path);
-    std.fs.cwd().makePath(dir_path) catch {};
+    std.Io.Dir.cwd().createDirPath(io, dir_path) catch {};
 
     const file_path = try std.fmt.allocPrint(allocator, "{s}/{s}/current.jsonl", .{ MEMORY_ROOT, agent_name });
     defer allocator.free(file_path);
@@ -163,14 +166,14 @@ pub fn write(allocator: Allocator, record: *const MemoryRecord) !void {
     const json_line = try serializeRecord(&buf, record);
 
     // Append to file
-    const file = try std.fs.cwd().createFile(file_path, .{ .truncate = false });
-    defer file.close();
-    try file.seekFromEnd(0);
-    try file.writeAll(json_line);
-    try file.writeAll("\n");
+    const file = try std.Io.Dir.cwd().createFile(io, file_path, .{ .truncate = false });
+    defer file.close(io);
+    const end = try file.length(io);
+    try file.writePositionalAll(io, json_line, end);
+    try file.writePositionalAll(io, "\n", end + json_line.len);
 
     // Check file size for rotation
-    const stat = try file.stat();
+    const stat = try file.stat(io);
     if (stat.size > MAX_FILE_SIZE) {
         rotateFile(allocator, agent_name) catch {};
     }
@@ -199,11 +202,12 @@ pub fn read(allocator: Allocator, opts: ReadOptions) !std.ArrayList(MemoryRecord
         try readAgentRecords(allocator, agent_name, opts, &results);
     } else {
         // Scan all agent directories
-        var dir = std.fs.cwd().openDir(MEMORY_ROOT, .{ .iterate = true }) catch return results;
-        defer dir.close();
+        const io = tri_io.get();
+        var dir = std.Io.Dir.cwd().openDir(io, MEMORY_ROOT, .{ .iterate = true }) catch return results;
+        defer dir.close(io);
 
         var dir_iter = dir.iterate();
-        while (try dir_iter.next()) |entry| {
+        while (try dir_iter.next(io)) |entry| {
             if (entry.kind != .directory) continue;
             try readAgentRecords(allocator, entry.name, opts, &results);
         }
@@ -286,11 +290,12 @@ pub fn gc(allocator: Allocator, agent_filter: ?[]const u8) !GcResult {
     if (agent_filter) |agent_name| {
         try gcAgent(allocator, agent_name, now_ts, &result);
     } else {
-        var dir = std.fs.cwd().openDir(MEMORY_ROOT, .{ .iterate = true }) catch return result;
-        defer dir.close();
+        const io = tri_io.get();
+        var dir = std.Io.Dir.cwd().openDir(io, MEMORY_ROOT, .{ .iterate = true }) catch return result;
+        defer dir.close(io);
 
         var dir_iter = dir.iterate();
-        while (try dir_iter.next()) |entry| {
+        while (try dir_iter.next(io)) |entry| {
             if (entry.kind != .directory) continue;
             try gcAgent(allocator, entry.name, now_ts, &result);
         }
@@ -451,14 +456,14 @@ pub fn getCellHistory(allocator: Allocator, cell_id: []const u8, days: u32) !std
     });
 
     // Filter by cell_id (done in-memory since data_json contains cell_id)
-    var filtered = std.ArrayList(MemoryRecord).init(allocator);
+    var filtered: std.ArrayList(MemoryRecord) = .empty;
     for (records.items) |rec| {
         const data_slice = rec.data_buf[0..rec.data_len];
         if (std.mem.indexOf(u8, data_slice, cell_id) != null) {
-            try filtered.append(rec);
+            try filtered.append(allocator, rec);
         }
     }
-    records.deinit();
+    records.deinit(allocator);
 
     return filtered;
 }
@@ -610,8 +615,8 @@ pub fn generateId(id_buf: *[64]u8, id_len: *u8, ts: u64, agent_name: []const u8)
 }
 
 fn serializeRecord(buf: *[4096]u8, rec: *const MemoryRecord) ![]const u8 {
-    var stream = std.io.fixedBufferStream(buf);
-    const w = stream.writer();
+    var stream = std.Io.Writer.fixed(buf);
+    const w = &stream;
 
     try w.writeAll("{\"id\":\"");
     try w.writeAll(rec.id());
@@ -653,7 +658,7 @@ fn serializeRecord(buf: *[4096]u8, rec: *const MemoryRecord) ![]const u8 {
     }
     try w.writeAll("\"}");
 
-    return stream.getWritten();
+    return stream.buffered();
 }
 
 fn deserializeRecord(line: []const u8, rec: *MemoryRecord) bool {
@@ -749,7 +754,7 @@ fn readAgentRecords(allocator: Allocator, agent_name: []const u8, opts: ReadOpti
     const file_path = try std.fmt.allocPrint(allocator, "{s}/{s}/current.jsonl", .{ MEMORY_ROOT, agent_name });
     defer allocator.free(file_path);
 
-    const contents = std.fs.cwd().readFileAlloc(allocator, file_path, 8 * 1024 * 1024) catch return;
+    const contents = std.Io.Dir.cwd().readFileAlloc(tri_io.get(), file_path, allocator, .limited(8 * 1024 * 1024)) catch return;
     defer allocator.free(contents);
 
     var line_iter = std.mem.splitScalar(u8, contents, '\n');
@@ -784,7 +789,8 @@ fn gcAgent(allocator: Allocator, agent_name: []const u8, now_ts: u64, result: *G
     const file_path = try std.fmt.allocPrint(allocator, "{s}/{s}/current.jsonl", .{ MEMORY_ROOT, agent_name });
     defer allocator.free(file_path);
 
-    const contents = std.fs.cwd().readFileAlloc(allocator, file_path, 8 * 1024 * 1024) catch return;
+    const io = tri_io.get();
+    const contents = std.Io.Dir.cwd().readFileAlloc(io, file_path, allocator, .limited(8 * 1024 * 1024)) catch return;
     defer allocator.free(contents);
 
     var kept_lines: std.ArrayList(u8) = .empty;
@@ -812,17 +818,18 @@ fn gcAgent(allocator: Allocator, agent_name: []const u8, now_ts: u64, result: *G
 
     // Rewrite file with only kept records
     if (result.removed > 0) {
-        const file = try std.fs.cwd().createFile(file_path, .{});
-        defer file.close();
-        try file.writeAll(kept_lines.items);
+        const file = try std.Io.Dir.cwd().createFile(io, file_path, .{});
+        defer file.close(io);
+        try file.writeStreamingAll(io, kept_lines.items);
     }
 }
 
 fn rotateFile(allocator: Allocator, agent_name: []const u8) !void {
     // Move current.jsonl to archive/YYYY-MM.jsonl
+    const io = tri_io.get();
     const archive_dir = try std.fmt.allocPrint(allocator, "{s}/{s}/archive", .{ MEMORY_ROOT, agent_name });
     defer allocator.free(archive_dir);
-    std.fs.cwd().makePath(archive_dir) catch {};
+    std.Io.Dir.cwd().createDirPath(io, archive_dir) catch {};
 
     const ts: u64 = @intCast(tri_time.timestamp());
     // Simple date: use ts / seconds_per_month approximation
@@ -837,17 +844,17 @@ fn rotateFile(allocator: Allocator, agent_name: []const u8) !void {
     defer allocator.free(current_path);
 
     // Append current to archive, then truncate current
-    const current_contents = std.fs.cwd().readFileAlloc(allocator, current_path, 8 * 1024 * 1024) catch return;
+    const current_contents = std.Io.Dir.cwd().readFileAlloc(io, current_path, allocator, .limited(8 * 1024 * 1024)) catch return;
     defer allocator.free(current_contents);
 
-    const archive_file = try std.fs.cwd().createFile(archive_path, .{ .truncate = false });
-    defer archive_file.close();
-    try archive_file.seekFromEnd(0);
-    try archive_file.writeAll(current_contents);
+    const archive_file = try std.Io.Dir.cwd().createFile(io, archive_path, .{ .truncate = false });
+    defer archive_file.close(io);
+    const archive_end = try archive_file.length(io);
+    try archive_file.writePositionalAll(io, current_contents, archive_end);
 
     // Truncate current
-    const trunc_file = try std.fs.cwd().createFile(current_path, .{});
-    trunc_file.close();
+    const trunc_file = try std.Io.Dir.cwd().createFile(io, current_path, .{});
+    trunc_file.close(io);
 }
 
 fn containsIgnoreCase(haystack: []const u8, needle: []const u8) bool {
@@ -1129,11 +1136,12 @@ fn runMemoryGc(allocator: Allocator, args: []const []const u8) !void {
 }
 
 fn runMemoryStats(allocator: Allocator) !void {
-    var dir = std.fs.cwd().openDir(MEMORY_ROOT, .{ .iterate = true }) catch {
+    const io = tri_io.get();
+    var dir = std.Io.Dir.cwd().openDir(io, MEMORY_ROOT, .{ .iterate = true }) catch {
         print("{s}No memory store found at {s}{s}\n", .{ YELLOW, MEMORY_ROOT, RESET });
         return;
     };
-    defer dir.close();
+    defer dir.close(io);
 
     print("\n{s}📊 MEMORY STATS{s}\n", .{ BOLD, RESET });
     print("{s}─────────────────────────────────────────────────────{s}\n", .{ DIM, RESET });
@@ -1142,19 +1150,19 @@ fn runMemoryStats(allocator: Allocator) !void {
     var total_size: u64 = 0;
 
     var dir_iter = dir.iterate();
-    while (try dir_iter.next()) |entry| {
+    while (try dir_iter.next(io)) |entry| {
         if (entry.kind != .directory) continue;
 
         const file_path = try std.fmt.allocPrint(allocator, "{s}/current.jsonl", .{entry.name});
         defer allocator.free(file_path);
 
-        const stat = dir.statFile(file_path) catch continue;
+        const stat = dir.statFile(io, file_path, .{}) catch continue;
         const size = stat.size;
 
         // Count lines
         const full_path = try std.fmt.allocPrint(allocator, "{s}/{s}/current.jsonl", .{ MEMORY_ROOT, entry.name });
         defer allocator.free(full_path);
-        const contents = std.fs.cwd().readFileAlloc(allocator, full_path, 8 * 1024 * 1024) catch continue;
+        const contents = std.Io.Dir.cwd().readFileAlloc(io, full_path, allocator, .limited(8 * 1024 * 1024)) catch continue;
         defer allocator.free(contents);
 
         var lines: u32 = 0;
@@ -1181,11 +1189,12 @@ fn runMemoryDashboard(allocator: Allocator) !void {
     print("{s}═══════════════════════════════════════════════════════════{s}\n", .{ DIM, RESET });
 
     // Collect per-agent stats
-    var dir = std.fs.cwd().openDir(MEMORY_ROOT, .{ .iterate = true }) catch {
+    const io = tri_io.get();
+    var dir = std.Io.Dir.cwd().openDir(io, MEMORY_ROOT, .{ .iterate = true }) catch {
         print("{s}No memory store found at {s}{s}\n", .{ YELLOW, MEMORY_ROOT, RESET });
         return;
     };
-    defer dir.close();
+    defer dir.close(io);
 
     const now_ts: u64 = @intCast(tri_time.timestamp());
 
@@ -1194,7 +1203,7 @@ fn runMemoryDashboard(allocator: Allocator) !void {
 
     var total_records: u32 = 0;
     var dir_iter = dir.iterate();
-    while (try dir_iter.next()) |entry| {
+    while (try dir_iter.next(io)) |entry| {
         if (entry.kind != .directory) continue;
 
         var agent_results = try read(allocator, .{ .agent = entry.name, .limit = 10000 });
@@ -1352,19 +1361,18 @@ fn importArenaBattles(allocator: Allocator) !void {
     print("{s}═══════════════════════════════════════════════════════════{s}\n\n", .{ DIM, RESET });
 
     // Read arena history from .trinity/arena/history.jsonl
-    const history_file = std.fs.cwd().openFile(".trinity/arena/history.jsonl", .{}) catch {
+    // readFile is open + fill-the-buffer + close: it stops short only at end of
+    // file, which is exactly what the 0.15 openFile + readAll pair did here.
+    var buf: [1024 * 64]u8 = undefined;
+    const content = std.Io.Dir.cwd().readFile(tri_io.get(), ".trinity/arena/history.jsonl", &buf) catch {
         print("  {s}⚠️  No arena history found.{s}\n", .{ YELLOW, RESET });
         print("  {s}Hint:{s} Run arena battles first to create history.{s}\n\n", .{ DIM, RESET, RESET });
         return;
     };
-    defer history_file.close();
-
-    var buf: [1024 * 64]u8 = undefined;
-    const content_len = try history_file.readAll(&buf);
 
     var imported: u32 = 0;
     var skipped: u32 = 0;
-    var lines = std.mem.splitScalar(u8, buf[0..content_len], '\n');
+    var lines = std.mem.splitScalar(u8, content, '\n');
 
     // Track imported records by hash for deduplication
     var imported_hashes = std.StringHashMap(void).init(allocator);
@@ -2269,14 +2277,15 @@ test "hippocampus — write then read roundtrip" {
     var buf: [4096]u8 = undefined;
     const json_line = try serializeRecord(&buf, &rec);
 
-    const file = try tmp.dir.createFile(test_file, .{ .truncate = false });
-    defer file.close();
-    try file.seekFromEnd(0);
-    try file.writeAll(json_line);
-    try file.writeAll("\n");
+    const io = std.testing.io;
+    const file = try tmp.dir.createFile(io, test_file, .{ .truncate = false });
+    defer file.close(io);
+    const end = try file.length(io);
+    try file.writePositionalAll(io, json_line, end);
+    try file.writePositionalAll(io, "\n", end + json_line.len);
 
     // Verify file was written
-    const content = try tmp.dir.readFileAlloc(testing.allocator, test_file, 8192);
+    const content = try tmp.dir.readFileAlloc(io, test_file, testing.allocator, .limited(8192));
     defer testing.allocator.free(content);
     try testing.expect(content.len > 0);
     try testing.expect(std.mem.indexOf(u8, content, "test observation") != null);

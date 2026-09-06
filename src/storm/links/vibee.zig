@@ -2,6 +2,7 @@
 //! Executes vibee binary to generate Zig code from .tri specification
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 const storm = @import("../golden_chain.zig");
@@ -10,13 +11,14 @@ pub const LinkID = 6;
 
 pub fn execute(allocator: std.mem.Allocator, task: []const u8, spec_file: []const u8) !storm.golden_chain.LinkResult {
     _ = task;
+    const io = tri_io.get();
     const log = std.log.scoped(.info);
 
     log.info("🧬 VIBEE Codegen: {s} → {s}", .{ spec_file, "Zig" });
 
     // Check if spec file exists (Zig 0.15: access() returns error, not bool)
     var exists = true;
-    if (std.fs.cwd().access(spec_file, .{})) |_| {
+    if (std.Io.Dir.cwd().access(io, spec_file, .{})) |_| {
         exists = false;
     }
 
@@ -101,7 +103,7 @@ pub fn execute(allocator: std.mem.Allocator, task: []const u8, spec_file: []cons
 
     // Verify generated file exists
     var gen_exists = true;
-    if (std.fs.cwd().access(output_path, .{})) |_| {
+    if (std.Io.Dir.cwd().access(io, output_path, .{})) |_| {
         gen_exists = false;
     }
 

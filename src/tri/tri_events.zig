@@ -10,6 +10,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
@@ -172,7 +173,7 @@ pub fn runEventsCommand(allocator: Allocator, args: []const []const u8) !void {
         // status — show recent events from log
         std.debug.print("\n\x1b[36m📡 EVENT BUS STATUS\x1b[0m\n\n", .{});
 
-        const log_content = std.fs.cwd().readFileAlloc(allocator, EVENTS_LOG, 262144) catch {
+        const log_content = std.Io.Dir.cwd().readFileAlloc(tri_io.get(), EVENTS_LOG, allocator, .limited(262144)) catch {
             std.debug.print("  No events logged yet ({s})\n\n", .{EVENTS_LOG});
             return;
         };
@@ -202,11 +203,12 @@ pub fn runEventsCommand(allocator: Allocator, args: []const []const u8) !void {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn logEvent(allocator: Allocator, event: []const u8, data: []const u8) void {
-    std.fs.cwd().makePath(".trinity") catch {};
+    const io = tri_io.get();
+    std.Io.Dir.cwd().createDirPath(io, ".trinity") catch {};
 
-    const file = std.fs.cwd().createFile(EVENTS_LOG, .{ .truncate = false }) catch return;
-    defer file.close();
-    file.seekFromEnd(0) catch return;
+    const file = std.Io.Dir.cwd().createFile(io, EVENTS_LOG, .{ .truncate = false }) catch return;
+    defer file.close(io);
+    const end = file.length(io) catch return;
 
     const timestamp = tri_time.timestamp();
     const line = std.fmt.allocPrint(
@@ -216,7 +218,7 @@ fn logEvent(allocator: Allocator, event: []const u8, data: []const u8) void {
     ) catch return;
     defer allocator.free(line);
 
-    file.writeAll(line) catch {};
+    file.writePositionalAll(io, line, end) catch {};
 }
 
 fn sendTelegramNotification(allocator: Allocator, event: []const u8, data: []const u8, cell_id: []const u8) void {

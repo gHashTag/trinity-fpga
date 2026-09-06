@@ -1,5 +1,6 @@
 // @origin(spec:mu_agent.tri) @regen(manual-impl)
 const std = @import("std");
+const tri_io = @import("tri_io");
 
 const tri_time = @import("tri_time");
 /// MU Agent — Memory Unit for the Trinity swarm.
@@ -86,13 +87,16 @@ pub const MuAgent = struct {
 
     /// Load patterns from JSONL storage file.
     pub fn load(self: *MuAgent) !void {
-        const file = std.fs.cwd().openFile(self.storage_path, .{}) catch |err| {
+        const io = tri_io.get();
+        const file = std.Io.Dir.cwd().openFile(io, self.storage_path, .{}) catch |err| {
             if (err == error.FileNotFound) return;
             return err;
         };
-        defer file.close();
+        defer file.close(io);
 
-        const content = try file.readToEndAlloc(self.allocator, 1024 * 1024);
+        var scratch: [4096]u8 = undefined;
+        var fr = file.reader(io, &scratch);
+        const content = try fr.interface.allocRemaining(self.allocator, .limited(1024 * 1024));
         defer self.allocator.free(content);
 
         var iter = std.mem.splitScalar(u8, content, '\n');
@@ -165,17 +169,19 @@ pub const MuAgent = struct {
 
     /// Log a pattern to the JSONL storage file.
     pub fn log(self: *MuAgent, pattern: ErrorPattern) !void {
+        const io = tri_io.get();
         if (std.fs.path.dirname(self.storage_path)) |dir| {
-            std.fs.cwd().makePath(dir) catch |err| {
+            std.Io.Dir.cwd().createDirPath(io, dir) catch |err| {
                 std.log.debug("mu_agent: failed to create dir: {}", .{err});
             };
         }
 
-        const file = try std.fs.cwd().createFile(self.storage_path, .{
+        const file = try std.Io.Dir.cwd().createFile(io, self.storage_path, .{
             .truncate = false,
         });
-        defer file.close();
-        try file.seekFromEnd(0);
+        defer file.close(io);
+        // 0.16 has no seek: the append offset is read from the file itself.
+        const end = try file.length(io);
 
         const line = try std.fmt.allocPrint(self.allocator, "{{\"id\":\"{s}\",\"category\":\"{s}\",\"count\":{d},\"spec\":\"{s}\",\"fix\":\"{s}\",\"auto\":{},\"resolved\":{},\"first\":{d},\"last\":{d}}}\n", .{
             pattern.id,        pattern.category.toString(), pattern.count,
@@ -183,7 +189,7 @@ pub const MuAgent = struct {
             pattern.resolved,  pattern.first_seen,          pattern.last_seen,
         });
         defer self.allocator.free(line);
-        try file.writeAll(line);
+        try file.writePositionalAll(io, line, end);
     }
 
     /// Suggest a fix for a given error text.
@@ -232,14 +238,15 @@ pub const MuAgent = struct {
 
     /// Save all patterns to storage (full rewrite).
     pub fn save(self: *MuAgent) !void {
+        const io = tri_io.get();
         if (std.fs.path.dirname(self.storage_path)) |dir| {
-            std.fs.cwd().makePath(dir) catch |err| {
+            std.Io.Dir.cwd().createDirPath(io, dir) catch |err| {
                 std.log.debug("mu_agent: failed to create dir: {}", .{err});
             };
         }
 
-        const file = try std.fs.cwd().createFile(self.storage_path, .{});
-        defer file.close();
+        const file = try std.Io.Dir.cwd().createFile(io, self.storage_path, .{});
+        defer file.close(io);
 
         for (self.patterns.items) |p| {
             const line = try std.fmt.allocPrint(self.allocator, "{{\"id\":\"{s}\",\"category\":\"{s}\",\"count\":{d},\"spec\":\"{s}\",\"fix\":\"{s}\",\"auto\":{},\"resolved\":{},\"first\":{d},\"last\":{d}}}\n", .{
@@ -254,7 +261,7 @@ pub const MuAgent = struct {
                 p.last_seen,
             });
             defer self.allocator.free(line);
-            try file.writeAll(line);
+            try file.writeStreamingAll(io, line);
         }
     }
 

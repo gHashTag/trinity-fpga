@@ -12,6 +12,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const needle = @import("needle.zig");
 const fuzzy = @import("fuzzy.zig");
 
@@ -320,7 +321,7 @@ pub const Searcher = struct {
         errdefer all_results.deinit();
 
         for (self.file_paths.items) |file_path| {
-            const source = try std.fs.cwd().readFileAlloc(self.allocator, file_path, 10_000_000);
+            const source = try std.Io.Dir.cwd().readFileAlloc(tri_io.get(), file_path, self.allocator, .limited(10_000_000));
             defer self.allocator.free(source);
 
             var matcher = Matcher.withConfig(self.allocator, source, file_path, self.config);
@@ -350,7 +351,7 @@ pub const Searcher = struct {
 
 /// Quick search in a single file
 pub fn search(allocator: std.mem.Allocator, file_path: []const u8, pattern: []const u8) !MatchResultList {
-    const source = try std.fs.cwd().readFileAlloc(allocator, file_path, 10_000_000);
+    const source = try std.Io.Dir.cwd().readFileAlloc(tri_io.get(), file_path, allocator, .limited(10_000_000));
     defer allocator.free(source);
 
     var matcher = Matcher.init(allocator, source, file_path);

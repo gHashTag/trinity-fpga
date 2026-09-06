@@ -3,6 +3,7 @@
 
 const std = @import("std");
 
+const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 pub const Episode = @import("episodes.zig").Episode;
 
@@ -39,12 +40,13 @@ pub const Context = struct {
 
 /// Read sensors from .trinity/queen/senses.json
 fn loadSensors(allocator: std.mem.Allocator) !SensorsSnapshot {
-    const file = std.fs.cwd().openFile(".trinity/queen/senses.json", .{}) catch {
-        return SensorsSnapshot{};
-    };
-    defer file.close();
-
-    const contents = file.readToEndAlloc(allocator, 1024 * 1024) catch {
+    const io = tri_io.get();
+    const contents = std.Io.Dir.cwd().readFileAlloc(
+        io,
+        ".trinity/queen/senses.json",
+        allocator,
+        .limited(1024 * 1024),
+    ) catch {
         return SensorsSnapshot{};
     };
     defer allocator.free(contents);
@@ -56,12 +58,13 @@ fn loadSensors(allocator: std.mem.Allocator) !SensorsSnapshot {
 
 /// Read policy from .trinity/queen/policy.json
 fn loadPolicy(allocator: std.mem.Allocator) !PolicySnapshot {
-    const file = std.fs.cwd().openFile(".trinity/queen/policy.json", .{}) catch {
-        return PolicySnapshot{};
-    };
-    defer file.close();
-
-    const contents = file.readToEndAlloc(allocator, 1024 * 1024) catch {
+    const io = tri_io.get();
+    const contents = std.Io.Dir.cwd().readFileAlloc(
+        io,
+        ".trinity/queen/policy.json",
+        allocator,
+        .limited(1024 * 1024),
+    ) catch {
         return PolicySnapshot{};
     };
     defer allocator.free(contents);
@@ -73,48 +76,51 @@ fn loadPolicy(allocator: std.mem.Allocator) !PolicySnapshot {
 
 /// Save policy to .trinity/queen/policy.json
 pub fn savePolicy(allocator: std.mem.Allocator, policy: PolicySnapshot) !void {
+    const io = tri_io.get();
     const dir = ".trinity/queen";
-    try std.fs.cwd().makePath(dir);
+    try std.Io.Dir.cwd().createDirPath(io, dir);
 
     const file_path = try std.fmt.allocPrint(allocator, "{s}/policy.json", .{dir});
     defer allocator.free(file_path);
 
-    const file = try std.fs.cwd().createFile(file_path, .{});
-    defer file.close();
+    const file = try std.Io.Dir.cwd().createFile(io, file_path, .{});
+    defer file.close(io);
 
     const json = try std.json.Stringify.valueAlloc(allocator, policy, .{ .whitespace = .indent_2 });
     defer allocator.free(json);
 
-    try file.writeAll(json);
+    try file.writeStreamingAll(io, json);
 }
 
 /// Write sensors to .trinity/queen/senses.json
 pub fn writeSensors(allocator: std.mem.Allocator, sensors: SensorsSnapshot) !void {
+    const io = tri_io.get();
     const dir = ".trinity/queen";
-    try std.fs.cwd().makePath(dir);
+    try std.Io.Dir.cwd().createDirPath(io, dir);
 
     const file_path = try std.fmt.allocPrint(allocator, "{s}/senses.json", .{dir});
     defer allocator.free(file_path);
 
-    const file = try std.fs.cwd().createFile(file_path, .{});
-    defer file.close();
+    const file = try std.Io.Dir.cwd().createFile(io, file_path, .{});
+    defer file.close(io);
 
     const json = try std.json.Stringify.valueAlloc(allocator, sensors, .{ .whitespace = .indent_2 });
     defer allocator.free(json);
 
-    try file.writeAll(json);
+    try file.writeStreamingAll(io, json);
 }
 
 /// Update sensors from farm metrics (call after farm operation)
 pub fn updateSensorsFromFarm(allocator: std.mem.Allocator, farm_metrics: anytype) !void {
+    const io = tri_io.get();
     const dir = ".trinity/queen";
-    try std.fs.cwd().makePath(dir);
+    try std.Io.Dir.cwd().createDirPath(io, dir);
 
     const file_path = try std.fmt.allocPrint(allocator, "{s}/senses.json", .{dir});
     defer allocator.free(file_path);
 
-    const file = try std.fs.cwd().createFile(file_path, .{});
-    defer file.close();
+    const file = try std.Io.Dir.cwd().createFile(io, file_path, .{});
+    defer file.close(io);
 
     // Extract metrics from farm metrics structure
     const build_ok = if (@TypeOf(farm_metrics) == std.type.Struct)
@@ -169,7 +175,7 @@ pub fn updateSensorsFromFarm(allocator: std.mem.Allocator, farm_metrics: anytype
     const json = try std.json.Stringify.valueAlloc(allocator, updated, .{ .whitespace = .indent_2 });
     defer allocator.free(json);
 
-    try file.writeAll(json);
+    try file.writeStreamingAll(io, json);
 }
 
 /// Observe: gather current state from sensors and policy

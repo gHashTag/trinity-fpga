@@ -1,6 +1,7 @@
 // @origin(spec:issue_planner.tri) @regen(manual-impl)
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const Allocator = std.mem.Allocator;
 
 pub const FarmTask = struct {
@@ -163,32 +164,34 @@ pub fn listFarmTasks(allocator: Allocator, json_response: []const u8) ![]FarmTas
 }
 
 pub fn saveTasksToDir(allocator: Allocator, tasks: []const FarmTask) !void {
+    const io = tri_io.get();
     const tasks_dir = ".trinity/tasks";
-    try std.fs.cwd().makePath(tasks_dir);
+    try std.Io.Dir.cwd().createDirPath(io, tasks_dir);
 
     for (tasks) |task| {
         const filename = try std.fmt.allocPrint(allocator, "{s}/farm-{d}.json", .{ tasks_dir, task.issue_number });
         defer allocator.free(filename);
 
-        const file = try std.fs.cwd().createFile(filename, .{ .truncate = true });
-        defer file.close();
+        const file = try std.Io.Dir.cwd().createFile(io, filename, .{ .truncate = true });
+        defer file.close(io);
 
         const json_str = try std.json.Stringify.valueAlloc(allocator, task, .{ .whitespace = .indent_2 });
         defer allocator.free(json_str);
-        try file.writeAll(json_str);
+        try file.writeStreamingAll(io, json_str);
     }
 }
 
 pub fn loadTasksFromDir(allocator: Allocator) ![]FarmTask {
+    const io = tri_io.get();
     // Count files first
     var count: usize = 0;
     {
         const tasks_dir = ".trinity/tasks";
-        var dir = try std.fs.cwd().openDir(tasks_dir, .{ .iterate = true });
-        defer dir.close();
+        var dir = try std.Io.Dir.cwd().openDir(io, tasks_dir, .{ .iterate = true });
+        defer dir.close(io);
 
         var iterator = dir.iterate();
-        while (try iterator.next()) |entry| {
+        while (try iterator.next(io)) |entry| {
             if (entry.kind == .file and std.mem.endsWith(u8, entry.name, ".json"))
                 count += 1;
         }
@@ -203,22 +206,18 @@ pub fn loadTasksFromDir(allocator: Allocator) ![]FarmTask {
     var index: usize = 0;
     {
         const tasks_dir = ".trinity/tasks";
-        var dir = try std.fs.cwd().openDir(tasks_dir, .{ .iterate = true });
-        defer dir.close();
+        var dir = try std.Io.Dir.cwd().openDir(io, tasks_dir, .{ .iterate = true });
+        defer dir.close(io);
 
         var iterator = dir.iterate();
-        while (try iterator.next()) |entry| {
+        while (try iterator.next(io)) |entry| {
             if (entry.kind != .file) continue;
             if (!std.mem.endsWith(u8, entry.name, ".json")) continue;
 
-            const file = try dir.openFile(entry.name, .{});
-            defer file.close();
-
-            const stat = try file.stat();
-            const content = try allocator.alloc(u8, stat.size);
+            // Whole file into an owned buffer -- the 0.15 stat+alloc+readAll
+            // read exactly the file's size, which is what readFileAlloc does.
+            const content = try dir.readFileAlloc(io, entry.name, allocator, .unlimited);
             // NOTE: Don't free content here - it's stored in task.backing_buffer
-
-            _ = try file.readAll(content);
 
             const parsed = try std.json.parseFromSlice(FarmTask, allocator, content, .{
                 .ignore_unknown_fields = true,
@@ -235,10 +234,11 @@ pub fn loadTasksFromDir(allocator: Allocator) ![]FarmTask {
 }
 
 pub fn deleteTaskFile(allocator: Allocator, issue_number: u32) !void {
+    const io = tri_io.get();
     const filename = try std.fmt.allocPrint(allocator, ".trinity/tasks/farm-{d}.json", .{issue_number});
     defer allocator.free(filename);
 
-    std.fs.cwd().deleteFile(filename) catch |err| {
+    std.Io.Dir.cwd().deleteFile(io, filename) catch |err| {
         if (err == error.FileNotFound) return;
         return err;
     };

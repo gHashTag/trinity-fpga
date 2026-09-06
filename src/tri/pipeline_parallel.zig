@@ -11,6 +11,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
@@ -247,10 +248,15 @@ pub fn executeDag(allocator: Allocator, dag: *PipelineDAG) void {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// SPAWN GROUP — Parallel execution via std.process.Child
+// SPAWN GROUP — Parallel execution via std.process.spawn
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn spawnGroup(allocator: Allocator, dag: *PipelineDAG, job_indices: []const u8) GroupResult {
+    // 0.16 spawns through the Io rather than an allocator-bearing Child.
+    // The parameter stays so callers need no change this round.
+    _ = allocator;
+    const io = tri_io.get();
+
     var result = GroupResult{
         .total = @intCast(job_indices.len),
     };
@@ -278,12 +284,12 @@ fn spawnGroup(allocator: Allocator, dag: *PipelineDAG, job_indices: []const u8) 
             argc += 1;
         }
 
-        var child = std.process.Child.init(argv_buf[0..argc], allocator);
-        child.stdin_behavior = .Ignore;
-        child.stdout_behavior = .Pipe;
-        child.stderr_behavior = .Pipe;
-
-        child.spawn() catch |err| {
+        const child = std.process.spawn(io, .{
+            .argv = argv_buf[0..argc],
+            .stdin = .ignore,
+            .stdout = .pipe,
+            .stderr = .pipe,
+        }) catch |err| {
             std.debug.print("    {s}spawn failed [{d}]: {}{s}\n", .{ RED, idx, err, RESET });
             dag.jobs[idx].status = .failed;
             dag.jobs[idx].exit_code = 1;
@@ -298,7 +304,7 @@ fn spawnGroup(allocator: Allocator, dag: *PipelineDAG, job_indices: []const u8) 
     for (job_indices, 0..) |idx, i| {
         if (children[i]) |*child| {
             const start = tri_time.milliTimestamp();
-            const term = child.wait() catch {
+            const term = child.wait(io) catch {
                 dag.jobs[idx].status = .failed;
                 dag.jobs[idx].exit_code = 1;
                 result.failed += 1;
@@ -332,19 +338,24 @@ fn spawnGroup(allocator: Allocator, dag: *PipelineDAG, job_indices: []const u8) 
 }
 
 fn saveJobOutput(job_id: u8, child: *std.process.Child) !void {
+    const io = tri_io.get();
+
     // Ensure output directory exists
-    std.fs.cwd().makePath(OUTPUT_DIR) catch {};
+    std.Io.Dir.cwd().createDirPath(io, OUTPUT_DIR) catch {};
 
     var path_buf: [128]u8 = undefined;
     const path = std.fmt.bufPrint(&path_buf, "{s}/{d}.txt", .{ OUTPUT_DIR, job_id }) catch return;
 
-    const file = std.fs.cwd().createFile(path, .{}) catch return;
-    defer file.close();
+    const file = std.Io.Dir.cwd().createFile(io, path, .{}) catch return;
+    defer file.close(io);
 
     if (child.stdout) |stdout| {
         var buf: [4096]u8 = undefined;
-        const n = stdout.read(&buf) catch 0;
-        if (n > 0) file.writeAll(buf[0..n]) catch {};
+        // 0.15 used File.read here: one attempt, best-effort, 0 at end of
+        // stream. readStreaming is that same single attempt; end-of-stream
+        // arrives as an error rather than 0, which the `catch 0` absorbs.
+        const n = stdout.readStreaming(io, &.{&buf}) catch 0;
+        if (n > 0) file.writeStreamingAll(io, buf[0..n]) catch {};
     }
 }
 
@@ -413,7 +424,8 @@ fn runSingleJob(allocator: Allocator, job: *DagJob) void {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 pub fn persistState(dag: *const PipelineDAG) void {
-    std.fs.cwd().makePath(".trinity") catch {};
+    const io = tri_io.get();
+    std.Io.Dir.cwd().createDirPath(io, ".trinity") catch {};
 
     var buf: [4096]u8 = undefined;
     var pos: usize = 0;
@@ -465,14 +477,15 @@ pub fn persistState(dag: *const PipelineDAG) void {
 
     // Atomic write: write to tmp, then rename
     const tmp_path = STATE_PATH ++ ".tmp";
-    const file = std.fs.cwd().createFile(tmp_path, .{}) catch return;
-    file.writeAll(buf[0..pos]) catch {
-        file.close();
+    const cwd = std.Io.Dir.cwd();
+    const file = cwd.createFile(io, tmp_path, .{}) catch return;
+    file.writeStreamingAll(io, buf[0..pos]) catch {
+        file.close(io);
         return;
     };
-    file.close();
+    file.close(io);
 
-    std.fs.cwd().rename(tmp_path, STATE_PATH) catch {};
+    cwd.rename(tmp_path, cwd, STATE_PATH, io) catch {};
 }
 
 fn copySlice(buf: *[4096]u8, pos: usize, src: []const u8) usize {
@@ -573,14 +586,11 @@ test "persistState_creates_json" {
     persistState(&dag);
 
     // Verify file exists
-    const file = std.fs.cwd().openFile(STATE_PATH, .{}) catch {
+    var buf: [4096]u8 = undefined;
+    const content = std.Io.Dir.cwd().readFile(tri_io.get(), STATE_PATH, &buf) catch {
         // File might not be writable in test env — skip
         return;
     };
-    defer file.close();
-    var buf: [4096]u8 = undefined;
-    const n = file.readAll(&buf) catch return;
-    const content = buf[0..n];
     try std.testing.expect(std.mem.indexOf(u8, content, "\"status\":\"COMPLETED\"") != null);
 }
 

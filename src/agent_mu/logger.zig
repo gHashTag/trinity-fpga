@@ -3,6 +3,7 @@
 //! Records successful fixes and unfixable errors to Ralph memory files.
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 const ArrayListManaged = std.array_list.Managed;
 const diagnostic = @import("diagnostic.zig");
@@ -170,15 +171,14 @@ fn getTimestamp(allocator: std.mem.Allocator) ![]const u8 {
 
 /// Append content to a file, creating it if it doesn't exist
 fn appendToFile(_: std.mem.Allocator, file_path: []const u8, content: []const u8) !void {
-    const file = try std.fs.cwd().openFile(file_path, .{ .mode = .write_only });
-    defer file.close();
+    const io = tri_io.get();
+    const file = try std.Io.Dir.cwd().openFile(io, file_path, .{ .mode = .write_only });
+    defer file.close(io);
 
-    // Seek to end
-    const end_pos = try file.getEndPos();
-    try file.seekTo(end_pos);
-
-    // Write content
-    try file.writeAll(content);
+    // 0.16 has no seek-then-write on File: read the end offset once and place
+    // the write positionally there.
+    const end_pos = try file.length(io);
+    try file.writePositionalAll(io, content, end_pos);
 }
 
 // ============================================================================
@@ -260,32 +260,31 @@ pub fn recordFixResult(success: bool) void {
 
 /// Save stats to .ralph/memory/MUTATION_STATS.md
 pub fn saveStats(allocator: std.mem.Allocator) !void {
+    const io = tri_io.get();
     const stats_file = ".trinity/ralph/memory/MUTATION_STATS.md";
 
     const content = try global_stats.format(allocator);
     defer allocator.free(content);
 
     // Overwrite file with current stats
-    const file = try std.fs.cwd().createFile(stats_file, .{ .read = true });
-    defer file.close();
+    const file = try std.Io.Dir.cwd().createFile(io, stats_file, .{ .read = true });
+    defer file.close(io);
 
-    try file.writeAll(content);
+    try file.writeStreamingAll(io, content);
 }
 
 /// Load stats from .ralph/memory/MUTATION_STATS.md
 pub fn loadStats(allocator: std.mem.Allocator) !void {
+    const io = tri_io.get();
     const stats_file = ".trinity/ralph/memory/MUTATION_STATS.md";
 
-    const file = std.fs.cwd().openFile(stats_file, .{}) catch |err| {
+    const content = std.Io.Dir.cwd().readFileAlloc(io, stats_file, allocator, .limited(1024)) catch |err| {
         if (err == error.FileNotFound) {
             // File doesn't exist yet, use default stats
             return;
         }
         return err;
     };
-    defer file.close();
-
-    const content = try file.readToEndAlloc(allocator, 1024);
     defer allocator.free(content);
 
     // Parse stats from file (simple line-based parsing)

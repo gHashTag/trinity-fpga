@@ -16,6 +16,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 const types = @import("train_types.zig");
 const diag = @import("train_diagnostics.zig");
@@ -144,6 +145,7 @@ fn runRemoteStatus(allocator: std.mem.Allocator) !void {
 
 /// tri train start — Launch local training
 fn runLocalStart(allocator: std.mem.Allocator, args: []const []const u8) !void {
+    _ = allocator;
     const steps = getFlagValue(args, "--steps") orelse "100000";
     const lr = getFlagValue(args, "--lr") orelse "3e-4";
     const warmup = getFlagValue(args, "--warmup") orelse "5000";
@@ -196,18 +198,17 @@ fn runLocalStart(allocator: std.mem.Allocator, args: []const []const u8) !void {
     print("  Command: {s}{s}{s}\n\n", .{ GRAY, cmd, RESET });
 
     // Execute via child process
-    var child = std.process.Child.init(
-        &.{ "/bin/sh", "-c", cmd },
-        allocator,
-    );
-    child.stdin_behavior = .Inherit;
-    child.stdout_behavior = .Inherit;
-    child.stderr_behavior = .Inherit;
-    _ = child.spawn() catch |err| {
+    const io = tri_io.get();
+    var child = std.process.spawn(io, .{
+        .argv = &.{ "/bin/sh", "-c", cmd },
+        .stdin = .inherit,
+        .stdout = .inherit,
+        .stderr = .inherit,
+    }) catch |err| {
         print("{s}Failed to start training: {}{s}\n", .{ RED, err, RESET });
         return;
     };
-    _ = child.wait() catch |err| {
+    _ = child.wait(io) catch |err| {
         print("{s}Training process error: {}{s}\n", .{ RED, err, RESET });
     };
 }
@@ -761,16 +762,14 @@ fn runDashboard(allocator: std.mem.Allocator, quick: bool) !void {
     }
 
     // ═══════ FARM EVOLUTION STATE ═══════
-    const state_file = std.fs.cwd().openFile(".trinity/evolution_state.json", .{}) catch {
-        print("{s}   ⚠️  No evolution state — run: tri farm evolve init{s}\n\n", .{ YELLOW, RESET });
-        // Still show local checkpoints
-        printLocalCheckpoints();
-        printScientific();
-        return;
-    };
-    defer state_file.close();
-
-    const contents = state_file.readToEndAlloc(allocator, 512 * 1024) catch {
+    const contents = std.Io.Dir.cwd().readFileAlloc(tri_io.get(), ".trinity/evolution_state.json", allocator, .limited(512 * 1024)) catch |err| {
+        if (err == error.FileNotFound) {
+            print("{s}   ⚠️  No evolution state — run: tri farm evolve init{s}\n\n", .{ YELLOW, RESET });
+            // Still show local checkpoints
+            printLocalCheckpoints();
+            printScientific();
+            return;
+        }
         print("{s}   ⚠️  Cannot read evolution state{s}\n\n", .{ RED, RESET });
         return;
     };
@@ -1433,9 +1432,7 @@ fn runDashboard(allocator: std.mem.Allocator, quick: bool) !void {
         try sacred_list.ensureTotalCapacity(allocator, 32);
 
         // Read sacred_workers.txt
-        if (std.fs.cwd().openFile(".trinity/sacred_workers.txt", .{})) |file| {
-            defer file.close();
-            const content = file.readToEndAlloc(allocator, 8192) catch "";
+        if (std.Io.Dir.cwd().readFileAlloc(tri_io.get(), ".trinity/sacred_workers.txt", allocator, .limited(8192))) |content| {
             defer allocator.free(content);
 
             var iter = std.mem.splitScalar(u8, content, '\n');
@@ -1598,10 +1595,9 @@ fn runDashboard(allocator: std.mem.Allocator, quick: bool) !void {
         const cur_mean: f32 = if (ppl_count > 0) ppl_sum / @as(f32, @floatFromInt(ppl_count)) else 0;
 
         // Read previous snapshot
-        const prev_file = std.fs.cwd().openFile(".trinity/dashboard_prev.json", .{});
+        const prev_file = std.Io.Dir.cwd().readFileAlloc(tri_io.get(), ".trinity/dashboard_prev.json", allocator, .limited(4096));
         if (prev_file) |pf| {
-            defer pf.close();
-            const prev_data = pf.readToEndAlloc(allocator, 4096) catch null;
+            const prev_data: ?[]u8 = pf;
             if (prev_data) |pd| {
                 defer allocator.free(pd);
                 const prev_parsed = std.json.parseFromSlice(std.json.Value, allocator, pd, .{});
@@ -1657,9 +1653,10 @@ fn runDashboard(allocator: std.mem.Allocator, quick: bool) !void {
         const now_ts2: u32 = @intCast(@min(@as(u64, @intCast(@max(0, tri_time.timestamp()))), std.math.maxInt(u32)));
         const snap = std.fmt.bufPrint(&snap_buf, "{{\"ts\":{d},\"best_ppl\":{d:.4},\"alive\":{d},\"mean_ppl\":{d:.4},\"g0_count\":{d}}}", .{ now_ts2, cur_best, alive, cur_mean, g0_count }) catch "";
         if (snap.len > 0) {
-            if (std.fs.cwd().createFile(".trinity/dashboard_prev.json", .{})) |sf| {
-                defer sf.close();
-                sf.writeAll(snap) catch {};
+            const io2 = tri_io.get();
+            if (std.Io.Dir.cwd().createFile(io2, ".trinity/dashboard_prev.json", .{})) |sf| {
+                defer sf.close(io2);
+                sf.writeStreamingAll(io2, snap) catch {};
             } else |_| {}
         }
     }
@@ -1748,21 +1745,19 @@ fn runDashboard(allocator: std.mem.Allocator, quick: bool) !void {
 const ExportFormat = enum { json, csv };
 
 fn runDashboardExport(allocator: std.mem.Allocator, fmt: ExportFormat) !void {
-    const state_file = std.fs.cwd().openFile(".trinity/evolution_state.json", .{}) catch {
+    const io = tri_io.get();
+    const contents = std.Io.Dir.cwd().readFileAlloc(io, ".trinity/evolution_state.json", allocator, .limited(512 * 1024)) catch {
         print("{{\"error\":\"no evolution state\"}}\n", .{});
         return;
     };
-    defer state_file.close();
-
-    const contents = state_file.readToEndAlloc(allocator, 512 * 1024) catch return;
     defer allocator.free(contents);
 
-    const out = std.fs.File.stdout();
+    const out = std.Io.File.stdout();
 
     if (fmt == .json) {
         // Raw JSON passthrough (evolution_state.json is already JSON)
-        out.writeAll(contents) catch {};
-        out.writeAll("\n") catch {};
+        out.writeStreamingAll(io, contents) catch {};
+        out.writeStreamingAll(io, "\n") catch {};
         return;
     }
 
@@ -1773,7 +1768,7 @@ fn runDashboardExport(allocator: std.mem.Allocator, fmt: ExportFormat) !void {
     const svcs_val = getJsonObj(root, "services");
     const svcs = if (svcs_val != null and svcs_val.? == .array) svcs_val.?.array.items else &[_]std.json.Value{};
 
-    out.writeAll("rank,name,ppl,step,obj,ctx,opt,lr,sched,gc,tps,gen,status\n") catch {};
+    out.writeStreamingAll(io, "rank,name,ppl,step,obj,ctx,opt,lr,sched,gc,tps,gen,status\n") catch {};
 
     // Sort by PPL
     var sorted_exp: [256]usize = undefined;
@@ -1818,7 +1813,7 @@ fn runDashboardExport(allocator: std.mem.Allocator, fmt: ExportFormat) !void {
             jsonU32(s, "gen"),
             jsonU32(s, "status"),
         }) catch continue;
-        out.writeAll(line) catch {};
+        out.writeStreamingAll(io, line) catch {};
     }
 }
 

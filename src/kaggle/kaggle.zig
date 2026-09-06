@@ -8,6 +8,7 @@
 // ═════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 
 pub const Track = struct {
     id: []const u8,
@@ -37,8 +38,10 @@ pub const Kaggle = struct {
 
     /// Export kaggle submodules for use by tri kaggle
     pub fn exportModules(self: *Kaggle, output_dir: []const u8) !void {
+        const io = tri_io.get();
+
         // Create output directory
-        try std.fs.cwd().makePath(output_dir);
+        try std.Io.Dir.cwd().createDirPath(io, output_dir);
 
         const exports_dir = try std.fmt.allocPrint(self.allocator, "{s}/kaggle", .{output_dir});
         defer self.allocator.free(exports_dir);
@@ -47,7 +50,7 @@ pub const Kaggle = struct {
         const src_path = try std.fmt.allocPrint(self.allocator, "{s}/src", .{output_dir});
         defer self.allocator.free(src_path);
 
-        std.fs.cwd().makeDir(src_path) catch {};
+        std.Io.Dir.cwd().createDir(io, src_path, .default_dir) catch {};
 
         const module_path = try std.fmt.allocPrint(self.allocator, "{s}/kaggle/zig", .{src_path});
         defer self.allocator.free(module_path);
@@ -68,13 +71,13 @@ pub const Kaggle = struct {
             defer self.allocator.free(src);
 
             // Open destination directory
-            var dest_dir = std.fs.cwd().openDir(src_path, .{}) catch |err| {
+            var dest_dir = std.Io.Dir.cwd().openDir(io, src_path, .{}) catch |err| {
                 std.debug.print("❌ Failed to open dest dir {s}: {}\n", .{ src_path, err });
                 continue;
             };
-            defer dest_dir.close();
+            defer dest_dir.close(io);
 
-            std.fs.cwd().copyFile(src, dest_dir, file, .{}) catch |err| {
+            std.Io.Dir.cwd().copyFile(src, dest_dir, file, io, .{}) catch |err| {
                 std.debug.print("❌ Failed to copy {s}: {}\n", .{ file, err });
                 continue;
             };

@@ -5,6 +5,7 @@
 // φ² + 1/φ² = 3 = TRINITY
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const b2t_loader = @import("b2t_loader.zig");
 const b2t_disasm = @import("b2t_disasm.zig");
 const b2t_lifter = @import("b2t_lifter.zig");
@@ -190,13 +191,14 @@ fn cmdConvert(allocator: std.mem.Allocator, args: []const []const u8) !void {
     };
 
     // Write output
-    const file = std.fs.cwd().createFile(output, .{}) catch |err| {
+    const io = tri_io.get();
+    const file = std.Io.Dir.cwd().createFile(io, output, .{}) catch |err| {
         std.debug.print("Error creating output file: {}\n", .{err});
         return;
     };
-    defer file.close();
+    defer file.close(io);
 
-    file.writeAll(trit_code) catch |err| {
+    file.writeStreamingAll(io, trit_code) catch |err| {
         std.debug.print("Error writing output: {}\n", .{err});
         return;
     };
@@ -268,17 +270,21 @@ fn cmdDisasm(allocator: std.mem.Allocator, args: []const []const u8) !void {
 }
 
 fn disasmTrit(allocator: std.mem.Allocator, path: []const u8) !void {
-    const file = std.fs.cwd().openFile(path, .{}) catch |err| {
+    const io = tri_io.get();
+    const file = std.Io.Dir.cwd().openFile(io, path, .{}) catch |err| {
         std.debug.print("Error opening file: {}\n", .{err});
         return;
     };
-    defer file.close();
+    defer file.close(io);
 
-    const stat = try file.stat();
+    const stat = try file.stat(io);
     const data = try allocator.alloc(u8, stat.size);
     defer allocator.free(data);
 
-    _ = try file.readAll(data);
+    // A fixed-width binary image follows, so a short read is corruption:
+    // readSliceAll fills `data` or fails with EndOfStream.
+    var fr = file.reader(io, &.{});
+    try fr.interface.readSliceAll(data);
 
     const trit_file = b2t_codegen.TritFile.parse(data) catch |err| {
         std.debug.print("Error parsing .trit file: {}\n", .{err});

@@ -7,6 +7,7 @@
 //
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const fs = std.fs;
@@ -98,9 +99,10 @@ pub const DevSession = struct {
 
     /// Save session state to JSON file
     pub fn save(self: *const DevSession) !void {
-        var cwd = std.fs.cwd();
-        const file = try cwd.createFile(DevSessionPath, .{ .read = true });
-        defer file.close();
+        const io = tri_io.get();
+        const cwd = std.Io.Dir.cwd();
+        const file = try cwd.createFile(io, DevSessionPath, .{ .read = true });
+        defer file.close(io);
 
         // Build JSON string manually
         var json_buffer: [1024]u8 = undefined;
@@ -200,21 +202,19 @@ pub const DevSession = struct {
         @memcpy(json_buffer[pos .. pos + json11.len], json11);
         pos += json11.len;
 
-        try file.writeAll(json_buffer[0..pos]);
+        try file.writeStreamingAll(io, json_buffer[0..pos]);
     }
 
     /// Load session state from JSON file
     pub fn load(allocator: Allocator) !DevSession {
-        var cwd = std.fs.cwd();
-        const file = cwd.openFile(DevSessionPath, .{}) catch |err| {
+        const io = tri_io.get();
+        const cwd = std.Io.Dir.cwd();
+        const content = cwd.readFileAlloc(io, DevSessionPath, allocator, .limited(4096)) catch |err| {
             if (err == error.FileNotFound) {
                 return DevSession{}; // Default idle state
             }
             return err;
         };
-        defer file.close();
-
-        const content = try file.readToEndAlloc(allocator, 4096);
         defer allocator.free(content);
 
         var session = DevSession{};

@@ -6,7 +6,9 @@
 // Uses raw TCP — minimal HTTP parsing without std.http.Server complexity.
 const std = @import("std");
 
+const tri_env = @import("tri_env");
 const tri_io = @import("tri_io");
+const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 const max_output = 64 * 1024;
 const max_body = 128 * 1024; // POST body limit for /px/done
@@ -20,19 +22,19 @@ pub const Bridge = struct {
     job_counter: u32 = 0,
 
     pub fn init(allocator: std.mem.Allocator) ?Bridge {
-        const token = std.process.getEnvVarOwned(allocator, "PX_BRIDGE_TOKEN") catch {
+        const token = tri_env.getEnvVarOwned(allocator, "PX_BRIDGE_TOKEN") catch {
             std.debug.print("[px-bridge] error: PX_BRIDGE_TOKEN not set\n", .{});
             return null;
         };
-        const port_str = std.process.getEnvVarOwned(allocator, "PX_BRIDGE_PORT") catch
-            std.process.getEnvVarOwned(allocator, "PORT") catch null;
+        const port_str = tri_env.getEnvVarOwned(allocator, "PX_BRIDGE_PORT") catch
+            tri_env.getEnvVarOwned(allocator, "PORT") catch null;
         defer if (port_str) |p| allocator.free(p);
         const port: u16 = if (port_str) |p| std.fmt.parseInt(u16, p, 10) catch 8077 else 8077;
 
         // Queue dir: PX_QUEUE_DIR > /data/queue > ./px-queue
-        const queue_dir = std.process.getEnvVarOwned(allocator, "PX_QUEUE_DIR") catch blk: {
+        const queue_dir = tri_env.getEnvVarOwned(allocator, "PX_QUEUE_DIR") catch blk: {
             // Check if /data exists (Railway volume)
-            std.fs.accessAbsolute("/data", .{}) catch break :blk allocator.dupe(u8, "./px-queue") catch return null;
+            std.Io.Dir.accessAbsolute(tri_io.get(), "/data", .{}) catch break :blk allocator.dupe(u8, "./px-queue") catch return null;
             break :blk allocator.dupe(u8, "/data/queue") catch return null;
         };
 
@@ -50,7 +52,7 @@ pub const Bridge = struct {
                 std.log.debug("perplexity_bridge: failed to create queue dir (abs): {}", .{err});
             };
         } else {
-            std.fs.cwd().makePath(self.queue_dir) catch |err| {
+            std.Io.Dir.cwd().createDirPath(tri_io.get(), self.queue_dir) catch |err| {
                 std.log.debug("perplexity_bridge: failed to create queue dir (rel): {}", .{err});
             };
         }
@@ -239,9 +241,9 @@ pub const Bridge = struct {
 
         const ts: i64 = tri_time.timestamp();
 
-        var json = std.ArrayList(u8).empty;
-        defer json.deinit(self.allocator);
-        const w = json.writer(self.allocator);
+        var json: std.Io.Writer.Allocating = .init(self.allocator);
+        defer json.deinit();
+        const w = &json.writer;
         try w.writeAll("{\"id\":\"");
         try w.writeAll(id);
         try w.writeAll("\",\"cmd\":\"");
@@ -251,9 +253,10 @@ pub const Bridge = struct {
         const path = try self.jobPath(id);
         defer self.allocator.free(path);
 
+        const io = tri_io.get();
         const file = try openFileForWrite(self.queue_dir, id);
-        defer file.close();
-        try file.writeAll(json.items);
+        defer file.close(io);
+        try file.writeStreamingAll(io, json.written());
 
         std.debug.print("[px-bridge] job created: {s} cmd={s}\n", .{ id, cmd });
         return id;
@@ -263,9 +266,10 @@ pub const Bridge = struct {
         const path = try self.jobPath(id);
         defer self.allocator.free(path);
 
-        const file = std.fs.cwd().openFile(path, .{}) catch return error.FileNotFound;
-        defer file.close();
-        return try file.readToEndAlloc(self.allocator, max_body);
+        // readFileAlloc is open + read-to-end + close, the same three steps the
+        // 0.15 openFile/readToEndAlloc/close trio performed here.
+        return std.Io.Dir.cwd().readFileAlloc(tri_io.get(), path, self.allocator, .limited(max_body)) catch
+            return error.FileNotFound;
     }
 
     fn updateJob(self: *Bridge, id: []const u8, status: []const u8, result: []const u8, exit_code: i32) !void {
@@ -278,9 +282,9 @@ pub const Bridge = struct {
         const created_at = extractJsonInt(existing, "created_at") orelse 0;
         const ts: i64 = tri_time.timestamp();
 
-        var json = std.ArrayList(u8).empty;
-        defer json.deinit(self.allocator);
-        const w = json.writer(self.allocator);
+        var json: std.Io.Writer.Allocating = .init(self.allocator);
+        defer json.deinit();
+        const w = &json.writer;
         try w.writeAll("{\"id\":\"");
         try w.writeAll(id);
         try w.writeAll("\",\"cmd\":\"");
@@ -291,22 +295,24 @@ pub const Bridge = struct {
         try writeJsonEscaped(w, result);
         try w.print("\",\"exit_code\":{d}}}", .{exit_code});
 
+        const io = tri_io.get();
         const file = try openFileForWrite(self.queue_dir, id);
-        defer file.close();
-        try file.writeAll(json.items);
+        defer file.close(io);
+        try file.writeStreamingAll(io, json.written());
 
         std.debug.print("[px-bridge] job updated: {s} → {s}\n", .{ id, status });
     }
 
     fn findPendingJob(self: *Bridge) !?[]const u8 {
-        var dir = std.fs.cwd().openDir(self.queue_dir, .{ .iterate = true }) catch return null;
-        defer dir.close();
+        const io = tri_io.get();
+        var dir = std.Io.Dir.cwd().openDir(io, self.queue_dir, .{ .iterate = true }) catch return null;
+        defer dir.close(io);
 
         var oldest_id: ?[]const u8 = null;
         var oldest_ts: i64 = std.math.maxInt(i64);
 
         var iter = dir.iterate();
-        while (try iter.next()) |entry| {
+        while (try iter.next(io)) |entry| {
             if (!std.mem.endsWith(u8, entry.name, ".json")) continue;
             const id = entry.name[0 .. entry.name.len - 5];
 
@@ -339,13 +345,13 @@ pub const Bridge = struct {
 
         // Validate command is in whitelist
         const shell_cmd = self.mapCommand(decoded) catch {
-            var err_resp = std.ArrayList(u8).empty;
-            defer err_resp.deinit(self.allocator);
-            const ew = err_resp.writer(self.allocator);
+            var err_resp: std.Io.Writer.Allocating = .init(self.allocator);
+            defer err_resp.deinit();
+            const ew = &err_resp.writer;
             try ew.writeAll("{\"error\":\"unknown command\",\"cmd\":\"");
             try writeJsonEscaped(ew, decoded);
             try ew.writeAll("\",\"available\":[\"diag\",\"status\",\"build\",\"test\",\"issues\",\"log\",\"branch\",\"push\",\"commit\",\"tri-diag\",\"swarm run N\",\"claude:<prompt>\"]}");
-            try writeResponse(stream, "200", err_resp.items);
+            try writeResponse(stream, "200", err_resp.written());
             return;
         };
         defer self.allocator.free(shell_cmd);
@@ -356,16 +362,16 @@ pub const Bridge = struct {
         };
         defer self.allocator.free(id);
 
-        var resp = std.ArrayList(u8).empty;
-        defer resp.deinit(self.allocator);
-        const w = resp.writer(self.allocator);
+        var resp: std.Io.Writer.Allocating = .init(self.allocator);
+        defer resp.deinit();
+        const w = &resp.writer;
         try w.writeAll("{\"job_id\":\"");
         try w.writeAll(id);
         try w.writeAll("\",\"status\":\"queued\",\"poll\":\"/px/result?id=");
         try w.writeAll(id);
         try w.writeAll("&token=...\"}");
 
-        try writeResponse(stream, "202", resp.items);
+        try writeResponse(stream, "202", resp.written());
     }
 
     fn handleResult(self: *Bridge, stream: std.net.Stream, id: []const u8) !void {
@@ -398,30 +404,31 @@ pub const Bridge = struct {
         const ts: i64 = tri_time.timestamp();
         const created_at = extractJsonInt(content, "created_at") orelse ts;
 
-        var json = std.ArrayList(u8).empty;
-        defer json.deinit(self.allocator);
-        const w = json.writer(self.allocator);
+        var json: std.Io.Writer.Allocating = .init(self.allocator);
+        defer json.deinit();
+        const w = &json.writer;
         try w.writeAll("{\"id\":\"");
         try w.writeAll(id);
         try w.writeAll("\",\"cmd\":\"");
         try writeJsonEscaped(w, cmd);
         try w.print("\",\"status\":\"running\",\"created_at\":{d},\"started_at\":{d},\"finished_at\":null,\"result\":null,\"exit_code\":null}}", .{ created_at, ts });
 
+        const io = tri_io.get();
         const file = try openFileForWrite(self.queue_dir, id);
-        defer file.close();
-        try file.writeAll(json.items);
+        defer file.close(io);
+        try file.writeStreamingAll(io, json.written());
 
         // Return job for Mac agent
-        var resp = std.ArrayList(u8).empty;
-        defer resp.deinit(self.allocator);
-        const rw = resp.writer(self.allocator);
+        var resp: std.Io.Writer.Allocating = .init(self.allocator);
+        defer resp.deinit();
+        const rw = &resp.writer;
         try rw.writeAll("{\"id\":\"");
         try rw.writeAll(id);
         try rw.writeAll("\",\"cmd\":\"");
         try writeJsonEscaped(rw, cmd);
         try rw.writeAll("\"}");
 
-        try writeResponse(stream, "200", resp.items);
+        try writeResponse(stream, "200", resp.written());
     }
 
     fn handleDone(self: *Bridge, stream: std.net.Stream, id: []const u8, result: []const u8, exit_code: i32) !void {
@@ -434,20 +441,21 @@ pub const Bridge = struct {
     }
 
     fn handleJobsList(self: *Bridge, stream: std.net.Stream) !void {
-        var dir = std.fs.cwd().openDir(self.queue_dir, .{ .iterate = true }) catch {
+        const io = tri_io.get();
+        var dir = std.Io.Dir.cwd().openDir(io, self.queue_dir, .{ .iterate = true }) catch {
             try writeResponse(stream, "200", "{\"jobs\":[]}");
             return;
         };
-        defer dir.close();
+        defer dir.close(io);
 
-        var resp = std.ArrayList(u8).empty;
-        defer resp.deinit(self.allocator);
-        const w = resp.writer(self.allocator);
+        var resp: std.Io.Writer.Allocating = .init(self.allocator);
+        defer resp.deinit();
+        const w = &resp.writer;
         try w.writeAll("{\"jobs\":[");
 
         var count: u32 = 0;
         var iter = dir.iterate();
-        while (try iter.next()) |entry| {
+        while (try iter.next(io)) |entry| {
             if (!std.mem.endsWith(u8, entry.name, ".json")) continue;
             const id = entry.name[0 .. entry.name.len - 5];
 
@@ -461,7 +469,7 @@ pub const Bridge = struct {
         }
 
         try w.writeAll("]}");
-        try writeResponse(stream, "200", resp.items);
+        try writeResponse(stream, "200", resp.written());
     }
 
     // ─── Legacy Direct Handlers (local exec fallback) ───────────
@@ -489,10 +497,11 @@ pub const Bridge = struct {
         var pending: u32 = 0;
         var running: u32 = 0;
         blk: {
-            var dir = std.fs.cwd().openDir(self.queue_dir, .{ .iterate = true }) catch break :blk;
-            defer dir.close();
+            const io = tri_io.get();
+            var dir = std.Io.Dir.cwd().openDir(io, self.queue_dir, .{ .iterate = true }) catch break :blk;
+            defer dir.close(io);
             var iter = dir.iterate();
-            while (iter.next() catch null) |entry| {
+            while (iter.next(io) catch null) |entry| {
                 if (!std.mem.endsWith(u8, entry.name, ".json")) continue;
                 const id = entry.name[0 .. entry.name.len - 5];
                 const content = self.readJobFile(id) catch continue;
@@ -503,9 +512,9 @@ pub const Bridge = struct {
             }
         }
 
-        var resp = std.ArrayList(u8).empty;
-        defer resp.deinit(self.allocator);
-        const w = resp.writer(self.allocator);
+        var resp: std.Io.Writer.Allocating = .init(self.allocator);
+        defer resp.deinit();
+        const w = &resp.writer;
         try w.writeAll("{\"status\":\"ok\"");
         try w.writeAll(",\"compile\":\"");
         try writeJsonEscaped(w, std.mem.trim(u8, compile, &std.ascii.whitespace));
@@ -521,21 +530,21 @@ pub const Bridge = struct {
         try writeJsonEscaped(w, std.mem.trim(u8, last_commit, &std.ascii.whitespace));
         try w.print("\",\"queue_pending\":{d},\"queue_running\":{d}}}", .{ pending, running });
 
-        try writeResponse(stream, "200", resp.items);
+        try writeResponse(stream, "200", resp.written());
     }
 
     fn handleIssues(self: *Bridge, stream: std.net.Stream) !void {
         const output = self.runCmd("gh issue list --state open --json number,title,labels --limit 20 2>/dev/null || echo '[]'") catch "[]";
         defer self.allocator.free(output);
 
-        var resp = std.ArrayList(u8).empty;
-        defer resp.deinit(self.allocator);
-        const w = resp.writer(self.allocator);
+        var resp: std.Io.Writer.Allocating = .init(self.allocator);
+        defer resp.deinit();
+        const w = &resp.writer;
         try w.writeAll("{\"issues\":");
         try w.writeAll(std.mem.trim(u8, output, &std.ascii.whitespace));
         try w.writeAll("}");
 
-        try writeResponse(stream, "200", resp.items);
+        try writeResponse(stream, "200", resp.written());
     }
 
     fn handleLog(self: *Bridge, stream: std.net.Stream, count: u32) !void {
@@ -546,14 +555,14 @@ pub const Bridge = struct {
         const output = self.runCmd(cmd) catch "error";
         defer self.allocator.free(output);
 
-        var resp = std.ArrayList(u8).empty;
-        defer resp.deinit(self.allocator);
-        const w = resp.writer(self.allocator);
+        var resp: std.Io.Writer.Allocating = .init(self.allocator);
+        defer resp.deinit();
+        const w = &resp.writer;
         try w.writeAll("{\"log\":\"");
         try writeJsonEscaped(w, std.mem.trim(u8, output, &std.ascii.whitespace));
         try w.writeAll("\"}");
 
-        try writeResponse(stream, "200", resp.items);
+        try writeResponse(stream, "200", resp.written());
     }
 
     /// Whitelist of safe commands. Returns shell command string.
@@ -602,31 +611,33 @@ pub const Bridge = struct {
     }
 
     fn runCmd(self: *Bridge, cmd: []const u8) ![]const u8 {
-        var child = std.process.Child.init(&.{ "/bin/sh", "-c", cmd }, self.allocator);
-        child.stdout_behavior = .Pipe;
-        child.stderr_behavior = .Inherit;
-        try child.spawn();
-        defer _ = child.wait() catch |err| {
-            std.log.warn("perplexity_bridge: child.wait failed: {}", .{err});
-        };
-
-        const stdout = child.stdout orelse return error.NoStdout;
-        const output = try stdout.readToEndAlloc(self.allocator, max_output);
-
-        return output;
+        // 0.16 has no Child.init/spawn with the 0.15 *_behavior fields, and
+        // File.readToEndAlloc is gone with them. tri_proc.run is the shim for
+        // the whole spawn + drain + wait sequence. One behaviour difference:
+        // stderr was .Inherit here and is now captured, so it no longer
+        // reaches the terminal. The caller only ever used stdout, and the
+        // commands that care already fold stderr in with `2>&1`.
+        const result = try tri_proc.run(.{
+            .allocator = self.allocator,
+            .argv = &.{ "/bin/sh", "-c", cmd },
+            .max_output_bytes = max_output,
+        });
+        self.allocator.free(result.stderr);
+        return result.stdout;
     }
 };
 
 // ─── File Helpers ────────────────────────────────────────────
 
-fn openFileForWrite(queue_dir: []const u8, id: []const u8) !std.fs.File {
+fn openFileForWrite(queue_dir: []const u8, id: []const u8) !std.Io.File {
     // Build filename: {id}.json
     var name_buf: [64]u8 = undefined;
     const name = std.fmt.bufPrint(&name_buf, "{s}.json", .{id}) catch return error.NameTooLong;
 
-    var dir = std.fs.cwd().openDir(queue_dir, .{}) catch return error.QueueDirNotFound;
-    defer dir.close();
-    return dir.createFile(name, .{}) catch return error.JobFileCreateFailed;
+    const io = tri_io.get();
+    var dir = std.Io.Dir.cwd().openDir(io, queue_dir, .{}) catch return error.QueueDirNotFound;
+    defer dir.close(io);
+    return dir.createFile(io, name, .{}) catch return error.JobFileCreateFailed;
 }
 
 // ─── Simple JSON Field Extraction ────────────────────────────

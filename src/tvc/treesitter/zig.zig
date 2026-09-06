@@ -12,6 +12,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const Allocator = std.mem.Allocator;
 
 // C FFI bindings to tree-sitter API
@@ -56,7 +57,7 @@ pub const Parser = struct {
 
     /// Parse a file (reads entire file into memory first)
     pub fn parseFile(self: *Parser, allocator: Allocator, path: []const u8) !*c.TSTree {
-        const source = try std.fs.cwd().readFileAlloc(allocator, path, 10 * 1024 * 1024); // 10MB limit
+        const source = try std.Io.Dir.cwd().readFileAlloc(tri_io.get(), path, allocator, .limited(10 * 1024 * 1024)); // 10MB limit
         defer allocator.free(source);
         return self.parseString(source);
     }

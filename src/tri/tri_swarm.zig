@@ -8,6 +8,7 @@
 // ============================================================================
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
@@ -471,7 +472,8 @@ fn runLog(allocator: Allocator) !void {
         return;
     };
 
-    const file = std.fs.cwd().openFile(date_str, .{}) catch {
+    const io = tri_io.get();
+    const file = std.Io.Dir.cwd().openFile(io, date_str, .{}) catch {
         // No log file — show recent issue comments instead
         std.debug.print("  No protocol log file found.\n", .{});
         std.debug.print("  {s}Showing recent agent comments from GitHub...{s}\n\n", .{ GRAY, RESET });
@@ -500,11 +502,15 @@ fn runLog(allocator: Allocator) !void {
         }
         return;
     };
-    defer file.close();
+    defer file.close(io);
 
-    // Read and display log entries
+    // Read and display log entries. readSliceShort fills the buffer and comes
+    // up short only at end of stream -- the same contract readAll had, and the
+    // reason readStreaming is not usable here.
     var buf: [4096]u8 = undefined;
-    const bytes_read = file.readAll(&buf) catch 0;
+    var scratch: [4096]u8 = undefined;
+    var fr = file.reader(io, &scratch);
+    const bytes_read = fr.interface.readSliceShort(&buf) catch 0;
     if (bytes_read > 0) {
         std.debug.print("{s}\n", .{buf[0..bytes_read]});
     } else {
@@ -773,12 +779,13 @@ fn runSync(allocator: Allocator) !void {
     };
 
     // Write to .trinity/swarm_state.json
-    const file = std.fs.cwd().createFile(".trinity/swarm_state.json", .{}) catch {
+    const io = tri_io.get();
+    const file = std.Io.Dir.cwd().createFile(io, ".trinity/swarm_state.json", .{}) catch {
         std.debug.print("  {s}Failed to write swarm_state.json{s}\n", .{ RED, RESET });
         return;
     };
-    defer file.close();
-    file.writeAll(state_json) catch {
+    defer file.close(io);
+    file.writeStreamingAll(io, state_json) catch {
         std.debug.print("  {s}Write failed{s}\n", .{ RED, RESET });
         return;
     };

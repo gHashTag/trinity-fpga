@@ -5,6 +5,7 @@
 //! Supports multiple output formats: ANSI text, JSON, CSV.
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const Allocator = std.mem.Allocator;
 const json = std.json;
 
@@ -23,10 +24,15 @@ fn stringifyJsonMinified(allocator: Allocator, value: json.Value) ![]const u8 {
     return std.json.Stringify.valueAlloc(allocator, value, .{ .whitespace = .minified });
 }
 
-/// Helper to get stdout writer in Zig 0.15
-fn getStdOutWriter() @TypeOf((std.fs.File{ .handle = 0 }).writer()) {
-    const stdout_file = std.fs.File{ .handle = std.posix.STDOUT_FILENO };
-    return stdout_file.writer();
+/// Buffer backing the stdout writer below. At module scope so the returned
+/// writer does not point into a dead stack frame.
+var stdout_write_buf: [4096]u8 = undefined;
+
+/// Helper to get stdout writer. 0.16's `File.writer` takes an Io and a
+/// buffer, and the result is buffered -- callers write through
+/// `&w.interface` and must flush.
+fn getStdOutWriter() std.Io.File.Writer {
+    return std.Io.File.stdout().writer(tri_io.get(), &stdout_write_buf);
 }
 
 /// ANSI color codes for terminal output

@@ -7,6 +7,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 const qt = @import("queen_types.zig");
@@ -341,12 +342,8 @@ pub const MotorExecutor = struct {
     fn checkStaleArenaHours(self: *MotorExecutor) !u16 {
         _ = self;
         // Check arena status file for last battle time
-        const arena_file = std.fs.cwd().openFile(".trinity/arena_status.json", .{}) catch return 0;
-        defer arena_file.close();
-
         var buf: [2048]u8 = undefined;
-        const n = arena_file.read(&buf) catch return 0;
-        const data = buf[0..n];
+        const data = std.Io.Dir.cwd().readFile(tri_io.get(), ".trinity/arena_status.json", &buf) catch return 0;
 
         // Parse last_battle_ts from JSON
         if (std.mem.indexOf(u8, data, "\"last_battle_ts\":")) |idx| {

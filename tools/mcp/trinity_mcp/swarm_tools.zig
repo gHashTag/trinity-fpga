@@ -9,6 +9,8 @@
 // @origin(manual) @regen(pending)
 
 const std = @import("std");
+const tri_io = @import("tri_io");
+const tri_time = @import("tri_time");
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TYPES (from swarm_orchestrator.tri)
@@ -162,7 +164,7 @@ var file_locks: [MAX_LOCKS]FileLock = [_]FileLock{.{}} ** MAX_LOCKS;
 var id_counter: u64 = 0;
 
 fn currentTimeMs() u64 {
-    const ts = std.time.milliTimestamp();
+    const ts = tri_time.milliTimestamp();
     return @intCast(if (ts < 0) 0 else ts);
 }
 
@@ -594,7 +596,7 @@ pub fn createGitHubIssue(allocator: std.mem.Allocator, title: []const u8, body_t
     }
     pi = bufAppend(&payload_buf, pi, "]}");
 
-    var client = std.http.Client{ .allocator = allocator };
+    var client = std.http.Client{ .allocator = allocator, .io = tri_io.get() };
     defer client.deinit();
 
     // Capture response to extract issue number
@@ -648,7 +650,7 @@ pub fn linkAsSubIssue(allocator: std.mem.Allocator, child_number: u32) void {
     var auth_buf: [300]u8 = undefined;
     const auth_val = std.fmt.bufPrint(&auth_buf, "Bearer {s}", .{gh_token}) catch return;
 
-    var client = std.http.Client{ .allocator = allocator };
+    var client = std.http.Client{ .allocator = allocator, .io = tri_io.get() };
     defer client.deinit();
 
     var aw: std.Io.Writer.Allocating = .init(allocator);
@@ -728,7 +730,7 @@ fn collectGitHubCounts(allocator: std.mem.Allocator) GitHubCounts {
     var auth_buf: [300]u8 = undefined;
     const auth_val = std.fmt.bufPrint(&auth_buf, "Bearer {s}", .{gh_token}) catch return result;
 
-    var client = std.http.Client{ .allocator = allocator };
+    var client = std.http.Client{ .allocator = allocator, .io = tri_io.get() };
     defer client.deinit();
 
     var aw: std.Io.Writer.Allocating = .init(allocator);
@@ -954,7 +956,8 @@ fn bufAppend(buf: []u8, pos: usize, s: []const u8) usize {
 }
 
 fn saveState() void {
-    std.fs.cwd().makeDir(".trinity") catch |err| switch (err) {
+    const io = tri_io.get();
+    std.Io.Dir.cwd().createDir(io, ".trinity", .default_dir) catch |err| switch (err) {
         error.PathAlreadyExists => {},
         else => return,
     };
@@ -1048,24 +1051,18 @@ fn saveState() void {
     i = bufAppend(&buf, i, "]}");
 
     // Write to file in one shot
-    const file = std.fs.cwd().createFile(STATE_FILE, .{}) catch return;
-    defer file.close();
-    file.writeAll(buf[0..i]) catch return;
+    const file = std.Io.Dir.cwd().createFile(io, STATE_FILE, .{}) catch return;
+    defer file.close(io);
+    file.writeStreamingAll(io, buf[0..i]) catch return;
 }
 
 fn loadState() void {
-    const file = std.fs.cwd().openFile(STATE_FILE, .{}) catch return;
-    defer file.close();
+    const io = tri_io.get();
 
     var buf: [512 * 1024]u8 = undefined;
-    var total: usize = 0;
-    while (total < buf.len) {
-        const n = file.read(buf[total..]) catch break;
-        if (n == 0) break;
-        total += n;
-    }
-    if (total == 0) return;
-    const json = buf[0..total];
+    // Whole state file into a fixed buffer; a short read is normal.
+    const json = std.Io.Dir.cwd().readFile(io, STATE_FILE, &buf) catch return;
+    if (json.len == 0) return;
 
     // Parse id_counter
     id_counter = jExtU64(json, "id_counter");

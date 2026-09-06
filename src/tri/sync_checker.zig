@@ -7,6 +7,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const Allocator = std.mem.Allocator;
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -66,7 +67,7 @@ pub fn parseSpec(allocator: Allocator, spec_path: []const u8) !SyncResult {
     var result = SyncResult.init(allocator);
     result.spec_path = spec_path;
 
-    const content = std.fs.cwd().readFileAlloc(allocator, spec_path, 1024 * 1024) catch {
+    const content = std.Io.Dir.cwd().readFileAlloc(tri_io.get(), spec_path, allocator, .limited(1024 * 1024)) catch {
         return result;
     };
     defer allocator.free(content);
@@ -136,7 +137,7 @@ pub fn parseSpec(allocator: Allocator, spec_path: []const u8) !SyncResult {
 pub fn parseCode(allocator: Allocator, code_path: []const u8, result: *SyncResult) !void {
     result.code_path = code_path;
 
-    const content = std.fs.cwd().readFileAlloc(allocator, code_path, 10 * 1024 * 1024) catch {
+    const content = std.Io.Dir.cwd().readFileAlloc(tri_io.get(), code_path, allocator, .limited(10 * 1024 * 1024)) catch {
         return;
     };
     defer allocator.free(content);
@@ -244,7 +245,7 @@ pub fn findCodePath(allocator: Allocator, spec_path: []const u8) !?[]u8 {
     // Try paths in order
     inline for (.{ "generated/{s}.zig", "src/tri/{s}.zig", "src/tri/tri_{s}.zig" }) |template| {
         const path = try std.fmt.allocPrint(allocator, template, .{stem});
-        if (std.fs.cwd().access(path, .{})) |_| {
+        if (std.Io.Dir.cwd().access(tri_io.get(), path, .{})) |_| {
             return path;
         } else |_| {
             allocator.free(path);
@@ -330,11 +331,12 @@ fn runSyncCheckSingle(allocator: Allocator, spec_path: []const u8) !u8 {
 }
 
 fn runSyncCheckAll(allocator: Allocator) !u8 {
-    var dir = std.fs.cwd().openDir("specs/tri", .{ .iterate = true }) catch {
+    const io = tri_io.get();
+    var dir = std.Io.Dir.cwd().openDir(io, "specs/tri", .{ .iterate = true }) catch {
         std.debug.print("  \x1b[31mNo specs/tri directory found\x1b[0m\n", .{});
         return 1;
     };
-    defer dir.close();
+    defer dir.close(io);
 
     var total: usize = 0;
     var synced: usize = 0;
@@ -342,7 +344,7 @@ fn runSyncCheckAll(allocator: Allocator) !u8 {
     var no_code: usize = 0;
 
     var iter = dir.iterate();
-    while (try iter.next()) |entry| {
+    while (try iter.next(io)) |entry| {
         if (entry.kind != .file) continue;
         if (!std.mem.endsWith(u8, entry.name, ".tri")) continue;
         total += 1;

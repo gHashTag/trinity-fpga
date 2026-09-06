@@ -10,6 +10,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const Allocator = std.mem.Allocator;
 const print = std.debug.print;
 
@@ -198,13 +199,16 @@ fn areLogsFresh(logs_json: []const u8) bool {
 /// Check sacred workers via Railway logs API (primary source of truth!)
 /// suffix: "" for RAILWAY_API_TOKEN, "_2" for RAILWAY_API_TOKEN_2, etc.
 pub fn checkSacredWorkersLive(allocator: Allocator, suffix: []const u8) !void {
-    const sacred_file = std.fs.cwd().openFile(".trinity/sacred_workers.txt", .{}) catch {
+    const io = tri_io.get();
+    const sacred_file = std.Io.Dir.cwd().openFile(io, ".trinity/sacred_workers.txt", .{}) catch {
         print("{s}⚠️  No sacred_workers.txt found{s}\n", .{ YELLOW, RESET });
         return;
     };
-    defer sacred_file.close();
+    defer sacred_file.close(io);
 
-    const content = try sacred_file.readToEndAlloc(allocator, 8192);
+    var read_scratch: [4096]u8 = undefined;
+    var sacred_reader = sacred_file.reader(io, &read_scratch);
+    const content = try sacred_reader.interface.allocRemaining(allocator, .limited(8192));
     defer allocator.free(content);
 
     print("\n{s}🛡️ SACRED WORKERS — LIVE STATUS (via Railway logs API){s}\n", .{ CYAN, RESET });

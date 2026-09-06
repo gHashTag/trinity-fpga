@@ -144,14 +144,16 @@ fn parseRuleString(s: []const u8) ?Rule {
 
 /// Read a file, trying both absolute and relative paths.
 fn readFile(allocator: std.mem.Allocator, path: []const u8) ![]const u8 {
+    const io = tri_io.get();
     if (path.len > 0 and path[0] == '/') {
-        const file = try std.Io.Dir.openFileAbsolute(tri_io.get(), path, .{});
-        defer file.close();
-        return file.readToEndAlloc(allocator, 1024 * 1024);
+        // 0.16 has no File.readToEndAlloc; a File.Reader plus allocRemaining is
+        // the direct equivalent (read to end of stream, capped by the limit).
+        const file = try std.Io.Dir.openFileAbsolute(io, path, .{});
+        defer file.close(io);
+        var fr = file.reader(io, &.{});
+        return fr.interface.allocRemaining(allocator, .limited(1024 * 1024));
     }
-    const file = try std.fs.cwd().openFile(path, .{});
-    defer file.close();
-    return file.readToEndAlloc(allocator, 1024 * 1024);
+    return std.Io.Dir.cwd().readFileAlloc(io, path, allocator, .limited(1024 * 1024));
 }
 
 // ─── Tests ───────────────────────────────────────────────────────────────────

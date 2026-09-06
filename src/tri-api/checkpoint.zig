@@ -3,6 +3,7 @@
 // Issue #65: Phase 6 permissions + checkpoints
 const std = @import("std");
 
+const tri_io = @import("tri_io");
 const tri_proc = @import("tri_proc");
 const stash_prefix = "tri-api checkpoint: ";
 
@@ -19,7 +20,7 @@ pub const Checkpoint = struct {
     /// This creates a recoverable snapshot in git stash.
     pub fn createBeforeWrite(self: *Checkpoint, file_path: []const u8) void {
         // Only checkpoint files that exist (new files have nothing to checkpoint)
-        std.fs.cwd().access(file_path, .{}) catch return;
+        std.Io.Dir.cwd().access(tri_io.get(), file_path, .{}) catch return;
 
         // Check if we're in a git repo
         _ = runGit(self.allocator, &.{ "git", "rev-parse", "--git-dir" }) catch return;

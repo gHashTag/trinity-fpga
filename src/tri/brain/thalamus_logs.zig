@@ -16,6 +16,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const railway_api = @import("../railway_api.zig");
@@ -210,12 +211,15 @@ pub const Thalamus = struct {
 
     /// Get live states for all sacred workers
     pub fn getSacredWorkersLive(self: *Self) !std.StringHashMap(WorkerLiveState) {
-        const sacred_file = std.fs.cwd().openFile(".trinity/sacred_workers.txt", .{}) catch {
+        const io = tri_io.get();
+        const sacred_file = std.Io.Dir.cwd().openFile(io, ".trinity/sacred_workers.txt", .{}) catch {
             return std.StringHashMap(WorkerLiveState).init(self.allocator);
         };
-        defer sacred_file.close();
+        defer sacred_file.close(io);
 
-        const content = try sacred_file.readToEndAlloc(self.allocator, 8192);
+        var read_buf: [4096]u8 = undefined;
+        var file_reader = sacred_file.reader(io, &read_buf);
+        const content = try file_reader.interface.allocRemaining(self.allocator, .limited(8192));
         defer self.allocator.free(content);
 
         var states = std.StringHashMap(WorkerLiveState).init(self.allocator);

@@ -6,6 +6,7 @@
 //! Simple YAML-based parser for .tri specification files
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayListUnmanaged;
 
@@ -31,8 +32,8 @@ pub const ParseResult = struct {
     pub fn init(allocator: Allocator) ParseResult {
         return .{
             .spec = VibeeSpec.init(allocator),
-            .errors = .{},
-            .warnings = .{},
+            .errors = .empty,
+            .warnings = .empty,
         };
     }
 
@@ -223,7 +224,8 @@ pub fn parse(allocator: Allocator, source: []const u8) !ParseResult {
 
 /// Parse .tri specification from file
 pub fn parseFile(allocator: Allocator, file_path: []const u8) !ParseResult {
-    const source = try std.fs.cwd().readFileAlloc(allocator, file_path, 1024 * 1024);
+    const io = tri_io.get();
+    const source = try std.Io.Dir.cwd().readFileAlloc(io, file_path, allocator, .limited(1024 * 1024));
     defer allocator.free(source);
 
     return parse(allocator, source);

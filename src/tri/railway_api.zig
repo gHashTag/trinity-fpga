@@ -14,6 +14,8 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
+const tri_time = @import("tri_time");
 const tri_env = @import("tri_env.zig");
 const Allocator = std.mem.Allocator;
 const crypto = std.crypto.random;
@@ -68,8 +70,8 @@ pub const RailwayApi = struct {
     token: []const u8,
     project_id: []const u8,
     environment_id: []const u8,
-    // Rate limiting state
-    last_request_time: std.time.Instant,
+    // Rate limiting state — monotonic nanoseconds, from tri_time.
+    last_request_time: u64,
     user_agent_index: u32,
 
     const Self = @This();
@@ -109,7 +111,7 @@ pub const RailwayApi = struct {
             .token = token,
             .project_id = project_id,
             .environment_id = environment_id,
-            .last_request_time = std.time.Instant.now() catch undefined,
+            .last_request_time = tri_time.monotonicNanos(),
             .user_agent_index = crypto.intRangeLessThan(u32, 0, USER_AGENTS.len),
         };
     }
@@ -138,8 +140,8 @@ pub const RailwayApi = struct {
     /// Check if API request is allowed (rate limiting).
     /// Returns true if enough time has passed since last request.
     fn checkRateLimit(self: *Self) bool {
-        const now = std.time.Instant.now() catch undefined;
-        const elapsed = now.since(self.last_request_time);
+        const now = tri_time.monotonicNanos();
+        const elapsed = now -| self.last_request_time;
         const min_interval_ns = MIN_REQUEST_INTERVAL_MS * 1_000_000;
         return elapsed >= min_interval_ns;
     }
@@ -433,7 +435,7 @@ pub const RailwayApi = struct {
             const result = self.httpPostOnce(body);
             if (result) |response| {
                 // Success - update last request time and return
-                self.last_request_time = std.time.Instant.now() catch undefined;
+                self.last_request_time = tri_time.monotonicNanos();
                 return response;
             } else |err| {
                 // Check if it's a rate limit error (429)
@@ -455,6 +457,7 @@ pub const RailwayApi = struct {
         // HTTP client with 5-second connection timeout for graceful degradation
         var client = std.http.Client{
             .allocator = self.allocator,
+            .io = tri_io.get(),
         };
         defer client.deinit();
 
@@ -576,9 +579,8 @@ pub const RailwayApi = struct {
     }
 
     fn readProjectIdFromFile(allocator: Allocator) ![]const u8 {
-        const file = std.fs.cwd().openFile(".railway.json", .{}) catch return error.MissingProjectId;
-        defer file.close();
-        const contents = file.readToEndAlloc(allocator, 64 * 1024) catch return error.MissingProjectId;
+        const contents = std.Io.Dir.cwd().readFileAlloc(tri_io.get(), ".railway.json", allocator, .limited(64 * 1024)) catch
+            return error.MissingProjectId;
         defer allocator.free(contents);
 
         // Simple parse: find "project": "..." or "project":"..."

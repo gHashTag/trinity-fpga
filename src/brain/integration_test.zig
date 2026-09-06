@@ -334,7 +334,7 @@ test "Integration: State save and restore" {
     const allocator = std.testing.allocator;
 
     const tmp_dir = ".trinity/brain/state";
-    try std.fs.cwd().makePath(tmp_dir);
+    try std.Io.Dir.cwd().createDirPath(std.testing.io, tmp_dir);
 
     basal_ganglia.resetGlobal(allocator);
     reticular_formation.resetGlobal(allocator);
@@ -378,7 +378,7 @@ test "Integration: State restoration after crash" {
     const allocator = std.testing.allocator;
 
     const tmp_dir = ".trinity/brain/state";
-    try std.fs.cwd().makePath(tmp_dir);
+    try std.Io.Dir.cwd().createDirPath(std.testing.io, tmp_dir);
 
     var manager = try state_recovery.StateManager.init(allocator);
     defer manager.deinit();
@@ -412,7 +412,7 @@ test "Integration: Auto-recovery on startup" {
     const allocator = std.testing.allocator;
 
     const tmp_dir = ".trinity/brain/state";
-    try std.fs.cwd().makePath(tmp_dir);
+    try std.Io.Dir.cwd().createDirPath(std.testing.io, tmp_dir);
 
     // Clean up any existing state files first
     var cleanup_manager = try state_recovery.StateManager.init(allocator);
@@ -932,15 +932,16 @@ test "Integration: Recovery after corrupted state" {
     const allocator = std.testing.allocator;
 
     const tmp_dir = ".trinity/brain/state";
-    try std.fs.cwd().makePath(tmp_dir);
+    try std.Io.Dir.cwd().createDirPath(std.testing.io, tmp_dir);
 
     var manager = try state_recovery.StateManager.init(allocator);
     defer manager.deinit();
 
     {
-        const file = try std.fs.cwd().createFile(manager.state_file_path, .{ .read = true });
-        defer file.close();
-        try file.writeAll("corrupted {{json data");
+        const io = std.testing.io;
+        const file = try std.Io.Dir.cwd().createFile(io, manager.state_file_path, .{ .read = true });
+        defer file.close(io);
+        try file.writeStreamingAll(io, "corrupted {{json data");
     }
 
     const result = manager.load();
@@ -968,7 +969,7 @@ test "Integration: All regions maintain consistency" {
     const allocator = std.testing.allocator;
 
     // Clean up any leftover state files from previous tests
-    std.fs.cwd().deleteTree(".trinity/brain/state") catch {};
+    std.Io.Dir.cwd().deleteTree(std.testing.io, ".trinity/brain/state") catch {};
 
     basal_ganglia.resetGlobal(allocator);
     reticular_formation.resetGlobal(allocator);
@@ -1468,7 +1469,7 @@ test "Integration: Recovery from corrupted telemetry" {
     const allocator = std.testing.allocator;
 
     const tmp_dir = ".trinity/brain/state";
-    try std.fs.cwd().makePath(tmp_dir);
+    try std.Io.Dir.cwd().createDirPath(std.testing.io, tmp_dir);
 
     basal_ganglia.resetGlobal(allocator);
     reticular_formation.resetGlobal(allocator);
@@ -1494,12 +1495,14 @@ test "Integration: Recovery from corrupted telemetry" {
     try manager.save(registry, event_bus);
 
     // Corrupt the state file
-    const state_file = try std.fs.cwd().openFile(
+    const io = std.testing.io;
+    const state_file = try std.Io.Dir.cwd().openFile(
+        io,
         manager.state_file_path,
         .{ .mode = .write_only },
     );
-    defer state_file.close();
-    try state_file.writeAll("corrupted data");
+    defer state_file.close(io);
+    try state_file.writeStreamingAll(io, "corrupted data");
 
     // Auto-recovery should handle this gracefully
     var new_registry = basal_ganglia.Registry.init(allocator);
@@ -1517,7 +1520,7 @@ test "Integration: Recovery with partial state loss" {
     const allocator = std.testing.allocator;
 
     const tmp_dir = ".trinity/brain/state";
-    try std.fs.cwd().makePath(tmp_dir);
+    try std.Io.Dir.cwd().createDirPath(std.testing.io, tmp_dir);
 
     basal_ganglia.resetGlobal(allocator);
     reticular_formation.resetGlobal(allocator);
@@ -1569,7 +1572,7 @@ test "Integration: Recovery after cascade failure" {
     const allocator = std.testing.allocator;
 
     const tmp_dir = ".trinity/brain/state";
-    try std.fs.cwd().makePath(tmp_dir);
+    try std.Io.Dir.cwd().createDirPath(std.testing.io, tmp_dir);
 
     basal_ganglia.resetGlobal(allocator);
     reticular_formation.resetGlobal(allocator);

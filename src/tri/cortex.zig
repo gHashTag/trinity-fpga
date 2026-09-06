@@ -667,8 +667,13 @@ pub fn runFacultyCommand(allocator: Allocator, args: []const []const u8) !void {
 
 /// Send faculty dashboard to Telegram. Fire-and-forget — errors are logged, never crash.
 fn sendFacultyTelegram(snapshot: FacultySnapshot, delta: FacultyDelta) void {
-    const bot_token = std.posix.getenv("TELEGRAM_BOT_TOKEN") orelse return;
-    const chat_id = std.posix.getenv("TELEGRAM_CHAT_ID") orelse return;
+    // 0.16 removed std.posix.getenv. tri_env.getEnvVar has the same contract
+    // -- a borrowed view into the process environment -- but needs an
+    // allocator for the null-terminated key, which it frees before returning.
+    // This function takes no allocator and its signature is not changing, so
+    // the page allocator serves for that one short-lived key.
+    const bot_token = tri_env.getEnvVar(std.heap.page_allocator, "TELEGRAM_BOT_TOKEN") orelse return;
+    const chat_id = tri_env.getEnvVar(std.heap.page_allocator, "TELEGRAM_CHAT_ID") orelse return;
 
     // Build plain-text message (no ANSI)
     var msg_buf: [3072]u8 = undefined;
@@ -803,20 +808,19 @@ fn sendFacultyTelegram(snapshot: FacultySnapshot, delta: FacultyDelta) void {
 }
 
 fn loadTgHash() ?u64 {
-    const file = std.fs.cwd().openFile(TG_HASH_PATH, .{}) catch return null;
-    defer file.close();
     var buf: [20]u8 = undefined;
-    const n = file.readAll(&buf) catch return null;
-    const trimmed = std.mem.trimEnd(u8, buf[0..n], "\n\r ");
+    const data = std.Io.Dir.cwd().readFile(tri_io.get(), TG_HASH_PATH, &buf) catch return null;
+    const trimmed = std.mem.trimEnd(u8, data, "\n\r ");
     return std.fmt.parseInt(u64, trimmed, 10) catch null;
 }
 
 fn saveTgHash(hash: u64) void {
+    const io = tri_io.get();
     var buf: [20]u8 = undefined;
     const content = std.fmt.bufPrint(&buf, "{d}", .{hash}) catch return;
-    const file = std.fs.cwd().createFile(TG_HASH_PATH, .{}) catch return;
-    defer file.close();
-    file.writeAll(content) catch |err| {
+    const file = std.Io.Dir.cwd().createFile(io, TG_HASH_PATH, .{}) catch return;
+    defer file.close(io);
+    file.writeStreamingAll(io, content) catch |err| {
         std.log.debug("faculty_board: write TG hash failed: {}", .{err});
     };
 }
@@ -824,16 +828,18 @@ fn saveTgHash(hash: u64) void {
 /// Read last N lines from agent_commands.log.
 /// Returns slices into `buf`. Returns count of lines found.
 fn lastNCommands(comptime max: usize, out: *[max][]const u8, buf: *[1024]u8) usize {
-    const file = std.fs.cwd().openFile(AGENT_CMD_LOG, .{}) catch return 0;
-    defer file.close();
+    const io = tri_io.get();
+    const file = std.Io.Dir.cwd().openFile(io, AGENT_CMD_LOG, .{}) catch return 0;
+    defer file.close(io);
 
     // Read tail of file (last 1KB is enough for ~10 lines)
-    const stat = file.stat() catch return 0;
+    const stat = file.stat(io) catch return 0;
     if (stat.size == 0) return 0;
 
+    // 0.16 has no seek-then-readAll; a positional read from `skip` is the
+    // same tail with the same fill-or-EOF semantics.
     const skip = if (stat.size > buf.len) stat.size - buf.len else 0;
-    file.seekTo(skip) catch return 0;
-    const n = file.readAll(buf) catch return 0;
+    const n = file.readPositionalAll(io, buf, skip) catch return 0;
     if (n == 0) return 0;
 
     // Split into lines, collect last `max`
@@ -865,17 +871,11 @@ const StaleResult = struct { is_stale: bool, count: u16 };
 /// Compare thought hash with previous. If identical 3+ times in a row, report stale.
 /// File format: "{hash}\n{count}\n"
 fn detectStaleReport(current_hash: u64) StaleResult {
-    const file = std.fs.cwd().openFile(THOUGHT_HASH_PATH, .{}) catch {
-        saveThoughtHash(current_hash, 1);
-        return .{ .is_stale = false, .count = 1 };
-    };
-    defer file.close();
     var read_buf: [48]u8 = undefined;
-    const n = file.readAll(&read_buf) catch {
+    const data = std.Io.Dir.cwd().readFile(tri_io.get(), THOUGHT_HASH_PATH, &read_buf) catch {
         saveThoughtHash(current_hash, 1);
         return .{ .is_stale = false, .count = 1 };
     };
-    const data = read_buf[0..n];
 
     var lines = std.mem.splitScalar(u8, data, '\n');
     const hash_str = lines.next() orelse {
@@ -897,11 +897,12 @@ fn detectStaleReport(current_hash: u64) StaleResult {
 }
 
 fn saveThoughtHash(hash: u64, count: u16) void {
+    const io = tri_io.get();
     var write_buf: [48]u8 = undefined;
     const content = std.fmt.bufPrint(&write_buf, "{d}\n{d}\n", .{ hash, count }) catch return;
-    const file = std.fs.cwd().createFile(THOUGHT_HASH_PATH, .{}) catch return;
-    defer file.close();
-    file.writeAll(content) catch {};
+    const file = std.Io.Dir.cwd().createFile(io, THOUGHT_HASH_PATH, .{}) catch return;
+    defer file.close(io);
+    file.writeStreamingAll(io, content) catch {};
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -909,7 +910,7 @@ fn saveThoughtHash(hash: u64, count: u16) void {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn loadPrevDelta(allocator: Allocator, snapshot: FacultySnapshot) FacultyDelta {
-    const content = std.fs.cwd().readFileAlloc(allocator, PREV_PATH, 1024) catch return .{};
+    const content = std.Io.Dir.cwd().readFileAlloc(tri_io.get(), PREV_PATH, allocator, .limited(1024)) catch return .{};
     defer allocator.free(content);
 
     var lines = std.mem.splitScalar(u8, content, '\n');
@@ -968,9 +969,10 @@ fn savePrevSnapshot(snapshot: FacultySnapshot) void {
         snapshot.open_issues,
     }) catch return;
 
-    const file = std.fs.cwd().createFile(PREV_PATH, .{}) catch return;
-    defer file.close();
-    file.writeAll(content) catch |err| {
+    const io = tri_io.get();
+    const file = std.Io.Dir.cwd().createFile(io, PREV_PATH, .{}) catch return;
+    defer file.close(io);
+    file.writeStreamingAll(io, content) catch |err| {
         std.log.debug("faculty_board: write prev snapshot failed: {}", .{err});
     };
 }
@@ -980,11 +982,12 @@ fn savePrevSnapshot(snapshot: FacultySnapshot) void {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn countBinaries() u8 {
+    const io = tri_io.get();
     var count: u8 = 0;
-    var dir = std.fs.cwd().openDir("zig-out/bin", .{ .iterate = true }) catch return 0;
-    defer dir.close();
+    var dir = std.Io.Dir.cwd().openDir(io, "zig-out/bin", .{ .iterate = true }) catch return 0;
+    defer dir.close(io);
     var iter = dir.iterate();
-    while (iter.next() catch null) |entry| {
+    while (iter.next(io) catch null) |entry| {
         if (entry.kind == .file) count +|= 1;
     }
     return count;
@@ -993,7 +996,7 @@ fn countBinaries() u8 {
 const RegenStats = struct { pass: u16, total: u16 };
 
 fn parseRegenReport(allocator: Allocator) RegenStats {
-    const content = std.fs.cwd().readFileAlloc(allocator, REGEN_REPORT, 256 * 1024) catch
+    const content = std.Io.Dir.cwd().readFileAlloc(tri_io.get(), REGEN_REPORT, allocator, .limited(256 * 1024)) catch
         return .{ .pass = 0, .total = 0 };
     defer allocator.free(content);
 
@@ -1109,7 +1112,7 @@ fn getGhAuthToken(allocator: Allocator) ?[]u8 {
 fn runCmdWithToken(allocator: Allocator, argv: []const []const u8, gh_token: ?[]const u8) ![]u8 {
     if (gh_token) |token| {
         // Get current environment and inject fresh GH_TOKEN (overrides stale .env value)
-        var env_map = std.process.getEnvMap(allocator) catch return error.CommandFailed;
+        var env_map = tri_env.getEnvMap(allocator) catch return error.CommandFailed;
         defer env_map.deinit();
         env_map.put("GH_TOKEN", token) catch return error.CommandFailed;
         const result = tri_proc.run(.{
@@ -1129,7 +1132,7 @@ fn runCmdWithToken(allocator: Allocator, argv: []const []const u8, gh_token: ?[]
 }
 
 fn countMuPatterns(allocator: Allocator) u16 {
-    const content = std.fs.cwd().readFileAlloc(allocator, MU_LEARNING_DB, 64 * 1024) catch
+    const content = std.Io.Dir.cwd().readFileAlloc(tri_io.get(), MU_LEARNING_DB, allocator, .limited(64 * 1024)) catch
         return 0;
     defer allocator.free(content);
     // Count pattern entries
@@ -1161,7 +1164,7 @@ const SwarmInfo = struct {
 // enrichFromHippocampus — removed: thalamus.zig handles hippocampus→file relay
 
 fn readSwarmState(allocator: Allocator) SwarmInfo {
-    const content = std.fs.cwd().readFileAlloc(allocator, SWARM_STATE_PATH, 64 * 1024) catch
+    const content = std.Io.Dir.cwd().readFileAlloc(tri_io.get(), SWARM_STATE_PATH, allocator, .limited(64 * 1024)) catch
         return .{ .agents = 0, .total_tasks = 0, .assigned_tasks = 0, .action_desc = "" };
     defer allocator.free(content);
 
@@ -1391,7 +1394,7 @@ test "stale detection triggers after 3 identical hashes" {
     try std.testing.expectEqual(@as(u16, 1), r4.count);
 
     // Cleanup
-    std.fs.cwd().deleteFile(THOUGHT_HASH_PATH) catch {};
+    std.Io.Dir.cwd().deleteFile(tri_io.get(), THOUGHT_HASH_PATH) catch {};
 }
 
 test "renderCompact produces output" {

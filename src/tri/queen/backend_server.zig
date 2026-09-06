@@ -19,6 +19,7 @@ const EpisodePattern = auto_improve.EpisodePattern;
 
 const std = @import("std");
 
+const tri_io = @import("tri_io");
 const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 // ============================================================================
@@ -448,7 +449,7 @@ pub const QueenBackend = struct {
 
         // Write .tri spec to file
         const spec_path = ".trinity/specs/auto_improvement.tri";
-        try std.fs.cwd().writeFile(.{
+        try std.Io.Dir.cwd().writeFile(tri_io.get(), .{
             .sub_path = spec_path,
             .data = tri_spec,
         });

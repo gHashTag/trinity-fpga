@@ -16,6 +16,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const vsa = @import("vsa.zig");
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -413,7 +414,7 @@ pub const IVFIndex = struct {
         }
 
         // Write buffer to file
-        try std.fs.cwd().writeFile(.{
+        try std.Io.Dir.cwd().writeFile(tri_io.get(), .{
             .sub_path = file_path,
             .data = buffer.items,
         });
@@ -425,10 +426,12 @@ pub const IVFIndex = struct {
         allocator: std.mem.Allocator,
         file_path: []const u8,
     ) !IVFIndex {
-        const file = try std.fs.cwd().openFile(file_path, .{});
-        defer file.close();
-
-        const contents = try file.readToEndAlloc(allocator, 1024 * 1024 * 100); // Max 100MB
+        const contents = try std.Io.Dir.cwd().readFileAlloc(
+            tri_io.get(),
+            file_path,
+            allocator,
+            .limited(1024 * 1024 * 100), // Max 100MB
+        );
         defer allocator.free(contents);
 
         var pos: usize = 0;
@@ -761,7 +764,7 @@ test "ivf.7: Tier 4.2 - saveToFile and loadFromFile" {
     const cache_path = "/tmp/ivf_test_cache.bin";
     try index.saveToFile(cache_path);
     defer {
-        std.fs.cwd().deleteFile(cache_path) catch |err| {
+        std.Io.Dir.cwd().deleteFile(tri_io.get(), cache_path) catch |err| {
             std.log.debug("ivf: cleanup cache file: {}", .{err});
         };
     }

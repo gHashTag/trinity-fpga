@@ -19,6 +19,7 @@
 // =============================================================================
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const Allocator = std.mem.Allocator;
 const types = @import("types.zig");
 
@@ -42,58 +43,71 @@ pub const CheckpointError = error{
 };
 
 // Helper: write u32 big-endian to raw file
-fn writeU32(file: std.fs.File, val: u32) !void {
+fn writeU32(file: std.Io.File, val: u32) !void {
     const bytes = std.mem.toBytes(std.mem.nativeTo(u32, val, .big));
-    try file.writeAll(&bytes);
+    try file.writeStreamingAll(tri_io.get(), &bytes);
 }
 
-fn writeU16(file: std.fs.File, val: u16) !void {
+fn writeU16(file: std.Io.File, val: u16) !void {
     const bytes = std.mem.toBytes(std.mem.nativeTo(u16, val, .big));
-    try file.writeAll(&bytes);
+    try file.writeStreamingAll(tri_io.get(), &bytes);
 }
 
-fn writeU64(file: std.fs.File, val: u64) !void {
+fn writeU64(file: std.Io.File, val: u64) !void {
     const bytes = std.mem.toBytes(std.mem.nativeTo(u64, val, .big));
-    try file.writeAll(&bytes);
+    try file.writeStreamingAll(tri_io.get(), &bytes);
 }
 
-fn writeU8(file: std.fs.File, val: u8) !void {
-    try file.writeAll(&[_]u8{val});
+fn writeU8(file: std.Io.File, val: u8) !void {
+    try file.writeStreamingAll(tri_io.get(), &[_]u8{val});
 }
 
-// Helper: read big-endian from raw file
-fn readU32(file: std.fs.File) !u32 {
+// Helper: read big-endian from raw file.
+//
+// These read fixed-width fields in sequence, so a short read is corruption,
+// not a normal outcome: `readSliceAll` loops until the destination is full and
+// returns error.EndOfStream if it cannot be, which is what the 0.15
+// `readAll` + explicit length check did.
+//
+// The reader is *streaming* and *unbuffered* on purpose. A positional
+// `File.Reader` starts at offset 0 regardless of where the file is, so a fresh
+// one per call would re-read the header every time; a buffered one would read
+// ahead and drop the lookahead when it went out of scope at the end of the
+// call. Streaming with a zero-length buffer reads from -- and advances -- the
+// file's own offset, exactly as `readAll` did.
+fn readU32(file: std.Io.File) !u32 {
     var bytes: [4]u8 = undefined;
-    const n = try file.readAll(&bytes);
-    if (n != 4) return error.EndOfStream;
+    var fr = file.readerStreaming(tri_io.get(), &.{});
+    try fr.interface.readSliceAll(&bytes);
     return std.mem.nativeTo(u32, std.mem.bytesToValue(u32, &bytes), .big);
 }
 
-fn readU16(file: std.fs.File) !u16 {
+fn readU16(file: std.Io.File) !u16 {
     var bytes: [2]u8 = undefined;
-    const n = try file.readAll(&bytes);
-    if (n != 2) return error.EndOfStream;
+    var fr = file.readerStreaming(tri_io.get(), &.{});
+    try fr.interface.readSliceAll(&bytes);
     return std.mem.nativeTo(u16, std.mem.bytesToValue(u16, &bytes), .big);
 }
 
-fn readU64(file: std.fs.File) !u64 {
+fn readU64(file: std.Io.File) !u64 {
     var bytes: [8]u8 = undefined;
-    const n = try file.readAll(&bytes);
-    if (n != 8) return error.EndOfStream;
+    var fr = file.readerStreaming(tri_io.get(), &.{});
+    try fr.interface.readSliceAll(&bytes);
     return std.mem.nativeTo(u64, std.mem.bytesToValue(u64, &bytes), .big);
 }
 
-fn readU8(file: std.fs.File) !u8 {
+fn readU8(file: std.Io.File) !u8 {
     var bytes: [1]u8 = undefined;
-    const n = try file.readAll(&bytes);
-    if (n != 1) return error.EndOfStream;
+    var fr = file.readerStreaming(tri_io.get(), &.{});
+    try fr.interface.readSliceAll(&bytes);
     return bytes[0];
 }
 
 /// Save a ForgeDB checkpoint to a binary file.
 pub fn saveCheckpoint(db: *const ForgeDB, path: []const u8) !void {
-    const file = try std.fs.cwd().createFile(path, .{});
-    defer file.close();
+    const io = tri_io.get();
+    const file = try std.Io.Dir.cwd().createFile(io, path, .{});
+    defer file.close(io);
 
     // Header
     try writeU32(file, FORGE_MAGIC);
@@ -120,8 +134,9 @@ pub fn saveCheckpoint(db: *const ForgeDB, path: []const u8) !void {
 
 /// Load a ForgeDB checkpoint from a binary file.
 pub fn loadCheckpoint(allocator: Allocator, path: []const u8) !ForgeDB {
-    const file = try std.fs.cwd().openFile(path, .{});
-    defer file.close();
+    const io = tri_io.get();
+    const file = try std.Io.Dir.cwd().openFile(io, path, .{});
+    defer file.close(io);
 
     // Validate header
     const magic = try readU32(file);
@@ -227,7 +242,7 @@ test "checkpoint roundtrip" {
     try std.testing.expect(c1.locked);
 
     // Cleanup
-    std.fs.cwd().deleteFile(path) catch |err| {
+    std.Io.Dir.cwd().deleteFile(tri_io.get(), path) catch |err| {
         std.log.debug("forge_db: failed to delete checkpoint file: {}", .{err});
     };
 }

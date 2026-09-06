@@ -11,6 +11,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const types = @import("train_types.zig");
 const TrainLogEntry = types.TrainLogEntry;
 const CheckpointInfo = types.CheckpointInfo;
@@ -309,12 +310,13 @@ pub fn scanCheckpoints(
     dir_path: []const u8,
     out: []CheckpointInfo,
 ) usize {
-    var dir = std.fs.cwd().openDir(dir_path, .{ .iterate = true }) catch return 0;
-    defer dir.close();
+    const io = tri_io.get();
+    var dir = std.Io.Dir.cwd().openDir(io, dir_path, .{ .iterate = true }) catch return 0;
+    defer dir.close(io);
 
     var count: usize = 0;
     var iter = dir.iterate();
-    while (iter.next() catch null) |entry| {
+    while (iter.next(io) catch null) |entry| {
         if (count >= out.len) break;
         if (entry.kind != .file) continue;
 
@@ -326,17 +328,21 @@ pub fn scanCheckpoints(
         if (std.mem.indexOf(u8, name, "PHASE") != null) continue;
 
         // Read 16-byte header
-        const file = dir.openFile(name, .{}) catch continue;
-        defer file.close();
+        const file = dir.openFile(io, name, .{}) catch continue;
+        defer file.close(io);
 
+        // A fixed-width binary header: anything shorter than 16 bytes is not a
+        // checkpoint. readSliceAll loops until full and errors EndOfStream if
+        // it cannot fill, which is the old `n < 16 -> skip` test.
+        var scratch: [64]u8 = undefined;
+        var fr = file.reader(io, &scratch);
         var header_bytes: [16]u8 = undefined;
-        const n = file.read(&header_bytes) catch continue;
-        if (n < 16) continue;
+        fr.interface.readSliceAll(&header_bytes) catch continue;
 
         const header = types.CheckpointHeader.fromBytes(&header_bytes);
         if (!header.isValid()) continue;
 
-        const stat = file.stat() catch continue;
+        const stat = file.stat(io) catch continue;
 
         out[count] = .{
             .step = header.step,

@@ -9,6 +9,8 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_env = @import("tri_env.zig");
+const tri_io = @import("tri_io");
 const CommandRegistry = @import("tri_command_registry.zig").CommandRegistry;
 const CommandMetadata = @import("tri_command_registry.zig").CommandMetadata;
 const tri_colors = @import("tri_colors.zig");
@@ -105,25 +107,27 @@ pub const CompletionGenerator = struct {
 
     /// Get all command names as comma-separated string
     pub fn getCommandsList(self: *const CompletionGenerator) ![]const u8 {
-        var list = std.ArrayList(u8).init(std.heap.page_allocator);
-        defer list.deinit();
+        const gpa = std.heap.page_allocator;
+        var list: std.ArrayList(u8) = .empty;
+        defer list.deinit(gpa);
 
         var first = true;
         for (self.registry.metadata_storage.items) |metadata| {
-            if (!first) try list.appendSlice(" ");
-            try list.appendSlice(metadata.name);
+            if (!first) try list.appendSlice(gpa, " ");
+            try list.appendSlice(gpa, metadata.name);
             first = false;
         }
 
-        return list.toOwnedSlice();
+        return list.toOwnedSlice(gpa);
     }
 
     /// Print completion scripts to stdout
     pub fn printCompletions(self: *const CompletionGenerator, shell: []const u8) !void {
-        // Zig 0.15.2: use std.io.BufferedWriter with explicit type
-        const stdout = std.io.getStdOut();
-        var buffered = std.io.bufferedWriter(stdout);
-        const writer = buffered.writer();
+        // 0.16: File.writer takes an Io and a buffer, and is itself the
+        // buffering layer; callers write through &fw.interface and flush.
+        var stdout_buf: [4096]u8 = undefined;
+        var fw = std.Io.File.stdout().writer(tri_io.get(), &stdout_buf);
+        const writer = &fw.interface;
 
         if (std.mem.eql(u8, shell, "bash")) {
             try self.generateBash(writer);
@@ -135,7 +139,7 @@ pub const CompletionGenerator = struct {
             tri_colors.printRed("Unknown shell: {s}\n", .{shell});
             tri_colors.printGray("Supported: bash, zsh, fish\n", .{});
         }
-        try buffered.flush();
+        try writer.flush();
     }
 
     /// Display installation instructions
@@ -162,15 +166,19 @@ pub const CompletionGenerator = struct {
     pub fn installCompletions(_: *const CompletionGenerator) !void {
         tri_colors.printGold("\nInstalling completion scripts...\n\n", .{});
 
-        // Create directories if they don't exist
-        const home = std.posix.getenv("HOME") orelse {
+        const io = tri_io.get();
+
+        // Create directories if they don't exist. getEnvVar borrows from the
+        // process environment, exactly as the removed std.posix.getenv did --
+        // the result is not allocator memory and must not be freed.
+        const home = tri_env.getEnvVar(std.heap.page_allocator, "HOME") orelse {
             tri_colors.printRed("Error: HOME environment variable not set\n", .{});
             return;
         };
 
         // Bash
         const bash_dir = try std.fmt.allocPrint(std.heap.page_allocator, "{s}/.local/share/bash-completion/completions", .{home});
-        std.fs.cwd().makePath(bash_dir) catch |err| {
+        std.Io.Dir.cwd().createDirPath(io, bash_dir) catch |err| {
             std.log.debug("tri_completion: failed to create bash completion dir: {}", .{err});
         };
         defer std.heap.page_allocator.free(bash_dir);
@@ -178,7 +186,7 @@ pub const CompletionGenerator = struct {
         const bash_file = try std.fmt.allocPrint(std.heap.page_allocator, "{s}/tri", .{bash_dir});
         defer std.heap.page_allocator.free(bash_file);
 
-        const bash_out = try std.fs.cwd().createFile(bash_file, .{});
+        const bash_out = try std.Io.Dir.cwd().createFile(io, bash_file, .{});
         {
             const script =
                 \\# TRI Bash Completion
@@ -211,9 +219,9 @@ pub const CompletionGenerator = struct {
                 \\complete -F _tri_completion tri
                 \\
             ;
-            try bash_out.writeAll(script);
+            try bash_out.writeStreamingAll(io, script);
         }
-        bash_out.close();
+        bash_out.close(io);
         tri_colors.printGreen("✓ Bash completion installed to {s}\n", .{bash_file});
 
         // Zsh
@@ -226,11 +234,11 @@ pub const CompletionGenerator = struct {
                 return;
             };
             defer std.heap.page_allocator.free(zfunc_dir);
-            std.fs.cwd().makePath(zfunc_dir) catch |err| {
+            std.Io.Dir.cwd().createDirPath(io, zfunc_dir) catch |err| {
                 std.log.debug("tri_completion: failed to create zfunc dir: {}", .{err});
             };
         }
-        const zsh_out = try std.fs.cwd().createFile(zsh_file, .{});
+        const zsh_out = try std.Io.Dir.cwd().createFile(io, zsh_file, .{});
         {
             const script =
                 \\#compdef tri
@@ -258,14 +266,14 @@ pub const CompletionGenerator = struct {
                 \\}
                 \\
             ;
-            try zsh_out.writeAll(script);
+            try zsh_out.writeStreamingAll(io, script);
         }
-        zsh_out.close();
+        zsh_out.close(io);
         tri_colors.printGreen("✓ Zsh completion installed to {s}\n", .{zsh_file});
 
         // Fish
         const fish_dir = try std.fmt.allocPrint(std.heap.page_allocator, "{s}/.config/fish/completions", .{home});
-        std.fs.cwd().makePath(fish_dir) catch |err| {
+        std.Io.Dir.cwd().createDirPath(io, fish_dir) catch |err| {
             std.log.debug("tri_completion: failed to create fish completion dir: {}", .{err});
         };
         defer std.heap.page_allocator.free(fish_dir);
@@ -273,7 +281,7 @@ pub const CompletionGenerator = struct {
         const fish_file = try std.fmt.allocPrint(std.heap.page_allocator, "{s}/tri.fish", .{fish_dir});
         defer std.heap.page_allocator.free(fish_file);
 
-        const fish_out = try std.fs.cwd().createFile(fish_file, .{});
+        const fish_out = try std.Io.Dir.cwd().createFile(io, fish_file, .{});
         {
             const script =
                 \\# TRI Fish Completion
@@ -295,9 +303,9 @@ pub const CompletionGenerator = struct {
                 \\end
                 \\
             ;
-            try fish_out.writeAll(script);
+            try fish_out.writeStreamingAll(io, script);
         }
-        fish_out.close();
+        fish_out.close(io);
         tri_colors.printGreen("✓ Fish completion installed to {s}\n\n", .{fish_file});
 
         tri_colors.printCyan("Restart your shell or run: source ~/.zfunc/_tri (zsh)\n\n", .{});

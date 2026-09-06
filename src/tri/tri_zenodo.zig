@@ -1001,7 +1001,7 @@ fn runV18Command(allocator: std.mem.Allocator, args: []const []const u8) !void {
             return;
         }
         const file_path = v18_args[0];
-        const content = try std.fs.cwd().readFileAlloc(allocator, file_path, 1_000_000);
+        const content = try std.Io.Dir.cwd().readFileAlloc(tri_io.get(), file_path, allocator, .limited(1_000_000));
         defer allocator.free(content);
 
         const is_valid = try zenodo_v18_clara.validateClaraMetadata(allocator, content);
@@ -1480,12 +1480,15 @@ fn updateSingleRecord(allocator: std.mem.Allocator, rec: UpdateRecord) !void {
 
     // Step 1: Read HTML description from file
     print("  1/4 Reading description from {s}...\n", .{rec.file});
-    const desc_file = std.fs.cwd().openFile(rec.file, .{}) catch {
+    const io = tri_io.get();
+    const desc_file = std.Io.Dir.cwd().openFile(io, rec.file, .{}) catch {
         print("  {s}File not found: {s}{s}\n", .{ RED, rec.file, RESET });
         return error.FileNotFound;
     };
-    defer desc_file.close();
-    const raw_desc = desc_file.readToEndAlloc(allocator, 65536) catch return error.ReadFailed;
+    defer desc_file.close(io);
+    var desc_read_buf: [4096]u8 = undefined;
+    var desc_reader = desc_file.reader(io, &desc_read_buf);
+    const raw_desc = desc_reader.interface.allocRemaining(allocator, .limited(65536)) catch return error.ReadFailed;
     defer allocator.free(raw_desc);
 
     // Escape description for JSON embedding
@@ -1892,12 +1895,15 @@ fn publishOneBundleV8(allocator: std.mem.Allocator, bundle: BundleV8) !void {
 
     // Step 1: Read JSON metadata
     print("  1/5 Reading metadata from {s}...\n", .{bundle.json_path});
-    const json_file = std.fs.cwd().openFile(bundle.json_path, .{}) catch {
+    const io = tri_io.get();
+    const json_file = std.Io.Dir.cwd().openFile(io, bundle.json_path, .{}) catch {
         print("  {s}File not found: {s}{s}\n", .{ RED, bundle.json_path, RESET });
         return error.FileNotFound;
     };
-    defer json_file.close();
-    const json_content = json_file.readToEndAlloc(allocator, 131072) catch return error.ReadFailed;
+    defer json_file.close(io);
+    var json_read_buf: [4096]u8 = undefined;
+    var json_reader = json_file.reader(io, &json_read_buf);
+    const json_content = json_reader.interface.allocRemaining(allocator, .limited(131072)) catch return error.ReadFailed;
     defer allocator.free(json_content);
 
     // Extract title from JSON (simple parsing)
@@ -1959,8 +1965,8 @@ fn publishOneBundleV8(allocator: std.mem.Allocator, bundle: BundleV8) !void {
         const fig_path = try std.fmt.allocPrint(allocator, "{s}/{s}", .{ files_dir, fig });
         defer allocator.free(fig_path);
 
-        if (std.fs.cwd().openFile(fig_path, .{})) |file| {
-            file.close();
+        if (std.Io.Dir.cwd().openFile(io, fig_path, .{})) |file| {
+            file.close(io);
             // Upload via curl
             const files_url = try std.fmt.allocPrint(allocator, "{s}/deposit/depositions/{s}/files", .{ API, dep_id });
             defer allocator.free(files_url);
@@ -2014,14 +2020,17 @@ fn loadToken(allocator: std.mem.Allocator) ![]const u8 {
     } else |_| {}
 
     // Fall back to .env file
-    const file = std.fs.cwd().openFile(".env", .{}) catch {
+    const io = tri_io.get();
+    const file = std.Io.Dir.cwd().openFile(io, ".env", .{}) catch {
         print("{s}❌ ZENODO_TOKEN not set and .env not found{s}\n", .{ RED, RESET });
         print("   Get token: https://zenodo.org/account/settings/applications/tokens/new/\n", .{});
         return error.TokenNotFound;
     };
-    defer file.close();
+    defer file.close(io);
 
-    const content = file.readToEndAlloc(allocator, 16384) catch return error.TokenNotFound;
+    var env_read_buf: [4096]u8 = undefined;
+    var env_reader = file.reader(io, &env_read_buf);
+    const content = env_reader.interface.allocRemaining(allocator, .limited(16384)) catch return error.TokenNotFound;
     defer allocator.free(content);
 
     // Find ZENODO_TOKEN=xxx line
@@ -2048,8 +2057,9 @@ fn curlGet(allocator: std.mem.Allocator, url: []const u8, token: []const u8) ![]
 
     // Use temporary file to avoid max_output_bytes limit
     const tmp_path = "/tmp/zenodo_curl_get.json";
-    const tmp_file = try std.fs.cwd().createFile(tmp_path, .{ .truncate = true });
-    defer tmp_file.close();
+    const io = tri_io.get();
+    const tmp_file = try std.Io.Dir.cwd().createFile(io, tmp_path, .{ .truncate = true });
+    defer tmp_file.close(io);
 
     {
         const result = try tri_proc.run(.{
@@ -2066,7 +2076,7 @@ fn curlGet(allocator: std.mem.Allocator, url: []const u8, token: []const u8) ![]
         }
     }
 
-    const data = try std.fs.cwd().readFileAlloc(allocator, tmp_path, 50 * 1024 * 1024);
+    const data = try std.Io.Dir.cwd().readFileAlloc(io, tmp_path, allocator, .limited(50 * 1024 * 1024));
     return data;
 }
 

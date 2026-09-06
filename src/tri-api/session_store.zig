@@ -3,6 +3,7 @@
 // Issue #64: Phase 5 native sessions
 const std = @import("std");
 const tri_io = @import("tri_io");
+const tri_env = @import("tri_env");
 const tri_time = @import("tri_time");
 const proto = @import("tool_protocol.zig");
 
@@ -17,7 +18,7 @@ pub const SessionStore = struct {
 
     /// Initialize with resolved ~/.tri-api/sessions path.
     pub fn init(allocator: std.mem.Allocator) SessionStore {
-        const home = std.posix.getenv("HOME") orelse "/tmp";
+        const home = tri_env.getEnvVar(allocator, "HOME") orelse "/tmp";
         const base = std.fmt.allocPrint(allocator, "{s}/{s}", .{ home, sessions_subdir }) catch
             return .{ .allocator = allocator, .base_dir = "/tmp/.tri-api/sessions", .base_dir_owned = false };
         return .{ .allocator = allocator, .base_dir = base, .base_dir_owned = true };
@@ -30,7 +31,7 @@ pub const SessionStore = struct {
     /// Save a session: write {id}.json and append to index.json.
     pub fn save(self: *SessionStore, messages_json: []const u8, prompt: []const u8) void {
         // Ensure directory exists
-        std.fs.cwd().makePath(self.base_dir) catch return;
+        std.Io.Dir.cwd().createDirPath(tri_io.get(), self.base_dir) catch return;
 
         // Generate session ID from timestamp (hex, 8 chars)
         const ts = tri_time.timestamp();
@@ -42,37 +43,41 @@ pub const SessionStore = struct {
         var session_path_buf: [512]u8 = undefined;
         const session_path = std.fmt.bufPrint(&session_path_buf, "{s}/{s}.json", .{ self.base_dir, id }) catch return;
 
-        var session_body: std.ArrayList(u8) = .empty;
-        defer session_body.deinit(self.allocator);
+        // 0.16 removed ArrayList.writer; an Allocating writer owns the same
+        // growable buffer and is what writeJsonEscaped now receives.
+        var session_body: std.Io.Writer.Allocating = .init(self.allocator);
+        defer session_body.deinit();
+        const sb = &session_body.writer;
 
-        session_body.appendSlice(self.allocator, "{\"id\":\"") catch return;
-        session_body.appendSlice(self.allocator, id) catch return;
-        session_body.appendSlice(self.allocator, "\",\"ts\":") catch return;
+        sb.writeAll("{\"id\":\"") catch return;
+        sb.writeAll(id) catch return;
+        sb.writeAll("\",\"ts\":") catch return;
         var ts_buf: [20]u8 = undefined;
         const ts_str = std.fmt.bufPrint(&ts_buf, "{d}", .{ts}) catch return;
-        session_body.appendSlice(self.allocator, ts_str) catch return;
-        session_body.appendSlice(self.allocator, ",\"messages\":\"") catch return;
+        sb.writeAll(ts_str) catch return;
+        sb.writeAll(",\"messages\":\"") catch return;
         // Escape the messages JSON as a string value
-        proto.writeJsonEscaped(session_body.writer(self.allocator), messages_json) catch return;
-        session_body.appendSlice(self.allocator, "\"}") catch return;
+        proto.writeJsonEscaped(sb, messages_json) catch return;
+        sb.writeAll("\"}") catch return;
 
-        writeFileAbs(session_path, session_body.items) catch return;
+        writeFileAbs(session_path, session_body.written()) catch return;
 
         // Update index.json: read existing, append entry
         var index_path_buf: [512]u8 = undefined;
         const index_path = std.fmt.bufPrint(&index_path_buf, "{s}/{s}", .{ self.base_dir, index_filename }) catch return;
 
         const preview_len = @min(prompt.len, 80);
-        var entry: std.ArrayList(u8) = .empty;
-        defer entry.deinit(self.allocator);
+        var entry: std.Io.Writer.Allocating = .init(self.allocator);
+        defer entry.deinit();
+        const ew = &entry.writer;
 
-        entry.appendSlice(self.allocator, "{\"id\":\"") catch return;
-        entry.appendSlice(self.allocator, id) catch return;
-        entry.appendSlice(self.allocator, "\",\"ts\":") catch return;
-        entry.appendSlice(self.allocator, ts_str) catch return;
-        entry.appendSlice(self.allocator, ",\"preview\":\"") catch return;
-        proto.writeJsonEscaped(entry.writer(self.allocator), prompt[0..preview_len]) catch return;
-        entry.appendSlice(self.allocator, "\"}") catch return;
+        ew.writeAll("{\"id\":\"") catch return;
+        ew.writeAll(id) catch return;
+        ew.writeAll("\",\"ts\":") catch return;
+        ew.writeAll(ts_str) catch return;
+        ew.writeAll(",\"preview\":\"") catch return;
+        proto.writeJsonEscaped(ew, prompt[0..preview_len]) catch return;
+        ew.writeAll("\"}") catch return;
 
         // Read existing index or start new
         const existing = readFileAbs(self.allocator, index_path) catch null;
@@ -91,7 +96,7 @@ pub const SessionStore = struct {
         } else {
             new_index.appendSlice(self.allocator, "[") catch return;
         }
-        new_index.appendSlice(self.allocator, entry.items) catch return;
+        new_index.appendSlice(self.allocator, entry.written()) catch return;
         new_index.appendSlice(self.allocator, "]") catch return;
 
         writeFileAbs(index_path, new_index.items) catch |err| {
@@ -198,14 +203,18 @@ pub const SessionStore = struct {
 
 /// Read a file at an absolute path.
 fn readFileAbs(allocator: std.mem.Allocator, path: []const u8) ![]const u8 {
-    const file = try std.Io.Dir.openFileAbsolute(tri_io.get(), path, .{});
-    defer file.close();
-    return file.readToEndAlloc(allocator, max_file_size);
+    const io = tri_io.get();
+    const file = try std.Io.Dir.openFileAbsolute(io, path, .{});
+    defer file.close(io);
+    var scratch: [4096]u8 = undefined;
+    var fr = file.reader(io, &scratch);
+    return fr.interface.allocRemaining(allocator, .limited(max_file_size));
 }
 
 /// Write a file at an absolute path.
 fn writeFileAbs(path: []const u8, data: []const u8) !void {
-    const file = try std.Io.Dir.createFileAbsolute(tri_io.get(), path, .{});
-    defer file.close();
-    try file.writeAll(data);
+    const io = tri_io.get();
+    const file = try std.Io.Dir.createFileAbsolute(io, path, .{});
+    defer file.close(io);
+    try file.writeStreamingAll(io, data);
 }

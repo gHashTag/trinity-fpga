@@ -11,6 +11,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const tri_proc = @import("tri_proc");
 const colors = @import("tri_colors.zig");
 
@@ -348,12 +349,9 @@ fn countDirty(allocator: std.mem.Allocator) u32 {
 
 fn readLatestVerdict() f32 {
     const path = ".trinity/verdict_history.json";
-    const file = std.fs.cwd().openFile(path, .{}) catch return 0;
-    defer file.close();
-
     var buf: [4096]u8 = undefined;
-    const n = file.readAll(&buf) catch return 0;
-    const content = buf[0..n];
+    // Whole small file into a fixed buffer; a short read is normal.
+    const content = std.Io.Dir.cwd().readFile(tri_io.get(), path, &buf) catch return 0;
 
     // Find last "total": value
     var last: f32 = 0;
@@ -378,19 +376,17 @@ fn readLatestVerdict() f32 {
 fn checkBuildOk(allocator: std.mem.Allocator) bool {
     // Check if tri binary exists and is recent
     _ = allocator;
-    const file = std.fs.cwd().openFile("zig-out/bin/tri", .{}) catch return false;
-    file.close();
+    const io = tri_io.get();
+    const file = std.Io.Dir.cwd().openFile(io, "zig-out/bin/tri", .{}) catch return false;
+    file.close(io);
     return true;
 }
 
 fn readFarmActive() u32 {
     const path = ".trinity/railway_farm.json";
-    const file = std.fs.cwd().openFile(path, .{}) catch return 0;
-    defer file.close();
-
     var buf: [8192]u8 = undefined;
-    const n = file.readAll(&buf) catch return 0;
-    const content = buf[0..n];
+    // Whole small file into a fixed buffer; a short read is normal.
+    const content = std.Io.Dir.cwd().readFile(tri_io.get(), path, &buf) catch return 0;
 
     // Count "active_services": N entries and sum
     var total: u32 = 0;
@@ -414,12 +410,9 @@ fn readFarmActive() u32 {
 
 fn readConsecutiveFailures() u32 {
     const path = ".trinity/loop_state.json";
-    const file = std.fs.cwd().openFile(path, .{}) catch return 0;
-    defer file.close();
-
     var buf: [2048]u8 = undefined;
-    const n = file.readAll(&buf) catch return 0;
-    const content = buf[0..n];
+    // Whole small file into a fixed buffer; a short read is normal.
+    const content = std.Io.Dir.cwd().readFile(tri_io.get(), path, &buf) catch return 0;
 
     const needle = "\"consecutive_failures\":";
     if (std.mem.indexOf(u8, content, needle)) |idx| {

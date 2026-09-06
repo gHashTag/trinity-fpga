@@ -59,16 +59,17 @@ fn appendFile(allocator: std.mem.Allocator, parts: *std.ArrayList(u8), path: []c
 
 /// Read a file, return content or null.
 fn readFile(allocator: std.mem.Allocator, path: []const u8) ?[]const u8 {
+    const io = tri_io.get();
     // Try as absolute path first, then relative
-    if (path.len > 0 and path[0] == '/') {
-        const file = std.Io.Dir.openFileAbsolute(tri_io.get(), path, .{}) catch return null;
-        defer file.close();
-        return file.readToEndAlloc(allocator, max_file_size) catch null;
-    }
+    const file = if (path.len > 0 and path[0] == '/')
+        std.Io.Dir.openFileAbsolute(io, path, .{}) catch return null
+    else
+        std.Io.Dir.cwd().openFile(io, path, .{}) catch return null;
+    defer file.close(io);
 
-    const file = std.fs.cwd().openFile(path, .{}) catch return null;
-    defer file.close();
-    return file.readToEndAlloc(allocator, max_file_size) catch null;
+    var read_scratch: [4096]u8 = undefined;
+    var file_reader = file.reader(io, &read_scratch);
+    return file_reader.interface.allocRemaining(allocator, .limited(max_file_size)) catch null;
 }
 
 // ─── Tests ───────────────────────────────────────────────────────────────────

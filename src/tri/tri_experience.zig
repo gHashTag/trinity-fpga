@@ -16,6 +16,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 const tri_exit_codes = @import("tri_exit_codes.zig");
 const Allocator = std.mem.Allocator;
@@ -200,6 +201,7 @@ fn runExperienceSave(_: Allocator, args: []const []const u8) !void {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn runExperienceRecall(allocator: Allocator, args: []const []const u8) !void {
+    const io = tri_io.get();
     var task_query: []const u8 = "";
 
     var i: usize = 0;
@@ -228,11 +230,11 @@ fn runExperienceRecall(allocator: Allocator, args: []const []const u8) !void {
     const words = words_buf[0..word_count];
 
     // Scan episodes directory
-    var dir = std.fs.cwd().openDir(EPISODES_DIR, .{ .iterate = true }) catch {
+    var dir = std.Io.Dir.cwd().openDir(io, EPISODES_DIR, .{ .iterate = true }) catch {
         print("{s}No episodes found. Use 'tri experience save' first.{s}\n", .{ YELLOW, RESET });
         return;
     };
-    defer dir.close();
+    defer dir.close(io);
 
     const ScoredFile = struct {
         name: [128]u8,
@@ -243,12 +245,12 @@ fn runExperienceRecall(allocator: Allocator, args: []const []const u8) !void {
     var scored_count: usize = 0;
 
     var dir_iter = dir.iterate();
-    while (try dir_iter.next()) |entry| {
+    while (try dir_iter.next(io)) |entry| {
         if (entry.kind != .file) continue;
         if (!std.mem.endsWith(u8, entry.name, ".json")) continue;
 
         // Read file and score it
-        const contents = dir.readFileAlloc(allocator, entry.name, 64 * 1024) catch continue;
+        const contents = dir.readFileAlloc(io, entry.name, allocator, .limited(64 * 1024)) catch continue;
         defer allocator.free(contents);
 
         const score = keywordScore(contents, words);
@@ -305,7 +307,7 @@ fn runExperienceRecall(allocator: Allocator, args: []const []const u8) !void {
 
     for (scored[0..show]) |*sf| {
         const fname = sf.name[0..sf.name_len];
-        const contents = dir.readFileAlloc(allocator, fname, 64 * 1024) catch continue;
+        const contents = dir.readFileAlloc(io, fname, allocator, .limited(64 * 1024)) catch continue;
         defer allocator.free(contents);
 
         print("  {s}File:{s} {s} (score: {d})\n", .{ CYAN, RESET, fname, sf.score });
@@ -326,22 +328,23 @@ fn runExperienceRecall(allocator: Allocator, args: []const []const u8) !void {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn runExperienceMistakes(allocator: Allocator) !void {
-    var dir = std.fs.cwd().openDir(MISTAKES_DIR, .{ .iterate = true }) catch {
+    const io = tri_io.get();
+    var dir = std.Io.Dir.cwd().openDir(io, MISTAKES_DIR, .{ .iterate = true }) catch {
         print("{s}No mistake patterns recorded yet.{s}\n", .{ YELLOW, RESET });
         return;
     };
-    defer dir.close();
+    defer dir.close(io);
 
     var patterns: [128]MistakePattern = undefined;
     var pattern_count: usize = 0;
 
     var dir_iter = dir.iterate();
-    while (try dir_iter.next()) |entry| {
+    while (try dir_iter.next(io)) |entry| {
         if (entry.kind != .file) continue;
         if (!std.mem.endsWith(u8, entry.name, ".json")) continue;
         if (pattern_count >= 128) break;
 
-        const contents = dir.readFileAlloc(allocator, entry.name, 16 * 1024) catch continue;
+        const contents = dir.readFileAlloc(io, entry.name, allocator, .limited(16 * 1024)) catch continue;
         defer allocator.free(contents);
 
         // Parse simple JSON fields
@@ -394,6 +397,7 @@ fn runExperienceMistakes(allocator: Allocator) !void {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn runExperienceReplay(allocator: Allocator, args: []const []const u8) !void {
+    const io = tri_io.get();
     var task_query: []const u8 = "";
 
     var i: usize = 0;
@@ -423,11 +427,11 @@ fn runExperienceReplay(allocator: Allocator, args: []const []const u8) !void {
     const words = words_buf[0..word_count];
 
     // Collect episodes
-    var dir = std.fs.cwd().openDir(EPISODES_DIR, .{ .iterate = true }) catch {
+    var dir = std.Io.Dir.cwd().openDir(io, EPISODES_DIR, .{ .iterate = true }) catch {
         print("{s}No episodes found. Use 'tri experience save' first.{s}\n", .{ YELLOW, RESET });
         return;
     };
-    defer dir.close();
+    defer dir.close(io);
 
     const ScoredEpisode = struct {
         name: [128]u8,
@@ -441,11 +445,11 @@ fn runExperienceReplay(allocator: Allocator, args: []const []const u8) !void {
     var scored_count: usize = 0;
 
     var dir_iter = dir.iterate();
-    while (try dir_iter.next()) |entry| {
+    while (try dir_iter.next(io)) |entry| {
         if (entry.kind != .file) continue;
         if (!std.mem.endsWith(u8, entry.name, ".json")) continue;
 
-        const contents = dir.readFileAlloc(allocator, entry.name, 64 * 1024) catch continue;
+        const contents = dir.readFileAlloc(io, entry.name, allocator, .limited(64 * 1024)) catch continue;
         defer allocator.free(contents);
 
         const score = keywordScore(contents, words);
@@ -469,16 +473,16 @@ fn runExperienceReplay(allocator: Allocator, args: []const []const u8) !void {
     // Collect mistake patterns (MNL = mistakes never learn)
     var mnl_patterns: [32]MistakePattern = undefined;
     var mnl_count: usize = 0;
-    var mnl_dir = std.fs.cwd().openDir(MISTAKES_DIR, .{ .iterate = true }) catch null;
+    var mnl_dir = std.Io.Dir.cwd().openDir(io, MISTAKES_DIR, .{ .iterate = true }) catch null;
     if (mnl_dir) |*mdir| {
-        defer mdir.close();
+        defer mdir.close(io);
         var mdir_iter = mdir.iterate();
-        while (try mdir_iter.next()) |entry| {
+        while (try mdir_iter.next(io)) |entry| {
             if (entry.kind != .file) continue;
             if (!std.mem.endsWith(u8, entry.name, ".json")) continue;
             if (mnl_count >= 32) break;
 
-            const contents = mdir.readFileAlloc(allocator, entry.name, 16 * 1024) catch continue;
+            const contents = mdir.readFileAlloc(io, entry.name, allocator, .limited(16 * 1024)) catch continue;
             defer allocator.free(contents);
 
             var pat = MistakePattern{};
@@ -548,7 +552,7 @@ fn runExperienceReplay(allocator: Allocator, args: []const []const u8) !void {
         const show = @min(scored_count, 5);
         for (scored[0..show]) |*sf| {
             const fname = sf.name[0..sf.name_len];
-            const contents = dir.readFileAlloc(allocator, fname, 64 * 1024) catch continue;
+            const contents = dir.readFileAlloc(io, fname, allocator, .limited(64 * 1024)) catch continue;
             defer allocator.free(contents);
 
             const task = extractJsonString(contents, "task") orelse "?";
@@ -615,11 +619,12 @@ fn runExperienceReplay(allocator: Allocator, args: []const []const u8) !void {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn runExperienceEvolve(allocator: Allocator) !void {
-    var dir = std.fs.cwd().openDir(EPISODES_DIR, .{ .iterate = true }) catch {
+    const io = tri_io.get();
+    var dir = std.Io.Dir.cwd().openDir(io, EPISODES_DIR, .{ .iterate = true }) catch {
         print("{s}No episodes found. Cannot evolve without data.{s}\n", .{ YELLOW, RESET });
         return;
     };
-    defer dir.close();
+    defer dir.close(io);
 
     var total: u32 = 0;
     var passes: u32 = 0;
@@ -627,11 +632,11 @@ fn runExperienceEvolve(allocator: Allocator) !void {
     var mistake_total: u32 = 0;
 
     var dir_iter = dir.iterate();
-    while (try dir_iter.next()) |entry| {
+    while (try dir_iter.next(io)) |entry| {
         if (entry.kind != .file) continue;
         if (!std.mem.endsWith(u8, entry.name, ".json")) continue;
 
-        const contents = dir.readFileAlloc(allocator, entry.name, 64 * 1024) catch continue;
+        const contents = dir.readFileAlloc(io, entry.name, allocator, .limited(64 * 1024)) catch continue;
         defer allocator.free(contents);
 
         total += 1;
@@ -699,21 +704,22 @@ fn runExperienceEvolve(allocator: Allocator) !void {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn runExperienceExport(allocator: Allocator) !void {
-    var dir = std.fs.cwd().openDir(EPISODES_DIR, .{ .iterate = true }) catch {
+    const io = tri_io.get();
+    var dir = std.Io.Dir.cwd().openDir(io, EPISODES_DIR, .{ .iterate = true }) catch {
         print("{s}No episodes found.{s}\n", .{ YELLOW, RESET });
         return;
     };
-    defer dir.close();
+    defer dir.close(io);
 
     var total: u32 = 0;
     var passes: u32 = 0;
 
     var dir_iter = dir.iterate();
-    while (try dir_iter.next()) |entry| {
+    while (try dir_iter.next(io)) |entry| {
         if (entry.kind != .file) continue;
         if (!std.mem.endsWith(u8, entry.name, ".json")) continue;
 
-        const contents = dir.readFileAlloc(allocator, entry.name, 64 * 1024) catch continue;
+        const contents = dir.readFileAlloc(io, entry.name, allocator, .limited(64 * 1024)) catch continue;
         defer allocator.free(contents);
 
         total += 1;
@@ -730,18 +736,18 @@ fn runExperienceExport(allocator: Allocator) !void {
     print("  Episodes dir:   {s}\n\n", .{EPISODES_DIR});
 
     // Count mistakes
-    var mdir = std.fs.cwd().openDir(MISTAKES_DIR, .{ .iterate = true }) catch {
+    var mdir = std.Io.Dir.cwd().openDir(io, MISTAKES_DIR, .{ .iterate = true }) catch {
         print("  Mistake patterns: 0\n", .{});
         print("  Mistakes dir:   {s}\n\n", .{MISTAKES_DIR});
         print("  Export format:  tri experience recall --task \"<query>\"\n", .{});
         print("  Replay format:  tri experience replay --task \"<query>\"\n\n", .{});
         return;
     };
-    defer mdir.close();
+    defer mdir.close(io);
     {
         var mcount: u32 = 0;
         var miter = mdir.iterate();
-        while (try miter.next()) |entry| {
+        while (try miter.next(io)) |entry| {
             if (entry.kind == .file and std.mem.endsWith(u8, entry.name, ".json")) mcount += 1;
         }
         print("  Mistake patterns: {d}\n", .{mcount});
@@ -757,8 +763,9 @@ fn runExperienceExport(allocator: Allocator) !void {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 pub fn saveEpisode(episode: Episode) !void {
+    const io = tri_io.get();
     // Ensure directory exists
-    std.fs.cwd().makePath(EPISODES_DIR) catch {};
+    std.Io.Dir.cwd().createDirPath(io, EPISODES_DIR) catch {};
 
     // Build filename: {issue}_{timestamp}.json
     var fname_buf: [64]u8 = undefined;
@@ -817,11 +824,11 @@ pub fn saveEpisode(episode: Episode) !void {
     pos += 1;
 
     // Write to file
-    var dir = try std.fs.cwd().openDir(EPISODES_DIR, .{});
-    defer dir.close();
-    var file = try dir.createFile(fname, .{});
-    defer file.close();
-    try file.writeAll(buf[0..pos]);
+    var dir = try std.Io.Dir.cwd().openDir(io, EPISODES_DIR, .{});
+    defer dir.close(io);
+    var file = try dir.createFile(io, fname, .{});
+    defer file.close(io);
+    try file.writeStreamingAll(io, buf[0..pos]);
 
     // Issue #420: Append-only JSONL episode log (ESAA pattern)
     appendJsonlEpisode(buf[0..pos]);
@@ -838,9 +845,10 @@ pub fn saveEpisode(episode: Episode) !void {
 }
 
 fn updateMistakePatterns(mistake_text: []const u8, issue: u32) !void {
+    const io = tri_io.get();
     if (mistake_text.len == 0) return;
 
-    std.fs.cwd().makePath(MISTAKES_DIR) catch {};
+    std.Io.Dir.cwd().createDirPath(io, MISTAKES_DIR) catch {};
 
     // Hash the first 32 chars as filename prefix
     var hash: u32 = 0;
@@ -852,12 +860,12 @@ fn updateMistakePatterns(mistake_text: []const u8, issue: u32) !void {
     var fname_buf: [64]u8 = undefined;
     const fname = std.fmt.bufPrint(&fname_buf, "{x:0>8}.json", .{hash}) catch return;
 
-    var dir = std.fs.cwd().openDir(MISTAKES_DIR, .{}) catch return;
-    defer dir.close();
+    var dir = std.Io.Dir.cwd().openDir(io, MISTAKES_DIR, .{}) catch return;
+    defer dir.close(io);
 
     // Try to read existing pattern
     var existing_count: u32 = 0;
-    if (dir.readFileAlloc(std.heap.page_allocator, fname, 16 * 1024)) |contents| {
+    if (dir.readFileAlloc(io, fname, std.heap.page_allocator, .limited(16 * 1024))) |contents| {
         defer std.heap.page_allocator.free(contents);
         existing_count = extractJsonU32(contents, "count") orelse 0;
     } else |_| {}
@@ -870,9 +878,9 @@ fn updateMistakePatterns(mistake_text: []const u8, issue: u32) !void {
         issue,
     }) catch return;
 
-    var file = dir.createFile(fname, .{}) catch return;
-    defer file.close();
-    file.writeAll(json) catch {};
+    var file = dir.createFile(io, fname, .{}) catch return;
+    defer file.close(io);
+    file.writeStreamingAll(io, json) catch {};
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -883,34 +891,37 @@ const JSONL_PATH = ".trinity/experience/episodes/activity.jsonl";
 const SIMILAR_TASKS_PATH = ".trinity/experience/similar_tasks.json";
 
 fn appendJsonlEpisode(json_line: []const u8) void {
-    std.fs.cwd().makePath(".trinity/experience/episodes") catch {};
+    const io = tri_io.get();
+    std.Io.Dir.cwd().createDirPath(io, ".trinity/experience/episodes") catch {};
 
     // Open in append mode
-    const file = std.fs.cwd().openFile(JSONL_PATH, .{ .mode = .write_only }) catch {
+    const file = std.Io.Dir.cwd().openFile(io, JSONL_PATH, .{ .mode = .write_only }) catch {
         // File doesn't exist, create it
-        const new_file = std.fs.cwd().createFile(JSONL_PATH, .{}) catch return;
-        defer new_file.close();
-        new_file.writeAll(json_line) catch return;
-        new_file.writeAll("\n") catch return;
+        const new_file = std.Io.Dir.cwd().createFile(io, JSONL_PATH, .{}) catch return;
+        defer new_file.close(io);
+        new_file.writeStreamingAll(io, json_line) catch return;
+        new_file.writeStreamingAll(io, "\n") catch return;
         return;
     };
-    defer file.close();
+    defer file.close(io);
 
-    // Seek to end for append
-    file.seekFromEnd(0) catch return;
-    file.writeAll(json_line) catch return;
-    file.writeAll("\n") catch return;
+    // Append at the current end of file. 0.16 has no seek-then-write on File;
+    // the offset is read once and both writes are placed positionally.
+    const end = file.length(io) catch return;
+    file.writePositionalAll(io, json_line, end) catch return;
+    file.writePositionalAll(io, "\n", end + json_line.len) catch return;
 }
 
 fn updateSimilarTasks(episode: Episode) void {
-    std.fs.cwd().makePath(".trinity/experience") catch {};
+    const io = tri_io.get();
+    std.Io.Dir.cwd().createDirPath(io, ".trinity/experience") catch {};
 
-    // Read existing similar_tasks.json
+    // Read existing similar_tasks.json. Whole-file-into-a-fixed-buffer: a short
+    // read here only means a short file, exactly as the 0.15 readAll did.
     var existing: [65536]u8 = undefined;
     var existing_len: usize = 0;
-    if (std.fs.cwd().openFile(SIMILAR_TASKS_PATH, .{})) |file| {
-        defer file.close();
-        existing_len = file.readAll(&existing) catch 0;
+    if (std.Io.Dir.cwd().readFile(io, SIMILAR_TASKS_PATH, &existing)) |slice| {
+        existing_len = slice.len;
     } else |_| {}
 
     // Build new entry
@@ -935,8 +946,8 @@ fn updateSimilarTasks(episode: Episode) void {
     }
 
     // Append to JSON array
-    const file = std.fs.cwd().createFile(SIMILAR_TASKS_PATH, .{}) catch return;
-    defer file.close();
+    const file = std.Io.Dir.cwd().createFile(io, SIMILAR_TASKS_PATH, .{}) catch return;
+    defer file.close(io);
 
     if (existing_len > 2) {
         // Remove trailing "]" and add new entry
@@ -947,18 +958,18 @@ fn updateSimilarTasks(episode: Episode) void {
             if (existing[last_bracket] == ']') break;
         }
         if (last_bracket > 0) {
-            file.writeAll(existing[0..last_bracket]) catch return;
-            file.writeAll(",") catch return;
-            file.writeAll(entry) catch return;
-            file.writeAll("]\n") catch return;
+            file.writeStreamingAll(io, existing[0..last_bracket]) catch return;
+            file.writeStreamingAll(io, ",") catch return;
+            file.writeStreamingAll(io, entry) catch return;
+            file.writeStreamingAll(io, "]\n") catch return;
             return;
         }
     }
 
     // New file — create array
-    file.writeAll("[") catch return;
-    file.writeAll(entry) catch return;
-    file.writeAll("]\n") catch return;
+    file.writeStreamingAll(io, "[") catch return;
+    file.writeStreamingAll(io, entry) catch return;
+    file.writeStreamingAll(io, "]\n") catch return;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1327,6 +1338,7 @@ fn runLogRecall(allocator: Allocator, args: []const []const u8) void {
 // ── tri experience log-save <TYPE> <CATEGORY> [--flags] ──────────────────────
 
 fn runLogSave(allocator: Allocator, args: []const []const u8) void {
+    const io = tri_io.get();
     if (args.len < 2) {
         print("{s}Usage: tri experience log-save <TYPE> <CATEGORY> [--impact H/M/L] [--lesson \"...\"] [--context \"...\"] [--outcome \"...\"] [--actions \"...\"]{s}\n", .{ YELLOW, RESET });
         return;
@@ -1388,14 +1400,13 @@ fn runLogSave(allocator: Allocator, args: []const []const u8) void {
         return;
     };
 
-    const file = std.fs.cwd().openFile(EXPERIENCE_LOG_PATH, .{ .mode = .read_write }) catch {
+    const file = std.Io.Dir.cwd().openFile(io, EXPERIENCE_LOG_PATH, .{ .mode = .read_write }) catch {
         print("{s}Cannot open EXPERIENCE_LOG.md{s}\n", .{ RED, RESET });
         return;
     };
-    defer file.close();
-    const stat = file.stat() catch return;
-    file.seekTo(stat.size) catch return;
-    file.writeAll(entry_text) catch {
+    defer file.close(io);
+    const stat = file.stat(io) catch return;
+    file.writePositionalAll(io, entry_text, stat.size) catch {
         print("{s}Write failed{s}\n", .{ RED, RESET });
         return;
     };
@@ -1408,9 +1419,8 @@ fn runLogSave(allocator: Allocator, args: []const []const u8) void {
 }
 
 fn readLogFile(allocator: Allocator) ?[]u8 {
-    const file = std.fs.cwd().openFile(EXPERIENCE_LOG_PATH, .{}) catch return null;
-    defer file.close();
-    return file.readToEndAlloc(allocator, 1_048_576) catch null;
+    const io = tri_io.get();
+    return std.Io.Dir.cwd().readFileAlloc(io, EXPERIENCE_LOG_PATH, allocator, .limited(1_048_576)) catch null;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

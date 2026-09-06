@@ -6,6 +6,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 const colors = @import("../tri_colors.zig");
 
@@ -259,13 +260,14 @@ fn runEternalDaemon() void {
     std.debug.print("{s}╚══════════════════════════════════════════════════════════╝{s}\n\n", .{ YELLOW, RESET });
 
     // Create log directory
-    std.fs.cwd().makePath(std.posix.getenv("HOME") orelse "/tmp") catch |err| {
+    const io = tri_io.get();
+    std.Io.Dir.cwd().createDirPath(io, std.posix.getenv("HOME") orelse "/tmp") catch |err| {
         std.log.debug("failed to create HOME dir: {}", .{err});
     };
     const home = std.posix.getenv("HOME") orelse "/tmp";
     var path_buf: [512]u8 = undefined;
     const log_dir = std.fmt.bufPrint(&path_buf, "{s}/.tri/log", .{home}) catch "/tmp";
-    std.fs.cwd().makePath(log_dir) catch |err| {
+    std.Io.Dir.cwd().createDirPath(io, log_dir) catch |err| {
         std.log.debug("failed to create log dir: {}", .{err});
     };
 
@@ -277,13 +279,15 @@ fn runEternalDaemon() void {
     std.debug.print("{s}Interval: phi seconds (1.618s){s}\n", .{ GRAY, RESET });
     std.debug.print("{s}Press Ctrl+C to stop{s}\n\n", .{ GRAY, RESET });
 
-    const log_file = std.fs.cwd().createFile(log_path, .{ .truncate = false }) catch |err| {
+    const log_file = std.Io.Dir.cwd().createFile(io, log_path, .{ .truncate = false }) catch |err| {
         std.debug.print("Cannot create log: {}\n", .{err});
         return;
     };
-    defer log_file.close();
-    log_file.seekFromEnd(0) catch |err| {
-        std.log.debug("failed to seek log file: {}", .{err});
+    defer log_file.close(io);
+    // 0.16 has no seek-then-write; append by tracking the end offset.
+    var log_offset: u64 = log_file.length(io) catch |err| blk: {
+        std.log.debug("failed to measure log file: {}", .{err});
+        break :blk 0;
     };
 
     var tick: u64 = 0;
@@ -300,9 +304,11 @@ fn runEternalDaemon() void {
         // Write to log
         var log_line_buf: [256]u8 = undefined;
         const log_line = std.fmt.bufPrint(&log_line_buf, "[{d}] t={d:.3} V(t)={d:.6} {s}\n", .{ tick, t, vt, aspect }) catch continue;
-        log_file.writeAll(log_line) catch |err| {
+        if (log_file.writePositionalAll(io, log_line, log_offset)) |_| {
+            log_offset += log_line.len;
+        } else |err| {
             std.log.debug("failed to write log line: {}", .{err});
-        };
+        }
 
         std.Thread.sleep(1_618_000_000); // phi seconds
     }
@@ -313,30 +319,40 @@ fn runSSEServer() void {
     std.debug.print("{s}║     SSE LIVE SYNC — port 1618 (phi*1000)                ║{s}\n", .{ YELLOW, RESET });
     std.debug.print("{s}╚══════════════════════════════════════════════════════════╝{s}\n\n", .{ YELLOW, RESET });
 
-    const addr = std.net.Address.parseIp4("127.0.0.1", 1618) catch {
+    const io = tri_io.get();
+    const addr = std.Io.net.IpAddress.parseIp4("127.0.0.1", 1618) catch {
         std.debug.print("Cannot parse address\n", .{});
         return;
     };
-    var server = addr.listen(.{ .reuse_address = true }) catch {
+    var server = addr.listen(io, .{ .reuse_address = true }) catch {
         std.debug.print("{s}[ERROR]{s} Cannot bind port 1618\n", .{ RED, RESET });
         return;
     };
-    defer server.deinit();
+    defer server.deinit(io);
 
     std.debug.print("{s}[SSE] Listening on http://127.0.0.1:1618/events{s}\n", .{ GREEN, RESET });
     std.debug.print("{s}Connect: curl -N http://localhost:1618/events{s}\n", .{ GRAY, RESET });
     std.debug.print("{s}Press Ctrl+C to stop{s}\n\n", .{ GRAY, RESET });
 
     while (true) {
-        const conn = server.accept() catch continue;
-        defer conn.stream.close();
+        const stream = server.accept(io) catch continue;
+        defer stream.close(io);
 
-        // Read request (discard)
+        // Read request (discard). One read attempt, exactly like the 0.15
+        // `stream.read`: readSliceShort would block trying to fill the whole
+        // buffer, and a keep-alive client never sends end-of-stream.
         var req_buf: [1024]u8 = undefined;
-        _ = conn.stream.read(&req_buf) catch continue;
+        var req_scratch: [1024]u8 = undefined;
+        var stream_reader = stream.reader(io, &req_scratch);
+        var req_vec: [1][]u8 = .{&req_buf};
+        _ = stream_reader.interface.readVec(&req_vec) catch continue;
 
         // Send SSE headers
-        conn.stream.writeAll("HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nCache-Control: no-cache\r\nAccess-Control-Allow-Origin: *\r\nConnection: keep-alive\r\n\r\n") catch continue;
+        var out_scratch: [1024]u8 = undefined;
+        var stream_writer = stream.writer(io, &out_scratch);
+        const out = &stream_writer.interface;
+        out.writeAll("HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nCache-Control: no-cache\r\nAccess-Control-Allow-Origin: *\r\nConnection: keep-alive\r\n\r\n") catch continue;
+        out.flush() catch continue;
 
         // Stream events
         var tick: u64 = 0;
@@ -349,7 +365,8 @@ fn runSSEServer() void {
             const evt = std.fmt.bufPrint(&evt_buf, "data: {{\"tick\":{d},\"t\":{d:.3},\"vt\":{d:.6},\"phi_sq\":{d:.6},\"trinity\":{d:.6},\"engine\":\"v1.4\"}}\n\n", .{
                 tick, t, vt, T_PHI_SQ, T_PHI_SQ + INV_T_PHI_SQ,
             }) catch continue;
-            conn.stream.writeAll(evt) catch break;
+            out.writeAll(evt) catch break;
+            out.flush() catch break;
             std.Thread.sleep(1_618_000_000);
         }
     }
@@ -361,22 +378,32 @@ fn runQuantumStream() void {
     std.debug.print("{s}║     Bell/CHSH + E8 + Fermion Generations                ║{s}\n", .{ YELLOW, RESET });
     std.debug.print("{s}╚══════════════════════════════════════════════════════════╝{s}\n\n", .{ YELLOW, RESET });
 
-    const addr = std.net.Address.parseIp4("127.0.0.1", 1618) catch return;
-    var server = addr.listen(.{ .reuse_address = true }) catch {
+    const io = tri_io.get();
+    const addr = std.Io.net.IpAddress.parseIp4("127.0.0.1", 1618) catch return;
+    var server = addr.listen(io, .{ .reuse_address = true }) catch {
         std.debug.print("{s}[ERROR]{s} Cannot bind port 1618\n", .{ RED, RESET });
         return;
     };
-    defer server.deinit();
+    defer server.deinit(io);
 
     std.debug.print("{s}[QUANTUM SSE] Listening on http://127.0.0.1:1618/{s}\n", .{ GREEN, RESET });
     std.debug.print("{s}CHSH = 2*sqrt(2) = {d:.10}{s}\n\n", .{ CYAN, @sqrt(2.0) * 2.0, RESET });
 
     while (true) {
-        const conn = server.accept() catch continue;
-        defer conn.stream.close();
+        const stream = server.accept(io) catch continue;
+        defer stream.close(io);
+        // One read attempt, matching the 0.15 `stream.read`; see runSSEServer.
         var req_buf: [1024]u8 = undefined;
-        _ = conn.stream.read(&req_buf) catch continue;
-        conn.stream.writeAll("HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nCache-Control: no-cache\r\nAccess-Control-Allow-Origin: *\r\n\r\n") catch continue;
+        var req_scratch: [1024]u8 = undefined;
+        var stream_reader = stream.reader(io, &req_scratch);
+        var req_vec: [1][]u8 = .{&req_buf};
+        _ = stream_reader.interface.readVec(&req_vec) catch continue;
+
+        var out_scratch: [1024]u8 = undefined;
+        var stream_writer = stream.writer(io, &out_scratch);
+        const out = &stream_writer.interface;
+        out.writeAll("HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nCache-Control: no-cache\r\nAccess-Control-Allow-Origin: *\r\n\r\n") catch continue;
+        out.flush() catch continue;
 
         const chsh = @sqrt(2.0) * 2.0;
         var tick: u64 = 0;
@@ -387,13 +414,16 @@ fn runQuantumStream() void {
             const evt = std.fmt.bufPrint(&evt_buf, "data: {{\"tick\":{d},\"t\":{d:.3},\"chsh\":{d:.10},\"bell_violation\":true,\"e8_dim\":248,\"fermion_generations\":3,\"neutrino_mass_ev\":0.0057,\"trinity\":{d:.6},\"mode\":\"quantum\"}}\n\n", .{
                 tick, t, chsh, T_PHI_SQ + INV_T_PHI_SQ,
             }) catch continue;
-            conn.stream.writeAll(evt) catch break;
+            out.writeAll(evt) catch break;
+            out.flush() catch break;
             std.Thread.sleep(1_618_000_000);
         }
     }
 }
 
 pub fn runInstallCommand(allocator: std.mem.Allocator) void {
+    // The 0.16 process API takes no allocator; the parameter stays for callers.
+    _ = allocator;
     std.debug.print("\n{s}╔══════════════════════════════════════════════════════════╗{s}\n", .{ YELLOW, RESET });
     std.debug.print("{s}║     TRI INSTALL — Self-Update to ~/.local/bin/tri       ║{s}\n", .{ YELLOW, RESET });
     std.debug.print("{s}╚══════════════════════════════════════════════════════════╝{s}\n\n", .{ YELLOW, RESET });
@@ -410,9 +440,15 @@ pub fn runInstallCommand(allocator: std.mem.Allocator) void {
     std.debug.print("{s}[2/4]{s} Project root: {s}\n", .{ CYAN, RESET, root });
     std.debug.print("{s}[3/4]{s} Building: zig build -Dtarget=native\n", .{ CYAN, RESET });
 
-    var child = std.process.Child.init(&.{ "zig", "build", "-Dtarget=native" }, allocator);
-    child.cwd = root;
-    const term = child.spawnAndWait() catch {
+    const io = tri_io.get();
+    var child = std.process.spawn(io, .{
+        .argv = &.{ "zig", "build", "-Dtarget=native" },
+        .cwd = .{ .path = root },
+    }) catch {
+        std.debug.print("{s}Build failed{s}\n", .{ RED, RESET });
+        return;
+    };
+    const term = child.wait(io) catch {
         std.debug.print("{s}Build failed{s}\n", .{ RED, RESET });
         return;
     };
@@ -425,7 +461,7 @@ pub fn runInstallCommand(allocator: std.mem.Allocator) void {
     const home = std.posix.getenv("HOME") orelse "/tmp";
     var dest_buf: [512]u8 = undefined;
     const dest_dir = std.fmt.bufPrint(&dest_buf, "{s}/.local/bin", .{home}) catch return;
-    std.fs.cwd().makePath(dest_dir) catch |err| {
+    std.Io.Dir.cwd().createDirPath(io, dest_dir) catch |err| {
         std.log.debug("failed to create .local/bin: {}", .{err});
     };
 
@@ -434,7 +470,7 @@ pub fn runInstallCommand(allocator: std.mem.Allocator) void {
     var dst_buf: [512]u8 = undefined;
     const dst = std.fmt.bufPrint(&dst_buf, "{s}/tri", .{dest_dir}) catch return;
 
-    std.fs.cwd().copyFile(src, std.fs.cwd(), dst, .{}) catch {
+    std.Io.Dir.cwd().copyFile(src, std.Io.Dir.cwd(), dst, io, .{}) catch {
         std.debug.print("{s}Copy failed{s}\n", .{ RED, RESET });
         return;
     };
@@ -444,6 +480,8 @@ pub fn runInstallCommand(allocator: std.mem.Allocator) void {
 }
 
 pub fn runBuildCommand(allocator: std.mem.Allocator) void {
+    // The 0.16 process API takes no allocator; the parameter stays for callers.
+    _ = allocator;
     std.debug.print("\n{s}╔══════════════════════════════════════════════════════════╗{s}\n", .{ YELLOW, RESET });
     std.debug.print("{s}║     TRI BUILD — Smart Native Build                      ║{s}\n", .{ YELLOW, RESET });
     std.debug.print("{s}╚══════════════════════════════════════════════════════════╝{s}\n\n", .{ YELLOW, RESET });
@@ -459,9 +497,15 @@ pub fn runBuildCommand(allocator: std.mem.Allocator) void {
     std.debug.print("{s}[BUILD]{s} Root: {s}\n", .{ CYAN, RESET, root });
     std.debug.print("{s}[BUILD]{s} Running: zig build -Dtarget=native\n\n", .{ CYAN, RESET });
 
-    var child = std.process.Child.init(&.{ "zig", "build", "-Dtarget=native" }, allocator);
-    child.cwd = root;
-    const term = child.spawnAndWait() catch {
+    const io = tri_io.get();
+    var child = std.process.spawn(io, .{
+        .argv = &.{ "zig", "build", "-Dtarget=native" },
+        .cwd = .{ .path = root },
+    }) catch {
+        std.debug.print("{s}Build failed{s}\n", .{ RED, RESET });
+        return;
+    };
+    const term = child.wait(io) catch {
         std.debug.print("{s}Build failed{s}\n", .{ RED, RESET });
         return;
     };
@@ -479,13 +523,14 @@ pub fn runDeckCommand(allocator: std.mem.Allocator) void {
     std.debug.print("{s}║     INVESTOR DECK GENERATOR v2.3 — QUANTUM              ║{s}\n", .{ YELLOW, RESET });
     std.debug.print("{s}╚══════════════════════════════════════════════════════════╝{s}\n\n", .{ YELLOW, RESET });
 
-    const deck_file = std.fs.cwd().createFile("trinity_deck.html", .{}) catch {
+    const io = tri_io.get();
+    const deck_file = std.Io.Dir.cwd().createFile(io, "trinity_deck.html", .{}) catch {
         std.debug.print("{s}Cannot create file{s}\n", .{ RED, RESET });
         return;
     };
-    defer deck_file.close();
+    defer deck_file.close(io);
 
-    deck_file.writeAll(
+    deck_file.writeStreamingAll(io,
         \\<!DOCTYPE html><html><head><meta charset="utf-8"><title>TRINITY — Investor Deck v2.3</title>
         \\<style>*{margin:0;padding:0;box-sizing:border-box}body{background:#0a0a0a;color:#e0e0e0;font-family:'JetBrains Mono',monospace}
         \\.slide{min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding:80px;border-bottom:2px solid #ffd700}
@@ -532,6 +577,8 @@ pub fn runDeckCommand(allocator: std.mem.Allocator) void {
 }
 
 pub fn runFpgaDemoCommand(allocator: std.mem.Allocator, cmd_args: []const []const u8) void {
+    // The 0.16 process API takes no allocator; the parameter stays for callers.
+    _ = allocator;
     std.debug.print("\n{s}╔══════════════════════════════════════════════════════════╗{s}\n", .{ YELLOW, RESET });
     std.debug.print("{s}║     FPGA DEMO — One-Click Synthesis Pipeline            ║{s}\n", .{ YELLOW, RESET });
     std.debug.print("{s}╚══════════════════════════════════════════════════════════╝{s}\n\n", .{ YELLOW, RESET });
@@ -570,10 +617,16 @@ pub fn runFpgaDemoCommand(allocator: std.mem.Allocator, cmd_args: []const []cons
 
     // Check yosys
     std.debug.print("{s}[2/5]{s} Checking prerequisites...\n", .{ CYAN, RESET });
-    var yosys_check = std.process.Child.init(&.{ "which", "yosys" }, allocator);
-    yosys_check.stdout_behavior = .Inherit;
-    yosys_check.stderr_behavior = .Inherit;
-    const yosys_term = yosys_check.spawnAndWait() catch {
+    const io = tri_io.get();
+    var yosys_check = std.process.spawn(io, .{
+        .argv = &.{ "which", "yosys" },
+        .stdout = .inherit,
+        .stderr = .inherit,
+    }) catch {
+        std.debug.print("  {s}Yosys: NOT FOUND{s}\n  Install: brew install yosys\n\n", .{ RED, RESET });
+        return;
+    };
+    const yosys_term = yosys_check.wait(io) catch {
         std.debug.print("  {s}Yosys: NOT FOUND{s}\n  Install: brew install yosys\n\n", .{ RED, RESET });
         return;
     };
@@ -589,7 +642,7 @@ pub fn runFpgaDemoCommand(allocator: std.mem.Allocator, cmd_args: []const []cons
     }
 
     // Check source
-    std.fs.cwd().access(verilog_file, .{}) catch {
+    std.Io.Dir.cwd().access(io, verilog_file, .{}) catch {
         std.debug.print("  {s}Source file not found: {s}{s}\n\n", .{ RED, verilog_file, RESET });
         return;
     };
@@ -602,8 +655,13 @@ pub fn runFpgaDemoCommand(allocator: std.mem.Allocator, cmd_args: []const []cons
     var yosys_cmd_buf: [512]u8 = undefined;
     const yosys_cmd = std.fmt.bufPrint(&yosys_cmd_buf, "synth_xilinx -flatten -abc9 -arch xc7 -top {s}; write_json {s}", .{ top_module, json_out }) catch return;
 
-    var yosys = std.process.Child.init(&.{ "yosys", "-p", yosys_cmd, verilog_file }, allocator);
-    const yosys_result = yosys.spawnAndWait() catch {
+    var yosys = std.process.spawn(io, .{
+        .argv = &.{ "yosys", "-p", yosys_cmd, verilog_file },
+    }) catch {
+        std.debug.print("{s}Yosys failed{s}\n", .{ RED, RESET });
+        return;
+    };
+    const yosys_result = yosys.wait(io) catch {
         std.debug.print("{s}Yosys failed{s}\n", .{ RED, RESET });
         return;
     };
@@ -621,15 +679,20 @@ pub fn runFpgaDemoCommand(allocator: std.mem.Allocator, cmd_args: []const []cons
     var bit_buf: [256]u8 = undefined;
     const bit_out = std.fmt.bufPrint(&bit_buf, "/tmp/{s}.bit", .{top_module}) catch return;
 
-    var forge = std.process.Child.init(&.{
-        forge_bin,       "run",
-        "--input",       json_out,
-        "--device",      "xc7a100t",
-        "--constraints", "fpga/openxc7-synth/qmtech_fgg676.xdc",
-        "--output",      bit_out,
-    }, allocator);
-    forge.cwd = root;
-    const forge_result = forge.spawnAndWait() catch {
+    var forge = std.process.spawn(io, .{
+        .argv = &.{
+            forge_bin,       "run",
+            "--input",       json_out,
+            "--device",      "xc7a100t",
+            "--constraints", "fpga/openxc7-synth/qmtech_fgg676.xdc",
+            "--output",      bit_out,
+        },
+        .cwd = .{ .path = root },
+    }) catch {
+        std.debug.print("  {s}FORGE not built — run 'zig build' first{s}\n", .{ RED, RESET });
+        return;
+    };
+    const forge_result = forge.wait(io) catch {
         std.debug.print("  {s}FORGE not built — run 'zig build' first{s}\n", .{ RED, RESET });
         return;
     };
@@ -646,9 +709,10 @@ pub fn runFpgaDemoCommand(allocator: std.mem.Allocator, cmd_args: []const []cons
 }
 
 fn generateQuantumVerilog() void {
-    const qv_file = std.fs.cwd().createFile("/tmp/quantum_trinity.v", .{}) catch return;
-    defer qv_file.close();
-    qv_file.writeAll(
+    const io = tri_io.get();
+    const qv_file = std.Io.Dir.cwd().createFile(io, "/tmp/quantum_trinity.v", .{}) catch return;
+    defer qv_file.close(io);
+    qv_file.writeStreamingAll(io,
         \\// QUANTUM TRINITY — CHSH violation + phi^4 asymmetry on FPGA
         \\// Generated by tri fpga quantum (Order #032)
         \\module quantum_trinity_top (
@@ -1765,7 +1829,7 @@ pub fn runLaunchCommand(allocator: std.mem.Allocator, cmd_args: []const []const 
 
 fn findProjectRoot() ?[]const u8 {
     // Check current directory for build.zig (works in any worktree)
-    std.fs.cwd().access("build.zig", .{}) catch return null;
+    std.Io.Dir.cwd().access(tri_io.get(), "build.zig", .{}) catch return null;
     // If build.zig exists in cwd, cwd IS the project root
     return ".";
 }

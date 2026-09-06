@@ -20,6 +20,7 @@
 //!   try JobManager.cancel(job_id);
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 const builtin = @import("builtin");
 
@@ -229,7 +230,7 @@ pub const JobManager = struct {
 
     allocator: std.mem.Allocator,
     jobs: JobsMap,
-    jobs_dir: std.fs.Dir,
+    jobs_dir: std.Io.Dir,
     project_root: []const u8, // P0.3: Detected project root
     jobs_dir_path: []const u8, // P0.4: Store for cleanup
 
@@ -243,13 +244,15 @@ pub const JobManager = struct {
         const jobs_dir_path = try std.fmt.allocPrint(allocator, "{s}/{s}", .{ root, JobDir });
         errdefer allocator.free(jobs_dir_path);
 
-        std.fs.cwd().makePath(jobs_dir_path) catch |err| {
+        const io = tri_io.get();
+
+        std.Io.Dir.cwd().createDirPath(io, jobs_dir_path) catch |err| {
             std.log.err("Failed to create jobs directory: {}", .{err});
             return err;
         };
 
-        const jobs_dir = try std.fs.cwd().openDir(jobs_dir_path, .{});
-        errdefer jobs_dir.close();
+        const jobs_dir = try std.Io.Dir.cwd().openDir(io, jobs_dir_path, .{});
+        errdefer jobs_dir.close(io);
 
         return JobManager{
             .allocator = allocator,
@@ -272,8 +275,8 @@ pub const JobManager = struct {
                 const marker_path = try std.fs.path.join(allocator, &.{ search_path, marker });
                 defer allocator.free(marker_path);
 
-                if (std.fs.cwd().openFile(marker_path, .{})) |f| {
-                    f.close(); // Close file handle immediately — only checking existence
+                if (std.Io.Dir.cwd().openFile(tri_io.get(), marker_path, .{})) |f| {
+                    f.close(tri_io.get()); // Close file handle immediately — only checking existence
                     return allocator.dupe(u8, search_path);
                 } else |_| continue;
             }
@@ -301,13 +304,10 @@ pub const JobManager = struct {
         const metadata_path = try std.fs.path.join(allocator, &.{ job_dir, "metadata.json" });
         defer allocator.free(metadata_path);
 
-        const file = std.fs.cwd().openFile(metadata_path, .{}) catch |err| {
+        const content = std.Io.Dir.cwd().readFileAlloc(tri_io.get(), metadata_path, allocator, .limited(10_000)) catch |err| {
             if (err == error.FileNotFound) return null;
-            return err;
+            return error.InvalidMetadata;
         };
-        defer file.close();
-
-        const content = file.readToEndAlloc(allocator, 10_000) catch return error.InvalidMetadata;
         defer allocator.free(content);
 
         // Parse JSON manually (simple fields)
@@ -388,7 +388,7 @@ pub const JobManager = struct {
             self.allocator.destroy(job);
         }
         self.jobs.deinit();
-        self.jobs_dir.close();
+        self.jobs_dir.close(tri_io.get());
         // P0.4: Free project_root allocation
         self.allocator.free(self.project_root);
         // P0.4: Free jobs_dir_path allocation
@@ -409,7 +409,7 @@ pub const JobManager = struct {
         const job_path = try self.getJobDirPath(self.allocator, job_id);
         defer self.allocator.free(job_path);
 
-        std.fs.cwd().makePath(job_path) catch |err| {
+        std.Io.Dir.cwd().createDirPath(tri_io.get(), job_path) catch |err| {
             std.log.err("Failed to create job directory: {}", .{err});
             return err;
         };
@@ -501,8 +501,9 @@ pub const JobManager = struct {
         const stderr_path = try std.fs.path.join(allocator, &.{ job_dir, "stderr.log" });
         defer allocator.free(stderr_path);
 
-        const stdout_content = std.fs.cwd().readFileAlloc(allocator, stdout_path, 10_000_000) catch "";
-        const stderr_content = std.fs.cwd().readFileAlloc(allocator, stderr_path, 10_000_000) catch "";
+        const io = tri_io.get();
+        const stdout_content = std.Io.Dir.cwd().readFileAlloc(io, stdout_path, allocator, .limited(10_000_000)) catch "";
+        const stderr_content = std.Io.Dir.cwd().readFileAlloc(io, stderr_path, allocator, .limited(10_000_000)) catch "";
 
         return JobLogs{
             .stdout = stdout_content,
@@ -541,14 +542,15 @@ pub const JobManager = struct {
             artifacts.deinit(allocator);
         }
 
-        var dir = std.fs.cwd().openDir(artifacts_path, .{ .iterate = true }) catch {
+        const io = tri_io.get();
+        var dir = std.Io.Dir.cwd().openDir(io, artifacts_path, .{ .iterate = true }) catch {
             // No artifacts directory yet
             return artifacts.toOwnedSlice(allocator);
         };
-        defer dir.close();
+        defer dir.close(io);
 
         var iterator = dir.iterate();
-        while (try iterator.next()) |entry| {
+        while (try iterator.next(io)) |entry| {
             if (entry.kind == .file) {
                 const full_path = try std.fs.path.join(allocator, &.{ artifacts_path, entry.name });
                 try artifacts.append(allocator, full_path);
@@ -570,11 +572,12 @@ pub const JobManager = struct {
         const jobs_dir_path = try std.fs.path.join(allocator, &.{ self.project_root, JobDir });
         defer allocator.free(jobs_dir_path);
 
-        var dir = std.fs.cwd().openDir(jobs_dir_path, .{ .iterate = true }) catch return error.JobsDirNotFound;
-        defer dir.close();
+        const io = tri_io.get();
+        var dir = std.Io.Dir.cwd().openDir(io, jobs_dir_path, .{ .iterate = true }) catch return error.JobsDirNotFound;
+        defer dir.close(io);
 
         var iterator = dir.iterate();
-        while (try iterator.next()) |entry| {
+        while (try iterator.next(io)) |entry| {
             if (entry.kind == .directory and std.mem.startsWith(u8, entry.name, "job_")) {
                 try job_ids.append(allocator, try allocator.dupe(u8, entry.name));
             }
@@ -606,7 +609,7 @@ pub const JobManager = struct {
                 const age: u64 = @intCast(delta);
                 if (age > older_than_seconds) {
                     // Remove job directory from filesystem
-                    std.fs.cwd().deleteTree(job.dir_path) catch |err| {
+                    std.Io.Dir.cwd().deleteTree(tri_io.get(), job.dir_path) catch |err| {
                         std.log.debug("job_system: failed to cleanup dir '{s}': {}", .{ job.dir_path, err });
                     };
                     // Mark for removal from map
@@ -683,10 +686,11 @@ pub const Job = struct {
         const metadata_path = try std.fmt.allocPrint(self.allocator, "{s}/metadata.json", .{self.dir_path});
         defer self.allocator.free(metadata_path);
 
-        const file = try std.fs.cwd().createFile(metadata_path, .{});
-        defer file.close();
+        const io = tri_io.get();
+        const file = try std.Io.Dir.cwd().createFile(io, metadata_path, .{});
+        defer file.close(io);
 
-        try file.writeAll(json);
+        try file.writeStreamingAll(io, json);
     }
 
     /// Spawn job process (Unix-only for now)
@@ -847,7 +851,7 @@ pub const Job = struct {
                 return self.toStatus();
             };
 
-            if (result == .exited or result == .Signal) {
+            if (result == .exited or result == .signal) {
                 // Process has terminated
                 self.metadata.state = switch (result) {
                     .exited => |code| if (code == 0) .completed else .failed,
@@ -898,8 +902,9 @@ pub const Job = struct {
         const stderr_path = try std.fmt.allocPrint(allocator, "{s}/stderr.log", .{self.dir_path});
         defer allocator.free(stderr_path);
 
-        const stdout_content = std.fs.cwd().readFileAlloc(allocator, stdout_path, 10_000_000) catch "";
-        const stderr_content = std.fs.cwd().readFileAlloc(allocator, stderr_path, 10_000_000) catch "";
+        const io = tri_io.get();
+        const stdout_content = std.Io.Dir.cwd().readFileAlloc(io, stdout_path, allocator, .limited(10_000_000)) catch "";
+        const stderr_content = std.Io.Dir.cwd().readFileAlloc(io, stderr_path, allocator, .limited(10_000_000)) catch "";
 
         return JobLogs{
             .stdout = stdout_content,

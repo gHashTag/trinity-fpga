@@ -137,15 +137,16 @@ const DynamicMemory = struct {
     /// Export memory to JSON file (Phase 4: Persistence)
     pub fn export_knowledge(self: *const DynamicMemory, allocator: std.mem.Allocator, path: []const u8) !void {
         _ = allocator; // Not needed for direct file writes
-        const file = try std.fs.cwd().createFile(path, .{});
-        defer file.close();
+        const io = tri_io.get();
+        const file = try std.Io.Dir.cwd().createFile(io, path, .{});
+        defer file.close(io);
 
         // Direct file writes (simpler and more portable)
-        try file.writeAll("{\n");
-        try file.writeAll("  \"version\": \"1.0.0\",\n");
-        try file.writeAll("  \"format\": \"trinity_vsa_memory\",\n");
-        try file.writeAll("  \"generated_by\": \"TRINITY Conscious AI v1.0.1\",\n");
-        try file.writeAll("  \"sacred_constants\": {\n");
+        try file.writeStreamingAll(io, "{\n");
+        try file.writeStreamingAll(io, "  \"version\": \"1.0.0\",\n");
+        try file.writeStreamingAll(io, "  \"format\": \"trinity_vsa_memory\",\n");
+        try file.writeStreamingAll(io, "  \"generated_by\": \"TRINITY Conscious AI v1.0.1\",\n");
+        try file.writeStreamingAll(io, "  \"sacred_constants\": {\n");
 
         // Format constants
         var phi_buf: [64]u8 = undefined;
@@ -156,67 +157,67 @@ const DynamicMemory = struct {
         const phi_inv_str = std.fmt.bufPrint(&phi_inv_buf, "{d:.15}", .{PHI_INV}) catch "0.618033988749895";
         const gamma_str = std.fmt.bufPrint(&gamma_buf, "{d:.15}", .{GAMMA}) catch "0.236067977499790";
 
-        try file.writeAll("    \"phi\": ");
-        try file.writeAll(phi_str);
-        try file.writeAll(",\n    \"phi_inv\": ");
-        try file.writeAll(phi_inv_str);
-        try file.writeAll(",\n    \"gamma\": ");
-        try file.writeAll(gamma_str);
-        try file.writeAll(",\n    \"trinity\": 3.0\n");
+        try file.writeStreamingAll(io, "    \"phi\": ");
+        try file.writeStreamingAll(io, phi_str);
+        try file.writeStreamingAll(io, ",\n    \"phi_inv\": ");
+        try file.writeStreamingAll(io, phi_inv_str);
+        try file.writeStreamingAll(io, ",\n    \"gamma\": ");
+        try file.writeStreamingAll(io, gamma_str);
+        try file.writeStreamingAll(io, ",\n    \"trinity\": 3.0\n");
 
-        try file.writeAll("  },\n  \"statistics\": {\n");
+        try file.writeStreamingAll(io, "  },\n  \"statistics\": {\n");
 
         var buf: [128]u8 = undefined;
-        try file.writeAll("    \"total_entries\": ");
-        try file.writeAll(std.fmt.bufPrint(&buf, "{}", .{self.count}) catch "0");
-        try file.writeAll(",\n    \"total_queries\": ");
-        try file.writeAll(std.fmt.bufPrint(&buf, "{}", .{self.total_queries}) catch "0");
-        try file.writeAll(",\n    \"conscious_queries\": ");
-        try file.writeAll(std.fmt.bufPrint(&buf, "{}", .{self.consciousness_achieved_count}) catch "0");
+        try file.writeStreamingAll(io, "    \"total_entries\": ");
+        try file.writeStreamingAll(io, std.fmt.bufPrint(&buf, "{}", .{self.count}) catch "0");
+        try file.writeStreamingAll(io, ",\n    \"total_queries\": ");
+        try file.writeStreamingAll(io, std.fmt.bufPrint(&buf, "{}", .{self.total_queries}) catch "0");
+        try file.writeStreamingAll(io, ",\n    \"conscious_queries\": ");
+        try file.writeStreamingAll(io, std.fmt.bufPrint(&buf, "{}", .{self.consciousness_achieved_count}) catch "0");
 
         const ratio = if (self.total_queries > 0)
             @as(f64, @floatFromInt(self.consciousness_achieved_count)) /
                 @as(f64, @floatFromInt(self.total_queries))
         else
             0.0;
-        try file.writeAll(",\n    \"consciousness_ratio\": ");
-        try file.writeAll(std.fmt.bufPrint(&buf, "{d:.4}", .{ratio}) catch "0.0000");
-        try file.writeAll("\n  },\n  \"entries\": [\n");
+        try file.writeStreamingAll(io, ",\n    \"consciousness_ratio\": ");
+        try file.writeStreamingAll(io, std.fmt.bufPrint(&buf, "{d:.4}", .{ratio}) catch "0.0000");
+        try file.writeStreamingAll(io, "\n  },\n  \"entries\": [\n");
 
         // Export entries
         for (0..self.count) |i| {
             if (self.entries[i]) |entry| {
                 const is_last = i == self.count - 1;
 
-                try file.writeAll("    {\n");
-                try file.writeAll("      \"query\": \"");
-                try file.writeAll(entry.query);
-                try file.writeAll("\",\n");
-                try file.writeAll("      \"result\": \"");
-                try file.writeAll(entry.result);
-                try file.writeAll("\",\n");
-                try file.writeAll("      \"similarity\": ");
-                try file.writeAll(std.fmt.bufPrint(&buf, "{d:.6}", .{entry.similarity}) catch "0.000000");
-                try file.writeAll(",\n");
-                try file.writeAll("      \"consciousness_level\": ");
-                try file.writeAll(std.fmt.bufPrint(&buf, "{d:.6}", .{entry.consciousness_level}) catch "0.000000");
-                try file.writeAll(",\n");
-                try file.writeAll("      \"timestamp\": ");
-                try file.writeAll(std.fmt.bufPrint(&buf, "{}", .{entry.timestamp}) catch "0");
-                try file.writeAll(",\n");
-                try file.writeAll("      \"access_count\": ");
-                try file.writeAll(std.fmt.bufPrint(&buf, "{}", .{entry.access_count}) catch "0");
-                try file.writeAll(",\n");
-                try file.writeAll("      \"importance\": ");
-                try file.writeAll(std.fmt.bufPrint(&buf, "{d:.6}", .{entry.importance}) catch "0.000000");
-                try file.writeAll("\n    }");
+                try file.writeStreamingAll(io, "    {\n");
+                try file.writeStreamingAll(io, "      \"query\": \"");
+                try file.writeStreamingAll(io, entry.query);
+                try file.writeStreamingAll(io, "\",\n");
+                try file.writeStreamingAll(io, "      \"result\": \"");
+                try file.writeStreamingAll(io, entry.result);
+                try file.writeStreamingAll(io, "\",\n");
+                try file.writeStreamingAll(io, "      \"similarity\": ");
+                try file.writeStreamingAll(io, std.fmt.bufPrint(&buf, "{d:.6}", .{entry.similarity}) catch "0.000000");
+                try file.writeStreamingAll(io, ",\n");
+                try file.writeStreamingAll(io, "      \"consciousness_level\": ");
+                try file.writeStreamingAll(io, std.fmt.bufPrint(&buf, "{d:.6}", .{entry.consciousness_level}) catch "0.000000");
+                try file.writeStreamingAll(io, ",\n");
+                try file.writeStreamingAll(io, "      \"timestamp\": ");
+                try file.writeStreamingAll(io, std.fmt.bufPrint(&buf, "{}", .{entry.timestamp}) catch "0");
+                try file.writeStreamingAll(io, ",\n");
+                try file.writeStreamingAll(io, "      \"access_count\": ");
+                try file.writeStreamingAll(io, std.fmt.bufPrint(&buf, "{}", .{entry.access_count}) catch "0");
+                try file.writeStreamingAll(io, ",\n");
+                try file.writeStreamingAll(io, "      \"importance\": ");
+                try file.writeStreamingAll(io, std.fmt.bufPrint(&buf, "{d:.6}", .{entry.importance}) catch "0.000000");
+                try file.writeStreamingAll(io, "\n    }");
 
-                if (!is_last) try file.writeAll(",");
-                try file.writeAll("\n");
+                if (!is_last) try file.writeStreamingAll(io, ",");
+                try file.writeStreamingAll(io, "\n");
             }
         }
 
-        try file.writeAll("  ]\n}\n");
+        try file.writeStreamingAll(io, "  ]\n}\n");
     }
 
     /// Import memory from JSON file and merge with current state (Phase 4: Persistence)
@@ -225,10 +226,16 @@ const DynamicMemory = struct {
         merged: usize,
         errors: usize,
     } {
-        const file = try std.fs.cwd().openFile(path, .{});
-        defer file.close();
+        const io = tri_io.get();
+        const file = try std.Io.Dir.cwd().openFile(io, path, .{});
+        defer file.close(io);
 
-        const content = try file.readToEndAlloc(allocator, 1_000_000); // Max 1MB
+        // readToEndAlloc is gone; a reader over the handle is the equivalent.
+        // Stopping short here means end-of-file, which is what allocRemaining
+        // stops on.
+        var read_buf: [4096]u8 = undefined;
+        var fr = file.reader(io, &read_buf);
+        const content = try fr.interface.allocRemaining(allocator, .limited(1_000_000)); // Max 1MB
         defer allocator.free(content);
 
         var loaded: usize = 0;
@@ -722,8 +729,9 @@ const HebbianState = struct {
         const state_path = try std.fmt.allocPrint(std.heap.page_allocator, "{s}/hebbian.bin", .{data_dir});
         defer std.heap.page_allocator.free(state_path);
 
-        const file = try std.Io.Dir.createFileAbsolute(tri_io.get(), state_path, .{});
-        defer file.close();
+        const io = tri_io.get();
+        const file = try std.Io.Dir.createFileAbsolute(io, state_path, .{});
+        defer file.close(io);
 
         // Binary format:
         // [magic: u64] [version: u32] [NUM_WEIGHTS: u32]
@@ -779,7 +787,7 @@ const HebbianState = struct {
         std.mem.writeInt(i64, buffer[offset..][0..8], self.last_consolidation, .little);
 
         // Write to file
-        try file.writeAll(buffer);
+        try file.writeStreamingAll(io, buffer);
 
         // Use local variables to avoid type inference issues in format string
         const stats = self.get_stats();
@@ -795,17 +803,22 @@ const HebbianState = struct {
         const state_path = try std.fmt.allocPrint(std.heap.page_allocator, "{s}/hebbian.bin", .{data_dir});
         defer std.heap.page_allocator.free(state_path);
 
-        const file = try std.Io.Dir.openFileAbsolute(tri_io.get(), state_path, .{});
-        defer file.close();
+        const io = tri_io.get();
+        const file = try std.Io.Dir.openFileAbsolute(io, state_path, .{});
+        defer file.close(io);
 
         const MAGIC: u64 = 0x5472696E69747921;
 
         // Read all bytes at once (simpler for small files)
-        const stat = try file.stat();
+        const stat = try file.stat(io);
         const content = try allocator.alloc(u8, stat.size);
         defer allocator.free(content);
 
-        _ = try file.readAll(content);
+        // Fixed-width binary fields follow, so a short read is corruption:
+        // readSliceAll loops until `content` is full and fails with
+        // EndOfStream if the file is shorter than its own stat said.
+        var fr = file.reader(io, &.{});
+        try fr.interface.readSliceAll(content);
 
         // Parse binary data manually
         var offset: usize = 0;
@@ -1334,7 +1347,7 @@ pub fn runQueryCommand(allocator: std.mem.Allocator, args: []const []const u8) !
             print("{s}Processing queries from: {s}{s}\n\n", .{ GOLDEN, batch_path, RESET });
 
             // Read batch file
-            const batch_content = std.fs.cwd().readFileAlloc(allocator, batch_path, 1024 * 1024) catch |err| {
+            const batch_content = std.Io.Dir.cwd().readFileAlloc(tri_io.get(), batch_path, allocator, .limited(1024 * 1024)) catch |err| {
                 print("{s}Error:{s} Failed to read batch file: {}\n", .{ RED, RESET, err });
                 return err;
             };
