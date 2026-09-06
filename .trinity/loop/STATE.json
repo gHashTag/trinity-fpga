@@ -4,7 +4,7 @@
     "id": "two-track",
     "cron_job": "1cd7dda4",
     "interval": "15m",
-    "iteration": 129,
+    "iteration": 130,
     "status": "RUNNING",
     "owner": "Dmitrii Vasilev / @gHashTag",
     "tracks": [
@@ -700,6 +700,13 @@
       "verified": "zig test src/tri/env_loader.zig -- 10 of 10 pass. main.zig compiled through: it now stops only on std.posix.getenv and std.process.argsAlloc, both process.Init APIs and both B22's real scope.",
       "measured_surface": "std.fs 938 sites/154 files, posix.getenv 47/21, trimRight 35/19, trimLeft 15/9, argsAlloc 8/8. Only the 50 trim sites are renames; the rest need a value plumbed to each call site.",
       "two_claims_of_mine_corrected": "B22 is a phantom for file I/O and real for args and environment (A56). And per-file `zig build-obj` on a library file analyses nothing without a root, so the rc=0 checks I quoted were weak (A55)."
+    },
+    {
+      "id": "D112",
+      "what": "The Zig 0.16 API migration on main.zig's dependency path is complete (commit a8c85fce6). Zero 0.16 API errors remain.",
+      "how": "std.posix.getenv became an extern \"c\" getenv, matching the setenv already declared in that file, so no caller has to carry a process.Environ. std.process.argsAlloc became std.process.Init.Minimal -- `{ environ, args }`, accepted directly by std/start.zig -- which is B22 at the scope it actually has: main keeps its own allocator and Io and inherits nothing else.",
+      "verified": "env_loader 10/10 tests pass under a real root. main.zig compiles with no API diagnostics, stopping only at module resolution for trinity_swe.",
+      "what_it_revealed": "That last error is not Zig 0.16 at all -- it is that no root build.zig or build.zig.tri exists in HEAD, so named modules have no provider. Recorded as A57 and B31."
     }
   ],
   "backlog": [
@@ -971,6 +978,15 @@
       "why_it_matters": "The corpus t27.ai serves cannot be reproduced by anyone else from a committed ref, and the packed-struct fix (t27#3384, merged to master) cannot reach the site by a re-vendor from master without deleting the Course. Those two facts are locked together: the fix and the teaching content are on opposite sides of the merge.",
       "options": "(a) merge fix/struct-field-brace-nesting into t27 master, after which a re-vendor is mechanical and the site gains both the Course and the parser fix; (b) cherry-pick the nine Course specs onto master; (c) leave as is and accept that the published corpus is not reproducible, in which case the manifest's new list is the honest record of that.",
       "needs": "operator decision on (a)/(b)/(c). This is the same shape as OD8/B18 -- a branch carrying real work that nobody has decided about -- and it now blocks a user-visible improvement."
+    },
+    {
+      "id": "B31",
+      "title": "The root build graph has no source: neither build.zig nor build.zig.tri is in HEAD",
+      "status": "pending",
+      "detail": "ac4304f78 (April 2026) converted the root build.zig into build.zig.tri, per the project's spec-first rule. build.zig.tri is itself absent from HEAD, removed in 4d57ad02c, the monolith import. So the repository has build.zig.zon but nothing that declares modules, and every @import of a NAMED module -- trinity_swe is the one main.zig stops on -- has no provider. Subproject build files still exist (src/vibeec/build.zig, deploy/trinity-nexus/build.zig); it is the root that is missing.",
+      "why_it_matters": "This, not Zig 0.16, is what stops `tri` linking. main.zig's own path now has zero 0.16 API errors. Until a root build graph exists, no amount of further API migration produces a binary, and B26's verification stays blocked for the same reason it has been all along.",
+      "options": "(a) regenerate build.zig from a .tri spec, which needs the spec restored first -- it is recoverable from 4d57ad02c^; (b) restore the April build.zig from ac4304f78^ and treat it as the source, accepting that it contradicts the spec-first rule; (c) write a minimal root build.zig that declares only the modules main.zig needs, as a stopgap that makes the binary buildable while the spec question is settled.",
+      "needs": "operator decision between (a), (b) and (c) -- it is a spec-first policy question, not a code one."
     }
   ],
   "anomalies": [
@@ -1474,6 +1490,15 @@
       "the_size_was_also_wrong": "I said '939 call sites, four renames'. Measured across src/tri: std.fs 938 sites in 154 files (each needs an Io in scope), posix.getenv 47 in 21 (needs process.Init), trimRight 35 in 19 and trimLeft 15 in 9 (pure renames), argsAlloc 8 in 8 (needs process.Init). Only 50 of 1043 are renames. The rest are signature changes per function and per caller.",
       "pattern": "Two iterations, two over-broad claims in opposite directions: first 'blocked on a structural decision' when file I/O was not, then 'not blocked at all' when args and environment are. Both times I generalised from the one API I happened to be holding.",
       "lesson": "When correcting an over-broad claim, check whether the correction is over-broad too. The honest unit is per-namespace: Io is constructible, process.Init is not."
+    },
+    {
+      "id": "A57",
+      "found": "2026-09-07, iteration 130, on finishing the Zig 0.16 API migration for main.zig.",
+      "what": "`tri` does not fail to build because of Zig 0.16. main.zig now reports zero 0.16 API errors, and the single remaining diagnostic is `tri_utils.zig:13: no module named 'trinity_swe' available within module 'main'`. trinity_swe is a NAMED module, which only a root build.zig can provide. There is no root build.zig: ac4304f78 converted it to build.zig.tri in April 2026, and build.zig.tri is not in HEAD either -- removed in 4d57ad02c, the monolith import. Neither the build file nor the spec it became exists, so every named module in this tree is unprovided.",
+      "why_it_matters": "'tri does not build' has been carried for several iterations as a Zig-version problem, including by me -- I sized it as 1043 API call sites two iterations ago. On main.zig's own path that work is now finished, and what is left is a missing artefact. Those need completely different responses: one is a migration, the other is regenerating or restoring a build graph.",
+      "b22_closed_at_its_real_scope": "main now takes std.process.Init.Minimal -- `{ environ, args }`, which std/start.zig accepts directly -- rather than the full Init. It keeps its own allocator and its own Io, since Io.Threaded already supplies one. File I/O never needed the signature change; arguments did. I checked for a global argv in std.os and std.posix before concluding that, having twice this week generalised from one API to a whole-program claim.",
+      "the_other_half": "std.posix.getenv went to an extern \"c\" getenv rather than std.process.Environ, because that file already links libc for setenv and Environ would have pushed an Init through every caller of loadDotEnv.",
+      "lesson": "When a build has been broken long enough to acquire a folk explanation, re-read the last error rather than the story. Three iterations of API work were correct and necessary, and none of them were ever going to make `tri` link."
     }
   ],
   "collaboration_options": [
