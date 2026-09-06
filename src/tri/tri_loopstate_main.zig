@@ -21,8 +21,9 @@ const dashboard = @import("loop_dashboard.zig");
 
 fn usage() void {
     std.debug.print(
-        \\usage: tri-loopstate <status|check|tripwire|bump|render> [--state PATH] [--dashboard PATH]
-        \\                     [--out PATH] [--note TEXT]
+        \\usage: tri-loopstate <status|check|tripwire|bump|render|record> [--state PATH]
+        \\                     [--dashboard PATH] [--out PATH] [--note TEXT]
+        \\                     [--kind done|anomaly] [--entry PATH]
         \\
         \\  status     print the current iteration, done count, and next actionable backlog item
         \\  check      recompute live backlog/anomaly counts from STATE.json and diff them
@@ -34,6 +35,11 @@ fn usage() void {
         \\             Replaces the "MANDATORY SELF-CHECK" in the continuity protocol that
         \\             asked a human to remember; it did not, for nine consecutive
         \\             iterations (anomaly A24, a recurrence of A7 at ~10x the scale).
+        \\  record     append a done[] or anomalies[] entry from --entry PATH (a JSON
+        \\             object), assigning the next free id itself. The id is DERIVED, never
+        \\             passed in: every iteration used to append these by hand through a
+        \\             throwaway script that also hand-asserted the id was free, which is
+        \\             the same shape as the iteration counter before `bump` (see A24).
         \\  render     regenerate the status dashboard from STATE.json (default --out
         \\             .trinity/loop/status.html). Derived, so its numbers cannot drift
         \\             from the state file the way a hand-edited page does.
@@ -56,6 +62,8 @@ pub fn main(init: std.process.Init) !u8 {
     var dashboard_path: []const u8 = ".trinity/loop/dashboard.html";
     var out_path: []const u8 = dashboard.default_output_path;
     var note: []const u8 = "";
+    var kind: []const u8 = "";
+    var entry_path: []const u8 = "";
     var i: usize = 2;
     while (i < argv.len) : (i += 1) {
         if (std.mem.eql(u8, argv[i], "--state") and i + 1 < argv.len) {
@@ -70,6 +78,12 @@ pub fn main(init: std.process.Init) !u8 {
         } else if (std.mem.eql(u8, argv[i], "--note") and i + 1 < argv.len) {
             i += 1;
             note = argv[i];
+        } else if (std.mem.eql(u8, argv[i], "--kind") and i + 1 < argv.len) {
+            i += 1;
+            kind = argv[i];
+        } else if (std.mem.eql(u8, argv[i], "--entry") and i + 1 < argv.len) {
+            i += 1;
+            entry_path = argv[i];
         }
     }
 
@@ -89,6 +103,49 @@ pub fn main(init: std.process.Init) !u8 {
         const s = try loopstate.renderStatus(gpa, &st);
         defer gpa.free(s);
         std.debug.print("{s}", .{s});
+        return 0;
+    }
+
+    if (std.mem.eql(u8, cmd, "record")) {
+        const section: []const u8, const prefix: []const u8 =
+            if (std.mem.eql(u8, kind, "done"))
+                .{ "done", "D" }
+            else if (std.mem.eql(u8, kind, "anomaly"))
+                .{ "anomalies", "A" }
+            else {
+                std.debug.print("error: --kind must be 'done' or 'anomaly', got '{s}'\n", .{kind});
+                return 1;
+            };
+
+        if (entry_path.len == 0) {
+            std.debug.print("error: record needs --entry PATH (a JSON object)\n", .{});
+            return 1;
+        }
+
+        const entry_bytes = std.Io.Dir.cwd().readFileAlloc(init.io, entry_path, gpa, .limited(4 << 20)) catch |err| {
+            std.debug.print("error: could not read {s}: {t}\n", .{ entry_path, err });
+            return 1;
+        };
+        defer gpa.free(entry_bytes);
+
+        const entry_doc = std.json.parseFromSlice(std.json.Value, gpa, entry_bytes, .{}) catch |err| {
+            std.debug.print("error: {s} is not valid JSON: {t}\n", .{ entry_path, err });
+            return 1;
+        };
+        defer entry_doc.deinit();
+
+        const res = loopstate.recordEntry(gpa, &st, section, prefix, entry_doc.value) catch |err| {
+            std.debug.print("error: could not append to {s}: {t}\n", .{ section, err });
+            return 1;
+        };
+        defer gpa.free(res.json);
+
+        std.Io.Dir.cwd().writeFile(init.io, .{ .sub_path = state_path, .data = res.json }) catch |err| {
+            std.debug.print("error: could not write {s}: {t}\n", .{ state_path, err });
+            return 1;
+        };
+
+        std.debug.print("recorded {s} in {s}\n", .{ res.id, section });
         return 0;
     }
 

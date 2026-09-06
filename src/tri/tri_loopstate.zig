@@ -1012,6 +1012,175 @@ pub fn bumpIteration(allocator: std.mem.Allocator, st: *State) ![]u8 {
     return std.json.Stringify.valueAlloc(allocator, st.doc.value, .{ .whitespace = .indent_2 });
 }
 
+/// Highest numeric suffix among ids in `array` sharing `prefix`, or 0.
+///
+/// Ids are `D87`, `A34` and so on. Anything not matching that shape -- a
+/// differently-prefixed id, a missing id, a non-object row -- is skipped rather
+/// than erroring: this answers "what number is free", and a row it cannot read
+/// cannot be occupying one.
+fn highestId(arr: []const std.json.Value, prefix: []const u8) i64 {
+    var best: i64 = 0;
+    for (arr) |row| {
+        const obj = switch (row) {
+            .object => |o| o,
+            else => continue,
+        };
+        const id = switch (obj.get("id") orelse continue) {
+            .string => |s| s,
+            else => continue,
+        };
+        if (!std.mem.startsWith(u8, id, prefix)) continue;
+        const n = std.fmt.parseInt(i64, id[prefix.len..], 10) catch continue;
+        if (n > best) best = n;
+    }
+    return best;
+}
+
+pub const RecordResult = struct {
+    /// The id this entry was given, e.g. "D92". Borrowed from the document arena.
+    id: []const u8,
+    /// Re-serialised document. Caller owns.
+    json: []u8,
+};
+
+/// Append an entry to `done` or `anomalies`, assigning the next free id.
+///
+/// Every iteration of this loop appended these by hand, through a throwaway
+/// script that also hand-asserted the id was not already taken. That is the same
+/// shape as the iteration counter before `bumpIteration`: a correctness step
+/// delegated to whoever remembers. `loop.iteration` froze at 76 for nine
+/// iterations that way (A24); nothing had yet gone wrong with ids, which is not
+/// the same as nothing being able to.
+///
+/// The id is derived, never passed in. A caller cannot pick a colliding one, and
+/// cannot pick a gap-filling one either -- ids stay monotone, so their order is
+/// the order things happened.
+pub fn recordEntry(
+    allocator: std.mem.Allocator,
+    st: *State,
+    section: []const u8,
+    prefix: []const u8,
+    entry: std.json.Value,
+) !RecordResult {
+    if (entry != .object) return Error.MalformedState;
+
+    // Same arena discipline as writeTripwireHysteresis -- see its comment.
+    const tree_allocator = st.doc.arena.allocator();
+
+    const obj = switch (st.doc.value) {
+        .object => |o| o,
+        else => return Error.MalformedState,
+    };
+    const section_ptr = obj.getPtr(section) orelse return Error.MalformedState;
+    var arr = switch (section_ptr.*) {
+        .array => |a| a,
+        else => return Error.MalformedState,
+    };
+
+    const next = highestId(arr.items, prefix) + 1;
+    const id = try std.fmt.allocPrint(tree_allocator, "{s}{d}", .{ prefix, next });
+
+    // Copy so the caller's map is not mutated, and so the entry lives in the
+    // document's arena rather than in whatever the caller used.
+    var row: std.json.ObjectMap = .empty;
+    try row.put(tree_allocator, "id", .{ .string = id });
+    var it = entry.object.iterator();
+    while (it.next()) |kv| {
+        // A caller-supplied id is ignored rather than honoured: allowing one
+        // would reintroduce exactly the collision this function exists to make
+        // impossible.
+        if (std.mem.eql(u8, kv.key_ptr.*, "id")) continue;
+        try row.put(tree_allocator, kv.key_ptr.*, kv.value_ptr.*);
+    }
+
+    // std.json.Array is MANAGED (it carries its own allocator) while ObjectMap
+    // above is unmanaged and takes one per call. The asymmetry is easy to trip
+    // over; writeTripwireHysteresis uses the same pair the same way.
+    try arr.append(.{ .object = row });
+    section_ptr.* = .{ .array = arr };
+
+    return .{
+        .id = id,
+        .json = try std.json.Stringify.valueAlloc(allocator, st.doc.value, .{ .whitespace = .indent_2 }),
+    };
+}
+
+test "recordEntry assigns the next free id and round-trips" {
+    var st = try parse(std.testing.allocator, test_state);
+    defer st.deinit();
+
+    var entry: std.json.ObjectMap = .empty;
+    defer entry.deinit(std.testing.allocator);
+    try entry.put(std.testing.allocator, "what", .{ .string = "a thing that happened" });
+
+    const r = try recordEntry(std.testing.allocator, &st, "done", "D", .{ .object = entry });
+    defer std.testing.allocator.free(r.json);
+
+    // test_state's done[] holds D1 and D2, so the next free id is D3.
+    try std.testing.expectEqualStrings("D3", r.id);
+
+    var reparsed = try parse(std.testing.allocator, r.json);
+    defer reparsed.deinit();
+    try std.testing.expectEqual(@as(usize, 3), reparsed.done_count);
+    try std.testing.expect(std.mem.indexOf(u8, r.json, "a thing that happened") != null);
+}
+
+test "recordEntry ignores a caller-supplied id rather than honouring it" {
+    var st = try parse(std.testing.allocator, test_state);
+    defer st.deinit();
+
+    var entry: std.json.ObjectMap = .empty;
+    defer entry.deinit(std.testing.allocator);
+    // A caller trying to reuse D1 must not be able to.
+    try entry.put(std.testing.allocator, "id", .{ .string = "D1" });
+    try entry.put(std.testing.allocator, "what", .{ .string = "attempted collision" });
+
+    const r = try recordEntry(std.testing.allocator, &st, "done", "D", .{ .object = entry });
+    defer std.testing.allocator.free(r.json);
+    try std.testing.expectEqualStrings("D3", r.id);
+
+    // And exactly one D1 survives -- the original.
+    var count: usize = 0;
+    var i: usize = 0;
+    while (std.mem.indexOfPos(u8, r.json, i, "\"D1\"")) |at| : (i = at + 1) count += 1;
+    try std.testing.expectEqual(@as(usize, 1), count);
+}
+
+test "highestId skips rows it cannot read instead of erroring" {
+    const messy =
+        \\{"loop":{"iteration":1},"done":[
+        \\  {"id":"D4"}, {"id":"B9"}, {"no_id":true}, "a bare string", {"id":"Dxx"}, {"id":"D11"}
+        \\],"backlog":[]}
+    ;
+    var st = try parse(std.testing.allocator, messy);
+    defer st.deinit();
+
+    var entry: std.json.ObjectMap = .empty;
+    defer entry.deinit(std.testing.allocator);
+    try entry.put(std.testing.allocator, "what", .{ .string = "x" });
+
+    const r = try recordEntry(std.testing.allocator, &st, "done", "D", .{ .object = entry });
+    defer std.testing.allocator.free(r.json);
+    // D11 is the highest readable D-id; B9, the id-less row, the bare string and
+    // "Dxx" are all skipped rather than crashing the append.
+    try std.testing.expectEqualStrings("D12", r.id);
+}
+
+test "recordEntry refuses a section that is missing or not an array" {
+    var st = try parse(std.testing.allocator, test_state);
+    defer st.deinit();
+    var entry: std.json.ObjectMap = .empty;
+    defer entry.deinit(std.testing.allocator);
+    try std.testing.expectError(
+        Error.MalformedState,
+        recordEntry(std.testing.allocator, &st, "no_such_section", "D", .{ .object = entry }),
+    );
+    try std.testing.expectError(
+        Error.MalformedState,
+        recordEntry(std.testing.allocator, &st, "loop", "D", .{ .object = entry }),
+    );
+}
+
 test "bumpIteration increments and survives a parse round-trip" {
     var st = try parse(std.testing.allocator, test_state);
     defer st.deinit();

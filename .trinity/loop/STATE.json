@@ -4,7 +4,7 @@
     "id": "two-track",
     "cron_job": "1cd7dda4",
     "interval": "15m",
-    "iteration": 110,
+    "iteration": 111,
     "status": "RUNNING",
     "owner": "Dmitrii Vasilev / @gHashTag",
     "tracks": [
@@ -539,6 +539,14 @@
       "the_map": "TWO CATEGORIES, and conflating them is why they looked alike. INFRASTRUCTURE, fixable by anyone: Brain Health Check and Brain Health Report both fail because `zig build tri` RUNS the CLI instead of installing it, so zig-out/bin/tri never exists and the health step has nothing to measure -- candidate fix open in #739, needs a rebase to retest. CLAIMS ABOUT THE PAPER, the author's to settle: withdrawn-live flags 2 numbers, and they are NOT alike -- 0.1797 sits in a \\textbf{} cell of a live results table (a real assertion of a withdrawn number, line 4729), while 0.92 appears in 'The ratios an earlier draft reported --- 0.92x, 2.84x, 5.53x --- were the unfilled M=9 rung' (line 1013), which reads as a withdrawal but does not match the gate's sentence pattern, `(is|are|was|were)\\s+(withdrawn|retracted)`. orphan-artefacts reports 13 measurement JSONs under research/arxiv_tnf/measurements/ with no generator script; the gate's own output says the count 'has stood for weeks'.",
       "not_fixed_and_why": "Nothing changed in the paper. Whether 0.1797 should be 0.180/0.181, and whether the 0.92 sentence counts as a withdrawal under this paper's own conventions, are judgements about a research claim -- not something to decide from a regex verdict at 04:00. The orphan artefacts need someone who knows which script produced each measurement, or whether it was a one-off hardware run that never had one.",
       "skill_corrected": ".claude/skills/ci-gates/SKILL.md previously listed the four as 'red on main and not yours', which is the sentence that taught the habit. Replaced with a table naming each cause and who owns it, plus a new section on checking run history before assuming a new red is a regression -- because a workflow that watches itself fires when you edit it, and a job dormant for months may be broken independently."
+    },
+    {
+      "id": "D92",
+      "what": "Added `tri-loopstate record` -- appends a done[] or anomalies[] entry from a JSON file and assigns the next free id itself. Every iteration of this session appended these by hand, through a throwaway Python script in the scratchpad that also hand-asserted the id was not already taken.",
+      "why": "That is the same shape as the iteration counter before `bump`: a correctness step delegated to whoever remembers to perform it. loop.iteration froze at 76 for nine iterations that way (A24, a recurrence of A7). Nothing had yet gone wrong with done/anomaly ids -- which is not the same as nothing being able to. The operator asked for tri CLI commands that save experience; this is the one the loop actually needed, discovered by noticing which throwaway script I rewrote every single iteration.",
+      "design": "The id is DERIVED, never passed in. A caller cannot supply a colliding id -- a supplied `id` key is dropped rather than honoured -- and cannot fill a gap either, so ids stay monotone and their order is the order things happened. highestId() skips rows it cannot read (wrong prefix, missing id, non-object, unparseable suffix) rather than erroring: it answers 'what number is free', and a row it cannot read cannot be occupying one.",
+      "tests": "4 new, 56 passing in tri_loopstate.zig. The load-bearing ones: a caller-supplied id is ignored and exactly one original survives; and a deliberately messy done[] holding {id:B9}, {no_id}, a bare string and {id:Dxx} still yields D12 from a highest readable D11.",
+      "zig_note": "std.json.Array is MANAGED (carries its own allocator, append takes one argument) while std.json.ObjectMap is UNMANAGED (.empty, put takes an allocator per call). Both are used in the same function here; the asymmetry cost two compile errors and is now noted in a comment where it bites."
     }
   ],
   "backlog": [
