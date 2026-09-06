@@ -304,6 +304,10 @@ pub const Command = enum {
 
 pub const CLIState = struct {
     allocator: std.mem.Allocator,
+    // Carried so the commands hanging off this state can do file I/O: 0.16
+    // requires an Io for every filesystem call, and threading it through each
+    // command signature would touch far more than storing it once here.
+    io: std.Io,
     agent: trinity_swe_agent_mod.TrinitySWEAgent,
     chat_agent: igla_hybrid_chat.IglaHybridChat,
     coder: igla_coder.IglaLocalCoder,
@@ -339,10 +343,10 @@ pub const CLIState = struct {
     /// Default TVC corpus save path
     const TVC_CORPUS_PATH = "data/trinity_chat.tvc";
 
-    pub fn init(allocator: std.mem.Allocator) !Self {
+    pub fn init(io: std.Io, allocator: std.mem.Allocator) !Self {
         // Auto-detect model path
         const model_path: ?[]const u8 = blk: {
-            std.fs.cwd().access(DEFAULT_MODEL_PATH, .{}) catch break :blk null;
+            std.Io.Dir.cwd().access(io, DEFAULT_MODEL_PATH, .{}) catch break :blk null;
             break :blk DEFAULT_MODEL_PATH;
         };
 
@@ -1458,7 +1462,7 @@ pub fn runInteractiveMode(state: *CLIState) !void {
     printBanner();
     printREPLHelp();
 
-    const stdin_file = std.fs.File.stdin();
+    const stdin_file = std.Io.File.stdin();
     var buf: [4096]u8 = undefined;
 
     while (state.running) {
@@ -2081,7 +2085,9 @@ pub fn runAutoCommitCommand(state: *CLIState, args: []const []const u8) !void {
 }
 
 pub fn runMLOptimizeCommand(state: *CLIState, args: []const []const u8) !void {
-    _ = state; // Mark as intentionally unused for now
+    // `state` was discarded here as unused. It is used now: the existence check
+    // below needs state.io, because 0.16 requires an Io for every filesystem
+    // call.
     if (args.len < 1) {
         std.debug.print("{s}Usage: tri ml-optimize <file>{s}\n", .{ RED, RESET });
         std.debug.print("Example: tri ml-optimize src/vsa.zig\n\n", .{});
@@ -2098,7 +2104,7 @@ pub fn runMLOptimizeCommand(state: *CLIState, args: []const []const u8) !void {
     std.debug.print("{s}Optimization strategy:{s} ML-based sacred pattern matching\n\n", .{ CYAN, RESET });
 
     // Check if file exists
-    std.fs.cwd().access(file_path, .{}) catch {
+    std.Io.Dir.cwd().access(state.io, file_path, .{}) catch {
         std.debug.print("{s}ERROR:{s} File not found: {s}\n\n", .{ RED, RESET, file_path });
         return error.FileNotFound;
     };

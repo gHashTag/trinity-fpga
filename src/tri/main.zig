@@ -50,21 +50,33 @@ const tri_sparc = @import("sparc/mod.zig");
 // MAIN
 // ═══════════════════════════════════════════════════════════════════════════════
 
-pub fn main() !void {
+/// Takes std.process.Init.Minimal -- `{ environ, args }`, which std/start.zig
+/// accepts directly. 0.16 removed std.process.argsAlloc and there is no global
+/// argv left in std.os or std.posix, so arguments can only come from the
+/// runtime. Minimal is the smallest form of that: main keeps its own allocator
+/// and builds its own Io below rather than inheriting full Init's arena and gpa.
+pub fn main(init: std.process.Init.Minimal) !void {
     // Use page_allocator to avoid leak-check spam from GGUF reader metadata strings
     const allocator = std.heap.page_allocator;
 
     // P2.10: Initialize structured logging
-    try structured_log.initGlobalLogger(allocator, .info);
+    // Zig 0.16 puts file I/O behind an Io. std.Io.Threaded.init builds one from
+    // an allocator alone, so main's signature does not have to change for this.
+    var threaded: std.Io.Threaded = .init(allocator, .{});
+    defer threaded.deinit();
+    const io = threaded.io();
+
+    try structured_log.initGlobalLogger(io, allocator, .info);
     defer structured_log.deinitGlobalLogger();
 
     // Auto-load .env into process environment (process env wins over .env)
-    env_loader.loadDotEnv(allocator);
+    env_loader.loadDotEnv(io, allocator);
 
-    const args = try std.process.argsAlloc(allocator);
-    defer std.process.argsFree(allocator, args);
+    // argsAlloc/argsFree are gone. These live for the whole process, exactly as
+    // the argsAlloc result did, so page_allocator serves as the arena.
+    const args = try init.args.toSlice(allocator);
 
-    var state = try utils.CLIState.init(allocator);
+    var state = try utils.CLIState.init(io, allocator);
     defer state.deinit();
 
     // No arguments = interactive mode
