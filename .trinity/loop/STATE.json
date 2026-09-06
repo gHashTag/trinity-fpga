@@ -4,7 +4,7 @@
     "id": "two-track",
     "cron_job": "1cd7dda4",
     "interval": "15m",
-    "iteration": 109,
+    "iteration": 110,
     "status": "RUNNING",
     "owner": "Dmitrii Vasilev / @gHashTag",
     "tracks": [
@@ -532,6 +532,13 @@
       "finding": "#739's diagnosis is correct: `zig build tri` RUNS the CLI rather than installing it, because build.zig declares tri_step.dependOn(&run_tri.step) while b.installArtifact(tri) hangs off the install step the target never reaches. A step named 'Build TRI Binary' that builds no binary -- and the next step then cannot find it, which is why Brain Health reports a missing measurement. Its fix (zig build install + an explicit test -x guard) was INSUFFICIENT at the time: the run from 2026-08-26 shows the guard firing, then 'tri: command not found', then 'error: NotImplemented' -- three deep, the same blocked-gate-hides-its-next-blocker shape as the docker case in B28.",
       "why_it_may_work_now": "That run predates this session. Validate VIBEE Codegen runs `zig build -Dci=true`, which includes the install step, and is GREEN on current main -- the 0.16 migration guards landed in #745/#746/#747/#749 removed exactly the targets that could not compile under CI's 0.15.2. So `zig build install -Dci=true` plausibly produces zig-out/bin/tri now. Plausible, not certain: the only way to know is a rebase, since a CI re-run replays the commit's own build.zig rather than main's.",
       "not_acted_on": "Rebasing and force-pushing someone else's branch is a real action on their work, so this was posted as a comment with the exact command instead: https://github.com/gHashTag/trinity-fpga/pull/739#issuecomment-5556567570 . If it goes green, withdrawn-live already passes on that branch, which would leave orphan-artefacts as the only permanently-red check in the repo."
+    },
+    {
+      "id": "D91",
+      "what": "A38's follow-through: diagnosed all four checks this loop had been calling 'red on main regardless' and skipping past. All four have causes. None is background noise. Took one command to find out, after five iterations of not asking.",
+      "the_map": "TWO CATEGORIES, and conflating them is why they looked alike. INFRASTRUCTURE, fixable by anyone: Brain Health Check and Brain Health Report both fail because `zig build tri` RUNS the CLI instead of installing it, so zig-out/bin/tri never exists and the health step has nothing to measure -- candidate fix open in #739, needs a rebase to retest. CLAIMS ABOUT THE PAPER, the author's to settle: withdrawn-live flags 2 numbers, and they are NOT alike -- 0.1797 sits in a \\textbf{} cell of a live results table (a real assertion of a withdrawn number, line 4729), while 0.92 appears in 'The ratios an earlier draft reported --- 0.92x, 2.84x, 5.53x --- were the unfilled M=9 rung' (line 1013), which reads as a withdrawal but does not match the gate's sentence pattern, `(is|are|was|were)\\s+(withdrawn|retracted)`. orphan-artefacts reports 13 measurement JSONs under research/arxiv_tnf/measurements/ with no generator script; the gate's own output says the count 'has stood for weeks'.",
+      "not_fixed_and_why": "Nothing changed in the paper. Whether 0.1797 should be 0.180/0.181, and whether the 0.92 sentence counts as a withdrawal under this paper's own conventions, are judgements about a research claim -- not something to decide from a regex verdict at 04:00. The orphan artefacts need someone who knows which script produced each measurement, or whether it was a one-off hardware run that never had one.",
+      "skill_corrected": ".claude/skills/ci-gates/SKILL.md previously listed the four as 'red on main and not yours', which is the sentence that taught the habit. Replaced with a table naming each cause and who owns it, plus a new section on checking run history before assuming a new red is a regression -- because a workflow that watches itself fires when you edit it, and a job dormant for months may be broken independently."
     }
   ],
   "backlog": [
@@ -1112,6 +1119,14 @@
       "impact": "The phrase 'pre-existing failure' functioned exactly like a green gate: it made a red signal safe to skip past without looking. Every PR merged tonight was checked against that list, so the reasoning was load-bearing, and it rested on nobody having asked why.",
       "status": "characterised. #739 reviewed and the operator given a one-command test. The ci-gates skill's 'four checks are red regardless' section should be revised once that answer is known, since it currently teaches the habit.",
       "lesson": "A known-failing check is the same species as a vacuous passing one: both are signals nobody reads. This session spent five iterations finding gates that pass without measuring, while routing around four that fail without being diagnosed. 'Pre-existing' is a description of when a problem started, never a reason it is acceptable."
+    },
+    {
+      "id": "A39",
+      "found": "2026-09-06, iteration 110",
+      "what": "withdrawn-live's two flags are qualitatively different and were reported identically. 0.1797 in a live results table is a real defect; 0.92 inside 'the ratios an earlier draft reported ... were the unfilled M=9 rung' is prose that withdraws the number in substance while failing the gate's syntactic test for a withdrawal sentence.",
+      "impact": "A gate that cannot distinguish 'asserted as current' from 'named while being retracted' produces a red that is 50% noise here, and noise is what made this whole class skippable for weeks. The checker's own docstring shows its author already fought this exact battle once -- the 0.1173 caption case -- so the pattern has a history of being too syntactic.",
+      "status": "reported, not fixed. Widening the withdrawal pattern is a change to a paper gate whose false-negative direction is dangerous (a missed live withdrawn number is the failure it exists to prevent), so it needs the author, not a 04:00 regex tweak.",
+      "lesson": "When a gate reports N failures, ask whether they are the same KIND before treating the count as one problem. Two flags from one gate can need two different owners -- here, one is a content fix and one is a classification call, and bundling them is part of why neither got made."
     }
   ],
   "collaboration_options": [

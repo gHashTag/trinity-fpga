@@ -137,14 +137,23 @@ denominator too: **a derived scope that shrinks to zero passes green.**
 
 ## Reading a red PR
 
-Four checks are **red on `main`** and are not yours:
+Four checks are red on `main` and are not caused by your diff. **They are not
+"ignore these" — every one has a diagnosed cause.** An earlier version of this
+skill listed them as background noise, and that sentence did the work of a green
+gate for a whole session: it made a red signal safe to skip without looking.
 
-- `orphan-artefacts`
-- `withdrawn-live`
-- `⚡ Brain Health Check`
-- `📋 Brain Health Report`
+| check | cause | who fixes it |
+|---|---|---|
+| `⚡ Brain Health Check` | `zig build tri` **runs** the CLI; it never installs it, so `zig-out/bin/tri` does not exist and the health step has nothing to measure. `tri_step.dependOn(&run_tri.step)`, while `installArtifact` hangs off the *install* step. | candidate fix open in #739 — needs a rebase to retest |
+| `📋 Brain Health Report` | downstream of the above | same |
+| `withdrawn-live` | **2 flags, and they are not alike.** `0.1797` sits in a `\textbf{}` cell of a live results table — a real assertion of a withdrawn number. `0.92` appears in *"The ratios an earlier draft reported … were the unfilled M=9 rung"*, which reads as a withdrawal but does not match the gate's sentence pattern (`is/are/was/were withdrawn\|retracted`). | paper author — one is a content fix, one is a classification call |
+| `orphan-artefacts` | 13 measurement JSONs under `research/arxiv_tnf/measurements/` with no generator script. The gate's own output says the count "has stood for weeks". | paper author — provenance, not infrastructure |
 
-Confirm before blaming your diff:
+The distinction that matters: the Brain Health pair is **infrastructure** and
+fixable by anyone; the other two are **claims about the paper** and are the
+author's to settle. Neither category is background noise.
+
+Confirm which checks are actually failing before blaming your diff:
 
 ```bash
 gh pr checks <N> --repo gHashTag/trinity-fpga --json name,bucket \
@@ -152,6 +161,21 @@ gh pr checks <N> --repo gHashTag/trinity-fpga --json name,bucket \
 ```
 
 Anything red beyond those four is yours.
+
+**And check whether your diff woke something.** A workflow that watches itself
+fires when you edit it, and a job that has not run in months may be broken
+independently of your change. `fpga-docker.yml` had run twice in its life and
+failed both times; removing one dead `paths:` entry made it fire and revealed a
+Dockerfile broken since April. Read the run history before assuming a new red is
+a regression:
+
+```bash
+gh run list --repo gHashTag/trinity-fpga --workflow <name>.yml --limit 5 \
+  --json createdAt,headBranch,conclusion \
+  --jq '.[] | "\(.createdAt[0:10])  \(.headBranch)  \(.conclusion)"'
+```
+
+Two runs in five months, both failed, means you did not break it — you woke it.
 
 **A compiler error names a position, not a defect class.** `zig build` reports
 the first failure only. Before fixing the file it named, enumerate the set that
