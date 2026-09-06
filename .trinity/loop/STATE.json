@@ -4,7 +4,7 @@
     "id": "two-track",
     "cron_job": "1cd7dda4",
     "interval": "15m",
-    "iteration": 112,
+    "iteration": 113,
     "status": "RUNNING",
     "owner": "Dmitrii Vasilev / @gHashTag",
     "tracks": [
@@ -556,6 +556,15 @@
       "verified": "Not inferred from absence: `gh run list --workflow fpga-bitstream.yml --status success --limit 100` returns exactly one row, this one, against 8 total runs. Jobs: 12 success, 1 skipped. The varlog filter was checked against ground truth recomputed independently in python -- selection matches, skipped set equals the 4 CI failures exactly.",
       "four_defects_of_mine_in_this_lineage": "(1) fixed a trigger without its body; (2) shipped a gate enforcing 80% of what I claimed (paths_block blind to the inline form, 87 of 432 entries, with a negative control that planted only into a block-form file and so could never reach the gap); (3) added a PyYAML import the runner lacks -- A28 twice in one session, first macOS-vs-Linux libc, then site-packages; (4) read silence as success. Each surfaced by executing something; none by re-reading.",
       "main_state": "Red checks on main dropped from five to ONE: only `Withdrawn numbers` remains, and it is diagnosed -- 0.1797 live in a results table at tnf_paper.tex:4729 (real), 0.92 inside 'the ratios an earlier draft reported' (a withdrawal the gate's syntactic test cannot see). Brain Health and Orphaned artefacts no longer appear in main's recent failures."
+    },
+    {
+      "id": "D94",
+      "what": "#754 merged: tnf-boundary-gate.yml and reachability-ratchet.yml now run under `defaults.run.shell: bash -eo pipefail`, and the ratchet validates its counter before comparing it. Zero of this repo's 118 workflows had set a pipefail shell.",
+      "mechanism": "GitHub's default step shell is `bash -e {0}` with NO pipefail, so in `measurer | tee log` only tee's status survives. Demonstrated in isolation: `bash -e -c 'python3 -c \"...; sys.exit(1)\" | tee x'` exits 0; the same under `bash -eo pipefail` exits 1; and the tee'd log is byte-identical either way, so a downstream step grepping that file cannot tell the two apart. tnf-boundary-gate has exactly such a step -- it asserts `boundary checks run:` stayed above 800000, a line the checker prints BEFORE any violations, so the coverage floor passed in both cases too.",
+      "reachability_ratchet_had_three_composing_defects": "(1) `python3 - <<'PY' | tee reach.txt` discarded the counter's failure; (2) `echo \"n=$(...)\"` still exits 0 when the substitution produces an EMPTY value; (3) `set +e` swallowed the resulting `[: : integer expression expected`, so the verdict fell through to `No change.` and exit 0. A ratchet reporting no regression precisely because it failed to measure. The counter is now rejected unless it is numeric, with reach.txt dumped on failure.",
+      "correction_to_the_sweep": "The 25-agent sweep reported this gate as having a LIVE `VIOLATIONS: 7`. With pipefail enabled on real CI it exits 0 -- the current tree has no violations. Re-reading the sweep's wording, it demonstrated the MECHANISM by constructing a failing case, not the tree's present state. I was careful not to assert live violations before measuring, and the measurement says the fix is preventive rather than revealing. Worth recording because the opposite reading was available and would have been wrong.",
+      "verified": "Both gates ran on the PR branch under the new shell and SUCCEEDED (tnf-boundary-gate id=34015170113, reachability-ratchet id=34015162174), checked by querying each run's conclusion rather than by reading the PR fail-list -- the fail-list is what misled me one iteration earlier, since a job that fails to instantiate never appears in it. Locally: new shell exits 1 on a failing measurer, old `bash -e` exits 0 on the identical command, counter guard rejects '' and 'abc' and accepts '395'.",
+      "not_done_and_why": "22 further pipes across 11 workflows surfaced in my own scan. Most are benign -- `echo | tee`, `|| true`, `$(grep | wc -l)` inside a command substitution -- and my scanner has no way to tell those from real ones. The earlier sweep triaged by execution and found 2; I fixed those 2 rather than trusting my cruder instrument, which is the third scanner I have written tonight and the third that over-reported."
     }
   ],
   "backlog": [
