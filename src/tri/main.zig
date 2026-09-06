@@ -50,7 +50,20 @@ const tri_sparc = @import("sparc/mod.zig");
 // MAIN
 // ═══════════════════════════════════════════════════════════════════════════════
 
-pub fn main() !void {
+/// Takes `std.process.Init.Minimal`, not the full `std.process.Init`.
+///
+/// Zig 0.16 removed std.process.argsAlloc; command-line arguments now arrive as
+/// a `std.process.Args` value, and only the runtime can supply one -- there is
+/// no global argv in std.os or std.posix any more. So main's signature has to
+/// change. `Minimal` is `{ environ, args }` and std/start.zig accepts it
+/// directly, which is the smallest version of that change: this function keeps
+/// its own allocator choice and builds its own Io below, rather than inheriting
+/// the arena, gpa and Io that full `Init` would hand over.
+///
+/// That distinction is the whole of B22 as it actually applies here. File I/O
+/// never needed this -- std.Io.Threaded.init builds an Io from an allocator --
+/// and only arguments and environment did.
+pub fn main(init: std.process.Init.Minimal) !void {
     // Use page_allocator to avoid leak-check spam from GGUF reader metadata strings
     const allocator = std.heap.page_allocator;
 
@@ -69,8 +82,10 @@ pub fn main() !void {
     // Auto-load .env into process environment (process env wins over .env)
     env_loader.loadDotEnv(io, allocator);
 
-    const args = try std.process.argsAlloc(allocator);
-    defer std.process.argsFree(allocator, args);
+    // argsAlloc/argsFree are gone. toSlice wants an arena because the Windows
+    // path builds the slice out of one; page_allocator serves here since these
+    // live for the whole process, exactly as the argsAlloc result did.
+    const args = try init.args.toSlice(allocator);
 
     var state = try utils.CLIState.init(allocator);
     defer state.deinit();

@@ -6,6 +6,15 @@ const std = @import("std");
 
 const c = struct {
     extern "c" fn setenv(name: [*:0]const u8, value: [*:0]const u8, overwrite: c_int) c_int;
+    // Zig 0.16 removed std.posix.getenv. The documented replacement is
+    // std.process.Environ, which is a value that only process.Init supplies --
+    // so taking it would push an Init through every caller of this function.
+    //
+    // libc is already linked here for setenv above, and getenv is its exact
+    // counterpart. Declaring it the same way keeps the pair symmetrical and
+    // asks nothing of callers. If this file ever needs Environ for another
+    // reason, both should move together rather than one of each.
+    extern "c" fn getenv(name: [*:0]const u8) ?[*:0]const u8;
 };
 
 /// Parse a single .env line into key and value, or null if comment/blank/invalid.
@@ -61,10 +70,12 @@ pub fn loadDotEnv(io: std.Io, allocator: std.mem.Allocator) void {
         const parsed = parseLine(line) orelse continue;
 
         // Skip if already set in process environment
-        if (std.posix.getenv(parsed.key) != null) continue;
-
-        // dupeZ for null-terminated strings — intentionally leaked
+        // getenv wants a null-terminated name, so the key is duped either way;
+        // reuse that one allocation for both the lookup and the setenv below.
         const key_z = allocator.dupeZ(u8, parsed.key) catch continue;
+        if (c.getenv(key_z.ptr) != null) continue;
+
+        // intentionally leaked — process-lifetime data
         const val_z = allocator.dupeZ(u8, parsed.value) catch continue;
 
         _ = c.setenv(key_z.ptr, val_z.ptr, 0);
