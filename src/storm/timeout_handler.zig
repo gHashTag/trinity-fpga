@@ -1,6 +1,7 @@
 //! P10: Timeout Handler — simplified for P10
 const std = @import("std");
 
+const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 pub const TimeoutHandler = struct {
     allocator: std.mem.Allocator,
@@ -57,13 +58,12 @@ pub const TimeoutHandler = struct {
     } {
         const start = tri_time.nanoTimestamp();
 
-        var child = std.process.Child.init(argv, std.heap.page_allocator);
-        child.stdout_behavior = .Ignore;
-        child.stderr_behavior = .Ignore;
-
-        try child.spawn();
-
-        const result = child.wait() catch |err| {
+        var child = try std.process.spawn(tri_io.get(), .{
+            .argv = argv,
+            .stdout = .ignore,
+            .stderr = .ignore,
+        });
+        const result = child.wait(tri_io.get()) catch |err| {
             return .{
                 .exit_code = 1,
                 .timed_out = false,
@@ -79,7 +79,7 @@ pub const TimeoutHandler = struct {
         var exit_code: u8 = 1;
         switch (result) {
             .exited => |code| exit_code = code,
-            .Signal => |sig| exit_code = 128 + @as(u8, @truncate(sig)),
+            .signal => |sig| exit_code = 128 + @as(u8, @truncate(@intFromEnum(sig))),
             else => {},
         }
 

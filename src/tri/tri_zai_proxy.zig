@@ -2,6 +2,11 @@
 // Script lives in ~/.claude/scripts/zai-rotating-proxy.mjs
 
 const std = @import("std");
+
+// 0.16 removed std.posix.getuid; libc has it and is already linked.
+const c_uid = struct {
+    extern "c" fn getuid() u32;
+};
 const tri_io = @import("tri_io");
 const tri_env = @import("tri_env");
 const builtin = @import("builtin");
@@ -296,7 +301,7 @@ fn installLaunchAgentMac(allocator: Allocator, home: []const u8) !void {
     try std.Io.Dir.cwd().copyFile(src, std.Io.Dir.cwd(), dst, io, .{});
 
     var uid_buf: [32]u8 = undefined;
-    const uid_str = try std.fmt.bufPrint(&uid_buf, "{d}", .{std.posix.getuid()});
+    const uid_str = try std.fmt.bufPrint(&uid_buf, "{d}", .{c_uid.getuid()});
 
     const bootout = try std.fmt.allocPrint(allocator, "launchctl bootout gui/{s}/local.zai-proxy 2>/dev/null; true", .{uid_str});
     defer allocator.free(bootout);
@@ -330,7 +335,7 @@ fn uninstallLaunchAgent(allocator: Allocator, home: []const u8) !void {
     if (builtin.os.tag != .macos) return;
     const io = tri_io.get();
     var uid_buf: [32]u8 = undefined;
-    const uid_str = try std.fmt.bufPrint(&uid_buf, "{d}", .{std.posix.getuid()});
+    const uid_str = try std.fmt.bufPrint(&uid_buf, "{d}", .{c_uid.getuid()});
 
     const bootout = try std.fmt.allocPrint(allocator, "launchctl bootout gui/{s}/local.zai-proxy 2>/dev/null; true", .{uid_str});
     defer allocator.free(bootout);

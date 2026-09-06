@@ -147,11 +147,11 @@ pub const CommandInvoker = struct {
         // Determine exit code
         const exit_code = switch (result.term) {
             .exited => |code| @as(u8, @intCast(code)),
-            .Signal => |signal| {
+            .signal => |signal| {
                 std.debug.print("Command killed by signal {}\n", .{signal});
                 return error.CommandKilled;
             },
-            .Stopped => |signal| {
+            .stopped => |signal| {
                 std.debug.print("Command stopped by signal {}\n", .{signal});
                 return error.CommandStopped;
             },

@@ -216,13 +216,14 @@ pub const ChromeLauncher = struct {
         if (self.config.use_mock_keychain) try args.append(try self.allocator.dupeZ(u8, "--use-mock-keychain"));
 
         // Run Chrome
-        var process = std.process.Child.init(args.items, self.allocator);
+        var process = try std.process.spawn(tri_io.get(), .{
+            .argv = args.items,
+            .stdout = .inherit,
+            .stderr = .inherit,
+        });
         process.stdin_behavior = .Ignore;
         process.stdout_behavior = .Pipe;
         process.stderr_behavior = .Pipe;
-
-        try process.spawn();
-
         const pid = process.id;
 
         // Don't kill process - let it run in background

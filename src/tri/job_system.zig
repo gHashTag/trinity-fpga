@@ -663,7 +663,7 @@ pub const Job = struct {
             _ = child.kill() catch |err| {
                 std.log.warn("failed to kill child process: {s}", .{@errorName(err)});
             };
-            _ = child.wait() catch |err| {
+            _ = child.wait(tri_io.get()) catch |err| {
                 std.log.debug("job_system: child.wait failed: {}", .{err});
             };
         }
@@ -745,7 +745,11 @@ pub const Job = struct {
         defer self.allocator.free(cmd_str);
 
         // Spawn using sh -c for shell redirection
-        var child = std.process.Child.init(&.{ "sh", "-c", cmd_str }, self.allocator);
+        var child = try std.process.spawn(tri_io.get(), .{
+            .argv = &.{ "sh", "-c", cmd_str },
+            .stdout = .inherit,
+            .stderr = .inherit,
+        });
         child.stdin_behavior = .Ignore;
 
         // Set working directory explicitly
@@ -756,8 +760,6 @@ pub const Job = struct {
         }
 
         // Start the process
-        try child.spawn();
-
         // Store PID immediately (child.id is valid after spawn, cast i32 to u32)
         self.metadata.pid = @intCast(child.id);
 
@@ -787,7 +789,7 @@ pub const Job = struct {
         }
 
         // Wait for the process to complete (blocks until exit or killed by watchdog)
-        const term = child.wait() catch |err| {
+        const term = child.wait(tri_io.get()) catch |err| {
             std.log.err("Job {s} wait failed: {}", .{ self.metadata.id, err });
             self.metadata.state = .failed;
             self.metadata.error_message = try std.fmt.allocPrint(self.allocator, "Process wait failed: {s}", .{@errorName(err)});
@@ -842,7 +844,7 @@ pub const Job = struct {
         // Check if process is still running
         if (self.child_process) |*child| {
             // Try to wait with WNOHANG to check status without blocking
-            const result = child.wait() catch |err| {
+            const result = child.wait(tri_io.get()) catch |err| {
                 // Process might have terminated or other error
                 std.log.warn("Job {s} wait failed: {}", .{ self.metadata.id, err });
                 self.metadata.state = .failed;
@@ -930,7 +932,7 @@ pub const Job = struct {
             };
 
             // Wait for process to terminate
-            const wait_result = child.wait() catch |err| {
+            const wait_result = child.wait(tri_io.get()) catch |err| {
                 std.log.warn("Job {s} cleanup wait failed: {}", .{ self.metadata.id, err });
                 return false;
             };
@@ -971,7 +973,7 @@ pub const Job = struct {
     /// Wait for job completion (blocking)
     fn wait(self: *Job) !void {
         if (self.child_process) |*child| {
-            const result = child.wait() catch |err| {
+            const result = child.wait(tri_io.get()) catch |err| {
                 std.log.err("Job {s} wait failed: {}", .{ self.metadata.id, err });
                 self.metadata.state = .failed;
                 self.metadata.error_message = try std.fmt.allocPrint(self.allocator, "Wait failed: {s}", .{@errorName(err)});

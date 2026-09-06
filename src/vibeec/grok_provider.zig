@@ -1,5 +1,6 @@
 const std = @import("std");
 
+const tri_io = @import("tri_io");
 const tri_env = @import("tri_env");
 // ============================================================================
 // GROK PROVIDER - THE SOVEREIGN SPIRIT
@@ -51,13 +52,12 @@ pub const GrokProvider = struct {
             "@-", // Read from stdin
         };
 
-        var child = std.process.Child.init(&argv, self.allocator);
-        child.stdout_behavior = .Pipe;
-        child.stderr_behavior = .Pipe;
+        var child = try std.process.spawn(tri_io.get(), .{
+            .argv = &argv,
+            .stdout = .pipe,
+            .stderr = .pipe,
+        });
         child.stdin_behavior = .Pipe;
-
-        try child.spawn();
-
         // Write JSON to stdin
         if (child.stdin) |*stdin| {
             try stdin.writeAll(json_body.items);
@@ -73,7 +73,7 @@ pub const GrokProvider = struct {
 
         try child.collectOutput(self.allocator, &stdout_list, &stderr_list, 10 * 1024 * 1024);
 
-        const term = try child.wait();
+        const term = try child.wait(tri_io.get());
 
         switch (term) {
             .exited => |code| {

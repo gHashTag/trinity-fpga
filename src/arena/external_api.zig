@@ -10,6 +10,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const tri_env = @import("tri_env");
 const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
@@ -95,17 +96,17 @@ fn callTrinity(allocator: Allocator, prompt: []const u8, start_ms: i64) !Complet
         "--max-tokens",
         "200",
     };
-    var child = std.process.Child.init(&argv, allocator);
-    child.stdout_behavior = .Pipe;
-    child.stderr_behavior = .Pipe;
-    try child.spawn();
-
+    var child = try std.process.spawn(tri_io.get(), .{
+        .argv = &argv,
+        .stdout = .pipe,
+        .stderr = .pipe,
+    });
     var stdout_buf: std.ArrayList(u8) = .empty;
     var stderr_buf: std.ArrayList(u8) = .empty;
     defer stderr_buf.deinit(allocator);
     try child.collectOutput(allocator, &stdout_buf, &stderr_buf, 1024 * 1024);
     const result = stdout_buf.toOwnedSlice(allocator) catch try allocator.dupe(u8, "");
-    const term = try child.wait();
+    const term = try child.wait(tri_io.get());
 
     const elapsed = elapsedMs(start_ms);
 

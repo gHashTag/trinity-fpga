@@ -2,6 +2,7 @@
 // Spawns MCP servers as subprocesses, communicates via JSON-RPC 2.0 over stdio.
 // Issue #66: Phase 7B MCP Client
 const std = @import("std");
+const tri_io = @import("tri_io");
 const proto = @import("tool_protocol.zig");
 
 const max_response_size = 10 * 1024 * 1024; // 10MB per response
@@ -52,7 +53,11 @@ pub const McpManager = struct {
     pub fn connectServer(self: *McpManager, name: []const u8, command: []const []const u8) u32 {
         if (command.len == 0) return 0;
 
-        var child = std.process.Child.init(command, self.allocator);
+        var child = try std.process.spawn(tri_io.get(), .{
+            .argv = command,
+            .stdout = .inherit,
+            .stderr = .inherit,
+        });
         child.stdin_behavior = .Pipe;
         child.stdout_behavior = .Pipe;
         child.stderr_behavior = .Ignore;
@@ -64,7 +69,7 @@ pub const McpManager = struct {
 
         const server_idx: u32 = std.math.cast(u32, self.servers.items.len) orelse {
             _ = child.kill() catch {};
-            _ = child.wait() catch {};
+            _ = child.wait(tri_io.get()) catch {};
             return 0;
         };
         self.servers.append(self.allocator, .{
@@ -73,7 +78,7 @@ pub const McpManager = struct {
             .alive = true,
         }) catch {
             _ = child.kill() catch {};
-            _ = child.wait() catch {};
+            _ = child.wait(tri_io.get()) catch {};
             return 0;
         };
 

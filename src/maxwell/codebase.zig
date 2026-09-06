@@ -5,6 +5,7 @@
 
 const std = @import("std");
 
+const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 // ═══════════════════════════════════════════════════════════════════════════════
 // CODEBASE INTERFACE
@@ -410,7 +411,11 @@ pub const Codebase = struct {
             };
         }
 
-        var child = std.process.Child.init(argv.items, self.allocator);
+        var child = try std.process.spawn(tri_io.get(), .{
+            .argv = argv.items,
+            .stdout = .inherit,
+            .stderr = .inherit,
+        });
         child.cwd = self.root_path;
         child.stdout_behavior = .Pipe;
         child.stderr_behavior = .Pipe;
@@ -427,7 +432,7 @@ pub const Codebase = struct {
         const stdout = child.stdout.?.reader().readAllAlloc(self.allocator, 1024 * 1024) catch "";
         const stderr = child.stderr.?.reader().readAllAlloc(self.allocator, 1024 * 1024) catch "";
 
-        const term = child.wait() catch {
+        const term = child.wait(tri_io.get()) catch {
             return ExecResult{
                 .exit_code = -1,
                 .stdout = stdout,

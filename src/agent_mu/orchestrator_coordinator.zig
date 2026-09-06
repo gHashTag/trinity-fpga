@@ -10,6 +10,7 @@
 
 const std = @import("std");
 
+const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 // S³AI Brain Regions (Neuroanatomy v5.1)
 const brain = @import("../brain/brain.zig");
@@ -676,9 +677,11 @@ pub const OrchestratorCoordinator = struct {
         const start_time = tri_time.nanoTimestamp();
 
         // Run command
-        var child = std.process.Child.init(argv, self.allocator);
-        child.stdout_behavior = .Pipe;
-        child.stderr_behavior = .Pipe;
+        var child = try std.process.spawn(tri_io.get(), .{
+            .argv = argv,
+            .stdout = .pipe,
+            .stderr = .pipe,
+        });
 
         child.spawn() catch |err| {
             return CoordinatedTask.TaskResult{
@@ -700,7 +703,7 @@ pub const OrchestratorCoordinator = struct {
         else
             "";
 
-        const term = child.wait() catch |err| {
+        const term = child.wait(tri_io.get()) catch |err| {
             return CoordinatedTask.TaskResult{
                 .success = false,
                 .output = stdout,
