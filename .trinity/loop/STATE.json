@@ -4,7 +4,7 @@
     "id": "two-track",
     "cron_job": "1cd7dda4",
     "interval": "15m",
-    "iteration": 130,
+    "iteration": 131,
     "status": "RUNNING",
     "owner": "Dmitrii Vasilev / @gHashTag",
     "tracks": [
@@ -707,6 +707,13 @@
       "how": "std.posix.getenv became an extern \"c\" getenv, matching the setenv already declared in that file, so no caller has to carry a process.Environ. std.process.argsAlloc became std.process.Init.Minimal -- `{ environ, args }`, accepted directly by std/start.zig -- which is B22 at the scope it actually has: main keeps its own allocator and Io and inherits nothing else.",
       "verified": "env_loader 10/10 tests pass under a real root. main.zig compiles with no API diagnostics, stopping only at module resolution for trinity_swe.",
       "what_it_revealed": "That last error is not Zig 0.16 at all -- it is that no root build.zig or build.zig.tri exists in HEAD, so named modules have no provider. Recorded as A57 and B31."
+    },
+    {
+      "id": "D113",
+      "what": "gHashTag/trinity-fpga#758: four files migrated to the 0.16 Io API on a branch off MAIN, moving `zig build tri-compile` past structured_log.zig, env_loader.zig, main.zig and tri_utils.zig.",
+      "measured": "Before: one error, structured_log.zig:145 fs.Dir. After: two, both in tri_context.zig -- :173 'missing struct field: items' (not a file-I/O error at all) and :696 fs.cwd. The right metric is files cleared, not error count: Zig stops at the first failures it reaches, so clearing one file exposes the next.",
+      "how": "Logger and CLIState carry an Io rather than taking one per call. main builds its Io with std.Io.Threaded.init, which needs only an allocator, and takes std.process.Init.Minimal for argv because argsAlloc is gone and no global argv remains. env_loader uses readFileAlloc and an extern \"c\" getenv, so no caller has to carry a process.Environ. main's existing tri_mutex.Mutex was left alone -- it already solves the removed std.Thread.Mutex, which my stale branch did not have.",
+      "not_claimed": "tri does not build. Four files no longer block it and the next two are named."
     }
   ],
   "backlog": [
@@ -1499,6 +1506,16 @@
       "b22_closed_at_its_real_scope": "main now takes std.process.Init.Minimal -- `{ environ, args }`, which std/start.zig accepts directly -- rather than the full Init. It keeps its own allocator and its own Io, since Io.Threaded already supplies one. File I/O never needed the signature change; arguments did. I checked for a global argv in std.os and std.posix before concluding that, having twice this week generalised from one API to a whole-program claim.",
       "the_other_half": "std.posix.getenv went to an extern \"c\" getenv rather than std.process.Environ, because that file already links libc for setenv and Environ would have pushed an Init through every caller of loadDotEnv.",
       "lesson": "When a build has been broken long enough to acquire a folk explanation, re-read the last error rather than the story. Three iterations of API work were correct and necessary, and none of them were ever going to make `tri` link."
+    },
+    {
+      "id": "A58",
+      "found": "2026-09-07, iteration 131, trying to act on B31 -- the claim that no root build graph exists.",
+      "what": "It exists. build.zig is on origin/main and has been all along. It is missing only from the loop's own branch, claude/bufr-support-pr-review-07c0ee, which is 435 commits BEHIND main (and 86 ahead). `zig build --list-steps` on main returns rc=0 with a healthy graph.",
+      "so_the_previous_two_findings_were_about_a_branch": "A57 said 'no root build.zig or build.zig.tri exists in HEAD, every named module is unprovided' and B31 asked the operator to choose between three ways of restoring it. Both are true of my branch and false of the project. The 'no module named trinity_swe' error that led there is a staleness artifact: on main, build.zig provides it.",
+      "how_deep_it_went": "I recovered build.zig.tri from history, proved byte-for-byte that the April 'convert to VIBEE spec format' commit was a pure RENAME with a misleading message, found the recovered file damaged by an orphaned addExecutable fragment, and fixed a placeholder hash in build.zig.zon -- all of it archaeology on a file main already has in better shape (3357 lines, no orphan). The rename finding is still true and still worth knowing; everything built on top of it was not.",
+      "the_real_state_measured_on_main": "`zig build tri-compile` on main fails with exactly ONE error: structured_log.zig:145 fs.Dir -- the very file I had migrated this session on the stale branch. So the work was right and aimed at the right defect; only the tree was wrong.",
+      "root_cause_of_my_error": "I have been running every measurement in the loop's worktree because that is where the loop state lives, and never asked how far it had drifted from main. 435 commits. The check costs one command: git rev-list --count HEAD..origin/main.",
+      "lesson": "A long-lived working branch is an instrument, and it goes out of calibration silently. Before diagnosing anything about 'the project', measure the distance from the branch you are standing on to the one that matters."
     }
   ],
   "collaboration_options": [
