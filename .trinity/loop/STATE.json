@@ -4,7 +4,7 @@
     "id": "two-track",
     "cron_job": "1cd7dda4",
     "interval": "15m",
-    "iteration": 124,
+    "iteration": 125,
     "status": "RUNNING",
     "owner": "Dmitrii Vasilev / @gHashTag",
     "tracks": [
@@ -649,6 +649,28 @@
       "fixed": "/dashboard overflowed by 13px -- the Trinity-identity row could not wrap. Now wraps with a viewport-scaled gap. The other 27 routes were already clean, which is worth knowing rather than assuming.",
       "verified": "Negative control red then green: a 900px probe in dist/index.html turns the gate red across all 28 routes with the widest element named per route, and removing it returns green. Both language audits re-run through the refactored harness, 28 routes PASS in each locale. CI run 34038100222 shows the mobile audit passing beside them. tsc baseline unchanged at 179.",
       "cost_paid": "Two false greens before the gate was real -- see A50. The stray server was killed and the worktree removed; port 4173 has 0 listeners."
+    },
+    {
+      "id": "D105",
+      "what": "OD10 closed by evidence, not by choice. Removed the `tri farm local-wave9` block from src/tri/tri_farm.zig (363 lines, commit 4a8609842).",
+      "why_it_was_not_a_decision": ".trinity/experience/wave_2026_07_15_wave20.md line 17 lists what that wave removed: 'agent-*, docker-*, deploy-*, koschei, vibee, wave9, claude, etc.' local_farm.zig went with wave9. The handlers still importing it were the residue of an incomplete removal. Nothing outside that one file referenced it -- no spec, no doc, no test. Fly-based wave9 (fly_wave9.zig) is separate and stays.",
+      "count_correction": "The loop's own note said 5 dead call sites. There were 7, plus the dispatch arm and a help line.",
+      "measured_effect": "before: src/tri/local_farm.zig:1:1 error unable to load, FileNotFound. after: tri_farm.zig compiles clean and main.zig reaches exactly ONE error in a different file: structured_log.zig:342 'Thread' has no member named 'Mutex'.",
+      "next_blocker_sized": "Zig 0.16 moved the mutex: std/Thread.zig no longer carries Mutex, and std.Io.Mutex takes an Io -- lock(m: *Mutex, io: Io) -- so it threads through the global logger's API rather than being a one-line swap. 14 files and 28 occurrences of std.Thread.Mutex remain in src/tri. Recorded, not started."
+    },
+    {
+      "id": "D106",
+      "what": "B30 advanced. gHashTag/t27#3385 merged as b691a1bef into fix/struct-field-brace-nesting -- the branch the website actually vendors -- so the packed-struct parser fix is now on both sides of the t27 divergence.",
+      "verified": "The branch's compiler.rs carries the fix. 7 checks passed; the single failure was 'NotebookLM Auto-Sync', an unrelated integration that had already succeeded once on this same branch.",
+      "still_open": "B30's substance remains: the Course specs live only on that branch and master has 586 commits it lacks, so the corpus still cannot be vendored from a single committed ref. What changed is that a re-vendor from the branch now carries the fix."
+    },
+    {
+      "id": "D107",
+      "what": "Reported from a phone: the code pane was ~3 lines tall and the page would not scroll. gHashTag/trinity#963 merged (e0167cef), published, verified live.",
+      "cause": "Structural. The desktop shape is a fixed-height flex column in a 100dvh root with overflow:hidden, so the only scroller is the innermost code pane. On a 375x812 phone the description, tags, share row, metrics and tab strip come first and left the pane about three lines -- with its own scrollbar, which also swallowed the swipe, so the page underneath did not move either.",
+      "fix": "On a phone the detail column scrolls as one document: main takes overflowY:auto, the layer body asks for 70vh instead of competing for leftovers, and the pane drops its nested scroller so exactly one scroll region remains. Above 760px unchanged.",
+      "verified_live": "On t27.ai at 375px: main scrollHeight 1197 vs client 760 = 437px of real page scroll, pane overflow computed 'visible', pane scrollHeight - clientHeight = 0 (no nested scroller), code element 482px inside a 554px pane so nothing is clipped. Re-checked at 1280x800 after reload: two panes, pane overflow back to 'auto' with 91px internal scroll, main overflowY 'visible' -- desktop unchanged. mobile_audit still 28/28.",
+      "incidental": "Also listens to resize as well as matchMedia change: a programmatic viewport change did not deliver a change event in the headless browser, which read as the layout being stuck until reload."
     }
   ],
   "backlog": [
@@ -1368,6 +1390,14 @@
       "structural": "collectRouteText is now a thin caller over a generic forEachRoute(baseUrl, expression, {windowSize}), so the settle loop that stops one route's DOM being attributed to another exists once rather than in two copies that could drift.",
       "shipped": "gHashTag/trinity#962 merged (cccfe51b). website-checks green with the new gate beside the language audits and the silicon-coverage check.",
       "lesson": "A gate that passes on its first run and has never been shown to fail is decoration. Run the control before believing the result -- and when the control fails, do not fix it once and trust it: mine failed twice, for two different reasons, and the second was invisible from every output the tool produced."
+    },
+    {
+      "id": "A51",
+      "found": "2026-09-06, iteration 125, working B29's third item -- 'cherry-pick b255fe75 to fix claude-review'.",
+      "what": "My own backlog entry was wrong. B29 said a fix for claude-review existed unmerged on blog/t27-spec-explorer as b255fe75 and 'has never reached main'. `git merge-base --is-ancestor` says that SHA is not on main, which is true and misleading: the CONTENT is. main's claude-code-review.yml already carries `pull-requests: write` with the exact comment from that commit, and the branch-vs-main diff for the file is empty. It reached main under a different SHA, as a squash merge.",
+      "second_error_avoided": "Cherry-picking b255fe75 verbatim would have reintroduced `show_full_output: true`, which a LATER commit on the same branch (be6b654f) removed as an input the action does not accept. main already carries that correction, as a comment explaining why the input is absent. So the naive fix would have regressed a fix.",
+      "real_cause_still_unknown": "claude-review fails with `\"subtype\": \"success\", \"is_error\": true` and no diagnostic beyond it -- num_turns 1, modelUsage {}, duration 2.1s. Permissions are correct and the token is present. That points at the action or the credential rather than the workflow file, which is operator territory.",
+      "lesson": "An ancestor check answers 'is this commit on main', not 'is this change on main'. For squash-merged repositories they are different questions, and I recorded the answer to the wrong one as a backlog item that then sat open for days. Diff the file, not the history."
     }
   ],
   "collaboration_options": [
