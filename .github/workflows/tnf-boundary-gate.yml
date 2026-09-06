@@ -40,6 +40,19 @@ on:
       - '.github/workflows/tnf-boundary-gate.yml'
   workflow_dispatch:
 
+# GitHub's default step shell is `bash -e {0}` -- NO pipefail. In `measurer | tee
+# log` only tee's status survives, so a checker that exits non-zero is reported
+# as a pass. Demonstrated:
+#
+#     bash -e         -c 'python3 -c "...; sys.exit(1)" | tee x'   -> exit 0
+#     bash -eo pipefail -c '<same>'                                -> exit 1
+#
+# and the log is byte-identical either way, so a downstream step that greps the
+# tee'd file cannot tell the two apart.
+defaults:
+  run:
+    shell: bash -eo pipefail {0}
+
 jobs:
   boundary:
     runs-on: ubuntu-latest

@@ -36,6 +36,19 @@ on:
       - 'build.zig'
   workflow_dispatch:
 
+# GitHub's default step shell is `bash -e {0}` -- NO pipefail. In `measurer | tee
+# log` only tee's status survives, so a checker that exits non-zero is reported
+# as a pass. Demonstrated:
+#
+#     bash -e         -c 'python3 -c "...; sys.exit(1)" | tee x'   -> exit 0
+#     bash -eo pipefail -c '<same>'                                -> exit 1
+#
+# and the log is byte-identical either way, so a downstream step that greps the
+# tee'd file cannot tell the two apart.
+defaults:
+  run:
+    shell: bash -eo pipefail {0}
+
 jobs:
   ratchet:
     runs-on: ubuntu-latest
@@ -75,7 +88,18 @@ jobs:
               "bytes": sum(os.path.getsize(p) for p in orphans),
           }))
           PY
-          echo "n=$(tail -1 reach.txt | python3 -c 'import json,sys; print(json.load(sys.stdin)["unreachable"])')" >> $GITHUB_OUTPUT
+          n=$(tail -1 reach.txt | python3 -c 'import json,sys; print(json.load(sys.stdin)["unreachable"])')
+          # An empty n is what a crashed counter looks like. Without this the
+          # next step compares "" against the baseline, bash prints
+          # `[: : integer expression expected`, `set +e` swallows it, and the
+          # verdict falls through to "No change." and exit 0 -- a ratchet that
+          # reports no regression precisely because it failed to measure.
+          case "$n" in
+            ''|*[!0-9]*)
+              echo "::error::the reachability counter produced '$n', not a number."
+              echo "--- reach.txt ---"; cat reach.txt; exit 1 ;;
+          esac
+          echo "n=$n" >> $GITHUB_OUTPUT
 
       - name: Compare against the baseline
         run: |
