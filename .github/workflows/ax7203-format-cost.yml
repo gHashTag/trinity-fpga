@@ -42,35 +42,28 @@ jobs:
             echo "::warning::docker pull attempt $i failed, sleeping $((i*20))s"; sleep $((i*20))
           done
           docker image inspect regymm/openxc7:latest >/dev/null 2>&1 || { echo "::error::docker pull failed after 6 retries"; exit 1; }
-      # -nodsp on BOTH branches -- a HYPOTHESIS to test, not a settled diagnosis.
+      # -nodsp on BOTH branches. MEASURED, not assumed.
       #
-      # This workflow has never succeeded (0 of 6 runs). Only gf8_mul fails;
-      # gf8_add, int8_add and both fp8_e4m3 cells route fine, which is the shape
-      # of something specific to the GF multiplier rather than general congestion.
+      # This workflow had never succeeded: 0 of 6 runs. gf8_mul failed to route --
+      #   Failed to find a route for arc 100 of net $PACKER_GND_NET
+      #   ERROR: Routing design failed  ->  "::error::no clean seed"
+      # while gf8_add, int8_add and both fp8_e4m3 cells routed fine.
       #
-      # This file ALREADY carries a diagnosis, in the nextpnr step below: a
-      # nextpnr-xilinx constant pseudo-net bug on $PACKER_GND_NET, explicitly not
-      # congestion (~237 LUT on a 200T part). The three-config P&R cascade there
-      # was written to work around it, and does not.
+      # Adding -nodsp fixed it. Run 34016575130 on ci/format-cost-nodsp: all six
+      # matrix cells succeeded, and gf8_mul routed at seed=heap/router1/seed1 --
+      # the FIRST configuration and the FIRST seed of the cascade below.
       #
-      # The competing hypothesis, not previously tried here: yosys infers DSP48E1
-      # for the GF multiplier without -nodsp. Every GF multiplier workflow in this
-      # repo that WORKS passes it -- ax7203-gf10-mul, gf12-mul-clean and
-      # gf16-mul-clean all use `-flatten -abc9 -nocarry -nodsp -arch xc7`. This is
-      # the only GF mul path that omits it, and the only one that has never routed.
-      # Suggestive, not conclusive, and the two are not exclusive: DSP inference
-      # could plausibly create the conditions the pseudo-net bug needs.
-      #
-      # CI is the experiment. If it routes, the missing flag was the cause and the
-      # note below should be corrected. If it still fails on $PACKER_GND_NET, the
-      # original diagnosis stands and this was a free consistency fix.
+      # Yosys was inferring DSP48E1 for the GF multiplier. Every GF multiplier
+      # workflow in this repo that works already passes the flag
+      # (ax7203-gf10-mul, gf12-mul-clean, gf16-mul-clean); this was the only GF
+      # mul path omitting it, and the only one that had never routed.
       #
       # Both branches, not just the failing one: they exist to isolate the effect
       # of -nocarry, so changing one alone would leave them differing in two
       # dimensions and confound the ablation. Applied to every matrix cell for the
       # same reason -- a format-cost comparison needs one recipe across formats.
-      # Nothing published depends on the old flags: 0 successes means this
-      # workflow has never produced a measurement to invalidate.
+      # Nothing published depended on the old flags: 0 successes meant there was
+      # never a measurement to invalidate.
       - name: Yosys (canonical, -nocarry)
         run: |
           TOP=corona_compute_${{ matrix.cell }}_ax7203
@@ -104,9 +97,20 @@ jobs:
       - name: nextpnr (seed search)
         run: |
           TOP=corona_compute_${{ matrix.cell }}_ax7203
-          # Каскад P&R-конфигураций: gf8_mul падает на $PACKER_GND_NET с heap+router1
-          # (баг псевдо-сетей констант nextpnr-xilinx, НЕ перегрузка: ядро ~237 LUT ≈ 0.2% 200T),
-          # а sa+router1 падает post-placement validity (слитая D+CE LUT-FF пара).
+          # CORRECTED 2026-09-06. This cascade was added because gf8_mul failed on
+          # $PACKER_GND_NET with heap+router1, attributed here to a constant
+          # pseudo-net bug in nextpnr-xilinx and explicitly not to congestion
+          # (~237 LUT on a 200T part). The congestion half was right; the cause
+          # was not the router. Yosys was inferring DSP48E1 because -nodsp was
+          # missing from synth_xilinx. With the flag added, run 34016575130 routed
+          # gf8_mul at heap/router1/seed1 -- the first config, the first seed.
+          #
+          # The cascade is KEPT, not deleted: it breaks out on first success, so
+          # it costs nothing when the first configuration works, and it is a real
+          # safety net if a future core genuinely needs another placer or router.
+          # But it is no longer load-bearing for gf8_mul, and the sa+router1
+          # post-placement validity note below was observed under the same
+          # DSP-inferred netlist and should be re-checked before being trusted.
           CLEAN=0
           for CFG in "heap router1" "heap router2" "sa router2"; do
             set -- $CFG; P=$1; R=$2
