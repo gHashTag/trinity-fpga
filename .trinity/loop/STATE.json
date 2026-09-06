@@ -4,7 +4,7 @@
     "id": "two-track",
     "cron_job": "1cd7dda4",
     "interval": "15m",
-    "iteration": 113,
+    "iteration": 114,
     "status": "RUNNING",
     "owner": "Dmitrii Vasilev / @gHashTag",
     "tracks": [
@@ -1163,6 +1163,15 @@
       "one_of_the_five_is_mine": "AX7203 Format Cost Ablation was red BECAUSE of #753. The auditor, once its blind spot was closed, correctly reported that the workflow synthesises gf_adder_param.v and gf_mul_param.v while watching only its own .yml, so I gave it those watches. It now fires and fails -- 0 successes in 6 runs across its entire history, so it was already broken; the change made a broken thing visible rather than breaking it. That was the intended trade, but it belongs in the count, and my count omitted it.",
       "status": "corrected. The accurate figure is 5 red on main, every one diagnosed: FPGA Docker Build (B28, needs a decision), AX7203 Format Cost Ablation (never once succeeded, newly visible), Orphaned artefacts (13 measurement JSONs with no generator), S3AI Brain CI (#739's candidate fix awaits a rebase), Withdrawn numbers (0.1797 real, 0.92 a classification artifact).",
       "lesson": "When summarising CI health, the denominator is WORKFLOWS, not recent runs. Query per workflow, or widen the window until it provably contains one run of each, and state which was done. A count that shrinks because the instrument could not see far enough looks exactly like progress."
+    },
+    {
+      "id": "A41",
+      "found": "2026-09-06, iteration 114, caught by reading the whole file before editing it",
+      "what": "I diagnosed ax7203-format-cost.yml's gf8_mul routing failure as missing -nodsp (DSP48E1 inference), on the strength of every working GF-mul workflow in this repo passing that flag and this one not. I had written the fix and a confident comment asserting the cause. Reading the rest of the file first found the author's OWN diagnosis, 50 lines below, attributing it to a nextpnr-xilinx constant pseudo-net bug on $PACKER_GND_NET and stating explicitly that it is NOT congestion -- with a three-config P&R cascade written to work around it.",
+      "impact": "None shipped wrong: the comment was rewritten to present -nodsp as an untested hypothesis, cite the existing diagnosis, note the two are not exclusive, and state what each CI outcome would mean. Had I not read on, I would have silently overwritten a maintainer's documented reasoning with my own, in a file where their note is the only record of why the cascade exists.",
+      "why_it_nearly_happened": "The evidence for my hypothesis was genuinely strong and entirely external to the file -- three sibling workflows use the flag, this one does not, this one has never routed. Nothing about that evidence pointed INTO the file, so there was no natural moment to look. I looked only because the fix touched a step whose surrounding context I wanted to check for the ablation's single-variable property.",
+      "status": "resolved as a stated experiment, PR #755. Prediction recorded: if it routes, the missing flag was the cause and the in-file note should be corrected; if it still dies on $PACKER_GND_NET, the original diagnosis stands and the flag was a free consistency fix. I cannot run nextpnr-xilinx or the openxc7 image here, so this is proposed, not verified.",
+      "lesson": "Before contradicting a file, read the file. A confident external diagnosis is exactly the condition under which one does not think to look for an internal one -- the stronger the outside evidence, the less the inside seems worth checking. And when a maintainer has left a diagnosis, the correct move is to argue with it explicitly, not to replace it: the note is the only record of why the workaround around it exists."
     }
   ],
   "collaboration_options": [
