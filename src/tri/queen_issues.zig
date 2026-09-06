@@ -6,6 +6,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 const qt = @import("queen_types.zig");
 const github_client = @import("github_client.zig");
@@ -241,7 +242,7 @@ pub const IssueTracker = struct {
         try argv_list.append("--json");
         try argv_list.append("number,url");
 
-        const result = try std.process.Child.run(.{
+        const result = try tri_proc.run(.{
             .allocator = self.allocator,
             .argv = argv_list.items,
             .max_output_bytes = 64 * 1024,
@@ -250,7 +251,7 @@ pub const IssueTracker = struct {
         defer self.allocator.free(result.stderr);
 
         const exit_code = switch (result.term) {
-            .Exited => |code| code,
+            .exited => |code| code,
             else => @as(u32, 1),
         };
 
@@ -368,7 +369,7 @@ pub const IssueTracker = struct {
 
     /// Add comment using gh CLI fallback
     fn updateIssueGh(self: *Self, issue_number: u32, comment: []const u8) !void {
-        const result = try std.process.Child.run(.{
+        const result = try tri_proc.run(.{
             .allocator = self.allocator,
             .argv = &.{ "gh", "issue", "comment", try std.fmt.allocPrint(self.allocator, "{d}", .{issue_number}), "--body", comment },
             .max_output_bytes = 4096,
@@ -377,7 +378,7 @@ pub const IssueTracker = struct {
         defer self.allocator.free(result.stderr);
 
         const exit_code = switch (result.term) {
-            .Exited => |code| code,
+            .exited => |code| code,
             else => @as(u32, 1),
         };
 
@@ -459,7 +460,7 @@ pub const IssueTracker = struct {
 
     /// Close issue using gh CLI fallback
     fn closeIssueGh(self: *Self, issue_number: u32) !void {
-        const result = try std.process.Child.run(.{
+        const result = try tri_proc.run(.{
             .allocator = self.allocator,
             .argv = &.{ "gh", "issue", "close", try std.fmt.allocPrint(self.allocator, "{d}", .{issue_number}) },
             .max_output_bytes = 4096,
@@ -468,7 +469,7 @@ pub const IssueTracker = struct {
         defer self.allocator.free(result.stderr);
 
         const exit_code = switch (result.term) {
-            .Exited => |code| code,
+            .exited => |code| code,
             else => @as(u32, 1),
         };
 
@@ -558,7 +559,7 @@ pub const IssueTracker = struct {
 
     /// Get issue status using gh CLI fallback
     fn getIssueStatusGh(self: *Self, issue_number: u32) !IssueStatus {
-        const result = try std.process.Child.run(.{
+        const result = try tri_proc.run(.{
             .allocator = self.allocator,
             .argv = &.{ "gh", "issue", "view", try std.fmt.allocPrint(self.allocator, "{d}", .{issue_number}), "--json", "state,title,labels" },
             .max_output_bytes = 16384,
@@ -567,7 +568,7 @@ pub const IssueTracker = struct {
         defer self.allocator.free(result.stderr);
 
         const exit_code = switch (result.term) {
-            .Exited => |code| code,
+            .exited => |code| code,
             else => @as(u32, 1),
         };
 
@@ -716,7 +717,7 @@ pub const IssueTracker = struct {
             try argv.append(self.allocator, search);
         }
 
-        const result = try std.process.Child.run(.{
+        const result = try tri_proc.run(.{
             .allocator = self.allocator,
             .argv = argv.items,
             .max_output_bytes = 65536,
@@ -725,7 +726,7 @@ pub const IssueTracker = struct {
         defer self.allocator.free(result.stderr);
 
         const exit_code = switch (result.term) {
-            .Exited => |code| code,
+            .exited => |code| code,
             else => @as(u32, 1),
         };
 
@@ -789,7 +790,7 @@ const RepoDetection = struct {
 
 /// Detect owner/repo from git remote
 fn detectRepo(allocator: Allocator) ?RepoDetection {
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ "git", "remote", "get-url", "origin" },
         .max_output_bytes = 1024,
@@ -798,7 +799,7 @@ fn detectRepo(allocator: Allocator) ?RepoDetection {
     defer allocator.free(result.stderr);
 
     const exit_code = switch (result.term) {
-        .Exited => |code| code,
+        .exited => |code| code,
         else => @as(u32, 1),
     };
     if (exit_code != 0) return null;

@@ -583,13 +583,13 @@ fn executeCommand(allocator: mem.Allocator, command: []const u8) !struct { exit_
     const term = try child.wait();
 
     // Combine stdout and stderr for error messages
-    if (term.Exited != 0) {
+    if (term.exited != 0) {
         allocator.free(stderr);
-        return .{ .exit_code = term.Exited, .stdout = stdout };
+        return .{ .exit_code = term.exited, .stdout = stdout };
     }
 
     allocator.free(stderr);
-    return .{ .exit_code = term.Exited, .stdout = stdout };
+    return .{ .exit_code = term.exited, .stdout = stdout };
 }
 
 /// Extract deployment URL from command output

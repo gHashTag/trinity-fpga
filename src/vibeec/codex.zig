@@ -6,6 +6,7 @@
 //  4:  (The Soul - LLM Integration)
 
 const std = @import("std");
+const tri_proc = @import("tri_proc");
 const llm = @import("llm_provider.zig");
 const Validator = @import("validation_engine.zig").Validator;
 
@@ -388,7 +389,7 @@ pub const Builder = struct {
             try file.writeAll(current_code);
             file.close();
 
-            const result = try std.process.Child.run(.{
+            const result = try tri_proc.run(.{
                 .allocator = self.allocator,
                 .argv = &[_][]const u8{ "zig", "build-obj", temp_file_name },
             });
@@ -396,7 +397,7 @@ pub const Builder = struct {
             defer self.allocator.free(result.stderr);
 
             const build_exit = switch (result.term) {
-                .Exited => |code| code,
+                .exited => |code| code,
                 else => @as(u32, 1),
             };
             if (build_exit == 0) {

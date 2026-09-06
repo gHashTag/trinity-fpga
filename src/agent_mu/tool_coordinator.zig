@@ -11,6 +11,7 @@
 
 const std = @import("std");
 
+const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 const SacredConstants = struct {
     pub const PHI: f64 = 1.618033988749895;
@@ -188,7 +189,7 @@ fn executeCommand(allocator: std.mem.Allocator, command: []const u8, _: ToolConf
 
     const max_output_size: usize = 64 * 1024; // 64KB output limit
 
-    const process = std.process.Child.run(.{
+    const process = tri_proc.run(.{
         .allocator = allocator,
         .argv = &[_][]const u8{ "sh", "-c", command },
         .max_output_bytes = max_output_size,
@@ -202,7 +203,7 @@ fn executeCommand(allocator: std.mem.Allocator, command: []const u8, _: ToolConf
     }
 
     const tc_exit = switch (process.term) {
-        .Exited => |code| code,
+        .exited => |code| code,
         else => @as(u32, 1),
     };
     if (tc_exit != 0) {

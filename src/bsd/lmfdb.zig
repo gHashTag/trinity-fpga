@@ -187,7 +187,7 @@ pub const LMFDBClient = struct {
         self.allocator.free(stderr);
 
         const term = try child.wait();
-        if (term.Exited != 0) {
+        if (term.exited != 0) {
             self.allocator.free(stdout);
             return error.CurlFailed;
         }

@@ -115,7 +115,7 @@ pub const PatchValidator = struct {
     /// Run runtime smoke tests
     fn runRuntimeSmoke(self: *const PatchValidator, file_path: []const u8) !RuntimeResult {
         // Check if test file exists
-        const test_path = try std.fmt.allocPrint(self.allocator, "{s}_test.zig", .{std.mem.trimRight(u8, file_path, ".zig")});
+        const test_path = try std.fmt.allocPrint(self.allocator, "{s}_test.zig", .{std.mem.trimEnd(u8, file_path, ".zig")});
         defer self.allocator.free(test_path);
 
         // Try to read the test file

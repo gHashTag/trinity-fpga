@@ -7,7 +7,7 @@
 // φ² + 1/φ² = 3
 
 const std = @import("std");
-const hybrid = vsa;  // one source: the module, not the local vsa_hybrid copy
+const hybrid = vsa; // one source: the module, not the local vsa_hybrid copy
 const vsa = @import("vsa");
 
 const HybridBigInt = hybrid.HybridBigInt;
@@ -28,7 +28,7 @@ pub const JitSimilarityFn = *const fn (*HybridBigInt, *HybridBigInt) f64;
 /// JIT Compiler for VSA operations
 pub const JitCompiler = struct {
     /// Code buffer for generated machine code
-    code: std.ArrayListUnmanaged(u8) = .{},
+    code: std.ArrayListUnmanaged(u8) = .empty,
     /// Allocator
     allocator: std.mem.Allocator,
     /// Executable memory (mmap'd)

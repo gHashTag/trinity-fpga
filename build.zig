@@ -44,6 +44,18 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
+    // Child process execution. 0.16 moved std.process.Child.run to
+    // std.process.run(gpa, io, options) and changed the options shape; this
+    // keeps the old call shape over the new function.
+    const tri_proc_mod = b.createModule(.{
+        .root_source_file = b.path("src/tri/tri_proc.zig"),
+        .target = target,
+        .optimize = optimize,
+        .imports = &.{
+            .{ .name = "tri_io", .module = tri_io_mod },
+        },
+    });
+
     // VIBEEC compiler module — single source of truth from trinity-nexus/lang
     // FIXME: trinity-nexus submodule missing
     // const trinity_lang_mod = b.createModule(.{
@@ -1345,6 +1357,7 @@ pub fn build(b: *std.Build) void {
         .imports = &.{
             .{ .name = "tri_time", .module = tri_time_mod },
             .{ .name = "tri_io", .module = tri_io_mod },
+            .{ .name = "tri_proc", .module = tri_proc_mod },
         },
     });
 
@@ -2069,6 +2082,7 @@ pub fn build(b: *std.Build) void {
             .{ .name = "triples_parser", .module = triples_parser_mod },
             .{ .name = "tri_time", .module = tri_time_mod },
             .{ .name = "tri_io", .module = tri_io_mod },
+            .{ .name = "tri_proc", .module = tri_proc_mod },
         },
     });
     // Golden Chain Agent (8-node unified pipeline)
@@ -2498,6 +2512,7 @@ pub fn build(b: *std.Build) void {
                 .{ .name = "tri27_cli", .module = tri27_cli_mod },
                 .{ .name = "tri_time", .module = tri_time_mod },
                 .{ .name = "tri_io", .module = tri_io_mod },
+                .{ .name = "tri_proc", .module = tri_proc_mod },
                 .{ .name = "trinity_swe", .module = vibeec_swe },
                 .{ .name = "igla_chat", .module = vibeec_chat },
                 .{ .name = "igla_hybrid_chat", .module = vibeec_hybrid_chat },

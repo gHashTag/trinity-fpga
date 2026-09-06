@@ -16,6 +16,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 const local_chat = @import("igla_local_chat.zig");
 
@@ -209,14 +210,14 @@ fn callOllama(allocator: std.mem.Allocator, prompt: []const u8) ![]u8 {
     , .{ MODEL, prompt });
     defer allocator.free(json_payload);
 
-    const result = try std.process.Child.run(.{
+    const result = try tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ "curl", "-s", OLLAMA_URL, "-d", json_payload },
     });
     defer allocator.free(result.stderr);
 
     if ((switch (result.term) {
-        .Exited => |code| code,
+        .exited => |code| code,
         else => @as(u32, 1),
     }) != 0) {
         allocator.free(result.stdout);

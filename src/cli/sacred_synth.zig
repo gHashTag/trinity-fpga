@@ -9,6 +9,7 @@
 
 const std = @import("std");
 
+const tri_proc = @import("tri_proc");
 const stdout = std.io.getStdOut();
 const stderr = std.io.getStdErr();
 
@@ -87,15 +88,15 @@ fn synthesizeModule(mod: Module) !void {
     const yosys_argv = &[_][]const u8{ "yosys", "-p", mod.top, mod.name, "-o", "build/mod", ".json", "-g", "cells,ports,attributes" };
 
     // Execute yosys
-    const result = try std.process.Child.run(.{
+    const result = try tri_proc.run(.{
         .allocator = std.heap.page_allocator,
         .argv = yosys_argv,
     });
 
-    if (result.term.Exited == 0) {
+    if (result.term.exited == 0) {
         try stdout.print("{s}✅ {s} synthesis complete{t}\n", .{ GREEN, .{mod.name} });
     } else {
-        try stdout.print("{s}❌ {s} synthesis failed (exit code {d}){t}\n", .{ RED, .{mod.name}, result.term.Exited });
+        try stdout.print("{s}❌ {s} synthesis failed (exit code {d}){t}\n", .{ RED, .{mod.name}, result.term.exited });
         return error.SynthesisFailed;
     }
 }

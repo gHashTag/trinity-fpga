@@ -1,6 +1,7 @@
 // Railway: Delete "trinity" base service from farm account
 const std = @import("std");
 
+const tri_proc = @import("tri_proc");
 pub fn main() !void {
     var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
@@ -49,7 +50,7 @@ fn findTrinityService(allocator: std.mem.Allocator, token: []const u8, project_i
     const auth_header = try std.fmt.allocPrint(allocator, "Authorization: Bearer {s}", .{token});
     defer allocator.free(auth_header);
 
-    const result = try std.process.Child.run(.{
+    const result = try tri_proc.run(.{
         .allocator = allocator,
         .argv = &[_][]const u8{
             "curl", "-s",        "-X",                                    "POST",
@@ -91,7 +92,7 @@ fn deleteService(allocator: std.mem.Allocator, token: []const u8, service_id: []
     const auth_header = try std.fmt.allocPrint(allocator, "Authorization: Bearer {s}", .{token});
     defer allocator.free(auth_header);
 
-    const result = try std.process.Child.run(.{
+    const result = try tri_proc.run(.{
         .allocator = allocator,
         .argv = &[_][]const u8{
             "curl", "-s",        "-X",                                    "POST",

@@ -10,6 +10,7 @@
 
 const std = @import("std");
 
+const tri_proc = @import("tri_proc");
 const stdout = std.fs.File.stdout();
 const stderr = std.fs.File.stderr();
 
@@ -102,7 +103,7 @@ fn synthesizeModule(allocator: std.mem.Allocator, mod: Module) !void {
         "yosys", "-p", yosys_script,
     };
 
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = yosys_argv,
     }) catch |err| {
@@ -112,10 +113,10 @@ fn synthesizeModule(allocator: std.mem.Allocator, mod: Module) !void {
         return;
     };
 
-    if (result.term.Exited == 0) {
+    if (result.term.exited == 0) {
         try stdout.writeAll("    \x1b[32mOK\x1b[0m\n");
     } else {
-        const fail_msg = try std.fmt.allocPrint(allocator, "    \x1b[31mFAILED (code {d})\x1b[0m\n", .{result.term.Exited});
+        const fail_msg = try std.fmt.allocPrint(allocator, "    \x1b[31mFAILED (code {d})\x1b[0m\n", .{result.term.exited});
         defer allocator.free(fail_msg);
         try stdout.writeAll(fail_msg);
     }

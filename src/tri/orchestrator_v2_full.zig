@@ -874,7 +874,7 @@ pub const WorkflowExecutor = struct {
 
             const op_end = std.mem.indexOfScalar(u8, rest, ' ') orelse return error.InvalidCondition;
             const op = rest[0..op_end];
-            const threshold = std.mem.trimLeft(u8, rest[op_end + 1 ..], &std.ascii.whitespace);
+            const threshold = std.mem.trimStart(u8, rest[op_end + 1 ..], &std.ascii.whitespace);
 
             return .{ .phi_call = .{ .n = n_str, .comparison = op, .threshold = threshold } };
         }
@@ -884,8 +884,8 @@ pub const WorkflowExecutor = struct {
         for (ops) |op| {
             if (std.mem.indexOf(u8, trimmed, op)) |idx| {
                 if (idx == 0) continue;
-                const left = std.mem.trimRight(u8, trimmed[0..idx], &std.ascii.whitespace);
-                const right = std.mem.trimLeft(u8, trimmed[idx + op.len ..], &std.ascii.whitespace);
+                const left = std.mem.trimEnd(u8, trimmed[0..idx], &std.ascii.whitespace);
+                const right = std.mem.trimStart(u8, trimmed[idx + op.len ..], &std.ascii.whitespace);
                 return .{ .comparison = .{ .left = left, .op = op, .right = right } };
             }
         }

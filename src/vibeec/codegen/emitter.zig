@@ -1454,7 +1454,7 @@ pub const ZigCodeGen = struct {
     /// - Replace `.error` enum literal with `.@"error"`
     /// - Replace `.type` enum literal with `.@"type"`
     fn sanitizeImplementation(allocator: std.mem.Allocator, implementation: []const u8) ![]const u8 {
-        var result: std.ArrayListUnmanaged(u8) = .{};
+        var result: std.ArrayListUnmanaged(u8) = .empty;
         errdefer result.deinit(allocator);
 
         var line_start: usize = 0;
@@ -1471,7 +1471,7 @@ pub const ZigCodeGen = struct {
                     if (c == '"') in_string = !in_string;
                 }
                 if (!in_string) {
-                    line = std.mem.trimRight(u8, line[0..hash_pos], " \t");
+                    line = std.mem.trimEnd(u8, line[0..hash_pos], " \t");
                 }
             }
 

@@ -21,6 +21,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 const tri_exit_codes = @import("tri_exit_codes.zig");
 const Allocator = std.mem.Allocator;
@@ -580,7 +581,7 @@ fn runDevSpawn(allocator: Allocator, args: []const []const u8) !void {
     const gh_body = std.fmt.bufPrint(&gh_body_buf, "Agent spawned: {s} | Role: {s}", .{ svc_name, role.toString() }) catch return;
     var gh_issue_buf: [16]u8 = undefined;
     const gh_issue_str = std.fmt.bufPrint(&gh_issue_buf, "{d}", .{issue_num}) catch return;
-    const gh_result = std.process.Child.run(.{
+    const gh_result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &[_][]const u8{ "gh", "issue", "comment", gh_issue_str, "--body", gh_body },
         .max_output_bytes = 65536,

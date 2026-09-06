@@ -11,6 +11,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const colors = @import("tri_colors.zig");
@@ -307,7 +308,7 @@ fn spawnGroup(allocator: Allocator, dag: *PipelineDAG, job_indices: []const u8) 
             dag.jobs[idx].duration_ms = elapsed;
 
             const code: u8 = switch (term) {
-                .Exited => |c| @intCast(@min(c, 255)),
+                .exited => |c| @intCast(@min(c, 255)),
                 else => 1,
             };
             dag.jobs[idx].exit_code = code;
@@ -374,7 +375,7 @@ fn runSingleJob(allocator: Allocator, job: *DagJob) void {
         argc += 1;
     }
 
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = argv_buf[0..argc],
         .max_output_bytes = MAX_OUTPUT_BYTES,
@@ -393,7 +394,7 @@ fn runSingleJob(allocator: Allocator, job: *DagJob) void {
     job.duration_ms = elapsed;
 
     const code: u8 = switch (result.term) {
-        .Exited => |c| @intCast(@min(c, 255)),
+        .exited => |c| @intCast(@min(c, 255)),
         else => 1,
     };
     job.exit_code = code;

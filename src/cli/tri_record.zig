@@ -10,6 +10,7 @@
 //!   TRI_REC_OVERWRITE - Skip existing files (default: false)
 
 const std = @import("std");
+const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 const builtin = @import("builtin");
 
@@ -116,12 +117,12 @@ pub fn main() !u8 {
     std.debug.print("Output: {s}\n", .{gif_path});
 
     // Run asciinema
-    const result = try std.process.Child.run(.{
+    const result = try tri_proc.run(.{
         .allocator = allocator,
         .argv = &[_][]const u8{ "sh", "-c", asciinema_cmd },
     });
 
-    if (result.term != .Exited or result.term.Exited != 0) {
+    if (result.term != .exited or result.term.exited != 0) {
         std.debug.print("asciinema failed: {s}\n", .{result.stderr});
         return 1;
     }
@@ -134,12 +135,12 @@ pub fn main() !u8 {
     );
     defer allocator.free(agg_cmd);
 
-    const agg_result = try std.process.Child.run(.{
+    const agg_result = try tri_proc.run(.{
         .allocator = allocator,
         .argv = &[_][]const u8{ "sh", "-c", agg_cmd },
     });
 
-    if (agg_result.term != .Exited or agg_result.term.Exited != 0) {
+    if (agg_result.term != .exited or agg_result.term.exited != 0) {
         std.debug.print("agg failed: {s}\n", .{agg_result.stderr});
         return 1;
     }

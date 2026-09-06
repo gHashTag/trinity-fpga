@@ -8,6 +8,7 @@
 //!    model.zig and trainer.zig checks below are disabled
 
 const std = @import("std");
+const tri_proc = @import("tri_proc");
 const Allocator = std.mem.Allocator;
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -227,7 +228,7 @@ pub fn runHeal(allocator: Allocator) !void {
         var sed_buf: [512]u8 = undefined;
         const sed_cmd = std.fmt.bufPrint(&sed_buf, "1s|^|{s}\\n|", .{marker}) catch continue;
 
-        const sed_result = std.process.Child.run(.{
+        const sed_result = tri_proc.run(.{
             .allocator = allocator,
             .argv = &.{ "sed", "-i", "", sed_cmd, f.path },
             .max_output_bytes = 4096,
@@ -240,7 +241,7 @@ pub fn runHeal(allocator: Allocator) !void {
         allocator.free(sed_result.stderr);
 
         // Verify with zig fmt (fire-and-forget)
-        if (std.process.Child.run(.{
+        if (tri_proc.run(.{
             .allocator = allocator,
             .argv = &.{ "zig", "fmt", f.path },
             .max_output_bytes = 4096,
@@ -263,7 +264,7 @@ pub fn runHeal(allocator: Allocator) !void {
     // Step 2: Verify build still works
     if (healed > 0) {
         std.debug.print("\n  Verifying build... ", .{});
-        const build_result = std.process.Child.run(.{
+        const build_result = tri_proc.run(.{
             .allocator = allocator,
             .argv = &.{ "zig", "build" },
             .max_output_bytes = 8192,
@@ -275,7 +276,7 @@ pub fn runHeal(allocator: Allocator) !void {
         allocator.free(build_result.stderr);
 
         const build_exit = switch (build_result.term) {
-            .Exited => |code| code,
+            .exited => |code| code,
             else => 1,
         };
         if (build_exit != 0) {
@@ -321,7 +322,7 @@ pub fn runHeal(allocator: Allocator) !void {
         // git add each healed file
         for (0..@min(healed, 128)) |i| {
             const path = healed_paths[i][0..healed_lens[i]];
-            const add_result = std.process.Child.run(.{
+            const add_result = tri_proc.run(.{
                 .allocator = allocator,
                 .argv = &.{ "git", "add", path },
                 .max_output_bytes = 1024,
@@ -331,7 +332,7 @@ pub fn runHeal(allocator: Allocator) !void {
         }
 
         // git add scan results
-        const add_scan = std.process.Child.run(.{
+        const add_scan = tri_proc.run(.{
             .allocator = allocator,
             .argv = &.{ "git", "add", ".doctor/scan_results.json" },
             .max_output_bytes = 1024,
@@ -344,7 +345,7 @@ pub fn runHeal(allocator: Allocator) !void {
         // git commit
         var commit_buf: [256]u8 = undefined;
         const commit_msg = std.fmt.bufPrint(&commit_buf, "chore(doctor): heal {d} files — health {d}/100", .{ healed, health.total }) catch "chore(doctor): heal files";
-        const commit_result = std.process.Child.run(.{
+        const commit_result = tri_proc.run(.{
             .allocator = allocator,
             .argv = &.{ "git", "commit", "-m", commit_msg },
             .max_output_bytes = 4096,
@@ -356,7 +357,7 @@ pub fn runHeal(allocator: Allocator) !void {
         allocator.free(commit_result.stderr);
 
         const commit_exit = switch (commit_result.term) {
-            .Exited => |code| code,
+            .exited => |code| code,
             else => 1,
         };
         if (commit_exit == 0) {
@@ -663,7 +664,7 @@ fn performMark(allocator: Allocator, scan: ScanResult) !void {
 
     // Verify build still passes
     std.debug.print("  Verifying build...\n", .{});
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ "zig", "build" },
         .max_output_bytes = 8192,
@@ -677,7 +678,7 @@ fn performMark(allocator: Allocator, scan: ScanResult) !void {
     allocator.free(result.stderr);
 
     const exit_code = switch (result.term) {
-        .Exited => |code| code,
+        .exited => |code| code,
         else => 1,
     };
 
@@ -708,7 +709,7 @@ fn addMarkerToFile(allocator: Allocator, path: []const u8, origin: FileOrigin) b
     var insert_pos: usize = 0;
     var lines_iter = std.mem.splitScalar(u8, content, '\n');
     while (lines_iter.next()) |line| {
-        const trimmed = std.mem.trimLeft(u8, line, " \t");
+        const trimmed = std.mem.trimStart(u8, line, " \t");
         if (std.mem.startsWith(u8, trimmed, "//!")) {
             insert_pos = (@intFromPtr(line.ptr) - @intFromPtr(content.ptr)) + line.len + 1;
         } else {
@@ -736,7 +737,7 @@ fn addMarkerToFile(allocator: Allocator, path: []const u8, origin: FileOrigin) b
 
 fn revertMarkers(allocator: Allocator) void {
     // git checkout -- . to revert all changes
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ "git", "checkout", "--", "." },
         .max_output_bytes = 4096,
@@ -947,7 +948,7 @@ fn notifyTelegram(allocator: Allocator, health: HealthScore, scan: ScanResult) v
 }
 
 fn notifyTelegramMsg(allocator: Allocator, msg: []const u8) void {
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ "tri", "notify", msg },
         .max_output_bytes = 1024,
@@ -992,7 +993,7 @@ pub fn runJunk(allocator: Allocator) !void {
 
     // 2. Untracked files via git
     std.debug.print("\n  {s}Untracked files:{s}\n", .{ CYAN, RESET });
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ "git", "status", "--porcelain", "-s" },
         .max_output_bytes = 65536,
@@ -1012,7 +1013,7 @@ pub fn runJunk(allocator: Allocator) !void {
     while (it.next()) |line| {
         if (line.len < 4) continue;
         if (!std.mem.startsWith(u8, line, "??")) continue;
-        const path = std.mem.trimLeft(u8, line[3..], " ");
+        const path = std.mem.trimStart(u8, line[3..], " ");
         untracked_total += 1;
 
         var whitelisted = false;
@@ -1246,7 +1247,7 @@ fn checkIntroData(allocator: Allocator) bool {
 }
 
 fn tryDocsBuild(allocator: Allocator) bool {
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ "npm", "run", "build" },
         .cwd = "docs",
@@ -1259,7 +1260,7 @@ fn tryDocsBuild(allocator: Allocator) bool {
     defer allocator.free(result.stderr);
 
     const exit = switch (result.term) {
-        .Exited => |code| code,
+        .exited => |code| code,
         else => 1,
     };
     if (exit == 0) {
@@ -1445,7 +1446,7 @@ pub fn runDupes(allocator: Allocator) !void {
 
     // 8. Duplicate .bak files (outside archive)
     var bak_count: u32 = 0;
-    const bak_scan = std.process.Child.run(.{
+    const bak_scan = tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ "git", "ls-files", "--others", "--exclude-standard", "-z" },
         .max_output_bytes = 65536,

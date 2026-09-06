@@ -16,6 +16,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 
@@ -378,7 +379,7 @@ fn executeFix(allocator: Allocator, item: FixItem) !bool {
     switch (item.source) {
         .doctor => {
             // Run tri doctor heal
-            const result = std.process.Child.run(.{
+            const result = tri_proc.run(.{
                 .allocator = allocator,
                 .argv = &[_][]const u8{ "tri", "doctor", "heal" },
                 .max_output_bytes = 1_000_000,
@@ -387,13 +388,13 @@ fn executeFix(allocator: Allocator, item: FixItem) !bool {
                 allocator.free(result.stdout);
                 allocator.free(result.stderr);
             }
-            return result.term.Exited == 0;
+            return result.term.exited == 0;
         },
         .hippocampus => {
             // For error memories, try to diagnose
             // This would require more sophisticated analysis
             // For now, just run tests to see if still broken
-            const test_result = std.process.Child.run(.{
+            const test_result = tri_proc.run(.{
                 .allocator = allocator,
                 .argv = &[_][]const u8{ "tri", "test" },
                 .max_output_bytes = 1_000_000,
@@ -403,7 +404,7 @@ fn executeFix(allocator: Allocator, item: FixItem) !bool {
                 allocator.free(test_result.stderr);
             }
             // If tests pass, consider it fixed (maybe externally)
-            return test_result.term.Exited == 0;
+            return test_result.term.exited == 0;
         },
         .pipeline => {
             // Retry pipeline run

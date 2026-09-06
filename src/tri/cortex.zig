@@ -8,6 +8,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 const tri_env = @import("tri_env.zig");
 const Allocator = std.mem.Allocator;
@@ -805,7 +806,7 @@ fn loadTgHash() ?u64 {
     defer file.close();
     var buf: [20]u8 = undefined;
     const n = file.readAll(&buf) catch return null;
-    const trimmed = std.mem.trimRight(u8, buf[0..n], "\n\r ");
+    const trimmed = std.mem.trimEnd(u8, buf[0..n], "\n\r ");
     return std.fmt.parseInt(u64, trimmed, 10) catch null;
 }
 
@@ -1011,7 +1012,7 @@ fn getGitBranch(allocator: Allocator, buf: []u8) []const u8 {
     const result = runCmd(allocator, &.{ "git", "branch", "--show-current" }) catch return "unknown";
     defer allocator.free(result);
     if (result.len > 0) {
-        const trimmed = std.mem.trimRight(u8, result, "\n\r ");
+        const trimmed = std.mem.trimEnd(u8, result, "\n\r ");
         if (trimmed.len > 0) {
             const len = @min(trimmed.len, buf.len);
             @memcpy(buf[0..len], trimmed[0..len]);
@@ -1074,19 +1075,19 @@ fn getGhAuthToken(allocator: Allocator) ?[]u8 {
     const home = tri_env.getEnvVarOwned(allocator, "HOME") catch null;
     defer if (home) |h| allocator.free(h);
     clean_env.put("HOME", home orelse "/tmp") catch return null;
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ "gh", "auth", "token" },
         .max_output_bytes = 4096,
         .env_map = &clean_env,
     }) catch return null;
     allocator.free(result.stderr);
-    if (result.term != .Exited or result.term.Exited != 0 or result.stdout.len == 0) {
+    if (result.term != .exited or result.term.exited != 0 or result.stdout.len == 0) {
         allocator.free(result.stdout);
         return null;
     }
     // Trim trailing newline
-    const len = std.mem.trimRight(u8, result.stdout, "\n\r").len;
+    const len = std.mem.trimEnd(u8, result.stdout, "\n\r").len;
     if (len == 0) {
         allocator.free(result.stdout);
         return null;
@@ -1110,14 +1111,14 @@ fn runCmdWithToken(allocator: Allocator, argv: []const []const u8, gh_token: ?[]
         var env_map = std.process.getEnvMap(allocator) catch return error.CommandFailed;
         defer env_map.deinit();
         env_map.put("GH_TOKEN", token) catch return error.CommandFailed;
-        const result = std.process.Child.run(.{
+        const result = tri_proc.run(.{
             .allocator = allocator,
             .argv = argv,
             .max_output_bytes = 1024 * 1024,
             .env_map = &env_map,
         }) catch return error.CommandFailed;
         allocator.free(result.stderr);
-        if (result.term != .Exited or result.term.Exited != 0) {
+        if (result.term != .exited or result.term.exited != 0) {
             allocator.free(result.stdout);
             return error.CommandFailed;
         }
@@ -1225,7 +1226,7 @@ fn isProcessRunning(allocator: Allocator, name: []const u8) bool {
 }
 
 fn runCmd(allocator: Allocator, argv: []const []const u8) ![]u8 {
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = argv,
         .max_output_bytes = 1024 * 1024,

@@ -20,6 +20,7 @@
 // =============================================================================
 
 const std = @import("std");
+const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 const posix = std.posix;
 const c = std.c;
@@ -52,7 +53,7 @@ pub const SerialPort = struct {
         child.stderr_behavior = .Ignore;
         child.spawn() catch return error.SystemResources;
         const term = child.wait() catch return error.SystemResources;
-        if (term.Exited != 0) return error.InvalidArgument;
+        if (term.exited != 0) return error.InvalidArgument;
 
         // Drain any stale bytes in buffer
         var drain: [256]u8 = undefined;
@@ -413,7 +414,7 @@ fn runCmd(allocator: std.mem.Allocator, argv: []const []const u8, verbose: bool)
     }
     try child.spawn();
     const term = try child.wait();
-    return term.Exited == 0;
+    return term.exited == 0;
 }
 
 // =========================================================================
@@ -769,8 +770,8 @@ pub fn runFpgaFlashCommand(allocator: std.mem.Allocator, args: []const []const u
     try child.spawn();
     const term = try child.wait();
 
-    if (term.Exited != 0) {
-        std.debug.print("\n{s}FLASH FAILED{s} (exit code {d})\n", .{ RED, RESET, term.Exited });
+    if (term.exited != 0) {
+        std.debug.print("\n{s}FLASH FAILED{s} (exit code {d})\n", .{ RED, RESET, term.exited });
         return error.FlashFailed;
     }
 
@@ -1425,8 +1426,8 @@ pub fn runFpgaReadCommand(allocator: std.mem.Allocator, args: []const []const u8
     try child.spawn();
     const term = try child.wait();
 
-    if (term.Exited != 0) {
-        std.debug.print("\n{s}FAILED{s} (exit code {d})\n", .{ RED, RESET, term.Exited });
+    if (term.exited != 0) {
+        std.debug.print("\n{s}FAILED{s} (exit code {d})\n", .{ RED, RESET, term.exited });
         return error.ReadFailed;
     }
 }
@@ -1878,7 +1879,7 @@ pub fn runFpgaFxloadCommand(allocator: std.mem.Allocator, args: []const []const 
     std.debug.print("\x1b[34mSTEP: Load FX2 Firmware\x1b[0m\n", .{});
     std.debug.print("\x1b[34m═════════════════════════════════════════\x1b[0m\n\n", .{});
 
-    const result = try std.process.Child.run(.{
+    const result = try tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ "sudo", FXLOAD_PATH, "-v", "-t", "fx2", "-d", "03fd:0013", "-i", FIRMWARE_PATH },
     });
@@ -1903,7 +1904,7 @@ pub fn runFpgaVerifyPidCommand(allocator: std.mem.Allocator, args: []const []con
     std.debug.print("\x1b[34mSTEP: Verify DLC10 PID\x1b[0m\n", .{});
     std.debug.print("\x1b[34m═════════════════════════════════════════\x1b[0m\n\n", .{});
 
-    const result = try std.process.Child.run(.{
+    const result = try tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ "system_profiler", "SPUSBDataType" },
     });
@@ -1948,7 +1949,7 @@ pub fn runFpgaFlashBitCommand(allocator: std.mem.Allocator, args: []const []cons
     std.debug.print("\x1b[34mSTEP: Flash uart_bridge_fixed.bit\x1b[0m\n", .{});
     std.debug.print("\x1b[34m═════════════════════════════════════════\x1b[0m\n\n", .{});
 
-    const result = try std.process.Child.run(.{
+    const result = try tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ "sudo", XC3SPROG_PATH, "-c", "xpc", UART_BRIDGE_BIT },
     });
@@ -1965,14 +1966,14 @@ pub fn runFpgaFlashBitCommand(allocator: std.mem.Allocator, args: []const []cons
 
         // Restore FTDI driver
         std.debug.print("Restoring FTDI driver...\n", .{});
-        _ = std.process.Child.run(.{
+        _ = tri_proc.run(.{
             .allocator = allocator,
             .argv = &.{ "sudo", "kextload", "-b", "com.apple.driver.AppleUSBFTDI" },
         }) catch {};
 
         // Kill screen processes
         std.debug.print("Killing screen processes...\n", .{});
-        _ = std.process.Child.run(.{
+        _ = tri_proc.run(.{
             .allocator = allocator,
             .argv = &.{ "killall", "screen" },
         }) catch {};
@@ -1994,7 +1995,7 @@ pub fn runFpgaMacUartTestCommand(allocator: std.mem.Allocator, args: []const []c
 
     std.debug.print("Sending 'aaaa\\r\\n' to /dev/cu.usbserial-2140...\n\n", .{});
 
-    const result = try std.process.Child.run(.{
+    const result = try tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ "python3", UART_TEST_PY },
     });

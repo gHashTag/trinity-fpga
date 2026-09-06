@@ -1576,8 +1576,8 @@ fn runFpgaMountCommand(allocator: std.mem.Allocator) !void {
     child.stderr_behavior = .Inherit;
     child.stdout_behavior = .Inherit;
     const term = try child.spawnAndWait();
-    if (term.Exited != 0) {
-        std.debug.print("\n{s}Mount failed (exit {d}).{s}\n", .{ RED, term.Exited, RESET });
+    if (term.exited != 0) {
+        std.debug.print("\n{s}Mount failed (exit {d}).{s}\n", .{ RED, term.exited, RESET });
         std.debug.print("Check: macFUSE installed? Cable connected? FPGA programmed?\n", .{});
     }
 }
@@ -1592,7 +1592,7 @@ fn runFpgaUnmountCommand(allocator: std.mem.Allocator) !void {
     child.stderr_behavior = .Inherit;
     child.stdout_behavior = .Inherit;
     const term = try child.spawnAndWait();
-    if (term.Exited != 0) {
+    if (term.exited != 0) {
         std.debug.print("\n{s}Unmount failed.{s} Try: sudo umount -f {s}\n", .{ RED, RESET, mount_point });
     } else {
         std.debug.print("  Unmounted successfully.\n", .{});
@@ -1610,8 +1610,8 @@ fn runFpgaProbeCommand(allocator: std.mem.Allocator) !void {
     child.stderr_behavior = .Inherit;
     child.stdout_behavior = .Inherit;
     const term = try child.spawnAndWait();
-    if (term.Exited != 0) {
-        std.debug.print("\n{s}Probe failed (exit {d}).{s} Check cable connection.\n", .{ RED, term.Exited, RESET });
+    if (term.exited != 0) {
+        std.debug.print("\n{s}Probe failed (exit {d}).{s} Check cable connection.\n", .{ RED, term.exited, RESET });
     }
 }
 
@@ -1665,8 +1665,8 @@ fn runJtagCommand(allocator: std.mem.Allocator, args: []const []const u8) !void 
     child.stderr_behavior = .Inherit;
     child.stdout_behavior = .Inherit;
     const term = try child.spawnAndWait();
-    if (term.Exited != 0) {
-        std.debug.print("\n{s}JTAG command failed (exit {d}).{s} Check cable connection.\n", .{ RED, term.Exited, RESET });
+    if (term.exited != 0) {
+        std.debug.print("\n{s}JTAG command failed (exit {d}).{s} Check cable connection.\n", .{ RED, term.exited, RESET });
     }
 }
 

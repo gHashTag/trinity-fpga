@@ -110,8 +110,8 @@ pub const ConflictMatrix = struct {
 /// Adversarial Test
 pub const AdversarialTest = struct {
     allocator: mem.Allocator,
-    theories: std.ArrayListUnmanaged(TheoryState) = .{},
-    predictions: std.ArrayListUnmanaged(Prediction) = .{},
+    theories: std.ArrayListUnmanaged(TheoryState) = .empty,
+    predictions: std.ArrayListUnmanaged(Prediction) = .empty,
     agreements: ConflictMatrix = .{},
     divergences: ConflictMatrix = .{},
 

@@ -3,6 +3,7 @@
 
 const std = @import("std");
 
+const tri_proc = @import("tri_proc");
 const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 // Decomposed modules
@@ -858,7 +859,7 @@ pub fn main(init: std.process.Init.Minimal) !void {
             } else if (std.mem.eql(u8, subcmd, "fix")) {
                 std.debug.print("\x1b[33mtri mu fix: deprecated — use hippocampus read/write directly\x1b[0m\n", .{});
             } else if (std.mem.eql(u8, subcmd, "start")) {
-                const result = std.process.Child.run(.{
+                const result = tri_proc.run(.{
                     .allocator = allocator,
                     .argv = &.{ "launchctl", "load", "-w", "deploy/com.trinity.mu-agent.plist" },
                 }) catch |err| {
@@ -869,7 +870,7 @@ pub fn main(init: std.process.Init.Minimal) !void {
                 allocator.free(result.stderr);
                 std.debug.print("Agent TRI started (launchctl load)\n", .{});
             } else if (std.mem.eql(u8, subcmd, "stop")) {
-                const result = std.process.Child.run(.{
+                const result = tri_proc.run(.{
                     .allocator = allocator,
                     .argv = &.{ "launchctl", "unload", "deploy/com.trinity.mu-agent.plist" },
                 }) catch |err| {
@@ -1256,7 +1257,7 @@ fn logAgentCommand(io: std.Io, environ: std.process.Environ, cmd_args: []const [
     };
 
     // Fire-and-forget Telegram notification
-    sendAgentTelegram(environ, line);
+    sendAgentTelegram(io, environ, line);
 
     // Rotate if too large (check size, not line count — cheaper)
     const stat = file.stat(io) catch return;
@@ -1266,7 +1267,10 @@ fn logAgentCommand(io: std.Io, environ: std.process.Environ, cmd_args: []const [
 }
 
 /// Send agent command log line to Telegram. Fire-and-forget — never crash.
-fn sendAgentTelegram(environ: std.process.Environ, line: []const u8) void {
+// Takes an Io because 0.16 gave std.http.Client an `io` field. The only
+// caller is logAgentCommand, which already has one, so this stays an
+// explicit parameter rather than reaching for the ambient handle.
+fn sendAgentTelegram(io: std.Io, environ: std.process.Environ, line: []const u8) void {
     const bot_token = environ.getPosix("TELEGRAM_BOT_TOKEN") orelse return;
     const chat_id = environ.getPosix("TELEGRAM_CHAT_ID") orelse return;
 
@@ -1327,7 +1331,7 @@ fn sendAgentTelegram(environ: std.process.Environ, line: []const u8) void {
     const body = body_buf[0..i];
 
     // Fire-and-forget HTTP POST
-    var client = std.http.Client{ .allocator = std.heap.page_allocator };
+    var client = std.http.Client{ .allocator = std.heap.page_allocator, .io = io };
     defer client.deinit();
 
     _ = client.fetch(.{
@@ -1384,7 +1388,7 @@ fn printVersion(allocator: std.mem.Allocator) void {
 
     // Get git hash at runtime
     var git_hash: []const u8 = "unknown";
-    const git_result = std.process.Child.run(.{
+    const git_result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &[_][]const u8{ "git", "rev-parse", "--short", "HEAD" },
         .max_output_bytes = 64,

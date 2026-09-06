@@ -437,7 +437,7 @@ pub const Codebase = struct {
         };
 
         const exit_code: i32 = switch (term) {
-            .Exited => |code| @as(i32, code),
+            .exited => |code| @as(i32, code),
             else => -1,
         };
 

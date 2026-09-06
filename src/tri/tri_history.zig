@@ -175,7 +175,7 @@ pub const History = struct {
             const line = line_buf.items;
             if (line.len > 0) {
                 // Trim carriage return if present
-                const trimmed = std.mem.trimRight(u8, line, "\r");
+                const trimmed = std.mem.trimEnd(u8, line, "\r");
                 if (trimmed.len > 0) {
                     const copy = try self.allocator.dupe(u8, trimmed);
                     try self.entries.append(copy);

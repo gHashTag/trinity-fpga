@@ -19,7 +19,7 @@ pub const ClaudeUI = struct {
     // UI State
     char_buffer: [1024]u8 = [_]u8{0} ** 1024,
     char_len: usize = 0,
-    messages: std.ArrayListUnmanaged([]const u8) = .{},
+    messages: std.ArrayListUnmanaged([]const u8) = .empty,
     task_progress: f32 = 0.0,
     is_working: bool = false,
 

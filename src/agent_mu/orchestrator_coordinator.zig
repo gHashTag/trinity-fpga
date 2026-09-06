@@ -712,7 +712,7 @@ pub const OrchestratorCoordinator = struct {
 
         const duration_ms = @as(u64, @intCast(@divTrunc(tri_time.nanoTimestamp() - start_time, 1_000_000)));
         const exit_code = switch (term) {
-            .Exited => |code| code,
+            .exited => |code| code,
             else => 1,
         };
 

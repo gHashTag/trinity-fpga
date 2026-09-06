@@ -3,6 +3,7 @@
 // Phase 6: Permission checks + git checkpoints before writes.
 // Phase 7: MCP tool routing.
 const std = @import("std");
+const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 const json = @import("tool_protocol.zig");
 const permissions = @import("permissions.zig");
@@ -283,7 +284,7 @@ pub const ToolExecutor = struct {
     const shell_meta = [_]u8{ '|', ';', '`', '$', '(', ')', '{', '}' };
 
     fn isBashAllowed(command: []const u8) bool {
-        const trimmed = std.mem.trimLeft(u8, command, &std.ascii.whitespace);
+        const trimmed = std.mem.trimStart(u8, command, &std.ascii.whitespace);
 
         // Block shell chaining: &&, ||, and shell metacharacters
         if (std.mem.indexOf(u8, trimmed, "&&") != null) return false;
@@ -310,7 +311,7 @@ pub const ToolExecutor = struct {
         if (!isBashAllowed(command))
             return .{ .output = "error: command not in allowed list", .is_error = true };
 
-        const result = std.process.Child.run(.{
+        const result = tri_proc.run(.{
             .allocator = self.allocator,
             .argv = &.{ "sh", "-c", command },
             .max_output_bytes = 512 * 1024,
@@ -320,7 +321,7 @@ pub const ToolExecutor = struct {
 
         // If non-zero exit, combine stderr + stdout
         const exit_code = switch (result.term) {
-            .Exited => |code| code,
+            .exited => |code| code,
             else => @as(u32, 1),
         };
         if (exit_code != 0) {
@@ -354,7 +355,7 @@ pub const ToolExecutor = struct {
         const grep_flag: []const u8 = if (use_regex) "-rn" else "-rnF";
 
         // Use timeout to prevent ReDoS, limit to 1000 matches
-        const result = std.process.Child.run(.{
+        const result = tri_proc.run(.{
             .allocator = self.allocator,
             .argv = &.{ "timeout", "5", "grep", grep_flag, "--max-count=1000", pattern, path },
             .max_output_bytes = 256 * 1024,

@@ -15,6 +15,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 const verdict = @import("pathology.zig");
 const colors = @import("tri_colors.zig");
@@ -457,13 +458,13 @@ fn commitCycle(allocator: std.mem.Allocator, cycle: u32, dimension: []const u8) 
 }
 
 fn runChild(allocator: std.mem.Allocator, argv: []const []const u8) u8 {
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = argv,
     }) catch return 1;
     defer allocator.free(result.stdout);
     defer allocator.free(result.stderr);
-    return result.term.Exited;
+    return result.term.exited;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

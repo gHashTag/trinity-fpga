@@ -74,7 +74,7 @@ test "fuzz: decode-encode roundtrip for random words" {
         const reencoded_opcode = @as(u8, @truncate(reencoded & 0xFF));
 
         // Only verify if opcode is in our enum
-        if (std.meta.intToEnum(Opcode, original_opcode)) |opcode| {
+        if (std.enums.fromInt(Opcode, original_opcode)) |opcode| {
             _ = opcode;
             try testing.expectEqual(original_opcode, reencoded_opcode);
         } else |_| {
@@ -160,8 +160,7 @@ test "fuzz: immediate instructions use 4-bit src1 (no bit 17 overlap)" {
     const imm_opcodes = [_]Opcode{
         .LDI, .STI, .LD_IMM, .PHI_CONST, .PI_CONST, .E_CONST,
         .JMP, .JZ,  .JNZ,    .JGT,       .JLT,      .CALL,
-        .RET, .SHL,
-        .SHR,
+        .RET, .SHL, .SHR,
         // Note: BUNDLE3 is excluded - it's a 3-operand instruction, not immediate
     };
 

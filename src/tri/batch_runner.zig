@@ -5,6 +5,7 @@
 // ============================================================================
 
 const std = @import("std");
+const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 const tri_mutex = @import("mutex.zig");
 const colors = @import("tri_colors.zig");
@@ -386,7 +387,7 @@ fn filterSpecs(
         },
         .changed_only => {
             // git diff --name-only HEAD~1 -- 'specs/**/*.tri'
-            const git_result = std.process.Child.run(.{
+            const git_result = tri_proc.run(.{
                 .allocator = allocator,
                 .argv = &[_][]const u8{ "git", "diff", "--name-only", "HEAD~1", "--", "specs/" },
                 .max_output_bytes = 64 * 1024,
@@ -416,7 +417,7 @@ fn filterSpecs(
 }
 
 fn runLintCheck(allocator: std.mem.Allocator, spec_path: []const u8) bool {
-    const lint_result = std.process.Child.run(.{
+    const lint_result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &[_][]const u8{ "zig-out/bin/vibee", "validate", spec_path },
         .max_output_bytes = 64 * 1024,
@@ -425,7 +426,7 @@ fn runLintCheck(allocator: std.mem.Allocator, spec_path: []const u8) bool {
     defer allocator.free(lint_result.stderr);
 
     return switch (lint_result.term) {
-        .Exited => |code| code == 0,
+        .exited => |code| code == 0,
         else => false,
     };
 }
@@ -473,7 +474,7 @@ fn runSinglePipeline(ctx: *WorkerContext) void {
     const is_verilog = detectVerilog(ctx.spec_path);
 
     // Link 7: Generate code
-    const gen_result = std.process.Child.run(.{
+    const gen_result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &[_][]const u8{ "zig-out/bin/vibee", "gen", ctx.spec_path, out_path },
         .max_output_bytes = 256 * 1024,
@@ -491,7 +492,7 @@ fn runSinglePipeline(ctx: *WorkerContext) void {
     allocator.free(gen_result.stderr);
 
     const gen_ok = switch (gen_result.term) {
-        .Exited => |code| code == 0,
+        .exited => |code| code == 0,
         else => false,
     };
 
@@ -519,7 +520,7 @@ fn runSinglePipeline(ctx: *WorkerContext) void {
     }
 
     // Link 8: AST check generated .zig
-    const ast_result = std.process.Child.run(.{
+    const ast_result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &[_][]const u8{ "zig", "ast-check", out_path },
         .max_output_bytes = 256 * 1024,
@@ -542,7 +543,7 @@ fn runSinglePipeline(ctx: *WorkerContext) void {
     allocator.free(ast_result.stderr);
 
     const ast_ok = switch (ast_result.term) {
-        .Exited => |code| code == 0,
+        .exited => |code| code == 0,
         else => false,
     };
 

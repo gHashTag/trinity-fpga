@@ -7,7 +7,7 @@
 // φ² + 1/φ² = 3
 
 const std = @import("std");
-const hybrid = vsa;  // one source: the module, not the local vsa_hybrid copy
+const hybrid = vsa; // one source: the module, not the local vsa_hybrid copy
 const vsa = @import("vsa");
 
 const HybridBigInt = hybrid.HybridBigInt;
@@ -22,9 +22,9 @@ const Trit = hybrid.Trit;
 /// Memory: O(nnz) instead of O(dimension)
 pub const SparseVector = struct {
     /// Indices of non-zero elements (sorted)
-    indices: std.ArrayListUnmanaged(u32) = .{},
+    indices: std.ArrayListUnmanaged(u32) = .empty,
     /// Values at those indices (-1, 0, or +1)
-    values: std.ArrayListUnmanaged(Trit) = .{},
+    values: std.ArrayListUnmanaged(Trit) = .empty,
     /// Total dimension of the vector
     dimension: u32,
     /// Allocator for dynamic memory

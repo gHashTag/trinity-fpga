@@ -17,6 +17,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 const crypto = @import("crypto.zig");
 const Ed25519 = std.crypto.sign.Ed25519;
@@ -170,7 +171,7 @@ pub fn verifyProvenanceWithTool(
     bitstream_path: []const u8,
     tool_path: []const u8,
 ) bool {
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ "python3", tool_path, "verify", bitstream_path },
         .max_output_bytes = 1024 * 1024,
@@ -179,7 +180,7 @@ pub fn verifyProvenanceWithTool(
     defer allocator.free(result.stderr);
 
     return switch (result.term) {
-        .Exited => |code| code == 0,
+        .exited => |code| code == 0,
         else => false,
     };
 }
@@ -457,7 +458,7 @@ fn parseHexPubKey(pubkey_str: []const u8, out: *[32]u8) bool {
 
 /// Get the current git commit (best-effort).
 fn getGitCommit(allocator: std.mem.Allocator) ![]u8 {
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ "git", "rev-parse", "--short=12", "HEAD" },
         .max_output_bytes = 256,
@@ -466,7 +467,7 @@ fn getGitCommit(allocator: std.mem.Allocator) ![]u8 {
     defer allocator.free(result.stderr);
 
     const code = switch (result.term) {
-        .Exited => |c| c,
+        .exited => |c| c,
         else => return try allocator.dupe(u8, "git:unknown"),
     };
     if (code != 0) return try allocator.dupe(u8, "git:unknown");

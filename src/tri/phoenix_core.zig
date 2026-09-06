@@ -291,7 +291,7 @@ pub const PhoenixCore = struct {
         var task_idx: u32 = 0;
         var lines = std.mem.splitScalar(u8, content, '\n');
         while (lines.next()) |line| {
-            const trimmed = std.mem.trimLeft(u8, line, " \t");
+            const trimmed = std.mem.trimStart(u8, line, " \t");
             if (std.mem.startsWith(u8, trimmed, "- [x]") or std.mem.startsWith(u8, trimmed, "- [X]")) {
                 // Done task — skip
                 continue;
@@ -425,7 +425,7 @@ pub const PhoenixCore = struct {
                 return false;
             };
 
-            return term.Exited == 0;
+            return term.exited == 0;
         }
 
         return true;
@@ -445,7 +445,7 @@ pub const PhoenixCore = struct {
         child.spawn() catch return false;
         const term = child.wait() catch return false;
 
-        return term.Exited == 0;
+        return term.exited == 0;
     }
 
     /// Execute generic task

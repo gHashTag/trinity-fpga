@@ -74,7 +74,7 @@ pub fn invokeVibee(allocator: std.mem.Allocator, spec_path: []const u8) !VibeeRe
         if (std.mem.indexOf(u8, result.output, output_marker)) |idx| {
             const start = idx + output_marker.len;
             const end = std.mem.indexOfScalar(u8, result.output[start..], '\n') orelse result.output.len;
-            output_path = try allocator.dupe(u8, std.mem.trimRight(u8, result.output[start .. start + end], "\n\r"));
+            output_path = try allocator.dupe(u8, std.mem.trimEnd(u8, result.output[start .. start + end], "\n\r"));
         }
     }
 
@@ -357,7 +357,7 @@ fn runCommand(allocator: std.mem.Allocator, argv: []const []const u8) !Invocatio
 
     const duration = @as(u64, @intCast(@divTrunc(tri_time.nanoTimestamp() - start_time, 1_000_000)));
 
-    if (term.Exited == 0) {
+    if (term.exited == 0) {
         return InvocationResult{
             .success = true,
             .output = stdout,
@@ -380,7 +380,7 @@ fn runCommand(allocator: std.mem.Allocator, argv: []const []const u8) !Invocatio
         .output = stdout,
         .error_message = error_msg,
         .exit_code = switch (term) {
-            .Exited => |code| code,
+            .exited => |code| code,
             else => 128,
         },
         .duration_ms = duration,

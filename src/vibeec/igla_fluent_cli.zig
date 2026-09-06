@@ -117,7 +117,7 @@ pub const ConversationHistory = struct {
 
     /// Get recent context for LLM (last N messages as string)
     pub fn getContextString(self: *const Self, max_messages: usize) ![]const u8 {
-        var context: std.ArrayListUnmanaged(u8) = .{};
+        var context: std.ArrayListUnmanaged(u8) = .empty;
         errdefer context.deinit(self.allocator);
 
         const start_idx = if (self.messages.items.len > max_messages)

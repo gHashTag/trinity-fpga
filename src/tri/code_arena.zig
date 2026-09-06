@@ -363,7 +363,7 @@ fn spawnContestant(allocator: Allocator, contestant: Contestant, task: []const u
     };
 
     const ok = switch (term) {
-        .Exited => |code| code == 0,
+        .exited => |code| code == 0,
         else => false,
     };
     if (!ok) {
@@ -449,7 +449,7 @@ fn getCurrentBranch(allocator: Allocator) ?[]const u8 {
     child.collectOutput(allocator, &stdout_buf, &stderr_buf, 1024) catch return null;
     const term = child.wait() catch return null;
     switch (term) {
-        .Exited => |code| if (code != 0) return null,
+        .exited => |code| if (code != 0) return null,
         else => return null,
     }
 
@@ -467,7 +467,7 @@ pub fn runGitCommand(allocator: Allocator, argv: []const []const u8) bool {
     _ = child.spawn() catch return false;
     const term = child.wait() catch return false;
     return switch (term) {
-        .Exited => |code| code == 0,
+        .exited => |code| code == 0,
         else => false,
     };
 }
@@ -479,7 +479,7 @@ fn runCheck(allocator: Allocator, argv: []const []const u8) bool {
     _ = child.spawn() catch return false;
     const term = child.wait() catch return false;
     return switch (term) {
-        .Exited => |code| code == 0,
+        .exited => |code| code == 0,
         else => false,
     };
 }
@@ -501,7 +501,7 @@ fn runCheckWithOutput(allocator: Allocator, argv: []const []const u8) CheckOutpu
     const term = child.wait() catch return .{ .ok = false, .output = "" };
 
     const ok = switch (term) {
-        .Exited => |code| code == 0,
+        .exited => |code| code == 0,
         else => false,
     };
 

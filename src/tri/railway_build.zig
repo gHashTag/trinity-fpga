@@ -89,9 +89,9 @@ pub fn runRailwayBuildCommand(allocator: std.mem.Allocator, args: []const []cons
         return RailwayBuildError.BuildFailed;
     };
 
-    if (term.Exited != 0) {
-        std.debug.print("{s}Railway build failed (exit {d}).{s}\n", .{ RED, term.Exited, RESET });
-        const exit_status = switch (term.Exited) {
+    if (term.exited != 0) {
+        std.debug.print("{s}Railway build failed (exit {d}).{s}\n", .{ RED, term.exited, RESET });
+        const exit_status = switch (term.exited) {
             1 => return RailwayBuildError.BuildFailed,
             127 => return RailwayBuildError.CommandNotFound,
             else => return RailwayBuildError.UnknownExitCode,

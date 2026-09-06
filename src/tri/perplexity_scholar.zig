@@ -75,7 +75,7 @@ pub const PerplexityScholar = struct {
 
     /// Build the JSON request body for Perplexity chat/completions API
     pub fn buildRequestBody(self: *Self, question: []const u8, context: []const u8) ![]const u8 {
-        var body: std.ArrayListUnmanaged(u8) = .{};
+        var body: std.ArrayListUnmanaged(u8) = .empty;
         errdefer body.deinit(self.allocator);
         const w = body.writer(self.allocator);
 
@@ -315,7 +315,7 @@ test "agent card valid" {
 
 test "writeJsonEscaped" {
     const allocator = std.testing.allocator;
-    var buf: std.ArrayListUnmanaged(u8) = .{};
+    var buf: std.ArrayListUnmanaged(u8) = .empty;
     defer buf.deinit(allocator);
 
     try writeJsonEscaped(buf.writer(allocator), "hello \"world\"\nnewline");

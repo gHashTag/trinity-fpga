@@ -19,6 +19,7 @@
 //! ```
 
 const std = @import("std");
+const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 const builtin = @import("builtin");
 const mem = std.mem;
@@ -626,7 +627,7 @@ pub fn runGitCommand(
     const stderr_trimmed = std.mem.trim(u8, stderr, &std.ascii.whitespace);
 
     const exit_code: u8 = switch (term) {
-        .Exited => |code| @intCast(code),
+        .exited => |code| @intCast(code),
         else => 1,
     };
     const success = exit_code == 0;
@@ -698,7 +699,7 @@ pub fn isRepoClean() bool {
 
 /// Find git executable in PATH
 fn findGitExecutable(allocator: Allocator) ![]const u8 {
-    const result = try std.process.Child.run(.{
+    const result = try tri_proc.run(.{
         .allocator = allocator,
         .argv = &[_][]const u8{ "which", "git" },
     });
@@ -706,7 +707,7 @@ fn findGitExecutable(allocator: Allocator) ![]const u8 {
     defer allocator.free(result.stderr);
 
     switch (result.term) {
-        .Exited => |exit_code| {
+        .exited => |exit_code| {
             if (exit_code == 0) {
                 const git_path = std.mem.trim(u8, result.stdout, &std.ascii.whitespace);
                 return allocator.dupe(u8, git_path);
@@ -840,7 +841,7 @@ fn runTests(allocator: Allocator) !GitResult {
     var arena = std.heap.ArenaAllocator.init(allocator);
     defer arena.deinit();
 
-    const result = try std.process.Child.run(.{
+    const result = try tri_proc.run(.{
         .allocator = arena.allocator(),
         .argv = &[_][]const u8{ "zig", "build", "test" },
     });
@@ -849,7 +850,7 @@ fn runTests(allocator: Allocator) !GitResult {
     const stderr_trimmed = std.mem.trim(u8, result.stderr, &std.ascii.whitespace);
 
     const exit_code: u8 = switch (result.term) {
-        .Exited => |code| @intCast(code),
+        .exited => |code| @intCast(code),
         else => 1,
     };
 

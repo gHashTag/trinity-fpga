@@ -10,6 +10,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 const types = @import("types.zig");
 const elo = @import("elo.zig");
@@ -297,13 +298,13 @@ pub const Arena = struct {
         tmp_file.close();
 
         // Post to GitHub via tri issue comment (uses existing github_client.zig)
-        const result = std.process.Child.run(.{
+        const result = tri_proc.run(.{
             .allocator = self.allocator,
             .argv = &.{ "zig-out/bin/tri", "issue", "comment", "357", "--body", comment },
             .max_output_bytes = 4096,
         }) catch {
             // Fallback: try gh directly with --repo flag
-            const gh_result = std.process.Child.run(.{
+            const gh_result = tri_proc.run(.{
                 .allocator = self.allocator,
                 .argv = &.{ "gh", "issue", "comment", "357", "--repo", "gHashTag/trinity", "-b", comment },
                 .max_output_bytes = 4096,

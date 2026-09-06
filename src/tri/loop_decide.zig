@@ -11,6 +11,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_proc = @import("tri_proc");
 const colors = @import("tri_colors.zig");
 
 const GREEN = colors.GREEN;
@@ -259,7 +260,7 @@ pub const NeedleResult = struct {
 /// Returns NeedleResult with score and pass/fail.
 /// If needle is not available, returns default pass (score=100).
 pub fn needleCheck(allocator: std.mem.Allocator) NeedleResult {
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ "zig-out/bin/tri", "needle", "quality-gate" },
         .max_output_bytes = 16384,
@@ -268,7 +269,7 @@ pub fn needleCheck(allocator: std.mem.Allocator) NeedleResult {
     defer allocator.free(result.stderr);
 
     const success = (switch (result.term) {
-        .Exited => |code| code,
+        .exited => |code| code,
         else => @as(u32, 1),
     }) == 0;
 
@@ -331,7 +332,7 @@ pub fn decideExtended(allocator: std.mem.Allocator) DecisionReport {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn countDirty(allocator: std.mem.Allocator) u32 {
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ "git", "status", "--short" },
     }) catch return 0;

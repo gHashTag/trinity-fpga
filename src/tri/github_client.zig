@@ -12,6 +12,7 @@
 
 const std = @import("std");
 
+const tri_proc = @import("tri_proc");
 const tri_env = @import("tri_env.zig");
 pub const Mode = enum {
     native_http,
@@ -475,7 +476,7 @@ pub const GitHubClient = struct {
                 const result = try self.ghCliRun(argv.items);
                 defer self.allocator.free(result);
                 // gh pr create outputs the URL
-                const trimmed = std.mem.trimRight(u8, result, "\n\r ");
+                const trimmed = std.mem.trimEnd(u8, result, "\n\r ");
                 const last_slash = std.mem.lastIndexOf(u8, trimmed, "/") orelse return error.ParseError;
                 const num_str = trimmed[last_slash + 1 ..];
                 const number = std.fmt.parseInt(u32, num_str, 10) catch return error.ParseError;
@@ -909,7 +910,7 @@ pub const GitHubClient = struct {
             } else |_| {}
         }
 
-        const result = try std.process.Child.run(.{
+        const result = try tri_proc.run(.{
             .allocator = self.allocator,
             .argv = argv,
             .max_output_bytes = 1024 * 1024,
@@ -918,7 +919,7 @@ pub const GitHubClient = struct {
         defer self.allocator.free(result.stderr);
 
         const gh_exit = switch (result.term) {
-            .Exited => |code| code,
+            .exited => |code| code,
             else => @as(u32, 1),
         };
         if (gh_exit != 0) {
@@ -943,7 +944,7 @@ const OwnerRepo = struct {
 
 /// Detect owner/repo from `git remote get-url origin`
 pub fn detectOwnerRepo(allocator: std.mem.Allocator) !OwnerRepo {
-    const result = try std.process.Child.run(.{
+    const result = try tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ "git", "remote", "get-url", "origin" },
         .max_output_bytes = 4096,
@@ -952,11 +953,11 @@ pub fn detectOwnerRepo(allocator: std.mem.Allocator) !OwnerRepo {
     defer allocator.free(result.stderr);
 
     if ((switch (result.term) {
-        .Exited => |code| code,
+        .exited => |code| code,
         else => @as(u32, 1),
     }) != 0) return error.GitRemoteFailed;
 
-    const url = std.mem.trimRight(u8, result.stdout, "\n\r ");
+    const url = std.mem.trimEnd(u8, result.stdout, "\n\r ");
     const parsed = try parseGitRemoteUrl(url);
     // Dupe strings so they outlive the freed stdout buffer
     return OwnerRepo{
@@ -996,7 +997,7 @@ fn parseOwnerRepoFromPath(path: []const u8) !OwnerRepo {
         repo = repo[0 .. repo.len - 4];
     }
     // Strip trailing whitespace
-    repo = std.mem.trimRight(u8, repo, " \n\r\t");
+    repo = std.mem.trimEnd(u8, repo, " \n\r\t");
 
     if (owner.len == 0 or repo.len == 0) return error.InvalidRemoteUrl;
 
@@ -1165,7 +1166,7 @@ fn parseIssueInfo(json: []const u8) !IssueInfo {
 /// Parse `gh issue create` output: last line contains the URL with issue number
 fn parseGhIssueCreateOutput(output: []const u8) !IssueResult {
     // Output format: https://github.com/owner/repo/issues/N
-    const trimmed = std.mem.trimRight(u8, output, "\n\r ");
+    const trimmed = std.mem.trimEnd(u8, output, "\n\r ");
     // Find last /
     const last_slash = std.mem.lastIndexOf(u8, trimmed, "/") orelse return error.ParseError;
     const num_str = trimmed[last_slash + 1 ..];

@@ -2,6 +2,7 @@
 //! Executes vibee binary to generate Zig code from .tri specification
 
 const std = @import("std");
+const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 const storm = @import("../golden_chain.zig");
 
@@ -31,7 +32,7 @@ pub fn execute(allocator: std.mem.Allocator, task: []const u8, spec_file: []cons
     // Execute vibee binary via std.process.Child
     const vibee_path = "zig-out/bin/vibee";
 
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &[_][]const u8{ vibee_path, "gen", spec_file },
     }) catch |err| {
@@ -54,8 +55,8 @@ pub fn execute(allocator: std.mem.Allocator, task: []const u8, spec_file: []cons
 
     // Check exit code (Zig 0.15: term is Term enum)
     const exit_code: u32 = switch (result.term) {
-        .Exited => |code| code,
-        .Signal, .Stopped, .Unknown => 1,
+        .exited => |code| code,
+        .signal, .stopped, .unknown => 1,
     };
 
     log.info("VIBEE exit code: {d}", .{exit_code});

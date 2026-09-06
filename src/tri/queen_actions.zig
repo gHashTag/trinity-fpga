@@ -6,6 +6,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 const qt = @import("queen_types.zig");
 const queen_policy = @import("queen_policy.zig");
@@ -23,7 +24,7 @@ pub fn execute(allocator: Allocator, kind: ActionKind) ActionResult {
     const argv = kindToArgv(kind);
     const start = tri_time.milliTimestamp();
 
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = argv,
         .max_output_bytes = 64 * 1024,
@@ -40,7 +41,7 @@ pub fn execute(allocator: Allocator, kind: ActionKind) ActionResult {
     const elapsed: u64 = @intCast(@max(0, tri_time.milliTimestamp() - start));
 
     var r = ActionResult{
-        .success = result.term.Exited == 0,
+        .success = result.term.exited == 0,
         .duration_ms = elapsed,
     };
 

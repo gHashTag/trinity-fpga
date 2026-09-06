@@ -6,6 +6,7 @@
 
 const std = @import("std");
 
+const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 /// Health check status
 pub const HealthStatus = enum {
@@ -199,7 +200,7 @@ pub const HealingManager = struct {
 
     /// Refresh instance status from Fly.io
     fn refreshInstances(self: *HealingManager) !void {
-        const result = std.process.Child.run(.{
+        const result = tri_proc.run(.{
             .allocator = self.allocator,
             .argv = &[_][]const u8{ "flyctl", "status", "--all", "--json", "--app", self.app_name },
         }) catch return;
@@ -209,7 +210,7 @@ pub const HealingManager = struct {
             self.allocator.free(result.stderr);
         }
 
-        if (result.term.Exited != 0) return;
+        if (result.term.exited != 0) return;
 
         // Parse JSON to extract instance states
         // flyctl status --json returns {"Machines":[{"id":"...","state":"started",...}]}
@@ -265,7 +266,7 @@ pub const HealingManager = struct {
         instance.state = .restarting;
         instance.restart_count += 1;
 
-        const result = std.process.Child.run(.{
+        const result = tri_proc.run(.{
             .allocator = self.allocator,
             .argv = &[_][]const u8{ "flyctl", "machine", "restart", instance.id, "--app", self.app_name },
         }) catch return;
@@ -275,7 +276,7 @@ pub const HealingManager = struct {
             self.allocator.free(result.stderr);
         }
 
-        if (result.term.Exited == 0) {
+        if (result.term.exited == 0) {
             instance.state = .starting;
             instance.health = .unknown;
         } else {
@@ -308,7 +309,7 @@ pub const HealingManager = struct {
         // Scale
         std.debug.print("Scaling from {d} to {d} instances\n", .{ current_count, desired_count });
 
-        const scale_result = std.process.Child.run(.{
+        const scale_result = tri_proc.run(.{
             .allocator = self.allocator,
             .argv = &[_][]const u8{
                 "flyctl",

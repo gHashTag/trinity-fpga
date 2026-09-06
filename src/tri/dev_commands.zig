@@ -7,6 +7,7 @@
 //
 
 const std = @import("std");
+const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const state_machine = @import("dev_state_machine.zig");
@@ -123,7 +124,7 @@ fn cmdCommit(allocator: Allocator, args: []const []const u8) !void {
         "--no-verify",
     };
 
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &git_args,
     }) catch |err| {

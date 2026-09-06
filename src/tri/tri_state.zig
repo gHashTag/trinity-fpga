@@ -6,6 +6,7 @@
 
 const std = @import("std");
 
+const tri_proc = @import("tri_proc");
 const TRINITY_DIR = ".trinity";
 
 /// Ensure .trinity/ directory exists
@@ -17,7 +18,7 @@ pub fn ensureTrinityDir() !void {
 
 /// Run a subprocess and capture stdout
 pub fn runProcessAndCapture(allocator: std.mem.Allocator, argv: []const []const u8) !struct { stdout: []const u8, exit_code: u8 } {
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = argv,
         .max_output_bytes = 1024 * 1024,
@@ -25,7 +26,7 @@ pub fn runProcessAndCapture(allocator: std.mem.Allocator, argv: []const []const 
     const r = try result;
     defer allocator.free(r.stderr);
     const code: u8 = switch (r.term) {
-        .Exited => |c| c,
+        .exited => |c| c,
         else => 1,
     };
     return .{ .stdout = r.stdout, .exit_code = code };
@@ -39,7 +40,7 @@ pub fn runProcessInherit(allocator: std.mem.Allocator, argv: []const []const u8)
     _ = try child.spawn();
     const result = try child.wait();
     return switch (result) {
-        .Exited => |c| c,
+        .exited => |c| c,
         else => 1,
     };
 }

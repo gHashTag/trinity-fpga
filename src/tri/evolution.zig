@@ -18,6 +18,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 const tri_exit_codes = @import("tri_exit_codes.zig");
 const Allocator = std.mem.Allocator;
@@ -2090,7 +2091,7 @@ fn curlGraphQL(allocator: Allocator, token: []const u8, deployment_id: []const u
         return error.RequestFailed;
     };
 
-    if (term.Exited != 0) {
+    if (term.exited != 0) {
         stdout_buf.deinit(allocator);
         return error.RequestFailed;
     }
@@ -3889,7 +3890,7 @@ fn postToIssue(allocator: Allocator, issue_num: []const u8, state: *const Evolut
     tmp_file.close();
 
     // Use tri issue comment (existing CLI) with fallback to gh
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ "zig-out/bin/tri", "issue", "comment", issue_num, "-F", tmp_path },
         .max_output_bytes = 4096,
@@ -5526,7 +5527,7 @@ fn runLiveLogs(allocator: Allocator, svc_name: []const u8, initial_lines: u32, i
 fn parseLiveMetrics(msg: []const u8, step: *u32, ppl: *f32, best: *f32) void {
     // Training lines look like: "  12300 |   4.2357 |   4.1973 |    69.11 | ..."
     // Find first pipe-separated number
-    const trimmed = std.mem.trimLeft(u8, msg, " ");
+    const trimmed = std.mem.trimStart(u8, msg, " ");
     if (trimmed.len == 0) return;
     if (trimmed[0] < '0' or trimmed[0] > '9') return;
 
@@ -5583,7 +5584,7 @@ fn sendLiveTelegram(allocator: Allocator, svc_name: []const u8, step: u32, ppl_v
         \\Polls: {d} | phi^2+1/phi^2=3
     , .{ svc_name, step_k, ppl_val, best_ppl_val, polls }) catch return;
 
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &[_][]const u8{ "zig-out/bin/tri", "notify", msg },
         .max_output_bytes = 4096,

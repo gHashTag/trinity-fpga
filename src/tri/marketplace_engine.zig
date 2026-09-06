@@ -132,7 +132,7 @@ pub fn computeDashboard() DashboardStats {
 }
 
 pub fn computeStakingTiers(allocator: Allocator) ![]StakingTier {
-    var result: std.ArrayListUnmanaged(StakingTier) = .{};
+    var result: std.ArrayListUnmanaged(StakingTier) = .empty;
     const fib_stakes = [_]u32{ 3, 5, 8, 13, 21, 34, 55, 89, 144, 233 };
     var tier: u8 = 0;
     while (tier < 10) : (tier += 1) {
@@ -151,7 +151,7 @@ pub fn computeStakingTiers(allocator: Allocator) ![]StakingTier {
 }
 
 pub fn getAccuracyTiers(allocator: Allocator) ![]AccuracyTier {
-    var result: std.ArrayListUnmanaged(AccuracyTier) = .{};
+    var result: std.ArrayListUnmanaged(AccuracyTier) = .empty;
     try result.append(allocator, .{ .name = "EXACT", .max_error_pct = 0.01, .reward_multiplier = std.math.pow(f64, PHI, 4.0), .label = "Sacred Fit" });
     try result.append(allocator, .{ .name = "CLOSE", .max_error_pct = 0.1, .reward_multiplier = PHI_SQ, .label = "Golden Fit" });
     try result.append(allocator, .{ .name = "NEAR", .max_error_pct = 1.0, .reward_multiplier = PHI, .label = "Silver Fit" });
@@ -161,7 +161,7 @@ pub fn getAccuracyTiers(allocator: Allocator) ![]AccuracyTier {
 }
 
 pub fn computeTopComputations(allocator: Allocator) ![]TopComputation {
-    var result: std.ArrayListUnmanaged(TopComputation) = .{};
+    var result: std.ArrayListUnmanaged(TopComputation) = .empty;
     try result.append(allocator, .{ .rank = 1, .formula = "m_tau/m_e = 4*3^3*pi^3*phi^-2*e", .accuracy_pct = 0.0002, .reward_phi_power = 4, .reward_value = std.math.pow(f64, PHI, 4.0) });
     try result.append(allocator, .{ .rank = 2, .formula = "CHSH = 8*3^4*pi^-3", .accuracy_pct = 0.0020, .reward_phi_power = 3, .reward_value = std.math.pow(f64, PHI, 3.0) });
     try result.append(allocator, .{ .rank = 3, .formula = "gamma_BI = 7*3^-3*pi^2*e^-3", .accuracy_pct = 0.0082, .reward_phi_power = 3, .reward_value = std.math.pow(f64, PHI, 3.0) });
@@ -171,7 +171,7 @@ pub fn computeTopComputations(allocator: Allocator) ![]TopComputation {
 }
 
 pub fn computeTokenomicsSchedule(allocator: Allocator, epochs: u32) ![]TokenomicsEpoch {
-    var result: std.ArrayListUnmanaged(TokenomicsEpoch) = .{};
+    var result: std.ArrayListUnmanaged(TokenomicsEpoch) = .empty;
     var supply: f64 = 999999.0;
     var staked_pct: f64 = 38.2;
     var epoch: u32 = 0;
@@ -294,7 +294,7 @@ pub fn computeLiquidityPools() [5]LiquidityPool {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 pub fn marketplaceToJson(allocator: Allocator, mode_str: []const u8) ![]u8 {
-    var buf: std.ArrayListUnmanaged(u8) = .{};
+    var buf: std.ArrayListUnmanaged(u8) = .empty;
     const w = buf.writer(allocator);
 
     const trinity = PHI_SQ + PHI_INV_SQ;

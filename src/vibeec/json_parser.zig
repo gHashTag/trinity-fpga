@@ -241,7 +241,7 @@ pub const JsonParser = struct {
         if (self.input[self.pos] != '[') return JsonError.UnexpectedToken;
         self.pos += 1;
 
-        var arr: std.ArrayListUnmanaged(JsonValue) = .{};
+        var arr: std.ArrayListUnmanaged(JsonValue) = .empty;
         errdefer arr.deinit(self.allocator);
 
         self.skipWhitespace();

@@ -40,7 +40,7 @@ pub const OllamaProvider = struct {
 
         // Check exit status
         switch (term) {
-            .Exited => |code| {
+            .exited => |code| {
                 if (code != 0) {
                     return error.OllamaFailed;
                 }

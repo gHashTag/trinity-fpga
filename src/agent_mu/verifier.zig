@@ -7,6 +7,7 @@
 
 const std = @import("std");
 
+const tri_proc = @import("tri_proc");
 /// Result of running a single command
 pub const CommandResult = struct {
     exit_code: u8,
@@ -36,7 +37,7 @@ fn runCommand(
     argv: []const []const u8,
     working_dir: ?[]const u8,
 ) !CommandResult {
-    const result = try std.process.Child.run(.{
+    const result = try tri_proc.run(.{
         .allocator = allocator,
         .argv = argv,
         .cwd = working_dir,
@@ -49,7 +50,7 @@ fn runCommand(
 
     // Determine exit code
     const exit_code: u8 = switch (result.term) {
-        .Exited => |code| @intCast(code),
+        .exited => |code| @intCast(code),
         else => 1,
     };
 

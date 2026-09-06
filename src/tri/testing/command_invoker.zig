@@ -1,5 +1,6 @@
 const std = @import("std");
 
+const tri_proc = @import("tri_proc");
 // ============================================================================
 // TRINITY: Command Invoker (Cycle 101)
 // Executes actual tri commands via subprocess and captures output
@@ -79,7 +80,7 @@ pub const CommandInvoker = struct {
         // If not found, try to build it
         std.debug.print("tri binary not found, attempting to build...\n", .{});
 
-        const build_result = try std.process.Child.run(.{
+        const build_result = try tri_proc.run(.{
             .allocator = allocator,
             .argv = &[_][]const u8{ "zig", "build", "tri" },
         });
@@ -89,7 +90,7 @@ pub const CommandInvoker = struct {
         }
 
         if ((switch (build_result.term) {
-            .Exited => |code| code,
+            .exited => |code| code,
             else => @as(u32, 1),
         }) != 0) {
             std.debug.print("Failed to build tri: {s}\n", .{build_result.stderr});
@@ -135,7 +136,7 @@ pub const CommandInvoker = struct {
         }
 
         // Execute the command
-        const result = try std.process.Child.run(.{
+        const result = try tri_proc.run(.{
             .allocator = self.allocator,
             .argv = full_argv,
             .cwd = ".",
@@ -143,7 +144,7 @@ pub const CommandInvoker = struct {
 
         // Determine exit code
         const exit_code = switch (result.term) {
-            .Exited => |code| @as(u8, @intCast(code)),
+            .exited => |code| @as(u8, @intCast(code)),
             .Signal => |signal| {
                 std.debug.print("Command killed by signal {}\n", .{signal});
                 return error.CommandKilled;

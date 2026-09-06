@@ -125,7 +125,7 @@ pub const Instruction = struct {
 ///     [22:18] = src2 (5 bits)
 pub fn decode(word: u32) Instruction {
     const opcode_val = @as(u8, @truncate(word & 0xFF));
-    const opcode = std.meta.intToEnum(Opcode, opcode_val) catch Opcode.NOP;
+    const opcode = std.enums.fromInt(Opcode, opcode_val) orelse Opcode.NOP;
 
     const dst = @as(u8, @truncate((word >> 8) & 0x1F));
 

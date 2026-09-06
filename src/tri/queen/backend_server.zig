@@ -19,6 +19,7 @@ const EpisodePattern = auto_improve.EpisodePattern;
 
 const std = @import("std");
 
+const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 // ============================================================================
 // CONSTANTS
@@ -465,7 +466,7 @@ pub const QueenBackend = struct {
         };
 
         // Zig 0.15: Use Child.run() to get output and exit status
-        const codegen_result = std.process.Child.run(.{
+        const codegen_result = tri_proc.run(.{
             .allocator = self.allocator,
             .argv = args,
         }) catch |err| {
@@ -485,9 +486,9 @@ pub const QueenBackend = struct {
         defer self.allocator.free(codegen_result.stdout);
         defer self.allocator.free(codegen_result.stderr);
 
-        // Zig 0.15: Term.Exited is the exit code (u8), not a nested field
+        // Zig 0.15: Term.exited is the exit code (u8), not a nested field
         const term = codegen_result.term;
-        const codegen_success: bool = term == .Exited and term.Exited == 0;
+        const codegen_success: bool = term == .exited and term.exited == 0;
         const codegen_output: []const u8 = if (codegen_success)
             codegen_result.stdout
         else
@@ -503,7 +504,7 @@ pub const QueenBackend = struct {
             .tri27_config = .{
                 .tri_gen_path = tri_gen_path,
                 .output_dir = "src/generated",
-                .exit_code = if (codegen_result.term == .Exited) codegen_result.term.Exited else 1,
+                .exit_code = if (codegen_result.term == .exited) codegen_result.term.exited else 1,
                 .codegen_success = codegen_success,
                 .codegen_output = codegen_output,
             },

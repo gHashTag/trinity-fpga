@@ -33,6 +33,7 @@
 
 const std = @import("std");
 
+const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 // Constants
 const DEFAULT_BAUD: u64 = 115200;
@@ -8692,7 +8693,7 @@ fn testEcho(port_path: []const u8, config: Config) void {
         };
         defer std.heap.page_allocator.free(stty_cmd);
 
-        const result = std.process.Child.run(.{
+        const result = tri_proc.run(.{
             .allocator = std.heap.page_allocator,
             .argv = &[_][]const u8{ "sh", "-c", stty_cmd },
         }) catch |err| {
@@ -8704,7 +8705,7 @@ fn testEcho(port_path: []const u8, config: Config) void {
             std.heap.page_allocator.free(result.stdout);
         }
 
-        if (result.term != .Exited or result.term.Exited != 0) {
+        if (result.term != .exited or result.term.exited != 0) {
             printErr("[!] stty failed: {s}\n", .{result.stderr});
             return;
         }

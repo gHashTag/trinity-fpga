@@ -107,7 +107,7 @@ pub fn generateBitstream(allocator: Allocator, device: DeviceId, output_path: []
 /// avoiding dependency on auto-increment padding details.
 fn writeBitFile(allocator: Allocator, path: []const u8, device: DeviceId, frames: []const u32, params: device_db.DeviceParams) !void {
     _ = params;
-    var buf: std.ArrayList(u8) = .{};
+    var buf: std.ArrayList(u8) = .empty;
     defer buf.deinit(allocator);
     const writer = buf.writer(allocator);
 
@@ -455,7 +455,7 @@ fn updateFrameEcc(frame: []u32) void {
 
 /// Generate bitstream to a buffer (for testing without file I/O).
 pub fn generateToBuffer(allocator: Allocator, device: DeviceId) ![]u8 {
-    var buf: std.ArrayList(u8) = .{};
+    var buf: std.ArrayList(u8) = .empty;
     errdefer buf.deinit(allocator);
 
     const writer = buf.writer(allocator);

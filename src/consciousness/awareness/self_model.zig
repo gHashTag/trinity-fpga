@@ -86,7 +86,7 @@ pub const SelfModel = struct {
     agency_level: f64 = 0.0,
     self_boundary: f64 = 0.0,
     identity_coherence: f64 = 0.0,
-    history: std.ArrayListUnmanaged(IntrospectionResult) = .{},
+    history: std.ArrayListUnmanaged(IntrospectionResult) = .empty,
 
     /// Initialize self-model
     pub fn init(allocator: mem.Allocator) SelfModel {

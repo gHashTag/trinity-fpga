@@ -18,6 +18,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 const RalphLoop = @import("ralph_loop.zig").RalphLoop;
 const agent_mu = @import("agent_mu");
@@ -515,7 +516,7 @@ pub const Orchestrator = struct {
 
     /// Create git branch
     fn gitCreateBranch(self: *Self, branch_name: []const u8) !void {
-        const result = try std.process.Child.run(.{
+        const result = try tri_proc.run(.{
             .allocator = self.alloc,
             .argv = &.{ "git", "checkout", "-b", branch_name },
         });
@@ -526,7 +527,7 @@ pub const Orchestrator = struct {
         }
 
         if ((switch (result.term) {
-            .Exited => |code| code,
+            .exited => |code| code,
             else => @as(u32, 1),
         }) != 0) {
             std.debug.print("⚠️  git checkout failed: {s}\n", .{result.stderr});

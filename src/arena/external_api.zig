@@ -10,6 +10,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 const types = @import("types.zig");
 const Allocator = std.mem.Allocator;
@@ -107,7 +108,7 @@ fn callTrinity(allocator: Allocator, prompt: []const u8, start_ms: i64) !Complet
 
     const elapsed = elapsedMs(start_ms);
 
-    if (term.Exited != 0) {
+    if (term.exited != 0) {
         const model_name = try allocator.dupe(u8, "trinity-hslm");
         return .{
             .response = result,
@@ -262,7 +263,7 @@ fn httpPost(
     else
         std.fmt.bufPrint(&auth_h_buf, "Authorization: Bearer {s}", .{auth_value}) catch "Authorization: Bearer ";
 
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{
             "curl", "-s", "--max-time",                     "30",

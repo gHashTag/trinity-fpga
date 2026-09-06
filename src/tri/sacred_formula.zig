@@ -187,7 +187,7 @@ pub fn fitToJson(allocator: Allocator, target: f64, fit: SacredFit) Allocator.Er
 
 /// Serialize constants list to JSON (for GET /api/sacred-formula/constants)
 pub fn constantsToJson(allocator: Allocator, spec: *const tri_spec.SacredSpec) Allocator.Error![]u8 {
-    var buf: std.ArrayListUnmanaged(u8) = .{};
+    var buf: std.ArrayListUnmanaged(u8) = .empty;
     const w = buf.writer(allocator);
 
     w.writeAll("{\"constants\":[") catch return error.OutOfMemory;
@@ -210,7 +210,7 @@ pub fn fullResultsToJson(
     preds: []const PredictionResult,
     bounds: tri_spec.SearchBounds,
 ) Allocator.Error![]u8 {
-    var buf: std.ArrayListUnmanaged(u8) = .{};
+    var buf: std.ArrayListUnmanaged(u8) = .empty;
     const w = buf.writer(allocator);
 
     w.writeAll("{\"formula\":\"V = n * 3^k * pi^m * phi^p * e^q\",\"constants\":[") catch return error.OutOfMemory;

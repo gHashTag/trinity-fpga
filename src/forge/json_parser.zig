@@ -181,7 +181,7 @@ fn parsePorts(allocator: Allocator, mod_obj: std.json.ObjectMap) ![]YosysPort {
         else => return ParseError.InvalidJsonStructure,
     };
 
-    var port_list: std.ArrayList(YosysPort) = .{};
+    var port_list: std.ArrayList(YosysPort) = .empty;
     errdefer {
         for (port_list.items) |p| {
             allocator.free(p.name);
@@ -231,7 +231,7 @@ fn parseCells(allocator: Allocator, mod_obj: std.json.ObjectMap) ![]YosysCell {
         else => return ParseError.InvalidJsonStructure,
     };
 
-    var cell_list: std.ArrayList(YosysCell) = .{};
+    var cell_list: std.ArrayList(YosysCell) = .empty;
     errdefer {
         for (cell_list.items) |cell| {
             allocator.free(cell.name);
@@ -303,7 +303,7 @@ fn parsePortDirections(allocator: Allocator, cell_obj: std.json.ObjectMap) ![]Yo
         else => return &[0]YosysCell.PortDirEntry{},
     };
 
-    var list: std.ArrayList(YosysCell.PortDirEntry) = .{};
+    var list: std.ArrayList(YosysCell.PortDirEntry) = .empty;
     errdefer {
         for (list.items) |pd| allocator.free(pd.name);
         list.deinit(allocator);
@@ -332,7 +332,7 @@ fn parseConnections(allocator: Allocator, cell_obj: std.json.ObjectMap) ![]Yosys
         else => return &[0]YosysCell.ConnectionEntry{},
     };
 
-    var list: std.ArrayList(YosysCell.ConnectionEntry) = .{};
+    var list: std.ArrayList(YosysCell.ConnectionEntry) = .empty;
     errdefer {
         for (list.items) |item| {
             allocator.free(item.name);
@@ -371,7 +371,7 @@ fn parseParameters(allocator: Allocator, cell_obj: std.json.ObjectMap) ![]YosysC
         else => return &[0]YosysCell.ParamEntry{},
     };
 
-    var list: std.ArrayList(YosysCell.ParamEntry) = .{};
+    var list: std.ArrayList(YosysCell.ParamEntry) = .empty;
     errdefer {
         for (list.items) |param| {
             allocator.free(param.name);

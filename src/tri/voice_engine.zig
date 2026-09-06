@@ -8,6 +8,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 const types = @import("faculty_types.zig");
 const AgentState = types.AgentState;
@@ -25,7 +26,7 @@ pub const MuHeartbeat = struct {
 
 /// Read last git commit subject line (max 80 chars).
 pub fn readLastCommit(buf: []u8) []const u8 {
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = std.heap.page_allocator,
         .argv = &.{ "git", "log", "--oneline", "-1", "--format=%s" },
         .max_output_bytes = 256,
@@ -41,7 +42,7 @@ pub fn readLastCommit(buf: []u8) []const u8 {
 
 /// Read last N git commit subjects (max 3). Returns count of commits found.
 pub fn readRecentCommits(out: *[3][80]u8) u8 {
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = std.heap.page_allocator,
         .argv = &.{ "git", "log", "--oneline", "-3", "--format=%s" },
         .max_output_bytes = 512,

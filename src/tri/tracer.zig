@@ -166,7 +166,7 @@ pub const Tracer = struct {
     /// Export trace to OTLP-compatible JSON
     pub fn exportTrace(self: *Self) ![]const u8 {
         const trace = self.active_trace orelse return error.NoActiveTrace;
-        var buf: std.ArrayListUnmanaged(u8) = .{};
+        var buf: std.ArrayListUnmanaged(u8) = .empty;
         const writer = buf.writer(self.allocator);
 
         try writer.writeAll("{\"resourceSpans\":[{");

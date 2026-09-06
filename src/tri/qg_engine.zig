@@ -109,7 +109,7 @@ pub const QGSimResult = struct {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 pub fn evolveSpinFoam(allocator: Allocator, steps: u32) ![]SpinFoamStep {
-    var result: std.ArrayListUnmanaged(SpinFoamStep) = .{};
+    var result: std.ArrayListUnmanaged(SpinFoamStep) = .empty;
     var amp: f64 = 1.0;
     var action: f64 = 0.0;
     var phase: f64 = 0.0;
@@ -132,7 +132,7 @@ pub fn evolveSpinFoam(allocator: Allocator, steps: u32) ![]SpinFoamStep {
 }
 
 pub fn evolveReggeLattice(allocator: Allocator, steps: u32) ![]ReggeStep {
-    var result: std.ArrayListUnmanaged(ReggeStep) = .{};
+    var result: std.ArrayListUnmanaged(ReggeStep) = .empty;
     var regge_action: f64 = 10.0;
     var deficit: f64 = 0.5;
     var i: u32 = 0;
@@ -152,7 +152,7 @@ pub fn evolveReggeLattice(allocator: Allocator, steps: u32) ![]ReggeStep {
 }
 
 pub fn simulateAdsThermal(allocator: Allocator, steps: u32) ![]AdSThermalStep {
-    var result: std.ArrayListUnmanaged(AdSThermalStep) = .{};
+    var result: std.ArrayListUnmanaged(AdSThermalStep) = .empty;
     var i: u32 = 0;
     const max_steps = @min(steps, 10) + 1;
     while (i < max_steps) : (i += 1) {
@@ -173,7 +173,7 @@ pub fn simulateAdsThermal(allocator: Allocator, steps: u32) ![]AdSThermalStep {
 }
 
 pub fn computeAreaSpectrum(allocator: Allocator) ![]AreaEigenvalue {
-    var result: std.ArrayListUnmanaged(AreaEigenvalue) = .{};
+    var result: std.ArrayListUnmanaged(AreaEigenvalue) = .empty;
     const js = [_]f64{ 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0 };
     var prev_area: f64 = 0.0;
     for (js) |j| {
@@ -196,7 +196,7 @@ pub fn computeAreaGap() f64 {
 }
 
 pub fn simulateCDT(allocator: Allocator, steps: u32) ![]CDTStep {
-    var result: std.ArrayListUnmanaged(CDTStep) = .{};
+    var result: std.ArrayListUnmanaged(CDTStep) = .empty;
     var i: u32 = 0;
     while (i < steps) : (i += 1) {
         const fi: f64 = @floatFromInt(i);
@@ -219,7 +219,7 @@ pub fn simulateCDT(allocator: Allocator, steps: u32) ![]CDTStep {
 }
 
 pub fn computeVenezianoAmplitudes(allocator: Allocator) ![]VenezianoAmplitude {
-    var result: std.ArrayListUnmanaged(VenezianoAmplitude) = .{};
+    var result: std.ArrayListUnmanaged(VenezianoAmplitude) = .empty;
     const s_values = [_]f64{ 0.5, 1.0, 1.5, 2.0, 2.5, 3.0 };
     for (s_values) |s| {
         const t = -s * PHI_INV;
@@ -247,7 +247,7 @@ pub fn computeVenezianoAmplitudes(allocator: Allocator) ![]VenezianoAmplitude {
 }
 
 pub fn simulatePageCurve(allocator: Allocator, steps: u32) ![]PageCurveStep {
-    var result: std.ArrayListUnmanaged(PageCurveStep) = .{};
+    var result: std.ArrayListUnmanaged(PageCurveStep) = .empty;
     const M: f64 = 10.0;
     const page_time: f64 = M * M * M * PAGE_TIME_COEFF;
     const initial_entropy: f64 = PI * M * M;
@@ -278,7 +278,7 @@ pub fn simulatePageCurve(allocator: Allocator, steps: u32) ![]PageCurveStep {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 pub fn qgSimToJson(allocator: Allocator, steps: u32) ![]u8 {
-    var buf: std.ArrayListUnmanaged(u8) = .{};
+    var buf: std.ArrayListUnmanaged(u8) = .empty;
     const w = buf.writer(allocator);
 
     const trinity = PHI_SQ + PHI_INV_SQ;

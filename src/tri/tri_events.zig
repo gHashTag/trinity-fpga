@@ -10,6 +10,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const cell_parser = @import("ribosome.zig");
@@ -227,7 +228,7 @@ fn sendTelegramNotification(allocator: Allocator, event: []const u8, data: []con
     defer allocator.free(msg);
 
     // Use tri notify to send
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ "zig-out/bin/tri", "notify", msg },
     }) catch return;

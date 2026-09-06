@@ -149,7 +149,7 @@ fn runSubprocess(allocator: std.mem.Allocator, argv: []const []const u8, desc: [
         return false;
     };
     const success = switch (term) {
-        .Exited => |c| c == 0,
+        .exited => |c| c == 0,
         else => false,
     };
     if (success) {

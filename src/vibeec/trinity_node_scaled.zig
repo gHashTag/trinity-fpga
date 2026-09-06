@@ -15,6 +15,7 @@
 
 const std = @import("std");
 
+const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 pub const TaskType = enum {
     Generation,
@@ -163,7 +164,7 @@ pub const ScaledTrinityNode = struct {
         var timer = try tri_time.Timer.start();
 
         // Build command arguments
-        var args: std.ArrayListUnmanaged([]const u8) = .{};
+        var args: std.ArrayListUnmanaged([]const u8) = .empty;
         defer args.deinit(self.allocator);
 
         try args.append(self.allocator, self.config.llama_cli_path);
@@ -197,7 +198,7 @@ pub const ScaledTrinityNode = struct {
         try args.append(self.allocator, "--no-warmup");
 
         // Run subprocess
-        const result = try std.process.Child.run(.{
+        const result = try tri_proc.run(.{
             .allocator = self.allocator,
             .argv = args.items,
             .max_output_bytes = 1024 * 1024,
@@ -211,7 +212,7 @@ pub const ScaledTrinityNode = struct {
         const tokens = output.len / 4; // Approx
 
         const success = switch (result.term) {
-            .Exited => |code| code == 0,
+            .exited => |code| code == 0,
             else => false,
         };
 
@@ -252,7 +253,7 @@ pub const ScaledTrinityNode = struct {
     }
 
     fn buildPrompt(self: *Self, task_type: TaskType, input: []const u8) ![]u8 {
-        var buffer: std.ArrayListUnmanaged(u8) = .{};
+        var buffer: std.ArrayListUnmanaged(u8) = .empty;
         errdefer buffer.deinit(self.allocator);
 
         switch (task_type) {

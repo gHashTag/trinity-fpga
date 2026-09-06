@@ -147,7 +147,7 @@ pub fn textToGematriaValue(text: []const u8) u32 {
 
 /// Collect all Coptic glyphs from text as GlyphBreakdown array.
 pub fn textToGlyphs(allocator: Allocator, text: []const u8) ![]GlyphBreakdown {
-    var list: std.ArrayListUnmanaged(GlyphBreakdown) = .{};
+    var list: std.ArrayListUnmanaged(GlyphBreakdown) = .empty;
     errdefer list.deinit(allocator);
 
     var i: usize = 0;
@@ -181,7 +181,7 @@ pub fn textToGlyphs(allocator: Allocator, text: []const u8) ![]GlyphBreakdown {
 /// E.g. 137 → Ⲥ(100) + Ⲗ(30) + Ⲍ(7)
 /// Handles values up to 999. For larger values, repeats hundreds.
 pub fn numberToGlyphs(allocator: Allocator, value: u32) ![]GlyphBreakdown {
-    var list: std.ArrayListUnmanaged(GlyphBreakdown) = .{};
+    var list: std.ArrayListUnmanaged(GlyphBreakdown) = .empty;
     errdefer list.deinit(allocator);
 
     if (value == 0) return list.toOwnedSlice(allocator);
@@ -259,7 +259,7 @@ pub fn numberToGlyphs(allocator: Allocator, value: u32) ![]GlyphBreakdown {
 
 /// Serialize gematria result to JSON
 pub fn gematriaToJson(allocator: Allocator, input: []const u8, mode: Mode, glyphs: []const GlyphBreakdown, total: u32) ![]u8 {
-    var buf: std.ArrayListUnmanaged(u8) = .{};
+    var buf: std.ArrayListUnmanaged(u8) = .empty;
     const w = buf.writer(allocator);
 
     const mode_str = switch (mode) {
@@ -305,7 +305,7 @@ pub fn gematriaWithFitToJson(
     computed: f64,
     error_pct: f64,
 ) ![]u8 {
-    var buf: std.ArrayListUnmanaged(u8) = .{};
+    var buf: std.ArrayListUnmanaged(u8) = .empty;
     const w = buf.writer(allocator);
 
     const mode_str = switch (mode) {

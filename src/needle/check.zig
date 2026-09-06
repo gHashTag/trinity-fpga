@@ -13,6 +13,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 const needle = @import("needle.zig");
 
@@ -123,7 +124,7 @@ pub const NeedleChecker = struct {
         var iter = std.mem.splitScalar(u8, self.source, '\n');
         var line_num: u32 = 1;
         while (iter.next()) |line| {
-            const trimmed = std.mem.trimRight(u8, line, " \t");
+            const trimmed = std.mem.trimEnd(u8, line, " \t");
             if (trimmed.len > 0 and trimmed[trimmed.len - 1] == '}') {
                 // Check if next non-empty line has a semicolon
                 // This is a simplified check
@@ -178,7 +179,7 @@ pub const NeedleChecker = struct {
             self.allocator.free(result.stderr);
         }
 
-        return result.term == .Exited and result.exit_code == 0;
+        return result.term == .exited and result.exit_code == 0;
     }
 };
 
@@ -419,7 +420,7 @@ pub fn runCompileCheck(
     errdefer result.deinit();
 
     // Run zig build as subprocess
-    const proc_result = try std.process.Child.run(.{
+    const proc_result = try tri_proc.run(.{
         .allocator = allocator,
         .cwd = project_root,
         .argv = &[_][]const u8{ "zig", "build" },
@@ -434,7 +435,7 @@ pub fn runCompileCheck(
     }
 
     result.exit_code = @intCast(switch (proc_result.term) {
-        .Exited => |code| code,
+        .exited => |code| code,
         else => 255,
     });
 

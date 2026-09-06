@@ -17,6 +17,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_proc = @import("tri_proc");
 const types = @import("types.zig");
 const battle_mod = @import("battle.zig");
 const tasks_mod = @import("tasks.zig");
@@ -112,7 +113,7 @@ fn cliBattle(allocator: Allocator, args: []const []const u8) !void {
 
     // If --from-issue, fetch issue title as prompt
     if (from_issue) |issue_num| {
-        const gh_result = std.process.Child.run(.{
+        const gh_result = tri_proc.run(.{
             .allocator = allocator,
             .argv = &.{ "gh", "issue", "view", issue_num, "--repo", "gHashTag/trinity", "--json", "title,body", "--jq", ".title" },
             .max_output_bytes = 4096,
@@ -125,7 +126,7 @@ fn cliBattle(allocator: Allocator, args: []const []const u8) !void {
             prompt = gh_result.stdout;
             // Trim trailing newline
             if (prompt) |p| {
-                const trimmed = std.mem.trimRight(u8, p, "\n\r");
+                const trimmed = std.mem.trimEnd(u8, p, "\n\r");
                 prompt = trimmed;
             }
             auto_judge = true; // Auto-judge when from issue

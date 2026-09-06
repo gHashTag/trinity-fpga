@@ -192,7 +192,7 @@ pub const ReadOptions = struct {
 
 /// Read memory records matching the given options
 pub fn read(allocator: Allocator, opts: ReadOptions) !std.ArrayList(MemoryRecord) {
-    var results: std.ArrayList(MemoryRecord) = .{};
+    var results: std.ArrayList(MemoryRecord) = .empty;
 
     if (opts.agent) |agent_name| {
         // Read from specific agent
@@ -238,7 +238,7 @@ pub fn search(allocator: Allocator, query: []const u8, limit: u32) !std.ArrayLis
     }
     const words = words_buf[0..word_count];
     if (word_count == 0) {
-        const empty: std.ArrayList(MemoryRecord) = .{};
+        const empty: std.ArrayList(MemoryRecord) = .empty;
         return empty;
     }
 
@@ -246,7 +246,7 @@ pub fn search(allocator: Allocator, query: []const u8, limit: u32) !std.ArrayLis
     var all = try read(allocator, .{ .limit = 10000 });
     defer all.deinit(allocator);
 
-    var results: std.ArrayList(MemoryRecord) = .{};
+    var results: std.ArrayList(MemoryRecord) = .empty;
 
     for (all.items) |rec| {
         var score: u32 = 0;
@@ -787,7 +787,7 @@ fn gcAgent(allocator: Allocator, agent_name: []const u8, now_ts: u64, result: *G
     const contents = std.fs.cwd().readFileAlloc(allocator, file_path, 8 * 1024 * 1024) catch return;
     defer allocator.free(contents);
 
-    var kept_lines: std.ArrayList(u8) = .{};
+    var kept_lines: std.ArrayList(u8) = .empty;
     defer kept_lines.deinit(allocator);
 
     var line_iter = std.mem.splitScalar(u8, contents, '\n');

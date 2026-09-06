@@ -68,7 +68,7 @@ pub const Tokenizer = struct {
     // Simple greedy tokenization (longest match)
     // Supports both GPT-2 style (Ġ = 0xC4 0xA0) and Llama style (▁ = 0xE2 0x96 0x81)
     pub fn encode(self: *const Tokenizer, allocator: std.mem.Allocator, text: []const u8) ![]u32 {
-        var tokens: std.ArrayListUnmanaged(u32) = .{};
+        var tokens: std.ArrayListUnmanaged(u32) = .empty;
         errdefer tokens.deinit(allocator);
 
         // Add BOS token
@@ -80,18 +80,22 @@ pub const Tokenizer = struct {
             var found_special = false;
             const special_tokens = [_][]const u8{
                 // Qwen/ChatML tokens
-                "<|im_start|>",         "<|im_end|>",                    "<|endoftext|>",
-                "<|object_ref_start|>", "<|object_ref_end|>",            "<|box_start|>",
-                "<|box_end|>",          "<|quad_start|>",                "<|quad_end|>",
-                "<|vision_start|>",     "<|vision_end|>",                "<|vision_pad|>",
-                "<|image_pad|>",        "<|video_pad|>",                 "<tool_call>",
-                "</tool_call>",         "<|fim_prefix|>",                "<|fim_middle|>",
-                "<|fim_suffix|>",       "<|fim_pad|>",                   "<|repo_name|>",
+                "<|im_start|>",         "<|im_end|>",         "<|endoftext|>",
+                "<|object_ref_start|>", "<|object_ref_end|>", "<|box_start|>",
+                "<|box_end|>",          "<|quad_start|>",     "<|quad_end|>",
+                "<|vision_start|>",     "<|vision_end|>",     "<|vision_pad|>",
+                "<|image_pad|>",        "<|video_pad|>",      "<tool_call>",
+                "</tool_call>",         "<|fim_prefix|>",     "<|fim_middle|>",
+                "<|fim_suffix|>",       "<|fim_pad|>",        "<|repo_name|>",
                 "<|file_sep|>",
                 // DeepSeek tokens
-                        "<|User|>",                      "<|Assistant|>",
-                "<|EOT|>",              "<｜begin▁of▁sentence｜>", "<｜end▁of▁sentence｜>",
-                "<｜fim▁hole｜>",   "<｜fim▁begin｜>",           "<｜fim▁end｜>",
+                        "<|User|>",           "<|Assistant|>",
+                "<|EOT|>",
+                "<｜begin▁of▁sentence｜>",
+                "<｜end▁of▁sentence｜>",
+                "<｜fim▁hole｜>",
+                "<｜fim▁begin｜>",
+                "<｜fim▁end｜>",
             };
 
             for (special_tokens) |special| {
@@ -255,7 +259,7 @@ pub const Tokenizer = struct {
 
     // Decode tokens to text
     pub fn decode(self: *const Tokenizer, allocator: std.mem.Allocator, tokens: []const u32) ![]u8 {
-        var result: std.ArrayListUnmanaged(u8) = .{};
+        var result: std.ArrayListUnmanaged(u8) = .empty;
         errdefer result.deinit(allocator);
 
         for (tokens) |token| {
@@ -369,7 +373,7 @@ pub const ChatTemplate = struct {
         system: ?[]const u8,
         user: []const u8,
     ) ![]u8 {
-        var result: std.ArrayListUnmanaged(u8) = .{};
+        var result: std.ArrayListUnmanaged(u8) = .empty;
         errdefer result.deinit(allocator);
 
         // System message

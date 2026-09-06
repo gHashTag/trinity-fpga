@@ -79,7 +79,7 @@ pub fn parseKeyValue(line: []const u8) struct { []const u8, []const u8, bool } {
 
 /// Check if line is a comment
 pub fn isComment(line: []const u8) bool {
-    const trimmed = std.mem.trimLeft(u8, line, " \t");
+    const trimmed = std.mem.trimStart(u8, line, " \t");
     return trimmed.len > 0 and trimmed[0] == '#';
 }
 
@@ -99,15 +99,15 @@ pub fn getIndentLevel(line: []const u8) usize {
 
 /// Check if line starts a list item (-)
 pub fn isListItem(line: []const u8) bool {
-    const trimmed = std.mem.trimLeft(u8, line, " \t");
+    const trimmed = std.mem.trimStart(u8, line, " \t");
     return trimmed.len > 0 and trimmed[0] == '-';
 }
 
 /// Extract list item value after '-'
 pub fn extractListItem(line: []const u8) []const u8 {
-    const trimmed = std.mem.trimLeft(u8, line, " \t");
+    const trimmed = std.mem.trimStart(u8, line, " \t");
     if (trimmed.len > 0 and trimmed[0] == '-') {
-        const rest = std.mem.trimLeft(u8, trimmed[1..], " \t");
+        const rest = std.mem.trimStart(u8, trimmed[1..], " \t");
         // Remove quotes if present
         if (rest.len >= 2 and ((rest[0] == '"' and rest[rest.len - 1] == '"') or (rest[0] == '\'' and rest[rest.len - 1] == '\''))) {
             return rest[1 .. rest.len - 1];

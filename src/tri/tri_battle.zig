@@ -49,7 +49,7 @@ pub fn runBattleCommand(allocator: std.mem.Allocator, args: []const []const u8) 
     const term = try child.wait();
 
     switch (term) {
-        .Exited => |code| {
+        .exited => |code| {
             if (code != 0) {
                 print("\n{s}\xe2\x9c\x97 arena exited with code {d}{s}\n", .{ "\x1b[31m", code, RESET });
             }

@@ -6,6 +6,7 @@
 
 const std = @import("std");
 
+const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 /// Certificate status
 pub const CertStatus = enum {
@@ -108,7 +109,7 @@ pub const TLSManager = struct {
         std.debug.print("Adding SSL certificate for domain: {s}\n", .{domain});
 
         // Use flyctl to add certificate
-        const result = std.process.Child.run(.{
+        const result = tri_proc.run(.{
             .allocator = self.allocator,
             .argv = &[_][]const u8{
                 "flyctl",
@@ -128,7 +129,7 @@ pub const TLSManager = struct {
             self.allocator.free(result.stderr);
         }
 
-        if (result.term != .Exited or result.term.Exited != 0) {
+        if (result.term != .exited or result.term.exited != 0) {
             std.debug.print("Certificate error:\n{s}\n", .{result.stderr});
             return error.CertificateFailed;
         }
@@ -214,7 +215,7 @@ pub const TLSManager = struct {
                 cert.status = .renewing;
 
                 // Trigger renewal via flyctl
-                _ = std.process.Child.run(.{
+                _ = tri_proc.run(.{
                     .allocator = self.allocator,
                     .argv = &[_][]const u8{
                         "flyctl",

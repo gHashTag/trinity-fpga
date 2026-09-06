@@ -69,7 +69,7 @@ const ConversationHistory = struct {
     }
 
     pub fn formatForModel(self: *const ConversationHistory, allocator: std.mem.Allocator, template: *const ChatTemplate) ![]u8 {
-        var result: std.ArrayListUnmanaged(u8) = .{};
+        var result: std.ArrayListUnmanaged(u8) = .empty;
         errdefer result.deinit(allocator);
 
         for (self.messages.items) |msg| {
@@ -358,7 +358,7 @@ fn generateWithHistory(
     var last_token: u32 = 0;
 
     // Collect response for history
-    var response: std.ArrayListUnmanaged(u8) = .{};
+    var response: std.ArrayListUnmanaged(u8) = .empty;
     errdefer response.deinit(allocator);
 
     while (generated < max_tokens) : (generated += 1) {

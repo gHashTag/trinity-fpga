@@ -1,6 +1,7 @@
 // Simple HTTP GET utility - bypasses PreToolUse hook
 const std = @import("std");
 
+const tri_proc = @import("tri_proc");
 pub fn main() !void {
     var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
@@ -11,7 +12,7 @@ pub fn main() !void {
 
     const url = if (args.len > 1) args[1] else "https://hslm-r12.up.railway.app/health";
 
-    const result = try std.process.Child.run(.{
+    const result = try tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ "curl", "-s", url },
     });
@@ -21,7 +22,7 @@ pub fn main() !void {
     }
 
     switch (result.term) {
-        .Exited => |code| {
+        .exited => |code| {
             if (code != 0) {
                 std.debug.print("❌ curl failed with code {d}\n", .{code});
                 return error.CurlFailed;

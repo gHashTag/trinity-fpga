@@ -2,6 +2,7 @@
 // Commands: status, create, deploy, list, env
 const std = @import("std");
 
+const tri_proc = @import("tri_proc");
 const Account = struct {
     name: []const u8,
     token_env: []const u8,
@@ -287,7 +288,7 @@ fn execCurl(allocator: std.mem.Allocator, token: []const u8, body: []const u8) !
     const auth_header = try std.fmt.allocPrint(allocator, "Authorization: Bearer {s}", .{token});
     defer allocator.free(auth_header);
 
-    const result = try std.process.Child.run(.{
+    const result = try tri_proc.run(.{
         .allocator = allocator,
         .argv = &[_][]const u8{
             "curl", "-s",        "-X",                                    "POST",
@@ -299,7 +300,7 @@ fn execCurl(allocator: std.mem.Allocator, token: []const u8, body: []const u8) !
         allocator.free(result.stderr);
     }
 
-    if (result.term.Exited != 0) return error.CurlFailed;
+    if (result.term.exited != 0) return error.CurlFailed;
 
     return result.stdout;
 }

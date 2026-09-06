@@ -187,7 +187,7 @@ pub fn scanSpecs(_: Allocator, candidates: []SpecCandidate) usize {
             lines_seen += 1;
 
             // Skip comment markers and metadata
-            const trimmed = std.mem.trimLeft(u8, line, "# ");
+            const trimmed = std.mem.trimStart(u8, line, "# ");
             if (trimmed.len < 3) continue;
 
             // Tokenize and add to candidate

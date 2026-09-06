@@ -15,6 +15,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_proc = @import("tri_proc");
 const Allocator = std.mem.Allocator;
 const tri_farm = @import("tri_farm.zig");
 const experience_hooks = @import("experience_hooks.zig");
@@ -104,7 +105,7 @@ fn hubGate(allocator: Allocator) !bool {
     print("\n{s}🚦 CI GATE CHECK{s}\n", .{ BOLD, RESET });
     print("{s}────────────────────────────────────────{s}\n", .{ DIM, RESET });
 
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ "gh", "run", "list", "--workflow", "ci-runner.yml", "--limit", "1", "--json", "conclusion,headSha" },
         .max_output_bytes = 64 * 1024,
@@ -116,7 +117,7 @@ fn hubGate(allocator: Allocator) !bool {
     defer allocator.free(result.stderr);
 
     const exit_code = switch (result.term) {
-        .Exited => |code| code,
+        .exited => |code| code,
         else => @as(u32, 1),
     };
     if (exit_code != 0) {
@@ -359,7 +360,7 @@ fn getJsonString(val: std.json.Value, key: []const u8) []const u8 {
 }
 
 fn getCurrentSha(allocator: Allocator) ?[]const u8 {
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ "git", "rev-parse", "--short", "HEAD" },
         .max_output_bytes = 256,
@@ -367,7 +368,7 @@ fn getCurrentSha(allocator: Allocator) ?[]const u8 {
     defer allocator.free(result.stderr);
 
     const exit_code = switch (result.term) {
-        .Exited => |code| code,
+        .exited => |code| code,
         else => @as(u32, 1),
     };
     if (exit_code != 0) {

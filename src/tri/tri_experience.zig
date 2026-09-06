@@ -1135,7 +1135,7 @@ pub fn parseExpLog(source: []const u8, entries: []LogEntry) usize {
                     const dl = @min(d.len, 16);
                     @memcpy(entry.date[0..dl], d[0..dl]);
                     entry.date_len = dl;
-                    const c = std.mem.trimRight(u8, rest[s3 + 3 ..], " \r\n");
+                    const c = std.mem.trimEnd(u8, rest[s3 + 3 ..], " \r\n");
                     const cl = @min(c.len, 32);
                     @memcpy(entry.category[0..cl], c[0..cl]);
                     entry.category_len = cl;
@@ -1148,7 +1148,7 @@ pub fn parseExpLog(source: []const u8, entries: []LogEntry) usize {
             if (std.mem.startsWith(u8, cl, "---") or std.mem.startsWith(u8, cl, "### EXP-")) break;
             const offset = @intFromPtr(cl.ptr) - @intFromPtr(source.ptr);
             if (std.mem.startsWith(u8, cl, "**Impact**: ")) {
-                const v = std.mem.trimRight(u8, cl[12..], " \r\n");
+                const v = std.mem.trimEnd(u8, cl[12..], " \r\n");
                 const vl = @min(v.len, 8);
                 @memcpy(entry.impact[0..vl], v[0..vl]);
                 entry.impact_len = vl;

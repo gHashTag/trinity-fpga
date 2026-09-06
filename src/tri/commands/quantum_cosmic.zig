@@ -416,8 +416,8 @@ pub fn runInstallCommand(allocator: std.mem.Allocator) void {
         std.debug.print("{s}Build failed{s}\n", .{ RED, RESET });
         return;
     };
-    if (term.Exited != 0) {
-        std.debug.print("{s}Build failed (exit {d}){s}\n", .{ RED, term.Exited, RESET });
+    if (term.exited != 0) {
+        std.debug.print("{s}Build failed (exit {d}){s}\n", .{ RED, term.exited, RESET });
         return;
     }
 
@@ -465,8 +465,8 @@ pub fn runBuildCommand(allocator: std.mem.Allocator) void {
         std.debug.print("{s}Build failed{s}\n", .{ RED, RESET });
         return;
     };
-    if (term.Exited != 0) {
-        std.debug.print("{s}Build failed (exit {d}){s}\n", .{ RED, term.Exited, RESET });
+    if (term.exited != 0) {
+        std.debug.print("{s}Build failed (exit {d}){s}\n", .{ RED, term.exited, RESET });
         return;
     }
     std.debug.print("\n{s}[BUILD] SUCCESS{s} — {s}-{s} binary ready\n", .{ GREEN, RESET, os, arch });
@@ -578,7 +578,7 @@ pub fn runFpgaDemoCommand(allocator: std.mem.Allocator, cmd_args: []const []cons
         return;
     };
     const yosys_ok = switch (yosys_term) {
-        .Exited => |code| code == 0,
+        .exited => |code| code == 0,
         else => false,
     };
     if (yosys_ok) {
@@ -607,7 +607,7 @@ pub fn runFpgaDemoCommand(allocator: std.mem.Allocator, cmd_args: []const []cons
         std.debug.print("{s}Yosys failed{s}\n", .{ RED, RESET });
         return;
     };
-    if (yosys_result.Exited != 0) {
+    if (yosys_result.exited != 0) {
         std.debug.print("{s}Synthesis failed{s}\n", .{ RED, RESET });
         return;
     }
@@ -633,10 +633,10 @@ pub fn runFpgaDemoCommand(allocator: std.mem.Allocator, cmd_args: []const []cons
         std.debug.print("  {s}FORGE not built — run 'zig build' first{s}\n", .{ RED, RESET });
         return;
     };
-    if (forge_result.Exited == 0) {
+    if (forge_result.exited == 0) {
         std.debug.print("{s}[4/5] Bitstream generated{s}: {s}\n", .{ GREEN, RESET, bit_out });
     } else {
-        std.debug.print("{s}[4/5] FORGE exited with {d}{s}\n", .{ RED, forge_result.Exited, RESET });
+        std.debug.print("{s}[4/5] FORGE exited with {d}{s}\n", .{ RED, forge_result.exited, RESET });
     }
 
     // Flash

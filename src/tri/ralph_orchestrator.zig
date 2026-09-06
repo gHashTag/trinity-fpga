@@ -333,7 +333,7 @@ pub const RalphOrchestrator = struct {
                 return false;
             };
 
-            return term.Exited == 0;
+            return term.exited == 0;
         }
 
         // Simulate FPGA task
@@ -355,7 +355,7 @@ pub const RalphOrchestrator = struct {
         child.spawn() catch return false;
         const term = child.wait() catch return false;
 
-        return term.Exited == 0;
+        return term.exited == 0;
     }
 
     /// Execute generic task

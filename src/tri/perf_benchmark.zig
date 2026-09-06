@@ -14,6 +14,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const colors = @import("tri_colors.zig");
@@ -225,7 +226,7 @@ fn countLoc(allocator: Allocator) u32 {
 
 fn measureBuildTime(allocator: Allocator) u32 {
     const start = tri_time.milliTimestamp();
-    _ = std.process.Child.run(.{
+    _ = tri_proc.run(.{
         .allocator = allocator,
         .argv = &[_][]const u8{ "zig", "build" },
         .max_output_bytes = 65536,

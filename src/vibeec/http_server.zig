@@ -677,7 +677,7 @@ pub const HttpServer = struct {
         var generated_token_count: usize = 0;
 
         if (tokens) |toks| {
-            var output_tokens: std.ArrayListUnmanaged(u32) = .{};
+            var output_tokens: std.ArrayListUnmanaged(u32) = .empty;
             defer output_tokens.deinit(self.allocator);
 
             // Process input tokens (prefill) - save logits from last token
@@ -749,7 +749,7 @@ pub const HttpServer = struct {
         std.debug.print("  Requests: {d} total, {d} active\n", .{ total, active });
 
         // Escape JSON string
-        var escaped: std.ArrayListUnmanaged(u8) = .{};
+        var escaped: std.ArrayListUnmanaged(u8) = .empty;
         defer escaped.deinit(self.allocator);
         for (response_text) |c| {
             switch (c) {
@@ -850,7 +850,7 @@ pub const HttpServer = struct {
 
                     if (token_text) |text| {
                         // Escape for JSON
-                        var escaped: std.ArrayListUnmanaged(u8) = .{};
+                        var escaped: std.ArrayListUnmanaged(u8) = .empty;
                         defer escaped.deinit(self.allocator);
                         for (text) |c| {
                             switch (c) {
@@ -895,7 +895,7 @@ pub const HttpServer = struct {
     fn handleVsaBundle(self: *HttpServer, connection: *std.net.Server.Connection, body: []const u8) !void {
         // Parse JSON body for vectors array
         // Expected format: {"vectors": [[-1,0,1,...], [-1,0,1,...], ...]}
-        var vectors: std.ArrayList([]const i8) = .{};
+        var vectors: std.ArrayList([]const i8) = .empty;
         defer {
             for (vectors.items) |v| {
                 self.allocator.free(v);
@@ -934,7 +934,7 @@ pub const HttpServer = struct {
         }
 
         // Perform bundled VSA operations
-        var results: std.ArrayList([]const i8) = .{};
+        var results: std.ArrayList([]const i8) = .empty;
         defer {
             for (results.items) |r| {
                 self.allocator.free(r);
@@ -956,7 +956,7 @@ pub const HttpServer = struct {
         _ = self.prometheus.vsa_operations_pending.fetchSub(@intCast(vectors.items.len), .monotonic);
 
         // Build response
-        var response_buf: std.ArrayListUnmanaged(u8) = .{};
+        var response_buf: std.ArrayListUnmanaged(u8) = .empty;
         defer response_buf.deinit(self.allocator);
 
         try response_buf.appendSlice(self.allocator, "{\"results\":[");
@@ -1020,7 +1020,7 @@ pub const HttpServer = struct {
 
     /// Helper: Parse vector from JSON array string
     fn parseVector(self: *HttpServer, str: []const u8) ![]i8 {
-        var values: std.ArrayListUnmanaged(i8) = .{};
+        var values: std.ArrayListUnmanaged(i8) = .empty;
         defer values.deinit(self.allocator);
 
         var i: usize = 0;

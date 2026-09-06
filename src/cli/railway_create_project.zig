@@ -1,6 +1,7 @@
 // Railway: Create project via GraphQL
 const std = @import("std");
 
+const tri_proc = @import("tri_proc");
 pub fn main() !void {
     var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
@@ -25,7 +26,7 @@ pub fn main() !void {
     const auth_header = try std.fmt.allocPrint(allocator, "Authorization: Bearer {s}", .{token});
     defer allocator.free(auth_header);
 
-    const result = try std.process.Child.run(.{
+    const result = try tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ "curl", "-s", "-X", "POST", "-H", auth_header, "-H", "Content-Type: application/json", "-d", query, "https://backboard.railway.com/graphql" },
     });
@@ -36,7 +37,7 @@ pub fn main() !void {
     // Match the sibling railway_* tools: fail with a non-zero exit instead of
     // silently succeeding on a failed request or a GraphQL error, so scripts
     // and CI can detect a project that wasn't actually created.
-    if (result.term.Exited != 0) return error.RequestFailed;
+    if (result.term.exited != 0) return error.RequestFailed;
     if (std.mem.indexOf(u8, result.stdout, "\"errors\"") != null) {
         return error.ApiError;
     }

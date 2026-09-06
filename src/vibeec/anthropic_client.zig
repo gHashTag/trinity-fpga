@@ -123,7 +123,7 @@ pub const AnthropicClient = struct {
 
     /// Build vision request with image content
     fn buildVisionRequestJson(self: *Self, prompt: []const u8, image_base64: []const u8) ![]u8 {
-        var buffer: std.ArrayListUnmanaged(u8) = .{};
+        var buffer: std.ArrayListUnmanaged(u8) = .empty;
         errdefer buffer.deinit(self.allocator);
 
         const writer = buffer.writer(self.allocator);
@@ -179,7 +179,7 @@ pub const AnthropicClient = struct {
 
     /// Build Anthropic Messages API request JSON
     fn buildRequestJson(self: *Self, system_prompt: ?[]const u8, user_message: []const u8) ![]u8 {
-        var buffer: std.ArrayListUnmanaged(u8) = .{};
+        var buffer: std.ArrayListUnmanaged(u8) = .empty;
         errdefer buffer.deinit(self.allocator);
 
         const writer = buffer.writer(self.allocator);

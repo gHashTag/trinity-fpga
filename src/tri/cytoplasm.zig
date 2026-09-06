@@ -13,6 +13,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 const tri_env = @import("tri_env.zig");
 const colors = @import("tri_colors.zig");
@@ -9955,7 +9956,7 @@ fn runBatchTest(allocator: Allocator) !void {
                 const test_path = std.fmt.allocPrint(allocator, "{s}/{s}", .{ path, entry.name }) catch continue;
                 defer allocator.free(test_path);
 
-                const result = std.process.Child.run(.{
+                const result = tri_proc.run(.{
                     .allocator = allocator,
                     .argv = &[_][]const u8{ "zig", "test", test_path },
                 }) catch {
@@ -9967,7 +9968,7 @@ fn runBatchTest(allocator: Allocator) !void {
                     allocator.free(result.stderr);
                 }
 
-                if (result.term.Exited != 0) {
+                if (result.term.exited != 0) {
                     test_passed = false;
                 }
             }

@@ -3,6 +3,7 @@
 // Issue #65: Phase 6 permissions + checkpoints
 const std = @import("std");
 
+const tri_proc = @import("tri_proc");
 const stash_prefix = "tri-api checkpoint: ";
 
 pub const CheckpointEntry = struct {
@@ -116,7 +117,7 @@ fn stashMessage(allocator: std.mem.Allocator, file_path: []const u8) ![]const u8
 
 /// Run a git command, return stdout. Caller owns memory.
 fn runGit(allocator: std.mem.Allocator, argv: []const []const u8) ![]const u8 {
-    const result = try std.process.Child.run(.{
+    const result = try tri_proc.run(.{
         .allocator = allocator,
         .argv = argv,
         .max_output_bytes = 64 * 1024,
@@ -124,7 +125,7 @@ fn runGit(allocator: std.mem.Allocator, argv: []const []const u8) ![]const u8 {
     defer allocator.free(result.stderr);
 
     if ((switch (result.term) {
-        .Exited => |code| code,
+        .exited => |code| code,
         else => @as(u32, 1),
     }) != 0) {
         allocator.free(result.stdout);

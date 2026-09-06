@@ -300,7 +300,7 @@ pub const GoldenChain = struct {
             result.duration_ms = @as(u64, @intFromFloat(@divTrunc(@as(f128, @floatFromInt(elapsed_ns)), 1_000_000)));
 
             switch (wait_result) {
-                .Exited => |code| {
+                .exited => |code| {
                     result.success = code == 0;
                     result.exit_code = code;
                     result.message = try std.fmt.allocPrint(self.allocator, "Exit {d}", .{code});

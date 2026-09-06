@@ -8,6 +8,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_proc = @import("tri_proc");
 const Allocator = std.mem.Allocator;
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -176,7 +177,7 @@ pub fn writeAndValidate(allocator: Allocator, template: SpecTemplate) !WriteResu
     try spec_file.writeAll(content);
 
     // Run vibee gen
-    const gen_result = std.process.Child.run(.{
+    const gen_result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ "zig", "build", "vibee", "--", "gen", spec_path },
     }) catch {
@@ -191,7 +192,7 @@ pub fn writeAndValidate(allocator: Allocator, template: SpecTemplate) !WriteResu
     defer allocator.free(gen_result.stderr);
 
     const gen_exit = switch (gen_result.term) {
-        .Exited => |code| code,
+        .exited => |code| code,
         else => @as(u32, 1),
     };
     if (gen_exit != 0) {
@@ -204,7 +205,7 @@ pub fn writeAndValidate(allocator: Allocator, template: SpecTemplate) !WriteResu
     }
 
     // Run zig ast-check
-    const ast_result = std.process.Child.run(.{
+    const ast_result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ "zig", "ast-check", gen_path },
     }) catch {
@@ -219,7 +220,7 @@ pub fn writeAndValidate(allocator: Allocator, template: SpecTemplate) !WriteResu
     defer allocator.free(ast_result.stderr);
 
     const ast_exit = switch (ast_result.term) {
-        .Exited => |code| code,
+        .exited => |code| code,
         else => @as(u32, 1),
     };
     return .{

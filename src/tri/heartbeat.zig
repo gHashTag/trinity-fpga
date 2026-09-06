@@ -560,7 +560,7 @@ fn runChild(allocator: Allocator, argv: []const []const u8) u8 {
     defer stderr_buf.deinit(allocator);
     const term = child.wait() catch return 255;
     return switch (term) {
-        .Exited => |code| code,
+        .exited => |code| code,
         else => 1,
     };
 }
@@ -778,7 +778,7 @@ fn runRetryBuildAndTest(allocator: Allocator) RetryIterationResult {
         child.collectOutput(allocator, &stdout_buf, &stderr_buf, 4 * 1024 * 1024) catch break :blk false;
         const term = child.wait() catch break :blk false;
         const ok = switch (term) {
-            .Exited => |code| code == 0,
+            .exited => |code| code == 0,
             else => false,
         };
         if (!ok) {
@@ -805,7 +805,7 @@ fn runRetryBuildAndTest(allocator: Allocator) RetryIterationResult {
         child.collectOutput(allocator, &stdout_buf, &stderr_buf, 4 * 1024 * 1024) catch return result;
         const term = child.wait() catch return result;
         result.test_ok = switch (term) {
-            .Exited => |code| code == 0,
+            .exited => |code| code == 0,
             else => false,
         };
         const out = if (stderr_buf.items.len > 0) stderr_buf.items else stdout_buf.items;

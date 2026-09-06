@@ -4,6 +4,7 @@
 
 const std = @import("std");
 
+const tri_proc = @import("tri_proc");
 const Allocator = std.mem.Allocator;
 
 pub fn main() !void {
@@ -72,7 +73,7 @@ pub fn main() !void {
 }
 
 fn execCurl(allocator: Allocator, args: []const []const u8) ![]u8 {
-    const result = try std.process.Child.run(.{
+    const result = try tri_proc.run(.{
         .allocator = allocator,
         .argv = args,
     });
@@ -81,7 +82,7 @@ fn execCurl(allocator: Allocator, args: []const []const u8) ![]u8 {
         std.debug.print("curl stderr: {s}\n", .{result.stderr});
     }
     switch (result.term) {
-        .Exited => |code| {
+        .exited => |code| {
             if (code != 0) return error.CurlFailed;
         },
         else => return error.CurlFailed,

@@ -220,7 +220,7 @@ pub const HttpClient = struct {
         const boundary = "----TrinityBoundary2026";
 
         // Build multipart body
-        var body_buf: std.ArrayListUnmanaged(u8) = .{};
+        var body_buf: std.ArrayListUnmanaged(u8) = .empty;
         defer body_buf.deinit(self.allocator);
         const w = body_buf.writer(self.allocator);
 

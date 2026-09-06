@@ -228,7 +228,7 @@ pub const ZigSymbolExtractor = struct {
         var line_num: u32 = 1;
 
         while (lines.next()) |line| {
-            const trimmed = std.mem.trimLeft(u8, line, &std.ascii.whitespace);
+            const trimmed = std.mem.trimStart(u8, line, &std.ascii.whitespace);
             const new_indent = line.len - trimmed.len;
 
             // Only capture top-level (indent 0 or 1) consts

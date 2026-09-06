@@ -11,6 +11,7 @@
 //! - Memory: Vector storage and retrieval
 
 const std = @import("std");
+const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 const tool_coordinator = @import("tool_coordinator.zig");
 
@@ -173,7 +174,7 @@ pub const MCPToolExecutor = struct {
             };
         };
 
-        const process = std.process.Child.run(.{
+        const process = tri_proc.run(.{
             .allocator = self.allocator,
             .argv = &[_][]const u8{ "sh", "-c", command },
             .max_output_bytes = 64 * 1024,
@@ -191,7 +192,7 @@ pub const MCPToolExecutor = struct {
         }
 
         const exit_code = switch (process.term) {
-            .Exited => |code| code,
+            .exited => |code| code,
             else => @as(u32, 1),
         };
         if (exit_code != 0) {

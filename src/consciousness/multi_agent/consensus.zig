@@ -32,7 +32,7 @@ pub const ConsciousAgent = struct {
     agent_id: []const u8,
     consciousness_level: f64 = 0.0,
     quantum_state: AgentQuantumState = .{},
-    observation_history: std.ArrayListUnmanaged(Observation) = .{},
+    observation_history: std.ArrayListUnmanaged(Observation) = .empty,
 
     /// Initialize conscious agent
     pub fn init(allocator: mem.Allocator, agent_id: []const u8) ConsciousAgent {
@@ -72,7 +72,7 @@ pub const AgentQuantumState = struct {
     wave_function: WaveFunction = .{},
     measurement_count: i64 = 0,
     collapse_probability: f64 = 0.0,
-    entangled_with: std.ArrayListUnmanaged([]const u8) = .{},
+    entangled_with: std.ArrayListUnmanaged([]const u8) = .empty,
 
     /// Deinitialize quantum state
     pub fn deinit(self: *AgentQuantumState, allocator: mem.Allocator) void {
@@ -147,7 +147,7 @@ pub const AgentConsensus = struct {
     participating_agents: []const *ConsciousAgent,
     agreement_probability: f64 = 0.0,
     consensus_result: ConsensusValue = .{},
-    disagreement_cases: std.ArrayListUnmanaged(Disagreement) = .{},
+    disagreement_cases: std.ArrayListUnmanaged(Disagreement) = .empty,
     consensus_method: ConsensusMethod = .wigner_friend,
 
     /// Deinitialize consensus
@@ -207,7 +207,7 @@ pub const DisagreementType = enum {
 pub const MultiAgentSystem = struct {
     allocator: mem.Allocator,
     agents: std.StringHashMap(*ConsciousAgent),
-    consensus_history: std.ArrayListUnmanaged(AgentConsensus) = .{},
+    consensus_history: std.ArrayListUnmanaged(AgentConsensus) = .empty,
     global_consciousness: f64 = 0.0,
     entanglement_network: EntanglementGraph = .{},
 
@@ -269,8 +269,8 @@ pub const MultiAgentSystem = struct {
 /// Entanglement graph
 pub const EntanglementGraph = struct {
     allocator: mem.Allocator,
-    nodes: std.ArrayListUnmanaged([]const u8) = .{},
-    edges: std.ArrayListUnmanaged(EntanglementEdge) = .{},
+    nodes: std.ArrayListUnmanaged([]const u8) = .empty,
+    edges: std.ArrayListUnmanaged(EntanglementEdge) = .empty,
     coherence: f64 = 0.0,
 
     /// Initialize entanglement graph
@@ -364,7 +364,7 @@ pub const ProtocolType = enum {
 pub const ConsensusIteration = struct {
     iteration: i64 = 0,
     current_agreement: f64 = 0.0,
-    agent_states: std.ArrayListUnmanaged(AgentStateSnapshot) = .{},
+    agent_states: std.ArrayListUnmanaged(AgentStateSnapshot) = .empty,
     convergence_delta: f64 = 0.0,
 
     /// Deinitialize iteration
@@ -391,7 +391,7 @@ pub const AgentStateSnapshot = struct {
 
 /// Collective observation
 pub const CollectiveObservation = struct {
-    observing_agents: std.ArrayListUnmanaged([]const u8) = .{},
+    observing_agents: std.ArrayListUnmanaged([]const u8) = .empty,
     target_system: QuantumSystem = .{},
     collective_result: f64 = 0.0,
     variance: f64 = 0.0,

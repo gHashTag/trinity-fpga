@@ -18,6 +18,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 const colors = @import("tri_colors.zig");
 const swe_arena = @import("swe_arena.zig");
@@ -376,7 +377,7 @@ pub fn saveVerdict(allocator: std.mem.Allocator, v: ToxicVerdict) void {
     defer file.close();
 
     if (existing_len > 2) {
-        const trimmed = std.mem.trimRight(u8, existing[0..existing_len], " \n\r\t");
+        const trimmed = std.mem.trimEnd(u8, existing[0..existing_len], " \n\r\t");
         if (trimmed.len > 0 and trimmed[trimmed.len - 1] == ']') {
             file.writeAll(trimmed[0 .. trimmed.len - 1]) catch return;
             file.writeAll(",\n") catch return;
@@ -497,18 +498,18 @@ const ScholarHealth = struct { wakes: u32, researched: u32 };
 const EnergyHealth = struct { total: u32, pass: u32 };
 
 fn checkBuild(allocator: std.mem.Allocator) bool {
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ "zig", "build", "--summary", "none" },
         .max_output_bytes = 1024 * 1024,
     }) catch return false;
     defer allocator.free(result.stdout);
     defer allocator.free(result.stderr);
-    return result.term.Exited == 0;
+    return result.term.exited == 0;
 }
 
 fn countTestBlocks(allocator: std.mem.Allocator) TestCount {
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ "zig", "build", "test" },
         .max_output_bytes = 4 * 1024 * 1024,
@@ -529,7 +530,7 @@ fn countTestBlocks(allocator: std.mem.Allocator) TestCount {
 
     const total = if (test_steps > 0) test_steps else 1;
 
-    if (result.term.Exited == 0) {
+    if (result.term.exited == 0) {
         // Exit 0 = all tests passed
         return TestCount{ .passed = total, .total = total };
     }

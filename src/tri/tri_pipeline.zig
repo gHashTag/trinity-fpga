@@ -11,6 +11,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 const colors = @import("tri_colors.zig");
 const golden_chain = @import("dna_polymerase.zig");
@@ -380,7 +381,7 @@ pub fn runPipelineAudit(allocator: std.mem.Allocator, args: []const []const u8) 
         defer allocator.free(out_path);
 
         // Run vibee gen
-        const gen_result = std.process.Child.run(.{
+        const gen_result = tri_proc.run(.{
             .allocator = allocator,
             .argv = &[_][]const u8{ "zig-out/bin/vibee", "gen", spec_path, out_path },
             .max_output_bytes = 1024 * 1024,
@@ -399,7 +400,7 @@ pub fn runPipelineAudit(allocator: std.mem.Allocator, args: []const []const u8) 
 
         // Check if process exited normally (not signaled)
         const gen_exit_ok = switch (gen_result.term) {
-            .Exited => |code| code == 0,
+            .exited => |code| code == 0,
             else => false,
         };
         if (!gen_exit_ok) {
@@ -429,7 +430,7 @@ pub fn runPipelineAudit(allocator: std.mem.Allocator, args: []const []const u8) 
         }
 
         // Run zig ast-check
-        const check_result = std.process.Child.run(.{
+        const check_result = tri_proc.run(.{
             .allocator = allocator,
             .argv = &[_][]const u8{ "zig", "ast-check", out_path },
             .max_output_bytes = 1024 * 1024,
@@ -447,7 +448,7 @@ pub fn runPipelineAudit(allocator: std.mem.Allocator, args: []const []const u8) 
         allocator.free(check_result.stderr);
 
         const check_exit_ok = switch (check_result.term) {
-            .Exited => |code| code == 0,
+            .exited => |code| code == 0,
             else => false,
         };
         if (check_exit_ok) {
@@ -567,7 +568,7 @@ pub fn runDecomposeCommand(allocator: std.mem.Allocator, args: []const []const u
     const issue_num_str = std.fmt.allocPrint(allocator, "{d}", .{issue_num}) catch return;
     defer allocator.free(issue_num_str);
 
-    const view_result = std.process.Child.run(.{
+    const view_result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ "gh", "issue", "view", issue_num_str, "--json", "title,body", "--jq", ".title" },
         .max_output_bytes = 64 * 1024,
@@ -606,7 +607,7 @@ pub fn runDecomposeCommand(allocator: std.mem.Allocator, args: []const []const u
         const labels = std.fmt.allocPrint(allocator, "status:queued,agent:spawn,{s}", .{phase.role_label}) catch continue;
         defer allocator.free(labels);
 
-        const create_result = std.process.Child.run(.{
+        const create_result = tri_proc.run(.{
             .allocator = allocator,
             .argv = &.{
                 "gh",      "issue",   "create",
@@ -619,7 +620,7 @@ pub fn runDecomposeCommand(allocator: std.mem.Allocator, args: []const []const u
         defer allocator.free(create_result.stderr);
 
         const ok = switch (create_result.term) {
-            .Exited => |c| c == 0,
+            .exited => |c| c == 0,
             else => false,
         };
 
@@ -693,7 +694,7 @@ pub fn runPlanCommand(allocator: std.mem.Allocator, args: []const []const u8) vo
         const num_str = std.fmt.allocPrint(allocator, "{d}", .{num}) catch return;
         defer allocator.free(num_str);
 
-        const view_result = std.process.Child.run(.{
+        const view_result = tri_proc.run(.{
             .allocator = allocator,
             .argv = &.{ "gh", "issue", "view", num_str, "--json", "title,body", "--jq", ".title + \"\\n\" + .body" },
             .max_output_bytes = 64 * 1024,
@@ -941,7 +942,7 @@ pub fn runVerifyCommand(allocator: std.mem.Allocator) void {
 
     // Link 7: Run tests
     std.debug.print("{s}Link 7: Running Tests...{s}\n", .{ CYAN, RESET });
-    const test_result = std.process.Child.run(.{
+    const test_result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &[_][]const u8{ "zig", "build", "test" },
         .max_output_bytes = 10 * 1024 * 1024,
@@ -953,7 +954,7 @@ pub fn runVerifyCommand(allocator: std.mem.Allocator) void {
     defer allocator.free(test_result.stderr);
 
     const tests_passed = (switch (test_result.term) {
-        .Exited => |code| code,
+        .exited => |code| code,
         else => @as(u32, 1),
     }) == 0;
     if (tests_passed) {

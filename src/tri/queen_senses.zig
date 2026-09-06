@@ -5,6 +5,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 const qt = @import("queen_types.zig");
 const faculty_types = @import("faculty_types.zig");
@@ -162,7 +163,7 @@ fn countArenaResults() u32 {
 }
 
 fn readDiskFreeGb(allocator: Allocator) f32 {
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ "df", "-k", "." },
         .max_output_bytes = 4096,

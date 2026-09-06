@@ -77,7 +77,7 @@ pub fn parseSpec(allocator: Allocator, spec_path: []const u8) !SyncResult {
 
     var lines = std.mem.splitScalar(u8, content, '\n');
     while (lines.next()) |line| {
-        const trimmed = std.mem.trimLeft(u8, line, " ");
+        const trimmed = std.mem.trimStart(u8, line, " ");
 
         // Detect section headers
         if (std.mem.startsWith(u8, trimmed, "types:")) {
@@ -143,7 +143,7 @@ pub fn parseCode(allocator: Allocator, code_path: []const u8, result: *SyncResul
 
     var lines = std.mem.splitScalar(u8, content, '\n');
     while (lines.next()) |line| {
-        const trimmed = std.mem.trimLeft(u8, line, " ");
+        const trimmed = std.mem.trimStart(u8, line, " ");
 
         // pub const X = struct/enum/union
         if (std.mem.startsWith(u8, trimmed, "pub const ")) {

@@ -807,12 +807,12 @@ pub const Job = struct {
             );
         } else {
             self.metadata.state = switch (term) {
-                .Exited => |code| if (code == 0) .completed else .failed,
+                .exited => |code| if (code == 0) .completed else .failed,
                 else => .failed,
             };
 
             switch (term) {
-                .Exited => |code| {
+                .exited => |code| {
                     self.metadata.exit_code = @as(i32, @intCast(code));
                 },
                 else => {
@@ -847,16 +847,16 @@ pub const Job = struct {
                 return self.toStatus();
             };
 
-            if (result == .Exited or result == .Signal) {
+            if (result == .exited or result == .Signal) {
                 // Process has terminated
                 self.metadata.state = switch (result) {
-                    .Exited => |code| if (code == 0) .completed else .failed,
+                    .exited => |code| if (code == 0) .completed else .failed,
                     else => .failed,
                 };
 
                 self.metadata.end_time = tri_time.timestamp();
                 switch (result) {
-                    .Exited => |code| {
+                    .exited => |code| {
                         self.metadata.exit_code = @as(i32, @intCast(code));
                     },
                     else => {
@@ -933,8 +933,8 @@ pub const Job = struct {
             self.metadata.state = .cancelled;
             self.metadata.end_time = tri_time.timestamp();
 
-            if (wait_result == .Exited) {
-                self.metadata.exit_code = @as(i32, @intCast(wait_result.Exited));
+            if (wait_result == .exited) {
+                self.metadata.exit_code = @as(i32, @intCast(wait_result.exited));
             }
 
             try self.writeMetadata();
@@ -976,12 +976,12 @@ pub const Job = struct {
 
             self.metadata.end_time = tri_time.timestamp();
             self.metadata.state = switch (result) {
-                .Exited => |code| if (code == 0) .completed else .failed,
+                .exited => |code| if (code == 0) .completed else .failed,
                 else => .failed,
             };
 
             switch (result) {
-                .Exited => |code| {
+                .exited => |code| {
                     self.metadata.exit_code = @as(i32, @intCast(code));
                 },
                 else => {

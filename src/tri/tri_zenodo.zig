@@ -14,6 +14,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 const tri_env = @import("tri_env.zig");
 const print = std.debug.print;
@@ -1719,7 +1720,7 @@ fn publishOneDiscovery(allocator: std.mem.Allocator, d: Discovery) !void {
         }
     }
 
-    const zip_result = std.process.Child.run(.{
+    const zip_result = tri_proc.run(.{
         .allocator = allocator,
         .argv = argv_buf[0..argc],
     }) catch |err| {
@@ -1740,7 +1741,7 @@ fn publishOneDiscovery(allocator: std.mem.Allocator, d: Discovery) !void {
     const name_arg = try std.fmt.allocPrint(allocator, "name={s}", .{zip_name});
     defer allocator.free(name_arg);
 
-    const upload_result = try std.process.Child.run(.{
+    const upload_result = try tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ "curl", "-s", "-X", "POST", files_url, "-H", auth, "-F", file_arg, "-F", name_arg },
     });
@@ -1970,7 +1971,7 @@ fn publishOneBundleV8(allocator: std.mem.Allocator, bundle: BundleV8) !void {
             const name_arg = try std.fmt.allocPrint(allocator, "name={s}", .{fig});
             defer allocator.free(name_arg);
 
-            const upload_result = std.process.Child.run(.{
+            const upload_result = tri_proc.run(.{
                 .allocator = allocator,
                 .argv = &.{ "curl", "-s", "-X", "POST", files_url, "-H", auth, "-F", file_arg, "-F", name_arg },
             }) catch continue;
@@ -2050,7 +2051,7 @@ fn curlGet(allocator: std.mem.Allocator, url: []const u8, token: []const u8) ![]
     defer tmp_file.close();
 
     {
-        const result = try std.process.Child.run(.{
+        const result = try tri_proc.run(.{
             .allocator = allocator,
             .argv = &.{ "curl", "-s", url, "-H", auth, "-o", tmp_path },
             .max_output_bytes = 1024 * 1024, // 1MB for stderr only
@@ -2059,7 +2060,7 @@ fn curlGet(allocator: std.mem.Allocator, url: []const u8, token: []const u8) ![]
         defer allocator.free(result.stderr);
 
         // Check exit code
-        if (result.term != .Exited or result.term.Exited != 0) {
+        if (result.term != .exited or result.term.exited != 0) {
             return error.CurlFailed;
         }
     }
@@ -2073,7 +2074,7 @@ fn curlPost(allocator: std.mem.Allocator, url: []const u8, token: []const u8, bo
     defer allocator.free(auth);
 
     if (body) |b| {
-        const result = try std.process.Child.run(.{
+        const result = try tri_proc.run(.{
             .allocator = allocator,
             .argv = &.{ "curl", "-s", "-X", "POST", url, "-H", auth, "-H", "Content-Type: application/json", "-d", b },
             .max_output_bytes = 50 * 1024 * 1024,
@@ -2081,7 +2082,7 @@ fn curlPost(allocator: std.mem.Allocator, url: []const u8, token: []const u8, bo
         defer allocator.free(result.stderr);
         return result.stdout;
     } else {
-        const result = try std.process.Child.run(.{
+        const result = try tri_proc.run(.{
             .allocator = allocator,
             .argv = &.{ "curl", "-s", "-X", "POST", url, "-H", auth, "-H", "Content-Type: application/json" },
             .max_output_bytes = 50 * 1024 * 1024,
@@ -2095,7 +2096,7 @@ fn curlPut(allocator: std.mem.Allocator, url: []const u8, token: []const u8, bod
     const auth = try std.fmt.allocPrint(allocator, "Authorization: Bearer {s}", .{token});
     defer allocator.free(auth);
 
-    const result = try std.process.Child.run(.{
+    const result = try tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ "curl", "-s", "-X", "PUT", url, "-H", auth, "-H", "Content-Type: application/json", "-d", body },
         .max_output_bytes = 50 * 1024 * 1024,
@@ -2111,7 +2112,7 @@ fn curlUpload(allocator: std.mem.Allocator, url: []const u8, token: []const u8, 
     const data_arg = try std.fmt.allocPrint(allocator, "@{s}", .{filepath});
     defer allocator.free(data_arg);
 
-    const result = try std.process.Child.run(.{
+    const result = try tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ "curl", "-s", "-X", "PUT", url, "-H", auth, "-H", "Content-Type: application/octet-stream", "--data-binary", data_arg },
     });
@@ -2123,7 +2124,7 @@ fn curlDelete(allocator: std.mem.Allocator, url: []const u8, token: []const u8) 
     const auth = try std.fmt.allocPrint(allocator, "Authorization: Bearer {s}", .{token});
     defer allocator.free(auth);
 
-    const result = try std.process.Child.run(.{
+    const result = try tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ "curl", "-s", "-X", "DELETE", url, "-H", auth },
     });
@@ -2256,7 +2257,7 @@ fn runPublish(allocator: std.mem.Allocator, version: []const u8, do_publish: boo
     const zip_path = try std.fmt.allocPrint(allocator, "/tmp/{s}", .{zip_name});
     defer allocator.free(zip_path);
 
-    const zip_result = try std.process.Child.run(.{
+    const zip_result = try tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{
             "zip",                 "-r",                     zip_path,

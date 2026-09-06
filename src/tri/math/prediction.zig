@@ -435,7 +435,7 @@ pub const PredictionRegistry = struct {
 
     /// Serialize to JSON
     pub fn toJSON(self: *const Self, allocator: Allocator) ![]u8 {
-        var buf: std.ArrayListUnmanaged(u8) = .{};
+        var buf: std.ArrayListUnmanaged(u8) = .empty;
         const w = buf.writer(allocator);
 
         try w.writeAll("{\n");

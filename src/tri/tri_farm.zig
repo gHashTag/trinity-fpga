@@ -16,6 +16,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 const tri_env = @import("tri_env.zig");
 const Allocator = std.mem.Allocator;
@@ -318,7 +319,7 @@ pub fn runFarmRecycle(allocator: Allocator, args: []const []const u8) !void {
         print("{s}⚠️  CI gate skipped (--skip-ci){s}\n", .{ YELLOW, RESET });
     } else {
         print("🔨 Running CI gate (zig build test)...\n", .{});
-        const ci_result = std.process.Child.run(.{
+        const ci_result = tri_proc.run(.{
             .allocator = allocator,
             .argv = &.{ "zig", "build", "test" },
             .max_output_bytes = 512 * 1024,
@@ -331,7 +332,7 @@ pub fn runFarmRecycle(allocator: Allocator, args: []const []const u8) !void {
         defer allocator.free(ci_result.stderr);
 
         const ci_exit = switch (ci_result.term) {
-            .Exited => |code| code,
+            .exited => |code| code,
             else => @as(u32, 1),
         };
         if (ci_exit != 0) {
@@ -1210,7 +1211,7 @@ fn getExistingPid() !u32 {
     var pid_buf: [32]u8 = undefined;
     const pid_bytes = try pid_file.readAll(&pid_buf);
     const pid_str = pid_buf[0..pid_bytes];
-    return try std.fmt.parseInt(u32, std.mem.trimRight(u8, pid_str, "\n"), 10);
+    return try std.fmt.parseInt(u32, std.mem.trimEnd(u8, pid_str, "\n"), 10);
 }
 
 fn isProcessAlive(pid: u32) bool {

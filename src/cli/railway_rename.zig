@@ -3,6 +3,7 @@
 
 const std = @import("std");
 
+const tri_proc = @import("tri_proc");
 const Allocator = std.mem.Allocator;
 
 const RAILWAY_GQL_HOST = "railway.com";
@@ -219,7 +220,7 @@ fn executeGraphql(allocator: Allocator, token: []const u8, gql: []const u8, vars
     const url = try std.fmt.allocPrint(allocator, "https://{s}{s}", .{ RAILWAY_GQL_HOST, RAILWAY_GQL_PATH });
     defer allocator.free(url);
 
-    const result = try std.process.Child.run(.{
+    const result = try tri_proc.run(.{
         .allocator = allocator,
         .argv = &[_][]const u8{
             "curl", "-s",        "-X", "POST",
@@ -232,7 +233,7 @@ fn executeGraphql(allocator: Allocator, token: []const u8, gql: []const u8, vars
         allocator.free(result.stdout);
     }
 
-    if (result.term.Exited != 0) return error.RequestFailed;
+    if (result.term.exited != 0) return error.RequestFailed;
 
     // Check for errors
     if (std.mem.indexOf(u8, result.stdout, "\"errors\"")) |_| {

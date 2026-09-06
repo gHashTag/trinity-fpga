@@ -65,11 +65,11 @@ fn parseLineWithLabels(line: []const u8, labels: *const LabelTable, line_num: us
     else if (std.mem.indexOfScalar(u8, rest_trimmed, '#')) |comment_idx| {
         rest_trimmed = rest_trimmed[0..comment_idx];
     }
-    rest_trimmed = std.mem.trimRight(u8, rest_trimmed, " \t");
+    rest_trimmed = std.mem.trimEnd(u8, rest_trimmed, " \t");
 
     // Check for label definition (ends with ':')
     if (rest_trimmed.len > 0 and rest_trimmed[rest_trimmed.len - 1] == ':') {
-        _ = std.mem.trimRight(u8, rest_trimmed[0 .. rest_trimmed.len - 1], " \t");
+        _ = std.mem.trimEnd(u8, rest_trimmed[0 .. rest_trimmed.len - 1], " \t");
         return .{ 0, true }; // Flag that this was a label definition
     }
 
@@ -91,7 +91,7 @@ fn parseLineWithLabels(line: []const u8, labels: *const LabelTable, line_num: us
     var op_lower_buf: [32]u8 = undefined;
     const op_lower = std.ascii.lowerString(&op_lower_buf, op_str);
 
-    const rest = std.mem.trimLeft(u8, it.rest(), " \t");
+    const rest = std.mem.trimStart(u8, it.rest(), " \t");
 
     // === CONTROL (NOP, HALT, JMP, JZ, JNZ, CALL, RET) ===
     if (std.mem.eql(u8, op_lower, "nop")) return .{ encode(Instruction{ .opcode = Opcode.NOP }), false };
@@ -604,7 +604,7 @@ pub fn assemble(allocator: Allocator, source: []const u8) ![]u8 {
 
         // Check for label definition
         if (trimmed.len > 0 and trimmed[trimmed.len - 1] == ':') {
-            const label_name = std.mem.trimRight(u8, trimmed[0 .. trimmed.len - 1], " \t");
+            const label_name = std.mem.trimEnd(u8, trimmed[0 .. trimmed.len - 1], " \t");
             try labels.put(label_name, instr_idx);
             line_num += 1;
             continue;

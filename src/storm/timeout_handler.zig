@@ -78,7 +78,7 @@ pub const TimeoutHandler = struct {
 
         var exit_code: u8 = 1;
         switch (result) {
-            .Exited => |code| exit_code = code,
+            .exited => |code| exit_code = code,
             .Signal => |sig| exit_code = 128 + @as(u8, @truncate(sig)),
             else => {},
         }

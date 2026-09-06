@@ -13,6 +13,7 @@
 
 const std = @import("std");
 
+const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 pub const BitNetFFI = struct {
     allocator: std.mem.Allocator,
@@ -74,7 +75,7 @@ pub const BitNetFFI = struct {
         try args.append(self.allocator, "--no-warmup");
 
         // Run llama-cli using std.process.Child.run
-        const result = try std.process.Child.run(.{
+        const result = try tri_proc.run(.{
             .allocator = self.allocator,
             .argv = args.items,
             .max_output_bytes = 1024 * 1024,
@@ -88,7 +89,7 @@ pub const BitNetFFI = struct {
         const generated = try self.parseOutput(output, prompt);
 
         const success = switch (result.term) {
-            .Exited => |code| code == 0,
+            .exited => |code| code == 0,
             else => false,
         };
 

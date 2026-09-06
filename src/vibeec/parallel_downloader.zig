@@ -13,6 +13,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 const net = std.net;
 const http = std.http;
@@ -189,7 +190,7 @@ fn parseUrl(url: []const u8) !ParsedUrl {
 
 fn getContentLength(allocator: std.mem.Allocator, url: []const u8) !usize {
     // Use curl -I to get headers
-    const result = try std.process.Child.run(.{
+    const result = try tri_proc.run(.{
         .allocator = allocator,
         .argv = &[_][]const u8{ "curl", "-sI", "-L", url },
     });
@@ -238,7 +239,7 @@ fn downloadChunk(
     var temp_path_buf: [256]u8 = undefined;
     const temp_path = try std.fmt.bufPrint(&temp_path_buf, "/tmp/trinity_chunk_{d}.tmp", .{chunk.id});
 
-    const result = try std.process.Child.run(.{
+    const result = try tri_proc.run(.{
         .allocator = allocator,
         .argv = &[_][]const u8{
             "curl",
@@ -256,7 +257,7 @@ fn downloadChunk(
     defer allocator.free(result.stderr);
 
     if ((switch (result.term) {
-        .Exited => |code| code,
+        .exited => |code| code,
         else => @as(u32, 1),
     }) != 0) {
         return error.CurlFailed;

@@ -16,6 +16,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 const tri_exit_codes = @import("tri_exit_codes.zig");
 const github_client = @import("github_client.zig");
@@ -479,7 +480,7 @@ fn issueList(allocator: std.mem.Allocator, args: []const []const u8, dry_run: bo
         try argv.appendSlice(allocator, &.{ "--label", l });
     }
 
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = argv.items,
         .max_output_bytes = 128 * 1024,
@@ -580,7 +581,7 @@ fn issueView(allocator: std.mem.Allocator, args: []const []const u8, dry_run: bo
         return;
     }
 
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ "gh", "issue", "view", number_str },
         .max_output_bytes = 64 * 1024,
@@ -1032,13 +1033,13 @@ fn agentList(allocator: std.mem.Allocator) !void {
             defer file.close();
             const n = file.readAll(&pid_buf) catch 0;
             if (n > 0) {
-                const trimmed = std.mem.trimRight(u8, pid_buf[0..n], "\n\r ");
+                const trimmed = std.mem.trimEnd(u8, pid_buf[0..n], "\n\r ");
                 pid_str = trimmed;
 
                 // Check if process is alive
                 const pid = std.fmt.parseInt(i32, trimmed, 10) catch 0;
                 if (pid > 0) {
-                    const kill_result = std.process.Child.run(.{
+                    const kill_result = tri_proc.run(.{
                         .allocator = allocator,
                         .argv = &.{ "kill", "-0", trimmed },
                         .max_output_bytes = 1024,
@@ -1047,7 +1048,7 @@ fn agentList(allocator: std.mem.Allocator) !void {
                         continue;
                     };
                     status = if ((switch (kill_result.term) {
-                        .Exited => |code| code,
+                        .exited => |code| code,
                         else => @as(u32, 1),
                     }) == 0) "running" else "dead (stale PID)";
                 }
@@ -1056,17 +1057,17 @@ fn agentList(allocator: std.mem.Allocator) !void {
             // Also check via pgrep as fallback
             var name_buf: [64]u8 = undefined;
             const pattern = std.fmt.bufPrint(&name_buf, "{s}-agent", .{name}) catch continue;
-            const pgrep = std.process.Child.run(.{
+            const pgrep = tri_proc.run(.{
                 .allocator = allocator,
                 .argv = &.{ "pgrep", "-f", pattern },
                 .max_output_bytes = 1024,
             }) catch continue;
 
             if ((switch (pgrep.term) {
-                .Exited => |code| code,
+                .exited => |code| code,
                 else => @as(u32, 1),
             }) == 0 and pgrep.stdout.len > 0) {
-                const first_line = std.mem.trimRight(u8, pgrep.stdout, "\n\r ");
+                const first_line = std.mem.trimEnd(u8, pgrep.stdout, "\n\r ");
                 // find first newline to get just first PID
                 if (std.mem.indexOfScalar(u8, first_line, '\n')) |nl| {
                     pid_str = first_line[0..nl];
@@ -1103,22 +1104,22 @@ fn agentStop(allocator: std.mem.Allocator, args: []const []const u8) !void {
         defer file.close();
         const n = file.readAll(&pid_buf) catch 0;
         if (n > 0) {
-            pid_str = std.mem.trimRight(u8, pid_buf[0..n], "\n\r ");
+            pid_str = std.mem.trimEnd(u8, pid_buf[0..n], "\n\r ");
         }
     } else |_| {
         // Fallback: pgrep
         var name_buf: [64]u8 = undefined;
         const pattern = std.fmt.bufPrint(&name_buf, "{s}-agent", .{name}) catch return;
-        const pgrep = std.process.Child.run(.{
+        const pgrep = tri_proc.run(.{
             .allocator = allocator,
             .argv = &.{ "pgrep", "-f", pattern },
             .max_output_bytes = 1024,
         }) catch return;
         if ((switch (pgrep.term) {
-            .Exited => |code| code,
+            .exited => |code| code,
             else => @as(u32, 1),
         }) == 0 and pgrep.stdout.len > 0) {
-            const trimmed = std.mem.trimRight(u8, pgrep.stdout, "\n\r ");
+            const trimmed = std.mem.trimEnd(u8, pgrep.stdout, "\n\r ");
             if (std.mem.indexOfScalar(u8, trimmed, '\n')) |nl| {
                 @memcpy(pid_buf[0..nl], trimmed[0..nl]);
                 pid_str = pid_buf[0..nl];
@@ -1130,7 +1131,7 @@ fn agentStop(allocator: std.mem.Allocator, args: []const []const u8) !void {
     }
 
     if (pid_str) |pid| {
-        const result = std.process.Child.run(.{
+        const result = tri_proc.run(.{
             .allocator = allocator,
             .argv = &.{ "kill", pid },
             .max_output_bytes = 1024,
@@ -1139,7 +1140,7 @@ fn agentStop(allocator: std.mem.Allocator, args: []const []const u8) !void {
             return;
         };
         if ((switch (result.term) {
-            .Exited => |code| code,
+            .exited => |code| code,
             else => @as(u32, 1),
         }) == 0) {
             std.debug.print("{s}Stopped {s} (PID {s}){s}\n", .{ GREEN, name, pid, RESET });
@@ -1171,7 +1172,7 @@ fn agentRestart(allocator: std.mem.Allocator, args: []const []const u8) !void {
     // Start — currently only Ralph has a binary
     if (std.mem.eql(u8, name, "ralph")) {
         std.debug.print("{s}Starting ralph-agent...{s}\n", .{ CYAN, RESET });
-        const result = std.process.Child.run(.{
+        const result = tri_proc.run(.{
             .allocator = allocator,
             .argv = &.{"./zig-out/bin/ralph-agent"},
             .max_output_bytes = 1024,
@@ -1183,7 +1184,7 @@ fn agentRestart(allocator: std.mem.Allocator, args: []const []const u8) !void {
         std.debug.print("{s}Restarted {s}{s}\n", .{ GREEN, name, RESET });
     } else if (std.mem.eql(u8, name, "mu")) {
         std.debug.print("{s}Starting MU daemon...{s}\n", .{ CYAN, RESET });
-        const result = std.process.Child.run(.{
+        const result = tri_proc.run(.{
             .allocator = allocator,
             .argv = &.{ "./zig-out/bin/trinity-mcp", "mu", "start" },
             .max_output_bytes = 1024,
@@ -1733,7 +1734,7 @@ fn checkCreate(allocator: std.mem.Allocator, args: []const []const u8, dry_run: 
 
     if (sha == null) {
         // Auto-detect HEAD sha
-        const result = std.process.Child.run(.{
+        const result = tri_proc.run(.{
             .allocator = allocator,
             .argv = &.{ "git", "rev-parse", "HEAD" },
             .max_output_bytes = 256,
@@ -1743,7 +1744,7 @@ fn checkCreate(allocator: std.mem.Allocator, args: []const []const u8, dry_run: 
         };
         defer allocator.free(result.stdout);
         defer allocator.free(result.stderr);
-        const trimmed = std.mem.trimRight(u8, result.stdout, "\n\r ");
+        const trimmed = std.mem.trimEnd(u8, result.stdout, "\n\r ");
         sha_owned = allocator.dupe(u8, trimmed) catch {
             std.debug.print("{s}Out of memory{s}\n", .{ RED, RESET });
             return;

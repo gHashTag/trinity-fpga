@@ -367,8 +367,8 @@ pub fn executeCellCommand(allocator: Allocator, cmd: CellCommand, args: []const 
     child.stderr_behavior = .Inherit;
     try child.spawn();
     const term = try child.wait();
-    if (term.Exited != 0) {
-        std.process.exit(term.Exited);
+    if (term.exited != 0) {
+        std.process.exit(term.exited);
     }
 }
 

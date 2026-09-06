@@ -152,7 +152,7 @@ fn cmdAdd(allocator: Allocator, args: []const []const u8) !void {
         // Find last ']' and replace with ','
         if (std.mem.lastIndexOfScalar(u8, data, ']')) |last_bracket| {
             // Check if there are existing entries (not just empty array)
-            const trimmed = std.mem.trimRight(u8, data[0..last_bracket], " \n\r\t");
+            const trimmed = std.mem.trimEnd(u8, data[0..last_bracket], " \n\r\t");
             try entries_json.appendSlice(allocator, trimmed);
             if (trimmed.len > 1) { // More than just '['
                 try entries_json.appendSlice(allocator, ",\n  ");

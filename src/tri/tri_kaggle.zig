@@ -24,6 +24,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_proc = @import("tri_proc");
 const tri_env = @import("tri_env.zig");
 const Allocator = std.mem.Allocator;
 
@@ -608,7 +609,7 @@ fn runPushCommand(allocator: Allocator, args: []const []const u8) !void {
             print("  Pushing {s}...", .{entry.name});
 
             // Run: kaggle kernels push <subdir_path>
-            const result = std.process.Child.run(.{
+            const result = tri_proc.run(.{
                 .allocator = allocator,
                 .argv = &.{ "kaggle", "kernels", "push", subdir_path },
                 .max_output_bytes = 1024 * 1024,
@@ -621,7 +622,7 @@ fn runPushCommand(allocator: Allocator, args: []const []const u8) !void {
             defer allocator.free(result.stderr);
 
             const exit_code = switch (result.term) {
-                .Exited => |code| code,
+                .exited => |code| code,
                 else => @as(u32, 1),
             };
 
@@ -693,7 +694,7 @@ fn runValidateCommand(allocator: Allocator) !void {
     print("{s}════════════════════════════════════════════════════════════{s}\n\n", .{ DIM, RESET });
 
     // Run: python kaggle/eval/validation.py
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ "python3", "kaggle/eval/validation.py" },
         .max_output_bytes = 1024 * 1024,
@@ -710,7 +711,7 @@ fn runValidateCommand(allocator: Allocator) !void {
     }
 
     const exit_code = switch (result.term) {
-        .Exited => |code| code,
+        .exited => |code| code,
         else => @as(u32, 1),
     };
 

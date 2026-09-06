@@ -183,10 +183,10 @@ const Section = enum {
 };
 
 pub fn validateSpec(source: []const u8, file_path: []const u8) ![]const ValidationError {
-    var errors: std.ArrayList(ValidationError) = .{};
+    var errors: std.ArrayList(ValidationError) = .empty;
 
     // ---- Pass 1: collect all spec-defined type names ----
-    var spec_types: std.ArrayList([]const u8) = .{};
+    var spec_types: std.ArrayList([]const u8) = .empty;
     {
         var pre_section: Section = .none;
         var pre_lines = std.mem.splitScalar(u8, source, '\n');
@@ -244,7 +244,7 @@ pub fn validateSpec(source: []const u8, file_path: []const u8) ![]const Validati
     var in_type_fields = false;
 
     // Behavior tracking
-    var behaviors: std.ArrayList(BehaviorState) = .{};
+    var behaviors: std.ArrayList(BehaviorState) = .empty;
     var current_behavior: ?BehaviorState = null;
 
     var lines = std.mem.splitScalar(u8, source, '\n');

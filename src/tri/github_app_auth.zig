@@ -18,6 +18,7 @@
 
 const std = @import("std");
 
+const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 const tri_env = @import("tri_env.zig");
 pub const GitHubAppAuth = struct {
@@ -132,7 +133,7 @@ pub const GitHubAppAuth = struct {
         }
 
         // Sign with openssl
-        const sign_result = try std.process.Child.run(.{
+        const sign_result = try tri_proc.run(.{
             .allocator = self.allocator,
             .argv = &.{
                 "openssl", "dgst", "-sha256", "-sign", self.private_key_path, "-out", sig_path, tmp_path,
@@ -143,7 +144,7 @@ pub const GitHubAppAuth = struct {
         defer self.allocator.free(sign_result.stderr);
 
         const exit_code = switch (sign_result.term) {
-            .Exited => |code| code,
+            .exited => |code| code,
             else => @as(u32, 1),
         };
         if (exit_code != 0) {

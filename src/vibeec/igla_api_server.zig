@@ -121,7 +121,7 @@ pub const Route = enum {
             clean_path = path[0..idx];
         }
         // Remove trailing space/CR
-        clean_path = std.mem.trimRight(u8, clean_path, " \r\n");
+        clean_path = std.mem.trimEnd(u8, clean_path, " \r\n");
 
         if (std.mem.startsWith(u8, clean_path, "/v1/chat/completions")) return .ChatCompletions;
         if (std.mem.startsWith(u8, clean_path, "/v1/models")) return .Models;

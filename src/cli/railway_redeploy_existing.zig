@@ -1,6 +1,7 @@
 // Railway: Redeploy using existing image (no rebuild/snapshot)
 const std = @import("std");
 
+const tri_proc = @import("tri_proc");
 pub fn main() !void {
     var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
@@ -30,7 +31,7 @@ pub fn main() !void {
 
     // Set builder
     {
-        const result = try std.process.Child.run(.{
+        const result = try tri_proc.run(.{
             .allocator = allocator,
             .argv = &.{ "curl", "-s", "-X", "POST", "-H", auth_header, "-H", "Content-Type: application/json", "-d", image_query, "https://backboard.railway.com/graphql" },
         });
@@ -48,7 +49,7 @@ pub fn main() !void {
     , .{ project_id, service_id }) catch return error.OutOfMemory;
     defer allocator.free(deploy_query);
 
-    const result = try std.process.Child.run(.{
+    const result = try tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ "curl", "-s", "-X", "POST", "-H", auth_header, "-H", "Content-Type: application/json", "-d", deploy_query, "https://backboard.railway.com/graphql" },
     });

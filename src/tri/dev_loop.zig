@@ -15,6 +15,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const colors = @import("tri_colors.zig");
@@ -191,7 +192,7 @@ pub const DevLoopState = struct {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn runTriCommand(allocator: Allocator, args: []const []const u8) struct { success: bool, output: []const u8 } {
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = args,
         .max_output_bytes = 65536,
@@ -201,7 +202,7 @@ fn runTriCommand(allocator: Allocator, args: []const []const u8) struct { succes
     // Caller must handle this carefully
     allocator.free(result.stderr);
 
-    const success = result.term.Exited == 0;
+    const success = result.term.exited == 0;
     return .{ .success = success, .output = result.stdout };
 }
 

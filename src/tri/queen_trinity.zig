@@ -15,6 +15,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 
@@ -343,7 +344,7 @@ fn workOnGithubIssue(allocator: std.mem.Allocator, cycle: u64) !bool {
     _ = cycle;
 
     // Fetch open GitHub issues
-    const result = try std.process.Child.run(.{
+    const result = try tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ "gh", "issue", "list", "--state", "open", "--limit", "1", "--json", "number,title" },
     });
@@ -352,7 +353,7 @@ fn workOnGithubIssue(allocator: std.mem.Allocator, cycle: u64) !bool {
         allocator.free(result.stderr);
     }
 
-    if (result.term.Exited != 0 or result.stdout.len == 0) {
+    if (result.term.exited != 0 or result.stdout.len == 0) {
         return false; // No issues or gh error
     }
 
@@ -382,7 +383,7 @@ fn workOnGithubIssue(allocator: std.mem.Allocator, cycle: u64) !bool {
     defer allocator.free(comment);
 
     // Comment on issue (disabled for now - uncomment when ready)
-    // _ = std.process.Child.run(.{
+    // _ = tri_proc.run(.{
     //     .allocator = allocator,
     //     .argv = &.{ "gh", "issue", "comment", number_str, "--body", comment },
     // });
@@ -447,7 +448,7 @@ fn runQueenStart(allocator: std.mem.Allocator, args: []const []const u8) !void {
 }
 
 fn countDirtyFiles(allocator: std.mem.Allocator) !usize {
-    const result = try std.process.Child.run(.{
+    const result = try tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ "git", "status", "--short" },
     });
@@ -465,7 +466,7 @@ fn countDirtyFiles(allocator: std.mem.Allocator) !usize {
 }
 
 fn checkBuild(allocator: std.mem.Allocator) !bool {
-    const result = try std.process.Child.run(.{
+    const result = try tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ "zig", "build" },
     });
@@ -474,7 +475,7 @@ fn checkBuild(allocator: std.mem.Allocator) !bool {
         allocator.free(result.stderr);
     }
     // Check if process exited cleanly (exit code 0)
-    return result.term == .Exited and result.term.Exited == 0;
+    return result.term == .exited and result.term.exited == 0;
 }
 
 fn updateHeartbeat(allocator: std.mem.Allocator, cycle: u64, timestamp: i64) !void {

@@ -14,6 +14,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const colors = @import("tri_colors.zig");
@@ -162,7 +163,7 @@ pub const ScanResult = struct {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn scanGithub(allocator: Allocator, result: *ScanResult) void {
-    const gh_result = std.process.Child.run(.{
+    const gh_result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &[_][]const u8{
             "gh",     "issue",               "list", "--state", "open",
@@ -266,7 +267,7 @@ fn scanGithub(allocator: Allocator, result: *ScanResult) void {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn scanDirty(allocator: Allocator, result: *ScanResult) void {
-    const git_result = std.process.Child.run(.{
+    const git_result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &[_][]const u8{ "git", "status", "--short" },
         .max_output_bytes = 65536,
@@ -282,7 +283,7 @@ fn scanDirty(allocator: Allocator, result: *ScanResult) void {
     var lines = std.mem.splitScalar(u8, git_result.stdout, '\n');
     while (lines.next()) |line| {
         if (line.len < 4) continue;
-        const path = std.mem.trimLeft(u8, line[2..], " ");
+        const path = std.mem.trimStart(u8, line[2..], " ");
         if (std.mem.endsWith(u8, path, ".zig")) {
             dirty_zig += 1;
         } else if (std.mem.endsWith(u8, path, ".tri")) {

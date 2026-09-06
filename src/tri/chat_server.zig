@@ -584,7 +584,7 @@ pub const ChatServer = struct {
         );
 
         // Build JSON response
-        var json: std.ArrayListUnmanaged(u8) = .{};
+        var json: std.ArrayListUnmanaged(u8) = .empty;
         defer json.deinit(self.allocator);
 
         try json.appendSlice(self.allocator, "{\"response\":\"");
@@ -754,7 +754,7 @@ pub const ChatServer = struct {
         };
         defer base_dir.close();
 
-        var json: std.ArrayListUnmanaged(u8) = .{};
+        var json: std.ArrayListUnmanaged(u8) = .empty;
         defer json.deinit(self.allocator);
 
         try json.appendSlice(self.allocator, "{\"agent\":");
@@ -857,7 +857,7 @@ pub const ChatServer = struct {
 
         std.debug.print("[ChatServer] Compile request: {s} ({d} bytes)\n", .{ language, code.len });
 
-        var json: std.ArrayListUnmanaged(u8) = .{};
+        var json: std.ArrayListUnmanaged(u8) = .empty;
         defer json.deinit(self.allocator);
 
         if (std.mem.eql(u8, language, "vibee")) {
@@ -1076,7 +1076,7 @@ pub const ChatServer = struct {
         const uptime = now - self.startup_time;
 
         // Build JSON using ArrayList for flexibility
-        var json: std.ArrayListUnmanaged(u8) = .{};
+        var json: std.ArrayListUnmanaged(u8) = .empty;
         defer json.deinit(self.allocator);
 
         try json.appendSlice(self.allocator, "{\"status\":\"ok\"");
@@ -1235,7 +1235,7 @@ pub const ChatServer = struct {
     }
 
     fn handleDiagnostic(self: *Self, connection: *std.net.Server.Connection) !void {
-        var json: std.ArrayListUnmanaged(u8) = .{};
+        var json: std.ArrayListUnmanaged(u8) = .empty;
         defer json.deinit(self.allocator);
 
         try json.appendSlice(self.allocator, "{\"routing_stats\":{");
@@ -1384,7 +1384,7 @@ pub const ChatServer = struct {
                 const start = i + header_name.len + 2;
                 var end = start;
                 while (end < request.len and request[end] != '\r') : (end += 1) {}
-                return std.mem.trimRight(u8, request[start..end], " \t");
+                return std.mem.trimEnd(u8, request[start..end], " \t");
             }
         }
         return null;
@@ -1398,7 +1398,7 @@ pub const ChatServer = struct {
     fn handlePasStatus(self: *Self, connection: *std.net.Server.Connection) !void {
         self.activatePas();
 
-        var json: std.ArrayListUnmanaged(u8) = .{};
+        var json: std.ArrayListUnmanaged(u8) = .empty;
         defer json.deinit(self.allocator);
 
         try json.appendSlice(self.allocator, "{\"active\":");
@@ -1438,7 +1438,7 @@ pub const ChatServer = struct {
     fn handlePasRecommendations(self: *Self, connection: *std.net.Server.Connection) !void {
         self.activatePas();
 
-        var json: std.ArrayListUnmanaged(u8) = .{};
+        var json: std.ArrayListUnmanaged(u8) = .empty;
         defer json.deinit(self.allocator);
 
         try json.appendSlice(self.allocator, "{\"active\":");
@@ -1486,7 +1486,7 @@ pub const ChatServer = struct {
         // Harvest some energy
         self.pas_energy += PHI_INV_SQ * 578.84;
 
-        var json: std.ArrayListUnmanaged(u8) = .{};
+        var json: std.ArrayListUnmanaged(u8) = .empty;
         defer json.deinit(self.allocator);
 
         try json.appendSlice(self.allocator, "{\"daemon_active\":");
@@ -1576,7 +1576,7 @@ pub const ChatServer = struct {
             return;
         }
         const fit = sacred_formula.fitSacredFormula(mass);
-        var json: std.ArrayListUnmanaged(u8) = .{};
+        var json: std.ArrayListUnmanaged(u8) = .empty;
         defer json.deinit(self.allocator);
         // Escape formula_str for safe JSON embedding (prevent injection via " or \ in query param)
         var escaped_formula_buf: [256]u8 = undefined;
@@ -1617,7 +1617,7 @@ pub const ChatServer = struct {
             try self.sendError(connection, "Element not found");
             return;
         };
-        var json: std.ArrayListUnmanaged(u8) = .{};
+        var json: std.ArrayListUnmanaged(u8) = .empty;
         defer json.deinit(self.allocator);
         const body = std.fmt.allocPrint(
             self.allocator,
@@ -1724,7 +1724,7 @@ pub const ChatServer = struct {
         }
 
         // Build response JSON
-        var json: std.ArrayListUnmanaged(u8) = .{};
+        var json: std.ArrayListUnmanaged(u8) = .empty;
         defer json.deinit(self.allocator);
         // Balanced equation string
         try json.appendSlice(self.allocator, "{\"balanced\":\"");
@@ -1961,7 +1961,7 @@ pub const ChatServer = struct {
         }
 
         // Build JSON response
-        var json: std.ArrayListUnmanaged(u8) = .{};
+        var json: std.ArrayListUnmanaged(u8) = .empty;
         defer json.deinit(self.allocator);
 
         try json.appendSlice(self.allocator, "{\"reactants\":[");

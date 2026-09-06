@@ -66,7 +66,7 @@ fn runCmd(allocator: std.mem.Allocator, argv: []const []const u8) !u8 {
     try child.spawn();
     const term = try child.wait();
     return switch (term) {
-        .Exited => |code| code,
+        .exited => |code| code,
         else => 1,
     };
 }

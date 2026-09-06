@@ -4,6 +4,7 @@
 //! detects regressions, validates all specs still compile.
 
 const std = @import("std");
+const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 const ArrayListManaged = std.array_list.Managed;
 const template_mutator = @import("template_mutator.zig");
@@ -196,7 +197,7 @@ pub const RegressionTester = struct {
         const start_time = tri_time.nanoTimestamp();
 
         // Try to compile the spec
-        const compile_result = std.process.Child.run(.{
+        const compile_result = tri_proc.run(.{
             .allocator = self.allocator,
             .argv = &.{ "zig", "build", "vibee", "--", "gen", spec_path },
         }) catch {
@@ -209,7 +210,7 @@ pub const RegressionTester = struct {
         }
 
         if ((switch (compile_result.term) {
-            .Exited => |code| code,
+            .exited => |code| code,
             else => @as(u32, 1),
         }) != 0) {
             result.passed = false;

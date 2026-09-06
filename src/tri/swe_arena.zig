@@ -341,7 +341,7 @@ fn runLocalBenchmark(allocator: Allocator) !void {
         child.collectOutput(allocator, &stdout_buf, &stderr_buf, 4 * 1024 * 1024) catch break :blk false;
         const term = child.wait() catch break :blk false;
         break :blk switch (term) {
-            .Exited => |code| code == 0,
+            .exited => |code| code == 0,
             else => false,
         };
     };
@@ -378,7 +378,7 @@ fn runLocalBenchmark(allocator: Allocator) !void {
             if (stdout_data.len > 0) allocator.free(stdout_data);
         }
         break :blk switch (term) {
-            .Exited => |code| code == 0,
+            .exited => |code| code == 0,
             else => false,
         };
     };

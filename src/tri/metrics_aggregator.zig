@@ -102,7 +102,7 @@ pub const MetricsCollector = struct {
 
     /// Compute aggregated metrics from collected entries
     pub fn aggregate(self: *Self) !std.ArrayListUnmanaged(AggregatedMetric) {
-        var result: std.ArrayListUnmanaged(AggregatedMetric) = .{};
+        var result: std.ArrayListUnmanaged(AggregatedMetric) = .empty;
 
         // Group by link+name, compute stats
         var seen = std.StringHashMap(std.ArrayListUnmanaged(f64)).init(self.allocator);
@@ -124,7 +124,7 @@ pub const MetricsCollector = struct {
                 values.append(self.allocator, entry.value) catch {};
                 self.allocator.free(key_owned);
             } else {
-                var values: std.ArrayListUnmanaged(f64) = .{};
+                var values: std.ArrayListUnmanaged(f64) = .empty;
                 values.append(self.allocator, entry.value) catch {};
                 seen.put(key_owned, values) catch {
                     self.allocator.free(key_owned);

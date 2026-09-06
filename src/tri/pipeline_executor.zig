@@ -4,6 +4,7 @@
 // ============================================================================
 
 const std = @import("std");
+const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 const golden_chain = @import("golden_chain.zig");
 const tvc_gate_mod = @import("tvc_gate.zig");
@@ -258,7 +259,7 @@ pub const PipelineExecutor = struct {
         var metrics = LinkMetrics{};
 
         // Get git log for baseline
-        const result = std.process.Child.run(.{
+        const result = tri_proc.run(.{
             .allocator = self.allocator,
             .argv = &[_][]const u8{ "git", "log", "--oneline", "-5" },
         }) catch {
@@ -308,7 +309,7 @@ pub const PipelineExecutor = struct {
         // Run zig build test
         var metrics = LinkMetrics{};
 
-        const result = std.process.Child.run(.{
+        const result = tri_proc.run(.{
             .allocator = self.allocator,
             .argv = &[_][]const u8{ "zig", "build", "test" },
             .max_output_bytes = 10 * 1024 * 1024,
@@ -318,7 +319,7 @@ pub const PipelineExecutor = struct {
         defer self.allocator.free(result.stdout);
         defer self.allocator.free(result.stderr);
 
-        const success = result.term.Exited == 0;
+        const success = result.term.exited == 0;
         if (!success) {
             return ChainError.TestsFailedGate;
         }
@@ -405,7 +406,7 @@ pub const PipelineExecutor = struct {
 
     fn executeGit(self: *PipelineExecutor) ChainError!LinkMetrics {
         // Git commit - only show status for now (don't auto-commit)
-        const result = std.process.Child.run(.{
+        const result = tri_proc.run(.{
             .allocator = self.allocator,
             .argv = &[_][]const u8{ "git", "status", "--short" },
         }) catch {

@@ -3,6 +3,7 @@
 
 const std = @import("std");
 
+const tri_proc = @import("tri_proc");
 pub fn main() !void {
     var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
@@ -62,13 +63,13 @@ pub fn main() !void {
 }
 
 fn execCurl(allocator: std.mem.Allocator, args: []const []const u8) ![]const u8 {
-    const result = try std.process.Child.run(.{
+    const result = try tri_proc.run(.{
         .allocator = allocator,
         .argv = args,
     });
     defer allocator.free(result.stderr);
     switch (result.term) {
-        .Exited => |code| {
+        .exited => |code| {
             if (code != 0) return error.CurlFailed;
         },
         else => return error.CurlFailed,

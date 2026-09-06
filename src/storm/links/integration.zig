@@ -2,6 +2,7 @@
 //! Git commit, GitHub API, experience save, phoenix lineage
 
 const std = @import("std");
+const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 const storm = @import("../golden_chain.zig");
 
@@ -22,7 +23,7 @@ pub fn executeGitCommit(allocator: std.mem.Allocator, phase: []const u8, task: [
     defer allocator.free(commit_msg);
 
     // Add modified files
-    const add_result = std.process.Child.run(.{
+    const add_result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &[_][]const u8{ "git", "add", "-A" },
     }) catch |err| {
@@ -36,7 +37,7 @@ pub fn executeGitCommit(allocator: std.mem.Allocator, phase: []const u8, task: [
     defer add_result.deinit();
 
     // Commit
-    const commit_result = std.process.Child.run(.{
+    const commit_result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &[_][]const u8{ "git", "commit", "-m", commit_msg },
     }) catch |err| {
@@ -57,8 +58,8 @@ pub fn executeGitCommit(allocator: std.mem.Allocator, phase: []const u8, task: [
     const duration: u64 = @intCast(tri_time.nanoTimestamp() - commit_result.start_time);
 
     const exit_code: u32 = switch (commit_result.term) {
-        .Exited => |code| code,
-        .Signal, .Stopped, .Unknown => 1,
+        .exited => |code| code,
+        .signal, .stopped, .unknown => 1,
     };
 
     if (exit_code != 0) {
@@ -140,7 +141,7 @@ pub fn executeGithubIssueComment(allocator: std.mem.Allocator, issue: u32, resul
     defer allocator.free(token);
 
     // Get repo from git
-    const git_result = std.process.Child.run(.{
+    const git_result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &[_][]const u8{ "git", "config", "--get", "remote.origin.url" },
     }) catch |err| {

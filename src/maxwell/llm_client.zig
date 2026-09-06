@@ -489,7 +489,7 @@ pub const LLMClient = struct {
         self.allocator.free(stderr);
 
         const term = try child.wait();
-        if (term.Exited != 0) return error.CurlFailed;
+        if (term.exited != 0) return error.CurlFailed;
 
         return self.parseClaudeResponse(stdout);
     }
@@ -589,7 +589,7 @@ pub const LLMClient = struct {
         self.allocator.free(stderr);
 
         const term = try child.wait();
-        if (term.Exited != 0) {
+        if (term.exited != 0) {
             return error.CurlFailed;
         }
 

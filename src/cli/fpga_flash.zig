@@ -240,7 +240,7 @@ fn execCommand(args: []const []const u8) ![]u8 {
         .argv = args,
     });
 
-    if (result.term.Exited != 0 and result.term.Exited != 1) {
+    if (result.term.exited != 0 and result.term.exited != 1) {
         // Exit code 1 might be from grep/find not finding anything
         // Other exit codes are actual errors
         return error.CommandFailed;

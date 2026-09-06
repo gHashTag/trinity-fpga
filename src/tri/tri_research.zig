@@ -15,6 +15,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 const tri_exit_codes = @import("tri_exit_codes.zig");
 const SacredConstants = @import("sacred_constants.zig").SacredConstants;
@@ -223,7 +224,7 @@ fn runPerplexityQuery(allocator: std.mem.Allocator, args: []const []const u8) !v
     var auth_buf: [256]u8 = undefined;
     const auth = std.fmt.bufPrint(&auth_buf, "Authorization: Bearer {s}", .{api_key}) catch return;
 
-    const curl_result = std.process.Child.run(.{
+    const curl_result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{
             "curl",                                       "-s", "-X",                             "POST",
@@ -291,7 +292,7 @@ fn offlineAnswer(query: []const u8) []const u8 {
         return "No output from ast-check means the file is empty or the path is wrong. Check: 1) generated/<name>.zig exists, 2) the .tri spec produced output, 3) vibee codegen ran successfully.";
     }
     if (std.mem.indexOf(u8, query, "compile") != null or std.mem.indexOf(u8, query, "build") != null) {
-        return "Compilation failures: 1) type mismatch — check function signatures, 2) missing error set member, 3) allocator not passed. In Zig 0.15: Child.run replaces Child.exec, use .term.Exited instead of .term.exited.";
+        return "Compilation failures: 1) type mismatch — check function signatures, 2) missing error set member, 3) allocator not passed. In Zig 0.15: Child.run replaces Child.exec, use .term.exited instead of .term.exited.";
     }
     if (std.mem.indexOf(u8, query, "test") != null or std.mem.indexOf(u8, query, "fail") != null) {
         return "Test failures: 1) expectEqual args may be swapped (expected, actual), 2) floating point: use expectApproxEqAbs, 3) allocation: use testing.allocator, defer free. Run: zig build test 2>&1 | grep FAIL for specific failures.";

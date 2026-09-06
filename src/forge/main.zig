@@ -450,7 +450,7 @@ fn forgeFasm2Bit(allocator: std.mem.Allocator, args: []const []const u8) !void {
     defer allocator.free(fasm_content);
 
     // Parse FASM lines into features
-    var features: std.ArrayList(types.FasmFeature) = .{};
+    var features: std.ArrayList(types.FasmFeature) = .empty;
     defer features.deinit(allocator);
 
     var line_count: u32 = 0;
@@ -614,7 +614,7 @@ fn flashBitstream(bitstream_path: []const u8, device_str: []const u8) void {
     };
 
     switch (term) {
-        .Exited => |code| {
+        .exited => |code| {
             if (code == 0) {
                 std.debug.print("\n  FLASH COMPLETE — FPGA PROGRAMMED\n", .{});
             } else {

@@ -234,11 +234,11 @@ fn cmdRegen(allocator: Allocator, cell_id: []const u8) !void {
                 return;
             };
 
-            if (term.Exited == 0) {
+            if (term.exited == 0) {
                 std.debug.print("  Regen:  {s}OK{s}\n", .{ GREEN, RESET });
                 try appendGenomeLog(allocator, cell.dir_path, cell_id, .ok);
             } else {
-                std.debug.print("  Regen:  {s}FAILED{s} (exit={d})\n", .{ RED, RESET, term.Exited });
+                std.debug.print("  Regen:  {s}FAILED{s} (exit={d})\n", .{ RED, RESET, term.exited });
                 try appendGenomeLog(allocator, cell.dir_path, cell_id, .failed);
             }
         } else |_| {
@@ -301,12 +301,12 @@ fn cmdRegenAll(allocator: Allocator) !void {
                 continue;
             };
 
-            if (term.Exited == 0) {
+            if (term.exited == 0) {
                 std.debug.print(" {s}OK{s}\n", .{ GREEN, RESET });
                 try appendGenomeLog(allocator, cell.dir_path, cell.manifest.id, .ok);
                 regen_count += 1;
             } else {
-                std.debug.print(" {s}FAILED{s} (exit={d})\n", .{ RED, RESET, term.Exited });
+                std.debug.print(" {s}FAILED{s} (exit={d})\n", .{ RED, RESET, term.exited });
                 try appendGenomeLog(allocator, cell.dir_path, cell.manifest.id, .failed);
             }
         } else |_| {

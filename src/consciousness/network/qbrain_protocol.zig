@@ -85,7 +85,7 @@ pub const EntanglementResult = struct {
 /// QBraiN Protocol
 pub const QBraiNProtocol = struct {
     allocator: mem.Allocator,
-    nodes: std.ArrayListUnmanaged(QuantumBrainNode) = .{},
+    nodes: std.ArrayListUnmanaged(QuantumBrainNode) = .empty,
     entanglement_matrix: std.ArrayListUnmanaged(std.ArrayListUnmanaged(f64)) = .{},
     network_phi: f64 = 0.0,
     binding_strength: f64 = 0.0,

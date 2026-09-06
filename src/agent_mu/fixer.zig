@@ -6,6 +6,7 @@
 //! Phase 1: 6 real auto-fix implementations (not stubs)
 
 const std = @import("std");
+const tri_proc = @import("tri_proc");
 const diagnostic = @import("diagnostic.zig");
 
 /// Sacred constant for intelligence gain calculation
@@ -150,7 +151,7 @@ fn applyImportFix(allocator: std.mem.Allocator, err_info: *const diagnostic.Erro
     try std.fs.cwd().writeFile(.{ .sub_path = file_path, .data = new_content });
 
     // 8. Verify fix by running zig build
-    const verify_result = try std.process.Child.run(.{
+    const verify_result = try tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ "zig", "build", "--summary", "all" },
         .cwd = std.fs.path.dirname(file_path) orelse ".",
@@ -161,7 +162,7 @@ fn applyImportFix(allocator: std.mem.Allocator, err_info: *const diagnostic.Erro
     }
 
     const success = (switch (verify_result.term) {
-        .Exited => |code| code,
+        .exited => |code| code,
         else => @as(u32, 1),
     }) == 0;
 
@@ -249,8 +250,8 @@ fn applyErrorUnionFix(allocator: std.mem.Allocator, err_info: *const diagnostic.
 
     // For now, we'll handle a simple case: known error-returning functions
     const error_fns = [_][]const u8{
-        "allocator.alloc(",       "allocator.create(",      "allocator.dupe(",
-        "std.fs.cwd().readFile(", "std.process.Child.run(",
+        "allocator.alloc(",       "allocator.create(", "allocator.dupe(",
+        "std.fs.cwd().readFile(", "tri_proc.run(",
     };
 
     var lines_changed: u32 = 0;
@@ -434,7 +435,7 @@ fn applyGeneratorPatch(allocator: std.mem.Allocator, err_info: *const diagnostic
 
 /// Apply automatic formatting using zig fmt
 fn applyFormatFix(allocator: std.mem.Allocator, file_path: []const u8) !FixResult {
-    const result = try std.process.Child.run(.{
+    const result = try tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ "zig", "fmt", file_path },
     });
@@ -444,7 +445,7 @@ fn applyFormatFix(allocator: std.mem.Allocator, file_path: []const u8) !FixResul
     }
 
     const success = (switch (result.term) {
-        .Exited => |code| code,
+        .exited => |code| code,
         else => @as(u32, 1),
     }) == 0;
 
@@ -634,7 +635,7 @@ test "fixer: applyFormatFix" {
         };
     }
 
-    try std.fs.cwd().writeFile(.{ .sub_path = test_file, .data = 
+    try std.fs.cwd().writeFile(.{ .sub_path = test_file, .data =
         \\const std=@import("std");
         \\pub fn add(a:i32,b:i32)i32{return a+b;}
     });

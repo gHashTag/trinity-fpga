@@ -8,6 +8,7 @@
 // φ² + 1/φ² = 3 = TRINITY
 // ═══════════════════════════════════════════════════════════════════════════════
 const std = @import("std");
+const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 const colors = @import("tri_colors.zig");
 const chat_server = @import("chat_server.zig");
@@ -131,7 +132,7 @@ pub fn runGenCommand(io: std.Io, allocator: std.mem.Allocator, args: []const []c
     child.stdout_behavior = .Inherit;
     const term = try child.spawnAndWait();
     switch (term) {
-        .Exited => |code| if (code != 0) {
+        .exited => |code| if (code != 0) {
             std.debug.print("{s} exited with code {d}\n", .{ backend_name, code });
             const exp_hooks = @import("experience_hooks.zig");
             const spec_name = if (actual_args.len > 0) actual_args[0] else "";
@@ -538,14 +539,14 @@ pub fn runGitCommand(allocator: std.mem.Allocator, subcommand: []const u8, args:
 }
 /// Print git status
 fn printGitStatus() !void {
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = std.heap.page_allocator,
         .argv = &[_][]const u8{ "git", "status", "--short" },
     }) catch |err| {
         std.debug.print("Error running git status: {s}\n", .{@errorName(err)});
         return error.GitFailed;
     };
-    if (result.term.Exited != 0) {
+    if (result.term.exited != 0) {
         std.debug.print("Git status failed\n", .{});
         return error.GitFailed;
     }
@@ -557,7 +558,7 @@ fn performGitCommit(allocator: std.mem.Allocator, args: []const []const u8) !voi
         args[0]
     else
         "Update";
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &[_][]const u8{ "git", "commit", "-m", commit_msg },
     }) catch |err| {
@@ -565,7 +566,7 @@ fn performGitCommit(allocator: std.mem.Allocator, args: []const []const u8) !voi
         return error.GitFailed;
     };
     // RunResult no longer has deinit() in Zig 0.15 - memory managed by page_allocator
-    if (result.term.Exited != 0) {
+    if (result.term.exited != 0) {
         std.debug.print("Git commit failed: {s}", .{result.stderr});
         return error.GitFailed;
     }
@@ -573,14 +574,14 @@ fn performGitCommit(allocator: std.mem.Allocator, args: []const []const u8) !voi
 }
 /// Perform git push
 fn performGitPush() !void {
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = std.heap.page_allocator,
         .argv = &[_][]const u8{ "git", "push" },
     }) catch |err| {
         std.debug.print("Error running git push: {s}\n", .{@errorName(err)});
         return error.GitFailed;
     };
-    if (result.term.Exited != 0) {
+    if (result.term.exited != 0) {
         std.debug.print("Git push failed: {s}", .{result.stderr});
         return error.GitFailed;
     }
@@ -588,14 +589,14 @@ fn performGitPush() !void {
 }
 /// Perform git pull
 fn performGitPull() !void {
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = std.heap.page_allocator,
         .argv = &[_][]const u8{ "git", "pull" },
     }) catch |err| {
         std.debug.print("Error running git pull: {s}\n", .{@errorName(err)});
         return error.GitFailed;
     };
-    if (result.term.Exited != 0) {
+    if (result.term.exited != 0) {
         std.debug.print("Git pull failed: {s}", .{result.stderr});
         return error.GitFailed;
     }
@@ -604,14 +605,14 @@ fn performGitPull() !void {
 /// Print git log
 fn printGitLog(allocator: std.mem.Allocator, args: []const []const u8) !void {
     const count_str = if (args.len > 0) args[0] else "10";
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &[_][]const u8{ "git", "log", "--oneline", "-n", count_str },
     }) catch |err| {
         std.debug.print("Error running git log: {s}\n", .{@errorName(err)});
         return error.GitFailed;
     };
-    if (result.term.Exited != 0) {
+    if (result.term.exited != 0) {
         std.debug.print("Git log failed\n", .{});
         return error.GitFailed;
     }
@@ -778,7 +779,7 @@ pub fn runUiCommand(allocator: std.mem.Allocator, args: []const []const u8) !voi
 
     // Kill any running swift processes
     std.debug.print("{s}🔄 Killing existing swift processes...{s}\n", .{ CYAN, RESET });
-    _ = std.process.Child.run(.{
+    _ = tri_proc.run(.{
         .allocator = allocator,
         .argv = &[_][]const u8{ "pkill", "-f", "swift-frontend" },
         .env_map = &env_map,
@@ -796,7 +797,7 @@ pub fn runUiCommand(allocator: std.mem.Allocator, args: []const []const u8) !voi
     std.debug.print("{s}  Command: swift run &{s}\n\n", .{ GRAY, RESET });
 
     // Run in background via shell
-    _ = std.process.Child.run(.{
+    _ = tri_proc.run(.{
         .allocator = allocator,
         .argv = &[_][]const u8{ "sh", "-c", "cd apps/queen && swift run &" },
         .env_map = &env_map,

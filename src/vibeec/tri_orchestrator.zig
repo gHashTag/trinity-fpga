@@ -536,7 +536,7 @@ pub const TriOrchestrator = struct {
         };
 
         const exit_code = switch (term) {
-            .Exited => |code| code,
+            .exited => |code| code,
             else => 1,
         };
 

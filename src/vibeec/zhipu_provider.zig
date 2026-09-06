@@ -81,7 +81,7 @@ pub const ZhipuProvider = struct {
         const term = try child.wait();
 
         switch (term) {
-            .Exited => |code| {
+            .exited => |code| {
                 if (code != 0) {
                     std.debug.print("[ZHIPU] curl failed with code {d}\n", .{code});
                     return error.ZhipuRequestFailed;

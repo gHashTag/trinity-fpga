@@ -6,6 +6,7 @@
 // ============================================================================
 
 const std = @import("std");
+const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 const tri_env = @import("tri_env.zig");
 const tri_mutex = @import("mutex.zig");
@@ -569,7 +570,7 @@ pub const PipelineExecutor = struct {
         var metrics = LinkMetrics{};
 
         // Get git log for baseline
-        const result = std.process.Child.run(.{
+        const result = tri_proc.run(.{
             .allocator = self.allocator,
             .argv = &[_][]const u8{ "git", "log", "--oneline", "-5" },
         }) catch {
@@ -615,7 +616,7 @@ pub const PipelineExecutor = struct {
         // Link 3: Search codebase for related code patterns
         std.debug.print("  [PAS] Searching for related patterns: \"{s}\"\n", .{self.state.task_description});
 
-        const result = std.process.Child.run(.{
+        const result = tri_proc.run(.{
             .allocator = self.allocator,
             .argv = &[_][]const u8{ "./zig-out/bin/tri", "search", self.state.task_description },
             .max_output_bytes = 1_048_576,
@@ -647,7 +648,7 @@ pub const PipelineExecutor = struct {
         // Link 4: Check GitHub issues to locate task in tech tree
         std.debug.print("  [TREE] Checking tech tree for: \"{s}\"\n", .{self.state.task_description});
 
-        const result = std.process.Child.run(.{
+        const result = tri_proc.run(.{
             .allocator = self.allocator,
             .argv = &[_][]const u8{ "gh", "issue", "list", "--limit", "20", "--json", "number,title,state" },
             .max_output_bytes = 262_144,
@@ -659,7 +660,7 @@ pub const PipelineExecutor = struct {
         defer self.allocator.free(result.stderr);
 
         if ((switch (result.term) {
-            .Exited => |code| code,
+            .exited => |code| code,
             else => @as(u32, 1),
         }) != 0) {
             std.debug.print("  [TREE] gh issue list failed, continuing\n", .{});
@@ -749,7 +750,7 @@ pub const PipelineExecutor = struct {
 
         std.debug.print("  [SPEC] Creating spec via: tri plan \"{s}\"\n", .{task});
 
-        const result = std.process.Child.run(.{
+        const result = tri_proc.run(.{
             .allocator = self.allocator,
             .argv = &[_][]const u8{ "./zig-out/bin/tri", "plan", task },
             .max_output_bytes = 1_048_576,
@@ -761,7 +762,7 @@ pub const PipelineExecutor = struct {
         defer self.allocator.free(result.stderr);
 
         if ((switch (result.term) {
-            .Exited => |code| code,
+            .exited => |code| code,
             else => @as(u32, 1),
         }) != 0) {
             std.debug.print("  [SPEC] tri plan exited with error\n", .{});
@@ -812,7 +813,7 @@ pub const PipelineExecutor = struct {
 
         std.debug.print("  [CODEGEN] Generating code: tri gen {s}\n", .{spec_path});
 
-        const result = std.process.Child.run(.{
+        const result = tri_proc.run(.{
             .allocator = self.allocator,
             .argv = &[_][]const u8{ "./zig-out/bin/tri", "gen", spec_path },
             .max_output_bytes = 1_048_576,
@@ -824,7 +825,7 @@ pub const PipelineExecutor = struct {
         defer self.allocator.free(result.stderr);
 
         if ((switch (result.term) {
-            .Exited => |code| code,
+            .exited => |code| code,
             else => @as(u32, 1),
         }) != 0) {
             std.debug.print("  [CODEGEN] tri gen error: {s}\n", .{result.stderr[0..@min(result.stderr.len, 200)]});
@@ -858,7 +859,7 @@ pub const PipelineExecutor = struct {
         var attempt: u32 = 0;
         while (attempt < 3) : (attempt += 1) {
             // Step 1: zig fmt
-            const fmt_result = std.process.Child.run(.{
+            const fmt_result = tri_proc.run(.{
                 .allocator = self.allocator,
                 .argv = &[_][]const u8{ "zig", "fmt", output_path },
                 .max_output_bytes = 65536,
@@ -870,7 +871,7 @@ pub const PipelineExecutor = struct {
             defer self.allocator.free(fmt_result.stderr);
 
             const fmt_ok = (switch (fmt_result.term) {
-                .Exited => |code| code,
+                .exited => |code| code,
                 else => @as(u32, 1),
             }) == 0;
 
@@ -884,7 +885,7 @@ pub const PipelineExecutor = struct {
             }
 
             // Step 2: zig build
-            const build_result = std.process.Child.run(.{
+            const build_result = tri_proc.run(.{
                 .allocator = self.allocator,
                 .argv = &[_][]const u8{ "zig", "build" },
                 .max_output_bytes = 1_048_576,
@@ -896,7 +897,7 @@ pub const PipelineExecutor = struct {
             defer self.allocator.free(build_result.stderr);
 
             const build_ok = (switch (build_result.term) {
-                .Exited => |code| code,
+                .exited => |code| code,
                 else => @as(u32, 1),
             }) == 0;
 
@@ -1016,7 +1017,7 @@ pub const PipelineExecutor = struct {
         // Run zig build test
         var metrics = LinkMetrics{};
 
-        const result = std.process.Child.run(.{
+        const result = tri_proc.run(.{
             .allocator = self.allocator,
             .argv = &[_][]const u8{ "zig", "build", "test" },
             .max_output_bytes = 10 * 1024 * 1024,
@@ -1027,7 +1028,7 @@ pub const PipelineExecutor = struct {
         defer self.allocator.free(result.stderr);
 
         const success = (switch (result.term) {
-            .Exited => |code| code,
+            .exited => |code| code,
             else => @as(u32, 1),
         }) == 0;
         if (!success) {
@@ -1090,7 +1091,7 @@ pub const PipelineExecutor = struct {
             std.debug.print("  [SWE] Fix attempt {d}/{d}\n", .{ retries + 1, max_retries });
 
             // Run test and capture stderr
-            const result = std.process.Child.run(.{
+            const result = tri_proc.run(.{
                 .allocator = self.allocator,
                 .argv = &[_][]const u8{ "zig", "build", "test" },
                 .max_output_bytes = 2_097_152,
@@ -1102,7 +1103,7 @@ pub const PipelineExecutor = struct {
             defer self.allocator.free(result.stderr);
 
             if ((switch (result.term) {
-                .Exited => |code| code,
+                .exited => |code| code,
                 else => @as(u32, 1),
             }) == 0) {
                 std.debug.print("  [SWE] {s}Tests pass after fix attempt {d}{s}\n", .{ GREEN, retries + 1, RESET });
@@ -1147,7 +1148,7 @@ pub const PipelineExecutor = struct {
                 var swe_path_buf: [512]u8 = undefined;
                 const spec_path = golden_chain.deriveSpecPath(self.state.task_description, &swe_name_buf, &swe_path_buf) orelse continue;
 
-                const regen = std.process.Child.run(.{
+                const regen = tri_proc.run(.{
                     .allocator = self.allocator,
                     .argv = &[_][]const u8{ "./zig-out/bin/tri", "gen", spec_path },
                     .max_output_bytes = 1_048_576,
@@ -1327,7 +1328,7 @@ pub const PipelineExecutor = struct {
 
     fn executeGit(self: *PipelineExecutor) ChainError!LinkMetrics {
         // Git commit - only show status for now (don't auto-commit)
-        const result = std.process.Child.run(.{
+        const result = tri_proc.run(.{
             .allocator = self.allocator,
             .argv = &[_][]const u8{ "git", "status", "--short" },
         }) catch {
@@ -1379,7 +1380,7 @@ pub const PipelineExecutor = struct {
         }
 
         // Check if flyctl is available
-        const fly_check = std.process.Child.run(.{
+        const fly_check = tri_proc.run(.{
             .allocator = self.allocator,
             .argv = &[_][]const u8{ "which", "flyctl" },
         }) catch {
@@ -1392,7 +1393,7 @@ pub const PipelineExecutor = struct {
         }
 
         if ((switch (fly_check.term) {
-            .Exited => |code| code,
+            .exited => |code| code,
             else => @as(u32, 1),
         }) != 0) {
             std.debug.print("  [FLY] flyctl not available\n", .{});
@@ -1409,7 +1410,7 @@ pub const PipelineExecutor = struct {
         fly_toml.close();
 
         // Run fly deploy (non-blocking)
-        const deploy_result = std.process.Child.run(.{
+        const deploy_result = tri_proc.run(.{
             .allocator = self.allocator,
             .argv = &[_][]const u8{ "flyctl", "deploy", "--yes" },
             .max_output_bytes = 2_048_576,
@@ -1423,7 +1424,7 @@ pub const PipelineExecutor = struct {
         }
 
         if ((switch (deploy_result.term) {
-            .Exited => |code| code,
+            .exited => |code| code,
             else => @as(u32, 1),
         }) == 0) {
             std.debug.print("  [FLY] {s}Deploy successful!{s}\n", .{ GREEN, RESET });
@@ -1651,7 +1652,7 @@ pub const PipelineExecutor = struct {
 
         std.debug.print("  [SPEC_LINT] Validating: {s}\n", .{spec_path});
 
-        const result = std.process.Child.run(.{
+        const result = tri_proc.run(.{
             .allocator = self.allocator,
             .argv = &[_][]const u8{ "./zig-out/bin/vibee", "validate", spec_path },
             .max_output_bytes = 1_048_576,
@@ -1666,7 +1667,7 @@ pub const PipelineExecutor = struct {
         const output = if (result.stderr.len > 0) result.stderr else result.stdout;
 
         if ((switch (result.term) {
-            .Exited => |code| code,
+            .exited => |code| code,
             else => @as(u32, 1),
         }) != 0) {
             std.debug.print("  [SPEC_LINT] {s}Spec validation FAILED:{s}\n{s}\n", .{
@@ -1870,7 +1871,7 @@ fn callProviderFix(allocator: std.mem.Allocator, provider: Provider, api_key: []
     defer allocator.free(auth_header);
 
     // Call API via curl with 30s timeout
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &[_][]const u8{
             "curl",      "-s",   "--connect-timeout",             "10", "--max-time",                     "60",

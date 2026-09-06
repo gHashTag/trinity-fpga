@@ -119,7 +119,7 @@ pub const RyuTakayanagi = struct {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 pub fn computeAdsLayers(allocator: Allocator) ![]BulkLayer {
-    var result: std.ArrayListUnmanaged(BulkLayer) = .{};
+    var result: std.ArrayListUnmanaged(BulkLayer) = .empty;
     var z: u32 = 0;
     while (z < 12) : (z += 1) {
         const zf: f64 = @as(f64, @floatFromInt(z)) * 0.1 + 0.05;
@@ -137,7 +137,7 @@ pub fn computeAdsLayers(allocator: Allocator) ![]BulkLayer {
 }
 
 pub fn computeSpinNetwork(allocator: Allocator) ![]SpinNode {
-    var result: std.ArrayListUnmanaged(SpinNode) = .{};
+    var result: std.ArrayListUnmanaged(SpinNode) = .empty;
     const spins = [_]f64{ 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5 };
     for (spins, 0..) |j, idx| {
         const area = 8.0 * PI * BARBERO_IMMIRZI * @sqrt(j * (j + 1.0));
@@ -153,7 +153,7 @@ pub fn computeSpinNetwork(allocator: Allocator) ![]SpinNode {
 }
 
 pub fn computePenroseProps(allocator: Allocator) ![]PenroseProperty {
-    var result: std.ArrayListUnmanaged(PenroseProperty) = .{};
+    var result: std.ArrayListUnmanaged(PenroseProperty) = .empty;
     try result.append(allocator, .{ .name = "kite_dart_ratio", .value = PHI, .description = "Kite/Dart area ratio = phi" });
     try result.append(allocator, .{ .name = "long_short_edge", .value = PHI, .description = "Long/Short edge ratio = phi" });
     try result.append(allocator, .{ .name = "inflation_factor", .value = PHI_SQ, .description = "Inflation factor = phi^2" });
@@ -173,7 +173,7 @@ pub fn computeEntropySurface() EntropySurface {
 }
 
 pub fn computeHawkingFrames(allocator: Allocator) ![]HawkingFrame {
-    var result: std.ArrayListUnmanaged(HawkingFrame) = .{};
+    var result: std.ArrayListUnmanaged(HawkingFrame) = .empty;
     var frame: u8 = 0;
     while (frame < 6) : (frame += 1) {
         const mass = 1.0 - @as(f64, @floatFromInt(frame)) * 0.15;
@@ -190,7 +190,7 @@ pub fn computeHawkingFrames(allocator: Allocator) ![]HawkingFrame {
 }
 
 pub fn computeMultiverseBubbles(allocator: Allocator) ![]MultiverseBubble {
-    var result: std.ArrayListUnmanaged(MultiverseBubble) = .{};
+    var result: std.ArrayListUnmanaged(MultiverseBubble) = .empty;
     var i: u8 = 0;
     while (i < 7) : (i += 1) {
         const fi: f64 = @floatFromInt(i);
@@ -216,7 +216,7 @@ pub fn computeMultiverseBubbles(allocator: Allocator) ![]MultiverseBubble {
 }
 
 pub fn computeStringLandscape(allocator: Allocator) ![]StringLandscapePoint {
-    var result: std.ArrayListUnmanaged(StringLandscapePoint) = .{};
+    var result: std.ArrayListUnmanaged(StringLandscapePoint) = .empty;
     var i: u8 = 0;
     while (i < 9) : (i += 1) {
         const fi: f64 = @floatFromInt(i);
@@ -244,7 +244,7 @@ pub fn computeStringLandscape(allocator: Allocator) ![]StringLandscapePoint {
 }
 
 pub fn computeRyuTakayanagi(allocator: Allocator) ![]RyuTakayanagi {
-    var result: std.ArrayListUnmanaged(RyuTakayanagi) = .{};
+    var result: std.ArrayListUnmanaged(RyuTakayanagi) = .empty;
     var i: u8 = 0;
     while (i < 5) : (i += 1) {
         const fi: f64 = @floatFromInt(i);
@@ -272,7 +272,7 @@ pub fn computeRyuTakayanagi(allocator: Allocator) ![]RyuTakayanagi {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 pub fn holoToJson(allocator: Allocator, mode_str: []const u8) ![]u8 {
-    var buf: std.ArrayListUnmanaged(u8) = .{};
+    var buf: std.ArrayListUnmanaged(u8) = .empty;
     const w = buf.writer(allocator);
 
     const trinity = PHI_SQ + PHI_INV_SQ;
