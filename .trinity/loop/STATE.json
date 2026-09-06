@@ -4,7 +4,7 @@
     "id": "two-track",
     "cron_job": "1cd7dda4",
     "interval": "15m",
-    "iteration": 123,
+    "iteration": 124,
     "status": "RUNNING",
     "owner": "Dmitrii Vasilev / @gHashTag",
     "tracks": [
@@ -22,9 +22,7 @@
       "_note": "hysteresis (disk_recovery_confirmations_needed, default 2) and flap detection (flap_window_iterations/flap_threshold, defaults 20/3) implemented in B21 -- was_halted/disk_recovery_streak/halt_episode_iterations below are live state written by tri-loopstate tripwire each run, not hand-edited",
       "was_halted": false,
       "disk_recovery_streak": 0,
-      "halt_episode_iterations": [
-        103
-      ]
+      "halt_episode_iterations": []
     },
     "halt": {
       "active": false,
@@ -644,6 +642,13 @@
       "three_judgement_calls": "(1) The pane switch lives in the list item's onClick, not inside pick(): the explorer also picks on load, and routing that through pick() dropped a first-time visitor into a file they had not chosen. A shared ?spec= link still opens its spec, because that one was asked for. (2) The back control is 44px, the smallest reliably tappable target. (3) The new flag is `phone`, not the `narrow` already in the file -- `narrow` means <1100px and only trims chrome, so reusing it would have tied a layout change to a threshold picked for something else. tsc caught the duplicate declaration.",
       "verified": "Measured in a real browser against the built artifact rather than reasoned from CSS. At 375x812: horizontal overflow 0px on both panes (scrollWidth === clientWidth === 375), library lands first, tap opens the detail with the back control, back returns with the selection still highlighted. At 1280x800: two panes, no back control, Chip tab present, unchanged. website-checks green, including the silicon-coverage gate and both language audits. Then live on t27.ai in Russian: the served chunk carried the mobile code while the page was still running a cached one, so the first look was misleading -- checking the bytes before the pixels is what settled it.",
       "note": "Third time this session a substring probe misled me: `textContent.includes('Search specs')` was false because the search box is an input with a PLACEHOLDER, not text content. The screenshot was the truth."
+    },
+    {
+      "id": "D104",
+      "what": "Every route is now checked for phone fit. gHashTag/trinity#962 merged (cccfe51b): qa/mobile_audit.mjs asks all 28 routes whether the page scrolls sideways at 375x812, wired into website-checks beside the language audits.",
+      "fixed": "/dashboard overflowed by 13px -- the Trinity-identity row could not wrap. Now wraps with a viewport-scaled gap. The other 27 routes were already clean, which is worth knowing rather than assuming.",
+      "verified": "Negative control red then green: a 900px probe in dist/index.html turns the gate red across all 28 routes with the widest element named per route, and removing it returns green. Both language audits re-run through the refactored harness, 28 routes PASS in each locale. CI run 34038100222 shows the mobile audit passing beside them. tsc baseline unchanged at 179.",
+      "cost_paid": "Two false greens before the gate was real -- see A50. The stray server was killed and the worktree removed; port 4173 has 0 listeners."
     }
   ],
   "backlog": [
@@ -1352,6 +1357,17 @@
       "process_errors_caught": "Two. (1) I updated the root NOW.md when the gate reads docs/NOW.md -- guessing the rule instead of reading check_now_sync, which names the path on its second line. (2) Undoing that, `git checkout -- NOW.md` restored from the INDEX, which held my staged edit, so the discard silently re-applied -- exactly the trap already in my notes as git-checkout-staged-trap. `git restore --staged --worktree` was the correct form.",
       "incidental": "`cargo build -p t27c` prunes ~1000 lines from Cargo.lock. The main t27 checkout's 17 dirty paths (B18/OD8) include `Cargo.lock -1313 lines`, which is very likely the same build artifact rather than deliberate work -- worth knowing before anyone reconciles that branch.",
       "lesson": "Ask what the fix DOES before asking where it should land. Three iterations carried a claim about yosys rejections that one yosys invocation refuted -- and yosys was installed the whole time."
+    },
+    {
+      "id": "A50",
+      "found": "2026-09-06, iteration 124, extending last iteration's phone fix from /specs to the other 27 routes.",
+      "what": "The gate I built to answer 'does any route scroll sideways at 375px' passed 28 of 28 on its first run. It was decoration, twice over, and only the negative control showed it. Injecting a 900px div into dist/index.html and requiring the gate to go red failed for two unrelated reasons: (1) Emulation.setDeviceMetricsOverride silently did not apply, so the page laid out at 980px -- the no-viewport-meta fallback -- and nothing overflowed; (2) after switching to a real --window-size, still green, because port 4173 was held by a python http.server from an EARLIER iteration whose worktree I had already removed with `git worktree remove --force`. The process kept running on a deleted directory, my new server failed to bind, and I never checked.",
+      "what_that_invalidated": "Every measurement in this iteration's first pass, including a clean 28/28, described a stale build of another branch. `lsof -nP -iTCP:4173 -sTCP:LISTEN` plus `lsof -a -p <pid> -d cwd -Fn` ended it in one command, after three wrong hypotheses.",
+      "the_real_result": "With the control passing, the audit found exactly one defect: /dashboard overflowed by 13px. The Trinity-identity row in SacredMathSection is three columns with fixed 32px gaps, and the ten-digit sum renders 144px wide in that mono face, so the third column ran past the right edge and took the page with it. Fixed by wrapping with a viewport-scaled gap. Every other route was already clean.",
+      "a_second_honesty_point": "Headless Chrome will not go below 500px via --window-size. The metrics override is applied ON TOP of it: measured clientWidth is 375 with both, 500 with the window size alone. The gate reports the width it actually measured, not the one requested.",
+      "structural": "collectRouteText is now a thin caller over a generic forEachRoute(baseUrl, expression, {windowSize}), so the settle loop that stops one route's DOM being attributed to another exists once rather than in two copies that could drift.",
+      "shipped": "gHashTag/trinity#962 merged (cccfe51b). website-checks green with the new gate beside the language audits and the silicon-coverage check.",
+      "lesson": "A gate that passes on its first run and has never been shown to fail is decoration. Run the control before believing the result -- and when the control fails, do not fix it once and trust it: mine failed twice, for two different reasons, and the second was invisible from every output the tool produced."
     }
   ],
   "collaboration_options": [

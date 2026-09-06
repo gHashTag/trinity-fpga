@@ -311,6 +311,40 @@ change.** One probe — does the captured artifact contain a string only my vers
 has? — separates a fix from a story. Then close it with a negative control:
 revert *only* your file, rebuild, and require the gate to go red.
 
+## Run the control before believing the result — and twice if it fails
+
+A gate that passes on its first run and has never been shown to fail is
+decoration. Build the control at the same time as the gate.
+
+Auditing whether any t27.ai route scrolls sideways at 375px, the gate returned a
+clean 28 of 28. Injecting a 900px div into `dist/index.html` and requiring it to
+go red failed **twice, for two unrelated reasons**:
+
+1. `Emulation.setDeviceMetricsOverride` silently did not apply — the page laid
+   out at **980px**, the no-viewport-meta fallback, so nothing overflowed.
+2. After switching to a real `--window-size`, still green — because port 4173 was
+   held by a `python3 -m http.server` from an **earlier worktree I had already
+   deleted**. `git worktree remove --force` does not kill a server started inside
+   it. The process kept the port, my new server failed to bind, and every
+   measurement described the old branch's build.
+
+Neither was visible in the tool's output; both looked exactly like "the site is
+fine".
+
+**How to apply:** when a control fails, do not fix it once and trust the next
+green — find out how many independent lies are stacked. And before any audit of a
+served artifact, ask what is holding the port:
+
+    lsof -nP -iTCP:4173 -sTCP:LISTEN          # which pid
+    lsof -a -p <pid> -d cwd -Fn               # which directory it thinks it is in
+
+Kill a worktree's server before removing the worktree.
+
+**Report the width you measured, not the one you asked for.** Headless Chrome will
+not go below **500px** via `--window-size`; the metrics override must be applied
+on top of it. Measured `clientWidth` was 375 with both and 500 with the window
+size alone.
+
 ## Related
 
 - `.github/reachability-baseline` — the ratchet's stored count
