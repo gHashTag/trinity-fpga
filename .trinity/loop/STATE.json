@@ -4,7 +4,7 @@
     "id": "two-track",
     "cron_job": "1cd7dda4",
     "interval": "15m",
-    "iteration": 117,
+    "iteration": 118,
     "status": "RUNNING",
     "owner": "Dmitrii Vasilev / @gHashTag",
     "tracks": [
@@ -592,6 +592,16 @@
       "self_criticism_pipe": "While diagnosing, I reported the host self-test as vacuous -- 'prints FAIL and exits 0'. Wrong. Line 373 is sys.exit(0 if self_test() else 1) and it propagates correctly; my measurement used `$?` after `| tail`, which reports tail's status. This is the SAME defect I had fixed in two CI workflows earlier in the session and written into the ci-gates skill. Knowing the bug did not prevent typing it. The near-miss was publishing 'this gate is broken' about a gate that works.",
       "verified": "Exit codes taken without a pipe: host self-test 53/53 exit 0 (was 52/53); golden_consistency 66720 codes 0 mismatches exit 0 (was 8); oracle-vs-CI 8/8 match, 56/56 other codes unchanged, fp6_e2m3 confirmed still non-saturating. And end to end on CI, run 34019226908, dispatched on the branch because decode-verify is another push-to-main-only workflow: all ten formats PASS, fp6_e3m2 checked=64 numeric_mismatches=0.",
       "not_established": "Whether saturation is what OCP MX actually mandates. I have not read the spec. What is established is that four artefacts now agree with the RTL where before three disagreed with it. If the spec says otherwise, the correction belongs in the RTL and all four oracles together."
+    },
+    {
+      "id": "D98",
+      "what": "Spec Explorer: a Chip tab that draws the datapath each .t27 spec declares, plus a hardware-history section for the formats that have been through the AX7203. PR gHashTag/trinity#953, branch blog/t27-spec-explorer, commit 029a7d15.",
+      "why": "Operator asked for a visual of how a program looks on a real chip, per spec, as a tab -- then for the specs that went through our FPGA to carry their synthesis history on real hardware and on silicon.",
+      "how": "SpecChipView derives the drawing from declared widths only: every constant's bit width, every packed struct's field layout, every function's parameter and return widths. Buses render as parallel lanes with a SMIL travelling pulse, pausable. SpecSiliconHistory keys off an explicit spec-path table (SPEC_TO_FORMAT), never name similarity, so a spec cannot acquire a hardware claim by resembling one. Every claim carries the level at which it was earned: declared / proven by SAT / bitstream ready / on silicon.",
+      "honesty_constraints": "Three, all load-bearing. (1) The schematic is NOT a netlist and says so: the .t27 -> Verilog backend emits module shells -- 361 of 676 specs produce Verilog yosys accepts and every one yields 0 LUTs and 0 flip-flops. (2) The silicon results belong to hand-written RTL of the same format, not to the Verilog these specs compile to; the panel states this. (3) SUB is shown as 'bitstream ready, not yet flashed', not as a result, and specs with no run say 'No hardware run' rather than rendering an empty timeline that reads as pending.",
+      "data_source": "research/goldenfloat-hw-conformance/GOLDENFLOAT_HW_CONFORMANCE_v0.2.md and the evidence chain it cites on EPIC #199: CI run id -> bitstream SHA-256 -> JTAG flash -> UART log. gf4/8/12/16/20/24 carry ADD and MUL on silicon; gf32 is outside the verified ladder and correctly shows nothing.",
+      "verified": "tsc -b --force: zero errors naming the four touched files (repo baseline 179 pre-existing, unchanged). Production build green. Read back in the browser on two specs: specs/numeric/gf16.t27 renders ADD 512/512 and MUL 512/512 on silicon with the NaN-fix note and the four-link chain; a tutorial spec renders 'No hardware run'.",
+      "cost": "Most of this iteration went to a diagnosis that was not about the code at all -- see the paired anomaly."
     }
   ],
   "backlog": [
@@ -1208,6 +1218,17 @@
       "impact": "Cosmetic in isolation: no decision rested on the number, and every substantive claim in that iteration was independently evidenced. But the loop's own reports are what the operator reads while asleep, and a count that drifts upward without work behind it is precisely the shape this loop exists to catch elsewhere.",
       "status": "The FILE is authoritative: the loop is at iteration 117. The commit 71c49b2f3 titled 'iteration 118' is off by one and stays as published history rather than being rewritten -- the invariant against rewriting published history outranks a cosmetic correction, and this note is the record.",
       "lesson": "An iteration that opens PRs but never touches STATE.json is invisible to the counter. Either every cycle ends with bump+render+commit, or the number in prose must be read from the file rather than incremented in my head. The second is cheaper and cannot drift: `jq .loop.iteration` before writing the report."
+    },
+    {
+      "id": "A43",
+      "found": "2026-09-06, iteration 117, while adding the Chip tab to the Spec Explorer.",
+      "what": "I spent several iterations debugging a feature that 'did not render' when the code was correct throughout. Three independent staleness layers, stacked, each hiding the next: (1) the preview server was `vite preview`, which serves a prebuilt dist/ and never reads src/ -- the harness had attached to a pre-existing config named t27-website, not the `npm run dev` launch.json I had written; (2) `npm run typecheck` is `tsc -b`, project-build mode with an incremental .tsbuildinfo, which re-checked nothing and exited quiet; (3) after rebuilding, the browser still held a cached index.html pointing at the previous chunk hash.",
+      "the_real_bug_underneath": "`tsc -b --force` immediately produced a genuine defect in my own file: I had written `active?.path` where the scope's variable is `selected`. The two `const active` in SpecExplorer.tsx are inside .map() callbacks, so this was a live ReferenceError that blanked the page. The incremental checker had reported clean over it.",
+      "why_it_matters": "A checker that skipped your file emits exactly the same output as a checker that approved it. I read the second from the first, and then spent the next several attempts re-reading source that was already right -- because a 'clean typecheck' had convinced me the problem must be elsewhere. This is the build-cache class arriving through two new doors at once.",
+      "what_ended_it": "One command: `ps -eo pid,args | grep vite`, which showed `vite preview` in plain text. I asked it only after three failed hypotheses, having twice assumed what the server was rather than looking.",
+      "second_order": "The repo's tsc has a 179-error pre-existing baseline (hence typecheck:ratchet), so 'did it pass' was never the right question -- it never passes. The right question is whether the error set gained a row naming a file I touched. I had been reading exit codes on a checker that cannot exit 0.",
+      "lesson": "When a change does not appear, do not re-read your source. Identify the artefact actually being served and prove your bytes are in it: `grep -rl '<a string only my version contains>' dist/` answers in one command, and performance.getEntriesByType('resource') in the page says which chunk hash the browser really loaded. If those disagree, it is cache, not code. And treat any 'clean' from an incremental checker as unverified until run with --force.",
+      "status": "Recorded in memory a-build-cache-can-grade-deleted-code, which already holds this family."
     }
   ],
   "collaboration_options": [
