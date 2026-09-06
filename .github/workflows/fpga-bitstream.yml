@@ -84,12 +84,36 @@ jobs:
             echo "specs_json=$(printf '%s\n' "${{ inputs.spec }}" | jq -R . | jq -sc .)" >> $GITHUB_OUTPUT
             echo "count=1" >> $GITHUB_OUTPUT
           else
-            # Detect changes
-            specs=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep 'specs/fpga/.*\.tri$' | sed 's|specs/fpga/||' | sed 's|\.tri$||' | tr '\n' ' ')
-            if [ -z "$specs" ]; then
-              # Fallback: all specs
-              specs=$(ls specs/fpga/*.tri 2>/dev/null | xargs -n1 basename | sed 's|\.tri$||' | tr '\n' ' ')
+            # Only specs that TARGET Verilog. `vibee gen` emits for the target a
+            # spec declares, so a spec with no `language:` line produces no .v and
+            # the next step reports "Verilog not found".
+            #
+            # Measured when this job first became visible: 14 .tri under
+            # specs/fpga, 10 declaring `language: varlog`, 4 declaring nothing --
+            # mac, rmsnorm, synthesis, uart_test_workflow -- and those 4 were
+            # exactly the 4 that failed. Building every .tri and expecting Verilog
+            # from all of them was the bug; the 4 are not broken Verilog specs,
+            # they are not Verilog specs.
+            #
+            # Filtered by content rather than by an exclude-list, so a spec that
+            # gains or loses a target moves itself between the sets.
+            is_verilog() { grep -qE '^[[:space:]]*language:[[:space:]]*varlog' "specs/fpga/$1.tri" 2>/dev/null; }
+
+            changed=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep 'specs/fpga/.*\.tri$' | sed 's|specs/fpga/||' | sed 's|\.tri$||' | tr '\n' ' ')
+            if [ -z "$changed" ]; then
+              # Fallback: every spec
+              changed=$(ls specs/fpga/*.tri 2>/dev/null | xargs -n1 basename | sed 's|\.tri$||' | tr '\n' ' ')
             fi
+
+            specs=""
+            skipped=""
+            for s in $changed; do
+              if is_verilog "$s"; then specs="$specs $s"; else skipped="$skipped $s"; fi
+            done
+            specs=$(echo $specs)
+            # Named, never silent: a shrinking scope that nobody can see is the
+            # defect this whole workflow has been demonstrating.
+            [ -n "$skipped" ] && echo "::notice::skipped (no 'language: varlog'):$skipped"
             echo "specs=$specs" >> $GITHUB_OUTPUT
             # A JSON ARRAY, not a bare word list. See the matrix note below.
             echo "specs_json=$(printf '%s\n' $specs | jq -R . | jq -sc .)" >> $GITHUB_OUTPUT
