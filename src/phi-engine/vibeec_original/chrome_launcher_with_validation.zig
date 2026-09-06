@@ -325,7 +325,7 @@ pub const ChromeLauncher = struct {
             return ChromeLauncherError.OutOfMemory;
         };
 
-        try std.Io.Dir.makeDirAbsolute(tri_io.get(), dir_path) catch |err| {
+        try std.Io.Dir.createDirAbsolute(tri_io.get(), dir_path, .default_dir) catch |err| {
             _ = err;
             return ChromeLauncherError.OutOfMemory;
         };

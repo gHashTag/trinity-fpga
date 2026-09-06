@@ -2014,7 +2014,7 @@ test "PipelineExecutor with TVC gate" {
     defer corpus.deinitHeap(allocator);
     var gate = TVCGate.init(corpus);
 
-    var executor = PipelineExecutor.initWithTVC(allocator, 1, "test task", &corpus, &gate);
+    var executor = PipelineExecutor.initWithTVC(allocator, 1, "test task", corpus, &gate);
     defer executor.deinit();
 
     try std.testing.expect(executor.tvc_gate != null);

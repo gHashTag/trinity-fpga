@@ -121,7 +121,7 @@ pub const ChromeLauncher = struct {
         const full_path = try std.fs.path.join(self.allocator, &[_][]const u8{ temp_dir, dir_name });
         errdefer self.allocator.free(full_path);
 
-        std.Io.Dir.makeDirAbsolute(tri_io.get(), full_path) catch |err| {
+        std.Io.Dir.createDirAbsolute(tri_io.get(), full_path, .default_dir) catch |err| {
             if (err != error.PathAlreadyExists) return ChromeLauncherError.CommandFailed;
         };
 

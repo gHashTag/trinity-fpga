@@ -3,6 +3,7 @@
 // φ² + 1/φ² = 3 = TRINITY
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const tri_command_registry = @import("tri_command_registry.zig");
 const CommandRegistry = tri_command_registry.CommandRegistry;
 const CommandMetadata = tri_command_registry.CommandMetadata;
@@ -1547,14 +1548,17 @@ fn runForgeBenchCommand(io: std.Io, allocator: std.mem.Allocator) !void {
     try argv.append(allocator, forge_bin);
     try argv.append(allocator, "bench");
 
-    var child = std.process.Child.init(argv.items, allocator);
-    child.stderr_behavior = .Inherit;
-    child.stdout_behavior = .Inherit;
-    _ = try child.spawnAndWait();
+    var child = try std.process.spawn(tri_io.get(), .{
+        .argv = argv.items,
+        .stdout = .inherit,
+        .stderr = .inherit,
+    });
+    _ = try child.wait(tri_io.get());
 }
 
 /// Mount FPGA virtual filesystem via macFUSE + JTAG bridge
 fn runFpgaMountCommand(allocator: std.mem.Allocator) !void {
+    _ = allocator; // 0.16: std.process.spawn takes no allocator
     const fpga_fs_path = "fpga/tools/fpga_fs";
     const mount_point = "/mnt/fpga";
 
@@ -1563,17 +1567,21 @@ fn runFpgaMountCommand(allocator: std.mem.Allocator) !void {
 
     // Create mount point if needed
     var mkdir_argv = [_][]const u8{ "sudo", "mkdir", "-p", mount_point };
-    var mkdir_child = std.process.Child.init(&mkdir_argv, allocator);
-    mkdir_child.stderr_behavior = .Inherit;
-    mkdir_child.stdout_behavior = .Inherit;
-    _ = try mkdir_child.spawnAndWait();
+    var mkdir_child = try std.process.spawn(tri_io.get(), .{
+        .argv = &mkdir_argv,
+        .stdout = .inherit,
+        .stderr = .inherit,
+    });
+    _ = try mkdir_child.wait(tri_io.get());
 
     // Launch fpga_fs daemon
     var argv = [_][]const u8{ "sudo", fpga_fs_path, mount_point };
-    var child = std.process.Child.init(&argv, allocator);
-    child.stderr_behavior = .Inherit;
-    child.stdout_behavior = .Inherit;
-    const term = try child.spawnAndWait();
+    var child = try std.process.spawn(tri_io.get(), .{
+        .argv = &argv,
+        .stdout = .inherit,
+        .stderr = .inherit,
+    });
+    const term = try child.wait(tri_io.get());
     if (term.exited != 0) {
         std.debug.print("\n{s}Mount failed (exit {d}).{s}\n", .{ RED, term.exited, RESET });
         std.debug.print("Check: macFUSE installed? Cable connected? FPGA programmed?\n", .{});
@@ -1582,14 +1590,17 @@ fn runFpgaMountCommand(allocator: std.mem.Allocator) !void {
 
 /// Unmount FPGA virtual filesystem
 fn runFpgaUnmountCommand(allocator: std.mem.Allocator) !void {
+    _ = allocator; // 0.16: std.process.spawn takes no allocator
     const mount_point = "/mnt/fpga";
     std.debug.print("{s}FPGA Unmount:{s} Unmounting {s}\n", .{ CYAN, RESET, mount_point });
 
     var argv = [_][]const u8{ "umount", mount_point };
-    var child = std.process.Child.init(&argv, allocator);
-    child.stderr_behavior = .Inherit;
-    child.stdout_behavior = .Inherit;
-    const term = try child.spawnAndWait();
+    var child = try std.process.spawn(tri_io.get(), .{
+        .argv = &argv,
+        .stdout = .inherit,
+        .stderr = .inherit,
+    });
+    const term = try child.wait(tri_io.get());
     if (term.exited != 0) {
         std.debug.print("\n{s}Unmount failed.{s} Try: sudo umount -f {s}\n", .{ RED, RESET, mount_point });
     } else {
@@ -1599,15 +1610,18 @@ fn runFpgaUnmountCommand(allocator: std.mem.Allocator) !void {
 
 /// Run fpga probe command — calls jtag_switcher probe via child process
 fn runFpgaProbeCommand(allocator: std.mem.Allocator) !void {
+    _ = allocator; // 0.16: std.process.spawn takes no allocator
     const probe_path = "fpga/tools/jtag_switcher";
     std.debug.print("{s}Running hardware probe...{s}\n", .{ CYAN, RESET });
     std.debug.print("\x1b[2mNote:\x1b[0m Requires sudo and connected Platform Cable USB II\n\n", .{});
 
     var argv = [_][]const u8{ "sudo", probe_path, "probe" };
-    var child = std.process.Child.init(&argv, allocator);
-    child.stderr_behavior = .Inherit;
-    child.stdout_behavior = .Inherit;
-    const term = try child.spawnAndWait();
+    var child = try std.process.spawn(tri_io.get(), .{
+        .argv = &argv,
+        .stdout = .inherit,
+        .stderr = .inherit,
+    });
+    const term = try child.wait(tri_io.get());
     if (term.exited != 0) {
         std.debug.print("\n{s}Probe failed (exit {d}).{s} Check cable connection.\n", .{ RED, term.exited, RESET });
     }
@@ -1659,10 +1673,12 @@ fn runJtagCommand(allocator: std.mem.Allocator, args: []const []const u8) !void 
     try argv.append(allocator, jtag_path);
     for (args) |a| try argv.append(allocator, a);
 
-    var child = std.process.Child.init(argv.items, allocator);
-    child.stderr_behavior = .Inherit;
-    child.stdout_behavior = .Inherit;
-    const term = try child.spawnAndWait();
+    var child = try std.process.spawn(tri_io.get(), .{
+        .argv = argv.items,
+        .stdout = .inherit,
+        .stderr = .inherit,
+    });
+    const term = try child.wait(tri_io.get());
     if (term.exited != 0) {
         std.debug.print("\n{s}JTAG command failed (exit {d}).{s} Check cable connection.\n", .{ RED, term.exited, RESET });
     }

@@ -579,7 +579,7 @@ pub const AdminManager = struct {
         }
 
         // Sort by name (which includes timestamp)
-        std.sort.insert(struct { name: []const u8, timestamp: i64 }, backups.items, {}, struct {
+        std.sort.insertion(@TypeOf(backups.items[0]), backups.items, {}, struct {
             fn lessThan(_: void, a: @TypeOf(backups.items[0]), b: @TypeOf(backups.items[0])) bool {
                 return std.mem.lessThan(u8, a.name, b.name);
             }

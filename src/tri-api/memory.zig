@@ -71,7 +71,7 @@ pub const Memory = struct {
 
         // Ensure directory exists
         const dir_path = self.base_dir[0..self.base_dir_len];
-        std.Io.Dir.makeDirAbsolute(tri_io.get(), dir_path) catch |err| {
+        std.Io.Dir.createDirAbsolute(tri_io.get(), dir_path, .default_dir) catch |err| {
             std.log.debug("memory: failed to create dir {s}: {}", .{ dir_path, err });
         };
 

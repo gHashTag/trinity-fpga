@@ -697,13 +697,17 @@ pub fn runCleanCommand(allocator: std.mem.Allocator, args: []const []const u8) !
 /// Format Command - Run zig fmt on source files
 /// Usage: tri fmt [path]
 pub fn runFmtCommand(allocator: std.mem.Allocator, args: []const []const u8) !void {
+    _ = allocator; // 0.16: std.process.spawn takes no allocator
     _ = args;
     std.debug.print("{s}🔧 Running zig fmt...{s}\n", .{ CYAN, RESET });
     const argv = &[_][]const u8{ "zig", "fmt" };
-    var child = std.process.Child.init(argv, allocator);
-    child.stderr_behavior = .Inherit;
-    child.stdout_behavior = .Inherit;
-    _ = try child.spawnAndWait();
+    const io = tri_io.get();
+    var child = try std.process.spawn(io, .{
+        .argv = argv,
+        .stdout = .inherit,
+        .stderr = .inherit,
+    });
+    _ = try child.wait(io);
 }
 
 /// Stats Command - Show build statistics

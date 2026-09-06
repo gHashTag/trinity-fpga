@@ -20,6 +20,15 @@
 // =============================================================================
 
 const std = @import("std");
+
+// 0.16 removed open/close/write/fcntl from std.posix (read, tcgetattr and
+// tcsetattr survive). libc has all of them and is already linked.
+const c_open = struct {
+    extern "c" fn open(path: [*:0]const u8, flags: c_int, mode: c_uint) c_int;
+    extern "c" fn close(fd: c_int) c_int;
+    extern "c" fn write(fd: c_int, buf: [*]const u8, n: usize) isize;
+    extern "c" fn fcntl(fd: c_int, cmd: c_int, arg: usize) c_int;
+};
 const tri_io = @import("tri_io");
 const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
@@ -35,13 +44,20 @@ pub const SerialPort = struct {
     path: []const u8,
 
     pub fn open(path: []const u8) !SerialPort {
-        const fd = try posix.open(path, .{ .ACCMODE = .RDWR, .NOCTTY = true, .NONBLOCK = true }, 0);
-        errdefer posix.close(fd);
+        // 0.16 removed std.posix.open. libc's is the same call and is already
+        // linked; the flag bits come from std.c.O so the per-OS values stay
+        // correct rather than being hard-coded here.
+        const path_z = try std.heap.page_allocator.dupeZ(u8, path);
+        defer std.heap.page_allocator.free(path_z);
+        const open_flags: c_int = @bitCast(@as(u32, @bitCast(c.O{ .ACCMODE = .RDWR, .NOCTTY = true, .NONBLOCK = true })));
+        const fd = c_open.open(path_z.ptr, open_flags, @as(c_uint, 0));
+        if (fd < 0) return error.OpenFailed;
+        errdefer _ = c_open.close(fd);
 
         // Clear NONBLOCK after open (needed for CH340 drivers)
         const nonblock_bit: usize = @bitCast(@as(isize, @intCast(@as(u32, @bitCast(c.O{ .NONBLOCK = true })))));
-        const flags = try posix.fcntl(fd, c.F.GETFL, 0);
-        _ = try posix.fcntl(fd, c.F.SETFL, flags & ~nonblock_bit);
+        const flags: usize = @intCast(@max(c_open.fcntl(fd, @as(c_int, c.F.GETFL), 0), 0));
+        _ = c_open.fcntl(fd, @as(c_int, c.F.SETFL), flags & ~nonblock_bit);
 
         // Configure 115200 8-N-1 raw via stty (portable macOS + Linux)
         const stty_flag = comptime if (@import("builtin").os.tag == .macos) "-f" else "-F";
@@ -66,7 +82,9 @@ pub const SerialPort = struct {
     }
 
     pub fn writeBytes(self: SerialPort, data: []const u8) !usize {
-        return posix.write(self.fd, data);
+        const n = c_open.write(self.fd, data.ptr, data.len);
+        if (n < 0) return error.WriteFailed;
+        return @intCast(n);
     }
 
     pub fn readBytes(self: SerialPort, buf: []u8) !usize {
@@ -74,7 +92,7 @@ pub const SerialPort = struct {
     }
 
     pub fn close(self: SerialPort) void {
-        posix.close(self.fd);
+        _ = c_open.close(self.fd);
     }
 };
 

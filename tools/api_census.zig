@@ -72,13 +72,100 @@ const Count = struct {
     reachable_files: usize = 0,
 };
 
-/// Files reachable from src/tri/main.zig by following @import("...zig").
+/// Maps a build-module NAME to the file that roots it, by reading build.zig.
 ///
-/// LIMITATION, stated because the last two plans in this migration went wrong
-/// by trusting a count too far: this follows PATH imports only. A module
-/// imported by name -- @import("tri27_cli") -- is wired up in build.zig, which
-/// is not parsed here, so its subtree is invisible. The reachable set is
-/// therefore a LOWER bound, and so is the IN-TRI column derived from it.
+/// Without this, `@import("tri27_cli")` is a dead end and everything under it
+/// looks unreachable. An earlier version of this tool followed path imports
+/// only and reported the reachable set as 253 files; it is far larger.
+const ModuleMap = struct {
+    names: std.StringHashMap([]const u8),
+
+    fn deinit(m: *ModuleMap, gpa: std.mem.Allocator) void {
+        var it = m.names.iterator();
+        while (it.next()) |e| {
+            gpa.free(e.key_ptr.*);
+            gpa.free(e.value_ptr.*);
+        }
+        m.names.deinit();
+    }
+
+    /// Two passes over build.zig: first `const X_mod = b.createModule(.{
+    /// .root_source_file = b.path("P")` to learn X_mod -> P, then
+    /// `.{ .name = "N", .module = X_mod }` to learn N -> P.
+    fn parse(gpa: std.mem.Allocator, io: std.Io) !ModuleMap {
+        var m: ModuleMap = .{ .names = std.StringHashMap([]const u8).init(gpa) };
+        const src = std.Io.Dir.cwd().readFileAlloc(io, "build.zig", gpa, .limited(4 * 1024 * 1024)) catch return m;
+        defer gpa.free(src);
+
+        var vars = std.StringHashMap([]const u8).init(gpa);
+        defer {
+            var it = vars.iterator();
+            while (it.next()) |e| {
+                gpa.free(e.key_ptr.*);
+                gpa.free(e.value_ptr.*);
+            }
+            vars.deinit();
+        }
+
+        var i: usize = 0;
+        while (std.mem.indexOfPos(u8, src, i, "= b.createModule(")) |at| {
+            // variable name: walk back over "const <name> "
+            var e = at;
+            while (e > 0 and src[e - 1] == ' ') e -= 1;
+            var b0 = e;
+            while (b0 > 0 and (std.ascii.isAlphanumeric(src[b0 - 1]) or src[b0 - 1] == '_')) b0 -= 1;
+            const vname = src[b0..e];
+
+            const key = "root_source_file = b.path(\"";
+            const kat = std.mem.indexOfPos(u8, src, at, key) orelse break;
+            const pstart = kat + key.len;
+            const pend = std.mem.indexOfPos(u8, src, pstart, "\"") orelse break;
+            if (vname.len > 0) {
+                // build.zig declares some module variables more than once;
+                // a plain put would drop the previous key and value on the
+                // floor, which DebugAllocator correctly reports as a leak.
+                const g = try vars.getOrPut(vname);
+                if (g.found_existing) {
+                    gpa.free(g.value_ptr.*);
+                } else {
+                    g.key_ptr.* = try gpa.dupe(u8, vname);
+                }
+                g.value_ptr.* = try gpa.dupe(u8, src[pstart..pend]);
+            }
+            i = pend;
+        }
+
+        i = 0;
+        while (std.mem.indexOfPos(u8, src, i, ".name = \"")) |at| {
+            const nstart = at + ".name = \"".len;
+            const nend = std.mem.indexOfPos(u8, src, nstart, "\"") orelse break;
+            const name = src[nstart..nend];
+            i = nend + 1;
+
+            const mk = ".module = ";
+            const mat = std.mem.indexOfPos(u8, src, nend, mk) orelse continue;
+            // only accept it if it is on the same entry (within a short span)
+            if (mat > nend + 40) continue;
+            var vs = mat + mk.len;
+            var ve = vs;
+            while (ve < src.len and (std.ascii.isAlphanumeric(src[ve]) or src[ve] == '_')) ve += 1;
+            const vname = src[vs..ve];
+            vs = 0;
+            if (vars.get(vname)) |path| {
+                if (!m.names.contains(name)) {
+                    try m.names.put(try gpa.dupe(u8, name), try gpa.dupe(u8, path));
+                }
+                // first wiring wins; a later duplicate is ignored rather than
+                // replaced, so nothing is orphaned
+            }
+        }
+        return m;
+    }
+};
+
+/// Files reachable from src/tri/main.zig, following BOTH `@import("path.zig")`
+/// and `@import("module_name")` resolved through build.zig.
+///
 /// Two plans in this migration were built on whole-tree counts and both
 /// mis-ranked the work: 140 argsAlloc sites looked like the top priority and
 /// turned out to be one per main() across 141 OTHER executables, none of them
@@ -101,7 +188,7 @@ const Reach = struct {
     }
 
     /// Walks the import graph breadth-first from `root`.
-    fn build(gpa: std.mem.Allocator, io: std.Io, root: []const u8) !Reach {
+    fn build(gpa: std.mem.Allocator, io: std.Io, root: []const u8, mods: *const ModuleMap) !Reach {
         var r: Reach = .init(gpa);
         var queue: std.ArrayList([]const u8) = .empty;
         defer queue.deinit(gpa);
@@ -122,10 +209,19 @@ const Reach = struct {
                 const end = std.mem.indexOfPos(u8, src, start, "\"") orelse break;
                 const name = src[start..end];
                 i = end + 1;
-                if (!std.mem.endsWith(u8, name, ".zig")) continue;
 
-                const joined = try std.fs.path.join(gpa, &.{ dir, name });
-                defer gpa.free(joined);
+                // A named module resolves through build.zig; a path resolves
+                // relative to the importing file.
+                var joined: []const u8 = undefined;
+                var owned = false;
+                if (std.mem.endsWith(u8, name, ".zig")) {
+                    joined = try std.fs.path.join(gpa, &.{ dir, name });
+                    owned = true;
+                } else if (mods.names.get(name)) |mod_path| {
+                    joined = mod_path;
+                } else continue;
+                defer if (owned) gpa.free(joined);
+
                 const norm = try normalize(gpa, joined);
                 if (r.set.contains(norm)) {
                     gpa.free(norm);
@@ -233,7 +329,10 @@ pub fn main(init: std.process.Init.Minimal) !void {
     var alias_files: usize = 0;
     var scanned: usize = 0;
 
-    var reach = try Reach.build(gpa, io, "src/tri/main.zig");
+    var mods = try ModuleMap.parse(gpa, io);
+    defer mods.deinit(gpa);
+
+    var reach = try Reach.build(gpa, io, "src/tri/main.zig", &mods);
     defer reach.deinit(gpa);
 
     for ([_][]const u8{ "src", "tools" }) |root_name| {
@@ -247,7 +346,7 @@ pub fn main(init: std.process.Init.Minimal) !void {
     const out = &w.interface;
 
     try out.print("scanned {d} .zig files; {d} of them alias a std namespace\n", .{ scanned, alias_files });
-    try out.print("{d} files are reachable from src/tri/main.zig\n\n", .{reach.set.count()});
+    try out.print("{d} files reachable from src/tri/main.zig ({d} build modules resolved)\n\n", .{ reach.set.count(), mods.names.count() });
     try out.print("{s:<26} {s:>7} {s:>8} {s:>7} {s:>6} {s:>10} {s:>6}\n", .{
         "axis", "direct", "aliased", "total", "files", "IN-TRI", "files",
     });
@@ -276,10 +375,10 @@ pub fn main(init: std.process.Init.Minimal) !void {
         in_tri, grand, if (grand == 0) 0 else in_tri * 100 / grand,
     });
     try out.print("The rest belong to other build targets and cannot block this build.\n\n", .{});
-    try out.print("CAVEAT: reachability follows @import(\"path.zig\") only. Imports by MODULE\n", .{});
-    try out.print("name -- @import(\"tri27_cli\"), @import(\"tri_time\") -- are declared in\n", .{});
-    try out.print("build.zig and are NOT followed, so IN-TRI is a LOWER bound. Treat it as\n", .{});
-    try out.print("\"at least this much blocks the build\", never as the complete set.\n", .{});
+    try out.print("Reachability follows @import(\"path.zig\") AND @import(\"module_name\")\n", .{});
+    try out.print("resolved through build.zig. It still cannot see a module wired up by a\n", .{});
+    try out.print("helper function or a loop, so treat IN-TRI as very close to complete\n", .{});
+    try out.print("rather than provably so -- and check a surprising zero by hand.\n", .{});
     try out.flush();
 }
 

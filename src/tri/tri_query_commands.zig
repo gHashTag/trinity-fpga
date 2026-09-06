@@ -722,7 +722,7 @@ const HebbianState = struct {
         defer std.heap.page_allocator.free(data_dir);
 
         // Create directory if needed
-        std.Io.Dir.makeDirAbsolute(tri_io.get(), data_dir) catch |err| {
+        std.Io.Dir.createDirAbsolute(tri_io.get(), data_dir, .default_dir) catch |err| {
             if (err != error.PathAlreadyExists) return err;
         };
 

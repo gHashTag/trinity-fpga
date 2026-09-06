@@ -20,6 +20,30 @@
 //!   try JobManager.cancel(job_id);
 
 const std = @import("std");
+
+const c_cwd = struct {
+    extern "c" fn getcwd(buf: [*]u8, size: usize) ?[*:0]u8;
+};
+
+/// Absolute path of the running executable. Caller owns the memory.
+fn selfExePathAlloc(gpa: std.mem.Allocator) ![]u8 {
+    var buf: [std.fs.max_path_bytes]u8 = undefined;
+    switch (@import("builtin").os.tag) {
+        .macos, .ios, .tvos, .watchos, .visionos => {
+            var size: u32 = @intCast(buf.len);
+            if (c_exe._NSGetExecutablePath(&buf, &size) != 0) return error.NameTooLong;
+            return gpa.dupe(u8, std.mem.sliceTo(&buf, 0));
+        },
+        else => {
+            const n = try std.Io.Dir.cwd().readLink(tri_io.get(), "/proc/self/exe", &buf);
+            return gpa.dupe(u8, n);
+        },
+    }
+}
+
+const c_exe = struct {
+    extern "c" fn _NSGetExecutablePath(buf: [*]u8, size: *u32) c_int;
+};
 const tri_rand = @import("tri_rand");
 const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
@@ -267,7 +291,11 @@ pub const JobManager = struct {
     /// P0.3: Detect project root by searching for markers
     fn detectProjectRoot(allocator: std.mem.Allocator) ![]const u8 {
         const markers = [_][]const u8{ ".git", "build.zig", "src" };
-        const cwd = try std.process.getCwdAlloc(allocator);
+        // 0.16 removed std.process.getCwdAlloc. libc getcwd fills a buffer;
+        // the result is duped so the caller's `free` contract is unchanged.
+        var cwd_buf: [std.fs.max_path_bytes]u8 = undefined;
+        const cwd_ptr = c_cwd.getcwd(&cwd_buf, cwd_buf.len) orelse return error.CurrentWorkingDirectoryUnlinked;
+        const cwd = try allocator.dupe(u8, std.mem.span(cwd_ptr));
         defer allocator.free(cwd);
 
         var search_path = cwd;
@@ -660,9 +688,8 @@ pub const Job = struct {
     /// Deinitialize job
     fn deinit(self: *Job) void {
         if (self.child_process) |*child| {
-            _ = child.kill() catch |err| {
-                std.log.warn("failed to kill child process: {s}", .{@errorName(err)});
-            };
+            // 0.16: kill returns void -- no failure left to report.
+            child.kill(tri_io.get());
             _ = child.wait(tri_io.get()) catch |err| {
                 std.log.debug("job_system: child.wait failed: {}", .{err});
             };
@@ -707,7 +734,10 @@ pub const Job = struct {
         const work_dir = options.working_dir orelse self.metadata.working_dir;
 
         // Get the current binary's path
-        const self_exe = try std.fs.selfExePathAlloc(self.allocator);
+        // 0.16 removed std.fs.selfExePathAlloc with no replacement anywhere
+        // in the stdlib, so this is per-platform: macOS exposes
+        // _NSGetExecutablePath, Linux answers through /proc/self/exe.
+        const self_exe = try selfExePathAlloc(self.allocator);
         defer self.allocator.free(self_exe);
 
         // Build the shell command with output redirection
@@ -745,23 +775,23 @@ pub const Job = struct {
         defer self.allocator.free(cmd_str);
 
         // Spawn using sh -c for shell redirection
+        // 0.16 takes stdio and cwd as spawn OPTIONS. Assigning them after the
+        // fact no longer compiles, and for cwd it was always a latent bug:
+        // the process has already started by then.
+        const child_cwd = options.working_dir orelse work_dir;
         var child = try std.process.spawn(tri_io.get(), .{
             .argv = &.{ "sh", "-c", cmd_str },
+            .stdin = .ignore,
             .stdout = .inherit,
             .stderr = .inherit,
+            .cwd = .{ .path = child_cwd },
         });
-        child.stdin_behavior = .Ignore;
-
-        // Set working directory explicitly
-        if (options.working_dir) |wd| {
-            child.cwd = wd;
-        } else {
-            child.cwd = work_dir;
-        }
 
         // Start the process
         // Store PID immediately (child.id is valid after spawn, cast i32 to u32)
-        self.metadata.pid = @intCast(child.id);
+        // child.id is optional in 0.16 (a spawn implementation may not expose
+        // an OS pid at all), so 0 stands for "no pid" as it did before.
+        self.metadata.pid = if (child.id) |pid| @intCast(pid) else 0;
 
         // Spawn timeout watchdog thread if timeout is specified
         var watchdog: ?std.Thread = null;
@@ -774,7 +804,7 @@ pub const Job = struct {
             };
             const ctx = try self.allocator.create(WatchdogCtx);
             ctx.* = .{
-                .pid = child.id,
+                .pid = child.id orelse 0, // 0.16: no OS pid means nothing to signal
                 .timeout_ns = @as(u64, options.timeout) * std.time.ns_per_ms,
                 .timed_out = &timed_out,
             };
@@ -921,15 +951,8 @@ pub const Job = struct {
 
         if (self.child_process) |*child| {
             // Try SIGTERM first (graceful shutdown)
-            _ = child.kill() catch |err| {
-                std.log.err("Failed to send SIGTERM to job {s}: {}", .{ self.metadata.id, err });
-
-                // Try SIGKILL (force terminate)
-                _ = child.kill() catch |err2| {
-                    std.log.err("Failed to send SIGKILL to job {s}: {}", .{ self.metadata.id, err2 });
-                    return false;
-                };
-            };
+            // 0.16: kill returns void -- no failure left to report.
+            child.kill(tri_io.get());
 
             // Wait for process to terminate
             const wait_result = child.wait(tri_io.get()) catch |err| {

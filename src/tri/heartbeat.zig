@@ -11,6 +11,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_proc = @import("tri_proc");
 const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
@@ -543,18 +544,17 @@ fn saveLoopState(wake: u32, ok: usize, fail: usize, decision: LoopDecision) void
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn runChild(allocator: Allocator, argv: []const []const u8) u8 {
-    var child = try std.process.spawn(tri_io.get(), .{
+    // 0.16 removed Child.collectOutput. Capturing both streams and waiting is
+    // precisely what tri_proc.run does, so spawn + collect + wait collapses
+    // into one call and the buffers it managed are no longer ours.
+    const res = tri_proc.run(.{
+        .allocator = allocator,
         .argv = argv,
-        .stdout = .pipe,
-        .stderr = .pipe,
-    });
-    var stdout_buf: std.ArrayList(u8) = .empty;
-    var stderr_buf: std.ArrayList(u8) = .empty;
-    child.collectOutput(allocator, &stdout_buf, &stderr_buf, 8 * 1024 * 1024) catch return 255;
-    defer stdout_buf.deinit(allocator);
-    defer stderr_buf.deinit(allocator);
-    const term = child.wait(tri_io.get()) catch return 255;
-    return switch (term) {
+        .max_output_bytes = 8 * 1024 * 1024,
+    }) catch return 255;
+    defer allocator.free(res.stdout);
+    defer allocator.free(res.stderr);
+    return switch (res.term) {
         .exited => |code| code,
         else => 1,
     };
@@ -762,26 +762,22 @@ fn runRetryBuildAndTest(allocator: Allocator) RetryIterationResult {
 
     // Step 1: zig build
     result.build_ok = blk: {
-        var child = try std.process.spawn(tri_io.get(), .{
+        // Same collapse as runChild: collectOutput is gone, and capturing
+        // both streams plus waiting is one tri_proc.run call.
+        const res = tri_proc.run(.{
+            .allocator = allocator,
             .argv = &.{ "zig", "build" },
-            .stdout = .pipe,
-            .stderr = .pipe,
-        });
-        _ = child.spawn() catch break :blk false;
-        var stdout_buf: std.ArrayList(u8) = .empty;
-        var stderr_buf: std.ArrayList(u8) = .empty;
-        defer stdout_buf.deinit(allocator);
-        defer stderr_buf.deinit(allocator);
-        child.collectOutput(allocator, &stdout_buf, &stderr_buf, 4 * 1024 * 1024) catch break :blk false;
-        const term = child.wait(tri_io.get()) catch break :blk false;
-        const ok = switch (term) {
+            .max_output_bytes = 4 * 1024 * 1024,
+        }) catch break :blk false;
+        defer allocator.free(res.stdout);
+        defer allocator.free(res.stderr);
+        const ok = switch (res.term) {
             .exited => |code| code == 0,
             else => false,
         };
         if (!ok) {
-            const stderr_data = stderr_buf.items;
-            const copy_len: u16 = @intCast(@min(stderr_data.len, 2048));
-            @memcpy(result.error_output[0..copy_len], stderr_data[0..copy_len]);
+            const copy_len: u16 = @intCast(@min(res.stderr.len, 2048));
+            @memcpy(result.error_output[0..copy_len], res.stderr[0..copy_len]);
             result.error_len = copy_len;
         }
         break :blk ok;
@@ -791,23 +787,18 @@ fn runRetryBuildAndTest(allocator: Allocator) RetryIterationResult {
 
     // Step 2: zig build test
     {
-        var child = try std.process.spawn(tri_io.get(), .{
+        const res = tri_proc.run(.{
+            .allocator = allocator,
             .argv = &.{ "zig", "build", "test" },
-            .stdout = .pipe,
-            .stderr = .pipe,
-        });
-        _ = child.spawn() catch return result;
-        var stdout_buf: std.ArrayList(u8) = .empty;
-        var stderr_buf: std.ArrayList(u8) = .empty;
-        defer stdout_buf.deinit(allocator);
-        defer stderr_buf.deinit(allocator);
-        child.collectOutput(allocator, &stdout_buf, &stderr_buf, 4 * 1024 * 1024) catch return result;
-        const term = child.wait(tri_io.get()) catch return result;
-        result.test_ok = switch (term) {
+            .max_output_bytes = 4 * 1024 * 1024,
+        }) catch return result;
+        defer allocator.free(res.stdout);
+        defer allocator.free(res.stderr);
+        result.test_ok = switch (res.term) {
             .exited => |code| code == 0,
             else => false,
         };
-        const out = if (stderr_buf.items.len > 0) stderr_buf.items else stdout_buf.items;
+        const out = if (res.stderr.len > 0) res.stderr else res.stdout;
         if (!result.test_ok) {
             const copy_len: u16 = @intCast(@min(out.len, 2048));
             @memcpy(result.error_output[0..copy_len], out[0..copy_len]);
@@ -864,12 +855,11 @@ fn retryCommentOnIssue(allocator: Allocator, issue: u32, iteration: u32, max_ite
     const body = std.fmt.bufPrint(&body_buf, "🔄 **[LOOP RETRY]** Iteration {d}/{d}", .{ iteration, max_iter }) catch return;
     var issue_buf: [16]u8 = undefined;
     const issue_str = std.fmt.bufPrint(&issue_buf, "{d}", .{issue}) catch return;
-    var child = try std.process.spawn(tri_io.get(), .{
+    var child = std.process.spawn(tri_io.get(), .{
         .argv = &.{ "gh", "issue", "comment", issue_str, "--body", body },
         .stdout = .ignore,
         .stderr = .ignore,
-    });
-    _ = child.spawn() catch return;
+    }) catch return;
     _ = child.wait(tri_io.get()) catch {};
 }
 
@@ -887,12 +877,11 @@ fn retryCommentFinal(allocator: Allocator, issue: u32, verdict: RetryVerdict, it
     }) catch return;
     var issue_buf: [16]u8 = undefined;
     const issue_str = std.fmt.bufPrint(&issue_buf, "{d}", .{issue}) catch return;
-    var child = try std.process.spawn(tri_io.get(), .{
+    var child = std.process.spawn(tri_io.get(), .{
         .argv = &.{ "gh", "issue", "comment", issue_str, "--body", body },
         .stdout = .ignore,
         .stderr = .ignore,
-    });
-    _ = child.spawn() catch return;
+    }) catch return;
     _ = child.wait(tri_io.get()) catch {};
 }
 

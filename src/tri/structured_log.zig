@@ -377,7 +377,7 @@ pub fn deinitGlobalLogger() void {
 }
 
 pub fn getGlobalLogger() ?*Logger {
-    return if (global_logger) |*l| &l else null;
+    return if (global_logger) |*l| l else null;
 }
 
 // Observer role prefixes for structured logging
