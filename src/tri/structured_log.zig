@@ -339,11 +339,43 @@ pub const Logger = struct {
 
 /// Global logger instance (initialized on first use)
 var global_logger: ?Logger = null;
-var global_logger_mutex = std.Thread.Mutex{};
+
+// This was `std.Thread.Mutex`, which Zig 0.16 removed: std/Thread.zig no longer
+// declares it, and it is the single error that stopped src/tri/main.zig from
+// compiling at all once the local-wave9 block was removed.
+//
+// The obvious replacement is std.Io.Mutex, and it is NOT used here on purpose.
+// Its lock takes an Io -- `lock(m: *Mutex, io: Io)` -- and the only two callers
+// of the functions below live in main.zig, which still has the pre-0.16
+// `pub fn main() !void` signature and therefore no `init.io` to hand down.
+// Threading one in means migrating main.zig to Io-threading first, which is a
+// separate structural decision already tracked as B22. Reaching for Io here
+// would have settled that decision as a side effect of a compile fix.
+//
+// So: a compare-exchange spinlock, which needs nothing from the runtime. It is
+// the right size for what is actually being guarded -- double-initialisation of
+// one optional, twice per process, at startup and at shutdown. There is no
+// contention to speak of, so spinning costs nothing and never blocks.
+//
+// Note what this does NOT change: getGlobalLogger() below reads `global_logger`
+// with no lock at all, exactly as it did before. Readers were never
+// synchronised here, and pretending otherwise by dressing up the writer side
+// would be worse than leaving the asymmetry visible.
+var global_logger_lock: std.atomic.Value(bool) = .init(false);
+
+fn lockGlobalLogger() void {
+    while (global_logger_lock.cmpxchgWeak(false, true, .acquire, .monotonic) != null) {
+        std.atomic.spinLoopHint();
+    }
+}
+
+fn unlockGlobalLogger() void {
+    global_logger_lock.store(false, .release);
+}
 
 pub fn initGlobalLogger(allocator: std.mem.Allocator, min_level: Level) !void {
-    global_logger_mutex.lock();
-    defer global_logger_mutex.unlock();
+    lockGlobalLogger();
+    defer unlockGlobalLogger();
 
     if (global_logger == null) {
         global_logger = try Logger.init(allocator, min_level);
@@ -351,8 +383,8 @@ pub fn initGlobalLogger(allocator: std.mem.Allocator, min_level: Level) !void {
 }
 
 pub fn deinitGlobalLogger() void {
-    global_logger_mutex.lock();
-    defer global_logger_mutex.unlock();
+    lockGlobalLogger();
+    defer unlockGlobalLogger();
 
     if (global_logger) |*logger| {
         logger.deinit();
