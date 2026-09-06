@@ -525,6 +525,13 @@
       "verified": "Both directions against the REAL tree, not fixtures: 25 scripts -> exit 0 / 58 .sh moved away -> exit 1 FAIL; 9 figures -> exit 0 / 9 pdf moved -> exit 1 FAIL; 4 tex -> exit 0 / 4 tex moved -> exit 1 FAIL. Each restored and re-run, with git status --porcelain asserted to show no stray path. A floor that only fires on a synthetic empty directory has not been shown to fire on the real one. And the regression that mattered: tools/check_gates_can_fail.py -- which tests these very gates -- still reports 7 of 10 rejecting their injected defect, exit 0.",
       "left_alone_and_why": "check_doc_refs.py is already red on a clean tree, so a floor there cannot be verified in either direction today. check_ref_kinds.py needs a floor on its DENOMINATOR rather than an empty-scope guard: tools/ref_kinds_baseline.txt does not exist, so its `known` set is always empty -- a different defect deserving its own change and its own evidence. check_pack_specials.py has the same shape but was not reached this iteration.",
       "pr": "#752"
+    },
+    {
+      "id": "D90",
+      "what": "#752 merged. Reviewed PR #739 (open 11 days, +43/-5, operator's own account) and found it is likely mergeable now and may remove TWO of the four checks this loop has been treating as 'red on main regardless' all session.",
+      "finding": "#739's diagnosis is correct: `zig build tri` RUNS the CLI rather than installing it, because build.zig declares tri_step.dependOn(&run_tri.step) while b.installArtifact(tri) hangs off the install step the target never reaches. A step named 'Build TRI Binary' that builds no binary -- and the next step then cannot find it, which is why Brain Health reports a missing measurement. Its fix (zig build install + an explicit test -x guard) was INSUFFICIENT at the time: the run from 2026-08-26 shows the guard firing, then 'tri: command not found', then 'error: NotImplemented' -- three deep, the same blocked-gate-hides-its-next-blocker shape as the docker case in B28.",
+      "why_it_may_work_now": "That run predates this session. Validate VIBEE Codegen runs `zig build -Dci=true`, which includes the install step, and is GREEN on current main -- the 0.16 migration guards landed in #745/#746/#747/#749 removed exactly the targets that could not compile under CI's 0.15.2. So `zig build install -Dci=true` plausibly produces zig-out/bin/tri now. Plausible, not certain: the only way to know is a rebase, since a CI re-run replays the commit's own build.zig rather than main's.",
+      "not_acted_on": "Rebasing and force-pushing someone else's branch is a real action on their work, so this was posted as a comment with the exact command instead: https://github.com/gHashTag/trinity-fpga/pull/739#issuecomment-5556567570 . If it goes green, withdrawn-live already passes on that branch, which would leave orphan-artefacts as the only permanently-red check in the repo."
     }
   ],
   "backlog": [
@@ -1097,6 +1104,14 @@
       "impact": "None shipped -- the numbers were discarded and each checker was read directly instead. But had the survey been subtly wrong rather than obviously wrong, it would have driven the whole change. Reading the files found a defect the survey could not have (check_figure_names' pdftotext exit(0)), because that path is not a scope question at all.",
       "status": "instrument discarded; findings derived by reading each checker's verdict logic.",
       "lesson": "Third instrument I built this session that was wrong -- after the JSON-key detector (A33) and the line-based paths scanner (iteration 108). The common shape: a regex over source code, used to answer a question about behaviour. Regex finds text; behaviour needs the control flow. When the answer is 'what does this do on input X', run it on input X. Every verified result this session came from executing something, and every wrong one came from matching a pattern."
+    },
+    {
+      "id": "A38",
+      "found": "2026-09-06, iteration 109, about this loop's own reasoning",
+      "what": "This loop has said 'four checks are red on main regardless, ignore them' on every PR for the whole session, and wrote it into the ci-gates skill as settled fact. It was never investigated. Two of the four (Brain Health Check, Brain Health Report) have a diagnosed cause and a candidate fix that has been sitting in an open PR since 2026-08-26.",
+      "impact": "The phrase 'pre-existing failure' functioned exactly like a green gate: it made a red signal safe to skip past without looking. Every PR merged tonight was checked against that list, so the reasoning was load-bearing, and it rested on nobody having asked why.",
+      "status": "characterised. #739 reviewed and the operator given a one-command test. The ci-gates skill's 'four checks are red regardless' section should be revised once that answer is known, since it currently teaches the habit.",
+      "lesson": "A known-failing check is the same species as a vacuous passing one: both are signals nobody reads. This session spent five iterations finding gates that pass without measuring, while routing around four that fail without being diagnosed. 'Pre-existing' is a description of when a problem started, never a reason it is acceptable."
     }
   ],
   "collaboration_options": [
