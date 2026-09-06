@@ -65,9 +65,23 @@ jobs:
         with:
           submodules: recursive
 
+      # `zig build tri` does not build the binary -- build.zig declares
+      #   const tri_step = b.step("tri", "Run TRI - Unified Trinity CLI");
+      #   tri_step.dependOn(&run_tri.step);
+      # so the step RUNS the CLI. `b.installArtifact(tri)` hangs off the install
+      # step, which this target never reaches, so the executable is compiled into
+      # the cache and never copied to zig-out/bin. The step was named "Build TRI
+      # Binary" and did not build one; the next step then could not find it, and
+      # this gate has reported a missing measurement on every run it has ever had.
       - name: Build TRI Binary
         run: |
-          zig build tri -Dci=true
+          zig build install -Dci=true
+          # Say so here rather than three steps later as a mystery health score.
+          test -x ./zig-out/bin/tri || {
+            echo "::error::zig build install produced no ./zig-out/bin/tri"
+            ls -la zig-out/bin 2>/dev/null || echo "zig-out/bin does not exist"
+            exit 1
+          }
 
       - name: Run Brain Health Check
         id: health
@@ -175,9 +189,15 @@ jobs:
         with:
           submodules: recursive
 
+      # See the note on the first "Build TRI Binary" step: `zig build tri` runs
+      # the CLI, it does not install it.
       - name: Build TRI Binary
         run: |
-          zig build tri -Dci=true
+          zig build install -Dci=true
+          test -x ./zig-out/bin/tri || {
+            echo "::error::zig build install produced no ./zig-out/bin/tri"
+            exit 1
+          }
 
   # =========================================================================
   # Phase 2: Unit Tests — Individual Brain Regions
@@ -373,9 +393,15 @@ jobs:
         with:
           submodules: recursive
 
+      # See the note on the first "Build TRI Binary" step: `zig build tri` runs
+      # the CLI, it does not install it.
       - name: Build TRI Binary
         run: |
-          zig build tri -Dci=true
+          zig build install -Dci=true
+          test -x ./zig-out/bin/tri || {
+            echo "::error::zig build install produced no ./zig-out/bin/tri"
+            exit 1
+          }
 
       - name: CLI Commands Test
         run: |
@@ -412,9 +438,15 @@ jobs:
         with:
           submodules: recursive
 
+      # See the note on the first "Build TRI Binary" step: `zig build tri` runs
+      # the CLI, it does not install it.
       - name: Build TRI Binary
         run: |
-          zig build tri -Dci=true
+          zig build install -Dci=true
+          test -x ./zig-out/bin/tri || {
+            echo "::error::zig build install produced no ./zig-out/bin/tri"
+            exit 1
+          }
 
       - name: Export Metrics
         run: |
@@ -514,9 +546,15 @@ jobs:
         with:
           submodules: recursive
 
+      # See the note on the first "Build TRI Binary" step: `zig build tri` runs
+      # the CLI, it does not install it.
       - name: Build TRI Binary
         run: |
-          zig build tri -Dci=true
+          zig build install -Dci=true
+          test -x ./zig-out/bin/tri || {
+            echo "::error::zig build install produced no ./zig-out/bin/tri"
+            exit 1
+          }
 
       - name: Run Full Stress Test
         run: |
