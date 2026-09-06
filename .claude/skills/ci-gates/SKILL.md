@@ -189,6 +189,60 @@ for f in $(...); do grep -q "b.path(\"$f\")" build.zig && echo "TARGET $f"; done
 Two pushes were spent walking a class one member at a time. One grep would have
 replaced both.
 
+## Counting red checks: the denominator is workflows, not runs
+
+This query is **wrong**, and it produced a published claim that main had one red
+check when it had five:
+
+```bash
+gh run list --branch main --limit 40 --json name,conclusion,createdAt \
+  | jq 'group_by(.name)[] | max_by(.createdAt) | select(.conclusion=="failure")'
+```
+
+Forty *runs* does not contain one run of every *workflow*. A workflow that last
+fired hours ago falls out of the window, contributes nothing to the group-by, and
+reads as **absent rather than as red**. Use `--limit 200`, or query per workflow,
+and say which you did.
+
+A count that shrinks because the instrument could not see far enough looks
+exactly like progress.
+
+## 50 workflows can only be tested by merging
+
+`push:` without `pull_request:` — 50 of 118, including every `ax7203-*` synthesis
+job. `ax7203-format-cost.yml` is `push: branches: [main]`, so a change to it runs
+**only after it lands**.
+
+That is probably deliberate: these are 240-minute FPGA jobs and running them per
+PR would be prohibitive. But the consequence is real — for those 50, "verify
+before merging" is not available through the normal path, which is part of why
+`fpga-bitstream`, `fpga-docker` and `format-cost` all sat broken for months.
+
+The escape hatch is `workflow_dispatch`, which most of them declare:
+
+```bash
+gh workflow run <file>.yml --repo gHashTag/trinity-fpga --ref <your-branch>
+```
+
+Use it before merging a change to one of these. Do not add `pull_request:` to
+them casually — that is a cost decision, not yours to flip in passing.
+
+## Read the file before contradicting it
+
+Diagnosing `ax7203-format-cost.yml`'s routing failure, the external evidence was
+strong and entirely outside the file: three sibling GF-mul workflows pass
+`-nodsp`, this one does not, this one has never routed. The fix and a confident
+comment were written on that basis.
+
+Fifty lines below the edit sat the maintainer's own diagnosis — a nextpnr-xilinx
+constant pseudo-net bug on `$PACKER_GND_NET`, explicitly *not* congestion — with
+the P&R cascade that exists because of it.
+
+**The stronger the outside evidence, the less the inside seems worth checking.**
+When a file already carries a diagnosis, argue with it explicitly and say what
+would settle it. Replacing it silently destroys the only record of why the
+surrounding workaround exists.
+
 ## Related
 
 - `.github/reachability-baseline` — the ratchet's stored count

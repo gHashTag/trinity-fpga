@@ -4,7 +4,7 @@
     "id": "two-track",
     "cron_job": "1cd7dda4",
     "interval": "15m",
-    "iteration": 114,
+    "iteration": 115,
     "status": "RUNNING",
     "owner": "Dmitrii Vasilev / @gHashTag",
     "tracks": [
@@ -565,6 +565,13 @@
       "correction_to_the_sweep": "The 25-agent sweep reported this gate as having a LIVE `VIOLATIONS: 7`. With pipefail enabled on real CI it exits 0 -- the current tree has no violations. Re-reading the sweep's wording, it demonstrated the MECHANISM by constructing a failing case, not the tree's present state. I was careful not to assert live violations before measuring, and the measurement says the fix is preventive rather than revealing. Worth recording because the opposite reading was available and would have been wrong.",
       "verified": "Both gates ran on the PR branch under the new shell and SUCCEEDED (tnf-boundary-gate id=34015170113, reachability-ratchet id=34015162174), checked by querying each run's conclusion rather than by reading the PR fail-list -- the fail-list is what misled me one iteration earlier, since a job that fails to instantiate never appears in it. Locally: new shell exits 1 on a failing measurer, old `bash -e` exits 0 on the identical command, counter guard rejects '' and 'abc' and accepts '395'.",
       "not_done_and_why": "22 further pipes across 11 workflows surfaced in my own scan. Most are benign -- `echo | tee`, `|| true`, `$(grep | wc -l)` inside a command substitution -- and my scanner has no way to tell those from real ones. The earlier sweep triaged by execution and found 2; I fixed those 2 rather than trusting my cruder instrument, which is the third scanner I have written tonight and the third that over-reported."
+    },
+    {
+      "id": "D95",
+      "what": "Dispatched the #755 -nodsp experiment on its own branch (run 34016575130), and found why it could not have run there otherwise: ax7203-format-cost.yml triggers on `push: branches: [main]` only. A PR that changes it never tests it.",
+      "the_wider_finding": "50 of 118 workflows declare `push` without `pull_request`, including every ax7203-* synthesis job. For those 50, 'verify before merging' is not available through the normal path -- a change is merged blind and validated only afterwards. That is very likely deliberate rather than an oversight: these are 240-minute FPGA jobs and running them per PR would be prohibitive. But the consequence is real, and it is part of why fpga-bitstream, fpga-docker and format-cost all sat broken for months while looking untroubled.",
+      "what_i_did_not_do": "Did not add pull_request triggers. Fifty workflows is a cost posture, not a bug, and flipping it in passing would commit the operator to a large recurring bill for FPGA synthesis on every PR. Used the escape hatch the workflows already declare -- workflow_dispatch on the branch -- which answers the question without changing anyone's costs.",
+      "skill_updated": ".claude/skills/ci-gates/SKILL.md gained three sections: the red-check denominator is WORKFLOWS not recent runs (A40, with the exact wrong query that produced a false 'five -> one'); the 50 push-only workflows and the `gh workflow run --ref <branch>` escape hatch; and 'read the file before contradicting it' (A41), including why strong external evidence is precisely the condition under which one does not think to look inside."
     }
   ],
   "backlog": [
