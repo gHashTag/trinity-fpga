@@ -70,6 +70,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       specs: ${{ steps.changed.outputs.specs }}
+      specs_json: ${{ steps.changed.outputs.specs_json }}
       count: ${{ steps.changed.outputs.count }}
     steps:
       - uses: actions/checkout@v4
@@ -80,6 +81,7 @@ jobs:
           if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ inputs.spec }}" ]; then
             # Manual trigger with specific spec
             echo "specs=${{ inputs.spec }}" >> $GITHUB_OUTPUT
+            echo "specs_json=$(printf '%s\n' "${{ inputs.spec }}" | jq -R . | jq -sc .)" >> $GITHUB_OUTPUT
             echo "count=1" >> $GITHUB_OUTPUT
           else
             # Detect changes
@@ -89,6 +91,8 @@ jobs:
               specs=$(ls specs/fpga/*.tri 2>/dev/null | xargs -n1 basename | sed 's|\.tri$||' | tr '\n' ' ')
             fi
             echo "specs=$specs" >> $GITHUB_OUTPUT
+            # A JSON ARRAY, not a bare word list. See the matrix note below.
+            echo "specs_json=$(printf '%s\n' $specs | jq -R . | jq -sc .)" >> $GITHUB_OUTPUT
             n=$(echo $specs | wc -w)
             echo "count=$n" >> $GITHUB_OUTPUT
             if [ "$n" -eq 0 ]; then
@@ -115,7 +119,14 @@ jobs:
     needs: detect-changes
     strategy:
       matrix:
-        spec: ${{ fromJson(format('[{0}]', needs.detect-changes.outputs.specs)) }}
+        # format('[{0}]', specs) built `[blink counter mac]` from a
+        # space-separated list -- not valid JSON, so fromJson() failed and this
+        # job never instantiated. GitHub then marked the RUN failed with no
+        # failing job attached to it: `gh run view` showed every job success or
+        # skipped, `--log-failed` printed nothing, and the workflow never
+        # appeared in the PR checks list at all. Invisible for its whole life.
+        # The detect step now emits a real JSON array via jq.
+        spec: ${{ fromJson(needs.detect-changes.outputs.specs_json) }}
       fail-fast: false
     steps:
       - uses: actions/checkout@v4
@@ -159,7 +170,7 @@ jobs:
     if: false  # Disabled by default - enable with self-hosted runner
     strategy:
       matrix:
-        spec: ${{ fromJson(format('[{0}]', needs.detect-changes.outputs.specs)) }}
+        spec: ${{ fromJson(needs.detect-changes.outputs.specs_json) }}
       fail-fast: false
     steps:
       - uses: actions/checkout@v4
