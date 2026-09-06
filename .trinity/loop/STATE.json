@@ -4,7 +4,7 @@
     "id": "two-track",
     "cron_job": "1cd7dda4",
     "interval": "15m",
-    "iteration": 126,
+    "iteration": 127,
     "status": "RUNNING",
     "owner": "Dmitrii Vasilev / @gHashTag",
     "tracks": [
@@ -680,6 +680,12 @@
       "and_a_second_locale": "The audit now runs EN and RU in CI. The defect that prompted all this fitted in English and did not in Russian; a single-locale run would have passed it. It then caught /play the same way.",
       "self_check_that_worked": "One audit run reported the baseline routes as 'now clean'. Nothing in that change touched them, so I declined to remove them; the next run reported them bad again. The baseline held because I did not act on one green.",
       "not_caught_by_any_gate": "The 'О...' title regression. A truncated heading is neither an overflow nor an unreachable control -- it is legible-or-not, which the audit deliberately does not judge. Found by looking at the published page."
+    },
+    {
+      "id": "D109",
+      "what": "gHashTag/trinity#968 merged (03e1b042). The mobile gate now distinguishes off-screen from unreachable, and its baseline is empty.",
+      "verified": "Injected control proves both directions in one run: a button 600px off-margin inside overflow:hidden is reported on all 28 routes; the same button inside overflow-x:auto is reported on none. Real audit after the change: EN and RU both exit 0 across 28 routes with no baseline to report. CI green, read before merging rather than after -- the merge is now a separate call from the wait, per A52.",
+      "net_effect": "The site has no known unreachable controls, and that statement is now backed by a check that has been shown to fire and to stay quiet for the right reasons."
     }
   ],
   "backlog": [
@@ -1416,6 +1422,15 @@
       "repaired": "gHashTag/trinity#967 fixes it (brand gives way, controls do not) and was merged only after checking both locales green -- verified before merging, not after.",
       "the_pattern": "Twice earlier this session I merged with checks pending and recorded it. Both times the lesson was written as 'check before merging'. It did not hold, because the failure is not forgetting to check -- I did check, and printed the answer. It is that the check and the merge were in the same unconditional command sequence. A rule that depends on me reading a line I just printed is not a control.",
       "lesson": "Never put `gh pr merge` in the same command as the wait that determines whether it should run. Make the merge a separate call whose input is the conclusion I have already read, so declining is the default rather than an extra step."
+    },
+    {
+      "id": "A53",
+      "found": "2026-09-06, iteration 127, setting out to fix the two routes I had listed as the site's only unreachable controls.",
+      "what": "There was nothing to fix. /queen and /tree were in the gate's baseline because their buttons sit at left 850px and 912px on a 375px screen. I recorded that as a defect without checking whether a reader could reach them. They can: both live in .queen27-hud-top, a header with overflow-x: auto carrying 619px of real scroll -- scrollWidth 976 against clientWidth 357 -- and scrolling it moves the MENU button from right edge 538 to -81. A swipeable toolbar is a normal mobile pattern.",
+      "so_the_defect_was_the_gate": "Off-screen and unreachable are different. The check now separates them: clipped by an ancestor that CANNOT scroll is lost; inside a scroller is merely not yet in view. KNOWN_UNREACHABLE went to empty, because the exemption disappeared with the reason for it.",
+      "the_control_i_should_have_run_first": "Two buttons injected 600px off the left margin of two identical 375px containers. overflow:hidden -> 'CLIPPED' reported on all 28 routes. overflow-x:auto -> 'SCROLLABLE' reported on none. Both directions in one run, and it took two minutes. I ran it AFTER writing the baseline instead of before.",
+      "what_this_says_about_baselines": "A baseline is a claim that something is broken and not being fixed today. I wrote one from a measurement I had not validated, and it would have sat there indefinitely looking like known debt. Yesterday I was pleased that the baseline 'held' when a flaky run called those routes clean -- the entries survived for the wrong reason, and I recorded that as the system working.",
+      "lesson": "Before adding anything to a baseline, verify the defect the way a user would experience it. A number that looks wrong is a hypothesis; the baseline is where hypotheses go to become permanent."
     }
   ],
   "collaboration_options": [

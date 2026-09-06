@@ -345,6 +345,41 @@ not go below **500px** via `--window-size`; the metrics override must be applied
 on top of it. Measured `clientWidth` was 375 with both and 500 with the window
 size alone.
 
+## A baseline is a claim, so verify it like one
+
+A baseline entry says "this is broken and we are not fixing it today". It then
+sits there looking like known debt, indefinitely, and nobody re-checks it.
+
+I put `/queen` and `/tree` into a mobile gate's baseline because their buttons
+measured at left 850px and 912px on a 375px screen. I never asked whether a
+reader could reach them. They could: both sit in a header with
+`overflow-x: auto` carrying **619px of real scroll** — `scrollWidth 976` vs
+`clientWidth 357` — so a swipe brings them into view. A scrollable toolbar is a
+normal mobile pattern. **The defect was in my gate, not the pages.**
+
+The distinction the check was missing:
+
+- clipped by an ancestor that **cannot** scroll → genuinely lost
+- inside a scroller → merely not yet in view
+
+**How to apply:** before adding anything to a baseline, reproduce the defect the
+way a user would experience it, not the way your instrument reports it. A number
+that looks wrong is a hypothesis; a baseline is where hypotheses become
+permanent.
+
+And note the near-miss that should have warned me: a flaky run had earlier
+reported those two routes as *clean*, I declined to remove them, and I recorded
+that as the baseline working. The entries survived for the right reason applied
+to the wrong fact.
+
+**Prove a classifier in both directions in one run.** Two buttons, 600px off the
+left margin of two identical 375px containers:
+
+    overflow: hidden   -> reported on all 28 routes
+    overflow-x: auto   -> reported on none
+
+Two minutes, and it is the check that would have prevented the wrong baseline.
+
 ## Related
 
 - `.github/reachability-baseline` — the ratchet's stored count
