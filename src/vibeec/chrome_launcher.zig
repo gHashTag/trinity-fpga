@@ -4,6 +4,8 @@
 // φ² + 1/φ² = 3
 
 const std = @import("std");
+const tri_io = @import("tri_io");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const cdp = @import("cdp_client.zig");
 const browser = @import("browser.zig");
@@ -114,12 +116,12 @@ pub const ChromeLauncher = struct {
         const temp_dir = std.fs.getenv("TMPDIR") orelse "/tmp";
 
         var dir_name_buf: [128]u8 = undefined;
-        const dir_name = std.fmt.bufPrint(&dir_name_buf, "vibee_chrome_{}", .{std.time.timestamp()}) catch return ChromeLauncherError.OutOfMemory;
+        const dir_name = std.fmt.bufPrint(&dir_name_buf, "vibee_chrome_{}", .{tri_time.timestamp()}) catch return ChromeLauncherError.OutOfMemory;
 
         const full_path = try std.fs.path.join(self.allocator, &[_][]const u8{ temp_dir, dir_name });
         errdefer self.allocator.free(full_path);
 
-        std.fs.makeDirAbsolute(full_path) catch |err| {
+        std.Io.Dir.createDirAbsolute(tri_io.get(), full_path, .default_dir) catch |err| {
             if (err != error.PathAlreadyExists) return ChromeLauncherError.CommandFailed;
         };
 
@@ -214,13 +216,14 @@ pub const ChromeLauncher = struct {
         if (self.config.use_mock_keychain) try args.append(try self.allocator.dupeZ(u8, "--use-mock-keychain"));
 
         // Run Chrome
-        var process = std.process.Child.init(args.items, self.allocator);
+        var process = try std.process.spawn(tri_io.get(), .{
+            .argv = args.items,
+            .stdout = .inherit,
+            .stderr = .inherit,
+        });
         process.stdin_behavior = .Ignore;
         process.stdout_behavior = .Pipe;
         process.stderr_behavior = .Pipe;
-
-        try process.spawn();
-
         const pid = process.id;
 
         // Don't kill process - let it run in background

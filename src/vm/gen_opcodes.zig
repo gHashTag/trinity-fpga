@@ -168,7 +168,7 @@ pub const Instruction = struct {
         const opcode_byte = @as(u8, @intCast(encoded >> 56));
         const operand_value = @as(i64, @bitCast(encoded & 0x00FFFFFFFFFFFFFF));
         return .{
-            .opcode = std.meta.intToEnum(Opcode, opcode_byte) catch .nop,
+            .opcode = std.enums.fromInt(Opcode, opcode_byte) orelse .nop,
             .operand = operand_value,
         };
     }
@@ -176,7 +176,7 @@ pub const Instruction = struct {
 
 /// Parse byte to Opcode (returns nop if invalid)
 pub fn opcodeFromByte(byte: u8) Opcode {
-    return std.meta.intToEnum(Opcode, byte) catch .nop;
+    return std.enums.fromInt(Opcode, byte) orelse .nop;
 }
 
 /// Get human-readable opcode name (alias for Opcode.toString)

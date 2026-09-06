@@ -10,6 +10,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const generator = @import("lang_generators.zig");
 const mapper = @import("igla_symbolic_mapper.zig");
 
@@ -50,7 +51,7 @@ pub fn runBenchmark() !void {
     };
 
     const iterations = 50;
-    var timer = try std.time.Timer.start();
+    var timer = try tri_time.Timer.start();
 
     // 1. Python Generation Benchmark
     timer.reset();

@@ -7,6 +7,8 @@
 
 const std = @import("std");
 
+const tri_mutex = @import("tri_mutex");
+const tri_time = @import("tri_time");
 // =============================================================================
 // DELEGATION CONFIGURATION
 // =============================================================================
@@ -78,7 +80,7 @@ pub const StakeDelegationEngine = struct {
     total_undelegated_wei: u128,
     total_rewards_wei: u128,
     total_slashed_wei: u128,
-    mutex: std.Thread.Mutex,
+    mutex: tri_mutex.Mutex,
 
     pub fn init(allocator: std.mem.Allocator) StakeDelegationEngine {
         return initWithConfig(allocator, .{});
@@ -154,7 +156,7 @@ pub const StakeDelegationEngine = struct {
             .delegator_id = delegator_id,
             .operator_id = operator_id,
             .amount_wei = amount_wei,
-            .delegation_time = std.time.timestamp(),
+            .delegation_time = tri_time.timestamp(),
             .rewards_earned_wei = 0,
             .slashed_wei = 0,
             .is_active = true,

@@ -259,7 +259,7 @@ fn containsSubstring(haystack: []const u8, needle: []const u8) bool {
 
 /// Extract programming keywords from multilingual text
 pub fn extractKeywords(allocator: std.mem.Allocator, text: []const u8, language: Language) ![][]const u8 {
-    var keywords = std.ArrayListUnmanaged([]const u8){};
+    var keywords = @as(std.ArrayListUnmanaged([]const u8), .empty);
     errdefer keywords.deinit(allocator);
 
     const mappings: []const KeywordMapping = switch (language) {
@@ -349,7 +349,7 @@ pub fn normalizePrompt(allocator: std.mem.Allocator, text: []const u8) ![]const 
     defer allocator.free(keywords);
 
     // Build normalized English prompt
-    var result = std.ArrayListUnmanaged(u8){};
+    var result = @as(std.ArrayListUnmanaged(u8), .empty);
     errdefer result.deinit(allocator);
 
     // Add keywords as English prompt

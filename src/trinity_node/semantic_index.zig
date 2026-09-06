@@ -6,6 +6,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_mutex = @import("tri_mutex");
 const ArrayList = std.array_list.Managed;
 const vsa_encoder = @import("vsa_shard_encoder.zig");
 const Hypervector = vsa_encoder.Hypervector;
@@ -43,7 +44,7 @@ pub const SemanticIndex = struct {
     shards_indexed: u64,
     shards_removed: u64,
     queries_executed: u64,
-    mutex: std.Thread.Mutex,
+    mutex: tri_mutex.Mutex,
 
     pub fn init(allocator: std.mem.Allocator, encoder: *VsaShardEncoder) SemanticIndex {
         return .{

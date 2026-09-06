@@ -3,6 +3,7 @@
 //! φ² + 1/φ² = 3
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const coptic_compiler = @import("coptic_compiler.zig");
 const coptic_semantic = @import("coptic_semantic.zig");
 const coptic_lexer = @import("coptic_lexer.zig");
@@ -413,7 +414,7 @@ fn benchmarkVM(path: []const u8, iterations: u32, allocator: std.mem.Allocator) 
     defer allocator.free(source);
 
     // Measure parse time
-    const parse_start = std.time.nanoTimestamp();
+    const parse_start = tri_time.nanoTimestamp();
     var parser = coptic_parser.Parser.init(allocator, source);
     var ast = parser.parseProgram() catch |err| {
         printError("Parse error");
@@ -421,10 +422,10 @@ fn benchmarkVM(path: []const u8, iterations: u32, allocator: std.mem.Allocator) 
         return;
     };
     defer ast.deinit();
-    const parse_time = std.time.nanoTimestamp() - parse_start;
+    const parse_time = tri_time.nanoTimestamp() - parse_start;
 
     // Measure compile time
-    const compile_start = std.time.nanoTimestamp();
+    const compile_start = tri_time.nanoTimestamp();
     var compiler = bytecode_compiler.BytecodeCompiler.init(allocator, source);
     defer compiler.deinit();
 
@@ -433,7 +434,7 @@ fn benchmarkVM(path: []const u8, iterations: u32, allocator: std.mem.Allocator) 
         std.debug.print("  Error: {}\n", .{err});
         return;
     };
-    const compile_time = std.time.nanoTimestamp() - compile_start;
+    const compile_time = tri_time.nanoTimestamp() - compile_start;
 
     const code = compiler.getCode();
     const constants = compiler.getConstants();

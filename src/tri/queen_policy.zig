@@ -13,6 +13,8 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
+const tri_time = @import("tri_time");
 const qt = @import("queen_types.zig");
 
 const print = std.debug.print;
@@ -143,7 +145,7 @@ pub fn checkPolicy(
     // Per-action cooldown
     const last_ts = counters.getLastTs(kind);
     if (last_ts > 0) {
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
         if (now - last_ts < limits.cooldown_sec) {
             return .denied_cooldown;
         }
@@ -172,7 +174,7 @@ pub const ActionCounters = struct {
     }
 
     pub fn record(self: *ActionCounters, kind: qt.ActionKind) void {
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
         // Reset window if hour elapsed
         if (now - self.window_start > 3600) {
             self.counts = .{0} ** NUM_ACTIONS;
@@ -237,7 +239,7 @@ pub const IncidentMemory = struct {
 
     pub fn init() IncidentMemory {
         var m = IncidentMemory{};
-        m.day_start_ts = std.time.timestamp();
+        m.day_start_ts = tri_time.timestamp();
         return m;
     }
 
@@ -247,7 +249,7 @@ pub const IncidentMemory = struct {
 
         const idx = self.count % MAX_INCIDENTS;
         self.ring[idx] = Incident{
-            .ts = std.time.timestamp(),
+            .ts = tri_time.timestamp(),
             .kind = kind,
             .action = action,
             .success = success,
@@ -266,7 +268,7 @@ pub const IncidentMemory = struct {
 
     /// Count recent failures of a specific action kind (last hour)
     pub fn recentFailCount(self: *const IncidentMemory, action: qt.ActionKind) u8 {
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
         const one_hour_ago = now - 3600;
         var fails: u8 = 0;
 
@@ -303,7 +305,7 @@ pub const IncidentMemory = struct {
     }
 
     fn maybeResetDaily(self: *IncidentMemory) void {
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
         if (now - self.day_start_ts > 86400) {
             self.total_alerts_24h = 0;
             self.total_auto_actions_24h = 0;
@@ -353,7 +355,7 @@ pub const PendingQueue = struct {
                 item.* = PendingAction{
                     .id = id,
                     .action = action,
-                    .requested_at = std.time.timestamp(),
+                    .requested_at = tri_time.timestamp(),
                     .active = true,
                 };
                 const len = @min(reason_text.len, item.reason.len);
@@ -395,7 +397,7 @@ pub const PendingQueue = struct {
 
     /// Expire items older than 30 minutes
     pub fn expireOld(self: *PendingQueue) void {
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
         for (&self.items) |*item| {
             if (item.active and now - item.requested_at > 1800) {
                 item.active = false;
@@ -417,23 +419,23 @@ pub fn writeAuditEntry(
     success: bool,
     detail: []const u8,
 ) void {
+    const io = tri_io.get();
     // Ensure directory exists
-    std.fs.cwd().makePath(".trinity/queen") catch {};
+    std.Io.Dir.cwd().createDirPath(io, ".trinity/queen") catch {};
 
-    const file = std.fs.cwd().openFile(AUDIT_PATH, .{ .mode = .read_write }) catch {
+    const file = std.Io.Dir.cwd().openFile(io, AUDIT_PATH, .{ .mode = .read_write }) catch {
         // Create if not exists
-        const new_file = std.fs.cwd().createFile(AUDIT_PATH, .{}) catch return;
+        const new_file = std.Io.Dir.cwd().createFile(io, AUDIT_PATH, .{}) catch return;
         writeAuditLine(new_file, kind, action, verdict, success, detail);
-        new_file.close();
+        new_file.close(io);
         return;
     };
-    defer file.close();
-    file.seekFromEnd(0) catch return;
+    defer file.close(io);
     writeAuditLine(file, kind, action, verdict, success, detail);
 }
 
 fn writeAuditLine(
-    file: std.fs.File,
+    file: std.Io.File,
     kind: []const u8,
     action: qt.ActionKind,
     verdict: PolicyVerdict,
@@ -450,14 +452,19 @@ fn writeAuditLine(
         \\{{"ts":{d},"kind":"{s}","action":"{s}","verdict":"{s}","success":{s},"detail":"{s}"}}
         \\
     , .{
-        std.time.timestamp(),
+        tri_time.timestamp(),
         kind,
         action.label(),
         verdict.reason(),
         if (success) "true" else "false",
         d,
     }) catch return;
-    _ = file.write(line) catch {};
+    // 0.16 has no seek-then-write on File: the append offset is taken here
+    // instead of by a seekFromEnd in the caller. A freshly created file has
+    // length 0, so the create branch still writes at the start.
+    const io = tri_io.get();
+    const end = file.length(io) catch return;
+    file.writePositionalAll(io, line, end) catch {};
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -587,7 +594,7 @@ pub fn fmtHistoryTelegram(buf: []u8, memory: *const IncidentMemory) []const u8 {
             .escalation => qt.E_SIREN,
         };
         // Format: [icon] action (Xs ago)
-        const ago = std.time.timestamp() - inc.ts;
+        const ago = tri_time.timestamp() - inc.ts;
         const ago_min = @divTrunc(ago, 60);
         const line = std.fmt.bufPrint(buf[offset..], "{s} {s} ({d}m ago)\n", .{
             icon,
@@ -650,7 +657,7 @@ test "Policy — check allowed L1" {
 test "Policy — rate limit exceeded" {
     const config = qt.QueenConfig{ .max_auto_level = 1 };
     var counters = ActionCounters{};
-    counters.window_start = std.time.timestamp();
+    counters.window_start = tri_time.timestamp();
     // git_commit_state: max 1/hour
     counters.counts[@intFromEnum(qt.ActionKind.git_commit_state)] = 1;
     const memory = IncidentMemory.init();
@@ -759,7 +766,7 @@ test "Policy — PendingQueue expireOld" {
     try std.testing.expectEqual(@as(u8, 1), q.pendingCount());
 
     // Simulate old item (age > 30 min)
-    const now = std.time.timestamp();
+    const now = tri_time.timestamp();
     for (&q.items) |*item| {
         if (item.id == id) {
             item.requested_at = now - 2000;
@@ -781,7 +788,7 @@ test "Policy — IncidentMemory recentFailCount" {
 
 test "Policy — ActionCounters window reset" {
     var c = ActionCounters{};
-    c.window_start = std.time.timestamp() - 4000; // > 1 hour ago
+    c.window_start = tri_time.timestamp() - 4000; // > 1 hour ago
     c.counts[@intFromEnum(qt.ActionKind.doctor_quick)] = 100;
 
     // Recording should reset window
@@ -862,7 +869,7 @@ test "Policy — checkPolicy denied_level without approval" {
 test "Policy — checkPolicy cooldown" {
     const config = qt.QueenConfig{ .max_auto_level = 1 };
     var counters = ActionCounters{};
-    counters.last_ts[@intFromEnum(qt.ActionKind.doctor_quick)] = std.time.timestamp();
+    counters.last_ts[@intFromEnum(qt.ActionKind.doctor_quick)] = tri_time.timestamp();
     const memory = IncidentMemory.init();
 
     // doctor_quick has 600s cooldown
@@ -874,7 +881,7 @@ test "Policy — checkPolicy allowed after cooldown" {
     const config = qt.QueenConfig{ .max_auto_level = 1 };
     var counters = ActionCounters{};
     // Set timestamp 700 seconds ago (more than 600s cooldown)
-    counters.last_ts[@intFromEnum(qt.ActionKind.doctor_quick)] = std.time.timestamp() - 700;
+    counters.last_ts[@intFromEnum(qt.ActionKind.doctor_quick)] = tri_time.timestamp() - 700;
     const memory = IncidentMemory.init();
 
     const v = checkPolicy(.doctor_quick, config, &counters, &memory);
@@ -940,7 +947,7 @@ test "Policy — IncidentMemory recentFailCount only counts failures" {
 
 test "Policy — IncidentMemory recentFailCount time window" {
     var m = IncidentMemory.init();
-    const old_ts = std.time.timestamp() - 4000; // > 1 hour ago
+    const old_ts = tri_time.timestamp() - 4000; // > 1 hour ago
 
     m.record(.auto_action_fail, .doctor_quick, false, "old fail");
     m.ring[0].ts = old_ts;
@@ -967,7 +974,7 @@ test "Policy — IncidentMemory daily reset" {
     try std.testing.expectEqual(@as(u32, 1), m.total_auto_actions_24h);
 
     // Simulate day passed
-    m.day_start_ts = std.time.timestamp() - 90000;
+    m.day_start_ts = tri_time.timestamp() - 90000;
     m.record(.alert, .doctor_quick, true, "alert2");
 
     // Should reset
@@ -1024,7 +1031,7 @@ test "Policy — PendingQueue expireOld partial" {
     const id = q.add(.ouroboros_cycle, "old").?;
 
     // Age the second item
-    const now = std.time.timestamp();
+    const now = tri_time.timestamp();
     for (&q.items) |*item| {
         if (item.id == id) {
             item.requested_at = now - 2000;
@@ -1341,7 +1348,7 @@ test "Policy — PendingQueue expireOld all expired" {
     _ = q.add(.farm_status, "test2");
 
     // Age all items
-    const now = std.time.timestamp();
+    const now = tri_time.timestamp();
     for (&q.items) |*item| {
         if (item.active) {
             item.requested_at = now - 2000;

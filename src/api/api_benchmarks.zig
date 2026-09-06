@@ -5,6 +5,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const testing = std.testing;
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -76,7 +77,7 @@ pub const BenchmarkReport = struct {
 
 pub fn benchmarkRestGet(allocator: std.mem.Allocator, iterations: u32) !BenchmarkResult {
     _ = allocator;
-    const start = std.time.nanoTimestamp();
+    const start = tri_time.nanoTimestamp();
 
     // Simulate REST GET request
     var accumulator: u32 = 0;
@@ -86,7 +87,7 @@ pub fn benchmarkRestGet(allocator: std.mem.Allocator, iterations: u32) !Benchmar
         if (accumulator == 0) accumulator = 1;
     }
 
-    const end = std.time.nanoTimestamp();
+    const end = tri_time.nanoTimestamp();
     const duration = end - start;
 
     return BenchmarkResult{
@@ -100,7 +101,7 @@ pub fn benchmarkRestGet(allocator: std.mem.Allocator, iterations: u32) !Benchmar
 
 pub fn benchmarkRestPost(allocator: std.mem.Allocator, iterations: u32) !BenchmarkResult {
     _ = allocator;
-    const start = std.time.nanoTimestamp();
+    const start = tri_time.nanoTimestamp();
 
     // Simulate REST POST request
     var accumulator: u32 = 0;
@@ -110,7 +111,7 @@ pub fn benchmarkRestPost(allocator: std.mem.Allocator, iterations: u32) !Benchma
         if (accumulator == 0) accumulator = 1;
     }
 
-    const end = std.time.nanoTimestamp();
+    const end = tri_time.nanoTimestamp();
     const duration = end - start;
 
     return BenchmarkResult{
@@ -124,7 +125,7 @@ pub fn benchmarkRestPost(allocator: std.mem.Allocator, iterations: u32) !Benchma
 
 pub fn benchmarkGraphQLQuery(allocator: std.mem.Allocator, iterations: u32) !BenchmarkResult {
     _ = allocator;
-    const start = std.time.nanoTimestamp();
+    const start = tri_time.nanoTimestamp();
 
     // Simulate GraphQL query
     var accumulator: u32 = 0;
@@ -134,7 +135,7 @@ pub fn benchmarkGraphQLQuery(allocator: std.mem.Allocator, iterations: u32) !Ben
         if (accumulator == 0) accumulator = 1;
     }
 
-    const end = std.time.nanoTimestamp();
+    const end = tri_time.nanoTimestamp();
     const duration = end - start;
 
     return BenchmarkResult{
@@ -148,7 +149,7 @@ pub fn benchmarkGraphQLQuery(allocator: std.mem.Allocator, iterations: u32) !Ben
 
 pub fn benchmarkGrpcExecute(allocator: std.mem.Allocator, iterations: u32) !BenchmarkResult {
     _ = allocator;
-    const start = std.time.nanoTimestamp();
+    const start = tri_time.nanoTimestamp();
 
     // Simulate gRPC Execute call
     var accumulator: u32 = 0;
@@ -158,7 +159,7 @@ pub fn benchmarkGrpcExecute(allocator: std.mem.Allocator, iterations: u32) !Benc
         if (accumulator == 0) accumulator = 1;
     }
 
-    const end = std.time.nanoTimestamp();
+    const end = tri_time.nanoTimestamp();
     const duration = end - start;
 
     return BenchmarkResult{
@@ -172,7 +173,7 @@ pub fn benchmarkGrpcExecute(allocator: std.mem.Allocator, iterations: u32) !Benc
 
 pub fn benchmarkWebSocketMessage(allocator: std.mem.Allocator, iterations: u32) !BenchmarkResult {
     _ = allocator;
-    const start = std.time.nanoTimestamp();
+    const start = tri_time.nanoTimestamp();
 
     // Simulate WebSocket message
     var accumulator: u32 = 0;
@@ -182,7 +183,7 @@ pub fn benchmarkWebSocketMessage(allocator: std.mem.Allocator, iterations: u32) 
         if (accumulator == 0) accumulator = 1;
     }
 
-    const end = std.time.nanoTimestamp();
+    const end = tri_time.nanoTimestamp();
     const duration = end - start;
 
     return BenchmarkResult{
@@ -196,7 +197,7 @@ pub fn benchmarkWebSocketMessage(allocator: std.mem.Allocator, iterations: u32) 
 
 pub fn benchmarkOpenApiGeneration(allocator: std.mem.Allocator, iterations: u32) !BenchmarkResult {
     _ = allocator;
-    const start = std.time.nanoTimestamp();
+    const start = tri_time.nanoTimestamp();
 
     // Simulate OpenAPI spec generation
     var accumulator: u32 = 0;
@@ -206,7 +207,7 @@ pub fn benchmarkOpenApiGeneration(allocator: std.mem.Allocator, iterations: u32)
         if (accumulator == 0) accumulator = 1;
     }
 
-    const end = std.time.nanoTimestamp();
+    const end = tri_time.nanoTimestamp();
     const duration = end - start;
 
     return BenchmarkResult{
@@ -229,7 +230,7 @@ pub fn runAllBenchmarks(allocator: std.mem.Allocator) !BenchmarkReport {
     const iterations: u32 = 10000;
     report.total_operations = iterations * 6;
 
-    const overall_start = std.time.nanoTimestamp();
+    const overall_start = tri_time.nanoTimestamp();
 
     // REST benchmarks
     try report.addResult(try benchmarkRestGet(allocator, iterations));
@@ -247,7 +248,7 @@ pub fn runAllBenchmarks(allocator: std.mem.Allocator) !BenchmarkReport {
     // OpenAPI generation benchmark
     try report.addResult(try benchmarkOpenApiGeneration(allocator, iterations));
 
-    const overall_end = std.time.nanoTimestamp();
+    const overall_end = tri_time.nanoTimestamp();
     report.total_duration_ns = overall_end - overall_start;
 
     return report;

@@ -8,6 +8,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const vm_runtime = @import("vm_runtime.zig");
 const VM = vm_runtime.VM;
@@ -269,7 +270,7 @@ pub const HotPathProfiler = struct {
 
     /// Record function entry - returns true if function should be JIT compiled
     pub fn recordEntry(self: *Self, address: u32) !bool {
-        const now = std.time.nanoTimestamp();
+        const now = tri_time.nanoTimestamp();
 
         const result = try self.profiles.getOrPut(address);
         if (!result.found_existing) {
@@ -3027,7 +3028,7 @@ pub const DeoptHistory = struct {
 
     pub fn recordRecompilation(self: *DeoptHistory) void {
         self.recompilation_count += 1;
-        self.last_recompile_time = std.time.timestamp();
+        self.last_recompile_time = tri_time.timestamp();
     }
 
     pub fn getDominantDeoptReason(self: *const DeoptHistory) DeoptReason {
@@ -3102,7 +3103,7 @@ pub const RecompilationPolicy = struct {
         }
 
         // Check cooldown
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
         if (now - history.last_recompile_time < @divFloor(self.recompile_cooldown_ns, 1_000_000_000)) {
             return .keep_current;
         }
@@ -3982,7 +3983,7 @@ pub const JITDashboard = struct {
         }
 
         self.cached_stats = stats;
-        self.last_update = std.time.timestamp();
+        self.last_update = tri_time.timestamp();
     }
 
     /// Get current statistics
@@ -9878,7 +9879,7 @@ pub const TieredCompiler = struct {
         self.stats.functions_at_tier[@intFromEnum(state.current_tier)] += 1;
         self.stats.total_promotions += 1;
 
-        const compile_start = std.time.nanoTimestamp();
+        const compile_start = tri_time.nanoTimestamp();
 
         switch (state.current_tier) {
             .JIT_IR => {
@@ -10040,7 +10041,7 @@ pub const TieredCompiler = struct {
                 try self.jit_ir_cache.put(address, optimized_ir);
                 self.stats.tier1_promotions += 1;
 
-                const compile_time: u64 = @intCast(@max(0, std.time.nanoTimestamp() - compile_start));
+                const compile_time: u64 = @intCast(@max(0, tri_time.nanoTimestamp() - compile_start));
                 self.stats.tier1_compile_time_ns += compile_time;
                 self.stats.total_compile_time_ns += compile_time;
             },
@@ -10181,7 +10182,7 @@ pub const TieredCompiler = struct {
                         try self.native_cache.put(address, executable);
                         self.stats.tier2_promotions += 1;
 
-                        const compile_time: u64 = @intCast(@max(0, std.time.nanoTimestamp() - compile_start));
+                        const compile_time: u64 = @intCast(@max(0, tri_time.nanoTimestamp() - compile_start));
                         self.stats.tier2_compile_time_ns += compile_time;
                         self.stats.total_compile_time_ns += compile_time;
                     } else |_| {
@@ -10210,7 +10211,7 @@ pub const TieredCompiler = struct {
     /// Execute function at appropriate tier
     pub fn execute(self: *Self, address: u32, vm: *VM, ir: []const IRInstruction) !i64 {
         const tier = self.getTier(address);
-        const exec_start = std.time.nanoTimestamp();
+        const exec_start = tri_time.nanoTimestamp();
 
         const result: i64 = switch (tier) {
             .Interpreter => blk: {
@@ -10231,7 +10232,7 @@ pub const TieredCompiler = struct {
             },
         };
 
-        const exec_time: u64 = @intCast(@max(0, std.time.nanoTimestamp() - exec_start));
+        const exec_time: u64 = @intCast(@max(0, tri_time.nanoTimestamp() - exec_start));
 
         // Record and check for promotion
         if (try self.recordExecution(address, exec_time)) |next_tier| {
@@ -10433,7 +10434,7 @@ pub const JITAdapter = struct {
         self.jit_instructions = 0;
         self.interpreter_instructions = 0;
 
-        const start_time = std.time.nanoTimestamp();
+        const start_time = tri_time.nanoTimestamp();
 
         const result = switch (self.config.mode) {
             .Interpreter => try self.executeInterpreterOnly(),
@@ -10441,7 +10442,7 @@ pub const JITAdapter = struct {
             .FullJIT => try self.executeFullJIT(code),
         };
 
-        const end_time = std.time.nanoTimestamp();
+        const end_time = tri_time.nanoTimestamp();
         const execution_time: u64 = @intCast(@max(0, end_time - start_time));
 
         return ExecutionResult{
@@ -10482,9 +10483,9 @@ pub const JITAdapter = struct {
         }
 
         // Execute via interpreter
-        const exec_start = std.time.nanoTimestamp();
+        const exec_start = tri_time.nanoTimestamp();
         const result = try self.vm.run();
-        const exec_end = std.time.nanoTimestamp();
+        const exec_end = tri_time.nanoTimestamp();
         const exec_time: u64 = @intCast(@max(0, exec_end - exec_start));
 
         self.interpreter_instructions = self.vm.instructions_executed;
@@ -10509,7 +10510,7 @@ pub const JITAdapter = struct {
             return;
         }
 
-        const compile_start = std.time.nanoTimestamp();
+        const compile_start = tri_time.nanoTimestamp();
 
         // Record trace for the function
         try self.jit_compiler.startTrace(address);
@@ -10572,7 +10573,7 @@ pub const JITAdapter = struct {
             }
         }
 
-        const compile_end = std.time.nanoTimestamp();
+        const compile_end = tri_time.nanoTimestamp();
         self.native_compile_time_ns += @intCast(@max(0, compile_end - compile_start));
     }
 
@@ -10601,7 +10602,7 @@ pub const JITAdapter = struct {
         self.native_instructions = 0;
 
         const entry_addr: u32 = 0;
-        const start_time = std.time.nanoTimestamp();
+        const start_time = tri_time.nanoTimestamp();
 
         // Get current tier for this function
         const current_tier = self.tiered_compiler.getTier(entry_addr);
@@ -10660,7 +10661,7 @@ pub const JITAdapter = struct {
             },
         };
 
-        const end_time = std.time.nanoTimestamp();
+        const end_time = tri_time.nanoTimestamp();
         const exec_time: u64 = @intCast(@max(0, end_time - start_time));
 
         // Record execution and check for tier promotion
@@ -10870,7 +10871,7 @@ pub const JITAdapter = struct {
     fn recordTraceForAddress(self: *Self, addr: u32, code: []const u8) !void {
         if (self.jit_compiler.lookupCode(addr) != null) return; // Already compiled
 
-        const compile_start = std.time.nanoTimestamp();
+        const compile_start = tri_time.nanoTimestamp();
 
         try self.jit_compiler.startTrace(addr);
 
@@ -10920,7 +10921,7 @@ pub const JITAdapter = struct {
             ip += 1 + operand_size;
         }
 
-        const compile_end = std.time.nanoTimestamp();
+        const compile_end = tri_time.nanoTimestamp();
         self.jit_compile_time_ns += @intCast(@max(0, compile_end - compile_start));
 
         // Try to compile to native code
@@ -10934,7 +10935,7 @@ pub const JITAdapter = struct {
         // Skip if already in native cache
         if (self.native_cache.contains(addr)) return;
 
-        const native_start = std.time.nanoTimestamp();
+        const native_start = tri_time.nanoTimestamp();
 
         var compiler = NativeCompiler.init(self.allocator);
         defer compiler.deinit();
@@ -10956,7 +10957,7 @@ pub const JITAdapter = struct {
             .is_valid = true,
         });
 
-        const native_end = std.time.nanoTimestamp();
+        const native_end = tri_time.nanoTimestamp();
         self.native_compile_time_ns += @intCast(@max(0, native_end - native_start));
     }
 
@@ -11676,12 +11677,12 @@ test "Benchmark: VM vs JIT IR vs Native" {
     defer adapter.deinit();
     try adapter.compileToNative(0, &ir);
 
-    const native_start = std.time.nanoTimestamp();
+    const native_start = tri_time.nanoTimestamp();
     var native_result: i64 = 0;
     for (0..iterations) |_| {
         native_result = adapter.tryExecuteNative(0).?;
     }
-    const native_end = std.time.nanoTimestamp();
+    const native_end = tri_time.nanoTimestamp();
     const native_time = native_end - native_start;
 
     // Check result
@@ -11717,12 +11718,12 @@ test "to: onandin to vs and" {
     const iterations: usize = 1000;
 
     // to onandin toyes
-    const start = std.time.nanoTimestamp();
+    const start = tri_time.nanoTimestamp();
     var result: i64 = 0;
     for (0..iterations) |_| {
         result = adapter.tryExecuteNative(0).?;
     }
-    const end = std.time.nanoTimestamp();
+    const end = tri_time.nanoTimestamp();
     const native_time: u64 = @intCast(@max(0, end - start));
 
     // Check result
@@ -11755,13 +11756,13 @@ test "Benchmark: Full Optimization Pipeline (Array Add)" {
     const iterations: usize = 100000;
 
     // 1. Scalar baseline (no SIMD)
-    const scalar_start = std.time.nanoTimestamp();
+    const scalar_start = tri_time.nanoTimestamp();
     for (0..iterations) |_| {
         for (0..64) |i| {
             result_scalar[i] = a[i] + b[i];
         }
     }
-    const scalar_end = std.time.nanoTimestamp();
+    const scalar_end = tri_time.nanoTimestamp();
     const scalar_time: u64 = @intCast(@max(0, scalar_end - scalar_start));
 
     // 2. SIMD vectorized (SSE - 4 elements per instruction)
@@ -11771,11 +11772,11 @@ test "Benchmark: Full Optimization Pipeline (Array Add)" {
 
     const simd_func: *const fn ([*]i32, [*]i32, [*]i32, usize) callconv(.C) void = @ptrCast(exec_simd.code.ptr);
 
-    const simd_start = std.time.nanoTimestamp();
+    const simd_start = tri_time.nanoTimestamp();
     for (0..iterations) |_| {
         simd_func(&a, &b, &result_simd, 64);
     }
-    const simd_end = std.time.nanoTimestamp();
+    const simd_end = tri_time.nanoTimestamp();
     const simd_time: u64 = @intCast(@max(0, simd_end - simd_start));
 
     // 3. Combo optimized (SIMD + Unroll)
@@ -11784,11 +11785,11 @@ test "Benchmark: Full Optimization Pipeline (Array Add)" {
 
     const combo_func: *const fn ([*]i32, [*]i32, [*]i32, usize) callconv(.C) void = @ptrCast(exec_combo.code.ptr);
 
-    const combo_start = std.time.nanoTimestamp();
+    const combo_start = tri_time.nanoTimestamp();
     for (0..iterations) |_| {
         combo_func(&a, &b, &result_combo, 64);
     }
-    const combo_end = std.time.nanoTimestamp();
+    const combo_end = tri_time.nanoTimestamp();
     const combo_time: u64 = @intCast(@max(0, combo_end - combo_start));
 
     // Verify results
@@ -12060,13 +12061,13 @@ test "Benchmark: Hot Path Profiler automatic JIT" {
     const iterations: usize = 1000;
 
     // Phase 1: Cold execution (profiling only)
-    const cold_start = std.time.nanoTimestamp();
+    const cold_start = tri_time.nanoTimestamp();
     for (0..9) |_| {
         const should_compile = try adapter.profiler.recordEntry(0);
         try std.testing.expect(!should_compile);
         adapter.profiler.recordExit(0, 100);
     }
-    const cold_end = std.time.nanoTimestamp();
+    const cold_end = tri_time.nanoTimestamp();
     const cold_time: u64 = @intCast(@max(0, cold_end - cold_start));
 
     // Phase 2: JIT trigger
@@ -12078,13 +12079,13 @@ test "Benchmark: Hot Path Profiler automatic JIT" {
     adapter.profiler.markCompiled(0);
 
     // Phase 3: Hot execution (native code)
-    const hot_start = std.time.nanoTimestamp();
+    const hot_start = tri_time.nanoTimestamp();
     var result: i64 = 0;
     for (0..iterations) |_| {
         result = adapter.tryExecuteNative(0).?;
         _ = try adapter.profiler.recordEntry(0);
     }
-    const hot_end = std.time.nanoTimestamp();
+    const hot_end = tri_time.nanoTimestamp();
     const hot_time: u64 = @intCast(@max(0, hot_end - hot_start));
 
     // Verify result
@@ -12281,9 +12282,9 @@ test "Benchmark: Tiered Compilation Pipeline" {
     // Phase 1: Interpreter tier
     var interpreter_time: u64 = 0;
     for (0..9) |_| {
-        const start = std.time.nanoTimestamp();
+        const start = tri_time.nanoTimestamp();
         const result = interpretIRCode(&ir);
-        const end = std.time.nanoTimestamp();
+        const end = tri_time.nanoTimestamp();
         interpreter_time += @intCast(@max(0, end - start));
         _ = try compiler.recordExecution(addr, @intCast(@max(0, end - start)));
         try std.testing.expectEqual(@as(i64, 42), result);
@@ -12296,9 +12297,9 @@ test "Benchmark: Tiered Compilation Pipeline" {
     // Phase 2: JIT IR tier
     var jit_ir_time: u64 = 0;
     for (0..40) |_| {
-        const start = std.time.nanoTimestamp();
+        const start = tri_time.nanoTimestamp();
         const result = interpretIRCode(&ir);
-        const end = std.time.nanoTimestamp();
+        const end = tri_time.nanoTimestamp();
         jit_ir_time += @intCast(@max(0, end - start));
         _ = try compiler.recordExecution(addr, @intCast(@max(0, end - start)));
         try std.testing.expectEqual(@as(i64, 42), result);
@@ -12312,9 +12313,9 @@ test "Benchmark: Tiered Compilation Pipeline" {
     var native_time: u64 = 0;
     if (compiler.native_cache.getPtr(addr)) |executable| {
         for (0..iterations) |_| {
-            const start = std.time.nanoTimestamp();
+            const start = tri_time.nanoTimestamp();
             const result = executable.call();
-            const end = std.time.nanoTimestamp();
+            const end = tri_time.nanoTimestamp();
             native_time += @intCast(@max(0, end - start));
             try std.testing.expectEqual(@as(i64, 42), result);
         }
@@ -12583,23 +12584,23 @@ test "Benchmark: Native call overhead analysis" {
     const iterations: usize = 10000;
 
     // Benchmark 1: Direct native call (no overhead)
-    const direct_start = std.time.nanoTimestamp();
+    const direct_start = tri_time.nanoTimestamp();
     var direct_result: i64 = 0;
     for (0..iterations) |_| {
         direct_result = executable.call();
     }
-    const direct_end = std.time.nanoTimestamp();
+    const direct_end = tri_time.nanoTimestamp();
     const direct_time: u64 = @intCast(@max(0, direct_end - direct_start));
 
     try std.testing.expectEqual(@as(i64, 5), direct_result);
 
     // Benchmark 2: IR interpreter
-    const ir_start = std.time.nanoTimestamp();
+    const ir_start = tri_time.nanoTimestamp();
     var ir_result: i64 = 0;
     for (0..iterations) |_| {
         ir_result = interpretIRCode(&ir);
     }
-    const ir_end = std.time.nanoTimestamp();
+    const ir_end = tri_time.nanoTimestamp();
     const ir_time: u64 = @intCast(@max(0, ir_end - ir_start));
 
     try std.testing.expectEqual(@as(i64, 5), ir_result);
@@ -12610,11 +12611,11 @@ test "Benchmark: Native call overhead analysis" {
     // Note: We can't put executable in cache as it would be freed twice
     // So we measure just the lookup overhead separately
 
-    const lookup_start = std.time.nanoTimestamp();
+    const lookup_start = tri_time.nanoTimestamp();
     for (0..iterations) |_| {
         _ = cache.get(0); // Just lookup, no call
     }
-    const lookup_end = std.time.nanoTimestamp();
+    const lookup_end = tri_time.nanoTimestamp();
     const lookup_time: u64 = @intCast(@max(0, lookup_end - lookup_start));
 
     if (@import("builtin").mode == .Debug) {
@@ -12864,21 +12865,21 @@ test "Benchmark: Loop unrolling effect" {
     const iterations: usize = 10000;
 
     // Benchmark original loop
-    const loop_start = std.time.nanoTimestamp();
+    const loop_start = tri_time.nanoTimestamp();
     var loop_result: i64 = 0;
     for (0..iterations) |_| {
         loop_result = interpretIRCode(&loop_ir);
     }
-    const loop_end = std.time.nanoTimestamp();
+    const loop_end = tri_time.nanoTimestamp();
     const loop_time: u64 = @intCast(@max(0, loop_end - loop_start));
 
     // Benchmark unrolled
-    const unrolled_start = std.time.nanoTimestamp();
+    const unrolled_start = tri_time.nanoTimestamp();
     var unrolled_result: i64 = 0;
     for (0..iterations) |_| {
         unrolled_result = interpretIRCode(unrolled_ir);
     }
-    const unrolled_end = std.time.nanoTimestamp();
+    const unrolled_end = tri_time.nanoTimestamp();
     const unrolled_time: u64 = @intCast(@max(0, unrolled_end - unrolled_start));
 
     const stats = unroller.getStats();
@@ -13142,21 +13143,21 @@ test "Benchmark: Constant folding effect" {
     const iterations: usize = 10000;
 
     // Benchmark unfolded
-    const unfolded_start = std.time.nanoTimestamp();
+    const unfolded_start = tri_time.nanoTimestamp();
     var unfolded_result: i64 = 0;
     for (0..iterations) |_| {
         unfolded_result = interpretIRCode(&unfolded_ir);
     }
-    const unfolded_end = std.time.nanoTimestamp();
+    const unfolded_end = tri_time.nanoTimestamp();
     const unfolded_time: u64 = @intCast(@max(0, unfolded_end - unfolded_start));
 
     // Benchmark folded
-    const folded_start = std.time.nanoTimestamp();
+    const folded_start = tri_time.nanoTimestamp();
     var folded_result: i64 = 0;
     for (0..iterations) |_| {
         folded_result = interpretIRCode(folded_ir);
     }
-    const folded_end = std.time.nanoTimestamp();
+    const folded_end = tri_time.nanoTimestamp();
     const folded_time: u64 = @intCast(@max(0, folded_end - folded_start));
 
     // Both should produce same result
@@ -13285,21 +13286,21 @@ test "Benchmark: Folding + DCE combined effect" {
     const iterations: usize = 10000;
 
     // Benchmark original
-    const orig_start = std.time.nanoTimestamp();
+    const orig_start = tri_time.nanoTimestamp();
     var orig_result: i64 = 0;
     for (0..iterations) |_| {
         orig_result = interpretIRCode(&original_ir);
     }
-    const orig_end = std.time.nanoTimestamp();
+    const orig_end = tri_time.nanoTimestamp();
     const orig_time: u64 = @intCast(@max(0, orig_end - orig_start));
 
     // Benchmark optimized
-    const opt_start = std.time.nanoTimestamp();
+    const opt_start = tri_time.nanoTimestamp();
     var opt_result: i64 = 0;
     for (0..iterations) |_| {
         opt_result = interpretIRCode(optimized);
     }
-    const opt_end = std.time.nanoTimestamp();
+    const opt_end = tri_time.nanoTimestamp();
     const opt_time: u64 = @intCast(@max(0, opt_end - opt_start));
 
     // Both should produce same result
@@ -14617,21 +14618,21 @@ test "Benchmark: Strength reduction effect" {
     const iterations: usize = 10000;
 
     // Benchmark original
-    const orig_start = std.time.nanoTimestamp();
+    const orig_start = tri_time.nanoTimestamp();
     var orig_result: i64 = 0;
     for (0..iterations) |_| {
         orig_result = interpretIRCode(&original_ir);
     }
-    const orig_end = std.time.nanoTimestamp();
+    const orig_end = tri_time.nanoTimestamp();
     const orig_time: u64 = @intCast(@max(0, orig_end - orig_start));
 
     // Benchmark reduced
-    const red_start = std.time.nanoTimestamp();
+    const red_start = tri_time.nanoTimestamp();
     var red_result: i64 = 0;
     for (0..iterations) |_| {
         red_result = interpretIRCode(reduced);
     }
-    const red_end = std.time.nanoTimestamp();
+    const red_end = tri_time.nanoTimestamp();
     const red_time: u64 = @intCast(@max(0, red_end - red_start));
 
     // Both should produce same result: 5 * 8 = 40
@@ -14733,21 +14734,21 @@ test "Integration Benchmark: Full optimization pipeline" {
     const iterations: usize = 10000;
 
     // Original
-    const orig_start = std.time.nanoTimestamp();
+    const orig_start = tri_time.nanoTimestamp();
     var orig_result: i64 = 0;
     for (0..iterations) |_| {
         orig_result = interpretIRCode(&complex_ir);
     }
-    const orig_end = std.time.nanoTimestamp();
+    const orig_end = tri_time.nanoTimestamp();
     const orig_time: u64 = @intCast(@max(0, orig_end - orig_start));
 
     // Optimized
-    const opt_start = std.time.nanoTimestamp();
+    const opt_start = tri_time.nanoTimestamp();
     var opt_result: i64 = 0;
     for (0..iterations) |_| {
         opt_result = interpretIRCode(fully_optimized);
     }
-    const opt_end = std.time.nanoTimestamp();
+    const opt_end = tri_time.nanoTimestamp();
     const opt_time: u64 = @intCast(@max(0, opt_end - opt_start));
 
     // Verify correctness: ((10*2)+(20*3)) * ((64/4)+(8*5)) = (20+60) * (16+40) = 80 * 56 = 4480
@@ -15134,11 +15135,11 @@ test "ICRuntime benchmark: IC hit vs miss" {
     _ = try runtime.callMethod(0x1000, 1, 100);
 
     // Benchmark IC hits
-    const start = std.time.nanoTimestamp();
+    const start = tri_time.nanoTimestamp();
     for (0..iterations) |_| {
         _ = try runtime.callMethod(0x1000, 1, 100);
     }
-    const elapsed = std.time.nanoTimestamp() - start;
+    const elapsed = tri_time.nanoTimestamp() - start;
     const ns_per_call = @as(f64, @floatFromInt(elapsed)) / @as(f64, @floatFromInt(iterations));
 
     const stats = runtime.getStats();
@@ -15486,17 +15487,17 @@ test "Benchmark: Register mapping vs default allocation" {
     // Benchmark
     const iterations: usize = 10000;
 
-    const start_default = std.time.nanoTimestamp();
+    const start_default = tri_time.nanoTimestamp();
     for (0..iterations) |_| {
         _ = exec_default.call();
     }
-    const time_default: u64 = @intCast(@max(0, std.time.nanoTimestamp() - start_default));
+    const time_default: u64 = @intCast(@max(0, tri_time.nanoTimestamp() - start_default));
 
-    const start_mapped = std.time.nanoTimestamp();
+    const start_mapped = tri_time.nanoTimestamp();
     for (0..iterations) |_| {
         _ = exec_mapped.call();
     }
-    const time_mapped: u64 = @intCast(@max(0, std.time.nanoTimestamp() - start_mapped));
+    const time_mapped: u64 = @intCast(@max(0, tri_time.nanoTimestamp() - start_mapped));
 
     if (@import("builtin").mode == .Debug) {
         std.debug.print("\n=== Register Mapping Benchmark ===\n", .{});

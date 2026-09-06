@@ -3,6 +3,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 pub const ParallelExecutor = struct {
     allocator: std.mem.Allocator,
     pool: *std.Thread.Pool,
@@ -76,7 +77,7 @@ pub const ParallelExecutor = struct {
                 struct {
                     fn run(t: *Task, r: *TaskResult, g: *std.Thread.WaitGroup) void {
                         defer g.done();
-                        const start = std.time.nanoTimestamp();
+                        const start = tri_time.nanoTimestamp();
 
                         r.* = TaskResult{
                             .success = false,
@@ -85,7 +86,7 @@ pub const ParallelExecutor = struct {
 
                         // Execute task function
                         if (t.func(std.heap.page_allocator, t.context)) {
-                            const end = std.time.nanoTimestamp();
+                            const end = tri_time.nanoTimestamp();
                             const duration_ms = @as(u64, @intFromFloat(@divTrunc(@as(f128, @floatFromInt(end - start)), 1_000_000)));
 
                             r.* = .{
@@ -97,7 +98,7 @@ pub const ParallelExecutor = struct {
                                 t.id, t.name, duration_ms,
                             });
                         } else |err| {
-                            const end = std.time.nanoTimestamp();
+                            const end = tri_time.nanoTimestamp();
                             const duration_ms = @as(u64, @intFromFloat(@divTrunc(@as(f128, @floatFromInt(end - start)), 1_000_000)));
 
                             r.* = .{
@@ -126,7 +127,7 @@ pub const ParallelExecutor = struct {
         const results = try self.allocator.alloc(TaskResult, tasks.len);
 
         for (tasks, 0..) |task, i| {
-            const start = std.time.nanoTimestamp();
+            const start = tri_time.nanoTimestamp();
 
             results[i] = TaskResult{
                 .success = false,
@@ -134,7 +135,7 @@ pub const ParallelExecutor = struct {
             };
 
             if (task.func(self.allocator, task.context)) {
-                const end = std.time.nanoTimestamp();
+                const end = tri_time.nanoTimestamp();
                 const duration_ms = @as(u64, @intFromFloat(@divTrunc(@as(f128, @floatFromInt(end - start)), 1_000_000)));
 
                 results[i] = .{
@@ -146,7 +147,7 @@ pub const ParallelExecutor = struct {
                     task.id, task.name, duration_ms,
                 });
             } else |err| {
-                const end = std.time.nanoTimestamp();
+                const end = tri_time.nanoTimestamp();
                 const duration_ms = @as(u64, @intFromFloat(@divTrunc(@as(f128, @floatFromInt(end - start)), 1_000_000)));
 
                 results[i] = .{

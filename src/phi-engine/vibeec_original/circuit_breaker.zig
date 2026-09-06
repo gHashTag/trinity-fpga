@@ -16,6 +16,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const testing = std.testing;
 const Allocator = std.mem.Allocator;
 
@@ -194,7 +195,7 @@ pub const CircuitBreaker = struct {
                 .to_state = self.state,
                 .reason = reason,
                 .loop_number = result.loop_number,
-                .timestamp = std.time.timestamp(),
+                .timestamp = tri_time.timestamp(),
             });
         }
 
@@ -217,7 +218,7 @@ pub const CircuitBreaker = struct {
                 .to_state = .closed,
                 .reason = "Manual reset",
                 .loop_number = self.current_loop,
-                .timestamp = std.time.timestamp(),
+                .timestamp = tri_time.timestamp(),
             }) catch {};
         }
     }

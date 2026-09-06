@@ -8,6 +8,8 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
+const tri_io = @import("tri_io");
 const Allocator = std.mem.Allocator;
 const hippocampus = @import("hippocampus.zig");
 
@@ -239,7 +241,8 @@ pub fn categorizeError(message: []const u8) ErrorCategory {
 
 /// Ensure the errors directory exists.
 fn ensureDir() !void {
-    std.fs.cwd().makePath(ERRORS_DIR) catch |err| {
+    const io = tri_io.get();
+    std.Io.Dir.cwd().createDirPath(io, ERRORS_DIR) catch |err| {
         if (err != error.PathAlreadyExists) {
             std.log.err("mu_error_protocol: cannot create {s}: {}", .{ ERRORS_DIR, err });
             return err;
@@ -249,7 +252,7 @@ fn ensureDir() !void {
 
 /// Generate a timestamp string for filenames.
 fn getTimestamp(allocator: Allocator) ![]u8 {
-    const epoch = std.time.timestamp();
+    const epoch = tri_time.timestamp();
     return std.fmt.allocPrint(allocator, "{d}", .{epoch});
 }
 
@@ -268,62 +271,62 @@ pub fn logError(allocator: Allocator, err: MuError) ![]u8 {
     // Build JSON manually (no std.json.stringify in Zig 0.15)
     var buf: std.ArrayList(u8) = .empty;
     errdefer buf.deinit(allocator);
-    const w = buf.writer(allocator);
 
-    try w.writeAll("{\n");
-    try w.print("  \"timestamp\": \"{s}\",\n", .{ts});
-    try w.print("  \"spec\": \"{s}\",\n", .{err.spec});
-    try w.print("  \"link\": {d},\n", .{err.link});
-    try w.print("  \"link_name\": \"{s}\",\n", .{err.link_name});
-    try w.print("  \"error_category\": \"{s}\",\n", .{err.error_category.toString()});
+    try buf.appendSlice(allocator, "{\n");
+    try buf.print(allocator, "  \"timestamp\": \"{s}\",\n", .{ts});
+    try buf.print(allocator, "  \"spec\": \"{s}\",\n", .{err.spec});
+    try buf.print(allocator, "  \"link\": {d},\n", .{err.link});
+    try buf.print(allocator, "  \"link_name\": \"{s}\",\n", .{err.link_name});
+    try buf.print(allocator, "  \"error_category\": \"{s}\",\n", .{err.error_category.toString()});
     // Escape error message for JSON
-    try w.writeAll("  \"error_message\": \"");
+    try buf.appendSlice(allocator, "  \"error_message\": \"");
     for (err.error_message) |c| {
         switch (c) {
-            '"' => try w.writeAll("\\\""),
-            '\\' => try w.writeAll("\\\\"),
-            '\n' => try w.writeAll("\\n"),
-            '\r' => try w.writeAll("\\r"),
-            '\t' => try w.writeAll("\\t"),
+            '"' => try buf.appendSlice(allocator, "\\\""),
+            '\\' => try buf.appendSlice(allocator, "\\\\"),
+            '\n' => try buf.appendSlice(allocator, "\\n"),
+            '\r' => try buf.appendSlice(allocator, "\\r"),
+            '\t' => try buf.appendSlice(allocator, "\\t"),
             0x00...0x08, 0x0b, 0x0c, 0x0e...0x1f => {
-                try w.print("\\u{x:0>4}", .{c});
+                try buf.print(allocator, "\\u{x:0>4}", .{c});
             },
-            else => try w.writeByte(c),
+            else => try buf.append(allocator, c),
         }
     }
-    try w.writeAll("\",\n");
-    try w.print("  \"error_line\": {d},\n", .{err.error_line});
-    try w.print("  \"generated_file\": \"{s}\",\n", .{err.generated_file});
-    try w.print("  \"fix_attempted\": {s},\n", .{if (err.fix_attempted) "true" else "false"});
-    try w.print("  \"fix_result\": \"{s}\",\n", .{err.fix_result});
+    try buf.appendSlice(allocator, "\",\n");
+    try buf.print(allocator, "  \"error_line\": {d},\n", .{err.error_line});
+    try buf.print(allocator, "  \"generated_file\": \"{s}\",\n", .{err.generated_file});
+    try buf.print(allocator, "  \"fix_attempted\": {s},\n", .{if (err.fix_attempted) "true" else "false"});
+    try buf.print(allocator, "  \"fix_result\": \"{s}\",\n", .{err.fix_result});
     // v2 fields
-    try w.print("  \"severity\": \"{s}\",\n", .{err.severity.toString()});
-    try w.writeAll("  \"root_cause\": \"");
+    try buf.print(allocator, "  \"severity\": \"{s}\",\n", .{err.severity.toString()});
+    try buf.appendSlice(allocator, "  \"root_cause\": \"");
     for (err.root_cause) |c| {
         switch (c) {
-            '"' => try w.writeAll("\\\""),
-            '\\' => try w.writeAll("\\\\"),
-            '\n' => try w.writeAll("\\n"),
-            '\r' => try w.writeAll("\\r"),
-            '\t' => try w.writeAll("\\t"),
+            '"' => try buf.appendSlice(allocator, "\\\""),
+            '\\' => try buf.appendSlice(allocator, "\\\\"),
+            '\n' => try buf.appendSlice(allocator, "\\n"),
+            '\r' => try buf.appendSlice(allocator, "\\r"),
+            '\t' => try buf.appendSlice(allocator, "\\t"),
             0x00...0x08, 0x0b, 0x0c, 0x0e...0x1f => {
-                try w.print("\\u{x:0>4}", .{c});
+                try buf.print(allocator, "\\u{x:0>4}", .{c});
             },
-            else => try w.writeByte(c),
+            else => try buf.append(allocator, c),
         }
     }
-    try w.writeAll("\",\n");
-    try w.print("  \"resolution_status\": \"{s}\",\n", .{err.resolution_status.toString()});
-    try w.print("  \"fix_commit\": \"{s}\",\n", .{err.fix_commit});
-    try w.print("  \"generator_component\": \"{s}\"\n", .{err.generator_component});
-    try w.writeAll("}\n");
+    try buf.appendSlice(allocator, "\",\n");
+    try buf.print(allocator, "  \"resolution_status\": \"{s}\",\n", .{err.resolution_status.toString()});
+    try buf.print(allocator, "  \"fix_commit\": \"{s}\",\n", .{err.fix_commit});
+    try buf.print(allocator, "  \"generator_component\": \"{s}\"\n", .{err.generator_component});
+    try buf.appendSlice(allocator, "}\n");
 
     const json = try buf.toOwnedSlice(allocator);
     defer allocator.free(json);
 
-    const file = try std.fs.cwd().createFile(filename, .{});
-    defer file.close();
-    try file.writeAll(json);
+    const io = tri_io.get();
+    const file = try std.Io.Dir.cwd().createFile(io, filename, .{});
+    defer file.close(io);
+    try file.writeStreamingAll(io, json);
 
     // Dual-write to hippocampus (Wave 2: Basal Ganglia)
     writeToHippocampusDual(allocator, err.spec, err.fix_result, err.generator_component) catch |write_err| {
@@ -336,7 +339,7 @@ pub fn logError(allocator: Allocator, err: MuError) ![]u8 {
 // Dual-write helper to avoid shadowing local ts variable
 fn writeToHippocampusDual(allocator: Allocator, spec: []const u8, fix_result: []const u8, generator: []const u8) !void {
     var record: hippocampus.MemoryRecord = .{ .kind = .observation, .ttl = 30 * 24 * 3600 };
-    const mem_ts: u64 = @intCast(std.time.timestamp());
+    const mem_ts: u64 = @intCast(tri_time.timestamp());
     hippocampus.generateId(&record.id_buf, &record.id_len, mem_ts, "mu_resolved");
     hippocampus.copyToFixed(32, &record.agent_buf, &record.agent_len, "mu_resolved");
     record.ts = mem_ts;
@@ -367,13 +370,14 @@ pub fn countErrors(allocator: Allocator) !ErrorStats {
     _ = allocator;
     var stats = ErrorStats.init();
 
-    var dir = std.fs.cwd().openDir(ERRORS_DIR, .{ .iterate = true }) catch {
+    const io = tri_io.get();
+    var dir = std.Io.Dir.cwd().openDir(io, ERRORS_DIR, .{ .iterate = true }) catch {
         return stats; // No errors dir = no errors
     };
-    defer dir.close();
+    defer dir.close(io);
 
     var iter = dir.iterate();
-    while (try iter.next()) |entry| {
+    while (try iter.next(io)) |entry| {
         if (entry.kind != .file) continue;
         if (!std.mem.endsWith(u8, entry.name, ".json")) continue;
         stats.total += 1;
@@ -382,7 +386,7 @@ pub fn countErrors(allocator: Allocator) !ErrorStats {
         var path_buf: [512]u8 = undefined;
         const path = std.fmt.bufPrint(&path_buf, ERRORS_DIR ++ "/{s}", .{entry.name}) catch continue;
 
-        const content = dir.readFileAlloc(std.heap.page_allocator, entry.name, 64 * 1024) catch continue;
+        const content = dir.readFileAlloc(io, entry.name, std.heap.page_allocator, .limited(64 * 1024)) catch continue;
         defer std.heap.page_allocator.free(content);
 
         // Simple category extraction from JSON
@@ -447,12 +451,13 @@ pub fn runMuErrorsCommand(allocator: Allocator, args: []const []const u8) !void 
     }
 
     // Scan errors directory
-    var dir = std.fs.cwd().openDir(ERRORS_DIR, .{ .iterate = true }) catch {
+    const io = tri_io.get();
+    var dir = std.Io.Dir.cwd().openDir(io, ERRORS_DIR, .{ .iterate = true }) catch {
         std.debug.print("  \x1b[90mNo errors logged yet.\x1b[0m\n", .{});
         std.debug.print("  Directory: {s}\n", .{ERRORS_DIR});
         return;
     };
-    defer dir.close();
+    defer dir.close(io);
 
     var count: usize = 0;
     var shown: usize = 0;
@@ -461,14 +466,14 @@ pub fn runMuErrorsCommand(allocator: Allocator, args: []const []const u8) !void 
     std.debug.print("  \x1b[36mLimit:\x1b[0m  {d}\n\n", .{limit});
 
     var iter = dir.iterate();
-    while (try iter.next()) |entry| {
+    while (try iter.next(io)) |entry| {
         if (entry.kind != .file) continue;
         if (!std.mem.endsWith(u8, entry.name, ".json")) continue;
         count += 1;
 
         if (shown >= limit) continue;
 
-        const content = dir.readFileAlloc(allocator, entry.name, 64 * 1024) catch continue;
+        const content = dir.readFileAlloc(io, entry.name, allocator, .limited(64 * 1024)) catch continue;
         defer allocator.free(content);
 
         // Apply category filter
@@ -704,14 +709,15 @@ test "logError — creates file" {
     defer allocator.free(path);
 
     // Verify file exists
-    const content = try std.fs.cwd().readFileAlloc(allocator, path, 64 * 1024);
+    const io = tri_io.get();
+    const content = try std.Io.Dir.cwd().readFileAlloc(io, path, allocator, .limited(64 * 1024));
     defer allocator.free(content);
 
     try std.testing.expect(std.mem.indexOf(u8, content, "TYPE_MAPPING") != null);
     try std.testing.expect(std.mem.indexOf(u8, content, "test error msg") != null);
 
     // Cleanup
-    std.fs.cwd().deleteFile(path) catch |del_err| {
+    std.Io.Dir.cwd().deleteFile(io, path) catch |del_err| {
         std.log.debug("mu_error_protocol: test cleanup deleteFile failed: {}", .{del_err});
     };
 }
@@ -766,7 +772,8 @@ test "logError — v2 fields in JSON" {
     const path = try logError(allocator, err);
     defer allocator.free(path);
 
-    const content = try std.fs.cwd().readFileAlloc(allocator, path, 64 * 1024);
+    const io = tri_io.get();
+    const content = try std.Io.Dir.cwd().readFileAlloc(io, path, allocator, .limited(64 * 1024));
     defer allocator.free(content);
 
     // v2 fields present
@@ -775,7 +782,7 @@ test "logError — v2 fields in JSON" {
     try std.testing.expect(std.mem.indexOf(u8, content, "\"generator_component\": \"type_mapper\"") != null);
     try std.testing.expect(std.mem.indexOf(u8, content, "missing type mapping") != null);
 
-    std.fs.cwd().deleteFile(path) catch |del_err| {
+    std.Io.Dir.cwd().deleteFile(io, path) catch |del_err| {
         std.log.debug("mu_error_protocol: test cleanup deleteFile failed: {}", .{del_err});
     };
 }

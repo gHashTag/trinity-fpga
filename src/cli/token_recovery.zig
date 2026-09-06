@@ -10,6 +10,7 @@
 
 const std = @import("std");
 
+const tri_io = @import("tri_io");
 const Account = struct {
     name: []const u8,
     env_key: []const u8,
@@ -110,7 +111,7 @@ pub fn main() !void {
 }
 
 fn testToken(allocator: std.mem.Allocator, token: []const u8) !?[]const u8 {
-    var client = std.http.Client{ .allocator = allocator };
+    var client = std.http.Client{ .allocator = allocator, .io = tri_io.get() };
     defer client.deinit();
 
     const uri = try std.Uri.parse("https://railway.com/graphql");

@@ -6,6 +6,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const storage_discovery = @import("storage_discovery.zig");
 const protocol = @import("protocol.zig");
 
@@ -249,7 +250,9 @@ test "ManifestDHT findResponsiblePeers ordering" {
     defer registry.deinit();
 
     // Add 5 peers with different node_ids via StorageAnnounce
-    const addr = std.net.Address.initIp4(.{ 127, 0, 0, 1 }, 9333);
+    // 0.16: std.net is gone. `IpAddress` is a tagged union over
+    // `Ip4Address`/`Ip6Address`, so `initIp4` becomes a plain union literal.
+    const addr: std.Io.net.IpAddress = .{ .ip4 = .{ .bytes = .{ 127, 0, 0, 1 }, .port = 9333 } };
     for (0..5) |i| {
         var peer_id: [32]u8 = undefined;
         @memset(&peer_id, @intCast(i + 1)); // 0x01..01, 0x02..02, etc.
@@ -258,7 +261,7 @@ test "ManifestDHT findResponsiblePeers ordering" {
             .available_bytes = 1024 * 1024,
             .total_bytes = 10 * 1024 * 1024,
             .shard_count = 0,
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
         };
         registry.updateFromAnnounce(announce, addr);
     }

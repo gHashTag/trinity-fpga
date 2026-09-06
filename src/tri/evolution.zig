@@ -18,6 +18,9 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
+const tri_proc = @import("tri_proc");
+const tri_time = @import("tri_time");
 const tri_exit_codes = @import("tri_exit_codes.zig");
 const Allocator = std.mem.Allocator;
 const railway_api = @import("railway_api.zig");
@@ -388,7 +391,7 @@ pub const EvolutionState = struct {
         if (self.event_count >= MAX_EVENTS) return;
         var ev = &self.events[self.event_count];
         ev.* = .{};
-        ev.timestamp = std.time.milliTimestamp();
+        ev.timestamp = tri_time.milliTimestamp();
         ev.event_type = etype;
         const nlen: u8 = @intCast(@min(name.len, 64));
         @memcpy(ev.service_name[0..nlen], name[0..nlen]);
@@ -544,14 +547,12 @@ fn runMock(allocator: Allocator, args: []const []const u8) !void {
     print("  Parents: {d} | Children: {d} | Ctx mutation: {} | Mode: {s}\n\n", .{ num_parents, num_children, allow_ctx, mode_str });
 
     // Load snapshot JSON
-    const file = std.fs.cwd().openFile(snapshot_path, .{}) catch {
-        print("{s}❌ Cannot open snapshot: {s}{s}\n", .{ RED, snapshot_path, RESET });
-        print("  Generate with: python3 tools/farm_leaderboard.py --json > {s}\n", .{snapshot_path});
-        return;
-    };
-    defer file.close();
-
-    const contents = file.readToEndAlloc(allocator, 1024 * 1024) catch {
+    const contents = std.Io.Dir.cwd().readFileAlloc(tri_io.get(), snapshot_path, allocator, .limited(1024 * 1024)) catch |err| {
+        if (err == error.FileNotFound) {
+            print("{s}❌ Cannot open snapshot: {s}{s}\n", .{ RED, snapshot_path, RESET });
+            print("  Generate with: python3 tools/farm_leaderboard.py --json > {s}\n", .{snapshot_path});
+            return;
+        }
         print("{s}❌ Failed to read snapshot{s}\n", .{ RED, RESET });
         return;
     };
@@ -694,7 +695,7 @@ fn runMock(allocator: Allocator, args: []const []const u8) !void {
     var parent_names_buf: [MAX_SERVICES][64]u8 = undefined;
     var parent_name_lens: [MAX_SERVICES]u8 = undefined;
 
-    var seed_counter: u32 = @truncate(@as(u64, @intCast(std.time.milliTimestamp())));
+    var seed_counter: u32 = @truncate(@as(u64, @intCast(tri_time.milliTimestamp())));
 
     for (0..num_children) |ci| {
         // Pick parent: round-robin among top parents
@@ -766,15 +767,16 @@ fn writeMockConfigsJson(
     parent_name_lens: *const [MAX_SERVICES]u8,
     num_children: usize,
 ) void {
-    var out_file = std.fs.cwd().createFile(out_path, .{}) catch {
+    const io = tri_io.get();
+    var out_file = std.Io.Dir.cwd().createFile(io, out_path, .{}) catch {
         print("\n{s}❌ Failed to create {s}{s}\n", .{ RED, out_path, RESET });
         return;
     };
-    defer out_file.close();
+    defer out_file.close(io);
 
-    out_file.writeAll("[\n") catch return;
+    out_file.writeStreamingAll(io, "[\n") catch return;
     for (0..num_children) |ci| {
-        if (ci > 0) out_file.writeAll(",\n") catch return;
+        if (ci > 0) out_file.writeStreamingAll(io, ",\n") catch return;
         const c = &configs_buf[ci];
         const child_name = config_names[ci][0..config_name_lens[ci]];
         const parent_name = parent_names_buf[ci][0..parent_name_lens[ci]];
@@ -795,9 +797,9 @@ fn writeMockConfigsJson(
             c.kill_ppl_30k,
             sacred_str,
         }) catch return;
-        out_file.writeAll(line) catch return;
+        out_file.writeStreamingAll(io, line) catch return;
     }
-    out_file.writeAll("\n]\n") catch return;
+    out_file.writeStreamingAll(io, "\n]\n") catch return;
     print("\n  {s}✅ Configs written → {s}{s}\n", .{ GREEN, out_path, RESET });
 }
 
@@ -813,16 +815,17 @@ fn appendMockLineage(
     sorted_idx: *const [MAX_SERVICES]usize,
     actual_parents: usize,
 ) void {
-    var lineage_file = std.fs.cwd().createFile(lineage_path, .{ .truncate = false }) catch {
+    const io = tri_io.get();
+    var lineage_file = std.Io.Dir.cwd().createFile(io, lineage_path, .{ .truncate = false }) catch {
         print("  {s}⚠️  Failed to open lineage file{s}\n", .{ YELLOW, RESET });
         return;
     };
-    defer lineage_file.close();
+    defer lineage_file.close(io);
 
-    // Seek to end for append
-    lineage_file.seekFromEnd(0) catch {};
+    // Append at end of file
+    var lineage_off = lineage_file.length(io) catch 0;
 
-    const ts = std.time.milliTimestamp();
+    const ts = tri_time.milliTimestamp();
     for (0..num_children) |ci| {
         const c = &configs_buf[ci];
         const child_name = config_names[ci][0..config_name_lens[ci]];
@@ -849,7 +852,8 @@ fn appendMockLineage(
             c.context,
             ts,
         }) catch continue;
-        lineage_file.writeAll(line) catch continue;
+        lineage_file.writePositionalAll(io, line, lineage_off) catch continue;
+        lineage_off += line.len;
 
         // Dual-write: mutation → hippocampus (permanent learning)
         var ml_summary_buf: [256]u8 = undefined;
@@ -948,7 +952,7 @@ fn runInit(allocator: Allocator) !void {
             count += 1;
 
             // Rate limiting between API calls
-            std.Thread.sleep(100 * std.time.ns_per_ms);
+            tri_time.sleep(100 * std.time.ns_per_ms);
         }
 
         print("  Found {d} training services\n\n", .{count});
@@ -1123,7 +1127,7 @@ fn runStep(allocator: Allocator, args: []const []const u8) !void {
         }
         if (stalled_killed > 0) {
             total_killed += stalled_killed;
-            const line = std.fmt.bufPrint(summary_buf[summary_len..], "  Stalled cleanup: {d} killed\n", .{stalled_killed}) catch "";
+            const line = std.fmt.bufPrint(summary_buf[summary_len..], "  Stalled cleanup: {d} killed\n", .{stalled_killed}) catch summary_buf[summary_len..summary_len];
             summary_len += line.len;
             print("  {s}Stalled workers killed: {d}{s}\n\n", .{ MAGENTA, stalled_killed, RESET });
         }
@@ -1163,7 +1167,7 @@ fn runStep(allocator: Allocator, args: []const []const u8) !void {
     if (!diagnose_mode and !dry_run and total_killed > 0) {
         // Check kills in last hour from event log
         var recent_kills: usize = 0;
-        const one_hour_ago = std.time.timestamp() - 3600;
+        const one_hour_ago = tri_time.timestamp() - 3600;
         for (state.events[0..state.event_count]) |*ev| {
             if (ev.event_type == .kill and ev.timestamp >= one_hour_ago) {
                 recent_kills += 1;
@@ -1176,17 +1180,18 @@ fn runStep(allocator: Allocator, args: []const []const u8) !void {
             print("  {s}Action: Auto-enabling NIGHT MODE to prevent further damage{s}\n", .{ DIM, RESET });
 
             // Create night_mode flag
-            if (std.fs.cwd().createFile(".trinity/night_mode", .{})) |night_flag| {
-                defer night_flag.close();
+            const cb_io = tri_io.get();
+            if (std.Io.Dir.cwd().createFile(cb_io, ".trinity/night_mode", .{})) |night_flag| {
+                defer night_flag.close(cb_io);
                 print("  {s}✅ Created .trinity/night_mode — evolution blocked until manual review{s}\n", .{ GREEN, RESET });
 
                 // Create circuit breaker marker with timestamp
-                if (std.fs.cwd().createFile(circuit_breaker_file, .{})) |cb_file| {
-                    defer cb_file.close();
-                    const timestamp = std.time.timestamp();
-                    const content = std.fmt.allocPrint(allocator, "Circuit breaker tripped at {d}\nRecent kills (1h): {d}\nThreshold: {d}\n", .{ timestamp, recent_kills, CIRCUIT_BREAKER_THRESHOLD }) catch "";
+                if (std.Io.Dir.cwd().createFile(cb_io, circuit_breaker_file, .{})) |cb_file| {
+                    defer cb_file.close(cb_io);
+                    const timestamp = tri_time.timestamp();
+                    const content = std.fmt.allocPrint(allocator, "Circuit breaker tripped at {d}\nRecent kills (1h): {d}\nThreshold: {d}\n", .{ timestamp, recent_kills, CIRCUIT_BREAKER_THRESHOLD }) catch summary_buf[summary_len..summary_len];
                     defer allocator.free(content);
-                    cb_file.writeAll(content) catch {};
+                    cb_file.writeStreamingAll(cb_io, content) catch {};
                 } else |err| {
                     print("  {s}❌ Failed to create circuit breaker marker: {s}{s}\n", .{ RED, @errorName(err), RESET });
                 }
@@ -1370,7 +1375,7 @@ pub fn collectMetrics(allocator: Allocator, state: *EvolutionState, api_calls: *
             print("  {s}  {s}...{s}", .{ DIM, svc_name, RESET });
 
             // Rate limit — 300ms between calls (safe for new accounts with stricter limits)
-            std.Thread.sleep(300 * std.time.ns_per_ms);
+            tri_time.sleep(300 * std.time.ns_per_ms);
 
             // Fresh API client per log call (reusing clients causes TLS hangs)
             // Retry with exponential backoff on failure (429 rate limit on new accounts)
@@ -1390,7 +1395,7 @@ pub fn collectMetrics(allocator: Allocator, state: *EvolutionState, api_calls: *
                     got_logs = true;
                     break;
                 } else |_| {
-                    std.Thread.sleep(backoff_ms * std.time.ns_per_ms);
+                    tri_time.sleep(backoff_ms * std.time.ns_per_ms);
                     backoff_ms *= 2; // 600 → 1200 → 2400ms
                 }
             }
@@ -1542,22 +1547,24 @@ const BatchLogQueryResult = struct {
 };
 
 fn buildBatchLogQuery(allocator: Allocator, entries: []const BatchLogEntry) !BatchLogQueryResult {
-    var gql_buf = std.ArrayListUnmanaged(u8){};
+    // Zig 0.16: ArrayList has no default field values; `{}` is a missing-field
+    // error. The empty value is the `.empty` declaration.
+    var gql_buf: std.ArrayListUnmanaged(u8) = .empty;
     errdefer gql_buf.deinit(allocator);
-    var vars_buf = std.ArrayListUnmanaged(u8){};
+    var vars_buf: std.ArrayListUnmanaged(u8) = .empty;
     errdefer vars_buf.deinit(allocator);
 
     // Build variable declarations: query($d0id: String!, $d0lim: Int, ...)
     try gql_buf.appendSlice(allocator, "query(");
     for (entries, 0..) |_, i| {
         if (i > 0) try gql_buf.appendSlice(allocator, ", ");
-        try gql_buf.writer(allocator).print("$d{d}id: String!, $d{d}lim: Int", .{ i, i });
+        try gql_buf.print(allocator, "$d{d}id: String!, $d{d}lim: Int", .{ i, i });
     }
     try gql_buf.appendSlice(allocator, ") {");
 
     // Build aliased fields: d0: deploymentLogs(deploymentId: $d0id, limit: $d0lim) { ... }
     for (0..entries.len) |i| {
-        try gql_buf.writer(allocator).print(" d{d}: deploymentLogs(deploymentId: $d{d}id, limit: $d{d}lim) {{ timestamp message severity }}", .{ i, i, i });
+        try gql_buf.print(allocator, " d{d}: deploymentLogs(deploymentId: $d{d}id, limit: $d{d}lim) {{ timestamp message severity }}", .{ i, i, i });
     }
     try gql_buf.appendSlice(allocator, " }");
 
@@ -1565,7 +1572,7 @@ fn buildBatchLogQuery(allocator: Allocator, entries: []const BatchLogEntry) !Bat
     try vars_buf.appendSlice(allocator, "{");
     for (entries, 0..) |entry, i| {
         if (i > 0) try vars_buf.appendSlice(allocator, ",");
-        try vars_buf.writer(allocator).print("\"d{d}id\":\"{s}\",\"d{d}lim\":{d}", .{ i, entry.dep_id, i, entry.log_limit });
+        try vars_buf.print(allocator, "\"d{d}id\":\"{s}\",\"d{d}lim\":{d}", .{ i, entry.dep_id, i, entry.log_limit });
     }
     try vars_buf.appendSlice(allocator, "}");
 
@@ -1579,7 +1586,7 @@ fn buildBatchLogQuery(allocator: Allocator, entries: []const BatchLogEntry) !Bat
 /// Skip if estimated step delta < 500 since last poll.
 fn shouldSkipByProgress(svc: *const ServiceEntry) bool {
     if (svc.last_poll_ts == 0 or svc.tok_per_sec <= 0) return false;
-    const now: i128 = std.time.nanoTimestamp();
+    const now: i128 = tri_time.nanoTimestamp();
     const elapsed_ns: i128 = now - svc.last_poll_ts;
     if (elapsed_ns <= 0) return false;
     // Convert to seconds as f64
@@ -1714,7 +1721,7 @@ fn collectMetricsForAccount(
         const chunk = batch_entries[chunk_start..chunk_end];
 
         // Rate limit — one 200ms sleep per chunk (not per service)
-        std.Thread.sleep(200 * std.time.ns_per_ms);
+        tri_time.sleep(200 * std.time.ns_per_ms);
 
         // Build aliased query with variables
         const batch_q = buildBatchLogQuery(allocator, chunk) catch {
@@ -1742,7 +1749,7 @@ fn collectMetricsForAccount(
                 got_logs = true;
                 break;
             } else |_| {
-                std.Thread.sleep(backoff_ms * std.time.ns_per_ms);
+                tri_time.sleep(backoff_ms * std.time.ns_per_ms);
                 backoff_ms *= 2;
             }
         }
@@ -1810,7 +1817,7 @@ fn collectMetricsForAccount(
                     .stall_count = tmp_svc.stall_count,
                     .last_ckpt_step = tmp_svc.last_ckpt_step,
                     .last_poll_step = tmp_svc.last_poll_step,
-                    .last_poll_ts = std.time.nanoTimestamp(),
+                    .last_poll_ts = tri_time.nanoTimestamp(),
                     .loss_history = tmp_svc.loss_history,
                     .loss_history_len = tmp_svc.loss_history_len,
                 };
@@ -1897,10 +1904,10 @@ pub fn collectMetricsParallel(allocator: Allocator, state: *EvolutionState, api_
     {
         var joined: [MAX_FARM_ACCOUNTS]bool = undefined;
         for (0..MAX_FARM_ACCOUNTS) |i| joined[i] = false;
-        const start_ns = std.time.nanoTimestamp();
+        const start_ns = tri_time.nanoTimestamp();
         const TIMEOUT_NS = 120 * std.time.ns_per_s; // 2 minute hard timeout
         while (true) {
-            std.Thread.sleep(500 * std.time.ns_per_ms);
+            tri_time.sleep(500 * std.time.ns_per_ms);
             const done = progress.load(.monotonic);
             print("\r  Collecting... {d}/{d} services  ", .{ done, expected });
             // Try joining completed threads (non-blocking check via status)
@@ -1919,7 +1926,7 @@ pub fn collectMetricsParallel(allocator: Allocator, state: *EvolutionState, api_
             if (accounts_reported >= account_count) break;
             if (done >= expected) break;
             // Timeout safeguard: if stuck for >2 minutes, force join
-            const elapsed = std.time.nanoTimestamp() - start_ns;
+            const elapsed = tri_time.nanoTimestamp() - start_ns;
             if (elapsed > TIMEOUT_NS) {
                 print("\n  {s}⏱️ Timeout after 120s, forcing join...{s}\n", .{ YELLOW, RESET });
                 break;
@@ -2016,15 +2023,16 @@ pub fn collectMetricsParallel(allocator: Allocator, state: *EvolutionState, api_
 
 /// I6: Append event to JSONL file (append-only, never truncated)
 fn appendEventJsonl(svc_name: []const u8, detail: []const u8, step: u32) void {
-    const file = std.fs.cwd().createFile(EVENTS_JSONL_PATH, .{ .truncate = false }) catch return;
-    defer file.close();
-    // Seek to end for append
-    file.seekFromEnd(0) catch return;
+    const io = tri_io.get();
+    const file = std.Io.Dir.cwd().createFile(io, EVENTS_JSONL_PATH, .{ .truncate = false }) catch return;
+    defer file.close(io);
+    // Append at end of file
+    const evt_off = file.length(io) catch return;
     var buf: [512]u8 = undefined;
     const line = std.fmt.bufPrint(&buf, "{{\"ts\":{d},\"type\":\"health\",\"svc\":\"{s}\",\"detail\":\"{s}\",\"step\":{d}}}\n", .{
-        std.time.milliTimestamp(), svc_name, detail, step,
+        tri_time.milliTimestamp(), svc_name, detail, step,
     }) catch return;
-    file.writeAll(line) catch {};
+    file.writePositionalAll(io, line, evt_off) catch {};
 
     // Dual-write: farm event → hippocampus (observation for routine, error for failures)
     var summary_buf: [256]u8 = undefined;
@@ -2059,52 +2067,32 @@ fn curlGraphQL(allocator: Allocator, token: []const u8, deployment_id: []const u
     const auth_hdr = std.fmt.allocPrint(allocator, "Authorization: Bearer {s}", .{token}) catch return error.OutOfMemory;
     defer allocator.free(auth_hdr);
 
-    var child = std.process.Child.init(&.{
-        "curl",                           "-s",     "--max-time", "15",
-        "-X",                             "POST",   "-H",         "Content-Type: application/json",
-        "-H",                             auth_hdr, "-d",         body,
-        "https://railway.com/graphql/v2",
-    }, allocator);
-    child.stdout_behavior = .Pipe;
-    child.stderr_behavior = .Pipe;
+    const result = tri_proc.run(.{
+        .allocator = allocator,
+        .argv = &.{
+            "curl",                           "-s",     "--max-time", "15",
+            "-X",                             "POST",   "-H",         "Content-Type: application/json",
+            "-H",                             auth_hdr, "-d",         body,
+            "https://railway.com/graphql/v2",
+        },
+        .max_output_bytes = 1 * 1024 * 1024,
+    }) catch return error.ConnectionFailed;
+    allocator.free(result.stderr);
+    errdefer allocator.free(result.stdout);
 
-    _ = child.spawn() catch return error.ConnectionFailed;
-    errdefer {
-        _ = child.kill() catch {};
-        _ = child.wait() catch {};
-    }
-
-    // Read stdout via poll
-    var stdout_buf: std.ArrayList(u8) = .empty;
-    var stderr_buf: std.ArrayList(u8) = .empty;
-    defer stderr_buf.deinit(allocator);
-
-    child.collectOutput(allocator, &stdout_buf, &stderr_buf, 1 * 1024 * 1024) catch {
-        stdout_buf.deinit(allocator);
-        return error.RequestFailed;
-    };
-
-    const term = child.wait() catch {
-        stdout_buf.deinit(allocator);
-        return error.RequestFailed;
-    };
-
-    if (term.Exited != 0) {
-        stdout_buf.deinit(allocator);
+    if (result.term != .exited or result.term.exited != 0) {
+        allocator.free(result.stdout);
         return error.RequestFailed;
     }
 
     // Debug: empty response check
-    if (stdout_buf.items.len == 0) {
-        stdout_buf.deinit(allocator);
+    if (result.stdout.len == 0) {
+        allocator.free(result.stdout);
         return error.RequestFailed;
     }
 
     // Transfer ownership of the buffer
-    return stdout_buf.toOwnedSlice(allocator) catch {
-        stdout_buf.deinit(allocator);
-        return error.OutOfMemory;
-    };
+    return result.stdout;
 }
 
 fn extractDeploymentId(root: std.json.Value) ?[]const u8 {
@@ -2416,7 +2404,7 @@ fn processRung(allocator: Allocator, state: *EvolutionState, rung_idx: u8, rung:
         }
 
         // Pick parent via truncation selection (diverse parents per child)
-        const prng_seed: u32 = @truncate(@as(u64, @intCast(std.time.milliTimestamp())) +% ki);
+        const prng_seed: u32 = @truncate(@as(u64, @intCast(tri_time.milliTimestamp())) +% ki);
         const leader_idx = selectParentTruncation(state, prng_seed) orelse eligible_indices[0];
         const leader = &state.services[leader_idx];
 
@@ -2840,16 +2828,13 @@ pub fn mutateConfigEx(leader: *const ServiceEntry, prng_seed: u32, allow_ctx_mut
 /// Returns list of worker names that must NEVER be killed by evolution
 fn loadSacredList(allocator: std.mem.Allocator) ![][]const u8 {
     const file_path = ".trinity/sacred_workers.txt";
-    const file = std.fs.cwd().openFile(file_path, .{}) catch |err| {
+    const content = std.Io.Dir.cwd().readFileAlloc(tri_io.get(), file_path, allocator, .limited(1024 * 64)) catch |err| {
         if (err == error.FileNotFound) {
             // No sacred list = no protection
             return allocator.alloc([]const u8, 0);
         }
         return err;
-    };
-    defer file.close();
-
-    const content = try file.readToEndAlloc(allocator, 1024 * 64); // Max 64KB
+    }; // Max 64KB
     defer allocator.free(content);
 
     // Count non-empty, non-comment lines first
@@ -2879,7 +2864,7 @@ fn loadSacredList(allocator: std.mem.Allocator) ![][]const u8 {
 /// Check if .trinity/night_mode flag exists (blocks destructive actions 22:00-08:00)
 fn isNightModeActive() bool {
     const flag_path = ".trinity/night_mode";
-    std.fs.cwd().access(flag_path, .{}) catch |err| {
+    std.Io.Dir.cwd().access(tri_io.get(), flag_path, .{}) catch |err| {
         if (err == error.FileNotFound) return false;
         return false;
     };
@@ -3325,7 +3310,7 @@ pub fn recycleService(allocator: Allocator, state: *EvolutionState, victim_idx: 
         api_calls.* += 1;
     }
 
-    std.Thread.sleep(100 * std.time.ns_per_ms);
+    tri_time.sleep(100 * std.time.ns_per_ms);
 
     // Set builder config
     const builder_gql = "mutation($serviceId: String!, $environmentId: String!, $input: ServiceInstanceUpdateInput!) { serviceInstanceUpdate(serviceId: $serviceId, environmentId: $environmentId, input: $input) }";
@@ -3339,7 +3324,7 @@ pub fn recycleService(allocator: Allocator, state: *EvolutionState, victim_idx: 
     } else |_| {}
     api_calls.* += 1;
 
-    std.Thread.sleep(100 * std.time.ns_per_ms);
+    tri_time.sleep(100 * std.time.ns_per_ms);
 
     // Redeploy
     if (api.redeployService(svc_id, acct.env_id)) |resp| {
@@ -3416,8 +3401,9 @@ pub fn mulberry32(seed: u32) u32 {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 pub fn saveState(state: EvolutionState) !void {
-    var file = try std.fs.cwd().createFile(STATE_PATH, .{});
-    defer file.close();
+    const io = tri_io.get();
+    var file = try std.Io.Dir.cwd().createFile(io, STATE_PATH, .{});
+    defer file.close(io);
 
     // Increased buffer: loss_history adds ~600B/service, 160 services = ~96KB extra
     var buf: [262144]u8 = undefined;
@@ -3479,14 +3465,14 @@ pub fn saveState(state: EvolutionState) !void {
 
     pos += (std.fmt.bufPrint(buf[pos..], "]}}", .{}) catch return error.OutOfMemory).len;
 
-    try file.writeAll(buf[0..pos]);
+    try file.writeStreamingAll(io, buf[0..pos]);
 }
 
 pub fn loadState(allocator: Allocator) !EvolutionState {
-    const file = std.fs.cwd().openFile(STATE_PATH, .{}) catch return error.FileNotFound;
-    defer file.close();
-
-    const contents = file.readToEndAlloc(allocator, 512 * 1024) catch return error.OutOfMemory;
+    const contents = std.Io.Dir.cwd().readFileAlloc(tri_io.get(), STATE_PATH, allocator, .limited(512 * 1024)) catch |err| switch (err) {
+        error.FileNotFound => return error.FileNotFound,
+        else => return error.OutOfMemory,
+    };
     defer allocator.free(contents);
 
     const parsed = std.json.parseFromSlice(std.json.Value, allocator, contents, .{}) catch return error.InvalidJson;
@@ -3654,7 +3640,7 @@ fn printDashboard(state: *const EvolutionState) void {
 
     // Circuit breaker status
     const night_mode = isNightModeActive();
-    const cb_tripped = std.fs.cwd().access(".trinity/circuit_breaker_tripped", .{}) catch null != null;
+    const cb_tripped = std.Io.Dir.cwd().access(tri_io.get(), ".trinity/circuit_breaker_tripped", .{}) catch null != null;
     if (night_mode) {
         print("  {s}🛡️ NIGHT MODE ACTIVE{s} — Destructive actions blocked\n", .{ CYAN, RESET });
         if (cb_tripped) {
@@ -3880,22 +3866,28 @@ fn postToIssue(allocator: Allocator, issue_num: []const u8, state: *const Evolut
 
     // Write to temp file (body may contain special chars)
     const tmp_path = "/tmp/sevo_step_comment.md";
-    const tmp_file = std.fs.cwd().createFile(tmp_path, .{}) catch return;
-    tmp_file.writeAll(body) catch {
-        tmp_file.close();
+    const tmp_io = tri_io.get();
+    const tmp_file = std.Io.Dir.cwd().createFile(tmp_io, tmp_path, .{}) catch return;
+    tmp_file.writeStreamingAll(tmp_io, body) catch {
+        tmp_file.close(tmp_io);
         return;
     };
-    tmp_file.close();
+    tmp_file.close(tmp_io);
 
     // Use tri issue comment (existing CLI) with fallback to gh
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ "zig-out/bin/tri", "issue", "comment", issue_num, "-F", tmp_path },
         .max_output_bytes = 4096,
     }) catch {
         // Fallback: gh with --repo
-        var child = std.process.Child.init(&.{ "gh", "issue", "comment", issue_num, "--repo", "gHashTag/trinity", "-F", tmp_path }, allocator);
-        _ = child.spawnAndWait() catch {
+        var child = std.process.spawn(tmp_io, .{
+            .argv = &.{ "gh", "issue", "comment", issue_num, "--repo", "gHashTag/trinity", "-F", tmp_path },
+        }) catch {
+            print("  {s}\xe2\x9a\xa0\xef\xb8\x8f  Failed to post to issue #{s}{s}\n", .{ YELLOW, issue_num, RESET });
+            return;
+        };
+        _ = child.wait(tmp_io) catch {
             print("  {s}\xe2\x9a\xa0\xef\xb8\x8f  Failed to post to issue #{s}{s}\n", .{ YELLOW, issue_num, RESET });
             return;
         };
@@ -4282,10 +4274,15 @@ fn runDeploy(allocator: Allocator, args: []const []const u8) !void {
     if (!skip_ci) {
         print("  {s}🔧 Running CI gate (zig build test)...{s}\n", .{ DIM, RESET });
         const ci_argv = [_][]const u8{ "zig", "build", "test" };
-        var child = std.process.Child.init(&ci_argv, allocator);
-        child.stderr_behavior = .Ignore;
-        child.stdout_behavior = .Ignore;
-        _ = child.spawnAndWait() catch {
+        var child = std.process.spawn(tri_io.get(), .{
+            .argv = &ci_argv,
+            .stdout = .ignore,
+            .stderr = .ignore,
+        }) catch {
+            print("  {s}❌ CI gate failed — zig build test error. Use --skip-ci to bypass.{s}\n", .{ RED, RESET });
+            return;
+        };
+        _ = child.wait(tri_io.get()) catch {
             print("  {s}❌ CI gate failed — zig build test error. Use --skip-ci to bypass.{s}\n", .{ RED, RESET });
             return;
         };
@@ -4335,12 +4332,19 @@ fn runDeploy(allocator: Allocator, args: []const []const u8) !void {
         defer allocator.free(num_str);
 
         const gh_argv = [_][]const u8{ "gh", "issue", "comment", num_str, "--body", body };
-        var gh_child = std.process.Child.init(&gh_argv, allocator);
-        gh_child.stderr_behavior = .Ignore;
-        gh_child.stdout_behavior = .Ignore;
-        _ = gh_child.spawnAndWait() catch {
+        const gh_io = tri_io.get();
+        if (std.process.spawn(gh_io, .{
+            .argv = &gh_argv,
+            .stdout = .ignore,
+            .stderr = .ignore,
+        })) |spawned| {
+            var gh_child = spawned;
+            _ = gh_child.wait(gh_io) catch {
+                print("  {s}⚠️  Failed to post to issue #{d}{s}\n", .{ YELLOW, num, RESET });
+            };
+        } else |_| {
             print("  {s}⚠️  Failed to post to issue #{d}{s}\n", .{ YELLOW, num, RESET });
-        };
+        }
         print("  {s}📝 Posted to issue #{d}{s}\n", .{ GREEN, num, RESET });
     }
 }
@@ -4354,10 +4358,7 @@ fn parseMockConfigJson(
     parent_names: *[MAX_SERVICES][64]u8,
     parent_lens: *[MAX_SERVICES]u8,
 ) !usize {
-    const file = try std.fs.cwd().openFile(path, .{});
-    defer file.close();
-
-    const contents = try file.readToEndAlloc(allocator, 1024 * 1024);
+    const contents = try std.Io.Dir.cwd().readFileAlloc(tri_io.get(), path, allocator, .limited(1024 * 1024));
     defer allocator.free(contents);
 
     const parsed = try std.json.parseFromSlice(std.json.Value, allocator, contents, .{});
@@ -4474,7 +4475,7 @@ fn deployConfigToService(
         return false;
     }
 
-    std.Thread.sleep(100 * std.time.ns_per_ms);
+    tri_time.sleep(100 * std.time.ns_per_ms);
 
     // 2. Set builder config (startCommand: null, builder: NIXPACKS)
     const builder_gql = "mutation($serviceId: String!, $environmentId: String!, $input: ServiceInstanceUpdateInput!) { serviceInstanceUpdate(serviceId: $serviceId, environmentId: $environmentId, input: $input) }";
@@ -4487,7 +4488,7 @@ fn deployConfigToService(
         allocator.free(resp);
     } else |_| {}
 
-    std.Thread.sleep(100 * std.time.ns_per_ms);
+    tri_time.sleep(100 * std.time.ns_per_ms);
 
     // 3. Redeploy
     if (api.redeployService(svc_id, acct.env_id)) |resp| {
@@ -4507,11 +4508,12 @@ fn appendDeployLineage(
     success: bool,
 ) void {
     const lineage_path = ".trinity/evolution_lineage.jsonl";
-    var lineage_file = std.fs.cwd().createFile(lineage_path, .{ .truncate = false }) catch return;
-    defer lineage_file.close();
-    lineage_file.seekFromEnd(0) catch {};
+    const io = tri_io.get();
+    var lineage_file = std.Io.Dir.cwd().createFile(io, lineage_path, .{ .truncate = false }) catch return;
+    defer lineage_file.close(io);
+    const lineage_off = lineage_file.length(io) catch 0;
 
-    const ts = std.time.milliTimestamp();
+    const ts = tri_time.milliTimestamp();
     const sched: []const u8 = config.lr_schedule.toStr();
     const sacred_str: []const u8 = if (config.sacred) "true" else "false";
     const ok_str: []const u8 = if (success) "true" else "false";
@@ -4531,7 +4533,7 @@ fn appendDeployLineage(
         config.seed,
         ts,
     }) catch return;
-    lineage_file.writeAll(line) catch return;
+    lineage_file.writePositionalAll(io, line, lineage_off) catch return;
 
     // Dual-write: lineage mutation → hippocampus (permanent learning)
     var lsummary_buf: [256]u8 = undefined;
@@ -4556,10 +4558,11 @@ fn writeDeployTargets(
     accounts_buf: anytype,
 ) void {
     const path = ".trinity/farm/deploy_targets.json";
-    var f = std.fs.cwd().createFile(path, .{}) catch return;
-    defer f.close();
+    const io = tri_io.get();
+    var f = std.Io.Dir.cwd().createFile(io, path, .{}) catch return;
+    defer f.close(io);
 
-    f.writeAll("[\n") catch return;
+    f.writeStreamingAll(io, "[\n") catch return;
     for (0..deploy_count) |di| {
         const ci = selected_indices[di];
         const c = &configs[ci];
@@ -4574,10 +4577,10 @@ fn writeDeployTargets(
         const line = std.fmt.bufPrint(&line_buf,
             \\  {{"config":"{s}","service":"{s}","svc_id":"{s}","acct_idx":{d},"acct_name":"{s}","sacred":{s}}}
         , .{ cfg_name, tgt_name, tgt_id, t.acct_idx, acct_name[0..@min(acct_name.len, 16)], sacred_str }) catch continue;
-        f.writeAll(line) catch continue;
-        if (di + 1 < deploy_count) f.writeAll(",\n") catch {} else f.writeAll("\n") catch {};
+        f.writeStreamingAll(io, line) catch continue;
+        if (di + 1 < deploy_count) f.writeStreamingAll(io, ",\n") catch {} else f.writeStreamingAll(io, "\n") catch {};
     }
-    f.writeAll("]\n") catch return;
+    f.writeStreamingAll(io, "]\n") catch return;
     print("  {s}📄 Wrote {s}{s}\n", .{ GREEN, path, RESET });
 }
 
@@ -4710,14 +4713,12 @@ fn runCollect(allocator: Allocator, args: []const []const u8) !void {
     }
 
     // Load deploy targets JSON
-    const targets_file = std.fs.cwd().openFile(targets_path, .{}) catch {
-        print("{s}❌ Cannot open deploy targets: {s}{s}\n", .{ RED, targets_path, RESET });
-        print("   Run `tri farm evolve deploy --execute` first to generate deploy_targets.json\n", .{});
-        return;
-    };
-    defer targets_file.close();
-
-    const targets_data = targets_file.readToEndAlloc(allocator, 1024 * 1024) catch {
+    const targets_data = std.Io.Dir.cwd().readFileAlloc(tri_io.get(), targets_path, allocator, .limited(1024 * 1024)) catch |err| {
+        if (err == error.FileNotFound) {
+            print("{s}❌ Cannot open deploy targets: {s}{s}\n", .{ RED, targets_path, RESET });
+            print("   Run `tri farm evolve deploy --execute` first to generate deploy_targets.json\n", .{});
+            return;
+        }
         print("{s}❌ Failed to read {s}{s}\n", .{ RED, targets_path, RESET });
         return;
     };
@@ -4804,7 +4805,7 @@ fn runCollect(allocator: Allocator, args: []const []const u8) !void {
         }
 
         // Rate limit between calls
-        if (ti > 0) std.Thread.sleep(1000 * std.time.ns_per_ms);
+        if (ti > 0) tri_time.sleep(1000 * std.time.ns_per_ms);
 
         // Get deployment ID for this service
         var api = RailwayApi.initWithSuffix(allocator, accounts_buf[dt.acct_idx].suffix) catch {
@@ -4844,7 +4845,7 @@ fn runCollect(allocator: Allocator, args: []const []const u8) !void {
         };
 
         // Fetch logs (fresh API client per call — TLS hang prevention)
-        std.Thread.sleep(DEPLOY_RATE_LIMIT_MS * std.time.ns_per_ms);
+        tri_time.sleep(DEPLOY_RATE_LIMIT_MS * std.time.ns_per_ms);
 
         var log_api = RailwayApi.initWithSuffix(allocator, accounts_buf[dt.acct_idx].suffix) catch {
             print(" {s}no token for logs{s}\n", .{ RED, RESET });
@@ -5081,13 +5082,10 @@ fn runInspect(allocator: Allocator, args: []const []const u8) !void {
     };
 
     // Load deploy targets
-    const targets_file = std.fs.cwd().openFile(targets_path, .{}) catch {
+    const targets_data = std.Io.Dir.cwd().readFileAlloc(tri_io.get(), targets_path, allocator, .limited(1024 * 1024)) catch {
         print("{s}❌ Cannot open {s}. Run deploy first.{s}\n", .{ RED, targets_path, RESET });
         return;
     };
-    defer targets_file.close();
-
-    const targets_data = targets_file.readToEndAlloc(allocator, 1024 * 1024) catch return;
     defer allocator.free(targets_data);
 
     const targets_parsed = std.json.parseFromSlice(std.json.Value, allocator, targets_data, .{}) catch return;
@@ -5166,7 +5164,7 @@ fn runInspect(allocator: Allocator, args: []const []const u8) !void {
     };
 
     // Fetch logs
-    std.Thread.sleep(DEPLOY_RATE_LIMIT_MS * std.time.ns_per_ms);
+    tri_time.sleep(DEPLOY_RATE_LIMIT_MS * std.time.ns_per_ms);
     var log_api = RailwayApi.initWithSuffix(allocator, accounts_buf[found_acct_idx].suffix) catch return;
     const log_resp = log_api.getDeploymentLogs(dep_id, log_lines) catch {
         print("{s}❌ Log fetch failed{s}\n", .{ RED, RESET });
@@ -5322,7 +5320,7 @@ fn runLogs(allocator: Allocator, args: []const []const u8) !void {
     }
 
     // Fetch logs with fresh client
-    std.Thread.sleep(DEPLOY_RATE_LIMIT_MS * std.time.ns_per_ms);
+    tri_time.sleep(DEPLOY_RATE_LIMIT_MS * std.time.ns_per_ms);
     var log_api = RailwayApi.initWithSuffix(allocator, accounts_buf[found_acct_idx].suffix) catch {
         print("{s}❌ Cannot init API for logs{s}\n", .{ RED, RESET });
         return;
@@ -5449,7 +5447,7 @@ fn runLiveLogs(allocator: Allocator, svc_name: []const u8, initial_lines: u32, i
 
     // Live loop
     while (true) {
-        std.Thread.sleep(if (poll_count == 0) 0 else interval_sec * std.time.ns_per_s);
+        tri_time.sleep(if (poll_count == 0) 0 else interval_sec * std.time.ns_per_s);
         poll_count += 1;
 
         const lines_to_fetch = if (poll_count == 1) initial_lines else 20;
@@ -5525,7 +5523,7 @@ fn runLiveLogs(allocator: Allocator, svc_name: []const u8, initial_lines: u32, i
 fn parseLiveMetrics(msg: []const u8, step: *u32, ppl: *f32, best: *f32) void {
     // Training lines look like: "  12300 |   4.2357 |   4.1973 |    69.11 | ..."
     // Find first pipe-separated number
-    const trimmed = std.mem.trimLeft(u8, msg, " ");
+    const trimmed = std.mem.trimStart(u8, msg, " ");
     if (trimmed.len == 0) return;
     if (trimmed[0] < '0' or trimmed[0] > '9') return;
 
@@ -5559,17 +5557,18 @@ fn parseLiveMetrics(msg: []const u8, step: *u32, ppl: *f32, best: *f32) void {
 /// Save live state to JSON for /tri skill integration
 fn saveLiveLogState(svc_name: []const u8, step: u32, ppl_val: f32, best_ppl_val: f32, polls: u32) void {
     const path = ".trinity/farm/live_logs.json";
-    std.fs.cwd().makePath(".trinity/farm") catch {};
-    var f = std.fs.cwd().createFile(path, .{}) catch return;
-    defer f.close();
+    const io = tri_io.get();
+    std.Io.Dir.cwd().createDirPath(io, ".trinity/farm") catch {};
+    var f = std.Io.Dir.cwd().createFile(io, path, .{}) catch return;
+    defer f.close(io);
 
     var buf: [512]u8 = undefined;
     const content = std.fmt.bufPrint(&buf,
         \\{{"service":"{s}","step":{d},"ppl":{d:.2},"best_ppl":{d:.2},"polls":{d},"ts":{d}}}
     ++ "\n", .{
-        svc_name, step, ppl_val, best_ppl_val, polls, std.time.timestamp(),
+        svc_name, step, ppl_val, best_ppl_val, polls, tri_time.timestamp(),
     }) catch return;
-    f.writeAll(content) catch {};
+    f.writeStreamingAll(io, content) catch {};
 }
 
 /// Send Telegram notification with live stats
@@ -5582,7 +5581,7 @@ fn sendLiveTelegram(allocator: Allocator, svc_name: []const u8, step: u32, ppl_v
         \\Polls: {d} | phi^2+1/phi^2=3
     , .{ svc_name, step_k, ppl_val, best_ppl_val, polls }) catch return;
 
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &[_][]const u8{ "zig-out/bin/tri", "notify", msg },
         .max_output_bytes = 4096,
@@ -5593,9 +5592,10 @@ fn sendLiveTelegram(allocator: Allocator, svc_name: []const u8, step: u32, ppl_v
 
 fn writeHypotheses() void {
     const hyp_path = ".trinity/farm/hypotheses.json";
-    var f = std.fs.cwd().createFile(hyp_path, .{}) catch return;
-    defer f.close();
-    f.writeAll(
+    const io = tri_io.get();
+    var f = std.Io.Dir.cwd().createFile(io, hyp_path, .{}) catch return;
+    defer f.close(io);
+    f.writeStreamingAll(io,
         \\[
         \\  {"id":"H1","name":"Sacred early convergence","criterion":"sacred avg PPL@10K < random by ≥1.0"},
         \\  {"id":"H2","name":"Sacred reduces spikes","criterion":"sacred avg spikes < random avg spikes"}
@@ -5614,15 +5614,16 @@ fn writeAbResults(
     random_avg: f32,
 ) void {
     _ = allocator;
-    var f = std.fs.cwd().createFile(path, .{}) catch return;
-    defer f.close();
+    const io = tri_io.get();
+    var f = std.Io.Dir.cwd().createFile(io, path, .{}) catch return;
+    defer f.close(io);
 
-    const ts = std.time.milliTimestamp();
+    const ts = tri_time.milliTimestamp();
     var hdr_buf: [256]u8 = undefined;
     const hdr = std.fmt.bufPrint(&hdr_buf,
         \\{{"timestamp":{d},"configs":[
     ++ "\n", .{ts}) catch return;
-    f.writeAll(hdr) catch return;
+    f.writeStreamingAll(io, hdr) catch return;
 
     for (0..count) |ci| {
         const dt = &targets[ci];
@@ -5643,15 +5644,15 @@ fn writeAbResults(
             m.ppl_20k,                   m.best_ppl, m.spikes,
             status_str,
         }) catch continue;
-        f.writeAll(line) catch continue;
-        if (ci + 1 < count) f.writeAll(",\n") catch {} else f.writeAll("\n") catch {};
+        f.writeStreamingAll(io, line) catch continue;
+        if (ci + 1 < count) f.writeStreamingAll(io, ",\n") catch {} else f.writeStreamingAll(io, "\n") catch {};
     }
 
     var summary_buf: [256]u8 = undefined;
     const summary = std.fmt.bufPrint(&summary_buf,
         \\],"summary":{{"sacred_avg_20k":{d:.1},"random_avg_20k":{d:.1}}}}}
     ++ "\n", .{ sacred_avg, random_avg }) catch return;
-    f.writeAll(summary) catch return;
+    f.writeStreamingAll(io, summary) catch return;
 
     print("  {s}📄 Wrote {s}{s}\n", .{ GREEN, path, RESET });
 }
@@ -5695,10 +5696,16 @@ fn postAbToIssue(
     defer allocator.free(num_str);
 
     const gh_argv = [_][]const u8{ "gh", "issue", "comment", num_str, "--body", body_buf[0..pos] };
-    var gh_child = std.process.Child.init(&gh_argv, allocator);
-    gh_child.stderr_behavior = .Ignore;
-    gh_child.stdout_behavior = .Ignore;
-    _ = gh_child.spawnAndWait() catch {
+    const gh_io = tri_io.get();
+    var gh_child = std.process.spawn(gh_io, .{
+        .argv = &gh_argv,
+        .stdout = .ignore,
+        .stderr = .ignore,
+    }) catch {
+        print("  {s}⚠️  Failed to post to issue #{d}{s}\n", .{ YELLOW, issue_num, RESET });
+        return;
+    };
+    _ = gh_child.wait(gh_io) catch {
         print("  {s}⚠️  Failed to post to issue #{d}{s}\n", .{ YELLOW, issue_num, RESET });
         return;
     };
@@ -5841,7 +5848,7 @@ fn runInject(allocator: Allocator, args: []const []const u8) !void {
         };
     } else {
         // Auto-select via binary tournament (PBT)
-        const seed_ts: u32 = @truncate(@as(u64, @intCast(std.time.milliTimestamp())));
+        const seed_ts: u32 = @truncate(@as(u64, @intCast(tri_time.milliTimestamp())));
         parent_idx = selectParentTournament(&state, seed_ts) orelse {
             print("{s}ERROR: No running parents found. Need at least 1 active training service.{s}\n", .{ RED, RESET });
             return;
@@ -5849,7 +5856,7 @@ fn runInject(allocator: Allocator, args: []const []const u8) !void {
     }
 
     const parent = &state.services[parent_idx];
-    const seed: u32 = @truncate(@as(u64, @intCast(std.time.milliTimestamp())));
+    const seed: u32 = @truncate(@as(u64, @intCast(tri_time.milliTimestamp())));
     var config = if (sacred)
         mutateConfigSacred(parent, seed, false)
     else
@@ -5970,7 +5977,7 @@ pub fn runInjectBatch(
     if (override_sched) |sched| print("   schedule override: {s}\n", .{sched.toStr()});
 
     var total_api_calls: u32 = 0;
-    const seed_base: u32 = @truncate(@as(u64, @intCast(std.time.milliTimestamp())));
+    const seed_base: u32 = @truncate(@as(u64, @intCast(tri_time.milliTimestamp())));
 
     var injected: u32 = 0;
     var ji: u32 = 0;
@@ -6130,7 +6137,7 @@ fn runWatch(allocator: Allocator, args: []const []const u8) !void {
 
             print("   Candidates: {d} dead/finished slots, injecting up to {d} (truncation selection)\n\n", .{ cand_count, max_inject });
 
-            var seed: u32 = @truncate(@as(u64, @intCast(std.time.milliTimestamp())));
+            var seed: u32 = @truncate(@as(u64, @intCast(tri_time.milliTimestamp())));
             for (candidates[0..max_inject]) |ci| {
                 const svc = &state.services[ci];
                 seed = mulberry32(seed);
@@ -6184,7 +6191,7 @@ fn runWatch(allocator: Allocator, args: []const []const u8) !void {
         if (kill_live) {
             const first_rung_step = if (sacred) SACRED_RUNGS[0].step_threshold else DEFAULT_RUNGS[0].step_threshold;
             var live_kills: u32 = 0;
-            var kill_seed: u32 = @truncate(@as(u64, @intCast(std.time.milliTimestamp())) +% 7777);
+            var kill_seed: u32 = @truncate(@as(u64, @intCast(tri_time.milliTimestamp())) +% 7777);
             while (live_kills < 2) { // max 2 live kills per sweep
                 kill_seed = mulberry32(kill_seed);
                 const victim_idx = findKillTournamentVictim(&state, first_rung_step, kill_seed) orelse break;
@@ -6244,7 +6251,7 @@ fn runWatch(allocator: Allocator, args: []const []const u8) !void {
         if (once) return;
 
         print("   Sleeping {d}s until next sweep...\n", .{interval});
-        std.Thread.sleep(interval * std.time.ns_per_s);
+        tri_time.sleep(interval * std.time.ns_per_s);
     }
 }
 
@@ -6262,9 +6269,7 @@ const NotifyState = struct {
 };
 
 fn loadNotifyState(allocator: Allocator) NotifyState {
-    const file = std.fs.cwd().openFile(NOTIFY_STATE_PATH, .{}) catch return .{};
-    defer file.close();
-    const contents = file.readToEndAlloc(allocator, 4096) catch return .{};
+    const contents = std.Io.Dir.cwd().readFileAlloc(tri_io.get(), NOTIFY_STATE_PATH, allocator, .limited(4096)) catch return .{};
     defer allocator.free(contents);
     const parsed = std.json.parseFromSlice(std.json.Value, allocator, contents, .{}) catch return .{};
     defer parsed.deinit();
@@ -6281,9 +6286,10 @@ fn loadNotifyState(allocator: Allocator) NotifyState {
 
 fn saveNotifyState(ns: *const NotifyState) void {
     // Ensure directory exists
-    std.fs.cwd().makePath(".trinity/farm") catch {};
-    var file = std.fs.cwd().createFile(NOTIFY_STATE_PATH, .{}) catch return;
-    defer file.close();
+    const io = tri_io.get();
+    std.Io.Dir.cwd().createDirPath(io, ".trinity/farm") catch {};
+    var file = std.Io.Dir.cwd().createFile(io, NOTIFY_STATE_PATH, .{}) catch return;
+    defer file.close(io);
     var buf: [512]u8 = undefined;
     const name = if (ns.last_best_name_len > 0)
         ns.last_best_name[0..ns.last_best_name_len]
@@ -6292,7 +6298,7 @@ fn saveNotifyState(ns: *const NotifyState) void {
     const json = std.fmt.bufPrint(&buf, "{{\"last_best_ppl\":{d:.2},\"last_best_name\":\"{s}\",\"last_event_count\":{d},\"last_timestamp\":{d},\"last_leader_step\":{d}}}", .{
         ns.last_best_ppl, name, ns.last_event_count, ns.last_timestamp, ns.last_leader_step,
     }) catch return;
-    file.writeAll(json) catch {};
+    file.writeStreamingAll(io, json) catch {};
 }
 
 fn runNotify(allocator: Allocator, args: []const []const u8) !void {
@@ -6329,15 +6335,19 @@ fn runNotify(allocator: Allocator, args: []const []const u8) !void {
 
     // Trigger 1: New global leader
     if (state.best_ppl < ns.last_best_ppl and state.best_ppl < threshold) {
-        const prev_name = if (ns.last_best_name_len > 0)
+        // Both branches must agree on a type: the slice is []u8 and the
+        // literal is *const [6:0]u8, so name the common type explicitly.
+        const prev_name: []const u8 = if (ns.last_best_name_len > 0)
             ns.last_best_name[0..ns.last_best_name_len]
         else
             "(none)";
-        pos += (std.fmt.bufPrint(msg_buf[pos..], "🏆 New leader: <b>{s}</b> PPL={d:.2} (was {s} PPL={d:.2})\n", .{
+        // bufPrint yields []u8 and the fallback is a string literal; the two
+        // do not unify inside a `catch` expression, so name the common type
+        // on a binding instead of trying to merge them in place.
+        const leader_line: []const u8 = std.fmt.bufPrint(msg_buf[pos..], "🏆 New leader: <b>{s}</b> PPL={d:.2} (was {s} PPL={d:.2})\n", .{
             state.bestNameStr(), state.best_ppl, prev_name, ns.last_best_ppl,
-        }) catch break_msg: {
-            break :break_msg "";
-        }).len;
+        }) catch msg_buf[pos..pos];
+        pos += leader_line.len;
         has_insights = true;
     }
 
@@ -6384,19 +6394,19 @@ fn runNotify(allocator: Allocator, args: []const []const u8) !void {
     // Trigger 6: Population health alerts
     const health = computePopulationHealth(&state);
     if (health.diversity < 0.001 and pos + 200 < msg_buf.len) {
-        pos += (std.fmt.bufPrint(msg_buf[pos..], "⚠️ CONVERGING: diversity={d:.4}, inject more sacred mutations\n", .{health.diversity}) catch "").len;
+        pos += (std.fmt.bufPrint(msg_buf[pos..], "⚠️ CONVERGING: diversity={d:.4}, inject more sacred mutations\n", .{health.diversity}) catch msg_buf[pos..pos]).len;
         has_insights = true;
     }
     if (health.elite_gap > 3.0 and pos + 200 < msg_buf.len) {
-        pos += (std.fmt.bufPrint(msg_buf[pos..], "👑 DOMINANT LEADER: PPL gap {d:.1}×\n", .{health.elite_gap}) catch "").len;
+        pos += (std.fmt.bufPrint(msg_buf[pos..], "👑 DOMINANT LEADER: PPL gap {d:.1}×\n", .{health.elite_gap}) catch msg_buf[pos..pos]).len;
         has_insights = true;
     }
     if (health.stagnation > 20000 and pos + 200 < msg_buf.len) {
-        pos += (std.fmt.bufPrint(msg_buf[pos..], "⚠️ STAGNATION: {d}K steps without improvement\n", .{health.stagnation / 1000}) catch "").len;
+        pos += (std.fmt.bufPrint(msg_buf[pos..], "⚠️ STAGNATION: {d}K steps without improvement\n", .{health.stagnation / 1000}) catch msg_buf[pos..pos]).len;
         has_insights = true;
     }
     if (health.spike_rate > 0.3 and pos + 200 < msg_buf.len) {
-        pos += (std.fmt.bufPrint(msg_buf[pos..], "🔴 HIGH SPIKES: {d:.0}% workers spiking\n", .{health.spike_rate * 100.0}) catch "").len;
+        pos += (std.fmt.bufPrint(msg_buf[pos..], "🔴 HIGH SPIKES: {d:.0}% workers spiking\n", .{health.spike_rate * 100.0}) catch msg_buf[pos..pos]).len;
         has_insights = true;
     }
 
@@ -6406,7 +6416,7 @@ fn runNotify(allocator: Allocator, args: []const []const u8) !void {
         if (steps_no_improve > 10000 and pos + 300 < msg_buf.len) {
             pos += (std.fmt.bufPrint(msg_buf[pos..], "📊 LEADER PLATEAU: {s} no improvement for {d}K steps (at {d}K/100K)\n", .{
                 state.bestNameStr(), steps_no_improve / 1000, health.leader_step / 1000,
-            }) catch "").len;
+            }) catch msg_buf[pos..pos]).len;
             has_insights = true;
         }
     }
@@ -6418,7 +6428,7 @@ fn runNotify(allocator: Allocator, args: []const []const u8) !void {
         if (svc.current_loss > expected * 3.0 and pos + 200 < msg_buf.len) {
             pos += (std.fmt.bufPrint(msg_buf[pos..], "🚨 INVESTIGATE: {s} catastrophic spike loss={d:.2} (3x expected={d:.2})\n", .{
                 svc.svcName(), svc.current_loss, expected * 3.0,
-            }) catch "").len;
+            }) catch msg_buf[pos..pos]).len;
             has_insights = true;
         }
     }
@@ -6434,7 +6444,7 @@ fn runNotify(allocator: Allocator, args: []const []const u8) !void {
         }
     }
     if (top_at_100k > 0 and top_at_100k == top_count and pos + 200 < msg_buf.len) {
-        pos += (std.fmt.bufPrint(msg_buf[pos..], "🏁 WAVE COMPLETE: all {d} top workers reached 100K! Ready for next wave\n", .{top_count}) catch "").len;
+        pos += (std.fmt.bufPrint(msg_buf[pos..], "🏁 WAVE COMPLETE: all {d} top workers reached 100K! Ready for next wave\n", .{top_count}) catch msg_buf[pos..pos]).len;
         has_insights = true;
     }
 
@@ -6442,7 +6452,7 @@ fn runNotify(allocator: Allocator, args: []const []const u8) !void {
     if (health.leader_step >= TARGET_STEP and state.best_ppl < ns.last_best_ppl and pos + 200 < msg_buf.len) {
         pos += (std.fmt.bufPrint(msg_buf[pos..], "🏆 RECORD VERIFIED at 100K: {s} PPL={d:.2}\n", .{
             state.bestNameStr(), state.best_ppl,
-        }) catch "").len;
+        }) catch msg_buf[pos..pos]).len;
         has_insights = true;
     }
 
@@ -6454,16 +6464,16 @@ fn runNotify(allocator: Allocator, args: []const []const u8) !void {
 
         pos += (std.fmt.bufPrint(msg_buf[pos..], "\n📋 <b>Leader</b>: {s} PPL={d:.2} step={d}K\n", .{
             state.bestNameStr(), state.best_ppl, health.leader_step / 1000,
-        }) catch "").len;
+        }) catch msg_buf[pos..pos]).len;
 
         if (delta_r33 < 0) {
             pos += (std.fmt.bufPrint(msg_buf[pos..], "  dR33: ✅{d:.2} | no-improve: {d}K steps\n", .{
                 -delta_r33, steps_no_improve_summary / 1000,
-            }) catch "").len;
+            }) catch msg_buf[pos..pos]).len;
         } else {
             pos += (std.fmt.bufPrint(msg_buf[pos..], "  dR33: ⬆️{d:.2} | no-improve: {d}K steps\n", .{
                 delta_r33, steps_no_improve_summary / 1000,
-            }) catch "").len;
+            }) catch msg_buf[pos..pos]).len;
         }
 
         // ETA lines
@@ -6492,7 +6502,7 @@ fn runNotify(allocator: Allocator, args: []const []const u8) !void {
             const eta_sec = @as(f32, @floatFromInt(remaining)) * toks_per_step / leader_toks;
             const eta_h: u32 = @intFromFloat(eta_sec / 3600.0);
             const eta_m: u32 = @intFromFloat(@mod(eta_sec / 60.0, 60.0));
-            pos += (std.fmt.bufPrint(msg_buf[pos..], "⏱️ Leader ETA: ~{d}h{d:0>2}m to 100K\n", .{ eta_h, eta_m }) catch "").len;
+            pos += (std.fmt.bufPrint(msg_buf[pos..], "⏱️ Leader ETA: ~{d}h{d:0>2}m to 100K\n", .{ eta_h, eta_m }) catch msg_buf[pos..pos]).len;
         }
         if (slowest_toks > 0 and slowest_step < TARGET_STEP) {
             const remaining = TARGET_STEP - slowest_step;
@@ -6501,13 +6511,13 @@ fn runNotify(allocator: Allocator, args: []const []const u8) !void {
             const eta_m: u32 = @intFromFloat(@mod(eta_sec / 60.0, 60.0));
             pos += (std.fmt.bufPrint(msg_buf[pos..], "⏱️ Tail ETA: {s} ~{d}h{d:0>2}m to 100K\n", .{
                 slowest_name_buf[0..slowest_name_len], eta_h, eta_m,
-            }) catch "").len;
+            }) catch msg_buf[pos..pos]).len;
         }
 
         pos += (std.fmt.bufPrint(msg_buf[pos..], "📊 Farm: {d}🟢 / {d}☠️ / {d} total | health: {d:.0}/100", .{
             health.alive,                            @as(u32, @intCast(state.service_count)) - health.alive,
             @as(u32, @intCast(state.service_count)), health.health_score,
-        }) catch "").len;
+        }) catch msg_buf[pos..pos]).len;
     }
 
     if (!has_insights) {
@@ -6539,7 +6549,7 @@ fn runNotify(allocator: Allocator, args: []const []const u8) !void {
     ns.last_best_ppl = state.best_ppl;
     copyToFixed(&ns.last_best_name, &ns.last_best_name_len, state.bestNameStr());
     ns.last_event_count = state.event_count;
-    ns.last_timestamp = std.time.milliTimestamp();
+    ns.last_timestamp = tri_time.milliTimestamp();
     ns.last_leader_step = health.leader_step;
     saveNotifyState(&ns);
 }
@@ -6578,12 +6588,15 @@ fn runServe(allocator: Allocator, args: []const []const u8) !void {
         if (pi == 4) addr_buf = parts;
     }
 
-    const address = std.net.Address.initIp4(addr_buf, port);
-    var server = address.listen(.{ .reuse_address = true }) catch |err| {
+    // Zig 0.16: `std.net` is gone. Addresses are `std.Io.net.IpAddress`, and
+    // both `listen` and `deinit` take the `Io` explicitly.
+    const io = tri_io.get();
+    const address: std.Io.net.IpAddress = .{ .ip4 = .{ .bytes = addr_buf, .port = port } };
+    var server = address.listen(io, .{ .reuse_address = true }) catch |err| {
         print("{s}Failed to bind {s}:{d}: {}{s}\n", .{ RED, host, port, err, RESET });
         return err;
     };
-    defer server.deinit();
+    defer server.deinit(io);
 
     // Initialize WebSocket infrastructure
     var event_bus = farm_ws.EventBus{};
@@ -6607,17 +6620,42 @@ fn runServe(allocator: Allocator, args: []const []const u8) !void {
     print("   Ctrl+C to stop\n\n", .{});
 
     while (true) {
-        const conn = server.accept() catch continue;
-        const taken = serveRequest(allocator, conn.stream, &broadcaster) catch false;
-        if (!taken) conn.stream.close();
+        // 0.16: `Server.accept` yields the `Stream` itself -- there is no
+        // `Server.Connection` wrapper any more -- and `close` takes the `Io`.
+        const conn = server.accept(io) catch continue;
+        const taken = serveRequest(allocator, conn, &broadcaster) catch false;
+        if (!taken) conn.close(io);
     }
 }
 
+/// Zig 0.16: `std.Io.net.Stream` has no `writeAll`. Writes go through a
+/// `Stream.Writer`, whose `Io.Writer` interface needs a caller-supplied
+/// buffer, so each write site builds one on the stack and flushes it. Keeping
+/// one call to one flush preserves the old "one payload, one send" behaviour.
+/// Same shape as the helper in tri_farm_ws.zig, which serves the same sockets.
+fn streamWriteAll(stream: std.Io.net.Stream, bytes: []const u8) !void {
+    var write_buf: [8192]u8 = undefined;
+    var w = stream.writer(tri_io.get(), &write_buf);
+    try w.interface.writeAll(bytes);
+    try w.interface.flush();
+}
+
+/// Zig 0.16 replacement for `stream.read(buf)`: one underlying read returning
+/// whatever arrived. The zero-length reader buffer stops `readVec` from
+/// filling an internal buffer first, so exactly one read happens, as before.
+/// `error.EndOfStream` stands in for the old "returned 0 bytes".
+fn streamReadOnce(stream: std.Io.net.Stream, buf: []u8) !usize {
+    var reader_buf: [0]u8 = .{};
+    var r = stream.reader(tri_io.get(), &reader_buf);
+    var data: [1][]u8 = .{buf};
+    return r.interface.readVec(&data);
+}
+
 /// Returns true if stream was taken by WebSocket (caller must NOT close it)
-fn serveRequest(allocator: Allocator, stream: std.net.Stream, broadcaster: *farm_ws.Broadcaster) !bool {
+fn serveRequest(allocator: Allocator, stream: std.Io.net.Stream, broadcaster: *farm_ws.Broadcaster) !bool {
     // Read request (first line is enough)
     var req_buf: [1024]u8 = undefined;
-    const n = stream.read(&req_buf) catch return false;
+    const n = streamReadOnce(stream, &req_buf) catch return false;
     if (n == 0) return false;
     const request = req_buf[0..n];
 
@@ -6672,21 +6710,21 @@ fn serveRequest(allocator: Allocator, stream: std.net.Stream, broadcaster: *farm
     return false;
 }
 
-fn sendJson(stream: std.net.Stream, body: []const u8) void {
+fn sendJson(stream: std.Io.net.Stream, body: []const u8) void {
     var header_buf: [256]u8 = undefined;
     const header = std.fmt.bufPrint(&header_buf, "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {d}\r\nConnection: close\r\n\r\n", .{body.len}) catch return;
-    stream.writeAll(header) catch return;
-    stream.writeAll(body) catch return;
+    streamWriteAll(stream, header) catch return;
+    streamWriteAll(stream, body) catch return;
 }
 
-fn sendJsonStatus(stream: std.net.Stream, status: []const u8, body: []const u8) void {
+fn sendJsonStatus(stream: std.Io.net.Stream, status: []const u8, body: []const u8) void {
     var header_buf: [256]u8 = undefined;
     const header = std.fmt.bufPrint(&header_buf, "HTTP/1.1 {s}\r\nContent-Type: application/json\r\nContent-Length: {d}\r\nConnection: close\r\n\r\n", .{ status, body.len }) catch return;
-    stream.writeAll(header) catch return;
-    stream.writeAll(body) catch return;
+    streamWriteAll(stream, header) catch return;
+    streamWriteAll(stream, body) catch return;
 }
 
-fn serveStatus(allocator: Allocator, stream: std.net.Stream) void {
+fn serveStatus(allocator: Allocator, stream: std.Io.net.Stream) void {
     const state = loadState(allocator) catch {
         sendJson(stream, "{\"error\":\"no evolution state\"}");
         return;
@@ -6707,7 +6745,7 @@ fn serveStatus(allocator: Allocator, stream: std.net.Stream) void {
     sendJson(stream, json);
 }
 
-fn serveLeaderboard(allocator: Allocator, stream: std.net.Stream) void {
+fn serveLeaderboard(allocator: Allocator, stream: std.Io.net.Stream) void {
     const state = loadState(allocator) catch {
         sendJson(stream, "{\"error\":\"no evolution state\"}");
         return;
@@ -6755,7 +6793,7 @@ fn serveLeaderboard(allocator: Allocator, stream: std.net.Stream) void {
     sendJson(stream, buf[0..pos]);
 }
 
-fn serveEvents(allocator: Allocator, stream: std.net.Stream) void {
+fn serveEvents(allocator: Allocator, stream: std.Io.net.Stream) void {
     const state = loadState(allocator) catch {
         sendJson(stream, "{\"error\":\"no evolution state\"}");
         return;
@@ -6788,13 +6826,8 @@ fn serveEvents(allocator: Allocator, stream: std.net.Stream) void {
     sendJson(stream, buf[0..pos]);
 }
 
-fn serveLineage(allocator: Allocator, stream: std.net.Stream) void {
-    const file = std.fs.cwd().openFile(LINEAGE_PATH, .{}) catch {
-        sendJson(stream, "[]");
-        return;
-    };
-    defer file.close();
-    const contents = file.readToEndAlloc(allocator, 256 * 1024) catch {
+fn serveLineage(allocator: Allocator, stream: std.Io.net.Stream) void {
+    const contents = std.Io.Dir.cwd().readFileAlloc(tri_io.get(), LINEAGE_PATH, allocator, .limited(256 * 1024)) catch {
         sendJson(stream, "[]");
         return;
     };
@@ -6941,7 +6974,7 @@ fn tuneService(allocator: Allocator, state: *EvolutionState, svc_idx: usize, con
     }
     api_calls.* += 1;
 
-    std.Thread.sleep(100 * std.time.ns_per_ms);
+    tri_time.sleep(100 * std.time.ns_per_ms);
 
     // Redeploy
     if (api.redeployService(svc_id, acct.env_id)) |resp| {
@@ -7005,7 +7038,7 @@ fn runTuneInternal(allocator: Allocator, state: *EvolutionState, sacred: bool, d
 
     print("   🔧 Tune: {d} eligible, bottom {d}, tuning {d}\n", .{ cand_count, bottom_count, tune_count });
 
-    var seed: u32 = @truncate(@as(u64, @intCast(std.time.milliTimestamp())) +% 3333);
+    var seed: u32 = @truncate(@as(u64, @intCast(tri_time.milliTimestamp())) +% 3333);
     for (candidates[0..tune_count]) |ci| {
         const svc = &state.services[ci];
         seed = mulberry32(seed);
@@ -7258,7 +7291,7 @@ fn resumeService(allocator: Allocator, state: *EvolutionState, svc_idx: usize, a
     }
     api_calls.* += 1;
 
-    std.Thread.sleep(100 * std.time.ns_per_ms);
+    tri_time.sleep(100 * std.time.ns_per_ms);
 
     // Redeploy
     if (api.redeployService(svc_id, acct.env_id)) |resp| {
@@ -7367,7 +7400,7 @@ fn runRestart(allocator: Allocator, args: []const []const u8) !void {
         return;
     }
 
-    std.Thread.sleep(100 * std.time.ns_per_ms);
+    tri_time.sleep(100 * std.time.ns_per_ms);
 
     // Redeploy
     if (api.redeployService(svc_id, acct.env_id)) |resp| {
@@ -7865,11 +7898,12 @@ test "parseMockConfigJson fields" {
 
     const tmp_path = "/tmp/trinity_test_deploy_configs.json";
     {
-        var f = try std.fs.createFileAbsolute(tmp_path, .{});
-        defer f.close();
-        try f.writeAll(test_json);
+        const io = tri_io.get();
+        var f = try std.Io.Dir.createFileAbsolute(io, tmp_path, .{});
+        defer f.close(io);
+        try f.writeStreamingAll(io, test_json);
     }
-    defer std.fs.deleteFileAbsolute(tmp_path) catch {};
+    defer std.Io.Dir.deleteFileAbsolute(tri_io.get(), tmp_path) catch {};
 
     var configs: [MAX_SERVICES]MutatedConfig = undefined;
     var cnames: [MAX_SERVICES][64]u8 = undefined;

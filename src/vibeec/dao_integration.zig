@@ -1,5 +1,6 @@
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 pub const StakingTier = enum {
     BRONZE, // 8% APY
     SILVER, // 12% APY
@@ -21,7 +22,7 @@ pub const DAOManager = struct {
     pub fn init(allocator: std.mem.Allocator) DAOManager {
         return DAOManager{
             .allocator = allocator,
-            .stakes = .{},
+            .stakes = .empty,
             .tri_balance = 0.0,
         };
     }
@@ -36,7 +37,7 @@ pub const DAOManager = struct {
         const info = StakeInfo{
             .amount = amount,
             .tier = tier,
-            .start_time = std.time.timestamp(),
+            .start_time = tri_time.timestamp(),
             .yield = switch (tier) {
                 .BRONZE => 0.08,
                 .SILVER => 0.12,
@@ -50,13 +51,13 @@ pub const DAOManager = struct {
     pub fn vote(self: *DAOManager, proposal_id: []const u8, choice: bool) !void {
         _ = self;
         std.debug.print("🗳️ [DAO] Casting vote on proposal {s}: {s}\n", .{ proposal_id, if (choice) "YES" else "NO" });
-        std.Thread.sleep(100 * std.time.ns_per_ms);
+        tri_time.sleep(100 * std.time.ns_per_ms);
         std.debug.print("✅ [DAO] Vote recorded on Trinity L2.\n", .{});
     }
 
     pub fn calculateRewards(self: *DAOManager) f64 {
         var total_reward: f64 = 0;
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
         for (self.stakes.items) |s| {
             const duration = @as(f64, @floatFromInt(now - s.start_time));
             // simplified reward: (amount * yield) * (time / year_in_seconds)

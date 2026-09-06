@@ -7,6 +7,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 // =============================================================================
 // CONSTANTS
 // =============================================================================
@@ -88,7 +89,7 @@ pub const RewardLedger = struct {
             .node_id_prefix = node_prefix,
             .amount_wei = amount_wei,
             .triple_count = triple_count,
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
             .claimed = false,
         };
         self.event_head = (self.event_head + 1) % MAX_REWARD_EVENTS;

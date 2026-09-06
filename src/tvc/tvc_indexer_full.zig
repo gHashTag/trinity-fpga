@@ -11,6 +11,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const math = std.math;
 const Allocator = std.mem.Allocator;
 
@@ -199,7 +200,7 @@ pub fn nameMatchScore(query: []const u8, symbol_name: []const u8) f32 {
 }
 
 pub fn recencyBoost(timestamp: i64) f32 {
-    const now = std.time.timestamp();
+    const now = tri_time.timestamp();
     const age_seconds = now - timestamp;
     const thirty_days: i64 = 30 * 24 * 60 * 60;
     if (age_seconds >= thirty_days) {

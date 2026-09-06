@@ -12,6 +12,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const math = std.math;
 const vsa = @import("vsa.zig");
 const trit = @import("trit_vsa.zig");
@@ -55,7 +56,7 @@ pub const NeuralEncoder = struct {
         errdefer allocator.free(projection);
 
         // Initialize with φ-based seed
-        const timestamp = std.time.nanoTimestamp();
+        const timestamp = tri_time.nanoTimestamp();
         const seed = @as(u64, @intCast(timestamp)) ^ @as(u64, @intFromFloat(PHI * 1000000));
         var prng = std.Random.DefaultPrng.init(seed);
 
@@ -270,7 +271,7 @@ pub const HybridVSA = struct {
             float_vec[i] = @floatCast(v);
         }
 
-        const timestamp = std.time.nanoTimestamp();
+        const timestamp = tri_time.nanoTimestamp();
         const seed = @as(u64, @intCast(timestamp));
 
         const tv = try TritVSA.fromFloatVector(

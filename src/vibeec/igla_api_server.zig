@@ -13,6 +13,7 @@
 // =============================================================================
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const streaming = @import("igla_streaming_engine.zig");
 
 // =============================================================================
@@ -120,7 +121,7 @@ pub const Route = enum {
             clean_path = path[0..idx];
         }
         // Remove trailing space/CR
-        clean_path = std.mem.trimRight(u8, clean_path, " \r\n");
+        clean_path = std.mem.trimEnd(u8, clean_path, " \r\n");
 
         if (std.mem.startsWith(u8, clean_path, "/v1/chat/completions")) return .ChatCompletions;
         if (std.mem.startsWith(u8, clean_path, "/v1/models")) return .Models;
@@ -503,7 +504,7 @@ pub const ApiMetrics = struct {
             .failed_requests = 0,
             .total_tokens_generated = 0,
             .total_response_time_ns = 0,
-            .start_time_ns = @intCast(std.time.nanoTimestamp()),
+            .start_time_ns = @intCast(tri_time.nanoTimestamp()),
         };
     }
 
@@ -519,7 +520,7 @@ pub const ApiMetrics = struct {
     }
 
     pub fn getUptime(self: *const ApiMetrics) f64 {
-        const now: i64 = @intCast(std.time.nanoTimestamp());
+        const now: i64 = @intCast(tri_time.nanoTimestamp());
         return @as(f64, @floatFromInt(now - self.start_time_ns)) / 1_000_000_000.0;
     }
 
@@ -571,7 +572,7 @@ pub const ApiHandler = struct {
             return self.handleMethodNotAllowed();
         }
 
-        const start_time: i64 = @intCast(std.time.nanoTimestamp());
+        const start_time: i64 = @intCast(tri_time.nanoTimestamp());
 
         // Extract message from request body
         const body = request.getBody();
@@ -587,7 +588,7 @@ pub const ApiHandler = struct {
         json.startObject();
         json.addString("id", "chatcmpl-igla-001");
         json.addString("object", "chat.completion");
-        const now_ns: i64 = @intCast(std.time.nanoTimestamp());
+        const now_ns: i64 = @intCast(tri_time.nanoTimestamp());
         json.addNumber("created", @divFloor(now_ns, 1_000_000_000));
         json.addString("model", MODEL_ID);
 
@@ -640,7 +641,7 @@ pub const ApiHandler = struct {
         response.setJsonBody(json.getJson());
 
         // Record metrics
-        const end_time: i64 = @intCast(std.time.nanoTimestamp());
+        const end_time: i64 = @intCast(tri_time.nanoTimestamp());
         const success = !stream_response.hasError();
         self.metrics.recordRequest(success, stream_response.progress.tokens_generated, end_time - start_time);
 
@@ -1299,9 +1300,9 @@ pub fn runBenchmark() void {
         var scenario_time: i64 = 0;
 
         for (0..iterations) |_| {
-            const start: i64 = @intCast(std.time.nanoTimestamp());
+            const start: i64 = @intCast(tri_time.nanoTimestamp());
             const response = server.processRequest(scenario.request);
-            const end: i64 = @intCast(std.time.nanoTimestamp());
+            const end: i64 = @intCast(tri_time.nanoTimestamp());
 
             total_requests += 1;
             scenario_time += end - start;

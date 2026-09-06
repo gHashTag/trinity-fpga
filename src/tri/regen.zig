@@ -16,6 +16,9 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
+const tri_proc = @import("tri_proc");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 
 const hippocampus = @import("hippocampus.zig");
@@ -142,7 +145,7 @@ pub const RegenAnalysis = struct {
 /// Analyze codebase health and generate fix items
 pub fn analyze(allocator: Allocator) !RegenAnalysis {
     var result = RegenAnalysis{
-        .timestamp = std.time.timestamp(),
+        .timestamp = tri_time.timestamp(),
     };
 
     // 1. Scan doctor violations
@@ -238,7 +241,7 @@ pub fn showStatus(allocator: Allocator) !void {
     print("{s}Recent immune responses:{s}\n\n", .{ CYAN, RESET });
     for (results.items) |rec| {
         const rec_ts: i64 = @intCast(rec.ts);
-        const dt = std.time.timestamp() - rec_ts;
+        const dt = tri_time.timestamp() - rec_ts;
         var ago_buf: [32]u8 = undefined;
         const ago = if (dt < 60) "just now" else if (dt < 3600) std.fmt.bufPrint(&ago_buf, "{d}m ago", .{@divTrunc(dt, 60)}) catch "?" else std.fmt.bufPrint(&ago_buf, "{d}h ago", .{@divTrunc(dt, 3600)}) catch "?";
         print("  {s}{s}{s} {s}\n", .{ DIM, ago, RESET, rec.summary() });
@@ -264,15 +267,13 @@ pub fn showStatus(allocator: Allocator) !void {
 
 fn scanDoctorViolations(allocator: Allocator, result: *RegenAnalysis) !void {
     _ = allocator; // Not used, but kept for API consistency
-    const file = std.fs.cwd().openFile(".trinity/scan_results.json", .{}) catch {
+    const io = tri_io.get();
+    var buf: [16384]u8 = undefined;
+    // Whole small file into a fixed buffer; a short read is normal.
+    const content = std.Io.Dir.cwd().readFile(io, ".trinity/scan_results.json", &buf) catch {
         // No scan results yet
         return;
     };
-    defer file.close();
-
-    var buf: [16384]u8 = undefined;
-    const content_len = try file.readAll(&buf);
-    const content = buf[0..content_len];
 
     // Simple JSON parsing for doctor results
     // Looking for patterns like "violations": N, "infected": N
@@ -330,7 +331,7 @@ fn scanErrorMemories(allocator: Allocator, result: *RegenAnalysis) !void {
     result.error_memories = @intCast(errors.items.len);
 
     // Add recent errors to fix plan
-    const now: i64 = std.time.timestamp();
+    const now: i64 = tri_time.timestamp();
     for (errors.items) |err| {
         if (result.fix_count >= 32) break;
         const err_ts: i64 = @intCast(err.ts);
@@ -377,7 +378,7 @@ fn executeFix(allocator: Allocator, item: FixItem) !bool {
     switch (item.source) {
         .doctor => {
             // Run tri doctor heal
-            const result = std.process.Child.run(.{
+            const result = tri_proc.run(.{
                 .allocator = allocator,
                 .argv = &[_][]const u8{ "tri", "doctor", "heal" },
                 .max_output_bytes = 1_000_000,
@@ -386,13 +387,13 @@ fn executeFix(allocator: Allocator, item: FixItem) !bool {
                 allocator.free(result.stdout);
                 allocator.free(result.stderr);
             }
-            return result.term.Exited == 0;
+            return result.term.exited == 0;
         },
         .hippocampus => {
             // For error memories, try to diagnose
             // This would require more sophisticated analysis
             // For now, just run tests to see if still broken
-            const test_result = std.process.Child.run(.{
+            const test_result = tri_proc.run(.{
                 .allocator = allocator,
                 .argv = &[_][]const u8{ "tri", "test" },
                 .max_output_bytes = 1_000_000,
@@ -402,7 +403,7 @@ fn executeFix(allocator: Allocator, item: FixItem) !bool {
                 allocator.free(test_result.stderr);
             }
             // If tests pass, consider it fixed (maybe externally)
-            return test_result.term.Exited == 0;
+            return test_result.term.exited == 0;
         },
         .pipeline => {
             // Retry pipeline run
@@ -488,15 +489,13 @@ fn renderAnalysis(analysis: *const RegenAnalysis) !void {
 }
 
 fn showFixPlan() !void {
-    const file = std.fs.cwd().openFile(".phoenix/fix_plan.md", .{}) catch {
+    const io = tri_io.get();
+    var buf: [16384]u8 = undefined;
+    // Whole small file into a fixed buffer; a short read is normal.
+    const content = std.Io.Dir.cwd().readFile(io, ".phoenix/fix_plan.md", &buf) catch {
         print("\n{s}⊙{s} No fix plan exists yet\n", .{ DIM, RESET });
         return;
     };
-    defer file.close();
-
-    var buf: [16384]u8 = undefined;
-    const content_len = try file.readAll(&buf);
-    const content = buf[0..content_len];
 
     print("\n{s}📋 FIX PLAN{s}\n", .{ BOLD, RESET });
     print("{s}═══════════════════════════════════════════════════════════{s}\n\n", .{ DIM, RESET });

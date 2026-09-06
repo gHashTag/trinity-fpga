@@ -7,6 +7,8 @@
 
 const std = @import("std");
 
+const tri_mutex = @import("tri_mutex");
+const tri_time = @import("tri_time");
 // =============================================================================
 // LATENCY CONFIGURATION
 // =============================================================================
@@ -53,7 +55,7 @@ pub const PeerLatencyTracker = struct {
     config: LatencyConfig,
     entries: std.AutoHashMap([32]u8, LatencyEntry),
     total_samples: u64,
-    mutex: std.Thread.Mutex,
+    mutex: tri_mutex.Mutex,
 
     pub fn init(allocator: std.mem.Allocator) PeerLatencyTracker {
         return initWithConfig(allocator, .{});
@@ -86,7 +88,7 @@ pub const PeerLatencyTracker = struct {
                 .max_latency_ns = latency_ns,
                 .ema_latency_ns = @floatFromInt(latency_ns),
                 .sample_count = 1,
-                .last_sample_time = std.time.timestamp(),
+                .last_sample_time = tri_time.timestamp(),
             };
         } else {
             const entry = result.value_ptr;
@@ -105,7 +107,7 @@ pub const PeerLatencyTracker = struct {
             const lat_f: f64 = @floatFromInt(latency_ns);
             entry.ema_latency_ns = self.config.ema_alpha * lat_f + (1.0 - self.config.ema_alpha) * entry.ema_latency_ns;
 
-            entry.last_sample_time = std.time.timestamp();
+            entry.last_sample_time = tri_time.timestamp();
         }
 
         self.total_samples += 1;
@@ -138,7 +140,7 @@ pub const PeerLatencyTracker = struct {
         self.mutex.lock();
         defer self.mutex.unlock();
 
-        var scores = std.ArrayListUnmanaged(PeerLatencyScore){};
+        var scores = @as(std.ArrayListUnmanaged(PeerLatencyScore), .empty);
         var iter = self.entries.iterator();
         while (iter.next()) |kv| {
             try scores.append(allocator, .{
@@ -172,7 +174,7 @@ pub const PeerLatencyTracker = struct {
         const ranked = try self.rankByLatency(allocator);
         defer allocator.free(ranked);
 
-        var result = std.ArrayListUnmanaged([32]u8){};
+        var result = @as(std.ArrayListUnmanaged([32]u8), .empty);
         for (ranked) |score| {
             if (result.items.len >= count) break;
             if (exclude_id) |excl| {

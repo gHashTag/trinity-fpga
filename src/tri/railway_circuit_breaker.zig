@@ -19,6 +19,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 // ═══════════════════════════════════════════════════════════════════════════════
 // Level 1: Circuit Breaker
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -266,7 +267,7 @@ pub fn getFarmHealth(accounts: []const AccountHealth, now: i64) FarmHealth {
 
 test "CircuitBreaker: closed allows requests" {
     var cb = AccountCircuit{};
-    const now = std.time.timestamp();
+    const now = tri_time.timestamp();
 
     try std.testing.expectEqual(cb.canUse(now), true);
     try std.testing.expectEqual(cb.state, .closed);
@@ -274,7 +275,7 @@ test "CircuitBreaker: closed allows requests" {
 
 test "CircuitBreaker: three failures opens circuit" {
     var cb = AccountCircuit{};
-    const now = std.time.timestamp();
+    const now = tri_time.timestamp();
 
     cb.recordFailure(now);
     try std.testing.expectEqual(cb.state, .closed);
@@ -289,7 +290,7 @@ test "CircuitBreaker: three failures opens circuit" {
 
 test "CircuitBreaker: success resets circuit" {
     var cb = AccountCircuit{};
-    const now = std.time.timestamp();
+    const now = tri_time.timestamp();
 
     // Trip circuit
     cb.recordFailure(now);
@@ -305,7 +306,7 @@ test "CircuitBreaker: success resets circuit" {
 
 test "RequestBudget: respects hourly limit" {
     var rb = RequestBudget{};
-    const now = std.time.timestamp();
+    const now = tri_time.timestamp();
 
     // Should allow up to hourly_limit
     var i: u32 = 0;
@@ -320,7 +321,7 @@ test "RequestBudget: respects hourly limit" {
 
 test "RequestBudget: resets after hour" {
     var rb = RequestBudget{};
-    const now = std.time.timestamp();
+    const now = tri_time.timestamp();
 
     // Use some budget
     _ = rb.tryConsume(now);
@@ -334,7 +335,7 @@ test "RequestBudget: resets after hour" {
 
 test "AccountHealth: score calculation" {
     var acc = AccountHealth{ .name = "TEST" };
-    const now = std.time.timestamp();
+    const now = tri_time.timestamp();
 
     // Initial score should be 1.0
     try std.testing.expectEqual(acc.score, 1.0);
@@ -352,7 +353,7 @@ test "AccountHealth: score calculation" {
 }
 
 test "selectBest: chooses healthiest account" {
-    const now = std.time.timestamp();
+    const now = tri_time.timestamp();
 
     var accounts = [_]AccountHealth{
         .{ .name = "PRIMARY", .score = 0.5 },
@@ -366,7 +367,7 @@ test "selectBest: chooses healthiest account" {
 }
 
 test "selectBest: skips exhausted budget" {
-    const now = std.time.timestamp();
+    const now = tri_time.timestamp();
 
     var accounts = [_]AccountHealth{
         .{ .name = "PRIMARY" },
@@ -385,7 +386,7 @@ test "selectBest: skips exhausted budget" {
 }
 
 test "selectBest: returns null if all exhausted" {
-    const now = std.time.timestamp();
+    const now = tri_time.timestamp();
 
     var accounts = [_]AccountHealth{
         .{ .name = "PRIMARY" },

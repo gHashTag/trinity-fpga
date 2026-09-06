@@ -5,6 +5,8 @@
 
 const std = @import("std");
 
+const tri_io = @import("tri_io");
+const tri_time = @import("tri_time");
 // ═══════════════════════════════════════════════════════════════════════════════
 // CODEBASE INTERFACE
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -321,7 +323,7 @@ pub const Codebase = struct {
             .path = self.allocator.dupe(u8, path) catch path,
             .old_content = old_content,
             .new_content = self.allocator.dupe(u8, content) catch content,
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
         }) catch |err| {
             std.log.warn("codebase: failed to record change history: {}", .{err});
         };
@@ -389,7 +391,7 @@ pub const Codebase = struct {
 
     /// byand to
     pub fn exec(self: *Codebase, command: []const u8, args: []const []const u8) ExecResult {
-        const start_time = std.time.milliTimestamp();
+        const start_time = tri_time.milliTimestamp();
 
         var argv = std.ArrayList([]const u8).init(self.allocator);
         defer argv.deinit();
@@ -409,7 +411,11 @@ pub const Codebase = struct {
             };
         }
 
-        var child = std.process.Child.init(argv.items, self.allocator);
+        var child = try std.process.spawn(tri_io.get(), .{
+            .argv = argv.items,
+            .stdout = .inherit,
+            .stderr = .inherit,
+        });
         child.cwd = self.root_path;
         child.stdout_behavior = .Pipe;
         child.stderr_behavior = .Pipe;
@@ -426,17 +432,17 @@ pub const Codebase = struct {
         const stdout = child.stdout.?.reader().readAllAlloc(self.allocator, 1024 * 1024) catch "";
         const stderr = child.stderr.?.reader().readAllAlloc(self.allocator, 1024 * 1024) catch "";
 
-        const term = child.wait() catch {
+        const term = child.wait(tri_io.get()) catch {
             return ExecResult{
                 .exit_code = -1,
                 .stdout = stdout,
                 .stderr = stderr,
-                .duration_ms = @intCast(std.time.milliTimestamp() - start_time),
+                .duration_ms = @intCast(tri_time.milliTimestamp() - start_time),
             };
         };
 
         const exit_code: i32 = switch (term) {
-            .Exited => |code| @as(i32, code),
+            .exited => |code| @as(i32, code),
             else => -1,
         };
 
@@ -444,7 +450,7 @@ pub const Codebase = struct {
             .exit_code = exit_code,
             .stdout = stdout,
             .stderr = stderr,
-            .duration_ms = @intCast(std.time.milliTimestamp() - start_time),
+            .duration_ms = @intCast(tri_time.milliTimestamp() - start_time),
         };
     }
 

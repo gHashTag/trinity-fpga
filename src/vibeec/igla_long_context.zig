@@ -13,6 +13,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 // ============================================================================
 // CONSTANTS
 // ============================================================================
@@ -112,7 +113,7 @@ pub const Message = struct {
             .role = role,
             .content = undefined,
             .content_len = 0,
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
             .tokens = 0,
             .priority = .Normal,
             .is_summarized = false,
@@ -144,7 +145,7 @@ pub const Message = struct {
     }
 
     pub fn getAge(self: *const Message) i64 {
-        return std.time.timestamp() - self.timestamp;
+        return tri_time.timestamp() - self.timestamp;
     }
 
     pub fn shouldRetain(self: *const Message) bool {
@@ -839,7 +840,7 @@ pub fn runBenchmark() void {
 
     // Add many messages to test sliding window
     std.debug.print("  Adding 50 conversation turns...\n", .{});
-    const start_time = std.time.nanoTimestamp();
+    const start_time = tri_time.nanoTimestamp();
 
     var i: usize = 0;
     while (i < 50) : (i += 1) {
@@ -852,7 +853,7 @@ pub fn runBenchmark() void {
         _ = engine.addAssistantMessage(asst_msg);
     }
 
-    const end_time = std.time.nanoTimestamp();
+    const end_time = tri_time.nanoTimestamp();
     const elapsed_ns: i64 = @intCast(end_time - start_time);
     const elapsed_us: u64 = @intCast(@divFloor(elapsed_ns, 1000));
 

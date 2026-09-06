@@ -13,6 +13,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const types = @import("train_types.zig");
 const diag = @import("train_diagnostics.zig");
 const CheckpointInfo = types.CheckpointInfo;
@@ -395,12 +396,13 @@ fn runExport() void {
     sortSummaries(summaries[0..n_summaries]);
 
     // Write markdown to docs/EXPERIMENTS.md
-    const cwd = std.fs.cwd();
-    const file = cwd.createFile("docs/EXPERIMENTS.md", .{}) catch {
+    const io = tri_io.get();
+    const cwd = std.Io.Dir.cwd();
+    const file = cwd.createFile(io, "docs/EXPERIMENTS.md", .{}) catch {
         print("{s}Error: cannot write docs/EXPERIMENTS.md{s}\n", .{ RED, RESET });
         return;
     };
-    defer file.close();
+    defer file.close(io);
 
     const header =
         \\# HSLM Experiment Results
@@ -413,14 +415,14 @@ fn runExport() void {
         \\|------|-----------|----------|-----------|-----------|----------|-------------|
         \\
     ;
-    file.writeAll(header) catch return;
+    file.writeStreamingAll(io, header) catch return;
 
     var line_buf: [256]u8 = undefined;
     for (summaries[0..n_summaries], 0..) |s, rank| {
         const line = std.fmt.bufPrint(&line_buf, "| {d} | `{s}` | {d:.2} | {d:.3} | {d} | {d} | {d} |\n", .{
             rank + 1, s.dir, s.best_ppl, s.best_loss, s.best_step, s.max_step, s.checkpoints,
         }) catch continue;
-        file.writeAll(line) catch return;
+        file.writeStreamingAll(io, line) catch return;
     }
 
     const wave6 =
@@ -461,7 +463,7 @@ fn runExport() void {
         \\- Batch size 66 with gradient accumulation 2 is default baseline
         \\
     ;
-    file.writeAll(wave6) catch return;
+    file.writeStreamingAll(io, wave6) catch return;
 
     print("{s}Exported to docs/EXPERIMENTS.md{s}\n", .{ GREEN, RESET });
 }
@@ -566,8 +568,9 @@ fn getCheckpointDirs(args: []const []const u8) DirList {
     for (known_dirs) |dir| {
         if (result.len >= 10) break;
         // Check if directory exists
-        var d = std.fs.cwd().openDir(dir, .{}) catch continue;
-        d.close();
+        const io = tri_io.get();
+        var d = std.Io.Dir.cwd().openDir(io, dir, .{}) catch continue;
+        d.close(io);
         result.paths[result.len] = dir;
         result.len += 1;
     }

@@ -20,6 +20,18 @@
 // =============================================================================
 
 const std = @import("std");
+
+// 0.16 removed open/close/write/fcntl from std.posix (read, tcgetattr and
+// tcsetattr survive). libc has all of them and is already linked.
+const c_open = struct {
+    extern "c" fn open(path: [*:0]const u8, flags: c_int, mode: c_uint) c_int;
+    extern "c" fn close(fd: c_int) c_int;
+    extern "c" fn write(fd: c_int, buf: [*]const u8, n: usize) isize;
+    extern "c" fn fcntl(fd: c_int, cmd: c_int, arg: usize) c_int;
+};
+const tri_io = @import("tri_io");
+const tri_proc = @import("tri_proc");
+const tri_time = @import("tri_time");
 const posix = std.posix;
 const c = std.c;
 
@@ -32,26 +44,35 @@ pub const SerialPort = struct {
     path: []const u8,
 
     pub fn open(path: []const u8) !SerialPort {
-        const fd = try posix.open(path, .{ .ACCMODE = .RDWR, .NOCTTY = true, .NONBLOCK = true }, 0);
-        errdefer posix.close(fd);
+        // 0.16 removed std.posix.open. libc's is the same call and is already
+        // linked; the flag bits come from std.c.O so the per-OS values stay
+        // correct rather than being hard-coded here.
+        const path_z = try std.heap.page_allocator.dupeZ(u8, path);
+        defer std.heap.page_allocator.free(path_z);
+        const open_flags: c_int = @bitCast(@as(u32, @bitCast(c.O{ .ACCMODE = .RDWR, .NOCTTY = true, .NONBLOCK = true })));
+        const fd = c_open.open(path_z.ptr, open_flags, @as(c_uint, 0));
+        if (fd < 0) return error.OpenFailed;
+        errdefer _ = c_open.close(fd);
 
         // Clear NONBLOCK after open (needed for CH340 drivers)
         const nonblock_bit: usize = @bitCast(@as(isize, @intCast(@as(u32, @bitCast(c.O{ .NONBLOCK = true })))));
-        const flags = try posix.fcntl(fd, c.F.GETFL, 0);
-        _ = try posix.fcntl(fd, c.F.SETFL, flags & ~nonblock_bit);
+        const flags: usize = @intCast(@max(c_open.fcntl(fd, @as(c_int, c.F.GETFL), 0), 0));
+        _ = c_open.fcntl(fd, @as(c_int, c.F.SETFL), flags & ~nonblock_bit);
 
         // Configure 115200 8-N-1 raw via stty (portable macOS + Linux)
         const stty_flag = comptime if (@import("builtin").os.tag == .macos) "-f" else "-F";
-        var child = std.process.Child.init(&.{
-            "stty",    stty_flag, path,    "115200", "cs8",    "-cstopb",
-            "-parenb", "raw",     "-echo", "-echoe", "-echok", "min",
-            "0",       "time",    "50",
-        }, std.heap.page_allocator);
-        child.stdout_behavior = .Ignore;
-        child.stderr_behavior = .Ignore;
-        child.spawn() catch return error.SystemResources;
-        const term = child.wait() catch return error.SystemResources;
-        if (term.Exited != 0) return error.InvalidArgument;
+        const stty_io = tri_io.get();
+        var child = std.process.spawn(stty_io, .{
+            .argv = &.{
+                "stty",    stty_flag, path,    "115200", "cs8",    "-cstopb",
+                "-parenb", "raw",     "-echo", "-echoe", "-echok", "min",
+                "0",       "time",    "50",
+            },
+            .stdout = .ignore,
+            .stderr = .ignore,
+        }) catch return error.SystemResources;
+        const term = child.wait(stty_io) catch return error.SystemResources;
+        if (term.exited != 0) return error.InvalidArgument;
 
         // Drain any stale bytes in buffer
         var drain: [256]u8 = undefined;
@@ -61,7 +82,9 @@ pub const SerialPort = struct {
     }
 
     pub fn writeBytes(self: SerialPort, data: []const u8) !usize {
-        return posix.write(self.fd, data);
+        const n = c_open.write(self.fd, data.ptr, data.len);
+        if (n < 0) return error.WriteFailed;
+        return @intCast(n);
     }
 
     pub fn readBytes(self: SerialPort, buf: []u8) !usize {
@@ -69,7 +92,7 @@ pub const SerialPort = struct {
     }
 
     pub fn close(self: SerialPort) void {
-        posix.close(self.fd);
+        _ = c_open.close(self.fd);
     }
 };
 
@@ -82,15 +105,16 @@ pub fn findSerialDevice(allocator: std.mem.Allocator) !?[]const u8 {
         "ttyACM", // Linux ACM (CDC)
     };
 
-    var dev_dir = std.fs.openDirAbsolute("/dev", .{ .iterate = true }) catch return null;
-    defer dev_dir.close();
+    const io = tri_io.get();
+    var dev_dir = std.Io.Dir.openDirAbsolute(io, "/dev", .{ .iterate = true }) catch return null;
+    defer dev_dir.close(io);
 
     // Try each prefix in priority order
     for (prefixes) |prefix| {
-        var dir2 = std.fs.openDirAbsolute("/dev", .{ .iterate = true }) catch continue;
-        defer dir2.close();
+        var dir2 = std.Io.Dir.openDirAbsolute(io, "/dev", .{ .iterate = true }) catch continue;
+        defer dir2.close(io);
         var iter = dir2.iterate();
-        while (iter.next() catch null) |entry| {
+        while (iter.next(io) catch null) |entry| {
             if (std.mem.startsWith(u8, entry.name, prefix)) {
                 return try std.fmt.allocPrint(allocator, "/dev/{s}", .{entry.name});
             }
@@ -135,14 +159,15 @@ fn uartScan(allocator: std.mem.Allocator) !void {
     std.debug.print("\n{s}{s}=== TRI FPGA UART SCAN ==={s}\n\n", .{ BOLD, CYAN, RESET });
 
     var found: usize = 0;
-    var dev_dir = std.fs.openDirAbsolute("/dev", .{ .iterate = true }) catch {
+    const io = tri_io.get();
+    var dev_dir = std.Io.Dir.openDirAbsolute(io, "/dev", .{ .iterate = true }) catch {
         std.debug.print("  {s}Cannot open /dev{s}\n", .{ RED, RESET });
         return;
     };
-    defer dev_dir.close();
+    defer dev_dir.close(io);
 
     var iter = dev_dir.iterate();
-    while (iter.next() catch null) |entry| {
+    while (iter.next(io) catch null) |entry| {
         for (prefixes) |prefix| {
             if (std.mem.startsWith(u8, entry.name, prefix)) {
                 const kind: []const u8 = if (std.mem.startsWith(u8, entry.name, "tty.wchusbserial"))
@@ -402,17 +427,15 @@ const DIM = "\x1b[2m";
 
 /// Helper: run a command, return success. If verbose, inherit stdout/stderr.
 fn runCmd(allocator: std.mem.Allocator, argv: []const []const u8, verbose: bool) !bool {
-    var child = std.process.Child.init(argv, allocator);
-    if (verbose) {
-        child.stdout_behavior = .Inherit;
-        child.stderr_behavior = .Inherit;
-    } else {
-        child.stdout_behavior = .Ignore;
-        child.stderr_behavior = .Ignore;
-    }
-    try child.spawn();
-    const term = try child.wait();
-    return term.Exited == 0;
+    _ = allocator;
+    const io = tri_io.get();
+    var child = try std.process.spawn(io, .{
+        .argv = argv,
+        .stdout = if (verbose) .inherit else .ignore,
+        .stderr = if (verbose) .inherit else .ignore,
+    });
+    const term = try child.wait(io);
+    return term.exited == 0;
 }
 
 // =========================================================================
@@ -422,6 +445,8 @@ fn runCmd(allocator: std.mem.Allocator, argv: []const []const u8, verbose: bool)
 pub fn runFpgaSynthCommand(allocator: std.mem.Allocator, args: []const []const u8) !void {
     if (args.len < 1) return printSynthUsage();
     if (std.mem.eql(u8, args[0], "--help") or std.mem.eql(u8, args[0], "-h")) return printSynthUsage();
+
+    const io = tri_io.get();
 
     // Parse args: collect .v files and options
     var vfiles_buf: [16][]const u8 = undefined;
@@ -533,8 +558,8 @@ pub fn runFpgaSynthCommand(allocator: std.mem.Allocator, args: []const []const u
         defer allocator.free(tb_path2);
 
         const tb_path: ?[]const u8 = blk: {
-            std.fs.cwd().access(tb_path1, .{}) catch {
-                std.fs.cwd().access(tb_path2, .{}) catch break :blk null;
+            std.Io.Dir.cwd().access(io, tb_path1, .{}) catch {
+                std.Io.Dir.cwd().access(io, tb_path2, .{}) catch break :blk null;
                 break :blk tb_path2;
             };
             break :blk tb_path1;
@@ -576,7 +601,7 @@ pub fn runFpgaSynthCommand(allocator: std.mem.Allocator, args: []const []const u
 
             // Check log for ERROR/FAIL keywords
             const log_has_error = check_log: {
-                const log_content = std.fs.cwd().readFileAlloc(allocator, "/tmp/tri_fpga_tb.log", 64 * 1024) catch break :check_log false;
+                const log_content = std.Io.Dir.cwd().readFileAlloc(io, "/tmp/tri_fpga_tb.log", allocator, .limited(64 * 1024)) catch break :check_log false;
                 defer allocator.free(log_content);
                 var line_iter = std.mem.splitSequence(u8, log_content, "\n");
                 while (line_iter.next()) |line| {
@@ -743,12 +768,14 @@ fn printSynthUsage() !void {
 // =========================================================================
 
 pub fn runFpgaFlashCommand(allocator: std.mem.Allocator, args: []const []const u8) !void {
+    _ = allocator;
     if (args.len < 1) return printFlashUsage();
     if (std.mem.eql(u8, args[0], "--help") or std.mem.eql(u8, args[0], "-h")) return printFlashUsage();
 
     const bit_path = args[0];
+    const io = tri_io.get();
 
-    std.fs.cwd().access(bit_path, .{}) catch {
+    std.Io.Dir.cwd().access(io, bit_path, .{}) catch {
         std.debug.print("{s}Error:{s} Bitstream not found: {s}\n", .{ RED, RESET, bit_path });
         return error.FileNotFound;
     };
@@ -759,17 +786,15 @@ pub fn runFpgaFlashCommand(allocator: std.mem.Allocator, args: []const []const u
     // Use openFPGALoader directly (no jtag_program wrapper)
     std.debug.print("  Programming via openFPGALoader...\n\n", .{});
 
-    var child = std.process.Child.init(
-        &[_][]const u8{ "sudo", JTAG_PROGRAM, bit_path },
-        allocator,
-    );
-    child.stdout_behavior = .Inherit;
-    child.stderr_behavior = .Inherit;
-    try child.spawn();
-    const term = try child.wait();
+    var child = try std.process.spawn(io, .{
+        .argv = &[_][]const u8{ "sudo", JTAG_PROGRAM, bit_path },
+        .stdout = .inherit,
+        .stderr = .inherit,
+    });
+    const term = try child.wait(io);
 
-    if (term.Exited != 0) {
-        std.debug.print("\n{s}FLASH FAILED{s} (exit code {d})\n", .{ RED, RESET, term.Exited });
+    if (term.exited != 0) {
+        std.debug.print("\n{s}FLASH FAILED{s} (exit code {d})\n", .{ RED, RESET, term.exited });
         return error.FlashFailed;
     }
 
@@ -849,7 +874,7 @@ pub fn runFpgaSnapCommand(allocator: std.mem.Allocator, args: []const []const u8
         "1",      "-y",       output_path,
     }, false);
 
-    std.fs.cwd().deleteFile(video_path) catch |err| {
+    std.Io.Dir.cwd().deleteFile(tri_io.get(), video_path) catch |err| {
         std.log.debug("tri_fpga: failed to delete video temp file: {}", .{err});
     };
 
@@ -948,7 +973,7 @@ pub fn runFpgaVerifyCommand(allocator: std.mem.Allocator, args: []const []const 
     }
 
     std.debug.print("\n  Frames: /tmp/fpga_verify_frames/\n\n", .{});
-    std.fs.cwd().deleteFile(video_path) catch |err| {
+    std.Io.Dir.cwd().deleteFile(tri_io.get(), video_path) catch |err| {
         std.log.debug("tri_fpga: failed to delete video temp file: {}", .{err});
     };
 }
@@ -1391,6 +1416,7 @@ fn printInferUsage() !void {
 const JTAG_SWITCHER = "fpga/tools/jtag_switcher";
 
 pub fn runFpgaReadCommand(allocator: std.mem.Allocator, args: []const []const u8) !void {
+    _ = allocator;
     if (args.len < 1) return printReadUsage();
     if (std.mem.eql(u8, args[0], "--help") or std.mem.eql(u8, args[0], "-h")) return printReadUsage();
 
@@ -1415,17 +1441,16 @@ pub fn runFpgaReadCommand(allocator: std.mem.Allocator, args: []const []const u8
     if (args.len > 1) std.debug.print(" {s}", .{args[1]});
     std.debug.print("\n\n", .{});
 
-    var child = std.process.Child.init(
-        argv_buf[0..argv_len],
-        allocator,
-    );
-    child.stdout_behavior = .Inherit;
-    child.stderr_behavior = .Inherit;
-    try child.spawn();
-    const term = try child.wait();
+    const io = tri_io.get();
+    var child = try std.process.spawn(io, .{
+        .argv = argv_buf[0..argv_len],
+        .stdout = .inherit,
+        .stderr = .inherit,
+    });
+    const term = try child.wait(io);
 
-    if (term.Exited != 0) {
-        std.debug.print("\n{s}FAILED{s} (exit code {d})\n", .{ RED, RESET, term.Exited });
+    if (term.exited != 0) {
+        std.debug.print("\n{s}FAILED{s} (exit code {d})\n", .{ RED, RESET, term.exited });
         return error.ReadFailed;
     }
 }
@@ -1510,7 +1535,9 @@ fn powerFlash(allocator: std.mem.Allocator) !void {
     const output_dir = "fpga/output";
     const bitstream = output_dir ++ "/power_modes.bit";
 
-    std.fs.cwd().access(source_file, .{}) catch {
+    const io = tri_io.get();
+
+    std.Io.Dir.cwd().access(io, source_file, .{}) catch {
         std.debug.print("  {s}Source not found:{s} {s}\n", .{ RED, RESET, source_file });
         std.debug.print("  Create power_modes.v first\n\n", .{});
         return error.FileNotFound;
@@ -1520,7 +1547,7 @@ fn powerFlash(allocator: std.mem.Allocator) !void {
     std.debug.print("  Output: {s}\n", .{bitstream});
     std.debug.print("\n  Synthesizing...\n", .{});
 
-    std.fs.cwd().makePath(output_dir) catch {};
+    std.Io.Dir.cwd().createDirPath(io, output_dir) catch {};
 
     const yosys_script =
         \\read -sv power_modes.v
@@ -1532,7 +1559,7 @@ fn powerFlash(allocator: std.mem.Allocator) !void {
     var yosys_argv = [_][]const u8{ "yosys", "-p", yosys_script };
     _ = try runCmd(allocator, &yosys_argv, true);
 
-    std.fs.cwd().access("fpga/openxc7-synth/power_modes.json", .{}) catch {
+    std.Io.Dir.cwd().access(io, "fpga/openxc7-synth/power_modes.json", .{}) catch {
         std.debug.print("  {s}Yosys failed{s} — no JSON output\n", .{ RED, RESET });
         return error.SynthesisFailed;
     };
@@ -1567,7 +1594,7 @@ fn powerFlash(allocator: std.mem.Allocator) !void {
     };
     _ = try runCmd(allocator, &bit_argv, false);
 
-    std.fs.cwd().access(bitstream, .{}) catch {
+    std.Io.Dir.cwd().access(io, bitstream, .{}) catch {
         std.debug.print("  {s}Bitstream not created:{s} {s}\n\n", .{ RED, RESET, bitstream });
         return error.BitstreamFailed;
     };
@@ -1640,19 +1667,20 @@ fn powerMeasure(allocator: std.mem.Allocator, device_arg: ?[]const u8) !void {
     }
 
     const results_path = ".trinity/fpga/power_results.json";
-    std.fs.cwd().makePath(".trinity/fpga") catch {};
+    const io = tri_io.get();
+    std.Io.Dir.cwd().createDirPath(io, ".trinity/fpga") catch {};
 
     {
-        var file = try std.fs.cwd().createFile(results_path, .{});
-        defer file.close();
+        var file = try std.Io.Dir.cwd().createFile(io, results_path, .{});
+        defer file.close(io);
 
         var json_buf: [8192]u8 = undefined;
-        var json_stream = std.io.fixedBufferStream(&json_buf);
-        const json_writer = json_stream.writer();
+        var json_stream = std.Io.Writer.fixed(&json_buf);
+        const json_writer = &json_stream;
 
         try json_writer.print(
             \\{{"timestamp": "{d}", "device": "{s}", "readings": [
-        , .{ std.time.timestamp(), dev_path });
+        , .{ tri_time.timestamp(), dev_path });
 
         for (readings_buf[0..readings_len], 0..) |r, i| {
             const comma = if (i < readings_len - 1) "," else "";
@@ -1662,7 +1690,7 @@ fn powerMeasure(allocator: std.mem.Allocator, device_arg: ?[]const u8) !void {
         }
         try json_writer.writeAll("]}\n");
 
-        try file.writeAll(json_stream.getWritten());
+        try file.writeStreamingAll(io, json_stream.buffered());
     }
 
     std.debug.print("{s}Results saved to:{s} {s}\n", .{ GREEN, RESET, results_path });
@@ -1674,7 +1702,7 @@ fn powerReport(allocator: std.mem.Allocator) !void {
     std.debug.print("\n{s}{s}=== TRI FPGA POWER REPORT ==={s}\n\n", .{ BOLD, CYAN, RESET });
 
     const results_path = ".trinity/fpga/power_results.json";
-    const contents = std.fs.cwd().readFileAlloc(allocator, results_path, 8192) catch {
+    const contents = std.Io.Dir.cwd().readFileAlloc(tri_io.get(), results_path, allocator, .limited(8192)) catch {
         std.debug.print("  {s}No results found{s}\n", .{ RED, RESET });
         std.debug.print("  Run {s}tri fpga power measure{s} first\n\n", .{ CYAN, RESET });
         return error.FileNotFound;
@@ -1760,8 +1788,8 @@ fn powerStatus(allocator: std.mem.Allocator, device_arg: ?[]const u8) !void {
 
     var buf: [256]u8 = undefined;
 
-    const start_ms = std.time.milliTimestamp();
-    while (std.time.milliTimestamp() - start_ms < 5000) {
+    const start_ms = tri_time.milliTimestamp();
+    while (tri_time.milliTimestamp() - start_ms < 5000) {
         const n = port.readBytes(&buf) catch break;
         if (n > 0) {
             for (0..n - 4) |i| {
@@ -1877,7 +1905,7 @@ pub fn runFpgaFxloadCommand(allocator: std.mem.Allocator, args: []const []const 
     std.debug.print("\x1b[34mSTEP: Load FX2 Firmware\x1b[0m\n", .{});
     std.debug.print("\x1b[34m═════════════════════════════════════════\x1b[0m\n\n", .{});
 
-    const result = try std.process.Child.run(.{
+    const result = try tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ "sudo", FXLOAD_PATH, "-v", "-t", "fx2", "-d", "03fd:0013", "-i", FIRMWARE_PATH },
     });
@@ -1902,7 +1930,7 @@ pub fn runFpgaVerifyPidCommand(allocator: std.mem.Allocator, args: []const []con
     std.debug.print("\x1b[34mSTEP: Verify DLC10 PID\x1b[0m\n", .{});
     std.debug.print("\x1b[34m═════════════════════════════════════════\x1b[0m\n\n", .{});
 
-    const result = try std.process.Child.run(.{
+    const result = try tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ "system_profiler", "SPUSBDataType" },
     });
@@ -1947,7 +1975,7 @@ pub fn runFpgaFlashBitCommand(allocator: std.mem.Allocator, args: []const []cons
     std.debug.print("\x1b[34mSTEP: Flash uart_bridge_fixed.bit\x1b[0m\n", .{});
     std.debug.print("\x1b[34m═════════════════════════════════════════\x1b[0m\n\n", .{});
 
-    const result = try std.process.Child.run(.{
+    const result = try tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ "sudo", XC3SPROG_PATH, "-c", "xpc", UART_BRIDGE_BIT },
     });
@@ -1964,14 +1992,14 @@ pub fn runFpgaFlashBitCommand(allocator: std.mem.Allocator, args: []const []cons
 
         // Restore FTDI driver
         std.debug.print("Restoring FTDI driver...\n", .{});
-        _ = std.process.Child.run(.{
+        _ = tri_proc.run(.{
             .allocator = allocator,
             .argv = &.{ "sudo", "kextload", "-b", "com.apple.driver.AppleUSBFTDI" },
         }) catch {};
 
         // Kill screen processes
         std.debug.print("Killing screen processes...\n", .{});
-        _ = std.process.Child.run(.{
+        _ = tri_proc.run(.{
             .allocator = allocator,
             .argv = &.{ "killall", "screen" },
         }) catch {};
@@ -1993,7 +2021,7 @@ pub fn runFpgaMacUartTestCommand(allocator: std.mem.Allocator, args: []const []c
 
     std.debug.print("Sending 'aaaa\\r\\n' to /dev/cu.usbserial-2140...\n\n", .{});
 
-    const result = try std.process.Child.run(.{
+    const result = try tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ "python3", UART_TEST_PY },
     });
@@ -2075,7 +2103,7 @@ fn runPinsToXdcCommand(allocator: std.mem.Allocator, args: []const []const u8) !
     const xdc_content = try pins_parser.generateXdcFromDesign(allocator, input);
 
     // Write output file
-    try std.fs.cwd().writeFile(.{ .sub_path = output, .data = xdc_content });
+    try std.Io.Dir.cwd().writeFile(tri_io.get(), .{ .sub_path = output, .data = xdc_content });
 
     std.debug.print("{s}✅ Generated {s}{s}\n", .{ GREEN, output, RESET });
 }
@@ -2111,7 +2139,7 @@ fn runPinsIrCommand(allocator: std.mem.Allocator, args: []const []const u8) !voi
     // Parse and export IR
     const ir_json = try pins_parser.exportIr(allocator, input);
 
-    try std.fs.cwd().writeFile(.{ .sub_path = output, .data = ir_json });
+    try std.Io.Dir.cwd().writeFile(tri_io.get(), .{ .sub_path = output, .data = ir_json });
 
     std.debug.print("{s}✅ Exported IR to {s}{s}\n", .{ GREEN, output, RESET });
 }

@@ -10,6 +10,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const swarm = @import("swarm.zig");
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -182,13 +183,13 @@ pub const SWEBenchEvaluator = struct {
         var total_iterations: f64 = 0.0;
 
         for (self.issues.items) |issue| {
-            const start_time = std.time.nanoTimestamp();
+            const start_time = tri_time.nanoTimestamp();
 
             // Run Omega Swarm on this issue
             const result = try self.evaluateIssue(issue);
             try self.results.append(result);
 
-            const end_time = std.time.nanoTimestamp();
+            const end_time = tri_time.nanoTimestamp();
             const elapsed = @as(f64, @floatFromInt(end_time - start_time)) / 1_000_000_000.0;
             total_time += elapsed;
             total_iterations += @as(f32, @floatFromInt(result.iterations));

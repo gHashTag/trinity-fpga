@@ -13,6 +13,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const enhanced_chat = @import("igla_enhanced_chat.zig");
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -85,7 +86,7 @@ pub const SIMDPatternScorer = struct {
         self.cache[self.cache_count] = CachedResponse{
             .query_hash = hashQuery(query),
             .response = response,
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
         };
         self.cache_count += 1;
     }
@@ -339,7 +340,7 @@ pub fn runBenchmark() !void {
 
     // Benchmark
     const iterations = 1000;
-    const start = std.time.nanoTimestamp();
+    const start = tri_time.nanoTimestamp();
 
     for (0..iterations) |_| {
         for (test_queries) |q| {
@@ -347,7 +348,7 @@ pub fn runBenchmark() !void {
         }
     }
 
-    const elapsed_ns = std.time.nanoTimestamp() - start;
+    const elapsed_ns = tri_time.nanoTimestamp() - start;
     const total_queries = iterations * test_queries.len;
     const ops_per_sec = @as(f64, @floatFromInt(total_queries)) / (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
     const elapsed_ms = @as(f64, @floatFromInt(elapsed_ns)) / 1_000_000.0;

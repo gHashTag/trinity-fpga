@@ -12,6 +12,8 @@
 // Results are sorted by similarity (highest first).
 
 const std = @import("std");
+const tri_io = @import("tri_io");
+const tri_time = @import("tri_time");
 const vsa = @import("vsa");
 
 const HybridBigInt = vsa.HybridBigInt;
@@ -78,7 +80,7 @@ pub fn main() !void {
     top_n = @min(top_n, MAX_RESULTS);
 
     // Read file
-    const file_data = std.fs.cwd().readFileAlloc(allocator, file_path, 10 * 1024 * 1024) catch {
+    const file_data = std.Io.Dir.cwd().readFileAlloc(tri_io.get(), file_path, allocator, .limited(10 * 1024 * 1024)) catch {
         print("Error: cannot read '{s}'\n", .{file_path});
         std.process.exit(1);
     };
@@ -119,7 +121,7 @@ pub fn main() !void {
     print("Indexing {d} lines from '{s}'...\n", .{ total_lines, file_path });
 
     // Encode query to HybridBigInt (stub: hash-based)
-    var timer = try std.time.Timer.start();
+    var timer = try tri_time.Timer.start();
     var query_hash: i64 = 0;
     for (query_text) |c| query_hash = query_hash *% 31 + @as(i64, @intCast(c));
     var query_vec = HybridBigInt.fromI64(query_hash);

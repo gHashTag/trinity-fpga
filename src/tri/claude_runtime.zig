@@ -43,7 +43,7 @@ pub fn checkInstallation(allocator: Allocator) !bool {
     defer allocator.free(output);
 
     // 'which' returns path on success, empty on not found
-    return output.len > 0 and !std.mem.eql(u8, std.mem.trimRight(u8, output, "\n\r"), "");
+    return output.len > 0 and !std.mem.eql(u8, std.mem.trimEnd(u8, output, "\n\r"), "");
 }
 
 /// Get the installed Claude Code version

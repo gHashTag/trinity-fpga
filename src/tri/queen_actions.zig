@@ -6,6 +6,8 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_proc = @import("tri_proc");
+const tri_time = @import("tri_time");
 const qt = @import("queen_types.zig");
 const queen_policy = @import("queen_policy.zig");
 
@@ -20,9 +22,9 @@ const print = std.debug.print;
 
 pub fn execute(allocator: Allocator, kind: ActionKind) ActionResult {
     const argv = kindToArgv(kind);
-    const start = std.time.milliTimestamp();
+    const start = tri_time.milliTimestamp();
 
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = argv,
         .max_output_bytes = 64 * 1024,
@@ -30,16 +32,16 @@ pub fn execute(allocator: Allocator, kind: ActionKind) ActionResult {
         var r = ActionResult{ .success = false };
         const msg = std.fmt.bufPrint(&r.output, "exec error: {s}", .{@errorName(err)}) catch "";
         r.output_len = msg.len;
-        r.duration_ms = @intCast(@max(0, std.time.milliTimestamp() - start));
+        r.duration_ms = @intCast(@max(0, tri_time.milliTimestamp() - start));
         return r;
     };
     defer allocator.free(result.stdout);
     defer allocator.free(result.stderr);
 
-    const elapsed: u64 = @intCast(@max(0, std.time.milliTimestamp() - start));
+    const elapsed: u64 = @intCast(@max(0, tri_time.milliTimestamp() - start));
 
     var r = ActionResult{
-        .success = result.term.Exited == 0,
+        .success = result.term.exited == 0,
         .duration_ms = elapsed,
     };
 
@@ -118,7 +120,7 @@ pub fn desiredAction(state: *const qt.QueenState, senses: qt.SenseResult) ?Actio
     }
     // Rule 6: Farm alert + no comment in 2h → issue comment
     if (senses.farm_best_ppl < 999.0) {
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
         if (senses.last_issue_comment_ts == 0 or (now - senses.last_issue_comment_ts) > 7200) {
             return .issue_comment;
         }
@@ -173,7 +175,7 @@ pub fn maybeAutoAction(
 /// Record that an auto-action was taken (updates both legacy state and v3 counters)
 pub fn recordAutoAction(state: *qt.QueenState, kind: ActionKind, counters: *queen_policy.ActionCounters) void {
     state.auto_actions_this_hour +|= 1;
-    state.last_auto_action_ts = std.time.timestamp();
+    state.last_auto_action_ts = tri_time.timestamp();
     if (kind == .doctor_quick or kind == .doctor_heal) {
         state.last_build_heal_cycle = state.cycle;
     }
@@ -595,7 +597,7 @@ test "Queen actions — kindToArgv all actions return valid argv" {
 
 test "Queen actions — desiredAction issue comment respects cooldown" {
     const state = qt.QueenState{};
-    const now = std.time.timestamp();
+    const now = tri_time.timestamp();
     const senses = qt.SenseResult{
         .build_ok = true,
         .ouroboros_score = 80.0,

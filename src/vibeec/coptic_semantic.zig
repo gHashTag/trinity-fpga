@@ -96,8 +96,8 @@ pub const SemanticAnalyzer = struct {
             .allocator = allocator,
             .current_scope = undefined,
             .global_scope = Scope.init(allocator, null),
-            .errors = .{},
-            .warnings = .{},
+            .errors = .empty,
+            .warnings = .empty,
             .source = "",
         };
     }

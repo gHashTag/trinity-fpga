@@ -10,6 +10,8 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const qt = @import("queen_types.zig");
 const thalamus = @import("thalamus.zig");
@@ -70,7 +72,7 @@ pub fn init(alert_sink: locus.AlertSink) ArasState {
 /// Run single sweep over farm workers
 pub fn sweepOnce(allocator: Allocator, state: *ArasState) !SweepResult {
     var result = SweepResult{
-        .timestamp = std.time.timestamp(),
+        .timestamp = tri_time.timestamp(),
     };
 
     // Get farm status
@@ -78,12 +80,13 @@ pub fn sweepOnce(allocator: Allocator, state: *ArasState) !SweepResult {
     result.total_services = farm.total_services;
 
     // Read evolution state for detailed worker info
-    const evo_file = std.fs.cwd().openFile(".trinity/evolution_state.json", .{}) catch return result;
-    defer evo_file.close();
-
+    // 0.16's File has no `read`; `Dir.readFile` is open + read-until-full-or-EOF
+    // + close in one call. A file smaller than the buffer is the normal case
+    // here, so a short result is legitimate -- and unlike the single `read`
+    // this replaces, a file larger than one syscall's worth is no longer
+    // silently truncated mid-JSON.
     var evo_buf: [16384]u8 = undefined;
-    const evo_n = evo_file.read(&evo_buf) catch return result;
-    const evo_data = evo_buf[0..evo_n];
+    const evo_data = std.Io.Dir.cwd().readFile(tri_io.get(), ".trinity/evolution_state.json", &evo_buf) catch return result;
 
     // Parse worker states from evolution state
     // Format: "workers": [ {"name": "...", "status": "...", "ppl": 1.23, "step": 1000}, ...]
@@ -142,7 +145,7 @@ pub fn sweepOnce(allocator: Allocator, state: *ArasState) !SweepResult {
     }
 
     // Count stale workers (stuck > 30 minutes)
-    _ = std.time.timestamp(); // For future timeout calculation
+    _ = tri_time.timestamp(); // For future timeout calculation
     for (state.workers[0..state.workers_len]) |w| {
         if (std.mem.eql(u8, w.state, "stale")) {
             // Check step stuck via evolution state timestamps
@@ -157,7 +160,7 @@ pub fn sweepOnce(allocator: Allocator, state: *ArasState) !SweepResult {
 /// Main sweep loop — runs every interval_sec
 pub fn sweepLoop(allocator: Allocator, state: *ArasState) !void {
     state.sweep_count += 1;
-    state.last_sweep = std.time.timestamp();
+    state.last_sweep = tri_time.timestamp();
 
     // Run sweep
     const result = try sweepOnce(allocator, state);
@@ -232,7 +235,7 @@ pub fn health() CellHealth {
     return CellHealth{
         .status = .healthy,
         .cycle = 0,
-        .last_check = std.time.timestamp(),
+        .last_check = tri_time.timestamp(),
     };
 }
 
@@ -282,11 +285,11 @@ test "aras — SweepResult hasProblems" {
 }
 
 test "aras — SweepResult timestamp" {
-    const before = std.time.timestamp();
+    const before = tri_time.timestamp();
     var result = SweepResult{};
     try std.testing.expectEqual(@as(i64, 0), result.timestamp);
 
-    result.timestamp = std.time.timestamp();
+    result.timestamp = tri_time.timestamp();
     try std.testing.expect(result.timestamp >= before);
 }
 

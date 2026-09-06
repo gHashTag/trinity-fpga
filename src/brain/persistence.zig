@@ -9,7 +9,10 @@
 //! Sacred Formula: φ² + 1/φ² = 3 = TRINITY
 
 const std = @import("std");
-const fs = std.fs;
+const tri_mutex = @import("tri_mutex");
+const tri_time = @import("tri_time");
+const tri_io = @import("tri_io");
+const fs = std.Io.Dir;
 const mem = std.mem;
 const json = std.json;
 const fmt = std.fmt;
@@ -38,8 +41,8 @@ pub const RotationConfig = struct {
 };
 
 pub const BrainEventLog = struct {
-    file: fs.File,
-    mutex: std.Thread.Mutex,
+    file: std.Io.File,
+    mutex: tri_mutex.Mutex,
     path: []const u8,
     allocator: mem.Allocator,
     write_buffer: []u8,
@@ -49,21 +52,22 @@ pub const BrainEventLog = struct {
 
     /// Open or create brain event log
     pub fn open(allocator: mem.Allocator, path: []const u8) !Self {
+        const io = tri_io.get();
         const dir = std.fs.path.dirname(path) orelse ".";
-        try fs.cwd().makePath(dir);
+        try fs.cwd().createDirPath(io, dir);
 
-        const file = fs.cwd().openFile(path, .{ .mode = .read_write }) catch |err| {
+        const file = fs.cwd().openFile(io, path, .{ .mode = .read_write }) catch |err| {
             if (err == error.FileNotFound) {
                 // Create new file
-                const new_file = try fs.cwd().createFile(path, .{ .read = true });
-                errdefer new_file.close();
+                const new_file = try fs.cwd().createFile(io, path, .{ .read = true });
+                errdefer new_file.close(io);
                 const path_copy = try allocator.dupe(u8, path);
                 errdefer allocator.free(path_copy);
                 const write_buffer = try allocator.alloc(u8, 4096);
                 errdefer allocator.free(write_buffer);
                 return Self{
                     .file = new_file,
-                    .mutex = std.Thread.Mutex{},
+                    .mutex = tri_mutex.Mutex{},
                     .path = path_copy,
                     .allocator = allocator,
                     .write_buffer = write_buffer,
@@ -72,10 +76,10 @@ pub const BrainEventLog = struct {
             }
             return err;
         };
-        errdefer file.close();
+        errdefer file.close(io);
 
-        // Seek to end for appending
-        try file.seekFromEnd(0);
+        // 0.16 files carry no seek cursor: appends are positional, so there is
+        // nothing to seek here. `log` reads the current length as its offset.
 
         const path_copy = try allocator.dupe(u8, path);
         errdefer allocator.free(path_copy);
@@ -85,7 +89,7 @@ pub const BrainEventLog = struct {
 
         return Self{
             .file = file,
-            .mutex = std.Thread.Mutex{},
+            .mutex = tri_mutex.Mutex{},
             .path = path_copy,
             .allocator = allocator,
             .write_buffer = write_buffer,
@@ -101,8 +105,9 @@ pub const BrainEventLog = struct {
     }
 
     pub fn close(self: *Self) void {
-        self.file.sync() catch {};
-        self.file.close();
+        const io = tri_io.get();
+        self.file.sync(io) catch {};
+        self.file.close(io);
         self.allocator.free(self.write_buffer);
         self.allocator.free(self.path);
     }
@@ -112,33 +117,42 @@ pub const BrainEventLog = struct {
         self.mutex.lock();
         defer self.mutex.unlock();
 
-        const timestamp = std.time.nanoTimestamp();
+        const io = tri_io.get();
+        const timestamp = tri_time.nanoTimestamp();
+
+        // 0.16 has no implicit file cursor, so the append offset is tracked
+        // explicitly. The current length is the end of the log, the same place
+        // the 0.15 seek-to-end cursor pointed at.
+        var offset = try self.file.length(io);
 
         // Build JSON line: {"ts":<timestamp>,"event":"<event>"}
         var buffer: [1024]u8 = undefined;
         const prefix = try fmt.bufPrint(&buffer, "{{\"ts\":{d},\"event\":\"", .{timestamp});
-        _ = try self.file.writeAll(prefix);
+        try self.file.writePositionalAll(io, prefix, offset);
+        offset += prefix.len;
 
         // Write formatted event
         const event_bytes = fmt.allocPrint(self.allocator, fmt_str, args) catch |err| {
             // Fallback to simple buffer if allocation fails
             var small_buf: [256]u8 = undefined;
             const formatted = try fmt.bufPrint(&small_buf, fmt_str, args);
-            try self.file.writeAll(formatted);
-            try self.file.writeAll("\"}\n");
-            try self.file.sync();
+            try self.file.writePositionalAll(io, formatted, offset);
+            offset += formatted.len;
+            try self.file.writePositionalAll(io, "\"}\n", offset);
+            try self.file.sync(io);
             return err;
         };
         defer self.allocator.free(event_bytes);
-        try self.file.writeAll(event_bytes);
-        try self.file.writeAll("\"}\n");
+        try self.file.writePositionalAll(io, event_bytes, offset);
+        offset += event_bytes.len;
+        try self.file.writePositionalAll(io, "\"}\n", offset);
+        offset += "\"}\n".len;
 
         // Sync to ensure data is written
-        try self.file.sync();
+        try self.file.sync(io);
 
         // Check if rotation is needed
-        const pos = try self.file.getPos();
-        if (pos >= self.rotation_config.max_file_size) {
+        if (offset >= self.rotation_config.max_file_size) {
             try self.rotateLocked();
         }
     }
@@ -147,13 +161,14 @@ pub const BrainEventLog = struct {
     pub fn flush(self: *Self) !void {
         self.mutex.lock();
         defer self.mutex.unlock();
-        try self.file.sync();
+        try self.file.sync(tri_io.get());
     }
 
     /// Rotate log file (must hold mutex)
     fn rotateLocked(self: *Self) !void {
+        const io = tri_io.get();
         // Close current file
-        self.file.close();
+        self.file.close(io);
 
         // Rotate existing backups
         const base_path = self.path;
@@ -163,7 +178,7 @@ pub const BrainEventLog = struct {
         // Delete oldest backup if it exists
         const oldest_path = try std.fmt.allocPrint(self.allocator, "{s}/{s}.{d}", .{ dir, basename, self.rotation_config.max_backup_files });
         defer self.allocator.free(oldest_path);
-        fs.cwd().deleteFile(oldest_path) catch {};
+        fs.cwd().deleteFile(io, oldest_path) catch {};
 
         // Rotate backups: N -> N+1
         var i: usize = self.rotation_config.max_backup_files;
@@ -173,16 +188,16 @@ pub const BrainEventLog = struct {
             const new_path = try std.fmt.allocPrint(self.allocator, "{s}/{s}.{d}", .{ dir, basename, i });
             defer self.allocator.free(new_path);
 
-            fs.cwd().rename(old_path, new_path) catch {};
+            fs.cwd().rename(old_path, fs.cwd(), new_path, io) catch {};
         }
 
         // Move current log to .1
         const backup_path = try std.fmt.allocPrint(self.allocator, "{s}/{s}.1", .{ dir, basename });
         defer self.allocator.free(backup_path);
-        fs.cwd().rename(base_path, backup_path) catch {};
+        fs.cwd().rename(base_path, fs.cwd(), backup_path, io) catch {};
 
         // Open new log file
-        self.file = try fs.cwd().createFile(base_path, .{ .read = true });
+        self.file = try fs.cwd().createFile(io, base_path, .{ .read = true });
     }
 
     /// Force rotation of the log file
@@ -197,21 +212,22 @@ pub const BrainEventLog = struct {
         self.mutex.lock();
         defer self.mutex.unlock();
 
-        // Save current position
-        const pos = try self.file.getPos();
+        const io = tri_io.get();
 
-        // Read from beginning
-        try self.file.seekTo(0);
+        // A positional reader starts at offset 0 and leaves no shared cursor
+        // behind, so the 0.15 save-position / seek-to-0 / restore dance is gone.
+        var scratch: [4096]u8 = undefined;
+        var fr = self.file.reader(io, &scratch);
 
         var read_buffer: [4096]u8 = undefined;
         var line_buffer = std.ArrayList(u8).initCapacity(self.allocator, 1024) catch unreachable;
         defer line_buffer.deinit(self.allocator);
 
         while (true) {
-            const bytes_read = self.file.read(&read_buffer) catch |err| {
-                if (err == error.EndOfStream) break;
-                return err;
-            };
+            // readSliceShort returns a short count -- including 0 -- only at end
+            // of stream, which is this loop's termination condition.
+            // readStreaming would not: it can return 0 mid-file.
+            const bytes_read = try fr.interface.readSliceShort(&read_buffer);
 
             if (bytes_read == 0) break;
 
@@ -233,16 +249,15 @@ pub const BrainEventLog = struct {
             const event = try BrainEvent.fromJsonString(self.allocator, line_buffer.items);
             try callback(context, event);
         }
-
-        // Restore position (ignore errors during cleanup)
-        self.file.seekTo(pos) catch {};
     }
 
     /// Get current file size
     pub fn fileSize(self: *Self) !u64 {
         self.mutex.lock();
         defer self.mutex.unlock();
-        return try self.file.getPos();
+        // getPos reported the append cursor, which always sat at end of file
+        // here; length is that same number without a cursor.
+        return try self.file.length(tri_io.get());
     }
 
     /// Count events in log
@@ -250,18 +265,15 @@ pub const BrainEventLog = struct {
         self.mutex.lock();
         defer self.mutex.unlock();
 
-        const pos = try self.file.getPos();
-
-        try self.file.seekTo(0);
+        const io = tri_io.get();
+        var scratch: [4096]u8 = undefined;
+        var fr = self.file.reader(io, &scratch);
 
         var read_buffer: [4096]u8 = undefined;
         var count: usize = 0;
 
         while (true) {
-            const bytes_read = self.file.read(&read_buffer) catch |err| {
-                if (err == error.EndOfStream) break;
-                return err;
-            };
+            const bytes_read = try fr.interface.readSliceShort(&read_buffer);
 
             if (bytes_read == 0) break;
 
@@ -269,9 +281,6 @@ pub const BrainEventLog = struct {
                 if (byte == '\n') count += 1;
             }
         }
-
-        // Restore position (ignore errors during cleanup)
-        self.file.seekTo(pos) catch {};
 
         return count;
     }
@@ -286,7 +295,7 @@ test "BrainEventLog open and write" {
     defer std.testing.allocator.free(tmp);
 
     // Clean up any existing test file
-    fs.cwd().deleteFile(tmp) catch {};
+    fs.cwd().deleteFile(std.testing.io, tmp) catch {};
 
     {
         var log = try BrainEventLog.open(std.testing.allocator, tmp);
@@ -297,20 +306,20 @@ test "BrainEventLog open and write" {
     }
 
     // Verify file exists and has content
-    const content = try fs.cwd().readFileAlloc(std.testing.allocator, tmp, 1024);
+    const content = try fs.cwd().readFileAlloc(std.testing.io, tmp, std.testing.allocator, .limited(1024));
     defer std.testing.allocator.free(content);
 
     try std.testing.expect(content.len > 0);
 
     // Clean up
-    fs.cwd().deleteFile(tmp) catch {};
+    fs.cwd().deleteFile(std.testing.io, tmp) catch {};
 }
 
 test "BrainEventLog JSONL format validation" {
     const tmp = try std.testing.allocator.dupeZ(u8, "/tmp/brain_test_format.jsonl");
     defer std.testing.allocator.free(tmp);
 
-    fs.cwd().deleteFile(tmp) catch {};
+    fs.cwd().deleteFile(std.testing.io, tmp) catch {};
 
     {
         var log = try BrainEventLog.open(std.testing.allocator, tmp);
@@ -321,7 +330,7 @@ test "BrainEventLog JSONL format validation" {
     }
 
     // Read and validate JSONL format
-    const content = try fs.cwd().readFileAlloc(std.testing.allocator, tmp, 4096);
+    const content = try fs.cwd().readFileAlloc(std.testing.io, tmp, std.testing.allocator, .limited(4096));
     defer std.testing.allocator.free(content);
 
     // Split by lines
@@ -340,14 +349,14 @@ test "BrainEventLog JSONL format validation" {
     try std.testing.expectEqual(@as(usize, 2), line_count);
 
     // Clean up
-    fs.cwd().deleteFile(tmp) catch {};
+    fs.cwd().deleteFile(std.testing.io, tmp) catch {};
 }
 
 test "BrainEventLog event replay" {
     const tmp = try std.testing.allocator.dupeZ(u8, "/tmp/brain_test_replay.jsonl");
     defer std.testing.allocator.free(tmp);
 
-    fs.cwd().deleteFile(tmp) catch {};
+    fs.cwd().deleteFile(std.testing.io, tmp) catch {};
 
     const test_events = [_][]const u8{
         "task_claimed",
@@ -392,14 +401,14 @@ test "BrainEventLog event replay" {
     }
 
     // Clean up
-    fs.cwd().deleteFile(tmp) catch {};
+    fs.cwd().deleteFile(std.testing.io, tmp) catch {};
 }
 
 test "BrainEventLog count events" {
     const tmp = try std.testing.allocator.dupeZ(u8, "/tmp/brain_test_count.jsonl");
     defer std.testing.allocator.free(tmp);
 
-    fs.cwd().deleteFile(tmp) catch {};
+    fs.cwd().deleteFile(std.testing.io, tmp) catch {};
 
     const event_count: usize = 42;
 
@@ -421,14 +430,14 @@ test "BrainEventLog count events" {
     }
 
     // Clean up
-    fs.cwd().deleteFile(tmp) catch {};
+    fs.cwd().deleteFile(std.testing.io, tmp) catch {};
 }
 
 test "BrainEventLog file size tracking" {
     const tmp = try std.testing.allocator.dupeZ(u8, "/tmp/brain_test_size.jsonl");
     defer std.testing.allocator.free(tmp);
 
-    fs.cwd().deleteFile(tmp) catch {};
+    fs.cwd().deleteFile(std.testing.io, tmp) catch {};
 
     {
         var log = try BrainEventLog.open(std.testing.allocator, tmp);
@@ -444,7 +453,7 @@ test "BrainEventLog file size tracking" {
     }
 
     // Clean up
-    fs.cwd().deleteFile(tmp) catch {};
+    fs.cwd().deleteFile(std.testing.io, tmp) catch {};
 }
 
 test "BrainEventLog manual rotation" {
@@ -452,8 +461,8 @@ test "BrainEventLog manual rotation" {
     defer std.testing.allocator.free(tmp);
 
     // Clean up test files
-    fs.cwd().deleteFile(tmp) catch {};
-    fs.cwd().deleteFile("/tmp/brain_test_rotate.jsonl.1") catch {};
+    fs.cwd().deleteFile(std.testing.io, tmp) catch {};
+    fs.cwd().deleteFile(std.testing.io, "/tmp/brain_test_rotate.jsonl.1") catch {};
 
     {
         var log = try BrainEventLog.open(std.testing.allocator, tmp);
@@ -469,7 +478,7 @@ test "BrainEventLog manual rotation" {
 
     // Check that backup was created
     {
-        const backup_content = fs.cwd().readFileAlloc(std.testing.allocator, "/tmp/brain_test_rotate.jsonl.1", 1024) catch null;
+        const backup_content = fs.cwd().readFileAlloc(std.testing.io, "/tmp/brain_test_rotate.jsonl.1", std.testing.allocator, .limited(1024)) catch null;
         defer if (backup_content) |c| std.testing.allocator.free(c);
 
         try std.testing.expect(backup_content != null);
@@ -480,15 +489,15 @@ test "BrainEventLog manual rotation" {
 
     // Check current file has new content
     {
-        const current_content = try fs.cwd().readFileAlloc(std.testing.allocator, tmp, 1024);
+        const current_content = try fs.cwd().readFileAlloc(std.testing.io, tmp, std.testing.allocator, .limited(1024));
         defer std.testing.allocator.free(current_content);
 
         try std.testing.expect(mem.indexOf(u8, current_content, "after_rotation") != null);
     }
 
     // Clean up
-    fs.cwd().deleteFile(tmp) catch {};
-    fs.cwd().deleteFile("/tmp/brain_test_rotate.jsonl.1") catch {};
+    fs.cwd().deleteFile(std.testing.io, tmp) catch {};
+    fs.cwd().deleteFile(std.testing.io, "/tmp/brain_test_rotate.jsonl.1") catch {};
 }
 
 test "BrainEventLog automatic rotation by size" {
@@ -496,8 +505,8 @@ test "BrainEventLog automatic rotation by size" {
     defer std.testing.allocator.free(tmp);
 
     // Clean up test files
-    fs.cwd().deleteFile(tmp) catch {};
-    fs.cwd().deleteFile("/tmp/brain_test_auto_rotate.jsonl.1") catch {};
+    fs.cwd().deleteFile(std.testing.io, tmp) catch {};
+    fs.cwd().deleteFile(std.testing.io, "/tmp/brain_test_auto_rotate.jsonl.1") catch {};
 
     // Small rotation threshold for testing
     const config = RotationConfig{ .max_file_size = 100, .max_backup_files = 3 };
@@ -514,16 +523,16 @@ test "BrainEventLog automatic rotation by size" {
     }
 
     // Verify backup was created
-    if (fs.cwd().openFile("/tmp/brain_test_auto_rotate.jsonl.1", .{})) |file| {
-        file.close();
+    if (fs.cwd().openFile(std.testing.io, "/tmp/brain_test_auto_rotate.jsonl.1", .{})) |file| {
+        file.close(std.testing.io);
     } else |_| {
         try std.testing.expect(false);
     }
 
     // Clean up
-    fs.cwd().deleteFile(tmp) catch {};
-    fs.cwd().deleteFile("/tmp/brain_test_auto_rotate.jsonl.1") catch {};
-    fs.cwd().deleteFile("/tmp/brain_test_auto_rotate.jsonl.2") catch {};
+    fs.cwd().deleteFile(std.testing.io, tmp) catch {};
+    fs.cwd().deleteFile(std.testing.io, "/tmp/brain_test_auto_rotate.jsonl.1") catch {};
+    fs.cwd().deleteFile(std.testing.io, "/tmp/brain_test_auto_rotate.jsonl.2") catch {};
 }
 
 test "BrainEventLog rotation backup limits" {
@@ -531,12 +540,12 @@ test "BrainEventLog rotation backup limits" {
     defer std.testing.allocator.free(tmp);
 
     // Clean up all test files
-    fs.cwd().deleteFile(tmp) catch {};
+    fs.cwd().deleteFile(std.testing.io, tmp) catch {};
     var i: usize = 1;
     while (i <= 5) : (i += 1) {
         const path = try std.fmt.allocPrint(std.testing.allocator, "/tmp/brain_test_limits.jsonl.{d}", .{i});
         defer std.testing.allocator.free(path);
-        fs.cwd().deleteFile(path) catch {};
+        fs.cwd().deleteFile(std.testing.io, path) catch {};
     }
 
     // Config with max 3 backups
@@ -556,20 +565,20 @@ test "BrainEventLog rotation backup limits" {
 
     // Verify oldest backup (beyond max) doesn't exist
     const oldest_path = "/tmp/brain_test_limits.jsonl.4";
-    if (fs.cwd().openFile(oldest_path, .{})) |file| {
-        file.close();
+    if (fs.cwd().openFile(std.testing.io, oldest_path, .{})) |file| {
+        file.close(std.testing.io);
         try std.testing.expect(false);
     } else |_| {
         // Expected - file should not exist
     }
 
     // Clean up
-    fs.cwd().deleteFile(tmp) catch {};
+    fs.cwd().deleteFile(std.testing.io, tmp) catch {};
     i = 1;
     while (i <= 3) : (i += 1) {
         const path = try std.fmt.allocPrint(std.testing.allocator, "/tmp/brain_test_limits.jsonl.{d}", .{i});
         defer std.testing.allocator.free(path);
-        fs.cwd().deleteFile(path) catch {};
+        fs.cwd().deleteFile(std.testing.io, path) catch {};
     }
 }
 
@@ -577,7 +586,7 @@ test "BrainEventLog replay with complex events" {
     const tmp = try std.testing.allocator.dupeZ(u8, "/tmp/brain_test_complex.jsonl");
     defer std.testing.allocator.free(tmp);
 
-    fs.cwd().deleteFile(tmp) catch {};
+    fs.cwd().deleteFile(std.testing.io, tmp) catch {};
 
     const complex_events = [_][]const u8{
         "task_claimed:task-123:agent-456",
@@ -620,14 +629,14 @@ test "BrainEventLog replay with complex events" {
     }
 
     // Clean up
-    fs.cwd().deleteFile(tmp) catch {};
+    fs.cwd().deleteFile(std.testing.io, tmp) catch {};
 }
 
 test "BrainEventLog empty file replay" {
     const tmp = try std.testing.allocator.dupeZ(u8, "/tmp/brain_test_empty.jsonl");
     defer std.testing.allocator.free(tmp);
 
-    fs.cwd().deleteFile(tmp) catch {};
+    fs.cwd().deleteFile(std.testing.io, tmp) catch {};
 
     // Create empty log file
     {
@@ -652,14 +661,14 @@ test "BrainEventLog empty file replay" {
     try std.testing.expectEqual(@as(usize, 0), call_count);
 
     // Clean up
-    fs.cwd().deleteFile(tmp) catch {};
+    fs.cwd().deleteFile(std.testing.io, tmp) catch {};
 }
 
 test "BrainEventLog concurrent write safety" {
     const tmp = try std.testing.allocator.dupeZ(u8, "/tmp/brain_test_concurrent.jsonl");
     defer std.testing.allocator.free(tmp);
 
-    fs.cwd().deleteFile(tmp) catch {};
+    fs.cwd().deleteFile(std.testing.io, tmp) catch {};
 
     {
         var log = try BrainEventLog.open(std.testing.allocator, tmp);
@@ -682,14 +691,14 @@ test "BrainEventLog concurrent write safety" {
     }
 
     // Clean up
-    fs.cwd().deleteFile(tmp) catch {};
+    fs.cwd().deleteFile(std.testing.io, tmp) catch {};
 }
 
 test "BrainEventLog append to existing file" {
     const tmp = try std.testing.allocator.dupeZ(u8, "/tmp/brain_test_append.jsonl");
     defer std.testing.allocator.free(tmp);
 
-    fs.cwd().deleteFile(tmp) catch {};
+    fs.cwd().deleteFile(std.testing.io, tmp) catch {};
 
     // First write
     {
@@ -708,21 +717,21 @@ test "BrainEventLog append to existing file" {
     }
 
     // Verify both events exist
-    const content = try fs.cwd().readFileAlloc(std.testing.allocator, tmp, 1024);
+    const content = try fs.cwd().readFileAlloc(std.testing.io, tmp, std.testing.allocator, .limited(1024));
     defer std.testing.allocator.free(content);
 
     try std.testing.expect(mem.indexOf(u8, content, "first_batch") != null);
     try std.testing.expect(mem.indexOf(u8, content, "second_batch") != null);
 
     // Clean up
-    fs.cwd().deleteFile(tmp) catch {};
+    fs.cwd().deleteFile(std.testing.io, tmp) catch {};
 }
 
 test "BrainEventLog special characters in events" {
     const tmp = try std.testing.allocator.dupeZ(u8, "/tmp/brain_test_special.jsonl");
     defer std.testing.allocator.free(tmp);
 
-    fs.cwd().deleteFile(tmp) catch {};
+    fs.cwd().deleteFile(std.testing.io, tmp) catch {};
 
     const special_events = [_][]const u8{
         "event_with_underscore",
@@ -763,7 +772,7 @@ test "BrainEventLog special characters in events" {
     try std.testing.expectEqual(special_events.len, replayed.items.len);
 
     // Clean up
-    fs.cwd().deleteFile(tmp) catch {};
+    fs.cwd().deleteFile(std.testing.io, tmp) catch {};
 }
 
 test "BrainEvent JSON parsing validation" {
@@ -786,7 +795,7 @@ test "BrainEventLog with custom rotation config" {
     const tmp = try std.testing.allocator.dupeZ(u8, "/tmp/brain_test_custom.jsonl");
     defer std.testing.allocator.free(tmp);
 
-    fs.cwd().deleteFile(tmp) catch {};
+    fs.cwd().deleteFile(std.testing.io, tmp) catch {};
 
     // Custom config: very small file size, 2 backups max
     const custom_config = RotationConfig{
@@ -806,5 +815,5 @@ test "BrainEventLog with custom rotation config" {
     }
 
     // Clean up
-    fs.cwd().deleteFile(tmp) catch {};
+    fs.cwd().deleteFile(std.testing.io, tmp) catch {};
 }

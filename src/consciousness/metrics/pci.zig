@@ -14,6 +14,7 @@
 //! - Correlates with sacred formula threshold φ^-1 = 0.618
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const lempel_ziv = @import("./lempel_ziv.zig");
 
 // Sacred constants (inline to avoid import issues)
@@ -152,7 +153,7 @@ pub fn computePCI(
     response: TMSResponse,
     allocator: std.mem.Allocator,
 ) !PCIResult {
-    const start = std.time.nanoTimestamp();
+    const start = tri_time.nanoTimestamp();
 
     // Step 1: Compute complexity (LZc) for each channel
     var total_complexity: f64 = 0.0;
@@ -192,7 +193,7 @@ pub fn computePCI(
     // Based on how far above threshold and signal quality
     const confidence = computeConfidence(pci_value, valid_channels, response.num_channels);
 
-    const end = std.time.nanoTimestamp();
+    const end = tri_time.nanoTimestamp();
 
     const classification = if (threshold_met == .sacred)
         "Enhanced consciousness"

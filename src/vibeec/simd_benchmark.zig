@@ -3,6 +3,7 @@
 // φ² + 1/φ² = 3 = TRINITY
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const prometheus = @import("prometheus_seed.zig");
 const engine = @import("trinity_inference_engine.zig");
 
@@ -253,7 +254,7 @@ pub fn runBenchmark(allocator: std.mem.Allocator) !void {
 
     // Benchmark scalar
     std.debug.print("Benchmarking scalar...\n", .{});
-    var timer = try std.time.Timer.start();
+    var timer = try tri_time.Timer.start();
 
     for (0..BENCHMARK_ITERATIONS) |_| {
         scalarMatmul(output, input, weights, IN_FEATURES, OUT_FEATURES);

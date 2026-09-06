@@ -3,6 +3,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 /// Log levels matching common severity
 pub const LogLevel = enum {
     Debug,
@@ -116,7 +117,7 @@ pub fn log(level: LogLevel, comptime fmt: []const u8, args: anytype, details: ?[
         return; // Skip messages below current level
     }
 
-    const timestamp = std.time.nanoTimestamp();
+    const timestamp = tri_time.nanoTimestamp();
     const ts_formatted = LogEntry.timestampFmt(@intCast(timestamp));
     const level_name = level.getName();
     const component = "core"; // Default component
@@ -160,7 +161,7 @@ pub fn logWithComponent(level: LogLevel, component: []const u8, comptime fmt: []
         return;
     }
 
-    const timestamp = std.time.nanoTimestamp();
+    const timestamp = tri_time.nanoTimestamp();
     const ts_formatted = LogEntry.timestampFmt(@intCast(timestamp));
     const level_name = level.getName();
 

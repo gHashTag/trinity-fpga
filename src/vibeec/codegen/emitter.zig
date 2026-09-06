@@ -7,6 +7,8 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
+const tri_time = @import("tri_time");
 const types = @import("types.zig");
 const builder_mod = @import("builder.zig");
 const patterns_mod = @import("patterns.zig");
@@ -81,13 +83,13 @@ pub const ZigCodeGen = struct {
         try self.builder.writeLine("            .port = port,");
         try self.builder.writeLine("        };");
         try self.builder.writeLine("        @memcpy(node.root_buf[0..root.len], root);");
-        try self.builder.writeLine("        std.fs.makeDirAbsolute(root) catch |e| switch (e) {");
+        try self.builder.writeLine("        std.Io.Dir.makeDirAbsolute(tri_io.get(), root) catch |e| switch (e) {");
         try self.builder.writeLine("            error.PathAlreadyExists => {},");
         try self.builder.writeLine("            else => return e,");
         try self.builder.writeLine("        };");
         try self.builder.writeLine("        var sbuf: [280]u8 = undefined;");
         try self.builder.writeLine("        const sdir = std.fmt.bufPrint(&sbuf, \"{s}/shards\", .{root}) catch unreachable;");
-        try self.builder.writeLine("        std.fs.makeDirAbsolute(sdir) catch |e| switch (e) {");
+        try self.builder.writeLine("        std.Io.Dir.makeDirAbsolute(tri_io.get(), sdir) catch |e| switch (e) {");
         try self.builder.writeLine("            error.PathAlreadyExists => {},");
         try self.builder.writeLine("            else => return e,");
         try self.builder.writeLine("        };");
@@ -129,7 +131,7 @@ pub const ZigCodeGen = struct {
         try self.builder.writeLine("        if (dn != data_len) return error.ProtocolError;");
         try self.builder.writeLine("        var pbuf: [350]u8 = undefined;");
         try self.builder.writeLine("        const spath = std.fmt.bufPrint(&pbuf, \"{s}/shards/{s}.shard\", .{ self.rootPath(), hash_buf }) catch unreachable;");
-        try self.builder.writeLine("        const file = try std.fs.createFileAbsolute(spath, .{});");
+        try self.builder.writeLine("        const file = try std.Io.Dir.createFileAbsolute(tri_io.get(), spath, .{});");
         try self.builder.writeLine("        defer file.close();");
         try self.builder.writeLine("        try file.writeAll(data_buf[0..dn]);");
         try self.builder.writeLine("    }");
@@ -1453,7 +1455,7 @@ pub const ZigCodeGen = struct {
     /// - Replace `.error` enum literal with `.@"error"`
     /// - Replace `.type` enum literal with `.@"type"`
     fn sanitizeImplementation(allocator: std.mem.Allocator, implementation: []const u8) ![]const u8 {
-        var result: std.ArrayListUnmanaged(u8) = .{};
+        var result: std.ArrayListUnmanaged(u8) = .empty;
         errdefer result.deinit(allocator);
 
         var line_start: usize = 0;
@@ -1470,7 +1472,7 @@ pub const ZigCodeGen = struct {
                     if (c == '"') in_string = !in_string;
                 }
                 if (!in_string) {
-                    line = std.mem.trimRight(u8, line[0..hash_pos], " \t");
+                    line = std.mem.trimEnd(u8, line[0..hash_pos], " \t");
                 }
             }
 
@@ -1809,7 +1811,7 @@ pub const ZigCodeGen = struct {
                 try self.builder.writeLine("\"Hey! What's on your mind?\",");
                 self.builder.decIndent();
                 try self.builder.writeLine("};");
-                try self.builder.writeLine("const idx = @as(usize, @intCast(@mod(std.time.timestamp(), responses.len)));");
+                try self.builder.writeLine("const idx = @as(usize, @intCast(@mod(tri_time.timestamp(), responses.len)));");
                 try self.builder.writeLine("_ = responses[idx];");
             } else if (mem.indexOf(u8, name, "Farewell") != null) {
                 try self.builder.writeLine("const responses = [_][]const u8{");
@@ -1819,7 +1821,7 @@ pub const ZigCodeGen = struct {
                 try self.builder.writeLine("\"Take care! Good luck!\",");
                 self.builder.decIndent();
                 try self.builder.writeLine("};");
-                try self.builder.writeLine("const idx = @as(usize, @intCast(@mod(std.time.timestamp(), responses.len)));");
+                try self.builder.writeLine("const idx = @as(usize, @intCast(@mod(tri_time.timestamp(), responses.len)));");
                 try self.builder.writeLine("_ = responses[idx];");
             } else if (mem.indexOf(u8, name, "Weather") != null or mem.indexOf(u8, name, "Unknown") != null) {
                 try self.builder.writeLine("// Honest response: acknowledge limitation");
@@ -1911,9 +1913,9 @@ pub const ZigCodeGen = struct {
         // --- Process/run/execute behaviors: orchestration ---
         if (mem.startsWith(u8, name, "process") or mem.startsWith(u8, name, "run") or mem.startsWith(u8, name, "execute")) {
             try self.builder.writeFmt("// Process: {s}\n", .{then});
-            try self.builder.writeLine("const start_time = std.time.timestamp();");
+            try self.builder.writeLine("const start_time = tri_time.timestamp();");
             try self.builder.writeFmt("// Pipeline: {s}\n", .{then});
-            try self.builder.writeLine("const elapsed = std.time.timestamp() - start_time;");
+            try self.builder.writeLine("const elapsed = tri_time.timestamp() - start_time;");
             try self.builder.writeLine("_ = elapsed;");
             return;
         }
@@ -2997,14 +2999,14 @@ pub const ZigCodeGen = struct {
                 try self.builder.writeLine("        };");
                 try self.builder.writeLine("        @memcpy(mgr.root_buf[0..root.len], root);");
                 try self.builder.writeLine("        // Create root directory");
-                try self.builder.writeLine("        std.fs.makeDirAbsolute(root) catch |e| switch (e) {");
+                try self.builder.writeLine("        std.Io.Dir.makeDirAbsolute(tri_io.get(), root) catch |e| switch (e) {");
                 try self.builder.writeLine("            error.PathAlreadyExists => {},");
                 try self.builder.writeLine("            else => return e,");
                 try self.builder.writeLine("        };");
                 try self.builder.writeLine("        // Create shards subdirectory");
                 try self.builder.writeLine("        var sbuf: [280]u8 = undefined;");
                 try self.builder.writeLine("        const sdir = std.fmt.bufPrint(&sbuf, \"{s}/shards\", .{root}) catch unreachable;");
-                try self.builder.writeLine("        std.fs.makeDirAbsolute(sdir) catch |e| switch (e) {");
+                try self.builder.writeLine("        std.Io.Dir.makeDirAbsolute(tri_io.get(), sdir) catch |e| switch (e) {");
                 try self.builder.writeLine("            error.PathAlreadyExists => {},");
                 try self.builder.writeLine("            else => return e,");
                 try self.builder.writeLine("        };");
@@ -3034,7 +3036,7 @@ pub const ZigCodeGen = struct {
                 try self.builder.writeLine("        const hex = hashToHex(hash);");
                 try self.builder.writeLine("        var pbuf: [350]u8 = undefined;");
                 try self.builder.writeLine("        const spath = std.fmt.bufPrint(&pbuf, \"{s}/shards/{s}.shard\", .{ self.rootPath(), hex }) catch unreachable;");
-                try self.builder.writeLine("        const file = try std.fs.createFileAbsolute(spath, .{});");
+                try self.builder.writeLine("        const file = try std.Io.Dir.createFileAbsolute(tri_io.get(), spath, .{});");
                 try self.builder.writeLine("        defer file.close();");
                 try self.builder.writeLine("        try file.writeAll(data);");
                 try self.builder.writeLine("        self.shard_count += 1;");
@@ -3047,7 +3049,7 @@ pub const ZigCodeGen = struct {
                 try self.builder.writeLine("    pub fn get(self: *const ShardManager, hex: *const [64]u8, buf: []u8) !usize {");
                 try self.builder.writeLine("        var pbuf: [350]u8 = undefined;");
                 try self.builder.writeLine("        const spath = std.fmt.bufPrint(&pbuf, \"{s}/shards/{s}.shard\", .{ self.rootPath(), hex.* }) catch unreachable;");
-                try self.builder.writeLine("        const file = try std.fs.openFileAbsolute(spath, .{});");
+                try self.builder.writeLine("        const file = try std.Io.Dir.openFileAbsolute(tri_io.get(), spath, .{});");
                 try self.builder.writeLine("        defer file.close();");
                 try self.builder.writeLine("        return try file.readAll(buf);");
                 try self.builder.writeLine("    }");
@@ -3057,7 +3059,7 @@ pub const ZigCodeGen = struct {
                 try self.builder.writeLine("    pub fn delete(self: *ShardManager, hex: *const [64]u8) !void {");
                 try self.builder.writeLine("        var pbuf: [350]u8 = undefined;");
                 try self.builder.writeLine("        const spath = std.fmt.bufPrint(&pbuf, \"{s}/shards/{s}.shard\", .{ self.rootPath(), hex.* }) catch unreachable;");
-                try self.builder.writeLine("        try std.fs.deleteFileAbsolute(spath);");
+                try self.builder.writeLine("        try std.Io.Dir.deleteFileAbsolute(tri_io.get(), spath);");
                 try self.builder.writeLine("        if (self.shard_count > 0) self.shard_count -= 1;");
                 try self.builder.writeLine("    }");
                 try self.builder.writeLine("");
@@ -3066,7 +3068,7 @@ pub const ZigCodeGen = struct {
                 try self.builder.writeLine("    pub fn exists(self: *const ShardManager, hex: *const [64]u8) bool {");
                 try self.builder.writeLine("        var pbuf: [350]u8 = undefined;");
                 try self.builder.writeLine("        const spath = std.fmt.bufPrint(&pbuf, \"{s}/shards/{s}.shard\", .{ self.rootPath(), hex.* }) catch unreachable;");
-                try self.builder.writeLine("        const file = std.fs.openFileAbsolute(spath, .{}) catch return false;");
+                try self.builder.writeLine("        const file = std.Io.Dir.openFileAbsolute(tri_io.get(), spath, .{}) catch return false;");
                 try self.builder.writeLine("        file.close();");
                 try self.builder.writeLine("        return true;");
                 try self.builder.writeLine("    }");
@@ -3076,7 +3078,7 @@ pub const ZigCodeGen = struct {
                 try self.builder.writeLine("    pub fn count(self: *const ShardManager) !usize {");
                 try self.builder.writeLine("        var sbuf: [280]u8 = undefined;");
                 try self.builder.writeLine("        const sdir = std.fmt.bufPrint(&sbuf, \"{s}/shards\", .{self.rootPath()}) catch unreachable;");
-                try self.builder.writeLine("        var dir = try std.fs.openDirAbsolute(sdir, .{ .iterate = true });");
+                try self.builder.writeLine("        var dir = try std.Io.Dir.openDirAbsolute(tri_io.get(), sdir, .{ .iterate = true });");
                 try self.builder.writeLine("        defer dir.close();");
                 try self.builder.writeLine("        var n: usize = 0;");
                 try self.builder.writeLine("        var it = dir.iterate();");
@@ -3091,7 +3093,7 @@ pub const ZigCodeGen = struct {
                 try self.builder.writeLine("    pub fn saveManifest(self: *const ShardManager) !void {");
                 try self.builder.writeLine("        var mbuf: [280]u8 = undefined;");
                 try self.builder.writeLine("        const mpath = std.fmt.bufPrint(&mbuf, \"{s}/manifest.json\", .{self.rootPath()}) catch unreachable;");
-                try self.builder.writeLine("        const file = try std.fs.createFileAbsolute(mpath, .{});");
+                try self.builder.writeLine("        const file = try std.Io.Dir.createFileAbsolute(tri_io.get(), mpath, .{});");
                 try self.builder.writeLine("        defer file.close();");
                 try self.builder.writeLine("        // Write JSON manually to avoid format string brace escaping");
                 try self.builder.writeLine("        var jbuf: [512]u8 = undefined;");

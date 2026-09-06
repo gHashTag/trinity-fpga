@@ -14,8 +14,11 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_rand = @import("tri_rand");
+const tri_io = @import("tri_io");
+const tri_time = @import("tri_time");
+const tri_env = @import("tri_env");
 const Allocator = std.mem.Allocator;
-const crypto = std.crypto.random;
 
 const RAILWAY_GQL_HOST = "backboard.railway.com";
 const RAILWAY_GQL_PATH = "/graphql/v2";
@@ -67,8 +70,8 @@ pub const RailwayApi = struct {
     token: []const u8,
     project_id: []const u8,
     environment_id: []const u8,
-    // Rate limiting state
-    last_request_time: std.time.Instant,
+    // Rate limiting state — monotonic nanoseconds, from tri_time.
+    last_request_time: u64,
     user_agent_index: u32,
 
     const Self = @This();
@@ -84,12 +87,12 @@ pub const RailwayApi = struct {
     pub fn initWithSuffix(allocator: Allocator, suffix: []const u8) RailwayApiError!RailwayApi {
         var token_name: [64]u8 = undefined;
         const token_key = buildEnvKey(&token_name, "RAILWAY_API_TOKEN", suffix);
-        const token = std.process.getEnvVarOwned(allocator, token_key) catch
+        const token = tri_env.getEnvVarOwned(allocator, token_key) catch
             return error.MissingToken;
 
         var proj_name: [64]u8 = undefined;
         const proj_key = buildEnvKey(&proj_name, "RAILWAY_PROJECT_ID", suffix);
-        const project_id = std.process.getEnvVarOwned(allocator, proj_key) catch blk: {
+        const project_id = tri_env.getEnvVarOwned(allocator, proj_key) catch blk: {
             if (suffix.len == 0) {
                 break :blk readProjectIdFromFile(allocator) catch return error.MissingProjectId;
             }
@@ -98,7 +101,7 @@ pub const RailwayApi = struct {
 
         var env_name: [64]u8 = undefined;
         const env_key = buildEnvKey(&env_name, "RAILWAY_ENVIRONMENT_ID", suffix);
-        const environment_id = std.process.getEnvVarOwned(allocator, env_key) catch blk: {
+        const environment_id = tri_env.getEnvVarOwned(allocator, env_key) catch blk: {
             const empty = allocator.dupe(u8, "") catch return error.OutOfMemory;
             break :blk empty;
         };
@@ -108,8 +111,8 @@ pub const RailwayApi = struct {
             .token = token,
             .project_id = project_id,
             .environment_id = environment_id,
-            .last_request_time = std.time.Instant.now() catch undefined,
-            .user_agent_index = crypto.intRangeLessThan(u32, 0, USER_AGENTS.len),
+            .last_request_time = tri_time.monotonicNanos(),
+            .user_agent_index = tri_rand.random().intRangeLessThan(u32, 0, USER_AGENTS.len),
         };
     }
 
@@ -131,14 +134,14 @@ pub const RailwayApi = struct {
         // Cap at max
         const capped_delay = @min(exp_delay, BACKOFF_CAP_MS);
         // Full jitter: random from 0 to capped_delay
-        return crypto.intRangeLessThan(u64, 0, capped_delay);
+        return tri_rand.random().intRangeLessThan(u64, 0, capped_delay);
     }
 
     /// Check if API request is allowed (rate limiting).
     /// Returns true if enough time has passed since last request.
     fn checkRateLimit(self: *Self) bool {
-        const now = std.time.Instant.now() catch undefined;
-        const elapsed = now.since(self.last_request_time);
+        const now = tri_time.monotonicNanos();
+        const elapsed = now -| self.last_request_time;
         const min_interval_ns = MIN_REQUEST_INTERVAL_MS * 1_000_000;
         return elapsed >= min_interval_ns;
     }
@@ -426,13 +429,13 @@ pub const RailwayApi = struct {
                 std.debug.print("Railway API: retry {d}/{d}, waiting {d}ms...\n", .{
                     retry_count, MAX_RETRIES, delay_ms,
                 });
-                std.Thread.sleep(delay_ms * 1000 * 1000); // Convert ms to ns (1ms = 1,000,000ns)
+                tri_time.sleep(delay_ms * 1000 * 1000); // Convert ms to ns (1ms = 1,000,000ns)
             }
 
             const result = self.httpPostOnce(body);
             if (result) |response| {
                 // Success - update last request time and return
-                self.last_request_time = std.time.Instant.now() catch undefined;
+                self.last_request_time = tri_time.monotonicNanos();
                 return response;
             } else |err| {
                 // Check if it's a rate limit error (429)
@@ -454,6 +457,7 @@ pub const RailwayApi = struct {
         // HTTP client with 5-second connection timeout for graceful degradation
         var client = std.http.Client{
             .allocator = self.allocator,
+            .io = tri_io.get(),
         };
         defer client.deinit();
 
@@ -575,9 +579,8 @@ pub const RailwayApi = struct {
     }
 
     fn readProjectIdFromFile(allocator: Allocator) ![]const u8 {
-        const file = std.fs.cwd().openFile(".railway.json", .{}) catch return error.MissingProjectId;
-        defer file.close();
-        const contents = file.readToEndAlloc(allocator, 64 * 1024) catch return error.MissingProjectId;
+        const contents = std.Io.Dir.cwd().readFileAlloc(tri_io.get(), ".railway.json", allocator, .limited(64 * 1024)) catch
+            return error.MissingProjectId;
         defer allocator.free(contents);
 
         // Simple parse: find "project": "..." or "project":"..."

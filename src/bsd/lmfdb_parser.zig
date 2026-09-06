@@ -3,6 +3,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 
 pub const LMFDBCurve = struct {
     lmfdb_label: []const u8,
@@ -31,14 +32,12 @@ pub const LMFDBDatabase = struct {
     }
 
     pub fn fromJson(allocator: std.mem.Allocator, json_path: []const u8) !Self {
-        const file = try std.fs.cwd().openFile(json_path, .{});
-        defer file.close();
+        const io = tri_io.get();
 
-        const stat = try file.stat();
-        const buffer = try allocator.alloc(u8, @intCast(stat.size));
+        // Whole-file read: 0.16 has no File.readAll, and readFileAlloc is the
+        // exact replacement for open + stat + alloc + readAll + close.
+        const buffer = try std.Io.Dir.cwd().readFileAlloc(io, json_path, allocator, .unlimited);
         defer allocator.free(buffer);
-
-        _ = try file.readAll(buffer);
 
         const parsed = try std.json.parseFromSlice(std.json.Value, allocator, buffer, .{});
         defer parsed.deinit();

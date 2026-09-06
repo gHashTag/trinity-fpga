@@ -33,6 +33,10 @@
 
 const std = @import("std");
 
+const tri_rand = @import("tri_rand");
+const tri_io = @import("tri_io");
+const tri_proc = @import("tri_proc");
+const tri_time = @import("tri_time");
 // Constants
 const DEFAULT_BAUD: u64 = 115200;
 const DEFAULT_DELAY_MS: u32 = 200;
@@ -640,7 +644,7 @@ const BaselineHistory = struct {
         if (timestamp < 0) {
             return "past";
         }
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
         const diff_hours = @divFloor(now - timestamp, 3600);
         if (diff_hours < 1) return "<1h ago";
         if (diff_hours < 24) return "<1d ago";
@@ -802,7 +806,7 @@ const ErrorStats = struct {
 
     pub fn recordError(self: *ErrorStats, err_type: []const u8) void {
         self.total_errors += 1;
-        const now: i64 = @intCast(std.time.nanoTimestamp());
+        const now: i64 = @intCast(tri_time.nanoTimestamp());
 
         // Track consecutive errors
         if (self.total_errors > 1 and (now - self.last_error_time) < 1_000_000_000) {
@@ -2518,7 +2522,7 @@ const JitterTracker = struct {
         const std_dev = stats.jitter;
 
         // Calculate empirical CDF for K-S test
-        var sorted_samples = std.ArrayList(i64){};
+        var sorted_samples = @as(std.ArrayList(i64), .empty);
         defer sorted_samples.deinit(self.allocator);
         try sorted_samples.appendSlice(self.allocator, self.samples[0..self.count]);
 
@@ -3723,7 +3727,7 @@ const JitterTracker = struct {
                 .message = "Extreme latency spike detected",
                 .value = rtt_ms,
                 .threshold = mean_ms * 5,
-                .timestamp_ms = @intCast(std.time.milliTimestamp()),
+                .timestamp_ms = @intCast(tri_time.milliTimestamp()),
             };
         }
 
@@ -3735,7 +3739,7 @@ const JitterTracker = struct {
                 .message = "Latency exceeds 100ms threshold",
                 .value = rtt_ms,
                 .threshold = 100,
-                .timestamp_ms = @intCast(std.time.milliTimestamp()),
+                .timestamp_ms = @intCast(tri_time.milliTimestamp()),
             };
         }
 
@@ -3747,7 +3751,7 @@ const JitterTracker = struct {
                 .message = "Multiple consecutive packet failures",
                 .value = @floatFromInt(self.consecutive_failures),
                 .threshold = 3,
-                .timestamp_ms = @intCast(std.time.milliTimestamp()),
+                .timestamp_ms = @intCast(tri_time.milliTimestamp()),
             };
         }
 
@@ -3761,7 +3765,7 @@ const JitterTracker = struct {
                     .message = "Significant degradation trend detected",
                     .value = trend.change_percent,
                     .threshold = 20,
-                    .timestamp_ms = @intCast(std.time.milliTimestamp()),
+                    .timestamp_ms = @intCast(tri_time.milliTimestamp()),
                 };
             }
         }
@@ -7459,7 +7463,7 @@ fn autoDetectBaud(fd: std.posix.fd_t) ?u64 {
             const test_byte: u8 = 0x55;
             _ = std.posix.write(fd, &[_]u8{test_byte}) catch {};
 
-            std.Thread.sleep(100_000); // 100ms wait
+            tri_time.sleep(100_000); // 100ms wait
 
             // Try to read response
             var read_buf: [8]u8 = undefined;
@@ -7881,7 +7885,7 @@ fn parseArgs() Config {
 
 // v3.15: Load TOML config file and merge with command-line config
 fn loadConfigFile(path: []const u8, config: *Config) !bool {
-    const file = std.fs.openFileAbsolute(path, .{}) catch |err| {
+    const file = std.Io.Dir.openFileAbsolute(tri_io.get(), path, .{}) catch |err| {
         printErr("[!] Cannot open config file: {any}\n", .{err});
         return false;
     };
@@ -8183,20 +8187,20 @@ fn healthCheck(port_path: ?[]const u8, baud: u64, config: Config) !bool {
         }
 
         // Small delay for echo
-        std.Thread.sleep(50_000); // 50ms
+        tri_time.sleep(50_000); // 50ms
 
         // Read response with short timeout
         var read_buffer: [8]u8 = undefined;
         var bytes_read: usize = 0;
-        const start_time = std.time.milliTimestamp();
+        const start_time = tri_time.milliTimestamp();
 
-        while (bytes_read < test_pattern.len and (std.time.milliTimestamp() - start_time) < 500) {
+        while (bytes_read < test_pattern.len and (tri_time.milliTimestamp() - start_time) < 500) {
             const read_result = std.posix.read(fd, read_buffer[bytes_read..]);
             if (read_result) |n| {
                 bytes_read += n;
             } else |err| {
                 if (err == error.OperationWouldBlock) {
-                    std.Thread.sleep(5_000); // 5ms
+                    tri_time.sleep(5_000); // 5ms
                     continue;
                 }
                 printErr("[!] Extended health check: Read error: {any}\n", .{err});
@@ -8336,14 +8340,14 @@ const FpgaXvcClient = struct {
                     return true;
                 } else if (std.mem.indexOf(u8, response, "BUSY") != null) {
                     printWarning("[XVC] ESP32 busy, waiting...\n", .{});
-                    std.Thread.sleep(1 * std.time.ns_per_s);
+                    tri_time.sleep(1 * std.time.ns_per_s);
                     continue;
                 } else if (std.mem.indexOf(u8, response, "ERROR") != null) {
                     printError("[XVC] Flash error: {s}\n", .{response});
                     return error.FpgaFlashError;
                 }
             }
-            std.Thread.sleep(1 * std.time.ns_per_s);
+            tri_time.sleep(1 * std.time.ns_per_s);
         }
 
         printError("[XVC] Flash timeout after {d}s\n", .{elapsed});
@@ -8399,7 +8403,7 @@ fn runFpgaTestCycle(config: Config) !void {
 
         // Wait for FPGA to initialize
         printInfo("[3/4] Waiting for FPGA initialization (2s)...\n", .{});
-        std.Thread.sleep(2 * std.time.ns_per_s);
+        tri_time.sleep(2 * std.time.ns_per_s);
     } else {
         printInfo("[2/4] Skipping bitstream flash (none specified)\n", .{});
         printInfo("[3/4] Using current FPGA configuration\n", .{});
@@ -8624,7 +8628,7 @@ pub fn main() !void {
 // v3.24: List all available serial devices with detailed info
 fn listSerialPorts() void {
     printInfo("\n[*] Scanning for serial devices...\n", .{});
-    var dir = std.fs.openDirAbsolute("/dev", .{}) catch |err| {
+    var dir = std.Io.Dir.openDirAbsolute(tri_io.get(), "/dev", .{}) catch |err| {
         printError("[!] Cannot open /dev: {any}\n", .{err});
         return;
     };
@@ -8691,7 +8695,7 @@ fn testEcho(port_path: []const u8, config: Config) void {
         };
         defer std.heap.page_allocator.free(stty_cmd);
 
-        const result = std.process.Child.run(.{
+        const result = tri_proc.run(.{
             .allocator = std.heap.page_allocator,
             .argv = &[_][]const u8{ "sh", "-c", stty_cmd },
         }) catch |err| {
@@ -8703,7 +8707,7 @@ fn testEcho(port_path: []const u8, config: Config) void {
             std.heap.page_allocator.free(result.stdout);
         }
 
-        if (result.term != .Exited or result.term.Exited != 0) {
+        if (result.term != .exited or result.term.exited != 0) {
             printErr("[!] stty failed: {s}\n", .{result.stderr});
             return;
         }
@@ -8826,7 +8830,7 @@ fn testEcho(port_path: []const u8, config: Config) void {
                         if (recovery.shouldRetry(retry_count)) {
                             const delay = recovery.getDelay(retry_count);
                             printWarning("[i] Auto-recovery: retry {d}/{d} after {d}ms delay\n", .{ retry_count, config.retries, delay });
-                            std.Thread.sleep(delay * 1_000);
+                            tri_time.sleep(delay * 1_000);
                         }
                     }
                 }
@@ -8873,7 +8877,7 @@ fn testEcho(port_path: []const u8, config: Config) void {
                 .rtt_us = 0, // Not available from result
             }) catch {};
 
-            std.Thread.sleep(config.delay_ms * 1_000_000);
+            tri_time.sleep(config.delay_ms * 1_000_000);
             test_idx += 1;
         }
 
@@ -8924,7 +8928,7 @@ fn testEcho(port_path: []const u8, config: Config) void {
             }
             printErr("\n", .{});
             cycle += 1;
-            std.Thread.sleep(2_000_000); // 2 second delay between cycles
+            tri_time.sleep(2_000_000); // 2 second delay between cycles
         }
     }
 
@@ -8965,7 +8969,7 @@ fn testEchoByte(fd: std.posix.fd_t, data: []const u8, test_name: []const u8, tes
             .rtt_us = 0,
         };
     }
-    std.Thread.sleep(config.delay_ms * 500_000);
+    tri_time.sleep(config.delay_ms * 500_000);
 
     if (config.verbose) {
         const mode_name = if (config.loopback_mode) "LOOPBACK" else if (config.ping_mode) "PING/PONG" else "Echo";
@@ -8974,10 +8978,10 @@ fn testEchoByte(fd: std.posix.fd_t, data: []const u8, test_name: []const u8, tes
 
     var read_buffer: [512]u8 = undefined;
     var bytes_read: usize = 0;
-    const start_time_ms = std.time.milliTimestamp();
+    const start_time_ms = tri_time.milliTimestamp();
     var round_trip_ms: i64 = 0;
 
-    while (std.time.milliTimestamp() - start_time_ms < config.timeout_ms) {
+    while (tri_time.milliTimestamp() - start_time_ms < config.timeout_ms) {
         const read_result = std.posix.read(fd, read_buffer[bytes_read..]);
 
         if (read_result) |n| {
@@ -8987,7 +8991,7 @@ fn testEchoByte(fd: std.posix.fd_t, data: []const u8, test_name: []const u8, tes
             }
             // Calculate round-trip time on first byte received
             if (round_trip_ms == 0) {
-                round_trip_ms = std.time.milliTimestamp() - start_time_ms;
+                round_trip_ms = tri_time.milliTimestamp() - start_time_ms;
             }
             // In ping mode, expect 1 byte (PONG). In echo mode, expect same as sent.
             if ((config.ping_mode and bytes_read >= 1) or (!config.ping_mode and bytes_read >= data.len)) {
@@ -8995,7 +8999,7 @@ fn testEchoByte(fd: std.posix.fd_t, data: []const u8, test_name: []const u8, tes
             }
         } else |err| {
             if (err == error.OperationWouldBlock) {
-                std.Thread.sleep(10_000);
+                tri_time.sleep(10_000);
                 continue;
             }
             if (config.verbose) {
@@ -9117,7 +9121,7 @@ fn runSimulationBatch(config: Config) !void {
     var recovered_packets: usize = 0;
 
     var results = BatchTestResults{};
-    const start_time = std.time.nanoTimestamp();
+    const start_time = tri_time.nanoTimestamp();
 
     // v3.41: Simulated auto-recovery for batch test
     var packets_sent: usize = 0;
@@ -9132,15 +9136,15 @@ fn runSimulationBatch(config: Config) !void {
 
             while (!packet_success and recovery.shouldRetry(retry_count)) {
                 // Simulate random RTT
-                const rtt_us = 10_000 + std.crypto.random.intRangeAtMost(u32, 0, 50_000);
+                const rtt_us = 10_000 + tri_rand.random().intRangeAtMost(u32, 0, 50_000);
                 if (config.measure_jitter) {
                     try jitter_tracker.addSample(@as(i64, rtt_us));
                 }
 
                 // Simulate occasional packet loss (less likely with each retry)
                 const fail_prob = @max(1, 5 - retry_count * 2);
-                const should_fail = std.crypto.random.intRangeAtMost(u8, 0, 100) < @as(u8, @intCast(fail_prob));
-                const should_timeout = std.crypto.random.intRangeAtMost(u8, 0, 100) < 2;
+                const should_fail = tri_rand.random().intRangeAtMost(u8, 0, 100) < @as(u8, @intCast(fail_prob));
+                const should_timeout = tri_rand.random().intRangeAtMost(u8, 0, 100) < 2;
 
                 results.total_sent += bytes_in_packet;
                 results.total_received += bytes_in_packet;
@@ -9174,14 +9178,14 @@ fn runSimulationBatch(config: Config) !void {
         } else {
             // Normal mode: single attempt
             // Simulate random RTT
-            const rtt_us = 10_000 + std.crypto.random.intRangeAtMost(u32, 0, 50_000);
+            const rtt_us = 10_000 + tri_rand.random().intRangeAtMost(u32, 0, 50_000);
             if (config.measure_jitter) {
                 try jitter_tracker.addSample(@as(i64, rtt_us));
             }
 
             // Simulate occasional packet loss
-            const should_fail = std.crypto.random.intRangeAtMost(u8, 0, 100) < 5;
-            const should_timeout = std.crypto.random.intRangeAtMost(u8, 0, 100) < 2;
+            const should_fail = tri_rand.random().intRangeAtMost(u8, 0, 100) < 5;
+            const should_timeout = tri_rand.random().intRangeAtMost(u8, 0, 100) < 2;
 
             results.total_sent += bytes_in_packet;
             results.total_received += bytes_in_packet;
@@ -9210,7 +9214,7 @@ fn runSimulationBatch(config: Config) !void {
         }
     }
 
-    const total_elapsed_ns = std.time.nanoTimestamp() - start_time;
+    const total_elapsed_ns = tri_time.nanoTimestamp() - start_time;
     results.batch_time_ms = @intCast(@divTrunc(total_elapsed_ns, 1_000_000));
     results.calculateThroughput();
 
@@ -9304,7 +9308,7 @@ fn runSimulationBatch(config: Config) !void {
 
     // v3.68: Export to CSV if requested
     if (config.csv_output) {
-        const timestamp = std.time.timestamp();
+        const timestamp = tri_time.timestamp();
         const success_rate = results.successRate();
         printErr("timestamp,version,mode,batch_size,matched,failed,timeouts,success_rate,batch_time_ms,packets_per_sec,bytes_per_sec", .{});
 
@@ -9401,7 +9405,7 @@ fn runSimulationBatch(config: Config) !void {
                 const spikes = jitter_tracker.detectSpikes(config.spike_threshold);
 
                 var new_baseline = Baseline{
-                    .timestamp = std.time.timestamp(),
+                    .timestamp = tri_time.timestamp(),
                     .version = "v3.62",
                     .mean_rtt_us = stats.mean,
                     .jitter_us = stats.jitter,
@@ -9493,13 +9497,13 @@ fn runSimulation(config: Config) !void {
     printErr("[i] Running simulation with {d} tests...\n", .{tests.len});
 
     for (tests, 0..) |testCase, i| {
-        const start = std.time.nanoTimestamp();
+        const start = tri_time.nanoTimestamp();
 
         // Simulate delay with random jitter
-        const sim_delay = 5 + std.crypto.random.intRangeAtMost(u32, 0, 20);
-        std.Thread.sleep(sim_delay * 1_000_000);
+        const sim_delay = 5 + tri_rand.random().intRangeAtMost(u32, 0, 20);
+        tri_time.sleep(sim_delay * 1_000_000);
 
-        const elapsed_ns = std.time.nanoTimestamp() - start;
+        const elapsed_ns = tri_time.nanoTimestamp() - start;
         const elapsed_ms: i64 = @intCast(@divTrunc(elapsed_ns, 1_000_000));
         total_time_ms += elapsed_ms;
 
@@ -9512,7 +9516,7 @@ fn runSimulation(config: Config) !void {
         printErr("  [->] Sim Test {d}/{d}: {s} (RTT: {d}ms) ", .{ i + 1, tests.len, testCase.name, elapsed_ms });
 
         // Simulate occasional "failure" in simulation mode
-        const should_fail = std.crypto.random.intRangeAtMost(u8, 0, 100) < 5;
+        const should_fail = tri_rand.random().intRangeAtMost(u8, 0, 100) < 5;
         if (should_fail) {
             printErr("[x] SIMULATED FAIL\n", .{});
             // v3.53: Record failure for consecutive failure tracking
@@ -9582,7 +9586,7 @@ fn runSimulation(config: Config) !void {
                     const spikes = jitter_tracker.detectSpikes(config.spike_threshold);
 
                     var new_baseline = Baseline{
-                        .timestamp = std.time.timestamp(),
+                        .timestamp = tri_time.timestamp(),
                         .version = "v3.62",
                         .mean_rtt_us = stats.mean,
                         .jitter_us = stats.jitter,
@@ -9761,14 +9765,14 @@ fn runBatchTestInternal(config: Config) !void {
     printErr("[i] Running batch test...\n", .{});
 
     var results = BatchTestResults{};
-    const start_time = std.time.nanoTimestamp();
+    const start_time = tri_time.nanoTimestamp();
 
     // Simulate batch operations
     var packets_sent: usize = 0;
     while (packets_sent < batch_size) {
         const bytes_in_packet = packet_size;
-        _ = 10 + std.crypto.random.intRangeAtMost(u32, 0, 50);
-        const should_fail = std.crypto.random.intRangeAtMost(u8, 0, 100) < 5;
+        _ = 10 + tri_rand.random().intRangeAtMost(u32, 0, 50);
+        const should_fail = tri_rand.random().intRangeAtMost(u8, 0, 100) < 5;
 
         results.total_sent += bytes_in_packet;
         results.total_received += bytes_in_packet;
@@ -9783,7 +9787,7 @@ fn runBatchTestInternal(config: Config) !void {
         packets_sent += 1;
     }
 
-    const total_elapsed_ns = std.time.nanoTimestamp() - start_time;
+    const total_elapsed_ns = tri_time.nanoTimestamp() - start_time;
     results.batch_time_ms = @intCast(@divTrunc(total_elapsed_ns, 1_000_000));
     results.calculateThroughput();
 
@@ -9951,7 +9955,7 @@ fn runBatchTest(fd: std.posix.fd_t, config: Config) !void {
     var total_retries: usize = 0;
     var recovered_packets: usize = 0;
 
-    const start_time = std.time.nanoTimestamp();
+    const start_time = tri_time.nanoTimestamp();
 
     while (packet_num < batch_size) {
         // Fill buffer with sequential data
@@ -9971,7 +9975,7 @@ fn runBatchTest(fd: std.posix.fd_t, config: Config) !void {
 
         // Send packet
         const send_buf = buffered_io.getWriteSlice();
-        const start_send = std.time.nanoTimestamp();
+        const start_send = tri_time.nanoTimestamp();
 
         var packet_success = false;
         var retry_count: u32 = 0;
@@ -9989,7 +9993,7 @@ fn runBatchTest(fd: std.posix.fd_t, config: Config) !void {
                 var poll_fds = [1]std.posix.pollfd{.{ .fd = fd, .events = std.posix.POLL.IN, .revents = 0 }};
 
                 while (bytes_read < send_buf.len and timeout_remaining > 0) {
-                    const poll_start = std.time.nanoTimestamp();
+                    const poll_start = tri_time.nanoTimestamp();
                     const poll_ms = @as(c_int, @intCast(timeout_remaining));
 
                     const poll_result = std.posix.poll(&poll_fds, poll_ms) catch |err| {
@@ -10005,11 +10009,11 @@ fn runBatchTest(fd: std.posix.fd_t, config: Config) !void {
                         bytes_read += read_result;
                     }
 
-                    const poll_elapsed_ms = @as(i32, @intCast(@divTrunc(std.time.nanoTimestamp() - poll_start, 1_000_000)));
+                    const poll_elapsed_ms = @as(i32, @intCast(@divTrunc(tri_time.nanoTimestamp() - poll_start, 1_000_000)));
                     timeout_remaining -= poll_elapsed_ms;
                 }
 
-                const elapsed_ns = std.time.nanoTimestamp() - start_send;
+                const elapsed_ns = tri_time.nanoTimestamp() - start_send;
                 const elapsed_ms: i64 = @intCast(@divTrunc(elapsed_ns, 1_000_000));
 
                 results.total_sent += send_buf.len;
@@ -10041,7 +10045,7 @@ fn runBatchTest(fd: std.posix.fd_t, config: Config) !void {
                         if (recovery.shouldRetry(retry_count)) {
                             const delay = recovery.getDelay(retry_count);
                             printWarning("[i] Auto-recovery: retry {d}/{d} after {d}ms delay\n", .{ retry_count, config.retries, delay });
-                            std.Thread.sleep(delay * 1_000);
+                            tri_time.sleep(delay * 1_000);
                         }
                         results.failed += 1;
                     }
@@ -10052,7 +10056,7 @@ fn runBatchTest(fd: std.posix.fd_t, config: Config) !void {
                     if (recovery.shouldRetry(retry_count)) {
                         const delay = recovery.getDelay(retry_count);
                         printWarning("[i] Auto-recovery: retry {d}/{d} after {d}ms delay (partial)\n", .{ retry_count, config.retries, delay });
-                        std.Thread.sleep(delay * 1_000);
+                        tri_time.sleep(delay * 1_000);
                     }
                     results.failed += 1;
                 } else {
@@ -10061,7 +10065,7 @@ fn runBatchTest(fd: std.posix.fd_t, config: Config) !void {
                     if (recovery.shouldRetry(retry_count)) {
                         const delay = recovery.getDelay(retry_count);
                         printWarning("[i] Auto-recovery: retry {d}/{d} after {d}ms delay (timeout)\n", .{ retry_count, config.retries, delay });
-                        std.Thread.sleep(delay * 1_000);
+                        tri_time.sleep(delay * 1_000);
                     }
                     results.timeouts += 1;
                 }
@@ -10076,7 +10080,7 @@ fn runBatchTest(fd: std.posix.fd_t, config: Config) !void {
             var poll_fds = [1]std.posix.pollfd{.{ .fd = fd, .events = std.posix.POLL.IN, .revents = 0 }};
 
             while (bytes_read < send_buf.len and timeout_remaining > 0) {
-                const poll_start = std.time.nanoTimestamp();
+                const poll_start = tri_time.nanoTimestamp();
                 const poll_ms = @as(c_int, @intCast(timeout_remaining));
 
                 const poll_result = std.posix.poll(&poll_fds, poll_ms) catch |err| {
@@ -10092,11 +10096,11 @@ fn runBatchTest(fd: std.posix.fd_t, config: Config) !void {
                     bytes_read += read_result;
                 }
 
-                const poll_elapsed_ms = @as(i32, @intCast(@divTrunc(std.time.nanoTimestamp() - poll_start, 1_000_000)));
+                const poll_elapsed_ms = @as(i32, @intCast(@divTrunc(tri_time.nanoTimestamp() - poll_start, 1_000_000)));
                 timeout_remaining -= poll_elapsed_ms;
             }
 
-            const elapsed_ns = std.time.nanoTimestamp() - start_send;
+            const elapsed_ns = tri_time.nanoTimestamp() - start_send;
             const elapsed_ms: i64 = @intCast(@divTrunc(elapsed_ns, 1_000_000));
 
             results.total_sent += send_buf.len;
@@ -10144,7 +10148,7 @@ fn runBatchTest(fd: std.posix.fd_t, config: Config) !void {
         }
     }
 
-    const total_elapsed_ns = std.time.nanoTimestamp() - start_time;
+    const total_elapsed_ns = tri_time.nanoTimestamp() - start_time;
     results.batch_time_ms = @intCast(@divTrunc(total_elapsed_ns, 1_000_000));
     results.calculateThroughput();
 
@@ -10282,7 +10286,7 @@ fn runStressTest(fd: std.posix.fd_t, config: Config) !void {
     var total_received: usize = 0;
     var write_errors: usize = 0; // v3.43: Track write attempts as retries
     var read_errors: usize = 0; // v3.43: Track read errors separately
-    const start_time = std.time.nanoTimestamp();
+    const start_time = tri_time.nanoTimestamp();
 
     for (0..config.stress_packets) |i| {
         const packet_num = i + 1;
@@ -10299,7 +10303,7 @@ fn runStressTest(fd: std.posix.fd_t, config: Config) !void {
         }
 
         // Minimal delay (stress mode)
-        std.Thread.sleep(1_000); // 1ms
+        tri_time.sleep(1_000); // 1ms
 
         // Try to read (non-blocking, optional in stress mode)
         var read_buf: [256]u8 = undefined;
@@ -10317,7 +10321,7 @@ fn runStressTest(fd: std.posix.fd_t, config: Config) !void {
         }
     }
 
-    const elapsed_ns = std.time.nanoTimestamp() - start_time;
+    const elapsed_ns = tri_time.nanoTimestamp() - start_time;
     const elapsed_ms = @divFloor(elapsed_ns, 1_000_000);
     const elapsed_sec = @as(f64, @floatFromInt(elapsed_ms)) / 1000.0;
 
@@ -10340,7 +10344,7 @@ fn runStressTest(fd: std.posix.fd_t, config: Config) !void {
 }
 
 fn findFT232Device() ?[]const u8 {
-    var dir = std.fs.openDirAbsolute("/dev", .{}) catch return null;
+    var dir = std.Io.Dir.openDirAbsolute(tri_io.get(), "/dev", .{}) catch return null;
     defer dir.close();
 
     var iterator = dir.iterate();
@@ -10408,7 +10412,7 @@ fn configureSerialWithFlow(fd: std.posix.fd_t, baud: u64, enable_rtscts: bool) b
 
 // Export test results to CSV file
 fn exportToCSV(path: []const u8, results: []const DetailedTestResult, passed: usize, total: usize) void {
-    const file = std.fs.createFileAbsolute(path, .{}) catch |err| {
+    const file = std.Io.Dir.createFileAbsolute(tri_io.get(), path, .{}) catch |err| {
         printErr("[!] Failed to create CSV file: {any}\n", .{err});
         return;
     };
@@ -10424,7 +10428,7 @@ fn exportToCSV(path: []const u8, results: []const DetailedTestResult, passed: us
         \\# Total: {d}/{d} passed
         \\# Columns: cycle,test_name,test_num,total_tests,bytes_sent,bytes_received,success,rtt_ms
         \\cycle,test_name,test_num,total_tests,bytes_sent,bytes_received,success,rtt_ms
-    , .{ std.time.timestamp(), passed, total }) catch return;
+    , .{ tri_time.timestamp(), passed, total }) catch return;
 
     // Write data rows
     for (results) |r| {
@@ -10459,7 +10463,7 @@ fn exportSimulationJSON(passed: usize, total: usize, total_time_ms: i64, jitter_
         \\    "total_time_ms": {d}
         \\  }}
     , .{
-        std.time.timestamp(),
+        tri_time.timestamp(),
         passed,
         total,
         @as(f64, @floatFromInt(passed)) / @as(f64, @floatFromInt(total)) * 100.0,
@@ -10538,7 +10542,7 @@ fn exportSimulationCSV(passed: usize, total: usize, total_time_ms: i64, jitter_t
     printErr("\n", .{});
 
     // CSV Data
-    const timestamp = std.time.timestamp();
+    const timestamp = tri_time.timestamp();
     const success_rate = @as(f64, @floatFromInt(passed)) / @as(f64, @floatFromInt(total)) * 100.0;
 
     printErr("{d},3.68,simulation,{d},{d},{d:.1},{d}", .{ timestamp, passed, total, success_rate, total_time_ms });

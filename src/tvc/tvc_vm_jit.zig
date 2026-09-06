@@ -1,4 +1,5 @@
 const std = @import("std");
+const tri_time = @import("tri_time");
 const tvc_ir = @import("tvc_ir.zig");
 const tvc_vm = @import("tvc_vm.zig");
 const tvc_jit = @import("tvc_jit.zig");
@@ -195,20 +196,20 @@ pub fn benchmarkVMvsJIT(
     }
 
     //  and
-    const vm_start = std.time.nanoTimestamp();
+    const vm_start = tri_time.nanoTimestamp();
     i = 0;
     while (i < iterations) : (i += 1) {
         _ = vm_only.callFunction(func_name) catch 0;
     }
-    const vm_end = std.time.nanoTimestamp();
+    const vm_end = tri_time.nanoTimestamp();
 
     //  JIT
-    const jit_start = std.time.nanoTimestamp();
+    const jit_start = tri_time.nanoTimestamp();
     i = 0;
     while (i < iterations) : (i += 1) {
         _ = vm_jit.callFunction(func_name) catch 0;
     }
-    const jit_end = std.time.nanoTimestamp();
+    const jit_end = tri_time.nanoTimestamp();
 
     const vm_ns = @as(u64, @intCast(vm_end - vm_start));
     const jit_ns = @as(u64, @intCast(jit_end - jit_start));

@@ -13,6 +13,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const builtin = @import("builtin");
 
 /// Per-layer memory cost estimates for common model sizes
@@ -158,7 +159,7 @@ fn getSystemMemoryMacOS() !SystemMemory {
 
 fn getSystemMemoryLinux() !SystemMemory {
     // Read /proc/meminfo
-    const file = std.fs.openFileAbsolute("/proc/meminfo", .{}) catch {
+    const file = std.Io.Dir.openFileAbsolute(tri_io.get(), "/proc/meminfo", .{}) catch {
         // Fallback
         return SystemMemory{ .total_bytes = 8 * 1024 * 1024 * 1024, .available_bytes = 6 * 1024 * 1024 * 1024 };
     };

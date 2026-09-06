@@ -4,6 +4,8 @@
 //! Provides O(log n) similarity search for pattern matching.
 
 const std = @import("std");
+const tri_rand = @import("tri_rand");
+const tri_time = @import("tri_time");
 const ArrayListManaged = std.array_list.Managed;
 const diagnostic = @import("diagnostic.zig");
 
@@ -128,7 +130,7 @@ pub const HNSWIndex = struct {
         var level: usize = 0;
         var rand_val: u32 = undefined;
         while (true) {
-            std.crypto.random.bytes(std.mem.asBytes(&rand_val));
+            tri_rand.random().bytes(std.mem.asBytes(&rand_val));
             const unif: f32 = @as(f32, @floatFromInt(rand_val)) / @as(f32, std.math.maxInt(u32));
             if (unif > self.ml) break;
             level += 1;
@@ -250,7 +252,7 @@ test "HNSWIndex: insert and search" {
         .vector = embedding,
         .confidence = 1.0,
         .fix_type = .TYPE_FIX,
-        .timestamp = std.time.timestamp(),
+        .timestamp = tri_time.timestamp(),
     };
 
     try index.insert(allocator, &error_emb);

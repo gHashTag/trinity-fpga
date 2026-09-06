@@ -257,22 +257,22 @@ pub const T27Emitter = struct {
 
                 // += operator
                 if (std.mem.endsWith(u8, lhs, "+")) {
-                    const target = std.mem.trimRight(u8, lhs, "+ ");
+                    const target = std.mem.trimEnd(u8, lhs, "+ ");
                     try self.emitCode("ADD {s}, {s}", .{ target, rhs });
                 }
                 // -= operator
                 else if (std.mem.endsWith(u8, lhs, "-")) {
-                    const target = std.mem.trimRight(u8, lhs, "- ");
+                    const target = std.mem.trimEnd(u8, lhs, "- ");
                     try self.emitCode("SUB {s}, {s}", .{ target, rhs });
                 }
                 // *= operator
                 else if (std.mem.endsWith(u8, lhs, "*")) {
-                    const target = std.mem.trimRight(u8, lhs, "* ");
+                    const target = std.mem.trimEnd(u8, lhs, "* ");
                     try self.emitCode("MUL {s}, {s}", .{ target, rhs });
                 }
                 // /= operator
                 else if (std.mem.endsWith(u8, lhs, "/")) {
-                    const target = std.mem.trimRight(u8, lhs, "/ ");
+                    const target = std.mem.trimEnd(u8, lhs, "/ ");
                     try self.emitCode("DIV {s}, {s}", .{ target, rhs });
                 }
                 // = assignment

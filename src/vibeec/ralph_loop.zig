@@ -16,6 +16,8 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
+const tri_time = @import("tri_time");
 const testing = std.testing;
 const Allocator = std.mem.Allocator;
 const circuit_breaker = @import("circuit_breaker.zig");
@@ -274,7 +276,7 @@ pub const RalphLoop = struct {
             .total_errors = 0,
             .total_duration_ms = 0,
             .api_calls_this_hour = 0,
-            .hour_start = std.time.timestamp(),
+            .hour_start = tri_time.timestamp(),
         };
     }
 
@@ -306,7 +308,7 @@ pub const RalphLoop = struct {
 
         // Check rate limiting
         if (self.config.enable_rate_limiting) {
-            const now = std.time.timestamp();
+            const now = tri_time.timestamp();
             if (now - self.hour_start >= 3600) {
                 // Reset hourly counter
                 self.hour_start = now;
@@ -586,7 +588,7 @@ test "golden identity" {
 /// This is the main entry point for Ralph Loop to work with AGENT MU.
 /// It generates code from a spec file, then runs AGENT MU verification.
 pub fn runIterationWithAgentMu(self: *RalphLoop, spec_file: []const u8) !AgentMuIterationResult {
-    const start_time = std.time.timestamp();
+    const start_time = tri_time.timestamp();
 
     // Generate code (would call VIBEE codegen here)
     const generated_file = try self.generateCodeFromSpec(spec_file);
@@ -603,7 +605,7 @@ pub fn runIterationWithAgentMu(self: *RalphLoop, spec_file: []const u8) !AgentMu
 
     const verify_result = try agent_mu.verifyAndFix(self.allocator, generated_file, config);
 
-    const duration_ms: u64 = @intCast((std.time.timestamp() - start_time) * 1000);
+    const duration_ms: u64 = @intCast((tri_time.timestamp() - start_time) * 1000);
 
     // Update iteration metrics
     const iter_result = IterationResult{
@@ -655,20 +657,27 @@ fn generateCodeFromSpec(self: *RalphLoop, spec_file: []const u8) ![]const u8 {
 
 /// Log failure to REGRESSION_PATTERNS.md
 pub fn logRegression(self: *RalphLoop, error_message: []const u8, fix_type: anytype) !void {
+    const io = tri_io.get();
     _ = fix_type;
 
-    const timestamp = std.time.timestamp();
-    const datetime = std.time.timestampToDateTime(timestamp);
+    // `std.time.timestampToDateTime` never existed in the stdlib; the calendar
+    // breakdown comes from `std.time.epoch`, which 0.16 still ships.
+    const timestamp = tri_time.timestamp();
+    var epoch_secs: std.time.epoch.EpochSeconds = .{ .secs = @intCast(timestamp) };
+    const epoch_day = epoch_secs.getEpochDay();
+    const day_secs = epoch_secs.getDaySeconds();
+    const year_day = epoch_day.calculateYearDay();
+    const month_day = year_day.calculateMonthDay();
 
     const pattern = try std.fmt.allocPrint(
         self.allocator,
         "\n---\n## Failure at {d}-{d:0>2}-{d:0>2} {d:0>2}:{d:0>2}\n\n**Error**: {s}\n**State**: {s}\n**Iteration**: {d}\n",
         .{
-            datetime.year,
-            datetime.month,
-            datetime.day,
-            datetime.hour,
-            datetime.minute,
+            year_day.year,
+            month_day.month.numeric(),
+            month_day.day_index + 1,
+            day_secs.getHoursIntoDay(),
+            day_secs.getMinutesIntoHour(),
             error_message,
             self.state.toString(),
             self.iteration,
@@ -676,21 +685,20 @@ pub fn logRegression(self: *RalphLoop, error_message: []const u8, fix_type: anyt
     );
     defer self.allocator.free(pattern);
 
-    const file = try std.fs.cwd().openFile(
+    const file = std.Io.Dir.cwd().openFile(
+        io,
         ".trinity/ralph/memory/REGRESSION_PATTERNS.md",
-        .{ .mode = .write },
-    ) catch |err| {
-        if (err == error.FileNotFound) {
-            // File doesn't exist, create it
-            try std.fs.cwd().makePath(".trinity/ralph/memory");
-            return std.fs.cwd().createFile(".trinity/ralph/memory/REGRESSION_PATTERNS.md", .{});
-        }
-        return err;
+        .{ .mode = .write_only },
+    ) catch |err| blk: {
+        if (err != error.FileNotFound) return err;
+        // File doesn't exist, create it
+        try std.Io.Dir.cwd().createDirPath(io, ".trinity/ralph/memory");
+        break :blk try std.Io.Dir.cwd().createFile(io, ".trinity/ralph/memory/REGRESSION_PATTERNS.md", .{});
     };
-    defer file.close();
+    defer file.close(io);
 
-    try file.seekFromEnd(0);
-    try file.writeAll(pattern);
+    const end = try file.length(io);
+    try file.writePositionalAll(io, pattern, end);
 }
 
 test "RalphLoop: runIterationWithAgentMu stub" {

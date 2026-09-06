@@ -17,6 +17,9 @@
 //! Architecture: Each instance is a "hemisphere" in the federated brain
 
 const std = @import("std");
+const tri_rand = @import("tri_rand");
+const tri_mutex = @import("tri_mutex");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const mem = std.mem;
 
@@ -35,7 +38,7 @@ pub const InstanceId = struct {
     /// Generate new random instance ID
     pub fn generate() InstanceId {
         var id: InstanceId = undefined;
-        std.crypto.random.bytes(&id.bytes);
+        tri_rand.random().bytes(&id.bytes);
 
         // Set version and variant bits for UUID v4
         id.bytes[6] = (id.bytes[6] & 0x0F) | 0x40; // Version 4
@@ -389,7 +392,7 @@ pub const LWWRegister = struct {
     pub fn init(allocator: Allocator, value: []const u8) !LWWRegister {
         return .{
             .value = try allocator.dupe(u8, value),
-            .timestamp = std.time.milliTimestamp(),
+            .timestamp = tri_time.milliTimestamp(),
             .instance = InstanceId.generate(),
         };
     }
@@ -401,7 +404,7 @@ pub const LWWRegister = struct {
     pub fn set(self: *LWWRegister, allocator: Allocator, value: []const u8, instance: InstanceId) !void {
         allocator.free(self.value);
         self.value = try allocator.dupe(u8, value);
-        self.timestamp = std.time.milliTimestamp();
+        self.timestamp = tri_time.milliTimestamp();
         self.instance = instance;
     }
 
@@ -435,7 +438,7 @@ pub const FederationState = struct {
     election: ElectionState,
     task_counter: GCounter,
     event_counter: GCounter,
-    mutex: std.Thread.Mutex,
+    mutex: tri_mutex.Mutex,
 
     pub fn init(allocator: Allocator, my_id: InstanceId) !FederationState {
         var state = FederationState{
@@ -444,7 +447,7 @@ pub const FederationState = struct {
             .election = ElectionState.init(),
             .task_counter = GCounter.init(allocator),
             .event_counter = GCounter.init(allocator),
-            .mutex = std.Thread.Mutex{},
+            .mutex = tri_mutex.Mutex{},
         };
 
         // Add self as first instance
@@ -455,7 +458,7 @@ pub const FederationState = struct {
             .id = my_id,
             .address = try allocator.dupe(u8, "localhost"),
             .status = .online,
-            .last_heartbeat = std.time.milliTimestamp(),
+            .last_heartbeat = tri_time.milliTimestamp(),
             .term = 0,
             .voted_for = null,
             .claim_count = 0,
@@ -710,7 +713,7 @@ pub const DistributedTaskClaim = struct {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 var global_federation: ?*FederationState = null;
-var global_mutex = std.Thread.Mutex{};
+var global_mutex = tri_mutex.Mutex{};
 
 /// Get or create global federation state
 pub fn getGlobal(allocator: Allocator) !*FederationState {
@@ -854,7 +857,7 @@ test "LWWRegister last write wins" {
     try std.testing.expectEqualStrings("value2", reg.get());
 
     // Simulate time passing
-    std.Thread.sleep(1_000_000_000); // 1 second in nanoseconds
+    tri_time.sleep(1_000_000_000); // 1 second in nanoseconds
 
     const id2 = InstanceId.generate();
     try reg.set(allocator, "value3", id2);
@@ -871,7 +874,7 @@ test "LWWRegister merge" {
     var reg2 = try LWWRegister.init(allocator, "value2");
     defer reg2.deinit(allocator);
 
-    std.Thread.sleep(1_000_000_000); // 1 second in nanoseconds
+    tri_time.sleep(1_000_000_000); // 1 second in nanoseconds
 
     const id = InstanceId.generate();
     try reg2.set(allocator, "value3", id);
@@ -909,7 +912,7 @@ test "FederationState aggregated health" {
         .id = id2,
         .address = "remote1",
         .status = .online,
-        .last_heartbeat = std.time.milliTimestamp(),
+        .last_heartbeat = tri_time.milliTimestamp(),
         .term = 0,
         .voted_for = null,
         .claim_count = 5,
@@ -922,7 +925,7 @@ test "FederationState aggregated health" {
         .id = id3,
         .address = "remote2",
         .status = .online,
-        .last_heartbeat = std.time.milliTimestamp(),
+        .last_heartbeat = tri_time.milliTimestamp(),
         .term = 0,
         .voted_for = null,
         .claim_count = 10,
@@ -1129,7 +1132,7 @@ test "LWWRegister timestamp precedence" {
     defer reg2.deinit(allocator);
 
     // reg1 has earlier timestamp
-    std.Thread.sleep(1_000_000); // 1ms
+    tri_time.sleep(1_000_000); // 1ms
 
     const id = InstanceId.generate();
     try reg2.set(allocator, "value3", id);
@@ -1173,7 +1176,7 @@ test "LWWRegister merge idempotent" {
     var reg2 = try LWWRegister.init(allocator, "value2");
     defer reg2.deinit(allocator);
 
-    std.Thread.sleep(1_000_000);
+    tri_time.sleep(1_000_000);
 
     const id = InstanceId.generate();
     try reg2.set(allocator, "value3", id);
@@ -1195,7 +1198,7 @@ test "LWWRegister merge no-op when earlier" {
     var reg1 = try LWWRegister.init(allocator, "value1");
     defer reg1.deinit(allocator);
 
-    std.Thread.sleep(1_000_000);
+    tri_time.sleep(1_000_000);
 
     const id = InstanceId.generate();
     try reg1.set(allocator, "value2", id);
@@ -1229,7 +1232,7 @@ test "LWWRegister concurrent writes" {
     const id1 = InstanceId{ .bytes = [_]u8{1} ++ [_]u8{0} ** 15 };
     const id2 = InstanceId{ .bytes = [_]u8{2} ++ [_]u8{0} ** 15 };
 
-    const base_timestamp = std.time.milliTimestamp();
+    const base_timestamp = tri_time.milliTimestamp();
 
     // Simulate concurrent writes
     reg1.timestamp = base_timestamp;
@@ -1398,7 +1401,7 @@ test "FederationState addInstance updates existing" {
         .id = id2,
         .address = "remote1:8080",
         .status = .online,
-        .last_heartbeat = std.time.milliTimestamp(),
+        .last_heartbeat = tri_time.milliTimestamp(),
         .term = 0,
         .voted_for = null,
         .claim_count = 5,
@@ -1413,7 +1416,7 @@ test "FederationState addInstance updates existing" {
         .id = id2,
         .address = "remote1:8081",
         .status = .leader,
-        .last_heartbeat = std.time.milliTimestamp(),
+        .last_heartbeat = tri_time.milliTimestamp(),
         .term = 1,
         .voted_for = null,
         .claim_count = 10,
@@ -1445,7 +1448,7 @@ test "FederationState removeInstance" {
         .id = id2,
         .address = "remote1:8080",
         .status = .online,
-        .last_heartbeat = std.time.milliTimestamp(),
+        .last_heartbeat = tri_time.milliTimestamp(),
         .term = 0,
         .voted_for = null,
         .claim_count = 5,
@@ -1509,7 +1512,7 @@ test "FederationState aggregated health excludes offline" {
         .id = id2,
         .address = "remote1",
         .status = .offline, // Offline
-        .last_heartbeat = std.time.milliTimestamp(),
+        .last_heartbeat = tri_time.milliTimestamp(),
         .term = 0,
         .voted_for = null,
         .claim_count = 0,
@@ -1522,7 +1525,7 @@ test "FederationState aggregated health excludes offline" {
         .id = id3,
         .address = "remote2",
         .status = .degraded, // Degraded, also excluded
-        .last_heartbeat = std.time.milliTimestamp(),
+        .last_heartbeat = tri_time.milliTimestamp(),
         .term = 0,
         .voted_for = null,
         .claim_count = 0,
@@ -1547,7 +1550,7 @@ test "FederationState aggregated health with mixed statuses" {
         .id = id2,
         .address = "remote1",
         .status = .leader, // Included
-        .last_heartbeat = std.time.milliTimestamp(),
+        .last_heartbeat = tri_time.milliTimestamp(),
         .term = 0,
         .voted_for = null,
         .claim_count = 0,
@@ -1560,7 +1563,7 @@ test "FederationState aggregated health with mixed statuses" {
         .id = id3,
         .address = "remote2",
         .status = .follower, // Included
-        .last_heartbeat = std.time.milliTimestamp(),
+        .last_heartbeat = tri_time.milliTimestamp(),
         .term = 0,
         .voted_for = null,
         .claim_count = 0,

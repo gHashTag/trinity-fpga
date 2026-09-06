@@ -359,7 +359,7 @@ pub const TreeSitterAnalyzer = struct {
             const decl_text = node.text(self.source);
 
             // Check if declaration uses `var` (not `const` — const inference is idiomatic)
-            if (std.mem.startsWith(u8, std.mem.trimLeft(u8, decl_text, " \t"), "var ")) {
+            if (std.mem.startsWith(u8, std.mem.trimStart(u8, decl_text, " \t"), "var ")) {
                 // Check if there's an explicit type annotation (: Type =)
                 if (std.mem.indexOf(u8, decl_text, ": ") == null) {
                     try report.violations.append(self.allocator, .{

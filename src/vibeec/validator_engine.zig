@@ -2,6 +2,7 @@
 // φ² + 1/φ² = 3 | PHOENIX = 999
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const interface = @import("bogatyrs_common.zig");
 const registry_mod = @import("bogatyrs_registry.zig");
@@ -35,7 +36,7 @@ pub const ValidatorEngine = struct {
     }
 
     pub fn validate(self: *ValidatorEngine, spec_path: []const u8) !ValidatorReport {
-        const start_time = std.time.nanoTimestamp();
+        const start_time = tri_time.nanoTimestamp();
 
         const source = try std.fs.cwd().readFileAlloc(self.allocator, spec_path, 1024 * 1024);
         defer self.allocator.free(source);
@@ -73,7 +74,7 @@ pub const ValidatorEngine = struct {
             }
         }
 
-        const end_time = std.time.nanoTimestamp();
+        const end_time = tri_time.nanoTimestamp();
         const errors_slice = try self.allocator.dupe(interface.ValidationError, all_errors.items);
 
         const verdict = if (all_errors.items.len > 0) .Fail else .Pass;

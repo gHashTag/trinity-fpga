@@ -8,6 +8,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 // ═══════════════════════════════════════════════════════════════════════════════
 // CONSTANTS (from kg_sync.tri)
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -83,7 +84,7 @@ pub fn serializeTriple(
         .object = [_]u8{0} ** MAX_OBJECT_LEN,
         .confidence_u32 = @intFromFloat(confidence * 10000.0),
         .source_node = source_node,
-        .timestamp = std.time.timestamp(),
+        .timestamp = tri_time.timestamp(),
     };
 
     const s_len = @min(subject.len, MAX_SUBJECT_LEN);
@@ -200,7 +201,7 @@ pub const KgTripleDHT = struct {
             .replication_factor = REPLICATION_FACTOR,
             .local_node_id = local_node_id,
             .stats = std.mem.zeroes(KgDHTStats),
-            .peer_nodes = .{},
+            .peer_nodes = .empty,
         };
     }
 
@@ -390,7 +391,7 @@ pub fn createChallenge(
         .challenger_id = challenger_id,
         .target_id = target_id,
         .triple_hash = triple_hash,
-        .timestamp = std.time.timestamp(),
+        .timestamp = tri_time.timestamp(),
     };
 }
 
@@ -477,7 +478,7 @@ pub const KgRewardCalculator = struct {
         }
         result.value_ptr.triples_contributed += accepted_count;
         result.value_ptr.triples_accepted += accepted_count;
-        result.value_ptr.last_contribution_time = std.time.timestamp();
+        result.value_ptr.last_contribution_time = tri_time.timestamp();
     }
 
     /// Calculate reward for a node (returns wei, 0 if below minimum)

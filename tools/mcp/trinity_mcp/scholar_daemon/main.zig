@@ -12,6 +12,7 @@
 //   TELEGRAM_CHAT_ID       — Telegram chat ID (optional)
 //
 const std = @import("std");
+const tri_env = @import("tri_env");
 const scholar_loop = @import("scholar_loop.zig");
 const telegram = @import("telegram");
 
@@ -20,19 +21,19 @@ pub fn main() !void {
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    const sleep_s: []const u8 = std.posix.getenv("SCHOLAR_SLEEP_INTERVAL") orelse "600";
-    const wakes_s: []const u8 = std.posix.getenv("SCHOLAR_MAX_WAKES") orelse "0";
+    const sleep_s: []const u8 = tri_env.getPosix("SCHOLAR_SLEEP_INTERVAL") orelse "600";
+    const wakes_s: []const u8 = tri_env.getPosix("SCHOLAR_MAX_WAKES") orelse "0";
 
     const sleep_interval = std.fmt.parseInt(u64, sleep_s, 10) catch 600;
     const max_wakes = std.fmt.parseInt(u32, wakes_s, 10) catch 0;
 
-    const tg_token: []const u8 = std.posix.getenv("TELEGRAM_BOT_TOKEN") orelse "";
-    const tg_chat_id: []const u8 = std.posix.getenv("TELEGRAM_CHAT_ID") orelse "";
+    const tg_token: []const u8 = tri_env.getPosix("TELEGRAM_BOT_TOKEN") orelse "";
+    const tg_chat_id: []const u8 = tri_env.getPosix("TELEGRAM_CHAT_ID") orelse "";
     const tg_enabled = tg_token.len > 0 and tg_chat_id.len > 0;
 
     // Detect project root
     const project_root = blk: {
-        if (std.posix.getenv("PROJECT_ROOT")) |root| break :blk @as([]const u8, root);
+        if (tri_env.getPosix("PROJECT_ROOT")) |root| break :blk @as([]const u8, root);
         const result = std.process.Child.run(.{
             .allocator = allocator,
             .argv = &.{ "git", "rev-parse", "--show-toplevel" },

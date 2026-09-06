@@ -7,6 +7,8 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const hippocampus = @import("hippocampus.zig");
 const voice_engine = @import("voice_engine.zig");
@@ -36,7 +38,7 @@ pub const VerdictCounts = struct {
 pub fn getMuHeartbeat(allocator: Allocator) voice_engine.MuHeartbeat {
     if (hippocampus.latestHeartbeat(allocator, "phoenix") catch null) |hb| {
         if (hb.ts > 0) {
-            const now: u64 = @intCast(std.time.timestamp());
+            const now: u64 = @intCast(tri_time.timestamp());
             const age: i64 = @intCast(now -| hb.ts);
             if (age < FRESHNESS_THRESHOLD) {
                 // Parse hippocampus data fields
@@ -62,7 +64,7 @@ pub fn getMuHeartbeat(allocator: Allocator) voice_engine.MuHeartbeat {
 pub fn getScholarHeartbeat(allocator: Allocator) voice_engine.ScholarHeartbeat {
     if (hippocampus.latestHeartbeat(allocator, "scholar") catch null) |hb| {
         if (hb.ts > 0) {
-            const now: u64 = @intCast(std.time.timestamp());
+            const now: u64 = @intCast(tri_time.timestamp());
             const age: i64 = @intCast(now -| hb.ts);
             if (age < FRESHNESS_THRESHOLD) {
                 const d = hb.data();
@@ -95,11 +97,12 @@ pub fn countEpisodes(allocator: Allocator) u32 {
 }
 
 fn countEpisodesFallback() u32 {
-    var dir = std.fs.cwd().openDir(".trinity/experience/episodes", .{ .iterate = true }) catch return 0;
-    defer dir.close();
+    const io = tri_io.get();
+    var dir = std.Io.Dir.cwd().openDir(io, ".trinity/experience/episodes", .{ .iterate = true }) catch return 0;
+    defer dir.close(io);
     var count: u32 = 0;
     var iter = dir.iterate();
-    while (iter.next() catch null) |entry| {
+    while (iter.next(io) catch null) |entry| {
         if (entry.kind == .file and std.mem.endsWith(u8, entry.name, ".json")) count += 1;
     }
     return count;
@@ -133,19 +136,18 @@ pub fn countEpisodeVerdicts(allocator: Allocator) VerdictCounts {
 }
 
 fn countVerdictsFallback() VerdictCounts {
-    var dir = std.fs.cwd().openDir(".trinity/experience/episodes", .{ .iterate = true }) catch
+    const io = tri_io.get();
+    var dir = std.Io.Dir.cwd().openDir(io, ".trinity/experience/episodes", .{ .iterate = true }) catch
         return .{};
-    defer dir.close();
+    defer dir.close(io);
     var vc = VerdictCounts{};
     var iter = dir.iterate();
-    while (iter.next() catch null) |entry| {
+    while (iter.next(io) catch null) |entry| {
         if (entry.kind != .file or !std.mem.endsWith(u8, entry.name, ".json")) continue;
         vc.total += 1;
+        // Whole small file into a fixed buffer; a short read is normal.
         var fbuf: [8192]u8 = undefined;
-        const f = dir.openFile(entry.name, .{}) catch continue;
-        defer f.close();
-        const n = f.readAll(&fbuf) catch continue;
-        const content = fbuf[0..n];
+        const content = dir.readFile(io, entry.name, &fbuf) catch continue;
         if (std.mem.indexOf(u8, content, "\"success\"") != null or
             std.mem.indexOf(u8, content, "\"PASS\"") != null or
             std.mem.indexOf(u8, content, "\"pass\"") != null)
@@ -170,12 +172,16 @@ pub fn countFarmEvents(allocator: Allocator, keyword: []const u8) u32 {
 }
 
 fn countFarmEventsFallback(keyword: []const u8) u32 {
-    const file = std.fs.cwd().openFile(".trinity/farm/events.jsonl", .{}) catch return 0;
-    defer file.close();
+    const io = tri_io.get();
+    const file = std.Io.Dir.cwd().openFile(io, ".trinity/farm/events.jsonl", .{}) catch return 0;
+    defer file.close(io);
+    var stream_buf: [4096]u8 = undefined;
+    var file_reader = file.reader(io, &stream_buf);
     var buf: [8192]u8 = undefined;
     var count: u32 = 0;
     while (true) {
-        const n = file.read(&buf) catch break;
+        // A short result is legitimate here: it only happens at end of stream.
+        const n = file_reader.interface.readSliceShort(&buf) catch break;
         if (n == 0) break;
         var pos: usize = 0;
         while (pos < n) {
@@ -243,19 +249,18 @@ pub fn getMuPatterns(allocator: Allocator, limit: u32) !MuPatternsResult {
 
 fn getMuPatternsFallback(allocator: Allocator, limit: u32) !MuPatternsResult {
     const DB_PATH = ".trinity/mu/learning_db.json";
-    const file = std.fs.cwd().openFile(DB_PATH, .{}) catch {
+    const io = tri_io.get();
+
+    // Whole file into a fixed buffer; a short read is normal.
+    var buf: [64 * 1024]u8 = undefined;
+    const content = std.Io.Dir.cwd().readFile(io, DB_PATH, &buf) catch {
         return .{ .items = &.{}, .count = 0 };
     };
-    defer file.close();
-
-    var buf: [64 * 1024]u8 = undefined;
-    const n = file.readAll(&buf) catch return .{ .items = &.{}, .count = 0 };
 
     var items: std.ArrayList([]const u8) = .empty;
     defer items.deinit(allocator);
 
     // Extract rules from JSON (simple string extraction)
-    const content = buf[0..n];
     var pos: usize = 0;
     var count: u32 = 0;
 
@@ -288,15 +293,16 @@ pub fn countMuResolvedErrors(allocator: Allocator) u32 {
 }
 
 fn countMuResolvedErrorsFallback() u32 {
-    var dir = std.fs.cwd().openDir(MU_ERRORS_DIR, .{ .iterate = true }) catch return 0;
-    defer dir.close();
+    const io = tri_io.get();
+    var dir = std.Io.Dir.cwd().openDir(io, MU_ERRORS_DIR, .{ .iterate = true }) catch return 0;
+    defer dir.close(io);
     var count: u32 = 0;
     var iter = dir.iterate();
-    while (iter.next() catch null) |entry| {
+    while (iter.next(io) catch null) |entry| {
         if (entry.kind != .file) continue;
         if (!std.mem.endsWith(u8, entry.name, ".json")) continue;
         // Check if error has fix_result (i.e., resolved)
-        const content = dir.readFileAlloc(std.heap.page_allocator, entry.name, 8192) catch continue;
+        const content = dir.readFileAlloc(io, entry.name, std.heap.page_allocator, .limited(8192)) catch continue;
         defer std.heap.page_allocator.free(content);
         if (std.mem.indexOf(u8, content, "\"fix_result\": \"") != null and
             std.mem.indexOf(u8, content, "\"resolution_status\": \"FIXED\"") != null)
@@ -524,7 +530,7 @@ pub fn getLastSleepInfo(allocator: Allocator) ?SleepInfo {
     // Get most recent SLEEP observation
     const rec = results.items[0];
     const d = rec.data();
-    const now: i64 = @intCast(std.time.timestamp());
+    const now: i64 = @intCast(tri_time.timestamp());
 
     return .{
         .timestamp = @as(i64, @intCast(rec.ts)),
@@ -570,15 +576,12 @@ pub const FarmStatus = struct {
 };
 
 pub fn getFarmStatus(allocator: Allocator) !FarmStatus {
-    var status = FarmStatus{ .timestamp = std.time.timestamp() };
+    var status = FarmStatus{ .timestamp = tri_time.timestamp() };
 
-    // Read from evolution state
-    const evo_file = std.fs.cwd().openFile(".trinity/evolution_state.json", .{}) catch return status;
-    defer evo_file.close();
-
+    // Read from evolution state — a short read is normal for this small JSON.
+    const io = tri_io.get();
     var buf: [8192]u8 = undefined;
-    const n = evo_file.read(&buf) catch return status;
-    const data = buf[0..n];
+    const data = std.Io.Dir.cwd().readFile(io, ".trinity/evolution_state.json", &buf) catch return status;
 
     if (findJsonU32(data, "\"service_count\":")) |v| status.total_services = v;
     if (findJsonF32(data, "\"best_ppl\":")) |v| status.best_ppl = v;
@@ -643,7 +646,7 @@ pub const GitHubCache = struct {
     const TTL: i64 = 300; // 5 minutes
 
     pub fn get(self: *GitHubCache, allocator: Allocator) !GitHubIssues {
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
 
         // Return cached if fresh
         if (self.issues) |*cached| {
@@ -746,9 +749,9 @@ test "thalamus getFarmStatus returns defaults when file missing" {
 
 test "thalamus GitHubCache TTL works" {
     var cache = GitHubCache{};
-    const dummy_issues = GitHubIssues{ .open = 5, .timestamp = std.time.timestamp() };
+    const dummy_issues = GitHubIssues{ .open = 5, .timestamp = tri_time.timestamp() };
     cache.issues = dummy_issues;
-    cache.cached_ts = std.time.timestamp();
+    cache.cached_ts = tri_time.timestamp();
 
     // First get should return cached
     const result1 = try cache.get(std.testing.allocator);

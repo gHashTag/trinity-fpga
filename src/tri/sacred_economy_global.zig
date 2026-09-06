@@ -11,6 +11,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const math = std.math;
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -335,9 +336,9 @@ _ = config;
 /// Then: Executes proposal action, distributes rewards
 pub fn executeP%m  () !void {
 // Process: Executes proposal action, distributes rewards
-    const start_time = std.time.timestamp();
+    const start_time = tri_time.timestamp();
 // Pipeline: Executes proposal action, distributes rewards
-    const elapsed = std.time.timestamp() - start_time;
+    const elapsed = tri_time.timestamp() - start_time;
     _ = elapsed;
 }
 

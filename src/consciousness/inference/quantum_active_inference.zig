@@ -77,8 +77,8 @@ pub const BeliefEntry = struct {
 pub const GenerativeModel = struct {
     allocator: mem.Allocator,
     beliefs: std.StringHashMap(f64),
-    predictions: std.ArrayListUnmanaged(f64) = .{},
-    precision_weights: std.ArrayListUnmanaged(f64) = .{},
+    predictions: std.ArrayListUnmanaged(f64) = .empty,
+    precision_weights: std.ArrayListUnmanaged(f64) = .empty,
     complexity: f64 = 0.0,
 
     /// Initialize generative model

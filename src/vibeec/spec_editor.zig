@@ -10,6 +10,7 @@
 //! ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const vibee_parser = @import("vibee_parser.zig");
 
@@ -57,7 +58,7 @@ pub const SpecEditor = struct {
 
         // Generate backup filename with timestamp
         const basename = std.fs.path.basename(path);
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
         const backup_name = try std.fmt.allocPrint(
             self.allocator,
             "{s}/{s}.{d}.bak",

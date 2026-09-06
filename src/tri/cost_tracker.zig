@@ -10,6 +10,8 @@
 // =============================================================================
 
 const std = @import("std");
+const tri_io = @import("tri_io");
+const tri_time = @import("tri_time");
 const golden_chain = @import("dna_polymerase.zig");
 
 const AgentRole = golden_chain.AgentRole;
@@ -104,7 +106,7 @@ pub const CostTracker = struct {
         return .{
             .issue_number = issue_number,
             .entries = entries,
-            .started_at = std.time.timestamp(),
+            .started_at = tri_time.timestamp(),
         };
     }
 
@@ -160,25 +162,28 @@ pub const CostTracker = struct {
         var path_buf: [512]u8 = undefined;
         const path = std.fmt.bufPrint(&path_buf, "{s}/cost_summary.json", .{dir}) catch return error.NameTooLong;
 
-        const file = try std.fs.cwd().createFile(path, .{});
-        defer file.close();
-        const w = file.writer();
+        const io = tri_io.get();
+        const file = try std.Io.Dir.cwd().createFile(io, path, .{});
+        defer file.close(io);
+        var buf: [4096]u8 = undefined;
+        var fw = file.writer(io, &buf);
+        const w = &fw.interface;
 
         try w.writeAll("{\n");
-        try std.fmt.format(w, "  \"issue_number\": {d},\n", .{self.issue_number});
-        try std.fmt.format(w, "  \"total_tokens_in\": {d},\n", .{self.totalTokensIn()});
-        try std.fmt.format(w, "  \"total_tokens_out\": {d},\n", .{self.totalTokensOut()});
-        try std.fmt.format(w, "  \"total_usd\": {d:.6},\n", .{self.totalUSD()});
-        try std.fmt.format(w, "  \"timestamp\": {d},\n", .{std.time.timestamp()});
+        try w.print("  \"issue_number\": {d},\n", .{self.issue_number});
+        try w.print("  \"total_tokens_in\": {d},\n", .{self.totalTokensIn()});
+        try w.print("  \"total_tokens_out\": {d},\n", .{self.totalTokensOut()});
+        try w.print("  \"total_usd\": {d:.6},\n", .{self.totalUSD()});
+        try w.print("  \"timestamp\": {d},\n", .{tri_time.timestamp()});
         try w.writeAll("  \"roles\": [\n");
 
         for (self.entries, 0..) |entry, i| {
             try w.writeAll("    {");
-            try std.fmt.format(w, "\"role\": \"{s}\", ", .{entry.role.getName()});
-            try std.fmt.format(w, "\"model\": \"{s}\", ", .{entry.getModel()});
-            try std.fmt.format(w, "\"tokens_in\": {d}, ", .{entry.tokens_in});
-            try std.fmt.format(w, "\"tokens_out\": {d}, ", .{entry.tokens_out});
-            try std.fmt.format(w, "\"usd\": {d:.6}", .{entry.usd});
+            try w.print("\"role\": \"{s}\", ", .{entry.role.getName()});
+            try w.print("\"model\": \"{s}\", ", .{entry.getModel()});
+            try w.print("\"tokens_in\": {d}, ", .{entry.tokens_in});
+            try w.print("\"tokens_out\": {d}, ", .{entry.tokens_out});
+            try w.print("\"usd\": {d:.6}", .{entry.usd});
             try w.writeByte('}');
             if (i < self.entries.len - 1) {
                 try w.writeAll(",\n");
@@ -188,6 +193,7 @@ pub const CostTracker = struct {
         }
 
         try w.writeAll("  ]\n}\n");
+        try w.flush();
     }
 
     /// Print cost table to stdout
@@ -242,10 +248,7 @@ pub fn readCostSummary(allocator: std.mem.Allocator, issue_number: u32) ?CostTra
     var path_buf: [512]u8 = undefined;
     const path = std.fmt.bufPrint(&path_buf, "{s}/cost_summary.json", .{dir}) catch return null;
 
-    const file = std.fs.cwd().openFile(path, .{}) catch return null;
-    defer file.close();
-
-    const content = file.readToEndAlloc(allocator, 64 * 1024) catch return null;
+    const content = std.Io.Dir.cwd().readFileAlloc(tri_io.get(), path, allocator, .limited(64 * 1024)) catch return null;
     defer allocator.free(content);
 
     // Parse JSON and populate tracker from file data

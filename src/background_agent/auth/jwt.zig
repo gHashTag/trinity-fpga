@@ -2,6 +2,7 @@
 //! φ² + 1/φ² = 3 | TRINITY
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const crypto = std.crypto;
 const hmac = crypto.auth.hmac.sha2;
@@ -12,8 +13,8 @@ const JWT_HEADER = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9";
 /// JWT payload structure
 pub const Payload = struct {
     sub: []const u8, // Subject (user ID)
-    iat: i64,        // Issued at (Unix timestamp)
-    exp: i64,        // Expiration (Unix timestamp)
+    iat: i64, // Issued at (Unix timestamp)
+    exp: i64, // Expiration (Unix timestamp)
 };
 
 /// JWT error set
@@ -171,7 +172,7 @@ pub fn verifyToken(allocator: Allocator, token: []const u8, secret: []const u8) 
     }, allocator, payload_json, .{ .ignore_unknown_fields = true });
     defer parsed.deinit();
 
-    const now = std.time.timestamp();
+    const now = tri_time.timestamp();
 
     // Check expiration
     if (parsed.value.exp < now) {
@@ -189,7 +190,7 @@ test "jwt: generate and verify" {
     const allocator = std.testing.allocator;
     const secret = "test-secret-key";
 
-    const now = std.time.timestamp();
+    const now = tri_time.timestamp();
     const payload = Payload{
         .sub = "user_123",
         .iat = now,
@@ -214,7 +215,7 @@ test "jwt: reject invalid signature" {
     const secret = "test-secret-key";
     const wrong_secret = "wrong-secret";
 
-    const now = std.time.timestamp();
+    const now = tri_time.timestamp();
     const payload = Payload{
         .sub = "user_123",
         .iat = now,
@@ -232,7 +233,7 @@ test "jwt: reject expired token" {
     const allocator = std.testing.allocator;
     const secret = "test-secret-key";
 
-    const now = std.time.timestamp();
+    const now = tri_time.timestamp();
     const payload = Payload{
         .sub = "user_123",
         .iat = now - 7200,

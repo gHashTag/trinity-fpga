@@ -18,6 +18,10 @@
 
 const std = @import("std");
 
+const tri_io = @import("tri_io");
+const tri_proc = @import("tri_proc");
+const tri_time = @import("tri_time");
+const tri_env = @import("tri_env");
 // Import DIM for styling (debug print colors)
 const DIM = std.debug.print;
 const Allocator = std.mem.Allocator;
@@ -248,7 +252,7 @@ fn cloudVars(allocator: Allocator, args: []const []const u8) !void {
 
         // Need service_id and environment_id — get from args or default
         const service_id = if (args.len >= 3) args[2] else "";
-        const env_id = std.posix.getenv("RAILWAY_ENVIRONMENT_ID") orelse "";
+        const env_id = tri_env.getPosix("RAILWAY_ENVIRONMENT_ID") orelse "";
 
         if (service_id.len == 0 or env_id.len == 0) {
             print("{s}Error: Need service ID and RAILWAY_ENVIRONMENT_ID{s}\n", .{ RED, RESET });
@@ -267,7 +271,7 @@ fn cloudVars(allocator: Allocator, args: []const []const u8) !void {
 
     // List variables
     const service_id = if (args.len >= 1) args[0] else "";
-    const env_id = std.posix.getenv("RAILWAY_ENVIRONMENT_ID") orelse "";
+    const env_id = tri_env.getPosix("RAILWAY_ENVIRONMENT_ID") orelse "";
 
     if (service_id.len == 0 or env_id.len == 0) {
         print("{s}Error: Need service ID and RAILWAY_ENVIRONMENT_ID{s}\n", .{ RED, RESET });
@@ -295,7 +299,7 @@ fn cloudDeploy(allocator: Allocator, args: []const []const u8) !void {
     defer api.deinit();
 
     const service_id = if (args.len >= 1) args[0] else "";
-    const env_id = std.posix.getenv("RAILWAY_ENVIRONMENT_ID") orelse "";
+    const env_id = tri_env.getPosix("RAILWAY_ENVIRONMENT_ID") orelse "";
 
     if (service_id.len == 0 or env_id.len == 0) {
         print("{s}Error: Need service ID and RAILWAY_ENVIRONMENT_ID{s}\n", .{ RED, RESET });
@@ -443,7 +447,7 @@ fn cloudSpawnAll(allocator: Allocator, args: []const []const u8) !void {
     print("{s}Fetching issues with label 'agent:spawn'...{s}\n", .{ CYAN, RESET });
 
     // 1. Run gh issue list to get open issues with agent:spawn label
-    const gh_result = std.process.Child.run(.{
+    const gh_result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{
             "gh",          "issue",            "list",
@@ -461,7 +465,7 @@ fn cloudSpawnAll(allocator: Allocator, args: []const []const u8) !void {
     defer allocator.free(gh_result.stderr);
 
     const gh_exit = switch (gh_result.term) {
-        .Exited => |code| code,
+        .exited => |code| code,
         else => @as(u32, 1),
     };
     if (gh_exit != 0) {
@@ -541,7 +545,7 @@ fn cloudSpawnAll(allocator: Allocator, args: []const []const u8) !void {
 
         // 2s delay between spawns to respect Railway rate limits
         if (spawned + skipped + failed < issue_count) {
-            std.Thread.sleep(2 * std.time.ns_per_s);
+            tri_time.sleep(2 * std.time.ns_per_s);
         }
     }
 
@@ -578,13 +582,14 @@ fn cloudKill(allocator: Allocator, args: []const []const u8) !void {
 
 /// tri cloud agents — List all active agent containers with live status from JSONL
 fn cloudAgents(allocator: Allocator) !void {
+    const io = tri_io.get();
     print("\n{s}{s}", .{ GOLDEN, BOLD });
     print("═══ CLOUD AGENTS ════════════════════════════════\n", .{});
     print("{s}", .{RESET});
 
     // Read JSONL events to get last status per issue
     const events_path = ".trinity/cloud_events.jsonl";
-    const file = std.fs.cwd().openFile(events_path, .{}) catch {
+    const file = std.Io.Dir.cwd().openFile(io, events_path, .{}) catch {
         // Fallback to orchestrator list
         var buf: [8192]u8 = undefined;
         const result = cloud_orchestrator.listAgents(&buf);
@@ -603,10 +608,10 @@ fn cloudAgents(allocator: Allocator) !void {
         print("{s}═════════════════════════════════════════════════{s}\n", .{ GOLDEN, RESET });
         return;
     };
-    defer file.close();
+    defer file.close(io);
 
     var fbuf: [32768]u8 = undefined;
-    const flen = file.readAll(&fbuf) catch 0;
+    const flen = file.readPositionalAll(io, &fbuf, 0) catch 0;
     const content = fbuf[0..flen];
 
     // Collect last status per issue (up to 50 issues)
@@ -675,7 +680,7 @@ fn cloudAgents(allocator: Allocator) !void {
 
     // Display
     const STUCK_THRESHOLD = 600; // 10 minutes
-    const now = std.time.timestamp();
+    const now = tri_time.timestamp();
     var count: u32 = 0;
     var stuck_count: u32 = 0;
 
@@ -879,12 +884,13 @@ fn cloudCleanup(allocator: Allocator) !void {
 
 /// tri cloud history [issue] [--format=json] — Show event history from JSONL
 fn cloudHistory(_: Allocator, args: []const []const u8) !void {
+    const io = tri_io.get();
     const events_path = ".trinity/cloud_events.jsonl";
-    const file = std.fs.cwd().openFile(events_path, .{}) catch {
+    const file = std.Io.Dir.cwd().openFile(io, events_path, .{}) catch {
         print("{s}No event history found ({s}){s}\n", .{ GRAY, events_path, RESET });
         return;
     };
-    defer file.close();
+    defer file.close(io);
 
     // Parse args: [issue] [--format=json]
     var filter_issue: ?u32 = null;
@@ -902,14 +908,14 @@ fn cloudHistory(_: Allocator, args: []const []const u8) !void {
 
     // Read entire file (cloud events are small)
     var buf: [32768]u8 = undefined;
-    const len = file.readAll(&buf) catch 0;
+    const len = file.readPositionalAll(io, &buf, 0) catch 0;
     const content = buf[0..len];
 
     if (json_output) {
         // JSON output for machine consumption
         var json_buf: [65536]u8 = undefined;
-        var fbs = std.io.fixedBufferStream(&json_buf);
-        const w = fbs.writer();
+        var fbs = std.Io.Writer.fixed(&json_buf);
+        const w = &fbs;
 
         w.writeAll("{\"events\":[") catch return;
 
@@ -942,11 +948,11 @@ fn cloudHistory(_: Allocator, args: []const []const u8) !void {
         w.writeAll("],\"count\":") catch |err| {
             std.log.debug("tri_cloud: JSON write count key failed: {}", .{err});
         };
-        std.fmt.format(w, "{d}}}", .{count}) catch |err| {
+        w.print("{d}}}", .{count}) catch |err| {
             std.log.debug("tri_cloud: JSON format count failed: {}", .{err});
         };
 
-        print("{s}\n", .{fbs.getWritten()});
+        print("{s}\n", .{fbs.buffered()});
         return;
     }
 
@@ -1024,6 +1030,7 @@ fn cloudHistory(_: Allocator, args: []const []const u8) !void {
 /// tri cloud pipeline <issue> — Full Golden Chain automation
 /// Spawns agent, monitors, verifies PR, auto-merges, cleans up
 fn cloudPipeline(allocator: Allocator, args: []const []const u8) !void {
+    const io = tri_io.get();
     if (args.len < 1) {
         print("{s}Usage: tri cloud pipeline <issue_number>{s}\n", .{ RED, RESET });
         return;
@@ -1059,7 +1066,7 @@ fn cloudPipeline(allocator: Allocator, args: []const []const u8) !void {
     const STUCK_TIMEOUT = 600; // 10 minutes
     const MAX_RETRIES: u32 = 3;
     var retry_count: u32 = 0;
-    var last_status_update: i64 = std.time.timestamp();
+    var last_status_update: i64 = tri_time.timestamp();
     var last_agent_status: [32]u8 = [_]u8{0} ** 32;
     var last_status_len: usize = 0;
 
@@ -1073,10 +1080,10 @@ fn cloudPipeline(allocator: Allocator, args: []const []const u8) !void {
         var pr_url: ?[]const u8 = null;
 
         const events_path = ".trinity/cloud_events.jsonl";
-        if (std.fs.cwd().openFile(events_path, .{})) |file| {
-            defer file.close();
+        if (std.Io.Dir.cwd().openFile(io, events_path, .{})) |file| {
+            defer file.close(io);
             var fbuf: [32768]u8 = undefined;
-            const flen = file.readAll(&fbuf) catch 0;
+            const flen = file.readPositionalAll(io, &fbuf, 0) catch 0;
             const content = fbuf[0..flen];
 
             // Find latest event for this issue
@@ -1101,7 +1108,7 @@ fn cloudPipeline(allocator: Allocator, args: []const []const u8) !void {
                 current_status = status_str;
 
                 // Check if stuck (no status change for >10min and not done)
-                const now = std.time.timestamp();
+                const now = tri_time.timestamp();
                 const ts_needle = "\"ts\":";
                 if (std.mem.indexOf(u8, last_line, ts_needle)) |tidx| {
                     const tstart = tidx + ts_needle.len;
@@ -1134,7 +1141,7 @@ fn cloudPipeline(allocator: Allocator, args: []const []const u8) !void {
             }
         } else |_| {
             // No events yet, agent just starting
-            const now = std.time.timestamp();
+            const now = tri_time.timestamp();
             if (now - last_status_update > STUCK_TIMEOUT) {
                 is_stuck = true;
             }
@@ -1159,9 +1166,9 @@ fn cloudPipeline(allocator: Allocator, args: []const []const u8) !void {
                 break;
             };
             print("  {s}✓ Respawned (retry {d}){s}\n", .{ GREEN, retry_count, RESET });
-            last_status_update = std.time.timestamp();
+            last_status_update = tri_time.timestamp();
             // Wait for new agent to start
-            std.Thread.sleep(5 * std.time.ns_per_s);
+            tri_time.sleep(5 * std.time.ns_per_s);
             continue;
         }
 
@@ -1192,7 +1199,7 @@ fn cloudPipeline(allocator: Allocator, args: []const []const u8) !void {
         }
 
         // Wait before next check
-        std.Thread.sleep(10 * std.time.ns_per_s);
+        tri_time.sleep(10 * std.time.ns_per_s);
     }
 
     // Step 6: Cleanup
@@ -1265,7 +1272,7 @@ fn cloudVerifyPR(allocator: Allocator, issue_num: u32) !bool {
     print("  Fetching PR for branch {s}...\n", .{branch_name});
 
     // Fetch the branch
-    const fetch_result = try std.process.Child.run(.{
+    const fetch_result = try tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ "git", "fetch", "origin", branch_name },
         .max_output_bytes = 4096,
@@ -1274,7 +1281,7 @@ fn cloudVerifyPR(allocator: Allocator, issue_num: u32) !bool {
     defer allocator.free(fetch_result.stderr);
 
     if ((switch (fetch_result.term) {
-        .Exited => |code| code,
+        .exited => |code| code,
         else => @as(u32, 1),
     }) != 0) {
         print("  Fetch failed: {s}\n", .{fetch_result.stderr});
@@ -1282,7 +1289,7 @@ fn cloudVerifyPR(allocator: Allocator, issue_num: u32) !bool {
     }
 
     // Checkout the branch
-    const checkout_result = try std.process.Child.run(.{
+    const checkout_result = try tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ "git", "checkout", branch_name },
         .max_output_bytes = 4096,
@@ -1291,7 +1298,7 @@ fn cloudVerifyPR(allocator: Allocator, issue_num: u32) !bool {
     defer allocator.free(checkout_result.stderr);
 
     if ((switch (checkout_result.term) {
-        .Exited => |code| code,
+        .exited => |code| code,
         else => @as(u32, 1),
     }) != 0) {
         print("  Checkout failed: {s}\n", .{checkout_result.stderr});
@@ -1300,7 +1307,7 @@ fn cloudVerifyPR(allocator: Allocator, issue_num: u32) !bool {
 
     // Run zig build
     print("  Building (zig build)...\n", .{});
-    const build_result = try std.process.Child.run(.{
+    const build_result = try tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ "zig", "build" },
         .max_output_bytes = 1024 * 1024,
@@ -1309,7 +1316,7 @@ fn cloudVerifyPR(allocator: Allocator, issue_num: u32) !bool {
     defer allocator.free(build_result.stderr);
 
     if ((switch (build_result.term) {
-        .Exited => |code| code,
+        .exited => |code| code,
         else => @as(u32, 1),
     }) != 0) {
         print("  Build failed:\n{s}\n", .{build_result.stderr});
@@ -1319,7 +1326,7 @@ fn cloudVerifyPR(allocator: Allocator, issue_num: u32) !bool {
     print("  {s}✓ Build succeeded{s}\n", .{ GREEN, RESET });
 
     // Switch back to main
-    if (std.process.Child.run(.{
+    if (tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ "git", "checkout", "main" },
         .max_output_bytes = 4096,
@@ -1487,17 +1494,17 @@ fn cloudRecordMetrics(allocator: Allocator, args: []const []const u8) !void {
 fn cloudApiCheck(allocator: Allocator) !void {
     print("\n{s}{s}═══ API CONNECTIVITY CHECK ══════════════════════{s}\n", .{ GOLDEN, BOLD, RESET });
 
-    const api_key = std.posix.getenv("ANTHROPIC_API_KEY") orelse {
+    const api_key = tri_env.getPosix("ANTHROPIC_API_KEY") orelse {
         print(" {s}ANTHROPIC_API_KEY not set{s}\n", .{ RED, RESET });
         return;
     };
-    const base_url = std.posix.getenv("ANTHROPIC_BASE_URL") orelse "https://api.anthropic.com";
+    const base_url = tri_env.getPosix("ANTHROPIC_BASE_URL") orelse "https://api.anthropic.com";
 
     print(" Key: {s}...{s}{s}\n", .{ GRAY, if (api_key.len > 8) api_key[0..8] else api_key, RESET });
     print(" URL: {s}{s}{s}\n", .{ CYAN, base_url, RESET });
 
     // Build test request body — use CLAUDE_MODEL env var or default glm-5
-    const model_name = std.posix.getenv("CLAUDE_MODEL") orelse "glm-5";
+    const model_name = tri_env.getPosix("CLAUDE_MODEL") orelse "glm-5";
     var body_buf: [256]u8 = undefined;
     const body = std.fmt.bufPrint(&body_buf,
         \\{{"model":"{s}","max_tokens":10,"messages":[{{"role":"user","content":"hi"}}]}}
@@ -1514,7 +1521,7 @@ fn cloudApiCheck(allocator: Allocator) !void {
     };
 
     // Use std.http.Client (Zig 0.15 API)
-    var client = std.http.Client{ .allocator = allocator };
+    var client = std.http.Client{ .allocator = allocator, .io = tri_io.get() };
     defer client.deinit();
 
     const uri = std.Uri.parse(url) catch {
@@ -1610,7 +1617,7 @@ fn cloudRedeploy(allocator: Allocator, args: []const []const u8) !void {
         return;
     };
 
-    const env_id = std.posix.getenv("RAILWAY_ENVIRONMENT_ID") orelse {
+    const env_id = tri_env.getPosix("RAILWAY_ENVIRONMENT_ID") orelse {
         print("{s}Error: RAILWAY_ENVIRONMENT_ID not set{s}\n", .{ RED, RESET });
         return;
     };
@@ -1643,6 +1650,7 @@ fn cloudRedeploy(allocator: Allocator, args: []const []const u8) !void {
 
 /// tri cloud diagnose <issue> — Check why agent failed (comments + events + PR status)
 fn cloudDiagnose(allocator: Allocator, args: []const []const u8) !void {
+    const io = tri_io.get();
     if (args.len < 1) {
         print("{s}Usage: tri cloud diagnose <issue-number>{s}\n", .{ RED, RESET });
         return;
@@ -1655,40 +1663,38 @@ fn cloudDiagnose(allocator: Allocator, args: []const []const u8) !void {
     print("\n {s}GitHub Issue Comments:{s}\n", .{ BOLD, RESET });
     gh_comments: {
         const gh_argv = [_][]const u8{ "gh", "issue", "view", issue_str, "--repo", "gHashTag/trinity", "--json", "state,title,comments", "--jq", ".comments[-3:][] | \"  [\" + .createdAt[:19] + \"] \" + .body[:150]" };
-        var child = std.process.Child.init(&gh_argv, allocator);
-        child.stdout_behavior = .Pipe;
-        child.stderr_behavior = .Pipe;
-        child.spawn() catch {
+        // 0.16 removed Child.init/spawn and File.readAll; this is exactly the
+        // spawn-capture-wait that tri_proc.run performs.
+        const res = tri_proc.run(.{
+            .allocator = allocator,
+            .argv = &gh_argv,
+            .max_output_bytes = 4096,
+        }) catch {
             print("  {s}gh CLI not available{s}\n", .{ GRAY, RESET });
             break :gh_comments;
         };
-        if (child.stdout) |*stdout| {
-            var gh_buf: [4096]u8 = undefined;
-            const gh_len = stdout.readAll(&gh_buf) catch 0;
-            if (gh_len > 0) {
-                print("{s}\n", .{gh_buf[0..gh_len]});
-            } else {
-                print("  {s}No comments{s}\n", .{ GRAY, RESET });
-            }
+        defer allocator.free(res.stdout);
+        defer allocator.free(res.stderr);
+        if (res.stdout.len > 0) {
+            print("{s}\n", .{res.stdout});
+        } else {
+            print("  {s}No comments{s}\n", .{ GRAY, RESET });
         }
-        _ = child.wait() catch |err| {
-            std.log.debug("tri_cloud: child.wait failed: {}", .{err});
-        };
     }
 
     // 2. Check event history from JSONL
     print(" {s}Event History:{s}\n", .{ BOLD, RESET });
     {
         const events_path = ".trinity/cloud_events.jsonl";
-        const file = std.fs.cwd().openFile(events_path, .{}) catch {
+        const file = std.Io.Dir.cwd().openFile(io, events_path, .{}) catch {
             print("  {s}No JSONL events found{s}\n", .{ GRAY, RESET });
             print("{s}═════════════════════════════════════════════════{s}\n", .{ GOLDEN, RESET });
             return;
         };
-        defer file.close();
+        defer file.close(io);
 
         var buf: [32768]u8 = undefined;
-        const flen = file.readAll(&buf) catch 0;
+        const flen = file.readPositionalAll(io, &buf, 0) catch 0;
         const content = buf[0..flen];
 
         // Filter events for this issue
@@ -1720,25 +1726,21 @@ fn cloudDiagnose(allocator: Allocator, args: []const []const u8) !void {
         var branch_buf: [64]u8 = undefined;
         const branch = std.fmt.bufPrint(&branch_buf, "feat/issue-{s}", .{issue_str}) catch "feat/issue-?";
         const pr_argv = [_][]const u8{ "gh", "pr", "list", "--repo", "gHashTag/trinity", "--head", branch, "--state", "all", "--json", "number,state,title", "--jq", ".[] | \"  #\" + (.number|tostring) + \" [\" + .state + \"] \" + .title" };
-        var child = std.process.Child.init(&pr_argv, allocator);
-        child.stdout_behavior = .Pipe;
-        child.stderr_behavior = .Pipe;
-        child.spawn() catch {
+        const res = tri_proc.run(.{
+            .allocator = allocator,
+            .argv = &pr_argv,
+            .max_output_bytes = 2048,
+        }) catch {
             print("  {s}gh CLI not available{s}\n", .{ GRAY, RESET });
             break :gh_pr;
         };
-        if (child.stdout) |*stdout| {
-            var pr_buf: [2048]u8 = undefined;
-            const pr_len = stdout.readAll(&pr_buf) catch 0;
-            if (pr_len > 0) {
-                print("{s}\n", .{pr_buf[0..pr_len]});
-            } else {
-                print("  {s}No PR found for branch {s}{s}\n", .{ GRAY, branch, RESET });
-            }
+        defer allocator.free(res.stdout);
+        defer allocator.free(res.stderr);
+        if (res.stdout.len > 0) {
+            print("{s}\n", .{res.stdout});
+        } else {
+            print("  {s}No PR found for branch {s}{s}\n", .{ GRAY, branch, RESET });
         }
-        _ = child.wait() catch |err| {
-            std.log.debug("tri_cloud: child.wait failed: {}", .{err});
-        };
     }
 
     print("{s}═════════════════════════════════════════════════{s}\n", .{ GOLDEN, RESET });
@@ -1810,22 +1812,19 @@ fn cloudIssueCreate(allocator: Allocator, args: []const []const u8) !void {
     }
     argc += 1;
 
-    var child = std.process.Child.init(gh_args[0..argc], allocator);
-    child.stdout_behavior = .Pipe;
-    child.stderr_behavior = .Pipe;
-    child.spawn() catch {
+    const res = tri_proc.run(.{
+        .allocator = allocator,
+        .argv = gh_args[0..argc],
+        .max_output_bytes = 2048,
+    }) catch {
         print("{s}Failed to run gh CLI{s}\n", .{ RED, RESET });
         return;
     };
+    defer allocator.free(res.stdout);
+    defer allocator.free(res.stderr);
 
-    var out_buf: [2048]u8 = undefined;
-    const out_len = if (child.stdout) |*stdout| stdout.readAll(&out_buf) catch 0 else 0;
-    _ = child.wait() catch |err| {
-        std.log.debug("tri_cloud: child.wait failed: {}", .{err});
-    };
-
-    if (out_len > 0) {
-        print("{s}Issue created: {s}{s}\n", .{ GREEN, out_buf[0..out_len], RESET });
+    if (res.stdout.len > 0) {
+        print("{s}Issue created: {s}{s}\n", .{ GREEN, res.stdout, RESET });
     } else {
         print("{s}Issue creation may have failed — check gh auth{s}\n", .{ YELLOW, RESET });
     }
@@ -2113,7 +2112,7 @@ fn cloudCi(allocator: Allocator, args: []const []const u8) !void {
 
     if (eql(u8, subcmd, "status")) {
         // gh run list --workflow ci-runner.yml --limit 5
-        const result = std.process.Child.run(.{
+        const result = tri_proc.run(.{
             .allocator = allocator,
             .argv = &.{ "gh", "run", "list", "--workflow", "ci-runner.yml", "--limit", "5" },
         }) catch |err| {
@@ -2131,7 +2130,7 @@ fn cloudCi(allocator: Allocator, args: []const []const u8) !void {
             print("  No CI runs found. Push to main or run: tri cloud ci trigger\n", .{});
         }
     } else if (eql(u8, subcmd, "trigger")) {
-        const result = std.process.Child.run(.{
+        const result = tri_proc.run(.{
             .allocator = allocator,
             .argv = &.{ "gh", "workflow", "run", "ci-runner.yml" },
         }) catch |err| {
@@ -2142,7 +2141,7 @@ fn cloudCi(allocator: Allocator, args: []const []const u8) !void {
         defer allocator.free(result.stderr);
 
         const exit_code = switch (result.term) {
-            .Exited => |code| code,
+            .exited => |code| code,
             else => @as(u32, 1),
         };
         if (exit_code == 0) {
@@ -2151,7 +2150,7 @@ fn cloudCi(allocator: Allocator, args: []const []const u8) !void {
             print("{s}❌ Trigger failed: {s}{s}\n", .{ RED, result.stderr, RESET });
         }
     } else if (eql(u8, subcmd, "logs")) {
-        const result = std.process.Child.run(.{
+        const result = tri_proc.run(.{
             .allocator = allocator,
             .argv = &.{ "gh", "run", "view", "--log-failed" },
         }) catch |err| {
@@ -2190,7 +2189,7 @@ fn cloudIde(allocator: Allocator, args: []const []const u8) !void {
 
         // Query for code-server service
         const gql = "query($projectId: String!) { project(id: $projectId) { services { edges { node { name id serviceInstances { edges { node { domains { serviceDomains { domain } } latestDeployment { status } } } } } } } } }";
-        const project_id = std.process.getEnvVarOwned(allocator, "RAILWAY_PROJECT_ID") catch {
+        const project_id = tri_env.getEnvVarOwned(allocator, "RAILWAY_PROJECT_ID") catch {
             print("  {s}⚠️  RAILWAY_PROJECT_ID not set{s}\n", .{ YELLOW, RESET });
             return;
         };
@@ -2400,7 +2399,7 @@ fn mailCheck(allocator: Allocator, args: []const []const u8) !void {
 
     // Run dig +short MX
     const argv = [_][]const u8{ "dig", "+short", "MX", domain };
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &argv,
     }) catch |err| {
@@ -2455,7 +2454,7 @@ fn mailApply(allocator: Allocator, args: []const []const u8) !void {
     // Check if ud CLI is installed
     {
         const check_argv = [_][]const u8{ "ud", "--version" };
-        const check_result = std.process.Child.run(.{
+        const check_result = tri_proc.run(.{
             .allocator = allocator,
             .argv = &check_argv,
         }) catch {
@@ -2473,7 +2472,7 @@ fn mailApply(allocator: Allocator, args: []const []const u8) !void {
     // Check if logged in
     {
         const check_argv = [_][]const u8{ "ud", "domains", "list" };
-        const check_result = std.process.Child.run(.{
+        const check_result = tri_proc.run(.{
             .allocator = allocator,
             .argv = &check_argv,
         }) catch |err| {
@@ -2513,7 +2512,7 @@ fn mailApply(allocator: Allocator, args: []const []const u8) !void {
                 defer allocator.free(json_data);
 
                 const argv = [_][]const u8{ "ud", "domains", "dns", "records", "add", domain, "--data", json_data };
-                const result = std.process.Child.run(.{
+                const result = tri_proc.run(.{
                     .allocator = allocator,
                     .argv = &argv,
                 }) catch |err| {
@@ -2536,7 +2535,7 @@ fn mailApply(allocator: Allocator, args: []const []const u8) !void {
             // SPF TXT record
             {
                 const spf_argv = [_][]const u8{ "ud", "domains", "dns", "records", "add", domain, "--data", "{{\"type\":\"TXT\",\"hostName\":\"@\",\"value\":\"v=spf1 include:zoho.com ~all\",\"ttl\":3600}}" };
-                const spf_result = std.process.Child.run(.{
+                const spf_result = tri_proc.run(.{
                     .allocator = allocator,
                     .argv = &spf_argv,
                 }) catch |err| {
@@ -2569,7 +2568,7 @@ fn mailApply(allocator: Allocator, args: []const []const u8) !void {
                 defer allocator.free(json_data);
 
                 const argv = [_][]const u8{ "ud", "domains", "dns", "records", "add", domain, "--data", json_data };
-                const result = std.process.Child.run(.{
+                const result = tri_proc.run(.{
                     .allocator = allocator,
                     .argv = &argv,
                 }) catch |err| {
@@ -2588,7 +2587,7 @@ fn mailApply(allocator: Allocator, args: []const []const u8) !void {
             }
 
             // SPF
-            if (std.process.Child.run(.{
+            if (tri_proc.run(.{
                 .allocator = allocator,
                 .argv = &[_][]const u8{ "ud", "domains", "dns", "records", "add", domain, "--data", "{{\"type\":\"TXT\",\"hostName\":\"@\",\"value\":\"v=spf1 include:_spf.google.com ~all\",\"ttl\":3600}}" },
             })) |result| {
@@ -2617,7 +2616,7 @@ fn mailApply(allocator: Allocator, args: []const []const u8) !void {
                 defer allocator.free(json_data);
 
                 const argv = [_][]const u8{ "ud", "domains", "dns", "records", "add", domain, "--data", json_data };
-                const result = std.process.Child.run(.{
+                const result = tri_proc.run(.{
                     .allocator = allocator,
                     .argv = &argv,
                 }) catch |err| {
@@ -2636,7 +2635,7 @@ fn mailApply(allocator: Allocator, args: []const []const u8) !void {
             }
 
             // SPF
-            if (std.process.Child.run(.{
+            if (tri_proc.run(.{
                 .allocator = allocator,
                 .argv = &[_][]const u8{ "ud", "domains", "dns", "records", "add", domain, "--data", "{{\"type\":\"TXT\",\"hostName\":\"@\",\"value\":\"v=spf1 include:protonmail.ch ~all\",\"ttl\":3600}}" },
             })) |result| {
@@ -2665,7 +2664,7 @@ fn mailApply(allocator: Allocator, args: []const []const u8) !void {
                 defer allocator.free(json_data);
 
                 const argv = [_][]const u8{ "ud", "domains", "dns", "records", "add", domain, "--data", json_data };
-                const result = std.process.Child.run(.{
+                const result = tri_proc.run(.{
                     .allocator = allocator,
                     .argv = &argv,
                 }) catch |err| {
@@ -2684,7 +2683,7 @@ fn mailApply(allocator: Allocator, args: []const []const u8) !void {
             }
 
             // SPF
-            if (std.process.Child.run(.{
+            if (tri_proc.run(.{
                 .allocator = allocator,
                 .argv = &[_][]const u8{ "ud", "domains", "dns", "records", "add", domain, "--data", "{{\"type\":\"TXT\",\"hostName\":\"@\",\"value\":\"v=spf1 include:_spf.migadu.com ~all\",\"ttl\":3600}}" },
             })) |result| {
@@ -2709,7 +2708,7 @@ fn mailApply(allocator: Allocator, args: []const []const u8) !void {
             const mx_data = try std.fmt.allocPrint(allocator, "{{\"type\":\"MX\",\"hostName\":\"@\",\"value\":\"{s}\",\"ttl\":3600,\"priority\":0}}", .{mx_value});
             defer allocator.free(mx_data);
 
-            if (std.process.Child.run(.{
+            if (tri_proc.run(.{
                 .allocator = allocator,
                 .argv = &[_][]const u8{ "ud", "domains", "dns", "records", "add", domain, "--data", mx_data },
             })) |result| {
@@ -2727,7 +2726,7 @@ fn mailApply(allocator: Allocator, args: []const []const u8) !void {
             }
 
             // SPF
-            if (std.process.Child.run(.{
+            if (tri_proc.run(.{
                 .allocator = allocator,
                 .argv = &[_][]const u8{ "ud", "domains", "dns", "records", "add", domain, "--data", "{{\"type\":\"TXT\",\"hostName\":\"@\",\"value\":\"v=spf1 include:spf.protection.outlook.com ~all\",\"ttl\":3600}}" },
             })) |spf_result| {
@@ -2763,6 +2762,7 @@ fn mailApply(allocator: Allocator, args: []const []const u8) !void {
 
 /// tri cloud mail-test <email> -- Show SMTP test command
 fn mailTest(allocator: Allocator, args: []const []const u8) !void {
+    const io = tri_io.get();
     if (args.len < 1) {
         print("{s}Usage: tri cloud mail-test <email@domain.com>{s}\n", .{ YELLOW, RESET });
         print("\n  Shows the swaks command to test SMTP and send email.\n", .{});
@@ -2810,7 +2810,7 @@ fn mailTest(allocator: Allocator, args: []const []const u8) !void {
     // Check if swaks is installed
     {
         const check_argv = [_][]const u8{ "which", "swaks" };
-        const check_result = std.process.Child.run(.{
+        const check_result = tri_proc.run(.{
             .allocator = allocator,
             .argv = &check_argv,
         }) catch |err| {
@@ -2839,13 +2839,14 @@ fn mailTest(allocator: Allocator, args: []const []const u8) !void {
     print("\n{s}→ Enter password for {s}:{s} ", .{ YELLOW, email, RESET });
 
     // Read password from stdin
+    // A single read attempt, as in 0.15: an interactive line arrives in one go
+    // and must not block waiting for the buffer to fill.
     var password_buf: [256]u8 = undefined;
-    const stdin_file = std.io.getStdin().reader();
-    const password_len = stdin_file.read(password_buf[0..]) catch |err| {
+    const password_len = std.Io.File.stdin().readStreaming(io, &.{password_buf[0..]}) catch |err| {
         print("\n{s}Error reading password: {s}{s}\n", .{ RED, @errorName(err), RESET });
         return;
     };
-    const password = std.mem.trimRight(u8, password_buf[0..password_len], &[_]u8{ '\r', '\n' });
+    const password = std.mem.trimEnd(u8, password_buf[0..password_len], &[_]u8{ '\r', '\n' });
 
     print("\n\n{s}Testing SMTP connection...{s}\n\n", .{ BOLD, RESET });
 
@@ -2857,7 +2858,7 @@ fn mailTest(allocator: Allocator, args: []const []const u8) !void {
     defer allocator.free(server_str);
 
     // Create a temporary file for the password to avoid passing it in command line
-    const tmp_dir = std.posix.getenv("TMPDIR") orelse "/tmp";
+    const tmp_dir = tri_env.getPosix("TMPDIR") orelse "/tmp";
     const pass_file = try std.fmt.allocPrint(allocator, "{s}/tri_mail_test_XXXXXX", .{tmp_dir});
     defer allocator.free(pass_file);
 
@@ -2868,11 +2869,11 @@ fn mailTest(allocator: Allocator, args: []const []const u8) !void {
     defer allocator.free(pass_path);
 
     {
-        const pass_file_obj = try std.fs.cwd().createFile(pass_path, .{ .read = true });
-        defer pass_file_obj.close();
-        try pass_file_obj.writeAll(password);
+        const pass_file_obj = try std.Io.Dir.cwd().createFile(io, pass_path, .{ .read = true });
+        defer pass_file_obj.close(io);
+        try pass_file_obj.writeStreamingAll(io, password);
     }
-    defer std.fs.cwd().deleteFile(pass_path) catch {};
+    defer std.Io.Dir.cwd().deleteFile(io, pass_path) catch {};
 
     // Run swaks with password from file
     const test_to = try std.fmt.allocPrint(allocator, "--to={s}", .{email});
@@ -2889,7 +2890,7 @@ fn mailTest(allocator: Allocator, args: []const []const u8) !void {
 
     // Note: swaks doesn't support reading password from file easily
     // We'll use environment variable instead
-    var env_map = try std.process.getEnvMap(allocator);
+    var env_map = try tri_env.getEnvMap(allocator);
     defer env_map.deinit();
     try env_map.put("TRI_MAIL_PASSWORD", password);
 
@@ -2912,7 +2913,7 @@ fn mailTest(allocator: Allocator, args: []const []const u8) !void {
         "This is a test email sent from tri CLI.",
     };
 
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &argv,
         .env_map = &env_map,

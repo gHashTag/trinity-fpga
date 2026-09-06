@@ -12,6 +12,7 @@
 //! Author: Dmitrii Vasilev (@gHashTag)
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const protocol = @import("protocol.zig");
 const node_mod = @import("node.zig");
 const mesh_mod = @import("mesh.zig");
@@ -50,7 +51,7 @@ fn line() void {
     std.debug.print("---------------------------------------------------------------\n", .{});
 }
 
-/// Monotonic nanoseconds. Straight onto libc because `std.time.Timer` is one
+/// Monotonic nanoseconds. Straight onto libc because `tri_time.Timer` is one
 /// more thing that moved in 0.16, and a benchmark should not be the place a
 /// standard-library rename shows up.
 fn monoNanos() u64 {

@@ -8,6 +8,7 @@
 //!   - After 1000 fixes: ×2.1×10^15 multiplier
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const ArrayListManaged = std.array_list.Managed;
 
 /// Sacred μ constant: intelligence gain per successful fix
@@ -111,7 +112,7 @@ pub const FixRecord = struct {
         confidence: f32,
     ) !FixRecord {
         return FixRecord{
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
             .fix_type = try allocator.dupe(u8, fix_type),
             .success = success,
             .error_message = try allocator.dupe(u8, error_message),
@@ -143,7 +144,7 @@ pub const MuTracker = struct {
             .total_fixes = 0,
             .successful_fixes = 0,
             .failed_fixes = 0,
-            .start_time = std.time.timestamp(),
+            .start_time = tri_time.timestamp(),
             .allocator = allocator,
         };
     }
@@ -189,7 +190,7 @@ pub const MuTracker = struct {
     /// Create intelligence snapshot
     pub fn createSnapshot(self: *MuTracker) !void {
         const snapshot = IntelligenceSnapshot.init(
-            std.time.timestamp(),
+            tri_time.timestamp(),
             self.total_fixes,
             self.successful_fixes,
             self.failed_fixes,
@@ -264,7 +265,7 @@ pub const MuTracker = struct {
 
     /// Calculate uptime in seconds
     pub fn getUptimeSeconds(self: *const MuTracker) i64 {
-        return std.time.timestamp() - self.start_time;
+        return tri_time.timestamp() - self.start_time;
     }
 
     /// Calculate fixes per second
@@ -298,7 +299,7 @@ pub const MuTracker = struct {
         , .{
             blk: {
                 var buf: [32]u8 = undefined;
-                break :blk formatTimestampBuf(&buf, std.time.timestamp());
+                break :blk formatTimestampBuf(&buf, tri_time.timestamp());
             },
             self.getUptimeSeconds(),
             @as(f64, @floatFromInt(self.getUptimeSeconds())) / 60.0,

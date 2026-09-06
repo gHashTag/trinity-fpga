@@ -1,4 +1,5 @@
 const std = @import("std");
+const tri_time = @import("tri_time");
 const moe = @import("moe_router.zig");
 const dao = @import("dao_integration.zig");
 
@@ -79,7 +80,7 @@ pub const EnhancedMoE = struct {
             .base_router = router,
             .hardware = hardware,
             .metrics = .{},
-            .optimization_history = .{},
+            .optimization_history = .empty,
         };
 
         // Auto-enable SIMD if available
@@ -99,11 +100,11 @@ pub const EnhancedMoE = struct {
 
     /// Route with benchmark tracking
     pub fn routeWithBenchmark(self: *Self, task: []const u8) moe.RouteResult {
-        const start = std.time.milliTimestamp();
+        const start = tri_time.milliTimestamp();
 
         const result = self.base_router.route(task);
 
-        const elapsed: u64 = @intCast(std.time.milliTimestamp() - start);
+        const elapsed: u64 = @intCast(tri_time.milliTimestamp() - start);
         self.total_inferences += 1;
         self.total_time_ms += elapsed;
 
@@ -155,7 +156,7 @@ pub const EnhancedMoE = struct {
     /// Generate self-improvement code (mock: returns optimization suggestion)
     pub fn generateSelfCode(self: *Self) []const u8 {
         _ = self;
-        return 
+        return
         \\// Auto-generated optimization for Qwen2.5-Coder-7B
         \\// 4-way SIMD unrolling for ternary matvec
         \\fn simdTernaryMatVec4(weights: [4][64]i2, input: [64]f32) [4]f32 {

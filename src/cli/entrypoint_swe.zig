@@ -7,6 +7,8 @@
 // phi^2 + 1/phi^2 = 3 = TRINITY
 
 const std = @import("std");
+const tri_io = @import("tri_io");
+const tri_time = @import("tri_time");
 const posix = std.posix;
 const log = std.log.scoped(.swe_entrypoint);
 
@@ -59,22 +61,26 @@ fn readConfig() EntrypointConfig {
 
 /// Run a child process and return exit code
 fn runCmd(allocator: std.mem.Allocator, argv: []const []const u8) !u8 {
-    var child = std.process.Child.init(argv, allocator);
-    child.stdout_behavior = .Inherit;
-    child.stderr_behavior = .Inherit;
-    try child.spawn();
-    const term = try child.wait();
+    _ = allocator; // 0.16: std.process.spawn takes no allocator
+    var child = try std.process.spawn(tri_io.get(), .{
+        .argv = argv,
+        .stdout = .inherit,
+        .stderr = .inherit,
+    });
+    const term = try child.wait(tri_io.get());
     return switch (term) {
-        .Exited => |code| code,
+        .exited => |code| code,
         else => 1,
     };
 }
 
 /// Run a child process and capture stdout
 fn runCmdCapture(allocator: std.mem.Allocator, argv: []const []const u8) ![]const u8 {
-    var child = std.process.Child.init(argv, allocator);
-    child.stdout_behavior = .Pipe;
-    child.stderr_behavior = .Pipe;
+    var child = try std.process.spawn(tri_io.get(), .{
+        .argv = argv,
+        .stdout = .pipe,
+        .stderr = .pipe,
+    });
 
     _ = try child.spawn();
 
@@ -83,7 +89,7 @@ fn runCmdCapture(allocator: std.mem.Allocator, argv: []const []const u8) ![]cons
     defer stderr_buf.deinit(allocator);
 
     try child.collectOutput(allocator, &stdout_buf, &stderr_buf, 1 * 1024 * 1024);
-    _ = try child.wait();
+    _ = try child.wait(tri_io.get());
 
     return try stdout_buf.toOwnedSlice(allocator);
 }
@@ -285,7 +291,7 @@ pub fn main() !void {
     postStepComment(allocator, issue_num_str, 3, 8, "\xe2\x9a\x99\xef\xb8\x8f", "ACTING", "Coding");
 
     log.info("Step 3: Running pipeline with links {s}...", .{config.pipeline_links});
-    const start_time = std.time.timestamp();
+    const start_time = tri_time.timestamp();
 
     var pipeline_ok = false;
     if (runCmd(allocator, &.{
@@ -303,7 +309,7 @@ pub fn main() !void {
     log.info("Step 4: Validating build...", .{});
     var report = validateBuild(allocator, config.work_dir);
     report.issue_number = config.issue_number;
-    report.time_seconds = @intCast(@as(u64, @intCast(std.time.timestamp() - start_time)));
+    report.time_seconds = @intCast(@as(u64, @intCast(tri_time.timestamp() - start_time)));
 
     // ── Step 5/8: Testing ──
     postStepComment(allocator, issue_num_str, 5, 8, "\xf0\x9f\xa7\xaa", "ACTING", "Testing");

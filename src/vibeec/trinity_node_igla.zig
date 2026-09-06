@@ -21,6 +21,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const multi_provider = @import("multi_provider.zig");
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -391,7 +392,7 @@ pub const TrinityNodeIgla = struct {
             .total_requests = 0,
             .total_time_us = 0,
             .requests_by_type = [_]usize{0} ** 9,
-            .uptime_start = std.time.timestamp(),
+            .uptime_start = tri_time.timestamp(),
             .total_rewards = 0,
             .tokens_processed = 0,
             // Continual Learning
@@ -491,7 +492,7 @@ pub const TrinityNodeIgla = struct {
     pub fn infer(self: *Self, request: InferenceRequest) !InferenceResponse {
         if (!self.loaded) return error.VocabularyNotLoaded;
 
-        const start = std.time.microTimestamp();
+        const start = tri_time.microTimestamp();
 
         const result = switch (request.task_type) {
             .Analogy => try self.processAnalogy(request),
@@ -505,7 +506,7 @@ pub const TrinityNodeIgla = struct {
             .GetPhaseMetrics => self.processGetPhaseMetrics(request),
         };
 
-        const elapsed = @as(u64, @intCast(std.time.microTimestamp() - start));
+        const elapsed = @as(u64, @intCast(tri_time.microTimestamp() - start));
 
         // Update stats
         self.total_requests += 1;
@@ -1030,7 +1031,7 @@ pub const TrinityNodeIgla = struct {
             .avg_ops_per_sec = avg_ops,
             .vocab_size = self.vocab.count,
             .memory_mb = (self.vocab.count * EMBEDDING_DIM) / (1024 * 1024),
-            .uptime_seconds = std.time.timestamp() - self.uptime_start,
+            .uptime_seconds = tri_time.timestamp() - self.uptime_start,
             .total_rewards = self.total_rewards,
         };
     }

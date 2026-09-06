@@ -1,6 +1,8 @@
 //! P10: Timeout Handler — simplified for P10
 const std = @import("std");
 
+const tri_io = @import("tri_io");
+const tri_time = @import("tri_time");
 pub const TimeoutHandler = struct {
     allocator: std.mem.Allocator,
     default_timeout_ms: u64 = 300_000,
@@ -23,7 +25,7 @@ pub const TimeoutHandler = struct {
         args: anytype,
         timeout_ms: u64,
     ) !TimeoutResult {
-        const start = std.time.nanoTimestamp();
+        const start = tri_time.nanoTimestamp();
 
         // Execute function and check for errors
         if (func(args)) |_| {
@@ -32,7 +34,7 @@ pub const TimeoutHandler = struct {
             return err;
         }
 
-        const elapsed = std.time.nanoTimestamp() - start;
+        const elapsed = tri_time.nanoTimestamp() - start;
         const duration_ms = @as(u64, @intFromFloat(@divTrunc(@as(f128, @floatFromInt(elapsed)), 1_000_000)));
         const timed_out = duration_ms > timeout_ms;
 
@@ -54,15 +56,14 @@ pub const TimeoutHandler = struct {
         stdout: []const u8,
         stderr: []const u8,
     } {
-        const start = std.time.nanoTimestamp();
+        const start = tri_time.nanoTimestamp();
 
-        var child = std.process.Child.init(argv, std.heap.page_allocator);
-        child.stdout_behavior = .Ignore;
-        child.stderr_behavior = .Ignore;
-
-        try child.spawn();
-
-        const result = child.wait() catch |err| {
+        var child = try std.process.spawn(tri_io.get(), .{
+            .argv = argv,
+            .stdout = .ignore,
+            .stderr = .ignore,
+        });
+        const result = child.wait(tri_io.get()) catch |err| {
             return .{
                 .exit_code = 1,
                 .timed_out = false,
@@ -72,13 +73,13 @@ pub const TimeoutHandler = struct {
             };
         };
 
-        const end = std.time.nanoTimestamp();
+        const end = tri_time.nanoTimestamp();
         const duration_ms = @as(u64, @intFromFloat(@divTrunc(@as(f128, @floatFromInt(end - start)), 1_000_000)));
 
         var exit_code: u8 = 1;
         switch (result) {
-            .Exited => |code| exit_code = code,
-            .Signal => |sig| exit_code = 128 + @as(u8, @truncate(sig)),
+            .exited => |code| exit_code = code,
+            .signal => |sig| exit_code = 128 + @as(u8, @truncate(@intFromEnum(sig))),
             else => {},
         }
 

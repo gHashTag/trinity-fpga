@@ -9,6 +9,7 @@
 // Result: Perfect code = 100% correct + 100% fluent
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const groq = @import("groq_provider.zig");
 const trinity_swe = @import("trinity_swe_agent.zig");
 
@@ -57,7 +58,7 @@ pub const HybridCodeGen = struct {
     /// Main entry point: Generate code from natural language
     pub fn generateCode(self: *Self, prompt: []const u8, language: trinity_swe.Language) !HybridResult {
         self.total_requests += 1;
-        const start = std.time.microTimestamp();
+        const start = tri_time.microTimestamp();
 
         // Step 1: IGLA Semantic Analysis
         const analysis = self.analyzePrompt(prompt);
@@ -73,7 +74,7 @@ pub const HybridCodeGen = struct {
         // Step 3: IGLA Verification
         const verification = self.verifyCode(code, analysis);
 
-        const elapsed = @as(u64, @intCast(std.time.microTimestamp() - start));
+        const elapsed = @as(u64, @intCast(tri_time.microTimestamp() - start));
 
         return HybridResult{
             .code = code,
@@ -143,7 +144,7 @@ pub const HybridCodeGen = struct {
         self.groq_calls += 1;
 
         // Build context from analysis
-        var context = std.ArrayListUnmanaged(u8){};
+        var context = @as(std.ArrayListUnmanaged(u8), .empty);
         defer context.deinit(self.allocator);
 
         try context.appendSlice(self.allocator, "Task: ");

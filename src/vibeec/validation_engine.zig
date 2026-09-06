@@ -20,7 +20,7 @@ pub const Validator = struct {
     }
 
     pub fn validate(self: *Validator, code: []const u8) !ValidationResult {
-        var violations = std.ArrayListUnmanaged([]const u8){};
+        var violations = @as(std.ArrayListUnmanaged([]const u8), .empty);
         var passed = true;
 
         // Law 1: All code must have a 'main' entry point (The Alpha)

@@ -6,6 +6,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const crypto = @import("crypto.zig");
 const protocol = @import("protocol.zig");
 
@@ -58,12 +59,13 @@ pub const Wallet = struct {
 
     /// Load wallet from encrypted file
     pub fn load(path: []const u8, password: []const u8) !Wallet {
-        const file = try std.fs.cwd().openFile(path, .{});
-        defer file.close();
-
+        // Dir.readFile is openFile + readSliceShort + close: it stops short only
+        // at end-of-file, exactly like 0.15's readAll, so the short-read check
+        // below keeps reporting a truncated wallet as InvalidWalletFile rather
+        // than as an I/O error.
         var buf: [crypto.WalletFile.SIZE]u8 = undefined;
-        const bytes_read = try file.readAll(&buf);
-        if (bytes_read != crypto.WalletFile.SIZE) {
+        const bytes = try std.Io.Dir.cwd().readFile(tri_io.get(), path, &buf);
+        if (bytes.len != crypto.WalletFile.SIZE) {
             return error.InvalidWalletFile;
         }
 
@@ -90,10 +92,11 @@ pub const Wallet = struct {
         const wf = crypto.createWalletFile(&self.keypair, password);
         const bytes = wf.serialize();
 
-        const file = try std.fs.cwd().createFile(path, .{});
-        defer file.close();
+        const io = tri_io.get();
+        const file = try std.Io.Dir.cwd().createFile(io, path, .{});
+        defer file.close(io);
 
-        try file.writeAll(&bytes);
+        try file.writeStreamingAll(io, &bytes);
     }
 
     /// Get node ID (32 bytes)

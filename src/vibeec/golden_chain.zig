@@ -12,6 +12,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const igla_hybrid = @import("igla_hybrid_chat");
 const Sha256 = std.crypto.hash.sha2.Sha256;
 
@@ -3783,7 +3784,7 @@ pub const GoldenChainAgent = struct {
                 .last_persist_us = 0,
                 .persist_count = 0,
                 .restore_count = 0,
-                .uptime_start_us = std.time.microTimestamp(),
+                .uptime_start_us = tri_time.microTimestamp(),
                 .tvc_corpus_hash = [_]u8{0} ** 32,
             },
             .faucet_config = .{},
@@ -4042,7 +4043,7 @@ pub const GoldenChainAgent = struct {
 
     // ── Node 1: GOAL_PARSE ──
     fn nodeGoalParse(self: *Self, input: []const u8) void {
-        const start = std.time.microTimestamp();
+        const start = tri_time.microTimestamp();
         self.state.startNode(.GoalParse);
 
         self.goal_type = detectGoalType(input);
@@ -4063,7 +4064,7 @@ pub const GoldenChainAgent = struct {
 
     // ── Node 2: DECOMPOSE ──
     fn nodeDecompose(self: *Self, input: []const u8) void {
-        const start = std.time.microTimestamp();
+        const start = tri_time.microTimestamp();
         self.state.startNode(.Decompose);
 
         // Simple decomposition: count "and" separators
@@ -4092,7 +4093,7 @@ pub const GoldenChainAgent = struct {
 
     // ── Node 3: SCHEDULE ──
     fn nodeSchedule(self: *Self) void {
-        const start = std.time.microTimestamp();
+        const start = tri_time.microTimestamp();
         self.state.startNode(.Schedule);
 
         var buf: [256]u8 = undefined;
@@ -4110,7 +4111,7 @@ pub const GoldenChainAgent = struct {
 
     // ── Node 4: EXECUTE — main work via IglaHybridChat ──
     fn nodeExecute(self: *Self, input: []const u8) void {
-        const start = std.time.microTimestamp();
+        const start = tri_time.microTimestamp();
         self.state.startNode(.Execute);
 
         if (self.hybrid_chat.respond(input)) |hr| {
@@ -4161,7 +4162,7 @@ pub const GoldenChainAgent = struct {
 
     // ── Node 5: MONITOR ──
     fn nodeMonitor(self: *Self) void {
-        const start = std.time.microTimestamp();
+        const start = tri_time.microTimestamp();
         self.state.startNode(.Monitor);
 
         const conf = if (self.execute_response) |hr| hr.confidence else 0.0;
@@ -4184,7 +4185,7 @@ pub const GoldenChainAgent = struct {
 
     // ── Node 6: ADAPT ──
     fn nodeAdapt(self: *Self, input: []const u8) void {
-        const start = std.time.microTimestamp();
+        const start = tri_time.microTimestamp();
         self.state.startNode(.Adapt);
 
         const conf = self.state.total_confidence;
@@ -4225,7 +4226,7 @@ pub const GoldenChainAgent = struct {
 
     // ── Node 7: SYNTHESIZE ──
     fn nodeSynthesize(self: *Self) void {
-        const start = std.time.microTimestamp();
+        const start = tri_time.microTimestamp();
         self.state.startNode(.Synthesize);
 
         var buf: [256]u8 = undefined;
@@ -4243,7 +4244,7 @@ pub const GoldenChainAgent = struct {
 
     // ── Node 8: DELIVER ──
     fn nodeDeliver(self: *Self) void {
-        const start = std.time.microTimestamp();
+        const start = tri_time.microTimestamp();
         self.state.startNode(.Deliver);
 
         var buf: [256]u8 = undefined;
@@ -5814,7 +5815,7 @@ pub const GoldenChainAgent = struct {
 
     fn elapsed(self: *const Self, start: i64) u64 {
         _ = self;
-        const now = std.time.microTimestamp();
+        const now = tri_time.microTimestamp();
         if (now > start) return @intCast(now - start);
         return 0;
     }
@@ -5838,7 +5839,7 @@ pub const GoldenChainAgent = struct {
     ) void {
         if (self.provenance_count >= MAX_PROVENANCE_RECORDS) return;
 
-        const timestamp = std.time.microTimestamp();
+        const timestamp = tri_time.microTimestamp();
         const idx = self.provenance_count;
 
         // Genesis = all zeros, otherwise chain to previous
@@ -5973,7 +5974,7 @@ pub const GoldenChainAgent = struct {
     ) void {
         if (self.quark_count >= MAX_QUARK_RECORDS) return;
 
-        const timestamp = std.time.microTimestamp();
+        const timestamp = tri_time.microTimestamp();
         const idx = self.quark_count;
 
         // Genesis = all zeros, otherwise chain to previous quark
@@ -7460,7 +7461,7 @@ pub const GoldenChainAgent = struct {
 
     /// Generate a shareable link from the current chain state.
     pub fn generateShareLink(self: *Self) ShareableLink {
-        const timestamp = std.time.microTimestamp();
+        const timestamp = tri_time.microTimestamp();
 
         // Compute link_hash: SHA256(all provenance hashes ++ all quark hashes ++ timestamp)
         var link_hasher = Sha256.init(.{});
@@ -7526,7 +7527,7 @@ pub const GoldenChainAgent = struct {
         if (amount_utri < self.staking_config.min_stake_utri) return false;
         if (self.staking_count >= self.staking_config.max_active_stakes) return false;
 
-        const timestamp = std.time.microTimestamp();
+        const timestamp = tri_time.microTimestamp();
 
         // Compute chain fingerprint for staking record
         var xored: [QUARK_HASH_SIZE]u8 = [_]u8{0} ** QUARK_HASH_SIZE;
@@ -7555,7 +7556,7 @@ pub const GoldenChainAgent = struct {
         if (index >= self.staking_count) return null;
         if (!self.staking_records[index].is_active) return null;
 
-        const timestamp = std.time.microTimestamp();
+        const timestamp = tri_time.microTimestamp();
         const rec = &self.staking_records[index];
 
         // Check if lock expired
@@ -7666,7 +7667,7 @@ pub const GoldenChainAgent = struct {
 
     /// Internal: repair a single quark by type.
     fn repairQuark(self: *Self, index: u8, repair_type: SelfRepairType) RepairRecord {
-        const timestamp = std.time.microTimestamp();
+        const timestamp = tri_time.microTimestamp();
         const conf_before = self.quarks[index].confidence;
 
         switch (repair_type) {
@@ -7824,7 +7825,7 @@ pub const GoldenChainAgent = struct {
 
     /// Serialize full agent state fingerprint. Returns SHA256 hash (TVC-compatible).
     pub fn persistState(self: *Self) [32]u8 {
-        self.immortal_state.last_persist_us = std.time.microTimestamp();
+        self.immortal_state.last_persist_us = tri_time.microTimestamp();
         self.immortal_state.persist_count += 1;
 
         var hasher = Sha256.init(.{});
@@ -7867,7 +7868,7 @@ pub const GoldenChainAgent = struct {
 
     /// Analyze chain health and track fitness for current generation.
     pub fn evolveChain(self: *Self) EvolutionRecord {
-        const timestamp = std.time.microTimestamp();
+        const timestamp = tri_time.microTimestamp();
         const health = self.getChainHealth();
 
         const record = EvolutionRecord{
@@ -7945,7 +7946,7 @@ pub const GoldenChainAgent = struct {
     pub fn claimFaucet(self: *Self, claimant_hash: [32]u8) u64 {
         if (!self.faucet_config.enabled) return 0;
 
-        const now = std.time.microTimestamp();
+        const now = tri_time.microTimestamp();
 
         // Reset daily counter if new day
         if (now - self.faucet_day_start_us >= 86_400_000_000) {
@@ -8001,7 +8002,7 @@ pub const GoldenChainAgent = struct {
             .canvas_version_minor = CANVAS_VERSION_MINOR,
             .is_public = true,
             .render_count = 0,
-            .last_render_us = std.time.microTimestamp(),
+            .last_render_us = tri_time.microTimestamp(),
             .browser_sessions = 0,
             .wasm_ready = true,
             .native_ready = true,
@@ -8011,7 +8012,7 @@ pub const GoldenChainAgent = struct {
     /// Sync canvas state (increment render, update timestamp).
     pub fn syncCanvasState(self: *Self) PublicCanvasState {
         self.canvas_state.render_count += 1;
-        self.canvas_state.last_render_us = std.time.microTimestamp();
+        self.canvas_state.last_render_us = tri_time.microTimestamp();
         return self.canvas_state;
     }
 
@@ -8019,7 +8020,7 @@ pub const GoldenChainAgent = struct {
     pub fn createPublicSession(self: *Self) PublicSessionInfo {
         var hasher = Sha256.init(.{});
         hasher.update(&self.immortal_state.tvc_corpus_hash);
-        const ts = std.time.microTimestamp();
+        const ts = tri_time.microTimestamp();
         const ts_bytes: [8]u8 = @bitCast(ts);
         hasher.update(&ts_bytes);
         const session_hash = hasher.finalResult();
@@ -8067,7 +8068,7 @@ pub const GoldenChainAgent = struct {
     /// Sync quark state with a target node. Returns success.
     pub fn syncNode(self: *Self, target_node_hash: [32]u8) bool {
         if (self.node_sync_count >= MAX_NODE_SYNC_RECORDS) return false;
-        const now = std.time.microTimestamp();
+        const now = tri_time.microTimestamp();
         const record = NodeSyncRecord{
             .sync_index = self.node_sync_count,
             .source_node_hash = self.node_config.node_id_hash,
@@ -8090,7 +8091,7 @@ pub const GoldenChainAgent = struct {
 
     /// Initialize Agent OS v1.0.
     pub fn initAgentOS(self: *Self) void {
-        const now = std.time.microTimestamp();
+        const now = tri_time.microTimestamp();
         self.agent_os_state.is_initialized = true;
         self.agent_os_state.boot_count += 1;
         self.agent_os_state.last_boot_us = now;
@@ -8100,7 +8101,7 @@ pub const GoldenChainAgent = struct {
 
     /// Run consensus round. Returns true if quorum reached.
     pub fn runConsensus(self: *Self) bool {
-        const now = std.time.microTimestamp();
+        const now = tri_time.microTimestamp();
         self.network_state.consensus_round += 1;
         self.network_state.last_consensus_us = now;
 
@@ -8147,7 +8148,7 @@ pub const GoldenChainAgent = struct {
         self.token_config.total_supply_utri += batch;
         self.token_config.mints_count += 1;
         if (!self.token_config.is_genesis_complete) {
-            self.token_config.genesis_timestamp_us = std.time.microTimestamp();
+            self.token_config.genesis_timestamp_us = tri_time.microTimestamp();
             self.token_config.is_genesis_complete = true;
         }
         return batch;
@@ -8156,7 +8157,7 @@ pub const GoldenChainAgent = struct {
     /// Submit a DAO proposal. Returns proposal index or null if at max.
     pub fn submitProposal(self: *Self, proposer_hash: [32]u8, title_digest: [48]u8) ?u16 {
         if (self.dao_proposal_count >= MAX_DAO_PROPOSALS) return null;
-        const now = std.time.microTimestamp();
+        const now = tri_time.microTimestamp();
         const idx = self.dao_proposal_count;
         self.dao_proposals[idx] = DAOProposal{
             .proposal_index = idx,
@@ -8187,7 +8188,7 @@ pub const GoldenChainAgent = struct {
             else => p.votes_abstain += 1,
         }
         self.dao_state.total_votes_cast += 1;
-        self.dao_state.last_vote_us = std.time.microTimestamp();
+        self.dao_state.last_vote_us = tri_time.microTimestamp();
         return true;
     }
 
@@ -8213,7 +8214,7 @@ pub const GoldenChainAgent = struct {
         if (self.swarm_state.active_nodes >= MAX_SWARM_NODES) return false;
         self.swarm_state.active_nodes += 1;
         self.swarm_state.total_spawned += 1;
-        self.swarm_state.last_heartbeat_us = std.time.microTimestamp();
+        self.swarm_state.last_heartbeat_us = tri_time.microTimestamp();
         // If first spawn, set genesis node hash
         if (self.swarm_state.total_spawned == 1) {
             var hasher = std.crypto.hash.sha2.Sha256.init(.{});
@@ -8257,7 +8258,7 @@ pub const GoldenChainAgent = struct {
     /// Launch mainnet v1.0 — sets mainnet as launched, records timestamp and launch hash.
     fn launchMainnet(self: *Self) bool {
         if (self.mainnet_config.is_launched) return false; // Already launched
-        const now = std.time.microTimestamp();
+        const now = tri_time.microTimestamp();
         self.mainnet_config.is_launched = true;
         self.mainnet_config.launch_timestamp_us = now;
         self.launch_state.mainnet_launched = true;
@@ -8276,7 +8277,7 @@ pub const GoldenChainAgent = struct {
         const batch = @min(COMMUNITY_ONBOARD_BATCH, remaining);
         self.community_state.active_nodes += batch;
         self.community_state.total_onboarded += batch;
-        self.community_state.last_onboard_us = std.time.microTimestamp();
+        self.community_state.last_onboard_us = tri_time.microTimestamp();
         if (self.community_state.total_onboarded == batch) {
             // First onboard — compute genesis community hash
             var hash_input: [8]u8 = @bitCast(self.community_state.last_onboard_us);
@@ -8292,7 +8293,7 @@ pub const GoldenChainAgent = struct {
         if (self.node_discovery_count >= MAX_NODE_DISCOVERY_RECORDS) return false;
         self.node_discovery_records[self.node_discovery_count] = .{
             .node_hash = node_hash,
-            .discovered_us = std.time.microTimestamp(),
+            .discovered_us = tri_time.microTimestamp(),
             .node_type = node_type,
             .is_active = true,
         };
@@ -8323,7 +8324,7 @@ pub const GoldenChainAgent = struct {
         self.swarm_orch_state.active_tasks += 1;
         self.swarm_orch_state.total_orchestrated += 1;
         self.swarm_orch_state.sync_batch = SWARM_SYNC_BATCH;
-        self.swarm_orch_state.last_orch_us = std.time.microTimestamp();
+        self.swarm_orch_state.last_orch_us = tri_time.microTimestamp();
         const hash_input = std.mem.asBytes(&self.swarm_orch_state.total_orchestrated);
         var orch_hash_buf: [32]u8 = undefined;
         std.crypto.hash.sha2.Sha256.hash(hash_input, &orch_hash_buf, .{});
@@ -8334,13 +8335,13 @@ pub const GoldenChainAgent = struct {
     fn swarmFailover(self: *Self) void {
         self.swarm_failover_config.is_failover_active = true;
         self.swarm_failover_config.failover_count += 1;
-        self.swarm_failover_config.last_failover_us = std.time.microTimestamp();
+        self.swarm_failover_config.last_failover_us = tri_time.microTimestamp();
     }
 
     /// Send telemetry report.
     fn sendTelemetry(self: *Self) void {
         self.swarm_telemetry_state.reports_sent += 1;
-        self.swarm_telemetry_state.last_report_us = std.time.microTimestamp();
+        self.swarm_telemetry_state.last_report_us = tri_time.microTimestamp();
     }
 
     /// Replicate state to replica nodes.
@@ -8350,7 +8351,7 @@ pub const GoldenChainAgent = struct {
                 .source_hash = source_hash,
                 .replica_count = self.swarm_replication_count + 1,
                 .replication_factor = SWARM_REPLICATION_FACTOR,
-                .replicated_us = std.time.microTimestamp(),
+                .replicated_us = tri_time.microTimestamp(),
                 .is_synced = true,
             };
             self.swarm_replication_count += 1;
@@ -8373,7 +8374,7 @@ pub const GoldenChainAgent = struct {
     /// Scale swarm to target node count.
     fn scaleSwarm(self: *Self) void {
         self.swarm_scale_state.active_nodes += 1;
-        self.swarm_scale_state.last_scale_us = std.time.microTimestamp();
+        self.swarm_scale_state.last_scale_us = tri_time.microTimestamp();
         const hash_input = std.mem.asBytes(&self.swarm_scale_state.active_nodes);
         var scale_hash_buf: [32]u8 = undefined;
         std.crypto.hash.sha2.Sha256.hash(hash_input, &scale_hash_buf, .{});
@@ -8384,7 +8385,7 @@ pub const GoldenChainAgent = struct {
     fn distributeRewards(self: *Self) void {
         self.reward_distribution_state.total_distributed += self.reward_distribution_state.batch_size;
         self.reward_distribution_state.claims_this_epoch += 1;
-        self.reward_distribution_state.last_distribution_us = std.time.microTimestamp();
+        self.reward_distribution_state.last_distribution_us = tri_time.microTimestamp();
         const hash_input = std.mem.asBytes(&self.reward_distribution_state.total_distributed);
         var dist_hash_buf: [32]u8 = undefined;
         std.crypto.hash.sha2.Sha256.hash(hash_input, &dist_hash_buf, .{});
@@ -8395,7 +8396,7 @@ pub const GoldenChainAgent = struct {
     fn activateDAOGovernance(self: *Self) void {
         self.dao_governance_live_state.is_governance_live = true;
         self.dao_governance_live_state.governance_epoch += 1;
-        self.dao_governance_live_state.last_governance_us = std.time.microTimestamp();
+        self.dao_governance_live_state.last_governance_us = tri_time.microTimestamp();
     }
 
     /// Register a scaled node.
@@ -8403,7 +8404,7 @@ pub const GoldenChainAgent = struct {
         if (self.node_scaling_count < DAO_MAX_CONCURRENT_PROPOSALS) {
             self.node_scaling_records[self.node_scaling_count] = .{
                 .node_id = node_id,
-                .scale_timestamp_us = std.time.microTimestamp(),
+                .scale_timestamp_us = tri_time.microTimestamp(),
                 .sync_status = 1,
                 .is_scaled = true,
             };
@@ -8428,7 +8429,7 @@ pub const GoldenChainAgent = struct {
     fn joinCommunity(self: *Self) void {
         self.community_node_state.active_nodes += 1;
         self.community_node_state.gossip_rounds += 1;
-        self.community_node_state.last_gossip_us = std.time.microTimestamp();
+        self.community_node_state.last_gossip_us = tri_time.microTimestamp();
         const hash_input = std.mem.asBytes(&self.community_node_state.active_nodes);
         var comm_hash_buf: [32]u8 = undefined;
         std.crypto.hash.sha2.Sha256.hash(hash_input, &comm_hash_buf, .{});
@@ -8438,7 +8439,7 @@ pub const GoldenChainAgent = struct {
     /// Broadcast gossip message to fanout peers.
     fn gossipBroadcast(self: *Self) void {
         self.gossip_protocol_state.messages_sent += 1;
-        self.gossip_protocol_state.last_broadcast_us = std.time.microTimestamp();
+        self.gossip_protocol_state.last_broadcast_us = tri_time.microTimestamp();
     }
 
     /// Perform DHT lookup, compute dht_hash.
@@ -8456,7 +8457,7 @@ pub const GoldenChainAgent = struct {
         if (self.community_node_count < DHT_BUCKET_SIZE) {
             self.community_node_records[self.community_node_count] = .{
                 .node_id = node_id,
-                .join_timestamp_us = std.time.microTimestamp(),
+                .join_timestamp_us = tri_time.microTimestamp(),
                 .gossip_status = 1,
                 .is_active = true,
             };
@@ -8480,7 +8481,7 @@ pub const GoldenChainAgent = struct {
     /// Delegate voting power: increment active delegations, compute delegation hash.
     fn delegateVotingPower(self: *Self) void {
         self.dao_delegation_state.active_delegations += 1;
-        self.dao_delegation_state.last_delegation_us = std.time.microTimestamp();
+        self.dao_delegation_state.last_delegation_us = tri_time.microTimestamp();
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         hasher.update("dao_delegation_v28");
         const del_bytes: [4]u8 = @bitCast(self.dao_delegation_state.active_delegations);
@@ -8492,7 +8493,7 @@ pub const GoldenChainAgent = struct {
     /// Cast time-locked vote: increment votes cast, compute voting hash.
     fn castTimelockVote(self: *Self) void {
         self.timelock_voting_state.votes_cast += 1;
-        self.timelock_voting_state.last_vote_us = std.time.microTimestamp();
+        self.timelock_voting_state.last_vote_us = tri_time.microTimestamp();
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         hasher.update("timelock_vote_v28");
         const vote_bytes: [4]u8 = @bitCast(self.timelock_voting_state.votes_cast);
@@ -8503,7 +8504,7 @@ pub const GoldenChainAgent = struct {
     /// Execute proposal: increment proposals executed, compute execution hash.
     fn executeProposalV2(self: *Self) void {
         self.proposal_execution_state.proposals_executed += 1;
-        self.proposal_execution_state.last_execution_us = std.time.microTimestamp();
+        self.proposal_execution_state.last_execution_us = tri_time.microTimestamp();
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         hasher.update("proposal_exec_v28");
         const exec_bytes: [4]u8 = @bitCast(self.proposal_execution_state.proposals_executed);
@@ -8514,7 +8515,7 @@ pub const GoldenChainAgent = struct {
     /// Distribute yield: increment farming epochs, compute yield hash.
     fn distributeYield(self: *Self) void {
         self.yield_farming_state.farming_epochs += 1;
-        self.yield_farming_state.last_yield_us = std.time.microTimestamp();
+        self.yield_farming_state.last_yield_us = tri_time.microTimestamp();
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         hasher.update("yield_farming_v28");
         const yield_bytes: [4]u8 = @bitCast(self.yield_farming_state.farming_epochs);
@@ -8537,7 +8538,7 @@ pub const GoldenChainAgent = struct {
 
     fn initCrossChainBridge(self: *Self) void {
         self.cross_chain_bridge_state.active_bridges += 1;
-        const now = std.time.microTimestamp();
+        const now = tri_time.microTimestamp();
         self.cross_chain_bridge_state.last_bridge_us = now;
         self.cross_chain_bridge_active = true;
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
@@ -8549,7 +8550,7 @@ pub const GoldenChainAgent = struct {
 
     fn executeAtomicSwap(self: *Self) void {
         self.atomic_swap_state.completed_swaps += 1;
-        const now = std.time.microTimestamp();
+        const now = tri_time.microTimestamp();
         self.atomic_swap_state.last_swap_us = now;
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         hasher.update("atomic_swap");
@@ -8560,7 +8561,7 @@ pub const GoldenChainAgent = struct {
 
     fn replicateStateV2(self: *Self) void {
         self.state_replication_state.replicated_states += 1;
-        const now = std.time.microTimestamp();
+        const now = tri_time.microTimestamp();
         self.state_replication_state.last_replication_us = now;
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         hasher.update("state_replicate");
@@ -8571,7 +8572,7 @@ pub const GoldenChainAgent = struct {
 
     fn relayBridgeMessage(self: *Self) void {
         self.bridge_relay_state.messages_relayed += 1;
-        const now = std.time.microTimestamp();
+        const now = tri_time.microTimestamp();
         self.bridge_relay_state.last_relay_us = now;
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         hasher.update("bridge_relay");
@@ -8598,7 +8599,7 @@ pub const GoldenChainAgent = struct {
         self.dao_full_governance_state.quorum_threshold_pct = DAO_GOVERNANCE_QUORUM_PCT;
         self.dao_full_governance_state.governance_epoch += 1;
         self.dao_full_governance_active = true;
-        const now = std.time.microTimestamp();
+        const now = tri_time.microTimestamp();
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         hasher.update("dao_full_governance_v2.10");
         hasher.update(std.mem.asBytes(&self.dao_full_governance_state.passed_proposals));
@@ -8610,7 +8611,7 @@ pub const GoldenChainAgent = struct {
         self.tri_staking_state.active_stakers += 1;
         self.tri_staking_state.total_staked += STAKING_MIN_AMOUNT;
         self.tri_staking_state.reward_pool += STAKING_REWARD_RATE_BPS;
-        const now = std.time.microTimestamp();
+        const now = tri_time.microTimestamp();
         self.tri_staking_state.last_reward_us = now;
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         hasher.update("tri_staking_v2.10");
@@ -8622,7 +8623,7 @@ pub const GoldenChainAgent = struct {
     fn distributeRewardsV2(self: *Self) void {
         self.reward_distribution_state_v2.distribution_count += 1;
         self.reward_distribution_state_v2.total_distributed += 1;
-        const now = std.time.microTimestamp();
+        const now = tri_time.microTimestamp();
         self.reward_distribution_state_v2.last_distribution_us = now;
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         hasher.update("reward_distribution_v2.10");
@@ -8634,7 +8635,7 @@ pub const GoldenChainAgent = struct {
     fn validateStaking(self: *Self) void {
         self.staking_validator_state.active_validators += 1;
         self.staking_validator_state.total_validated += 1;
-        const now = std.time.microTimestamp();
+        const now = tri_time.microTimestamp();
         self.staking_validator_state.last_validation_us = now;
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         hasher.update("staking_validator_v2.10");
@@ -8659,7 +8660,7 @@ pub const GoldenChainAgent = struct {
         self.swarm_100k_state.active_nodes += 1;
         self.swarm_100k_state.max_capacity = SWARM_100K_MAX_NODES;
         self.swarm_100k_state.shard_count = GOSSIP_SHARD_COUNT;
-        const now = std.time.microTimestamp();
+        const now = tri_time.microTimestamp();
         self.swarm_100k_state.last_scale_us = now;
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         hasher.update("swarm_100k_v2.11");
@@ -8672,7 +8673,7 @@ pub const GoldenChainAgent = struct {
     fn shardGossip(self: *Self) void {
         self.gossip_shard_state.total_shards = GOSSIP_SHARD_COUNT;
         self.gossip_shard_state.messages_propagated += 1;
-        const now = std.time.microTimestamp();
+        const now = tri_time.microTimestamp();
         self.gossip_shard_state.last_gossip_us = now;
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         hasher.update("gossip_shard_v2.11");
@@ -8684,7 +8685,7 @@ pub const GoldenChainAgent = struct {
     fn syncDHTHierarchical(self: *Self) void {
         self.dht_hierarchical_state.hierarchy_depth = DHT_HIERARCHY_DEPTH;
         self.dht_hierarchical_state.total_lookups += 1;
-        const now = std.time.microTimestamp();
+        const now = tri_time.microTimestamp();
         self.dht_hierarchical_state.last_lookup_us = now;
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         hasher.update("dht_hierarchical_v2.11");
@@ -8697,7 +8698,7 @@ pub const GoldenChainAgent = struct {
         self.community_50k_state.community_nodes += 1;
         self.community_50k_state.onboarded_total += 1;
         self.community_50k_state.active_communities += 1;
-        const now = std.time.microTimestamp();
+        const now = tri_time.microTimestamp();
         self.community_50k_state.last_onboard_us = now;
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         hasher.update("community_50k_v2.11");
@@ -8721,7 +8722,7 @@ pub const GoldenChainAgent = struct {
     fn initZKBridge(self: *Self) void {
         self.zk_bridge_state.active_bridges += 1;
         self.zk_bridge_active = true;
-        const now = std.time.microTimestamp();
+        const now = tri_time.microTimestamp();
         self.zk_bridge_state.last_verify_us = now;
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         hasher.update("zk_bridge_v2.12");
@@ -8734,7 +8735,7 @@ pub const GoldenChainAgent = struct {
         self.zk_proof_state.proofs_generated += 1;
         self.zk_proof_state.proofs_verified += 1;
         self.zk_proof_state.proof_batch_count += 1;
-        const now = std.time.microTimestamp();
+        const now = tri_time.microTimestamp();
         self.zk_proof_state.last_proof_us = now;
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         hasher.update("zk_proof_v2.12");
@@ -8747,7 +8748,7 @@ pub const GoldenChainAgent = struct {
         self.privacy_transfer_state.transfers_completed += 1;
         self.privacy_transfer_state.total_volume += PRIVACY_TRANSFER_MIN_AMOUNT;
         self.privacy_transfer_state.privacy_level = 1;
-        const now = std.time.microTimestamp();
+        const now = tri_time.microTimestamp();
         self.privacy_transfer_state.last_transfer_us = now;
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         hasher.update("privacy_transfer_v2.12");
@@ -8759,7 +8760,7 @@ pub const GoldenChainAgent = struct {
     fn syncCrossChain(self: *Self) void {
         self.cross_chain_sync_state.synced_chains += 1;
         self.cross_chain_sync_state.sync_operations += 1;
-        const now = std.time.microTimestamp();
+        const now = tri_time.microTimestamp();
         self.cross_chain_sync_state.last_sync_us = now;
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         hasher.update("cross_chain_sync_v2.12");
@@ -8784,7 +8785,7 @@ pub const GoldenChainAgent = struct {
         self.l2_rollup_state.batches_submitted += 1;
         self.l2_rollup_state.transactions_rolled += L2_ROLLUP_BATCH_SIZE;
         self.l2_rollup_active = true;
-        const now = std.time.microTimestamp();
+        const now = tri_time.microTimestamp();
         self.l2_rollup_state.last_rollup_us = now;
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         hasher.update("l2_rollup_v2.13");
@@ -8796,7 +8797,7 @@ pub const GoldenChainAgent = struct {
     fn submitOptimisticVerify(self: *Self) void {
         self.optimistic_verify_state.challenges_submitted += 1;
         self.optimistic_verify_state.challenges_resolved += 1;
-        const now = std.time.microTimestamp();
+        const now = tri_time.microTimestamp();
         self.optimistic_verify_state.last_challenge_us = now;
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         hasher.update("optimistic_verify_v2.13");
@@ -8808,7 +8809,7 @@ pub const GoldenChainAgent = struct {
     fn openStateChannel(self: *Self) void {
         self.state_channel_state.channels_opened += 1;
         self.state_channel_state.active_participants += 2;
-        const now = std.time.microTimestamp();
+        const now = tri_time.microTimestamp();
         self.state_channel_state.last_channel_us = now;
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         hasher.update("state_channel_v2.13");
@@ -8821,7 +8822,7 @@ pub const GoldenChainAgent = struct {
         self.batch_compress_state.batches_compressed += 1;
         self.batch_compress_state.compression_ratio = BATCH_COMPRESS_RATIO;
         self.batch_compress_state.total_saved_bytes += 4096;
-        const now = std.time.microTimestamp();
+        const now = tri_time.microTimestamp();
         self.batch_compress_state.last_compress_us = now;
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         hasher.update("batch_compress_v2.13");
@@ -8845,7 +8846,7 @@ pub const GoldenChainAgent = struct {
     fn initDynamicShard(self: *Self) void {
         self.dynamic_shard_state.shards_active += 1;
         self.dynamic_shard_state.shards_split += 1;
-        self.dynamic_shard_state.last_rebalance_us = std.time.microTimestamp();
+        self.dynamic_shard_state.last_rebalance_us = tri_time.microTimestamp();
         self.dynamic_shard_active = true;
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         hasher.update("dynamic_shard_init");
@@ -8857,7 +8858,7 @@ pub const GoldenChainAgent = struct {
     fn splitShard(self: *Self) void {
         self.shard_load_state.hot_spots_detected += 1;
         self.shard_load_state.load_factor += SHARD_SPLIT_THRESHOLD;
-        self.shard_load_state.last_load_check_us = std.time.microTimestamp();
+        self.shard_load_state.last_load_check_us = tri_time.microTimestamp();
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         hasher.update("shard_split");
         hasher.update(&std.mem.toBytes(self.shard_load_state.hot_spots_detected));
@@ -8868,7 +8869,7 @@ pub const GoldenChainAgent = struct {
     fn mergeShard(self: *Self) void {
         self.shard_load_state.cold_spots_detected += 1;
         self.dynamic_shard_state.shards_merged += 1;
-        self.shard_load_state.last_load_check_us = std.time.microTimestamp();
+        self.shard_load_state.last_load_check_us = tri_time.microTimestamp();
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         hasher.update("shard_merge");
         hasher.update(&std.mem.toBytes(self.shard_load_state.cold_spots_detected));
@@ -8879,10 +8880,10 @@ pub const GoldenChainAgent = struct {
     fn adaptDHT(self: *Self) void {
         self.adaptive_dht_state.dht_rebalances += 1;
         self.adaptive_dht_state.dht_nodes += 1;
-        self.adaptive_dht_state.last_dht_adapt_us = std.time.microTimestamp();
+        self.adaptive_dht_state.last_dht_adapt_us = tri_time.microTimestamp();
         self.gossip_reshard_state.reshards_completed += 1;
         self.gossip_reshard_state.gossip_rounds += 1;
-        self.gossip_reshard_state.last_reshard_us = std.time.microTimestamp();
+        self.gossip_reshard_state.last_reshard_us = tri_time.microTimestamp();
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         hasher.update("adapt_dht");
         hasher.update(&std.mem.toBytes(self.adaptive_dht_state.dht_rebalances));
@@ -8910,7 +8911,7 @@ pub const GoldenChainAgent = struct {
         self.swarm_million_state.active_nodes += 1;
         self.swarm_million_state.layers += 1;
         self.swarm_million_state.target_nodes = SWARM_TARGET_NODES;
-        self.swarm_million_state.last_swarm_us = std.time.microTimestamp();
+        self.swarm_million_state.last_swarm_us = tri_time.microTimestamp();
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         hasher.update("swarm_million_init");
         hasher.update(&std.mem.toBytes(self.swarm_million_state.active_nodes));
@@ -8923,7 +8924,7 @@ pub const GoldenChainAgent = struct {
         self.community_node_state_v2.community_nodes += 1;
         self.community_node_state_v2.joined += 1;
         self.community_node_state_v2.heartbeats += 1;
-        self.community_node_state_v2.last_heartbeat_us = std.time.microTimestamp();
+        self.community_node_state_v2.last_heartbeat_us = tri_time.microTimestamp();
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         hasher.update("community_node_join");
         hasher.update(&std.mem.toBytes(self.community_node_state_v2.community_nodes));
@@ -8935,7 +8936,7 @@ pub const GoldenChainAgent = struct {
         self.hierarchical_gossip_state.messages_propagated += 1;
         self.hierarchical_gossip_state.layer_hops += 1;
         self.hierarchical_gossip_state.gossip_layers = HIERARCHICAL_GOSSIP_LAYERS;
-        self.hierarchical_gossip_state.last_gossip_us = std.time.microTimestamp();
+        self.hierarchical_gossip_state.last_gossip_us = tri_time.microTimestamp();
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         hasher.update("hierarchical_gossip_propagate");
         hasher.update(&std.mem.toBytes(self.hierarchical_gossip_state.messages_propagated));
@@ -8947,7 +8948,7 @@ pub const GoldenChainAgent = struct {
         self.geographic_shard_state.geo_shards += 1;
         self.geographic_shard_state.rebalances += 1;
         self.geographic_shard_state.regions = GEOGRAPHIC_SHARD_REGIONS;
-        self.geographic_shard_state.last_geo_us = std.time.microTimestamp();
+        self.geographic_shard_state.last_geo_us = tri_time.microTimestamp();
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         hasher.update("geographic_shard_rebalance");
         hasher.update(&std.mem.toBytes(self.geographic_shard_state.geo_shards));
@@ -8971,7 +8972,7 @@ pub const GoldenChainAgent = struct {
         self.zk_snark_proof_state.proof_count += 1;
         self.zk_snark_proof_state.verified_proofs += 1;
         self.zk_snark_proof_state.proof_size = ZK_PROOF_SIZE_BYTES_V2;
-        self.zk_snark_proof_state.last_proof_us = std.time.microTimestamp();
+        self.zk_snark_proof_state.last_proof_us = tri_time.microTimestamp();
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         var proof_buf: [4]u8 = @bitCast(self.zk_snark_proof_state.proof_count);
         hasher.update(&proof_buf);
@@ -8985,7 +8986,7 @@ pub const GoldenChainAgent = struct {
         self.recursive_proof_state.compositions += 1;
         self.recursive_proof_state.composed += 1;
         self.recursive_proof_state.recursive_depth = RECURSIVE_PROOF_DEPTH;
-        self.recursive_proof_state.last_compose_us = std.time.microTimestamp();
+        self.recursive_proof_state.last_compose_us = tri_time.microTimestamp();
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         var comp_buf: [4]u8 = @bitCast(self.recursive_proof_state.compositions);
         hasher.update(&comp_buf);
@@ -8998,7 +8999,7 @@ pub const GoldenChainAgent = struct {
         self.l2_scaling_state.l2_batches += 1;
         self.l2_scaling_state.transactions_rolled += L2_BATCH_SIZE;
         self.l2_scaling_state.batch_size = L2_BATCH_SIZE;
-        self.l2_scaling_state.last_batch_us = std.time.microTimestamp();
+        self.l2_scaling_state.last_batch_us = tri_time.microTimestamp();
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         var batch_buf: [4]u8 = @bitCast(self.l2_scaling_state.l2_batches);
         hasher.update(&batch_buf);
@@ -9011,7 +9012,7 @@ pub const GoldenChainAgent = struct {
         self.rollup_batch_state.commitments += 1;
         self.rollup_batch_state.anchored += 1;
         self.rollup_batch_state.proofs_per_batch = MAX_PROOFS_PER_BATCH;
-        self.rollup_batch_state.last_anchor_us = std.time.microTimestamp();
+        self.rollup_batch_state.last_anchor_us = tri_time.microTimestamp();
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         var commit_buf: [4]u8 = @bitCast(self.rollup_batch_state.commitments);
         hasher.update(&commit_buf);
@@ -9036,7 +9037,7 @@ pub const GoldenChainAgent = struct {
         self.cross_shard_tx_state.cross_shard_txs += 1;
         self.cross_shard_tx_state.completed_txs += 1;
         self.cross_shard_tx_state.active_shards = TX_COORDINATOR_MAX_SHARDS;
-        self.cross_shard_tx_state.last_tx_us = std.time.microTimestamp();
+        self.cross_shard_tx_state.last_tx_us = tri_time.microTimestamp();
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         var tx_buf: [4]u8 = @bitCast(self.cross_shard_tx_state.cross_shard_txs);
         hasher.update(&tx_buf);
@@ -9049,7 +9050,7 @@ pub const GoldenChainAgent = struct {
     fn executeAtomic2pc(self: *Self) void {
         self.atomic_2pc_state.prepare_count += 1;
         self.atomic_2pc_state.commit_count += 1;
-        self.atomic_2pc_state.last_2pc_us = std.time.microTimestamp();
+        self.atomic_2pc_state.last_2pc_us = tri_time.microTimestamp();
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         var prep_buf: [4]u8 = @bitCast(self.atomic_2pc_state.prepare_count);
         hasher.update(&prep_buf);
@@ -9063,7 +9064,7 @@ pub const GoldenChainAgent = struct {
         self.shard_fee_state.fees_collected += SHARD_FEE_PER_TX_UTRI;
         self.shard_fee_state.fee_per_tx = SHARD_FEE_PER_TX_UTRI;
         self.shard_fee_state.fee_distributions += 1;
-        self.shard_fee_state.last_fee_us = std.time.microTimestamp();
+        self.shard_fee_state.last_fee_us = tri_time.microTimestamp();
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         var fee_buf: [8]u8 = @bitCast(self.shard_fee_state.fees_collected);
         hasher.update(&fee_buf);
@@ -9077,7 +9078,7 @@ pub const GoldenChainAgent = struct {
         self.tx_coordinator_state.coordinated_txs += 1;
         self.tx_coordinator_state.active_coordinators = TX_COORDINATOR_MAX_SHARDS;
         self.tx_coordinator_state.routing_decisions += 1;
-        self.tx_coordinator_state.last_coord_us = std.time.microTimestamp();
+        self.tx_coordinator_state.last_coord_us = tri_time.microTimestamp();
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         var coord_buf: [4]u8 = @bitCast(self.tx_coordinator_state.coordinated_txs);
         hasher.update(&coord_buf);
@@ -9103,7 +9104,7 @@ pub const GoldenChainAgent = struct {
         self.partition_detect_state.partitions_detected += 1;
         self.partition_detect_state.active_partitions = SPLIT_BRAIN_THRESHOLD;
         self.partition_detect_state.healed_partitions += 1;
-        self.partition_detect_state.last_detect_us = std.time.microTimestamp();
+        self.partition_detect_state.last_detect_us = tri_time.microTimestamp();
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         var det_buf: [4]u8 = @bitCast(self.partition_detect_state.partitions_detected);
         hasher.update(&det_buf);
@@ -9117,7 +9118,7 @@ pub const GoldenChainAgent = struct {
         self.split_brain_state.split_events += 1;
         self.split_brain_state.brain_count = SPLIT_BRAIN_THRESHOLD;
         self.split_brain_state.resolved_splits += 1;
-        self.split_brain_state.last_split_us = std.time.microTimestamp();
+        self.split_brain_state.last_split_us = tri_time.microTimestamp();
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         var spl_buf: [4]u8 = @bitCast(self.split_brain_state.split_events);
         hasher.update(&spl_buf);
@@ -9131,7 +9132,7 @@ pub const GoldenChainAgent = struct {
         self.auto_heal_state.heal_attempts += 1;
         self.auto_heal_state.successful_heals += 1;
         self.auto_heal_state.heal_latency_us = AUTO_HEAL_INTERVAL_US;
-        self.auto_heal_state.last_heal_us = std.time.microTimestamp();
+        self.auto_heal_state.last_heal_us = tri_time.microTimestamp();
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         var att_buf: [4]u8 = @bitCast(self.auto_heal_state.heal_attempts);
         hasher.update(&att_buf);
@@ -9145,7 +9146,7 @@ pub const GoldenChainAgent = struct {
         self.partition_tolerance_state.tolerance_level = RECOVERY_QUORUM_PERCENT;
         self.partition_tolerance_state.sync_operations += 1;
         self.partition_tolerance_state.merged_partitions += 1;
-        self.partition_tolerance_state.last_tolerance_us = std.time.microTimestamp();
+        self.partition_tolerance_state.last_tolerance_us = tri_time.microTimestamp();
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         var sync_buf: [4]u8 = @bitCast(self.partition_tolerance_state.sync_operations);
         hasher.update(&sync_buf);
@@ -9171,7 +9172,7 @@ pub const GoldenChainAgent = struct {
         self.swarm_10m_state.swarm_nodes += 1;
         self.swarm_10m_state.target_nodes = SWARM_10M_TARGET;
         self.swarm_10m_state.nodes_online += 1;
-        self.swarm_10m_state.last_swarm_us = std.time.microTimestamp();
+        self.swarm_10m_state.last_swarm_us = tri_time.microTimestamp();
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         var sw_buf: [4]u8 = @bitCast(self.swarm_10m_state.swarm_nodes);
         hasher.update(&sw_buf);
@@ -9185,7 +9186,7 @@ pub const GoldenChainAgent = struct {
         self.community_5m_state.community_nodes += 1;
         self.community_5m_state.target_community = COMMUNITY_5M_TARGET;
         self.community_5m_state.onboarded += 1;
-        self.community_5m_state.last_community_us = std.time.microTimestamp();
+        self.community_5m_state.last_community_us = tri_time.microTimestamp();
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         var cm_buf: [4]u8 = @bitCast(self.community_5m_state.community_nodes);
         hasher.update(&cm_buf);
@@ -9199,7 +9200,7 @@ pub const GoldenChainAgent = struct {
         self.earning_boost_state.earning_total_utri += EARNING_RATE_UTRI_PER_HOUR;
         self.earning_boost_state.earning_rate = EARNING_RATE_UTRI_PER_HOUR;
         self.earning_boost_state.distributions += 1;
-        self.earning_boost_state.last_earning_us = std.time.microTimestamp();
+        self.earning_boost_state.last_earning_us = tri_time.microTimestamp();
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         var et_buf: [8]u8 = @bitCast(self.earning_boost_state.earning_total_utri);
         hasher.update(&et_buf);
@@ -9213,7 +9214,7 @@ pub const GoldenChainAgent = struct {
         self.massive_gossip_state.gossip_rounds += 1;
         self.massive_gossip_state.fanout = MASSIVE_GOSSIP_FANOUT;
         self.massive_gossip_state.nodes_reached += MASSIVE_GOSSIP_FANOUT;
-        self.massive_gossip_state.last_gossip_us = std.time.microTimestamp();
+        self.massive_gossip_state.last_gossip_us = tri_time.microTimestamp();
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         var gr_buf: [4]u8 = @bitCast(self.massive_gossip_state.gossip_rounds);
         hasher.update(&gr_buf);
@@ -9239,7 +9240,7 @@ pub const GoldenChainAgent = struct {
         self.snark_generate_state.proofs_generated += 1;
         self.snark_generate_state.proof_size_bytes = ZK_SNARK_V2_PROOF_SIZE;
         self.snark_generate_state.verified_proofs += 1;
-        self.snark_generate_state.last_proof_us = std.time.microTimestamp();
+        self.snark_generate_state.last_proof_us = tri_time.microTimestamp();
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         var pg_buf: [4]u8 = @bitCast(self.snark_generate_state.proofs_generated);
         hasher.update(&pg_buf);
@@ -9253,7 +9254,7 @@ pub const GoldenChainAgent = struct {
         self.recursive_compose_state.compositions += 1;
         self.recursive_compose_state.max_depth_reached = RECURSIVE_PROOF_MAX_DEPTH;
         self.recursive_compose_state.composed_proofs += 1;
-        self.recursive_compose_state.last_compose_us = std.time.microTimestamp();
+        self.recursive_compose_state.last_compose_us = tri_time.microTimestamp();
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         var cp_buf: [4]u8 = @bitCast(self.recursive_compose_state.compositions);
         hasher.update(&cp_buf);
@@ -9266,7 +9267,7 @@ pub const GoldenChainAgent = struct {
         self.l2_fee_state.fees_collected += L2_FEE_UTRI_PER_TX;
         self.l2_fee_state.fee_rate = L2_FEE_UTRI_PER_TX;
         self.l2_fee_state.transactions_processed += 1;
-        self.l2_fee_state.last_fee_us = std.time.microTimestamp();
+        self.l2_fee_state.last_fee_us = tri_time.microTimestamp();
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         var fc_buf: [8]u8 = @bitCast(self.l2_fee_state.fees_collected);
         hasher.update(&fc_buf);
@@ -9279,7 +9280,7 @@ pub const GoldenChainAgent = struct {
         self.zk_rollup_v2_state.rollup_batches += 1;
         self.zk_rollup_v2_state.transactions_rolled += L2_BATCH_SIZE_V2;
         self.zk_rollup_v2_state.l2_fees_collected_utri += @as(u64, L2_FEE_UTRI_PER_TX) * @as(u64, L2_BATCH_SIZE_V2);
-        self.zk_rollup_v2_state.last_rollup_us = std.time.microTimestamp();
+        self.zk_rollup_v2_state.last_rollup_us = tri_time.microTimestamp();
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         var rb_buf: [4]u8 = @bitCast(self.zk_rollup_v2_state.rollup_batches);
         hasher.update(&rb_buf);
@@ -9304,7 +9305,7 @@ pub const GoldenChainAgent = struct {
         self.cross_shard_tx_state_v2.cross_shard_txs += 1;
         self.cross_shard_tx_state_v2.atomic_commits += 1;
         self.cross_shard_tx_state_v2.shards_involved = ATOMIC_2PC_MAX_SHARDS;
-        self.cross_shard_tx_state_v2.last_cross_shard_us = std.time.microTimestamp();
+        self.cross_shard_tx_state_v2.last_cross_shard_us = tri_time.microTimestamp();
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         var tx_buf: [4]u8 = @bitCast(self.cross_shard_tx_state_v2.cross_shard_txs);
         hasher.update(&tx_buf);
@@ -9317,7 +9318,7 @@ pub const GoldenChainAgent = struct {
     fn runAtomic2PC(self: *Self) void {
         self.atomic_2pc_state_v2.prepare_count += 1;
         self.atomic_2pc_state_v2.commit_count += 1;
-        self.atomic_2pc_state_v2.last_2pc_us = std.time.microTimestamp();
+        self.atomic_2pc_state_v2.last_2pc_us = tri_time.microTimestamp();
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         var pc_buf: [4]u8 = @bitCast(self.atomic_2pc_state_v2.prepare_count);
         hasher.update(&pc_buf);
@@ -9330,7 +9331,7 @@ pub const GoldenChainAgent = struct {
         self.shard_fee_state_v2.shard_fees_utri += SHARD_FEE_UTRI_PER_TX;
         self.shard_fee_state_v2.fee_rate_utri = SHARD_FEE_UTRI_PER_TX;
         self.shard_fee_state_v2.fee_distributions += 1;
-        self.shard_fee_state_v2.last_fee_us = std.time.microTimestamp();
+        self.shard_fee_state_v2.last_fee_us = tri_time.microTimestamp();
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         var fee_buf: [8]u8 = @bitCast(self.shard_fee_state_v2.shard_fees_utri);
         hasher.update(&fee_buf);
@@ -9342,7 +9343,7 @@ pub const GoldenChainAgent = struct {
     fn syncInterShard(self: *Self) void {
         self.inter_shard_sync_state.sync_rounds += 1;
         self.inter_shard_sync_state.shards_synced = ATOMIC_2PC_MAX_SHARDS;
-        self.inter_shard_sync_state.last_sync_us = std.time.microTimestamp();
+        self.inter_shard_sync_state.last_sync_us = tri_time.microTimestamp();
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         var sr_buf: [4]u8 = @bitCast(self.inter_shard_sync_state.sync_rounds);
         hasher.update(&sr_buf);
@@ -9367,7 +9368,7 @@ pub const GoldenChainAgent = struct {
         self.formal_verify_state.verifications += 1;
         self.formal_verify_state.properties_tested += 1;
         self.formal_verify_state.invariants_held += 1;
-        self.formal_verify_state.last_verify_us = std.time.microTimestamp();
+        self.formal_verify_state.last_verify_us = tri_time.microTimestamp();
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         var v_buf: [4]u8 = @bitCast(self.formal_verify_state.verifications);
         hasher.update(&v_buf);
@@ -9380,7 +9381,7 @@ pub const GoldenChainAgent = struct {
     fn executePropertyTest(self: *Self) void {
         self.property_test_state.test_runs += 1;
         self.property_test_state.tests_passed += PROPERTY_TEST_ITERATIONS;
-        self.property_test_state.last_test_us = std.time.microTimestamp();
+        self.property_test_state.last_test_us = tri_time.microTimestamp();
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         var tr_buf: [4]u8 = @bitCast(self.property_test_state.test_runs);
         hasher.update(&tr_buf);
@@ -9392,7 +9393,7 @@ pub const GoldenChainAgent = struct {
     fn checkInvariants(self: *Self) void {
         self.invariant_check_state.checks_performed += 1;
         self.invariant_check_state.invariants_valid += 1;
-        self.invariant_check_state.last_check_us = std.time.microTimestamp();
+        self.invariant_check_state.last_check_us = tri_time.microTimestamp();
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         var cp_buf: [4]u8 = @bitCast(self.invariant_check_state.checks_performed);
         hasher.update(&cp_buf);
@@ -9405,7 +9406,7 @@ pub const GoldenChainAgent = struct {
         self.proof_generate_state.proofs_generated += 1;
         self.proof_generate_state.theorems_proved += 1;
         self.proof_generate_state.proof_depth = THEOREM_PROOF_DEPTH;
-        self.proof_generate_state.last_proof_us = std.time.microTimestamp();
+        self.proof_generate_state.last_proof_us = tri_time.microTimestamp();
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         var pg_buf: [4]u8 = @bitCast(self.proof_generate_state.proofs_generated);
         hasher.update(&pg_buf);
@@ -9430,7 +9431,7 @@ pub const GoldenChainAgent = struct {
         self.swarm_100m_state.swarm_nodes += 1;
         self.swarm_100m_state.active_nodes += 1;
         self.swarm_100m_state.gossip_rounds += 1;
-        self.swarm_100m_state.last_swarm_us = std.time.microTimestamp();
+        self.swarm_100m_state.last_swarm_us = tri_time.microTimestamp();
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         var sn_buf: [8]u8 = @bitCast(self.swarm_100m_state.swarm_nodes);
         hasher.update(&sn_buf);
@@ -9443,7 +9444,7 @@ pub const GoldenChainAgent = struct {
         self.community_50m_state.community_members += 1;
         self.community_50m_state.active_members += 1;
         self.community_50m_state.onboarding_rate += 1;
-        self.community_50m_state.last_community_us = std.time.microTimestamp();
+        self.community_50m_state.last_community_us = tri_time.microTimestamp();
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         var cm_buf: [8]u8 = @bitCast(self.community_50m_state.community_members);
         hasher.update(&cm_buf);
@@ -9456,7 +9457,7 @@ pub const GoldenChainAgent = struct {
         self.earning_moonshot_state.earning_nodes += 1;
         self.earning_moonshot_state.total_earned_utri += EARNING_BOOST_UTRI_PER_HOUR;
         self.earning_moonshot_state.earning_rate_utri = EARNING_BOOST_UTRI_PER_HOUR;
-        self.earning_moonshot_state.last_earning_us = std.time.microTimestamp();
+        self.earning_moonshot_state.last_earning_us = tri_time.microTimestamp();
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         var en_buf: [8]u8 = @bitCast(self.earning_moonshot_state.earning_nodes);
         hasher.update(&en_buf);
@@ -9469,7 +9470,7 @@ pub const GoldenChainAgent = struct {
         self.gossip_v3_state.gossip_messages += 1;
         self.gossip_v3_state.fanout = GOSSIP_V3_FANOUT;
         self.gossip_v3_state.propagation_rounds += 1;
-        self.gossip_v3_state.last_gossip_us = std.time.microTimestamp();
+        self.gossip_v3_state.last_gossip_us = tri_time.microTimestamp();
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         var gm_buf: [8]u8 = @bitCast(self.gossip_v3_state.gossip_messages);
         hasher.update(&gm_buf);
@@ -9494,7 +9495,7 @@ pub const GoldenChainAgent = struct {
         self.global_dominance_state.dominance_events += 1;
         self.global_dominance_state.active_regions += 1;
         self.global_dominance_state.ecosystem_score += 1;
-        self.global_dominance_state.last_dominance_us = std.time.microTimestamp();
+        self.global_dominance_state.last_dominance_us = tri_time.microTimestamp();
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         var de_buf: [8]u8 = @bitCast(self.global_dominance_state.dominance_events);
         hasher.update(&de_buf);
@@ -9507,7 +9508,7 @@ pub const GoldenChainAgent = struct {
         self.world_adoption_state.adoption_users += 1;
         self.world_adoption_state.monthly_growth += WORLD_ADOPTION_RATE;
         self.world_adoption_state.active_users += 1;
-        self.world_adoption_state.last_adoption_us = std.time.microTimestamp();
+        self.world_adoption_state.last_adoption_us = tri_time.microTimestamp();
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         var au_buf: [8]u8 = @bitCast(self.world_adoption_state.adoption_users);
         hasher.update(&au_buf);
@@ -9520,7 +9521,7 @@ pub const GoldenChainAgent = struct {
         self.tri_to_one_state.tri_transactions += 1;
         self.tri_to_one_state.price_utri = TRI_PRICE_TARGET_UTRI;
         self.tri_to_one_state.market_cap_utri += TRI_PRICE_TARGET_UTRI;
-        self.tri_to_one_state.last_price_us = std.time.microTimestamp();
+        self.tri_to_one_state.last_price_us = tri_time.microTimestamp();
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         var tt_buf: [8]u8 = @bitCast(self.tri_to_one_state.tri_transactions);
         hasher.update(&tt_buf);
@@ -9533,7 +9534,7 @@ pub const GoldenChainAgent = struct {
         self.ecosystem_complete_state.components_active += 1;
         self.ecosystem_complete_state.integration_score += 1;
         self.ecosystem_complete_state.uptime_percent = 100;
-        self.ecosystem_complete_state.last_ecosystem_us = std.time.microTimestamp();
+        self.ecosystem_complete_state.last_ecosystem_us = tri_time.microTimestamp();
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         var ca_buf: [4]u8 = @bitCast(self.ecosystem_complete_state.components_active);
         hasher.update(&ca_buf);
@@ -9557,7 +9558,7 @@ pub const GoldenChainAgent = struct {
         self.ouroboros_state.evolution_cycles += 1;
         self.ouroboros_state.current_generation += 1;
         self.ouroboros_state.fitness_score += 1;
-        self.ouroboros_state.last_evolution_us = std.time.microTimestamp();
+        self.ouroboros_state.last_evolution_us = tri_time.microTimestamp();
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         var ec_buf: [8]u8 = @bitCast(self.ouroboros_state.evolution_cycles);
         hasher.update(&ec_buf);
@@ -9572,7 +9573,7 @@ pub const GoldenChainAgent = struct {
         if (self.infinite_scale_state.current_scale > self.infinite_scale_state.peak_scale) {
             self.infinite_scale_state.peak_scale = self.infinite_scale_state.current_scale;
         }
-        self.infinite_scale_state.last_scale_us = std.time.microTimestamp();
+        self.infinite_scale_state.last_scale_us = tri_time.microTimestamp();
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         var sp_buf: [8]u8 = @bitCast(self.infinite_scale_state.scale_projections);
         hasher.update(&sp_buf);
@@ -9585,7 +9586,7 @@ pub const GoldenChainAgent = struct {
         self.universal_reserve_state.reserve_transactions += 1;
         self.universal_reserve_state.reserve_valuation_utri = TRI_RESERVE_VALUATION_UTRI;
         self.universal_reserve_state.reserve_holders += 1;
-        self.universal_reserve_state.last_reserve_us = std.time.microTimestamp();
+        self.universal_reserve_state.last_reserve_us = tri_time.microTimestamp();
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         var rt_buf: [8]u8 = @bitCast(self.universal_reserve_state.reserve_transactions);
         hasher.update(&rt_buf);
@@ -9597,7 +9598,7 @@ pub const GoldenChainAgent = struct {
     fn verifyEternalUptime(self: *Self) void {
         self.eternal_uptime_state.uptime_checks += 1;
         self.eternal_uptime_state.uptime_score = ETERNAL_UPTIME_TARGET;
-        self.eternal_uptime_state.last_uptime_us = std.time.microTimestamp();
+        self.eternal_uptime_state.last_uptime_us = tri_time.microTimestamp();
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         var uc_buf: [8]u8 = @bitCast(self.eternal_uptime_state.uptime_checks);
         hasher.update(&uc_buf);
@@ -9622,7 +9623,7 @@ pub const GoldenChainAgent = struct {
         self.tri_to_ten_state.tri_ten_transactions += 1;
         self.tri_to_ten_state.price_utri = TRI_PRICE_TARGET_10_UTRI;
         self.tri_to_ten_state.market_cap_utri = TRI_PRICE_TARGET_10_UTRI * MASS_ADOPTION_TARGET;
-        const ts = std.time.microTimestamp();
+        const ts = tri_time.microTimestamp();
         self.tri_to_ten_state.last_price_us = ts;
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         var tsbuf: [8]u8 = @bitCast(ts);
@@ -9635,7 +9636,7 @@ pub const GoldenChainAgent = struct {
         self.mass_adoption_state.adoption_events += 1;
         self.mass_adoption_state.total_users += MASS_ADOPTION_TARGET / 1000;
         self.mass_adoption_state.monthly_active += MASS_ADOPTION_TARGET / 10000;
-        const ts = std.time.microTimestamp();
+        const ts = tri_time.microTimestamp();
         self.mass_adoption_state.last_adoption_us = ts;
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         var tsbuf: [8]u8 = @bitCast(ts);
@@ -9648,7 +9649,7 @@ pub const GoldenChainAgent = struct {
         self.exchange_listing_state.listing_events += 1;
         self.exchange_listing_state.exchanges_active = @intCast(@min(self.exchange_listing_state.listing_events, EXCHANGE_LISTING_TARGET));
         self.exchange_listing_state.volume_utri += TRI_PRICE_TARGET_10_UTRI * 1000;
-        const ts = std.time.microTimestamp();
+        const ts = tri_time.microTimestamp();
         self.exchange_listing_state.last_listing_us = ts;
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         var tsbuf: [8]u8 = @bitCast(ts);
@@ -9661,7 +9662,7 @@ pub const GoldenChainAgent = struct {
         self.universal_wallet_state.wallet_events += 1;
         self.universal_wallet_state.wallets_created += UNIVERSAL_WALLET_TARGET / 1000;
         self.universal_wallet_state.active_wallets += UNIVERSAL_WALLET_TARGET / 10000;
-        const ts = std.time.microTimestamp();
+        const ts = tri_time.microTimestamp();
         self.universal_wallet_state.last_wallet_us = ts;
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         var tsbuf: [8]u8 = @bitCast(ts);
@@ -9685,7 +9686,7 @@ pub const GoldenChainAgent = struct {
         self.tri_to_hundred_state.tri_hundred_transactions += 1;
         self.tri_to_hundred_state.price_utri += 1000;
         self.tri_to_hundred_state.market_cap_utri = self.tri_to_hundred_state.price_utri * UNIVERSAL_ADOPTION_TARGET;
-        self.tri_to_hundred_state.last_price_us = std.time.microTimestamp();
+        self.tri_to_hundred_state.last_price_us = tri_time.microTimestamp();
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         var price_buf: [8]u8 = undefined;
         std.mem.writeInt(u64, &price_buf, self.tri_to_hundred_state.tri_hundred_transactions, .little);
@@ -9697,7 +9698,7 @@ pub const GoldenChainAgent = struct {
         self.universal_adoption_state.adoption_events += 1;
         self.universal_adoption_state.total_users_10b += 10000;
         self.universal_adoption_state.monthly_active_1b += 5000;
-        self.universal_adoption_state.last_adoption_us = std.time.microTimestamp();
+        self.universal_adoption_state.last_adoption_us = tri_time.microTimestamp();
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         var adopt_buf: [8]u8 = undefined;
         std.mem.writeInt(u64, &adopt_buf, self.universal_adoption_state.adoption_events, .little);
@@ -9710,7 +9711,7 @@ pub const GoldenChainAgent = struct {
         if (self.exchange_v2_state.exchanges_active < GLOBAL_EXCHANGE_TARGET)
             self.exchange_v2_state.exchanges_active += 1;
         self.exchange_v2_state.volume_utri += 10_000_000;
-        self.exchange_v2_state.last_listing_us = std.time.microTimestamp();
+        self.exchange_v2_state.last_listing_us = tri_time.microTimestamp();
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         var list_buf: [8]u8 = undefined;
         std.mem.writeInt(u64, &list_buf, self.exchange_v2_state.listing_events, .little);
@@ -9722,7 +9723,7 @@ pub const GoldenChainAgent = struct {
         self.global_wallet_state.wallet_events += 1;
         self.global_wallet_state.wallets_created += 100000;
         self.global_wallet_state.active_wallets += 50000;
-        self.global_wallet_state.last_wallet_us = std.time.microTimestamp();
+        self.global_wallet_state.last_wallet_us = tri_time.microTimestamp();
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         var wallet_buf: [8]u8 = undefined;
         std.mem.writeInt(u64, &wallet_buf, self.global_wallet_state.wallet_events, .little);
@@ -9746,7 +9747,7 @@ pub const GoldenChainAgent = struct {
         self.swarm_10m_state_v2.swarm_events += 1;
         self.swarm_10m_state_v2.nodes_active += 10000;
         self.swarm_10m_state_v2.nodes_discovered += 15000;
-        self.swarm_10m_state_v2.last_swarm_us = std.time.microTimestamp();
+        self.swarm_10m_state_v2.last_swarm_us = tri_time.microTimestamp();
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         hasher.update("swarm_10m");
         hasher.update(std.mem.asBytes(&self.swarm_10m_state_v2.swarm_events));
@@ -9757,7 +9758,7 @@ pub const GoldenChainAgent = struct {
         self.community_5m_state_v2.community_events += 1;
         self.community_5m_state_v2.members_active += 5000;
         self.community_5m_state_v2.monthly_contributors += 2500;
-        self.community_5m_state_v2.last_community_us = std.time.microTimestamp();
+        self.community_5m_state_v2.last_community_us = tri_time.microTimestamp();
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         hasher.update("community_5m");
         hasher.update(std.mem.asBytes(&self.community_5m_state_v2.community_events));
@@ -9768,7 +9769,7 @@ pub const GoldenChainAgent = struct {
         self.earning_ultimate_state.earning_events += 1;
         self.earning_ultimate_state.earning_rate_utri = EARNING_ULTIMATE_UTRI_PER_HOUR;
         self.earning_ultimate_state.total_earned_utri += EARNING_ULTIMATE_UTRI_PER_HOUR;
-        self.earning_ultimate_state.last_earning_us = std.time.microTimestamp();
+        self.earning_ultimate_state.last_earning_us = tri_time.microTimestamp();
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         hasher.update("earning_ultimate");
         hasher.update(std.mem.asBytes(&self.earning_ultimate_state.earning_events));
@@ -9779,7 +9780,7 @@ pub const GoldenChainAgent = struct {
         self.node_discovery_10m_state.discovery_events += 1;
         self.node_discovery_10m_state.nodes_registered += 10000;
         self.node_discovery_10m_state.nodes_healthy += 9500;
-        self.node_discovery_10m_state.last_discovery_us = std.time.microTimestamp();
+        self.node_discovery_10m_state.last_discovery_us = tri_time.microTimestamp();
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         hasher.update("node_discovery_10m");
         hasher.update(std.mem.asBytes(&self.node_discovery_10m_state.discovery_events));
@@ -9801,7 +9802,7 @@ pub const GoldenChainAgent = struct {
         self.swarm_1b_state.swarm_1b_events += 1;
         self.swarm_1b_state.nodes_active_1b +|= 1;
         self.swarm_1b_state.nodes_discovered_1b +|= 1;
-        self.swarm_1b_state.last_swarm_1b_us = std.time.microTimestamp();
+        self.swarm_1b_state.last_swarm_1b_us = tri_time.microTimestamp();
         var h = std.crypto.hash.sha2.Sha256.init(.{});
         h.update("swarm_1b_v2.29");
         h.update(std.mem.asBytes(&self.swarm_1b_state.swarm_1b_events));
@@ -9813,7 +9814,7 @@ pub const GoldenChainAgent = struct {
         self.community_500m_state.community_500m_events += 1;
         self.community_500m_state.members_active_500m +|= 1;
         self.community_500m_state.monthly_contributors_500m +|= 1;
-        self.community_500m_state.last_community_500m_us = std.time.microTimestamp();
+        self.community_500m_state.last_community_500m_us = tri_time.microTimestamp();
         var h = std.crypto.hash.sha2.Sha256.init(.{});
         h.update("community_500m_v2.29");
         h.update(std.mem.asBytes(&self.community_500m_state.community_500m_events));
@@ -9824,7 +9825,7 @@ pub const GoldenChainAgent = struct {
         self.earning_god_mode_state.god_mode_events += 1;
         self.earning_god_mode_state.earning_rate_god_utri = EARNING_GOD_MODE_UTRI_PER_HOUR;
         self.earning_god_mode_state.total_earned_god_utri +|= EARNING_GOD_MODE_UTRI_PER_HOUR;
-        self.earning_god_mode_state.last_god_mode_us = std.time.microTimestamp();
+        self.earning_god_mode_state.last_god_mode_us = tri_time.microTimestamp();
         var h = std.crypto.hash.sha2.Sha256.init(.{});
         h.update("earning_god_mode_v2.29");
         h.update(std.mem.asBytes(&self.earning_god_mode_state.god_mode_events));
@@ -9835,7 +9836,7 @@ pub const GoldenChainAgent = struct {
         self.node_discovery_1b_state.discovery_1b_events += 1;
         self.node_discovery_1b_state.nodes_registered_1b +|= 1;
         self.node_discovery_1b_state.nodes_healthy_1b +|= 1;
-        self.node_discovery_1b_state.last_discovery_1b_us = std.time.microTimestamp();
+        self.node_discovery_1b_state.last_discovery_1b_us = tri_time.microTimestamp();
         var h = std.crypto.hash.sha2.Sha256.init(.{});
         h.update("node_discovery_1b_v2.29");
         h.update(std.mem.asBytes(&self.node_discovery_1b_state.discovery_1b_events));
@@ -9857,7 +9858,7 @@ pub const GoldenChainAgent = struct {
     fn runTernaryInference(self: *Self) void {
         self.ternary_nn_state.nn_inference_events += 1;
         self.ternary_nn_state.nn_accuracy = 9500; // 95.00% baseline
-        self.ternary_nn_state.last_inference_us = std.time.microTimestamp();
+        self.ternary_nn_state.last_inference_us = tri_time.microTimestamp();
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         hasher.update("ternary_nn_inference");
         const nn_events_bytes: [8]u8 = @bitCast(self.ternary_nn_state.nn_inference_events);
@@ -9871,7 +9872,7 @@ pub const GoldenChainAgent = struct {
         if (self.recursive_self_train_state.train_loss_bp > 100) {
             self.recursive_self_train_state.train_loss_bp -= 100; // Reduce loss by 1%
         }
-        self.recursive_self_train_state.last_train_us = std.time.microTimestamp();
+        self.recursive_self_train_state.last_train_us = tri_time.microTimestamp();
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         hasher.update("recursive_self_train");
         const cycles_bytes: [8]u8 = @bitCast(self.recursive_self_train_state.train_cycles);
@@ -9883,7 +9884,7 @@ pub const GoldenChainAgent = struct {
         self.contribution_reward_state.contribution_events += 1;
         self.contribution_reward_state.total_rewarded_utri += CONTRIBUTION_REWARD_UTRI;
         self.contribution_reward_state.contributors_active += 1;
-        self.contribution_reward_state.last_reward_us = std.time.microTimestamp();
+        self.contribution_reward_state.last_reward_us = tri_time.microTimestamp();
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         hasher.update("contribution_reward");
         const reward_bytes: [8]u8 = @bitCast(self.contribution_reward_state.total_rewarded_utri);
@@ -9895,7 +9896,7 @@ pub const GoldenChainAgent = struct {
         self.neural_consensus_state.consensus_events += 1;
         self.neural_consensus_state.models_validated += 1;
         self.neural_consensus_state.consensus_accuracy_bp = 9800; // 98.00%
-        self.neural_consensus_state.last_consensus_us = std.time.microTimestamp();
+        self.neural_consensus_state.last_consensus_us = tri_time.microTimestamp();
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         hasher.update("neural_consensus");
         const consensus_bytes: [8]u8 = @bitCast(self.neural_consensus_state.consensus_events);
@@ -9920,7 +9921,7 @@ pub const GoldenChainAgent = struct {
         self.tri_to_1000_state.tri_1000_events += 1;
         self.tri_to_1000_state.tri_price_usd = TRI_TARGET_PRICE_USD;
         self.tri_to_1000_state.market_cap_utri = UNIVERSAL_RESERVE_CAP_UTRI;
-        self.tri_to_1000_state.last_price_us = std.time.microTimestamp();
+        self.tri_to_1000_state.last_price_us = tri_time.microTimestamp();
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         hasher.update("tri_to_1000_v2.31");
         hasher.update(&std.mem.toBytes(self.tri_to_1000_state.tri_1000_events));
@@ -9933,7 +9934,7 @@ pub const GoldenChainAgent = struct {
         self.universal_reserve_v2_state.reserve_events += 1;
         self.universal_reserve_v2_state.reserve_balance_utri += UNIVERSAL_RESERVE_CAP_UTRI;
         self.universal_reserve_v2_state.reserve_participants += 1;
-        self.universal_reserve_v2_state.last_reserve_us = std.time.microTimestamp();
+        self.universal_reserve_v2_state.last_reserve_us = tri_time.microTimestamp();
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         hasher.update("universal_reserve_v2.31");
         hasher.update(&std.mem.toBytes(self.universal_reserve_v2_state.reserve_events));
@@ -9945,7 +9946,7 @@ pub const GoldenChainAgent = struct {
         self.global_dominance_v2_state.dominance_events += 1;
         self.global_dominance_v2_state.dominance_score_bp = DOMINANCE_THRESHOLD_BP;
         self.global_dominance_v2_state.exchanges_listed = GLOBAL_EXCHANGE_LISTINGS;
-        self.global_dominance_v2_state.last_dominance_us = std.time.microTimestamp();
+        self.global_dominance_v2_state.last_dominance_us = tri_time.microTimestamp();
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         hasher.update("global_dominance_v2.31");
         hasher.update(&std.mem.toBytes(self.global_dominance_v2_state.dominance_events));
@@ -9957,7 +9958,7 @@ pub const GoldenChainAgent = struct {
         self.eternal_governance_v2_state.governance_events += 1;
         self.eternal_governance_v2_state.proposals_passed += 1;
         self.eternal_governance_v2_state.governance_accuracy_bp = 9800; // 98.00%
-        self.eternal_governance_v2_state.last_governance_us = std.time.microTimestamp();
+        self.eternal_governance_v2_state.last_governance_us = tri_time.microTimestamp();
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         hasher.update("eternal_governance_v2.31");
         hasher.update(&std.mem.toBytes(self.eternal_governance_v2_state.governance_events));
@@ -9971,7 +9972,7 @@ pub const GoldenChainAgent = struct {
         self.trinity_beyond_state.beyond_events += 1;
         self.trinity_beyond_state.beyond_scale = BEYOND_SCALE_FACTOR;
         self.trinity_beyond_state.beyond_dimensions = MULTIVERSE_DIMENSIONS;
-        self.trinity_beyond_state.last_beyond_us = std.time.microTimestamp();
+        self.trinity_beyond_state.last_beyond_us = tri_time.microTimestamp();
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         hasher.update("trinity_beyond_v2.32");
         hasher.update(&std.mem.toBytes(self.trinity_beyond_state.beyond_events));
@@ -9983,7 +9984,7 @@ pub const GoldenChainAgent = struct {
         self.infinite_scale_v2_state.scale_events += 1;
         self.infinite_scale_v2_state.scale_factor = BEYOND_SCALE_FACTOR;
         self.infinite_scale_v2_state.nodes_infinite = INFINITE_NODES_TARGET;
-        self.infinite_scale_v2_state.last_scale_us = std.time.microTimestamp();
+        self.infinite_scale_v2_state.last_scale_us = tri_time.microTimestamp();
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         hasher.update("infinite_scale_v2.32");
         hasher.update(&std.mem.toBytes(self.infinite_scale_v2_state.scale_events));
@@ -9995,7 +9996,7 @@ pub const GoldenChainAgent = struct {
         self.multiverse_dominance_state.multiverse_events += 1;
         self.multiverse_dominance_state.universes_dominated = MAX_UNIVERSES;
         self.multiverse_dominance_state.dominance_factor_bp = BEYOND_DOMINANCE_THRESHOLD_BP;
-        self.multiverse_dominance_state.last_multiverse_us = std.time.microTimestamp();
+        self.multiverse_dominance_state.last_multiverse_us = tri_time.microTimestamp();
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         hasher.update("multiverse_dominance_v2.32");
         hasher.update(&std.mem.toBytes(self.multiverse_dominance_state.multiverse_events));
@@ -10007,7 +10008,7 @@ pub const GoldenChainAgent = struct {
         self.eternal_evolution_state.evolution_events += 1;
         self.eternal_evolution_state.evolution_cycles += 1;
         self.eternal_evolution_state.evolution_accuracy_bp = 9900; // 99.00%
-        self.eternal_evolution_state.last_evolution_us = std.time.microTimestamp();
+        self.eternal_evolution_state.last_evolution_us = tri_time.microTimestamp();
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         hasher.update("eternal_evolution_v2.32");
         hasher.update(&std.mem.toBytes(self.eternal_evolution_state.evolution_events));
@@ -10032,7 +10033,7 @@ pub const GoldenChainAgent = struct {
         self.trinity_absolute_state.absolute_events += 1;
         self.trinity_absolute_state.absolute_factor = ABSOLUTE_COMPLETION_FACTOR;
         self.trinity_absolute_state.absolute_dimensions = ETERNAL_VICTORY_DIMENSIONS;
-        self.trinity_absolute_state.last_absolute_us = std.time.microTimestamp();
+        self.trinity_absolute_state.last_absolute_us = tri_time.microTimestamp();
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         hasher.update("trinity_absolute_v3.0");
         hasher.update(&std.mem.toBytes(self.trinity_absolute_state.absolute_events));
@@ -10044,7 +10045,7 @@ pub const GoldenChainAgent = struct {
         self.infinite_tri_state.infinite_events += 1;
         self.infinite_tri_state.tri_value = INFINITE_TRI_VALUE;
         self.infinite_tri_state.tri_supply_locked = INFINITE_TRI_VALUE;
-        self.infinite_tri_state.last_infinite_us = std.time.microTimestamp();
+        self.infinite_tri_state.last_infinite_us = tri_time.microTimestamp();
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         hasher.update("infinite_tri_v3.0");
         hasher.update(&std.mem.toBytes(self.infinite_tri_state.infinite_events));
@@ -10056,7 +10057,7 @@ pub const GoldenChainAgent = struct {
         self.eternal_victory_state.victory_events += 1;
         self.eternal_victory_state.victories_achieved = ETERNAL_VICTORY_DIMENSIONS;
         self.eternal_victory_state.victory_factor_bp = ABSOLUTE_DOMINANCE_THRESHOLD_BP;
-        self.eternal_victory_state.last_victory_us = std.time.microTimestamp();
+        self.eternal_victory_state.last_victory_us = tri_time.microTimestamp();
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         hasher.update("eternal_victory_v3.0");
         hasher.update(&std.mem.toBytes(self.eternal_victory_state.victory_events));
@@ -10068,7 +10069,7 @@ pub const GoldenChainAgent = struct {
         self.multiverse_complete_state.completion_events += 1;
         self.multiverse_complete_state.universes_completed = MAX_SYNCHRONIZED_UNIVERSES;
         self.multiverse_complete_state.completion_accuracy_bp = 10000; // 100.00%
-        self.multiverse_complete_state.last_completion_us = std.time.microTimestamp();
+        self.multiverse_complete_state.last_completion_us = tri_time.microTimestamp();
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         hasher.update("multiverse_complete_v3.0");
         hasher.update(&std.mem.toBytes(self.multiverse_complete_state.completion_events));

@@ -16,6 +16,9 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
+const tri_proc = @import("tri_proc");
+const tri_time = @import("tri_time");
 const local_chat = @import("igla_local_chat.zig");
 
 const VERSION = "1.0.2";
@@ -98,16 +101,22 @@ fn interactiveMode(allocator: std.mem.Allocator) !void {
     var symbolic_hits: usize = 0;
     var llm_calls: usize = 0;
 
-    const stdin_file = std.fs.File.stdin();
+    // The reader is built once, outside the loop: it owns a buffer, so rebuilding
+    // it per iteration would discard bytes already pulled off the pipe.
+    const io = tri_io.get();
+    const stdin_file = std.Io.File.stdin();
+    var stdin_scratch: [4096]u8 = undefined;
+    var stdin_reader = stdin_file.reader(io, &stdin_scratch);
     var buf: [4096]u8 = undefined;
 
     while (true) {
         std.debug.print("[You] > ", .{});
 
-        // Read line using low-level read
+        // Read the line one byte at a time. readSliceShort returns a short count
+        // (here: 0) only at end-of-stream, matching 0.15's File.read returning 0.
         var line_len: usize = 0;
         while (line_len < buf.len - 1) {
-            const read_result = stdin_file.read(buf[line_len .. line_len + 1]) catch break;
+            const read_result = stdin_reader.interface.readSliceShort(buf[line_len .. line_len + 1]) catch break;
             if (read_result == 0) break; // EOF
             if (buf[line_len] == '\n') break;
             line_len += 1;
@@ -143,7 +152,7 @@ fn interactiveMode(allocator: std.mem.Allocator) !void {
         }
 
         total_queries += 1;
-        const start = std.time.microTimestamp();
+        const start = tri_time.microTimestamp();
 
         // Try symbolic first
         const sym_result = symbolic.respond(input);
@@ -151,7 +160,7 @@ fn interactiveMode(allocator: std.mem.Allocator) !void {
         if (sym_result.category != .Unknown and sym_result.confidence >= 0.3) {
             // Symbolic hit
             symbolic_hits += 1;
-            const elapsed = @as(u64, @intCast(std.time.microTimestamp() - start));
+            const elapsed = @as(u64, @intCast(tri_time.microTimestamp() - start));
             std.debug.print("[Trinity] (Symbolic, {d:.0}%, {d}μs)\n", .{ sym_result.confidence * 100, elapsed });
             std.debug.print("{s}\n\n", .{sym_result.response});
         } else {
@@ -160,14 +169,14 @@ fn interactiveMode(allocator: std.mem.Allocator) !void {
             std.debug.print("[Trinity] Calling Ollama...\n", .{});
 
             const llm_response = callOllama(allocator, input) catch |err| {
-                const elapsed = @as(u64, @intCast(std.time.microTimestamp() - start));
+                const elapsed = @as(u64, @intCast(tri_time.microTimestamp() - start));
                 std.debug.print("[Trinity] (Error: {}, {d}ms)\n", .{ err, elapsed / 1000 });
                 std.debug.print("Fallback: {s}\n\n", .{sym_result.response});
                 continue;
             };
             defer allocator.free(llm_response);
 
-            const elapsed = @as(u64, @intCast(std.time.microTimestamp() - start));
+            const elapsed = @as(u64, @intCast(tri_time.microTimestamp() - start));
             std.debug.print("[Trinity] (LLM, {d}ms)\n", .{elapsed / 1000});
             std.debug.print("{s}\n\n", .{llm_response});
         }
@@ -178,13 +187,13 @@ fn interactiveMode(allocator: std.mem.Allocator) !void {
 
 fn processQuery(allocator: std.mem.Allocator, query: []const u8) !void {
     var symbolic = local_chat.IglaLocalChat.init();
-    const start = std.time.microTimestamp();
+    const start = tri_time.microTimestamp();
 
     // Try symbolic first
     const sym_result = symbolic.respond(query);
 
     if (sym_result.category != .Unknown and sym_result.confidence >= 0.3) {
-        const elapsed = @as(u64, @intCast(std.time.microTimestamp() - start));
+        const elapsed = @as(u64, @intCast(tri_time.microTimestamp() - start));
         std.debug.print("[Symbolic, {d:.0}%, {d}μs]\n", .{ sym_result.confidence * 100, elapsed });
         std.debug.print("{s}\n", .{sym_result.response});
     } else {
@@ -196,7 +205,7 @@ fn processQuery(allocator: std.mem.Allocator, query: []const u8) !void {
         };
         defer allocator.free(llm_response);
 
-        const elapsed = @as(u64, @intCast(std.time.microTimestamp() - start));
+        const elapsed = @as(u64, @intCast(tri_time.microTimestamp() - start));
         std.debug.print("[LLM, {d}ms]\n", .{elapsed / 1000});
         std.debug.print("{s}\n", .{llm_response});
     }
@@ -208,14 +217,14 @@ fn callOllama(allocator: std.mem.Allocator, prompt: []const u8) ![]u8 {
     , .{ MODEL, prompt });
     defer allocator.free(json_payload);
 
-    const result = try std.process.Child.run(.{
+    const result = try tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ "curl", "-s", OLLAMA_URL, "-d", json_payload },
     });
     defer allocator.free(result.stderr);
 
     if ((switch (result.term) {
-        .Exited => |code| code,
+        .exited => |code| code,
         else => @as(u32, 1),
     }) != 0) {
         allocator.free(result.stdout);

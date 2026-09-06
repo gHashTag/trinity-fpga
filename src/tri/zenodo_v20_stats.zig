@@ -15,6 +15,7 @@
 //! - Cliff, N. (1993). "Dominance statistics: Ordinal analyses"
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 
 // Error function approximation (Abramowitz & Stegun 7.1.26)
@@ -71,7 +72,7 @@ pub fn bootstrapCI(
     const bootstrap_means = try allocator.alloc(f64, n_bootstraps);
     defer allocator.free(bootstrap_means);
 
-    var rng = std.Random.DefaultPrng.init(@intCast(std.time.timestamp()));
+    var rng = std.Random.DefaultPrng.init(@intCast(tri_time.timestamp()));
 
     // Generate bootstrap samples
     for (0..n_bootstraps) |i| {

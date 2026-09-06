@@ -3,6 +3,8 @@
 
 const std = @import("std");
 
+const tri_env = @import("tri_env");
+const tri_proc = @import("tri_proc");
 const Allocator = std.mem.Allocator;
 
 const RAILWAY_GQL_HOST = "railway.com";
@@ -48,7 +50,7 @@ pub fn main() !void {
     const dry_run = if (args.len > 1 and std.mem.eql(u8, args[1], "--dry-run")) true else false;
 
     // Load RAILWAY_TOKEN from .env
-    const token = std.process.getEnvVarOwned(allocator, "RAILWAY_API_TOKEN") catch {
+    const token = tri_env.getEnvVarOwned(allocator, "RAILWAY_API_TOKEN") catch {
         std.debug.print("{s}Error{s}: RAILWAY_API_TOKEN not found in environment\n", .{ YELLOW, RESET });
         std.debug.print("{s}Hint{s}: Run 'export $(cat .env | xargs)' or 'set -a && source .env && set +a'\n", .{ GRAY, RESET });
         std.debug.print("Or run with --help for more info.\n", .{});
@@ -56,7 +58,7 @@ pub fn main() !void {
     };
     defer allocator.free(token);
 
-    const project_id = std.process.getEnvVarOwned(allocator, "RAILWAY_PROJECT_ID") catch {
+    const project_id = tri_env.getEnvVarOwned(allocator, "RAILWAY_PROJECT_ID") catch {
         std.debug.print("{s}Error{s}: RAILWAY_PROJECT_ID not found in environment\n", .{ YELLOW, RESET });
         std.debug.print("{s}Hint{s}: Run 'export $(cat .env | xargs)' or 'set -a && source .env && set +a'\n", .{ GRAY, RESET });
         std.process.exit(1);
@@ -133,7 +135,7 @@ fn fetchServices(allocator: Allocator, token: []const u8, project_id: []const u8
     const response = try executeGraphql(allocator, token, gql, vars);
 
     // Parse JSON response manually (simplified)
-    var services = std.ArrayListUnmanaged(Service){};
+    var services = @as(std.ArrayListUnmanaged(Service), .empty);
     try services.ensureTotalCapacity(allocator, 32);
 
     var it = std.mem.splitScalar(u8, response, '"');
@@ -219,7 +221,7 @@ fn executeGraphql(allocator: Allocator, token: []const u8, gql: []const u8, vars
     const url = try std.fmt.allocPrint(allocator, "https://{s}{s}", .{ RAILWAY_GQL_HOST, RAILWAY_GQL_PATH });
     defer allocator.free(url);
 
-    const result = try std.process.Child.run(.{
+    const result = try tri_proc.run(.{
         .allocator = allocator,
         .argv = &[_][]const u8{
             "curl", "-s",        "-X", "POST",
@@ -232,7 +234,7 @@ fn executeGraphql(allocator: Allocator, token: []const u8, gql: []const u8, vars
         allocator.free(result.stdout);
     }
 
-    if (result.term.Exited != 0) return error.RequestFailed;
+    if (result.term.exited != 0) return error.RequestFailed;
 
     // Check for errors
     if (std.mem.indexOf(u8, result.stdout, "\"errors\"")) |_| {

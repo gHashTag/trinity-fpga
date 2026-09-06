@@ -11,6 +11,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 
 const MAX_HISTORY_SIZE: usize = 1000;
 const ArrayListManaged = std.array_list.Managed;
@@ -144,38 +145,37 @@ pub const History = struct {
 
     /// Save history to file
     pub fn save(self: *const History) !void {
-        const file = try std.fs.cwd().createFile(self.file_path, .{});
-        defer file.close();
+        const io = tri_io.get();
+        const file = try std.Io.Dir.cwd().createFile(io, self.file_path, .{});
+        defer file.close(io);
+
+        var write_buffer: [4096]u8 = undefined;
+        var file_writer = file.writer(io, &write_buffer);
+        const w = &file_writer.interface;
 
         for (self.entries.items) |entry| {
-            try file.writeAll(entry);
-            try file.writeAll("\n");
+            try w.writeAll(entry);
+            try w.writeAll("\n");
         }
+        try w.flush();
     }
 
     /// Load history from file
     pub fn load(self: *History) !void {
-        const file = try std.fs.cwd().openFile(self.file_path, .{});
-        defer file.close();
+        const io = tri_io.get();
+        const file = try std.Io.Dir.cwd().openFile(io, self.file_path, .{});
+        defer file.close(io);
 
         var read_buffer: [4096]u8 = undefined;
-        const reader = file.reader(&read_buffer);
+        var file_reader = file.reader(io, &read_buffer);
+        const reader = &file_reader.interface;
 
-        var line_buf = ArrayListManaged(u8).init(self.allocator);
-        defer line_buf.deinit();
-
-        while (true) {
-            line_buf.clearRetainingCapacity();
-
-            reader.streamUntilDelimiterArrayList(u8, &line_buf, '\n', &read_buffer) catch |err| {
-                if (err == error.EndOfStream) break;
-                return err;
-            };
-
-            const line = line_buf.items;
+        // `takeDelimiter` yields null at end of stream; the returned slice
+        // points into `read_buffer`, so it is duped before the next call.
+        while (try reader.takeDelimiter('\n')) |line| {
             if (line.len > 0) {
                 // Trim carriage return if present
-                const trimmed = std.mem.trimRight(u8, line, "\r");
+                const trimmed = std.mem.trimEnd(u8, line, "\r");
                 if (trimmed.len > 0) {
                     const copy = try self.allocator.dupe(u8, trimmed);
                     try self.entries.append(copy);

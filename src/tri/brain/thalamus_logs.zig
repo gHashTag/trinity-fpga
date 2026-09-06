@@ -16,6 +16,8 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const railway_api = @import("../railway_api.zig");
 const contracts = @import("contracts.zig");
@@ -65,7 +67,7 @@ pub const WorkerMetrics = struct {
     last_seen_sec: i64 = 0, // UNIX timestamp
 
     pub fn isFresh(self: *const WorkerMetrics, max_age_sec: i64) bool {
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
         if (self.last_seen_sec == 0) return false;
         const age = now - self.last_seen_sec;
         return age < max_age_sec;
@@ -179,7 +181,7 @@ pub const Thalamus = struct {
             state.metrics.ppl = parseLatestPPL(logs_json);
             state.metrics.tok_per_sec = parseLatestTokPerSec(logs_json);
             state.metrics.loss = parseLatestLoss(logs_json);
-            state.metrics.last_seen_sec = std.time.timestamp();
+            state.metrics.last_seen_sec = tri_time.timestamp();
             state.fresh = areLogsFresh(logs_json);
         } else if (std.mem.eql(u8, dep_status, "SUCCESS")) {
             state.status = .stalled; // Running but no logs = possibly stalled
@@ -209,12 +211,15 @@ pub const Thalamus = struct {
 
     /// Get live states for all sacred workers
     pub fn getSacredWorkersLive(self: *Self) !std.StringHashMap(WorkerLiveState) {
-        const sacred_file = std.fs.cwd().openFile(".trinity/sacred_workers.txt", .{}) catch {
+        const io = tri_io.get();
+        const sacred_file = std.Io.Dir.cwd().openFile(io, ".trinity/sacred_workers.txt", .{}) catch {
             return std.StringHashMap(WorkerLiveState).init(self.allocator);
         };
-        defer sacred_file.close();
+        defer sacred_file.close(io);
 
-        const content = try sacred_file.readToEndAlloc(self.allocator, 8192);
+        var read_buf: [4096]u8 = undefined;
+        var file_reader = sacred_file.reader(io, &read_buf);
+        const content = try file_reader.interface.allocRemaining(self.allocator, .limited(8192));
         defer self.allocator.free(content);
 
         var states = std.StringHashMap(WorkerLiveState).init(self.allocator);

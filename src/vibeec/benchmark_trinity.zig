@@ -6,6 +6,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 
 pub const PHI: f64 = 1.618033988749895;
@@ -66,9 +67,9 @@ pub fn runBenchmark(
     // Actual benchmark
     var i: u64 = 0;
     while (i < iterations) : (i += 1) {
-        const start = std.time.nanoTimestamp();
+        const start = tri_time.nanoTimestamp();
         func();
-        const end = std.time.nanoTimestamp();
+        const end = tri_time.nanoTimestamp();
         const elapsed: u64 = @intCast(@as(u128, @bitCast(end - start)));
 
         total += elapsed;

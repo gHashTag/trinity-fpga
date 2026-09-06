@@ -7,11 +7,26 @@
 // φ² + 1/φ² = 3
 
 const std = @import("std");
-const hybrid = vsa;  // one source: the module, not the local vsa_hybrid copy
+const hybrid = vsa; // one source: the module, not the local vsa_hybrid copy
 const vsa = @import("vsa");
 
 const HybridBigInt = hybrid.HybridBigInt;
 const Trit = hybrid.Trit;
+
+// 0.16 removed std.posix.mprotect; libc still has it. std.posix.PROT is a
+// packed struct(u32) on every target that has one, so the flag word is built
+// from the struct rather than from hand-written octal.
+extern "c" fn mprotect(addr: *anyopaque, len: usize, prot: c_int) c_int;
+
+fn protFlags(prot: std.posix.PROT) c_int {
+    return @bitCast(@as(u32, @bitCast(prot)));
+}
+
+fn makeExecutable(mem: []align(std.heap.page_size_min) u8) !void {
+    if (mprotect(mem.ptr, mem.len, protFlags(.{ .READ = true, .EXEC = true })) != 0) {
+        return error.MprotectFailed;
+    }
+}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // JIT COMPILER
@@ -28,7 +43,7 @@ pub const JitSimilarityFn = *const fn (*HybridBigInt, *HybridBigInt) f64;
 /// JIT Compiler for VSA operations
 pub const JitCompiler = struct {
     /// Code buffer for generated machine code
-    code: std.ArrayListUnmanaged(u8) = .{},
+    code: std.ArrayListUnmanaged(u8) = .empty,
     /// Allocator
     allocator: std.mem.Allocator,
     /// Executable memory (mmap'd)
@@ -38,7 +53,7 @@ pub const JitCompiler = struct {
 
     pub fn init(allocator: std.mem.Allocator) Self {
         return Self{
-            .code = .{},
+            .code = .empty,
             .allocator = allocator,
         };
     }
@@ -280,7 +295,7 @@ pub const JitCompiler = struct {
         const mem = try std.posix.mmap(
             null,
             alloc_size,
-            std.posix.PROT.READ | std.posix.PROT.WRITE,
+            .{ .READ = true, .WRITE = true },
             .{ .TYPE = .PRIVATE, .ANONYMOUS = true },
             -1,
             0,
@@ -290,7 +305,7 @@ pub const JitCompiler = struct {
         @memcpy(mem[0..code_size], self.code.items);
 
         // Change to PROT_READ | PROT_EXEC
-        try std.posix.mprotect(mem, std.posix.PROT.READ | std.posix.PROT.EXEC);
+        try makeExecutable(mem);
 
         self.exec_mem = mem;
 
@@ -682,7 +697,7 @@ test "JitCompiler dot product correctness" {
     const mem = try std.posix.mmap(
         null,
         alloc_size,
-        std.posix.PROT.READ | std.posix.PROT.WRITE,
+        .{ .READ = true, .WRITE = true },
         .{ .TYPE = .PRIVATE, .ANONYMOUS = true },
         -1,
         0,
@@ -690,7 +705,7 @@ test "JitCompiler dot product correctness" {
     defer std.posix.munmap(mem);
 
     @memcpy(mem[0..code_size], compiler.code.items);
-    try std.posix.mprotect(mem, std.posix.PROT.READ | std.posix.PROT.EXEC);
+    try makeExecutable(mem);
 
     const func: *const fn (*const [dim]i8, *const [dim]i8) callconv(.c) i64 = @ptrCast(mem.ptr);
 

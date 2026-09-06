@@ -1,4 +1,5 @@
 const std = @import("std");
+const tri_time = @import("tri_time");
 const tvc_bigint = @import("tvc_bigint.zig");
 
 pub const TRITS_PER_BYTE: usize = 5;
@@ -270,23 +271,23 @@ pub fn runBenchmarks() void {
 
     std.debug.print("Addition x {} iterations:\n", .{iterations});
 
-    const unpacked_start = std.time.nanoTimestamp();
+    const unpacked_start = tri_time.nanoTimestamp();
     var unpacked_result = tvc_bigint.TVCBigInt.zero();
     var i: u64 = 0;
     while (i < iterations) : (i += 1) {
         unpacked_result = unpacked_a.addScalar(&unpacked_b);
     }
-    const unpacked_end = std.time.nanoTimestamp();
+    const unpacked_end = tri_time.nanoTimestamp();
     std.mem.doNotOptimizeAway(unpacked_result);
     const unpacked_ns = @as(u64, @intCast(unpacked_end - unpacked_start));
 
-    const packed_start = std.time.nanoTimestamp();
+    const packed_start = tri_time.nanoTimestamp();
     var packed_result = PackedBigInt.zero();
     i = 0;
     while (i < iterations) : (i += 1) {
         packed_result = packed_a.add(&packed_b);
     }
-    const packed_end = std.time.nanoTimestamp();
+    const packed_end = tri_time.nanoTimestamp();
     std.mem.doNotOptimizeAway(packed_result);
     const packed_ns = @as(u64, @intCast(packed_end - packed_start));
 

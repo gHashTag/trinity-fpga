@@ -11,6 +11,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_proc = @import("tri_proc");
 const Allocator = std.mem.Allocator;
 
 pub const Platform = enum {
@@ -77,7 +78,7 @@ pub fn detectPlatform(allocator: Allocator) !Platform {
 
 // Detect system architecture
 pub fn detectArch(allocator: Allocator) !Arch {
-    const result = try std.process.Child.run(.{
+    const result = try tri_proc.run(.{
         .allocator = allocator,
         .argv = &[_][]const u8{ "uname", "-m" },
     });
@@ -98,7 +99,7 @@ pub fn detectArch(allocator: Allocator) !Arch {
 
 // Get CPU core count
 pub fn detectCPUCores(allocator: Allocator) !u32 {
-    const result = try std.process.Child.run(.{
+    const result = try tri_proc.run(.{
         .allocator = allocator,
         .argv = &[_][]const u8{ "sysctl", "-n", "hw.ncpu" },
     });
@@ -113,7 +114,7 @@ pub fn detectCPUCores(allocator: Allocator) !u32 {
 
 // Get system memory in MB
 pub fn detectMemoryMB(allocator: Allocator) !u32 {
-    const result = try std.process.Child.run(.{
+    const result = try tri_proc.run(.{
         .allocator = allocator,
         .argv = &[_][]const u8{ "sysctl", "-n", "hw.memsize" },
     });

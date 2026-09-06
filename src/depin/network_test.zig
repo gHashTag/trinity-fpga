@@ -5,6 +5,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const network = @import("network.zig");
 
 // Firebird constants are now defined in network.zig
@@ -250,13 +251,13 @@ test "DePIN Benchmark: Reward calculation throughput" {
         .last_heartbeat = 0,
     };
 
-    const start = std.time.nanoTimestamp();
+    const start = tri_time.nanoTimestamp();
     var total: f64 = 0;
     var i: usize = 0;
     while (i < iterations) : (i += 1) {
         total += node.calculateReward(0.001);
     }
-    const elapsed = @as(f64, @floatFromInt(std.time.nanoTimestamp() - start)) / 1_000_000.0;
+    const elapsed = @as(f64, @floatFromInt(tri_time.nanoTimestamp() - start)) / 1_000_000.0;
 
     const throughput = @as(f64, @floatFromInt(iterations)) / elapsed;
     std.debug.print("\n  Reward Calculation: {d:.0} ops/s ({d:.3}ms total)\n", .{ throughput, elapsed });

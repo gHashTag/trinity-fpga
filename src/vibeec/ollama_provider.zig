@@ -1,5 +1,6 @@
 const std = @import("std");
 
+const tri_io = @import("tri_io");
 // ============================================================================
 // OLLAMA PROVIDER - THE PROFANE SPIRIT
 // ============================================================================
@@ -22,25 +23,24 @@ pub const OllamaProvider = struct {
         // Build the command
         const argv = [_][]const u8{ "ollama", "run", self.model, prompt };
 
-        var child = std.process.Child.init(&argv, self.allocator);
-        child.stdout_behavior = .Pipe;
-        child.stderr_behavior = .Pipe;
-
-        try child.spawn();
-
+        var child = try std.process.spawn(tri_io.get(), .{
+            .argv = &argv,
+            .stdout = .pipe,
+            .stderr = .pipe,
+        });
         // Collect output using Zig 0.15 API with ArrayListUnmanaged
-        var stdout_list = std.ArrayListUnmanaged(u8){};
+        var stdout_list = @as(std.ArrayListUnmanaged(u8), .empty);
         defer stdout_list.deinit(self.allocator);
-        var stderr_list = std.ArrayListUnmanaged(u8){};
+        var stderr_list = @as(std.ArrayListUnmanaged(u8), .empty);
         defer stderr_list.deinit(self.allocator);
 
         try child.collectOutput(self.allocator, &stdout_list, &stderr_list, 10 * 1024 * 1024);
 
-        const term = try child.wait();
+        const term = try child.wait(tri_io.get());
 
         // Check exit status
         switch (term) {
-            .Exited => |code| {
+            .exited => |code| {
                 if (code != 0) {
                     return error.OllamaFailed;
                 }
@@ -54,7 +54,7 @@ pub const OllamaProvider = struct {
 
     /// Generate Zig code with system prompt
     pub fn generateZigCode(self: *OllamaProvider, user_prompt: []const u8, penance: ?[]const u8) ![]const u8 {
-        var full_prompt = std.ArrayListUnmanaged(u8){};
+        var full_prompt = @as(std.ArrayListUnmanaged(u8), .empty);
         defer full_prompt.deinit(self.allocator);
 
         // System instruction

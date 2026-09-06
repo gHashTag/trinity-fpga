@@ -4,6 +4,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 const DEFAULT_BAUD: u32 = 115_200;
 const BUFFER_SIZE: usize = 1024;
 
@@ -120,10 +121,10 @@ fn runEchoTest(fd: std.posix.fd_t) !void {
 
     var buffer: [BUFFER_SIZE]u8 = undefined;
     var total_read: usize = 0;
-    const start_time = std.time.nanoTimestamp();
+    const start_time = tri_time.nanoTimestamp();
 
     while (total_read < 1) {
-        const elapsed_ns = std.time.nanoTimestamp() - start_time;
+        const elapsed_ns = tri_time.nanoTimestamp() - start_time;
         const elapsed_ms = @as(f64, elapsed_ns) / 1_000_000.0;
 
         if (elapsed_ms > 5000.0) {
@@ -136,7 +137,7 @@ fn runEchoTest(fd: std.posix.fd_t) !void {
             total_read += @as(usize, read_result);
 
             if (total_read == 1 and buffer[0] == 0x83) {
-                const response_ns = std.time.nanoTimestamp() - start_time;
+                const response_ns = tri_time.nanoTimestamp() - start_time;
                 const elapsed_us = @as(f64, response_ns) / 1000.0;
 
                 std.debug.print("\n✅ Received PONG (0x83)\n", .{});
@@ -169,7 +170,7 @@ fn runMultiplePings(fd: std.posix.fd_t, count: u32) !void {
         const ping = [_]u8{0x03};
         _ = try std.os.write(fd, &ping);
 
-        const start_time = std.time.nanoTimestamp();
+        const start_time = tri_time.nanoTimestamp();
         var pong_received = false;
 
         var timeout: u32 = 0;
@@ -179,7 +180,7 @@ fn runMultiplePings(fd: std.posix.fd_t, count: u32) !void {
 
             if (read_result > 0 and buffer[0] == 0x83) {
                 pong_received = true;
-                const elapsed_ns = std.time.nanoTimestamp() - start_time;
+                const elapsed_ns = tri_time.nanoTimestamp() - start_time;
                 const elapsed_us = @as(f64, elapsed_ns) / 1000.0;
 
                 success += 1;

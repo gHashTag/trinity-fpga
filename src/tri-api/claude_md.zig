@@ -3,6 +3,8 @@
 // Issue #67: Phase 8 Context Management
 const std = @import("std");
 
+const tri_env = @import("tri_env");
+const tri_io = @import("tri_io");
 const max_file_size = 256 * 1024; // 256KB per CLAUDE.md
 
 /// Load and merge CLAUDE.md files into a system prompt.
@@ -12,7 +14,7 @@ pub fn loadSystemPrompt(allocator: std.mem.Allocator) ?[]const u8 {
     var parts = std.ArrayList(u8).empty;
 
     // 1. Global: ~/.claude/CLAUDE.md
-    if (std.posix.getenv("HOME")) |home| {
+    if (tri_env.getPosix("HOME")) |home| {
         var path_buf: [512]u8 = undefined;
         if (std.fmt.bufPrint(&path_buf, "{s}/.claude/CLAUDE.md", .{home})) |path| {
             appendFile(allocator, &parts, path);
@@ -58,16 +60,17 @@ fn appendFile(allocator: std.mem.Allocator, parts: *std.ArrayList(u8), path: []c
 
 /// Read a file, return content or null.
 fn readFile(allocator: std.mem.Allocator, path: []const u8) ?[]const u8 {
+    const io = tri_io.get();
     // Try as absolute path first, then relative
-    if (path.len > 0 and path[0] == '/') {
-        const file = std.fs.openFileAbsolute(path, .{}) catch return null;
-        defer file.close();
-        return file.readToEndAlloc(allocator, max_file_size) catch null;
-    }
+    const file = if (path.len > 0 and path[0] == '/')
+        std.Io.Dir.openFileAbsolute(io, path, .{}) catch return null
+    else
+        std.Io.Dir.cwd().openFile(io, path, .{}) catch return null;
+    defer file.close(io);
 
-    const file = std.fs.cwd().openFile(path, .{}) catch return null;
-    defer file.close();
-    return file.readToEndAlloc(allocator, max_file_size) catch null;
+    var read_scratch: [4096]u8 = undefined;
+    var file_reader = file.reader(io, &read_scratch);
+    return file_reader.interface.allocRemaining(allocator, .limited(max_file_size)) catch null;
 }
 
 // ─── Tests ───────────────────────────────────────────────────────────────────

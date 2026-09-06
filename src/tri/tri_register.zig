@@ -3,6 +3,7 @@
 // φ² + 1/φ² = 3 = TRINITY
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const tri_command_registry = @import("tri_command_registry.zig");
 const CommandRegistry = tri_command_registry.CommandRegistry;
 const CommandMetadata = tri_command_registry.CommandMetadata;
@@ -347,11 +348,22 @@ const execute_map = [_]ExecuteEntry{
     }.f },
 
     // ── VIBEE / Dev ──
-    .{ .name = "gen", .execute = struct {
-        fn f(a: std.mem.Allocator, args: []const []const u8) !void {
-            return commands.runGenCommand(a, args);
-        }
-    }.f },
+    .{
+        .name = "gen",
+        .execute = struct {
+            fn f(a: std.mem.Allocator, args: []const []const u8) !void {
+                // Same reason as forge-bench below: runGenCommand needs an Io in
+                // 0.16 and CommandFn has no slot for one, so take the process's
+                // Io off CLIState, which registerAllCommands installs before any
+                // dispatch happens.
+                const state = g_state orelse {
+                    std.debug.print("Error: CLIState not initialized\n", .{});
+                    return;
+                };
+                return commands.runGenCommand(state.io, a, args);
+            }
+        }.f,
+    },
     .{ .name = "convert", .execute = struct {
         fn f(_: std.mem.Allocator, args: []const []const u8) !void {
             return commands.runConvertCommand(args);
@@ -1208,12 +1220,22 @@ const execute_map = [_]ExecuteEntry{
             return tri_zenodo.runZenodoCommand(a, args);
         }
     }.f },
-    .{ .name = "forge-bench", .execute = struct {
-        fn f(a: std.mem.Allocator, args: []const []const u8) !void {
-            _ = args;
-            return runForgeBenchCommand(a);
-        }
-    }.f },
+    .{
+        .name = "forge-bench",
+        .execute = struct {
+            fn f(a: std.mem.Allocator, args: []const []const u8) !void {
+                _ = args;
+                // The FORGE binary probe needs an Io in 0.16, and CommandFn has no
+                // slot for one; take the process's Io off CLIState, which
+                // registerAllCommands installs before any dispatch happens.
+                const state = g_state orelse {
+                    std.debug.print("Error: CLIState not initialized\n", .{});
+                    return;
+                };
+                return runForgeBenchCommand(state.io, a);
+            }
+        }.f,
+    },
     .{ .name = "forge-verdict", .execute = struct {
         fn f(a: std.mem.Allocator, args: []const []const u8) !void {
             return runForgeVerdictCommand(a, args);
@@ -1384,20 +1406,19 @@ pub fn runFpgaCommand(allocator: std.mem.Allocator, args: []const []const u8) !v
         // Build subcommands list for data field
         var data_json = try std.ArrayList(u8).initCapacity(allocator, 512);
         defer data_json.deinit(allocator);
-        const data_writer = data_json.writer(allocator);
 
         try data_json.append(allocator, '{');
-        try data_writer.print("\"subcommands\":[", .{});
+        try data_json.print(allocator, "\"subcommands\":[", .{});
         const subcommands = &[_][]const u8{
             "synth",  "flash",      "build",     "verify",        "snap", "status", "gen", "test", "jtag", "uart", "power",
             "fxload", "verify-pid", "flash-bit", "mac-uart-test", "pins",
         };
         for (subcommands, 0..) |sc, i| {
             if (i > 0) try data_json.append(allocator, ',');
-            try data_writer.print("\"{s}\"", .{sc});
+            try data_json.print(allocator, "\"{s}\"", .{sc});
         }
         try data_json.appendSlice(allocator, "],");
-        try data_writer.print("\"examples\":[", .{});
+        try data_json.print(allocator, "\"examples\":[", .{});
         const examples = &[_][]const u8{
             "tri fpga gen specs/fpga/blink.tri",
             "tri fpga gen-tri fpga/specs/uart.tri",
@@ -1408,7 +1429,7 @@ pub fn runFpgaCommand(allocator: std.mem.Allocator, args: []const []const u8) !v
         };
         for (examples, 0..) |ex, i| {
             if (i > 0) try data_json.append(allocator, ',');
-            try data_writer.print("\"{s}\"", .{ex});
+            try data_json.print(allocator, "\"{s}\"", .{ex});
         }
         try data_json.appendSlice(allocator, "]}");
 
@@ -1480,14 +1501,13 @@ pub fn runFpgaCommand(allocator: std.mem.Allocator, args: []const []const u8) !v
 
         var data_json = try std.ArrayList(u8).initCapacity(allocator, 128);
         defer data_json.deinit(allocator);
-        const data_writer = data_json.writer(allocator);
 
         try data_json.append(allocator, '{');
-        try data_writer.print("\"subcommand\":\"{s}\",\"valid_subcommands\":[", .{subcommand});
+        try data_json.print(allocator, "\"subcommand\":\"{s}\",\"valid_subcommands\":[", .{subcommand});
         const valid_subs = &[_][]const u8{ "gen", "gen-tri", "synth", "verdict", "flash", "test", "verify", "eye", "snap", "status", "build", "read", "experience", "probe", "jtag", "mount", "unmount", "uart", "build-uart", "flash-uart", "uart-test", "power", "pins" };
         for (valid_subs, 0..) |vs, i| {
             if (i > 0) try data_json.append(allocator, ',');
-            try data_writer.print("\"{s}\"", .{vs});
+            try data_json.print(allocator, "\"{s}\"", .{vs});
         }
         try data_json.appendSlice(allocator, "]}");
 
@@ -1516,8 +1536,8 @@ pub fn runCommand(allocator: std.mem.Allocator, name: []const u8, args: []const 
 }
 
 /// Run forge-bench command - FORGE regression suite
-fn runForgeBenchCommand(allocator: std.mem.Allocator) !void {
-    const forge_bin = findForgeBinary(allocator) orelse {
+fn runForgeBenchCommand(io: std.Io, allocator: std.mem.Allocator) !void {
+    const forge_bin = findForgeBinary(io, allocator) orelse {
         std.debug.print("{s}Error:{s} FORGE binary not found. Run 'zig build forge' first.\n", .{ RED, RESET });
         return error.ForgeNotFound;
     };
@@ -1528,14 +1548,17 @@ fn runForgeBenchCommand(allocator: std.mem.Allocator) !void {
     try argv.append(allocator, forge_bin);
     try argv.append(allocator, "bench");
 
-    var child = std.process.Child.init(argv.items, allocator);
-    child.stderr_behavior = .Inherit;
-    child.stdout_behavior = .Inherit;
-    _ = try child.spawnAndWait();
+    var child = try std.process.spawn(tri_io.get(), .{
+        .argv = argv.items,
+        .stdout = .inherit,
+        .stderr = .inherit,
+    });
+    _ = try child.wait(tri_io.get());
 }
 
 /// Mount FPGA virtual filesystem via macFUSE + JTAG bridge
 fn runFpgaMountCommand(allocator: std.mem.Allocator) !void {
+    _ = allocator; // 0.16: std.process.spawn takes no allocator
     const fpga_fs_path = "fpga/tools/fpga_fs";
     const mount_point = "/mnt/fpga";
 
@@ -1544,34 +1567,41 @@ fn runFpgaMountCommand(allocator: std.mem.Allocator) !void {
 
     // Create mount point if needed
     var mkdir_argv = [_][]const u8{ "sudo", "mkdir", "-p", mount_point };
-    var mkdir_child = std.process.Child.init(&mkdir_argv, allocator);
-    mkdir_child.stderr_behavior = .Inherit;
-    mkdir_child.stdout_behavior = .Inherit;
-    _ = try mkdir_child.spawnAndWait();
+    var mkdir_child = try std.process.spawn(tri_io.get(), .{
+        .argv = &mkdir_argv,
+        .stdout = .inherit,
+        .stderr = .inherit,
+    });
+    _ = try mkdir_child.wait(tri_io.get());
 
     // Launch fpga_fs daemon
     var argv = [_][]const u8{ "sudo", fpga_fs_path, mount_point };
-    var child = std.process.Child.init(&argv, allocator);
-    child.stderr_behavior = .Inherit;
-    child.stdout_behavior = .Inherit;
-    const term = try child.spawnAndWait();
-    if (term.Exited != 0) {
-        std.debug.print("\n{s}Mount failed (exit {d}).{s}\n", .{ RED, term.Exited, RESET });
+    var child = try std.process.spawn(tri_io.get(), .{
+        .argv = &argv,
+        .stdout = .inherit,
+        .stderr = .inherit,
+    });
+    const term = try child.wait(tri_io.get());
+    if (term.exited != 0) {
+        std.debug.print("\n{s}Mount failed (exit {d}).{s}\n", .{ RED, term.exited, RESET });
         std.debug.print("Check: macFUSE installed? Cable connected? FPGA programmed?\n", .{});
     }
 }
 
 /// Unmount FPGA virtual filesystem
 fn runFpgaUnmountCommand(allocator: std.mem.Allocator) !void {
+    _ = allocator; // 0.16: std.process.spawn takes no allocator
     const mount_point = "/mnt/fpga";
     std.debug.print("{s}FPGA Unmount:{s} Unmounting {s}\n", .{ CYAN, RESET, mount_point });
 
     var argv = [_][]const u8{ "umount", mount_point };
-    var child = std.process.Child.init(&argv, allocator);
-    child.stderr_behavior = .Inherit;
-    child.stdout_behavior = .Inherit;
-    const term = try child.spawnAndWait();
-    if (term.Exited != 0) {
+    var child = try std.process.spawn(tri_io.get(), .{
+        .argv = &argv,
+        .stdout = .inherit,
+        .stderr = .inherit,
+    });
+    const term = try child.wait(tri_io.get());
+    if (term.exited != 0) {
         std.debug.print("\n{s}Unmount failed.{s} Try: sudo umount -f {s}\n", .{ RED, RESET, mount_point });
     } else {
         std.debug.print("  Unmounted successfully.\n", .{});
@@ -1580,17 +1610,20 @@ fn runFpgaUnmountCommand(allocator: std.mem.Allocator) !void {
 
 /// Run fpga probe command — calls jtag_switcher probe via child process
 fn runFpgaProbeCommand(allocator: std.mem.Allocator) !void {
+    _ = allocator; // 0.16: std.process.spawn takes no allocator
     const probe_path = "fpga/tools/jtag_switcher";
     std.debug.print("{s}Running hardware probe...{s}\n", .{ CYAN, RESET });
     std.debug.print("\x1b[2mNote:\x1b[0m Requires sudo and connected Platform Cable USB II\n\n", .{});
 
     var argv = [_][]const u8{ "sudo", probe_path, "probe" };
-    var child = std.process.Child.init(&argv, allocator);
-    child.stderr_behavior = .Inherit;
-    child.stdout_behavior = .Inherit;
-    const term = try child.spawnAndWait();
-    if (term.Exited != 0) {
-        std.debug.print("\n{s}Probe failed (exit {d}).{s} Check cable connection.\n", .{ RED, term.Exited, RESET });
+    var child = try std.process.spawn(tri_io.get(), .{
+        .argv = &argv,
+        .stdout = .inherit,
+        .stderr = .inherit,
+    });
+    const term = try child.wait(tri_io.get());
+    if (term.exited != 0) {
+        std.debug.print("\n{s}Probe failed (exit {d}).{s} Check cable connection.\n", .{ RED, term.exited, RESET });
     }
 }
 
@@ -1640,12 +1673,14 @@ fn runJtagCommand(allocator: std.mem.Allocator, args: []const []const u8) !void 
     try argv.append(allocator, jtag_path);
     for (args) |a| try argv.append(allocator, a);
 
-    var child = std.process.Child.init(argv.items, allocator);
-    child.stderr_behavior = .Inherit;
-    child.stdout_behavior = .Inherit;
-    const term = try child.spawnAndWait();
-    if (term.Exited != 0) {
-        std.debug.print("\n{s}JTAG command failed (exit {d}).{s} Check cable connection.\n", .{ RED, term.Exited, RESET });
+    var child = try std.process.spawn(tri_io.get(), .{
+        .argv = argv.items,
+        .stdout = .inherit,
+        .stderr = .inherit,
+    });
+    const term = try child.wait(tri_io.get());
+    if (term.exited != 0) {
+        std.debug.print("\n{s}JTAG command failed (exit {d}).{s} Check cable connection.\n", .{ RED, term.exited, RESET });
     }
 }
 
@@ -1655,14 +1690,14 @@ fn runForgeVerdictCommand(allocator: std.mem.Allocator, args: []const []const u8
 }
 
 /// Helper: find FORGE binary
-fn findForgeBinary(allocator: std.mem.Allocator) ?[]const u8 {
+fn findForgeBinary(io: std.Io, allocator: std.mem.Allocator) ?[]const u8 {
     const paths = [_][]const u8{
         "zig-out/bin/forge",
         "./zig-out/bin/forge",
     };
 
     for (paths) |path| {
-        if (std.fs.cwd().access(path, .{})) |_| {
+        if (std.Io.Dir.cwd().access(io, path, .{})) |_| {
             return allocator.dupe(u8, path) catch return null;
         } else |_| continue;
     }

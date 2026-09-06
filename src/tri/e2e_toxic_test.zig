@@ -14,6 +14,8 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const colors = @import("tri_colors.zig");
 const toxic_verdict = @import("pathology.zig");
@@ -154,24 +156,26 @@ const DiscoveryResult = struct {
 
 fn discoverScenarios(allocator: Allocator, threshold: f32) DiscoveryResult {
     _ = allocator;
+    // No `io` reaches this function -- discoverScenarios is called from
+    // runE2ECommand, whose signature is fixed by its callers.
+    const io = tri_io.get();
     var result = DiscoveryResult{};
 
-    var dir = std.fs.cwd().openDir("specs/tri", .{ .iterate = true }) catch return result;
-    defer dir.close();
+    var dir = std.Io.Dir.cwd().openDir(io, "specs/tri", .{ .iterate = true }) catch return result;
+    defer dir.close(io);
 
     var iter = dir.iterate();
-    while (iter.next() catch null) |entry| {
+    while (iter.next(io) catch null) |entry| {
         if (result.count >= MAX_SCENARIOS) break;
         if (entry.kind != .file) continue;
         if (!std.mem.endsWith(u8, entry.name, ".tri")) continue;
 
-        // Read file to check for test blocks
-        const file = dir.openFile(entry.name, .{}) catch continue;
-        defer file.close();
-
+        // Read file to check for test blocks. Dir.readFile does the open, the
+        // whole-file read into the caller's buffer and the close, so an open
+        // failure and a read failure both land on the same `continue` the two
+        // separate steps used to take.
         var buf: [8192]u8 = undefined;
-        const n = file.readAll(&buf) catch continue;
-        const content = buf[0..n];
+        const content = dir.readFile(io, entry.name, &buf) catch continue;
 
         const has_tests = std.mem.indexOf(u8, content, "tests:") != null or
             std.mem.indexOf(u8, content, "test_cases:") != null;
@@ -213,7 +217,9 @@ fn discoverScenarios(allocator: Allocator, threshold: f32) DiscoveryResult {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn runScenario(scenario: *const E2EScenario) E2EResult {
-    const start = std.time.milliTimestamp();
+    // Same reason as discoverScenarios: nothing in this call chain carries an Io.
+    const io = tri_io.get();
+    const start = tri_time.milliTimestamp();
 
     var result = E2EResult{};
     result.setScenario(scenario.nameStr());
@@ -222,22 +228,22 @@ fn runScenario(scenario: *const E2EScenario) E2EResult {
     var zig_path_buf: [128]u8 = undefined;
     const zig_path = std.fmt.bufPrint(&zig_path_buf, "src/tri/{s}.zig", .{scenario.nameStr()}) catch {
         result.setError("Failed to build .zig path");
-        result.duration_ms = @intCast(@as(u64, @bitCast(std.time.milliTimestamp() - start)));
+        result.duration_ms = @intCast(@as(u64, @bitCast(tri_time.milliTimestamp() - start)));
         return result;
     };
 
     result.has_matching_zig = blk: {
-        std.fs.cwd().access(zig_path, .{}) catch break :blk false;
+        std.Io.Dir.cwd().access(io, zig_path, .{}) catch break :blk false;
         break :blk true;
     };
 
     // Check 2: Does the .zig file have test blocks?
     if (result.has_matching_zig) {
-        if (std.fs.cwd().openFile(zig_path, .{})) |zig_file| {
-            defer zig_file.close();
-            var read_buf: [65536]u8 = undefined;
-            const bytes = zig_file.readAll(&read_buf) catch 0;
-            result.has_test_block = std.mem.indexOf(u8, read_buf[0..bytes], "test \"") != null;
+        var read_buf: [65536]u8 = undefined;
+        // A failed read is treated as "no test block", which is what the old
+        // `readAll(...) catch 0` plus an empty-slice search amounted to.
+        if (std.Io.Dir.cwd().readFile(io, zig_path, &read_buf)) |content| {
+            result.has_test_block = std.mem.indexOf(u8, content, "test \"") != null;
         } else |_| {
             result.has_test_block = false;
         }
@@ -266,7 +272,7 @@ fn runScenario(scenario: *const E2EScenario) E2EResult {
         }
     }
 
-    const end = std.time.milliTimestamp();
+    const end = tri_time.milliTimestamp();
     result.duration_ms = @intCast(@as(u64, @bitCast(end - start)));
 
     return result;
@@ -340,9 +346,11 @@ fn renderResults(suite: *const E2ESuite, toxic: bool) void {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn saveResults(suite: *const E2ESuite) void {
-    std.fs.cwd().makePath(".trinity") catch {};
-    const file = std.fs.cwd().createFile(".trinity/e2e_results.json", .{}) catch return;
-    defer file.close();
+    // Same reason as discoverScenarios: nothing in this call chain carries an Io.
+    const io = tri_io.get();
+    std.Io.Dir.cwd().createDirPath(io, ".trinity") catch {};
+    const file = std.Io.Dir.cwd().createFile(io, ".trinity/e2e_results.json", .{}) catch return;
+    defer file.close(io);
 
     var buf: [256]u8 = undefined;
     const content = std.fmt.bufPrint(&buf, "{{\"total\":{d},\"passed\":{d},\"failed\":{d},\"avg_verdict\":{d:.1},\"duration_ms\":{d},\"timestamp\":{d}}}\n", .{
@@ -351,9 +359,9 @@ fn saveResults(suite: *const E2ESuite) void {
         suite.failed,
         suite.avg_verdict,
         suite.total_duration_ms,
-        std.time.timestamp(),
+        tri_time.timestamp(),
     }) catch return;
-    file.writeAll(content) catch return;
+    file.writeStreamingAll(io, content) catch return;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

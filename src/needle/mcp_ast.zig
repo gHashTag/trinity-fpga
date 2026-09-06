@@ -456,7 +456,7 @@ pub fn parseRequest(allocator: std.mem.Allocator, json_str: []const u8) !McpRequ
 
     const id = parsed.object.get("id").?.string orelse return error.InvalidRequest;
     const method_str = parsed.object.get("method").?.string orelse return error.InvalidRequest;
-    const params = parsed.object.get("params") orelse std.json.Value{ .object = std.json.ObjectMap.init(allocator) };
+    const params = parsed.object.get("params") orelse std.json.Value{ .object = std.json.ObjectMap.empty };
 
     const method = std.meta.stringToEnum(McpMethod, method_str) orelse return error.UnknownMethod;
 

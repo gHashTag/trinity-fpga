@@ -9,6 +9,7 @@
 //!   fpga-flash full         # Complete procedure
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const fs = std.fs;
 const process = std.process;
 const mem = std.mem;
@@ -240,7 +241,7 @@ fn execCommand(args: []const []const u8) ![]u8 {
         .argv = args,
     });
 
-    if (result.term.Exited != 0 and result.term.Exited != 1) {
+    if (result.term.exited != 0 and result.term.exited != 1) {
         // Exit code 1 might be from grep/find not finding anything
         // Other exit codes are actual errors
         return error.CommandFailed;
@@ -250,7 +251,7 @@ fn execCommand(args: []const []const u8) ![]u8 {
 }
 
 fn getFileSize(path: []const u8) !u64 {
-    const file = try std.fs.openFileAbsolute(path, .{});
+    const file = try std.Io.Dir.openFileAbsolute(tri_io.get(), path, .{});
     defer file.close();
     return try file.getEndPos();
 }

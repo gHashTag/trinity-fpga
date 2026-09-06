@@ -9,6 +9,8 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const hippocampus = @import("hippocampus.zig");
 
@@ -200,7 +202,7 @@ pub fn measureState(
         .actions_taken = actions_taken,
         .actions_suppressed = actions_suppressed,
         .action_rate = action_rate,
-        .measured_at = std.time.timestamp(),
+        .measured_at = tri_time.timestamp(),
     };
 }
 
@@ -233,23 +235,23 @@ pub fn reportState(allocator: Allocator, state: InternalState) !void {
     defer allocator.free(json);
 
     // Ensure directory exists
-    std.fs.cwd().makePath(".trinity/memory/insula") catch |err| {
+    const io = tri_io.get();
+    std.Io.Dir.cwd().createDirPath(io, ".trinity/memory/insula") catch |err| {
         if (err != error.PathAlreadyExists) return err;
     };
 
     // Append to JSONL file
-    const file = try std.fs.cwd().openFile(INSULA_MEMORY_PATH, .{ .mode = .write_only });
-    defer file.close();
+    const file = try std.Io.Dir.cwd().openFile(io, INSULA_MEMORY_PATH, .{ .mode = .write_only });
+    defer file.close(io);
 
-    // Seek to end
-    const stat = file.stat() catch return error.FileAccess;
-    try file.seekTo(stat.size);
+    // 0.16 has no seek-then-write; write at the current end offset instead.
+    const append_at = file.length(io) catch return error.FileAccess;
 
     // Write JSONL entry
     const line = try std.fmt.allocPrint(allocator, "{s}\n", .{json});
     defer allocator.free(line);
 
-    try file.writeAll(line);
+    try file.writePositionalAll(io, line, append_at);
 
     // Also write to Hippocampus for cross-module access
     const summary = "Internal state metrics captured";
@@ -258,23 +260,26 @@ pub fn reportState(allocator: Allocator, state: InternalState) !void {
 
 /// Load recent states from file
 pub fn loadStates(allocator: Allocator, limit: usize) ![]InternalState {
-    const file = std.fs.cwd().openFile(INSULA_MEMORY_PATH, .{}) catch {
+    const io = tri_io.get();
+    const file = std.Io.Dir.cwd().openFile(io, INSULA_MEMORY_PATH, .{}) catch {
         return allocator.alloc(InternalState, 0);
     };
-    defer file.close();
+    defer file.close(io);
 
-    const stat = file.stat() catch return allocator.alloc(InternalState, 0);
+    const stat = file.stat(io) catch return allocator.alloc(InternalState, 0);
     if (stat.size == 0) return allocator.alloc(InternalState, 0);
 
     const contents = try allocator.alloc(u8, stat.size);
     defer allocator.free(contents);
 
-    const n = file.readAll(contents) catch return allocator.alloc(InternalState, 0);
+    var read_scratch: [4096]u8 = undefined;
+    var file_reader = file.reader(io, &read_scratch);
+    const n = file_reader.interface.readSliceShort(contents) catch return allocator.alloc(InternalState, 0);
     if (n == 0) return allocator.alloc(InternalState, 0);
 
     // Parse JSONL (simplified parsing for robustness)
-    var states = std.ArrayList(InternalState).init(allocator);
-    errdefer states.deinit();
+    var states: std.ArrayList(InternalState) = .empty;
+    errdefer states.deinit(allocator);
 
     var line_iter = std.mem.splitScalar(u8, contents[0..n], '\n');
     var count: usize = 0;
@@ -285,7 +290,7 @@ pub fn loadStates(allocator: Allocator, limit: usize) ![]InternalState {
 
         // Parse JSON manually (avoid full JSON parser for simplicity)
         if (parseInternalStateFromJson(line)) |state| {
-            try states.append(state);
+            try states.append(allocator, state);
             count += 1;
         } else |_| {
             // Skip malformed lines
@@ -293,7 +298,7 @@ pub fn loadStates(allocator: Allocator, limit: usize) ![]InternalState {
         }
     }
 
-    return states.toOwnedSlice();
+    return states.toOwnedSlice(allocator);
 }
 
 /// Parse InternalState from JSON string (simplified parser)
@@ -411,7 +416,7 @@ pub fn health() CellHealth {
     return CellHealth{
         .status = .healthy,
         .cycle = 0,
-        .last_check = std.time.timestamp(),
+        .last_check = tri_time.timestamp(),
     };
 }
 
@@ -695,17 +700,17 @@ test "insula — InternalState activity threshold" {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 test "insula — measureState returns valid state" {
-    const start = @as(i64, @intCast(std.time.nanoTimestamp()));
+    const start = @as(i64, @intCast(tri_time.nanoTimestamp()));
     var timing = TimingSnapshot.init();
     // Add delay to ensure measurable time passes
-    std.Thread.sleep(1 * std.time.ns_per_ms);
+    tri_time.sleep(1 * std.time.ns_per_ms);
     const state = try measureState(std.testing.allocator, start, &timing, 1, 0, 1);
     // Should have non-zero latency at minimum
     try std.testing.expect(state.cycle_latency_us >= 1000); // At least 1ms
 }
 
 test "insula — measureState has timing data" {
-    const start = @as(i64, @intCast(std.time.nanoTimestamp()));
+    const start = @as(i64, @intCast(tri_time.nanoTimestamp()));
     var timing = TimingSnapshot.init();
     const state = try measureState(std.testing.allocator, start, &timing, 5, 1, 10);
     // Timing fields should be populated
@@ -729,9 +734,9 @@ test "insula — CellHealth status enum" {
 test "insula — TimingSnapshot measures latencies" {
     var snap = TimingSnapshot.init();
     // Add small delay to ensure measurable time passes
-    std.Thread.sleep(1 * std.time.ns_per_ms);
+    tri_time.sleep(1 * std.time.ns_per_ms);
     snap.markThalamus();
-    std.Thread.sleep(1 * std.time.ns_per_ms);
+    tri_time.sleep(1 * std.time.ns_per_ms);
     snap.markDlpfc();
 
     const cycle_us = snap.cycleLatencyUs();

@@ -6,13 +6,17 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const net = std.Io.net;
 
+const tri_io = @import("tri_io");
+const tri_mutex = @import("tri_mutex");
+const tri_time = @import("tri_time");
 // ═══════════════════════════════════════════════════════════════════════════════
 // POOLED CONNECTION
 // ═══════════════════════════════════════════════════════════════════════════════
 
 pub const PooledConnection = struct {
-    stream: std.net.Stream,
+    stream: net.Stream,
     last_used: i128, // nanoTimestamp
     in_use: bool,
 };
@@ -23,19 +27,20 @@ pub const PooledConnection = struct {
 
 pub const PeerPool = struct {
     connections: std.ArrayListUnmanaged(PooledConnection),
-    address: std.net.Address,
+    address: net.IpAddress,
 
-    pub fn init(address: std.net.Address) PeerPool {
+    pub fn init(address: net.IpAddress) PeerPool {
         return PeerPool{
-            .connections = .{},
+            .connections = .empty,
             .address = address,
         };
     }
 
     pub fn deinit(self: *PeerPool, allocator: std.mem.Allocator) void {
         // Close all connections
+        const io = tri_io.get();
         for (self.connections.items) |conn| {
-            conn.stream.close();
+            conn.stream.close(io);
         }
         self.connections.deinit(allocator);
     }
@@ -50,7 +55,7 @@ pub const ConnectionPool = struct {
     allocator: std.mem.Allocator,
     max_per_peer: u32,
     idle_timeout_ns: i128,
-    mutex: std.Thread.Mutex,
+    mutex: tri_mutex.Mutex,
 
     // Stats
     total_acquired: u64,
@@ -81,7 +86,7 @@ pub const ConnectionPool = struct {
     }
 
     /// Acquire a connection to a peer. Returns existing idle connection or opens new one.
-    pub fn acquire(self: *ConnectionPool, node_id: [32]u8, address: std.net.Address) !std.net.Stream {
+    pub fn acquire(self: *ConnectionPool, node_id: [32]u8, address: net.IpAddress) !net.Stream {
         self.mutex.lock();
         defer self.mutex.unlock();
 
@@ -90,7 +95,7 @@ pub const ConnectionPool = struct {
             for (pool.connections.items) |*conn| {
                 if (!conn.in_use) {
                     conn.in_use = true;
-                    conn.last_used = std.time.nanoTimestamp();
+                    conn.last_used = tri_time.nanoTimestamp();
                     self.total_acquired += 1;
                     return conn.stream;
                 }
@@ -103,11 +108,13 @@ pub const ConnectionPool = struct {
         }
 
         // Open new connection
-        const stream = try std.net.tcpConnectToAddress(address);
+        // 0.16: `tcpConnectToAddress` is gone; a TCP connect is `IpAddress.connect`
+        // with `.mode = .stream` (protocol defaults to tcp for a stream socket).
+        const stream = try address.connect(tri_io.get(), .{ .mode = .stream });
 
         const pooled = PooledConnection{
             .stream = stream,
-            .last_used = std.time.nanoTimestamp(),
+            .last_used = tri_time.nanoTimestamp(),
             .in_use = true,
         };
 
@@ -124,15 +131,15 @@ pub const ConnectionPool = struct {
     }
 
     /// Release a connection back to the pool (mark as idle)
-    pub fn release(self: *ConnectionPool, node_id: [32]u8, stream: std.net.Stream) void {
+    pub fn release(self: *ConnectionPool, node_id: [32]u8, stream: net.Stream) void {
         self.mutex.lock();
         defer self.mutex.unlock();
 
         if (self.pools.getPtr(node_id)) |pool| {
             for (pool.connections.items) |*conn| {
-                if (conn.stream.handle == stream.handle and conn.in_use) {
+                if (conn.stream.socket.handle == stream.socket.handle and conn.in_use) {
                     conn.in_use = false;
-                    conn.last_used = std.time.nanoTimestamp();
+                    conn.last_used = tri_time.nanoTimestamp();
                     self.total_released += 1;
                     return;
                 }
@@ -141,15 +148,15 @@ pub const ConnectionPool = struct {
     }
 
     /// Discard a connection (close and remove from pool, e.g. after error)
-    pub fn discard(self: *ConnectionPool, node_id: [32]u8, stream: std.net.Stream) void {
+    pub fn discard(self: *ConnectionPool, node_id: [32]u8, stream: net.Stream) void {
         self.mutex.lock();
         defer self.mutex.unlock();
 
         if (self.pools.getPtr(node_id)) |pool| {
             var i: usize = 0;
             while (i < pool.connections.items.len) {
-                if (pool.connections.items[i].stream.handle == stream.handle) {
-                    pool.connections.items[i].stream.close();
+                if (pool.connections.items[i].stream.socket.handle == stream.socket.handle) {
+                    pool.connections.items[i].stream.close(tri_io.get());
                     _ = pool.connections.swapRemove(i);
                     self.total_discarded += 1;
                     return;
@@ -164,7 +171,8 @@ pub const ConnectionPool = struct {
         self.mutex.lock();
         defer self.mutex.unlock();
 
-        const now = std.time.nanoTimestamp();
+        const io = tri_io.get();
+        const now = tri_time.nanoTimestamp();
         var pruned: u32 = 0;
 
         var it = self.pools.iterator();
@@ -174,7 +182,7 @@ pub const ConnectionPool = struct {
             while (i < pool.connections.items.len) {
                 const conn = &pool.connections.items[i];
                 if (!conn.in_use and (now - conn.last_used) > self.idle_timeout_ns) {
-                    conn.stream.close();
+                    conn.stream.close(io);
                     _ = pool.connections.swapRemove(i);
                     pruned += 1;
                 } else {

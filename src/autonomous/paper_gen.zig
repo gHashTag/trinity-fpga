@@ -9,6 +9,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 pub const BenchmarkResult = struct {
     baseline_metric: f64,
     new_metric: f64,
@@ -91,7 +92,7 @@ pub const PaperPublisher = struct {
     /// Generate blog post from benchmark results
     pub fn generateBlogPost(self: *PaperPublisher, result: BenchmarkResult) !BlogPost {
         // Use ISO date format (YYYY-MM-DD) for blog posts
-        const timestamp = std.time.timestamp();
+        const timestamp = tri_time.timestamp();
         const date = try std.fmt.allocPrint(self.allocator, "{d}", .{timestamp});
         defer self.allocator.free(date);
 
@@ -280,7 +281,7 @@ pub fn main() !void {
             .improvement_percent = improvement,
             .metric_name = metric_name,
             .commit_hash = "c40b16605",
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
         };
 
         const post = try publisher.generateBlogPost(result);

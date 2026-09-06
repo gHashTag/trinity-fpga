@@ -10,6 +10,7 @@
 
 const std = @import("std");
 
+const tri_rand = @import("tri_rand");
 pub const PHI: f64 = 1.618033988749895;
 pub const GOLDEN_IDENTITY: f64 = 3.0;
 
@@ -68,7 +69,7 @@ pub fn qutritDensity(state: QutritState) f64 {
 /// Measure Qutrit State (Collapse)
 /// Returns a Trit based on probabilites of amplitudes
 pub fn qutritMeasure(state: QutritState) Trit {
-    const rand = std.crypto.random.float(std.math.random.float);
+    const rand = tri_rand.random().float(std.math.random.float);
 
     const p_alpha = state.alpha * state.alpha;
     const p_beta = state.beta * state.beta;

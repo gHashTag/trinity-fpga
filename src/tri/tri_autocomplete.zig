@@ -18,6 +18,8 @@
 
 const std = @import("std");
 
+const tri_io = @import("tri_io");
+const tri_env = @import("tri_env");
 const Allocator = std.mem.Allocator;
 
 // ANSI colors
@@ -72,7 +74,7 @@ const Config = struct {
 };
 
 fn getConfigPath(allocator: Allocator) ![]const u8 {
-    const home_dir = std.process.getEnvVarOwned(allocator, "HOME") catch return error.HomeNotFound;
+    const home_dir = tri_env.getEnvVarOwned(allocator, "HOME") catch return error.HomeNotFound;
     defer allocator.free(home_dir);
     return std.fs.path.join(allocator, &.{ home_dir, TRI_CONFIG_DIR, TRI_CONFIG_FILE });
 }
@@ -81,13 +83,16 @@ fn loadConfig(allocator: Allocator) !?Config {
     const config_path = try getConfigPath(allocator);
     defer allocator.free(config_path);
 
-    const file = std.fs.openFileAbsolute(config_path, .{}) catch |err| {
+    const io = tri_io.get();
+    const file = std.Io.Dir.openFileAbsolute(io, config_path, .{}) catch |err| {
         if (err == error.FileNotFound) return null;
         return err;
     };
-    defer file.close();
+    defer file.close(io);
 
-    const content = file.readToEndAlloc(allocator, 1024 * 1024) catch return error.ReadFailed;
+    var read_scratch: [4096]u8 = undefined;
+    var file_reader = file.reader(io, &read_scratch);
+    const content = file_reader.interface.allocRemaining(allocator, .limited(1024 * 1024)) catch return error.ReadFailed;
     defer allocator.free(content);
 
     var config = Config.init(allocator);
@@ -121,13 +126,14 @@ fn saveConfig(allocator: Allocator, config: *const Config) !void {
     const config_path = try getConfigPath(allocator);
     defer allocator.free(config_path);
 
-    const home_dir = std.process.getEnvVarOwned(allocator, "HOME") catch return error.HomeNotFound;
+    const home_dir = tri_env.getEnvVarOwned(allocator, "HOME") catch return error.HomeNotFound;
     defer allocator.free(home_dir);
 
     const config_dir = try std.fs.path.join(allocator, &.{ home_dir, TRI_CONFIG_DIR });
     defer allocator.free(config_dir);
 
-    try std.fs.cwd().makePath(config_dir);
+    const io = tri_io.get();
+    try std.Io.Dir.cwd().createDirPath(io, config_dir);
 
     const aliases_obj = try std.json.ObjectMap.initCapacity(allocator, @intCast(config.aliases.count()));
     defer aliases_obj.deinit();
@@ -147,9 +153,9 @@ fn saveConfig(allocator: Allocator, config: *const Config) !void {
     const stringified = try std.json.allocPrintZ(allocator, root, options);
     defer allocator.free(stringified);
 
-    const file = try std.fs.createFileAbsolute(config_path, .{ .read = true });
-    defer file.close();
-    try file.writeAll(stringified);
+    const file = try std.Io.Dir.createFileAbsolute(io, config_path, .{ .read = true });
+    defer file.close(io);
+    try file.writeStreamingAll(io, stringified);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -391,7 +397,7 @@ fn getAllTopLevelCommands(allocator: Allocator) ![][]const u8 {
     const commands = getCommands();
     var list = try std.ArrayList([]const u8).initCapacity(allocator, commands.len + 20);
     for (commands) |cmd| {
-        try list.append(try allocator.dupe(u8, cmd.name));
+        try list.append(allocator, try allocator.dupe(u8, cmd.name));
     }
     // Add flat commands
     const flat_commands = &[_][]const u8{
@@ -408,7 +414,7 @@ fn getAllTopLevelCommands(allocator: Allocator) ![][]const u8 {
         "experiment",   "trace",      "eval",          "metrics",          "context-load",      "infer",
     };
     for (flat_commands) |cmd| {
-        try list.append(try allocator.dupe(u8, cmd));
+        try list.append(allocator, try allocator.dupe(u8, cmd));
     }
     return list.toOwnedSlice(allocator);
 }
@@ -712,7 +718,7 @@ const Shell = enum {
     auto,
 
     fn detect() Shell {
-        const shell_env = std.process.getEnvVarOwned(std.heap.page_allocator, "SHELL") catch return .auto;
+        const shell_env = tri_env.getEnvVarOwned(std.heap.page_allocator, "SHELL") catch return .auto;
         defer std.heap.page_allocator.free(shell_env);
 
         if (std.mem.indexOf(u8, shell_env, "zsh") != null) return .zsh;
@@ -721,7 +727,7 @@ const Shell = enum {
     }
 
     fn getConfigFile(shell: Shell) ![]const u8 {
-        const home = try std.process.getEnvVarOwned(std.heap.page_allocator, "HOME");
+        const home = try tri_env.getEnvVarOwned(std.heap.page_allocator, "HOME");
         defer std.heap.page_allocator.free(home);
 
         return switch (shell) {
@@ -744,47 +750,52 @@ fn installCompletion(shell: Shell) !void {
     const marker_end = "# <<< tri autocomplete <<<";
 
     // Generate completion script
-    var script_buffer = try std.ArrayList(u8).initCapacity(std.heap.page_allocator, 16384);
+    var script_buffer: std.Io.Writer.Allocating = try .initCapacity(std.heap.page_allocator, 16384);
+    defer script_buffer.deinit();
+    const script_writer = &script_buffer.writer;
 
-    try script_buffer.appendSlice(std.heap.page_allocator, "\n");
-    try script_buffer.appendSlice(std.heap.page_allocator, marker);
-    try script_buffer.appendSlice(std.heap.page_allocator, "\n");
+    try script_writer.writeAll("\n");
+    try script_writer.writeAll(marker);
+    try script_writer.writeAll("\n");
 
     switch (shell) {
-        .bash => try generateBashCompletion(std.heap.page_allocator, script_buffer.writer(std.heap.page_allocator)),
-        .zsh => try generateZshCompletion(std.heap.page_allocator, script_buffer.writer(std.heap.page_allocator)),
+        .bash => try generateBashCompletion(std.heap.page_allocator, script_writer),
+        .zsh => try generateZshCompletion(std.heap.page_allocator, script_writer),
         .auto => {
             const detected = Shell.detect();
             switch (detected) {
-                .bash => try generateBashCompletion(std.heap.page_allocator, script_buffer.writer(std.heap.page_allocator)),
-                .zsh => try generateZshCompletion(std.heap.page_allocator, script_buffer.writer(std.heap.page_allocator)),
-                .auto => try generateBashCompletion(std.heap.page_allocator, script_buffer.writer(std.heap.page_allocator)),
+                .bash => try generateBashCompletion(std.heap.page_allocator, script_writer),
+                .zsh => try generateZshCompletion(std.heap.page_allocator, script_writer),
+                .auto => try generateBashCompletion(std.heap.page_allocator, script_writer),
             }
         },
     }
 
-    try script_buffer.appendSlice(std.heap.page_allocator, marker_end);
-    try script_buffer.appendSlice(std.heap.page_allocator, "\n");
+    try script_writer.writeAll(marker_end);
+    try script_writer.writeAll("\n");
 
-    const script = try script_buffer.toOwnedSlice(std.heap.page_allocator);
+    const script = try script_buffer.toOwnedSlice();
     defer std.heap.page_allocator.free(script);
 
     // Check if already installed
-    const file = std.fs.openFileAbsolute(config_file, .{}) catch |err| {
+    const io = tri_io.get();
+    const file = std.Io.Dir.openFileAbsolute(io, config_file, .{ .mode = .read_write }) catch |err| {
         if (err == error.FileNotFound) {
             // Create new file
-            const new_file = try std.fs.createFileAbsolute(config_file, .{ .read = true });
-            defer new_file.close();
-            try new_file.writeAll(script);
+            const new_file = try std.Io.Dir.createFileAbsolute(io, config_file, .{ .read = true });
+            defer new_file.close(io);
+            try new_file.writeStreamingAll(io, script);
             std.debug.print("{s}Installed tri autocomplete to {s}{s}\n", .{ GREEN, config_file, RESET });
             std.debug.print("{s}Run 'source {s}' to activate{s}\n", .{ YELLOW, config_file, RESET });
             return;
         }
         return err;
     };
-    defer file.close();
+    defer file.close(io);
 
-    const content = file.readToEndAlloc(std.heap.page_allocator, 1024 * 1024) catch return error.ReadFailed;
+    var read_scratch: [4096]u8 = undefined;
+    var file_reader = file.reader(io, &read_scratch);
+    const content = file_reader.interface.allocRemaining(std.heap.page_allocator, .limited(1024 * 1024)) catch return error.ReadFailed;
     defer std.heap.page_allocator.free(content);
 
     if (std.mem.indexOf(u8, content, marker) != null) {
@@ -792,9 +803,9 @@ fn installCompletion(shell: Shell) !void {
         return;
     }
 
-    // Append to file
-    try file.seekFromEnd(0);
-    try file.writeAll(script);
+    // Append to file: 0.16 has no seek-then-write, so write at the end offset.
+    const append_at = try file.length(io);
+    try file.writePositionalAll(io, script, append_at);
 
     std.debug.print("{s}Installed tri autocomplete to {s}{s}\n", .{ GREEN, config_file, RESET });
     std.debug.print("{s}Run 'source {s}' to activate{s}\n", .{ YELLOW, config_file, RESET });
@@ -807,16 +818,19 @@ fn uninstallCompletion(shell: Shell) !void {
     const marker = "# >>> tri autocomplete >>>";
     const marker_end = "# <<< tri autocomplete <<<";
 
-    const file = std.fs.openFileAbsolute(config_file, .{}) catch |err| {
+    const io = tri_io.get();
+    const file = std.Io.Dir.openFileAbsolute(io, config_file, .{}) catch |err| {
         if (err == error.FileNotFound) {
             std.debug.print("{s}No shell config file found: {s}{s}\n", .{ YELLOW, config_file, RESET });
             return;
         }
         return err;
     };
-    defer file.close();
+    defer file.close(io);
 
-    const content = file.readToEndAlloc(std.heap.page_allocator, 1024 * 1024) catch return error.ReadFailed;
+    var read_scratch: [4096]u8 = undefined;
+    var file_reader = file.reader(io, &read_scratch);
+    const content = file_reader.interface.allocRemaining(std.heap.page_allocator, .limited(1024 * 1024)) catch return error.ReadFailed;
     defer std.heap.page_allocator.free(content);
 
     const start_idx = std.mem.indexOf(u8, content, marker) orelse {
@@ -842,8 +856,8 @@ fn uninstallCompletion(shell: Shell) !void {
     defer new_content.deinit(std.heap.page_allocator);
 
     // Rewrite file
-    try file.setEndPos(0);
-    try file.pwriteAll(new_content.items, 0);
+    try file.setLength(io, 0);
+    try file.writePositionalAll(io, new_content.items, 0);
 
     std.debug.print("{s}Uninstalled tri autocomplete from {s}{s}\n", .{ GREEN, config_file, RESET });
     std.debug.print("{s}Run 'source {s}' to apply changes{s}\n", .{ YELLOW, config_file, RESET });
@@ -896,18 +910,19 @@ pub fn runAutocompleteCommand(allocator: Allocator, args: []const []const u8) !v
 
     switch (action) {
         .print => {
-            var script_buffer = try std.ArrayList(u8).initCapacity(allocator, 16384);
-            defer script_buffer.deinit(allocator);
+            var script_buffer: std.Io.Writer.Allocating = try .initCapacity(allocator, 16384);
+            defer script_buffer.deinit();
+            const script_writer = &script_buffer.writer;
 
             const detected = if (shell == .auto) Shell.detect() else shell;
 
             switch (detected) {
-                .bash => try generateBashCompletion(allocator, script_buffer.writer(allocator)),
-                .zsh => try generateZshCompletion(allocator, script_buffer.writer(allocator)),
-                .auto => try generateBashCompletion(allocator, script_buffer.writer(allocator)),
+                .bash => try generateBashCompletion(allocator, script_writer),
+                .zsh => try generateZshCompletion(allocator, script_writer),
+                .auto => try generateBashCompletion(allocator, script_writer),
             }
 
-            std.debug.print("{s}", .{script_buffer.items});
+            std.debug.print("{s}", .{script_buffer.written()});
         },
         .install => try installCompletion(shell),
         .uninstall => try uninstallCompletion(shell),

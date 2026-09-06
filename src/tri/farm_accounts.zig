@@ -12,6 +12,7 @@
 
 const std = @import("std");
 
+const tri_env = @import("tri_env");
 pub const MAX_ACCOUNTS = 8;
 
 pub const Account = struct {
@@ -42,7 +43,7 @@ const account_slots = [_]AccountSlot{
 
 /// Discover available Railway accounts by checking env vars.
 /// Returns number of accounts found. Populates buf[0..count].
-/// Uses std.process.getEnvVarOwned to check existence, then frees immediately.
+/// Uses tri_env.getEnvVarOwned to check existence, then frees immediately.
 /// The Account fields (env_id, project_id) are owned by the allocator — caller must
 /// free them via deinitAccounts().
 pub fn discoverAccounts(allocator: std.mem.Allocator, buf: *[MAX_ACCOUNTS]Account) u8 {
@@ -52,14 +53,14 @@ pub fn discoverAccounts(allocator: std.mem.Allocator, buf: *[MAX_ACCOUNTS]Accoun
         if (count >= MAX_ACCOUNTS) break;
 
         // Check token exists (required for API access)
-        const token = std.process.getEnvVarOwned(allocator, slot.token_key) catch continue;
+        const token = tri_env.getEnvVarOwned(allocator, slot.token_key) catch continue;
         allocator.free(token); // Don't need the value, just checking existence
 
         // Get project_id (required)
-        const project_id = std.process.getEnvVarOwned(allocator, slot.project_key) catch continue;
+        const project_id = tri_env.getEnvVarOwned(allocator, slot.project_key) catch continue;
 
         // Get environment_id (required)
-        const env_id = std.process.getEnvVarOwned(allocator, slot.env_key) catch {
+        const env_id = tri_env.getEnvVarOwned(allocator, slot.env_key) catch {
             allocator.free(project_id);
             continue;
         };

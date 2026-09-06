@@ -10,6 +10,7 @@
 // ═════════════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const qt = @import("queen_types.zig");
 const queen_policy = @import("queen_policy.zig");
@@ -78,7 +79,7 @@ pub const ActionResult = struct {
         const len = @min(text.len, self.output.len);
         @memcpy(self.output[0..len], text[0..len]);
         self.output_len = len;
-        self.timestamp = std.time.timestamp();
+        self.timestamp = tri_time.timestamp();
     }
 };
 
@@ -162,7 +163,7 @@ pub fn executeMassAction(
     action: MassAction,
     config: qt.QueenConfig,
 ) !ActionResult {
-    const start = std.time.milliTimestamp();
+    const start = tri_time.milliTimestamp();
     var result = ActionResult{
         .success = false,
         .affected_count = action.count,
@@ -200,7 +201,7 @@ pub fn executeMassAction(
     }
 
     result.affected_count = action.count;
-    const elapsed = std.time.milliTimestamp() - start;
+    const elapsed = tri_time.milliTimestamp() - start;
     result.duration_ms = @intCast(@abs(elapsed));
 
     // Log to hippocampus
@@ -252,7 +253,7 @@ pub fn health() CellHealth {
     return CellHealth{
         .status = .healthy,
         .cycle = 0,
-        .last_check = std.time.timestamp(),
+        .last_check = tri_time.timestamp(),
     };
 }
 
@@ -413,9 +414,9 @@ test "gigantocellular — ActionResult outputStr empty" {
 test "gigantocellular — ActionResult setOutput updates timestamp" {
     var result = ActionResult{ .success = false, .affected_count = 0, .duration_ms = 0 };
 
-    const before = std.time.timestamp();
+    const before = tri_time.timestamp();
     result.setOutput("Test");
-    const after = std.time.timestamp();
+    const after = tri_time.timestamp();
 
     try std.testing.expect(result.timestamp >= before);
     try std.testing.expect(result.timestamp <= after);

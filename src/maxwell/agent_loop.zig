@@ -4,6 +4,7 @@
 // φ² + 1/φ² = 3 = TRINITY
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const codebase = @import("codebase.zig");
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -56,7 +57,7 @@ pub const Task = struct {
             .constraints = std.ArrayList([]const u8).init(allocator),
             .status = .Pending,
             .result = null,
-            .created_at = std.time.timestamp(),
+            .created_at = tri_time.timestamp(),
             .started_at = null,
             .completed_at = null,
         };
@@ -182,8 +183,8 @@ pub const AgentLoop = struct {
                 .current_task = null,
                 .tasks_completed = 0,
                 .tasks_failed = 0,
-                .start_time = std.time.timestamp(),
-                .last_activity = std.time.timestamp(),
+                .start_time = tri_time.timestamp(),
+                .last_activity = tri_time.timestamp(),
             },
             .codebase_interface = codebase.Codebase.init(allocator, config.working_directory),
             .task_queue = std.PriorityQueue(*Task, void, taskCompare).init(allocator, {}),
@@ -216,7 +217,7 @@ pub const AgentLoop = struct {
 
         self.running.store(true, .seq_cst);
         self.state.status = .Idle;
-        self.state.start_time = std.time.timestamp();
+        self.state.start_time = tri_time.timestamp();
 
         self.log(.Info, "Maxwell Daemon starting...");
 
@@ -265,7 +266,7 @@ pub const AgentLoop = struct {
     /// inand yes in
     pub fn submitTask(self: *AgentLoop, description: []const u8, task_type: TaskType) !u64 {
         const task = try self.allocator.create(Task);
-        const id = @as(u64, @intCast(std.time.timestamp())) ^ @as(u64, @intFromPtr(task));
+        const id = @as(u64, @intCast(tri_time.timestamp())) ^ @as(u64, @intFromPtr(task));
 
         task.* = Task.init(self.allocator, id, description, task_type);
         try self.task_queue.add(task);
@@ -277,7 +278,7 @@ pub const AgentLoop = struct {
     /// inand yes with and
     pub fn submitTaskWithPriority(self: *AgentLoop, description: []const u8, task_type: TaskType, priority: u8) !u64 {
         const task = try self.allocator.create(Task);
-        const id = @as(u64, @intCast(std.time.timestamp())) ^ @as(u64, @intFromPtr(task));
+        const id = @as(u64, @intCast(tri_time.timestamp())) ^ @as(u64, @intFromPtr(task));
 
         task.* = Task.init(self.allocator, id, description, task_type);
         task.priority = @min(priority, 10);
@@ -297,10 +298,10 @@ pub const AgentLoop = struct {
 
         self.state.status = .Working;
         self.state.current_task = task;
-        self.state.last_activity = std.time.timestamp();
+        self.state.last_activity = tri_time.timestamp();
 
         task.status = .InProgress;
-        task.started_at = std.time.timestamp();
+        task.started_at = tri_time.timestamp();
 
         if (self.on_task_start) |handler| {
             handler(task);
@@ -308,7 +309,7 @@ pub const AgentLoop = struct {
 
         // Execute task
         var result = TaskResult.init(self.allocator);
-        const start_time = std.time.milliTimestamp();
+        const start_time = tri_time.milliTimestamp();
 
         self.executeTask(task, &result) catch |err| {
             result.success = false;
@@ -316,7 +317,7 @@ pub const AgentLoop = struct {
             self.state.tasks_failed += 1;
         };
 
-        result.duration_ms = @intCast(std.time.milliTimestamp() - start_time);
+        result.duration_ms = @intCast(tri_time.milliTimestamp() - start_time);
 
         if (result.success) {
             self.state.tasks_completed += 1;
@@ -326,7 +327,7 @@ pub const AgentLoop = struct {
             task.status = .Failed;
         }
 
-        task.completed_at = std.time.timestamp();
+        task.completed_at = tri_time.timestamp();
         task.result = result;
 
         if (self.on_task_complete) |handler| {
@@ -505,7 +506,7 @@ pub const AgentLoop = struct {
     }
 
     pub fn getUptime(self: *AgentLoop) i64 {
-        return std.time.timestamp() - self.state.start_time;
+        return tri_time.timestamp() - self.state.start_time;
     }
 };
 

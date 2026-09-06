@@ -13,6 +13,8 @@
 // @origin(manual) @regen(pending)
 
 const std = @import("std");
+const tri_env = @import("tri_env");
+const tri_time = @import("tri_time");
 const swarm = @import("swarm_tools.zig");
 const mu_doctor = @import("mu_doctor.zig");
 
@@ -179,11 +181,11 @@ pub fn oracleStatus(buf: []u8) []const u8 {
 
 /// Auto-start from env vars (called from server.zig main)
 pub fn tryAutoStart() void {
-    const token = std.posix.getenv("TELEGRAM_BOT_TOKEN") orelse
-        std.posix.getenv("RALPH_TELEGRAM_BOT_TOKEN") orelse return;
-    const chat_id = std.posix.getenv("TELEGRAM_CHAT_ID") orelse
-        std.posix.getenv("RALPH_TELEGRAM_CHAT_ID") orelse return;
-    const oracle_enabled = std.posix.getenv("ORACLE_ENABLED") orelse "false";
+    const token = tri_env.getPosix("TELEGRAM_BOT_TOKEN") orelse
+        tri_env.getPosix("RALPH_TELEGRAM_BOT_TOKEN") orelse return;
+    const chat_id = tri_env.getPosix("TELEGRAM_CHAT_ID") orelse
+        tri_env.getPosix("RALPH_TELEGRAM_CHAT_ID") orelse return;
+    const oracle_enabled = tri_env.getPosix("ORACLE_ENABLED") orelse "false";
 
     if (!std.mem.eql(u8, oracle_enabled, "true") and !std.mem.eql(u8, oracle_enabled, "1")) return;
 
@@ -259,7 +261,7 @@ fn watchdogLoop() void {
         // Sleep for interval (check stop flag every second)
         var slept: u64 = 0;
         while (slept < stored_interval_ms and oracle_running.load(.acquire)) {
-            std.Thread.sleep(1_000_000_000); // 1 second
+            tri_time.sleep(1_000_000_000); // 1 second
             slept += 1000;
         }
     }

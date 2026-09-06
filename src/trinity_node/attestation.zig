@@ -17,6 +17,9 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
+const tri_proc = @import("tri_proc");
+const tri_time = @import("tri_time");
 const crypto = @import("crypto.zig");
 const Ed25519 = std.crypto.sign.Ed25519;
 const Sha256 = std.crypto.hash.sha2.Sha256;
@@ -103,13 +106,17 @@ pub const SignedAttestation = struct {
 /// This hash is the attestation key — the cryptographic commitment to
 /// (source, toolchain, routing).
 pub fn computeBitstreamHash(path: []const u8) ![32]u8 {
-    const file = try std.fs.cwd().openFile(path, .{});
-    defer file.close();
+    const io = tri_io.get();
+    const file = try std.Io.Dir.cwd().openFile(io, path, .{});
+    defer file.close(io);
 
     var hasher = Sha256.init(.{});
+    var scratch: [4096]u8 = undefined;
+    var file_reader = file.reader(io, &scratch);
     var buf: [65536]u8 = undefined;
     while (true) {
-        const bytes_read = try file.read(&buf);
+        // Short result only at end of stream, so 0 means EOF.
+        const bytes_read = try file_reader.interface.readSliceShort(&buf);
         if (bytes_read == 0) break;
         hasher.update(buf[0..bytes_read]);
     }
@@ -125,13 +132,17 @@ pub fn computeBitstreamHashHex(allocator: std.mem.Allocator, path: []const u8) !
 
 /// Compute SHA256 of a conformance vectors file.
 pub fn computeVectorsHash(allocator: std.mem.Allocator, vectors_path: []const u8) ![]u8 {
-    const file = try std.fs.cwd().openFile(vectors_path, .{});
-    defer file.close();
+    const io = tri_io.get();
+    const file = try std.Io.Dir.cwd().openFile(io, vectors_path, .{});
+    defer file.close(io);
 
     var hasher = Sha256.init(.{});
+    var scratch: [4096]u8 = undefined;
+    var file_reader = file.reader(io, &scratch);
     var buf: [65536]u8 = undefined;
     while (true) {
-        const bytes_read = try file.read(&buf);
+        // Short result only at end of stream, so 0 means EOF.
+        const bytes_read = try file_reader.interface.readSliceShort(&buf);
         if (bytes_read == 0) break;
         hasher.update(buf[0..bytes_read]);
     }
@@ -169,7 +180,7 @@ pub fn verifyProvenanceWithTool(
     bitstream_path: []const u8,
     tool_path: []const u8,
 ) bool {
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ "python3", tool_path, "verify", bitstream_path },
         .max_output_bytes = 1024 * 1024,
@@ -178,7 +189,7 @@ pub fn verifyProvenanceWithTool(
     defer allocator.free(result.stderr);
 
     return switch (result.term) {
-        .Exited => |code| code == 0,
+        .exited => |code| code == 0,
         else => false,
     };
 }
@@ -427,7 +438,7 @@ pub fn writeSignedAttestation(
     const json = try serializeSignedAttestation(allocator, signed);
     defer allocator.free(json);
 
-    try std.fs.cwd().writeFile(.{ .sub_path = path, .data = json });
+    try std.Io.Dir.cwd().writeFile(tri_io.get(), .{ .sub_path = path, .data = json });
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -456,7 +467,7 @@ fn parseHexPubKey(pubkey_str: []const u8, out: *[32]u8) bool {
 
 /// Get the current git commit (best-effort).
 fn getGitCommit(allocator: std.mem.Allocator) ![]u8 {
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ "git", "rev-parse", "--short=12", "HEAD" },
         .max_output_bytes = 256,
@@ -465,7 +476,7 @@ fn getGitCommit(allocator: std.mem.Allocator) ![]u8 {
     defer allocator.free(result.stderr);
 
     const code = switch (result.term) {
-        .Exited => |c| c,
+        .exited => |c| c,
         else => return try allocator.dupe(u8, "git:unknown"),
     };
     if (code != 0) return try allocator.dupe(u8, "git:unknown");
@@ -476,7 +487,7 @@ fn getGitCommit(allocator: std.mem.Allocator) ![]u8 {
 
 /// Get the current UTC timestamp as ISO 8601.
 fn getTimestamp(allocator: std.mem.Allocator) ![]u8 {
-    const ts: i64 = std.time.timestamp();
+    const ts: i64 = tri_time.timestamp();
     const epoch_secs: u64 = @intCast(@max(ts, 0));
 
     const es = std.time.epoch.EpochSeconds{ .secs = epoch_secs };
@@ -541,12 +552,13 @@ pub fn defaultToolchain() ToolchainProvenance {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 test "compute bitstream hash of known data" {
+    const io = tri_io.get();
     const tmp = "test_bitstream_hash.tmp";
-    defer std.fs.cwd().deleteFile(tmp) catch {};
+    defer std.Io.Dir.cwd().deleteFile(io, tmp) catch {};
 
     // Write known data
     const data = "Trinity DePIN Trust Anchor";
-    try std.fs.cwd().writeFile(.{ .sub_path = tmp, .data = data });
+    try std.Io.Dir.cwd().writeFile(io, .{ .sub_path = tmp, .data = data });
 
     const hash = try computeBitstreamHash(tmp);
     const expected = crypto.sha256(data);

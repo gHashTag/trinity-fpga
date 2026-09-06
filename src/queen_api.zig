@@ -7,6 +7,7 @@
 
 const std = @import("std");
 
+const tri_io = @import("tri_io");
 const allocator = std.heap.c_allocator;
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -22,18 +23,22 @@ export fn trinity_queen_version() [*:0]const u8 {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn readFileIntoBuffer(path: []const u8, buf: [*]u8, len: usize) usize {
-    const file = std.fs.openFileAbsolute(path, .{}) catch return 0;
-    defer file.close();
-    const bytes_read = file.readAll(buf[0..len]) catch return 0;
+    const io = tri_io.get();
+    const file = std.Io.Dir.openFileAbsolute(io, path, .{}) catch return 0;
+    defer file.close(io);
+
+    // A file shorter than the buffer is the normal case here, so a short read
+    // is not an error: readSliceShort returns fewer bytes only at end of
+    // stream, which is what `readAll` meant. The reader is unbuffered so it
+    // reads straight into the caller's buffer.
+    var fr = file.reader(io, &.{});
+    const bytes_read = fr.interface.readSliceShort(buf[0..len]) catch return 0;
     return bytes_read;
 }
 
 fn readRelativeFile(rel_path: []const u8, buf: [*]u8, len: usize) usize {
-    const cwd = std.fs.cwd();
-    const file = cwd.openFile(rel_path, .{}) catch return 0;
-    defer file.close();
-    const bytes_read = file.readAll(buf[0..len]) catch return 0;
-    return bytes_read;
+    const slice = std.Io.Dir.cwd().readFile(tri_io.get(), rel_path, buf[0..len]) catch return 0;
+    return slice.len;
 }
 
 fn writeJsonField(writer: anytype, key: []const u8, value: []const u8) void {
@@ -50,8 +55,7 @@ export fn trinity_queen_sacred_constants(buf: [*]u8, len: usize) usize {
     const inv_phi_sq = 1.0 / phi_sq;
     const trinity_identity = phi_sq + inv_phi_sq; // = 3.0
 
-    var fbs = std.io.fixedBufferStream(buf[0..len]);
-    const w = fbs.writer();
+    var w = std.Io.Writer.fixed(buf[0..len]);
 
     w.print(
         \\{{"phi":{d:.10},"phi_squared":{d:.10},"inv_phi_squared":{d:.10},
@@ -69,7 +73,7 @@ export fn trinity_queen_sacred_constants(buf: [*]u8, len: usize) usize {
         \\"delta_cp":248.75,"w0":-0.618}}
     , .{}) catch return 0;
 
-    return fbs.pos;
+    return w.end;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -86,8 +90,7 @@ export fn trinity_queen_ouroboros_state(buf: [*]u8, len: usize) usize {
 
 export fn trinity_queen_faculty_snapshot(buf: [*]u8, len: usize) usize {
     // Read heartbeats from all agents
-    var fbs = std.io.fixedBufferStream(buf[0..len]);
-    const w = fbs.writer();
+    var w = std.Io.Writer.fixed(buf[0..len]);
 
     w.print("{{\"agents\":[", .{}) catch return 0;
 
@@ -111,7 +114,7 @@ export fn trinity_queen_faculty_snapshot(buf: [*]u8, len: usize) usize {
     }
 
     w.print("]}}", .{}) catch return 0;
-    return fbs.pos;
+    return w.end;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -119,19 +122,22 @@ export fn trinity_queen_faculty_snapshot(buf: [*]u8, len: usize) usize {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 export fn trinity_queen_farm_events(buf: [*]u8, len: usize, last_n: usize) usize {
-    const cwd = std.fs.cwd();
-    const file = cwd.openFile(".trinity/farm/events.jsonl", .{}) catch return 0;
-    defer file.close();
+    const io = tri_io.get();
+    const cwd = std.Io.Dir.cwd();
+    const file = cwd.openFile(io, ".trinity/farm/events.jsonl", .{}) catch return 0;
+    defer file.close(io);
 
     // Read entire file into temp buffer, then extract last N lines
     var temp_buf = allocator.alloc(u8, 256 * 1024) catch return 0;
     defer allocator.free(temp_buf);
 
-    const total = file.readAll(temp_buf) catch return 0;
+    // A file smaller than temp_buf is expected, so a short read is legitimate.
+    var fr = file.reader(io, &.{});
+    const total = fr.interface.readSliceShort(temp_buf) catch return 0;
     if (total == 0) return 0;
 
     // Find last N newlines
-    var line_starts = std.ArrayListUnmanaged(usize){};
+    var line_starts = @as(std.ArrayListUnmanaged(usize), .empty);
     defer line_starts.deinit(allocator);
 
     line_starts.append(allocator, 0) catch return 0;
@@ -145,8 +151,7 @@ export fn trinity_queen_farm_events(buf: [*]u8, len: usize, last_n: usize) usize
     const start_idx = line_starts.items.len - n;
     const start_pos = line_starts.items[start_idx];
 
-    var fbs = std.io.fixedBufferStream(buf[0..len]);
-    const w = fbs.writer();
+    var w = std.Io.Writer.fixed(buf[0..len]);
 
     w.print("{{\"events\":[", .{}) catch return 0;
 
@@ -165,7 +170,7 @@ export fn trinity_queen_farm_events(buf: [*]u8, len: usize, last_n: usize) usize
     }
 
     w.print("]}}", .{}) catch return 0;
-    return fbs.pos;
+    return w.end;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -181,8 +186,7 @@ export fn trinity_queen_swarm_state(buf: [*]u8, len: usize) usize {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 export fn trinity_queen_build_status(buf: [*]u8, len: usize) usize {
-    var fbs = std.io.fixedBufferStream(buf[0..len]);
-    const w = fbs.writer();
+    var w = std.Io.Writer.fixed(buf[0..len]);
 
     // Check build by reading e2e results
     var e2e_buf: [4096]u8 = undefined;
@@ -196,7 +200,7 @@ export fn trinity_queen_build_status(buf: [*]u8, len: usize) usize {
     }
 
     w.print("}}", .{}) catch return 0;
-    return fbs.pos;
+    return w.end;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -230,22 +234,21 @@ export fn trinity_queen_arena_leaderboard(buf: [*]u8, len: usize) usize {
 export fn trinity_queen_experience_recent(buf: [*]u8, len: usize, n: usize) usize {
     _ = n;
     // List recent experience episodes
-    const cwd = std.fs.cwd();
-    var dir = cwd.openDir(".trinity/experience/episodes", .{ .iterate = true }) catch {
-        var fbs = std.io.fixedBufferStream(buf[0..len]);
-        const w = fbs.writer();
+    const io = tri_io.get();
+    const cwd = std.Io.Dir.cwd();
+    var dir = cwd.openDir(io, ".trinity/experience/episodes", .{ .iterate = true }) catch {
+        var w = std.Io.Writer.fixed(buf[0..len]);
         w.print("{{\"episodes\":[]}}", .{}) catch return 0;
-        return fbs.pos;
+        return w.end;
     };
-    defer dir.close();
+    defer dir.close(io);
 
-    var fbs = std.io.fixedBufferStream(buf[0..len]);
-    const w = fbs.writer();
+    var w = std.Io.Writer.fixed(buf[0..len]);
     w.print("{{\"episodes\":[", .{}) catch return 0;
 
     var count: usize = 0;
     var iter = dir.iterate();
-    while (iter.next() catch null) |entry| {
+    while (iter.next(io) catch null) |entry| {
         if (!std.mem.endsWith(u8, entry.name, ".json")) continue;
         if (count > 0) w.print(",", .{}) catch {};
         w.print("\"{s}\"", .{entry.name}) catch {};
@@ -254,7 +257,7 @@ export fn trinity_queen_experience_recent(buf: [*]u8, len: usize, n: usize) usiz
     }
 
     w.print("],\"count\":{d}}}", .{count}) catch return 0;
-    return fbs.pos;
+    return w.end;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -274,18 +277,21 @@ export fn trinity_queen_actions_list(buf: [*]u8, len: usize) usize {
 }
 
 export fn trinity_queen_audit_recent(n: usize, buf: [*]u8, len: usize) usize {
-    const cwd = std.fs.cwd();
-    const file = cwd.openFile(".trinity/queen/audit.jsonl", .{}) catch return 0;
-    defer file.close();
+    const io = tri_io.get();
+    const cwd = std.Io.Dir.cwd();
+    const file = cwd.openFile(io, ".trinity/queen/audit.jsonl", .{}) catch return 0;
+    defer file.close(io);
 
     var temp_buf = allocator.alloc(u8, 128 * 1024) catch return 0;
     defer allocator.free(temp_buf);
 
-    const total = file.readAll(temp_buf) catch return 0;
+    // A file smaller than temp_buf is expected, so a short read is legitimate.
+    var fr = file.reader(io, &.{});
+    const total = fr.interface.readSliceShort(temp_buf) catch return 0;
     if (total == 0) return 0;
 
     // Find last N newlines
-    var line_starts = std.ArrayListUnmanaged(usize){};
+    var line_starts = @as(std.ArrayListUnmanaged(usize), .empty);
     defer line_starts.deinit(allocator);
 
     line_starts.append(allocator, 0) catch return 0;
@@ -299,8 +305,7 @@ export fn trinity_queen_audit_recent(n: usize, buf: [*]u8, len: usize) usize {
     const start_idx = line_starts.items.len - count;
     const start_pos = line_starts.items[start_idx];
 
-    var fbs = std.io.fixedBufferStream(buf[0..len]);
-    const w = fbs.writer();
+    var w = std.Io.Writer.fixed(buf[0..len]);
 
     w.print("{{\"entries\":[", .{}) catch return 0;
 
@@ -319,7 +324,7 @@ export fn trinity_queen_audit_recent(n: usize, buf: [*]u8, len: usize) usize {
     }
 
     w.print("]}}", .{}) catch return 0;
-    return fbs.pos;
+    return w.end;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

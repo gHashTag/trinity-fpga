@@ -12,6 +12,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 
 const queen_acc = @import("queen_acc.zig");
@@ -192,7 +193,7 @@ test "integration — PCC consciousness state detects stuck" {
     };
     var detector = queen_pcc.LoopDetector{};
 
-    const now = std.time.timestamp();
+    const now = tri_time.timestamp();
     const stuck_state = queen_pcc.diagnoseConsciousness(
         model,
         &detector,
@@ -399,7 +400,7 @@ test "integration — Stress test: Consciousness monitoring during decisions" {
     }
 
     // Check consciousness state
-    const consciousness = queen_pcc.diagnoseConsciousness(model, &detector, std.time.timestamp());
+    const consciousness = queen_pcc.diagnoseConsciousness(model, &detector, tri_time.timestamp());
 
     try std.testing.expect(consciousness.status != .dead_end);
 }

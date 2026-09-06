@@ -13,6 +13,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const Allocator = std.mem.Allocator;
 const cell_parser = @import("ribosome.zig");
 const demos = @import("tri_demos.zig");
@@ -340,7 +341,8 @@ pub fn executeCellCommand(allocator: Allocator, cmd: CellCommand, args: []const 
     defer allocator.free(binary_path);
 
     // Check if binary exists
-    std.fs.cwd().access(binary_path, .{}) catch {
+    const io = tri_io.get();
+    std.Io.Dir.cwd().access(io, binary_path, .{}) catch {
         // No binary — try running via `tri` subcommand delegation
         printCellCommandInfo(cmd);
         return;
@@ -361,14 +363,13 @@ pub fn executeCellCommand(allocator: Allocator, cmd: CellCommand, args: []const 
         try argv.append(arg);
     }
 
-    var child = std.process.Child.init(argv.items, allocator);
-    child.stdin_behavior = .Inherit;
-    child.stdout_behavior = .Inherit;
-    child.stderr_behavior = .Inherit;
-    try child.spawn();
-    const term = try child.wait();
-    if (term.Exited != 0) {
-        std.process.exit(term.Exited);
+    // 0.16 replaced `Child.init` + `spawn` with `process.spawn`, and its
+    // stdio defaults are already `.inherit` -- the three assignments above
+    // were setting what is now the default.
+    var child = try std.process.spawn(io, .{ .argv = argv.items });
+    const term = try child.wait(io);
+    if (term.exited != 0) {
+        std.process.exit(term.exited);
     }
 }
 
@@ -423,7 +424,7 @@ fn discoverCellCommands(allocator: Allocator) ![]CellCommand {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn loadFromCache(allocator: Allocator, full_command: []const u8) ?CellCommand {
-    const content = std.fs.cwd().readFileAlloc(allocator, CACHE_PATH, 262144) catch return null;
+    const content = std.Io.Dir.cwd().readFileAlloc(tri_io.get(), CACHE_PATH, allocator, .limited(262144)) catch return null;
     defer allocator.free(content);
 
     const parsed = std.json.parseFromSlice(std.json.Value, allocator, content, .{}) catch return null;
@@ -474,12 +475,16 @@ fn loadFromCache(allocator: Allocator, full_command: []const u8) ?CellCommand {
 }
 
 fn writeCache(allocator: Allocator, commands: []const CellCommand) !void {
-    // Ensure .trinity/ exists
-    std.fs.cwd().makePath(".trinity") catch {};
+    const io = tri_io.get();
 
-    var buf = std.array_list.Managed(u8).init(allocator);
+    // Ensure .trinity/ exists
+    std.Io.Dir.cwd().createDirPath(io, ".trinity") catch {};
+
+    // 0.16 dropped `ArrayList.writer()`; an Allocating writer is the
+    // replacement, and `written()` gives back what `buf.items` gave.
+    var buf: std.Io.Writer.Allocating = .init(allocator);
     defer buf.deinit();
-    const writer = buf.writer();
+    const writer = &buf.writer;
 
     try writer.writeAll("{\"commands\":[");
     for (commands, 0..) |cmd, i| {
@@ -496,14 +501,14 @@ fn writeCache(allocator: Allocator, commands: []const CellCommand) !void {
     }
     try writer.writeAll("]}");
 
-    const file = try std.fs.cwd().createFile(CACHE_PATH, .{});
-    defer file.close();
-    try file.writeAll(buf.items);
+    const file = try std.Io.Dir.cwd().createFile(io, CACHE_PATH, .{});
+    defer file.close(io);
+    try file.writeStreamingAll(io, buf.written());
 }
 
 /// Invalidate the command cache (called by `tri cell check --sync`)
 pub fn invalidateCache() void {
-    std.fs.cwd().deleteFile(CACHE_PATH) catch {};
+    std.Io.Dir.cwd().deleteFile(tri_io.get(), CACHE_PATH) catch {};
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -515,13 +520,14 @@ const MCP_TOOLS_PATH = "data/cells/mcp_tools.json";
 pub fn runMcpGenCommand(allocator: Allocator) !void {
     std.debug.print("\x1b[36m[mcp-gen]\x1b[0m Scanning cells for MCP tool definitions...\n", .{});
 
-    const cwd = std.fs.cwd();
+    const io = tri_io.get();
+    const cwd = std.Io.Dir.cwd();
     var cells_found: usize = 0;
     var tools_generated: usize = 0;
 
-    var buf = std.array_list.Managed(u8).init(allocator);
+    var buf: std.Io.Writer.Allocating = .init(allocator);
     defer buf.deinit();
-    const writer = buf.writer();
+    const writer = &buf.writer;
 
     try writer.writeAll("{\"tools\":[");
 
@@ -572,11 +578,11 @@ pub fn runMcpGenCommand(allocator: Allocator) !void {
     try writer.writeAll("\n]}");
 
     // Ensure data/cells/ exists
-    cwd.makePath("data/cells") catch {};
+    cwd.createDirPath(io, "data/cells") catch {};
 
-    const file = try cwd.createFile(MCP_TOOLS_PATH, .{});
-    defer file.close();
-    try file.writeAll(buf.items);
+    const file = try cwd.createFile(io, MCP_TOOLS_PATH, .{});
+    defer file.close(io);
+    try file.writeStreamingAll(io, buf.written());
 
     std.debug.print("\x1b[32m✓\x1b[0m Scanned {d} cells, generated {d} MCP tools → {s}\n", .{
         cells_found, tools_generated, MCP_TOOLS_PATH,

@@ -3,6 +3,7 @@
 //! φ² + 1/φ² = 3
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const coptic_compiler = @import("coptic_compiler.zig");
 const coptic_semantic = @import("coptic_semantic.zig");
 const coptic_lexer = @import("coptic_lexer.zig");
@@ -414,9 +415,9 @@ fn runOptimized(path: []const u8, allocator: std.mem.Allocator) !void {
     // Execute optimized SSA IR
     var interp = jit_e2e.SSAInterpreter.init(allocator);
 
-    const start_time = std.time.nanoTimestamp();
+    const start_time = tri_time.nanoTimestamp();
     const result = interp.execute(&converter.func);
-    const end_time = std.time.nanoTimestamp();
+    const end_time = tri_time.nanoTimestamp();
     const exec_time_ns: u64 = @intCast(@max(0, end_time - start_time));
 
     // Print results
@@ -520,9 +521,9 @@ fn runNative(path: []const u8, allocator: std.mem.Allocator) !void {
     defer exec_mem.free();
 
     // Execute native code
-    const start_time = std.time.nanoTimestamp();
+    const start_time = tri_time.nanoTimestamp();
     const result = exec_mem.execute();
-    const end_time = std.time.nanoTimestamp();
+    const end_time = tri_time.nanoTimestamp();
     const exec_time_ns: u64 = @intCast(@max(0, end_time - start_time));
 
     // Print results
@@ -688,13 +689,13 @@ fn runWithJIT(path: []const u8, allocator: std.mem.Allocator) !void {
     };
     defer jit_vm.deinit();
 
-    const start_time = std.time.nanoTimestamp();
+    const start_time = tri_time.nanoTimestamp();
     const result = jit_vm.executeTiered(code, constants) catch |err| {
         printError("JIT execution error");
         std.debug.print("  Error: {}\n", .{err});
         return;
     };
-    const end_time = std.time.nanoTimestamp();
+    const end_time = tri_time.nanoTimestamp();
     const elapsed_ns: u64 = @intCast(@max(0, end_time - start_time));
     const elapsed_us = @as(f64, @floatFromInt(elapsed_ns)) / 1000.0;
 
@@ -769,9 +770,9 @@ fn benchmarkJIT(path: []const u8, total_iterations: u32, allocator: std.mem.Allo
     var warmup_time: u64 = 0;
     var i: u32 = 0;
     while (i < warmup_iterations) : (i += 1) {
-        const start = std.time.nanoTimestamp();
+        const start = tri_time.nanoTimestamp();
         _ = jit_vm.executeTiered(code, constants) catch continue;
-        const end = std.time.nanoTimestamp();
+        const end = tri_time.nanoTimestamp();
         warmup_time += @intCast(@max(0, end - start));
     }
     const warmup_avg = warmup_time / warmup_iterations;
@@ -785,9 +786,9 @@ fn benchmarkJIT(path: []const u8, total_iterations: u32, allocator: std.mem.Allo
 
     i = 0;
     while (i < measured_iterations) : (i += 1) {
-        const start = std.time.nanoTimestamp();
+        const start = tri_time.nanoTimestamp();
         _ = jit_vm.executeTiered(code, constants) catch continue;
-        const end = std.time.nanoTimestamp();
+        const end = tri_time.nanoTimestamp();
         const elapsed: u64 = @intCast(@max(0, end - start));
         measured_time += elapsed;
         min_time = @min(min_time, elapsed);
@@ -901,7 +902,7 @@ fn benchmarkVM(path: []const u8, iterations: u32, allocator: std.mem.Allocator) 
     defer allocator.free(source);
 
     // Measure parse time
-    const parse_start = std.time.nanoTimestamp();
+    const parse_start = tri_time.nanoTimestamp();
     var parser = coptic_parser.Parser.init(allocator, source);
     var ast = parser.parseProgram() catch |err| {
         printError("Parse error");
@@ -909,10 +910,10 @@ fn benchmarkVM(path: []const u8, iterations: u32, allocator: std.mem.Allocator) 
         return;
     };
     defer ast.deinit();
-    const parse_time = std.time.nanoTimestamp() - parse_start;
+    const parse_time = tri_time.nanoTimestamp() - parse_start;
 
     // Measure compile time
-    const compile_start = std.time.nanoTimestamp();
+    const compile_start = tri_time.nanoTimestamp();
     var compiler = bytecode_compiler.BytecodeCompiler.init(allocator, source);
     defer compiler.deinit();
 
@@ -921,7 +922,7 @@ fn benchmarkVM(path: []const u8, iterations: u32, allocator: std.mem.Allocator) 
         std.debug.print("  Error: {}\n", .{err});
         return;
     };
-    const compile_time = std.time.nanoTimestamp() - compile_start;
+    const compile_time = tri_time.nanoTimestamp() - compile_start;
 
     const code = compiler.getCode();
     const constants = compiler.getConstants();

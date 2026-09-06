@@ -2,6 +2,7 @@
 //! Consult experience, save episodes, similarity search via Levenshtein
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 
 /// Error entry for blacklist
 pub const Error = struct {
@@ -40,8 +41,9 @@ pub const ExperienceEngine = struct {
     blacklist: std.StringHashMap(Error),
 
     pub fn init(allocator: std.mem.Allocator) !ExperienceEngine {
+        const io = tri_io.get();
         const episodes_dir = ".trinity/experience/episodes";
-        std.fs.cwd().makePath(episodes_dir) catch {};
+        std.Io.Dir.cwd().createDirPath(io, episodes_dir) catch {};
 
         return ExperienceEngine{
             .allocator = allocator,

@@ -12,6 +12,7 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 const types = @import("types.zig");
+const tri_io = @import("tri_io");
 
 const NetBit = types.NetBit;
 const YosysCell = types.YosysCell;
@@ -78,10 +79,14 @@ pub const ParseResult = struct {
 
 /// Parse a Yosys JSON netlist file and return the top-level module.
 pub fn parseYosysJson(allocator: Allocator, file_path: []const u8) !ParseResult {
-    const file = try std.fs.cwd().openFile(file_path, .{});
-    defer file.close();
-
-    const content = try file.readToEndAlloc(allocator, 256 * 1024 * 1024);
+    // 0.16: `File.readToEndAlloc` is gone; reading a whole named file is
+    // `Dir.readFileAlloc`, which takes the io first and the size as a Limit.
+    const content = try std.Io.Dir.cwd().readFileAlloc(
+        tri_io.get(),
+        file_path,
+        allocator,
+        .limited(256 * 1024 * 1024),
+    );
     defer allocator.free(content);
 
     return parseYosysJsonFromSlice(allocator, content);
@@ -181,7 +186,7 @@ fn parsePorts(allocator: Allocator, mod_obj: std.json.ObjectMap) ![]YosysPort {
         else => return ParseError.InvalidJsonStructure,
     };
 
-    var port_list: std.ArrayList(YosysPort) = .{};
+    var port_list: std.ArrayList(YosysPort) = .empty;
     errdefer {
         for (port_list.items) |p| {
             allocator.free(p.name);
@@ -231,7 +236,7 @@ fn parseCells(allocator: Allocator, mod_obj: std.json.ObjectMap) ![]YosysCell {
         else => return ParseError.InvalidJsonStructure,
     };
 
-    var cell_list: std.ArrayList(YosysCell) = .{};
+    var cell_list: std.ArrayList(YosysCell) = .empty;
     errdefer {
         for (cell_list.items) |cell| {
             allocator.free(cell.name);
@@ -303,7 +308,7 @@ fn parsePortDirections(allocator: Allocator, cell_obj: std.json.ObjectMap) ![]Yo
         else => return &[0]YosysCell.PortDirEntry{},
     };
 
-    var list: std.ArrayList(YosysCell.PortDirEntry) = .{};
+    var list: std.ArrayList(YosysCell.PortDirEntry) = .empty;
     errdefer {
         for (list.items) |pd| allocator.free(pd.name);
         list.deinit(allocator);
@@ -332,7 +337,7 @@ fn parseConnections(allocator: Allocator, cell_obj: std.json.ObjectMap) ![]Yosys
         else => return &[0]YosysCell.ConnectionEntry{},
     };
 
-    var list: std.ArrayList(YosysCell.ConnectionEntry) = .{};
+    var list: std.ArrayList(YosysCell.ConnectionEntry) = .empty;
     errdefer {
         for (list.items) |item| {
             allocator.free(item.name);
@@ -371,7 +376,7 @@ fn parseParameters(allocator: Allocator, cell_obj: std.json.ObjectMap) ![]YosysC
         else => return &[0]YosysCell.ParamEntry{},
     };
 
-    var list: std.ArrayList(YosysCell.ParamEntry) = .{};
+    var list: std.ArrayList(YosysCell.ParamEntry) = .empty;
     errdefer {
         for (list.items) |param| {
             allocator.free(param.name);
@@ -384,7 +389,7 @@ fn parseParameters(allocator: Allocator, cell_obj: std.json.ObjectMap) ![]YosysC
     while (iter.next()) |entry| {
         const val_str = switch (entry.value_ptr.*) {
             .string => |s| s,
-            .integer => |_| "0",
+            .integer => "0",
             else => continue,
         };
         const param_name = try dupeStr(allocator, entry.key_ptr.*);

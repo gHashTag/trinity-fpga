@@ -15,6 +15,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 
 const RESET = "\x1b[0m";
@@ -123,7 +124,7 @@ pub fn analyzeWorkerLogs(
         if (last_log.object.get("timestamp")) |ts| {
             if (ts == .integer) {
                 const log_ts_ms = ts.integer;
-                const now_ms = std.time.milliTimestamp();
+                const now_ms = tri_time.milliTimestamp();
                 const age_ms = now_ms - log_ts_ms;
                 result.log_age_sec = @divTrunc(age_ms, 1000);
 
@@ -274,7 +275,7 @@ pub fn analyzeFarmAccounts(
     accounts: []const []const u8,
 ) ![]AccountAnalysis {
     var results = try std.ArrayList(AccountAnalysis).initCapacity(allocator, accounts.len);
-    defer results.deinit();
+    defer results.deinit(allocator);
 
     for (accounts) |acct_name| {
         const analysis = AccountAnalysis{
@@ -282,7 +283,7 @@ pub fn analyzeFarmAccounts(
             .suffix = "",
             .status = .unmonitored, // By default — not monitored
         };
-        try results.append(analysis);
+        try results.append(allocator, analysis);
     }
 
     return results.toOwnedSlice(allocator);
@@ -313,12 +314,12 @@ pub fn formatErrorCategory(cat: ErrorCategory) []const u8 {
 
 /// Formats worker analysis for dashboard
 pub fn formatWorkerAnalysis(analysis: *const WorkerAnalysis) ![]const u8 {
-    var buf = std.ArrayList(u8).init(std.heap.page_allocator);
-    defer buf.deinit();
+    var buf: std.ArrayList(u8) = .empty;
+    defer buf.deinit(std.heap.page_allocator);
 
     const status_str = if (analysis.is_training) "🟢 training" else if (analysis.is_stalled) "🟡 stalled" else "🔴 idle";
 
-    try buf.writer().print(
+    try buf.print(std.heap.page_allocator,
         \\{s}: {s}
         \\  step={d} PPL={d:.1} age={d}s
         \\  error={s}
@@ -539,13 +540,13 @@ pub fn runAnalyzeCommand(allocator: Allocator, args: []const []const u8) !void {
         defer json_buf.deinit(allocator);
 
         try json_buf.append(allocator, '{');
-        try json_buf.writer(allocator).print(
+        try json_buf.print(allocator,
             \\"total_workers":{d},"training":{d},"stalled":{d},"error":{d},"unmonitored":{d},"workers":[
         , .{ total_workers, total_training, total_stalled, total_error, total_unmonitored });
 
         for (results.items, 0..) |analysis, idx| {
             if (idx > 0) try json_buf.append(allocator, ',');
-            try json_buf.writer(allocator).print(
+            try json_buf.print(allocator,
                 \\"name\\":\\"{s}\\",\\"account\\":\\"{s}\\",\\"step\\":{d},\\"ppl\\":{d:.1},\\"training\\":{s},\\"stalled\\":{s},\\"error\\":\\"{s}\\",\\"can_restart\\":{s}}}
             , .{
                 analysis.name,

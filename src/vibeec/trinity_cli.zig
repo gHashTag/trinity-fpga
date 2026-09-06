@@ -12,6 +12,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const trinity_swe = @import("trinity_swe_agent.zig");
 
 const SWETaskType = trinity_swe.SWETaskType;
@@ -199,7 +200,13 @@ pub fn main() !void {
     printHeader();
     printHelp();
 
-    const stdin_file = std.fs.File.stdin();
+    const io = tri_io.get();
+    const stdin_file = std.Io.File.stdin();
+    // Unbuffered on purpose: an empty scratch buffer means each read goes
+    // straight into the destination, so no input is stranded between reads.
+    // readSliceShort returns 0 only at end-of-stream, matching the 0.15 `read`
+    // contract this loop was written against.
+    var stdin_reader = stdin_file.readerStreaming(io, &.{});
     var buf: [1024]u8 = undefined;
 
     while (state.running) {
@@ -208,7 +215,7 @@ pub fn main() !void {
         // Read input line using low-level read
         var line_len: usize = 0;
         while (line_len < buf.len - 1) {
-            const read_result = stdin_file.read(buf[line_len .. line_len + 1]) catch |err| {
+            const read_result = stdin_reader.interface.readSliceShort(buf[line_len .. line_len + 1]) catch |err| {
                 std.debug.print("{s}Input error: {}{s}\n", .{ RED, err, RESET });
                 break;
             };

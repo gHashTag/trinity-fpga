@@ -108,29 +108,29 @@ fn exportCommandsJson(allocator: std.mem.Allocator) !void {
         if (i > 0) try json_buf.append(allocator, ',');
 
         try json_buf.append(allocator, '{');
-        try json_buf.writer(allocator).print("\"name\":\"{s}\"", .{cmd.name});
-        try json_buf.writer(allocator).print(",\"description\":\"{s}\"", .{cmd.description});
-        try json_buf.writer(allocator).print(",\"category\":\"{s}\"", .{@tagName(cmd.category)});
+        try json_buf.print(allocator, "\"name\":\"{s}\"", .{cmd.name});
+        try json_buf.print(allocator, ",\"description\":\"{s}\"", .{cmd.description});
+        try json_buf.print(allocator, ",\"category\":\"{s}\"", .{@tagName(cmd.category)});
 
         // Aliases
         try json_buf.appendSlice(allocator, ",\"aliases\":[");
         for (cmd.aliases, 0..) |alias, j| {
             if (j > 0) try json_buf.append(allocator, ',');
-            try json_buf.writer(allocator).print("\"{s}\"", .{alias});
+            try json_buf.print(allocator, "\"{s}\"", .{alias});
         }
         try json_buf.append(allocator, ']');
 
         // Namespace
-        try json_buf.writer(allocator).print(",\"namespace\":\"{s}\"", .{cmd.cli_namespace.toString()});
+        try json_buf.print(allocator, ",\"namespace\":\"{s}\"", .{cmd.cli_namespace.toString()});
 
         // Mode
-        try json_buf.writer(allocator).print(",\"mode\":\"{s}\"", .{@tagName(cmd.mode)});
+        try json_buf.print(allocator, ",\"mode\":\"{s}\"", .{@tagName(cmd.mode)});
 
         // Stability
-        try json_buf.writer(allocator).print(",\"stability\":\"{s}\"", .{@tagName(cmd.stability)});
+        try json_buf.print(allocator, ",\"stability\":\"{s}\"", .{@tagName(cmd.stability)});
 
         // MCP enabled
-        try json_buf.writer(allocator).print(",\"mcp_enabled\":{}", .{cmd.mcp_enabled});
+        try json_buf.print(allocator, ",\"mcp_enabled\":{}", .{cmd.mcp_enabled});
 
         try json_buf.append(allocator, '}');
     }

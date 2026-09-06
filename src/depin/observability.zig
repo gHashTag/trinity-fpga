@@ -5,6 +5,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 
 // ═════════════════════════════════════════════════════════════════════════════════════════
@@ -73,8 +74,8 @@ pub const ObservabilityManager = struct {
     pub fn init(allocator: Allocator) ObservabilityManager {
         return ObservabilityManager{
             .allocator = allocator,
-            .metrics = .{},
-            .alert_thresholds = .{},
+            .metrics = .empty,
+            .alert_thresholds = .empty,
             .alerts_triggered = 0,
         };
     }
@@ -85,7 +86,7 @@ pub const ObservabilityManager = struct {
             .name = name,
             .mtype = mtype,
             .value = value,
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
             .labels = .{},
         };
         try self.metrics.append(self.allocator, metric);
@@ -111,7 +112,7 @@ pub const ObservabilityManager = struct {
             .name = name,
             .mtype = mtype,
             .value = value,
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
             .labels = label_map,
         };
         try self.metrics.append(self.allocator, metric);
@@ -200,7 +201,10 @@ pub const ObservabilityManager = struct {
             };
             defer allocator.free(value_str);
 
-            try buffer.writer(allocator).print(
+            // 0.16 removed ArrayList.writer(); the writer never left this
+            // statement, so the list is formatted into directly.
+            try buffer.print(
+                allocator,
                 "{s}_{s} {s}\n",
                 .{ "depin", metric.name, value_str },
             );

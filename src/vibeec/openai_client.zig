@@ -4,6 +4,7 @@
 // φ² + 1/φ² = 3
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const http = @import("http_client.zig");
 const json = @import("json_parser.zig");
@@ -190,7 +191,7 @@ pub const OpenAIClient = struct {
 
     /// Chat completion with system prompt
     pub fn chatWithSystem(self: *Self, system_prompt: ?[]const u8, user_message: []const u8) OpenAIError!ChatResponse {
-        const start_time = std.time.nanoTimestamp();
+        const start_time = tri_time.nanoTimestamp();
 
         // Build request JSON
         const request_body = self.buildRequestJson(system_prompt, user_message) catch return OpenAIError.OutOfMemory;
@@ -204,7 +205,7 @@ pub const OpenAIClient = struct {
         var response = self.http_client.postJson(self.base_url, request_body, auth_header) catch return OpenAIError.NetworkError;
         defer response.deinit();
 
-        const end_time = std.time.nanoTimestamp();
+        const end_time = tri_time.nanoTimestamp();
 
         // Check status
         if (response.status == 401) return OpenAIError.InvalidApiKey;
@@ -216,10 +217,12 @@ pub const OpenAIClient = struct {
     }
 
     fn buildRequestJson(self: *Self, system_prompt: ?[]const u8, user_message: []const u8) ![]u8 {
-        var buffer = try std.ArrayList(u8).initCapacity(self.allocator, 256);
-        errdefer buffer.deinit(self.allocator);
+        // 0.16 removed ArrayList.writer(); an Allocating writer replaces it.
+        // initCapacity keeps the original 256-byte pre-allocation.
+        var aw: std.Io.Writer.Allocating = try .initCapacity(self.allocator, 256);
+        errdefer aw.deinit();
 
-        const writer = buffer.writer(self.allocator);
+        const writer = &aw.writer;
 
         try writer.writeAll("{\"model\":\"");
         try writer.writeAll(self.model);
@@ -237,7 +240,7 @@ pub const OpenAIClient = struct {
 
         try writer.writeAll("],\"max_tokens\":1024}");
 
-        return try buffer.toOwnedSlice(self.allocator);
+        return try aw.toOwnedSlice();
     }
 
     fn writeEscaped(self: *Self, writer: anytype, str: []const u8) !void {
@@ -256,7 +259,7 @@ pub const OpenAIClient = struct {
 
     /// Chat with vision (image analysis)
     pub fn chatWithVision(self: *Self, prompt: []const u8, image_base64: []const u8) OpenAIError!ChatResponse {
-        const start_time = std.time.nanoTimestamp();
+        const start_time = tri_time.nanoTimestamp();
 
         // Build vision request
         const request_body = buildVisionRequest(self.allocator, GPT4V_MODEL, prompt, image_base64) catch return OpenAIError.OutOfMemory;
@@ -270,7 +273,7 @@ pub const OpenAIClient = struct {
         var response = self.http_client.postJson(self.base_url, request_body, auth_header) catch return OpenAIError.NetworkError;
         defer response.deinit();
 
-        const end_time = std.time.nanoTimestamp();
+        const end_time = tri_time.nanoTimestamp();
 
         // Check status
         if (response.status == 401) return OpenAIError.InvalidApiKey;
@@ -365,35 +368,35 @@ pub const GPT4V_MODEL = "gpt-4o"; // Vision-capable model
 
 /// Build vision request with image
 pub fn buildVisionRequest(allocator: Allocator, model: []const u8, prompt: []const u8, image_base64: []const u8) ![]u8 {
+    // 0.16 removed ArrayList.writer(); the writer never leaves this function,
+    // so the list is appended to directly.
     var buffer = try std.ArrayList(u8).initCapacity(allocator, 256);
     errdefer buffer.deinit(allocator);
 
-    const writer = buffer.writer(allocator);
-
-    try writer.writeAll("{\"model\":\"");
-    try writer.writeAll(model);
-    try writer.writeAll("\",\"messages\":[{\"role\":\"user\",\"content\":[");
+    try buffer.appendSlice(allocator, "{\"model\":\"");
+    try buffer.appendSlice(allocator, model);
+    try buffer.appendSlice(allocator, "\",\"messages\":[{\"role\":\"user\",\"content\":[");
 
     // Text content
-    try writer.writeAll("{\"type\":\"text\",\"text\":\"");
+    try buffer.appendSlice(allocator, "{\"type\":\"text\",\"text\":\"");
     for (prompt) |c| {
         switch (c) {
-            '"' => try writer.writeAll("\\\""),
-            '\\' => try writer.writeAll("\\\\"),
-            '\n' => try writer.writeAll("\\n"),
-            '\r' => try writer.writeAll("\\r"),
-            '\t' => try writer.writeAll("\\t"),
-            else => try writer.writeByte(c),
+            '"' => try buffer.appendSlice(allocator, "\\\""),
+            '\\' => try buffer.appendSlice(allocator, "\\\\"),
+            '\n' => try buffer.appendSlice(allocator, "\\n"),
+            '\r' => try buffer.appendSlice(allocator, "\\r"),
+            '\t' => try buffer.appendSlice(allocator, "\\t"),
+            else => try buffer.append(allocator, c),
         }
     }
-    try writer.writeAll("\"},");
+    try buffer.appendSlice(allocator, "\"},");
 
     // Image content
-    try writer.writeAll("{\"type\":\"image_url\",\"image_url\":{\"url\":\"data:image/png;base64,");
-    try writer.writeAll(image_base64);
-    try writer.writeAll("\"}}");
+    try buffer.appendSlice(allocator, "{\"type\":\"image_url\",\"image_url\":{\"url\":\"data:image/png;base64,");
+    try buffer.appendSlice(allocator, image_base64);
+    try buffer.appendSlice(allocator, "\"}}");
 
-    try writer.writeAll("]}],\"max_tokens\":1024}");
+    try buffer.appendSlice(allocator, "]}],\"max_tokens\":1024}");
 
     return try buffer.toOwnedSlice(allocator);
 }
@@ -414,28 +417,28 @@ test "buildVisionRequest" {
 
 /// Build streaming request (adds "stream": true)
 pub fn buildStreamingRequest(allocator: Allocator, model: []const u8, prompt: []const u8) ![]u8 {
+    // 0.16 removed ArrayList.writer(); the writer never leaves this function,
+    // so the list is appended to directly.
     var buffer = try std.ArrayList(u8).initCapacity(allocator, 256);
     errdefer buffer.deinit(allocator);
 
-    const writer = buffer.writer(allocator);
-
-    try writer.writeAll("{\"model\":\"");
-    try writer.writeAll(model);
-    try writer.writeAll("\",\"messages\":[{\"role\":\"user\",\"content\":\"");
+    try buffer.appendSlice(allocator, "{\"model\":\"");
+    try buffer.appendSlice(allocator, model);
+    try buffer.appendSlice(allocator, "\",\"messages\":[{\"role\":\"user\",\"content\":\"");
 
     // Escape prompt
     for (prompt) |c| {
         switch (c) {
-            '"' => try writer.writeAll("\\\""),
-            '\\' => try writer.writeAll("\\\\"),
-            '\n' => try writer.writeAll("\\n"),
-            '\r' => try writer.writeAll("\\r"),
-            '\t' => try writer.writeAll("\\t"),
-            else => try writer.writeByte(c),
+            '"' => try buffer.appendSlice(allocator, "\\\""),
+            '\\' => try buffer.appendSlice(allocator, "\\\\"),
+            '\n' => try buffer.appendSlice(allocator, "\\n"),
+            '\r' => try buffer.appendSlice(allocator, "\\r"),
+            '\t' => try buffer.appendSlice(allocator, "\\t"),
+            else => try buffer.append(allocator, c),
         }
     }
 
-    try writer.writeAll("\"}],\"stream\":true,\"max_tokens\":1024}");
+    try buffer.appendSlice(allocator, "\"}],\"stream\":true,\"max_tokens\":1024}");
 
     return try buffer.toOwnedSlice(allocator);
 }

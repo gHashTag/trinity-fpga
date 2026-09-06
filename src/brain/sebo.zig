@@ -11,6 +11,7 @@
 
 const std = @import("std");
 
+const tri_rand = @import("tri_rand");
 const Allocator = std.mem.Allocator;
 
 // Sacred constants as Bayesian priors
@@ -94,7 +95,7 @@ pub const SeboOptimizer = struct {
     use_simulation: bool,
 
     pub fn init(alloc: Allocator, config: SeboConfig) !SeboOptimizer {
-        const prng = std.Random.DefaultPrng.init(std.crypto.random.int(u64));
+        const prng = std.Random.DefaultPrng.init(tri_rand.random().int(u64));
         var sebo = SeboOptimizer{
             .alloc = alloc,
             .config = config,

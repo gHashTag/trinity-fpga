@@ -5,6 +5,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const tri_inference = @import("tri_inference.zig");
 const gguf_reader = @import("gguf_reader.zig");
 const gguf_tokenizer = @import("gguf_tokenizer.zig");
@@ -87,7 +88,7 @@ pub fn main() !void {
     const temperature: f32 = 0.8;
 
     model.resetKVCache();
-    var timer = try std.time.Timer.start();
+    var timer = try tri_time.Timer.start();
 
     var generated = std.ArrayList(u32).init(allocator);
     defer generated.deinit();
@@ -185,7 +186,7 @@ fn runWithoutTokenizer(allocator: std.mem.Allocator, tri_path: []const u8, promp
     const temperature: f32 = 0.7;
 
     model.resetKVCache();
-    var timer = try std.time.Timer.start();
+    var timer = try tri_time.Timer.start();
 
     var current_token: u32 = 1; // BOS
     var generated: [32]u32 = undefined;

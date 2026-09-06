@@ -3,6 +3,7 @@
 //! φ² + 1/φ² = 3 — Trinity Identity validation
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const phi_types = @import("phi_types.zig");
 
 /// φ Gate — the sacred filter between generation and acceptance
@@ -28,7 +29,7 @@ pub const PhiGate = struct {
             .phi_weighted = false,
             .error_count = 0,
             .warning_count = 0,
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
         };
     }
 
@@ -178,7 +179,7 @@ pub const PhiGate = struct {
         self.error_count = 0;
         self.warning_count = 0;
         self.phi_weighted = false;
-        self.timestamp = std.time.timestamp();
+        self.timestamp = tri_time.timestamp();
     }
 
     /// Export gate state as JSON (for dashboard)
@@ -215,7 +216,7 @@ pub const BatchValidator = struct {
     pub fn init(allocator: std.mem.Allocator) BatchValidator {
         return BatchValidator{
             .allocator = allocator,
-            .gates = .{},
+            .gates = .empty,
         };
     }
 

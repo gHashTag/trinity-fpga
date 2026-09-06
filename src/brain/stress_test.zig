@@ -14,6 +14,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 // Direct imports for testing (bypass brain.zig re-exports)
 const basal_ganglia = @import("basal_ganglia.zig");
 const reticular_formation = @import("reticular_formation.zig");
@@ -249,12 +250,12 @@ test "Stress: Reticular Formation - poll under load" {
         });
 
         // Small delay to ensure different timestamps
-        std.Thread.sleep(1 * std.time.ns_per_us);
+        tri_time.sleep(1 * std.time.ns_per_us);
     }
 
     // Poll in batches
     var total_polled: usize = 0;
-    const start_time = std.time.milliTimestamp();
+    const start_time = tri_time.milliTimestamp();
 
     var offset: i64 = 0;
     while (true) {
@@ -268,7 +269,7 @@ test "Stress: Reticular Formation - poll under load" {
         offset = events[events.len - 1].timestamp;
     }
 
-    const elapsed = std.time.milliTimestamp() - start_time;
+    const elapsed = tri_time.milliTimestamp() - start_time;
     // Note: Due to timing, some events may have the same timestamp and be filtered
     try std.testing.expect(total_polled >= 800); // At least 80% polled
 
@@ -433,7 +434,7 @@ test "Stress: Telemetry - 10,000 data points" {
     var tel = telemetry.BrainTelemetry.init(allocator, 10_000);
     defer tel.deinit();
 
-    const now = std.time.milliTimestamp();
+    const now = tri_time.milliTimestamp();
 
     // Add 10,000 points
     var i: usize = 0;
@@ -460,7 +461,7 @@ test "Stress: Telemetry - trim to max capacity" {
     var tel = telemetry.BrainTelemetry.init(allocator, 100);
     defer tel.deinit();
 
-    const now = std.time.milliTimestamp();
+    const now = tri_time.milliTimestamp();
 
     // Add 1000 points, should trim to 100
     var i: usize = 0;
@@ -482,7 +483,7 @@ test "Stress: Telemetry - rapid trend calculation" {
     var tel = telemetry.BrainTelemetry.init(allocator, 1000);
     defer tel.deinit();
 
-    const now = std.time.milliTimestamp();
+    const now = tri_time.milliTimestamp();
 
     // Create improving trend
     var i: usize = 0;
@@ -506,7 +507,7 @@ test "Stress: Telemetry - percentile calculation under load" {
     var tel = telemetry.BrainTelemetry.init(allocator, 256);
     defer tel.deinit();
 
-    const now = std.time.milliTimestamp();
+    const now = tri_time.milliTimestamp();
 
     // Add 256 points with varying health scores
     var i: usize = 0;
@@ -539,7 +540,7 @@ test "Stress: Alerts - 1000 rapid alerts" {
     var manager = try alerts.AlertManager.init(allocator);
     defer manager.deinit();
 
-    const now = std.time.milliTimestamp();
+    const now = tri_time.milliTimestamp();
 
     // Generate 1000 alerts rapidly
     var i: usize = 0;
@@ -564,7 +565,7 @@ test "Stress: Alerts - suppression under spam" {
     var manager = try alerts.AlertManager.init(allocator);
     defer manager.deinit();
 
-    const now = std.time.milliTimestamp();
+    const now = tri_time.milliTimestamp();
 
     // Send 100 identical alerts rapidly (should be suppressed)
     var i: usize = 0;
@@ -593,7 +594,7 @@ test "Stress: Alerts - history trim at limit" {
     var history = alerts.AlertHistory.init(allocator, 100);
     defer history.deinit();
 
-    const now = std.time.milliTimestamp();
+    const now = tri_time.milliTimestamp();
 
     // Add 500 alerts, should trim to 100
     var i: usize = 0;
@@ -692,7 +693,7 @@ test "Stress: Integration - full brain circuit under load" {
         if (i % 100 == 0) {
             const stats = event_bus.getStats();
             const point = telemetry.TelemetryPoint{
-                .timestamp = std.time.milliTimestamp(),
+                .timestamp = tri_time.milliTimestamp(),
                 .active_claims = registry.claims.count(),
                 .events_published = stats.published,
                 .events_buffered = stats.buffered,
@@ -964,7 +965,7 @@ test "Stress: Edge case - telemetry extreme values" {
         -std.math.inf(f32),
     };
 
-    const now = std.time.milliTimestamp();
+    const now = tri_time.milliTimestamp();
 
     for (extremes, 0..) |health, i| {
         const point = telemetry.TelemetryPoint{
@@ -1040,7 +1041,7 @@ test "Stress: Memory - telemetry array growth" {
     var tel = telemetry.BrainTelemetry.init(allocator, 10);
     defer tel.deinit();
 
-    const now = std.time.milliTimestamp();
+    const now = tri_time.milliTimestamp();
 
     var i: usize = 0;
     while (i < 1000) : (i += 1) {

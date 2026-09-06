@@ -1,4 +1,5 @@
 const std = @import("std");
+const tri_time = @import("tri_time");
 const dao = @import("dao_integration.zig");
 
 // ============================================================================
@@ -90,7 +91,7 @@ fn chatReflex(ctx: *Context, args: []const []const u8) !void {
 fn simulatedMatVec(id: u32, buf: []u8) void {
     _ = id;
     _ = buf;
-    std.Thread.sleep(10 * std.time.ns_per_ms);
+    tri_time.sleep(10 * std.time.ns_per_ms);
 }
 
 fn inferReflex(ctx: *Context, args: []const []const u8) !void {

@@ -15,6 +15,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 // Import brain modules directly to avoid circular dependency
 // Using module names from build.zig imports
 const basal_ganglia = @import("basal_ganglia");
@@ -242,7 +243,7 @@ pub const SimulationEngine = struct {
     pub fn init(allocator: std.mem.Allocator, config: SimulationConfig) !SimulationEngine {
         var rng = std.Random.DefaultPrng.init(config.seed);
         if (config.seed == 0) {
-            rng = std.Random.DefaultPrng.init(@as(u64, @intCast(std.time.nanoTimestamp())));
+            rng = std.Random.DefaultPrng.init(@as(u64, @intCast(tri_time.nanoTimestamp())));
         }
 
         const coord = try AgentCoordination.init(allocator);
@@ -284,7 +285,7 @@ pub const SimulationEngine = struct {
 
     /// Run the full simulation
     pub fn run(self: *SimulationEngine) !SimulationResult {
-        const start_time = std.time.nanoTimestamp();
+        const start_time = tri_time.nanoTimestamp();
         var tasks_processed: usize = 0;
         var tasks_failed: usize = 0;
         var agents_crashed: usize = 0;
@@ -302,7 +303,7 @@ pub const SimulationEngine = struct {
         const storm_results = try self.simulateEventStorm();
         partitions_occurred = storm_results.partitions;
 
-        const end_time = std.time.nanoTimestamp();
+        const end_time = tri_time.nanoTimestamp();
         const duration_ms = @as(u64, @intCast(@divTrunc(end_time - start_time, 1_000_000)));
 
         // Final brain health
@@ -581,18 +582,18 @@ test "Simulation: result format" {
 
     // Test format doesn't crash
     var buffer: [4096]u8 = undefined;
-    var fbs = std.io.fixedBufferStream(&buffer);
-    try result.format(fbs.writer());
-    try std.testing.expect(fbs.getWritten().len > 0);
+    var w: std.Io.Writer = .fixed(&buffer);
+    try result.format(&w);
+    try std.testing.expect(w.buffered().len > 0);
 }
 
 test "Simulation: result json" {
     const result = try runSmokeTest(std.testing.allocator);
 
     var buffer: [4096]u8 = undefined;
-    var fbs = std.io.fixedBufferStream(&buffer);
-    try result.toJson(fbs.writer());
-    const output = fbs.getWritten();
+    var w: std.Io.Writer = .fixed(&buffer);
+    try result.toJson(&w);
+    const output = w.buffered();
 
     // Verify JSON structure
     try std.testing.expect(std.mem.startsWith(u8, output, "{"));
@@ -939,9 +940,9 @@ test "Simulation: metrics - duration measurement" {
     var engine = try SimulationEngine.init(std.testing.allocator, config);
     defer engine.deinit();
 
-    const start_time = std.time.nanoTimestamp();
+    const start_time = tri_time.nanoTimestamp();
     const result = try engine.run();
-    const end_time = std.time.nanoTimestamp();
+    const end_time = tri_time.nanoTimestamp();
 
     // Duration should be positive and reasonable
     try std.testing.expect(result.duration_ms > 0);
@@ -1044,9 +1045,9 @@ test "Simulation: analysis - result format output" {
 
     // Test formatted output contains expected sections
     var buffer: [8192]u8 = undefined;
-    var fbs = std.io.fixedBufferStream(&buffer);
-    try result.format(fbs.writer());
-    const output = fbs.getWritten();
+    var w: std.Io.Writer = .fixed(&buffer);
+    try result.format(&w);
+    const output = w.buffered();
 
     // Check for key sections in formatted output
     try std.testing.expect(std.mem.indexOf(u8, output, "S³AI BRAIN SIMULATION REPORT") != null);
@@ -1060,9 +1061,9 @@ test "Simulation: analysis - result JSON completeness" {
     const result = try runSmokeTest(std.testing.allocator);
 
     var buffer: [8192]u8 = undefined;
-    var fbs = std.io.fixedBufferStream(&buffer);
-    try result.toJson(fbs.writer());
-    const json = fbs.getWritten();
+    var w: std.Io.Writer = .fixed(&buffer);
+    try result.toJson(&w);
+    const json = w.buffered();
 
     // Verify all required fields are present
     const required_fields = [_][]const u8{
@@ -1086,9 +1087,9 @@ test "Simulation: analysis - config nested in JSON" {
     const result = try runAgentCompetition(std.testing.allocator);
 
     var buffer: [8192]u8 = undefined;
-    var fbs = std.io.fixedBufferStream(&buffer);
-    try result.toJson(fbs.writer());
-    const json = fbs.getWritten();
+    var w: std.Io.Writer = .fixed(&buffer);
+    try result.toJson(&w);
+    const json = w.buffered();
 
     // Verify nested config fields
     const config_fields = [_][]const u8{

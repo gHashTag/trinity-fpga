@@ -13,6 +13,8 @@
 
 const std = @import("std");
 
+const tri_io = @import("tri_io");
+const tri_time = @import("tri_time");
 // ═══════════════════════════════════════════════════════════════════════════════
 // SACRED CONSTANTS
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -162,7 +164,7 @@ pub const OrchestratorState = struct {
             .skipped_links = 0,
             .active_agents = 0,
             .circuit_breaker_open = false,
-            .start_time = std.time.timestamp(),
+            .start_time = tri_time.timestamp(),
             .last_commit = null,
         };
     }
@@ -189,7 +191,7 @@ pub const CircuitBreakerState = struct {
     pub fn trip(self: *CircuitBreakerState, reason: []const u8) void {
         self.is_open = true;
         self.failure_count += 1;
-        self.last_failure_time = std.time.timestamp();
+        self.last_failure_time = tri_time.timestamp();
         self.last_failure_reason = reason;
         self.half_open_attempts = 0;
     }
@@ -226,7 +228,7 @@ pub const WorkflowResult = struct {
             .output = "",
             .err_msg = null,
             .duration_ms = 0,
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
         };
     }
 };
@@ -321,7 +323,7 @@ pub const TriOrchestrator = struct {
             .realm = .razum,
             .status = .initializing,
             .health = 1.0,
-            .last_heartbeat = std.time.timestamp(),
+            .last_heartbeat = tri_time.timestamp(),
             .capabilities = &[_][]const u8{ "routing", "planning", "analysis" },
         };
 
@@ -331,7 +333,7 @@ pub const TriOrchestrator = struct {
             .realm = .materiya,
             .status = .initializing,
             .health = 1.0,
-            .last_heartbeat = std.time.timestamp(),
+            .last_heartbeat = tri_time.timestamp(),
             .capabilities = &[_][]const u8{ "storage", "memory", "data" },
         };
 
@@ -341,7 +343,7 @@ pub const TriOrchestrator = struct {
             .realm = .dukh,
             .status = .initializing,
             .health = 1.0,
-            .last_heartbeat = std.time.timestamp(),
+            .last_heartbeat = tri_time.timestamp(),
             .capabilities = &[_][]const u8{ "execution", "tools", "actions" },
         };
 
@@ -482,9 +484,9 @@ pub const TriOrchestrator = struct {
         try self.logSacredCall(cmd_name, if (argv.len > 2) argv[2] else "");
 
         // Execute command
-        const start_time = std.time.nanoTimestamp();
+        const start_time = tri_time.nanoTimestamp();
         const cmd_result = try self.runCommand(argv);
-        result.duration_ms = @as(u64, @intCast(@divTrunc(std.time.nanoTimestamp() - start_time, 1_000_000)));
+        result.duration_ms = @as(u64, @intCast(@divTrunc(tri_time.nanoTimestamp() - start_time, 1_000_000)));
 
         if (cmd_result.success) {
             result.success = true;
@@ -502,9 +504,11 @@ pub const TriOrchestrator = struct {
     fn runCommand(self: *TriOrchestrator, argv: []const []const u8) !CommandResult {
         _ = self;
 
-        var child = std.process.Child.init(argv, self.allocator);
-        child.stdout_behavior = .Pipe;
-        child.stderr_behavior = .Pipe;
+        var child = try std.process.spawn(tri_io.get(), .{
+            .argv = argv,
+            .stdout = .pipe,
+            .stderr = .pipe,
+        });
 
         child.spawn() catch |err| {
             return CommandResult{
@@ -525,7 +529,7 @@ pub const TriOrchestrator = struct {
         else
             "";
 
-        const term = child.wait() catch |err| {
+        const term = child.wait(tri_io.get()) catch |err| {
             return CommandResult{
                 .success = false,
                 .output = stdout,
@@ -535,7 +539,7 @@ pub const TriOrchestrator = struct {
         };
 
         const exit_code = switch (term) {
-            .Exited => |code| code,
+            .exited => |code| code,
             else => 1,
         };
 
@@ -575,7 +579,7 @@ pub const TriOrchestrator = struct {
 
     /// Log to sacred_tool_calls.log with φ marker
     fn logSacredCall(self: *TriOrchestrator, command: []const u8, arg: []const u8) !void {
-        const timestamp = std.time.timestamp();
+        const timestamp = tri_time.timestamp();
         const epoch_abs = @abs(@as(i64, @intCast(@divFloor(timestamp, 1_000_000_000))));
 
         var buf: [512]u8 = undefined;
@@ -640,7 +644,7 @@ pub const TriOrchestrator = struct {
             .participant_count = @intCast(votes.len),
             .agreement_level = agreement,
             .trinity_verified = verifyTrinityIdentity(),
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
         };
     }
 
@@ -760,7 +764,7 @@ test "ClusterNode health check" {
         .realm = .razum,
         .status = .active,
         .health = 0.8,
-        .last_heartbeat = std.time.timestamp(),
+        .last_heartbeat = tri_time.timestamp(),
         .capabilities = &[_][]const u8{},
     };
 

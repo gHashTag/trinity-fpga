@@ -12,6 +12,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const tri_exit_codes = @import("tri_exit_codes.zig");
 const Allocator = std.mem.Allocator;
 const print = std.debug.print;
@@ -146,12 +147,13 @@ pub fn jaccardSimilarity(a: *const TokenSet, b: *const TokenSet) f32 {
 /// Scan specs/tri/*.tri directory for template candidates.
 /// Reads filename + first 10 lines of each .tri file for keyword extraction.
 pub fn scanSpecs(_: Allocator, candidates: []SpecCandidate) usize {
-    var dir = std.fs.cwd().openDir(SPEC_DIR, .{ .iterate = true }) catch return 0;
-    defer dir.close();
+    const io = tri_io.get();
+    var dir = std.Io.Dir.cwd().openDir(io, SPEC_DIR, .{ .iterate = true }) catch return 0;
+    defer dir.close(io);
 
     var count: usize = 0;
     var iter = dir.iterate();
-    while (iter.next() catch null) |entry| {
+    while (iter.next(io) catch null) |entry| {
         if (count >= candidates.len) break;
         if (entry.kind != .file) continue;
         if (!std.mem.endsWith(u8, entry.name, ".tri")) continue;
@@ -171,13 +173,10 @@ pub fn scanSpecs(_: Allocator, candidates: []SpecCandidate) usize {
         // Tokenize name (underscores → separate words)
         cand.tokens = tokenize(entry.name[0..name_end]);
 
-        // Read first 10 lines for more keywords
-        const file = dir.openFile(entry.name, .{}) catch continue;
-        defer file.close();
-
+        // Read first 10 lines for more keywords: header prefix into a fixed
+        // buffer, a short read being normal.
         var buf: [4096]u8 = undefined;
-        const bytes_read = file.read(&buf) catch continue;
-        const content = buf[0..bytes_read];
+        const content = dir.readFile(io, entry.name, &buf) catch continue;
 
         // Extract keyword tokens from header lines
         var lines_seen: usize = 0;
@@ -187,7 +186,7 @@ pub fn scanSpecs(_: Allocator, candidates: []SpecCandidate) usize {
             lines_seen += 1;
 
             // Skip comment markers and metadata
-            const trimmed = std.mem.trimLeft(u8, line, "# ");
+            const trimmed = std.mem.trimStart(u8, line, "# ");
             if (trimmed.len < 3) continue;
 
             // Tokenize and add to candidate
@@ -251,10 +250,8 @@ pub fn findBestTemplate(allocator: Allocator, issue_text: []const u8, candidates
 /// Returns the output path, or null on failure.
 pub fn cloneTemplate(allocator: Allocator, template_path: []const u8, new_name: []const u8) ?[]const u8 {
     // Read template
-    const file = std.fs.cwd().openFile(template_path, .{}) catch return null;
-    defer file.close();
-
-    const content = file.readToEndAlloc(allocator, 256 * 1024) catch return null;
+    const io = tri_io.get();
+    const content = std.Io.Dir.cwd().readFileAlloc(io, template_path, allocator, .limited(256 * 1024)) catch return null;
     defer allocator.free(content);
 
     // Build output path
@@ -262,28 +259,28 @@ pub fn cloneTemplate(allocator: Allocator, template_path: []const u8, new_name: 
     const out_path = std.fmt.bufPrint(&out_path_buf, "specs/tri/{s}.tri", .{new_name}) catch return null;
 
     // Check if already exists
-    if (std.fs.cwd().access(out_path, .{})) |_| {
+    if (std.Io.Dir.cwd().access(io, out_path, .{})) |_| {
         print("  {s}Spec already exists: {s}{s}\n", .{ YELLOW, out_path, RESET });
         return null;
     } else |_| {}
 
     // Write new file with replaced name/module
-    const out_file = std.fs.cwd().createFile(out_path, .{}) catch return null;
-    defer out_file.close();
+    const out_file = std.Io.Dir.cwd().createFile(io, out_path, .{}) catch return null;
+    defer out_file.close(io);
 
     var line_iter = std.mem.splitScalar(u8, content, '\n');
     while (line_iter.next()) |line| {
         if (std.mem.startsWith(u8, line, "name: ")) {
-            out_file.writeAll("name: ") catch return null;
-            out_file.writeAll(new_name) catch return null;
-            out_file.writeAll("\n") catch return null;
+            out_file.writeStreamingAll(io, "name: ") catch return null;
+            out_file.writeStreamingAll(io, new_name) catch return null;
+            out_file.writeStreamingAll(io, "\n") catch return null;
         } else if (std.mem.startsWith(u8, line, "module: ")) {
-            out_file.writeAll("module: ") catch return null;
-            out_file.writeAll(new_name) catch return null;
-            out_file.writeAll("\n") catch return null;
+            out_file.writeStreamingAll(io, "module: ") catch return null;
+            out_file.writeStreamingAll(io, new_name) catch return null;
+            out_file.writeStreamingAll(io, "\n") catch return null;
         } else {
-            out_file.writeAll(line) catch return null;
-            out_file.writeAll("\n") catch return null;
+            out_file.writeStreamingAll(io, line) catch return null;
+            out_file.writeStreamingAll(io, "\n") catch return null;
         }
     }
 

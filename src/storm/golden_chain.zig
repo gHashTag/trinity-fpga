@@ -6,6 +6,8 @@
 
 const std = @import("std");
 
+const tri_io = @import("tri_io");
+const tri_time = @import("tri_time");
 // P10: Import real link modules
 const vibee_link = @import("links/vibee.zig");
 const zig_tools_link = @import("links/zig_tools.zig");
@@ -157,7 +159,7 @@ pub const GoldenChain = struct {
         errdefer allocator.free(checkpoint_dir);
 
         // Ensure checkpoint directory exists
-        std.fs.cwd().makePath(checkpoint_dir) catch |e| {
+        std.Io.Dir.cwd().createDirPath(tri_io.get(), checkpoint_dir) catch |e| {
             std.log.warn("Failed to create checkpoint dir: {}", .{e});
         };
 
@@ -281,11 +283,11 @@ pub const GoldenChain = struct {
             }
         } else {
             // Fallback: direct execution
-            const start_time = std.time.nanoTimestamp();
-            var child = std.process.Child.init(cmd.argv, self.allocator);
-            try child.spawn();
+            const io = tri_io.get();
+            const start_time = tri_time.nanoTimestamp();
+            var child = try std.process.spawn(io, .{ .argv = cmd.argv });
 
-            const wait_result = child.wait() catch |err| {
+            const wait_result = child.wait(io) catch |err| {
                 return .{
                     .success = false,
                     .exit_code = 1,
@@ -294,19 +296,19 @@ pub const GoldenChain = struct {
                 };
             };
 
-            const end_time = std.time.nanoTimestamp();
+            const end_time = tri_time.nanoTimestamp();
             const elapsed_ns = end_time - start_time;
             result.duration_ms = @as(u64, @intFromFloat(@divTrunc(@as(f128, @floatFromInt(elapsed_ns)), 1_000_000)));
 
             switch (wait_result) {
-                .Exited => |code| {
+                .exited => |code| {
                     result.success = code == 0;
                     result.exit_code = code;
                     result.message = try std.fmt.allocPrint(self.allocator, "Exit {d}", .{code});
                 },
-                .Signal => |sig| {
-                    result.exit_code = 128 + @as(u8, @truncate(sig));
-                    result.message = try std.fmt.allocPrint(self.allocator, "Signal {d}", .{sig});
+                .signal => |sig| {
+                    result.exit_code = 128 + @as(u8, @truncate(@intFromEnum(sig)));
+                    result.message = try std.fmt.allocPrint(self.allocator, "Signal {d}", .{@intFromEnum(sig)});
                 },
                 else => {
                     result.message = try self.allocator.dupe(u8, "Unknown termination");
@@ -445,7 +447,7 @@ pub const GoldenChain = struct {
 
     /// Save checkpoint to disk (P11: Full JSON serialization)
     pub fn saveCheckpoint(self: *GoldenChain, task: []const u8) !void {
-        const timestamp = std.time.timestamp();
+        const timestamp = tri_time.timestamp();
 
         // Create checkpoint filename
         const filename = try std.fmt.allocPrint(
@@ -471,7 +473,7 @@ pub const GoldenChain = struct {
         defer self.allocator.free(json_str);
 
         // Write to file
-        try std.fs.cwd().writeFile(.{
+        try std.Io.Dir.cwd().writeFile(tri_io.get(), .{
             .sub_path = filename,
             .data = json_str,
         });
@@ -487,11 +489,8 @@ pub const GoldenChain = struct {
     pub fn loadCheckpoint(self: *GoldenChain, filename: []const u8) !CheckpointData {
         self.log(.info, "📂 Loading checkpoint from {s}", .{filename});
 
-        // Read checkpoint file
-        const file = try std.fs.cwd().openFile(filename, .{});
-        defer file.close();
-
-        const content = try file.readToEndAlloc(self.allocator, 1024 * 1024); // Max 1MB
+        // Read checkpoint file (max 1MB, same cap the 0.15 readToEndAlloc had)
+        const content = try std.Io.Dir.cwd().readFileAlloc(tri_io.get(), filename, self.allocator, .limited(1024 * 1024));
         defer self.allocator.free(content);
 
         // P11: Parse JSON using std.json.parseFromSlice
@@ -608,7 +607,7 @@ pub const GoldenChain = struct {
 
     /// Run full chain
     pub fn run(self: *GoldenChain, task: []const u8) !u8 {
-        self.state.start_time = std.time.timestamp();
+        self.state.start_time = tri_time.timestamp();
         self.state.current_link = 1;
         self.results.clearRetainingCapacity();
 

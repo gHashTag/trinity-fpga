@@ -6,7 +6,11 @@
 // ============================================================================
 
 const std = @import("std");
-const tri_mutex = @import("mutex.zig");
+const tri_io = @import("tri_io");
+const tri_proc = @import("tri_proc");
+const tri_time = @import("tri_time");
+const tri_env = @import("tri_env");
+const tri_mutex = @import("tri_mutex");
 const golden_chain = @import("dna_polymerase.zig");
 const tvc_gate_mod = @import("tvc_gate.zig");
 const tvc_corpus = @import("tvc_corpus");
@@ -184,7 +188,7 @@ pub const PipelineExecutor = struct {
         self.state.phase = link;
         self.printLinkStart(link);
 
-        const start_time = std.time.milliTimestamp();
+        const start_time = tri_time.milliTimestamp();
         var result = LinkResult.init(link);
         result.started_at = start_time;
         result.status = .in_progress;
@@ -194,7 +198,7 @@ pub const PipelineExecutor = struct {
         const span_id = self.tracer.startSpan(link_name, self.root_span_id, link, 0);
 
         const link_result = self.executeLink(link);
-        result.completed_at = std.time.milliTimestamp();
+        result.completed_at = tri_time.milliTimestamp();
         const duration = result.completed_at - start_time;
 
         if (link_result) |metrics| {
@@ -303,28 +307,33 @@ pub const PipelineExecutor = struct {
 
         if (active_count == 0) return null;
 
-        // Use thread pool for parallel execution
-        var pool: std.Thread.Pool = undefined;
-        pool.init(.{
-            .allocator = self.allocator,
-            .n_jobs = @intCast(@min(active_count, 4)),
-        }) catch {
-            // Fallback to sequential if pool init fails
+        // 0.16 removed std.Thread.Pool and std.Thread.WaitGroup together.
+        // std.Io.Group replaces the pair: `async` spawns into the group and
+        // `await` joins, so the separate wait-group disappears. The worker
+        // count is no longer ours to choose -- concurrency belongs to the Io
+        // implementation, which main builds as a thread pool.
+        //
+        // Group.async cannot fail, so the old "fall back to sequential if the
+        // pool will not start" branch has nothing left to catch. The sequential
+        // path is kept for the single-link case, where spawning is pure
+        // overhead.
+        const io = tri_io.get();
+
+        if (active_count == 1) {
+            const maybe_err = self.runSingleLinkInPipeline(contexts_buf[0].link);
+            if (maybe_err) |err| return err;
+        } else {
+            var group: std.Io.Group = .init;
+            defer group.cancel(io);
+
             for (contexts_buf[0..active_count]) |*ctx| {
-                const maybe_err = self.runSingleLinkInPipeline(ctx.link);
-                if (maybe_err) |err| return err;
+                group.async(io, parallelLinkWorker, .{ctx});
             }
-            return null;
-        };
-        defer pool.deinit();
 
-        var wg: std.Thread.WaitGroup = .{};
-
-        for (contexts_buf[0..active_count]) |*ctx| {
-            pool.spawnWg(&wg, parallelLinkWorker, .{ctx});
+            // await propagates cancelation only; the workers themselves record
+            // their outcome in ctx, which the collection loop below reads.
+            group.await(io) catch {};
         }
-
-        wg.wait();
 
         // Collect results
         var first_critical_err: ?ChainError = null;
@@ -347,13 +356,13 @@ pub const PipelineExecutor = struct {
     }
 
     fn parallelLinkWorker(ctx: *ParallelLinkContext) void {
-        const start_time = std.time.milliTimestamp();
+        const start_time = tri_time.milliTimestamp();
         ctx.result.started_at = start_time;
         ctx.result.status = .in_progress;
 
         // executeLink is read-only for parallel-safe links
         const link_result = ctx.executor.executeLink(ctx.link);
-        ctx.result.completed_at = std.time.milliTimestamp();
+        ctx.result.completed_at = tri_time.milliTimestamp();
 
         if (link_result) |metrics| {
             ctx.result.status = .completed;
@@ -391,7 +400,7 @@ pub const PipelineExecutor = struct {
             .last_link = @intCast(link_num),
             .task = self.state.task_description,
             .status = status,
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
         };
         // Populate per-link results from pipeline state
         for (self.state.results, 0..) |result, i| {
@@ -418,7 +427,7 @@ pub const PipelineExecutor = struct {
             .last_link = link_idx,
             .task = self.state.task_description,
             .status = "running",
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
         };
         // Copy existing results
         for (self.state.results, 0..) |result, i| {
@@ -465,7 +474,7 @@ pub const PipelineExecutor = struct {
     /// Execute a single chain link standalone (for `tri chain <cmd>`).
     /// Wraps executeLink with timing and state updates.
     pub fn executeSingleLink(self: *PipelineExecutor, link: ChainLink) ChainError!LinkMetrics {
-        const start_time = std.time.timestamp();
+        const start_time = tri_time.timestamp();
         self.state.phase = link;
         self.state.status = .in_progress;
 
@@ -473,7 +482,7 @@ pub const PipelineExecutor = struct {
             var result = LinkResult.init(link);
             result.status = .failed;
             result.started_at = start_time;
-            result.completed_at = std.time.timestamp();
+            result.completed_at = tri_time.timestamp();
             self.state.setResult(link, result);
             self.state.status = .failed;
             return err;
@@ -482,7 +491,7 @@ pub const PipelineExecutor = struct {
         var result = LinkResult.init(link);
         result.status = .completed;
         result.started_at = start_time;
-        result.completed_at = std.time.timestamp();
+        result.completed_at = tri_time.timestamp();
         result.metrics = metrics;
         self.state.setResult(link, result);
 
@@ -567,7 +576,7 @@ pub const PipelineExecutor = struct {
         var metrics = LinkMetrics{};
 
         // Get git log for baseline
-        const result = std.process.Child.run(.{
+        const result = tri_proc.run(.{
             .allocator = self.allocator,
             .argv = &[_][]const u8{ "git", "log", "--oneline", "-5" },
         }) catch {
@@ -583,17 +592,12 @@ pub const PipelineExecutor = struct {
     fn executeMetrics(self: *PipelineExecutor) ChainError!LinkMetrics {
         // Collect v(n-1) metrics from baselines file
         var metrics = LinkMetrics{};
+        const io = tri_io.get();
 
-        const baselines = std.fs.cwd().openFile(".trinity/baselines.json", .{}) catch {
-            // No baselines yet — return defaults for first run
-            metrics.tokens_per_sec = 0;
-            metrics.memory_bytes = 0;
-            return metrics;
-        };
-        defer baselines.close();
-
+        // Whole small file into a fixed buffer; a short read is normal here.
         var buf: [4096]u8 = undefined;
-        const n = baselines.readAll(&buf) catch {
+        const content = std.Io.Dir.cwd().readFile(io, ".trinity/baselines.json", &buf) catch {
+            // No baselines yet — return defaults for first run
             metrics.tokens_per_sec = 0;
             metrics.memory_bytes = 0;
             return metrics;
@@ -601,7 +605,6 @@ pub const PipelineExecutor = struct {
 
         _ = self;
         // Parse tok/s from baselines if available
-        const content = buf[0..n];
         if (std.mem.indexOf(u8, content, "tok_per_sec")) |_| {
             metrics.tokens_per_sec = 2472.0; // Last recorded baseline
         }
@@ -613,7 +616,7 @@ pub const PipelineExecutor = struct {
         // Link 3: Search codebase for related code patterns
         std.debug.print("  [PAS] Searching for related patterns: \"{s}\"\n", .{self.state.task_description});
 
-        const result = std.process.Child.run(.{
+        const result = tri_proc.run(.{
             .allocator = self.allocator,
             .argv = &[_][]const u8{ "./zig-out/bin/tri", "search", self.state.task_description },
             .max_output_bytes = 1_048_576,
@@ -645,7 +648,7 @@ pub const PipelineExecutor = struct {
         // Link 4: Check GitHub issues to locate task in tech tree
         std.debug.print("  [TREE] Checking tech tree for: \"{s}\"\n", .{self.state.task_description});
 
-        const result = std.process.Child.run(.{
+        const result = tri_proc.run(.{
             .allocator = self.allocator,
             .argv = &[_][]const u8{ "gh", "issue", "list", "--limit", "20", "--json", "number,title,state" },
             .max_output_bytes = 262_144,
@@ -657,7 +660,7 @@ pub const PipelineExecutor = struct {
         defer self.allocator.free(result.stderr);
 
         if ((switch (result.term) {
-            .Exited => |code| code,
+            .exited => |code| code,
             else => @as(u32, 1),
         }) != 0) {
             std.debug.print("  [TREE] gh issue list failed, continuing\n", .{});
@@ -687,8 +690,9 @@ pub const PipelineExecutor = struct {
         };
 
         const exists = blk: {
-            const f = std.fs.cwd().openFile(spec_path, .{}) catch break :blk false;
-            f.close();
+            const io = tri_io.get();
+            const f = std.Io.Dir.cwd().openFile(io, spec_path, .{}) catch break :blk false;
+            f.close(io);
             break :blk true;
         };
 
@@ -714,8 +718,9 @@ pub const PipelineExecutor = struct {
         };
 
         const already_exists = blk: {
-            const f = std.fs.cwd().openFile(spec_path, .{}) catch break :blk false;
-            f.close();
+            const io = tri_io.get();
+            const f = std.Io.Dir.cwd().openFile(io, spec_path, .{}) catch break :blk false;
+            f.close(io);
             break :blk true;
         };
 
@@ -747,7 +752,7 @@ pub const PipelineExecutor = struct {
 
         std.debug.print("  [SPEC] Creating spec via: tri plan \"{s}\"\n", .{task});
 
-        const result = std.process.Child.run(.{
+        const result = tri_proc.run(.{
             .allocator = self.allocator,
             .argv = &[_][]const u8{ "./zig-out/bin/tri", "plan", task },
             .max_output_bytes = 1_048_576,
@@ -759,7 +764,7 @@ pub const PipelineExecutor = struct {
         defer self.allocator.free(result.stderr);
 
         if ((switch (result.term) {
-            .Exited => |code| code,
+            .exited => |code| code,
             else => @as(u32, 1),
         }) != 0) {
             std.debug.print("  [SPEC] tri plan exited with error\n", .{});
@@ -768,8 +773,9 @@ pub const PipelineExecutor = struct {
 
         // Verify spec was created
         const created = blk: {
-            const f = std.fs.cwd().openFile(spec_path, .{}) catch break :blk false;
-            f.close();
+            const io = tri_io.get();
+            const f = std.Io.Dir.cwd().openFile(io, spec_path, .{}) catch break :blk false;
+            f.close(io);
             break :blk true;
         };
 
@@ -784,6 +790,7 @@ pub const PipelineExecutor = struct {
 
     fn executeCodeGenerate(self: *PipelineExecutor) ChainError!LinkMetrics {
         // Link 7: Generate Zig code from .tri spec via `tri gen`
+        const io = tri_io.get();
         // Pre-check: if spec_lint ran and failed, block codegen
         const lint_result = self.state.getResult(.spec_lint);
         if (lint_result.status == .failed) {
@@ -801,16 +808,16 @@ pub const PipelineExecutor = struct {
 
         // Verify spec exists
         {
-            const f = std.fs.cwd().openFile(spec_path, .{}) catch {
+            const f = std.Io.Dir.cwd().openFile(io, spec_path, .{}) catch {
                 std.debug.print("  [CODEGEN] No spec at {s} — nothing to generate\n", .{spec_path});
                 return ChainError.FileNotFound;
             };
-            f.close();
+            f.close(io);
         }
 
         std.debug.print("  [CODEGEN] Generating code: tri gen {s}\n", .{spec_path});
 
-        const result = std.process.Child.run(.{
+        const result = tri_proc.run(.{
             .allocator = self.allocator,
             .argv = &[_][]const u8{ "./zig-out/bin/tri", "gen", spec_path },
             .max_output_bytes = 1_048_576,
@@ -822,7 +829,7 @@ pub const PipelineExecutor = struct {
         defer self.allocator.free(result.stderr);
 
         if ((switch (result.term) {
-            .Exited => |code| code,
+            .exited => |code| code,
             else => @as(u32, 1),
         }) != 0) {
             std.debug.print("  [CODEGEN] tri gen error: {s}\n", .{result.stderr[0..@min(result.stderr.len, 200)]});
@@ -837,9 +844,9 @@ pub const PipelineExecutor = struct {
         };
 
         const generated = blk: {
-            const f = std.fs.cwd().openFile(output_path, .{}) catch break :blk false;
-            defer f.close();
-            const stat = f.stat() catch break :blk false;
+            const f = std.Io.Dir.cwd().openFile(io, output_path, .{}) catch break :blk false;
+            defer f.close(io);
+            const stat = f.stat(io) catch break :blk false;
             if (stat.size == 0) break :blk false; // empty file = not generated
             break :blk true;
         };
@@ -856,7 +863,7 @@ pub const PipelineExecutor = struct {
         var attempt: u32 = 0;
         while (attempt < 3) : (attempt += 1) {
             // Step 1: zig fmt
-            const fmt_result = std.process.Child.run(.{
+            const fmt_result = tri_proc.run(.{
                 .allocator = self.allocator,
                 .argv = &[_][]const u8{ "zig", "fmt", output_path },
                 .max_output_bytes = 65536,
@@ -868,7 +875,7 @@ pub const PipelineExecutor = struct {
             defer self.allocator.free(fmt_result.stderr);
 
             const fmt_ok = (switch (fmt_result.term) {
-                .Exited => |code| code,
+                .exited => |code| code,
                 else => @as(u32, 1),
             }) == 0;
 
@@ -882,7 +889,7 @@ pub const PipelineExecutor = struct {
             }
 
             // Step 2: zig build
-            const build_result = std.process.Child.run(.{
+            const build_result = tri_proc.run(.{
                 .allocator = self.allocator,
                 .argv = &[_][]const u8{ "zig", "build" },
                 .max_output_bytes = 1_048_576,
@@ -894,7 +901,7 @@ pub const PipelineExecutor = struct {
             defer self.allocator.free(build_result.stderr);
 
             const build_ok = (switch (build_result.term) {
-                .Exited => |code| code,
+                .exited => |code| code,
                 else => @as(u32, 1),
             }) == 0;
 
@@ -913,20 +920,16 @@ pub const PipelineExecutor = struct {
             // On retry: call Claude API to fix the error (deterministic re-gen won't help)
             if (attempt > 0) {
                 std.debug.print("  [CODEGEN] Calling Claude API to fix build error (attempt {d})...\n", .{attempt + 1});
-                const source = blk: {
-                    const f = std.fs.cwd().openFile(output_path, .{}) catch break :blk null;
-                    defer f.close();
-                    break :blk f.readToEndAlloc(self.allocator, 256_000) catch null;
-                };
+                const source = std.Io.Dir.cwd().readFileAlloc(io, output_path, self.allocator, .limited(256_000)) catch null;
                 defer if (source) |s| self.allocator.free(s);
 
                 if (source) |src| {
                     if (callClaudeFix(self.allocator, build_result.stderr, src)) |fixed| {
                         defer self.allocator.free(fixed);
                         // Write fixed code back
-                        if (std.fs.cwd().createFile(output_path, .{})) |wf| {
-                            defer wf.close();
-                            wf.writeAll(fixed) catch {};
+                        if (std.Io.Dir.cwd().createFile(io, output_path, .{})) |wf| {
+                            defer wf.close(io);
+                            wf.writeStreamingAll(io, fixed) catch {};
                             std.debug.print("  [CODEGEN] Claude fix applied, retrying build...\n", .{});
                         } else |_| {}
                     }
@@ -950,13 +953,16 @@ pub const PipelineExecutor = struct {
         };
 
         // Read generated file and validate patterns
-        const file = std.fs.cwd().openFile(output_path, .{}) catch {
+        const io = tri_io.get();
+        const file = std.Io.Dir.cwd().openFile(io, output_path, .{}) catch {
             std.debug.print("  [SACRED] No generated file to analyze, skipping\n", .{});
             return LinkMetrics{ .duration_ms = 10 };
         };
-        defer file.close();
+        defer file.close(io);
 
-        const content = file.readToEndAlloc(self.allocator, 1_048_576) catch {
+        var read_buf: [4096]u8 = undefined;
+        var file_reader = file.reader(io, &read_buf);
+        const content = file_reader.interface.allocRemaining(self.allocator, .limited(1_048_576)) catch {
             return LinkMetrics{ .duration_ms = 50 };
         };
         defer self.allocator.free(content);
@@ -1014,7 +1020,7 @@ pub const PipelineExecutor = struct {
         // Run zig build test
         var metrics = LinkMetrics{};
 
-        const result = std.process.Child.run(.{
+        const result = tri_proc.run(.{
             .allocator = self.allocator,
             .argv = &[_][]const u8{ "zig", "build", "test" },
             .max_output_bytes = 10 * 1024 * 1024,
@@ -1025,7 +1031,7 @@ pub const PipelineExecutor = struct {
         defer self.allocator.free(result.stderr);
 
         const success = (switch (result.term) {
-            .Exited => |code| code,
+            .exited => |code| code,
             else => @as(u32, 1),
         }) == 0;
         if (!success) {
@@ -1043,13 +1049,13 @@ pub const PipelineExecutor = struct {
         var metrics = LinkMetrics{};
 
         // Simple benchmark
-        const start = std.time.nanoTimestamp();
+        const start = tri_time.nanoTimestamp();
         var sum: u64 = 0;
         var i: u64 = 0;
         while (i < 1000) : (i += 1) {
             sum += i * i;
         }
-        const elapsed = std.time.nanoTimestamp() - start;
+        const elapsed = tri_time.nanoTimestamp() - start;
         std.mem.doNotOptimizeAway(&sum);
 
         metrics.duration_ms = @intCast(@divFloor(elapsed, 1_000_000));
@@ -1071,6 +1077,7 @@ pub const PipelineExecutor = struct {
 
     fn executeSweFix(self: *PipelineExecutor) ChainError!LinkMetrics {
         // Link 11: Auto-fix on test failure — analyze stderr, apply fix, retry
+        const io = tri_io.get();
         const test_result = self.state.getResult(.test_run);
 
         // Only run if test_run actually failed
@@ -1088,7 +1095,7 @@ pub const PipelineExecutor = struct {
             std.debug.print("  [SWE] Fix attempt {d}/{d}\n", .{ retries + 1, max_retries });
 
             // Run test and capture stderr
-            const result = std.process.Child.run(.{
+            const result = tri_proc.run(.{
                 .allocator = self.allocator,
                 .argv = &[_][]const u8{ "zig", "build", "test" },
                 .max_output_bytes = 2_097_152,
@@ -1100,7 +1107,7 @@ pub const PipelineExecutor = struct {
             defer self.allocator.free(result.stderr);
 
             if ((switch (result.term) {
-                .Exited => |code| code,
+                .exited => |code| code,
                 else => @as(u32, 1),
             }) == 0) {
                 std.debug.print("  [SWE] {s}Tests pass after fix attempt {d}{s}\n", .{ GREEN, retries + 1, RESET });
@@ -1145,7 +1152,7 @@ pub const PipelineExecutor = struct {
                 var swe_path_buf: [512]u8 = undefined;
                 const spec_path = golden_chain.deriveSpecPath(self.state.task_description, &swe_name_buf, &swe_path_buf) orelse continue;
 
-                const regen = std.process.Child.run(.{
+                const regen = tri_proc.run(.{
                     .allocator = self.allocator,
                     .argv = &[_][]const u8{ "./zig-out/bin/tri", "gen", spec_path },
                     .max_output_bytes = 1_048_576,
@@ -1161,19 +1168,15 @@ pub const PipelineExecutor = struct {
                 var fix_path_buf: [512]u8 = undefined;
                 const fix_output_path = golden_chain.deriveOutputPath(self.state.task_description, &fix_name_buf, &fix_path_buf) orelse continue;
 
-                const source = fix_blk: {
-                    const f = std.fs.cwd().openFile(fix_output_path, .{}) catch break :fix_blk null;
-                    defer f.close();
-                    break :fix_blk f.readToEndAlloc(self.allocator, 256_000) catch null;
-                };
+                const source = std.Io.Dir.cwd().readFileAlloc(io, fix_output_path, self.allocator, .limited(256_000)) catch null;
                 defer if (source) |s| self.allocator.free(s);
 
                 if (source) |src| {
                     if (callClaudeFix(self.allocator, result.stderr, src)) |fixed| {
                         defer self.allocator.free(fixed);
-                        if (std.fs.cwd().createFile(fix_output_path, .{})) |wf| {
-                            defer wf.close();
-                            wf.writeAll(fixed) catch {};
+                        if (std.Io.Dir.cwd().createFile(io, fix_output_path, .{})) |wf| {
+                            defer wf.close(io);
+                            wf.writeStreamingAll(io, fixed) catch {};
                             std.debug.print("  [SWE] Claude API fix applied (attempt 3)\n", .{});
                         } else |_| {}
                     }
@@ -1188,17 +1191,18 @@ pub const PipelineExecutor = struct {
     fn executeBenchmarkExternal(self: *const PipelineExecutor) ChainError!LinkMetrics {
         // Link 12: Compare binary size and test count before vs after
         _ = self;
+        const io = tri_io.get();
         std.debug.print("  [BENCH-EXT] Measuring project deltas...\n", .{});
 
         // Measure binary size (tri CLI)
         var bin_size: u64 = 0;
         {
-            const f = std.fs.cwd().openFile("zig-out/bin/tri", .{}) catch {
+            const f = std.Io.Dir.cwd().openFile(io, "zig-out/bin/tri", .{}) catch {
                 std.debug.print("  [BENCH-EXT] tri binary not found, skipping\n", .{});
                 return LinkMetrics{ .duration_ms = 50 };
             };
-            defer f.close();
-            const stat = f.stat() catch {
+            defer f.close(io);
+            const stat = f.stat(io) catch {
                 return LinkMetrics{ .duration_ms = 50 };
             };
             bin_size = stat.size;
@@ -1207,12 +1211,12 @@ pub const PipelineExecutor = struct {
         // Count .zig files in src/tri/
         var zig_count: u32 = 0;
         {
-            var dir = std.fs.cwd().openDir("src/tri", .{ .iterate = true }) catch {
+            var dir = std.Io.Dir.cwd().openDir(io, "src/tri", .{ .iterate = true }) catch {
                 return LinkMetrics{ .duration_ms = 50 };
             };
-            defer dir.close();
+            defer dir.close(io);
             var iter = dir.iterate();
-            while (iter.next() catch null) |entry| {
+            while (iter.next(io) catch null) |entry| {
                 if (entry.kind == .file and std.mem.endsWith(u8, entry.name, ".zig")) {
                     zig_count += 1;
                 }
@@ -1265,8 +1269,9 @@ pub const PipelineExecutor = struct {
 
         // Check if docsite exists
         const has_docsite = blk: {
-            var d = std.fs.cwd().openDir("docsite/docs", .{}) catch break :blk false;
-            d.close();
+            const io = tri_io.get();
+            var d = std.Io.Dir.cwd().openDir(io, "docsite/docs", .{}) catch break :blk false;
+            d.close(io);
             break :blk true;
         };
 
@@ -1325,7 +1330,7 @@ pub const PipelineExecutor = struct {
 
     fn executeGit(self: *PipelineExecutor) ChainError!LinkMetrics {
         // Git commit - only show status for now (don't auto-commit)
-        const result = std.process.Child.run(.{
+        const result = tri_proc.run(.{
             .allocator = self.allocator,
             .argv = &[_][]const u8{ "git", "status", "--short" },
         }) catch {
@@ -1377,7 +1382,7 @@ pub const PipelineExecutor = struct {
         }
 
         // Check if flyctl is available
-        const fly_check = std.process.Child.run(.{
+        const fly_check = tri_proc.run(.{
             .allocator = self.allocator,
             .argv = &[_][]const u8{ "which", "flyctl" },
         }) catch {
@@ -1390,7 +1395,7 @@ pub const PipelineExecutor = struct {
         }
 
         if ((switch (fly_check.term) {
-            .Exited => |code| code,
+            .exited => |code| code,
             else => @as(u32, 1),
         }) != 0) {
             std.debug.print("  [FLY] flyctl not available\n", .{});
@@ -1400,14 +1405,15 @@ pub const PipelineExecutor = struct {
         std.debug.print("  [FLY] flyctl found, deploying...\n", .{});
 
         // Check for fly.toml
-        const fly_toml = std.fs.cwd().openFile("fly.toml", .{}) catch {
+        const io = tri_io.get();
+        const fly_toml = std.Io.Dir.cwd().openFile(io, "fly.toml", .{}) catch {
             std.debug.print("  [FLY] No fly.toml found\n", .{});
             return LinkMetrics{ .duration_ms = 10 };
         };
-        fly_toml.close();
+        fly_toml.close(io);
 
         // Run fly deploy (non-blocking)
-        const deploy_result = std.process.Child.run(.{
+        const deploy_result = tri_proc.run(.{
             .allocator = self.allocator,
             .argv = &[_][]const u8{ "flyctl", "deploy", "--yes" },
             .max_output_bytes = 2_048_576,
@@ -1421,7 +1427,7 @@ pub const PipelineExecutor = struct {
         }
 
         if ((switch (deploy_result.term) {
-            .Exited => |code| code,
+            .exited => |code| code,
             else => @as(u32, 1),
         }) == 0) {
             std.debug.print("  [FLY] {s}Deploy successful!{s}\n", .{ GREEN, RESET });
@@ -1563,7 +1569,7 @@ pub const PipelineExecutor = struct {
         std.debug.print("  [VISION] Starting camera-based LED verification...\n", .{});
 
         // Check if we have a camera configured
-        const camera_url = std.posix.getenv("TRI_CAMERA_URL") orelse {
+        const camera_url = tri_env.getPosix("TRI_CAMERA_URL") orelse {
             std.debug.print("  [VISION] No camera configured (set TRI_CAMERA_URL), skipping\n", .{});
             return LinkMetrics{ .duration_ms = 10 };
         };
@@ -1580,7 +1586,7 @@ pub const PipelineExecutor = struct {
         std.debug.print("  [SCHOLAR] Perplexity Scholar Agent starting...\n", .{});
 
         // 1. Get API key from env (skip if missing)
-        const api_key = std.posix.getenv("PERPLEXITY_API_KEY") orelse {
+        const api_key = tri_env.getPosix("PERPLEXITY_API_KEY") orelse {
             std.debug.print("  [SCHOLAR] No PERPLEXITY_API_KEY set, skipping\n", .{});
             return LinkMetrics{ .duration_ms = 0 };
         };
@@ -1640,16 +1646,17 @@ pub const PipelineExecutor = struct {
 
         // Verify spec exists
         {
-            const f = std.fs.cwd().openFile(spec_path, .{}) catch {
+            const io = tri_io.get();
+            const f = std.Io.Dir.cwd().openFile(io, spec_path, .{}) catch {
                 std.debug.print("  [SPEC_LINT] No spec at {s} — skipping lint\n", .{spec_path});
                 return LinkMetrics{ .duration_ms = 0 };
             };
-            f.close();
+            f.close(io);
         }
 
         std.debug.print("  [SPEC_LINT] Validating: {s}\n", .{spec_path});
 
-        const result = std.process.Child.run(.{
+        const result = tri_proc.run(.{
             .allocator = self.allocator,
             .argv = &[_][]const u8{ "./zig-out/bin/vibee", "validate", spec_path },
             .max_output_bytes = 1_048_576,
@@ -1664,7 +1671,7 @@ pub const PipelineExecutor = struct {
         const output = if (result.stderr.len > 0) result.stderr else result.stdout;
 
         if ((switch (result.term) {
-            .Exited => |code| code,
+            .exited => |code| code,
             else => @as(u32, 1),
         }) != 0) {
             std.debug.print("  [SPEC_LINT] {s}Spec validation FAILED:{s}\n{s}\n", .{
@@ -1829,7 +1836,7 @@ fn callClaudeFix(allocator: std.mem.Allocator, error_text: []const u8, source_co
 
     // Try each provider in fallback chain
     for (providers) |provider| {
-        const api_key = std.process.getEnvVarOwned(allocator, provider.key_env) catch continue;
+        const api_key = tri_env.getEnvVarOwned(allocator, provider.key_env) catch continue;
         defer allocator.free(api_key);
 
         std.debug.print("  [CLAUDE-FIX] Trying {s} ({s})...\n", .{ provider.key_env, provider.base_url });
@@ -1855,9 +1862,10 @@ fn callProviderFix(allocator: std.mem.Allocator, provider: Provider, api_key: []
     // Write body to temp file
     const tmp_path = "/tmp/trinity_claude_fix.json";
     {
-        const tmp = std.fs.createFileAbsolute(tmp_path, .{}) catch return null;
-        defer tmp.close();
-        tmp.writeAll(body) catch return null;
+        const io = tri_io.get();
+        const tmp = std.Io.Dir.createFileAbsolute(io, tmp_path, .{}) catch return null;
+        defer tmp.close(io);
+        tmp.writeStreamingAll(io, body) catch return null;
     }
 
     // Build URL and auth header
@@ -1868,7 +1876,7 @@ fn callProviderFix(allocator: std.mem.Allocator, provider: Provider, api_key: []
     defer allocator.free(auth_header);
 
     // Call API via curl with 30s timeout
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &[_][]const u8{
             "curl",      "-s",   "--connect-timeout",             "10", "--max-time",                     "60",
@@ -2006,7 +2014,7 @@ test "PipelineExecutor with TVC gate" {
     defer corpus.deinitHeap(allocator);
     var gate = TVCGate.init(corpus);
 
-    var executor = PipelineExecutor.initWithTVC(allocator, 1, "test task", &corpus, &gate);
+    var executor = PipelineExecutor.initWithTVC(allocator, 1, "test task", corpus, &gate);
     defer executor.deinit();
 
     try std.testing.expect(executor.tvc_gate != null);

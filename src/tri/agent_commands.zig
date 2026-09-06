@@ -2,6 +2,8 @@
 //! φ² + 1/φ² = 3 | TRINITY
 
 const std = @import("std");
+const tri_rand = @import("tri_rand");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 
 // TODO: Fix module imports for RailwayClient, issue_bindings, sessions
@@ -89,8 +91,11 @@ const sessions = struct {
     }
 };
 
+// Zig 0.16 puts filesystem access behind an Io. These are free functions with no
+// enclosing type to hold an Io field, so it is threaded in from main, which already
+// owns the process event loop.
 /// Run agent spawn command
-pub fn runAgentSpawnCommand(allocator: Allocator, args: []const []const u8) !void {
+pub fn runAgentSpawnCommand(io: std.Io, allocator: Allocator, args: []const []const u8) !void {
     if (args.len < 2) {
         std.debug.print("Usage: tri agent spawn <issue_number>\n", .{});
         return error.InvalidInput;
@@ -102,11 +107,11 @@ pub fn runAgentSpawnCommand(allocator: Allocator, args: []const []const u8) !voi
         return error.InvalidInput;
     };
 
-    try spawnAgent(allocator, issue_number);
+    try spawnAgent(io, allocator, issue_number);
 }
 
 /// Spawn agent for given issue
-pub fn spawnAgent(allocator: Allocator, issue_number: u32) !void {
+pub fn spawnAgent(io: std.Io, allocator: Allocator, issue_number: u32) !void {
     const print = std.debug.print;
 
     // 1. Load existing bindings
@@ -147,7 +152,7 @@ pub fn spawnAgent(allocator: Allocator, issue_number: u32) !void {
     const soul_dir = try std.fmt.allocPrint(allocator, ".trinity/souls/issue-{d}-{s}", .{ issue_number, agent_id });
     defer allocator.free(soul_dir);
 
-    try std.fs.cwd().makePath(soul_dir);
+    try std.Io.Dir.cwd().createDirPath(io, soul_dir);
 
     const soul_path = try std.fmt.allocPrint(allocator, "{s}/SOUL.md", .{soul_dir});
     defer allocator.free(soul_path);
@@ -155,7 +160,7 @@ pub fn spawnAgent(allocator: Allocator, issue_number: u32) !void {
     const soul_content = try generateSoulContent(allocator, issue_number, agent_id);
     defer allocator.free(soul_content);
 
-    try std.fs.cwd().writeFile(.{
+    try std.Io.Dir.cwd().writeFile(io, .{
         .sub_path = soul_path,
         .data = soul_content,
     });
@@ -197,7 +202,7 @@ pub fn spawnAgent(allocator: Allocator, issue_number: u32) !void {
     try issue_bindings.upsertBinding(allocator, &bindings_file, binding);
 
     // 8. Save bindings
-    bindings_file.last_updated = std.time.timestamp();
+    bindings_file.last_updated = tri_time.timestamp();
     try issue_bindings.saveBindings(allocator, &bindings_file);
 
     print("Created binding for issue {d}\n", .{issue_number});
@@ -210,8 +215,8 @@ pub fn spawnAgent(allocator: Allocator, issue_number: u32) !void {
 
 /// Generate unique agent ID
 fn generateAgentId(allocator: Allocator, issue_number: u32) ![]const u8 {
-    const now = std.time.nanoTimestamp();
-    const random = std.crypto.random.intRangeAtMost(usize, std.math.maxInt(usize));
+    const now = tri_time.nanoTimestamp();
+    const random = tri_rand.random().intRangeAtMost(usize, std.math.maxInt(usize));
 
     return try std.fmt.allocPrint(allocator, "issue-{d}-a1_{d}_{x}", .{ issue_number, now, random });
 }
@@ -374,7 +379,7 @@ pub fn runAgentStopCommand(allocator: Allocator, args: []const []const u8) !void
 
     // 4. Update binding status
     try issue_bindings.updateBindingStatus(&bindings_file, issue_number, issue_bindings.Status.STOPPED);
-    bindings_file.last_updated = std.time.timestamp();
+    bindings_file.last_updated = tri_time.timestamp();
     try issue_bindings.saveBindings(allocator, &bindings_file);
 
     std.debug.print("Stopped agent for issue {d}\n", .{issue_number});

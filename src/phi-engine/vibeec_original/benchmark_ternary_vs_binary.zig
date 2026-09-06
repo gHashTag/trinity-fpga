@@ -4,6 +4,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const trit_logic = @import("trit_logic.zig");
 const simd_ternary = @import("simd_ternary.zig");
 const simd_opt = @import("simd_ternary_optimized.zig");
@@ -130,12 +131,12 @@ fn benchmark(comptime name: []const u8, comptime func: anytype) u64 {
     std.mem.doNotOptimizeAway(warmup_sum);
 
     // Benchmark
-    const start = std.time.nanoTimestamp();
+    const start = tri_time.nanoTimestamp();
     var sum: i64 = 0;
     for (0..ITERATIONS) |i| {
         sum +%= func(i);
     }
-    const end = std.time.nanoTimestamp();
+    const end = tri_time.nanoTimestamp();
     std.mem.doNotOptimizeAway(sum);
 
     const ns = @as(u64, @intCast(end - start));

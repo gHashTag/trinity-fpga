@@ -21,6 +21,9 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
+const tri_rand = @import("tri_rand");
+const tri_io = @import("tri_io");
 const Allocator = std.mem.Allocator;
 const time = std.time;
 
@@ -340,7 +343,7 @@ pub const Prediction = struct {
         const within_bounds = (measured_value >= self.uncertainty_lower and
             measured_value <= self.uncertainty_upper);
 
-        self.verified_at = time.timestamp();
+        self.verified_at = tri_time.timestamp();
         self.verified_value = measured_value;
         self.verification_source = source;
         self.status = if (within_bounds) .verified else .falsified;
@@ -352,6 +355,10 @@ pub const Prediction = struct {
 /// Registry of all predictions
 pub const PredictionRegistry = struct {
     version: []const u8 = PREDICTION_VERSION,
+    /// 0.16's `ArrayList` is unmanaged, so the allocator that owns
+    /// `predictions` has to live somewhere. `addPrediction` takes no allocator
+    /// and its signature is fixed, so the registry carries one.
+    allocator: Allocator,
     last_updated: i64,
     predictions: std.ArrayList(Prediction),
 
@@ -359,19 +366,27 @@ pub const PredictionRegistry = struct {
 
     /// Load from JSON file
     pub fn loadFromFile(allocator: Allocator, path: []const u8) !Self {
-        const file = try std.fs.cwd().openFile(path, .{});
-        defer file.close();
+        const io = tri_io.get();
+        const file = try std.Io.Dir.cwd().openFile(io, path, .{});
+        defer file.close(io);
 
-        const stat = try file.stat();
+        const stat = try file.stat(io);
         const contents = try allocator.alloc(u8, stat.size);
         defer allocator.free(contents);
 
-        _ = try file.readAll(contents);
+        // The 0.15 `readAll` filled `contents` and stopped short only at end of
+        // file. `contents` is sized from the stat above, so a short read here
+        // means the file shrank between stat and read -- corruption, not a
+        // normal outcome -- and `readSliceAll` is the form that reports it.
+        var scratch: [4096]u8 = undefined;
+        var fr = file.reader(io, &scratch);
+        try fr.interface.readSliceAll(contents);
 
         // Parse JSON (simplified - use std.json in real implementation)
         const registry = Self{
-            .last_updated = time.timestamp(),
-            .predictions = std.ArrayList(Prediction).init(allocator),
+            .allocator = allocator,
+            .last_updated = tri_time.timestamp(),
+            .predictions = .empty,
         };
 
         // DEFERRED (v12): JSON parsing requires std.json integration
@@ -384,14 +399,15 @@ pub const PredictionRegistry = struct {
         const json = try self.toJSON(allocator);
         defer allocator.free(json);
 
+        const io = tri_io.get();
         const dir = std.fs.path.dirname(path) orelse ".";
-        try std.fs.cwd().makePath(dir);
+        try std.Io.Dir.cwd().createDirPath(io, dir);
 
-        const file = try std.fs.cwd().createFile(path, .{});
-        defer file.close();
+        const file = try std.Io.Dir.cwd().createFile(io, path, .{});
+        defer file.close(io);
 
-        try file.writeAll(json);
-        self.last_updated = time.timestamp();
+        try file.writeStreamingAll(io, json);
+        self.last_updated = tri_time.timestamp();
     }
 
     /// Add new prediction (idempotent by UUID)
@@ -403,7 +419,7 @@ pub const PredictionRegistry = struct {
                 return error.PredictionAlreadyExists;
             }
         }
-        try self.predictions.append(pred);
+        try self.predictions.append(self.allocator, pred);
     }
 
     /// Get by UUID
@@ -435,8 +451,11 @@ pub const PredictionRegistry = struct {
 
     /// Serialize to JSON
     pub fn toJSON(self: *const Self, allocator: Allocator) ![]u8 {
-        var buf: std.ArrayListUnmanaged(u8) = .{};
-        const w = buf.writer(allocator);
+        // `writeJSON` takes the writer as a parameter, so this needs a real
+        // `Io.Writer` rather than calls straight onto the list.
+        var aw: std.Io.Writer.Allocating = .init(allocator);
+        errdefer aw.deinit();
+        const w = &aw.writer;
 
         try w.writeAll("{\n");
         try w.print("  \"version\": \"{s}\",\n", .{self.version});
@@ -445,11 +464,11 @@ pub const PredictionRegistry = struct {
 
         for (self.predictions.items, 0..) |pred, i| {
             if (i > 0) try w.writeAll(",\n");
-            try pred.writeJSON(w);
+            try writeJSON(pred, w);
         }
 
         try w.writeAll("\n  ]\n}\n");
-        return buf.toOwnedSlice(allocator);
+        return aw.toOwnedSlice();
     }
 };
 
@@ -518,7 +537,7 @@ pub fn createPrediction(allocator: Allocator, params: PredictionParams) !Predict
     const id = try generateUUID(allocator);
     errdefer allocator.free(id);
 
-    const created_at = time.timestamp();
+    const created_at = tri_time.timestamp();
 
     // Compute predicted value from formula
     const predicted_value = sacred_formula.computeSacredFormula(
@@ -581,11 +600,10 @@ pub const PredictionParams = struct {
 /// Generate UUID v4
 fn generateUUID(allocator: Allocator) ![]u8 {
     // Use timestamp + random for simple UUID-like string
-    _ = time.timestamp();
-    const random = std.crypto.random;
+    _ = tri_time.timestamp();
 
     var buf: [16]u8 = undefined;
-    random.bytes(&buf);
+    tri_rand.random().bytes(&buf);
 
     // Set version and variant bits for UUID v4
     buf[6] = (buf[6] & 0x0F) | 0x40; // Version 4

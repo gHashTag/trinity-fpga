@@ -20,6 +20,7 @@
 // ═════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 
 const EVENTS_PATH = ".trinity/agent_events.jsonl";
 
@@ -34,14 +35,16 @@ pub const Event = struct {
 
 /// Append one event as a JSONL line to .trinity/agent_events.jsonl
 pub fn appendEvent(allocator: std.mem.Allocator, event: Event) !void {
+    const io = tri_io.get();
+
     // Ensure .trinity/ directory exists
-    std.fs.cwd().makePath(".trinity") catch |err| {
+    std.Io.Dir.cwd().createDirPath(io, ".trinity") catch |err| {
         std.log.warn("jsonl_logger: makePath(.trinity) failed: {}", .{err});
         // Continue anyway — file creation may still work
     };
 
     // Use std.json.Stringify stream to get a JSON string
-    var buffer: std.io.Writer.Allocating = .init(allocator);
+    var buffer: std.Io.Writer.Allocating = .init(allocator);
     defer buffer.deinit();
     var write_stream: std.json.Stringify = .{
         .writer = &buffer.writer,
@@ -65,23 +68,24 @@ pub fn appendEvent(allocator: std.mem.Allocator, event: Event) !void {
 
     const json_string = buffer.written();
 
-    const file = std.fs.cwd().openFile(EVENTS_PATH, .{}) catch |err| switch (err) {
+    const file = std.Io.Dir.cwd().openFile(io, EVENTS_PATH, .{}) catch |err| switch (err) {
         error.FileNotFound => {
             // Create file if it doesn't exist
-            const new_file = try std.fs.cwd().createFile(EVENTS_PATH, .{});
-            defer new_file.close();
-            try new_file.writeAll(json_string);
-            try new_file.writeAll("\n");
+            const new_file = try std.Io.Dir.cwd().createFile(io, EVENTS_PATH, .{});
+            defer new_file.close(io);
+            try new_file.writeStreamingAll(io, json_string);
+            try new_file.writeStreamingAll(io, "\n");
             return;
         },
         else => return err,
     };
-    defer file.close();
+    defer file.close(io);
 
-    // Seek to end before writing (append mode)
-    try file.seekFromEnd(0);
-    try file.writeAll(json_string);
-    try file.writeAll("\n");
+    // Write at end-of-file (append mode)
+    var end = try file.length(io);
+    try file.writePositionalAll(io, json_string, end);
+    end += json_string.len;
+    try file.writePositionalAll(io, "\n", end);
 }
 
 test "appendEvent creates directory" {
@@ -100,5 +104,5 @@ test "appendEvent creates directory" {
     try appendEvent(allocator, test_event);
 
     // Cleanup
-    std.fs.cwd().deleteFile(EVENTS_PATH) catch {};
+    std.Io.Dir.cwd().deleteFile(tri_io.get(), EVENTS_PATH) catch {};
 }

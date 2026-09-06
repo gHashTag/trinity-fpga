@@ -259,10 +259,10 @@ pub const Net = struct {
     id: u32,
     name: []const u8,
     driver: ?PinRef = null,
-    sinks: std.ArrayList(PinRef) = .{},
+    sinks: std.ArrayList(PinRef) = .empty,
     is_clock: bool = false,
     is_global: bool = false,
-    route_pips: std.ArrayList(RoutingPip) = .{},
+    route_pips: std.ArrayList(RoutingPip) = .empty,
 
     pub fn deinit(self: *Net, gpa: Allocator) void {
         self.sinks.deinit(gpa);
@@ -373,8 +373,8 @@ pub const ClockConstraint = struct {
 
 /// All constraints from XDC parsing
 pub const Constraints = struct {
-    io: std.ArrayList(IOConstraint) = .{},
-    clocks: std.ArrayList(ClockConstraint) = .{},
+    io: std.ArrayList(IOConstraint) = .empty,
+    clocks: std.ArrayList(ClockConstraint) = .empty,
 
     pub fn deinit(self: *Constraints, gpa: Allocator) void {
         self.io.deinit(gpa);
@@ -398,8 +398,8 @@ pub const ForgeDB = struct {
     allocator: Allocator,
     device: DeviceId,
     phase: Phase,
-    cells: std.ArrayList(MappedCell) = .{},
-    nets: std.ArrayList(Net) = .{},
+    cells: std.ArrayList(MappedCell) = .empty,
+    nets: std.ArrayList(Net) = .empty,
     constraints: Constraints = .{},
 
     pub fn init(allocator: Allocator, device: DeviceId) ForgeDB {

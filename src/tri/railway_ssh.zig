@@ -11,6 +11,8 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
+const tri_proc = @import("tri_proc");
 const Allocator = std.mem.Allocator;
 
 const RESET = "\x1b[0m";
@@ -52,7 +54,7 @@ pub const RailwaySSH = struct {
         defer allocator.free(target);
 
         // We use env to clear SSH_AUTH_SOCK and then call ssh
-        const result = std.process.Child.run(.{
+        const result = tri_proc.run(.{
             .allocator = allocator,
             .argv = &.{
                 "env",
@@ -76,7 +78,7 @@ pub const RailwaySSH = struct {
         defer allocator.free(result.stderr);
 
         const ssh_exit = switch (result.term) {
-            .Exited => |code| code,
+            .exited => |code| code,
             else => @as(u32, 1),
         };
         if (ssh_exit != 0) {
@@ -97,7 +99,7 @@ pub const RailwaySSH = struct {
             return self.exec(allocator, command) catch |err| {
                 if (attempt == 2) return err;
                 std.debug.print("SSH attempt {d}/3 failed: {}, retrying...\n", .{ attempt + 1, err });
-                std.Thread.sleep(std.time.ns_per_s * (@as(u64, 1) << @intCast(attempt)));
+                tri_time.sleep(std.time.ns_per_s * (@as(u64, 1) << @intCast(attempt)));
                 continue;
             };
         }

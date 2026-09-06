@@ -2,6 +2,8 @@
 //! Unit tests and VSA verification
 
 const std = @import("std");
+const tri_proc = @import("tri_proc");
+const tri_time = @import("tri_time");
 const storm = @import("../golden_chain.zig");
 
 pub const unitTestLinkID = 10;
@@ -17,7 +19,7 @@ pub fn executeUnitTest(allocator: std.mem.Allocator, task: []const u8, file: []c
     log.info("🧪 Unit Test: {s}", .{file});
 
     const zig_binary = "zig";
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &[_][]const u8{ zig_binary, "test", file },
     }) catch |err| {
@@ -35,11 +37,11 @@ pub fn executeUnitTest(allocator: std.mem.Allocator, task: []const u8, file: []c
     const stderr = try allocator.dupe(u8, result.stderr.items);
     defer allocator.free(stderr);
 
-    const duration: u64 = @intCast(std.time.nanoTimestamp() - result.start_time);
+    const duration: u64 = @intCast(tri_time.nanoTimestamp() - result.start_time);
 
     const exit_code: u32 = switch (result.term) {
-        .Exited => |code| code,
-        .Signal, .Stopped, .Unknown => 1,
+        .exited => |code| code,
+        .signal, .stopped, .unknown => 1,
     };
 
     // Parse test results
@@ -91,7 +93,7 @@ pub fn executeVsaVerify(allocator: std.mem.Allocator, task: []const u8, spec_fil
     log.info("🔬 VSA Verify: {s}", .{spec_file});
 
     const tri_binary = "zig-out/bin/tri";
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &[_][]const u8{ tri_binary, "vsacodegen", "verify", spec_file },
     }) catch |err| {
@@ -109,11 +111,11 @@ pub fn executeVsaVerify(allocator: std.mem.Allocator, task: []const u8, spec_fil
     const stderr = try allocator.dupe(u8, result.stderr.items);
     defer allocator.free(stderr);
 
-    const duration: u64 = @intCast(std.time.nanoTimestamp() - result.start_time);
+    const duration: u64 = @intCast(tri_time.nanoTimestamp() - result.start_time);
 
     const exit_code: u32 = switch (result.term) {
-        .Exited => |code| code,
-        .Signal, .Stopped, .Unknown => 1,
+        .exited => |code| code,
+        .signal, .stopped, .unknown => 1,
     };
 
     if (exit_code != 0) {
@@ -165,7 +167,7 @@ pub fn executeIntegrationTest(allocator: std.mem.Allocator, task: []const u8, co
     log.info("🔗 Integration Test: {s}", .{config});
 
     const tri_binary = "zig-out/bin/tri";
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &[_][]const u8{ tri_binary, "integration-test", "--config", config },
     }) catch |err| {
@@ -183,11 +185,11 @@ pub fn executeIntegrationTest(allocator: std.mem.Allocator, task: []const u8, co
     const stderr = try allocator.dupe(u8, result.stderr.items);
     defer allocator.free(stderr);
 
-    const duration: u64 = @intCast(std.time.nanoTimestamp() - result.start_time);
+    const duration: u64 = @intCast(tri_time.nanoTimestamp() - result.start_time);
 
     const exit_code: u32 = switch (result.term) {
-        .Exited => |code| code,
-        .Signal, .Stopped, .Unknown => 1,
+        .exited => |code| code,
+        .signal, .stopped, .unknown => 1,
     };
 
     if (exit_code != 0) {

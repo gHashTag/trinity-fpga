@@ -10,6 +10,8 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const array_list = std.array_list;
 
@@ -207,7 +209,7 @@ pub const PredictionKind = enum {
 
 /// Get detailed metrics from faculty_board
 pub fn getFacultyMetrics(allocator: Allocator) !FacultyMetrics {
-    const now = std.time.timestamp();
+    const now = tri_time.timestamp();
 
     // Collect current snapshot from faculty_board
     const snapshot = try faculty_cortex.collectSnapshot(allocator);
@@ -464,13 +466,13 @@ pub const CycleState = struct {
 
     pub fn init() CycleState {
         return .{
-            .start_time = std.time.timestamp(),
+            .start_time = tri_time.timestamp(),
             .timing = insula.TimingSnapshot.init(),
         };
     }
 
     pub fn uptimeSeconds(self: *const CycleState) i64 {
-        return std.time.timestamp() - self.start_time;
+        return tri_time.timestamp() - self.start_time;
     }
 };
 
@@ -480,7 +482,7 @@ pub const CycleState = struct {
 
 pub fn runUnifiedLoop(allocator: Allocator, config: qt.QueenConfig) !void {
     var state = qt.QueenState{
-        .started_at = std.time.timestamp(),
+        .started_at = tri_time.timestamp(),
     };
     var counters = queen_policy.ActionCounters{};
     var incidents = queen_policy.IncidentMemory.init();
@@ -1063,7 +1065,7 @@ pub fn health() CellHealth {
     return CellHealth{
         .status = .healthy,
         .cycle = 0,
-        .last_check = std.time.timestamp(),
+        .last_check = tri_time.timestamp(),
     };
 }
 
@@ -1133,7 +1135,7 @@ test "dlpfc — decide detects crashed workers" {
 
     var ctx = DecisionContext{
         .allocator = std.testing.allocator,
-        .farm = .{ .total_services = 10, .active = 5, .crashed = 5, .timestamp = std.time.timestamp() },
+        .farm = .{ .total_services = 10, .active = 5, .crashed = 5, .timestamp = tri_time.timestamp() },
         .issues = .{},
         .mu_heartbeat = .{ .build_ok = true },
         .config = .{ .allow_auto_actions = true, .daemon = true, .max_auto_level = 2 },
@@ -1614,7 +1616,7 @@ test "dlpfc — CycleState default values" {
 
 test "dlpfc — CycleState timing" {
     var state = CycleState{};
-    state.start_time = std.time.timestamp();
+    state.start_time = tri_time.timestamp();
 
     const uptime = state.uptimeSeconds();
     try std.testing.expect(uptime >= 0);
@@ -2041,7 +2043,7 @@ test "dlpfc — generateGoalsFromTrends v-zone trend" {
 /// Check if .trinity/night_mode flag exists (blocks destructive actions 22:00-08:00)
 fn isNightModeActive() bool {
     const flag_path = ".trinity/night_mode";
-    std.fs.cwd().access(flag_path, .{}) catch |err| {
+    std.Io.Dir.cwd().access(tri_io.get(), flag_path, .{}) catch |err| {
         if (err == error.FileNotFound) return false;
         return false;
     };
@@ -2051,7 +2053,7 @@ fn isNightModeActive() bool {
 /// Check if circuit breaker was tripped (auto-enabled night mode after too many kills)
 fn isCircuitBreakerTripped() bool {
     const cb_path = ".trinity/circuit_breaker_tripped";
-    std.fs.cwd().access(cb_path, .{}) catch |err| {
+    std.Io.Dir.cwd().access(tri_io.get(), cb_path, .{}) catch |err| {
         if (err == error.FileNotFound) return false;
         return false;
     };
@@ -2061,11 +2063,9 @@ fn isCircuitBreakerTripped() bool {
 /// Check if a service name is in the sacred workers list
 fn isSacredWorker(svc_name: []const u8) bool {
     const file_path = ".trinity/sacred_workers.txt";
-    const file = std.fs.cwd().openFile(file_path, .{}) catch return false;
-    defer file.close();
 
     var buf: [4096]u8 = undefined;
-    const content = file.readAll(&buf) catch return false;
+    const content = std.Io.Dir.cwd().readFile(tri_io.get(), file_path, &buf) catch return false;
 
     var iter = std.mem.splitScalar(u8, content, '\n');
     while (iter.next()) |line| {
@@ -2116,7 +2116,7 @@ test "dlpfc — DecisionContext hasWarningTrends checks" {
 }
 
 test "dlpfc — CycleState uptimeSeconds calculates" {
-    const state = CycleState{ .start_ts = std.time.timestamp() - 3600 };
+    const state = CycleState{ .start_ts = tri_time.timestamp() - 3600 };
     const uptime = state.uptimeSeconds();
     try std.testing.expect(uptime >= 3590 and uptime <= 3610); // ~1 hour
 }

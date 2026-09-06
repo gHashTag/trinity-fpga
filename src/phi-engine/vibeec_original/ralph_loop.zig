@@ -16,6 +16,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const testing = std.testing;
 const Allocator = std.mem.Allocator;
 const circuit_breaker = @import("circuit_breaker.zig");
@@ -273,7 +274,7 @@ pub const RalphLoop = struct {
             .total_errors = 0,
             .total_duration_ms = 0,
             .api_calls_this_hour = 0,
-            .hour_start = std.time.timestamp(),
+            .hour_start = tri_time.timestamp(),
         };
     }
 
@@ -305,7 +306,7 @@ pub const RalphLoop = struct {
 
         // Check rate limiting
         if (self.config.enable_rate_limiting) {
-            const now = std.time.timestamp();
+            const now = tri_time.timestamp();
             if (now - self.hour_start >= 3600) {
                 // Reset hourly counter
                 self.hour_start = now;

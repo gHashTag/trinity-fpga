@@ -1,4 +1,5 @@
 const std = @import("std");
+const tri_time = @import("tri_time");
 const colors = @import("../tri_colors.zig");
 
 const GREEN = colors.GREEN;
@@ -169,7 +170,7 @@ pub fn runFineTuneBench() void {
     var total_time_ns: i128 = 0;
 
     for (test_inputs, 0..) |test_case, i| {
-        const start = std.time.nanoTimestamp();
+        const start = tri_time.nanoTimestamp();
 
         // Simulate pattern matching with similarity
         var similarity: f32 = 0.0;
@@ -193,7 +194,7 @@ pub fn runFineTuneBench() void {
             }
         }
 
-        const end = std.time.nanoTimestamp();
+        const end = tri_time.nanoTimestamp();
         total_time_ns += end - start;
 
         if (matched and similarity >= 0.5) {
@@ -490,7 +491,7 @@ pub fn runMultiModalBench() void {
     var total_similarity: f64 = 0;
     var total_ops: f64 = 0;
     var passed_tests: usize = 0;
-    const start_time = std.time.milliTimestamp();
+    const start_time = tri_time.milliTimestamp();
 
     std.debug.print("{s}Running Multi-Modal Tests:{s}\n\n", .{ CYAN, RESET });
 
@@ -523,7 +524,7 @@ pub fn runMultiModalBench() void {
         total_ops += 1;
     }
 
-    const elapsed = std.time.milliTimestamp() - start_time;
+    const elapsed = tri_time.milliTimestamp() - start_time;
     const avg_similarity = total_similarity / total_ops;
     const throughput = total_ops * 1000.0 / @as(f64, @floatFromInt(@max(1, elapsed)));
 

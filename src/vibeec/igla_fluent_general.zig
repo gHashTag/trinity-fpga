@@ -12,6 +12,8 @@
 // =============================================================================
 
 const std = @import("std");
+const tri_io = @import("tri_io");
+const tri_time = @import("tri_time");
 const multilingual = @import("igla_multilingual_coder.zig");
 const self_opt = @import("igla_self_opt.zig");
 
@@ -44,57 +46,89 @@ pub const Intent = enum {
         // Question markers
         if (endsWithAny(query, &[_][]const u8{ "?", "？" })) return .Question;
         if (startsWithAny(query, &[_][]const u8{
-            "what",   "toto",    "what",     "to",           "where",     "toyes",  "by",    "",
-            "who",    "where",   "when",     "why",          "how",       "which",  "whose", "whom",
-            "什么", "谁",     "哪里",   "什么时候", "为什么", "怎么", "qué",  "quién",
-            "dónde", "cuándo", "por qué", "cómo",        "was",       "wer",    "wo",    "wann",
-            "warum",  "wie",
+            "what", "toto",  "what", "to",   "where", "toyes", "by",    "",
+            "who",  "where", "when", "why",  "how",   "which", "whose", "whom",
+            "什么",
+            "谁",
+            "哪里",
+            "什么时候",
+            "为什么",
+            "怎么",
+            "qué",
+            "quién",
+            "dónde",
+            "cuándo",
+            "por qué",
+            "cómo",
+            "was",  "wer",   "wo",   "wann", "warum", "wie",
         })) return .Question;
 
         // Greeting markers
         if (containsAnyWord(query, &[_][]const u8{
-            "hello",   "hi",      "hey",       "andin",  "inwithin", "before",
-            "你好",  "嗨",     "hola",      "buenos", "hallo",    "guten",
-            "morning", "evening", "afternoon",
+            "hello",     "hi",     "hey",   "andin", "inwithin", "before",
+            "你好",
+            "嗨",
+            "hola",      "buenos", "hallo", "guten", "morning",  "evening",
+            "afternoon",
         })) return .Greeting;
 
         // Farewell markers
         if (containsAnyWord(query, &[_][]const u8{
-            "bye",             "goodbye", "byto",   "before withinandyesand", "",
-            "再见",          "拜拜",  "adiós", "hasta",                  "tschüss",
+            "bye",             "goodbye", "byto", "before withinandyesand", "",
+            "再见",
+            "拜拜",
+            "adiós",
+            "hasta",
+            "tschüss",
             "auf wiedersehen",
         })) return .Farewell;
 
         // Request markers
         if (startsWithAny(query, &[_][]const u8{
             "please",    "can you",   "could you", "would you", "help me",
-            "bywith",    "",          "byand",     "请",       "能不能",
-            "帮我",    "por favor", "puedes",    "ayúdame",  "bitte",
-            "kannst du", "hilf mir",
+            "bywith",    "",          "byand",
+            "请",
+            "能不能",
+            "帮我",
+            "por favor", "puedes",
+            "ayúdame",
+            "bitte",     "kannst du", "hilf mir",
         })) return .Request;
 
         // Help markers
         if (containsAnyWord(query, &[_][]const u8{
-            "help", "by", "byand", "帮助", "ayuda", "hilfe",
+            "help",  "by",    "byand",
+            "帮助",
+            "ayuda", "hilfe",
         })) return .Help;
 
         // Emotion markers
         if (containsAnyWord(query, &[_][]const u8{
-            "feel",  "inwithin", "感觉", "siento", "fühle",
-            "happy", "sad",      "angry",  "scared", "excited",
-            "",      "with",     "",       "with",
+            "feel",    "inwithin",
+            "感觉",
+            "siento",
+            "fühle",
+            "happy",   "sad",
+            "angry",   "scared",
+            "excited", "",
+            "with",    "",
+            "with",
         })) return .Emotion;
 
         // Story markers
         if (containsAnyWord(query, &[_][]const u8{
-            "story",   "withtoand", "andwithand", "故事", "cuento", "geschichte",
-            "tell me", "once upon",
+            "story",     "withtoand",  "andwithand",
+            "故事",
+            "cuento",    "geschichte", "tell me",
+            "once upon",
         })) return .Story;
 
         // Opinion markers
         if (containsAnyWord(query, &[_][]const u8{
-            "think",  "believe", "opinion", "withand", "",      "notand",
-            "认为", "觉得",  "creo",    "opino",   "denke", "meine",
+            "think", "believe", "opinion", "withand", "", "notand",
+            "认为",
+            "觉得",
+            "creo",  "opino",   "denke",   "meine",
         })) return .Opinion;
 
         // Default to statement
@@ -133,51 +167,72 @@ pub const Topic = enum {
     pub fn extract(query: []const u8) Topic {
         // Technology
         if (containsAnyWord(query, &[_][]const u8{
-            "computer", "programming", "code",       "software", "app",    "internet",
-            "to",       "",            "to",         "软件",   "电脑", "tecnología",
-            "zig",      "python",      "javascript", "rust",     "ai",     "ml",
+            "computer", "programming", "code",       "software", "app", "internet",
+            "to",       "",            "to",
+            "软件",
+            "电脑",
+            "tecnología",
+            "zig",      "python",      "javascript", "rust",     "ai",  "ml",
         })) return .Technology;
 
         // Science
         if (containsAnyWord(query, &[_][]const u8{
-            "science", "physics", "chemistry", "biology", "math",    "onto",
-            "andto",   "and",     "科学",    "数学",  "ciencia", "wissenschaft",
+            "science", "physics",      "chemistry", "biology", "math", "onto",
+            "andto",   "and",
+            "科学",
+            "数学",
+            "ciencia", "wissenschaft",
         })) return .Science;
 
         // Philosophy
         if (containsAnyWord(query, &[_][]const u8{
-            "philosophy", "meaning", "life",   "existence", "truth",      "andwithand",
-            "with",       "and",     "哲学", "意义",    "filosofía", "philosophie",
+            "philosophy",  "meaning", "life", "existence", "truth", "andwithand",
+            "with",        "and",
+            "哲学",
+            "意义",
+            "filosofía",
+            "philosophie",
         })) return .Philosophy;
 
         // Weather
         if (containsAnyWord(query, &[_][]const u8{
-            "weather", "rain", "sun",    "snow",   "cold",   "hot", "byyes",
-            "before",  "with", "天气", "lluvia", "wetter",
+            "weather", "rain",   "sun", "snow", "cold", "hot", "byyes",
+            "before",  "with",
+            "天气",
+            "lluvia",  "wetter",
         })) return .Weather;
 
         // Food
         if (containsAnyWord(query, &[_][]const u8{
-            "food",   "eat", "cook",   "recipe", "yes",    "frominand", "",
-            "食物", "吃", "comida", "essen",  "kochen",
+            "food",   "eat",   "cook",   "recipe", "yes", "frominand", "",
+            "食物",
+            "吃",
+            "comida", "essen", "kochen",
         })) return .Food;
 
         // Health
         if (containsAnyWord(query, &[_][]const u8{
-            "health", "doctor", "medicine", "beforein",   "in", "towithin",
-            "健康", "医生", "salud",    "gesundheit",
+            "health", "doctor",     "medicine", "beforein", "in", "towithin",
+            "健康",
+            "医生",
+            "salud",  "gesundheit",
         })) return .Health;
 
         // Self (about IGLA)
         if (containsAnyWord(query, &[_][]const u8{
-            "you", "your",   "igla", "",   "",     "in",
-            "你", "你的", "tú",  "du", "dein",
+            "you", "your", "igla", "", "", "in",
+            "你",
+            "你的",
+            "tú",
+            "du",  "dein",
         })) return .Self;
 
         // User
         if (containsAnyWord(query, &[_][]const u8{
-            "i ",  "my ",    "me ", " ",  " ",   " ",
-            "我", "我的", "yo",  "mi", "ich", "mein",
+            "i ", "my ", "me ", " ",    " ", " ",
+            "我",
+            "我的",
+            "yo", "mi",  "ich", "mein",
         })) return .User;
 
         return .General;
@@ -199,28 +254,38 @@ pub const Sentiment = enum {
     pub fn analyze(query: []const u8) Sentiment {
         // Positive markers
         if (containsAnyWord(query, &[_][]const u8{
-            "good",      "great",   "awesome", "love",      "happy",   "thank",  "nice",
-            "well",      "fromand", "",        "withandin", "withand", "towith", "好",
-            "太棒了", "喜欢",  "gracias", "genial",    "toll",    "danke",
+            "good",    "great",   "awesome", "love",      "happy",   "thank",  "nice",
+            "well",    "fromand", "",        "withandin", "withand", "towith",
+            "好",
+            "太棒了",
+            "喜欢",
+            "gracias", "genial",  "toll",    "danke",
         })) return .Positive;
 
         // Negative markers
         if (containsAnyWord(query, &[_][]const u8{
-            "bad",    "terrible", "hate",       "angry",    "sad",  "wrong", "stupid",
-            "badly",  "with",     "notoninand", "",         "with", "by",    "不好",
-            "讨厌", "terrible", "mal",        "schlecht", "dumm",
+            "bad",      "terrible", "hate",       "angry", "sad",  "wrong", "stupid",
+            "badly",    "with",     "notoninand", "",      "with", "by",
+            "不好",
+            "讨厌",
+            "terrible", "mal",      "schlecht",   "dumm",
         })) return .Negative;
 
         // Frustrated markers
         if (containsAnyWord(query, &[_][]const u8{
-            "not working", "doesn't work", "broken", "stuck",     "confused",
-            "not from",    "with",         "with",   "不工作", "坏了",
+            "not working", "doesn't work", "broken", "stuck", "confused",
+            "not from",    "with",         "with",
+            "不工作",
+            "坏了",
         })) return .Frustrated;
 
         // Excited markers
         if (containsAnyWord(query, &[_][]const u8{
-            "wow", "amazing",      "incredible", "in",       "notin", "to",
-            "哇", "太神奇了", "increíble", "wahnsinn",
+            "wow",      "amazing", "incredible", "in", "notin", "to",
+            "哇",
+            "太神奇了",
+            "increíble",
+            "wahnsinn",
         })) return .Excited;
 
         // Curious (questions often indicate curiosity)
@@ -710,12 +775,13 @@ fn endsWithAny(text: []const u8, suffixes: []const []const u8) bool {
 // =============================================================================
 
 pub fn runBenchmark() !void {
-    const stdout = std.fs.File.stdout();
+    const io = tri_io.get();
+    const stdout = std.Io.File.stdout();
 
-    _ = try stdout.write("\n");
-    _ = try stdout.write("===============================================================================\n");
-    _ = try stdout.write("     IGLA FLUENT GENERAL BENCHMARK (CYCLE 7)                                  \n");
-    _ = try stdout.write("===============================================================================\n");
+    try stdout.writeStreamingAll(io, "\n");
+    try stdout.writeStreamingAll(io, "===============================================================================\n");
+    try stdout.writeStreamingAll(io, "     IGLA FLUENT GENERAL BENCHMARK (CYCLE 7)                                  \n");
+    try stdout.writeStreamingAll(io, "===============================================================================\n");
 
     var engine = FluentGeneralEngine.init();
 
@@ -753,7 +819,7 @@ pub fn runBenchmark() !void {
     var total_confidence: f32 = 0;
     var high_confidence: usize = 0;
 
-    const start = std.time.nanoTimestamp();
+    const start = tri_time.nanoTimestamp();
 
     for (test_queries) |q| {
         const response = engine.respond(q);
@@ -763,63 +829,63 @@ pub fn runBenchmark() !void {
         }
     }
 
-    const elapsed_ns = std.time.nanoTimestamp() - start;
+    const elapsed_ns = tri_time.nanoTimestamp() - start;
     const ops_per_sec = @as(f64, @floatFromInt(test_queries.len)) / (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
 
     const stats = engine.getStats();
     const avg_confidence = total_confidence / @as(f32, @floatFromInt(test_queries.len));
     const improvement_rate = @as(f32, @floatFromInt(high_confidence)) / @as(f32, @floatFromInt(test_queries.len));
 
-    _ = try stdout.write("\n");
+    try stdout.writeStreamingAll(io, "\n");
 
     var buf: [256]u8 = undefined;
 
     var len = std.fmt.bufPrint(&buf, "  Total queries: {d}\n", .{test_queries.len}) catch return;
-    _ = try stdout.write(len);
+    try stdout.writeStreamingAll(io, len);
 
     len = std.fmt.bufPrint(&buf, "  Fluent responses: {d}\n", .{stats.fluent_responses}) catch return;
-    _ = try stdout.write(len);
+    try stdout.writeStreamingAll(io, len);
 
     len = std.fmt.bufPrint(&buf, "  Fluent rate: {d:.1}%\n", .{stats.fluent_rate * 100}) catch return;
-    _ = try stdout.write(len);
+    try stdout.writeStreamingAll(io, len);
 
     len = std.fmt.bufPrint(&buf, "  High confidence: {d}/{d}\n", .{ high_confidence, test_queries.len }) catch return;
-    _ = try stdout.write(len);
+    try stdout.writeStreamingAll(io, len);
 
     len = std.fmt.bufPrint(&buf, "  Avg confidence: {d:.2}\n", .{avg_confidence}) catch return;
-    _ = try stdout.write(len);
+    try stdout.writeStreamingAll(io, len);
 
     len = std.fmt.bufPrint(&buf, "  Speed: {d:.0} ops/s\n", .{ops_per_sec}) catch return;
-    _ = try stdout.write(len);
+    try stdout.writeStreamingAll(io, len);
 
     len = std.fmt.bufPrint(&buf, "  Generic avoided: {d}\n", .{stats.generic_avoided}) catch return;
-    _ = try stdout.write(len);
+    try stdout.writeStreamingAll(io, len);
 
-    _ = try stdout.write("\n  Language breakdown:\n");
+    try stdout.writeStreamingAll(io, "\n  Language breakdown:\n");
     len = std.fmt.bufPrint(&buf, "    Russian: {d}\n", .{stats.language_breakdown.russian}) catch return;
-    _ = try stdout.write(len);
+    try stdout.writeStreamingAll(io, len);
     len = std.fmt.bufPrint(&buf, "    English: {d}\n", .{stats.language_breakdown.english}) catch return;
-    _ = try stdout.write(len);
+    try stdout.writeStreamingAll(io, len);
     len = std.fmt.bufPrint(&buf, "    Chinese: {d}\n", .{stats.language_breakdown.chinese}) catch return;
-    _ = try stdout.write(len);
+    try stdout.writeStreamingAll(io, len);
     len = std.fmt.bufPrint(&buf, "    Spanish: {d}\n", .{stats.language_breakdown.spanish}) catch return;
-    _ = try stdout.write(len);
+    try stdout.writeStreamingAll(io, len);
     len = std.fmt.bufPrint(&buf, "    German: {d}\n", .{stats.language_breakdown.german}) catch return;
-    _ = try stdout.write(len);
+    try stdout.writeStreamingAll(io, len);
 
     len = std.fmt.bufPrint(&buf, "\n  Improvement rate: {d:.2}\n", .{improvement_rate}) catch return;
-    _ = try stdout.write(len);
+    try stdout.writeStreamingAll(io, len);
 
     if (improvement_rate > 0.618) {
-        _ = try stdout.write("  Golden Ratio Gate: PASSED (>0.618)\n");
+        try stdout.writeStreamingAll(io, "  Golden Ratio Gate: PASSED (>0.618)\n");
     } else {
-        _ = try stdout.write("  Golden Ratio Gate: NEEDS IMPROVEMENT (<0.618)\n");
+        try stdout.writeStreamingAll(io, "  Golden Ratio Gate: NEEDS IMPROVEMENT (<0.618)\n");
     }
 
-    _ = try stdout.write("\n");
-    _ = try stdout.write("===============================================================================\n");
-    _ = try stdout.write("  phi^2 + 1/phi^2 = 3 = TRINITY | FLUENT GENERAL CYCLE 7                      \n");
-    _ = try stdout.write("===============================================================================\n");
+    try stdout.writeStreamingAll(io, "\n");
+    try stdout.writeStreamingAll(io, "===============================================================================\n");
+    try stdout.writeStreamingAll(io, "  phi^2 + 1/phi^2 = 3 = TRINITY | FLUENT GENERAL CYCLE 7                      \n");
+    try stdout.writeStreamingAll(io, "===============================================================================\n");
 }
 
 // =============================================================================

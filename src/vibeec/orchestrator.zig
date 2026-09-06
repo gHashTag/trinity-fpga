@@ -18,6 +18,9 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
+const tri_proc = @import("tri_proc");
+const tri_time = @import("tri_time");
 const RalphLoop = @import("ralph_loop.zig").RalphLoop;
 const agent_mu = @import("agent_mu");
 const allocator = std.heap.page_allocator;
@@ -155,7 +158,7 @@ pub const Orchestrator = struct {
 
     /// Run autonomous development cycle
     pub fn run(self: *Self, task_filter: ?[]const u8) !CycleReport {
-        const start_time = std.time.milliTimestamp();
+        const start_time = tri_time.milliTimestamp();
 
         // Step 1: Read fix_plan.md
         var tasks = try self.readFixPlan();
@@ -219,7 +222,7 @@ pub const Orchestrator = struct {
                 .tests_total = 0,
                 .errors_found = 0,
                 .errors_fixed = 0,
-                .duration_ms = @intCast(std.time.milliTimestamp() - start_time),
+                .duration_ms = @intCast(tri_time.milliTimestamp() - start_time),
                 .message = try std.fmt.allocPrint(self.alloc, "Task blocked by: {s}", .{task.blocked_by}),
             };
         }
@@ -291,7 +294,7 @@ pub const Orchestrator = struct {
                     .errors = 0,
                     .confidence = 100,
                     .exit_signal = true,
-                    .duration_ms = @intCast(std.time.milliTimestamp() - start_time),
+                    .duration_ms = @intCast(tri_time.milliTimestamp() - start_time),
                 });
 
                 if (verify_result.fix_applied) {
@@ -299,7 +302,7 @@ pub const Orchestrator = struct {
                 }
 
                 // Success!
-                const duration = std.time.milliTimestamp() - start_time;
+                const duration = tri_time.milliTimestamp() - start_time;
 
                 return CycleReport{
                     .result = .success,
@@ -325,7 +328,7 @@ pub const Orchestrator = struct {
                 .errors = 1,
                 .confidence = 0,
                 .exit_signal = false,
-                .duration_ms = @intCast(std.time.milliTimestamp() - start_time),
+                .duration_ms = @intCast(tri_time.milliTimestamp() - start_time),
             });
 
             if (self.config.verbose) {
@@ -345,7 +348,7 @@ pub const Orchestrator = struct {
                 .tests_total = 0,
                 .errors_found = 1,
                 .errors_fixed = errors_fixed,
-                .duration_ms = @intCast(std.time.milliTimestamp() - start_time),
+                .duration_ms = @intCast(tri_time.milliTimestamp() - start_time),
                 .message = try self.alloc.dupe(u8, "Circuit breaker opened - too many failures"),
             };
         }
@@ -360,7 +363,7 @@ pub const Orchestrator = struct {
             .tests_total = 0,
             .errors_found = 1,
             .errors_fixed = errors_fixed,
-            .duration_ms = @intCast(std.time.milliTimestamp() - start_time),
+            .duration_ms = @intCast(tri_time.milliTimestamp() - start_time),
             .message = try std.fmt.allocPrint(self.alloc, "Max iterations reached ({d})", .{self.config.max_iterations}),
         };
     }
@@ -371,17 +374,20 @@ pub const Orchestrator = struct {
 
     /// Read and parse fix_plan.md
     fn readFixPlan(self: *Self) !std.ArrayList(Task) {
-        const file = std.fs.cwd().openFile(self.fix_plan_path, .{}) catch |err| {
+        const io = tri_io.get();
+        const file = std.Io.Dir.cwd().openFile(io, self.fix_plan_path, .{}) catch |err| {
             if (err == error.FileNotFound) {
                 std.debug.print("⚠️  fix_plan.md not found at: {s}\n", .{self.fix_plan_path});
-                const empty = std.ArrayList(Task){};
+                const empty = @as(std.ArrayList(Task), .empty);
                 return empty;
             }
             return err;
         };
-        defer file.close();
+        defer file.close(io);
 
-        const content = try file.readToEndAlloc(self.alloc, 1024 * 1024); // Max 1MB
+        var scratch: [4096]u8 = undefined;
+        var fr = file.reader(io, &scratch);
+        const content = try fr.interface.allocRemaining(self.alloc, .limited(1024 * 1024)); // Max 1MB
         defer self.alloc.free(content);
 
         var tasks = std.ArrayList(Task).initCapacity(self.alloc, 16) catch return error.OutOfMemory;
@@ -501,8 +507,9 @@ pub const Orchestrator = struct {
         const spec_file = try std.fmt.allocPrint(self.alloc, "specs/tri/{s}.tri", .{sanitized});
 
         // Check if spec file exists
-        if (std.fs.cwd().openFile(spec_file, .{})) |file| {
-            file.close();
+        const io = tri_io.get();
+        if (std.Io.Dir.cwd().openFile(io, spec_file, .{})) |file| {
+            file.close(io);
             // File exists, generate output path
             return deriveOutputPath(self.alloc, spec_file);
         } else |_| {
@@ -514,7 +521,7 @@ pub const Orchestrator = struct {
 
     /// Create git branch
     fn gitCreateBranch(self: *Self, branch_name: []const u8) !void {
-        const result = try std.process.Child.run(.{
+        const result = try tri_proc.run(.{
             .allocator = self.alloc,
             .argv = &.{ "git", "checkout", "-b", branch_name },
         });
@@ -525,7 +532,7 @@ pub const Orchestrator = struct {
         }
 
         if ((switch (result.term) {
-            .Exited => |code| code,
+            .exited => |code| code,
             else => @as(u32, 1),
         }) != 0) {
             std.debug.print("⚠️  git checkout failed: {s}\n", .{result.stderr});

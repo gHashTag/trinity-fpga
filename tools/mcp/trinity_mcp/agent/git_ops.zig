@@ -1,6 +1,9 @@
 // git_ops.zig — Git operations via child process for agent entrypoint
 // Replaces bash git commands with typed Zig wrappers.
 const std = @import("std");
+const tri_time = @import("tri_time");
+const tri_io = @import("tri_io");
+const tri_proc = @import("tri_proc");
 
 pub const DiffStats = struct {
     files_changed: u32 = 0,
@@ -33,7 +36,7 @@ pub fn setupWorktree(
 
     // Clone bare repo (or fetch if /bare-repo.git exists from Docker cache)
     const bare_path = "/bare-repo.git";
-    if (std.fs.cwd().access(bare_path, .{})) {
+    if (std.Io.Dir.cwd().access(tri_io.get(), bare_path, .{})) {
         // Fetch latest
         _ = runGit(allocator, &.{ "git", "-C", bare_path, "fetch", "origin", "main", "--depth=1" }) catch {};
     } else |_| {
@@ -116,7 +119,7 @@ fn stripProtocol(url: []const u8) []const u8 {
 }
 
 fn runGit(allocator: std.mem.Allocator, argv: []const []const u8) ![]const u8 {
-    const result = try std.process.Child.run(.{
+    const result = try tri_proc.run(.{
         .allocator = allocator,
         .argv = argv,
         .max_output_bytes = 256 * 1024,
@@ -124,7 +127,7 @@ fn runGit(allocator: std.mem.Allocator, argv: []const []const u8) ![]const u8 {
     allocator.free(result.stderr);
 
     switch (result.term) {
-        .Exited => |code| {
+        .exited => |code| {
             if (code != 0) {
                 allocator.free(result.stdout);
                 return error.GitCommandFailed;
@@ -145,7 +148,7 @@ fn runGitRetry(allocator: std.mem.Allocator, argv: []const []const u8, max_attem
         if (runGit(allocator, argv)) |output| return output else |err| {
             if (attempt + 1 < max_attempts) {
                 std.debug.print("[git] attempt {d}/{d} failed: {s}, retrying...\n", .{ attempt + 1, max_attempts, @errorName(err) });
-                std.Thread.sleep(2 * std.time.ns_per_s);
+                tri_time.sleep(2 * std.time.ns_per_s);
             } else return err;
         }
     }

@@ -9,12 +9,13 @@
 //
 // Env vars: TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
 const std = @import("std");
+const tri_env = @import("tri_env");
 const telegram = @import("telegram.zig");
 
 pub fn main() !void {
     // Read Telegram config from env
-    const bot_token: []const u8 = std.posix.getenv("TELEGRAM_BOT_TOKEN") orelse return;
-    const chat_id: []const u8 = std.posix.getenv("TELEGRAM_CHAT_ID") orelse return;
+    const bot_token: []const u8 = tri_env.getPosix("TELEGRAM_BOT_TOKEN") orelse return;
+    const chat_id: []const u8 = tri_env.getPosix("TELEGRAM_CHAT_ID") orelse return;
     const config = telegram.TelegramConfig{
         .bot_token = bot_token,
         .chat_id = chat_id,
@@ -22,7 +23,7 @@ pub fn main() !void {
     };
 
     // Agent identity from env (default: "Claude")
-    const agent_name = std.posix.getenv("AGENT_NAME") orelse "claude";
+    const agent_name = tri_env.getPosix("AGENT_NAME") orelse "claude";
     const agent_emoji: []const u8 = if (std.mem.eql(u8, agent_name, "ralph"))
         "\xf0\x9f\x94\xa7"
     else if (std.mem.eql(u8, agent_name, "mu"))

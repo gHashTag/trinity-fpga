@@ -171,22 +171,24 @@ pub const ContextManager = struct {
     pub fn buildCompactionRequest(self: *ContextManager, messages: *const std.ArrayList(u8), model: []const u8) ?[]const u8 {
         if (!self.isNearLimit(messages)) return null;
 
-        var body = std.ArrayList(u8).empty;
-        body.appendSlice(self.allocator, "{\"model\":\"") catch return null;
-        body.appendSlice(self.allocator, model) catch return null;
-        body.appendSlice(self.allocator, "\",\"max_tokens\":2048,\"messages\":[{\"role\":\"user\",\"content\":\"") catch return null;
+        var aw: std.Io.Writer.Allocating = .init(self.allocator);
+        defer aw.deinit();
+        const body = &aw.writer;
+        body.writeAll("{\"model\":\"") catch return null;
+        body.writeAll(model) catch return null;
+        body.writeAll("\",\"max_tokens\":2048,\"messages\":[{\"role\":\"user\",\"content\":\"") catch return null;
 
         // Inject summary prompt + conversation excerpt
         const prompt_prefix = "Summarize the following conversation concisely in 2-3 paragraphs. Preserve: all file paths mentioned, key decisions made, current task state, and any errors encountered. Conversation:\\n\\n";
-        body.appendSlice(self.allocator, prompt_prefix) catch return null;
+        body.writeAll(prompt_prefix) catch return null;
 
         // Include first portion of messages (up to ~100K chars)
         const max_excerpt = @min(messages.items.len, 400_000);
-        proto.writeJsonEscaped(body.writer(self.allocator), messages.items[0..max_excerpt]) catch return null;
+        proto.writeJsonEscaped(body, messages.items[0..max_excerpt]) catch return null;
 
-        body.appendSlice(self.allocator, "\"}]}") catch return null;
+        body.writeAll("\"}]}") catch return null;
 
-        return body.toOwnedSlice(self.allocator) catch null;
+        return aw.toOwnedSlice() catch null;
     }
 
     /// Apply a summary: replace old messages with summary + keep recent turns.
@@ -214,22 +216,23 @@ pub const ContextManager = struct {
         }
 
         // Build new messages: [{"role":"user","content":"[Context Summary]\n{summary}"},...recent turns...]
-        var new_msgs = std.ArrayList(u8).empty;
-        new_msgs.appendSlice(self.allocator, "[{\"role\":\"user\",\"content\":\"[Previous context summary]\\n") catch return;
-        proto.writeJsonEscaped(new_msgs.writer(self.allocator), summary) catch return;
-        new_msgs.appendSlice(self.allocator, "\"}") catch return;
+        var aw: std.Io.Writer.Allocating = .init(self.allocator);
+        defer aw.deinit();
+        const new_msgs = &aw.writer;
+        new_msgs.writeAll("[{\"role\":\"user\",\"content\":\"[Previous context summary]\\n") catch return;
+        proto.writeJsonEscaped(new_msgs, summary) catch return;
+        new_msgs.writeAll("\"}") catch return;
 
         // Append recent turns
         if (keep_from < data.len) {
-            new_msgs.appendSlice(self.allocator, data[keep_from..]) catch return;
+            new_msgs.writeAll(data[keep_from..]) catch return;
         }
 
         // Replace
         messages.clearRetainingCapacity();
-        messages.appendSlice(self.allocator, new_msgs.items) catch |err| {
+        messages.appendSlice(self.allocator, new_msgs.buffered()) catch |err| {
             std.log.warn("context: applySummary failed to replace messages: {}", .{err});
         };
-        new_msgs.deinit(self.allocator);
     }
 };
 

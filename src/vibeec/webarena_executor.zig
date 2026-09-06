@@ -4,6 +4,7 @@
 // φ² + 1/φ² = 3
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const browser = @import("browser.zig");
 const task_mod = @import("webarena_task.zig");
@@ -102,7 +103,7 @@ pub const WebArenaExecutor = struct {
     /// Execute a WebArena task
     pub fn executeTask(self: *Self, task: *const task_mod.WebArenaTask) ExecutorError!ExecutionResult {
         self.current_step = 0;
-        self.start_time = std.time.milliTimestamp();
+        self.start_time = tri_time.milliTimestamp();
 
         const b = self.browser_instance orelse return ExecutorError.BrowserError;
 
@@ -119,7 +120,7 @@ pub const WebArenaExecutor = struct {
         // 5. Check if task is complete
         // 6. Repeat until done or max steps
 
-        const elapsed = @as(u64, @intCast(std.time.milliTimestamp() - self.start_time));
+        const elapsed = @as(u64, @intCast(tri_time.milliTimestamp() - self.start_time));
 
         return ExecutionResult{
             .task_id = task.task_id,
@@ -240,7 +241,7 @@ pub const WebArenaExecutor = struct {
     pub fn shouldStop(self: *Self) bool {
         if (self.current_step >= self.config.max_steps) return true;
 
-        const elapsed = @as(u64, @intCast(std.time.milliTimestamp() - self.start_time));
+        const elapsed = @as(u64, @intCast(tri_time.milliTimestamp() - self.start_time));
         if (elapsed >= self.config.timeout_ms) return true;
 
         return false;

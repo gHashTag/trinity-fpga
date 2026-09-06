@@ -6,6 +6,7 @@
 
 const std = @import("std");
 
+const tri_io = @import("tri_io");
 /// ═══════════════════════════════════════════════════════════════════════════════
 /// ERROR TYPES
 /// ═════════════════════════════════════════════════════════════════════════════════════════
@@ -53,7 +54,7 @@ pub const TRI27_MAGIC: u32 = 0x54524927;
 /// Load binary file and copy data to memory (little-endian)
 pub fn loadBinary(path: []const u8, mem: [*]u8, mem_size: usize) !LoadResult {
     // Check file size
-    const file = std.fs.openFileAbsolute(path, .{}) catch return error.FileNotFound;
+    const file = std.Io.Dir.openFileAbsolute(tri_io.get(), path, .{}) catch return error.FileNotFound;
     defer file.close();
 
     const stat = try file.stat();

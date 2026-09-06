@@ -4,6 +4,7 @@
 // Golden Identity: phi^2 + 1/phi^2 = 3
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const interface = @import("plugin_interface.zig");
 
@@ -126,7 +127,7 @@ pub const PluginRegistry = struct {
             .source = source,
             .priority = priority,
             .enabled = true,
-            .load_time_ns = std.time.nanoTimestamp(),
+            .load_time_ns = tri_time.nanoTimestamp(),
         };
 
         try self.plugins.put(id, entry);

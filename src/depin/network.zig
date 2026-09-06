@@ -5,6 +5,8 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
+const tri_time = @import("tri_time");
 const bootstrap = @import("bootstrap");
 const persistence = @import("persistence");
 const metrics_mod = @import("metrics");
@@ -139,7 +141,8 @@ pub const ClusterNode = struct {
 
     /// Check if node is healthy (seen in last hour, quality > 0.3)
     pub fn isHealthy(self: *const ClusterNode) bool {
-        const now = std.time.timestamp();
+        // tri_time.timestamp() is i64; these fields are u64.
+        const now: u64 = @intCast(tri_time.timestamp());
         const hours_since_seen: f64 = if (self.last_heartbeat > 0)
             @as(f64, @floatFromInt(now - self.last_heartbeat)) / 3600.0
         else
@@ -150,12 +153,12 @@ pub const ClusterNode = struct {
 
     /// Update quality score based on interaction
     pub fn updateQuality(self: *ClusterNode, success: bool, latency_ms: u64) void {
-        const now = std.time.timestamp();
+        const now: u64 = @intCast(tri_time.timestamp());
         if (self.first_seen == 0) self.first_seen = now;
         self.last_heartbeat = now;
 
         if (success) {
-            const latency_bonus = if (latency_ms < 100)
+            const latency_bonus: f64 = if (latency_ms < 100)
                 0.05
             else if (latency_ms < 500)
                 0.02
@@ -173,33 +176,23 @@ pub const ClusterNode = struct {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 pub const UDPDiscovery = struct {
-    socket: std.posix.socket_t,
+    socket: std.Io.net.Socket,
     port: u16,
     allocator: std.mem.Allocator,
 
     pub fn init(port: u16, allocator: std.mem.Allocator) !UDPDiscovery {
-        const socket = try std.posix.socket(std.posix.AF.INET, std.posix.SOCK.DGRAM, std.posix.IPPROTO.UDP);
+        const io = tri_io.get();
 
-        // Enable broadcast
-        const broadcast_value: u32 = 1;
-        _ = std.posix.setsockopt(socket, std.posix.SOL.SOCKET, std.posix.SO.BROADCAST, &std.mem.toBytes(@as(c_int, @intCast(broadcast_value)))) catch |err| {
-            std.posix.close(socket);
-            return err;
-        };
-
-        // Enable reuse address
-        const reuse_value: u32 = 1;
-        _ = std.posix.setsockopt(socket, std.posix.SOL.SOCKET, std.posix.SO.REUSEADDR, &std.mem.toBytes(@as(c_int, @intCast(reuse_value)))) catch |err| {
-            std.posix.close(socket);
-            return err;
-        };
-
-        // Bind to address
-        const addr = std.net.Address.initIp4(.{ 0, 0, 0, 0 }, port);
-        std.posix.bind(socket, &addr.any, addr.getOsSockLen()) catch |err| {
-            std.posix.close(socket);
-            return err;
-        };
+        // Zig 0.16: `IpAddress.bind` creates the socket and binds it in one
+        // step. `allow_broadcast` replaces the explicit SO_BROADCAST
+        // setsockopt. There is no `BindOptions` field for SO_REUSEADDR, so
+        // that option is not carried over -- see the migration notes.
+        const addr: std.Io.net.IpAddress = .{ .ip4 = .unspecified(port) };
+        const socket = try addr.bind(io, .{
+            .mode = .dgram,
+            .protocol = .udp,
+            .allow_broadcast = true,
+        });
 
         return UDPDiscovery{
             .socket = socket,
@@ -209,25 +202,31 @@ pub const UDPDiscovery = struct {
     }
 
     pub fn deinit(self: *UDPDiscovery) void {
-        std.posix.close(self.socket);
+        self.socket.close(tri_io.get());
     }
 
     pub fn broadcastDiscovery(self: *const UDPDiscovery, cluster_id: []const u8, node_id: []const u8) !void {
+        const io = tri_io.get();
+
         const packet = try std.fmt.allocPrint(self.allocator,
             \\{{"type":"discovery","cluster_id":"{s}","node_id":"{s}","timestamp":{d}}}
-        , .{ cluster_id, node_id, std.time.milliTimestamp() });
+        , .{ cluster_id, node_id, tri_time.milliTimestamp() });
         defer self.allocator.free(packet);
 
-        const broadcast_addr = std.net.Address.initIp4(.{ 255, 255, 255, 255 }, self.port);
+        const broadcast_addr: std.Io.net.IpAddress = .{
+            .ip4 = .{ .bytes = .{ 255, 255, 255, 255 }, .port = self.port },
+        };
 
-        _ = try std.posix.sendto(self.socket, packet, 0, &broadcast_addr.any, broadcast_addr.getOsSockLen());
+        try self.socket.send(io, &broadcast_addr, packet);
     }
 
     /// Directed discovery to specific IP address (for Railway public IPs)
     pub fn directedDiscovery(self: *const UDPDiscovery, target_ip: []const u8, target_port: u16, cluster_id: []const u8, node_id: []const u8) !void {
+        const io = tri_io.get();
+
         const packet = try std.fmt.allocPrint(self.allocator,
             \\{{"type":"discovery","cluster_id":"{s}","node_id":"{s}","timestamp":{d}}}
-        , .{ cluster_id, node_id, std.time.milliTimestamp() });
+        , .{ cluster_id, node_id, tri_time.milliTimestamp() });
         defer self.allocator.free(packet);
 
         // Parse IP address
@@ -239,9 +238,11 @@ pub const UDPDiscovery = struct {
             i += 1;
         }
 
-        const target_addr = std.net.Address.initIp4(octets, target_port);
+        const target_addr: std.Io.net.IpAddress = .{
+            .ip4 = .{ .bytes = octets, .port = target_port },
+        };
 
-        _ = try std.posix.sendto(self.socket, packet, 0, &target_addr.any, target_addr.getOsSockLen());
+        try self.socket.send(io, &target_addr, packet);
     }
 
     /// Directed discovery to multiple bootstrap peers
@@ -263,27 +264,27 @@ pub const UDPDiscovery = struct {
     }
 
     pub fn receiveDiscovery(self: *UDPDiscovery, timeout_ms: u64) !?NodeDiscovery {
-        // Set receive timeout
-        if (timeout_ms > 0) {
-            const tv = std.posix.timeval{
-                .sec = @intCast(timeout_ms / 1000),
-                .usec = @intCast((timeout_ms % 1000) * 1000),
-            };
-            _ = std.posix.setsockopt(self.socket, std.posix.SOL.SOCKET, std.posix.SO.RCVTIMEO, &std.mem.toBytes(tv)) catch |err| {
-                std.log.debug("network: failed to set receive timeout: {}", .{err});
-            };
-        }
+        const io = tri_io.get();
+
+        // Zig 0.16: the SO_RCVTIMEO setsockopt is replaced by passing an
+        // `Io.Timeout` to `receiveTimeout`, which reports `error.Timeout`
+        // where the 0.15 code saw `error.WouldBlock`.
+        const timeout: std.Io.Timeout = if (timeout_ms > 0)
+            .{ .duration = .{
+                .raw = .fromMilliseconds(@intCast(timeout_ms)),
+                .clock = .awake,
+            } }
+        else
+            .none;
 
         var buf: [MAX_PACKET_SIZE]u8 = undefined;
-        var src_addr: std.net.Address = undefined;
-        var src_len: std.posix.socklen_t = @sizeOf(std.posix.sockaddr);
 
-        const len = std.posix.recvfrom(self.socket, &buf, 0, &src_addr.any, &src_len) catch |err| {
-            if (err == error.WouldBlock) return null;
-            return err;
+        const message = self.socket.receiveTimeout(io, &buf, timeout) catch |err| switch (err) {
+            error.Timeout => return null,
+            else => |e| return e,
         };
 
-        const data = buf[0..len];
+        const data = message.data;
 
         // Parse JSON discovery packet
         // Simplified parsing (in production, use proper JSON parser)
@@ -300,9 +301,13 @@ pub const UDPDiscovery = struct {
         const node_id_end = std.mem.indexOf(u8, data[node_id_start + 11 ..], "\"") orelse return NetworkError.InvalidPacket;
         const node_id = data[node_id_start + 11 .. node_id_start + 11 + node_id_end];
 
-        // Get IP string from src_addr (IPv4 only for now)
-        // Extract bytes from the in_addr struct
-        const bytes: *const [4]u8 = @ptrCast(&src_addr.in.sa.addr);
+        // Get IP string from the sender address (IPv4 only for now).
+        // Zig 0.16: `IncomingMessage.from` is an `IpAddress` union, so the
+        // octets come out of `Ip4Address.bytes` rather than a raw `in_addr`.
+        const bytes: [4]u8 = switch (message.from) {
+            .ip4 => |a| a.bytes,
+            .ip6 => |a| (std.Io.net.Ip4Address.fromIp6(a) orelse return NetworkError.InvalidPacket).bytes,
+        };
         const ip_alloc = try std.fmt.allocPrint(self.allocator, "{d}.{d}.{d}.{d}", .{ bytes[0], bytes[1], bytes[2], bytes[3] });
         errdefer self.allocator.free(ip_alloc);
 
@@ -311,21 +316,23 @@ pub const UDPDiscovery = struct {
             .node_id = try self.allocator.dupe(u8, node_id),
             .addr = SocketAddr{
                 .ip = ip_alloc,
-                .port = src_addr.getPort(),
+                .port = message.from.getPort(),
             },
             .role = .worker, // Default
             .tier = .free, // Default
-            .timestamp = @as(u64, @intCast(std.time.milliTimestamp())),
+            .timestamp = @as(u64, @intCast(tri_time.milliTimestamp())),
         };
     }
 
-    pub fn respondToDiscovery(self: *const UDPDiscovery, dest_addr: std.net.Address, cluster_id: []const u8, node_id: []const u8, role: NodeRole, tier: NodeTier) !void {
+    pub fn respondToDiscovery(self: *const UDPDiscovery, dest_addr: std.Io.net.IpAddress, cluster_id: []const u8, node_id: []const u8, role: NodeRole, tier: NodeTier) !void {
+        const io = tri_io.get();
+
         const packet = try std.fmt.allocPrint(self.allocator,
             \\{{"type":"discovery_response","cluster_id":"{s}","node_id":"{s}","role":"{s}","tier":"{s}","timestamp":{d}}}
-        , .{ cluster_id, node_id, role.toString(), tier.toString(), @as(u64, @intCast(std.time.milliTimestamp())) });
+        , .{ cluster_id, node_id, role.toString(), tier.toString(), @as(u64, @intCast(tri_time.milliTimestamp())) });
         defer self.allocator.free(packet);
 
-        _ = try std.posix.sendto(self.socket, packet, 0, &dest_addr.any, dest_addr.getOsSockLen());
+        try self.socket.send(io, &dest_addr, packet);
     }
 };
 
@@ -334,31 +341,27 @@ pub const UDPDiscovery = struct {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 pub const TCPJobServer = struct {
-    server_socket: std.posix.socket_t,
+    /// Zig 0.16: a listening socket is a `std.Io.net.Server`, not a raw fd.
+    server_socket: std.Io.net.Server,
     port: u16,
     allocator: std.mem.Allocator,
     running: bool,
 
     pub fn init(port: u16, allocator: std.mem.Allocator) !TCPJobServer {
-        const server_socket = try std.posix.socket(std.posix.AF.INET, std.posix.SOCK.STREAM, std.posix.IPPROTO.TCP);
+        const io = tri_io.get();
 
-        // Enable reuse address
-        const reuse_value: u32 = 1;
-        _ = std.posix.setsockopt(server_socket, std.posix.SOL.SOCKET, std.posix.SO.REUSEADDR, &std.mem.toBytes(@as(c_int, @intCast(reuse_value)))) catch |err| {
-            std.posix.close(server_socket);
-            return err;
-        };
-
-        const addr = std.net.Address.initIp4(.{ 0, 0, 0, 0 }, port);
-        std.posix.bind(server_socket, &addr.any, addr.getOsSockLen()) catch |err| {
-            std.posix.close(server_socket);
-            return err;
-        };
-
-        try std.posix.listen(server_socket, 128);
+        // `IpAddress.listen` folds socket/setsockopt/bind/listen into one
+        // call; SO_REUSEADDR is `reuse_address` in `ListenOptions`.
+        const addr: std.Io.net.IpAddress = .{ .ip4 = .unspecified(port) };
+        const server = try addr.listen(io, .{
+            .reuse_address = true,
+            .kernel_backlog = 128,
+            .mode = .stream,
+            .protocol = .tcp,
+        });
 
         return TCPJobServer{
-            .server_socket = server_socket,
+            .server_socket = server,
             .port = port,
             .allocator = allocator,
             .running = false,
@@ -367,7 +370,7 @@ pub const TCPJobServer = struct {
 
     pub fn deinit(self: *TCPJobServer) void {
         self.running = false;
-        std.posix.close(self.server_socket);
+        self.server_socket.deinit(tri_io.get());
     }
 
     pub fn start(self: *TCPJobServer) void {
@@ -375,109 +378,125 @@ pub const TCPJobServer = struct {
     }
 
     pub fn acceptConnection(self: *TCPJobServer) !TCPJobConnection {
-        var client_addr: std.net.Address = undefined;
-        var addr_len: std.posix.socklen_t = @sizeOf(std.posix.sockaddr);
+        const io = tri_io.get();
 
-        const client_socket = std.posix.accept(self.server_socket, &client_addr.any, &addr_len) catch |err| {
-            return err;
-        };
+        // 0.16 `Server.accept` returns a `Stream` directly -- there is no
+        // `Server.Connection`. The peer address is on the accepted socket.
+        const stream = try self.server_socket.accept(io);
 
         return TCPJobConnection{
-            .socket = client_socket,
-            .address = client_addr,
+            .socket = stream,
+            .address = stream.socket.address,
             .allocator = self.allocator,
         };
     }
 };
 
 pub const TCPJobConnection = struct {
-    socket: std.posix.socket_t,
-    address: std.net.Address,
+    socket: std.Io.net.Stream,
+    address: std.Io.net.IpAddress,
     allocator: std.mem.Allocator,
 
     pub fn deinit(self: *TCPJobConnection) void {
-        std.posix.close(self.socket);
+        self.socket.close(tri_io.get());
     }
 
     pub fn sendJob(self: *TCPJobConnection, job: JobPacket) !void {
+        const io = tri_io.get();
+
         const json = try job.toJson(self.allocator);
         defer self.allocator.free(json);
 
         const header = try std.fmt.allocPrint(self.allocator, "Content-Length: {d}\r\n\r\n", .{json.len});
         defer self.allocator.free(header);
 
-        // Send header
-        _ = try std.posix.send(self.socket, header, 0);
+        // 0.16: writing to a stream goes through `Stream.Writer.interface`,
+        // and the detailed error is left on the writer.
+        var send_buf: [512]u8 = undefined;
+        var stream_writer = self.socket.writer(io, &send_buf);
+        const w = &stream_writer.interface;
 
-        // Send body
-        _ = try std.posix.send(self.socket, json, 0);
+        w.writeAll(header) catch return stream_writer.err orelse error.WriteFailed;
+        w.writeAll(json) catch return stream_writer.err orelse error.WriteFailed;
+        w.flush() catch return stream_writer.err orelse error.WriteFailed;
     }
 
     pub fn receiveResult(self: *TCPJobConnection, max_size: usize) ![]const u8 {
         _ = max_size; // Will be used for size limiting
-        var buffer: [MAX_PACKET_SIZE]u8 = undefined;
+        const io = tri_io.get();
 
-        const len = std.posix.recv(self.socket, &buffer, 0) catch |err| {
-            return err;
+        var buffer: [MAX_PACKET_SIZE]u8 = undefined;
+        var stream_reader = self.socket.reader(io, &buffer);
+        const r = &stream_reader.interface;
+
+        // `fillMore` performs exactly one underlying read, which is the
+        // closest 0.16 equivalent of the single `recv` this replaced.
+        r.fillMore() catch |err| switch (err) {
+            error.EndOfStream => return error.ConnectionClosed,
+            error.ReadFailed => return stream_reader.err orelse error.ReadFailed,
         };
 
-        if (len == 0) return error.ConnectionClosed;
+        const data = r.buffered();
+        if (data.len == 0) return error.ConnectionClosed;
 
-        return self.allocator.dupe(u8, buffer[0..len]);
+        return self.allocator.dupe(u8, data);
     }
 };
 
 pub const TCPJobClient = struct {
-    socket: std.posix.socket_t,
+    socket: std.Io.net.Stream,
     allocator: std.mem.Allocator,
 
-    pub fn connect(address: std.net.Address, allocator: std.mem.Allocator) !TCPJobClient {
-        const socket = try std.posix.socket(std.posix.AF.INET, std.posix.SOCK.STREAM, std.posix.IPPROTO.TCP);
+    pub fn connect(address: std.Io.net.IpAddress, allocator: std.mem.Allocator) !TCPJobClient {
+        const io = tri_io.get();
 
-        std.posix.connect(socket, &address.any, address.getOsSockLen()) catch |err| {
-            std.posix.close(socket);
-            return err;
-        };
+        // 0.16 replaces socket()+connect() with `IpAddress.connect`, which
+        // returns an open `Stream`.
+        const stream = try address.connect(io, .{ .mode = .stream, .protocol = .tcp });
 
         return TCPJobClient{
-            .socket = socket,
+            .socket = stream,
             .allocator = allocator,
         };
     }
 
     pub fn deinit(self: *TCPJobClient) void {
-        std.posix.close(self.socket);
+        self.socket.close(tri_io.get());
     }
 
     pub fn receiveJob(self: *TCPJobClient) !JobPacket {
-        // Receive header
-        var header_buf: [256]u8 = undefined;
-        const header_len = std.posix.recv(self.socket, &header_buf, 0) catch |err| {
-            return err;
+        const io = tri_io.get();
+
+        var read_buf: [MAX_PACKET_SIZE]u8 = undefined;
+        var stream_reader = self.socket.reader(io, &read_buf);
+        const r = &stream_reader.interface;
+
+        // Receive header. One underlying read, matching the single `recv`
+        // the 0.15 code used, then look for the end of the header block in
+        // what is buffered.
+        r.fillMore() catch |err| switch (err) {
+            error.EndOfStream => return error.ConnectionClosed,
+            error.ReadFailed => return stream_reader.err orelse error.ReadFailed,
         };
 
-        const header = header_buf[0..header_len];
+        const buffered = r.buffered();
+        const header_end = std.mem.indexOf(u8, buffered, "\r\n\r\n") orelse return NetworkError.InvalidPacket;
+        const header = buffered[0 .. header_end + 4];
 
         // Parse Content-Length
         const len_start = std.mem.indexOf(u8, header, "Content-Length: ") orelse return NetworkError.InvalidPacket;
         const len_end = std.mem.indexOf(u8, header[len_start..], "\r\n") orelse return NetworkError.InvalidPacket;
         const content_len_str = header[len_start + 16 .. len_start + len_end];
         const content_len = try std.fmt.parseInt(usize, content_len_str, 10);
+        if (content_len > read_buf.len) return NetworkError.InvalidPacket;
 
-        // Receive body
-        var body_buf: [MAX_PACKET_SIZE]u8 = undefined;
-        var total_received: usize = 0;
-
-        while (total_received < content_len) {
-            const received = std.posix.recv(self.socket, body_buf[total_received..], 0) catch |err| {
-                return err;
-            };
-            if (received == 0) return error.ConnectionClosed;
-            total_received += received;
-        }
-
-        // Parse JobPacket from JSON (simplified)
-        const body = body_buf[0..content_len];
+        // Receive body. `take` fills the buffer until `content_len` bytes are
+        // available, which is what the old read loop did by hand.
+        r.toss(header.len);
+        const body = r.take(content_len) catch |err| switch (err) {
+            error.EndOfStream => return error.ConnectionClosed,
+            error.ReadFailed => return stream_reader.err orelse error.ReadFailed,
+        };
 
         const job_id_start = std.mem.indexOf(u8, body, "\"job_id\":\"") orelse return NetworkError.InvalidPacket;
         const job_id_end = std.mem.indexOf(u8, body[job_id_start + 10 ..], "\"") orelse return NetworkError.InvalidPacket;
@@ -496,12 +515,19 @@ pub const TCPJobClient = struct {
             .job_id = try self.allocator.dupe(u8, job_id),
             .payload = try self.allocator.dupe(u8, payload),
             .reward = reward,
-            .timestamp = std.time.milliTimestamp(),
+            .timestamp = @intCast(tri_time.milliTimestamp()),
         };
     }
 
     pub fn sendResult(self: *TCPJobClient, result: []const u8) !void {
-        _ = try std.posix.send(self.socket, result, 0);
+        const io = tri_io.get();
+
+        var send_buf: [512]u8 = undefined;
+        var stream_writer = self.socket.writer(io, &send_buf);
+        const w = &stream_writer.interface;
+
+        w.writeAll(result) catch return stream_writer.err orelse error.WriteFailed;
+        w.flush() catch return stream_writer.err orelse error.WriteFailed;
     }
 };
 
@@ -531,7 +557,7 @@ pub const ClusterManager = struct {
             .node_id = try allocator.dupe(u8, node_id),
             .role = role,
             .tier = tier,
-            .nodes = .{},
+            .nodes = .empty,
             .udp = null,
             .tcp_server = null,
             .allocator = allocator,
@@ -612,7 +638,7 @@ pub const ClusterManager = struct {
         );
         defer state.deinit(self.allocator);
 
-        const now = @as(u64, @intCast(std.time.timestamp()));
+        const now = @as(u64, @intCast(tri_time.timestamp()));
 
         for (self.nodes.items) |node| {
             const peer = persistence.PeerState{
@@ -650,7 +676,7 @@ pub const ClusterManager = struct {
         self.tcp_server.?.start();
     }
 
-    pub fn startWorker(self: *ClusterManager, coordinator_addr: std.net.Address) !void {
+    pub fn startWorker(self: *ClusterManager, coordinator_addr: std.Io.net.IpAddress) !void {
         _ = self; // Will be used for connection
         _ = coordinator_addr; // Will be used to connect
         // Implementation: send discovery response, wait for jobs
@@ -669,9 +695,9 @@ pub const ClusterManager = struct {
         try self.udp.?.broadcastDiscovery(self.cluster_id, self.node_id);
 
         var discovered: usize = 0;
-        const start_time = std.time.milliTimestamp();
+        const start_time = tri_time.milliTimestamp();
 
-        while (std.time.milliTimestamp() - start_time < timeout_ms) {
+        while (tri_time.milliTimestamp() - start_time < timeout_ms) {
             const discovery = try self.udp.?.receiveDiscovery(1000);
             if (discovery) |d| {
                 // Check if node already exists
@@ -738,13 +764,12 @@ pub const ClusterManager = struct {
         // Wait for responses
         var discovered: usize = 0;
         const timeout_ms = 5000;
-        const start_time = std.time.milliTimestamp();
+        const start_time = tri_time.milliTimestamp();
 
-        while (std.time.milliTimestamp() - start_time < timeout_ms) {
-            const recv_result = self.udp.?.receiveDiscovery(1000) catch |err| {
-                if (err == error.WouldBlock) continue;
-                return err;
-            };
+        while (tri_time.milliTimestamp() - start_time < timeout_ms) {
+            // 0.16: a receive that times out comes back as `null` rather than
+            // `error.WouldBlock`, so the old catch-and-continue is gone.
+            const recv_result = try self.udp.?.receiveDiscovery(1000);
 
             if (recv_result) |d| {
                 // Check if node already exists
@@ -792,18 +817,18 @@ pub const ClusterManager = struct {
         if (self.tcp_server == null) return NetworkError.SocketCreateFailed;
 
         // Accept connection from worker
-        const conn = try self.tcp_server.?.acceptConnection();
+        var conn = try self.tcp_server.?.acceptConnection();
         defer conn.deinit();
 
         // Create job packet
-        const job_id = try std.fmt.allocPrint(self.allocator, "job-{d}", .{std.time.milliTimestamp()});
+        const job_id = try std.fmt.allocPrint(self.allocator, "job-{d}", .{tri_time.milliTimestamp()});
         defer self.allocator.free(job_id);
 
         const job = JobPacket{
             .job_id = job_id,
             .payload = payload,
             .reward = base_reward,
-            .timestamp = std.time.milliTimestamp(),
+            .timestamp = @intCast(tri_time.milliTimestamp()),
         };
 
         try conn.sendJob(job);
@@ -829,32 +854,26 @@ pub const RestApiResponse = struct {
 };
 
 pub const RestApiServer = struct {
-    server_socket: std.posix.socket_t,
+    /// Zig 0.16: a listening socket is a `std.Io.net.Server`, not a raw fd.
+    server_socket: std.Io.net.Server,
     port: u16,
     cluster: *ClusterManager,
     allocator: std.mem.Allocator,
     running: bool,
 
     pub fn init(port: u16, cluster: *ClusterManager, allocator: std.mem.Allocator) !RestApiServer {
-        const server_socket = try std.posix.socket(std.posix.AF.INET, std.posix.SOCK.STREAM, std.posix.IPPROTO.TCP);
+        const io = tri_io.get();
 
-        // Enable reuse address
-        const reuse_value: u32 = 1;
-        _ = std.posix.setsockopt(server_socket, std.posix.SOL.SOCKET, std.posix.SO.REUSEADDR, &std.mem.toBytes(@as(c_int, @intCast(reuse_value)))) catch |err| {
-            std.posix.close(server_socket);
-            return err;
-        };
-
-        const addr = std.net.Address.initIp4(.{ 0, 0, 0, 0 }, port);
-        std.posix.bind(server_socket, &addr.any, addr.getOsSockLen()) catch |err| {
-            std.posix.close(server_socket);
-            return err;
-        };
-
-        try std.posix.listen(server_socket, 128);
+        const addr: std.Io.net.IpAddress = .{ .ip4 = .unspecified(port) };
+        const server = try addr.listen(io, .{
+            .reuse_address = true,
+            .kernel_backlog = 128,
+            .mode = .stream,
+            .protocol = .tcp,
+        });
 
         return RestApiServer{
-            .server_socket = server_socket,
+            .server_socket = server,
             .port = port,
             .cluster = cluster,
             .allocator = allocator,
@@ -864,7 +883,7 @@ pub const RestApiServer = struct {
 
     pub fn deinit(self: *RestApiServer) void {
         self.running = false;
-        std.posix.close(self.server_socket);
+        self.server_socket.deinit(tri_io.get());
     }
 
     pub fn start(self: *RestApiServer) void {
@@ -873,90 +892,100 @@ pub const RestApiServer = struct {
 
     /// Handle GET /api/status — Return cluster status, nodes, $TRI balances
     pub fn handleStatus(self: *RestApiServer) ![]const u8 {
-        var buffer = std.ArrayList(u8).init(self.allocator);
-        defer buffer.deinit();
+        // Zig 0.16: `std.ArrayList` is the unmanaged list, so the allocator
+        // travels with each call instead of living in the list.
+        const gpa = self.allocator;
+        var buffer: std.ArrayList(u8) = .empty;
+        defer buffer.deinit(gpa);
 
-        try buffer.appendSlice(
+        // `std.fmt.formatInt` / `std.fmt.formatFloat` are gone in 0.16;
+        // numbers go through `std.fmt.bufPrint` into this scratch buffer.
+        var num_buf: [64]u8 = undefined;
+
+        try buffer.appendSlice(gpa,
             \\{"cluster_id":""
         );
-        try buffer.appendSlice(self.cluster.cluster_id);
-        try buffer.appendSlice(
+        try buffer.appendSlice(gpa, self.cluster.cluster_id);
+        try buffer.appendSlice(gpa,
             \\","node_id":""
         );
-        try buffer.appendSlice(self.cluster.node_id);
-        try buffer.appendSlice(
+        try buffer.appendSlice(gpa, self.cluster.node_id);
+        try buffer.appendSlice(gpa,
             \\","role":""
         );
-        try buffer.appendSlice(self.cluster.role.toString());
-        try buffer.appendSlice(
+        try buffer.appendSlice(gpa, self.cluster.role.toString());
+        try buffer.appendSlice(gpa,
             \\","tier":""
         );
-        try buffer.appendSlice(self.cluster.tier.toString());
-        try buffer.appendSlice(
+        try buffer.appendSlice(gpa, self.cluster.tier.toString());
+        try buffer.appendSlice(gpa,
             \\","nodes":[
         );
 
         for (self.cluster.nodes.items, 0..) |node, i| {
-            if (i > 0) try buffer.append(',');
-            try buffer.appendSlice(
+            if (i > 0) try buffer.append(gpa, ',');
+            try buffer.appendSlice(gpa,
                 \\{"id":""
             );
-            try buffer.appendSlice(node.id);
-            try buffer.appendSlice(
+            try buffer.appendSlice(gpa, node.id);
+            try buffer.appendSlice(gpa,
                 \\","role":""
             );
-            try buffer.appendSlice(node.role.toString());
-            try buffer.appendSlice(
+            try buffer.appendSlice(gpa, node.role.toString());
+            try buffer.appendSlice(gpa,
                 \\","tier":""
             );
-            try buffer.appendSlice(node.tier.toString());
-            try buffer.appendSlice(
+            try buffer.appendSlice(gpa, node.tier.toString());
+            try buffer.appendSlice(gpa,
                 \\","status":""
             );
-            try buffer.appendSlice(@tagName(node.status));
-            try buffer.appendSlice(
+            try buffer.appendSlice(gpa, @tagName(node.status));
+            try buffer.appendSlice(gpa,
                 \\","operations":
             );
-            try std.fmt.formatInt(buffer.writer(), node.operations_count, 10, .lower, .{});
-            try buffer.appendSlice(
+            try buffer.appendSlice(gpa, try std.fmt.bufPrint(&num_buf, "{d}", .{node.operations_count}));
+            try buffer.appendSlice(gpa,
                 \\,"earned_tri":
             );
-            try std.fmt.formatFloat(buffer.writer(), node.earned_tri, .{ .decimal_digits = 6 });
-            try buffer.appendSlice(
+            try buffer.appendSlice(gpa, try std.fmt.bufPrint(&num_buf, "{d:.6}", .{node.earned_tri}));
+            try buffer.appendSlice(gpa,
                 \\,"pending_tri":
             );
-            try std.fmt.formatFloat(buffer.writer(), node.pending_tri, .{ .decimal_digits = 6 });
-            try buffer.appendSlice('}');
+            try buffer.appendSlice(gpa, try std.fmt.bufPrint(&num_buf, "{d:.6}", .{node.pending_tri}));
+            try buffer.append(gpa, '}');
         }
 
-        try buffer.appendSlice(
+        try buffer.appendSlice(gpa,
             \\]}
         );
 
-        return self.allocator.dupe(u8, buffer.items);
+        return gpa.dupe(u8, buffer.items);
     }
 
     /// Handle POST /api/claim — Claim pending $TRI rewards
     pub fn handleClaim(self: *RestApiServer, node_id: []const u8) ![]const u8 {
         _ = node_id; // Will be used to find specific node
 
-        var buffer = std.ArrayList(u8).init(self.allocator);
-        defer buffer.deinit();
+        const gpa = self.allocator;
+        var buffer: std.ArrayList(u8) = .empty;
+        defer buffer.deinit(gpa);
+
+        var num_buf: [64]u8 = undefined;
 
         // For now, just return pending TRI from current node (self)
         // DEFERRED: Cross-node reward lookup - currently only returns local pending TRI
 
-        try buffer.appendSlice(
+        try buffer.appendSlice(gpa,
             \\{"success":true,"claimed_tri":
         );
-        try std.fmt.formatFloat(buffer.writer(), 0.0, .{ .decimal_digits = 6 });
-        try buffer.appendSlice(
+        try buffer.appendSlice(gpa, try std.fmt.bufPrint(&num_buf, "{d:.6}", .{@as(f64, 0.0)}));
+        try buffer.appendSlice(gpa,
             \\,"new_balance":
         );
-        try std.fmt.formatFloat(buffer.writer(), 0.0, .{ .decimal_digits = 6 });
-        try buffer.appendSlice('}');
+        try buffer.appendSlice(gpa, try std.fmt.bufPrint(&num_buf, "{d:.6}", .{@as(f64, 0.0)}));
+        try buffer.append(gpa, '}');
 
-        return self.allocator.dupe(u8, buffer.items);
+        return gpa.dupe(u8, buffer.items);
     }
 
     /// Handle GET /api/dashboard — Full dashboard HTML

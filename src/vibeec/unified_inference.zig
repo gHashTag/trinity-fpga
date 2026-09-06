@@ -6,6 +6,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const gguf = @import("gguf_reader.zig");
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -154,7 +155,7 @@ pub const UnifiedPipeline = struct {
 
     /// Load model from GGUF file with auto-detection
     pub fn loadModel(self: *UnifiedPipeline, path: []const u8) !void {
-        var timer = try std.time.Timer.start();
+        var timer = try tri_time.Timer.start();
 
         // Open GGUF file
         self.reader = try gguf.GGUFReader.open(self.allocator, path);
@@ -234,7 +235,7 @@ pub const UnifiedPipeline = struct {
 
     /// Load and dequantize all weights with proper tensor mapping
     pub fn loadWeights(self: *UnifiedPipeline) !void {
-        var timer = try std.time.Timer.start();
+        var timer = try tri_time.Timer.start();
 
         const r = &self.reader.?;
         var total_bytes: u64 = 0;
@@ -410,7 +411,7 @@ pub const UnifiedPipeline = struct {
         }
 
         // Top-p sampling
-        var prng = std.Random.DefaultPrng.init(@intCast(std.time.milliTimestamp()));
+        var prng = std.Random.DefaultPrng.init(@intCast(tri_time.milliTimestamp()));
         const r = prng.random().float(f32) * top_p;
 
         var cumsum: f32 = 0;
@@ -429,7 +430,7 @@ pub const UnifiedPipeline = struct {
         var tokens = std.ArrayList(u32).init(self.allocator);
         try tokens.appendSlice(prompt_tokens);
 
-        var timer = try std.time.Timer.start();
+        var timer = try tri_time.Timer.start();
 
         // Generate new tokens
         for (0..max_new_tokens) |i| {
@@ -463,7 +464,7 @@ pub const UnifiedPipeline = struct {
         var total_time: u64 = 0;
 
         for (0..iterations) |i| {
-            var timer = try std.time.Timer.start();
+            var timer = try tri_time.Timer.start();
 
             // Run actual forward pass
             const logits = try self.forward(@intCast(i % self.config.vocab_size), i);

@@ -8,6 +8,9 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
+const tri_env = @import("tri_env");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayList;
 
@@ -163,7 +166,7 @@ pub const Compiler = struct {
     }
 
     pub fn compile(self: *Self, source: []const u8) !CompileResult {
-        const start_time = std.time.nanoTimestamp();
+        const start_time = tri_time.nanoTimestamp();
         var metrics = CompileMetrics{
             .parse_time_ns = 0,
             .type_check_time_ns = 0,
@@ -181,7 +184,7 @@ pub const Compiler = struct {
         };
 
         // Phase 1: Parse
-        const parse_start = std.time.nanoTimestamp();
+        const parse_start = tri_time.nanoTimestamp();
         var spec = self.parser.parse(source) catch |err| {
             var writer = error_reporter.ColorWriter.init(std.io.getStdOut().writer().any(), true);
             try writer.printColored(.red, "Parse error: {}\n", .{err});
@@ -196,13 +199,13 @@ pub const Compiler = struct {
                 .allocator = self.allocator,
             };
         };
-        const parse_end = std.time.nanoTimestamp();
+        const parse_end = tri_time.nanoTimestamp();
         metrics.parse_time_ns = @intCast(parse_end - parse_start);
         metrics.lines_parsed = self.parser.lines_parsed;
 
         // Phase 2: Type Check
         if (self.options.enable_type_check) {
-            const tc_start = std.time.nanoTimestamp();
+            const tc_start = tri_time.nanoTimestamp();
             var tc_result = self.type_checker.check(&spec) catch |err| {
                 const stderr = std.io.getStdErr().writer();
                 var writer = error_reporter.ColorWriter.init(stderr.any(), true);
@@ -220,7 +223,7 @@ pub const Compiler = struct {
                 };
             };
             defer tc_result.deinit(self.allocator);
-            const tc_end = std.time.nanoTimestamp();
+            const tc_end = tri_time.nanoTimestamp();
             metrics.type_check_time_ns = @intCast(tc_end - tc_start);
             metrics.types_checked = self.type_checker.types_checked;
 
@@ -234,7 +237,7 @@ pub const Compiler = struct {
         }
 
         // Phase 3: Code Generation
-        const cg_start = std.time.nanoTimestamp();
+        const cg_start = tri_time.nanoTimestamp();
         var cg = CodegenV4.init(self.allocator, self.options.target) catch |err| {
             var writer = error_reporter.ColorWriter.init(std.io.getStdOut().writer().any(), true);
             try writer.printColored(.red, "Codegen init error: {}\n", .{err});
@@ -264,7 +267,7 @@ pub const Compiler = struct {
                 .allocator = self.allocator,
             };
         };
-        const cg_end = std.time.nanoTimestamp();
+        const cg_end = tri_time.nanoTimestamp();
         metrics.codegen_time_ns = @intCast(cg_end - cg_start);
 
         // Collect codegen metrics
@@ -290,7 +293,7 @@ pub const Compiler = struct {
         }
 
         // Total time
-        const end_time = std.time.nanoTimestamp();
+        const end_time = tri_time.nanoTimestamp();
         metrics.total_time_ns = @intCast(end_time - start_time);
 
         // Update statistics
@@ -584,10 +587,10 @@ fn printAgentStatus() void {
     const stdout = std.io.getStdOut().writer();
 
     // Check API keys
-    const anthropic_key = std.posix.getenv("ANTHROPIC_API_KEY");
-    const openai_key = std.posix.getenv("OPENAI_API_KEY");
-    const ollama_host = std.posix.getenv("OLLAMA_HOST");
-    const eden_key = std.posix.getenv("EDEN_AI_API_KEY");
+    const anthropic_key = tri_env.getPosix("ANTHROPIC_API_KEY");
+    const openai_key = tri_env.getPosix("OPENAI_API_KEY");
+    const ollama_host = tri_env.getPosix("OLLAMA_HOST");
+    const eden_key = tri_env.getPosix("EDEN_AI_API_KEY");
 
     const has_anthropic = anthropic_key != null and anthropic_key.?.len > 0;
     const has_openai = openai_key != null and openai_key.?.len > 0;
@@ -629,10 +632,10 @@ fn printAgentStatus() void {
 fn printConfig() void {
     const stdout = std.io.getStdOut().writer();
 
-    const anthropic_key = std.posix.getenv("ANTHROPIC_API_KEY");
-    const openai_key = std.posix.getenv("OPENAI_API_KEY");
-    const ollama_host = std.posix.getenv("OLLAMA_HOST") orelse "http://localhost:11434";
-    const eden_key = std.posix.getenv("EDEN_AI_API_KEY");
+    const anthropic_key = tri_env.getPosix("ANTHROPIC_API_KEY");
+    const openai_key = tri_env.getPosix("OPENAI_API_KEY");
+    const ollama_host = tri_env.getPosix("OLLAMA_HOST") orelse "http://localhost:11434";
+    const eden_key = tri_env.getPosix("EDEN_AI_API_KEY");
 
     const has_anthropic = anthropic_key != null and anthropic_key.?.len > 0;
     const has_openai = openai_key != null and openai_key.?.len > 0;
@@ -682,10 +685,10 @@ fn runChat(allocator: std.mem.Allocator) !u8 {
     const stdin = std.io.getStdIn().reader();
 
     // Check for API keys
-    const anthropic_key = std.posix.getenv("ANTHROPIC_API_KEY");
-    const openai_key = std.posix.getenv("OPENAI_API_KEY");
-    const ollama_host = std.posix.getenv("OLLAMA_HOST");
-    const eden_key = std.posix.getenv("EDEN_AI_API_KEY");
+    const anthropic_key = tri_env.getPosix("ANTHROPIC_API_KEY");
+    const openai_key = tri_env.getPosix("OPENAI_API_KEY");
+    const ollama_host = tri_env.getPosix("OLLAMA_HOST");
+    const eden_key = tri_env.getPosix("EDEN_AI_API_KEY");
 
     const has_anthropic = anthropic_key != null and anthropic_key.?.len > 0;
     const has_openai = openai_key != null and openai_key.?.len > 0;
@@ -838,12 +841,16 @@ fn launchAgent(allocator: std.mem.Allocator, args: []const []const u8) !u8 {
     }
 
     // Execute
-    var child = std.process.Child.init(argv.items, allocator);
+    var child = try std.process.spawn(tri_io.get(), .{
+        .argv = argv.items,
+        .stdout = .inherit,
+        .stderr = .inherit,
+    });
     child.stdin_behavior = .Inherit;
     child.stdout_behavior = .Inherit;
     child.stderr_behavior = .Inherit;
 
-    _ = child.spawnAndWait() catch |err| {
+    _ = child.wait(tri_io.get()) catch |err| {
         const stdout = std.io.getStdOut().writer();
         stdout.print("Failed to launch agent: {}\n", .{err}) catch {};
         stdout.print("\nRun directly: ./bin/vibee-agent\n", .{}) catch {};

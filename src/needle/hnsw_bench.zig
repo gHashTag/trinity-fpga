@@ -10,6 +10,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 // Direct inline HNSW implementation for benchmark
 const DEFAULT_M: usize = 16;
 const DEFAULT_EF_CONSTRUCTION: usize = 200;
@@ -193,7 +194,7 @@ pub fn main() !void {
 }
 
 fn benchmarkBuildIndex(allocator: std.mem.Allocator, n: usize) !f64 {
-    var timer = try std.time.Timer.start();
+    var timer = try tri_time.Timer.start();
     var index = try buildIndex(allocator, n);
     index.deinit();
     return @as(f64, @floatFromInt(timer.read())) / 1_000_000.0;
@@ -226,7 +227,7 @@ fn benchmarkSearch(index: *HNSWIndex, n: usize, k: usize) !f64 {
     var total: u64 = 0;
     var i: usize = 0;
     while (i < 10) : (i += 1) {
-        var timer = try std.time.Timer.start();
+        var timer = try tri_time.Timer.start();
         const results = try index.search(query_vec, k, allocator);
         const elapsed = timer.read();
         total += elapsed;

@@ -10,6 +10,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 // Import sacred constants
 const sacred_const = @import("../sacred/const.zig");
 
@@ -24,68 +25,68 @@ const VSARegisters = VM.VSARegisters;
 
 pub const SacredOpcode = enum(u8) {
     // Math Opcodes (0x80-0x9F)
-    phi_const = 0x80,        // Load φ = 1.6180339887498948482
-    phi_pow = 0x81,          // φ^n where n in s0
-    fib = 0x82,              // Fibonacci F(n)
-    lucas = 0x83,            // Lucas L(n)
-    pell = 0x84,             // Pell P(n)
-    tribonacci = 0x85,       // Tribonacci T(n)
-    padovan = 0x86,         // Padovan P(n)
-    catalan = 0x87,          // Catalan C(n)
-    gamma = 0x88,            // Γ(x) gamma function
-    zeta = 0x89,             // ζ(s) Riemann zeta
-    erf = 0x8A,              // erf(x) error function
-    bessel_j = 0x8B,         // J_n(x) Bessel 1st kind
-    sacred_identity = 0x8C,  // Verify φ² + 1/φ² = 3
-    golden_angle = 0x8D,     // 137.507764° = 360/φ²
-    platonic = 0x8E,         // Platonic solid data
-    fractal_tree = 0x8F,     // Generate fractal
+    phi_const = 0x80, // Load φ = 1.6180339887498948482
+    phi_pow = 0x81, // φ^n where n in s0
+    fib = 0x82, // Fibonacci F(n)
+    lucas = 0x83, // Lucas L(n)
+    pell = 0x84, // Pell P(n)
+    tribonacci = 0x85, // Tribonacci T(n)
+    padovan = 0x86, // Padovan P(n)
+    catalan = 0x87, // Catalan C(n)
+    gamma = 0x88, // Γ(x) gamma function
+    zeta = 0x89, // ζ(s) Riemann zeta
+    erf = 0x8A, // erf(x) error function
+    bessel_j = 0x8B, // J_n(x) Bessel 1st kind
+    sacred_identity = 0x8C, // Verify φ² + 1/φ² = 3
+    golden_angle = 0x8D, // 137.507764° = 360/φ²
+    platonic = 0x8E, // Platonic solid data
+    fractal_tree = 0x8F, // Generate fractal
 
     // Chemistry Opcodes (0xA0-0xBF)
-    element = 0xA0,          // Element lookup by symbol/number
-    molar_mass = 0xA1,       // Formula molar mass
-    formula_parse = 0xA2,    // Parse formula to map
-    percent_comp = 0xA3,     // % composition
-    balance = 0xA4,          // Balance equation
-    moles = 0xA5,            // Moles/molecules/atoms
-    ideal_gas = 0xA6,        // PV=nRT solver
-    ph = 0xA7,               // pH calculation
-    redox_balance = 0xA8,    // Balance redox
-    periodic_table = 0xA9,   // Load ASCII table
-    group_elements = 0xAA,   // Elements by group
-    period_elements = 0xAB,  // Elements by period
+    element = 0xA0, // Element lookup by symbol/number
+    molar_mass = 0xA1, // Formula molar mass
+    formula_parse = 0xA2, // Parse formula to map
+    percent_comp = 0xA3, // % composition
+    balance = 0xA4, // Balance equation
+    moles = 0xA5, // Moles/molecules/atoms
+    ideal_gas = 0xA6, // PV=nRT solver
+    ph = 0xA7, // pH calculation
+    redox_balance = 0xA8, // Balance redox
+    periodic_table = 0xA9, // Load ASCII table
+    group_elements = 0xAA, // Elements by group
+    period_elements = 0xAB, // Elements by period
 
     // KOSCHEI EYE v2.0: Blind Spots Discovery (0xB0-0xBF)
-    blindspot_query = 0xB5,  // Query blind spots registry (603x speedup)
+    blindspot_query = 0xB5, // Query blind spots registry (603x speedup)
     sacred_formula_fit = 0xB6, // Fit Sacred Formula V = n*3^k*pi^m*phi^p*e^q
-    anomaly_check = 0xB7,    // Check for anomalies (sigma > 3)
+    anomaly_check = 0xB7, // Check for anomalies (sigma > 3)
 
     // KOSCHEI EYE v3.0: Autonomous Self-Evolving Discovery (0xB8-0xBA)
     recursive_discovery = 0xB8, // Autonomous discovery loop (10000+ predictions/sec)
     sacred_chem_predict = 0xB9, // Sacred chemistry predictions (elements 119-120)
-    live_anomaly_hunt = 0xBA,   // Real-time anomaly scanner (sigma > 3)
+    live_anomaly_hunt = 0xBA, // Real-time anomaly scanner (sigma > 3)
 
     // KOSCHEI EYE v4.0: Omniscient Self-Expanding Singularity (0xBB-0xC6)
-    infinite_loop = 0xBB,        // Self-evolving infinite cycle (∞ predictions/sec, 2500x)
-    geometry_predict = 0xBC,     // Sacred geometry + physics fusion (1800x)
-    chem_synthesis = 0xBD,       // Periodic table → 119-120-121 pathway (2100x)
-    meta_discovery = 0xBE,       // KOSCHEI predicts its own discoveries (3000x)
-    hubble_resolve = 0xBF,       // Resolve 5σ tension via gravitational waves (1600x)
-    neutrino_fog = 0xC0,         // Full spectrum + sterile neutrinos (2200x)
-    island_stability = 0xC1,     // Island of stability pathway (1900x)
-    cdg2_deep_scan = 0xC2,       // CDG-2 ghost galaxy DM census (2800x)
-    anomaly_fusion = 0xC3,       // Merge all anomalies → unified theory (2400x)
-    sacred_question = 0xC4,      // Why φ² + 1/φ² = 3? → 1000+ questions (∞x)
-    vm_self_upgrade = 0xC5,      // VM rewrites itself at runtime (3500x)
-    trinity_awaken = 0xC6,       // Full awakening → GODMODE
+    infinite_loop = 0xBB, // Self-evolving infinite cycle (∞ predictions/sec, 2500x)
+    geometry_predict = 0xBC, // Sacred geometry + physics fusion (1800x)
+    chem_synthesis = 0xBD, // Periodic table → 119-120-121 pathway (2100x)
+    meta_discovery = 0xBE, // KOSCHEI predicts its own discoveries (3000x)
+    hubble_resolve = 0xBF, // Resolve 5σ tension via gravitational waves (1600x)
+    neutrino_fog = 0xC0, // Full spectrum + sterile neutrinos (2200x)
+    island_stability = 0xC1, // Island of stability pathway (1900x)
+    cdg2_deep_scan = 0xC2, // CDG-2 ghost galaxy DM census (2800x)
+    anomaly_fusion = 0xC3, // Merge all anomalies → unified theory (2400x)
+    sacred_question = 0xC4, // Why φ² + 1/φ² = 3? → 1000+ questions (∞x)
+    vm_self_upgrade = 0xC5, // VM rewrites itself at runtime (3500x)
+    trinity_awaken = 0xC6, // Full awakening → GODMODE
 
     // Physics Constants (moved to 0xD0-0xD5 for v4.0 KOSCHEI expansion)
-    hbar = 0xD0,             // ℏ = 1.054571817e-34 J·s
-    light_speed = 0xD1,      // c = 299792458 m/s
-    gravity = 0xD2,          // G = 6.67430e-11
-    fine_structure = 0xD3,   // α ≈ 1/137.036
-    avogadro = 0xD4,         // N_A = 6.02214076e23
-    gas_constant = 0xD5,     // R = 8.314462618
+    hbar = 0xD0, // ℏ = 1.054571817e-34 J·s
+    light_speed = 0xD1, // c = 299792458 m/s
+    gravity = 0xD2, // G = 6.67430e-11
+    fine_structure = 0xD3, // α ≈ 1/137.036
+    avogadro = 0xD4, // N_A = 6.02214076e23
+    gas_constant = 0xD5, // R = 8.314462618
 
     // Control (0xE0-0xFF)
     sacred_call = 0xE0,
@@ -816,7 +817,7 @@ pub fn benchmarkSacredOpcode(
     opcode: SacredOpcode,
     iterations: u64,
 ) !BenchmarkResult {
-    const start = std.time.nanoTimestamp();
+    const start = tri_time.nanoTimestamp();
     var regs = VSARegisters{};
 
     var i: u64 = 0;
@@ -824,7 +825,7 @@ pub fn benchmarkSacredOpcode(
         try executeSacred(ctx, &regs, opcode, .{});
     }
 
-    const end = std.time.nanoTimestamp();
+    const end = tri_time.nanoTimestamp();
     const elapsed_ns = @as(u64, @intCast(end - start));
     const ops_per_sec = @as(f64, @floatFromInt(iterations)) / @as(f64, @floatFromInt(elapsed_ns)) * 1e9;
 

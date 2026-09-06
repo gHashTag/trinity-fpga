@@ -5,6 +5,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const testing = std.testing;
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -139,7 +140,7 @@ test "API: gRPC Execute call" {
     }, .{
         .success = true,
         .data = "gRPC executed",
-        .timestamp = std.time.milliTimestamp(),
+        .timestamp = tri_time.milliTimestamp(),
     });
 
     try testing.expect(response.success == true);

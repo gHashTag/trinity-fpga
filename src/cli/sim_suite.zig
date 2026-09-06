@@ -12,6 +12,7 @@
 //! φ² + 1/φ² = 3 = TRINITY
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 
 const Allocator = std.mem.Allocator;
 const print = std.debug.print;
@@ -55,7 +56,7 @@ pub fn main() !void {
 
     // Create output directory if specified
     if (output_dir) |dir| {
-        std.fs.cwd().makePath(dir) catch |err| {
+        std.Io.Dir.cwd().createDirPath(tri_io.get(), dir) catch |err| {
             print("{s}Error creating output directory '{s}': {}{s}\n", .{ RED, dir, err, RESET });
             return error.OutputDirFailed;
         };
@@ -182,19 +183,23 @@ pub fn main() !void {
     // Write CSV if output directory specified
     if (output_dir) |dir| {
         const csv_path = try std.fmt.allocPrint(allocator, "{s}/simulation_results.csv", .{dir});
-        const csv_file = try std.fs.cwd().createFile(csv_path, .{});
-        defer csv_file.close();
+        const io = tri_io.get();
+        const csv_file = try std.Io.Dir.cwd().createFile(io, csv_path, .{});
+        defer csv_file.close(io);
         defer allocator.free(csv_path);
 
         // Enhanced CSV format for visualization and analysis (22 columns)
         // energy_cost calculated as: cumulative alive workers × step
         // fpga_cost_norm = (lut_ratio * 0.7 + bram_ratio * 0.3)
         // quantum_*: quantum-inspired metrics (superposition, coherence, interference, collapse)
-        try csv_file.writeAll("step,scenario_id,ppl,diversity,alive,culled,byzantine,converged,energy_cost,fpga_lut,fpga_bram,fpga_cost_norm,seed_rate,kill_rate,ntp_weight,jepa_weight,nca_weight,quantum_superposition,quantum_coherence,quantum_interference,quantum_collapse_prob\n");
+        try csv_file.writeStreamingAll(io, "step,scenario_id,ppl,diversity,alive,culled,byzantine,converged,energy_cost,fpga_lut,fpga_bram,fpga_cost_norm,seed_rate,kill_rate,ntp_weight,jepa_weight,nca_weight,quantum_superposition,quantum_coherence,quantum_interference,quantum_collapse_prob\n");
 
         // Helper to write timeline with energy cost, policy params, and quantum metrics
         const writeTimeline = struct {
-            fn write(timeline: []const evo_sim.EvolutionResult.TimelineEntry, scenario: []const u8, alloc: Allocator, csv_out: std.fs.File, converged: u8, energy_cost: f32, fpga_lut: u16, fpga_bram: u8, fpga_cost: f32, seed_rate: f32, kill_rate: f32, ntp_weight: f32, jepa_weight: f32, nca_weight: f32, quantum_superposition: f32, quantum_coherence: f32, quantum_interference: f32, quantum_collapse_prob: f32) !void {
+            fn write(timeline: []const evo_sim.EvolutionResult.TimelineEntry, scenario: []const u8, alloc: Allocator, csv_out: std.Io.File, converged: u8, energy_cost: f32, fpga_lut: u16, fpga_bram: u8, fpga_cost: f32, seed_rate: f32, kill_rate: f32, ntp_weight: f32, jepa_weight: f32, nca_weight: f32, quantum_superposition: f32, quantum_coherence: f32, quantum_interference: f32, quantum_collapse_prob: f32) !void {
+                // Distinct name from the enclosing scope's `io`: a nested function
+                // cannot capture a runtime local, and Zig rejects the shadowing.
+                const out_io = tri_io.get();
                 for (timeline) |entry| {
                     // Calculate cumulative energy cost up to this step
                     const cum_energy = energy_cost * @as(f32, @floatFromInt(entry.step + 1));
@@ -206,7 +211,7 @@ pub fn main() !void {
                         nca_weight,            quantum_superposition, quantum_coherence, quantum_interference,
                         quantum_collapse_prob,
                     });
-                    try csv_out.writeAll(line);
+                    try csv_out.writeStreamingAll(out_io, line);
                     alloc.free(line);
                 }
             }
@@ -228,7 +233,7 @@ pub fn main() !void {
                 0.0,                 q_superpos,        q_coherence,   q_interference,
                 q_collapse,
             });
-            try csv_file.writeAll(line);
+            try csv_file.writeStreamingAll(io, line);
             allocator.free(line);
         }
 

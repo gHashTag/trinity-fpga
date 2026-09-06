@@ -11,6 +11,9 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_proc = @import("tri_proc");
+const tri_io = @import("tri_io");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const tri_experience = @import("tri_experience.zig");
 const tri_dev = @import("tri_dev.zig");
@@ -308,28 +311,29 @@ pub fn runLoopDecide(allocator: Allocator) !void {
     print("\n{s}LOOP DECIDE{s} — Episode-based energy calculation\n", .{ BOLD, RESET });
     print("{s}════════════════════════════════════════════════════════════════{s}\n\n", .{ DIM, RESET });
 
-    var episodes_dir = std.fs.cwd().openDir(".trinity/experience/episodes", .{ .iterate = true }) catch {
+    const io = tri_io.get();
+    var episodes_dir = std.Io.Dir.cwd().openDir(io, ".trinity/experience/episodes", .{ .iterate = true }) catch {
         print("  {s}No episodes found. Default: CONTINUE{s}\n\n", .{ YELLOW, RESET });
         return;
     };
-    defer episodes_dir.close();
+    defer episodes_dir.close(io);
 
     var total: u32 = 0;
     var passes: u32 = 0;
     var fails: u32 = 0;
     var recent_fails: u32 = 0;
 
-    const now = std.time.timestamp();
+    const now = tri_time.timestamp();
     const one_hour_ago = now - 3600;
 
     var dir_iter = episodes_dir.iterate();
-    while (try dir_iter.next()) |entry| {
+    while (try dir_iter.next(io)) |entry| {
         if (entry.kind != .file) continue;
         if (!std.mem.endsWith(u8, entry.name, ".json")) continue;
         // Skip JSONL file
         if (std.mem.eql(u8, entry.name, "activity.jsonl")) continue;
 
-        const contents = episodes_dir.readFileAlloc(allocator, entry.name, 64 * 1024) catch continue;
+        const contents = episodes_dir.readFileAlloc(io, entry.name, allocator, .limited(64 * 1024)) catch continue;
         defer allocator.free(contents);
 
         total += 1;
@@ -400,9 +404,10 @@ fn extractEpisodeTimestamp(json: []const u8) i64 {
 }
 
 fn saveDecideState(energy: f32, total: u32, passes: u32, fails: u32, decision: []const u8) void {
-    std.fs.cwd().makePath(".trinity/state") catch {};
-    const file = std.fs.cwd().createFile(".trinity/state/loop_state.json", .{}) catch return;
-    defer file.close();
+    const io = tri_io.get();
+    std.Io.Dir.cwd().createDirPath(io, ".trinity/state") catch {};
+    const file = std.Io.Dir.cwd().createFile(io, ".trinity/state/loop_state.json", .{}) catch return;
+    defer file.close(io);
 
     const energy_pct: u32 = @intFromFloat(energy * 100.0);
     var buf: [512]u8 = undefined;
@@ -410,9 +415,9 @@ fn saveDecideState(energy: f32, total: u32, passes: u32, fails: u32, decision: [
         \\{{"energy":{d},"total":{d},"passes":{d},"fails":{d},"decision":"{s}","timestamp":{d}}}
     , .{
         energy_pct,                          total,                passes, fails,
-        decision[0..@min(decision.len, 64)], std.time.timestamp(),
+        decision[0..@min(decision.len, 64)], tri_time.timestamp(),
     }) catch return;
-    file.writeAll(json) catch {};
+    file.writeStreamingAll(io, json) catch {};
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -435,16 +440,14 @@ fn runContinuous(allocator: Allocator, interval_sec: u32) !void {
         }
 
         print("  {s}Sleeping {d}s...{s}\n\n", .{ DIM, interval_sec, RESET });
-        std.Thread.sleep(@as(u64, interval_sec) * std.time.ns_per_s);
+        tri_time.sleep(@as(u64, interval_sec) * std.time.ns_per_s);
     }
 }
 
 fn checkExitState() bool {
-    const file = std.fs.cwd().openFile(STATE_PATH, .{}) catch return false;
-    defer file.close();
     var buf: [1024]u8 = undefined;
-    const n = file.readAll(&buf) catch return false;
-    return std.mem.indexOf(u8, buf[0..n], "\"EXIT\"") != null;
+    const data = std.Io.Dir.cwd().readFile(tri_io.get(), STATE_PATH, &buf) catch return false;
+    return std.mem.indexOf(u8, data, "\"EXIT\"") != null;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -455,17 +458,12 @@ fn runStatus() void {
     print("\n{s}🔄 TRI LOOP — STATUS{s}\n", .{ BOLD, RESET });
     print("{s}════════════════════════════════════════════════════════════════{s}\n\n", .{ DIM, RESET });
 
-    const file = std.fs.cwd().openFile(STATE_PATH, .{}) catch {
+    var buf: [1024]u8 = undefined;
+    const data = std.Io.Dir.cwd().readFile(tri_io.get(), STATE_PATH, &buf) catch {
         print("  {s}No loop state found. Run: tri loop{s}\n\n", .{ DIM, RESET });
         return;
     };
-    defer file.close();
-    var buf: [1024]u8 = undefined;
-    const n = file.readAll(&buf) catch {
-        print("  {s}Failed to read state{s}\n\n", .{ DIM, RESET });
-        return;
-    };
-    print("  {s}\n\n", .{buf[0..n]});
+    print("  {s}\n\n", .{data});
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -473,11 +471,8 @@ fn runStatus() void {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn incrementWakeCount() u32 {
-    const file = std.fs.cwd().openFile(STATE_PATH, .{}) catch return 1;
-    defer file.close();
     var buf: [1024]u8 = undefined;
-    const n = file.readAll(&buf) catch return 1;
-    const data = buf[0..n];
+    const data = std.Io.Dir.cwd().readFile(tri_io.get(), STATE_PATH, &buf) catch return 1;
 
     // Parse "wake":N
     const key = "\"wake\":";
@@ -490,7 +485,7 @@ fn incrementWakeCount() u32 {
 
 fn saveLoopEpisode(wake_count: u32, results: []const StepResult, decision: LoopDecision) void {
     var episode = tri_experience.Episode{};
-    episode.timestamp = std.time.timestamp();
+    episode.timestamp = tri_time.timestamp();
     episode.issue = 0;
     episode.iterations = wake_count;
 
@@ -533,14 +528,15 @@ fn saveLoopEpisode(wake_count: u32, results: []const StepResult, decision: LoopD
 }
 
 fn saveLoopState(wake: u32, ok: usize, fail: usize, decision: LoopDecision) void {
-    const ts = @as(u64, @intCast(std.time.timestamp()));
-    var file = std.fs.cwd().createFile(STATE_PATH, .{}) catch return;
-    defer file.close();
+    const ts = @as(u64, @intCast(tri_time.timestamp()));
+    const io = tri_io.get();
+    var file = std.Io.Dir.cwd().createFile(io, STATE_PATH, .{}) catch return;
+    defer file.close(io);
     var buf: [512]u8 = undefined;
     const json = std.fmt.bufPrint(&buf,
         \\{{"wake":{d},"ok":{d},"fail":{d},"decision":"{s}","ts":{d}}}
     , .{ wake, ok, fail, decision.toString(), ts }) catch return;
-    file.writeAll(json) catch {};
+    file.writeStreamingAll(io, json) catch {};
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -548,18 +544,18 @@ fn saveLoopState(wake: u32, ok: usize, fail: usize, decision: LoopDecision) void
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn runChild(allocator: Allocator, argv: []const []const u8) u8 {
-    var child = std.process.Child.init(argv, allocator);
-    child.stdout_behavior = .Pipe;
-    child.stderr_behavior = .Pipe;
-    child.spawn() catch return 255;
-    var stdout_buf: std.ArrayList(u8) = .empty;
-    var stderr_buf: std.ArrayList(u8) = .empty;
-    child.collectOutput(allocator, &stdout_buf, &stderr_buf, 8 * 1024 * 1024) catch return 255;
-    defer stdout_buf.deinit(allocator);
-    defer stderr_buf.deinit(allocator);
-    const term = child.wait() catch return 255;
-    return switch (term) {
-        .Exited => |code| code,
+    // 0.16 removed Child.collectOutput. Capturing both streams and waiting is
+    // precisely what tri_proc.run does, so spawn + collect + wait collapses
+    // into one call and the buffers it managed are no longer ours.
+    const res = tri_proc.run(.{
+        .allocator = allocator,
+        .argv = argv,
+        .max_output_bytes = 8 * 1024 * 1024,
+    }) catch return 255;
+    defer allocator.free(res.stdout);
+    defer allocator.free(res.stderr);
+    return switch (res.term) {
+        .exited => |code| code,
         else => 1,
     };
 }
@@ -659,11 +655,11 @@ fn runRetryLoop(allocator: Allocator, config: RetryConfig) !void {
     episode.issue = config.issue;
     @memcpy(episode.task[0..config.task_len], config.task[0..config.task_len]);
     episode.task_len = config.task_len;
-    episode.timestamp = std.time.timestamp();
+    episode.timestamp = tri_time.timestamp();
 
     var final_verdict: RetryVerdict = .fail;
     var final_result: RetryIterationResult = .{};
-    const loop_start = std.time.milliTimestamp();
+    const loop_start = tri_time.milliTimestamp();
 
     var iteration: u32 = 1;
     while (iteration <= config.max_iterations) : (iteration += 1) {
@@ -720,7 +716,7 @@ fn runRetryLoop(allocator: Allocator, config: RetryConfig) !void {
     }
 
     // Compute fitness
-    const elapsed_ms = std.time.milliTimestamp() - loop_start;
+    const elapsed_ms = tri_time.milliTimestamp() - loop_start;
     const elapsed_hours: f32 = @as(f32, @floatFromInt(elapsed_ms)) / (1000.0 * 3600.0);
     episode.iterations = iteration;
     episode.fitness = .{
@@ -766,24 +762,22 @@ fn runRetryBuildAndTest(allocator: Allocator) RetryIterationResult {
 
     // Step 1: zig build
     result.build_ok = blk: {
-        var child = std.process.Child.init(&.{ "zig", "build" }, allocator);
-        child.stdout_behavior = .Pipe;
-        child.stderr_behavior = .Pipe;
-        _ = child.spawn() catch break :blk false;
-        var stdout_buf: std.ArrayList(u8) = .empty;
-        var stderr_buf: std.ArrayList(u8) = .empty;
-        defer stdout_buf.deinit(allocator);
-        defer stderr_buf.deinit(allocator);
-        child.collectOutput(allocator, &stdout_buf, &stderr_buf, 4 * 1024 * 1024) catch break :blk false;
-        const term = child.wait() catch break :blk false;
-        const ok = switch (term) {
-            .Exited => |code| code == 0,
+        // Same collapse as runChild: collectOutput is gone, and capturing
+        // both streams plus waiting is one tri_proc.run call.
+        const res = tri_proc.run(.{
+            .allocator = allocator,
+            .argv = &.{ "zig", "build" },
+            .max_output_bytes = 4 * 1024 * 1024,
+        }) catch break :blk false;
+        defer allocator.free(res.stdout);
+        defer allocator.free(res.stderr);
+        const ok = switch (res.term) {
+            .exited => |code| code == 0,
             else => false,
         };
         if (!ok) {
-            const stderr_data = stderr_buf.items;
-            const copy_len: u16 = @intCast(@min(stderr_data.len, 2048));
-            @memcpy(result.error_output[0..copy_len], stderr_data[0..copy_len]);
+            const copy_len: u16 = @intCast(@min(res.stderr.len, 2048));
+            @memcpy(result.error_output[0..copy_len], res.stderr[0..copy_len]);
             result.error_len = copy_len;
         }
         break :blk ok;
@@ -793,21 +787,18 @@ fn runRetryBuildAndTest(allocator: Allocator) RetryIterationResult {
 
     // Step 2: zig build test
     {
-        var child = std.process.Child.init(&.{ "zig", "build", "test" }, allocator);
-        child.stdout_behavior = .Pipe;
-        child.stderr_behavior = .Pipe;
-        _ = child.spawn() catch return result;
-        var stdout_buf: std.ArrayList(u8) = .empty;
-        var stderr_buf: std.ArrayList(u8) = .empty;
-        defer stdout_buf.deinit(allocator);
-        defer stderr_buf.deinit(allocator);
-        child.collectOutput(allocator, &stdout_buf, &stderr_buf, 4 * 1024 * 1024) catch return result;
-        const term = child.wait() catch return result;
-        result.test_ok = switch (term) {
-            .Exited => |code| code == 0,
+        const res = tri_proc.run(.{
+            .allocator = allocator,
+            .argv = &.{ "zig", "build", "test" },
+            .max_output_bytes = 4 * 1024 * 1024,
+        }) catch return result;
+        defer allocator.free(res.stdout);
+        defer allocator.free(res.stderr);
+        result.test_ok = switch (res.term) {
+            .exited => |code| code == 0,
             else => false,
         };
-        const out = if (stderr_buf.items.len > 0) stderr_buf.items else stdout_buf.items;
+        const out = if (res.stderr.len > 0) res.stderr else res.stdout;
         if (!result.test_ok) {
             const copy_len: u16 = @intCast(@min(out.len, 2048));
             @memcpy(result.error_output[0..copy_len], out[0..copy_len]);
@@ -859,18 +850,21 @@ fn retryParseTestCounts(output: []const u8, result: *RetryIterationResult) void 
 }
 
 fn retryCommentOnIssue(allocator: Allocator, issue: u32, iteration: u32, max_iter: u32) void {
+    _ = allocator; // 0.16: std.process.spawn takes no allocator
     var body_buf: [256]u8 = undefined;
     const body = std.fmt.bufPrint(&body_buf, "🔄 **[LOOP RETRY]** Iteration {d}/{d}", .{ iteration, max_iter }) catch return;
     var issue_buf: [16]u8 = undefined;
     const issue_str = std.fmt.bufPrint(&issue_buf, "{d}", .{issue}) catch return;
-    var child = std.process.Child.init(&.{ "gh", "issue", "comment", issue_str, "--body", body }, allocator);
-    child.stdout_behavior = .Ignore;
-    child.stderr_behavior = .Ignore;
-    _ = child.spawn() catch return;
-    _ = child.wait() catch {};
+    var child = std.process.spawn(tri_io.get(), .{
+        .argv = &.{ "gh", "issue", "comment", issue_str, "--body", body },
+        .stdout = .ignore,
+        .stderr = .ignore,
+    }) catch return;
+    _ = child.wait(tri_io.get()) catch {};
 }
 
 fn retryCommentFinal(allocator: Allocator, issue: u32, verdict: RetryVerdict, iterations: u32, result: RetryIterationResult) void {
+    _ = allocator; // 0.16: std.process.spawn takes no allocator
     const emoji: []const u8 = if (verdict == .pass) "✅" else "❌";
     var body_buf: [512]u8 = undefined;
     const body = std.fmt.bufPrint(&body_buf, "{s} **[LOOP RETRY COMPLETE]** {s} after {d} iterations (tests: {d}/{d}, rate: {d:.0}%)", .{
@@ -883,11 +877,12 @@ fn retryCommentFinal(allocator: Allocator, issue: u32, verdict: RetryVerdict, it
     }) catch return;
     var issue_buf: [16]u8 = undefined;
     const issue_str = std.fmt.bufPrint(&issue_buf, "{d}", .{issue}) catch return;
-    var child = std.process.Child.init(&.{ "gh", "issue", "comment", issue_str, "--body", body }, allocator);
-    child.stdout_behavior = .Ignore;
-    child.stderr_behavior = .Ignore;
-    _ = child.spawn() catch return;
-    _ = child.wait() catch {};
+    var child = std.process.spawn(tri_io.get(), .{
+        .argv = &.{ "gh", "issue", "comment", issue_str, "--body", body },
+        .stdout = .ignore,
+        .stderr = .ignore,
+    }) catch return;
+    _ = child.wait(tri_io.get()) catch {};
 }
 
 pub fn extractRetryErrorSummary(error_output: []const u8) []const u8 {

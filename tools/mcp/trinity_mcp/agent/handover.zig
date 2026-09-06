@@ -1,11 +1,13 @@
 // handover.zig — Read/write .ralph/HANDOVER.md between agent sessions
 const std = @import("std");
+const tri_io = @import("tri_io");
+const tri_time = @import("tri_time");
 
 /// Read HANDOVER.md content. Returns null if not found.
 pub fn read(allocator: std.mem.Allocator, project_root: []const u8) ?[]const u8 {
     var path_buf: [512]u8 = undefined;
     const path = std.fmt.bufPrint(&path_buf, "{s}/.ralph/HANDOVER.md", .{project_root}) catch return null;
-    return std.fs.cwd().readFileAlloc(allocator, path, 32768) catch null;
+    return std.Io.Dir.cwd().readFileAlloc(tri_io.get(), path, allocator, .limited(32768)) catch null;
 }
 
 /// Write emergency handover when the agent session didn't produce one.
@@ -39,13 +41,14 @@ pub fn writeEmergency(allocator: std.mem.Allocator, project_root: []const u8, wa
     , .{ ts, wake_count, issue_str });
     defer allocator.free(content);
 
-    const file = try std.fs.cwd().createFile(path, .{});
-    defer file.close();
-    try file.writeAll(content);
+    const io = tri_io.get();
+    const file = try std.Io.Dir.cwd().createFile(io, path, .{});
+    defer file.close(io);
+    try file.writeStreamingAll(io, content);
 }
 
 fn timestamp(buf: []u8) []const u8 {
-    const epoch_s: u64 = @intCast(@divTrunc(std.time.nanoTimestamp(), std.time.ns_per_s));
+    const epoch_s: u64 = @intCast(@divTrunc(tri_time.nanoTimestamp(), std.time.ns_per_s));
     const es = std.time.epoch.EpochSeconds{ .secs = epoch_s };
     const day = es.getDaySeconds();
     const yd = es.getEpochDay().calculateYearDay();

@@ -8,6 +8,8 @@
 
 const std = @import("std");
 
+const tri_io = @import("tri_io");
+const tri_time = @import("tri_time");
 pub const BounceType = enum {
     /// Permanent bounce — invalid email, domain doesn't exist
     permanent,
@@ -95,7 +97,7 @@ pub const BounceHandler = struct {
                     .email = email,
                     .bounce_type = .spam_complaint,
                     .reason = "Recipient marked as spam",
-                    .timestamp = std.time.timestamp(),
+                    .timestamp = tri_time.timestamp(),
                     .do_not_email = true,
                 };
             }
@@ -108,7 +110,7 @@ pub const BounceHandler = struct {
                     .email = email,
                     .bounce_type = .permanent,
                     .reason = extractReason(response),
-                    .timestamp = std.time.timestamp(),
+                    .timestamp = tri_time.timestamp(),
                     .do_not_email = true,
                 };
             }
@@ -121,7 +123,7 @@ pub const BounceHandler = struct {
                     .email = email,
                     .bounce_type = .temporary,
                     .reason = extractReason(response),
-                    .timestamp = std.time.timestamp(),
+                    .timestamp = tri_time.timestamp(),
                     .do_not_email = false, // Retry later
                 };
             }
@@ -132,7 +134,7 @@ pub const BounceHandler = struct {
 
     /// Record bounce to file for tracking
     pub fn recordBounce(self: *BounceHandler, bounce: BounceInfo) !void {
-        const file = try std.fs.createFileAbsolute(
+        const file = try std.Io.Dir.createFileAbsolute(tri_io.get(), 
             self.bounce_file,
             .{ .read = true, .write = true },
         );
@@ -150,7 +152,7 @@ pub const BounceHandler = struct {
 
     /// Check if email should be blocked (pre-send check)
     pub fn shouldBlockEmail(self: *BounceHandler, email: []const u8) !bool {
-        const file = std.fs.openFileAbsolute(
+        const file = std.Io.Dir.openFileAbsolute(tri_io.get(), 
             self.bounce_file,
             .{} catch return false,
         );
@@ -171,7 +173,7 @@ pub const BounceHandler = struct {
 
     /// Get bounce statistics
     pub fn getStats(self: *BounceHandler) !BounceStats {
-        const file = std.fs.openFileAbsolute(
+        const file = std.Io.Dir.openFileAbsolute(tri_io.get(), 
             self.bounce_file,
             .{} catch return .{
                 .permanent = 0,

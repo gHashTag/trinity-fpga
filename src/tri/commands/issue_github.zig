@@ -16,6 +16,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const github_client = @import("../github_client.zig");
 const github_commands = @import("../github_commands.zig");
 
@@ -585,7 +586,7 @@ fn appendProtocolLog(allocator: std.mem.Allocator, action: []const u8, issue: u3
     const filepath = try std.fmt.allocPrint(allocator, "{s}/{s}.jsonl", .{ protocol_dir, date_str });
     defer allocator.free(filepath);
 
-    const timestamp = std.time.timestamp();
+    const timestamp = tri_time.timestamp();
     const agent_str = agent orelse "unknown";
     const ok_str = if (ok) "true" else "false";
 
@@ -601,7 +602,7 @@ fn appendProtocolLog(allocator: std.mem.Allocator, action: []const u8, issue: u3
 }
 
 fn getDateStr(allocator: std.mem.Allocator) ![]u8 {
-    const timestamp = std.time.timestamp();
+    const timestamp = tri_time.timestamp();
     const epoch_seconds = std.time.epoch.EpochSeconds{ .secs = @intCast(timestamp) };
     const epoch_day = epoch_seconds.getEpochDay();
     const year_day = epoch_day.calculateYearDay();

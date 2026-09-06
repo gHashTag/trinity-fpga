@@ -11,6 +11,8 @@
 
 const std = @import("std");
 
+const tri_proc = @import("tri_proc");
+const tri_time = @import("tri_time");
 const SacredConstants = struct {
     pub const PHI: f64 = 1.618033988749895;
     pub const PHI_SQ: f64 = 2.618033988749895;
@@ -52,7 +54,7 @@ pub const ToolRequest = struct {
             .target = try allocator.dupe(u8, target),
             .parameters = std.StringHashMap([]const u8).init(allocator),
             .confidence = confidence,
-            .timestamp_ms = std.time.nanoTimestamp() / 1_000_000,
+            .timestamp_ms = tri_time.nanoTimestamp() / 1_000_000,
         };
     }
 
@@ -110,7 +112,7 @@ pub const ToolConfig = struct {
 
 /// Main tool execution router with safety validation
 pub fn executeTool(allocator: std.mem.Allocator, req: ToolRequest, config: ToolConfig) !ToolResponse {
-    const start_time = std.time.nanoTimestamp();
+    const start_time = tri_time.nanoTimestamp();
 
     // Safety gate: confidence threshold
     if (req.confidence < config.min_confidence) {
@@ -127,7 +129,7 @@ pub fn executeTool(allocator: std.mem.Allocator, req: ToolRequest, config: ToolC
         .web_search => try webSearch(allocator, req.parameters.get("query")),
     };
 
-    const elapsed_ms = @as(u64, @intCast((std.time.nanoTimestamp() - start_time) / 1_000_000));
+    const elapsed_ms = @as(u64, @intCast((tri_time.nanoTimestamp() - start_time) / 1_000_000));
 
     // Log to sacred log
     try writeToSacredLog(req, result, elapsed_ms);
@@ -137,7 +139,7 @@ pub fn executeTool(allocator: std.mem.Allocator, req: ToolRequest, config: ToolC
 
 /// Safe file reading with path validation and size limits
 fn readFile(allocator: std.mem.Allocator, path: []const u8, config: ToolConfig) !ToolResponse {
-    const start_time = std.time.nanoTimestamp();
+    const start_time = tri_time.nanoTimestamp();
 
     // Path validation: must be within repository
     if (!isValidPath(path)) {
@@ -162,7 +164,7 @@ fn readFile(allocator: std.mem.Allocator, path: []const u8, config: ToolConfig) 
         return ToolResponse.fail(allocator, try std.fmt.allocPrint(allocator, "Cannot read file: {s}", .{@errorName(err)}), .file_read);
     };
 
-    const elapsed_ms = @as(u64, @intCast((std.time.nanoTimestamp() - start_time) / 1_000_000));
+    const elapsed_ms = @as(u64, @intCast((tri_time.nanoTimestamp() - start_time) / 1_000_000));
 
     return ToolResponse{
         .success = true,
@@ -175,7 +177,7 @@ fn readFile(allocator: std.mem.Allocator, path: []const u8, config: ToolConfig) 
 
 /// Sandboxed command execution with resource limits
 fn executeCommand(allocator: std.mem.Allocator, command: []const u8, _: ToolConfig) !ToolResponse {
-    const start_time = std.time.nanoTimestamp();
+    const start_time = tri_time.nanoTimestamp();
 
     // Command validation: whitelist allowed commands
     if (!isSafeCommand(command)) {
@@ -187,7 +189,7 @@ fn executeCommand(allocator: std.mem.Allocator, command: []const u8, _: ToolConf
 
     const max_output_size: usize = 64 * 1024; // 64KB output limit
 
-    const process = std.process.Child.run(.{
+    const process = tri_proc.run(.{
         .allocator = allocator,
         .argv = &[_][]const u8{ "sh", "-c", command },
         .max_output_bytes = max_output_size,
@@ -201,14 +203,14 @@ fn executeCommand(allocator: std.mem.Allocator, command: []const u8, _: ToolConf
     }
 
     const tc_exit = switch (process.term) {
-        .Exited => |code| code,
+        .exited => |code| code,
         else => @as(u32, 1),
     };
     if (tc_exit != 0) {
         return ToolResponse.fail(allocator, try std.fmt.allocPrint(allocator, "Command failed (exit {d}): {s}", .{ tc_exit, process.stderr }), .command_exec);
     }
 
-    const elapsed_ms = @as(u64, @intCast((std.time.nanoTimestamp() - start_time) / 1_000_000));
+    const elapsed_ms = @as(u64, @intCast((tri_time.nanoTimestamp() - start_time) / 1_000_000));
 
     return ToolResponse.ok(allocator, process.stdout, elapsed_ms, .command_exec);
 }

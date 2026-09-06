@@ -15,6 +15,8 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
+const tri_proc = @import("tri_proc");
 const Allocator = std.mem.Allocator;
 const tri_farm = @import("tri_farm.zig");
 const experience_hooks = @import("experience_hooks.zig");
@@ -104,7 +106,7 @@ fn hubGate(allocator: Allocator) !bool {
     print("\n{s}🚦 CI GATE CHECK{s}\n", .{ BOLD, RESET });
     print("{s}────────────────────────────────────────{s}\n", .{ DIM, RESET });
 
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ "gh", "run", "list", "--workflow", "ci-runner.yml", "--limit", "1", "--json", "conclusion,headSha" },
         .max_output_bytes = 64 * 1024,
@@ -116,7 +118,7 @@ fn hubGate(allocator: Allocator) !bool {
     defer allocator.free(result.stderr);
 
     const exit_code = switch (result.term) {
-        .Exited => |code| code,
+        .exited => |code| code,
         else => @as(u32, 1),
     };
     if (exit_code != 0) {
@@ -259,10 +261,11 @@ fn hubPipeline(allocator: Allocator, force: bool) !void {
     defer if (notify_msg.len > 0 and notify_msg.ptr != "Hub Pipeline complete".ptr) allocator.free(notify_msg);
 
     // Fire-and-forget: spawn tri notify in background
-    var notify_child = std.process.Child.init(&.{ "tri", "notify", notify_msg }, allocator);
-    notify_child.spawn() catch |err| {
+    if (std.process.spawn(tri_io.get(), .{
+        .argv = &.{ "tri", "notify", notify_msg },
+    })) |_| {} else |err| {
         print("  {s}⚠️  Notify spawn failed: {s} (non-fatal){s}\n", .{ YELLOW, @errorName(err), RESET });
-    };
+    }
 
     print("\n{s}════════════════════════════════════════════════════════════{s}\n", .{ DIM, RESET });
     print("{s}✅ HUB PIPELINE COMPLETE{s}\n", .{ GREEN, RESET });
@@ -285,10 +288,7 @@ const HubState = struct {
 };
 
 fn readState(allocator: Allocator) !HubState {
-    const file = try std.fs.cwd().openFile(STATE_PATH, .{});
-    defer file.close();
-
-    const contents = try file.readToEndAlloc(allocator, 16 * 1024);
+    const contents = try std.Io.Dir.cwd().readFileAlloc(tri_io.get(), STATE_PATH, allocator, .limited(16 * 1024));
     defer allocator.free(contents);
 
     const parsed = try std.json.parseFromSlice(std.json.Value, allocator, contents, .{});
@@ -340,11 +340,12 @@ fn saveState(allocator: Allocator, state: HubState) void {
     defer allocator.free(json);
 
     // Ensure .trinity directory exists
-    std.fs.cwd().makePath(".trinity") catch {};
+    const io = tri_io.get();
+    std.Io.Dir.cwd().createDirPath(io, ".trinity") catch {};
 
-    const file = std.fs.cwd().createFile(STATE_PATH, .{}) catch return;
-    defer file.close();
-    file.writeAll(json) catch {};
+    const file = std.Io.Dir.cwd().createFile(io, STATE_PATH, .{}) catch return;
+    defer file.close(io);
+    file.writeStreamingAll(io, json) catch {};
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -359,7 +360,7 @@ fn getJsonString(val: std.json.Value, key: []const u8) []const u8 {
 }
 
 fn getCurrentSha(allocator: Allocator) ?[]const u8 {
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ "git", "rev-parse", "--short", "HEAD" },
         .max_output_bytes = 256,
@@ -367,7 +368,7 @@ fn getCurrentSha(allocator: Allocator) ?[]const u8 {
     defer allocator.free(result.stderr);
 
     const exit_code = switch (result.term) {
-        .Exited => |code| code,
+        .exited => |code| code,
         else => @as(u32, 1),
     };
     if (exit_code != 0) {

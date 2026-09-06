@@ -17,6 +17,9 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
+const tri_proc = @import("tri_proc");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const colors = @import("tri_colors.zig");
 const toxic_verdict = @import("pathology.zig");
@@ -257,7 +260,7 @@ fn printDryRun(task: []const u8) void {
 }
 
 fn runBattle(allocator: Allocator, task: []const u8, timeout_ms: u64) !void {
-    const timestamp = std.time.timestamp();
+    const timestamp = tri_time.timestamp();
 
     // Format branch names
     var base_branch_buf: [64]u8 = undefined;
@@ -338,38 +341,41 @@ fn runBattle(allocator: Allocator, task: []const u8, timeout_ms: u64) !void {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn spawnContestant(allocator: Allocator, contestant: Contestant, task: []const u8, timeout_ms: u64) u64 {
-    const start = std.time.milliTimestamp();
+    // The 0.16 spawn API takes no allocator; the parameter stays for callers.
+    _ = allocator;
+    const start = tri_time.milliTimestamp();
 
     const argv: []const []const u8 = switch (contestant) {
         .baseline => &.{ "claude", "--dangerously-skip-permissions", "-p", task },
         .gladiator => &.{ "zig-out/bin/tri-api", "--task", task },
     };
 
-    var child = std.process.Child.init(argv, allocator);
-    child.stdout_behavior = .Ignore;
-    child.stderr_behavior = .Ignore;
-
-    _ = child.spawn() catch {
+    const io = tri_io.get();
+    var child = std.process.spawn(io, .{
+        .argv = argv,
+        .stdout = .ignore,
+        .stderr = .ignore,
+    }) catch {
         print("    {s}Failed to spawn {s}{s}\n", .{ RED, contestant.label(), RESET });
         return 0;
     };
 
     // Wait for completion (timeout enforced externally if needed)
     _ = timeout_ms;
-    const term = child.wait() catch {
+    const term = child.wait(io) catch {
         print("    {s}{s} wait failed{s}\n", .{ YELLOW, contestant.label(), RESET });
         return 0;
     };
 
     const ok = switch (term) {
-        .Exited => |code| code == 0,
+        .exited => |code| code == 0,
         else => false,
     };
     if (!ok) {
         print("    {s}{s} exited with error{s}\n", .{ YELLOW, contestant.label(), RESET });
     }
 
-    const elapsed: u64 = @intCast(@max(0, std.time.milliTimestamp() - start));
+    const elapsed: u64 = @intCast(@max(0, tri_time.milliTimestamp() - start));
     return elapsed;
 }
 
@@ -436,23 +442,25 @@ fn computeScore(build_ok: bool, test_ok: bool, test_count: u32, diff_lines: u32,
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn getCurrentBranch(allocator: Allocator) ?[]const u8 {
-    var child = std.process.Child.init(&.{ "git", "rev-parse", "--abbrev-ref", "HEAD" }, allocator);
-    child.stdout_behavior = .Pipe;
-    child.stderr_behavior = .Pipe;
-    _ = child.spawn() catch return null;
-
-    var stdout_buf: std.ArrayList(u8) = .empty;
-    var stderr_buf: std.ArrayList(u8) = .empty;
-    defer stdout_buf.deinit(allocator);
-    defer stderr_buf.deinit(allocator);
-    child.collectOutput(allocator, &stdout_buf, &stderr_buf, 1024) catch return null;
-    const term = child.wait() catch return null;
-    switch (term) {
-        .Exited => |code| if (code != 0) return null,
-        else => return null,
+    // 0.16 has no Child.collectOutput; tri_proc.run pipes and collects in one call.
+    const r = tri_proc.run(.{
+        .allocator = allocator,
+        .argv = &.{ "git", "rev-parse", "--abbrev-ref", "HEAD" },
+        .max_output_bytes = 1024,
+    }) catch return null;
+    allocator.free(r.stderr);
+    switch (r.term) {
+        .exited => |code| if (code != 0) {
+            allocator.free(r.stdout);
+            return null;
+        },
+        else => {
+            allocator.free(r.stdout);
+            return null;
+        },
     }
 
-    const out = stdout_buf.items;
+    const out = r.stdout;
     if (out.len > 0 and out[out.len - 1] == '\n') {
         return out[0 .. out.len - 1];
     }
@@ -460,25 +468,31 @@ fn getCurrentBranch(allocator: Allocator) ?[]const u8 {
 }
 
 pub fn runGitCommand(allocator: Allocator, argv: []const []const u8) bool {
-    var child = std.process.Child.init(argv, allocator);
-    child.stdout_behavior = .Ignore;
-    child.stderr_behavior = .Ignore;
-    _ = child.spawn() catch return false;
-    const term = child.wait() catch return false;
+    _ = allocator;
+    const io = tri_io.get();
+    var child = std.process.spawn(io, .{
+        .argv = argv,
+        .stdout = .ignore,
+        .stderr = .ignore,
+    }) catch return false;
+    const term = child.wait(io) catch return false;
     return switch (term) {
-        .Exited => |code| code == 0,
+        .exited => |code| code == 0,
         else => false,
     };
 }
 
 fn runCheck(allocator: Allocator, argv: []const []const u8) bool {
-    var child = std.process.Child.init(argv, allocator);
-    child.stdout_behavior = .Ignore;
-    child.stderr_behavior = .Ignore;
-    _ = child.spawn() catch return false;
-    const term = child.wait() catch return false;
+    _ = allocator;
+    const io = tri_io.get();
+    var child = std.process.spawn(io, .{
+        .argv = argv,
+        .stdout = .ignore,
+        .stderr = .ignore,
+    }) catch return false;
+    const term = child.wait(io) catch return false;
     return switch (term) {
-        .Exited => |code| code == 0,
+        .exited => |code| code == 0,
         else => false,
     };
 }
@@ -489,23 +503,19 @@ const CheckOutput = struct {
 };
 
 fn runCheckWithOutput(allocator: Allocator, argv: []const []const u8) CheckOutput {
-    var child = std.process.Child.init(argv, allocator);
-    child.stdout_behavior = .Pipe;
-    child.stderr_behavior = .Pipe;
-    _ = child.spawn() catch return .{ .ok = false, .output = "" };
+    const r = tri_proc.run(.{
+        .allocator = allocator,
+        .argv = argv,
+        .max_output_bytes = 4 * 1024 * 1024,
+    }) catch return .{ .ok = false, .output = "" };
 
-    var stdout_buf: std.ArrayList(u8) = .empty;
-    var stderr_buf: std.ArrayList(u8) = .empty;
-    child.collectOutput(allocator, &stdout_buf, &stderr_buf, 4 * 1024 * 1024) catch return .{ .ok = false, .output = "" };
-    const term = child.wait() catch return .{ .ok = false, .output = "" };
-
-    const ok = switch (term) {
-        .Exited => |code| code == 0,
+    const ok = switch (r.term) {
+        .exited => |code| code == 0,
         else => false,
     };
 
     // Combine stdout+stderr for test output parsing
-    const output = if (stdout_buf.items.len > 0) stdout_buf.items else stderr_buf.items;
+    const output = if (r.stdout.len > 0) r.stdout else r.stderr;
     return .{ .ok = ok, .output = output };
 }
 
@@ -524,19 +534,16 @@ fn countTestPasses(output: []const u8) u32 {
 }
 
 fn getDiffLines(allocator: Allocator) u32 {
-    var child = std.process.Child.init(&.{ "git", "diff", "main", "--stat" }, allocator);
-    child.stdout_behavior = .Pipe;
-    child.stderr_behavior = .Pipe;
-    _ = child.spawn() catch return 0;
-
-    var stdout_buf: std.ArrayList(u8) = .empty;
-    var stderr_buf2: std.ArrayList(u8) = .empty;
-    defer stderr_buf2.deinit(allocator);
-    child.collectOutput(allocator, &stdout_buf, &stderr_buf2, 64 * 1024) catch return 0;
-    _ = child.wait() catch return 0;
+    const r = tri_proc.run(.{
+        .allocator = allocator,
+        .argv = &.{ "git", "diff", "main", "--stat" },
+        .max_output_bytes = 64 * 1024,
+    }) catch return 0;
+    defer allocator.free(r.stderr);
+    defer allocator.free(r.stdout);
 
     // Parse last line: " N files changed, X insertions(+), Y deletions(-)"
-    const out = stdout_buf.items;
+    const out = r.stdout;
     if (out.len == 0) return 0;
 
     var total: u32 = 0;
@@ -583,11 +590,14 @@ fn updateElo(baseline_elo: f64, gladiator_elo: f64, winner: Winner) struct { f64
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn readEloState() EloState {
-    const file = std.fs.cwd().openFile(ELO_PATH, .{}) catch return EloState{};
-    defer file.close();
+    const io = tri_io.get();
+    const file = std.Io.Dir.cwd().openFile(io, ELO_PATH, .{}) catch return EloState{};
+    defer file.close(io);
 
     var buf: [512]u8 = undefined;
-    const n = file.readAll(&buf) catch return EloState{};
+    var read_scratch: [512]u8 = undefined;
+    var file_reader = file.reader(io, &read_scratch);
+    const n = file_reader.interface.readSliceShort(&buf) catch return EloState{};
     const content = buf[0..n];
 
     // Minimal JSON parse for our known fields
@@ -602,9 +612,10 @@ fn readEloState() EloState {
 }
 
 fn writeEloState(state: EloState) void {
-    std.fs.cwd().makePath(".trinity/code_arena") catch {};
-    const file = std.fs.cwd().createFile(ELO_PATH, .{}) catch return;
-    defer file.close();
+    const io = tri_io.get();
+    std.Io.Dir.cwd().createDirPath(io, ".trinity/code_arena") catch {};
+    const file = std.Io.Dir.cwd().createFile(io, ELO_PATH, .{}) catch return;
+    defer file.close(io);
 
     var buf: [512]u8 = undefined;
     const json = std.fmt.bufPrint(&buf,
@@ -618,19 +629,20 @@ fn writeEloState(state: EloState) void {
         state.ties,
     }) catch return;
 
-    file.writeAll(json) catch {};
-    file.writeAll("\n") catch {};
+    file.writeStreamingAll(io, json) catch {};
+    file.writeStreamingAll(io, "\n") catch {};
 }
 
 fn appendResult(outcome: BattleOutcome) void {
-    std.fs.cwd().makePath(".trinity/code_arena") catch {};
+    const io = tri_io.get();
+    std.Io.Dir.cwd().createDirPath(io, ".trinity/code_arena") catch {};
 
-    const file = std.fs.cwd().openFile(RESULTS_PATH, .{ .mode = .read_write }) catch
-        std.fs.cwd().createFile(RESULTS_PATH, .{}) catch return;
-    defer file.close();
+    const file = std.Io.Dir.cwd().openFile(io, RESULTS_PATH, .{ .mode = .read_write }) catch
+        std.Io.Dir.cwd().createFile(io, RESULTS_PATH, .{}) catch return;
+    defer file.close(io);
 
-    const stat = file.stat() catch return;
-    file.seekTo(stat.size) catch {};
+    // 0.16 has no seek-then-write; append at the measured end offset.
+    const append_at = file.length(io) catch return;
 
     var buf: [2048]u8 = undefined;
     const line = std.fmt.bufPrint(&buf,
@@ -655,8 +667,8 @@ fn appendResult(outcome: BattleOutcome) void {
         outcome.gladiator.total_score,
     }) catch return;
 
-    file.writeAll(line) catch {};
-    file.writeAll("\n") catch {};
+    file.writePositionalAll(io, line, append_at) catch {};
+    file.writePositionalAll(io, "\n", append_at + line.len) catch {};
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -753,14 +765,17 @@ fn showLeaderboard() void {
 }
 
 fn showHistory(allocator: Allocator) void {
-    const file = std.fs.cwd().openFile(RESULTS_PATH, .{}) catch {
+    const io = tri_io.get();
+    const file = std.Io.Dir.cwd().openFile(io, RESULTS_PATH, .{}) catch {
         print("\n  {s}No battle history. Run: tri code arena battle \"task\"{s}\n\n", .{ GRAY, RESET });
         return;
     };
-    defer file.close();
+    defer file.close(io);
 
     var buf: [16384]u8 = undefined;
-    const n = file.readAll(&buf) catch return;
+    var read_scratch: [4096]u8 = undefined;
+    var file_reader = file.reader(io, &read_scratch);
+    const n = file_reader.interface.readSliceShort(&buf) catch return;
     const content = buf[0..n];
 
     print("\n{s}{s}CODE ARENA — Battle History{s}\n", .{ BOLD, GOLDEN, RESET });

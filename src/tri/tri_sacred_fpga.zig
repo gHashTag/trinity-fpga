@@ -21,6 +21,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const colors = @import("tri_colors.zig");
 const GOLD = colors.GOLDEN;
 const CYAN = colors.CYAN;
@@ -33,9 +34,10 @@ const RESET = colors.RESET;
 // =============================================================================
 
 fn writeVerilogFile(path: []const u8, content: []const u8) !void {
-    const file = try std.fs.cwd().createFile(path, .{});
-    defer file.close();
-    try file.writeAll(content);
+    const io = tri_io.get();
+    const file = try std.Io.Dir.cwd().createFile(io, path, .{});
+    defer file.close(io);
+    try file.writeStreamingAll(io, content);
     std.debug.print("{s}✓ Generated: {s}{s}\n", .{ GREEN, path, RESET });
 }
 

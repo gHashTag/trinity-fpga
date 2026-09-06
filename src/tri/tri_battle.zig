@@ -18,6 +18,7 @@
 
 const std = @import("std");
 
+const tri_io = @import("tri_io");
 const print = std.debug.print;
 const RESET = "\x1b[0m";
 const GOLDEN = "\x1b[38;5;220m";
@@ -25,6 +26,7 @@ const CYAN = "\x1b[36m";
 const GRAY = "\x1b[90m";
 
 pub fn runBattleCommand(allocator: std.mem.Allocator, args: []const []const u8) !void {
+    _ = allocator; // 0.16: std.process.spawn takes no allocator
     if (args.len == 0) {
         printUsage();
         return;
@@ -42,14 +44,15 @@ pub fn runBattleCommand(allocator: std.mem.Allocator, args: []const []const u8) 
     print("{s}\xe2\x9a\x94 Trinity Arena 2.0{s}\n", .{ GOLDEN, RESET });
     print("{s}   Launching arena...{s}\n\n", .{ GRAY, RESET });
 
-    var child = std.process.Child.init(argv, allocator);
-    child.stderr_behavior = .Inherit;
-    child.stdout_behavior = .Inherit;
-    try child.spawn();
-    const term = try child.wait();
+    var child = try std.process.spawn(tri_io.get(), .{
+        .argv = argv,
+        .stdout = .inherit,
+        .stderr = .inherit,
+    });
+    const term = try child.wait(tri_io.get());
 
     switch (term) {
-        .Exited => |code| {
+        .exited => |code| {
             if (code != 0) {
                 print("\n{s}\xe2\x9c\x97 arena exited with code {d}{s}\n", .{ "\x1b[31m", code, RESET });
             }

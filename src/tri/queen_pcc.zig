@@ -10,6 +10,8 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_env = @import("tri_env");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const qt = @import("queen_types.zig");
 const hippocampus = @import("hippocampus.zig");
@@ -239,7 +241,7 @@ pub fn introspect(allocator: Allocator) !IntrospectionResult {
     model.identity.name_len = 7;
     @memcpy(model.identity.version[0..6], "v2.0.3");
     model.identity.version_len = 6;
-    model.identity.uptime_seconds = std.time.timestamp();
+    model.identity.uptime_seconds = tri_time.timestamp();
     // Note: pid would need platform-specific code
 
     // Current state
@@ -276,7 +278,7 @@ pub fn introspect(allocator: Allocator) !IntrospectionResult {
         .model = model,
         .health_score = health_score,
         .awareness_level = if (health_score > 80) .self_analytical else .self_aware,
-        .timestamp = std.time.timestamp(),
+        .timestamp = tri_time.timestamp(),
     };
 }
 
@@ -296,7 +298,7 @@ pub const SelfAwarenessContext = struct {
 
     /// Am I making progress?
     pub fn isProgressing(self: *const SelfAwarenessContext) bool {
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
         const time_since_progress = now - self.model.learning_state.last_lesson_ts;
         return time_since_progress < 3600; // Progress within 1 hour
     }
@@ -363,10 +365,10 @@ pub fn learnFromActionResult(
 ) !void {
     if (result.success) {
         model.current_state.cycle_count += 1;
-        model.current_state.last_action_ts = std.time.timestamp();
+        model.current_state.last_action_ts = tri_time.timestamp();
 
         // Update learning state
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
         if (now - model.learning_state.last_lesson_ts > 300) { // 5 min since last lesson
             model.learning_state.last_lesson_ts = now;
             const prefix = "Action succeeded: ";
@@ -415,7 +417,7 @@ pub fn diagnoseConsciousness(
     }
 
     // Check for stuck (no progress)
-    const now = std.time.timestamp();
+    const now = tri_time.timestamp();
     const time_since_progress = now - last_progress_ts;
     if (time_since_progress > 7200) { // 2 hours without progress
         state.status = .stuck;
@@ -498,7 +500,7 @@ fn binaryExistsInPath(bin_name: []const u8) bool {
 /// Check if GitHub connectivity is working
 fn checkGitHubConnectivity() bool {
     // Simple check: try to read git config
-    if (std.process.getEnvVarOwned(std.heap.page_allocator, "GITHUB_TOKEN")) |token| {
+    if (tri_env.getEnvVarOwned(std.heap.page_allocator, "GITHUB_TOKEN")) |token| {
         defer std.heap.page_allocator.free(token);
         return token.len > 0;
     } else |_| {}
@@ -508,11 +510,11 @@ fn checkGitHubConnectivity() bool {
 /// Check if Railway connectivity is working
 fn checkRailwayConnectivity() bool {
     // Check for Railway tokens
-    if (std.process.getEnvVarOwned(std.heap.page_allocator, "RAILWAY_TOKEN_1")) |token| {
+    if (tri_env.getEnvVarOwned(std.heap.page_allocator, "RAILWAY_TOKEN_1")) |token| {
         defer std.heap.page_allocator.free(token);
         return token.len > 0;
     } else |_| {}
-    if (std.process.getEnvVarOwned(std.heap.page_allocator, "RAILWAY_TOKEN_2")) |token| {
+    if (tri_env.getEnvVarOwned(std.heap.page_allocator, "RAILWAY_TOKEN_2")) |token| {
         defer std.heap.page_allocator.free(token);
         return token.len > 0;
     } else |_| {}
@@ -521,7 +523,7 @@ fn checkRailwayConnectivity() bool {
 
 /// Check if Telegram connectivity is working
 fn checkTelegramConnectivity() bool {
-    if (std.process.getEnvVarOwned(std.heap.page_allocator, "TELEGRAM_BOT_TOKEN")) |token| {
+    if (tri_env.getEnvVarOwned(std.heap.page_allocator, "TELEGRAM_BOT_TOKEN")) |token| {
         defer std.heap.page_allocator.free(token);
         return token.len > 0;
     } else |_| {}
@@ -536,7 +538,7 @@ pub fn health() CellHealth {
     return CellHealth{
         .status = .healthy,
         .cycle = 0,
-        .last_check = std.time.timestamp(),
+        .last_check = tri_time.timestamp(),
     };
 }
 
@@ -614,7 +616,7 @@ test "pcc — diagnoseConsciousness detects stuck" {
     };
     var detector = LoopDetector{};
 
-    const now = std.time.timestamp();
+    const now = tri_time.timestamp();
     const state = diagnoseConsciousness(model, &detector, now - 8000); // > 2 hours ago
 
     try std.testing.expectEqual(ConsciousnessState.Status.stuck, state.status);
@@ -1054,7 +1056,7 @@ test "pcc — SelfAwarenessContext isProgressing with recent lesson" {
         .current_state = .{},
         .capabilities = .{},
         .goals = .{},
-        .learning_state = .{ .last_lesson_ts = std.time.timestamp() - 1000 }, // 16 min ago
+        .learning_state = .{ .last_lesson_ts = tri_time.timestamp() - 1000 }, // 16 min ago
     };
 
     const context = SelfAwarenessContext{
@@ -1071,7 +1073,7 @@ test "pcc — SelfAwarenessContext isProgressing with old lesson" {
         .current_state = .{},
         .capabilities = .{},
         .goals = .{},
-        .learning_state = .{ .last_lesson_ts = std.time.timestamp() - 7200 }, // 2 hours ago
+        .learning_state = .{ .last_lesson_ts = tri_time.timestamp() - 7200 }, // 2 hours ago
     };
 
     const context = SelfAwarenessContext{
@@ -1403,7 +1405,7 @@ test "pcc — diagnoseConsciousness with degraded capabilities" {
     };
     var detector = LoopDetector{};
 
-    const now = std.time.timestamp();
+    const now = tri_time.timestamp();
     const state = diagnoseConsciousness(model, &detector, now);
 
     try std.testing.expectEqual(ConsciousnessState.Status.degraded, state.status);
@@ -1419,7 +1421,7 @@ test "pcc — diagnoseConsciousness conscious with good capabilities" {
     };
     var detector = LoopDetector{};
 
-    const now = std.time.timestamp();
+    const now = tri_time.timestamp();
     const state = diagnoseConsciousness(model, &detector, now);
 
     try std.testing.expectEqual(ConsciousnessState.Status.conscious, state.status);
@@ -1441,7 +1443,7 @@ test "pcc — diagnoseConsciousness loop takes priority" {
     _ = detector.record(.introspection);
     _ = detector.record(.introspection);
 
-    const now = std.time.timestamp();
+    const now = tri_time.timestamp();
     const state = diagnoseConsciousness(model, &detector, now);
 
     try std.testing.expectEqual(ConsciousnessState.Status.looping, state.status);
@@ -1564,7 +1566,7 @@ test "pcc — diagnoseConsciousness returns valid ConsciousnessState" {
     };
     var detector = LoopDetector{};
 
-    const now = std.time.timestamp();
+    const now = tri_time.timestamp();
     const state = diagnoseConsciousness(model, &detector, now);
 
     // Should return a valid status
@@ -1585,7 +1587,7 @@ test "pcc — health returns CellHealth with timestamp" {
     const h = health();
 
     // Timestamp should be recent (within last second)
-    const now = std.time.timestamp();
+    const now = tri_time.timestamp();
     try std.testing.expect(h.last_check > 0);
     try std.testing.expect(h.last_check <= now);
 }

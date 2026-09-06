@@ -13,6 +13,8 @@
 //! 9. φ Loop: Decide next action via SONA
 
 const std = @import("std");
+const tri_io = @import("tri_io");
+const tri_time = @import("tri_time");
 const phi_types = @import("phi_types.zig");
 const phi_gate = @import("phi_gate.zig");
 
@@ -61,7 +63,7 @@ pub const PhiLoop = struct {
                 .failed_links = 0,
                 .skipped_links = 0,
                 .average_pas_score = 0.0,
-                .start_time = std.time.timestamp(),
+                .start_time = tri_time.timestamp(),
             },
             .config = config,
         };
@@ -82,7 +84,7 @@ pub const PhiLoop = struct {
             };
         }
 
-        const start_time = std.time.nanoTimestamp();
+        const start_time = tri_time.nanoTimestamp();
 
         // Step 1: φ Decompose
         self.state = .decomposing;
@@ -95,12 +97,12 @@ pub const PhiLoop = struct {
         // Step 3-4: φ Spec & φ Gen (combined for VIBEE)
         self.state = .generating;
         const gen_result = try self.phiGen(spec_path);
-        const generation_time = @as(u64, @intCast(@divTrunc(std.time.nanoTimestamp() - start_time, 1_000_000)));
+        const generation_time = @as(u64, @intCast(@divTrunc(tri_time.nanoTimestamp() - start_time, 1_000_000)));
 
         // Step 5-6: φ Validate & φ Test
         self.state = .validating;
         const validation = try self.phiValidate(gen_result);
-        const validation_time = @as(u64, @intCast(@divTrunc(std.time.nanoTimestamp() - start_time, 1_000_000) - generation_time));
+        const validation_time = @as(u64, @intCast(@divTrunc(tri_time.nanoTimestamp() - start_time, 1_000_000) - generation_time));
 
         // Step 7: φ Verdict (φ Gate check)
         var gate = phi_gate.PhiGate.init(self.allocator);
@@ -179,7 +181,7 @@ pub const PhiLoop = struct {
     /// φ Decompose: Analyze task through sacred math
     fn phiDecompose(self: *PhiLoop, spec_path: []const u8) !phi_types.TaskDecomposition {
         // Parse spec to determine complexity
-        const file = try std.fs.cwd().readFileAlloc(self.allocator, spec_path, 10_000_000);
+        const file = try std.Io.Dir.cwd().readFileAlloc(tri_io.get(), spec_path, self.allocator, .limited(10_000_000));
         defer self.allocator.free(file);
 
         const line_count = std.mem.count(u8, file, "\n");
@@ -218,7 +220,7 @@ pub const PhiLoop = struct {
 
     /// φ Gen: Generate code via VIBEE
     fn phiGen(self: *PhiLoop, spec_path: []const u8) !phi_types.GeneratedCode {
-        const file = try std.fs.cwd().readFileAlloc(self.allocator, spec_path, 10_000_000);
+        const file = try std.Io.Dir.cwd().readFileAlloc(tri_io.get(), spec_path, self.allocator, .limited(10_000_000));
 
         // Generate pattern ID from spec content
         const pattern_id = std.hash.Wyhash.hash(0, file);
@@ -228,7 +230,7 @@ pub const PhiLoop = struct {
             .output_path = spec_path,
             .language = "zig",
             .pattern_id = pattern_id,
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
         };
     }
 
@@ -397,12 +399,13 @@ test "PhiLoop phiDecompose" {
 
     // Create a minimal test spec file
     const test_spec = "# Simple test spec\nname: test\nversion: \"1.0\"\n";
-    try std.fs.cwd().writeFile(.{
+    const io = tri_io.get();
+    try std.Io.Dir.cwd().writeFile(io, .{
         .sub_path = "test_phi_decompose.tri",
         .data = test_spec,
     });
     defer {
-        std.fs.cwd().deleteFile("test_phi_decompose.tri") catch {};
+        std.Io.Dir.cwd().deleteFile(io, "test_phi_decompose.tri") catch {};
     }
 
     const task = try loop.phiDecompose("test_phi_decompose.tri");

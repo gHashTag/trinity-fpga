@@ -2,6 +2,13 @@
 // Script lives in ~/.claude/scripts/zai-rotating-proxy.mjs
 
 const std = @import("std");
+
+// 0.16 removed std.posix.getuid; libc has it and is already linked.
+const c_uid = struct {
+    extern "c" fn getuid() u32;
+};
+const tri_io = @import("tri_io");
+const tri_env = @import("tri_env");
 const builtin = @import("builtin");
 
 const Allocator = std.mem.Allocator;
@@ -42,7 +49,7 @@ fn launchAgentDstPath(allocator: Allocator, home: []const u8) ![]const u8 {
 }
 
 fn envDefaultPort() u16 {
-    const raw = std.posix.getenv("ZAI_PROXY_PORT") orelse return DEFAULT_PORT;
+    const raw = tri_env.getPosix("ZAI_PROXY_PORT") orelse return DEFAULT_PORT;
     return std.fmt.parseInt(u16, raw, 10) catch DEFAULT_PORT;
 }
 
@@ -82,13 +89,13 @@ fn readPidFile(path: []const u8) !struct {
     pid: ?u32,
     port_line: ?u16,
 } {
-    const file = std.fs.cwd().openFile(path, .{}) catch return .{ .pid = null, .port_line = null };
-    defer file.close();
+    const io = tri_io.get();
     const max = 128;
     var buf: [max]u8 = undefined;
-    const n = try file.readAll(&buf);
-    if (n == 0) return .{ .pid = null, .port_line = null };
-    const text = std.mem.trim(u8, buf[0..n], " \t\r\n");
+    // Whole small state file into a fixed buffer; a short read is normal.
+    const contents = std.Io.Dir.cwd().readFile(io, path, &buf) catch return .{ .pid = null, .port_line = null };
+    if (contents.len == 0) return .{ .pid = null, .port_line = null };
+    const text = std.mem.trim(u8, contents, " \t\r\n");
     var it = std.mem.splitScalar(u8, text, '\n');
     const line1 = it.next() orelse return .{ .pid = null, .port_line = null };
     const pid = std.fmt.parseInt(u32, std.mem.trim(u8, line1, " \t\r\n"), 10) catch null;
@@ -101,30 +108,32 @@ fn readPidFile(path: []const u8) !struct {
 }
 
 fn processAlive(pid: u32) bool {
-    std.posix.kill(@intCast(pid), 0) catch return false;
+    std.posix.kill(@intCast(pid), @enumFromInt(0)) catch return false;
     return true;
 }
 
 fn writePidState(allocator: Allocator, path: []const u8, pid: u32, port: u16) !void {
+    const io = tri_io.get();
     const dir = std.fs.path.dirname(path) orelse return error.BadPath;
-    try std.fs.cwd().makePath(dir);
+    try std.Io.Dir.cwd().createDirPath(io, dir);
     const tmp = try std.fmt.allocPrint(allocator, "{s}.tmp", .{path});
     defer allocator.free(tmp);
     {
-        const f = try std.fs.cwd().createFile(tmp, .{ .truncate = true });
-        defer f.close();
+        const f = try std.Io.Dir.cwd().createFile(io, tmp, .{ .truncate = true });
+        defer f.close(io);
         var wbuf: [32]u8 = undefined;
         const blob = try std.fmt.bufPrint(&wbuf, "{d}\n{d}\n", .{ pid, port });
-        try f.writeAll(blob);
+        try f.writeStreamingAll(io, blob);
     }
-    try std.fs.cwd().rename(tmp, path);
+    try std.Io.Dir.cwd().rename(tmp, std.Io.Dir.cwd(), path, io);
 }
 
 fn removePidFile(path: []const u8) void {
-    std.fs.cwd().deleteFile(path) catch {};
+    std.Io.Dir.cwd().deleteFile(tri_io.get(), path) catch {};
 }
 
 fn startDaemon(allocator: Allocator, home: []const u8, port: u16) !void {
+    const io = tri_io.get();
     const pid_path = try pidFilePath(allocator, home);
     defer allocator.free(pid_path);
 
@@ -140,14 +149,14 @@ fn startDaemon(allocator: Allocator, home: []const u8, port: u16) !void {
 
     const script = try scriptPath(allocator, home);
     defer allocator.free(script);
-    std.fs.cwd().access(script, .{}) catch {
+    std.Io.Dir.cwd().access(io, script, .{}) catch {
         print("{s}error:{s} script not found: {s}\n", .{ RED, RESET, script });
         return error.MissingScript;
     };
 
     const log_dir = try logDirPath(allocator, home);
     defer allocator.free(log_dir);
-    try std.fs.cwd().makePath(log_dir);
+    try std.Io.Dir.cwd().createDirPath(io, log_dir);
     const log_path = try logFilePath(allocator, home);
     defer allocator.free(log_path);
 
@@ -165,16 +174,20 @@ fn startDaemon(allocator: Allocator, home: []const u8, port: u16) !void {
 
     // `-lc` takes one argv slot; no extra quoting layer (not via sh -c).
     const argv = [_][]const u8{ "/bin/bash", "-lc", inner };
-    var child = std.process.Child.init(&argv, allocator);
-    child.stdout_behavior = .Pipe;
-    child.stderr_behavior = .Inherit;
-    try child.spawn();
+    var child = try std.process.spawn(io, .{
+        .argv = &argv,
+        .stdout = .pipe,
+        .stderr = .inherit,
+    });
 
     const st_out = child.stdout orelse return error.NoPipe;
-    defer st_out.close();
     var out_buf: [64]u8 = undefined;
-    const read_n = try st_out.readAll(&out_buf);
-    _ = try child.wait();
+    // Drain the pipe to end-of-stream; a short result is legitimate here.
+    var scratch: [64]u8 = undefined;
+    var out_reader = st_out.reader(io, &scratch);
+    const read_n = try out_reader.interface.readSliceShort(&out_buf);
+    // `wait` closes the pipe handles itself in 0.16; no explicit close here.
+    _ = try child.wait(io);
 
     const pid_text = std.mem.trim(u8, out_buf[0..read_n], " \t\r\n");
     const pid = std.fmt.parseInt(u32, pid_text, 10) catch {
@@ -242,27 +255,29 @@ fn printStatus(allocator: Allocator, home: []const u8) void {
 }
 
 fn runForeground(allocator: Allocator, home: []const u8, port: u16) !void {
+    const io = tri_io.get();
     const script = try scriptPath(allocator, home);
     defer allocator.free(script);
-    std.fs.cwd().access(script, .{}) catch {
+    std.Io.Dir.cwd().access(io, script, .{}) catch {
         print("{s}error:{s} script not found: {s}\n", .{ RED, RESET, script });
         return error.MissingScript;
     };
     const port_str = try std.fmt.allocPrint(allocator, "{d}", .{port});
     defer allocator.free(port_str);
 
-    var env_map = try std.process.getEnvMap(allocator);
+    var env_map = try tri_env.getEnvMap(allocator);
     defer env_map.deinit();
     try env_map.put("ZAI_PROXY_PORT", port_str);
 
     const node_argv = [_][]const u8{ "node", script };
-    var child = std.process.Child.init(&node_argv, allocator);
-    child.env_map = &env_map;
-    child.stdin_behavior = .Inherit;
-    child.stdout_behavior = .Inherit;
-    child.stderr_behavior = .Inherit;
-    try child.spawn();
-    _ = try child.wait();
+    var child = try std.process.spawn(io, .{
+        .argv = &node_argv,
+        .environ_map = &env_map,
+        .stdin = .inherit,
+        .stdout = .inherit,
+        .stderr = .inherit,
+    });
+    _ = try child.wait(io);
 }
 
 fn installLaunchAgentMac(allocator: Allocator, home: []const u8) !void {
@@ -270,31 +285,33 @@ fn installLaunchAgentMac(allocator: Allocator, home: []const u8) !void {
         print("{s}install:{s} only supported on macOS\n", .{ YELLOW, RESET });
         return;
     }
+    const io = tri_io.get();
     const src = try plistSrcPath(allocator, home);
     defer allocator.free(src);
     const dst = try launchAgentDstPath(allocator, home);
     defer allocator.free(dst);
 
-    std.fs.cwd().access(src, .{}) catch {
+    std.Io.Dir.cwd().access(io, src, .{}) catch {
         print("{s}error:{s} missing {s}\n", .{ RED, RESET, src });
         return error.MissingPlist;
     };
 
     const dst_dir = std.fs.path.dirname(dst) orelse return error.BadPath;
-    try std.fs.cwd().makePath(dst_dir);
-    try std.fs.cwd().copyFile(src, std.fs.cwd(), dst, .{});
+    try std.Io.Dir.cwd().createDirPath(io, dst_dir);
+    try std.Io.Dir.cwd().copyFile(src, std.Io.Dir.cwd(), dst, io, .{});
 
     var uid_buf: [32]u8 = undefined;
-    const uid_str = try std.fmt.bufPrint(&uid_buf, "{d}", .{std.posix.getuid()});
+    const uid_str = try std.fmt.bufPrint(&uid_buf, "{d}", .{c_uid.getuid()});
 
     const bootout = try std.fmt.allocPrint(allocator, "launchctl bootout gui/{s}/local.zai-proxy 2>/dev/null; true", .{uid_str});
     defer allocator.free(bootout);
     const boot_argv = [_][]const u8{ "/bin/bash", "-lc", bootout };
-    var c1 = std.process.Child.init(&boot_argv, allocator);
-    c1.stdout_behavior = .Inherit;
-    c1.stderr_behavior = .Inherit;
-    try c1.spawn();
-    _ = try c1.wait();
+    var c1 = try std.process.spawn(io, .{
+        .argv = &boot_argv,
+        .stdout = .inherit,
+        .stderr = .inherit,
+    });
+    _ = try c1.wait(io);
 
     const bootstrap = blk: {
         const q_dst = try shellSingleQuote(allocator, dst);
@@ -303,11 +320,12 @@ fn installLaunchAgentMac(allocator: Allocator, home: []const u8) !void {
     };
     defer allocator.free(bootstrap);
     const boot2_argv = [_][]const u8{ "/bin/bash", "-lc", bootstrap };
-    var c2 = std.process.Child.init(&boot2_argv, allocator);
-    c2.stdout_behavior = .Inherit;
-    c2.stderr_behavior = .Inherit;
-    try c2.spawn();
-    _ = try c2.wait();
+    var c2 = try std.process.spawn(io, .{
+        .argv = &boot2_argv,
+        .stdout = .inherit,
+        .stderr = .inherit,
+    });
+    _ = try c2.wait(io);
 
     print("{s}LaunchAgent installed{s} → {s}\n", .{ GREEN, RESET, dst });
     print("{s}logs:{s} /tmp/zai-proxy.out.log, /tmp/zai-proxy.err.log\n", .{ DIM, RESET });
@@ -315,21 +333,23 @@ fn installLaunchAgentMac(allocator: Allocator, home: []const u8) !void {
 
 fn uninstallLaunchAgent(allocator: Allocator, home: []const u8) !void {
     if (builtin.os.tag != .macos) return;
+    const io = tri_io.get();
     var uid_buf: [32]u8 = undefined;
-    const uid_str = try std.fmt.bufPrint(&uid_buf, "{d}", .{std.posix.getuid()});
+    const uid_str = try std.fmt.bufPrint(&uid_buf, "{d}", .{c_uid.getuid()});
 
     const bootout = try std.fmt.allocPrint(allocator, "launchctl bootout gui/{s}/local.zai-proxy 2>/dev/null; true", .{uid_str});
     defer allocator.free(bootout);
     const boot_argv = [_][]const u8{ "/bin/bash", "-lc", bootout };
-    var c1 = std.process.Child.init(&boot_argv, allocator);
-    c1.stdout_behavior = .Inherit;
-    c1.stderr_behavior = .Inherit;
-    try c1.spawn();
-    _ = try c1.wait();
+    var c1 = try std.process.spawn(io, .{
+        .argv = &boot_argv,
+        .stdout = .inherit,
+        .stderr = .inherit,
+    });
+    _ = try c1.wait(io);
 
     const dst = try launchAgentDstPath(allocator, home);
     defer allocator.free(dst);
-    std.fs.cwd().deleteFile(dst) catch {};
+    std.Io.Dir.cwd().deleteFile(io, dst) catch {};
     print("{s}LaunchAgent removed{s}\n", .{ GREEN, RESET });
 }
 
@@ -346,7 +366,7 @@ fn printUsage() void {
 }
 
 pub fn runZaiProxyCommand(allocator: Allocator, args: []const []const u8) !void {
-    const home = std.posix.getenv("HOME") orelse {
+    const home = tri_env.getPosix("HOME") orelse {
         print("{s}error:{s} HOME is not set\n", .{ RED, RESET });
         return error.NoHome;
     };

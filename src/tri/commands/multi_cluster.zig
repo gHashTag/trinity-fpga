@@ -8,6 +8,8 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
+const tri_time = @import("tri_time");
 const tri_exit_codes = @import("../tri_exit_codes.zig");
 const colors = @import("../tri_colors.zig");
 
@@ -237,89 +239,90 @@ fn generateNodeId(dest: *[64]u8, dest_len: *usize, address: []const u8, port: u1
 // ───────────────────────────────────────────────────────────────────
 
 fn saveClusterState(_: std.mem.Allocator, state: *const ClusterState) void {
-    const file = std.fs.cwd().createFile(CLUSTER_STATE_FILE, .{}) catch |err| {
+    const io = tri_io.get();
+    const file = std.Io.Dir.cwd().createFile(io, CLUSTER_STATE_FILE, .{}) catch |err| {
         std.debug.print("{s}Error saving state: {}{s}\n", .{ RED, err, RESET });
         return;
     };
-    defer file.close();
+    defer file.close(io);
 
     // Helper: format line into stack buffer, write to file
     var tmp: [1024]u8 = undefined;
 
-    file.writeAll("{\n") catch return;
+    file.writeStreamingAll(io, "{\n") catch return;
     var n_written = std.fmt.bufPrint(&tmp, "  \"cluster_id\": \"{s}\",\n", .{state.cluster_id[0..state.cluster_id_len]}) catch return;
-    file.writeAll(n_written) catch return;
+    file.writeStreamingAll(io, n_written) catch return;
     n_written = std.fmt.bufPrint(&tmp, "  \"coordinator_port\": {d},\n", .{state.coordinator_port}) catch return;
-    file.writeAll(n_written) catch return;
+    file.writeStreamingAll(io, n_written) catch return;
     n_written = std.fmt.bufPrint(&tmp, "  \"discovery_port\": {d},\n", .{state.discovery_port}) catch return;
-    file.writeAll(n_written) catch return;
+    file.writeStreamingAll(io, n_written) catch return;
     n_written = std.fmt.bufPrint(&tmp, "  \"total_operations\": {d},\n", .{state.total_operations}) catch return;
-    file.writeAll(n_written) catch return;
+    file.writeStreamingAll(io, n_written) catch return;
     n_written = std.fmt.bufPrint(&tmp, "  \"total_tri_earned\": {d:.6},\n", .{state.total_tri_earned}) catch return;
-    file.writeAll(n_written) catch return;
+    file.writeStreamingAll(io, n_written) catch return;
     n_written = std.fmt.bufPrint(&tmp, "  \"total_pending_tri\": {d:.6},\n", .{state.total_pending_tri}) catch return;
-    file.writeAll(n_written) catch return;
+    file.writeStreamingAll(io, n_written) catch return;
     n_written = std.fmt.bufPrint(&tmp, "  \"last_sync_timestamp\": {d},\n", .{state.last_sync_timestamp}) catch return;
-    file.writeAll(n_written) catch return;
+    file.writeStreamingAll(io, n_written) catch return;
     n_written = std.fmt.bufPrint(&tmp, "  \"sync_count\": {d},\n", .{state.sync_count}) catch return;
-    file.writeAll(n_written) catch return;
+    file.writeStreamingAll(io, n_written) catch return;
     n_written = std.fmt.bufPrint(&tmp, "  \"crdt_entries_merged\": {d},\n", .{state.crdt_entries_merged}) catch return;
-    file.writeAll(n_written) catch return;
+    file.writeStreamingAll(io, n_written) catch return;
     n_written = std.fmt.bufPrint(&tmp, "  \"crdt_conflicts_resolved\": {d},\n", .{state.crdt_conflicts_resolved}) catch return;
-    file.writeAll(n_written) catch return;
+    file.writeStreamingAll(io, n_written) catch return;
     n_written = std.fmt.bufPrint(&tmp, "  \"created_at\": {d},\n", .{state.created_at}) catch return;
-    file.writeAll(n_written) catch return;
-    n_written = std.fmt.bufPrint(&tmp, "  \"last_modified\": {d},\n", .{std.time.timestamp()}) catch return;
-    file.writeAll(n_written) catch return;
+    file.writeStreamingAll(io, n_written) catch return;
+    n_written = std.fmt.bufPrint(&tmp, "  \"last_modified\": {d},\n", .{tri_time.timestamp()}) catch return;
+    file.writeStreamingAll(io, n_written) catch return;
     n_written = std.fmt.bufPrint(&tmp, "  \"is_running\": {s},\n", .{if (state.is_running) "true" else "false"}) catch return;
-    file.writeAll(n_written) catch return;
+    file.writeStreamingAll(io, n_written) catch return;
 
     // Nodes array
-    file.writeAll("  \"nodes\": [\n") catch return;
+    file.writeStreamingAll(io, "  \"nodes\": [\n") catch return;
     for (0..state.node_count) |i| {
         const nd = &state.nodes[i];
-        if (i > 0) file.writeAll(",\n") catch return;
-        file.writeAll("    {\n") catch return;
+        if (i > 0) file.writeStreamingAll(io, ",\n") catch return;
+        file.writeStreamingAll(io, "    {\n") catch return;
         n_written = std.fmt.bufPrint(&tmp, "      \"id\": \"{s}\",\n", .{nd.id[0..nd.id_len]}) catch return;
-        file.writeAll(n_written) catch return;
+        file.writeStreamingAll(io, n_written) catch return;
         n_written = std.fmt.bufPrint(&tmp, "      \"address\": \"{s}\",\n", .{nd.address[0..nd.address_len]}) catch return;
-        file.writeAll(n_written) catch return;
+        file.writeStreamingAll(io, n_written) catch return;
         n_written = std.fmt.bufPrint(&tmp, "      \"port\": {d},\n", .{nd.port}) catch return;
-        file.writeAll(n_written) catch return;
+        file.writeStreamingAll(io, n_written) catch return;
         n_written = std.fmt.bufPrint(&tmp, "      \"role\": \"{s}\",\n", .{nd.role[0..nd.role_len]}) catch return;
-        file.writeAll(n_written) catch return;
+        file.writeStreamingAll(io, n_written) catch return;
         n_written = std.fmt.bufPrint(&tmp, "      \"status\": \"{s}\",\n", .{nd.status[0..nd.status_len]}) catch return;
-        file.writeAll(n_written) catch return;
+        file.writeStreamingAll(io, n_written) catch return;
         n_written = std.fmt.bufPrint(&tmp, "      \"tier\": \"{s}\",\n", .{@tagName(nd.tier)}) catch return;
-        file.writeAll(n_written) catch return;
+        file.writeStreamingAll(io, n_written) catch return;
         n_written = std.fmt.bufPrint(&tmp, "      \"operations\": {d},\n", .{nd.operations}) catch return;
-        file.writeAll(n_written) catch return;
+        file.writeStreamingAll(io, n_written) catch return;
         n_written = std.fmt.bufPrint(&tmp, "      \"earned_tri\": {d:.6},\n", .{nd.earned_tri}) catch return;
-        file.writeAll(n_written) catch return;
+        file.writeStreamingAll(io, n_written) catch return;
         n_written = std.fmt.bufPrint(&tmp, "      \"pending_tri\": {d:.6},\n", .{nd.pending_tri}) catch return;
-        file.writeAll(n_written) catch return;
+        file.writeStreamingAll(io, n_written) catch return;
         n_written = std.fmt.bufPrint(&tmp, "      \"added_at\": {d}\n", .{nd.added_at}) catch return;
-        file.writeAll(n_written) catch return;
-        file.writeAll("    }") catch return;
+        file.writeStreamingAll(io, n_written) catch return;
+        file.writeStreamingAll(io, "    }") catch return;
     }
-    file.writeAll("\n  ],\n") catch return;
+    file.writeStreamingAll(io, "\n  ],\n") catch return;
 
     // Federations array
-    file.writeAll("  \"federations\": [\n") catch return;
+    file.writeStreamingAll(io, "  \"federations\": [\n") catch return;
     for (0..state.federation_count) |i| {
         const f = &state.federations[i];
-        if (i > 0) file.writeAll(",\n") catch return;
-        file.writeAll("    {\n") catch return;
+        if (i > 0) file.writeStreamingAll(io, ",\n") catch return;
+        file.writeStreamingAll(io, "    {\n") catch return;
         n_written = std.fmt.bufPrint(&tmp, "      \"address\": \"{s}\",\n", .{f.address[0..f.address_len]}) catch return;
-        file.writeAll(n_written) catch return;
+        file.writeStreamingAll(io, n_written) catch return;
         n_written = std.fmt.bufPrint(&tmp, "      \"sync_mode\": \"{s}\",\n", .{f.sync_mode[0..f.sync_mode_len]}) catch return;
-        file.writeAll(n_written) catch return;
+        file.writeStreamingAll(io, n_written) catch return;
         n_written = std.fmt.bufPrint(&tmp, "      \"linked_at\": {d}\n", .{f.linked_at}) catch return;
-        file.writeAll(n_written) catch return;
-        file.writeAll("    }") catch return;
+        file.writeStreamingAll(io, n_written) catch return;
+        file.writeStreamingAll(io, "    }") catch return;
     }
-    file.writeAll("\n  ]\n") catch return;
-    file.writeAll("}\n") catch return;
+    file.writeStreamingAll(io, "\n  ]\n") catch return;
+    file.writeStreamingAll(io, "}\n") catch return;
 }
 
 // ───────────────────────────────────────────────────────────────────
@@ -329,10 +332,8 @@ fn saveClusterState(_: std.mem.Allocator, state: *const ClusterState) void {
 fn loadClusterState(allocator: std.mem.Allocator) ClusterState {
     var state = ClusterState.init();
 
-    const file = std.fs.cwd().openFile(CLUSTER_STATE_FILE, .{}) catch return state;
-    defer file.close();
-
-    const content = file.readToEndAlloc(allocator, 1024 * 1024) catch return state;
+    // Max 1MB, same cap the 0.15 readToEndAlloc had.
+    const content = std.Io.Dir.cwd().readFileAlloc(tri_io.get(), CLUSTER_STATE_FILE, allocator, .limited(1024 * 1024)) catch return state;
     defer allocator.free(content);
 
     const parsed = std.json.parseFromSlice(std.json.Value, allocator, content, .{}) catch return state;
@@ -533,7 +534,7 @@ fn runInitialize(allocator: std.mem.Allocator, args: []const []const u8) void {
     state = ClusterState.init();
     state.coordinator_port = port;
     state.discovery_port = discovery_port;
-    state.created_at = std.time.timestamp();
+    state.created_at = tri_time.timestamp();
     state.is_running = true;
 
     // Generate cluster ID
@@ -664,7 +665,7 @@ fn runAddNode(allocator: std.mem.Allocator, args: []const []const u8) void {
     copyToFixed(32, &node.role, &node.role_len, role);
     copyToFixed(16, &node.status, &node.status_len, "online");
     node.tier = tier;
-    node.added_at = std.time.timestamp();
+    node.added_at = tri_time.timestamp();
 
     // Calculate reward with tier multiplier using RewardCalculator
     const base_reward = REWARD_PER_OPERATION;
@@ -830,7 +831,7 @@ fn runSync(allocator: std.mem.Allocator, args: []const []const u8) void {
     }
 
     state.sync_count += 1;
-    state.last_sync_timestamp = std.time.timestamp();
+    state.last_sync_timestamp = tri_time.timestamp();
 
     // Accrue sync reward to each online node
     const sync_reward = REWARD_PER_SYNC;
@@ -891,7 +892,7 @@ fn runFederate(allocator: std.mem.Allocator, args: []const []const u8) void {
     var link = FederationLink.empty();
     copyToFixed(128, &link.address, &link.address_len, cluster_addr);
     copyToFixed(16, &link.sync_mode, &link.sync_mode_len, sync_mode);
-    link.linked_at = std.time.timestamp();
+    link.linked_at = tri_time.timestamp();
 
     state.federations[state.federation_count] = link;
     state.federation_count += 1;

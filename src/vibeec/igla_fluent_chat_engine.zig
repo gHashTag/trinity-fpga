@@ -14,6 +14,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 // Note: We import rag directly instead of memory to reduce stack size
 const rag = @import("igla_rag_engine.zig");
 
@@ -939,7 +940,7 @@ pub const FluentChatEngine = struct {
     }
 
     pub fn respond(self: *FluentChatEngine, input: []const u8) ChatResponse {
-        const start = std.time.nanoTimestamp();
+        const start = tri_time.nanoTimestamp();
 
         self.total_turns += 1;
 
@@ -970,7 +971,7 @@ pub const FluentChatEngine = struct {
             .is_fluent = fluent.is_fluent,
             .memory_used = self.message_store.message_count > 1,
             .turn_number = self.context.turn_count,
-            .execution_time_ns = @intCast(std.time.nanoTimestamp() - start),
+            .execution_time_ns = @intCast(tri_time.nanoTimestamp() - start),
         };
 
         // Store response

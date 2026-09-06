@@ -121,9 +121,9 @@ pub const TVCBlock = struct {
         return TVCBlock{
             .allocator = allocator,
             .id = block_id,
-            .instructions = .{},
-            .successors = .{},
-            .predecessors = .{},
+            .instructions = .empty,
+            .successors = .empty,
+            .predecessors = .empty,
         };
     }
 
@@ -150,11 +150,11 @@ pub const TVCFunction = struct {
             .allocator = allocator,
             .id = func_id,
             .name = "",
-            .params = .{},
+            .params = .empty,
             .return_type = .void,
-            .locals = .{},
-            .blocks = .{},
-            .values = .{},
+            .locals = .empty,
+            .blocks = .empty,
+            .values = .empty,
             .next_value_id = 0,
         };
     }
@@ -205,8 +205,8 @@ pub const TVCModule = struct {
         return TVCModule{
             .allocator = allocator,
             .name = "module",
-            .functions = .{},
-            .globals = .{},
+            .functions = .empty,
+            .globals = .empty,
             .entry_point = null,
         };
     }
@@ -248,8 +248,8 @@ pub const Lifter = struct {
         return Lifter{
             .allocator = allocator,
             .module = TVCModule.init(allocator),
-            .stack = .{},
-            .block_stack = .{},
+            .stack = .empty,
+            .block_stack = .empty,
             .next_label = 0,
         };
     }

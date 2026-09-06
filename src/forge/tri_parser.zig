@@ -364,68 +364,68 @@ pub const TriParser = struct {
     /// Generate Verilog from .tri spec
     pub fn generateVerilog(self: *TriParser, spec: *const DesignSpec, writer: anytype) !void {
         _ = self;
-        try std.fmt.format(writer, "// Generated from {s}.tri\n", .{spec.name});
-        try std.fmt.format(writer, "// Consciousness: {}\n", .{spec.consciousness_enabled});
-        try std.fmt.format(writer, "// Device: {s}\n\n", .{spec.device});
+        try writer.print("// Generated from {s}.tri\n", .{spec.name});
+        try writer.print("// Consciousness: {}\n", .{spec.consciousness_enabled});
+        try writer.print("// Device: {s}\n\n", .{spec.device});
 
-        try std.fmt.format(writer, "module {s}(\n", .{spec.name});
+        try writer.print("module {s}(\n", .{spec.name});
 
         // Port declarations
         for (spec.ports.items, 0..) |port, i| {
             const comma = if (i < spec.ports.items.len - 1) "," else "";
-            try std.fmt.format(writer, "  ", .{});
+            try writer.print("  ", .{});
 
             // Direction
             if (port.direction == .input) {
-                try std.fmt.format(writer, "input ", .{});
+                try writer.print("input ", .{});
             } else if (port.direction == .output) {
-                try std.fmt.format(writer, "output ", .{});
+                try writer.print("output ", .{});
             } else {
-                try std.fmt.format(writer, "inout ", .{});
+                try writer.print("inout ", .{});
             }
 
             // Width
             if (port.width > 1) {
-                try std.fmt.format(writer, "[{}:0] ", .{port.width - 1});
+                try writer.print("[{}:0] ", .{port.width - 1});
             }
 
             // Name
-            try std.fmt.format(writer, "{s}{s}\n", .{ port.name, comma });
+            try writer.print("{s}{s}\n", .{ port.name, comma });
         }
 
-        try std.fmt.format(writer, ");\n\n", .{});
+        try writer.print(");\n\n", .{});
 
         // Generate header comments
-        try std.fmt.format(writer, "// Consciousness-Guided Synthesis\n", .{});
-        try std.fmt.format(writer, "// Strategy: {s}\n", .{@tagName(spec.override_strategy orelse Strategy.Balanced)});
+        try writer.print("// Consciousness-Guided Synthesis\n", .{});
+        try writer.print("// Strategy: {s}\n", .{@tagName(spec.override_strategy orelse Strategy.Balanced)});
 
         if (spec.behavior.template_path) |path| {
-            try std.fmt.format(writer, "// Template: {s}\n", .{path});
+            try writer.print("// Template: {s}\n", .{path});
         }
 
-        try std.fmt.format(writer, "\nendmodule\n", .{});
+        try writer.print("\nendmodule\n", .{});
     }
 
     /// Generate XDC constraints from .tri spec
     pub fn generateXDC(self: *TriParser, spec: *const DesignSpec, writer: anytype) !void {
         _ = self;
-        try std.fmt.format(writer, "# Generated from {s}.tri\n", .{spec.name});
-        try std.fmt.format(writer, "# Device: {s}\n\n", .{spec.device});
+        try writer.print("# Generated from {s}.tri\n", .{spec.name});
+        try writer.print("# Device: {s}\n\n", .{spec.device});
 
         for (spec.ports.items) |port| {
             if (port.attributes.loc) |loc| {
-                try std.fmt.format(writer, "set_property PACKAGE_PIN {s} ", .{loc});
-                try std.fmt.format(writer, "[get_ports {s}]\n", .{port.name});
+                try writer.print("set_property PACKAGE_PIN {s} ", .{loc});
+                try writer.print("[get_ports {s}]\n", .{port.name});
             }
             if (port.attributes.iostandard) |io_std| {
-                try std.fmt.format(writer, "set_property IOSTANDARD {s} ", .{io_std});
-                try std.fmt.format(writer, "[get_ports {s}]\n", .{port.name});
+                try writer.print("set_property IOSTANDARD {s} ", .{io_std});
+                try writer.print("[get_ports {s}]\n", .{port.name});
             }
             if (port.port_type == .clock) {
                 if (port.attributes.freq_mhz) |freq| {
-                    try std.fmt.format(writer, "#create_generated_clock -name {s}_clk ", .{port.name});
-                    try std.fmt.format(writer, "-period [expr {{{d:.2} ns]] ", .{1000.0 / freq});
-                    try std.fmt.format(writer, "[get_pins {s}]\n", .{port.name});
+                    try writer.print("#create_generated_clock -name {s}_clk ", .{port.name});
+                    try writer.print("-period [expr {{{d:.2} ns]] ", .{1000.0 / freq});
+                    try writer.print("[get_pins {s}]\n", .{port.name});
                 }
             }
         }

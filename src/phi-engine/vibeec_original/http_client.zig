@@ -4,6 +4,8 @@
 // φ² + 1/φ² = 3
 
 const std = @import("std");
+const tri_io = @import("tri_io");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 
 pub const HttpMethod = enum {
@@ -44,7 +46,7 @@ pub const HttpClient = struct {
     pub fn init(allocator: Allocator) Self {
         return Self{
             .allocator = allocator,
-            .client = std.http.Client{ .allocator = allocator },
+            .client = std.http.Client{ .allocator = allocator, .io = tri_io.get() },
         };
     }
 
@@ -81,7 +83,7 @@ pub const HttpClient = struct {
         body: ?[]const u8,
         auth_token: ?[]const u8,
     ) HttpError!HttpResponse {
-        const start_time = std.time.nanoTimestamp();
+        const start_time = tri_time.nanoTimestamp();
 
         const uri = std.Uri.parse(url) catch return HttpError.InvalidUrl;
 
@@ -139,7 +141,7 @@ pub const HttpClient = struct {
 
         const response_body = req.reader().readAllAlloc(self.allocator, 10 * 1024 * 1024) catch return HttpError.OutOfMemory;
 
-        const end_time = std.time.nanoTimestamp();
+        const end_time = tri_time.nanoTimestamp();
 
         return HttpResponse{
             .status = @intFromEnum(req.response.status),
@@ -152,7 +154,7 @@ pub const HttpClient = struct {
     /// Make a POST request with Anthropic-specific headers
     /// Anthropic requires: x-api-key, anthropic-version, content-type
     pub fn postJsonAnthropic(self: *Self, url: []const u8, body: []const u8, api_key: []const u8) HttpError!HttpResponse {
-        const start_time = std.time.nanoTimestamp();
+        const start_time = tri_time.nanoTimestamp();
 
         const uri = std.Uri.parse(url) catch return HttpError.InvalidUrl;
 
@@ -185,7 +187,7 @@ pub const HttpClient = struct {
 
         const response_body = req.reader().readAllAlloc(self.allocator, 10 * 1024 * 1024) catch return HttpError.OutOfMemory;
 
-        const end_time = std.time.nanoTimestamp();
+        const end_time = tri_time.nanoTimestamp();
 
         return HttpResponse{
             .status = @intFromEnum(req.response.status),

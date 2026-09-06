@@ -3,9 +3,10 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 pub fn generateV4(allocator: std.mem.Allocator) ![16]u8 {
     var uuid = try allocator.alloc(u8, 16);
-    var prng = std.Random.DefaultPrng.init(@intCast(std.time.timestamp()));
+    var prng = std.Random.DefaultPrng.init(@intCast(tri_time.timestamp()));
 
     for (0..16) |i| {
         uuid[i] = prng.random().byte();

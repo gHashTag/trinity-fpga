@@ -6,6 +6,8 @@
 
 const std = @import("std");
 
+const tri_proc = @import("tri_proc");
+const tri_time = @import("tri_time");
 /// Fly.io deployment regions for global edge
 pub const FlyRegion = enum {
     ams, // Amsterdam (Europe)
@@ -113,7 +115,7 @@ pub const FlyDeployer = struct {
 
     /// Deploy to Fly.io (main entry point)
     pub fn deploy(self: *FlyDeployer) !DeployResult {
-        const start_time = std.time.nanoTimestamp();
+        const start_time = tri_time.nanoTimestamp();
 
         // Step 1: Validate prerequisites
         try self.validatePrerequisites();
@@ -145,7 +147,7 @@ pub const FlyDeployer = struct {
             try self.configureDomain(domain);
         }
 
-        const end_time = std.time.nanoTimestamp();
+        const end_time = tri_time.nanoTimestamp();
         const deployment_time_ms = @as(u64, @intFromFloat((@as(f64, @floatFromInt(end_time - start_time)) / 1_000_000.0)));
 
         return .{
@@ -160,7 +162,7 @@ pub const FlyDeployer = struct {
         _ = self;
 
         // Check if flyctl is installed
-        const result = std.process.Child.run(.{
+        const result = tri_proc.run(.{
             .allocator = self.allocator,
             .argv = &[_][]const u8{ "flyctl", "--version" },
         }) catch |err| {
@@ -172,12 +174,12 @@ pub const FlyDeployer = struct {
             self.allocator.free(result.stderr);
         }
 
-        if (result.term != .Exited or result.term.Exited != 0) {
+        if (result.term != .exited or result.term.exited != 0) {
             return error.FlyctlNotInstalled;
         }
 
         // Check authentication
-        const auth_result = std.process.Child.run(.{
+        const auth_result = tri_proc.run(.{
             .allocator = self.allocator,
             .argv = &[_][]const u8{ "flyctl", "auth", "token" },
         }) catch return error.FlyctlAuthCheckFailed;
@@ -198,7 +200,7 @@ pub const FlyDeployer = struct {
     fn buildImage(self: *FlyDeployer) !void {
         std.debug.print("Building Docker image...\n", .{});
 
-        const result = std.process.Child.run(.{
+        const result = tri_proc.run(.{
             .allocator = self.allocator,
             .argv = &[_][]const u8{ "docker", "build", "-f", self.config.dockerfile, "-t", "trinity-mcp:2.2.0", "." },
             .cwd = ".",
@@ -212,7 +214,7 @@ pub const FlyDeployer = struct {
             self.allocator.free(result.stderr);
         }
 
-        if (result.term != .Exited or result.term.Exited != 0) {
+        if (result.term != .exited or result.term.exited != 0) {
             std.debug.print("Docker build error:\n{s}\n", .{result.stderr});
             return error.DockerBuildFailed;
         }
@@ -230,7 +232,7 @@ pub const FlyDeployer = struct {
         const app_name = self.config.app_name;
 
         // Create app if it doesn't exist
-        _ = std.process.Child.run(.{
+        _ = tri_proc.run(.{
             .allocator = self.allocator,
             .argv = &[_][]const u8{
                 "flyctl",    "apps",                                "create",
@@ -242,7 +244,7 @@ pub const FlyDeployer = struct {
         };
 
         // Deploy
-        const deploy_result = std.process.Child.run(.{
+        const deploy_result = tri_proc.run(.{
             .allocator = self.allocator,
             .argv = &[_][]const u8{ "flyctl", "deploy", "--config", self.config.config_file, "--app", app_name },
         }) catch |err| {
@@ -255,13 +257,13 @@ pub const FlyDeployer = struct {
             self.allocator.free(deploy_result.stderr);
         }
 
-        if (deploy_result.term != .Exited or deploy_result.term.Exited != 0) {
+        if (deploy_result.term != .exited or deploy_result.term.exited != 0) {
             std.debug.print("Deploy error:\n{s}\n", .{deploy_result.stderr});
             return error.DeployFailed;
         }
 
         // Get app URL
-        const url_result = std.process.Child.run(.{
+        const url_result = tri_proc.run(.{
             .allocator = self.allocator,
             .argv = &[_][]const u8{ "flyctl", "info", "--app", app_name, "--json" },
         }) catch return error.CannotGetAppInfo;
@@ -293,7 +295,7 @@ pub const FlyDeployer = struct {
 
         std.debug.print("Configuring custom domain: {s}...\n", .{domain});
 
-        const result = std.process.Child.run(.{
+        const result = tri_proc.run(.{
             .allocator = self.allocator,
             .argv = &[_][]const u8{ "flyctl", "certs", "add", domain, "--app", self.config.app_name },
         }) catch |err| {
@@ -306,7 +308,7 @@ pub const FlyDeployer = struct {
             self.allocator.free(result.stderr);
         }
 
-        if (result.term != .Exited or result.term.Exited != 0) {
+        if (result.term != .exited or result.term.exited != 0) {
             std.debug.print("Certificate error:\n{s}\n", .{result.stderr});
             return error.CertificateFailed;
         }
@@ -316,7 +318,7 @@ pub const FlyDeployer = struct {
 
     /// Get deployment status
     pub fn getStatus(self: *FlyDeployer) !DeploymentStatus {
-        const result = std.process.Child.run(.{
+        const result = tri_proc.run(.{
             .allocator = self.allocator,
             .argv = &[_][]const u8{ "flyctl", "status", "--all", "--app", self.config.app_name },
         }) catch return error.StatusCheckFailed;

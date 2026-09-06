@@ -15,6 +15,8 @@
 
 const std = @import("std");
 
+const tri_proc = @import("tri_proc");
+const tri_time = @import("tri_time");
 pub const TaskType = enum {
     Generation,
     Sentiment,
@@ -108,7 +110,7 @@ pub const ScaledTrinityNode = struct {
             .total_tokens = 0,
             .total_time_ms = 0,
             .requests_by_type = [_]usize{0} ** 5,
-            .uptime_start = std.time.timestamp(),
+            .uptime_start = tri_time.timestamp(),
         };
     }
 
@@ -159,10 +161,10 @@ pub const ScaledTrinityNode = struct {
     };
 
     fn callBitNet(self: *Self, prompt: []const u8, max_tokens: u32) !BitNetResult {
-        var timer = try std.time.Timer.start();
+        var timer = try tri_time.Timer.start();
 
         // Build command arguments
-        var args: std.ArrayListUnmanaged([]const u8) = .{};
+        var args: std.ArrayListUnmanaged([]const u8) = .empty;
         defer args.deinit(self.allocator);
 
         try args.append(self.allocator, self.config.llama_cli_path);
@@ -196,7 +198,7 @@ pub const ScaledTrinityNode = struct {
         try args.append(self.allocator, "--no-warmup");
 
         // Run subprocess
-        const result = try std.process.Child.run(.{
+        const result = try tri_proc.run(.{
             .allocator = self.allocator,
             .argv = args.items,
             .max_output_bytes = 1024 * 1024,
@@ -210,7 +212,7 @@ pub const ScaledTrinityNode = struct {
         const tokens = output.len / 4; // Approx
 
         const success = switch (result.term) {
-            .Exited => |code| code == 0,
+            .exited => |code| code == 0,
             else => false,
         };
 
@@ -251,7 +253,7 @@ pub const ScaledTrinityNode = struct {
     }
 
     fn buildPrompt(self: *Self, task_type: TaskType, input: []const u8) ![]u8 {
-        var buffer: std.ArrayListUnmanaged(u8) = .{};
+        var buffer: std.ArrayListUnmanaged(u8) = .empty;
         errdefer buffer.deinit(self.allocator);
 
         switch (task_type) {
@@ -287,7 +289,7 @@ pub const ScaledTrinityNode = struct {
 
     /// Get node statistics
     pub fn getStats(self: *Self) NodeStats {
-        const uptime = std.time.timestamp() - self.uptime_start;
+        const uptime = tri_time.timestamp() - self.uptime_start;
         const avg_tok = if (self.total_time_ms > 0)
             @as(f64, @floatFromInt(self.total_tokens)) / (self.total_time_ms / 1000.0)
         else

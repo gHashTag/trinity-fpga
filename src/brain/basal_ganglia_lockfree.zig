@@ -20,6 +20,8 @@
 
 const std = @import("std");
 
+const tri_mutex = @import("tri_mutex");
+const tri_time = @import("tri_time");
 const SHARD_COUNT: usize = 16; // Must be power of 2 for fast hash
 
 pub const TaskClaim = struct {
@@ -33,7 +35,7 @@ pub const TaskClaim = struct {
 
     pub fn isValid(self: *const TaskClaim) bool {
         if (self.status != .active) return false;
-        const now_ms = std.time.timestamp() * 1000;
+        const now_ms = tri_time.timestamp() * 1000;
 
         // Handle clock skew: if claimed_at is in future, treat as valid
         const age_ms = if (self.claimed_at > now_ms)
@@ -57,12 +59,12 @@ pub const TaskClaim = struct {
 /// This allows concurrent access to different shards
 const Shard = struct {
     claims: std.StringHashMap(TaskClaim),
-    rwlock: std.Thread.RwLock,
+    rwlock: tri_mutex.RwLock,
 
     fn init(allocator: std.mem.Allocator) Shard {
         return Shard{
             .claims = std.StringHashMap(TaskClaim).init(allocator),
-            .rwlock = std.Thread.RwLock{},
+            .rwlock = tri_mutex.RwLock{},
         };
     }
 
@@ -179,7 +181,7 @@ pub const Registry = struct {
         shard.rwlock.lock();
         defer shard.rwlock.unlock();
 
-        const now_ms = std.time.timestamp() * 1000;
+        const now_ms = tri_time.timestamp() * 1000;
 
         // Check if already claimed and valid
         if (shard.claims.get(task_id)) |existing| {
@@ -234,7 +236,7 @@ pub const Registry = struct {
         if (shard.claims.getEntry(task_id)) |entry| {
             const entry_claim = &entry.value_ptr.*;
             if (std.mem.eql(u8, entry_claim.agent_id, agent_id) and entry_claim.isValid()) {
-                entry_claim.last_heartbeat = std.time.timestamp() * 1000;
+                entry_claim.last_heartbeat = tri_time.timestamp() * 1000;
                 _ = self.stats.heartbeat_success.fetchAdd(1, .monotonic);
                 return true;
             }
@@ -256,7 +258,7 @@ pub const Registry = struct {
             const entry_claim = &entry.value_ptr.*;
             if (std.mem.eql(u8, entry_claim.agent_id, agent_id) and entry_claim.isValid()) {
                 entry_claim.status = .completed;
-                entry_claim.completed_at = std.time.timestamp() * 1000;
+                entry_claim.completed_at = tri_time.timestamp() * 1000;
                 _ = self.stats.complete_success.fetchAdd(1, .monotonic);
                 return true;
             }
@@ -278,7 +280,7 @@ pub const Registry = struct {
             const entry_claim = &entry.value_ptr.*;
             if (std.mem.eql(u8, entry_claim.agent_id, agent_id) and entry_claim.isValid()) {
                 entry_claim.status = .abandoned;
-                entry_claim.completed_at = std.time.timestamp() * 1000;
+                entry_claim.completed_at = tri_time.timestamp() * 1000;
                 _ = self.stats.abandon_success.fetchAdd(1, .monotonic);
                 return true;
             }
@@ -358,7 +360,7 @@ pub const Registry = struct {
 
 var global_registry: ?*Registry = null;
 var global_allocator: ?std.mem.Allocator = null;
-var global_mutex = std.Thread.Mutex{};
+var global_mutex = tri_mutex.Mutex{};
 
 /// Gets or creates the global task claim registry
 pub fn getGlobal(allocator: std.mem.Allocator) !*Registry {
@@ -558,13 +560,13 @@ test "LockFree: claim throughput benchmark" {
     const iterations = 100_000;
     var task_buf: [32]u8 = undefined;
 
-    const start = std.time.nanoTimestamp();
+    const start = tri_time.nanoTimestamp();
     var i: u64 = 0;
     while (i < iterations) : (i += 1) {
         const task_id = try std.fmt.bufPrintZ(&task_buf, "task-{d}", .{i});
         _ = try registry.claim(allocator, task_id, "agent-001", 300000);
     }
-    const elapsed_ns = @as(u64, @intCast(std.time.nanoTimestamp() - start));
+    const elapsed_ns = @as(u64, @intCast(tri_time.nanoTimestamp() - start));
     const ops_per_sec = @as(f64, @floatFromInt(iterations)) / @as(f64, @floatFromInt(elapsed_ns));
     _ = std.debug.print("LockFree Sharded Basal Ganglia: {d:.0} OP/s ({d:.2} ns/op)\n", .{ ops_per_sec * 1_000_000_000.0, @as(f64, @floatFromInt(elapsed_ns)) / @as(f64, @floatFromInt(iterations)) });
 }
@@ -586,12 +588,12 @@ test "LockFree: heartbeat throughput benchmark" {
 
     // Benchmark heartbeat
     i = 0;
-    const start = std.time.nanoTimestamp();
+    const start = tri_time.nanoTimestamp();
     while (i < iterations) : (i += 1) {
         const task_id = try std.fmt.bufPrintZ(&task_buf, "task-{d}", .{i});
         _ = registry.heartbeat(task_id, "agent-001");
     }
-    const elapsed_ns = @as(u64, @intCast(std.time.nanoTimestamp() - start));
+    const elapsed_ns = @as(u64, @intCast(tri_time.nanoTimestamp() - start));
     const ops_per_sec = @as(f64, @floatFromInt(iterations)) / @as(f64, @floatFromInt(elapsed_ns));
     _ = std.debug.print("LockFree Sharded Basal Ganglia Heartbeat: {d:.0} OP/s ({d:.2} ns/op)\n", .{ ops_per_sec * 1_000_000_000.0, @as(f64, @floatFromInt(elapsed_ns)) / @as(f64, @floatFromInt(iterations)) });
 }

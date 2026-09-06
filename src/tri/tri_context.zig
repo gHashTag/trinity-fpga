@@ -15,6 +15,7 @@
 // =============================================================================
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const colors = @import("tri_colors.zig");
 const sacred_formula = @import("math/formula.zig");
 
@@ -144,6 +145,7 @@ pub const MultiLanguageGematria = struct {
 // ContextManager
 pub const ContextManager = struct {
     allocator: std.mem.Allocator,
+    io: std.Io,
     arena: std.heap.ArenaAllocator,
     symbols: std.ArrayListUnmanaged(IndexedSymbol),
     embeddings: std.ArrayListUnmanaged([EMBEDDING_DIM]f32),
@@ -166,12 +168,19 @@ pub const ContextManager = struct {
         "target",
     };
 
-    pub fn init(allocator: std.mem.Allocator) Self {
+    /// Zig 0.16 routes file I/O through an Io. Five call sites here need one
+    /// (scan, walk, index, save, load), so it is stored on the manager rather
+    /// than threaded through each of them as a parameter.
+    pub fn init(io: std.Io, allocator: std.mem.Allocator) Self {
         return Self{
             .allocator = allocator,
+            .io = io,
             .arena = std.heap.ArenaAllocator.init(allocator),
-            .symbols = .{},
-            .embeddings = .{},
+            // 0.16's ArrayList is unmanaged and its fields no longer carry
+            // defaults, so `.{}` no longer constructs one. `.empty` is the
+            // stdlib's own name for the same zero value.
+            .symbols = .empty,
+            .embeddings = .empty,
             .stats = .{
                 .files_indexed = 0,
                 .symbols_indexed = 0,
@@ -202,7 +211,7 @@ pub const ContextManager = struct {
     // =========================================================================
 
     pub fn scanRepository(self: *Self) !void {
-        const timer = std.time.milliTimestamp();
+        const timer = tri_time.milliTimestamp();
 
         // Clear existing data
         self.symbols.clearRetainingCapacity();
@@ -211,19 +220,20 @@ pub const ContextManager = struct {
         self.stats.files_indexed = 0;
 
         // Walk current directory
-        var dir = std.fs.cwd().openDir(".", .{ .iterate = true }) catch return;
-        defer dir.close();
+        // const, not var: Io.Dir.close takes the Dir by value, so it is never mutated.
+        const dir = std.Io.Dir.cwd().openDir(self.io, ".", .{ .iterate = true }) catch return;
+        defer dir.close(self.io);
         try self.walkDirectory(dir, ".");
 
         self.stats.symbols_indexed = @intCast(self.symbols.items.len);
-        self.stats.last_scan_ms = std.time.milliTimestamp() - timer;
+        self.stats.last_scan_ms = tri_time.milliTimestamp() - timer;
         self.stats.is_loaded = true;
         self.is_dirty = true;
     }
 
-    fn walkDirectory(self: *Self, parent: std.fs.Dir, prefix: []const u8) !void {
+    fn walkDirectory(self: *Self, parent: std.Io.Dir, prefix: []const u8) !void {
         var iter = parent.iterate();
-        while (try iter.next()) |entry| {
+        while (try iter.next(self.io)) |entry| {
             // Build full path
             const full_path = try std.fmt.allocPrint(self.arena.allocator(), "{s}/{s}", .{ prefix, entry.name });
 
@@ -231,8 +241,8 @@ pub const ContextManager = struct {
                 // Skip excluded directories
                 if (isExcludedDir(entry.name)) continue;
 
-                var subdir = parent.openDir(entry.name, .{ .iterate = true }) catch continue;
-                defer subdir.close();
+                const subdir = parent.openDir(self.io, entry.name, .{ .iterate = true }) catch continue;
+                defer subdir.close(self.io);
                 try self.walkDirectory(subdir, full_path);
             } else if (entry.kind == .file) {
                 // Process .zig and .tri files
@@ -252,12 +262,10 @@ pub const ContextManager = struct {
         return false;
     }
 
-    fn indexFile(self: *Self, dir: std.fs.Dir, name: []const u8, full_path: []const u8) !void {
-        const file = dir.openFile(name, .{}) catch return;
-        defer file.close();
-
-        // Read up to 256KB per file
-        const content = file.readToEndAllocOptions(self.arena.allocator(), 256 * 1024, null, .@"1", null) catch return;
+    fn indexFile(self: *Self, dir: std.Io.Dir, name: []const u8, full_path: []const u8) !void {
+        // Read up to 256KB per file. In 0.16 the whole-file read lives on the
+        // directory and opens the file itself, so no open/close pair here.
+        const content = dir.readFileAlloc(self.io, name, self.arena.allocator(), .limited(256 * 1024)) catch return;
 
         self.stats.files_indexed += 1;
 
@@ -440,8 +448,10 @@ pub const ContextManager = struct {
 
         // Format context header
         var buf: [16384]u8 = undefined; // Increased for sacred information
-        var fbs = std.io.fixedBufferStream(&buf);
-        const writer = fbs.writer();
+        // A full buffer now surfaces as error.WriteFailed rather than
+        // error.NoSpaceLeft. Every write below already catches, so an
+        // over-long context is still silently truncated, as before.
+        var writer = std.Io.Writer.fixed(&buf);
 
         writer.writeAll("// === CODEBASE CONTEXT (auto-retrieved) ===\n") catch return null;
         writer.writeAll("// Relevant code from repository:\n") catch return null;
@@ -451,40 +461,40 @@ pub const ContextManager = struct {
             const sym = self.symbols.items[hit.symbol_idx];
             const analysis = self.analyzeSacredSymbol(sym.name);
             if (analysis) |sacred| {
-                std.fmt.format(writer, "//   {s}: gematria={d}\n", .{ sym.name, sacred.gematria_value }) catch |err| {
+                writer.print("//   {s}: gematria={d}\n", .{ sym.name, sacred.gematria_value }) catch |err| {
                     std.log.debug("tri_context: write gematria failed: {}", .{err});
                 };
                 if (sacred.recognized_constant) |rc| {
-                    std.fmt.format(writer, "//   {s}: recognized as {s}\n", .{ sym.name, rc }) catch |err| {
+                    writer.print("//   {s}: recognized as {s}\n", .{ sym.name, rc }) catch |err| {
                         std.log.debug("tri_context: write recognized constant failed: {}", .{err});
                     };
                 }
             }
-            std.fmt.format(writer, "//   {s}\n", .{sym.snippet}) catch break;
+            writer.print("//   {s}\n", .{sym.snippet}) catch break;
 
             // Add sacred intelligence information
             if (sym.sacred_gematria) |gem| {
-                std.fmt.format(writer, "//   Sacred Gematria: {d} (mod 27 = {d})\n", .{
+                writer.print("//   Sacred Gematria: {d} (mod 27 = {d})\n", .{
                     gem, gem % 27,
                 }) catch break;
             }
             if (sym.hebrew_gematria) |gem| {
-                std.fmt.format(writer, "//   Hebrew Gematria: {d}\n", .{gem}) catch break;
+                writer.print("//   Hebrew Gematria: {d}\n", .{gem}) catch break;
             }
             if (sym.greek_gematria) |gem| {
-                std.fmt.format(writer, "//   Greek Gematria: {d}\n", .{gem}) catch break;
+                writer.print("//   Greek Gematria: {d}\n", .{gem}) catch break;
             }
             if (sym.arabic_gematria) |gem| {
-                std.fmt.format(writer, "//   Arabic Gematria: {d}\n", .{gem}) catch break;
+                writer.print("//   Arabic Gematria: {d}\n", .{gem}) catch break;
             }
             if (sym.sacred_formula) |formula| {
-                std.fmt.format(writer, "//   Sacred Formula: V = {s}\n", .{formula}) catch break;
+                writer.print("//   Sacred Formula: V = {s}\n", .{formula}) catch break;
             }
             if (sym.sacred_constant_match) |match| {
-                std.fmt.format(writer, "//   Sacred Constant Match: {s}\n", .{match}) catch break;
+                writer.print("//   Sacred Constant Match: {s}\n", .{match}) catch break;
             }
             if (sym.patch_candidate) {
-                std.fmt.format(writer, "//   PATCH CANDIDATE (confidence: {d:.2})\n", .{
+                writer.print("//   PATCH CANDIDATE (confidence: {d:.2})\n", .{
                     sym.confidence_score,
                 }) catch break;
             }
@@ -492,12 +502,12 @@ pub const ContextManager = struct {
 
         // Add evolution progress
         const metrics = self.sacred_metrics;
-        std.fmt.format(writer, "// === EVOLUTION PROGRESS: {d:.1}% ===\n", .{
+        writer.print("// === EVOLUTION PROGRESS: {d:.1}% ===\n", .{
             metrics.evolution_progress * 100.0,
         }) catch |err| {
             std.log.debug("tri_context: write evolution progress failed: {}", .{err});
         };
-        std.fmt.format(writer, "// Patch Candidates: {d} / {d} symbols\n", .{
+        writer.print("// Patch Candidates: {d} / {d} symbols\n", .{
             metrics.patch_candidates_found,
             metrics.total_symbols_analyzed,
         }) catch |err| {
@@ -506,7 +516,7 @@ pub const ContextManager = struct {
 
         writer.writeAll("// === END CONTEXT ===\n\n") catch return null;
 
-        const written = fbs.getWritten();
+        const written = writer.buffered();
         const result = self.allocator.alloc(u8, written.len) catch return null;
         @memcpy(result, written);
         return result;
@@ -647,15 +657,15 @@ pub const ContextManager = struct {
 
     pub fn saveIndex(self: *Self) !void {
         // Ensure directory exists
-        std.fs.cwd().makePath(".trinity-nexus") catch |err| {
+        std.Io.Dir.cwd().createDirPath(self.io, ".trinity-nexus") catch |err| {
             std.log.debug("tri_context: create .trinity-nexus directory failed: {}", .{err});
         };
 
-        const file = try std.fs.cwd().createFile(INDEX_PATH, .{});
-        defer file.close();
+        const file = try std.Io.Dir.cwd().createFile(self.io, INDEX_PATH, .{});
+        defer file.close(self.io);
 
         // Build index in memory, then write at once
-        var buf = std.ArrayListUnmanaged(u8){};
+        var buf: std.ArrayListUnmanaged(u8) = .empty;
         defer buf.deinit(self.allocator);
 
         // Header (32 bytes)
@@ -686,18 +696,17 @@ pub const ContextManager = struct {
         }
 
         // Write all at once
-        try file.writeAll(buf.items);
+        try file.writeStreamingAll(self.io, buf.items);
 
         self.stats.index_size_bytes = buf.items.len;
         self.is_dirty = false;
     }
 
     pub fn loadIndex(self: *Self) !void {
-        const file = std.fs.cwd().openFile(INDEX_PATH, .{}) catch return;
-        defer file.close();
-
-        // Read entire file into memory for parsing
-        const content = file.readToEndAllocOptions(self.allocator, 128 * 1024 * 1024, null, .@"1", null) catch return;
+        // Read entire file into memory for parsing. In 0.16 the whole-file read
+        // lives on the directory and opens the file itself, so the missing-index
+        // case is still the same `catch return`.
+        const content = std.Io.Dir.cwd().readFileAlloc(self.io, INDEX_PATH, self.allocator, .limited(128 * 1024 * 1024)) catch return;
         defer self.allocator.free(content);
 
         if (content.len < 32) return; // Too small for header
@@ -1324,7 +1333,9 @@ test "sacred_score_formula" {
 }
 
 test "context_manager_init_deinit" {
-    var mgr = ContextManager.init(std.testing.allocator);
+    // The test runner owns this Io instance, so taking it here does not spin up
+    // a second event loop the way constructing an Io.Threaded would.
+    var mgr = ContextManager.init(std.testing.io, std.testing.allocator);
     defer mgr.deinit();
     try std.testing.expectEqual(mgr.stats.symbols_indexed, 0);
     try std.testing.expectEqual(mgr.stats.is_loaded, false);
@@ -1349,7 +1360,7 @@ test "sacred_constant_matching" {
 }
 
 test "patch_candidate_identification" {
-    var mgr = ContextManager.init(std.testing.allocator);
+    var mgr = ContextManager.init(std.testing.io, std.testing.allocator);
     defer mgr.deinit();
 
     // Create test symbols with known scores
@@ -1415,7 +1426,7 @@ test "sacred_score_calculation" {
 }
 
 test "sacred_metrics_collection" {
-    var mgr = ContextManager.init(std.testing.allocator);
+    var mgr = ContextManager.init(std.testing.io, std.testing.allocator);
     defer mgr.deinit();
 
     // Add some test symbols

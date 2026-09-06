@@ -12,6 +12,9 @@
 
 const std = @import("std");
 
+const tri_env = @import("tri_env");
+const tri_io = @import("tri_io");
+const tri_time = @import("tri_time");
 pub const io = std.io;
 
 const types = @import("types.zig");
@@ -91,7 +94,7 @@ fn cmdInit(allocator: std.mem.Allocator, args: []const []const u8) !void {
     const stderr = std.io.getStdErr().writer();
 
     // Check for environment variables
-    const zoho_password = std.posix.getenv("ZOHO_APP_PASSWORD");
+    const zoho_password = tri_env.getPosix("ZOHO_APP_PASSWORD");
     if (zoho_password == null) {
         try stderr.print(
             \\ERROR: ZOHO_APP_PASSWORD not set
@@ -138,8 +141,8 @@ fn cmdStatus(allocator: std.mem.Allocator) !void {
     const stdout = std.io.getStdOut().writer();
 
     // Calculate current warming week
-    const start_date = getStartDate(allocator) catch std.time.timestamp();
-    const current_week = warming.getCurrentWeek(start_date, std.time.timestamp());
+    const start_date = getStartDate(allocator) catch tri_time.timestamp();
+    const current_week = warming.getCurrentWeek(start_date, tri_time.timestamp());
     const daily_limit = warming.getDailyLimit(current_week);
     const focus = warming.getFocus(current_week);
 
@@ -203,8 +206,8 @@ fn cmdSend(allocator: std.mem.Allocator, args: []const []const u8) !void {
         try stdout.print("\n📧 DRY RUN MODE — Previewing emails (not sending)\n\n", .{});
     }
 
-    const start_date = getStartDate(allocator) catch std.time.timestamp();
-    const current_week = warming.getCurrentWeek(start_date, std.time.timestamp());
+    const start_date = getStartDate(allocator) catch tri_time.timestamp();
+    const current_week = warming.getCurrentWeek(start_date, tri_time.timestamp());
     const daily_limit = warming.getDailyLimit(current_week);
 
     const queue = getTodayQueue(allocator, current_week);
@@ -369,13 +372,13 @@ const QueueItem = struct {
 
 fn getStartDate(allocator: std.mem.Allocator) !i64 {
     // Read start date from config file
-    const file = std.fs.openFileAbsolute(
+    const file = std.Io.Dir.openFileAbsolute(tri_io.get(), 
         ".trinity/outreach_start_date.txt",
         .{},
     ) catch {
         // Create default start date (today)
-        const now = std.time.timestamp();
-        const file = try std.fs.createFileAbsolute(
+        const now = tri_time.timestamp();
+        const file = try std.Io.Dir.createFileAbsolute(tri_io.get(), 
             ".trinity/outreach_start_date.txt",
             .{},
         );

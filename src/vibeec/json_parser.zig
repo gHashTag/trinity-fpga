@@ -4,6 +4,7 @@
 // φ² + 1/φ² = 3
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 
 pub const JsonError = error{
@@ -117,7 +118,7 @@ pub const JsonParser = struct {
 
     /// Parse JSON string into JsonValue
     pub fn parse(self: *Self, input: []const u8) !ParseResult {
-        const start_time = std.time.nanoTimestamp();
+        const start_time = tri_time.nanoTimestamp();
 
         self.input = input;
         self.pos = 0;
@@ -125,7 +126,7 @@ pub const JsonParser = struct {
         self.skipWhitespace();
         const value = try self.parseValue();
 
-        const end_time = std.time.nanoTimestamp();
+        const end_time = tri_time.nanoTimestamp();
 
         return ParseResult{
             .value = value,
@@ -240,7 +241,7 @@ pub const JsonParser = struct {
         if (self.input[self.pos] != '[') return JsonError.UnexpectedToken;
         self.pos += 1;
 
-        var arr: std.ArrayListUnmanaged(JsonValue) = .{};
+        var arr: std.ArrayListUnmanaged(JsonValue) = .empty;
         errdefer arr.deinit(self.allocator);
 
         self.skipWhitespace();

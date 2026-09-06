@@ -6,6 +6,7 @@
 //! Simple YAML-based parser for .tri specification files
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayListUnmanaged;
 
@@ -31,8 +32,8 @@ pub const ParseResult = struct {
     pub fn init(allocator: Allocator) ParseResult {
         return .{
             .spec = VibeeSpec.init(allocator),
-            .errors = .{},
-            .warnings = .{},
+            .errors = .empty,
+            .warnings = .empty,
         };
     }
 
@@ -79,7 +80,7 @@ pub fn parseKeyValue(line: []const u8) struct { []const u8, []const u8, bool } {
 
 /// Check if line is a comment
 pub fn isComment(line: []const u8) bool {
-    const trimmed = std.mem.trimLeft(u8, line, " \t");
+    const trimmed = std.mem.trimStart(u8, line, " \t");
     return trimmed.len > 0 and trimmed[0] == '#';
 }
 
@@ -99,15 +100,15 @@ pub fn getIndentLevel(line: []const u8) usize {
 
 /// Check if line starts a list item (-)
 pub fn isListItem(line: []const u8) bool {
-    const trimmed = std.mem.trimLeft(u8, line, " \t");
+    const trimmed = std.mem.trimStart(u8, line, " \t");
     return trimmed.len > 0 and trimmed[0] == '-';
 }
 
 /// Extract list item value after '-'
 pub fn extractListItem(line: []const u8) []const u8 {
-    const trimmed = std.mem.trimLeft(u8, line, " \t");
+    const trimmed = std.mem.trimStart(u8, line, " \t");
     if (trimmed.len > 0 and trimmed[0] == '-') {
-        const rest = std.mem.trimLeft(u8, trimmed[1..], " \t");
+        const rest = std.mem.trimStart(u8, trimmed[1..], " \t");
         // Remove quotes if present
         if (rest.len >= 2 and ((rest[0] == '"' and rest[rest.len - 1] == '"') or (rest[0] == '\'' and rest[rest.len - 1] == '\''))) {
             return rest[1 .. rest.len - 1];
@@ -223,7 +224,8 @@ pub fn parse(allocator: Allocator, source: []const u8) !ParseResult {
 
 /// Parse .tri specification from file
 pub fn parseFile(allocator: Allocator, file_path: []const u8) !ParseResult {
-    const source = try std.fs.cwd().readFileAlloc(allocator, file_path, 1024 * 1024);
+    const io = tri_io.get();
+    const source = try std.Io.Dir.cwd().readFileAlloc(io, file_path, allocator, .limited(1024 * 1024));
     defer allocator.free(source);
 
     return parse(allocator, source);

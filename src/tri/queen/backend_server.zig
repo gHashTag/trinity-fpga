@@ -19,6 +19,9 @@ const EpisodePattern = auto_improve.EpisodePattern;
 
 const std = @import("std");
 
+const tri_io = @import("tri_io");
+const tri_proc = @import("tri_proc");
+const tri_time = @import("tri_time");
 // ============================================================================
 // CONSTANTS
 // ============================================================================
@@ -103,7 +106,7 @@ pub const Tri27Config = struct {
 pub const QueenBackend = struct {
     allocator: std.mem.Allocator,
     config: BackendConfig,
-    server: ?std.net.Server,
+    server: ?std.Io.net.Server,
     logger: EpisodeLogger,
     health: struct {
         started_at: i64,
@@ -119,7 +122,7 @@ pub const QueenBackend = struct {
             .server = null,
             .logger = EpisodeLogger.init(".trinity/logs"),
             .health = .{
-                .started_at = @intCast(std.time.nanoTimestamp()),
+                .started_at = @intCast(tri_time.nanoTimestamp()),
                 .improve_cycles = 0,
                 .last_improve_time = 0,
             },
@@ -134,7 +137,7 @@ pub const QueenBackend = struct {
             .server = null,
             .logger = EpisodeLogger.init(".trinity/logs"),
             .health = .{
-                .started_at = @intCast(std.time.nanoTimestamp()),
+                .started_at = @intCast(tri_time.nanoTimestamp()),
                 .improve_cycles = 0,
                 .last_improve_time = 0,
             },
@@ -144,8 +147,9 @@ pub const QueenBackend = struct {
 
     /// Start HTTP server
     pub fn start(self: *QueenBackend) !void {
-        const address = try std.net.Address.parseIp("0.0.0.0", self.config.port);
-        self.server = try address.listen(.{
+        const io = tri_io.get();
+        const address = try std.Io.net.IpAddress.parse("0.0.0.0", self.config.port);
+        self.server = try address.listen(io, .{
             .reuse_address = true,
         });
 
@@ -171,30 +175,41 @@ pub const QueenBackend = struct {
         // Main server loop
         var server = self.server.?;
         while (true) {
-            const connection = server.accept() catch |err| {
+            // 0.16: Server.accept yields the Stream itself; there is no
+            // Server.Connection wrapper any more.
+            const stream = server.accept(io) catch |err| {
                 std.debug.print("Accept failed: {}\n", .{err});
                 continue;
             };
 
             // Handle connection in blocking mode for simplicity
-            self.handleConnection(connection.stream) catch |err| {
+            self.handleConnection(stream) catch |err| {
                 std.debug.print("Connection error: {}\n", .{err});
             };
         }
     }
 
     /// Handle single HTTP connection
-    fn handleConnection(self: *QueenBackend, stream: std.net.Stream) !void {
+    fn handleConnection(self: *QueenBackend, stream: std.Io.net.Stream) !void {
+        const io = tri_io.get();
         var buffer: [4096]u8 = undefined;
-        const request_data = stream.read(&buffer) catch |err| {
-            std.debug.print("Read failed: {}\n", .{err});
+
+        // 0.16: Stream has no `read`; go through Stream.Reader. `fillMore`
+        // performs exactly one underlying read, which is what `stream.read`
+        // used to do, and reports end-of-stream as an error rather than 0.
+        var stream_reader = stream.reader(io, &buffer);
+        const reader = &stream_reader.interface;
+        reader.fillMore() catch {
+            if (stream_reader.err) |read_err| {
+                std.debug.print("Read failed: {}\n", .{read_err});
+            }
             return;
         };
 
-        if (request_data == 0) return;
+        const request_text = reader.buffered();
+        if (request_text.len == 0) return;
 
         // Parse HTTP request
-        const request_text = buffer[0..request_data];
         var lines = std.mem.splitScalar(u8, request_text, '\n');
 
         const request_line = lines.next() orelse return;
@@ -206,8 +221,12 @@ pub const QueenBackend = struct {
         // Route request (pass path with query string for /api/episodes filtering)
         const response = try self.routeRequest(method, path, request_text);
 
-        // Send response
-        _ = try stream.writeAll(response);
+        // Send response. 0.16: Stream has no `writeAll`; write through
+        // Stream.Writer and flush what is still buffered.
+        var write_buf: [4096]u8 = undefined;
+        var stream_writer = stream.writer(io, &write_buf);
+        try stream_writer.interface.writeAll(response);
+        try stream_writer.interface.flush();
     }
 
     /// Route HTTP request to handler
@@ -260,7 +279,7 @@ pub const QueenBackend = struct {
 
     /// Handle GET / - Root endpoint with API info
     fn handleRoot(self: *const QueenBackend) ![]const u8 {
-        const uptime = std.time.nanoTimestamp() - self.health.started_at;
+        const uptime = tri_time.nanoTimestamp() - self.health.started_at;
         const uptime_s = @as(u64, @intCast(@divTrunc(uptime, 1_000_000_000)));
 
         const body = try std.fmt.allocPrint(self.allocator,
@@ -274,7 +293,7 @@ pub const QueenBackend = struct {
 
     /// Handle GET /health - Health check for Railway
     fn handleHealth(self: *const QueenBackend) ![]const u8 {
-        const uptime = std.time.nanoTimestamp() - self.health.started_at;
+        const uptime = tri_time.nanoTimestamp() - self.health.started_at;
         const uptime_s = @as(u64, @intCast(@divTrunc(uptime, 1_000_000_000)));
 
         const health = HealthResponse{
@@ -436,7 +455,7 @@ pub const QueenBackend = struct {
 
         // Update health stats
         self.health.improve_cycles += 1;
-        self.health.last_improve_time = @truncate(std.time.nanoTimestamp());
+        self.health.last_improve_time = @truncate(tri_time.nanoTimestamp());
 
         // Generate .tri spec and compile with tri_gen
         // TODO: Need to analyze patterns from episodes - passing empty for now
@@ -446,7 +465,7 @@ pub const QueenBackend = struct {
 
         // Write .tri spec to file
         const spec_path = ".trinity/specs/auto_improvement.tri";
-        try std.fs.cwd().writeFile(.{
+        try std.Io.Dir.cwd().writeFile(tri_io.get(), .{
             .sub_path = spec_path,
             .data = tri_spec,
         });
@@ -464,7 +483,7 @@ pub const QueenBackend = struct {
         };
 
         // Zig 0.15: Use Child.run() to get output and exit status
-        const codegen_result = std.process.Child.run(.{
+        const codegen_result = tri_proc.run(.{
             .allocator = self.allocator,
             .argv = args,
         }) catch |err| {
@@ -484,9 +503,9 @@ pub const QueenBackend = struct {
         defer self.allocator.free(codegen_result.stdout);
         defer self.allocator.free(codegen_result.stderr);
 
-        // Zig 0.15: Term.Exited is the exit code (u8), not a nested field
+        // Zig 0.15: Term.exited is the exit code (u8), not a nested field
         const term = codegen_result.term;
-        const codegen_success: bool = term == .Exited and term.Exited == 0;
+        const codegen_success: bool = term == .exited and term.exited == 0;
         const codegen_output: []const u8 = if (codegen_success)
             codegen_result.stdout
         else
@@ -502,7 +521,7 @@ pub const QueenBackend = struct {
             .tri27_config = .{
                 .tri_gen_path = tri_gen_path,
                 .output_dir = "src/generated",
-                .exit_code = if (codegen_result.term == .Exited) codegen_result.term.Exited else 1,
+                .exit_code = if (codegen_result.term == .exited) codegen_result.term.exited else 1,
                 .codegen_success = codegen_success,
                 .codegen_output = codegen_output,
             },
@@ -621,6 +640,14 @@ pub const QueenBackend = struct {
 // CLI ENTRY POINT
 // ============================================================================
 
+// Stale standalone entry point. This file is built as a module and reached via
+// runBackendCommand (see src/tri/queen_trinity.zig:runQueenBackend), so nothing
+// references this `main` and Zig never analyses it. It is left at 0.15 because
+// 0.16 removed std.process.argsAlloc/argsFree and left no global argv in std.os
+// or std.posix: argv is only reachable through a `main(init: std.process.Init)`
+// parameter, and adding that parameter is a signature change. Fix the signature
+// before wiring this up as an executable root. Same treatment as
+// src/tri27/tri27_cli.zig.
 pub fn main() !void {
     const allocator = std.heap.page_allocator;
 

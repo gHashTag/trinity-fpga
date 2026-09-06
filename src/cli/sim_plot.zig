@@ -10,6 +10,7 @@
 //! φ² + 1/phi² = 3 = TRINITY
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 
 const Allocator = std.mem.Allocator;
 const print = std.debug.print;
@@ -126,13 +127,10 @@ pub fn main() !void {
 }
 
 fn loadCSV(allocator: Allocator, csv_path: []const u8) ![]ScenarioStats {
-    const file = std.fs.cwd().openFile(csv_path, .{}) catch |err| {
+    const contents = std.Io.Dir.cwd().readFileAlloc(tri_io.get(), csv_path, allocator, .limited(10 * 1024 * 1024)) catch |err| {
         print("{s}Error: cannot open '{s}': {}{s}\n", .{ RED, csv_path, err, RESET });
         return err;
     };
-    defer file.close();
-
-    const contents = try file.readToEndAlloc(allocator, 10 * 1024 * 1024);
     defer allocator.free(contents);
 
     const ScenarioData = struct {

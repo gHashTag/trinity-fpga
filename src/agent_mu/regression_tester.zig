@@ -4,6 +4,8 @@
 //! detects regressions, validates all specs still compile.
 
 const std = @import("std");
+const tri_proc = @import("tri_proc");
+const tri_time = @import("tri_time");
 const ArrayListManaged = std.array_list.Managed;
 const template_mutator = @import("template_mutator.zig");
 
@@ -124,7 +126,7 @@ pub const RegressionTester = struct {
             specs.deinit();
         }
 
-        const start_time = std.time.nanoTimestamp();
+        const start_time = tri_time.nanoTimestamp();
 
         // Test each spec
         for (specs.items) |spec_path| {
@@ -132,7 +134,7 @@ pub const RegressionTester = struct {
             try result.addSpecResult(spec_result);
         }
 
-        const end_time = std.time.nanoTimestamp();
+        const end_time = tri_time.nanoTimestamp();
         result.total_duration_ms = @intCast((end_time - start_time) / 1_000_000);
 
         // Store as baseline
@@ -158,7 +160,7 @@ pub const RegressionTester = struct {
         var result = try RegressionTestResult.init(self.allocator);
         errdefer result.deinit();
 
-        const start_time = std.time.nanoTimestamp();
+        const start_time = tri_time.nanoTimestamp();
 
         // Test each spec
         for (self.baseline_results.items) |baseline| {
@@ -180,7 +182,7 @@ pub const RegressionTester = struct {
             try result.addSpecResult(spec_result);
         }
 
-        const end_time = std.time.nanoTimestamp();
+        const end_time = tri_time.nanoTimestamp();
         result.total_duration_ms = @intCast((end_time - start_time) / 1_000_000);
 
         return result;
@@ -192,10 +194,10 @@ pub const RegressionTester = struct {
         var result = try SpecTestResult.init(self.allocator, spec_name);
         errdefer result.deinit();
 
-        const start_time = std.time.nanoTimestamp();
+        const start_time = tri_time.nanoTimestamp();
 
         // Try to compile the spec
-        const compile_result = std.process.Child.run(.{
+        const compile_result = tri_proc.run(.{
             .allocator = self.allocator,
             .argv = &.{ "zig", "build", "vibee", "--", "gen", spec_path },
         }) catch {
@@ -208,14 +210,14 @@ pub const RegressionTester = struct {
         }
 
         if ((switch (compile_result.term) {
-            .Exited => |code| code,
+            .exited => |code| code,
             else => @as(u32, 1),
         }) != 0) {
             result.passed = false;
             try result.compile_errors.append(try self.allocator.dupe(u8, compile_result.stderr));
         }
 
-        const end_time = std.time.nanoTimestamp();
+        const end_time = tri_time.nanoTimestamp();
         result.duration_ms = @intCast((end_time - start_time) / 1_000_000);
 
         return result;

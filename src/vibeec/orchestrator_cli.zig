@@ -3,6 +3,7 @@
 //! φ² + 1/φ² = 3
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const orchestrator = @import("trinity_orchestrator");
 const impl = @import("orchestrator_impl.zig");
 
@@ -184,7 +185,7 @@ fn demoConsensus(allocator: std.mem.Allocator) !void {
             .confidence = 0.95,
             .pas_score = 0.97,
             .reasoning = "Code generation successful",
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
         },
         .{
             .agent_id = "agent-mu-001",
@@ -193,7 +194,7 @@ fn demoConsensus(allocator: std.mem.Allocator) !void {
             .confidence = 0.88,
             .pas_score = 0.92,
             .reasoning = "No critical issues found",
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
         },
         .{
             .agent_id = "symbolic-ai-001",
@@ -202,7 +203,7 @@ fn demoConsensus(allocator: std.mem.Allocator) !void {
             .confidence = 0.91,
             .pas_score = 0.89,
             .reasoning = "Pattern match found",
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
         },
         .{
             .agent_id = "pas-daemon-001",
@@ -211,7 +212,7 @@ fn demoConsensus(allocator: std.mem.Allocator) !void {
             .confidence = 0.96,
             .pas_score = 0.98,
             .reasoning = "Sacred threshold exceeded",
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
         },
     };
 

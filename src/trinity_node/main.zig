@@ -6,6 +6,8 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
+const tri_time = @import("tri_time");
 const builtin = @import("builtin");
 const protocol = @import("protocol.zig");
 const crypto = @import("crypto.zig");
@@ -879,7 +881,7 @@ fn runHeadless(allocator: std.mem.Allocator, network: *network_mod.NetworkNode, 
                 std.debug.print("Generated {d} tokens in {d}ms\n", .{ tokens_generated, latency_ms });
             } else {
                 // Simulate processing
-                std.Thread.sleep(1 * std.time.ns_per_s);
+                tri_time.sleep(1 * std.time.ns_per_s);
             }
 
             // Record job completion
@@ -891,7 +893,7 @@ fn runHeadless(allocator: std.mem.Allocator, network: *network_mod.NetworkNode, 
             });
         }
 
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
 
         // Broadcast storage announce periodically
         // TODO: Implement broadcastStorageAnnounce in NetworkNode
@@ -913,7 +915,7 @@ fn runHeadless(allocator: std.mem.Allocator, network: *network_mod.NetworkNode, 
         }
 
         // Sleep to avoid busy loop
-        std.Thread.sleep(100 * std.time.ns_per_ms);
+        tri_time.sleep(100 * std.time.ns_per_ms);
     }
 }
 
@@ -976,17 +978,24 @@ fn runStoreFile(allocator: std.mem.Allocator, sp: *storage_mod.StorageProvider, 
     std.debug.print("Storing file: {s}\n", .{file_path});
 
     // Read file from disk
-    const file = std.fs.cwd().openFile(file_path, .{}) catch |err| {
+    const io = tri_io.get();
+    const file = std.Io.Dir.cwd().openFile(io, file_path, .{}) catch |err| {
         std.debug.print("Cannot open file: {s} ({s})\n", .{ file_path, @errorName(err) });
         return err;
     };
-    defer file.close();
+    defer file.close(io);
 
-    const stat = try file.stat();
+    const stat = try file.stat(io);
     const file_data = try allocator.alloc(u8, stat.size);
     defer allocator.free(file_data);
-    const bytes_read = try file.readAll(file_data);
-    if (bytes_read != stat.size) return error.IncompleteRead;
+    // Exactly `stat.size` bytes are expected; a short read means the file
+    // changed under us, which the old readAll reported as IncompleteRead.
+    var read_scratch: [4096]u8 = undefined;
+    var file_reader = file.reader(io, &read_scratch);
+    file_reader.interface.readSliceAll(file_data) catch |err| switch (err) {
+        error.EndOfStream => return error.IncompleteRead,
+        error.ReadFailed => return file_reader.err.?,
+    };
 
     // v1.3: HKDF key derivation (or legacy SHA256)
     const key = getEncryptionKey(password, legacy_key);
@@ -1057,9 +1066,10 @@ fn runRetrieveFile(allocator: std.mem.Allocator, sp: *storage_mod.StorageProvide
     const out_path = try std.fmt.allocPrint(allocator, "{s}/{s}", .{ out_dir, file_name });
     defer allocator.free(out_path);
 
-    const out_file = try std.fs.cwd().createFile(out_path, .{});
-    defer out_file.close();
-    try out_file.writeAll(recovered);
+    const io = tri_io.get();
+    const out_file = try std.Io.Dir.cwd().createFile(io, out_path, .{});
+    defer out_file.close(io);
+    try out_file.writeStreamingAll(io, recovered);
 
     std.debug.print("\nFile retrieved successfully!\n", .{});
     std.debug.print("  Output:    {s}\n", .{out_path});

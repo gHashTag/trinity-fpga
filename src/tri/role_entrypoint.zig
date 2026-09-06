@@ -19,6 +19,8 @@
 // =============================================================================
 
 const std = @import("std");
+const tri_io = @import("tri_io");
+const tri_time = @import("tri_time");
 const golden_chain = @import("dna_polymerase.zig");
 const pipeline_executor = @import("rna_polymerase.zig");
 const handoff = @import("handoff.zig");
@@ -135,20 +137,23 @@ pub fn detectRoleFromLabels(labels: []const []const u8) ?AgentRole {
 
 /// Run a subprocess, print status, return true if exit code == 0.
 fn runSubprocess(allocator: std.mem.Allocator, argv: []const []const u8, desc: []const u8, step: []const u8) bool {
+    _ = allocator; // 0.16: std.process.spawn takes no allocator
     std.debug.print("  [{s}] {s} ... ", .{ step, desc });
-    var child = std.process.Child.init(argv, allocator);
-    child.stdout_behavior = .Ignore;
-    child.stderr_behavior = .Ignore;
+    var child = try std.process.spawn(tri_io.get(), .{
+        .argv = argv,
+        .stdout = .ignore,
+        .stderr = .ignore,
+    });
     _ = child.spawn() catch {
         std.debug.print("{s}FAIL (spawn){s}\n", .{ RED, RESET });
         return false;
     };
-    const term = child.wait() catch {
+    const term = child.wait(tri_io.get()) catch {
         std.debug.print("{s}FAIL (wait){s}\n", .{ RED, RESET });
         return false;
     };
     const success = switch (term) {
-        .Exited => |c| c == 0,
+        .exited => |c| c == 0,
         else => false,
     };
     if (success) {
@@ -178,7 +183,7 @@ pub fn runTesterNoLLM(allocator: std.mem.Allocator, issue_number: u32) RoleResul
 
     std.debug.print("\n{s}TESTER (no-LLM){s} -- pure Zig build + test\n", .{ CYAN, RESET });
 
-    const start_ns = std.time.nanoTimestamp();
+    const start_ns = tri_time.nanoTimestamp();
 
     // Step 1: zig build
     const build_success = runSubprocess(allocator, &.{ "zig", "build" }, "zig build", "1/3");
@@ -210,7 +215,7 @@ pub fn runTesterNoLLM(allocator: std.mem.Allocator, issue_number: u32) RoleResul
         result.links_failed += 1;
     }
 
-    const elapsed_ns = std.time.nanoTimestamp() - start_ns;
+    const elapsed_ns = tri_time.nanoTimestamp() - start_ns;
     const elapsed_ms = @divTrunc(elapsed_ns, std.time.ns_per_ms);
     result.total_duration_ms = if (elapsed_ms > 0) @intCast(elapsed_ms) else 0;
 
@@ -228,7 +233,7 @@ pub fn runTesterNoLLM(allocator: std.mem.Allocator, issue_number: u32) RoleResul
         .fmt_clean = fmt_clean,
         .benchmarks = &.{},
         .regressions = &.{},
-        .timestamp = std.time.timestamp(),
+        .timestamp = tri_time.timestamp(),
     };
     handoff.writeTesterReport(issue_number, report) catch |err| {
         std.debug.print("{s}Warning: could not write tester report: {}{s}\n", .{ GRAY, err, RESET });
@@ -282,7 +287,7 @@ pub fn runCoderReviewerLoop(
             .commits = &.{},
             .lines_added = 0,
             .lines_removed = 0,
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
         };
         handoff.writeCoderOutput(issue_number, coder_output) catch |err| {
             std.log.warn("handoff: writeCoderOutput failed: {}", .{err});
@@ -307,7 +312,7 @@ pub fn runCoderReviewerLoop(
                 .iteration = iteration,
                 .max_iterations = MAX_REVIEW_ITERATIONS,
                 .files_reviewed = &.{},
-                .timestamp = std.time.timestamp(),
+                .timestamp = tri_time.timestamp(),
             };
             handoff.writeReviewerVerdict(issue_number, verdict) catch |err| {
                 std.log.warn("handoff: writeReviewerVerdict failed: {}", .{err});
@@ -334,7 +339,7 @@ pub fn runCoderReviewerLoop(
             .iteration = iteration,
             .max_iterations = MAX_REVIEW_ITERATIONS,
             .files_reviewed = &.{},
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
         };
         handoff.writeReviewerVerdict(issue_number, verdict) catch |err| {
             std.log.warn("handoff: writeReviewerVerdict failed: {}", .{err});
@@ -384,7 +389,7 @@ pub fn runFullRolePipelineWithIssue(allocator: std.mem.Allocator, task: []const 
                 .files = &.{},
                 .approach = task,
                 .spec_path = "",
-                .timestamp = std.time.timestamp(),
+                .timestamp = tri_time.timestamp(),
             };
             handoff.writePlannerOutput(issue_number, planner_output) catch |err| {
                 std.log.warn("handoff: writePlannerOutput failed: {}", .{err});
@@ -495,7 +500,7 @@ pub fn dispatchRole(allocator: std.mem.Allocator, role: AgentRole, task: []const
                     .files = &.{},
                     .approach = task,
                     .spec_path = "",
-                    .timestamp = std.time.timestamp(),
+                    .timestamp = tri_time.timestamp(),
                 };
                 handoff.writePlannerOutput(issue_number, output) catch |err| {
                     std.log.warn("handoff: writePlannerOutput failed: {}", .{err});
@@ -509,7 +514,7 @@ pub fn dispatchRole(allocator: std.mem.Allocator, role: AgentRole, task: []const
                     .iteration = 1,
                     .max_iterations = MAX_REVIEW_ITERATIONS,
                     .files_reviewed = &.{},
-                    .timestamp = std.time.timestamp(),
+                    .timestamp = tri_time.timestamp(),
                 };
                 handoff.writeReviewerVerdict(issue_number, verdict) catch |err| {
                     std.log.warn("handoff: writeReviewerVerdict failed: {}", .{err});

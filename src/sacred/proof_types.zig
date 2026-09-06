@@ -307,9 +307,9 @@ pub const GoalState = struct {
         return .{
             .allocator = allocator,
             .target_formula_id = target_formula_id,
-            .hypotheses = .{},
-            .goals = .{},
-            .proof_trace = .{},
+            .hypotheses = .empty,
+            .goals = .empty,
+            .proof_trace = .empty,
             .final_verdict = null,
         };
     }

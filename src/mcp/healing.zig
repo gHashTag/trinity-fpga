@@ -6,6 +6,8 @@
 
 const std = @import("std");
 
+const tri_proc = @import("tri_proc");
+const tri_time = @import("tri_time");
 /// Health check status
 pub const HealthStatus = enum {
     healthy,
@@ -47,7 +49,7 @@ pub const Instance = struct {
 
         // Auto-restart if unhealthy for too long
         if (self.health == .unhealthy) {
-            const now = std.time.nanoTimestamp();
+            const now = tri_time.nanoTimestamp();
             const unhealthy_ns = now - self.last_health_check;
             const five_minutes_ns: i64 = 300 * 1_000_000_000;
             if (unhealthy_ns > five_minutes_ns) return true;
@@ -159,7 +161,7 @@ pub const HealingManager = struct {
 
     /// Run healing cycle (should be called periodically)
     pub fn runCycle(self: *HealingManager) !HealingReport {
-        const start_time = std.time.nanoTimestamp();
+        const start_time = tri_time.nanoTimestamp();
 
         // Refresh instance status from Fly.io
         try self.refreshInstances();
@@ -182,7 +184,7 @@ pub const HealingManager = struct {
         // Auto-scale based on load
         const scaled = try self.autoScale();
 
-        const end_time = std.time.nanoTimestamp();
+        const end_time = tri_time.nanoTimestamp();
 
         return .{
             .timestamp = end_time,
@@ -198,7 +200,7 @@ pub const HealingManager = struct {
 
     /// Refresh instance status from Fly.io
     fn refreshInstances(self: *HealingManager) !void {
-        const result = std.process.Child.run(.{
+        const result = tri_proc.run(.{
             .allocator = self.allocator,
             .argv = &[_][]const u8{ "flyctl", "status", "--all", "--json", "--app", self.app_name },
         }) catch return;
@@ -208,7 +210,7 @@ pub const HealingManager = struct {
             self.allocator.free(result.stderr);
         }
 
-        if (result.term.Exited != 0) return;
+        if (result.term.exited != 0) return;
 
         // Parse JSON to extract instance states
         // flyctl status --json returns {"Machines":[{"id":"...","state":"started",...}]}
@@ -253,7 +255,7 @@ pub const HealingManager = struct {
                 else
                     .crashed;
 
-                inst.last_health_check = std.time.nanoTimestamp();
+                inst.last_health_check = tri_time.nanoTimestamp();
                 inst.health = if (inst.state == .running) .healthy else .degraded;
             }
         }
@@ -264,7 +266,7 @@ pub const HealingManager = struct {
         instance.state = .restarting;
         instance.restart_count += 1;
 
-        const result = std.process.Child.run(.{
+        const result = tri_proc.run(.{
             .allocator = self.allocator,
             .argv = &[_][]const u8{ "flyctl", "machine", "restart", instance.id, "--app", self.app_name },
         }) catch return;
@@ -274,7 +276,7 @@ pub const HealingManager = struct {
             self.allocator.free(result.stderr);
         }
 
-        if (result.term.Exited == 0) {
+        if (result.term.exited == 0) {
             instance.state = .starting;
             instance.health = .unknown;
         } else {
@@ -285,7 +287,7 @@ pub const HealingManager = struct {
 
     /// Auto-scale based on policy
     fn autoScale(self: *HealingManager) !bool {
-        const now = std.time.nanoTimestamp();
+        const now = tri_time.nanoTimestamp();
         const time_since_last_scale = (now - self.last_scale_time) / 1_000_000_000;
 
         const desired_count = self.policy.calculateDesiredCount(self.instances.items);
@@ -307,7 +309,7 @@ pub const HealingManager = struct {
         // Scale
         std.debug.print("Scaling from {d} to {d} instances\n", .{ current_count, desired_count });
 
-        const scale_result = std.process.Child.run(.{
+        const scale_result = tri_proc.run(.{
             .allocator = self.allocator,
             .argv = &[_][]const u8{
                 "flyctl",
@@ -376,7 +378,7 @@ pub const UptimeCalculator = struct {
 
     pub fn init() UptimeCalculator {
         return .{
-            .start_time = std.time.nanoTimestamp(),
+            .start_time = tri_time.nanoTimestamp(),
         };
     }
 
@@ -387,7 +389,7 @@ pub const UptimeCalculator = struct {
 
     /// Calculate uptime percentage
     pub fn uptimePercentage(self: *const UptimeCalculator) f64 {
-        const now = std.time.nanoTimestamp();
+        const now = tri_time.nanoTimestamp();
         const total_ns = now - self.start_time;
         const uptime_ns = total_ns - self.downtime_ns;
 
@@ -427,7 +429,7 @@ test "instance — healthy running no restart" {
         .state = .running,
         .health = .healthy,
         .connections = 10,
-        .last_health_check = std.time.nanoTimestamp(),
+        .last_health_check = tri_time.nanoTimestamp(),
         .restart_count = 0,
         .memory_mb = 100.0,
         .cpu_percent = 30.0,
@@ -443,7 +445,7 @@ test "instance — overloaded" {
         .state = .running,
         .health = .degraded,
         .connections = 100,
-        .last_health_check = std.time.nanoTimestamp(),
+        .last_health_check = tri_time.nanoTimestamp(),
         .restart_count = 0,
         .memory_mb = 500.0,
         .cpu_percent = 95.0,

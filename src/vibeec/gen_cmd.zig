@@ -1,4 +1,5 @@
 const std = @import("std");
+const tri_io = @import("tri_io");
 const validate_cmd = @import("validate_cmd.zig");
 const vibee_parser = @import("vibee_parser.zig");
 const zig_codegen = @import("zig_codegen.zig");
@@ -186,10 +187,8 @@ fn printUsage() void {
 }
 
 fn detectLanguage(allocator: std.mem.Allocator, input_path: []const u8) ![]const u8 {
-    const file = try std.fs.cwd().openFile(input_path, .{});
-    defer file.close();
-
-    const content = try file.readToEndAlloc(allocator, 64 * 1024);
+    const io = tri_io.get();
+    const content = try std.Io.Dir.cwd().readFileAlloc(io, input_path, allocator, .limited(64 * 1024));
     defer allocator.free(content);
 
     var lines = std.mem.splitScalar(u8, content, '\n');
@@ -241,42 +240,40 @@ fn deriveOutputPath(allocator: std.mem.Allocator, input_path: []const u8, langua
 }
 
 fn generateCode(allocator: std.mem.Allocator, input_path: []const u8, output_path: []const u8) !void {
+    const io = tri_io.get();
     std.debug.print("  Input:  {s}\n", .{input_path});
     std.debug.print("  Output: {s}\n", .{output_path});
 
-    const file = try std.fs.cwd().openFile(input_path, .{});
-    defer file.close();
-
-    const source = try file.readToEndAlloc(allocator, 1024 * 1024);
+    const source = try std.Io.Dir.cwd().readFileAlloc(io, input_path, allocator, .limited(1024 * 1024));
     defer allocator.free(source);
 
     var spec = try vibee_parser.parse(allocator, source);
     defer spec.deinit(allocator);
 
     const dir_path = std.fs.path.dirname(output_path) orelse ".";
-    std.fs.cwd().makePath(dir_path) catch {};
+    std.Io.Dir.cwd().createDirPath(io, dir_path) catch {};
 
-    const out_file = try std.fs.cwd().createFile(output_path, .{});
-    defer out_file.close();
+    const out_file = try std.Io.Dir.cwd().createFile(io, output_path, .{});
+    defer out_file.close(io);
 
     if (std.mem.eql(u8, spec.spec.language, "verilog") or std.mem.eql(u8, spec.spec.language, "varlog")) {
         const output = try verilog_codegen.generateVerilog(allocator, &spec.spec);
         defer allocator.free(output);
-        try out_file.writeAll(output);
+        try out_file.writeStreamingAll(io, output);
     } else if (isMultiLangTarget(spec.spec.language)) {
         const output = try generateMultiLang(allocator, &spec.spec);
         defer allocator.free(output);
-        try out_file.writeAll(output);
+        try out_file.writeStreamingAll(io, output);
     } else {
         var codegen = zig_codegen.ZigCodeGen.init(allocator);
         const output = try codegen.generate(&spec.spec);
         defer allocator.free(output);
-        try out_file.writeAll(output);
+        try out_file.writeStreamingAll(io, output);
     }
 
     // AGENT MU: Post-generation verification (Zig code only)
     if (std.mem.eql(u8, spec.spec.language, "zig")) {
-        try out_file.sync();
+        try out_file.sync(io);
 
         const config = agent_mu.Config{
             .max_retries = 3,
@@ -420,11 +417,12 @@ fn ralphRun(
 
 /// Show Ralph status
 fn ralphStatus(alloc: std.mem.Allocator) !void {
+    const io = tri_io.get();
     std.debug.print("\n📊 Ralph Status\n", .{});
     std.debug.print("─────────────────────────────────────────────────────────────\n", .{});
 
     // Try to read fix_plan.md
-    const file = std.fs.cwd().openFile(".trinity/ralph/internal/fix_plan.md", .{}) catch |err| {
+    const content = std.Io.Dir.cwd().readFileAlloc(io, ".trinity/ralph/internal/fix_plan.md", alloc, .limited(1024 * 1024)) catch |err| {
         if (err == error.FileNotFound) {
             std.debug.print("⚠️  fix_plan.md not found\n", .{});
             std.debug.print("   Run 'vibeec ralph help' for usage\n", .{});
@@ -432,9 +430,6 @@ fn ralphStatus(alloc: std.mem.Allocator) !void {
         }
         return err;
     };
-    defer file.close();
-
-    const content = try file.readToEndAlloc(alloc, 1024 * 1024);
     defer alloc.free(content);
 
     // Count tasks

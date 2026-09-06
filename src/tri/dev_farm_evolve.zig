@@ -12,6 +12,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const tri_dev = @import("tri_dev.zig");
 
@@ -184,7 +185,7 @@ fn runStep(allocator: Allocator) !void {
         if (a.has_fitness) with_fitness += 1;
     }
 
-    const now: u64 = @intCast(std.time.timestamp());
+    const now: u64 = @intCast(tri_time.timestamp());
     const elapsed_secs = if (now > oldest_start) now - oldest_start else 0;
     const elapsed_hours: f32 = @as(f32, @floatFromInt(elapsed_secs)) / 3600.0;
 
@@ -309,7 +310,7 @@ fn runStatus(allocator: Allocator) !void {
         }
     }
 
-    const now: u64 = @intCast(std.time.timestamp());
+    const now: u64 = @intCast(tri_time.timestamp());
     const elapsed_secs = if (now > oldest_start and oldest_start < std.math.maxInt(u64)) now - oldest_start else 0;
     const elapsed_hours: f32 = @as(f32, @floatFromInt(elapsed_secs)) / 3600.0;
 

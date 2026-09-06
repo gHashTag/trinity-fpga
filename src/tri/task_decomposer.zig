@@ -9,6 +9,8 @@
 // ============================================================================
 
 const std = @import("std");
+const tri_proc = @import("tri_proc");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 
 // ============================================================================
@@ -264,7 +266,7 @@ fn fetchSubIssues(allocator: Allocator, parent_number: u32, out: *[16]SubTask) !
     var jq_buf: [256]u8 = undefined;
     const jq_filter = std.fmt.bufPrint(&jq_buf, ".[] | select(.body != null and (.body | contains(\"{s}\"))) | \"\\(.number)\\t\\(.title)\\t\\(.labels | map(.name) | join(\",\"))\"", .{parent_str}) catch return 0;
 
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &[_][]const u8{
             "gh",      "issue",   "list",
@@ -320,7 +322,7 @@ fn fetchSubIssues(allocator: Allocator, parent_number: u32, out: *[16]SubTask) !
 // ============================================================================
 
 fn executeTask(allocator: Allocator, task: *const SubTask) TaskResult {
-    const timer = std.time.milliTimestamp();
+    const timer = tri_time.milliTimestamp();
     const title = task.title[0..task.title_len];
 
     // Extract task description from title (remove "[Sub] Phase: " prefix)
@@ -333,7 +335,7 @@ fn executeTask(allocator: Allocator, task: *const SubTask) TaskResult {
 
     // For RESEARCH and PLAN phases, just mark as done (they're documentation)
     if (task.phase == .research or task.phase == .plan) {
-        const elapsed: u64 = @intCast(@max(0, std.time.milliTimestamp() - timer));
+        const elapsed: u64 = @intCast(@max(0, tri_time.milliTimestamp() - timer));
         return .{
             .task = task.*,
             .success = true,
@@ -342,7 +344,7 @@ fn executeTask(allocator: Allocator, task: *const SubTask) TaskResult {
     }
 
     // For IMPLEMENT/TEST/VERIFY — try running the pipeline
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &[_][]const u8{
             "zig-out/bin/tri",
@@ -352,7 +354,7 @@ fn executeTask(allocator: Allocator, task: *const SubTask) TaskResult {
         },
         .max_output_bytes = 65536,
     }) catch {
-        const elapsed: u64 = @intCast(@max(0, std.time.milliTimestamp() - timer));
+        const elapsed: u64 = @intCast(@max(0, tri_time.milliTimestamp() - timer));
         return .{
             .task = task.*,
             .success = false,
@@ -363,10 +365,10 @@ fn executeTask(allocator: Allocator, task: *const SubTask) TaskResult {
     defer allocator.free(result.stderr);
 
     const success = (switch (result.term) {
-        .Exited => |code| code,
+        .exited => |code| code,
         else => @as(u32, 1),
     }) == 0;
-    const elapsed: u64 = @intCast(std.time.milliTimestamp() - timer);
+    const elapsed: u64 = @intCast(tri_time.milliTimestamp() - timer);
 
     var res = TaskResult{
         .task = task.*,
@@ -408,7 +410,7 @@ fn updateLabel(allocator: Allocator, issue_number: u32, remove: []const u8, add:
     var num_buf: [16]u8 = undefined;
     const num_str = std.fmt.bufPrint(&num_buf, "{d}", .{issue_number}) catch return;
 
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &[_][]const u8{
             "gh",          "issue",          "edit",
@@ -428,7 +430,7 @@ fn commentOnIssue(allocator: Allocator, issue_number: u32, body: []const u8) voi
     var num_buf: [16]u8 = undefined;
     const num_str = std.fmt.bufPrint(&num_buf, "{d}", .{issue_number}) catch return;
 
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &[_][]const u8{
             "gh",    "issue",  "comment",
@@ -447,7 +449,7 @@ fn closeIssue(allocator: Allocator, issue_number: u32) void {
     var num_buf: [16]u8 = undefined;
     const num_str = std.fmt.bufPrint(&num_buf, "{d}", .{issue_number}) catch return;
 
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &[_][]const u8{
             "gh",    "issue", "close",
@@ -463,7 +465,7 @@ fn closeIssue(allocator: Allocator, issue_number: u32) void {
 }
 
 fn ghGetIssueTitle(allocator: Allocator, issue_str: []const u8, buf: *[512]u8) ![]const u8 {
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &[_][]const u8{
             "gh",      "issue",  "view",
@@ -475,7 +477,7 @@ fn ghGetIssueTitle(allocator: Allocator, issue_str: []const u8, buf: *[512]u8) !
     defer allocator.free(result.stdout);
     defer allocator.free(result.stderr);
 
-    const title = std.mem.trimRight(u8, result.stdout, "\n\r ");
+    const title = std.mem.trimEnd(u8, result.stdout, "\n\r ");
     const len = @min(title.len, 512);
     @memcpy(buf[0..len], title[0..len]);
     return buf[0..len];

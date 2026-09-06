@@ -9,6 +9,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_proc = @import("tri_proc");
 const colors = @import("tri_colors.zig");
 const utils = @import("tri_utils.zig");
 
@@ -31,12 +32,12 @@ fn runViaBuild(allocator: std.mem.Allocator, args: []const u8) !void {
     try argv.appendSlice(allocator, &[_][]const u8{LOTUS_BUILD_STEP});
     try argv.appendSlice(allocator, args);
 
-    const result = try std.process.Child.run(.{
+    const result = try tri_proc.run(.{
         .allocator = allocator,
         .argv = argv.items,
     });
 
-    const exit_code = result.term.Exited orelse 1;
+    const exit_code = result.term.exited orelse 1;
     if (exit_code != 0) {
         const stderr = result.stderr.?;
         if (stderr.len > 0) {
@@ -55,7 +56,7 @@ fn runDirect(allocator: std.mem.Allocator, args: []const u8) !void {
     std.fs.cwd().access(binary_path, .{}) catch {
         // Binary not found, try building first
         std.debug.print("{s}Building lotus-cycle...{s}\n", .{ YELLOW, RESET });
-        _ = try std.process.Child.run(.{
+        _ = try tri_proc.run(.{
             .allocator = allocator,
             .argv = &[_][]const u8{ "zig", "build", "lotus-cycle" },
         });
@@ -68,13 +69,13 @@ fn runDirect(allocator: std.mem.Allocator, args: []const u8) !void {
     try argv.append(allocator, binary_path);
     try argv.appendSlice(allocator, args);
 
-    const result = try std.process.Child.run(.{
+    const result = try tri_proc.run(.{
         .allocator = allocator,
         .argv = argv.items,
         .cwd = std.fs.cwd(),
     });
 
-    const exit_code = result.term.Exited orelse 1;
+    const exit_code = result.term.exited orelse 1;
     if (exit_code != 0) {
         const stderr = result.stderr.?;
         if (stderr.len > 0) {

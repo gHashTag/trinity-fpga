@@ -16,6 +16,9 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
+const tri_proc = @import("tri_proc");
+const tri_time = @import("tri_time");
 const tri_exit_codes = @import("tri_exit_codes.zig");
 const github_client = @import("github_client.zig");
 const jsonl_logger = @import("jsonl_logger.zig");
@@ -290,7 +293,7 @@ fn issueComment(allocator: std.mem.Allocator, args: []const []const u8, dry_run:
     try appendProtocolLog(allocator, "issue_comment", number, agent_name, true);
 
     // Log to agent_events.jsonl
-    const event_ts = std.time.timestamp();
+    const event_ts = tri_time.timestamp();
     const comment_event = jsonl_logger.Event{
         .ts = @intCast(event_ts),
         .event_type = "issue_comment",
@@ -478,7 +481,7 @@ fn issueList(allocator: std.mem.Allocator, args: []const []const u8, dry_run: bo
         try argv.appendSlice(allocator, &.{ "--label", l });
     }
 
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = argv.items,
         .max_output_bytes = 128 * 1024,
@@ -579,7 +582,7 @@ fn issueView(allocator: std.mem.Allocator, args: []const []const u8, dry_run: bo
         return;
     }
 
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ "gh", "issue", "view", number_str },
         .max_output_bytes = 64 * 1024,
@@ -1027,17 +1030,19 @@ fn agentList(allocator: std.mem.Allocator) !void {
         var status: []const u8 = "stopped";
         var pid_buf: [20]u8 = undefined;
 
-        if (std.fs.cwd().openFile(pid_path, .{})) |file| {
-            defer file.close();
-            const n = file.readAll(&pid_buf) catch 0;
+        // 0.16 puts the whole-file read on the directory: open + readAll +
+        // close collapse into one call, and a short read stays a short read
+        // (readFile loops to EOF, as readAll did).
+        if (std.Io.Dir.cwd().readFile(tri_io.get(), pid_path, &pid_buf)) |slice| {
+            const n = slice.len;
             if (n > 0) {
-                const trimmed = std.mem.trimRight(u8, pid_buf[0..n], "\n\r ");
+                const trimmed = std.mem.trimEnd(u8, pid_buf[0..n], "\n\r ");
                 pid_str = trimmed;
 
                 // Check if process is alive
                 const pid = std.fmt.parseInt(i32, trimmed, 10) catch 0;
                 if (pid > 0) {
-                    const kill_result = std.process.Child.run(.{
+                    const kill_result = tri_proc.run(.{
                         .allocator = allocator,
                         .argv = &.{ "kill", "-0", trimmed },
                         .max_output_bytes = 1024,
@@ -1046,7 +1051,7 @@ fn agentList(allocator: std.mem.Allocator) !void {
                         continue;
                     };
                     status = if ((switch (kill_result.term) {
-                        .Exited => |code| code,
+                        .exited => |code| code,
                         else => @as(u32, 1),
                     }) == 0) "running" else "dead (stale PID)";
                 }
@@ -1055,17 +1060,17 @@ fn agentList(allocator: std.mem.Allocator) !void {
             // Also check via pgrep as fallback
             var name_buf: [64]u8 = undefined;
             const pattern = std.fmt.bufPrint(&name_buf, "{s}-agent", .{name}) catch continue;
-            const pgrep = std.process.Child.run(.{
+            const pgrep = tri_proc.run(.{
                 .allocator = allocator,
                 .argv = &.{ "pgrep", "-f", pattern },
                 .max_output_bytes = 1024,
             }) catch continue;
 
             if ((switch (pgrep.term) {
-                .Exited => |code| code,
+                .exited => |code| code,
                 else => @as(u32, 1),
             }) == 0 and pgrep.stdout.len > 0) {
-                const first_line = std.mem.trimRight(u8, pgrep.stdout, "\n\r ");
+                const first_line = std.mem.trimEnd(u8, pgrep.stdout, "\n\r ");
                 // find first newline to get just first PID
                 if (std.mem.indexOfScalar(u8, first_line, '\n')) |nl| {
                     pid_str = first_line[0..nl];
@@ -1098,26 +1103,25 @@ fn agentStop(allocator: std.mem.Allocator, args: []const []const u8) !void {
     var pid_str: ?[]const u8 = null;
     var pid_buf: [20]u8 = undefined;
 
-    if (std.fs.cwd().openFile(pid_path, .{})) |file| {
-        defer file.close();
-        const n = file.readAll(&pid_buf) catch 0;
+    if (std.Io.Dir.cwd().readFile(tri_io.get(), pid_path, &pid_buf)) |slice| {
+        const n = slice.len;
         if (n > 0) {
-            pid_str = std.mem.trimRight(u8, pid_buf[0..n], "\n\r ");
+            pid_str = std.mem.trimEnd(u8, pid_buf[0..n], "\n\r ");
         }
     } else |_| {
         // Fallback: pgrep
         var name_buf: [64]u8 = undefined;
         const pattern = std.fmt.bufPrint(&name_buf, "{s}-agent", .{name}) catch return;
-        const pgrep = std.process.Child.run(.{
+        const pgrep = tri_proc.run(.{
             .allocator = allocator,
             .argv = &.{ "pgrep", "-f", pattern },
             .max_output_bytes = 1024,
         }) catch return;
         if ((switch (pgrep.term) {
-            .Exited => |code| code,
+            .exited => |code| code,
             else => @as(u32, 1),
         }) == 0 and pgrep.stdout.len > 0) {
-            const trimmed = std.mem.trimRight(u8, pgrep.stdout, "\n\r ");
+            const trimmed = std.mem.trimEnd(u8, pgrep.stdout, "\n\r ");
             if (std.mem.indexOfScalar(u8, trimmed, '\n')) |nl| {
                 @memcpy(pid_buf[0..nl], trimmed[0..nl]);
                 pid_str = pid_buf[0..nl];
@@ -1129,7 +1133,7 @@ fn agentStop(allocator: std.mem.Allocator, args: []const []const u8) !void {
     }
 
     if (pid_str) |pid| {
-        const result = std.process.Child.run(.{
+        const result = tri_proc.run(.{
             .allocator = allocator,
             .argv = &.{ "kill", pid },
             .max_output_bytes = 1024,
@@ -1138,12 +1142,12 @@ fn agentStop(allocator: std.mem.Allocator, args: []const []const u8) !void {
             return;
         };
         if ((switch (result.term) {
-            .Exited => |code| code,
+            .exited => |code| code,
             else => @as(u32, 1),
         }) == 0) {
             std.debug.print("{s}Stopped {s} (PID {s}){s}\n", .{ GREEN, name, pid, RESET });
             // Clean up PID file
-            std.fs.cwd().deleteFile(pid_path) catch |err| {
+            std.Io.Dir.cwd().deleteFile(tri_io.get(), pid_path) catch |err| {
                 std.log.debug("github_commands: deleteFile PID cleanup ({s}) failed: {}", .{ pid_path, err });
             };
         } else {
@@ -1170,7 +1174,7 @@ fn agentRestart(allocator: std.mem.Allocator, args: []const []const u8) !void {
     // Start — currently only Ralph has a binary
     if (std.mem.eql(u8, name, "ralph")) {
         std.debug.print("{s}Starting ralph-agent...{s}\n", .{ CYAN, RESET });
-        const result = std.process.Child.run(.{
+        const result = tri_proc.run(.{
             .allocator = allocator,
             .argv = &.{"./zig-out/bin/ralph-agent"},
             .max_output_bytes = 1024,
@@ -1182,7 +1186,7 @@ fn agentRestart(allocator: std.mem.Allocator, args: []const []const u8) !void {
         std.debug.print("{s}Restarted {s}{s}\n", .{ GREEN, name, RESET });
     } else if (std.mem.eql(u8, name, "mu")) {
         std.debug.print("{s}Starting MU daemon...{s}\n", .{ CYAN, RESET });
-        const result = std.process.Child.run(.{
+        const result = tri_proc.run(.{
             .allocator = allocator,
             .argv = &.{ "./zig-out/bin/trinity-mcp", "mu", "start" },
             .max_output_bytes = 1024,
@@ -1247,15 +1251,16 @@ fn protocolLog(allocator: std.mem.Allocator, args: []const []const u8) !void {
         try displayLogFile(filename, filter_issue, filter_agent);
     } else {
         // List all log files
-        var dir = std.fs.cwd().openDir(protocol_dir, .{ .iterate = true }) catch {
+        const io = tri_io.get();
+        var dir = std.Io.Dir.cwd().openDir(io, protocol_dir, .{ .iterate = true }) catch {
             std.debug.print("{s}No protocol logs found in {s}/{s}\n", .{ GOLDEN, protocol_dir, RESET });
             return;
         };
-        defer dir.close();
+        defer dir.close(io);
 
         var iter = dir.iterate();
         var found = false;
-        while (try iter.next()) |entry| {
+        while (try iter.next(io)) |entry| {
             if (std.mem.endsWith(u8, entry.name, ".jsonl")) {
                 const filepath = try std.fmt.allocPrint(allocator, "{s}/{s}", .{ protocol_dir, entry.name });
                 defer allocator.free(filepath);
@@ -1294,18 +1299,19 @@ fn protocolVerify(allocator: std.mem.Allocator, args: []const []const u8) !void 
     var has_comment = false;
     var has_close = false;
 
-    var dir = std.fs.cwd().openDir(protocol_dir, .{ .iterate = true }) catch {
+    const io = tri_io.get();
+    var dir = std.Io.Dir.cwd().openDir(io, protocol_dir, .{ .iterate = true }) catch {
         std.debug.print("{s}✗ No protocol logs found — compliance FAILED{s}\n", .{ RED, RESET });
         return;
     };
-    defer dir.close();
+    defer dir.close(io);
 
     var iter = dir.iterate();
-    while (try iter.next()) |entry| {
+    while (try iter.next(io)) |entry| {
         if (std.mem.endsWith(u8, entry.name, ".jsonl")) {
             const filepath = try std.fmt.allocPrint(allocator, "{s}/{s}", .{ protocol_dir, entry.name });
             defer allocator.free(filepath);
-            const content = std.fs.cwd().readFileAlloc(allocator, filepath, 1024 * 1024) catch continue;
+            const content = std.Io.Dir.cwd().readFileAlloc(io, filepath, allocator, .limited(1024 * 1024)) catch continue;
             defer allocator.free(content);
             const issue_str = try std.fmt.allocPrint(allocator, "\"issue\":{d}", .{issue_num.?});
             defer allocator.free(issue_str);
@@ -1351,8 +1357,9 @@ fn appendProtocolLog(allocator: std.mem.Allocator, action: []const u8, issue: u3
     const protocol_dir = ".trinity/protocol";
 
     // Ensure directory exists
-    std.fs.cwd().makePath(protocol_dir) catch |err| {
-        std.log.warn("github_commands: makePath ({s}) failed: {}", .{ protocol_dir, err });
+    const io = tri_io.get();
+    std.Io.Dir.cwd().createDirPath(io, protocol_dir) catch |err| {
+        std.log.warn("github_commands: createDirPath ({s}) failed: {}", .{ protocol_dir, err });
     };
 
     const date_str = try getTodayDateStr(allocator);
@@ -1360,7 +1367,7 @@ fn appendProtocolLog(allocator: std.mem.Allocator, action: []const u8, issue: u3
     const filepath = try std.fmt.allocPrint(allocator, "{s}/{s}.jsonl", .{ protocol_dir, date_str });
     defer allocator.free(filepath);
 
-    const timestamp = std.time.timestamp();
+    const timestamp = tri_time.timestamp();
     const agent_str = agent orelse "unknown";
     const ok_str = if (ok) "true" else "false";
 
@@ -1369,16 +1376,18 @@ fn appendProtocolLog(allocator: std.mem.Allocator, action: []const u8, issue: u3
         timestamp, action, issue, agent_str, ok_str,
     });
 
-    const file = try std.fs.cwd().createFile(filepath, .{ .truncate = false });
-    defer file.close();
-    try file.seekFromEnd(0);
-    try file.writeAll(line);
+    const file = try std.Io.Dir.cwd().createFile(io, filepath, .{ .truncate = false });
+    defer file.close(io);
+    // 0.16 has no seekFromEnd on File. Appending is now an explicit positional
+    // write at the current length, which is what seekFromEnd(0) + writeAll did.
+    const end = try file.length(io);
+    try file.writePositionalAll(io, line, end);
 }
 
 fn displayLogFile(filepath: []const u8, filter_issue: ?u32, filter_agent: ?[]const u8) !void {
     // Use page_allocator for simplicity in this CLI display function
     const allocator = std.heap.page_allocator;
-    const content = std.fs.cwd().readFileAlloc(allocator, filepath, 1024 * 1024) catch {
+    const content = std.Io.Dir.cwd().readFileAlloc(tri_io.get(), filepath, allocator, .limited(1024 * 1024)) catch {
         std.debug.print("{s}No log file: {s}{s}\n", .{ GOLDEN, filepath, RESET });
         return;
     };
@@ -1447,7 +1456,7 @@ fn getAgentEmoji(agent: []const u8) []const u8 {
 }
 
 fn getTodayDateStr(allocator: std.mem.Allocator) ![]u8 {
-    const timestamp = std.time.timestamp();
+    const timestamp = tri_time.timestamp();
     const epoch_seconds = std.time.epoch.EpochSeconds{ .secs = @intCast(timestamp) };
     const epoch_day = epoch_seconds.getEpochDay();
     const year_day = epoch_day.calculateYearDay();
@@ -1732,7 +1741,7 @@ fn checkCreate(allocator: std.mem.Allocator, args: []const []const u8, dry_run: 
 
     if (sha == null) {
         // Auto-detect HEAD sha
-        const result = std.process.Child.run(.{
+        const result = tri_proc.run(.{
             .allocator = allocator,
             .argv = &.{ "git", "rev-parse", "HEAD" },
             .max_output_bytes = 256,
@@ -1742,7 +1751,7 @@ fn checkCreate(allocator: std.mem.Allocator, args: []const []const u8, dry_run: 
         };
         defer allocator.free(result.stdout);
         defer allocator.free(result.stderr);
-        const trimmed = std.mem.trimRight(u8, result.stdout, "\n\r ");
+        const trimmed = std.mem.trimEnd(u8, result.stdout, "\n\r ");
         sha_owned = allocator.dupe(u8, trimmed) catch {
             std.debug.print("{s}Out of memory{s}\n", .{ RED, RESET });
             return;

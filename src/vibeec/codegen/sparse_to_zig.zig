@@ -143,7 +143,7 @@ const SPARSE_VECTOR_IMPL =
 
 pub fn generate(allocator: Allocator, source: []const u8) ![]const u8 {
     _ = source; // Spec ignored for now - full template
-    var output = std.ArrayListUnmanaged(u8){};
+    var output = @as(std.ArrayListUnmanaged(u8), .empty);
 
     try output.appendSlice(allocator,
         \\// ═══════════════════════════════════════════════════════════════════════════════

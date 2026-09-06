@@ -1,5 +1,6 @@
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 /// BATCH GENERATOR - within notand VIBEE
 /// withtoand: 10-50x by withinnotand with bywithbeforein notand
 pub const ModuleDef = struct {
@@ -95,7 +96,7 @@ pub fn generateZig(allocator: std.mem.Allocator, module: ModuleDef, version: u32
         \\    return .{{
         \\        .status = "initialized",
         \\        .data = "{{}}",
-        \\        .timestamp = std.time.timestamp(),
+        \\        .timestamp = tri_time.timestamp(),
         \\    }};
         \\}}
         \\

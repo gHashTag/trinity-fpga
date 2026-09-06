@@ -6,6 +6,9 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
+const tri_mutex = @import("tri_mutex");
+const tri_time = @import("tri_time");
 const protocol = @import("protocol.zig");
 const discovery = @import("discovery.zig");
 const wallet_mod = @import("wallet.zig");
@@ -39,7 +42,8 @@ pub const NetworkStatus = enum {
 pub const PendingJob = struct {
     job: protocol.InferenceJob,
     received_at: i64,
-    client_addr: std.net.Address,
+    // 0.16: std.net is gone; `std.Io.net.IpAddress` is the replacement type.
+    client_addr: std.Io.net.IpAddress,
 };
 
 pub const JobQueue = struct {
@@ -47,7 +51,7 @@ pub const JobQueue = struct {
     head: usize,
     tail: usize,
     count: usize,
-    mutex: std.Thread.Mutex,
+    mutex: tri_mutex.Mutex,
 
     pub fn init() JobQueue {
         return JobQueue{
@@ -106,7 +110,10 @@ pub const NetworkNode = struct {
     status: NetworkStatus,
     running: std.atomic.Value(bool),
     job_server_thread: ?std.Thread,
-    job_server_socket: ?std.posix.socket_t,
+    // 0.16: std.posix lost socket/bind/listen/accept entirely, so a bare fd is
+    // no longer usable. This now holds the `std.Io.net.Server` that
+    // `IpAddress.listen` returns; the name is kept because callers refer to it.
+    job_server_socket: ?std.Io.net.Server,
     listen_port: u16,
 
     // Stats
@@ -220,7 +227,7 @@ pub const NetworkNode = struct {
 
         self.running.store(true, .release);
         self.status = .connecting;
-        self.start_time = std.time.timestamp();
+        self.start_time = tri_time.timestamp();
 
         // Start discovery
         try self.discovery_service.start();
@@ -239,9 +246,10 @@ pub const NetworkNode = struct {
         // Stop discovery
         self.discovery_service.stop();
 
-        // Stop job server
-        if (self.job_server_socket) |sock| {
-            std.posix.close(sock);
+        // Stop job server. Closing the listening socket is still what breaks
+        // `jobServerLoop` out of its blocking accept.
+        if (self.job_server_socket) |*server| {
+            server.deinit(tri_io.get());
             self.job_server_socket = null;
         }
 
@@ -253,60 +261,74 @@ pub const NetworkNode = struct {
 
     /// Start TCP job server
     fn startJobServer(self: *NetworkNode) !void {
-        // Create TCP socket
-        const sock = try std.posix.socket(std.posix.AF.INET, std.posix.SOCK.STREAM, 0);
-        errdefer std.posix.close(sock);
+        const io = tri_io.get();
 
-        // Enable address reuse
-        const reuse: i32 = 1;
-        try std.posix.setsockopt(sock, std.posix.SOL.SOCKET, std.posix.SO.REUSEADDR, std.mem.asBytes(&reuse));
+        // 0.16: the socket / setsockopt(SO_REUSEADDR) / bind / listen sequence
+        // collapses into `IpAddress.listen`, which is the only way to get a
+        // listening socket now that std.posix.socket and friends are gone.
+        // `reuse_address` sets SO_REUSEADDR (and SO_REUSEPORT on POSIX);
+        // `kernel_backlog` is the old `listen` backlog argument.
+        const addr: std.Io.net.IpAddress = .{ .ip4 = .{ .bytes = .{ 0, 0, 0, 0 }, .port = self.listen_port } };
+        var server = try addr.listen(io, .{
+            .reuse_address = true,
+            .kernel_backlog = 10,
+        });
+        errdefer {
+            server.deinit(io);
+            self.job_server_socket = null;
+        }
 
-        // Bind to job port
-        const addr = std.net.Address.initIp4(.{ 0, 0, 0, 0 }, self.listen_port);
-        try std.posix.bind(sock, &addr.any, addr.getOsSockLen());
-
-        // Listen
-        try std.posix.listen(sock, 10);
-
-        self.job_server_socket = sock;
+        self.job_server_socket = server;
         self.job_server_thread = try std.Thread.spawn(.{}, jobServerLoop, .{self});
     }
 
     /// Job server loop - accepts connections and receives jobs
     fn jobServerLoop(self: *NetworkNode) void {
-        const sock = self.job_server_socket orelse return;
+        const io = tri_io.get();
+        if (self.job_server_socket == null) return;
+        const server = &self.job_server_socket.?;
 
         while (self.running.load(.acquire)) {
-            var client_addr: std.posix.sockaddr = undefined;
-            var addr_len: std.posix.socklen_t = @sizeOf(std.posix.sockaddr);
-
-            const client_sock = std.posix.accept(sock, &client_addr, &addr_len, 0) catch |err| {
+            // 0.16: `accept` yields the connected `Stream` itself, and the
+            // peer address rides along on the accepted socket instead of
+            // coming back through a sockaddr out-parameter.
+            const stream = server.accept(io) catch |err| {
                 if (err == error.WouldBlock) continue;
                 break;
             };
-            defer std.posix.close(client_sock);
+            defer stream.close(io);
 
             // Handle connection
-            self.handleConnection(client_sock, std.net.Address{ .any = client_addr }) catch |err| {
+            self.handleConnection(stream, stream.socket.address) catch |err| {
                 std.log.debug("network: handle connection failed: {}", .{err});
             };
         }
     }
 
     /// Handle incoming connection
-    fn handleConnection(self: *NetworkNode, sock: std.posix.socket_t, client_addr: std.net.Address) !void {
+    fn handleConnection(self: *NetworkNode, stream: std.Io.net.Stream, client_addr: std.Io.net.IpAddress) !void {
+        const io = tri_io.get();
         var buf: [65536]u8 = undefined;
 
-        // Read message header
+        // 0.16: std.posix.recv/send went with the rest of the socket layer;
+        // reads and writes go through Stream.Reader / Stream.Writer.
+        var read_buf: [256]u8 = undefined;
+        var stream_reader = stream.reader(io, &read_buf);
+        const reader = &stream_reader.interface;
+
+        // Read message header. `readSliceShort` returns fewer bytes than asked
+        // for only at end of stream, which is the case the old recv-length
+        // check was guarding -- but unlike a bare `recv` it also keeps reading
+        // through a short TCP delivery instead of dropping the message.
         var header_buf: [protocol.MessageHeader.SIZE]u8 = undefined;
-        const header_len = try std.posix.recv(sock, &header_buf, 0);
+        const header_len = try reader.readSliceShort(&header_buf);
         if (header_len != protocol.MessageHeader.SIZE) return;
 
         const header = try protocol.MessageHeader.deserialize(&header_buf);
 
         // Read payload
         if (header.length > buf.len) return error.PayloadTooLarge;
-        const payload_len = try std.posix.recv(sock, buf[0..header.length], 0);
+        const payload_len = try reader.readSliceShort(buf[0..header.length]);
         if (payload_len != header.length) return;
 
         // Handle message by type
@@ -318,7 +340,7 @@ pub const NetworkNode = struct {
                 // Add to queue
                 const pending = PendingJob{
                     .job = job,
-                    .received_at = std.time.timestamp(),
+                    .received_at = tri_time.timestamp(),
                     .client_addr = client_addr,
                 };
                 _ = self.job_queue.push(pending);
@@ -332,9 +354,9 @@ pub const NetworkNode = struct {
                 // Respond with our heartbeat
                 const hb = protocol.Heartbeat{
                     .node_id = self.wallet.getNodeId(),
-                    .timestamp = std.time.timestamp(),
+                    .timestamp = tri_time.timestamp(),
                     .jobs_completed = self.jobs_completed,
-                    .uptime_seconds = @intCast(std.time.timestamp() - self.start_time),
+                    .uptime_seconds = @intCast(tri_time.timestamp() - self.start_time),
                     .status = if (self.job_queue.size() > 0) .busy else .online,
                 };
                 const payload = try hb.serialize(self.allocator);
@@ -344,8 +366,14 @@ pub const NetworkNode = struct {
                     .msg_type = .heartbeat,
                     .length = @intCast(payload.len),
                 };
-                _ = try std.posix.send(sock, &resp_header.serialize(), 0);
-                _ = try std.posix.send(sock, payload, 0);
+                // Stream.Writer buffers, so the flush is what puts the reply
+                // on the wire.
+                var write_buf: [1024]u8 = undefined;
+                var stream_writer = stream.writer(io, &write_buf);
+                const w = &stream_writer.interface;
+                try w.writeAll(&resp_header.serialize());
+                try w.writeAll(payload);
+                try w.flush();
             },
             else => {},
         }
@@ -361,11 +389,12 @@ pub const NetworkNode = struct {
         // Find client peer by node ID
         const peer = self.discovery_service.peers.getPeer(result.worker_id) orelse return error.PeerNotFound;
 
-        // Connect to peer
-        const sock = try std.posix.socket(std.posix.AF.INET, std.posix.SOCK.STREAM, 0);
-        defer std.posix.close(sock);
+        const io = tri_io.get();
 
-        try std.posix.connect(sock, &peer.address.any, peer.address.getOsSockLen());
+        // Connect to peer. 0.16: socket + connect collapse into
+        // `IpAddress.connect`, which hands back the connected `Stream`.
+        const stream = try peer.address.connect(io, .{ .mode = .stream });
+        defer stream.close(io);
 
         // Send result
         const payload = try result.serialize(self.allocator);
@@ -376,8 +405,12 @@ pub const NetworkNode = struct {
             .length = @intCast(payload.len),
         };
 
-        _ = try std.posix.send(sock, &header.serialize(), 0);
-        _ = try std.posix.send(sock, payload, 0);
+        var write_buf: [1024]u8 = undefined;
+        var stream_writer = stream.writer(io, &write_buf);
+        const w = &stream_writer.interface;
+        try w.writeAll(&header.serialize());
+        try w.writeAll(payload);
+        try w.flush();
 
         self.jobs_completed += 1;
     }
@@ -396,21 +429,24 @@ pub const NetworkNode = struct {
         const peers = try self.discovery_service.getAlivePeers();
         defer self.allocator.free(peers);
 
+        const io = tri_io.get();
         for (peers) |peer| {
-            const sock = std.posix.socket(std.posix.AF.INET, std.posix.SOCK.STREAM, 0) catch continue;
-            defer std.posix.close(sock);
+            const stream = peer.address.connect(io, .{ .mode = .stream }) catch continue;
+            defer stream.close(io);
 
-            std.posix.connect(sock, &peer.address.any, peer.address.getOsSockLen()) catch continue;
-
-            _ = std.posix.send(sock, &header.serialize(), 0) catch continue;
-            _ = std.posix.send(sock, payload, 0) catch continue;
+            var write_buf: [1024]u8 = undefined;
+            var stream_writer = stream.writer(io, &write_buf);
+            const w = &stream_writer.interface;
+            w.writeAll(&header.serialize()) catch continue;
+            w.writeAll(payload) catch continue;
+            w.flush() catch continue;
         }
     }
 
     /// Get network stats
     pub fn getStats(self: *NetworkNode) NetworkStats {
         const uptime = if (self.start_time > 0)
-            @as(u64, @intCast(std.time.timestamp() - self.start_time))
+            @as(u64, @intCast(tri_time.timestamp() - self.start_time))
         else
             0;
 
@@ -455,8 +491,8 @@ test "job queue operations" {
 
     const job = PendingJob{
         .job = undefined,
-        .received_at = std.time.timestamp(),
-        .client_addr = std.net.Address.initIp4(.{ 127, 0, 0, 1 }, 9334),
+        .received_at = tri_time.timestamp(),
+        .client_addr = .{ .ip4 = .{ .bytes = .{ 127, 0, 0, 1 }, .port = 9334 } },
     };
 
     try std.testing.expect(queue.push(job));

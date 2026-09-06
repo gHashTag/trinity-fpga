@@ -6,6 +6,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const vsa = @import("vsa.zig");
 
 const Trit = vsa.Trit;
@@ -231,7 +232,7 @@ pub fn benchmarkBind(allocator: std.mem.Allocator, dim: usize, iterations: usize
     }
 
     // Scalar benchmark
-    var timer = try std.time.Timer.start();
+    var timer = try tri_time.Timer.start();
     for (0..iterations) |_| {
         var r = try vsa.bind(allocator, &a, &b);
         r.deinit();
@@ -265,7 +266,7 @@ pub fn benchmarkDotProduct(allocator: std.mem.Allocator, dim: usize, iterations:
     }
 
     // Scalar benchmark
-    var timer = try std.time.Timer.start();
+    var timer = try tri_time.Timer.start();
     for (0..iterations) |_| {
         _ = vsa.dotProduct(&a, &b);
     }
@@ -297,7 +298,7 @@ pub fn benchmarkHamming(allocator: std.mem.Allocator, dim: usize, iterations: us
     }
 
     // Scalar benchmark
-    var timer = try std.time.Timer.start();
+    var timer = try tri_time.Timer.start();
     for (0..iterations) |_| {
         _ = vsa.hammingDistance(&a, &b);
     }

@@ -61,7 +61,7 @@ pub const CommandTestInfo = struct {
 
     /// Get full command string for testing
     pub fn getCommandString(self: *const CommandTestInfo, allocator: std.mem.Allocator) ![]const u8 {
-        var buffer = std.ArrayList(u8){};
+        var buffer = @as(std.ArrayList(u8), .empty);
         try buffer.appendSlice(allocator, self.name);
         for (self.example_args) |arg| {
             try buffer.append(allocator, ' ');

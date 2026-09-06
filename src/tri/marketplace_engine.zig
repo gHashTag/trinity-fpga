@@ -132,7 +132,7 @@ pub fn computeDashboard() DashboardStats {
 }
 
 pub fn computeStakingTiers(allocator: Allocator) ![]StakingTier {
-    var result: std.ArrayListUnmanaged(StakingTier) = .{};
+    var result: std.ArrayListUnmanaged(StakingTier) = .empty;
     const fib_stakes = [_]u32{ 3, 5, 8, 13, 21, 34, 55, 89, 144, 233 };
     var tier: u8 = 0;
     while (tier < 10) : (tier += 1) {
@@ -151,7 +151,7 @@ pub fn computeStakingTiers(allocator: Allocator) ![]StakingTier {
 }
 
 pub fn getAccuracyTiers(allocator: Allocator) ![]AccuracyTier {
-    var result: std.ArrayListUnmanaged(AccuracyTier) = .{};
+    var result: std.ArrayListUnmanaged(AccuracyTier) = .empty;
     try result.append(allocator, .{ .name = "EXACT", .max_error_pct = 0.01, .reward_multiplier = std.math.pow(f64, PHI, 4.0), .label = "Sacred Fit" });
     try result.append(allocator, .{ .name = "CLOSE", .max_error_pct = 0.1, .reward_multiplier = PHI_SQ, .label = "Golden Fit" });
     try result.append(allocator, .{ .name = "NEAR", .max_error_pct = 1.0, .reward_multiplier = PHI, .label = "Silver Fit" });
@@ -161,7 +161,7 @@ pub fn getAccuracyTiers(allocator: Allocator) ![]AccuracyTier {
 }
 
 pub fn computeTopComputations(allocator: Allocator) ![]TopComputation {
-    var result: std.ArrayListUnmanaged(TopComputation) = .{};
+    var result: std.ArrayListUnmanaged(TopComputation) = .empty;
     try result.append(allocator, .{ .rank = 1, .formula = "m_tau/m_e = 4*3^3*pi^3*phi^-2*e", .accuracy_pct = 0.0002, .reward_phi_power = 4, .reward_value = std.math.pow(f64, PHI, 4.0) });
     try result.append(allocator, .{ .rank = 2, .formula = "CHSH = 8*3^4*pi^-3", .accuracy_pct = 0.0020, .reward_phi_power = 3, .reward_value = std.math.pow(f64, PHI, 3.0) });
     try result.append(allocator, .{ .rank = 3, .formula = "gamma_BI = 7*3^-3*pi^2*e^-3", .accuracy_pct = 0.0082, .reward_phi_power = 3, .reward_value = std.math.pow(f64, PHI, 3.0) });
@@ -171,7 +171,7 @@ pub fn computeTopComputations(allocator: Allocator) ![]TopComputation {
 }
 
 pub fn computeTokenomicsSchedule(allocator: Allocator, epochs: u32) ![]TokenomicsEpoch {
-    var result: std.ArrayListUnmanaged(TokenomicsEpoch) = .{};
+    var result: std.ArrayListUnmanaged(TokenomicsEpoch) = .empty;
     var supply: f64 = 999999.0;
     var staked_pct: f64 = 38.2;
     var epoch: u32 = 0;
@@ -294,103 +294,102 @@ pub fn computeLiquidityPools() [5]LiquidityPool {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 pub fn marketplaceToJson(allocator: Allocator, mode_str: []const u8) ![]u8 {
-    var buf: std.ArrayListUnmanaged(u8) = .{};
-    const w = buf.writer(allocator);
+    var buf: std.ArrayListUnmanaged(u8) = .empty;
 
     const trinity = PHI_SQ + PHI_INV_SQ;
-    try w.writeAll("{");
-    try std.fmt.format(w, "\"mode\":\"{s}\",\"trinity_check\":{d:.6}", .{ mode_str, trinity });
+    try buf.appendSlice(allocator, "{");
+    try buf.print(allocator, "\"mode\":\"{s}\",\"trinity_check\":{d:.6}", .{ mode_str, trinity });
 
     if (std.mem.eql(u8, mode_str, "dashboard")) {
         const stats = computeDashboard();
-        try std.fmt.format(w, ",\"dashboard\":{{\"network_active\":{},\"total_constants\":{d},\"verify_passing\":{d},\"verify_total\":{d},\"formula_fits\":{d},\"exact_fits\":{d},\"total_supply\":{d:.0},\"circulating\":{d:.0},\"staked\":{d:.0},\"inflation_rate\":{d:.4},\"deflation_rate\":{d:.4}}}", .{
+        try buf.print(allocator, ",\"dashboard\":{{\"network_active\":{},\"total_constants\":{d},\"verify_passing\":{d},\"verify_total\":{d},\"formula_fits\":{d},\"exact_fits\":{d},\"total_supply\":{d:.0},\"circulating\":{d:.0},\"staked\":{d:.0},\"inflation_rate\":{d:.4},\"deflation_rate\":{d:.4}}}", .{
             stats.network_active, stats.total_constants, stats.verify_passing, stats.verify_total, stats.formula_fits, stats.exact_fits, stats.total_supply, stats.circulating, stats.staked, stats.inflation_rate, stats.deflation_rate,
         });
 
         const top = try computeTopComputations(allocator);
         defer allocator.free(top);
-        try w.writeAll(",\"top_computations\":[");
+        try buf.appendSlice(allocator, ",\"top_computations\":[");
         for (top, 0..) |c, idx| {
-            if (idx > 0) try w.writeAll(",");
-            try std.fmt.format(w, "{{\"rank\":{d},\"formula\":\"{s}\",\"accuracy_pct\":{d:.4},\"reward_phi_power\":{d},\"reward_value\":{d:.4}}}", .{
+            if (idx > 0) try buf.appendSlice(allocator, ",");
+            try buf.print(allocator, "{{\"rank\":{d},\"formula\":\"{s}\",\"accuracy_pct\":{d:.4},\"reward_phi_power\":{d},\"reward_value\":{d:.4}}}", .{
                 c.rank, c.formula, c.accuracy_pct, c.reward_phi_power, c.reward_value,
             });
         }
-        try w.writeAll("]");
+        try buf.appendSlice(allocator, "]");
     } else if (std.mem.eql(u8, mode_str, "staking")) {
         const tiers = try computeStakingTiers(allocator);
         defer allocator.free(tiers);
-        try w.writeAll(",\"staking_tiers\":[");
+        try buf.appendSlice(allocator, ",\"staking_tiers\":[");
         for (tiers, 0..) |t, idx| {
-            if (idx > 0) try w.writeAll(",");
-            try std.fmt.format(w, "{{\"tier\":{d},\"stake_amount\":{d},\"multiplier\":{d:.4},\"annual_yield_pct\":{d:.2},\"lock_days\":{d}}}", .{
+            if (idx > 0) try buf.appendSlice(allocator, ",");
+            try buf.print(allocator, "{{\"tier\":{d},\"stake_amount\":{d},\"multiplier\":{d:.4},\"annual_yield_pct\":{d:.2},\"lock_days\":{d}}}", .{
                 t.tier, t.stake_amount, t.multiplier, t.annual_yield_pct, t.lock_days,
             });
         }
-        try w.writeAll("]");
+        try buf.appendSlice(allocator, "]");
     } else if (std.mem.eql(u8, mode_str, "proof")) {
         const tiers = try getAccuracyTiers(allocator);
         defer allocator.free(tiers);
-        try w.writeAll(",\"accuracy_tiers\":[");
+        try buf.appendSlice(allocator, ",\"accuracy_tiers\":[");
         for (tiers, 0..) |t, idx| {
-            if (idx > 0) try w.writeAll(",");
-            try std.fmt.format(w, "{{\"name\":\"{s}\",\"max_error_pct\":{d:.2},\"reward_multiplier\":{d:.4},\"label\":\"{s}\"}}", .{
+            if (idx > 0) try buf.appendSlice(allocator, ",");
+            try buf.print(allocator, "{{\"name\":\"{s}\",\"max_error_pct\":{d:.2},\"reward_multiplier\":{d:.4},\"label\":\"{s}\"}}", .{
                 t.name, t.max_error_pct, t.reward_multiplier, t.label,
             });
         }
-        try w.writeAll("]");
-        try w.writeAll(",\"difficulty_base\":27,\"difficulty_formula\":\"27^tier\"");
+        try buf.appendSlice(allocator, "]");
+        try buf.appendSlice(allocator, ",\"difficulty_base\":27,\"difficulty_formula\":\"27^tier\"");
     } else if (std.mem.eql(u8, mode_str, "tokenomics")) {
         const schedule = try computeTokenomicsSchedule(allocator, 12);
         defer allocator.free(schedule);
-        try w.writeAll(",\"tokenomics\":[");
+        try buf.appendSlice(allocator, ",\"tokenomics\":[");
         for (schedule, 0..) |e, idx| {
-            if (idx > 0) try w.writeAll(",");
-            try std.fmt.format(w, "{{\"epoch\":{d},\"supply\":{d:.0},\"inflation\":{d:.1},\"staked_pct\":{d:.1},\"burned\":{d:.1},\"net_change\":{d:.1}}}", .{
+            if (idx > 0) try buf.appendSlice(allocator, ",");
+            try buf.print(allocator, "{{\"epoch\":{d},\"supply\":{d:.0},\"inflation\":{d:.1},\"staked_pct\":{d:.1},\"burned\":{d:.1},\"net_change\":{d:.1}}}", .{
                 e.epoch, e.supply, e.inflation, e.staked_pct, e.burned, e.net_change,
             });
         }
-        try w.writeAll("]");
+        try buf.appendSlice(allocator, "]");
     } else if (std.mem.eql(u8, mode_str, "yield_farming")) {
         const pools = computeYieldFarming();
-        try w.writeAll(",\"yield_pools\":[");
+        try buf.appendSlice(allocator, ",\"yield_pools\":[");
         for (0..5) |idx| {
-            if (idx > 0) try w.writeAll(",");
+            if (idx > 0) try buf.appendSlice(allocator, ",");
             const p = pools[idx];
             const name_slice = p.name[0..p.name_len];
-            try std.fmt.format(w, "{{\"name\":\"{s}\",\"pair_constant\":{d:.6},\"tier\":{d},\"tvl\":{d:.2},\"apy_pct\":{d:.4},\"reward_per_epoch\":{d:.4},\"impermanent_loss_phi\":{d:.6}}}", .{
+            try buf.print(allocator, "{{\"name\":\"{s}\",\"pair_constant\":{d:.6},\"tier\":{d},\"tvl\":{d:.2},\"apy_pct\":{d:.4},\"reward_per_epoch\":{d:.4},\"impermanent_loss_phi\":{d:.6}}}", .{
                 name_slice, p.pair_constant, p.tier, p.tvl, p.apy_pct, p.reward_per_epoch, p.impermanent_loss_phi,
             });
         }
-        try w.writeAll("]");
+        try buf.appendSlice(allocator, "]");
     } else if (std.mem.eql(u8, mode_str, "oracle")) {
         const oracles = computeSacredOracles();
-        try w.writeAll(",\"sacred_oracles\":[");
+        try buf.appendSlice(allocator, ",\"sacred_oracles\":[");
         for (0..5) |idx| {
-            if (idx > 0) try w.writeAll(",");
+            if (idx > 0) try buf.appendSlice(allocator, ",");
             const o = oracles[idx];
             const cname_slice = o.constant_name[0..o.name_len];
-            try std.fmt.format(w, "{{\"constant_name\":\"{s}\",\"current_price_tri\":{d:.6},\"confidence_pct\":{d:.4},\"epochs_since_update\":{d},\"twap_24h\":{d:.6}}}", .{
+            try buf.print(allocator, "{{\"constant_name\":\"{s}\",\"current_price_tri\":{d:.6},\"confidence_pct\":{d:.4},\"epochs_since_update\":{d},\"twap_24h\":{d:.6}}}", .{
                 cname_slice, o.current_price_tri, o.confidence_pct, o.epochs_since_update, o.twap_24h,
             });
         }
-        try w.writeAll("]");
+        try buf.appendSlice(allocator, "]");
     } else if (std.mem.eql(u8, mode_str, "liquidity")) {
         const pools = computeLiquidityPools();
-        try w.writeAll(",\"liquidity_pools\":[");
+        try buf.appendSlice(allocator, ",\"liquidity_pools\":[");
         for (0..5) |idx| {
-            if (idx > 0) try w.writeAll(",");
+            if (idx > 0) try buf.appendSlice(allocator, ",");
             const lp = pools[idx];
-            try std.fmt.format(w, "{{\"pool_id\":{d},\"reserve_tri\":{d:.2},\"reserve_paired\":{d:.2},\"k_invariant\":{d:.2},\"fee_accumulated\":{d:.4},\"lp_token_supply\":{d:.4},\"phi_fee_boost\":{d:.6}}}", .{
+            try buf.print(allocator, "{{\"pool_id\":{d},\"reserve_tri\":{d:.2},\"reserve_paired\":{d:.2},\"k_invariant\":{d:.2},\"fee_accumulated\":{d:.4},\"lp_token_supply\":{d:.4},\"phi_fee_boost\":{d:.6}}}", .{
                 lp.pool_id, lp.reserve_tri, lp.reserve_paired, lp.k_invariant, lp.fee_accumulated, lp.lp_token_supply, lp.phi_fee_boost,
             });
         }
-        try w.writeAll("]");
+        try buf.appendSlice(allocator, "]");
     } else {
-        try w.writeAll(",\"modes\":[\"dashboard\",\"staking\",\"proof\",\"tokenomics\",\"yield_farming\",\"oracle\",\"liquidity\"]");
+        try buf.appendSlice(allocator, ",\"modes\":[\"dashboard\",\"staking\",\"proof\",\"tokenomics\",\"yield_farming\",\"oracle\",\"liquidity\"]");
     }
 
-    try w.writeAll("}");
+    try buf.appendSlice(allocator, "}");
     return buf.toOwnedSlice(allocator);
 }
 

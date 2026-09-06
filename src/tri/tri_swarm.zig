@@ -8,6 +8,9 @@
 // ============================================================================
 
 const std = @import("std");
+const tri_io = @import("tri_io");
+const tri_proc = @import("tri_proc");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const task_decomposer = @import("task_decomposer.zig");
 
@@ -189,7 +192,7 @@ fn runDecompose(allocator: Allocator, args: []const []const u8) !void {
         std.debug.print("  {s} Creating: [{s}] {s}...\n", .{ task.agent.emoji(), task.agent.name(), sub_title[0..@min(sub_title.len, 60)] });
 
         // Create the sub-issue via gh CLI
-        const result = std.process.Child.run(.{
+        const result = tri_proc.run(.{
             .allocator = allocator,
             .argv = &[_][]const u8{
                 "gh",            "issue",                "create",
@@ -207,13 +210,13 @@ fn runDecompose(allocator: Allocator, args: []const []const u8) !void {
         defer allocator.free(result.stderr);
 
         const exited_ok = switch (result.term) {
-            .Exited => |code| code == 0,
+            .exited => |code| code == 0,
             else => false,
         };
         if (exited_ok) {
             created += 1;
             // Extract issue URL from stdout
-            const url = std.mem.trimRight(u8, result.stdout, "\n\r ");
+            const url = std.mem.trimEnd(u8, result.stdout, "\n\r ");
             std.debug.print("    {s}✅ Created: {s}{s}\n", .{ GREEN, url, RESET });
         } else {
             std.debug.print("    {s}❌ Failed: {s}{s}\n", .{ RED, result.stderr[0..@min(result.stderr.len, 200)], RESET });
@@ -225,7 +228,7 @@ fn runDecompose(allocator: Allocator, args: []const []const u8) !void {
         var comment_buf: [1024]u8 = undefined;
         const comment = std.fmt.bufPrint(&comment_buf, "🐝 **Swarm Coordinator** decomposed this issue into {d} sub-tasks.\n\nAgents assigned: Scholar, Linter, Ralph, MU\nStatus: All queued.\n\n_φ² + 1/φ² = 3 — The Trinity decomposes._", .{created}) catch "🐝 Decomposition complete.";
 
-        const comment_result = std.process.Child.run(.{
+        const comment_result = tri_proc.run(.{
             .allocator = allocator,
             .argv = &[_][]const u8{ "gh", "issue", "comment", issue_num, "--body", comment },
             .max_output_bytes = 65536,
@@ -249,7 +252,7 @@ fn runStatus(allocator: Allocator) !void {
     std.debug.print("{s}═══════════════════════════════════════════════════{s}\n\n", .{ PURPLE, RESET });
 
     // Fetch issues with agent: labels
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &[_][]const u8{
             "gh",      "issue",                                                            "list",
@@ -267,7 +270,7 @@ fn runStatus(allocator: Allocator) !void {
 
     if (result.stdout.len == 0) {
         // Fallback: list all open issues with labels
-        const fallback = std.process.Child.run(.{
+        const fallback = tri_proc.run(.{
             .allocator = allocator,
             .argv = &[_][]const u8{
                 "gh",      "issue",  "list",
@@ -378,7 +381,7 @@ fn runAssign(allocator: Allocator, args: []const []const u8) !void {
     std.debug.print("  {s} Assigning #{s} to {s}...\n", .{ role.emoji(), issue_num, role.name() });
 
     // Add agent label
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &[_][]const u8{
             "gh",          "issue",      "edit",        issue_num,
@@ -393,7 +396,7 @@ fn runAssign(allocator: Allocator, args: []const []const u8) !void {
     defer allocator.free(result.stderr);
 
     if ((switch (result.term) {
-        .Exited => |code| code,
+        .exited => |code| code,
         else => @as(u32, 1),
     }) == 0) {
         std.debug.print("  {s}✅ #{s} assigned to {s} ({s}){s}\n", .{ GREEN, issue_num, role.name(), role.label(), RESET });
@@ -402,7 +405,7 @@ fn runAssign(allocator: Allocator, args: []const []const u8) !void {
         var comment_buf: [256]u8 = undefined;
         const comment = std.fmt.bufPrint(&comment_buf, "{s} **Assigned to {s}** | Status: queued\n_by 🐝 Swarm Coordinator_", .{ role.emoji(), role.name() }) catch "Assigned.";
 
-        const comment_result = std.process.Child.run(.{
+        const comment_result = tri_proc.run(.{
             .allocator = allocator,
             .argv = &[_][]const u8{ "gh", "issue", "comment", issue_num, "--body", comment },
             .max_output_bytes = 65536,
@@ -426,7 +429,7 @@ fn runMonitor(allocator: Allocator) !void {
     std.debug.print("{s}═══════════════════════════════════════════════════{s}\n\n", .{ PURPLE, RESET });
 
     // Find issues with "epic" label or issues that have sub-issues
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &[_][]const u8{
             "gh",      "issue",               "list",
@@ -462,20 +465,21 @@ fn runLog(allocator: Allocator) !void {
 
     // Read today's protocol file
     var date_buf: [32]u8 = undefined;
-    const timestamp = std.time.timestamp();
+    const timestamp = tri_time.timestamp();
     const epoch_day = @divFloor(timestamp, 86400);
     const date_str = std.fmt.bufPrint(&date_buf, ".trinity/protocol/{d}.jsonl", .{epoch_day}) catch {
         std.debug.print("  {s}No protocol log for today{s}\n\n", .{ GRAY, RESET });
         return;
     };
 
-    const file = std.fs.cwd().openFile(date_str, .{}) catch {
+    const io = tri_io.get();
+    const file = std.Io.Dir.cwd().openFile(io, date_str, .{}) catch {
         // No log file — show recent issue comments instead
         std.debug.print("  No protocol log file found.\n", .{});
         std.debug.print("  {s}Showing recent agent comments from GitHub...{s}\n\n", .{ GRAY, RESET });
 
         // List recent comments on agent-labeled issues
-        const result = std.process.Child.run(.{
+        const result = tri_proc.run(.{
             .allocator = allocator,
             .argv = &[_][]const u8{
                 "gh",                                              "issue",                        "list",
@@ -498,11 +502,15 @@ fn runLog(allocator: Allocator) !void {
         }
         return;
     };
-    defer file.close();
+    defer file.close(io);
 
-    // Read and display log entries
+    // Read and display log entries. readSliceShort fills the buffer and comes
+    // up short only at end of stream -- the same contract readAll had, and the
+    // reason readStreaming is not usable here.
     var buf: [4096]u8 = undefined;
-    const bytes_read = file.readAll(&buf) catch 0;
+    var scratch: [4096]u8 = undefined;
+    var fr = file.reader(io, &scratch);
+    const bytes_read = fr.interface.readSliceShort(&buf) catch 0;
     if (bytes_read > 0) {
         std.debug.print("{s}\n", .{buf[0..bytes_read]});
     } else {
@@ -524,7 +532,7 @@ fn runEscalate(allocator: Allocator, args: []const []const u8) !void {
     std.debug.print("\n  {s}⚠️  Escalating #{s}...{s}\n", .{ GOLDEN, issue_num, RESET });
 
     // Fetch the issue to find current agent
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &[_][]const u8{
             "gh",     "issue",  "view", issue_num,
@@ -544,7 +552,7 @@ fn runEscalate(allocator: Allocator, args: []const []const u8) !void {
     for (result.stdout, 0..) |c, i| {
         if (c == '\n' or i == result.stdout.len - 1) {
             const line = result.stdout[line_start..if (c == '\n') i else i + 1];
-            const trimmed = std.mem.trimRight(u8, line, "\r\n ");
+            const trimmed = std.mem.trimEnd(u8, line, "\r\n ");
             if (AgentRole.fromLabel(trimmed)) |role| {
                 current_agent = role;
             }
@@ -570,7 +578,7 @@ fn runEscalate(allocator: Allocator, args: []const []const u8) !void {
 
         // Remove old agent label, add new one
         if (current_agent) |ca| {
-            const remove_result = std.process.Child.run(.{
+            const remove_result = tri_proc.run(.{
                 .allocator = allocator,
                 .argv = &[_][]const u8{
                     "gh",             "issue",         "edit",        issue_num,
@@ -595,7 +603,7 @@ fn runEscalate(allocator: Allocator, args: []const []const u8) !void {
             next.name(),
         }) catch "⚠️ Escalated.";
 
-        const comment_result = std.process.Child.run(.{
+        const comment_result = tri_proc.run(.{
             .allocator = allocator,
             .argv = &[_][]const u8{ "gh", "issue", "comment", issue_num, "--body", comment },
             .max_output_bytes = 65536,
@@ -611,7 +619,7 @@ fn runEscalate(allocator: Allocator, args: []const []const u8) !void {
         std.debug.print("  {s}⚠️  No automated escalation available. Needs human review.{s}\n\n", .{ GOLDEN, RESET });
 
         // Comment for human
-        const human_result = std.process.Child.run(.{
+        const human_result = tri_proc.run(.{
             .allocator = allocator,
             .argv = &[_][]const u8{ "gh", "issue", "comment", issue_num, "--body", "⚠️ **Escalation**: Automated agents exhausted. **Human review required.**\n_by 🐝 Swarm Coordinator_" },
             .max_output_bytes = 65536,
@@ -630,7 +638,7 @@ fn runEscalate(allocator: Allocator, args: []const []const u8) !void {
 
 /// Fetch issue title via gh CLI
 fn ghGetIssueTitle(allocator: Allocator, issue_num: []const u8, buf: []u8) ![]const u8 {
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &[_][]const u8{
             "gh",     "issue", "view", issue_num,
@@ -642,11 +650,11 @@ fn ghGetIssueTitle(allocator: Allocator, issue_num: []const u8, buf: []u8) ![]co
     defer allocator.free(result.stderr);
 
     if ((switch (result.term) {
-        .Exited => |code| code,
+        .exited => |code| code,
         else => @as(u32, 1),
     }) != 0) return error.ProcessFailed;
 
-    const title = std.mem.trimRight(u8, result.stdout, "\n\r ");
+    const title = std.mem.trimEnd(u8, result.stdout, "\n\r ");
     const len = @min(title.len, buf.len);
     @memcpy(buf[0..len], title[0..len]);
     return buf[0..len];
@@ -706,7 +714,7 @@ fn runSync(allocator: Allocator) !void {
     std.debug.print("{s}═══════════════════════════════════════════════════{s}\n\n", .{ PURPLE, RESET });
 
     // Fetch open issues with agent: labels
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &[_][]const u8{
             "gh",      "issue",  "list",
@@ -722,7 +730,7 @@ fn runSync(allocator: Allocator) !void {
     defer allocator.free(result.stderr);
 
     const exited_ok = switch (result.term) {
-        .Exited => |code| code == 0,
+        .exited => |code| code == 0,
         else => false,
     };
     if (!exited_ok or result.stdout.len < 3) {
@@ -756,7 +764,7 @@ fn runSync(allocator: Allocator) !void {
     // Write updated swarm_state.json with real issue counts
     // Keep existing agents, update task list from GitHub
     var buf: [4096]u8 = undefined;
-    const now_ms = @as(u64, @intCast(std.time.milliTimestamp()));
+    const now_ms = @as(u64, @intCast(tri_time.milliTimestamp()));
     const state_json = std.fmt.bufPrint(&buf,
         \\{{"id_counter":{d},"agents":[
         \\{{"id":"ralph","hostname":"mac-local","status":"idle","paused":false,"task_id":"","branch":"main","hb_ms":{d},"reg_ms":{d},"tasks_done":0,"tasks_failed":0,"no_progress":0,"sha":""}},
@@ -771,12 +779,13 @@ fn runSync(allocator: Allocator) !void {
     };
 
     // Write to .trinity/swarm_state.json
-    const file = std.fs.cwd().createFile(".trinity/swarm_state.json", .{}) catch {
+    const io = tri_io.get();
+    const file = std.Io.Dir.cwd().createFile(io, ".trinity/swarm_state.json", .{}) catch {
         std.debug.print("  {s}Failed to write swarm_state.json{s}\n", .{ RED, RESET });
         return;
     };
-    defer file.close();
-    file.writeAll(state_json) catch {
+    defer file.close(io);
+    file.writeStreamingAll(io, state_json) catch {
         std.debug.print("  {s}Write failed{s}\n", .{ RED, RESET });
         return;
     };

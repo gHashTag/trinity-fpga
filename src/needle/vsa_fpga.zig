@@ -21,6 +21,8 @@
 
 const std = @import("std");
 
+const tri_io = @import("tri_io");
+const tri_time = @import("tri_time");
 // ═══════════════════════════════════════════════════════════════════════════════
 // CONSTANTS
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -250,7 +252,7 @@ pub const FPGADevice = struct {
     /// Try to open FPGA device (tries multiple paths)
     pub fn open(allocator: std.mem.Allocator) !FPGADevice {
         for (DEFAULT_DEVICES) |path| {
-            if (std.fs.openFileAbsolute(path, .{ .mode = .read_write })) |file| {
+            if (std.Io.Dir.openFileAbsolute(tri_io.get(), path, .{ .mode = .read_write })) |file| {
                 const fd = file.handle;
                 // Keep file open, will be closed by FPGADevice.close()
                 std.log.info("VSA FPGA: Opened device {s}", .{path});
@@ -432,7 +434,7 @@ pub const FPGADevice = struct {
             vec_b.setTrit(i * 2, if (i % 3 == 0) .pos else .zero);
         }
 
-        var timer = try std.time.Timer.start();
+        var timer = try tri_time.Timer.start();
         var total_ns: u64 = 0;
 
         var i: usize = 0;
@@ -464,11 +466,11 @@ pub const FPGADevice = struct {
 
     /// Read with timeout (millisecond precision)
     fn readTimeout(self: *FPGADevice, buffer: []u8, timeout_ms: u64) !usize {
-        const deadline = std.time.nanoTimestamp() + (timeout_ms * 1_000_000);
+        const deadline = tri_time.nanoTimestamp() + (timeout_ms * 1_000_000);
 
         var total_read: usize = 0;
         while (total_read < buffer.len) {
-            const remaining = std.time.nanoTimestamp() - deadline;
+            const remaining = tri_time.nanoTimestamp() - deadline;
             if (remaining >= 0) return error.Timeout;
 
             // Use poll for timeout (if available) or sleep + retry

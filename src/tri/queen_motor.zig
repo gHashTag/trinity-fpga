@@ -7,6 +7,9 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
+const tri_proc = @import("tri_proc");
+const tri_time = @import("tri_time");
 const qt = @import("queen_types.zig");
 const queen_premotor = @import("queen_premotor.zig");
 
@@ -133,9 +136,9 @@ pub const MotorExecutor = struct {
             self.allocator.free(argv);
         }
 
-        const start = std.time.milliTimestamp();
+        const start = tri_time.milliTimestamp();
 
-        const result = std.process.Child.run(.{
+        const result = tri_proc.run(.{
             .allocator = self.allocator,
             .argv = argv,
             .max_output_bytes = 2 * 1024 * 1024,
@@ -149,8 +152,8 @@ pub const MotorExecutor = struct {
             self.allocator.free(result.stderr);
         }
 
-        const duration = std.time.milliTimestamp() - start;
-        const success = result.term == .Exited and result.term.Exited == 0;
+        const duration = tri_time.milliTimestamp() - start;
+        const success = result.term == .exited and result.term.exited == 0;
 
         // Check if command produced output
         const has_output = result.stdout.len > 0 or result.stderr.len > 0;
@@ -181,7 +184,7 @@ pub const MotorExecutor = struct {
 
     /// Check if `zig build` succeeds
     fn checkBuildOk(self: *MotorExecutor) !bool {
-        const result = try std.process.Child.run(.{
+        const result = try tri_proc.run(.{
             .allocator = self.allocator,
             .argv = &[_][]const u8{ "zig", "build" },
             .max_output_bytes = 64 * 1024,
@@ -190,12 +193,12 @@ pub const MotorExecutor = struct {
             self.allocator.free(result.stdout);
             self.allocator.free(result.stderr);
         }
-        return result.term == .Exited and result.term.Exited == 0;
+        return result.term == .exited and result.term.exited == 0;
     }
 
     /// Check if `zig build test` succeeds
     fn checkTestsPass(self: *MotorExecutor) !bool {
-        const result = try std.process.Child.run(.{
+        const result = try tri_proc.run(.{
             .allocator = self.allocator,
             .argv = &[_][]const u8{ "zig", "build", "test" },
             .max_output_bytes = 64 * 1024,
@@ -204,12 +207,12 @@ pub const MotorExecutor = struct {
             self.allocator.free(result.stdout);
             self.allocator.free(result.stderr);
         }
-        return result.term == .Exited and result.term.Exited == 0;
+        return result.term == .exited and result.term.exited == 0;
     }
 
     /// Count idle farm services by running `tri farm list`
     fn checkFarmIdleCount(self: *MotorExecutor) !u8 {
-        const result = std.process.Child.run(.{
+        const result = tri_proc.run(.{
             .allocator = self.allocator,
             .argv = &[_][]const u8{ "tri", "farm", "list" },
             .max_output_bytes = 128 * 1024,
@@ -241,7 +244,7 @@ pub const MotorExecutor = struct {
 
     /// Check if arena service is running via `tri arena status`
     fn checkArenaExists(self: *MotorExecutor) !bool {
-        const result = std.process.Child.run(.{
+        const result = tri_proc.run(.{
             .allocator = self.allocator,
             .argv = &[_][]const u8{ "tri", "arena", "status" },
             .max_output_bytes = 64 * 1024,
@@ -251,7 +254,7 @@ pub const MotorExecutor = struct {
             self.allocator.free(result.stderr);
         }
 
-        const success = result.term == .Exited and result.term.Exited == 0;
+        const success = result.term == .exited and result.term.exited == 0;
         const has_output = result.stdout.len > 0;
 
         return success and has_output;
@@ -261,7 +264,7 @@ pub const MotorExecutor = struct {
 
     /// Get ouroboros score from `tri ouroboros status`
     fn checkOuroborosScore(self: *MotorExecutor) !f32 {
-        const result = std.process.Child.run(.{
+        const result = tri_proc.run(.{
             .allocator = self.allocator,
             .argv = &[_][]const u8{ "tri", "ouroboros", "status" },
             .max_output_bytes = 64 * 1024,
@@ -287,7 +290,7 @@ pub const MotorExecutor = struct {
 
     /// Get dirty files count from `tri git status`
     fn checkDirtyFiles(self: *MotorExecutor) !u16 {
-        const result = std.process.Child.run(.{
+        const result = tri_proc.run(.{
             .allocator = self.allocator,
             .argv = &[_][]const u8{ "tri", "git", "status" },
             .max_output_bytes = 64 * 1024,
@@ -311,7 +314,7 @@ pub const MotorExecutor = struct {
 
     /// Get best PPL from farm status
     fn checkFarmBestPpl(self: *MotorExecutor) !f32 {
-        const result = std.process.Child.run(.{
+        const result = tri_proc.run(.{
             .allocator = self.allocator,
             .argv = &[_][]const u8{ "tri", "farm", "status" },
             .max_output_bytes = 64 * 1024,
@@ -339,12 +342,8 @@ pub const MotorExecutor = struct {
     fn checkStaleArenaHours(self: *MotorExecutor) !u16 {
         _ = self;
         // Check arena status file for last battle time
-        const arena_file = std.fs.cwd().openFile(".trinity/arena_status.json", .{}) catch return 0;
-        defer arena_file.close();
-
         var buf: [2048]u8 = undefined;
-        const n = arena_file.read(&buf) catch return 0;
-        const data = buf[0..n];
+        const data = std.Io.Dir.cwd().readFile(tri_io.get(), ".trinity/arena_status.json", &buf) catch return 0;
 
         // Parse last_battle_ts from JSON
         if (std.mem.indexOf(u8, data, "\"last_battle_ts\":")) |idx| {
@@ -354,7 +353,7 @@ pub const MotorExecutor = struct {
             const ts_str = std.mem.trim(u8, after_colon[0..ts_end2], &std.ascii.whitespace);
             const last_ts = std.fmt.parseInt(i64, ts_str, 10) catch return 0;
 
-            const now = std.time.timestamp();
+            const now = tri_time.timestamp();
             const hours_ago = @as(u16, @intCast(@divTrunc(now - last_ts, 3600)));
             return hours_ago;
         }
@@ -403,7 +402,7 @@ pub const MotorExecutor = struct {
 
             // Apply delay if specified
             if (step.delay_ms > 0) {
-                std.Thread.sleep(step.delay_ms * std.time.ns_per_ms);
+                tri_time.sleep(step.delay_ms * std.time.ns_per_ms);
             }
 
             // Execute the action

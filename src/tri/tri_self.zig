@@ -17,6 +17,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_proc = @import("tri_proc");
 const Allocator = std.mem.Allocator;
 const tri_doctor = @import("leukocyte.zig");
 const toxic_verdict = @import("pathology.zig");
@@ -152,7 +153,7 @@ fn runSelfTest(allocator: Allocator, args: []const []const u8) !void {
 fn runChildGate(name: []const u8, argv: []const []const u8, allocator: Allocator) Gate {
     var gate = Gate{ .name = name };
 
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = argv,
         .max_output_bytes = 128 * 1024,
@@ -166,7 +167,7 @@ fn runChildGate(name: []const u8, argv: []const []const u8, allocator: Allocator
     defer allocator.free(result.stderr);
 
     const code: u8 = switch (result.term) {
-        .Exited => |c| c,
+        .exited => |c| c,
         else => 1,
     };
 

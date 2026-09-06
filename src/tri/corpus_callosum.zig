@@ -9,6 +9,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const qt = @import("queen_types.zig");
 
@@ -27,7 +28,7 @@ pub const Synapse = struct {
             .from = from_mod,
             .to = to_mod,
             .signal = sig,
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
         };
     }
 };
@@ -138,7 +139,7 @@ pub const CommBus = struct {
         }
 
         self.signals = try new_signals.toOwnedSlice(allocator);
-        self.last_broadcast = std.time.timestamp();
+        self.last_broadcast = tri_time.timestamp();
     }
 
     /// Get signals for a specific module (filters by target)
@@ -181,7 +182,7 @@ pub const BridgeState = struct {
     sync_count: u32 = 0,
 
     pub fn needsSync(self: *const BridgeState) bool {
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
         const age_sec = now - self.last_sync;
         return age_sec > 60; // Sync every minute
     }
@@ -199,7 +200,7 @@ pub fn syncBridge(
     bus: *CommBus,
     state: *BridgeState,
 ) !void {
-    state.last_sync = std.time.timestamp();
+    state.last_sync = tri_time.timestamp();
     state.sync_count += 1;
 
     // Broadcast sync signal
@@ -226,7 +227,7 @@ pub fn health() CellHealth {
     return CellHealth{
         .status = .healthy,
         .cycle = 0,
-        .last_check = std.time.timestamp(),
+        .last_check = tri_time.timestamp(),
     };
 }
 
@@ -287,11 +288,11 @@ test "corpus_callosum — Signal isAlert" {
 
 test "corpus_callosum — BridgeState needsSync" {
     var state = BridgeState{
-        .last_sync = std.time.timestamp() - 120, // 2 min ago
+        .last_sync = tri_time.timestamp() - 120, // 2 min ago
     };
     try std.testing.expect(state.needsSync());
 
-    state.last_sync = std.time.timestamp(); // Just synced
+    state.last_sync = tri_time.timestamp(); // Just synced
     try std.testing.expect(!state.needsSync());
 }
 
@@ -324,12 +325,12 @@ test "corpus_callosum — Signal urgency levels" {
 }
 
 test "corpus_callosum — Synapse captures timestamp" {
-    const before = std.time.timestamp();
+    const before = tri_time.timestamp();
     const syn = Synapse.init(.queen_dlpfc, .hippocampus, .{
         .kind = .heartbeat,
         .data = "test",
     });
-    const after = std.time.timestamp();
+    const after = tri_time.timestamp();
 
     try std.testing.expect(syn.timestamp >= before);
     try std.testing.expect(syn.timestamp <= after);
@@ -485,7 +486,7 @@ test "corpus_callosum — CommBus getSignals filters by target" {
 
 test "corpus_callosum — BridgeState sync threshold" {
     const state = BridgeState{
-        .last_sync = std.time.timestamp() - 59, // 59 seconds ago
+        .last_sync = tri_time.timestamp() - 59, // 59 seconds ago
     };
 
     try std.testing.expect(!state.needsSync()); // < 60 seconds
@@ -757,7 +758,7 @@ test "corpus_callosum — CommBus multiple broadcasts" {
 
 test "corpus_callosum — BridgeState needsSync at exact threshold" {
     const state = BridgeState{
-        .last_sync = std.time.timestamp() - 60, // Exactly 60 seconds
+        .last_sync = tri_time.timestamp() - 60, // Exactly 60 seconds
     };
 
     try std.testing.expect(state.needsSync()); // >= 60 seconds
@@ -765,7 +766,7 @@ test "corpus_callosum — BridgeState needsSync at exact threshold" {
 
 test "corpus_callosum — BridgeState needsSync just before threshold" {
     const state = BridgeState{
-        .last_sync = std.time.timestamp() - 61, // 61 seconds ago
+        .last_sync = tri_time.timestamp() - 61, // 61 seconds ago
     };
 
     try std.testing.expect(state.needsSync());
@@ -848,7 +849,7 @@ test "corpus_callosum — CellHealth from health function has timestamp" {
     const h = health();
 
     try std.testing.expect(h.last_check != 0);
-    try std.testing.expect(h.last_check <= std.time.timestamp());
+    try std.testing.expect(h.last_check <= tri_time.timestamp());
 }
 
 test "corpus_callosum — CellHealth zero timestamp valid" {

@@ -1,5 +1,7 @@
 const std = @import("std");
 
+const tri_io = @import("tri_io");
+const tri_env = @import("tri_env");
 // ============================================================================
 // GROK PROVIDER - THE SOVEREIGN SPIRIT
 // ============================================================================
@@ -13,7 +15,7 @@ pub const GrokProvider = struct {
 
     pub fn init(allocator: std.mem.Allocator) GrokProvider {
         // Read API key from environment variable for security
-        const api_key = std.process.getEnvVarOwned(allocator, "XAI_API_KEY") catch
+        const api_key = tri_env.getEnvVarOwned(allocator, "XAI_API_KEY") catch
             allocator.dupe(u8, "YOUR_XAI_API_KEY_HERE") catch "";
         return GrokProvider{
             .allocator = allocator,
@@ -25,7 +27,7 @@ pub const GrokProvider = struct {
     /// Generate code using Grok API via curl subprocess
     pub fn generate(self: *GrokProvider, system_prompt: []const u8, user_prompt: []const u8) ![]const u8 {
         // Build JSON body
-        var json_body = std.ArrayListUnmanaged(u8){};
+        var json_body = @as(std.ArrayListUnmanaged(u8), .empty);
         defer json_body.deinit(self.allocator);
 
         try json_body.appendSlice(self.allocator, "{\"messages\":[{\"role\":\"system\",\"content\":\"");
@@ -37,7 +39,7 @@ pub const GrokProvider = struct {
         try json_body.appendSlice(self.allocator, "\",\"stream\":false,\"temperature\":0}");
 
         // Build curl command
-        var auth_header = std.ArrayListUnmanaged(u8){};
+        var auth_header = @as(std.ArrayListUnmanaged(u8), .empty);
         defer auth_header.deinit(self.allocator);
         try auth_header.appendSlice(self.allocator, "Authorization: Bearer ");
         try auth_header.appendSlice(self.allocator, self.api_key);
@@ -50,13 +52,12 @@ pub const GrokProvider = struct {
             "@-", // Read from stdin
         };
 
-        var child = std.process.Child.init(&argv, self.allocator);
-        child.stdout_behavior = .Pipe;
-        child.stderr_behavior = .Pipe;
+        var child = try std.process.spawn(tri_io.get(), .{
+            .argv = &argv,
+            .stdout = .pipe,
+            .stderr = .pipe,
+        });
         child.stdin_behavior = .Pipe;
-
-        try child.spawn();
-
         // Write JSON to stdin
         if (child.stdin) |*stdin| {
             try stdin.writeAll(json_body.items);
@@ -65,17 +66,17 @@ pub const GrokProvider = struct {
         }
 
         // Collect output
-        var stdout_list = std.ArrayListUnmanaged(u8){};
+        var stdout_list = @as(std.ArrayListUnmanaged(u8), .empty);
         defer stdout_list.deinit(self.allocator);
-        var stderr_list = std.ArrayListUnmanaged(u8){};
+        var stderr_list = @as(std.ArrayListUnmanaged(u8), .empty);
         defer stderr_list.deinit(self.allocator);
 
         try child.collectOutput(self.allocator, &stdout_list, &stderr_list, 10 * 1024 * 1024);
 
-        const term = try child.wait();
+        const term = try child.wait(tri_io.get());
 
         switch (term) {
-            .Exited => |code| {
+            .exited => |code| {
                 if (code != 0) {
                     std.debug.print("❌ [GROK] curl failed with code {d}\n", .{code});
                     return error.GrokRequestFailed;
@@ -122,7 +123,7 @@ pub const GrokProvider = struct {
         const content_start = start_idx + marker.len;
 
         // Parse the string value
-        var result = std.ArrayListUnmanaged(u8){};
+        var result = @as(std.ArrayListUnmanaged(u8), .empty);
         var i = content_start;
         var escaped = false;
 
@@ -170,7 +171,7 @@ pub const GrokProvider = struct {
 
     /// Generate Zig code with system prompt
     pub fn generateZigCode(self: *GrokProvider, user_prompt: []const u8, penance: ?[]const u8) ![]const u8 {
-        var system_prompt = std.ArrayListUnmanaged(u8){};
+        var system_prompt = @as(std.ArrayListUnmanaged(u8), .empty);
         defer system_prompt.deinit(self.allocator);
 
         try system_prompt.appendSlice(self.allocator, "You are a Zig code generator. Generate ONLY valid Zig code, no explanations.\n" ++

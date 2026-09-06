@@ -21,6 +21,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const model_mod = @import("gguf_model.zig");
 const tokenizer_mod = @import("gguf_tokenizer.zig");
 const inference = @import("gguf_inference.zig");
@@ -174,7 +175,7 @@ pub const IglaLocalSWE = struct {
         errdefer model.deinit();
 
         // Load weights
-        var timer = try std.time.Timer.start();
+        var timer = try tri_time.Timer.start();
         try model.loadWeights();
         const load_time = timer.read();
         std.debug.print("Model loaded in {d:.2}s\n", .{@as(f64, @floatFromInt(load_time)) / 1e9});
@@ -194,7 +195,7 @@ pub const IglaLocalSWE = struct {
 
     /// Main entry: Execute SWE task
     pub fn execute(self: *Self, request: SWERequest) !SWEResult {
-        const start = std.time.milliTimestamp();
+        const start = tri_time.milliTimestamp();
 
         // Ensure model is loaded
         if (!self.model_loaded) {
@@ -214,7 +215,7 @@ pub const IglaLocalSWE = struct {
         const code = try self.extractCode(response, request.language);
         const explanation = try self.extractExplanation(response);
 
-        const elapsed = @as(u64, @intCast(std.time.milliTimestamp() - start));
+        const elapsed = @as(u64, @intCast(tri_time.milliTimestamp() - start));
         self.total_time_ms += elapsed;
         self.total_tokens += response.len;
 

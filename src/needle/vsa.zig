@@ -9,6 +9,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 // Import from main VSA module (src/vsa.zig) via module system
 const trinity_vsa = @import("vsa");
 const zig_parser = @import("zig_parser.zig");
@@ -535,10 +536,11 @@ pub fn unbindVSA(bound: *HybridBigInt, key: *HybridBigInt) HybridBigInt {
 /// Bundle multiple vectors (majority vote) - uses HybridBigInt
 pub fn bundleVSA(vectors: []const *HybridBigInt) !HybridBigInt {
     // Convert slice to pointers slice for bundleN
-    var pointers = std.ArrayList(*HybridBigInt).init(std.heap.page_allocator);
-    defer pointers.deinit();
+    const gpa = std.heap.page_allocator;
+    var pointers: std.ArrayList(*HybridBigInt) = .empty;
+    defer pointers.deinit(gpa);
     for (vectors) |v| {
-        try pointers.append(v);
+        try pointers.append(gpa, v);
     }
     return trinity_vsa.bundleN(pointers.items);
 }
@@ -727,7 +729,7 @@ pub fn clearSemanticCache() void {
     }
 
     // Tier 4.2: Also remove persistent cache file
-    std.fs.cwd().deleteFile(IVF_CACHE_PATH) catch |err| {
+    std.Io.Dir.cwd().deleteFile(tri_io.get(), IVF_CACHE_PATH) catch |err| {
         std.log.debug("vsa: cleanup IVF cache file: {}", .{err});
     };
 }

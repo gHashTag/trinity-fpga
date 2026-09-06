@@ -2,6 +2,7 @@
 // ══════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 
 const tri27_exp = @import("tri27_experience.zig");
@@ -58,7 +59,7 @@ pub fn saveTri27Episode(
 
     // Create event and record via tri27_experience
     var event = tri27_exp.Tri27Event{
-        .timestamp = std.time.timestamp(),
+        .timestamp = tri_time.timestamp(),
         .operation = switch (kind) {
             .assemble => .assemble,
             .disassemble => .disassemble,

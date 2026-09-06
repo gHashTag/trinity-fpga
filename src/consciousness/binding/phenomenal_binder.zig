@@ -29,7 +29,7 @@ pub const UNITY_THRESHOLD: f64 = 0.7;
 /// Modality Cluster
 pub const ModalityCluster = struct {
     allocator: mem.Allocator,
-    modalities: std.ArrayListUnmanaged([]const u8) = .{},
+    modalities: std.ArrayListUnmanaged([]const u8) = .empty,
     binding_within: f64 = 0.0,
     binding_between: f64 = 0.0,
     cluster_coherence: f64 = 0.0,

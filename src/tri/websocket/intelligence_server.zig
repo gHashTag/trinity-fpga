@@ -4,6 +4,8 @@
 //! patches, gematria calculations, and evolution progress.
 
 const std = @import("std");
+const tri_mutex = @import("tri_mutex");
+const tri_time = @import("tri_time");
 const net = std.net;
 const Thread = std.Thread;
 const Allocator = std.mem.Allocator;
@@ -131,7 +133,7 @@ pub const MultiLanguageGematria = struct {
 
     /// Serialize gematria to JSON
     pub fn toJson(gem: MultiLanguageGematria, allocator: Allocator) ![]u8 {
-        var buffer = std.ArrayList(u8){};
+        var buffer = @as(std.ArrayList(u8), .empty);
         defer buffer.deinit(allocator);
 
         try buffer.appendSlice(allocator, "{\"input\":\"");
@@ -202,7 +204,7 @@ pub const WSClient = struct {
     address: net.Address,
     connected: bool,
 
-    mutex: std.Thread.Mutex,
+    mutex: tri_mutex.Mutex,
 
     pub fn init(allocator: Allocator, stream: net.Stream) !WSClient {
         return .{
@@ -210,7 +212,7 @@ pub const WSClient = struct {
             .stream = stream,
             .address = try stream.address,
             .connected = true,
-            .mutex = std.Thread.Mutex{},
+            .mutex = tri_mutex.Mutex{},
         };
     }
 
@@ -222,7 +224,7 @@ pub const WSClient = struct {
         if (!client.connected) return error.Disconnected;
 
         // Create WebSocket frame
-        var frame = std.ArrayList(u8){};
+        var frame = @as(std.ArrayList(u8), .empty);
         defer frame.deinit(client.allocator);
 
         // FIN + text frame
@@ -281,7 +283,7 @@ pub const WSServer = struct {
     server: ?net.Server,
     clients: std.ArrayList(*WSClient),
     metrics: SacredMetrics,
-    mutex: std.Thread.Mutex,
+    mutex: tri_mutex.Mutex,
     listener_thread: ?Thread,
 
     /// Initialize WebSocket server
@@ -292,9 +294,9 @@ pub const WSServer = struct {
             .port = port,
             .running = false,
             .server = null,
-            .clients = std.ArrayList(*WSClient){},
+            .clients = @as(std.ArrayList(*WSClient), .empty),
             .metrics = SacredMetrics{},
-            .mutex = std.Thread.Mutex{},
+            .mutex = tri_mutex.Mutex{},
             .listener_thread = null,
         };
     }
@@ -534,7 +536,7 @@ pub const WSServer = struct {
 
         const msg = WSMessage{
             .type = .METRICS,
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
             .data = data,
         };
 
@@ -558,7 +560,7 @@ pub const WSServer = struct {
 
         const msg = WSMessage{
             .type = .PATCH,
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
             .data = data,
         };
 
@@ -582,7 +584,7 @@ pub const WSServer = struct {
 
         const msg = WSMessage{
             .type = .GEMATRIA,
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
             .data = data,
         };
 
@@ -606,7 +608,7 @@ pub const WSServer = struct {
 
         const msg = WSMessage{
             .type = .EVOLUTION,
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
             .data = data,
         };
 

@@ -146,7 +146,7 @@ pub const Worldline = struct {
     /// Initialize worldline
     pub fn init(allocator: mem.Allocator) Worldline {
         return Worldline{
-            .points = .{},
+            .points = .empty,
             .allocator = allocator,
         };
     }

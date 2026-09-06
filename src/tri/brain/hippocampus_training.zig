@@ -16,6 +16,8 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const thalamus_logs = @import("thalamus_logs.zig");
 const contracts = @import("contracts.zig");
@@ -36,7 +38,7 @@ pub const CachedWorkerStatus = struct {
     cached: bool = true, // Flag indicating this is cache, NOT live truth
 
     pub fn ageSec(self: *const CachedWorkerStatus) i64 {
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
         return now - self.last_updated;
     }
 
@@ -76,7 +78,7 @@ pub const PopulationCache = struct {
 
     /// Update or add worker in cache (optimized: avoids key allocation on update)
     pub fn updateWorker(self: *Self, allocator: Allocator, service_name: []const u8, status: LiveStatus, step: u32, ppl: f32) !void {
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
 
         // First try get existing entry to avoid allocation
         if (self.workers.getEntry(service_name)) |entry| {
@@ -121,10 +123,10 @@ pub const PopulationCache = struct {
 
     /// Get all worker keys in cache (fixed: uses passed allocator, not page_allocator)
     pub fn listWorkers(self: *const Self, allocator: Allocator) !std.ArrayList([]const u8) {
-        var list = std.ArrayList([]const u8).init(allocator);
+        var list: std.ArrayList([]const u8) = .empty;
         var iter = self.workers.iterator();
         while (iter.next()) |entry| {
-            try list.append(allocator.dupe(u8, entry.key_ptr.*) catch |err| {
+            try list.append(allocator, allocator.dupe(u8, entry.key_ptr.*) catch |err| {
                 // On error, clean up what we've allocated
                 for (list.items) |k| allocator.free(k);
                 return err;
@@ -152,7 +154,7 @@ pub const PopulationCache = struct {
 
     /// Check if refresh is needed
     pub fn needsRefresh(self: *const Self) bool {
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
         return (now - self.last_refresh) > self.refresh_interval_sec;
     }
 };
@@ -187,7 +189,7 @@ pub const Hippocampus = struct {
 
     /// Refresh cache from Thalamus (expensive Railway API call!)
     pub fn refreshFromThalamus(self: *Self, thalamus: *const thalamus_logs.Thalamus) !void {
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
 
         // Get all sacred workers live state
         var live_states = try thalamus.getSacredWorkersLive();
@@ -246,7 +248,7 @@ pub const Hippocampus = struct {
 
     /// Get all cached workers
     pub fn getAllCachedWorkers(self: *const Self) !std.ArrayList(CachedWorkerStatus) {
-        var results = std.ArrayList(CachedWorkerStatus).init(self.allocator);
+        var results: std.ArrayList(CachedWorkerStatus) = .empty;
 
         var iter = self.cache.workers.iterator();
         while (iter.next()) |entry| {
@@ -258,7 +260,7 @@ pub const Hippocampus = struct {
 
     /// Get workers that are stale (older than max_age_sec)
     pub fn getStaleWorkers(self: *const Self, max_age_sec: i64) !std.ArrayList(CachedWorkerStatus) {
-        var results = std.ArrayList(CachedWorkerStatus).init(self.allocator);
+        var results: std.ArrayList(CachedWorkerStatus) = .empty;
 
         var iter = self.cache.workers.iterator();
         while (iter.next()) |entry| {
@@ -320,9 +322,10 @@ pub const Hippocampus = struct {
             root.deinit(self.allocator);
         }
 
-        const file = try std.fs.cwd().createFile(self.file_path, .{});
-        defer file.close();
-        try file.writeAll(json_str);
+        const io = tri_io.get();
+        const file = try std.Io.Dir.cwd().createFile(io, self.file_path, .{});
+        defer file.close(io);
+        try file.writeStreamingAll(io, json_str);
     }
 
     /// Force refresh of cache (ignores refresh interval)
@@ -332,7 +335,7 @@ pub const Hippocampus = struct {
 
     /// Get cache age in seconds
     pub fn getCacheAge(self: *const Self) i64 {
-        return std.time.timestamp() - self.cache.last_refresh;
+        return tri_time.timestamp() - self.cache.last_refresh;
     }
 
     /// Check if worker exists in cache
@@ -346,10 +349,12 @@ pub const Hippocampus = struct {
 // ═══════════════════════════════════════════════════════════════════════════
 
 fn loadCacheFromFile(allocator: Allocator, cache: *PopulationCache) !void {
-    const file = std.fs.cwd().openFile(".trinity/evolution_state.json", .{}) catch return;
-    defer file.close();
-
-    const content = try file.readToEndAlloc(allocator, 65536);
+    const content = std.Io.Dir.cwd().readFileAlloc(
+        tri_io.get(),
+        ".trinity/evolution_state.json",
+        allocator,
+        .limited(65536),
+    ) catch return;
     defer allocator.free(content);
 
     const parsed = try std.json.parseFromSlice(allocator, content);
@@ -413,7 +418,7 @@ test "hippocampus_stale_detection" {
     defer cache.deinit(allocator);
 
     // Simulate old entry (100 seconds ago)
-    _ = std.time.timestamp() - 100; // Would be used to set last_updated timestamp
+    _ = tri_time.timestamp() - 100; // Would be used to set last_updated timestamp
     try cache.updateWorker(allocator, "old-worker", .training, 500, 5.0);
 
     // Hack the last_updated timestamp
@@ -553,7 +558,7 @@ test "hippocampus_needs_refresh" {
     try std.testing.expect(cache.needsRefresh());
 
     // Set last_refresh to now
-    cache.last_refresh = std.time.timestamp();
+    cache.last_refresh = tri_time.timestamp();
 
     // Should not need refresh immediately
     try std.testing.expect(!cache.needsRefresh());
@@ -600,12 +605,12 @@ test "hippocampus_custom_refresh_interval" {
     defer cache.deinit(allocator);
 
     cache.refresh_interval_sec = 60; // 1 minute
-    cache.last_refresh = std.time.timestamp();
+    cache.last_refresh = tri_time.timestamp();
 
     try std.testing.expect(!cache.needsRefresh());
 
     // Simulate time passing (by setting last_refresh to past)
-    cache.last_refresh = std.time.timestamp() - 61;
+    cache.last_refresh = tri_time.timestamp() - 61;
 
     try std.testing.expect(cache.needsRefresh());
 }

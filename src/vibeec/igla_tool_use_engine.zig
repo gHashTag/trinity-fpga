@@ -12,6 +12,8 @@
 // =============================================================================
 
 const std = @import("std");
+const tri_io = @import("tri_io");
+const tri_time = @import("tri_time");
 const personality = @import("igla_personality_engine.zig");
 const learning = @import("igla_learning_engine.zig");
 const multilingual = @import("igla_multilingual_coder.zig");
@@ -399,7 +401,7 @@ pub const ToolExecutor = struct {
 
     /// Execute a tool call and return result
     pub fn execute(self: *Self, call: *const ToolCall) ToolResult {
-        const start = std.time.nanoTimestamp();
+        const start = tri_time.nanoTimestamp();
         self.total_executions += 1;
 
         const result = switch (call.tool_type) {
@@ -412,7 +414,7 @@ pub const ToolExecutor = struct {
             .WebFetch => self.executeWebFetch(call),
         };
 
-        const elapsed = std.time.nanoTimestamp() - start;
+        const elapsed = tri_time.nanoTimestamp() - start;
 
         if (result.success) {
             self.successful_executions += 1;
@@ -626,12 +628,13 @@ pub const ToolUseResponse = struct {
 // =============================================================================
 
 pub fn runBenchmark() !void {
-    const stdout = std.fs.File.stdout();
+    const io = tri_io.get();
+    const stdout = std.Io.File.stdout();
 
-    _ = try stdout.write("\n");
-    _ = try stdout.write("===============================================================================\n");
-    _ = try stdout.write("     IGLA TOOL USE ENGINE BENCHMARK (CYCLE 11)                                \n");
-    _ = try stdout.write("===============================================================================\n");
+    try stdout.writeStreamingAll(io, "\n");
+    try stdout.writeStreamingAll(io, "===============================================================================\n");
+    try stdout.writeStreamingAll(io, "     IGLA TOOL USE ENGINE BENCHMARK (CYCLE 11)                                \n");
+    try stdout.writeStreamingAll(io, "===============================================================================\n");
 
     var engine = ToolUseEngine.init();
 
@@ -677,7 +680,7 @@ pub fn runBenchmark() !void {
     var successful_tools: usize = 0;
     var high_confidence: usize = 0;
 
-    const start = std.time.nanoTimestamp();
+    const start = tri_time.nanoTimestamp();
 
     for (session) |s| {
         const response = engine.respond(s.query);
@@ -697,51 +700,51 @@ pub fn runBenchmark() !void {
         engine.recordFeedback(s.feedback);
     }
 
-    const elapsed_ns = std.time.nanoTimestamp() - start;
+    const elapsed_ns = tri_time.nanoTimestamp() - start;
     const ops_per_sec = @as(f64, @floatFromInt(session.len)) / (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
 
     const stats = engine.getStats();
     const tool_rate = @as(f32, @floatFromInt(tool_invocations)) / @as(f32, @floatFromInt(session.len));
     const improvement_rate = (stats.tool_success_rate + tool_rate + 0.5) / 2.0;
 
-    _ = try stdout.write("\n");
+    try stdout.writeStreamingAll(io, "\n");
 
     var buf: [256]u8 = undefined;
 
     var len = std.fmt.bufPrint(&buf, "  Total queries: {d}\n", .{session.len}) catch return;
-    _ = try stdout.write(len);
+    try stdout.writeStreamingAll(io, len);
 
     len = std.fmt.bufPrint(&buf, "  Tool invocations: {d}\n", .{tool_invocations}) catch return;
-    _ = try stdout.write(len);
+    try stdout.writeStreamingAll(io, len);
 
     len = std.fmt.bufPrint(&buf, "  Successful tools: {d}\n", .{successful_tools}) catch return;
-    _ = try stdout.write(len);
+    try stdout.writeStreamingAll(io, len);
 
     len = std.fmt.bufPrint(&buf, "  Tool success rate: {d:.1}%\n", .{stats.tool_success_rate * 100}) catch return;
-    _ = try stdout.write(len);
+    try stdout.writeStreamingAll(io, len);
 
     len = std.fmt.bufPrint(&buf, "  High confidence: {d}/{d}\n", .{ high_confidence, session.len }) catch return;
-    _ = try stdout.write(len);
+    try stdout.writeStreamingAll(io, len);
 
     len = std.fmt.bufPrint(&buf, "  Speed: {d:.0} ops/s\n", .{ops_per_sec}) catch return;
-    _ = try stdout.write(len);
+    try stdout.writeStreamingAll(io, len);
 
     len = std.fmt.bufPrint(&buf, "\n  Tool rate: {d:.2}\n", .{tool_rate}) catch return;
-    _ = try stdout.write(len);
+    try stdout.writeStreamingAll(io, len);
 
     len = std.fmt.bufPrint(&buf, "  Improvement rate: {d:.2}\n", .{improvement_rate}) catch return;
-    _ = try stdout.write(len);
+    try stdout.writeStreamingAll(io, len);
 
     if (improvement_rate > 0.618) {
-        _ = try stdout.write("  Golden Ratio Gate: PASSED (>0.618)\n");
+        try stdout.writeStreamingAll(io, "  Golden Ratio Gate: PASSED (>0.618)\n");
     } else {
-        _ = try stdout.write("  Golden Ratio Gate: NEEDS IMPROVEMENT (<0.618)\n");
+        try stdout.writeStreamingAll(io, "  Golden Ratio Gate: NEEDS IMPROVEMENT (<0.618)\n");
     }
 
-    _ = try stdout.write("\n");
-    _ = try stdout.write("===============================================================================\n");
-    _ = try stdout.write("  phi^2 + 1/phi^2 = 3 = TRINITY | TOOL USE ENGINE CYCLE 11                    \n");
-    _ = try stdout.write("===============================================================================\n");
+    try stdout.writeStreamingAll(io, "\n");
+    try stdout.writeStreamingAll(io, "===============================================================================\n");
+    try stdout.writeStreamingAll(io, "  phi^2 + 1/phi^2 = 3 = TRINITY | TOOL USE ENGINE CYCLE 11                    \n");
+    try stdout.writeStreamingAll(io, "===============================================================================\n");
 }
 
 // =============================================================================

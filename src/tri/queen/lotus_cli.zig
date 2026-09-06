@@ -2,6 +2,7 @@
 // φ² + 1/φ² = 3 | TRINITY
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const lotus = @import("lotus_cycle.zig");
 
 const RESET = "\x1b[0m";
@@ -69,7 +70,7 @@ fn runCycle(allocator: std.mem.Allocator) !void {
     std.debug.print("{s}🌸 Queen Lotus Cycle — Starting{s}\n", .{ YELLOW, RESET });
     std.debug.print("{s}═══════════════════════════════════════════════════════════════{s}\n\n", .{ BOLD, RESET });
 
-    const start_ns = std.time.nanoTimestamp();
+    const start_ns = tri_time.nanoTimestamp();
 
     const result = lotus.runFullCycle(allocator) catch |err| {
         std.debug.print("{s}❌ Cycle failed: {s}{s}\n", .{ RED, @errorName(err), RESET });
@@ -77,7 +78,7 @@ fn runCycle(allocator: std.mem.Allocator) !void {
     };
     defer allocator.free(result.context.active_issues);
 
-    const end_ns = std.time.nanoTimestamp();
+    const end_ns = tri_time.nanoTimestamp();
     const duration_ms = @divTrunc(end_ns - start_ns, 1_000_000);
 
     // Display results

@@ -8,6 +8,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 
 // Import individual zeta modules
 const zeta_import = @import("zeta_import.zig");
@@ -99,7 +100,13 @@ pub fn runZetaVerdictCommand(allocator: std.mem.Allocator, args: []const []const
     std.debug.print("{s}═ STAGE 1: Spacing Analysis ═{s}\n", .{ CYAN, RESET });
     var spacings = try zeta_spacing.computeSpacings(allocator, zeros);
     defer spacings.deinit();
-    try spacings.formatSummary(std.fs.File.stderr().deprecatedWriter());
+    {
+        const io = tri_io.get();
+        var stderr_buf: [4096]u8 = undefined;
+        var stderr_writer = std.Io.File.stderr().writer(io, &stderr_buf);
+        try spacings.formatSummary(&stderr_writer.interface);
+        try stderr_writer.interface.flush();
+    }
 
     const gue_result = try zeta_spacing.compareVsGUE(&spacings, allocator);
     const gue_color = if (gue_result.ks_p_value > 0.05) GREEN else "\x1b[31m";

@@ -2,6 +2,9 @@
 // Single binary: clone → read issue → Claude Code → self-review → PR
 // Telegram UX: 1 card per agent (edit-in-place), 1 summary at completion.
 const std = @import("std");
+const tri_time = @import("tri_time");
+const tri_io = @import("tri_io");
+const tri_env = @import("tri_env");
 const telegram = @import("telegram.zig");
 const telegram_card = @import("telegram_card.zig");
 const github_api = @import("github_api.zig");
@@ -25,7 +28,12 @@ const Env = struct {
     dry_run: bool,
 
     fn fromSystem() Env {
-        const issue_str = std.posix.getenv("ISSUE_NUMBER") orelse std.posix.getenv("ISSUE") orelse {
+        // 0.16 removed std.posix.getenv. tri_env.getEnvVar keeps the same
+        // borrowed-slice contract; the allocator is only for the temporary
+        // null-terminated key, which it frees before returning. fromSystem
+        // takes no allocator and its signature is not changing.
+        const env_gpa = std.heap.page_allocator;
+        const issue_str = tri_env.getEnvVar(env_gpa, "ISSUE_NUMBER") orelse tri_env.getEnvVar(env_gpa, "ISSUE") orelse {
             std.debug.print("[agent] FATAL: ISSUE_NUMBER is required\n", .{});
             std.process.exit(1);
         };
@@ -34,32 +42,32 @@ const Env = struct {
             std.process.exit(1);
         };
 
-        const gh_token = std.posix.getenv("GITHUB_TOKEN") orelse std.posix.getenv("AGENT_GH_TOKEN") orelse {
+        const gh_token = tri_env.getEnvVar(env_gpa, "GITHUB_TOKEN") orelse tri_env.getEnvVar(env_gpa, "AGENT_GH_TOKEN") orelse {
             std.debug.print("[agent] FATAL: GITHUB_TOKEN is required\n", .{});
             std.process.exit(1);
         };
 
-        const api_key = std.posix.getenv("ANTHROPIC_API_KEY") orelse {
+        const api_key = tri_env.getEnvVar(env_gpa, "ANTHROPIC_API_KEY") orelse {
             std.debug.print("[agent] FATAL: ANTHROPIC_API_KEY is required\n", .{});
             std.process.exit(1);
         };
 
-        const repo_url = std.posix.getenv("REPO_URL") orelse "https://github.com/gHashTag/trinity.git";
+        const repo_url = tri_env.getEnvVar(env_gpa, "REPO_URL") orelse "https://github.com/gHashTag/trinity.git";
 
         // Extract owner/repo from URL
-        const owner = std.posix.getenv("GITHUB_OWNER") orelse "gHashTag";
-        const repo = std.posix.getenv("GITHUB_REPO") orelse "trinity";
+        const owner = tri_env.getEnvVar(env_gpa, "GITHUB_OWNER") orelse "gHashTag";
+        const repo = tri_env.getEnvVar(env_gpa, "GITHUB_REPO") orelse "trinity";
 
-        const model = std.posix.getenv("CLAUDE_MODEL");
+        const model = tri_env.getEnvVar(env_gpa, "CLAUDE_MODEL");
 
-        const timeout_str = std.posix.getenv("AGENT_TIMEOUT") orelse "3600";
+        const timeout_str = tri_env.getEnvVar(env_gpa, "AGENT_TIMEOUT") orelse "3600";
         const timeout_s = std.fmt.parseInt(u64, timeout_str, 10) catch 3600;
 
-        const turns_str = std.posix.getenv("AGENT_MAX_TURNS") orelse "50";
+        const turns_str = tri_env.getEnvVar(env_gpa, "AGENT_MAX_TURNS") orelse "50";
         const max_turns = std.fmt.parseInt(u32, turns_str, 10) catch 50;
 
-        const tg_token = std.posix.getenv("TELEGRAM_BOT_TOKEN") orelse "";
-        const tg_chat = std.posix.getenv("TELEGRAM_CHAT_ID") orelse "";
+        const tg_token = tri_env.getEnvVar(env_gpa, "TELEGRAM_BOT_TOKEN") orelse "";
+        const tg_chat = tri_env.getEnvVar(env_gpa, "TELEGRAM_CHAT_ID") orelse "";
 
         // Check --dry-run in args
         var dry_run = false;
@@ -242,7 +250,7 @@ pub fn main() !void {
             std.debug.print("[agent] {s}\n", .{backoff_msg});
 
             if (attempt + 1 < max_attempts) {
-                std.Thread.sleep(wait * std.time.ns_per_s);
+                tri_time.sleep(wait * std.time.ns_per_s);
                 continue;
             }
 
@@ -273,7 +281,7 @@ pub fn main() !void {
             }) catch "\xe2\x9a\xa0 Retrying...";
             card.appendStep(backoff_msg);
             std.debug.print("[agent] {s}\n", .{backoff_msg});
-            std.Thread.sleep(wait * std.time.ns_per_s);
+            tri_time.sleep(wait * std.time.ns_per_s);
         }
     }
 
@@ -377,7 +385,7 @@ pub fn main() !void {
 /// Background ticker: refreshes card every 30s.
 fn updateTicker(card: *telegram_card.TelegramCard) void {
     while (card.final_status == null) {
-        std.Thread.sleep(30 * std.time.ns_per_s);
+        tri_time.sleep(30 * std.time.ns_per_s);
         if (card.final_status != null) break;
         card.refresh();
         touchAlive();
@@ -386,8 +394,9 @@ fn updateTicker(card: *telegram_card.TelegramCard) void {
 
 /// Touch /tmp/agent-alive for Docker HEALTHCHECK.
 fn touchAlive() void {
-    const file = std.fs.cwd().createFile("/tmp/agent-alive", .{}) catch return;
-    file.close();
+    const io = tri_io.get();
+    const file = std.Io.Dir.cwd().createFile(io, "/tmp/agent-alive", .{}) catch return;
+    file.close(io);
 }
 
 test "Env.fromSystem does not crash without env" {

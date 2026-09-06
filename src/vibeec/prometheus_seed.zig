@@ -1,4 +1,5 @@
 const std = @import("std");
+const tri_io = @import("tri_io");
 
 // ============================================================================
 // TRINITY TYPES
@@ -148,8 +149,9 @@ fn runQuantizationDemo(allocator: std.mem.Allocator) !void {
     std.debug.print("\n✅ SEED CREATED. The weights are purified.\n", .{});
 
     // In a real implementation, we would write these Trits to a .tri file here.
-    const file = try std.fs.cwd().createFile("mistral-7b-layer1.tri", .{});
-    defer file.close();
-    try file.writeAll("TRINITY_HEADER_V1");
+    const io = tri_io.get();
+    const file = try std.Io.Dir.cwd().createFile(io, "mistral-7b-layer1.tri", .{});
+    defer file.close(io);
+    try file.writeStreamingAll(io, "TRINITY_HEADER_V1");
     // Writing raw bytes of trits demo...
 }

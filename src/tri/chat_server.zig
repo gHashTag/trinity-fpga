@@ -17,6 +17,11 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const net = std.Io.net;
+const tri_rand = @import("tri_rand");
+const tri_env = @import("tri_env");
+const tri_io = @import("tri_io");
+const tri_time = @import("tri_time");
 const igla_hybrid_chat = @import("igla_hybrid_chat");
 const tvc = @import("tvc_corpus");
 const pas_orchestrator = @import("pas_orchestrator");
@@ -40,6 +45,28 @@ const WSFrameHeader = struct {
     payload_len: u64,
 };
 
+/// Zig 0.16: `net.Stream` has no `writeAll` of its own. Writing goes through a
+/// `net.Stream.Writer`, whose `Io.Writer` interface needs a caller-supplied
+/// buffer, so each write site builds one on the stack and flushes it. This
+/// keeps the old one-call-per-payload shape of `stream.writeAll(bytes)`.
+fn streamWriteAll(stream: net.Stream, bytes: []const u8) !void {
+    var write_buf: [4096]u8 = undefined;
+    var w = stream.writer(tri_io.get(), &write_buf);
+    try w.interface.writeAll(bytes);
+    try w.interface.flush();
+}
+
+/// Zig 0.16 replacement for `stream.read(buf)`: one underlying `netRead`, with
+/// whatever arrived. A zero-length reader buffer keeps `readVec` from filling an
+/// internal buffer first, so this performs exactly one read like the old call.
+/// `error.EndOfStream` stands in for the old "returned 0 bytes".
+fn streamReadOnce(stream: net.Stream, buf: []u8) !usize {
+    var reader_buf: [0]u8 = .{};
+    var r = stream.reader(tri_io.get(), &reader_buf);
+    var data: [1][]u8 = .{buf};
+    return r.interface.readVec(&data);
+}
+
 const PasWsMessage = struct {
     type: []const u8,
     id: []const u8,
@@ -49,27 +76,29 @@ const PasWsMessage = struct {
 };
 
 pub const PasWebSocketServer = struct {
-    clients: std.ArrayListUnmanaged(std.net.Stream),
+    clients: std.ArrayListUnmanaged(net.Stream),
     allocator: Allocator,
 
     const Self = @This();
 
     pub fn init(allocator: Allocator) Self {
         return Self{
-            .clients = .{},
+            .clients = .empty,
             .allocator = allocator,
         };
     }
 
     pub fn deinit(self: *Self) void {
+        const io = tri_io.get();
         for (self.clients.items) |client| {
-            client.close();
+            client.close(io);
         }
         self.clients.deinit(self.allocator);
     }
 
     /// Broadcast JSON message to all connected WebSocket clients
     pub fn broadcast(self: *Self, json: []const u8) !void {
+        const io = tri_io.get();
         var i: usize = 0;
         while (i < self.clients.items.len) {
             const client = self.clients.items[i];
@@ -78,13 +107,13 @@ pub const PasWebSocketServer = struct {
             } else {
                 // Remove disconnected client
                 _ = self.clients.orderedRemove(i);
-                client.close();
+                client.close(io);
             }
         }
     }
 
     /// Send WebSocket TEXT frame to client (server-to-client, no masking)
-    fn sendWsFrame(self: *Self, stream: std.net.Stream, payload: []const u8) bool {
+    fn sendWsFrame(self: *Self, stream: net.Stream, payload: []const u8) bool {
         _ = self;
         var frame_buf: [16384]u8 = undefined;
         var pos: usize = 0;
@@ -118,7 +147,7 @@ pub const PasWebSocketServer = struct {
         @memcpy(frame_buf[pos .. pos + payload.len], payload);
         pos += payload.len;
 
-        stream.writeAll(frame_buf[0..pos]) catch return false;
+        streamWriteAll(stream, frame_buf[0..pos]) catch return false;
         return true;
     }
 
@@ -138,7 +167,7 @@ pub const PasWebSocketServer = struct {
             allocator,
             \\{{"type":"recommendation","id":"{s}","action":"{s}","priority":{d},"rationale":"{s}","timestamp":{d}}}
         ,
-            .{ uuid, action, priority, rationale, std.time.timestamp() },
+            .{ uuid, action, priority, rationale, tri_time.timestamp() },
         );
     }
 
@@ -157,7 +186,7 @@ pub const PasWebSocketServer = struct {
             allocator,
             \\{{"type":"progress","task":"{s}","baseline":{d},"pas":{d},"attempts":{d},"energy":{d:.2},"timestamp":{d}}}
         ,
-            .{ task, baseline, pas, attempts, energy, std.time.timestamp() },
+            .{ task, baseline, pas, attempts, energy, tri_time.timestamp() },
         );
     }
 
@@ -173,7 +202,7 @@ pub const PasWebSocketServer = struct {
             allocator,
             \\{{"type":"alert","level":"{s}","message":"{s}","timestamp":{d}}}
         ,
-            .{ level, message, std.time.timestamp() },
+            .{ level, message, tri_time.timestamp() },
         );
     }
 };
@@ -185,7 +214,7 @@ fn generateUUID(allocator: Allocator) ![]const u8 {
 
     var i: usize = 0;
     var rand_buf: [16]u8 = undefined;
-    std.crypto.random.bytes(&rand_buf);
+    tri_rand.random().bytes(&rand_buf);
 
     // Format: xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
     uuid[i] = hex_chars[(rand_buf[0] >> 4) & 0xF];
@@ -297,7 +326,7 @@ pub const ChatServer = struct {
             .port = port,
             .chat_engine = null,
             .corpus = null,
-            .startup_time = std.time.timestamp(),
+            .startup_time = tri_time.timestamp(),
             .log_ring = [_]LogEntry{LogEntry{
                 .timestamp = 0,
                 .source = "none",
@@ -333,7 +362,7 @@ pub const ChatServer = struct {
 
     fn addLogEntry(self: *Self, source: []const u8, query: []const u8, confidence: f32, latency_us: u64, learned: bool) void {
         var entry = &self.log_ring[self.log_index];
-        entry.timestamp = std.time.timestamp();
+        entry.timestamp = tri_time.timestamp();
         entry.source = source;
         const copy_len = @min(query.len, 64);
         @memcpy(entry.query_preview[0..copy_len], query[0..copy_len]);
@@ -371,9 +400,9 @@ pub const ChatServer = struct {
         var config = igla_hybrid_chat.HybridConfig{};
 
         // Read API keys from environment
-        config.groq_api_key = std.posix.getenv("GROQ_API_KEY");
-        config.claude_api_key = std.posix.getenv("ANTHROPIC_API_KEY");
-        config.openai_api_key = std.posix.getenv("OPENAI_API_KEY");
+        config.groq_api_key = tri_env.getPosix("GROQ_API_KEY");
+        config.claude_api_key = tri_env.getPosix("ANTHROPIC_API_KEY");
+        config.openai_api_key = tri_env.getPosix("OPENAI_API_KEY");
         config.enable_context = true;
         config.system_prompt = "You are Trinity, a helpful AI assistant with multi-modal capabilities. Be concise and insightful.";
 
@@ -404,16 +433,18 @@ pub const ChatServer = struct {
         std.debug.print("  OPTIONS /*          - CORS preflight\n", .{});
         std.debug.print("\n", .{});
 
-        const address = std.net.Address.initIp4(.{ 0, 0, 0, 0 }, self.port);
-        var server = try address.listen(.{
+        const io = tri_io.get();
+        const address: net.IpAddress = .{ .ip4 = .{ .bytes = .{ 0, 0, 0, 0 }, .port = self.port } };
+        var server = try address.listen(io, .{
             .reuse_address = true,
         });
-        defer server.deinit();
+        defer server.deinit(io);
 
         std.debug.print("Server ready on http://127.0.0.1:{d}\n\n", .{self.port});
 
         while (true) {
-            var connection = server.accept() catch |err| {
+            // 0.16: `accept` yields a bare `net.Stream`; there is no `Connection`.
+            var connection = server.accept(io) catch |err| {
                 std.debug.print("[ChatServer] Accept error: {}\n", .{err});
                 continue;
             };
@@ -422,13 +453,16 @@ pub const ChatServer = struct {
                 std.debug.print("[ChatServer] Request error: {}\n", .{err});
             };
 
-            connection.stream.close();
+            connection.close(io);
         }
     }
 
-    fn handleConnection(self: *Self, connection: *std.net.Server.Connection) !void {
+    fn handleConnection(self: *Self, connection: *net.Stream) !void {
         var buf: [16384]u8 = undefined;
-        const n = try connection.stream.read(&buf);
+        const n = streamReadOnce(connection.*, &buf) catch |err| switch (err) {
+            error.EndOfStream => return,
+            else => return err,
+        };
         if (n == 0) return;
 
         const request = buf[0..n];
@@ -513,8 +547,8 @@ pub const ChatServer = struct {
     // HANDLERS
     // ═══════════════════════════════════════════════════════════════════════════
 
-    fn handleChat(self: *Self, connection: *std.net.Server.Connection, body: []const u8) !void {
-        const start = std.time.microTimestamp();
+    fn handleChat(self: *Self, connection: *net.Stream, body: []const u8) !void {
+        const start = tri_time.microTimestamp();
 
         // Lazy-init engine
         const engine = self.ensureEngine() catch {
@@ -568,7 +602,7 @@ pub const ChatServer = struct {
                 };
             };
 
-        const elapsed = @as(u64, @intCast(std.time.microTimestamp() - start));
+        const elapsed = @as(u64, @intCast(tri_time.microTimestamp() - start));
         const source_name = @tagName(result.source);
 
         std.debug.print("[ChatServer] Source: {s} | Confidence: {d:.2} | Latency: {d}μs\n", .{ source_name, result.confidence, elapsed });
@@ -583,7 +617,7 @@ pub const ChatServer = struct {
         );
 
         // Build JSON response
-        var json: std.ArrayListUnmanaged(u8) = .{};
+        var json: std.ArrayListUnmanaged(u8) = .empty;
         defer json.deinit(self.allocator);
 
         try json.appendSlice(self.allocator, "{\"response\":\"");
@@ -637,7 +671,7 @@ pub const ChatServer = struct {
         try self.sendJsonResponse(connection, json.items);
     }
 
-    fn handleClearContext(self: *Self, connection: *std.net.Server.Connection) !void {
+    fn handleClearContext(self: *Self, connection: *net.Stream) !void {
         if (self.chat_engine != null) {
             self.chat_engine.?.clearContext();
             std.debug.print("[ChatServer] Context cleared\n", .{});
@@ -650,7 +684,7 @@ pub const ChatServer = struct {
     // ═══════════════════════════════════════════════════════════════════════════
 
     /// GET /api/files — Return project file listing for Finder panel
-    fn handleFileList(self: *Self, connection: *std.net.Server.Connection) !void {
+    fn handleFileList(self: *Self, connection: *net.Stream) !void {
         std.debug.print("[ChatServer] Serving file list\n", .{});
 
         // Project file listing — curated list matching frontend FILE_INDEX
@@ -722,10 +756,10 @@ pub const ChatServer = struct {
     }
 
     /// GET /api/ralph-status?agent=N — Return internal Ralph autonomous state for agent N (0-3)
-    fn handleRalphStatus(self: *Self, connection: *std.net.Server.Connection, path: []const u8) !void {
+    fn handleRalphStatus(self: *Self, connection: *net.Stream, path: []const u8) !void {
         // Parse ?agent=N from path (default to 0 = main worktree)
         // Derive worktree paths from HOME env var
-        const home = std.posix.getenv("HOME") orelse "/tmp";
+        const home = tri_env.getPosix("HOME") orelse "/tmp";
         var wt_bufs: [4][256]u8 = undefined;
         var worktree_paths: [4][]const u8 = undefined;
         const suffixes = [_][]const u8{ "/trinity", "/trinity-w1", "/trinity-w2", "/trinity-w3" };
@@ -747,13 +781,14 @@ pub const ChatServer = struct {
         const base_path = worktree_paths[@min(agent_idx, 3)];
 
         // Open worktree directory (absolute path)
-        var base_dir = std.fs.openDirAbsolute(base_path, .{}) catch {
+        const io = tri_io.get();
+        var base_dir = std.Io.Dir.openDirAbsolute(io, base_path, .{}) catch {
             try self.sendJsonResponse(connection, "{\"loop\":{\"status\":\"offline\"},\"circuit_breaker\":{\"state\":\"UNKNOWN\"},\"logs\":[],\"agent\":" ++ "0" ++ ",\"reachable\":false}");
             return;
         };
-        defer base_dir.close();
+        defer base_dir.close(io);
 
-        var json: std.ArrayListUnmanaged(u8) = .{};
+        var json: std.ArrayListUnmanaged(u8) = .empty;
         defer json.deinit(self.allocator);
 
         try json.appendSlice(self.allocator, "{\"agent\":");
@@ -765,7 +800,7 @@ pub const ChatServer = struct {
         try json.appendSlice(self.allocator, agent_buf[0..agent_str_len]);
 
         // 1. Read .ralph/logs/status.json
-        const status_json = base_dir.readFileAlloc(self.allocator, ".trinity/ralph/logs/status.json", 4096) catch |err| s_blk: {
+        const status_json = base_dir.readFileAlloc(io, ".trinity/ralph/logs/status.json", self.allocator, .limited(4096)) catch |err| s_blk: {
             std.debug.print("[ChatServer] Ralph agent {d} status read error: {}\n", .{ agent_idx, err });
             break :s_blk "{\"status\":\"offline\"}";
         };
@@ -778,7 +813,7 @@ pub const ChatServer = struct {
         try json.appendSlice(self.allocator, status_json);
 
         // 2. Read .ralph/internal/.circuit_breaker_state
-        const cb_json = base_dir.readFileAlloc(self.allocator, ".trinity/ralph/internal/.circuit_breaker_state", 4096) catch |err| cb_blk: {
+        const cb_json = base_dir.readFileAlloc(io, ".trinity/ralph/internal/.circuit_breaker_state", self.allocator, .limited(4096)) catch |err| cb_blk: {
             std.debug.print("[ChatServer] Ralph agent {d} CB read error: {}\n", .{ agent_idx, err });
             break :cb_blk "{\"state\":\"UNKNOWN\"}";
         };
@@ -791,18 +826,18 @@ pub const ChatServer = struct {
         // 3. Tail latest log
         try json.appendSlice(self.allocator, ",\"logs\":[");
         {
-            var dir = base_dir.openDir(".trinity/ralph/logs", .{ .iterate = true }) catch null;
+            var dir = base_dir.openDir(io, ".trinity/ralph/logs", .{ .iterate = true }) catch null;
             if (dir) |*d| {
-                defer d.close();
+                defer d.close(io);
                 var latest_time: i128 = 0;
                 var latest_name: [128]u8 = undefined;
                 var latest_len: usize = 0;
                 var it = d.iterate();
-                while (it.next() catch null) |entry| {
+                while (it.next(io) catch null) |entry| {
                     if (std.mem.startsWith(u8, entry.name, "claude_output_")) {
-                        const stat = d.statFile(entry.name) catch continue;
-                        if (stat.mtime > latest_time) {
-                            latest_time = stat.mtime;
+                        const stat = d.statFile(io, entry.name, .{}) catch continue;
+                        if (@as(i128, stat.mtime.nanoseconds) > latest_time) {
+                            latest_time = @as(i128, stat.mtime.nanoseconds);
                             @memcpy(latest_name[0..entry.name.len], entry.name);
                             latest_len = entry.name.len;
                         }
@@ -810,7 +845,7 @@ pub const ChatServer = struct {
                 }
 
                 if (latest_len > 0) {
-                    const log_content = d.readFileAlloc(self.allocator, latest_name[0..latest_len], 16384) catch null;
+                    const log_content = d.readFileAlloc(io, latest_name[0..latest_len], self.allocator, .limited(16384)) catch null;
                     if (log_content) |content| {
                         defer self.allocator.free(content);
                         var line_it = std.mem.splitBackwardsScalar(u8, content, '\n');
@@ -847,7 +882,7 @@ pub const ChatServer = struct {
     }
 
     /// POST /api/compile — Compile VIBEE spec or analyze Zig code
-    fn handleCompile(self: *Self, connection: *std.net.Server.Connection, body: []const u8) !void {
+    fn handleCompile(self: *Self, connection: *net.Stream, body: []const u8) !void {
         const code = extractJsonString(body, "code") orelse {
             try self.sendError(connection, "Missing 'code' field in JSON body");
             return;
@@ -856,7 +891,7 @@ pub const ChatServer = struct {
 
         std.debug.print("[ChatServer] Compile request: {s} ({d} bytes)\n", .{ language, code.len });
 
-        var json: std.ArrayListUnmanaged(u8) = .{};
+        var json: std.ArrayListUnmanaged(u8) = .empty;
         defer json.deinit(self.allocator);
 
         if (std.mem.eql(u8, language, "vibee")) {
@@ -1033,7 +1068,7 @@ pub const ChatServer = struct {
     // HTTP HELPERS
     // ═══════════════════════════════════════════════════════════════════════════
 
-    fn sendJsonResponse(self: *Self, connection: *std.net.Server.Connection, json_body: []const u8) !void {
+    fn sendJsonResponse(self: *Self, connection: *net.Stream, json_body: []const u8) !void {
         const header = std.fmt.allocPrint(
             self.allocator,
             "HTTP/1.1 200 OK\r\n" ++
@@ -1047,11 +1082,11 @@ pub const ChatServer = struct {
         ) catch return;
         defer self.allocator.free(header);
 
-        try connection.stream.writeAll(header);
-        try connection.stream.writeAll(json_body);
+        try streamWriteAll(connection.*, header);
+        try streamWriteAll(connection.*, json_body);
     }
 
-    fn sendError(self: *Self, connection: *std.net.Server.Connection, message: []const u8) !void {
+    fn sendError(self: *Self, connection: *net.Stream, message: []const u8) !void {
         const body = std.fmt.allocPrint(self.allocator, "{{\"error\":\"{s}\"}}", .{message}) catch return;
         defer self.allocator.free(body);
 
@@ -1066,16 +1101,16 @@ pub const ChatServer = struct {
         ) catch return;
         defer self.allocator.free(header);
 
-        try connection.stream.writeAll(header);
-        try connection.stream.writeAll(body);
+        try streamWriteAll(connection.*, header);
+        try streamWriteAll(connection.*, body);
     }
 
-    fn sendHealth(self: *Self, connection: *std.net.Server.Connection) !void {
-        const now = std.time.timestamp();
+    fn sendHealth(self: *Self, connection: *net.Stream) !void {
+        const now = tri_time.timestamp();
         const uptime = now - self.startup_time;
 
         // Build JSON using ArrayList for flexibility
-        var json: std.ArrayListUnmanaged(u8) = .{};
+        var json: std.ArrayListUnmanaged(u8) = .empty;
         defer json.deinit(self.allocator);
 
         try json.appendSlice(self.allocator, "{\"status\":\"ok\"");
@@ -1233,15 +1268,16 @@ pub const ChatServer = struct {
         try self.sendJsonResponse(connection, json.items);
     }
 
-    fn handleDiagnostic(self: *Self, connection: *std.net.Server.Connection) !void {
-        var json: std.ArrayListUnmanaged(u8) = .{};
+    fn handleDiagnostic(self: *Self, connection: *net.Stream) !void {
+        var json: std.ArrayListUnmanaged(u8) = .empty;
         defer json.deinit(self.allocator);
 
         try json.appendSlice(self.allocator, "{\"routing_stats\":{");
 
         if (self.chat_engine) |engine| {
             const energy = engine.energy;
-            try json.writer(self.allocator).print(
+            try json.print(
+                self.allocator,
                 "\"tool_hits\":{d},\"symbolic_hits\":{d},\"kg_hits\":{d},\"tvc_hits\":{d},\"llm_calls\":{d},\"error_fallbacks\":{d},\"total_queries\":{d}",
                 .{ energy.tool_hits, energy.symbolic_hits, energy.kg_hits, energy.tvc_hits, engine.llm_calls, engine.error_fallbacks, energy.total_queries },
             );
@@ -1252,7 +1288,8 @@ pub const ChatServer = struct {
         try json.appendSlice(self.allocator, "},\"llm_status\":{");
 
         if (self.chat_engine) |engine| {
-            try json.writer(self.allocator).print(
+            try json.print(
+                self.allocator,
                 "\"groq_key\":{s},\"claude_key\":{s},\"local_model\":{s}",
                 .{
                     if (engine.config.groq_api_key != null) "true" else "false",
@@ -1279,7 +1316,7 @@ pub const ChatServer = struct {
                 try json.appendSlice(self.allocator, "{\"q\":\"");
                 const qlen = @min(entry.query_len, 64);
                 try json.appendSlice(self.allocator, entry.query[0..qlen]);
-                try json.writer(self.allocator).print("\",\"src\":\"{s}\",\"conf\":{d:.2},\"lat\":{d}}}", .{
+                try json.print(self.allocator, "\",\"src\":\"{s}\",\"conf\":{d:.2},\"lat\":{d}}}", .{
                     @tagName(entry.source),
                     entry.confidence,
                     entry.latency_us,
@@ -1296,7 +1333,7 @@ pub const ChatServer = struct {
     // ═══════════════════════════════════════════════════════════════════════════
 
     /// Handle WebSocket upgrade request for /ws/pas
-    fn handleWebSocketUpgrade(self: *Self, connection: *std.net.Server.Connection, request: []const u8) !void {
+    fn handleWebSocketUpgrade(self: *Self, connection: *net.Stream, request: []const u8) !void {
         // Check for required WebSocket upgrade headers
         const has_upgrade = std.mem.indexOf(u8, request, "Upgrade: websocket") != null;
         const has_connection = std.mem.indexOf(u8, request, "Connection: Upgrade") != null or
@@ -1340,22 +1377,22 @@ pub const ChatServer = struct {
         ) catch return;
         defer self.allocator.free(response);
 
-        _ = try connection.stream.writeAll(response);
+        try streamWriteAll(connection.*, response);
 
         std.debug.print("[ChatServer] WebSocket /ws/pas connection established\n", .{});
 
         // Add client to WebSocket server
-        try self.ws_server.clients.append(self.allocator, connection.stream);
+        try self.ws_server.clients.append(self.allocator, connection.*);
 
         // Send initial welcome message
         const welcome = try std.fmt.allocPrint(
             self.allocator,
             \\{{"type":"connected","endpoint":"/ws/pas","timestamp":{d},"message":"PAS WebSocket connected"}}
         ,
-            .{std.time.timestamp()},
+            .{tri_time.timestamp()},
         );
         defer self.allocator.free(welcome);
-        _ = self.ws_server.sendWsFrame(connection.stream, welcome);
+        _ = self.ws_server.sendWsFrame(connection.*, welcome);
 
         // Send initial PAS status
         const status_msg = try std.fmt.allocPrint(
@@ -1365,7 +1402,7 @@ pub const ChatServer = struct {
             .{ if (self.pas_active) "true" else "false", self.pas_analyses, self.pas_energy, self.pas_berry_phase },
         );
         defer self.allocator.free(status_msg);
-        _ = self.ws_server.sendWsFrame(connection.stream, status_msg);
+        _ = self.ws_server.sendWsFrame(connection.*, status_msg);
 
         // Note: This is a simple implementation that doesn't handle persistent connections
         // In production, you'd want a separate thread/event loop for each WebSocket
@@ -1383,7 +1420,7 @@ pub const ChatServer = struct {
                 const start = i + header_name.len + 2;
                 var end = start;
                 while (end < request.len and request[end] != '\r') : (end += 1) {}
-                return std.mem.trimRight(u8, request[start..end], " \t");
+                return std.mem.trimEnd(u8, request[start..end], " \t");
             }
         }
         return null;
@@ -1394,10 +1431,10 @@ pub const ChatServer = struct {
     // ═══════════════════════════════════════════════════════════════════════════
 
     /// GET /api/pas/status - Returns PAS daemon status
-    fn handlePasStatus(self: *Self, connection: *std.net.Server.Connection) !void {
+    fn handlePasStatus(self: *Self, connection: *net.Stream) !void {
         self.activatePas();
 
-        var json: std.ArrayListUnmanaged(u8) = .{};
+        var json: std.ArrayListUnmanaged(u8) = .empty;
         defer json.deinit(self.allocator);
 
         try json.appendSlice(self.allocator, "{\"active\":");
@@ -1434,10 +1471,10 @@ pub const ChatServer = struct {
     }
 
     /// GET /api/pas/recs - Returns current PAS recommendations
-    fn handlePasRecommendations(self: *Self, connection: *std.net.Server.Connection) !void {
+    fn handlePasRecommendations(self: *Self, connection: *net.Stream) !void {
         self.activatePas();
 
-        var json: std.ArrayListUnmanaged(u8) = .{};
+        var json: std.ArrayListUnmanaged(u8) = .empty;
         defer json.deinit(self.allocator);
 
         try json.appendSlice(self.allocator, "{\"active\":");
@@ -1472,7 +1509,7 @@ pub const ChatServer = struct {
     }
 
     /// GET /api/pas/analyze - Returns current PAS analysis
-    fn handlePasAnalyze(self: *Self, connection: *std.net.Server.Connection) !void {
+    fn handlePasAnalyze(self: *Self, connection: *net.Stream) !void {
         self.activatePas();
 
         // Increment analysis count
@@ -1485,7 +1522,7 @@ pub const ChatServer = struct {
         // Harvest some energy
         self.pas_energy += PHI_INV_SQ * 578.84;
 
-        var json: std.ArrayListUnmanaged(u8) = .{};
+        var json: std.ArrayListUnmanaged(u8) = .empty;
         defer json.deinit(self.allocator);
 
         try json.appendSlice(self.allocator, "{\"daemon_active\":");
@@ -1525,7 +1562,7 @@ pub const ChatServer = struct {
         try self.sendJsonResponse(connection, json.items);
     }
 
-    fn sendCors(self: *Self, connection: *std.net.Server.Connection) !void {
+    fn sendCors(self: *Self, connection: *net.Stream) !void {
         _ = self;
         const response =
             "HTTP/1.1 200 OK\r\n" ++
@@ -1534,10 +1571,10 @@ pub const ChatServer = struct {
             "Access-Control-Allow-Headers: Content-Type\r\n" ++
             "Content-Length: 0\r\n" ++
             "Connection: close\r\n\r\n";
-        try connection.stream.writeAll(response);
+        try streamWriteAll(connection.*, response);
     }
 
-    fn sendNotFound(self: *Self, connection: *std.net.Server.Connection) !void {
+    fn sendNotFound(self: *Self, connection: *net.Stream) !void {
         _ = self;
         const response =
             "HTTP/1.1 404 Not Found\r\n" ++
@@ -1545,10 +1582,10 @@ pub const ChatServer = struct {
             "Content-Length: 20\r\n" ++
             "Connection: close\r\n\r\n" ++
             "{\"error\":\"Not Found\"}";
-        try connection.stream.writeAll(response);
+        try streamWriteAll(connection.*, response);
     }
 
-    fn sendMethodNotAllowed(self: *Self, connection: *std.net.Server.Connection) !void {
+    fn sendMethodNotAllowed(self: *Self, connection: *net.Stream) !void {
         _ = self;
         const response =
             "HTTP/1.1 405 Method Not Allowed\r\n" ++
@@ -1556,7 +1593,7 @@ pub const ChatServer = struct {
             "Content-Length: 30\r\n" ++
             "Connection: close\r\n\r\n" ++
             "{\"error\":\"Method Not Allowed\"}";
-        try connection.stream.writeAll(response);
+        try streamWriteAll(connection.*, response);
     }
 
     // ═════════════════════════════════════════════════════════════════════════
@@ -1564,7 +1601,7 @@ pub const ChatServer = struct {
     // ═════════════════════════════════════════════════════════════════════════
 
     /// GET /api/chem/sacred?formula=H2O — Molar mass + sacred formula fit
-    fn handleChemSacred(self: *Self, connection: *std.net.Server.Connection, path: []const u8) !void {
+    fn handleChemSacred(self: *Self, connection: *net.Stream, path: []const u8) !void {
         const formula_str = extractQueryParam(path, "formula") orelse {
             try self.sendError(connection, "Missing ?formula= parameter");
             return;
@@ -1575,7 +1612,7 @@ pub const ChatServer = struct {
             return;
         }
         const fit = sacred_formula.fitSacredFormula(mass);
-        var json: std.ArrayListUnmanaged(u8) = .{};
+        var json: std.ArrayListUnmanaged(u8) = .empty;
         defer json.deinit(self.allocator);
         // Escape formula_str for safe JSON embedding (prevent injection via " or \ in query param)
         var escaped_formula_buf: [256]u8 = undefined;
@@ -1606,7 +1643,7 @@ pub const ChatServer = struct {
     }
 
     /// GET /api/chem/element?q=Fe — Element info with extended data
-    fn handleChemElement(self: *Self, connection: *std.net.Server.Connection, path: []const u8) !void {
+    fn handleChemElement(self: *Self, connection: *net.Stream, path: []const u8) !void {
         const query = extractQueryParam(path, "q") orelse {
             try self.sendError(connection, "Missing ?q= parameter");
             return;
@@ -1616,7 +1653,7 @@ pub const ChatServer = struct {
             try self.sendError(connection, "Element not found");
             return;
         };
-        var json: std.ArrayListUnmanaged(u8) = .{};
+        var json: std.ArrayListUnmanaged(u8) = .empty;
         defer json.deinit(self.allocator);
         const body = std.fmt.allocPrint(
             self.allocator,
@@ -1637,7 +1674,7 @@ pub const ChatServer = struct {
     }
 
     /// GET /api/chem/balance?eq=H2%2BO2-%3EH2O — Balance chemical equation
-    fn handleChemBalance(self: *Self, connection: *std.net.Server.Connection, path: []const u8) !void {
+    fn handleChemBalance(self: *Self, connection: *net.Stream, path: []const u8) !void {
         const eq_raw = extractQueryParam(path, "eq") orelse {
             try self.sendError(connection, "Missing ?eq= parameter");
             return;
@@ -1723,7 +1760,7 @@ pub const ChatServer = struct {
         }
 
         // Build response JSON
-        var json: std.ArrayListUnmanaged(u8) = .{};
+        var json: std.ArrayListUnmanaged(u8) = .empty;
         defer json.deinit(self.allocator);
         // Balanced equation string
         try json.appendSlice(self.allocator, "{\"balanced\":\"");
@@ -1785,7 +1822,7 @@ pub const ChatServer = struct {
     }
 
     /// GET /api/chem/predict?reactants=Fe%2BHCl — Predict reaction products
-    fn handleChemPredict(self: *Self, connection: *std.net.Server.Connection, path: []const u8) !void {
+    fn handleChemPredict(self: *Self, connection: *net.Stream, path: []const u8) !void {
         const raw = extractQueryParam(path, "reactants") orelse {
             try self.sendError(connection, "Missing ?reactants= parameter");
             return;
@@ -1960,7 +1997,7 @@ pub const ChatServer = struct {
         }
 
         // Build JSON response
-        var json: std.ArrayListUnmanaged(u8) = .{};
+        var json: std.ArrayListUnmanaged(u8) = .empty;
         defer json.deinit(self.allocator);
 
         try json.appendSlice(self.allocator, "{\"reactants\":[");

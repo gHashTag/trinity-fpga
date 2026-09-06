@@ -20,6 +20,33 @@
 //!   try JobManager.cancel(job_id);
 
 const std = @import("std");
+
+const c_cwd = struct {
+    extern "c" fn getcwd(buf: [*]u8, size: usize) ?[*:0]u8;
+};
+
+/// Absolute path of the running executable. Caller owns the memory.
+fn selfExePathAlloc(gpa: std.mem.Allocator) ![]u8 {
+    var buf: [std.fs.max_path_bytes]u8 = undefined;
+    switch (@import("builtin").os.tag) {
+        .macos, .ios, .tvos, .watchos, .visionos => {
+            var size: u32 = @intCast(buf.len);
+            if (c_exe._NSGetExecutablePath(&buf, &size) != 0) return error.NameTooLong;
+            return gpa.dupe(u8, std.mem.sliceTo(&buf, 0));
+        },
+        else => {
+            const n = try std.Io.Dir.cwd().readLink(tri_io.get(), "/proc/self/exe", &buf);
+            return gpa.dupe(u8, n);
+        },
+    }
+}
+
+const c_exe = struct {
+    extern "c" fn _NSGetExecutablePath(buf: [*]u8, size: *u32) c_int;
+};
+const tri_rand = @import("tri_rand");
+const tri_io = @import("tri_io");
+const tri_time = @import("tri_time");
 const builtin = @import("builtin");
 
 // =============================================================================
@@ -228,7 +255,7 @@ pub const JobManager = struct {
 
     allocator: std.mem.Allocator,
     jobs: JobsMap,
-    jobs_dir: std.fs.Dir,
+    jobs_dir: std.Io.Dir,
     project_root: []const u8, // P0.3: Detected project root
     jobs_dir_path: []const u8, // P0.4: Store for cleanup
 
@@ -242,13 +269,15 @@ pub const JobManager = struct {
         const jobs_dir_path = try std.fmt.allocPrint(allocator, "{s}/{s}", .{ root, JobDir });
         errdefer allocator.free(jobs_dir_path);
 
-        std.fs.cwd().makePath(jobs_dir_path) catch |err| {
+        const io = tri_io.get();
+
+        std.Io.Dir.cwd().createDirPath(io, jobs_dir_path) catch |err| {
             std.log.err("Failed to create jobs directory: {}", .{err});
             return err;
         };
 
-        const jobs_dir = try std.fs.cwd().openDir(jobs_dir_path, .{});
-        errdefer jobs_dir.close();
+        const jobs_dir = try std.Io.Dir.cwd().openDir(io, jobs_dir_path, .{});
+        errdefer jobs_dir.close(io);
 
         return JobManager{
             .allocator = allocator,
@@ -262,7 +291,11 @@ pub const JobManager = struct {
     /// P0.3: Detect project root by searching for markers
     fn detectProjectRoot(allocator: std.mem.Allocator) ![]const u8 {
         const markers = [_][]const u8{ ".git", "build.zig", "src" };
-        const cwd = try std.process.getCwdAlloc(allocator);
+        // 0.16 removed std.process.getCwdAlloc. libc getcwd fills a buffer;
+        // the result is duped so the caller's `free` contract is unchanged.
+        var cwd_buf: [std.fs.max_path_bytes]u8 = undefined;
+        const cwd_ptr = c_cwd.getcwd(&cwd_buf, cwd_buf.len) orelse return error.CurrentWorkingDirectoryUnlinked;
+        const cwd = try allocator.dupe(u8, std.mem.span(cwd_ptr));
         defer allocator.free(cwd);
 
         var search_path = cwd;
@@ -271,8 +304,8 @@ pub const JobManager = struct {
                 const marker_path = try std.fs.path.join(allocator, &.{ search_path, marker });
                 defer allocator.free(marker_path);
 
-                if (std.fs.cwd().openFile(marker_path, .{})) |f| {
-                    f.close(); // Close file handle immediately — only checking existence
+                if (std.Io.Dir.cwd().openFile(tri_io.get(), marker_path, .{})) |f| {
+                    f.close(tri_io.get()); // Close file handle immediately — only checking existence
                     return allocator.dupe(u8, search_path);
                 } else |_| continue;
             }
@@ -300,13 +333,10 @@ pub const JobManager = struct {
         const metadata_path = try std.fs.path.join(allocator, &.{ job_dir, "metadata.json" });
         defer allocator.free(metadata_path);
 
-        const file = std.fs.cwd().openFile(metadata_path, .{}) catch |err| {
+        const content = std.Io.Dir.cwd().readFileAlloc(tri_io.get(), metadata_path, allocator, .limited(10_000)) catch |err| {
             if (err == error.FileNotFound) return null;
-            return err;
+            return error.InvalidMetadata;
         };
-        defer file.close();
-
-        const content = file.readToEndAlloc(allocator, 10_000) catch return error.InvalidMetadata;
         defer allocator.free(content);
 
         // Parse JSON manually (simple fields)
@@ -387,7 +417,7 @@ pub const JobManager = struct {
             self.allocator.destroy(job);
         }
         self.jobs.deinit();
-        self.jobs_dir.close();
+        self.jobs_dir.close(tri_io.get());
         // P0.4: Free project_root allocation
         self.allocator.free(self.project_root);
         // P0.4: Free jobs_dir_path allocation
@@ -408,7 +438,7 @@ pub const JobManager = struct {
         const job_path = try self.getJobDirPath(self.allocator, job_id);
         defer self.allocator.free(job_path);
 
-        std.fs.cwd().makePath(job_path) catch |err| {
+        std.Io.Dir.cwd().createDirPath(tri_io.get(), job_path) catch |err| {
             std.log.err("Failed to create job directory: {}", .{err});
             return err;
         };
@@ -420,7 +450,7 @@ pub const JobManager = struct {
             .command = try self.allocator.dupe(u8, command),
             .args = try duplicateStringSlice(self.allocator, args),
             .state = .pending,
-            .start_time = std.time.timestamp(),
+            .start_time = tri_time.timestamp(),
             .end_time = 0,
             .pid = 0,
             .working_dir = self.project_root, // P0.3: Use project root
@@ -500,8 +530,9 @@ pub const JobManager = struct {
         const stderr_path = try std.fs.path.join(allocator, &.{ job_dir, "stderr.log" });
         defer allocator.free(stderr_path);
 
-        const stdout_content = std.fs.cwd().readFileAlloc(allocator, stdout_path, 10_000_000) catch "";
-        const stderr_content = std.fs.cwd().readFileAlloc(allocator, stderr_path, 10_000_000) catch "";
+        const io = tri_io.get();
+        const stdout_content = std.Io.Dir.cwd().readFileAlloc(io, stdout_path, allocator, .limited(10_000_000)) catch "";
+        const stderr_content = std.Io.Dir.cwd().readFileAlloc(io, stderr_path, allocator, .limited(10_000_000)) catch "";
 
         return JobLogs{
             .stdout = stdout_content,
@@ -540,14 +571,15 @@ pub const JobManager = struct {
             artifacts.deinit(allocator);
         }
 
-        var dir = std.fs.cwd().openDir(artifacts_path, .{ .iterate = true }) catch {
+        const io = tri_io.get();
+        var dir = std.Io.Dir.cwd().openDir(io, artifacts_path, .{ .iterate = true }) catch {
             // No artifacts directory yet
             return artifacts.toOwnedSlice(allocator);
         };
-        defer dir.close();
+        defer dir.close(io);
 
         var iterator = dir.iterate();
-        while (try iterator.next()) |entry| {
+        while (try iterator.next(io)) |entry| {
             if (entry.kind == .file) {
                 const full_path = try std.fs.path.join(allocator, &.{ artifacts_path, entry.name });
                 try artifacts.append(allocator, full_path);
@@ -569,11 +601,12 @@ pub const JobManager = struct {
         const jobs_dir_path = try std.fs.path.join(allocator, &.{ self.project_root, JobDir });
         defer allocator.free(jobs_dir_path);
 
-        var dir = std.fs.cwd().openDir(jobs_dir_path, .{ .iterate = true }) catch return error.JobsDirNotFound;
-        defer dir.close();
+        const io = tri_io.get();
+        var dir = std.Io.Dir.cwd().openDir(io, jobs_dir_path, .{ .iterate = true }) catch return error.JobsDirNotFound;
+        defer dir.close(io);
 
         var iterator = dir.iterate();
-        while (try iterator.next()) |entry| {
+        while (try iterator.next(io)) |entry| {
             if (entry.kind == .directory and std.mem.startsWith(u8, entry.name, "job_")) {
                 try job_ids.append(allocator, try allocator.dupe(u8, entry.name));
             }
@@ -585,7 +618,7 @@ pub const JobManager = struct {
     /// Clean up completed jobs older than specified seconds
     pub fn cleanup(self: *JobManager, older_than_seconds: u64) !usize {
         var cleaned: usize = 0;
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
 
         // Collect job IDs to remove (can't modify map while iterating)
         var to_remove: std.ArrayList([]const u8) = .empty;
@@ -605,7 +638,7 @@ pub const JobManager = struct {
                 const age: u64 = @intCast(delta);
                 if (age > older_than_seconds) {
                     // Remove job directory from filesystem
-                    std.fs.cwd().deleteTree(job.dir_path) catch |err| {
+                    std.Io.Dir.cwd().deleteTree(tri_io.get(), job.dir_path) catch |err| {
                         std.log.debug("job_system: failed to cleanup dir '{s}': {}", .{ job.dir_path, err });
                     };
                     // Mark for removal from map
@@ -655,10 +688,9 @@ pub const Job = struct {
     /// Deinitialize job
     fn deinit(self: *Job) void {
         if (self.child_process) |*child| {
-            _ = child.kill() catch |err| {
-                std.log.warn("failed to kill child process: {s}", .{@errorName(err)});
-            };
-            _ = child.wait() catch |err| {
+            // 0.16: kill returns void -- no failure left to report.
+            child.kill(tri_io.get());
+            _ = child.wait(tri_io.get()) catch |err| {
                 std.log.debug("job_system: child.wait failed: {}", .{err});
             };
         }
@@ -682,10 +714,11 @@ pub const Job = struct {
         const metadata_path = try std.fmt.allocPrint(self.allocator, "{s}/metadata.json", .{self.dir_path});
         defer self.allocator.free(metadata_path);
 
-        const file = try std.fs.cwd().createFile(metadata_path, .{});
-        defer file.close();
+        const io = tri_io.get();
+        const file = try std.Io.Dir.cwd().createFile(io, metadata_path, .{});
+        defer file.close(io);
 
-        try file.writeAll(json);
+        try file.writeStreamingAll(io, json);
     }
 
     /// Spawn job process (Unix-only for now)
@@ -701,7 +734,10 @@ pub const Job = struct {
         const work_dir = options.working_dir orelse self.metadata.working_dir;
 
         // Get the current binary's path
-        const self_exe = try std.fs.selfExePathAlloc(self.allocator);
+        // 0.16 removed std.fs.selfExePathAlloc with no replacement anywhere
+        // in the stdlib, so this is per-platform: macOS exposes
+        // _NSGetExecutablePath, Linux answers through /proc/self/exe.
+        const self_exe = try selfExePathAlloc(self.allocator);
         defer self.allocator.free(self_exe);
 
         // Build the shell command with output redirection
@@ -739,21 +775,23 @@ pub const Job = struct {
         defer self.allocator.free(cmd_str);
 
         // Spawn using sh -c for shell redirection
-        var child = std.process.Child.init(&.{ "sh", "-c", cmd_str }, self.allocator);
-        child.stdin_behavior = .Ignore;
-
-        // Set working directory explicitly
-        if (options.working_dir) |wd| {
-            child.cwd = wd;
-        } else {
-            child.cwd = work_dir;
-        }
+        // 0.16 takes stdio and cwd as spawn OPTIONS. Assigning them after the
+        // fact no longer compiles, and for cwd it was always a latent bug:
+        // the process has already started by then.
+        const child_cwd = options.working_dir orelse work_dir;
+        var child = try std.process.spawn(tri_io.get(), .{
+            .argv = &.{ "sh", "-c", cmd_str },
+            .stdin = .ignore,
+            .stdout = .inherit,
+            .stderr = .inherit,
+            .cwd = .{ .path = child_cwd },
+        });
 
         // Start the process
-        try child.spawn();
-
         // Store PID immediately (child.id is valid after spawn, cast i32 to u32)
-        self.metadata.pid = @intCast(child.id);
+        // child.id is optional in 0.16 (a spawn implementation may not expose
+        // an OS pid at all), so 0 stands for "no pid" as it did before.
+        self.metadata.pid = if (child.id) |pid| @intCast(pid) else 0;
 
         // Spawn timeout watchdog thread if timeout is specified
         var watchdog: ?std.Thread = null;
@@ -766,13 +804,13 @@ pub const Job = struct {
             };
             const ctx = try self.allocator.create(WatchdogCtx);
             ctx.* = .{
-                .pid = child.id,
+                .pid = child.id orelse 0, // 0.16: no OS pid means nothing to signal
                 .timeout_ns = @as(u64, options.timeout) * std.time.ns_per_ms,
                 .timed_out = &timed_out,
             };
             watchdog = try std.Thread.spawn(.{}, struct {
                 fn run(c: *WatchdogCtx) void {
-                    std.Thread.sleep(c.timeout_ns);
+                    tri_time.sleep(c.timeout_ns);
                     // If we wake up, the process exceeded the timeout — kill it
                     std.posix.kill(c.pid, std.posix.SIG.KILL) catch {};
                     c.timed_out.* = true;
@@ -781,11 +819,11 @@ pub const Job = struct {
         }
 
         // Wait for the process to complete (blocks until exit or killed by watchdog)
-        const term = child.wait() catch |err| {
+        const term = child.wait(tri_io.get()) catch |err| {
             std.log.err("Job {s} wait failed: {}", .{ self.metadata.id, err });
             self.metadata.state = .failed;
             self.metadata.error_message = try std.fmt.allocPrint(self.allocator, "Process wait failed: {s}", .{@errorName(err)});
-            self.metadata.end_time = std.time.timestamp();
+            self.metadata.end_time = tri_time.timestamp();
             try self.writeMetadata();
             return err;
         };
@@ -794,7 +832,7 @@ pub const Job = struct {
         if (watchdog) |w| w.detach();
 
         // Update metadata with final status
-        self.metadata.end_time = std.time.timestamp();
+        self.metadata.end_time = tri_time.timestamp();
 
         if (timed_out) {
             self.metadata.state = .failed;
@@ -806,12 +844,12 @@ pub const Job = struct {
             );
         } else {
             self.metadata.state = switch (term) {
-                .Exited => |code| if (code == 0) .completed else .failed,
+                .exited => |code| if (code == 0) .completed else .failed,
                 else => .failed,
             };
 
             switch (term) {
-                .Exited => |code| {
+                .exited => |code| {
                     self.metadata.exit_code = @as(i32, @intCast(code));
                 },
                 else => {
@@ -836,26 +874,26 @@ pub const Job = struct {
         // Check if process is still running
         if (self.child_process) |*child| {
             // Try to wait with WNOHANG to check status without blocking
-            const result = child.wait() catch |err| {
+            const result = child.wait(tri_io.get()) catch |err| {
                 // Process might have terminated or other error
                 std.log.warn("Job {s} wait failed: {}", .{ self.metadata.id, err });
                 self.metadata.state = .failed;
                 self.metadata.error_message = try std.fmt.allocPrint(self.allocator, "Process wait failed: {s}", .{@errorName(err)});
-                self.metadata.end_time = std.time.timestamp();
+                self.metadata.end_time = tri_time.timestamp();
                 try self.writeMetadata();
                 return self.toStatus();
             };
 
-            if (result == .Exited or result == .Signal) {
+            if (result == .exited or result == .signal) {
                 // Process has terminated
                 self.metadata.state = switch (result) {
-                    .Exited => |code| if (code == 0) .completed else .failed,
+                    .exited => |code| if (code == 0) .completed else .failed,
                     else => .failed,
                 };
 
-                self.metadata.end_time = std.time.timestamp();
+                self.metadata.end_time = tri_time.timestamp();
                 switch (result) {
-                    .Exited => |code| {
+                    .exited => |code| {
                         self.metadata.exit_code = @as(i32, @intCast(code));
                     },
                     else => {
@@ -897,8 +935,9 @@ pub const Job = struct {
         const stderr_path = try std.fmt.allocPrint(allocator, "{s}/stderr.log", .{self.dir_path});
         defer allocator.free(stderr_path);
 
-        const stdout_content = std.fs.cwd().readFileAlloc(allocator, stdout_path, 10_000_000) catch "";
-        const stderr_content = std.fs.cwd().readFileAlloc(allocator, stderr_path, 10_000_000) catch "";
+        const io = tri_io.get();
+        const stdout_content = std.Io.Dir.cwd().readFileAlloc(io, stdout_path, allocator, .limited(10_000_000)) catch "";
+        const stderr_content = std.Io.Dir.cwd().readFileAlloc(io, stderr_path, allocator, .limited(10_000_000)) catch "";
 
         return JobLogs{
             .stdout = stdout_content,
@@ -912,28 +951,21 @@ pub const Job = struct {
 
         if (self.child_process) |*child| {
             // Try SIGTERM first (graceful shutdown)
-            _ = child.kill() catch |err| {
-                std.log.err("Failed to send SIGTERM to job {s}: {}", .{ self.metadata.id, err });
-
-                // Try SIGKILL (force terminate)
-                _ = child.kill() catch |err2| {
-                    std.log.err("Failed to send SIGKILL to job {s}: {}", .{ self.metadata.id, err2 });
-                    return false;
-                };
-            };
+            // 0.16: kill returns void -- no failure left to report.
+            child.kill(tri_io.get());
 
             // Wait for process to terminate
-            const wait_result = child.wait() catch |err| {
+            const wait_result = child.wait(tri_io.get()) catch |err| {
                 std.log.warn("Job {s} cleanup wait failed: {}", .{ self.metadata.id, err });
                 return false;
             };
 
             // Update metadata
             self.metadata.state = .cancelled;
-            self.metadata.end_time = std.time.timestamp();
+            self.metadata.end_time = tri_time.timestamp();
 
-            if (wait_result == .Exited) {
-                self.metadata.exit_code = @as(i32, @intCast(wait_result.Exited));
+            if (wait_result == .exited) {
+                self.metadata.exit_code = @as(i32, @intCast(wait_result.exited));
             }
 
             try self.writeMetadata();
@@ -964,23 +996,23 @@ pub const Job = struct {
     /// Wait for job completion (blocking)
     fn wait(self: *Job) !void {
         if (self.child_process) |*child| {
-            const result = child.wait() catch |err| {
+            const result = child.wait(tri_io.get()) catch |err| {
                 std.log.err("Job {s} wait failed: {}", .{ self.metadata.id, err });
                 self.metadata.state = .failed;
                 self.metadata.error_message = try std.fmt.allocPrint(self.allocator, "Wait failed: {s}", .{@errorName(err)});
-                self.metadata.end_time = std.time.timestamp();
+                self.metadata.end_time = tri_time.timestamp();
                 try self.writeMetadata();
                 return;
             };
 
-            self.metadata.end_time = std.time.timestamp();
+            self.metadata.end_time = tri_time.timestamp();
             self.metadata.state = switch (result) {
-                .Exited => |code| if (code == 0) .completed else .failed,
+                .exited => |code| if (code == 0) .completed else .failed,
                 else => .failed,
             };
 
             switch (result) {
-                .Exited => |code| {
+                .exited => |code| {
                     self.metadata.exit_code = @as(i32, @intCast(code));
                 },
                 else => {
@@ -1042,8 +1074,8 @@ pub const StartOptions = struct {
 
 /// Generate a unique job ID
 fn generateJobId(allocator: std.mem.Allocator) ![]const u8 {
-    const timestamp = std.time.timestamp();
-    const random = std.crypto.random.int(u32);
+    const timestamp = tri_time.timestamp();
+    const random = tri_rand.random().int(u32);
     return std.fmt.allocPrint(allocator, "job_{d}_{x}", .{ timestamp, random });
 }
 

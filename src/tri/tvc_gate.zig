@@ -11,6 +11,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const golden_chain = @import("dna_polymerase.zig");
 const tvc_corpus = @import("tvc_corpus");
 
@@ -186,10 +187,10 @@ pub const TVCGate = struct {
     /// Execute as Golden Chain link (returns LinkMetrics)
     pub fn executeAsLink(self: *Self, allocator: std.mem.Allocator, query: []const u8) ChainError!LinkMetrics {
         var metrics = LinkMetrics{};
-        const start = std.time.milliTimestamp();
+        const start = tri_time.milliTimestamp();
 
         const result = self.execute(allocator, query);
-        metrics.duration_ms = @intCast(std.time.milliTimestamp() - start);
+        metrics.duration_ms = @intCast(tri_time.milliTimestamp() - start);
 
         switch (result) {
             .hit => |h| {

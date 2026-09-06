@@ -15,6 +15,7 @@
 //!     V = n × 3^k × π^m × φ^p × e^q
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const mu_tracker = @import("mu_tracker.zig");
 const IntelligenceSnapshot = mu_tracker.IntelligenceSnapshot;
 
@@ -124,7 +125,7 @@ pub const ForecastModel = struct {
         self.base_intelligence = std.math.exp(intercept);
         self.growth_rate = lambda;
         self.sample_count = history.len;
-        self.last_fit_time = std.time.timestamp();
+        self.last_fit_time = tri_time.timestamp();
 
         // Calculate R² and standard error
         const mean_y = sum_y / n;
@@ -306,7 +307,7 @@ var global_model_time: i64 = 0;
 
 /// Get or create cached forecast model
 pub fn getGlobalModel(tracker: *const mu_tracker.MuTracker) !*ForecastModel {
-    const current_time = std.time.timestamp();
+    const current_time = tri_time.timestamp();
 
     // Refresh if older than 1 minute
     if (global_model == null or (current_time - global_model_time) > 60) {
@@ -435,7 +436,7 @@ var global_ensemble_time: i64 = 0;
 
 /// Get or create cached ensemble forecaster
 pub fn getGlobalEnsemble(tracker: *const mu_tracker.MuTracker, allocator: Allocator) !*EnsembleForecaster {
-    const current_time = std.time.timestamp();
+    const current_time = tri_time.timestamp();
 
     // Refresh if older than 1 minute
     if (global_ensemble == null or (current_time - global_ensemble_time) > 60) {

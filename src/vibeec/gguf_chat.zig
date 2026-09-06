@@ -4,6 +4,8 @@
 // phi^2 + 1/phi^2 = 3 = TRINITY
 
 const std = @import("std");
+const tri_io = @import("tri_io");
+const tri_time = @import("tri_time");
 const gguf = @import("gguf_reader.zig");
 const model_mod = @import("gguf_model.zig");
 const tokenizer_mod = @import("gguf_tokenizer.zig");
@@ -34,7 +36,7 @@ const ConversationHistory = struct {
     pub fn init(allocator: std.mem.Allocator, max_messages: usize) ConversationHistory {
         return .{
             .allocator = allocator,
-            .messages = .{},
+            .messages = .empty,
             .max_messages = max_messages,
         };
     }
@@ -68,7 +70,7 @@ const ConversationHistory = struct {
     }
 
     pub fn formatForModel(self: *const ConversationHistory, allocator: std.mem.Allocator, template: *const ChatTemplate) ![]u8 {
-        var result: std.ArrayListUnmanaged(u8) = .{};
+        var result: std.ArrayListUnmanaged(u8) = .empty;
         errdefer result.deinit(allocator);
 
         for (self.messages.items) |msg| {
@@ -192,7 +194,7 @@ fn runChatInternal(allocator: std.mem.Allocator, model_path: []const u8, initial
     model.printConfig();
 
     std.debug.print("\nLoading weights (SIMD matmul enabled)...\n", .{});
-    var timer = try std.time.Timer.start();
+    var timer = try tri_time.Timer.start();
     model.loadWeights() catch |err| {
         std.debug.print("Error loading weights: {}\n", .{err});
         return;
@@ -246,7 +248,7 @@ fn runChatInternal(allocator: std.mem.Allocator, model_path: []const u8, initial
     // Handle initial prompt if provided
     if (initial_prompt) |prompt| {
         try history.addMessage(.user, prompt);
-        const stdout_initial = std.fs.File.stdout();
+        const stdout_initial = std.Io.File.stdout();
         const response = try generateWithHistory(allocator, stdout_initial, &model, &tokenizer, &template, &history, max_tokens, sampling_params);
         if (response) |resp| {
             try history.addMessage(.assistant, resp);
@@ -254,17 +256,24 @@ fn runChatInternal(allocator: std.mem.Allocator, model_path: []const u8, initial
         }
     }
 
-    // Interactive loop - using low-level read for Zig 0.15 compatibility
-    const stdin_file = std.fs.File.stdin();
+    // Interactive loop.
+    // The reader is built once, outside the loop: it owns a buffer, so rebuilding
+    // it per iteration would discard bytes already pulled off the pipe.
+    const io = tri_io.get();
+    const stdin_file = std.Io.File.stdin();
+    var stdin_scratch: [1024]u8 = undefined;
+    var stdin_reader = stdin_file.reader(io, &stdin_scratch);
     var buf: [1024]u8 = undefined;
 
     while (true) {
         std.debug.print("User: ", .{});
 
-        // Read line byte by byte (Zig 0.15 compatible)
+        // Read the line one byte at a time. readSliceShort returns a short count
+        // (here: 0) only at end-of-stream, which is exactly what 0.15's
+        // File.read returning 0 meant.
         var line_len: usize = 0;
         while (line_len < buf.len - 1) {
-            const read_result = stdin_file.read(buf[line_len .. line_len + 1]) catch break;
+            const read_result = stdin_reader.interface.readSliceShort(buf[line_len .. line_len + 1]) catch break;
             if (read_result == 0) break; // EOF
             if (buf[line_len] == '\n') break;
             line_len += 1;
@@ -293,7 +302,7 @@ fn runChatInternal(allocator: std.mem.Allocator, model_path: []const u8, initial
         try history.addMessage(.user, trimmed);
 
         // Generate response with full history
-        const stdout_file = std.fs.File.stdout();
+        const stdout_file = std.Io.File.stdout();
         const response = try generateWithHistory(allocator, stdout_file, &model, &tokenizer, &template, &history, max_tokens, sampling_params);
 
         // Add assistant response to history
@@ -309,7 +318,7 @@ fn runChatInternal(allocator: std.mem.Allocator, model_path: []const u8, initial
 // Generate response with conversation history
 fn generateWithHistory(
     allocator: std.mem.Allocator,
-    _: std.fs.File, // unused, using std.debug.print
+    _: std.Io.File, // unused, using std.debug.print
     model: *model_mod.FullModel,
     tokenizer: *tokenizer_mod.Tokenizer,
     template: *const ChatTemplate,
@@ -322,7 +331,7 @@ fn generateWithHistory(
     defer allocator.free(formatted);
 
     std.debug.print("Assistant: ", .{});
-    var gen_timer = try std.time.Timer.start();
+    var gen_timer = try tri_time.Timer.start();
 
     // Tokenize formatted prompt
     const tokens = tokenizer.encode(allocator, formatted) catch {
@@ -357,7 +366,7 @@ fn generateWithHistory(
     var last_token: u32 = 0;
 
     // Collect response for history
-    var response: std.ArrayListUnmanaged(u8) = .{};
+    var response: std.ArrayListUnmanaged(u8) = .empty;
     errdefer response.deinit(allocator);
 
     while (generated < max_tokens) : (generated += 1) {
@@ -425,7 +434,7 @@ fn generateWithTemplate(
     defer allocator.free(formatted);
 
     std.debug.print("Assistant: ", .{});
-    var gen_timer = try std.time.Timer.start();
+    var gen_timer = try tri_time.Timer.start();
 
     // Tokenize formatted prompt
     const tokens = tokenizer.encode(allocator, formatted) catch {
@@ -527,7 +536,7 @@ pub fn main() !void {
     model.printConfig();
 
     std.debug.print("\nLoading weights...\n", .{});
-    var timer = try std.time.Timer.start();
+    var timer = try tri_time.Timer.start();
     model.loadWeights() catch |err| {
         std.debug.print("Error loading weights: {}\n", .{err});
         return;

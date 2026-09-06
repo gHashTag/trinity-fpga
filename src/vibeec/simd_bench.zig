@@ -1,4 +1,5 @@
 const std = @import("std");
+const tri_time = @import("tri_time");
 const simd = @import("simd_matmul.zig");
 
 // Scalar implementations for comparison
@@ -63,7 +64,7 @@ pub fn main() !void {
         // Benchmark scalar
         var scalar_time: u64 = 0;
         {
-            var timer = try std.time.Timer.start();
+            var timer = try tri_time.Timer.start();
             for (0..iterations) |_| {
                 scalarMatVec(output_scalar, mat, vec, rows, cols);
             }
@@ -73,7 +74,7 @@ pub fn main() !void {
         // Benchmark SIMD
         var simd_time: u64 = 0;
         {
-            var timer = try std.time.Timer.start();
+            var timer = try tri_time.Timer.start();
             for (0..iterations) |_| {
                 simd.simdMatVec(output_simd, mat, vec, rows, cols);
             }
@@ -117,7 +118,7 @@ pub fn main() !void {
     var scalar_dot_time: u64 = 0;
     var scalar_result: f32 = 0;
     {
-        var timer = try std.time.Timer.start();
+        var timer = try tri_time.Timer.start();
         for (0..dot_iters) |_| {
             scalar_result = scalarDot(a, b);
         }
@@ -127,7 +128,7 @@ pub fn main() !void {
     var simd_dot_time: u64 = 0;
     var simd_result: f32 = 0;
     {
-        var timer = try std.time.Timer.start();
+        var timer = try tri_time.Timer.start();
         for (0..dot_iters) |_| {
             simd_result = simd.simdDot(a, b);
         }

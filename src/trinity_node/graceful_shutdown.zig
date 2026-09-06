@@ -6,6 +6,8 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_mutex = @import("tri_mutex");
+const tri_time = @import("tri_time");
 const storage_mod = @import("storage.zig");
 const shard_rebalancer_mod = @import("shard_rebalancer.zig");
 
@@ -30,7 +32,7 @@ pub const GracefulShutdownManager = struct {
     active_plans: std.AutoHashMap([32]u8, ShutdownPlan),
     completed_plans: u64,
     total_shards_moved: u64,
-    mutex: std.Thread.Mutex,
+    mutex: tri_mutex.Mutex,
 
     pub fn init(allocator: std.mem.Allocator) GracefulShutdownManager {
         return .{
@@ -71,7 +73,7 @@ pub const GracefulShutdownManager = struct {
             .node_id = node_id,
             .shards_to_move = shard_count,
             .shards_moved = 0,
-            .initiated_at = std.time.timestamp(),
+            .initiated_at = tri_time.timestamp(),
             .completed = false,
         };
 

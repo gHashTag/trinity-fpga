@@ -1,5 +1,6 @@
 // identity.zig — Load agent identity from .ralph/IDENTITY.md
 const std = @import("std");
+const tri_io = @import("tri_io");
 
 const default_identity =
     \\# Ralph — Autonomous Development Agent
@@ -38,7 +39,7 @@ pub fn load(allocator: std.mem.Allocator, project_root: []const u8) Identity {
     const path = std.fmt.bufPrint(&path_buf, "{s}/.ralph/IDENTITY.md", .{project_root}) catch
         return .{ .content = default_identity, .allocator = allocator, .is_allocated = false };
 
-    const content = std.fs.cwd().readFileAlloc(allocator, path, 16384) catch
+    const content = std.Io.Dir.cwd().readFileAlloc(tri_io.get(), path, allocator, .limited(16384)) catch
         return .{ .content = default_identity, .allocator = allocator, .is_allocated = false };
 
     return .{ .content = content, .allocator = allocator, .is_allocated = true };

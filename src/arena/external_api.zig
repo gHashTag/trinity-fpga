@@ -10,6 +10,10 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
+const tri_env = @import("tri_env");
+const tri_proc = @import("tri_proc");
+const tri_time = @import("tri_time");
 const types = @import("types.zig");
 const Allocator = std.mem.Allocator;
 
@@ -23,7 +27,7 @@ pub const CompletionResult = struct {
 
 /// Get current time in milliseconds
 fn nowMs() i64 {
-    return @divTrunc(std.time.milliTimestamp(), 1);
+    return @divTrunc(tri_time.milliTimestamp(), 1);
 }
 
 /// Call an external LLM to complete a prompt
@@ -58,11 +62,11 @@ pub fn complete(
         .anthropic => {
             const mdl = model orelse blk_m: {
                 // Use CLAUDE_MODEL env if set (z.ai uses glm-5)
-                break :blk_m std.process.getEnvVarOwned(allocator, "CLAUDE_MODEL") catch "claude-sonnet-4-20250514";
+                break :blk_m tri_env.getEnvVarOwned(allocator, "CLAUDE_MODEL") catch "claude-sonnet-4-20250514";
             };
             const ep = endpoint orelse blk_e: {
                 // Use ANTHROPIC_BASE_URL env if set (z.ai proxy)
-                if (std.process.getEnvVarOwned(allocator, "ANTHROPIC_BASE_URL") catch null) |base| {
+                if (tri_env.getEnvVarOwned(allocator, "ANTHROPIC_BASE_URL") catch null) |base| {
                     defer allocator.free(base);
                     break :blk_e std.fmt.allocPrint(allocator, "{s}/v1/messages", .{base}) catch "https://api.anthropic.com/v1/messages";
                 }
@@ -92,21 +96,21 @@ fn callTrinity(allocator: Allocator, prompt: []const u8, start_ms: i64) !Complet
         "--max-tokens",
         "200",
     };
-    var child = std.process.Child.init(&argv, allocator);
-    child.stdout_behavior = .Pipe;
-    child.stderr_behavior = .Pipe;
-    try child.spawn();
-
+    var child = try std.process.spawn(tri_io.get(), .{
+        .argv = &argv,
+        .stdout = .pipe,
+        .stderr = .pipe,
+    });
     var stdout_buf: std.ArrayList(u8) = .empty;
     var stderr_buf: std.ArrayList(u8) = .empty;
     defer stderr_buf.deinit(allocator);
     try child.collectOutput(allocator, &stdout_buf, &stderr_buf, 1024 * 1024);
     const result = stdout_buf.toOwnedSlice(allocator) catch try allocator.dupe(u8, "");
-    const term = try child.wait();
+    const term = try child.wait(tri_io.get());
 
     const elapsed = elapsedMs(start_ms);
 
-    if (term.Exited != 0) {
+    if (term.exited != 0) {
         const model_name = try allocator.dupe(u8, "trinity-hslm");
         return .{
             .response = result,
@@ -132,7 +136,7 @@ fn callOpenAI(
     prompt: []const u8,
     start_ms: i64,
 ) !CompletionResult {
-    const api_key = std.process.getEnvVarOwned(allocator, "OPENAI_API_KEY") catch |err| switch (err) {
+    const api_key = tri_env.getEnvVarOwned(allocator, "OPENAI_API_KEY") catch |err| switch (err) {
         error.EnvironmentVariableNotFound => return makeError(allocator, "OPENAI_API_KEY not set", start_ms),
         else => return err,
     };
@@ -179,10 +183,10 @@ fn callAnthropic(
     prompt: []const u8,
     start_ms: i64,
 ) !CompletionResult {
-    const api_key = std.process.getEnvVarOwned(allocator, "ANTHROPIC_API_KEY") catch |err| switch (err) {
+    const api_key = tri_env.getEnvVarOwned(allocator, "ANTHROPIC_API_KEY") catch |err| switch (err) {
         error.EnvironmentVariableNotFound => {
             // Try ZAI_KEY_1 as fallback
-            const zai = std.process.getEnvVarOwned(allocator, "ZAI_KEY_1") catch
+            const zai = tri_env.getEnvVarOwned(allocator, "ZAI_KEY_1") catch
                 return makeError(allocator, "ANTHROPIC_API_KEY not set", start_ms);
             return callAnthropicWithKey(allocator, endpoint, model, prompt, zai, start_ms);
         },
@@ -261,7 +265,7 @@ fn httpPost(
     else
         std.fmt.bufPrint(&auth_h_buf, "Authorization: Bearer {s}", .{auth_value}) catch "Authorization: Bearer ";
 
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{
             "curl", "-s", "--max-time",                     "30",

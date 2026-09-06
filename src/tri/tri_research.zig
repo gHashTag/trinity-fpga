@@ -15,6 +15,10 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_env = @import("tri_env");
+const tri_io = @import("tri_io");
+const tri_proc = @import("tri_proc");
+const tri_time = @import("tri_time");
 const tri_exit_codes = @import("tri_exit_codes.zig");
 const SacredConstants = @import("sacred_constants.zig").SacredConstants;
 
@@ -43,7 +47,7 @@ pub fn runIdempotencyCommand(allocator: std.mem.Allocator, args: []const []const
     const CYCLES: usize = 100;
     std.debug.print("{s}Running {d}-cycle idempotency test...{s}\n\n", .{ CYAN, CYCLES, RESET });
 
-    const start_time = std.time.nanoTimestamp();
+    const start_time = tri_time.nanoTimestamp();
 
     // Sacred constants verification
     std.debug.print("{s}1. Sacred Constants Verification{s}\n", .{ GOLDEN, RESET });
@@ -68,7 +72,7 @@ pub fn runIdempotencyCommand(allocator: std.mem.Allocator, args: []const []const
     std.debug.print("   {s}✓{s} Hash-based O(1) pattern lookup (deterministic)\n", .{ GREEN, RESET });
     std.debug.print("   {s}✓{s} No HNSW randomness in current implementation\n\n", .{ GREEN, RESET });
 
-    const elapsed_ns = std.time.nanoTimestamp() - start_time;
+    const elapsed_ns = tri_time.nanoTimestamp() - start_time;
     const elapsed_ms = @as(f64, @floatFromInt(elapsed_ns)) / 1_000_000.0;
 
     std.debug.print("{s}═════════════════════════════════════════════════════════════{s}\n", .{ GOLDEN, RESET });
@@ -87,7 +91,7 @@ pub fn runIdempotencyCommand(allocator: std.mem.Allocator, args: []const []const
         \\  "elapsed_ms": {d:.2}
         \\}}}}
     , .{
-        std.time.timestamp(),
+        tri_time.timestamp(),
         CYCLES,
         elapsed_ms,
     });
@@ -190,20 +194,22 @@ fn runPerplexityQuery(allocator: std.mem.Allocator, args: []const []const u8) !v
     const cache_path = std.fmt.bufPrint(&cache_path_buf, "{s}/{x}.txt", .{ CACHE_DIR, hash }) catch "";
 
     if (cache_path.len > 0) {
-        if (std.fs.cwd().openFile(cache_path, .{})) |f| {
-            defer f.close();
-            const cached = f.readToEndAlloc(allocator, 64 * 1024) catch null;
-            if (cached) |content| {
-                defer allocator.free(content);
-                std.debug.print("{s}  [cached]{s}\n  {s}\n\n", .{ GREEN, RESET, content });
-                std.debug.print("RESEARCH_RESULT:cached=true:hash={x}\n", .{hash});
-                return;
-            }
-        } else |_| {}
+        const cached = std.Io.Dir.cwd().readFileAlloc(
+            tri_io.get(),
+            cache_path,
+            allocator,
+            .limited(64 * 1024),
+        ) catch null;
+        if (cached) |content| {
+            defer allocator.free(content);
+            std.debug.print("{s}  [cached]{s}\n  {s}\n\n", .{ GREEN, RESET, content });
+            std.debug.print("RESEARCH_RESULT:cached=true:hash={x}\n", .{hash});
+            return;
+        }
     }
 
     // Try Perplexity API via PERPLEXITY_API_KEY
-    const api_key = std.posix.getenv("PERPLEXITY_API_KEY") orelse {
+    const api_key = tri_env.getPosix("PERPLEXITY_API_KEY") orelse {
         // No API key — fall back to offline
         std.debug.print("  {s}No PERPLEXITY_API_KEY. Using offline patterns.{s}\n\n", .{ GOLDEN, RESET });
         const answer = offlineAnswer(query);
@@ -222,7 +228,7 @@ fn runPerplexityQuery(allocator: std.mem.Allocator, args: []const []const u8) !v
     var auth_buf: [256]u8 = undefined;
     const auth = std.fmt.bufPrint(&auth_buf, "Authorization: Bearer {s}", .{api_key}) catch return;
 
-    const curl_result = std.process.Child.run(.{
+    const curl_result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{
             "curl",                                       "-s", "-X",                             "POST",
@@ -267,12 +273,13 @@ fn runPerplexityQuery(allocator: std.mem.Allocator, args: []const []const u8) !v
 fn cacheAnswer(allocator: std.mem.Allocator, path: []const u8, answer: []const u8) !void {
     _ = allocator;
     if (path.len == 0) return;
-    std.fs.cwd().makePath(CACHE_DIR) catch |err| {
+    const io = tri_io.get();
+    std.Io.Dir.cwd().createDirPath(io, CACHE_DIR) catch |err| {
         std.log.warn("failed to create cache dir: {s}", .{@errorName(err)});
     };
-    const file = std.fs.cwd().createFile(path, .{}) catch return;
-    defer file.close();
-    file.writeAll(answer) catch |err| {
+    const file = std.Io.Dir.cwd().createFile(io, path, .{}) catch return;
+    defer file.close(io);
+    file.writeStreamingAll(io, answer) catch |err| {
         std.log.warn("failed to write cache: {s}", .{@errorName(err)});
     };
 }
@@ -290,7 +297,7 @@ fn offlineAnswer(query: []const u8) []const u8 {
         return "No output from ast-check means the file is empty or the path is wrong. Check: 1) generated/<name>.zig exists, 2) the .tri spec produced output, 3) vibee codegen ran successfully.";
     }
     if (std.mem.indexOf(u8, query, "compile") != null or std.mem.indexOf(u8, query, "build") != null) {
-        return "Compilation failures: 1) type mismatch — check function signatures, 2) missing error set member, 3) allocator not passed. In Zig 0.15: Child.run replaces Child.exec, use .term.Exited instead of .term.exited.";
+        return "Compilation failures: 1) type mismatch — check function signatures, 2) missing error set member, 3) allocator not passed. In Zig 0.15: Child.run replaces Child.exec, use .term.exited instead of .term.exited.";
     }
     if (std.mem.indexOf(u8, query, "test") != null or std.mem.indexOf(u8, query, "fail") != null) {
         return "Test failures: 1) expectEqual args may be swapped (expected, actual), 2) floating point: use expectApproxEqAbs, 3) allocation: use testing.allocator, defer free. Run: zig build test 2>&1 | grep FAIL for specific failures.";
@@ -335,21 +342,25 @@ fn runCacheList(allocator: std.mem.Allocator) !void {
     _ = allocator;
     std.debug.print("\n{s}\xf0\x9f\x93\x9a Scholar Cache{s}\n\n", .{ GOLDEN, RESET });
 
-    var dir = std.fs.cwd().openDir(CACHE_DIR, .{ .iterate = true }) catch {
+    const io = tri_io.get();
+    var dir = std.Io.Dir.cwd().openDir(io, CACHE_DIR, .{ .iterate = true }) catch {
         std.debug.print("  {s}No cache directory yet.{s}\n\n", .{ GOLDEN, RESET });
         return;
     };
-    defer dir.close();
+    defer dir.close(io);
 
     var count: u32 = 0;
     var iter = dir.iterate();
-    while (iter.next() catch null) |entry| {
+    while (iter.next(io) catch null) |entry| {
         if (entry.kind == .file and std.mem.endsWith(u8, entry.name, ".txt")) {
             // Read first 80 chars as preview
-            const file = dir.openFile(entry.name, .{}) catch continue;
-            defer file.close();
+            const file = dir.openFile(io, entry.name, .{}) catch continue;
+            defer file.close(io);
             var preview_buf: [80]u8 = undefined;
-            const n = file.readAll(&preview_buf) catch 0;
+            // Preview only: a short read is legitimate here.
+            var preview_scratch: [128]u8 = undefined;
+            var preview_reader = file.reader(io, &preview_scratch);
+            const n = preview_reader.interface.readSliceShort(&preview_buf) catch 0;
             std.debug.print("  {s}{s}{s}: {s}\n", .{ CYAN, entry.name, RESET, preview_buf[0..n] });
             count += 1;
         }

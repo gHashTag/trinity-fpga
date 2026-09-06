@@ -8,6 +8,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_env = @import("tri_env");
 const http = std.http;
 const json = std.json;
 
@@ -220,7 +221,7 @@ pub fn main() !void {
     const expected_state = args[2];
 
     // Get API key from env
-    const api_key = std.process.getEnvVarOwned(allocator, "ANTHROPIC_API_KEY") catch |err| {
+    const api_key = tri_env.getEnvVarOwned(allocator, "ANTHROPIC_API_KEY") catch |err| {
         std.debug.print("Error getting API key: {}\n", .{err});
         std.debug.print("Set ANTHROPIC_API_KEY environment variable\n", .{});
         return err;

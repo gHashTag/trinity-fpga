@@ -22,6 +22,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 // ═══════════════════════════════════════════════════════════════════════════════
 // CODE TEMPLATE DATABASE (50+ templates)
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1953,9 +1954,9 @@ pub fn main() !void {
 
     std.debug.print("\n", .{});
     for (queries, 0..) |query, i| {
-        const start = std.time.microTimestamp();
+        const start = tri_time.microTimestamp();
         const result = coder.generateCode(query);
-        const elapsed = @as(u64, @intCast(std.time.microTimestamp() - start));
+        const elapsed = @as(u64, @intCast(tri_time.microTimestamp() - start));
         total_time_us += elapsed;
 
         if (result.is_match) matches += 1;

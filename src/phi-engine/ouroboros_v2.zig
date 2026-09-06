@@ -1,5 +1,6 @@
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 // ═════════════════════════════════════════════════════════════
 //  v2.0:  inand withbyand and withinwithininand
 // betteron version with to and
@@ -730,8 +731,8 @@ pub const AdvancedCreator = struct {
     }
 
     fn populateMetadata(self: *AdvancedCreator, generated: *GeneratedCode, canonized: CanonizedSpec) !void {
-        generated.metadata.version = try std.fmt.allocPrint(self.allocator, "{d}.0.0", .{std.time.timestamp()});
-        generated.metadata.compile_time = std.time.timestamp();
+        generated.metadata.version = try std.fmt.allocPrint(self.allocator, "{d}.0.0", .{tri_time.timestamp()});
+        generated.metadata.compile_time = tri_time.timestamp();
         generated.metadata.target_architecture = "ternary_trit_cpu";
         generated.metadata.optimization_level = 2;
     }

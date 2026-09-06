@@ -4,6 +4,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 /// Point in time
 pub const Instant = struct {
     epoch_seconds: i64,
@@ -18,7 +19,7 @@ pub const Duration = struct {
 
 /// Current time (Unix epoch)
 pub fn now() Instant {
-    const timestamp = std.time.nanoTimestamp();
+    const timestamp = tri_time.nanoTimestamp();
     const secs = @as(i64, @intCast(@divTrunc(timestamp, 1_000_000_000)));
     const ns = @as(u32, @intCast(@abs(timestamp) % 1_000_000_000));
     return .{

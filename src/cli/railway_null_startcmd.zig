@@ -1,6 +1,7 @@
 // Railway: Remove startCommand to use Dockerfile ENTRYPOINT
 const std = @import("std");
 
+const tri_proc = @import("tri_proc");
 pub fn main() !void {
     var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
@@ -27,14 +28,14 @@ pub fn main() !void {
     const auth_header = std.fmt.allocPrint(allocator, "Authorization: Bearer {s}", .{token}) catch return error.OutOfMemory;
     defer allocator.free(auth_header);
 
-    const result = try std.process.Child.run(.{
+    const result = try tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ "curl", "-s", "-X", "POST", "-H", auth_header, "-H", "Content-Type: application/json", "-d", query, "https://backboard.railway.com/graphql" },
     });
     defer allocator.free(result.stderr);
     defer allocator.free(result.stdout);
 
-    const has_error = result.term.Exited != 0;
+    const has_error = result.term.exited != 0;
     const has_errors_field = std.mem.indexOf(u8, result.stdout, "\"errors\"") != null;
     if (has_error or has_errors_field) {
         std.debug.print("❌ Error: {s}\n", .{result.stdout});

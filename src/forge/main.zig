@@ -14,6 +14,8 @@
 // =============================================================================
 
 const std = @import("std");
+const tri_io = @import("tri_io");
+const tri_time = @import("tri_time");
 const types = @import("types.zig");
 const json_parser = @import("json_parser.zig");
 const xdc_parser = @import("xdc_parser.zig");
@@ -149,7 +151,7 @@ fn forgeRun(allocator: std.mem.Allocator, args: []const []const u8) !void {
     else
         .xc7a35t;
 
-    const timer_start = std.time.milliTimestamp();
+    const timer_start = tri_time.milliTimestamp();
 
     // =========================================================================
     // Phase 1: Parse Yosys JSON netlist
@@ -375,7 +377,7 @@ fn forgeRun(allocator: std.mem.Allocator, args: []const []const u8) !void {
     // =========================================================================
     // Final Report
     // =========================================================================
-    const timer_end = std.time.milliTimestamp();
+    const timer_end = tri_time.milliTimestamp();
     const total_ms = timer_end - timer_start;
 
     std.debug.print("\n", .{});
@@ -442,14 +444,14 @@ fn forgeFasm2Bit(allocator: std.mem.Allocator, args: []const []const u8) !void {
     std.debug.print("  Output:  {s}\n", .{output_path});
 
     // Read FASM file
-    const fasm_content = std.fs.cwd().readFileAlloc(allocator, input_path.?, 10 * 1024 * 1024) catch |err| {
+    const fasm_content = std.Io.Dir.cwd().readFileAlloc(tri_io.get(), input_path.?, allocator, .limited(10 * 1024 * 1024)) catch |err| {
         std.debug.print("  Error: Failed to read {s}: {}\n", .{ input_path.?, err });
         return;
     };
     defer allocator.free(fasm_content);
 
     // Parse FASM lines into features
-    var features: std.ArrayList(types.FasmFeature) = .{};
+    var features: std.ArrayList(types.FasmFeature) = .empty;
     defer features.deinit(allocator);
 
     var line_count: u32 = 0;
@@ -601,19 +603,23 @@ fn flashBitstream(bitstream_path: []const u8, device_str: []const u8) void {
         bitstream_path,
     };
 
-    var child = std.process.Child.init(&argv, std.heap.page_allocator);
+    var child = try std.process.spawn(tri_io.get(), .{
+        .argv = &argv,
+        .stdout = .inherit,
+        .stderr = .inherit,
+    });
     child.spawn() catch {
         printManualFlash(bitstream_path);
         return;
     };
 
-    const term = child.wait() catch {
+    const term = child.wait(tri_io.get()) catch {
         printManualFlash(bitstream_path);
         return;
     };
 
     switch (term) {
-        .Exited => |code| {
+        .exited => |code| {
             if (code == 0) {
                 std.debug.print("\n  FLASH COMPLETE — FPGA PROGRAMMED\n", .{});
             } else {
@@ -638,21 +644,24 @@ fn printManualFlash(bitstream_path: []const u8) void {
 // =============================================================================
 
 fn forgeDetect(allocator: std.mem.Allocator) !void {
+    _ = allocator; // 0.16: std.process.spawn takes no allocator
     std.debug.print("{s}", .{FORGE_BANNER});
     std.debug.print("{s}", .{FORGE_DEPRECATION});
     std.debug.print("[FORGE] JTAG Device Detection\n\n", .{});
     std.debug.print("  Scanning JTAG chain...\n", .{});
 
     const argv = [_][]const u8{ "openFPGALoader", "--detect" };
-    var child = std.process.Child.init(&argv, allocator);
-    child.stderr_behavior = .Pipe;
-    child.stdout_behavior = .Pipe;
+    var child = try std.process.spawn(tri_io.get(), .{
+        .argv = &argv,
+        .stdout = .pipe,
+        .stderr = .pipe,
+    });
     child.spawn() catch {
         std.debug.print("  openFPGALoader not found.\n", .{});
         printIdcodeTable();
         return;
     };
-    _ = child.wait() catch {
+    _ = child.wait(tri_io.get()) catch {
         printIdcodeTable();
         return;
     };

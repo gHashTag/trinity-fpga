@@ -4,6 +4,7 @@
 //! high-confidence patterns, and streams results via WebSocket.
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const sacred = @import("sacred_constants.zig");
 
 /// Daemon configuration
@@ -203,7 +204,7 @@ pub const PasDaemon = struct {
             .pattern_id = pattern_id,
             .pattern_data = task_data,
             .priority = priority,
-            .created_at = std.time.milliTimestamp(),
+            .created_at = tri_time.milliTimestamp(),
             .context = null,
         };
 
@@ -214,7 +215,7 @@ pub const PasDaemon = struct {
 
     /// Process a single task
     pub fn processTask(self: *PasDaemon, task: AnalysisTask) !AnalysisResult {
-        const start_time = std.time.milliTimestamp();
+        const start_time = tri_time.milliTimestamp();
 
         // Analyze pattern with sacred mathematics
         const base_confidence = try self.analyzePattern(task.pattern_id, task.pattern_data);
@@ -230,7 +231,7 @@ pub const PasDaemon = struct {
         // Generate recommendation
         const recommendation = try self.generateRecommendation(boosted_confidence, sacred_score);
 
-        const end_time = std.time.milliTimestamp();
+        const end_time = tri_time.milliTimestamp();
 
         // Auto-apply if high confidence
         var auto_applied = false;
@@ -479,7 +480,7 @@ test "PasDaemon process task" {
         .pattern_id = 456,
         .pattern_data = pattern_data,
         .priority = .normal,
-        .created_at = std.time.milliTimestamp(),
+        .created_at = tri_time.milliTimestamp(),
         .context = null,
     };
 
@@ -509,7 +510,7 @@ test "PasDaemon auto-apply threshold" {
         .pattern_id = 1,
         .pattern_data = pattern_data,
         .priority = .high,
-        .created_at = std.time.milliTimestamp(),
+        .created_at = tri_time.milliTimestamp(),
         .context = null,
     };
 

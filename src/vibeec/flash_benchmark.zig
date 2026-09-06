@@ -5,6 +5,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const flash = @import("flash_attention.zig");
 
 pub fn main() !void {
@@ -51,7 +52,7 @@ pub fn main() !void {
         for (v_cache, 0..) |*v, i| v.* = @sin(@as(f32, @floatFromInt(i)) * 0.2);
 
         // Benchmark standard attention
-        var timer = try std.time.Timer.start();
+        var timer = try tri_time.Timer.start();
         for (0..iterations) |_| {
             try flash.standardAttention(allocator, output, q, k_cache, v_cache, num_heads, num_kv_heads, head_dim, seq_len, scale);
         }

@@ -6,6 +6,8 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_mutex = @import("tri_mutex");
+const tri_time = @import("tri_time");
 const storage_mod = @import("storage.zig");
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -34,7 +36,7 @@ pub const ShardScrubber = struct {
     corrupted_shards: std.AutoHashMap([32]u8, ScrubResult),
     scrub_interval_secs: i64,
     last_scrub_time: i64,
-    mutex: std.Thread.Mutex,
+    mutex: tri_mutex.Mutex,
 
     // Stats
     total_scrubs: u64,
@@ -81,7 +83,7 @@ pub const ShardScrubber = struct {
             if (!std.mem.eql(u8, &actual_hash, &expected_hash)) {
                 // Corruption detected
                 self.corrupted_shards.put(expected_hash, .{
-                    .detected_at = std.time.timestamp(),
+                    .detected_at = tri_time.timestamp(),
                     .expected_hash = expected_hash,
                     .actual_hash = actual_hash,
                 }) catch |err| {
@@ -92,7 +94,7 @@ pub const ShardScrubber = struct {
             }
         }
 
-        self.last_scrub_time = std.time.timestamp();
+        self.last_scrub_time = tri_time.timestamp();
         return found;
     }
 
@@ -108,7 +110,7 @@ pub const ShardScrubber = struct {
         self.mutex.lock();
         defer self.mutex.unlock();
 
-        var result = std.ArrayListUnmanaged([32]u8){};
+        var result = @as(std.ArrayListUnmanaged([32]u8), .empty);
         errdefer result.deinit(allocator);
 
         var iter = self.corrupted_shards.keyIterator();
@@ -128,7 +130,7 @@ pub const ShardScrubber = struct {
 
     /// Check if it's time to run a scrub
     pub fn shouldScrub(self: *ShardScrubber) bool {
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
         return (now - self.last_scrub_time) >= self.scrub_interval_secs;
     }
 
@@ -289,7 +291,7 @@ test "shouldScrub respects interval" {
     try std.testing.expect(scrubber.shouldScrub());
 
     // After setting recent time, should not scrub
-    scrubber.last_scrub_time = std.time.timestamp();
+    scrubber.last_scrub_time = tri_time.timestamp();
     try std.testing.expect(!scrubber.shouldScrub());
 }
 

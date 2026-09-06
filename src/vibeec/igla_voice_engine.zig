@@ -13,6 +13,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 // ============================================================================
 // CONSTANTS
 // ============================================================================
@@ -722,7 +723,7 @@ pub fn runBenchmark() void {
     std.debug.print("  Volume: {d:.2}\n", .{engine.config.volume});
     std.debug.print("\n", .{});
 
-    const start_time = std.time.nanoTimestamp();
+    const start_time = tri_time.nanoTimestamp();
 
     // Test TTS
     std.debug.print("  Testing Text-to-Speech...\n", .{});
@@ -769,7 +770,7 @@ pub fn runBenchmark() void {
         });
     }
 
-    const end_time = std.time.nanoTimestamp();
+    const end_time = tri_time.nanoTimestamp();
     const elapsed_ns: i64 = @intCast(end_time - start_time);
     const elapsed_us: u64 = @intCast(@divFloor(elapsed_ns, 1000));
 

@@ -13,6 +13,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const real_agent = @import("real_agent.zig");
 const http_client = @import("http_client.zig");
@@ -330,7 +331,7 @@ pub const ActionCache = struct {
         if (self.cache.getPtr(key)) |entry| {
             // Update existing entry
             entry.success_count += 1;
-            entry.last_used = std.time.timestamp();
+            entry.last_used = tri_time.timestamp();
             entry.action = sequence.actions[0];
             entry.sequence = sequence;
             self.allocator.free(key);
@@ -341,7 +342,7 @@ pub const ActionCache = struct {
                 .sequence = sequence,
                 .success_count = 1,
                 .fail_count = 0,
-                .last_used = std.time.timestamp(),
+                .last_used = tri_time.timestamp(),
             }) catch {
                 self.allocator.free(key);
             };
@@ -425,7 +426,7 @@ pub const ActionCache = struct {
             if (count >= MAX_ENTRIES) break;
 
             // Check TTL
-            const now = std.time.timestamp();
+            const now = tri_time.timestamp();
             if (now - entry.value_ptr.last_used > TTL_SECONDS) {
                 continue;
             }
@@ -577,7 +578,7 @@ pub const ActionCache = struct {
 
         var pos = array_start;
         var loaded: u32 = 0;
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
 
         // Check version for format
         const is_v2 = std.mem.indexOf(u8, json, "\"version\":2") != null;
@@ -721,7 +722,7 @@ pub const ActionCache = struct {
 
     /// Clean expired entries
     pub fn cleanExpired(self: *Self) void {
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
         var to_remove = std.ArrayList([]const u8).init(self.allocator);
         defer to_remove.deinit();
 
@@ -878,7 +879,7 @@ pub const MultiAgentOrchestrator = struct {
 
     /// Main orchestration loop - coordinates multiple agents
     pub fn orchestrate(self: *Self, goal: []const u8) ![]const u8 {
-        const start_time = std.time.milliTimestamp();
+        const start_time = tri_time.milliTimestamp();
 
         // Step 1: Analyze task and determine agent routing
         const primary_agent = routeToAgent(goal);
@@ -911,7 +912,7 @@ pub const MultiAgentOrchestrator = struct {
             },
         }
 
-        const duration = @as(u64, @intCast(std.time.milliTimestamp() - start_time));
+        const duration = @as(u64, @intCast(tri_time.milliTimestamp() - start_time));
 
         // Log execution
         try self.execution_log.append(ExecutionLogEntry{

@@ -10,6 +10,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const vibee_parser = @import("vibee_parser.zig");
 const zig_codegen = @import("zig_codegen.zig");
 
@@ -224,7 +225,7 @@ pub const SelfImprover = struct {
         defer self.allocator.free(gen_path);
 
         // Read generated file
-        const source = std.fs.cwd().readFileAlloc(self.allocator, gen_path, 1024 * 1024) catch |err| {
+        const source = std.Io.Dir.cwd().readFileAlloc(tri_io.get(), gen_path, self.allocator, .limited(1024 * 1024)) catch |err| {
             if (err == error.FileNotFound) {
                 // File doesn't exist yet, generate it first
                 try self.regenerateCode(spec_path);
@@ -481,7 +482,7 @@ pub const SelfImprover = struct {
 
         // v10.1: Check if file exists and needs patching vs fresh generation
         var buffer: [1024]u8 = undefined;
-        const file_exists = std.fs.cwd().readFile(gen_path, &buffer) catch |err| {
+        const file_exists = std.Io.Dir.cwd().readFile(tri_io.get(), gen_path, &buffer) catch |err| {
             if (err == error.FileNotFound) {
                 // File doesn't exist - fresh generation
                 try self.generateFresh(spec_path);

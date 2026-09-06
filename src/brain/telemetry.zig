@@ -62,7 +62,7 @@
 //!
 //! // Record metrics
 //! try tel.record(.{
-//!     .timestamp = std.time.nanoTimestamp(),
+//!     .timestamp = tri_time.nanoTimestamp(),
 //!     .active_claims = 5,
 //!     .events_published = 1000,
 //!     .events_buffered = 10,
@@ -94,6 +94,8 @@
 
 const std = @import("std");
 
+const tri_mutex = @import("tri_mutex");
+const tri_time = @import("tri_time");
 pub const TelemetryPoint = struct {
     timestamp: i64,
     active_claims: usize,
@@ -106,7 +108,7 @@ pub const BrainTelemetry = struct {
     allocator: std.mem.Allocator,
     points: std.ArrayList(TelemetryPoint),
     max_points: usize,
-    mutex: std.Thread.Mutex,
+    mutex: tri_mutex.Mutex,
 
     const Self = @This();
 
@@ -119,7 +121,7 @@ pub const BrainTelemetry = struct {
             .allocator = allocator,
             .points = points,
             .max_points = max_points,
-            .mutex = std.Thread.Mutex{},
+            .mutex = tri_mutex.Mutex{},
         };
     }
 
@@ -629,10 +631,10 @@ test "BrainTelemetry exportJson" {
     try tel.record(.{ .timestamp = now, .active_claims = 5, .events_published = 100, .events_buffered = 10, .health_score = 90.5 });
 
     var buffer: [256]u8 = undefined;
-    var fbs = std.io.fixedBufferStream(&buffer);
-    try tel.exportJson(fbs.writer());
+    var w: std.Io.Writer = .fixed(&buffer);
+    try tel.exportJson(&w);
 
-    const output = fbs.getWritten();
+    const output = w.buffered();
     try std.testing.expectEqual(@as(usize, 85), output.len);
     try std.testing.expectEqualStrings("{\"telemetry\":[{\"ts\":1234567890,\"claims\":5,\"events\":100,\"buffered\":10,\"health\":90.5}]}", output);
 }
@@ -648,10 +650,10 @@ test "BrainTelemetry exportJson: multiple points" {
     try tel.record(.{ .timestamp = now + 1, .active_claims = 3, .events_published = 150, .events_buffered = 5, .health_score = 95.0 });
 
     var buffer: [512]u8 = undefined;
-    var fbs = std.io.fixedBufferStream(&buffer);
-    try tel.exportJson(fbs.writer());
+    var w: std.Io.Writer = .fixed(&buffer);
+    try tel.exportJson(&w);
 
-    const output = fbs.getWritten();
+    const output = w.buffered();
     try std.testing.expect(output.len > 80);
     try std.testing.expect(std.mem.indexOf(u8, output, "\"claims\":5") != null);
     try std.testing.expect(std.mem.indexOf(u8, output, "\"claims\":3") != null);
@@ -785,10 +787,10 @@ test "BrainTelemetry exportJson: empty" {
     defer tel.deinit();
 
     var buffer: [64]u8 = undefined;
-    var fbs = std.io.fixedBufferStream(&buffer);
-    try tel.exportJson(fbs.writer());
+    var w: std.Io.Writer = .fixed(&buffer);
+    try tel.exportJson(&w);
 
-    const output = fbs.getWritten();
+    const output = w.buffered();
     try std.testing.expectEqualStrings("{\"telemetry\":[]}", output);
 }
 

@@ -10,6 +10,8 @@
 // =============================================================================
 
 const std = @import("std");
+const tri_io = @import("tri_io");
+const tri_time = @import("tri_time");
 const golden_chain = @import("dna_polymerase.zig");
 
 // =============================================================================
@@ -143,17 +145,18 @@ fn runEvalRun(allocator: std.mem.Allocator, args: []const []const u8) void {
 
 fn runEvalReport(allocator: std.mem.Allocator) void {
     // Read latest eval run from .trinity/eval/
-    var dir = std.fs.cwd().openDir(".trinity/eval", .{ .iterate = true }) catch {
+    const io = tri_io.get();
+    var dir = std.Io.Dir.cwd().openDir(io, ".trinity/eval", .{ .iterate = true }) catch {
         std.debug.print("\x1b[33mNo eval data. Run `tri eval run --issues=...` first.\x1b[0m\n", .{});
         return;
     };
-    defer dir.close();
+    defer dir.close(io);
 
     _ = allocator;
 
     var count: u32 = 0;
     var iter = dir.iterate();
-    while (iter.next() catch null) |entry| {
+    while (iter.next(io) catch null) |entry| {
         if (std.mem.endsWith(u8, entry.name, ".json")) {
             std.debug.print("  \x1b[36m{s}\x1b[0m\n", .{entry.name});
             count += 1;
@@ -196,27 +199,28 @@ fn printEvalHelp() void {
 // =============================================================================
 
 fn saveEvalRun(allocator: std.mem.Allocator, run_id: []const u8, issues: []const u8) !void {
-    std.fs.cwd().makePath(".trinity/eval") catch {};
+    const io = tri_io.get();
+    std.Io.Dir.cwd().createDirPath(io, ".trinity/eval") catch {};
 
     var path_buf: [256]u8 = undefined;
     const path = std.fmt.bufPrint(&path_buf, ".trinity/eval/{s}.json", .{run_id}) catch return error.PathTooLong;
 
-    var file = try std.fs.cwd().createFile(path, .{});
-    defer file.close();
+    const file = try std.Io.Dir.cwd().createFile(io, path, .{});
+    defer file.close(io);
 
     var json_buf: [1024]u8 = undefined;
     const json = std.fmt.bufPrint(&json_buf, "{{\"run_id\":\"{s}\",\"timestamp\":{d},\"issues\":\"{s}\",\"status\":\"queued\"}}\n", .{
         run_id,
-        std.time.timestamp(),
+        tri_time.timestamp(),
         issues,
     }) catch return error.PathTooLong;
-    try file.writeAll(json);
+    try file.writeStreamingAll(io, json);
 
     _ = allocator;
 }
 
 fn generateRunId(allocator: std.mem.Allocator) ![]const u8 {
-    const ts = std.time.timestamp();
+    const ts = tri_time.timestamp();
     return std.fmt.allocPrint(allocator, "eval_{d}", .{ts});
 }
 
@@ -243,7 +247,7 @@ test "EvalRun computeSummary empty" {
     var run = EvalRun{
         .run_id = "test",
         .timestamp = 0,
-        .results = .{},
+        .results = .empty,
         .summary = null,
     };
     defer run.results.deinit(std.testing.allocator);
@@ -257,7 +261,7 @@ test "EvalRun computeSummary with results" {
     var run = EvalRun{
         .run_id = "test",
         .timestamp = 0,
-        .results = .{},
+        .results = .empty,
         .summary = null,
     };
     defer run.results.deinit(std.testing.allocator);

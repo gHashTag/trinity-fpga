@@ -6,6 +6,9 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
+const tri_proc = @import("tri_proc");
+const tri_time = @import("tri_time");
 const qt = @import("queen_types.zig");
 const github_client = @import("github_client.zig");
 const github_app_auth = @import("github_app_auth.zig");
@@ -165,7 +168,7 @@ pub const IssueTracker = struct {
 
         const request_body = body_buf[0..body_len];
 
-        var client = std.http.Client{ .allocator = self.allocator };
+        var client = std.http.Client{ .allocator = self.allocator, .io = tri_io.get() };
         defer client.deinit();
 
         const uri = try std.Uri.parse(url);
@@ -188,7 +191,7 @@ pub const IssueTracker = struct {
 
         req.transfer_encoding = .{ .content_length = request_body.len };
         var body_writer = try req.sendBodyUnflushed(&.{});
-        try body_writer.writer().writeAll(request_body);
+        try body_writer.writer.writeAll(request_body);
         try body_writer.end();
         if (req.connection) |conn| try conn.flush();
 
@@ -226,8 +229,8 @@ pub const IssueTracker = struct {
     /// Create issue using gh CLI fallback
     fn createIssueGh(self: *Self, title: []const u8, issue_body: []const u8, labels: []const []const u8) !IssueResult {
         // Build gh CLI command
-        var argv_list = std.ArrayList([]const u8).init(self.allocator);
-        defer argv_list.deinit();
+        var argv_list: std.ArrayList([]const u8) = .empty;
+        defer argv_list.deinit(self.allocator);
 
         try argv_list.appendSlice(self.allocator, &.{ "gh", "issue", "create", "--title", title, "--body", issue_body });
 
@@ -237,10 +240,10 @@ pub const IssueTracker = struct {
             try argv_list.appendSlice(self.allocator, &.{ "--label", labels_str });
         }
 
-        try argv_list.append("--json");
-        try argv_list.append("number,url");
+        try argv_list.append(self.allocator, "--json");
+        try argv_list.append(self.allocator, "number,url");
 
-        const result = try std.process.Child.run(.{
+        const result = try tri_proc.run(.{
             .allocator = self.allocator,
             .argv = argv_list.items,
             .max_output_bytes = 64 * 1024,
@@ -249,7 +252,7 @@ pub const IssueTracker = struct {
         defer self.allocator.free(result.stderr);
 
         const exit_code = switch (result.term) {
-            .Exited => |code| code,
+            .exited => |code| code,
             else => @as(u32, 1),
         };
 
@@ -324,7 +327,7 @@ pub const IssueTracker = struct {
 
         const request_body = body_buf[0..body_len];
 
-        var client = std.http.Client{ .allocator = self.allocator };
+        var client = std.http.Client{ .allocator = self.allocator, .io = tri_io.get() };
         defer client.deinit();
 
         const uri = try std.Uri.parse(url);
@@ -347,7 +350,7 @@ pub const IssueTracker = struct {
 
         req.transfer_encoding = .{ .content_length = request_body.len };
         var body_writer = try req.sendBodyUnflushed(&.{});
-        try body_writer.writer().writeAll(request_body);
+        try body_writer.writer.writeAll(request_body);
         try body_writer.end();
         if (req.connection) |conn| try conn.flush();
 
@@ -367,7 +370,7 @@ pub const IssueTracker = struct {
 
     /// Add comment using gh CLI fallback
     fn updateIssueGh(self: *Self, issue_number: u32, comment: []const u8) !void {
-        const result = try std.process.Child.run(.{
+        const result = try tri_proc.run(.{
             .allocator = self.allocator,
             .argv = &.{ "gh", "issue", "comment", try std.fmt.allocPrint(self.allocator, "{d}", .{issue_number}), "--body", comment },
             .max_output_bytes = 4096,
@@ -376,7 +379,7 @@ pub const IssueTracker = struct {
         defer self.allocator.free(result.stderr);
 
         const exit_code = switch (result.term) {
-            .Exited => |code| code,
+            .exited => |code| code,
             else => @as(u32, 1),
         };
 
@@ -415,7 +418,7 @@ pub const IssueTracker = struct {
 
         const request_body = "{\"state\":\"closed\"}";
 
-        var client = std.http.Client{ .allocator = self.allocator };
+        var client = std.http.Client{ .allocator = self.allocator, .io = tri_io.get() };
         defer client.deinit();
 
         const uri = try std.Uri.parse(url);
@@ -438,7 +441,7 @@ pub const IssueTracker = struct {
 
         req.transfer_encoding = .{ .content_length = request_body.len };
         var body_writer = try req.sendBodyUnflushed(&.{});
-        try body_writer.writer().writeAll(request_body);
+        try body_writer.writer.writeAll(request_body);
         try body_writer.end();
         if (req.connection) |conn| try conn.flush();
 
@@ -458,7 +461,7 @@ pub const IssueTracker = struct {
 
     /// Close issue using gh CLI fallback
     fn closeIssueGh(self: *Self, issue_number: u32) !void {
-        const result = try std.process.Child.run(.{
+        const result = try tri_proc.run(.{
             .allocator = self.allocator,
             .argv = &.{ "gh", "issue", "close", try std.fmt.allocPrint(self.allocator, "{d}", .{issue_number}) },
             .max_output_bytes = 4096,
@@ -467,7 +470,7 @@ pub const IssueTracker = struct {
         defer self.allocator.free(result.stderr);
 
         const exit_code = switch (result.term) {
-            .Exited => |code| code,
+            .exited => |code| code,
             else => @as(u32, 1),
         };
 
@@ -493,7 +496,7 @@ pub const IssueTracker = struct {
         const url = try std.fmt.allocPrint(self.allocator, "https://{s}/repos/{s}/{s}/issues/{d}", .{ GITHUB_API_HOST, self.owner, self.repo, issue_number });
         defer self.allocator.free(url);
 
-        var client = std.http.Client{ .allocator = self.allocator };
+        var client = std.http.Client{ .allocator = self.allocator, .io = tri_io.get() };
         defer client.deinit();
 
         const uri = try std.Uri.parse(url);
@@ -557,7 +560,7 @@ pub const IssueTracker = struct {
 
     /// Get issue status using gh CLI fallback
     fn getIssueStatusGh(self: *Self, issue_number: u32) !IssueStatus {
-        const result = try std.process.Child.run(.{
+        const result = try tri_proc.run(.{
             .allocator = self.allocator,
             .argv = &.{ "gh", "issue", "view", try std.fmt.allocPrint(self.allocator, "{d}", .{issue_number}), "--json", "state,title,labels" },
             .max_output_bytes = 16384,
@@ -566,7 +569,7 @@ pub const IssueTracker = struct {
         defer self.allocator.free(result.stderr);
 
         const exit_code = switch (result.term) {
-            .Exited => |code| code,
+            .exited => |code| code,
             else => @as(u32, 1),
         };
 
@@ -617,7 +620,7 @@ pub const IssueTracker = struct {
         var url_buf: [256]u8 = undefined;
         const url = try std.fmt.bufPrint(&url_buf, "https://{s}/repos/{s}/{s}/issues?state=open&per_page=100", .{ GITHUB_API_HOST, self.owner, self.repo });
 
-        var client = std.http.Client{ .allocator = self.allocator };
+        var client = std.http.Client{ .allocator = self.allocator, .io = tri_io.get() };
         defer client.deinit();
 
         const uri = try std.Uri.parse(url);
@@ -715,7 +718,7 @@ pub const IssueTracker = struct {
             try argv.append(self.allocator, search);
         }
 
-        const result = try std.process.Child.run(.{
+        const result = try tri_proc.run(.{
             .allocator = self.allocator,
             .argv = argv.items,
             .max_output_bytes = 65536,
@@ -724,7 +727,7 @@ pub const IssueTracker = struct {
         defer self.allocator.free(result.stderr);
 
         const exit_code = switch (result.term) {
-            .Exited => |code| code,
+            .exited => |code| code,
             else => @as(u32, 1),
         };
 
@@ -788,7 +791,7 @@ const RepoDetection = struct {
 
 /// Detect owner/repo from git remote
 fn detectRepo(allocator: Allocator) ?RepoDetection {
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ "git", "remote", "get-url", "origin" },
         .max_output_bytes = 1024,
@@ -797,7 +800,7 @@ fn detectRepo(allocator: Allocator) ?RepoDetection {
     defer allocator.free(result.stderr);
 
     const exit_code = switch (result.term) {
-        .Exited => |code| code,
+        .exited => |code| code,
         else => @as(u32, 1),
     };
     if (exit_code != 0) return null;
@@ -892,7 +895,7 @@ pub const StepStatus = enum {
 };
 
 fn timestampStr() []const u8 {
-    const timestamp = std.time.timestamp();
+    const timestamp = tri_time.timestamp();
     const secs = @mod(timestamp, 60);
     const mins = @mod(@divTrunc(timestamp, 60), 60);
     const hours = @mod(@divTrunc(timestamp, 3600), 24);

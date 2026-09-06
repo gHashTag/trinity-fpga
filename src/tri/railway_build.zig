@@ -4,6 +4,7 @@
 
 const std = @import("std");
 
+const tri_io = @import("tri_io");
 // Import Railway API module (in src/tri/railway_api.zig)
 const railway_api = @import("railway_api.zig");
 
@@ -79,19 +80,20 @@ pub fn runRailwayBuildCommand(allocator: std.mem.Allocator, args: []const []cons
     }
 
     // Execute railway CLI via child process
-    var child = std.process.Child.init(&[_][]const u8{"railway"}, allocator);
-    child.argv = argv.items;
-    child.stderr_behavior = .Inherit;
-    child.stdout_behavior = .Inherit;
+    var child = try std.process.spawn(tri_io.get(), .{
+        .argv = argv.items,
+        .stdout = .inherit,
+        .stderr = .inherit,
+    });
 
-    const term = child.spawnAndWait() catch |err| {
+    const term = child.wait(tri_io.get()) catch |err| {
         std.debug.print("{s}Railway spawn failed: {s}.{s}\n", .{ RED, @errorName(err), RESET });
         return RailwayBuildError.BuildFailed;
     };
 
-    if (term.Exited != 0) {
-        std.debug.print("{s}Railway build failed (exit {d}).{s}\n", .{ RED, term.Exited, RESET });
-        const exit_status = switch (term.Exited) {
+    if (term.exited != 0) {
+        std.debug.print("{s}Railway build failed (exit {d}).{s}\n", .{ RED, term.exited, RESET });
+        const exit_status = switch (term.exited) {
             1 => return RailwayBuildError.BuildFailed,
             127 => return RailwayBuildError.CommandNotFound,
             else => return RailwayBuildError.UnknownExitCode,

@@ -1,6 +1,7 @@
 // bot_loop.zig — Main poll → parse → dispatch → repeat loop
 // v2.0: Direct Anthropic API (no claude CLI)
 const std = @import("std");
+const tri_time = @import("tri_time");
 const telegram_api = @import("telegram_api.zig");
 const json_utils = @import("json_utils.zig");
 const command_parser = @import("command_parser.zig");
@@ -30,7 +31,7 @@ pub fn run(allocator: std.mem.Allocator, config: BotConfig) void {
     while (true) {
         const body = telegram_api.getUpdates(allocator, config.bot_token, last_update_id + 1) orelse {
             // Network error — wait and retry
-            std.Thread.sleep(5 * std.time.ns_per_s);
+            tri_time.sleep(5 * std.time.ns_per_s);
             continue;
         };
         defer allocator.free(body);

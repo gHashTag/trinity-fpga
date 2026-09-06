@@ -10,6 +10,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 // Sacred Constants
 pub const PHI: f64 = 1.618033988749895;
 pub const PHI_SQ: f64 = 2.618033988749895;
@@ -229,12 +230,12 @@ pub const ClusterState = struct {
             .allocator = allocator,
             .nodes = std.StringHashMap(*ClusterNode).init(allocator),
             .active_tasks = std.StringHashMap(void).init(allocator),
-            .consensus_history = std.ArrayListUnmanaged(*ConsensusProposal){},
-            .message_queue = std.ArrayListUnmanaged(ClusterMessage){},
+            .consensus_history = @as(std.ArrayListUnmanaged(*ConsensusProposal), .empty),
+            .message_queue = @as(std.ArrayListUnmanaged(ClusterMessage), .empty),
             .intelligence_level = 1.0,
             .manifestation_level = 0.0,
             .current_link = 59, // Starting at link 59
-            .start_time = @intCast(@divTrunc(std.time.nanoTimestamp(), 1_000_000)),
+            .start_time = @intCast(@divTrunc(tri_time.nanoTimestamp(), 1_000_000)),
         };
     }
 
@@ -268,7 +269,7 @@ pub const ClusterState = struct {
             const node = try self.allocator.create(ClusterNode);
             node.* = ClusterNode.init(self.allocator, node_type);
             node.status = .active;
-            node.last_heartbeat = @intCast(@divTrunc(std.time.nanoTimestamp(), 1_000_000));
+            node.last_heartbeat = @intCast(@divTrunc(tri_time.nanoTimestamp(), 1_000_000));
 
             const key = try self.allocator.dupe(u8, node.node_id);
             try self.nodes.put(key, node);
@@ -309,7 +310,7 @@ pub const ClusterState = struct {
     pub fn processHeartbeat(self: *ClusterState, node_id: []const u8, health: f64) !void {
         if (self.nodes.get(node_id)) |node| {
             node.*.health = health;
-            node.*.last_heartbeat = @intCast(@divTrunc(std.time.nanoTimestamp(), 1_000_000));
+            node.*.last_heartbeat = @intCast(@divTrunc(tri_time.nanoTimestamp(), 1_000_000));
             if (node.*.status == .offline or node.*.status == .degraded) {
                 node.*.status = .active;
             }
@@ -318,7 +319,7 @@ pub const ClusterState = struct {
 
     /// Check for dead nodes and mark them offline
     pub fn checkNodeHealth(self: *ClusterState) void {
-        const current_time: i64 = @intCast(@divTrunc(std.time.nanoTimestamp(), 1_000_000));
+        const current_time: i64 = @intCast(@divTrunc(tri_time.nanoTimestamp(), 1_000_000));
         var it = self.nodes.iterator();
         while (it.next()) |entry| {
             const node = entry.value_ptr.*;
@@ -365,7 +366,7 @@ pub const ClusterState = struct {
     pub fn achieveConsensus(self: *ClusterState, proposal_type: ProposalType, data: []const u8) !bool {
         const proposal = try self.allocator.create(ConsensusProposal);
         proposal.* = ConsensusProposal{
-            .proposal_id = try std.fmt.allocPrint(self.allocator, "prop-{d}", .{std.time.nanoTimestamp()}),
+            .proposal_id = try std.fmt.allocPrint(self.allocator, "prop-{d}", .{tri_time.nanoTimestamp()}),
             .proposal_type = proposal_type,
             .proposer = try self.allocator.dupe(u8, "cluster"),
             .data = try self.allocator.dupe(u8, data),
@@ -432,13 +433,13 @@ pub const ClusterState = struct {
 
 /// Create cluster message
 pub fn createMessage(allocator: std.mem.Allocator, from: []const u8, to: []const u8, msg_type: MessageType, payload: []const u8) !ClusterMessage {
-    const correlation_id = try std.fmt.allocPrint(allocator, "msg-{d}", .{std.time.nanoTimestamp()});
+    const correlation_id = try std.fmt.allocPrint(allocator, "msg-{d}", .{tri_time.nanoTimestamp()});
     return ClusterMessage{
         .from_node = try allocator.dupe(u8, from),
         .to_node = try allocator.dupe(u8, to),
         .message_type = msg_type,
         .payload = try allocator.dupe(u8, payload),
-        .timestamp = @intCast(@divTrunc(std.time.nanoTimestamp(), 1_000_000)),
+        .timestamp = @intCast(@divTrunc(tri_time.nanoTimestamp(), 1_000_000)),
         .correlation_id = correlation_id,
     };
 }

@@ -22,6 +22,7 @@
 //!
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const math = std.math;
 
 // Sacred constants
@@ -204,8 +205,8 @@ pub fn fitSacredFormulaExtended(target: f64) SacredFormulaFit {
 
 /// Format the formula string: "n × 3^k × π^m × φ^p × e^q"
 pub fn formatFormulaString(buf: []u8, fit: SacredFormulaFit) []const u8 {
-    var fbs = std.io.fixedBufferStream(buf);
-    const writer = fbs.writer();
+    var fbs = std.Io.Writer.fixed(buf);
+    const writer = &fbs;
 
     writer.print("{d}", .{fit.n}) catch return buf[0..0];
 
@@ -238,7 +239,7 @@ pub fn formatFormulaString(buf: []u8, fit: SacredFormulaFit) []const u8 {
         }
     }
 
-    return fbs.getWritten();
+    return fbs.buffered();
 }
 
 /// Print a sacred formula fit result with ANSI colors
@@ -574,16 +575,18 @@ pub fn printSacredConstantsTable() void {
 pub fn exportCSV(allocator: std.mem.Allocator) !void {
     const base_dir = "docs/lab/papers/sacred";
 
+    const io = tri_io.get();
+
     // Ensure directory exists
-    std.fs.cwd().makePath(base_dir) catch {};
+    std.Io.Dir.cwd().createDirPath(io, base_dir) catch {};
 
     // 1. sacred_constants.csv
     {
         const path = base_dir ++ "/sacred_constants.csv";
-        const file = try std.fs.cwd().createFile(path, .{});
-        defer file.close();
+        const file = try std.Io.Dir.cwd().createFile(io, path, .{});
+        defer file.close(io);
 
-        try file.writeAll("name,target,computed,error_pct,n,k,m,p,q,category\n");
+        try file.writeStreamingAll(io, "name,target,computed,error_pct,n,k,m,p,q,category\n");
         for (sacred_constants) |c| {
             const line = try std.fmt.allocPrint(allocator, "{s},{d:.10},{d:.10},{d:.6},{d},{d},{d},{d},{d},{s}\n", .{
                 c.name, c.target,   c.computed, c.error_pct,
@@ -591,7 +594,7 @@ pub fn exportCSV(allocator: std.mem.Allocator) !void {
                 c.q,    c.category,
             });
             defer allocator.free(line);
-            try file.writeAll(line);
+            try file.writeStreamingAll(io, line);
         }
 
         std.debug.print("  Wrote {s} ({d} rows)\n", .{ path, sacred_constants.len });
@@ -600,10 +603,10 @@ pub fn exportCSV(allocator: std.mem.Allocator) !void {
     // 2. sacred_predictions.csv
     {
         const path = base_dir ++ "/sacred_predictions.csv";
-        const file = try std.fs.cwd().createFile(path, .{});
-        defer file.close();
+        const file = try std.Io.Dir.cwd().createFile(io, path, .{});
+        defer file.close(io);
 
-        try file.writeAll("name,formula,value,unit,reference_state,experimental_bound,falsification_criterion\n");
+        try file.writeStreamingAll(io, "name,formula,value,unit,reference_state,experimental_bound,falsification_criterion\n");
         for (sacred_predictions) |p| {
             var fbuf: [128]u8 = undefined;
             const fit = SacredFormulaFit{ .n = p.n, .k = p.k, .m = p.m, .p = p.p, .q = p.q, .computed = p.value, .error_pct = 0.0 };
@@ -618,7 +621,7 @@ pub fn exportCSV(allocator: std.mem.Allocator) !void {
                 ref_state, exp_bound, falsification,
             });
             defer allocator.free(line);
-            try file.writeAll(line);
+            try file.writeStreamingAll(io, line);
         }
 
         std.debug.print("  Wrote {s} ({d} rows)\n", .{ path, sacred_predictions.len });
@@ -628,16 +631,16 @@ pub fn exportCSV(allocator: std.mem.Allocator) !void {
     {
         const stats = runRandomControlInternal();
         const path = base_dir ++ "/sacred_random_control.csv";
-        const file = try std.fs.cwd().createFile(path, .{});
-        defer file.close();
+        const file = try std.Io.Dir.cwd().createFile(io, path, .{});
+        defer file.close(io);
 
-        try file.writeAll("random_value,computed,error_pct,n,k,m,p,q\n");
+        try file.writeStreamingAll(io, "random_value,computed,error_pct,n,k,m,p,q\n");
         for (stats.values, stats.fits) |val, fit| {
             const line = try std.fmt.allocPrint(allocator, "{d:.10},{d:.10},{d:.6},{d},{d},{d},{d},{d}\n", .{
                 val, fit.computed, fit.error_pct, fit.n, fit.k, fit.m, fit.p, fit.q,
             });
             defer allocator.free(line);
-            try file.writeAll(line);
+            try file.writeStreamingAll(io, line);
         }
 
         std.debug.print("  Wrote {s} (100 rows)\n", .{path});

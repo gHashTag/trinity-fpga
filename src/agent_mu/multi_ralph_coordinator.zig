@@ -9,6 +9,7 @@
 //! φ² + 1/φ² = 3 | TRINITY
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const http = std.http;
 const net = std.net;
 
@@ -212,8 +213,8 @@ pub const MultiRalphCoordinator = struct {
     config: CoordinatorConfig,
     state: ClusterState,
     socket: ?*std.net.Server,
-    heartbeat_timer: ?std.time.Timer,
-    election_timer: ?std.time.Timer,
+    heartbeat_timer: ?tri_time.Timer,
+    election_timer: ?tri_time.Timer,
     running: bool,
 
     /// Coordinator configuration
@@ -246,8 +247,8 @@ pub const MultiRalphCoordinator = struct {
             .config = config,
             .state = ClusterState.init(allocator),
             .socket = null,
-            .heartbeat_timer = try std.time.Timer.start(),
-            .election_timer = try std.time.Timer.start(),
+            .heartbeat_timer = try tri_time.Timer.start(),
+            .election_timer = try tri_time.Timer.start(),
             .running = false,
         };
 
@@ -343,7 +344,7 @@ pub const MultiRalphCoordinator = struct {
         }
 
         // Update sender's last heartbeat
-        const now = std.time.milliTimestamp();
+        const now = tri_time.milliTimestamp();
         if (self.state.nodes.get(sender_id)) |*sender_state| {
             sender_state.last_heartbeat_ms = now;
             sender_state.current_term = term;
@@ -508,7 +509,7 @@ pub const MultiRalphCoordinator = struct {
             };
         };
 
-        const now = std.time.milliTimestamp();
+        const now = tri_time.milliTimestamp();
         const online = self.state.getHealthyNodes(@intCast(self.config.election_timeout_ms * 2), now);
 
         return .{
@@ -523,7 +524,7 @@ pub const MultiRalphCoordinator = struct {
 
     /// Main event loop
     pub fn run(self: *MultiRalphCoordinator) !void {
-        const now = std.time.milliTimestamp();
+        const now = tri_time.milliTimestamp();
 
         while (self.running) {
             // Check for heartbeat timeout (if leader)
@@ -618,7 +619,7 @@ test "ClusterState quorum calculation" {
     var cluster = ClusterState.init(allocator);
     defer cluster.deinit();
 
-    const now = std.time.milliTimestamp();
+    const now = tri_time.milliTimestamp();
 
     // Add 3 nodes
     for (0..3) |i| {

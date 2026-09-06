@@ -6,6 +6,9 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
+const tri_mutex = @import("tri_mutex");
+const tri_time = @import("tri_time");
 const ArrayList = std.array_list.Managed;
 const protocol = @import("protocol.zig");
 const crypto = @import("crypto.zig");
@@ -32,19 +35,19 @@ pub const DEFAULT_BOOTSTRAP_NODES = [_][]const u8{
 pub const Peer = struct {
     node_id: protocol.NodeId,
     public_key: [32]u8,
-    address: std.net.Address,
+    address: std.Io.net.IpAddress,
     listen_port: u16,
     last_seen: i64,
     latency_ms: u32,
     capabilities_hash: [32]u8,
 
     pub fn isAlive(self: *const Peer) bool {
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
         return (now - self.last_seen) * 1000 < PEER_TIMEOUT_MS;
     }
 
     pub fn updateLastSeen(self: *Peer) void {
-        self.last_seen = std.time.timestamp();
+        self.last_seen = tri_time.timestamp();
     }
 };
 
@@ -55,7 +58,7 @@ pub const Peer = struct {
 pub const PeerList = struct {
     peers: [MAX_PEERS]?Peer,
     count: usize,
-    mutex: std.Thread.Mutex,
+    mutex: tri_mutex.Mutex,
 
     pub fn init() PeerList {
         return PeerList{
@@ -165,7 +168,7 @@ pub const PeerList = struct {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 pub const DiscoveryService = struct {
-    socket: std.posix.socket_t,
+    socket: std.Io.net.Socket,
     node_id: protocol.NodeId,
     public_key: [32]u8,
     listen_port: u16,
@@ -177,30 +180,24 @@ pub const DiscoveryService = struct {
 
     // v1.5: Optional storage announce data (sent alongside PeerAnnounce)
     storage_announce_data: ?[protocol.StorageAnnounce.SIZE]u8 = null,
-    storage_announce_callback: ?*const fn (protocol.StorageAnnounce, ?std.net.Address) void = null,
+    storage_announce_callback: ?*const fn (protocol.StorageAnnounce, ?std.Io.net.IpAddress) void = null,
 
     pub fn init(allocator: std.mem.Allocator, node_id: protocol.NodeId, public_key: [32]u8, listen_port: u16) !*DiscoveryService {
         const self = try allocator.create(DiscoveryService);
 
-        // Create UDP socket
-        const socket = try std.posix.socket(std.posix.AF.INET, std.posix.SOCK.DGRAM, 0);
-        errdefer std.posix.close(socket);
+        // 0.16: `IpAddress.bind` creates, configures and binds the UDP socket in
+        // one call. `allow_broadcast` replaces the explicit SO_BROADCAST setsockopt.
+        const io = tri_io.get();
+        const addr: std.Io.net.IpAddress = .{ .ip4 = .{ .bytes = .{ 0, 0, 0, 0 }, .port = DISCOVERY_PORT } };
+        const bind_options: std.Io.net.IpAddress.BindOptions = .{ .mode = .dgram, .allow_broadcast = true };
 
-        // Enable broadcast
-        const broadcast_opt: i32 = 1;
-        try std.posix.setsockopt(socket, std.posix.SOL.SOCKET, std.posix.SO.BROADCAST, std.mem.asBytes(&broadcast_opt));
-
-        // Bind to discovery port
-        const addr = std.net.Address.initIp4(.{ 0, 0, 0, 0 }, DISCOVERY_PORT);
-        std.posix.bind(socket, &addr.any, addr.getOsSockLen()) catch |err| {
+        const socket = addr.bind(io, bind_options) catch |err| blk: {
             // Port might be in use, try with a random port
-            if (err == error.AddressInUse) {
-                const alt_addr = std.net.Address.initIp4(.{ 0, 0, 0, 0 }, 0);
-                try std.posix.bind(socket, &alt_addr.any, alt_addr.getOsSockLen());
-            } else {
-                return err;
-            }
+            if (err != error.AddressInUse) return err;
+            const alt_addr: std.Io.net.IpAddress = .{ .ip4 = .{ .bytes = .{ 0, 0, 0, 0 }, .port = 0 } };
+            break :blk try alt_addr.bind(io, bind_options);
         };
+        errdefer socket.close(io);
 
         self.* = DiscoveryService{
             .socket = socket,
@@ -221,7 +218,7 @@ pub const DiscoveryService = struct {
 
     pub fn deinit(self: *DiscoveryService) void {
         self.stop();
-        std.posix.close(self.socket);
+        self.socket.close(tri_io.get());
         self.allocator.destroy(self);
     }
 
@@ -259,33 +256,36 @@ pub const DiscoveryService = struct {
             self.broadcastAnnounce() catch |err| {
                 std.log.debug("discovery: broadcastAnnounce failed: {}", .{err});
             };
-            std.Thread.sleep(BROADCAST_INTERVAL_MS * std.time.ns_per_ms);
+            tri_time.sleep(BROADCAST_INTERVAL_MS * std.time.ns_per_ms);
         }
     }
 
     /// Receive loop - listens for peer announcements and storage announcements
     fn receiveLoop(self: *DiscoveryService) void {
+        const io = tri_io.get();
         var buf: [1024]u8 = undefined;
 
         while (self.running.load(.acquire)) {
-            var src_addr: std.posix.sockaddr = undefined;
-            var addr_len: std.posix.socklen_t = @sizeOf(std.posix.sockaddr);
-
-            const len = std.posix.recvfrom(self.socket, &buf, 0, &src_addr, &addr_len) catch |err| {
-                if (err == error.WouldBlock) continue;
+            // 0.16: `Socket.receive` replaces recvfrom. It returns an
+            // `IncomingMessage` whose `data` points into `buf` and whose `from`
+            // is the sender's address, so no sockaddr scratch space is needed.
+            // `ReceiveError` has no `WouldBlock`, so the old retry arm is gone.
+            const msg = self.socket.receive(io, &buf) catch |err| {
+                std.log.debug("discovery: receive failed: {}", .{err});
                 break;
             };
 
-            const addr = std.net.Address{ .any = src_addr };
+            const addr = msg.from;
+            const len = msg.data.len;
 
             if (len >= 106) {
                 // PeerAnnounce (106 bytes)
-                self.handleAnnounce(buf[0..len], addr) catch |err| {
+                self.handleAnnounce(msg.data, addr) catch |err| {
                     std.log.debug("discovery: handleAnnounce failed: {}", .{err});
                 };
             } else if (len == protocol.StorageAnnounce.SIZE) {
                 // v1.5: StorageAnnounce (60 bytes)
-                self.handleStorageAnnounce(buf[0..len], addr) catch |err| {
+                self.handleStorageAnnounce(msg.data, addr) catch |err| {
                     std.log.debug("discovery: handleStorageAnnounce failed: {}", .{err});
                 };
             }
@@ -294,32 +294,34 @@ pub const DiscoveryService = struct {
 
     /// Broadcast our peer announcement (and storage announcement if configured)
     fn broadcastAnnounce(self: *DiscoveryService) !void {
+        const io = tri_io.get();
         const announce = protocol.PeerAnnounce{
             .node_id = self.node_id,
             .public_key = self.public_key,
             .listen_port = self.listen_port,
             .capabilities_hash = crypto.sha256(&self.node_id), // DEFERRED (v12): Real capabilities hash from actual supported features
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
         };
 
         const bytes = announce.serialize();
 
-        // Broadcast to local network
-        const broadcast_addr = std.net.Address.initIp4(.{ 255, 255, 255, 255 }, DISCOVERY_PORT);
-        _ = std.posix.sendto(self.socket, &bytes, 0, &broadcast_addr.any, broadcast_addr.getOsSockLen()) catch |err| {
-            std.log.debug("discovery: sendto PeerAnnounce failed: {}", .{err});
+        // Broadcast to local network. 0.16: `Socket.send` replaces sendto and
+        // returns void, so there is no byte count to discard.
+        const broadcast_addr: std.Io.net.IpAddress = .{ .ip4 = .{ .bytes = .{ 255, 255, 255, 255 }, .port = DISCOVERY_PORT } };
+        self.socket.send(io, &broadcast_addr, &bytes) catch |err| {
+            std.log.debug("discovery: send PeerAnnounce failed: {}", .{err});
         };
 
         // v1.5: Also broadcast StorageAnnounce if storage info is set
         if (self.storage_announce_data) |sa_data| {
-            _ = std.posix.sendto(self.socket, &sa_data, 0, &broadcast_addr.any, broadcast_addr.getOsSockLen()) catch |err| {
-                std.log.debug("discovery: sendto StorageAnnounce failed: {}", .{err});
+            self.socket.send(io, &broadcast_addr, &sa_data) catch |err| {
+                std.log.debug("discovery: send StorageAnnounce failed: {}", .{err});
             };
         }
     }
 
     /// Handle incoming peer announcement
-    fn handleAnnounce(self: *DiscoveryService, data: []const u8, src_addr: std.net.Address) !void {
+    fn handleAnnounce(self: *DiscoveryService, data: []const u8, src_addr: std.Io.net.IpAddress) !void {
         const announce = try protocol.PeerAnnounce.deserialize(data);
 
         // Ignore our own announcements
@@ -331,7 +333,7 @@ pub const DiscoveryService = struct {
             .public_key = announce.public_key,
             .address = src_addr,
             .listen_port = announce.listen_port,
-            .last_seen = std.time.timestamp(),
+            .last_seen = tri_time.timestamp(),
             .latency_ms = 0, // DEFERRED (v12): Measure latency via ping/pong exchange
             .capabilities_hash = announce.capabilities_hash,
         };
@@ -340,7 +342,7 @@ pub const DiscoveryService = struct {
     }
 
     /// v1.5: Handle incoming storage announcement
-    fn handleStorageAnnounce(self: *DiscoveryService, data: []const u8, src_addr: std.net.Address) !void {
+    fn handleStorageAnnounce(self: *DiscoveryService, data: []const u8, src_addr: std.Io.net.IpAddress) !void {
         const announce = try protocol.StorageAnnounce.deserialize(data);
 
         // Ignore our own announcements
@@ -359,13 +361,13 @@ pub const DiscoveryService = struct {
             .available_bytes = available_bytes,
             .total_bytes = total_bytes,
             .shard_count = shard_count,
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
         };
         self.storage_announce_data = announce.serialize();
     }
 
     /// v1.5: Set callback for incoming StorageAnnounce packets
-    pub fn setStorageAnnounceCallback(self: *DiscoveryService, cb: *const fn (protocol.StorageAnnounce, ?std.net.Address) void) void {
+    pub fn setStorageAnnounceCallback(self: *DiscoveryService, cb: *const fn (protocol.StorageAnnounce, ?std.Io.net.IpAddress) void) void {
         self.storage_announce_callback = cb;
     }
 
@@ -390,9 +392,9 @@ test "peer list operations" {
     var peer = Peer{
         .node_id = undefined,
         .public_key = undefined,
-        .address = std.net.Address.initIp4(.{ 127, 0, 0, 1 }, 9333),
+        .address = .{ .ip4 = .{ .bytes = .{ 127, 0, 0, 1 }, .port = 9333 } },
         .listen_port = 9334,
-        .last_seen = std.time.timestamp(),
+        .last_seen = tri_time.timestamp(),
         .latency_ms = 100,
         .capabilities_hash = undefined,
     };
@@ -418,7 +420,7 @@ test "storage announce serialize roundtrip via discovery" {
         .available_bytes = 1024 * 1024 * 1024,
         .total_bytes = 10 * 1024 * 1024 * 1024,
         .shard_count = 42,
-        .timestamp = std.time.timestamp(),
+        .timestamp = tri_time.timestamp(),
     };
 
     const serialized = announce.serialize();
@@ -435,9 +437,9 @@ test "peer alive check" {
     var peer = Peer{
         .node_id = undefined,
         .public_key = undefined,
-        .address = std.net.Address.initIp4(.{ 127, 0, 0, 1 }, 9333),
+        .address = .{ .ip4 = .{ .bytes = .{ 127, 0, 0, 1 }, .port = 9333 } },
         .listen_port = 9334,
-        .last_seen = std.time.timestamp(),
+        .last_seen = tri_time.timestamp(),
         .latency_ms = 100,
         .capabilities_hash = undefined,
     };
@@ -445,6 +447,6 @@ test "peer alive check" {
     try std.testing.expect(peer.isAlive());
 
     // Simulate old peer
-    peer.last_seen = std.time.timestamp() - 60; // 60 seconds ago
+    peer.last_seen = tri_time.timestamp() - 60; // 60 seconds ago
     try std.testing.expect(!peer.isAlive());
 }

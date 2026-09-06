@@ -9,6 +9,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_env = @import("tri_env");
 const colors = @import("tri_colors.zig");
 const trinity_swe_agent_mod = @import("trinity_swe");
 const igla_hybrid_chat = @import("igla_hybrid_chat");
@@ -304,6 +305,10 @@ pub const Command = enum {
 
 pub const CLIState = struct {
     allocator: std.mem.Allocator,
+    // Carried so the commands hanging off this state can do file I/O: 0.16
+    // requires an Io for every filesystem call, and threading it through each
+    // command signature would touch far more than storing it once here.
+    io: std.Io,
     agent: trinity_swe_agent_mod.TrinitySWEAgent,
     chat_agent: igla_hybrid_chat.IglaHybridChat,
     coder: igla_coder.IglaLocalCoder,
@@ -339,10 +344,10 @@ pub const CLIState = struct {
     /// Default TVC corpus save path
     const TVC_CORPUS_PATH = "data/trinity_chat.tvc";
 
-    pub fn init(allocator: std.mem.Allocator) !Self {
+    pub fn init(io: std.Io, allocator: std.mem.Allocator) !Self {
         // Auto-detect model path
         const model_path: ?[]const u8 = blk: {
-            std.fs.cwd().access(DEFAULT_MODEL_PATH, .{}) catch break :blk null;
+            std.Io.Dir.cwd().access(io, DEFAULT_MODEL_PATH, .{}) catch break :blk null;
             break :blk DEFAULT_MODEL_PATH;
         };
 
@@ -371,15 +376,15 @@ pub const CLIState = struct {
 
         // Codebase Context Manager (Cycle 92)
         const ctx_mgr = try allocator.create(tri_context.ContextManager);
-        ctx_mgr.* = tri_context.ContextManager.init(allocator);
+        ctx_mgr.* = tri_context.ContextManager.init(io, allocator);
         ctx_mgr.loadIndex() catch |err| {
             std.log.debug("context index load: {s}", .{@errorName(err)});
         };
 
         // Read API keys from environment
-        const groq_key = std.process.getEnvVarOwned(allocator, "GROQ_API_KEY") catch null;
-        const claude_key = std.process.getEnvVarOwned(allocator, "ANTHROPIC_API_KEY") catch null;
-        const openai_key = std.process.getEnvVarOwned(allocator, "OPENAI_API_KEY") catch null;
+        const groq_key = tri_env.getEnvVarOwned(allocator, "GROQ_API_KEY") catch null;
+        const claude_key = tri_env.getEnvVarOwned(allocator, "ANTHROPIC_API_KEY") catch null;
+        const openai_key = tri_env.getEnvVarOwned(allocator, "OPENAI_API_KEY") catch null;
 
         // Build hybrid config with TVC + multi-provider + multi-modal (v2.1)
         const config = igla_hybrid_chat.HybridConfig{
@@ -395,6 +400,7 @@ pub const CLIState = struct {
 
         return Self{
             .allocator = allocator,
+            .io = io,
             .agent = try trinity_swe_agent_mod.TrinitySWEAgent.init(allocator),
             .chat_agent = chat,
             .coder = igla_coder.IglaLocalCoder.init(allocator),
@@ -1458,7 +1464,7 @@ pub fn runInteractiveMode(state: *CLIState) !void {
     printBanner();
     printREPLHelp();
 
-    const stdin_file = std.fs.File.stdin();
+    const stdin_file = std.Io.File.stdin();
     var buf: [4096]u8 = undefined;
 
     while (state.running) {
@@ -1468,11 +1474,21 @@ pub fn runInteractiveMode(state: *CLIState) !void {
         var line_len: usize = 0;
         var eof_reached = false;
         while (line_len < buf.len - 1) {
-            const read_result = stdin_file.read(buf[line_len .. line_len + 1]) catch break;
-            if (read_result == 0) {
-                eof_reached = true;
-                break; // EOF
-            }
+            // 0.16 inverts this contract. `read` is gone; `readStreaming` is
+            // vectored (hence the slice-of-slices), it signals end-of-stream
+            // with error.EndOfStream, and it documents that returning 0 is a
+            // legitimate short read rather than EOF. The 0.15 loop below read
+            // exactly the opposite meaning out of both, so translating the
+            // call without translating the conditions would quietly turn every
+            // short read into an EOF.
+            const read_result = stdin_file.readStreaming(state.io, &.{buf[line_len .. line_len + 1]}) catch |err| switch (err) {
+                error.EndOfStream => {
+                    eof_reached = true;
+                    break;
+                },
+                else => break,
+            };
+            if (read_result == 0) continue; // short read, not EOF -- ask again
             if (buf[line_len] == '\n') break;
             line_len += 1;
         }
@@ -1582,7 +1598,7 @@ pub fn runCodeCommand(state: *CLIState, args: []const []const u8) void {
                 defer state.allocator.free(sacred_ctx);
 
                 // Combine sacred context with prompt
-                var combined = std.ArrayListUnmanaged(u8){};
+                var combined = @as(std.ArrayListUnmanaged(u8), .empty);
                 defer {
                     if (combined.items.len > 0) {
                         combined.deinit(state.allocator);
@@ -1704,7 +1720,7 @@ pub fn runChatCommand(state: *CLIState, args: []const []const u8) void {
                     defer state.allocator.free(sacred_ctx);
 
                     // Combine sacred context with message
-                    var combined = std.ArrayListUnmanaged(u8){};
+                    var combined = @as(std.ArrayListUnmanaged(u8), .empty);
                     defer {
                         if (combined.items.len > 0) {
                             combined.deinit(state.allocator);
@@ -1768,8 +1784,8 @@ fn generateSacredIntelligenceContext(allocator: std.mem.Allocator, prompt: []con
 
     // Format output buffer
     var buf: [2048]u8 = undefined;
-    var fbs = std.io.fixedBufferStream(&buf);
-    const writer = fbs.writer();
+    var w: std.Io.Writer = .fixed(&buf);
+    const writer = &w;
 
     // Write sacred intelligence header
     writer.writeAll("\n// ═══════════════════════════════════════════════════════════════════════════════\n") catch return error.BufferTooSmall;
@@ -1777,13 +1793,13 @@ fn generateSacredIntelligenceContext(allocator: std.mem.Allocator, prompt: []con
     writer.writeAll("// ═══════════════════════════════════════════════════════════════════════════════\n") catch return error.BufferTooSmall;
 
     // Gematria info
-    std.fmt.format(writer, "// Prompt Gematria: {d} (mod 27 = {d})\n", .{ gematria_sum, gematria_sum % 27 }) catch return error.BufferTooSmall;
+    writer.print("// Prompt Gematria: {d} (mod 27 = {d})\n", .{ gematria_sum, gematria_sum % 27 }) catch return error.BufferTooSmall;
 
     // Sacred formula fit
     var formula_buf: [128]u8 = undefined;
     const formula_str = sacred_formula.formatFormulaString(&formula_buf, fit);
-    std.fmt.format(writer, "// Sacred Formula: V = {s}\n", .{formula_str}) catch return error.BufferTooSmall;
-    std.fmt.format(writer, "// Formula Error: {d:.2}%\n", .{fit.error_pct}) catch return error.BufferTooSmall;
+    writer.print("// Sacred Formula: V = {s}\n", .{formula_str}) catch return error.BufferTooSmall;
+    writer.print("// Formula Error: {d:.2}%\n", .{fit.error_pct}) catch return error.BufferTooSmall;
 
     // Recognized constants (basic pattern matching)
     writer.writeAll("// Recognized Constants: ") catch return error.BufferTooSmall;
@@ -1811,7 +1827,7 @@ fn generateSacredIntelligenceContext(allocator: std.mem.Allocator, prompt: []con
 
     writer.writeAll("// ═══════════════════════════════════════════════════════════════════════════════\n\n") catch return error.BufferTooSmall;
 
-    const written = fbs.getWritten();
+    const written = w.buffered();
     const result = try allocator.alloc(u8, written.len);
     @memcpy(result, written);
     return result;
@@ -1885,7 +1901,7 @@ pub fn runSWECommand(state: *CLIState, task_type: trinity_swe_agent_mod.SWETaskT
             }
 
             // Try to build combined context
-            var combined_buf = std.ArrayListUnmanaged(u8){};
+            var combined_buf = @as(std.ArrayListUnmanaged(u8), .empty);
             defer {
                 if (combined_buf.items.len > 0) {
                     combined_buf.deinit(state.allocator);
@@ -2081,7 +2097,9 @@ pub fn runAutoCommitCommand(state: *CLIState, args: []const []const u8) !void {
 }
 
 pub fn runMLOptimizeCommand(state: *CLIState, args: []const []const u8) !void {
-    _ = state; // Mark as intentionally unused for now
+    // `state` was discarded here as unused. It is used now: the existence check
+    // below needs state.io, because 0.16 requires an Io for every filesystem
+    // call.
     if (args.len < 1) {
         std.debug.print("{s}Usage: tri ml-optimize <file>{s}\n", .{ RED, RESET });
         std.debug.print("Example: tri ml-optimize src/vsa.zig\n\n", .{});
@@ -2098,7 +2116,7 @@ pub fn runMLOptimizeCommand(state: *CLIState, args: []const []const u8) !void {
     std.debug.print("{s}Optimization strategy:{s} ML-based sacred pattern matching\n\n", .{ CYAN, RESET });
 
     // Check if file exists
-    std.fs.cwd().access(file_path, .{}) catch {
+    std.Io.Dir.cwd().access(state.io, file_path, .{}) catch {
         std.debug.print("{s}ERROR:{s} File not found: {s}\n\n", .{ RED, RESET, file_path });
         return error.FileNotFound;
     };

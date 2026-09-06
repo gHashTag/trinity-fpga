@@ -13,6 +13,9 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_mutex = @import("tri_mutex");
+const tri_proc = @import("tri_proc");
+const tri_time = @import("tri_time");
 const net = std.net;
 const http = std.http;
 
@@ -74,7 +77,7 @@ const DownloadState = struct {
     stop_flag: std.atomic.Value(bool),
     allocator: std.mem.Allocator,
     config: Config,
-    file_mutex: std.Thread.Mutex,
+    file_mutex: tri_mutex.Mutex,
 
     pub fn init(allocator: std.mem.Allocator, url: []const u8, output_path: []const u8, total_size: usize, config: Config) !*DownloadState {
         const state = try allocator.create(DownloadState);
@@ -95,12 +98,12 @@ const DownloadState = struct {
             .total_size = total_size,
             .downloaded = std.atomic.Value(usize).init(0),
             .chunks = chunks,
-            .start_time = std.time.milliTimestamp(),
+            .start_time = tri_time.milliTimestamp(),
             .active_workers = std.atomic.Value(u32).init(0),
             .stop_flag = std.atomic.Value(bool).init(false),
             .allocator = allocator,
             .config = config,
-            .file_mutex = std.Thread.Mutex{},
+            .file_mutex = tri_mutex.Mutex{},
         };
 
         return state;
@@ -118,7 +121,7 @@ const DownloadState = struct {
     }
 
     pub fn getSpeed(self: *const DownloadState) f64 {
-        const elapsed_ms = std.time.milliTimestamp() - self.start_time;
+        const elapsed_ms = tri_time.milliTimestamp() - self.start_time;
         if (elapsed_ms <= 0) return 0;
         const downloaded = self.downloaded.load(.seq_cst);
         const elapsed_sec = @max(1, @divFloor(elapsed_ms, 1000));
@@ -188,7 +191,7 @@ fn parseUrl(url: []const u8) !ParsedUrl {
 
 fn getContentLength(allocator: std.mem.Allocator, url: []const u8) !usize {
     // Use curl -I to get headers
-    const result = try std.process.Child.run(.{
+    const result = try tri_proc.run(.{
         .allocator = allocator,
         .argv = &[_][]const u8{ "curl", "-sI", "-L", url },
     });
@@ -237,7 +240,7 @@ fn downloadChunk(
     var temp_path_buf: [256]u8 = undefined;
     const temp_path = try std.fmt.bufPrint(&temp_path_buf, "/tmp/trinity_chunk_{d}.tmp", .{chunk.id});
 
-    const result = try std.process.Child.run(.{
+    const result = try tri_proc.run(.{
         .allocator = allocator,
         .argv = &[_][]const u8{
             "curl",
@@ -255,7 +258,7 @@ fn downloadChunk(
     defer allocator.free(result.stderr);
 
     if ((switch (result.term) {
-        .Exited => |code| code,
+        .exited => |code| code,
         else => @as(u32, 1),
     }) != 0) {
         return error.CurlFailed;
@@ -371,7 +374,7 @@ fn workerThread(
         for (0..state.config.retry_count) |_| {
             downloadChunk(allocator, url, output_path, chunk, state) catch {
                 _ = chunk.retries.fetchAdd(1, .seq_cst);
-                std.Thread.sleep(state.config.retry_delay_ms * std.time.ns_per_ms);
+                tri_time.sleep(state.config.retry_delay_ms * std.time.ns_per_ms);
                 continue;
             };
             success = true;
@@ -474,7 +477,7 @@ pub fn download(allocator: std.mem.Allocator, url: []const u8, output_path: []co
         }
         if (all_done) break;
 
-        std.Thread.sleep(200 * std.time.ns_per_ms);
+        tri_time.sleep(200 * std.time.ns_per_ms);
     }
 
     // Wait for all threads

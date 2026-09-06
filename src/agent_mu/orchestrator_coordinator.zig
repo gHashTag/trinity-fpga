@@ -10,6 +10,8 @@
 
 const std = @import("std");
 
+const tri_io = @import("tri_io");
+const tri_time = @import("tri_time");
 // S³AI Brain Regions (Neuroanatomy v5.1)
 const brain = @import("../brain/brain.zig");
 const basal_ganglia = brain.basal_ganglia;
@@ -167,7 +169,7 @@ pub const CoordinatedTask = struct {
             .priority = priority,
             .status = .pending,
             .assigned_node = null,
-            .created_at = std.time.timestamp(),
+            .created_at = tri_time.timestamp(),
             .started_at = null,
             .completed_at = null,
             .result = null,
@@ -311,7 +313,7 @@ pub const OrchestratorCoordinator = struct {
             .active_tasks = 0,
             .completed_tasks = 0,
             .failed_tasks = 0,
-            .last_heartbeat = std.time.timestamp(),
+            .last_heartbeat = tri_time.timestamp(),
             .capabilities = &[_][]const u8{ "routing", "planning", "analysis", "decompose" },
         };
         initialized_nodes = 1;
@@ -325,7 +327,7 @@ pub const OrchestratorCoordinator = struct {
             .active_tasks = 0,
             .completed_tasks = 0,
             .failed_tasks = 0,
-            .last_heartbeat = std.time.timestamp(),
+            .last_heartbeat = tri_time.timestamp(),
             .capabilities = &[_][]const u8{ "storage", "memory", "data", "spec-create", "gen" },
         };
         initialized_nodes = 2;
@@ -339,7 +341,7 @@ pub const OrchestratorCoordinator = struct {
             .active_tasks = 0,
             .completed_tasks = 0,
             .failed_tasks = 0,
-            .last_heartbeat = std.time.timestamp(),
+            .last_heartbeat = tri_time.timestamp(),
             .capabilities = &[_][]const u8{ "execution", "tools", "actions", "test", "bench" },
         };
 
@@ -579,7 +581,7 @@ pub const OrchestratorCoordinator = struct {
         task.assigned_node = try self.allocator.dupe(u8, best_node.?.id);
         task.status = .assigned;
         best_node.?.active_tasks += 1;
-        best_node.?.last_heartbeat = std.time.timestamp();
+        best_node.?.last_heartbeat = tri_time.timestamp();
         if (best_node.?.active_tasks > 0) {
             best_node.?.status = .busy;
         }
@@ -597,13 +599,13 @@ pub const OrchestratorCoordinator = struct {
         const task = self.active_tasks.getPtr(task_id) orelse return error.TaskNotFound;
 
         task.status = .running;
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
         task.started_at = now;
 
         // Execute via TRI CLI based on realm
         const result = try self.executeViaTriCli(task);
 
-        task.completed_at = std.time.timestamp();
+        task.completed_at = tri_time.timestamp();
         task.status = if (result.success) .completed else .failed;
         task.result = result;
 
@@ -672,12 +674,14 @@ pub const OrchestratorCoordinator = struct {
             self.allocator.free(argv);
         }
 
-        const start_time = std.time.nanoTimestamp();
+        const start_time = tri_time.nanoTimestamp();
 
         // Run command
-        var child = std.process.Child.init(argv, self.allocator);
-        child.stdout_behavior = .Pipe;
-        child.stderr_behavior = .Pipe;
+        var child = try std.process.spawn(tri_io.get(), .{
+            .argv = argv,
+            .stdout = .pipe,
+            .stderr = .pipe,
+        });
 
         child.spawn() catch |err| {
             return CoordinatedTask.TaskResult{
@@ -699,19 +703,19 @@ pub const OrchestratorCoordinator = struct {
         else
             "";
 
-        const term = child.wait() catch |err| {
+        const term = child.wait(tri_io.get()) catch |err| {
             return CoordinatedTask.TaskResult{
                 .success = false,
                 .output = stdout,
                 .err_msg = try self.allocator.dupe(u8, @tagName(err)),
-                .duration_ms = @as(u64, @intCast(@divTrunc(std.time.nanoTimestamp() - start_time, 1_000_000))),
+                .duration_ms = @as(u64, @intCast(@divTrunc(tri_time.nanoTimestamp() - start_time, 1_000_000))),
                 .pas_score = 0,
             };
         };
 
-        const duration_ms = @as(u64, @intCast(@divTrunc(std.time.nanoTimestamp() - start_time, 1_000_000)));
+        const duration_ms = @as(u64, @intCast(@divTrunc(tri_time.nanoTimestamp() - start_time, 1_000_000)));
         const exit_code = switch (term) {
-            .Exited => |code| code,
+            .exited => |code| code,
             else => 1,
         };
 
@@ -774,7 +778,7 @@ pub const OrchestratorCoordinator = struct {
             .participant_count = @intCast(votes.len),
             .agreement_level = agreement,
             .trinity_verified = verifyTrinityIdentity(),
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
         };
     }
 
@@ -827,7 +831,7 @@ pub const OrchestratorCoordinator = struct {
 
     /// Update health status of all nodes
     pub fn updateNodeHealth(self: *OrchestratorCoordinator) void {
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
 
         for (self.nodes) |*node| {
             // Decay health if no recent heartbeat
@@ -958,7 +962,7 @@ test "OrchestratorCoordinator φ consensus" {
             .confidence = 0.95,
             .pas_score = 0.97,
             .reasoning = null,
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
         },
         .{
             .agent_id = "beta-001",
@@ -967,7 +971,7 @@ test "OrchestratorCoordinator φ consensus" {
             .confidence = 0.90,
             .pas_score = 0.92,
             .reasoning = null,
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
         },
         .{
             .agent_id = "gamma-001",
@@ -976,7 +980,7 @@ test "OrchestratorCoordinator φ consensus" {
             .confidence = 0.70,
             .pas_score = 0.75,
             .reasoning = null,
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
         },
     };
 
@@ -1012,7 +1016,7 @@ test "OrchestratorCoordinator node availability" {
         .active_tasks = 0,
         .completed_tasks = 10,
         .failed_tasks = 1,
-        .last_heartbeat = std.time.timestamp(),
+        .last_heartbeat = tri_time.timestamp(),
         .capabilities = &[_][]const u8{},
     };
 
@@ -1034,7 +1038,7 @@ test "CoordinatedTask lifecycle" {
     try std.testing.expect(!task.isComplete());
 
     task.status = .running;
-    const now = std.time.timestamp();
+    const now = tri_time.timestamp();
     task.started_at = now;
     task.completed_at = now + 1000;
 

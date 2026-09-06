@@ -14,6 +14,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const print = std.debug.print;
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -70,11 +71,11 @@ const ScanStats = struct {
     end_time: i128 = 0,
 
     pub fn start(self: *ScanStats) void {
-        self.start_time = std.time.nanoTimestamp();
+        self.start_time = tri_time.nanoTimestamp();
     }
 
     pub fn finish(self: *ScanStats) void {
-        self.end_time = std.time.nanoTimestamp();
+        self.end_time = tri_time.nanoTimestamp();
     }
 
     pub fn duration(self: *const ScanStats) f64 {

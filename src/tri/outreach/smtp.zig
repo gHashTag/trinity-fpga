@@ -4,6 +4,7 @@
 //! See: https://www.rfc-editor.org/rfc/rfc8058.html
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const types = @import("types.zig");
 
 pub const SmtpHeader = struct {
@@ -81,7 +82,7 @@ pub fn generateHeaders(allocator: std.mem.Allocator, msg: types.EmailMessage, co
 
 /// Get current datetime in RFC 5322 format
 fn getDateTime(allocator: std.mem.Allocator) ![]const u8 {
-    const timestamp = std.time.timestamp();
+    const timestamp = tri_time.timestamp();
 
     // Convert to RFC 5322 date format
     // Example: Tue, 28 Mar 2026 12:34:56 +0000

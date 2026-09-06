@@ -6,6 +6,7 @@
 //! φ² + 1/φ² = 3 | Consciousness + FORGE = UNITY
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const mem = std.mem;
 const synthesis_types = @import("synthesis_types.zig");
 const array_list = std.array_list;
@@ -124,7 +125,7 @@ pub const ForgeStrategist = struct {
 
     /// Learn from synthesis result (Hebbian update)
     pub fn learn(self: *ForgeStrategist, result: *const SynthesisResult) !void {
-        const now = std.time.nanoTimestamp();
+        const now = tri_time.nanoTimestamp();
         const reward: f32 = if (result.success)
             // Success: reward inversely proportional to attempts
             1.0 / @max(1.0, @as(f32, @floatFromInt(result.attempts)))

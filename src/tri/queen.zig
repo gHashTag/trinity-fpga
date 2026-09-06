@@ -17,7 +17,9 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
-const tri_mutex = @import("mutex.zig");
+const tri_io = @import("tri_io");
+const tri_time = @import("tri_time");
+const tri_mutex = @import("tri_mutex");
 const faculty_board = @import("cortex.zig");
 const faculty_types = @import("faculty_types.zig");
 const colors = @import("tri_colors.zig");
@@ -208,7 +210,7 @@ fn cmdTamagotchiReport(allocator: Allocator) !void {
 
     // 1. Read Queen state
     const state = loadState();
-    const now = std.time.timestamp();
+    const now = tri_time.timestamp();
     const uptime = if (state.started_at > 0) now - state.started_at else 0;
 
     // 2. Get farm status
@@ -517,7 +519,7 @@ fn runManualAction(allocator: Allocator, kind_str: []const u8) !void {
 
 fn runQueenLoop(allocator: Allocator, config: QueenConfig) !void {
     var state = loadState();
-    if (state.started_at == 0) state.started_at = std.time.timestamp();
+    if (state.started_at == 0) state.started_at = tri_time.timestamp();
 
     const tg = qt.initTelegram();
 
@@ -582,7 +584,7 @@ fn runQueenLoop(allocator: Allocator, config: QueenConfig) !void {
 
     while (true) {
         state.cycle += 1;
-        const cycle_start = std.time.timestamp();
+        const cycle_start = tri_time.timestamp();
 
         if (!config.daemon) {
             print("{s}=== Queen #{d} ==={s}\n", .{ GOLDEN, state.cycle, RESET });
@@ -863,38 +865,43 @@ const SupervisorConfig = struct {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn writePidFile() !void {
+    const io = tri_io.get();
     const pid = std.posix.getpid();
-    const dir = std.fs.cwd().makeOpenPath(".trinity/queen", .{}) catch |err| {
-        print("  {s}" ++ qt.E_CROSS ++ " Failed to create .trinity/queen: {s}{s}\n", .{ RED, @errorName(err), RESET });
-        return err;
+    const dir = blk: {
+        std.Io.Dir.cwd().createDirPath(io, ".trinity/queen") catch |err| {
+            print("  {s}" ++ qt.E_CROSS ++ " Failed to create .trinity/queen: {s}{s}\n", .{ RED, @errorName(err), RESET });
+            return err;
+        };
+        break :blk std.Io.Dir.cwd().openDir(io, ".trinity/queen", .{}) catch |err| {
+            print("  {s}" ++ qt.E_CROSS ++ " Failed to create .trinity/queen: {s}{s}\n", .{ RED, @errorName(err), RESET });
+            return err;
+        };
     };
-    defer dir.close();
+    defer dir.close(io);
 
-    var file = try dir.createFile("supervisor.pid", .{ .truncate = true });
-    defer file.close();
+    var file = try dir.createFile(io, "supervisor.pid", .{ .truncate = true });
+    defer file.close(io);
     var buf: [32]u8 = undefined;
     const pid_str = std.fmt.bufPrint(&buf, "{d}", .{pid}) catch return error.InvalidPid;
-    try file.writeAll(pid_str);
+    try file.writeStreamingAll(io, pid_str);
 }
 
 fn removePidFile() void {
-    std.fs.cwd().deleteFile(qt.SUPERVISOR_PID_PATH) catch {};
+    std.Io.Dir.cwd().deleteFile(tri_io.get(), qt.SUPERVISOR_PID_PATH) catch {};
 }
 
 fn isSupervisorRunning() bool {
-    const file = std.fs.cwd().openFile(qt.SUPERVISOR_PID_PATH, .{}) catch return false;
-    defer file.close();
+    const io = tri_io.get();
 
     var buf: [32]u8 = undefined;
-    const n = file.read(&buf) catch return false;
-    if (n == 0) return false;
+    const pid_str = std.Io.Dir.cwd().readFile(io, qt.SUPERVISOR_PID_PATH, &buf) catch return false;
+    if (pid_str.len == 0) return false;
 
-    const pid_str = buf[0..n];
     const pid = std.fmt.parseInt(i32, pid_str, 10) catch return false;
 
     // Check if process is running by sending signal 0
     // Returns void on success (process exists), error on failure
-    std.posix.kill(pid, 0) catch return false;
+    std.posix.kill(pid, @enumFromInt(0)) catch return false;
     return true;
 }
 
@@ -904,21 +911,17 @@ fn stopSupervisor() !void {
         return;
     }
 
-    const file = std.fs.cwd().openFile(qt.SUPERVISOR_PID_PATH, .{}) catch |err| {
+    var buf: [32]u8 = undefined;
+    const pid_str = std.Io.Dir.cwd().readFile(tri_io.get(), qt.SUPERVISOR_PID_PATH, &buf) catch |err| {
         print("  {s}" ++ qt.E_CROSS ++ " Failed to read PID file: {s}{s}\n", .{ RED, @errorName(err), RESET });
         return err;
     };
-    defer file.close();
-
-    var buf: [32]u8 = undefined;
-    const n = file.read(&buf) catch return error.ReadError;
-    const pid_str = buf[0..n];
     const pid = std.fmt.parseInt(i32, pid_str, 10) catch return error.InvalidPid;
 
     print("{s}" ++ qt.E_STOP ++ " Stopping supervisor (PID {d})...{s}\n", .{ GOLDEN, pid, RESET });
 
     // Send SIGTERM (15) for graceful shutdown
-    if (std.posix.kill(pid, 15)) |_| {
+    if (std.posix.kill(pid, .TERM)) |_| {
         // Success
     } else |err| {
         print("  {s}" ++ qt.E_CROSS ++ " Failed to stop supervisor: {s}{s}\n", .{ RED, @errorName(err), RESET });
@@ -926,11 +929,11 @@ fn stopSupervisor() !void {
     }
 
     // Wait a bit for process to exit
-    std.Thread.sleep(2 * std.time.ns_per_s);
+    tri_time.sleep(2 * std.time.ns_per_s);
 
     if (isSupervisorRunning()) {
         print("  {s}" ++ qt.E_SIREN ++ " Supervisor still running, try SIGKILL{s}\n", .{ RED, RESET });
-        _ = std.posix.kill(pid, 9) catch {}; // SIGKILL
+        _ = std.posix.kill(pid, .KILL) catch {}; // SIGKILL
     } else {
         print("  {s}" ++ qt.E_CHECK ++ " Supervisor stopped{s}\n", .{ GREEN, RESET });
     }
@@ -943,15 +946,18 @@ fn stopSupervisor() !void {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const SupervisorLog = struct {
-    file: std.fs.File,
+    file: std.Io.File,
     mutex: tri_mutex.Mutex,
 
     fn init() !SupervisorLog {
-        const dir = try std.fs.cwd().makeOpenPath(".trinity/queen", .{});
-        defer dir.close();
+        const io = tri_io.get();
+        try std.Io.Dir.cwd().createDirPath(io, ".trinity/queen");
+        const dir = try std.Io.Dir.cwd().openDir(io, ".trinity/queen", .{});
+        defer dir.close(io);
 
-        const file = try dir.createFile("supervisor.log", .{ .truncate = false });
-        try file.seekFromEnd(0);
+        // 0.16 has no seek-then-append: each write positions itself at the
+        // current end of file instead (see `log` below).
+        const file = try dir.createFile(io, "supervisor.log", .{ .truncate = false });
 
         return SupervisorLog{
             .file = file,
@@ -963,15 +969,17 @@ const SupervisorLog = struct {
         self.mutex.lock();
         defer self.mutex.unlock();
 
-        const timestamp = std.time.timestamp();
+        const io = tri_io.get();
+        const timestamp = tri_time.timestamp();
         var buf: [4096]u8 = undefined;
         const msg = std.fmt.bufPrint(&buf, "[{d}] {s}\n", .{ timestamp, std.fmt.fmtFmt(fmt, args) }) catch return;
-        try self.file.writeAll(msg);
-        try self.file.sync();
+        const end = try self.file.length(io);
+        try self.file.writePositionalAll(io, msg, end);
+        try self.file.sync(io);
     }
 
     fn close(self: *SupervisorLog) void {
-        self.file.close();
+        self.file.close(tri_io.get());
     }
 };
 
@@ -1002,7 +1010,7 @@ pub fn runSupervisorMode(allocator: Allocator) !void {
 
     while (true) {
         cycle += 1;
-        const cycle_start = std.time.timestamp();
+        const cycle_start = tri_time.timestamp();
 
         print("{s}=== Supervisor Cycle #{d} ==={s}\n", .{ GOLDEN, cycle, RESET });
 
@@ -1272,7 +1280,7 @@ fn executeSelfHealing(
         }
 
         // Small delay between actions
-        std.Thread.sleep(1 * std.time.ns_per_s);
+        tri_time.sleep(1 * std.time.ns_per_s);
     }
 
     return result;
@@ -1332,9 +1340,10 @@ fn statusEmoji(status: anytype) []const u8 {
 
 fn saveSupervisorState(cycle: u32, pfc_health: anytype, analysis: HealthAnalysis) void {
     _ = pfc_health; // Currently unused, reserved for future use
+    const io = tri_io.get();
     const path = ".trinity/queen/supervisor_state.json";
-    const file = std.fs.cwd().createFile(path, .{}) catch return;
-    defer file.close();
+    const file = std.Io.Dir.cwd().createFile(io, path, .{}) catch return;
+    defer file.close(io);
 
     var buf: [512]u8 = undefined;
     const data = std.fmt.bufPrint(&buf,
@@ -1346,7 +1355,7 @@ fn saveSupervisorState(cycle: u32, pfc_health: anytype, analysis: HealthAnalysis
         if (analysis.overall_status == .healthy) "true" else "false",
     }) catch return;
 
-    _ = file.write(data) catch {};
+    file.writeStreamingAll(io, data) catch {};
 }
 
 fn runOneCycle(allocator: Allocator, config: QueenConfig) !void {
@@ -1513,7 +1522,7 @@ fn fmtHeartbeat(buf: []u8, snap: FacultySnapshot, evo: EvolutionInfo, arena: Are
 }
 
 fn fmtDaily(buf: []u8, snap: FacultySnapshot, evo: EvolutionInfo, arena: ArenaInfo, senses: qt.SenseResult, state: QueenState) []const u8 {
-    const uptime_h = @divTrunc(std.time.timestamp() - state.started_at, 3600);
+    const uptime_h = @divTrunc(tri_time.timestamp() - state.started_at, 3600);
 
     return std.fmt.bufPrint(buf, qt.E_CROWN ++ " Queen v2 Daily\n" ++
         "\n" ++
@@ -1596,7 +1605,7 @@ fn determineGoal(snap: FacultySnapshot, evo: EvolutionInfo, incidents: *const qu
     if (evo.service_count == 0) return .check_farm;
     if (snap.dirty_files > 100) return .cleanup_cloud;
 
-    const ts = std.time.timestamp();
+    const ts = tri_time.timestamp();
     const hour: u64 = @intCast(@mod(@divTrunc(ts, 3600), 24));
     if (hour == 9) return .research_update;
 
@@ -1608,12 +1617,8 @@ fn determineGoal(snap: FacultySnapshot, evo: EvolutionInfo, incidents: *const qu
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn loadState() QueenState {
-    const file = std.fs.cwd().openFile(qt.STATE_PATH, .{}) catch return QueenState{};
-    defer file.close();
-
     var buf: [1024]u8 = undefined;
-    const n = file.read(&buf) catch return QueenState{};
-    const data = buf[0..n];
+    const data = std.Io.Dir.cwd().readFile(tri_io.get(), qt.STATE_PATH, &buf) catch return QueenState{};
 
     var state = QueenState{};
     if (qt.findJsonU32(data, "\"cycle\":")) |v| state.cycle = v;
@@ -1653,9 +1658,10 @@ fn saveState(state: QueenState) void {
         state.event_seq,
     }) catch return;
 
-    const file = std.fs.cwd().createFile(qt.STATE_PATH, .{}) catch return;
-    defer file.close();
-    _ = file.write(data) catch {};
+    const io = tri_io.get();
+    const file = std.Io.Dir.cwd().createFile(io, qt.STATE_PATH, .{}) catch return;
+    defer file.close(io);
+    file.writeStreamingAll(io, data) catch {};
 }
 
 fn showStatus(allocator: Allocator) !void {
@@ -1664,7 +1670,7 @@ fn showStatus(allocator: Allocator) !void {
     const senses = queen_senses.collectAllSenses(allocator, snap);
     const evo = queen_senses.readEvolutionInfo();
 
-    const uptime = std.time.timestamp() - state.started_at;
+    const uptime = tri_time.timestamp() - state.started_at;
     const hours = @divTrunc(uptime, 3600);
     const minutes = @divTrunc(@mod(uptime, 3600), 60);
 
@@ -1720,7 +1726,7 @@ fn printCycleSummary(snap: FacultySnapshot, evo: EvolutionInfo, arena: ArenaInfo
     if (alert_count > 0) {
         print("  {s}" ++ qt.E_FIRE ++ " {d} alert(s){s}\n", .{ RED, alert_count, RESET });
     }
-    const since_hb = std.time.timestamp() - state.last_heartbeat;
+    const since_hb = tri_time.timestamp() - state.last_heartbeat;
     const next_hb_min = if (state.last_heartbeat == 0) @as(i64, 0) else @divTrunc(@as(i64, 3600) - since_hb, 60);
     print("  " ++ qt.E_CYCLE ++ " #{d} | Heartbeat in {d}m\n\n", .{ state.cycle, next_hb_min });
 }
@@ -1730,9 +1736,10 @@ fn printCycleSummary(snap: FacultySnapshot, evo: EvolutionInfo, arena: ArenaInfo
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn logEvent(state: *QueenState, snap: FacultySnapshot, alert_count: usize) void {
-    const file = std.fs.cwd().openFile(".trinity/event_log.jsonl", .{ .mode = .read_write }) catch return;
-    defer file.close();
-    file.seekFromEnd(0) catch return;
+    const io = tri_io.get();
+    const file = std.Io.Dir.cwd().openFile(io, ".trinity/event_log.jsonl", .{ .mode = .read_write }) catch return;
+    defer file.close(io);
+    const end = file.length(io) catch return;
 
     state.event_seq += 1;
     var buf: [512]u8 = undefined;
@@ -1740,7 +1747,7 @@ fn logEvent(state: *QueenState, snap: FacultySnapshot, alert_count: usize) void 
         \\{{"ts":{d},"seq":{d},"agent":"queen","kind":"queen_cycle","event":"queen_cycle","cycle":{d},"build_ok":{s},"dirty":{d},"issues":{d},"alerts":{d}}}
         \\
     , .{
-        std.time.timestamp(),
+        tri_time.timestamp(),
         state.event_seq,
         state.cycle,
         if (snap.build_ok) "true" else "false",
@@ -1748,13 +1755,14 @@ fn logEvent(state: *QueenState, snap: FacultySnapshot, alert_count: usize) void 
         snap.open_issues,
         alert_count,
     }) catch return;
-    _ = file.write(line) catch {};
+    file.writePositionalAll(io, line, end) catch {};
 }
 
 fn emitEvent(state: *QueenState, kind: []const u8, text: []const u8) void {
-    const file = std.fs.cwd().openFile(".trinity/event_log.jsonl", .{ .mode = .read_write }) catch return;
-    defer file.close();
-    file.seekFromEnd(0) catch return;
+    const io = tri_io.get();
+    const file = std.Io.Dir.cwd().openFile(io, ".trinity/event_log.jsonl", .{ .mode = .read_write }) catch return;
+    defer file.close(io);
+    const end = file.length(io) catch return;
 
     state.event_seq += 1;
     var buf: [1024]u8 = undefined;
@@ -1762,18 +1770,19 @@ fn emitEvent(state: *QueenState, kind: []const u8, text: []const u8) void {
         \\{{"ts":{d},"seq":{d},"agent":"queen","kind":"{s}","text":"{s}"}}
         \\
     , .{
-        std.time.timestamp(),
+        tri_time.timestamp(),
         state.event_seq,
         kind,
         text,
     }) catch return;
-    _ = file.write(line) catch {};
+    file.writePositionalAll(io, line, end) catch {};
 }
 
 fn emitStep(state: *QueenState, step: u8, total: u8, text: []const u8) void {
-    const file = std.fs.cwd().openFile(".trinity/event_log.jsonl", .{ .mode = .read_write }) catch return;
-    defer file.close();
-    file.seekFromEnd(0) catch return;
+    const io = tri_io.get();
+    const file = std.Io.Dir.cwd().openFile(io, ".trinity/event_log.jsonl", .{ .mode = .read_write }) catch return;
+    defer file.close(io);
+    const end = file.length(io) catch return;
 
     state.event_seq += 1;
     var buf: [1024]u8 = undefined;
@@ -1781,45 +1790,44 @@ fn emitStep(state: *QueenState, step: u8, total: u8, text: []const u8) void {
         \\{{"ts":{d},"seq":{d},"agent":"queen","kind":"queen_cycle","step":{d},"total":{d},"text":"{s}"}}
         \\
     , .{
-        std.time.timestamp(),
+        tri_time.timestamp(),
         state.event_seq,
         step,
         total,
         text,
     }) catch return;
-    _ = file.write(line) catch {};
+    file.writePositionalAll(io, line, end) catch {};
 }
 
 // Helper for supervisor mode (stateless logging)
 fn emitSupervisorStep(step: u8, total: u8, text: []const u8) void {
-    const file = std.fs.cwd().openFile(".trinity/event_log.jsonl", .{ .mode = .read_write }) catch return;
-    defer file.close();
-    file.seekFromEnd(0) catch return;
+    const io = tri_io.get();
+    const file = std.Io.Dir.cwd().openFile(io, ".trinity/event_log.jsonl", .{ .mode = .read_write }) catch return;
+    defer file.close(io);
+    const end = file.length(io) catch return;
 
     var buf: [512]u8 = undefined;
     const line = std.fmt.bufPrint(&buf,
         \\{{"ts":{d},"agent":"supervisor","kind":"supervisor_cycle","step":{d},"total":{d},"text":"{s}"}}
         \\
     , .{
-        std.time.timestamp(),
+        tri_time.timestamp(),
         step,
         total,
         text,
     }) catch return;
-    _ = file.write(line) catch {};
+    file.writePositionalAll(io, line, end) catch {};
 }
 
 fn readUserInput(state: *QueenState) void {
+    const io = tri_io.get();
     const path = ".trinity/queen/user_input.json";
-    const file = std.fs.cwd().openFile(path, .{}) catch return;
-    defer file.close();
 
     var buf: [1024]u8 = undefined;
-    const n = file.read(&buf) catch return;
-    if (n == 0) return;
-
     // Extract message from JSON: {"ts":...,"message":"..."}
-    const data = buf[0..n];
+    const data = std.Io.Dir.cwd().readFile(io, path, &buf) catch return;
+    if (data.len == 0) return;
+
     if (std.mem.indexOf(u8, data, "\"message\":\"")) |start| {
         const msg_start = start + 11;
         if (std.mem.indexOfPos(u8, data, msg_start, "\"")) |msg_end| {
@@ -1834,21 +1842,18 @@ fn readUserInput(state: *QueenState) void {
     }
 
     // Delete file after reading (one-shot message)
-    std.fs.cwd().deleteFile(path) catch {};
+    std.Io.Dir.cwd().deleteFile(io, path) catch {};
 }
 
 /// Read UI action queue (written by SwiftUI ActionQueue)
 /// Executes each action and deletes the queue file
 fn readActionsQueue(allocator: Allocator, state: *QueenState) void {
+    const io = tri_io.get();
     const path = ".trinity/queen/actions_queue.json";
-    const file = std.fs.cwd().openFile(path, .{}) catch return;
-    defer file.close();
 
     var buf: [4096]u8 = undefined;
-    const n = file.read(&buf) catch return;
-    if (n == 0) return;
-
-    const data = buf[0..n];
+    const data = std.Io.Dir.cwd().readFile(io, path, &buf) catch return;
+    if (data.len == 0) return;
 
     // Parse JSON array of actions: [{"action":"build","params":{},"ts":...},...]
     // Simple extraction: find all "action":"<name>" pairs
@@ -1873,7 +1878,7 @@ fn readActionsQueue(allocator: Allocator, state: *QueenState) void {
     }
 
     // Delete queue file after processing
-    std.fs.cwd().deleteFile(path) catch {};
+    std.Io.Dir.cwd().deleteFile(io, path) catch {};
 }
 
 fn mapUiAction(name: []const u8) ?qt.ActionKind {
@@ -1897,15 +1902,15 @@ fn mapUiAction(name: []const u8) ?qt.ActionKind {
 }
 
 fn writeTodosFile(senses: qt.SenseResult) void {
+    const io = tri_io.get();
     ensureQueenDir();
-    const file = std.fs.cwd().createFile(".trinity/queen/todos.json", .{}) catch return;
-    defer file.close();
+    const file = std.Io.Dir.cwd().createFile(io, ".trinity/queen/todos.json", .{}) catch return;
+    defer file.close(io);
 
     var buf: [4096]u8 = undefined;
-    var fbs = std.io.fixedBufferStream(&buf);
-    const w = fbs.writer();
+    var w: std.Io.Writer = .fixed(&buf);
 
-    w.print("{{\"generated_at\":{d},\"items\":[", .{std.time.timestamp()}) catch return;
+    w.print("{{\"generated_at\":{d},\"items\":[", .{tri_time.timestamp()}) catch return;
 
     var count: usize = 0;
 
@@ -1945,8 +1950,8 @@ fn writeTodosFile(senses: qt.SenseResult) void {
     }
 
     w.writeAll("]}") catch {};
-    const data = fbs.getWritten();
-    _ = file.write(data) catch {};
+    const data = w.buffered();
+    file.writeStreamingAll(io, data) catch {};
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1954,19 +1959,20 @@ fn writeTodosFile(senses: qt.SenseResult) void {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn ensureQueenDir() void {
-    std.fs.cwd().makePath(".trinity/queen") catch {};
+    std.Io.Dir.cwd().createDirPath(tri_io.get(), ".trinity/queen") catch {};
 }
 
 fn writeSensesFile(s: qt.SenseResult) void {
+    const io = tri_io.get();
     ensureQueenDir();
-    const file = std.fs.cwd().createFile(".trinity/queen/senses.json", .{}) catch return;
-    defer file.close();
+    const file = std.Io.Dir.cwd().createFile(io, ".trinity/queen/senses.json", .{}) catch return;
+    defer file.close(io);
 
     var buf: [2048]u8 = undefined;
     const data = std.fmt.bufPrint(&buf,
         \\{{"ts":{d},"build_ok":{s},"test_rate":{d},"dirty_files":{d},"open_issues":{d},"agent_count":{d},"farm_services":{d},"farm_best_ppl":{d:.2},"arena_battles":{d},"ouroboros_score":{d:.1},"disk_free_gb":{d:.1},"keys_present":{d},"keys_total":{d},"experience_episodes":{d},"network_ok":{s},"farm_idle_count":{d},"stale_arena_hours":{d},"agent_spawn_issues":{d},"finished_containers":{d},"last_git_push_ts":{d}}}
     , .{
-        std.time.timestamp(),
+        tri_time.timestamp(),
         if (s.build_ok) "true" else "false",
         s.test_rate,
         s.dirty_files,
@@ -1987,19 +1993,19 @@ fn writeSensesFile(s: qt.SenseResult) void {
         s.finished_containers,
         s.last_git_push_ts,
     }) catch return;
-    _ = file.write(data) catch {};
+    file.writeStreamingAll(io, data) catch {};
 }
 
 fn writeActionsFile() void {
+    const io = tri_io.get();
     ensureQueenDir();
-    const file = std.fs.cwd().createFile(".trinity/queen/actions.json", .{}) catch return;
-    defer file.close();
+    const file = std.Io.Dir.cwd().createFile(io, ".trinity/queen/actions.json", .{}) catch return;
+    defer file.close(io);
 
     var buf: [8192]u8 = undefined;
-    var fbs = std.io.fixedBufferStream(&buf);
-    const w = fbs.writer();
+    var w: std.Io.Writer = .fixed(&buf);
 
-    w.print("{{\"version\":4,\"generated_at\":{d},\"actions\":[", .{std.time.timestamp()}) catch return;
+    w.print("{{\"version\":4,\"generated_at\":{d},\"actions\":[", .{tri_time.timestamp()}) catch return;
 
     for (0..qt.ActionKind.COUNT) |i| {
         if (i > 0) w.print(",", .{}) catch return;
@@ -2017,17 +2023,17 @@ fn writeActionsFile() void {
     }
 
     w.print("]}}", .{}) catch return;
-    _ = file.write(fbs.getWritten()) catch {};
+    file.writeStreamingAll(io, w.buffered()) catch {};
 }
 
 fn writeAuditSummary(config: qt.QueenConfig, counters: *const queen_policy.ActionCounters) void {
+    const io = tri_io.get();
     ensureQueenDir();
-    const file = std.fs.cwd().createFile(".trinity/queen/policy.json", .{}) catch return;
-    defer file.close();
+    const file = std.Io.Dir.cwd().createFile(io, ".trinity/queen/policy.json", .{}) catch return;
+    defer file.close(io);
 
     var buf: [4096]u8 = undefined;
-    var fbs = std.io.fixedBufferStream(&buf);
-    const w = fbs.writer();
+    var w: std.Io.Writer = .fixed(&buf);
 
     w.print("{{\"max_auto_level\":{d},\"require_human_approval\":{s},\"god_mode\":{s},\"rate_limits\":{{", .{
         config.max_auto_level,
@@ -2051,7 +2057,7 @@ fn writeAuditSummary(config: qt.QueenConfig, counters: *const queen_policy.Actio
     }
 
     w.print("}}}}", .{}) catch return;
-    _ = file.write(fbs.getWritten()) catch {};
+    file.writeStreamingAll(io, w.buffered()) catch {};
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -2059,7 +2065,7 @@ fn writeAuditSummary(config: qt.QueenConfig, counters: *const queen_policy.Actio
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn sleepInterval(sec: u64) void {
-    std.Thread.sleep(sec * std.time.ns_per_s);
+    tri_time.sleep(sec * std.time.ns_per_s);
 }
 
 // Sleep that can be interrupted by checking running flag
@@ -2072,25 +2078,21 @@ fn sleepInterruptible(running: *const std.atomic.Value(bool), interval_sec: u64)
         if (!running.load(.acquire)) return;
         const remain = total_ns - elapsed;
         const sleep_time = if (remain > chunk_ns) chunk_ns else remain;
-        std.Thread.sleep(sleep_time);
+        tri_time.sleep(sleep_time);
         elapsed += sleep_time;
     }
 }
 
 // Check if our PID file is still valid (exists and process is running)
 fn isPidFileValid() bool {
-    const file = std.fs.cwd().openFile(qt.SUPERVISOR_PID_PATH, .{}) catch return false;
-    defer file.close();
-
     var buf: [32]u8 = undefined;
-    const n = file.read(&buf) catch return false;
-    if (n == 0) return false;
+    const pid_str = std.Io.Dir.cwd().readFile(tri_io.get(), qt.SUPERVISOR_PID_PATH, &buf) catch return false;
+    if (pid_str.len == 0) return false;
 
-    const pid_str = buf[0..n];
     const pid = std.fmt.parseInt(i32, pid_str, 10) catch return false;
 
     // Check if process exists by sending signal 0
-    const result = std.posix.kill(pid, 0);
+    const result = std.posix.kill(pid, @enumFromInt(0));
     return result == 0;
 }
 

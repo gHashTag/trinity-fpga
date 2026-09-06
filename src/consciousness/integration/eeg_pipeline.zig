@@ -7,6 +7,8 @@
 
 const std = @import("std");
 
+const tri_rand = @import("tri_rand");
+const tri_time = @import("tri_time");
 // Sacred constants (inline to avoid import issues)
 const PHI: f64 = 1.6180339887498948482;
 const PHI_INV: f64 = 1.0 / PHI;
@@ -151,7 +153,7 @@ pub const RawEEG = struct {
     pub fn init(data: []const []f64, sampling_rate: f64) RawEEG {
         return .{
             .data = data,
-            .timestamp = std.time.nanoTimestamp(),
+            .timestamp = tri_time.nanoTimestamp(),
             .sampling_rate = sampling_rate,
         };
     }
@@ -298,7 +300,7 @@ pub const EEGPipeline = struct {
 
     /// Process a window of EEG data
     pub fn processWindow(self: *EEGPipeline, raw: RawEEG) !ProcessedEEG {
-        const start = std.time.nanoTimestamp();
+        const start = tri_time.nanoTimestamp();
 
         // Validate input
         if (raw.data.len != self.config.num_channels) {
@@ -372,7 +374,7 @@ pub const EEGPipeline = struct {
             pci_estimate,
         );
 
-        const end = std.time.nanoTimestamp();
+        const end = tri_time.nanoTimestamp();
 
         const is_conscious = consciousness_level >= CONSCIOUSNESS_THRESHOLD;
 
@@ -818,7 +820,7 @@ pub fn generateSimulatedEEG(
             // Add complexity with random bursts for high consciousness
             if (consciousness_level > 0.8) {
                 const burst_prob = consciousness_level - 0.8;
-                const rand_val = @as(f64, @floatFromInt(std.crypto.random.int(u8))) / 255.0;
+                const rand_val = @as(f64, @floatFromInt(tri_rand.random().int(u8))) / 255.0;
                 if (rand_val < burst_prob) {
                     value += 2.0 * @sin(2.0 * std.math.pi * (30.0 + rand_val * 30.0) * t);
                 }
@@ -826,7 +828,7 @@ pub fn generateSimulatedEEG(
 
             // Add noise (higher for conscious states)
             const noise_level = 0.2 + consciousness_level * 2.0;
-            value += noise_level * (2.0 * @as(f64, @floatFromInt(std.crypto.random.int(u8))) - 1.0) / 255.0;
+            value += noise_level * (2.0 * @as(f64, @floatFromInt(tri_rand.random().int(u8))) - 1.0) / 255.0;
 
             data[ch_idx][i] = value;
         }
@@ -834,7 +836,7 @@ pub fn generateSimulatedEEG(
 
     return RawEEG{
         .data = data,
-        .timestamp = @intCast(std.time.nanoTimestamp()),
+        .timestamp = @intCast(tri_time.nanoTimestamp()),
         .sampling_rate = config.sampling_rate,
     };
 }

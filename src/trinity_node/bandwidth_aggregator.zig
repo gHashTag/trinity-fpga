@@ -6,6 +6,8 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_mutex = @import("tri_mutex");
+const tri_time = @import("tri_time");
 const storage_mod = @import("storage.zig");
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -41,7 +43,7 @@ pub const BandwidthAggregator = struct {
     reports: std.AutoHashMap([32]u8, BandwidthReport),
     aggregation_interval_secs: i64,
     last_aggregation_time: i64,
-    mutex: std.Thread.Mutex,
+    mutex: tri_mutex.Mutex,
 
     pub fn init(allocator: std.mem.Allocator) BandwidthAggregator {
         return .{
@@ -72,7 +74,7 @@ pub const BandwidthAggregator = struct {
         tracker: *const storage_mod.RewardTracker,
         local_node_id: [32]u8,
     ) BandwidthReport {
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
         return .{
             .node_id = local_node_id,
             .bytes_uploaded = tracker.bytes_uploaded,
@@ -99,7 +101,7 @@ pub const BandwidthAggregator = struct {
             count += 1;
         }
 
-        self.last_aggregation_time = std.time.timestamp();
+        self.last_aggregation_time = tri_time.timestamp();
 
         return .{
             .total_upload = total_upload,
@@ -131,7 +133,7 @@ pub const BandwidthAggregator = struct {
 
     /// Check if it's time to aggregate
     pub fn shouldAggregate(self: *BandwidthAggregator) bool {
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
         return (now - self.last_aggregation_time) >= self.aggregation_interval_secs;
     }
 
@@ -166,7 +168,7 @@ test "record and aggregate bandwidth reports" {
     var aggregator = BandwidthAggregator.init(allocator);
     defer aggregator.deinit();
 
-    const now = std.time.timestamp();
+    const now = tri_time.timestamp();
 
     // 5 nodes with different bandwidth
     for (0..5) |i| {
@@ -197,7 +199,7 @@ test "reward share proportional to contribution" {
     var aggregator = BandwidthAggregator.init(allocator);
     defer aggregator.deinit();
 
-    const now = std.time.timestamp();
+    const now = tri_time.timestamp();
 
     // Node 1: 100 MB total
     var id1: [32]u8 = undefined;
@@ -257,7 +259,7 @@ test "generate local report from RewardTracker" {
     var tracker = storage_mod.RewardTracker{
         .shards_hosted = 42,
         .retrievals_served = 10,
-        .hosting_start = std.time.timestamp() - 7200,
+        .hosting_start = tri_time.timestamp() - 7200,
         .bytes_uploaded = 500 * 1024 * 1024,
         .bytes_downloaded = 300 * 1024 * 1024,
     };

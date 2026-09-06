@@ -8,6 +8,10 @@
 // φ² + 1/φ² = 3 = TRINITY
 // ═══════════════════════════════════════════════════════════════════════════════
 const std = @import("std");
+const tri_env = @import("tri_env");
+const tri_io = @import("tri_io");
+const tri_proc = @import("tri_proc");
+const tri_time = @import("tri_time");
 const colors = @import("tri_colors.zig");
 const chat_server = @import("chat_server.zig");
 // depin.zig is in src/firebird/ — inline constants to avoid cross-module import
@@ -72,7 +76,12 @@ pub const BackoffPolicy = locus_coeruleus.BackoffPolicy;
 // ═══════════════════════════════════════════════════════════════════════════════
 // GEN COMMAND - Code Generation
 // ═══════════════════════════════════════════════════════════════════════════════
-pub fn runGenCommand(allocator: std.mem.Allocator, args: []const []const u8) !void {
+// This file is a flat namespace of free functions with no enclosing type to
+// hang an `io` field on, so the Io the 0.16 filesystem API needs is passed in.
+pub fn runGenCommand(io: std.Io, allocator: std.mem.Allocator, args: []const []const u8) !void {
+    // 0.16's std.process.spawn takes no allocator, where Child.init did. The
+    // parameter stays for the callers and the command-table signature.
+    _ = allocator;
     if (args.len < 1) {
         printGenHelp();
         return;
@@ -101,7 +110,7 @@ pub fn runGenCommand(allocator: std.mem.Allocator, args: []const []const u8) !vo
     };
     var backend_path: ?[]const u8 = null;
     for (backend_paths) |path| {
-        std.fs.cwd().access(path, .{}) catch continue;
+        std.Io.Dir.cwd().access(io, path, .{}) catch continue;
         backend_path = path;
         break;
     }
@@ -123,12 +132,19 @@ pub fn runGenCommand(allocator: std.mem.Allocator, args: []const []const u8) !vo
         argv_buf[argc] = arg;
         argc += 1;
     }
-    var child = std.process.Child.init(argv_buf[0..argc], allocator);
-    child.stderr_behavior = .Inherit;
-    child.stdout_behavior = .Inherit;
-    const term = try child.spawnAndWait();
+    // 0.16 removed Child.init/spawnAndWait. Spawning is now io.processSpawn via
+    // std.process.spawn, with the stdio behaviour given up front instead of
+    // assigned to fields afterwards, and the wait is a separate call.
+    // This function already receives an `io`, so use it rather than the
+    // ambient handle.
+    var child = try std.process.spawn(io, .{
+        .argv = argv_buf[0..argc],
+        .stdout = .inherit,
+        .stderr = .inherit,
+    });
+    const term = try child.wait(io);
     switch (term) {
-        .Exited => |code| if (code != 0) {
+        .exited => |code| if (code != 0) {
             std.debug.print("{s} exited with code {d}\n", .{ backend_name, code });
             const exp_hooks = @import("experience_hooks.zig");
             const spec_name = if (actual_args.len > 0) actual_args[0] else "";
@@ -208,12 +224,12 @@ pub fn runBenchCommandInternal(allocator: std.mem.Allocator) !void {
     std.debug.print("\n{s}TRINITY BENCHMARK SUITE{s}\n", .{ YELLOW, RESET });
     std.debug.print("{s}Running benchmarks...{s}\n\n", .{ CYAN, RESET });
     // VSA benchmarks
-    const start = std.time.nanoTimestamp();
+    const start = tri_time.nanoTimestamp();
     std.debug.print("{s}VSA Operations:{s}\n", .{ GREEN, RESET });
     std.debug.print("  - bind/unbind: {d} ops/ms\n", .{1000});
     std.debug.print("  - bundle3: {d} ops/ms\n", .{500});
     std.debug.print("  - cosineSimilarity: {d} ops/ms\n", .{2500});
-    const elapsed = std.time.nanoTimestamp() - start;
+    const elapsed = tri_time.nanoTimestamp() - start;
     const elapsed_ms = @divFloor(elapsed, 1_000_000);
     std.debug.print("\n{s}Total time: {d}ms{s}\n", .{ YELLOW, elapsed_ms, RESET });
     _ = allocator;
@@ -223,12 +239,12 @@ pub fn runBenchCommand(allocator: std.mem.Allocator) !void {
     std.debug.print("\n{s}TRINITY BENCHMARK SUITE{s}\n", .{ YELLOW, RESET });
     std.debug.print("{s}Running benchmarks...{s}\n\n", .{ CYAN, RESET });
     // VSA benchmarks
-    const start = std.time.nanoTimestamp();
+    const start = tri_time.nanoTimestamp();
     std.debug.print("{s}VSA Operations:{s}\n", .{ GREEN, RESET });
     std.debug.print("  - bind/unbind: {d} ops/ms\n", .{1000});
     std.debug.print("  - bundle3: {d} ops/ms\n", .{500});
     std.debug.print("  - cosineSimilarity: {d} ops/ms\n", .{2500});
-    const elapsed = std.time.nanoTimestamp() - start;
+    const elapsed = tri_time.nanoTimestamp() - start;
     const elapsed_ms = @divFloor(elapsed, 1_000_000);
     std.debug.print("\n{s}Total time: {d}ms{s}\n", .{ YELLOW, elapsed_ms, RESET });
     _ = allocator;
@@ -535,14 +551,14 @@ pub fn runGitCommand(allocator: std.mem.Allocator, subcommand: []const u8, args:
 }
 /// Print git status
 fn printGitStatus() !void {
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = std.heap.page_allocator,
         .argv = &[_][]const u8{ "git", "status", "--short" },
     }) catch |err| {
         std.debug.print("Error running git status: {s}\n", .{@errorName(err)});
         return error.GitFailed;
     };
-    if (result.term.Exited != 0) {
+    if (result.term.exited != 0) {
         std.debug.print("Git status failed\n", .{});
         return error.GitFailed;
     }
@@ -554,7 +570,7 @@ fn performGitCommit(allocator: std.mem.Allocator, args: []const []const u8) !voi
         args[0]
     else
         "Update";
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &[_][]const u8{ "git", "commit", "-m", commit_msg },
     }) catch |err| {
@@ -562,7 +578,7 @@ fn performGitCommit(allocator: std.mem.Allocator, args: []const []const u8) !voi
         return error.GitFailed;
     };
     // RunResult no longer has deinit() in Zig 0.15 - memory managed by page_allocator
-    if (result.term.Exited != 0) {
+    if (result.term.exited != 0) {
         std.debug.print("Git commit failed: {s}", .{result.stderr});
         return error.GitFailed;
     }
@@ -570,14 +586,14 @@ fn performGitCommit(allocator: std.mem.Allocator, args: []const []const u8) !voi
 }
 /// Perform git push
 fn performGitPush() !void {
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = std.heap.page_allocator,
         .argv = &[_][]const u8{ "git", "push" },
     }) catch |err| {
         std.debug.print("Error running git push: {s}\n", .{@errorName(err)});
         return error.GitFailed;
     };
-    if (result.term.Exited != 0) {
+    if (result.term.exited != 0) {
         std.debug.print("Git push failed: {s}", .{result.stderr});
         return error.GitFailed;
     }
@@ -585,14 +601,14 @@ fn performGitPush() !void {
 }
 /// Perform git pull
 fn performGitPull() !void {
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = std.heap.page_allocator,
         .argv = &[_][]const u8{ "git", "pull" },
     }) catch |err| {
         std.debug.print("Error running git pull: {s}\n", .{@errorName(err)});
         return error.GitFailed;
     };
-    if (result.term.Exited != 0) {
+    if (result.term.exited != 0) {
         std.debug.print("Git pull failed: {s}", .{result.stderr});
         return error.GitFailed;
     }
@@ -601,14 +617,14 @@ fn performGitPull() !void {
 /// Print git log
 fn printGitLog(allocator: std.mem.Allocator, args: []const []const u8) !void {
     const count_str = if (args.len > 0) args[0] else "10";
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &[_][]const u8{ "git", "log", "--oneline", "-n", count_str },
     }) catch |err| {
         std.debug.print("Error running git log: {s}\n", .{@errorName(err)});
         return error.GitFailed;
     };
-    if (result.term.Exited != 0) {
+    if (result.term.exited != 0) {
         std.debug.print("Git log failed\n", .{});
         return error.GitFailed;
     }
@@ -681,13 +697,17 @@ pub fn runCleanCommand(allocator: std.mem.Allocator, args: []const []const u8) !
 /// Format Command - Run zig fmt on source files
 /// Usage: tri fmt [path]
 pub fn runFmtCommand(allocator: std.mem.Allocator, args: []const []const u8) !void {
+    _ = allocator; // 0.16: std.process.spawn takes no allocator
     _ = args;
     std.debug.print("{s}🔧 Running zig fmt...{s}\n", .{ CYAN, RESET });
     const argv = &[_][]const u8{ "zig", "fmt" };
-    var child = std.process.Child.init(argv, allocator);
-    child.stderr_behavior = .Inherit;
-    child.stdout_behavior = .Inherit;
-    _ = try child.spawnAndWait();
+    const io = tri_io.get();
+    var child = try std.process.spawn(io, .{
+        .argv = argv,
+        .stdout = .inherit,
+        .stderr = .inherit,
+    });
+    _ = try child.wait(io);
 }
 
 /// Stats Command - Show build statistics
@@ -770,12 +790,12 @@ pub fn runUiCommand(allocator: std.mem.Allocator, args: []const []const u8) !voi
     const queen_dir = "apps/queen";
 
     // Get current environment for subprocess inheritance
-    var env_map = try std.process.getEnvMap(allocator);
+    var env_map = try tri_env.getEnvMap(allocator);
     defer env_map.deinit();
 
     // Kill any running swift processes
     std.debug.print("{s}🔄 Killing existing swift processes...{s}\n", .{ CYAN, RESET });
-    _ = std.process.Child.run(.{
+    _ = tri_proc.run(.{
         .allocator = allocator,
         .argv = &[_][]const u8{ "pkill", "-f", "swift-frontend" },
         .env_map = &env_map,
@@ -785,7 +805,7 @@ pub fn runUiCommand(allocator: std.mem.Allocator, args: []const []const u8) !voi
     };
 
     // Wait a moment for processes to terminate
-    std.Thread.sleep(100_000_000); // 100ms
+    tri_time.sleep(100_000_000); // 100ms
 
     // Run swift run
     std.debug.print("{s}🚀 Launching Queen UI...{s}\n", .{ GREEN, RESET });
@@ -793,7 +813,7 @@ pub fn runUiCommand(allocator: std.mem.Allocator, args: []const []const u8) !voi
     std.debug.print("{s}  Command: swift run &{s}\n\n", .{ GRAY, RESET });
 
     // Run in background via shell
-    _ = std.process.Child.run(.{
+    _ = tri_proc.run(.{
         .allocator = allocator,
         .argv = &[_][]const u8{ "sh", "-c", "cd apps/queen && swift run &" },
         .env_map = &env_map,

@@ -109,7 +109,7 @@ pub const QGSimResult = struct {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 pub fn evolveSpinFoam(allocator: Allocator, steps: u32) ![]SpinFoamStep {
-    var result: std.ArrayListUnmanaged(SpinFoamStep) = .{};
+    var result: std.ArrayListUnmanaged(SpinFoamStep) = .empty;
     var amp: f64 = 1.0;
     var action: f64 = 0.0;
     var phase: f64 = 0.0;
@@ -132,7 +132,7 @@ pub fn evolveSpinFoam(allocator: Allocator, steps: u32) ![]SpinFoamStep {
 }
 
 pub fn evolveReggeLattice(allocator: Allocator, steps: u32) ![]ReggeStep {
-    var result: std.ArrayListUnmanaged(ReggeStep) = .{};
+    var result: std.ArrayListUnmanaged(ReggeStep) = .empty;
     var regge_action: f64 = 10.0;
     var deficit: f64 = 0.5;
     var i: u32 = 0;
@@ -152,7 +152,7 @@ pub fn evolveReggeLattice(allocator: Allocator, steps: u32) ![]ReggeStep {
 }
 
 pub fn simulateAdsThermal(allocator: Allocator, steps: u32) ![]AdSThermalStep {
-    var result: std.ArrayListUnmanaged(AdSThermalStep) = .{};
+    var result: std.ArrayListUnmanaged(AdSThermalStep) = .empty;
     var i: u32 = 0;
     const max_steps = @min(steps, 10) + 1;
     while (i < max_steps) : (i += 1) {
@@ -173,7 +173,7 @@ pub fn simulateAdsThermal(allocator: Allocator, steps: u32) ![]AdSThermalStep {
 }
 
 pub fn computeAreaSpectrum(allocator: Allocator) ![]AreaEigenvalue {
-    var result: std.ArrayListUnmanaged(AreaEigenvalue) = .{};
+    var result: std.ArrayListUnmanaged(AreaEigenvalue) = .empty;
     const js = [_]f64{ 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0 };
     var prev_area: f64 = 0.0;
     for (js) |j| {
@@ -196,7 +196,7 @@ pub fn computeAreaGap() f64 {
 }
 
 pub fn simulateCDT(allocator: Allocator, steps: u32) ![]CDTStep {
-    var result: std.ArrayListUnmanaged(CDTStep) = .{};
+    var result: std.ArrayListUnmanaged(CDTStep) = .empty;
     var i: u32 = 0;
     while (i < steps) : (i += 1) {
         const fi: f64 = @floatFromInt(i);
@@ -219,7 +219,7 @@ pub fn simulateCDT(allocator: Allocator, steps: u32) ![]CDTStep {
 }
 
 pub fn computeVenezianoAmplitudes(allocator: Allocator) ![]VenezianoAmplitude {
-    var result: std.ArrayListUnmanaged(VenezianoAmplitude) = .{};
+    var result: std.ArrayListUnmanaged(VenezianoAmplitude) = .empty;
     const s_values = [_]f64{ 0.5, 1.0, 1.5, 2.0, 2.5, 3.0 };
     for (s_values) |s| {
         const t = -s * PHI_INV;
@@ -247,7 +247,7 @@ pub fn computeVenezianoAmplitudes(allocator: Allocator) ![]VenezianoAmplitude {
 }
 
 pub fn simulatePageCurve(allocator: Allocator, steps: u32) ![]PageCurveStep {
-    var result: std.ArrayListUnmanaged(PageCurveStep) = .{};
+    var result: std.ArrayListUnmanaged(PageCurveStep) = .empty;
     const M: f64 = 10.0;
     const page_time: f64 = M * M * M * PAGE_TIME_COEFF;
     const initial_entropy: f64 = PI * M * M;
@@ -278,100 +278,99 @@ pub fn simulatePageCurve(allocator: Allocator, steps: u32) ![]PageCurveStep {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 pub fn qgSimToJson(allocator: Allocator, steps: u32) ![]u8 {
-    var buf: std.ArrayListUnmanaged(u8) = .{};
-    const w = buf.writer(allocator);
+    var buf: std.ArrayListUnmanaged(u8) = .empty;
 
     const trinity = PHI_SQ + PHI_INV_SQ;
     const area_gap = computeAreaGap();
 
-    try std.fmt.format(w, "{{\"steps\":{d},\"trinity_check\":{d:.6},\"area_gap\":{d:.6}", .{ steps, trinity, area_gap });
+    try buf.print(allocator, "{{\"steps\":{d},\"trinity_check\":{d:.6},\"area_gap\":{d:.6}", .{ steps, trinity, area_gap });
 
     // Spin foam
     const foam = try evolveSpinFoam(allocator, steps);
     defer allocator.free(foam);
-    try w.writeAll(",\"spin_foam\":[");
+    try buf.appendSlice(allocator, ",\"spin_foam\":[");
     for (foam, 0..) |s, idx| {
-        if (idx > 0) try w.writeAll(",");
-        try std.fmt.format(w, "{{\"step\":{d},\"amplitude\":{d:.8},\"action\":{d:.4},\"phase\":{d:.4},\"vertices\":{d},\"edges\":{d}}}", .{
+        if (idx > 0) try buf.appendSlice(allocator, ",");
+        try buf.print(allocator, "{{\"step\":{d},\"amplitude\":{d:.8},\"action\":{d:.4},\"phase\":{d:.4},\"vertices\":{d},\"edges\":{d}}}", .{
             s.step, s.amplitude, s.action, s.phase, s.vertices, s.edges,
         });
     }
-    try w.writeAll("]");
+    try buf.appendSlice(allocator, "]");
 
     // Regge
     const regge = try evolveReggeLattice(allocator, steps);
     defer allocator.free(regge);
-    try w.writeAll(",\"regge\":[");
+    try buf.appendSlice(allocator, ",\"regge\":[");
     for (regge, 0..) |r, idx| {
-        if (idx > 0) try w.writeAll(",");
-        try std.fmt.format(w, "{{\"iteration\":{d},\"simplices\":{d},\"deficit_angle\":{d:.6},\"regge_action\":{d:.4},\"curvature\":{d:.4}}}", .{
+        if (idx > 0) try buf.appendSlice(allocator, ",");
+        try buf.print(allocator, "{{\"iteration\":{d},\"simplices\":{d},\"deficit_angle\":{d:.6},\"regge_action\":{d:.4},\"curvature\":{d:.4}}}", .{
             r.iteration, r.simplices, r.deficit_angle, r.regge_action, r.curvature,
         });
     }
-    try w.writeAll("]");
+    try buf.appendSlice(allocator, "]");
 
     // AdS thermal
     const ads = try simulateAdsThermal(allocator, steps);
     defer allocator.free(ads);
-    try w.writeAll(",\"ads_thermal\":[");
+    try buf.appendSlice(allocator, ",\"ads_thermal\":[");
     for (ads, 0..) |a, idx| {
-        if (idx > 0) try w.writeAll(",");
-        try std.fmt.format(w, "{{\"time\":{d:.1},\"s_entangle\":{d:.4},\"s_thermal\":{d:.4},\"scrambling_pct\":{d:.1},\"temperature\":{d:.4}}}", .{
+        if (idx > 0) try buf.appendSlice(allocator, ",");
+        try buf.print(allocator, "{{\"time\":{d:.1},\"s_entangle\":{d:.4},\"s_thermal\":{d:.4},\"scrambling_pct\":{d:.1},\"temperature\":{d:.4}}}", .{
             a.time, a.s_entangle, a.s_thermal, a.scrambling_pct, a.temperature,
         });
     }
-    try w.writeAll("]");
+    try buf.appendSlice(allocator, "]");
 
     // Area spectrum
     const spectrum = try computeAreaSpectrum(allocator);
     defer allocator.free(spectrum);
-    try w.writeAll(",\"area_spectrum\":[");
+    try buf.appendSlice(allocator, ",\"area_spectrum\":[");
     for (spectrum, 0..) |a, idx| {
-        if (idx > 0) try w.writeAll(",");
-        try std.fmt.format(w, "{{\"j\":{d:.1},\"area\":{d:.6},\"area_phi\":{d:.6},\"ratio_to_prev\":{d:.6}}}", .{
+        if (idx > 0) try buf.appendSlice(allocator, ",");
+        try buf.print(allocator, "{{\"j\":{d:.1},\"area\":{d:.6},\"area_phi\":{d:.6},\"ratio_to_prev\":{d:.6}}}", .{
             a.j, a.area, a.area_phi, a.ratio_to_prev,
         });
     }
-    try w.writeAll("]");
+    try buf.appendSlice(allocator, "]");
 
     // CDT
     const cdt = try simulateCDT(allocator, steps);
     defer allocator.free(cdt);
-    try w.writeAll(",\"cdt\":[");
+    try buf.appendSlice(allocator, ",\"cdt\":[");
     for (cdt, 0..) |c, idx| {
-        if (idx > 0) try w.writeAll(",");
-        try std.fmt.format(w, "{{\"time_slice\":{d},\"simplices_24\":{d},\"simplices_41\":{d},\"spatial_volume\":{d:.6},\"dim_spectral\":{d:.6},\"total_simplices\":{d}}}", .{
+        if (idx > 0) try buf.appendSlice(allocator, ",");
+        try buf.print(allocator, "{{\"time_slice\":{d},\"simplices_24\":{d},\"simplices_41\":{d},\"spatial_volume\":{d:.6},\"dim_spectral\":{d:.6},\"total_simplices\":{d}}}", .{
             c.time_slice, c.simplices_24, c.simplices_41, c.spatial_volume, c.dim_spectral, c.total_simplices,
         });
     }
-    try w.writeAll("]");
+    try buf.appendSlice(allocator, "]");
 
     // Veneziano
     const veneziano = try computeVenezianoAmplitudes(allocator);
     defer allocator.free(veneziano);
-    try w.writeAll(",\"veneziano\":[");
+    try buf.appendSlice(allocator, ",\"veneziano\":[");
     for (veneziano, 0..) |v, idx| {
-        if (idx > 0) try w.writeAll(",");
-        try std.fmt.format(w, "{{\"s\":{d:.1},\"t\":{d:.6},\"alpha_s\":{d:.6},\"alpha_t\":{d:.6},\"amplitude\":{d:.8},\"regge_slope\":{d:.4},\"string_tension\":{d:.6}}}", .{
+        if (idx > 0) try buf.appendSlice(allocator, ",");
+        try buf.print(allocator, "{{\"s\":{d:.1},\"t\":{d:.6},\"alpha_s\":{d:.6},\"alpha_t\":{d:.6},\"amplitude\":{d:.8},\"regge_slope\":{d:.4},\"string_tension\":{d:.6}}}", .{
             v.s, v.t, v.alpha_s, v.alpha_t, v.amplitude, v.regge_slope, v.string_tension,
         });
     }
-    try w.writeAll("]");
+    try buf.appendSlice(allocator, "]");
 
     // Page curve
     const page = try simulatePageCurve(allocator, steps);
     defer allocator.free(page);
-    try w.writeAll(",\"page_curve\":[");
+    try buf.appendSlice(allocator, ",\"page_curve\":[");
     for (page, 0..) |p, idx| {
-        if (idx > 0) try w.writeAll(",");
+        if (idx > 0) try buf.appendSlice(allocator, ",");
         const past_str: []const u8 = if (p.past_page_time) "true" else "false";
-        try std.fmt.format(w, "{{\"time\":{d:.4},\"bh_mass\":{d:.6},\"bh_entropy\":{d:.6},\"radiation_entropy\":{d:.6},\"total_entropy\":{d:.6},\"past_page_time\":{s}}}", .{
+        try buf.print(allocator, "{{\"time\":{d:.4},\"bh_mass\":{d:.6},\"bh_entropy\":{d:.6},\"radiation_entropy\":{d:.6},\"total_entropy\":{d:.6},\"past_page_time\":{s}}}", .{
             p.time, p.bh_mass, p.bh_entropy, p.radiation_entropy, p.total_entropy, past_str,
         });
     }
-    try w.writeAll("]");
+    try buf.appendSlice(allocator, "]");
 
-    try w.writeAll("}");
+    try buf.appendSlice(allocator, "}");
     return buf.toOwnedSlice(allocator);
 }
 

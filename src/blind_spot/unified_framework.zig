@@ -128,7 +128,7 @@ pub const CrossDomainVerifier = struct {
     pub fn init(allocator: mem.Allocator) CrossDomainVerifier {
         return CrossDomainVerifier{
             .allocator = allocator,
-            .results = .{},
+            .results = .empty,
         };
     }
 

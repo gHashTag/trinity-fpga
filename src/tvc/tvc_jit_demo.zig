@@ -1,4 +1,5 @@
 const std = @import("std");
+const tri_time = @import("tri_time");
 const tvc_ir = @import("tvc_ir.zig");
 const tvc_jit = @import("tvc_jit.zig");
 const tvc_vm_jit = @import("tvc_vm_jit.zig");
@@ -265,14 +266,14 @@ fn runBenchmarks(allocator: std.mem.Allocator, module: *tvc_ir.TVCModule) !void 
         }
 
         //  VM
-        const vm_start = std.time.nanoTimestamp();
+        const vm_start = tri_time.nanoTimestamp();
         i = 0;
         while (i < iterations) : (i += 1) {
             _ = vm.callFunctionSilent(func_name) catch 0;
             vm.registers.r0 = 0;
             vm.registers.r1 = 0;
         }
-        const vm_end = std.time.nanoTimestamp();
+        const vm_end = tri_time.nanoTimestamp();
         const vm_ns = @as(u64, @intCast(vm_end - vm_start));
 
         // === JIT Benchmark ===
@@ -286,12 +287,12 @@ fn runBenchmarks(allocator: std.mem.Allocator, module: *tvc_ir.TVCModule) !void 
         }
 
         //  JIT
-        const jit_start = std.time.nanoTimestamp();
+        const jit_start = tri_time.nanoTimestamp();
         i = 0;
         while (i < iterations) : (i += 1) {
             _ = compiled.call();
         }
-        const jit_end = std.time.nanoTimestamp();
+        const jit_end = tri_time.nanoTimestamp();
         const jit_ns = @as(u64, @intCast(jit_end - jit_start));
 
         // Compute andtoand
@@ -322,16 +323,16 @@ fn runBenchmarks(allocator: std.mem.Allocator, module: *tvc_ir.TVCModule) !void 
     }
 
     //  JIT loop
-    const jit_loop_start = std.time.nanoTimestamp();
+    const jit_loop_start = tri_time.nanoTimestamp();
     j = 0;
     while (j < loop_iterations) : (j += 1) {
         _ = jit_loop.call();
     }
-    const jit_loop_end = std.time.nanoTimestamp();
+    const jit_loop_end = tri_time.nanoTimestamp();
     const jit_loop_ns = @as(u64, @intCast(jit_loop_end - jit_loop_start));
 
     // VM and andto (with Zig code for withinnotand)
-    const vm_loop_start = std.time.nanoTimestamp();
+    const vm_loop_start = tri_time.nanoTimestamp();
     j = 0;
     var vm_sum: i64 = 0;
     while (j < loop_iterations) : (j += 1) {
@@ -343,7 +344,7 @@ fn runBenchmarks(allocator: std.mem.Allocator, module: *tvc_ir.TVCModule) !void 
         }
         vm_sum +%= s;
     }
-    const vm_loop_end = std.time.nanoTimestamp();
+    const vm_loop_end = tri_time.nanoTimestamp();
     const vm_loop_ns = @as(u64, @intCast(vm_loop_end - vm_loop_start));
     std.mem.doNotOptimizeAway(vm_sum);
 
@@ -376,12 +377,12 @@ fn runBenchmarks(allocator: std.mem.Allocator, module: *tvc_ir.TVCModule) !void 
     }
 
     // Benchmark JIT SIMD
-    const jit_simd_start = std.time.nanoTimestamp();
+    const jit_simd_start = tri_time.nanoTimestamp();
     j = 0;
     while (j < simd_iterations) : (j += 1) {
         _ = jit_simd.call();
     }
-    const jit_simd_end = std.time.nanoTimestamp();
+    const jit_simd_end = tri_time.nanoTimestamp();
     const jit_simd_ns = @as(u64, @intCast(jit_simd_end - jit_simd_start));
 
     // Benchmark scalar JIT (reuse sum_loop with larger n)
@@ -393,12 +394,12 @@ fn runBenchmarks(allocator: std.mem.Allocator, module: *tvc_ir.TVCModule) !void 
         _ = jit_scalar.call();
     }
 
-    const jit_scalar_start = std.time.nanoTimestamp();
+    const jit_scalar_start = tri_time.nanoTimestamp();
     j = 0;
     while (j < simd_iterations) : (j += 1) {
         _ = jit_scalar.call();
     }
-    const jit_scalar_end = std.time.nanoTimestamp();
+    const jit_scalar_end = tri_time.nanoTimestamp();
     const jit_scalar_ns = @as(u64, @intCast(jit_scalar_end - jit_scalar_start));
 
     const simd_ns_per_call = jit_simd_ns / simd_iterations;

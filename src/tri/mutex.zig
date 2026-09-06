@@ -70,3 +70,140 @@ test "default initialisation is unlocked" {
     try std.testing.expect(m.tryLock());
     m.unlock();
 }
+
+test "mutual exclusion holds under real contention" {
+    // The two tests above pass even if lock() were a no-op. This one does not:
+    // an unguarded counter reliably loses updates across four threads.
+    const Ctx = struct {
+        m: Mutex = .{},
+        counter: u64 = 0,
+
+        fn bump(self: *@This(), n: usize) void {
+            var i: usize = 0;
+            while (i < n) : (i += 1) {
+                self.m.lock();
+                defer self.m.unlock();
+                self.counter += 1; // deliberately non-atomic
+            }
+        }
+    };
+
+    var ctx: Ctx = .{};
+    const per_thread = 20_000;
+    const thread_count = 4;
+    var threads: [thread_count]std.Thread = undefined;
+    for (&threads) |*t| t.* = try std.Thread.spawn(.{}, Ctx.bump, .{ &ctx, per_thread });
+    for (threads) |t| t.join();
+
+    try std.testing.expectEqual(@as(u64, thread_count * per_thread), ctx.counter);
+}
+
+/// Replaces the removed `std.Thread.RwLock`.
+///
+/// 0.16 took every synchronisation primitive out of `std.Thread`, RwLock
+/// included. This tree uses it in one place -- the sharded basal-ganglia
+/// tables -- with 16 shared-lock sites against a handful of exclusive ones, so
+/// aliasing it to `Mutex` would be correct but would serialise every reader on
+/// a hot path. Hence a real one.
+///
+/// Reader-preferring: a continuous stream of readers can starve a writer. That
+/// is the right trade here (reads dominate, and every critical section is a few
+/// map operations) and the wrong one for a write-heavy structure. Like `Mutex`
+/// above, this spins rather than blocking, so it suits short sections only.
+pub const RwLock = struct {
+    /// High bit marks an exclusive holder; the low bits count shared holders.
+    /// The two are mutually exclusive, so a non-zero state with the high bit
+    /// clear means "readers present, no writer".
+    state: std.atomic.Value(u32) = .init(0),
+
+    const WRITER: u32 = 1 << 31;
+
+    pub fn lock(self: *RwLock) void {
+        while (true) {
+            if (self.state.cmpxchgWeak(0, WRITER, .acquire, .monotonic) == null) return;
+            std.atomic.spinLoopHint();
+        }
+    }
+
+    pub fn unlock(self: *RwLock) void {
+        self.state.store(0, .release);
+    }
+
+    pub fn tryLock(self: *RwLock) bool {
+        return self.state.cmpxchgStrong(0, WRITER, .acquire, .monotonic) == null;
+    }
+
+    pub fn lockShared(self: *RwLock) void {
+        while (true) {
+            const s = self.state.load(.monotonic);
+            if (s & WRITER == 0 and
+                self.state.cmpxchgWeak(s, s + 1, .acquire, .monotonic) == null) return;
+            std.atomic.spinLoopHint();
+        }
+    }
+
+    pub fn unlockShared(self: *RwLock) void {
+        _ = self.state.fetchSub(1, .release);
+    }
+
+    pub fn tryLockShared(self: *RwLock) bool {
+        const s = self.state.load(.monotonic);
+        if (s & WRITER != 0) return false;
+        return self.state.cmpxchgStrong(s, s + 1, .acquire, .monotonic) == null;
+    }
+};
+
+test "RwLock: readers share, a writer excludes" {
+    var l: RwLock = .{};
+    l.lockShared();
+    try std.testing.expect(l.tryLockShared()); // a second reader gets in
+    try std.testing.expect(!l.tryLock()); // but a writer does not
+    l.unlockShared();
+    l.unlockShared();
+    try std.testing.expect(l.tryLock()); // free once all readers leave
+    try std.testing.expect(!l.tryLockShared()); // and now readers are shut out
+    l.unlock();
+}
+
+test "RwLock: exclusive sections do not interleave" {
+    // Same shape as the Mutex contention test: this fails if lock() lets two
+    // writers in at once.
+    const Ctx = struct {
+        l: RwLock = .{},
+        counter: u64 = 0,
+        fn bump(self: *@This(), n: usize) void {
+            var i: usize = 0;
+            while (i < n) : (i += 1) {
+                self.l.lock();
+                defer self.l.unlock();
+                self.counter += 1;
+            }
+        }
+    };
+    var ctx: Ctx = .{};
+    var threads: [4]std.Thread = undefined;
+    for (&threads) |*t| t.* = try std.Thread.spawn(.{}, Ctx.bump, .{ &ctx, 20_000 });
+    for (threads) |t| t.join();
+    try std.testing.expectEqual(@as(u64, 80_000), ctx.counter);
+}
+
+test "RwLock: concurrent readers all observe a stable value" {
+    const Ctx = struct {
+        l: RwLock = .{},
+        value: u64 = 42,
+        ok: std.atomic.Value(u32) = .init(0),
+        fn read(self: *@This(), n: usize) void {
+            var i: usize = 0;
+            while (i < n) : (i += 1) {
+                self.l.lockShared();
+                defer self.l.unlockShared();
+                if (self.value == 42) _ = self.ok.fetchAdd(1, .monotonic);
+            }
+        }
+    };
+    var ctx: Ctx = .{};
+    var threads: [4]std.Thread = undefined;
+    for (&threads) |*t| t.* = try std.Thread.spawn(.{}, Ctx.read, .{ &ctx, 5_000 });
+    for (threads) |t| t.join();
+    try std.testing.expectEqual(@as(u32, 20_000), ctx.ok.load(.monotonic));
+}

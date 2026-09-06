@@ -5,6 +5,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 
 // ═══════════════════════════════════════════════════════════════════════════════════════
@@ -82,7 +83,7 @@ pub const MultiChainManager = struct {
     pub fn init(allocator: Allocator) MultiChainManager {
         var manager = MultiChainManager{
             .allocator = allocator,
-            .delegations = .{},
+            .delegations = .empty,
             .active_chains = .{},
         };
 
@@ -119,7 +120,7 @@ pub const MultiChainManager = struct {
             return error.ChainNotSupported;
         }
 
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
         const delegation_id = try std.fmt.allocPrint(self.allocator, "xfer_{d}_{x}", .{ now, std.math.maxInt(u64, std.math.maxInt(u64)) });
 
         const delegation = CrossChainDelegation{

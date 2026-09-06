@@ -10,6 +10,7 @@
 //! - Automatic patch rejection below 85% quality threshold
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const ASTAnalyzer = @import("ast_analyzer.zig").ASTAnalyzer;
 
 /// Quality validator for code patches
@@ -42,7 +43,7 @@ pub const PatchValidator = struct {
     /// Validate a generated file (compile + runtime + semantic check)
     pub fn validateFile(self: *const PatchValidator, file_path: []const u8) !ValidationResult {
         // Read the file
-        const source = try std.fs.cwd().readFileAlloc(self.allocator, file_path, 1_000_000);
+        const source = try std.Io.Dir.cwd().readFileAlloc(tri_io.get(), file_path, self.allocator, .limited(1_000_000));
         defer self.allocator.free(source);
 
         // 1. Compile-time validation
@@ -115,12 +116,12 @@ pub const PatchValidator = struct {
     /// Run runtime smoke tests
     fn runRuntimeSmoke(self: *const PatchValidator, file_path: []const u8) !RuntimeResult {
         // Check if test file exists
-        const test_path = try std.fmt.allocPrint(self.allocator, "{s}_test.zig", .{std.mem.trimRight(u8, file_path, ".zig")});
+        const test_path = try std.fmt.allocPrint(self.allocator, "{s}_test.zig", .{std.mem.trimEnd(u8, file_path, ".zig")});
         defer self.allocator.free(test_path);
 
         // Try to read the test file
         var buffer: [1024]u8 = undefined;
-        const has_tests = std.fs.cwd().readFile(test_path, &buffer) catch |err| switch (err) {
+        const has_tests = std.Io.Dir.cwd().readFile(tri_io.get(), test_path, &buffer) catch |err| switch (err) {
             error.FileNotFound => return .{ .success = true, .errors = "" }, // No tests = pass
             else => return .{ .success = false, .errors = "Failed to read test file" },
         };

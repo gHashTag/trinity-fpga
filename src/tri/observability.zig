@@ -12,6 +12,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 /// Exit code convention following POSIX standards
 pub const ExitCode = enum(u8) {
     success = 0,
@@ -117,11 +118,10 @@ pub const ArtifactHash = struct {
 };
 
 /// Compute hash of file content
-pub fn hashFile(allocator: std.mem.Allocator, path: []const u8, algorithm: HashAlgorithm) !ArtifactHash {
-    const file = try std.fs.cwd().openFile(path, .{});
-    defer file.close();
-
-    const content = try file.readToEndAlloc(allocator, 1024 * 1024 * 100); // Max 100MB
+pub fn hashFile(io: std.Io, allocator: std.mem.Allocator, path: []const u8, algorithm: HashAlgorithm) !ArtifactHash {
+    // Whole-file reads live on the directory in the 0.16 Io API, so the explicit
+    // open/close pair is gone; the 100MB cap is now the read limit.
+    const content = try std.Io.Dir.cwd().readFileAlloc(io, path, allocator, .limited(1024 * 1024 * 100));
     defer allocator.free(content);
 
     return hashBytes(content, algorithm);
@@ -177,30 +177,37 @@ fn xxhash64(bytes: []const u8) ArtifactHash {
 
 /// High-precision duration tracking
 pub const Duration = struct {
-    start_time: std.time.Instant,
-    end_time: ?std.time.Instant,
+    // 0.16 emptied `std.time` down to unit constants: `Instant` is gone along
+    // with `now`/`since`. `tri_time.monotonicNanos` reads the same monotonic
+    // clock `Instant` used, so the instants become plain nanosecond counts and
+    // `since` becomes a subtraction. Saturating (`-|`), because `since`
+    // returned an unsigned elapsed time and never wrapped.
+    start_time: u64,
+    end_time: ?u64,
     elapsed_ns: u64,
 
+    // `start` and `stop` stay fallible: the clock read cannot fail any more,
+    // but the call sites are written against an error union.
     pub fn start() !Duration {
         return Duration{
-            .start_time = try std.time.Instant.now(),
+            .start_time = tri_time.monotonicNanos(),
             .end_time = null,
             .elapsed_ns = 0,
         };
     }
 
     pub fn stop(self: *Duration) !void {
-        self.end_time = try std.time.Instant.now();
-        self.elapsed_ns = self.end_time.?.since(self.start_time);
+        self.end_time = tri_time.monotonicNanos();
+        self.elapsed_ns = self.end_time.? -| self.start_time;
     }
 
     pub fn elapsed(self: *const Duration) u64 {
         if (self.end_time) |end| {
-            return end.since(self.start_time);
+            return end -| self.start_time;
         }
         // If not stopped, return current elapsed
-        const now = std.time.Instant.now() catch return 0;
-        return now.since(self.start_time);
+        const now = tri_time.monotonicNanos();
+        return now -| self.start_time;
     }
 
     pub fn elapsedMs(self: *const Duration) u64 {
@@ -260,7 +267,7 @@ pub const RequestId = struct {
 
     fn generateUuid() [16]u8 {
         var uuid: [16]u8 = undefined;
-        var rng = std.Random.DefaultPrng.init(@intCast(std.time.microTimestamp()));
+        var rng = std.Random.DefaultPrng.init(@intCast(tri_time.microTimestamp()));
         rng.fill(&uuid);
 
         // Set version (4) and variant bits
@@ -293,7 +300,7 @@ pub const OperationContext = struct {
             .exit_code = .success,
             .artifacts = std.StringHashMap(ArtifactHash).init(allocator),
             .metadata = std.StringHashMap([]const u8).init(allocator),
-            .start_time = std.time.timestamp(),
+            .start_time = tri_time.timestamp(),
         };
     }
 
@@ -317,8 +324,8 @@ pub const OperationContext = struct {
         self.exit_code = code;
     }
 
-    pub fn addArtifact(self: *OperationContext, path: []const u8, algorithm: HashAlgorithm) !void {
-        const hash = try hashFile(self.allocator, path, algorithm);
+    pub fn addArtifact(self: *OperationContext, io: std.Io, path: []const u8, algorithm: HashAlgorithm) !void {
+        const hash = try hashFile(io, self.allocator, path, algorithm);
         const path_copy = try self.allocator.dupe(u8, path);
         try self.artifacts.put(path_copy, hash);
     }
@@ -456,10 +463,10 @@ test "ArtifactHash formatTo" {
     hash.bytes[1] = 0xCD;
 
     var buffer: [16]u8 = undefined;
-    var stream = std.io.fixedBufferStream(&buffer);
-    try hash.formatTo(stream.writer());
+    var w: std.Io.Writer = .fixed(&buffer);
+    try hash.formatTo(&w);
 
-    try std.testing.expectEqualStrings("abcd", stream.getWritten());
+    try std.testing.expectEqualStrings("abcd", w.buffered());
 }
 
 test "OperationContext init and deinit" {

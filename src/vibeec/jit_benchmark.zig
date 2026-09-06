@@ -10,6 +10,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const jit_adapter = @import("jit_adapter.zig");
 const JITAdapter = jit_adapter.JITAdapter;
 const JITMode = jit_adapter.JITMode;
@@ -293,9 +294,9 @@ fn runBenchmark(
         defer vm.deinit();
         vm.load(code, constants);
 
-        const start = std.time.nanoTimestamp();
+        const start = tri_time.nanoTimestamp();
         _ = try vm.run();
-        const end = std.time.nanoTimestamp();
+        const end = tri_time.nanoTimestamp();
 
         interpreter_times[i] = @intCast(@max(0, end - start));
         if (i == 0) instructions_executed = vm.instructions_executed;
@@ -307,9 +308,9 @@ fn runBenchmark(
         defer vm.deinit();
         vm.load(code, constants);
 
-        const start = std.time.nanoTimestamp();
+        const start = tri_time.nanoTimestamp();
         _ = try vm.runFast();
-        const end = std.time.nanoTimestamp();
+        const end = tri_time.nanoTimestamp();
 
         fast_interpreter_times[i] = @intCast(@max(0, end - start));
     }
@@ -320,9 +321,9 @@ fn runBenchmark(
         defer adapter.deinit();
         adapter.setMode(.Mixed);
 
-        const start = std.time.nanoTimestamp();
+        const start = tri_time.nanoTimestamp();
         _ = try adapter.execute(code, constants);
-        const end = std.time.nanoTimestamp();
+        const end = tri_time.nanoTimestamp();
 
         jit_adapter_times[i] = @intCast(@max(0, end - start));
     }
@@ -403,9 +404,9 @@ pub fn main() !void {
             var vm = try VM.init(allocator);
             defer vm.deinit();
             vm.load(prog.code, prog.constants);
-            const start = std.time.nanoTimestamp();
+            const start = tri_time.nanoTimestamp();
             _ = try vm.run();
-            const end = std.time.nanoTimestamp();
+            const end = tri_time.nanoTimestamp();
             interpreter_time = @intCast(@max(0, end - start));
             instructions = vm.instructions_executed;
         }
@@ -416,9 +417,9 @@ pub fn main() !void {
             var vm = try VM.init(allocator);
             defer vm.deinit();
             vm.load(prog.code, prog.constants);
-            const start = std.time.nanoTimestamp();
+            const start = tri_time.nanoTimestamp();
             _ = try vm.runFast();
-            const end = std.time.nanoTimestamp();
+            const end = tri_time.nanoTimestamp();
             fast_time = @intCast(@max(0, end - start));
         }
 
@@ -428,9 +429,9 @@ pub fn main() !void {
             var adapter = try JITAdapter.init(allocator);
             defer adapter.deinit();
             adapter.setMode(.Mixed);
-            const start = std.time.nanoTimestamp();
+            const start = tri_time.nanoTimestamp();
             _ = try adapter.execute(prog.code, prog.constants);
-            const end = std.time.nanoTimestamp();
+            const end = tri_time.nanoTimestamp();
             jit_time = @intCast(@max(0, end - start));
         }
 
@@ -461,9 +462,9 @@ pub fn main() !void {
             var vm = try VM.init(allocator);
             defer vm.deinit();
             vm.load(prog.code, prog.constants);
-            const start = std.time.nanoTimestamp();
+            const start = tri_time.nanoTimestamp();
             _ = try vm.run();
-            const end = std.time.nanoTimestamp();
+            const end = tri_time.nanoTimestamp();
             interpreter_time = @intCast(@max(0, end - start));
             instructions = vm.instructions_executed;
         }
@@ -474,9 +475,9 @@ pub fn main() !void {
             var vm = try VM.init(allocator);
             defer vm.deinit();
             vm.load(prog.code, prog.constants);
-            const start = std.time.nanoTimestamp();
+            const start = tri_time.nanoTimestamp();
             _ = try vm.runFast();
-            const end = std.time.nanoTimestamp();
+            const end = tri_time.nanoTimestamp();
             fast_time = @intCast(@max(0, end - start));
         }
 
@@ -486,9 +487,9 @@ pub fn main() !void {
             var adapter = try JITAdapter.init(allocator);
             defer adapter.deinit();
             adapter.setMode(.Mixed);
-            const start = std.time.nanoTimestamp();
+            const start = tri_time.nanoTimestamp();
             _ = try adapter.execute(prog.code, prog.constants);
-            const end = std.time.nanoTimestamp();
+            const end = tri_time.nanoTimestamp();
             jit_time = @intCast(@max(0, end - start));
         }
 

@@ -6,6 +6,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const vsa = @import("vsa.zig");
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -121,14 +122,14 @@ pub const DePINNode = struct {
 
     pub fn start(self: *DePINNode) void {
         self.status = .syncing;
-        self.start_time = std.time.timestamp();
+        self.start_time = tri_time.timestamp();
         // Simulate sync
         self.status = .online;
     }
 
     pub fn stop(self: *DePINNode) void {
         if (self.start_time > 0) {
-            self.uptime_seconds += @intCast(std.time.timestamp() - self.start_time);
+            self.uptime_seconds += @intCast(tri_time.timestamp() - self.start_time);
         }
         self.status = .offline;
         self.start_time = 0;
