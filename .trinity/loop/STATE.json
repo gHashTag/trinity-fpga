@@ -4,7 +4,7 @@
     "id": "two-track",
     "cron_job": "1cd7dda4",
     "interval": "15m",
-    "iteration": 120,
+    "iteration": 121,
     "status": "RUNNING",
     "owner": "Dmitrii Vasilev / @gHashTag",
     "tracks": [
@@ -1290,6 +1290,16 @@
       "cost": "EN audit 23s -> 198s. Waiting for a settled DOM is not free; guessing was.",
       "second_order": "Both locales pass today, but from this commit the audits are checking routes they were not actually checking before. Every green run of this gate before today is weaker evidence than it looked.",
       "lesson": "A fixed sleep after an async navigation is not a wait, it is a bet -- and when it loses, the harness does not error, it silently reports the wrong subject. When a gate is called flaky, check whether it is measuring what it names before you tune its timing."
+    },
+    {
+      "id": "A47",
+      "found": "2026-09-06, iteration 121, doing the competitor research I had skipped twice -- and following it into our own emitter.",
+      "competitor_finding": "Prior art for the Chip tab is STRONGER than what we ship: netlistsvg (nturley) draws a real schematic from a yosys JSON netlist, DigitalJS Online runs HDL in the browser with simulation, d3-hwschematic renders hierarchical interactive netlists, and FEntwumS.NetlistViewer does it inside an editor. All of them render an ELABORATED netlist. Ours renders declared widths, because our Verilog is module shells -- so on this axis we are behind ten-year-old open tooling, and the honesty header on the panel is the only thing keeping the comparison fair. On the other axis, searching for published silicon-level format conformance returns OUR OWN paper (arXiv:2606.09686) as the top hit; the nearest external anchor is Wintersteiger's ARITH 2025 case for bit-level conformance testing. So: behind on visualisation, alone on evidence.",
+      "what_that_led_to": "Reading the Verilog the compiler actually emits for hello_world -- the spec the Spec Explorer opens on -- I found `parameter [31:0] Greeting = packed;`. `packed` is a keyword, not a value. Cause: there is no KwPacked in the lexer, so `packed` arrives as an Ident; parse_const_decl handles `= struct {` and `= union(enum) {` but not `= packed struct {`, and the declaration became a ConstDecl whose initializer started at that token. Fixed in gHashTag/t27#3384, closing #3383.",
+      "my_overstatement_caught_mid_flight": "I wrote that this was 'likely a major contributor to the 315 specs yosys rejects'. Then I counted: `grep -rn '= packed struct' --include='*.t27'` returns ZERO on master. The construct exists only in the corpus snapshot the website vendors. So the fix changes no corpus number in either direction, and I said so in the commit and the PR rather than letting the earlier framing stand. The user-visible impact is real and narrow: one line, on the teaching spec, on a public site.",
+      "verification": "No spec exercises the construct, so the two regression tests are the only guard. Checked against the defect rather than merely run: with the new parser branch disabled the packed test FAILS and the plain-struct test still passes; enabled, both pass; full suite 1694 passed, 0 failed.",
+      "process_notes": "compiler.rs is guarded by a FROZEN_HASH seal (build.rs:254). Resealed per FROZEN.md §5 / CANON.md M5, with the digest computed by shasum and written by the shell -- never transcribed. Worked in a git worktree off origin/master because the main t27 checkout carries 17 dirty tracked paths from another session, which is B18/OD8 and not mine to disturb.",
+      "lesson": "Competitor research is not a formality -- it is a way of being told what your artefact actually is. Two searches placed the Chip tab behind netlistsvg, and the reason it is behind (our Verilog is shells) led directly to a real emitter defect on the most-read spec in the corpus. I had skipped this step twice because a tool was broken, and both times the honest move would have been to change surface rather than omit the work."
     }
   ],
   "collaboration_options": [
