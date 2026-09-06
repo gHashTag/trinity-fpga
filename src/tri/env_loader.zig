@@ -11,7 +11,9 @@ const c = struct {
 /// Parse a single .env line into key and value, or null if comment/blank/invalid.
 pub fn parseLine(line: []const u8) ?struct { key: []const u8, value: []const u8 } {
     // Skip leading whitespace
-    var s = std.mem.trimLeft(u8, line, " \t");
+    // 0.16 renamed trimLeft/trimRight to trimStart/trimEnd. A true rename:
+    // same arguments, same meaning, no value to thread.
+    var s = std.mem.trimStart(u8, line, " \t");
 
     // Skip empty lines and comments
     if (s.len == 0 or s[0] == '#') return null;
@@ -19,16 +21,16 @@ pub fn parseLine(line: []const u8) ?struct { key: []const u8, value: []const u8 
     // Skip optional "export " prefix
     if (std.mem.startsWith(u8, s, "export ")) {
         s = s["export ".len..];
-        s = std.mem.trimLeft(u8, s, " \t");
+        s = std.mem.trimStart(u8, s, " \t");
     }
 
     // Find '='
     const eq = std.mem.indexOfScalar(u8, s, '=') orelse return null;
-    const key = std.mem.trimRight(u8, s[0..eq], " \t");
+    const key = std.mem.trimEnd(u8, s[0..eq], " \t");
     if (key.len == 0) return null;
 
-    var value = std.mem.trimLeft(u8, s[eq + 1 ..], " \t");
-    value = std.mem.trimRight(u8, value, " \t\r");
+    var value = std.mem.trimStart(u8, s[eq + 1 ..], " \t");
+    value = std.mem.trimEnd(u8, value, " \t\r");
 
     // Strip matching quotes
     if (value.len >= 2) {
@@ -44,11 +46,14 @@ pub fn parseLine(line: []const u8) ?struct { key: []const u8, value: []const u8 
 
 /// Load .env from CWD into process environment. Process env takes precedence.
 /// Silently returns if .env is missing or unreadable.
-pub fn loadDotEnv(allocator: std.mem.Allocator) void {
-    const file = std.fs.cwd().openFile(".env", .{}) catch return;
-    defer file.close();
-
-    const content = file.readToEndAlloc(allocator, 32 * 1024) catch return;
+/// Takes an `io` because Zig 0.16 moved file I/O behind it. That is a signature
+/// change, not a rename: every caller has to have an Io to give. Here there is
+/// one caller (main.zig) and it already builds one, so the cost is a parameter.
+/// Elsewhere in this tree it will be the actual work.
+pub fn loadDotEnv(io: std.Io, allocator: std.mem.Allocator) void {
+    // readFileAlloc replaces open + readToEndAlloc + close in one call: the
+    // 0.16 shape puts the whole-file read on the directory, not the file.
+    const content = std.Io.Dir.cwd().readFileAlloc(io, ".env", allocator, .limited(32 * 1024)) catch return;
     // intentionally leaked — process-lifetime data
 
     var iter = std.mem.splitScalar(u8, content, '\n');

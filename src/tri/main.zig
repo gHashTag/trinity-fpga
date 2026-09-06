@@ -67,7 +67,7 @@ pub fn main() !void {
     defer structured_log.deinitGlobalLogger();
 
     // Auto-load .env into process environment (process env wins over .env)
-    env_loader.loadDotEnv(allocator);
+    env_loader.loadDotEnv(io, allocator);
 
     const args = try std.process.argsAlloc(allocator);
     defer std.process.argsFree(allocator, args);
