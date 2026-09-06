@@ -621,6 +621,14 @@
       "verified": "Against the real built artifact with real Chrome, not by reading. After the harness fix pages['dashboard'] contains the dashboard and queen/dashboard are distinct. Negative control: reverting ONLY ProductionDashboard.tsx to origin/main and rebuilding makes the RU audit fail deterministically with exactly the line CI reported; restoring it passes. Both audits pass 28 routes in both locales, locally and then in CI (run 34029447558) -- website-checks green on a PR for the first time in this series. Live on t27.ai at index-DJBc4wS1.js / ProductionDashboard-Bz636jKU.js, rendering ПАНЕЛЬ TRINITY, В РАБОТЕ and a ru-RU date.",
       "cost": "EN audit 23s -> 198s; that is the price of waiting for a settled DOM instead of guessing. And every green run of this gate before today is weaker evidence than it looked, because it was not checking the routes it named.",
       "skill_updated": ".claude/skills/ci-gates/SKILL.md gains 'Flaky is a diagnosis, and usually the wrong one' and 'The PASS that had nothing to do with your change'. Memory a-fixed-sleep-is-a-bet-not-a-wait written."
+    },
+    {
+      "id": "D101",
+      "what": "gHashTag/t27#3384 merged to master as f5d8564ab, closing #3383. `pub const X = packed struct {...}` now parses as a StructDecl instead of becoming a ConstDecl whose Verilog rendering was `parameter [31:0] Greeting = packed;`.",
+      "verified": "38 checks pass, 0 fail, 0 pending -- including the Corpus ratchet, which is consistent with the zero-specs finding rather than merely permissive. Full suite 1694 passed. Negative control: with the new parser branch disabled the packed test FAILS and the plain-struct test still passes.",
+      "scope_corrected": "I first framed this as a likely major cause of the 315 yosys rejections. Counted: zero specs on master declare the construct. The fix changes no corpus number in either direction and the commit, the PR and the NOW entry all say so.",
+      "protocol": "Two NOW gates refused the first push: every change to master must ADD a docs/now/ entry, while the local pre-commit hook only checks that an EXISTING entry is fresh -- so the hook passed and CI did not. The second gate exists precisely to report two gates disagreeing, and it did. FROZEN_HASH resealed per FROZEN.md §5 with the digest computed by shasum, never transcribed. Worked in a worktree off origin/master; the main t27 checkout's 17 dirty paths (B18/OD8) were left untouched and are still 17.",
+      "still_open": "The website vendors an older corpus snapshot, so t27.ai still shows `= packed;` under hello_world's Verilog tab until the snapshot is re-vendored. That re-vendor is the follow-up, not this PR."
     }
   ],
   "backlog": [
