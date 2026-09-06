@@ -4,7 +4,7 @@
     "id": "two-track",
     "cron_job": "1cd7dda4",
     "interval": "15m",
-    "iteration": 111,
+    "iteration": 112,
     "status": "RUNNING",
     "owner": "Dmitrii Vasilev / @gHashTag",
     "tracks": [
@@ -547,6 +547,15 @@
       "design": "The id is DERIVED, never passed in. A caller cannot supply a colliding id -- a supplied `id` key is dropped rather than honoured -- and cannot fill a gap either, so ids stay monotone and their order is the order things happened. highestId() skips rows it cannot read (wrong prefix, missing id, non-object, unparseable suffix) rather than erroring: it answers 'what number is free', and a row it cannot read cannot be occupying one.",
       "tests": "4 new, 56 passing in tri_loopstate.zig. The load-bearing ones: a caller-supplied id is ignored and exactly one original survives; and a deliberately messy done[] holding {id:B9}, {no_id}, a bare string and {id:Dxx} still yields D12 from a highest readable D11.",
       "zig_note": "std.json.Array is MANAGED (carries its own allocator, append takes one argument) while std.json.ObjectMap is UNMANAGED (.empty, put takes an allocator per call). Both are used in the same function here; the asymmetry cost two compile errors and is now noted in a comment where it bites."
+    },
+    {
+      "id": "D93",
+      "what": "#753 merged. fpga-bitstream.yml SUCCEEDED for the first time in its existence -- 1 success in 8 runs ever, and it is this one. Four stacked blockers had to come off, each invisible until the one in front of it was removed.",
+      "the_sequence": "dead .vibee paths entry -> the workflow never fired at all (fixed in #751). Body still said .vibee -> it fired and found nothing. format('[{0}]', words) built '[blink counter mac]', which is not JSON, so the matrix never instantiated and GitHub marked the RUN failed with NO failing job attached: every job success or skipped, --log-failed empty, workflow absent from the checks list entirely. Then, matrix finally instantiating, 4 of 14 specs failed 'Verilog not found' -- because vibee gen emits for the target a spec declares, 10 of 14 declare `language: varlog`, and the 4 without one were exactly the 4 that failed. Not broken Verilog specs; not Verilog specs.",
+      "self_correction": "I nearly merged mid-sequence believing it fixed, because the workflow had VANISHED from the PR checks list. Its absence WAS the defect. A job that fails to instantiate has no log, no check-run and no name, so a fail-list cannot see it -- and I had been reading fail-lists as the source of truth all session. Every subsequent claim was checked against the run's own conclusion instead.",
+      "verified": "Not inferred from absence: `gh run list --workflow fpga-bitstream.yml --status success --limit 100` returns exactly one row, this one, against 8 total runs. Jobs: 12 success, 1 skipped. The varlog filter was checked against ground truth recomputed independently in python -- selection matches, skipped set equals the 4 CI failures exactly.",
+      "four_defects_of_mine_in_this_lineage": "(1) fixed a trigger without its body; (2) shipped a gate enforcing 80% of what I claimed (paths_block blind to the inline form, 87 of 432 entries, with a negative control that planted only into a block-form file and so could never reach the gap); (3) added a PyYAML import the runner lacks -- A28 twice in one session, first macOS-vs-Linux libc, then site-packages; (4) read silence as success. Each surfaced by executing something; none by re-reading.",
+      "main_state": "Red checks on main dropped from five to ONE: only `Withdrawn numbers` remains, and it is diagnosed -- 0.1797 live in a results table at tnf_paper.tex:4729 (real), 0.92 inside 'the ratios an earlier draft reported' (a withdrawal the gate's syntactic test cannot see). Brain Health and Orphaned artefacts no longer appear in main's recent failures."
     }
   ],
   "backlog": [
