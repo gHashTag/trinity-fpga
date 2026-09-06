@@ -18,11 +18,25 @@ on:
   push:
     branches: [main]
     paths:
-      - 'specs/fpga/**/*.vibee'
+      # `**/` requires a directory level, and every .tri here sits directly
+      # in specs/fpga -- so the `**` form matched nothing and was the reason
+      # this workflow could not fire at all. Only the live form is listed:
+      # a pattern that matches nothing today is indistinguishable from one
+      # that has rotted, which is the defect this whole change is fixing.
+      # Add the `**` form when specs/fpga actually gains subdirectories.
+      - 'specs/fpga/*.tri'
+      - '.github/workflows/fpga-bitstream.yml'
   pull_request:
     branches: [main]
     paths:
-      - 'specs/fpga/**/*.vibee'
+      # `**/` requires a directory level, and every .tri here sits directly
+      # in specs/fpga -- so the `**` form matched nothing and was the reason
+      # this workflow could not fire at all. Only the live form is listed:
+      # a pattern that matches nothing today is indistinguishable from one
+      # that has rotted, which is the defect this whole change is fixing.
+      # Add the `**` form when specs/fpga actually gains subdirectories.
+      - 'specs/fpga/*.tri'
+      - '.github/workflows/fpga-bitstream.yml'
   workflow_dispatch:
     inputs:
       spec:

@@ -18,13 +18,11 @@ on:
     branches: [main]
     paths:
       - 'fpga/openxc7-synth/Dockerfile*'
-      - 'fpga/openxc7-synth/synth*.sh'
       - '.github/workflows/fpga-docker.yml'
   pull_request:
     branches: [main]
     paths:
       - 'fpga/openxc7-synth/Dockerfile*'
-      - 'fpga/openxc7-synth/synth*.sh'
       - '.github/workflows/fpga-docker.yml'
   workflow_dispatch:
     inputs:

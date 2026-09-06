@@ -16,13 +16,21 @@ on:
   push:
     branches: [main]
     paths:
-      - 'fpga/openxc7-synth/corona_compute_gf*_{div,sqrt,quire}_ax7203.v'
+      # No brace expansion in GitHub path filters -- only * ** ? + [].
+      # The brace form matched nothing; these three match all 12 wrappers.
+      - 'fpga/openxc7-synth/corona_compute_gf*_div_ax7203.v'
+      - 'fpga/openxc7-synth/corona_compute_gf*_sqrt_ax7203.v'
+      - 'fpga/openxc7-synth/corona_compute_gf*_quire_ax7203.v'
       - 'fpga/openxc7-synth/gf_*_param.v'
       - 'conformance/wrapper_conversion_conformance.py'
       - '.github/workflows/wrapper-conversion-conformance.yml'
   pull_request:
     paths:
-      - 'fpga/openxc7-synth/corona_compute_gf*_{div,sqrt,quire}_ax7203.v'
+      # No brace expansion in GitHub path filters -- only * ** ? + [].
+      # The brace form matched nothing; these three match all 12 wrappers.
+      - 'fpga/openxc7-synth/corona_compute_gf*_div_ax7203.v'
+      - 'fpga/openxc7-synth/corona_compute_gf*_sqrt_ax7203.v'
+      - 'fpga/openxc7-synth/corona_compute_gf*_quire_ax7203.v'
       - 'fpga/openxc7-synth/gf_*_param.v'
       - 'conformance/wrapper_conversion_conformance.py'
       - '.github/workflows/wrapper-conversion-conformance.yml'
