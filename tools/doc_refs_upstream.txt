@@ -3,13 +3,10 @@ docs/ICA_W40_001.md: names `gHashTag/t27/trios-coq/Physics/SparsityMask.v`
 docs/IDCODE.md: names `gHashTag/t27/fpga/HARDWARE_SSOT.md`
 docs/R18_LAYER_FROZEN.md: names `gHashTag/t27/CANON.md`
 docs/R18_LAYER_FROZEN.md: names `gHashTag/t27/FROZEN.md`
-docs/REFEREE-PAGE.md: names `gHashTag/t27/specs/ternary/gft_sadd.t27`
-docs/REFEREE-PAGE.md: names `gHashTag/t27/specs/ternary/gft_smul.t27`
 docs/ZENODO_UPLOAD_GUIDE.md: names `gHashTag/t27/.github/workflows/zenodo-publish.yml`
 docs/competitive/TOPS_LEVERS_W28_PRE_2026-05-15.md: names `gHashTag/t27/coq/IGLA/RMarker.v`
 docs/docs/architecture/SA-2_EXECUTION_GRAPH.md: names `gHashTag/t27/.github/workflows/release.yml`
 docs/docs/research/papers/ARXIV_SUBMISSION_CONFIRMATION.md: names `gHashTag/trios/docs/infrastructure/zenodo-registry.md`
-docs/funding/TRI-NET_grant_onepager_RU.md: names `gHashTag/t27/specs/numeric/formats_catalog.t27`
 docs/handoff/HANDOFF_AGENT.md: names `gHashTag/t27/conformance/vectors/INDEX_all_formats.json`
 docs/papers/ARXIV_SUBMISSION_CONFIRMATION.md: names `gHashTag/trios/docs/infrastructure/zenodo-registry.md`
 research/ARXIV_ABSTRACTS_READY_TO_PASTE.md: names `gHashTag/t27/conformance/vectors/INDEX_all_formats.json`

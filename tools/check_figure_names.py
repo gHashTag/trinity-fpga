@@ -29,13 +29,26 @@ for f in sorted(FIGDIR.glob("*.pdf")):
         txt = subprocess.run(["pdftotext", str(f), "-"],
                              capture_output=True, text=True, timeout=60).stdout
     except FileNotFoundError:
-        print("pdftotext not available -- cannot check"); sys.exit(0)
+        # exit(1), not exit(0). A missing tool means this gate CANNOT measure,
+        # which is not the same as finding nothing wrong -- and a green run in
+        # that state is indistinguishable from a real pass. check_overfull.py has
+        # the identical shape and has consequently reported success for 298 runs
+        # without ever measuring anything.
+        print("FAIL: pdftotext not available -- the gate cannot measure")
+        sys.exit(1)
     checked += 1
     for name in SUPERSEDED:
         if name in txt:
             fails.append(f"{f.name}: contains the superseded name '{name}'")
 
 print(f"figures checked: {checked}")
+if checked == 0:
+    # An empty scope is not a pass. Floored at 1 rather than at today's count, so
+    # legitimately retiring one figure does not fail the gate while losing all of
+    # them does.
+    print("\nFAIL: no figures were checked -- an empty scope reports OK, which is "
+          "indistinguishable from finding no superseded names.")
+    sys.exit(1)
 if fails:
     print(f"\nFAIL: {len(fails)} figure(s) carry a superseded name\n")
     for x in fails: print(f"  {x}")

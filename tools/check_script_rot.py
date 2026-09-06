@@ -70,7 +70,22 @@ DEAD = {"fpga/tef/upper/sweep.sh", "fpga/tef/upper/upper.sh"}
 live = [f for f in fails if not any(d in f for d in DEAD)]
 dead = [f for f in fails if any(d in f for d in DEAD)]
 
+MIN_SCRIPTS = 1
+
 print(f"scripts invoking yosys: {checked}")
+if checked < MIN_SCRIPTS:
+    print(f"\nFAIL: found {checked} script(s) invoking yosys, expected at least "
+          f"{MIN_SCRIPTS}.")
+    print("This gate reports OK when it inspects nothing, which is "
+          "indistinguishable from")
+    print("finding no rot. Its scope is fpga/**/*.sh -- files "
+          ".claude/rules/no-shell-scripts.md")
+    print("marks for deletion -- so an empty scope is the EXPECTED end state, "
+          "not a surprise.")
+    print("If the reproduction scripts are genuinely gone, delete this gate "
+          "rather than")
+    print("leaving it green over an empty set.")
+    sys.exit(1)
 if dead:
     print(f"\n{len(dead)} reference(s) in dead tooling (module absent from tree and "
           f"history; no published number depends on these):")
