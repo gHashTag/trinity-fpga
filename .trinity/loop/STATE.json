@@ -4,7 +4,7 @@
     "id": "two-track",
     "cron_job": "1cd7dda4",
     "interval": "15m",
-    "iteration": 107,
+    "iteration": 108,
     "status": "RUNNING",
     "owner": "Dmitrii Vasilev / @gHashTag",
     "tracks": [
@@ -504,6 +504,18 @@
       "verified": "Step body extracted from the YAML and run verbatim under local bash 3.2, both directions: floor=7 -> exit 0 with 'testable gates: 7 (floor: 7)'; floor=9 -> exit 1 with '::error::Only 7 gate(s) could be tested; the floor is 9.'",
       "noted_not_fixed": "Running the harness leaves tools/doc_refs_crossrepo.txt and tools/doc_refs_upstream.txt modified. Attributed by running check_doc_refs.py alone and reproducing it: that gate regenerates its own baselines. Not the harness failing to clean up. Harmless on an ephemeral runner, mildly annoying locally.",
       "pr": "#750"
+    },
+    {
+      "id": "D88",
+      "what": "B24 merged (#750: gates-can-fail.yml plus the audit_workflow_paths argument-order fix), and B25 done in #751: nine paths: entries that could never fire, plus the check that never looked for them.",
+      "b25_detail": "Nothing had ever checked whether a paths: entry matches a real file. Nine did not, across five workflows, and fpga-bitstream.yml had NO other entry -- unfirable since 2026-04-19 while looking healthy in the Actions sidebar. Four causes, each with a named commit: .vibee->.tri (7ed113c3c), trinity-nexus->deploy/trinity-nexus (430b43921), synth*.sh deleted (6f6840d52), and a path INSIDE a gitlink (32af5c242), which can never appear in a superproject diff because git reports a submodule as one entry. The fifth was the brace glob corona_compute_gf*_{div,sqrt,quire}_ax7203.v -- GitHub's path filter has no brace expansion, so it matched none of the 12 wrappers, including the file whose defects caused that workflow to be written.",
+      "the_gate": "audit_workflow_paths.py asked whether a workflow watches what it BUILDS; it never asked whether what it watches EXISTS. dead_paths() now does, wired into the exit code. matches() also stopped emulating brace expansion -- that was not leniency but measuring a different system, reporting 12 matches where GitHub had 0, which is exactly why the inert workflow went unnoticed. Removing the emulation is safe ONLY because the entries it would flag are fixed in the same commit; either half alone would have landed a red gate.",
+      "verified": "before 9 dead / after 0, each of the 5 workflows keeping at least one live pattern; self-check PASS with TWO negative controls (planted dead entry flagged, planted script gap flagged, file restored byte-identically); and a revert test that puts the REAL brace glob back and requires exit 1 naming it. The revert test matters more than the self-check: planting a synthetic entry proves the check works on a fixture, reverting the actual defect proves it catches what it was written for.",
+      "self_correction": "Caught by my own verifier, not by review: my first fix for fpga-bitstream.yml was specs/fpga/**/*.tri, which is ALSO dead -- **/ requires a directory level and every .tri there sits directly in specs/fpga. I then kept it beside the working pattern as future-proofing, and removed it again on the same reasoning the whole change rests on: a pattern matching nothing today is indistinguishable from one that has rotted. Also corrected my own counting instrument mid-task -- a line-based scanner reset on blank lines and comments, truncating paths: blocks and reporting 4 unique entries; a real YAML parse found the 5th (the gitlink one) and matched the sweep's 9.",
+      "prs": [
+        "#750",
+        "#751"
+      ]
     }
   ],
   "backlog": [
@@ -719,10 +731,11 @@
     {
       "id": "B25",
       "prio": 5,
-      "status": "pending",
+      "status": "completed",
       "blocked_by": [],
       "title": "9 dead paths: entries across 5 workflows, so those triggers can never fire. wrapper-conversion-conformance.yml:19,25 watch a BRACE pattern ('corona_compute_gf*_{div,sqrt,quire}_ax7203.v') -- GitHub's path filter supports only * ** ? + [], not brace expansion, and zero of 18,788 tracked paths contain a brace, so all 12 wrappers trigger nothing. fpga-bitstream.yml has no OTHER entry, making it unfirable since 2026-04-19. Four distinct rot causes, each with a named commit: .vibee->.tri (7ed113c3c), trinity-nexus->deploy/trinity-nexus (430b43921), synth*.sh deleted (6f6840d52), and a gitlink path (external/tt-trinity-corona/src/rtl/posit8_decode.v, 32af5c242) that can never appear in a superproject diff.",
-      "fix": "research/audit_workflow_paths.py already parses paths: blocks and already runs in gate-ratchet.yml -- but its matches() at line 95 EMULATES brace expansion (\\{ -> (, , -> \\|), which is precisely why it is blind to this. Fix that one line to use real GitHub glob semantics and add a zero-match assertion; that catches all 9. Report gitlink-prefixed entries as their own category (watch the gitlink, not a path under it)."
+      "fix": "research/audit_workflow_paths.py already parses paths: blocks and already runs in gate-ratchet.yml -- but its matches() at line 95 EMULATES brace expansion (\\{ -> (, , -> \\|), which is precisely why it is blind to this. Fix that one line to use real GitHub glob semantics and add a zero-match assertion; that catches all 9. Report gitlink-prefixed entries as their own category (watch the gitlink, not a path under it).",
+      "completed_note": "#751 -- all 9 entries fixed and dead_paths() added so it cannot recur silently."
     },
     {
       "id": "B26",
@@ -1038,6 +1051,14 @@
       "impact": "None shipped -- the plan was corrected before it became a commit. But it would have added a permanently non-blocking gate, which is a gate whose failures nobody has to act on, i.e. another member of the exact class this iteration is cataloguing.",
       "status": "corrected before landing; the workflow is blocking, with a coverage floor.",
       "lesson": "The same root cause as A28, A29, A31 and A33 -- reasoning about a thing instead of running it -- but reached from the opposite direction. Those four were overconfidence; this was overcaution. Both are the same failure to execute, and overcaution is harder to notice because its output looks like prudence and produces no red build to argue with."
+    },
+    {
+      "id": "A35",
+      "found": "2026-09-06, iteration 108",
+      "what": "A scratch worktree this session had been using (/tmp/loop-merge) was gone after a session restart, so a `cd` failed and the commands after it ran in the LOOP worktree instead -- which is 425+ commits behind main. The measurements taken there (auditor exit code, list of brace-using workflows) were therefore against the wrong tree, and looked entirely plausible.",
+      "impact": "Caught within one command, before any conclusion was published, because the output printed the HEAD sha and it was the loop branch rather than main. Nothing wrong shipped. Had the shas not been printed, the whole B25 analysis would have been done against a tree missing 32 workflows.",
+      "status": "fixed procedurally: a fresh `git worktree add --detach <scratch> origin/main` is now created explicitly and its HEAD sha printed and checked before any measurement.",
+      "lesson": "`cd X && cmd` silently runs cmd in the current directory when X does not exist. Any shell step whose correctness depends on the working directory must PRINT what tree it is in, and the reader must actually look. Related to A30: both are cases where a git/shell operation did something other than what its shape suggested."
     }
   ],
   "collaboration_options": [
