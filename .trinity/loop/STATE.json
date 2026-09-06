@@ -4,7 +4,7 @@
     "id": "two-track",
     "cron_job": "1cd7dda4",
     "interval": "15m",
-    "iteration": 127,
+    "iteration": 128,
     "status": "RUNNING",
     "owner": "Dmitrii Vasilev / @gHashTag",
     "tracks": [
@@ -686,6 +686,13 @@
       "what": "gHashTag/trinity#968 merged (03e1b042). The mobile gate now distinguishes off-screen from unreachable, and its baseline is empty.",
       "verified": "Injected control proves both directions in one run: a button 600px off-margin inside overflow:hidden is reported on all 28 routes; the same button inside overflow-x:auto is reported on none. Real audit after the change: EN and RU both exit 0 across 28 routes with no baseline to report. CI green, read before merging rather than after -- the merge is now a separate call from the wait, per A52.",
       "net_effect": "The site has no known unreachable controls, and that statement is now backed by a check that has been shown to fire and to stay quiet for the right reasons."
+    },
+    {
+      "id": "D110",
+      "what": "Two commits on the tri build. e3a23ae42 replaces the removed std.Thread.Mutex with a compare-exchange spinlock, right-sized for guarding one optional twice per process. ccfd313bc migrates structured_log.zig to std.Io and wires main.zig to construct the Io.",
+      "renames_confirmed_against_the_stdlib": "std.fs.Dir/File -> std.Io.Dir/File; makeOpenPath -> createDirPath then openDir; writeAll -> writeStreamingAll(io, ...); close()/stat() -> close(io)/stat(io). Each was looked up rather than guessed, and two of my first attempts were wrong -- makeOpenPath and writeAll both do not exist.",
+      "b22_untouched_on_purpose": "main.zig keeps `pub fn main() !void`. Using std.Io.Mutex or process.Init would have settled B22's design as a side effect of a compile fix; the spinlock and Io.Threaded avoid that.",
+      "verified": "structured_log.zig compiles standalone. main.zig moves off it entirely, onto env_loader.zig:48 and main.zig:72 -- different files, same 0.16 family. The Io pattern was proven end to end in a scratch program first, including reading back the written line."
     }
   ],
   "backlog": [
@@ -1431,6 +1438,17 @@
       "the_control_i_should_have_run_first": "Two buttons injected 600px off the left margin of two identical 375px containers. overflow:hidden -> 'CLIPPED' reported on all 28 routes. overflow-x:auto -> 'SCROLLABLE' reported on none. Both directions in one run, and it took two minutes. I ran it AFTER writing the baseline instead of before.",
       "what_this_says_about_baselines": "A baseline is a claim that something is broken and not being fixed today. I wrote one from a measurement I had not validated, and it would have sat there indefinitely looking like known debt. Yesterday I was pleased that the baseline 'held' when a flaky run called those routes clean -- the entries survived for the wrong reason, and I recorded that as the system working.",
       "lesson": "Before adding anything to a baseline, verify the defect the way a user would experience it. A number that looks wrong is a hypothesis; the baseline is where hypotheses go to become permanent."
+    },
+    {
+      "id": "A54",
+      "found": "2026-09-07, iteration 128, starting the Zig 0.16 Mutex work I had scoped as blocked on B22.",
+      "the_standing_belief": "The loop recorded for several iterations that main.zig could not be repaired until it was migrated to `main(init: std.process.Init)` -- B22 -- because 0.16 puts file I/O behind an Io and only that signature supplies one. I wrote that myself, twice, and sized other work around it.",
+      "it_is_false": "`std.Io.Threaded.init(gpa, .{})` builds an Io from an allocator alone. Proven as a standalone program before touching the tree: a plain `pub fn main() !void` obtains an Io and performs createDirPath, openDir, createFile and writeStreamingAll, with the written line read back from the file.",
+      "how_the_belief_formed": "I checked that std.Io.Mutex.lock takes an Io, saw main.zig had no init.io, and concluded the signature had to change. I never asked whether an Io could be constructed. One grep for `pub fn init` in Io/Threaded.zig would have answered it -- the same grep I eventually ran, four iterations later.",
+      "what_it_cost": "Two iterations of scoping around a phantom prerequisite, and a backlog item (B22) recorded as blocking something it does not block.",
+      "what_changed_materially": "structured_log.zig is fully migrated to std.Io rather than worked around, and main.zig constructs the Io and hands it down. main.zig now fails on two errors in OTHER files (env_loader std.fs.cwd, main.zig std.process.argsAlloc) instead of on the logger.",
+      "the_real_size": "155 of 749 files in src/tri touch std.fs, across 939 call sites; 19 already use std.Io. A program-wide mechanical migration, not a short chain. The shape of the work changed from 'blocked on a decision nobody made' to '939 call sites anyone can start on, in any order, knowing four renames'.",
+      "lesson": "When a dependency looks structural, check whether the thing you need can simply be constructed. I reasoned from one function's signature to a whole-program prerequisite without ever asking where the value comes from."
     }
   ],
   "collaboration_options": [
