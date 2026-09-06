@@ -80,10 +80,10 @@
 
   <div class="readout">
     <div class="cellstat"><div class="n">88</div><div class="l">done</div></div>
-    <div class="cellstat"><div class="n">8</div><div class="l">backlog open</div></div>
-    <div class="cellstat"><div class="n">27</div><div class="l">backlog total</div></div>
-    <div class="cellstat"><div class="n">15</div><div class="l">anomalies open</div></div>
-    <div class="cellstat"><div class="n">35</div><div class="l">anomalies total</div></div>
+    <div class="cellstat"><div class="n">9</div><div class="l">backlog open</div></div>
+    <div class="cellstat"><div class="n">28</div><div class="l">backlog total</div></div>
+    <div class="cellstat"><div class="n">16</div><div class="l">anomalies open</div></div>
+    <div class="cellstat"><div class="n">36</div><div class="l">anomalies total</div></div>
   </div>
 
   <h2>Decision gate</h2>
@@ -99,6 +99,7 @@
     <div class="row"><div class="id">B23</div><div class="st">pending</div><div class="wt">overfull.yml has never measured anything: 298 green runs, zero measurements. &#39;cargo install tectonic || true&#39; fails on the runner (tectonic_bridge_png, libpng), and tools/check_overfull.py:24-25 turns the resulting FileNotFoundError into&hellip;</div></div>
     <div class="row"><div class="id">B26</div><div class="st">pending</div><div class="wt">Four live wrong values in tri output, all one class: a Zig reader looking for a JSON key its real data file does not contain -- the same defect as the loop_dashboard title/detail bug found earlier this iteration, which means the class has&hellip;</div></div>
     <div class="row"><div class="id">B27</div><div class="st">pending</div><div class="wt">Six glob-scoped tools/check_*.py print OK on an EMPTY scope; only check_harness.py goes red. check_script_rot.py&#39;s scope is fpga/**/*.sh, and .claude/rules/no-shell-scripts.md marks exactly those for deletion -- so the project roadmap ends&hellip;</div></div>
+    <div class="row"><div class="id">B28</div><div class="st blocked">pending</div><div class="wt">The Docker image the reproducibility docs promise has not been buildable since 2026-04-19. fpga-docker.yml has run exactly TWICE in its existence and failed both times; its only live triggers were Dockerfile* and itself, untouched for five&hellip;<span class="by">blocked by: operator decision: the fix conflicts with .claude/rules/no-shell-scripts.md, and the alternatives change or retire a documented published artifact</span></div></div>
   </div>
 
   <h2>Collaboration options for the next loop</h2>

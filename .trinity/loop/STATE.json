@@ -757,6 +757,19 @@
       "title": "Six glob-scoped tools/check_*.py print OK on an EMPTY scope; only check_harness.py goes red. check_script_rot.py's scope is fpga/**/*.sh, and .claude/rules/no-shell-scripts.md marks exactly those for deletion -- so the project roadmap ends with this gate scanning zero files and printing OK. Verified by deleting all 58 .sh in a copy: 25 -> 0, still green. Same shape in reachability-ratchet.yml (empty scope -> '395 fewer. Lower the baseline', exit 0) and tri-build.yml:159-191 ('sites: 0' -> 'the convention holds across all commands'). Separately, reachability-ratchet.yml swallows its own measurement failure: no shell: key anywhere in this repo's workflows means default bash -e with NO pipefail, so 'python3 ... | tee reach.txt' discards the exit status, and os.path.getsize at line 75 sits outside the try/except -- one dangling .zig symlink crashes it, n= comes back empty, two '[: : integer expression expected' errors print, and the job reports 'No change.' green. 50 genuinely new unreachable files pass.",
       "fix": "Every glob-scoped checker asserts a non-empty scope BEFORE reporting; tools/check_undefined_outputs.py (if not SWEEPS: FAIL) is the model already in tree. For reachability-ratchet.yml specifically: add 'set -o pipefail' (measured: makes the same fixture exit 1), move getsize inside the try, and add case \"$NOW\" in ''|*[!0-9]*) exit 1;; esac.",
       "note": "MEASURED CAVEAT: the 'gone-set' remedy is inert for check_ref_kinds.py -- tools/ref_kinds_baseline.txt does not exist, so 'known' is always empty. That one needs a floor on the denominator, not a baseline diff."
+    },
+    {
+      "id": "B28",
+      "prio": 3,
+      "status": "pending",
+      "blocked_by": [
+        "operator decision: the fix conflicts with .claude/rules/no-shell-scripts.md, and the alternatives change or retire a documented published artifact"
+      ],
+      "title": "The Docker image the reproducibility docs promise has not been buildable since 2026-04-19. fpga-docker.yml has run exactly TWICE in its existence and failed both times; its only live triggers were Dockerfile* and itself, untouched for five months, so it sat green-by-absence. Removing its dead synth*.sh paths entry in #751 woke it and exposed two stacked failures: (1) type=sha,prefix={{branch}}- expands {{branch}} to EMPTY on pull_request, producing the invalid tag ':-983c973' -- fixed in #751; (2) behind it, Dockerfile.conscious does COPY synth.sh and COPY synth_conscious.sh and zero such files exist. Its entire documented interface (./synth_conscious.sh --aware design.v) is built on them.",
+      "root_cause": "Both scripts were deleted in 6f6840d52, titled 'feat(brain): fix Zig 0.15.2 compatibility - Batch 3-4 brain cells'. They were collateral damage of a commit about something else. The SAME deletion killed the paths: trigger and the Dockerfile, and the dead trigger then hid the broken build for five months -- a dead trigger does not merely fail to catch regressions, it conceals that the job itself is broken.",
+      "why_it_matters_beyond_ci": "deploy/reproducible/REPRODUCIBILITY.md and fpga/openxc7-synth/CI_CD_README.md both cite this image as available. Those documents currently promise an artifact that cannot be built. That is a claim problem, not only a CI problem.",
+      "options": "(a) restore both scripts from 6f6840d52^ -- cheapest, but conflicts with .claude/rules/no-shell-scripts.md, which marks exactly these for deletion; (b) rewrite Dockerfile.conscious to not need them -- requires knowing what they did, and changes the image's published interface; (c) delete the workflow and Dockerfile as obsolete -- defensible, but the two docs above must be corrected in the same change or they keep promising it.",
+      "note": "#751 is deliberately NOT merged. Merging adds a fifth permanently-red check to main. The check would be TRUE, and hiding it is the exact disease this work is treating -- but it changes the operator's CI posture, which is theirs to decide. Full diagnosis posted at https://github.com/gHashTag/trinity-fpga/pull/751#issuecomment-5556496255"
     }
   ],
   "anomalies": [
@@ -1059,6 +1072,14 @@
       "impact": "Caught within one command, before any conclusion was published, because the output printed the HEAD sha and it was the loop branch rather than main. Nothing wrong shipped. Had the shas not been printed, the whole B25 analysis would have been done against a tree missing 32 workflows.",
       "status": "fixed procedurally: a fresh `git worktree add --detach <scratch> origin/main` is now created explicitly and its HEAD sha printed and checked before any measurement.",
       "lesson": "`cd X && cmd` silently runs cmd in the current directory when X does not exist. Any shell step whose correctness depends on the working directory must PRINT what tree it is in, and the reader must actually look. Related to A30: both are cases where a git/shell operation did something other than what its shape suggested."
+    },
+    {
+      "id": "A36",
+      "found": "2026-09-06, iteration 108",
+      "what": "A dead paths: trigger does not just fail to catch regressions -- it conceals that the job behind it is broken. fpga-docker.yml's trigger and its Dockerfile were broken by the SAME commit (6f6840d52 deleting synth*.sh). Because the trigger died, the build never ran, so its failure was invisible for five months while the workflow showed no red in the sidebar.",
+      "impact": "Generalises beyond this one workflow: for every dead trigger found in #751, 'the workflow never fires' was the OPTIMISTIC reading. The pessimistic one -- that the job behind it is also broken and nobody can tell -- was true in the one case that got tested. The other four fixed workflows fired and passed, so this was not universal, but it was not rare either: one in five.",
+      "status": "characterised. The docker case is filed as B28 with three options, all needing an operator decision. dead_paths() now prevents new instances of the trigger half.",
+      "lesson": "When a gate is found inert, the question is not only 'what did it stop catching' but 'is the thing behind it still working at all'. Waking a dormant job is itself a measurement, and it should be expected to fail rather than treated as a regression when it does."
     }
   ],
   "collaboration_options": [
