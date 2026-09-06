@@ -17,6 +17,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_rand = @import("tri_rand");
 const tri_env = @import("tri_env");
 const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
@@ -188,7 +189,7 @@ fn generateUUID(allocator: Allocator) ![]const u8 {
 
     var i: usize = 0;
     var rand_buf: [16]u8 = undefined;
-    std.crypto.random.bytes(&rand_buf);
+    tri_rand.random().bytes(&rand_buf);
 
     // Format: xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
     uuid[i] = hex_chars[(rand_buf[0] >> 4) & 0xF];

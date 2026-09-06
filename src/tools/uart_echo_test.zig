@@ -33,6 +33,7 @@
 
 const std = @import("std");
 
+const tri_rand = @import("tri_rand");
 const tri_io = @import("tri_io");
 const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
@@ -9135,15 +9136,15 @@ fn runSimulationBatch(config: Config) !void {
 
             while (!packet_success and recovery.shouldRetry(retry_count)) {
                 // Simulate random RTT
-                const rtt_us = 10_000 + std.crypto.random.intRangeAtMost(u32, 0, 50_000);
+                const rtt_us = 10_000 + tri_rand.random().intRangeAtMost(u32, 0, 50_000);
                 if (config.measure_jitter) {
                     try jitter_tracker.addSample(@as(i64, rtt_us));
                 }
 
                 // Simulate occasional packet loss (less likely with each retry)
                 const fail_prob = @max(1, 5 - retry_count * 2);
-                const should_fail = std.crypto.random.intRangeAtMost(u8, 0, 100) < @as(u8, @intCast(fail_prob));
-                const should_timeout = std.crypto.random.intRangeAtMost(u8, 0, 100) < 2;
+                const should_fail = tri_rand.random().intRangeAtMost(u8, 0, 100) < @as(u8, @intCast(fail_prob));
+                const should_timeout = tri_rand.random().intRangeAtMost(u8, 0, 100) < 2;
 
                 results.total_sent += bytes_in_packet;
                 results.total_received += bytes_in_packet;
@@ -9177,14 +9178,14 @@ fn runSimulationBatch(config: Config) !void {
         } else {
             // Normal mode: single attempt
             // Simulate random RTT
-            const rtt_us = 10_000 + std.crypto.random.intRangeAtMost(u32, 0, 50_000);
+            const rtt_us = 10_000 + tri_rand.random().intRangeAtMost(u32, 0, 50_000);
             if (config.measure_jitter) {
                 try jitter_tracker.addSample(@as(i64, rtt_us));
             }
 
             // Simulate occasional packet loss
-            const should_fail = std.crypto.random.intRangeAtMost(u8, 0, 100) < 5;
-            const should_timeout = std.crypto.random.intRangeAtMost(u8, 0, 100) < 2;
+            const should_fail = tri_rand.random().intRangeAtMost(u8, 0, 100) < 5;
+            const should_timeout = tri_rand.random().intRangeAtMost(u8, 0, 100) < 2;
 
             results.total_sent += bytes_in_packet;
             results.total_received += bytes_in_packet;
@@ -9499,7 +9500,7 @@ fn runSimulation(config: Config) !void {
         const start = tri_time.nanoTimestamp();
 
         // Simulate delay with random jitter
-        const sim_delay = 5 + std.crypto.random.intRangeAtMost(u32, 0, 20);
+        const sim_delay = 5 + tri_rand.random().intRangeAtMost(u32, 0, 20);
         tri_time.sleep(sim_delay * 1_000_000);
 
         const elapsed_ns = tri_time.nanoTimestamp() - start;
@@ -9515,7 +9516,7 @@ fn runSimulation(config: Config) !void {
         printErr("  [->] Sim Test {d}/{d}: {s} (RTT: {d}ms) ", .{ i + 1, tests.len, testCase.name, elapsed_ms });
 
         // Simulate occasional "failure" in simulation mode
-        const should_fail = std.crypto.random.intRangeAtMost(u8, 0, 100) < 5;
+        const should_fail = tri_rand.random().intRangeAtMost(u8, 0, 100) < 5;
         if (should_fail) {
             printErr("[x] SIMULATED FAIL\n", .{});
             // v3.53: Record failure for consecutive failure tracking
@@ -9770,8 +9771,8 @@ fn runBatchTestInternal(config: Config) !void {
     var packets_sent: usize = 0;
     while (packets_sent < batch_size) {
         const bytes_in_packet = packet_size;
-        _ = 10 + std.crypto.random.intRangeAtMost(u32, 0, 50);
-        const should_fail = std.crypto.random.intRangeAtMost(u8, 0, 100) < 5;
+        _ = 10 + tri_rand.random().intRangeAtMost(u32, 0, 50);
+        const should_fail = tri_rand.random().intRangeAtMost(u8, 0, 100) < 5;
 
         results.total_sent += bytes_in_packet;
         results.total_received += bytes_in_packet;

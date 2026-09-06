@@ -7,6 +7,7 @@
 
 const std = @import("std");
 
+const tri_rand = @import("tri_rand");
 const tri_time = @import("tri_time");
 // Sacred constants (inline to avoid import issues)
 const PHI: f64 = 1.6180339887498948482;
@@ -819,7 +820,7 @@ pub fn generateSimulatedEEG(
             // Add complexity with random bursts for high consciousness
             if (consciousness_level > 0.8) {
                 const burst_prob = consciousness_level - 0.8;
-                const rand_val = @as(f64, @floatFromInt(std.crypto.random.int(u8))) / 255.0;
+                const rand_val = @as(f64, @floatFromInt(tri_rand.random().int(u8))) / 255.0;
                 if (rand_val < burst_prob) {
                     value += 2.0 * @sin(2.0 * std.math.pi * (30.0 + rand_val * 30.0) * t);
                 }
@@ -827,7 +828,7 @@ pub fn generateSimulatedEEG(
 
             // Add noise (higher for conscious states)
             const noise_level = 0.2 + consciousness_level * 2.0;
-            value += noise_level * (2.0 * @as(f64, @floatFromInt(std.crypto.random.int(u8))) - 1.0) / 255.0;
+            value += noise_level * (2.0 * @as(f64, @floatFromInt(tri_rand.random().int(u8))) - 1.0) / 255.0;
 
             data[ch_idx][i] = value;
         }

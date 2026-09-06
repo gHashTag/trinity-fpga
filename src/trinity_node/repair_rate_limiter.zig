@@ -6,6 +6,7 @@
 // =============================================================================
 
 const std = @import("std");
+const tri_mutex = @import("tri_mutex");
 const tri_time = @import("tri_time");
 const auto_repair_mod = @import("auto_repair.zig");
 const storage_mod = @import("storage.zig");
@@ -57,7 +58,7 @@ pub const RepairRateLimiter = struct {
     total_allowed: u64,
     total_throttled: u64,
     total_circuit_breaks: u64,
-    mutex: std.Thread.Mutex,
+    mutex: tri_mutex.Mutex,
 
     pub fn init(allocator: std.mem.Allocator) RepairRateLimiter {
         return initWithConfig(allocator, .{});

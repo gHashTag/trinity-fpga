@@ -20,6 +20,7 @@
 //! 8. Comprehensive testing: Run full test suite after each patch
 
 const std = @import("std");
+const tri_rand = @import("tri_rand");
 const tri_time = @import("tri_time");
 const mem = std.mem;
 const fs = std.fs;
@@ -249,7 +250,7 @@ pub const SelfHostingSession = struct {
 
 fn generateSessionId(allocator: Allocator) ![]const u8 {
     const timestamp = tri_time.timestamp();
-    const random = std.crypto.random.int(u64);
+    const random = tri_rand.random().int(u64);
     return std.fmt.allocPrint(allocator, "session-{d}-{x}", .{ timestamp, random });
 }
 

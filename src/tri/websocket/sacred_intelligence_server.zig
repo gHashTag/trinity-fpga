@@ -4,6 +4,7 @@
 //! patches, gematria calculations, and evolution progress.
 
 const std = @import("std");
+const tri_mutex = @import("tri_mutex");
 const tri_time = @import("tri_time");
 const net = std.net;
 const Thread = std.Thread;
@@ -203,7 +204,7 @@ pub const WSClient = struct {
     address: net.Address,
     connected: bool,
 
-    mutex: std.Thread.Mutex,
+    mutex: tri_mutex.Mutex,
 
     pub fn init(allocator: Allocator, stream: net.Stream) WSClient {
         return .{
@@ -211,7 +212,7 @@ pub const WSClient = struct {
             .stream = stream,
             .address = stream.address catch unreachable,
             .connected = true,
-            .mutex = std.Thread.Mutex{},
+            .mutex = tri_mutex.Mutex{},
         };
     }
 
@@ -282,7 +283,7 @@ pub const WSServer = struct {
     server: ?net.Server,
     clients: std.ArrayList(*WSClient),
     metrics: SacredMetrics,
-    mutex: std.Thread.Mutex,
+    mutex: tri_mutex.Mutex,
     listener_thread: ?Thread,
 
     /// Initialize WebSocket server
@@ -295,7 +296,7 @@ pub const WSServer = struct {
             .server = null,
             .clients = std.ArrayList(*WSClient){},
             .metrics = SacredMetrics{},
-            .mutex = std.Thread.Mutex{},
+            .mutex = tri_mutex.Mutex{},
             .listener_thread = null,
         };
     }

@@ -6,6 +6,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_mutex = @import("tri_mutex");
 const tri_time = @import("tri_time");
 const storage_mod = @import("storage.zig");
 
@@ -36,7 +37,7 @@ pub const ShardRebalancer = struct {
     target_replication: u32,
     rebalance_interval_secs: i64,
     last_rebalance_time: i64,
-    mutex: std.Thread.Mutex,
+    mutex: tri_mutex.Mutex,
 
     // Stats
     shards_rebalanced: u64,

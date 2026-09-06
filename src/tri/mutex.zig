@@ -70,3 +70,30 @@ test "default initialisation is unlocked" {
     try std.testing.expect(m.tryLock());
     m.unlock();
 }
+
+test "mutual exclusion holds under real contention" {
+    // The two tests above pass even if lock() were a no-op. This one does not:
+    // an unguarded counter reliably loses updates across four threads.
+    const Ctx = struct {
+        m: Mutex = .{},
+        counter: u64 = 0,
+
+        fn bump(self: *@This(), n: usize) void {
+            var i: usize = 0;
+            while (i < n) : (i += 1) {
+                self.m.lock();
+                defer self.m.unlock();
+                self.counter += 1; // deliberately non-atomic
+            }
+        }
+    };
+
+    var ctx: Ctx = .{};
+    const per_thread = 20_000;
+    const thread_count = 4;
+    var threads: [thread_count]std.Thread = undefined;
+    for (&threads) |*t| t.* = try std.Thread.spawn(.{}, Ctx.bump, .{ &ctx, per_thread });
+    for (threads) |t| t.join();
+
+    try std.testing.expectEqual(@as(u64, thread_count * per_thread), ctx.counter);
+}

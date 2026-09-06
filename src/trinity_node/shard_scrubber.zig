@@ -6,6 +6,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_mutex = @import("tri_mutex");
 const tri_time = @import("tri_time");
 const storage_mod = @import("storage.zig");
 
@@ -35,7 +36,7 @@ pub const ShardScrubber = struct {
     corrupted_shards: std.AutoHashMap([32]u8, ScrubResult),
     scrub_interval_secs: i64,
     last_scrub_time: i64,
-    mutex: std.Thread.Mutex,
+    mutex: tri_mutex.Mutex,
 
     // Stats
     total_scrubs: u64,

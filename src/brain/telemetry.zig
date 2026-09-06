@@ -94,6 +94,7 @@
 
 const std = @import("std");
 
+const tri_mutex = @import("tri_mutex");
 const tri_time = @import("tri_time");
 pub const TelemetryPoint = struct {
     timestamp: i64,
@@ -107,7 +108,7 @@ pub const BrainTelemetry = struct {
     allocator: std.mem.Allocator,
     points: std.ArrayList(TelemetryPoint),
     max_points: usize,
-    mutex: std.Thread.Mutex,
+    mutex: tri_mutex.Mutex,
 
     const Self = @This();
 
@@ -120,7 +121,7 @@ pub const BrainTelemetry = struct {
             .allocator = allocator,
             .points = points,
             .max_points = max_points,
-            .mutex = std.Thread.Mutex{},
+            .mutex = tri_mutex.Mutex{},
         };
     }
 

@@ -6,6 +6,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_mutex = @import("tri_mutex");
 const tri_time = @import("tri_time");
 const ArrayList = std.array_list.Managed;
 const protocol = @import("protocol.zig");
@@ -56,7 +57,7 @@ pub const Peer = struct {
 pub const PeerList = struct {
     peers: [MAX_PEERS]?Peer,
     count: usize,
-    mutex: std.Thread.Mutex,
+    mutex: tri_mutex.Mutex,
 
     pub fn init() PeerList {
         return PeerList{

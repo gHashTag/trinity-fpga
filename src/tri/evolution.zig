@@ -1127,7 +1127,7 @@ fn runStep(allocator: Allocator, args: []const []const u8) !void {
         }
         if (stalled_killed > 0) {
             total_killed += stalled_killed;
-            const line = std.fmt.bufPrint(summary_buf[summary_len..], "  Stalled cleanup: {d} killed\n", .{stalled_killed}) catch "";
+            const line = std.fmt.bufPrint(summary_buf[summary_len..], "  Stalled cleanup: {d} killed\n", .{stalled_killed}) catch summary_buf[summary_len..summary_len];
             summary_len += line.len;
             print("  {s}Stalled workers killed: {d}{s}\n\n", .{ MAGENTA, stalled_killed, RESET });
         }
@@ -1189,7 +1189,7 @@ fn runStep(allocator: Allocator, args: []const []const u8) !void {
                 if (std.Io.Dir.cwd().createFile(cb_io, circuit_breaker_file, .{})) |cb_file| {
                     defer cb_file.close(cb_io);
                     const timestamp = tri_time.timestamp();
-                    const content = std.fmt.allocPrint(allocator, "Circuit breaker tripped at {d}\nRecent kills (1h): {d}\nThreshold: {d}\n", .{ timestamp, recent_kills, CIRCUIT_BREAKER_THRESHOLD }) catch "";
+                    const content = std.fmt.allocPrint(allocator, "Circuit breaker tripped at {d}\nRecent kills (1h): {d}\nThreshold: {d}\n", .{ timestamp, recent_kills, CIRCUIT_BREAKER_THRESHOLD }) catch summary_buf[summary_len..summary_len];
                     defer allocator.free(content);
                     cb_file.writeStreamingAll(cb_io, content) catch {};
                 } else |err| {
@@ -6333,15 +6333,19 @@ fn runNotify(allocator: Allocator, args: []const []const u8) !void {
 
     // Trigger 1: New global leader
     if (state.best_ppl < ns.last_best_ppl and state.best_ppl < threshold) {
-        const prev_name = if (ns.last_best_name_len > 0)
+        // Both branches must agree on a type: the slice is []u8 and the
+        // literal is *const [6:0]u8, so name the common type explicitly.
+        const prev_name: []const u8 = if (ns.last_best_name_len > 0)
             ns.last_best_name[0..ns.last_best_name_len]
         else
             "(none)";
-        pos += (std.fmt.bufPrint(msg_buf[pos..], "🏆 New leader: <b>{s}</b> PPL={d:.2} (was {s} PPL={d:.2})\n", .{
+        // bufPrint yields []u8 and the fallback is a string literal; the two
+        // do not unify inside a `catch` expression, so name the common type
+        // on a binding instead of trying to merge them in place.
+        const leader_line: []const u8 = std.fmt.bufPrint(msg_buf[pos..], "🏆 New leader: <b>{s}</b> PPL={d:.2} (was {s} PPL={d:.2})\n", .{
             state.bestNameStr(), state.best_ppl, prev_name, ns.last_best_ppl,
-        }) catch break_msg: {
-            break :break_msg "";
-        }).len;
+        }) catch msg_buf[pos..pos];
+        pos += leader_line.len;
         has_insights = true;
     }
 
@@ -6388,19 +6392,19 @@ fn runNotify(allocator: Allocator, args: []const []const u8) !void {
     // Trigger 6: Population health alerts
     const health = computePopulationHealth(&state);
     if (health.diversity < 0.001 and pos + 200 < msg_buf.len) {
-        pos += (std.fmt.bufPrint(msg_buf[pos..], "⚠️ CONVERGING: diversity={d:.4}, inject more sacred mutations\n", .{health.diversity}) catch "").len;
+        pos += (std.fmt.bufPrint(msg_buf[pos..], "⚠️ CONVERGING: diversity={d:.4}, inject more sacred mutations\n", .{health.diversity}) catch msg_buf[pos..pos]).len;
         has_insights = true;
     }
     if (health.elite_gap > 3.0 and pos + 200 < msg_buf.len) {
-        pos += (std.fmt.bufPrint(msg_buf[pos..], "👑 DOMINANT LEADER: PPL gap {d:.1}×\n", .{health.elite_gap}) catch "").len;
+        pos += (std.fmt.bufPrint(msg_buf[pos..], "👑 DOMINANT LEADER: PPL gap {d:.1}×\n", .{health.elite_gap}) catch msg_buf[pos..pos]).len;
         has_insights = true;
     }
     if (health.stagnation > 20000 and pos + 200 < msg_buf.len) {
-        pos += (std.fmt.bufPrint(msg_buf[pos..], "⚠️ STAGNATION: {d}K steps without improvement\n", .{health.stagnation / 1000}) catch "").len;
+        pos += (std.fmt.bufPrint(msg_buf[pos..], "⚠️ STAGNATION: {d}K steps without improvement\n", .{health.stagnation / 1000}) catch msg_buf[pos..pos]).len;
         has_insights = true;
     }
     if (health.spike_rate > 0.3 and pos + 200 < msg_buf.len) {
-        pos += (std.fmt.bufPrint(msg_buf[pos..], "🔴 HIGH SPIKES: {d:.0}% workers spiking\n", .{health.spike_rate * 100.0}) catch "").len;
+        pos += (std.fmt.bufPrint(msg_buf[pos..], "🔴 HIGH SPIKES: {d:.0}% workers spiking\n", .{health.spike_rate * 100.0}) catch msg_buf[pos..pos]).len;
         has_insights = true;
     }
 
@@ -6410,7 +6414,7 @@ fn runNotify(allocator: Allocator, args: []const []const u8) !void {
         if (steps_no_improve > 10000 and pos + 300 < msg_buf.len) {
             pos += (std.fmt.bufPrint(msg_buf[pos..], "📊 LEADER PLATEAU: {s} no improvement for {d}K steps (at {d}K/100K)\n", .{
                 state.bestNameStr(), steps_no_improve / 1000, health.leader_step / 1000,
-            }) catch "").len;
+            }) catch msg_buf[pos..pos]).len;
             has_insights = true;
         }
     }
@@ -6422,7 +6426,7 @@ fn runNotify(allocator: Allocator, args: []const []const u8) !void {
         if (svc.current_loss > expected * 3.0 and pos + 200 < msg_buf.len) {
             pos += (std.fmt.bufPrint(msg_buf[pos..], "🚨 INVESTIGATE: {s} catastrophic spike loss={d:.2} (3x expected={d:.2})\n", .{
                 svc.svcName(), svc.current_loss, expected * 3.0,
-            }) catch "").len;
+            }) catch msg_buf[pos..pos]).len;
             has_insights = true;
         }
     }
@@ -6438,7 +6442,7 @@ fn runNotify(allocator: Allocator, args: []const []const u8) !void {
         }
     }
     if (top_at_100k > 0 and top_at_100k == top_count and pos + 200 < msg_buf.len) {
-        pos += (std.fmt.bufPrint(msg_buf[pos..], "🏁 WAVE COMPLETE: all {d} top workers reached 100K! Ready for next wave\n", .{top_count}) catch "").len;
+        pos += (std.fmt.bufPrint(msg_buf[pos..], "🏁 WAVE COMPLETE: all {d} top workers reached 100K! Ready for next wave\n", .{top_count}) catch msg_buf[pos..pos]).len;
         has_insights = true;
     }
 
@@ -6446,7 +6450,7 @@ fn runNotify(allocator: Allocator, args: []const []const u8) !void {
     if (health.leader_step >= TARGET_STEP and state.best_ppl < ns.last_best_ppl and pos + 200 < msg_buf.len) {
         pos += (std.fmt.bufPrint(msg_buf[pos..], "🏆 RECORD VERIFIED at 100K: {s} PPL={d:.2}\n", .{
             state.bestNameStr(), state.best_ppl,
-        }) catch "").len;
+        }) catch msg_buf[pos..pos]).len;
         has_insights = true;
     }
 
@@ -6458,16 +6462,16 @@ fn runNotify(allocator: Allocator, args: []const []const u8) !void {
 
         pos += (std.fmt.bufPrint(msg_buf[pos..], "\n📋 <b>Leader</b>: {s} PPL={d:.2} step={d}K\n", .{
             state.bestNameStr(), state.best_ppl, health.leader_step / 1000,
-        }) catch "").len;
+        }) catch msg_buf[pos..pos]).len;
 
         if (delta_r33 < 0) {
             pos += (std.fmt.bufPrint(msg_buf[pos..], "  dR33: ✅{d:.2} | no-improve: {d}K steps\n", .{
                 -delta_r33, steps_no_improve_summary / 1000,
-            }) catch "").len;
+            }) catch msg_buf[pos..pos]).len;
         } else {
             pos += (std.fmt.bufPrint(msg_buf[pos..], "  dR33: ⬆️{d:.2} | no-improve: {d}K steps\n", .{
                 delta_r33, steps_no_improve_summary / 1000,
-            }) catch "").len;
+            }) catch msg_buf[pos..pos]).len;
         }
 
         // ETA lines
@@ -6496,7 +6500,7 @@ fn runNotify(allocator: Allocator, args: []const []const u8) !void {
             const eta_sec = @as(f32, @floatFromInt(remaining)) * toks_per_step / leader_toks;
             const eta_h: u32 = @intFromFloat(eta_sec / 3600.0);
             const eta_m: u32 = @intFromFloat(@mod(eta_sec / 60.0, 60.0));
-            pos += (std.fmt.bufPrint(msg_buf[pos..], "⏱️ Leader ETA: ~{d}h{d:0>2}m to 100K\n", .{ eta_h, eta_m }) catch "").len;
+            pos += (std.fmt.bufPrint(msg_buf[pos..], "⏱️ Leader ETA: ~{d}h{d:0>2}m to 100K\n", .{ eta_h, eta_m }) catch msg_buf[pos..pos]).len;
         }
         if (slowest_toks > 0 and slowest_step < TARGET_STEP) {
             const remaining = TARGET_STEP - slowest_step;
@@ -6505,13 +6509,13 @@ fn runNotify(allocator: Allocator, args: []const []const u8) !void {
             const eta_m: u32 = @intFromFloat(@mod(eta_sec / 60.0, 60.0));
             pos += (std.fmt.bufPrint(msg_buf[pos..], "⏱️ Tail ETA: {s} ~{d}h{d:0>2}m to 100K\n", .{
                 slowest_name_buf[0..slowest_name_len], eta_h, eta_m,
-            }) catch "").len;
+            }) catch msg_buf[pos..pos]).len;
         }
 
         pos += (std.fmt.bufPrint(msg_buf[pos..], "📊 Farm: {d}🟢 / {d}☠️ / {d} total | health: {d:.0}/100", .{
             health.alive,                            @as(u32, @intCast(state.service_count)) - health.alive,
             @as(u32, @intCast(state.service_count)), health.health_score,
-        }) catch "").len;
+        }) catch msg_buf[pos..pos]).len;
     }
 
     if (!has_insights) {

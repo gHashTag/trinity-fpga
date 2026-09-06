@@ -13,6 +13,7 @@
 // φ² + 1/φ² = 3 | TRINITY
 
 const std = @import("std");
+const tri_mutex = @import("tri_mutex");
 const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const token_types = @import("token_types.zig");
@@ -113,7 +114,7 @@ pub const StakingState = struct {
     reward_pool_wei: u128,
     pos_failure_slash_rate: f64 = 0.01,
     corruption_slash_rate: f64 = 0.05,
-    mutex: std.Thread.Mutex,
+    mutex: tri_mutex.Mutex,
 
     pub fn init(allocator: Allocator) StakingState {
         return .{

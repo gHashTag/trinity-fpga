@@ -6,6 +6,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_rand = @import("tri_rand");
 const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 const crypto = @import("crypto.zig");
@@ -150,7 +151,7 @@ pub const ShardManager = struct {
 
         // 5. Encrypt entire compressed payload
         var nonce: [12]u8 = undefined;
-        std.crypto.random.bytes(&nonce);
+        tri_rand.random().bytes(&nonce);
         const ciphertext = try self.allocator.alloc(u8, compressed_data.len);
         defer self.allocator.free(ciphertext);
         var tag: [16]u8 = undefined;

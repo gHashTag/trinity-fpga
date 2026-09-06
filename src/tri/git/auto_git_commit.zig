@@ -19,6 +19,7 @@
 //! ```
 
 const std = @import("std");
+const tri_rand = @import("tri_rand");
 const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 const builtin = @import("builtin");
@@ -318,7 +319,7 @@ pub const CommitSession = struct {
 /// Generate unique session ID
 fn generateSessionId(allocator: Allocator) ![]const u8 {
     const timestamp = tri_time.timestamp();
-    const random = std.crypto.random.int(u64);
+    const random = tri_rand.random().int(u64);
     return std.fmt.allocPrint(allocator, "session-{d}-{x}", .{ timestamp, random });
 }
 

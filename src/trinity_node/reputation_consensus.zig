@@ -6,6 +6,7 @@
 // =============================================================================
 
 const std = @import("std");
+const tri_mutex = @import("tri_mutex");
 const tri_time = @import("tri_time");
 const node_reputation_mod = @import("node_reputation.zig");
 
@@ -65,7 +66,7 @@ pub const ReputationConsensus = struct {
     total_votes_cast: u64,
     fraud_detections: u64,
     penalties_applied: u64,
-    mutex: std.Thread.Mutex,
+    mutex: tri_mutex.Mutex,
 
     pub fn init(allocator: std.mem.Allocator) ReputationConsensus {
         return initWithConfig(allocator, .{});

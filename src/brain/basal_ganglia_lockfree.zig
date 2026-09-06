@@ -20,6 +20,7 @@
 
 const std = @import("std");
 
+const tri_mutex = @import("tri_mutex");
 const tri_time = @import("tri_time");
 const SHARD_COUNT: usize = 16; // Must be power of 2 for fast hash
 
@@ -359,7 +360,7 @@ pub const Registry = struct {
 
 var global_registry: ?*Registry = null;
 var global_allocator: ?std.mem.Allocator = null;
-var global_mutex = std.Thread.Mutex{};
+var global_mutex = tri_mutex.Mutex{};
 
 /// Gets or creates the global task claim registry
 pub fn getGlobal(allocator: std.mem.Allocator) !*Registry {

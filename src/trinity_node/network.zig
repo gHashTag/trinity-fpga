@@ -6,6 +6,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_mutex = @import("tri_mutex");
 const tri_time = @import("tri_time");
 const protocol = @import("protocol.zig");
 const discovery = @import("discovery.zig");
@@ -48,7 +49,7 @@ pub const JobQueue = struct {
     head: usize,
     tail: usize,
     count: usize,
-    mutex: std.Thread.Mutex,
+    mutex: tri_mutex.Mutex,
 
     pub fn init() JobQueue {
         return JobQueue{

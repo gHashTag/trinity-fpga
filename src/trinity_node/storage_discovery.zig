@@ -6,6 +6,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_mutex = @import("tri_mutex");
 const tri_time = @import("tri_time");
 const protocol = @import("protocol.zig");
 
@@ -43,7 +44,7 @@ pub const StoragePeerInfo = struct {
 pub const StoragePeerRegistry = struct {
     allocator: std.mem.Allocator,
     peers: std.AutoHashMap([32]u8, StoragePeerInfo),
-    mutex: std.Thread.Mutex,
+    mutex: tri_mutex.Mutex,
 
     pub fn init(allocator: std.mem.Allocator) StoragePeerRegistry {
         return .{

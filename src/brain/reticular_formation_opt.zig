@@ -12,6 +12,7 @@
 
 const std = @import("std");
 
+const tri_mutex = @import("tri_mutex");
 const tri_time = @import("tri_time");
 const MAX_EVENTS: usize = 10_000;
 
@@ -86,7 +87,7 @@ const Stats = struct {
 
 /// Optimized event bus with reduced contention
 pub const EventBus = struct {
-    mutex: std.Thread.Mutex,
+    mutex: tri_mutex.Mutex,
     allocator: std.mem.Allocator,
     events: std.ArrayList(StoredEvent),
     stats: Stats,
@@ -99,7 +100,7 @@ pub const EventBus = struct {
         };
 
         return EventBus{
-            .mutex = std.Thread.Mutex{},
+            .mutex = tri_mutex.Mutex{},
             .allocator = allocator,
             .events = std.ArrayList(StoredEvent).initCapacity(allocator, 256) catch |err| {
                 std.log.err("Failed to allocate EventBus: {}", .{err});

@@ -8,6 +8,7 @@
 
 const std = @import("std");
 
+const tri_mutex = @import("tri_mutex");
 const tri_time = @import("tri_time");
 // ═══════════════════════════════════════════════════════════════════════════════
 // REPUTATION TYPES
@@ -46,7 +47,7 @@ pub const NodeReputationSystem = struct {
     entries: std.AutoHashMap([32]u8, NodeReputationEntry),
     weights: ReputationWeights,
     max_bandwidth_bytes: u64, // Normalization reference for bandwidth score
-    mutex: std.Thread.Mutex,
+    mutex: tri_mutex.Mutex,
     // v1.7: Decay configuration
     decay_enabled: bool,
     decay_half_life_secs: i64, // Half-life in seconds (default 24h = 86400)

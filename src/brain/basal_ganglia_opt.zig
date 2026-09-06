@@ -12,6 +12,7 @@
 
 const std = @import("std");
 
+const tri_mutex = @import("tri_mutex");
 const tri_time = @import("tri_time");
 pub const TaskClaim = struct {
     task_id: []const u8,
@@ -36,12 +37,12 @@ pub const TaskClaim = struct {
 /// Optimized registry with fast-path for common operations
 pub const Registry = struct {
     claims: std.StringHashMap(TaskClaim),
-    mutex: std.Thread.Mutex,
+    mutex: tri_mutex.Mutex,
 
     pub fn init(allocator: std.mem.Allocator) Registry {
         return Registry{
             .claims = std.StringHashMap(TaskClaim).init(allocator),
-            .mutex = std.Thread.Mutex{},
+            .mutex = tri_mutex.Mutex{},
         };
     }
 
@@ -163,7 +164,7 @@ pub const Registry = struct {
 
 // Global singleton (optimized)
 var global_registry: ?*Registry = null;
-var global_mutex = std.Thread.Mutex{};
+var global_mutex = tri_mutex.Mutex{};
 
 pub fn getGlobal(allocator: std.mem.Allocator) !*Registry {
     global_mutex.lock();

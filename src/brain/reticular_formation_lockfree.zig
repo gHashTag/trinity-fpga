@@ -16,6 +16,7 @@
 
 const std = @import("std");
 
+const tri_mutex = @import("tri_mutex");
 const tri_time = @import("tri_time");
 const MAX_EVENTS: usize = 10_000;
 const MAX_STRING_LEN: usize = 64; // Fixed-size inline strings
@@ -140,7 +141,7 @@ pub const EventBus = struct {
     stats: Stats,
 
     // Fallback mutex for poll (multi-consumer)
-    poll_mutex: std.Thread.Mutex,
+    poll_mutex: tri_mutex.Mutex,
 
     pub fn init(allocator: std.mem.Allocator) EventBus {
         var bus: EventBus = undefined;
@@ -149,7 +150,7 @@ pub const EventBus = struct {
         bus.head = PaddedIndex.init(0);
         bus.tail = PaddedIndex.init(0);
         bus.stats = Stats.init();
-        bus.poll_mutex = std.Thread.Mutex{};
+        bus.poll_mutex = tri_mutex.Mutex{};
         return bus;
     }
 

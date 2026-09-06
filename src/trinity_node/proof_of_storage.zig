@@ -6,6 +6,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_rand = @import("tri_rand");
 const tri_time = @import("tri_time");
 const protocol = @import("protocol.zig");
 const storage_mod = @import("storage.zig");
@@ -57,11 +58,11 @@ pub const ProofOfStorageEngine = struct {
     ) !protocol.StorageChallengeMsg {
         // Generate random challenge ID
         var challenge_id: [32]u8 = undefined;
-        std.crypto.random.bytes(&challenge_id);
+        tri_rand.random().bytes(&challenge_id);
 
         // Random byte range within shard
         const max_offset = if (shard_size > 64) shard_size - 64 else 0;
-        const byte_offset = if (max_offset > 0) std.crypto.random.intRangeAtMost(u32, 0, max_offset) else 0;
+        const byte_offset = if (max_offset > 0) tri_rand.random().intRangeAtMost(u32, 0, max_offset) else 0;
         const byte_length = @min(@as(u32, 64), shard_size - byte_offset);
 
         const challenge = protocol.StorageChallengeMsg{

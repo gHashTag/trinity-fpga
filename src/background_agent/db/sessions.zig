@@ -2,6 +2,7 @@
 //! φ² + 1/φ² = 3 | TRINITY
 
 const std = @import("std");
+const tri_rand = @import("tri_rand");
 const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 
@@ -219,7 +220,7 @@ pub fn deleteSession(client: *PostgresClient, session_id: []const u8) !void {
 /// Generate a unique session ID
 fn generateSessionId(allocator: Allocator) ![]const u8 {
     const now = tri_time.nanoTimestamp();
-    const random = std.crypto.random.intRangeAtMost(usize, 0, std.math.maxInt(usize));
+    const random = tri_rand.random().intRangeAtMost(usize, 0, std.math.maxInt(usize));
 
     return try std.fmt.allocPrint(allocator, "sess_{d}_{x}", .{ now, random });
 }

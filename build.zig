@@ -7,19 +7,6 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    // CI mode: skip targets requiring system libraries (raylib, etc.)
-    const ci_mode = b.option(bool, "ci", "CI mode: skip GUI and system-library targets") orelse false;
-
-    // Cycle 78: Optional tree-sitter integration for VIBEE AST analysis
-    const enable_treesitter = b.option(bool, "treesitter", "Enable tree-sitter AST analysis for VIBEE (requires libtree-sitter)") orelse false;
-
-    // Library module for imports
-    const trinity_mod = b.createModule(.{
-        .root_source_file = b.path("src/trinity.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-
     // Wall-clock timestamps. Zig 0.16 removed std.time's timestamp functions
     // and Timer; src/tri/tri_time.zig restores those names on top of libc.
     //
@@ -30,6 +17,16 @@ pub fn build(b: *std.Build) void {
     // Everything imports it by name instead.
     const tri_time_mod = b.createModule(.{
         .root_source_file = b.path("src/tri/tri_time.zig"),
+        .target = target,
+        .optimize = optimize,
+        .link_libc = true,
+    });
+
+    // Cryptographic randomness. 0.16 removed std.crypto.random with no
+    // in-crypto replacement; this is a lazily seeded ChaCha CSPRNG over libc
+    // arc4random_buf, which is the entropy source the removed global used.
+    const tri_rand_mod = b.createModule(.{
+        .root_source_file = b.path("src/tri/tri_rand.zig"),
         .target = target,
         .optimize = optimize,
         .link_libc = true,
@@ -48,6 +45,17 @@ pub fn build(b: *std.Build) void {
         .link_libc = true,
     });
 
+    // Synchronisation. std.Thread lost every primitive in 0.16 and
+    // std.Io.Mutex needs an Io on every lock; these call sites guard a few
+    // field writes with no Io in scope. src/tri/mutex.zig already solved this
+    // for 12 files via a path import -- promoting it to a module is what lets
+    // the rest of the tree share the one implementation instead of a second.
+    const tri_mutex_mod = b.createModule(.{
+        .root_source_file = b.path("src/tri/mutex.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+
     const tri_io_mod = b.createModule(.{
         .root_source_file = b.path("src/tri/tri_io.zig"),
         .target = target,
@@ -63,6 +71,23 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
         .imports = &.{
             .{ .name = "tri_io", .module = tri_io_mod },
+        },
+    });
+
+    // CI mode: skip targets requiring system libraries (raylib, etc.)
+    const ci_mode = b.option(bool, "ci", "CI mode: skip GUI and system-library targets") orelse false;
+
+    // Cycle 78: Optional tree-sitter integration for VIBEE AST analysis
+    const enable_treesitter = b.option(bool, "treesitter", "Enable tree-sitter AST analysis for VIBEE (requires libtree-sitter)") orelse false;
+
+    // Library module for imports
+    const trinity_mod = b.createModule(.{
+        .root_source_file = b.path("src/trinity.zig"),
+        .target = target,
+        .optimize = optimize,
+        .imports = &.{
+            .{ .name = "tri_time", .module = tri_time_mod },
+            .{ .name = "tri_rand", .module = tri_rand_mod },
         },
     });
 
@@ -148,6 +173,9 @@ pub fn build(b: *std.Build) void {
         .root_source_file = b.path("src/queen_api.zig"),
         .target = target,
         .optimize = .ReleaseFast,
+        .imports = &.{
+            .{ .name = "tri_io", .module = tri_io_mod },
+        },
     });
 
     const libqueen_shared = b.addLibrary(.{
@@ -596,6 +624,8 @@ pub fn build(b: *std.Build) void {
                 .target = release_target,
                 .optimize = .ReleaseFast,
                 .imports = &.{
+                    .{ .name = "tri_time", .module = tri_time_mod },
+                    .{ .name = "tri_rand", .module = tri_rand_mod },
                     .{ .name = "igla_chat", .module = fluent_release_chat },
                 },
             }),
@@ -634,12 +664,21 @@ pub fn build(b: *std.Build) void {
         .root_source_file = b.path("src/depin/bootstrap.zig"),
         .target = target,
         .optimize = optimize,
+        .imports = &.{
+            .{ .name = "tri_time", .module = tri_time_mod },
+            .{ .name = "tri_rand", .module = tri_rand_mod },
+        },
     });
 
     const depin_persistence_mod = b.createModule(.{
         .root_source_file = b.path("src/depin/persistence.zig"),
         .target = target,
         .optimize = optimize,
+        .imports = &.{
+            .{ .name = "tri_io", .module = tri_io_mod },
+            .{ .name = "tri_time", .module = tri_time_mod },
+            .{ .name = "tri_rand", .module = tri_rand_mod },
+        },
     });
 
     const depin_network_mod = b.createModule(.{
@@ -647,6 +686,8 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
         .imports = &.{
+            .{ .name = "tri_time", .module = tri_time_mod },
+            .{ .name = "tri_rand", .module = tri_rand_mod },
             .{ .name = "bootstrap", .module = depin_bootstrap_mod },
             .{ .name = "persistence", .module = depin_persistence_mod },
         },
@@ -1268,12 +1309,20 @@ pub fn build(b: *std.Build) void {
         .root_source_file = b.path("src/vibeec/igla_local_chat.zig"),
         .target = target,
         .optimize = optimize,
+        .imports = &.{
+            .{ .name = "tri_time", .module = tri_time_mod },
+            .{ .name = "tri_rand", .module = tri_rand_mod },
+        },
     });
 
     const vibeec_fluent_chat = b.createModule(.{
         .root_source_file = b.path("src/vibeec/igla_fluent_chat_engine.zig"),
         .target = target,
         .optimize = optimize,
+        .imports = &.{
+            .{ .name = "tri_time", .module = tri_time_mod },
+            .{ .name = "tri_rand", .module = tri_rand_mod },
+        },
     });
 
     // src/tri/tri_storm.zig wants GoldenChain, which lives in
@@ -1286,6 +1335,13 @@ pub fn build(b: *std.Build) void {
         .root_source_file = b.path("src/storm/golden_chain.zig"),
         .target = target,
         .optimize = optimize,
+        .imports = &.{
+            .{ .name = "tri_io", .module = tri_io_mod },
+            .{ .name = "tri_time", .module = tri_time_mod },
+            .{ .name = "tri_rand", .module = tri_rand_mod },
+            .{ .name = "tri_proc", .module = tri_proc_mod },
+            .{ .name = "tri_env", .module = tri_env_mod },
+        },
     });
 
     // Thirteen modules src/tri imports by name that the March build.zig never
@@ -1305,6 +1361,11 @@ pub fn build(b: *std.Build) void {
         .root_source_file = b.path("src/kaggle/kaggle.zig"),
         .target = target,
         .optimize = optimize,
+        .imports = &.{
+            .{ .name = "tri_io", .module = tri_io_mod },
+            .{ .name = "tri_time", .module = tri_time_mod },
+            .{ .name = "tri_rand", .module = tri_rand_mod },
+        },
     });
     const measurement_mod = b.createModule(.{
         .root_source_file = b.path("src/tri/tri_measurement.zig"),
@@ -1366,6 +1427,8 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
         .imports = &.{
             .{ .name = "tri_time", .module = tri_time_mod },
+            .{ .name = "tri_rand", .module = tri_rand_mod },
+            .{ .name = "tri_mutex", .module = tri_mutex_mod },
             .{ .name = "tri_env", .module = tri_env_mod },
             .{ .name = "tri_io", .module = tri_io_mod },
             .{ .name = "tri_proc", .module = tri_proc_mod },
@@ -1440,6 +1503,8 @@ pub fn build(b: *std.Build) void {
         .imports = &.{
             .{ .name = "vsa", .module = vsa_tri },
             .{ .name = "tri_time", .module = tri_time_mod },
+            .{ .name = "tri_rand", .module = tri_rand_mod },
+            .{ .name = "tri_mutex", .module = tri_mutex_mod },
             .{ .name = "tri_env", .module = tri_env_mod },
             .{ .name = "tri_io", .module = tri_io_mod },
         },
@@ -1494,6 +1559,12 @@ pub fn build(b: *std.Build) void {
         .root_source_file = b.path("src/agent_mu/agent_mu.zig"),
         .target = target,
         .optimize = optimize,
+        .imports = &.{
+            .{ .name = "tri_io", .module = tri_io_mod },
+            .{ .name = "tri_time", .module = tri_time_mod },
+            .{ .name = "tri_rand", .module = tri_rand_mod },
+            .{ .name = "tri_proc", .module = tri_proc_mod },
+        },
     });
 
     const vibee = b.addExecutable(.{
@@ -1541,6 +1612,9 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/vibeec/self_improver.zig"),
             .target = target,
             .optimize = optimize,
+            .imports = &.{
+                .{ .name = "tri_io", .module = tri_io_mod },
+            },
         }),
     });
     b.installArtifact(self_improve);
@@ -1587,6 +1661,10 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
         .imports = &.{
+            .{ .name = "tri_io", .module = tri_io_mod },
+            .{ .name = "tri_time", .module = tri_time_mod },
+            .{ .name = "tri_rand", .module = tri_rand_mod },
+            .{ .name = "tri_proc", .module = tri_proc_mod },
             .{ .name = "treesitter_zig", .module = ts_zig_mod },
         },
     });
@@ -1641,6 +1719,14 @@ pub fn build(b: *std.Build) void {
         .root_source_file = b.path("src/tri/metabolism.zig"),
         .target = target,
         .optimize = optimize,
+        .imports = &.{
+            .{ .name = "tri_io", .module = tri_io_mod },
+            .{ .name = "tri_proc", .module = tri_proc_mod },
+            .{ .name = "tri_time", .module = tri_time_mod },
+            .{ .name = "tri_rand", .module = tri_rand_mod },
+            .{ .name = "tri_env", .module = tri_env_mod },
+            .{ .name = "tri_mutex", .module = tri_mutex_mod },
+        },
     });
 
     const trinity_mcp = b.addExecutable(.{
@@ -2074,6 +2160,10 @@ pub fn build(b: *std.Build) void {
         .root_source_file = b.path("src/vibeec/igla_local_coder.zig"),
         .target = target,
         .optimize = optimize,
+        .imports = &.{
+            .{ .name = "tri_time", .module = tri_time_mod },
+            .{ .name = "tri_rand", .module = tri_rand_mod },
+        },
     });
     // TVC Distributed module for TRI (file-based sharing)
     const tvc_distributed_mod = b.createModule(.{
@@ -2081,6 +2171,9 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
         .imports = &.{
+            .{ .name = "tri_io", .module = tri_io_mod },
+            .{ .name = "tri_time", .module = tri_time_mod },
+            .{ .name = "tri_rand", .module = tri_rand_mod },
             .{ .name = "tvc_corpus", .module = tvc_corpus_mod },
         },
     });
@@ -2095,6 +2188,8 @@ pub fn build(b: *std.Build) void {
             .{ .name = "igla_kg", .module = igla_kg_mod },
             .{ .name = "triples_parser", .module = triples_parser_mod },
             .{ .name = "tri_time", .module = tri_time_mod },
+            .{ .name = "tri_rand", .module = tri_rand_mod },
+            .{ .name = "tri_mutex", .module = tri_mutex_mod },
             .{ .name = "tri_env", .module = tri_env_mod },
             .{ .name = "tri_io", .module = tri_io_mod },
             .{ .name = "tri_proc", .module = tri_proc_mod },
@@ -2106,6 +2201,8 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
         .imports = &.{
+            .{ .name = "tri_time", .module = tri_time_mod },
+            .{ .name = "tri_rand", .module = tri_rand_mod },
             .{ .name = "igla_hybrid_chat", .module = vibeec_hybrid_chat },
         },
     });
@@ -2145,16 +2242,30 @@ pub fn build(b: *std.Build) void {
         .root_source_file = b.path("src/brain/basal_ganglia.zig"),
         .target = target,
         .optimize = optimize,
+        .imports = &.{
+            .{ .name = "tri_time", .module = tri_time_mod },
+            .{ .name = "tri_rand", .module = tri_rand_mod },
+            .{ .name = "tri_mutex", .module = tri_mutex_mod },
+        },
     });
     const reticular_formation_mod = b.createModule(.{
         .root_source_file = b.path("src/brain/reticular_formation.zig"),
         .target = target,
         .optimize = optimize,
+        .imports = &.{
+            .{ .name = "tri_time", .module = tri_time_mod },
+            .{ .name = "tri_rand", .module = tri_rand_mod },
+            .{ .name = "tri_mutex", .module = tri_mutex_mod },
+        },
     });
     const locus_coeruleus_mod = b.createModule(.{
         .root_source_file = b.path("src/brain/locus_coeruleus.zig"),
         .target = target,
         .optimize = optimize,
+        .imports = &.{
+            .{ .name = "tri_time", .module = tri_time_mod },
+            .{ .name = "tri_rand", .module = tri_rand_mod },
+        },
     });
     const amygdala_mod = b.createModule(.{
         .root_source_file = b.path("src/brain/amygdala.zig"),
@@ -2165,16 +2276,31 @@ pub fn build(b: *std.Build) void {
         .root_source_file = b.path("src/brain/persistence.zig"),
         .target = target,
         .optimize = optimize,
+        .imports = &.{
+            .{ .name = "tri_io", .module = tri_io_mod },
+            .{ .name = "tri_time", .module = tri_time_mod },
+            .{ .name = "tri_rand", .module = tri_rand_mod },
+            .{ .name = "tri_mutex", .module = tri_mutex_mod },
+        },
     });
     const telemetry_mod = b.createModule(.{
         .root_source_file = b.path("src/brain/telemetry.zig"),
         .target = target,
         .optimize = optimize,
+        .imports = &.{
+            .{ .name = "tri_time", .module = tri_time_mod },
+            .{ .name = "tri_rand", .module = tri_rand_mod },
+            .{ .name = "tri_mutex", .module = tri_mutex_mod },
+        },
     });
     const thalamus_logs_mod = b.createModule(.{
         .root_source_file = b.path("src/brain/thalamus_logs.zig"),
         .target = target,
         .optimize = optimize,
+        .imports = &.{
+            .{ .name = "tri_time", .module = tri_time_mod },
+            .{ .name = "tri_rand", .module = tri_rand_mod },
+        },
     });
     const prefrontal_cortex_mod = b.createModule(.{
         .root_source_file = b.path("src/brain/prefrontal_cortex.zig"),
@@ -2185,17 +2311,28 @@ pub fn build(b: *std.Build) void {
         .root_source_file = b.path("src/brain/health_history.zig"),
         .target = target,
         .optimize = optimize,
+        .imports = &.{
+            .{ .name = "tri_io", .module = tri_io_mod },
+            .{ .name = "tri_time", .module = tri_time_mod },
+            .{ .name = "tri_rand", .module = tri_rand_mod },
+        },
     });
     const microglia_mod = b.createModule(.{
         .root_source_file = b.path("src/brain/microglia.zig"),
         .target = target,
         .optimize = optimize,
+        .imports = &.{
+            .{ .name = "tri_time", .module = tri_time_mod },
+            .{ .name = "tri_rand", .module = tri_rand_mod },
+        },
     });
     const metrics_dashboard_mod = b.createModule(.{
         .root_source_file = b.path("src/brain/metrics_dashboard.zig"),
         .target = target,
         .optimize = optimize,
         .imports = &.{
+            .{ .name = "tri_time", .module = tri_time_mod },
+            .{ .name = "tri_rand", .module = tri_rand_mod },
             .{ .name = "basal_ganglia", .module = basal_ganglia_mod },
             .{ .name = "reticular_formation", .module = reticular_formation_mod },
             .{ .name = "locus_coeruleus", .module = locus_coeruleus_mod },
@@ -2208,6 +2345,9 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
         .imports = &.{
+            .{ .name = "tri_time", .module = tri_time_mod },
+            .{ .name = "tri_rand", .module = tri_rand_mod },
+            .{ .name = "tri_env", .module = tri_env_mod },
             .{ .name = "basal_ganglia", .module = basal_ganglia_mod },
             .{ .name = "reticular_formation", .module = reticular_formation_mod },
             .{ .name = "telemetry", .module = telemetry_mod },
@@ -2219,6 +2359,10 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
         .imports = &.{
+            .{ .name = "tri_io", .module = tri_io_mod },
+            .{ .name = "tri_time", .module = tri_time_mod },
+            .{ .name = "tri_rand", .module = tri_rand_mod },
+            .{ .name = "tri_mutex", .module = tri_mutex_mod },
             .{ .name = "basal_ganglia", .module = basal_ganglia_mod },
             .{ .name = "reticular_formation", .module = reticular_formation_mod },
             .{ .name = "telemetry", .module = telemetry_mod },
@@ -2230,6 +2374,8 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
         .imports = &.{
+            .{ .name = "tri_time", .module = tri_time_mod },
+            .{ .name = "tri_rand", .module = tri_rand_mod },
             .{ .name = "basal_ganglia", .module = basal_ganglia_mod },
             .{ .name = "reticular_formation", .module = reticular_formation_mod },
             .{ .name = "locus_coeruleus", .module = locus_coeruleus_mod },
@@ -2250,6 +2396,8 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
         .imports = &.{
+            .{ .name = "tri_time", .module = tri_time_mod },
+            .{ .name = "tri_rand", .module = tri_rand_mod },
             .{ .name = "basal_ganglia", .module = basal_ganglia_mod },
             .{ .name = "reticular_formation", .module = reticular_formation_mod },
             .{ .name = "locus_coeruleus", .module = locus_coeruleus_mod },
@@ -2261,6 +2409,8 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
         .imports = &.{
+            .{ .name = "tri_time", .module = tri_time_mod },
+            .{ .name = "tri_rand", .module = tri_rand_mod },
             .{ .name = "basal_ganglia", .module = basal_ganglia_mod },
             .{ .name = "reticular_formation", .module = reticular_formation_mod },
             .{ .name = "state_recovery", .module = state_recovery_mod },
@@ -2272,19 +2422,28 @@ pub fn build(b: *std.Build) void {
         .root_source_file = b.path("src/brain/visualization.zig"),
         .target = target,
         .optimize = optimize,
-        .imports = &.{},
+        .imports = &.{
+            .{ .name = "tri_time", .module = tri_time_mod },
+            .{ .name = "tri_rand", .module = tri_rand_mod },
+        },
     });
     const learning_mod = b.createModule(.{
         .root_source_file = b.path("src/brain/learning.zig"),
         .target = target,
         .optimize = optimize,
-        .imports = &.{},
+        .imports = &.{
+            .{ .name = "tri_time", .module = tri_time_mod },
+            .{ .name = "tri_rand", .module = tri_rand_mod },
+        },
     });
     const federation_mod = b.createModule(.{
         .root_source_file = b.path("src/brain/federation.zig"),
         .target = target,
         .optimize = optimize,
         .imports = &.{
+            .{ .name = "tri_time", .module = tri_time_mod },
+            .{ .name = "tri_rand", .module = tri_rand_mod },
+            .{ .name = "tri_mutex", .module = tri_mutex_mod },
             .{ .name = "basal_ganglia", .module = basal_ganglia_mod },
             .{ .name = "reticular_formation", .module = reticular_formation_mod },
         },
@@ -2294,6 +2453,9 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
         .imports = &.{
+            .{ .name = "tri_time", .module = tri_time_mod },
+            .{ .name = "tri_rand", .module = tri_rand_mod },
+            .{ .name = "tri_mutex", .module = tri_mutex_mod },
             .{ .name = "basal_ganglia", .module = basal_ganglia_mod },
             .{ .name = "reticular_formation", .module = reticular_formation_mod },
         },
@@ -2303,6 +2465,8 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
         .imports = &.{
+            .{ .name = "tri_time", .module = tri_time_mod },
+            .{ .name = "tri_rand", .module = tri_rand_mod },
             .{ .name = "basal_ganglia", .module = basal_ganglia_mod },
             .{ .name = "reticular_formation", .module = reticular_formation_mod },
             .{ .name = "locus_coeruleus", .module = locus_coeruleus_mod },
@@ -2373,6 +2537,10 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
         .imports = &.{
+            .{ .name = "tri_time", .module = tri_time_mod },
+            .{ .name = "tri_rand", .module = tri_rand_mod },
+            .{ .name = "tri_io", .module = tri_io_mod },
+            .{ .name = "tri_env", .module = tri_env_mod },
             .{ .name = "tri_colors", .module = tri_colors_mod },
         },
     });
@@ -2382,6 +2550,11 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
         .imports = &.{
+            .{ .name = "tri_io", .module = tri_io_mod },
+            .{ .name = "tri_time", .module = tri_time_mod },
+            .{ .name = "tri_rand", .module = tri_rand_mod },
+            .{ .name = "tri_proc", .module = tri_proc_mod },
+            .{ .name = "tri_env", .module = tri_env_mod },
             .{ .name = "tri_colors", .module = tri_colors_mod },
             .{ .name = "brain", .module = brain_mod },
             .{ .name = "simulation", .module = simulation_mod },
@@ -2399,6 +2572,9 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
         .imports = &.{
+            .{ .name = "tri_io", .module = tri_io_mod },
+            .{ .name = "tri_time", .module = tri_time_mod },
+            .{ .name = "tri_rand", .module = tri_rand_mod },
             .{ .name = "command_def", .module = trinity_mod },
         },
     });
@@ -2417,6 +2593,8 @@ pub fn build(b: *std.Build) void {
         .imports = &.{
             .{ .name = "const", .module = sacred_const_mod },
             .{ .name = "tri_time", .module = tri_time_mod },
+            .{ .name = "tri_rand", .module = tri_rand_mod },
+            .{ .name = "tri_mutex", .module = tri_mutex_mod },
             .{ .name = "tri_env", .module = tri_env_mod },
             .{ .name = "tri_io", .module = tri_io_mod },
         },
@@ -2428,6 +2606,8 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
         .imports = &.{
+            .{ .name = "tri_time", .module = tri_time_mod },
+            .{ .name = "tri_rand", .module = tri_rand_mod },
             .{ .name = "sacred", .module = sacred_mod },
         },
     });
@@ -2438,7 +2618,10 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
         .imports = &.{
+            .{ .name = "tri_proc", .module = tri_proc_mod },
             .{ .name = "tri_time", .module = tri_time_mod },
+            .{ .name = "tri_rand", .module = tri_rand_mod },
+            .{ .name = "tri_mutex", .module = tri_mutex_mod },
             .{ .name = "tri_env", .module = tri_env_mod },
             .{ .name = "tri_io", .module = tri_io_mod },
         },
@@ -2449,6 +2632,10 @@ pub fn build(b: *std.Build) void {
         .root_source_file = b.path("src/firebird/slashing.zig"),
         .target = target,
         .optimize = optimize,
+        .imports = &.{
+            .{ .name = "tri_time", .module = tri_time_mod },
+            .{ .name = "tri_rand", .module = tri_rand_mod },
+        },
     });
 
     // Phase 5: Mainnet Deployment
@@ -2456,6 +2643,10 @@ pub fn build(b: *std.Build) void {
         .root_source_file = b.path("src/firebird/mainnet.zig"),
         .target = target,
         .optimize = optimize,
+        .imports = &.{
+            .{ .name = "tri_time", .module = tri_time_mod },
+            .{ .name = "tri_rand", .module = tri_rand_mod },
+        },
     });
 
     // Phase 5: Multi-Chain Support
@@ -2463,6 +2654,10 @@ pub fn build(b: *std.Build) void {
         .root_source_file = b.path("src/depin/multichain.zig"),
         .target = target,
         .optimize = optimize,
+        .imports = &.{
+            .{ .name = "tri_time", .module = tri_time_mod },
+            .{ .name = "tri_rand", .module = tri_rand_mod },
+        },
     });
 
     // Phase 5: Observability & Monitoring
@@ -2470,6 +2665,10 @@ pub fn build(b: *std.Build) void {
         .root_source_file = b.path("src/depin/observability.zig"),
         .target = target,
         .optimize = optimize,
+        .imports = &.{
+            .{ .name = "tri_time", .module = tri_time_mod },
+            .{ .name = "tri_rand", .module = tri_rand_mod },
+        },
     });
 
     // Phase 5: Production REST API
@@ -2477,6 +2676,10 @@ pub fn build(b: *std.Build) void {
         .root_source_file = b.path("src/api/depin_production.zig"),
         .target = target,
         .optimize = optimize,
+        .imports = &.{
+            .{ .name = "tri_time", .module = tri_time_mod },
+            .{ .name = "tri_rand", .module = tri_rand_mod },
+        },
     });
 
     // Phase 5: Governance Module
@@ -2484,6 +2687,10 @@ pub fn build(b: *std.Build) void {
         .root_source_file = b.path("src/firebird/governance.zig"),
         .target = target,
         .optimize = optimize,
+        .imports = &.{
+            .{ .name = "tri_time", .module = tri_time_mod },
+            .{ .name = "tri_rand", .module = tri_rand_mod },
+        },
     });
 
     // Bench module — IGLA (Needle In A Haystack) benchmark
@@ -2491,6 +2698,10 @@ pub fn build(b: *std.Build) void {
         .root_source_file = b.path("src/bench/bench.zig"),
         .target = target,
         .optimize = optimize,
+        .imports = &.{
+            .{ .name = "tri_time", .module = tri_time_mod },
+            .{ .name = "tri_rand", .module = tri_rand_mod },
+        },
     });
 
     // zig-hslm — Official HSLM Numerical Library
@@ -2534,6 +2745,8 @@ pub fn build(b: *std.Build) void {
                 .{ .name = "golden_chain", .module = golden_chain_storm_mod },
                 .{ .name = "tri27_cli", .module = tri27_cli_mod },
                 .{ .name = "tri_time", .module = tri_time_mod },
+                .{ .name = "tri_rand", .module = tri_rand_mod },
+                .{ .name = "tri_mutex", .module = tri_mutex_mod },
                 .{ .name = "tri_env", .module = tri_env_mod },
                 .{ .name = "tri_io", .module = tri_io_mod },
                 .{ .name = "tri_proc", .module = tri_proc_mod },
@@ -2803,6 +3016,11 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
         .imports = &.{
+            .{ .name = "tri_io", .module = tri_io_mod },
+            .{ .name = "tri_time", .module = tri_time_mod },
+            .{ .name = "tri_rand", .module = tri_rand_mod },
+            .{ .name = "tri_mutex", .module = tri_mutex_mod },
+            .{ .name = "tri_env", .module = tri_env_mod },
             .{ .name = "brain", .module = brain_mod },
         },
     });
@@ -2827,6 +3045,8 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
         .imports = &.{
+            .{ .name = "tri_time", .module = tri_time_mod },
+            .{ .name = "tri_rand", .module = tri_rand_mod },
             .{ .name = "basal_ganglia", .module = basal_ganglia_mod },
             .{ .name = "reticular_formation", .module = reticular_formation_mod },
             .{ .name = "locus_coeruleus", .module = locus_coeruleus_mod },
@@ -2873,6 +3093,11 @@ pub fn build(b: *std.Build) void {
         .root_source_file = b.path("src/vibeec/gguf_model.zig"),
         .target = target,
         .optimize = optimize,
+        .imports = &.{
+            .{ .name = "tri_io", .module = tri_io_mod },
+            .{ .name = "tri_time", .module = tri_time_mod },
+            .{ .name = "tri_rand", .module = tri_rand_mod },
+        },
     });
 
     // Trinity Node - Decentralized Inference Network
@@ -3007,6 +3232,8 @@ pub fn build(b: *std.Build) void {
                 .target = target,
                 .optimize = optimize,
                 .imports = &.{
+                    .{ .name = "tri_time", .module = tri_time_mod },
+                    .{ .name = "tri_rand", .module = tri_rand_mod },
                     .{ .name = "igla_hybrid_chat", .module = wasm_hybrid_chat },
                 },
             });
@@ -3135,6 +3362,10 @@ pub fn build(b: *std.Build) void {
         .root_source_file = b.path("src/vibeec/kg_sync.zig"),
         .target = target,
         .optimize = optimize,
+        .imports = &.{
+            .{ .name = "tri_time", .module = tri_time_mod },
+            .{ .name = "tri_rand", .module = tri_rand_mod },
+        },
     });
     const sym_005_tests = b.addTest(.{
         .root_module = b.createModule(.{
@@ -3157,6 +3388,11 @@ pub fn build(b: *std.Build) void {
         .root_source_file = b.path("src/vibeec/kv_cache.zig"),
         .target = target,
         .optimize = optimize,
+        .imports = &.{
+            .{ .name = "tri_io", .module = tri_io_mod },
+            .{ .name = "tri_time", .module = tri_time_mod },
+            .{ .name = "tri_rand", .module = tri_rand_mod },
+        },
     });
     const prefix_cache_tests = b.addTest(.{
         .root_module = b.createModule(.{
@@ -3255,6 +3491,9 @@ pub fn build(b: *std.Build) void {
         .root_source_file = b.path("src/tri/token_rotator.zig"),
         .target = target,
         .optimize = optimize,
+        .imports = &.{
+            .{ .name = "tri_env", .module = tri_env_mod },
+        },
     });
 
     // ═══════════════════════════════════════════════════════════════════════════════

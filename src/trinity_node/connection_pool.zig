@@ -7,6 +7,7 @@
 
 const std = @import("std");
 
+const tri_mutex = @import("tri_mutex");
 const tri_time = @import("tri_time");
 // ═══════════════════════════════════════════════════════════════════════════════
 // POOLED CONNECTION
@@ -51,7 +52,7 @@ pub const ConnectionPool = struct {
     allocator: std.mem.Allocator,
     max_per_peer: u32,
     idle_timeout_ns: i128,
-    mutex: std.Thread.Mutex,
+    mutex: tri_mutex.Mutex,
 
     // Stats
     total_acquired: u64,

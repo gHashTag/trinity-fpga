@@ -20,6 +20,7 @@
 //!   try JobManager.cancel(job_id);
 
 const std = @import("std");
+const tri_rand = @import("tri_rand");
 const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 const builtin = @import("builtin");
@@ -1049,7 +1050,7 @@ pub const StartOptions = struct {
 /// Generate a unique job ID
 fn generateJobId(allocator: std.mem.Allocator) ![]const u8 {
     const timestamp = tri_time.timestamp();
-    const random = std.crypto.random.int(u32);
+    const random = tri_rand.random().int(u32);
     return std.fmt.allocPrint(allocator, "job_{d}_{x}", .{ timestamp, random });
 }
 

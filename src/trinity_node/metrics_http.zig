@@ -6,6 +6,7 @@
 // =============================================================================
 
 const std = @import("std");
+const tri_mutex = @import("tri_mutex");
 const prometheus_metrics_mod = @import("prometheus_metrics.zig");
 const network_stats_mod = @import("network_stats.zig");
 
@@ -33,7 +34,7 @@ pub const MetricsHttpServer = struct {
     health_requests: u64,
     not_found_requests: u64,
     errors: u64,
-    mutex: std.Thread.Mutex,
+    mutex: tri_mutex.Mutex,
 
     pub fn init(allocator: std.mem.Allocator, port: u16) MetricsHttpServer {
         return .{

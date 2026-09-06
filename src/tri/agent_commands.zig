@@ -2,6 +2,7 @@
 //! φ² + 1/φ² = 3 | TRINITY
 
 const std = @import("std");
+const tri_rand = @import("tri_rand");
 const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 
@@ -215,7 +216,7 @@ pub fn spawnAgent(io: std.Io, allocator: Allocator, issue_number: u32) !void {
 /// Generate unique agent ID
 fn generateAgentId(allocator: Allocator, issue_number: u32) ![]const u8 {
     const now = tri_time.nanoTimestamp();
-    const random = std.crypto.random.intRangeAtMost(usize, std.math.maxInt(usize));
+    const random = tri_rand.random().intRangeAtMost(usize, std.math.maxInt(usize));
 
     return try std.fmt.allocPrint(allocator, "issue-{d}-a1_{d}_{x}", .{ issue_number, now, random });
 }

@@ -6,6 +6,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_mutex = @import("tri_mutex");
 const tri_time = @import("tri_time");
 const storage_mod = @import("storage.zig");
 
@@ -42,7 +43,7 @@ pub const BandwidthAggregator = struct {
     reports: std.AutoHashMap([32]u8, BandwidthReport),
     aggregation_interval_secs: i64,
     last_aggregation_time: i64,
-    mutex: std.Thread.Mutex,
+    mutex: tri_mutex.Mutex,
 
     pub fn init(allocator: std.mem.Allocator) BandwidthAggregator {
         return .{

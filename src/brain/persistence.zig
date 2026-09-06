@@ -9,6 +9,7 @@
 //! Sacred Formula: φ² + 1/φ² = 3 = TRINITY
 
 const std = @import("std");
+const tri_mutex = @import("tri_mutex");
 const tri_time = @import("tri_time");
 const tri_io = @import("tri_io");
 const fs = std.Io.Dir;
@@ -41,7 +42,7 @@ pub const RotationConfig = struct {
 
 pub const BrainEventLog = struct {
     file: std.Io.File,
-    mutex: std.Thread.Mutex,
+    mutex: tri_mutex.Mutex,
     path: []const u8,
     allocator: mem.Allocator,
     write_buffer: []u8,
@@ -66,7 +67,7 @@ pub const BrainEventLog = struct {
                 errdefer allocator.free(write_buffer);
                 return Self{
                     .file = new_file,
-                    .mutex = std.Thread.Mutex{},
+                    .mutex = tri_mutex.Mutex{},
                     .path = path_copy,
                     .allocator = allocator,
                     .write_buffer = write_buffer,
@@ -88,7 +89,7 @@ pub const BrainEventLog = struct {
 
         return Self{
             .file = file,
-            .mutex = std.Thread.Mutex{},
+            .mutex = tri_mutex.Mutex{},
             .path = path_copy,
             .allocator = allocator,
             .write_buffer = write_buffer,

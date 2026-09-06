@@ -1,7 +1,7 @@
 // TRI Orchestrator v2.0 - Full Command Registry
 const std = @import("std");
 const tri_time = @import("tri_time");
-const tri_mutex = @import("mutex.zig");
+const tri_mutex = @import("tri_mutex");
 const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayListUnmanaged;
 

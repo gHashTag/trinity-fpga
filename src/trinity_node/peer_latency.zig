@@ -7,6 +7,7 @@
 
 const std = @import("std");
 
+const tri_mutex = @import("tri_mutex");
 const tri_time = @import("tri_time");
 // =============================================================================
 // LATENCY CONFIGURATION
@@ -54,7 +55,7 @@ pub const PeerLatencyTracker = struct {
     config: LatencyConfig,
     entries: std.AutoHashMap([32]u8, LatencyEntry),
     total_samples: u64,
-    mutex: std.Thread.Mutex,
+    mutex: tri_mutex.Mutex,
 
     pub fn init(allocator: std.mem.Allocator) PeerLatencyTracker {
         return initWithConfig(allocator, .{});

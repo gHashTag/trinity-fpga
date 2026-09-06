@@ -12,6 +12,7 @@
 
 const std = @import("std");
 
+const tri_mutex = @import("tri_mutex");
 const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 const ALERTS_LOG = ".trinity/brain_alerts.jsonl";
@@ -241,7 +242,7 @@ pub const AlertHistory = struct {
     allocator: std.mem.Allocator,
     alerts: std.ArrayList(Alert),
     max_alerts: usize = 1000,
-    mutex: std.Thread.Mutex,
+    mutex: tri_mutex.Mutex,
 
     const Self = @This();
 
@@ -252,7 +253,7 @@ pub const AlertHistory = struct {
             .allocator = allocator,
             .alerts = .empty,
             .max_alerts = max_alerts,
-            .mutex = std.Thread.Mutex{},
+            .mutex = tri_mutex.Mutex{},
         };
     }
 
@@ -400,7 +401,7 @@ pub const AlertManager = struct {
     telegram_enabled: bool,
     telegram_token: []const u8 = "",
     telegram_chat_id: []const u8 = "",
-    mutex: std.Thread.Mutex,
+    mutex: tri_mutex.Mutex,
 
     const Self = @This();
 
@@ -413,7 +414,7 @@ pub const AlertManager = struct {
             .suppression = .{},
             .thresholds = AlertThresholds.init(),
             .telegram_enabled = false,
-            .mutex = std.Thread.Mutex{},
+            .mutex = tri_mutex.Mutex{},
         };
     }
 

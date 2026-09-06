@@ -6,6 +6,7 @@
 // =============================================================================
 
 const std = @import("std");
+const tri_mutex = @import("tri_mutex");
 const tri_time = @import("tri_time");
 const storage_mod = @import("storage.zig");
 const shard_scrubber_mod = @import("shard_scrubber.zig");
@@ -49,7 +50,7 @@ pub const ErasureRepairEngine = struct {
     rs_failures: u64,
     rs_shards_recovered: u64,
     replica_repairs: u64,
-    mutex: std.Thread.Mutex,
+    mutex: tri_mutex.Mutex,
 
     pub fn init(allocator: std.mem.Allocator) ErasureRepairEngine {
         return initWithConfig(allocator, .{});

@@ -6,6 +6,7 @@
 // =============================================================================
 
 const std = @import("std");
+const tri_mutex = @import("tri_mutex");
 const storage_mod = @import("storage.zig");
 const reed_solomon_mod = @import("reed_solomon.zig");
 
@@ -28,7 +29,7 @@ pub const RsRepairEngine = struct {
     rs_repairs_attempted: u64,
     rs_repairs_succeeded: u64,
     rs_repairs_failed: u64,
-    mutex: std.Thread.Mutex,
+    mutex: tri_mutex.Mutex,
 
     pub fn init(allocator: std.mem.Allocator) RsRepairEngine {
         return .{

@@ -13,7 +13,7 @@
 const std = @import("std");
 const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
-const tri_mutex = @import("mutex.zig");
+const tri_mutex = @import("tri_mutex");
 const Allocator = std.mem.Allocator;
 
 // Re-export from global constants for backward compatibility

@@ -31,6 +31,7 @@
 
 const std = @import("std");
 
+const tri_mutex = @import("tri_mutex");
 const tri_time = @import("tri_time");
 /// Maximum number of events that can be buffered in memory.
 /// When exceeded, oldest events are auto-trimmed (FIFO eviction).
@@ -116,7 +117,7 @@ const StoredEvent = struct {
 /// Protected by mutex to ensure thread-safe initialization.
 var global_event_bus: ?*EventBus = null;
 var global_allocator: ?std.mem.Allocator = null;
-var global_mutex = std.Thread.Mutex{};
+var global_mutex = tri_mutex.Mutex{};
 
 /// Get or create the global event bus singleton.
 /// Thread-safe: uses double-checked locking pattern.
@@ -176,7 +177,7 @@ pub fn resetGlobal(allocator: std.mem.Allocator) void {
 /// - Event strings are allocated on publish and freed on eviction/deinit
 /// - Auto-trim when buffer full: oldest event freed to make room
 pub const EventBus = struct {
-    mutex: std.Thread.Mutex,
+    mutex: tri_mutex.Mutex,
     allocator: std.mem.Allocator,
     /// Ring buffer: fixed size array with head/tail indices
     buffer: [MAX_EVENTS]StoredEvent,
@@ -202,7 +203,7 @@ pub const EventBus = struct {
     /// Buffer starts empty; all stats at zero.
     pub fn init(allocator: std.mem.Allocator) EventBus {
         return EventBus{
-            .mutex = std.Thread.Mutex{},
+            .mutex = tri_mutex.Mutex{},
             .allocator = allocator,
             .buffer = undefined,
             .head_idx = 0,

@@ -8,6 +8,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const tri_env = @import("tri_env");
 const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
@@ -840,12 +841,16 @@ fn launchAgent(allocator: std.mem.Allocator, args: []const []const u8) !u8 {
     }
 
     // Execute
-    var child = std.process.Child.init(argv.items, allocator);
+    var child = try std.process.spawn(tri_io.get(), .{
+        .argv = argv.items,
+        .stdout = .inherit,
+        .stderr = .inherit,
+    });
     child.stdin_behavior = .Inherit;
     child.stdout_behavior = .Inherit;
     child.stderr_behavior = .Inherit;
 
-    _ = child.spawnAndWait() catch |err| {
+    _ = child.wait(tri_io.get()) catch |err| {
         const stdout = std.io.getStdOut().writer();
         stdout.print("Failed to launch agent: {}\n", .{err}) catch {};
         stdout.print("\nRun directly: ./bin/vibee-agent\n", .{}) catch {};

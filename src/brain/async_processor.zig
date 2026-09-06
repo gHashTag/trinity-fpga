@@ -17,6 +17,7 @@
 //! Sacred Formula: phi^2 + 1/phi^2 = 3 = TRINITY
 
 const std = @import("std");
+const tri_mutex = @import("tri_mutex");
 const tri_time = @import("tri_time");
 const builtin = @import("builtin");
 
@@ -137,14 +138,14 @@ pub const AsyncTaskResult = union(enum) {
 
 /// Thread-safe result channel for async operations
 pub const ResultChannel = struct {
-    mutex: std.Thread.Mutex,
+    mutex: tri_mutex.Mutex,
     cond: std.Thread.Condition,
     result: ?AsyncTaskResult,
     ready: bool,
 
     pub fn init() ResultChannel {
         return ResultChannel{
-            .mutex = std.Thread.Mutex{},
+            .mutex = tri_mutex.Mutex{},
             .cond = std.Thread.Condition{},
             .result = null,
             .ready = false,
@@ -246,7 +247,7 @@ pub const AsyncProcessor = struct {
 
     // Task queue
     task_queue: std.ArrayList(AsyncTask),
-    queue_mutex: std.Thread.Mutex,
+    queue_mutex: tri_mutex.Mutex,
     queue_cond: std.Thread.Condition,
 
     // Workers
@@ -291,7 +292,7 @@ pub const AsyncProcessor = struct {
             .basal_registry = basal_registry,
             .event_bus = event_bus,
             .task_queue = std.ArrayList(AsyncTask).initCapacity(allocator, 64) catch unreachable,
-            .queue_mutex = std.Thread.Mutex{},
+            .queue_mutex = tri_mutex.Mutex{},
             .queue_cond = std.Thread.Condition{},
             .workers = workers,
             .running = std.atomic.Value(bool).init(false),
@@ -835,7 +836,7 @@ pub const BackgroundCollector = struct {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 var global_processor: ?*AsyncProcessor = null;
-var global_mutex = std.Thread.Mutex{};
+var global_mutex = tri_mutex.Mutex{};
 
 pub fn getGlobal(allocator: std.mem.Allocator, config: Config) !*AsyncProcessor {
     global_mutex.lock();

@@ -13,6 +13,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_mutex = @import("tri_mutex");
 const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
 const net = std.net;
@@ -76,7 +77,7 @@ const DownloadState = struct {
     stop_flag: std.atomic.Value(bool),
     allocator: std.mem.Allocator,
     config: Config,
-    file_mutex: std.Thread.Mutex,
+    file_mutex: tri_mutex.Mutex,
 
     pub fn init(allocator: std.mem.Allocator, url: []const u8, output_path: []const u8, total_size: usize, config: Config) !*DownloadState {
         const state = try allocator.create(DownloadState);
@@ -102,7 +103,7 @@ const DownloadState = struct {
             .stop_flag = std.atomic.Value(bool).init(false),
             .allocator = allocator,
             .config = config,
-            .file_mutex = std.Thread.Mutex{},
+            .file_mutex = tri_mutex.Mutex{},
         };
 
         return state;

@@ -6,6 +6,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_mutex = @import("tri_mutex");
 const tri_time = @import("tri_time");
 const token_staking_mod = @import("token_staking.zig");
 
@@ -192,7 +193,7 @@ pub const HttpApiServer = struct {
     config: ApiConfig,
     stats: ApiStats,
     node_state: NodeState,
-    mutex: std.Thread.Mutex,
+    mutex: tri_mutex.Mutex,
 
     /// Delegate for Prometheus metrics — if set, /metrics requests are forwarded
     prometheus_delegate: ?*const fn (allocator: std.mem.Allocator) anyerror![]u8 = null,

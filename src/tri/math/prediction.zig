@@ -21,6 +21,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_rand = @import("tri_rand");
 const Allocator = std.mem.Allocator;
 const time = std.time;
 
@@ -582,10 +583,9 @@ pub const PredictionParams = struct {
 fn generateUUID(allocator: Allocator) ![]u8 {
     // Use timestamp + random for simple UUID-like string
     _ = time.timestamp();
-    const random = std.crypto.random;
 
     var buf: [16]u8 = undefined;
-    random.bytes(&buf);
+    tri_rand.random().bytes(&buf);
 
     // Set version and variant bits for UUID v4
     buf[6] = (buf[6] & 0x0F) | 0x40; // Version 4

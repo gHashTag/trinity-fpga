@@ -14,11 +14,11 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_rand = @import("tri_rand");
 const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 const tri_env = @import("tri_env");
 const Allocator = std.mem.Allocator;
-const crypto = std.crypto.random;
 
 const RAILWAY_GQL_HOST = "backboard.railway.com";
 const RAILWAY_GQL_PATH = "/graphql/v2";
@@ -112,7 +112,7 @@ pub const RailwayApi = struct {
             .project_id = project_id,
             .environment_id = environment_id,
             .last_request_time = tri_time.monotonicNanos(),
-            .user_agent_index = crypto.intRangeLessThan(u32, 0, USER_AGENTS.len),
+            .user_agent_index = tri_rand.random().intRangeLessThan(u32, 0, USER_AGENTS.len),
         };
     }
 
@@ -134,7 +134,7 @@ pub const RailwayApi = struct {
         // Cap at max
         const capped_delay = @min(exp_delay, BACKOFF_CAP_MS);
         // Full jitter: random from 0 to capped_delay
-        return crypto.intRangeLessThan(u64, 0, capped_delay);
+        return tri_rand.random().intRangeLessThan(u64, 0, capped_delay);
     }
 
     /// Check if API request is allowed (rate limiting).

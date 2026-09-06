@@ -6,6 +6,7 @@
 // =============================================================================
 
 const std = @import("std");
+const tri_mutex = @import("tri_mutex");
 const storage_mod = @import("storage.zig");
 const shard_scrubber_mod = @import("shard_scrubber.zig");
 const shard_rebalancer_mod = @import("shard_rebalancer.zig");
@@ -31,7 +32,7 @@ pub const AutoRepairEngine = struct {
     repairs_succeeded: u64,
     repairs_failed: u64,
     shards_replaced: u64,
-    mutex: std.Thread.Mutex,
+    mutex: tri_mutex.Mutex,
 
     pub fn init(allocator: std.mem.Allocator) AutoRepairEngine {
         return .{

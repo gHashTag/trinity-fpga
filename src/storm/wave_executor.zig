@@ -3,6 +3,7 @@
 
 const std = @import("std");
 
+const tri_mutex = @import("tri_mutex");
 const tri_time = @import("tri_time");
 pub const WaveConfig = struct {
     num_agents: u8 = 32,
@@ -132,7 +133,7 @@ pub const WaveExecutor = struct {
 pub const TaskQueue = struct {
     allocator: std.mem.Allocator,
     tasks: std.ArrayList([]const u8),
-    mutex: std.Thread.Mutex,
+    mutex: tri_mutex.Mutex,
     condition: std.Thread.Condition,
 
     pub fn init(allocator: std.mem.Allocator) TaskQueue {

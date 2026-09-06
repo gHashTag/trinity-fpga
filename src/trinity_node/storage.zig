@@ -6,6 +6,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_rand = @import("tri_rand");
 const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 const crypto = @import("crypto.zig");
@@ -737,7 +738,7 @@ fn uniqueTestDir(comptime prefix: []const u8) [prefix.len + 16]u8 {
     var buf: [prefix.len + 16]u8 = undefined;
     @memcpy(buf[0..prefix.len], prefix);
     var random_bytes: [8]u8 = undefined;
-    std.crypto.random.bytes(&random_bytes);
+    tri_rand.random().bytes(&random_bytes);
     const hex = std.fmt.bytesToHex(random_bytes, .lower);
     @memcpy(buf[prefix.len..], &hex);
     return buf;

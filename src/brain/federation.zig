@@ -17,6 +17,8 @@
 //! Architecture: Each instance is a "hemisphere" in the federated brain
 
 const std = @import("std");
+const tri_rand = @import("tri_rand");
+const tri_mutex = @import("tri_mutex");
 const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const mem = std.mem;
@@ -36,7 +38,7 @@ pub const InstanceId = struct {
     /// Generate new random instance ID
     pub fn generate() InstanceId {
         var id: InstanceId = undefined;
-        std.crypto.random.bytes(&id.bytes);
+        tri_rand.random().bytes(&id.bytes);
 
         // Set version and variant bits for UUID v4
         id.bytes[6] = (id.bytes[6] & 0x0F) | 0x40; // Version 4
@@ -436,7 +438,7 @@ pub const FederationState = struct {
     election: ElectionState,
     task_counter: GCounter,
     event_counter: GCounter,
-    mutex: std.Thread.Mutex,
+    mutex: tri_mutex.Mutex,
 
     pub fn init(allocator: Allocator, my_id: InstanceId) !FederationState {
         var state = FederationState{
@@ -445,7 +447,7 @@ pub const FederationState = struct {
             .election = ElectionState.init(),
             .task_counter = GCounter.init(allocator),
             .event_counter = GCounter.init(allocator),
-            .mutex = std.Thread.Mutex{},
+            .mutex = tri_mutex.Mutex{},
         };
 
         // Add self as first instance
@@ -711,7 +713,7 @@ pub const DistributedTaskClaim = struct {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 var global_federation: ?*FederationState = null;
-var global_mutex = std.Thread.Mutex{};
+var global_mutex = tri_mutex.Mutex{};
 
 /// Get or create global federation state
 pub fn getGlobal(allocator: Allocator) !*FederationState {

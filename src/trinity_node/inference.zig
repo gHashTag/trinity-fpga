@@ -6,6 +6,7 @@
 // =============================================================================
 
 const std = @import("std");
+const tri_mutex = @import("tri_mutex");
 const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 const ArrayList = std.array_list.Managed;
@@ -268,7 +269,7 @@ pub const InferenceWorker = struct {
     // Job queue
     job_queue: ArrayList(protocol.InferenceJob),
     result_queue: ArrayList(protocol.InferenceResult),
-    mutex: std.Thread.Mutex,
+    mutex: tri_mutex.Mutex,
 
     pub fn init(
         allocator: std.mem.Allocator,

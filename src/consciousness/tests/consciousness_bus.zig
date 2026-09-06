@@ -10,6 +10,7 @@
 //!   - Supports both synchronous and asynchronous message delivery
 
 const std = @import("std");
+const tri_mutex = @import("tri_mutex");
 const tri_time = @import("tri_time");
 const mem = std.mem;
 
@@ -217,7 +218,7 @@ pub const ConsciousnessBus = struct {
     subscriptions: std.ArrayListUnmanaged(Subscription),
     event_queue: std.ArrayListUnmanaged(Event),
     running: bool,
-    mutex: std.Thread.Mutex,
+    mutex: tri_mutex.Mutex,
 
     pub fn init(allocator: mem.Allocator) ConsciousnessBus {
         return .{
