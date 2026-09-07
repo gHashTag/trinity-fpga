@@ -423,6 +423,18 @@ pub fn mapType(type_name: []const u8) []const u8 {
     if (std.mem.startsWith(u8, clean_input, "List(") and clean_input.len > 5) {
         if (std.mem.indexOf(u8, clean_input[5..], ")")) |end| {
             const inner = std.mem.trim(u8, clean_input[5 .. 5 + end], " ");
+            // Recurse only on a STRICTLY SHORTER string. `extractInnerType`
+            // returns its input unchanged for a malformed generic -- `List<`
+            // with no closing bracket -- and mapType then called itself on the
+            // same text forever. Feeding the whole spec corpus through this
+            // crashed with a stack overflow inside std.mem.eql.
+            if (inner.len >= clean_input.len) return clean_input;
+            // Recurse only on a STRICTLY SHORTER string. `extractInnerType`
+            // returns its input unchanged for a malformed generic -- `List<`
+            // with no closing bracket -- and mapType then called itself on the
+            // same text forever. Feeding the whole spec corpus through this
+            // crashed with a stack overflow inside std.mem.eql.
+            if (inner.len >= clean_input.len) return clean_input;
             const inner_zig = mapType(inner);
             if (std.mem.eql(u8, inner_zig, "[]const u8")) return "[]const u8";
             if (std.mem.eql(u8, inner_zig, "i64")) return "[]const i64";
@@ -461,6 +473,12 @@ pub fn mapType(type_name: []const u8) []const u8 {
         if (std.mem.eql(u8, inner, "Int") or std.mem.eql(u8, inner, "int")) return "[]const i64";
         if (std.mem.eql(u8, inner, "Float") or std.mem.eql(u8, inner, "float")) return "[]const f64";
         if (std.mem.eql(u8, inner, "Bool") or std.mem.eql(u8, inner, "bool")) return "[]const bool";
+        // Recurse only on a STRICTLY SHORTER string. `extractInnerType`
+        // returns its input unchanged for a malformed generic -- `List<`
+        // with no closing bracket -- and mapType then called itself on the
+        // same text forever. Feeding the whole spec corpus through this
+        // crashed with a stack overflow inside std.mem.eql.
+        if (inner.len >= clean_input.len) return clean_input;
         const inner_zig = mapType(inner);
         if (std.mem.eql(u8, inner_zig, "[]const u8")) return "[]const []const u8";
         return "[]const u8";
@@ -477,6 +495,12 @@ pub fn mapType(type_name: []const u8) []const u8 {
         if (std.mem.eql(u8, inner, "usize")) return "[]const usize";
         if (std.mem.eql(u8, inner, "u8")) return "[]u8";
         // For complex inner types (generics, custom types), use mapType recursively
+        // Recurse only on a STRICTLY SHORTER string. `extractInnerType`
+        // returns its input unchanged for a malformed generic -- `List<`
+        // with no closing bracket -- and mapType then called itself on the
+        // same text forever. Feeding the whole spec corpus through this
+        // crashed with a stack overflow inside std.mem.eql.
+        if (inner.len >= clean_input.len) return clean_input;
         const inner_zig = mapType(inner);
         // Nested generics support for already-converted types
         if (std.mem.eql(u8, inner_zig, "[]const u8")) return "[]const []const u8"; // List<List<String>>
@@ -499,6 +523,18 @@ pub fn mapType(type_name: []const u8) []const u8 {
             if (std.mem.eql(u8, inner, "Bool")) return "[]const bool";
             if (std.mem.eql(u8, inner, "usize")) return "[]const usize";
             if (std.mem.eql(u8, inner, "u8")) return "[]u8";
+            // Recurse only on a STRICTLY SHORTER string. `extractInnerType`
+            // returns its input unchanged for a malformed generic -- `List<`
+            // with no closing bracket -- and mapType then called itself on the
+            // same text forever. Feeding the whole spec corpus through this
+            // crashed with a stack overflow inside std.mem.eql.
+            if (inner.len >= clean_input.len) return clean_input;
+            // Recurse only on a STRICTLY SHORTER string. `extractInnerType`
+            // returns its input unchanged for a malformed generic -- `List<`
+            // with no closing bracket -- and mapType then called itself on the
+            // same text forever. Feeding the whole spec corpus through this
+            // crashed with a stack overflow inside std.mem.eql.
+            if (inner.len >= clean_input.len) return clean_input;
             const inner_zig = mapType(inner);
             if (std.mem.eql(u8, inner_zig, "[]const u8")) return "[]const []const u8";
             return "[]const u8"; // custom types fallback to serialized
@@ -518,6 +554,12 @@ pub fn mapType(type_name: []const u8) []const u8 {
             inner_end = inner_start + pos;
         }
         const inner = std.mem.trim(u8, clean_input[inner_start..inner_end], " ");
+        // Recurse only on a STRICTLY SHORTER string. `extractInnerType`
+        // returns its input unchanged for a malformed generic -- `List<`
+        // with no closing bracket -- and mapType then called itself on the
+        // same text forever. Feeding the whole spec corpus through this
+        // crashed with a stack overflow inside std.mem.eql.
+        if (inner.len >= clean_input.len) return clean_input;
         const inner_zig = mapType(inner);
         if (std.mem.eql(u8, inner_zig, "f64")) return "?f64";
         if (std.mem.eql(u8, inner_zig, "i64")) return "?i64";
@@ -529,6 +571,12 @@ pub fn mapType(type_name: []const u8) []const u8 {
     // Generic types Option<T> -> ?T (FIXED: parse inner type)
     if (std.mem.startsWith(u8, clean_input, "Option<")) {
         const inner = extractInnerType(clean_input, "Option<", ">");
+        // Recurse only on a STRICTLY SHORTER string. `extractInnerType`
+        // returns its input unchanged for a malformed generic -- `List<`
+        // with no closing bracket -- and mapType then called itself on the
+        // same text forever. Feeding the whole spec corpus through this
+        // crashed with a stack overflow inside std.mem.eql.
+        if (inner.len >= clean_input.len) return clean_input;
         const inner_zig = mapType(inner);
         // Map common inner types to correct optional types
         if (std.mem.eql(u8, inner_zig, "f64")) return "?f64";

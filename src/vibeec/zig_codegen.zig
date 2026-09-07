@@ -307,3 +307,112 @@ test "a behaviour's implementation lands inside a function, never at file scope"
     try std.testing.expect(header_at != null);
     try std.testing.expect(header_at.? < impl_at);
 }
+
+// ─── Specs referencing types they never declare ────────────────────────────
+//
+// 365 field types across 146 specs name a type the spec neither declares in
+// `types:` nor lists in `imports:`. The generator emits them faithfully, so
+// the resulting Zig has an undeclared identifier -- 12 of the 19 undeclared
+// identifiers in generated output were this.
+//
+// A ratchet, not a demand for zero: 365 is too many to fix in one change, and
+// a permanently red gate reads as a broken subject rather than a broken check.
+// This defends the number so the class cannot grow while it is worked down.
+
+// 152, measured by THIS test. Running the generator binary over the corpus and
+// counting its warnings gave 146 -- a different instrument, over a slightly
+// different set (it counts only specs that generate successfully). The number
+// a ratchet defends has to come from the instrument that enforces it, or the
+// first honest run looks like a regression.
+const baseline_undeclared_specs: usize = 152;
+
+test "no NEW spec references a type it never declares" {
+    const gpa = std.testing.allocator;
+
+    const io = tri_io_for_test.get();
+
+    var paths: std.ArrayList([]u8) = .empty;
+    defer {
+        for (paths.items) |p| gpa.free(p);
+        paths.deinit(gpa);
+    }
+    collectSpecs(gpa, io, "specs", &paths) catch return error.SkipZigTest;
+
+    var offending: usize = 0;
+    var checked: usize = 0;
+    for (paths.items) |path| {
+        const src = std.Io.Dir.cwd().readFileAlloc(io, path, gpa, .limited(4 * 1024 * 1024)) catch continue;
+        defer gpa.free(src);
+        checked += 1;
+
+        var result = spec_parser.parse(gpa, src) catch continue;
+        defer result.deinit(gpa);
+
+        if (specHasUndeclaredType(&result.spec)) offending += 1;
+    }
+
+    // Guard the denominator: a walk that finds no specs would pass over
+    // nothing, which is the failure mode this repository keeps producing.
+    try std.testing.expect(checked > 300);
+
+    if (offending > baseline_undeclared_specs) {
+        std.debug.print(
+            "  {d} specs reference an undeclared type, up from the {d} baseline.\n" ++
+                "  Add the type to `types:` or the module to `imports:`; if the\n" ++
+                "  increase is intentional, update baseline_undeclared_specs.\n",
+            .{ offending, baseline_undeclared_specs },
+        );
+    }
+    try std.testing.expect(offending <= baseline_undeclared_specs);
+}
+
+/// Same rule the generator warns on: an uppercase field type that mapType does
+/// not lower, and that the spec neither declares nor imports.
+fn specHasUndeclaredType(spec: *const parser_types_align.VibeeSpec) bool {
+    for (spec.types.items) |t| {
+        for (t.fields.items) |f| {
+            const bare = std.mem.trim(u8, f.type_name, " \t?[]*");
+            if (bare.len == 0 or !std.ascii.isUpper(bare[0])) continue;
+            if (!std.mem.eql(u8, codegen_utils_for_test.mapType(bare), bare)) continue;
+
+            var declared = false;
+            for (spec.types.items) |other| {
+                if (std.mem.eql(u8, other.name, bare)) declared = true;
+            }
+            for (spec.imports.items) |imp| {
+                if (std.mem.eql(u8, imp.name, bare)) declared = true;
+            }
+            if (!declared) return true;
+        }
+    }
+    return false;
+}
+
+const codegen_utils_for_test = @import("codegen/utils.zig");
+const spec_parser = @import("gen_vibee_parser.zig");
+const tri_io_for_test = @import("tri_io");
+
+fn collectSpecs(gpa: std.mem.Allocator, io: std.Io, path: []const u8, acc: *std.ArrayList([]u8)) !void {
+    var dir = try std.Io.Dir.cwd().openDir(io, path, .{ .iterate = true });
+    defer dir.close(io);
+
+    var it = dir.iterate();
+    while (try it.next(io)) |entry| {
+        if (entry.name.len > 0 and entry.name[0] == '.') continue;
+        const child = try std.fs.path.join(gpa, &.{ path, entry.name });
+        switch (entry.kind) {
+            .directory => {
+                defer gpa.free(child);
+                collectSpecs(gpa, io, child, acc) catch {};
+            },
+            .file => {
+                if (std.mem.endsWith(u8, entry.name, ".vibee") or
+                    std.mem.endsWith(u8, entry.name, ".tri"))
+                {
+                    try acc.append(gpa, child);
+                } else gpa.free(child);
+            },
+            else => gpa.free(child),
+        }
+    }
+}
