@@ -995,6 +995,7 @@ pub const ZigCodeGen = struct {
         try self.writeHeader(spec);
         try self.writeImports(spec);
         try self.writeConstants(spec.constants.items);
+        try self.warnUndeclaredTypes(spec);
         try self.writeTypes(spec.types.items);
         try self.writeMemoryBuffers();
         // TODO: Re-enable when CreationPattern is available
@@ -1217,6 +1218,50 @@ pub const ZigCodeGen = struct {
         if (!has_e) try self.builder.writeLine("pub const E: f64 = 2.718281828459045;");
         if (!has_phoenix) try self.builder.writeLine("pub const PHOENIX: i64 = 999;");
         try self.builder.newline();
+    }
+
+    /// Warn about field types the spec neither declares nor imports, and that
+    /// mapType does not lower.
+    ///
+    /// Twelve of the nineteen undeclared identifiers in generated output were
+    /// this: `streaming_memory.vibee` uses `HyperVector` while declaring no
+    /// such type and carrying no `imports:` section, so the generator
+    /// faithfully emits a name that does not exist. That is an incomplete
+    /// spec, not a codegen defect -- but the generator said nothing, and the
+    /// author found out from `zig ast-check` on the output, if at all.
+    ///
+    /// A warning, not an error: the spec still generates, because some of
+    /// these names are resolved by imports the emitter cannot see. It just
+    /// stops being silent.
+    fn warnUndeclaredTypes(self: *Self, spec: *const VibeeSpec) !void {
+        for (spec.types.items) |t| {
+            for (t.fields.items) |f| {
+                const bare = std.mem.trim(u8, f.type_name, " \t?[]*");
+                if (bare.len == 0) continue;
+                // Lowercase leading char: a primitive or already-lowered type.
+                if (!std.ascii.isUpper(bare[0])) continue;
+                // mapType knows it, so it will not reach the output verbatim.
+                if (!std.mem.eql(u8, utils.mapType(bare), bare)) continue;
+
+                var declared = false;
+                for (spec.types.items) |other| {
+                    if (std.mem.eql(u8, other.name, bare)) declared = true;
+                }
+                for (spec.imports.items) |imp| {
+                    if (std.mem.eql(u8, imp.name, bare)) declared = true;
+                }
+                if (declared) continue;
+
+                try self.builder.writeFmt(
+                    "// WARNING: field '{s}.{s}' has type '{s}', which this spec neither declares nor imports\n",
+                    .{ t.name, f.name, bare },
+                );
+                std.debug.print(
+                    "  warning: {s}.{s}: '{s}' is neither declared in types: nor listed in imports:\n",
+                    .{ t.name, f.name, bare },
+                );
+            }
+        }
     }
 
     fn writeTypes(self: *Self, type_defs: []const TypeDef) !void {
