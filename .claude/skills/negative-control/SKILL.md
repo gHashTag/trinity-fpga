@@ -22,9 +22,13 @@ output while measuring nothing.
 | `tri stress --health` gate | gates on a `NotImplemented` stub. Its own comment records 47 runs, none passing |
 | `zig fmt --check <path list>` | eight files fail to parse and **none is in the path list** |
 | assert mode is 0600 after `save()` | the final mode is 0600 whether the narrowing happens before or after the write. Blind to the window it was written to catch |
+| `vibeec_tests` in `build.zig` | its root, `src/vibeec/codegen_tests.zig`, imports nothing except `std`. Named after the compiler, reaches none of it — **nothing in `src/vibeec/` was covered by the test step at all** |
+| `zig ast-check` on generated output | the generator had written a **0-byte file**. An empty file parses. "Regenerated output ast-checks OK" was a statement about nothing |
 
-The last one is the sharpest: **I wrote it myself, in this repo, while fixing
-the other five.** Knowing the pattern does not confer immunity.
+The 0600 one is the sharpest: **I wrote it myself, in this repo, while fixing
+the other five.** Knowing the pattern does not confer immunity — and I then
+nearly shipped the `vibeec_tests` one by adding a new test to a file no build
+target reached.
 
 ## The procedure
 
@@ -60,6 +64,38 @@ if (items.len == 0) return error.NothingMatched;
 
 Every derived-list gate in this repo now carries that guard. `tools/cmd_smoke.zig`
 found its own stdout/stderr bug this way within a minute of first running.
+
+## A test you added is not a test that runs
+
+Writing the test is the easy half. Two failure modes, both hit in this repo:
+
+- **The file has no route to a build target.** `zig test path/to/file.zig`
+  passing proves nothing about CI. Confirm with the *step*, not the file:
+
+  ```bash
+  zig build test --summary all   # note the TEST COUNT before and after
+  ```
+
+  Adding `src/vibeec/validate_cmd.zig` as a test root moved it 2789 → 2811.
+  A count that does not move means your tests did not run. Then break one on
+  purpose and confirm `zig build test` exits 1.
+
+- **The module boundary silently forbids the import.** `@import("../x.zig")`
+  from inside a directory that is its own module root fails with *import of
+  file outside module path*. Put the test on the side that can import
+  downward, not the side that reads better.
+
+## An empty artefact passes every checker
+
+`zig ast-check` on a 0-byte file returns rc=0. So does `zig fmt --check`.
+Before validating anything a tool just produced, check it exists and is
+non-empty:
+
+```bash
+[ -s "$out" ] || { echo "generator wrote nothing"; exit 1; }
+```
+
+This is how `tools/bin/vibee_arm64` came to be 0 bytes and stay that way.
 
 ## Exit codes and pipes
 
