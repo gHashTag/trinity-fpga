@@ -5,6 +5,7 @@
 
 const std = @import("std");
 
+const tri_proc = @import("tri_proc");
 const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -411,7 +412,7 @@ pub const Codebase = struct {
             };
         }
 
-        var child = try std.process.spawn(tri_io.get(), .{
+        var child = try tri_proc.spawn(tri_io.get(), .{
             .argv = argv.items,
             .stdout = .inherit,
             .stderr = .inherit,

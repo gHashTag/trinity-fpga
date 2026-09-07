@@ -4,6 +4,7 @@
 // φ² + 1/φ² = 3
 
 const std = @import("std");
+const tri_proc = @import("tri_proc");
 const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
@@ -216,7 +217,7 @@ pub const ChromeLauncher = struct {
         if (self.config.use_mock_keychain) try args.append(try self.allocator.dupeZ(u8, "--use-mock-keychain"));
 
         // Run Chrome
-        var process = try std.process.spawn(tri_io.get(), .{
+        var process = try tri_proc.spawn(tri_io.get(), .{
             .argv = args.items,
             .stdout = .inherit,
             .stderr = .inherit,

@@ -8,6 +8,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_proc = @import("tri_proc");
 const tri_io = @import("tri_io");
 const tri_env = @import("tri_env");
 const tri_time = @import("tri_time");
@@ -809,7 +810,7 @@ fn launchAgent(allocator: std.mem.Allocator, args: []const []const u8) !u8 {
     }
 
     // Execute
-    var child = try std.process.spawn(tri_io.get(), .{
+    var child = try tri_proc.spawn(tri_io.get(), .{
         .argv = argv.items,
         .stdout = .inherit,
         .stderr = .inherit,

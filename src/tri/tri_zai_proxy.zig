@@ -3,6 +3,7 @@
 
 const std = @import("std");
 
+const tri_proc = @import("tri_proc");
 // 0.16 removed std.posix.getuid; libc has it and is already linked.
 const c_uid = struct {
     extern "c" fn getuid() u32;
@@ -174,7 +175,7 @@ fn startDaemon(allocator: Allocator, home: []const u8, port: u16) !void {
 
     // `-lc` takes one argv slot; no extra quoting layer (not via sh -c).
     const argv = [_][]const u8{ "/bin/bash", "-lc", inner };
-    var child = try std.process.spawn(io, .{
+    var child = try tri_proc.spawn(io, .{
         .argv = &argv,
         .stdout = .pipe,
         .stderr = .inherit,
@@ -270,7 +271,7 @@ fn runForeground(allocator: Allocator, home: []const u8, port: u16) !void {
     try env_map.put("ZAI_PROXY_PORT", port_str);
 
     const node_argv = [_][]const u8{ "node", script };
-    var child = try std.process.spawn(io, .{
+    var child = try tri_proc.spawn(io, .{
         .argv = &node_argv,
         .environ_map = &env_map,
         .stdin = .inherit,
@@ -306,7 +307,7 @@ fn installLaunchAgentMac(allocator: Allocator, home: []const u8) !void {
     const bootout = try std.fmt.allocPrint(allocator, "launchctl bootout gui/{s}/local.zai-proxy 2>/dev/null; true", .{uid_str});
     defer allocator.free(bootout);
     const boot_argv = [_][]const u8{ "/bin/bash", "-lc", bootout };
-    var c1 = try std.process.spawn(io, .{
+    var c1 = try tri_proc.spawn(io, .{
         .argv = &boot_argv,
         .stdout = .inherit,
         .stderr = .inherit,
@@ -320,7 +321,7 @@ fn installLaunchAgentMac(allocator: Allocator, home: []const u8) !void {
     };
     defer allocator.free(bootstrap);
     const boot2_argv = [_][]const u8{ "/bin/bash", "-lc", bootstrap };
-    var c2 = try std.process.spawn(io, .{
+    var c2 = try tri_proc.spawn(io, .{
         .argv = &boot2_argv,
         .stdout = .inherit,
         .stderr = .inherit,
@@ -340,7 +341,7 @@ fn uninstallLaunchAgent(allocator: Allocator, home: []const u8) !void {
     const bootout = try std.fmt.allocPrint(allocator, "launchctl bootout gui/{s}/local.zai-proxy 2>/dev/null; true", .{uid_str});
     defer allocator.free(bootout);
     const boot_argv = [_][]const u8{ "/bin/bash", "-lc", bootout };
-    var c1 = try std.process.spawn(io, .{
+    var c1 = try tri_proc.spawn(io, .{
         .argv = &boot_argv,
         .stdout = .inherit,
         .stderr = .inherit,

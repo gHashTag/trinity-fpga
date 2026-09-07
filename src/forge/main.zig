@@ -14,6 +14,7 @@
 // =============================================================================
 
 const std = @import("std");
+const tri_proc = @import("tri_proc");
 const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 const types = @import("types.zig");
@@ -603,7 +604,7 @@ fn flashBitstream(bitstream_path: []const u8, device_str: []const u8) void {
         bitstream_path,
     };
 
-    var child = try std.process.spawn(tri_io.get(), .{
+    var child = try tri_proc.spawn(tri_io.get(), .{
         .argv = &argv,
         .stdout = .inherit,
         .stderr = .inherit,
@@ -644,14 +645,14 @@ fn printManualFlash(bitstream_path: []const u8) void {
 // =============================================================================
 
 fn forgeDetect(allocator: std.mem.Allocator) !void {
-    _ = allocator; // 0.16: std.process.spawn takes no allocator
+    _ = allocator; // 0.16: tri_proc.spawn resolves PATH itself
     std.debug.print("{s}", .{FORGE_BANNER});
     std.debug.print("{s}", .{FORGE_DEPRECATION});
     std.debug.print("[FORGE] JTAG Device Detection\n\n", .{});
     std.debug.print("  Scanning JTAG chain...\n", .{});
 
     const argv = [_][]const u8{ "openFPGALoader", "--detect" };
-    var child = try std.process.spawn(tri_io.get(), .{
+    var child = try tri_proc.spawn(tri_io.get(), .{
         .argv = &argv,
         .stdout = .pipe,
         .stderr = .pipe,

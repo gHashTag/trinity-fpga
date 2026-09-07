@@ -261,7 +261,7 @@ fn hubPipeline(allocator: Allocator, force: bool) !void {
     defer if (notify_msg.len > 0 and notify_msg.ptr != "Hub Pipeline complete".ptr) allocator.free(notify_msg);
 
     // Fire-and-forget: spawn tri notify in background
-    if (std.process.spawn(tri_io.get(), .{
+    if (tri_proc.spawn(tri_io.get(), .{
         .argv = &.{ "tri", "notify", notify_msg },
     })) |_| {} else |err| {
         print("  {s}⚠️  Notify spawn failed: {s} (non-fatal){s}\n", .{ YELLOW, @errorName(err), RESET });

@@ -1,6 +1,7 @@
 //! P10: Timeout Handler — simplified for P10
 const std = @import("std");
 
+const tri_proc = @import("tri_proc");
 const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 pub const TimeoutHandler = struct {
@@ -58,7 +59,7 @@ pub const TimeoutHandler = struct {
     } {
         const start = tri_time.nanoTimestamp();
 
-        var child = try std.process.spawn(tri_io.get(), .{
+        var child = try tri_proc.spawn(tri_io.get(), .{
             .argv = argv,
             .stdout = .ignore,
             .stderr = .ignore,

@@ -3,6 +3,7 @@
 //! φ² + 1/φ² = 3
 
 const std = @import("std");
+const tri_proc = @import("tri_proc");
 const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 const orchestrator = @import("trinity_orchestrator");
@@ -318,7 +319,7 @@ fn calculateConsensus(
 fn runCommand(allocator: std.mem.Allocator, argv: []const []const u8) !InvocationResult {
     const start_time = tri_time.nanoTimestamp();
 
-    var child = try std.process.spawn(tri_io.get(), .{
+    var child = try tri_proc.spawn(tri_io.get(), .{
         .argv = argv,
         .stdout = .pipe,
         .stderr = .pipe,

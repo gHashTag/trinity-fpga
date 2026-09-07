@@ -7,6 +7,7 @@
 // phi^2 + 1/phi^2 = 3 = TRINITY
 
 const std = @import("std");
+const tri_proc = @import("tri_proc");
 const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 const posix = std.posix;
@@ -61,8 +62,8 @@ fn readConfig() EntrypointConfig {
 
 /// Run a child process and return exit code
 fn runCmd(allocator: std.mem.Allocator, argv: []const []const u8) !u8 {
-    _ = allocator; // 0.16: std.process.spawn takes no allocator
-    var child = try std.process.spawn(tri_io.get(), .{
+    _ = allocator; // 0.16: tri_proc.spawn resolves PATH itself
+    var child = try tri_proc.spawn(tri_io.get(), .{
         .argv = argv,
         .stdout = .inherit,
         .stderr = .inherit,
@@ -76,7 +77,7 @@ fn runCmd(allocator: std.mem.Allocator, argv: []const []const u8) !u8 {
 
 /// Run a child process and capture stdout
 fn runCmdCapture(allocator: std.mem.Allocator, argv: []const []const u8) ![]const u8 {
-    var child = try std.process.spawn(tri_io.get(), .{
+    var child = try tri_proc.spawn(tri_io.get(), .{
         .argv = argv,
         .stdout = .pipe,
         .stderr = .pipe,

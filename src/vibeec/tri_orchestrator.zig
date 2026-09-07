@@ -13,6 +13,7 @@
 
 const std = @import("std");
 
+const tri_proc = @import("tri_proc");
 const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -504,7 +505,7 @@ pub const TriOrchestrator = struct {
     fn runCommand(self: *TriOrchestrator, argv: []const []const u8) !CommandResult {
         _ = self;
 
-        var child = try std.process.spawn(tri_io.get(), .{
+        var child = try tri_proc.spawn(tri_io.get(), .{
             .argv = argv,
             .stdout = .pipe,
             .stderr = .pipe,

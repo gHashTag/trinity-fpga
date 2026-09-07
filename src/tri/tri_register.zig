@@ -3,6 +3,7 @@
 // φ² + 1/φ² = 3 = TRINITY
 
 const std = @import("std");
+const tri_proc = @import("tri_proc");
 const tri_io = @import("tri_io");
 const tri_command_registry = @import("tri_command_registry.zig");
 const CommandRegistry = tri_command_registry.CommandRegistry;
@@ -1548,7 +1549,7 @@ fn runForgeBenchCommand(io: std.Io, allocator: std.mem.Allocator) !void {
     try argv.append(allocator, forge_bin);
     try argv.append(allocator, "bench");
 
-    var child = try std.process.spawn(tri_io.get(), .{
+    var child = try tri_proc.spawn(tri_io.get(), .{
         .argv = argv.items,
         .stdout = .inherit,
         .stderr = .inherit,
@@ -1558,7 +1559,7 @@ fn runForgeBenchCommand(io: std.Io, allocator: std.mem.Allocator) !void {
 
 /// Mount FPGA virtual filesystem via macFUSE + JTAG bridge
 fn runFpgaMountCommand(allocator: std.mem.Allocator) !void {
-    _ = allocator; // 0.16: std.process.spawn takes no allocator
+    _ = allocator; // 0.16: tri_proc.spawn resolves PATH itself
     const fpga_fs_path = "fpga/tools/fpga_fs";
     const mount_point = "/mnt/fpga";
 
@@ -1567,7 +1568,7 @@ fn runFpgaMountCommand(allocator: std.mem.Allocator) !void {
 
     // Create mount point if needed
     var mkdir_argv = [_][]const u8{ "sudo", "mkdir", "-p", mount_point };
-    var mkdir_child = try std.process.spawn(tri_io.get(), .{
+    var mkdir_child = try tri_proc.spawn(tri_io.get(), .{
         .argv = &mkdir_argv,
         .stdout = .inherit,
         .stderr = .inherit,
@@ -1576,7 +1577,7 @@ fn runFpgaMountCommand(allocator: std.mem.Allocator) !void {
 
     // Launch fpga_fs daemon
     var argv = [_][]const u8{ "sudo", fpga_fs_path, mount_point };
-    var child = try std.process.spawn(tri_io.get(), .{
+    var child = try tri_proc.spawn(tri_io.get(), .{
         .argv = &argv,
         .stdout = .inherit,
         .stderr = .inherit,
@@ -1590,12 +1591,12 @@ fn runFpgaMountCommand(allocator: std.mem.Allocator) !void {
 
 /// Unmount FPGA virtual filesystem
 fn runFpgaUnmountCommand(allocator: std.mem.Allocator) !void {
-    _ = allocator; // 0.16: std.process.spawn takes no allocator
+    _ = allocator; // 0.16: tri_proc.spawn resolves PATH itself
     const mount_point = "/mnt/fpga";
     std.debug.print("{s}FPGA Unmount:{s} Unmounting {s}\n", .{ CYAN, RESET, mount_point });
 
     var argv = [_][]const u8{ "umount", mount_point };
-    var child = try std.process.spawn(tri_io.get(), .{
+    var child = try tri_proc.spawn(tri_io.get(), .{
         .argv = &argv,
         .stdout = .inherit,
         .stderr = .inherit,
@@ -1610,13 +1611,13 @@ fn runFpgaUnmountCommand(allocator: std.mem.Allocator) !void {
 
 /// Run fpga probe command — calls jtag_switcher probe via child process
 fn runFpgaProbeCommand(allocator: std.mem.Allocator) !void {
-    _ = allocator; // 0.16: std.process.spawn takes no allocator
+    _ = allocator; // 0.16: tri_proc.spawn resolves PATH itself
     const probe_path = "fpga/tools/jtag_switcher";
     std.debug.print("{s}Running hardware probe...{s}\n", .{ CYAN, RESET });
     std.debug.print("\x1b[2mNote:\x1b[0m Requires sudo and connected Platform Cable USB II\n\n", .{});
 
     var argv = [_][]const u8{ "sudo", probe_path, "probe" };
-    var child = try std.process.spawn(tri_io.get(), .{
+    var child = try tri_proc.spawn(tri_io.get(), .{
         .argv = &argv,
         .stdout = .inherit,
         .stderr = .inherit,
@@ -1673,7 +1674,7 @@ fn runJtagCommand(allocator: std.mem.Allocator, args: []const []const u8) !void 
     try argv.append(allocator, jtag_path);
     for (args) |a| try argv.append(allocator, a);
 
-    var child = try std.process.spawn(tri_io.get(), .{
+    var child = try tri_proc.spawn(tri_io.get(), .{
         .argv = argv.items,
         .stdout = .inherit,
         .stderr = .inherit,

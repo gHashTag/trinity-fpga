@@ -18,6 +18,7 @@
 
 const std = @import("std");
 
+const tri_proc = @import("tri_proc");
 const tri_io = @import("tri_io");
 const print = std.debug.print;
 const RESET = "\x1b[0m";
@@ -26,7 +27,7 @@ const CYAN = "\x1b[36m";
 const GRAY = "\x1b[90m";
 
 pub fn runBattleCommand(allocator: std.mem.Allocator, args: []const []const u8) !void {
-    _ = allocator; // 0.16: std.process.spawn takes no allocator
+    _ = allocator; // 0.16: tri_proc.spawn resolves PATH itself
     if (args.len == 0) {
         printUsage();
         return;
@@ -44,7 +45,7 @@ pub fn runBattleCommand(allocator: std.mem.Allocator, args: []const []const u8) 
     print("{s}\xe2\x9a\x94 Trinity Arena 2.0{s}\n", .{ GOLDEN, RESET });
     print("{s}   Launching arena...{s}\n\n", .{ GRAY, RESET });
 
-    var child = try std.process.spawn(tri_io.get(), .{
+    var child = try tri_proc.spawn(tri_io.get(), .{
         .argv = argv,
         .stdout = .inherit,
         .stderr = .inherit,

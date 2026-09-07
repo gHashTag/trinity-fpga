@@ -37,7 +37,7 @@ pub fn runProcessAndCapture(allocator: std.mem.Allocator, argv: []const []const 
 pub fn runProcessInherit(allocator: std.mem.Allocator, argv: []const []const u8) !u8 {
     _ = allocator;
     const io = tri_io.get();
-    var child = try std.process.spawn(io, .{
+    var child = try tri_proc.spawn(io, .{
         .argv = argv,
         .stdout = .inherit,
         .stderr = .inherit,

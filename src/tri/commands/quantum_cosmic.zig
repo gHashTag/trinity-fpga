@@ -6,6 +6,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_proc = @import("tri_proc");
 const tri_env = @import("tri_env");
 const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
@@ -442,7 +443,7 @@ pub fn runInstallCommand(allocator: std.mem.Allocator) void {
     std.debug.print("{s}[3/4]{s} Building: zig build -Dtarget=native\n", .{ CYAN, RESET });
 
     const io = tri_io.get();
-    var child = std.process.spawn(io, .{
+    var child = tri_proc.spawn(io, .{
         .argv = &.{ "zig", "build", "-Dtarget=native" },
         .cwd = .{ .path = root },
     }) catch {
@@ -499,7 +500,7 @@ pub fn runBuildCommand(allocator: std.mem.Allocator) void {
     std.debug.print("{s}[BUILD]{s} Running: zig build -Dtarget=native\n\n", .{ CYAN, RESET });
 
     const io = tri_io.get();
-    var child = std.process.spawn(io, .{
+    var child = tri_proc.spawn(io, .{
         .argv = &.{ "zig", "build", "-Dtarget=native" },
         .cwd = .{ .path = root },
     }) catch {
@@ -619,7 +620,7 @@ pub fn runFpgaDemoCommand(allocator: std.mem.Allocator, cmd_args: []const []cons
     // Check yosys
     std.debug.print("{s}[2/5]{s} Checking prerequisites...\n", .{ CYAN, RESET });
     const io = tri_io.get();
-    var yosys_check = std.process.spawn(io, .{
+    var yosys_check = tri_proc.spawn(io, .{
         .argv = &.{ "which", "yosys" },
         .stdout = .inherit,
         .stderr = .inherit,
@@ -656,7 +657,7 @@ pub fn runFpgaDemoCommand(allocator: std.mem.Allocator, cmd_args: []const []cons
     var yosys_cmd_buf: [512]u8 = undefined;
     const yosys_cmd = std.fmt.bufPrint(&yosys_cmd_buf, "synth_xilinx -flatten -abc9 -arch xc7 -top {s}; write_json {s}", .{ top_module, json_out }) catch return;
 
-    var yosys = std.process.spawn(io, .{
+    var yosys = tri_proc.spawn(io, .{
         .argv = &.{ "yosys", "-p", yosys_cmd, verilog_file },
     }) catch {
         std.debug.print("{s}Yosys failed{s}\n", .{ RED, RESET });
@@ -680,7 +681,7 @@ pub fn runFpgaDemoCommand(allocator: std.mem.Allocator, cmd_args: []const []cons
     var bit_buf: [256]u8 = undefined;
     const bit_out = std.fmt.bufPrint(&bit_buf, "/tmp/{s}.bit", .{top_module}) catch return;
 
-    var forge = std.process.spawn(io, .{
+    var forge = tri_proc.spawn(io, .{
         .argv = &.{
             forge_bin,       "run",
             "--input",       json_out,

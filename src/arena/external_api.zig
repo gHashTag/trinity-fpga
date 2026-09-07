@@ -96,7 +96,7 @@ fn callTrinity(allocator: Allocator, prompt: []const u8, start_ms: i64) !Complet
         "--max-tokens",
         "200",
     };
-    var child = try std.process.spawn(tri_io.get(), .{
+    var child = try tri_proc.spawn(tri_io.get(), .{
         .argv = &argv,
         .stdout = .pipe,
         .stderr = .pipe,

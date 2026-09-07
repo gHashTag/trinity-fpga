@@ -21,6 +21,7 @@
 
 const std = @import("std");
 
+const tri_proc = @import("tri_proc");
 const c_cwd = struct {
     extern "c" fn getcwd(buf: [*]u8, size: usize) ?[*:0]u8;
 };
@@ -779,7 +780,7 @@ pub const Job = struct {
         // fact no longer compiles, and for cwd it was always a latent bug:
         // the process has already started by then.
         const child_cwd = options.working_dir orelse work_dir;
-        var child = try std.process.spawn(tri_io.get(), .{
+        var child = try tri_proc.spawn(tri_io.get(), .{
             .argv = &.{ "sh", "-c", cmd_str },
             .stdin = .ignore,
             .stdout = .inherit,

@@ -70,6 +70,7 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
         .imports = &.{
+            .{ .name = "tri_env", .module = tri_env_mod },
             .{ .name = "tri_io", .module = tri_io_mod },
         },
     });

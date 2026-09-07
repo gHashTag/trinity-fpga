@@ -284,7 +284,7 @@ fn spawnGroup(allocator: Allocator, dag: *PipelineDAG, job_indices: []const u8) 
             argc += 1;
         }
 
-        const child = std.process.spawn(io, .{
+        const child = tri_proc.spawn(io, .{
             .argv = argv_buf[0..argc],
             .stdin = .ignore,
             .stdout = .pipe,

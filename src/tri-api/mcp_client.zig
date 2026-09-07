@@ -2,6 +2,7 @@
 // Spawns MCP servers as subprocesses, communicates via JSON-RPC 2.0 over stdio.
 // Issue #66: Phase 7B MCP Client
 const std = @import("std");
+const tri_proc = @import("tri_proc");
 const tri_io = @import("tri_io");
 const proto = @import("tool_protocol.zig");
 
@@ -53,7 +54,7 @@ pub const McpManager = struct {
     pub fn connectServer(self: *McpManager, name: []const u8, command: []const []const u8) u32 {
         if (command.len == 0) return 0;
 
-        var child = try std.process.spawn(tri_io.get(), .{
+        var child = try tri_proc.spawn(tri_io.get(), .{
             .argv = command,
             .stdout = .inherit,
             .stderr = .inherit,

@@ -13,6 +13,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_proc = @import("tri_proc");
 const tri_io = @import("tri_io");
 const Allocator = std.mem.Allocator;
 const cell_parser = @import("ribosome.zig");
@@ -366,7 +367,7 @@ pub fn executeCellCommand(allocator: Allocator, cmd: CellCommand, args: []const 
     // 0.16 replaced `Child.init` + `spawn` with `process.spawn`, and its
     // stdio defaults are already `.inherit` -- the three assignments above
     // were setting what is now the default.
-    var child = try std.process.spawn(io, .{ .argv = argv.items });
+    var child = try tri_proc.spawn(io, .{ .argv = argv.items });
     const term = try child.wait(io);
     if (term.exited != 0) {
         std.process.exit(term.exited);

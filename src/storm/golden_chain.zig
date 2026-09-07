@@ -6,6 +6,7 @@
 
 const std = @import("std");
 
+const tri_proc = @import("tri_proc");
 const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 // P10: Import real link modules
@@ -285,7 +286,7 @@ pub const GoldenChain = struct {
             // Fallback: direct execution
             const io = tri_io.get();
             const start_time = tri_time.nanoTimestamp();
-            var child = try std.process.spawn(io, .{ .argv = cmd.argv });
+            var child = try tri_proc.spawn(io, .{ .argv = cmd.argv });
 
             const wait_result = child.wait(io) catch |err| {
                 return .{

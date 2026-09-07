@@ -7,6 +7,7 @@
 
 const std = @import("std");
 
+const tri_proc = @import("tri_proc");
 const tri_io = @import("tri_io");
 const tri_env = @import("tri_env");
 pub const ZhipuProvider = struct {
@@ -68,7 +69,7 @@ pub const ZhipuProvider = struct {
             json_body.items,
         };
 
-        var child = try std.process.spawn(tri_io.get(), .{
+        var child = try tri_proc.spawn(tri_io.get(), .{
             .argv = &argv,
             .stdout = .pipe,
             .stderr = .pipe,

@@ -4,6 +4,7 @@
 
 const std = @import("std");
 
+const tri_proc = @import("tri_proc");
 const tri_io = @import("tri_io");
 // Import Railway API module (in src/tri/railway_api.zig)
 const railway_api = @import("railway_api.zig");
@@ -80,7 +81,7 @@ pub fn runRailwayBuildCommand(allocator: std.mem.Allocator, args: []const []cons
     }
 
     // Execute railway CLI via child process
-    var child = try std.process.spawn(tri_io.get(), .{
+    var child = try tri_proc.spawn(tri_io.get(), .{
         .argv = argv.items,
         .stdout = .inherit,
         .stderr = .inherit,

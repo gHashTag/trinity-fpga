@@ -19,6 +19,7 @@
 // =============================================================================
 
 const std = @import("std");
+const tri_proc = @import("tri_proc");
 const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 const golden_chain = @import("dna_polymerase.zig");
@@ -137,9 +138,9 @@ pub fn detectRoleFromLabels(labels: []const []const u8) ?AgentRole {
 
 /// Run a subprocess, print status, return true if exit code == 0.
 fn runSubprocess(allocator: std.mem.Allocator, argv: []const []const u8, desc: []const u8, step: []const u8) bool {
-    _ = allocator; // 0.16: std.process.spawn takes no allocator
+    _ = allocator; // 0.16: tri_proc.spawn resolves PATH itself
     std.debug.print("  [{s}] {s} ... ", .{ step, desc });
-    var child = try std.process.spawn(tri_io.get(), .{
+    var child = try tri_proc.spawn(tri_io.get(), .{
         .argv = argv,
         .stdout = .ignore,
         .stderr = .ignore,

@@ -62,7 +62,7 @@ pub const SerialPort = struct {
         // Configure 115200 8-N-1 raw via stty (portable macOS + Linux)
         const stty_flag = comptime if (@import("builtin").os.tag == .macos) "-f" else "-F";
         const stty_io = tri_io.get();
-        var child = std.process.spawn(stty_io, .{
+        var child = tri_proc.spawn(stty_io, .{
             .argv = &.{
                 "stty",    stty_flag, path,    "115200", "cs8",    "-cstopb",
                 "-parenb", "raw",     "-echo", "-echoe", "-echok", "min",
@@ -429,7 +429,7 @@ const DIM = "\x1b[2m";
 fn runCmd(allocator: std.mem.Allocator, argv: []const []const u8, verbose: bool) !bool {
     _ = allocator;
     const io = tri_io.get();
-    var child = try std.process.spawn(io, .{
+    var child = try tri_proc.spawn(io, .{
         .argv = argv,
         .stdout = if (verbose) .inherit else .ignore,
         .stderr = if (verbose) .inherit else .ignore,
@@ -786,7 +786,7 @@ pub fn runFpgaFlashCommand(allocator: std.mem.Allocator, args: []const []const u
     // Use openFPGALoader directly (no jtag_program wrapper)
     std.debug.print("  Programming via openFPGALoader...\n\n", .{});
 
-    var child = try std.process.spawn(io, .{
+    var child = try tri_proc.spawn(io, .{
         .argv = &[_][]const u8{ "sudo", JTAG_PROGRAM, bit_path },
         .stdout = .inherit,
         .stderr = .inherit,
@@ -1442,7 +1442,7 @@ pub fn runFpgaReadCommand(allocator: std.mem.Allocator, args: []const []const u8
     std.debug.print("\n\n", .{});
 
     const io = tri_io.get();
-    var child = try std.process.spawn(io, .{
+    var child = try tri_proc.spawn(io, .{
         .argv = argv_buf[0..argv_len],
         .stdout = .inherit,
         .stderr = .inherit,

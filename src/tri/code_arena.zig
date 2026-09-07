@@ -351,7 +351,7 @@ fn spawnContestant(allocator: Allocator, contestant: Contestant, task: []const u
     };
 
     const io = tri_io.get();
-    var child = std.process.spawn(io, .{
+    var child = tri_proc.spawn(io, .{
         .argv = argv,
         .stdout = .ignore,
         .stderr = .ignore,
@@ -470,7 +470,7 @@ fn getCurrentBranch(allocator: Allocator) ?[]const u8 {
 pub fn runGitCommand(allocator: Allocator, argv: []const []const u8) bool {
     _ = allocator;
     const io = tri_io.get();
-    var child = std.process.spawn(io, .{
+    var child = tri_proc.spawn(io, .{
         .argv = argv,
         .stdout = .ignore,
         .stderr = .ignore,
@@ -485,7 +485,7 @@ pub fn runGitCommand(allocator: Allocator, argv: []const []const u8) bool {
 fn runCheck(allocator: Allocator, argv: []const []const u8) bool {
     _ = allocator;
     const io = tri_io.get();
-    var child = std.process.spawn(io, .{
+    var child = tri_proc.spawn(io, .{
         .argv = argv,
         .stdout = .ignore,
         .stderr = .ignore,

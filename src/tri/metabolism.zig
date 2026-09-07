@@ -16,6 +16,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_proc = @import("tri_proc");
 const tri_env = @import("tri_env");
 const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
@@ -200,7 +201,7 @@ fn runLocalStart(allocator: std.mem.Allocator, args: []const []const u8) !void {
 
     // Execute via child process
     const io = tri_io.get();
-    var child = std.process.spawn(io, .{
+    var child = tri_proc.spawn(io, .{
         .argv = &.{ "/bin/sh", "-c", cmd },
         .stdin = .inherit,
         .stdout = .inherit,

@@ -3881,7 +3881,7 @@ fn postToIssue(allocator: Allocator, issue_num: []const u8, state: *const Evolut
         .max_output_bytes = 4096,
     }) catch {
         // Fallback: gh with --repo
-        var child = std.process.spawn(tmp_io, .{
+        var child = tri_proc.spawn(tmp_io, .{
             .argv = &.{ "gh", "issue", "comment", issue_num, "--repo", "gHashTag/trinity", "-F", tmp_path },
         }) catch {
             print("  {s}\xe2\x9a\xa0\xef\xb8\x8f  Failed to post to issue #{s}{s}\n", .{ YELLOW, issue_num, RESET });
@@ -4274,7 +4274,7 @@ fn runDeploy(allocator: Allocator, args: []const []const u8) !void {
     if (!skip_ci) {
         print("  {s}🔧 Running CI gate (zig build test)...{s}\n", .{ DIM, RESET });
         const ci_argv = [_][]const u8{ "zig", "build", "test" };
-        var child = std.process.spawn(tri_io.get(), .{
+        var child = tri_proc.spawn(tri_io.get(), .{
             .argv = &ci_argv,
             .stdout = .ignore,
             .stderr = .ignore,
@@ -4333,7 +4333,7 @@ fn runDeploy(allocator: Allocator, args: []const []const u8) !void {
 
         const gh_argv = [_][]const u8{ "gh", "issue", "comment", num_str, "--body", body };
         const gh_io = tri_io.get();
-        if (std.process.spawn(gh_io, .{
+        if (tri_proc.spawn(gh_io, .{
             .argv = &gh_argv,
             .stdout = .ignore,
             .stderr = .ignore,
@@ -5697,7 +5697,7 @@ fn postAbToIssue(
 
     const gh_argv = [_][]const u8{ "gh", "issue", "comment", num_str, "--body", body_buf[0..pos] };
     const gh_io = tri_io.get();
-    var gh_child = std.process.spawn(gh_io, .{
+    var gh_child = tri_proc.spawn(gh_io, .{
         .argv = &gh_argv,
         .stdout = .ignore,
         .stderr = .ignore,

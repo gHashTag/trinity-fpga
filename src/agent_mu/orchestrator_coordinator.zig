@@ -10,6 +10,7 @@
 
 const std = @import("std");
 
+const tri_proc = @import("tri_proc");
 const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
 // S³AI Brain Regions (Neuroanatomy v5.1)
@@ -677,7 +678,7 @@ pub const OrchestratorCoordinator = struct {
         const start_time = tri_time.nanoTimestamp();
 
         // Run command
-        var child = try std.process.spawn(tri_io.get(), .{
+        var child = try tri_proc.spawn(tri_io.get(), .{
             .argv = argv,
             .stdout = .pipe,
             .stderr = .pipe,

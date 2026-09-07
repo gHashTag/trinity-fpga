@@ -850,12 +850,12 @@ fn retryParseTestCounts(output: []const u8, result: *RetryIterationResult) void 
 }
 
 fn retryCommentOnIssue(allocator: Allocator, issue: u32, iteration: u32, max_iter: u32) void {
-    _ = allocator; // 0.16: std.process.spawn takes no allocator
+    _ = allocator; // 0.16: tri_proc.spawn resolves PATH itself
     var body_buf: [256]u8 = undefined;
     const body = std.fmt.bufPrint(&body_buf, "🔄 **[LOOP RETRY]** Iteration {d}/{d}", .{ iteration, max_iter }) catch return;
     var issue_buf: [16]u8 = undefined;
     const issue_str = std.fmt.bufPrint(&issue_buf, "{d}", .{issue}) catch return;
-    var child = std.process.spawn(tri_io.get(), .{
+    var child = tri_proc.spawn(tri_io.get(), .{
         .argv = &.{ "gh", "issue", "comment", issue_str, "--body", body },
         .stdout = .ignore,
         .stderr = .ignore,
@@ -864,7 +864,7 @@ fn retryCommentOnIssue(allocator: Allocator, issue: u32, iteration: u32, max_ite
 }
 
 fn retryCommentFinal(allocator: Allocator, issue: u32, verdict: RetryVerdict, iterations: u32, result: RetryIterationResult) void {
-    _ = allocator; // 0.16: std.process.spawn takes no allocator
+    _ = allocator; // 0.16: tri_proc.spawn resolves PATH itself
     const emoji: []const u8 = if (verdict == .pass) "✅" else "❌";
     var body_buf: [512]u8 = undefined;
     const body = std.fmt.bufPrint(&body_buf, "{s} **[LOOP RETRY COMPLETE]** {s} after {d} iterations (tests: {d}/{d}, rate: {d:.0}%)", .{
@@ -877,7 +877,7 @@ fn retryCommentFinal(allocator: Allocator, issue: u32, verdict: RetryVerdict, it
     }) catch return;
     var issue_buf: [16]u8 = undefined;
     const issue_str = std.fmt.bufPrint(&issue_buf, "{d}", .{issue}) catch return;
-    var child = std.process.spawn(tri_io.get(), .{
+    var child = tri_proc.spawn(tri_io.get(), .{
         .argv = &.{ "gh", "issue", "comment", issue_str, "--body", body },
         .stdout = .ignore,
         .stderr = .ignore,
