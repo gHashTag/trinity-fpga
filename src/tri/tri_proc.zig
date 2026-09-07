@@ -78,9 +78,15 @@ pub fn resolveProgram(gpa: std.mem.Allocator, name: []const u8) !?[]u8 {
         const candidate = try std.fs.path.join(gpa, &.{ dir, name });
         errdefer gpa.free(candidate);
         // X_OK is not expressible through Io.Dir.access, so ask libc directly.
+        //
+        // The kind check is NOT redundant: access(X_OK) answers TRUE for a
+        // DIRECTORY, because the execute bit there means "traversable". A
+        // directory named `sh` on PATH would otherwise be returned as the
+        // program, and the spawn would fail later with a confusing error far
+        // from the cause. Found by a test, not by reading this.
         const cz = try gpa.dupeZ(u8, candidate);
         defer gpa.free(cz);
-        if (c_access.access(cz.ptr, 1) == 0) return candidate; // 1 == X_OK
+        if (c_access.access(cz.ptr, 1) == 0 and isRegularFile(candidate)) return candidate; // 1 == X_OK
         gpa.free(candidate);
     }
     return null;
@@ -89,6 +95,17 @@ pub fn resolveProgram(gpa: std.mem.Allocator, name: []const u8) !?[]u8 {
 const c_access = struct {
     extern "c" fn access(path: [*:0]const u8, mode: c_int) c_int;
 };
+
+/// True when the path is a regular file rather than a directory.
+///
+/// std.c.stat does not resolve on macOS (the symbol is versioned), so this
+/// goes through the migrated Io API instead. The ambient Io is acceptable
+/// here: resolveProgram takes no io, and adding one would change the
+/// signature of every caller for a stat.
+fn isRegularFile(path: []const u8) bool {
+    const st = std.Io.Dir.cwd().statFile(tri_io.get(), path, .{}) catch return false;
+    return st.kind == .file;
+}
 
 /// Copies `argv` with argv[0] replaced by its resolved absolute path.
 /// Caller frees the returned slice and its first element.
@@ -273,3 +290,108 @@ test "run executes a bare program name" {
     try std.testing.expectEqualStrings("trinity", res.stdout);
     try std.testing.expectEqual(@as(u8, 0), res.term.exited);
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PATH resolution edge cases (#764)
+// ═══════════════════════════════════════════════════════════════════════════════
+//
+// resolveProgram is the reason every subprocess in this tree still works after
+// 0.16 removed PATH lookup from spawn and run. It was tested against `sh` and
+// nothing else, which covers the happy path and none of the ways a PATH entry
+// can be strange.
+
+test "resolveProgram skips a PATH entry that is not a directory" {
+    const gpa = std.testing.allocator;
+    const io = tri_io.get();
+
+    // A regular FILE on PATH. access(X_OK) on `<file>/sh` gives ENOTDIR, which
+    // must be skipped like any other miss rather than aborting the search.
+    const bogus = "/tmp/tri_path_not_a_dir";
+    {
+        var f = try std.Io.Dir.cwd().createFile(io, bogus, .{});
+        f.close(io);
+    }
+    defer std.Io.Dir.cwd().deleteFile(io, bogus) catch {};
+
+    const real = tri_env.getPosix("PATH") orelse return error.NoPath;
+    const saved = try gpa.dupeZ(u8, real);
+    defer gpa.free(saved);
+    const patched = try std.fmt.allocPrintSentinel(gpa, "{s}:{s}", .{ bogus, real }, 0);
+    defer gpa.free(patched);
+    _ = c_env.setenv("PATH", patched.ptr, 1);
+    defer _ = c_env.setenv("PATH", saved.ptr, 1);
+
+    const found = (try resolveProgram(gpa, "sh")).?;
+    defer gpa.free(found);
+    try std.testing.expect(std.mem.endsWith(u8, found, "/sh"));
+}
+
+test "resolveProgram skips a directory that merely shares the program's name" {
+    const gpa = std.testing.allocator;
+    const io = tri_io.get();
+
+    // access(X_OK) answers TRUE for a directory -- the execute bit means
+    // "traversable" there. Without a kind check this returns a path that
+    // cannot be executed, and the spawn fails later with a confusing error.
+    const dir = "/tmp/tri_path_dir_trap";
+    const trap = "/tmp/tri_path_dir_trap/sh";
+    try std.Io.Dir.cwd().createDirPath(io, trap);
+    defer std.Io.Dir.cwd().deleteTree(io, dir) catch {};
+
+    const real = tri_env.getPosix("PATH") orelse return error.NoPath;
+    const saved = try gpa.dupeZ(u8, real);
+    defer gpa.free(saved);
+    const patched = try std.fmt.allocPrintSentinel(gpa, "{s}:{s}", .{ dir, real }, 0);
+    defer gpa.free(patched);
+    _ = c_env.setenv("PATH", patched.ptr, 1);
+    defer _ = c_env.setenv("PATH", saved.ptr, 1);
+
+    const found = (try resolveProgram(gpa, "sh")).?;
+    defer gpa.free(found);
+    // The directory must NOT win, even though it is first on PATH.
+    try std.testing.expect(!std.mem.startsWith(u8, found, dir));
+
+    // And the resolved path must actually run.
+    const res = try run(.{ .allocator = gpa, .argv = &.{ "sh", "-c", "printf ok" } });
+    defer gpa.free(res.stdout);
+    defer gpa.free(res.stderr);
+    try std.testing.expectEqualStrings("ok", res.stdout);
+}
+
+test "resolveProgram returns null rather than searching when PATH is empty" {
+    const gpa = std.testing.allocator;
+    const real = tri_env.getPosix("PATH") orelse return error.NoPath;
+    const saved = try gpa.dupeZ(u8, real);
+    defer gpa.free(saved);
+
+    _ = c_env.setenv("PATH", "", 1);
+    defer _ = c_env.setenv("PATH", saved.ptr, 1);
+
+    try std.testing.expect(try resolveProgram(gpa, "sh") == null);
+    // An absolute path still works: it is not a PATH lookup at all.
+    const abs = (try resolveProgram(gpa, "/bin/sh")).?;
+    defer gpa.free(abs);
+    try std.testing.expectEqualStrings("/bin/sh", abs);
+}
+
+test "resolveProgram ignores empty PATH segments" {
+    // "::" and a trailing colon are legal and historically mean "the current
+    // directory" -- which is exactly what a program lookup must NOT honour.
+    const gpa = std.testing.allocator;
+    const real = tri_env.getPosix("PATH") orelse return error.NoPath;
+    const saved = try gpa.dupeZ(u8, real);
+    defer gpa.free(saved);
+
+    const patched = try std.fmt.allocPrintSentinel(gpa, "::{s}:", .{real}, 0);
+    defer gpa.free(patched);
+    _ = c_env.setenv("PATH", patched.ptr, 1);
+    defer _ = c_env.setenv("PATH", saved.ptr, 1);
+
+    const found = (try resolveProgram(gpa, "sh")).?;
+    defer gpa.free(found);
+    try std.testing.expect(found[0] == '/');
+}
+
+const c_env = struct {
+    extern "c" fn setenv(name: [*:0]const u8, value: [*:0]const u8, overwrite: c_int) c_int;
+};
