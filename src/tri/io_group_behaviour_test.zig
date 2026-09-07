@@ -66,26 +66,43 @@ test "Io.Group.await waits for every worker before the collection loop reads" {
 }
 
 test "Io.Group runs the workers concurrently, not one after another" {
-    // If the group serialised, eight 20ms sleeps would take ~160ms. This is
-    // the property the migration was supposed to preserve -- a Group that
-    // silently ran sequentially would pass the test above and still be a
-    // regression.
+    // A Group that silently ran its tasks in sequence would pass the test
+    // above and still be a regression, so concurrency needs its own check.
+    //
+    // The first version of this compared against an ABSOLUTE threshold --
+    // "eight 20ms sleeps in under 120ms" -- and it flaked on main within
+    // minutes: the run that tripped it was the first after a full rebuild,
+    // with the machine loaded. A wall-clock budget measures the machine as
+    // much as the code.
+    //
+    // This measures a SERIAL BASELINE in the same run instead, so both halves
+    // absorb the same load and the ratio is what is asserted. Eight concurrent
+    // workers must beat four serial ones; on a serialised Group they would
+    // take twice as long.
     const io = tri_io.get();
 
-    var slots: [8]GroupProbe.Slot = undefined;
-    for (&slots, 0..) |*s, i| s.* = .{ .index = i };
+    var one: [1]GroupProbe.Slot = .{.{ .index = 0 }};
+    var serial = try tri_time.Timer.start();
+    var i: usize = 0;
+    while (i < 4) : (i += 1) GroupProbe.work(&one[0]);
+    const serial_ns = serial.read();
 
-    var timer = try tri_time.Timer.start();
+    var slots: [8]GroupProbe.Slot = undefined;
+    for (&slots, 0..) |*s, k| s.* = .{ .index = k };
+
+    var concurrent = try tri_time.Timer.start();
     var group: std.Io.Group = .init;
     defer group.cancel(io);
     for (&slots) |*s| group.async(io, GroupProbe.work, .{s});
     group.await(io) catch {};
-    const elapsed_ms = timer.read() / std.time.ns_per_ms;
+    const concurrent_ns = concurrent.read();
 
     for (&slots) |*s| try std.testing.expect(s.ran);
-    // Generous: serial would be ~160ms, concurrent ~20-40ms. 120 leaves room
-    // for a loaded machine without admitting a serial run.
-    try std.testing.expect(elapsed_ms < 120);
+
+    // Twice the work in less time than the serial baseline. A sequential
+    // Group would need roughly 2x the baseline, so this cannot pass by luck
+    // however slow the machine is.
+    try std.testing.expect(concurrent_ns < serial_ns);
 }
 
 test "an empty Io.Group awaits immediately rather than hanging" {
