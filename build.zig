@@ -3481,6 +3481,24 @@ pub fn build(b: *std.Build) void {
     const hslm_f16_tests_step = b.step("test-hslm-f16", "Run HSLM F16 Utils Tests");
     hslm_f16_tests_step.dependOn(&run_hslm_f16_tests.step);
 
+    // `test-hslm` — the step .github/workflows/brain-ci.yml asks for in its
+    // brain-unit matrix (region: hslm). It runs over the zig-hslm library
+    // root so that any future file added to root.zig is covered too.
+    // root.zig itself declares no tests; it references f16_utils so that
+    // file's 16 tests are collected. Verified non-vacuous: `zig test` over
+    // this root reports 17 tests, and dropping the reference drops it to 0.
+    const hslm_tests_mod = b.createModule(.{
+        .root_source_file = b.path("external/zig-hslm/src/root.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    const hslm_tests = b.addTest(.{
+        .root_module = hslm_tests_mod,
+    });
+    const run_hslm_tests = b.addRunArtifact(hslm_tests);
+    const hslm_tests_step = b.step("test-hslm", "Run HSLM Numerical Library Tests");
+    hslm_tests_step.dependOn(&run_hslm_tests.step);
+
     // Intraparietal Sulcus (Numerical Layer) tests
     const intraparietal_tests = b.addTest(.{
         .root_module = intraparietal_mod,
