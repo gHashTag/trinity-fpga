@@ -40,7 +40,7 @@ Three layers:
 
 1. **Specification Layer** (specs/sym/): sota_tech_report, agent_task_integration, project_summary
 2. **Implementation Layer** (src/sota_report_demo.zig): 10 empirical validation functions
-3. **Reporting Layer** (docsite/docs/research/): This report + empirical log
+3. **Reporting Layer** (docs/docs/research/): This report + empirical log
 
 ### Validation Categories
 

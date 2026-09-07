@@ -36,8 +36,10 @@ fn selfExePathAlloc(gpa: std.mem.Allocator) ![]u8 {
             return gpa.dupe(u8, std.mem.sliceTo(&buf, 0));
         },
         else => {
+            // readLink returns the byte COUNT, not a slice. This branch is
+            // comptime-dead on macOS, so nothing analysed it until Linux CI did.
             const n = try std.Io.Dir.cwd().readLink(tri_io.get(), "/proc/self/exe", &buf);
-            return gpa.dupe(u8, n);
+            return gpa.dupe(u8, buf[0..n]);
         },
     }
 }

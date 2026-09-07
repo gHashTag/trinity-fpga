@@ -181,7 +181,7 @@ Environment key detection for provider availability.
 | `specs/tri/hdc_igla_hybrid_v2_0.vibee` | NEW | 311 lines — single source of truth |
 | `generated/hdc_igla_hybrid_v2_0.zig` | GENERATED | ~200 lines — type scaffolding from VIBEE |
 | `src/vibeec/igla_hybrid_chat.zig` | MODIFIED | +500 lines — v2.0 types, memory, routing, health, wave state, tests |
-| `docsite/docs/research/trinity-hybrid-v2.0-report.md` | NEW | This report |
+| `docs/docs/research/trinity-hybrid-v2.0-report.md` | NEW | This report |
 | `docsite/sidebars.ts` | MODIFIED | +1 line — report entry |
 
 ## Critical Assessment (Link 7: Verdict)

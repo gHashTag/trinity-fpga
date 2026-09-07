@@ -431,7 +431,7 @@ The E8 Lie group is a **beautiful mathematical structure** with deep connections
 **Document Version:** 1.0
 **Last Updated:** 2026-03-07
 **Next Phase:** Final Verdict (Phase 4)
-**Repository:** `/Users/playom/trinity-fpga/docs/research/delta_001_phase3_e8.md`
+**Repository:** `docs/docs/research/delta_001_phase3_e8.md`
 
 ---
 

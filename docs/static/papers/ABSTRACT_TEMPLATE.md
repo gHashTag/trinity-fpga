@@ -120,4 +120,4 @@ A framework that honestly reports its failures is more credible than one that hi
 
 **Document Version:** 1.1
 **Date:** March 7, 2026 (Electroweak Core Complete — 13 smoking guns)
-**Repository:** `/Users/playom/trinity-fpga/docs/papers/ABSTRACT_TEMPLATE.md`
+**Repository:** `docs/static/papers/ABSTRACT_TEMPLATE.md`

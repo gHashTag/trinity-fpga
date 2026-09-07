@@ -104,7 +104,7 @@ FIX C: Canvas Wave State Integration
 | `src/tvc/tvc_corpus.zig` | MODIFIED | +18 lines — initHeap(), initHeapWithNodeId(), deinitHeap() |
 | `src/vibeec/igla_hybrid_chat.zig` | MODIFIED | +80 lines — health wiring in llmCascade(), v2.1 header, 4 tests |
 | `src/vsa/photon_trinity_canvas.zig` | MODIFIED | +20 lines — wave state ring modulation, memory ring, learning glow |
-| `docsite/docs/research/trinity-hybrid-v2.1-report.md` | NEW | This report |
+| `docs/docs/research/trinity-hybrid-v2.1-report.md` | NEW | This report |
 | `docsite/sidebars.ts` | MODIFIED | +1 line — report entry |
 
 ## Critical Assessment (Link 7: Verdict)

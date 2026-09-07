@@ -310,7 +310,7 @@ All 6 tests passed.
 **Document Version:** 1.0
 **Last Updated:** 2026-03-07
 **Next Review:** After Phase 2 completion (Higher Spins)
-**Repository:** `/Users/playom/trinity-fpga/docs/research/delta_001_phase1_foundations.md`
+**Repository:** `docs/docs/research/delta_001_phase1_foundations.md`
 
 ---
 

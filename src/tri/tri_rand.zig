@@ -11,9 +11,11 @@
 // HNSW level. They want "some good-quality randomness", not a specific
 // generator, and none of them is in a position to carry a seed.
 //
-// So: a lazily seeded ChaCha CSPRNG, seeded from libc `arc4random_buf` -- the
-// system entropy source on both macOS and Linux, and the same thing the
-// removed stdlib global used underneath.
+// So: a lazily seeded ChaCha CSPRNG, seeded from the system entropy source --
+// `arc4random_buf` where the target has it, `/dev/urandom` otherwise. That
+// split is not decoration: on Linux std.c.arc4random_buf is gated behind
+// glibc >= 2.36 and resolves to `void` below it, which is a COMPILE error at
+// the call rather than a runtime fallback. See systemEntropy.
 //
 // The one shape change at the call site is a pair of parentheses:
 // `std.crypto.random.float(f64)` becomes `tri_rand.random().float(f64)`.
@@ -43,6 +45,44 @@ pub fn random() std.Random {
     return g_csprng.random();
 }
 
+/// Fills `dest` from the system entropy source.
+///
+/// `std.c.arc4random_buf` is NOT portable the way it looks: on Linux it is
+/// gated behind glibc >= 2.36, and resolves to `void` otherwise -- which is a
+/// compile error at the call, not a runtime fallback. Cross-compiling to
+/// x86_64-linux-gnu is what surfaced it; everything here had been measured on
+/// macOS, where the symbol always exists.
+///
+/// So: use it when the target actually has it, and read /dev/urandom when it
+/// does not. The latter needs no version gate and exists on every POSIX system
+/// this runs on.
+fn systemEntropy(dest: []u8) void {
+    if (@TypeOf(std.c.arc4random_buf) != void) {
+        std.c.arc4random_buf(dest.ptr, dest.len);
+        return;
+    }
+    const fd = c_rand.open("/dev/urandom", 0, 0);
+    if (fd >= 0) {
+        defer _ = c_rand.close(fd);
+        var off: usize = 0;
+        while (off < dest.len) {
+            const n = c_rand.read(fd, dest[off..].ptr, dest.len - off);
+            if (n <= 0) break;
+            off += @intCast(n);
+        }
+        if (off == dest.len) return;
+    }
+    // Entropy is unavailable. Rather than seed from a constant and look
+    // random, make the degradation visible.
+    @panic("tri_rand: no system entropy source (arc4random_buf absent and /dev/urandom unreadable)");
+}
+
+const c_rand = struct {
+    extern "c" fn open(path: [*:0]const u8, flags: c_int, mode: c_uint) c_int;
+    extern "c" fn read(fd: c_int, buf: [*]u8, n: usize) isize;
+    extern "c" fn close(fd: c_int) c_int;
+};
+
 fn seed() void {
     while (g_lock.cmpxchgWeak(false, true, .acquire, .monotonic) != null) {
         std.atomic.spinLoopHint();
@@ -53,7 +93,7 @@ fn seed() void {
     if (@atomicLoad(bool, &g_ready, .acquire)) return;
 
     var s: [std.Random.DefaultCsprng.secret_seed_length]u8 = undefined;
-    std.c.arc4random_buf(&s, s.len);
+    systemEntropy(&s);
     g_csprng = std.Random.DefaultCsprng.init(s);
     @atomicStore(bool, &g_ready, true, .release);
 }

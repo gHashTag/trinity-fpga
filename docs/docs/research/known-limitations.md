@@ -147,9 +147,9 @@ TRINITY successfully predicts G, t_present, τ_memory, and cosmological paramete
 ## Related Documents
 
 - **ALPHA-002 Screening**: `docs/internal/alpha_002_screening.md`
-- **Trust Scale**: `docs/research/trinity_trust_scale.md`
+- **Trust Scale**: `docs/docs/research/trinity_trust_scale.md`
 - **Status Hierarchy**: `docs/internal/trinity_status_hierarchy.md`
-- **Three Layers of Time**: `docs/research/three-layers-of-time.md`
+- **Three Layers of Time**: `docs/docs/research/three-layers-of-time.md`
 
 ---
 
