@@ -4065,6 +4065,38 @@ pub fn build(b: *std.Build) void {
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
+    // tri-smoke — run every tri command against a scratch tree (#763)
+    // ═══════════════════════════════════════════════════════════════════════════
+    //
+    // `tri` builds and 108 commands enumerate; before this, six had ever been
+    // EXECUTED. The rest were run with --help only, because running them for
+    // real would push commits, spawn cloud agents, or spend tokens. This runs
+    // them in a sandbox that makes all three impossible, so a clean build can
+    // finally be told apart from working software.
+    const cmd_smoke = b.addExecutable(.{
+        .name = "tri-smoke",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("tools/cmd_smoke.zig"),
+            .target = target,
+            .optimize = optimize,
+            .link_libc = true,
+            .imports = &.{
+                .{ .name = "tri_time", .module = tri_time_mod },
+                .{ .name = "tri_env", .module = tri_env_mod },
+            },
+        }),
+    });
+    b.installArtifact(cmd_smoke);
+
+    const run_cmd_smoke = b.addRunArtifact(cmd_smoke);
+    // It shells out to zig-out/bin/tri, so that one binary has to exist --
+    // NOT the whole install step, which drags in the raylib GUI targets and
+    // fails anywhere without the system library.
+    run_cmd_smoke.step.dependOn(tri_compile_step);
+    const smoke_step = b.step("smoke", "Run every tri command in a sandbox (#763)");
+    smoke_step.dependOn(&run_cmd_smoke.step);
+
+    // ═══════════════════════════════════════════════════════════════════════════
     // tri-github-collab — OAuth + webhook backend for the Spec Explorer
     //
     // Declared here rather than only in deploy/Dockerfile.github-collab: the
