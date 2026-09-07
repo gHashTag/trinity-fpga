@@ -174,7 +174,7 @@ pub const Environment = struct {
     }
 
     pub fn deinit(self: *Environment) void {
-        self.values.deinit(allocator);
+        self.values.deinit(self.allocator);
     }
 
     pub fn define(self: *Environment, name: []const u8, value: Value) !void {
@@ -235,20 +235,20 @@ pub const Interpreter = struct {
     }
 
     pub fn deinit(self: *Interpreter) void {
-        self.output.deinit(allocator);
+        self.output.deinit(self.allocator);
         // Deinit HashMap BEFORE arena to avoid use-after-free
         // HashMap.deinit(allocator) only frees internal buckets, not values
-        self.global.values.deinit(allocator);
-        self.arena.deinit(allocator);
+        self.global.values.deinit(self.allocator);
+        self.arena.deinit(self.allocator);
     }
 
     /// Reset interpreter state (for REPL)
     pub fn reset(self: *Interpreter) void {
         // Free HashMap first, then arena
-        self.global.deinit(allocator);
-        self.arena.deinit(allocator);
-        self.arena = std.heap.ArenaAllocator.init(allocator);
-        self.global = Environment.init(allocator, null);
+        self.global.deinit(self.allocator);
+        self.arena.deinit(self.allocator);
+        self.arena = std.heap.ArenaAllocator.init(self.allocator);
+        self.global = Environment.init(self.allocator, null);
         self.current = &self.global;
         self.call_depth = 0;
         self.output.clearRetainingCapacity();
@@ -877,8 +877,8 @@ pub const Interpreter = struct {
                                 }
                             }
                             if (!found) {
-                                key_list.append(allocator, k) catch return error.OutOfMemory;
-                                value_list.append(allocator, spread_val.object.values[i]) catch return error.OutOfMemory;
+                                key_list.append(self.allocator, k) catch return error.OutOfMemory;
+                                value_list.append(self.allocator, spread_val.object.values[i]) catch return error.OutOfMemory;
                             }
                         }
                     }
@@ -901,8 +901,8 @@ pub const Interpreter = struct {
                     }
                 }
                 if (!found) {
-                    key_list.append(allocator, key) catch return error.OutOfMemory;
-                    value_list.append(allocator, value) catch return error.OutOfMemory;
+                    key_list.append(self.allocator, key) catch return error.OutOfMemory;
+                    value_list.append(self.allocator, value) catch return error.OutOfMemory;
                 }
             }
         }
@@ -1255,9 +1255,9 @@ pub const Interpreter = struct {
             for (args) |arg| {
                 var buf: [512]u8 = undefined;
                 const str = std.fmt.bufPrint(&buf, "{}", .{arg}) catch "?";
-                self.output.appendSlice(allocator, str) catch {};
+                self.output.appendSlice(self.allocator, str) catch {};
             }
-            self.output.append(allocator, '\n') catch {};
+            self.output.append(self.allocator, '\n') catch {};
             return .nil;
         }
 
@@ -2023,6 +2023,7 @@ pub const Interpreter = struct {
 
 // Tests
 test "interpreter basic" {
+    const allocator = std.testing.allocator;
     const source = "const x = 42";
     var parser = coptic_parser.Parser.init(source, std.testing.allocator);
     var ast = try parser.parseProgram();
@@ -2036,6 +2037,7 @@ test "interpreter basic" {
 }
 
 test "interpreter arithmetic" {
+    const allocator = std.testing.allocator;
     const source = "const x = 10 + 5";
     var parser = coptic_parser.Parser.init(source, std.testing.allocator);
     var ast = try parser.parseProgram();
@@ -2049,6 +2051,7 @@ test "interpreter arithmetic" {
 }
 
 test "interpreter trit" {
+    const allocator = std.testing.allocator;
     var interp = Interpreter.init(std.testing.allocator, "");
     defer interp.deinit(allocator);
 
@@ -2062,6 +2065,7 @@ test "interpreter trit" {
 }
 
 test "interpreter builtins" {
+    const allocator = std.testing.allocator;
     var interp = Interpreter.init(std.testing.allocator, "");
     defer interp.deinit(allocator);
 
@@ -2079,6 +2083,7 @@ test "phi constant" {
 }
 
 test "interpreter if" {
+    const allocator = std.testing.allocator;
     const source = "if true { 42 } else { 0 }";
     var parser = coptic_parser.Parser.init(source, std.testing.allocator);
     var ast = try parser.parseProgram();
@@ -2092,6 +2097,7 @@ test "interpreter if" {
 }
 
 test "interpreter if false" {
+    const allocator = std.testing.allocator;
     const source = "if false { 42 } else { 99 }";
     var parser = coptic_parser.Parser.init(source, std.testing.allocator);
     var ast = try parser.parseProgram();
@@ -2105,6 +2111,7 @@ test "interpreter if false" {
 }
 
 test "interpreter comparison" {
+    const allocator = std.testing.allocator;
     const source = "10 > 5";
     var parser = coptic_parser.Parser.init(source, std.testing.allocator);
     var ast = try parser.parseProgram();
@@ -2118,6 +2125,7 @@ test "interpreter comparison" {
 }
 
 test "interpreter string" {
+    const allocator = std.testing.allocator;
     const source = "\"hello\"";
     var parser = coptic_parser.Parser.init(source, std.testing.allocator);
     var ast = try parser.parseProgram();
@@ -2131,6 +2139,7 @@ test "interpreter string" {
 }
 
 test "interpreter user function" {
+    const allocator = std.testing.allocator;
     const source = "func double(x) { x * 2 }\ndouble(5)";
     var parser = coptic_parser.Parser.init(source, std.testing.allocator);
     var ast = try parser.parseProgram();
@@ -2144,6 +2153,7 @@ test "interpreter user function" {
 }
 
 test "interpreter function with multiple params" {
+    const allocator = std.testing.allocator;
     const source = "func add(a, b) { a + b }\nadd(3, 7)";
     var parser = coptic_parser.Parser.init(source, std.testing.allocator);
     var ast = try parser.parseProgram();
@@ -2157,6 +2167,7 @@ test "interpreter function with multiple params" {
 }
 
 test "interpreter array literal" {
+    const allocator = std.testing.allocator;
     const source = "[1, 2, 3]";
     var parser = coptic_parser.Parser.init(source, std.testing.allocator);
     var ast = try parser.parseProgram();
@@ -2171,6 +2182,7 @@ test "interpreter array literal" {
 }
 
 test "interpreter array index" {
+    const allocator = std.testing.allocator;
     const source = "[10, 20, 30][1]";
     var parser = coptic_parser.Parser.init(source, std.testing.allocator);
     var ast = try parser.parseProgram();
@@ -2184,6 +2196,7 @@ test "interpreter array index" {
 }
 
 test "interpreter for loop array" {
+    const allocator = std.testing.allocator;
     const source = "for x in [1, 2, 3] { x }";
     var parser = coptic_parser.Parser.init(source, std.testing.allocator);
     var ast = try parser.parseProgram();
@@ -2198,6 +2211,7 @@ test "interpreter for loop array" {
 }
 
 test "interpreter range builtin" {
+    const allocator = std.testing.allocator;
     const source = "range(3)";
     var parser = coptic_parser.Parser.init(source, std.testing.allocator);
     var ast = try parser.parseProgram();

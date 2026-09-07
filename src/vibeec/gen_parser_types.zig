@@ -135,7 +135,11 @@ pub const TypeDef = struct {
 /// Behavior definition (function contract)
 pub const Behavior = struct {
     name: []const u8,
-    owner: ?[]const u8, // Which struct owns this method
+    // Defaults to null so a Behavior literal need not spell it out. Twelve
+    // construction sites across codegen/ omitted it and would not compile;
+    // the field is optional, so "absent" and "null" are the same thing, and
+    // one default is better than twelve `.owner = null,` lines.
+    owner: ?[]const u8 = null, // Which struct owns this method
     given: []const u8,
     when: []const u8,
     then: []const u8,

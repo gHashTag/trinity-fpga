@@ -846,7 +846,12 @@ fn makeBehavior(name: []const u8) Behavior {
         .when = "test",
         .then = "test",
         .implementation = "",
-        .test_cases = .{},
+        // `.empty`, not `.{}`: ArrayListUnmanaged's fields lost their defaults
+        // in 0.16, so `.{}` is a struct literal missing `capacity`. This one
+        // line kept the whole codegen tree unimportable, and therefore
+        // untestable -- it is a Sema error, so ast-check and the format gate
+        // both called this file clean.
+        .test_cases = .empty,
     };
 }
 

@@ -336,6 +336,12 @@ pub fn build(b: *std.Build) void {
         // here for the same reason as the line above: nothing else in the
         // test step reaches src/vibeec/.
         b.path("src/vibeec/gen_vibee_parser.zig"),
+        // The Zig backend. Nothing could import this tree until now: one
+        // `.test_cases = .{}` in codegen/patterns/rl.zig was a struct literal
+        // missing a field, which is a Sema error -- so ast-check and the
+        // format gate both called the file clean and the whole subtree was
+        // untestable. It carries 90 tests that had never run.
+        b.path("src/vibeec/zig_codegen.zig"),
     };
     for (behaviour_test_roots) |root_path| {
         const t = b.addTest(.{

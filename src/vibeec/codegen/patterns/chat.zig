@@ -1458,7 +1458,7 @@ test "chat pattern match" {
         .when = "user greets",
         .then = "return greeting",
         .implementation = "",
-        .test_cases = .{},
+        .test_cases = .empty,
     };
 
     const matched = try match(&builder, &b);

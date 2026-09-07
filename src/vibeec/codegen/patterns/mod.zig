@@ -293,7 +293,7 @@ fn testBehavior(name: []const u8) Behavior {
         .when = "test",
         .then = "test",
         .implementation = "",
-        .test_cases = .{},
+        .test_cases = .empty,
     };
 }
 

@@ -2466,7 +2466,7 @@ pub const MetricsExporter = struct {
         try writer.writeAll("  }\n");
         try writer.writeAll("}\n");
 
-        return buffer.toOwnedSlice(allocator);
+        return buffer.toOwnedSlice(self.allocator);
     }
 
     /// Export retry metrics to Prometheus format (v23.24)
@@ -2537,7 +2537,7 @@ pub const MetricsExporter = struct {
         try writer.print("vibee_retry_delay_percentile{{quantile=\"0.95\"}} {d}\n", .{metrics.getDelayP95()});
         try writer.print("vibee_retry_delay_percentile{{quantile=\"0.99\"}} {d}\n", .{metrics.getDelayP99()});
 
-        return buffer.toOwnedSlice(allocator);
+        return buffer.toOwnedSlice(self.allocator);
     }
 
     /// Export circuit breaker state to JSON (v23.24)
@@ -2554,7 +2554,7 @@ pub const MetricsExporter = struct {
         try writer.print("  \"reset_timeout_ms\": {d}\n", .{cb.reset_timeout_ms});
         try writer.writeAll("}\n");
 
-        return buffer.toOwnedSlice(allocator);
+        return buffer.toOwnedSlice(self.allocator);
     }
 };
 
@@ -2694,7 +2694,7 @@ pub const HealthCheck = struct {
         try writer.writeAll("  }\n");
         try writer.writeAll("}\n");
 
-        return buffer.toOwnedSlice(allocator);
+        return buffer.toOwnedSlice(self.allocator);
     }
 
     /// Export health status to Prometheus format (v23.28)
@@ -2724,7 +2724,7 @@ pub const HealthCheck = struct {
         try writer.writeAll("# TYPE vibee_open_circuits gauge\n");
         try writer.print("vibee_open_circuits {d}\n", .{status.open_circuits});
 
-        return buffer.toOwnedSlice(allocator);
+        return buffer.toOwnedSlice(self.allocator);
     }
 };
 
@@ -4478,9 +4478,9 @@ pub const RealAgent = struct {
     /// Includes few-shot examples and structured element references
     pub fn buildPrompt(self: *Self, instruction: []const u8, page_text: []const u8) ![]u8 {
         var buffer = std.ArrayList(u8).empty;
-        errdefer buffer.deinit(allocator);
+        errdefer buffer.deinit(self.allocator);
 
-        const writer = buffer.writer(allocator);
+        const writer = buffer.writer(self.allocator);
 
         // Few-shot examples
         try writer.writeAll(FEW_SHOT_EXAMPLES);
@@ -4497,7 +4497,7 @@ pub const RealAgent = struct {
         try self.writePageContext(writer, page_text);
         try writer.writeAll("\n\nResponse: ");
 
-        return buffer.toOwnedSlice(allocator);
+        return buffer.toOwnedSlice(self.allocator);
     }
 
     /// Write page context with smart truncation (v23.46)
@@ -4525,9 +4525,9 @@ pub const RealAgent = struct {
             const elements = dom.getInteractiveElements() catch return self.allocator.dupe(u8, "[No elements]");
 
             var buffer = std.ArrayList(u8).empty;
-            errdefer buffer.deinit(allocator);
+            errdefer buffer.deinit(self.allocator);
 
-            const writer = buffer.writer(allocator);
+            const writer = buffer.writer(self.allocator);
             try writer.writeAll("INTERACTIVE ELEMENTS:\n");
 
             var count: usize = 0;
@@ -4559,7 +4559,7 @@ pub const RealAgent = struct {
                 count += 1;
             }
 
-            return buffer.toOwnedSlice(allocator);
+            return buffer.toOwnedSlice(self.allocator);
         }
         return self.allocator.dupe(u8, "[DOM extractor not initialized]");
     }
@@ -4703,9 +4703,9 @@ pub const RealAgent = struct {
     /// Build prompt with tool definitions (v23.49)
     pub fn buildPromptWithTools(self: *Self, instruction: []const u8, page_text: []const u8) ![]u8 {
         var buffer = std.ArrayList(u8).empty;
-        errdefer buffer.deinit(allocator);
+        errdefer buffer.deinit(self.allocator);
 
-        const writer = buffer.writer(allocator);
+        const writer = buffer.writer(self.allocator);
 
         // Tool descriptions
         try writer.writeAll("You have access to these tools:\n\n");
@@ -4731,7 +4731,7 @@ pub const RealAgent = struct {
         try writer.writeAll("Use the appropriate tool to complete the task. ");
         try writer.writeAll("Use 'done' tool when the task is complete.\n");
 
-        return buffer.toOwnedSlice(allocator);
+        return buffer.toOwnedSlice(self.allocator);
     }
 
     /// Run full task cycle: observe -> think -> act (v23.45, v23.49)
