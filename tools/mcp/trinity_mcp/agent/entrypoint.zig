@@ -14,6 +14,14 @@ const process_spawn = @import("process_spawn.zig");
 
 const log = std.log.scoped(.agent_entrypoint);
 
+/// The process's command line, published by `main`.
+///
+/// 0.16 removed `std.process.args()`; the only source of arguments is now
+/// main's `init` parameter. `Env.fromSystem` is the one reader, it takes no
+/// parameters, and its signature is not changing -- so main hands the value
+/// over here rather than through the call chain.
+var g_args: ?std.process.Args = null;
+
 const Env = struct {
     issue_number: u32,
     gh_token: []const u8,
@@ -69,13 +77,21 @@ const Env = struct {
         const tg_token = tri_env.getEnvVar(env_gpa, "TELEGRAM_BOT_TOKEN") orelse "";
         const tg_chat = tri_env.getEnvVar(env_gpa, "TELEGRAM_CHAT_ID") orelse "";
 
-        // Check --dry-run in args
-        var dry_run = false;
-        var args = std.process.args();
-        _ = args.next(); // skip argv[0]
-        while (args.next()) |arg| {
-            if (std.mem.eql(u8, arg, "--dry-run")) dry_run = true;
-        }
+        // Check --dry-run in args.
+        const dry_run = blk: {
+            const a = g_args orelse break :blk false;
+            // iterateAllocator rather than iterate: iterate is a compile error
+            // on Windows and WASI, and its error set is empty on POSIX, so this
+            // costs nothing here and stays portable.
+            var args = a.iterateAllocator(env_gpa) catch break :blk false;
+            defer args.deinit();
+            _ = args.next(); // skip argv[0]
+            var found = false;
+            while (args.next()) |arg| {
+                if (std.mem.eql(u8, arg, "--dry-run")) found = true;
+            }
+            break :blk found;
+        };
 
         return .{
             .issue_number = issue_number,
@@ -105,7 +121,10 @@ const Env = struct {
     }
 };
 
-pub fn main() !void {
+pub fn main(init: std.process.Init.Minimal) !void {
+    // Publish argv before anything reads it; Env.fromSystem is the first.
+    g_args = init.args;
+
     var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();

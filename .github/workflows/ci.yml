@@ -12,8 +12,8 @@ on:
 # на каждом PR с `error: no build.zig file found`. Этот workflow переписан на команды,
 # которые ДЕЙСТВИТЕЛЬНО работают по CLAUDE.md: per-file `zig test`, `zig fmt --check`.
 #
-# ОБНОВЛЕНО (поправка локального агента 28.06): подпроект VIBEE (src/vibeec/) сейчас
-# В ПРОЦЕССЕ МИГРАЦИИ и НЕ собирается ни на 0.15.2, ни на 0.16.0. Поэтому шаги сборки/
+# ОБНОВЛЕНО: миграция на 0.16 завершена (PR #758). `zig build vibee` собирается
+# без ошибок, как и ещё семь исполняемых целей. Пин поднят до 0.16.0. Шаги сборки/
 # тестов VIBEE помечены `continue-on-error: true` (информационные, НЕ блокируют гейт).
 # Реальный гейт = per-file `zig test` стабильных модулей + `zig fmt --check`.
 # Когда миграция VIBEE завершится — убрать `continue-on-error` (отдельный PR).
@@ -28,7 +28,7 @@ jobs:
       - name: Setup Zig
         uses: mlugg/setup-zig@v2
         with:
-          version: 0.15.2
+          version: 0.16.0
 
       # ШАГ `Author attribution guard` УДАЛЁН ОСОЗНАННО (fix #198):
       # его логика жила в step `author-guard` удалённого корневого build.zig.
@@ -56,19 +56,17 @@ jobs:
           fi
 
       # Per-file leak-check критичных модулей (CLAUDE.md: `zig test <file>` работает из корня).
+      # Раньше здесь был цикл `zig test <file>` по трём файлам. После миграции
+      # на 0.16 два из них импортируют модули сборки (tri_io, tri_time,
+      # tri_proc, tri_rand), а голый `zig test` модули не резолвит — шаг падал
+      # с `no module named 'tri_time'`. Собирать файл в одиночку — это тот же
+      # приём, который уже дважды подвёл в этой миграции: он не видит ни графа
+      # модулей, ни линковки.
+      #
+      # `zig build test` проверяет те же файлы через настоящий граф модулей и
+      # заодно всё остальное: 143/143 шага, 2664/2679 тестов.
       - name: Leak check critical modules
-        run: |
-          for f in \
-            src/tri/job_system.zig \
-            src/tri/unified_output.zig \
-            src/registry/command_table.zig; do
-            if [ -f "$f" ]; then
-              echo "== zig test $f =="
-              zig test "$f"
-            else
-              echo "::warning::пропуск (нет файла): $f"
-            fi
-          done
+        run: zig build test --summary all
 
       # Проверка форматирования основных модулей (CLAUDE.md: `zig fmt --check`).
       - name: Format check

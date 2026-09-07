@@ -10,7 +10,6 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
-const tri_io = @import("tri_io");
 const tri_env = @import("tri_env");
 const tri_proc = @import("tri_proc");
 const tri_time = @import("tri_time");
@@ -96,21 +95,27 @@ fn callTrinity(allocator: Allocator, prompt: []const u8, start_ms: i64) !Complet
         "--max-tokens",
         "200",
     };
-    var child = try tri_proc.spawn(tri_io.get(), .{
+    // 0.16 dropped Child.collectOutput, so the spawn/collect/wait dance
+    // collapses into one call. tri_proc.run also resolves argv[0] through
+    // PATH, which std.process.run no longer does.
+    const run_result = try tri_proc.run(.{
+        .allocator = allocator,
         .argv = &argv,
-        .stdout = .pipe,
-        .stderr = .pipe,
+        .max_output_bytes = 1024 * 1024,
     });
-    var stdout_buf: std.ArrayList(u8) = .empty;
-    var stderr_buf: std.ArrayList(u8) = .empty;
-    defer stderr_buf.deinit(allocator);
-    try child.collectOutput(allocator, &stdout_buf, &stderr_buf, 1024 * 1024);
-    const result = stdout_buf.toOwnedSlice(allocator) catch try allocator.dupe(u8, "");
-    const term = try child.wait(tri_io.get());
+    allocator.free(run_result.stderr);
+    const result = run_result.stdout;
+
+    // Term is a tagged union; reading .exited when the child died on a signal
+    // would be a safety panic, so branch on the tag instead.
+    const exit_code: u8 = switch (run_result.term) {
+        .exited => |code| code,
+        else => 1,
+    };
 
     const elapsed = elapsedMs(start_ms);
 
-    if (term.exited != 0) {
+    if (exit_code != 0) {
         const model_name = try allocator.dupe(u8, "trinity-hslm");
         return .{
             .response = result,

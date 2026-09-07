@@ -2,6 +2,7 @@
 // Runs: zig fmt --check → zig build → zig build test (with 3 repair attempts)
 const std = @import("std");
 
+const tri_proc = @import("tri_proc");
 pub const ReviewResult = struct {
     passed: bool,
     fmt_ok: bool,
@@ -90,7 +91,7 @@ const CommandResult = struct {
 };
 
 fn runCommand(allocator: std.mem.Allocator, cwd: []const u8, argv: []const []const u8) CommandResult {
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = argv,
         .cwd = cwd,
@@ -99,7 +100,7 @@ fn runCommand(allocator: std.mem.Allocator, cwd: []const u8, argv: []const []con
 
     // Combine stderr+stdout for error reporting
     const success = switch (result.term) {
-        .Exited => |code| code == 0,
+        .exited => |code| code == 0,
         else => false,
     };
 

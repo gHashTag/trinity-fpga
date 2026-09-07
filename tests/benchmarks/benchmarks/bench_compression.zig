@@ -9,6 +9,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 const Trit = i8;
 const MAX_PACKED_VALUES: usize = 243; // 3^5
 
@@ -335,7 +336,7 @@ fn benchTCV1(trits: []const Trit, ds_name: []const u8) CompressionResult {
         std.mem.doNotOptimizeAway(&pack_buf);
     }
 
-    var timer = std.time.Timer.start() catch unreachable;
+    var timer = tri_time.Timer.start() catch unreachable;
     for (0..ITERATIONS) |_| {
         _ = doPackTrits(trits, &pack_buf);
         std.mem.doNotOptimizeAway(&pack_buf);
@@ -343,7 +344,7 @@ fn benchTCV1(trits: []const Trit, ds_name: []const u8) CompressionResult {
     const c_ns = timer.read();
 
     const actual = doPackTrits(trits, &pack_buf);
-    timer = std.time.Timer.start() catch unreachable;
+    timer = tri_time.Timer.start() catch unreachable;
     for (0..ITERATIONS) |_| {
         doUnpackTrits(pack_buf[0..actual], &unp_buf, trits.len);
         std.mem.doNotOptimizeAway(&unp_buf);
@@ -384,7 +385,7 @@ fn benchTCV2(trits: []const Trit, ds_name: []const u8) CompressionResult {
         std.mem.doNotOptimizeAway(&rle_buf);
     }
 
-    var timer = std.time.Timer.start() catch unreachable;
+    var timer = tri_time.Timer.start() catch unreachable;
     var rle_len: usize = 0;
     for (0..ITERATIONS) |_| {
         rle_len = rleEncode(pack_buf[0..pack_len], &rle_buf) orelse pack_len;
@@ -392,7 +393,7 @@ fn benchTCV2(trits: []const Trit, ds_name: []const u8) CompressionResult {
     }
     const c_ns = timer.read();
 
-    timer = std.time.Timer.start() catch unreachable;
+    timer = tri_time.Timer.start() catch unreachable;
     var dec_len: usize = 0;
     for (0..ITERATIONS) |_| {
         dec_len = rleDecode(rle_buf[0..rle_len], &dec_buf) orelse 0;
@@ -444,7 +445,7 @@ fn benchTCV4(trits: []const Trit, ds_name: []const u8) CompressionResult {
         std.mem.doNotOptimizeAway(&enc_buf);
     }
 
-    var timer = std.time.Timer.start() catch unreachable;
+    var timer = tri_time.Timer.start() catch unreachable;
     var enc_result: ?EncodeResult = null;
     for (0..ITERATIONS) |_| {
         enc_result = huffmanEncode(pack_buf[0..pack_len], &enc_buf, &codes);
@@ -484,7 +485,7 @@ fn benchTrinityPipeline(binary: []const u8, ds_name: []const u8) PipelineResult 
     var dec_trits: [614400]Trit = undefined;
 
     // Full pipeline: binary -> ternary -> pack -> RLE
-    var timer = std.time.Timer.start() catch unreachable;
+    var timer = tri_time.Timer.start() catch unreachable;
     var rle_len: usize = 0;
     for (0..ITERATIONS) |_| {
         for (binary, 0..) |byte, i| {

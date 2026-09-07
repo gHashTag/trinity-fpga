@@ -37,13 +37,12 @@ pub const McpManager = struct {
     }
 
     pub fn deinit(self: *McpManager) void {
-        // Kill all servers
+        // Kill all servers. Zig 0.16: `kill` takes an Io, returns void rather
+        // than an error union, and already blocks until the child terminates
+        // and reaps it -- so the old kill-then-wait pair collapses to one call.
+        const io = tri_io.get();
         for (self.servers.items) |*server| {
-            if (server.alive) {
-                _ = server.child.kill() catch |err| {
-                    std.log.debug("mcp_client: failed to kill server {s}: {}", .{ server.name, err });
-                };
-            }
+            if (server.alive) server.child.kill(io);
         }
         self.servers.deinit(self.allocator);
         self.tools.deinit(self.allocator);
@@ -54,23 +53,24 @@ pub const McpManager = struct {
     pub fn connectServer(self: *McpManager, name: []const u8, command: []const []const u8) u32 {
         if (command.len == 0) return 0;
 
-        var child = try tri_proc.spawn(tri_io.get(), .{
+        // Zig 0.16: the stream behaviours moved from post-init fields on Child
+        // (.stdin_behavior = .Pipe) into SpawnOptions, and spawning is one call
+        // instead of init-then-spawn. tri_proc.spawn is used rather than
+        // std.process.spawn because an MCP server command is typically a bare
+        // program name, which 0.16 no longer resolves through PATH.
+        const io = tri_io.get();
+        var child = tri_proc.spawn(io, .{
             .argv = command,
-            .stdout = .inherit,
-            .stderr = .inherit,
-        });
-        child.stdin_behavior = .Pipe;
-        child.stdout_behavior = .Pipe;
-        child.stderr_behavior = .Ignore;
-
-        child.spawn() catch |err| {
+            .stdin = .pipe,
+            .stdout = .pipe,
+            .stderr = .ignore,
+        }) catch |err| {
             std.debug.print("[mcp] Failed to spawn {s}: {s}\n", .{ name, @errorName(err) });
             return 0;
         };
 
         const server_idx: u32 = std.math.cast(u32, self.servers.items.len) orelse {
-            _ = child.kill() catch {};
-            _ = child.wait(tri_io.get()) catch {};
+            child.kill(io);
             return 0;
         };
         self.servers.append(self.allocator, .{
@@ -78,8 +78,7 @@ pub const McpManager = struct {
             .child = child,
             .alive = true,
         }) catch {
-            _ = child.kill() catch {};
-            _ = child.wait(tri_io.get()) catch {};
+            child.kill(io);
             return 0;
         };
 
@@ -214,7 +213,10 @@ pub const McpManager = struct {
         buf.appendSlice(self.allocator, params) catch return false;
         buf.appendSlice(self.allocator, "}\n") catch return false;
 
-        _ = stdin_file.write(buf.items) catch return false;
+        // 0.15's File.write was one attempt that could write short; every
+        // caller here needs the whole request on the wire, so this is the
+        // write-it-all form rather than a rename.
+        stdin_file.writeStreamingAll(tri_io.get(), buf.items) catch return false;
         return true;
     }
 
@@ -227,7 +229,7 @@ pub const McpManager = struct {
 
         var buf: [256]u8 = undefined;
         const msg = std.fmt.bufPrint(&buf, "{{\"jsonrpc\":\"2.0\",\"method\":\"{s}\"}}\n", .{method}) catch return;
-        _ = stdin_file.write(msg) catch |err| {
+        stdin_file.writeStreamingAll(tri_io.get(), msg) catch |err| {
             std.log.debug("mcp_client: sendNotification write failed: {}", .{err});
         };
     }
@@ -259,7 +261,22 @@ pub const McpManager = struct {
         const server = &self.servers.items[server_idx];
         const stdout_file = server.child.stdout orelse return null;
 
-        // Read until newline (JSON-RPC stdio uses newline-delimited JSON)
+        // Read until newline (JSON-RPC stdio uses newline-delimited JSON).
+        //
+        // Zig 0.16 removed File.read. The replacement must not buffer ahead:
+        // this pipe carries every later response too, so any byte pulled in
+        // past the newline would be silently dropped when this Reader goes out
+        // of scope. A File.Reader over a zero-length buffer cannot do that --
+        // readSliceAll passes the caller's slice straight to the read syscall
+        // (std.Io.File.Reader.readVecStreaming), so exactly one byte moves.
+        //
+        // 0.16 also reports end-of-stream as error.EndOfStream instead of a
+        // zero-length read, and retries genuine short reads inside readSliceAll
+        // rather than letting the caller mistake one for EOF.
+        var no_lookahead: [0]u8 = undefined;
+        var file_reader = stdout_file.readerStreaming(tri_io.get(), &no_lookahead);
+        const reader = &file_reader.interface;
+
         var line: std.ArrayList(u8) = .empty;
         errdefer line.deinit(self.allocator);
         var byte_buf: [1]u8 = undefined;
@@ -267,11 +284,15 @@ pub const McpManager = struct {
         // Set a timeout by limiting reads
         var total_bytes: usize = 0;
         while (total_bytes < max_response_size) {
-            const n = stdout_file.read(&byte_buf) catch {
-                line.deinit(self.allocator);
-                return null;
+            reader.readSliceAll(&byte_buf) catch |err| switch (err) {
+                // EOF: keep whatever arrived, exactly as the 0.15 n == 0 branch did.
+                error.EndOfStream => break,
+                // A real read failure discarded the partial line before, too.
+                else => {
+                    line.deinit(self.allocator);
+                    return null;
+                },
             };
-            if (n == 0) break; // EOF
             total_bytes += 1;
             if (byte_buf[0] == '\n') break;
             line.append(self.allocator, byte_buf[0]) catch {

@@ -4,6 +4,7 @@
 //! phi^2 + 1/phi^2 = 3 | TRINITY
 
 const std = @import("std");
+const tri_proc = @import("tri_proc");
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TYPES (kept for MCP compatibility)
@@ -116,17 +117,20 @@ pub fn diagnoseAndHeal(allocator: std.mem.Allocator, signal: HealthSignal) HealR
 }
 
 fn runTriDoctor(allocator: std.mem.Allocator, subcommand: []const u8) bool {
-    const result = std.process.Child.run(.{
+    // Zig 0.16: Child.run is gone, and "tri" is a bare name that neither
+    // std.process.run nor std.process.spawn resolves through PATH — tri_proc
+    // does both. Term tags are lowercase now (.exited, not .Exited).
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ "tri", "doctor", subcommand },
         .max_output_bytes = 8192,
     }) catch return false;
     allocator.free(result.stdout);
     allocator.free(result.stderr);
-    return (switch (result.term) {
-        .Exited => |code| code,
-        else => @as(u32, 1),
-    }) == 0;
+    return switch (result.term) {
+        .exited => |code| code == 0,
+        else => false,
+    };
 }
 
 fn bufWrite(buf: []u8, s: []const u8) []const u8 {

@@ -6,14 +6,14 @@
 # toolchain, the same way a dependency pinned to a branch is not pinned.
 #
 # 0.16 moved the filesystem, clocks, sleeping and subprocesses behind an
-# explicit `Io` capability that must be threaded through call graphs. The tree
-# has 4,973 call sites across 865 of its 2,249 Zig files that would need it,
-# and no `Io` instance exists anywhere yet. That migration is a real project;
-# pinning the toolchain the code was actually written for is the honest interim,
-# and it is what .github/workflows/tri-build.yml already does.
+# explicit `Io` capability. That migration was a real project and it is done:
+# `tri` and seven other executables build on 0.16, `zig build test` reports
+# 2664/2679 passing, and six shim modules restore the removed stdlib surface
+# (see .claude/rules/zig-016-migration.md). The pin is 0.16.0 to match.
 #
-# Ubuntu, not macOS: Zig 0.15.2 cannot link against current macOS SDKs -- it
-# fails inside its own build runner there, before reaching project code.
+# Ubuntu, not macOS: this is also the platform that can still surprise us --
+# the shims call libc directly and everything was measured on a Mac. Two
+# Linux-only breaks were found exactly this way.
 #
 # phi^2 + 1/phi^2 = 3 = TRINITY
 
@@ -29,7 +29,7 @@ on:
   workflow_dispatch:
 
 env:
-  ZIG_VERSION: '0.15.2'
+  ZIG_VERSION: '0.16.0'
 
 jobs:
   validate:

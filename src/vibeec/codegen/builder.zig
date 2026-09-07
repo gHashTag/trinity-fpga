@@ -50,8 +50,8 @@ pub const CodeBuilder = struct {
     }
 
     pub fn writeFmt(self: *Self, comptime fmt: []const u8, args: anytype) !void {
-        const writer = self.buffer.writer(self.allocator);
-        try writer.print(fmt, args);
+        // 0.16 removed ArrayList.writer(); the list prints directly.
+        try self.buffer.print(self.allocator, fmt, args);
     }
 
     pub fn newline(self: *Self) !void {

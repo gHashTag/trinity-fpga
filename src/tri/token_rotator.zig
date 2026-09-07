@@ -338,14 +338,16 @@ fn logEvent(timestamp: i64, token_name: []const u8, event_type: []const u8, dura
             return err;
         }
     };
-    defer file_obj.close();
+    defer file_obj.close(io);
 
-    try file_obj.seekFromEnd(0);
+    // 0.16's Io.File has no seek. The append that seekFromEnd(0) + writeAll
+    // expressed is now a positional write at the current end of the file.
+    const end = try file_obj.length(io);
 
     const log_entry = try std.fmt.allocPrint(std.heap.page_allocator, "{{\"timestamp\":{},\"event\":\"token_{s}\",\"token_name\":\"{s}\",\"duration\":{}}}\n", .{ timestamp, event_type, token_name, duration });
     defer std.heap.page_allocator.free(log_entry);
 
-    try file_obj.writeAll(log_entry);
+    try file_obj.writePositionalAll(io, log_entry, end);
 }
 
 const testing = std.testing;

@@ -3,7 +3,8 @@ const std = @import("std");
 const trinity = @import("trinity");
 
 pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    // 0.16 renamed GeneralPurposeAllocator to DebugAllocator.
+    var gpa: std.heap.DebugAllocator(.{}) = .init;
     defer _ = gpa.deinit();
 
     std.debug.print("\n=== Trinity VM Example ===\n\n", .{});

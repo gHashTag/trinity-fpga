@@ -30,13 +30,15 @@ pub const Memory = struct {
     pub fn load(self: *Memory) ?[]const u8 {
         if (self.base_dir_len == 0) return null;
 
+        const io = tri_io.get();
+
         var path_buf: [560]u8 = undefined;
         const path = std.fmt.bufPrint(&path_buf, "{s}/MEMORY.md", .{self.base_dir[0..self.base_dir_len]}) catch return null;
 
-        const file = std.Io.Dir.openFileAbsolute(tri_io.get(), path, .{}) catch return null;
-        defer file.close();
-
-        const content = file.readToEndAlloc(self.allocator, max_file_size) catch return null;
+        // 0.16 removed File.readToEndAlloc; the whole-file read lives on the
+        // directory now. cwd() with an absolute path is exactly what
+        // openFileAbsolute does internally.
+        const content = std.Io.Dir.cwd().readFileAlloc(io, path, self.allocator, .limited(max_file_size)) catch return null;
 
         // Limit to first 200 lines
         var line_count: u32 = 0;
@@ -69,9 +71,11 @@ pub const Memory = struct {
         if (self.base_dir_len == 0) return;
         if (text.len == 0) return;
 
+        const io = tri_io.get();
+
         // Ensure directory exists
         const dir_path = self.base_dir[0..self.base_dir_len];
-        std.Io.Dir.createDirAbsolute(tri_io.get(), dir_path, .default_dir) catch |err| {
+        std.Io.Dir.createDirAbsolute(io, dir_path, .default_dir) catch |err| {
             std.log.debug("memory: failed to create dir {s}: {}", .{ dir_path, err });
         };
 
@@ -79,22 +83,27 @@ pub const Memory = struct {
         const path = std.fmt.bufPrint(&path_buf, "{s}/MEMORY.md", .{dir_path}) catch return;
 
         // Open for appending (create if needed)
-        const file = std.Io.Dir.createFileAbsolute(tri_io.get(), path, .{ .truncate = false }) catch return;
-        defer file.close();
+        const file = std.Io.Dir.createFileAbsolute(io, path, .{ .truncate = false }) catch return;
+        defer file.close(io);
 
-        // Seek to end
-        file.seekFromEnd(0) catch |err| {
-            std.log.warn("memory: seekFromEnd failed for MEMORY.md: {}", .{err});
+        // 0.16 has no File.seekFromEnd. Append by writing positionally from the
+        // current end of file instead; the offset advances by hand.
+        var offset: u64 = file.length(io) catch |err| blk: {
+            std.log.warn("memory: length failed for MEMORY.md: {}", .{err});
+            break :blk 0;
         };
 
         // Write entry with separator
-        file.writeAll("\n---\n") catch |write_err| {
+        const separator = "\n---\n";
+        file.writePositionalAll(io, separator, offset) catch |write_err| {
             std.log.warn("memory: failed to write separator to MEMORY.md: {}", .{write_err});
         };
-        file.writeAll(text) catch |write_err| {
+        offset += separator.len;
+        file.writePositionalAll(io, text, offset) catch |write_err| {
             std.log.warn("memory: failed to write text to MEMORY.md: {}", .{write_err});
         };
-        file.writeAll("\n") catch |write_err| {
+        offset += text.len;
+        file.writePositionalAll(io, "\n", offset) catch |write_err| {
             std.log.warn("memory: failed to write newline to MEMORY.md: {}", .{write_err});
         };
     }

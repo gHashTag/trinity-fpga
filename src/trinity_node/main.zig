@@ -125,12 +125,21 @@ const Args = struct {
     help: bool = false,
 };
 
+/// The process argv.
+///
+/// 0.16 removed the ambient `std.process.args()`: argv now reaches a program
+/// only as a parameter to `main`. `main` publishes it here so `parseArgs`
+/// keeps its shape. On POSIX `Args.toSlice` allocates just the outer array --
+/// the argument bytes themselves point into the OS argv block and live for
+/// the whole process, so the `Args` returned below may borrow from them.
+var g_argv: []const [:0]const u8 = &.{};
+
 fn parseArgs() Args {
     var args = Args{};
-    var arg_iter = std.process.args();
-    _ = arg_iter.skip(); // Skip program name
+    // Skip the program name.
+    const rest = if (g_argv.len > 1) g_argv[1..] else g_argv[0..0];
 
-    while (arg_iter.next()) |arg| {
+    for (rest) |arg| {
         if (std.mem.eql(u8, arg, "--headless") or std.mem.eql(u8, arg, "-d")) {
             args.headless = true;
         } else if (std.mem.eql(u8, arg, "--distributed") or std.mem.eql(u8, arg, "--dist")) {
@@ -340,6 +349,12 @@ pub fn main(init: std.process.Init.Minimal) !void {
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
+    // 0.16: argv arrives through `init` instead of an ambient iterator.
+    // Published to g_argv so parseArgs can read it; see the comment there.
+    const process_args = try init.args.toSlice(allocator);
+    defer allocator.free(process_args);
+    g_argv = process_args;
+
     const args = parseArgs();
 
     if (args.help) {
@@ -350,9 +365,12 @@ pub fn main(init: std.process.Init.Minimal) !void {
     // Distributed inference mode — bypass normal node startup
     if (args.distributed) {
         const alloc = std.heap.page_allocator;
-        const process_args = try init.args.toSlice(alloc);
-        defer alloc.free(process_args);
-        const dist_args = if (process_args.len > 1) process_args[1..] else &[_][]const u8{};
+        // runDistributed takes []const []const u8; toSlice yields
+        // sentinel-terminated slices, and slices do not coerce element-wise.
+        const tail = if (process_args.len > 1) process_args[1..] else process_args[0..0];
+        const dist_args = try alloc.alloc([]const u8, tail.len);
+        defer alloc.free(dist_args);
+        for (dist_args, tail) |*dst, src| dst.* = src;
         try distributed.runDistributed(alloc, dist_args);
         return;
     }

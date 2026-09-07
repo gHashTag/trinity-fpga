@@ -5,6 +5,8 @@
 // @origin(manual) @regen(pending)
 
 const std = @import("std");
+const tri_io = @import("tri_io");
+const tri_proc = @import("tri_proc");
 
 const MAX_OUTPUT = 8192;
 
@@ -43,32 +45,36 @@ fn runTriFpga(buf: *[MAX_OUTPUT]u8, args: []const []const u8) []const u8 {
         argv[2 + i] = args[i];
     }
 
-    var child = std.process.Child.init(argv[0 .. 2 + n], std.heap.page_allocator);
-    child.stdout_behavior = .Pipe;
-    child.stderr_behavior = .Inherit;
-    child.spawn() catch |err| {
+    // 0.16 removed Child.init/spawn/readToEndAlloc as a usable trio here, and
+    // std.process.run does not search PATH; tri_proc.run does both and collapses
+    // the old spawn/read/wait dance into one call.
+    const gpa = std.heap.page_allocator;
+    const result = tri_proc.run(.{
+        .allocator = gpa,
+        .argv = argv[0 .. 2 + n],
+        .max_output_bytes = MAX_OUTPUT,
+    }) catch |err| {
         return copyToBuf(buf, switch (err) {
             error.FileNotFound => "Error: tri binary not found (run zig build)",
             else => "Error: Failed to spawn tri fpga process",
         });
     };
-    defer {
-        _ = child.wait() catch |err| {
-            std.log.warn("fpga_tools: child.wait() failed: {}", .{err});
-        };
+    defer gpa.free(result.stdout);
+    defer gpa.free(result.stderr);
+
+    // The old child inherited stderr, so its diagnostics reached this process's
+    // stderr. `run` captures it instead, so forward it to keep that visible --
+    // stdout here is the MCP protocol channel and must not carry it.
+    if (result.stderr.len > 0) {
+        std.Io.File.stderr().writeStreamingAll(tri_io.get(), result.stderr) catch {};
     }
 
-    const stdout = child.stdout.?.readToEndAlloc(std.heap.page_allocator, MAX_OUTPUT) catch {
-        return copyToBuf(buf, "Error: Failed to read tri fpga output");
-    };
-    defer std.heap.page_allocator.free(stdout);
-
-    if (stdout.len == 0) {
+    if (result.stdout.len == 0) {
         return copyToBuf(buf, "OK (no output — check stderr)");
     }
 
-    const len = @min(stdout.len, MAX_OUTPUT);
-    @memcpy(buf[0..len], stdout[0..len]);
+    const len = @min(result.stdout.len, MAX_OUTPUT);
+    @memcpy(buf[0..len], result.stdout[0..len]);
     return buf[0..len];
 }
 

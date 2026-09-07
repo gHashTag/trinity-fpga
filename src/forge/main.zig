@@ -603,12 +603,13 @@ fn flashBitstream(bitstream_path: []const u8, device_str: []const u8) void {
         bitstream_path,
     };
 
-    var child = try tri_proc.spawn(tri_io.get(), .{
+    // 0.16: tri_proc.spawn both resolves argv[0] through PATH and starts the
+    // child, so the old init-then-spawn pair collapses into this one call.
+    var child = tri_proc.spawn(tri_io.get(), .{
         .argv = &argv,
         .stdout = .inherit,
         .stderr = .inherit,
-    });
-    child.spawn() catch {
+    }) catch {
         printManualFlash(bitstream_path);
         return;
     };
@@ -651,12 +652,11 @@ fn forgeDetect(allocator: std.mem.Allocator) !void {
     std.debug.print("  Scanning JTAG chain...\n", .{});
 
     const argv = [_][]const u8{ "openFPGALoader", "--detect" };
-    var child = try tri_proc.spawn(tri_io.get(), .{
+    var child = tri_proc.spawn(tri_io.get(), .{
         .argv = &argv,
         .stdout = .pipe,
         .stderr = .pipe,
-    });
-    child.spawn() catch {
+    }) catch {
         std.debug.print("  openFPGALoader not found.\n", .{});
         printIdcodeTable();
         return;

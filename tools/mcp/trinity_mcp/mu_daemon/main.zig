@@ -14,10 +14,14 @@
 //
 const std = @import("std");
 const tri_env = @import("tri_env");
+const tri_proc = @import("tri_proc");
 const mu_loop = @import("mu_loop.zig");
 const telegram = @import("telegram");
 
-pub fn main() !void {
+/// 0.16 removed `std.process.argsAlloc` and left no global argv, so arguments
+/// can only come from the runtime. `Init.Minimal` is the smallest form std's
+/// start code will hand to main.
+pub fn main(init: std.process.Init.Minimal) !void {
     var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
@@ -37,7 +41,7 @@ pub fn main() !void {
     // Detect project root
     const project_root = blk: {
         if (tri_env.getPosix("PROJECT_ROOT")) |root| break :blk @as([]const u8, root);
-        const result = std.process.Child.run(.{
+        const result = tri_proc.run(.{
             .allocator = allocator,
             .argv = &.{ "git", "rev-parse", "--show-toplevel" },
         }) catch {
@@ -49,13 +53,13 @@ pub fn main() !void {
             std.debug.print("[mu-agent] ERROR: Not in a git repository.\n", .{});
             std.process.exit(1);
         }
-        break :blk std.mem.trimRight(u8, result.stdout, &std.ascii.whitespace);
+        break :blk std.mem.trimEnd(u8, result.stdout, &std.ascii.whitespace);
     };
 
     // Parse CLI args for --single-shot
     var single_shot = false;
-    const args = try std.process.argsAlloc(allocator);
-    defer std.process.argsFree(allocator, args);
+    const args = try init.args.toSlice(allocator);
+    defer allocator.free(args);
     for (args) |arg| {
         if (std.mem.eql(u8, arg, "--single-shot")) {
             single_shot = true;

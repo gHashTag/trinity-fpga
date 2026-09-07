@@ -1,6 +1,7 @@
 // telegram_api.zig — Telegram Bot API: getUpdates (long poll) + sendMessage + sendMessageDraft
 // Pattern from agent/telegram.zig (send) and agent/github_poller.zig (HTTP GET)
 const std = @import("std");
+const tri_io = @import("tri_io");
 
 pub const BotConfig = struct {
     bot_token: []const u8,
@@ -17,7 +18,7 @@ pub fn getUpdates(allocator: std.mem.Allocator, bot_token: []const u8, offset: i
     var url_buf: [512]u8 = undefined;
     const url = std.fmt.bufPrint(&url_buf, "https://api.telegram.org/bot{s}/getUpdates?timeout=30&offset={d}", .{ bot_token, offset }) catch return null;
 
-    var client = std.http.Client{ .allocator = allocator };
+    var client = std.http.Client{ .allocator = allocator, .io = tri_io.get() };
     defer client.deinit();
 
     var aw: std.Io.Writer.Allocating = .init(allocator);
@@ -120,7 +121,7 @@ fn sendToEndpoint(allocator: std.mem.Allocator, bot_token: []const u8, chat_id: 
 
     const body = body_buf[0..i];
 
-    var client = std.http.Client{ .allocator = allocator };
+    var client = std.http.Client{ .allocator = allocator, .io = tri_io.get() };
     defer client.deinit();
 
     const result = client.fetch(.{
