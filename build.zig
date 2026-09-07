@@ -269,6 +269,40 @@ pub fn build(b: *std.Build) void {
     test_step.dependOn(&run_main_tests.step);
 
     // ═══════════════════════════════════════════════════════════════════════════
+    // vibee_gen — the .tri/.vibee code generator (#775)
+    // ═══════════════════════════════════════════════════════════════════════════
+    //
+    // CLAUDE.md makes `.tri` specs the single source of truth and tells every
+    // agent to "edit the spec and regenerate". The generator that instruction
+    // depends on had NO build target anywhere in this repo: `tools/bin/vibee_gen`
+    // was a prebuilt binary that could not be rebuilt, inspected or tested.
+    //
+    // It also does not work -- it writes a 0-byte file and reports
+    // `error.Unexpected` for every spec, which is how `tools/bin/vibee_arm64`
+    // came to be 0 bytes. Diagnosing that needed a buildable binary first,
+    // which is what this target is.
+    const vibee_gen_exe = b.addExecutable(.{
+        .name = "vibee_gen",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/vibeec/vibee_gen.zig"),
+            .target = target,
+            .optimize = optimize,
+            .link_libc = true,
+            .imports = &.{
+                .{ .name = "tri_time", .module = tri_time_mod },
+                .{ .name = "tri_io", .module = tri_io_mod },
+                .{ .name = "tri_env", .module = tri_env_mod },
+                .{ .name = "tri_proc", .module = tri_proc_mod },
+                .{ .name = "tri_rand", .module = tri_rand_mod },
+                .{ .name = "tri_mutex", .module = tri_mutex_mod },
+            },
+        }),
+    });
+    b.installArtifact(vibee_gen_exe);
+    const vibee_gen_step = b.step("vibee-gen", "Build the .tri/.vibee code generator");
+    vibee_gen_step.dependOn(&vibee_gen_exe.step);
+
+    // ═══════════════════════════════════════════════════════════════════════════
     // Behaviour-path tests for the Zig 0.16 migration (#764)
     // ═══════════════════════════════════════════════════════════════════════════
     //
@@ -296,6 +330,12 @@ pub fn build(b: *std.Build) void {
         // by the test step at all. This root pulls in codegen/utils.zig, which
         // is where mapType lives.
         b.path("src/vibeec/validate_cmd.zig"),
+        // The spec parser. Its tests pin the parse body that was missing --
+        // `parse` handled indent == 0 and dropped every indented line, so
+        // every spec in the repo yielded 0 types and 0 behaviours. Declared
+        // here for the same reason as the line above: nothing else in the
+        // test step reaches src/vibeec/.
+        b.path("src/vibeec/gen_vibee_parser.zig"),
     };
     for (behaviour_test_roots) |root_path| {
         const t = b.addTest(.{
@@ -3446,6 +3486,24 @@ pub fn build(b: *std.Build) void {
     const run_hslm_f16_tests = b.addRunArtifact(hslm_f16_tests);
     const hslm_f16_tests_step = b.step("test-hslm-f16", "Run HSLM F16 Utils Tests");
     hslm_f16_tests_step.dependOn(&run_hslm_f16_tests.step);
+
+    // `test-hslm` — the step .github/workflows/brain-ci.yml asks for in its
+    // brain-unit matrix (region: hslm). It runs over the zig-hslm library
+    // root so that any future file added to root.zig is covered too.
+    // root.zig itself declares no tests; it references f16_utils so that
+    // file's 16 tests are collected. Verified non-vacuous: `zig test` over
+    // this root reports 17 tests, and dropping the reference drops it to 0.
+    const hslm_tests_mod = b.createModule(.{
+        .root_source_file = b.path("external/zig-hslm/src/root.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    const hslm_tests = b.addTest(.{
+        .root_module = hslm_tests_mod,
+    });
+    const run_hslm_tests = b.addRunArtifact(hslm_tests);
+    const hslm_tests_step = b.step("test-hslm", "Run HSLM Numerical Library Tests");
+    hslm_tests_step.dependOn(&run_hslm_tests.step);
 
     // Intraparietal Sulcus (Numerical Layer) tests
     const intraparietal_tests = b.addTest(.{

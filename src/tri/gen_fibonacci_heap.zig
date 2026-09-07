@@ -135,7 +135,7 @@ pub const FibonacciHeap = struct {
     }
 
     fn cascadingCut(heap: *FibonacciHeap, y: *FibNode) void {
-        var z = y.parent;
+        const z = y.parent;
         if (z != null) {
             if (!y.marked) {
                 y.marked = true;

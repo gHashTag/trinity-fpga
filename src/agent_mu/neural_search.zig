@@ -172,9 +172,9 @@ pub const PatternClustering = struct {
 
         // Initialize clusters with first k patterns as centroids
         const actual_k = @min(self.k, patterns.len);
-        for (0..actual_k) |i| {
-            const cluster = try PatternCluster.init(self.allocator, "cluster_001", .TYPE_FIX);
-            try self.clusters.append(cluster);
+        for (0..actual_k) |_| {
+            const new_cluster = try PatternCluster.init(self.allocator, "cluster_001", .TYPE_FIX);
+            try self.clusters.append(new_cluster);
         }
 
         // Assign patterns to nearest cluster
@@ -182,8 +182,8 @@ pub const PatternClustering = struct {
             var best_cluster: usize = 0;
             var best_sim: f32 = -1.0;
 
-            for (self.clusters.items, 0..) |cluster, i| {
-                const sim = embeddings.cosineSimilarity(&pattern.vector, &cluster.centroid);
+            for (self.clusters.items, 0..) |c, i| {
+                const sim = embeddings.cosineSimilarity(&pattern.vector, &c.centroid);
                 if (sim > best_sim) {
                     best_sim = sim;
                     best_cluster = i;
@@ -194,8 +194,8 @@ pub const PatternClustering = struct {
         }
 
         // Update centroids
-        for (self.clusters.items) |*cluster| {
-            try cluster.updateCentroid();
+        for (self.clusters.items) |*c| {
+            try c.updateCentroid();
         }
     }
 
@@ -204,11 +204,11 @@ pub const PatternClustering = struct {
         var best_cluster: ?*const PatternCluster = null;
         var best_sim: f32 = -1.0;
 
-        for (self.clusters.items) |*cluster| {
-            const sim = embeddings.cosineSimilarity(embedding, &cluster.centroid);
+        for (self.clusters.items) |*c| {
+            const sim = embeddings.cosineSimilarity(embedding, &c.centroid);
             if (sim > best_sim) {
                 best_sim = sim;
-                best_cluster = cluster;
+                best_cluster = c;
             }
         }
 

@@ -58,6 +58,8 @@ pub const ProofWriter = struct {
 
     /// Generate proof for a logical problem
     pub fn generateProof(self: *Self, problem: *ProofProblem) !ProofStatement {
+        _ = self;
+        _ = problem;
         // Simplified proof generation: always true for the goal
         // In a full implementation, this would use actual reasoning
         return ProofStatement{
@@ -148,8 +150,13 @@ test "ProofWriter evaluation" {
 
     try pw.addProblem(problem);
 
+    // Not a `const` buffer: it is written through the writer below, so
+    // ast-check's "never mutated" reading was an artefact of the line under
+    // it being dead. `std.io.fixedBufferStream` does not exist in 0.16 --
+    // `std.Io.Writer.fixed` is the replacement, and it takes a slice.
     var buffer: [1024]u8 = undefined;
-    const writer = std.io.fixedBufferStream(buffer);
+    var writer = std.Io.Writer.fixed(&buffer);
+    _ = &writer; // written through by evaluate() below
 
     try pw.evaluate(writer);
 }

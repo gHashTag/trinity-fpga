@@ -2,6 +2,7 @@
 const std = @import("std");
 
 pub fn runTrinityCommand(allocator: std.mem.Allocator) void {
+    _ = allocator;
     std.debug.print(
         \\
         \\╔══════════════════════════════════════════════════════════╗

@@ -49,6 +49,8 @@ pub const RsbenchResults = struct {
         .{ .correct = 0, .total = 0 },
     },
 
+    const Self = @This();
+
     pub fn accuracy(self: *const Self) f64 {
         if (self.total == 0) return 0.0;
         return @as(f64, @floatFromInt(self.correct)) / @as(f64, @floatFromInt(self.total));

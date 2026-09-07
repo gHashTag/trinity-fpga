@@ -230,8 +230,6 @@ pub const SendWindow = struct {
 };
 
 test "warming schedule" {
-    const std = @import("std");
-
     // Manual warmup phase
     try std.testing.expectEqual(@as(u32, 3), getDailyLimit(1));
     try std.testing.expectEqual(@as(u32, 3), getDailyLimit(14));
@@ -246,8 +244,6 @@ test "warming schedule" {
 }
 
 test "shouldSendThisWeek" {
-    const std = @import("std");
-
     // During manual warmup, no real scientists
     try std.testing.expect(!shouldSendThisWeek(5, "Michael Sherbon"));
 
@@ -258,16 +254,12 @@ test "shouldSendThisWeek" {
 }
 
 test "needsManualWarmup" {
-    const std = @import("std");
-
     try std.testing.expect(needsManualWarmup(1));
     try std.testing.expect(needsManualWarmup(14));
     try std.testing.expect(!needsManualWarmup(15));
 }
 
 test "getPhase" {
-    const std = @import("std");
-
     try std.testing.expectEqualStrings("manual_warmup", getPhase(1));
     try std.testing.expectEqualStrings("manual_warmup", getPhase(14));
     try std.testing.expectEqualStrings("engaged_contacts", getPhase(15));

@@ -112,6 +112,7 @@ pub fn validateTypeFunction(allocator: std.mem.Allocator, func_decl: []const u8)
 
 /// Generate correct @Type() call for struct creation
 pub fn generateStructType(allocator: std.mem.Allocator, struct_name: []const u8, fields: []const u8) ![]const u8 {
+    _ = struct_name;
     return std.fmt.allocPrint(allocator,
         \\@Type(.{ .Struct = .{{
         \\    .layout = .auto,

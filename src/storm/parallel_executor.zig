@@ -69,7 +69,7 @@ pub const ParallelExecutor = struct {
         defer wg.wait();
 
         // Spawn tasks in thread pool
-        for (config.tasks, 0..) |task, i| {
+        for (config.tasks, 0..) |_, i| {
             const task_ptr = &config.tasks[i];
             const result_ptr = &results[i];
 
@@ -122,8 +122,6 @@ pub const ParallelExecutor = struct {
 
     /// Execute tasks sequentially (fallback for single-threaded mode)
     pub fn executeSequential(self: *ParallelExecutor, tasks: []Task) ![]TaskResult {
-        _ = self;
-
         const results = try self.allocator.alloc(TaskResult, tasks.len);
 
         for (tasks, 0..) |task, i| {

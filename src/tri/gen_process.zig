@@ -11,6 +11,7 @@ pub const ProcessResult = struct {
 };
 
 pub fn run(allocator: std.mem.Allocator, command: []const u8, args: []const []const u8) !ProcessResult {
+    _ = allocator;
     _ = command;
     _ = args;
 

@@ -18,9 +18,17 @@ pub const phiQuantize = f16_utils.phiQuantize;
 pub const phiDequantize = f16_utils.phiDequantize;
 pub const f16BatchToF32 = f16_utils.f16BatchToF32;
 pub const f32BatchToF16 = f16_utils.f32BatchToF16;
-pub const hslmF16BatchToF32 = f16_utils.f16BatchToF32;  // Alias for compatibility
+pub const hslmF16BatchToF32 = f16_utils.f16BatchToF32; // Alias for compatibility
 pub const vectorFloatCast = f16_utils.vectorFloatCast;
 
 pub fn testAll() !void {
     std.debug.print("zig-hslm test suite passed\n", .{});
+}
+
+// Re-exporting a declaration does not pull that file's `test` blocks into a
+// `zig test` run over this root — without the reference below, `test-hslm`
+// reports "All 0 tests passed" while measuring nothing. Referencing the
+// import forces the compiler to analyse f16_utils.zig and collect its tests.
+test {
+    _ = f16_utils;
 }

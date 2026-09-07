@@ -662,8 +662,6 @@ pub const OrchestratorCoordinator = struct {
 
     /// Execute task via TRI CLI
     fn executeViaTriCli(self: *OrchestratorCoordinator, task: *CoordinatedTask) !CoordinatedTask.TaskResult {
-        _ = self;
-
         // Determine TRI CLI command based on task realm and description
         const argv = try self.buildTriCliCommand(task);
         defer {
@@ -743,8 +741,6 @@ pub const OrchestratorCoordinator = struct {
 
     /// Calculate φ-weighted consensus from agent votes
     pub fn calculateConsensus(self: *OrchestratorCoordinator, votes: []const AgentVote) ConsensusResult {
-        _ = self;
-
         var total_weight: f64 = 0;
         var proceed_weight: f64 = 0;
 
@@ -1006,8 +1002,6 @@ test "OrchestratorCoordinator metrics" {
 }
 
 test "OrchestratorCoordinator node availability" {
-    const allocator = std.testing.allocator;
-
     var node = CoordinatedNode{
         .id = "test-node",
         .node_type = .alpha,

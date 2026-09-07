@@ -6,6 +6,8 @@
 const std = @import("std");
 
 pub fn main(_allocator: std.mem.Allocator, _args: []const []const u8) !void {
+    _ = _allocator;
+    _ = _args;
     std.debug.print("tri_clara: TEMPORARILY DISABLED - Original has build errors\n", .{});
     std.debug.print("Run `mv tri_clara_orig.zig tri_clara.zig` and fix build errors to restore.\n", .{});
     return error.NotImplemented;

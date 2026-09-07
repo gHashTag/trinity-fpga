@@ -121,8 +121,6 @@ fn parseLine(allocator: std.mem.Allocator, root: *ASTNode, line: []const u8, lin
         node.* = try ASTNode.init(allocator, .error_union);
         try root.children.append(node);
     }
-
-    _ = allocator;
 }
 
 /// Analyze VIBEE compiler source for codegen templates
@@ -162,8 +160,8 @@ pub fn analyzeCompilerSource(allocator: std.mem.Allocator, source_path: []const 
 
 /// Extract template metadata from function declaration
 fn extractTemplateMetadata(allocator: std.mem.Allocator, line: []const u8, file_path: []const u8, line_num: usize) !TemplateMetadata {
-    var params = ArrayListManaged([]const u8).init(allocator);
-    var bugs = ArrayListManaged([]const u8).init(allocator);
+    const params = ArrayListManaged([]const u8).init(allocator);
+    const bugs = ArrayListManaged([]const u8).init(allocator);
 
     // Extract function name
     const name = if (std.mem.indexOf(u8, line, "fn ")) |pos| blk1: {

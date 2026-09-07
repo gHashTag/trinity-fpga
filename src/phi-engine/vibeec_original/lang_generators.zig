@@ -36,7 +36,6 @@ pub const ParsedSpec = struct {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 pub fn generatePython(allocator: Allocator, spec: ParsedSpec) ![]u8 {
-    _ = allocator;
     var result: std.ArrayListUnmanaged(u8) = .empty;
 
     try result.print(allocator, "# {s} v{s}\n", .{ spec.name, spec.version });
@@ -83,7 +82,6 @@ fn mapTypePython(vibee_type: []const u8) []const u8 {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 pub fn generateRust(allocator: Allocator, spec: ParsedSpec) ![]u8 {
-    _ = allocator;
     var result: std.ArrayListUnmanaged(u8) = .empty;
 
     try result.print(allocator, "// {s} v{s}\n", .{ spec.name, spec.version });
@@ -126,7 +124,6 @@ fn mapTypeRust(vibee_type: []const u8) []const u8 {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 pub fn generateGo(allocator: Allocator, spec: ParsedSpec) ![]u8 {
-    _ = allocator;
     var result: std.ArrayListUnmanaged(u8) = .empty;
 
     try result.print(allocator, "// {s} v{s}\n", .{ spec.name, spec.version });
@@ -168,7 +165,6 @@ fn mapTypeGo(vibee_type: []const u8) []const u8 {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 pub fn generateTypeScript(allocator: Allocator, spec: ParsedSpec) ![]u8 {
-    _ = allocator;
     var result: std.ArrayListUnmanaged(u8) = .empty;
 
     try result.print(allocator, "// {s} v{s}\n", .{ spec.name, spec.version });
@@ -209,7 +205,6 @@ fn mapTypeTS(vibee_type: []const u8) []const u8 {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 pub fn generateJava(allocator: Allocator, spec: ParsedSpec) ![]u8 {
-    _ = allocator;
     var result: std.ArrayListUnmanaged(u8) = .empty;
 
     try result.print(allocator, "// {s} v{s}\n", .{ spec.name, spec.version });
@@ -246,7 +241,6 @@ fn mapTypeJava(vibee_type: []const u8) []const u8 {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 pub fn generateSwift(allocator: Allocator, spec: ParsedSpec) ![]u8 {
-    _ = allocator;
     var result: std.ArrayListUnmanaged(u8) = .empty;
 
     try result.print(allocator, "// {s} v{s}\n", .{ spec.name, spec.version });
@@ -288,7 +282,6 @@ fn mapTypeSwift(vibee_type: []const u8) []const u8 {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 pub fn generateKotlin(allocator: Allocator, spec: ParsedSpec) ![]u8 {
-    _ = allocator;
     var result: std.ArrayListUnmanaged(u8) = .empty;
 
     try result.print(allocator, "// {s} v{s}\n", .{ spec.name, spec.version });
@@ -331,7 +324,6 @@ fn mapTypeKotlin(vibee_type: []const u8) []const u8 {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 pub fn generateC(allocator: Allocator, spec: ParsedSpec) ![]u8 {
-    _ = allocator;
     var result: std.ArrayListUnmanaged(u8) = .empty;
 
     try result.print(allocator, "/* {s} v{s} */\n", .{ spec.name, spec.version });
@@ -376,7 +368,6 @@ fn mapTypeC(vibee_type: []const u8) []const u8 {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 pub fn generateSQL(allocator: Allocator, spec: ParsedSpec) ![]u8 {
-    _ = allocator;
     var result: std.ArrayListUnmanaged(u8) = .empty;
 
     try result.print(allocator, "-- {s} v{s}\n", .{ spec.name, spec.version });

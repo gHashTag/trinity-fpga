@@ -590,8 +590,6 @@ pub const EEGPipeline = struct {
 
     /// Extract power in a specific frequency band using bandpass filtering
     fn extractBandPower(self: *EEGPipeline, raw: RawEEG, band: FrequencyBand) !f64 {
-        _ = self;
-
         // Bandpass filter for the target frequency band
         const low_freq = band.low;
         const high_freq = band.high;

@@ -310,6 +310,9 @@ fn classifyNumber(
     max_pq: u64,
     entropy: f64,
 ) cfrac_ref.Classification {
+    _ = gk_chi2;
+    _ = entropy;
+
     // Periodic → quadratic
     if (periodic.is_periodic) {
         return if (periodic.period_length.? == 1 and periodic.confidence == 1.0)
@@ -357,6 +360,9 @@ fn computeConfidence(
     max_pq: u64,
     entropy: f64,
 ) f64 {
+    _ = max_pq;
+    _ = entropy;
+
     var score: f64 = 0.0;
 
     // Periodic gives high confidence
@@ -385,6 +391,8 @@ fn computeConfidence(
 /// Generate human-readable verdict
 fn generateVerdict(classification: cfrac_ref.Classification, confidence: f64, khinchin: f64, gk_chi2: f64) []const u8 {
     _ = confidence;
+    _ = khinchin;
+    _ = gk_chi2;
 
     return switch (classification) {
         .noble => "NOBLE: φ-type structure (Khinchin K << 2.685)",
@@ -398,8 +406,6 @@ fn generateVerdict(classification: cfrac_ref.Classification, confidence: f64, kh
 
 /// CLI command: tri math cfrac-stats <formula_id>
 pub fn runStatsCommand(allocator: std.mem.Allocator, args: []const []const u8) !void {
-    _ = allocator;
-
     const GOLD = "\x1b[33m";
     const CYAN = "\x1b[36m";
     const WHITE = "\x1b[97m";

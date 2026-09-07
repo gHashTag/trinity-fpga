@@ -42,7 +42,6 @@ pub fn generateRandomBaseline(allocator: std.mem.Allocator, count: usize) ![]Bas
         var value_approx: f64 = 0.0;
         for (0..50) |j| {
             partials[j] = rng.random().intRangeAtMost(u64, 1, 100);
-            _ = j;
         }
 
         // Compute approximate value from first few convergents
@@ -216,8 +215,6 @@ fn computeEntropy(partials: []const u64) f64 {
 
 /// CLI command: tri math cfrac-compare <formula_id> <reference_id>
 pub fn runCompareCommand(allocator: std.mem.Allocator, args: []const []const u8) !void {
-    _ = allocator;
-
     const GOLD = "\x1b[33m";
     const CYAN = "\x1b[36m";
     const WHITE = "\x1b[97m";

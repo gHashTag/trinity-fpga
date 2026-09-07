@@ -197,7 +197,6 @@ pub fn runApproxCommand(allocator: std.mem.Allocator, args: []const []const u8) 
     const WHITE = "\x1b[97m";
     const GREEN = "\x1b[32m";
     const YELLOW = "\x1b[93m";
-    const RED = "\x1b[31m";
     const MAGENTA = "\x1b[35m";
     const RESET = "\x1b[0m";
 
@@ -281,7 +280,7 @@ pub fn runApproxCommand(allocator: std.mem.Allocator, args: []const []const u8) 
 
     // Show experimental thresholds
     std.debug.print("  {s}EXPERIMENTAL THRESHOLDS:{s}\n", .{ YELLOW, RESET });
-    for (omega_dm_thresholds, 0..) |threshold, i| {
+    for (omega_dm_thresholds) |threshold| {
         const achieved = if (approx.best_convergent) |best|
             best.error_log <= threshold.precision
         else

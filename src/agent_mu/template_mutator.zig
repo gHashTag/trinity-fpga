@@ -116,7 +116,6 @@ pub const TemplateMutator = struct {
         // This would require tracking which template file each mutation came from
         // and writing back the original content. For now, mutations are just
         // removed from the history without reverting the file.
-        _ = last;
 
         return true;
     }

@@ -331,7 +331,6 @@ fn generate_zig_from_ternary(spec: *const VbtSpec, allocator: Allocator) ![]cons
                 try zig_code.appendSlice(allocator, "    // States: ");
                 const state_count = @min(3, behavior.markov_chain.items.len);
                 for (behavior.markov_chain.items[0..state_count], 0..) |trans, idx| {
-                    _ = idx;
                     try zig_code.appendSlice(allocator, trans.state);
                     if (idx < state_count - 1) {
                         try zig_code.appendSlice(allocator, " -> ");

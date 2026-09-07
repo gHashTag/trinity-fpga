@@ -213,7 +213,7 @@ pub const AutonomousSpawner = struct {
         defer config.deinit(self.allocator);
 
         // Call MCP to spawn
-        const result = try self.nexus.spawnSubAgent(config);
+        _ = try self.nexus.spawnSubAgent(config);
 
         // Generate agent ID from result
         const agent_id = try std.fmt.allocPrint(

@@ -58,8 +58,6 @@ pub const VisionVerifier = struct {
 
     // Encode image as base64
     fn encodeImageBase64(self: *VisionVerifier, image_path: []const u8) ![]const u8 {
-        _ = self;
-
         const file = try std.fs.cwd().openFile(image_path, .{});
         defer file.close();
 
@@ -78,8 +76,6 @@ pub const VisionVerifier = struct {
 
     // Build prompt for Claude Vision API
     fn buildPrompt(self: *VisionVerifier, expected: LEDPattern) ![]const u8 {
-        _ = self;
-
         const prompt = try std.fmt.allocPrint(self.allocator,
             \\Analyze this FPGA board photo and answer ONLY with JSON:
             \\
@@ -108,7 +104,6 @@ pub const VisionVerifier = struct {
         defer self.allocator.free(prompt);
 
         // Prepare request
-        const uri = "https://api.anthropic.com/v1/messages";
         var headers = std.http.Headers.init(self.allocator);
         defer headers.deinit();
 
@@ -145,7 +140,7 @@ pub const VisionVerifier = struct {
         defer self.allocator.free(request_body);
 
         // Send request
-        var result = VisionResult{
+        const result = VisionResult{
             .led_visible = false,
             .blink_rate_hz = 0.0,
             .pattern_match = false,

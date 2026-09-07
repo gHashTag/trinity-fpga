@@ -1019,6 +1019,32 @@ pub const ZigCodeGen = struct {
         try self.builder.newline();
     }
 
+    /// Does any behaviour in this spec lower to a body that calls tri_time?
+    ///
+    /// This list must stay in step with the branches in body_emitter.zig that
+    /// actually write `tri_time.timestamp()`. Two lists in two files deciding
+    /// whether generated code compiles is the same shape as the spec-type
+    /// vocabulary gap that left `Uint64` unlowered, so the test below pins
+    /// them together rather than trusting them to stay in step.
+    pub fn needsTriTime(spec: *const VibeeSpec) bool {
+        for (spec.behaviors.items) |b| {
+            const name = b.name;
+            // Process/run/execute bodies time themselves.
+            if (std.mem.startsWith(u8, name, "process") or
+                std.mem.startsWith(u8, name, "run") or
+                std.mem.startsWith(u8, name, "execute")) return true;
+            // respond*/handle* pick a canned reply by clock value, but only
+            // for the Greeting and Farewell shapes.
+            if (std.mem.startsWith(u8, name, "respond") or
+                std.mem.startsWith(u8, name, "handle"))
+            {
+                if (std.mem.indexOf(u8, name, "Greeting") != null or
+                    std.mem.indexOf(u8, name, "Farewell") != null) return true;
+            }
+        }
+        return false;
+    }
+
     fn writeImports(self: *Self, spec: *const VibeeSpec) !void {
         try self.builder.writeLine("const std = @import(\"std\");");
         try self.builder.writeLine("const math = std.math;");
@@ -1052,6 +1078,17 @@ pub const ZigCodeGen = struct {
         }
         if (needs_allocator) {
             try self.builder.writeLine("const Allocator = std.mem.Allocator;");
+        }
+
+        // The body emitter writes `tri_time.timestamp()` into certain
+        // behaviour stubs, but imports are written BEFORE bodies, so nothing
+        // ever emitted the import to go with the call. Every generated file
+        // with a process/run/execute behaviour carried an undeclared
+        // identifier -- which no instrument catches, because ast-check does
+        // not resolve members and the file is only compiled if some build
+        // target reaches it.
+        if (needsTriTime(spec)) {
+            try self.builder.writeLine("const tri_time = @import(\"tri_time\");");
         }
 
         // Emit custom imports from spec (uses module names for build.zig integration)

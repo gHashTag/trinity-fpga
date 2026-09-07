@@ -100,7 +100,7 @@ pub const BalancedTernary = struct {
 
             // Update remaining value
             const current_value = trit.toInt();
-            remaining = (@fabs(value) - @abs(@as(f64, @floatFromInt(current_value)))) / 3.0;
+            remaining = (@abs(value) - @abs(@as(f64, @floatFromInt(current_value)))) / 3.0;
         }
     }
 
@@ -181,6 +181,7 @@ pub fn findCompactFit(allocator: std.mem.Allocator, target_value: f64, max_power
     error_pct: f64,
     complexity: usize, // Sum of absolute parameter values
 } {
+    _ = allocator;
     const PHI = (1.0 + std.math.sqrt(5.0)) / 2.0;
     const PI = std.math.pi;
     const E = std.math.e;

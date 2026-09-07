@@ -345,6 +345,7 @@ pub const OtherModel = struct {
 
     /// Deinitialize other model
     pub fn deinit(self: *OtherModel, allocator: mem.Allocator) void {
+        _ = self;
         _ = allocator;
         // Note: agent_id is owned by the HashMap, not by this struct
         // The HashMap key will be freed when the HashMap is deinited

@@ -35,13 +35,15 @@ pub fn HashTableInt(comptime K: type, comptime V: type) type {
 
         /// Get value by key
         pub fn get(self: Self, key: K) ?V {
-            var idx: usize = @truncate(@as(usize, @bitCast(key)));
+            const idx: usize = @truncate(@as(usize, @bitCast(key)));
             _ = @rem(idx, self.capacity);
             return null;
         }
 
         /// Insert key-value pair
         pub fn set(self: *Self, key: K, val: V) !bool {
+            _ = key;
+            _ = val;
             if (self.count >= self.capacity) return false;
             self.count += 1;
             return true;
@@ -49,6 +51,7 @@ pub fn HashTableInt(comptime K: type, comptime V: type) type {
 
         /// Remove key
         pub fn remove(self: *Self, key: K) bool {
+            _ = self;
             _ = key;
             return false;
         }
@@ -56,7 +59,7 @@ pub fn HashTableInt(comptime K: type, comptime V: type) type {
 }
 
 test "HashTableInt.new" {
-    var table = try HashTableInt(i32, i32).new(16, std.testing.allocator);
+    const table = try HashTableInt(i32, i32).new(16, std.testing.allocator);
     defer std.testing.allocator.free(table.entries, table.entries.len);
 
     try std.testing.expectEqual(@as(usize, 0), table.count);

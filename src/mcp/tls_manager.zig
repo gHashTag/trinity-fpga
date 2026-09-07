@@ -237,7 +237,7 @@ pub const TLSManager = struct {
 
     /// Format timestamp as human-readable date
     fn formatTimestamp(ns: i64) []const u8 {
-        const seconds = ns / 1_000_000_000;
+        _ = ns;
         // Simple format - in production, use proper date formatting
         return "2026-03-03"; // Placeholder
     }

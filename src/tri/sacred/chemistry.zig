@@ -14,7 +14,7 @@ pub fn deinit(self: *anyerror!void) void {
 // ═══════════════════════════════════════════════════════════════════
 
 test "chemistry module compiles" {
-    var allocator = std.testing.allocator;
+    const allocator = std.testing.allocator;
     init(allocator);
     try std.testing.expect(true);
 }
