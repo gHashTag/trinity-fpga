@@ -25,10 +25,9 @@ const Config = struct {
     output_dir: []const u8 = "recordings",
 };
 
-pub fn main() !u8 {
-    const args = try std.process.argsAlloc(allocator);
-    defer std.process.argsFree(allocator, args);
-
+pub fn main(init: std.process.Init.Minimal) !u8 {
+    const args = try init.args.toSlice(allocator);
+    defer allocator.free(args);
     if (args.len < 2) {
         std.debug.print(
             \\Usage: tri-record <tri-command>

@@ -280,13 +280,12 @@ test "SwarmRuntime k8s heartbeat" {
 }
 
 /// Main entry point for the swarm runtime executable
-pub fn main() !u8 {
+pub fn main(init: std.process.Init.Minimal) !u8 {
     var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    const args = try std.process.argsAlloc(allocator);
-    defer std.process.argsFree(allocator, args);
-
+    const args = try init.args.toSlice(allocator);
+    defer allocator.free(args);
     return try runSwarmRuntime(allocator, args);
 }

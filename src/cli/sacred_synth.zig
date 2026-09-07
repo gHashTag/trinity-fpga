@@ -34,11 +34,11 @@ const GREEN = "\x1b[32m";
 const YELLOW = "\x1b[33m";
 const NC = "\x1b[0m";
 
-pub fn main() !u8 {
+pub fn main(init: std.process.Init.Minimal) !u8 {
     const gpa = std.heap.raw_c_allocator;
 
     // Parse command line arguments
-    const args = try std.process.argsAlloc(gpa);
+    const args = try init.args.toSlice(gpa);
     defer gpa.deinit(args);
 
     if (args.len < 2) {

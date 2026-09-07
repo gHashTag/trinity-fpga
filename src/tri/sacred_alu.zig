@@ -32,11 +32,11 @@ const MODULES = [_]Module{
 
 const SYNTH_DIR = "build";
 
-pub fn main() !u8 {
+pub fn main(init: std.process.Init.Minimal) !u8 {
     const io = tri_io.get();
     const allocator = std.heap.raw_c_allocator;
 
-    const args = try std.process.argsAlloc(allocator);
+    const args = try init.args.toSlice(allocator);
     defer allocator.free(args);
 
     if (args.len < 2) {

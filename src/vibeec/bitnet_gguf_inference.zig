@@ -506,14 +506,13 @@ pub const BitNetGGUFModel = struct {
 // MAIN - Demo coherent generation
 // ═══════════════════════════════════════════════════════════════════════════════
 
-pub fn main() !void {
+pub fn main(init: std.process.Init.Minimal) !void {
     var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    const args = try std.process.argsAlloc(allocator);
-    defer std.process.argsFree(allocator, args);
-
+    const args = try init.args.toSlice(allocator);
+    defer allocator.free(args);
     const model_path = if (args.len > 1) args[1] else "data/models/bitnet-gguf/ggml-model-i2_s.gguf";
 
     std.debug.print("Loading BitNet model: {s}\n", .{model_path});

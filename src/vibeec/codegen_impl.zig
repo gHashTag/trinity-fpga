@@ -7,13 +7,12 @@ const std = @import("std");
 const MAX_FIELDS = 32;
 const MAX_IMPL_LINES = 256;
 
-pub fn main() !void {
+pub fn main(init: std.process.Init.Minimal) !void {
     var gpa = std.heap.DebugAllocator(.{}){};
     const allocator = gpa.allocator();
 
-    const args = try std.process.argsAlloc(allocator);
-    defer std.process.argsFree(allocator, args);
-
+    const args = try init.args.toSlice(allocator);
+    defer allocator.free(args);
     if (args.len < 2) {
         std.debug.print("Usage: {s} <spec.tri> [output.zig]\n", .{args[0]});
         return error.Usage;

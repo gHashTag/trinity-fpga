@@ -13,7 +13,7 @@ const TestMode = enum {
     loopback, // Loopback mode: TX->RX hardware loopback
 };
 
-pub fn main() !void {
+pub fn main(init: std.process.Init.Minimal) !void {
     const args = try std.process.argsAlloc(std.heap.page_allocator);
     defer std.heap.page_allocator.free(args);
 

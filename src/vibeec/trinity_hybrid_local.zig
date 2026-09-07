@@ -25,14 +25,13 @@ const VERSION = "1.0.2";
 const MODEL = "qwen2.5-coder:7b";
 const OLLAMA_URL = "http://localhost:11434/api/generate";
 
-pub fn main() !void {
+pub fn main(init: std.process.Init.Minimal) !void {
     var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    const args = try std.process.argsAlloc(allocator);
-    defer std.process.argsFree(allocator, args);
-
+    const args = try init.args.toSlice(allocator);
+    defer allocator.free(args);
     // Parse arguments
     if (args.len > 1) {
         const arg = args[1];

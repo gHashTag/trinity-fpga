@@ -189,15 +189,14 @@ pub const VisionVerifier = struct {
 };
 
 // CLI for testing
-pub fn main() !void {
+pub fn main(init: std.process.Init.Minimal) !void {
     const allocator = std.heap.page_allocator;
 
     std.debug.print("👁️  TRINITY VISION VERIFICATION\n", .{});
     std.debug.print("φ² + 1/φ² = 3\n\n", .{});
 
-    const args = try std.process.argsAlloc(allocator);
-    defer std.process.argsFree(allocator, args);
-
+    const args = try init.args.toSlice(allocator);
+    defer allocator.free(args);
     if (args.len < 3) {
         std.debug.print(
             \\Usage: vision_verify <image_path> <expected_state>

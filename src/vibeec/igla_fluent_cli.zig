@@ -445,15 +445,14 @@ fn processQuery(state: *CLIState, query: []const u8) void {
 // MAIN
 // ═══════════════════════════════════════════════════════════════════════════════
 
-pub fn main() !void {
+pub fn main(init: std.process.Init.Minimal) !void {
     var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
     // Parse args for --no-llm flag
-    const args = try std.process.argsAlloc(allocator);
-    defer std.process.argsFree(allocator, args);
-
+    const args = try init.args.toSlice(allocator);
+    defer allocator.free(args);
     var enable_llm = true;
     for (args) |arg| {
         if (std.mem.eql(u8, arg, "--no-llm") or std.mem.eql(u8, arg, "-s")) {

@@ -648,13 +648,12 @@ pub const QueenBackend = struct {
 // parameter, and adding that parameter is a signature change. Fix the signature
 // before wiring this up as an executable root. Same treatment as
 // src/tri27/tri27_cli.zig.
-pub fn main() !void {
+pub fn main(init: std.process.Init.Minimal) !void {
     const allocator = std.heap.page_allocator;
 
     // Skip program name
-    const args = try std.process.argsAlloc(allocator);
-    defer std.process.argsFree(allocator, args);
-
+    const args = try init.args.toSlice(allocator);
+    defer allocator.free(args);
     const cmd_args = if (args.len > 1) args[1..] else &[_][]const u8{};
     try runBackendCommand(allocator, cmd_args);
 }

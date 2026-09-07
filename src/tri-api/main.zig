@@ -21,15 +21,14 @@ const api_version = "2023-06-01";
 const max_turns = 20;
 const default_model = "claude-sonnet-4-20250514";
 
-pub fn main() !void {
+pub fn main(init: std.process.Init.Minimal) !void {
     var gpa: std.heap.DebugAllocator(.{}) = .init;
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
     // Parse CLI args first (--serve needs no API key)
-    const args = try std.process.argsAlloc(allocator);
-    defer std.process.argsFree(allocator, args);
-
+    const args = try init.args.toSlice(allocator);
+    defer allocator.free(args);
     var model: []const u8 = default_model;
     var do_continue = false;
     var resume_id: ?[]const u8 = null;

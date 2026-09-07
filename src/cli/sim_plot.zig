@@ -53,10 +53,10 @@ const ScenarioStats = struct {
     points: []const DataPoint,
 };
 
-pub fn main() !void {
+pub fn main(init: std.process.Init.Minimal) !void {
     const allocator = std.heap.page_allocator;
 
-    var args = try std.process.argsAlloc(allocator);
+    var args = try init.args.toSlice(allocator);
     defer allocator.free(args);
 
     if (args.len > 1 and (std.mem.eql(u8, args[1], "--help") or std.mem.eql(u8, args[1], "-h"))) {

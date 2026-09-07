@@ -382,12 +382,12 @@ fn printHelp() void {
 // reachable through the `main(init: std.process.Init)` parameter, and adding
 // that parameter is a signature change. Fix the signature before wiring this up
 // as an executable root.
-pub fn main() !void {
+pub fn main(init: std.process.Init.Minimal) !void {
     var arena_state = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     defer arena_state.deinit();
     const allocator = arena_state.allocator();
 
-    const args = try std.process.argsAlloc(allocator);
+    const args = try init.args.toSlice(allocator);
     defer allocator.free(args);
 
     if (args.len < 2) {

@@ -16,13 +16,12 @@ const near_miss_mod = @import("near_miss.zig");
 // MAIN
 // ═══════════════════════════════════════════════════════════════════════════════
 
-pub fn main() !void {
+pub fn main(init: std.process.Init.Minimal) !void {
     const allocator = std.heap.page_allocator;
 
     // Parse command line arguments
-    const args = try std.process.argsAlloc(allocator);
-    defer std.process.argsFree(allocator, args);
-
+    const args = try init.args.toSlice(allocator);
+    defer allocator.free(args);
     var config = search_mod.SearchConfig{};
     var run_benchmarks = false;
     var run_near_miss = false;

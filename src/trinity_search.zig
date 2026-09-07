@@ -36,12 +36,11 @@ fn print(comptime fmt: []const u8, args: anytype) void {
     std.debug.print(fmt, args);
 }
 
-pub fn main() !void {
+pub fn main(init: std.process.Init.Minimal) !void {
     const allocator = std.heap.page_allocator;
 
-    const args = try std.process.argsAlloc(allocator);
-    defer std.process.argsFree(allocator, args);
-
+    const args = try init.args.toSlice(allocator);
+    defer allocator.free(args);
     // Parse arguments
     if (args.len < 2) {
         printUsage();

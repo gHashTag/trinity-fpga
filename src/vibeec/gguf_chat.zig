@@ -508,14 +508,13 @@ fn generateWithTemplate(
     std.debug.print("[{d} tokens, {d:.1} tok/s]\n\n", .{ generated, tok_per_sec });
 }
 
-pub fn main() !void {
+pub fn main(init: std.process.Init.Minimal) !void {
     var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    const args = try std.process.argsAlloc(allocator);
-    defer std.process.argsFree(allocator, args);
-
+    const args = try init.args.toSlice(allocator);
+    defer allocator.free(args);
     const path = if (args.len > 1) args[1] else "data/models/tinyllama-1.1b-q8_0.gguf";
 
     std.debug.print("\n", .{});

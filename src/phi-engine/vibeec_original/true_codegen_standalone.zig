@@ -5,10 +5,9 @@ const parser = @import("parser_v3.zig");
 const Specification = parser.Specification;
 const Behavior = parser.Behavior;
 
-pub fn main() !void {
-    const args = try std.process.argsAlloc(allocator);
-    defer std.process.argsFree(allocator, args);
-
+pub fn main(init: std.process.Init.Minimal) !void {
+    const args = try init.args.toSlice(allocator);
+    defer allocator.free(args);
     if (args.len < 2) {
         std.debug.print("Usage: {s} <spec.tri>\n", .{args[0]});
         return error.Usage;

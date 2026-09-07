@@ -20,12 +20,11 @@ const XC3SPROG_PATH = "/Users/playra/trinity-w1/fpga/tools/xc3sprog";
 const BITSTREAM_PATH = "/Users/playra/trinity-w1/fpga/openxc7-synth/uart_bridge_fixed.bit";
 const UART_TEST_PATH = "/Users/playra/trinity-w1/fpga/uart_test.py";
 
-pub fn main() !void {
+pub fn main(init: std.process.Init.Minimal) !void {
     const gpa = std.heap.page_allocator;
 
-    const args = try std.process.argsAlloc(gpa);
-    defer std.process.argsFree(gpa, args);
-
+    const args = try init.args.toSlice(gpa);
+    defer gpa.free(args);
     if (args.len < 2) {
         printUsage();
         return error.InvalidArgs;

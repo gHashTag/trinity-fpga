@@ -118,6 +118,9 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/trinity.zig"),
             .target = target,
             .optimize = optimize,
+            .imports = &.{
+                .{ .name = "tri_time", .module = tri_time_mod },
+            },
         }),
     });
     b.installArtifact(lib);
@@ -194,6 +197,9 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/queen_api.zig"),
             .target = target,
             .optimize = .ReleaseFast,
+            .imports = &.{
+                .{ .name = "tri_io", .module = tri_io_mod },
+            },
         }),
     });
     libqueen_static.root_module.link_libc = true;
@@ -252,6 +258,9 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/trinity.zig"),
             .target = target,
             .optimize = optimize,
+            .imports = &.{
+                .{ .name = "tri_time", .module = tri_time_mod },
+            },
         }),
     });
 
@@ -267,6 +276,9 @@ pub fn build(b: *std.Build) void {
             .optimize = optimize,
             // uses std.heap.c_allocator, which Zig requires be declared
             .link_libc = true,
+            .imports = &.{
+                .{ .name = "tri_io", .module = tri_io_mod },
+            },
         }),
     });
     const run_queen_api_tests = b.addRunArtifact(queen_api_tests);
@@ -291,6 +303,13 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/tri/brain_benchmark.zig"),
             .target = target,
             .optimize = .ReleaseFast,
+            .imports = &.{
+                .{ .name = "tri_env", .module = tri_env_mod },
+                .{ .name = "tri_io", .module = tri_io_mod },
+                .{ .name = "tri_mutex", .module = tri_mutex_mod },
+                .{ .name = "tri_proc", .module = tri_proc_mod },
+                .{ .name = "tri_time", .module = tri_time_mod },
+            },
         }),
     });
     const run_brain_bench = b.addRunArtifact(brain_bench);
@@ -303,6 +322,9 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/vm.zig"),
             .target = target,
             .optimize = optimize,
+            .imports = &.{
+                .{ .name = "tri_time", .module = tri_time_mod },
+            },
         }),
     });
     const run_vm_tests = b.addRunArtifact(vm_tests);
@@ -314,6 +336,9 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/e2e_test.zig"),
             .target = target,
             .optimize = optimize,
+            .imports = &.{
+                .{ .name = "tri_time", .module = tri_time_mod },
+            },
         }),
     });
     const run_e2e_tests = b.addRunArtifact(e2e_tests);
@@ -366,6 +391,9 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/agent_mu/swarm_collaboration.zig"),
             .target = target,
             .optimize = optimize,
+            .imports = &.{
+                .{ .name = "tri_time", .module = tri_time_mod },
+            },
         }),
     });
     const run_swarm_collab_tests = b.addRunArtifact(swarm_collab_tests);
@@ -376,6 +404,9 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/agent_mu/production_hardening_test.zig"),
             .target = target,
             .optimize = optimize,
+            .imports = &.{
+                .{ .name = "tri_time", .module = tri_time_mod },
+            },
         }),
     });
     const run_production_hardening_tests = b.addRunArtifact(production_hardening_tests);
@@ -386,6 +417,9 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/agent_mu/production_test.zig"),
             .target = target,
             .optimize = optimize,
+            .imports = &.{
+                .{ .name = "tri_time", .module = tri_time_mod },
+            },
         }),
     });
     const run_production_tests = b.addRunArtifact(production_tests);
@@ -398,6 +432,10 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/trinity_search.zig"),
             .target = target,
             .optimize = .ReleaseFast,
+            .imports = &.{
+                .{ .name = "tri_io", .module = tri_io_mod },
+                .{ .name = "tri_time", .module = tri_time_mod },
+            },
         }),
     });
     b.installArtifact(trinity_search);
@@ -416,6 +454,9 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/query_cli.zig"),
             .target = target,
             .optimize = .ReleaseFast,
+            .imports = &.{
+                .{ .name = "tri_io", .module = tri_io_mod },
+            },
         }),
     });
     b.installArtifact(trinity_query);
@@ -525,6 +566,9 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/agent_mu/pas_demo.zig"),
             .target = target,
             .optimize = optimize,
+            .imports = &.{
+                .{ .name = "tri_time", .module = tri_time_mod },
+            },
         }),
     });
     b.installArtifact(pas_demo);
@@ -540,6 +584,10 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/firebird/cli.zig"),
             .target = target,
             .optimize = .ReleaseFast,
+            .imports = &.{
+                .{ .name = "tri_io", .module = tri_io_mod },
+                .{ .name = "tri_time", .module = tri_time_mod },
+            },
         }),
     });
     b.installArtifact(firebird);
@@ -557,6 +605,9 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/firebird/b2t_integration.zig"),
             .target = target,
             .optimize = optimize,
+            .imports = &.{
+                .{ .name = "tri_time", .module = tri_time_mod },
+            },
         }),
     });
     const run_firebird_tests = b.addRunArtifact(firebird_tests);
@@ -568,6 +619,10 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/firebird/wasm_parser.zig"),
             .target = target,
             .optimize = optimize,
+            .imports = &.{
+                .{ .name = "tri_io", .module = tri_io_mod },
+                .{ .name = "tri_time", .module = tri_time_mod },
+            },
         }),
     });
     const run_wasm_tests = b.addRunArtifact(wasm_tests);
@@ -591,6 +646,10 @@ pub fn build(b: *std.Build) void {
                 .root_source_file = b.path("src/firebird/cli.zig"),
                 .target = release_target,
                 .optimize = .ReleaseFast,
+                .imports = &.{
+                    .{ .name = "tri_io", .module = tri_io_mod },
+                    .{ .name = "tri_time", .module = tri_time_mod },
+                },
             }),
         });
 
@@ -617,6 +676,9 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/vibeec/igla_local_chat.zig"),
             .target = release_target,
             .optimize = .ReleaseFast,
+            .imports = &.{
+                .{ .name = "tri_time", .module = tri_time_mod },
+            },
         });
         const fluent_release_exe = b.addExecutable(.{
             .name = "fluent",
@@ -625,6 +687,7 @@ pub fn build(b: *std.Build) void {
                 .target = release_target,
                 .optimize = .ReleaseFast,
                 .imports = &.{
+                    .{ .name = "tri_io", .module = tri_io_mod },
                     .{ .name = "tri_time", .module = tri_time_mod },
                     .{ .name = "tri_rand", .module = tri_rand_mod },
                     .{ .name = "igla_chat", .module = fluent_release_chat },
@@ -652,6 +715,9 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/firebird/extension_wasm.zig"),
             .target = target,
             .optimize = optimize,
+            .imports = &.{
+                .{ .name = "tri_time", .module = tri_time_mod },
+            },
         }),
     });
     const run_extension_tests = b.addRunArtifact(extension_tests);
@@ -701,6 +767,9 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/firebird/depin.zig"),
             .target = target,
             .optimize = optimize,
+            .imports = &.{
+                .{ .name = "tri_time", .module = tri_time_mod },
+            },
         }),
     });
     const run_depin_tests = b.addRunArtifact(depin_tests);
@@ -730,6 +799,9 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/trinity_node/file_encoder.zig"),
             .target = target,
             .optimize = optimize,
+            .imports = &.{
+                .{ .name = "tri_rand", .module = tri_rand_mod },
+            },
         }),
     });
     const run_file_encoder_tests = b.addRunArtifact(file_encoder_tests);
@@ -741,6 +813,9 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/trinity_node/protocol.zig"),
             .target = target,
             .optimize = optimize,
+            .imports = &.{
+                .{ .name = "tri_time", .module = tri_time_mod },
+            },
         }),
     });
     const run_protocol_tests = b.addRunArtifact(protocol_tests);
@@ -752,6 +827,11 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/trinity_node/storage.zig"),
             .target = target,
             .optimize = optimize,
+            .imports = &.{
+                .{ .name = "tri_io", .module = tri_io_mod },
+                .{ .name = "tri_rand", .module = tri_rand_mod },
+                .{ .name = "tri_time", .module = tri_time_mod },
+            },
         }),
     });
     const run_storage_tests = b.addRunArtifact(storage_tests);
@@ -763,6 +843,12 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/trinity_node/shard_manager.zig"),
             .target = target,
             .optimize = optimize,
+            .imports = &.{
+                .{ .name = "tri_io", .module = tri_io_mod },
+                .{ .name = "tri_mutex", .module = tri_mutex_mod },
+                .{ .name = "tri_rand", .module = tri_rand_mod },
+                .{ .name = "tri_time", .module = tri_time_mod },
+            },
         }),
     });
     const run_shard_manager_tests = b.addRunArtifact(shard_manager_tests);
@@ -774,6 +860,10 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/trinity_node/storage_discovery.zig"),
             .target = target,
             .optimize = optimize,
+            .imports = &.{
+                .{ .name = "tri_mutex", .module = tri_mutex_mod },
+                .{ .name = "tri_time", .module = tri_time_mod },
+            },
         }),
     });
     const run_storage_discovery_tests = b.addRunArtifact(storage_discovery_tests);
@@ -785,6 +875,12 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/trinity_node/remote_storage.zig"),
             .target = target,
             .optimize = optimize,
+            .imports = &.{
+                .{ .name = "tri_io", .module = tri_io_mod },
+                .{ .name = "tri_mutex", .module = tri_mutex_mod },
+                .{ .name = "tri_rand", .module = tri_rand_mod },
+                .{ .name = "tri_time", .module = tri_time_mod },
+            },
         }),
     });
     const run_remote_storage_tests = b.addRunArtifact(remote_storage_tests);
@@ -796,6 +892,9 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/trinity_node/crypto.zig"),
             .target = target,
             .optimize = optimize,
+            .imports = &.{
+                .{ .name = "tri_rand", .module = tri_rand_mod },
+            },
         }),
     });
     const run_crypto_tests = b.addRunArtifact(crypto_tests);
@@ -829,6 +928,11 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/trinity_node/connection_pool.zig"),
             .target = target,
             .optimize = optimize,
+            .imports = &.{
+                .{ .name = "tri_io", .module = tri_io_mod },
+                .{ .name = "tri_mutex", .module = tri_mutex_mod },
+                .{ .name = "tri_time", .module = tri_time_mod },
+            },
         }),
     });
     const run_connection_pool_tests = b.addRunArtifact(connection_pool_tests);
@@ -840,6 +944,10 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/trinity_node/manifest_dht.zig"),
             .target = target,
             .optimize = optimize,
+            .imports = &.{
+                .{ .name = "tri_mutex", .module = tri_mutex_mod },
+                .{ .name = "tri_time", .module = tri_time_mod },
+            },
         }),
     });
     const run_manifest_dht_tests = b.addRunArtifact(manifest_dht_tests);
@@ -851,6 +959,12 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/trinity_node/integration_test.zig"),
             .target = target,
             .optimize = optimize,
+            .imports = &.{
+                .{ .name = "tri_io", .module = tri_io_mod },
+                .{ .name = "tri_mutex", .module = tri_mutex_mod },
+                .{ .name = "tri_rand", .module = tri_rand_mod },
+                .{ .name = "tri_time", .module = tri_time_mod },
+            },
         }),
     });
     const run_integration_tests = b.addRunArtifact(integration_tests);
@@ -862,6 +976,12 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/trinity_node/proof_of_storage.zig"),
             .target = target,
             .optimize = optimize,
+            .imports = &.{
+                .{ .name = "tri_io", .module = tri_io_mod },
+                .{ .name = "tri_mutex", .module = tri_mutex_mod },
+                .{ .name = "tri_rand", .module = tri_rand_mod },
+                .{ .name = "tri_time", .module = tri_time_mod },
+            },
         }),
     });
     const run_pos_tests = b.addRunArtifact(pos_tests);
@@ -873,6 +993,12 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/trinity_node/shard_rebalancer.zig"),
             .target = target,
             .optimize = optimize,
+            .imports = &.{
+                .{ .name = "tri_io", .module = tri_io_mod },
+                .{ .name = "tri_mutex", .module = tri_mutex_mod },
+                .{ .name = "tri_rand", .module = tri_rand_mod },
+                .{ .name = "tri_time", .module = tri_time_mod },
+            },
         }),
     });
     const run_rebalancer_tests = b.addRunArtifact(rebalancer_tests);
@@ -884,6 +1010,12 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/trinity_node/bandwidth_aggregator.zig"),
             .target = target,
             .optimize = optimize,
+            .imports = &.{
+                .{ .name = "tri_io", .module = tri_io_mod },
+                .{ .name = "tri_mutex", .module = tri_mutex_mod },
+                .{ .name = "tri_rand", .module = tri_rand_mod },
+                .{ .name = "tri_time", .module = tri_time_mod },
+            },
         }),
     });
     const run_bw_agg_tests = b.addRunArtifact(bw_agg_tests);
@@ -895,6 +1027,12 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/trinity_node/shard_scrubber.zig"),
             .target = target,
             .optimize = optimize,
+            .imports = &.{
+                .{ .name = "tri_io", .module = tri_io_mod },
+                .{ .name = "tri_mutex", .module = tri_mutex_mod },
+                .{ .name = "tri_rand", .module = tri_rand_mod },
+                .{ .name = "tri_time", .module = tri_time_mod },
+            },
         }),
     });
     const run_scrubber_tests = b.addRunArtifact(scrubber_tests);
@@ -906,6 +1044,10 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/trinity_node/node_reputation.zig"),
             .target = target,
             .optimize = optimize,
+            .imports = &.{
+                .{ .name = "tri_mutex", .module = tri_mutex_mod },
+                .{ .name = "tri_time", .module = tri_time_mod },
+            },
         }),
     });
     const run_reputation_tests = b.addRunArtifact(reputation_tests);
@@ -917,6 +1059,12 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/trinity_node/graceful_shutdown.zig"),
             .target = target,
             .optimize = optimize,
+            .imports = &.{
+                .{ .name = "tri_io", .module = tri_io_mod },
+                .{ .name = "tri_mutex", .module = tri_mutex_mod },
+                .{ .name = "tri_rand", .module = tri_rand_mod },
+                .{ .name = "tri_time", .module = tri_time_mod },
+            },
         }),
     });
     const run_shutdown_tests = b.addRunArtifact(shutdown_tests);
@@ -928,6 +1076,12 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/trinity_node/network_stats.zig"),
             .target = target,
             .optimize = optimize,
+            .imports = &.{
+                .{ .name = "tri_io", .module = tri_io_mod },
+                .{ .name = "tri_mutex", .module = tri_mutex_mod },
+                .{ .name = "tri_rand", .module = tri_rand_mod },
+                .{ .name = "tri_time", .module = tri_time_mod },
+            },
         }),
     });
     const run_netstats_tests = b.addRunArtifact(netstats_tests);
@@ -939,6 +1093,12 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/trinity_node/auto_repair.zig"),
             .target = target,
             .optimize = optimize,
+            .imports = &.{
+                .{ .name = "tri_io", .module = tri_io_mod },
+                .{ .name = "tri_mutex", .module = tri_mutex_mod },
+                .{ .name = "tri_rand", .module = tri_rand_mod },
+                .{ .name = "tri_time", .module = tri_time_mod },
+            },
         }),
     });
     const run_auto_repair_tests = b.addRunArtifact(auto_repair_tests);
@@ -950,6 +1110,12 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/trinity_node/incentive_slashing.zig"),
             .target = target,
             .optimize = optimize,
+            .imports = &.{
+                .{ .name = "tri_io", .module = tri_io_mod },
+                .{ .name = "tri_mutex", .module = tri_mutex_mod },
+                .{ .name = "tri_rand", .module = tri_rand_mod },
+                .{ .name = "tri_time", .module = tri_time_mod },
+            },
         }),
     });
     const run_slashing_tests = b.addRunArtifact(slashing_tests);
@@ -961,6 +1127,12 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/trinity_node/prometheus_metrics.zig"),
             .target = target,
             .optimize = optimize,
+            .imports = &.{
+                .{ .name = "tri_io", .module = tri_io_mod },
+                .{ .name = "tri_mutex", .module = tri_mutex_mod },
+                .{ .name = "tri_rand", .module = tri_rand_mod },
+                .{ .name = "tri_time", .module = tri_time_mod },
+            },
         }),
     });
     const run_prometheus_tests = b.addRunArtifact(prometheus_tests);
@@ -972,6 +1144,12 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/trinity_node/repair_rate_limiter.zig"),
             .target = target,
             .optimize = optimize,
+            .imports = &.{
+                .{ .name = "tri_io", .module = tri_io_mod },
+                .{ .name = "tri_mutex", .module = tri_mutex_mod },
+                .{ .name = "tri_rand", .module = tri_rand_mod },
+                .{ .name = "tri_time", .module = tri_time_mod },
+            },
         }),
     });
     const run_rate_limiter_tests = b.addRunArtifact(rate_limiter_tests);
@@ -983,6 +1161,10 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/trinity_node/token_staking.zig"),
             .target = target,
             .optimize = optimize,
+            .imports = &.{
+                .{ .name = "tri_mutex", .module = tri_mutex_mod },
+                .{ .name = "tri_time", .module = tri_time_mod },
+            },
         }),
     });
     const run_token_staking_tests = b.addRunArtifact(token_staking_tests);
@@ -994,6 +1176,9 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/firebird/mainnet.zig"),
             .target = target,
             .optimize = optimize,
+            .imports = &.{
+                .{ .name = "tri_time", .module = tri_time_mod },
+            },
         }),
     });
     const run_mainnet_tests = b.addRunArtifact(mainnet_tests);
@@ -1005,6 +1190,9 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/depin/multichain.zig"),
             .target = target,
             .optimize = optimize,
+            .imports = &.{
+                .{ .name = "tri_time", .module = tri_time_mod },
+            },
         }),
     });
     const run_multichain_tests = b.addRunArtifact(multichain_tests);
@@ -1016,6 +1204,9 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/depin/observability.zig"),
             .target = target,
             .optimize = optimize,
+            .imports = &.{
+                .{ .name = "tri_time", .module = tri_time_mod },
+            },
         }),
     });
     const run_observability_tests = b.addRunArtifact(observability_tests);
@@ -1027,6 +1218,9 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/api/depin_production.zig"),
             .target = target,
             .optimize = optimize,
+            .imports = &.{
+                .{ .name = "tri_time", .module = tri_time_mod },
+            },
         }),
     });
     const run_production_api_tests = b.addRunArtifact(production_api_tests);
@@ -1038,6 +1232,9 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/firebird/governance.zig"),
             .target = target,
             .optimize = optimize,
+            .imports = &.{
+                .{ .name = "tri_time", .module = tri_time_mod },
+            },
         }),
     });
     const run_governance_tests = b.addRunArtifact(governance_tests);
@@ -1049,6 +1246,10 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/trinity_node/peer_latency.zig"),
             .target = target,
             .optimize = optimize,
+            .imports = &.{
+                .{ .name = "tri_mutex", .module = tri_mutex_mod },
+                .{ .name = "tri_time", .module = tri_time_mod },
+            },
         }),
     });
     const run_peer_latency_tests = b.addRunArtifact(peer_latency_tests);
@@ -1060,6 +1261,12 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/trinity_node/rs_repair.zig"),
             .target = target,
             .optimize = optimize,
+            .imports = &.{
+                .{ .name = "tri_io", .module = tri_io_mod },
+                .{ .name = "tri_mutex", .module = tri_mutex_mod },
+                .{ .name = "tri_rand", .module = tri_rand_mod },
+                .{ .name = "tri_time", .module = tri_time_mod },
+            },
         }),
     });
     const run_rs_repair_tests = b.addRunArtifact(rs_repair_tests);
@@ -1071,6 +1278,12 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/trinity_node/metrics_http.zig"),
             .target = target,
             .optimize = optimize,
+            .imports = &.{
+                .{ .name = "tri_io", .module = tri_io_mod },
+                .{ .name = "tri_mutex", .module = tri_mutex_mod },
+                .{ .name = "tri_rand", .module = tri_rand_mod },
+                .{ .name = "tri_time", .module = tri_time_mod },
+            },
         }),
     });
     const run_metrics_http_tests = b.addRunArtifact(metrics_http_tests);
@@ -1082,6 +1295,12 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/trinity_node/erasure_repair.zig"),
             .target = target,
             .optimize = optimize,
+            .imports = &.{
+                .{ .name = "tri_io", .module = tri_io_mod },
+                .{ .name = "tri_mutex", .module = tri_mutex_mod },
+                .{ .name = "tri_rand", .module = tri_rand_mod },
+                .{ .name = "tri_time", .module = tri_time_mod },
+            },
         }),
     });
     const run_erasure_repair_tests = b.addRunArtifact(erasure_repair_tests);
@@ -1093,6 +1312,10 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/trinity_node/reputation_consensus.zig"),
             .target = target,
             .optimize = optimize,
+            .imports = &.{
+                .{ .name = "tri_mutex", .module = tri_mutex_mod },
+                .{ .name = "tri_time", .module = tri_time_mod },
+            },
         }),
     });
     const run_reputation_consensus_tests = b.addRunArtifact(reputation_consensus_tests);
@@ -1104,6 +1327,10 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/trinity_node/stake_delegation.zig"),
             .target = target,
             .optimize = optimize,
+            .imports = &.{
+                .{ .name = "tri_mutex", .module = tri_mutex_mod },
+                .{ .name = "tri_time", .module = tri_time_mod },
+            },
         }),
     });
     const run_stake_delegation_tests = b.addRunArtifact(stake_delegation_tests);
@@ -1115,6 +1342,10 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/trinity_node/region_topology.zig"),
             .target = target,
             .optimize = optimize,
+            .imports = &.{
+                .{ .name = "tri_mutex", .module = tri_mutex_mod },
+                .{ .name = "tri_time", .module = tri_time_mod },
+            },
         }),
     });
     const run_region_topology_tests = b.addRunArtifact(region_topology_tests);
@@ -1137,6 +1368,12 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/trinity_node/prometheus_http.zig"),
             .target = target,
             .optimize = optimize,
+            .imports = &.{
+                .{ .name = "tri_io", .module = tri_io_mod },
+                .{ .name = "tri_mutex", .module = tri_mutex_mod },
+                .{ .name = "tri_rand", .module = tri_rand_mod },
+                .{ .name = "tri_time", .module = tri_time_mod },
+            },
         }),
     });
     const run_prometheus_http_tests = b.addRunArtifact(prometheus_http_tests);
@@ -1148,6 +1385,9 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/trinity_node/vsa_shard_encoder.zig"),
             .target = target,
             .optimize = optimize,
+            .imports = &.{
+                .{ .name = "tri_mutex", .module = tri_mutex_mod },
+            },
         }),
     });
     const run_vsa_shard_encoder_tests = b.addRunArtifact(vsa_shard_encoder_tests);
@@ -1159,6 +1399,9 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/trinity_node/semantic_index.zig"),
             .target = target,
             .optimize = optimize,
+            .imports = &.{
+                .{ .name = "tri_mutex", .module = tri_mutex_mod },
+            },
         }),
     });
     const run_semantic_index_tests = b.addRunArtifact(semantic_index_tests);
@@ -1192,6 +1435,10 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/trinity_node/region_router.zig"),
             .target = target,
             .optimize = optimize,
+            .imports = &.{
+                .{ .name = "tri_mutex", .module = tri_mutex_mod },
+                .{ .name = "tri_time", .module = tri_time_mod },
+            },
         }),
     });
     const run_region_router_tests = b.addRunArtifact(region_router_tests);
@@ -1203,6 +1450,12 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/trinity_node/dynamic_erasure.zig"),
             .target = target,
             .optimize = optimize,
+            .imports = &.{
+                .{ .name = "tri_io", .module = tri_io_mod },
+                .{ .name = "tri_mutex", .module = tri_mutex_mod },
+                .{ .name = "tri_rand", .module = tri_rand_mod },
+                .{ .name = "tri_time", .module = tri_time_mod },
+            },
         }),
     });
     const run_dynamic_erasure_tests = b.addRunArtifact(dynamic_erasure_tests);
@@ -1259,6 +1512,9 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/b2t/b2t_cli.zig"),
             .target = target,
             .optimize = optimize,
+            .imports = &.{
+                .{ .name = "tri_io", .module = tri_io_mod },
+            },
         }),
     });
     b.installArtifact(b2t);
@@ -1280,6 +1536,9 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/vibeec/claude_ui.zig"),
             .target = target,
             .optimize = optimize,
+            .imports = &.{
+                .{ .name = "tri_time", .module = tri_time_mod },
+            },
         }),
     });
     b.installArtifact(claude_ui);
@@ -1295,6 +1554,9 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/vibeec/trinity_cli.zig"),
             .target = target,
             .optimize = optimize,
+            .imports = &.{
+                .{ .name = "tri_io", .module = tri_io_mod },
+            },
         }),
     });
     b.installArtifact(trinity_cli);
@@ -1534,6 +1796,8 @@ pub fn build(b: *std.Build) void {
             .target = target,
             .optimize = optimize,
             .imports = &.{
+                .{ .name = "tri_io", .module = tri_io_mod },
+                .{ .name = "tri_time", .module = tri_time_mod },
                 .{ .name = "igla_chat", .module = vibeec_chat },
                 .{ .name = "tvc_corpus", .module = tvc_corpus_mod },
                 .{ .name = "igla_kg", .module = igla_kg_mod },
@@ -1575,6 +1839,11 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/vibeec/gen_cmd.zig"),
             .target = target,
             .optimize = optimize,
+            .imports = &.{
+                .{ .name = "tri_io", .module = tri_io_mod },
+                .{ .name = "tri_proc", .module = tri_proc_mod },
+                .{ .name = "tri_time", .module = tri_time_mod },
+            },
         }),
     });
 
@@ -1586,6 +1855,9 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/tvc/treesitter/zig.zig"),
             .target = target,
             .optimize = optimize,
+            .imports = &.{
+                .{ .name = "tri_io", .module = tri_io_mod },
+            },
         });
         ts_zig_mod.linkSystemLibrary("tree-sitter", .{});
         ts_zig_mod.link_libc = true;
@@ -1615,6 +1887,7 @@ pub fn build(b: *std.Build) void {
             .target = target,
             .optimize = optimize,
             .imports = &.{
+                .{ .name = "tri_time", .module = tri_time_mod },
                 .{ .name = "tri_io", .module = tri_io_mod },
             },
         }),
@@ -1637,6 +1910,9 @@ pub fn build(b: *std.Build) void {
         .root_source_file = b.path("src/tvc/treesitter/zig.zig"),
         .target = target,
         .optimize = optimize,
+        .imports = &.{
+            .{ .name = "tri_io", .module = tri_io_mod },
+        },
     });
     ts_zig_mod.link_libc = true;
     // Add stub include path for tree_sitter/api.h when library is not installed
@@ -1677,6 +1953,10 @@ pub fn build(b: *std.Build) void {
             .target = target,
             .optimize = optimize,
             .imports = &.{
+                .{ .name = "tri_io", .module = tri_io_mod },
+                .{ .name = "tri_proc", .module = tri_proc_mod },
+                .{ .name = "tri_rand", .module = tri_rand_mod },
+                .{ .name = "tri_time", .module = tri_time_mod },
                 .{ .name = "treesitter_zig", .module = ts_zig_mod },
             },
         }),
@@ -1698,6 +1978,7 @@ pub fn build(b: *std.Build) void {
             .target = target,
             .optimize = optimize,
             .imports = &.{
+                .{ .name = "tri_io", .module = tri_io_mod },
                 .{ .name = "needle", .module = needle_mod },
                 .{ .name = "vsa", .module = vsa_tri },
                 .{ .name = "treesitter_zig", .module = ts_zig_mod },
@@ -1738,6 +2019,10 @@ pub fn build(b: *std.Build) void {
             .target = target,
             .optimize = optimize,
             .imports = &.{
+                .{ .name = "tri_env", .module = tri_env_mod },
+                .{ .name = "tri_io", .module = tri_io_mod },
+                .{ .name = "tri_proc", .module = tri_proc_mod },
+                .{ .name = "tri_time", .module = tri_time_mod },
                 .{ .name = "needle", .module = needle_mod },
                 .{ .name = "vsa", .module = vsa_tri },
                 .{ .name = "treesitter_zig", .module = ts_zig_mod },
@@ -1768,6 +2053,12 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("tools/mcp/trinity_mcp/agent/main.zig"),
             .target = target,
             .optimize = optimize,
+            .imports = &.{
+                .{ .name = "tri_env", .module = tri_env_mod },
+                .{ .name = "tri_io", .module = tri_io_mod },
+                .{ .name = "tri_proc", .module = tri_proc_mod },
+                .{ .name = "tri_time", .module = tri_time_mod },
+            },
         }),
     });
     b.installArtifact(ralph_agent);
@@ -1791,6 +2082,10 @@ pub fn build(b: *std.Build) void {
             .target = target,
             .optimize = optimize,
             .imports = &.{
+                .{ .name = "tri_env", .module = tri_env_mod },
+                .{ .name = "tri_io", .module = tri_io_mod },
+                .{ .name = "tri_proc", .module = tri_proc_mod },
+                .{ .name = "tri_time", .module = tri_time_mod },
                 .{ .name = "telegram", .module = telegram_mod },
             },
         }),
@@ -1811,6 +2106,10 @@ pub fn build(b: *std.Build) void {
             .target = target,
             .optimize = optimize,
             .imports = &.{
+                .{ .name = "tri_env", .module = tri_env_mod },
+                .{ .name = "tri_io", .module = tri_io_mod },
+                .{ .name = "tri_proc", .module = tri_proc_mod },
+                .{ .name = "tri_time", .module = tri_time_mod },
                 .{ .name = "telegram", .module = telegram_mod },
             },
         }),
@@ -1831,6 +2130,12 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("tools/mcp/trinity_mcp/agent/entrypoint.zig"),
             .target = target,
             .optimize = optimize,
+            .imports = &.{
+                .{ .name = "tri_env", .module = tri_env_mod },
+                .{ .name = "tri_io", .module = tri_io_mod },
+                .{ .name = "tri_proc", .module = tri_proc_mod },
+                .{ .name = "tri_time", .module = tri_time_mod },
+            },
         }),
     });
     b.installArtifact(agent_entrypoint);
@@ -1847,6 +2152,9 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("tools/mcp/trinity_mcp/agent/ralph_hook.zig"),
             .target = target,
             .optimize = optimize,
+            .imports = &.{
+                .{ .name = "tri_env", .module = tri_env_mod },
+            },
         }),
     });
     b.installArtifact(ralph_hook);
@@ -1858,6 +2166,9 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("tools/hooks/pipeline_guard.zig"),
             .target = target,
             .optimize = optimize,
+            .imports = &.{
+                .{ .name = "tri_io", .module = tri_io_mod },
+            },
         }),
     });
     b.installArtifact(pipeline_guard);
@@ -1869,6 +2180,12 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("tools/mcp/trinity_mcp/bot/main.zig"),
             .target = target,
             .optimize = optimize,
+            .imports = &.{
+                .{ .name = "tri_env", .module = tri_env_mod },
+                .{ .name = "tri_io", .module = tri_io_mod },
+                .{ .name = "tri_proc", .module = tri_proc_mod },
+                .{ .name = "tri_time", .module = tri_time_mod },
+            },
         }),
     });
     b.installArtifact(tri_bot);
@@ -1886,6 +2203,10 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/vibeec/phi_loop_cli.zig"),
             .target = target,
             .optimize = optimize,
+            .imports = &.{
+                .{ .name = "tri_io", .module = tri_io_mod },
+                .{ .name = "tri_time", .module = tri_time_mod },
+            },
         }),
     });
     b.installArtifact(phi_loop);
@@ -1904,6 +2225,11 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/forge/main.zig"),
             .target = target,
             .optimize = .ReleaseFast,
+            .imports = &.{
+                .{ .name = "tri_io", .module = tri_io_mod },
+                .{ .name = "tri_proc", .module = tri_proc_mod },
+                .{ .name = "tri_time", .module = tri_time_mod },
+            },
         }),
     });
     b.installArtifact(forge);
@@ -1927,6 +2253,9 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/beal/main.zig"),
             .target = target,
             .optimize = .ReleaseFast,
+            .imports = &.{
+                .{ .name = "tri_time", .module = tri_time_mod },
+            },
         }),
     });
     b.installArtifact(beal);
@@ -1944,6 +2273,9 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/beal.zig"),
             .target = target,
             .optimize = optimize,
+            .imports = &.{
+                .{ .name = "tri_time", .module = tri_time_mod },
+            },
         }),
     });
     const run_beal_tests = b.addRunArtifact(beal_tests);
@@ -1994,6 +2326,9 @@ pub fn build(b: *std.Build) void {
             .target = target,
             .optimize = optimize,
             .link_libc = true,
+            .imports = &.{
+                .{ .name = "tri_proc", .module = tri_proc_mod },
+            },
         }),
     });
     b.installArtifact(railway_redeploy);
@@ -2011,6 +2346,9 @@ pub fn build(b: *std.Build) void {
             .target = target,
             .optimize = optimize,
             .link_libc = true,
+            .imports = &.{
+                .{ .name = "tri_proc", .module = tri_proc_mod },
+            },
         }),
     });
     b.installArtifact(railway_update_service);
@@ -2028,6 +2366,9 @@ pub fn build(b: *std.Build) void {
             .target = target,
             .optimize = optimize,
             .link_libc = true,
+            .imports = &.{
+                .{ .name = "tri_proc", .module = tri_proc_mod },
+            },
         }),
     });
     b.installArtifact(railway_set_builder);
@@ -2045,6 +2386,9 @@ pub fn build(b: *std.Build) void {
             .target = target,
             .optimize = optimize,
             .link_libc = true,
+            .imports = &.{
+                .{ .name = "tri_proc", .module = tri_proc_mod },
+            },
         }),
     });
     b.installArtifact(railway_create_service);
@@ -2062,6 +2406,9 @@ pub fn build(b: *std.Build) void {
             .target = target,
             .optimize = optimize,
             .link_libc = true,
+            .imports = &.{
+                .{ .name = "tri_proc", .module = tri_proc_mod },
+            },
         }),
     });
     b.installArtifact(railway_set_startcmd);
@@ -2079,6 +2426,9 @@ pub fn build(b: *std.Build) void {
             .target = target,
             .optimize = optimize,
             .link_libc = true,
+            .imports = &.{
+                .{ .name = "tri_proc", .module = tri_proc_mod },
+            },
         }),
     });
     b.installArtifact(railway_trigger_redeploy);
@@ -2096,6 +2446,9 @@ pub fn build(b: *std.Build) void {
             .target = target,
             .optimize = optimize,
             .link_libc = true,
+            .imports = &.{
+                .{ .name = "tri_proc", .module = tri_proc_mod },
+            },
         }),
     });
     b.installArtifact(railway_set_dockerfile);
@@ -2113,6 +2466,10 @@ pub fn build(b: *std.Build) void {
             .target = target,
             .optimize = optimize,
             .link_libc = true,
+            .imports = &.{
+                .{ .name = "tri_env", .module = tri_env_mod },
+                .{ .name = "tri_proc", .module = tri_proc_mod },
+            },
         }),
     });
     b.installArtifact(railway_rename);
@@ -2132,6 +2489,11 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/cli/entrypoint_swe.zig"),
             .target = target,
             .optimize = .ReleaseFast,
+            .imports = &.{
+                .{ .name = "tri_io", .module = tri_io_mod },
+                .{ .name = "tri_proc", .module = tri_proc_mod },
+                .{ .name = "tri_time", .module = tri_time_mod },
+            },
         }),
     });
     b.installArtifact(swe_entrypoint);
@@ -2347,6 +2709,7 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
         .imports = &.{
+            .{ .name = "tri_io", .module = tri_io_mod },
             .{ .name = "tri_time", .module = tri_time_mod },
             .{ .name = "tri_rand", .module = tri_rand_mod },
             .{ .name = "tri_env", .module = tri_env_mod },
@@ -2412,6 +2775,7 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
         .imports = &.{
+            .{ .name = "tri_io", .module = tri_io_mod },
             .{ .name = "tri_time", .module = tri_time_mod },
             .{ .name = "tri_rand", .module = tri_rand_mod },
             .{ .name = "basal_ganglia", .module = basal_ganglia_mod },
@@ -2435,6 +2799,7 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
         .imports = &.{
+            .{ .name = "tri_io", .module = tri_io_mod },
             .{ .name = "tri_time", .module = tri_time_mod },
             .{ .name = "tri_rand", .module = tri_rand_mod },
         },
@@ -2502,6 +2867,7 @@ pub fn build(b: *std.Build) void {
             .target = target,
             .optimize = optimize,
             .imports = &.{
+                .{ .name = "tri_io", .module = tri_io_mod },
                 .{ .name = "brain", .module = brain_mod },
             },
         }),
@@ -2522,6 +2888,9 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/cli/sim_plot.zig"),
             .target = target,
             .optimize = optimize,
+            .imports = &.{
+                .{ .name = "tri_io", .module = tri_io_mod },
+            },
         }),
     });
     b.installArtifact(sim_plot);
@@ -2833,6 +3202,9 @@ pub fn build(b: *std.Build) void {
             .target = target,
             .optimize = optimize,
             .imports = &.{
+                .{ .name = "tri_io", .module = tri_io_mod },
+                .{ .name = "tri_proc", .module = tri_proc_mod },
+                .{ .name = "tri_time", .module = tri_time_mod },
                 .{ .name = "tri_utils", .module = tri_utils_mod },
                 .{ .name = "tri_commands", .module = tri_commands_mod },
                 .{ .name = "trinity_swe", .module = vibeec_swe },
@@ -2881,6 +3253,10 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/tri/tri_config.zig"),
             .target = target,
             .optimize = optimize,
+            .imports = &.{
+                .{ .name = "tri_env", .module = tri_env_mod },
+                .{ .name = "tri_io", .module = tri_io_mod },
+            },
         }),
     });
     const run_tri_config_tests = b.addRunArtifact(tri_config_tests);
@@ -2893,6 +3269,9 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/tri/tri_history.zig"),
             .target = target,
             .optimize = optimize,
+            .imports = &.{
+                .{ .name = "tri_io", .module = tri_io_mod },
+            },
         }),
     });
     const run_tri_history_tests = b.addRunArtifact(tri_history_tests);
@@ -2917,6 +3296,10 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/brain/basal_ganglia.zig"),
             .target = target,
             .optimize = optimize,
+            .imports = &.{
+                .{ .name = "tri_mutex", .module = tri_mutex_mod },
+                .{ .name = "tri_time", .module = tri_time_mod },
+            },
         }),
     });
     const run_basal_ganglia_tests = b.addRunArtifact(basal_ganglia_tests);
@@ -2928,6 +3311,10 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/brain/reticular_formation.zig"),
             .target = target,
             .optimize = optimize,
+            .imports = &.{
+                .{ .name = "tri_mutex", .module = tri_mutex_mod },
+                .{ .name = "tri_time", .module = tri_time_mod },
+            },
         }),
     });
     const run_reticular_formation_tests = b.addRunArtifact(reticular_formation_tests);
@@ -2939,6 +3326,9 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/brain/locus_coeruleus.zig"),
             .target = target,
             .optimize = optimize,
+            .imports = &.{
+                .{ .name = "tri_time", .module = tri_time_mod },
+            },
         }),
     });
     const run_locus_coeruleus_tests = b.addRunArtifact(locus_coeruleus_tests);
@@ -3079,6 +3469,11 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/vibeec/trinity_hybrid_local.zig"),
             .target = target,
             .optimize = .ReleaseFast,
+            .imports = &.{
+                .{ .name = "tri_io", .module = tri_io_mod },
+                .{ .name = "tri_proc", .module = tri_proc_mod },
+                .{ .name = "tri_time", .module = tri_time_mod },
+            },
         }),
     });
     b.installArtifact(hybrid_local);
@@ -3111,6 +3506,12 @@ pub fn build(b: *std.Build) void {
             .target = target,
             .optimize = optimize,
             .imports = &.{
+                .{ .name = "tri_env", .module = tri_env_mod },
+                .{ .name = "tri_io", .module = tri_io_mod },
+                .{ .name = "tri_mutex", .module = tri_mutex_mod },
+                .{ .name = "tri_proc", .module = tri_proc_mod },
+                .{ .name = "tri_rand", .module = tri_rand_mod },
+                .{ .name = "tri_time", .module = tri_time_mod },
                 .{ .name = "gguf_model", .module = gguf_model_mod },
             },
         }),
@@ -3134,6 +3535,13 @@ pub fn build(b: *std.Build) void {
                 .root_source_file = b.path("src/trinity_node/main_gui.zig"),
                 .target = target,
                 .optimize = optimize,
+                .imports = &.{
+                    .{ .name = "tri_env", .module = tri_env_mod },
+                    .{ .name = "tri_io", .module = tri_io_mod },
+                    .{ .name = "tri_mutex", .module = tri_mutex_mod },
+                    .{ .name = "tri_rand", .module = tri_rand_mod },
+                    .{ .name = "tri_time", .module = tri_time_mod },
+                },
             }),
         });
         trinity_node_gui.root_module.linkSystemLibrary("raylib", .{});
@@ -3353,6 +3761,9 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/vibeec/kg_sync.zig"),
             .target = target,
             .optimize = optimize,
+            .imports = &.{
+                .{ .name = "tri_time", .module = tri_time_mod },
+            },
         }),
     });
     const run_kg_sync = b.addRunArtifact(kg_sync_tests);
@@ -3471,6 +3882,8 @@ pub fn build(b: *std.Build) void {
             .target = target,
             .optimize = optimize,
             .imports = &.{
+                .{ .name = "tri_io", .module = tri_io_mod },
+                .{ .name = "tri_time", .module = tri_time_mod },
                 .{ .name = "mcp_gen", .module = registry_mod },
                 .{ .name = "trinity", .module = trinity_mod },
             },
@@ -3495,6 +3908,8 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
         .imports = &.{
+            .{ .name = "tri_io", .module = tri_io_mod },
+            .{ .name = "tri_time", .module = tri_time_mod },
             .{ .name = "tri_env", .module = tri_env_mod },
         },
     });
@@ -3510,6 +3925,10 @@ pub fn build(b: *std.Build) void {
             .target = target,
             .optimize = optimize,
             .imports = &.{
+                .{ .name = "tri_env", .module = tri_env_mod },
+                .{ .name = "tri_io", .module = tri_io_mod },
+                .{ .name = "tri_proc", .module = tri_proc_mod },
+                .{ .name = "tri_time", .module = tri_time_mod },
                 .{ .name = "token_rotator", .module = token_rotator_mod },
             },
         }),
@@ -3530,6 +3949,12 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/arena/main.zig"),
             .target = target,
             .optimize = optimize,
+            .imports = &.{
+                .{ .name = "tri_env", .module = tri_env_mod },
+                .{ .name = "tri_io", .module = tri_io_mod },
+                .{ .name = "tri_proc", .module = tri_proc_mod },
+                .{ .name = "tri_time", .module = tri_time_mod },
+            },
         }),
     });
     b.installArtifact(arena_exe);
@@ -3544,6 +3969,12 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/arena/main.zig"),
             .target = target,
             .optimize = optimize,
+            .imports = &.{
+                .{ .name = "tri_env", .module = tri_env_mod },
+                .{ .name = "tri_io", .module = tri_io_mod },
+                .{ .name = "tri_proc", .module = tri_proc_mod },
+                .{ .name = "tri_time", .module = tri_time_mod },
+            },
         }),
     });
     const run_arena_tests = b.addRunArtifact(arena_tests);
@@ -3561,6 +3992,10 @@ pub fn build(b: *std.Build) void {
             .optimize = .ReleaseFast,
             // reaches std.c, which Zig requires declared rather than inferred
             .link_libc = true,
+            .imports = &.{
+                .{ .name = "tri_io", .module = tri_io_mod },
+                .{ .name = "tri_proc", .module = tri_proc_mod },
+            },
         }),
     });
     b.installArtifact(sacred);

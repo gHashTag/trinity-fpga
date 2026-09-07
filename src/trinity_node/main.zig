@@ -335,7 +335,7 @@ fn printHelp() void {
 // MAIN
 // ═══════════════════════════════════════════════════════════════════════════════
 
-pub fn main() !void {
+pub fn main(init: std.process.Init.Minimal) !void {
     var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
@@ -350,8 +350,8 @@ pub fn main() !void {
     // Distributed inference mode — bypass normal node startup
     if (args.distributed) {
         const alloc = std.heap.page_allocator;
-        const process_args = try std.process.argsAlloc(alloc);
-        defer std.process.argsFree(alloc, process_args);
+        const process_args = try init.args.toSlice(alloc);
+        defer alloc.free(process_args);
         const dist_args = if (process_args.len > 1) process_args[1..] else &[_][]const u8{};
         try distributed.runDistributed(alloc, dist_args);
         return;

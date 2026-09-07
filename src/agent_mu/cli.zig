@@ -9,13 +9,12 @@ pub const log = std.log;
 // Import PAS daemon via build.zig module system
 const pas_daemon_mod = @import("pas_daemon");
 
-pub fn main() !u8 {
+pub fn main(init: std.process.Init.Minimal) !u8 {
     const allocator = std.heap.page_allocator;
 
     // Parse command line arguments
-    const args = try std.process.argsAlloc(allocator);
-    defer std.process.argsFree(allocator, args);
-
+    const args = try init.args.toSlice(allocator);
+    defer allocator.free(args);
     var config_path: []const u8 = "agent-mu-config.json";
     var run_daemon = false;
     var run_once = false;
