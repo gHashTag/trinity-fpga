@@ -40,7 +40,9 @@ pub const SemanticIndex = struct {
     allocator: std.mem.Allocator,
     encoder: *VsaShardEncoder,
     // HashMap: shard_hash[32] → Hypervector fingerprint
-    index: std.AutoArrayHashMap([32]u8, Hypervector),
+    /// 0.16 renamed this to ...Unmanaged: the map no longer stores an
+    /// allocator, so put/deinit/orderedRemove take one explicitly.
+    index: std.AutoArrayHashMapUnmanaged([32]u8, Hypervector),
     shards_indexed: u64,
     shards_removed: u64,
     queries_executed: u64,
@@ -50,7 +52,7 @@ pub const SemanticIndex = struct {
         return .{
             .allocator = allocator,
             .encoder = encoder,
-            .index = std.AutoArrayHashMap([32]u8, Hypervector).init(allocator),
+            .index = .empty,
             .shards_indexed = 0,
             .shards_removed = 0,
             .queries_executed = 0,
@@ -59,7 +61,7 @@ pub const SemanticIndex = struct {
     }
 
     pub fn deinit(self: *SemanticIndex) void {
-        self.index.deinit();
+        self.index.deinit(self.allocator);
     }
 
     /// Index a shard: compute fingerprint from data, store in index
@@ -68,7 +70,7 @@ pub const SemanticIndex = struct {
         defer self.mutex.unlock();
 
         const fingerprint = self.encoder.encode(data);
-        try self.index.put(shard_hash, fingerprint);
+        try self.index.put(self.allocator, shard_hash, fingerprint);
         self.shards_indexed += 1;
     }
 
@@ -77,7 +79,7 @@ pub const SemanticIndex = struct {
         self.mutex.lock();
         defer self.mutex.unlock();
 
-        try self.index.put(shard_hash, fingerprint);
+        try self.index.put(self.allocator, shard_hash, fingerprint);
         self.shards_indexed += 1;
     }
 

@@ -544,12 +544,18 @@ pub const TVCBigInt = struct {
             // SIMD compare
             const cmp = simdCompareTrits(a_vec, b_vec);
 
-            // Check from most significant position in chunk
+            // Check from most significant position in chunk.
+            //
+            // 0.16 rejects indexing a @Vector with a runtime index. The scan
+            // is inherently sequential (first non-zero from the top wins), so
+            // copy the lanes into an array and walk that -- the comparison
+            // itself already happened in one SIMD op above.
+            const lanes: [32]i8 = cmp;
             var pos: usize = 32;
             while (pos > 0) {
                 pos -= 1;
-                if (cmp[pos] != 0) {
-                    return cmp[pos];
+                if (lanes[pos] != 0) {
+                    return lanes[pos];
                 }
             }
         }
