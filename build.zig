@@ -268,6 +268,44 @@ pub fn build(b: *std.Build) void {
     const test_step = b.step("test", "Run library tests");
     test_step.dependOn(&run_main_tests.step);
 
+    // ═══════════════════════════════════════════════════════════════════════════
+    // Behaviour-path tests for the Zig 0.16 migration (#764)
+    // ═══════════════════════════════════════════════════════════════════════════
+    //
+    // These three files carry the tests for the paths where 0.16 changed
+    // BEHAVIOUR rather than names -- the token file's permissions, PATH
+    // resolution for subprocesses, and Io.Group replacing a thread pool.
+    //
+    // They are declared here because they were NOT reachable from the test
+    // step, which covers a fixed list of roots. Verified rather than assumed:
+    // an always-failing test added to each returned rc=0 before this. Tests
+    // that nothing runs are decoration, which is the same defect as a gate
+    // that cannot fail, one level up.
+    const behaviour_test_files = [_][]const u8{
+        "src/tri/token_rotator.zig",
+        "src/tri/tri_proc.zig",
+        "src/tri/io_group_behaviour_test.zig",
+    };
+    for (behaviour_test_files) |src_file| {
+        const t = b.addTest(.{
+            .root_module = b.createModule(.{
+                .root_source_file = b.path(src_file),
+                .target = target,
+                .optimize = optimize,
+                .link_libc = true,
+                .imports = &.{
+                    .{ .name = "tri_time", .module = tri_time_mod },
+                    .{ .name = "tri_io", .module = tri_io_mod },
+                    .{ .name = "tri_env", .module = tri_env_mod },
+                    .{ .name = "tri_proc", .module = tri_proc_mod },
+                    .{ .name = "tri_mutex", .module = tri_mutex_mod },
+                    .{ .name = "tri_rand", .module = tri_rand_mod },
+                },
+            }),
+        });
+        test_step.dependOn(&b.addRunArtifact(t).step);
+    }
+
     // Queen API tests
     const queen_api_tests = b.addTest(.{
         .root_module = b.createModule(.{
