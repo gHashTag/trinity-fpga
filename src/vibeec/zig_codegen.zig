@@ -96,3 +96,175 @@ test "codegen submodules" {
     _ = @import("codegen/emitter.zig");
     _ = @import("codegen/mod.zig");
 }
+
+// ─── Signature and body must agree ─────────────────────────────────────────
+//
+// Two independent decisions, keyed on two different things:
+//
+//   the RETURN TYPE comes from phrases in the behaviour's `then` clause
+//       (signature.zig: "valid" -> bool, "count" -> usize, ...)
+//   the BODY SHAPE comes from the prefix of the behaviour's NAME
+//       (emitter.zig: process*/run*/execute* -> a timed block, ...)
+//
+// Nothing makes them agree, and they demonstrably do not: a `then` reading
+// "Return true if phi^2 + 1/phi^2 equals 3.0" produced `!void` while
+// tests_gen emitted `try std.testing.expect(result)`, and the generated file
+// did not compile. That was one instance found by CI; this is the general
+// property.
+//
+// The invariant a generated function must satisfy is small and checkable on
+// the emitted text: if the signature promises a value, the body must return
+// one. This sweeps the whole name-prefix space against the whole return-type
+// space, so a new body branch that forgets to return is caught the first time
+// it is added, rather than whenever a spec happens to hit it.
+
+const parser_types_align = @import("gen_parser_types.zig");
+
+/// Extract the body of `pub fn <name>(` from generated source: everything
+/// between its opening brace and the first `\n}` at column zero.
+fn bodyOf(src: []const u8, fn_name: []const u8) ?struct { ret: []const u8, body: []const u8 } {
+    var needle_buf: [128]u8 = undefined;
+    const needle = std.fmt.bufPrint(&needle_buf, "pub fn {s}(", .{fn_name}) catch return null;
+    const at = std.mem.indexOf(u8, src, needle) orelse return null;
+
+    const line_end = std.mem.indexOfScalarPos(u8, src, at, '\n') orelse return null;
+    const header = src[at..line_end];
+    const close_paren = std.mem.lastIndexOfScalar(u8, header, ')') orelse return null;
+    const brace = std.mem.lastIndexOfScalar(u8, header, '{') orelse return null;
+    if (brace < close_paren) return null;
+    const ret = std.mem.trim(u8, header[close_paren + 1 .. brace], " ");
+
+    const body_start = line_end + 1;
+    const end_rel = std.mem.indexOf(u8, src[body_start..], "\n}") orelse return null;
+    return .{ .ret = ret, .body = src[body_start .. body_start + end_rel] };
+}
+
+/// Does this return type oblige the body to produce a value?
+fn returnsAValue(ret: []const u8) bool {
+    if (ret.len == 0) return false;
+    if (std.mem.eql(u8, ret, "void") or std.mem.eql(u8, ret, "!void")) return false;
+    if (std.mem.eql(u8, ret, "anyerror!void")) return false;
+    return true;
+}
+
+test "a generated function that promises a value returns one" {
+    const allocator = std.testing.allocator;
+
+    // Every prefix emitter.zig and body_emitter.zig branch on. Kept as a
+    // literal list rather than derived, so adding a branch without adding it
+    // here leaves a visible gap rather than silently shrinking the sweep.
+    const prefixes = [_][]const u8{
+        "add",      "assemble",   "assign",    "boost",    "check",
+        "classify", "clear",      "combine",   "compress", "compute",
+        "convert",  "coordinate", "decay",     "decode",   "decompress",
+        "delegate", "delete",     "detect",    "disable",  "dispatch",
+        "encode",   "estimate",   "evict",     "execute",  "extract",
+        "find",     "fit",        "fuse",      "generate", "get",
+        "handle",   "insert",     "list",      "load",     "merge",
+        "modify",   "parse",      "persist",   "process",  "query",
+        "recall",   "reinforce",  "remove",    "reset",    "resolve",
+        "respond",  "route",      "run",       "save",     "score",
+        "search",   "select",     "set",       "should",   "start",
+        "stream",   "strengthen", "summarize", "trim",     "update",
+        "validate", "verify",
+    };
+
+    // One phrase per return type signature.zig can select, plus the phrasing
+    // that started this: "Return true" (capital R, no s) misses the
+    // "returns true" entry and falls through to !void.
+    const thens = [_][]const u8{
+        "Returns a similarity score",
+        "Returns the count of items",
+        "Returns encoded bytes",
+        "Returns the weights",
+        "Returns true or false",
+        "Return true if the identity holds",
+        "Returns an array of results",
+        "Returns the text label",
+        "Stores the value",
+    };
+
+    var checked: usize = 0;
+    var bad: usize = 0;
+
+    for (prefixes) |p| {
+        for (thens) |t| {
+            var name_buf: [64]u8 = undefined;
+            const name = try std.fmt.bufPrint(&name_buf, "{s}Thing", .{p});
+
+            var spec = parser_types_align.VibeeSpec.init(allocator);
+            defer spec.deinit(allocator);
+
+            var b = parser_types_align.Behavior.init(allocator);
+            b.name = name;
+            b.given = "input";
+            b.when = "asked";
+            b.then = t;
+            try spec.behaviors.append(allocator, b);
+
+            var gen = ZigCodeGen.init(allocator);
+            defer gen.deinit();
+            const out = try gen.generate(&spec);
+            defer allocator.free(out);
+
+            const found = bodyOf(out, name) orelse continue;
+            if (!returnsAValue(found.ret)) continue;
+
+            checked += 1;
+            if (std.mem.indexOf(u8, found.body, "return ") == null) {
+                std.debug.print(
+                    "  {s} + \"{s}\" -> signature `{s}` with a body that never returns\n",
+                    .{ name, t, found.ret },
+                );
+                bad += 1;
+            }
+        }
+    }
+
+    // The property under test.
+    try std.testing.expectEqual(@as(usize, 0), bad);
+
+    // And the reason that number is currently easy to satisfy, stated so it
+    // cannot be mistaken for coverage. Measured: across all 558 combinations
+    // of name prefix and `then` phrase, the emitter writes `() !void` every
+    // single time. signature.zig's return-type inference reaches the BODY
+    // emitter (which uses it to decide which parameters to discard, in
+    // functions that have no parameters) and the TEST generator -- but never
+    // the code that writes the function header, which is hardcoded per
+    // pattern.
+    //
+    // So `checked` is 0 today, and this assertion is what makes that visible.
+    // When the inference is wired into the header, this line fails, `checked`
+    // becomes non-zero, and the `bad == 0` check above starts doing the work
+    // it was written for. Change this to `expect(checked > 0)` at that point.
+    try std.testing.expectEqual(@as(usize, 0), checked);
+}
+
+test "signature inference is not consulted for function headers" {
+    // The sharp form of the note above, as a standalone fact rather than a
+    // footnote on another test. This is what made a generated file fail to
+    // compile in CI: tests_gen asked the inference and emitted an assertion
+    // for a bool, while the header the function actually got was `!void`.
+    const allocator = std.testing.allocator;
+
+    var spec = parser_types_align.VibeeSpec.init(allocator);
+    defer spec.deinit(allocator);
+
+    var b = parser_types_align.Behavior.init(allocator);
+    b.name = "computeSimilarity";
+    b.given = "two vectors";
+    // signature.zig maps "similarity" to f32 -- unambiguously, it is the
+    // first phrase in its list.
+    b.then = "Returns a similarity score";
+    try spec.behaviors.append(allocator, b);
+
+    var gen = ZigCodeGen.init(allocator);
+    defer gen.deinit();
+    const out = try gen.generate(&spec);
+    defer allocator.free(out);
+
+    const found = bodyOf(out, "computeSimilarity") orelse return error.FunctionNotEmitted;
+    // Not `f32`. If this ever becomes f32, the inference has been wired in --
+    // delete this test and enable the one above.
+    try std.testing.expectEqualStrings("!void", found.ret);
+}

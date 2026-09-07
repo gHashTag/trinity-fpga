@@ -94,8 +94,8 @@ pub fn findMatchingBracket(str: []const u8, start_pos: usize) ?usize {
 
 pub fn parseComplexTypeNoAlloc(spec_types: []const TypeDef, type_str: []const u8) ?[]const u8 {
     if (std.mem.startsWith(u8, type_str, "Option<")) {
-        const end_pos = findMatchingBracket(type_str, 8) orelse return null;
-        const inner = type_str[8..end_pos];
+        const end_pos = findMatchingBracket(type_str, "Option<".len) orelse return null;
+        const inner = type_str["Option<".len..end_pos];
         const resolved = parseComplexTypeNoAlloc(spec_types, inner) orelse return null;
         if (std.mem.eql(u8, resolved, "i64")) return "?i64";
         if (std.mem.eql(u8, resolved, "f64")) return "?f64";
@@ -139,9 +139,9 @@ pub fn parseComplexTypeNoAlloc(spec_types: []const TypeDef, type_str: []const u8
 
 pub fn parseComplexType(allocator: Allocator, spec_types: []const TypeDef, type_str: []const u8) ![]const u8 {
     if (std.mem.startsWith(u8, type_str, "Option<")) {
-        const end_pos = findMatchingBracket(type_str, 8) orelse
+        const end_pos = findMatchingBracket(type_str, "Option<".len) orelse
             return error.UnmatchedBrackets;
-        const inner = type_str[8..end_pos];
+        const inner = type_str["Option<".len..end_pos];
         const resolved = try parseComplexType(allocator, spec_types, inner);
         return try std.fmt.allocPrint(allocator, "?{s}", .{resolved});
     }
@@ -330,7 +330,13 @@ test "parseComplexTypeNoAlloc: Option<Int>" {
 
 test "parseComplexTypeNoAlloc: List<String>" {
     const empty: []const TypeDef = &.{};
-    try std.testing.expectEqualStrings("[]const u8", parseComplexTypeNoAlloc(empty, "List<String>").?);
+    // `[]const []const u8`, not `[]const u8`. The expectation here used to be
+    // the latter, which would make a list of strings indistinguishable from a
+    // single string. The test below settles it: List<List<Int>> resolves to
+    // `[]const []const i64`, so List<String> -- a list of `[]const u8` -- must
+    // gain a slice the same way. The implementation was right; this line was
+    // wrong, and it had never run to say so.
+    try std.testing.expectEqualStrings("[]const []const u8", parseComplexTypeNoAlloc(empty, "List<String>").?);
 }
 
 test "parseComplexTypeNoAlloc: nested List<List<Int>>" {
