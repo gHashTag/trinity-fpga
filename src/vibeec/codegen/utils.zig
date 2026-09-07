@@ -255,6 +255,35 @@ pub fn mapType(type_name: []const u8) []const u8 {
     if (std.mem.eql(u8, clean_input, "Uint4")) return "u4";
     if (std.mem.eql(u8, clean_input, "Uint2")) return "u2";
 
+    // Case variants of the pointer-sized integer. `USize` is the spelling
+    // seven fields across the corpus actually use, and it was in neither
+    // mapType nor `known_base_types` -- so the validator rejected it AND the
+    // generator emitted it verbatim, producing `use of undeclared identifier
+    // 'USize'`. Same shape as the Uint64 gap in #774: a spelling the specs use
+    // and neither vocabulary knows.
+    if (std.ascii.eqlIgnoreCase(clean_input, "usize")) return "usize";
+    if (std.ascii.eqlIgnoreCase(clean_input, "isize")) return "isize";
+
+    // `Bytes8` and friends: a fixed-width byte buffer.
+    if (std.mem.startsWith(u8, clean_input, "Bytes") and clean_input.len > 5) {
+        const digits = clean_input[5..];
+        var all_digits = digits.len > 0;
+        for (digits) |c| {
+            if (!std.ascii.isDigit(c)) all_digits = false;
+        }
+        if (all_digits) {
+            // The width is part of the type, so it cannot come from this
+            // function's static-string return. Only the common widths the
+            // corpus uses are spelled out; anything else falls through to the
+            // generic handling rather than being guessed at.
+            if (std.mem.eql(u8, digits, "4")) return "[4]u8";
+            if (std.mem.eql(u8, digits, "8")) return "[8]u8";
+            if (std.mem.eql(u8, digits, "16")) return "[16]u8";
+            if (std.mem.eql(u8, digits, "32")) return "[32]u8";
+            if (std.mem.eql(u8, digits, "64")) return "[64]u8";
+        }
+    }
+
     // Short capitalization aliases (U64, U32, etc.)
     if (std.mem.eql(u8, clean_input, "U64")) return "u64";
     if (std.mem.eql(u8, clean_input, "U32")) return "u32";
