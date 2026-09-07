@@ -27,7 +27,7 @@ pub const TestResult = struct {
 pub fn runAllTests(allocator: Allocator) !void {
     const stdout = std.io.getStdOut().writer();
 
-    stdout.print("\n{s}SPARC Module Test Suite{s}\n\n", .{"=" **= 20}) catch unreachable;
+    stdout.print("\n{s}SPARC Module Test Suite{s}\n\n", .{"=" ** 20}) catch unreachable;
 
     var passed: usize = 0;
     var failed: usize = 0;
@@ -37,10 +37,10 @@ pub fn runAllTests(allocator: Allocator) !void {
         for (results) |result| {
             if (result.passed) {
                 passed += 1;
-                stdout.print("  {s} {s}: {s}PASSED{s}\n", .{"✓", result.name, "", ""}) catch unreachable;
+                stdout.print("  {s} {s}: {s}PASSED{s}\n", .{ "✓", result.name, "", "" }) catch unreachable;
             } else {
                 failed += 1;
-                stdout.print("  {s} {s}: {s}FAILED{s} - {s}\n", .{"✗", result.name, "", "", result.message}) catch unreachable;
+                stdout.print("  {s} {s}: {s}FAILED{s} - {s}\n", .{ "✗", result.name, "", "", result.message }) catch unreachable;
             }
         }
     } else |err| {
@@ -52,10 +52,10 @@ pub fn runAllTests(allocator: Allocator) !void {
         for (results) |result| {
             if (result.passed) {
                 passed += 1;
-                stdout.print("  {s} {s}: {s}PASSED{s}\n", .{"✓", result.name, "", ""}) catch unreachable;
+                stdout.print("  {s} {s}: {s}PASSED{s}\n", .{ "✓", result.name, "", "" }) catch unreachable;
             } else {
                 failed += 1;
-                stdout.print("  {s} {s}: {s}FAILED{s} - {s}\n", .{"✗", result.name, "", "", result.message}) catch unreachable;
+                stdout.print("  {s} {s}: {s}FAILED{s} - {s}\n", .{ "✗", result.name, "", "", result.message }) catch unreachable;
             }
         }
     } else |err| {
@@ -67,10 +67,10 @@ pub fn runAllTests(allocator: Allocator) !void {
         for (results) |result| {
             if (result.passed) {
                 passed += 1;
-                stdout.print("  {s} {s}: {s}PASSED{s}\n", .{"✓", result.name, "", ""}) catch unreachable;
+                stdout.print("  {s} {s}: {s}PASSED{s}\n", .{ "✓", result.name, "", "" }) catch unreachable;
             } else {
                 failed += 1;
-                stdout.print("  {s} {s}: {s}FAILED{s} - {s}\n", .{"✗", result.name, "", "", result.message}) catch unreachable;
+                stdout.print("  {s} {s}: {s}FAILED{s} - {s}\n", .{ "✗", result.name, "", "", result.message }) catch unreachable;
             }
         }
     } else |err| {
@@ -78,16 +78,16 @@ pub fn runAllTests(allocator: Allocator) !void {
     }
 
     // Summary
-    stdout.print("\n{s}Test Summary{s}\n", .{"=" **= 17}) catch unreachable;
+    stdout.print("\n{s}Test Summary{s}\n", .{"=" ** 17}) catch unreachable;
     stdout.print("  Total: {}\n", .{passed + failed}) catch unreachable;
-    stdout.print("  {s}Passed: {s}{}\n", .{colorize("✓", "\x1b[32m"), passed, "\x1b[0m"}) catch unreachable;
-    stdout.print("  {s}Failed: {s}{}\n", .{colorize("✗", "\x1b[31m"), failed, "\x1b[0m"}) catch unreachable;
+    stdout.print("  {s}Passed: {s}{}\n", .{ colorize("✓", "\x1b[32m"), passed, "\x1b[0m" }) catch unreachable;
+    stdout.print("  {s}Failed: {s}{}\n", .{ colorize("✗", "\x1b[31m"), failed, "\x1b[0m" }) catch unreachable;
 
     if (failed == 0) {
-        stdout.print("\n{s}All tests passed!{s}\n", .{"=" **= 20}) catch unreachable;
+        stdout.print("\n{s}All tests passed!{s}\n", .{"=" ** 20}) catch unreachable;
         std.process.exit(0);
     } else {
-        stdout.print("\n{s}Some tests failed{s}\n", .{"=" **= 19}) catch unreachable;
+        stdout.print("\n{s}Some tests failed{s}\n", .{"=" ** 19}) catch unreachable;
         std.process.exit(1);
     }
 }
@@ -98,7 +98,6 @@ fn colorize(s: []const u8, code: []const u8) []const u8 {
 
 /// Run Savchenko module tests
 fn runSavchenkoTests(allocator: Allocator) ![]TestResult {
-    _ = allocator;
     var results = std.ArrayList(TestResult).initCapacity(allocator, 5);
     defer results.deinit();
 
@@ -130,7 +129,7 @@ fn runDataTests(allocator: Allocator) ![]TestResult {
         \\1.5 89.4 3.8
     ;
 
-    const points = Data.parseSPARCData(allocator, valid_content) catch |err| {
+    const points = Data.parseSPARCData(allocator, valid_content) catch {
         try results.append(.{ .name = "parse valid data", .passed = false, .message = "Failed to parse" });
         return results.toOwnedSlice();
     };
@@ -144,7 +143,7 @@ fn runDataTests(allocator: Allocator) ![]TestResult {
 
     // Test invalid data rejection
     const invalid_content = "-1.0 100.0 5.0";
-    const invalid_points = Data.parseSPARCData(allocator, invalid_content) catch |err| {
+    const invalid_points = Data.parseSPARCData(allocator, invalid_content) catch {
         try results.append(.{ .name = "reject invalid data", .passed = false, .message = "Parse failed" });
         return results.toOwnedSlice();
     };
@@ -195,7 +194,7 @@ fn runFittingTests(allocator: Allocator) ![]TestResult {
     }
 
     // Test grid search
-    const fit_result = Fitting.fitGalaxy(allocator, &points) catch |err| {
+    const fit_result = Fitting.fitGalaxy(allocator, &points) catch {
         try results.append(.{ .name = "gridSearchFit", .passed = false, .message = "Fit failed" });
         return results.toOwnedSlice();
     };
