@@ -1056,6 +1056,86 @@ pub const ZigCodeGen = struct {
         }
     }
 
+    /// Prefix any parameter whose name the generated bodies also bind.
+    /// Caller owns the result.
+    fn renameShadowedParams(self: *Self, params: []const u8) ![]u8 {
+        const body_locals = [_][]const u8{
+            "result",  "input",     "items", "config",   "allocator",
+            "elapsed", "idx",       "sim",   "is_valid", "capacity",
+            "count",   "responses", "scope", "buffer",   "start_time",
+        };
+        var out: std.ArrayListUnmanaged(u8) = .empty;
+        errdefer out.deinit(self.allocator);
+        var first = true;
+        var it = std.mem.splitScalar(u8, params, ',');
+        while (it.next()) |raw| {
+            const decl = std.mem.trim(u8, raw, " \t");
+            if (decl.len == 0) continue;
+            if (!first) try out.appendSlice(self.allocator, ", ");
+            first = false;
+            const colon = std.mem.indexOfScalar(u8, decl, ':') orelse {
+                try out.appendSlice(self.allocator, decl);
+                continue;
+            };
+            const pname = std.mem.trim(u8, decl[0..colon], " \t");
+
+            // Drop `self`. These functions are emitted at FILE scope, not
+            // inside a struct, so a `self` parameter names a receiver that
+            // does not exist -- `pub fn filter_by_quality(self: *GoldenChainAgent)`
+            // referenced a type the generated file never declares. The one
+            // spec of 1033 that regressed on this change failed for exactly
+            // that, and the corpus gate named it.
+            if (std.mem.eql(u8, pname, "self")) {
+                // Undo the separator written for this parameter.
+                if (out.items.len >= 2 and std.mem.endsWith(u8, out.items, ", ")) {
+                    out.items.len -= 2;
+                } else if (out.items.len == 0) {
+                    first = true;
+                }
+                continue;
+            }
+
+            for (body_locals) |l| {
+                if (std.mem.eql(u8, pname, l)) {
+                    try out.appendSlice(self.allocator, "p_");
+                    break;
+                }
+            }
+            try out.appendSlice(self.allocator, decl);
+        }
+        return out.toOwnedSlice(self.allocator);
+    }
+
+    /// Is `name` used as an identifier in real CODE? Comments and string
+    /// literals are both excluded -- each was learned from an unused
+    /// parameter surviving into generated output.
+    fn mentionsInCode(haystack: []const u8, name: []const u8) bool {
+        var lines = std.mem.splitScalar(u8, haystack, '\n');
+        while (lines.next()) |line| {
+            const code = if (std.mem.indexOf(u8, line, "//")) |c| line[0..c] else line;
+            var i: usize = 0;
+            var in_string = false;
+            while (i < code.len) : (i += 1) {
+                const c = code[i];
+                if (c == '\\' and in_string) {
+                    i += 1;
+                    continue;
+                }
+                if (c == '"') {
+                    in_string = !in_string;
+                    continue;
+                }
+                if (in_string) continue;
+                if (!std.mem.startsWith(u8, code[i..], name)) continue;
+                const before_ok = i == 0 or !(std.ascii.isAlphanumeric(code[i - 1]) or code[i - 1] == '_');
+                const end = i + name.len;
+                const after_ok = end >= code.len or !(std.ascii.isAlphanumeric(code[end]) or code[end] == '_');
+                if (before_ok and after_ok) return true;
+            }
+        }
+        return false;
+    }
+
     /// A zero value for a return type the stub bodies do not produce, or null
     /// when the type needs no return at all.
     ///
@@ -1955,12 +2035,33 @@ pub const ZigCodeGen = struct {
             // half-applying it is the exact failure mode three fixes in this
             // area have been cleaning up. So: return type from the spec,
             // parameters when the bodies are ready for them.
-            try self.builder.writeFmt("pub fn {s}() {s} {{\n", .{ safe_fn_name, sig.ret });
+            const params = try self.renameShadowedParams(sig.params);
+            defer self.allocator.free(params);
+            try self.builder.writeFmt("pub fn {s}({s}) {s} {{\n", .{ safe_fn_name, params, sig.ret });
             self.builder.incIndent();
 
             const body_start = self.builder.buffer.items.len;
             try self.generateRealBody(b);
             const body = self.builder.buffer.items[body_start..];
+
+            {
+                var discards: std.ArrayListUnmanaged(u8) = .empty;
+                defer discards.deinit(self.allocator);
+                var pit = std.mem.splitScalar(u8, params, ',');
+                while (pit.next()) |raw| {
+                    const decl = std.mem.trim(u8, raw, " \t");
+                    const colon = std.mem.indexOfScalar(u8, decl, ':') orelse continue;
+                    const pname = std.mem.trim(u8, decl[0..colon], " \t");
+                    if (pname.len == 0) continue;
+                    if (mentionsInCode(body, pname)) continue;
+                    try discards.appendSlice(self.allocator, "    _ = ");
+                    try discards.appendSlice(self.allocator, pname);
+                    try discards.appendSlice(self.allocator, ";\n");
+                }
+                if (discards.items.len > 0) {
+                    try self.builder.buffer.insertSlice(self.allocator, body_start, discards.items);
+                }
+            }
 
             // A signature that promises a value needs a body that produces
             // one. The stub bodies do not return, so supply a default -- but
