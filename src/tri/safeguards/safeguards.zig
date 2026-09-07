@@ -1519,7 +1519,7 @@ test "SacredSafeguards exportSafetyLog" {
     try safeguards.logSafetyEvent(event);
 
     // Export to temp file
-    const tmp_path = "/tmp/safety_log_test.json";
+    const tmp_path = "/tmp/safety_log_test_plain.json";
     try safeguards.exportSafetyLog(tmp_path);
 
     // Verify file exists

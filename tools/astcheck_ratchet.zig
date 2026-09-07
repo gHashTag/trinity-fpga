@@ -210,3 +210,115 @@ fn collectZig(gpa: std.mem.Allocator, io: std.Io, path: []const u8, acc: *std.Ar
 fn lessThanStr(_: void, a: []u8, b: []u8) bool {
     return std.mem.order(u8, a, b) == .lt;
 }
+
+// ─── No two files may mutate the same literal /tmp path ────────────────────
+//
+// `zig build` runs independent test binaries in PARALLEL. Two files whose
+// tests create and delete the same fixed path therefore race, and the loser
+// fails with FileNotFound on a file it just wrote.
+//
+// That is not hypothetical: `shard_manager.zig` used a fixed
+// `/tmp/trinity_test_5node` and deleteTree'd it on entry and exit -- 4
+// failures in 20 runs, and it took three sessions to find because it only
+// appears when two runs overlap. `src/libs/stdlib/impl/io.zig` and
+// `tools/legacy/stdlib/impl/io.zig` are both declared test roots and were
+// both writing `/tmp/vibee_io_test.txt`.
+//
+// A census found 51 tests mutating 56 distinct literal paths. Renaming the
+// colliding ones fixes today; this test is what stops the next one, and it
+// costs nothing to keep.
+
+test "no literal /tmp path is mutated from more than one file" {
+    const gpa = std.testing.allocator;
+    const io = tri_io.get();
+
+    var files: std.ArrayList([]u8) = .empty;
+    defer {
+        for (files.items) |f| gpa.free(f);
+        files.deinit(gpa);
+    }
+    for (roots) |root| try collectZig(gpa, io, root, &files);
+    // Guard the denominator: a walk that finds nothing would pass silently.
+    try std.testing.expect(files.items.len > 500);
+
+    // path -> first file that mutates it
+    var owner = std.StringHashMap([]const u8).init(gpa);
+    defer {
+        var it = owner.keyIterator();
+        while (it.next()) |k| gpa.free(k.*);
+        owner.deinit();
+    }
+
+    var clashes: usize = 0;
+    for (files.items) |path| {
+        const src = std.Io.Dir.cwd().readFileAlloc(io, path, gpa, .limited(4 * 1024 * 1024)) catch continue;
+        defer gpa.free(src);
+        if (!mutatesAPath(src)) continue;
+
+        // Only paths written INSIDE a test block count. The first version of
+        // this check scanned whole files and flagged `/tmp/.tri_cache.json`,
+        // which is a production cache default that happens to appear in two
+        // duplicated source files -- a real duplication, but not a test
+        // collision, and not something this test should be the one to fail
+        // over.
+        var i: usize = 0;
+        while (std.mem.indexOfPos(u8, src, i, "\"/tmp/")) |at| {
+            if (!insideTestBlock(src, at)) {
+                i = at + 1;
+                continue;
+            }
+            const start = at + 1;
+            const end = std.mem.indexOfScalarPos(u8, src, start, '"') orelse break;
+            const lit = src[start..end];
+            i = end + 1;
+            if (lit.len <= "/tmp/".len) continue;
+
+            if (owner.get(lit)) |first| {
+                if (!std.mem.eql(u8, first, path)) {
+                    std.debug.print(
+                        "  {s} is mutated from two files:\n    {s}\n    {s}\n",
+                        .{ lit, first, path },
+                    );
+                    clashes += 1;
+                }
+            } else {
+                const key = try gpa.dupe(u8, lit);
+                try owner.put(key, path);
+            }
+        }
+    }
+
+    try std.testing.expectEqual(@as(usize, 0), clashes);
+}
+
+/// Is byte `at` inside a `test "..." { ... }` block?
+///
+/// Counted by brace depth from the nearest preceding `\ntest "`, so a path in
+/// a helper function below the test does not get mistaken for one in it.
+fn insideTestBlock(src: []const u8, at: usize) bool {
+    const head = src[0..at];
+    const test_at = std.mem.lastIndexOf(u8, head, "\ntest \"") orelse return false;
+    const open = std.mem.indexOfScalarPos(u8, src, test_at, '{') orelse return false;
+    if (open > at) return false;
+    var depth: usize = 0;
+    var i = open;
+    while (i < at) : (i += 1) {
+        if (src[i] == '{') depth += 1;
+        if (src[i] == '}') {
+            if (depth == 0) return false;
+            depth -= 1;
+        }
+    }
+    return depth > 0;
+}
+
+fn mutatesAPath(src: []const u8) bool {
+    const mutators = [_][]const u8{
+        "deleteTree", "deleteDir",  "deleteFile", "createDirPath",
+        "makePath",   "createFile", "writeFile",  "makeDir",
+    };
+    for (mutators) |m| {
+        if (std.mem.indexOf(u8, src, m) != null) return true;
+    }
+    return false;
+}
