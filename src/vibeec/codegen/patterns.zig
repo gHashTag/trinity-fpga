@@ -102,7 +102,7 @@ test "DSL pattern matching" {
         .when = "$fs.read file",
         .then = "content",
         .implementation = "",
-        .test_cases = .{},
+        .test_cases = .empty,
     };
 
     const matched = try matcher.generateFromDsLPattern(&b);
@@ -121,7 +121,7 @@ test "Lifecycle pattern matching" {
         .when = "system starts",
         .then = "initialized",
         .implementation = "",
-        .test_cases = .{},
+        .test_cases = .empty,
     };
 
     const matched = try matcher.generateFromWhenThenPattern(&b);
@@ -140,7 +140,7 @@ test "ML pattern matching" {
         .when = "model ready",
         .then = "output",
         .implementation = "",
-        .test_cases = .{},
+        .test_cases = .empty,
     };
 
     const matched = try matcher.generateFromWhenThenPattern(&b);
@@ -159,7 +159,7 @@ test "VSA pattern matching" {
         .when = "bind operation",
         .then = "bound vector",
         .implementation = "",
-        .test_cases = .{},
+        .test_cases = .empty,
     };
 
     const matched = try matcher.generateFromWhenThenPattern(&b);
@@ -178,7 +178,7 @@ test "Generic pattern matching" {
         .when = "lookup",
         .then = "value",
         .implementation = "",
-        .test_cases = .{},
+        .test_cases = .empty,
     };
 
     const matched = try matcher.generateFromWhenThenPattern(&b);
@@ -197,7 +197,7 @@ test "I/O pattern matching" {
         .when = "read from source",
         .then = "data",
         .implementation = "",
-        .test_cases = .{},
+        .test_cases = .empty,
     };
 
     const matched = try matcher.generateFromWhenThenPattern(&b);
@@ -216,7 +216,7 @@ test "Data transform pattern matching" {
         .when = "encode",
         .then = "encoded",
         .implementation = "",
-        .test_cases = .{},
+        .test_cases = .empty,
     };
 
     const matched = try matcher.generateFromWhenThenPattern(&b);
@@ -241,7 +241,7 @@ test "Match with category" {
         .when = "training",
         .then = "trained model",
         .implementation = "",
-        .test_cases = .{},
+        .test_cases = .empty,
     };
 
     const result = try matcher.matchWithCategory(&b);
