@@ -14,38 +14,39 @@
 //! - Branch: feat/vector-float-cast
 //! - Academic: https://www.academia.edu/144897776/Trinity_Framework_Architecture
 //!
-//! ⚠️ HSLM moved to trinity-training repo (gHashTag/trinity-training)
+//! The hslm library is vendored in-tree at external/zig-hslm/ and is supplied
+//! to this file as the "hslm" module by build.zig.
 
 const std = @import("std");
 
-// Import hslm module (external library) - MOVED to trinity-training
-// const hslm = @import("hslm");
+// Import hslm module (external library).
+// Wired by build.zig, which roots the module at external/zig-hslm/src/root.zig
+// and passes it in as: .{ .name = "hslm", .module = hslm_mod }
+const hslm = @import("hslm");
 
-// Re-export hslm types for convenience - using stubs
-pub const GF16 = f32;
-pub const TF3 = f32;
-pub const PHI: f32 = 3.0;
-pub const PHI_INV: f32 = 1.0 / 3.0;
-pub const HslmF16 = u16;
+// Re-export hslm types for convenience — these are the real library types,
+// not local approximations. GF16 and TF3 are packed struct(u16); HslmF16 is f16.
+pub const GF16 = hslm.GF16;
+pub const TF3 = hslm.TF3;
+pub const PHI: f32 = hslm.PHI;
+pub const PHI_INV: f32 = hslm.PHI_INV;
+pub const HslmF16 = hslm.HslmF16;
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // NUMBER FORMAT CONVERSION
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /// Safe f16 to f32 conversion with NaN/Inf/subnormal handling
-// HSLM moved to trinity-training - using zig-golden-float directly
 pub fn hslmF16ToF32(v: HslmF16) f32 {
     return @floatCast(@as(f32, v));
 }
 
 /// Direct f32 to hslm f16 conversion
-// HSLM moved to trinity-training - using zig-golden-float directly
 pub fn f32ToHslmF16(v: f32) HslmF16 {
     return @floatCast(v);
 }
 
 /// Batch conversion hslm f16 → f32
-// HSLM moved to trinity-training - using zig-golden-float directly
 pub fn hslmF16BatchToF32(comptime N: usize, src: [N]HslmF16) [N]f32 {
     var result: [N]f32 = undefined;
     for (src, 0..) |s, i| {
@@ -55,7 +56,6 @@ pub fn hslmF16BatchToF32(comptime N: usize, src: [N]HslmF16) [N]f32 {
 }
 
 /// Batch conversion f32 → f16
-// HSLM moved to trinity-training - using zig-golden-float directly
 pub fn f32BatchToF16(comptime N: usize, src: [N]f32) [N]f16 {
     var result: [N]f16 = undefined;
     for (src, 0..) |s, i| {
@@ -69,17 +69,13 @@ pub fn f32BatchToF16(comptime N: usize, src: [N]f32) [N]f16 {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /// φ-weighted quantization for better distribution
-// HSLM moved to trinity-training - stub
 pub fn phiQuantize(v: f32) f16 {
-    // TODO: reimplement using zig-golden-float
-    return @floatCast(v);
+    return hslm.phiQuantize(v);
 }
 
 /// φ-weighted dequantization
-// HSLM moved to trinity-training - stub
 pub fn phiDequantize(v: f16) f32 {
-    // TODO: reimplement using zig-golden-float
-    return @floatCast(v);
+    return hslm.phiDequantize(v);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -226,7 +222,9 @@ test "vector float cast" {
     const vec_i16 = @Vector(4, i16){ 1000, 2000, 3000, 4000 };
     const vec_f32 = vectorFloatCast(@Vector(4, f32), vec_i16);
 
-    for (0..4) |i| {
+    // `inline` is required: Zig 0.16 rejects a runtime index into a vector
+    // ("vector index not comptime known"). Assertions are unchanged.
+    inline for (0..4) |i| {
         try std.testing.expectApproxEqAbs(
             @as(f32, @floatFromInt(vec_i16[i])),
             vec_f32[i],
