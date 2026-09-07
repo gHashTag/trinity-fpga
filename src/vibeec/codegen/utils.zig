@@ -346,6 +346,28 @@ pub fn mapType(type_name: []const u8) []const u8 {
     {
         return "[]const u8"; // Simplified: maps as serialized data
     }
+    // Inline enum: `safety_level: Enum[low, medium, high]`.
+    //
+    // 21 occurrences across 9 specs, and mapType had no case for it, so the
+    // whole `Enum[low, medium, high]` reached the generated struct verbatim
+    // and the file did not PARSE -- five of the twenty-five specs whose
+    // output failed ast-check failed on this.
+    //
+    // Lowered to `[]const u8`, the same answer this function already gives for
+    // Map and Set: complex types become serialized data. A real Zig enum
+    // would be better and is what the spec means, but mapType returns static
+    // strings and cannot build `enum { low, medium, high }` without an
+    // allocator. Widening that signature is a change to every caller, so it
+    // is a separate piece of work -- this makes the output compile and keeps
+    // the field, rather than dropping either.
+    if (std.mem.startsWith(u8, clean_input, "Enum[") or
+        std.mem.startsWith(u8, clean_input, "enum[") or
+        std.mem.startsWith(u8, clean_input, "Enum<") or
+        std.mem.startsWith(u8, clean_input, "enum<"))
+    {
+        return "[]const u8";
+    }
+
     // Set types -> []const u8
     if (std.mem.startsWith(u8, clean_input, "Set<") or std.mem.startsWith(u8, clean_input, "set<") or
         std.mem.startsWith(u8, clean_input, "Set(") or std.mem.startsWith(u8, clean_input, "set("))

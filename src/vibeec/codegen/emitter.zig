@@ -1022,6 +1022,39 @@ pub const ZigCodeGen = struct {
         try self.builder.newline();
     }
 
+    /// Emit a doc comment from a spec value, prefixing EVERY line.
+    ///
+    /// Spec values are frequently multi-line -- `then: |` block scalars are
+    /// common, and one reads:
+    ///
+    ///     1. Store vector in map (deep copy)
+    ///     2. Store symbol ID (deep copy)
+    ///     3. Add to ordered list
+    ///
+    /// `writeFmt("/// Then: {s}\n", .{b.then})` prefixes only the first line,
+    /// so lines 2 and 3 landed in the struct body as bare text and the
+    /// generated file did not PARSE. Seven of the twenty-five specs whose
+    /// output failed ast-check failed for exactly this.
+    fn writeDoc(self: *Self, label: []const u8, value: []const u8) !void {
+        if (value.len == 0) {
+            try self.builder.writeFmt("/// {s}\n", .{label});
+            return;
+        }
+        var first = true;
+        var it = std.mem.splitScalar(u8, value, '\n');
+        while (it.next()) |line| {
+            const trimmed = std.mem.trimEnd(u8, line, " \t\r");
+            if (first) {
+                try self.builder.writeFmt("/// {s}{s}\n", .{ label, trimmed });
+                first = false;
+            } else {
+                // Continuation lines keep their own indentation after the
+                // marker, so a numbered list still reads as one.
+                try self.builder.writeFmt("///{s}{s}\n", .{ if (trimmed.len > 0) " " else "", trimmed });
+            }
+        }
+    }
+
     /// A zero value for a return type the stub bodies do not produce, or null
     /// when the type needs no return at all.
     ///
@@ -1144,7 +1177,7 @@ pub const ZigCodeGen = struct {
 
         for (constants) |c| {
             if (c.description.len > 0) {
-                try self.builder.writeFmt("/// {s}\n", .{c.description});
+                try self.writeDoc("", c.description);
             }
             try self.builder.writeFmt("pub const {s}: f64 = {d};\n", .{ c.name, c.value });
             try self.builder.newline();
@@ -1195,7 +1228,7 @@ pub const ZigCodeGen = struct {
         try self.builder.newline();
 
         for (type_defs) |t| {
-            try self.builder.writeFmt("/// {s}\n", .{t.description});
+            try self.writeDoc("", t.description);
 
             if (t.base) |base| {
                 try self.builder.writeFmt("pub const {s} = {s};\n", .{ t.name, base });
@@ -1268,7 +1301,7 @@ pub const ZigCodeGen = struct {
         try self.builder.newline();
 
         for (patterns) |p| {
-            try self.builder.writeFmt("/// {s}\n", .{p.transformer});
+            try self.writeDoc("", p.transformer);
             try self.builder.writeFmt("/// Source: {s} -> Result: {s}\n", .{ p.source, p.result });
             try self.generatePatternFunction(p);
             try self.builder.newline();
@@ -1685,8 +1718,26 @@ pub const ZigCodeGen = struct {
         // "pub const" / "pub var" — module-level declarations (must not be wrapped in a function)
         if (start + 9 <= implementation.len and std.mem.eql(u8, implementation[start .. start + 9], "pub const")) return true;
         if (start + 7 <= implementation.len and std.mem.eql(u8, implementation[start .. start + 7], "pub var")) return true;
-        // "const" at start — also module-level
-        if (fn_start + 5 <= implementation.len and std.mem.eql(u8, implementation[fn_start .. fn_start + 5], "const")) return true;
+        // "const" at start — module-level ONLY if nothing in the block can
+        // appear outside a function.
+        //
+        // This used to return true for any leading `const`, and
+        // `const parser = try zig_parser.createZigParser();` is the single
+        // most ordinary first line of a Zig function BODY. Every behaviour
+        // with an `implementation:` beginning that way had its block written
+        // raw at file scope -- no doc comments, no `pub fn` -- and the
+        // generated file did not parse. `try` at file scope is a syntax
+        // error, so the misclassification was never harmless.
+        //
+        // These four keywords are function-only in Zig. Their presence says
+        // "body" no matter how the block starts.
+        if (fn_start + 5 <= implementation.len and std.mem.eql(u8, implementation[fn_start .. fn_start + 5], "const")) {
+            const function_only = [_][]const u8{ "try ", "return ", "defer ", "errdefer " };
+            for (function_only) |kw| {
+                if (std.mem.indexOf(u8, implementation, kw) != null) return false;
+            }
+            return true;
+        }
         return false;
     }
 
@@ -1755,7 +1806,15 @@ pub const ZigCodeGen = struct {
         // Check for manual implementation in spec
         if (b.implementation.len > 0) {
             // Sanitize: strip # comments, escape .error/.type enum literals
-            const sanitized = sanitizeImplementation(self.allocator, b.implementation) catch b.implementation;
+            // `sanitizeImplementation` always allocates; the `catch` falls back
+            // to the caller's own slice, which must NOT be freed. Keeping the
+            // owned case separate is what makes the free safe -- a plain
+            // `defer free(sanitized)` would free borrowed memory on the error
+            // path. The leak was real and the testing allocator caught it the
+            // moment a test first exercised this branch.
+            const sanitized_owned: ?[]const u8 = sanitizeImplementation(self.allocator, b.implementation) catch null;
+            defer if (sanitized_owned) |s| self.allocator.free(s);
+            const sanitized = sanitized_owned orelse b.implementation;
 
             // CYCLE 51 FIX: If implementation contains a full function definition, write it directly
             // This prevents invalid nested "pub fn" syntax when spec provides complete function
@@ -1763,9 +1822,9 @@ pub const ZigCodeGen = struct {
                 try self.builder.writeLine(sanitized);
             } else {
                 // Wrap partial implementation in function stub
-                try self.builder.writeFmt("/// {s}\n", .{b.given});
-                try self.builder.writeFmt("/// When: {s}\n", .{b.when});
-                try self.builder.writeFmt("/// Then: {s}\n", .{b.then});
+                try self.writeDoc("", b.given);
+                try self.writeDoc("When: ", b.when);
+                try self.writeDoc("Then: ", b.then);
                 const safe_name = sanitizeName(self.allocator, b.name);
                 try self.builder.writeFmt("pub fn {s}() !void {{\n", .{safe_name});
                 self.builder.incIndent();
@@ -1791,9 +1850,9 @@ pub const ZigCodeGen = struct {
             }
         } else {
             // Generate auto-body from behavior semantics
-            try self.builder.writeFmt("/// {s}\n", .{b.given});
-            try self.builder.writeFmt("/// When: {s}\n", .{b.when});
-            try self.builder.writeFmt("/// Then: {s}\n", .{b.then});
+            try self.writeDoc("", b.given);
+            try self.writeDoc("When: ", b.when);
+            try self.writeDoc("Then: ", b.then);
             const safe_fn_name = sanitizeName(self.allocator, b.name);
 
             // The return type comes from the inference the body emitter and
@@ -3214,9 +3273,9 @@ pub const ZigCodeGen = struct {
                 try self.builder.writeLine("");
             }
             // Emit marker function for the individual behavior
-            try self.builder.writeFmt("/// {s}\n", .{b.given});
-            try self.builder.writeFmt("/// When: {s}\n", .{b.when});
-            try self.builder.writeFmt("/// Then: {s}\n", .{b.then});
+            try self.writeDoc("", b.given);
+            try self.writeDoc("When: ", b.when);
+            try self.writeDoc("Then: ", b.then);
             try self.builder.writeFmt("pub fn {s}() bool {{\n", .{b.name});
             self.builder.incIndent();
             try self.builder.writeLine("return true; // Real logic is in ShardManager struct methods");
@@ -3234,9 +3293,9 @@ pub const ZigCodeGen = struct {
         if (std_mem.startsWith(u8, b.name, "network")) {
             try self.emitShardNetworkStruct();
             // Emit marker function for the individual behavior
-            try self.builder.writeFmt("/// {s}\n", .{b.given});
-            try self.builder.writeFmt("/// When: {s}\n", .{b.when});
-            try self.builder.writeFmt("/// Then: {s}\n", .{b.then});
+            try self.writeDoc("", b.given);
+            try self.writeDoc("When: ", b.when);
+            try self.writeDoc("Then: ", b.then);
             try self.builder.writeFmt("pub fn {s}() bool {{\n", .{b.name});
             self.builder.incIndent();
             try self.builder.writeLine("return true; // Real logic is in ShardNetwork struct methods");
@@ -3255,9 +3314,9 @@ pub const ZigCodeGen = struct {
         if (std_mem.startsWith(u8, b.name, "erasure")) {
             try self.emitReedSolomonStruct();
             // Emit marker function for each behavior
-            try self.builder.writeFmt("/// {s}\n", .{b.given});
-            try self.builder.writeFmt("/// When: {s}\n", .{b.when});
-            try self.builder.writeFmt("/// Then: {s}\n", .{b.then});
+            try self.writeDoc("", b.given);
+            try self.writeDoc("When: ", b.when);
+            try self.writeDoc("Then: ", b.then);
             try self.builder.writeFmt("pub fn {s}() bool {{\n", .{b.name});
             self.builder.incIndent();
             try self.builder.writeLine("return true; // Real logic is in ReedSolomon struct methods");
@@ -3281,9 +3340,9 @@ pub const ZigCodeGen = struct {
             try self.emitDiscoveryStructs();
             try self.emitReedSolomonStruct();
             // Emit marker function for each discovery behavior
-            try self.builder.writeFmt("/// {s}\n", .{b.given});
-            try self.builder.writeFmt("/// When: {s}\n", .{b.when});
-            try self.builder.writeFmt("/// Then: {s}\n", .{b.then});
+            try self.writeDoc("", b.given);
+            try self.writeDoc("When: ", b.when);
+            try self.writeDoc("Then: ", b.then);
             try self.builder.writeFmt("pub fn {s}() bool {{\n", .{b.name});
             self.builder.incIndent();
             try self.builder.writeLine("return true; // Real logic is in discovery test blocks");
@@ -3301,9 +3360,9 @@ pub const ZigCodeGen = struct {
             try self.emitShardNetworkStruct();
             try self.emitReedSolomonStruct();
             // Emit marker function for each netpipeline behavior
-            try self.builder.writeFmt("/// {s}\n", .{b.given});
-            try self.builder.writeFmt("/// When: {s}\n", .{b.when});
-            try self.builder.writeFmt("/// Then: {s}\n", .{b.then});
+            try self.writeDoc("", b.given);
+            try self.writeDoc("When: ", b.when);
+            try self.writeDoc("Then: ", b.then);
             try self.builder.writeFmt("pub fn {s}() bool {{\n", .{b.name});
             self.builder.incIndent();
             try self.builder.writeLine("return true; // Real logic is in netpipeline test blocks");
@@ -3315,9 +3374,9 @@ pub const ZigCodeGen = struct {
         if (std_mem.startsWith(u8, b.name, "pipeline")) {
             try self.emitReedSolomonStruct();
             // Emit marker function for each pipeline behavior
-            try self.builder.writeFmt("/// {s}\n", .{b.given});
-            try self.builder.writeFmt("/// When: {s}\n", .{b.when});
-            try self.builder.writeFmt("/// Then: {s}\n", .{b.then});
+            try self.writeDoc("", b.given);
+            try self.writeDoc("When: ", b.when);
+            try self.writeDoc("Then: ", b.then);
             try self.builder.writeFmt("pub fn {s}() bool {{\n", .{b.name});
             self.builder.incIndent();
             try self.builder.writeLine("return true; // Real logic is in pipeline test blocks");
@@ -3332,9 +3391,9 @@ pub const ZigCodeGen = struct {
         if (std_mem.startsWith(u8, b.name, "pos")) {
             try self.emitProofOfStorageStruct();
             // Emit marker function for each PoS behavior
-            try self.builder.writeFmt("/// {s}\n", .{b.given});
-            try self.builder.writeFmt("/// When: {s}\n", .{b.when});
-            try self.builder.writeFmt("/// Then: {s}\n", .{b.then});
+            try self.writeDoc("", b.given);
+            try self.writeDoc("When: ", b.when);
+            try self.writeDoc("Then: ", b.then);
             try self.builder.writeFmt("pub fn {s}() bool {{\n", .{b.name});
             self.builder.incIndent();
             try self.builder.writeLine("return true; // Real logic is in PoS test blocks");
@@ -3349,9 +3408,9 @@ pub const ZigCodeGen = struct {
         if (std_mem.startsWith(u8, b.name, "dht")) {
             try self.emitDhtStruct();
             // Emit marker function for each DHT behavior
-            try self.builder.writeFmt("/// {s}\n", .{b.given});
-            try self.builder.writeFmt("/// When: {s}\n", .{b.when});
-            try self.builder.writeFmt("/// Then: {s}\n", .{b.then});
+            try self.writeDoc("", b.given);
+            try self.writeDoc("When: ", b.when);
+            try self.writeDoc("Then: ", b.then);
             try self.builder.writeFmt("pub fn {s}() bool {{\n", .{b.name});
             self.builder.incIndent();
             try self.builder.writeLine("return true; // Real logic is in DHT test blocks");
@@ -3366,9 +3425,9 @@ pub const ZigCodeGen = struct {
         if (std_mem.startsWith(u8, b.name, "swarm")) {
             try self.emitSwarmStruct();
             // Emit marker function for each swarm behavior
-            try self.builder.writeFmt("/// {s}\n", .{b.given});
-            try self.builder.writeFmt("/// When: {s}\n", .{b.when});
-            try self.builder.writeFmt("/// Then: {s}\n", .{b.then});
+            try self.writeDoc("", b.given);
+            try self.writeDoc("When: ", b.when);
+            try self.writeDoc("Then: ", b.then);
             try self.builder.writeFmt("pub fn {s}() bool {{\n", .{b.name});
             self.builder.incIndent();
             try self.builder.writeLine("return true; // Real logic is in swarm test blocks");
@@ -3383,9 +3442,9 @@ pub const ZigCodeGen = struct {
         if (std_mem.startsWith(u8, b.name, "rewards")) {
             try self.emitRewardsStruct();
             // Emit marker function for each rewards behavior
-            try self.builder.writeFmt("/// {s}\n", .{b.given});
-            try self.builder.writeFmt("/// When: {s}\n", .{b.when});
-            try self.builder.writeFmt("/// Then: {s}\n", .{b.then});
+            try self.writeDoc("", b.given);
+            try self.writeDoc("When: ", b.when);
+            try self.writeDoc("Then: ", b.then);
             try self.builder.writeFmt("pub fn {s}() bool {{\n", .{b.name});
             self.builder.incIndent();
             try self.builder.writeLine("return true; // Real logic is in rewards test blocks");
@@ -3400,9 +3459,9 @@ pub const ZigCodeGen = struct {
         // ═══════════════════════════════════════════════════════════════════
 
         if (std_mem.startsWith(u8, b.name, "quark")) {
-            try self.builder.writeFmt("/// {s}\n", .{b.given});
-            try self.builder.writeFmt("/// When: {s}\n", .{b.when});
-            try self.builder.writeFmt("/// Then: {s}\n", .{b.then});
+            try self.writeDoc("", b.given);
+            try self.writeDoc("When: ", b.when);
+            try self.writeDoc("Then: ", b.then);
             try self.builder.writeFmt("pub fn {s}() bool {{\n", .{b.name});
             self.builder.incIndent();
             try self.builder.writeLine("// Quark proof: real assertions are in the generated test block.");
@@ -3441,7 +3500,7 @@ pub const ZigCodeGen = struct {
         if (std_mem.indexOf(u8, name, "init") != null and
             (std_mem.indexOf(u8, when, "role") != null or std_mem.indexOf(u8, when, "orthogonal") != null))
         {
-            try self.builder.writeFmt("/// {s}\n", .{b.given});
+            try self.writeDoc("", b.given);
             try self.builder.writeFmt("/// When: {s}\n", .{when});
             try self.builder.writeFmt("pub fn {s}(num_heads: usize, dimension: usize) void {{\n", .{name});
             self.builder.incIndent();
@@ -3468,7 +3527,7 @@ pub const ZigCodeGen = struct {
         if (std_mem.indexOf(u8, name, "embed") != null and std_mem.indexOf(u8, name, "Token") != null and
             std_mem.indexOf(u8, when, "codebook") != null)
         {
-            try self.builder.writeFmt("/// {s}\n", .{b.given});
+            try self.writeDoc("", b.given);
             try self.builder.writeFmt("/// When: {s}\n", .{when});
             try self.builder.writeFmt("pub fn {s}(token: []const u8, position: usize, dim: usize) void {{\n", .{name});
             self.builder.incIndent();
@@ -3494,7 +3553,7 @@ pub const ZigCodeGen = struct {
 
         // --- embedSequence: batch embed all tokens ---
         if (std_mem.indexOf(u8, name, "embed") != null and std_mem.indexOf(u8, name, "Sequence") != null) {
-            try self.builder.writeFmt("/// {s}\n", .{b.given});
+            try self.writeDoc("", b.given);
             try self.builder.writeFmt("pub fn {s}(tokens: []const []const u8, dim: usize) void {{\n", .{name});
             self.builder.incIndent();
             try self.builder.writeLine("// Embed each token with positional encoding");
@@ -3513,7 +3572,7 @@ pub const ZigCodeGen = struct {
         if (std_mem.indexOf(u8, name, "compute") != null and std_mem.indexOf(u8, name, "Attention") != null and
             std_mem.indexOf(u8, when, "cosine similarity") != null)
         {
-            try self.builder.writeFmt("/// {s}\n", .{b.given});
+            try self.writeDoc("", b.given);
             try self.builder.writeFmt("/// When: {s}\n", .{when});
             try self.builder.writeFmt("pub fn {s}(query_pos: usize, seq_len: usize, use_causal_mask: bool) void {{\n", .{name});
             self.builder.incIndent();
@@ -3542,7 +3601,7 @@ pub const ZigCodeGen = struct {
 
         // --- aggregateValues: weighted bundle of V projections ---
         if (std_mem.indexOf(u8, name, "aggregate") != null and std_mem.indexOf(u8, when, "bundle") != null) {
-            try self.builder.writeFmt("/// {s}\n", .{b.given});
+            try self.writeDoc("", b.given);
             try self.builder.writeFmt("/// When: {s}\n", .{when});
             try self.builder.writeFmt("pub fn {s}(seq_len: usize, top_k: usize) void {{\n", .{name});
             self.builder.incIndent();
@@ -3561,7 +3620,7 @@ pub const ZigCodeGen = struct {
 
         // --- multiHeadAttention: run all heads, bundle results ---
         if (std_mem.indexOf(u8, name, "multiHead") != null and std_mem.indexOf(u8, when, "head") != null) {
-            try self.builder.writeFmt("/// {s}\n", .{b.given});
+            try self.writeDoc("", b.given);
             try self.builder.writeFmt("pub fn {s}(position: usize, num_heads: usize) void {{\n", .{name});
             self.builder.incIndent();
             try self.builder.writeLine("// Run each head independently with its own Q/K/V role vectors");
@@ -3582,7 +3641,7 @@ pub const ZigCodeGen = struct {
 
         // --- forwardLayer: attention + feed-forward + residual ---
         if (std_mem.indexOf(u8, name, "forward") != null and std_mem.indexOf(u8, name, "Layer") != null) {
-            try self.builder.writeFmt("/// {s}\n", .{b.given});
+            try self.writeDoc("", b.given);
             try self.builder.writeFmt("pub fn {s}(seq_len: usize, num_heads: usize) void {{\n", .{name});
             self.builder.incIndent();
             try self.builder.writeLine("// Transformer layer: attention + feed-forward + residual");
@@ -3603,7 +3662,7 @@ pub const ZigCodeGen = struct {
 
         // --- forward: full pass through all layers ---
         if (std_mem.eql(u8, name, "forward") and std_mem.indexOf(u8, when, "layer") != null) {
-            try self.builder.writeFmt("/// {s}\n", .{b.given});
+            try self.writeDoc("", b.given);
             try self.builder.writeFmt("pub fn {s}(tokens: []const []const u8, num_layers: usize, num_heads: usize, dim: usize) void {{\n", .{name});
             self.builder.incIndent();
             try self.builder.writeLine("// Step 1: Embed all tokens with positional encoding");
@@ -3626,7 +3685,7 @@ pub const ZigCodeGen = struct {
 
         // --- predict: forward + decode via codebook ---
         if (std_mem.eql(u8, name, "predict") and std_mem.indexOf(u8, when, "codebook") != null) {
-            try self.builder.writeFmt("/// {s}\n", .{b.given});
+            try self.writeDoc("", b.given);
             try self.builder.writeFmt("pub fn {s}(tokens: []const []const u8) void {{\n", .{name});
             self.builder.incIndent();
             try self.builder.writeLine("// 1. Forward pass through all layers");
@@ -3645,7 +3704,7 @@ pub const ZigCodeGen = struct {
 
         // --- generate: iterative predict + append ---
         if (std_mem.eql(u8, name, "generate") and std_mem.indexOf(u8, when, "predict") != null) {
-            try self.builder.writeFmt("/// {s}\n", .{b.given});
+            try self.writeDoc("", b.given);
             try self.builder.writeFmt("pub fn {s}(seed_text: []const u8, max_length: usize) void {{\n", .{name});
             self.builder.incIndent();
             try self.builder.writeLine("// Autoregressive generation loop:");
@@ -3670,7 +3729,7 @@ pub const ZigCodeGen = struct {
 
         // --- getAttentionMap: extract scores from last forward ---
         if (std_mem.indexOf(u8, name, "Attention") != null and std_mem.indexOf(u8, name, "Map") != null) {
-            try self.builder.writeFmt("/// {s}\n", .{b.given});
+            try self.writeDoc("", b.given);
             try self.builder.writeFmt("pub fn {s}(layer_idx: usize, head_idx: usize) void {{\n", .{name});
             self.builder.incIndent();
             try self.builder.writeLine("// Extract 2D attention map from cached forward pass");
@@ -3683,7 +3742,7 @@ pub const ZigCodeGen = struct {
 
         // --- interpretAttention: unbind to explain contributions ---
         if (std_mem.indexOf(u8, name, "interpret") != null and std_mem.indexOf(u8, when, "unbind") != null) {
-            try self.builder.writeFmt("/// {s}\n", .{b.given});
+            try self.writeDoc("", b.given);
             try self.builder.writeFmt("/// Explainability via unbind: recover which keys contributed\n", .{});
             try self.builder.writeFmt("pub fn {s}(query_pos: usize, layer_idx: usize, head_idx: usize) void {{\n", .{name});
             self.builder.incIndent();
@@ -3699,7 +3758,7 @@ pub const ZigCodeGen = struct {
 
         // --- stats: engine-wide statistics ---
         if (std_mem.eql(u8, name, "stats") and std_mem.indexOf(u8, when, "statistic") != null) {
-            try self.builder.writeFmt("/// {s}\n", .{b.given});
+            try self.writeDoc("", b.given);
             try self.builder.writeFmt("pub fn {s}() void {{\n", .{name});
             self.builder.incIndent();
             try self.builder.writeLine("// Compute engine-wide statistics:");
@@ -3715,7 +3774,7 @@ pub const ZigCodeGen = struct {
         }
 
         // --- Generic VSA behavior: when mentions VSA ops but doesn't match above ---
-        try self.builder.writeFmt("/// {s}\n", .{b.given});
+        try self.writeDoc("", b.given);
         try self.builder.writeFmt("/// VSA ops: {s}\n", .{when});
         try self.builder.writeFmt("/// Result: {s}\n", .{then});
         try self.builder.writeFmt("pub fn {s}() void {{\n", .{name});
