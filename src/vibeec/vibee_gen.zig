@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════════════════════
-// VIBEE GEN - Minimal Code Generator (Zig 0.15 compatible)
+// VIBEE GEN - Minimal Code Generator
 // ═══════════════════════════════════════════════════════════════════════════════
 //
 // Generates Zig/Verilog code from .vibee specifications
@@ -9,6 +9,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const vibee_parser = @import("vibee_parser.zig");
 const zig_codegen = @import("zig_codegen.zig");
 const verilog_codegen = @import("verilog_codegen.zig");
@@ -135,14 +136,64 @@ fn printKoscheiCycle() void {
     , .{});
 }
 
-fn detectLanguage(allocator: std.mem.Allocator, input_path: []const u8) ![]const u8 {
-    // Read first part of file to detect language field
-    const file = try std.fs.cwd().openFile(input_path, .{});
-    defer file.close();
+/// Write generated code, or leave nothing behind.
+///
+/// The shipped `tools/bin/vibee_gen` created the output file, failed the
+/// write, printed `error.Unexpected`, and **returned leaving a 0-byte file on
+/// disk**. That is how `tools/bin/vibee_arm64` came to be 0 bytes and stay
+/// that way: an empty file is indistinguishable from a successful run to
+/// every downstream check. `zig ast-check` returns rc=0 on an empty file, and
+/// so does `zig fmt --check`.
+///
+/// So the contract here is all-or-nothing. On any write failure the partial
+/// file is deleted before the error is reported, and the error is reported
+/// rather than swallowed.
+fn writeGenerated(output_path: []const u8, generated_code: []const u8) !void {
+    const io = tri_io.get();
 
-    var buf: [4096]u8 = undefined;
-    const bytes_read = try file.read(&buf);
-    const content = buf[0..bytes_read];
+    var output_file = std.Io.Dir.cwd().createFile(io, output_path, .{}) catch |err| {
+        std.debug.print("Error creating output file: {}\n", .{err});
+        return err;
+    };
+
+    output_file.writeStreamingAll(io, generated_code) catch |err| {
+        std.debug.print("Error writing output: {}\n", .{err});
+        output_file.close(io);
+        // Do not leave a truncated artefact where a generated file should be.
+        std.Io.Dir.cwd().deleteFile(io, output_path) catch |del_err| {
+            std.debug.print(
+                "  and could not remove the partial file {s}: {}\n",
+                .{ output_path, del_err },
+            );
+        };
+        return err;
+    };
+    output_file.close(io);
+
+    if (generated_code.len == 0) {
+        // A generator that emits nothing has not succeeded, whatever the
+        // write returned. Refuse rather than report success over an empty file.
+        std.Io.Dir.cwd().deleteFile(io, output_path) catch {};
+        std.debug.print("Error: the generator produced 0 bytes for {s}\n", .{output_path});
+        return error.EmptyOutput;
+    }
+}
+
+fn detectLanguage(allocator: std.mem.Allocator, input_path: []const u8) ![]const u8 {
+    // Read the head of the file to detect the language field.
+    //
+    // This was `file.read(&buf)` on a 4 KiB stack buffer. In 0.16 a single
+    // read is ONE attempt that may return short without meaning EOF, so a
+    // `language:` field sitting past the first short read would have gone
+    // undetected. readFileAlloc reads the whole file or fails; the limit
+    // bounds it, and specs in this repo are a few KiB.
+    const content = try std.Io.Dir.cwd().readFileAlloc(
+        tri_io.get(),
+        input_path,
+        allocator,
+        .limited(1024 * 1024),
+    );
+    defer allocator.free(content);
 
     // Look for "language:" field
     if (std.mem.indexOf(u8, content, "language:")) |idx| {
@@ -222,73 +273,62 @@ fn generateCode(allocator: std.mem.Allocator, input_path: []const u8, output_pat
     std.debug.print("Input:  {s}\n", .{input_path});
     std.debug.print("Output: {s}\n\n", .{output_path});
 
-    // Read source file
-    const file = std.fs.cwd().openFile(input_path, .{}) catch |err| {
-        std.debug.print("Error opening file: {}\n", .{err});
-        return;
-    };
-    defer file.close();
-
-    const stat = file.stat() catch |err| {
-        std.debug.print("Error getting file size: {}\n", .{err});
-        return;
-    };
-
-    const source = allocator.alloc(u8, stat.size) catch |err| {
-        std.debug.print("Error allocating memory: {}\n", .{err});
-        return;
-    };
-    defer allocator.free(source);
-
-    _ = file.readAll(source) catch |err| {
+    // Read source file.
+    //
+    // Was open + stat + alloc(stat.size) + readAll, then BOTH
+    // `defer allocator.free(source)` and `spec.owns_source = true` -- which
+    // makes the spec free it too. That is a double free of the whole source
+    // buffer on every successful run. readFileAlloc gives one allocation with
+    // one owner, and the ownership is handed to the spec below.
+    const source = std.Io.Dir.cwd().readFileAlloc(
+        tri_io.get(),
+        input_path,
+        allocator,
+        .limited(16 * 1024 * 1024),
+    ) catch |err| {
         std.debug.print("Error reading file: {}\n", .{err});
         return;
     };
+    // Registered BEFORE the parse defer, so it runs AFTER it: the spec may
+    // hold slices into `source`, and freeing the backing buffer first would
+    // make every later read of spec.name a use-after-free.
+    defer allocator.free(source);
 
-    // Parse specification
+    // Parse specification.
+    //
+    // `vibee_parser.VibeeParser` no longer exists -- the parser was rewritten
+    // as free functions and re-exported from gen_vibee_parser.zig, and nothing
+    // updated this caller. That rewrite is why the shipped tools/bin/vibee_gen
+    // could not be rebuilt from this source: the binary predates it.
     std.debug.print("Parsing specification...\n", .{});
-    var parser = vibee_parser.VibeeParser.init(allocator, source);
-
-    var spec = parser.parse() catch |err| {
+    var result = vibee_parser.parse(allocator, source) catch |err| {
         std.debug.print("Error parsing spec: {}\n", .{err});
         return;
     };
-    spec.owns_source = true; // source was readToEndAlloc'd
-    defer spec.deinit();
+    defer result.deinit(allocator);
+
+    for (result.errors.items) |e| std.debug.print("  spec error: {s}\n", .{e});
+    for (result.warnings.items) |w| std.debug.print("  spec warning: {s}\n", .{w});
+
+    const spec = &result.spec;
 
     std.debug.print("  Name: {s}\n", .{spec.name});
     std.debug.print("  Version: {s}\n", .{spec.version});
     std.debug.print("  Language: {s}\n", .{spec.language});
-    if (spec.languages.items.len > 1) {
-        std.debug.print("  Languages: [", .{});
-        for (spec.languages.items, 0..) |lang, i| {
-            if (i > 0) std.debug.print(", ", .{});
-            std.debug.print("{s}", .{lang});
-        }
-        std.debug.print("]\n", .{});
-    }
     std.debug.print("  Types: {d}\n", .{spec.types.items.len});
     std.debug.print("  Behaviors: {d}\n", .{spec.behaviors.items.len});
 
-    // Multi-language mode: generate output for each target language
-    if (spec.languages.items.len > 1) {
-        for (spec.languages.items) |lang| {
-            const lang_output = deriveOutputPath(allocator, input_path, lang) catch {
-                std.debug.print("Error: Could not derive output path for {s}\n", .{lang});
-                continue;
-            };
-            defer allocator.free(lang_output);
+    // The multi-language branch that stood here read `spec.languages`, a field
+    // the current VibeeSpec does not have -- the parser rewrite replaced the
+    // list with a single `language`. The branch was therefore unreachable for
+    // as long as both existed, and could not compile. `generateSingleLang` is
+    // kept below and still works; restoring multi-target output needs the
+    // parser to carry a list again, which is a spec-format decision, not a
+    // repair.
 
-            try generateSingleLang(allocator, &spec, lang, lang_output);
-        }
-        std.debug.print("\nφ² + 1/φ² = 3 = TRINITY\n\n", .{});
-        return;
-    }
-
-    // Single-language mode (original behavior)
     // Ensure output directory exists
     const dir_path = std.fs.path.dirname(output_path) orelse ".";
-    std.fs.cwd().makePath(dir_path) catch {};
+    std.Io.Dir.cwd().createDirPath(tri_io.get(), dir_path) catch {};
 
     // Generate code based on language
     var generated_code: []const u8 = undefined;
@@ -297,29 +337,20 @@ fn generateCode(allocator: std.mem.Allocator, input_path: []const u8, output_pat
         std.debug.print("\nGenerating Verilog...\n", .{});
         var codegen = verilog_codegen.VerilogCodeGen.init(allocator);
         defer codegen.deinit();
-        generated_code = try codegen.generate(&spec);
+        generated_code = try codegen.generate(spec);
     } else if (isMultiLangTarget(spec.language)) {
         std.debug.print("\nGenerating {s}...\n", .{spec.language});
-        generated_code = try generateMultiLang(allocator, &spec);
+        generated_code = try generateMultiLang(allocator, spec);
     } else {
         std.debug.print("\nGenerating Zig...\n", .{});
         var codegen = zig_codegen.ZigCodeGen.init(allocator);
         defer codegen.deinit();
-        generated_code = try codegen.generate(&spec);
+        generated_code = try codegen.generate(spec);
     }
 
     // Write to output file
-    const output_file = std.fs.cwd().createFile(output_path, .{}) catch |err| {
-        std.debug.print("Error creating output file: {}\n", .{err});
-        return;
-    };
-    defer output_file.close();
     defer allocator.free(generated_code);
-
-    output_file.writeAll(generated_code) catch |err| {
-        std.debug.print("Error writing output: {}\n", .{err});
-        return;
-    };
+    writeGenerated(output_path, generated_code) catch return;
 
     std.debug.print("\n✓ Code generated successfully!\n", .{});
     std.debug.print("  Output: {s}\n", .{output_path});
@@ -328,7 +359,7 @@ fn generateCode(allocator: std.mem.Allocator, input_path: []const u8, output_pat
 
 fn generateSingleLang(allocator: std.mem.Allocator, spec: *vibee_parser.VibeeSpec, language: []const u8, lang_output: []const u8) !void {
     const dir_path = std.fs.path.dirname(lang_output) orelse ".";
-    std.fs.cwd().makePath(dir_path) catch {};
+    std.Io.Dir.cwd().createDirPath(tri_io.get(), dir_path) catch {};
 
     var generated_code: []const u8 = undefined;
 
@@ -351,17 +382,8 @@ fn generateSingleLang(allocator: std.mem.Allocator, spec: *vibee_parser.VibeeSpe
         generated_code = try codegen.generate(spec);
     }
 
-    const output_file = std.fs.cwd().createFile(lang_output, .{}) catch |err| {
-        std.debug.print("Error creating output file: {}\n", .{err});
-        return;
-    };
-    defer output_file.close();
     defer allocator.free(generated_code);
-
-    output_file.writeAll(generated_code) catch |err| {
-        std.debug.print("Error writing output: {}\n", .{err});
-        return;
-    };
+    writeGenerated(lang_output, generated_code) catch return;
 
     std.debug.print("  -> {s}\n", .{lang_output});
 }

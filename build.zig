@@ -269,6 +269,40 @@ pub fn build(b: *std.Build) void {
     test_step.dependOn(&run_main_tests.step);
 
     // ═══════════════════════════════════════════════════════════════════════════
+    // vibee_gen — the .tri/.vibee code generator (#775)
+    // ═══════════════════════════════════════════════════════════════════════════
+    //
+    // CLAUDE.md makes `.tri` specs the single source of truth and tells every
+    // agent to "edit the spec and regenerate". The generator that instruction
+    // depends on had NO build target anywhere in this repo: `tools/bin/vibee_gen`
+    // was a prebuilt binary that could not be rebuilt, inspected or tested.
+    //
+    // It also does not work -- it writes a 0-byte file and reports
+    // `error.Unexpected` for every spec, which is how `tools/bin/vibee_arm64`
+    // came to be 0 bytes. Diagnosing that needed a buildable binary first,
+    // which is what this target is.
+    const vibee_gen_exe = b.addExecutable(.{
+        .name = "vibee_gen",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/vibeec/vibee_gen.zig"),
+            .target = target,
+            .optimize = optimize,
+            .link_libc = true,
+            .imports = &.{
+                .{ .name = "tri_time", .module = tri_time_mod },
+                .{ .name = "tri_io", .module = tri_io_mod },
+                .{ .name = "tri_env", .module = tri_env_mod },
+                .{ .name = "tri_proc", .module = tri_proc_mod },
+                .{ .name = "tri_rand", .module = tri_rand_mod },
+                .{ .name = "tri_mutex", .module = tri_mutex_mod },
+            },
+        }),
+    });
+    b.installArtifact(vibee_gen_exe);
+    const vibee_gen_step = b.step("vibee-gen", "Build the .tri/.vibee code generator");
+    vibee_gen_step.dependOn(&vibee_gen_exe.step);
+
+    // ═══════════════════════════════════════════════════════════════════════════
     // Behaviour-path tests for the Zig 0.16 migration (#764)
     // ═══════════════════════════════════════════════════════════════════════════
     //
