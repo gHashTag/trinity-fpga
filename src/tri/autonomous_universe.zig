@@ -131,7 +131,7 @@ fn generate_phi_spiral(n: u32, scale: f64, cx: f64, cy: f64) u32 {
 /// >
 /// When: >
 /// Then: >
-pub fn autonomo_fn() !void {
+pub fn autonomous_bubbles() !void {
     // Stub: >
     // Add 'implementation:' field in .tri spec to provide real code.
 }
@@ -139,7 +139,7 @@ pub fn autonomo_fn() !void {
 /// >
 /// When: >
 /// Then: >
-pub fn auto_tun_fn() !void {
+pub fn auto_tune_parameters() !void {
     // Stub: >
     // Add 'implementation:' field in .tri spec to provide real code.
 }
@@ -147,7 +147,7 @@ pub fn auto_tun_fn() !void {
 /// >
 /// When: >
 /// Then: >
-pub fn universe_fn() !void {
+pub fn universe_evolution() !void {
     // Stub: >
     // Add 'implementation:' field in .tri spec to provide real code.
 }
@@ -409,7 +409,7 @@ pub fn discovery_integration() bool {
 /// >
 /// When: >
 /// Then: >
-pub fn state_sn_fn() !void {
+pub fn state_snapshot() !void {
     // Stub: >
     // Add 'implementation:' field in .tri spec to provide real code.
 }
@@ -417,7 +417,7 @@ pub fn state_sn_fn() !void {
 /// >
 /// When: >
 /// Then: >
-pub fn converge_fn() !void {
+pub fn convergence_check() !void {
     // Stub: >
     // Add 'implementation:' field in .tri spec to provide real code.
 }
@@ -425,7 +425,7 @@ pub fn converge_fn() !void {
 /// >
 /// When: >
 /// Then: >
-pub fn reset_un_fn() !void {
+pub fn reset_universe() !void {
     // Cleanup: >
     const removed_count: usize = 1;
     _ = removed_count;
@@ -435,7 +435,7 @@ pub fn reset_un_fn() !void {
 // TESTS - Generated from behaviors and test_cases
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test "autonomo_fn_behavior" {
+test "autonomous_bubbles_behavior" {
     // Given: >
     // When: >
     // Then: >
@@ -443,7 +443,7 @@ test "autonomo_fn_behavior" {
     _ = autonomous_bubbles;
 }
 
-test "auto_tun_fn_behavior" {
+test "auto_tune_parameters_behavior" {
     // Given: >
     // When: >
     // Then: >
@@ -451,7 +451,7 @@ test "auto_tun_fn_behavior" {
     _ = auto_tune_parameters;
 }
 
-test "universe_fn_behavior" {
+test "universe_evolution_behavior" {
     // Given: >
     // When: >
     // Then: >
@@ -467,7 +467,7 @@ test "discover_fn_behavior" {
     _ = discovery_integration;
 }
 
-test "state_sn_fn_behavior" {
+test "state_snapshot_behavior" {
     // Given: >
     // When: >
     // Then: >
@@ -475,7 +475,7 @@ test "state_sn_fn_behavior" {
     _ = state_snapshot;
 }
 
-test "converge_fn_behavior" {
+test "convergence_check_behavior" {
     // Given: >
     // When: >
     // Then: >
@@ -483,7 +483,7 @@ test "converge_fn_behavior" {
     _ = convergence_check;
 }
 
-test "reset_un_fn_behavior" {
+test "reset_universe_behavior" {
     // Given: >
     // When: >
     // Then: >

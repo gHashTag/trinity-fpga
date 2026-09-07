@@ -210,7 +210,7 @@ pub const LSPServer = struct {
     pub fn handleInitialize(self: *Self) ![]const u8 {
         self.initialized = true;
 
-        return 
+        return
         \\{
         \\  "capabilities": {
         \\    "textDocumentSync": 1,

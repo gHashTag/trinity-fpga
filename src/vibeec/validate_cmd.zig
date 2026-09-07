@@ -20,8 +20,16 @@ pub const ValidationError = struct {
     severity: Severity,
 };
 
-// Known base types for type validation
-const known_base_types = [_][]const u8{
+// Known base types for type validation.
+//
+// Public because this list is one half of a contract: every name a spec is
+// ALLOWED to write here must be a name the Zig backend can LOWER in
+// codegen/utils.zig. Those two lists used to drift, and the drift was
+// invisible -- the spec validated, the generator emitted, and the resulting
+// .zig never compiled. codegen/utils.zig now imports this array and tests the
+// containment directly, so adding a name here without teaching mapType about
+// it fails a test rather than a build months later.
+pub const known_base_types = [_][]const u8{
     // Primitives
     "f64",    "f32",       "i32",    "i64",       "u32",      "u64",
     "u8",     "u16",       "usize",  "bool",
@@ -796,4 +804,77 @@ test "output missing is warning not error" {
             try std.testing.expectEqual(Severity.warning, e.severity);
         }
     }
+}
+
+// ─── The vocabulary contract ───────────────────────────────────────────────
+//
+// Two lists in two files decide whether a spec produces compiling Zig:
+// `known_base_types` above says which type names a spec MAY write, and
+// codegen/utils.zig's `mapType` says which it can LOWER. Nothing connected
+// them, so `Uint64` sat in the first and not the second for as long as both
+// existed. Every spec using that spelling validated cleanly and generated a
+// .zig with a bare `Uint64` in it -- see src/tri/sacred_economy_global.zig and
+// src/tri/self_improving_formula_discovery.zig, neither of which has ever
+// compiled.
+//
+// These tests are the connection. They read the real array, not a copy --
+// a copy would drift exactly the way the two originals did.
+
+const codegen_utils = @import("codegen/utils.zig");
+
+/// What mapType is allowed to produce: Zig primitives, the slice shapes, and
+/// the few stdlib identifiers a generated file resolves through its own
+/// imports. Anything else means a spec name reached the output unlowered.
+fn isLegalZigTypeExpr(t: []const u8) bool {
+    const legal = [_][]const u8{
+        "void",   "bool",   "anyerror",    "usize",     "isize",
+        "u2",     "u4",     "u8",          "u16",       "u32",
+        "u64",    "u128",   "i2",          "i4",        "i8",
+        "i16",    "i32",    "i64",         "i128",      "f16",
+        "f32",    "f64",    "f80",         "f128",      "[]const u8",
+        "[]u8",   "[]i8",   "?[]const u8",
+        // Resolved by the generated file's own imports, not by mapType.
+        "Allocator", "Writer",
+        "Reader", "Thread", "Mutex",
+    };
+    for (legal) |p| {
+        if (std.mem.eql(u8, t, p)) return true;
+    }
+    // A qualified stdlib path is a type expression the generated file can
+    // resolve on its own -- mapType lowers `Allocator` to `std.mem.Allocator`,
+    // and the first draft of this list wrongly flagged that as a defect.
+    if (std.mem.startsWith(u8, t, "std.")) return true;
+    return false;
+}
+
+test "every type name the validator blesses is one mapType can lower" {
+    // Guard the denominator. A test that iterates an empty list passes over
+    // nothing, which is the precise failure mode this file exists to prevent.
+    try std.testing.expect(known_base_types.len > 20);
+
+    var unlowered: usize = 0;
+    for (known_base_types) |spec_name| {
+        const zig_name = codegen_utils.mapType(spec_name);
+        if (!isLegalZigTypeExpr(zig_name)) {
+            std.debug.print(
+                "  spec type '{s}' reaches generated Zig as '{s}', which is not a type\n",
+                .{ spec_name, zig_name },
+            );
+            unlowered += 1;
+        }
+    }
+    try std.testing.expectEqual(@as(usize, 0), unlowered);
+}
+
+test "the Uint case variants specifically, since those are the ones that shipped" {
+    try std.testing.expectEqualStrings("u64", codegen_utils.mapType("Uint64"));
+    try std.testing.expectEqualStrings("u32", codegen_utils.mapType("Uint32"));
+    try std.testing.expectEqualStrings("u16", codegen_utils.mapType("Uint16"));
+    try std.testing.expectEqualStrings("u8", codegen_utils.mapType("Uint8"));
+
+    // Both spellings must agree, or a spec's meaning would depend on its
+    // capitalisation.
+    try std.testing.expectEqualStrings(codegen_utils.mapType("UInt64"), codegen_utils.mapType("Uint64"));
+    try std.testing.expectEqualStrings(codegen_utils.mapType("UInt32"), codegen_utils.mapType("Uint32"));
+    try std.testing.expectEqualStrings(codegen_utils.mapType("UInt8"), codegen_utils.mapType("Uint8"));
 }

@@ -234,6 +234,27 @@ pub fn mapType(type_name: []const u8) []const u8 {
     if (std.mem.eql(u8, clean_input, "Float32")) return "f32";
     if (std.mem.eql(u8, clean_input, "Float64")) return "f64";
 
+    // Lowercase-i case variants (Uint64, Uint32, ...).
+    //
+    // These are NOT decorative aliases. validate_cmd.zig's `known_base_types`
+    // blesses them under the heading "Case variants (common in specs)", so a
+    // spec author writing `last_update: Uint64` is told the spec validates --
+    // and then gets Zig with a bare `Uint64` in it, because this function used
+    // to fall through to `return clean_input` for exactly this spelling.
+    //
+    // That is what src/tri/sacred_economy_global.zig and
+    // src/tri/self_improving_formula_discovery.zig are: generated output that
+    // has never compiled, from specs that have always validated. The gap was
+    // one missing capitalisation, and the test below now pins the two
+    // vocabularies together so it cannot silently reopen.
+    if (std.mem.eql(u8, clean_input, "Uint")) return "u32";
+    if (std.mem.eql(u8, clean_input, "Uint64")) return "u64";
+    if (std.mem.eql(u8, clean_input, "Uint32")) return "u32";
+    if (std.mem.eql(u8, clean_input, "Uint16")) return "u16";
+    if (std.mem.eql(u8, clean_input, "Uint8")) return "u8";
+    if (std.mem.eql(u8, clean_input, "Uint4")) return "u4";
+    if (std.mem.eql(u8, clean_input, "Uint2")) return "u2";
+
     // Short capitalization aliases (U64, U32, etc.)
     if (std.mem.eql(u8, clean_input, "U64")) return "u64";
     if (std.mem.eql(u8, clean_input, "U32")) return "u32";

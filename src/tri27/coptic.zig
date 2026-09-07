@@ -67,9 +67,33 @@ pub const CopticReg = enum(u5) {
 
 /// Array of Coptic glyphs in order (maps 1:1 to CopticReg enum values)
 pub const coptic_glyphs = [27][]const u8{
-    "Ⲁ", "Ⲃ", "Ⲅ", "Ⲇ", "Ⲉ", "Ⲋ", "Ⲍ", "Ⲏ", "Ⲑ",
-    "Ⲓ", "Ⲕ", "Ⲗ", "Ⲙ", "Ⲛ", "Ⲝ", "Ⲟ", "Ⲡ", "Ⲣ",
-    "Ⲥ", "Ⲧ", "Ⲩ", "Ⲫ", "Ⲭ", "Ⲯ", "Ⲱ", "Ϣ",  "Ϥ",
+    "Ⲁ",
+    "Ⲃ",
+    "Ⲅ",
+    "Ⲇ",
+    "Ⲉ",
+    "Ⲋ",
+    "Ⲍ",
+    "Ⲏ",
+    "Ⲑ",
+    "Ⲓ",
+    "Ⲕ",
+    "Ⲗ",
+    "Ⲙ",
+    "Ⲛ",
+    "Ⲝ",
+    "Ⲟ",
+    "Ⲡ",
+    "Ⲣ",
+    "Ⲥ",
+    "Ⲧ",
+    "Ⲩ",
+    "Ⲫ",
+    "Ⲭ",
+    "Ⲯ",
+    "Ⲱ",
+    "Ϣ",
+    "Ϥ",
 };
 
 /// Lookup table: Coptic glyph → CopticReg (O(N) for small N=27)

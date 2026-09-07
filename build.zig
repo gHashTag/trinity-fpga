@@ -290,6 +290,12 @@ pub fn build(b: *std.Build) void {
         b.path("src/tri/tri_proc.zig"),
         b.path("src/tri/io_group_behaviour_test.zig"),
         b.path("src/tri/net_behaviour_test.zig"),
+        // The spec-type vocabulary contract. `vibeec_tests` below looks like
+        // it covers the compiler, but its root (src/vibeec/codegen_tests.zig)
+        // imports nothing except std -- so nothing in src/vibeec/ was reached
+        // by the test step at all. This root pulls in codegen/utils.zig, which
+        // is where mapType lives.
+        b.path("src/vibeec/validate_cmd.zig"),
     };
     for (behaviour_test_roots) |root_path| {
         const t = b.addTest(.{
@@ -4138,6 +4144,33 @@ pub fn build(b: *std.Build) void {
     run_cmd_smoke.step.dependOn(tri_compile_step);
     const smoke_step = b.step("smoke", "Run every tri command in a sandbox (#763)");
     smoke_step.dependOn(&run_cmd_smoke.step);
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // test-coverage — how many files carry tests that nothing runs
+    // ═══════════════════════════════════════════════════════════════════════════
+    //
+    // A ratchet, not a demand. 1688 files under src/ contain tests and about
+    // 168 are reachable from the `test` step; the rest are dead files,
+    // generated fixtures, or modules that cannot compile standalone. Wiring
+    // all of them up is not the goal. Not letting the number GROW is.
+    //
+    // This exists because a probe -- an always-failing test appended to a file
+    // -- showed that three of four files I had just added tests to were never
+    // compiled. Two of those test sets had already caught real defects. A test
+    // nothing runs looks like coverage in every review, which makes it worse
+    // than no test at all.
+    const test_coverage = b.addExecutable(.{
+        .name = "tri-test-coverage",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("tools/test_coverage.zig"),
+            .target = target,
+            .optimize = optimize,
+            .link_libc = true,
+        }),
+    });
+    const run_test_coverage = b.addRunArtifact(test_coverage);
+    const test_coverage_step = b.step("test-coverage", "Fail if a new file gains tests nothing runs");
+    test_coverage_step.dependOn(&run_test_coverage.step);
 
     // ═══════════════════════════════════════════════════════════════════════════
     // tri-github-collab — OAuth + webhook backend for the Spec Explorer

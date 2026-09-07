@@ -68,9 +68,19 @@ jobs:
       - name: Leak check critical modules
         run: zig build test --summary all
 
-      # Проверка форматирования основных модулей (CLAUDE.md: `zig fmt --check`).
+      # Format check over the WHOLE tree, not a hand-maintained path list.
+      #
+      # This step used to name five paths. Eight files elsewhere in src/ did
+      # not parse at all, and none of them was in the list -- so the gate was
+      # green for as long as those files existed. A path list is a promise
+      # about the files someone remembered; `src/ tools/` is a promise about
+      # the tree.
+      #
+      # `zig fmt --check` also fails on a file that cannot be PARSED, which is
+      # the more valuable half: it is the cheapest tree-wide syntax gate the
+      # toolchain gives us, and it now covers everything a build could reach.
+      #
+      # If this step starts failing on a file you did not touch, run
+      # `zig fmt src/ tools/` -- do not narrow the paths back down.
       - name: Format check
-        run: |
-          zig fmt --check \
-            src/vm.zig src/trinity.zig \
-            src/bsd/ src/hslm/ tools/mcp/
+        run: zig fmt --check src/ tools/

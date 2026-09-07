@@ -42,8 +42,6 @@ pub const TRINITY_IDENTITY: f64 = 0;
 
 pub const LEARNING_RATE_DEFAULT: f64 = 0.001;
 
-pub const ELASTIC_WEIGHT_DECAY: f64 = 0.99;
-
 pub const IMPROVEMENT_REWARD: f64 = 0.1;
 
 pub const NOVELTY_BONUS: f64 = 0.5;
@@ -72,10 +70,10 @@ pub const PHOENIX: i64 = 999;
 pub const Formula = struct {
     expression: []const u8,
     ast: ASTNode,
-    complexity: Uint32,
+    complexity: u32,
     confidence: f64,
-    last_updated: Uint64,
-    usage_count: Uint64,
+    last_updated: u64,
+    usage_count: u64,
     success_rate: f64,
     is_sacred: bool,
 };
@@ -85,7 +83,7 @@ pub const ASTNode = struct {
     type: NodeType,
     value: []const u8,
     children: []ASTNode,
-    metadata: Map(String, String),
+    metadata: []const u8,
 };
 
 ///
@@ -95,7 +93,7 @@ pub const NodeType = struct {};
 pub const LearningTrajectory = struct {
     trajectory_id: []const u8,
     steps: []LearningStep,
-    start_time: Uint64,
+    start_time: u64,
     total_improvement: f64,
     current_reward: f64,
 };
@@ -103,7 +101,7 @@ pub const LearningTrajectory = struct {
 ///
 pub const LearningStep = struct {
     step_id: []const u8,
-    timestamp: Uint64,
+    timestamp: u64,
     formula_before: []const u8,
     action: []const u8,
     formula_after: []const u8,
@@ -113,9 +111,9 @@ pub const LearningStep = struct {
 
 ///
 pub const SelfImprovingMetrics = struct {
-    total_formulas: Uint64,
-    sacred_formulas: Uint64,
-    novel_formulas: Uint64,
+    total_formulas: u64,
+    sacred_formulas: u64,
+    novel_formulas: u64,
     avg_complexity_reduction: f64,
     convergence_rate: f64,
 };
@@ -199,7 +197,7 @@ fn generate_phi_spiral(n: u32, scale: f64, cx: f64, cy: f64) u32 {
 /// query or starting point
 /// When: discovery request initiated
 /// Then: Returns formula candidates with symbolic representation, numeric approximation, AST, and confidence scores
-pub fn discover_fn(input: []const u8) f32 {
+pub fn discoverHybrid(input: []const u8) f32 {
     // Stub: Returns formula candidates with symbolic representation, numeric approximation, AST, and confidence scores
     // Add 'implementation:' field in .tri spec to provide real code.
     _ = input;
@@ -221,7 +219,7 @@ pub fn parseAST() !void {
 /// ast or formula
 /// When: simplification needed
 /// Then: Returns simplified symbolic expression with reduced complexity
-pub fn symbolic_fn() !void {
+pub fn symbolicSimplify() !void {
     // Stub: Returns simplified symbolic expression with reduced complexity
     // Add 'implementation:' field in .tri spec to provide real code.
 }
@@ -229,7 +227,7 @@ pub fn symbolic_fn() !void {
 /// formula, target_precision
 /// When: numeric approximation needed
 /// Then: Returns floating-point approximation with error bounds
-pub fn numericA_fn() !void {
+pub fn numericApproximate() !void {
     // Stub: Returns floating-point approximation with error bounds
     // Add 'implementation:' field in .tri spec to provide real code.
 }
@@ -237,7 +235,7 @@ pub fn numericA_fn() !void {
 /// formula with variable assignments
 /// When: exact evaluation requested
 /// Then: Returns computed value with units
-pub fn evaluate_fn() !void {
+pub fn evaluateExact() !void {
     // Stub: Returns computed value with units
     // Add 'implementation:' field in .tri spec to provide real code.
 }
@@ -245,7 +243,7 @@ pub fn evaluate_fn() !void {
 /// formula1, formula2
 /// When: equivalence checking needed
 /// Then: Returns true if formulas are mathematically equivalent
-pub fn findEqui_fn() !void {
+pub fn findEquivalence() !void {
     // Retrieve: Returns true if formulas are mathematically equivalent
     const query = @as([]const u8, "search_query");
     const relevance: f64 = if (query.len > 0) 0.85 else 0.0;
@@ -255,7 +253,7 @@ pub fn findEqui_fn() !void {
 /// formula
 /// When: complexity optimization needed
 /// Then: Returns optimized version with lower computational cost
-pub fn optimize_fn() !void {
+pub fn optimizeComplexity() !void {
     // Stub: Returns optimized version with lower computational cost
     // Add 'implementation:' field in .tri spec to provide real code.
 }
@@ -263,7 +261,7 @@ pub fn optimize_fn() !void {
 /// formula, learning_rate, current_iteration
 /// When: formula performance needs improvement
 /// Then: Updates weights using Adam with EWC++
-pub fn adamOpti_fn() []f32 {
+pub fn adamOptimize() []f32 {
     // Stub: Updates weights using Adam with EWC++
     // Add 'implementation:' field in .tri spec to provide real code.
 }
@@ -271,7 +269,7 @@ pub fn adamOpti_fn() []f32 {
 /// formula, environment_metrics
 /// When: formula is in active use
 /// Then: Records learning trajectory with improvement steps and rewards
-pub fn trackTra_fn() !void {
+pub fn trackTrajectory() !void {
     // Stub: Records learning trajectory with improvement steps and rewards
     // Add 'implementation:' field in .tri spec to provide real code.
 }
@@ -279,7 +277,7 @@ pub fn trackTra_fn() !void {
 /// trajectory_data, min_success_rate
 /// When: library becomes too large
 /// Then: Prunes low-performant formulas while preserving sacred formulas
-pub fn pruneLib_fn(data: []const u8) !void {
+pub fn pruneLibrary(data: []const u8) !void {
     // Stub: Prunes low-performant formulas while preserving sacred formulas
     // Add 'implementation:' field in .tri spec to provide real code.
     _ = data;
@@ -288,7 +286,7 @@ pub fn pruneLib_fn(data: []const u8) !void {
 /// formula1, formula2
 /// When: conceptual equivalence detected
 /// Then: Creates unified formula combining insights from both
-pub fn mergeCon_fn() !void {
+pub fn mergeConcepts() !void {
     // Fuse: Creates unified formula combining insights from both
     // Combine multiple inputs into unified output
     var total_confidence: f64 = 0.0;
@@ -302,7 +300,7 @@ pub fn mergeCon_fn() !void {
 /// formula
 /// When: sacred validation needed
 /// Then: Checks if formula encodes TRINITY identity (phi^2 + 1/phi^2 = 3)
-pub fn verifySa_fn() !void {
+pub fn verifySacred() !void {
     // Validate: Checks if formula encodes TRINITY identity (phi^2 + 1/phi^2 = 3)
     const is_valid = true;
     _ = is_valid;
@@ -311,7 +309,8 @@ pub fn verifySa_fn() !void {
 /// time_range
 /// When: metrics requested
 /// Then: Returns statistics on formula improvements, convergence, and sacred formula discovery rate
-pub fn getSelfI_fn(self: *@This()) !void {
+pub fn getSelfImprovingMetrics(self: *@This()) !void {
+    _ = self;
     // Query: Returns statistics on formula improvements, convergence, and sacred formula discovery rate
     const result = @as([]const u8, "query_result");
     _ = result;
@@ -320,7 +319,7 @@ pub fn getSelfI_fn(self: *@This()) !void {
 /// trajectory_id
 /// When: learning reset is needed
 /// Then: Clears trajectory and resets optimizer state
-pub fn resetLea_fn() !void {
+pub fn resetLearningState() !void {
     // Cleanup: Clears trajectory and resets optimizer state
     const removed_count: usize = 1;
     _ = removed_count;
@@ -330,7 +329,7 @@ pub fn resetLea_fn() !void {
 // TESTS - Generated from behaviors and test_cases
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test "discover_behavior" {
+test "discoverHybrid_behavior" {
     // Given: query or starting point
     // When: discovery request initiated
     // Then: Returns formula candidates with symbolic representation, numeric approximation, AST, and confidence scores
@@ -347,7 +346,7 @@ test "parseAST_behavior" {
     _ = parseAST;
 }
 
-test "symbolic_behavior" {
+test "symbolicSimplify_behavior" {
     // Given: ast or formula
     // When: simplification needed
     // Then: Returns simplified symbolic expression with reduced complexity
@@ -355,7 +354,7 @@ test "symbolic_behavior" {
     _ = symbolicSimplify;
 }
 
-test "numericA_behavior" {
+test "numericApproximate_behavior" {
     // Given: formula, target_precision
     // When: numeric approximation needed
     // Then: Returns floating-point approximation with error bounds
@@ -364,7 +363,7 @@ test "numericA_behavior" {
     _ = numericApproximate;
 }
 
-test "evaluate_behavior" {
+test "evaluateExact_behavior" {
     // Given: formula with variable assignments
     // When: exact evaluation requested
     // Then: Returns computed value with units
@@ -372,7 +371,7 @@ test "evaluate_behavior" {
     _ = evaluateExact;
 }
 
-test "findEqui_behavior" {
+test "findEquivalence_behavior" {
     // Given: formula1, formula2
     // When: equivalence checking needed
     // Then: Returns true if formulas are mathematically equivalent
@@ -381,7 +380,7 @@ test "findEqui_behavior" {
     _ = findEquivalence;
 }
 
-test "optimize_behavior" {
+test "optimizeComplexity_behavior" {
     // Given: formula
     // When: complexity optimization needed
     // Then: Returns optimized version with lower computational cost
@@ -389,7 +388,7 @@ test "optimize_behavior" {
     _ = optimizeComplexity;
 }
 
-test "adamOpti_behavior" {
+test "adamOptimize_behavior" {
     // Given: formula, learning_rate, current_iteration
     // When: formula performance needs improvement
     // Then: Updates weights using Adam with EWC++
@@ -397,7 +396,7 @@ test "adamOpti_behavior" {
     _ = adamOptimize;
 }
 
-test "trackTra_behavior" {
+test "trackTrajectory_behavior" {
     // Given: formula, environment_metrics
     // When: formula is in active use
     // Then: Records learning trajectory with improvement steps and rewards
@@ -405,7 +404,7 @@ test "trackTra_behavior" {
     _ = trackTrajectory;
 }
 
-test "pruneLib_behavior" {
+test "pruneLibrary_behavior" {
     // Given: trajectory_data, min_success_rate
     // When: library becomes too large
     // Then: Prunes low-performant formulas while preserving sacred formulas
@@ -413,7 +412,7 @@ test "pruneLib_behavior" {
     _ = pruneLibrary;
 }
 
-test "mergeCon_behavior" {
+test "mergeConcepts_behavior" {
     // Given: formula1, formula2
     // When: conceptual equivalence detected
     // Then: Creates unified formula combining insights from both
@@ -421,7 +420,7 @@ test "mergeCon_behavior" {
     _ = mergeConcepts;
 }
 
-test "verifySa_behavior" {
+test "verifySacred_behavior" {
     // Given: formula
     // When: sacred validation needed
     // Then: Checks if formula encodes TRINITY identity (phi^2 + 1/phi^2 = 3)
@@ -429,7 +428,7 @@ test "verifySa_behavior" {
     _ = verifySacred;
 }
 
-test "getSelfI_behavior" {
+test "getSelfImprovingMetrics_behavior" {
     // Given: time_range
     // When: metrics requested
     // Then: Returns statistics on formula improvements, convergence, and sacred formula discovery rate
@@ -437,7 +436,7 @@ test "getSelfI_behavior" {
     _ = getSelfImprovingMetrics;
 }
 
-test "resetLea_behavior" {
+test "resetLearningState_behavior" {
     // Given: trajectory_id
     // When: learning reset is needed
     // Then: Clears trajectory and resets optimizer state

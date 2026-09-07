@@ -45,19 +45,19 @@ pub const TriParseResult = extern struct {
 
 fn igla_tri_parse(source: [*]const u8, len: usize) TriParseResult {
     const data = source[0..len];
-    
+
     var entries: i64 = 0;
     var keys: i64 = 0;
     var values: i64 = 0;
     var pos: usize = 0;
-    
+
     while (pos < data.len) {
         // Skip whitespace
         while (pos < data.len and (data[pos] == ' ' or data[pos] == '\t')) {
             pos += 1;
         }
         if (pos >= data.len) break;
-        
+
         // Skip comments
         if (data[pos] == '#') {
             while (pos < data.len and data[pos] != '\n') {
@@ -66,43 +66,43 @@ fn igla_tri_parse(source: [*]const u8, len: usize) TriParseResult {
             if (pos < data.len) pos += 1;
             continue;
         }
-        
+
         // Parse key
         const key_start = pos;
         while (pos < data.len and data[pos] != ':' and data[pos] != '\n') {
             pos += 1;
         }
-        
+
         if (pos > key_start) {
             keys += 1;
         }
-        
+
         // Skip colon and parse value
         if (pos < data.len and data[pos] == ':') {
             pos += 1;
             while (pos < data.len and (data[pos] == ' ' or data[pos] == '\t')) {
                 pos += 1;
             }
-            
+
             const value_start = pos;
             while (pos < data.len and data[pos] != '\n') {
                 pos += 1;
             }
-            
+
             if (pos > value_start) {
                 values += 1;
             }
-            
+
             entries += 1;
         }
-        
+
         // Skip to next line
         while (pos < data.len and data[pos] != '\n') {
             pos += 1;
         }
         if (pos < data.len) pos += 1;
     }
-    
+
     return .{
         .entries = entries,
         .keys = keys,
@@ -148,7 +148,7 @@ fn igla_is_prime(n: i64) i32 {
     if (n <= 1) return 0;
     if (n <= 3) return 1;
     if (@mod(n, 2) == 0 or @mod(n, 3) == 0) return 0;
-    
+
     var i: i64 = 5;
     while (i * i <= n) {
         if (@mod(n, i) == 0 or @mod(n, i + 2) == 0) return 0;

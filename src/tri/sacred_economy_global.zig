@@ -5,7 +5,7 @@
 // Священная формула: V = n × 3^k × π^m × φ^p × e^q
 // Золотая идентичность: φ² + 1/φ² = 3
 //
-// Author: 
+// Author:
 // DO NOT EDIT - This file is auto-generated
 //
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -84,37 +84,37 @@ pub const PHOENIX: i64 = 999;
 // ТИПЫ
 // ═══════════════════════════════════════════════════════════════════════════════
 
-/// 
+///
 pub const GlobalOracle = struct {
     oracle_address: []const u8,
     chain_id: []const u8,
     phi_price: f64,
     confidence: f64,
-    last_update: Uint64,
+    last_update: u64,
 };
 
-/// 
+///
 pub const GlobalStake = struct {
     stake_address: []const u8,
     staked_amount: f64,
-    lock_period: Uint32,
-    lock_start: Uint64,
+    lock_period: u32,
+    lock_start: u64,
     unlockable: bool,
     rewards_earned: f64,
 };
 
-/// 
+///
 pub const GlobalMarketplace = struct {
     listing_id: []const u8,
     nft_token_id: []const u8,
     seller: []const u8,
     ask_price: f64,
     min_bid_increment: f64,
-    auction_end_time: Uint64,
+    auction_end_time: u64,
     is_auction: bool,
 };
 
-/// 
+///
 pub const YieldFarm = struct {
     farm_address: []const u8,
     pool_id: []const u8,
@@ -123,24 +123,24 @@ pub const YieldFarm = struct {
     rewards_claimed: bool,
 };
 
-/// 
+///
 pub const DaoGovernance = struct {
     proposal_id: []const u8,
     proposer: []const u8,
     title: []const u8,
     description: []const u8,
-    votes_for: Uint64,
-    votes_against: Uint64,
+    votes_for: u64,
+    votes_against: u64,
     execution_status: []const u8,
 };
 
-/// 
+///
 pub const CrossChainBridge = struct {
     source_chain: []const u8,
     target_chain: []const u8,
     amount: f64,
     relayed: bool,
-    confirmation_count: Uint8,
+    confirmation_count: u8,
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -165,8 +165,8 @@ export fn get_f64_buffer_ptr() [*]f64 {
 /// Trit - ternary digit (-1, 0, +1)
 pub const Trit = enum(i8) {
     negative = -1, // FALSE
-    zero = 0,      // UNKNOWN
-    positive = 1,  // TRUE
+    zero = 0, // UNKNOWN
+    positive = 1, // TRUE
 
     pub fn trit_and(a: Trit, b: Trit) Trit {
         return @enumFromInt(@min(@intFromEnum(a), @intFromEnum(b)));
@@ -222,8 +222,9 @@ fn generate_phi_spiral(n: u32, scale: f64, cx: f64, cy: f64) u32 {
 /// chain_id
 /// When: oracle address requested for chain
 /// Then: Returns oracle address with current phi price and confidence
-pub fn getGloba%m  (self: *@This()) f32 {
-// Query: Returns oracle address with current phi price and confidence
+pub fn getGlobalOracle(self: *@This()) f32 {
+    _ = self;
+    // Query: Returns oracle address with current phi price and confidence
     const result = @as([]const u8, "query_result");
     _ = result;
 }
@@ -231,8 +232,9 @@ pub fn getGloba%m  (self: *@This()) f32 {
 /// chain_id, oracle_address, new_phi_price
 /// When: phi price needs updating across chains
 /// Then: Updates oracle and broadcasts to all chains
-pub fn updateGl%m   `(self: *@This()) !void {
-// Update: Updates oracle and broadcasts to all chains
+pub fn updateGlobalOracle(self: *@This()) !void {
+    _ = self;
+    // Update: Updates oracle and broadcasts to all chains
     // Mutate state based on new data
     const state_changed = true;
     _ = state_changed;
@@ -241,8 +243,9 @@ pub fn updateGl%m   `(self: *@This()) !void {
 /// stake_address
 /// When: user queries their stake position
 /// Then: Returns staked amount, lock period, and earned rewards
-pub fn getGloba%m (self: *@This()) !void {
-// Query: Returns staked amount, lock period, and earned rewards
+pub fn getGlobalStake(self: *@This()) !void {
+    _ = self;
+    // Query: Returns staked amount, lock period, and earned rewards
     const result = @as([]const u8, "query_result");
     _ = result;
 }
@@ -250,24 +253,25 @@ pub fn getGloba%m (self: *@This()) !void {
 /// stake_address, amount, lock_period
 /// When: user wants to stake $TRI
 /// Then: Locks tokens for specified period, earns yield rewards
-pub fn stakeGlo%() !void {
-// TODO: implement — Locks tokens for specified period, earns yield rewards
+pub fn stakeGlobal() !void {
+    // TODO: implement — Locks tokens for specified period, earns yield rewards
     // Add 'implementation:' field in .vibee spec to provide real code.
 }
 
 /// stake_address
 /// When: lock period has expired
 /// Then: Unlocks tokens and returns staked amount plus rewards
-pub fn unstakeG%m() !void {
-// TODO: implement — Unlocks tokens and returns staked amount plus rewards
+pub fn unstakeGlobal() !void {
+    // TODO: implement — Unlocks tokens and returns staked amount plus rewards
     // Add 'implementation:' field in .vibee spec to provide real code.
 }
 
 /// Optional chain_id filter
 /// When: user wants to browse all NFT listings
 /// Then: Returns paginated listings from all chains
-pub fn getGloba%m   `(config: anytype) !void {
-// Query: Returns paginated listings from all chains
+pub fn getGlobalListings(config: anytype) !void {
+    _ = config;
+    // Query: Returns paginated listings from all chains
     const result = @as([]const u8, "query_result");
     _ = result;
 }
@@ -275,33 +279,34 @@ pub fn getGloba%m   `(config: anytype) !void {
 /// nft_token_id, ask_price, min_bid_increment, auction_enabled
 /// When: seller wants to list NFT globally
 /// Then: Creates listing with unique ID, visible on all chains
-pub fn createGl%m   `(token_ids: []const u32) !void {
-// TODO: implement — Creates listing with unique ID, visible on all chains
+pub fn createGlobalListing(token_ids: []const u32) !void {
+    // TODO: implement — Creates listing with unique ID, visible on all chains
     // Add 'implementation:' field in .vibee spec to provide real code.
-_ = token_ids;
+    _ = token_ids;
 }
 
 /// listing_id, bid_amount
 /// When: user wants to place bid
 /// Then: Records bid, checks if bid exceeds minimum increment
-pub fn placeGlo%m () !void {
-// TODO: implement — Records bid, checks if bid exceeds minimum increment
+pub fn placeGlobalBid() !void {
+    // TODO: implement — Records bid, checks if bid exceeds minimum increment
     // Add 'implementation:' field in .vibee spec to provide real code.
 }
 
 /// listing_id, buyer_address, offer_amount
 /// When: seller wants to accept offer
 /// Then: Transfers NFT and distributes royalties
-pub fn acceptGl%m   `() !void {
-// TODO: implement — Transfers NFT and distributes royalties
+pub fn acceptGlobalOffer() !void {
+    // TODO: implement — Transfers NFT and distributes royalties
     // Add 'implementation:' field in .vibee spec to provide real code.
 }
 
 /// pool_id
 /// When: user queries yield farming pool
 /// Then: Returns pool details, current APY, and staked amount
-pub fn getYield%m(self: *@This()) !void {
-// Query: Returns pool details, current APY, and staked amount
+pub fn getYieldPool(self: *@This()) !void {
+    _ = self;
+    // Query: Returns pool details, current APY, and staked amount
     const result = @as([]const u8, "query_result");
     _ = result;
 }
@@ -309,16 +314,16 @@ pub fn getYield%m(self: *@This()) !void {
 /// pool_id, farm_address
 /// When: farming rewards are available
 /// Then: Transfers yield rewards to farmer
-pub fn claimYie%m   `() !void {
-// TODO: implement — Transfers yield rewards to farmer
+pub fn claimYieldRewards() !void {
+    // TODO: implement — Transfers yield rewards to farmer
     // Add 'implementation:' field in .vibee spec to provide real code.
 }
 
 /// proposer, title, description
 /// When: governance proposal created
 /// Then: Generates unique proposal ID and records in registry
-pub fn createPr%m () !void {
-// TODO: implement — Generates unique proposal ID and records in registry
+pub fn createProposal() !void {
+    // TODO: implement — Generates unique proposal ID and records in registry
     // Add 'implementation:' field in .vibee spec to provide real code.
 }
 
@@ -326,18 +331,18 @@ pub fn createPr%m () !void {
 /// When: stakeholder votes on proposal
 /// Then: Records vote, updates tally
 pub fn vote(config: anytype) !void {
-// TODO: implement — Records vote, updates tally
+    // TODO: implement — Records vote, updates tally
     // Add 'implementation:' field in .vibee spec to provide real code.
-_ = config;
+    _ = config;
 }
 
 /// proposal_id
 /// When: voting period ends and proposal passes
 /// Then: Executes proposal action, distributes rewards
-pub fn executeP%m  () !void {
-// Process: Executes proposal action, distributes rewards
+pub fn executeProposal() !void {
+    // Process: Executes proposal action, distributes rewards
     const start_time = tri_time.timestamp();
-// Pipeline: Executes proposal action, distributes rewards
+    // Pipeline: Executes proposal action, distributes rewards
     const elapsed = tri_time.timestamp() - start_time;
     _ = elapsed;
 }
@@ -345,16 +350,16 @@ pub fn executeP%m  () !void {
 /// source_chain, target_chain, amount
 /// When: cross-chain transfer initiated
 /// Then: Locks assets in source chain, mints equivalent in target chain
-pub fn bridgeAs%m() !void {
-// TODO: implement — Locks assets in source chain, mints equivalent in target chain
+pub fn bridgeAssets() !void {
+    // TODO: implement — Locks assets in source chain, mints equivalent in target chain
     // Add 'implementation:' field in .vibee spec to provide real code.
 }
 
 /// transfer_id
 /// When: bridge transfer pending confirmation
 /// Then: After final confirmation, completes bridge operation
-pub fn confirmB%m   `m() f32 {
-// TODO: implement — After final confirmation, completes bridge operation
+pub fn confirmBridgeTransfer() f32 {
+    // TODO: implement — After final confirmation, completes bridge operation
     // Add 'implementation:' field in .vibee spec to provide real code.
 }
 
@@ -362,133 +367,133 @@ pub fn confirmB%m   `m() f32 {
 // TESTS - Generated from behaviors and test_cases
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test "getGloba%m  _behavior" {
-// Given: chain_id
-// When: oracle address requested for chain
-// Then: Returns oracle address with current phi price and confidence
-// Test getGlobalOracle: verify returns a float in valid range
-// TODO: Add specific test for getGlobalOracle
-_ = getGlobalOracle;
+test "getGlobalOracle_behavior" {
+    // Given: chain_id
+    // When: oracle address requested for chain
+    // Then: Returns oracle address with current phi price and confidence
+    // Test getGlobalOracle: verify returns a float in valid range
+    // TODO: Add specific test for getGlobalOracle
+    _ = getGlobalOracle;
 }
 
-test "updateGl%m   `_behavior" {
-// Given: chain_id, oracle_address, new_phi_price
-// When: phi price needs updating across chains
-// Then: Updates oracle and broadcasts to all chains
-// Test updateGlobalOracle: verify behavior is callable (compile-time check)
-_ = updateGlobalOracle;
+test "updateGlobalOracle_behavior" {
+    // Given: chain_id, oracle_address, new_phi_price
+    // When: phi price needs updating across chains
+    // Then: Updates oracle and broadcasts to all chains
+    // Test updateGlobalOracle: verify behavior is callable (compile-time check)
+    _ = updateGlobalOracle;
 }
 
-test "getGloba%m _behavior" {
-// Given: stake_address
-// When: user queries their stake position
-// Then: Returns staked amount, lock period, and earned rewards
-// Test getGlobalStake: verify behavior is callable (compile-time check)
-_ = getGlobalStake;
+test "getGlobalStake_behavior" {
+    // Given: stake_address
+    // When: user queries their stake position
+    // Then: Returns staked amount, lock period, and earned rewards
+    // Test getGlobalStake: verify behavior is callable (compile-time check)
+    _ = getGlobalStake;
 }
 
-test "stakeGlo%_behavior" {
-// Given: stake_address, amount, lock_period
-// When: user wants to stake $TRI
-// Then: Locks tokens for specified period, earns yield rewards
-// Test stakeGlobal: verify behavior is callable (compile-time check)
-_ = stakeGlobal;
+test "stakeGlobal_behavior" {
+    // Given: stake_address, amount, lock_period
+    // When: user wants to stake $TRI
+    // Then: Locks tokens for specified period, earns yield rewards
+    // Test stakeGlobal: verify behavior is callable (compile-time check)
+    _ = stakeGlobal;
 }
 
-test "unstakeG%m_behavior" {
-// Given: stake_address
-// When: lock period has expired
-// Then: Unlocks tokens and returns staked amount plus rewards
-// Test unstakeGlobal: verify behavior is callable (compile-time check)
-_ = unstakeGlobal;
+test "unstakeGlobal_behavior" {
+    // Given: stake_address
+    // When: lock period has expired
+    // Then: Unlocks tokens and returns staked amount plus rewards
+    // Test unstakeGlobal: verify behavior is callable (compile-time check)
+    _ = unstakeGlobal;
 }
 
-test "getGloba%m   `_behavior" {
-// Given: Optional chain_id filter
-// When: user wants to browse all NFT listings
-// Then: Returns paginated listings from all chains
-// Test getGlobalListings: verify behavior is callable (compile-time check)
-_ = getGlobalListings;
+test "getGlobalListings_behavior" {
+    // Given: Optional chain_id filter
+    // When: user wants to browse all NFT listings
+    // Then: Returns paginated listings from all chains
+    // Test getGlobalListings: verify behavior is callable (compile-time check)
+    _ = getGlobalListings;
 }
 
-test "createGl%m   `_behavior" {
-// Given: nft_token_id, ask_price, min_bid_increment, auction_enabled
-// When: seller wants to list NFT globally
-// Then: Creates listing with unique ID, visible on all chains
-// Test createGlobalListing: verify behavior is callable (compile-time check)
-_ = createGlobalListing;
+test "createGlobalListing_behavior" {
+    // Given: nft_token_id, ask_price, min_bid_increment, auction_enabled
+    // When: seller wants to list NFT globally
+    // Then: Creates listing with unique ID, visible on all chains
+    // Test createGlobalListing: verify behavior is callable (compile-time check)
+    _ = createGlobalListing;
 }
 
-test "placeGlo%m _behavior" {
-// Given: listing_id, bid_amount
-// When: user wants to place bid
-// Then: Records bid, checks if bid exceeds minimum increment
-// Test placeGlobalBid: verify behavior is callable (compile-time check)
-_ = placeGlobalBid;
+test "placeGlobalBid_behavior" {
+    // Given: listing_id, bid_amount
+    // When: user wants to place bid
+    // Then: Records bid, checks if bid exceeds minimum increment
+    // Test placeGlobalBid: verify behavior is callable (compile-time check)
+    _ = placeGlobalBid;
 }
 
-test "acceptGl%m   `_behavior" {
-// Given: listing_id, buyer_address, offer_amount
-// When: seller wants to accept offer
-// Then: Transfers NFT and distributes royalties
-// Test acceptGlobalOffer: verify behavior is callable (compile-time check)
-_ = acceptGlobalOffer;
+test "acceptGlobalOffer_behavior" {
+    // Given: listing_id, buyer_address, offer_amount
+    // When: seller wants to accept offer
+    // Then: Transfers NFT and distributes royalties
+    // Test acceptGlobalOffer: verify behavior is callable (compile-time check)
+    _ = acceptGlobalOffer;
 }
 
-test "getYield%m_behavior" {
-// Given: pool_id
-// When: user queries yield farming pool
-// Then: Returns pool details, current APY, and staked amount
-// Test getYieldPool: verify behavior is callable (compile-time check)
-_ = getYieldPool;
+test "getYieldPool_behavior" {
+    // Given: pool_id
+    // When: user queries yield farming pool
+    // Then: Returns pool details, current APY, and staked amount
+    // Test getYieldPool: verify behavior is callable (compile-time check)
+    _ = getYieldPool;
 }
 
-test "claimYie%m   `_behavior" {
-// Given: pool_id, farm_address
-// When: farming rewards are available
-// Then: Transfers yield rewards to farmer
-// Test claimYieldRewards: verify behavior is callable (compile-time check)
-_ = claimYieldRewards;
+test "claimYieldRewards_behavior" {
+    // Given: pool_id, farm_address
+    // When: farming rewards are available
+    // Then: Transfers yield rewards to farmer
+    // Test claimYieldRewards: verify behavior is callable (compile-time check)
+    _ = claimYieldRewards;
 }
 
-test "createPr%m _behavior" {
-// Given: proposer, title, description
-// When: governance proposal created
-// Then: Generates unique proposal ID and records in registry
-// Test createProposal: verify behavior is callable (compile-time check)
-_ = createProposal;
+test "createProposal_behavior" {
+    // Given: proposer, title, description
+    // When: governance proposal created
+    // Then: Generates unique proposal ID and records in registry
+    // Test createProposal: verify behavior is callable (compile-time check)
+    _ = createProposal;
 }
 
 test "vote_behavior" {
-// Given: proposal_id, vote_option, voter_address
-// When: stakeholder votes on proposal
-// Then: Records vote, updates tally
-// Test vote: verify behavior is callable (compile-time check)
-_ = vote;
+    // Given: proposal_id, vote_option, voter_address
+    // When: stakeholder votes on proposal
+    // Then: Records vote, updates tally
+    // Test vote: verify behavior is callable (compile-time check)
+    _ = vote;
 }
 
-test "executeP%m  _behavior" {
-// Given: proposal_id
-// When: voting period ends and proposal passes
-// Then: Executes proposal action, distributes rewards
-// Test executeProposal: verify behavior is callable (compile-time check)
-_ = executeProposal;
+test "executeProposal_behavior" {
+    // Given: proposal_id
+    // When: voting period ends and proposal passes
+    // Then: Executes proposal action, distributes rewards
+    // Test executeProposal: verify behavior is callable (compile-time check)
+    _ = executeProposal;
 }
 
-test "bridgeAs%m_behavior" {
-// Given: source_chain, target_chain, amount
-// When: cross-chain transfer initiated
-// Then: Locks assets in source chain, mints equivalent in target chain
-// Test bridgeAssets: verify behavior is callable (compile-time check)
-_ = bridgeAssets;
+test "bridgeAssets_behavior" {
+    // Given: source_chain, target_chain, amount
+    // When: cross-chain transfer initiated
+    // Then: Locks assets in source chain, mints equivalent in target chain
+    // Test bridgeAssets: verify behavior is callable (compile-time check)
+    _ = bridgeAssets;
 }
 
-test "confirmB%m   `m_behavior" {
-// Given: transfer_id
-// When: bridge transfer pending confirmation
-// Then: After final confirmation, completes bridge operation
-// Test confirmBridgeTransfer: verify behavior is callable (compile-time check)
-_ = confirmBridgeTransfer;
+test "confirmBridgeTransfer_behavior" {
+    // Given: transfer_id
+    // When: bridge transfer pending confirmation
+    // Then: After final confirmation, completes bridge operation
+    // Test confirmBridgeTransfer: verify behavior is callable (compile-time check)
+    _ = confirmBridgeTransfer;
 }
 
 test "phi_constants" {

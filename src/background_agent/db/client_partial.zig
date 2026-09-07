@@ -133,15 +133,13 @@ fn buildStartupMessage(client: *const PostgresClient) ![]const u8 {
     defer msg.deinit();
 
     // Protocol version 3.0, user database
-    try msg.writer().print("\x00\x00\x03\x00user\x00{s}\x00client_encoding\x00UTF8", .{
-        client.database
-    });
+    try msg.writer().print("\x00\x00\x03\x00user\x00{s}\x00client_encoding\x00UTF8", .{client.database});
 
     // Format: length + message
     var result = std.ArrayList(u8).init(std.heap.page_allocator);
     try result.writer().print("{c}{s}", .{
-        @intCast((msg.items.len & 0xFF), u8),
-        @intCast((msg.items.len >> 8) & 0xFF), u8),
+        @as(u8, @intCast(msg.items.len & 0xFF)),
+        @as(u8, @intCast((msg.items.len >> 8) & 0xFF)),
     });
 
     return result.toOwnedSlice();
@@ -158,9 +156,7 @@ fn buildQueryMessage(sql: []const u8, args: []const ?[]const u8) ![]const u8 {
     try msg.appendSlice(sql);
 
     var result = std.ArrayList(u8).init(std.heap.page_allocator);
-    try result.writer().print("Q{s}", .{
-        msg.items
-    });
+    try result.writer().print("Q{s}", .{msg.items});
 
     return result.toOwnedSlice();
 }

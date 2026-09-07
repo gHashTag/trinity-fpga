@@ -134,7 +134,8 @@ pub const BounceHandler = struct {
 
     /// Record bounce to file for tracking
     pub fn recordBounce(self: *BounceHandler, bounce: BounceInfo) !void {
-        const file = try std.Io.Dir.createFileAbsolute(tri_io.get(), 
+        const file = try std.Io.Dir.createFileAbsolute(
+            tri_io.get(),
             self.bounce_file,
             .{ .read = true, .write = true },
         );
@@ -152,7 +153,8 @@ pub const BounceHandler = struct {
 
     /// Check if email should be blocked (pre-send check)
     pub fn shouldBlockEmail(self: *BounceHandler, email: []const u8) !bool {
-        const file = std.Io.Dir.openFileAbsolute(tri_io.get(), 
+        const file = std.Io.Dir.openFileAbsolute(
+            tri_io.get(),
             self.bounce_file,
             .{} catch return false,
         );
@@ -173,7 +175,8 @@ pub const BounceHandler = struct {
 
     /// Get bounce statistics
     pub fn getStats(self: *BounceHandler) !BounceStats {
-        const file = std.Io.Dir.openFileAbsolute(tri_io.get(), 
+        const file = std.Io.Dir.openFileAbsolute(
+            tri_io.get(),
             self.bounce_file,
             .{} catch return .{
                 .permanent = 0,

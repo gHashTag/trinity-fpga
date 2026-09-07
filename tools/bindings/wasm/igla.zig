@@ -30,7 +30,7 @@ fn igla_is_prime(n: u64) u32 {
     if (n < 2) return 0;
     if (n == 2) return 1;
     if (n % 2 == 0) return 0;
-    
+
     var i: u64 = 3;
     while (i * i <= n) : (i += 2) {
         if (n % i == 0) return 0;
@@ -49,11 +49,11 @@ fn igla_sacred_formula(n: f64, k: f64, m: f64, p: f64, q: f64) f64 {
     // V = n × 3^k × π^m × φ^p × e^q
     const pi = std.math.pi;
     const e = std.math.e;
-    
-    return n * std.math.pow(f64, 3.0, k) * 
-           std.math.pow(f64, pi, m) * 
-           std.math.pow(f64, PHI, p) * 
-           std.math.pow(f64, e, q);
+
+    return n * std.math.pow(f64, 3.0, k) *
+        std.math.pow(f64, pi, m) *
+        std.math.pow(f64, PHI, p) *
+        std.math.pow(f64, e, q);
 }
 
 // TRI Parser simulation for WASM
@@ -62,7 +62,7 @@ fn igla_parse_tri(input_ptr: [*]const u8, input_len: u32) u32 {
     var tokens: u32 = 0;
     var i: u32 = 0;
     var in_token = false;
-    
+
     while (i < input_len) : (i += 1) {
         const c = input_ptr[i];
         if (c == ' ' or c == '\n' or c == '\t' or c == ':') {
@@ -75,7 +75,7 @@ fn igla_parse_tri(input_ptr: [*]const u8, input_len: u32) u32 {
         }
     }
     if (in_token) tokens += 1;
-    
+
     return tokens;
 }
 
