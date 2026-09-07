@@ -264,3 +264,46 @@ test "the function header comes from the spec's own then clause" {
     // And a body that produces one, since the stub computes nothing.
     try std.testing.expect(std.mem.indexOf(u8, found.body, "return ") != null);
 }
+
+test "a behaviour's implementation lands inside a function, never at file scope" {
+    // specs/needle/core.tri emitted its first behaviour's `implementation:`
+    // block as bare statements after the BEHAVIOR FUNCTIONS banner -- no doc
+    // comments, no `pub fn`, just `const parser = try ...` at file scope. The
+    // generated file did not parse. Every other behaviour in the same spec
+    // got a proper header.
+    const allocator = std.testing.allocator;
+
+    var spec = parser_types_align.VibeeSpec.init(allocator);
+    defer spec.deinit(allocator);
+
+    var b = parser_types_align.Behavior.init(allocator);
+    b.name = "find_matches_ast";
+    b.given = "Source code + AST loaded";
+    b.when = "Pattern is a query";
+    b.then = "Returns list of MatchResult";
+    // A function BODY, not a definition: no `fn`, no `pub const`.
+    b.implementation =
+        \\const parser = try zig_parser.createZigParser();
+        \\const root = parser.root();
+        \\return root;
+    ;
+    try spec.behaviors.append(allocator, b);
+
+    var gen = ZigCodeGen.init(allocator);
+    defer gen.deinit();
+    const out = try gen.generate(&spec);
+    defer allocator.free(out);
+
+    const impl_at = std.mem.indexOf(u8, out, "const parser = try zig_parser") orelse
+        return error.ImplementationNotEmitted;
+    const header_at = std.mem.indexOf(u8, out, "pub fn find_matches_ast");
+
+    if (header_at == null or header_at.? > impl_at) {
+        std.debug.print(
+            "  implementation emitted at file scope: no `pub fn find_matches_ast` before it\n",
+            .{},
+        );
+    }
+    try std.testing.expect(header_at != null);
+    try std.testing.expect(header_at.? < impl_at);
+}
