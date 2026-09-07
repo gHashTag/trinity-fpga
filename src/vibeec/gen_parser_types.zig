@@ -106,13 +106,13 @@ pub const TypeDef = struct {
         return TypeDef{
             .name = "",
             .base = null,
-            .fields = .{},
-            .constraints = .{},
+            .fields = .empty,
+            .constraints = .empty,
             .generic = null,
             .description = "",
-            .enum_variants = .{},
+            .enum_variants = .empty,
             .consts = std.StringHashMap([]const u8).init(allocator),
-            .implements = .{},
+            .implements = .empty,
         };
     }
 
@@ -151,7 +151,7 @@ pub const Behavior = struct {
             .when = "",
             .then = "",
             .implementation = "",
-            .test_cases = .{},
+            .test_cases = .empty,
         };
     }
 
@@ -172,9 +172,9 @@ pub const Algorithm = struct {
         _ = allocator;
         return Algorithm{
             .name = "",
-            .inputs = .{},
-            .outputs = .{},
-            .steps = .{},
+            .inputs = .empty,
+            .outputs = .empty,
+            .steps = .empty,
             .big_o = "",
         };
     }
@@ -222,12 +222,12 @@ pub const VibeeSpec = struct {
             .license = "MIT",
             .zig_mode = .standard,
             .allocator_strategy = .none,
-            .types = .{},
-            .behaviors = .{},
-            .algorithms = .{},
-            .constants = .{},
-            .imports = .{},
-            .tests = .{},
+            .types = .empty,
+            .behaviors = .empty,
+            .algorithms = .empty,
+            .constants = .empty,
+            .imports = .empty,
+            .tests = .empty,
         };
     }
 

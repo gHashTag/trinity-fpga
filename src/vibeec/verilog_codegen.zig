@@ -32,7 +32,7 @@ pub const ExtractedSignal = struct {
 
 /// Extract signals from spec types for SVA checker
 pub fn extractSignalsFromTypes(types: []const TypeDef, allocator: Allocator) !ArrayList(ExtractedSignal) {
-    var signals: ArrayList(ExtractedSignal) = .{};
+    var signals: ArrayList(ExtractedSignal) = .empty;
 
     for (types) |t| {
         for (t.fields.items) |field| {
@@ -108,7 +108,7 @@ const signal_keywords = [_]struct { keyword: []const u8, signal: []const u8 }{
 
 /// Extract signal references from behavior text
 pub fn extractSignalReferences(text: []const u8, allocator: Allocator) !ArrayList([]const u8) {
-    var refs: ArrayList([]const u8) = .{};
+    var refs: ArrayList([]const u8) = .empty;
 
     for (signal_keywords) |kw| {
         if (containsIgnoreCase(text, kw.keyword)) {
@@ -155,7 +155,7 @@ pub fn validateBehaviorSignals(
     extracted: []const ExtractedSignal,
     allocator: Allocator,
 ) !ArrayList(ValidationWarning) {
-    var warnings: ArrayList(ValidationWarning) = .{};
+    var warnings: ArrayList(ValidationWarning) = .empty;
 
     for (behaviors) |behavior| {
         // Check given clause
@@ -224,7 +224,7 @@ pub const VerilogBuilder = struct {
     pub fn init(allocator: Allocator) Self {
         return Self{
             .allocator = allocator,
-            .buffer = .{},
+            .buffer = .empty,
             .indent = 0,
         };
     }
@@ -251,8 +251,8 @@ pub const VerilogBuilder = struct {
     }
 
     pub fn writeFmt(self: *Self, comptime fmt: []const u8, args: anytype) !void {
-        const writer = self.buffer.writer(self.allocator);
-        try writer.print(fmt, args);
+        // 0.16 removed ArrayList.writer; the list formats into itself now.
+        try self.buffer.print(self.allocator, fmt, args);
     }
 
     pub fn newline(self: *Self) !void {
@@ -2313,11 +2313,11 @@ pub const VerilogCodeGen = struct {
         if (spec.behaviors.items.len == 0) return;
 
         // Extract signals from types
-        var extracted_signals = extractSignalsFromTypes(spec.types.items, self.allocator) catch ArrayList(ExtractedSignal){};
+        var extracted_signals = extractSignalsFromTypes(spec.types.items, self.allocator) catch ArrayList(ExtractedSignal).empty;
         defer extracted_signals.deinit(self.allocator);
 
         // Validate behavior signals
-        var warnings = validateBehaviorSignals(spec.behaviors.items, extracted_signals.items, self.allocator) catch ArrayList(ValidationWarning){};
+        var warnings = validateBehaviorSignals(spec.behaviors.items, extracted_signals.items, self.allocator) catch ArrayList(ValidationWarning).empty;
         defer warnings.deinit(self.allocator);
 
         // Print warnings to stderr (visible during generation)

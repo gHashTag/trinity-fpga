@@ -12,14 +12,16 @@ const std = @import("std");
 const tri_io = @import("tri_io");
 
 pub fn main() !void {
-    // Read tool input JSON from stdin
+    const io = tri_io.get();
+
+    // Read tool input JSON from stdin.
+    // `readSliceShort` is the 0.16 spelling of the old fill-until-EOF loop:
+    // it returns fewer bytes than requested if and only if the stream ended,
+    // so a short result here means EOF and not merely a short read.
     var input_buf: [65536]u8 = undefined;
-    var total: usize = 0;
-    while (total < input_buf.len) {
-        const n = std.posix.read(0, input_buf[total..]) catch break;
-        if (n == 0) break;
-        total += n;
-    }
+    var stdin_scratch: [4096]u8 = undefined;
+    var stdin_reader = std.Io.File.stdin().readerStreaming(io, &stdin_scratch);
+    const total = stdin_reader.interface.readSliceShort(&input_buf) catch 0;
     if (total == 0) return;
     const input = input_buf[0..total];
 
@@ -82,7 +84,7 @@ pub fn main() !void {
         // Output deny JSON to stdout (Claude Code hook protocol)
         var out_buf: [1024]u8 = undefined;
         const msg = std.fmt.bufPrint(&out_buf, "{{\"hookSpecificOutput\":{{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"PIPELINE-FIRST: {s} has a .tri spec. Edit the spec, then run: tri pipeline run\"}}}}", .{file_path}) catch return;
-        _ = std.posix.write(1, msg) catch return;
+        std.Io.File.stdout().writeStreamingAll(io, msg) catch return;
         return;
     }
 

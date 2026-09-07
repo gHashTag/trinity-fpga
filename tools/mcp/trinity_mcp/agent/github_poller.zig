@@ -1,6 +1,7 @@
 // github_poller.zig — Fetch pending GitHub Issues labeled assign:ralph
 const std = @import("std");
 
+const tri_io = @import("tri_io");
 /// Fetch pending issues from GitHub API.
 /// Returns raw JSON string or null on error.
 pub fn fetchPending(allocator: std.mem.Allocator, owner: []const u8, repo: []const u8, gh_token: []const u8) ?[]const u8 {
@@ -10,7 +11,8 @@ pub fn fetchPending(allocator: std.mem.Allocator, owner: []const u8, repo: []con
     var auth_buf: [300]u8 = undefined;
     const auth_val = std.fmt.bufPrint(&auth_buf, "Bearer {s}", .{gh_token}) catch return null;
 
-    var client = std.http.Client{ .allocator = allocator };
+    // 0.16: http.Client carries the Io it does its socket work through.
+    var client = std.http.Client{ .allocator = allocator, .io = tri_io.get() };
     defer client.deinit();
 
     var aw: std.Io.Writer.Allocating = .init(allocator);

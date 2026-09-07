@@ -4,6 +4,7 @@
 // Run: zig build bench
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const vsa = @import("vsa");
 
 // Benchmark configuration
@@ -57,7 +58,7 @@ fn benchmarkBind(dim: usize) !void {
     }
 
     // Benchmark
-    var timer = std.time.Timer.start() catch unreachable;
+    var timer = tri_time.Timer.start() catch unreachable;
     for (0..BENCHMARK_ITERATIONS) |_| {
         _ = vsa.bind(&a, &b);
     }
@@ -82,7 +83,7 @@ fn benchmarkBundle(dim: usize) !void {
     }
 
     // Benchmark
-    var timer = std.time.Timer.start() catch unreachable;
+    var timer = tri_time.Timer.start() catch unreachable;
     for (0..BENCHMARK_ITERATIONS) |_| {
         _ = vsa.bundle2(&a, &b);
     }
@@ -106,7 +107,7 @@ fn benchmarkPermute(dim: usize) !void {
     }
 
     // Benchmark
-    var timer = std.time.Timer.start() catch unreachable;
+    var timer = tri_time.Timer.start() catch unreachable;
     for (0..BENCHMARK_ITERATIONS) |_| {
         _ = vsa.permute(&a, 1);
     }
@@ -131,7 +132,7 @@ fn benchmarkSimilarity(dim: usize) !void {
     }
 
     // Benchmark
-    var timer = std.time.Timer.start() catch unreachable;
+    var timer = tri_time.Timer.start() catch unreachable;
     for (0..BENCHMARK_ITERATIONS) |_| {
         _ = vsa.cosineSimilarity(&a, &b);
     }

@@ -3,6 +3,8 @@
 // send Telegram drafts every 500ms, final message when done.
 // No claude CLI dependency. Pure Zig std.http.Client.
 const std = @import("std");
+const tri_io = @import("tri_io");
+const tri_time = @import("tri_time");
 const telegram_api = @import("telegram_api.zig");
 const handlers = @import("handlers.zig");
 
@@ -55,7 +57,7 @@ pub fn runStreaming(
     std.debug.print("[tri-bot] SSE request: {d} bytes, model={s}\n", .{ body_buf.items.len, model });
 
     // HTTP POST to Anthropic API (supports z.ai and custom proxies via ANTHROPIC_BASE_URL)
-    var client = std.http.Client{ .allocator = allocator };
+    var client = std.http.Client{ .allocator = allocator, .io = tri_io.get() };
     defer client.deinit();
 
     const api_url = std.fmt.allocPrint(allocator, "{s}/v1/messages", .{config.api_base_url}) catch {
@@ -141,7 +143,7 @@ pub fn runStreaming(
     var text_buf: std.ArrayList(u8) = .empty;
     defer text_buf.deinit(allocator);
 
-    var last_draft_ns: i128 = std.time.nanoTimestamp();
+    var last_draft_ns: i128 = tri_time.nanoTimestamp();
     const draft_interval: i128 = 500_000_000; // 500ms
 
     var line_buf: [65536]u8 = undefined;
@@ -170,7 +172,7 @@ pub fn runStreaming(
                 line_len = 0;
 
                 // Throttle: sendDraft every 500ms
-                const now = std.time.nanoTimestamp();
+                const now = tri_time.nanoTimestamp();
                 if (now - last_draft_ns >= draft_interval and text_buf.items.len > 0) {
                     const draft_len = @min(text_buf.items.len, 4000);
                     telegram_api.sendDraft(allocator, config.bot_token, config.chat_id, text_buf.items[0..draft_len]);

@@ -5,6 +5,7 @@
 // @origin(manual) @regen(pending)
 
 const std = @import("std");
+const tri_proc = @import("tri_proc");
 
 const MAX_OUTPUT = 8192;
 
@@ -158,32 +159,28 @@ fn runTriCmd(buf: *[MAX_OUTPUT]u8, args: []const []const u8) []const u8 {
         argv[1 + i] = args[i];
     }
 
-    var child = std.process.Child.init(argv[0 .. 1 + n], std.heap.page_allocator);
-    child.stdout_behavior = .Pipe;
-    child.stderr_behavior = .Inherit;
-    child.spawn() catch |err| {
+    // 0.16 has neither Child.collectOutput nor File.readToEndAlloc, so the
+    // init/spawn/read/wait sequence collapses into a single tri_proc.run.
+    const gpa = std.heap.page_allocator;
+    const result = tri_proc.run(.{
+        .allocator = gpa,
+        .argv = argv[0 .. 1 + n],
+        .max_output_bytes = MAX_OUTPUT,
+    }) catch |err| {
         return copyToBuf(buf, switch (err) {
             error.FileNotFound => "Error: tri binary not found (run zig build)",
             else => "Error: Failed to spawn tri process",
         });
     };
-    defer {
-        _ = child.wait() catch |err| {
-            std.log.warn("cloud_tools: child.wait() failed: {}", .{err});
-        };
-    }
+    defer gpa.free(result.stdout);
+    defer gpa.free(result.stderr);
 
-    const stdout = child.stdout.?.readToEndAlloc(std.heap.page_allocator, MAX_OUTPUT) catch {
-        return copyToBuf(buf, "Error: Failed to read tri output");
-    };
-    defer std.heap.page_allocator.free(stdout);
-
-    if (stdout.len == 0) {
+    if (result.stdout.len == 0) {
         return copyToBuf(buf, "OK (no output — check stderr)");
     }
 
-    const len = @min(stdout.len, MAX_OUTPUT);
-    @memcpy(buf[0..len], stdout[0..len]);
+    const len = @min(result.stdout.len, MAX_OUTPUT);
+    @memcpy(buf[0..len], result.stdout[0..len]);
     return buf[0..len];
 }
 
@@ -197,34 +194,28 @@ fn runTriCloud(buf: *[MAX_OUTPUT]u8, args: []const []const u8) []const u8 {
         argv[2 + i] = args[i];
     }
 
-    var child = std.process.Child.init(argv[0 .. 2 + n], std.heap.page_allocator);
-    child.stdout_behavior = .Pipe;
-    child.stderr_behavior = .Inherit;
-    child.spawn() catch |err| {
+    // Same collapse as runTriCmd: one call replaces init/spawn/read/wait.
+    const gpa = std.heap.page_allocator;
+    const result = tri_proc.run(.{
+        .allocator = gpa,
+        .argv = argv[0 .. 2 + n],
+        .max_output_bytes = MAX_OUTPUT,
+    }) catch |err| {
         return copyToBuf(buf, switch (err) {
             error.FileNotFound => "Error: tri binary not found (run zig build)",
             else => "Error: Failed to spawn tri cloud process",
         });
     };
-    defer {
-        _ = child.wait() catch |err| {
-            std.log.warn("cloud_tools: child.wait() failed: {}", .{err});
-        };
-    }
+    defer gpa.free(result.stdout);
+    defer gpa.free(result.stderr);
 
-    // Read stdout via File.readToEndAlloc
-    const stdout = child.stdout.?.readToEndAlloc(std.heap.page_allocator, MAX_OUTPUT) catch {
-        return copyToBuf(buf, "Error: Failed to read tri cloud output");
-    };
-    defer std.heap.page_allocator.free(stdout);
-
-    if (stdout.len == 0) {
+    if (result.stdout.len == 0) {
         return copyToBuf(buf, "OK (no output — check stderr)");
     }
 
     // Copy to provided buffer
-    const len = @min(stdout.len, MAX_OUTPUT);
-    @memcpy(buf[0..len], stdout[0..len]);
+    const len = @min(result.stdout.len, MAX_OUTPUT);
+    @memcpy(buf[0..len], result.stdout[0..len]);
     return buf[0..len];
 }
 

@@ -1,6 +1,10 @@
 // github_api.zig — GitHub REST API client for agent entrypoint
 // Replaces gh CLI dependency. Uses std.http.Client only.
 const std = @import("std");
+// 0.16: std.http.Client gained a required `io` field -- it opens the TCP
+// connections through it. None of the helpers below take an Io parameter and
+// their signatures are fixed by their callers, so they take the process Io.
+const tri_io = @import("tri_io");
 
 pub const Issue = struct {
     number: u32,
@@ -195,7 +199,7 @@ fn githubGet(allocator: std.mem.Allocator, token: []const u8, url: []const u8) !
     var auth_buf: [300]u8 = undefined;
     const auth_val = try std.fmt.bufPrint(&auth_buf, "Bearer {s}", .{token});
 
-    var client = std.http.Client{ .allocator = allocator };
+    var client = std.http.Client{ .allocator = allocator, .io = tri_io.get() };
     defer client.deinit();
 
     var aw: std.Io.Writer.Allocating = .init(allocator);
@@ -225,7 +229,7 @@ fn githubPost(allocator: std.mem.Allocator, token: []const u8, url: []const u8, 
     var auth_buf: [300]u8 = undefined;
     const auth_val = try std.fmt.bufPrint(&auth_buf, "Bearer {s}", .{token});
 
-    var client = std.http.Client{ .allocator = allocator };
+    var client = std.http.Client{ .allocator = allocator, .io = tri_io.get() };
     defer client.deinit();
 
     var aw: std.Io.Writer.Allocating = .init(allocator);
@@ -257,7 +261,7 @@ fn githubDelete(allocator: std.mem.Allocator, token: []const u8, url: []const u8
     var auth_buf: [300]u8 = undefined;
     const auth_val = try std.fmt.bufPrint(&auth_buf, "Bearer {s}", .{token});
 
-    var client = std.http.Client{ .allocator = allocator };
+    var client = std.http.Client{ .allocator = allocator, .io = tri_io.get() };
     defer client.deinit();
 
     const result = try client.fetch(.{

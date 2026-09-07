@@ -58,7 +58,7 @@ jobs:
       - name: Setup Zig
         uses: mlugg/setup-zig@v2
         with:
-          version: 0.15.2
+          version: 0.16.0
 
       - name: Checkout Trinity
         uses: actions/checkout@v4
@@ -168,7 +168,7 @@ jobs:
       - name: Setup Zig
         uses: mlugg/setup-zig@v2
         with:
-          version: 0.15.2
+          version: 0.16.0
 
       - name: Checkout Trinity
         uses: actions/checkout@v4
@@ -201,7 +201,7 @@ jobs:
       - name: Setup Zig
         uses: mlugg/setup-zig@v2
         with:
-          version: 0.15.2
+          version: 0.16.0
 
       - name: Checkout Trinity
         uses: actions/checkout@v4
@@ -225,7 +225,7 @@ jobs:
       - name: Setup Zig
         uses: mlugg/setup-zig@v2
         with:
-          version: 0.15.2
+          version: 0.16.0
 
       - name: Checkout Trinity
         uses: actions/checkout@v4
@@ -249,7 +249,7 @@ jobs:
       - name: Setup Zig
         uses: mlugg/setup-zig@v2
         with:
-          version: 0.15.2
+          version: 0.16.0
 
       - name: Checkout Trinity
         uses: actions/checkout@v4
@@ -366,7 +366,7 @@ jobs:
       - name: Setup Zig
         uses: mlugg/setup-zig@v2
         with:
-          version: 0.15.2
+          version: 0.16.0
 
       - name: Checkout Trinity
         uses: actions/checkout@v4
@@ -405,7 +405,7 @@ jobs:
       - name: Setup Zig
         uses: mlugg/setup-zig@v2
         with:
-          version: 0.15.2
+          version: 0.16.0
 
       - name: Checkout Trinity
         uses: actions/checkout@v4
@@ -507,7 +507,7 @@ jobs:
       - name: Setup Zig
         uses: mlugg/setup-zig@v2
         with:
-          version: 0.15.2
+          version: 0.16.0
 
       - name: Checkout Trinity
         uses: actions/checkout@v4

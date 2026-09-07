@@ -34,7 +34,7 @@ const SYNTH_DIR = "build";
 
 pub fn main(init: std.process.Init.Minimal) !u8 {
     const io = tri_io.get();
-    const allocator = std.heap.raw_c_allocator;
+    const allocator = std.heap.c_allocator;
 
     const args = try init.args.toSlice(allocator);
     defer allocator.free(args);
@@ -45,7 +45,9 @@ pub fn main(init: std.process.Init.Minimal) !u8 {
     }
 
     const command = args[1];
-    const modules_to_synth = if (args.len > 2) args[2..] else &[_][]u8{};
+    // 0.16's `Init.args.toSlice` yields `[]const [:0]const u8`, so the empty
+    // branch has to carry the same element type for the `if` to unify.
+    const modules_to_synth = if (args.len > 2) args[2..] else &[_][:0]const u8{};
 
     if (std.mem.eql(u8, command, "s")) {
         if (modules_to_synth.len == 0) {
@@ -117,10 +119,22 @@ fn synthesizeModule(allocator: std.mem.Allocator, mod: Module) !void {
         return;
     };
 
-    if (result.term.exited == 0) {
+    // tri_proc.run allocates both streams and hands ownership to the caller.
+    defer allocator.free(result.stdout);
+    defer allocator.free(result.stderr);
+
+    // Term is a tagged union; reading `.exited` when yosys died on a signal
+    // is reading an inactive field, and this target builds ReleaseFast where
+    // that is not checked. Switch instead.
+    const code: u8 = switch (result.term) {
+        .exited => |c| c,
+        else => 1,
+    };
+
+    if (code == 0) {
         try stdout.writeStreamingAll(io, "    \x1b[32mOK\x1b[0m\n");
     } else {
-        const fail_msg = try std.fmt.allocPrint(allocator, "    \x1b[31mFAILED (code {d})\x1b[0m\n", .{result.term.exited});
+        const fail_msg = try std.fmt.allocPrint(allocator, "    \x1b[31mFAILED (code {d})\x1b[0m\n", .{code});
         defer allocator.free(fail_msg);
         try stdout.writeStreamingAll(io, fail_msg);
     }

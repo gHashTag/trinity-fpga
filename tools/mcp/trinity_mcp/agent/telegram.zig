@@ -3,6 +3,15 @@
 // Pattern from oracle_watchdog.zig:515-598
 const std = @import("std");
 
+// Zig 0.16: std.http.Client gained an `io` field. This file is unusual in that
+// it is a build module root ("telegram") for mu-agent and scholar-agent AND a
+// relative import inside ralph-agent, ralph-hook and agent-entrypoint. Of those
+// compilations, ralph-hook has only `tri_env` and the telegram module itself has
+// no imports at all, so `@import("tri_io")` would not resolve everywhere this
+// file is compiled. Each entry point here is already fire-and-forget with its
+// own per-call allocator and HTTP client, so it builds a matching per-call Io.
+// Everywhere else in the tree, use `tri_io.get()` or a threaded `io` parameter.
+
 pub const TelegramConfig = struct {
     bot_token: []const u8,
     chat_id: []const u8,
@@ -93,7 +102,10 @@ fn sendToEndpoint(config: TelegramConfig, endpoint: []const u8, text: []const u8
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    var client = std.http.Client{ .allocator = allocator };
+    var threaded: std.Io.Threaded = .init(allocator, .{});
+    defer threaded.deinit();
+
+    var client = std.http.Client{ .allocator = allocator, .io = threaded.io() };
     defer client.deinit();
 
     const result = client.fetch(.{
@@ -128,7 +140,10 @@ pub fn sendAndCapture(config: TelegramConfig, text: []const u8) ?i64 {
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    var client = std.http.Client{ .allocator = allocator };
+    var threaded: std.Io.Threaded = .init(allocator, .{});
+    defer threaded.deinit();
+
+    var client = std.http.Client{ .allocator = allocator, .io = threaded.io() };
     defer client.deinit();
 
     var aw: std.Io.Writer.Allocating = .init(allocator);
@@ -171,7 +186,10 @@ pub fn editMessage(config: TelegramConfig, message_id: i64, text: []const u8) vo
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    var client = std.http.Client{ .allocator = allocator };
+    var threaded: std.Io.Threaded = .init(allocator, .{});
+    defer threaded.deinit();
+
+    var client = std.http.Client{ .allocator = allocator, .io = threaded.io() };
     defer client.deinit();
 
     const result = client.fetch(.{
@@ -205,7 +223,10 @@ pub fn pinMessage(config: TelegramConfig, message_id: i64) void {
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    var client = std.http.Client{ .allocator = allocator };
+    var threaded: std.Io.Threaded = .init(allocator, .{});
+    defer threaded.deinit();
+
+    var client = std.http.Client{ .allocator = allocator, .io = threaded.io() };
     defer client.deinit();
 
     _ = client.fetch(.{

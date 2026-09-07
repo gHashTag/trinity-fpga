@@ -475,7 +475,7 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("tests/benchmarks/benchmarks/bench_core.zig"),
             .target = target,
             .optimize = .ReleaseFast,
-            .imports = &.{.{ .name = "vsa", .module = trinity_mod }},
+            .imports = &.{ .{ .name = "tri_time", .module = tri_time_mod }, .{ .name = "vsa", .module = trinity_mod } },
         }),
     });
     b.installArtifact(bench_core);
@@ -491,6 +491,9 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("tests/benchmarks/benchmarks/bench_compression.zig"),
             .target = target,
             .optimize = .ReleaseFast,
+            .imports = &.{
+                .{ .name = "tri_time", .module = tri_time_mod },
+            },
         }),
     });
     b.installArtifact(bench_compress);

@@ -12,8 +12,8 @@ on:
 # на каждом PR с `error: no build.zig file found`. Этот workflow переписан на команды,
 # которые ДЕЙСТВИТЕЛЬНО работают по CLAUDE.md: per-file `zig test`, `zig fmt --check`.
 #
-# ОБНОВЛЕНО (поправка локального агента 28.06): подпроект VIBEE (src/vibeec/) сейчас
-# В ПРОЦЕССЕ МИГРАЦИИ и НЕ собирается ни на 0.15.2, ни на 0.16.0. Поэтому шаги сборки/
+# ОБНОВЛЕНО: миграция на 0.16 завершена (PR #758). `zig build vibee` собирается
+# без ошибок, как и ещё семь исполняемых целей. Пин поднят до 0.16.0. Шаги сборки/
 # тестов VIBEE помечены `continue-on-error: true` (информационные, НЕ блокируют гейт).
 # Реальный гейт = per-file `zig test` стабильных модулей + `zig fmt --check`.
 # Когда миграция VIBEE завершится — убрать `continue-on-error` (отдельный PR).
@@ -28,7 +28,7 @@ jobs:
       - name: Setup Zig
         uses: mlugg/setup-zig@v2
         with:
-          version: 0.15.2
+          version: 0.16.0
 
       # ШАГ `Author attribution guard` УДАЛЁН ОСОЗНАННО (fix #198):
       # его логика жила в step `author-guard` удалённого корневого build.zig.

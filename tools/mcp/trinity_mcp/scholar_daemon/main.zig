@@ -13,10 +13,14 @@
 //
 const std = @import("std");
 const tri_env = @import("tri_env");
+const tri_proc = @import("tri_proc");
 const scholar_loop = @import("scholar_loop.zig");
 const telegram = @import("telegram");
 
-pub fn main() !void {
+/// Takes std.process.Init.Minimal -- `{ environ, args }`, which std/start.zig
+/// accepts directly. 0.16 removed std.process.argsAlloc, so `--single-shot`
+/// can only be seen through the runtime-supplied argument vector.
+pub fn main(init: std.process.Init.Minimal) !void {
     var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
@@ -34,7 +38,7 @@ pub fn main() !void {
     // Detect project root
     const project_root = blk: {
         if (tri_env.getPosix("PROJECT_ROOT")) |root| break :blk @as([]const u8, root);
-        const result = std.process.Child.run(.{
+        const result = tri_proc.run(.{
             .allocator = allocator,
             .argv = &.{ "git", "rev-parse", "--show-toplevel" },
         }) catch {
@@ -46,12 +50,12 @@ pub fn main() !void {
             std.debug.print("[scholar] ERROR: Not in a git repository.\n", .{});
             std.process.exit(1);
         }
-        break :blk std.mem.trimRight(u8, result.stdout, &std.ascii.whitespace);
+        break :blk std.mem.trimEnd(u8, result.stdout, &std.ascii.whitespace);
     };
 
     var single_shot = false;
-    const args = try std.process.argsAlloc(allocator);
-    defer std.process.argsFree(allocator, args);
+    const args = try init.args.toSlice(allocator);
+    defer allocator.free(args);
     for (args) |arg| {
         if (std.mem.eql(u8, arg, "--single-shot")) {
             single_shot = true;

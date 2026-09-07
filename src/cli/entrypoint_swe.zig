@@ -10,8 +10,15 @@ const std = @import("std");
 const tri_proc = @import("tri_proc");
 const tri_io = @import("tri_io");
 const tri_time = @import("tri_time");
-const posix = std.posix;
 const log = std.log.scoped(.swe_entrypoint);
+
+// 0.16 removed `std.posix.getenv`. The tri_env shim replaces it, but this
+// executable's module does not import it, so the one call site here talks to
+// libc directly -- the same thing tri_env.getPosix does. libc is linked into
+// this binary via the tri_time module.
+const c = struct {
+    extern "c" fn getenv(name: [*:0]const u8) ?[*:0]const u8;
+};
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TYPES (from swe_entrypoint.tri)
@@ -42,7 +49,14 @@ const EntrypointConfig = struct {
 };
 
 fn envStr(key: []const u8, default: []const u8) []const u8 {
-    return posix.getenv(key) orelse default;
+    // Copy the name into a stack buffer to null-terminate it for libc; every
+    // key used here is a short compile-time literal.
+    var buf: [256]u8 = undefined;
+    if (key.len >= buf.len) return default;
+    @memcpy(buf[0..key.len], key);
+    buf[key.len] = 0;
+    const raw = c.getenv(@ptrCast(&buf)) orelse return default;
+    return std.mem.span(raw);
 }
 
 fn readConfig() EntrypointConfig {
@@ -77,22 +91,16 @@ fn runCmd(allocator: std.mem.Allocator, argv: []const []const u8) !u8 {
 
 /// Run a child process and capture stdout
 fn runCmdCapture(allocator: std.mem.Allocator, argv: []const []const u8) ![]const u8 {
-    var child = try tri_proc.spawn(tri_io.get(), .{
+    // 0.16: Child.init + spawn + collectOutput + wait collapses into one call.
+    // tri_proc.run resolves argv[0] through PATH, which std.process.run no
+    // longer does -- every argv here names its program bare ("gh", "zig").
+    const result = try tri_proc.run(.{
+        .allocator = allocator,
         .argv = argv,
-        .stdout = .pipe,
-        .stderr = .pipe,
+        .max_output_bytes = 1 * 1024 * 1024,
     });
-
-    _ = try child.spawn();
-
-    var stdout_buf: std.ArrayList(u8) = .empty;
-    var stderr_buf: std.ArrayList(u8) = .empty;
-    defer stderr_buf.deinit(allocator);
-
-    try child.collectOutput(allocator, &stdout_buf, &stderr_buf, 1 * 1024 * 1024);
-    _ = try child.wait(tri_io.get());
-
-    return try stdout_buf.toOwnedSlice(allocator);
+    allocator.free(result.stderr);
+    return result.stdout;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
