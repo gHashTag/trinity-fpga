@@ -285,6 +285,7 @@ pub fn build(b: *std.Build) void {
         "src/tri/token_rotator.zig",
         "src/tri/tri_proc.zig",
         "src/tri/io_group_behaviour_test.zig",
+        "src/tri/net_behaviour_test.zig",
     };
     for (behaviour_test_files) |src_file| {
         const t = b.addTest(.{
