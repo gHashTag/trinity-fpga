@@ -36,6 +36,42 @@ pub const CodeBuilder = struct {
         try self.buffer.append(self.allocator, byte);
     }
 
+    /// Write `// <label><value>` as a comment, giving EVERY line of a
+    /// multi-line value its own `//` marker.
+    ///
+    /// Spec values are routinely multi-line -- `then: |` block scalars are the
+    /// normal way to write a numbered list -- and `writeFmt("// X: {s}\n", ...)`
+    /// marks only the first line. The rest landed in the generated file as
+    /// bare code and it did not parse: `expected ';' after statement` was the
+    /// most common first error in generated output, and this was one of its
+    /// two causes.
+    ///
+    /// `marker` is "//" or "///" so the doc-comment path can share this.
+    pub fn writeCommentLines(self: *Self, marker: []const u8, label: []const u8, value: []const u8) !void {
+        if (value.len == 0) {
+            try self.writeIndent();
+            try self.buffer.appendSlice(self.allocator, marker);
+            try self.buffer.append(self.allocator, ' ');
+            try self.buffer.appendSlice(self.allocator, label);
+            try self.buffer.append(self.allocator, '\n');
+            return;
+        }
+        var first = true;
+        var it = std.mem.splitScalar(u8, value, '\n');
+        while (it.next()) |line| {
+            const trimmed = std.mem.trim(u8, line, " \t\r");
+            try self.writeIndent();
+            try self.buffer.appendSlice(self.allocator, marker);
+            try self.buffer.append(self.allocator, ' ');
+            if (first) {
+                try self.buffer.appendSlice(self.allocator, label);
+                first = false;
+            }
+            try self.buffer.appendSlice(self.allocator, trimmed);
+            try self.buffer.append(self.allocator, '\n');
+        }
+    }
+
     pub fn writeLine(self: *Self, str: []const u8) !void {
         try self.writeIndent();
         try self.buffer.appendSlice(self.allocator, str);

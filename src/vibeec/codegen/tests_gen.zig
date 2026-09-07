@@ -68,9 +68,9 @@ pub const TestGenerator = struct {
             try self.writeSanitizedIdent(b.name);
             try self.builder.writeLine("_behavior\" {");
             self.builder.incIndent();
-            try self.builder.writeFmt("// Given: {s}\n", .{b.given});
-            try self.builder.writeFmt("// When: {s}\n", .{b.when});
-            try self.builder.writeFmt("// Then: {s}\n", .{b.then});
+            try self.builder.writeCommentLines("//", "Given: ", b.given);
+            try self.builder.writeCommentLines("//", "When: ", b.when);
+            try self.builder.writeCommentLines("//", "Then: ", b.then);
 
             // Generate assertions from test_cases
             if (b.test_cases.items.len > 0) {
@@ -117,8 +117,8 @@ pub const TestGenerator = struct {
             try self.writeSanitizedIdent(tc.name);
             try self.builder.writeLine("\" {");
             self.builder.incIndent();
-            try self.builder.writeFmt("// Given: {s}\n", .{tc.input});
-            try self.builder.writeFmt("// Expected: {s}\n", .{tc.expected});
+            try self.builder.writeCommentLines("//", "Given: ", tc.input);
+            try self.builder.writeCommentLines("//", "Expected: ", tc.expected);
 
             // Generate assertions based on test name and expected output
             try self.generateSpecLevelTestAssertion(tc);
@@ -308,7 +308,7 @@ pub const TestGenerator = struct {
                 try self.builder.writeLine("try std.testing.expect(true); // Placeholder - requires full self-improvement runtime");
             } else {
                 // Generic production swarm test
-                try self.builder.writeFmt("// Test: {s}\n", .{name});
+                try self.builder.writeCommentLines("//", "Test: ", name);
                 try self.builder.writeLine("try std.testing.expect(true); // Placeholder");
             }
             // Cycle 75: Phi/Trinity math test assertions
@@ -330,7 +330,7 @@ pub const TestGenerator = struct {
             try self.builder.writeLine("try std.testing.expect(result);");
             // Default fallback - compile-time check
         } else {
-            try self.builder.writeFmt("// Test: {s}\n", .{name});
+            try self.builder.writeCommentLines("//", "Test: ", name);
             try self.builder.writeLine("// (Test setup and assertions to be implemented)");
             try self.builder.writeLine("_ = @as(usize, 0); // Compile-time check");
         }

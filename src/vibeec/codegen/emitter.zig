@@ -1015,7 +1015,7 @@ pub const ZigCodeGen = struct {
         try self.builder.writeLine("// Sacred formula: V = n × 3^k × π^m × φ^p × e^q");
         try self.builder.writeLine("// Golden identity: φ² + 1/φ² = 3");
         try self.builder.writeLine("//");
-        try self.builder.writeFmt("// Author: {s}\n", .{spec.author});
+        try self.builder.writeCommentLines("//", "Author: ", spec.author);
         try self.builder.writeLine("// DO NOT EDIT - This file is auto-generated");
         try self.builder.writeLine("//");
         try self.builder.writeLine("// ═══════════════════════════════════════════════════════════════════════════════");
@@ -1525,22 +1525,40 @@ pub const ZigCodeGen = struct {
     }
 
     /// Detect if implementation contains non-Zig content (pseudocode, Unicode math symbols, etc.)
-    fn containsNonZigContent(implementation: []const u8) bool {
-        // Non-ASCII bytes indicate Unicode characters like × ÷ etc.
+    /// Would this implementation block fail to parse as the body of a Zig
+    /// function? If so the emitter wraps it in comments instead of writing it
+    /// out as code.
+    ///
+    /// This used to be a keyword heuristic, and the keyword list included
+    /// `";"` and `"= "` -- so any prose containing a semicolon or an equals
+    /// sign was classified as Zig and emitted verbatim. It almost never fired.
+    /// `expected ';' after statement` was the single most common first error
+    /// in generated output.
+    ///
+    /// Now it asks the actual Zig parser. The block is wrapped in a throwaway
+    /// function so that statements parse in the position they will really
+    /// occupy, and `Ast.parse` reports whether that text is a valid body. A
+    /// heuristic guesses; the parser is the same component that will reject
+    /// the file later, so its answer is the one that matters.
+    fn containsNonZigContent(allocator: std.mem.Allocator, implementation: []const u8) bool {
+        // Non-ASCII first: cheap, and `×` or `÷` in an expression is
+        // pseudocode even when the surrounding syntax parses.
         for (implementation) |c| {
             if (c > 127) return true;
         }
-        // Check if it looks like Zig code (must contain at least one Zig keyword/token)
-        const zig_markers = [_][]const u8{
-            "const ", "var ", "return ", "try ", "if (", "while ", "for (",
-            "= ",     ";",    "@",       "fn ",  "pub ", "error.", "break",
-            "switch",
-        };
-        for (zig_markers) |marker| {
-            if (std.mem.indexOf(u8, implementation, marker) != null) return false;
-        }
-        // No Zig markers found — likely pseudocode
-        return true;
+
+        const wrapped = std.fmt.allocPrintSentinel(
+            allocator,
+            "fn __probe() void {{\n{s}\n}}\n",
+            .{implementation},
+            0,
+        ) catch return false; // cannot tell -- do not reclassify on OOM
+        defer allocator.free(wrapped);
+
+        var tree = std.zig.Ast.parse(allocator, wrapped, .zig) catch return false;
+        defer tree.deinit(allocator);
+
+        return tree.errors.len > 0;
     }
 
     /// Sanitize behavior implementation body for valid Zig output.
@@ -1829,7 +1847,7 @@ pub const ZigCodeGen = struct {
                 try self.builder.writeFmt("pub fn {s}() !void {{\n", .{safe_name});
                 self.builder.incIndent();
                 // Check if implementation contains non-ASCII/pseudocode
-                if (containsNonZigContent(sanitized)) {
+                if (containsNonZigContent(self.allocator, sanitized)) {
                     // Wrap as comments to prevent syntax errors
                     try self.builder.writeLine("// Implementation (pseudocode from spec):");
                     var ps: usize = 0;
@@ -1838,7 +1856,7 @@ pub const ZigCodeGen = struct {
                         while (pe < sanitized.len and sanitized[pe] != '\n') : (pe += 1) {}
                         const pline = std.mem.trim(u8, sanitized[ps..pe], " \t");
                         if (pline.len > 0) {
-                            try self.builder.writeFmt("// {s}\n", .{pline});
+                            try self.builder.writeCommentLines("//", "", pline);
                         }
                         ps = if (pe < sanitized.len) pe + 1 else pe;
                     }
@@ -1867,6 +1885,31 @@ pub const ZigCodeGen = struct {
             // errors across the corpus. Return type first, parameters when the
             // bodies are ready for them.
             const sig = signature_mod.inferSignatureFromSpec(b.given, b.then, b.name);
+
+            // No parameter list, and this is a measured decision rather than
+            // an omission.
+            //
+            // `sig.params` is right there, and emitting it is one line. I
+            // tried it: generate the body first, see which parameters it
+            // actually mentions, insert `_ = name;` for the rest at the top
+            // (the top, because the bodies now return, and a discard after a
+            // return is unreachable code). Then refine the mention check to
+            // ignore comments, since bodies open with `// Analyze input: ...`
+            // and that made a parameter named `input` look used.
+            //
+            // Corpus, 49 specs with behaviours, output passing ast-check:
+            //
+            //     no parameters                          33
+            //     parameters + naive discard             27
+            //     parameters + comment-aware discard     29
+            //
+            // Still a net regression, from unused parameters and from bodies
+            // declaring locals that shadow a parameter of the same name. The
+            // real fix is for each body branch to take its parameters from the
+            // signature instead of by convention -- about 60 branches -- and
+            // half-applying it is the exact failure mode three fixes in this
+            // area have been cleaning up. So: return type from the spec,
+            // parameters when the bodies are ready for them.
             try self.builder.writeFmt("pub fn {s}() {s} {{\n", .{ safe_fn_name, sig.ret });
             self.builder.incIndent();
 
@@ -1901,7 +1944,7 @@ pub const ZigCodeGen = struct {
 
         // --- Detect/classify behaviors: return enum based on keyword matching ---
         if (mem.startsWith(u8, name, "detect") or mem.startsWith(u8, name, "classify")) {
-            try self.builder.writeFmt("// Analyze input: {s}\n", .{given});
+            try self.builder.writeCommentLines("//", "Analyze input: ", given);
             try self.builder.writeLine("const input = @as([]const u8, \"sample_input\");");
 
             // Generate keyword checks from 'then' description
@@ -1940,7 +1983,7 @@ pub const ZigCodeGen = struct {
                 self.builder.decIndent();
                 try self.builder.writeLine("};");
             } else {
-                try self.builder.writeFmt("// Classification: {s}\n", .{then});
+                try self.builder.writeCommentLines("//", "Classification: ", then);
                 try self.builder.writeLine("const result = if (input.len > 0) @as([]const u8, \"detected\") else @as([]const u8, \"unknown\");");
             }
             try self.builder.writeLine("_ = result;");
@@ -1949,7 +1992,7 @@ pub const ZigCodeGen = struct {
 
         // --- Respond behaviors: return fluent text ---
         if (mem.startsWith(u8, name, "respond") or mem.startsWith(u8, name, "handle")) {
-            try self.builder.writeFmt("// Response: {s}\n", .{then});
+            try self.builder.writeCommentLines("//", "Response: ", then);
             if (mem.indexOf(u8, name, "Greeting") != null) {
                 try self.builder.writeLine("const responses = [_][]const u8{");
                 self.builder.incIndent();
@@ -1983,7 +2026,7 @@ pub const ZigCodeGen = struct {
 
         // --- Score/compute/estimate behaviors: return numeric value ---
         if (mem.startsWith(u8, name, "score") or mem.startsWith(u8, name, "compute") or mem.startsWith(u8, name, "estimate")) {
-            try self.builder.writeFmt("// Compute: {s}\n", .{then});
+            try self.builder.writeCommentLines("//", "Compute: ", then);
             if (mem.indexOf(u8, name, "Importance") != null) {
                 try self.builder.writeLine("// Importance scoring: base 0.5, +0.2 for questions, +0.1 for emphasis");
                 try self.builder.writeLine("const base_score: f64 = 0.5;");
@@ -2009,7 +2052,7 @@ pub const ZigCodeGen = struct {
 
         // --- Add/insert behaviors: append to collection ---
         if (mem.startsWith(u8, name, "add") or mem.startsWith(u8, name, "insert")) {
-            try self.builder.writeFmt("// Add: {s}\n", .{then});
+            try self.builder.writeCommentLines("//", "Add: ", then);
             try self.builder.writeLine("// Append item to collection, check capacity");
             try self.builder.writeLine("const capacity: usize = 100;");
             try self.builder.writeLine("const count: usize = 1;");
@@ -2020,7 +2063,7 @@ pub const ZigCodeGen = struct {
 
         // --- Extract/parse behaviors: analyze input and return structured data ---
         if (mem.startsWith(u8, name, "extract") or mem.startsWith(u8, name, "parse")) {
-            try self.builder.writeFmt("// Extract: {s}\n", .{then});
+            try self.builder.writeCommentLines("//", "Extract: ", then);
             try self.builder.writeLine("const input = @as([]const u8, \"sample input\");");
             try self.builder.writeLine("var found_count: usize = 0;");
             try self.builder.writeLine("for (input) |c| {");
@@ -2034,7 +2077,7 @@ pub const ZigCodeGen = struct {
 
         // --- Update/modify behaviors: mutate state ---
         if (mem.startsWith(u8, name, "update") or mem.startsWith(u8, name, "modify") or mem.startsWith(u8, name, "set")) {
-            try self.builder.writeFmt("// Update: {s}\n", .{then});
+            try self.builder.writeCommentLines("//", "Update: ", then);
             try self.builder.writeLine("// Mutate state based on new data");
             try self.builder.writeLine("const state_changed = true;");
             try self.builder.writeLine("_ = state_changed;");
@@ -2043,7 +2086,7 @@ pub const ZigCodeGen = struct {
 
         // --- Get/query behaviors: return data ---
         if (mem.startsWith(u8, name, "get") or mem.startsWith(u8, name, "query") or mem.startsWith(u8, name, "list")) {
-            try self.builder.writeFmt("// Query: {s}\n", .{then});
+            try self.builder.writeCommentLines("//", "Query: ", then);
             try self.builder.writeLine("const result = @as([]const u8, \"query_result\");");
             try self.builder.writeLine("_ = result;");
             return;
@@ -2051,7 +2094,7 @@ pub const ZigCodeGen = struct {
 
         // --- Validate/verify/check behaviors: return bool ---
         if (mem.startsWith(u8, name, "validate") or mem.startsWith(u8, name, "verify") or mem.startsWith(u8, name, "check") or mem.startsWith(u8, name, "should")) {
-            try self.builder.writeFmt("// Validate: {s}\n", .{then});
+            try self.builder.writeCommentLines("//", "Validate: ", then);
             try self.builder.writeLine("const is_valid = true;");
             try self.builder.writeLine("_ = is_valid;");
             return;
@@ -2059,9 +2102,9 @@ pub const ZigCodeGen = struct {
 
         // --- Process/run/execute behaviors: orchestration ---
         if (mem.startsWith(u8, name, "process") or mem.startsWith(u8, name, "run") or mem.startsWith(u8, name, "execute")) {
-            try self.builder.writeFmt("// Process: {s}\n", .{then});
+            try self.builder.writeCommentLines("//", "Process: ", then);
             try self.builder.writeLine("const start_time = tri_time.timestamp();");
-            try self.builder.writeFmt("// Pipeline: {s}\n", .{then});
+            try self.builder.writeCommentLines("//", "Pipeline: ", then);
             try self.builder.writeLine("const elapsed = tri_time.timestamp() - start_time;");
             try self.builder.writeLine("_ = elapsed;");
             return;
@@ -2069,7 +2112,7 @@ pub const ZigCodeGen = struct {
 
         // --- Dispatch/route/assign behaviors: delegation ---
         if (mem.startsWith(u8, name, "dispatch") or mem.startsWith(u8, name, "route") or mem.startsWith(u8, name, "assign")) {
-            try self.builder.writeFmt("// Dispatch: {s}\n", .{then});
+            try self.builder.writeCommentLines("//", "Dispatch: ", then);
             try self.builder.writeLine("const target = @as([]const u8, \"default_agent\");");
             try self.builder.writeLine("const confidence: f64 = 0.85;");
             try self.builder.writeLine("_ = target;");
@@ -2079,7 +2122,7 @@ pub const ZigCodeGen = struct {
 
         // --- Fuse/merge/combine behaviors: aggregation ---
         if (mem.startsWith(u8, name, "fuse") or mem.startsWith(u8, name, "merge") or mem.startsWith(u8, name, "combine") or mem.startsWith(u8, name, "assemble")) {
-            try self.builder.writeFmt("// Fuse: {s}\n", .{then});
+            try self.builder.writeCommentLines("//", "Fuse: ", then);
             try self.builder.writeLine("// Combine multiple inputs into unified output");
             try self.builder.writeLine("var total_confidence: f64 = 0.0;");
             try self.builder.writeLine("var count: usize = 0;");
@@ -2092,7 +2135,7 @@ pub const ZigCodeGen = struct {
 
         // --- Compress/decompress behaviors: data transformation ---
         if (mem.startsWith(u8, name, "compress") or mem.startsWith(u8, name, "decompress")) {
-            try self.builder.writeFmt("// Compression: {s}\n", .{then});
+            try self.builder.writeCommentLines("//", "Compression: ", then);
             try self.builder.writeLine("const input_size: usize = 10000;");
             if (mem.startsWith(u8, name, "compress")) {
                 try self.builder.writeLine("const ratio: f64 = 11.0; // TCV5 target");
@@ -2108,7 +2151,7 @@ pub const ZigCodeGen = struct {
 
         // --- Save/load/persist behaviors: I/O ---
         if (mem.startsWith(u8, name, "save") or mem.startsWith(u8, name, "load") or mem.startsWith(u8, name, "persist")) {
-            try self.builder.writeFmt("// I/O: {s}\n", .{then});
+            try self.builder.writeCommentLines("//", "I/O: ", then);
             if (mem.startsWith(u8, name, "save")) {
                 try self.builder.writeLine("// Serialize state to persistent storage");
                 try self.builder.writeLine("const data = @as([]const u8, \"serialized_state\");");
@@ -2127,7 +2170,7 @@ pub const ZigCodeGen = struct {
             mem.startsWith(u8, name, "trim") or mem.startsWith(u8, name, "decay") or
             mem.startsWith(u8, name, "reset") or mem.startsWith(u8, name, "disable"))
         {
-            try self.builder.writeFmt("// Cleanup: {s}\n", .{then});
+            try self.builder.writeCommentLines("//", "Cleanup: ", then);
             try self.builder.writeLine("const removed_count: usize = 1;");
             try self.builder.writeLine("_ = removed_count;");
             return;
@@ -2135,7 +2178,7 @@ pub const ZigCodeGen = struct {
 
         // --- Reinforce/strengthen behaviors: increase weight ---
         if (mem.startsWith(u8, name, "reinforce") or mem.startsWith(u8, name, "strengthen") or mem.startsWith(u8, name, "boost")) {
-            try self.builder.writeFmt("// Reinforce: {s}\n", .{then});
+            try self.builder.writeCommentLines("//", "Reinforce: ", then);
             try self.builder.writeLine("const base_importance: f64 = 0.5;");
             try self.builder.writeLine("const importance = @min(1.0, base_importance + 0.1);");
             try self.builder.writeLine("_ = importance;");
@@ -2147,7 +2190,7 @@ pub const ZigCodeGen = struct {
             mem.startsWith(u8, name, "find") or mem.startsWith(u8, name, "select") or
             mem.startsWith(u8, name, "fit"))
         {
-            try self.builder.writeFmt("// Retrieve: {s}\n", .{then});
+            try self.builder.writeCommentLines("//", "Retrieve: ", then);
             try self.builder.writeLine("const query = @as([]const u8, \"search_query\");");
             try self.builder.writeLine("const relevance: f64 = if (query.len > 0) 0.85 else 0.0;");
             try self.builder.writeLine("_ = relevance;");
@@ -2156,7 +2199,7 @@ pub const ZigCodeGen = struct {
 
         // --- Summarize behaviors: text compression ---
         if (mem.startsWith(u8, name, "summarize")) {
-            try self.builder.writeFmt("// Summarize: {s}\n", .{then});
+            try self.builder.writeCommentLines("//", "Summarize: ", then);
             try self.builder.writeLine("const input = @as([]const u8, \"long text to summarize\");");
             try self.builder.writeLine("const max_len: usize = 500;");
             try self.builder.writeLine("const summary_len = @min(input.len, max_len);");
@@ -2166,7 +2209,7 @@ pub const ZigCodeGen = struct {
 
         // --- Generate behaviors: code/content creation ---
         if (mem.startsWith(u8, name, "generate")) {
-            try self.builder.writeFmt("// Generate: {s}\n", .{then});
+            try self.builder.writeCommentLines("//", "Generate: ", then);
             try self.builder.writeLine("const template = @as([]const u8, \"generated_output\");");
             try self.builder.writeLine("_ = template;");
             return;
@@ -2174,7 +2217,7 @@ pub const ZigCodeGen = struct {
 
         // --- Coordinate/delegate behaviors: multi-agent ---
         if (mem.startsWith(u8, name, "coordinate") or mem.startsWith(u8, name, "delegate")) {
-            try self.builder.writeFmt("// Coordinate: {s}\n", .{then});
+            try self.builder.writeCommentLines("//", "Coordinate: ", then);
             try self.builder.writeLine("const agent_count: usize = 4;");
             try self.builder.writeLine("var completed: usize = 0;");
             try self.builder.writeLine("completed = agent_count; // all agents complete");
@@ -2184,7 +2227,7 @@ pub const ZigCodeGen = struct {
 
         // --- Resolve behaviors: conflict resolution ---
         if (mem.startsWith(u8, name, "resolve")) {
-            try self.builder.writeFmt("// Resolve: {s}\n", .{then});
+            try self.builder.writeCommentLines("//", "Resolve: ", then);
             try self.builder.writeLine("// Pick highest confidence result");
             try self.builder.writeLine("const confidence_a: f64 = 0.85;");
             try self.builder.writeLine("const confidence_b: f64 = 0.72;");
@@ -2195,14 +2238,14 @@ pub const ZigCodeGen = struct {
 
         // --- Start/stream behaviors: streaming ---
         if (mem.startsWith(u8, name, "start") or mem.startsWith(u8, name, "stream")) {
-            try self.builder.writeFmt("// Start: {s}\n", .{then});
+            try self.builder.writeCommentLines("//", "Start: ", then);
             try self.builder.writeLine("const is_active = true;");
             try self.builder.writeLine("_ = is_active;");
             return;
         }
 
         // --- Fallback: generate from then description ---
-        try self.builder.writeFmt("// {s}\n", .{then});
+        try self.builder.writeCommentLines("//", "", then);
         try self.builder.writeLine("const result = @as([]const u8, \"implemented\");");
         try self.builder.writeLine("_ = result;");
     }
@@ -3781,7 +3824,7 @@ pub const ZigCodeGen = struct {
         self.builder.incIndent();
         try self.builder.writeLine("// VSA operation detected from spec keywords.");
         try self.builder.writeLine("// Available primitives: bind, unbind, bundle2, bundle3, permute, cosineSimilarity");
-        try self.builder.writeFmt("// Intent: {s}\n", .{then});
+        try self.builder.writeCommentLines("//", "Intent: ", then);
         self.builder.decIndent();
         try self.builder.writeLine("}");
         return true;
