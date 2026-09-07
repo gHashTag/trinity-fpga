@@ -31,24 +31,31 @@ pub const ValidationError = struct {
 // it fails a test rather than a build months later.
 pub const known_base_types = [_][]const u8{
     // Primitives
-    "f64",    "f32",       "i32",    "i64",       "u32",      "u64",
-    "u8",     "u16",       "usize",  "bool",
+    "f64",     "f32",       "i32",    "i64",       "u32",      "u64",
+    "u8",      "u16",       "usize",  "bool",
     // VIBEE types
          "String",   "Int",
-    "Float",  "Bool",      "Bytes",  "Timestamp", "Duration", "Any",
-    "Void",   "Error",
+    "Float",   "Bool",      "Bytes",  "Timestamp", "Duration", "Any",
+    "Void",    "Error",
     // Aliases
         "string", "int",       "float",
     // Extended
        "Int64",
-    "Int32",  "Int16",     "Int8",   "UInt",      "UInt64",   "UInt32",
-    "UInt16", "UInt8",     "UInt4",  "Float32",   "Float64",
+    "Int32",   "Int16",     "Int8",   "UInt",      "UInt64",   "UInt32",
+    "UInt16",  "UInt8",     "UInt4",  "Float32",   "Float64",
     // Case variants (common in specs)
      "Uint64",
-    "Uint32", "Uint16",    "Uint8",  "U32",       "U64",      "U8",
+    "Uint32",  "Uint16",    "Uint8",  "U32",       "U64",      "U8",
     "U16",
     // Common Zig stdlib types
-       "Allocator", "Writer", "Reader",    "Thread",   "Mutex",
+        "Allocator", "Writer", "Reader",    "Thread",   "Mutex",
+    // Pointer-sized integers and fixed-width byte buffers, in the spellings
+    // the corpus actually uses. `USize` appeared in seven fields while being
+    // in neither this list nor mapType, so the validator rejected it and the
+    // generator emitted it verbatim. The containment test below is what keeps
+    // these two vocabularies in step -- every name here must be lowerable.
+    "USize",   "ISize",     "Bytes4", "Bytes8",    "Bytes16",  "Bytes32",
+    "Bytes64",
 };
 
 fn matchesNumericType(name: []const u8) bool {
@@ -844,6 +851,23 @@ fn isLegalZigTypeExpr(t: []const u8) bool {
     // resolve on its own -- mapType lowers `Allocator` to `std.mem.Allocator`,
     // and the first draft of this list wrongly flagged that as a defect.
     if (std.mem.startsWith(u8, t, "std.")) return true;
+
+    // A fixed-size array, `[N]<element>`. `Bytes8` lowers to `[8]u8`, which is
+    // a perfectly good Zig type -- this recogniser simply did not know the
+    // form, and reported five false defects when Bytes4..Bytes64 were added.
+    // The element is checked recursively so `[8]NotAType` is still rejected.
+    if (t.len > 2 and t[0] == '[') {
+        if (std.mem.indexOfScalar(u8, t, ']')) |close| {
+            const len_part = t[1..close];
+            var all_digits = len_part.len > 0;
+            for (len_part) |c| {
+                if (!std.ascii.isDigit(c)) all_digits = false;
+            }
+            if (all_digits and close + 1 < t.len) {
+                return isLegalZigTypeExpr(t[close + 1 ..]);
+            }
+        }
+    }
     return false;
 }
 
