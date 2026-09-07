@@ -268,6 +268,49 @@ pub fn build(b: *std.Build) void {
     const test_step = b.step("test", "Run library tests");
     test_step.dependOn(&run_main_tests.step);
 
+    // ═══════════════════════════════════════════════════════════════════════════
+    // Behaviour-path tests for the Zig 0.16 migration (#764)
+    // ═══════════════════════════════════════════════════════════════════════════
+    //
+    // These three files carry the tests for the paths where 0.16 changed
+    // BEHAVIOUR rather than names -- the token file's permissions, PATH
+    // resolution for subprocesses, and Io.Group replacing a thread pool.
+    //
+    // They are declared here because they were NOT reachable from the test
+    // step, which covers a fixed list of roots. Verified rather than assumed:
+    // an always-failing test added to each returned rc=0 before this. Tests
+    // that nothing runs are decoration, which is the same defect as a gate
+    // that cannot fail, one level up.
+    // Written out one by one rather than looped over a string array: the
+    // `ratchet` gate reads this file AS TEXT, matching literal
+    // `b.path("...")` calls, so a path that only ever exists as an array
+    // element is invisible to it and the file reads as unreachable.
+    const behaviour_test_roots = [_]std.Build.LazyPath{
+        b.path("src/tri/token_rotator.zig"),
+        b.path("src/tri/tri_proc.zig"),
+        b.path("src/tri/io_group_behaviour_test.zig"),
+        b.path("src/tri/net_behaviour_test.zig"),
+    };
+    for (behaviour_test_roots) |root_path| {
+        const t = b.addTest(.{
+            .root_module = b.createModule(.{
+                .root_source_file = root_path,
+                .target = target,
+                .optimize = optimize,
+                .link_libc = true,
+                .imports = &.{
+                    .{ .name = "tri_time", .module = tri_time_mod },
+                    .{ .name = "tri_io", .module = tri_io_mod },
+                    .{ .name = "tri_env", .module = tri_env_mod },
+                    .{ .name = "tri_proc", .module = tri_proc_mod },
+                    .{ .name = "tri_mutex", .module = tri_mutex_mod },
+                    .{ .name = "tri_rand", .module = tri_rand_mod },
+                },
+            }),
+        });
+        test_step.dependOn(&b.addRunArtifact(t).step);
+    }
+
     // Queen API tests
     const queen_api_tests = b.addTest(.{
         .root_module = b.createModule(.{

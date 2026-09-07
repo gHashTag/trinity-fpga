@@ -2586,3 +2586,142 @@ test "semantic query message serialize/deserialize" {
     try std.testing.expectEqual(threshold, parsed_threshold);
     try std.testing.expectEqual(@as(u8, 10), parsed.max_results);
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Truncation tests (#764)
+// ═══════════════════════════════════════════════════════════════════════════════
+//
+// The 0.16 migration TIGHTENED this decoder, and the tightening had never been
+// exercised. The 0.15 code read fields with `_ = try r.readAll(buf)` and
+// DISCARDED the byte count, so a short packet produced a half-filled struct
+// that looked valid: uninitialised job_id, a prompt of the wrong length, a
+// temperature read out of whatever was in the buffer.
+//
+// `readSliceAll` errors instead. That is the behaviour these tests pin, at
+// every truncation point rather than at one, because the failure mode of the
+// old code was silence and silence has no single boundary.
+
+fn sampleJob() InferenceJob {
+    var job: InferenceJob = .{
+        .job_id = undefined,
+        .requester_id = undefined,
+        .model_id = "phi-3-mini",
+        .prompt = "what is the golden ratio",
+        .max_tokens = 512,
+        .temperature = 0.7,
+        .top_p = 0.95,
+        .created_at = 1_700_000_000,
+    };
+    @memset(&job.job_id, 0xAB);
+    @memset(&job.requester_id, 0xCD);
+    return job;
+}
+
+test "InferenceJob survives a round trip intact" {
+    // The control for the truncation tests below: if this fails, a truncation
+    // test passing proves nothing, because everything would be failing.
+    const gpa = std.testing.allocator;
+    const job = sampleJob();
+    const bytes = try job.serialize(gpa);
+    defer gpa.free(bytes);
+
+    const back = try InferenceJob.deserialize(bytes, gpa);
+    defer gpa.free(back.model_id);
+    defer gpa.free(back.prompt);
+
+    try std.testing.expectEqualSlices(u8, &job.job_id, &back.job_id);
+    try std.testing.expectEqualSlices(u8, &job.requester_id, &back.requester_id);
+    try std.testing.expectEqualStrings(job.model_id, back.model_id);
+    try std.testing.expectEqualStrings(job.prompt, back.prompt);
+    try std.testing.expectEqual(job.max_tokens, back.max_tokens);
+    try std.testing.expectEqual(job.temperature, back.temperature);
+    try std.testing.expectEqual(job.top_p, back.top_p);
+    try std.testing.expectEqual(job.created_at, back.created_at);
+}
+
+test "a truncated InferenceJob errors at EVERY cut point, never decodes partially" {
+    const gpa = std.testing.allocator;
+    const job = sampleJob();
+    const bytes = try job.serialize(gpa);
+    defer gpa.free(bytes);
+
+    // Every prefix short of the whole packet. Testing one cut point would miss
+    // the fields whose reads happen to land on a boundary.
+    var cut: usize = 0;
+    var checked: usize = 0;
+    while (cut < bytes.len) : (cut += 1) {
+        const partial = bytes[0..cut];
+        if (InferenceJob.deserialize(partial, gpa)) |decoded| {
+            // Reaching here is the 0.15 behaviour this migration removed.
+            gpa.free(decoded.model_id);
+            gpa.free(decoded.prompt);
+            std.debug.print("\ntruncated to {d}/{d} bytes still decoded\n", .{ cut, bytes.len });
+            return error.TruncatedPacketDecoded;
+        } else |_| {
+            checked += 1;
+        }
+    }
+
+    // An empty loop would pass silently; the packet must be long enough for
+    // the sweep to have meant something.
+    try std.testing.expect(checked == bytes.len);
+    try std.testing.expect(checked > 60);
+}
+
+test "a truncated InferenceResult errors at every cut point too" {
+    const gpa = std.testing.allocator;
+    var result: InferenceResult = .{
+        .job_id = undefined,
+        .worker_id = undefined,
+        .response = "phi squared plus its inverse is three",
+        .tokens_generated = 42,
+        .latency_ms = 1234,
+        .signature = undefined,
+    };
+    @memset(&result.job_id, 0x11);
+    @memset(&result.worker_id, 0x22);
+    @memset(&result.signature, 0x33);
+
+    const bytes = try result.serialize(gpa);
+    defer gpa.free(bytes);
+
+    // Control first: the full packet must decode, or the sweep below is vacuous.
+    {
+        const back = try InferenceResult.deserialize(bytes, gpa);
+        defer gpa.free(back.response);
+        try std.testing.expectEqualStrings(result.response, back.response);
+        try std.testing.expectEqual(result.tokens_generated, back.tokens_generated);
+        try std.testing.expectEqualSlices(u8, &result.signature, &back.signature);
+    }
+
+    var cut: usize = 0;
+    while (cut < bytes.len) : (cut += 1) {
+        if (InferenceResult.deserialize(bytes[0..cut], gpa)) |decoded| {
+            gpa.free(decoded.response);
+            std.debug.print("\nresult truncated to {d}/{d} still decoded\n", .{ cut, bytes.len });
+            return error.TruncatedPacketDecoded;
+        } else |_| {}
+    }
+}
+
+test "a length header longer than the payload is rejected, not trusted" {
+    // The dangerous shape: the packet is well-formed up to a length field that
+    // claims more bytes than remain. The old readAll would return short and be
+    // ignored; readSliceAll must refuse.
+    const gpa = std.testing.allocator;
+    const job = sampleJob();
+    const bytes = try job.serialize(gpa);
+    defer gpa.free(bytes);
+
+    const forged = try gpa.dupe(u8, bytes);
+    defer gpa.free(forged);
+
+    // model_len sits after job_id(16) + requester_id(32) + created_at(8)
+    // + max_tokens(4) + temperature(4) + top_p(4).
+    const model_len_at = 16 + 32 + 8 + 4 + 4 + 4;
+    const original = std.mem.readInt(u16, forged[model_len_at..][0..2], .little);
+    try std.testing.expectEqual(@as(u16, @intCast(job.model_id.len)), original);
+
+    std.mem.writeInt(u16, forged[model_len_at..][0..2], original + 64, .little);
+    try std.testing.expectError(error.EndOfStream, InferenceJob.deserialize(forged, gpa));
+}
