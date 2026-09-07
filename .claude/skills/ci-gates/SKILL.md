@@ -10,16 +10,40 @@ Written after an iteration that burned two CI cycles rediscovering all of this.
 
 ## The single most important fact
 
-**Neither Zig toolchain builds this tree.** The repo is mid-migration:
+**One toolchain now: Zig 0.16.0, locally and in CI alike.** All 16 workflow
+pins read 0.16.0 as of #759.
 
-| Toolchain | Builds | Fails on |
-|---|---|---|
-| **0.15.2** (what CI runs) | everything else | files migrated to `main(init: std.process.Init)` |
-| **0.16.0** (what's installed locally) | the migrated files | ~20 targets still on 0.15 `std.fs` / `std.process` APIs |
+    zig build tri-compile   rc=0
+    zig build -Dci=true     rc=0   (also cross-compiled to x86_64-linux-gnu)
+    zig build test          rc=0   143/143 steps, 2664/2679 passing
+    zig build smoke         rc=0   108 commands in a sandbox, 0 crashes
 
-So "just bump CI to 0.16" is **not available** as a fix and won't be until the
-migration finishes. Measured, not assumed: `zig build -Dci=true` under 0.16
-locally fails on ~20 targets.
+This section previously said the opposite -- "neither toolchain builds this
+tree", with a table of what each one broke, and that bumping CI to 0.16 was
+"not available as a fix". That was true when written and was retired by
+#758/#759/#760. If you are reading a claim like that anywhere else in the
+tree, re-measure before acting on it.
+
+**The bump is what found the work.** All seven remaining workflows were GREEN
+on 0.15.2, and that green was the defect: the pin hid 43 compile errors across
+30 files -- every target beyond `tri`. A version pin that no longer matches
+the code is a gate measuring the wrong thing.
+
+### The 0.16 essentials
+
+Six shim modules restore removed stdlib surface -- `tri_time`, `tri_env`,
+`tri_proc`, `tri_mutex`, `tri_rand`, `tri_io`. They are **build modules**:
+import by name, never by relative path. Full reference:
+`.claude/rules/zig-016-migration.md`.
+
+**Always call subprocesses through `tri_proc`.** Neither `std.process.spawn`
+nor `std.process.run` resolves a bare program name through PATH in 0.16, so
+`.{ "zig", "fmt" }` compiles perfectly and fails at runtime. That shipped once.
+
+**Cross-compile before pushing.** `zig build -Dci=true -Dtarget=x86_64-linux-gnu`
+takes seconds and reaches the comptime-dead branches a macOS build never
+analyses. Three Linux-only breaks were found exactly this way, each of which
+had compiled cleanly locally.
 
 ## Before you push
 
@@ -31,7 +55,7 @@ gates pull in opposite directions:
 - **`ratchet`** (reachability) wants every entry point declared, and reads
   `build.zig` **as text** — `re.findall(r'b\.path\("([^"]+)"\)')` plus an
   `@import` walk. It never runs the build.
-- **`Validate VIBEE Codegen`** runs `zig build -Dci=true` under **0.15.2** and
+- **`Validate VIBEE Codegen`** runs `zig build -Dci=true` under **0.16.0** and
   will try to compile whatever you declared.
 
 If the file uses any Zig 0.16 API, satisfying the first gate breaks the second.
@@ -126,6 +150,7 @@ replaced both.
 ## Related
 
 - `.github/reachability-baseline` — the ratchet's stored count
-- `.github/workflows/tri-build.yml` — header explains why 0.15.2 is pinned
+- `.github/workflows/tri-build.yml` — header explains why 0.16.0 is pinned,
+  and what the old 0.15.2 pin was for
 - `.github/workflows/zig-0-16-migrated.yml` — the other half of that trade
 - `docs/zig-migration-rules.md` — the API-level 0.15→0.16 notes
