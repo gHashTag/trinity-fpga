@@ -4236,6 +4236,46 @@ pub fn build(b: *std.Build) void {
     const test_coverage_step = b.step("test-coverage", "Fail if a new file gains tests nothing runs");
     test_coverage_step.dependOn(&run_test_coverage.step);
 
+    // astcheck — fail when a NEW file starts failing `zig ast-check`
+    //
+    // 94 files under src/ and tools/ do not pass ast-check, carrying 272
+    // errors. Demanding zero would mean a permanently red gate, which reads
+    // as a broken subject rather than a broken check -- the harder failure to
+    // notice. So this defends the number.
+    //
+    // It is deliberately narrower than a build: ast-check sees syntax and
+    // name binding, never types or members. One `.test_cases = .{}` -- a
+    // Sema error -- kept the whole codegen tree unimportable while this
+    // check and the format gate both called the file clean.
+    const astcheck = b.addExecutable(.{
+        .name = "tri-astcheck-ratchet",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("tools/astcheck_ratchet.zig"),
+            .target = target,
+            .optimize = optimize,
+            .link_libc = true,
+            .imports = &.{
+                .{ .name = "tri_io", .module = tri_io_mod },
+                .{ .name = "tri_proc", .module = tri_proc_mod },
+                .{ .name = "tri_time", .module = tri_time_mod },
+                .{ .name = "tri_env", .module = tri_env_mod },
+                .{ .name = "tri_rand", .module = tri_rand_mod },
+                .{ .name = "tri_mutex", .module = tri_mutex_mod },
+            },
+        }),
+    });
+    const run_astcheck = b.addRunArtifact(astcheck);
+    const astcheck_step = b.step("astcheck", "Fail if a new file starts failing zig ast-check");
+    astcheck_step.dependOn(&run_astcheck.step);
+
+    // A named step for re-recording, because `zig build astcheck -- --update`
+    // does not reach the child: the build runner treats what follows `--` as
+    // its own. Without this the tool's own remediation advice is unusable.
+    const run_astcheck_update = b.addRunArtifact(astcheck);
+    run_astcheck_update.addArg("--update");
+    const astcheck_update_step = b.step("astcheck-update", "Re-record the ast-check baseline");
+    astcheck_update_step.dependOn(&run_astcheck_update.step);
+
     // ═══════════════════════════════════════════════════════════════════════════
     // tri-github-collab — OAuth + webhook backend for the Spec Explorer
     //

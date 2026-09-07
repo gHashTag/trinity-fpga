@@ -84,3 +84,18 @@ jobs:
       # `zig fmt src/ tools/` -- do not narrow the paths back down.
       - name: Format check
         run: zig fmt --check src/ tools/
+
+      # Ratchet, not a clean bill of health: 92 files under src/ and tools/
+      # fail ast-check today, carrying 270 errors. Demanding zero would mean a
+      # permanently red gate, which reads as a broken subject rather than a
+      # broken check -- the harder failure to notice. This defends the number.
+      #
+      # Deliberately narrower than a build. ast-check sees syntax and name
+      # binding, never types or members: one `.test_cases = .{}` kept the whole
+      # codegen tree unimportable while both this check and the format check
+      # above called the file clean. A green run here is "nothing got
+      # syntactically worse", not "the tree compiles".
+      #
+      # To re-record after a genuine move: zig build astcheck-update
+      - name: No new ast-check failures
+        run: zig build astcheck
