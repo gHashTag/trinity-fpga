@@ -116,7 +116,7 @@ Based on v8.22 validated metrics:
 | `src/vibeec/codegen/patterns/ml.zig` | Modified | +40 |
 | `specs/tri/test_implementation.vibee` | Created | ~50 |
 | `generated/test_implementation.zig` | Generated | ~210 |
-| `docsite/docs/research/pas-v8.23-final-production-report.md` | Created | ~150 |
+| `docs/docs/research/pas-v8.23-final-production-report.md` | Created | ~150 |
 
 ---
 

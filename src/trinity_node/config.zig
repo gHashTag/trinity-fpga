@@ -6,6 +6,8 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
+const tri_env = @import("tri_env");
 const discovery = @import("discovery.zig");
 const network = @import("network.zig");
 
@@ -71,7 +73,11 @@ pub const Config = struct {
 
     /// Get home directory path
     pub fn getHomeDir() ![]const u8 {
-        return std.posix.getenv("HOME") orelse return error.NoHomeDir;
+        // The returned slice points into the process environment, not into
+        // allocator memory; the allocator only builds the temporary
+        // NUL-terminated key, so the page allocator is enough and nothing here
+        // needs freeing. Signature is unchanged.
+        return tri_env.getEnvVar(std.heap.page_allocator, "HOME") orelse return error.NoHomeDir;
     }
 
     /// Get config directory path
@@ -127,13 +133,19 @@ pub const Config = struct {
         const path = try getConfigPath(allocator);
         defer allocator.free(path);
 
-        const file = std.fs.cwd().openFile(path, .{}) catch {
+        const io = tri_io.get();
+        const file = std.Io.Dir.cwd().openFile(io, path, .{}) catch {
             // Return default config if file doesn't exist
             return Config{};
         };
-        defer file.close();
+        defer file.close(io);
 
-        const content = try file.readToEndAlloc(allocator, 1024 * 1024);
+        // 0.16 has no File.readToEndAlloc; a reader over the open handle is
+        // the direct equivalent. A short read here is end-of-file, which is
+        // what allocRemaining stops on.
+        var read_buf: [4096]u8 = undefined;
+        var fr = file.reader(io, &read_buf);
+        const content = try fr.interface.allocRemaining(allocator, .limited(1024 * 1024));
         defer allocator.free(content);
 
         // Parse JSON (simplified - in real impl would use std.json)
@@ -143,57 +155,66 @@ pub const Config = struct {
 
     /// Save config to file
     pub fn save(self: *const Config, allocator: std.mem.Allocator) !void {
+        const io = tri_io.get();
         const config_dir = try getConfigDir(allocator);
         defer allocator.free(config_dir);
 
         // Ensure config directory exists
-        std.fs.cwd().makePath(config_dir) catch |err| {
+        std.Io.Dir.cwd().createDirPath(io, config_dir) catch |err| {
             std.log.warn("config: failed to create config dir: {}", .{err});
         };
 
         const path = try getConfigPath(allocator);
         defer allocator.free(path);
 
-        const file = try std.fs.cwd().createFile(path, .{});
-        defer file.close();
+        const file = try std.Io.Dir.cwd().createFile(io, path, .{});
+        defer file.close(io);
 
-        // Write JSON (simplified)
-        try file.writeAll("{\n");
-        try file.writer().print("  \"discovery_port\": {d},\n", .{self.discovery_port});
-        try file.writer().print("  \"job_port\": {d},\n", .{self.job_port});
-        try file.writer().print("  \"max_cpu_percent\": {d},\n", .{self.max_cpu_percent});
-        try file.writer().print("  \"max_memory_mb\": {d},\n", .{self.max_memory_mb});
-        try file.writer().print("  \"auto_start\": {s},\n", .{if (self.auto_start) "true" else "false"});
-        try file.writer().print("  \"model_path\": \"{s}\"\n", .{self.model_path});
-        try file.writeAll("}\n");
+        // Write JSON (simplified). One buffered writer over the handle
+        // replaces the repeated `file.writer()` calls; it must be flushed.
+        var write_buf: [1024]u8 = undefined;
+        var fw = file.writer(io, &write_buf);
+        const w = &fw.interface;
+
+        try w.writeAll("{\n");
+        try w.print("  \"discovery_port\": {d},\n", .{self.discovery_port});
+        try w.print("  \"job_port\": {d},\n", .{self.job_port});
+        try w.print("  \"max_cpu_percent\": {d},\n", .{self.max_cpu_percent});
+        try w.print("  \"max_memory_mb\": {d},\n", .{self.max_memory_mb});
+        try w.print("  \"auto_start\": {s},\n", .{if (self.auto_start) "true" else "false"});
+        try w.print("  \"model_path\": \"{s}\"\n", .{self.model_path});
+        try w.writeAll("}\n");
+        try w.flush();
     }
 
     /// Ensure all directories exist
     pub fn ensureDirectories(allocator: std.mem.Allocator) !void {
+        const io = tri_io.get();
         const config_dir = try getConfigDir(allocator);
         defer allocator.free(config_dir);
-        std.fs.cwd().makePath(config_dir) catch |err| {
+        std.Io.Dir.cwd().createDirPath(io, config_dir) catch |err| {
             std.log.warn("config: failed to create config dir: {}", .{err});
         };
 
         const model_dir = try getModelDir(allocator);
         defer allocator.free(model_dir);
-        std.fs.cwd().makePath(model_dir) catch |err| {
+        std.Io.Dir.cwd().createDirPath(io, model_dir) catch |err| {
             std.log.warn("config: failed to create model dir: {}", .{err});
         };
     }
 
     /// Ensure storage directories exist (~/.trinity/storage/shards, ~/.trinity/storage/manifests)
     pub fn ensureStorageDirectories(allocator: std.mem.Allocator) !void {
+        const io = tri_io.get();
         const shards_dir = try getShardsDir(allocator);
         defer allocator.free(shards_dir);
-        std.fs.cwd().makePath(shards_dir) catch |err| {
+        std.Io.Dir.cwd().createDirPath(io, shards_dir) catch |err| {
             std.log.warn("config: failed to create shards dir: {}", .{err});
         };
 
         const manifests_dir = try getManifestsDir(allocator);
         defer allocator.free(manifests_dir);
-        std.fs.cwd().makePath(manifests_dir) catch |err| {
+        std.Io.Dir.cwd().createDirPath(io, manifests_dir) catch |err| {
             std.log.warn("config: failed to create manifests dir: {}", .{err});
         };
     }

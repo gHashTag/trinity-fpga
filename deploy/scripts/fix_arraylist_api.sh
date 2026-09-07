@@ -2,7 +2,7 @@
 # Script for andwithprainlenandya API ArrayList in praboutetothose vibeec
 # Zig 0.15+ trebatet peredachand allocator in methody ArrayList
 
-cd /Users/playra/vibee-lang/src/vibeec
+cd /Users/playom/vibee-lang/src/vibeec
 
 # 1. Zameon .init(allocator) on .init(allocator) with savingm allocator
 # Ethat withlaboutzhnee ainthatmatfromandraboutinat, thatto how trebatet refawhorandnga withtrattotatr

@@ -138,7 +138,7 @@ pub const SelfImprovementEngine = struct {
         const allocator = executor.allocator;
 
         var analysis = PipelineAnalysis.init(allocator);
-        var slow_links = std.ArrayListUnmanaged(PipelineAnalysis.SlowLink){};
+        var slow_links = @as(std.ArrayListUnmanaged(PipelineAnalysis.SlowLink), .empty);
         defer slow_links.deinit(allocator);
         var total_time: u64 = 0;
 
@@ -184,7 +184,7 @@ pub const SelfImprovementEngine = struct {
     ) ![]const ImprovementSuggestion {
         const allocator = self.allocator;
 
-        var suggestions = std.ArrayListUnmanaged(ImprovementSuggestion){};
+        var suggestions = @as(std.ArrayListUnmanaged(ImprovementSuggestion), .empty);
 
         for (analysis.slow_links) |slow_link| {
             const suggestion = ImprovementSuggestion{

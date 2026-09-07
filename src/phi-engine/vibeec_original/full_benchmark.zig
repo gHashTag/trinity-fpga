@@ -14,6 +14,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const testing = std.testing;
 const Allocator = std.mem.Allocator;
 
@@ -148,9 +149,9 @@ pub fn runBenchmark(
 
     var i: u64 = 0;
     while (i < iterations) : (i += 1) {
-        const start = std.time.nanoTimestamp();
+        const start = tri_time.nanoTimestamp();
         _ = func();
-        const end = std.time.nanoTimestamp();
+        const end = tri_time.nanoTimestamp();
 
         const elapsed: u64 = @intCast(end - start);
         samples[i] = elapsed;

@@ -13,6 +13,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const builtin = @import("builtin");
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -106,7 +107,7 @@ pub fn ConfigurableVSA(comptime config: VocabConfig) type {
             query_norm: f32,
             similarities: []f32,
         ) !void {
-            var timer = try std.time.Timer.start();
+            var timer = try tri_time.Timer.start();
 
             const num_threads = 8;
             const chunk_size = (self.vocab_count + num_threads - 1) / num_threads;
@@ -257,7 +258,7 @@ pub fn benchmarkConfig(comptime config: VocabConfig, allocator: std.mem.Allocato
     vsa.total_time_ns = 0;
 
     // Benchmark
-    var timer = try std.time.Timer.start();
+    var timer = try tri_time.Timer.start();
     for (0..iterations) |_| {
         try vsa.batchSimilarity(&query, query_norm, result_buf);
     }

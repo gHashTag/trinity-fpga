@@ -6,6 +6,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const mod_filter = @import("mod_filter.zig");
 const search_mod = @import("search.zig");
 const simd = @import("simd_neon.zig");
@@ -15,13 +16,12 @@ const near_miss_mod = @import("near_miss.zig");
 // MAIN
 // ═══════════════════════════════════════════════════════════════════════════════
 
-pub fn main() !void {
+pub fn main(init: std.process.Init.Minimal) !void {
     const allocator = std.heap.page_allocator;
 
     // Parse command line arguments
-    const args = try std.process.argsAlloc(allocator);
-    defer std.process.argsFree(allocator, args);
-
+    const args = try init.args.toSlice(allocator);
+    defer allocator.free(args);
     var config = search_mod.SearchConfig{};
     var run_benchmarks = false;
     var run_near_miss = false;
@@ -78,7 +78,7 @@ pub fn main() !void {
 
     // Initialize power table
     std.debug.print("\nInitializing modular filter...\n", .{});
-    var timer = try std.time.Timer.start();
+    var timer = try tri_time.Timer.start();
 
     var power_table = try mod_filter.PowerTable.init(
         allocator,
@@ -106,7 +106,7 @@ pub fn main() !void {
     std.debug.print("  Exponents: {d} <= x,y,z <= {d}\n", .{ config.min_exponent, config.max_exponent });
     std.debug.print("  Threads: {}\n\n", .{config.num_threads});
 
-    var search_timer = try std.time.Timer.start();
+    var search_timer = try tri_time.Timer.start();
 
     const results = try search_mod.searchParallel(
         allocator,
@@ -181,7 +181,7 @@ fn runBenchmarks(allocator: std.mem.Allocator) !void {
 
     // Benchmark 1: GCD filter
     std.debug.print("GCD Filter Benchmark:\n", .{});
-    var gcd_timer = try std.time.Timer.start();
+    var gcd_timer = try tri_time.Timer.start();
     var gcd_count: u32 = 0;
     var i: u32 = 0;
     while (i < 10000) : (i += 1) {
@@ -201,7 +201,7 @@ fn runBenchmarks(allocator: std.mem.Allocator) !void {
     const max_base: u32 = 1000;
     const max_exp: u8 = 10;
 
-    var mod_init_time = try std.time.Timer.start();
+    var mod_init_time = try tri_time.Timer.start();
     var mod_table = try mod_filter.PowerTable.init(
         allocator,
         &mod_filter.RECOMMENDED_PRIMES,
@@ -222,7 +222,7 @@ fn runBenchmarks(allocator: std.mem.Allocator) !void {
     std.debug.print("  Width: {}\n", .{simd.getSimdWidth()});
 
     // Benchmark check4PrimesSIMD
-    var simd_timer = try std.time.Timer.start();
+    var simd_timer = try tri_time.Timer.start();
     var simd_count: usize = 0;
     var iter: usize = 0;
     while (iter < 1_000_000) : (iter += 1) {

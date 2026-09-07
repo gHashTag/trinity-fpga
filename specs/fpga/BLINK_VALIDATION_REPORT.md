@@ -44,7 +44,7 @@ imports:
 - `protocol.TrinityV1Command` - UART protocol commands
 - `protocol.LedMode` - LED mode enumeration
 
-**Validation:** ✅ Import path resolves to `/Users/playra/trinity-w1/src/common/protocol.zig`
+**Validation:** ✅ Import path resolves to `/Users/playom/trinity-fpga/src/common/protocol.zig`
 
 ---
 
@@ -258,13 +258,13 @@ signals:
 
 ## Files Modified
 
-1. **Created:** `/Users/playra/trinity-w1/specs/fpga/blink.tri`
+1. **Created:** `/Users/playom/trinity-fpga/specs/fpga/blink.tri`
    - Canonical .tri format with all enhancements
 
-2. **Created:** `/Users/playra/trinity-w1/specs/fpga/BLINK_VALIDATION_REPORT.md`
+2. **Created:** `/Users/playom/trinity-fpga/specs/fpga/BLINK_VALIDATION_REPORT.md`
    - This validation report
 
-3. **Reference (unchanged):** `/Users/playra/trinity-w1/fpga/openxc7-synth/blink.v`
+3. **Reference (unchanged):** `/Users/playom/trinity-fpga/fpga/openxc7-synth/blink.v`
    - Auto-generated Verilog from .vibee
    - Matches spec implementation
 

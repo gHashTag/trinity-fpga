@@ -86,7 +86,7 @@ pub const TestResult = struct {
             .confidence = 0.0,
             .verdict = .MORTAL,
             .consensus_theory = "",
-            .outlier_theories = .{},
+            .outlier_theories = .empty,
         };
     }
 
@@ -110,8 +110,8 @@ pub const ConflictMatrix = struct {
 /// Adversarial Test
 pub const AdversarialTest = struct {
     allocator: mem.Allocator,
-    theories: std.ArrayListUnmanaged(TheoryState) = .{},
-    predictions: std.ArrayListUnmanaged(Prediction) = .{},
+    theories: std.ArrayListUnmanaged(TheoryState) = .empty,
+    predictions: std.ArrayListUnmanaged(Prediction) = .empty,
     agreements: ConflictMatrix = .{},
     divergences: ConflictMatrix = .{},
 
@@ -283,7 +283,7 @@ pub const AdversarialTest = struct {
 
     /// Identify outlier theories
     pub fn identifyOutliers(self: *AdversarialTest, threshold: f64) !std.ArrayListUnmanaged([]const u8) {
-        var outliers = std.ArrayListUnmanaged([]const u8){};
+        var outliers = @as(std.ArrayListUnmanaged([]const u8), .empty);
 
         for (self.theories.items, 0..) |theory, i| {
             var avg_agreement: f64 = 0.0;

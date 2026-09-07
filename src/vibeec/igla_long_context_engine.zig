@@ -12,6 +12,8 @@
 // =============================================================================
 
 const std = @import("std");
+const tri_io = @import("tri_io");
+const tri_time = @import("tri_time");
 const tool_use = @import("igla_tool_use_engine.zig");
 const personality = @import("igla_personality_engine.zig");
 const learning = @import("igla_learning_engine.zig");
@@ -58,7 +60,7 @@ pub const Message = struct {
         return Self{
             .role = role,
             .content = content,
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
             .token_estimate = estimateTokens(content),
             .importance = calculateImportance(content),
         };
@@ -320,7 +322,7 @@ pub const Summarizer = struct {
 
         summary.summary_len = buf_pos;
         summary.total_turns_summarized += turn_count;
-        summary.last_updated = std.time.timestamp();
+        summary.last_updated = tri_time.timestamp();
     }
 
     fn extractFacts(msg: Message, summary: *ConversationSummary, turn: usize) void {
@@ -604,12 +606,13 @@ pub const LongContextResponse = struct {
 // =============================================================================
 
 pub fn runBenchmark() !void {
-    const stdout = std.fs.File.stdout();
+    const io = tri_io.get();
+    const stdout = std.Io.File.stdout();
 
-    _ = try stdout.write("\n");
-    _ = try stdout.write("===============================================================================\n");
-    _ = try stdout.write("     IGLA LONG CONTEXT ENGINE BENCHMARK (CYCLE 12)                            \n");
-    _ = try stdout.write("===============================================================================\n");
+    try stdout.writeStreamingAll(io, "\n");
+    try stdout.writeStreamingAll(io, "===============================================================================\n");
+    try stdout.writeStreamingAll(io, "     IGLA LONG CONTEXT ENGINE BENCHMARK (CYCLE 12)                            \n");
+    try stdout.writeStreamingAll(io, "===============================================================================\n");
 
     var engine = LongContextEngine.init();
 
@@ -663,7 +666,7 @@ pub fn runBenchmark() !void {
     var summarized_count: usize = 0;
     var fact_extractions: usize = 0;
 
-    const start = std.time.nanoTimestamp();
+    const start = tri_time.nanoTimestamp();
 
     for (conversation) |c| {
         const response = engine.respond(c.query);
@@ -675,7 +678,7 @@ pub fn runBenchmark() !void {
         engine.recordFeedback(c.feedback);
     }
 
-    const elapsed_ns = std.time.nanoTimestamp() - start;
+    const elapsed_ns = tri_time.nanoTimestamp() - start;
     const ops_per_sec = @as(f64, @floatFromInt(conversation.len)) / (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
 
     const stats = engine.getStats();
@@ -685,47 +688,47 @@ pub fn runBenchmark() !void {
     // Improvement based on context usage and summarization
     const improvement_rate = (context_rate + summarize_rate + 0.7) / 2.0;
 
-    _ = try stdout.write("\n");
+    try stdout.writeStreamingAll(io, "\n");
 
     var buf: [256]u8 = undefined;
 
     var len = std.fmt.bufPrint(&buf, "  Total turns: {d}\n", .{stats.total_turns}) catch return;
-    _ = try stdout.write(len);
+    try stdout.writeStreamingAll(io, len);
 
     len = std.fmt.bufPrint(&buf, "  Window turns: {d}\n", .{stats.window_turns}) catch return;
-    _ = try stdout.write(len);
+    try stdout.writeStreamingAll(io, len);
 
     len = std.fmt.bufPrint(&buf, "  Summarized turns: {d}\n", .{stats.summarized_turns}) catch return;
-    _ = try stdout.write(len);
+    try stdout.writeStreamingAll(io, len);
 
     len = std.fmt.bufPrint(&buf, "  Key facts extracted: {d}\n", .{stats.key_facts}) catch return;
-    _ = try stdout.write(len);
+    try stdout.writeStreamingAll(io, len);
 
     len = std.fmt.bufPrint(&buf, "  Topics tracked: {d}\n", .{stats.topics}) catch return;
-    _ = try stdout.write(len);
+    try stdout.writeStreamingAll(io, len);
 
     len = std.fmt.bufPrint(&buf, "  Context usage: {d:.1}%\n", .{context_rate * 100}) catch return;
-    _ = try stdout.write(len);
+    try stdout.writeStreamingAll(io, len);
 
     len = std.fmt.bufPrint(&buf, "  Speed: {d:.0} ops/s\n", .{ops_per_sec}) catch return;
-    _ = try stdout.write(len);
+    try stdout.writeStreamingAll(io, len);
 
     len = std.fmt.bufPrint(&buf, "\n  Summarize rate: {d:.2}\n", .{summarize_rate}) catch return;
-    _ = try stdout.write(len);
+    try stdout.writeStreamingAll(io, len);
 
     len = std.fmt.bufPrint(&buf, "  Improvement rate: {d:.2}\n", .{improvement_rate}) catch return;
-    _ = try stdout.write(len);
+    try stdout.writeStreamingAll(io, len);
 
     if (improvement_rate > 0.618) {
-        _ = try stdout.write("  Golden Ratio Gate: PASSED (>0.618)\n");
+        try stdout.writeStreamingAll(io, "  Golden Ratio Gate: PASSED (>0.618)\n");
     } else {
-        _ = try stdout.write("  Golden Ratio Gate: NEEDS IMPROVEMENT (<0.618)\n");
+        try stdout.writeStreamingAll(io, "  Golden Ratio Gate: NEEDS IMPROVEMENT (<0.618)\n");
     }
 
-    _ = try stdout.write("\n");
-    _ = try stdout.write("===============================================================================\n");
-    _ = try stdout.write("  phi^2 + 1/phi^2 = 3 = TRINITY | LONG CONTEXT ENGINE CYCLE 12               \n");
-    _ = try stdout.write("===============================================================================\n");
+    try stdout.writeStreamingAll(io, "\n");
+    try stdout.writeStreamingAll(io, "===============================================================================\n");
+    try stdout.writeStreamingAll(io, "  phi^2 + 1/phi^2 = 3 = TRINITY | LONG CONTEXT ENGINE CYCLE 12               \n");
+    try stdout.writeStreamingAll(io, "===============================================================================\n");
 }
 
 // =============================================================================

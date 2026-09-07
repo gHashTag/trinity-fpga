@@ -209,9 +209,9 @@ These features appear in FASM but have NO config bits in the bitstream:
 
 ```bash
 zig build forge -- run \
-    --input /Users/playra/trinity-w1/fpga/openxc7-synth/quantum_blinker.json \
+    --input /Users/playom/trinity-fpga/fpga/openxc7-synth/quantum_blinker.json \
     --device xc7a100t \
-    --constraints /Users/playra/trinity-w1/fpga/openxc7-synth/trinity.xdc \
+    --constraints /Users/playom/trinity-fpga/fpga/openxc7-synth/trinity.xdc \
     --output /tmp/quantum_blinker_vNN.bit \
     --fasm /tmp/quantum_blinker_vNN.fasm 2>&1
 ```
@@ -226,7 +226,7 @@ bash fpga/tools/flash.sh /tmp/quantum_blinker_vNN.bit
 
 ```bash
 zig build forge -- fasm2bit \
-    --input /Users/playra/trinity-w1/fpga/openxc7-synth/blinker_t23.fasm \
+    --input /Users/playom/trinity-fpga/fpga/openxc7-synth/blinker_t23.fasm \
     --device xc7a100t \
     --output /tmp/blinker_reference_via_forge.bit
 ```

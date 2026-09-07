@@ -20,6 +20,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const builtin = @import("builtin");
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -218,7 +219,7 @@ pub const MetalVSA = struct {
         query: []const Trit,
         query_norm: f32,
     ) ![]f32 {
-        var timer = try std.time.Timer.start();
+        var timer = try tri_time.Timer.start();
 
         const similarities = try self.allocator.alloc(f32, self.vocab_count);
         errdefer self.allocator.free(similarities);
@@ -715,7 +716,7 @@ pub fn benchmark(allocator: std.mem.Allocator, iterations: usize) !BenchmarkResu
     };
 
     // Benchmark - batch 8 queries in parallel
-    var timer = try std.time.Timer.start();
+    var timer = try tri_time.Timer.start();
 
     var iter: usize = 0;
     while (iter < iterations) : (iter += 8) {
@@ -855,7 +856,7 @@ pub fn benchmarkScalable(allocator: std.mem.Allocator, vocab_size: usize, iterat
     }
 
     // Benchmark
-    var timer = try std.time.Timer.start();
+    var timer = try tri_time.Timer.start();
     for (0..iterations) |_| {
         try gpu.batchSimilarityGPU(&query, query_norm, result_buf);
     }

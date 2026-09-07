@@ -18,6 +18,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const testing = std.testing;
 
@@ -244,7 +245,7 @@ pub const DeepSeekOptimized = struct {
 
         self.cache.put(hash, CacheEntry{
             .response = response,
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
             .hit_count = 0,
             .tokens_saved = tokens,
         }) catch {};
@@ -304,9 +305,9 @@ pub const DeepSeekOptimized = struct {
     // ═══════════════════════════════════════════════════════════════════════════
 
     pub fn chat(self: *Self, query: []const u8) ![]const u8 {
-        const start = std.time.nanoTimestamp();
+        const start = tri_time.nanoTimestamp();
         defer {
-            const end = std.time.nanoTimestamp();
+            const end = tri_time.nanoTimestamp();
             self.metrics.latency_sum_ns += @intCast(end - start);
         }
 

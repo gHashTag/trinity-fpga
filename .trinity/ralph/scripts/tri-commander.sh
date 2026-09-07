@@ -2,7 +2,7 @@
 # TRI COMMANDER — High-Level Strategic Interface v10
 # Правая панель для высокоуровневого управления армией агентов
 
-RALPH_DIR="/Users/playra/trinity"
+RALPH_DIR="/Users/playom/trinity"
 cd "$RALPH_DIR" 2>/dev/null || exit 1
 
 # Trinity colors

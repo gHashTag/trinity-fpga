@@ -1,6 +1,6 @@
 #!/bin/bash
 # TRI COMMANDER v4 — Simplified Real Handler with API Failover
-cd /Users/playra/trinity/trinity-nexus || exit 1
+cd /Users/playom/trinity/trinity-nexus || exit 1
 
 INCOMING="ralph/queue/incoming.cmd"
 RESPONSE="ralph/queue/responses/current.resp"
@@ -96,7 +96,7 @@ write_box() {
 }
 
 get_status() {
-    local json="/Users/playra/trinity/.ralph/logs/status.json"
+    local json="/Users/playom/trinity/.ralph/logs/status.json"
     if [ -f "$json" ]; then
         local st=$(jq -r '.status' "$json")
         local lc=$(jq -r '.loop_count' "$json")
@@ -112,8 +112,8 @@ get_status() {
 
 get_tasks() {
     local fp=""
-    [ -f "/Users/playra/trinity/.ralph/fix_plan.md" ] && fp="/Users/playra/trinity/.ralph/fix_plan.md"
-    [ -f "/Users/playra/trinity/.ralph/internal/fix_plan.md" ] && fp="/Users/playra/trinity/.ralph/internal/fix_plan.md"
+    [ -f "/Users/playom/trinity/.ralph/fix_plan.md" ] && fp="/Users/playom/trinity/.ralph/fix_plan.md"
+    [ -f "/Users/playom/trinity/.ralph/internal/fix_plan.md" ] && fp="/Users/playom/trinity/.ralph/internal/fix_plan.md"
 
     if [ -n "$fp" ] && [ -f "$fp" ]; then
         local all=$(grep -c "^- \[.\]" "$fp")
@@ -180,8 +180,8 @@ while true; do
                     ;;
                 "what delat"*|"zadachand"*)
                     local fp=""
-                    [ -f "/Users/playra/trinity/.ralph/fix_plan.md" ] && fp="/Users/playra/trinity/.ralph/fix_plan.md"
-                    [ -f "/Users/playra/trinity/.ralph/internal/fix_plan.md" ] && fp="/Users/playra/trinity/.ralph/internal/fix_plan.md"
+                    [ -f "/Users/playom/trinity/.ralph/fix_plan.md" ] && fp="/Users/playom/trinity/.ralph/fix_plan.md"
+                    [ -f "/Users/playom/trinity/.ralph/internal/fix_plan.md" ] && fp="/Users/playom/trinity/.ralph/internal/fix_plan.md"
                     if [ -n "$fp" ]; then
                         write_box "$current" "$(grep '^- \[ \]' "$fp" | head -3 | sed 's/^- \[ \] //')" "0"
                     else

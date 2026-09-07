@@ -11,6 +11,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const parent_mod = @import("mod.zig");
 const format = @import("format.zig");
 const sacred_formula = @import("formula.zig");
@@ -31,7 +32,7 @@ pub const BenchmarkResult = struct {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn benchmarkGoldenWrap(iterations: usize) BenchmarkResult {
-    var timer = std.time.Timer.start() catch return .{
+    var timer = tri_time.Timer.start() catch return .{
         .name = "Golden Wrap (skipped - timer not supported)",
         .ops_per_sec = 0,
         .avg_time_ns = 0,
@@ -55,7 +56,7 @@ fn benchmarkGoldenWrap(iterations: usize) BenchmarkResult {
 }
 
 fn benchmarkPhiHash(iterations: usize) BenchmarkResult {
-    var timer = std.time.Timer.start() catch return .{
+    var timer = tri_time.Timer.start() catch return .{
         .name = "Phi Hash (skipped - timer not supported)",
         .ops_per_sec = 0,
         .avg_time_ns = 0,
@@ -79,7 +80,7 @@ fn benchmarkPhiHash(iterations: usize) BenchmarkResult {
 }
 
 fn benchmarkPhiPower(iterations: usize) BenchmarkResult {
-    var timer = std.time.Timer.start() catch return .{
+    var timer = tri_time.Timer.start() catch return .{
         .name = "φ^n (skipped - timer not supported)",
         .ops_per_sec = 0,
         .avg_time_ns = 0,
@@ -103,7 +104,7 @@ fn benchmarkPhiPower(iterations: usize) BenchmarkResult {
 }
 
 fn benchmarkFibonacci(iterations: usize) BenchmarkResult {
-    var timer = std.time.Timer.start() catch return .{
+    var timer = tri_time.Timer.start() catch return .{
         .name = "Fibonacci (skipped - timer not supported)",
         .ops_per_sec = 0,
         .avg_time_ns = 0,
@@ -128,7 +129,7 @@ fn benchmarkFibonacci(iterations: usize) BenchmarkResult {
 }
 
 fn benchmarkSacredFormulaFit(iterations: usize) BenchmarkResult {
-    var timer = std.time.Timer.start() catch return .{
+    var timer = tri_time.Timer.start() catch return .{
         .name = "Sacred Formula Fit (skipped)",
         .ops_per_sec = 0,
         .avg_time_ns = 0,
@@ -153,7 +154,7 @@ fn benchmarkSacredFormulaFit(iterations: usize) BenchmarkResult {
 }
 
 fn benchmarkGematriaDecode(iterations: usize, allocator: std.mem.Allocator) BenchmarkResult {
-    var timer = std.time.Timer.start() catch return .{
+    var timer = tri_time.Timer.start() catch return .{
         .name = "Gematria Decode (skipped)",
         .ops_per_sec = 0,
         .avg_time_ns = 0,
@@ -187,7 +188,7 @@ pub const BenchmarkSuite = struct {
 };
 
 pub fn runAllBenchmarks(allocator: std.mem.Allocator) !BenchmarkSuite {
-    const start = std.time.nanoTimestamp();
+    const start = tri_time.nanoTimestamp();
 
     // Run all benchmarks and collect results
     var results = try std.ArrayList(BenchmarkResult).initCapacity(allocator, 10);
@@ -209,7 +210,7 @@ pub fn runAllBenchmarks(allocator: std.mem.Allocator) !BenchmarkSuite {
     try results.append(allocator, benchmarkSacredFormulaFit(100));
     try results.append(allocator, benchmarkGematriaDecode(10_000, allocator));
 
-    const elapsed_ns = std.time.nanoTimestamp() - start;
+    const elapsed_ns = tri_time.nanoTimestamp() - start;
     const total_duration_ms: u64 = @intCast(@divFloor(elapsed_ns, 1_000_000));
 
     // Return results with owned array

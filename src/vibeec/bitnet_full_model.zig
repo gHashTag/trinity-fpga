@@ -5,6 +5,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const json = std.json;
 const math = std.math;
 const forward = @import("bitnet_forward.zig");
@@ -1022,7 +1023,7 @@ pub const BitNetFullModel = struct {
         max_new_tokens: usize,
         temperature: f32,
     ) ![]u32 {
-        var rng = std.Random.DefaultPrng.init(@intCast(std.time.milliTimestamp()));
+        var rng = std.Random.DefaultPrng.init(@intCast(tri_time.milliTimestamp()));
         var generated = std.ArrayList(u32).init(self.allocator);
 
         // Initialize KV-cache if not already done

@@ -8,6 +8,7 @@
 //! - Automatic rollback on regression
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const sacred = @import("sacred_constants.zig");
 
 pub const AgentType = enum {
@@ -111,7 +112,7 @@ pub const MetaLearner = struct {
             .new_value = try self.allocator.dupe(u8, new_value),
             .validation = validation,
             .confidence = confidence,
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
         };
         try self.validation_history.append(modification);
 
@@ -153,7 +154,7 @@ pub const MetaLearner = struct {
                 .approved = approved,
                 .score = @floatCast(s),
                 .reason = try self.allocator.dupe(u8, "Validated"),
-                .timestamp = std.time.timestamp(),
+                .timestamp = tri_time.timestamp(),
             };
             try verdicts.put(name, verdict);
 
@@ -168,7 +169,7 @@ pub const MetaLearner = struct {
             .verdicts = verdicts,
             .consensus_score = consensus,
             .approved = approved,
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
         };
     }
 

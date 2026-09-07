@@ -7,6 +7,7 @@
 
 const std = @import("std");
 
+const tri_mutex = @import("tri_mutex");
 // ═══════════════════════════════════════════════════════════════════════════════
 // TERNARY HYPERVECTOR (self-contained VSA core for storage network)
 // Balanced ternary {-1, 0, +1} vectors with bind/bundle/permute/similarity
@@ -118,7 +119,7 @@ pub const VsaShardEncoder = struct {
     shards_encoded: u64,
     total_bytes_encoded: u64,
     similarity_queries: u64,
-    mutex: std.Thread.Mutex,
+    mutex: tri_mutex.Mutex,
 
     pub fn init(allocator: std.mem.Allocator) VsaShardEncoder {
         return initWithConfig(allocator, .{});

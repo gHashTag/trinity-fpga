@@ -64,7 +64,7 @@ pub const TVCBlock = struct {
 
     pub fn init(allocator: std.mem.Allocator, label: []const u8) TVCBlock {
         return TVCBlock{
-            .instructions = .{},
+            .instructions = .empty,
             .label = label,
             .allocator = allocator,
         };
@@ -87,7 +87,7 @@ pub const TVCModule = struct {
     pub fn init(allocator: std.mem.Allocator, name: []const u8) TVCModule {
         return TVCModule{
             .allocator = allocator,
-            .blocks = .{},
+            .blocks = .empty,
             .name = name,
         };
     }
@@ -210,7 +210,7 @@ pub const NavigationState = struct {
             .allocator = allocator,
             .position = position,
             .module_vec = module_vec,
-            .history = .{},
+            .history = .empty,
             .step = 0,
         };
     }

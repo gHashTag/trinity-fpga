@@ -8,7 +8,7 @@ import json
 from pathlib import Path
 from datetime import datetime
 
-registry_path = Path("/Users/playra/trinity-w1/data/predictions/registry.json")
+registry_path = Path("/Users/playom/trinity-fpga/data/predictions/registry.json")
 
 # Load existing registry
 with open(registry_path) as f:

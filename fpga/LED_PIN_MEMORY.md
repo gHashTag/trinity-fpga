@@ -52,10 +52,10 @@
 **How to use:**
 ```bash
 # Initialize cable
-sudo /Users/playra/trinity-w1/fpga/tools/fxload -t fx2 -d 03fd:0013 -i /Users/playra/trinity-w1/fpga/tools/xusb_xp2.hex
+sudo /Users/playom/trinity-fpga/fpga/tools/fxload -t fx2 -d 03fd:0013 -i /Users/playom/trinity-fpga/fpga/tools/xusb_xp2.hex
 
 # Flash diagnostic
-sudo /Users/playra/trinity-w1/fpga/tools/jtag_program /Users/playra/trinity-w1/fpga/openxc7-synth/led_diagnostic.bit
+sudo /Users/playom/trinity-fpga/fpga/tools/jtag_program /Users/playom/trinity-fpga/fpga/openxc7-synth/led_diagnostic.bit
 ```
 
 **Expected results:**

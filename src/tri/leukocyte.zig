@@ -8,6 +8,8 @@
 //!    model.zig and trainer.zig checks below are disabled
 
 const std = @import("std");
+const tri_io = @import("tri_io");
+const tri_proc = @import("tri_proc");
 const Allocator = std.mem.Allocator;
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -90,10 +92,11 @@ const EXEMPT_FILES = [_][]const u8{
 // ═══════════════════════════════════════════════════════════════════════════════
 
 pub fn runInit(allocator: Allocator) !void {
+    const io = tri_io.get();
     std.debug.print("\n{s}{s}TRINITY DOCTOR — INIT{s}\n\n", .{ BOLD, CYAN, RESET });
 
     // Create .doctor/ directory
-    std.fs.cwd().makePath(".doctor") catch |err| {
+    std.Io.Dir.cwd().createDirPath(io, ".doctor") catch |err| {
         if (err != error.PathAlreadyExists) return err;
     };
 
@@ -116,9 +119,10 @@ pub fn runInit(allocator: Allocator) !void {
 }
 
 pub fn runScan(allocator: Allocator) !void {
+    const io = tri_io.get();
     std.debug.print("\n{s}{s}TRINITY DOCTOR — SCAN{s}\n\n", .{ BOLD, CYAN, RESET });
 
-    std.fs.cwd().makePath(".doctor") catch |err| {
+    std.Io.Dir.cwd().createDirPath(io, ".doctor") catch |err| {
         if (err != error.PathAlreadyExists) return err;
     };
 
@@ -149,6 +153,7 @@ pub fn runReport(allocator: Allocator) !void {
 }
 
 pub fn runPlan(allocator: Allocator) !void {
+    const io = tri_io.get();
     std.debug.print("\n{s}{s}TRINITY DOCTOR — PLAN{s}\n\n", .{ BOLD, CYAN, RESET });
 
     const scan = try performScan(allocator);
@@ -156,8 +161,8 @@ pub fn runPlan(allocator: Allocator) !void {
     var queue_count: u32 = 0;
     // Build migration queue from manual files
     var json_buf: [16384]u8 = undefined;
-    var stream = std.io.fixedBufferStream(&json_buf);
-    const writer = stream.writer();
+    var stream = std.Io.Writer.fixed(&json_buf);
+    const writer = &stream;
 
     writer.writeAll("[\n") catch {};
     for (scan.files) |f| {
@@ -173,17 +178,18 @@ pub fn runPlan(allocator: Allocator) !void {
     writer.writeAll("\n]\n") catch {};
 
     // Save migration queue
-    const written = stream.getWritten();
-    std.fs.cwd().makePath(".doctor") catch {};
-    const file = try std.fs.cwd().createFile(".doctor/migration_queue.json", .{});
-    defer file.close();
-    try file.writeAll(written);
+    const written = stream.buffered();
+    std.Io.Dir.cwd().createDirPath(io, ".doctor") catch {};
+    const file = try std.Io.Dir.cwd().createFile(io, ".doctor/migration_queue.json", .{});
+    defer file.close(io);
+    try file.writeStreamingAll(io, written);
 
     std.debug.print("{s}Migration queue:{s} {d} manual files queued for regen\n", .{ GREEN, RESET, queue_count });
     std.debug.print("  Saved to: .doctor/migration_queue.json\n", .{});
 }
 
 pub fn runHeal(allocator: Allocator) !void {
+    const io = tri_io.get();
     std.debug.print("\n{s}{s}TRINITY DOCTOR — HEAL{s}\n\n", .{ BOLD, CYAN, RESET });
 
     // Step 1: Scan to find manual files with specs
@@ -204,11 +210,9 @@ pub fn runHeal(allocator: Allocator) !void {
         if (f.spec_path == null) continue;
 
         // Check if already has @origin marker
-        const file = std.fs.cwd().openFile(f.path, .{}) catch continue;
-        defer file.close();
         var header: [512]u8 = undefined;
-        const n = file.read(&header) catch continue;
-        if (std.mem.indexOf(u8, header[0..n], "@origin(spec") != null or std.mem.indexOf(u8, header[0..n], "@origin(generated)") != null) {
+        const head = std.Io.Dir.cwd().readFile(io, f.path, &header) catch continue;
+        if (std.mem.indexOf(u8, head, "@origin(spec") != null or std.mem.indexOf(u8, head, "@origin(generated)") != null) {
             skipped += 1;
             continue;
         }
@@ -227,7 +231,7 @@ pub fn runHeal(allocator: Allocator) !void {
         var sed_buf: [512]u8 = undefined;
         const sed_cmd = std.fmt.bufPrint(&sed_buf, "1s|^|{s}\\n|", .{marker}) catch continue;
 
-        const sed_result = std.process.Child.run(.{
+        const sed_result = tri_proc.run(.{
             .allocator = allocator,
             .argv = &.{ "sed", "-i", "", sed_cmd, f.path },
             .max_output_bytes = 4096,
@@ -240,7 +244,7 @@ pub fn runHeal(allocator: Allocator) !void {
         allocator.free(sed_result.stderr);
 
         // Verify with zig fmt (fire-and-forget)
-        if (std.process.Child.run(.{
+        if (tri_proc.run(.{
             .allocator = allocator,
             .argv = &.{ "zig", "fmt", f.path },
             .max_output_bytes = 4096,
@@ -263,7 +267,7 @@ pub fn runHeal(allocator: Allocator) !void {
     // Step 2: Verify build still works
     if (healed > 0) {
         std.debug.print("\n  Verifying build... ", .{});
-        const build_result = std.process.Child.run(.{
+        const build_result = tri_proc.run(.{
             .allocator = allocator,
             .argv = &.{ "zig", "build" },
             .max_output_bytes = 8192,
@@ -275,7 +279,7 @@ pub fn runHeal(allocator: Allocator) !void {
         allocator.free(build_result.stderr);
 
         const build_exit = switch (build_result.term) {
-            .Exited => |code| code,
+            .exited => |code| code,
             else => 1,
         };
         if (build_exit != 0) {
@@ -321,7 +325,7 @@ pub fn runHeal(allocator: Allocator) !void {
         // git add each healed file
         for (0..@min(healed, 128)) |i| {
             const path = healed_paths[i][0..healed_lens[i]];
-            const add_result = std.process.Child.run(.{
+            const add_result = tri_proc.run(.{
                 .allocator = allocator,
                 .argv = &.{ "git", "add", path },
                 .max_output_bytes = 1024,
@@ -331,7 +335,7 @@ pub fn runHeal(allocator: Allocator) !void {
         }
 
         // git add scan results
-        const add_scan = std.process.Child.run(.{
+        const add_scan = tri_proc.run(.{
             .allocator = allocator,
             .argv = &.{ "git", "add", ".doctor/scan_results.json" },
             .max_output_bytes = 1024,
@@ -344,7 +348,7 @@ pub fn runHeal(allocator: Allocator) !void {
         // git commit
         var commit_buf: [256]u8 = undefined;
         const commit_msg = std.fmt.bufPrint(&commit_buf, "chore(doctor): heal {d} files — health {d}/100", .{ healed, health.total }) catch "chore(doctor): heal files";
-        const commit_result = std.process.Child.run(.{
+        const commit_result = tri_proc.run(.{
             .allocator = allocator,
             .argv = &.{ "git", "commit", "-m", commit_msg },
             .max_output_bytes = 4096,
@@ -356,7 +360,7 @@ pub fn runHeal(allocator: Allocator) !void {
         allocator.free(commit_result.stderr);
 
         const commit_exit = switch (commit_result.term) {
-            .Exited => |code| code,
+            .exited => |code| code,
             else => 1,
         };
         if (commit_exit == 0) {
@@ -394,6 +398,7 @@ pub fn runEnforce(allocator: Allocator) !void {
 }
 
 pub fn runStatus(allocator: Allocator) !void {
+    const io = tri_io.get();
     const scan = performScan(allocator) catch {
         std.debug.print("CRITICAL — cannot scan\n", .{});
         return;
@@ -402,7 +407,7 @@ pub fn runStatus(allocator: Allocator) !void {
 
     // Count violations
     var violation_count: u32 = 0;
-    const vdata = std.fs.cwd().readFileAlloc(allocator, ".doctor/violations.jsonl", 65536) catch "";
+    const vdata = std.Io.Dir.cwd().readFileAlloc(io, ".doctor/violations.jsonl", allocator, .limited(65536)) catch "";
     if (vdata.len > 0) {
         defer allocator.free(vdata);
         var it = std.mem.splitScalar(u8, vdata, '\n');
@@ -439,14 +444,17 @@ pub fn runStatus(allocator: Allocator) !void {
 }
 
 pub fn runEnforceCheck(allocator: Allocator) !void {
+    const io = tri_io.get();
     // Read JSON from stdin via file descriptors
-    const stdin_file: std.fs.File = .{ .handle = std.posix.STDIN_FILENO };
-    const stdout_file: std.fs.File = .{ .handle = std.posix.STDOUT_FILENO };
+    const stdin_file = std.Io.File.stdin();
+    const stdout_file = std.Io.File.stdout();
     var buf: [8192]u8 = undefined;
     var total_read: usize = 0;
 
     while (total_read < buf.len) {
-        const n = stdin_file.read(buf[total_read..]) catch break;
+        // One attempt per iteration, exactly as the 0.15 `read` did: a short
+        // result is normal, and end-of-stream arrives as an error rather than 0.
+        const n = stdin_file.readStreaming(io, &.{buf[total_read..]}) catch break;
         if (n == 0) break;
         total_read += n;
         // Check if we have a complete JSON object
@@ -457,13 +465,13 @@ pub fn runEnforceCheck(allocator: Allocator) !void {
 
     // Extract tool_name
     const tool_name = extractJsonStr(input, "tool_name") orelse {
-        try stdout_file.writeAll("{}\n");
+        try stdout_file.writeStreamingAll(io, "{}\n");
         return;
     };
 
     // Extract file_path from tool_input
     const file_path = extractJsonStr(input, "file_path") orelse {
-        try stdout_file.writeAll("{}\n");
+        try stdout_file.writeStreamingAll(io, "{}\n");
         return;
     };
 
@@ -492,7 +500,7 @@ pub fn runEnforceCheck(allocator: Allocator) !void {
             }
         }
         if (is_exempt) {
-            try stdout_file.writeAll("{}\n");
+            try stdout_file.writeStreamingAll(io, "{}\n");
             return;
         }
 
@@ -510,7 +518,7 @@ pub fn runEnforceCheck(allocator: Allocator) !void {
     }
 
     // Default: allow
-    try stdout_file.writeAll("{}\n");
+    try stdout_file.writeStreamingAll(io, "{}\n");
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -548,11 +556,12 @@ pub fn performScan(allocator: Allocator) !ScanResult {
 }
 
 fn scanDirectory(allocator: Allocator, file_buf: *[MAX_FILES]FileMarker, file_count: *usize, dir_path: []const u8) void {
-    var dir = std.fs.cwd().openDir(dir_path, .{ .iterate = true }) catch return;
-    defer dir.close();
+    const io = tri_io.get();
+    var dir = std.Io.Dir.cwd().openDir(io, dir_path, .{ .iterate = true }) catch return;
+    defer dir.close(io);
 
     var iter = dir.iterate();
-    while (iter.next() catch null) |entry| {
+    while (iter.next(io) catch null) |entry| {
         if (entry.kind != .file) continue;
         if (!std.mem.endsWith(u8, entry.name, ".zig")) continue;
         if (file_count.* >= MAX_FILES) return;
@@ -593,12 +602,9 @@ fn classifyFile(path: []const u8) FileOrigin {
     }
 
     // Check for @origin marker in file
-    const file = std.fs.cwd().openFile(path, .{}) catch return .manual;
-    defer file.close();
-
+    const io = tri_io.get();
     var header: [512]u8 = undefined;
-    const n = file.read(&header) catch return .manual;
-    const content = header[0..n];
+    const content = std.Io.Dir.cwd().readFile(io, path, &header) catch return .manual;
 
     // Recognize both @origin(generated) and @origin(spec:...) as generated
     const has_generated_marker = std.mem.indexOf(u8, content, "@origin(generated)") != null;
@@ -629,7 +635,7 @@ fn findMatchingSpec(allocator: Allocator, zig_path: []const u8) ?[]const u8 {
     // Check specs/tri/{stem}.tri
     const spec_path = std.fmt.allocPrint(allocator, "specs/tri/{s}.tri", .{stem}) catch return null;
 
-    std.fs.cwd().access(spec_path, .{}) catch {
+    std.Io.Dir.cwd().access(tri_io.get(), spec_path, .{}) catch {
         allocator.free(spec_path);
         return null;
     };
@@ -663,7 +669,7 @@ fn performMark(allocator: Allocator, scan: ScanResult) !void {
 
     // Verify build still passes
     std.debug.print("  Verifying build...\n", .{});
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ "zig", "build" },
         .max_output_bytes = 8192,
@@ -677,7 +683,7 @@ fn performMark(allocator: Allocator, scan: ScanResult) !void {
     allocator.free(result.stderr);
 
     const exit_code = switch (result.term) {
-        .Exited => |code| code,
+        .exited => |code| code,
         else => 1,
     };
 
@@ -691,7 +697,8 @@ fn performMark(allocator: Allocator, scan: ScanResult) !void {
 }
 
 fn addMarkerToFile(allocator: Allocator, path: []const u8, origin: FileOrigin) bool {
-    const content = std.fs.cwd().readFileAlloc(allocator, path, 1048576) catch return false;
+    const io = tri_io.get();
+    const content = std.Io.Dir.cwd().readFileAlloc(io, path, allocator, .limited(1048576)) catch return false;
     defer allocator.free(content);
 
     // Already has marker?
@@ -708,7 +715,7 @@ fn addMarkerToFile(allocator: Allocator, path: []const u8, origin: FileOrigin) b
     var insert_pos: usize = 0;
     var lines_iter = std.mem.splitScalar(u8, content, '\n');
     while (lines_iter.next()) |line| {
-        const trimmed = std.mem.trimLeft(u8, line, " \t");
+        const trimmed = std.mem.trimStart(u8, line, " \t");
         if (std.mem.startsWith(u8, trimmed, "//!")) {
             insert_pos = (@intFromPtr(line.ptr) - @intFromPtr(content.ptr)) + line.len + 1;
         } else {
@@ -727,16 +734,16 @@ fn addMarkerToFile(allocator: Allocator, path: []const u8, origin: FileOrigin) b
     }) catch return false;
     defer allocator.free(new_content);
 
-    const file = std.fs.cwd().createFile(path, .{}) catch return false;
-    defer file.close();
-    file.writeAll(new_content) catch return false;
+    const file = std.Io.Dir.cwd().createFile(io, path, .{}) catch return false;
+    defer file.close(io);
+    file.writeStreamingAll(io, new_content) catch return false;
 
     return true;
 }
 
 fn revertMarkers(allocator: Allocator) void {
     // git checkout -- . to revert all changes
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ "git", "checkout", "--", "." },
         .max_output_bytes = 4096,
@@ -832,24 +839,25 @@ fn printReport(scan: ScanResult, health: HealthScore) void {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn saveScanResults(allocator: Allocator, scan: ScanResult) !void {
-    const file = try std.fs.cwd().createFile(".doctor/scan_results.json", .{});
-    defer file.close();
+    const io = tri_io.get();
+    const file = try std.Io.Dir.cwd().createFile(io, ".doctor/scan_results.json", .{});
+    defer file.close(io);
 
-    try file.writeAll("{\n  \"files\": [\n");
+    try file.writeStreamingAll(io, "{\n  \"files\": [\n");
     var fmt_buf: [1024]u8 = undefined;
     for (scan.files, 0..) |f, i| {
-        if (i > 0) try file.writeAll(",\n");
+        if (i > 0) try file.writeStreamingAll(io, ",\n");
         const entry = std.fmt.bufPrint(&fmt_buf, "    {{\"path\":\"{s}\",\"origin\":\"{s}\",\"regen\":\"{s}\"", .{
             f.path,
             @tagName(f.origin),
             @tagName(f.regen),
         }) catch continue;
-        try file.writeAll(entry);
+        try file.writeStreamingAll(io, entry);
         if (f.spec_path) |sp| {
             const sp_entry = std.fmt.bufPrint(&fmt_buf, ",\"spec_path\":\"{s}\"", .{sp}) catch "";
-            try file.writeAll(sp_entry);
+            try file.writeStreamingAll(io, sp_entry);
         }
-        try file.writeAll("}");
+        try file.writeStreamingAll(io, "}");
     }
     const footer = std.fmt.bufPrint(&fmt_buf, "\n  ],\n  \"generated_count\":{d},\n  \"manual_count\":{d},\n  \"mixed_count\":{d},\n  \"exempt_count\":{d}\n}}\n", .{
         scan.generated_count,
@@ -857,7 +865,7 @@ fn saveScanResults(allocator: Allocator, scan: ScanResult) !void {
         scan.mixed_count,
         scan.exempt_count,
     }) catch return;
-    try file.writeAll(footer);
+    try file.writeStreamingAll(io, footer);
     _ = allocator;
 }
 
@@ -869,12 +877,9 @@ fn stripZigExt(name: []const u8) []const u8 {
 }
 
 fn hasOriginMarker(path: []const u8) bool {
-    const file = std.fs.cwd().openFile(path, .{}) catch return false;
-    defer file.close();
-
+    const io = tri_io.get();
     var header: [512]u8 = undefined;
-    const n = file.read(&header) catch return false;
-    const content = header[0..n];
+    const content = std.Io.Dir.cwd().readFile(io, path, &header) catch return false;
 
     // Files with @regen(manual-impl) are explicitly allowed for direct edits
     if (std.mem.indexOf(u8, content, "@regen(manual-impl)") != null) return false;
@@ -902,33 +907,35 @@ fn extractJsonStr(json: []const u8, key: []const u8) ?[]const u8 {
     return json[val_start..val_end];
 }
 
-fn writeDeny(file: std.fs.File, reason: []const u8) !void {
+fn writeDeny(file: std.Io.File, reason: []const u8) !void {
     var deny_buf: [2048]u8 = undefined;
     const msg = std.fmt.bufPrint(&deny_buf, "{{\"hookSpecificOutput\":{{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"{s}\"}}}}\n", .{reason}) catch return;
-    try file.writeAll(msg);
+    try file.writeStreamingAll(tri_io.get(), msg);
 }
 
 fn logViolation(allocator: Allocator, agent: []const u8, file_path: []const u8, action: []const u8) void {
-    std.fs.cwd().makePath(".doctor") catch {};
-    const f = std.fs.cwd().createFile(".doctor/violations.jsonl", .{ .truncate = false }) catch return;
-    defer f.close();
-    f.seekFromEnd(0) catch {};
+    const io = tri_io.get();
+    std.Io.Dir.cwd().createDirPath(io, ".doctor") catch {};
+    const f = std.Io.Dir.cwd().createFile(io, ".doctor/violations.jsonl", .{ .truncate = false }) catch return;
+    defer f.close(io);
+    const end = f.length(io) catch 0;
     var log_buf: [1024]u8 = undefined;
     const entry = std.fmt.bufPrint(&log_buf, "{{\"agent\":\"{s}\",\"file\":\"{s}\",\"action\":\"{s}\",\"blocked\":true}}\n", .{
         agent, file_path, action,
     }) catch return;
-    f.writeAll(entry) catch {};
+    f.writePositionalAll(io, entry, end) catch {};
     _ = allocator;
 }
 
 fn logMarkHistory(marked: u32) void {
-    std.fs.cwd().makePath(".doctor") catch {};
-    const f = std.fs.cwd().createFile(".doctor/mark_history.jsonl", .{ .truncate = false }) catch return;
-    defer f.close();
-    f.seekFromEnd(0) catch {};
+    const io = tri_io.get();
+    std.Io.Dir.cwd().createDirPath(io, ".doctor") catch {};
+    const f = std.Io.Dir.cwd().createFile(io, ".doctor/mark_history.jsonl", .{ .truncate = false }) catch return;
+    defer f.close(io);
+    const end = f.length(io) catch 0;
     var log_buf: [256]u8 = undefined;
     const line = std.fmt.bufPrint(&log_buf, "{{\"marked\":{d}}}\n", .{marked}) catch return;
-    f.writeAll(line) catch {};
+    f.writePositionalAll(io, line, end) catch {};
 }
 
 fn notifyTelegram(allocator: Allocator, health: HealthScore, scan: ScanResult) void {
@@ -947,7 +954,7 @@ fn notifyTelegram(allocator: Allocator, health: HealthScore, scan: ScanResult) v
 }
 
 fn notifyTelegramMsg(allocator: Allocator, msg: []const u8) void {
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ "tri", "notify", msg },
         .max_output_bytes = 1024,
@@ -979,7 +986,7 @@ pub fn runJunk(allocator: Allocator) !void {
 
     // 1. Check archive
     const archive_exists = blk: {
-        std.fs.cwd().access(JUNK_ARCHIVE_DIR, .{}) catch break :blk false;
+        std.Io.Dir.cwd().access(tri_io.get(), JUNK_ARCHIVE_DIR, .{}) catch break :blk false;
         break :blk true;
     };
 
@@ -992,7 +999,7 @@ pub fn runJunk(allocator: Allocator) !void {
 
     // 2. Untracked files via git
     std.debug.print("\n  {s}Untracked files:{s}\n", .{ CYAN, RESET });
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ "git", "status", "--porcelain", "-s" },
         .max_output_bytes = 65536,
@@ -1012,7 +1019,7 @@ pub fn runJunk(allocator: Allocator) !void {
     while (it.next()) |line| {
         if (line.len < 4) continue;
         if (!std.mem.startsWith(u8, line, "??")) continue;
-        const path = std.mem.trimLeft(u8, line[3..], " ");
+        const path = std.mem.trimStart(u8, line[3..], " ");
         untracked_total += 1;
 
         var whitelisted = false;
@@ -1053,6 +1060,7 @@ pub fn runJunk(allocator: Allocator) !void {
 }
 
 fn printArchiveStats(allocator: Allocator) void {
+    const io = tri_io.get();
     const subdirs = [_][]const u8{
         "fpga-mem-weights",
         "fpga-nested-duplicates",
@@ -1070,11 +1078,11 @@ fn printArchiveStats(allocator: Allocator) void {
         const full = std.fmt.bufPrint(&path_buf, "{s}/{s}", .{ JUNK_ARCHIVE_DIR, subdir }) catch continue;
 
         var count: u32 = 0;
-        var dir = std.fs.cwd().openDir(full, .{ .iterate = true }) catch continue;
-        defer dir.close();
+        var dir = std.Io.Dir.cwd().openDir(io, full, .{ .iterate = true }) catch continue;
+        defer dir.close(io);
 
         var dir_iter = dir.iterate();
-        while (dir_iter.next() catch null) |_| {
+        while (dir_iter.next(io) catch null) |_| {
             count += 1;
         }
         if (count > 0) {
@@ -1095,6 +1103,7 @@ const DocsCheck = struct {
 };
 
 pub fn runDocs(allocator: Allocator) !void {
+    const io = tri_io.get();
     std.debug.print("\n{s}{s}TRINITY DOCTOR \xe2\x80\x94 DOCS MONITOR{s}\n\n", .{ BOLD, CYAN, RESET });
 
     var checks_buf: [16]DocsCheck = undefined;
@@ -1102,7 +1111,7 @@ pub fn runDocs(allocator: Allocator) !void {
 
     // 1. Check docs/ directory exists
     const docs_exists = blk: {
-        std.fs.cwd().access("docs/docusaurus.config.ts", .{}) catch break :blk false;
+        std.Io.Dir.cwd().access(io, "docs/docusaurus.config.ts", .{}) catch break :blk false;
         break :blk true;
     };
     checks_buf[check_count] = .{
@@ -1119,7 +1128,7 @@ pub fn runDocs(allocator: Allocator) !void {
 
     // 2. Check docs build (node_modules present)
     const nm_exists = blk: {
-        std.fs.cwd().access("docs/node_modules/.package-lock.json", .{}) catch break :blk false;
+        std.Io.Dir.cwd().access(io, "docs/node_modules/.package-lock.json", .{}) catch break :blk false;
         break :blk true;
     };
     checks_buf[check_count] = .{
@@ -1205,18 +1214,18 @@ pub fn runDocs(allocator: Allocator) !void {
 }
 
 fn getFileMtime(path: []const u8) i128 {
-    const file = std.fs.cwd().openFile(path, .{}) catch return 0;
-    defer file.close();
-    const stat = file.stat() catch return 0;
-    return stat.mtime;
+    const io = tri_io.get();
+    const st = std.Io.Dir.cwd().statFile(io, path, .{}) catch return 0;
+    return st.mtime.nanoseconds;
 }
 
 fn countFilesInDir(dir_path: []const u8) u32 {
+    const io = tri_io.get();
     var count: u32 = 0;
-    var dir = std.fs.cwd().openDir(dir_path, .{ .iterate = true }) catch return 0;
-    defer dir.close();
+    var dir = std.Io.Dir.cwd().openDir(io, dir_path, .{ .iterate = true }) catch return 0;
+    defer dir.close(io);
     var it = dir.iterate();
-    while (it.next() catch null) |entry| {
+    while (it.next(io) catch null) |entry| {
         if (entry.kind == .file and std.mem.endsWith(u8, entry.name, ".md")) {
             count += 1;
         }
@@ -1225,10 +1234,11 @@ fn countFilesInDir(dir_path: []const u8) u32 {
 }
 
 fn checkIntroData(allocator: Allocator) bool {
+    const io = tri_io.get();
     // Check that key numbers from README appear in intro.md
-    const readme = std.fs.cwd().readFileAlloc(allocator, "README.md", 65536) catch return true;
+    const readme = std.Io.Dir.cwd().readFileAlloc(io, "README.md", allocator, .limited(65536)) catch return true;
     defer allocator.free(readme);
-    const intro = std.fs.cwd().readFileAlloc(allocator, "docs/docs/intro.md", 65536) catch return true;
+    const intro = std.Io.Dir.cwd().readFileAlloc(io, "docs/docs/intro.md", allocator, .limited(65536)) catch return true;
     defer allocator.free(intro);
 
     // Check for key markers that should be in both
@@ -1246,7 +1256,7 @@ fn checkIntroData(allocator: Allocator) bool {
 }
 
 fn tryDocsBuild(allocator: Allocator) bool {
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ "npm", "run", "build" },
         .cwd = "docs",
@@ -1259,7 +1269,7 @@ fn tryDocsBuild(allocator: Allocator) bool {
     defer allocator.free(result.stderr);
 
     const exit = switch (result.term) {
-        .Exited => |code| code,
+        .exited => |code| code,
         else => 1,
     };
     if (exit == 0) {
@@ -1310,6 +1320,7 @@ const DupeCheck = struct {
 };
 
 pub fn runDupes(allocator: Allocator) !void {
+    const io = tri_io.get();
     std.debug.print("\n{s}{s}TRINITY DOCTOR \xe2\x80\x94 DUPLICATION MONITOR{s}\n\n", .{ BOLD, CYAN, RESET });
 
     var checks: [10]DupeCheck = undefined;
@@ -1317,7 +1328,7 @@ pub fn runDupes(allocator: Allocator) !void {
 
     // 1. Nested FPGA directory
     const nested_fpga = blk: {
-        std.fs.cwd().access("fpga/openxc7-synth/fpga/openxc7-synth", .{}) catch break :blk false;
+        std.Io.Dir.cwd().access(io, "fpga/openxc7-synth/fpga/openxc7-synth", .{}) catch break :blk false;
         break :blk true;
     };
     checks[check_count] = .{
@@ -1338,7 +1349,7 @@ pub fn runDupes(allocator: Allocator) !void {
     };
     var vsa_count: u32 = 0;
     for (vsa_paths) |p| {
-        std.fs.cwd().access(p, .{}) catch continue;
+        std.Io.Dir.cwd().access(io, p, .{}) catch continue;
         vsa_count += 1;
     }
     checks[check_count] = .{
@@ -1357,7 +1368,7 @@ pub fn runDupes(allocator: Allocator) !void {
     };
     var json_count: u32 = 0;
     for (json_paths) |p| {
-        std.fs.cwd().access(p, .{}) catch continue;
+        std.Io.Dir.cwd().access(io, p, .{}) catch continue;
         json_count += 1;
     }
     checks[check_count] = .{
@@ -1376,7 +1387,7 @@ pub fn runDupes(allocator: Allocator) !void {
     };
     var http_count: u32 = 0;
     for (http_paths) |p| {
-        std.fs.cwd().access(p, .{}) catch continue;
+        std.Io.Dir.cwd().access(io, p, .{}) catch continue;
         http_count += 1;
     }
     checks[check_count] = .{
@@ -1432,7 +1443,7 @@ pub fn runDupes(allocator: Allocator) !void {
         "deploy/trinity-nexus/output.before_cycle66.1771750778",
     };
     for (backup_dirs) |d| {
-        std.fs.cwd().access(d, .{}) catch continue;
+        std.Io.Dir.cwd().access(io, d, .{}) catch continue;
         nexus_backups += 1;
     }
     checks[check_count] = .{
@@ -1445,7 +1456,7 @@ pub fn runDupes(allocator: Allocator) !void {
 
     // 8. Duplicate .bak files (outside archive)
     var bak_count: u32 = 0;
-    const bak_scan = std.process.Child.run(.{
+    const bak_scan = tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ "git", "ls-files", "--others", "--exclude-standard", "-z" },
         .max_output_bytes = 65536,

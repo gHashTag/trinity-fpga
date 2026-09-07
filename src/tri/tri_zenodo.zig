@@ -14,6 +14,10 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
+const tri_proc = @import("tri_proc");
+const tri_time = @import("tri_time");
+const tri_env = @import("tri_env");
 const print = std.debug.print;
 
 // V16 Scientific Documentation Framework
@@ -997,7 +1001,7 @@ fn runV18Command(allocator: std.mem.Allocator, args: []const []const u8) !void {
             return;
         }
         const file_path = v18_args[0];
-        const content = try std.fs.cwd().readFileAlloc(allocator, file_path, 1_000_000);
+        const content = try std.Io.Dir.cwd().readFileAlloc(tri_io.get(), file_path, allocator, .limited(1_000_000));
         defer allocator.free(content);
 
         const is_valid = try zenodo_v18_clara.validateClaraMetadata(allocator, content);
@@ -1476,12 +1480,15 @@ fn updateSingleRecord(allocator: std.mem.Allocator, rec: UpdateRecord) !void {
 
     // Step 1: Read HTML description from file
     print("  1/4 Reading description from {s}...\n", .{rec.file});
-    const desc_file = std.fs.cwd().openFile(rec.file, .{}) catch {
+    const io = tri_io.get();
+    const desc_file = std.Io.Dir.cwd().openFile(io, rec.file, .{}) catch {
         print("  {s}File not found: {s}{s}\n", .{ RED, rec.file, RESET });
         return error.FileNotFound;
     };
-    defer desc_file.close();
-    const raw_desc = desc_file.readToEndAlloc(allocator, 65536) catch return error.ReadFailed;
+    defer desc_file.close(io);
+    var desc_read_buf: [4096]u8 = undefined;
+    var desc_reader = desc_file.reader(io, &desc_read_buf);
+    const raw_desc = desc_reader.interface.allocRemaining(allocator, .limited(65536)) catch return error.ReadFailed;
     defer allocator.free(raw_desc);
 
     // Escape description for JSON embedding
@@ -1717,7 +1724,7 @@ fn publishOneDiscovery(allocator: std.mem.Allocator, d: Discovery) !void {
         }
     }
 
-    const zip_result = std.process.Child.run(.{
+    const zip_result = tri_proc.run(.{
         .allocator = allocator,
         .argv = argv_buf[0..argc],
     }) catch |err| {
@@ -1738,7 +1745,7 @@ fn publishOneDiscovery(allocator: std.mem.Allocator, d: Discovery) !void {
     const name_arg = try std.fmt.allocPrint(allocator, "name={s}", .{zip_name});
     defer allocator.free(name_arg);
 
-    const upload_result = try std.process.Child.run(.{
+    const upload_result = try tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ "curl", "-s", "-X", "POST", files_url, "-H", auth, "-F", file_arg, "-F", name_arg },
     });
@@ -1756,7 +1763,7 @@ fn publishOneDiscovery(allocator: std.mem.Allocator, d: Discovery) !void {
     print("  {s}[{s}] DOI: {s}{s}\n\n", .{ GREEN, d.id, doi, RESET });
 
     // Cleanup
-    std.fs.deleteFileAbsolute(zip_path) catch {};
+    std.Io.Dir.deleteFileAbsolute(tri_io.get(), zip_path) catch {};
 }
 
 fn printHelp() void {
@@ -1888,12 +1895,15 @@ fn publishOneBundleV8(allocator: std.mem.Allocator, bundle: BundleV8) !void {
 
     // Step 1: Read JSON metadata
     print("  1/5 Reading metadata from {s}...\n", .{bundle.json_path});
-    const json_file = std.fs.cwd().openFile(bundle.json_path, .{}) catch {
+    const io = tri_io.get();
+    const json_file = std.Io.Dir.cwd().openFile(io, bundle.json_path, .{}) catch {
         print("  {s}File not found: {s}{s}\n", .{ RED, bundle.json_path, RESET });
         return error.FileNotFound;
     };
-    defer json_file.close();
-    const json_content = json_file.readToEndAlloc(allocator, 131072) catch return error.ReadFailed;
+    defer json_file.close(io);
+    var json_read_buf: [4096]u8 = undefined;
+    var json_reader = json_file.reader(io, &json_read_buf);
+    const json_content = json_reader.interface.allocRemaining(allocator, .limited(131072)) catch return error.ReadFailed;
     defer allocator.free(json_content);
 
     // Extract title from JSON (simple parsing)
@@ -1955,8 +1965,8 @@ fn publishOneBundleV8(allocator: std.mem.Allocator, bundle: BundleV8) !void {
         const fig_path = try std.fmt.allocPrint(allocator, "{s}/{s}", .{ files_dir, fig });
         defer allocator.free(fig_path);
 
-        if (std.fs.cwd().openFile(fig_path, .{})) |file| {
-            file.close();
+        if (std.Io.Dir.cwd().openFile(io, fig_path, .{})) |file| {
+            file.close(io);
             // Upload via curl
             const files_url = try std.fmt.allocPrint(allocator, "{s}/deposit/depositions/{s}/files", .{ API, dep_id });
             defer allocator.free(files_url);
@@ -1968,7 +1978,7 @@ fn publishOneBundleV8(allocator: std.mem.Allocator, bundle: BundleV8) !void {
             const name_arg = try std.fmt.allocPrint(allocator, "name={s}", .{fig});
             defer allocator.free(name_arg);
 
-            const upload_result = std.process.Child.run(.{
+            const upload_result = tri_proc.run(.{
                 .allocator = allocator,
                 .argv = &.{ "curl", "-s", "-X", "POST", files_url, "-H", auth, "-F", file_arg, "-F", name_arg },
             }) catch continue;
@@ -2005,19 +2015,22 @@ fn publishOneBundleV8(allocator: std.mem.Allocator, bundle: BundleV8) !void {
 
 fn loadToken(allocator: std.mem.Allocator) ![]const u8 {
     // Try env var first
-    if (std.process.getEnvVarOwned(allocator, "ZENODO_TOKEN")) |token| {
+    if (tri_env.getEnvVarOwned(allocator, "ZENODO_TOKEN")) |token| {
         return token;
     } else |_| {}
 
     // Fall back to .env file
-    const file = std.fs.cwd().openFile(".env", .{}) catch {
+    const io = tri_io.get();
+    const file = std.Io.Dir.cwd().openFile(io, ".env", .{}) catch {
         print("{s}❌ ZENODO_TOKEN not set and .env not found{s}\n", .{ RED, RESET });
         print("   Get token: https://zenodo.org/account/settings/applications/tokens/new/\n", .{});
         return error.TokenNotFound;
     };
-    defer file.close();
+    defer file.close(io);
 
-    const content = file.readToEndAlloc(allocator, 16384) catch return error.TokenNotFound;
+    var env_read_buf: [4096]u8 = undefined;
+    var env_reader = file.reader(io, &env_read_buf);
+    const content = env_reader.interface.allocRemaining(allocator, .limited(16384)) catch return error.TokenNotFound;
     defer allocator.free(content);
 
     // Find ZENODO_TOKEN=xxx line
@@ -2044,11 +2057,12 @@ fn curlGet(allocator: std.mem.Allocator, url: []const u8, token: []const u8) ![]
 
     // Use temporary file to avoid max_output_bytes limit
     const tmp_path = "/tmp/zenodo_curl_get.json";
-    const tmp_file = try std.fs.cwd().createFile(tmp_path, .{ .truncate = true });
-    defer tmp_file.close();
+    const io = tri_io.get();
+    const tmp_file = try std.Io.Dir.cwd().createFile(io, tmp_path, .{ .truncate = true });
+    defer tmp_file.close(io);
 
     {
-        const result = try std.process.Child.run(.{
+        const result = try tri_proc.run(.{
             .allocator = allocator,
             .argv = &.{ "curl", "-s", url, "-H", auth, "-o", tmp_path },
             .max_output_bytes = 1024 * 1024, // 1MB for stderr only
@@ -2057,12 +2071,12 @@ fn curlGet(allocator: std.mem.Allocator, url: []const u8, token: []const u8) ![]
         defer allocator.free(result.stderr);
 
         // Check exit code
-        if (result.term != .Exited or result.term.Exited != 0) {
+        if (result.term != .exited or result.term.exited != 0) {
             return error.CurlFailed;
         }
     }
 
-    const data = try std.fs.cwd().readFileAlloc(allocator, tmp_path, 50 * 1024 * 1024);
+    const data = try std.Io.Dir.cwd().readFileAlloc(io, tmp_path, allocator, .limited(50 * 1024 * 1024));
     return data;
 }
 
@@ -2071,7 +2085,7 @@ fn curlPost(allocator: std.mem.Allocator, url: []const u8, token: []const u8, bo
     defer allocator.free(auth);
 
     if (body) |b| {
-        const result = try std.process.Child.run(.{
+        const result = try tri_proc.run(.{
             .allocator = allocator,
             .argv = &.{ "curl", "-s", "-X", "POST", url, "-H", auth, "-H", "Content-Type: application/json", "-d", b },
             .max_output_bytes = 50 * 1024 * 1024,
@@ -2079,7 +2093,7 @@ fn curlPost(allocator: std.mem.Allocator, url: []const u8, token: []const u8, bo
         defer allocator.free(result.stderr);
         return result.stdout;
     } else {
-        const result = try std.process.Child.run(.{
+        const result = try tri_proc.run(.{
             .allocator = allocator,
             .argv = &.{ "curl", "-s", "-X", "POST", url, "-H", auth, "-H", "Content-Type: application/json" },
             .max_output_bytes = 50 * 1024 * 1024,
@@ -2093,7 +2107,7 @@ fn curlPut(allocator: std.mem.Allocator, url: []const u8, token: []const u8, bod
     const auth = try std.fmt.allocPrint(allocator, "Authorization: Bearer {s}", .{token});
     defer allocator.free(auth);
 
-    const result = try std.process.Child.run(.{
+    const result = try tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ "curl", "-s", "-X", "PUT", url, "-H", auth, "-H", "Content-Type: application/json", "-d", body },
         .max_output_bytes = 50 * 1024 * 1024,
@@ -2109,7 +2123,7 @@ fn curlUpload(allocator: std.mem.Allocator, url: []const u8, token: []const u8, 
     const data_arg = try std.fmt.allocPrint(allocator, "@{s}", .{filepath});
     defer allocator.free(data_arg);
 
-    const result = try std.process.Child.run(.{
+    const result = try tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ "curl", "-s", "-X", "PUT", url, "-H", auth, "-H", "Content-Type: application/octet-stream", "--data-binary", data_arg },
     });
@@ -2121,7 +2135,7 @@ fn curlDelete(allocator: std.mem.Allocator, url: []const u8, token: []const u8) 
     const auth = try std.fmt.allocPrint(allocator, "Authorization: Bearer {s}", .{token});
     defer allocator.free(auth);
 
-    const result = try std.process.Child.run(.{
+    const result = try tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ "curl", "-s", "-X", "DELETE", url, "-H", auth },
     });
@@ -2236,9 +2250,9 @@ fn runPublish(allocator: std.mem.Allocator, version: []const u8, do_publish: boo
         \\{{"metadata":{{"title":"gHashTag/trinity: Trinity {s} — FPGA Autoregressive Ternary LLM + Training Results","description":"HSLM: 1.95M-parameter ternary language model with zero-DSP FPGA inference. PPL=125 on TinyStories, 1,872KB model, 0 DSP48, $30 FPGA.","creators":[{{"person_or_org":{{"family_name":"Vasilev","given_name":"Dmitrii","type":"personal"}}}}],"publication_date":"{d}-{d:0>2}-{d:0>2}","version":"{s}","resource_type":{{"id":"software"}},"publisher":"Zenodo","related_identifiers":[{{"identifier":"https://github.com/gHashTag/trinity","relation_type":{{"id":"issupplementto"}},"scheme":"url"}}]}}}}
     , .{
         version,
-        @as(u16, @intCast(std.time.epoch.EpochSeconds.getEpochDay(@as(std.time.epoch.EpochSeconds, .{ .secs = @intCast(std.time.timestamp()) })).calculateYearDay().year)),
-        @as(u9, @intCast(std.time.epoch.EpochSeconds.getEpochDay(@as(std.time.epoch.EpochSeconds, .{ .secs = @intCast(std.time.timestamp()) })).calculateYearDay().calculateMonthDay().month.numeric())),
-        @as(u5, @intCast(std.time.epoch.EpochSeconds.getEpochDay(@as(std.time.epoch.EpochSeconds, .{ .secs = @intCast(std.time.timestamp()) })).calculateYearDay().calculateMonthDay().day_index + 1)),
+        @as(u16, @intCast(std.time.epoch.EpochSeconds.getEpochDay(@as(std.time.epoch.EpochSeconds, .{ .secs = @intCast(tri_time.timestamp()) })).calculateYearDay().year)),
+        @as(u9, @intCast(std.time.epoch.EpochSeconds.getEpochDay(@as(std.time.epoch.EpochSeconds, .{ .secs = @intCast(tri_time.timestamp()) })).calculateYearDay().calculateMonthDay().month.numeric())),
+        @as(u5, @intCast(std.time.epoch.EpochSeconds.getEpochDay(@as(std.time.epoch.EpochSeconds, .{ .secs = @intCast(tri_time.timestamp()) })).calculateYearDay().calculateMonthDay().day_index + 1)),
         version,
     });
     defer allocator.free(metadata_json);
@@ -2254,7 +2268,7 @@ fn runPublish(allocator: std.mem.Allocator, version: []const u8, do_publish: boo
     const zip_path = try std.fmt.allocPrint(allocator, "/tmp/{s}", .{zip_name});
     defer allocator.free(zip_path);
 
-    const zip_result = try std.process.Child.run(.{
+    const zip_result = try tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{
             "zip",                 "-r",                     zip_path,
@@ -2337,7 +2351,7 @@ fn runPublish(allocator: std.mem.Allocator, version: []const u8, do_publish: boo
     }
 
     // Cleanup
-    std.fs.deleteFileAbsolute(zip_path) catch |err| {
+    std.Io.Dir.deleteFileAbsolute(tri_io.get(), zip_path) catch |err| {
         std.log.debug("tri_zenodo: failed to cleanup zip file: {}", .{err});
     };
 }

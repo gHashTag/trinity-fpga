@@ -1,4 +1,5 @@
 const std = @import("std");
+const tri_io = @import("tri_io");
 
 // ============================================================================
 // TRINITY TYPES
@@ -59,14 +60,13 @@ pub const TritWeight = Trit;
 // LOGIC
 // ============================================================================
 
-pub fn main() !void {
+pub fn main(init: std.process.Init.Minimal) !void {
     var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    const args = try std.process.argsAlloc(allocator);
-    defer std.process.argsFree(allocator, args);
-
+    const args = try init.args.toSlice(allocator);
+    defer allocator.free(args);
     if (args.len < 2) {
         std.debug.print("Usage: zig run prometheus_seed.zig -- --model <name> --quantize\n", .{});
         return;
@@ -148,8 +148,9 @@ fn runQuantizationDemo(allocator: std.mem.Allocator) !void {
     std.debug.print("\n✅ SEED CREATED. The weights are purified.\n", .{});
 
     // In a real implementation, we would write these Trits to a .tri file here.
-    const file = try std.fs.cwd().createFile("mistral-7b-layer1.tri", .{});
-    defer file.close();
-    try file.writeAll("TRINITY_HEADER_V1");
+    const io = tri_io.get();
+    const file = try std.Io.Dir.cwd().createFile(io, "mistral-7b-layer1.tri", .{});
+    defer file.close(io);
+    try file.writeStreamingAll(io, "TRINITY_HEADER_V1");
     // Writing raw bytes of trits demo...
 }

@@ -6,6 +6,8 @@
 
 const std = @import("std");
 
+const tri_proc = @import("tri_proc");
+const tri_time = @import("tri_time");
 /// Certificate status
 pub const CertStatus = enum {
     pending,
@@ -27,7 +29,7 @@ pub const Certificate = struct {
     /// Check if certificate is expiring soon
     pub fn isExpiringSoon(self: *const Certificate, days_threshold: u32) bool {
         if (self.expires_at) |expires| {
-            const now = std.time.nanoTimestamp();
+            const now = tri_time.nanoTimestamp();
             const ns_in_day: u64 = 86_400_000_000_000;
             const expires_days = (expires - now) / ns_in_day;
             return @as(u32, @intCast(expires_days)) <= days_threshold;
@@ -38,7 +40,7 @@ pub const Certificate = struct {
     /// Get days until expiration
     pub fn daysUntilExpiration(self: *const Certificate) ?u64 {
         if (self.expires_at) |expires| {
-            const now = std.time.nanoTimestamp();
+            const now = tri_time.nanoTimestamp();
             const ns_in_day: u64 = 86_400_000_000_000;
             if (expires > now) {
                 return (expires - now) / ns_in_day;
@@ -107,7 +109,7 @@ pub const TLSManager = struct {
         std.debug.print("Adding SSL certificate for domain: {s}\n", .{domain});
 
         // Use flyctl to add certificate
-        const result = std.process.Child.run(.{
+        const result = tri_proc.run(.{
             .allocator = self.allocator,
             .argv = &[_][]const u8{
                 "flyctl",
@@ -127,13 +129,13 @@ pub const TLSManager = struct {
             self.allocator.free(result.stderr);
         }
 
-        if (result.term != .Exited or result.term.Exited != 0) {
+        if (result.term != .exited or result.term.exited != 0) {
             std.debug.print("Certificate error:\n{s}\n", .{result.stderr});
             return error.CertificateFailed;
         }
 
         // Add to certificates map
-        const now = std.time.nanoTimestamp();
+        const now = tri_time.nanoTimestamp();
         const ninety_days_ns: i64 = 90 * 86_400_000_000_000;
 
         try self.certificates.put(domain, .{
@@ -213,7 +215,7 @@ pub const TLSManager = struct {
                 cert.status = .renewing;
 
                 // Trigger renewal via flyctl
-                _ = std.process.Child.run(.{
+                _ = tri_proc.run(.{
                     .allocator = self.allocator,
                     .argv = &[_][]const u8{
                         "flyctl",

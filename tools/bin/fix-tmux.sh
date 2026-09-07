@@ -2,7 +2,7 @@
 # fix-tmux.sh - Fix Ralph Dashboard tmux layout
 set -e
 
-RALPH_DIR="/Users/playra/trinity"
+RALPH_DIR="/Users/playom/trinity"
 cd "$RALPH_DIR"
 
 echo "=== TMUX FIX SCRIPT ==="
@@ -49,7 +49,7 @@ set-option -g status-interval 2
 set-option -g status-left-length 60
 set-option -g status-right-length 120
 set-option -g status-left '#[fg=colour220]RALPH #[fg=colour075]CMD #[fg=colour141]CENTER'
-set-option -g status-right '#(cd /Users/playra/trinity && .ralph/scripts/tmux_status.sh statusline)'
+set-option -g status-right '#(cd /Users/playom/trinity && .ralph/scripts/tmux_status.sh statusline)'
 set-option -g status-style "bg=colour235,fg=colour255"
 EOF
 

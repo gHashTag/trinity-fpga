@@ -10,6 +10,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const tri_experience = @import("tri_experience.zig");
 const Episode = tri_experience.Episode;
 
@@ -20,7 +21,7 @@ const RESET = "\x1b[0m";
 /// Fire-and-forget experience save. Never fails the caller.
 pub fn autoSaveExperience(command: []const u8, detail: []const u8, success: bool) void {
     var episode = Episode{};
-    episode.timestamp = std.time.timestamp();
+    episode.timestamp = tri_time.timestamp();
 
     // Set task = "command: detail" or just "command"
     var task_buf: [256]u8 = undefined;
@@ -47,7 +48,7 @@ pub fn autoSaveExperience(command: []const u8, detail: []const u8, success: bool
 /// Auto-save with a mistake recorded
 pub fn autoSaveWithMistake(command: []const u8, detail: []const u8, mistake: []const u8) void {
     var episode = Episode{};
-    episode.timestamp = std.time.timestamp();
+    episode.timestamp = tri_time.timestamp();
 
     tri_experience.copyToFixed(&episode.task, &episode.task_len, command);
 

@@ -7,6 +7,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const bytecode = @import("bytecode.zig");
 const Value = bytecode.Value;
@@ -164,9 +165,9 @@ fn runProgramBenchmark(
     var result_unopt: i64 = 0;
 
     for (0..runs) |_| {
-        const start = std.time.nanoTimestamp();
+        const start = tri_time.nanoTimestamp();
         result_unopt = interp_unopt.execute(&converter_unopt.func);
-        const end = std.time.nanoTimestamp();
+        const end = tri_time.nanoTimestamp();
         time_unopt += @intCast(@max(0, end - start));
     }
 
@@ -176,9 +177,9 @@ fn runProgramBenchmark(
     var result_opt: i64 = 0;
 
     for (0..runs) |_| {
-        const start = std.time.nanoTimestamp();
+        const start = tri_time.nanoTimestamp();
         result_opt = interp_opt.execute(&converter_opt.func);
-        const end = std.time.nanoTimestamp();
+        const end = tri_time.nanoTimestamp();
         time_opt += @intCast(@max(0, end - start));
     }
 

@@ -8,6 +8,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const Allocator = std.mem.Allocator;
 
 const agent_roles = @import("agent_roles.zig");
@@ -81,15 +82,13 @@ const EVENTS_PATH = ".trinity/agent_events.jsonl";
 
 /// Load configuration from file or return defaults
 fn loadConfig(allocator: Allocator) !Config {
-    std.fs.cwd().makePath(".trinity/copywright") catch {};
+    const io = tri_io.get();
+    std.Io.Dir.cwd().createDirPath(io, ".trinity/copywright") catch {};
 
-    const file = std.fs.cwd().openFile(CONFIG_PATH, .{}) catch |err| switch (err) {
+    const content = std.Io.Dir.cwd().readFileAlloc(io, CONFIG_PATH, allocator, .limited(1024 * 1024)) catch |err| switch (err) {
         error.FileNotFound => return DEFAULT_CONFIG,
         else => return err,
     };
-    defer file.close();
-
-    const content = try file.readToEndAlloc(allocator, 1024 * 1024);
     defer allocator.free(content);
 
     const parsed = try std.json.parseFromSliceLeaky(Config, allocator, content, .{});
@@ -98,14 +97,15 @@ fn loadConfig(allocator: Allocator) !Config {
 
 /// Save configuration to file
 fn saveConfig(allocator: Allocator, config: Config) !void {
-    std.fs.cwd().makePath(".trinity/copywright") catch {};
+    const io = tri_io.get();
+    std.Io.Dir.cwd().createDirPath(io, ".trinity/copywright") catch {};
 
     const json_string = try std.json.stringifyAlloc(allocator, config, .{ .whitespace = .indent_2 });
     defer allocator.free(json_string);
 
-    const file = try std.fs.cwd().createFile(CONFIG_PATH, .{});
-    defer file.close();
-    try file.writeAll(json_string);
+    const file = try std.Io.Dir.cwd().createFile(io, CONFIG_PATH, .{});
+    defer file.close(io);
+    try file.writeStreamingAll(io, json_string);
 }
 
 /// Extract key highlights from agent output
@@ -229,10 +229,8 @@ pub fn runCopywrightPostCommand(allocator: Allocator, args: []const []const u8) 
 
     if (args.len == 0) {
         // Generate posts from latest agent work
-        const events_file = try std.fs.cwd().openFile(EVENTS_PATH, .{});
-        defer events_file.close();
-
-        const events = try events_file.readToEndAlloc(allocator, 1024 * 1024);
+        const io = tri_io.get();
+        const events = try std.Io.Dir.cwd().readFileAlloc(io, EVENTS_PATH, allocator, .limited(1024 * 1024));
         defer allocator.free(events);
 
         // Parse last event (assume last line is the latest)

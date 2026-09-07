@@ -5,6 +5,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 // Sacred constants
 const PHI: f64 = 1.6180339887498948482;
 const GOLDEN_IDENTITY: f64 = 3.0;
@@ -112,7 +113,7 @@ pub const TokenStream = struct {
             .tokens = std.ArrayList([]const u8).init(allocator),
             .current_index = 0,
             .total_tokens = 0,
-            .start_time = std.time.milliTimestamp(),
+            .start_time = tri_time.milliTimestamp(),
         };
     }
 
@@ -139,7 +140,7 @@ pub const TokenStream = struct {
     }
 
     pub fn tokensPerSecond(self: *Self) f64 {
-        const elapsed = std.time.milliTimestamp() - self.start_time;
+        const elapsed = tri_time.milliTimestamp() - self.start_time;
         if (elapsed <= 0) return 0;
         return @as(f64, @floatFromInt(self.total_tokens)) / (@as(f64, @floatFromInt(elapsed)) / 1000.0);
     }
@@ -175,7 +176,7 @@ pub const SSEStream = struct {
             .state = .connecting,
             .buffer = std.ArrayList(u8).init(allocator),
             .heartbeat_interval = 15000, // 15 seconds
-            .last_heartbeat = std.time.milliTimestamp(),
+            .last_heartbeat = tri_time.milliTimestamp(),
         };
     }
 
@@ -229,13 +230,13 @@ pub const SSEStream = struct {
 
     // Check if heartbeat needed
     pub fn needsHeartbeat(self: *Self) bool {
-        const now = std.time.milliTimestamp();
+        const now = tri_time.milliTimestamp();
         return (now - self.last_heartbeat) >= self.heartbeat_interval;
     }
 
     // Send heartbeat
     pub fn sendHeartbeat(self: *Self) ![]u8 {
-        self.last_heartbeat = std.time.milliTimestamp();
+        self.last_heartbeat = tri_time.milliTimestamp();
         return self.send(.heartbeat, "ping");
     }
 };
@@ -256,7 +257,7 @@ pub const AgentStreamContext = struct {
             .stream = SSEStream.init(allocator),
             .token_stream = TokenStream.init(allocator),
             .agent_id = agent_id,
-            .session_id = @intCast(std.time.milliTimestamp()),
+            .session_id = @intCast(tri_time.milliTimestamp()),
         };
     }
 

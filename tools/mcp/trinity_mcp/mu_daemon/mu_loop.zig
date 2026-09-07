@@ -1,6 +1,9 @@
 // mu_loop.zig — Core MU self-healing loop
 // Each cycle: SCAN → LEARN → HEAL → VERIFY → HEARTBEAT → REPORT
 const std = @import("std");
+const tri_io = @import("tri_io");
+const tri_proc = @import("tri_proc");
+const tri_time = @import("tri_time");
 const mu_state = @import("mu_state.zig");
 const telegram = @import("telegram");
 
@@ -37,7 +40,7 @@ fn runTriCmd(allocator: std.mem.Allocator, project_root: []const u8, args: []con
         argv_buf[3 + i] = args[i];
     }
 
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = argv_buf[0 .. 3 + n],
         .cwd = project_root,
@@ -47,7 +50,7 @@ fn runTriCmd(allocator: std.mem.Allocator, project_root: []const u8, args: []con
     allocator.free(result.stderr);
 
     const code: u8 = switch (result.term) {
-        .Exited => |c| c,
+        .exited => |c| c,
         else => 1,
     };
 
@@ -57,16 +60,17 @@ fn runTriCmd(allocator: std.mem.Allocator, project_root: []const u8, args: []con
 /// Run zig build in the project root to verify compilation.
 fn runZigBuild(allocator: std.mem.Allocator, project_root: []const u8) bool {
     // Try common zig paths — mu-agent may start without full PATH
+    const io = tri_io.get();
     const zig_bin: []const u8 = blk: {
-        std.fs.accessAbsolute("/opt/homebrew/bin/zig", .{}) catch {
-            std.fs.accessAbsolute("/usr/local/bin/zig", .{}) catch {
+        std.Io.Dir.accessAbsolute(io, "/opt/homebrew/bin/zig", .{}) catch {
+            std.Io.Dir.accessAbsolute(io, "/usr/local/bin/zig", .{}) catch {
                 break :blk "zig"; // fallback to PATH lookup
             };
             break :blk "/usr/local/bin/zig";
         };
         break :blk "/opt/homebrew/bin/zig";
     };
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ zig_bin, "build" },
         .cwd = project_root,
@@ -77,7 +81,7 @@ fn runZigBuild(allocator: std.mem.Allocator, project_root: []const u8) bool {
     allocator.free(result.stderr);
 
     return switch (result.term) {
-        .Exited => |c| c == 0,
+        .exited => |c| c == 0,
         else => false,
     };
 }
@@ -93,15 +97,16 @@ fn writeHeartbeat(
     test_ok: bool,
 ) void {
     var path_buf: [512]u8 = undefined;
+    const io = tri_io.get();
     const dir_path = std.fmt.bufPrint(&path_buf, "{s}/.trinity/mu", .{project_root}) catch return;
-    std.fs.cwd().makePath(dir_path) catch |err| {
+    std.Io.Dir.cwd().createDirPath(io, dir_path) catch |err| {
         std.log.debug("mu_loop: failed to create heartbeat dir: {}", .{err});
     };
 
     var file_buf: [512]u8 = undefined;
     const file_path = std.fmt.bufPrint(&file_buf, "{s}/.trinity/mu/heartbeat.json", .{project_root}) catch return;
 
-    const ts_raw = std.time.timestamp();
+    const ts_raw = tri_time.timestamp();
     const timestamp: u64 = if (ts_raw >= 0) @intCast(ts_raw) else 0;
     const json = std.fmt.allocPrint(
         allocator,
@@ -110,9 +115,9 @@ fn writeHeartbeat(
     ) catch return;
     defer allocator.free(json);
 
-    const file = std.fs.cwd().createFile(file_path, .{}) catch return;
-    defer file.close();
-    file.writeAll(json) catch |err| {
+    const file = std.Io.Dir.cwd().createFile(io, file_path, .{}) catch return;
+    defer file.close(io);
+    file.writeStreamingAll(io, json) catch |err| {
         std.log.warn("mu_loop: failed to write heartbeat: {}", .{err});
     };
 }
@@ -134,10 +139,10 @@ fn readErrorsFromDb(allocator: std.mem.Allocator, project_root: []const u8) u32 
     var path_buf: [512]u8 = undefined;
     const db_path = std.fmt.bufPrint(&path_buf, "{s}/.trinity/mu/learning_db.json", .{project_root}) catch return 0;
 
-    const file = std.fs.cwd().openFile(db_path, .{}) catch return 0;
-    defer file.close();
-
-    const content = file.readToEndAlloc(allocator, 64 * 1024) catch return 0;
+    // readFileAlloc is the 0.16 open + read-to-end + close in one call; both
+    // the old open failure and the old read failure land in the same catch,
+    // which already returned 0 for either.
+    const content = std.Io.Dir.cwd().readFileAlloc(tri_io.get(), db_path, allocator, .limited(64 * 1024)) catch return 0;
     defer allocator.free(content);
 
     // Find "total_errors_scanned": N
@@ -270,7 +275,7 @@ pub fn run(allocator: std.mem.Allocator, config: Config) !void {
         if (config.max_wakes > 0 and wake >= config.max_wakes) break;
 
         std.debug.print("[mu-agent] Sleeping {d}s...\n", .{config.sleep_interval_s});
-        std.Thread.sleep(config.sleep_interval_s * std.time.ns_per_s);
+        tri_time.sleep(config.sleep_interval_s * std.time.ns_per_s);
     }
 
     std.debug.print("[mu-agent] Done.\n", .{});

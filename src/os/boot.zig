@@ -3,6 +3,7 @@
 // Temporal Trinity v1.0 — Order #021: ETERNAL ASCENSION
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const sacred = @import("sacred");
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -189,7 +190,7 @@ pub const TrinityOS = struct {
 
     /// FULL BOOT SEQUENCE
     pub fn boot(self: *Self, mode: BootMode) !void {
-        const start = std.time.nanoTimestamp();
+        const start = tri_time.nanoTimestamp();
 
         // Print banner
         self.printBanner(mode);
@@ -215,7 +216,7 @@ pub const TrinityOS = struct {
             self.boot_state.phase = .ready;
         }
 
-        const end = std.time.nanoTimestamp();
+        const end = tri_time.nanoTimestamp();
         self.boot_state.uptime_ns = @intCast(end - start);
 
         // Ready message

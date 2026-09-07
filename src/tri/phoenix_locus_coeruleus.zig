@@ -9,6 +9,8 @@
 // ═══════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const qt = @import("queen_types.zig");
 const hippocampus = @import("hippocampus.zig");
@@ -100,7 +102,7 @@ pub const Alert = struct {
         const len = @min(text.len, self.message.len);
         @memcpy(self.message[0..len], text[0..len]);
         self.message_len = len;
-        self.timestamp = std.time.timestamp();
+        self.timestamp = tri_time.timestamp();
     }
 };
 
@@ -212,7 +214,7 @@ pub fn evaluateInteroception(state: insula.InternalState) ArousalLevel {
 /// Decay arousal over time (natural relaxation)
 pub fn decayArousal(state: *LocusState, decay_sec: u32) void {
     _ = decay_sec;
-    const now = std.time.timestamp();
+    const now = tri_time.timestamp();
     const last_alert_age = now - state.last_alert.timestamp;
 
     // Fast decay: lose 1 level per 5 minutes of no alerts
@@ -244,18 +246,18 @@ const LOCUS_STATE_PATH = ".trinity/queen/locus_state.json";
 
 /// Save LC state to file
 pub fn saveState(state: LocusState) void {
-    var file = std.fs.cwd().openFile(LOCUS_STATE_PATH, .{ .mode = .write_only }) catch {
+    const io = tri_io.get();
+    const file = std.Io.Dir.cwd().openFile(io, LOCUS_STATE_PATH, .{ .mode = .write_only }) catch {
         // Create parent dirs if missing
-        std.fs.cwd().makePath(".trinity/queen") catch return;
-        return std.fs.cwd().createFile(LOCUS_STATE_PATH, .{}) catch |err| {
-            _ = err;
-            return;
-        };
+        std.Io.Dir.cwd().createDirPath(io, ".trinity/queen") catch return;
+        const created = std.Io.Dir.cwd().createFile(io, LOCUS_STATE_PATH, .{}) catch return;
+        created.close(io);
+        return;
     };
-    defer file.close();
+    defer file.close(io);
 
     // Truncate existing file
-    file.setEndPos(0) catch {};
+    file.setLength(io, 0) catch {};
 
     var buf: [512]u8 = undefined;
     const msg = std.fmt.bufPrint(&buf,
@@ -266,19 +268,17 @@ pub fn saveState(state: LocusState) void {
         state.last_alert.timestamp,
     }) catch return;
 
-    file.writeAll(msg) catch {};
+    file.writeStreamingAll(io, msg) catch {};
 }
 
 /// Load LC state from file (returns default if missing)
 pub fn loadState() LocusState {
-    const file = std.fs.cwd().openFile(LOCUS_STATE_PATH, .{}) catch return LocusState{};
-    defer file.close();
-
+    // Whole small file into a fixed buffer; a short read is normal.
+    const io = tri_io.get();
     var buf: [512]u8 = undefined;
-    const n = file.readAll(&buf) catch return LocusState{};
-    if (n == 0) return LocusState{};
+    const data = std.Io.Dir.cwd().readFile(io, LOCUS_STATE_PATH, &buf) catch return LocusState{};
+    if (data.len == 0) return LocusState{};
 
-    const data = buf[0..n];
     var state = LocusState{};
 
     // Parse JSON manually (avoid full JSON parser for simplicity)
@@ -327,7 +327,7 @@ pub fn health() CellHealth {
     return CellHealth{
         .status = .healthy,
         .cycle = 0,
-        .last_check = std.time.timestamp(),
+        .last_check = tri_time.timestamp(),
     };
 }
 
@@ -575,9 +575,9 @@ test "locus_coeruleus — Alert setMessage updates timestamp" {
 
     try std.testing.expectEqual(@as(i64, 0), alert.timestamp);
 
-    const before = std.time.timestamp();
+    const before = tri_time.timestamp();
     alert.setMessage("Test");
-    const after = std.time.timestamp();
+    const after = tri_time.timestamp();
 
     try std.testing.expect(alert.timestamp >= before);
     try std.testing.expect(alert.timestamp <= after);
@@ -695,7 +695,7 @@ test "locus_coeruleus — triggerAlarm only raises arousal if higher" {
 test "locus_coeruleus — decayArousal from emergency" {
     var state = init(sinkFn);
     state.arousal = .emergency;
-    state.last_alert.timestamp = std.time.timestamp() - 400; // 400 seconds ago
+    state.last_alert.timestamp = tri_time.timestamp() - 400; // 400 seconds ago
 
     decayArousal(&state, 300);
 
@@ -715,7 +715,7 @@ test "locus_coeruleus — decayArousal from sleep stays sleep" {
 test "locus_coeruleus — decayArousal recent alert no decay" {
     var state = init(sinkFn);
     state.arousal = .alarm;
-    state.last_alert.timestamp = std.time.timestamp(); // Just now
+    state.last_alert.timestamp = tri_time.timestamp(); // Just now
 
     decayArousal(&state, 300);
 

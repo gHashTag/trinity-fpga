@@ -10,6 +10,8 @@
 //! - Human-approval gates for critical patches
 
 const std = @import("std");
+const tri_io = @import("tri_io");
+const tri_time = @import("tri_time");
 const PatchValidator = @import("validator.zig").PatchValidator;
 
 /// Rollback manager for transaction-safe patching
@@ -27,20 +29,22 @@ pub const RollbackManager = struct {
 
     /// Create backup of a file before patching
     pub fn createBackup(self: *RollbackManager, file_path: []const u8) ![]const u8 {
+        const io = tri_io.get();
+
         // Read original file
-        const source = try std.fs.cwd().readFileAlloc(self.allocator, file_path, 10_000_000);
+        const source = try std.Io.Dir.cwd().readFileAlloc(io, file_path, self.allocator, .limited(10_000_000));
         defer self.allocator.free(source);
 
         // Create backup filename with timestamp
-        const timestamp = std.time.timestamp();
+        const timestamp = tri_time.timestamp();
         const backup_path = try std.fmt.allocPrint(self.allocator, "{s}/{s}.{d}.bak", .{ self.backup_dir, std.fs.path.basename(file_path), timestamp });
         errdefer self.allocator.free(backup_path);
 
         // Ensure backup directory exists
-        try std.fs.cwd().makePath(self.backup_dir);
+        try std.Io.Dir.cwd().createDirPath(io, self.backup_dir);
 
         // Write backup
-        try std.fs.cwd().writeFile(.{
+        try std.Io.Dir.cwd().writeFile(io, .{
             .sub_path = backup_path,
             .data = source,
         });
@@ -50,12 +54,14 @@ pub const RollbackManager = struct {
 
     /// Restore from backup
     pub fn rollback(self: *RollbackManager, file_path: []const u8, backup_path: []const u8) !void {
+        const io = tri_io.get();
+
         // Read backup
-        const backup_content = try std.fs.cwd().readFileAlloc(self.allocator, backup_path, 10_000_000);
+        const backup_content = try std.Io.Dir.cwd().readFileAlloc(io, backup_path, self.allocator, .limited(10_000_000));
         defer self.allocator.free(backup_content);
 
         // Restore original file
-        try std.fs.cwd().writeFile(.{
+        try std.Io.Dir.cwd().writeFile(io, .{
             .sub_path = file_path,
             .data = backup_content,
         });
@@ -87,7 +93,7 @@ pub const RollbackManager = struct {
             };
 
             // Step 3: Write patched source atomically
-            try std.fs.cwd().writeFile(.{
+            try std.Io.Dir.cwd().writeFile(tri_io.get(), .{
                 .sub_path = self.file_path,
                 .data = patched_source,
             });
@@ -112,7 +118,7 @@ pub const RollbackManager = struct {
             if (self.committed) {
                 if (self.backup_path) |bp| {
                     // Remove backup file
-                    std.fs.cwd().deleteFile(bp) catch {};
+                    std.Io.Dir.cwd().deleteFile(tri_io.get(), bp) catch {};
                     self.backup_path = null;
                 }
             }
@@ -179,18 +185,19 @@ pub const RollbackManager = struct {
 test "RollbackManager: create and restore backup" {
     // Create a temp subdirectory in the test's working directory
     const temp_subdir = "rollback_test_dir";
+    const io = tri_io.get();
 
     // Create test file directly
     const test_file = try std.fmt.allocPrint(std.testing.allocator, "{s}/test.zig", .{temp_subdir});
     defer std.testing.allocator.free(test_file);
 
     // Create temp directory and test file
-    try std.fs.cwd().makePath(temp_subdir);
+    try std.Io.Dir.cwd().createDirPath(io, temp_subdir);
     defer {
-        std.fs.cwd().deleteTree(temp_subdir) catch {};
+        std.Io.Dir.cwd().deleteTree(io, temp_subdir) catch {};
     }
 
-    try std.fs.cwd().writeFile(.{
+    try std.Io.Dir.cwd().writeFile(io, .{
         .sub_path = test_file,
         .data = "pub fn test() void {}",
     });
@@ -204,7 +211,7 @@ test "RollbackManager: create and restore backup" {
     try std.testing.expect(backup_path.len > 0);
 
     // Modify file
-    try std.fs.cwd().writeFile(.{
+    try std.Io.Dir.cwd().writeFile(io, .{
         .sub_path = test_file,
         .data = "pub fn test() void { // modified }",
     });
@@ -213,7 +220,7 @@ test "RollbackManager: create and restore backup" {
     try manager.rollback(test_file, backup_path);
 
     // Verify restoration
-    const content = try std.fs.cwd().readFileAlloc(std.testing.allocator, test_file, 1000);
+    const content = try std.Io.Dir.cwd().readFileAlloc(io, test_file, std.testing.allocator, .limited(1000));
     defer std.testing.allocator.free(content);
 
     try std.testing.expectEqualStrings("pub fn test() void {}", content);

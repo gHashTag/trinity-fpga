@@ -8,6 +8,8 @@
 
 const std = @import("std");
 
+const tri_mutex = @import("tri_mutex");
+const tri_time = @import("tri_time");
 // ═══════════════════════════════════════════════════════════════════════════════
 // REPUTATION TYPES
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -45,7 +47,7 @@ pub const NodeReputationSystem = struct {
     entries: std.AutoHashMap([32]u8, NodeReputationEntry),
     weights: ReputationWeights,
     max_bandwidth_bytes: u64, // Normalization reference for bandwidth score
-    mutex: std.Thread.Mutex,
+    mutex: tri_mutex.Mutex,
     // v1.7: Decay configuration
     decay_enabled: bool,
     decay_half_life_secs: i64, // Half-life in seconds (default 24h = 86400)
@@ -83,7 +85,7 @@ pub const NodeReputationSystem = struct {
         }
         result.value_ptr.pos_total += 1;
         if (passed) result.value_ptr.pos_passed += 1;
-        result.value_ptr.last_activity_ts = std.time.timestamp();
+        result.value_ptr.last_activity_ts = tri_time.timestamp();
     }
 
     /// Record uptime for a node
@@ -103,7 +105,7 @@ pub const NodeReputationSystem = struct {
         }
         result.value_ptr.uptime_secs = uptime_secs;
         result.value_ptr.window_secs = window_secs;
-        result.value_ptr.last_activity_ts = std.time.timestamp();
+        result.value_ptr.last_activity_ts = tri_time.timestamp();
     }
 
     /// Record bandwidth contribution for a node
@@ -125,7 +127,7 @@ pub const NodeReputationSystem = struct {
         if (result.value_ptr.bandwidth_bytes > self.max_bandwidth_bytes) {
             self.max_bandwidth_bytes = result.value_ptr.bandwidth_bytes;
         }
-        result.value_ptr.last_activity_ts = std.time.timestamp();
+        result.value_ptr.last_activity_ts = tri_time.timestamp();
     }
 
     /// Get the composite reputation score for a node
@@ -162,7 +164,7 @@ pub const NodeReputationSystem = struct {
 
         // v1.7: Apply decay factor based on time since last activity
         if (self.decay_enabled and entry.last_activity_ts > 0 and self.decay_half_life_secs > 0) {
-            const now = std.time.timestamp();
+            const now = tri_time.timestamp();
             const elapsed = now - entry.last_activity_ts;
             if (elapsed > 0) {
                 // Exponential decay: score * 0.5^(elapsed / half_life)
@@ -251,7 +253,7 @@ pub const NodeReputationSystem = struct {
         self.mutex.lock();
         defer self.mutex.unlock();
 
-        var result = std.ArrayListUnmanaged(ReputationScore){};
+        var result = @as(std.ArrayListUnmanaged(ReputationScore), .empty);
         errdefer result.deinit(allocator);
 
         var iter = self.entries.keyIterator();
@@ -279,7 +281,7 @@ pub const NodeReputationSystem = struct {
         const ranked = try self.rankNodes(allocator);
         defer allocator.free(ranked);
 
-        var result = std.ArrayListUnmanaged([32]u8){};
+        var result = @as(std.ArrayListUnmanaged([32]u8), .empty);
         errdefer result.deinit(allocator);
 
         for (ranked) |entry| {
@@ -450,7 +452,7 @@ test "v1.7: decay halves score after one half-life" {
 
     // Manually set last_activity_ts to 1 hour ago
     if (system.entries.getPtr(node)) |entry| {
-        entry.last_activity_ts = std.time.timestamp() - 3600;
+        entry.last_activity_ts = tri_time.timestamp() - 3600;
     }
 
     const decayed = system.getScore(node);
@@ -490,7 +492,7 @@ test "v1.7: getScoreAtTime with future timestamp shows more decay" {
 
     system.enableDecay(3600); // 1-hour half-life
 
-    const now = std.time.timestamp();
+    const now = tri_time.timestamp();
 
     // Set last_activity to now
     if (system.entries.getPtr(node)) |entry| {

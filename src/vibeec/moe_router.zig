@@ -1,5 +1,6 @@
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 // ============================================================================
 // TRINITY: MoE ROUTER (PHASE 16) - Mixture of Experts with Ternary Weights
 // Inspired by Mixtral/BitNet architecture for efficient agentic routing
@@ -170,7 +171,7 @@ pub const MoERouter = struct {
 
     /// Route a task to the best experts using top-k gating
     pub fn route(self: *Self, task: []const u8) RouteResult {
-        const start_time = std.time.milliTimestamp();
+        const start_time = tri_time.milliTimestamp();
 
         self.projectTask(task);
 
@@ -212,7 +213,7 @@ pub const MoERouter = struct {
         result.selected_count = self.config.top_k;
 
         // Adaptive depth for mobile/low-latency
-        result.latency_ms = @intCast(std.time.milliTimestamp() - start_time);
+        result.latency_ms = @intCast(tri_time.milliTimestamp() - start_time);
         if (self.config.adaptive_depth and result.latency_ms > self.config.latency_threshold_ms) {
             result.selected_count = 1; // Reduce to single expert
             std.debug.print("⚡ [MoE] Adaptive mode: reduced to 1 expert (latency: {d}ms)\n", .{result.latency_ms});

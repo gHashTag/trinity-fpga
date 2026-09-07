@@ -5,6 +5,7 @@
 //! from astroweb.case.edu. Includes data bundling for offline operation.
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const Allocator = std.mem.Allocator;
 
 const SavchenkoParams = @import("mod.zig").SavchenkoParams;
@@ -45,22 +46,24 @@ pub const DownloadError = error{
 /// # Returns
 ///   JSON string containing parsed galaxy data
 pub fn downloadSPARCData(allocator: Allocator, use_cached: bool) ![]const u8 {
+    const io = tri_io.get();
+
     // Try cache first if requested
     if (use_cached) {
         const dir_opt = std.fs.path.dirname(CACHE_FILE);
         if (dir_opt) |dir| {
-            var dir_stream = std.fs.cwd().openDir(dir, .{}) catch {
+            var dir_stream = std.Io.Dir.cwd().openDir(io, dir, .{ .iterate = true }) catch {
                 return error.CacheError;
             };
-            defer dir_stream.close();
+            defer dir_stream.close(io);
 
             var dir_iter = dir_stream.iterate();
-            while (try dir_iter.next()) |entry| {
+            while (try dir_iter.next(io)) |entry| {
                 if (entry.kind == .file) {
                     if (std.mem.eql(u8, entry.name, std.fs.path.basename(CACHE_FILE))) {
                         std.debug.print("Using cached SPARC data from {s}...\n", .{CACHE_FILE});
 
-                        const cached_data = std.fs.cwd().readFileAlloc(allocator, CACHE_FILE, 10 * 1024 * 1024) catch |err| {
+                        const cached_data = std.Io.Dir.cwd().readFileAlloc(io, CACHE_FILE, allocator, .limited(10 * 1024 * 1024)) catch |err| {
                             std.debug.print("Failed to read cache: {}\n", .{err});
                             continue;
                         };
@@ -73,14 +76,8 @@ pub fn downloadSPARCData(allocator: Allocator, use_cached: bool) ![]const u8 {
     }
 
     // Try embedded data
-    if (std.fs.cwd().openFile(EMBEDDED_DATA_PATH, .{})) |file| {
-        defer file.close();
+    if (std.Io.Dir.cwd().readFileAlloc(io, EMBEDDED_DATA_PATH, allocator, .unlimited)) |data| {
         std.debug.print("Using embedded SPARC data...\n", .{});
-
-        const size = try file.getEndPos();
-        const data = try allocator.alloc(u8, @as(usize, size));
-        _ = try file.readAll(data);
-
         return data;
     } else |_| {}
 
@@ -148,20 +145,23 @@ pub fn parseSPARCData(allocator: Allocator, content: []const u8) ![]GalaxyDataPo
 ///   - data: Galaxy data to cache
 pub fn cacheData(allocator: Allocator, data: []const u8) !void {
     _ = allocator;
+    const io = tri_io.get();
     const dir = CACHE_DIR;
-    std.fs.makePathAbsolute(dir) catch {};
 
-    // Ensure directory exists
-    std.fs.cwd().makePath(dir) catch |err| {
+    // Ensure directory exists. (0.15 also called `std.fs.makePathAbsolute` here,
+    // which had no effect: CACHE_DIR is a relative path and that API takes only
+    // absolute ones. 0.16 has no absolute counterpart, and the cwd-relative call
+    // below is what actually created the directory, so the dead call is dropped.)
+    std.Io.Dir.cwd().createDirPath(io, dir) catch |err| {
         std.debug.print("Failed to create cache directory: {}\n", .{err});
         return error.CacheError;
     };
 
     // Write cache file
-    const file = try std.fs.cwd().createFile(CACHE_FILE, .{});
-    defer file.close();
+    const file = try std.Io.Dir.cwd().createFile(io, CACHE_FILE, .{});
+    defer file.close(io);
 
-    _ = try file.writeAll(data);
+    try file.writeStreamingAll(io, data);
 
     std.debug.print("SPARC data cached to {s}\n", .{CACHE_FILE});
 }
@@ -214,8 +214,9 @@ pub fn parseGalaxyName(content: []const u8) []const u8 {
 ///   - allocator: Memory allocator
 pub fn createEmbeddedDataFile(allocator: Allocator) !void {
     _ = allocator;
+    const io = tri_io.get();
     const dir = CACHE_DIR;
-    std.fs.cwd().makePath(dir) catch {};
+    std.Io.Dir.cwd().createDirPath(io, dir) catch {};
 
     const content =
         \\# SPARC Embedded Data Placeholder
@@ -226,10 +227,10 @@ pub fn createEmbeddedDataFile(allocator: Allocator) !void {
         \\# Example: 0.5 45.2 2.3 0.0 0.0 0.0 0.0 0.0
     ;
 
-    const file = try std.fs.cwd().createFile(EMBEDDED_DATA_PATH, .{});
-    defer file.close();
+    const file = try std.Io.Dir.cwd().createFile(io, EMBEDDED_DATA_PATH, .{});
+    defer file.close(io);
 
-    _ = try file.writeAll(content);
+    try file.writeStreamingAll(io, content);
 
     std.debug.print("Created embedded data placeholder: {s}\n", .{EMBEDDED_DATA_PATH});
 }

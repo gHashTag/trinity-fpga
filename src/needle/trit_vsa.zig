@@ -11,6 +11,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const math = std.math;
 const vsa = @import("vsa.zig");
 
@@ -400,7 +401,7 @@ pub const TritVSA = struct {
 /// Create random TritVSA with φ-seeded RNG
 pub fn randomTritVSA(allocator: std.mem.Allocator, dim: usize) !TritVSA {
     // Use timestamp + PHI for seed
-    const seed = @as(u64, @intFromFloat(std.time.nanoTimestamp() * PHI));
+    const seed = @as(u64, @intFromFloat(tri_time.nanoTimestamp() * PHI));
     return TritVSA.init(allocator, dim, seed);
 }
 

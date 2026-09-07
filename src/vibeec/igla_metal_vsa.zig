@@ -15,6 +15,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 // ═══════════════════════════════════════════════════════════════════════════════
 // CONSTANTS - Optimized for Apple Silicon cache lines (128 bytes)
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -264,7 +265,7 @@ pub const IGLAEngine = struct {
 
     /// Zero-shot reasoning: "What is the relation between A and B?"
     pub fn reason(self: *Self, concept_a: []const u8, concept_b: []const u8) !ReasoningResult {
-        var timer = try std.time.Timer.start();
+        var timer = try tri_time.Timer.start();
 
         const va = self.concepts.get(concept_a) orelse return error.ConceptNotFound;
         const vb = self.concepts.get(concept_b) orelse return error.ConceptNotFound;
@@ -294,7 +295,7 @@ pub const IGLAEngine = struct {
 
     /// Analogy: "A is to B as C is to ?"
     pub fn analogy(self: *Self, a: []const u8, b: []const u8, c: []const u8) !ReasoningResult {
-        var timer = try std.time.Timer.start();
+        var timer = try tri_time.Timer.start();
 
         const va = self.concepts.get(a) orelse return error.ConceptNotFound;
         const vb = self.concepts.get(b) orelse return error.ConceptNotFound;
@@ -359,7 +360,7 @@ pub fn benchmarkBind(allocator: std.mem.Allocator, dim: usize, iterations: usize
         r.deinit();
     }
 
-    var timer = try std.time.Timer.start();
+    var timer = try tri_time.Timer.start();
     for (0..iterations) |_| {
         var r = try bindSimd(allocator, &a, &b);
         r.deinit();
@@ -387,7 +388,7 @@ pub fn benchmarkDotProduct(allocator: std.mem.Allocator, dim: usize, iterations:
         _ = dotProductSimd(&a, &b);
     }
 
-    var timer = try std.time.Timer.start();
+    var timer = try tri_time.Timer.start();
     for (0..iterations) |_| {
         _ = dotProductSimd(&a, &b);
     }
@@ -414,7 +415,7 @@ pub fn benchmarkSimilarity(allocator: std.mem.Allocator, dim: usize, iterations:
         _ = cosineSimilaritySimd(&a, &b);
     }
 
-    var timer = try std.time.Timer.start();
+    var timer = try tri_time.Timer.start();
     for (0..iterations) |_| {
         _ = cosineSimilaritySimd(&a, &b);
     }

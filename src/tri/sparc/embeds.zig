@@ -5,6 +5,7 @@
 //! Enables offline operation without network access.
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const Allocator = std.mem.Allocator;
 
 /// Embedded SPARC data (if available at compile time)
@@ -41,17 +42,18 @@ pub fn ensureEmbeddedPlaceholder(allocator: Allocator) !void {
 
     if (hasEmbeddedData()) return;
 
+    const io = tri_io.get();
     const path = "var/trinity/sparc/embedded_data.txt";
-    std.fs.cwd().makePath("var/trinity/sparc") catch {};
+    std.Io.Dir.cwd().createDirPath(io, "var/trinity/sparc") catch {};
 
-    if (std.fs.cwd().openFile(path, .{})) |file| {
-        file.close();
+    if (std.Io.Dir.cwd().openFile(io, path, .{})) |file| {
+        file.close(io);
         return;
     } else |_| {}
 
     // Create placeholder
-    const file = try std.fs.cwd().createFile(path, .{});
-    defer file.close();
+    const file = try std.Io.Dir.cwd().createFile(io, path, .{});
+    defer file.close(io);
 
     const content =
         \\# SPARC Embedded Data Placeholder
@@ -66,7 +68,7 @@ pub fn ensureEmbeddedPlaceholder(allocator: Allocator) !void {
         \\0.0 0.0 0.0
     ;
 
-    _ = try file.writeAll(content);
+    try file.writeStreamingAll(io, content);
 }
 
 test "hasEmbeddedData returns boolean" {

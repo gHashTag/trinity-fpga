@@ -8,6 +8,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const reg_bytecode = @import("reg_bytecode.zig");
 const RegOpcode = reg_bytecode.RegOpcode;
@@ -211,7 +212,7 @@ pub const RegVM = struct {
     // ═══════════════════════════════════════════════════════════════════════════
 
     pub fn run(self: *Self) VMError!Value {
-        self.start_time = std.time.nanoTimestamp();
+        self.start_time = tri_time.nanoTimestamp();
         self.halted = false;
 
         // Cache frequently accessed fields
@@ -591,7 +592,7 @@ pub const RegVM = struct {
         }
 
         self.ip = ip;
-        self.end_time = std.time.nanoTimestamp();
+        self.end_time = tri_time.nanoTimestamp();
 
         // Return R0 as result
         return self.regs[0];

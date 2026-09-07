@@ -11,6 +11,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -56,7 +57,7 @@ const MockHippocampus = struct {
                 .service_name = try self.allocator.dupe(u8, service_name),
                 .step = step,
                 .ppl = ppl,
-                .last_updated = std.time.timestamp(),
+                .last_updated = tri_time.timestamp(),
             };
             errdefer self.allocator.free(value.service_name);
             try self.workers.put(service_name, value);
@@ -73,13 +74,13 @@ const MockHippocampus = struct {
                 .service_name = try self.allocator.dupe(u8, service_name),
                 .step = step,
                 .ppl = ppl,
-                .last_updated = std.time.timestamp(),
+                .last_updated = tri_time.timestamp(),
             };
             errdefer self.allocator.free(value.service_name);
 
             try self.workers.put(key, value);
         }
-        self.last_refresh = std.time.timestamp();
+        self.last_refresh = tri_time.timestamp();
     }
 
     pub fn loadWorker(self: *const MockHippocampus, service_name: []const u8) ?WorkerState {
@@ -182,7 +183,7 @@ const MockACC = struct {
             const service_name = entry.key_ptr.*;
             const hippo_worker = entry.value_ptr.*;
 
-            const cache_age = std.time.timestamp() - hippo_worker.last_updated;
+            const cache_age = tri_time.timestamp() - hippo_worker.last_updated;
             if (cache_age > self.max_cache_age_sec) {
                 const conflict = Conflict{
                     .service_name = try self.allocator.dupe(u8, service_name),
@@ -268,7 +269,7 @@ const MockBasalGanglia = struct {
         const action = Action{
             .action_type = action_type,
             .service_name = try self.allocator.dupe(u8, service_name),
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
         };
         try self.executed_actions.append(self.allocator, action);
     }
@@ -381,7 +382,7 @@ const MockLocusCoeruleus = struct {
         const alarm = Alarm{
             .service_name = try self.allocator.dupe(u8, service_name),
             .severity = severity,
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
         };
         try self.alarms.append(self.allocator, alarm);
         self.arousal_level = if (severity == .critical) 3 else if (severity == .warning) 2 else 1;
@@ -681,13 +682,13 @@ test "integration_locus_alarm_propagation_latency" {
     var lc = MockLocusCoeruleus.init(allocator);
     defer lc.deinit();
 
-    const start = std.time.nanoTimestamp();
+    const start = tri_time.nanoTimestamp();
 
     try lc.triggerAlarm("worker-a", .info);
     try lc.triggerAlarm("worker-b", .warning);
     try lc.triggerAlarm("worker-c", .critical);
 
-    const end = std.time.nanoTimestamp();
+    const end = tri_time.nanoTimestamp();
     const elapsed_ms = @as(u64, @intFromFloat(@as(f64, @floatFromInt(end - start)) / 1_000_000.0));
 
     try std.testing.expectEqual(@as(usize, 3), lc.getAlarmCount());
@@ -800,13 +801,13 @@ test "integration_state_persistence_timestamps" {
 
     const service_name = "worker-ts";
 
-    const before_save = std.time.timestamp();
+    const before_save = tri_time.timestamp();
     try hippocampus.saveWorker(service_name, 11111, 1.11);
 
     const loaded = hippocampus.loadWorker(service_name);
     try std.testing.expect(loaded != null);
     try std.testing.expect(loaded.?.last_updated >= before_save);
-    try std.testing.expect(loaded.?.last_updated <= std.time.timestamp());
+    try std.testing.expect(loaded.?.last_updated <= tri_time.timestamp());
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

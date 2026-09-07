@@ -8,6 +8,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const time = std.time;
 const fs = std.fs;
@@ -192,17 +193,17 @@ pub const Timer = struct {
     start_ns: i128,
 
     pub fn start() Timer {
-        return .{ .start_ns = time.nanoTimestamp() };
+        return .{ .start_ns = tri_time.nanoTimestamp() };
     }
 
     pub fn elapsedMs(self: Timer) f64 {
-        const end_ns = time.nanoTimestamp();
+        const end_ns = tri_time.nanoTimestamp();
         const elapsed_ns = end_ns - self.start_ns;
         return @as(f64, @floatFromInt(elapsed_ns)) / 1_000_000.0;
     }
 
     pub fn elapsedUs(self: Timer) f64 {
-        const end_ns = time.nanoTimestamp();
+        const end_ns = tri_time.nanoTimestamp();
         const elapsed_ns = end_ns - self.start_ns;
         return @as(f64, @floatFromInt(elapsed_ns)) / 1_000.0;
     }
@@ -413,7 +414,7 @@ pub const BenchmarkRunner = struct {
         try writer.writeAll("{\n");
         try writer.writeAll("  \"benchmark\": \"Trinity Production Benchmark\",\n");
         try writer.print("  \"model\": \"{s}\",\n", .{self.config.model_name});
-        try writer.print("  \"timestamp\": {d},\n", .{time.timestamp()});
+        try writer.print("  \"timestamp\": {d},\n", .{tri_time.timestamp()});
         try writer.writeAll("  \"results\": [\n");
 
         for (self.results.items, 0..) |result, i| {
@@ -438,7 +439,7 @@ pub const BenchmarkRunner = struct {
     pub fn generateMarkdownReport(self: *BenchmarkRunner, writer: anytype) !void {
         try writer.writeAll("# Trinity Production Benchmark Results\n\n");
         try writer.print("**Model:** {s}\n\n", .{self.config.model_name});
-        try writer.print("**Timestamp:** {d}\n\n", .{time.timestamp()});
+        try writer.print("**Timestamp:** {d}\n\n", .{tri_time.timestamp()});
 
         try writer.writeAll("## Results\n\n");
         try writer.writeAll("| Test | Batch | Prompt | Output | Load (ms) | TTFT (ms) | Tok/s |\n");

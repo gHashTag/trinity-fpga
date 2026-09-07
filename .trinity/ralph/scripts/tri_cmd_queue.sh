@@ -2,7 +2,7 @@
 # TRI COMMAND QUEUE - FIFO command queue for Claude integration
 # Usage: ./tri_cmd_queue.sh {init|enqueue|dequeue|complete}
 
-RALPH_DIR="/Users/playra/trinity"
+RALPH_DIR="/Users/playom/trinity"
 QUEUE_DIR="$RALPH_DIR/.ralph/queue"
 INCOMING="$QUEUE_DIR/incoming.cmd"
 PROCESSING="$QUEUE_DIR/processing.lock"

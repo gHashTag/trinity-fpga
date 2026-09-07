@@ -11,6 +11,7 @@
 // ╚════════════════════════════════════════════════════════════════════════════╝
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const tqnn = @import("tqnn_inference.zig");
 const qutrit = @import("../../quantum/qutrit.zig");
 const vsa10k = @import("../../vsa/10k_vsa.zig");
@@ -76,12 +77,12 @@ pub fn run_layer_benchmark(allocator: std.mem.Allocator, config: BenchmarkConfig
     }
 
     // Benchmark
-    const start = std.time.nanoTimestamp();
+    const start = tri_time.nanoTimestamp();
     i = 0;
     while (i < config.iterations) : (i += 1) {
         _ = try layer.forward(input);
     }
-    const end = std.time.nanoTimestamp();
+    const end = tri_time.nanoTimestamp();
 
     const total_ns = @as(u64, @intCast(end - start));
     const avg_ns = total_ns / config.iterations;
@@ -116,12 +117,12 @@ pub fn run_hybrid_benchmark(allocator: std.mem.Allocator, config: BenchmarkConfi
     }
 
     // Benchmark
-    const start = std.time.nanoTimestamp();
+    const start = tri_time.nanoTimestamp();
     i = 0;
     while (i < config.iterations) : (i += 1) {
         _ = try engine.forward(input);
     }
-    const end = std.time.nanoTimestamp();
+    const end = tri_time.nanoTimestamp();
 
     const total_ns = @as(u64, @intCast(end - start));
     const avg_ns = total_ns / config.iterations;
@@ -167,12 +168,12 @@ pub fn run_scaling_benchmark(allocator: std.mem.Allocator, base_dim: usize, iter
         }
 
         // Benchmark
-        const start = std.time.nanoTimestamp();
+        const start = tri_time.nanoTimestamp();
         i = 0;
         while (i < iterations) : (i += 1) {
             _ = try engine.forward(input);
         }
-        const end = std.time.nanoTimestamp();
+        const end = tri_time.nanoTimestamp();
 
         const total_ns = @as(u64, @intCast(end - start));
         const ops_per_sec = @as(f64, @floatFromInt(iterations)) / @as(f64, @floatFromInt(total_ns)) * 1_000_000_000;

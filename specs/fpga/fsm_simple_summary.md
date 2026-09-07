@@ -216,9 +216,9 @@ LED behavior (active-low):
 
 ## Files Modified
 
-- **Created**: `/Users/playra/trinity-w1/specs/fpga/fsm_simple.tri` (367 lines)
-- **Retained**: `/Users/playra/trinity-w1/specs/fpga/fsm_simple.vibee` (103 lines)
-- **Verified**: `/Users/playra/trinity-w1/fpga/openxc7-synth/fsm_simple.v` (67 lines)
+- **Created**: `/Users/playom/trinity-fpga/specs/fpga/fsm_simple.tri` (367 lines)
+- **Retained**: `/Users/playom/trinity-fpga/specs/fpga/fsm_simple.vibee` (103 lines)
+- **Verified**: `/Users/playom/trinity-fpga/fpga/openxc7-synth/fsm_simple.v` (67 lines)
 
 ---
 

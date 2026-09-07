@@ -6,6 +6,8 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_mutex = @import("tri_mutex");
+const tri_time = @import("tri_time");
 const storage_mod = @import("storage.zig");
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -35,7 +37,7 @@ pub const ShardRebalancer = struct {
     target_replication: u32,
     rebalance_interval_secs: i64,
     last_rebalance_time: i64,
-    mutex: std.Thread.Mutex,
+    mutex: tri_mutex.Mutex,
 
     // Stats
     shards_rebalanced: u64,
@@ -69,7 +71,7 @@ pub const ShardRebalancer = struct {
 
         const result = try self.shard_locations.getOrPut(shard_hash);
         if (!result.found_existing) {
-            result.value_ptr.* = .{ .node_ids = .{} };
+            result.value_ptr.* = .{ .node_ids = .empty };
         }
 
         // Don't add duplicate node_ids
@@ -107,7 +109,7 @@ pub const ShardRebalancer = struct {
         self.mutex.lock();
         defer self.mutex.unlock();
 
-        var result = std.ArrayListUnmanaged(UnderReplicatedShard){};
+        var result = @as(std.ArrayListUnmanaged(UnderReplicatedShard), .empty);
         errdefer result.deinit(allocator);
 
         var iter = self.shard_locations.iterator();
@@ -185,7 +187,7 @@ pub const ShardRebalancer = struct {
         }
 
         self.shards_rebalanced += rebalanced;
-        self.last_rebalance_time = std.time.timestamp();
+        self.last_rebalance_time = tri_time.timestamp();
 
         return rebalanced;
     }
@@ -203,7 +205,7 @@ pub const ShardRebalancer = struct {
 
     /// Check if rebalance is needed
     pub fn shouldRebalance(self: *ShardRebalancer) bool {
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
         return (now - self.last_rebalance_time) >= self.rebalance_interval_secs;
     }
 
@@ -212,7 +214,7 @@ pub const ShardRebalancer = struct {
         self.mutex.lock();
         defer self.mutex.unlock();
 
-        var result = std.ArrayListUnmanaged([32]u8){};
+        var result = @as(std.ArrayListUnmanaged([32]u8), .empty);
         errdefer result.deinit(allocator);
 
         var iter = self.shard_locations.iterator();

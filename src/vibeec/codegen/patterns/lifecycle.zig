@@ -7,6 +7,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const types = @import("../types.zig");
 const builder_mod = @import("../builder.zig");
 
@@ -47,7 +48,7 @@ pub fn match(builder: *CodeBuilder, b: *const Behavior) !bool {
         builder.incIndent();
         try builder.writeLine("// Start process/service");
         try builder.writeLine("self.running = true;");
-        try builder.writeLine("self.start_time = std.time.timestamp();");
+        try builder.writeLine("self.start_time = tri_time.timestamp();");
         builder.decIndent();
         try builder.writeLine("}");
         return true;

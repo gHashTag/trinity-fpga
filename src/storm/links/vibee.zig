@@ -2,19 +2,23 @@
 //! Executes vibee binary to generate Zig code from .tri specification
 
 const std = @import("std");
+const tri_io = @import("tri_io");
+const tri_proc = @import("tri_proc");
+const tri_time = @import("tri_time");
 const storm = @import("../golden_chain.zig");
 
 pub const LinkID = 6;
 
 pub fn execute(allocator: std.mem.Allocator, task: []const u8, spec_file: []const u8) !storm.golden_chain.LinkResult {
     _ = task;
+    const io = tri_io.get();
     const log = std.log.scoped(.info);
 
     log.info("🧬 VIBEE Codegen: {s} → {s}", .{ spec_file, "Zig" });
 
     // Check if spec file exists (Zig 0.15: access() returns error, not bool)
     var exists = true;
-    if (std.fs.cwd().access(spec_file, .{})) |_| {
+    if (std.Io.Dir.cwd().access(io, spec_file, .{})) |_| {
         exists = false;
     }
 
@@ -30,7 +34,7 @@ pub fn execute(allocator: std.mem.Allocator, task: []const u8, spec_file: []cons
     // Execute vibee binary via std.process.Child
     const vibee_path = "zig-out/bin/vibee";
 
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &[_][]const u8{ vibee_path, "gen", spec_file },
     }) catch |err| {
@@ -49,12 +53,12 @@ pub fn execute(allocator: std.mem.Allocator, task: []const u8, spec_file: []cons
     const stderr = try allocator.dupe(u8, result.stderr.items);
     defer allocator.free(stderr);
 
-    const duration: u64 = @intCast(std.time.nanoTimestamp() - result.start_time);
+    const duration: u64 = @intCast(tri_time.nanoTimestamp() - result.start_time);
 
     // Check exit code (Zig 0.15: term is Term enum)
     const exit_code: u32 = switch (result.term) {
-        .Exited => |code| code,
-        .Signal, .Stopped, .Unknown => 1,
+        .exited => |code| code,
+        .signal, .stopped, .unknown => 1,
     };
 
     log.info("VIBEE exit code: {d}", .{exit_code});
@@ -99,7 +103,7 @@ pub fn execute(allocator: std.mem.Allocator, task: []const u8, spec_file: []cons
 
     // Verify generated file exists
     var gen_exists = true;
-    if (std.fs.cwd().access(output_path, .{})) |_| {
+    if (std.Io.Dir.cwd().access(io, output_path, .{})) |_| {
         gen_exists = false;
     }
 

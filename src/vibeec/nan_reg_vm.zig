@@ -8,6 +8,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const nan_value = @import("nan_value.zig");
 const NanValue = nan_value.NanValue;
 
@@ -110,7 +111,7 @@ pub const NanRegVM = struct {
     // ═══════════════════════════════════════════════════════════════════════════
 
     pub fn run(self: *Self) NanValue {
-        self.start_time = std.time.nanoTimestamp();
+        self.start_time = tri_time.nanoTimestamp();
 
         const code = self.code;
         var ip = self.ip;
@@ -257,7 +258,7 @@ pub const NanRegVM = struct {
         }
 
         self.ip = ip;
-        self.end_time = std.time.nanoTimestamp();
+        self.end_time = tri_time.nanoTimestamp();
 
         return self.regs[0]; // R0 = result
     }

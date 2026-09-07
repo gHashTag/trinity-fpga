@@ -12,6 +12,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 // ═══════════════════════════════════════════════════════════════════════════════
 // CONSTANTS
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -306,7 +307,7 @@ pub const SemanticEngine = struct {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn benchmarkAnalogy(engine: *SemanticEngine, a: []const u8, b: []const u8, c: []const u8, expected: []const u8) !void {
-    var timer = try std.time.Timer.start();
+    var timer = try tri_time.Timer.start();
 
     const result = engine.analogy(a, b, c) catch |err| {
         std.debug.print("  {s} - {s} + {s} = ERROR: {}\n", .{ a, b, c, err });
@@ -373,7 +374,7 @@ pub fn main() !void {
     const embedding_path = "data/models/embeddings/semantic_core.txt";
     const threshold: f32 = 0.15; // Quantization threshold
 
-    var timer = try std.time.Timer.start();
+    var timer = try tri_time.Timer.start();
     const word_count = engine.loadFromFile(embedding_path, threshold) catch |err| {
         print("  ERROR loading embeddings: {}\n", .{err});
         print("  Make sure {s} exists\n", .{embedding_path});
@@ -430,7 +431,7 @@ pub fn main() !void {
     print("═══════════════════════════════════════════════════════════════\n\n", .{});
 
     const iterations: usize = 1000;
-    timer = try std.time.Timer.start();
+    timer = try tri_time.Timer.start();
 
     for (0..iterations) |_| {
         _ = engine.analogy("man", "king", "woman") catch continue;

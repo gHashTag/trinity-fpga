@@ -3,6 +3,7 @@
 // φ² + 1/φ² = 3 | PHOENIX = 999
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const creator = @import("bogatyr_34_creator.zig");
 
 // ============================================================================
@@ -38,7 +39,7 @@ pub const Process = struct {
 
     pub fn waitTime(self: Process) i64 {
         if (self.waiting_since) |start| {
-            return std.time.milliTimestamp() - start;
+            return tri_time.milliTimestamp() - start;
         }
         return 0;
     }
@@ -77,7 +78,7 @@ pub const DeadlockScenario = struct {
 
     /// and:  with with inand with in
     pub fn simulateContention(self: *Self) void {
-        const now = std.time.milliTimestamp();
+        const now = tri_time.milliTimestamp();
 
         //  with onandon yes
         self.process_a.waiting_since = now;

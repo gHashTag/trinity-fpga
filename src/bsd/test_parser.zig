@@ -1,7 +1,7 @@
 const std = @import("std");
 
 pub fn main() !void {
-    const path = "/Users/playra/trinity-w1/data/ecdata/allbsd/allbsd.00000-09999";
+    const path = "/Users/playom/trinity-fpga/data/ecdata/allbsd/allbsd.00000-09999";
     const db = try std.fs.cwd().openFile(path, .{});
     defer db.close();
 

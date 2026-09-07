@@ -2,6 +2,7 @@
 //! Comprehensive tests for the main improvement loop
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const phi_types = @import("phi_types.zig");
 const phi_gate = @import("phi_gate.zig");
 const phi_loop = @import("phi_loop.zig");
@@ -306,7 +307,7 @@ test "ProgressTracker: completionPercentage at start" {
         .failed_links = 0,
         .skipped_links = 0,
         .average_pas_score = 0.0,
-        .start_time = std.time.timestamp(),
+        .start_time = tri_time.timestamp(),
     };
 
     try std.testing.expect(tracker.completionPercentage() < 1.0);
@@ -319,7 +320,7 @@ test "ProgressTracker: completionPercentage at midpoint" {
         .failed_links = 40,
         .skipped_links = 10,
         .average_pas_score = 0.92,
-        .start_time = std.time.timestamp(),
+        .start_time = tri_time.timestamp(),
     };
 
     try std.testing.expectApproxEqAbs(tracker.completionPercentage(), 50.0, 0.1);
@@ -332,7 +333,7 @@ test "ProgressTracker: successRate calculation" {
         .failed_links = 15,
         .skipped_links = 5,
         .average_pas_score = 0.92,
-        .start_time = std.time.timestamp(),
+        .start_time = tri_time.timestamp(),
     };
 
     const rate = tracker.successRate();
@@ -346,7 +347,7 @@ test "ProgressTracker: remainingLinks calculation" {
         .failed_links = 40,
         .skipped_links = 10,
         .average_pas_score = 0.92,
-        .start_time = std.time.timestamp(),
+        .start_time = tri_time.timestamp(),
     };
 
     try std.testing.expectEqual(@as(u32, 499), tracker.remainingLinks());
@@ -363,7 +364,7 @@ test "GeneratedCode: metrics calculation" {
         .output_path = "test.zig",
         .language = "zig",
         .pattern_id = 12345,
-        .timestamp = std.time.timestamp(),
+        .timestamp = tri_time.timestamp(),
     };
 
     const metrics = generated.metrics();

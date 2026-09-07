@@ -10,6 +10,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const types = @import("types.zig");
 const builder_mod = @import("builder.zig");
 const struct_emitters = @import("struct_emitters.zig");
@@ -969,14 +970,14 @@ pub fn tryGenerateVSABehavior(builder: *CodeBuilder, emission_state: *EmissionSt
             try builder.writeLine("        };");
             try builder.writeLine("        @memcpy(mgr.root_buf[0..root.len], root);");
             try builder.writeLine("        // Create root directory");
-            try builder.writeLine("        std.fs.makeDirAbsolute(root) catch |e| switch (e) {");
+            try builder.writeLine("        std.Io.Dir.makeDirAbsolute(tri_io.get(), root) catch |e| switch (e) {");
             try builder.writeLine("            error.PathAlreadyExists => {},");
             try builder.writeLine("            else => return e,");
             try builder.writeLine("        };");
             try builder.writeLine("        // Create shards subdirectory");
             try builder.writeLine("        var sbuf: [280]u8 = undefined;");
             try builder.writeLine("        const sdir = std.fmt.bufPrint(&sbuf, \"{s}/shards\", .{root}) catch unreachable;");
-            try builder.writeLine("        std.fs.makeDirAbsolute(sdir) catch |e| switch (e) {");
+            try builder.writeLine("        std.Io.Dir.makeDirAbsolute(tri_io.get(), sdir) catch |e| switch (e) {");
             try builder.writeLine("            error.PathAlreadyExists => {},");
             try builder.writeLine("            else => return e,");
             try builder.writeLine("        };");
@@ -1006,7 +1007,7 @@ pub fn tryGenerateVSABehavior(builder: *CodeBuilder, emission_state: *EmissionSt
             try builder.writeLine("        const hex = hashToHex(hash);");
             try builder.writeLine("        var pbuf: [350]u8 = undefined;");
             try builder.writeLine("        const spath = std.fmt.bufPrint(&pbuf, \"{s}/shards/{s}.shard\", .{ self.rootPath(), hex }) catch unreachable;");
-            try builder.writeLine("        const file = try std.fs.createFileAbsolute(spath, .{});");
+            try builder.writeLine("        const file = try std.Io.Dir.createFileAbsolute(tri_io.get(), spath, .{});");
             try builder.writeLine("        defer file.close();");
             try builder.writeLine("        try file.writeAll(data);");
             try builder.writeLine("        self.shard_count += 1;");
@@ -1019,7 +1020,7 @@ pub fn tryGenerateVSABehavior(builder: *CodeBuilder, emission_state: *EmissionSt
             try builder.writeLine("    pub fn get(self: *const ShardManager, hex: *const [64]u8, buf: []u8) !usize {");
             try builder.writeLine("        var pbuf: [350]u8 = undefined;");
             try builder.writeLine("        const spath = std.fmt.bufPrint(&pbuf, \"{s}/shards/{s}.shard\", .{ self.rootPath(), hex.* }) catch unreachable;");
-            try builder.writeLine("        const file = try std.fs.openFileAbsolute(spath, .{});");
+            try builder.writeLine("        const file = try std.Io.Dir.openFileAbsolute(tri_io.get(), spath, .{});");
             try builder.writeLine("        defer file.close();");
             try builder.writeLine("        return try file.readAll(buf);");
             try builder.writeLine("    }");
@@ -1029,7 +1030,7 @@ pub fn tryGenerateVSABehavior(builder: *CodeBuilder, emission_state: *EmissionSt
             try builder.writeLine("    pub fn delete(self: *ShardManager, hex: *const [64]u8) !void {");
             try builder.writeLine("        var pbuf: [350]u8 = undefined;");
             try builder.writeLine("        const spath = std.fmt.bufPrint(&pbuf, \"{s}/shards/{s}.shard\", .{ self.rootPath(), hex.* }) catch unreachable;");
-            try builder.writeLine("        try std.fs.deleteFileAbsolute(spath);");
+            try builder.writeLine("        try std.Io.Dir.deleteFileAbsolute(tri_io.get(), spath);");
             try builder.writeLine("        if (self.shard_count > 0) self.shard_count -= 1;");
             try builder.writeLine("    }");
             try builder.writeLine("");
@@ -1038,7 +1039,7 @@ pub fn tryGenerateVSABehavior(builder: *CodeBuilder, emission_state: *EmissionSt
             try builder.writeLine("    pub fn exists(self: *const ShardManager, hex: *const [64]u8) bool {");
             try builder.writeLine("        var pbuf: [350]u8 = undefined;");
             try builder.writeLine("        const spath = std.fmt.bufPrint(&pbuf, \"{s}/shards/{s}.shard\", .{ self.rootPath(), hex.* }) catch unreachable;");
-            try builder.writeLine("        const file = std.fs.openFileAbsolute(spath, .{}) catch return false;");
+            try builder.writeLine("        const file = std.Io.Dir.openFileAbsolute(tri_io.get(), spath, .{}) catch return false;");
             try builder.writeLine("        file.close();");
             try builder.writeLine("        return true;");
             try builder.writeLine("    }");
@@ -1048,7 +1049,7 @@ pub fn tryGenerateVSABehavior(builder: *CodeBuilder, emission_state: *EmissionSt
             try builder.writeLine("    pub fn count(self: *const ShardManager) !usize {");
             try builder.writeLine("        var sbuf: [280]u8 = undefined;");
             try builder.writeLine("        const sdir = std.fmt.bufPrint(&sbuf, \"{s}/shards\", .{self.rootPath()}) catch unreachable;");
-            try builder.writeLine("        var dir = try std.fs.openDirAbsolute(sdir, .{ .iterate = true });");
+            try builder.writeLine("        var dir = try std.Io.Dir.openDirAbsolute(tri_io.get(), sdir, .{ .iterate = true });");
             try builder.writeLine("        defer dir.close();");
             try builder.writeLine("        var n: usize = 0;");
             try builder.writeLine("        var it = dir.iterate();");
@@ -1063,7 +1064,7 @@ pub fn tryGenerateVSABehavior(builder: *CodeBuilder, emission_state: *EmissionSt
             try builder.writeLine("    pub fn saveManifest(self: *const ShardManager) !void {");
             try builder.writeLine("        var mbuf: [280]u8 = undefined;");
             try builder.writeLine("        const mpath = std.fmt.bufPrint(&mbuf, \"{s}/manifest.json\", .{self.rootPath()}) catch unreachable;");
-            try builder.writeLine("        const file = try std.fs.createFileAbsolute(mpath, .{});");
+            try builder.writeLine("        const file = try std.Io.Dir.createFileAbsolute(tri_io.get(), mpath, .{});");
             try builder.writeLine("        defer file.close();");
             try builder.writeLine("        // Write JSON manually to avoid format string brace escaping");
             try builder.writeLine("        var jbuf: [512]u8 = undefined;");

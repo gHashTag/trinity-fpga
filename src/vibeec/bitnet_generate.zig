@@ -5,6 +5,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const json = std.json;
 const model_mod = @import("bitnet_full_model.zig");
 
@@ -262,10 +263,10 @@ pub fn main() !void {
         std.debug.print("  Prompt tokens: {d}\n", .{prompt_tokens.len});
 
         // Generate
-        const start_time = std.time.milliTimestamp();
+        const start_time = tri_time.milliTimestamp();
         const generated = try model.generate(prompt_tokens, 32, 0.8);
         defer allocator.free(generated);
-        const end_time = std.time.milliTimestamp();
+        const end_time = tri_time.milliTimestamp();
 
         // Decode
         const text = try tokenizer.decode(generated);

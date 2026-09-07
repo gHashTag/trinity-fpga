@@ -148,7 +148,7 @@ cd VexRiscv
 sbt "runMain vexriscv.GenCore -rTrinityRiscvConfig"
 
 # 4. Copy generated VexRiscv.v to trinity_os/
-cp VexRiscv.v ../trinity-w1/fpga/openxc7-synth/trinity_os/
+cp VexRiscv.v ../trinity-fpga/fpga/openxc7-synth/trinity_os/
 ```
 
 ### Current Implementation

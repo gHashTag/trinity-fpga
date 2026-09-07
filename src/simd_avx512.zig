@@ -7,7 +7,8 @@
 // φ² + 1/φ² = 3
 
 const std = @import("std");
-const hybrid = vsa;  // one source: the module, not the local vsa_hybrid copy
+const tri_time = @import("tri_time");
+const hybrid = vsa; // one source: the module, not the local vsa_hybrid copy
 const vsa = @import("vsa");
 
 const HybridBigInt = hybrid.HybridBigInt;
@@ -358,7 +359,7 @@ test "benchmark AVX-512 vs AVX2 vs Scalar" {
         var b = vsa.randomVector(size, 67890);
 
         // Benchmark Scalar (naive loop)
-        var timer = std.time.Timer.start() catch unreachable;
+        var timer = tri_time.Timer.start() catch unreachable;
         for (0..iterations) |_| {
             var result = HybridBigInt.zero();
             result.mode = .unpacked_mode;

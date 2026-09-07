@@ -8,6 +8,7 @@
 //! Uses sacred mathematics constants (φ, μ, χ, σ, ε) for optimal convergence.
 
 const std = @import("std");
+const tri_rand = @import("tri_rand");
 const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayList;
 
@@ -103,7 +104,7 @@ pub const PatchChromosome = struct {
             // Initialize random genes [0, 1]
             var i: usize = 0;
             while (i < GENE_COUNT) : (i += 1) {
-                genes[i] = @as(f64, @floatFromInt(std.crypto.random.int(u64))) / @as(f64, @floatFromInt(std.math.maxInt(u64)));
+                genes[i] = @as(f64, @floatFromInt(tri_rand.random().int(u64))) / @as(f64, @floatFromInt(std.math.maxInt(u64)));
             }
         }
 
@@ -392,7 +393,7 @@ pub const MLPatchOptimizer = struct {
     fn createRandomPatch(self: *MLPatchOptimizer, target_code: []const u8) !AutoCodePatch {
         // Simple placeholder patch - in practice, would generate real variants
         const desc = try std.fmt.allocPrint(self.allocator, "Random patch {d}", .{
-            std.crypto.random.int(u32),
+            tri_rand.random().int(u32),
         });
         errdefer self.allocator.free(desc);
 
@@ -627,12 +628,12 @@ pub const MLPatchOptimizer = struct {
     /// Tournament selection
     fn tournamentSelect(self: *MLPatchOptimizer) !*PatchChromosome {
         // Select random candidates
-        var best_idx: usize = std.crypto.random.intRangeLessThan(usize, 0, self.population.items.len);
+        var best_idx: usize = tri_rand.random().intRangeLessThan(usize, 0, self.population.items.len);
         var best_fitness = self.population.items[best_idx].fitness;
 
         var i: usize = 1;
         while (i < TOURNAMENT_SIZE) : (i += 1) {
-            const idx = std.crypto.random.intRangeLessThan(usize, 0, self.population.items.len);
+            const idx = tri_rand.random().intRangeLessThan(usize, 0, self.population.items.len);
             const fitness = self.population.items[idx].fitness;
 
             if (fitness > best_fitness) {
@@ -658,7 +659,7 @@ pub const MLPatchOptimizer = struct {
             if (offspring_count >= self.config.population_size - elite_count) break;
 
             // Crossover?
-            if (@as(f64, @floatFromInt(std.crypto.random.int(u64))) / @as(f64, @floatFromInt(std.math.maxInt(u64))) < self.config.crossover_rate) {
+            if (@as(f64, @floatFromInt(tri_rand.random().int(u64))) / @as(f64, @floatFromInt(std.math.maxInt(u64))) < self.config.crossover_rate) {
                 const offspring = try self.crossover(pair.parent1, pair.parent2);
                 try new_population.append(self.allocator, offspring);
                 offspring_count += 1;
@@ -672,7 +673,7 @@ pub const MLPatchOptimizer = struct {
 
         // Fill remaining with mutations if needed
         while (new_population.items.len < self.config.population_size) {
-            const idx = std.crypto.random.intRangeLessThan(usize, 0, new_population.items.len);
+            const idx = tri_rand.random().intRangeLessThan(usize, 0, new_population.items.len);
             var clone = try new_population.items[idx].clone(self.allocator);
             try self.mutate(&clone, self.config.mutation_rate);
             try new_population.append(self.allocator, clone);
@@ -727,7 +728,7 @@ pub const MLPatchOptimizer = struct {
         parent2: *PatchChromosome,
     ) !PatchChromosome {
         // Single-point crossover on genes
-        const crossover_point = std.crypto.random.intRangeLessThan(usize, 0, GENE_COUNT);
+        const crossover_point = tri_rand.random().intRangeLessThan(usize, 0, GENE_COUNT);
 
         var child_genes: [GENE_COUNT]f64 = undefined;
         for (0..GENE_COUNT) |i| {
@@ -764,7 +765,7 @@ pub const MLPatchOptimizer = struct {
     /// Mutate chromosome
     fn mutate(self: *MLPatchOptimizer, chromosome: *PatchChromosome, rate: f64) !void {
         for (0..GENE_COUNT) |i| {
-            if (@as(f64, @floatFromInt(std.crypto.random.int(u64))) / @as(f64, @floatFromInt(std.math.maxInt(u64))) < rate) {
+            if (@as(f64, @floatFromInt(tri_rand.random().int(u64))) / @as(f64, @floatFromInt(std.math.maxInt(u64))) < rate) {
                 // Gaussian mutation
                 const gaussian = self.boxMuller();
                 const new_val = chromosome.genes[i] + gaussian * 0.2;
@@ -773,7 +774,7 @@ pub const MLPatchOptimizer = struct {
         }
 
         // Mutate confidence slightly
-        if (@as(f64, @floatFromInt(std.crypto.random.int(u64))) / @as(f64, @floatFromInt(std.math.maxInt(u64))) < rate) {
+        if (@as(f64, @floatFromInt(tri_rand.random().int(u64))) / @as(f64, @floatFromInt(std.math.maxInt(u64))) < rate) {
             const new_conf = chromosome.patch.confidence + (self.boxMuller() * 0.1);
             chromosome.patch.confidence = if (new_conf < 0.0) 0.0 else if (new_conf > 1.0) 1.0 else new_conf;
         }
@@ -783,8 +784,8 @@ pub const MLPatchOptimizer = struct {
     fn boxMuller(self: *MLPatchOptimizer) f64 {
         _ = self;
 
-        const u1_val = @as(f64, @floatFromInt(std.crypto.random.int(u64))) / @as(f64, @floatFromInt(std.math.maxInt(u64)));
-        const u2_val = @as(f64, @floatFromInt(std.crypto.random.int(u64))) / @as(f64, @floatFromInt(std.math.maxInt(u64)));
+        const u1_val = @as(f64, @floatFromInt(tri_rand.random().int(u64))) / @as(f64, @floatFromInt(std.math.maxInt(u64)));
+        const u2_val = @as(f64, @floatFromInt(tri_rand.random().int(u64))) / @as(f64, @floatFromInt(std.math.maxInt(u64)));
 
         return @sqrt(-2.0 * @log(u1_val)) * @cos(2.0 * std.math.pi * u2_val);
     }

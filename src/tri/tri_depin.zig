@@ -21,6 +21,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const railway_api = @import("railway_api.zig");
 const RailwayApi = railway_api.RailwayApi;
@@ -574,7 +575,7 @@ fn runDepinPeers(allocator: Allocator) !void {
     print("  {s}Node ID                    Host           Port    Quality   Status{s}\n", .{ DIM, RESET });
     print("  {s}──────────────────────────  ─────────────  ──────  ────────  ───────{s}\n", .{ DIM, RESET });
 
-    const now = @as(u64, @intCast(std.time.timestamp()));
+    const now = @as(u64, @intCast(tri_time.timestamp()));
 
     for (state.peers.items) |peer| {
         const status_emoji = if (peer.isHealthy())

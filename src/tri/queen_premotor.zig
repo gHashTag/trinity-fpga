@@ -7,6 +7,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const qt = @import("queen_types.zig");
 
 const Allocator = std.mem.Allocator;
@@ -257,7 +258,7 @@ pub const Sequencer = struct {
             .total_duration_ms = 0,
         };
 
-        const start = std.time.milliTimestamp();
+        const start = tri_time.milliTimestamp();
 
         for (0..seq.step_count) |i| {
             const step = &seq.steps[i];
@@ -274,14 +275,14 @@ pub const Sequencer = struct {
 
             // Delay if specified
             if (step.delay_ms > 0) {
-                std.Thread.sleep(step.delay_ms * std.time.ns_per_ms);
+                tri_time.sleep(step.delay_ms * std.time.ns_per_ms);
             }
 
             // Execute action (will be handled by M1 cortex)
             result.executed_count += 1;
         }
 
-        result.total_duration_ms = @intCast(@max(0, std.time.milliTimestamp() - start));
+        result.total_duration_ms = @intCast(@max(0, tri_time.milliTimestamp() - start));
         return result;
     }
 
@@ -403,7 +404,7 @@ pub const MotorPlan = struct {
     pub fn init(goal: Goal) MotorPlan {
         return .{
             .sequence = planFromGoal(goal),
-            .created_at = std.time.milliTimestamp(),
+            .created_at = tri_time.milliTimestamp(),
             .priority = goal.priority(),
             .source_goal = goal,
         };
@@ -1132,9 +1133,9 @@ test "Premotor — MotorPlan sequence from goal" {
 }
 
 test "Premotor — MotorPlan created_at is reasonable" {
-    const before = std.time.milliTimestamp();
+    const before = tri_time.milliTimestamp();
     const plan = MotorPlan.init(.heal_system);
-    const after = std.time.milliTimestamp();
+    const after = tri_time.milliTimestamp();
 
     try std.testing.expect(plan.created_at >= before);
     try std.testing.expect(plan.created_at <= after);
@@ -1455,9 +1456,9 @@ test "premotor — MotorPlan.init sets priority from Goal.priority" {
 }
 
 test "premotor — MotorPlan.init sets created_at to recent timestamp" {
-    const before = std.time.milliTimestamp();
+    const before = tri_time.milliTimestamp();
     const plan = MotorPlan.init(.heal_system);
-    const after = std.time.milliTimestamp();
+    const after = tri_time.milliTimestamp();
 
     try std.testing.expect(plan.created_at >= before);
     try std.testing.expect(plan.created_at <= after);

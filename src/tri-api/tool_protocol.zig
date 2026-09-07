@@ -290,7 +290,7 @@ test "unescapeString" {
 
 test "writeJsonEscaped" {
     var buf: [256]u8 = undefined;
-    var fbs = std.io.fixedBufferStream(&buf);
-    try writeJsonEscaped(fbs.writer(), "line1\nline2\ttab\"quote");
-    try std.testing.expectEqualStrings("line1\\nline2\\ttab\\\"quote", fbs.getWritten());
+    var w: std.Io.Writer = .fixed(&buf);
+    try writeJsonEscaped(&w, "line1\nline2\ttab\"quote");
+    try std.testing.expectEqualStrings("line1\\nline2\\ttab\\\"quote", w.buffered());
 }

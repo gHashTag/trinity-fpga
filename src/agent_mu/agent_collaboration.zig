@@ -11,6 +11,7 @@
 //! Fallback: Return null on timeout, use solo mode
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const diagnostic = @import("diagnostic.zig");
 const FixType = diagnostic.FixType;
 
@@ -245,7 +246,7 @@ pub const AgentCollaborator = struct {
 
     /// Generate correlation ID
     fn generateCorrelationId(self: *AgentCollaborator) ![]const u8 {
-        const timestamp = std.time.timestamp();
+        const timestamp = tri_time.timestamp();
         var rand: u64 = undefined;
         std.posix.getrandom(std.mem.asBytes(&rand)) catch {
             rand = @as(u64, @intCast(timestamp));
@@ -273,7 +274,7 @@ pub const AgentCollaborator = struct {
             .to = .phi,
             .message_type = .analysis_request,
             .payload = try self.allocator.dupe(u8, payload),
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
             .correlation_id = correlation_id,
             .response_expected = true,
         };
@@ -348,7 +349,7 @@ pub const AgentCollaborator = struct {
             .to = to,
             .message_type = msg_type,
             .payload = try self.allocator.dupe(u8, payload),
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
             .correlation_id = correlation_id,
             .response_expected = false,
         };
@@ -441,7 +442,7 @@ pub const AgentCollaborator = struct {
             .recommended_mu = mu * success_rate,
             .energy_harvested = 0.42,
             .sacred_valid = true,
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
         };
     }
 

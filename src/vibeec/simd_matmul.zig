@@ -4,6 +4,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 // SIMD vector types
 pub const Vec8f = @Vector(8, f32);
 pub const Vec4f = @Vector(4, f32);
@@ -1003,7 +1004,7 @@ test "benchmark_ternary_vs_f32_norm" {
     defer freeTernaryWeights(allocator, tw);
 
     // Benchmark f32 RMSNorm
-    var timer = std.time.Timer.start() catch unreachable;
+    var timer = tri_time.Timer.start() catch unreachable;
     for (0..iterations) |_| {
         simdRmsNorm(output, input, weights, 1e-5);
         std.mem.doNotOptimizeAway(output);

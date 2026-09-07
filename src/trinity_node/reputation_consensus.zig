@@ -6,6 +6,8 @@
 // =============================================================================
 
 const std = @import("std");
+const tri_mutex = @import("tri_mutex");
+const tri_time = @import("tri_time");
 const node_reputation_mod = @import("node_reputation.zig");
 
 // =============================================================================
@@ -64,7 +66,7 @@ pub const ReputationConsensus = struct {
     total_votes_cast: u64,
     fraud_detections: u64,
     penalties_applied: u64,
-    mutex: std.Thread.Mutex,
+    mutex: tri_mutex.Mutex,
 
     pub fn init(allocator: std.mem.Allocator) ReputationConsensus {
         return initWithConfig(allocator, .{});
@@ -74,7 +76,7 @@ pub const ReputationConsensus = struct {
         return .{
             .allocator = allocator,
             .config = config,
-            .votes = .{},
+            .votes = .empty,
             .total_rounds = 0,
             .successful_rounds = 0,
             .failed_rounds = 0,
@@ -104,7 +106,7 @@ pub const ReputationConsensus = struct {
             .voter_id = voter_id,
             .target_id = target_id,
             .reported_score = clamped,
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
         });
         self.total_votes_cast += 1;
     }
@@ -118,7 +120,7 @@ pub const ReputationConsensus = struct {
         self.total_rounds += 1;
 
         // Collect all votes for this target
-        var target_scores = std.ArrayListUnmanaged(f64){};
+        var target_scores = @as(std.ArrayListUnmanaged(f64), .empty);
         defer target_scores.deinit(self.allocator);
 
         for (self.votes.items) |vote| {
@@ -200,7 +202,7 @@ pub const ReputationConsensus = struct {
         node_ids: []const [32]u8,
         reputation: *node_reputation_mod.NodeReputationSystem,
     ) ![]ConsensusResult {
-        var results = std.ArrayListUnmanaged(ConsensusResult){};
+        var results = @as(std.ArrayListUnmanaged(ConsensusResult), .empty);
         errdefer results.deinit(self.allocator);
 
         for (node_ids) |nid| {

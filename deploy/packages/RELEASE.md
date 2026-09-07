@@ -12,12 +12,12 @@ For package maintainainers releasing new versions.
 
 Update in all files:
 
-- `/Users/playra/trinity-w1/src/trinity.zig` → `pub const version = "0.11.0";`
-- `/Users/playra/trinity-w1/homebrew-tap/Formula/tri.rb` → `version "0.11.0"`
-- `/Users/playra/trinity-w1/packages/homebrew/tri.rb` → `version "0.11.0"`
-- `/Users/playra/trinity-w1/packages/aur/PKGBUILD` → `pkgver=0.11.0`
-- `/Users/playra/trinity-w1/packages/npm/package.json` → `"version": "0.11.0"`
-- `/Users/playra/trinity-w1/package.json` → `"version": "0.11.0"`
+- `/Users/playom/trinity-fpga/src/trinity.zig` → `pub const version = "0.11.0";`
+- `/Users/playom/trinity-fpga/homebrew-tap/Formula/tri.rb` → `version "0.11.0"`
+- `/Users/playom/trinity-fpga/packages/homebrew/tri.rb` → `version "0.11.0"`
+- `/Users/playom/trinity-fpga/packages/aur/PKGBUILD` → `pkgver=0.11.0`
+- `/Users/playom/trinity-fpga/packages/npm/package.json` → `"version": "0.11.0"`
+- `/Users/playom/trinity-fpga/package.json` → `"version": "0.11.0"`
 
 ### 2. Update CHANGELOG
 
@@ -119,7 +119,7 @@ Or use GitHub web UI to:
 **Update formula:**
 
 ```bash
-cd /Users/playra/trinity-w1/homebrew-tap/Formula/
+cd "$(git rev-parse --show-toplevel)/homebrew-tap/Formula/"
 vim tri.rb
 ```
 
@@ -149,7 +149,7 @@ git push
 **Update PKGBUILD:**
 
 ```bash
-cd /Users/playra/trinity-w1/packages/aur/
+cd "$(git rev-parse --show-toplevel)/packages/aur/"
 vim PKGBUILD
 ```
 
@@ -172,9 +172,9 @@ git clone ssh://aur@aur.archlinux.org/tri-cli.git
 cd tri-cli
 
 # Copy files
-cp /Users/playra/trinity-w1/packages/aur/PKGBUILD .
-cp /Users/playra/trinity-w1/packages/aur/.SRCINFO .
-cp /Users/playra/trinity-w1/packages/aur/tri-cli-cli.install .
+cp /Users/playom/trinity-fpga/packages/aur/PKGBUILD .
+cp /Users/playom/trinity-fpga/packages/aur/.SRCINFO .
+cp /Users/playom/trinity-fpga/packages/aur/tri-cli-cli.install .
 
 # Commit
 git add PKGBUILD .SRCINFO tri-cli-cli.install
@@ -187,7 +187,7 @@ git push
 **Publish:**
 
 ```bash
-cd /Users/playra/trinity-w1/packages/npm/
+cd "$(git rev-parse --show-toplevel)/packages/npm/"
 npm publish
 ```
 

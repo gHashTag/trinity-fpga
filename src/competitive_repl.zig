@@ -1,6 +1,7 @@
 // @origin(spec:competitive_repl.tri) @regen(manual-impl)
 // @origin(manual) @regen(pending)
 const std = @import("std");
+const tri_time = @import("tri_time");
 const moe = @import("vibeec/moe_router.zig");
 const enhanced = @import("vibeec/enhanced_moe.zig");
 const tools = @import("vibeec/agent_tools.zig");
@@ -136,7 +137,7 @@ pub const CompetitiveRepl = struct {
             .agent_tools = tools.AgentTools.init(allocator),
             .completer = TabCompleter.init(),
             .progress = .{},
-            .session_start = std.time.timestamp(),
+            .session_start = tri_time.timestamp(),
         };
 
         return self;
@@ -230,7 +231,7 @@ pub const CompetitiveRepl = struct {
 
     /// Print session summary
     fn printSummary(self: *Self, writer: anytype) !void {
-        const duration = std.time.timestamp() - self.session_start;
+        const duration = tri_time.timestamp() - self.session_start;
         const tool_stats = self.agent_tools.getStats();
 
         try writer.print("\n", .{});
@@ -371,7 +372,7 @@ pub const CompetitiveRepl = struct {
 
     /// Print statistics
     fn printStats(self: *Self, writer: anytype) !void {
-        const duration = std.time.timestamp() - self.session_start;
+        const duration = tri_time.timestamp() - self.session_start;
         const tool_stats = self.agent_tools.getStats();
         const moe_stats = self.moe_engine.base_router.getStats();
 

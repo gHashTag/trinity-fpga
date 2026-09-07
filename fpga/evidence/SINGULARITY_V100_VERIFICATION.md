@@ -38,7 +38,7 @@ Runtime:    256 ms
 Tool:       xc3sprog via Platform Cable USB II
 Duration:   31.6 seconds
 Status:     ✓ SUCCESS
-Evidence:   /Users/playra/trinity-w1/fpga/evidence/singularity_v100_proof.jpg
+Evidence:   /Users/playom/trinity-fpga/fpga/evidence/singularity_v100_proof.jpg
 ```
 
 ---

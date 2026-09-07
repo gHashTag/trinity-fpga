@@ -7,6 +7,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const error_reporter = @import("error_reporter.zig");
 const Color = error_reporter.Color;
@@ -181,7 +182,7 @@ pub const CLI = struct {
         defer reporter.deinit();
 
         // Simulate compilation (placeholder for actual parser/codegen)
-        const start_time = std.time.nanoTimestamp();
+        const start_time = tri_time.nanoTimestamp();
 
         // Check for basic validity
         if (source.len == 0) {
@@ -195,7 +196,7 @@ pub const CLI = struct {
             _ = try reporter.reportError(.E004_MISSING_FIELD, span, "missing required field 'name'");
         }
 
-        const end_time = std.time.nanoTimestamp();
+        const end_time = tri_time.nanoTimestamp();
         const elapsed_ms = @as(f64, @floatFromInt(end_time - start_time)) / 1_000_000.0;
 
         // Render diagnostics
@@ -412,14 +413,13 @@ pub const CLI = struct {
 // MAIN
 // ═══════════════════════════════════════════════════════════════════════════════
 
-pub fn main() !u8 {
+pub fn main(init: std.process.Init.Minimal) !u8 {
     var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    const args = try std.process.argsAlloc(allocator);
-    defer std.process.argsFree(allocator, args);
-
+    const args = try init.args.toSlice(allocator);
+    defer allocator.free(args);
     var cli = CLI.init(allocator, null);
     return cli.run(args);
 }

@@ -9,14 +9,13 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 
-pub fn main() !u8 {
+pub fn main(init: std.process.Init.Minimal) !u8 {
     var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    const args = try std.process.argsAlloc(allocator);
-    defer std.process.argsFree(allocator, args);
-
+    const args = try init.args.toSlice(allocator);
+    defer allocator.free(args);
     if (args.len < 2) {
         std.debug.print(
             \\Legacy to VIBEE Converter - Cycle 67
@@ -104,7 +103,7 @@ fn convertFile(allocator: Allocator, input_path: []const u8, output_path: []cons
 
 /// Parse legacy format and convert to VIBEE format
 fn convertLegacyToVibee(allocator: Allocator, source: []const u8) ![]const u8 {
-    var buffer = std.ArrayListUnmanaged(u8){};
+    var buffer = @as(std.ArrayListUnmanaged(u8), .empty);
     defer buffer.deinit(allocator);
     try buffer.ensureTotalCapacity(allocator, 16384);
 
@@ -245,7 +244,7 @@ fn convertLegacyToVibee(allocator: Allocator, source: []const u8) ![]const u8 {
     }
 
     // Write header at beginning (we delayed it to get metadata first)
-    var output_buffer = std.ArrayListUnmanaged(u8){};
+    var output_buffer = @as(std.ArrayListUnmanaged(u8), .empty);
     defer output_buffer.deinit(allocator);
     try output_buffer.ensureTotalCapacity(allocator, buffer.items.len + 256);
 

@@ -296,7 +296,7 @@ fn parseBitVector(feature: []const u8) ?struct {
     // Find "= " followed by value
     const after_bracket = feature[bracket_pos + close_bracket + 2 ..]; // after ']'
     const eq_pos = std.mem.indexOf(u8, after_bracket, "= ") orelse return null;
-    const value_str = std.mem.trimLeft(u8, after_bracket[eq_pos + 2 ..], " ");
+    const value_str = std.mem.trimStart(u8, after_bracket[eq_pos + 2 ..], " ");
 
     // Parse value: N'bBBBBBBBBBBBBBBBBBBBB or N'hHHHH
     const value = parseFasmValue(value_str, hi + 1) orelse return null;

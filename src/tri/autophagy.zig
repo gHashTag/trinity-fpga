@@ -15,6 +15,9 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
+const tri_proc = @import("tri_proc");
+const tri_time = @import("tri_time");
 const verdict = @import("pathology.zig");
 const colors = @import("tri_colors.zig");
 const experience = @import("experience_hooks.zig");
@@ -131,7 +134,7 @@ pub fn runOuroborosCommand(allocator: std.mem.Allocator, args: []const []const u
 
 fn runOuroboros(allocator: std.mem.Allocator, config: OuroborosConfig) !void {
     var state = loadState();
-    if (state.started_at == 0) state.started_at = std.time.timestamp();
+    if (state.started_at == 0) state.started_at = tri_time.timestamp();
 
     const hard_limit = @min(config.max_cycles, 50);
 
@@ -243,7 +246,7 @@ fn runOuroboros(allocator: std.mem.Allocator, config: OuroborosConfig) !void {
 
 fn runQueen(allocator: std.mem.Allocator, config: OuroborosConfig) !void {
     var state = loadState();
-    if (state.started_at == 0) state.started_at = std.time.timestamp();
+    if (state.started_at == 0) state.started_at = tri_time.timestamp();
 
     // Initial diagnosis
     const input = verdict.collectInputs(allocator);
@@ -388,7 +391,7 @@ fn selectAction(rx: *const verdict.VerdictPrescription, strategy: Strategy, focu
                 if (rx.actions[i].is_auto) auto_count += 1;
             }
             if (auto_count > 0) {
-                const ts: u64 = @intCast(std.time.timestamp());
+                const ts: u64 = @intCast(tri_time.timestamp());
                 var target = ts % auto_count;
                 for (0..rx.action_count) |i| {
                     if (rx.actions[i].is_auto) {
@@ -398,7 +401,7 @@ fn selectAction(rx: *const verdict.VerdictPrescription, strategy: Strategy, focu
                 }
             }
             // Fallback: any action
-            const ts: u64 = @intCast(std.time.timestamp());
+            const ts: u64 = @intCast(tri_time.timestamp());
             const idx = ts % rx.action_count;
             break :blk &rx.actions[idx];
         },
@@ -456,13 +459,13 @@ fn commitCycle(allocator: std.mem.Allocator, cycle: u32, dimension: []const u8) 
 }
 
 fn runChild(allocator: std.mem.Allocator, argv: []const []const u8) u8 {
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = argv,
     }) catch return 1;
     defer allocator.free(result.stdout);
     defer allocator.free(result.stderr);
-    return result.term.Exited;
+    return result.term.exited;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -470,12 +473,8 @@ fn runChild(allocator: std.mem.Allocator, argv: []const []const u8) u8 {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn loadState() OuroborosState {
-    const file = std.fs.cwd().openFile(STATE_PATH, .{}) catch return OuroborosState{};
-    defer file.close();
-
     var buf: [1024]u8 = undefined;
-    const n = file.readAll(&buf) catch return OuroborosState{};
-    const content = buf[0..n];
+    const content = std.Io.Dir.cwd().readFile(tri_io.get(), STATE_PATH, &buf) catch return OuroborosState{};
 
     return OuroborosState{
         .cycle = parseJsonU32(content, "\"cycle\":") orelse 0,
@@ -488,11 +487,13 @@ fn loadState() OuroborosState {
 }
 
 fn saveState(state: OuroborosState) void {
-    // Ensure .trinity/ exists
-    std.fs.cwd().makePath(".trinity") catch {};
+    const io = tri_io.get();
 
-    const file = std.fs.cwd().createFile(STATE_PATH, .{}) catch return;
-    defer file.close();
+    // Ensure .trinity/ exists
+    std.Io.Dir.cwd().createDirPath(io, ".trinity") catch {};
+
+    const file = std.Io.Dir.cwd().createFile(io, STATE_PATH, .{}) catch return;
+    defer file.close(io);
 
     var buf: [512]u8 = undefined;
     const json = std.fmt.bufPrint(&buf,
@@ -505,11 +506,11 @@ fn saveState(state: OuroborosState) void {
         state.strategy.label(),
         state.started_at,
     }) catch return;
-    file.writeAll(json) catch {};
+    file.writeStreamingAll(io, json) catch {};
 }
 
 fn resetState() void {
-    std.fs.cwd().deleteFile(STATE_PATH) catch {};
+    std.Io.Dir.cwd().deleteFile(tri_io.get(), STATE_PATH) catch {};
     print("  {s}⟳ Ouroboros state reset{s}\n", .{ CYAN, RESET });
 }
 

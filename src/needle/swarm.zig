@@ -13,6 +13,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const trit_vsa = @import("trit_vsa.zig");
 const vsa = @import("vsa.zig");
 
@@ -102,7 +103,7 @@ pub const VSAPattern = struct {
 
     /// Age decay: newer patterns have higher weight
     pub fn ageDecay(self: *const VSAPattern) f32 {
-        const now = std.time.nanoTimestamp();
+        const now = tri_time.nanoTimestamp();
         const age_ns = now -| self.created_at_ns;
         const age_hours = @as(f32, @floatCast(age_ns)) / (3.6e12); // ns to hours
 
@@ -117,7 +118,7 @@ pub const VSAPattern = struct {
         } else {
             self.failure_count += 1;
         }
-        self.created_at_ns = std.time.nanoTimestamp();
+        self.created_at_ns = tri_time.nanoTimestamp();
     }
 };
 
@@ -178,7 +179,7 @@ pub const RefactorMemory = struct {
             .success_count = if (success) @as(u32, 1) else 0,
             .failure_count = if (success) @as(u32, 0) else 1,
             .weight = self.learning_rate,
-            .created_at_ns = std.time.nanoTimestamp(),
+            .created_at_ns = tri_time.nanoTimestamp(),
         };
 
         if (success) {

@@ -6,6 +6,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const storage_mod = @import("storage.zig");
 const shard_manager_mod = @import("shard_manager.zig");
 const manifest_dht_mod = @import("manifest_dht.zig");
@@ -142,7 +143,7 @@ test "12-node RS store and retrieve with progressive failures" {
     // Test 3: Kill more shards (up to parity_shards total) — RS still recovers
     // We already removed 1. Remove parity_shards - 1 more = total parity_shards missing.
     {
-        var removed_extras = std.ArrayListUnmanaged([]const u8){};
+        var removed_extras = @as(std.ArrayListUnmanaged([]const u8), .empty);
         defer {
             for (removed_extras.items) |d| allocator.free(d);
             removed_extras.deinit(allocator);
@@ -284,7 +285,9 @@ test "10-node manifest DHT resilience" {
 
     const NODE_COUNT = 10;
     var node_ids: [NODE_COUNT][32]u8 = undefined;
-    const addr = std.net.Address.initIp4(.{ 127, 0, 0, 1 }, 9333);
+    // Zig 0.16: `std.net.Address.initIp4` is gone; the replacement is the
+    // `std.Io.net.IpAddress` union, which is what `updateFromAnnounce` takes.
+    const addr: std.Io.net.IpAddress = .{ .ip4 = .{ .bytes = .{ 127, 0, 0, 1 }, .port = 9333 } };
 
     for (0..NODE_COUNT) |i| {
         @memset(&node_ids[i], @intCast(i + 1));
@@ -293,7 +296,7 @@ test "10-node manifest DHT resilience" {
             .available_bytes = 1024 * 1024,
             .total_bytes = 10 * 1024 * 1024,
             .shard_count = 0,
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
         };
         registry.updateFromAnnounce(announce, addr);
     }
@@ -503,7 +506,7 @@ test "v1.5: proof-of-storage challenge round across 8 nodes" {
         .challenge_id = bad_challenge.challenge_id,
         .prover_id = peer_ids[7],
         .proof_hash = [_]u8{0xFF} ** 32, // Wrong hash — simulates corrupted data
-        .timestamp = std.time.timestamp(),
+        .timestamp = tri_time.timestamp(),
     };
     const bad_valid = try engine.verifyProof(fake_proof, &nodes[0]);
     try std.testing.expect(!bad_valid);
@@ -527,7 +530,7 @@ test "v1.5: bandwidth aggregation across 10 nodes" {
         trackers[i] = storage_mod.RewardTracker{
             .shards_hosted = @as(u64, (i + 1)) * 10,
             .retrievals_served = @as(u64, (i + 1)) * 5,
-            .hosting_start = std.time.timestamp() - 3600,
+            .hosting_start = tri_time.timestamp() - 3600,
             .bytes_uploaded = @as(u64, (i + 1)) * 100 * 1024 * 1024, // (i+1)*100 MB
             .bytes_downloaded = @as(u64, (i + 1)) * 50 * 1024 * 1024, // (i+1)*50 MB
         };
@@ -656,7 +659,7 @@ test "v1.6: 20-node multi-file RS with churn, PoS, and bandwidth" {
         var tracker = storage_mod.RewardTracker{
             .shards_hosted = nodes[i].getStats().total_shards,
             .retrievals_served = @as(u64, i + 1) * 3,
-            .hosting_start = std.time.timestamp() - 3600,
+            .hosting_start = tri_time.timestamp() - 3600,
             .bytes_uploaded = @as(u64, (i + 1)) * 50 * 1024 * 1024,
             .bytes_downloaded = @as(u64, (i + 1)) * 25 * 1024 * 1024,
         };
@@ -968,7 +971,7 @@ test "v1.6: network stats report with 20 nodes" {
         var tracker = storage_mod.RewardTracker{
             .shards_hosted = nodes[i].getStats().total_shards,
             .retrievals_served = @as(u64, i + 1),
-            .hosting_start = std.time.timestamp() - 3600,
+            .hosting_start = tri_time.timestamp() - 3600,
             .bytes_uploaded = @as(u64, (i + 1)) * 10 * 1024 * 1024,
             .bytes_downloaded = @as(u64, (i + 1)) * 5 * 1024 * 1024,
         };
@@ -986,7 +989,7 @@ test "v1.6: network stats report with 20 nodes" {
             .available_bytes = @as(u64, (i + 1)) * 50 * 1024,
             .total_bytes = 1024 * 1024,
             .shard_count = @intCast(nodes[i].getStats().total_shards),
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
         }, null);
     }
 
@@ -1210,7 +1213,7 @@ test "v1.7: 30-node reputation decay — stale nodes lose ranking" {
     reputation.enableDecay(3600);
 
     // Make first 15 nodes "stale" (last activity 2 hours ago)
-    const now = std.time.timestamp();
+    const now = tri_time.timestamp();
     for (0..15) |i| {
         if (reputation.entries.getPtr(peer_ids[i])) |entry| {
             entry.last_activity_ts = now - 7200; // 2 hours ago
@@ -1286,7 +1289,7 @@ test "v1.7: 30-node prometheus metrics export" {
         var tracker = storage_mod.RewardTracker{
             .shards_hosted = nodes[i].getStats().total_shards,
             .retrievals_served = @as(u64, i + 1),
-            .hosting_start = std.time.timestamp() - 3600,
+            .hosting_start = tri_time.timestamp() - 3600,
             .bytes_uploaded = @as(u64, (i + 1)) * 10 * 1024 * 1024,
             .bytes_downloaded = @as(u64, (i + 1)) * 5 * 1024 * 1024,
         };
@@ -1847,7 +1850,7 @@ test "v1.9: 100-node erasure-coded repair — reconstruct from RS parity" {
     var scrubber = shard_scrubber_mod.ShardScrubber.init(allocator);
     defer scrubber.deinit();
     try scrubber.corrupted_shards.put(hashes[1], .{
-        .detected_at = std.time.timestamp(),
+        .detected_at = tri_time.timestamp(),
         .expected_hash = hashes[1],
         .actual_hash = [_]u8{0} ** 32,
     });

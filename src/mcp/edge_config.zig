@@ -6,6 +6,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 /// Edge node information
 pub const EdgeNode = struct {
     region: []const u8,
@@ -161,8 +162,8 @@ pub fn healthCheck(node: *const EdgeNode, allocator: std.mem.Allocator) !HealthC
     return .{
         .node = node,
         .healthy = true,
-        .latency_ms = node.target_latency_ms + @as(u32, @intFromFloat(@mod(@as(f64, @floatFromInt(std.time.nanoTimestamp())), 10))),
-        .timestamp = std.time.nanoTimestamp(),
+        .latency_ms = node.target_latency_ms + @as(u32, @intFromFloat(@mod(@as(f64, @floatFromInt(tri_time.nanoTimestamp())), 10))),
+        .timestamp = tri_time.nanoTimestamp(),
     };
 }
 

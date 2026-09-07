@@ -87,7 +87,7 @@ echo -e "${GREEN}✓ Pushed to gh-pages${NC}"
 echo ""
 
 # Step 6: Cleanup and verification
-cd /Users/playra/trinity-w1
+cd "$(git rev-parse --show-toplevel)"
 rm -rf "$DEPLOY_DIR"
 
 echo -e "${BLUE}[5/5] Deployment complete!${NC}"

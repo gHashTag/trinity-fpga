@@ -17,6 +17,8 @@
 //! Sacred Formula: phi^2 + 1/phi^2 = 3 = TRINITY
 
 const std = @import("std");
+const tri_mutex = @import("tri_mutex");
+const tri_time = @import("tri_time");
 const builtin = @import("builtin");
 
 // Direct imports - use module names, not file paths
@@ -136,14 +138,14 @@ pub const AsyncTaskResult = union(enum) {
 
 /// Thread-safe result channel for async operations
 pub const ResultChannel = struct {
-    mutex: std.Thread.Mutex,
+    mutex: tri_mutex.Mutex,
     cond: std.Thread.Condition,
     result: ?AsyncTaskResult,
     ready: bool,
 
     pub fn init() ResultChannel {
         return ResultChannel{
-            .mutex = std.Thread.Mutex{},
+            .mutex = tri_mutex.Mutex{},
             .cond = std.Thread.Condition{},
             .result = null,
             .ready = false,
@@ -171,10 +173,10 @@ pub const ResultChannel = struct {
 
         if (self.ready) return self.result;
 
-        const deadline = std.time.milliTimestamp() + @as(i64, @intCast(timeout_ms));
+        const deadline = tri_time.milliTimestamp() + @as(i64, @intCast(timeout_ms));
 
         while (!self.ready) {
-            const now = std.time.milliTimestamp();
+            const now = tri_time.milliTimestamp();
             if (now >= deadline) return null;
 
             const remaining = deadline - now;
@@ -229,7 +231,7 @@ const Worker = struct {
                 }
             } else |err| {
                 std.log.err("Worker {d} dequeue error: {}", .{ worker.id, err });
-                std.Thread.sleep(100 * std.time.ns_per_ms);
+                tri_time.sleep(100 * std.time.ns_per_ms);
             }
         }
 
@@ -245,7 +247,7 @@ pub const AsyncProcessor = struct {
 
     // Task queue
     task_queue: std.ArrayList(AsyncTask),
-    queue_mutex: std.Thread.Mutex,
+    queue_mutex: tri_mutex.Mutex,
     queue_cond: std.Thread.Condition,
 
     // Workers
@@ -290,7 +292,7 @@ pub const AsyncProcessor = struct {
             .basal_registry = basal_registry,
             .event_bus = event_bus,
             .task_queue = std.ArrayList(AsyncTask).initCapacity(allocator, 64) catch unreachable,
-            .queue_mutex = std.Thread.Mutex{},
+            .queue_mutex = tri_mutex.Mutex{},
             .queue_cond = std.Thread.Condition{},
             .workers = workers,
             .running = std.atomic.Value(bool).init(false),
@@ -363,12 +365,12 @@ pub const AsyncProcessor = struct {
         self.queue_mutex.lock();
         defer self.queue_mutex.unlock();
 
-        const deadline = std.time.milliTimestamp() + @as(i64, @intCast(timeout_ms));
+        const deadline = tri_time.milliTimestamp() + @as(i64, @intCast(timeout_ms));
 
         while (self.task_queue.items.len == 0) {
             if (!self.running.load(.acquire)) return null;
 
-            const now = std.time.milliTimestamp();
+            const now = tri_time.milliTimestamp();
             if (now >= deadline) return error.Timeout;
 
             const remaining = deadline - now;
@@ -466,7 +468,7 @@ pub const AsyncProcessor = struct {
             .active_claims = @as(u64, @intCast(basal_stats.active_claims)),
             .events_published = stats.published,
             .events_buffered = stats.buffered,
-            .timestamp = std.time.milliTimestamp(),
+            .timestamp = tri_time.milliTimestamp(),
         } };
     }
 
@@ -524,7 +526,7 @@ pub const AsyncProcessor = struct {
                 .ttl_ms = ttl_ms,
                 .result_channel = channel,
             } },
-            .allocated_at = std.time.milliTimestamp(),
+            .allocated_at = tri_time.milliTimestamp(),
             .timeout_ms = self.config.task_timeout_ms,
         };
 
@@ -552,7 +554,7 @@ pub const AsyncProcessor = struct {
                 .agent_id = agent_id_copy,
                 .result_channel = channel,
             } },
-            .allocated_at = std.time.milliTimestamp(),
+            .allocated_at = tri_time.milliTimestamp(),
             .timeout_ms = self.config.task_timeout_ms,
         };
 
@@ -578,7 +580,7 @@ pub const AsyncProcessor = struct {
                 .data = cloned_data,
                 .result_channel = channel,
             } },
-            .allocated_at = std.time.milliTimestamp(),
+            .allocated_at = tri_time.milliTimestamp(),
             .timeout_ms = self.config.task_timeout_ms,
         };
 
@@ -593,7 +595,7 @@ pub const AsyncProcessor = struct {
             .data = .{ .health_check = .{
                 .result_channel = channel,
             } },
-            .allocated_at = std.time.milliTimestamp(),
+            .allocated_at = tri_time.milliTimestamp(),
             .timeout_ms = self.config.task_timeout_ms,
         };
 
@@ -608,7 +610,7 @@ pub const AsyncProcessor = struct {
             .data = .{ .telemetry_snapshot = .{
                 .result_channel = channel,
             } },
-            .allocated_at = std.time.milliTimestamp(),
+            .allocated_at = tri_time.milliTimestamp(),
             .timeout_ms = self.config.task_timeout_ms,
         };
 
@@ -806,7 +808,7 @@ pub const BackgroundCollector = struct {
         std.log.debug("Background telemetry collector started", .{});
 
         while (collector.running.load(.acquire)) {
-            std.Thread.sleep(collector.interval_ms * std.time.ns_per_ms);
+            tri_time.sleep(collector.interval_ms * std.time.ns_per_ms);
 
             // Collect telemetry snapshot in background
             var channel = ResultChannel.init();
@@ -834,7 +836,7 @@ pub const BackgroundCollector = struct {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 var global_processor: ?*AsyncProcessor = null;
-var global_mutex = std.Thread.Mutex{};
+var global_mutex = tri_mutex.Mutex{};
 
 pub fn getGlobal(allocator: std.mem.Allocator, config: Config) !*AsyncProcessor {
     global_mutex.lock();
@@ -1242,9 +1244,9 @@ test "AsyncProcessor publish event non-blocking" {
     defer channel.deinit(allocator);
 
     // Publish should return immediately (non-blocking)
-    const before_publish = std.time.milliTimestamp();
+    const before_publish = tri_time.milliTimestamp();
     try processor.asyncPublishEvent(.task_claimed, event_data, &channel);
-    const after_publish = std.time.milliTimestamp();
+    const after_publish = tri_time.milliTimestamp();
 
     // Should take less than 10ms (just enqueue)
     const elapsed = after_publish - before_publish;
@@ -1570,7 +1572,7 @@ test "AsyncProcessor telemetry snapshot" {
         switch (result.?) {
             .telemetry => |tel| {
                 // Timestamp should be recent
-                const now = std.time.milliTimestamp();
+                const now = tri_time.milliTimestamp();
                 try std.testing.expect(tel.timestamp > 0);
                 try std.testing.expect(tel.timestamp <= now);
             },
@@ -1795,7 +1797,7 @@ test "BackgroundCollector short run" {
     try collector.start();
 
     // Let it run for a bit
-    std.Thread.sleep(150 * std.time.ns_per_ms);
+    tri_time.sleep(150 * std.time.ns_per_ms);
 
     collector.stop();
 }
@@ -2163,12 +2165,12 @@ test "ResultChannel very long timeout" {
     var channel = ResultChannel.init();
     defer channel.deinit(std.testing.allocator);
 
-    const before = std.time.milliTimestamp();
+    const before = tri_time.milliTimestamp();
 
     // Very long timeout without result
     const result = channel.wait(100000);
 
-    const elapsed = std.time.milliTimestamp() - before;
+    const elapsed = tri_time.milliTimestamp() - before;
 
     try std.testing.expect(result == null);
     try std.testing.expect(elapsed < 100); // Should return quickly
@@ -2262,7 +2264,7 @@ test "BackgroundCollector zero interval" {
 
     // Zero interval is valid (polls continuously)
     try collector.start();
-    std.Thread.sleep(50_000_000); // 50ms
+    tri_time.sleep(50_000_000); // 50ms
     collector.stop();
 
     try std.testing.expect(!collector.running.load(.acquire));
@@ -2404,11 +2406,11 @@ test "BackgroundCollector start stop cycle" {
 
     // Multiple start/stop cycles
     try collector.start();
-    std.Thread.sleep(25_000_000);
+    tri_time.sleep(25_000_000);
     collector.stop();
 
     try collector.start();
-    std.Thread.sleep(25_000_000);
+    tri_time.sleep(25_000_000);
     collector.stop();
 
     try collector.start();

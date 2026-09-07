@@ -6,6 +6,7 @@
 // =============================================================================
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const rl = @cImport({
     @cInclude("raylib.h");
 });
@@ -238,7 +239,7 @@ pub const TrinityNodeUI = struct {
     pub fn addLog(self: *TrinityNodeUI, level: LogEntry.LogLevel, message: []const u8) void {
         const idx = (self.log_head + self.log_count) % 100;
         self.logs[idx] = LogEntry{
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
             .level = level,
             .message = undefined,
             .message_len = @min(message.len, 255),

@@ -8,6 +8,7 @@
 //! - Automatic rollback on regression
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const sacred = @import("sacred_constants.zig");
 
 const Allocator = std.mem.Allocator;
@@ -96,7 +97,7 @@ pub const CircuitBreaker = struct {
 
     /// Initialize with default safety values
     pub fn init() CircuitBreaker {
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
         return .{
             .state = .closed,
             .failure_threshold = 5,
@@ -111,7 +112,7 @@ pub const CircuitBreaker = struct {
     /// Check if modifications are allowed
     pub fn canModify(self: *const CircuitBreaker) bool {
         if (self.state == .open) {
-            const now = std.time.timestamp();
+            const now = tri_time.timestamp();
             const elapsed = now - self.last_state_change;
             if (elapsed >= self.open_timeout_seconds) {
                 return true; // Timeout passed, can attempt recovery
@@ -126,7 +127,7 @@ pub const CircuitBreaker = struct {
         self.failure_count += 1;
         if (self.failure_count >= self.failure_threshold) {
             self.state = .open;
-            self.last_state_change = std.time.timestamp();
+            self.last_state_change = tri_time.timestamp();
         }
     }
 
@@ -151,7 +152,7 @@ pub const CircuitBreaker = struct {
     pub fn attemptRecovery(self: *CircuitBreaker) bool {
         if (self.state != .open) return true;
 
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
         const elapsed = now - self.last_state_change;
 
         if (elapsed >= self.open_timeout_seconds) {
@@ -331,7 +332,7 @@ pub const LivePatternManager = struct {
         const pattern_id = try std.fmt.allocPrint(self.allocator, "pattern_{d}", .{self.pattern_counter});
         errdefer self.allocator.free(pattern_id);
 
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
         const pattern = RuntimePattern{
             .id = pattern_id,
             .template = try self.allocator.dupe(u8, template),
@@ -373,7 +374,7 @@ pub const LivePatternManager = struct {
 
     /// Rollback to previous stable state
     pub fn rollback(self: *LivePatternManager, reason: []const u8) !void {
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
 
         // Create snapshot of current state
         if (self.active_patterns.items.len > 0) {
@@ -407,7 +408,7 @@ pub const LivePatternManager = struct {
     ) ?PatternMetrics {
         const pattern = self.findPattern(pattern_id) orelse return null;
 
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
         const age = now - pattern.applied_at;
 
         return .{
@@ -619,7 +620,7 @@ test "CircuitBreaker: recovery after timeout" {
     try std.testing.expectEqual(CircuitBreakerState.open, cb.state);
 
     // Set timeout to past
-    cb.last_state_change = std.time.timestamp() - 100;
+    cb.last_state_change = tri_time.timestamp() - 100;
 
     // Attempt recovery
     const recovered = cb.attemptRecovery();

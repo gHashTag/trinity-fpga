@@ -13,6 +13,7 @@
 //! φ² + 1/φ² = 3 | TRINITY
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const hdc = @import("hdc_core.zig");
 const cl = @import("continual_learner.zig");
 
@@ -75,7 +76,7 @@ pub const TrinityContinualAgent = struct {
                 .avg_forgetting = 0.0,
                 .max_forgetting = 0.0,
             },
-            .start_time = std.time.timestamp(),
+            .start_time = tri_time.timestamp(),
             .allocator = allocator,
         };
     }
@@ -159,7 +160,7 @@ pub const TrinityContinualAgent = struct {
 
     /// Get agent statistics
     pub fn getStats(self: *TrinityContinualAgent) AgentStats {
-        self.stats.uptime_seconds = @intCast(std.time.timestamp() - self.start_time);
+        self.stats.uptime_seconds = @intCast(tri_time.timestamp() - self.start_time);
         self.stats.total_classes = self.learner.prototypes.count();
         return self.stats;
     }
@@ -261,7 +262,7 @@ pub const TrinityContinualAgent = struct {
             .avg_forgetting = 0.0,
             .max_forgetting = 0.0,
         };
-        self.start_time = std.time.timestamp();
+        self.start_time = tri_time.timestamp();
     }
 };
 

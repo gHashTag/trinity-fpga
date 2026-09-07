@@ -4,6 +4,8 @@
 // ============================================================================
 
 const std = @import("std");
+const tri_proc = @import("tri_proc");
+const tri_time = @import("tri_time");
 const golden_chain = @import("golden_chain.zig");
 const tvc_gate_mod = @import("tvc_gate.zig");
 const tvc_corpus = @import("tvc_corpus");
@@ -94,13 +96,13 @@ pub const PipelineExecutor = struct {
             self.printLinkStart(link);
 
             // Execute link
-            const start_time = std.time.milliTimestamp();
+            const start_time = tri_time.milliTimestamp();
             var result = LinkResult.init(link);
             result.started_at = start_time;
             result.status = .in_progress;
 
             const link_result = self.executeLink(link);
-            result.completed_at = std.time.milliTimestamp();
+            result.completed_at = tri_time.milliTimestamp();
 
             if (link_result) |metrics| {
                 result.status = .completed;
@@ -257,7 +259,7 @@ pub const PipelineExecutor = struct {
         var metrics = LinkMetrics{};
 
         // Get git log for baseline
-        const result = std.process.Child.run(.{
+        const result = tri_proc.run(.{
             .allocator = self.allocator,
             .argv = &[_][]const u8{ "git", "log", "--oneline", "-5" },
         }) catch {
@@ -307,7 +309,7 @@ pub const PipelineExecutor = struct {
         // Run zig build test
         var metrics = LinkMetrics{};
 
-        const result = std.process.Child.run(.{
+        const result = tri_proc.run(.{
             .allocator = self.allocator,
             .argv = &[_][]const u8{ "zig", "build", "test" },
             .max_output_bytes = 10 * 1024 * 1024,
@@ -317,7 +319,7 @@ pub const PipelineExecutor = struct {
         defer self.allocator.free(result.stdout);
         defer self.allocator.free(result.stderr);
 
-        const success = result.term.Exited == 0;
+        const success = result.term.exited == 0;
         if (!success) {
             return ChainError.TestsFailedGate;
         }
@@ -332,13 +334,13 @@ pub const PipelineExecutor = struct {
         var metrics = LinkMetrics{};
 
         // Simple benchmark
-        const start = std.time.nanoTimestamp();
+        const start = tri_time.nanoTimestamp();
         var sum: u64 = 0;
         var i: u64 = 0;
         while (i < 1000) : (i += 1) {
             sum += i * i;
         }
-        const elapsed = std.time.nanoTimestamp() - start;
+        const elapsed = tri_time.nanoTimestamp() - start;
         std.mem.doNotOptimizeAway(&sum);
 
         metrics.duration_ms = @intCast(@divFloor(elapsed, 1_000_000));
@@ -404,7 +406,7 @@ pub const PipelineExecutor = struct {
 
     fn executeGit(self: *PipelineExecutor) ChainError!LinkMetrics {
         // Git commit - only show status for now (don't auto-commit)
-        const result = std.process.Child.run(.{
+        const result = tri_proc.run(.{
             .allocator = self.allocator,
             .argv = &[_][]const u8{ "git", "status", "--short" },
         }) catch {

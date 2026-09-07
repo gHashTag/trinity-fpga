@@ -147,7 +147,7 @@ The counter behavior implements:
 
 ## Validation Against Reference Implementation
 
-**Reference:** `/Users/playra/trinity-w1/fpga/openxc7-synth/counter.v`
+**Reference:** `/Users/playom/trinity-fpga/fpga/openxc7-synth/counter.v`
 
 ### Comparison Results
 
@@ -215,7 +215,7 @@ endmodule
 
 ### 2. Generate XDC Constraint File
 
-**Create:** `/Users/playra/trinity-w1/fpga/openxc7-synth/counter.xdc`
+**Create:** `/Users/playom/trinity-fpga/fpga/openxc7-synth/counter.xdc`
 
 ```tcl
 # Counter constraints for QMTECH XC7A100T-1FGG676C
@@ -274,9 +274,9 @@ The enhanced `counter.tri` specification is:
 ---
 
 **Files:**
-- **Spec (enhanced):** `/Users/playra/trinity-w1/specs/fpga/counter.tri`
-- **Spec (original):** `/Users/playra/trinity-w1/specs/fpga/counter.vibee`
-- **Reference:** `/Users/playra/trinity-w1/fpga/openxc7-synth/counter.v`
-- **Protocol SSOT:** `/Users/playra/trinity-w1/src/common/protocol.zig`
+- **Spec (enhanced):** `/Users/playom/trinity-fpga/specs/fpga/counter.tri`
+- **Spec (original):** `/Users/playom/trinity-fpga/specs/fpga/counter.vibee`
+- **Reference:** `/Users/playom/trinity-fpga/fpga/openxc7-synth/counter.v`
+- **Protocol SSOT:** `/Users/playom/trinity-fpga/src/common/protocol.zig`
 
 **φ² + 1/φ² = 3 | TRINITY FPGA Pipeline v1.0**

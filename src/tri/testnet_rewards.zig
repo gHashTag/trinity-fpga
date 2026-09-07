@@ -5,10 +5,11 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const testnet_config = @import("testnet_config.zig");
 
 /// Current unix time in whole seconds. Replaces the removed
-/// std.time.timestamp() -- Zig 0.16 moved wall-clock reads under the Io
+/// tri_time.timestamp() -- Zig 0.16 moved wall-clock reads under the Io
 /// vtable (Clock.real.now(io).toSeconds()), verified against `date +%s`
 /// before use here, not assumed from the API shape alone.
 fn nowSeconds(io: std.Io) u64 {

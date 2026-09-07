@@ -12,8 +12,9 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
-const Timer = std.time.Timer;
+const Timer = tri_time.Timer;
 const basal_ganglia = @import("basal_ganglia.zig");
 const reticular_aras = @import("reticular_aras.zig");
 const amygdala = @import("amygdala.zig");

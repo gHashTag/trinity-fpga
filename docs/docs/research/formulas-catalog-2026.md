@@ -330,7 +330,7 @@ Sacred Formula: `V = n × 3^k × π^m × φ^p × e^q × γ^r`
 **Document Version:** 1.3
 **Last Updated:** 2026-03-07 (Sprint 1C — PMNS Complete ✅)
 **Next Update:** After QCD Transition sprint
-**Repository:** `/Users/playra/trinity-w1/docsite/docs/research/formulas-catalog-2026.md`
+**Repository:** `docs/docs/research/formulas-catalog-2026.md`
 
 ---
 

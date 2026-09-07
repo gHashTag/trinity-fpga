@@ -637,7 +637,7 @@ pub const PSLQResults = struct {
     /// Create empty results
     pub fn init(allocator: std.mem.Allocator) PSLQResults {
         return .{
-            .candidates = .{},
+            .candidates = .empty,
             .allocator = allocator,
             .iterations = 0,
         };
@@ -944,7 +944,7 @@ pub const LatticeDensityResult = struct {
         return .{
             .count = 0,
             .classification = "UNKNOWN",
-            .points = .{},
+            .points = .empty,
             .allocator = allocator,
         };
     }

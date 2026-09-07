@@ -5,15 +5,14 @@
 const std = @import("std");
 const mcp_gen = @import("mcp_gen.zig");
 
-pub fn main() !void {
+pub fn main(init: std.process.Init.Minimal) !void {
     var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
     // Get output path from command line args
-    const args = try std.process.argsAlloc(allocator);
-    defer std.process.argsFree(allocator, args);
-
+    const args = try init.args.toSlice(allocator);
+    defer allocator.free(args);
     const output_path = if (args.len > 1)
         args[1]
     else

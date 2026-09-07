@@ -12,6 +12,7 @@
 // =============================================================================
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const api = @import("igla_api_server.zig");
 
 // =============================================================================
@@ -50,7 +51,7 @@ pub const TrainingExample = struct {
             .category = undefined,
             .category_len = @min(category.len, MAX_PATTERN_SIZE),
             .weight = 1.0,
-            .timestamp = @intCast(std.time.nanoTimestamp()),
+            .timestamp = @intCast(tri_time.nanoTimestamp()),
             .is_active = true,
         };
         @memcpy(example.input[0..example.input_len], input[0..example.input_len]);
@@ -1091,9 +1092,9 @@ pub fn runBenchmark() void {
     var total_time: i64 = 0;
 
     for (test_inputs) |input| {
-        const start: i64 = @intCast(std.time.nanoTimestamp());
+        const start: i64 = @intCast(tri_time.nanoTimestamp());
         const response = engine.infer(input);
-        const end: i64 = @intCast(std.time.nanoTimestamp());
+        const end: i64 = @intCast(tri_time.nanoTimestamp());
 
         total_time += end - start;
 

@@ -224,7 +224,7 @@ pub const UIContext = struct {
     pub fn init(allocator: std.mem.Allocator) Self {
         return .{
             .allocator = allocator,
-            .commands = .{},
+            .commands = .empty,
             .window_size = .{ .x = WINDOW_WIDTH, .y = WINDOW_HEIGHT },
             .mouse_pos = Vec2.zero(),
             .mouse_down = false,

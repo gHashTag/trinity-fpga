@@ -12,6 +12,7 @@
 //!   plateau_count = consecutive attempts without improvement
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const diagnostic = @import("diagnostic.zig");
 const FixType = diagnostic.FixType;
 const meta_learner = @import("meta_learner.zig");
@@ -132,7 +133,7 @@ pub const MetaMetaLearner = struct {
 
     /// Update learning velocities based on recent outcomes from meta-learner
     pub fn updateVelocities(self: *MetaMetaLearner, learner: *const meta_learner.MetaLearner) !void {
-        const current_time = std.time.timestamp();
+        const current_time = tri_time.timestamp();
         const time_delta = if (self.last_analysis_time > 0)
             current_time - self.last_analysis_time
         else

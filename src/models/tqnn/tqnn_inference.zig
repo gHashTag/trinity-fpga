@@ -12,6 +12,7 @@
 // ╚════════════════════════════════════════════════════════════════════════════╝
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const qutrit = @import("../../quantum/qutrit.zig");
 const vsa10k = @import("../../vsa/10k_vsa.zig");
 
@@ -188,7 +189,7 @@ pub const TQNNVSAInference = struct {
         const layer1 = try TQNNLayer1.init(allocator, config);
 
         // Initialize random VSA weights
-        var rng = std.Random.DefaultPrng.init(@intCast(std.time.nanoTimestamp()));
+        var rng = std.Random.DefaultPrng.init(@intCast(tri_time.nanoTimestamp()));
         const weights = try vsa10k.HyperVector10K.random(&rng);
 
         return .{

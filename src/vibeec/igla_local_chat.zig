@@ -18,6 +18,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 // ═══════════════════════════════════════════════════════════════════════════════
 // CHAT RESPONSE TYPES
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1140,8 +1141,11 @@ pub const IglaLocalChat = struct {
             "write",   "allocator",   "memory",      "vibee",
             "zig",     "rust",        "python",      "to",
             "toand",   "withandinto", "byandwithto", "onand",
-            "withyes", "withnotand",  "and",         "代码",
-            "函数",  "排序",      "搜索",
+            "withyes", "withnotand",  "and",
+            "代码",
+            "函数",
+            "排序",
+            "搜索",
         };
 
         for (code_keywords) |keyword| {
@@ -1372,9 +1376,9 @@ pub fn main() !void {
 
     std.debug.print("\n", .{});
     for (queries, 0..) |query, i| {
-        const start = std.time.microTimestamp();
+        const start = tri_time.microTimestamp();
         const result = chat.respond(query);
-        const elapsed = @as(u64, @intCast(std.time.microTimestamp() - start));
+        const elapsed = @as(u64, @intCast(tri_time.microTimestamp() - start));
 
         const lang_str = switch (result.language) {
             .Russian => "RU",

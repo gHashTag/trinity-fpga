@@ -19,7 +19,7 @@ pub const CodeBuilder = struct {
     pub fn init(allocator: Allocator) Self {
         return Self{
             .allocator = allocator,
-            .buffer = .{},
+            .buffer = .empty,
             .indent = 0,
         };
     }

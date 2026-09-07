@@ -586,7 +586,7 @@ pub const Lexer = struct {
 
     pub fn tokenize(source: []const u8, allocator: std.mem.Allocator) ![]Token {
         var lexer = Lexer.init(source);
-        var tokens = std.ArrayListUnmanaged(Token){};
+        var tokens = @as(std.ArrayListUnmanaged(Token), .empty);
         while (true) {
             const tok = lexer.nextToken();
             try tokens.append(allocator, tok);

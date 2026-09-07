@@ -3,6 +3,7 @@
 // φ² + 1/φ² = 3 | PHOENIX = 999
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const common = @import("bogatyrs_common.zig");
 
 // ============================================================================
@@ -178,13 +179,13 @@ pub fn calculateCourageRequirement(synthesis: Synthesis) f64 {
 
 /// 34- with — not  withnotand,   withand
 pub fn voteAsCreator(ctx: *const common.ValidationContext) !common.BogatyrResult {
-    const start_time = std.time.nanoTimestamp();
+    const start_time = tri_time.nanoTimestamp();
     _ = ctx; // withbywith for inandyesand totowith
 
     // -and inwithyes with Pass, if finds path for inwithin
     //   withandwith with  analysis beforetowithin in totowith
 
-    const end_time = std.time.nanoTimestamp();
+    const end_time = tri_time.nanoTimestamp();
     const duration: i64 = @intCast(end_time - start_time);
 
     return common.BogatyrResult{

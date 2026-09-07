@@ -1,4 +1,5 @@
 const std = @import("std");
+const tri_time = @import("tri_time");
 const AdaptiveCache = @import("adaptive_cache.zig").AdaptiveCache;
 
 // ============================================================================
@@ -54,7 +55,7 @@ pub const StreamingInference = struct {
         // Simulate output generation
         while (i < 10) : (i += 1) {
             // Fake delay - using std.Thread.sleep
-            std.Thread.sleep(100 * std.time.ns_per_ms);
+            tri_time.sleep(100 * std.time.ns_per_ms);
 
             // Decaying hit rate simulation
             hit_rate_sim -= 0.05;

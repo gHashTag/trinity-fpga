@@ -3,6 +3,7 @@
 // ⲤⲀⲔⲢⲀ ⲪⲞⲢⲘⲨⲖⲀ: V = n × 3^k × π^m × φ^p × e^q
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const tvc_bigint = @import("bigint.zig");
 const tvc_packed = @import("packed_trit.zig");
 
@@ -639,37 +640,37 @@ pub fn runBenchmarks() void {
     std.debug.print("Addition x {} iterations:\n", .{iterations});
 
     // Unpacked benchmark
-    const unpacked_start = std.time.nanoTimestamp();
+    const unpacked_start = tri_time.nanoTimestamp();
     var unpacked_result = tvc_bigint.TVCBigInt.zero();
     var i: u64 = 0;
     while (i < iterations) : (i += 1) {
         unpacked_result = unpacked_a.addScalar(&unpacked_b);
     }
-    const unpacked_end = std.time.nanoTimestamp();
+    const unpacked_end = tri_time.nanoTimestamp();
     std.mem.doNotOptimizeAway(unpacked_result);
     const unpacked_ns = @as(u64, @intCast(unpacked_end - unpacked_start));
 
     // Packed benchmark
-    const packed_start = std.time.nanoTimestamp();
+    const packed_start = tri_time.nanoTimestamp();
     var packed_result = tvc_packed.PackedBigInt.zero();
     i = 0;
     while (i < iterations) : (i += 1) {
         packed_result = packed_a.add(&packed_b);
     }
-    const packed_end = std.time.nanoTimestamp();
+    const packed_end = tri_time.nanoTimestamp();
     std.mem.doNotOptimizeAway(packed_result);
     const packed_ns = @as(u64, @intCast(packed_end - packed_start));
 
     // Hybrid benchmark
     hybrid_a = HybridBigInt.fromI64(val_a);
     hybrid_b = HybridBigInt.fromI64(val_b);
-    const hybrid_start = std.time.nanoTimestamp();
+    const hybrid_start = tri_time.nanoTimestamp();
     var hybrid_result = HybridBigInt.zero();
     i = 0;
     while (i < iterations) : (i += 1) {
         hybrid_result = hybrid_a.add(&hybrid_b);
     }
-    const hybrid_end = std.time.nanoTimestamp();
+    const hybrid_end = tri_time.nanoTimestamp();
     std.mem.doNotOptimizeAway(hybrid_result);
     const hybrid_ns = @as(u64, @intCast(hybrid_end - hybrid_start));
 
@@ -689,13 +690,13 @@ pub fn runBenchmarks() void {
 
     hybrid_a = HybridBigInt.fromI64(val_a);
     hybrid_b = HybridBigInt.fromI64(val_b);
-    const simd_start = std.time.nanoTimestamp();
+    const simd_start = tri_time.nanoTimestamp();
     var simd_result = HybridBigInt.zero();
     i = 0;
     while (i < iterations) : (i += 1) {
         simd_result = hybrid_a.addSimd(&hybrid_b);
     }
-    const simd_end = std.time.nanoTimestamp();
+    const simd_end = tri_time.nanoTimestamp();
     std.mem.doNotOptimizeAway(simd_result);
     const simd_ns = @as(u64, @intCast(simd_end - simd_start));
 
@@ -709,13 +710,13 @@ pub fn runBenchmarks() void {
 
     hybrid_a = HybridBigInt.fromI64(val_a);
     hybrid_b = HybridBigInt.fromI64(val_b);
-    const dot_start = std.time.nanoTimestamp();
+    const dot_start = tri_time.nanoTimestamp();
     var dot_result: i32 = 0;
     i = 0;
     while (i < iterations) : (i += 1) {
         dot_result = hybrid_a.dotProduct(&hybrid_b);
     }
-    const dot_end = std.time.nanoTimestamp();
+    const dot_end = tri_time.nanoTimestamp();
     std.mem.doNotOptimizeAway(dot_result);
     const dot_ns = @as(u64, @intCast(dot_end - dot_start));
 

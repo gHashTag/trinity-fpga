@@ -60,7 +60,7 @@ with an older version of nextpnr-xilinx.
 ### Option 1: Regenerate Chipdb (Recommended)
 
 ```bash
-cd /Users/playra/trinity-w1/fpga/prjxray
+cd "$(git rev-parse --show-toplevel)/fpga/prjxray"
 make db-full-100t
 # This will generate a fresh chipdb compatible with current nextpnr-xilinx
 ```
@@ -85,7 +85,7 @@ The project already has working bitstreams:
 
 These can be flashed directly:
 ```bash
-/Users/playra/trinity-w1/fpga/tools/jtag_program temporal_heartbeat.bit
+/Users/playom/trinity-fpga/fpga/tools/jtag_program temporal_heartbeat.bit
 ```
 
 ## Architecture

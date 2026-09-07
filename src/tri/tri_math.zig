@@ -52,6 +52,7 @@
 // =============================================================================
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const colors = @import("tri_colors.zig");
 const constants_table = @import("math/constants_table.zig");
 
@@ -1071,7 +1072,7 @@ pub fn runMathBenchCommand() void {
 
     // Benchmark fibonacci(19)
     {
-        var timer = std.time.Timer.start() catch {
+        var timer = tri_time.Timer.start() catch {
             std.debug.print("{s}Timer unavailable{s}\n", .{ RED, RESET });
             return;
         };
@@ -1086,7 +1087,7 @@ pub fn runMathBenchCommand() void {
 
     // Benchmark lucas(19)
     {
-        var timer = std.time.Timer.start() catch return;
+        var timer = tri_time.Timer.start() catch return;
         var sum: i64 = 0;
         for (0..iters) |_| {
             sum +|= lucas(19);
@@ -1098,7 +1099,7 @@ pub fn runMathBenchCommand() void {
 
     // Benchmark phiSpiral(100)
     {
-        var timer = std.time.Timer.start() catch return;
+        var timer = tri_time.Timer.start() catch return;
         var sum: f64 = 0;
         for (0..iters) |_| {
             const nf: f64 = @floatFromInt(@as(u32, 100));
@@ -1113,7 +1114,7 @@ pub fn runMathBenchCommand() void {
 
     // Benchmark goldenWrap
     {
-        var timer = std.time.Timer.start() catch return;
+        var timer = tri_time.Timer.start() catch return;
         var sum: i64 = 0;
         for (0..iters) |i| {
             const val: i16 = @intCast(@as(i32, @intCast(i % 53)) - 26);
@@ -1126,7 +1127,7 @@ pub fn runMathBenchCommand() void {
 
     // Benchmark fibonacci(50) (recurrence path)
     {
-        var timer = std.time.Timer.start() catch return;
+        var timer = tri_time.Timer.start() catch return;
         var sum: i64 = 0;
         for (0..iters) |_| {
             sum +|= fibonacci(50);

@@ -18,6 +18,7 @@
 // =============================================================================
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const Allocator = std.mem.Allocator;
 const types = @import("types.zig");
 const device_db = @import("device_db.zig");
@@ -100,7 +101,7 @@ pub const FasmResult = struct {
 /// Generate FASM features from a placed and routed design.
 pub fn generate(allocator: Allocator, db: *const ForgeDB) !FasmResult {
     var result = FasmResult{
-        .features = .{},
+        .features = .empty,
         .allocator = allocator,
     };
     errdefer result.deinit();
@@ -709,8 +710,16 @@ fn generateRoutingPips(allocator: Allocator, db: *const ForgeDB, result: *FasmRe
 
 /// Write FASM features to a file, deduplicating identical lines.
 pub fn writeFasm(allocator: Allocator, result: *const FasmResult, file_path: []const u8) !void {
-    const file = try std.fs.cwd().createFile(file_path, .{});
-    defer file.close();
+    const io = tri_io.get();
+    const file = try std.Io.Dir.cwd().createFile(io, file_path, .{});
+    defer file.close(io);
+
+    // 0.16 files carry no seek cursor, so sequential appends go through a
+    // buffered File.Writer rather than repeated writeAll at an implicit
+    // position. The buffer must be flushed before the file is closed.
+    var write_buf: [8192]u8 = undefined;
+    var fw = file.writer(io, &write_buf);
+    const w = &fw.interface;
 
     // Deduplicate: track which feature strings have been written
     var seen = std.StringHashMap(void).init(allocator);
@@ -719,10 +728,12 @@ pub fn writeFasm(allocator: Allocator, result: *const FasmResult, file_path: []c
     for (result.features.items) |feature| {
         const gop = try seen.getOrPut(feature.line);
         if (!gop.found_existing) {
-            try file.writeAll(feature.line);
-            try file.writeAll("\n");
+            try w.writeAll(feature.line);
+            try w.writeAll("\n");
         }
     }
+
+    try w.flush();
 }
 
 // =============================================================================

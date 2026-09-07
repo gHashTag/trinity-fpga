@@ -19,6 +19,7 @@
 // φ² + 1/φ² = 3 | TRINITY
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const Allocator = std.mem.Allocator;
 
 /// Kinship relations for CLUTRR reasoning
@@ -197,13 +198,16 @@ pub const ClutrrParser = struct {
 
     /// Parse CLUTRR CSV file
     pub fn parse(self: *Self) ![]ClutrrExample {
-        const file = try std.fs.cwd().openFile(self.path, .{});
-        defer file.close();
+        const io = tri_io.get();
+        const file = try std.Io.Dir.cwd().openFile(io, self.path, .{});
+        defer file.close(io);
 
-        const stat = try file.stat();
+        const stat = try file.stat(io);
         const data = try self.allocator.alloc(u8, stat.size);
         defer self.allocator.free(data);
-        _ = try file.readAll(data);
+        var read_buf: [4096]u8 = undefined;
+        var file_reader = file.reader(io, &read_buf);
+        try file_reader.interface.readSliceAll(data);
 
         var examples = std.ArrayList(ClutrrExample).initCapacity(self.allocator, 0) catch @panic("OOM");
 

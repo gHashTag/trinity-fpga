@@ -8,6 +8,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const jit_tier2 = @import("jit_tier2.zig");
 const SSAFunction = jit_tier2.SSAFunction;
@@ -679,21 +680,21 @@ pub fn runNativeBenchmark(allocator: Allocator) !void {
 
         // Benchmark native
         var native_result: i64 = 0;
-        const native_start = std.time.nanoTimestamp();
+        const native_start = tri_time.nanoTimestamp();
         for (0..runs) |_| {
             native_result = mem.execute();
         }
-        const native_end = std.time.nanoTimestamp();
+        const native_end = tri_time.nanoTimestamp();
         const native_time: u64 = @intCast(@max(0, native_end - native_start));
 
         // Benchmark SSA interpreter
         var interp = jit_e2e.SSAInterpreter.init(allocator);
         var interp_result: i64 = 0;
-        const interp_start = std.time.nanoTimestamp();
+        const interp_start = tri_time.nanoTimestamp();
         for (0..runs) |_| {
             interp_result = interp.execute(&func);
         }
-        const interp_end = std.time.nanoTimestamp();
+        const interp_end = tri_time.nanoTimestamp();
         const interp_time: u64 = @intCast(@max(0, interp_end - interp_start));
 
         const speedup = if (native_time > 0) @as(f64, @floatFromInt(interp_time)) / @as(f64, @floatFromInt(native_time)) else 1.0;

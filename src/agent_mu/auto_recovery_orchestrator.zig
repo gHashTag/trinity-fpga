@@ -10,6 +10,7 @@
 //! φ² + 1/φ² = 3 | TRINITY
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const info = std.log.info;
 const warn = std.log.warn;
 const err = std.log.err;
@@ -83,7 +84,7 @@ pub const RecoveryOperation = struct {
     attempts: u32,
 
     pub fn init(id: []const u8, failed_node: []const u8) RecoveryOperation {
-        const now = std.time.milliTimestamp();
+        const now = tri_time.milliTimestamp();
         return .{
             .id = id,
             .failed_node = failed_node,
@@ -101,7 +102,7 @@ pub const RecoveryOperation = struct {
         if (self.completed_at) |end| {
             return end - self.started_at;
         }
-        return std.time.milliTimestamp() - self.started_at;
+        return tri_time.milliTimestamp() - self.started_at;
     }
 };
 
@@ -167,7 +168,7 @@ pub const FailoverPlan = struct {
         _ = allocator;
         return .{
             .primary_node = primary,
-            .backup_nodes = .{},
+            .backup_nodes = .empty,
             .state_sync_required = true,
             .rollback_on_failure = true,
         };
@@ -232,7 +233,7 @@ pub const AutoRecoveryOrchestrator = struct {
 
     /// Detect and handle node failure
     pub fn handleNodeFailure(self: *AutoRecoveryOrchestrator, failed_node: []const u8) ![]const u8 {
-        const op_id = try std.fmt.allocPrint(self.allocator, "recovery-{d}", .{std.time.milliTimestamp()});
+        const op_id = try std.fmt.allocPrint(self.allocator, "recovery-{d}", .{tri_time.milliTimestamp()});
         errdefer self.allocator.free(op_id);
 
         var operation = RecoveryOperation.init(op_id, failed_node);
@@ -283,7 +284,7 @@ pub const AutoRecoveryOrchestrator = struct {
 
         // Complete
         op.status = .completed;
-        op.completed_at = std.time.milliTimestamp();
+        op.completed_at = tri_time.milliTimestamp();
         info("Recovery operation {s} completed in {}ms\n", .{ op_id, op.durationMs() });
     }
 
@@ -415,7 +416,7 @@ pub const AutoRecoveryOrchestrator = struct {
         if (self.operations.getPtr(op_id)) |op| {
             op.status = .cancelled;
             op.error_message = reason;
-            op.completed_at = std.time.milliTimestamp();
+            op.completed_at = tri_time.milliTimestamp();
             info("Recovery operation {s} cancelled: {s}\n", .{ op_id, reason });
         }
     }

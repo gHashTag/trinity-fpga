@@ -181,21 +181,22 @@ pub fn displayConstantsTable(format: OutputFormat, cat: Category, sort: SortBy) 
 /// Display as Unicode table
 fn displayTable(cat: Category, sort: SortBy) void {
     // Collect filtered constants
-    var filtered = std.ArrayList(sacred_formula.SacredConstant).init(std.heap.page_allocator);
-    defer filtered.deinit();
+    const gpa = std.heap.page_allocator;
+    var filtered: std.ArrayList(sacred_formula.SacredConstant) = .empty;
+    defer filtered.deinit(gpa);
 
     for (sacred_formula.sacred_constants) |c| {
         if (matchesCategory(c, cat)) {
-            filtered.append(c) catch continue;
+            filtered.append(gpa, c) catch continue;
         }
     }
 
     // Create sort entries
-    var sort_entries = std.ArrayList(SortEntry).init(std.heap.page_allocator);
-    defer sort_entries.deinit();
+    var sort_entries: std.ArrayList(SortEntry) = .empty;
+    defer sort_entries.deinit(gpa);
 
     for (filtered.items, 0..) |c, i| {
-        sort_entries.append(.{ .constant = c, .index = i }) catch continue;
+        sort_entries.append(gpa, .{ .constant = c, .index = i }) catch continue;
     }
 
     // Sort
@@ -256,8 +257,7 @@ fn displayTable(cat: Category, sort: SortBy) void {
 
 /// Format formula as string
 fn formatFormula(buf: []u8, c: sacred_formula.SacredConstant) []const u8 {
-    var fbs = std.io.fixedBufferStream(buf);
-    const writer = fbs.writer();
+    var writer: std.Io.Writer = .fixed(buf);
 
     writer.print("{d}", .{c.n}) catch return buf[0..0];
 
@@ -298,7 +298,7 @@ fn formatFormula(buf: []u8, c: sacred_formula.SacredConstant) []const u8 {
         }
     }
 
-    return fbs.getWritten();
+    return writer.buffered();
 }
 
 /// Display as JSON

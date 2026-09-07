@@ -3,6 +3,7 @@
 //! φ² + 1/φ² = 3
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const coptic_parser = @import("coptic_parser_real.zig");
 const coptic_interpreter = @import("coptic_interpreter.zig");
 const bytecode_compiler = @import("bytecode_compiler.zig");
@@ -79,9 +80,9 @@ fn benchmarkInterpreter(allocator: std.mem.Allocator, source: []const u8, iterat
         var interp = coptic_interpreter.Interpreter.init(allocator, source);
         defer interp.deinit();
 
-        const start = std.time.nanoTimestamp();
+        const start = tri_time.nanoTimestamp();
         _ = try interp.interpret(&ast);
-        const end = std.time.nanoTimestamp();
+        const end = tri_time.nanoTimestamp();
 
         const elapsed: u64 = @intCast(end - start);
         total_ns += elapsed;
@@ -120,9 +121,9 @@ fn benchmarkVM(allocator: std.mem.Allocator, source: []const u8, iterations: u32
 
         vm.load(code, constants);
 
-        const start = std.time.nanoTimestamp();
+        const start = tri_time.nanoTimestamp();
         _ = try vm.run();
-        const end = std.time.nanoTimestamp();
+        const end = tri_time.nanoTimestamp();
 
         const elapsed: u64 = @intCast(end - start);
         total_ns += elapsed;

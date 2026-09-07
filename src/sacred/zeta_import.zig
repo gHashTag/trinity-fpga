@@ -9,6 +9,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // DATA STRUCTURES
@@ -100,17 +101,19 @@ pub fn loadHardcodedZeros(allocator: std.mem.Allocator) !ZerosData {
 /// Load Odlyzko zeta zeros from a plain text file
 /// File format: one gamma per line, optionally with comments (#...)
 pub fn loadOdlyzkoZeros(allocator: std.mem.Allocator, path: []const u8) !ZerosData {
-    const file = try std.fs.cwd().openFile(path, .{});
-    defer file.close();
+    const io = tri_io.get();
+    const file = try std.Io.Dir.cwd().openFile(io, path, .{});
+    defer file.close(io);
 
-    const stat = try file.stat();
+    const stat = try file.stat(io);
     const size = stat.size;
 
     // Read entire file
     const buffer = try allocator.alloc(u8, @intCast(size));
     defer allocator.free(buffer);
 
-    _ = try file.readAll(buffer);
+    // Fills `buffer` or stops at end of file -- 0.15 readAll semantics.
+    _ = try file.readPositionalAll(io, buffer, 0);
 
     // Parse zeros from buffer
     const result = try parseZerosBuffer(allocator, buffer);
@@ -215,7 +218,7 @@ pub fn downloadOdlyzkoData(allocator: std.mem.Allocator, n_zeros: usize) ![]cons
 
 /// Ensure cache directory exists
 pub fn ensureCacheDir() !void {
-    _ = std.fs.cwd().makeOpenPath(CACHE_DIR, .{}) catch |err| {
+    std.Io.Dir.cwd().createDirPath(tri_io.get(), CACHE_DIR) catch |err| {
         if (err == error.PathAlreadyExists) {
             return; // Directory already exists, nothing to do
         } else {

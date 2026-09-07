@@ -9,6 +9,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayList;
 const bytecode = @import("bytecode.zig");
@@ -389,7 +390,7 @@ pub const JITCompilerV2 = struct {
         bytecode_slice: []const u8,
         ctx: TypeContext,
     ) !*BasicBlockVersion {
-        const start_time = std.time.nanoTimestamp();
+        const start_time = tri_time.nanoTimestamp();
 
         // Get or create basic block
         const bb_result = try self.basic_blocks.getOrPut(block_id);
@@ -476,7 +477,7 @@ pub const JITCompilerV2 = struct {
             }
         }
 
-        const end_time = std.time.nanoTimestamp();
+        const end_time = tri_time.nanoTimestamp();
         self.compile_time_ns += @intCast(@as(u128, @bitCast(end_time - start_time)));
 
         return version;

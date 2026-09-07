@@ -2,6 +2,7 @@
 // Hooks handle per-tool Telegram reporting. This loop only sends WAKE/SLEEP.
 // Uses --continue for native session resume (replaces HANDOVER.md).
 const std = @import("std");
+const tri_time = @import("tri_time");
 const identity_mod = @import("identity.zig");
 const handover = @import("handover.zig");
 const github_poller = @import("github_poller.zig");
@@ -75,7 +76,7 @@ pub fn run(allocator: std.mem.Allocator, config: Config) !void {
             log("No pending issues or GitHub API unavailable. Sleeping.", .{});
             telegram.sendFmt(config.tg_config, &tg_buf, "\xf0\x9f\x94\xa7 Ralph  \xf0\x9f\x98\xb4 \xd0\x9d\xd0\xb5\xd1\x82 \xd0\xb7\xd0\xb0\xd0\xb4\xd0\xb0\xd1\x87. \xd0\xa1\xd0\xbf\xd0\xbb\xd1\x8e {d}\xd0\xbc\xd0\xb8\xd0\xbd.", .{config.sleep_interval_s / 60});
             if (config.single_shot) break;
-            std.Thread.sleep(config.sleep_interval_s * std.time.ns_per_s);
+            tri_time.sleep(config.sleep_interval_s * std.time.ns_per_s);
             continue;
         }
 
@@ -120,7 +121,7 @@ pub fn run(allocator: std.mem.Allocator, config: Config) !void {
             log("Claude spawn error: {s}", .{@errorName(err)});
             telegram.sendFmt(config.tg_config, &tg_buf, "\xf0\x9f\x94\xa7 Ralph  \xe2\x9d\x8c Spawn FAILED: {s}", .{@errorName(err)});
             if (config.single_shot) break;
-            std.Thread.sleep(config.sleep_interval_s * std.time.ns_per_s);
+            tri_time.sleep(config.sleep_interval_s * std.time.ns_per_s);
             continue;
         };
         defer result.deinit();
@@ -153,7 +154,7 @@ pub fn run(allocator: std.mem.Allocator, config: Config) !void {
 
         log("Sleeping for {d}s...", .{config.sleep_interval_s});
         telegram.sendFmt(config.tg_config, &tg_buf, "\xf0\x9f\x94\xa7 Ralph  \xf0\x9f\x98\xb4 \xd0\xa1\xd0\xbf\xd0\xbb\xd1\x8e {d}\xd0\xbc\xd0\xb8\xd0\xbd.", .{config.sleep_interval_s / 60});
-        std.Thread.sleep(config.sleep_interval_s * std.time.ns_per_s);
+        tri_time.sleep(config.sleep_interval_s * std.time.ns_per_s);
     }
 
     log("Agent loop terminated.", .{});

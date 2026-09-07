@@ -7,6 +7,8 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
+const tri_proc = @import("tri_proc");
 const CurveLabel = @import("curve.zig").CurveLabel;
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -173,26 +175,23 @@ pub const LMFDBClient = struct {
 
     /// Fetch using curl as subprocess
     fn fetchWithCurl(self: *const Self, url: []const u8) ![]u8 {
-        var child = std.process.Child.init(
-            &[_][]const u8{ "curl", "-s", "-f", "-L", url },
-            self.allocator,
-        );
-        child.stdout_behavior = .Pipe;
-        child.stderr_behavior = .Pipe;
+        const result = try tri_proc.run(.{
+            .allocator = self.allocator,
+            .argv = &[_][]const u8{ "curl", "-s", "-f", "-L", url },
+            .max_output_bytes = 10 * 1024 * 1024,
+        });
+        self.allocator.free(result.stderr);
 
-        try child.spawn();
-
-        const stdout = try child.stdout.?.reader().readAllAlloc(self.allocator, 10 * 1024 * 1024);
-        const stderr = try child.stderr.?.reader().readAllAlloc(self.allocator, 64 * 1024);
-        self.allocator.free(stderr);
-
-        const term = try child.wait();
-        if (term.Exited != 0) {
-            self.allocator.free(stdout);
+        const ok = switch (result.term) {
+            .exited => |code| code == 0,
+            else => false,
+        };
+        if (!ok) {
+            self.allocator.free(result.stdout);
             return error.CurlFailed;
         }
 
-        return stdout;
+        return result.stdout;
     }
 };
 
@@ -518,7 +517,7 @@ pub fn parseLMFDBCsv(allocator: std.mem.Allocator, csv_data: []const u8) ![]LMFD
 
 /// Load curves from local cache file
 pub fn loadFromCache(allocator: std.mem.Allocator, cache_path: []const u8) !LMFDBImport {
-    const csv_data = try std.fs.cwd().readFileAlloc(allocator, cache_path, 100_000_000);
+    const csv_data = try std.Io.Dir.cwd().readFileAlloc(tri_io.get(), cache_path, allocator, .limited(100_000_000));
     defer allocator.free(csv_data);
 
     const entries = try parseLMFDBCsv(allocator, csv_data);

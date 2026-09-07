@@ -15,6 +15,9 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
+const tri_proc = @import("tri_proc");
+const tri_time = @import("tri_time");
 const cell_parser = @import("ribosome.zig");
 const colors = @import("tri_colors.zig");
 
@@ -179,6 +182,7 @@ fn cmdScan(allocator: Allocator) !void {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn cmdRegen(allocator: Allocator, cell_id: []const u8) !void {
+    const io = tri_io.get();
     const cells = try cell_parser.discoverAll(allocator);
     defer allocator.free(cells);
 
@@ -206,38 +210,38 @@ fn cmdRegen(allocator: Allocator, cell_id: []const u8) !void {
         // Ensure gen/ directory exists
         const gen_dir = std.fmt.allocPrint(allocator, "{s}/gen", .{cell.dir_path}) catch return;
         defer allocator.free(gen_dir);
-        std.fs.cwd().makePath(gen_dir) catch |err| {
+        std.Io.Dir.cwd().createDirPath(io, gen_dir) catch |err| {
             std.debug.print("{s}ERROR{s}: Cannot create gen/ directory: {}\n", .{ RED, RESET, err });
             return;
         };
 
         // Check if source spec exists
-        if (std.fs.cwd().access(cell.manifest.dna_source, .{})) |_| {
+        if (std.Io.Dir.cwd().access(io, cell.manifest.dna_source, .{})) |_| {
             std.debug.print("  Spec:   {s}EXISTS{s}\n", .{ GREEN, RESET });
 
-            // Run vibee gen to regenerate
-            var child = std.process.Child.init(&.{
-                "zig", "build", "vibee", "--", "gen", cell.manifest.dna_source,
-            }, allocator);
-            child.stdout_behavior = .Pipe;
-            child.stderr_behavior = .Pipe;
-
-            child.spawn() catch |err| {
+            // Run vibee gen to regenerate.
+            //
+            // 0.16 removed `Child.init`/`spawn`, so the spawn-then-wait pair
+            // collapses into one `run`. The child's pipes were opened and
+            // never drained before; `run` drains them, so the two former
+            // failure messages become one.
+            const result = tri_proc.run(.{
+                .allocator = allocator,
+                .argv = &.{ "zig", "build", "vibee", "--", "gen", cell.manifest.dna_source },
+            }) catch |err| {
                 std.debug.print("  Regen:  {s}FAILED{s} (spawn: {})\n", .{ RED, RESET, err });
                 try appendGenomeLog(allocator, cell.dir_path, cell_id, .failed);
                 return;
             };
-            const term = child.wait() catch |err| {
-                std.debug.print("  Regen:  {s}FAILED{s} (wait: {})\n", .{ RED, RESET, err });
-                try appendGenomeLog(allocator, cell.dir_path, cell_id, .failed);
-                return;
-            };
+            defer allocator.free(result.stdout);
+            defer allocator.free(result.stderr);
+            const term = result.term;
 
-            if (term.Exited == 0) {
+            if (term.exited == 0) {
                 std.debug.print("  Regen:  {s}OK{s}\n", .{ GREEN, RESET });
                 try appendGenomeLog(allocator, cell.dir_path, cell_id, .ok);
             } else {
-                std.debug.print("  Regen:  {s}FAILED{s} (exit={d})\n", .{ RED, RESET, term.Exited });
+                std.debug.print("  Regen:  {s}FAILED{s} (exit={d})\n", .{ RED, RESET, term.exited });
                 try appendGenomeLog(allocator, cell.dir_path, cell_id, .failed);
             }
         } else |_| {
@@ -258,6 +262,7 @@ fn cmdRegen(allocator: Allocator, cell_id: []const u8) !void {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn cmdRegenAll(allocator: Allocator) !void {
+    const io = tri_io.get();
     const cells = try cell_parser.discoverAll(allocator);
     defer allocator.free(cells);
 
@@ -279,33 +284,29 @@ fn cmdRegenAll(allocator: Allocator) !void {
         // Ensure gen/ exists
         const gen_dir = std.fmt.allocPrint(allocator, "{s}/gen", .{cell.dir_path}) catch continue;
         defer allocator.free(gen_dir);
-        std.fs.cwd().makePath(gen_dir) catch continue;
+        std.Io.Dir.cwd().createDirPath(io, gen_dir) catch continue;
 
-        if (std.fs.cwd().access(cell.manifest.dna_source, .{})) |_| {
-            // Run vibee gen to regenerate
-            var child = std.process.Child.init(&.{
-                "zig", "build", "vibee", "--", "gen", cell.manifest.dna_source,
-            }, allocator);
-            child.stdout_behavior = .Pipe;
-            child.stderr_behavior = .Pipe;
-
-            child.spawn() catch |err| {
+        if (std.Io.Dir.cwd().access(io, cell.manifest.dna_source, .{})) |_| {
+            // Run vibee gen to regenerate. See runRegen: spawn+wait became one
+            // `run` because 0.16 removed `Child.init`.
+            const result = tri_proc.run(.{
+                .allocator = allocator,
+                .argv = &.{ "zig", "build", "vibee", "--", "gen", cell.manifest.dna_source },
+            }) catch |err| {
                 std.debug.print(" {s}FAILED{s} (spawn: {})\n", .{ RED, RESET, err });
                 try appendGenomeLog(allocator, cell.dir_path, cell.manifest.id, .failed);
                 continue;
             };
-            const term = child.wait() catch |err| {
-                std.debug.print(" {s}FAILED{s} (wait: {})\n", .{ RED, RESET, err });
-                try appendGenomeLog(allocator, cell.dir_path, cell.manifest.id, .failed);
-                continue;
-            };
+            defer allocator.free(result.stdout);
+            defer allocator.free(result.stderr);
+            const term = result.term;
 
-            if (term.Exited == 0) {
+            if (term.exited == 0) {
                 std.debug.print(" {s}OK{s}\n", .{ GREEN, RESET });
                 try appendGenomeLog(allocator, cell.dir_path, cell.manifest.id, .ok);
                 regen_count += 1;
             } else {
-                std.debug.print(" {s}FAILED{s} (exit={d})\n", .{ RED, RESET, term.Exited });
+                std.debug.print(" {s}FAILED{s} (exit={d})\n", .{ RED, RESET, term.exited });
                 try appendGenomeLog(allocator, cell.dir_path, cell.manifest.id, .failed);
             }
         } else |_| {
@@ -336,7 +337,7 @@ fn cmdLineage(allocator: Allocator, cell_id: []const u8) !void {
         std.debug.print("\n{s}GENOME LINEAGE{s} — {s}{s}{s}\n", .{ GOLDEN, RESET, CYAN, cell_id, RESET });
         std.debug.print("═══════════════════════════════════════════\n\n", .{});
 
-        const content = std.fs.cwd().readFileAlloc(allocator, log_path, 1024 * 64) catch {
+        const content = std.Io.Dir.cwd().readFileAlloc(tri_io.get(), log_path, allocator, .limited(1024 * 64)) catch {
             std.debug.print("  {s}No genome.log found{s} — cell has no mutation history yet.\n\n", .{ GRAY, RESET });
             return;
         };
@@ -378,13 +379,13 @@ fn cmdBiopsy(allocator: Allocator, cell_id: []const u8) !void {
         std.debug.print("  Regenerable:   {s}\n", .{if (cell.manifest.dna_regenerable) GREEN ++ "yes" ++ RESET else RED ++ "no" ++ RESET});
 
         // Check source spec
-        const source_exists = if (std.fs.cwd().access(cell.manifest.dna_source, .{})) |_| true else |_| false;
+        const source_exists = if (std.Io.Dir.cwd().access(tri_io.get(), cell.manifest.dna_source, .{})) |_| true else |_| false;
         std.debug.print("  Source exists:  {s}\n", .{if (source_exists) GREEN ++ "yes" ++ RESET else RED ++ "MISSING" ++ RESET});
 
         // Check output
         const output_path = std.fmt.allocPrint(allocator, "{s}/{s}", .{ cell.dir_path, cell.manifest.dna_output }) catch return;
         defer allocator.free(output_path);
-        const output_exists = if (std.fs.cwd().access(output_path, .{})) |_| true else |_| false;
+        const output_exists = if (std.Io.Dir.cwd().access(tri_io.get(), output_path, .{})) |_| true else |_| false;
         std.debug.print("  Output exists:  {s}\n", .{if (output_exists) GREEN ++ "yes" ++ RESET else YELLOW ++ "not yet generated" ++ RESET});
 
         // Show contract
@@ -414,17 +415,18 @@ fn appendGenomeLog(allocator: Allocator, cell_dir: []const u8, cell_id: []const 
     const log_path = try std.fmt.allocPrint(allocator, "{s}/genome.log", .{cell_dir});
     defer allocator.free(log_path);
 
-    const cwd = std.fs.cwd();
-    const file = cwd.createFile(log_path, .{ .truncate = false }) catch |err| {
+    const io = tri_io.get();
+    const cwd = std.Io.Dir.cwd();
+    const file = cwd.createFile(io, log_path, .{ .truncate = false }) catch |err| {
         std.debug.print("  (genome.log write failed: {})\n", .{err});
         return;
     };
-    defer file.close();
+    defer file.close(io);
 
-    // Seek to end for append
-    file.seekFromEnd(0) catch {};
+    // Append: 0.16 has no seek-then-write, so find the end and write there.
+    const end = file.length(io) catch 0;
 
-    const ts = std.time.timestamp();
+    const ts = tri_time.timestamp();
     const status_str: []const u8 = switch (status) {
         .ok => "OK",
         .failed => "FAILED",
@@ -435,7 +437,7 @@ fn appendGenomeLog(allocator: Allocator, cell_dir: []const u8, cell_id: []const 
     const entry = try std.fmt.allocPrint(allocator, "[{d}] {s} status={s}\n", .{ ts, cell_id, status_str });
     defer allocator.free(entry);
 
-    _ = file.write(entry) catch {};
+    file.writePositionalAll(io, entry, end) catch {};
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

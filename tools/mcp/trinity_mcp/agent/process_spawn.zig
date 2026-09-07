@@ -1,6 +1,9 @@
 // process_spawn.zig — Spawn Claude Code with timeout + process group kill
 // Replaces bash timeout/SIGTERM handling with typed Zig.
 const std = @import("std");
+const tri_io = @import("tri_io");
+const tri_time = @import("tri_time");
+const tri_proc = @import("tri_proc");
 
 pub const SpawnResult = struct {
     stdout: []const u8,
@@ -60,7 +63,7 @@ pub fn spawnClaude(
     argv_buf[argc] = prompt;
     argc += 1;
 
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = argv_buf[0..argc],
         .cwd = cwd,
@@ -75,7 +78,7 @@ pub fn spawnClaude(
     allocator.free(result.stderr);
 
     const exit_code: u8 = switch (result.term) {
-        .Exited => |code| code,
+        .exited => |code| code,
         else => 1,
     };
 
@@ -91,16 +94,17 @@ pub fn spawnClaude(
 pub fn saveLog(_: std.mem.Allocator, worktree_path: []const u8, content: []const u8) void {
     var dir_buf: [512]u8 = undefined;
     const log_dir = std.fmt.bufPrint(&dir_buf, "{s}/../logs", .{worktree_path}) catch return;
-    std.fs.cwd().makePath(log_dir) catch {};
+    const io = tri_io.get();
+    std.Io.Dir.cwd().createDirPath(io, log_dir) catch {};
 
-    const epoch_s: u64 = @intCast(@divTrunc(std.time.nanoTimestamp(), std.time.ns_per_s));
+    const epoch_s: u64 = @intCast(@divTrunc(tri_time.nanoTimestamp(), std.time.ns_per_s));
 
     var path_buf: [512]u8 = undefined;
     const path = std.fmt.bufPrint(&path_buf, "{s}/session_{d}.log", .{ log_dir, epoch_s }) catch return;
 
-    const file = std.fs.cwd().createFile(path, .{}) catch return;
-    defer file.close();
-    file.writeAll(content) catch {};
+    const file = std.Io.Dir.cwd().createFile(io, path, .{}) catch return;
+    defer file.close(io);
+    file.writeStreamingAll(io, content) catch {};
     std.debug.print("[agent] Log saved: {s}\n", .{path});
 }
 

@@ -13,6 +13,8 @@
 
 const std = @import("std");
 
+const tri_proc = @import("tri_proc");
+const tri_time = @import("tri_time");
 pub const BitNetFFI = struct {
     allocator: std.mem.Allocator,
     llama_cli_path: []const u8,
@@ -42,7 +44,7 @@ pub const BitNetFFI = struct {
         max_tokens: u32,
         temperature: f32,
     ) !GenerationResult {
-        var timer = try std.time.Timer.start();
+        var timer = try tri_time.Timer.start();
 
         // Build command arguments
         var args: std.ArrayListUnmanaged([]const u8) = .empty;
@@ -73,7 +75,7 @@ pub const BitNetFFI = struct {
         try args.append(self.allocator, "--no-warmup");
 
         // Run llama-cli using std.process.Child.run
-        const result = try std.process.Child.run(.{
+        const result = try tri_proc.run(.{
             .allocator = self.allocator,
             .argv = args.items,
             .max_output_bytes = 1024 * 1024,
@@ -87,7 +89,7 @@ pub const BitNetFFI = struct {
         const generated = try self.parseOutput(output, prompt);
 
         const success = switch (result.term) {
-            .Exited => |code| code == 0,
+            .exited => |code| code == 0,
             else => false,
         };
 
@@ -127,14 +129,13 @@ pub const GenerationResult = struct {
 // MAIN - Run coherent generation tests
 // ═══════════════════════════════════════════════════════════════════════════════
 
-pub fn main() !void {
+pub fn main(init: std.process.Init.Minimal) !void {
     var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    const args = try std.process.argsAlloc(allocator);
-    defer std.process.argsFree(allocator, args);
-
+    const args = try init.args.toSlice(allocator);
+    defer allocator.free(args);
     const llama_cli = if (args.len > 1) args[1] else "bitnet-cpp/build/bin/llama-cli";
     const model_path = if (args.len > 2) args[2] else "bitnet-cpp/models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf";
 

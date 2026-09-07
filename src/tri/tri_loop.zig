@@ -27,8 +27,8 @@ const GOLD = "\x1b[38;2;255;215;0m";
 const DIM = "\x1b[38;2;156;156;160m";
 const RESET = "\x1b[0m";
 
-pub fn runLoopCommand(allocator: std.mem.Allocator, args: []const []const u8) !void {
-    const content = std.fs.cwd().readFileAlloc(allocator, JOURNAL, 4 * 1024 * 1024) catch |err| {
+pub fn runLoopCommand(io: std.Io, allocator: std.mem.Allocator, args: []const []const u8) !void {
+    const content = std.Io.Dir.cwd().readFileAlloc(io, JOURNAL, allocator, .limited(4 * 1024 * 1024)) catch |err| {
         std.debug.print("{s}no journal at {s}{s} ({s})\n", .{ DIM, JOURNAL, RESET, @errorName(err) });
         std.debug.print("Run this from the repository root.\n", .{});
         return err;

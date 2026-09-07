@@ -2,7 +2,7 @@
 # Скрипт для исправления API ArrayList в проекте vibeec
 # Zig 0.15+ требует передачи allocator в методы ArrayList
 
-cd /Users/playra/vibee-lang/src/vibeec
+cd /Users/playom/vibee-lang/src/vibeec
 
 # 1. Замена .init(allocator) на .init(allocator) с сохранением allocator
 # Это сложнее автоматизировать, так как требует рефакторинга структур

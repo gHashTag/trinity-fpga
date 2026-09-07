@@ -1,6 +1,6 @@
 #!/bin/bash
 # Ralph Dashboard v4.0 — Полный редизайн UI/UX
-cd /Users/playra/trinity
+cd /Users/playom/trinity
 
 # Stop old handlers and sessions
 pkill -f tri_cmd_handler 2>/dev/null || true

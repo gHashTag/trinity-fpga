@@ -7,7 +7,7 @@
 
     <key>ProgramArguments</key>
     <array>
-        <string>/Users/playra/trinity-w1/fpga/tools/fpga_monitor_daemon.sh</string>
+        <string>/Users/playom/trinity-fpga/fpga/tools/fpga_monitor_daemon.sh</string>
         <string>--daemon-loop</string>
     </array>
 
@@ -23,13 +23,13 @@
     </dict>
 
     <key>StandardOutPath</key>
-    <string>/Users/playra/.trinity/fpga/monitor.stdout.log</string>
+    <string>/Users/playom/.trinity/fpga/monitor.stdout.log</string>
 
     <key>StandardErrorPath</key>
-    <string>/Users/playra/.trinity/fpga/monitor.stderr.log</string>
+    <string>/Users/playom/.trinity/fpga/monitor.stderr.log</string>
 
     <key>WorkingDirectory</key>
-    <string>/Users/playra/trinity-w1/fpga/tools</string>
+    <string>/Users/playom/trinity-fpga/fpga/tools</string>
 
     <key>EnvironmentVariables</key>
     <dict>

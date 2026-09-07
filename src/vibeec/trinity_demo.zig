@@ -3,6 +3,7 @@
 // φ² + 1/φ² = 3 = TRINITY
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const mistral = @import("mistral_trinity.zig");
 const trinity_format = @import("trinity_format.zig");
 const bpe = @import("bpe_tokenizer.zig");
@@ -167,7 +168,7 @@ pub const TrinityDemo = struct {
         std.debug.print("Encoded to {d} tokens\n", .{prompt_tokens.len});
 
         // Start timer
-        var timer = try std.time.Timer.start();
+        var timer = try tri_time.Timer.start();
 
         // Reset cache for new generation
         self.model.?.resetCache();
@@ -242,7 +243,7 @@ pub const TrinityDemo = struct {
         for (DEMO_PROMPTS, 0..) |prompt, i| {
             std.debug.print("\n[Demo {d}/{d}]\n", .{ i + 1, DEMO_PROMPTS.len });
 
-            var timer = try std.time.Timer.start();
+            var timer = try tri_time.Timer.start();
             const output = self.generate(prompt) catch |err| {
                 std.debug.print("Error: {}\n", .{err});
                 continue;
@@ -271,14 +272,13 @@ pub const TrinityDemo = struct {
 // MAIN
 // ═══════════════════════════════════════════════════════════════════════════════
 
-pub fn main() !void {
+pub fn main(init: std.process.Init.Minimal) !void {
     var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    const args = try std.process.argsAlloc(allocator);
-    defer std.process.argsFree(allocator, args);
-
+    const args = try init.args.toSlice(allocator);
+    defer allocator.free(args);
     var config = DemoConfig{};
 
     // Parse args

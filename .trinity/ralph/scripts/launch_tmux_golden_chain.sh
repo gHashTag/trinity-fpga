@@ -5,7 +5,7 @@
 set -e
 
 SESSION_NAME="trinity"
-RALPH_DIR="/Users/playra/trinity"
+RALPH_DIR="/Users/playom/trinity"
 
 cd "$RALPH_DIR" || exit 1
 

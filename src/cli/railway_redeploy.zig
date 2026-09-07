@@ -3,16 +3,16 @@
 
 const std = @import("std");
 
+const tri_proc = @import("tri_proc");
 const Allocator = std.mem.Allocator;
 
-pub fn main() !void {
+pub fn main(init: std.process.Init.Minimal) !void {
     var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    const args = try std.process.argsAlloc(allocator);
-    defer std.process.argsFree(allocator, args);
-
+    const args = try init.args.toSlice(allocator);
+    defer allocator.free(args);
     if (args.len < 4) {
         std.debug.print(
             \\Usage: railway-redeploy <service-id> <project-id> <token>
@@ -59,7 +59,7 @@ pub fn main() !void {
 }
 
 fn execCurl(allocator: Allocator, args: []const []const u8) ![]u8 {
-    const result = try std.process.Child.run(.{
+    const result = try tri_proc.run(.{
         .allocator = allocator,
         .argv = args,
     });
@@ -69,7 +69,7 @@ fn execCurl(allocator: Allocator, args: []const []const u8) ![]u8 {
     }
     // Check if exited successfully (exit code 0)
     switch (result.term) {
-        .Exited => |code| {
+        .exited => |code| {
             if (code != 0) return error.CurlFailed;
         },
         else => return error.CurlFailed,

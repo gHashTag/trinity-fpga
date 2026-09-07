@@ -1,6 +1,9 @@
 // handlers.zig — Command handlers for tri-bot
 // No claude CLI dependency. /status uses git directly.
 const std = @import("std");
+const tri_env = @import("tri_env");
+const tri_io = @import("tri_io");
+const tri_proc = @import("tri_proc");
 const telegram_api = @import("telegram_api.zig");
 
 const BotConfig = telegram_api.BotConfig;
@@ -189,7 +192,7 @@ pub fn handleUndo(allocator: std.mem.Allocator, config: BotConfig) void {
     telegram_api.sendMessage(allocator, config.bot_token, config.chat_id, "\xe2\x8f\xaa Checking for checkpoints...");
 
     // Run: git stash list --format="%gd %s" and find tri-api checkpoint
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ "git", "stash", "list", "--format=%gd %s" },
         .cwd = config.project_root,
@@ -219,7 +222,7 @@ pub fn handleUndo(allocator: std.mem.Allocator, config: BotConfig) void {
             const file_path = line[prefix_idx + stash_prefix.len ..];
 
             // Pop the stash
-            const pop_result = std.process.Child.run(.{
+            const pop_result = tri_proc.run(.{
                 .allocator = allocator,
                 .argv = &.{ "git", "stash", "pop", stash_ref },
                 .cwd = config.project_root,
@@ -283,7 +286,7 @@ pub fn handleTriCommand(allocator: std.mem.Allocator, config: BotConfig, args: [
         argv_len += 1;
     }
 
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = argv_buf[0..argv_len],
         .cwd = config.project_root,
@@ -306,7 +309,7 @@ pub fn handleTriCommand(allocator: std.mem.Allocator, config: BotConfig, args: [
 
 /// /sessions — List saved sessions from ~/.tri-api/sessions/index.json
 pub fn handleSessions(allocator: std.mem.Allocator, config: BotConfig) void {
-    const home = std.posix.getenv("HOME") orelse "/tmp";
+    const home = tri_env.getPosix("HOME") orelse "/tmp";
     var path_buf: [512]u8 = undefined;
     const index_path = std.fmt.bufPrint(&path_buf, "{s}/.tri-api/sessions/index.json", .{home}) catch {
         telegram_api.sendMessage(allocator, config.bot_token, config.chat_id, "\xe2\x9a\xa0 Cannot resolve sessions path");
@@ -367,7 +370,7 @@ pub fn handleSessions(allocator: std.mem.Allocator, config: BotConfig) void {
 /// /resume [id] — Load session messages from ~/.tri-api/sessions/{id}.json.
 /// Returns messages JSON (caller owns memory) or null if not found.
 pub fn loadSessionMessages(allocator: std.mem.Allocator, session_id: []const u8) ?[]const u8 {
-    const home = std.posix.getenv("HOME") orelse "/tmp";
+    const home = tri_env.getPosix("HOME") orelse "/tmp";
 
     // If no ID provided, load latest
     if (session_id.len == 0) {
@@ -492,14 +495,19 @@ fn unescapeJson(allocator: std.mem.Allocator, s: []const u8) ?[]const u8 {
 
 /// Read a file at an absolute path.
 fn readFileAbs(allocator: std.mem.Allocator, path: []const u8) ![]const u8 {
-    const file = try std.fs.openFileAbsolute(path, .{});
-    defer file.close();
-    return file.readToEndAlloc(allocator, 10 * 1024 * 1024);
+    const io = tri_io.get();
+    const file = try std.Io.Dir.openFileAbsolute(io, path, .{});
+    defer file.close(io);
+
+    var scratch: [4096]u8 = undefined;
+    var fr = file.reader(io, &scratch);
+    // Max 10MB, same cap the 0.15 readToEndAlloc had.
+    return fr.interface.allocRemaining(allocator, .limited(10 * 1024 * 1024));
 }
 
 /// Run a command and append its stdout to the output buffer.
 fn appendCommandOutput(allocator: std.mem.Allocator, out: *std.ArrayList(u8), cwd: []const u8, argv: []const []const u8) void {
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = argv,
         .cwd = cwd,

@@ -15,6 +15,9 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
+const tri_proc = @import("tri_proc");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -140,40 +143,43 @@ pub const ImpureQueue = struct {
     pub fn init(allocator: std.mem.Allocator) ImpureQueue {
         return .{
             .allocator = allocator,
-            .events = std.ArrayList(ImpureEvent).init(allocator),
+            .events = .empty,
         };
     }
 
     pub fn deinit(self: *ImpureQueue) void {
-        self.events.deinit();
+        self.events.deinit(self.allocator);
     }
 
     pub fn load(self: *ImpureQueue) !void {
         self.events.clearRetainingCapacity();
 
-        const dir = std.fs.cwd().openDir(IMPURE_DIR, .{ .iterate = true }) catch {
+        const io = tri_io.get();
+
+        var dir = std.Io.Dir.cwd().openDir(io, IMPURE_DIR, .{ .iterate = true }) catch {
             // Directory doesn't exist yet - empty queue
             return;
         };
-        defer dir.close();
+        defer dir.close(io);
 
         var iter = dir.iterate();
-        while (try iter.next()) |entry| {
+        while (try iter.next(io)) |entry| {
             if (entry.kind != .file) continue;
             if (!std.mem.endsWith(u8, entry.name, ".json")) continue;
 
-            const content = dir.readFileAlloc(self.allocator, entry.name, 4096) catch continue;
+            const content = dir.readFileAlloc(io, entry.name, self.allocator, .limited(4096)) catch continue;
             defer self.allocator.free(content);
 
             var event = ImpureEvent{};
             if (parseImpureEvent(&event, content)) {
-                try self.events.append(event);
+                try self.events.append(self.allocator, event);
             }
         }
     }
 
     pub fn save(self: *const ImpureQueue) !void {
-        std.fs.cwd().makePath(IMPURE_DIR) catch {};
+        const io = tri_io.get();
+        std.Io.Dir.cwd().createDirPath(io, IMPURE_DIR) catch {};
 
         for (self.events.items) |event| {
             var fname_buf: [128]u8 = undefined;
@@ -182,9 +188,9 @@ pub const ImpureQueue = struct {
             const content = try serializeImpureEvent(&event, self.allocator);
             defer self.allocator.free(content);
 
-            const file = try std.fs.cwd().createFile(fname, .{});
-            defer file.close();
-            try file.writeAll(content);
+            const file = try std.Io.Dir.cwd().createFile(io, fname, .{});
+            defer file.close(io);
+            try file.writeStreamingAll(io, content);
         }
     }
 
@@ -192,7 +198,7 @@ pub const ImpureQueue = struct {
         if (self.events.items.len >= MAX_QUEUE_SIZE) {
             return error.QueueFull;
         }
-        try self.events.append(event);
+        try self.events.append(self.allocator, event);
     }
 
     pub fn dequeue(self: *ImpureQueue) ?ImpureEvent {
@@ -342,7 +348,7 @@ fn workOnGithubIssue(allocator: std.mem.Allocator, cycle: u64) !bool {
     _ = cycle;
 
     // Fetch open GitHub issues
-    const result = try std.process.Child.run(.{
+    const result = try tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ "gh", "issue", "list", "--state", "open", "--limit", "1", "--json", "number,title" },
     });
@@ -351,7 +357,7 @@ fn workOnGithubIssue(allocator: std.mem.Allocator, cycle: u64) !bool {
         allocator.free(result.stderr);
     }
 
-    if (result.term.Exited != 0 or result.stdout.len == 0) {
+    if (result.term.exited != 0 or result.stdout.len == 0) {
         return false; // No issues or gh error
     }
 
@@ -381,7 +387,7 @@ fn workOnGithubIssue(allocator: std.mem.Allocator, cycle: u64) !bool {
     defer allocator.free(comment);
 
     // Comment on issue (disabled for now - uncomment when ready)
-    // _ = std.process.Child.run(.{
+    // _ = tri_proc.run(.{
     //     .allocator = allocator,
     //     .argv = &.{ "gh", "issue", "comment", number_str, "--body", comment },
     // });
@@ -392,19 +398,21 @@ fn workOnGithubIssue(allocator: std.mem.Allocator, cycle: u64) !bool {
 fn runQueenStart(allocator: std.mem.Allocator, args: []const []const u8) !void {
     _ = args;
 
+    const io = tri_io.get();
+
     // Create PID file
     const pid = std.c.getpid();
     {
-        var f = try std.fs.cwd().createFile(PID_FILE, .{});
-        defer f.close();
+        var f = try std.Io.Dir.cwd().createFile(io, PID_FILE, .{});
+        defer f.close(io);
         var buf: [32]u8 = undefined;
         const pid_str = try std.fmt.bufPrint(&buf, "{d}", .{pid});
-        try f.writeAll(pid_str);
+        try f.writeStreamingAll(io, pid_str);
     }
-    defer std.fs.deleteFileAbsolute(PID_FILE) catch {};
+    defer std.Io.Dir.deleteFileAbsolute(io, PID_FILE) catch {};
 
     // Create heartbeat directory
-    std.fs.cwd().makePath(".trinity/queen") catch {};
+    std.Io.Dir.cwd().createDirPath(io, ".trinity/queen") catch {};
 
     std.debug.print("👑 Queen Trinity starting daemon mode (PID {d})\n", .{pid});
 
@@ -413,7 +421,7 @@ fn runQueenStart(allocator: std.mem.Allocator, args: []const []const u8) !void {
     // DAEMON LOOP — infinite until killed
     while (true) {
         cycle += 1;
-        const now = std.time.milliTimestamp();
+        const now = tri_time.milliTimestamp();
 
         // OBSERVE: check system state
         const dirty = countDirtyFiles(allocator) catch 0;
@@ -441,12 +449,12 @@ fn runQueenStart(allocator: std.mem.Allocator, args: []const []const u8) !void {
         try updateHeartbeat(allocator, cycle, now);
 
         // SLEEP until next cycle
-        std.Thread.sleep(DAEMON_SLEEP_SEC * 1000_000_000);
+        tri_time.sleep(DAEMON_SLEEP_SEC * 1000_000_000);
     }
 }
 
 fn countDirtyFiles(allocator: std.mem.Allocator) !usize {
-    const result = try std.process.Child.run(.{
+    const result = try tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ "git", "status", "--short" },
     });
@@ -464,7 +472,7 @@ fn countDirtyFiles(allocator: std.mem.Allocator) !usize {
 }
 
 fn checkBuild(allocator: std.mem.Allocator) !bool {
-    const result = try std.process.Child.run(.{
+    const result = try tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ "zig", "build" },
     });
@@ -473,41 +481,44 @@ fn checkBuild(allocator: std.mem.Allocator) !bool {
         allocator.free(result.stderr);
     }
     // Check if process exited cleanly (exit code 0)
-    return result.term == .Exited and result.term.Exited == 0;
+    return result.term == .exited and result.term.exited == 0;
 }
 
 fn updateHeartbeat(allocator: std.mem.Allocator, cycle: u64, timestamp: i64) !void {
     const content = try std.fmt.allocPrint(allocator, "{{\"cycle\":{d},\"timestamp\":{d}}}\n", .{ cycle, timestamp });
     defer allocator.free(content);
 
-    var f = try std.fs.cwd().createFile(HEARTBEAT_FILE, .{ .truncate = true });
-    defer f.close();
-    try f.writeAll(content);
+    const io = tri_io.get();
+    var f = try std.Io.Dir.cwd().createFile(io, HEARTBEAT_FILE, .{ .truncate = true });
+    defer f.close(io);
+    try f.writeStreamingAll(io, content);
 }
 
 fn logToHive(allocator: std.mem.Allocator, cycle: u64, msg: []const u8, args: anytype) !void {
     _ = args;
-    const timestamp = std.time.milliTimestamp();
+    const timestamp = tri_time.milliTimestamp();
     const formatted = try std.fmt.allocPrint(allocator, "[{d}] Cycle {d}: {s}\n", .{ timestamp, cycle, msg });
     defer allocator.free(formatted);
 
+    const io = tri_io.get();
     const log_file = ".trinity/queen/HIVELOG.md";
-    std.fs.cwd().makePath(".trinity/queen") catch {};
+    std.Io.Dir.cwd().createDirPath(io, ".trinity/queen") catch {};
 
     // Try to append to existing file, or create new one
-    var f = std.fs.cwd().openFile(log_file, .{ .mode = .write_only }) catch {
+    var f = std.Io.Dir.cwd().openFile(io, log_file, .{ .mode = .write_only }) catch {
         // File doesn't exist, create it with header
-        var new_f = try std.fs.cwd().createFile(log_file, .{});
-        defer new_f.close();
-        try new_f.writeAll("# Queen Trinity Hive Log\n\n");
-        try new_f.writeAll(formatted);
+        var new_f = try std.Io.Dir.cwd().createFile(io, log_file, .{});
+        defer new_f.close(io);
+        // Streaming writes advance the file position, so these append in order.
+        try new_f.writeStreamingAll(io, "# Queen Trinity Hive Log\n\n");
+        try new_f.writeStreamingAll(io, formatted);
         return;
     };
-    defer f.close();
+    defer f.close(io);
 
-    // Seek to end before writing (append mode)
-    try f.seekFromEnd(0);
-    try f.writeAll(formatted);
+    // Append: write at the current end of the file.
+    const end = try f.length(io);
+    try f.writePositionalAll(io, formatted, end);
 }
 
 fn runQueenStatus(allocator: std.mem.Allocator) !void {

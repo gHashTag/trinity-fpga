@@ -4,6 +4,8 @@
 // φ² + 1/φ² = 3
 
 const std = @import("std");
+const tri_io = @import("tri_io");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 
 pub const HttpMethod = enum {
@@ -44,7 +46,7 @@ pub const HttpClient = struct {
     pub fn init(allocator: Allocator) Self {
         return Self{
             .allocator = allocator,
-            .client = std.http.Client{ .allocator = allocator },
+            .client = std.http.Client{ .allocator = allocator, .io = tri_io.get() },
         };
     }
 
@@ -81,7 +83,7 @@ pub const HttpClient = struct {
         body: ?[]const u8,
         auth_token: ?[]const u8,
     ) HttpError!HttpResponse {
-        const start_time = std.time.nanoTimestamp();
+        const start_time = tri_time.nanoTimestamp();
 
         const uri = std.Uri.parse(url) catch return HttpError.InvalidUrl;
 
@@ -142,7 +144,7 @@ pub const HttpClient = struct {
 
         const response_body = reader.allocRemaining(self.allocator, std.Io.Limit.limited(10 * 1024 * 1024)) catch return HttpError.OutOfMemory;
 
-        const end_time = std.time.nanoTimestamp();
+        const end_time = tri_time.nanoTimestamp();
 
         return HttpResponse{
             .status = @intFromEnum(response.head.status),
@@ -155,7 +157,7 @@ pub const HttpClient = struct {
     /// Make a POST request with Anthropic-specific headers
     /// Anthropic requires: x-api-key, anthropic-version, content-type
     pub fn postJsonAnthropic(self: *Self, url: []const u8, body: []const u8, api_key: []const u8) HttpError!HttpResponse {
-        const start_time = std.time.nanoTimestamp();
+        const start_time = tri_time.nanoTimestamp();
 
         const uri = std.Uri.parse(url) catch return HttpError.InvalidUrl;
 
@@ -195,7 +197,7 @@ pub const HttpClient = struct {
 
         const response_body = reader.allocRemaining(self.allocator, std.Io.Limit.limited(10 * 1024 * 1024)) catch return HttpError.OutOfMemory;
 
-        const end_time = std.time.nanoTimestamp();
+        const end_time = tri_time.nanoTimestamp();
 
         return HttpResponse{
             .status = @intFromEnum(response.head.status),
@@ -215,45 +217,44 @@ pub const HttpClient = struct {
         extra_fields: []const [2][]const u8,
         auth_token: []const u8,
     ) HttpError!HttpResponse {
-        const start_time = std.time.nanoTimestamp();
+        const start_time = tri_time.nanoTimestamp();
         const boundary = "----TrinityBoundary2026";
 
         // Build multipart body
-        var body_buf: std.ArrayListUnmanaged(u8) = .{};
+        var body_buf: std.ArrayListUnmanaged(u8) = .empty;
         defer body_buf.deinit(self.allocator);
-        const w = body_buf.writer(self.allocator);
 
         // File part
-        w.writeAll("--") catch return HttpError.OutOfMemory;
-        w.writeAll(boundary) catch return HttpError.OutOfMemory;
-        w.writeAll("\r\n") catch return HttpError.OutOfMemory;
-        w.writeAll("Content-Disposition: form-data; name=\"") catch return HttpError.OutOfMemory;
-        w.writeAll(file_field_name) catch return HttpError.OutOfMemory;
-        w.writeAll("\"; filename=\"") catch return HttpError.OutOfMemory;
-        w.writeAll(file_name) catch return HttpError.OutOfMemory;
-        w.writeAll("\"\r\n") catch return HttpError.OutOfMemory;
-        w.writeAll("Content-Type: ") catch return HttpError.OutOfMemory;
-        w.writeAll(file_content_type) catch return HttpError.OutOfMemory;
-        w.writeAll("\r\n\r\n") catch return HttpError.OutOfMemory;
-        w.writeAll(file_data) catch return HttpError.OutOfMemory;
-        w.writeAll("\r\n") catch return HttpError.OutOfMemory;
+        body_buf.appendSlice(self.allocator, "--") catch return HttpError.OutOfMemory;
+        body_buf.appendSlice(self.allocator, boundary) catch return HttpError.OutOfMemory;
+        body_buf.appendSlice(self.allocator, "\r\n") catch return HttpError.OutOfMemory;
+        body_buf.appendSlice(self.allocator, "Content-Disposition: form-data; name=\"") catch return HttpError.OutOfMemory;
+        body_buf.appendSlice(self.allocator, file_field_name) catch return HttpError.OutOfMemory;
+        body_buf.appendSlice(self.allocator, "\"; filename=\"") catch return HttpError.OutOfMemory;
+        body_buf.appendSlice(self.allocator, file_name) catch return HttpError.OutOfMemory;
+        body_buf.appendSlice(self.allocator, "\"\r\n") catch return HttpError.OutOfMemory;
+        body_buf.appendSlice(self.allocator, "Content-Type: ") catch return HttpError.OutOfMemory;
+        body_buf.appendSlice(self.allocator, file_content_type) catch return HttpError.OutOfMemory;
+        body_buf.appendSlice(self.allocator, "\r\n\r\n") catch return HttpError.OutOfMemory;
+        body_buf.appendSlice(self.allocator, file_data) catch return HttpError.OutOfMemory;
+        body_buf.appendSlice(self.allocator, "\r\n") catch return HttpError.OutOfMemory;
 
         // Extra string fields
         for (extra_fields) |field| {
-            w.writeAll("--") catch return HttpError.OutOfMemory;
-            w.writeAll(boundary) catch return HttpError.OutOfMemory;
-            w.writeAll("\r\n") catch return HttpError.OutOfMemory;
-            w.writeAll("Content-Disposition: form-data; name=\"") catch return HttpError.OutOfMemory;
-            w.writeAll(field[0]) catch return HttpError.OutOfMemory;
-            w.writeAll("\"\r\n\r\n") catch return HttpError.OutOfMemory;
-            w.writeAll(field[1]) catch return HttpError.OutOfMemory;
-            w.writeAll("\r\n") catch return HttpError.OutOfMemory;
+            body_buf.appendSlice(self.allocator, "--") catch return HttpError.OutOfMemory;
+            body_buf.appendSlice(self.allocator, boundary) catch return HttpError.OutOfMemory;
+            body_buf.appendSlice(self.allocator, "\r\n") catch return HttpError.OutOfMemory;
+            body_buf.appendSlice(self.allocator, "Content-Disposition: form-data; name=\"") catch return HttpError.OutOfMemory;
+            body_buf.appendSlice(self.allocator, field[0]) catch return HttpError.OutOfMemory;
+            body_buf.appendSlice(self.allocator, "\"\r\n\r\n") catch return HttpError.OutOfMemory;
+            body_buf.appendSlice(self.allocator, field[1]) catch return HttpError.OutOfMemory;
+            body_buf.appendSlice(self.allocator, "\r\n") catch return HttpError.OutOfMemory;
         }
 
         // Closing boundary
-        w.writeAll("--") catch return HttpError.OutOfMemory;
-        w.writeAll(boundary) catch return HttpError.OutOfMemory;
-        w.writeAll("--\r\n") catch return HttpError.OutOfMemory;
+        body_buf.appendSlice(self.allocator, "--") catch return HttpError.OutOfMemory;
+        body_buf.appendSlice(self.allocator, boundary) catch return HttpError.OutOfMemory;
+        body_buf.appendSlice(self.allocator, "--\r\n") catch return HttpError.OutOfMemory;
 
         // Build content-type header with boundary
         var ct_buf: [128]u8 = undefined;
@@ -297,7 +298,7 @@ pub const HttpClient = struct {
         var reader = response.reader(&transfer_buffer);
         const response_body = reader.allocRemaining(self.allocator, std.Io.Limit.limited(10 * 1024 * 1024)) catch return HttpError.OutOfMemory;
 
-        const end_time = std.time.nanoTimestamp();
+        const end_time = tri_time.nanoTimestamp();
 
         return HttpResponse{
             .status = @intFromEnum(response.head.status),

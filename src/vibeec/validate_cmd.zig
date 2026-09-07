@@ -4,6 +4,7 @@
 // ===============================================================================
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 
 const alloc = std.heap.page_allocator;
 
@@ -183,10 +184,10 @@ const Section = enum {
 };
 
 pub fn validateSpec(source: []const u8, file_path: []const u8) ![]const ValidationError {
-    var errors: std.ArrayList(ValidationError) = .{};
+    var errors: std.ArrayList(ValidationError) = .empty;
 
     // ---- Pass 1: collect all spec-defined type names ----
-    var spec_types: std.ArrayList([]const u8) = .{};
+    var spec_types: std.ArrayList([]const u8) = .empty;
     {
         var pre_section: Section = .none;
         var pre_lines = std.mem.splitScalar(u8, source, '\n');
@@ -244,7 +245,7 @@ pub fn validateSpec(source: []const u8, file_path: []const u8) ![]const Validati
     var in_type_fields = false;
 
     // Behavior tracking
-    var behaviors: std.ArrayList(BehaviorState) = .{};
+    var behaviors: std.ArrayList(BehaviorState) = .empty;
     var current_behavior: ?BehaviorState = null;
 
     var lines = std.mem.splitScalar(u8, source, '\n');
@@ -499,9 +500,10 @@ pub fn runValidation(args: []const []const u8) !u8 {
     const file_path = args[1];
 
     // Check if path is a directory by trying to open it
-    if (std.fs.cwd().openDir(file_path, .{ .iterate = true })) |dir| {
+    const io = tri_io.get();
+    if (std.Io.Dir.cwd().openDir(io, file_path, .{ .iterate = true })) |dir| {
         var d = dir;
-        d.close();
+        d.close(io);
         return lintDirectory(file_path);
     } else |_| {}
 
@@ -509,7 +511,7 @@ pub fn runValidation(args: []const []const u8) !u8 {
 }
 
 fn lintSingleFile(file_path: []const u8) !u8 {
-    const source = std.fs.cwd().readFileAlloc(alloc, file_path, 1024 * 1024) catch |err| {
+    const source = std.Io.Dir.cwd().readFileAlloc(tri_io.get(), file_path, alloc, .limited(1024 * 1024)) catch |err| {
         std.debug.print("Error reading file: {}\n   Path: {s}\n", .{ err, file_path });
         return 1;
     };
@@ -549,14 +551,15 @@ fn lintDirectory(dir_path: []const u8) !u8 {
     var total_files: usize = 0;
     var failed_files: usize = 0;
 
-    var dir = std.fs.cwd().openDir(dir_path, .{ .iterate = true }) catch |err| {
+    const io = tri_io.get();
+    var dir = std.Io.Dir.cwd().openDir(io, dir_path, .{ .iterate = true }) catch |err| {
         std.debug.print("Error opening directory: {}\n   Path: {s}\n", .{ err, dir_path });
         return 1;
     };
-    defer dir.close();
+    defer dir.close(io);
 
     var iter = dir.iterate();
-    while (try iter.next()) |entry| {
+    while (try iter.next(io)) |entry| {
         if (entry.kind != .file) continue;
         if (!std.mem.endsWith(u8, entry.name, ".tri")) continue;
 

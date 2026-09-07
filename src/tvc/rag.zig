@@ -11,6 +11,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 
 // Import TVC embeddings
@@ -121,7 +122,7 @@ pub const RAGRetriever = struct {
             .line_number = line_number,
             .snippet = try self.allocator.dupe(u8, snippet),
             .embedding = embedding,
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
             .sacred_bonus = sacred_bonus,
         };
 
@@ -384,7 +385,7 @@ pub fn sacredRankResults(
 
     for (0..results.len) |i| {
         const name_score = nameMatchScore(query, results[i].symbol_name);
-        const recency = recencyBoost(std.time.timestamp()); // Use now for results
+        const recency = recencyBoost(tri_time.timestamp()); // Use now for results
 
         ranked[i] = CodeChunk{
             .symbol_name = try allocator.dupe(u8, results[i].symbol_name),

@@ -2,6 +2,7 @@
 // Demonstrates INT4 compression for LLM weights
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const quantizer = @import("trinity_quantizer.zig");
 
 pub fn main() !void {
@@ -34,7 +35,7 @@ pub fn main() !void {
 
     // Quantize
     std.debug.print("Quantizing to INT4...\n", .{});
-    var timer = try std.time.Timer.start();
+    var timer = try tri_time.Timer.start();
 
     var quant = try quantizer.quantizeTensor(allocator, weights);
     defer quantizer.deinitPacked(allocator, &quant);

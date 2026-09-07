@@ -11,6 +11,7 @@
 //! φ² + 1/φ² = 3 | TRINITY
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const hdc = @import("hdc_core.zig");
 
 pub const Trit = hdc.Trit;
@@ -148,7 +149,7 @@ pub const RLAgent = struct {
             .total_reward = 0,
             .episode_rewards = std.ArrayList(f64).init(allocator),
             .allocator = allocator,
-            .rng = std.Random.DefaultPrng.init(@intCast(std.time.timestamp())),
+            .rng = std.Random.DefaultPrng.init(@intCast(tri_time.timestamp())),
         };
     }
 

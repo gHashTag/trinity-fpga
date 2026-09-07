@@ -6,6 +6,8 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_mutex = @import("tri_mutex");
+const tri_time = @import("tri_time");
 const token_staking_mod = @import("token_staking.zig");
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -191,7 +193,7 @@ pub const HttpApiServer = struct {
     config: ApiConfig,
     stats: ApiStats,
     node_state: NodeState,
-    mutex: std.Thread.Mutex,
+    mutex: tri_mutex.Mutex,
 
     /// Delegate for Prometheus metrics — if set, /metrics requests are forwarded
     prometheus_delegate: ?*const fn (allocator: std.mem.Allocator) anyerror![]u8 = null,
@@ -265,7 +267,7 @@ pub const HttpApiServer = struct {
         const limit = tier.rateLimit();
         if (limit == 0) return false; // unlimited
 
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
 
         self.mutex.lock();
         defer self.mutex.unlock();
@@ -298,7 +300,7 @@ pub const HttpApiServer = struct {
         self.mutex.lock();
         defer self.mutex.unlock();
 
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
 
         if (self.rate_limits.get(wallet_key)) |entry| {
             if (now - entry.window_start >= TierConfig.RATE_LIMIT_WINDOW_SECONDS) {
@@ -624,7 +626,7 @@ pub const HttpApiServer = struct {
         self.mutex.unlock();
 
         // Generate a mock tx hash from current timestamp
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
         const body = try std.fmt.allocPrint(
             self.allocator,
             \\{{"claimed_tri":{d:.6},"tx_hash":"0x{x:0>16}{x:0>16}{x:0>16}{x:0>16}"}}
@@ -670,7 +672,7 @@ pub const HttpApiServer = struct {
     fn handleRewardHistory(self: *HttpApiServer, request: HttpRequest) ![]u8 {
         if (request.method != .GET) return self.methodNotAllowedResponse();
 
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
 
         // Return simulated recent reward history
         const body = try std.fmt.allocPrint(

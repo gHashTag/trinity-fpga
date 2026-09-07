@@ -10,6 +10,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const hippocampus = @import("hippocampus.zig");
 const voice_engine = @import("voice_engine.zig");
@@ -161,7 +162,7 @@ pub fn conditionFear(
 
     // Build episode record with fear tags
     var record = hippocampus.MemoryRecord{};
-    const ts: u64 = @intCast(std.time.timestamp());
+    const ts: u64 = @intCast(tri_time.timestamp());
     hippocampus.generateId(&record.id_buf, &record.id_len, ts, "amygdala");
     hippocampus.copyToFixed(32, &record.agent_buf, &record.agent_len, "amygdala");
     record.kind = .episode;
@@ -204,7 +205,7 @@ pub fn conditionReward(
     const clamped = @min(@abs(intensity), 100);
 
     var record = hippocampus.MemoryRecord{};
-    const ts: u64 = @intCast(std.time.timestamp());
+    const ts: u64 = @intCast(tri_time.timestamp());
     hippocampus.generateId(&record.id_buf, &record.id_len, ts, "amygdala");
     hippocampus.copyToFixed(32, &record.agent_buf, &record.agent_len, "amygdala");
     record.kind = .episode;
@@ -362,7 +363,7 @@ pub fn modulateMood(
     defer results.deinit(allocator);
 
     var recent_fear_count: u32 = 0;
-    const now = std.time.timestamp();
+    const now = tri_time.timestamp();
     const one_hour_ago = now - 3600;
 
     for (results.items) |rec| {
@@ -559,7 +560,7 @@ pub fn health() CellHealth {
     return CellHealth{
         .status = .healthy,
         .cycle = 0,
-        .last_check = std.time.timestamp(),
+        .last_check = tri_time.timestamp(),
     };
 }
 
@@ -603,7 +604,7 @@ test "amygdala — FearMemory shouldAvoid logic" {
         .context = "test",
         .intensity = 80,
         .encounter_count = 5,
-        .last_encounter = std.time.timestamp(),
+        .last_encounter = tri_time.timestamp(),
         .extinction_progress = 0.0,
     };
     try std.testing.expect(fm.shouldAvoid());
@@ -613,7 +614,7 @@ test "amygdala — FearMemory shouldAvoid logic" {
         .context = "test",
         .intensity = 80,
         .encounter_count = 5,
-        .last_encounter = std.time.timestamp(),
+        .last_encounter = tri_time.timestamp(),
         .extinction_progress = 0.9,
     };
     try std.testing.expect(!extinguished.shouldAvoid());
@@ -666,7 +667,7 @@ test "amygdala — FearMemory avoidanceConfidence formula" {
         .context = "test",
         .intensity = 50,
         .encounter_count = 1,
-        .last_encounter = std.time.timestamp(),
+        .last_encounter = tri_time.timestamp(),
         .extinction_progress = 0.0,
     };
     // confidence = (50 / 100) * (1.0 - 0.0) = 0.5
@@ -682,7 +683,7 @@ test "amygdala — FearMemory shouldAvoid thresholds" {
         .context = "test",
         .intensity = 31, // Just above threshold
         .encounter_count = 1,
-        .last_encounter = std.time.timestamp(),
+        .last_encounter = tri_time.timestamp(),
         .extinction_progress = 0.0,
     };
     try std.testing.expect(fm1.shouldAvoid());
@@ -691,7 +692,7 @@ test "amygdala — FearMemory shouldAvoid thresholds" {
         .context = "test",
         .intensity = 30, // At threshold
         .encounter_count = 1,
-        .last_encounter = std.time.timestamp(),
+        .last_encounter = tri_time.timestamp(),
         .extinction_progress = 0.0,
     };
     try std.testing.expect(!fm2.shouldAvoid());
@@ -700,7 +701,7 @@ test "amygdala — FearMemory shouldAvoid thresholds" {
         .context = "test",
         .intensity = 100,
         .encounter_count = 1,
-        .last_encounter = std.time.timestamp(),
+        .last_encounter = tri_time.timestamp(),
         .extinction_progress = 0.81, // Extinguished
     };
     try std.testing.expect(!fm3.shouldAvoid());
@@ -861,7 +862,7 @@ test "amygdala — FearMemory shouldAvoid low intensity" {
         .context = "test",
         .intensity = 20, // Below threshold
         .encounter_count = 1,
-        .last_encounter = std.time.timestamp(),
+        .last_encounter = tri_time.timestamp(),
         .extinction_progress = 0.0,
     };
     try std.testing.expect(!fm.shouldAvoid());
@@ -872,7 +873,7 @@ test "amygdala — FearMemory avoidanceConfidence max" {
         .context = "test",
         .intensity = 100,
         .encounter_count = 1,
-        .last_encounter = std.time.timestamp(),
+        .last_encounter = tri_time.timestamp(),
         .extinction_progress = 0.0,
     };
     try std.testing.expectApproxEqAbs(@as(f32, 1.0), fm.avoidanceConfidence(), 0.01);
@@ -883,7 +884,7 @@ test "amygdala — FearMemory avoidanceConfidence extinguished" {
         .context = "test",
         .intensity = 100,
         .encounter_count = 1,
-        .last_encounter = std.time.timestamp(),
+        .last_encounter = tri_time.timestamp(),
         .extinction_progress = 1.0,
     };
     try std.testing.expectApproxEqAbs(@as(f32, 0.0), fm.avoidanceConfidence(), 0.01);
@@ -894,7 +895,7 @@ test "amygdala — FearMemory encounter_count increments" {
         .context = "test",
         .intensity = 50,
         .encounter_count = 1,
-        .last_encounter = std.time.timestamp(),
+        .last_encounter = tri_time.timestamp(),
     };
     try std.testing.expectEqual(@as(u32, 1), fm.encounter_count);
 

@@ -12,6 +12,7 @@
 // - Anthropic (Claude) - Advanced reasoning, math proofs
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const groq = @import("groq_provider.zig");
 const zhipu = @import("zhipu_provider.zig");
 const anthropic = @import("anthropic_provider.zig");
@@ -83,7 +84,7 @@ pub const MultiProvider = struct {
     /// Generate code with auto-routing
     pub fn generate(self: *Self, prompt: []const u8, task_type: TaskType, context: ?[]const u8) !GenerateResult {
         const provider_type = self.selectProvider(prompt, task_type);
-        const start = std.time.microTimestamp();
+        const start = tri_time.microTimestamp();
 
         const code = switch (provider_type) {
             .Groq => blk: {
@@ -116,7 +117,7 @@ pub const MultiProvider = struct {
             },
         };
 
-        const elapsed = @as(u64, @intCast(std.time.microTimestamp() - start));
+        const elapsed = @as(u64, @intCast(tri_time.microTimestamp() - start));
 
         return GenerateResult{
             .code = code,

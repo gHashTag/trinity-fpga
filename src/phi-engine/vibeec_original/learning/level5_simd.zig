@@ -11,6 +11,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const testing = std.testing;
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -209,9 +210,9 @@ pub fn benchmarkFindChar(text: []const u8, needle: u8, iterations: u64) SimdBenc
     var scalar_total: u64 = 0;
     var i: u64 = 0;
     while (i < iterations) : (i += 1) {
-        const start = std.time.nanoTimestamp();
+        const start = tri_time.nanoTimestamp();
         _ = scalarFindChar(text, needle);
-        const end = std.time.nanoTimestamp();
+        const end = tri_time.nanoTimestamp();
         scalar_total += @intCast(end - start);
     }
 
@@ -219,9 +220,9 @@ pub fn benchmarkFindChar(text: []const u8, needle: u8, iterations: u64) SimdBenc
     var simd_total: u64 = 0;
     i = 0;
     while (i < iterations) : (i += 1) {
-        const start = std.time.nanoTimestamp();
+        const start = tri_time.nanoTimestamp();
         _ = simdFindChar(text, needle);
-        const end = std.time.nanoTimestamp();
+        const end = tri_time.nanoTimestamp();
         simd_total += @intCast(end - start);
     }
 

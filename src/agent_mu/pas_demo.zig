@@ -5,6 +5,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 const pas_task_runner = @import("pas_task_runner.zig");
 
 const Allocator = std.mem.Allocator;
@@ -16,70 +17,70 @@ const Allocator = std.mem.Allocator;
 /// Task 1: Code Generation (30% baseline, 50% with PAS)
 fn codeGenTask(attempt: usize) bool {
     _ = attempt;
-    const rand = @as(u32, @truncate(@as(u64, @intCast(@rem(std.time.nanoTimestamp(), 1000)))));
+    const rand = @as(u32, @truncate(@as(u64, @intCast(@rem(tri_time.nanoTimestamp(), 1000)))));
     return rand % 10 < 3; // 30% baseline
 }
 
 fn codeGenTaskWithPas(attempt: usize, pas_hint: bool) bool {
     _ = attempt;
     _ = pas_hint;
-    const rand = @as(u32, @truncate(@as(u64, @intCast(@rem(std.time.nanoTimestamp(), 1000)))));
+    const rand = @as(u32, @truncate(@as(u64, @intCast(@rem(tri_time.nanoTimestamp(), 1000)))));
     return rand % 10 < 5; // 50% with PAS
 }
 
 /// Task 2: Type System Fix (40% baseline, 70% with PAS)
 fn typeFixTask(attempt: usize) bool {
     _ = attempt;
-    const rand = @as(u32, @truncate(@as(u64, @intCast(@rem(std.time.nanoTimestamp() + 123, 1000)))));
+    const rand = @as(u32, @truncate(@as(u64, @intCast(@rem(tri_time.nanoTimestamp() + 123, 1000)))));
     return rand % 10 < 4; // 40% baseline
 }
 
 fn typeFixTaskWithPas(attempt: usize, pas_hint: bool) bool {
     _ = attempt;
     _ = pas_hint;
-    const rand = @as(u32, @truncate(@as(u64, @intCast(@rem(std.time.nanoTimestamp() + 123, 1000)))));
+    const rand = @as(u32, @truncate(@as(u64, @intCast(@rem(tri_time.nanoTimestamp() + 123, 1000)))));
     return rand % 10 < 7; // 70% with PAS
 }
 
 /// Task 3: Memory Optimization (25% baseline, 45% with PAS)
 fn memOptTask(attempt: usize) bool {
     _ = attempt;
-    const rand = @as(u32, @truncate(@as(u64, @intCast(@rem(std.time.nanoTimestamp() + 456, 1000)))));
+    const rand = @as(u32, @truncate(@as(u64, @intCast(@rem(tri_time.nanoTimestamp() + 456, 1000)))));
     return rand % 10 < 2; // 25% baseline
 }
 
 fn memOptTaskWithPas(attempt: usize, pas_hint: bool) bool {
     _ = attempt;
     _ = pas_hint;
-    const rand = @as(u32, @truncate(@as(u64, @intCast(@rem(std.time.nanoTimestamp() + 456, 1000)))));
+    const rand = @as(u32, @truncate(@as(u64, @intCast(@rem(tri_time.nanoTimestamp() + 456, 1000)))));
     return rand % 10 < 4; // 45% with PAS
 }
 
 /// Task 4: VSA Operations (35% baseline, 60% with PAS)
 fn vsaTask(attempt: usize) bool {
     _ = attempt;
-    const rand = @as(u32, @truncate(@as(u64, @intCast(@rem(std.time.nanoTimestamp() + 789, 1000)))));
+    const rand = @as(u32, @truncate(@as(u64, @intCast(@rem(tri_time.nanoTimestamp() + 789, 1000)))));
     return rand % 10 < 3; // 35% baseline
 }
 
 fn vsaTaskWithPas(attempt: usize, pas_hint: bool) bool {
     _ = attempt;
     _ = pas_hint;
-    const rand = @as(u32, @truncate(@as(u64, @intCast(@rem(std.time.nanoTimestamp() + 789, 1000)))));
+    const rand = @as(u32, @truncate(@as(u64, @intCast(@rem(tri_time.nanoTimestamp() + 789, 1000)))));
     return rand % 10 < 6; // 60% with PAS
 }
 
 /// Task 5: I/O Patterns (50% baseline, 65% with PAS)
 fn ioTask(attempt: usize) bool {
     _ = attempt;
-    const rand = @as(u32, @truncate(@as(u64, @intCast(@rem(std.time.nanoTimestamp() + 999, 1000)))));
+    const rand = @as(u32, @truncate(@as(u64, @intCast(@rem(tri_time.nanoTimestamp() + 999, 1000)))));
     return rand % 10 < 5; // 50% baseline
 }
 
 fn ioTaskWithPas(attempt: usize, pas_hint: bool) bool {
     _ = attempt;
     _ = pas_hint;
-    const rand = @as(u32, @truncate(@as(u64, @intCast(@rem(std.time.nanoTimestamp() + 999, 1000)))));
+    const rand = @as(u32, @truncate(@as(u64, @intCast(@rem(tri_time.nanoTimestamp() + 999, 1000)))));
     return rand % 10 < 6; // 65% with PAS
 }
 

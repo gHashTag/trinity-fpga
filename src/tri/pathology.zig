@@ -18,6 +18,9 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
+const tri_proc = @import("tri_proc");
+const tri_time = @import("tri_time");
 const colors = @import("tri_colors.zig");
 const swe_arena = @import("swe_arena.zig");
 const thalamus = @import("thalamus.zig");
@@ -324,17 +327,12 @@ pub fn classifyLevel(score: f32) VerdictLevel {
 pub fn compareWithPast(allocator: std.mem.Allocator, current_score: f32) PastComparison {
     _ = allocator;
     const path = ".trinity/verdict_history.json";
-    const file = std.fs.cwd().openFile(path, .{}) catch {
-        return PastComparison{ .prev_score = 0, .delta = current_score, .trend_up = true };
-    };
-    defer file.close();
-
+    // A history file shorter than the buffer is the normal case, so a short
+    // read is legitimate: `readFile` is open + read-to-EOF-or-full + close.
     var buf: [4096]u8 = undefined;
-    const bytes_read = file.readAll(&buf) catch {
+    const content = std.Io.Dir.cwd().readFile(tri_io.get(), path, &buf) catch {
         return PastComparison{ .prev_score = 0, .delta = current_score, .trend_up = true };
     };
-
-    const content = buf[0..bytes_read];
     var last_score: f32 = 0;
     var pos: usize = 0;
     const needle = "\"total\":";
@@ -364,26 +362,27 @@ pub fn saveVerdict(allocator: std.mem.Allocator, v: ToxicVerdict) void {
     _ = allocator;
     const path = ".trinity/verdict_history.json";
 
+    const io = tri_io.get();
+
     var existing: [32768]u8 = undefined;
     var existing_len: usize = 0;
-    if (std.fs.cwd().openFile(path, .{})) |file| {
-        existing_len = file.readAll(&existing) catch 0;
-        file.close();
+    if (std.Io.Dir.cwd().readFile(io, path, &existing)) |slice| {
+        existing_len = slice.len;
     } else |_| {}
 
-    const file = std.fs.cwd().createFile(path, .{}) catch return;
-    defer file.close();
+    const file = std.Io.Dir.cwd().createFile(io, path, .{}) catch return;
+    defer file.close(io);
 
     if (existing_len > 2) {
-        const trimmed = std.mem.trimRight(u8, existing[0..existing_len], " \n\r\t");
+        const trimmed = std.mem.trimEnd(u8, existing[0..existing_len], " \n\r\t");
         if (trimmed.len > 0 and trimmed[trimmed.len - 1] == ']') {
-            file.writeAll(trimmed[0 .. trimmed.len - 1]) catch return;
-            file.writeAll(",\n") catch return;
+            file.writeStreamingAll(io, trimmed[0 .. trimmed.len - 1]) catch return;
+            file.writeStreamingAll(io, ",\n") catch return;
         } else {
-            file.writeAll("[\n") catch return;
+            file.writeStreamingAll(io, "[\n") catch return;
         }
     } else {
-        file.writeAll("[\n") catch return;
+        file.writeStreamingAll(io, "[\n") catch return;
     }
 
     var buf: [512]u8 = undefined;
@@ -397,7 +396,7 @@ pub fn saveVerdict(allocator: std.mem.Allocator, v: ToxicVerdict) void {
         v.level.label(),
         v.timestamp,
     }) catch return;
-    file.writeAll(entry) catch return;
+    file.writeStreamingAll(io, entry) catch return;
 }
 
 /// Render toxic verdict output — 12 dimensions in 3 tiers
@@ -469,7 +468,7 @@ pub fn runVerdictCommand(allocator: std.mem.Allocator) void {
     const score = computeScore(input);
     const level = classifyLevel(score.total);
     const comparison = compareWithPast(allocator, score.total);
-    const timestamp = std.time.timestamp();
+    const timestamp = tri_time.timestamp();
 
     const v = ToxicVerdict{
         .score = score,
@@ -496,18 +495,18 @@ const ScholarHealth = struct { wakes: u32, researched: u32 };
 const EnergyHealth = struct { total: u32, pass: u32 };
 
 fn checkBuild(allocator: std.mem.Allocator) bool {
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ "zig", "build", "--summary", "none" },
         .max_output_bytes = 1024 * 1024,
     }) catch return false;
     defer allocator.free(result.stdout);
     defer allocator.free(result.stderr);
-    return result.term.Exited == 0;
+    return result.term.exited == 0;
 }
 
 fn countTestBlocks(allocator: std.mem.Allocator) TestCount {
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ "zig", "build", "test" },
         .max_output_bytes = 4 * 1024 * 1024,
@@ -528,7 +527,7 @@ fn countTestBlocks(allocator: std.mem.Allocator) TestCount {
 
     const total = if (test_steps > 0) test_steps else 1;
 
-    if (result.term.Exited == 0) {
+    if (result.term.exited == 0) {
         // Exit 0 = all tests passed
         return TestCount{ .passed = total, .total = total };
     }
@@ -546,24 +545,25 @@ fn countTestBlocks(allocator: std.mem.Allocator) TestCount {
 /// Count .zig files in src/tri/ that have test blocks
 fn countFileCoverage(allocator: std.mem.Allocator) CoverageCount {
     _ = allocator;
-    var dir = std.fs.cwd().openDir("src/tri", .{ .iterate = true }) catch return CoverageCount{ .with_tests = 0, .total = 0 };
-    defer dir.close();
+    const io = tri_io.get();
+    var dir = std.Io.Dir.cwd().openDir(io, "src/tri", .{ .iterate = true }) catch return CoverageCount{ .with_tests = 0, .total = 0 };
+    defer dir.close(io);
 
     var total: u32 = 0;
     var with_tests: u32 = 0;
 
     var iter = dir.iterate();
-    while (iter.next() catch null) |entry| {
+    while (iter.next(io) catch null) |entry| {
         if (entry.kind != .file) continue;
         if (!std.mem.endsWith(u8, entry.name, ".zig")) continue;
         total += 1;
 
         // Read file and check for test blocks
+        // A source file shorter than the buffer is the normal case; readFile
+        // is open + read-to-EOF-or-full + close in one call.
         var fbuf: [65536]u8 = undefined;
-        const f = dir.openFile(entry.name, .{}) catch continue;
-        defer f.close();
-        const n = f.readAll(&fbuf) catch continue;
-        if (std.mem.indexOf(u8, fbuf[0..n], "test \"") != null) {
+        const fcontent = dir.readFile(io, entry.name, &fbuf) catch continue;
+        if (std.mem.indexOf(u8, fcontent, "test \"") != null) {
             with_tests += 1;
         }
     }
@@ -574,23 +574,21 @@ fn countFileCoverage(allocator: std.mem.Allocator) CoverageCount {
 /// Count TODO, FIXME, HACK, XXX markers in src/tri/
 fn countTechDebt(allocator: std.mem.Allocator) DebtCount {
     _ = allocator;
-    var dir = std.fs.cwd().openDir("src/tri", .{ .iterate = true }) catch return DebtCount{ .todo = 0, .fixme = 0, .hack = 0 };
-    defer dir.close();
+    const io = tri_io.get();
+    var dir = std.Io.Dir.cwd().openDir(io, "src/tri", .{ .iterate = true }) catch return DebtCount{ .todo = 0, .fixme = 0, .hack = 0 };
+    defer dir.close(io);
 
     var todo: u32 = 0;
     var fixme: u32 = 0;
     var hack: u32 = 0;
 
     var iter = dir.iterate();
-    while (iter.next() catch null) |entry| {
+    while (iter.next(io) catch null) |entry| {
         if (entry.kind != .file) continue;
         if (!std.mem.endsWith(u8, entry.name, ".zig")) continue;
 
         var fbuf: [65536]u8 = undefined;
-        const f = dir.openFile(entry.name, .{}) catch continue;
-        defer f.close();
-        const n = f.readAll(&fbuf) catch continue;
-        const content = fbuf[0..n];
+        const content = dir.readFile(io, entry.name, &fbuf) catch continue;
 
         var pos: usize = 0;
         while (pos < content.len) {
@@ -618,23 +616,22 @@ fn countTechDebt(allocator: std.mem.Allocator) DebtCount {
 /// Count files > 1500 LOC in src/tri/ (god file threshold)
 fn countGodFiles(allocator: std.mem.Allocator) u32 {
     _ = allocator;
-    var dir = std.fs.cwd().openDir("src/tri", .{ .iterate = true }) catch return 0;
-    defer dir.close();
+    const io = tri_io.get();
+    var dir = std.Io.Dir.cwd().openDir(io, "src/tri", .{ .iterate = true }) catch return 0;
+    defer dir.close(io);
 
     var gods: u32 = 0;
 
     var iter = dir.iterate();
-    while (iter.next() catch null) |entry| {
+    while (iter.next(io) catch null) |entry| {
         if (entry.kind != .file) continue;
         if (!std.mem.endsWith(u8, entry.name, ".zig")) continue;
 
         var fbuf: [131072]u8 = undefined;
-        const f = dir.openFile(entry.name, .{}) catch continue;
-        defer f.close();
-        const n = f.readAll(&fbuf) catch continue;
+        const fcontent = dir.readFile(io, entry.name, &fbuf) catch continue;
 
         var lines: u32 = 0;
-        for (fbuf[0..n]) |c| {
+        for (fcontent) |c| {
             if (c == '\n') lines += 1;
         }
         if (lines > 1500) gods += 1;
@@ -646,22 +643,20 @@ fn countGodFiles(allocator: std.mem.Allocator) u32 {
 /// Count stub pub fns (body is unreachable, return error, or < 3 lines)
 fn countDeadCode(allocator: std.mem.Allocator) DeadCount {
     _ = allocator;
-    var dir = std.fs.cwd().openDir("src/tri", .{ .iterate = true }) catch return DeadCount{ .stubs = 0, .total = 0 };
-    defer dir.close();
+    const io = tri_io.get();
+    var dir = std.Io.Dir.cwd().openDir(io, "src/tri", .{ .iterate = true }) catch return DeadCount{ .stubs = 0, .total = 0 };
+    defer dir.close(io);
 
     var total: u32 = 0;
     var stubs: u32 = 0;
 
     var iter = dir.iterate();
-    while (iter.next() catch null) |entry| {
+    while (iter.next(io) catch null) |entry| {
         if (entry.kind != .file) continue;
         if (!std.mem.endsWith(u8, entry.name, ".zig")) continue;
 
         var fbuf: [131072]u8 = undefined;
-        const f = dir.openFile(entry.name, .{}) catch continue;
-        defer f.close();
-        const n = f.readAll(&fbuf) catch continue;
-        const content = fbuf[0..n];
+        const content = dir.readFile(io, entry.name, &fbuf) catch continue;
 
         // Count "pub fn" occurrences
         var pos: usize = 0;
@@ -690,14 +685,15 @@ fn countDeadCode(allocator: std.mem.Allocator) DeadCount {
 /// Count duplicate file groups (_v2, _v3, _v4 patterns)
 fn countDuplication(allocator: std.mem.Allocator) u32 {
     _ = allocator;
-    var dir = std.fs.cwd().openDir("src/tri", .{ .iterate = true }) catch return 0;
-    defer dir.close();
+    const io = tri_io.get();
+    var dir = std.Io.Dir.cwd().openDir(io, "src/tri", .{ .iterate = true }) catch return 0;
+    defer dir.close(io);
 
     // Simple: count files matching *_v[2-9].zig pattern
     var dups: u32 = 0;
 
     var iter = dir.iterate();
-    while (iter.next() catch null) |entry| {
+    while (iter.next(io) catch null) |entry| {
         if (entry.kind != .file) continue;
         if (!std.mem.endsWith(u8, entry.name, ".zig")) continue;
         const base = entry.name[0 .. entry.name.len - 4]; // remove .zig
@@ -716,14 +712,15 @@ fn countDuplication(allocator: std.mem.Allocator) u32 {
 /// Count specs without matching .zig implementation
 fn countSpecGaps(allocator: std.mem.Allocator) SpecGapCount {
     _ = allocator;
-    var dir = std.fs.cwd().openDir("specs/tri", .{ .iterate = true }) catch return SpecGapCount{ .gaps = 0, .total = 0 };
-    defer dir.close();
+    const io = tri_io.get();
+    var dir = std.Io.Dir.cwd().openDir(io, "specs/tri", .{ .iterate = true }) catch return SpecGapCount{ .gaps = 0, .total = 0 };
+    defer dir.close(io);
 
     var total: u32 = 0;
     var gaps: u32 = 0;
 
     var iter = dir.iterate();
-    while (iter.next() catch null) |entry| {
+    while (iter.next(io) catch null) |entry| {
         if (entry.kind != .file) continue;
         if (!std.mem.endsWith(u8, entry.name, ".tri")) continue;
         total += 1;
@@ -735,9 +732,9 @@ fn countSpecGaps(allocator: std.mem.Allocator) SpecGapCount {
 
         // Check src/tri/ (top-level)
         const has_src = blk: {
-            var src_dir = std.fs.cwd().openDir("src/tri", .{}) catch break :blk false;
-            defer src_dir.close();
-            _ = src_dir.statFile(zig_name) catch break :blk false;
+            var src_dir = std.Io.Dir.cwd().openDir(io, "src/tri", .{}) catch break :blk false;
+            defer src_dir.close(io);
+            _ = src_dir.statFile(io, zig_name, .{}) catch break :blk false;
             break :blk true;
         };
 
@@ -760,9 +757,9 @@ fn countSpecGaps(allocator: std.mem.Allocator) SpecGapCount {
                 "deploy/trinity-nexus/output/examples/zig",
             };
             for (gen_dirs) |gd| {
-                var gdir = std.fs.cwd().openDir(gd, .{}) catch continue;
-                defer gdir.close();
-                _ = gdir.statFile(zig_name) catch continue;
+                var gdir = std.Io.Dir.cwd().openDir(io, gd, .{}) catch continue;
+                defer gdir.close(io);
+                _ = gdir.statFile(io, zig_name, .{}) catch continue;
                 break :blk true;
             }
             break :blk false;
@@ -777,15 +774,14 @@ fn countSpecGaps(allocator: std.mem.Allocator) SpecGapCount {
 /// Read scholar health from heartbeat + count real research artifacts
 fn readScholarHealth() ScholarHealth {
     // Read wakes from heartbeat
+    const io = tri_io.get();
     var wakes: u32 = 0;
-    if (std.fs.cwd().openFile(".trinity/scholar/heartbeat.json", .{})) |file| {
-        defer file.close();
-        var buf: [4096]u8 = undefined;
-        const n = file.readAll(&buf) catch 0;
-        if (n > 0) {
-            wakes = simpleJsonU32(buf[0..n], "wakes") orelse
-                simpleJsonU32(buf[0..n], "wake_count") orelse
-                simpleJsonU32(buf[0..n], "wake") orelse 0;
+    var hb_buf: [4096]u8 = undefined;
+    if (std.Io.Dir.cwd().readFile(io, ".trinity/scholar/heartbeat.json", &hb_buf)) |hb| {
+        if (hb.len > 0) {
+            wakes = simpleJsonU32(hb, "wakes") orelse
+                simpleJsonU32(hb, "wake_count") orelse
+                simpleJsonU32(hb, "wake") orelse 0;
         }
     } else |_| {}
 
@@ -793,17 +789,17 @@ fn readScholarHealth() ScholarHealth {
     var researched: u32 = 0;
 
     // Count papers
-    if (std.fs.cwd().openDir("papers", .{ .iterate = true })) |papers_dir_val| {
+    if (std.Io.Dir.cwd().openDir(io, "papers", .{ .iterate = true })) |papers_dir_val| {
         var papers_dir = papers_dir_val;
-        defer papers_dir.close();
+        defer papers_dir.close(io);
         var piter = papers_dir.iterate();
-        while (piter.next() catch null) |pentry| {
+        while (piter.next(io) catch null) |pentry| {
             if (pentry.kind == .directory) {
                 // Each subdir with .md files = 1 research output
-                var subdir = papers_dir.openDir(pentry.name, .{ .iterate = true }) catch continue;
-                defer subdir.close();
+                var subdir = papers_dir.openDir(io, pentry.name, .{ .iterate = true }) catch continue;
+                defer subdir.close(io);
                 var siter = subdir.iterate();
-                while (siter.next() catch null) |sentry| {
+                while (siter.next(io) catch null) |sentry| {
                     if (sentry.kind == .file and std.mem.endsWith(u8, sentry.name, ".md")) {
                         researched += 1;
                     }
@@ -813,12 +809,10 @@ fn readScholarHealth() ScholarHealth {
     } else |_| {}
 
     // Count EXPERIENCE_LOG entries (lines containing "EXP-0")
-    if (std.fs.cwd().openFile("docs/lab/papers/EXPERIENCE_LOG.md", .{})) |efile| {
-        defer efile.close();
-        var ebuf: [32768]u8 = undefined;
-        const en = efile.readAll(&ebuf) catch 0;
-        if (en > 0) {
-            var lines = std.mem.splitScalar(u8, ebuf[0..en], '\n');
+    var ebuf: [32768]u8 = undefined;
+    if (std.Io.Dir.cwd().readFile(io, "docs/lab/papers/EXPERIENCE_LOG.md", &ebuf)) |elog| {
+        if (elog.len > 0) {
+            var lines = std.mem.splitScalar(u8, elog, '\n');
             while (lines.next()) |line| {
                 if (std.mem.indexOf(u8, line, "EXP-0") != null) researched += 1;
             }
@@ -834,24 +828,22 @@ fn readScholarHealth() ScholarHealth {
 /// Read experience episode success rate
 fn readEnergyHealth(allocator: std.mem.Allocator) EnergyHealth {
     _ = allocator;
-    var dir = std.fs.cwd().openDir(".trinity/experience/episodes", .{ .iterate = true }) catch
+    const io = tri_io.get();
+    var dir = std.Io.Dir.cwd().openDir(io, ".trinity/experience/episodes", .{ .iterate = true }) catch
         return EnergyHealth{ .total = 0, .pass = 0 };
-    defer dir.close();
+    defer dir.close(io);
 
     var total: u32 = 0;
     var pass: u32 = 0;
 
     var iter = dir.iterate();
-    while (iter.next() catch null) |entry| {
+    while (iter.next(io) catch null) |entry| {
         if (entry.kind != .file) continue;
         if (!std.mem.endsWith(u8, entry.name, ".json")) continue;
         total += 1;
 
         var fbuf: [8192]u8 = undefined;
-        const f = dir.openFile(entry.name, .{}) catch continue;
-        defer f.close();
-        const n = f.readAll(&fbuf) catch continue;
-        const content = fbuf[0..n];
+        const content = dir.readFile(io, entry.name, &fbuf) catch continue;
 
         // Check for success verdict
         if (std.mem.indexOf(u8, content, "\"success\"") != null or
@@ -867,12 +859,8 @@ fn readEnergyHealth(allocator: std.mem.Allocator) EnergyHealth {
 
 /// Read token cost efficiency score
 fn readTokenCost() u32 {
-    const file = std.fs.cwd().openFile(".trinity/ouroboros_metrics.json", .{}) catch return 50;
-    defer file.close();
-
     var buf: [4096]u8 = undefined;
-    const n = file.readAll(&buf) catch return 50;
-    const content = buf[0..n];
+    const content = std.Io.Dir.cwd().readFile(tri_io.get(), ".trinity/ouroboros_metrics.json", &buf) catch return 50;
 
     return simpleJsonU32(content, "efficiency") orelse 50;
 }
@@ -1029,11 +1017,8 @@ pub fn explainScore(score: VerdictScore, input: VerdictInput) VerdictExplanation
 }
 
 fn readIpScore() f32 {
-    const file = std.fs.cwd().openFile(".trinity/patent/status.json", .{}) catch return 50.0;
-    defer file.close();
     var buf: [4096]u8 = undefined;
-    const n = file.readAll(&buf) catch return 50.0;
-    const content = buf[0..n];
+    const content = std.Io.Dir.cwd().readFile(tri_io.get(), ".trinity/patent/status.json", &buf) catch return 50.0;
     // Count how many discoveries have status beyond "doi_only"
     var total_disc: u32 = 0;
     var protected: u32 = 0;
@@ -1194,19 +1179,20 @@ pub fn prescribe(allocator: std.mem.Allocator, explanation: VerdictExplanation, 
 }
 
 fn loadMistakePatterns(allocator: std.mem.Allocator, rx: *VerdictPrescription) void {
-    var dir = std.fs.cwd().openDir(".trinity/experience/mistakes", .{ .iterate = true }) catch return;
-    defer dir.close();
+    const io = tri_io.get();
+    var dir = std.Io.Dir.cwd().openDir(io, ".trinity/experience/mistakes", .{ .iterate = true }) catch return;
+    defer dir.close(io);
 
     var all: [64]MistakeEntry = undefined;
     var count: usize = 0;
 
     var iter = dir.iterate();
-    while (iter.next() catch null) |entry| {
+    while (iter.next(io) catch null) |entry| {
         if (entry.kind != .file) continue;
         if (!std.mem.endsWith(u8, entry.name, ".json")) continue;
         if (count >= 64) break;
 
-        const contents = dir.readFileAlloc(allocator, entry.name, 16 * 1024) catch continue;
+        const contents = dir.readFileAlloc(io, entry.name, allocator, .limited(16 * 1024)) catch continue;
         defer allocator.free(contents);
 
         var me = MistakeEntry{};
@@ -1311,7 +1297,11 @@ pub fn renderFeedAgentJson(
     explanation: VerdictExplanation,
     rx: VerdictPrescription,
 ) void {
-    const stdout = std.fs.File.stdout().deprecatedWriter();
+    // 0.16 dropped `deprecatedWriter`. The writer is deliberately UNBUFFERED
+    // (`&.{}`): every `catch return` below is an early exit, and a buffered
+    // writer would silently drop whatever had not been flushed.
+    var stdout_fw = std.Io.File.stdout().writer(tri_io.get(), &.{});
+    const stdout = &stdout_fw.interface;
 
     stdout.print("{{\"score\":{d:.0},\"level\":\"{s}\",\"dimensions\":{{", .{ score.total, level.label() }) catch return;
 
@@ -1380,7 +1370,7 @@ pub fn runVerdictCommandEx(allocator: std.mem.Allocator, args: []const []const u
     const score = computeScore(input);
     const level = classifyLevel(score.total);
     const comparison = compareWithPast(allocator, score.total);
-    const timestamp = std.time.timestamp();
+    const timestamp = tri_time.timestamp();
 
     const v = ToxicVerdict{
         .score = score,
@@ -1597,7 +1587,7 @@ pub fn autoCollectAndVerdict(allocator: std.mem.Allocator, threshold: f32) Pipel
     const score = computeScore(input);
     const level = classifyLevel(score.total);
     const comparison = compareWithPast(allocator, score.total);
-    const timestamp = std.time.timestamp();
+    const timestamp = tri_time.timestamp();
 
     // Immune system: read cell health and potentially create doctor task
     const cell_health = readCellHealthFromHippocampus(allocator) catch CellHealth{
@@ -1722,7 +1712,7 @@ pub fn createDoctorTaskIfNeeded(allocator: std.mem.Allocator, score: f32, cell_h
         score,                threshold,
         cell_health.healthy,  cell_health.weak,
         cell_health.broken,   if (score < 50) "CRITICAL" else "HIGH",
-        std.time.timestamp(),
+        tri_time.timestamp(),
     }) catch return;
 
     // Create GitHub issue
@@ -1746,7 +1736,7 @@ test "createDoctorTaskIfNeeded_skips_when_healthy" {
         .weak = 10,
         .broken = 0,
         .total = 110,
-        .timestamp = std.time.timestamp(),
+        .timestamp = tri_time.timestamp(),
     };
 
     // Score 80, no broken cells — should skip (no error = skipped)
@@ -1759,7 +1749,7 @@ test "createDoctorTaskIfNeeded_creates_on_low_score" {
         .weak = 20,
         .broken = 0,
         .total = 70,
-        .timestamp = std.time.timestamp(),
+        .timestamp = tri_time.timestamp(),
     };
 
     // Score 60 < 70 — should create task (dry run in test env)
@@ -1772,7 +1762,7 @@ test "createDoctorTaskIfNeeded_creates_on_broken_cells" {
         .weak = 10,
         .broken = 5,
         .total = 95,
-        .timestamp = std.time.timestamp(),
+        .timestamp = tri_time.timestamp(),
     };
 
     // Score 75 but broken > 0 — should create task
@@ -1983,7 +1973,7 @@ test "pathology — CellHealth timestamp" {
         .weak = 5,
         .broken = 0,
         .total = 55,
-        .timestamp = std.time.timestamp(),
+        .timestamp = tri_time.timestamp(),
     };
     try std.testing.expect(health.timestamp > 0);
 }
@@ -2073,7 +2063,7 @@ test "pathology — ToxicVerdict structure" {
         .level = level,
         .input = input,
         .comparison = comparison,
-        .timestamp = std.time.timestamp(),
+        .timestamp = tri_time.timestamp(),
     };
 
     // With minimal input, score will be mediocre (around 50-60 range)

@@ -45,7 +45,7 @@ def main():
     # Test 1: Dataset file check
     print("\n" + "-"*60)
     print("TEST 1: Dataset file check")
-    dataset_file = "/Users/playra/trinity-w1/kaggle/data/thlp_learning.csv"
+    dataset_file = "/Users/playom/trinity-fpga/kaggle/data/thlp_learning.csv"
     run_command(f"ls -lh {dataset_file}", f"Verify dataset file exists")
 
     # Test 2: List Kaggle datasets

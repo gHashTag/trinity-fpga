@@ -10,6 +10,7 @@
 //! Returns JSON for dashboard consumption with mock fallbacks.
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const mu_tracker = @import("mu_tracker.zig");
 const predictive_intelligence = @import("predictive_intelligence.zig");
 const meta_learner = @import("meta_learner.zig");
@@ -308,7 +309,7 @@ pub fn generateMockEvolutionTree(allocator: Allocator, count: usize) ![]const u8
             i,
             parent_str,
             mutation,
-            std.time.timestamp() - (count - i) * 3600,
+            tri_time.timestamp() - (count - i) * 3600,
             fitness,
             depth,
         });
@@ -397,7 +398,7 @@ pub fn generateMockSacredMath(allocator: Allocator) ![]const u8 {
         constants.phi,
         constants.lucas_10,
         constants.trinity,
-        std.time.timestamp(),
+        tri_time.timestamp(),
     });
 }
 

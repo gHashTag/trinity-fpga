@@ -3,6 +3,7 @@
 // φ² + 1/φ² = 3 | PHOENIX = 999
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const common = @import("../../bogatyrs.zig");
 
 const NAME = "spec_structure";
@@ -19,7 +20,7 @@ pub const bogatyr = common.BogatyrPlugin{
 };
 
 fn validateSpecStructure(ctx: *const common.ValidationContext) !common.BogatyrResult {
-    const start_time = std.time.nanoTimestamp();
+    const start_time = tri_time.nanoTimestamp();
     const allocator = ctx.allocator;
 
     var errors = std.ArrayList(common.ValidationError).init(allocator);
@@ -98,7 +99,7 @@ fn validateSpecStructure(ctx: *const common.ValidationContext) !common.BogatyrRe
         try errors.append(try common.createError(allocator, "missing_content", "Must have at least 'types' or 'behaviors' section", 1, 0));
     }
 
-    const end_time = std.time.nanoTimestamp();
+    const end_time = tri_time.nanoTimestamp();
 
     const verdict: common.BogatyrVerdict = if (errors.items.len > 0) .Fail else .Pass;
 

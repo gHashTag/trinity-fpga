@@ -2,6 +2,7 @@
 // φ² + 1/φ² = 3 | TRINITY
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const Allocator = std.mem.Allocator;
 
 const EXIT_CODES_TEMPLATE =
@@ -60,7 +61,7 @@ pub fn writeExitCodes(allocator: Allocator, path: []const u8) !void {
     const content = try generateExitCodes(allocator);
     defer allocator.free(content);
 
-    const file = try std.fs.createFileAbsolute(path, .{});
+    const file = try std.Io.Dir.createFileAbsolute(tri_io.get(), path, .{});
     defer file.close();
 
     try file.writeAll(content);

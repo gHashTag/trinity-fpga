@@ -5,6 +5,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -82,7 +83,7 @@ pub const StakePosition = struct {
     /// Check if stake can be withdrawn
     pub fn canWithdraw(self: *const StakePosition) bool {
         if (self.is_slashed) return true;
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
         return now >= self.unlock_timestamp;
     }
 
@@ -90,7 +91,7 @@ pub const StakePosition = struct {
     pub fn calculateRewards(self: *const StakePosition, base_reward_rate: f64) u128 {
         if (self.is_slashed or !self.is_active) return 0;
 
-        const elapsed = @as(f64, @floatFromInt(std.time.timestamp() - self.start_timestamp));
+        const elapsed = @as(f64, @floatFromInt(tri_time.timestamp() - self.start_timestamp));
         const hours = elapsed / 3600.0;
         const multiplier = self.lock_period.getMultiplier();
         const reward = base_reward_rate * hours * multiplier;
@@ -139,7 +140,7 @@ pub const StakingManager = struct {
     ) ![]const u8 {
         if (amount < MIN_STAKE) return error.StakeBelowMinimum;
 
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
         const stake_id = try self.generateStakeId(staker_address, now);
 
         const position = StakePosition{
@@ -172,7 +173,7 @@ pub const StakingManager = struct {
     ) ![]const u8 {
         if (amount < MIN_STAKE) return error.StakeBelowMinimum;
 
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
         const stake_id = try self.generateStakeId(delegator_address, now);
 
         const position = StakePosition{
@@ -314,7 +315,7 @@ pub const StakingManager = struct {
         if (self.staker_stakes.getEntry(key)) |entry| {
             try entry.value_ptr.append(self.allocator, duped_id);
         } else {
-            var list = std.ArrayListUnmanaged([]const u8){};
+            var list = @as(std.ArrayListUnmanaged([]const u8), .empty);
             try list.append(self.allocator, duped_id);
             try self.staker_stakes.put(self.allocator, key, list);
         }
@@ -402,8 +403,8 @@ test "StakePosition calculateRewards" {
     position.delegator_address = null;
     position.amount = 1000 * std.math.pow(u128, 10, 18);
     position.lock_period = .six_months; // 1.5x multiplier
-    position.start_timestamp = std.time.timestamp() - 3600; // 1 hour ago
-    position.unlock_timestamp = std.time.timestamp() + 86400;
+    position.start_timestamp = tri_time.timestamp() - 3600; // 1 hour ago
+    position.unlock_timestamp = tri_time.timestamp() + 86400;
     position.is_slashed = false;
     position.rewards = 0;
     position.is_active = true;
@@ -423,8 +424,8 @@ test "StakePosition canWithdraw" {
     position.delegator_address = null;
     position.amount = 1000;
     position.lock_period = .one_month;
-    position.start_timestamp = std.time.timestamp();
-    position.unlock_timestamp = std.time.timestamp() + 86400;
+    position.start_timestamp = tri_time.timestamp();
+    position.unlock_timestamp = tri_time.timestamp() + 86400;
     position.is_slashed = false;
     position.rewards = 0;
     position.is_active = true;
@@ -443,8 +444,8 @@ test "StakePosition slash" {
     position.delegator_address = null;
     position.amount = 1000;
     position.lock_period = .one_month;
-    position.start_timestamp = std.time.timestamp();
-    position.unlock_timestamp = std.time.timestamp() + 86400;
+    position.start_timestamp = tri_time.timestamp();
+    position.unlock_timestamp = tri_time.timestamp() + 86400;
     position.is_slashed = false;
     position.rewards = 0;
     position.is_active = true;

@@ -6,6 +6,8 @@
 //! Phase 1: 6 real auto-fix implementations (not stubs)
 
 const std = @import("std");
+const tri_io = @import("tri_io");
+const tri_proc = @import("tri_proc");
 const diagnostic = @import("diagnostic.zig");
 
 /// Sacred constant for intelligence gain calculation
@@ -75,6 +77,7 @@ fn hasImport(content: []const u8, import_stmt: []const u8) bool {
 
 /// IMPORT_FIX: Auto-add missing imports
 fn applyImportFix(allocator: std.mem.Allocator, err_info: *const diagnostic.ErrorInfo, file_path: []const u8) !FixResult {
+    const io = tri_io.get();
     // 1. Extract undeclared identifier from error message
     const identifier = extractUndeclaredIdentifier(err_info.message) orelse {
         return FixResult{
@@ -106,7 +109,7 @@ fn applyImportFix(allocator: std.mem.Allocator, err_info: *const diagnostic.Erro
     };
 
     // 3. Read file content
-    const content = try std.fs.cwd().readFileAlloc(allocator, file_path, 10 * 1024 * 1024);
+    const content = try std.Io.Dir.cwd().readFileAlloc(io, file_path, allocator, .limited(10 * 1024 * 1024));
     defer allocator.free(content);
 
     // 4. Check if import already exists
@@ -147,10 +150,10 @@ fn applyImportFix(allocator: std.mem.Allocator, err_info: *const diagnostic.Erro
     @memcpy(new_content[insert_pos + import_line.len + 1 ..][0..remaining], content[insert_pos..]);
 
     // 7. Write modified file
-    try std.fs.cwd().writeFile(.{ .sub_path = file_path, .data = new_content });
+    try std.Io.Dir.cwd().writeFile(io, .{ .sub_path = file_path, .data = new_content });
 
     // 8. Verify fix by running zig build
-    const verify_result = try std.process.Child.run(.{
+    const verify_result = try tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ "zig", "build", "--summary", "all" },
         .cwd = std.fs.path.dirname(file_path) orelse ".",
@@ -161,7 +164,7 @@ fn applyImportFix(allocator: std.mem.Allocator, err_info: *const diagnostic.Erro
     }
 
     const success = (switch (verify_result.term) {
-        .Exited => |code| code,
+        .exited => |code| code,
         else => @as(u32, 1),
     }) == 0;
 
@@ -191,12 +194,13 @@ fn extractFunctionNeedingAllocator(msg: []const u8) ?[]const u8 {
 
 /// ALLOCATOR_FIX: Inject allocator parameter
 fn applyAllocatorFix(allocator: std.mem.Allocator, err_info: *const diagnostic.ErrorInfo, file_path: []const u8) !FixResult {
+    const io = tri_io.get();
     _ = err_info;
     // For v8.12, we'll add a simple allocator injection for common patterns
     // Full implementation requires AST parsing which is complex
 
     // 1. Read file content
-    const content = try std.fs.cwd().readFileAlloc(allocator, file_path, 10 * 1024 * 1024);
+    const content = try std.Io.Dir.cwd().readFileAlloc(io, file_path, allocator, .limited(10 * 1024 * 1024));
     defer allocator.free(content);
 
     // 2. Check if this is a simple case: missing allocator in ArrayList.init
@@ -215,7 +219,7 @@ fn applyAllocatorFix(allocator: std.mem.Allocator, err_info: *const diagnostic.E
             "ArrayListUnmanaged{}",
         );
 
-        try std.fs.cwd().writeFile(.{ .sub_path = file_path, .data = modified });
+        try std.Io.Dir.cwd().writeFile(io, .{ .sub_path = file_path, .data = modified });
 
         return FixResult{
             .success = true,
@@ -239,9 +243,10 @@ fn applyAllocatorFix(allocator: std.mem.Allocator, err_info: *const diagnostic.E
 
 /// ERROR_UNION_FIX: Add error handling (try prefix)
 fn applyErrorUnionFix(allocator: std.mem.Allocator, err_info: *const diagnostic.ErrorInfo, file_path: []const u8) !FixResult {
+    const io = tri_io.get();
     _ = err_info;
     // 1. Read file content
-    const content = try std.fs.cwd().readFileAlloc(allocator, file_path, 10 * 1024 * 1024);
+    const content = try std.Io.Dir.cwd().readFileAlloc(io, file_path, allocator, .limited(10 * 1024 * 1024));
     defer allocator.free(content);
 
     // 2. Look for error-causing calls without try
@@ -249,8 +254,8 @@ fn applyErrorUnionFix(allocator: std.mem.Allocator, err_info: *const diagnostic.
 
     // For now, we'll handle a simple case: known error-returning functions
     const error_fns = [_][]const u8{
-        "allocator.alloc(",       "allocator.create(",      "allocator.dupe(",
-        "std.fs.cwd().readFile(", "std.process.Child.run(",
+        "allocator.alloc(",       "allocator.create(", "allocator.dupe(",
+        "std.fs.cwd().readFile(", "tri_proc.run(",
     };
 
     var lines_changed: u32 = 0;
@@ -306,7 +311,7 @@ fn applyErrorUnionFix(allocator: std.mem.Allocator, err_info: *const diagnostic.
 
     if (lines_changed > 0) {
         const final_content = modified[0..write_pos];
-        try std.fs.cwd().writeFile(.{ .sub_path = file_path, .data = final_content });
+        try std.Io.Dir.cwd().writeFile(io, .{ .sub_path = file_path, .data = final_content });
 
         return FixResult{
             .success = true,
@@ -330,8 +335,9 @@ fn applyErrorUnionFix(allocator: std.mem.Allocator, err_info: *const diagnostic.
 
 /// TYPE_FIX: Fix common type mismatches
 fn applyTypeFix(allocator: std.mem.Allocator, err_info: *const diagnostic.ErrorInfo, file_path: []const u8) !FixResult {
+    const io = tri_io.get();
     // 1. Read file content
-    const content = try std.fs.cwd().readFileAlloc(allocator, file_path, 10 * 1024 * 1024);
+    const content = try std.Io.Dir.cwd().readFileAlloc(io, file_path, allocator, .limited(10 * 1024 * 1024));
     defer allocator.free(content);
 
     // 2. Handle common type mismatch: []const u8 vs []u8
@@ -349,7 +355,7 @@ fn applyTypeFix(allocator: std.mem.Allocator, err_info: *const diagnostic.ErrorI
             "[]u8",
         );
 
-        try std.fs.cwd().writeFile(.{ .sub_path = file_path, .data = modified });
+        try std.Io.Dir.cwd().writeFile(io, .{ .sub_path = file_path, .data = modified });
 
         // Count occurrences for lines_changed
         var count: usize = 0;
@@ -434,7 +440,7 @@ fn applyGeneratorPatch(allocator: std.mem.Allocator, err_info: *const diagnostic
 
 /// Apply automatic formatting using zig fmt
 fn applyFormatFix(allocator: std.mem.Allocator, file_path: []const u8) !FixResult {
-    const result = try std.process.Child.run(.{
+    const result = try tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ "zig", "fmt", file_path },
     });
@@ -444,7 +450,7 @@ fn applyFormatFix(allocator: std.mem.Allocator, file_path: []const u8) !FixResul
     }
 
     const success = (switch (result.term) {
-        .Exited => |code| code,
+        .exited => |code| code,
         else => @as(u32, 1),
     }) == 0;
 
@@ -464,6 +470,7 @@ pub fn applyFix(
     err_info: *const diagnostic.ErrorInfo,
     file_path: []const u8,
 ) !FixResult {
+    const io = tri_io.get();
     switch (err_info.fix_type) {
         .SYNTAX_FIX => {
             if (std.mem.indexOf(u8, err_info.message, "formatting check failed") != null) {
@@ -518,7 +525,7 @@ pub fn applyFix(
         },
         .COMPTIME_QUOTA_FIX => {
             // Add @setEvalBranchQuota(100000) at beginning of file
-            const content = try std.fs.cwd().readFileAlloc(allocator, file_path, 10 * 1024 * 1024);
+            const content = try std.Io.Dir.cwd().readFileAlloc(io, file_path, allocator, .limited(10 * 1024 * 1024));
             defer allocator.free(content);
 
             if (std.mem.indexOf(u8, content, "@setEvalBranchQuota") == null) {
@@ -529,7 +536,7 @@ pub fn applyFix(
                 @memcpy(new_content[0..quota_line.len], quota_line);
                 @memcpy(new_content[quota_line.len..], content);
 
-                try std.fs.cwd().writeFile(.{ .sub_path = file_path, .data = new_content });
+                try std.Io.Dir.cwd().writeFile(io, .{ .sub_path = file_path, .data = new_content });
 
                 return FixResult{
                     .success = true,
@@ -623,18 +630,19 @@ pub fn getIntelligenceGain(successful_fixes: u32) f64 {
 // ============================================================================
 
 test "fixer: applyFormatFix" {
+    const io = tri_io.get();
     const allocator = std.testing.allocator;
 
     // Create a temporary file in the current directory
     const test_file = "test_unformatted_fmt.zig";
     defer {
         // Clean up the test file
-        std.fs.cwd().deleteFile(test_file) catch |err| {
+        std.Io.Dir.cwd().deleteFile(io, test_file) catch |err| {
             std.log.debug("fixer: test cleanup delete failed: {}", .{err});
         };
     }
 
-    try std.fs.cwd().writeFile(.{ .sub_path = test_file, .data = 
+    try std.Io.Dir.cwd().writeFile(io, .{ .sub_path = test_file, .data =
         \\const std=@import("std");
         \\pub fn add(a:i32,b:i32)i32{return a+b;}
     });

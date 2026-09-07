@@ -25,6 +25,7 @@
 // φ² + 1/φ² = 3 | TRINITY
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 
 // Import sensation module for HSLM access (via module import from build.zig)
@@ -279,7 +280,7 @@ pub const ThalamusLogs = struct {
                     const gf = ips.gf16FromF32(v);
                     // Store in buffer (simplified - in real usage would be separate)
                     const event = SensoryEvent{
-                        .timestamp_ns = @as(u64, @intCast(std.time.nanoTimestamp())),
+                        .timestamp_ns = @as(u64, @intCast(tri_time.nanoTimestamp())),
                         .sensor = .FarmBestPpl,
                         .input = SensorInput{
                             .id = .FarmBestPpl,
@@ -298,7 +299,7 @@ pub const ThalamusLogs = struct {
                     const tf = ips.tf3FromF32(f32_val);
                     // Store in buffer
                     const event = SensoryEvent{
-                        .timestamp_ns = @as(u64, @intCast(std.time.nanoTimestamp())),
+                        .timestamp_ns = @as(u64, @intCast(tri_time.nanoTimestamp())),
                         .sensor = .ArenaBattles,
                         .input = SensorInput{
                             .id = .ArenaBattles,
@@ -319,7 +320,7 @@ pub const ThalamusLogs = struct {
                     const gf = ips.gf16FromF32(@floatFromInt(@as(u16, q)));
                     // Store in buffer
                     const event = SensoryEvent{
-                        .timestamp_ns = @as(u64, @intCast(std.time.nanoTimestamp())),
+                        .timestamp_ns = @as(u64, @intCast(tri_time.nanoTimestamp())),
                         .sensor = .OuroborosScore,
                         .input = SensorInput{
                             .id = .OuroborosScore,
@@ -347,12 +348,12 @@ pub const ThalamusLogs = struct {
                         .value = v,
                         .sensor_id = 2,
                         .confidence = @floatCast(0.9),
-                        .timestamp = std.time.timestamp(),
+                        .timestamp = tri_time.timestamp(),
                     };
                     const val = ofc.assignValence(stim);
                     // Store in buffer
                     const event = SensoryEvent{
-                        .timestamp_ns = @as(u64, @intCast(std.time.nanoTimestamp())),
+                        .timestamp_ns = @as(u64, @intCast(tri_time.nanoTimestamp())),
                         .sensor = .TestsRate,
                         .input = SensorInput{
                             .id = .TestsRate,
@@ -370,7 +371,7 @@ pub const ThalamusLogs = struct {
                     const gf = ips.gf16FromF32(@as(f32, @floatFromInt(v)));
                     // Store in buffer
                     const event = SensoryEvent{
-                        .timestamp_ns = @as(u64, @intCast(std.time.nanoTimestamp())),
+                        .timestamp_ns = @as(u64, @intCast(tri_time.nanoTimestamp())),
                         .sensor = .DiskFree,
                         .input = SensorInput{
                             .id = .DiskFree,
@@ -394,7 +395,7 @@ pub const ThalamusLogs = struct {
                     }
                     // Store in buffer
                     const event = SensoryEvent{
-                        .timestamp_ns = @as(u64, @intCast(std.time.nanoTimestamp())),
+                        .timestamp_ns = @as(u64, @intCast(tri_time.nanoTimestamp())),
                         .sensor = .ArenaStale,
                         .input = SensorInput{
                             .id = .ArenaStale,

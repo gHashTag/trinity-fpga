@@ -12,6 +12,8 @@
 // =============================================================================
 
 const std = @import("std");
+const tri_io = @import("tri_io");
+const tri_time = @import("tri_time");
 const fluent_general = @import("igla_fluent_general.zig");
 const multilingual = @import("igla_multilingual_coder.zig");
 const self_opt = @import("igla_self_opt.zig");
@@ -47,14 +49,32 @@ pub const ChatMode = enum {
 
         // Strong code indicators
         const strong_code = [_][]const u8{
-            "code",      "to",     "代码", "código",     "programmieren",
-            "function",  "toand",  "函数", "función",    "funktion",
-            "class",     "towith", "类",    "clase",       "klasse",
-            "write",     "onand",  "写",    "escribe",     "schreib",
-            "implement", "and",    "实现", "implementar", "implementieren",
-            "debug",     "from",   "调试", "depurar",     "debuggen",
-            "compile",   "toand",  "编译", "compilar",    "kompilieren",
-            "error",     "andto",  "错误", "syntax",      "withandtowith",
+            "code",          "to",
+            "代码",
+            "código",
+            "programmieren", "function",
+            "toand",
+            "函数",
+            "función",
+            "funktion",      "class",
+            "towith",
+            "类",
+            "clase",         "klasse",
+            "write",         "onand",
+            "写",
+            "escribe",       "schreib",
+            "implement",     "and",
+            "实现",
+            "implementar",   "implementieren",
+            "debug",         "from",
+            "调试",
+            "depurar",       "debuggen",
+            "compile",       "toand",
+            "编译",
+            "compilar",      "kompilieren",
+            "error",         "andto",
+            "错误",
+            "syntax",        "withandtowith",
         };
 
         for (strong_code) |word| {
@@ -91,16 +111,40 @@ pub const ChatMode = enum {
 
         // Strong chat indicators
         const chat_words = [_][]const u8{
-            "feel",    "inwithin",   "感觉", "siento",    "fühle",
-            "think",   "",           "想",    "creo",      "denke",
-            "believe", "in",         "相信", "creer",     "glaube",
-            "opinion", "notand",     "意见", "opinión",  "meinung",
-            "story",   "andwithand", "故事", "historia",  "geschichte",
-            "weather", "by",         "天气", "tiempo",    "wetter",
-            "food",    "yes",        "食物", "comida",    "essen",
-            "music",   "to",         "音乐", "música",   "musik",
-            "movie",   "and",        "电影", "película", "film",
-            "travel",  "within",     "旅行", "viaje",     "reise",
+            "feel",       "inwithin",
+            "感觉",
+            "siento",
+            "fühle",
+            "think",      "",
+            "想",
+            "creo",       "denke",
+            "believe",    "in",
+            "相信",
+            "creer",      "glaube",
+            "opinion",    "notand",
+            "意见",
+            "opinión",
+            "meinung",    "story",
+            "andwithand",
+            "故事",
+            "historia",   "geschichte",
+            "weather",    "by",
+            "天气",
+            "tiempo",     "wetter",
+            "food",       "yes",
+            "食物",
+            "comida",     "essen",
+            "music",      "to",
+            "音乐",
+            "música",
+            "musik",      "movie",
+            "and",
+            "电影",
+            "película",
+            "film",       "travel",
+            "within",
+            "旅行",
+            "viaje",      "reise",
         };
 
         for (chat_words) |word| {
@@ -111,9 +155,16 @@ pub const ChatMode = enum {
 
         // Greeting/farewell boost
         const social = [_][]const u8{
-            "hello",   "hi",      "hey",     "andin",  "你好", "hola",     "hallo",
-            "bye",     "goodbye", "byto",    "再见", "adiós", "tschüss", "thanks",
-            "withand", "谢谢",  "gracias", "danke",
+            "hello",   "hi",      "hey", "andin",
+            "你好",
+            "hola",    "hallo",   "bye", "goodbye",
+            "byto",
+            "再见",
+            "adiós",
+            "tschüss",
+            "thanks",  "withand",
+            "谢谢",
+            "gracias", "danke",
         };
 
         for (social) |word| {
@@ -184,7 +235,7 @@ pub const SessionContext = struct {
             .mode = mode,
             .language = lang,
             .code_lang = code_lang,
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
         };
         self.turn_count += 1;
 
@@ -509,12 +560,13 @@ fn containsWordInsensitive(text: []const u8, word: []const u8) bool {
 // =============================================================================
 
 pub fn runBenchmark() !void {
-    const stdout = std.fs.File.stdout();
+    const io = tri_io.get();
+    const stdout = std.Io.File.stdout();
 
-    _ = try stdout.write("\n");
-    _ = try stdout.write("===============================================================================\n");
-    _ = try stdout.write("     IGLA UNIFIED CHAT BENCHMARK (CYCLE 8)                                    \n");
-    _ = try stdout.write("===============================================================================\n");
+    try stdout.writeStreamingAll(io, "\n");
+    try stdout.writeStreamingAll(io, "===============================================================================\n");
+    try stdout.writeStreamingAll(io, "     IGLA UNIFIED CHAT BENCHMARK (CYCLE 8)                                    \n");
+    try stdout.writeStreamingAll(io, "===============================================================================\n");
 
     var engine = UnifiedChatEngine.init();
 
@@ -556,7 +608,7 @@ pub fn runBenchmark() !void {
     var high_confidence: usize = 0;
     var non_generic: usize = 0;
 
-    const start = std.time.nanoTimestamp();
+    const start = tri_time.nanoTimestamp();
 
     for (test_queries) |q| {
         const response = engine.respond(q);
@@ -569,7 +621,7 @@ pub fn runBenchmark() !void {
         }
     }
 
-    const elapsed_ns = std.time.nanoTimestamp() - start;
+    const elapsed_ns = tri_time.nanoTimestamp() - start;
     const ops_per_sec = @as(f64, @floatFromInt(test_queries.len)) / (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
 
     const stats = engine.getStats();
@@ -577,50 +629,50 @@ pub fn runBenchmark() !void {
     const improvement_rate = @as(f32, @floatFromInt(high_confidence)) / @as(f32, @floatFromInt(test_queries.len));
     const fluent_rate = @as(f32, @floatFromInt(non_generic)) / @as(f32, @floatFromInt(test_queries.len));
 
-    _ = try stdout.write("\n");
+    try stdout.writeStreamingAll(io, "\n");
 
     var buf: [256]u8 = undefined;
 
     var len = std.fmt.bufPrint(&buf, "  Total queries: {d}\n", .{test_queries.len}) catch return;
-    _ = try stdout.write(len);
+    try stdout.writeStreamingAll(io, len);
 
     len = std.fmt.bufPrint(&buf, "  Code queries: {d}\n", .{stats.code_queries}) catch return;
-    _ = try stdout.write(len);
+    try stdout.writeStreamingAll(io, len);
 
     len = std.fmt.bufPrint(&buf, "  Chat queries: {d}\n", .{stats.chat_queries}) catch return;
-    _ = try stdout.write(len);
+    try stdout.writeStreamingAll(io, len);
 
     len = std.fmt.bufPrint(&buf, "  Mixed queries: {d}\n", .{stats.mixed_queries}) catch return;
-    _ = try stdout.write(len);
+    try stdout.writeStreamingAll(io, len);
 
     len = std.fmt.bufPrint(&buf, "  Mode switches: {d}\n", .{stats.mode_switches}) catch return;
-    _ = try stdout.write(len);
+    try stdout.writeStreamingAll(io, len);
 
     len = std.fmt.bufPrint(&buf, "  High confidence: {d}/{d}\n", .{ high_confidence, test_queries.len }) catch return;
-    _ = try stdout.write(len);
+    try stdout.writeStreamingAll(io, len);
 
     len = std.fmt.bufPrint(&buf, "  Avg confidence: {d:.2}\n", .{avg_confidence}) catch return;
-    _ = try stdout.write(len);
+    try stdout.writeStreamingAll(io, len);
 
     len = std.fmt.bufPrint(&buf, "  Fluent rate: {d:.1}%\n", .{fluent_rate * 100}) catch return;
-    _ = try stdout.write(len);
+    try stdout.writeStreamingAll(io, len);
 
     len = std.fmt.bufPrint(&buf, "  Speed: {d:.0} ops/s\n", .{ops_per_sec}) catch return;
-    _ = try stdout.write(len);
+    try stdout.writeStreamingAll(io, len);
 
     len = std.fmt.bufPrint(&buf, "\n  Improvement rate: {d:.2}\n", .{improvement_rate}) catch return;
-    _ = try stdout.write(len);
+    try stdout.writeStreamingAll(io, len);
 
     if (improvement_rate > 0.618) {
-        _ = try stdout.write("  Golden Ratio Gate: PASSED (>0.618)\n");
+        try stdout.writeStreamingAll(io, "  Golden Ratio Gate: PASSED (>0.618)\n");
     } else {
-        _ = try stdout.write("  Golden Ratio Gate: NEEDS IMPROVEMENT (<0.618)\n");
+        try stdout.writeStreamingAll(io, "  Golden Ratio Gate: NEEDS IMPROVEMENT (<0.618)\n");
     }
 
-    _ = try stdout.write("\n");
-    _ = try stdout.write("===============================================================================\n");
-    _ = try stdout.write("  phi^2 + 1/phi^2 = 3 = TRINITY | UNIFIED CHAT CYCLE 8                        \n");
-    _ = try stdout.write("===============================================================================\n");
+    try stdout.writeStreamingAll(io, "\n");
+    try stdout.writeStreamingAll(io, "===============================================================================\n");
+    try stdout.writeStreamingAll(io, "  phi^2 + 1/phi^2 = 3 = TRINITY | UNIFIED CHAT CYCLE 8                        \n");
+    try stdout.writeStreamingAll(io, "===============================================================================\n");
 }
 
 // =============================================================================

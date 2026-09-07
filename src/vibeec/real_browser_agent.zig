@@ -4,6 +4,7 @@
 // φ² + 1/φ² = 3
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const cdp = @import("cdp_client.zig");
 const http = @import("http_client.zig");
@@ -236,7 +237,7 @@ pub const BrowserAgent = struct {
 
     /// Run agent on a task
     pub fn run(self: *Self, goal: []const u8) BrowserAgentError!AgentResult {
-        const start_time = std.time.milliTimestamp();
+        const start_time = tri_time.milliTimestamp();
 
         if (self.config.verbose) {
             std.debug.print("\n=== Browser Agent Starting ===\n", .{});
@@ -291,7 +292,7 @@ pub const BrowserAgent = struct {
 
             // 4. Check for done
             if (std.mem.eql(u8, parsed.action, "done")) {
-                const end_time = std.time.milliTimestamp();
+                const end_time = tri_time.milliTimestamp();
                 return AgentResult{
                     .success = true,
                     .answer = self.allocator.dupe(u8, parsed.input) catch null,
@@ -312,7 +313,7 @@ pub const BrowserAgent = struct {
             std.time.sleep(500 * std.time.ns_per_ms);
         }
 
-        const end_time = std.time.milliTimestamp();
+        const end_time = tri_time.milliTimestamp();
         return AgentResult{
             .success = false,
             .answer = null,

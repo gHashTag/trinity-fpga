@@ -1,14 +1,14 @@
 // Railway: Set service repository
 const std = @import("std");
 
-pub fn main() !void {
+const tri_proc = @import("tri_proc");
+pub fn main(init: std.process.Init.Minimal) !void {
     var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    const args = try std.process.argsAlloc(allocator);
-    defer std.process.argsFree(allocator, args);
-
+    const args = try init.args.toSlice(allocator);
+    defer allocator.free(args);
     if (args.len < 4) {
         std.debug.print("Usage: railway-set-repo <service-id> <repo-url> <token>\n", .{});
         std.process.exit(1);
@@ -29,7 +29,7 @@ pub fn main() !void {
     const auth_header = std.fmt.allocPrint(allocator, "Authorization: Bearer {s}", .{token}) catch return error.OutOfMemory;
     defer allocator.free(auth_header);
 
-    const result = try std.process.Child.run(.{
+    const result = try tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ "curl", "-s", "-X", "POST", "-H", auth_header, "-H", "Content-Type: application/json", "-d", query, "https://backboard.railway.com/graphql" },
     });

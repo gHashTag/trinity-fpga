@@ -20,6 +20,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 // ═══════════════════════════════════════════════════════════════════════════════
 // CONSTANTS
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -604,7 +605,7 @@ pub fn runBenchmarks(allocator: std.mem.Allocator, vocab: *const VocabStore) !vo
     var cat_total = std.StringHashMap(usize).init(allocator);
     defer cat_total.deinit();
 
-    const start_time = std.time.nanoTimestamp();
+    const start_time = tri_time.nanoTimestamp();
 
     for (ANALOGY_TESTS) |test_case| {
         const result = try computeAnalogyTopK(allocator, vocab, test_case.a, test_case.b, test_case.c);
@@ -672,7 +673,7 @@ pub fn runBenchmarks(allocator: std.mem.Allocator, vocab: *const VocabStore) !vo
         total += 1;
     }
 
-    const end_time = std.time.nanoTimestamp();
+    const end_time = tri_time.nanoTimestamp();
     const elapsed_ns = @as(u64, @intCast(end_time - start_time));
     const elapsed_ms = @as(f64, @floatFromInt(elapsed_ns)) / 1_000_000.0;
     const ops_per_sec = @as(f64, @floatFromInt(total)) / (elapsed_ms / 1000.0);

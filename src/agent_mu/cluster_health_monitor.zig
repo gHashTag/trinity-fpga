@@ -11,6 +11,7 @@
 //! φ² + 1/φ² = 3 | TRINITY
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const mem = std.mem;
 const process = std.process;
 
@@ -79,7 +80,7 @@ pub const SystemMetrics = struct {
 
     /// Get current system metrics (platform-specific)
     pub fn getCurrent() !SystemMetrics {
-        const current_time = std.time.timestamp();
+        const current_time = tri_time.timestamp();
 
         // Initialize with defaults
         var metrics = SystemMetrics{
@@ -187,7 +188,7 @@ pub const HealthCheckResult = struct {
             .success = true,
             .response_time_ms = response_time_ms,
             .error_message = null,
-            .timestamp = std.time.milliTimestamp(),
+            .timestamp = tri_time.milliTimestamp(),
         };
     }
 
@@ -196,7 +197,7 @@ pub const HealthCheckResult = struct {
             .success = false,
             .response_time_ms = 0.0,
             .error_message = msg,
-            .timestamp = std.time.milliTimestamp(),
+            .timestamp = tri_time.milliTimestamp(),
         };
     }
 };
@@ -275,7 +276,7 @@ pub const ClusterHealth = struct {
             self.overall_status = .unhealthy;
         }
 
-        self.last_update = std.time.milliTimestamp();
+        self.last_update = tri_time.milliTimestamp();
     }
 
     /// Get cluster health score (0.0 - 1.0)
@@ -340,7 +341,7 @@ pub const ClusterHealthMonitor = struct {
     health: ClusterHealth,
     check_interval_ms: u64,
     running: bool,
-    check_timer: ?std.time.Timer,
+    check_timer: ?tri_time.Timer,
 
     pub fn init(allocator: std.mem.Allocator, check_interval_ms: u64) ClusterHealthMonitor {
         return .{
@@ -359,7 +360,7 @@ pub const ClusterHealthMonitor = struct {
     /// Start monitoring
     pub fn start(self: *ClusterHealthMonitor) !void {
         self.running = false;
-        self.check_timer = try std.time.Timer.start();
+        self.check_timer = try tri_time.Timer.start();
 
         std.log.info("Cluster Health Monitor started (interval: {}ms)\n", .{self.check_interval_ms});
     }
@@ -374,11 +375,11 @@ pub const ClusterHealthMonitor = struct {
     pub fn checkNode(self: *ClusterHealthMonitor, node_id: []const u8) !HealthCheckResult {
         _ = self;
         _ = node_id; // Will be used in production for actual HTTP call
-        const start_time = std.time.nanoTimestamp();
+        const start_time = tri_time.nanoTimestamp();
 
         // Simulate check (replace with actual HTTP call in production)
         std.time.sleep(10 * std.time.ns_per_ms); // Simulate 10ms latency
-        const end_time = std.time.nanoTimestamp();
+        const end_time = tri_time.nanoTimestamp();
         const response_time_ms = @as(f64, @floatFromInt(end_time - start_time)) / 1_000_000.0;
 
         return HealthCheckResult.successNow(response_time_ms);
@@ -386,7 +387,7 @@ pub const ClusterHealthMonitor = struct {
 
     /// Update node health from check result
     pub fn updateFromCheck(self: *ClusterHealthMonitor, node_id: []const u8, result: HealthCheckResult, pas_efficiency: f64) !void {
-        const now = std.time.milliTimestamp();
+        const now = tri_time.milliTimestamp();
         const metrics = try SystemMetrics.getCurrent();
 
         var existing = self.health.getNode(node_id);
@@ -594,7 +595,7 @@ test "NodeHealth status determination" {
         .pas_efficiency = 0.25,
         .response_time_ms = 100.0,
         .consecutive_failures = 0,
-        .last_check_time = std.time.milliTimestamp(),
+        .last_check_time = tri_time.milliTimestamp(),
         .last_failure_time = null,
         .isolated_reason = null,
     };
@@ -624,7 +625,7 @@ test "NodeHealth isolation threshold" {
         .pas_efficiency = 0.25,
         .response_time_ms = 100.0,
         .consecutive_failures = 3,
-        .last_check_time = std.time.milliTimestamp(),
+        .last_check_time = tri_time.milliTimestamp(),
         .last_failure_time = null,
         .isolated_reason = null,
     };
@@ -637,7 +638,7 @@ test "ClusterHealth recalculation" {
     var cluster = ClusterHealth.init(allocator);
     defer cluster.deinit();
 
-    const now = std.time.milliTimestamp();
+    const now = tri_time.milliTimestamp();
 
     // Add healthy node
     const node1 = NodeHealth{

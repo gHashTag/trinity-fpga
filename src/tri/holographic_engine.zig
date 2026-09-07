@@ -119,7 +119,7 @@ pub const RyuTakayanagi = struct {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 pub fn computeAdsLayers(allocator: Allocator) ![]BulkLayer {
-    var result: std.ArrayListUnmanaged(BulkLayer) = .{};
+    var result: std.ArrayListUnmanaged(BulkLayer) = .empty;
     var z: u32 = 0;
     while (z < 12) : (z += 1) {
         const zf: f64 = @as(f64, @floatFromInt(z)) * 0.1 + 0.05;
@@ -137,7 +137,7 @@ pub fn computeAdsLayers(allocator: Allocator) ![]BulkLayer {
 }
 
 pub fn computeSpinNetwork(allocator: Allocator) ![]SpinNode {
-    var result: std.ArrayListUnmanaged(SpinNode) = .{};
+    var result: std.ArrayListUnmanaged(SpinNode) = .empty;
     const spins = [_]f64{ 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5 };
     for (spins, 0..) |j, idx| {
         const area = 8.0 * PI * BARBERO_IMMIRZI * @sqrt(j * (j + 1.0));
@@ -153,7 +153,7 @@ pub fn computeSpinNetwork(allocator: Allocator) ![]SpinNode {
 }
 
 pub fn computePenroseProps(allocator: Allocator) ![]PenroseProperty {
-    var result: std.ArrayListUnmanaged(PenroseProperty) = .{};
+    var result: std.ArrayListUnmanaged(PenroseProperty) = .empty;
     try result.append(allocator, .{ .name = "kite_dart_ratio", .value = PHI, .description = "Kite/Dart area ratio = phi" });
     try result.append(allocator, .{ .name = "long_short_edge", .value = PHI, .description = "Long/Short edge ratio = phi" });
     try result.append(allocator, .{ .name = "inflation_factor", .value = PHI_SQ, .description = "Inflation factor = phi^2" });
@@ -173,7 +173,7 @@ pub fn computeEntropySurface() EntropySurface {
 }
 
 pub fn computeHawkingFrames(allocator: Allocator) ![]HawkingFrame {
-    var result: std.ArrayListUnmanaged(HawkingFrame) = .{};
+    var result: std.ArrayListUnmanaged(HawkingFrame) = .empty;
     var frame: u8 = 0;
     while (frame < 6) : (frame += 1) {
         const mass = 1.0 - @as(f64, @floatFromInt(frame)) * 0.15;
@@ -190,7 +190,7 @@ pub fn computeHawkingFrames(allocator: Allocator) ![]HawkingFrame {
 }
 
 pub fn computeMultiverseBubbles(allocator: Allocator) ![]MultiverseBubble {
-    var result: std.ArrayListUnmanaged(MultiverseBubble) = .{};
+    var result: std.ArrayListUnmanaged(MultiverseBubble) = .empty;
     var i: u8 = 0;
     while (i < 7) : (i += 1) {
         const fi: f64 = @floatFromInt(i);
@@ -216,7 +216,7 @@ pub fn computeMultiverseBubbles(allocator: Allocator) ![]MultiverseBubble {
 }
 
 pub fn computeStringLandscape(allocator: Allocator) ![]StringLandscapePoint {
-    var result: std.ArrayListUnmanaged(StringLandscapePoint) = .{};
+    var result: std.ArrayListUnmanaged(StringLandscapePoint) = .empty;
     var i: u8 = 0;
     while (i < 9) : (i += 1) {
         const fi: f64 = @floatFromInt(i);
@@ -244,7 +244,7 @@ pub fn computeStringLandscape(allocator: Allocator) ![]StringLandscapePoint {
 }
 
 pub fn computeRyuTakayanagi(allocator: Allocator) ![]RyuTakayanagi {
-    var result: std.ArrayListUnmanaged(RyuTakayanagi) = .{};
+    var result: std.ArrayListUnmanaged(RyuTakayanagi) = .empty;
     var i: u8 = 0;
     while (i < 5) : (i += 1) {
         const fi: f64 = @floatFromInt(i);
@@ -272,107 +272,106 @@ pub fn computeRyuTakayanagi(allocator: Allocator) ![]RyuTakayanagi {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 pub fn holoToJson(allocator: Allocator, mode_str: []const u8) ![]u8 {
-    var buf: std.ArrayListUnmanaged(u8) = .{};
-    const w = buf.writer(allocator);
+    var buf: std.ArrayListUnmanaged(u8) = .empty;
 
     const trinity = PHI_SQ + PHI_INV_SQ;
 
-    try w.writeAll("{");
-    try std.fmt.format(w, "\"mode\":\"{s}\",\"trinity_check\":{d:.6}", .{ mode_str, trinity });
+    try buf.appendSlice(allocator, "{");
+    try buf.print(allocator, "\"mode\":\"{s}\",\"trinity_check\":{d:.6}", .{ mode_str, trinity });
 
     if (std.mem.eql(u8, mode_str, "ads")) {
         const layers = try computeAdsLayers(allocator);
         defer allocator.free(layers);
-        try w.writeAll(",\"layers\":[");
+        try buf.appendSlice(allocator, ",\"layers\":[");
         for (layers, 0..) |layer, idx| {
-            if (idx > 0) try w.writeAll(",");
-            try std.fmt.format(w, "{{\"z\":{d:.2},\"width\":{d},\"entropy_density\":{d:.4},\"region\":\"{s}\"}}", .{
+            if (idx > 0) try buf.appendSlice(allocator, ",");
+            try buf.print(allocator, "{{\"z\":{d:.2},\"width\":{d},\"entropy_density\":{d:.4},\"region\":\"{s}\"}}", .{
                 layer.z, layer.width, layer.entropy_density, layer.region,
             });
         }
-        try w.writeAll("]");
+        try buf.appendSlice(allocator, "]");
     } else if (std.mem.eql(u8, mode_str, "spin_network")) {
         const nodes = try computeSpinNetwork(allocator);
         defer allocator.free(nodes);
-        try w.writeAll(",\"spin_nodes\":[");
+        try buf.appendSlice(allocator, ",\"spin_nodes\":[");
         for (nodes, 0..) |node, idx| {
-            if (idx > 0) try w.writeAll(",");
-            try std.fmt.format(w, "{{\"id\":{d},\"spin\":{d:.1},\"area_eigenvalue\":{d:.6},\"volume_eigenvalue\":{d:.6}}}", .{
+            if (idx > 0) try buf.appendSlice(allocator, ",");
+            try buf.print(allocator, "{{\"id\":{d},\"spin\":{d:.1},\"area_eigenvalue\":{d:.6},\"volume_eigenvalue\":{d:.6}}}", .{
                 node.id, node.spin, node.area_eigenvalue, node.volume_eigenvalue,
             });
         }
-        try w.writeAll("]");
+        try buf.appendSlice(allocator, "]");
     } else if (std.mem.eql(u8, mode_str, "penrose")) {
         const props = try computePenroseProps(allocator);
         defer allocator.free(props);
-        try w.writeAll(",\"properties\":[");
+        try buf.appendSlice(allocator, ",\"properties\":[");
         for (props, 0..) |prop, idx| {
-            if (idx > 0) try w.writeAll(",");
-            try std.fmt.format(w, "{{\"name\":\"{s}\",\"value\":{d:.10},\"description\":\"{s}\"}}", .{
+            if (idx > 0) try buf.appendSlice(allocator, ",");
+            try buf.print(allocator, "{{\"name\":\"{s}\",\"value\":{d:.10},\"description\":\"{s}\"}}", .{
                 prop.name, prop.value, prop.description,
             });
         }
-        try w.writeAll("]");
+        try buf.appendSlice(allocator, "]");
     } else if (std.mem.eql(u8, mode_str, "entropy")) {
         const surface = computeEntropySurface();
-        try std.fmt.format(w, ",\"entropy_surface\":{{\"radius\":{d},\"formula\":\"{s}\",\"solar_mass_entropy_log10\":{d:.1},\"holographic_bits\":{d:.10}}}", .{
+        try buf.print(allocator, ",\"entropy_surface\":{{\"radius\":{d},\"formula\":\"{s}\",\"solar_mass_entropy_log10\":{d:.1},\"holographic_bits\":{d:.10}}}", .{
             surface.radius, surface.formula, surface.solar_mass_entropy_log10, surface.holographic_bits,
         });
     } else if (std.mem.eql(u8, mode_str, "hawking")) {
         const frames = try computeHawkingFrames(allocator);
         defer allocator.free(frames);
-        try w.writeAll(",\"hawking_frames\":[");
+        try buf.appendSlice(allocator, ",\"hawking_frames\":[");
         for (frames, 0..) |frame, idx| {
-            if (idx > 0) try w.writeAll(",");
-            try std.fmt.format(w, "{{\"frame\":{d},\"mass\":{d:.4},\"temperature\":{d:.6},\"radius\":{d}}}", .{
+            if (idx > 0) try buf.appendSlice(allocator, ",");
+            try buf.print(allocator, "{{\"frame\":{d},\"mass\":{d:.4},\"temperature\":{d:.6},\"radius\":{d}}}", .{
                 frame.frame, frame.mass, frame.temperature, frame.radius,
             });
         }
-        try w.writeAll("]");
+        try buf.appendSlice(allocator, "]");
     } else if (std.mem.eql(u8, mode_str, "multiverse")) {
         const bubbles = try computeMultiverseBubbles(allocator);
         defer allocator.free(bubbles);
-        try w.writeAll(",\"bubbles\":[");
+        try buf.appendSlice(allocator, ",\"bubbles\":[");
         for (bubbles, 0..) |bubble, idx| {
-            if (idx > 0) try w.writeAll(",");
-            try std.fmt.format(w, "{{\"id\":{d},\"cosmological_constant\":{d:.6},\"tunneling_prob\":{d:.10},\"radius\":{d:.6},\"inflation_rate\":{d:.4},\"is_our_vacuum\":{s}}}", .{
+            if (idx > 0) try buf.appendSlice(allocator, ",");
+            try buf.print(allocator, "{{\"id\":{d},\"cosmological_constant\":{d:.6},\"tunneling_prob\":{d:.10},\"radius\":{d:.6},\"inflation_rate\":{d:.4},\"is_our_vacuum\":{s}}}", .{
                 bubble.id, bubble.cosmological_constant, bubble.tunneling_prob, bubble.radius, bubble.inflation_rate, if (bubble.is_our_vacuum) "true" else "false",
             });
         }
-        try w.writeAll("]");
+        try buf.appendSlice(allocator, "]");
     } else if (std.mem.eql(u8, mode_str, "string_landscape")) {
         const points = try computeStringLandscape(allocator);
         defer allocator.free(points);
-        try w.writeAll(",\"landscape\":[");
+        try buf.appendSlice(allocator, ",\"landscape\":[");
         for (points, 0..) |point, idx| {
-            if (idx > 0) try w.writeAll(",");
+            if (idx > 0) try buf.appendSlice(allocator, ",");
             if (point.tunneling_to) |t| {
-                try std.fmt.format(w, "{{\"modulus_x\":{d:.6},\"modulus_y\":{d:.6},\"energy\":{d:.6},\"flux_config\":{d},\"is_minimum\":{s},\"tunneling_to\":{d}}}", .{
+                try buf.print(allocator, "{{\"modulus_x\":{d:.6},\"modulus_y\":{d:.6},\"energy\":{d:.6},\"flux_config\":{d},\"is_minimum\":{s},\"tunneling_to\":{d}}}", .{
                     point.modulus_x, point.modulus_y, point.energy, point.flux_config, if (point.is_minimum) "true" else "false", t,
                 });
             } else {
-                try std.fmt.format(w, "{{\"modulus_x\":{d:.6},\"modulus_y\":{d:.6},\"energy\":{d:.6},\"flux_config\":{d},\"is_minimum\":{s},\"tunneling_to\":null}}", .{
+                try buf.print(allocator, "{{\"modulus_x\":{d:.6},\"modulus_y\":{d:.6},\"energy\":{d:.6},\"flux_config\":{d},\"is_minimum\":{s},\"tunneling_to\":null}}", .{
                     point.modulus_x, point.modulus_y, point.energy, point.flux_config, if (point.is_minimum) "true" else "false",
                 });
             }
         }
-        try w.writeAll("]");
+        try buf.appendSlice(allocator, "]");
     } else if (std.mem.eql(u8, mode_str, "ryu_takayanagi")) {
         const geodesics = try computeRyuTakayanagi(allocator);
         defer allocator.free(geodesics);
-        try w.writeAll(",\"geodesics\":[");
+        try buf.appendSlice(allocator, ",\"geodesics\":[");
         for (geodesics, 0..) |geo, idx| {
-            if (idx > 0) try w.writeAll(",");
-            try std.fmt.format(w, "{{\"boundary_start\":{d:.4},\"boundary_end\":{d:.4},\"geodesic_length\":{d:.6},\"entanglement_entropy\":{d:.6},\"phi_correction\":{d:.10},\"area_over_4g\":{d:.6}}}", .{
+            if (idx > 0) try buf.appendSlice(allocator, ",");
+            try buf.print(allocator, "{{\"boundary_start\":{d:.4},\"boundary_end\":{d:.4},\"geodesic_length\":{d:.6},\"entanglement_entropy\":{d:.6},\"phi_correction\":{d:.10},\"area_over_4g\":{d:.6}}}", .{
                 geo.boundary_start, geo.boundary_end, geo.geodesic_length, geo.entanglement_entropy, geo.phi_correction, geo.area_over_4g,
             });
         }
-        try w.writeAll("]");
+        try buf.appendSlice(allocator, "]");
     } else {
-        try w.writeAll(",\"modes\":[\"ads\",\"spin_network\",\"penrose\",\"entropy\",\"hawking\",\"multiverse\",\"string_landscape\",\"ryu_takayanagi\"]");
+        try buf.appendSlice(allocator, ",\"modes\":[\"ads\",\"spin_network\",\"penrose\",\"entropy\",\"hawking\",\"multiverse\",\"string_landscape\",\"ryu_takayanagi\"]");
     }
 
-    try w.writeAll("}");
+    try buf.appendSlice(allocator, "}");
     return buf.toOwnedSlice(allocator);
 }
 

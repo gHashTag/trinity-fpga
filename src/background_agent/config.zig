@@ -2,6 +2,7 @@
 //! φ² + 1/φ² = 3 | TRINITY
 
 const std = @import("std");
+const tri_env = @import("tri_env");
 const Allocator = std.mem.Allocator;
 
 /// Configuration for background-agent API
@@ -17,7 +18,7 @@ pub const Config = struct {
 
 /// Get environment variable with error handling
 fn getEnv(allocator: Allocator, key: []const u8) ![]const u8 {
-    if (std.process.getEnvVarOwned(allocator, key)) |value| {
+    if (tri_env.getEnvVarOwned(allocator, key)) |value| {
         return value;
     } else |_| {
         return error.MissingEnv;
@@ -26,7 +27,7 @@ fn getEnv(allocator: Allocator, key: []const u8) ![]const u8 {
 
 /// Get environment variable with default value
 fn getEnvOr(allocator: Allocator, key: []const u8, default_value: []const u8) ![]const u8 {
-    if (std.process.getEnvVarOwned(allocator, key)) |value| {
+    if (tri_env.getEnvVarOwned(allocator, key)) |value| {
         return value;
     } else |_| {
         return default_value;
@@ -76,7 +77,7 @@ pub const Error = error{
 
 test "config: load defaults" {
     const allocator = std.testing.allocator;
-    var env = std.process.EnvMap.init(allocator);
+    var env = std.process.Environ.Map.init(allocator);
     defer env.deinit();
 
     try env.put("PORT", "8080");
@@ -97,7 +98,7 @@ test "config: load defaults" {
 
 test "config: optional api token and auth secret" {
     const allocator = std.testing.allocator;
-    var env = std.process.EnvMap.init(allocator);
+    var env = std.process.Environ.Map.init(allocator);
     defer env.deinit();
 
     try env.put("PORT", "3000");
@@ -115,7 +116,7 @@ test "config: optional api token and auth secret" {
 
 test "config: missing database url" {
     const allocator = std.testing.allocator;
-    var env = std.process.EnvMap.init(allocator);
+    var env = std.process.Environ.Map.init(allocator);
     defer env.deinit();
 
     try env.put("PORT", "3000");

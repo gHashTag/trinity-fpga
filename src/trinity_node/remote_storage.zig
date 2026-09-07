@@ -6,6 +6,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const protocol = @import("protocol.zig");
 const storage_mod = @import("storage.zig");
 const storage_discovery = @import("storage_discovery.zig");
@@ -17,7 +18,7 @@ const connection_pool = @import("connection_pool.zig");
 
 pub const RemotePeerClient = struct {
     allocator: std.mem.Allocator,
-    address: std.net.Address,
+    address: std.Io.net.IpAddress,
     timeout_ns: u64 = 5_000_000_000, // 5 seconds
     // v1.4: Optional connection pool
     pool: ?*connection_pool.ConnectionPool = null,
@@ -43,27 +44,41 @@ pub const RemotePeerClient = struct {
             .length = @intCast(payload.len),
         };
 
-        // Connect and send (use pool if available)
+        // Connect and send (use pool if available).
+        // 0.16: `std.net.tcpConnectToAddress` is gone; `IpAddress.connect` takes
+        // the io and an explicit socket mode.
+        const io = tri_io.get();
         const use_pool = self.pool != null;
         const stream = if (self.pool) |p|
-            p.acquire(self.node_id, self.address) catch try std.net.tcpConnectToAddress(self.address)
+            p.acquire(self.node_id, self.address) catch try self.address.connect(io, .{ .mode = .stream })
         else
-            try std.net.tcpConnectToAddress(self.address);
+            try self.address.connect(io, .{ .mode = .stream });
         errdefer {
             if (use_pool) {
                 if (self.pool) |p| p.discard(self.node_id, stream);
             } else {
-                stream.close();
+                stream.close(io);
             }
         }
 
+        // 0.16: `Stream` has no read/write. It hands out a buffered `Reader` and
+        // `Writer` that hold the io; both must outlive every use of `.interface`.
+        var write_buf: [4096]u8 = undefined;
+        var stream_writer = stream.writer(io, &write_buf);
+        const w = &stream_writer.interface;
+
+        var read_buf: [4096]u8 = undefined;
+        var stream_reader = stream.reader(io, &read_buf);
+        const r = &stream_reader.interface;
+
         const header_bytes = header.serialize();
-        _ = try stream.write(&header_bytes);
-        _ = try stream.write(payload);
+        try w.writeAll(&header_bytes);
+        try w.writeAll(payload);
+        try w.flush();
 
         // Read response header
         var resp_header_buf: [protocol.MessageHeader.SIZE]u8 = undefined;
-        const resp_header_read = try stream.read(&resp_header_buf);
+        const resp_header_read = try r.readSliceShort(&resp_header_buf);
         if (resp_header_read < protocol.MessageHeader.SIZE) return error.IncompleteResponse;
 
         const resp_header = try protocol.MessageHeader.deserialize(&resp_header_buf);
@@ -71,7 +86,7 @@ pub const RemotePeerClient = struct {
 
         // Read response payload
         var resp_buf: [protocol.StoreResponse.SIZE]u8 = undefined;
-        const resp_read = try stream.read(&resp_buf);
+        const resp_read = try r.readSliceShort(&resp_buf);
         if (resp_read < protocol.StoreResponse.SIZE) return error.IncompleteResponse;
 
         const resp = try protocol.StoreResponse.deserialize(&resp_buf);
@@ -82,7 +97,7 @@ pub const RemotePeerClient = struct {
         if (self.pool) |p| {
             p.release(self.node_id, stream);
         } else {
-            stream.close();
+            stream.close(io);
         }
     }
 
@@ -101,27 +116,41 @@ pub const RemotePeerClient = struct {
             .length = protocol.RetrieveRequest.SIZE,
         };
 
-        // Connect and send (use pool if available)
+        // Connect and send (use pool if available).
+        // 0.16: `std.net.tcpConnectToAddress` is gone; `IpAddress.connect` takes
+        // the io and an explicit socket mode.
+        const io = tri_io.get();
         const use_pool = self.pool != null;
         const stream = if (self.pool) |p|
-            p.acquire(self.node_id, self.address) catch try std.net.tcpConnectToAddress(self.address)
+            p.acquire(self.node_id, self.address) catch try self.address.connect(io, .{ .mode = .stream })
         else
-            try std.net.tcpConnectToAddress(self.address);
+            try self.address.connect(io, .{ .mode = .stream });
         errdefer {
             if (use_pool) {
                 if (self.pool) |p| p.discard(self.node_id, stream);
             } else {
-                stream.close();
+                stream.close(io);
             }
         }
 
+        // 0.16: `Stream` has no read/write. It hands out a buffered `Reader` and
+        // `Writer` that hold the io; both must outlive every use of `.interface`.
+        var write_buf: [4096]u8 = undefined;
+        var stream_writer = stream.writer(io, &write_buf);
+        const w = &stream_writer.interface;
+
+        var read_buf: [4096]u8 = undefined;
+        var stream_reader = stream.reader(io, &read_buf);
+        const r = &stream_reader.interface;
+
         const header_bytes = header.serialize();
-        _ = try stream.write(&header_bytes);
-        _ = try stream.write(&payload_bytes);
+        try w.writeAll(&header_bytes);
+        try w.writeAll(&payload_bytes);
+        try w.flush();
 
         // Read response header
         var resp_header_buf: [protocol.MessageHeader.SIZE]u8 = undefined;
-        const resp_header_read = try stream.read(&resp_header_buf);
+        const resp_header_read = try r.readSliceShort(&resp_header_buf);
         if (resp_header_read < protocol.MessageHeader.SIZE) return error.IncompleteResponse;
 
         const resp_header = try protocol.MessageHeader.deserialize(&resp_header_buf);
@@ -134,7 +163,7 @@ pub const RemotePeerClient = struct {
 
         var total_read: usize = 0;
         while (total_read < resp_header.length) {
-            const n = try stream.read(resp_buf[total_read..]);
+            const n = try r.readSliceShort(resp_buf[total_read..]);
             if (n == 0) return error.ConnectionClosed;
             total_read += n;
         }
@@ -149,7 +178,7 @@ pub const RemotePeerClient = struct {
         if (self.pool) |p| {
             p.release(self.node_id, stream);
         } else {
-            stream.close();
+            stream.close(io);
         }
 
         return resp.data; // Caller owns this allocation
@@ -263,7 +292,7 @@ pub const NetworkShardDistributor = struct {
 
 test "RemotePeerClient struct creation" {
     // Test that RemotePeerClient can be created with expected defaults
-    const addr = std.net.Address.initIp4(.{ 127, 0, 0, 1 }, 9333);
+    const addr: std.Io.net.IpAddress = .{ .ip4 = .{ .bytes = .{ 127, 0, 0, 1 }, .port = 9333 } };
     const client = RemotePeerClient{
         .allocator = std.testing.allocator,
         .address = addr,

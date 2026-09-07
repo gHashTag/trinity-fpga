@@ -5,6 +5,7 @@
 //!        tri mcp tools
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const registry = @import("registry");
 const unified_output = @import("unified_output.zig");
 
@@ -76,14 +77,15 @@ fn runDoctorCommand(allocator: std.mem.Allocator, args: []const []const u8) !voi
     }
 
     // CHECK 1: registry.json exists
+    const io = tri_io.get();
     const registry_path = ".trinity/registry.json";
-    std.fs.cwd().access(registry_path, .{}) catch {
+    std.Io.Dir.cwd().access(io, registry_path, .{}) catch {
         try issues.append(allocator, "REGISTRY_NOT_FOUND: Run 'zig build export-registry' first");
     };
 
     // CHECK 2: Validate registry JSON
     if (issues.items.len == 0) {
-        const registry_content_result = std.fs.cwd().readFileAlloc(allocator, registry_path, 1024 * 1024);
+        const registry_content_result = std.Io.Dir.cwd().readFileAlloc(io, registry_path, allocator, .limited(1024 * 1024));
         if (registry_content_result) |content| {
             defer allocator.free(content);
 
@@ -100,7 +102,7 @@ fn runDoctorCommand(allocator: std.mem.Allocator, args: []const []const u8) !voi
     // CHECK 3: mcp_schemas.json exists
     const schemas_path = ".trinity/mcp_schemas.json";
     const schemas_exist = blk: {
-        if (std.fs.cwd().access(schemas_path, .{})) |_| {
+        if (std.Io.Dir.cwd().access(io, schemas_path, .{})) |_| {
             break :blk true;
         } else |_| {
             break :blk false;
@@ -113,7 +115,7 @@ fn runDoctorCommand(allocator: std.mem.Allocator, args: []const []const u8) !voi
 
     // CHECK 4: Validate schemas JSON if exists
     if (schemas_exist) {
-        const schemas_content_result = std.fs.cwd().readFileAlloc(allocator, schemas_path, 1024 * 1024);
+        const schemas_content_result = std.Io.Dir.cwd().readFileAlloc(io, schemas_path, allocator, .limited(1024 * 1024));
         if (schemas_content_result) |content| {
             defer allocator.free(content);
 
@@ -144,7 +146,7 @@ fn runDoctorCommand(allocator: std.mem.Allocator, args: []const []const u8) !voi
     // CHECK 6: Schema drift detection
     if (schemas_exist and issues.items.len == 0) {
         // Compare command count
-        const schemas_content = std.fs.cwd().readFileAlloc(allocator, schemas_path, 1024 * 1024) catch "";
+        const schemas_content = std.Io.Dir.cwd().readFileAlloc(io, schemas_path, allocator, .limited(1024 * 1024)) catch "";
         defer allocator.free(schemas_content);
 
         const parsed = std.json.parseFromSlice(std.json.Value, allocator, schemas_content, .{ .allocate = .alloc_always }) catch null;

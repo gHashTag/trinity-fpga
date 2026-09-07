@@ -20,6 +20,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const experience_hooks = @import("experience_hooks.zig");
 const tri_experience = @import("tri_experience.zig");
@@ -63,7 +64,11 @@ const RunStep = struct {
 // DISPATCH
 // ═══════════════════════════════════════════════════════════════════════════════
 
-pub fn runAgentRunCommand(allocator: Allocator, args: []const []const u8) !void {
+// Takes an `io` because step 4 calls runGenCommand, which needs one in 0.16.
+// There is exactly one caller (main.zig, `tri agent run`) and it already has
+// an Io in scope, so threading it costs a parameter and keeps the process's
+// single Io rather than manufacturing a second one here.
+pub fn runAgentRunCommand(io: std.Io, allocator: Allocator, args: []const []const u8) !void {
     if (args.len == 0) {
         printHelp();
         return;
@@ -76,14 +81,14 @@ pub fn runAgentRunCommand(allocator: Allocator, args: []const []const u8) !void 
         return;
     };
 
-    try runFullCycle(allocator, issue_num, issue_str);
+    try runFullCycle(io, allocator, issue_num, issue_str);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // FULL 8-STEP CYCLE
 // ═══════════════════════════════════════════════════════════════════════════════
 
-fn runFullCycle(allocator: Allocator, issue_num: u32, issue_str: []const u8) !void {
+fn runFullCycle(io: std.Io, allocator: Allocator, issue_num: u32, issue_str: []const u8) !void {
     const github_commands = @import("github_commands.zig");
     const pipeline = @import("tri_pipeline.zig");
     const commands = @import("tri_commands.zig");
@@ -144,7 +149,7 @@ fn runFullCycle(allocator: Allocator, issue_num: u32, issue_str: []const u8) !vo
     // Step 4: Gen
     printStepStart(4, 8, "Code generate");
     steps[3].name = "gen";
-    commands.runGenCommand(allocator, &[_][]const u8{}) catch |err| {
+    commands.runGenCommand(io, allocator, &[_][]const u8{}) catch |err| {
         steps[3].setDetail(@errorName(err));
         printStepEnd(false);
         queen_bridge.logStepError(allocator, "gamma", issue_num, "code generate", @errorName(err)) catch {};
@@ -180,7 +185,7 @@ fn runFullCycle(allocator: Allocator, issue_num: u32, issue_str: []const u8) !vo
     steps[6].name = "experience save";
     {
         var episode = tri_experience.Episode{};
-        episode.timestamp = std.time.timestamp();
+        episode.timestamp = tri_time.timestamp();
         episode.issue = issue_num;
 
         var task_buf: [256]u8 = undefined;

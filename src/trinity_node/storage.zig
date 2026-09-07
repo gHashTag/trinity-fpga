@@ -6,6 +6,9 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_rand = @import("tri_rand");
+const tri_io = @import("tri_io");
+const tri_time = @import("tri_time");
 const crypto = @import("crypto.zig");
 const protocol = @import("protocol.zig");
 
@@ -95,7 +98,7 @@ pub const RewardTracker = struct {
         return .{
             .shards_hosted = 0,
             .retrievals_served = 0,
-            .hosting_start = std.time.timestamp(),
+            .hosting_start = tri_time.timestamp(),
             .bytes_uploaded = 0,
             .bytes_downloaded = 0,
         };
@@ -120,7 +123,7 @@ pub const RewardTracker = struct {
 
     /// Calculate total earned TRI (in wei)
     pub fn calculateEarnedWei(self: *const RewardTracker) u128 {
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
         const elapsed_secs: u64 = if (now > self.hosting_start)
             @intCast(now - self.hosting_start)
         else
@@ -142,7 +145,7 @@ pub const RewardTracker = struct {
 
     /// Get reward stats
     pub fn getStats(self: *const RewardTracker) RewardStats {
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
         const elapsed_secs: u64 = if (now > self.hosting_start)
             @intCast(now - self.hosting_start)
         else
@@ -581,42 +584,45 @@ pub const StorageProvider = struct {
     /// Persist a shard to disk: {storage_dir}/{hash_hex}.shard
     fn persistShardToDisk(self: *StorageProvider, shard_hash: [32]u8, data: []const u8) !void {
         const dir_path = self.config.storage_dir orelse return;
+        const io = tri_io.get();
 
         // Ensure storage directory exists
-        std.fs.cwd().makePath(dir_path) catch {};
+        std.Io.Dir.cwd().createDirPath(io, dir_path) catch {};
 
         const hex = hashToHex(shard_hash);
         const file_path = try std.fmt.allocPrint(self.allocator, "{s}/{s}.shard", .{ dir_path, hex });
         defer self.allocator.free(file_path);
 
-        const file = try std.fs.cwd().createFile(file_path, .{});
-        defer file.close();
-        try file.writeAll(data);
+        const file = try std.Io.Dir.cwd().createFile(io, file_path, .{});
+        defer file.close(io);
+        try file.writeStreamingAll(io, data);
     }
 
     /// Load a shard from disk into memory
     fn loadShardFromDisk(self: *StorageProvider, shard_hash: [32]u8) ?[]u8 {
         const dir_path = self.config.storage_dir orelse return null;
+        const io = tri_io.get();
 
         const hex = hashToHex(shard_hash);
         const file_path = std.fmt.allocPrint(self.allocator, "{s}/{s}.shard", .{ dir_path, hex }) catch return null;
         defer self.allocator.free(file_path);
 
-        const file = std.fs.cwd().openFile(file_path, .{}) catch return null;
-        defer file.close();
+        const file = std.Io.Dir.cwd().openFile(io, file_path, .{}) catch return null;
+        defer file.close(io);
 
-        const stat = file.stat() catch return null;
+        const stat = file.stat(io) catch return null;
         if (stat.size > 256 * 1024 * 1024) return null; // max 256MB shard
         const data = self.allocator.alloc(u8, stat.size) catch return null;
-        const bytes_read = file.readAll(data) catch {
+
+        // Fixed-width read: the shard is exactly `stat.size` bytes, so a short
+        // read is corruption. `readSliceAll` loops until full and fails with
+        // error.EndOfStream if it cannot.
+        var read_scratch: [4096]u8 = undefined;
+        var file_reader = file.reader(io, &read_scratch);
+        file_reader.interface.readSliceAll(data) catch {
             self.allocator.free(data);
             return null;
         };
-
-        if (bytes_read != stat.size) {
-            self.allocator.free(data);
-            return null;
-        }
 
         // Verify hash
         const actual_hash = crypto.sha256(data);
@@ -635,13 +641,14 @@ pub const StorageProvider = struct {
     /// Does NOT load shard data into memory — lazy loading on retrieve
     pub fn loadFromDisk(self: *StorageProvider) !u32 {
         const dir_path = self.config.storage_dir orelse return 0;
+        const io = tri_io.get();
 
-        var dir = std.fs.cwd().openDir(dir_path, .{ .iterate = true }) catch return 0;
-        defer dir.close();
+        var dir = std.Io.Dir.cwd().openDir(io, dir_path, .{ .iterate = true }) catch return 0;
+        defer dir.close(io);
 
         var count: u32 = 0;
         var iter = dir.iterate();
-        while (try iter.next()) |entry| {
+        while (try iter.next(io)) |entry| {
             if (entry.kind != .file) continue;
 
             // Check for .shard extension
@@ -668,13 +675,14 @@ pub const StorageProvider = struct {
     /// Persist a FileManifest to disk: {storage_dir}/../manifests/{file_id_hex}.manifest
     pub fn persistManifest(self: *StorageProvider, manifest: *const FileManifest) !void {
         const dir_path = self.config.storage_dir orelse return;
+        const io = tri_io.get();
 
         // Build manifests directory path (sibling to shards dir)
         const manifests_dir = try std.fmt.allocPrint(self.allocator, "{s}/../manifests", .{dir_path});
         defer self.allocator.free(manifests_dir);
 
         // Ensure directory exists
-        std.fs.cwd().makePath(manifests_dir) catch |path_err| {
+        std.Io.Dir.cwd().createDirPath(io, manifests_dir) catch |path_err| {
             std.log.debug("storage: could not create manifests directory: {}", .{path_err});
         };
 
@@ -685,14 +693,15 @@ pub const StorageProvider = struct {
         const data = try manifest.serialize(self.allocator);
         defer self.allocator.free(data);
 
-        const file = try std.fs.cwd().createFile(file_path, .{});
-        defer file.close();
-        try file.writeAll(data);
+        const file = try std.Io.Dir.cwd().createFile(io, file_path, .{});
+        defer file.close(io);
+        try file.writeStreamingAll(io, data);
     }
 
     /// Load a FileManifest from disk
     pub fn loadManifest(self: *StorageProvider, file_id: [32]u8) !FileManifest {
         const dir_path = self.config.storage_dir orelse return error.NoDiskStorage;
+        const io = tri_io.get();
 
         const manifests_dir = try std.fmt.allocPrint(self.allocator, "{s}/../manifests", .{dir_path});
         defer self.allocator.free(manifests_dir);
@@ -701,18 +710,21 @@ pub const StorageProvider = struct {
         const file_path = try std.fmt.allocPrint(self.allocator, "{s}/{s}.manifest", .{ manifests_dir, hex });
         defer self.allocator.free(file_path);
 
-        const file = std.fs.cwd().openFile(file_path, .{}) catch return error.ManifestNotFound;
-        defer file.close();
+        const file = std.Io.Dir.cwd().openFile(io, file_path, .{}) catch return error.ManifestNotFound;
+        defer file.close(io);
 
-        const stat = try file.stat();
+        const stat = try file.stat(io);
         if (stat.size > 16 * 1024 * 1024) return error.InvalidData; // max 16MB manifest
         const data = try self.allocator.alloc(u8, stat.size);
         defer self.allocator.free(data);
 
-        const bytes_read = try file.readAll(data);
-        if (bytes_read != stat.size) return error.InvalidData;
+        // Fixed-width read: the manifest is exactly `stat.size` bytes, so a
+        // short read means truncation. `readSliceAll` loops until full.
+        var read_scratch: [4096]u8 = undefined;
+        var file_reader = file.reader(io, &read_scratch);
+        file_reader.interface.readSliceAll(data) catch return error.InvalidData;
 
-        return FileManifest.deserialize(data[0..bytes_read], self.allocator);
+        return FileManifest.deserialize(data, self.allocator);
     }
 };
 
@@ -726,7 +738,7 @@ fn uniqueTestDir(comptime prefix: []const u8) [prefix.len + 16]u8 {
     var buf: [prefix.len + 16]u8 = undefined;
     @memcpy(buf[0..prefix.len], prefix);
     var random_bytes: [8]u8 = undefined;
-    std.crypto.random.bytes(&random_bytes);
+    tri_rand.random().bytes(&random_bytes);
     const hex = std.fmt.bytesToHex(random_bytes, .lower);
     @memcpy(buf[prefix.len..], &hex);
     return buf;
@@ -909,7 +921,7 @@ test "reward tracker calculation" {
     var tracker = RewardTracker{
         .shards_hosted = 100,
         .retrievals_served = 10,
-        .hosting_start = std.time.timestamp() - 3600, // 1 hour ago
+        .hosting_start = tri_time.timestamp() - 3600, // 1 hour ago
         .bytes_uploaded = 0,
         .bytes_downloaded = 0,
     };
@@ -933,11 +945,12 @@ test "disk persistence - store and recover" {
     const test_dir: []const u8 = &test_dir_buf;
 
     // Clean up from any previous run
-    std.fs.cwd().deleteTree(test_dir) catch |cleanup_err| {
+    const io = tri_io.get();
+    std.Io.Dir.cwd().deleteTree(io, test_dir) catch |cleanup_err| {
         std.log.debug("storage test: cleanup before test: {}", .{cleanup_err});
     };
-    try std.fs.cwd().makePath(test_dir);
-    defer std.fs.cwd().deleteTree(test_dir) catch |defer_err| {
+    try std.Io.Dir.cwd().createDirPath(io, test_dir);
+    defer std.Io.Dir.cwd().deleteTree(io, test_dir) catch |defer_err| {
         std.log.debug("storage test: cleanup after test: {}", .{defer_err});
     };
 
@@ -986,11 +999,12 @@ test "lazy disk loading" {
     const test_dir_buf = uniqueTestDir("/tmp/trinity_lazy_");
     const test_dir: []const u8 = &test_dir_buf;
 
-    std.fs.cwd().deleteTree(test_dir) catch |cleanup_err| {
+    const io = tri_io.get();
+    std.Io.Dir.cwd().deleteTree(io, test_dir) catch |cleanup_err| {
         std.log.debug("storage test: cleanup before lazy test: {}", .{cleanup_err});
     };
-    try std.fs.cwd().makePath(test_dir);
-    defer std.fs.cwd().deleteTree(test_dir) catch |defer_err| {
+    try std.Io.Dir.cwd().createDirPath(io, test_dir);
+    defer std.Io.Dir.cwd().deleteTree(io, test_dir) catch |defer_err| {
         std.log.debug("storage test: cleanup after lazy test: {}", .{defer_err});
     };
 
@@ -1053,12 +1067,13 @@ test "manifest persist and load" {
     const manifests_dir = try std.fmt.allocPrint(allocator, "{s}/manifests", .{test_dir});
     defer allocator.free(manifests_dir);
 
-    std.fs.cwd().deleteTree(test_dir) catch |cleanup_err| {
+    const io = tri_io.get();
+    std.Io.Dir.cwd().deleteTree(io, test_dir) catch |cleanup_err| {
         std.log.debug("storage test: cleanup before manifest test: {}", .{cleanup_err});
     };
-    try std.fs.cwd().makePath(shards_dir);
-    try std.fs.cwd().makePath(manifests_dir);
-    defer std.fs.cwd().deleteTree(test_dir) catch |defer_err| {
+    try std.Io.Dir.cwd().createDirPath(io, shards_dir);
+    try std.Io.Dir.cwd().createDirPath(io, manifests_dir);
+    defer std.Io.Dir.cwd().deleteTree(io, test_dir) catch |defer_err| {
         std.log.debug("storage test: cleanup after manifest test: {}", .{defer_err});
     };
 
@@ -1113,11 +1128,12 @@ test "loadFromDisk recovery with multiple shards" {
     const test_dir_buf = uniqueTestDir("/tmp/trinity_recv_");
     const test_dir: []const u8 = &test_dir_buf;
 
-    std.fs.cwd().deleteTree(test_dir) catch |cleanup_err| {
+    const io = tri_io.get();
+    std.Io.Dir.cwd().deleteTree(io, test_dir) catch |cleanup_err| {
         std.log.debug("storage test: cleanup before recovery test: {}", .{cleanup_err});
     };
-    try std.fs.cwd().makePath(test_dir);
-    defer std.fs.cwd().deleteTree(test_dir) catch |defer_err| {
+    try std.Io.Dir.cwd().createDirPath(io, test_dir);
+    defer std.Io.Dir.cwd().deleteTree(io, test_dir) catch |defer_err| {
         std.log.debug("storage test: cleanup after recovery test: {}", .{defer_err});
     };
 
@@ -1175,11 +1191,12 @@ test "LRU eviction triggers when over limit" {
     const test_dir_buf = uniqueTestDir("/tmp/trinity_lru1_");
     const test_dir: []const u8 = &test_dir_buf;
 
-    std.fs.cwd().deleteTree(test_dir) catch |cleanup_err| {
+    const io = tri_io.get();
+    std.Io.Dir.cwd().deleteTree(io, test_dir) catch |cleanup_err| {
         std.log.debug("storage test: cleanup before LRU test: {}", .{cleanup_err});
     };
-    try std.fs.cwd().makePath(test_dir);
-    defer std.fs.cwd().deleteTree(test_dir) catch |defer_err| {
+    try std.Io.Dir.cwd().createDirPath(io, test_dir);
+    defer std.Io.Dir.cwd().deleteTree(io, test_dir) catch |defer_err| {
         std.log.debug("storage test: cleanup after LRU test: {}", .{defer_err});
     };
 
@@ -1224,11 +1241,12 @@ test "LRU evicts oldest accessed shard" {
     const test_dir_buf = uniqueTestDir("/tmp/trinity_lru2_");
     const test_dir: []const u8 = &test_dir_buf;
 
-    std.fs.cwd().deleteTree(test_dir) catch |cleanup_err| {
+    const io = tri_io.get();
+    std.Io.Dir.cwd().deleteTree(io, test_dir) catch |cleanup_err| {
         std.log.debug("storage test: cleanup before LRU2 test: {}", .{cleanup_err});
     };
-    try std.fs.cwd().makePath(test_dir);
-    defer std.fs.cwd().deleteTree(test_dir) catch |defer_err| {
+    try std.Io.Dir.cwd().createDirPath(io, test_dir);
+    defer std.Io.Dir.cwd().deleteTree(io, test_dir) catch |defer_err| {
         std.log.debug("storage test: cleanup after LRU2 test: {}", .{defer_err});
     };
 
@@ -1270,11 +1288,12 @@ test "evicted shard still retrievable from disk" {
     const test_dir_buf = uniqueTestDir("/tmp/trinity_lru3_");
     const test_dir: []const u8 = &test_dir_buf;
 
-    std.fs.cwd().deleteTree(test_dir) catch |cleanup_err| {
+    const io = tri_io.get();
+    std.Io.Dir.cwd().deleteTree(io, test_dir) catch |cleanup_err| {
         std.log.debug("storage test: cleanup before LRU3 test: {}", .{cleanup_err});
     };
-    try std.fs.cwd().makePath(test_dir);
-    defer std.fs.cwd().deleteTree(test_dir) catch |defer_err| {
+    try std.Io.Dir.cwd().createDirPath(io, test_dir);
+    defer std.Io.Dir.cwd().deleteTree(io, test_dir) catch |defer_err| {
         std.log.debug("storage test: cleanup after LRU3 test: {}", .{defer_err});
     };
 
@@ -1347,11 +1366,12 @@ test "pinned shard not evicted by LRU" {
     const test_dir_buf = uniqueTestDir("/tmp/trinity_pin1_");
     const test_dir: []const u8 = &test_dir_buf;
 
-    std.fs.cwd().deleteTree(test_dir) catch |cleanup_err| {
+    const io = tri_io.get();
+    std.Io.Dir.cwd().deleteTree(io, test_dir) catch |cleanup_err| {
         std.log.debug("storage test: cleanup before pin test: {}", .{cleanup_err});
     };
-    try std.fs.cwd().makePath(test_dir);
-    defer std.fs.cwd().deleteTree(test_dir) catch |defer_err| {
+    try std.Io.Dir.cwd().createDirPath(io, test_dir);
+    defer std.Io.Dir.cwd().deleteTree(io, test_dir) catch |defer_err| {
         std.log.debug("storage test: cleanup after pin test: {}", .{defer_err});
     };
 
@@ -1396,11 +1416,12 @@ test "unpin allows eviction" {
     const test_dir_buf = uniqueTestDir("/tmp/trinity_pin2_");
     const test_dir: []const u8 = &test_dir_buf;
 
-    std.fs.cwd().deleteTree(test_dir) catch |cleanup_err| {
+    const io = tri_io.get();
+    std.Io.Dir.cwd().deleteTree(io, test_dir) catch |cleanup_err| {
         std.log.debug("storage test: cleanup before unpin test: {}", .{cleanup_err});
     };
-    try std.fs.cwd().makePath(test_dir);
-    defer std.fs.cwd().deleteTree(test_dir) catch |defer_err| {
+    try std.Io.Dir.cwd().createDirPath(io, test_dir);
+    defer std.Io.Dir.cwd().deleteTree(io, test_dir) catch |defer_err| {
         std.log.debug("storage test: cleanup after unpin test: {}", .{defer_err});
     };
 
@@ -1456,7 +1477,7 @@ test "bandwidth reward calculation" {
     var tracker = RewardTracker{
         .shards_hosted = 0,
         .retrievals_served = 0,
-        .hosting_start = std.time.timestamp(),
+        .hosting_start = tri_time.timestamp(),
         .bytes_uploaded = 1024 * 1024 * 1024, // 1 GB uploaded
         .bytes_downloaded = 1024 * 1024 * 1024, // 1 GB downloaded
     };

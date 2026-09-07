@@ -8,6 +8,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayList;
 const bytecode = @import("bytecode.zig");
@@ -426,7 +427,7 @@ pub const VM = struct {
 
     pub fn run(self: *Self) VMError!Value {
         self.state = .running;
-        self.start_time = std.time.nanoTimestamp();
+        self.start_time = tri_time.nanoTimestamp();
 
         while (self.state == .running) {
             const opcode_byte = try self.readByte();
@@ -438,7 +439,7 @@ pub const VM = struct {
             self.cycles += 1;
         }
 
-        self.end_time = std.time.nanoTimestamp();
+        self.end_time = tri_time.nanoTimestamp();
         self.execution_time_ns = @intCast(@max(0, self.end_time - self.start_time));
 
         if (self.sp > 0) {
@@ -450,7 +451,7 @@ pub const VM = struct {
     /// Fast run without profiling - maximum performance
     pub fn runFast(self: *Self) VMError!Value {
         self.state = .running;
-        self.start_time = std.time.nanoTimestamp();
+        self.start_time = tri_time.nanoTimestamp();
 
         // Tight loop - no profiling, minimal overhead
         // Cache frequently accessed fields in local variables
@@ -779,7 +780,7 @@ pub const VM = struct {
         self.ip = ip;
         self.sp = sp;
 
-        self.end_time = std.time.nanoTimestamp();
+        self.end_time = tri_time.nanoTimestamp();
         self.execution_time_ns = @intCast(@max(0, self.end_time - self.start_time));
 
         if (sp > 0) {
@@ -2774,7 +2775,7 @@ fn nativeChshCheck(_: *VM, args: []const Value) VMError!Value {
 
 fn nativeClock(_: *VM, _: []const Value) VMError!Value {
     // Return current timestamp in nanoseconds as int
-    const now = std.time.nanoTimestamp();
+    const now = tri_time.nanoTimestamp();
     return .{ .int_val = @intCast(now) };
 }
 

@@ -5,6 +5,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 // ═══════════════════════════════════════════════════════════════════════════════
 // TYPES
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -43,7 +44,7 @@ pub const Experience = struct {
             .outcome = .Success,
             .lessons = std.ArrayList([]const u8).init(allocator),
             .duration_ms = 0,
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
         };
     }
 
@@ -227,7 +228,7 @@ pub const MemoryStore = struct {
             if (p.id == pattern_id) {
                 p.usage_count += 1;
                 if (success) p.success_count += 1;
-                p.last_used = std.time.timestamp();
+                p.last_used = tri_time.timestamp();
 
                 // Update confidence based on success rate
                 p.confidence = p.successRate();
@@ -278,7 +279,7 @@ pub const MemoryStore = struct {
             .confidence = 0.5, // Initial confidence
             .usage_count = 1,
             .success_count = 1,
-            .last_used = std.time.timestamp(),
+            .last_used = tri_time.timestamp(),
         };
 
         _ = try self.addPattern(pattern);
@@ -297,7 +298,7 @@ pub const MemoryStore = struct {
             .context = context,
             .solution_attempted = "",
             .resolved = false,
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
         };
 
         self.next_error_id += 1;

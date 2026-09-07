@@ -15,6 +15,9 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
+const tri_proc = @import("tri_proc");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const colors = @import("tri_colors.zig");
 const print = std.debug.print;
@@ -190,7 +193,7 @@ pub const DevLoopState = struct {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn runTriCommand(allocator: Allocator, args: []const []const u8) struct { success: bool, output: []const u8 } {
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = args,
         .max_output_bytes = 65536,
@@ -200,7 +203,7 @@ fn runTriCommand(allocator: Allocator, args: []const []const u8) struct { succes
     // Caller must handle this carefully
     allocator.free(result.stderr);
 
-    const success = result.term.Exited == 0;
+    const success = result.term.exited == 0;
     return .{ .success = success, .output = result.stdout };
 }
 
@@ -239,7 +242,7 @@ fn postStepComment(allocator: Allocator, issue_num: u32, phase: LoopPhase, detai
 fn executePhase(allocator: Allocator, phase: LoopPhase, issue_num: u32) LoopStep {
     var step = LoopStep{
         .phase = phase,
-        .started_at = std.time.timestamp(),
+        .started_at = tri_time.timestamp(),
     };
 
     switch (phase) {
@@ -264,16 +267,19 @@ fn executePhase(allocator: Allocator, phase: LoopPhase, issue_num: u32) LoopStep
             postStepComment(allocator, issue_num, phase, if (r.success) "task selected via --smart" else "pick failed");
         },
         .research => {
-            const file = std.fs.cwd().openFile(".trinity/pick_result.json", .{}) catch {
+            const io = tri_io.get();
+            const file = std.Io.Dir.cwd().openFile(io, ".trinity/pick_result.json", .{}) catch {
                 step.setOutput("No pick result found");
                 step.success = false;
-                step.finished_at = std.time.timestamp();
+                step.finished_at = tri_time.timestamp();
                 postStepComment(allocator, issue_num, phase, "no pick result found");
                 return step;
             };
-            defer file.close();
+            defer file.close(io);
             var buf: [512]u8 = undefined;
-            const n = file.readAll(&buf) catch 0;
+            var read_scratch: [512]u8 = undefined;
+            var file_reader = file.reader(io, &read_scratch);
+            const n = file_reader.interface.readSliceShort(&buf) catch 0;
             if (n > 0) {
                 step.setOutput(buf[0..@min(n, step.output.len)]);
                 step.success = true;
@@ -348,28 +354,29 @@ fn executePhase(allocator: Allocator, phase: LoopPhase, issue_num: u32) LoopStep
         },
     }
 
-    step.finished_at = std.time.timestamp();
+    step.finished_at = tri_time.timestamp();
     return step;
 }
 
 /// Issue #420: Save mistake file for issue on test failure
 fn saveMistakeForIssue(issue_num: u32, err_msg: []const u8) void {
-    std.fs.cwd().makePath(".trinity/mistakes") catch {};
+    const io = tri_io.get();
+    std.Io.Dir.cwd().createDirPath(io, ".trinity/mistakes") catch {};
 
     var path_buf: [128]u8 = undefined;
     const path = std.fmt.bufPrint(&path_buf, ".trinity/mistakes/{d}_{d}.json", .{
         issue_num,
-        std.time.timestamp(),
+        tri_time.timestamp(),
     }) catch return;
 
-    const file = std.fs.cwd().createFile(path, .{}) catch return;
-    defer file.close();
+    const file = std.Io.Dir.cwd().createFile(io, path, .{}) catch return;
+    defer file.close(io);
 
     var buf: [2048]u8 = undefined;
     const json = std.fmt.bufPrint(&buf, "{{\"issue\":{d},\"error\":\"{s}\",\"timestamp\":{d},\"source\":\"dev_loop\"}}", .{
-        issue_num, err_msg, std.time.timestamp(),
+        issue_num, err_msg, tri_time.timestamp(),
     }) catch return;
-    file.writeAll(json) catch return;
+    file.writeStreamingAll(io, json) catch return;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -387,7 +394,7 @@ fn runOnce(allocator: Allocator, state: *DevLoopState) LoopIteration {
         .number = state.current_iteration,
     };
 
-    const start_time = std.time.timestamp();
+    const start_time = tri_time.timestamp();
 
     print("\n{s}LOOP ITERATION {d}{s}\n", .{ GOLDEN, state.current_iteration, RESET });
     print("{s}════════════════════════════════════════════{s}\n\n", .{ GRAY, RESET });
@@ -440,7 +447,7 @@ fn runOnce(allocator: Allocator, state: *DevLoopState) LoopIteration {
         }
     }
 
-    iteration.total_seconds = @intCast(std.time.timestamp() - start_time);
+    iteration.total_seconds = @intCast(tri_time.timestamp() - start_time);
 
     if (all_passed) {
         state.consecutive_failures = 0;
@@ -503,9 +510,10 @@ fn renderSummary(iteration: *const LoopIteration) void {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn saveState(state: *const DevLoopState) void {
-    std.fs.cwd().makePath(".trinity") catch {};
-    const file = std.fs.cwd().createFile(".trinity/dev_loop_state.json", .{}) catch return;
-    defer file.close();
+    const io = tri_io.get();
+    std.Io.Dir.cwd().createDirPath(io, ".trinity") catch {};
+    const file = std.Io.Dir.cwd().createFile(io, ".trinity/dev_loop_state.json", .{}) catch return;
+    defer file.close(io);
 
     var buf: [512]u8 = undefined;
     const content = std.fmt.bufPrint(&buf, "{{\"iteration\":{d},\"max\":{d},\"interval\":{d},\"consecutive_failures\":{d},\"total_commits\":{d},\"total_specs\":{d},\"timestamp\":{d}}}\n", .{
@@ -515,17 +523,20 @@ fn saveState(state: *const DevLoopState) void {
         state.consecutive_failures,
         state.total_commits,
         state.total_specs_created,
-        std.time.timestamp(),
+        tri_time.timestamp(),
     }) catch return;
-    file.writeAll(content) catch return;
+    file.writeStreamingAll(io, content) catch return;
 }
 
 fn loadState() DevLoopState {
-    const file = std.fs.cwd().openFile(".trinity/dev_loop_state.json", .{}) catch return .{};
-    defer file.close();
+    const io = tri_io.get();
+    const file = std.Io.Dir.cwd().openFile(io, ".trinity/dev_loop_state.json", .{}) catch return .{};
+    defer file.close(io);
 
     var buf: [512]u8 = undefined;
-    const n = file.readAll(&buf) catch return .{};
+    var read_scratch: [512]u8 = undefined;
+    var file_reader = file.reader(io, &read_scratch);
+    const n = file_reader.interface.readSliceShort(&buf) catch return .{};
     const content = buf[0..n];
 
     var state = DevLoopState{};
@@ -555,26 +566,27 @@ fn extractJsonInt(json: []const u8, needle: []const u8) ?u32 {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn saveMistake(phase: LoopPhase, err_msg: []const u8) void {
-    std.fs.cwd().makePath(".trinity/mistakes") catch {};
+    const io = tri_io.get();
+    std.Io.Dir.cwd().createDirPath(io, ".trinity/mistakes") catch {};
 
     var path_buf: [128]u8 = undefined;
     const path = std.fmt.bufPrint(&path_buf, ".trinity/mistakes/{s}_{d}.txt", .{
         phase.label(),
-        std.time.timestamp(),
+        tri_time.timestamp(),
     }) catch return;
 
-    const file = std.fs.cwd().createFile(path, .{}) catch return;
-    defer file.close();
+    const file = std.Io.Dir.cwd().createFile(io, path, .{}) catch return;
+    defer file.close(io);
 
-    file.writeAll("phase: ") catch return;
-    file.writeAll(phase.label()) catch return;
-    file.writeAll("\nerror: ") catch return;
-    file.writeAll(err_msg) catch return;
-    file.writeAll("\ntimestamp: ") catch return;
+    file.writeStreamingAll(io, "phase: ") catch return;
+    file.writeStreamingAll(io, phase.label()) catch return;
+    file.writeStreamingAll(io, "\nerror: ") catch return;
+    file.writeStreamingAll(io, err_msg) catch return;
+    file.writeStreamingAll(io, "\ntimestamp: ") catch return;
     var ts_buf: [20]u8 = undefined;
-    const ts = std.fmt.bufPrint(&ts_buf, "{d}", .{std.time.timestamp()}) catch return;
-    file.writeAll(ts) catch return;
-    file.writeAll("\n") catch return;
+    const ts = std.fmt.bufPrint(&ts_buf, "{d}", .{tri_time.timestamp()}) catch return;
+    file.writeStreamingAll(io, ts) catch return;
+    file.writeStreamingAll(io, "\n") catch return;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -633,7 +645,7 @@ pub fn runDevLoopCommand(allocator: Allocator, args: []const []const u8) !void {
         // Sleep between iterations if interval set
         if (interval > 0 and (max_iterations == 0 or iter_count < max_iterations)) {
             print("{s}Sleeping {d}s before next iteration...{s}\n", .{ DIM, interval, RESET });
-            std.Thread.sleep(@as(u64, interval) * std.time.ns_per_s);
+            tri_time.sleep(@as(u64, interval) * std.time.ns_per_s);
         }
     }
 

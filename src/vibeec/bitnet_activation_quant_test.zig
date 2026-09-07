@@ -5,6 +5,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const full_model = @import("bitnet_full_model.zig");
 const json = std.json;
 
@@ -206,13 +207,13 @@ pub fn main() !void {
         model.resetKVCache();
 
         // Generate with full model (includes activation quantization)
-        const start_time = std.time.milliTimestamp();
+        const start_time = tri_time.milliTimestamp();
         const generated = model.generate(prompt_tokens, 32, 0.8) catch |err| {
             std.debug.print("  Generation failed: {}\n", .{err});
             continue;
         };
         defer allocator.free(generated);
-        const end_time = std.time.milliTimestamp();
+        const end_time = tri_time.milliTimestamp();
 
         // Decode
         const text = try tokenizer.decode(generated);

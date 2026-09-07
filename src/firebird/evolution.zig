@@ -6,6 +6,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const math = std.math;
 const vsa = @import("vsa.zig");
 const vsa_simd = @import("vsa_simd.zig");
@@ -639,7 +640,7 @@ pub fn benchmarkEvolution(
         .target_fitness = 2.0, // Unreachable - run all generations
     };
 
-    var timer = try std.time.Timer.start();
+    var timer = try tri_time.Timer.start();
 
     var rng = std.Random.DefaultPrng.init(seed +% 2);
     evaluatePopulation(&population, &human);

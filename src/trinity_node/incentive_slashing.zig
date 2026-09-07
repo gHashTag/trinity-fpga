@@ -6,6 +6,7 @@
 // =============================================================================
 
 const std = @import("std");
+const tri_mutex = @import("tri_mutex");
 const node_reputation_mod = @import("node_reputation.zig");
 const storage_mod = @import("storage.zig");
 
@@ -47,7 +48,7 @@ pub const IncentiveSlashingEngine = struct {
     total_evaluations: u64,
     total_slashed: u64,
     total_wei_slashed: u128,
-    mutex: std.Thread.Mutex,
+    mutex: tri_mutex.Mutex,
 
     pub fn init(allocator: std.mem.Allocator) IncentiveSlashingEngine {
         return .{

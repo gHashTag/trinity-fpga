@@ -12,6 +12,7 @@
 // =============================================================================
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const long_context = @import("igla_long_context_engine.zig");
 const tool_use = @import("igla_tool_use_engine.zig");
 const personality = @import("igla_personality_engine.zig");
@@ -118,7 +119,7 @@ pub const Task = struct {
             .assigned_agents = [_]?AgentRole{null} ** MAX_AGENTS,
             .agent_count = 0,
             .status = .Pending,
-            .created_at = std.time.timestamp(),
+            .created_at = tri_time.timestamp(),
         };
     }
 
@@ -171,7 +172,7 @@ pub const CoderAgent = struct {
     const Self = @This();
 
     pub fn execute(_: *const Self, task: *const Task) AgentResult {
-        const start = std.time.nanoTimestamp();
+        const start = tri_time.nanoTimestamp();
 
         // Simulate code-related response
         const output = switch (task.task_type) {
@@ -185,7 +186,7 @@ pub const CoderAgent = struct {
             .role = .Coder,
             .output = output,
             .confidence = 0.85,
-            .execution_time_ns = @intCast(std.time.nanoTimestamp() - start),
+            .execution_time_ns = @intCast(tri_time.nanoTimestamp() - start),
             .success = true,
             .subtask_completed = true,
         };
@@ -196,7 +197,7 @@ pub const ChatAgent = struct {
     const Self = @This();
 
     pub fn execute(_: *const Self, task: *const Task) AgentResult {
-        const start = std.time.nanoTimestamp();
+        const start = tri_time.nanoTimestamp();
 
         const output = switch (task.task_type) {
             .Conversation => "Happy to chat! How can I help you today?",
@@ -209,7 +210,7 @@ pub const ChatAgent = struct {
             .role = .Chat,
             .output = output,
             .confidence = 0.90,
-            .execution_time_ns = @intCast(std.time.nanoTimestamp() - start),
+            .execution_time_ns = @intCast(tri_time.nanoTimestamp() - start),
             .success = true,
             .subtask_completed = true,
         };
@@ -220,7 +221,7 @@ pub const ReasonerAgent = struct {
     const Self = @This();
 
     pub fn execute(_: *const Self, task: *const Task) AgentResult {
-        const start = std.time.nanoTimestamp();
+        const start = tri_time.nanoTimestamp();
 
         const output = switch (task.task_type) {
             .Analysis => "Analysis complete: identified 3 key factors and 2 risks.",
@@ -233,7 +234,7 @@ pub const ReasonerAgent = struct {
             .role = .Reasoner,
             .output = output,
             .confidence = 0.82,
-            .execution_time_ns = @intCast(std.time.nanoTimestamp() - start),
+            .execution_time_ns = @intCast(tri_time.nanoTimestamp() - start),
             .success = true,
             .subtask_completed = true,
         };
@@ -244,7 +245,7 @@ pub const ResearcherAgent = struct {
     const Self = @This();
 
     pub fn execute(_: *const Self, task: *const Task) AgentResult {
-        const start = std.time.nanoTimestamp();
+        const start = tri_time.nanoTimestamp();
 
         const output = switch (task.task_type) {
             .Research => "Found 5 relevant sources and extracted key facts.",
@@ -256,7 +257,7 @@ pub const ResearcherAgent = struct {
             .role = .Researcher,
             .output = output,
             .confidence = 0.78,
-            .execution_time_ns = @intCast(std.time.nanoTimestamp() - start),
+            .execution_time_ns = @intCast(tri_time.nanoTimestamp() - start),
             .success = true,
             .subtask_completed = true,
         };
@@ -636,7 +637,7 @@ pub fn runBenchmark() void {
     var successful_count: usize = 0;
     var total_agents: usize = 0;
 
-    const start = std.time.nanoTimestamp();
+    const start = tri_time.nanoTimestamp();
 
     for (scenarios) |s| {
         const response = engine.respond(s.query);
@@ -648,7 +649,7 @@ pub fn runBenchmark() void {
         engine.recordFeedback(s.feedback);
     }
 
-    const elapsed_ns = std.time.nanoTimestamp() - start;
+    const elapsed_ns = tri_time.nanoTimestamp() - start;
     const ops_per_sec = @as(f64, @floatFromInt(scenarios.len)) / (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
 
     const stats = engine.getStats();

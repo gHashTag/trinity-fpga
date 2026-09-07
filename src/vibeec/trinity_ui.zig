@@ -260,11 +260,11 @@ pub const UIContext = struct {
     pub fn init(allocator: std.mem.Allocator, width: f32, height: f32) Self {
         return Self{
             .allocator = allocator,
-            .draw_commands = .{},
+            .draw_commands = .empty,
             .input = InputState{},
             .cursor = Vec2.zero(),
             .current_panel = null,
-            .panel_stack = .{},
+            .panel_stack = .empty,
             .hot_id = null,
             .active_id = null,
             .focus_id = null,

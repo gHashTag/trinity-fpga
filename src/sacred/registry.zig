@@ -4,6 +4,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const proof_types = @import("proof_types.zig");
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -105,7 +106,7 @@ pub const Provenance = struct {
             .doi = null,
             .url = null,
             .authors = &.{},
-            .date_added = std.time.timestamp(),
+            .date_added = tri_time.timestamp(),
         };
     }
 };
@@ -208,7 +209,7 @@ pub const SacredFormula = struct {
         _ = _pi;
         _ = _e;
 
-        var parts = std.ArrayList([]const u8){};
+        var parts = @as(std.ArrayList([]const u8), .empty);
 
         // Always show n
         if (self.params.n != 1.0) {
@@ -417,7 +418,7 @@ pub const Registry = struct {
                         &[_][]const u8{"Particle Data Group"}
                     else
                         &[_][]const u8{},
-                    .date_added = std.time.timestamp(),
+                    .date_added = tri_time.timestamp(),
                 },
                 .depends_on_defs = deps_slice,
                 .depends_on_lemmas = &.{},
@@ -505,7 +506,7 @@ pub const Registry = struct {
                         &[_][]const u8{"TRINITY Collaboration"}
                     else
                         &[_][]const u8{},
-                    .date_added = std.time.timestamp(),
+                    .date_added = tri_time.timestamp(),
                 },
                 .depends_on_defs = deps_slice,
                 .depends_on_lemmas = &.{},

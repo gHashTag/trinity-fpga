@@ -9,6 +9,7 @@
 
 const std = @import("std");
 
+const tri_io = @import("tri_io");
 pub const EmailResolver = struct {
     allocator: std.mem.Allocator,
     client: std.http.Client,
@@ -16,7 +17,7 @@ pub const EmailResolver = struct {
     pub fn init(allocator: std.mem.Allocator) EmailResolver {
         return .{
             .allocator = allocator,
-            .client = std.http.Client{ .allocator = allocator },
+            .client = std.http.Client{ .allocator = allocator, .io = tri_io.get() },
         };
     }
 

@@ -62,22 +62,23 @@ pub const prompts = [_]PromptDef{
 
 /// Generate JSON list of all available prompts (MCP format)
 pub fn generatePromptsList(allocator: std.mem.Allocator) ![]const u8 {
-    var buf: std.ArrayList(u8) = .{};
+    var buf: std.ArrayList(u8) = .empty;
     errdefer buf.deinit(allocator);
 
     try buf.appendSlice(allocator, "{\"prompts\":[");
 
     for (prompts, 0..) |p, i| {
         if (i > 0) try buf.appendSlice(allocator, ",");
-        const writer = buf.writer(allocator);
-        try writer.print(
+        try buf.print(
+            allocator,
             "{{\"name\":\"{s}\",\"description\":\"{s}\",\"arguments\":[",
             .{ p.name, p.description },
         );
 
         for (p.arguments, 0..) |arg, j| {
             if (j > 0) try buf.appendSlice(allocator, ",");
-            try writer.print(
+            try buf.print(
+                allocator,
                 "{{\"name\":\"{s}\",\"description\":\"{s}\",\"required\":{s}}}",
                 .{ arg.name, arg.description, if (arg.required) "true" else "false" },
             );
@@ -101,7 +102,7 @@ pub fn hasPrompt(name: []const u8) bool {
 /// Generate prompt content response (MCP prompts/get format)
 pub fn generatePromptGetResponse(allocator: std.mem.Allocator, name: []const u8, args_json: ?[]const u8) ![]const u8 {
     _ = args_json;
-    var buf: std.ArrayList(u8) = .{};
+    var buf: std.ArrayList(u8) = .empty;
     errdefer buf.deinit(allocator);
 
     if (std.mem.eql(u8, name, "sacred_formula_analysis")) {

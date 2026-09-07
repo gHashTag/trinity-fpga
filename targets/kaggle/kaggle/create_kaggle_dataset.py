@@ -38,10 +38,10 @@ print("\n" + "="*60)
 print("STEP: Create Dataset (public owner)")
 print("="*60)
 
-dataset_dir = "/Users/playra/trinity-w1/kaggle/dataset_thlp"
+dataset_dir = "/Users/playom/trinity-fpga/kaggle/dataset_thlp"
 os.makedirs(dataset_dir, exist_ok=True)
 
-data_file = "/Users/playra/trinity-thlp/dataset_thlp/thlp_learning.csv"
+data_file = "/Users/playom/trinity-thlp/dataset_thlp/thlp_learning.csv"
 
 # Skip owner ID (let Kaggle use current user)
 print("Creating Kaggle Dataset without owner ID...")

@@ -4,10 +4,10 @@
 
 set -uo pipefail
 
-RALPHRC="/Users/playra/trinity/.ralph/.ralphrc"
+RALPHRC="/Users/playom/trinity/.ralph/.ralphrc"
 STATE_FILE="/tmp/ralph_fallback_state"
-LOG="/Users/playra/trinity/.ralph/logs/ralph.log"
-REPORT_SCRIPT="/Users/playra/trinity/.ralph/scripts/report.sh"
+LOG="/Users/playom/trinity/.ralph/logs/ralph.log"
+REPORT_SCRIPT="/Users/playom/trinity/.ralph/scripts/report.sh"
 
 # Load config
 source "$RALPHRC" 2>/dev/null || true

@@ -19,6 +19,9 @@
 //! ```
 
 const std = @import("std");
+const tri_rand = @import("tri_rand");
+const tri_proc = @import("tri_proc");
+const tri_time = @import("tri_time");
 const builtin = @import("builtin");
 const mem = std.mem;
 const fs = std.fs;
@@ -123,7 +126,7 @@ pub const AutoGitCommit = struct {
         , .{
             self.commit_hash,
             self.author,
-            std.time.timestamp(), // Unix timestamp (use `date -r @N` for human-readable)
+            tri_time.timestamp(), // Unix timestamp (use `date -r @N` for human-readable)
             self.branch,
             self.confidence,
         });
@@ -282,7 +285,7 @@ pub const CommitSession = struct {
         const session_id = try generateSessionId(allocator);
         return .{
             .current_branch = try allocator.dupe(u8, branch),
-            .start_time = std.time.timestamp(),
+            .start_time = tri_time.timestamp(),
             .session_id = session_id,
         };
     }
@@ -309,14 +312,14 @@ pub const CommitSession = struct {
     }
 
     pub fn getDuration(self: *const CommitSession) i64 {
-        return std.time.timestamp() - self.start_time;
+        return tri_time.timestamp() - self.start_time;
     }
 };
 
 /// Generate unique session ID
 fn generateSessionId(allocator: Allocator) ![]const u8 {
-    const timestamp = std.time.timestamp();
-    const random = std.crypto.random.int(u64);
+    const timestamp = tri_time.timestamp();
+    const random = tri_rand.random().int(u64);
     return std.fmt.allocPrint(allocator, "session-{d}-{x}", .{ timestamp, random });
 }
 
@@ -398,7 +401,7 @@ pub fn analyzeAndCommit(
                 },
                 .branch = try allocator.dupe(u8, current_branch),
                 .author = "sacred-intelligence-auto",
-                .timestamp = std.time.timestamp(),
+                .timestamp = tri_time.timestamp(),
                 .confidence = patch.confidence,
             };
             try commits.append(commit);
@@ -420,7 +423,7 @@ pub fn analyzeAndCommit(
                 },
                 .branch = try allocator.dupe(u8, current_branch),
                 .author = "sacred-intelligence-auto",
-                .timestamp = std.time.timestamp(),
+                .timestamp = tri_time.timestamp(),
                 .confidence = patch.confidence,
             };
             try commits.append(commit);
@@ -536,7 +539,7 @@ pub fn validateCommitSafety(
 /// Create feature branch with sacred prefix
 pub fn createFeatureBranch(allocator: Allocator, name: []const u8) ![]const u8 {
     _ = name;
-    const timestamp = std.time.timestamp();
+    const timestamp = tri_time.timestamp();
     const branch_name = try std.fmt.allocPrint(
         allocator,
         "sacred/auto-patch-{d}",
@@ -625,7 +628,7 @@ pub fn runGitCommand(
     const stderr_trimmed = std.mem.trim(u8, stderr, &std.ascii.whitespace);
 
     const exit_code: u8 = switch (term) {
-        .Exited => |code| @intCast(code),
+        .exited => |code| @intCast(code),
         else => 1,
     };
     const success = exit_code == 0;
@@ -697,7 +700,7 @@ pub fn isRepoClean() bool {
 
 /// Find git executable in PATH
 fn findGitExecutable(allocator: Allocator) ![]const u8 {
-    const result = try std.process.Child.run(.{
+    const result = try tri_proc.run(.{
         .allocator = allocator,
         .argv = &[_][]const u8{ "which", "git" },
     });
@@ -705,7 +708,7 @@ fn findGitExecutable(allocator: Allocator) ![]const u8 {
     defer allocator.free(result.stderr);
 
     switch (result.term) {
-        .Exited => |exit_code| {
+        .exited => |exit_code| {
             if (exit_code == 0) {
                 const git_path = std.mem.trim(u8, result.stdout, &std.ascii.whitespace);
                 return allocator.dupe(u8, git_path);
@@ -839,7 +842,7 @@ fn runTests(allocator: Allocator) !GitResult {
     var arena = std.heap.ArenaAllocator.init(allocator);
     defer arena.deinit();
 
-    const result = try std.process.Child.run(.{
+    const result = try tri_proc.run(.{
         .allocator = arena.allocator(),
         .argv = &[_][]const u8{ "zig", "build", "test" },
     });
@@ -848,7 +851,7 @@ fn runTests(allocator: Allocator) !GitResult {
     const stderr_trimmed = std.mem.trim(u8, result.stderr, &std.ascii.whitespace);
 
     const exit_code: u8 = switch (result.term) {
-        .Exited => |code| @intCast(code),
+        .exited => |code| @intCast(code),
         else => 1,
     };
 

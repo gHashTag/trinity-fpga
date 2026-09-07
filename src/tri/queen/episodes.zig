@@ -1,5 +1,7 @@
 // Queen Episodes — Episode Management & JSONL Persistence
 const std = @import("std");
+const tri_io = @import("tri_io");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 
 pub const Context = @import("observe.zig").Context;
@@ -116,9 +118,9 @@ fn parseTri27Operation(str: []const u8) Tri27Operation {
 
 /// Helper function for creating test Episode with minimal fields
 pub fn createTestEpisode(allocator: Allocator, outcome: Outcome) !Episode {
-    const now_ns = std.time.nanoTimestamp();
+    const now_ns = tri_time.nanoTimestamp();
     const id: u64 = @as(u64, @intCast(@mod(now_ns, 1_000_000_000_000_000_000)));
-    const ms = std.time.milliTimestamp();
+    const ms = tri_time.milliTimestamp();
     const timestamp: u64 = @intCast(@divTrunc(ms, 1000));
 
     return Episode{
@@ -147,8 +149,8 @@ pub fn createTestEpisode(allocator: Allocator, outcome: Outcome) !Episode {
 pub fn recordEpisode(allocator: std.mem.Allocator, context: Context, plan: Plan, result: Result, outcome: Outcome) !Episode {
     _ = allocator;
     return Episode{
-        .id = @as(u64, @intCast(std.time.nanoTimestamp())),
-        .timestamp = @as(u64, @intCast(std.time.nanoTimestamp())),
+        .id = @as(u64, @intCast(tri_time.nanoTimestamp())),
+        .timestamp = @as(u64, @intCast(tri_time.nanoTimestamp())),
         .source = .lotus_cycle,
         .context = context,
         .action = if (plan.action == .scale_up)
@@ -166,7 +168,7 @@ pub fn recordEpisode(allocator: std.mem.Allocator, context: Context, plan: Plan,
 
 /// Record TRI-27 operation as Episode
 pub fn recordTri27Episode(allocator: std.mem.Allocator, tri27_event: Tri27Event) !EpisodeSummary {
-    const now_ns_i128 = std.time.nanoTimestamp();
+    const now_ns_i128 = tri_time.nanoTimestamp();
     const now_ns = @as(u64, @intCast(@abs(now_ns_i128)));
 
     // Create minimal context
@@ -252,18 +254,23 @@ pub fn recordTri27Episode(allocator: std.mem.Allocator, tri27_event: Tri27Event)
 }
 
 pub fn appendEpisode(episode: Episode, allocator: std.mem.Allocator) !void {
+    const io = tri_io.get();
     const episodes_dir = ".trinity/queen";
-    std.fs.cwd().makePath(episodes_dir) catch |err| {
+    std.Io.Dir.cwd().createDirPath(io, episodes_dir) catch |err| {
         if (err != error.PathAlreadyExists) return err;
     };
 
     const file_path = try std.fmt.allocPrint(allocator, "{s}/episodes.jsonl", .{episodes_dir});
     defer allocator.free(file_path);
 
-    const file = try std.fs.cwd().createFile(file_path, .{});
-    defer file.close();
+    const file = try std.Io.Dir.cwd().createFile(io, file_path, .{});
+    defer file.close(io);
 
-    try file.seekFromEnd(0);
+    // 0.16 has no seek-then-write; the append offset is the file's length.
+    // (`createFile` here truncates, as it did before, so this is 0 in
+    // practice -- kept as a length lookup so the intent survives if the
+    // truncate is ever corrected.)
+    const append_offset = try file.length(io);
 
     // Create simplified summary for JSONL
     const action_name = @tagName(episode.action);
@@ -318,18 +325,23 @@ pub fn appendEpisode(episode: Episode, allocator: std.mem.Allocator) !void {
     const line = try std.fmt.allocPrint(allocator, "{s}\n", .{json});
     defer allocator.free(line);
 
-    try file.writeAll(line);
+    try file.writePositionalAll(io, line, append_offset);
 }
 
 pub fn loadEpisodes(allocator: std.mem.Allocator) ![]Episode {
     const file_path = ".trinity/queen/episodes.jsonl";
 
-    const file = std.fs.cwd().openFile(file_path, .{}) catch {
+    const io = tri_io.get();
+    const file = std.Io.Dir.cwd().openFile(io, file_path, .{}) catch {
         return try allocator.alloc(Episode, 0);
     };
-    defer file.close();
+    defer file.close(io);
 
-    const contents = file.readToEndAlloc(allocator, 1024 * 1024) catch {
+    // readToEndAlloc is gone; a reader over the handle is the equivalent, and
+    // a short read here means end-of-file, which allocRemaining stops on.
+    var read_buf: [4096]u8 = undefined;
+    var fr = file.reader(io, &read_buf);
+    const contents = fr.interface.allocRemaining(allocator, .limited(1024 * 1024)) catch {
         return try allocator.alloc(Episode, 0);
     };
     defer allocator.free(contents);
@@ -391,12 +403,17 @@ pub fn loadEpisodes(allocator: std.mem.Allocator) ![]Episode {
 pub fn loadRecentEpisodes(allocator: std.mem.Allocator, max_count: usize) ![]Episode {
     const file_path = ".trinity/queen/episodes.jsonl";
 
-    const file = std.fs.cwd().openFile(file_path, .{}) catch {
+    const io = tri_io.get();
+    const file = std.Io.Dir.cwd().openFile(io, file_path, .{}) catch {
         return try allocator.alloc(Episode, 0);
     };
-    defer file.close();
+    defer file.close(io);
 
-    const contents = file.readToEndAlloc(allocator, 1024 * 1024) catch {
+    // readToEndAlloc is gone; a reader over the handle is the equivalent, and
+    // a short read here means end-of-file, which allocRemaining stops on.
+    var read_buf: [4096]u8 = undefined;
+    var fr = file.reader(io, &read_buf);
+    const contents = fr.interface.allocRemaining(allocator, .limited(1024 * 1024)) catch {
         return try allocator.alloc(Episode, 0);
     };
     defer allocator.free(contents);
@@ -524,7 +541,7 @@ pub fn getEpisodeStats(allocator: std.mem.Allocator) !EpisodeStats {
     const episodes = try loadEpisodes(allocator);
     defer allocator.free(episodes);
 
-    const now_ns = std.time.nanoTimestamp();
+    const now_ns = tri_time.nanoTimestamp();
     const day_ns: u64 = 24 * 60 * 60 * 1_000_000_000;
 
     var stats = EpisodeStats{

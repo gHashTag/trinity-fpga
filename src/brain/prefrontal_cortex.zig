@@ -229,8 +229,10 @@ pub const PrefrontalCortex = struct {
 
         // Static buffer for reasons - no allocation in hot path
         var reasons_buf: [256]u8 = undefined;
-        var fbs = std.io.fixedBufferStream(&reasons_buf);
-        const writer = fbs.writer();
+        // std.io is gone in 0.16. A fixed-buffer writer is Io.Writer.fixed,
+        // and it holds the written bytes itself -- there is no separate stream
+        // handle to ask for position or contents.
+        var writer: std.Io.Writer = .fixed(&reasons_buf);
 
         // Check error rate
         if (ctx.error_rate > 0.5) {
@@ -281,7 +283,8 @@ pub const PrefrontalCortex = struct {
         }
 
         // Use static buffer reasoning if available, else fallback string
-        const reasoning = if (fbs.pos > 0) fbs.getWritten() else "All systems healthy";
+        const written = writer.buffered();
+        const reasoning = if (written.len > 0) written else "All systems healthy";
 
         return .{
             .action = action,

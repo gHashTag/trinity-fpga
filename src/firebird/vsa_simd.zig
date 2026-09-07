@@ -6,6 +6,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const vsa = @import("vsa.zig");
 
 const Trit = vsa.Trit;
@@ -136,14 +137,19 @@ pub fn bundle2Simd(allocator: std.mem.Allocator, a: *const TritVec, b: *const Tr
         const sum = @as(@Vector(SIMD_WIDTH, i16), va) + @as(@Vector(SIMD_WIDTH, i16), vb);
 
         // Threshold: >0 -> 1, <0 -> -1, ==0 -> 0
-        var result: SimdVec = zero;
-        for (0..SIMD_WIDTH) |i| {
-            if (sum[i] > 0) {
-                result[i] = 1;
-            } else if (sum[i] < 0) {
-                result[i] = -1;
-            }
-        }
+        //
+        // 0.16 rejects indexing a @Vector with a runtime index. Doing it
+        // element-wise as vector SELECTS is not just a workaround -- it is
+        // what the SIMD path was for, and the scalar loop was throwing that
+        // away one lane at a time.
+        const pos: SimdVec = @splat(1);
+        const neg: SimdVec = @splat(-1);
+        const result: SimdVec = @select(
+            i8,
+            sum > @as(@Vector(SIMD_WIDTH, i16), @splat(0)),
+            pos,
+            @select(i8, sum < @as(@Vector(SIMD_WIDTH, i16), @splat(0)), neg, zero),
+        );
         data[offset..][0..SIMD_WIDTH].* = result;
     }
 
@@ -231,7 +237,7 @@ pub fn benchmarkBind(allocator: std.mem.Allocator, dim: usize, iterations: usize
     }
 
     // Scalar benchmark
-    var timer = try std.time.Timer.start();
+    var timer = try tri_time.Timer.start();
     for (0..iterations) |_| {
         var r = try vsa.bind(allocator, &a, &b);
         r.deinit();
@@ -265,7 +271,7 @@ pub fn benchmarkDotProduct(allocator: std.mem.Allocator, dim: usize, iterations:
     }
 
     // Scalar benchmark
-    var timer = try std.time.Timer.start();
+    var timer = try tri_time.Timer.start();
     for (0..iterations) |_| {
         _ = vsa.dotProduct(&a, &b);
     }
@@ -297,7 +303,7 @@ pub fn benchmarkHamming(allocator: std.mem.Allocator, dim: usize, iterations: us
     }
 
     // Scalar benchmark
-    var timer = try std.time.Timer.start();
+    var timer = try tri_time.Timer.start();
     for (0..iterations) |_| {
         _ = vsa.hammingDistance(&a, &b);
     }

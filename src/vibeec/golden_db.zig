@@ -33,7 +33,7 @@ pub const GoldenDB = struct {
 
     pub fn init(allocator: Allocator) !GoldenDB {
         std.debug.print("  [GoldenDB] Stub initialized\n", .{});
-        const list: std.ArrayList(VerifiedSeed) = .{};
+        const list: std.ArrayList(VerifiedSeed) = .empty;
         return GoldenDB{
             .allocator = allocator,
             .implementations = list,

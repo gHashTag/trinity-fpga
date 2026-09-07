@@ -3,6 +3,7 @@
 // ⲤⲀⲔⲢⲀ ⲪⲞⲢⲘⲨⲖⲀ: V = n × 3^k × π^m × φ^p × e^q
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const tvc_hybrid = @import("tvc_hybrid.zig");
 
 pub const HybridBigInt = tvc_hybrid.HybridBigInt;
@@ -563,13 +564,13 @@ pub fn runBenchmarks() void {
     var c = randomVector(vec_size, 333);
 
     // Bind benchmark
-    const bind_start = std.time.nanoTimestamp();
+    const bind_start = tri_time.nanoTimestamp();
     var bind_result = HybridBigInt.zero();
     var i: u64 = 0;
     while (i < iterations) : (i += 1) {
         bind_result = bind(&a, &b);
     }
-    const bind_end = std.time.nanoTimestamp();
+    const bind_end = tri_time.nanoTimestamp();
     std.mem.doNotOptimizeAway(bind_result);
     const bind_ns = @as(u64, @intCast(bind_end - bind_start));
 
@@ -580,13 +581,13 @@ pub fn runBenchmarks() void {
     });
 
     // Bundle benchmark
-    const bundle_start = std.time.nanoTimestamp();
+    const bundle_start = tri_time.nanoTimestamp();
     var bundle_result = HybridBigInt.zero();
     i = 0;
     while (i < iterations) : (i += 1) {
         bundle_result = bundle3(&a, &b, &c);
     }
-    const bundle_end = std.time.nanoTimestamp();
+    const bundle_end = tri_time.nanoTimestamp();
     std.mem.doNotOptimizeAway(bundle_result);
     const bundle_ns = @as(u64, @intCast(bundle_end - bundle_start));
 
@@ -597,13 +598,13 @@ pub fn runBenchmarks() void {
     });
 
     // Similarity benchmark
-    const sim_start = std.time.nanoTimestamp();
+    const sim_start = tri_time.nanoTimestamp();
     var sim_result: f64 = 0;
     i = 0;
     while (i < iterations) : (i += 1) {
         sim_result = cosineSimilarity(&a, &b);
     }
-    const sim_end = std.time.nanoTimestamp();
+    const sim_end = tri_time.nanoTimestamp();
     std.mem.doNotOptimizeAway(sim_result);
     const sim_ns = @as(u64, @intCast(sim_end - sim_start));
 
@@ -614,13 +615,13 @@ pub fn runBenchmarks() void {
     });
 
     // Dot product benchmark (using HybridBigInt method)
-    const dot_start = std.time.nanoTimestamp();
+    const dot_start = tri_time.nanoTimestamp();
     var dot_result: i32 = 0;
     i = 0;
     while (i < iterations) : (i += 1) {
         dot_result = a.dotProduct(&b);
     }
-    const dot_end = std.time.nanoTimestamp();
+    const dot_end = tri_time.nanoTimestamp();
     std.mem.doNotOptimizeAway(dot_result);
     const dot_ns = @as(u64, @intCast(dot_end - dot_start));
 
@@ -631,13 +632,13 @@ pub fn runBenchmarks() void {
     });
 
     // Permute benchmark
-    const perm_start = std.time.nanoTimestamp();
+    const perm_start = tri_time.nanoTimestamp();
     var perm_result = HybridBigInt.zero();
     i = 0;
     while (i < iterations) : (i += 1) {
         perm_result = permute(&a, 7);
     }
-    const perm_end = std.time.nanoTimestamp();
+    const perm_end = tri_time.nanoTimestamp();
     std.mem.doNotOptimizeAway(perm_result);
     const perm_ns = @as(u64, @intCast(perm_end - perm_start));
 

@@ -10,6 +10,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 pub const Allocator = std.mem.Allocator;
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -120,7 +121,7 @@ pub fn notifyCOAR(doi: []const u8, work_type: WorkType) !COARNotifyResult {
     // 2. DataCite DOI minting
     // 3. OpenAlex indexing API
 
-    const timestamp = std.time.timestamp();
+    const timestamp = tri_time.timestamp();
     return COARNotifyResult{
         .crossref_registered = false,
         .datacite_doi = null,

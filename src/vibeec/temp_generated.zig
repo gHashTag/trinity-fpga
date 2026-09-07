@@ -1,5 +1,6 @@
 const std = @import("std");
 
+const tri_rand = @import("tri_rand");
 const CacheType = enum {
     LRU,
     LFU,
@@ -115,7 +116,7 @@ const AdaptiveCache = struct {
 
     fn findRandomKey(self: *AdaptiveCache) ?u64 {
         var iter = self.entries.iterator();
-        const rand_idx = std.crypto.random.intRangeLessThan(usize, 0, self.entries.count());
+        const rand_idx = tri_rand.random().intRangeLessThan(usize, 0, self.entries.count());
         var idx: usize = 0;
         while (iter.next()) |entry| {
             if (idx == rand_idx) {

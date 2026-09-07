@@ -9,6 +9,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 // Import all modules
 const ConsciousnessBus = @import("consciousness_bus.zig").ConsciousnessBus;
 const Event = @import("consciousness_bus.zig").Event;
@@ -251,14 +252,14 @@ test "Integration: ConsciousnessBus priority ordering" {
     // Add events with different priorities
     const low_priority = Event{
         .type = .vsa_bind,
-        .timestamp = @as(i64, @intCast(std.time.nanoTimestamp())),
+        .timestamp = @as(i64, @intCast(tri_time.nanoTimestamp())),
         .source = "test",
         .data = undefined,
     };
 
     const high_priority = Event{
         .type = .consciousness_emergence,
-        .timestamp = @as(i64, @intCast(std.time.nanoTimestamp())),
+        .timestamp = @as(i64, @intCast(tri_time.nanoTimestamp())),
         .source = "test",
         .data = undefined,
     };

@@ -3,6 +3,7 @@
 // phi^2 + 1/phi^2 = 3 = TRINITY
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const gguf = @import("gguf_reader.zig");
 const simd = @import("simd_matmul.zig");
 
@@ -573,7 +574,7 @@ pub fn sample(probs: []const f32, temperature: f32) u32 {
     }
 
     // Temperature sampling
-    var prng = std.Random.DefaultPrng.init(@intCast(std.time.milliTimestamp()));
+    var prng = std.Random.DefaultPrng.init(@intCast(tri_time.milliTimestamp()));
     const random = prng.random();
     const r = random.float(f32);
 
@@ -738,7 +739,7 @@ pub fn sampleWithRepeatPenalty(allocator: std.mem.Allocator, logits: []f32, para
     }
 
     // Sample from distribution
-    var prng = std.Random.DefaultPrng.init(@intCast(std.time.milliTimestamp()));
+    var prng = std.Random.DefaultPrng.init(@intCast(tri_time.milliTimestamp()));
     const random = prng.random();
     const r = random.float(f32);
 

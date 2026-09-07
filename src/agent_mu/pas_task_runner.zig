@@ -11,6 +11,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -150,7 +151,7 @@ pub const PasTaskRunner = struct {
 
     /// Run a simulated task WITHOUT PAS (baseline)
     pub fn runBaseline(self: *PasTaskRunner, task_id: []const u8, simulate_fn: *const fn (usize) bool) !TaskResult {
-        const start_time = std.time.nanoTimestamp();
+        const start_time = tri_time.nanoTimestamp();
         var attempts: usize = 0;
         var successes: usize = 0;
 
@@ -161,7 +162,7 @@ pub const PasTaskRunner = struct {
             }
         }
 
-        const end_time = std.time.nanoTimestamp();
+        const end_time = tri_time.nanoTimestamp();
         const elapsed_ns = end_time - start_time;
         const total_time_ms = @as(u64, @intCast(@divTrunc(elapsed_ns, 1_000_000)));
         const avg_time_ms = @as(f64, @floatFromInt(total_time_ms)) / @as(f64, @floatFromInt(attempts));
@@ -177,7 +178,7 @@ pub const PasTaskRunner = struct {
             .avg_time_ms = avg_time_ms,
             .energy_harvested = 0.0,
             .berry_phase = 0.0,
-            .timestamp = @as(i64, @intCast(std.time.nanoTimestamp())),
+            .timestamp = @as(i64, @intCast(tri_time.nanoTimestamp())),
         };
 
         try self.results.put(try std.fmt.allocPrint(self.allocator, "{s}_baseline", .{task_id}), result);
@@ -186,7 +187,7 @@ pub const PasTaskRunner = struct {
 
     /// Run a simulated task WITH PAS
     pub fn runWithPas(self: *PasTaskRunner, task_id: []const u8, simulate_fn: *const fn (usize, bool) bool) !TaskResult {
-        const start_time = std.time.nanoTimestamp();
+        const start_time = tri_time.nanoTimestamp();
         var attempts: usize = 0;
         var successes: usize = 0;
 
@@ -203,7 +204,7 @@ pub const PasTaskRunner = struct {
             }
         }
 
-        const end_time = std.time.nanoTimestamp();
+        const end_time = tri_time.nanoTimestamp();
         const elapsed_ns = end_time - start_time;
         const total_time_ms = @as(u64, @intCast(@divTrunc(elapsed_ns, 1_000_000)));
         const avg_time_ms = @as(f64, @floatFromInt(total_time_ms)) / @as(f64, @floatFromInt(attempts));
@@ -219,7 +220,7 @@ pub const PasTaskRunner = struct {
             .avg_time_ms = avg_time_ms,
             .energy_harvested = self.pas_core.pas_energy,
             .berry_phase = self.pas_core.berry_phase,
-            .timestamp = @as(i64, @intCast(std.time.nanoTimestamp())),
+            .timestamp = @as(i64, @intCast(tri_time.nanoTimestamp())),
         };
 
         try self.results.put(try std.fmt.allocPrint(self.allocator, "{s}_pas", .{task_id}), result);
@@ -289,7 +290,7 @@ pub const PasTaskRunner = struct {
 /// Simulated task: 30% success rate, PAS improves to 50%
 fn simulatedTask(attempt: usize) bool {
     _ = attempt;
-    const rand = @as(u32, @truncate(@as(u64, @intCast(@rem(std.time.nanoTimestamp(), 1000)))));
+    const rand = @as(u32, @truncate(@as(u64, @intCast(@rem(tri_time.nanoTimestamp(), 1000)))));
     return rand % 10 < 3; // 30% success
 }
 
@@ -297,7 +298,7 @@ fn simulatedTask(attempt: usize) bool {
 fn simulatedTaskWithPas(attempt: usize, pas_hint: bool) bool {
     _ = attempt;
     _ = pas_hint;
-    const rand = @as(u32, @truncate(@as(u64, @intCast(@rem(std.time.nanoTimestamp(), 1000)))));
+    const rand = @as(u32, @truncate(@as(u64, @intCast(@rem(tri_time.nanoTimestamp(), 1000)))));
     return rand % 10 < 5; // 50% success with PAS
 }
 

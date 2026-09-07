@@ -11,6 +11,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const math = std.math;
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -236,7 +237,7 @@ pub const TokenState = struct {
 
     /// Check if stake is unlocked
     pub fn isStakeUnlocked(self: *const TokenState, address: [32]u8) bool {
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
         if (self.getStake(address)) |stake| {
             return stake.is_active and now >= stake.unlock_time;
         }
@@ -485,7 +486,7 @@ test "TokenState - stake operations" {
     defer state.deinit();
 
     const addr = [_]u8{0x01} ** 32;
-    const now = std.time.timestamp();
+    const now = tri_time.timestamp();
 
     const stake = TokenStake{
         .staker = addr,
@@ -507,7 +508,7 @@ test "TokenState - isStakeUnlocked" {
     defer state.deinit();
 
     const addr = [_]u8{0x01} ** 32;
-    const now = std.time.timestamp();
+    const now = tri_time.timestamp();
 
     const stake = TokenStake{
         .staker = addr,
@@ -526,7 +527,7 @@ test "TokenState - isStakeUnlocked still locked" {
     defer state.deinit();
 
     const addr = [_]u8{0x01} ** 32;
-    const now = std.time.timestamp();
+    const now = tri_time.timestamp();
 
     const stake = TokenStake{
         .staker = addr,

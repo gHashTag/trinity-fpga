@@ -17,6 +17,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const Allocator = std.mem.Allocator;
 
 // Import modular components
@@ -43,11 +44,10 @@ pub const TestCase = vibee_parser.TestCase;
 
 /// Generate Zig code from a .tri file
 pub fn generateFromFile(allocator: Allocator, vibee_path: []const u8, output_path: []const u8) !void {
-    // Read .tri file
-    const file = try std.fs.cwd().openFile(vibee_path, .{});
-    defer file.close();
+    const io = tri_io.get();
 
-    const source = try file.readToEndAlloc(allocator, 1024 * 1024);
+    // Read .tri file
+    const source = try std.Io.Dir.cwd().readFileAlloc(io, vibee_path, allocator, .limited(1024 * 1024));
     defer allocator.free(source);
 
     // Parse
@@ -62,10 +62,10 @@ pub fn generateFromFile(allocator: Allocator, vibee_path: []const u8, output_pat
     const output = try gen.generate(&spec);
 
     // Write to file
-    const out_file = try std.fs.cwd().createFile(output_path, .{});
-    defer out_file.close();
+    const out_file = try std.Io.Dir.cwd().createFile(io, output_path, .{});
+    defer out_file.close(io);
 
-    try out_file.writeAll(output);
+    try out_file.writeStreamingAll(io, output);
 }
 
 /// Generate Zig code from a VibeeSpec (for programmatic use)

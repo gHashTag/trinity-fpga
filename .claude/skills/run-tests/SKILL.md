@@ -16,7 +16,7 @@ Run tests for: $ARGUMENTS
 
 1. **Build**
    ```bash
-   cd /Users/playom/trinity-fpga && zig build 2>&1
+   cd "$(git rev-parse --show-toplevel)" && zig build 2>&1
    ```
    - Check for warnings and errors
    - Report any compilation issues

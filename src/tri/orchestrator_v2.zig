@@ -10,6 +10,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayListUnmanaged;
 const StringHashMap = std.StringHashMapUnmanaged;
@@ -294,7 +295,7 @@ pub fn detectWorkflowFormat(file_path: []const u8) WorkflowFormat {
 /// Execute a workflow and return the result
 pub fn executeWorkflow(allocator: Allocator, wf: *const Workflow, options: ExecutionOptions) !OrchestratorResult {
     _ = options;
-    const start_time = std.time.nanoTimestamp();
+    const start_time = tri_time.nanoTimestamp();
 
     var result = OrchestratorResult{
         .success = false,
@@ -316,7 +317,7 @@ pub fn executeWorkflow(allocator: Allocator, wf: *const Workflow, options: Execu
         .adaptive => try executeAdaptive(allocator, wf, &result),
     }
 
-    const end_time = std.time.nanoTimestamp();
+    const end_time = tri_time.nanoTimestamp();
     result.duration_ms = @intCast((end_time - start_time) / 1_000_000);
 
     return result;

@@ -2,6 +2,7 @@
 // ANSI colored output, prompt input, streaming support.
 // Issue #66: Phase 7A TUI
 const std = @import("std");
+const tri_io = @import("tri_io");
 
 // ANSI escape codes
 const esc_reset = "\x1b[0m";
@@ -17,14 +18,15 @@ const esc_clear_line = "\x1b[2K\r";
 pub const Tui = struct {
     allocator: std.mem.Allocator,
     use_color: bool,
-    stdout: std.fs.File,
-    stdin: std.fs.File,
+    stdout: std.Io.File,
+    stdin: std.Io.File,
 
     pub fn init(allocator: std.mem.Allocator) Tui {
-        const stdout = std.fs.File.stdout();
-        const stdin = std.fs.File.stdin();
+        const io = tri_io.get();
+        const stdout = std.Io.File.stdout();
+        const stdin = std.Io.File.stdin();
         // Detect if stdout is a TTY for color support
-        const use_color = stdout.isTty();
+        const use_color = stdout.isTty(io) catch false;
         return .{
             .allocator = allocator,
             .use_color = use_color,
@@ -148,8 +150,15 @@ pub const Tui = struct {
         var line_buf: std.ArrayList(u8) = .empty;
         var read_buf: [1]u8 = undefined;
 
+        const io = tri_io.get();
+        // Unbuffered on purpose: an empty scratch buffer means every read goes
+        // straight into `read_buf`, so no input is stranded between calls.
+        // readSliceShort returns 0 only at end-of-stream, matching the 0.15
+        // `read` contract this loop was written against.
+        var stdin_reader = self.stdin.readerStreaming(io, &.{});
+
         while (true) {
-            const bytes_read = self.stdin.read(&read_buf) catch return null;
+            const bytes_read = stdin_reader.interface.readSliceShort(&read_buf) catch return null;
             if (bytes_read == 0) {
                 // EOF
                 if (line_buf.items.len == 0) {
@@ -179,14 +188,14 @@ pub const Tui = struct {
     // ─── Internal ────────────────────────────────────────────────────────
 
     fn writeStr(self: *Tui, s: []const u8) void {
-        _ = self.stdout.write(s) catch |err| {
+        self.stdout.writeStreamingAll(tri_io.get(), s) catch |err| {
             std.log.debug("tui: writeStr failed: {}", .{err});
         };
     }
 
     fn writeColor(self: *Tui, code: []const u8) void {
         if (self.use_color) {
-            _ = self.stdout.write(code) catch |err| {
+            self.stdout.writeStreamingAll(tri_io.get(), code) catch |err| {
                 std.log.debug("tui: writeColor failed: {}", .{err});
             };
         }
@@ -194,7 +203,7 @@ pub const Tui = struct {
 
     fn flush(self: *Tui) void {
         // stdout is unbuffered for File, but sync just in case
-        _ = self.stdout.sync() catch |err| {
+        self.stdout.sync(tri_io.get()) catch |err| {
             std.log.debug("tui: flush/sync failed: {}", .{err});
         };
     }

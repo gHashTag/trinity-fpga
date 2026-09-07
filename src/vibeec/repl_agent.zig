@@ -1,4 +1,5 @@
 const std = @import("std");
+const tri_time = @import("tri_time");
 const moe = @import("moe_router.zig");
 const agent = @import("agent_loop.zig");
 const dao = @import("dao_integration.zig");
@@ -69,8 +70,8 @@ pub const ReplAgent = struct {
             .router = router,
             .agent_loop = agent_loop,
             .config = config,
-            .command_history = .{},
-            .session_start = std.time.timestamp(),
+            .command_history = .empty,
+            .session_start = tri_time.timestamp(),
         };
 
         return self;
@@ -201,7 +202,7 @@ pub const ReplAgent = struct {
 
     /// Print session statistics
     fn printStats(self: *Self, writer: anytype) !void {
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
         const session_duration = now - self.session_start;
         const router_stats = self.router.getStats();
 

@@ -8,11 +8,11 @@ const std = @import("std");
 
 const Allocator = std.mem.Allocator;
 
-pub fn main() !void {
+pub fn main(init: std.process.Init.Minimal) !void {
     const allocator = std.heap.page_allocator;
 
     // Parse args
-    var args = try std.process.argsAlloc(allocator);
+    var args = try init.args.toSlice(allocator);
     defer allocator.free(args);
 
     if (args.len < 2) {

@@ -1,5 +1,6 @@
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 // Import existing queen modules
 const jsonl_reader = @import("jsonl_reader.zig");
 const episodes = @import("episodes.zig");
@@ -189,7 +190,7 @@ pub const AutoImprove = struct {
                 try patterns.append(self.allocator, EpisodePattern{
                     .pattern_type = .RepeatedFailure,
                     .frequency = entry.value_ptr.*,
-                    .last_occurrence = std.time.timestamp(),
+                    .last_occurrence = tri_time.timestamp(),
                     .suggestion = try self.allocator.dupe(u8, "Increase max_deltas or review parameters"),
                 });
             }

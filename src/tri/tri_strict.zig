@@ -17,6 +17,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const colors = @import("tri_colors.zig");
 
 const GREEN = colors.GREEN;
@@ -121,7 +122,7 @@ fn runStrictEnable() void {
     };
     defer file.close();
 
-    const timestamp = std.time.timestamp();
+    const timestamp = tri_time.timestamp();
     var buf: [512]u8 = undefined;
     const content = std.fmt.bufPrint(&buf,
         \\VIBEE-FIRST STRICT MODE ENABLED

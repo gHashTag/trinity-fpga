@@ -1,4 +1,5 @@
 const std = @import("std");
+const tri_time = @import("tri_time");
 const colors = @import("../tri_colors.zig");
 
 const GREEN = colors.GREEN;
@@ -145,7 +146,7 @@ pub fn runVoiceIOBench() void {
     var stt_count: usize = 0;
     var tts_accuracy_sum: f64 = 0;
     var tts_count: usize = 0;
-    const start_time = std.time.milliTimestamp();
+    const start_time = tri_time.milliTimestamp();
 
     std.debug.print("{s}Running Voice I/O Multi-Modal Tests:{s}\n\n", .{ CYAN, RESET });
 
@@ -198,7 +199,7 @@ pub fn runVoiceIOBench() void {
         total_ops += 1;
     }
 
-    const elapsed = std.time.milliTimestamp() - start_time;
+    const elapsed = tri_time.milliTimestamp() - start_time;
     const avg_accuracy = total_accuracy / total_ops;
     const throughput = total_ops * 1000.0 / @as(f64, @floatFromInt(@max(1, elapsed)));
 

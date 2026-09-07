@@ -6,6 +6,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_rand = @import("tri_rand");
 const Ed25519 = std.crypto.sign.Ed25519;
 const Sha256 = std.crypto.hash.sha2.Sha256;
 const Aes256Gcm = std.crypto.aead.aes_gcm.Aes256Gcm;
@@ -21,7 +22,7 @@ pub const KeyPair = struct {
     /// Generate new random keypair
     pub fn generate() KeyPair {
         var seed: [32]u8 = undefined;
-        std.crypto.random.bytes(&seed);
+        tri_rand.random().bytes(&seed);
         return fromSeed(seed);
     }
 
@@ -113,7 +114,7 @@ pub fn deriveKey(password: []const u8, salt: [16]u8) [32]u8 {
 /// Encrypt data with AES-256-GCM
 pub fn encrypt(allocator: std.mem.Allocator, plaintext: []const u8, key: [32]u8) !EncryptedData {
     var nonce: [12]u8 = undefined;
-    std.crypto.random.bytes(&nonce);
+    tri_rand.random().bytes(&nonce);
 
     const ciphertext = try allocator.alloc(u8, plaintext.len);
     var tag: [16]u8 = undefined;
@@ -215,8 +216,8 @@ pub fn createWalletFile(keypair: *const KeyPair, password: []const u8) WalletFil
     };
 
     // Generate random salt and nonce
-    std.crypto.random.bytes(&wf.salt);
-    std.crypto.random.bytes(&wf.nonce);
+    tri_rand.random().bytes(&wf.salt);
+    tri_rand.random().bytes(&wf.nonce);
 
     // Derive key from password
     const key = deriveKey(password, wf.salt);

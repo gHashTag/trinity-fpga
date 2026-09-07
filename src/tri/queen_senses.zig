@@ -5,6 +5,10 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_env = @import("tri_env");
+const tri_io = @import("tri_io");
+const tri_proc = @import("tri_proc");
+const tri_time = @import("tri_time");
 const qt = @import("queen_types.zig");
 const faculty_types = @import("faculty_types.zig");
 const thalamus = @import("thalamus.zig");
@@ -99,21 +103,19 @@ fn countAliveAgents() u8 {
     };
 
     var count: u8 = 0;
-    const now = std.time.timestamp();
+    const now = tri_time.timestamp();
+
+    const io = tri_io.get();
 
     for (heartbeat_paths) |path| {
-        const file = std.fs.cwd().openFile(path, .{}) catch continue;
-        defer file.close();
-        const stat = file.stat() catch continue;
-        const mtime_s: i64 = @intCast(@divTrunc(stat.mtime, std.time.ns_per_s));
+        const stat = std.Io.Dir.cwd().statFile(io, path, .{}) catch continue;
+        const mtime_s: i64 = @intCast(@divTrunc(stat.mtime.nanoseconds, std.time.ns_per_s));
         if (now - mtime_s < 300) count += 1; // alive if modified < 5 min ago
     }
 
     for (wake_paths) |path| {
-        const file = std.fs.cwd().openFile(path, .{}) catch continue;
-        defer file.close();
-        const stat = file.stat() catch continue;
-        const mtime_s: i64 = @intCast(@divTrunc(stat.mtime, std.time.ns_per_s));
+        const stat = std.Io.Dir.cwd().statFile(io, path, .{}) catch continue;
+        const mtime_s: i64 = @intCast(@divTrunc(stat.mtime.nanoseconds, std.time.ns_per_s));
         if (now - mtime_s < 300) count += 1;
     }
 
@@ -123,12 +125,8 @@ fn countAliveAgents() u8 {
 pub fn readEvolutionInfo() qt.EvolutionInfo {
     var info = qt.EvolutionInfo{};
 
-    const file = std.fs.cwd().openFile(".trinity/evolution_state.json", .{}) catch return info;
-    defer file.close();
-
     var buf: [4096]u8 = undefined;
-    const n = file.read(&buf) catch return info;
-    const data = buf[0..n];
+    const data = std.Io.Dir.cwd().readFile(tri_io.get(), ".trinity/evolution_state.json", &buf) catch return info;
 
     if (qt.findJsonF32(data, "\"best_ppl\":")) |v| info.best_ppl = v;
     if (qt.findJsonU32(data, "\"best_step\":")) |v| info.best_step = v;
@@ -145,23 +143,28 @@ pub fn readEvolutionInfo() qt.EvolutionInfo {
 }
 
 fn countArenaResults() u32 {
-    const file = std.fs.cwd().openFile("data/arena/arena_results.jsonl", .{}) catch return 0;
-    defer file.close();
+    const io = tri_io.get();
+    const file = std.Io.Dir.cwd().openFile(io, "data/arena/arena_results.jsonl", .{}) catch return 0;
+    defer file.close(io);
 
     var buf: [8192]u8 = undefined;
+    var fr = file.reader(io, &.{});
     var total: u32 = 0;
     while (true) {
-        const n = file.read(&buf) catch break;
+        // readSliceShort returns a short count only at end-of-stream, which is
+        // the semantics the 0.15 read-loop relied on.
+        const n = fr.interface.readSliceShort(&buf) catch break;
         if (n == 0) break;
         for (buf[0..n]) |c| {
             if (c == '\n') total += 1;
         }
+        if (n < buf.len) break;
     }
     return total;
 }
 
 fn readDiskFreeGb(allocator: Allocator) f32 {
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ "df", "-k", "." },
         .max_output_bytes = 4096,
@@ -196,7 +199,7 @@ fn countEnvKeys() KeyCheck {
     };
     var present: u8 = 0;
     for (required_keys) |key| {
-        if (std.posix.getenv(key)) |v| {
+        if (tri_env.getPosix(key)) |v| {
             if (v.len > 0) present += 1;
         }
     }
@@ -204,21 +207,19 @@ fn countEnvKeys() KeyCheck {
 }
 
 fn readOuroborosScore() f32 {
-    const file = std.fs.cwd().openFile(".trinity/ouroboros_state.json", .{}) catch return 0.0;
-    defer file.close();
-
     var buf: [2048]u8 = undefined;
-    const n = file.read(&buf) catch return 0.0;
-    return qt.findJsonF32(buf[0..n], "\"score\":") orelse 0.0;
+    const data = std.Io.Dir.cwd().readFile(tri_io.get(), ".trinity/ouroboros_state.json", &buf) catch return 0.0;
+    return qt.findJsonF32(data, "\"score\":") orelse 0.0;
 }
 
 fn countExperienceEpisodes() u32 {
-    var dir = std.fs.cwd().openDir(".trinity/experience/episodes", .{ .iterate = true }) catch return 0;
-    defer dir.close();
+    const io = tri_io.get();
+    var dir = std.Io.Dir.cwd().openDir(io, ".trinity/experience/episodes", .{ .iterate = true }) catch return 0;
+    defer dir.close(io);
 
     var count: u32 = 0;
     var iter = dir.iterate();
-    while (iter.next() catch null) |entry| {
+    while (iter.next(io) catch null) |entry| {
         if (entry.kind == .file and std.mem.endsWith(u8, entry.name, ".json")) {
             count += 1;
         }
@@ -231,11 +232,8 @@ fn countExperienceEpisodes() u32 {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn countFarmIdleServices() u8 {
-    const file = std.fs.cwd().openFile(".trinity/evolution_state.json", .{}) catch return 0;
-    defer file.close();
     var buf: [8192]u8 = undefined;
-    const n = file.read(&buf) catch return 0;
-    const data = buf[0..n];
+    const data = std.Io.Dir.cwd().readFile(tri_io.get(), ".trinity/evolution_state.json", &buf) catch return 0;
 
     // Count occurrences of "status":"idle" or "status":"finished"
     var count: u8 = 0;
@@ -257,23 +255,23 @@ fn countFarmIdleServices() u8 {
 }
 
 fn calcStaleArenaHours() u16 {
-    const file = std.fs.cwd().openFile("data/arena/arena_results.jsonl", .{}) catch return 999;
-    defer file.close();
-    const stat = file.stat() catch return 999;
-    const mtime_s: i64 = @intCast(@divTrunc(stat.mtime, std.time.ns_per_s));
-    const now = std.time.timestamp();
+    const stat = std.Io.Dir.cwd().statFile(tri_io.get(), "data/arena/arena_results.jsonl", .{}) catch return 999;
+    const mtime_s: i64 = @intCast(@divTrunc(stat.mtime.nanoseconds, std.time.ns_per_s));
+    const now = tri_time.timestamp();
     const diff = now - mtime_s;
     if (diff < 0) return 0;
     return @intCast(@min(@divTrunc(diff, 3600), 65535));
 }
 
 fn countAgentSpawnIssues() u8 {
-    const file = std.fs.cwd().openFile(".trinity/farm/events.jsonl", .{}) catch return 0;
-    defer file.close();
+    const io = tri_io.get();
+    const file = std.Io.Dir.cwd().openFile(io, ".trinity/farm/events.jsonl", .{}) catch return 0;
+    defer file.close(io);
     var buf: [8192]u8 = undefined;
+    var fr = file.reader(io, &.{});
     var count: u8 = 0;
     while (true) {
-        const n = file.read(&buf) catch break;
+        const n = fr.interface.readSliceShort(&buf) catch break;
         if (n == 0) break;
         var pos: usize = 0;
         while (pos < n) {
@@ -282,25 +280,26 @@ fn countAgentSpawnIssues() u8 {
                 pos = idx + 11;
             } else break;
         }
+        if (n < buf.len) break;
     }
     return count;
 }
 
 fn readGitPushTs() i64 {
-    const file = std.fs.cwd().openFile(".git/refs/remotes/origin/main", .{}) catch return 0;
-    defer file.close();
-    const stat = file.stat() catch return 0;
-    return @intCast(@divTrunc(stat.mtime, std.time.ns_per_s));
+    const stat = std.Io.Dir.cwd().statFile(tri_io.get(), ".git/refs/remotes/origin/main", .{}) catch return 0;
+    return @intCast(@divTrunc(stat.mtime.nanoseconds, std.time.ns_per_s));
 }
 
 fn countFinishedContainers() u8 {
     // Read from cloud state if available
-    const file = std.fs.cwd().openFile(".trinity/farm/events.jsonl", .{}) catch return 0;
-    defer file.close();
+    const io = tri_io.get();
+    const file = std.Io.Dir.cwd().openFile(io, ".trinity/farm/events.jsonl", .{}) catch return 0;
+    defer file.close(io);
     var buf: [8192]u8 = undefined;
+    var fr = file.reader(io, &.{});
     var count: u8 = 0;
     while (true) {
-        const n = file.read(&buf) catch break;
+        const n = fr.interface.readSliceShort(&buf) catch break;
         if (n == 0) break;
         var pos: usize = 0;
         while (pos < n) {
@@ -309,16 +308,15 @@ fn countFinishedContainers() u8 {
                 pos = idx + 10;
             } else break;
         }
+        if (n < buf.len) break;
     }
     return count;
 }
 
 fn readLastIssueCommentTs() i64 {
     // Use farm events as proxy — last event with "comment" type
-    const file = std.fs.cwd().openFile(".trinity/farm/events.jsonl", .{}) catch return 0;
-    defer file.close();
-    const stat = file.stat() catch return 0;
-    return @intCast(@divTrunc(stat.mtime, std.time.ns_per_s));
+    const stat = std.Io.Dir.cwd().statFile(tri_io.get(), ".trinity/farm/events.jsonl", .{}) catch return 0;
+    return @intCast(@divTrunc(stat.mtime.nanoseconds, std.time.ns_per_s));
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

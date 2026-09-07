@@ -12,6 +12,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 
 // Import VSA/TVC components
@@ -390,7 +391,7 @@ pub const CodeIndexer = struct {
             }
         }
 
-        self.stats.last_update = std.time.timestamp();
+        self.stats.last_update = tri_time.timestamp();
     }
 
     /// Index a directory recursively
@@ -495,7 +496,7 @@ pub const CodeIndexer = struct {
 
     /// Search for similar code (NOW WITH HNSW - O(log n) performance!)
     pub fn search(self: *CodeIndexer, query: []const u8, top_k: usize) !SearchResults {
-        const start_time = std.time.nanoTimestamp();
+        const start_time = tri_time.nanoTimestamp();
 
         var results = std.ArrayList(SearchResult).init(self.allocator);
 
@@ -589,7 +590,7 @@ pub const CodeIndexer = struct {
         }
 
         // Update stats
-        const end_time = std.time.nanoTimestamp();
+        const end_time = tri_time.nanoTimestamp();
         const query_time = @as(u64, @intCast((end_time - start_time) / 1_000_000));
         self.stats.queries_processed += 1;
         self.stats.avg_query_time_ms = (self.stats.avg_query_time_ms * @as(f64, @floatFromInt(self.stats.queries_processed - 1)) +

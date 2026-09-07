@@ -147,7 +147,7 @@ Derivation:
 | `src/particle_physics/formulas.zig` | MODIFY | +150 |
 | `src/tri/math/commands.zig` | MODIFY | +50 |
 | `build.zig` | MODIFY | +10 |
-| `docsite/docs/research/consciousness-qualia-v11-complete.md` | CREATE | This file |
+| `docs/docs/research/consciousness-qualia-v11-complete.md` | CREATE | This file |
 | `docsite/sidebars.ts` | MODIFY | +1 |
 
 ## Test Results

@@ -5,6 +5,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const ternary = @import("ternary_weights.zig");
 const inference = @import("gguf_inference.zig");
 const transformer = @import("gguf_transformer.zig");
@@ -1143,7 +1144,7 @@ pub const Request = struct {
             .max_tokens = max_tokens,
             .temperature = temp,
             .priority = priority,
-            .created_at = std.time.milliTimestamp(),
+            .created_at = tri_time.milliTimestamp(),
             .status = .queued,
             .generated_tokens = std.ArrayList(u32).init(allocator),
             .tokens_generated = 0,
@@ -1470,7 +1471,7 @@ pub const PagedRequest = struct {
             .max_tokens = max_tokens,
             .temperature = temp,
             .priority = priority,
-            .created_at = std.time.milliTimestamp(),
+            .created_at = tri_time.milliTimestamp(),
             .status = .queued,
             .generated_tokens = std.ArrayList(u32).init(allocator),
             .tokens_generated = 0,
@@ -2015,14 +2016,13 @@ pub const PagedSchedulerStats = struct {
 // MAIN - Benchmark TRI vs GGUF
 // ═══════════════════════════════════════════════════════════════════════════════
 
-pub fn main() !void {
+pub fn main(init: std.process.Init.Minimal) !void {
     var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    const args = try std.process.argsAlloc(allocator);
-    defer std.process.argsFree(allocator, args);
-
+    const args = try init.args.toSlice(allocator);
+    defer allocator.free(args);
     const path = if (args.len > 1) args[1] else "data/models/smollm2-360m.tri";
 
     std.debug.print("\n", .{});
@@ -2044,7 +2044,7 @@ pub fn main() !void {
     const temperature: f32 = 0.7;
 
     model.resetKVCache();
-    var timer = try std.time.Timer.start();
+    var timer = try tri_time.Timer.start();
 
     var generated: [32]u32 = undefined;
     var i: usize = 0;

@@ -18,6 +18,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const vsa = @import("vsa");
 const print = std.debug.print;
 
@@ -51,10 +52,10 @@ test "CLARA_Theorem1: VSA bind is O(n)" {
         for (0..n) |i| b[i] = 1;
 
         // Measure bind time
-        const start = std.time.nanoTimestamp();
+        const start = tri_time.nanoTimestamp();
         const result = try vsa.bind(a, b);
         _ = result;
-        const end = std.time.nanoTimestamp();
+        const end = tri_time.nanoTimestamp();
 
         const elapsed_ns = end - start;
 
@@ -86,10 +87,10 @@ test "CLARA_Theorem1: VSA unbind is O(n)" {
         defer allocator.free(key);
         for (0..n) |i| key[i] = 1;
 
-        const start = std.time.nanoTimestamp();
+        const start = tri_time.nanoTimestamp();
         const result = try vsa.unbind(bound, key);
         _ = result;
-        const end = std.time.nanoTimestamp();
+        const end = tri_time.nanoTimestamp();
 
         const elapsed_ns = end - start;
 
@@ -122,10 +123,10 @@ test "CLARA_Theorem1: VSA bundle3 is O(n)" {
         defer allocator.free(c);
         for (c) |*v| v.* = 1;
 
-        const start = std.time.nanoTimestamp();
+        const start = tri_time.nanoTimestamp();
         const result = try vsa.bundle3(a, b, c);
         _ = result;
-        const end = std.time.nanoTimestamp();
+        const end = tri_time.nanoTimestamp();
 
         const elapsed_ns = end - start;
 
@@ -154,10 +155,10 @@ test "CLARA_Theorem1: VSA cosineSimilarity is O(n)" {
         defer allocator.free(b);
         for (0..n) |i| b[i] = 1;
 
-        const start = std.time.nanoTimestamp();
+        const start = tri_time.nanoTimestamp();
         const similarity = vsa.cosineSimilarity(a, b);
         _ = similarity;
-        const end = std.time.nanoTimestamp();
+        const end = tri_time.nanoTimestamp();
 
         const elapsed_ns = end - start;
 

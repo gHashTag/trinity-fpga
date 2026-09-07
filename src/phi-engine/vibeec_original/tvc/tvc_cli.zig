@@ -7,11 +7,10 @@ const ternary_codegen = @import("ternary_codegen.zig");
 
 // TVC MVP CLI - Main entry point for TVC compiler
 
-pub fn main() !void {
+pub fn main(init: std.process.Init.Minimal) !void {
     const allocator = std.heap.page_allocator;
-    const args = try std.process.argsAlloc(allocator);
-    defer std.process.argsFree(allocator, args);
-
+    const args = try init.args.toSlice(allocator);
+    defer allocator.free(args);
     if (args.len < 2) {
         try printUsage(args[0]);
         return error.Usage;

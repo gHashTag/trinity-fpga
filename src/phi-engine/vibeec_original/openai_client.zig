@@ -4,6 +4,7 @@
 // φ² + 1/φ² = 3
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const http = @import("http_client.zig");
 const json = @import("json_parser.zig");
@@ -190,7 +191,7 @@ pub const OpenAIClient = struct {
 
     /// Chat completion with system prompt
     pub fn chatWithSystem(self: *Self, system_prompt: ?[]const u8, user_message: []const u8) OpenAIError!ChatResponse {
-        const start_time = std.time.nanoTimestamp();
+        const start_time = tri_time.nanoTimestamp();
 
         // Build request JSON
         const request_body = self.buildRequestJson(system_prompt, user_message) catch return OpenAIError.OutOfMemory;
@@ -204,7 +205,7 @@ pub const OpenAIClient = struct {
         var response = self.http_client.postJson(self.base_url, request_body, auth_header) catch return OpenAIError.NetworkError;
         defer response.deinit();
 
-        const end_time = std.time.nanoTimestamp();
+        const end_time = tri_time.nanoTimestamp();
 
         // Check status
         if (response.status == 401) return OpenAIError.InvalidApiKey;
@@ -256,7 +257,7 @@ pub const OpenAIClient = struct {
 
     /// Chat with vision (image analysis)
     pub fn chatWithVision(self: *Self, prompt: []const u8, image_base64: []const u8) OpenAIError!ChatResponse {
-        const start_time = std.time.nanoTimestamp();
+        const start_time = tri_time.nanoTimestamp();
 
         // Build vision request
         const request_body = buildVisionRequest(self.allocator, GPT4V_MODEL, prompt, image_base64) catch return OpenAIError.OutOfMemory;
@@ -270,7 +271,7 @@ pub const OpenAIClient = struct {
         var response = self.http_client.postJson(self.base_url, request_body, auth_header) catch return OpenAIError.NetworkError;
         defer response.deinit();
 
-        const end_time = std.time.nanoTimestamp();
+        const end_time = tri_time.nanoTimestamp();
 
         // Check status
         if (response.status == 401) return OpenAIError.InvalidApiKey;

@@ -13,6 +13,10 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
+const tri_proc = @import("tri_proc");
+const tri_time = @import("tri_time");
+const tri_env = @import("tri_env");
 const colors = @import("tri_colors.zig");
 // Top-level binding for the eight usage-error paths below. The file already
 // imported this module once, function-locally at line ~2480 and under the name
@@ -623,6 +627,7 @@ fn runList(allocator: Allocator, args: []const []const u8) !void {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn runSearch(allocator: Allocator, args: []const []const u8) !void {
+    const io = tri_io.get();
     if (args.len == 0) {
         std.debug.print("{s}Usage:{s} tri cell search <query>\n", .{ YELLOW, RESET });
         std.debug.print("  Example: tri cell search faculty\n", .{});
@@ -663,7 +668,7 @@ fn runSearch(allocator: Allocator, args: []const []const u8) !void {
         const cell_tri_path = std.fmt.allocPrint(allocator, "{s}/cell.tri", .{path}) catch continue;
         defer allocator.free(cell_tri_path);
 
-        const cell_content = std.fs.cwd().readFileAlloc(allocator, cell_tri_path, 65536) catch continue;
+        const cell_content = std.Io.Dir.cwd().readFileAlloc(io, cell_tri_path, allocator, .limited(65536)) catch continue;
         defer allocator.free(cell_content);
 
         const cell = parseCellTri(cell_content);
@@ -717,6 +722,7 @@ fn runSearch(allocator: Allocator, args: []const []const u8) !void {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn runFind(allocator: Allocator, args: []const []const u8) !void {
+    const io = tri_io.get();
     // Parse flags
     var capability_filter: ?[]const u8 = null;
     var export_filter: ?[]const u8 = null;
@@ -769,7 +775,7 @@ fn runFind(allocator: Allocator, args: []const []const u8) !void {
         const cell_tri_path = std.fmt.allocPrint(allocator, "{s}/cell.tri", .{path}) catch continue;
         defer allocator.free(cell_tri_path);
 
-        const cell_content = std.fs.cwd().readFileAlloc(allocator, cell_tri_path, 65536) catch continue;
+        const cell_content = std.Io.Dir.cwd().readFileAlloc(io, cell_tri_path, allocator, .limited(65536)) catch continue;
         defer allocator.free(cell_content);
 
         const cell = parseCellTri(cell_content);
@@ -854,6 +860,7 @@ fn runFind(allocator: Allocator, args: []const []const u8) !void {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn runInfo(allocator: Allocator, args: []const []const u8) !void {
+    const io = tri_io.get();
     if (args.len == 0) {
         std.debug.print("{s}Usage:{s} tri cell info <cell-id> [options]\n", .{ YELLOW, RESET });
         std.debug.print("\n  Options:\n", .{});
@@ -906,7 +913,7 @@ fn runInfo(allocator: Allocator, args: []const []const u8) !void {
         const cell_tri_path = std.fmt.allocPrint(allocator, "{s}/cell.tri", .{path}) catch return;
         defer allocator.free(cell_tri_path);
 
-        const cell_content = std.fs.cwd().readFileAlloc(allocator, cell_tri_path, 65536) catch |err| {
+        const cell_content = std.Io.Dir.cwd().readFileAlloc(io, cell_tri_path, allocator, .limited(65536)) catch |err| {
             std.debug.print("\n{s}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━{s}\n", .{ RED, RESET });
             std.debug.print("{s}ERROR {s}: Cannot read cell.tri: {}\n", .{ RED, RESET, err });
             std.debug.print("{s}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━{s}\n\n", .{ RED, RESET });
@@ -1028,7 +1035,7 @@ fn runInfo(allocator: Allocator, args: []const []const u8) !void {
             }
             // Check if definition file exists
             if (cell.agent_definition.len > 0) {
-                if (std.fs.cwd().access(cell.agent_definition, .{})) |_| {
+                if (std.Io.Dir.cwd().access(io, cell.agent_definition, .{})) |_| {
                     std.debug.print("  {s}Def Status:{s}      {s}EXISTS{s}\n", .{ CYAN, RESET, GREEN, RESET });
                 } else |_| {
                     std.debug.print("  {s}Def Status:{s}      {s}MISSING{s}\n", .{ CYAN, RESET, RED, RESET });
@@ -1070,6 +1077,7 @@ fn runInfo(allocator: Allocator, args: []const []const u8) !void {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn runInit(allocator: Allocator, args: []const []const u8) !void {
+    const io = tri_io.get();
     if (args.len == 0) {
         std.debug.print("{s}Usage:{s} tri cell init <name> [--kind tool|agent|backend|frontend] [--with-test] [--template <name>]\n", .{ YELLOW, RESET });
         std.debug.print("\n  Creates a new cell scaffold:\n", .{});
@@ -1103,7 +1111,7 @@ fn runInit(allocator: Allocator, args: []const []const u8) !void {
     const cell_dir = std.fmt.allocPrint(allocator, "{s}/{s}", .{ base, name }) catch return;
     defer allocator.free(cell_dir);
 
-    std.fs.cwd().makePath(cell_dir) catch |err| {
+    std.Io.Dir.cwd().createDirPath(io, cell_dir) catch |err| {
         std.debug.print("{s}ERROR{s}: Cannot create {s}: {}\n", .{ RED, RESET, cell_dir, err });
         return;
     };
@@ -1153,7 +1161,7 @@ fn runInit(allocator: Allocator, args: []const []const u8) !void {
             // Create parent directory if needed
             const md_dir = std.fs.path.dirname(md_path) orelse "";
             if (md_dir.len > 0) {
-                std.fs.cwd().makePath(md_dir) catch {};
+                std.Io.Dir.cwd().createDirPath(io, md_dir) catch {};
             }
 
             const md_content = std.fmt.allocPrint(allocator,
@@ -1282,6 +1290,7 @@ fn runInit(allocator: Allocator, args: []const []const u8) !void {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn runCheck(allocator: Allocator, args: []const []const u8) !void {
+    const io = tri_io.get();
     var do_sync = false;
     var dry_run = false;
     var auto_register = false;
@@ -1320,7 +1329,7 @@ fn runCheck(allocator: Allocator, args: []const []const u8) !void {
     var existing_meta = std.StringHashMap(std.json.Value).init(allocator);
     defer existing_meta.deinit();
     if (do_sync) {
-        const reg_data = std.fs.cwd().readFileAlloc(allocator, "data/cells/registry.json", 262144) catch null;
+        const reg_data = std.Io.Dir.cwd().readFileAlloc(io, "data/cells/registry.json", allocator, .limited(262144)) catch null;
         if (reg_data) |rd| {
             defer allocator.free(rd);
             if (std.json.parseFromSlice(std.json.Value, allocator, rd, .{})) |reg_parsed| {
@@ -1342,11 +1351,11 @@ fn runCheck(allocator: Allocator, args: []const []const u8) !void {
     var invalid: usize = 0;
     var core_issues: usize = 0;
 
-    var sync_buf = std.array_list.Managed(u8).init(allocator);
+    var sync_buf: std.Io.Writer.Allocating = .init(allocator);
     defer sync_buf.deinit();
 
     if (do_sync) {
-        const writer = sync_buf.writer();
+        const writer = &sync_buf.writer;
         try writer.writeAll("{\n  \"version\": \"1.0.0\",\n  \"updated\": \"2026-03-17\",\n  \"core_version\": \"");
         try writer.writeAll(CORE_VERSION);
         try writer.writeAll("\",\n  \"core_files\": [\n    \"src/vsa.zig\", \"src/vm.zig\", \"src/hybrid.zig\", \"src/sdk.zig\",\n    \"src/sparse.zig\", \"src/jit.zig\", \"src/science.zig\", \"src/c_api.zig\"\n  ],\n  \"cells\": [\n");
@@ -1358,7 +1367,7 @@ fn runCheck(allocator: Allocator, args: []const []const u8) !void {
         const cell_tri_path = std.fmt.allocPrint(allocator, "{s}/cell.tri", .{path}) catch continue;
         defer allocator.free(cell_tri_path);
 
-        const content = std.fs.cwd().readFileAlloc(allocator, cell_tri_path, 65536) catch {
+        const content = std.Io.Dir.cwd().readFileAlloc(io, cell_tri_path, allocator, .limited(65536)) catch {
             std.debug.print("  {s}MISSING{s}  {s}/cell.tri\n", .{ RED, RESET, path });
             invalid += 1;
             continue;
@@ -1383,7 +1392,7 @@ fn runCheck(allocator: Allocator, args: []const []const u8) !void {
         }
 
         if (do_sync) {
-            const writer = sync_buf.writer();
+            const writer = &sync_buf.writer;
             if (!first_sync_entry) try writer.writeAll(",\n");
             first_sync_entry = false;
 
@@ -1525,7 +1534,7 @@ fn runCheck(allocator: Allocator, args: []const []const u8) !void {
     }
 
     if (do_sync) {
-        const writer = sync_buf.writer();
+        const writer = &sync_buf.writer;
         try writer.writeAll(
             \\
             \\  ],
@@ -1542,15 +1551,15 @@ fn runCheck(allocator: Allocator, args: []const []const u8) !void {
         );
 
         if (dry_run) {
-            std.debug.print("  {s}[DRY RUN]{s} Would write registry.json ({d} cells, {d} bytes)\n\n", .{ YELLOW, RESET, valid, sync_buf.items.len });
+            std.debug.print("  {s}[DRY RUN]{s} Would write registry.json ({d} cells, {d} bytes)\n\n", .{ YELLOW, RESET, valid, sync_buf.written().len });
         } else {
             const registry_path = "data/cells/registry.json";
-            const file = std.fs.cwd().createFile(registry_path, .{}) catch |err| {
+            const file = std.Io.Dir.cwd().createFile(io, registry_path, .{}) catch |err| {
                 std.debug.print("{s}ERROR{s}: Cannot write {s}: {}\n", .{ RED, RESET, registry_path, err });
                 return;
             };
-            defer file.close();
-            file.writeAll(sync_buf.items) catch |err| {
+            defer file.close(io);
+            file.writeStreamingAll(io, sync_buf.written()) catch |err| {
                 std.debug.print("{s}ERROR{s}: Write failed: {}\n", .{ RED, RESET, err });
                 return;
             };
@@ -1569,6 +1578,7 @@ fn runCheck(allocator: Allocator, args: []const []const u8) !void {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn runDeps(allocator: Allocator, args: []const []const u8) !void {
+    const io = tri_io.get();
     // tri cell deps --auto-detect → scan @imports across all cells
     for (args) |a| {
         if (std.mem.eql(u8, a, "--auto-detect")) {
@@ -1640,7 +1650,7 @@ fn runDeps(allocator: Allocator, args: []const []const u8) !void {
 
     const tri_path = std.fmt.allocPrint(allocator, "{s}/cell.tri", .{cell_path.?}) catch return;
     defer allocator.free(tri_path);
-    const content = std.fs.cwd().readFileAlloc(allocator, tri_path, 65536) catch {
+    const content = std.Io.Dir.cwd().readFileAlloc(io, tri_path, allocator, .limited(65536)) catch {
         std.debug.print("{s}ERROR{s}: Cannot read {s}\n", .{ RED, RESET, tri_path });
         return;
     };
@@ -1665,6 +1675,7 @@ fn runDeps(allocator: Allocator, args: []const []const u8) !void {
 }
 
 fn printDepsTree(allocator: Allocator, cells: []const std.json.Value, deps_raw: []const u8, prefix: []const u8, recursive: bool, visited: *std.StringHashMap(void)) void {
+    const io = tri_io.get();
     const total = DepIterator.count(deps_raw);
     if (total == 0) return;
 
@@ -1699,7 +1710,7 @@ fn printDepsTree(allocator: Allocator, cells: []const std.json.Value, deps_raw: 
                             const dep_path = jsonStr(cell_item.object, "path");
                             const dep_tri = std.fmt.allocPrint(allocator, "{s}/cell.tri", .{dep_path}) catch break;
                             defer allocator.free(dep_tri);
-                            const dep_content = std.fs.cwd().readFileAlloc(allocator, dep_tri, 65536) catch break;
+                            const dep_content = std.Io.Dir.cwd().readFileAlloc(io, dep_tri, allocator, .limited(65536)) catch break;
                             defer allocator.free(dep_content);
                             const dep_cell = parseCellTri(dep_content);
                             if (dep_cell.dependencies_raw.len > 0) {
@@ -1725,6 +1736,7 @@ fn printDepsTree(allocator: Allocator, cells: []const std.json.Value, deps_raw: 
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn runAutoDetectDeps(allocator: Allocator, write_mode: bool) !void {
+    const io = tri_io.get();
     std.debug.print("{s}[auto-detect]{s} Scanning @import statements across all cells...\n\n", .{ CYAN, RESET });
 
     const cells = cell_parser.discoverAll(allocator) catch {
@@ -1754,20 +1766,20 @@ fn runAutoDetectDeps(allocator: Allocator, write_mode: bool) !void {
         defer detected_deps.deinit();
         var import_count: usize = 0;
 
-        var dir = std.fs.cwd().openDir(cell_path, .{ .iterate = true }) catch continue;
-        defer dir.close();
+        var dir = std.Io.Dir.cwd().openDir(io, cell_path, .{ .iterate = true }) catch continue;
+        defer dir.close(io);
 
         const has_patterns = m.file_patterns.len > 2; // more than "[]"
 
         var walker = dir.iterate();
-        while (walker.next() catch null) |entry| {
+        while (walker.next(io) catch null) |entry| {
             if (entry.kind != .file) continue;
             if (!std.mem.endsWith(u8, entry.name, ".zig")) continue;
             // For virtual sub-cells, only scan files matching their patterns
             if (has_patterns and !matchesFilePatterns(entry.name, m.file_patterns)) continue;
 
             // Read file content
-            const content = dir.readFileAlloc(allocator, entry.name, 1048576) catch continue;
+            const content = dir.readFileAlloc(io, entry.name, allocator, .limited(1048576)) catch continue;
             defer allocator.free(content);
 
             // Scan for @import("...") patterns
@@ -1898,6 +1910,7 @@ fn runAutoDetectDeps(allocator: Allocator, write_mode: bool) !void {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn runPruneDeps(allocator: Allocator, write_mode: bool) !void {
+    const io = tri_io.get();
     std.debug.print("{s}[prune]{s} Finding declared deps with no matching @import...\n\n", .{ CYAN, RESET });
 
     const all_cells = cell_parser.discoverAll(allocator) catch {
@@ -1960,7 +1973,7 @@ fn runPruneDeps(allocator: Allocator, write_mode: bool) !void {
             // Rebuild cell.tri content, filtering out prunable dep lines
             const cell_tri_path = std.fmt.allocPrint(allocator, "{s}/cell.tri", .{m.path}) catch continue;
             defer allocator.free(cell_tri_path);
-            const original = std.fs.cwd().readFileAlloc(allocator, cell_tri_path, 65536) catch continue;
+            const original = std.Io.Dir.cwd().readFileAlloc(io, cell_tri_path, allocator, .limited(65536)) catch continue;
             defer allocator.free(original);
 
             var result = std.array_list.Managed(u8).init(allocator);
@@ -2008,9 +2021,9 @@ fn runPruneDeps(allocator: Allocator, write_mode: bool) !void {
                 _ = result.pop();
             }
 
-            const file = std.fs.cwd().createFile(cell_tri_path, .{}) catch continue;
-            defer file.close();
-            file.writeAll(result.items) catch continue;
+            const file = std.Io.Dir.cwd().createFile(io, cell_tri_path, .{}) catch continue;
+            defer file.close(io);
+            file.writeStreamingAll(io, result.items) catch continue;
             files_written += 1;
         }
         std.debug.print("\n{s}[prune done]{s} {d} cell.tri files rewritten\n", .{ CYAN, RESET, files_written });
@@ -2062,16 +2075,17 @@ fn scanCellImportsFiltered(
     path_to_cell: *std.StringHashMap([]const u8),
     detected_deps: *std.StringHashMap(void),
 ) void {
+    const io = tri_io.get();
     const has_patterns = file_patterns.len > 2; // more than "[]"
 
-    var dir = std.fs.cwd().openDir(cell_path, .{ .iterate = true }) catch return;
-    defer dir.close();
+    var dir = std.Io.Dir.cwd().openDir(io, cell_path, .{ .iterate = true }) catch return;
+    defer dir.close(io);
 
     // Use walk() to descend into subdirectories (e.g., src/models/tqnn/)
     var walker = dir.walk(allocator) catch return;
     defer walker.deinit();
 
-    while (walker.next() catch null) |entry| {
+    while (walker.next(io) catch null) |entry| {
         if (entry.kind != .file) continue;
         if (!std.mem.endsWith(u8, entry.basename, ".zig")) continue;
         if (std.mem.indexOf(u8, entry.path, ".zig-cache") != null) continue;
@@ -2081,7 +2095,7 @@ fn scanCellImportsFiltered(
         const file_content = blk: {
             const file_path = std.fmt.allocPrint(allocator, "{s}/{s}", .{ cell_path, entry.path }) catch continue;
             defer allocator.free(file_path);
-            break :blk std.fs.cwd().readFileAlloc(allocator, file_path, 1048576) catch continue;
+            break :blk std.Io.Dir.cwd().readFileAlloc(io, file_path, allocator, .limited(1048576)) catch continue;
         };
         defer allocator.free(file_content);
 
@@ -2408,9 +2422,9 @@ fn runDepsValidate(allocator: Allocator, args: []const []const u8) !void {
                     const next_color = color.get(next) orelse 0;
                     if (next_color == 1) {
                         // Found cycle — record it as a string for display
-                        var cycle_str = std.array_list.Managed(u8).init(allocator);
+                        var cycle_str: std.Io.Writer.Allocating = .init(allocator);
                         defer cycle_str.deinit();
-                        const writer = cycle_str.writer();
+                        const writer = &cycle_str.writer;
                         var in_cycle = false;
                         for (path_list.items) |p| {
                             if (std.mem.eql(u8, p, next)) in_cycle = true;
@@ -2419,7 +2433,7 @@ fn runDepsValidate(allocator: Allocator, args: []const []const u8) !void {
                             }
                         }
                         try writer.print("{s}", .{next});
-                        const cycle_copy = allocator.dupe(u8, cycle_str.items) catch continue;
+                        const cycle_copy = allocator.dupe(u8, cycle_str.written()) catch continue;
                         circular_deps.append(cycle_copy) catch {};
                     } else if (next_color == 0) {
                         color.put(next, 1) catch {};
@@ -2771,6 +2785,7 @@ fn writeMermaidGraph(
     cell_health: std.StringHashMap(HealthInfo),
     path: []const u8,
 ) !void {
+    const io = tri_io.get();
     var output = std.array_list.Managed(u8).init(allocator);
     defer output.deinit();
 
@@ -2791,16 +2806,16 @@ fn writeMermaidGraph(
 
         defer allocator.free(label);
 
-        try output.writer().print("{s}[\"{s}\"]\n", .{ mermaid_id, label });
+        try output.print("{s}[\"{s}\"]\n", .{ mermaid_id, label });
 
         // Apply base color for bio_system
         const base_color = bioSystemColor(info.bio_system);
-        try output.writer().print("style {s} fill:{s}\n", .{ mermaid_id, base_color });
+        try output.print("style {s} fill:{s}\n", .{ mermaid_id, base_color });
 
         // Add warning stroke for low health
         if (info.score < 70) {
             const stroke_color = if (info.score < 50) "#E74C3C" else "#F39C12";
-            try output.writer().print("style {s} stroke:{s},stroke-width:3px\n", .{ mermaid_id, stroke_color });
+            try output.print("style {s} stroke:{s},stroke-width:3px\n", .{ mermaid_id, stroke_color });
         }
     }
 
@@ -2817,7 +2832,7 @@ fn writeMermaidGraph(
             const to_mermaid = try sanitizeId(allocator, to_id);
             defer allocator.free(to_mermaid);
 
-            try output.writer().print("{s} --> {s}\n", .{ from_mermaid, to_mermaid });
+            try output.print("{s} --> {s}\n", .{ from_mermaid, to_mermaid });
         }
     }
 
@@ -2829,9 +2844,9 @@ fn writeMermaidGraph(
     try output.appendSlice("classDef orange fill:#F39C12,stroke:#E67E22,stroke-width:2px,color:#fff\n");
     try output.appendSlice("classDef gray fill:#95A5A6,stroke:#7F8C8D,stroke-width:2px,color:#fff\n");
 
-    var file = try std.fs.cwd().createFile(path, .{});
-    defer file.close();
-    try file.writeAll(output.items);
+    var file = try std.Io.Dir.cwd().createFile(io, path, .{});
+    defer file.close(io);
+    try file.writeStreamingAll(io, output.items);
 }
 
 fn writeJsonGraph(
@@ -2840,6 +2855,7 @@ fn writeJsonGraph(
     cell_health: std.StringHashMap(HealthInfo),
     path: []const u8,
 ) !void {
+    const io = tri_io.get();
     var output = std.array_list.Managed(u8).init(allocator);
     defer output.deinit();
 
@@ -2862,7 +2878,7 @@ fn writeJsonGraph(
         const escaped_status = try escapeJsonString(allocator, info.status);
         defer allocator.free(escaped_status);
 
-        try output.writer().print("    {{\"id\": \"{s}\", \"name\": \"{s}\", \"score\": {d}, \"bio_system\": \"{s}\", \"status\": \"{s}\"}}", .{
+        try output.print("    {{\"id\": \"{s}\", \"name\": \"{s}\", \"score\": {d}, \"bio_system\": \"{s}\", \"status\": \"{s}\"}}", .{
             escaped_id,
             escaped_name,
             info.score,
@@ -2887,7 +2903,7 @@ fn writeJsonGraph(
             const escaped_to = try escapeJsonString(allocator, to_id);
             defer allocator.free(escaped_to);
 
-            try output.writer().print("    {{\"from\": \"{s}\", \"to\": \"{s}\"}}", .{
+            try output.print("    {{\"from\": \"{s}\", \"to\": \"{s}\"}}", .{
                 escaped_from,
                 escaped_to,
             });
@@ -2896,9 +2912,9 @@ fn writeJsonGraph(
 
     try output.appendSlice("\n  ]\n}\n");
 
-    var file = try std.fs.cwd().createFile(path, .{});
-    defer file.close();
-    try file.writeAll(output.items);
+    var file = try std.Io.Dir.cwd().createFile(io, path, .{});
+    defer file.close(io);
+    try file.writeStreamingAll(io, output.items);
 }
 
 fn writeHtmlGraph(
@@ -2907,6 +2923,7 @@ fn writeHtmlGraph(
     cell_health: std.StringHashMap(HealthInfo),
     path: []const u8,
 ) !void {
+    const io = tri_io.get();
     var output = std.array_list.Managed(u8).init(allocator);
     defer output.deinit();
 
@@ -2966,7 +2983,7 @@ fn writeHtmlGraph(
         const escaped_status = try escapeJsString(allocator, info.status);
         defer allocator.free(escaped_status);
 
-        try output.writer().print("{{id:\"{s}\",name:\"{s}\",score:{d},bio:\"{s}\",status:\"{s}\"}}", .{
+        try output.print("{{id:\"{s}\",name:\"{s}\",score:{d},bio:\"{s}\",status:\"{s}\"}}", .{
             escaped_id,
             escaped_name,
             info.score,
@@ -2995,7 +3012,7 @@ fn writeHtmlGraph(
             const escaped_to = try escapeJsString(allocator, to_id);
             defer allocator.free(escaped_to);
 
-            try output.writer().print("{{source:\"{s}\",target:\"{s}\"}}", .{
+            try output.print("{{source:\"{s}\",target:\"{s}\"}}", .{
                 escaped_from,
                 escaped_to,
             });
@@ -3066,9 +3083,9 @@ fn writeHtmlGraph(
         \\</html>
     );
 
-    var file = try std.fs.cwd().createFile(path, .{});
-    defer file.close();
-    try file.writeAll(output.items);
+    var file = try std.Io.Dir.cwd().createFile(io, path, .{});
+    defer file.close(io);
+    try file.writeStreamingAll(io, output.items);
 }
 
 // Sanitize cell ID for Mermaid (dots are not allowed in node IDs)
@@ -3322,6 +3339,7 @@ fn runGraphLegacy(allocator: Allocator) !void {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn runHealthJSON(allocator: Allocator) !void {
+    const io = tri_io.get();
     const all_cells = cell_parser.discoverAll(allocator) catch {
         std.debug.print("{{\"error\": \"Failed to discover cells\"}}\n", .{});
         return;
@@ -3411,11 +3429,11 @@ fn runHealthJSON(allocator: Allocator) !void {
 
     // Count monolith files
     {
-        var tri_dir = std.fs.cwd().openDir("src/tri", .{ .iterate = true }) catch null;
+        var tri_dir = std.Io.Dir.cwd().openDir(io, "src/tri", .{ .iterate = true }) catch null;
         if (tri_dir) |*d| {
-            defer d.close();
+            defer d.close(io);
             var iter = d.iterate();
-            while (iter.next() catch null) |entry| {
+            while (iter.next(io) catch null) |entry| {
                 if (entry.kind == .file and std.mem.endsWith(u8, entry.name, ".zig")) {
                     monolith_total += 1;
                     for (all_cells) |sc| {
@@ -3429,11 +3447,11 @@ fn runHealthJSON(allocator: Allocator) !void {
                 }
             }
         }
-        var math_dir = std.fs.cwd().openDir("src/tri/math", .{ .iterate = true }) catch null;
+        var math_dir = std.Io.Dir.cwd().openDir(io, "src/tri/math", .{ .iterate = true }) catch null;
         if (math_dir) |*md| {
-            defer md.close();
+            defer md.close(io);
             var miter = md.iterate();
-            while (miter.next() catch null) |entry| {
+            while (miter.next(io) catch null) |entry| {
                 if (entry.kind == .file and std.mem.endsWith(u8, entry.name, ".zig")) {
                     monolith_total += 1;
                     monolith_covered += 1;
@@ -3445,7 +3463,7 @@ fn runHealthJSON(allocator: Allocator) !void {
     // Output JSON
     std.debug.print("{{\n", .{});
     std.debug.print("  \"version\": \"10.0\",\n", .{});
-    std.debug.print("  \"timestamp\": {d},\n", .{std.time.timestamp()});
+    std.debug.print("  \"timestamp\": {d},\n", .{tri_time.timestamp()});
     std.debug.print("  \"summary\": {{\n", .{});
     std.debug.print("    \"cells\": {d},\n", .{cell_count});
     std.debug.print("    \"sub_cells\": {d},\n", .{sub_count});
@@ -3583,6 +3601,7 @@ fn runHealthJSON(allocator: Allocator) !void {
 }
 
 fn runHealth(allocator: Allocator, args: []const []const u8) !void {
+    const io = tri_io.get();
     // Check for --json flag
     for (args) |arg| {
         if (std.mem.eql(u8, arg, "--json")) {
@@ -3767,11 +3786,11 @@ fn runHealth(allocator: Allocator, args: []const []const u8) !void {
     var monolith_total: usize = 0;
     var monolith_covered: usize = 0;
     {
-        var tri_dir = std.fs.cwd().openDir("src/tri", .{ .iterate = true }) catch null;
+        var tri_dir = std.Io.Dir.cwd().openDir(io, "src/tri", .{ .iterate = true }) catch null;
         if (tri_dir) |*d| {
-            defer d.close();
+            defer d.close(io);
             var iter = d.iterate();
-            while (iter.next() catch null) |entry| {
+            while (iter.next(io) catch null) |entry| {
                 if (entry.kind == .file and std.mem.endsWith(u8, entry.name, ".zig")) {
                     monolith_total += 1;
                     // Check if matched by any sub-cell file_patterns
@@ -3787,11 +3806,11 @@ fn runHealth(allocator: Allocator, args: []const []const u8) !void {
             }
         }
         // Also count math/ subdir
-        var math_dir = std.fs.cwd().openDir("src/tri/math", .{ .iterate = true }) catch null;
+        var math_dir = std.Io.Dir.cwd().openDir(io, "src/tri/math", .{ .iterate = true }) catch null;
         if (math_dir) |*md| {
-            defer md.close();
+            defer md.close(io);
             var miter = md.iterate();
-            while (miter.next() catch null) |entry| {
+            while (miter.next(io) catch null) |entry| {
                 if (entry.kind == .file and std.mem.endsWith(u8, entry.name, ".zig")) {
                     monolith_total += 1;
                     monolith_covered += 1; // math sub-cell covers all math/*.zig
@@ -4113,7 +4132,7 @@ fn outputTrendsJson(trends: []CellTrend, days: u32) !void {
     std.debug.print("{{\n", .{});
     std.debug.print("  \"version\": \"1.0\",\n", .{});
     std.debug.print("  \"days_analyzed\": {d},\n", .{days});
-    std.debug.print("  \"timestamp\": {d},\n", .{std.time.timestamp()});
+    std.debug.print("  \"timestamp\": {d},\n", .{tri_time.timestamp()});
     std.debug.print("  \"cells\": [\n", .{});
 
     for (trends, 0..) |t, i| {
@@ -4143,7 +4162,7 @@ fn outputTrendsJson(trends: []CellTrend, days: u32) !void {
 /// Output trends in Markdown format
 fn outputTrendsMarkdown(trends: []CellTrend, days: u32) !void {
     std.debug.print("# Cell Health Trends ({d} days)\n\n", .{days});
-    std.debug.print("*Generated: {}*\n\n", .{std.time.timestamp()});
+    std.debug.print("*Generated: {}*\n\n", .{tri_time.timestamp()});
 
     // Sort by slope
     var sorted = try std.ArrayList(CellTrend).initCapacity(std.heap.page_allocator, trends.len);
@@ -4362,6 +4381,7 @@ fn runCacheRefresh(allocator: Allocator) !void {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn runToggleEnabled(allocator: Allocator, args: []const []const u8, enable: bool) !void {
+    const io = tri_io.get();
     if (args.len == 0) {
         std.debug.print("{s}Usage:{s} tri cell {s} <cell-id>\n", .{
             YELLOW, RESET, if (enable) "enable" else "disable",
@@ -4391,7 +4411,7 @@ fn runToggleEnabled(allocator: Allocator, args: []const []const u8, enable: bool
             if (obj.*.getPtr("enabled")) |enabled_ptr| {
                 enabled_ptr.* = .{ .bool = enable };
             } else {
-                obj.*.put("enabled", .{ .bool = enable }) catch {
+                obj.*.put(parsed.arena.allocator(), "enabled", .{ .bool = enable }) catch {
                     std.debug.print("{s}ERROR{s}: Failed to set enabled field\n", .{ RED, RESET });
                     return;
                 };
@@ -4407,17 +4427,17 @@ fn runToggleEnabled(allocator: Allocator, args: []const []const u8, enable: bool
     }
 
     // Write back using JSON pretty printer
-    var output = std.array_list.Managed(u8).init(allocator);
+    var output: std.Io.Writer.Allocating = .init(allocator);
     defer output.deinit();
-    try writeJsonPretty(output.writer(), root.*, 0);
-    try output.append('\n');
+    try writeJsonPretty(&output.writer, root.*, 0);
+    try output.writer.writeByte('\n');
 
-    const file = std.fs.cwd().createFile("data/cells/registry.json", .{}) catch |err| {
+    const file = std.Io.Dir.cwd().createFile(io, "data/cells/registry.json", .{}) catch |err| {
         std.debug.print("{s}ERROR{s}: Cannot write registry: {}\n", .{ RED, RESET, err });
         return;
     };
-    defer file.close();
-    file.writeAll(output.items) catch return;
+    defer file.close(io);
+    file.writeStreamingAll(io, output.written()) catch return;
 
     const action = if (enable) "enabled" else "disabled";
     const icon = if (enable) "●" else "○";
@@ -4430,6 +4450,7 @@ fn runToggleEnabled(allocator: Allocator, args: []const []const u8, enable: bool
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn runVerify(allocator: Allocator) !void {
+    const io = tri_io.get();
     std.debug.print("\n{s}🔐 Verifying cell integrity...{s}\n\n", .{ GOLDEN, RESET });
 
     const registry = try loadRegistry(allocator);
@@ -4461,7 +4482,7 @@ fn runVerify(allocator: Allocator) !void {
         const cell_tri_path = std.fmt.allocPrint(allocator, "{s}/cell.tri", .{path}) catch continue;
         defer allocator.free(cell_tri_path);
 
-        const content = std.fs.cwd().readFileAlloc(allocator, cell_tri_path, 65536) catch {
+        const content = std.Io.Dir.cwd().readFileAlloc(io, cell_tri_path, allocator, .limited(65536)) catch {
             std.debug.print("  {s}FAIL{s}  {s} — cannot read {s}\n", .{ RED, RESET, id, cell_tri_path });
             fail_count += 1;
             continue;
@@ -4493,6 +4514,7 @@ fn runVerify(allocator: Allocator) !void {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn runCheckBoundaries(allocator: Allocator) !void {
+    const io = tri_io.get();
     std.debug.print("\n{s}🏗  Checking boundary rules...{s}\n\n", .{ GOLDEN, RESET });
 
     const registry = try loadRegistry(allocator);
@@ -4578,7 +4600,7 @@ fn runCheckBoundaries(allocator: Allocator) !void {
             const cell_path = jsonStr(cell_obj, "path");
             const tri_path = std.fmt.allocPrint(allocator, "{s}/cell.tri", .{cell_path}) catch continue;
             defer allocator.free(tri_path);
-            const content = std.fs.cwd().readFileAlloc(allocator, tri_path, 65536) catch continue;
+            const content = std.Io.Dir.cwd().readFileAlloc(io, tri_path, allocator, .limited(65536)) catch continue;
             defer allocator.free(content);
             const cell = parseCellTri(content);
 
@@ -4622,6 +4644,7 @@ fn runCheckBoundaries(allocator: Allocator) !void {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn runLint(allocator: Allocator, args: []const []const u8) !void {
+    const io = tri_io.get();
     std.debug.print("\n{s}🔍 Linting cell boundaries...{s}\n\n", .{ GOLDEN, RESET });
 
     // Optional cell filter
@@ -4667,7 +4690,7 @@ fn runLint(allocator: Allocator, args: []const []const u8) !void {
         // Read cell.tri for declared dependencies and permissions
         const tri_path = std.fmt.allocPrint(allocator, "{s}/cell.tri", .{cell_path}) catch continue;
         defer allocator.free(tri_path);
-        const cell_content = std.fs.cwd().readFileAlloc(allocator, tri_path, 65536) catch continue;
+        const cell_content = std.Io.Dir.cwd().readFileAlloc(io, tri_path, allocator, .limited(65536)) catch continue;
         defer allocator.free(cell_content);
         const cell = parseCellTri(cell_content);
 
@@ -4684,20 +4707,20 @@ fn runLint(allocator: Allocator, args: []const []const u8) !void {
         var cell_warnings: usize = 0;
 
         // Scan all .zig files in cell_path for @import statements
-        var dir = std.fs.cwd().openDir(cell_path, .{ .iterate = true }) catch continue;
-        defer dir.close();
+        var dir = std.Io.Dir.cwd().openDir(io, cell_path, .{ .iterate = true }) catch continue;
+        defer dir.close(io);
 
         var walker = dir.walk(allocator) catch continue;
         defer walker.deinit();
 
-        while (walker.next() catch null) |entry| {
+        while (walker.next(io) catch null) |entry| {
             if (entry.kind != .file) continue;
             if (!std.mem.endsWith(u8, entry.basename, ".zig")) continue;
 
             const file_path = std.fmt.allocPrint(allocator, "{s}/{s}", .{ cell_path, entry.path }) catch continue;
             defer allocator.free(file_path);
 
-            const source = std.fs.cwd().readFileAlloc(allocator, file_path, 1048576) catch continue;
+            const source = std.Io.Dir.cwd().readFileAlloc(io, file_path, allocator, .limited(1048576)) catch continue;
             defer allocator.free(source);
 
             // Find @import("...") patterns
@@ -4757,7 +4780,7 @@ fn runLint(allocator: Allocator, args: []const []const u8) !void {
                         if (std.mem.eql(u8, stem, other_module)) {
                             const local_check = std.fmt.allocPrint(allocator, "{s}/{s}", .{ cell_path, import_path }) catch continue;
                             defer allocator.free(local_check);
-                            const local_exists = if (std.fs.cwd().access(local_check, .{})) true else |_| false;
+                            const local_exists = if (std.Io.Dir.cwd().access(io, local_check, .{})) true else |_| false;
                             if (!local_exists) {
                                 is_cross_cell = true;
                             }
@@ -4788,7 +4811,7 @@ fn runLint(allocator: Allocator, args: []const []const u8) !void {
                             const dep_path2 = jsonStr(dep_cell.object, "path");
                             const dep_tri = std.fmt.allocPrint(allocator, "{s}/cell.tri", .{dep_path2}) catch break;
                             defer allocator.free(dep_tri);
-                            const dep_content = std.fs.cwd().readFileAlloc(allocator, dep_tri, 65536) catch break;
+                            const dep_content = std.Io.Dir.cwd().readFileAlloc(io, dep_tri, allocator, .limited(65536)) catch break;
                             defer allocator.free(dep_content);
                             const dep_info = parseCellTri(dep_content);
                             if (std.mem.eql(u8, dep_info.perm_level, "L2")) {
@@ -4824,7 +4847,7 @@ fn runLint(allocator: Allocator, args: []const []const u8) !void {
                             const dep_path3 = jsonStr(dep_cell.object, "path");
                             const dep_tri2 = std.fmt.allocPrint(allocator, "{s}/cell.tri", .{dep_path3}) catch break;
                             defer allocator.free(dep_tri2);
-                            const dep_content2 = std.fs.cwd().readFileAlloc(allocator, dep_tri2, 65536) catch break;
+                            const dep_content2 = std.Io.Dir.cwd().readFileAlloc(io, dep_tri2, allocator, .limited(65536)) catch break;
                             defer allocator.free(dep_content2);
                             const dep_info2 = parseCellTri(dep_content2);
                             if (std.mem.eql(u8, dep_info2.perm_network, "external")) {
@@ -4884,6 +4907,7 @@ fn runLint(allocator: Allocator, args: []const []const u8) !void {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn runCreate(allocator: Allocator, args: []const []const u8) !void {
+    const io = tri_io.get();
     if (args.len == 0) {
         std.debug.print("{s}Usage:{s} tri cell create <path>\n", .{ YELLOW, RESET });
         std.debug.print("  Examples:\n", .{});
@@ -4913,17 +4937,17 @@ fn runCreate(allocator: Allocator, args: []const []const u8) !void {
     // Check if cell.tri already exists
     const cell_tri_path = std.fmt.allocPrint(allocator, "{s}/cell.tri", .{path}) catch return;
     defer allocator.free(cell_tri_path);
-    if (std.fs.cwd().access(cell_tri_path, .{})) |_| {
+    if (std.Io.Dir.cwd().access(io, cell_tri_path, .{})) |_| {
         std.debug.print("{s}SKIP{s}: {s} already has cell.tri\n", .{ YELLOW, RESET, path });
         return;
     } else |_| {}
 
     // Verify directory exists
-    var dir = std.fs.cwd().openDir(path, .{ .iterate = true }) catch {
+    var dir = std.Io.Dir.cwd().openDir(io, path, .{ .iterate = true }) catch {
         std.debug.print("{s}ERROR{s}: Directory not found: {s}\n", .{ RED, RESET, path });
         return;
     };
-    defer dir.close();
+    defer dir.close(io);
 
     // Count files and tests
     const stats = countFilesAndTests(allocator, path);
@@ -4942,7 +4966,8 @@ fn runCreate(allocator: Allocator, args: []const []const u8) !void {
     const name = if (std.mem.lastIndexOf(u8, path, "/")) |slash| path[slash + 1 ..] else path;
 
     // Infer kind: has main.zig or server → backend, else library
-    const has_main = std.fs.cwd().access(
+    const has_main = std.Io.Dir.cwd().access(
+        io,
         std.fmt.allocPrint(allocator, "{s}/main.zig", .{path}) catch return,
         .{},
     ) != error.FileNotFound;
@@ -5025,12 +5050,12 @@ fn runCreate(allocator: Allocator, args: []const []const u8) !void {
     defer allocator.free(content);
 
     // Write
-    const file = std.fs.cwd().createFile(cell_tri_path, .{}) catch |err| {
+    const file = std.Io.Dir.cwd().createFile(io, cell_tri_path, .{}) catch |err| {
         std.debug.print("{s}ERROR{s}: Cannot write {s}: {}\n", .{ RED, RESET, cell_tri_path, err });
         return;
     };
-    defer file.close();
-    file.writeAll(content) catch return;
+    defer file.close(io);
+    file.writeStreamingAll(io, content) catch return;
 
     std.debug.print("\n{s}🐝 Cell created:{s} {s}\n", .{ GREEN, RESET, cell_id });
     std.debug.print("  {s}Path:{s}    {s}\n", .{ CYAN, RESET, cell_tri_path });
@@ -5048,11 +5073,12 @@ fn runCreate(allocator: Allocator, args: []const []const u8) !void {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn runCreateAgent(allocator: Allocator, name: []const u8) !void {
+    const io = tri_io.get();
     // 1. Create tools/agents/<name>/cell.tri
     const cell_dir = std.fmt.allocPrint(allocator, "tools/agents/{s}", .{name}) catch return;
     defer allocator.free(cell_dir);
 
-    std.fs.cwd().makePath(cell_dir) catch |err| {
+    std.Io.Dir.cwd().createDirPath(io, cell_dir) catch |err| {
         std.debug.print("{s}ERROR{s}: Cannot create {s}: {}\n", .{ RED, RESET, cell_dir, err });
         return;
     };
@@ -5145,6 +5171,7 @@ fn runCreateAgent(allocator: Allocator, name: []const u8) !void {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn runCreateAll(allocator: Allocator, args: []const []const u8) !void {
+    const io = tri_io.get();
     var dry_run = false;
     for (args) |arg| {
         if (std.mem.eql(u8, arg, "--dry-run")) dry_run = true;
@@ -5152,7 +5179,7 @@ fn runCreateAll(allocator: Allocator, args: []const []const u8) !void {
 
     std.debug.print("\n{s}🐝 Scanning for unwrapped modules...{s}\n\n", .{ GOLDEN, RESET });
 
-    const cwd = std.fs.cwd();
+    const cwd = std.Io.Dir.cwd();
     var candidates = std.array_list.Managed([]const u8).init(allocator);
     defer {
         for (candidates.items) |p| allocator.free(p);
@@ -5161,11 +5188,11 @@ fn runCreateAll(allocator: Allocator, args: []const []const u8) !void {
 
     // Scan top-level dirs in CELL_SCAN_DIRS for directories with .zig files but no cell.tri
     for (CELL_SCAN_DIRS) |scan_dir| {
-        var dir = cwd.openDir(scan_dir, .{ .iterate = true }) catch continue;
-        defer dir.close();
+        var dir = cwd.openDir(io, scan_dir, .{ .iterate = true }) catch continue;
+        defer dir.close(io);
 
         var iter = dir.iterate();
-        while (iter.next() catch null) |entry| {
+        while (iter.next(io) catch null) |entry| {
             if (entry.kind != .directory) continue;
             // Skip hidden dirs, .zig-cache, etc.
             if (entry.name.len == 0 or entry.name[0] == '.') continue;
@@ -5179,7 +5206,7 @@ fn runCreateAll(allocator: Allocator, args: []const []const u8) !void {
             };
             defer allocator.free(cell_tri);
 
-            if (cwd.access(cell_tri, .{})) |_| {
+            if (cwd.access(io, cell_tri, .{})) |_| {
                 allocator.free(full_path);
                 continue; // Already has cell.tri
             } else |_| {}
@@ -5309,9 +5336,9 @@ fn runCreateAll(allocator: Allocator, args: []const []const u8) !void {
         }) catch continue;
         defer allocator.free(content);
 
-        const file = cwd.createFile(cell_tri_path, .{}) catch continue;
-        defer file.close();
-        file.writeAll(content) catch continue;
+        const file = cwd.createFile(io, cell_tri_path, .{}) catch continue;
+        defer file.close(io);
+        file.writeStreamingAll(io, content) catch continue;
 
         std.debug.print("  {s}+{s} {s}  ({d} files, {d} tests, {s})\n", .{
             GREEN, RESET, cell_id, stats.files, stats.tests, perms.level,
@@ -5328,6 +5355,7 @@ fn runCreateAll(allocator: Allocator, args: []const []const u8) !void {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn runAudit(allocator: Allocator, args: []const []const u8) !void {
+    const io = tri_io.get();
     var strict = false;
     for (args) |arg| {
         if (std.mem.eql(u8, arg, "--strict")) strict = true;
@@ -5353,7 +5381,7 @@ fn runAudit(allocator: Allocator, args: []const []const u8) !void {
         const cell_tri_path = std.fmt.allocPrint(allocator, "{s}/cell.tri", .{path}) catch continue;
         defer allocator.free(cell_tri_path);
 
-        const content = std.fs.cwd().readFileAlloc(allocator, cell_tri_path, 65536) catch continue;
+        const content = std.Io.Dir.cwd().readFileAlloc(io, cell_tri_path, allocator, .limited(65536)) catch continue;
         defer allocator.free(content);
 
         const cell = parseCellTri(content);
@@ -5519,6 +5547,7 @@ fn runAudit(allocator: Allocator, args: []const []const u8) !void {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn runStatus(allocator: Allocator, args: []const []const u8) !void {
+    const io = tri_io.get();
     // Parse flags
     const perf_flags = perf_mod.PerfFlags.parse(args);
     const benchmark = perf_flags.benchmark;
@@ -5603,7 +5632,7 @@ fn runStatus(allocator: Allocator, args: []const []const u8) !void {
     for (discovered) |path| {
         const cell_tri_path = std.fmt.allocPrint(allocator, "{s}/cell.tri", .{path}) catch continue;
         defer allocator.free(cell_tri_path);
-        const content = std.fs.cwd().readFileAlloc(allocator, cell_tri_path, 65536) catch continue;
+        const content = std.Io.Dir.cwd().readFileAlloc(io, cell_tri_path, allocator, .limited(65536)) catch continue;
         defer allocator.free(content);
         const cell = parseCellTri(content);
         if (cell.id.len == 0) continue;
@@ -5682,7 +5711,7 @@ fn runStatus(allocator: Allocator, args: []const []const u8) !void {
     for (discovered) |path| {
         const stbp = std.fmt.allocPrint(allocator, "{s}/cell.tri", .{path}) catch continue;
         defer allocator.free(stbp);
-        const stbc = std.fs.cwd().readFileAlloc(allocator, stbp, 65536) catch continue;
+        const stbc = std.Io.Dir.cwd().readFileAlloc(io, stbp, allocator, .limited(65536)) catch continue;
         defer allocator.free(stbc);
         const stcell = parseCellTri(stbc);
         if (stcell.contributes_binaries.len > 2) {
@@ -5698,11 +5727,11 @@ fn runStatus(allocator: Allocator, args: []const []const u8) !void {
         }
     }
 
-    if (std.fs.cwd().openDir("zig-out/bin", .{ .iterate = true })) |bd_val| {
+    if (std.Io.Dir.cwd().openDir(io, "zig-out/bin", .{ .iterate = true })) |bd_val| {
         var bd = bd_val;
-        defer bd.close();
+        defer bd.close(io);
         var bi = bd.iterate();
-        while (bi.next() catch null) |entry| {
+        while (bi.next(io) catch null) |entry| {
             if (entry.kind != .file or entry.name[0] == '.') continue;
             bin_total += 1;
             // Check contributes.binaries first
@@ -5800,6 +5829,7 @@ fn runStatus(allocator: Allocator, args: []const []const u8) !void {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn runMap(allocator: Allocator) !void {
+    const io = tri_io.get();
     std.debug.print("\n{s}🗺  BINARY → CELL MAP{s}\n\n", .{ GOLDEN, RESET });
 
     // Scan zig-out/bin/ for built binaries
@@ -5809,14 +5839,14 @@ fn runMap(allocator: Allocator) !void {
         binaries.deinit();
     }
 
-    var bin_dir = std.fs.cwd().openDir("zig-out/bin", .{ .iterate = true }) catch {
+    var bin_dir = std.Io.Dir.cwd().openDir(io, "zig-out/bin", .{ .iterate = true }) catch {
         std.debug.print("  {s}No zig-out/bin/ found. Run `zig build` first.{s}\n\n", .{ YELLOW, RESET });
         return;
     };
-    defer bin_dir.close();
+    defer bin_dir.close(io);
 
     var iter = bin_dir.iterate();
-    while (iter.next() catch null) |entry| {
+    while (iter.next(io) catch null) |entry| {
         if (entry.kind != .file) continue;
         if (std.mem.startsWith(u8, entry.name, ".")) continue;
         const name = allocator.dupe(u8, entry.name) catch continue;
@@ -5849,7 +5879,7 @@ fn runMap(allocator: Allocator) !void {
     for (discovered) |path| {
         const cell_tri_path = std.fmt.allocPrint(allocator, "{s}/cell.tri", .{path}) catch continue;
         defer allocator.free(cell_tri_path);
-        const content = std.fs.cwd().readFileAlloc(allocator, cell_tri_path, 65536) catch continue;
+        const content = std.Io.Dir.cwd().readFileAlloc(io, cell_tri_path, allocator, .limited(65536)) catch continue;
         defer allocator.free(content);
         const cell = parseCellTri(content);
         if (cell.id.len == 0) continue;
@@ -5942,6 +5972,7 @@ fn runMap(allocator: Allocator) !void {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn runExplain(allocator: Allocator, args: []const []const u8) !void {
+    const io = tri_io.get();
     if (args.len == 0) {
         std.debug.print("{s}Usage:{s} tri cell explain <cell-id>\n", .{ YELLOW, RESET });
         return tri_exit_codes.exitWithCode(.validation_error);
@@ -5957,7 +5988,7 @@ fn runExplain(allocator: Allocator, args: []const []const u8) !void {
     for (discovered) |path| {
         const cell_tri_path = std.fmt.allocPrint(allocator, "{s}/cell.tri", .{path}) catch continue;
         defer allocator.free(cell_tri_path);
-        const content = std.fs.cwd().readFileAlloc(allocator, cell_tri_path, 65536) catch continue;
+        const content = std.Io.Dir.cwd().readFileAlloc(io, cell_tri_path, allocator, .limited(65536)) catch continue;
         defer allocator.free(content);
         const cell = parseCellTri(content);
         if (!std.mem.eql(u8, cell.id, target_id)) continue;
@@ -5969,22 +6000,22 @@ fn runExplain(allocator: Allocator, args: []const []const u8) !void {
         });
 
         // Scan each file and report what triggers each permission
-        var dir = std.fs.cwd().openDir(path, .{ .iterate = true }) catch return;
-        defer dir.close();
+        var dir = std.Io.Dir.cwd().openDir(io, path, .{ .iterate = true }) catch return;
+        defer dir.close(io);
 
         var walker = dir.walk(allocator) catch return;
         defer walker.deinit();
 
         var has_findings = false;
 
-        while (walker.next() catch null) |entry| {
+        while (walker.next(io) catch null) |entry| {
             if (entry.kind != .file) continue;
             if (!std.mem.endsWith(u8, entry.basename, ".zig")) continue;
             if (std.mem.indexOf(u8, entry.path, ".zig-cache") != null) continue;
 
             const file_path = std.fmt.allocPrint(allocator, "{s}/{s}", .{ path, entry.path }) catch continue;
             defer allocator.free(file_path);
-            const source = std.fs.cwd().readFileAlloc(allocator, file_path, 1048576) catch continue;
+            const source = std.Io.Dir.cwd().readFileAlloc(io, file_path, allocator, .limited(1048576)) catch continue;
             defer allocator.free(source);
 
             const patterns = [_]struct { pat: []const u8, label: []const u8, level: []const u8 }{
@@ -6050,7 +6081,7 @@ fn runExplain(allocator: Allocator, args: []const []const u8) !void {
 
             const tri_path = std.fmt.allocPrint(allocator, "{s}/cell.tri", .{other_path}) catch continue;
             defer allocator.free(tri_path);
-            const other_content = std.fs.cwd().readFileAlloc(allocator, tri_path, 65536) catch continue;
+            const other_content = std.Io.Dir.cwd().readFileAlloc(io, tri_path, allocator, .limited(65536)) catch continue;
             defer allocator.free(other_content);
             const other_cell = parseCellTri(other_content);
 
@@ -6085,6 +6116,7 @@ fn runExplain(allocator: Allocator, args: []const []const u8) !void {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn runSign(allocator: Allocator, args: []const []const u8) !void {
+    const io = tri_io.get();
     var sign_all = false;
     var target_id: ?[]const u8 = null;
     for (args) |arg| {
@@ -6107,7 +6139,7 @@ fn runSign(allocator: Allocator, args: []const []const u8) !void {
     for (discovered) |path| {
         const cell_tri_path = std.fmt.allocPrint(allocator, "{s}/cell.tri", .{path}) catch continue;
         defer allocator.free(cell_tri_path);
-        const content = std.fs.cwd().readFileAlloc(allocator, cell_tri_path, 65536) catch continue;
+        const content = std.Io.Dir.cwd().readFileAlloc(io, cell_tri_path, allocator, .limited(65536)) catch continue;
         defer allocator.free(content);
         const cell = parseCellTri(content);
         if (cell.id.len == 0) continue;
@@ -6146,9 +6178,9 @@ fn runSign(allocator: Allocator, args: []const []const u8) !void {
             defer allocator.free(sec_section);
             result.appendSlice(sec_section) catch continue;
 
-            const file = std.fs.cwd().createFile(cell_tri_path, .{}) catch continue;
-            defer file.close();
-            file.writeAll(result.items) catch continue;
+            const file = std.Io.Dir.cwd().createFile(io, cell_tri_path, .{}) catch continue;
+            defer file.close(io);
+            file.writeStreamingAll(io, result.items) catch continue;
         }
 
         std.debug.print("  {s}SIGNED{s}  {s} ({s})\n", .{ GREEN, RESET, cell.id, cell.perm_level });
@@ -6206,6 +6238,7 @@ fn runDoctor(allocator: Allocator, args: []const []const u8) !void {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn runOrphans(allocator: Allocator) !void {
+    const io = tri_io.get();
     std.debug.print("\n{s}🔍 ORPHAN SCAN — Finding unclaimed .zig files{s}\n\n", .{ GOLDEN, RESET });
 
     // Discover all cells and build ownership map
@@ -6223,10 +6256,10 @@ fn runOrphans(allocator: Allocator) !void {
         const m = c.manifest;
         if (m.file_patterns.len > 2) {
             // Virtual cell with patterns — scan its path dir and match
-            var dir = std.fs.cwd().openDir(m.path, .{ .iterate = true }) catch continue;
-            defer dir.close();
+            var dir = std.Io.Dir.cwd().openDir(io, m.path, .{ .iterate = true }) catch continue;
+            defer dir.close(io);
             var iter = dir.iterate();
-            while (iter.next() catch null) |entry| {
+            while (iter.next(io) catch null) |entry| {
                 if (entry.kind != .file) continue;
                 if (!std.mem.endsWith(u8, entry.name, ".zig")) continue;
                 if (matchesFilePatterns(entry.name, m.file_patterns)) {
@@ -6236,10 +6269,10 @@ fn runOrphans(allocator: Allocator) !void {
             }
         } else {
             // Regular cell — owns all .zig in its path
-            var dir = std.fs.cwd().openDir(m.path, .{ .iterate = true }) catch continue;
-            defer dir.close();
+            var dir = std.Io.Dir.cwd().openDir(io, m.path, .{ .iterate = true }) catch continue;
+            defer dir.close(io);
             var iter = dir.iterate();
-            while (iter.next() catch null) |entry| {
+            while (iter.next(io) catch null) |entry| {
                 if (entry.kind != .file) continue;
                 if (!std.mem.endsWith(u8, entry.name, ".zig")) continue;
                 const key = std.fmt.allocPrint(allocator, "{s}/{s}", .{ m.path, entry.name }) catch continue;
@@ -6252,11 +6285,11 @@ fn runOrphans(allocator: Allocator) !void {
     var orphan_count: usize = 0;
     var total_scanned: usize = 0;
     for (CELL_SCAN_DIRS) |scan_dir| {
-        var dir = std.fs.cwd().openDir(scan_dir, .{ .iterate = true }) catch continue;
-        defer dir.close();
+        var dir = std.Io.Dir.cwd().openDir(io, scan_dir, .{ .iterate = true }) catch continue;
+        defer dir.close(io);
         var walker = dir.walk(allocator) catch continue;
         defer walker.deinit();
-        while (walker.next() catch null) |entry| {
+        while (walker.next(io) catch null) |entry| {
             if (entry.kind != .file) continue;
             if (!std.mem.endsWith(u8, entry.basename, ".zig")) continue;
             total_scanned += 1;
@@ -6271,7 +6304,7 @@ fn runOrphans(allocator: Allocator) !void {
                     if (dir_path.len < scan_dir.len) break; // Don't go above scan root
                     const cell_check = std.fmt.allocPrint(allocator, "{s}/cell.tri", .{dir_path}) catch break;
                     defer allocator.free(cell_check);
-                    if (std.fs.cwd().access(cell_check, .{})) |_| {
+                    if (std.Io.Dir.cwd().access(io, cell_check, .{})) |_| {
                         is_owned = true;
                         break;
                     } else |_| {}
@@ -6471,11 +6504,12 @@ fn suggestBioSystem(cell_path: []const u8) BioSuggestion {
 }
 
 fn patchCellBio(allocator: Allocator, cell_path: []const u8, suggestion: BioSuggestion) !bool {
+    const io = tri_io.get();
     const cell_tri_path = try std.fmt.allocPrint(allocator, "{s}/cell.tri", .{cell_path});
     defer allocator.free(cell_tri_path);
 
     // Read existing content
-    const content = std.fs.cwd().readFileAlloc(allocator, cell_tri_path, 65536) catch {
+    const content = std.Io.Dir.cwd().readFileAlloc(io, cell_tri_path, allocator, .limited(65536)) catch {
         return false;
     };
     defer allocator.free(content);
@@ -6512,7 +6546,7 @@ fn patchCellBio(allocator: Allocator, cell_path: []const u8, suggestion: BioSugg
     }
 
     // Write back
-    try std.fs.cwd().writeFile(.{ .sub_path = cell_tri_path, .data = new_content.items });
+    try std.Io.Dir.cwd().writeFile(io, .{ .sub_path = cell_tri_path, .data = new_content.items });
     return true;
 }
 
@@ -6529,6 +6563,7 @@ const CellSnapshot = struct {
 };
 
 fn runWatch(allocator: Allocator, args: []const []const u8) !void {
+    const io = tri_io.get();
     // Parse options: --interval N, --filter-bio <system>, --filter-min <score>, --no-color, --json
     var interval: u64 = 5;
     var json_output = false;
@@ -6585,7 +6620,7 @@ fn runWatch(allocator: Allocator, args: []const []const u8) !void {
         std.debug.print("{s}", .{CLEAR_SCREEN});
 
         // Header with ISO timestamp
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
         const secs = @rem(now, 86400);
         const hrs: u32 = @intCast(@divTrunc(secs, 3600));
         const mins: u32 = @intCast(@divTrunc(@rem(secs, 3600), 60));
@@ -6747,8 +6782,9 @@ fn runWatch(allocator: Allocator, args: []const []const u8) !void {
         }
         std.debug.print("{s}\n", .{rst_color});
 
-        // Sleep for interval
-        std.Thread.sleep(interval * 1_000_000_000);
+        // Sleep for interval (std.Thread.sleep is gone in Zig 0.16;
+        // Clock.awake is CLOCK_MONOTONIC, what Thread.sleep used).
+        try io.sleep(.fromNanoseconds(interval * 1_000_000_000), .awake);
     }
 }
 
@@ -6760,7 +6796,7 @@ fn runWatchJSON(allocator: Allocator) !void {
     defer allocator.free(all_cells);
 
     std.debug.print("{{\n", .{});
-    std.debug.print("  \"timestamp\": {d},\n", .{std.time.timestamp()});
+    std.debug.print("  \"timestamp\": {d},\n", .{tri_time.timestamp()});
     std.debug.print("  \"cells\": [\n", .{});
 
     var first = true;
@@ -6865,6 +6901,7 @@ fn classifyBioSystem(id: []const u8, caps: []const u8, path: []const u8) u8 {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn runFix(allocator: Allocator, args: []const []const u8) !void {
+    const io = tri_io.get();
     var fix_perms = false;
     var fix_deps = false;
     var fix_ids = false;
@@ -6925,7 +6962,7 @@ fn runFix(allocator: Allocator, args: []const []const u8) !void {
     for (discovered) |path| {
         const cell_tri_path = std.fmt.allocPrint(allocator, "{s}/cell.tri", .{path}) catch continue;
         defer allocator.free(cell_tri_path);
-        const content = std.fs.cwd().readFileAlloc(allocator, cell_tri_path, 65536) catch continue;
+        const content = std.Io.Dir.cwd().readFileAlloc(io, cell_tri_path, allocator, .limited(65536)) catch continue;
         defer allocator.free(content);
         const cell = parseCellTri(content);
         if (cell.id.len == 0) continue;
@@ -6989,7 +7026,7 @@ fn runFix(allocator: Allocator, args: []const []const u8) !void {
         for (discovered) |path| {
             const cell_tri_path = std.fmt.allocPrint(allocator, "{s}/cell.tri", .{path}) catch continue;
             defer allocator.free(cell_tri_path);
-            const content = std.fs.cwd().readFileAlloc(allocator, cell_tri_path, 65536) catch continue;
+            const content = std.Io.Dir.cwd().readFileAlloc(io, cell_tri_path, allocator, .limited(65536)) catch continue;
             defer allocator.free(content);
             const cell = parseCellTri(content);
             if (cell.id.len == 0) continue;
@@ -7065,7 +7102,7 @@ fn runFix(allocator: Allocator, args: []const []const u8) !void {
         for (discovered) |path| {
             const cell_tri_path = std.fmt.allocPrint(allocator, "{s}/cell.tri", .{path}) catch continue;
             defer allocator.free(cell_tri_path);
-            const content = std.fs.cwd().readFileAlloc(allocator, cell_tri_path, 65536) catch continue;
+            const content = std.Io.Dir.cwd().readFileAlloc(io, cell_tri_path, allocator, .limited(65536)) catch continue;
             defer allocator.free(content);
             const cell = parseCellTri(content);
             if (cell.id.len == 0) continue;
@@ -7088,7 +7125,7 @@ fn runFix(allocator: Allocator, args: []const []const u8) !void {
         for (discovered) |path| {
             const cell_tri_path = std.fmt.allocPrint(allocator, "{s}/cell.tri", .{path}) catch continue;
             defer allocator.free(cell_tri_path);
-            const content = std.fs.cwd().readFileAlloc(allocator, cell_tri_path, 65536) catch continue;
+            const content = std.Io.Dir.cwd().readFileAlloc(io, cell_tri_path, allocator, .limited(65536)) catch continue;
             defer allocator.free(content);
             const cell = parseCellTri(content);
             if (cell.id.len == 0) continue;
@@ -7132,7 +7169,7 @@ fn runFix(allocator: Allocator, args: []const []const u8) !void {
         for (discovered) |path| {
             const cell_tri_path = std.fmt.allocPrint(allocator, "{s}/cell.tri", .{path}) catch continue;
             defer allocator.free(cell_tri_path);
-            const content = std.fs.cwd().readFileAlloc(allocator, cell_tri_path, 65536) catch continue;
+            const content = std.Io.Dir.cwd().readFileAlloc(io, cell_tri_path, allocator, .limited(65536)) catch continue;
             // Keep content alive for parseCellTri
             const cell = parseCellTri(content);
             if (cell.id.len == 0) {
@@ -7152,11 +7189,11 @@ fn runFix(allocator: Allocator, args: []const []const u8) !void {
             var missing_deps = std.StringHashMap(void).init(allocator);
             defer missing_deps.deinit();
 
-            var dir = std.fs.cwd().openDir(path, .{ .iterate = true }) catch {
+            var dir = std.Io.Dir.cwd().openDir(io, path, .{ .iterate = true }) catch {
                 allocator.free(content);
                 continue;
             };
-            defer dir.close();
+            defer dir.close(io);
 
             var walker = dir.walk(allocator) catch {
                 allocator.free(content);
@@ -7164,14 +7201,14 @@ fn runFix(allocator: Allocator, args: []const []const u8) !void {
             };
             defer walker.deinit();
 
-            while (walker.next() catch null) |entry| {
+            while (walker.next(io) catch null) |entry| {
                 if (entry.kind != .file) continue;
                 if (!std.mem.endsWith(u8, entry.basename, ".zig")) continue;
                 if (std.mem.indexOf(u8, entry.path, ".zig-cache") != null) continue;
 
                 const file_path = std.fmt.allocPrint(allocator, "{s}/{s}", .{ path, entry.path }) catch continue;
                 defer allocator.free(file_path);
-                const source = std.fs.cwd().readFileAlloc(allocator, file_path, 1048576) catch continue;
+                const source = std.Io.Dir.cwd().readFileAlloc(io, file_path, allocator, .limited(1048576)) catch continue;
                 defer allocator.free(source);
 
                 // Find @import("...") patterns
@@ -7248,7 +7285,7 @@ fn runFix(allocator: Allocator, args: []const []const u8) !void {
         for (discovered) |path| {
             const cell_tri_path = std.fmt.allocPrint(allocator, "{s}/cell.tri", .{path}) catch continue;
             defer allocator.free(cell_tri_path);
-            const content = std.fs.cwd().readFileAlloc(allocator, cell_tri_path, 65536) catch continue;
+            const content = std.Io.Dir.cwd().readFileAlloc(io, cell_tri_path, allocator, .limited(65536)) catch continue;
             defer allocator.free(content);
             const cell = parseCellTri(content);
             if (cell.id.len == 0) continue;
@@ -7305,7 +7342,7 @@ fn runFix(allocator: Allocator, args: []const []const u8) !void {
         for (discovered) |path| {
             const ctri_path = std.fmt.allocPrint(allocator, "{s}/cell.tri", .{path}) catch continue;
             defer allocator.free(ctri_path);
-            const ctri_content = std.fs.cwd().readFileAlloc(allocator, ctri_path, 65536) catch continue;
+            const ctri_content = std.Io.Dir.cwd().readFileAlloc(io, ctri_path, allocator, .limited(65536)) catch continue;
             defer allocator.free(ctri_content);
             const ccell = parseCellTri(ctri_content);
             if (ccell.id.len == 0) continue;
@@ -7355,7 +7392,7 @@ fn runFix(allocator: Allocator, args: []const []const u8) !void {
         for (discovered) |path| {
             const cell_tri_path = std.fmt.allocPrint(allocator, "{s}/cell.tri", .{path}) catch continue;
             defer allocator.free(cell_tri_path);
-            const content = std.fs.cwd().readFileAlloc(allocator, cell_tri_path, 65536) catch continue;
+            const content = std.Io.Dir.cwd().readFileAlloc(io, cell_tri_path, allocator, .limited(65536)) catch continue;
             defer allocator.free(content);
             const cell = parseCellTri(content);
             if (cell.id.len == 0) continue;
@@ -7381,10 +7418,11 @@ fn runFix(allocator: Allocator, args: []const []const u8) !void {
 /// Fix a single key=value field in cell.tri
 /// Insert a complete [permissions] section before [security] (or at end)
 fn insertPermissionsSection(allocator: Allocator, cell_path: []const u8, perms: PermResult) void {
+    const io = tri_io.get();
     const cell_tri_path = std.fmt.allocPrint(allocator, "{s}/cell.tri", .{cell_path}) catch return;
     defer allocator.free(cell_tri_path);
 
-    const content = std.fs.cwd().readFileAlloc(allocator, cell_tri_path, 65536) catch return;
+    const content = std.Io.Dir.cwd().readFileAlloc(io, cell_tri_path, allocator, .limited(65536)) catch return;
     defer allocator.free(content);
 
     const section = std.fmt.allocPrint(allocator,
@@ -7425,16 +7463,17 @@ fn insertPermissionsSection(allocator: Allocator, cell_path: []const u8, perms: 
         result.appendSlice(section) catch return;
     }
 
-    const file = std.fs.cwd().createFile(cell_tri_path, .{}) catch return;
-    defer file.close();
-    file.writeAll(result.items) catch {};
+    const file = std.Io.Dir.cwd().createFile(io, cell_tri_path, .{}) catch return;
+    defer file.close(io);
+    file.writeStreamingAll(io, result.items) catch {};
 }
 
 fn fixCellTriField(allocator: Allocator, cell_path: []const u8, key: []const u8, new_value: []const u8) void {
+    const io = tri_io.get();
     const cell_tri_path = std.fmt.allocPrint(allocator, "{s}/cell.tri", .{cell_path}) catch return;
     defer allocator.free(cell_tri_path);
 
-    const content = std.fs.cwd().readFileAlloc(allocator, cell_tri_path, 65536) catch return;
+    const content = std.Io.Dir.cwd().readFileAlloc(io, cell_tri_path, allocator, .limited(65536)) catch return;
     defer allocator.free(content);
 
     var result = std.array_list.Managed(u8).init(allocator);
@@ -7526,17 +7565,18 @@ fn fixCellTriField(allocator: Allocator, cell_path: []const u8, key: []const u8,
         }
     }
 
-    const file = std.fs.cwd().createFile(cell_tri_path, .{}) catch return;
-    defer file.close();
-    file.writeAll(result.items) catch {};
+    const file = std.Io.Dir.cwd().createFile(io, cell_tri_path, .{}) catch return;
+    defer file.close(io);
+    file.writeStreamingAll(io, result.items) catch {};
 }
 
 /// Append missing deps to the [dependencies] section of cell.tri
 fn appendDepsToCell(allocator: Allocator, cell_path: []const u8, deps: *std.StringHashMap(void)) void {
+    const io = tri_io.get();
     const cell_tri_path = std.fmt.allocPrint(allocator, "{s}/cell.tri", .{cell_path}) catch return;
     defer allocator.free(cell_tri_path);
 
-    const content = std.fs.cwd().readFileAlloc(allocator, cell_tri_path, 65536) catch return;
+    const content = std.Io.Dir.cwd().readFileAlloc(io, cell_tri_path, allocator, .limited(65536)) catch return;
     defer allocator.free(content);
 
     var result = std.array_list.Managed(u8).init(allocator);
@@ -7563,9 +7603,9 @@ fn appendDepsToCell(allocator: Allocator, cell_path: []const u8, deps: *std.Stri
         }
     }
 
-    const file = std.fs.cwd().createFile(cell_tri_path, .{}) catch return;
-    defer file.close();
-    file.writeAll(result.items) catch {};
+    const file = std.Io.Dir.cwd().createFile(io, cell_tri_path, .{}) catch return;
+    defer file.close(io);
+    file.writeStreamingAll(io, result.items) catch {};
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -7573,6 +7613,7 @@ fn appendDepsToCell(allocator: Allocator, cell_path: []const u8, deps: *std.Stri
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn runScore(allocator: Allocator, args: []const []const u8) !void {
+    const io = tri_io.get();
     std.debug.print("\n{s}🏆 CELL INTEGRITY SCORE v10 (honest){s}\n\n", .{ GOLDEN, RESET });
 
     const discovered = discoverCells(allocator) catch {
@@ -7669,7 +7710,7 @@ fn runScore(allocator: Allocator, args: []const []const u8) !void {
     for (discovered) |path| {
         const cell_tri_path = std.fmt.allocPrint(allocator, "{s}/cell.tri", .{path}) catch continue;
         defer allocator.free(cell_tri_path);
-        const content = std.fs.cwd().readFileAlloc(allocator, cell_tri_path, 65536) catch continue;
+        const content = std.Io.Dir.cwd().readFileAlloc(io, cell_tri_path, allocator, .limited(65536)) catch continue;
         defer allocator.free(content);
         const cell = parseCellTri(content);
         if (cell.id.len == 0) continue;
@@ -7876,6 +7917,7 @@ fn computeDepsAccuracy(
     all_cells_opt: ?[]const cell_parser.DiscoveredCell,
     path_to_cell: *std.StringHashMap([]const u8),
 ) DepsAccuracy {
+    const io = tri_io.get();
     var result = DepsAccuracy{ .confirmed = 0, .missing = 0, .extra = 0, .total = 0 };
     const all_cells = all_cells_opt orelse return result;
 
@@ -7883,8 +7925,8 @@ fn computeDepsAccuracy(
     var detected_deps = std.StringHashMap(void).init(allocator);
     defer detected_deps.deinit();
 
-    var dir = std.fs.cwd().openDir(cell_path, .{ .iterate = true }) catch return result;
-    defer dir.close();
+    var dir = std.Io.Dir.cwd().openDir(io, cell_path, .{ .iterate = true }) catch return result;
+    defer dir.close(io);
 
     // For virtual sub-cells with file_patterns, only scan matching files
     const has_patterns = cell.file_patterns.len > 2; // more than "[]"
@@ -7893,7 +7935,7 @@ fn computeDepsAccuracy(
     var walker = dir.walk(allocator) catch return result;
     defer walker.deinit();
 
-    while (walker.next() catch null) |entry| {
+    while (walker.next(io) catch null) |entry| {
         if (entry.kind != .file) continue;
         if (!std.mem.endsWith(u8, entry.basename, ".zig")) continue;
         if (std.mem.indexOf(u8, entry.path, ".zig-cache") != null) continue;
@@ -7904,7 +7946,7 @@ fn computeDepsAccuracy(
         const file_content = blk: {
             const file_path = std.fmt.allocPrint(allocator, "{s}/{s}", .{ cell_path, entry.path }) catch continue;
             defer allocator.free(file_path);
-            break :blk std.fs.cwd().readFileAlloc(allocator, file_path, 1048576) catch continue;
+            break :blk std.Io.Dir.cwd().readFileAlloc(io, file_path, allocator, .limited(1048576)) catch continue;
         };
         defer allocator.free(file_content);
 
@@ -7997,12 +8039,13 @@ const FileStats = struct { files: u32, tests: u32 };
 /// Like countFilesAndTests but only counts files matching file_patterns in a flat directory.
 /// Used for virtual cells where path="src" but code lives in specific files.
 fn countFilesAndTestsFiltered(allocator: Allocator, dir_path: []const u8, file_patterns: []const u8) FileStats {
+    const io = tri_io.get();
     var result = FileStats{ .files = 0, .tests = 0 };
-    var dir = std.fs.cwd().openDir(dir_path, .{ .iterate = true }) catch return result;
-    defer dir.close();
+    var dir = std.Io.Dir.cwd().openDir(io, dir_path, .{ .iterate = true }) catch return result;
+    defer dir.close(io);
 
     var iter = dir.iterate();
-    while (iter.next() catch null) |entry| {
+    while (iter.next(io) catch null) |entry| {
         if (entry.kind != .file) continue;
         if (!std.mem.endsWith(u8, entry.name, ".zig")) continue;
         if (!matchesFilePatterns(entry.name, file_patterns)) continue;
@@ -8011,7 +8054,7 @@ fn countFilesAndTestsFiltered(allocator: Allocator, dir_path: []const u8, file_p
 
         const file_path = std.fmt.allocPrint(allocator, "{s}/{s}", .{ dir_path, entry.name }) catch continue;
         defer allocator.free(file_path);
-        const source = std.fs.cwd().readFileAlloc(allocator, file_path, 1048576) catch continue;
+        const source = std.Io.Dir.cwd().readFileAlloc(io, file_path, allocator, .limited(1048576)) catch continue;
         defer allocator.free(source);
 
         var pos: usize = 0;
@@ -8025,14 +8068,15 @@ fn countFilesAndTestsFiltered(allocator: Allocator, dir_path: []const u8, file_p
 }
 
 fn countFilesAndTests(allocator: Allocator, path: []const u8) FileStats {
+    const io = tri_io.get();
     var result = FileStats{ .files = 0, .tests = 0 };
-    var dir = std.fs.cwd().openDir(path, .{ .iterate = true }) catch return result;
-    defer dir.close();
+    var dir = std.Io.Dir.cwd().openDir(io, path, .{ .iterate = true }) catch return result;
+    defer dir.close(io);
 
     var walker = dir.walk(allocator) catch return result;
     defer walker.deinit();
 
-    while (walker.next() catch null) |entry| {
+    while (walker.next(io) catch null) |entry| {
         if (entry.kind != .file) continue;
         if (!std.mem.endsWith(u8, entry.basename, ".zig")) continue;
         // Skip .zig-cache
@@ -8043,7 +8087,7 @@ fn countFilesAndTests(allocator: Allocator, path: []const u8) FileStats {
         // Count test blocks
         const file_path = std.fmt.allocPrint(allocator, "{s}/{s}", .{ path, entry.path }) catch continue;
         defer allocator.free(file_path);
-        const source = std.fs.cwd().readFileAlloc(allocator, file_path, 1048576) catch continue;
+        const source = std.Io.Dir.cwd().readFileAlloc(io, file_path, allocator, .limited(1048576)) catch continue;
         defer allocator.free(source);
 
         var pos: usize = 0;
@@ -8084,21 +8128,22 @@ fn isTrivialExport(name: []const u8) bool {
 
 /// Like detectExportsInDir but scans specific files matching file_patterns in a flat directory.
 fn detectExportsFiltered(allocator: Allocator, dir_path: []const u8, file_patterns: []const u8) ExportList {
+    const io = tri_io.get();
     var result = ExportList{ .items = undefined, .count = 0 };
     for (&result.items) |*item| item.* = "";
 
-    var dir = std.fs.cwd().openDir(dir_path, .{ .iterate = true }) catch return result;
-    defer dir.close();
+    var dir = std.Io.Dir.cwd().openDir(io, dir_path, .{ .iterate = true }) catch return result;
+    defer dir.close(io);
 
     var iter = dir.iterate();
-    while (iter.next() catch null) |entry| {
+    while (iter.next(io) catch null) |entry| {
         if (entry.kind != .file) continue;
         if (!std.mem.endsWith(u8, entry.name, ".zig")) continue;
         if (!matchesFilePatterns(entry.name, file_patterns)) continue;
 
         const file_path = std.fmt.allocPrint(allocator, "{s}/{s}", .{ dir_path, entry.name }) catch continue;
         defer allocator.free(file_path);
-        const source = std.fs.cwd().readFileAlloc(allocator, file_path, 1048576) catch continue;
+        const source = std.Io.Dir.cwd().readFileAlloc(io, file_path, allocator, .limited(1048576)) catch continue;
         defer allocator.free(source);
 
         var pos: usize = 0;
@@ -8123,20 +8168,21 @@ fn detectExportsFiltered(allocator: Allocator, dir_path: []const u8, file_patter
 }
 
 fn detectExportsInDir(allocator: Allocator, path: []const u8) ExportList {
+    const io = tri_io.get();
     var result = ExportList{ .items = undefined, .count = 0 };
     for (&result.items) |*item| item.* = "";
 
-    var dir = std.fs.cwd().openDir(path, .{ .iterate = true }) catch return result;
-    defer dir.close();
+    var dir = std.Io.Dir.cwd().openDir(io, path, .{ .iterate = true }) catch return result;
+    defer dir.close(io);
 
     var iter = dir.iterate();
-    while (iter.next() catch null) |entry| {
+    while (iter.next(io) catch null) |entry| {
         if (entry.kind != .file) continue;
         if (!std.mem.endsWith(u8, entry.name, ".zig")) continue;
 
         const file_path = std.fmt.allocPrint(allocator, "{s}/{s}", .{ path, entry.name }) catch continue;
         defer allocator.free(file_path);
-        const source = std.fs.cwd().readFileAlloc(allocator, file_path, 1048576) catch continue;
+        const source = std.Io.Dir.cwd().readFileAlloc(io, file_path, allocator, .limited(1048576)) catch continue;
         defer allocator.free(source);
 
         var pos: usize = 0;
@@ -8173,6 +8219,7 @@ const PermResult = struct {
 /// Like inferPermissions but only scans files matching file_patterns in a flat directory.
 /// Used for virtual cells where path="src" but code lives in specific files.
 fn inferPermissionsFiltered(allocator: Allocator, dir_path: []const u8, file_patterns: []const u8) PermResult {
+    const io = tri_io.get();
     var result = PermResult{
         .level = "L0",
         .fs = "read",
@@ -8182,18 +8229,18 @@ fn inferPermissionsFiltered(allocator: Allocator, dir_path: []const u8, file_pat
         .concurrency = "none",
     };
 
-    var dir = std.fs.cwd().openDir(dir_path, .{ .iterate = true }) catch return result;
-    defer dir.close();
+    var dir = std.Io.Dir.cwd().openDir(io, dir_path, .{ .iterate = true }) catch return result;
+    defer dir.close(io);
 
     var iter = dir.iterate();
-    while (iter.next() catch null) |entry| {
+    while (iter.next(io) catch null) |entry| {
         if (entry.kind != .file) continue;
         if (!std.mem.endsWith(u8, entry.name, ".zig")) continue;
         if (!matchesFilePatterns(entry.name, file_patterns)) continue;
 
         const file_path = std.fmt.allocPrint(allocator, "{s}/{s}", .{ dir_path, entry.name }) catch continue;
         defer allocator.free(file_path);
-        const source = std.fs.cwd().readFileAlloc(allocator, file_path, 1048576) catch continue;
+        const source = std.Io.Dir.cwd().readFileAlloc(io, file_path, allocator, .limited(1048576)) catch continue;
         defer allocator.free(source);
 
         if (std.mem.indexOf(u8, source, "createFile") != null or
@@ -8231,6 +8278,7 @@ fn inferPermissionsFiltered(allocator: Allocator, dir_path: []const u8, file_pat
 }
 
 fn inferPermissions(allocator: Allocator, path: []const u8) PermResult {
+    const io = tri_io.get();
     var result = PermResult{
         .level = "L0",
         .fs = "read",
@@ -8240,20 +8288,20 @@ fn inferPermissions(allocator: Allocator, path: []const u8) PermResult {
         .concurrency = "none",
     };
 
-    var dir = std.fs.cwd().openDir(path, .{ .iterate = true }) catch return result;
-    defer dir.close();
+    var dir = std.Io.Dir.cwd().openDir(io, path, .{ .iterate = true }) catch return result;
+    defer dir.close(io);
 
     var walker = dir.walk(allocator) catch return result;
     defer walker.deinit();
 
-    while (walker.next() catch null) |entry| {
+    while (walker.next(io) catch null) |entry| {
         if (entry.kind != .file) continue;
         if (!std.mem.endsWith(u8, entry.basename, ".zig")) continue;
         if (std.mem.indexOf(u8, entry.path, ".zig-cache") != null) continue;
 
         const file_path = std.fmt.allocPrint(allocator, "{s}/{s}", .{ path, entry.path }) catch continue;
         defer allocator.free(file_path);
-        const source = std.fs.cwd().readFileAlloc(allocator, file_path, 1048576) catch continue;
+        const source = std.Io.Dir.cwd().readFileAlloc(io, file_path, allocator, .limited(1048576)) catch continue;
         defer allocator.free(source);
 
         // Filesystem write
@@ -8300,17 +8348,18 @@ fn inferPermissions(allocator: Allocator, path: []const u8) PermResult {
 }
 
 fn inferKind(allocator: Allocator, path: []const u8) []const u8 {
+    const io = tri_io.get();
     // Check for server/main patterns
     const main_path = std.fmt.allocPrint(allocator, "{s}/main.zig", .{path}) catch return "library";
     defer allocator.free(main_path);
-    if (std.fs.cwd().access(main_path, .{})) |_| {
+    if (std.Io.Dir.cwd().access(io, main_path, .{})) |_| {
         return "backend";
     } else |_| {}
 
     // Check for server.zig
     const server_path = std.fmt.allocPrint(allocator, "{s}/server.zig", .{path}) catch return "library";
     defer allocator.free(server_path);
-    if (std.fs.cwd().access(server_path, .{})) |_| {
+    if (std.Io.Dir.cwd().access(io, server_path, .{})) |_| {
         return "backend";
     } else |_| {}
 
@@ -8374,20 +8423,21 @@ fn inferScope(path: []const u8) []const u8 {
 }
 
 fn scanCodeForPattern(allocator: Allocator, path: []const u8, pattern: []const u8) bool {
-    var dir = std.fs.cwd().openDir(path, .{ .iterate = true }) catch return false;
-    defer dir.close();
+    const io = tri_io.get();
+    var dir = std.Io.Dir.cwd().openDir(io, path, .{ .iterate = true }) catch return false;
+    defer dir.close(io);
 
     var walker = dir.walk(allocator) catch return false;
     defer walker.deinit();
 
-    while (walker.next() catch null) |entry| {
+    while (walker.next(io) catch null) |entry| {
         if (entry.kind != .file) continue;
         if (!std.mem.endsWith(u8, entry.basename, ".zig")) continue;
         if (std.mem.indexOf(u8, entry.path, ".zig-cache") != null) continue;
 
         const file_path = std.fmt.allocPrint(allocator, "{s}/{s}", .{ path, entry.path }) catch continue;
         defer allocator.free(file_path);
-        const source = std.fs.cwd().readFileAlloc(allocator, file_path, 1048576) catch continue;
+        const source = std.Io.Dir.cwd().readFileAlloc(io, file_path, allocator, .limited(1048576)) catch continue;
         defer allocator.free(source);
 
         if (std.mem.indexOf(u8, source, pattern) != null) return true;
@@ -8408,20 +8458,23 @@ fn matchesAnyScope(scope: []const u8, names: []const []const u8) bool {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn loadCellCache(allocator: Allocator) ?[]u8 {
-    return std.fs.cwd().readFileAlloc(allocator, ".trinity/cell_cache.json", 262144) catch null;
+    const io = tri_io.get();
+    return std.Io.Dir.cwd().readFileAlloc(io, ".trinity/cell_cache.json", allocator, .limited(262144)) catch null;
 }
 
 fn writeCellCache(allocator: Allocator, cells_json: []const u8) void {
+    const io = tri_io.get();
     // Ensure .trinity dir exists
-    std.fs.cwd().makePath(".trinity") catch return;
-    const file = std.fs.cwd().createFile(".trinity/cell_cache.json", .{}) catch return;
-    defer file.close();
-    file.writeAll(cells_json) catch {};
+    std.Io.Dir.cwd().createDirPath(io, ".trinity") catch return;
+    const file = std.Io.Dir.cwd().createFile(io, ".trinity/cell_cache.json", .{}) catch return;
+    defer file.close(io);
+    file.writeStreamingAll(io, cells_json) catch {};
     _ = allocator;
 }
 
 fn invalidateCellCache() void {
-    std.fs.cwd().deleteFile(".trinity/cell_cache.json") catch {};
+    const io = tri_io.get();
+    std.Io.Dir.cwd().deleteFile(io, ".trinity/cell_cache.json") catch {};
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -8524,9 +8577,10 @@ fn runContracts(allocator: Allocator) !void {
 
 /// Scan .zig files in a cell's path for a `pub fn <name>` declaration
 fn verifyExportExists(allocator: Allocator, cell_path: []const u8, export_name: []const u8) bool {
-    const cwd = std.fs.cwd();
-    var dir = cwd.openDir(cell_path, .{ .iterate = true }) catch return false;
-    defer dir.close();
+    const io = tri_io.get();
+    const cwd = std.Io.Dir.cwd();
+    var dir = cwd.openDir(io, cell_path, .{ .iterate = true }) catch return false;
+    defer dir.close(io);
 
     var walker = dir.walk(allocator) catch return false;
     defer walker.deinit();
@@ -8535,14 +8589,14 @@ fn verifyExportExists(allocator: Allocator, cell_path: []const u8, export_name: 
     const pattern = std.fmt.allocPrint(allocator, "pub fn {s}", .{export_name}) catch return false;
     defer allocator.free(pattern);
 
-    while (walker.next() catch null) |entry| {
+    while (walker.next(io) catch null) |entry| {
         if (entry.kind != .file) continue;
         if (!std.mem.endsWith(u8, entry.basename, ".zig")) continue;
 
         const full_path = std.fmt.allocPrint(allocator, "{s}/{s}", .{ cell_path, entry.path }) catch continue;
         defer allocator.free(full_path);
 
-        const content = cwd.readFileAlloc(allocator, full_path, 524288) catch continue;
+        const content = cwd.readFileAlloc(io, full_path, allocator, .limited(524288)) catch continue;
         defer allocator.free(content);
 
         if (std.mem.indexOf(u8, content, pattern) != null) {
@@ -8701,6 +8755,7 @@ fn runVersion(allocator: Allocator, args: []const []const u8) !void {
 }
 
 fn runOutdated(allocator: Allocator, args: []const []const u8) !void {
+    const io = tri_io.get();
     _ = args;
     std.debug.print("\n{s}🔄 CHECKING FOR OUTDATED CELLS{s}\n\n", .{ GOLDEN, RESET });
 
@@ -8743,7 +8798,7 @@ fn runOutdated(allocator: Allocator, args: []const []const u8) !void {
         const cell_tri_path = std.fmt.allocPrint(allocator, "{s}/cell.tri", .{path}) catch continue;
         defer allocator.free(cell_tri_path);
 
-        const content = std.fs.cwd().readFileAlloc(allocator, cell_tri_path, 65536) catch {
+        const content = std.Io.Dir.cwd().readFileAlloc(io, cell_tri_path, allocator, .limited(65536)) catch {
             std.debug.print("  {s}{s}{s}", .{ WHITE, id, RESET });
             printPad(id.len, 26);
             std.debug.print(" {s}<error: cannot read>{s}\n", .{ RED, RESET });
@@ -8784,6 +8839,7 @@ fn runOutdated(allocator: Allocator, args: []const []const u8) !void {
 }
 
 fn runRegenerate(allocator: Allocator, args: []const []const u8) !void {
+    const io = tri_io.get();
     var regenerate_outdated = false;
 
     for (args) |arg| {
@@ -8844,7 +8900,7 @@ fn runRegenerate(allocator: Allocator, args: []const []const u8) !void {
         const cell_tri_path = std.fmt.allocPrint(allocator, "{s}/cell.tri", .{path}) catch continue;
         defer allocator.free(cell_tri_path);
 
-        const content = std.fs.cwd().readFileAlloc(allocator, cell_tri_path, 65536) catch continue;
+        const content = std.Io.Dir.cwd().readFileAlloc(io, cell_tri_path, allocator, .limited(65536)) catch continue;
         defer allocator.free(content);
 
         var hash: [32]u8 = undefined;
@@ -8916,7 +8972,8 @@ fn runRegenerate(allocator: Allocator, args: []const []const u8) !void {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn loadRegistry(allocator: Allocator) ![]u8 {
-    return std.fs.cwd().readFileAlloc(allocator, "data/cells/registry.json", 262144) catch |err| {
+    const io = tri_io.get();
+    return std.Io.Dir.cwd().readFileAlloc(io, "data/cells/registry.json", allocator, .limited(262144)) catch |err| {
         std.debug.print("{s}ERROR{s}: Cannot read data/cells/registry.json: {}\n", .{ RED, RESET, err });
         return err;
     };
@@ -8996,6 +9053,7 @@ fn hasContributes(obj: std.json.ObjectMap) bool {
 }
 
 fn computeHealthScore(obj: std.json.ObjectMap) u8 {
+    const io = tri_io.get();
     const owner = jsonStr(obj, "owner");
     const tests = jsonInt(obj, "tests");
     const caps_count = countJsonArray(obj, "capabilities");
@@ -9027,7 +9085,7 @@ fn computeHealthScore(obj: std.json.ObjectMap) u8 {
             // Definition file exists → +10 (replaces hash_score)
             var def_score: u8 = 0;
             if (definition.len > 0) {
-                if (std.fs.cwd().access(definition, .{})) |_| {
+                if (std.Io.Dir.cwd().access(io, definition, .{})) |_| {
                     def_score = 10;
                 } else |_| {}
             }
@@ -9198,9 +9256,10 @@ fn parseVersion(v: []const u8) [3]u32 {
 }
 
 fn writeFileIfNotExists(path: []const u8, content: []const u8) void {
-    const file = std.fs.cwd().createFile(path, .{ .exclusive = true }) catch return;
-    defer file.close();
-    file.writeAll(content) catch {};
+    const io = tri_io.get();
+    const file = std.Io.Dir.cwd().createFile(io, path, .{ .exclusive = true }) catch return;
+    defer file.close(io);
+    file.writeStreamingAll(io, content) catch {};
 }
 
 /// Write a cell.tri array value like `["a", "b", "c"]` (parsed from raw string) as JSON array elements
@@ -9314,6 +9373,7 @@ fn writeIndent(writer: anytype, n: usize) !void {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn runAutoRegister(allocator: Allocator, dry_run: bool, auto_yes: bool) !void {
+    const io = tri_io.get();
     std.debug.print("\n{s}🧬 Auto-Registration: detecting new cells...{s}\n\n", .{ GOLDEN, RESET });
 
     // Discover all cell.tri files
@@ -9327,7 +9387,7 @@ fn runAutoRegister(allocator: Allocator, dry_run: bool, auto_yes: bool) !void {
     }
 
     // Load existing registry
-    const reg_data = std.fs.cwd().readFileAlloc(allocator, "data/cells/registry.json", 262144) catch {
+    const reg_data = std.Io.Dir.cwd().readFileAlloc(io, "data/cells/registry.json", allocator, .limited(262144)) catch {
         std.debug.print("{s}ERROR{s}: Cannot read data/cells/registry.json\n", .{ RED, RESET });
         return;
     };
@@ -9369,7 +9429,7 @@ fn runAutoRegister(allocator: Allocator, dry_run: bool, auto_yes: bool) !void {
         const cell_tri_path = std.fmt.allocPrint(allocator, "{s}/cell.tri", .{path}) catch continue;
         defer allocator.free(cell_tri_path);
 
-        const content = std.fs.cwd().readFileAlloc(allocator, cell_tri_path, 65536) catch continue;
+        const content = std.Io.Dir.cwd().readFileAlloc(io, cell_tri_path, allocator, .limited(65536)) catch continue;
         defer allocator.free(content);
 
         const cell = parseCellTri(content);
@@ -9425,7 +9485,7 @@ fn runAutoRegister(allocator: Allocator, dry_run: bool, auto_yes: bool) !void {
         const cell_tri_path = std.fmt.allocPrint(allocator, "{s}/cell.tri", .{c.path}) catch continue;
         defer allocator.free(cell_tri_path);
 
-        const content = std.fs.cwd().readFileAlloc(allocator, cell_tri_path, 65536) catch continue;
+        const content = std.Io.Dir.cwd().readFileAlloc(io, cell_tri_path, allocator, .limited(65536)) catch continue;
         defer allocator.free(content);
 
         const cell = parseCellTri(content);
@@ -9460,12 +9520,13 @@ fn runAutoRegister(allocator: Allocator, dry_run: bool, auto_yes: bool) !void {
 }
 
 fn writeRegistry(allocator: Allocator, all_cells: anytype) !void {
-    var buf = std.array_list.Managed(u8).init(allocator);
+    const io = tri_io.get();
+    var buf: std.Io.Writer.Allocating = .init(allocator);
     defer buf.deinit();
 
-    const writer = buf.writer();
+    const writer = &buf.writer;
     try writer.writeAll("{\n  \"version\": \"1.0.0\",\n  \"updated\": \"");
-    try writer.print("{d}", .{std.time.timestamp()});
+    try writer.print("{d}", .{tri_time.timestamp()});
     try writer.writeAll("\",\n  \"core_version\": \"");
     try writer.writeAll(CORE_VERSION);
     try writer.writeAll("\",\n  \"core_files\": [\n    \"src/vsa.zig\", \"src/vm.zig\", \"src/hybrid.zig\", \"src/sdk.zig\",\n    \"src/sparse.zig\", \"src/jit.zig\", \"src/science.zig\", \"src/c_api.zig\"\n  ],\n  \"cells\": [\n");
@@ -9487,13 +9548,14 @@ fn writeRegistry(allocator: Allocator, all_cells: anytype) !void {
     try writer.writeAll("\n  ],\n  \"plugins\": [],\n  \"boundary_rules\": [\n    {\"sourceTag\": \"type:agent\", \"allowedDeps\": [\"type:library\", \"type:tool\"], \"deniedDeps\": [\"type:ui\"]},\n    {\"sourceTag\": \"type:ui\", \"deniedDeps\": [\"type:agent\"]},\n    {\"sourceTag\": \"type:library\", \"deniedDeps\": [\"type:agent\", \"type:ui\", \"type:backend\"]},\n    {\"sourceTag\": \"type:tool\", \"deniedDeps\": [\"type:agent\", \"type:ui\"]},\n    {\"sourceTag\": \"type:backend\", \"deniedDeps\": [\"type:agent\", \"type:ui\"]}\n  ]\n}\n");
 
     const registry_path = "data/cells/registry.json";
-    const file = try std.fs.cwd().createFile(registry_path, .{});
-    defer file.close();
-    try file.writeAll(buf.items);
+    const file = try std.Io.Dir.cwd().createFile(io, registry_path, .{});
+    defer file.close(io);
+    try file.writeStreamingAll(io, buf.written());
     std.debug.print("  {s}✓ Registry updated:{s} {s} ({d} cells)\n", .{ GREEN, RESET, registry_path, all_cells.len });
 }
 
 fn runInstallHooks(allocator: Allocator) !void {
+    const io = tri_io.get();
     _ = allocator;
     std.debug.print("\n{s}🪝 Installing Git hooks for auto-registration...{s}\n\n", .{ GOLDEN, RESET });
 
@@ -9517,18 +9579,19 @@ fn runInstallHooks(allocator: Allocator) !void {
 
     // Create post-commit hook
     const hook_path = ".git/hooks/post-commit";
-    const file = std.fs.cwd().createFile(hook_path, .{}) catch |err| {
+    const file = std.Io.Dir.cwd().createFile(io, hook_path, .{}) catch |err| {
         std.debug.print("  {s}ERROR{s}: Cannot create {s}: {}\n", .{ RED, RESET, hook_path, err });
         return;
     };
-    defer file.close();
-    file.writeAll(hook_content) catch |err| {
+    defer file.close(io);
+    file.writeStreamingAll(io, hook_content) catch |err| {
         std.debug.print("  {s}ERROR{s}: Write failed: {}\n", .{ RED, RESET, err });
         return;
     };
 
-    // Make hook executable (use posix.fchmod in Zig 0.15)
-    std.posix.fchmod(file.handle, 0o755) catch |chmod_err| {
+    // Make hook executable (std.posix.fchmod is gone in Zig 0.16 —
+    // std.Io.File.setPermissions is the chmod equivalent).
+    file.setPermissions(io, .fromMode(0o755)) catch |chmod_err| {
         std.debug.print("  {s}WARN{s}: Could not make hook executable: {}\n", .{ YELLOW, RESET, chmod_err });
     };
 
@@ -9542,6 +9605,7 @@ fn runInstallHooks(allocator: Allocator) !void {
 
 /// List available templates
 fn runTemplates(allocator: Allocator, args: []const []const u8) !void {
+    const io = tri_io.get();
     _ = args;
 
     std.debug.print("\n{s}📋 Cell Template Library{s}\n\n", .{ GOLDEN, RESET });
@@ -9555,7 +9619,7 @@ fn runTemplates(allocator: Allocator, args: []const []const u8) !void {
     }
 
     // List user templates if they exist
-    const home_dir = std.process.getEnvVarOwned(allocator, "HOME") catch {
+    const home_dir = tri_env.getEnvVarOwned(allocator, "HOME") catch {
         std.debug.print("\n  {s}No HOME dir, skipping user templates{s}\n", .{ YELLOW, RESET });
         return;
     };
@@ -9571,13 +9635,13 @@ fn runTemplates(allocator: Allocator, args: []const []const u8) !void {
     }
 
     {
-        var user_dir = std.fs.cwd().openDir(user_templates_dir, .{ .iterate = true }) catch {
+        var user_dir = std.Io.Dir.cwd().openDir(io, user_templates_dir, .{ .iterate = true }) catch {
             // No user templates directory, skip
             return;
         };
-        defer user_dir.close();
+        defer user_dir.close(io);
         var iter = user_dir.iterate();
-        while (iter.next() catch null) |entry| {
+        while (iter.next(io) catch null) |entry| {
             if (entry.kind == .file and std.mem.endsWith(u8, entry.name, ".tri")) {
                 const name = entry.name[0 .. entry.name.len - 4]; // strip .tri
                 const name_copy = allocator.dupe(u8, name) catch continue;
@@ -9618,7 +9682,8 @@ fn getTemplateDescription(name: []const u8) []const u8 {
 
 /// Load template from user directory
 fn loadUserTemplate(allocator: Allocator, name: []const u8) !?[]const u8 {
-    const home_dir = std.process.getEnvVarOwned(allocator, "HOME") catch return null;
+    const io = tri_io.get();
+    const home_dir = tri_env.getEnvVarOwned(allocator, "HOME") catch return null;
     defer allocator.free(home_dir);
 
     const user_templates_dir = std.fmt.allocPrint(allocator, "{s}/.tri/templates", .{home_dir}) catch return null;
@@ -9627,7 +9692,7 @@ fn loadUserTemplate(allocator: Allocator, name: []const u8) !?[]const u8 {
     const template_path = std.fmt.allocPrint(allocator, "{s}/{s}.tri", .{ user_templates_dir, name }) catch return null;
     defer allocator.free(template_path);
 
-    return std.fs.cwd().readFileAlloc(allocator, template_path, 65536) catch null;
+    return std.Io.Dir.cwd().readFileAlloc(io, template_path, allocator, .limited(65536)) catch null;
 }
 
 /// Replace template variables with actual values
@@ -9750,6 +9815,7 @@ fn calcCellHealth(cell: CellInfo) u8 {
 
 /// Batch fix: fix all cells with health < 70
 fn runBatchFix(allocator: Allocator) !void {
+    const io = tri_io.get();
     std.debug.print("\n{s}🔧 BATCH FIX{s} — Fixing cells with health < 70%%\n\n", .{ GOLDEN, RESET });
 
     const discovered = discoverCells(allocator) catch {
@@ -9773,7 +9839,7 @@ fn runBatchFix(allocator: Allocator) !void {
     for (discovered) |path| {
         const cell_tri_path = std.fmt.allocPrint(allocator, "{s}/cell.tri", .{path}) catch continue;
         defer allocator.free(cell_tri_path);
-        const content = std.fs.cwd().readFileAlloc(allocator, cell_tri_path, 65536) catch continue;
+        const content = std.Io.Dir.cwd().readFileAlloc(io, cell_tri_path, allocator, .limited(65536)) catch continue;
         defer allocator.free(content);
         const cell = parseCellTri(content);
         if (cell.id.len == 0) continue;
@@ -9814,6 +9880,7 @@ fn runBatchFix(allocator: Allocator) !void {
 
 /// Batch sign: sign all L2 cells
 fn runBatchSign(allocator: Allocator) !void {
+    const io = tri_io.get();
     std.debug.print("\n{s}🔏 BATCH SIGN{s} — Signing all L2 cells\n\n", .{ GOLDEN, RESET });
 
     const discovered = discoverCells(allocator) catch {
@@ -9837,7 +9904,7 @@ fn runBatchSign(allocator: Allocator) !void {
     for (discovered) |path| {
         const cell_tri_path = std.fmt.allocPrint(allocator, "{s}/cell.tri", .{path}) catch continue;
         defer allocator.free(cell_tri_path);
-        const content = std.fs.cwd().readFileAlloc(allocator, cell_tri_path, 65536) catch continue;
+        const content = std.Io.Dir.cwd().readFileAlloc(io, cell_tri_path, allocator, .limited(65536)) catch continue;
         defer allocator.free(content);
         const cell = parseCellTri(content);
         if (cell.id.len == 0) continue;
@@ -9870,7 +9937,7 @@ fn runBatchSign(allocator: Allocator) !void {
 
         const cell_tri_path = std.fmt.allocPrint(allocator, "{s}/cell.tri", .{item.path}) catch continue;
         defer allocator.free(cell_tri_path);
-        const content = std.fs.cwd().readFileAlloc(allocator, cell_tri_path, 65536) catch continue;
+        const content = std.Io.Dir.cwd().readFileAlloc(io, cell_tri_path, allocator, .limited(65536)) catch continue;
         defer allocator.free(content);
 
         var hash: [32]u8 = undefined;
@@ -9895,7 +9962,7 @@ fn runBatchSign(allocator: Allocator) !void {
             , .{sig_str}) catch continue;
             defer allocator.free(sec_section);
             result.appendSlice(sec_section) catch continue;
-            std.fs.cwd().writeFile(.{ .sub_path = cell_tri_path, .data = result.toOwnedSlice() catch continue }) catch continue;
+            std.Io.Dir.cwd().writeFile(io, .{ .sub_path = cell_tri_path, .data = result.toOwnedSlice() catch continue }) catch continue;
         }
 
         signed_count += 1;
@@ -9906,6 +9973,7 @@ fn runBatchSign(allocator: Allocator) !void {
 
 /// Batch test: run tests for all cells
 fn runBatchTest(allocator: Allocator) !void {
+    const io = tri_io.get();
     std.debug.print("\n{s}🧪 BATCH TEST{s} — Running tests for all cells\n\n", .{ GOLDEN, RESET });
 
     const discovered = discoverCells(allocator) catch {
@@ -9925,7 +9993,7 @@ fn runBatchTest(allocator: Allocator) !void {
     for (discovered, 0..) |path, idx| {
         const cell_tri_path = std.fmt.allocPrint(allocator, "{s}/cell.tri", .{path}) catch continue;
         defer allocator.free(cell_tri_path);
-        const content = std.fs.cwd().readFileAlloc(allocator, cell_tri_path, 65536) catch continue;
+        const content = std.Io.Dir.cwd().readFileAlloc(io, cell_tri_path, allocator, .limited(65536)) catch continue;
         defer allocator.free(content);
         const cell = parseCellTri(content);
         if (cell.id.len == 0) continue;
@@ -9939,21 +10007,21 @@ fn runBatchTest(allocator: Allocator) !void {
             continue;
         }
 
-        var test_dir = std.fs.cwd().openDir(path, .{ .iterate = true }) catch {
+        var test_dir = std.Io.Dir.cwd().openDir(io, path, .{ .iterate = true }) catch {
             std.debug.print(" {s}✗ No tests dir{s}\n", .{ YELLOW, RESET });
             skipped_count += 1;
             continue;
         };
-        defer test_dir.close();
+        defer test_dir.close(io);
 
         var test_passed = true;
         var iter = test_dir.iterate();
-        while (iter.next() catch null) |entry| {
+        while (iter.next(io) catch null) |entry| {
             if (entry.kind == .file and std.mem.endsWith(u8, entry.name, ".test.zig")) {
                 const test_path = std.fmt.allocPrint(allocator, "{s}/{s}", .{ path, entry.name }) catch continue;
                 defer allocator.free(test_path);
 
-                const result = std.process.Child.run(.{
+                const result = tri_proc.run(.{
                     .allocator = allocator,
                     .argv = &[_][]const u8{ "zig", "test", test_path },
                 }) catch {
@@ -9965,7 +10033,7 @@ fn runBatchTest(allocator: Allocator) !void {
                     allocator.free(result.stderr);
                 }
 
-                if (result.term.Exited != 0) {
+                if (result.term.exited != 0) {
                     test_passed = false;
                 }
             }
@@ -10151,39 +10219,39 @@ test "health score computation" {
 
 test "writeStrArrayFromCellTri" {
     var buf: [256]u8 = undefined;
-    var fbs = std.io.fixedBufferStream(&buf);
-    const writer = fbs.writer();
+    var fbs: std.Io.Writer = .fixed(&buf);
+    const writer = &fbs;
 
     try writeStrArrayFromCellTri(writer, "[\"a\", \"b\", \"c\"]");
-    const result = fbs.getWritten();
+    const result = fbs.buffered();
     try std.testing.expectEqualStrings("\"a\", \"b\", \"c\"", result);
 }
 
 test "writeStrArrayFromCellTri empty" {
     var buf: [256]u8 = undefined;
-    var fbs = std.io.fixedBufferStream(&buf);
-    try writeStrArrayFromCellTri(fbs.writer(), "[]");
-    try std.testing.expect(fbs.getWritten().len == 0);
+    var fbs: std.Io.Writer = .fixed(&buf);
+    try writeStrArrayFromCellTri(&fbs, "[]");
+    try std.testing.expect(fbs.buffered().len == 0);
 }
 
 test "json pretty printer" {
-    var buf = std.array_list.Managed(u8).init(std.testing.allocator);
+    var buf: std.Io.Writer.Allocating = .init(std.testing.allocator);
     defer buf.deinit();
 
     // Test simple value
-    try writeJsonPretty(buf.writer(), .{ .bool = true }, 0);
-    try std.testing.expectEqualStrings("true", buf.items);
+    try writeJsonPretty(&buf.writer, .{ .bool = true }, 0);
+    try std.testing.expectEqualStrings("true", buf.written());
     buf.clearRetainingCapacity();
 
     // Test string escaping
-    try writeJsonPretty(buf.writer(), .{ .string = "hello \"world\"" }, 0);
-    try std.testing.expectEqualStrings("\"hello \\\"world\\\"\"", buf.items);
+    try writeJsonPretty(&buf.writer, .{ .string = "hello \"world\"" }, 0);
+    try std.testing.expectEqualStrings("\"hello \\\"world\\\"\"", buf.written());
     buf.clearRetainingCapacity();
 
     // Test empty array
     const empty_arr = std.json.Value{ .array = std.json.Array.init(std.testing.allocator) };
-    try writeJsonPretty(buf.writer(), empty_arr, 0);
-    try std.testing.expectEqualStrings("[]", buf.items);
+    try writeJsonPretty(&buf.writer, empty_arr, 0);
+    try std.testing.expectEqualStrings("[]", buf.written());
 }
 
 test "parse cell.tri with security section" {

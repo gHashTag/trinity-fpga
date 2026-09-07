@@ -62,8 +62,8 @@ pub const MetacognitiveReport = struct {
 pub const HOTEngine = struct {
     allocator: mem.Allocator,
     meta_levels: u8 = 0,
-    first_order_states: std.ArrayListUnmanaged(HigherOrderState) = .{},
-    higher_order_states: std.ArrayListUnmanaged(HigherOrderState) = .{},
+    first_order_states: std.ArrayListUnmanaged(HigherOrderState) = .empty,
+    higher_order_states: std.ArrayListUnmanaged(HigherOrderState) = .empty,
     hot_strength: f64 = 0.0,
     prefrontal_coupling: f64 = 0.0,
     metacognitive_accuracy: f64 = 0.0,

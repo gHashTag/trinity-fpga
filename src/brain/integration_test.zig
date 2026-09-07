@@ -12,6 +12,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 // Import brain region modules (using module names from build system)
 const basal_ganglia = @import("basal_ganglia");
 const reticular_formation = @import("reticular_formation");
@@ -227,12 +228,12 @@ test "Integration: Event filtering by timestamp" {
     });
 
     // Sleep longer to ensure timestamp advances
-    std.Thread.sleep(100 * std.time.ns_per_ms);
+    tri_time.sleep(100 * std.time.ns_per_ms);
 
-    const middle = std.time.milliTimestamp();
+    const middle = tri_time.milliTimestamp();
 
     // Small sleep to ensure next event has later timestamp
-    std.Thread.sleep(10 * std.time.ns_per_ms);
+    tri_time.sleep(10 * std.time.ns_per_ms);
 
     try event_bus.publish(.task_completed, .{
         .task_completed = .{
@@ -269,7 +270,7 @@ test "Integration: Health monitoring across regions" {
     var tel = telemetry.BrainTelemetry.init(allocator, 100);
     defer tel.deinit();
 
-    const now = std.time.milliTimestamp();
+    const now = tri_time.milliTimestamp();
     try tel.record(.{
         .timestamp = now,
         .active_claims = 0,
@@ -306,7 +307,7 @@ test "Integration: Health trend detection" {
     var tel = telemetry.BrainTelemetry.init(allocator, 100);
     defer tel.deinit();
 
-    const now = std.time.milliTimestamp();
+    const now = tri_time.milliTimestamp();
 
     // Need at least 6 points for trend calculation (third >= 2)
     var i: u64 = 0;
@@ -333,7 +334,7 @@ test "Integration: State save and restore" {
     const allocator = std.testing.allocator;
 
     const tmp_dir = ".trinity/brain/state";
-    try std.fs.cwd().makePath(tmp_dir);
+    try std.Io.Dir.cwd().createDirPath(std.testing.io, tmp_dir);
 
     basal_ganglia.resetGlobal(allocator);
     reticular_formation.resetGlobal(allocator);
@@ -377,7 +378,7 @@ test "Integration: State restoration after crash" {
     const allocator = std.testing.allocator;
 
     const tmp_dir = ".trinity/brain/state";
-    try std.fs.cwd().makePath(tmp_dir);
+    try std.Io.Dir.cwd().createDirPath(std.testing.io, tmp_dir);
 
     var manager = try state_recovery.StateManager.init(allocator);
     defer manager.deinit();
@@ -411,7 +412,7 @@ test "Integration: Auto-recovery on startup" {
     const allocator = std.testing.allocator;
 
     const tmp_dir = ".trinity/brain/state";
-    try std.fs.cwd().makePath(tmp_dir);
+    try std.Io.Dir.cwd().createDirPath(std.testing.io, tmp_dir);
 
     // Clean up any existing state files first
     var cleanup_manager = try state_recovery.StateManager.init(allocator);
@@ -772,7 +773,7 @@ test "Integration: Full task lifecycle with monitoring" {
     const task_id = "lifecycle-task";
     const agent_id = "lifecycle-agent";
 
-    const start_time = std.time.milliTimestamp();
+    const start_time = tri_time.milliTimestamp();
 
     const claimed = try registry.claim(allocator, task_id, agent_id, 60000);
     try std.testing.expect(claimed);
@@ -794,7 +795,7 @@ test "Integration: Full task lifecycle with monitoring" {
 
     try alert_mgr.checkHealth(100.0, 1, 1);
 
-    const complete_time = std.time.milliTimestamp();
+    const complete_time = tri_time.milliTimestamp();
     const duration_ms = @as(u64, @intCast(complete_time - start_time));
 
     _ = registry.complete(task_id, agent_id);
@@ -931,15 +932,16 @@ test "Integration: Recovery after corrupted state" {
     const allocator = std.testing.allocator;
 
     const tmp_dir = ".trinity/brain/state";
-    try std.fs.cwd().makePath(tmp_dir);
+    try std.Io.Dir.cwd().createDirPath(std.testing.io, tmp_dir);
 
     var manager = try state_recovery.StateManager.init(allocator);
     defer manager.deinit();
 
     {
-        const file = try std.fs.cwd().createFile(manager.state_file_path, .{ .read = true });
-        defer file.close();
-        try file.writeAll("corrupted {{json data");
+        const io = std.testing.io;
+        const file = try std.Io.Dir.cwd().createFile(io, manager.state_file_path, .{ .read = true });
+        defer file.close(io);
+        try file.writeStreamingAll(io, "corrupted {{json data");
     }
 
     const result = manager.load();
@@ -967,7 +969,7 @@ test "Integration: All regions maintain consistency" {
     const allocator = std.testing.allocator;
 
     // Clean up any leftover state files from previous tests
-    std.fs.cwd().deleteTree(".trinity/brain/state") catch {};
+    std.Io.Dir.cwd().deleteTree(std.testing.io, ".trinity/brain/state") catch {};
 
     basal_ganglia.resetGlobal(allocator);
     reticular_formation.resetGlobal(allocator);
@@ -999,7 +1001,7 @@ test "Integration: All regions maintain consistency" {
         });
 
         try tel.record(.{
-            .timestamp = std.time.milliTimestamp(),
+            .timestamp = tri_time.milliTimestamp(),
             .active_claims = i + 1,
             .events_published = @as(u64, @intCast(i + 1)),
             .events_buffered = i + 1,
@@ -1322,7 +1324,7 @@ test "Integration: Health monitoring across all regions" {
     defer alert_mgr.deinit();
 
     // Simulate activity across regions
-    const now = std.time.milliTimestamp();
+    const now = tri_time.milliTimestamp();
 
     // Basal Ganglia: claims
     var i: usize = 0;
@@ -1384,7 +1386,7 @@ test "Integration: Health degradation detection" {
     var tel = telemetry.BrainTelemetry.init(allocator, 100);
     defer tel.deinit();
 
-    const now = std.time.milliTimestamp();
+    const now = tri_time.milliTimestamp();
 
     // Record healthy baseline - need at least 6 points for proper trend detection
     var i: u32 = 0;
@@ -1430,7 +1432,7 @@ test "Integration: Health recovery detection" {
     var tel = telemetry.BrainTelemetry.init(allocator, 100);
     defer tel.deinit();
 
-    const now = std.time.milliTimestamp();
+    const now = tri_time.milliTimestamp();
 
     // Start poor
     var i: u32 = 0;
@@ -1467,7 +1469,7 @@ test "Integration: Recovery from corrupted telemetry" {
     const allocator = std.testing.allocator;
 
     const tmp_dir = ".trinity/brain/state";
-    try std.fs.cwd().makePath(tmp_dir);
+    try std.Io.Dir.cwd().createDirPath(std.testing.io, tmp_dir);
 
     basal_ganglia.resetGlobal(allocator);
     reticular_formation.resetGlobal(allocator);
@@ -1493,12 +1495,14 @@ test "Integration: Recovery from corrupted telemetry" {
     try manager.save(registry, event_bus);
 
     // Corrupt the state file
-    const state_file = try std.fs.cwd().openFile(
+    const io = std.testing.io;
+    const state_file = try std.Io.Dir.cwd().openFile(
+        io,
         manager.state_file_path,
         .{ .mode = .write_only },
     );
-    defer state_file.close();
-    try state_file.writeAll("corrupted data");
+    defer state_file.close(io);
+    try state_file.writeStreamingAll(io, "corrupted data");
 
     // Auto-recovery should handle this gracefully
     var new_registry = basal_ganglia.Registry.init(allocator);
@@ -1516,7 +1520,7 @@ test "Integration: Recovery with partial state loss" {
     const allocator = std.testing.allocator;
 
     const tmp_dir = ".trinity/brain/state";
-    try std.fs.cwd().makePath(tmp_dir);
+    try std.Io.Dir.cwd().createDirPath(std.testing.io, tmp_dir);
 
     basal_ganglia.resetGlobal(allocator);
     reticular_formation.resetGlobal(allocator);
@@ -1568,7 +1572,7 @@ test "Integration: Recovery after cascade failure" {
     const allocator = std.testing.allocator;
 
     const tmp_dir = ".trinity/brain/state";
-    try std.fs.cwd().makePath(tmp_dir);
+    try std.Io.Dir.cwd().createDirPath(std.testing.io, tmp_dir);
 
     basal_ganglia.resetGlobal(allocator);
     reticular_formation.resetGlobal(allocator);
@@ -1685,7 +1689,7 @@ const ConcurrentClaimContext = struct {
         const agent_id = std.fmt.bufPrint(&agent_buf, "concurrent-agent-{d}", .{self.thread_id}) catch return;
 
         // Small delay to increase chance of true concurrent execution
-        std.Thread.sleep(std.time.ns_per_ms);
+        tri_time.sleep(std.time.ns_per_ms);
 
         // Claim the task
         const claimed = self.registry.claim(allocator, task_id, agent_id, 60000) catch false;
@@ -1746,7 +1750,7 @@ const EventPublisherContext = struct {
             const task_id = std.fmt.bufPrint(&task_buf, "pub-{d}-task-{d}", .{ self.publisher_id, i }) catch continue;
 
             // Small delay to increase interleaving
-            std.Thread.sleep(std.time.ns_per_ms / 10);
+            tri_time.sleep(std.time.ns_per_ms / 10);
 
             // Publish event, ignore errors in stress test
             self.event_bus.publish(.task_claimed, .{
@@ -1773,7 +1777,7 @@ const EventPollerContext = struct {
         var i: usize = 0;
         while (i < 5) : (i += 1) {
             // Small delay before each poll
-            std.Thread.sleep(std.time.ns_per_ms / 5);
+            tri_time.sleep(std.time.ns_per_ms / 5);
 
             const events = self.event_bus.poll(0, allocator, 100) catch break;
             defer allocator.free(events);
@@ -1792,7 +1796,7 @@ const BackoffComputeContext = struct {
 
     pub fn run(self: *BackoffComputeContext) void {
         // Small delay to allow threads to start simultaneously
-        std.Thread.sleep(std.time.ns_per_ms / 100);
+        tri_time.sleep(std.time.ns_per_ms / 100);
 
         // All threads call nextDelay() concurrently
         // This tests thread safety of EXP_TABLE access
@@ -1999,7 +2003,7 @@ test "Integration: Alert propagation across regions" {
     }
 
     try tel.record(.{
-        .timestamp = std.time.milliTimestamp(),
+        .timestamp = tri_time.milliTimestamp(),
         .active_claims = 6000,
         .events_published = 0,
         .events_buffered = 0,
@@ -2180,7 +2184,7 @@ test "Multi-region: Brain initialization and teardown" {
 
     // Verify telemetry can record metrics
     try context.telemetry_inst.record(.{
-        .timestamp = std.time.milliTimestamp(),
+        .timestamp = tri_time.milliTimestamp(),
         .active_claims = 1,
         .events_published = 1,
         .events_buffered = 1,
@@ -2252,21 +2256,21 @@ test "Multi-region: Alert pipeline telemetry -> alerts -> notification" {
 
     // Step 1: Record poor health in telemetry
     try context.telemetry_inst.record(.{
-        .timestamp = std.time.milliTimestamp(),
+        .timestamp = tri_time.milliTimestamp(),
         .active_claims = 100,
         .events_published = 5000,
         .events_buffered = 100,
         .health_score = 25.0,
     });
     try context.telemetry_inst.record(.{
-        .timestamp = std.time.milliTimestamp(),
+        .timestamp = tri_time.milliTimestamp(),
         .active_claims = 100,
         .events_published = 5000,
         .events_buffered = 100,
         .health_score = 30.0,
     });
     try context.telemetry_inst.record(.{
-        .timestamp = std.time.milliTimestamp(),
+        .timestamp = tri_time.milliTimestamp(),
         .active_claims = 100,
         .events_published = 5000,
         .events_buffered = 100,
@@ -2428,7 +2432,7 @@ test "Multi-region: Resource cleanup verification" {
     });
 
     try context.telemetry_inst.record(.{
-        .timestamp = std.time.milliTimestamp(),
+        .timestamp = tri_time.milliTimestamp(),
         .active_claims = 1,
         .events_published = 1,
         .events_buffered = 1,
@@ -2474,7 +2478,7 @@ test "Multi-region: Full end-to-end workflow" {
 
     // Step 3: Record telemetry
     try context.telemetry_inst.record(.{
-        .timestamp = std.time.milliTimestamp(),
+        .timestamp = tri_time.milliTimestamp(),
         .active_claims = 1,
         .events_published = 1,
         .events_buffered = 1,
@@ -2546,21 +2550,21 @@ test "Multi-region: Health aggregation across federation" {
 
     // Record health for multiple instances
     try context.telemetry_inst.record(.{
-        .timestamp = std.time.milliTimestamp(),
+        .timestamp = tri_time.milliTimestamp(),
         .active_claims = 10,
         .events_published = 100,
         .events_buffered = 10,
         .health_score = 85.0,
     });
     try context.telemetry_inst.record(.{
-        .timestamp = std.time.milliTimestamp(),
+        .timestamp = tri_time.milliTimestamp(),
         .active_claims = 10,
         .events_published = 100,
         .events_buffered = 10,
         .health_score = 90.0,
     });
     try context.telemetry_inst.record(.{
-        .timestamp = std.time.milliTimestamp(),
+        .timestamp = tri_time.milliTimestamp(),
         .active_claims = 10,
         .events_published = 100,
         .events_buffered = 10,
@@ -2629,7 +2633,7 @@ test "Multi-region: Telemetry trend detection over time" {
     while (i < 10) : (i += 1) {
         const health = 60.0 + @as(f32, @floatFromInt(i * 4));
         try context.telemetry_inst.record(.{
-            .timestamp = std.time.milliTimestamp(),
+            .timestamp = tri_time.milliTimestamp(),
             .active_claims = i,
             .events_published = @as(u64, @intCast(i)),
             .events_buffered = i,
@@ -2682,7 +2686,7 @@ test "Multi-region: Telemetry percentile calculations" {
     const values = [_]f32{ 50, 60, 70, 80, 90, 100 };
     for (values) |v| {
         try context.telemetry_inst.record(.{
-            .timestamp = std.time.milliTimestamp(),
+            .timestamp = tri_time.milliTimestamp(),
             .active_claims = 10,
             .events_published = 100,
             .events_buffered = 10,
@@ -2703,28 +2707,28 @@ test "Multi-region: Health range and statistics" {
 
     // Record range of values
     try context.telemetry_inst.record(.{
-        .timestamp = std.time.milliTimestamp(),
+        .timestamp = tri_time.milliTimestamp(),
         .active_claims = 1,
         .events_published = 10,
         .events_buffered = 1,
         .health_score = 20.0,
     });
     try context.telemetry_inst.record(.{
-        .timestamp = std.time.milliTimestamp(),
+        .timestamp = tri_time.milliTimestamp(),
         .active_claims = 2,
         .events_published = 20,
         .events_buffered = 2,
         .health_score = 50.0,
     });
     try context.telemetry_inst.record(.{
-        .timestamp = std.time.milliTimestamp(),
+        .timestamp = tri_time.milliTimestamp(),
         .active_claims = 3,
         .events_published = 30,
         .events_buffered = 3,
         .health_score = 80.0,
     });
     try context.telemetry_inst.record(.{
-        .timestamp = std.time.milliTimestamp(),
+        .timestamp = tri_time.milliTimestamp(),
         .active_claims = 4,
         .events_published = 40,
         .events_buffered = 4,
@@ -2753,7 +2757,7 @@ test "Multi-region: Concurrent telemetry collection" {
     var i: usize = 0;
     while (i < 50) : (i += 1) {
         try context.telemetry_inst.record(.{
-            .timestamp = std.time.milliTimestamp(),
+            .timestamp = tri_time.milliTimestamp(),
             .active_claims = i,
             .events_published = @as(u64, @intCast(i)),
             .events_buffered = i,
@@ -2910,7 +2914,7 @@ test "Full Agent Workflow: claim -> publish event -> record telemetry -> complet
     // STEP 3: RECORD TELEMETRY
     // ═══════════════════════════════════════════════════════════════════════════════
 
-    const now = std.time.milliTimestamp();
+    const now = tri_time.milliTimestamp();
     try tel.record(.{
         .timestamp = now,
         .active_claims = 1,
@@ -2938,7 +2942,7 @@ test "Full Agent Workflow: claim -> publish event -> record telemetry -> complet
     try std.testing.expectEqual(basal_ganglia.Registry.ClaimCheckResult.expired, registry.checkClaim(task_id));
 
     // Publish completion event
-    const complete_time = std.time.milliTimestamp();
+    const complete_time = tri_time.milliTimestamp();
     const duration_ms = @as(u64, @intCast(complete_time - now));
 
     const complete_event = reticular_formation.EventData{
@@ -3183,7 +3187,7 @@ test "Full Agent Workflow: complete telemetry capture throughout lifecycle" {
     const task_id = "telemetry-workflow-task";
     const agent_id = "agent-telemetry";
 
-    const now = std.time.milliTimestamp();
+    const now = tri_time.milliTimestamp();
 
     // Record initial state (idle)
     try tel.record(.{
@@ -3214,7 +3218,7 @@ test "Full Agent Workflow: complete telemetry capture throughout lifecycle" {
     });
 
     // Simulate work with heartbeat
-    std.Thread.sleep(50 * std.time.ns_per_ms);
+    tri_time.sleep(50 * std.time.ns_per_ms);
     _ = registry.heartbeat(task_id, agent_id);
 
     // Record working state
@@ -3296,7 +3300,7 @@ test "Full Agent Workflow: error handling and recovery" {
     defer telem.deinit();
 
     try telem.record(.{
-        .timestamp = std.time.milliTimestamp(),
+        .timestamp = tri_time.milliTimestamp(),
         .active_claims = 1,
         .events_published = 1,
         .events_buffered = 1,

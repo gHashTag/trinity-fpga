@@ -163,8 +163,8 @@ pub const EClass = struct {
         _ = allocator;
         return .{
             .id = id,
-            .nodes = .{},
-            .parents = .{},
+            .nodes = .empty,
+            .parents = .empty,
         };
     }
 
@@ -270,7 +270,7 @@ pub const EGraph = struct {
             .classes = std.AutoHashMap(EClassId, EClass).init(allocator),
             .hashcons = std.AutoHashMap(u64, EClassId).init(allocator),
             .union_find = std.AutoHashMap(EClassId, EClassId).init(allocator),
-            .rules = .{},
+            .rules = .empty,
         };
     }
 

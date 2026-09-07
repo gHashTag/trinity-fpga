@@ -22,6 +22,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 // ═══════════════════════════════════════════════════════════════════════════════
 // CONSTANTS
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -513,7 +514,7 @@ const TESTS = [_]AnalogyTest{
 
 fn runBenchmark(vocab: *OptimizedVocabMatrix) struct { ops_per_sec: f64, accuracy: f64 } {
     var correct: usize = 0;
-    const start_time = std.time.nanoTimestamp();
+    const start_time = tri_time.nanoTimestamp();
 
     for (TESTS) |t| {
         const result = computeAnalogyILP(vocab, t.a, t.b, t.c);
@@ -524,7 +525,7 @@ fn runBenchmark(vocab: *OptimizedVocabMatrix) struct { ops_per_sec: f64, accurac
         }
     }
 
-    const end_time = std.time.nanoTimestamp();
+    const end_time = tri_time.nanoTimestamp();
     const elapsed_ns = @as(u64, @intCast(end_time - start_time));
     const elapsed_ms = @as(f64, @floatFromInt(elapsed_ns)) / 1_000_000.0;
     const ops_per_sec = @as(f64, @floatFromInt(TESTS.len)) / (elapsed_ms / 1000.0);

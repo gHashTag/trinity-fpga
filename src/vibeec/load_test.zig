@@ -7,6 +7,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const time = std.time;
 const Thread = std.Thread;
@@ -49,7 +50,7 @@ pub const LoadTestResult = struct {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn simulateRequest(metrics: *MetricsRegistry, config: LoadTestConfig, latencies: *std.ArrayList(f64)) void {
-    const start = time.nanoTimestamp();
+    const start = tri_time.nanoTimestamp();
 
     // Simulate processing
     metrics.active_requests += 1;
@@ -57,7 +58,7 @@ fn simulateRequest(metrics: *MetricsRegistry, config: LoadTestConfig, latencies:
 
     // Simulate latency with some variance
     const base_latency = config.simulated_latency_ms;
-    const variance: u64 = @intCast(@mod(time.nanoTimestamp(), 20));
+    const variance: u64 = @intCast(@mod(tri_time.nanoTimestamp(), 20));
     const actual_latency = base_latency + @as(u32, @intCast(variance));
     time.sleep(actual_latency * 1_000_000);
 
@@ -67,7 +68,7 @@ fn simulateRequest(metrics: *MetricsRegistry, config: LoadTestConfig, latencies:
     metrics.active_requests -= 1;
     metrics.queue_depth -= 1;
 
-    const end = time.nanoTimestamp();
+    const end = tri_time.nanoTimestamp();
     const latency_ms = @as(f64, @floatFromInt(end - start)) / 1_000_000.0;
 
     latencies.append(latency_ms) catch {};
@@ -92,7 +93,7 @@ pub fn runLoadTest(allocator: Allocator, config: LoadTestConfig) !LoadTestResult
     std.debug.print("═══════════════════════════════════════════════════════════════════════════════\n", .{});
     std.debug.print("\n", .{});
 
-    const start_time = time.nanoTimestamp();
+    const start_time = tri_time.nanoTimestamp();
 
     // Run requests in batches
     var completed: u32 = 0;
@@ -142,7 +143,7 @@ pub fn runLoadTest(allocator: Allocator, config: LoadTestConfig) !LoadTestResult
         time.sleep(config.request_delay_ms * 1_000_000);
     }
 
-    const end_time = time.nanoTimestamp();
+    const end_time = tri_time.nanoTimestamp();
     const total_time_ms = @as(f64, @floatFromInt(end_time - start_time)) / 1_000_000.0;
 
     // Calculate statistics

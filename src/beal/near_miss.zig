@@ -7,6 +7,7 @@
 // =============================================================================
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const gcd_mod = @import("gcd.zig");
 const bigint_verify = @import("bigint_verify.zig");
 
@@ -238,7 +239,7 @@ pub fn runBealNearCommand(allocator: std.mem.Allocator, args: []const []const u8
 
     std.debug.print("{s}Scanning for near-misses...{s}\n", .{ CYAN, RESET });
 
-    var timer = try std.time.Timer.start();
+    var timer = try tri_time.Timer.start();
     const near_misses = try scanNearMisses(allocator, &config);
     defer allocator.free(near_misses);
     const elapsed = timer.read();

@@ -67,7 +67,7 @@ RESOURCES: 0.1% (80 LUT + 50 FF)
 
 **What to run**:
 ```bash
-cd /Users/playra/trinity-w1/fpga/openxc7-synth
+cd "$(git rev-parse --show-toplevel)/fpga/openxc7-synth"
 
 # Quick demo (even if cable not connected)
 ./uart_host_v6                    # Show help

@@ -19,7 +19,7 @@ NC='\033[0m'
 if [ ! -f "$FORGE_BIN" ]; then
     echo "Error: FORGE binary not found: $FORGE_BIN"
     echo "Usage: $0 <zig_out_dir> <project_root>"
-    echo "Example: $0 /Users/playra/trinity-w1/zig-out /Users/playra/trinity-w1"
+    echo "Example: $0 /Users/playom/trinity-fpga/zig-out /Users/playom/trinity-fpga"
     exit 1
 fi
 

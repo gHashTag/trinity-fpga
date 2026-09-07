@@ -3,6 +3,8 @@
 // ═════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 
 // Queen episode integration
@@ -123,8 +125,13 @@ const Episode = struct {
     timestamp: i64 = 0,
 
     pub fn save(self: Episode) !void {
+        // save() is called from recordEpisodeFromEvent, which is reached from
+        // tri27_cli without an Io anywhere in the chain, so this asks for the
+        // process-wide one rather than growing a parameter.
+        const io = tri_io.get();
+
         // Ensure directory exists
-        std.fs.cwd().makePath(EPISODES_DIR) catch {};
+        std.Io.Dir.cwd().createDirPath(io, EPISODES_DIR) catch {};
 
         // Build filename: {issue}_{timestamp}.json
         var fname_buf: [64]u8 = undefined;
@@ -145,11 +152,11 @@ const Episode = struct {
         }) catch return error.OutOfMemory).len;
 
         // Write to file
-        var dir = try std.fs.cwd().openDir(EPISODES_DIR, .{});
-        defer dir.close();
-        var file = try dir.createFile(fname, .{});
-        defer file.close();
-        try file.writeAll(buf[0..pos]);
+        var dir = try std.Io.Dir.cwd().openDir(io, EPISODES_DIR, .{});
+        defer dir.close(io);
+        var file = try dir.createFile(io, fname, .{});
+        defer file.close(io);
+        try file.writeStreamingAll(io, buf[0..pos]);
     }
 };
 
@@ -328,7 +335,7 @@ fn logCommand(args: []const []const u8) !void {
     const operation_str = if (args.len > 1) args[1] else "RUN";
 
     var event = Tri27Event{};
-    event.timestamp = std.time.timestamp();
+    event.timestamp = tri_time.timestamp();
     event.operation = parseOperation(operation_str);
 
     var i: usize = 0;
@@ -414,13 +421,18 @@ test "tri27_experience: recordToQueenEpisodes integration" {
 
     // Verify episodes.jsonl was created and contains the event
     const file_path = ".trinity/queen/episodes.jsonl";
-    const file = std.fs.cwd().openFile(file_path, .{}) catch {
+    const io = tri_io.get();
+
+    // The whole-file read lives on the directory in 0.16, so it subsumes the
+    // open. The existence check is kept as its own step so that a missing file
+    // still fails with the "not created" diagnostic and a read failure still
+    // falls through to the content assertions below, exactly as before.
+    std.Io.Dir.cwd().access(io, file_path, .{}) catch {
         std.debug.print("Error: episodes.jsonl not created\n", .{});
         return error.FileNotFound;
     };
-    defer file.close();
 
-    const contents = file.readToEndAlloc(allocator, 4096) catch "";
+    const contents = std.Io.Dir.cwd().readFileAlloc(io, file_path, allocator, .limited(4096)) catch "";
     defer allocator.free(contents);
 
     // Verify JSON contains expected fields

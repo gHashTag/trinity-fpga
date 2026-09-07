@@ -1,14 +1,14 @@
 // Railway: Delete base services from farm accounts to free slots for Wave 8
 const std = @import("std");
 
-pub fn main() !void {
+const tri_proc = @import("tri_proc");
+pub fn main(init: std.process.Init.Minimal) !void {
     var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    const args = try std.process.argsAlloc(allocator);
-    defer std.process.argsFree(allocator, args);
-
+    const args = try init.args.toSlice(allocator);
+    defer allocator.free(args);
     if (args.len < 4) {
         std.debug.print("Usage: railway-cleanup <account-name> <project-id> <token>\n", .{});
         std.debug.print("Example: railway-cleanup FARM-7 aa0efa7f-95e6-4466-8de6-43945a031365 $TOKEN\n", .{});
@@ -35,7 +35,7 @@ pub fn main() !void {
     std.debug.print("🔍 Found {d} services\n", .{services.items.len});
 
     // Step 2: Find base services to delete
-    var to_delete = std.ArrayListUnmanaged(Service){};
+    var to_delete = @as(std.ArrayListUnmanaged(Service), .empty);
     defer {
         for (to_delete.items) |svc| {
             allocator.free(svc.id);
@@ -90,7 +90,7 @@ fn isBaseService(name: []const u8) bool {
 }
 
 fn listServices(allocator: std.mem.Allocator, token: []const u8, project_id: []const u8) !std.ArrayListUnmanaged(Service) {
-    var services = std.ArrayListUnmanaged(Service){};
+    var services = @as(std.ArrayListUnmanaged(Service), .empty);
 
     const query_fmt = "{{\"query\":\"{{project(id:\\\"{s}\\\"){{services{{edges{{node{{id name}}}}}}}}}}\"}}";
     const query = try std.fmt.allocPrint(allocator, query_fmt, .{project_id});
@@ -154,7 +154,7 @@ fn execCurl(allocator: std.mem.Allocator, token: []const u8, body: []const u8) !
     const auth_header = try std.fmt.allocPrint(allocator, "Authorization: Bearer {s}", .{token});
     defer allocator.free(auth_header);
 
-    const result = try std.process.Child.run(.{
+    const result = try tri_proc.run(.{
         .allocator = allocator,
         .argv = &[_][]const u8{
             "curl", "-s",        "-X",                                    "POST",
@@ -166,7 +166,7 @@ fn execCurl(allocator: std.mem.Allocator, token: []const u8, body: []const u8) !
         allocator.free(result.stderr);
     }
 
-    if (result.term.Exited != 0) return error.CurlFailed;
+    if (result.term.exited != 0) return error.CurlFailed;
 
     return result.stdout;
 }

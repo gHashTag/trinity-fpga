@@ -45,7 +45,7 @@ pub const Verdict = struct {
     suggested_penance: []const Penance,
 
     pub fn format(self: Verdict, allocator: std.mem.Allocator) ![]const u8 {
-        var result = std.ArrayListUnmanaged(u8){};
+        var result = @as(std.ArrayListUnmanaged(u8), .empty);
 
         if (self.is_valid) {
             try result.appendSlice(allocator, "✅ CODE IS BLESSED. No mortal sins detected.\n");
@@ -81,8 +81,8 @@ pub const Validator = struct {
     pub fn init(allocator: std.mem.Allocator) Validator {
         return Validator{
             .allocator = allocator,
-            .sins = .{},
-            .penance = .{},
+            .sins = .empty,
+            .penance = .empty,
         };
     }
 

@@ -12,6 +12,8 @@
 // =============================================================================
 
 const std = @import("std");
+const tri_io = @import("tri_io");
+const tri_time = @import("tri_time");
 const enhanced_chat = @import("igla_enhanced_chat.zig");
 
 // =============================================================================
@@ -200,7 +202,7 @@ pub const PatternOptimizer = struct {
             .pattern_idx = pattern_idx,
             .feedback = feedback,
             .query = query,
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
             .needle_score = needle_score,
         };
         self.feedback_count += 1;
@@ -209,7 +211,7 @@ pub const PatternOptimizer = struct {
         if (pattern_idx < self.pattern_success.len) {
             var stats = &self.pattern_success[pattern_idx];
             stats.uses += 1;
-            stats.last_used = std.time.timestamp();
+            stats.last_used = tri_time.timestamp();
 
             switch (feedback) {
                 .Positive => stats.positive += 1,
@@ -443,12 +445,13 @@ pub const SelfOptChat = struct {
 // =============================================================================
 
 pub fn runBenchmark() !void {
-    const stdout = std.fs.File.stdout();
+    const io = tri_io.get();
+    const stdout = std.Io.File.stdout();
 
-    _ = try stdout.write("\n");
-    _ = try stdout.write("===============================================================================\n");
-    _ = try stdout.write("     IGLA SELF-OPTIMIZATION BENCHMARK                                          \n");
-    _ = try stdout.write("===============================================================================\n");
+    try stdout.writeStreamingAll(io, "\n");
+    try stdout.writeStreamingAll(io, "===============================================================================\n");
+    try stdout.writeStreamingAll(io, "     IGLA SELF-OPTIMIZATION BENCHMARK                                          \n");
+    try stdout.writeStreamingAll(io, "===============================================================================\n");
 
     var engine = SelfOptChat.init(true);
 
@@ -486,41 +489,41 @@ pub fn runBenchmark() !void {
     // Run optimization
     const opt_result = engine.forceOptimize();
 
-    _ = try stdout.write("\n");
+    try stdout.writeStreamingAll(io, "\n");
 
     var buf: [256]u8 = undefined;
 
     var len = std.fmt.bufPrint(&buf, "  Queries processed: {d}\n", .{FEEDBACK_WINDOW}) catch return;
-    _ = try stdout.write(len);
+    try stdout.writeStreamingAll(io, len);
 
     len = std.fmt.bufPrint(&buf, "  Positive feedback: {d}\n", .{positive_count}) catch return;
-    _ = try stdout.write(len);
+    try stdout.writeStreamingAll(io, len);
 
     len = std.fmt.bufPrint(&buf, "  Negative feedback: {d}\n", .{negative_count}) catch return;
-    _ = try stdout.write(len);
+    try stdout.writeStreamingAll(io, len);
 
     len = std.fmt.bufPrint(&buf, "  Optimization cycles: {d}\n", .{opt_result.cycle}) catch return;
-    _ = try stdout.write(len);
+    try stdout.writeStreamingAll(io, len);
 
     len = std.fmt.bufPrint(&buf, "  Patterns adjusted: {d}\n", .{opt_result.patterns_adjusted}) catch return;
-    _ = try stdout.write(len);
+    try stdout.writeStreamingAll(io, len);
 
     len = std.fmt.bufPrint(&buf, "  Patterns improved: {d}\n", .{opt_result.patterns_improved}) catch return;
-    _ = try stdout.write(len);
+    try stdout.writeStreamingAll(io, len);
 
     len = std.fmt.bufPrint(&buf, "  Needle score: {d:.2}\n", .{opt_result.average_needle_score}) catch return;
-    _ = try stdout.write(len);
+    try stdout.writeStreamingAll(io, len);
 
     if (opt_result.passes_quality_gate) {
-        _ = try stdout.write("  Quality gate: PASSED (>0.7)\n");
+        try stdout.writeStreamingAll(io, "  Quality gate: PASSED (>0.7)\n");
     } else {
-        _ = try stdout.write("  Quality gate: FAILED (<0.7)\n");
+        try stdout.writeStreamingAll(io, "  Quality gate: FAILED (<0.7)\n");
     }
 
-    _ = try stdout.write("\n");
-    _ = try stdout.write("===============================================================================\n");
-    _ = try stdout.write("  phi^2 + 1/phi^2 = 3 = TRINITY | SELF-OPTIMIZATION                           \n");
-    _ = try stdout.write("===============================================================================\n");
+    try stdout.writeStreamingAll(io, "\n");
+    try stdout.writeStreamingAll(io, "===============================================================================\n");
+    try stdout.writeStreamingAll(io, "  phi^2 + 1/phi^2 = 3 = TRINITY | SELF-OPTIMIZATION                           \n");
+    try stdout.writeStreamingAll(io, "===============================================================================\n");
 }
 
 // =============================================================================

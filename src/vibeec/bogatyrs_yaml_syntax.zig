@@ -3,6 +3,7 @@
 // φ² + 1/φ² = 3 | PHOENIX = 999
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const common = @import("bogatyrs_common.zig");
 
 const NAME = "yaml_syntax";
@@ -19,7 +20,7 @@ pub const bogatyr = common.BogatyrPlugin{
 };
 
 fn validateYAMLSyntax(ctx: *const common.ValidationContext) !common.BogatyrResult {
-    const start_time = std.time.nanoTimestamp();
+    const start_time = tri_time.nanoTimestamp();
     const allocator = ctx.allocator;
 
     var error_count: usize = 0;
@@ -44,7 +45,7 @@ fn validateYAMLSyntax(ctx: *const common.ValidationContext) !common.BogatyrResul
         }
     }
 
-    const end_time = std.time.nanoTimestamp();
+    const end_time = tri_time.nanoTimestamp();
     const duration: i64 = @intCast(end_time - start_time);
 
     const verdict: common.BogatyrVerdict = if (error_count > 0) .Fail else .Pass;

@@ -14,6 +14,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const print = std.debug.print;
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -70,11 +71,11 @@ const ScanStats = struct {
     end_time: i128 = 0,
 
     pub fn start(self: *ScanStats) void {
-        self.start_time = std.time.nanoTimestamp();
+        self.start_time = tri_time.nanoTimestamp();
     }
 
     pub fn finish(self: *ScanStats) void {
-        self.end_time = std.time.nanoTimestamp();
+        self.end_time = tri_time.nanoTimestamp();
     }
 
     pub fn duration(self: *const ScanStats) f64 {
@@ -326,7 +327,7 @@ pub fn main() !void {
     print("  Verifying BSD Conjecture for entire database\n", .{});
     print("=============================================================\n\n", .{});
 
-    const base_dir = "/Users/playra/trinity-w1/data/ecdata/allbsd";
+    const base_dir = "/Users/playom/trinity-fpga/data/ecdata/allbsd";
     const max_conductor: u64 = 500000;
 
     var stats = ScanStats{};

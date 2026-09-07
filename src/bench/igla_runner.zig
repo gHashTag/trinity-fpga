@@ -7,6 +7,7 @@
 // phi^2 + 1/phi^2 = 3 = TRINITY
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const igla_bench = @import("igla_bench.zig");
 const igla_tasks = @import("igla_tasks.zig");
 const igla_metrics = @import("igla_metrics.zig");
@@ -33,12 +34,12 @@ pub fn runSingleConfig(
 
     var test_results = try std.ArrayList(igla_bench.IGLAResult).initCapacity(allocator, haystack.questions.len);
 
-    const start = std.time.nanoTimestamp();
+    const start = tri_time.nanoTimestamp();
     for (haystack.questions) |question| {
         const result = try igla_bench.runInference(allocator, haystack, question, format);
         try test_results.append(allocator, result);
     }
-    const total_ms = @as(f32, @floatFromInt(@divFloor(std.time.nanoTimestamp() - start, 1_000_000)));
+    const total_ms = @as(f32, @floatFromInt(@divFloor(tri_time.nanoTimestamp() - start, 1_000_000)));
 
     // Calculate accuracy
     var correct: usize = 0;

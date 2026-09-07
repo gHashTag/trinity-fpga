@@ -4,6 +4,7 @@
 // φ² + 1/φ² = 3
 
 const std = @import("std");
+const tri_rand = @import("tri_rand");
 const Allocator = std.mem.Allocator;
 const net = std.net;
 
@@ -82,7 +83,7 @@ pub const WebSocketClient = struct {
 
         // Generate random key
         var key_bytes: [16]u8 = undefined;
-        std.crypto.random.bytes(&key_bytes);
+        tri_rand.random().bytes(&key_bytes);
         var key_buf: [24]u8 = undefined;
         const key = std.base64.standard.Encoder.encode(&key_buf, &key_bytes);
 
@@ -148,7 +149,7 @@ pub const WebSocketClient = struct {
 
         // Mask key (4 bytes)
         var mask_key: [4]u8 = undefined;
-        std.crypto.random.bytes(&mask_key);
+        tri_rand.random().bytes(&mask_key);
         @memcpy(frame_buf[pos .. pos + 4], &mask_key);
         pos += 4;
 

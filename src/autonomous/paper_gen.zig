@@ -9,6 +9,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 pub const BenchmarkResult = struct {
     baseline_metric: f64,
     new_metric: f64,
@@ -91,7 +92,7 @@ pub const PaperPublisher = struct {
     /// Generate blog post from benchmark results
     pub fn generateBlogPost(self: *PaperPublisher, result: BenchmarkResult) !BlogPost {
         // Use ISO date format (YYYY-MM-DD) for blog posts
-        const timestamp = std.time.timestamp();
+        const timestamp = tri_time.timestamp();
         const date = try std.fmt.allocPrint(self.allocator, "{d}", .{timestamp});
         defer self.allocator.free(date);
 
@@ -236,12 +237,11 @@ pub const PaperPublisher = struct {
 };
 
 // CLI for testing
-pub fn main() !void {
+pub fn main(init: std.process.Init.Minimal) !void {
     const allocator = std.heap.page_allocator;
 
-    const args = try std.process.argsAlloc(allocator);
-    defer std.process.argsFree(allocator, args);
-
+    const args = try init.args.toSlice(allocator);
+    defer allocator.free(args);
     std.debug.print("📝 TRINITY AUTONOMOUS PAPER PUBLISHING\n", .{});
     std.debug.print("φ² + 1/φ² = 3\n\n", .{});
 
@@ -272,7 +272,7 @@ pub fn main() !void {
         const improvement = try std.fmt.parseFloat(f64, args[2]);
         const metric_name = args[3];
 
-        var publisher = PaperPublisher.init(allocator, "/Users/playra/trinity-w1/docsite", "/Users/playra/trinity-w1");
+        var publisher = PaperPublisher.init(allocator, "/Users/playom/trinity-fpga/docsite", "/Users/playom/trinity-fpga");
 
         const result = BenchmarkResult{
             .baseline_metric = 100.0,
@@ -280,7 +280,7 @@ pub fn main() !void {
             .improvement_percent = improvement,
             .metric_name = metric_name,
             .commit_hash = "c40b16605",
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
         };
 
         const post = try publisher.generateBlogPost(result);

@@ -13,6 +13,7 @@
 //! ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 
 /// Transaction types
@@ -53,7 +54,7 @@ pub const Transaction = struct {
             .from = from,
             .to = to,
             .amount = amount,
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
             .metadata = try allocator.dupe(u8, metadata),
             .block_height = block_height,
         };
@@ -79,7 +80,7 @@ pub const Block = struct {
             .hash = [_]u8{0} ** 32,
             .prev_hash = prev_hash,
             .transactions = std.ArrayList(Transaction).init(allocator),
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
             .nonce = 0,
         };
     }

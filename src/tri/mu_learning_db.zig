@@ -1,6 +1,7 @@
 // @origin(spec:mu_learning_db.tri) @regen(manual-impl)
 // MU LEARNING DB — Pattern database with hippocampus dual-write
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const hippocampus = @import("hippocampus.zig");
 
@@ -21,13 +22,12 @@ pub fn saveDB(allocator: Allocator, rules: []const AutoFixRule) !void {
     std.fs.cwd().makePath(".trinity/mu") catch {};
     var buf: std.ArrayList(u8) = .empty;
     errdefer buf.deinit(allocator);
-    const w = buf.writer(allocator);
-    try w.writeAll("[\n");
+    try buf.appendSlice(allocator, "[\n");
     for (rules, 0..) |rule, i| {
-        try w.print("  {{\"id\":\"{s}\",\"pattern\":\"{s}\",\"replacement\":\"{s}\"", .{ rule.id, rule.pattern, rule.replacement });
-        try w.print(",\"category\":\"{s}\",\"description\":\"{s}\",\"apply_count\":{d},\"success_count\":{d}}}\n", .{ rule.category, rule.description, rule.apply_count, rule.success_count });
+        try buf.print(allocator, "  {{\"id\":\"{s}\",\"pattern\":\"{s}\",\"replacement\":\"{s}\"", .{ rule.id, rule.pattern, rule.replacement });
+        try buf.print(allocator, ",\"category\":\"{s}\",\"description\":\"{s}\",\"apply_count\":{d},\"success_count\":{d}}}\n", .{ rule.category, rule.description, rule.apply_count, rule.success_count });
     }
-    try w.writeAll("]\n");
+    try buf.appendSlice(allocator, "]\n");
     const json = try buf.toOwnedSlice(allocator);
     defer allocator.free(json);
     const file = try std.fs.cwd().createFile(DB_PATH, .{});
@@ -36,7 +36,7 @@ pub fn saveDB(allocator: Allocator, rules: []const AutoFixRule) !void {
 
     // Hippocampus dual-write
     var record: hippocampus.MemoryRecord = undefined;
-    const ts: u64 = @intCast(std.time.timestamp());
+    const ts: u64 = @intCast(tri_time.timestamp());
     hippocampus.generateId(&record.id_buf, &record.id_len, ts, "mu_pattern");
     hippocampus.copyToFixed(32, &record.agent_buf, &record.agent_len, "mu_pattern");
     record.kind = .learning;
@@ -57,7 +57,7 @@ pub fn saveDB(allocator: Allocator, rules: []const AutoFixRule) !void {
 pub fn applyFixes(allocator: Allocator, fixes_made: usize, total_errors: usize) !void {
     // Hippocampus dual-write
     var record: hippocampus.MemoryRecord = undefined;
-    const ts: u64 = @intCast(std.time.timestamp());
+    const ts: u64 = @intCast(tri_time.timestamp());
     hippocampus.generateId(&record.id_buf, &record.id_len, ts, "mu_fix");
     hippocampus.copyToFixed(32, &record.agent_buf, &record.agent_len, "mu");
     record.kind = .learning;

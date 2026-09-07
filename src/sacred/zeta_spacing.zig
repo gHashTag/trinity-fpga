@@ -281,7 +281,17 @@ pub fn runZetaSpacingCommand(allocator: std.mem.Allocator, args: []const []const
     defer spacings.deinit();
 
     // Print summary
-    try spacings.formatSummary(std.fs.File.stderr().deprecatedWriter());
+    // 0.16 dropped `deprecatedWriter`. `std.debug.lockStderr` hands back the
+    // same stderr writer `std.debug.print` (used throughout this function)
+    // writes through, and needs no Io parameter.
+    {
+        var stderr_buf: [4096]u8 = undefined;
+        const locked = std.debug.lockStderr(&stderr_buf);
+        defer std.debug.unlockStderr();
+        const stderr_w = &locked.file_writer.interface;
+        try spacings.formatSummary(stderr_w);
+        try stderr_w.flush();
+    }
 
     // Compare to GUE
     std.debug.print("\n{s}GUE COMPARISON:{s}\n", .{ CYAN, RESET });

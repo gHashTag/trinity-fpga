@@ -6,6 +6,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const vsa = @import("vsa.zig");
 const vsa_simd = @import("vsa_simd.zig");
 const evolution = @import("evolution.zig");
@@ -125,7 +126,7 @@ pub fn benchmarkScale(allocator: std.mem.Allocator, dim: usize, iterations: usiz
     }
 
     // Bind benchmark
-    var timer = try std.time.Timer.start();
+    var timer = try tri_time.Timer.start();
     for (0..iterations) |_| {
         var r = try vsa_simd.bindSimd(allocator, &a, &b);
         r.deinit();
@@ -189,7 +190,7 @@ pub fn evolveAtScale(
         .target_fitness = 0.9,
     };
 
-    var timer = try std.time.Timer.start();
+    var timer = try tri_time.Timer.start();
     const stats = try evolution.evolve(allocator, &population, &human, &config, seed +% 2);
     const total_ns = timer.read();
 

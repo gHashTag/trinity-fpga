@@ -108,17 +108,15 @@ pub const ReplTester = struct {
         // Clear previous output
         self.output.clearRetainingCapacity();
 
-        // Create a writer that captures to our buffer
-        const writer = self.output.writer(self.allocator);
-
         // Execute via CommandInvoker directly
         var result = try self.invoker.runCommandString(cmd_str);
         defer result.deinit();
 
-        // Capture output
-        try writer.writeAll(result.stdout);
+        // Capture output. 0.16 removed ArrayList.writer(); the writer never left
+        // this function, so the list is appended to directly.
+        try self.output.appendSlice(self.allocator, result.stdout);
         if (result.stderr.len > 0) {
-            try writer.writeAll(result.stderr);
+            try self.output.appendSlice(self.allocator, result.stderr);
         }
 
         self.exit_code = @intCast(result.exit_code);
@@ -130,10 +128,16 @@ pub const ReplTester = struct {
     pub fn runCommandEnum(self: *Self, cmd: Command, args: ?[]const []const u8) ![]const u8 {
         _ = args;
         self.output.clearRetainingCapacity();
-        const writer = self.output.writer(self.allocator);
+
+        // 0.16 removed ArrayList.writer(), and executeCommand takes the writer,
+        // so a real one is needed. Allocating takes ownership of self.output's
+        // buffer; toArrayList hands it back with the written bytes in place.
+        var aw: std.Io.Writer.Allocating = .fromArrayList(self.allocator, &self.output);
+        errdefer self.output = aw.toArrayList();
 
         var exit_code: i32 = 0;
-        try executeCommand(cmd, self.state, writer, &exit_code, self.invoker);
+        try executeCommand(cmd, self.state, &aw.writer, &exit_code, self.invoker);
+        self.output = aw.toArrayList();
         self.exit_code = exit_code;
 
         return self.output.items;

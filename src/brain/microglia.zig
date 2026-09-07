@@ -47,6 +47,7 @@
 //! φ² + 1/φ² = 3 = TRINITY
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const print = std.debug.print;
 
@@ -95,7 +96,7 @@ pub const Microglia = struct {
     pub fn patrol(_: *const Microglia, allocator: Allocator) !SurveillanceReport {
         _ = allocator;
         return SurveillanceReport{
-            .timestamp = std.time.milliTimestamp(),
+            .timestamp = tri_time.milliTimestamp(),
             .active_workers = 0,
             .crashed_workers = 0,
             .idle_workers = 0,
@@ -572,7 +573,7 @@ test "SurveillanceReport with different recommendations" {
 
     for (recommendations) |rec| {
         const report = SurveillanceReport{
-            .timestamp = std.time.milliTimestamp(),
+            .timestamp = tri_time.milliTimestamp(),
             .active_workers = 10,
             .crashed_workers = 1,
             .idle_workers = 0,
@@ -795,7 +796,7 @@ test "SurveillanceReport timestamp increases" {
     const microglia = Microglia{};
 
     const report1 = try microglia.patrol(allocator);
-    std.Thread.sleep(1 * std.time.ns_per_ms); // Small delay (1ms)
+    tri_time.sleep(1 * std.time.ns_per_ms); // Small delay (1ms)
     const report2 = try microglia.patrol(allocator);
 
     try std.testing.expect(report2.timestamp >= report1.timestamp);

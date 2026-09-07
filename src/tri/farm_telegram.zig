@@ -75,8 +75,8 @@ pub fn notifyTaskComplete(allocator: Allocator, task: FarmTask, success: bool, e
     const status_text = if (success) "complete" else "failed";
 
     var message_buf: [1024]u8 = undefined;
-    var fbs = std.io.fixedBufferStream(&message_buf);
-    const writer = fbs.writer();
+    var w: std.Io.Writer = .fixed(&message_buf);
+    const writer = &w;
 
     writer.print(
         \\{s} FARM #{d}: {s}
@@ -88,7 +88,7 @@ pub fn notifyTaskComplete(allocator: Allocator, task: FarmTask, success: bool, e
         writer.print("   Error: {s}\n", .{err}) catch return;
     }
 
-    const message = try allocator.dupe(u8, fbs.getWritten());
+    const message = try allocator.dupe(u8, w.buffered());
     defer allocator.free(message);
 
     try sendNotification(allocator, message);

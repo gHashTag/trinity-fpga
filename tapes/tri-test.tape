@@ -9,7 +9,7 @@ Set Theme "Catppuccin Mocha"
 Set TypingSpeed 50ms
 
 # Start with clean terminal
-Type "cd ~/trinity-w1"
+Type "cd ~/trinity-fpga"
 Enter
 Sleep 500ms
 

@@ -5,6 +5,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 // Sacred constants
 const PHI: f64 = 1.6180339887498948482;
 const GOLDEN_IDENTITY: f64 = 3.0; // φ² + 1/φ² = 3
@@ -360,7 +361,7 @@ pub fn benchmarkSimdVsScalar(allocator: std.mem.Allocator, input: []const u8, it
     {
         var i: u32 = 0;
         while (i < iterations) : (i += 1) {
-            var timer = try std.time.Timer.start();
+            var timer = try tri_time.Timer.start();
             var parser = SimdParserV2.init(allocator, input);
             defer parser.deinit();
             _ = try parser.tokenize();
@@ -373,7 +374,7 @@ pub fn benchmarkSimdVsScalar(allocator: std.mem.Allocator, input: []const u8, it
     {
         var i: u32 = 0;
         while (i < iterations) : (i += 1) {
-            var timer = try std.time.Timer.start();
+            var timer = try tri_time.Timer.start();
             _ = scalarTokenize(input);
             scalar_total += timer.read();
         }

@@ -2,6 +2,7 @@
 // φ² + 1/φ² = 3
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const tri = @import("tri_inference.zig");
 const kv_cache = @import("kv_cache.zig");
 
@@ -32,7 +33,7 @@ pub fn main() !void {
 
     // Test 2: Forward pass with f32 KV cache
     std.debug.print("═══ TEST 2: Forward pass (f32 KV cache) ═══\n", .{});
-    var timer = try std.time.Timer.start();
+    var timer = try tri_time.Timer.start();
 
     const token_id: u32 = 5;
     const logits_f32 = model.forward(token_id, 0) catch |err| {

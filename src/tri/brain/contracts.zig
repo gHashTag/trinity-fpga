@@ -4,6 +4,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 
 /// Worker view with source and staleness markers
@@ -41,7 +42,7 @@ pub const WorkerView = struct {
                 .steps = metrics_.step,
                 .loss = metrics_.loss,
                 .ppl = metrics_.ppl,
-                .timestamp = std.time.timestamp(),
+                .timestamp = tri_time.timestamp(),
             },
         };
     }

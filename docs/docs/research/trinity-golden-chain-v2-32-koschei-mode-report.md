@@ -151,7 +151,7 @@ detected   as offline  backup   backup   health     to pool
 | `src/agent_mu/cluster_health_monitor.zig` | Created | 680 |
 | `src/agent_mu/auto_recovery_orchestrator.zig` | Created | 500 |
 | `.github/workflows/koschei-production.yml` | Created | 180 |
-| `docsite/docs/research/pas-v8.24-koschei-mode-report.md` | Created | ~150 |
+| `docs/docs/research/pas-v8.24-koschei-mode-report.md` | Created | ~150 |
 | `docsite/sidebars.ts` | Modified | +1 |
 | `.ralph/TECH_TREE.md` | Updated | +5 |
 | `.ralph/SUCCESS_HISTORY.md` | Updated | +80 |

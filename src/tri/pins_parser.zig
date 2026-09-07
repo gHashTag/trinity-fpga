@@ -12,6 +12,7 @@
 // See: specs/pins/README.md for migration plan.
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 
 // BOOTSTRAP: Migration to .tri specs in progress
 // This file is bootstrap implementation pending migration to proper .tri specs.
@@ -872,10 +873,8 @@ pub const XdcEmitter = struct {
         var buffer = std.ArrayList(u8).initCapacity(self.allocator, 1024) catch unreachable;
         errdefer buffer.deinit(self.allocator);
 
-        const writer = buffer.writer(self.allocator);
-
         // Header
-        try writer.print(
+        try buffer.print(self.allocator,
             \\# ============================================================================
             \\# XDC Constraints generated from Trinity Pins DSL
             \\# Design: {s}
@@ -949,15 +948,15 @@ pub const XdcEmitter = struct {
                 };
 
                 // Emit XDC constraint
-                try writer.print("# {s}\n", .{binding.target});
-                try writer.print("set_property LOC {s} [get_ports {s}]\n", .{ clean_loc, binding.port });
-                try writer.print("set_property IOSTANDARD {s} [get_ports {s}]\n", .{ io_standard, binding.port });
-                try writer.writeAll("\n");
+                try buffer.print(self.allocator, "# {s}\n", .{binding.target});
+                try buffer.print(self.allocator, "set_property LOC {s} [get_ports {s}]\n", .{ clean_loc, binding.port });
+                try buffer.print(self.allocator, "set_property IOSTANDARD {s} [get_ports {s}]\n", .{ io_standard, binding.port });
+                try buffer.appendSlice(self.allocator, "\n");
             }
         }
 
         // Bitstream config
-        try writer.writeAll(
+        try buffer.appendSlice(self.allocator,
             \\# Bitstream config
             \\set_property CFGBVS VCCO [current_design]
             \\set_property CONFIG_VOLTAGE 3.3 [current_design]
@@ -977,7 +976,8 @@ pub fn parseDesignFile(allocator: std.mem.Allocator, path: []const u8) !struct {
     board: BoardDecl,
     fpga: FpgaDecl,
 } {
-    const content = std.fs.cwd().readFileAlloc(allocator, path, 1024 * 1024) catch |err| {
+    const io = tri_io.get();
+    const content = std.Io.Dir.cwd().readFileAlloc(io, path, allocator, .limited(1024 * 1024)) catch |err| {
         std.debug.print("Failed to read {s}: {}\n", .{ path, err });
         return error.FileNotFound;
     };
@@ -1003,7 +1003,7 @@ pub fn parseDesignFile(allocator: std.mem.Allocator, path: []const u8) !struct {
     else
         "fpga/boards/qmtech_xc7a100t.board.tri";
 
-    const board_content = std.fs.cwd().readFileAlloc(allocator, board_path, 1024 * 1024) catch |err| {
+    const board_content = std.Io.Dir.cwd().readFileAlloc(io, board_path, allocator, .limited(1024 * 1024)) catch |err| {
         std.debug.print("Failed to read {s}: {}\n", .{ board_path, err });
         return error.FileNotFound;
     };
@@ -1024,7 +1024,7 @@ pub fn parseDesignFile(allocator: std.mem.Allocator, path: []const u8) !struct {
     else
         "fpga/fabric/xc7a100t_fgg676.fabric.tri";
 
-    const fpga_content = std.fs.cwd().readFileAlloc(allocator, fpga_path, 1024 * 1024) catch |err| {
+    const fpga_content = std.Io.Dir.cwd().readFileAlloc(io, fpga_path, allocator, .limited(1024 * 1024)) catch |err| {
         std.debug.print("Failed to read {s}: {}\n", .{ fpga_path, err });
         return error.FileNotFound;
     };
@@ -1117,20 +1117,19 @@ pub fn exportIr(allocator: std.mem.Allocator, design_path: []const u8) ![]const 
     // Build JSON representation
     var json = std.ArrayList(u8).initCapacity(allocator, 512) catch unreachable;
     errdefer json.deinit(allocator);
-    const writer = json.writer(allocator);
 
-    try writer.writeAll("{\n"); // prints {
-    try writer.print("  \"design\": \"{s}\",\n", .{result.design.name});
-    try writer.print("  \"board\": \"{s}\",\n", .{result.board.name});
-    try writer.print("  \"fpga\": \"{s}\",\n", .{result.fpga.name});
-    try writer.writeAll("  \"bindings\": [\n");
+    try json.appendSlice(allocator, "{\n"); // prints {
+    try json.print(allocator, "  \"design\": \"{s}\",\n", .{result.design.name});
+    try json.print(allocator, "  \"board\": \"{s}\",\n", .{result.board.name});
+    try json.print(allocator, "  \"fpga\": \"{s}\",\n", .{result.fpga.name});
+    try json.appendSlice(allocator, "  \"bindings\": [\n");
 
     for (result.design.bindings.items, 0..) |binding, i| {
-        if (i > 0) try writer.writeAll(",\n");
-        try writer.print("    {{ \"port\": \"{s}\", \"signal\": \"{s}\" }}", .{ binding.port, binding.target });
+        if (i > 0) try json.appendSlice(allocator, ",\n");
+        try json.print(allocator, "    {{ \"port\": \"{s}\", \"signal\": \"{s}\" }}", .{ binding.port, binding.target });
     }
 
-    try writer.writeAll("\n  ]\n}\n"); // prints }\n
+    try json.appendSlice(allocator, "\n  ]\n}\n"); // prints }\n
 
     return json.toOwnedSlice(allocator);
 }

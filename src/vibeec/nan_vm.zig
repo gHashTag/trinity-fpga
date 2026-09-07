@@ -8,6 +8,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const nan_value = @import("nan_value.zig");
 const NanValue = nan_value.NanValue;
@@ -128,7 +129,7 @@ pub const NanVM = struct {
     // ═══════════════════════════════════════════════════════════════════════════
 
     pub fn run(self: *Self) NanValue {
-        self.start_time = std.time.nanoTimestamp();
+        self.start_time = tri_time.nanoTimestamp();
 
         const code = self.code;
         var ip = self.ip;
@@ -295,7 +296,7 @@ pub const NanVM = struct {
 
         self.ip = ip;
         self.sp = sp;
-        self.end_time = std.time.nanoTimestamp();
+        self.end_time = tri_time.nanoTimestamp();
 
         if (sp > 0) {
             return self.stack[sp - 1];

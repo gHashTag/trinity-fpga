@@ -1,1 +1,1 @@
-/Users/playra/trinity-w1/fpga/openxc7-synth/uart_simple.xdc
+/Users/playom/trinity-fpga/fpga/openxc7-synth/uart_simple.xdc

@@ -3,6 +3,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_rand = @import("tri_rand");
 const math = std.math;
 const sacred_const = @import("const.zig");
 
@@ -387,7 +388,7 @@ pub fn barnsleyFern(iterations: u32, writer: anytype) !void {
 
     var i: u32 = 0;
     while (i < iterations) : (i += 1) {
-        const r = @as(f64, @floatFromInt(std.crypto.random.intRangeLessThan(u8, 100))) / 100.0;
+        const r = @as(f64, @floatFromInt(tri_rand.random().intRangeLessThan(u8, 100))) / 100.0;
 
         var nx: f64 = undefined;
         var ny: f64 = undefined;

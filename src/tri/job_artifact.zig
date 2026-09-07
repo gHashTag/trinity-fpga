@@ -16,6 +16,7 @@
 //!   └── test_results.xml
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 
 // =============================================================================
 // ARTIFACT TYPE
@@ -110,21 +111,22 @@ pub const ArtifactManifest = struct {
 
     /// Serialize to JSON
     pub fn toJson(self: *const ArtifactManifest, allocator: std.mem.Allocator) ![]const u8 {
-        var buf = std.ArrayList(u8).init(allocator);
+        var buf: std.Io.Writer.Allocating = .init(allocator);
         errdefer buf.deinit();
+        const w = &buf.writer;
 
-        try buf.print(
+        try w.print(
             \\{{"job_id":"{s}","artifacts":[
         , .{self.job_id});
 
         for (self.artifacts, 0..) |artifact, i| {
-            if (i > 0) try buf.appendSlice(allocator, ",");
+            if (i > 0) try w.writeAll(",");
             const artifact_json = try artifact.toJson(allocator);
             defer allocator.free(artifact_json);
-            try buf.appendSlice(allocator, artifact_json);
+            try w.writeAll(artifact_json);
         }
 
-        try buf.print(
+        try w.print(
             \\],"total_size":{d},"required_count":{d},"present_count":{d}}}
         , .{ self.total_size, self.required_count, self.present_count });
 
@@ -145,20 +147,21 @@ pub const ArtifactManifest = struct {
 pub const ArtifactCollector = struct {
     allocator: std.mem.Allocator,
     job_id: []const u8,
-    artifacts_dir: std.fs.Dir,
+    artifacts_dir: std.Io.Dir,
 
     /// Initialize the collector for a job
     pub fn init(allocator: std.mem.Allocator, job_id: []const u8) !ArtifactCollector {
+        const io = tri_io.get();
         const artifacts_path = try std.fmt.allocPrint(allocator, ".trinity/jobs/{s}/artifacts", .{job_id});
         defer allocator.free(artifacts_path);
 
         // Create artifacts directory if it doesn't exist
-        std.fs.cwd().makePath(artifacts_path) catch |err| {
+        std.Io.Dir.cwd().createDirPath(io, artifacts_path) catch |err| {
             std.log.err("Failed to create artifacts directory: {}", .{err});
             return err;
         };
 
-        const artifacts_dir = try std.fs.cwd().openDir(artifacts_path, .{});
+        const artifacts_dir = try std.Io.Dir.cwd().openDir(io, artifacts_path, .{});
 
         return ArtifactCollector{
             .allocator = allocator,
@@ -170,7 +173,7 @@ pub const ArtifactCollector = struct {
     /// Deinitialize the collector
     pub fn deinit(self: *ArtifactCollector) void {
         self.allocator.free(self.job_id);
-        self.artifacts_dir.close();
+        self.artifacts_dir.close(tri_io.get());
     }
 
     /// Collect all artifacts from the artifacts directory
@@ -189,12 +192,13 @@ pub const ArtifactCollector = struct {
         var present_count: u32 = 0;
 
         // Iterate through files in artifacts directory
+        const io = tri_io.get();
         var iter = self.artifacts_dir.iterate();
-        while (try iter.next()) |entry| {
+        while (try iter.next(io)) |entry| {
             if (entry.kind == .directory) continue;
 
             // Get file stat
-            const stat = try self.artifacts_dir.statFile(entry.name);
+            const stat = try self.artifacts_dir.statFile(io, entry.name, .{});
             const size = stat.size;
             total_size += size;
 
@@ -237,22 +241,28 @@ pub const ArtifactCollector = struct {
     /// Add an artifact file to the artifacts directory
     pub fn addArtifact(self: *ArtifactCollector, source_path: []const u8, dest_filename: []const u8) !void {
         // Open source file
-        const source_file = try std.fs.cwd().openFile(source_path, .{});
-        defer source_file.close();
+        const io = tri_io.get();
+        const source_file = try std.Io.Dir.cwd().openFile(io, source_path, .{});
+        defer source_file.close(io);
 
         // Create destination file
-        const dest_file = try self.artifacts_dir.createFile(dest_filename, .{});
-        defer dest_file.close();
+        const dest_file = try self.artifacts_dir.createFile(io, dest_filename, .{});
+        defer dest_file.close(io);
 
         // Copy contents
         const buf_size = 8192;
         var buffer = try self.allocator.alloc(u8, buf_size);
         defer self.allocator.free(buffer);
 
+        // readSliceShort returns a short count -- including 0 -- only at end of
+        // stream, which is the loop's termination condition. readStreaming
+        // would not: it can return 0 mid-file and truncate the copy silently.
+        var scratch: [4096]u8 = undefined;
+        var fr = source_file.reader(io, &scratch);
         while (true) {
-            const bytes_read = try source_file.read(buffer);
+            const bytes_read = try fr.interface.readSliceShort(buffer);
             if (bytes_read == 0) break;
-            try dest_file.writeAll(buffer[0..bytes_read]);
+            try dest_file.writeStreamingAll(io, buffer[0..bytes_read]);
         }
 
         std.log.info("Added artifact: {s} -> {s}", .{ source_path, dest_filename });
@@ -278,16 +288,21 @@ pub const ArtifactCollector = struct {
 
     /// Calculate SHA256 checksum of a file
     fn calculateChecksum(self: *ArtifactCollector, filename: []const u8) ![]const u8 {
-        const file = try self.artifacts_dir.openFile(filename, .{});
-        defer file.close();
+        const io = tri_io.get();
+        const file = try self.artifacts_dir.openFile(io, filename, .{});
+        defer file.close(io);
 
         var hasher = std.crypto.hash.sha2.Sha256.init(.{});
         const buf_size = 8192;
         var buffer = try self.allocator.alloc(u8, buf_size);
         defer self.allocator.free(buffer);
 
+        // Short read only at end of stream -- the checksum must cover every
+        // byte, so readStreaming's mid-file short reads are not usable here.
+        var scratch: [4096]u8 = undefined;
+        var fr = file.reader(io, &scratch);
         while (true) {
-            const bytes_read = try file.read(buffer);
+            const bytes_read = try fr.interface.readSliceShort(buffer);
             if (bytes_read == 0) break;
             hasher.update(buffer[0..bytes_read]);
         }

@@ -6,6 +6,9 @@
 // =============================================================================
 
 const std = @import("std");
+const tri_mutex = @import("tri_mutex");
+const tri_io = @import("tri_io");
+const tri_time = @import("tri_time");
 const ArrayList = std.array_list.Managed;
 const protocol = @import("protocol.zig");
 const wallet_mod = @import("wallet.zig");
@@ -103,18 +106,19 @@ pub const InferenceEngine = struct {
         errdefer self.status = .error_state;
 
         // Check if model file exists
-        const file = std.fs.cwd().openFile(self.config.model_path, .{}) catch |err| {
+        const io = tri_io.get();
+        const file = std.Io.Dir.cwd().openFile(io, self.config.model_path, .{}) catch |err| {
             self.setError("Model file not found");
             return err;
         };
-        file.close();
+        file.close(io);
 
         // MVP: Model loading simulation
         // In production, this would use gguf_model.FullModel
         // For now, we mark as ready and use simulation mode
 
         // Simulate model loading delay
-        std.Thread.sleep(100 * std.time.ns_per_ms);
+        tri_time.sleep(100 * std.time.ns_per_ms);
 
         self.model_loaded = true;
         self.status = .ready;
@@ -123,7 +127,7 @@ pub const InferenceEngine = struct {
     /// Process an inference job
     /// MVP: Uses simulation mode. Connect to gguf_model for real inference.
     pub fn processJob(self: *InferenceEngine, job: protocol.InferenceJob) !InferenceResult {
-        const start_time = std.time.milliTimestamp();
+        const start_time = tri_time.milliTimestamp();
 
         // Ensure model is loaded
         if (self.status != .ready) {
@@ -139,12 +143,12 @@ pub const InferenceEngine = struct {
 
         // Simulate token generation (10ms per token)
         const tokens_to_generate: u32 = @min(max_new_tokens, 50);
-        std.Thread.sleep(@as(u64, tokens_to_generate) * 10 * std.time.ns_per_ms);
+        tri_time.sleep(@as(u64, tokens_to_generate) * 10 * std.time.ns_per_ms);
 
         // Generate a simulated response
         const response = try self.allocator.dupe(u8, "[Trinity Node Response] Inference complete.");
 
-        const end_time = std.time.milliTimestamp();
+        const end_time = tri_time.milliTimestamp();
         const latency_ms: u32 = @intCast(end_time - start_time);
 
         // Update stats
@@ -265,7 +269,7 @@ pub const InferenceWorker = struct {
     // Job queue
     job_queue: ArrayList(protocol.InferenceJob),
     result_queue: ArrayList(protocol.InferenceResult),
-    mutex: std.Thread.Mutex,
+    mutex: tri_mutex.Mutex,
 
     pub fn init(
         allocator: std.mem.Allocator,
@@ -365,7 +369,7 @@ pub const InferenceWorker = struct {
                 );
             } else {
                 // No jobs, sleep
-                std.Thread.sleep(100 * std.time.ns_per_ms);
+                tri_time.sleep(100 * std.time.ns_per_ms);
             }
         }
     }

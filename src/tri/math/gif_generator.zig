@@ -12,6 +12,7 @@
 //! ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const mod = @import("mod.zig");
 const fmt = @import("format.zig");
 
@@ -80,25 +81,39 @@ pub const GifPalette = struct {
 
 pub const GifEncoder = struct {
     allocator: std.mem.Allocator,
-    writer: std.io.BufferedWriter(4096, std.fs.File.Writer),
+    /// 0.16's `File.Writer` carries its own buffer, so the separate
+    /// `BufferedWriter` wrapper is gone. The buffer is heap-allocated rather
+    /// than an inline array because `init` returns this struct *by value*:
+    /// `File.Writer` stores a slice pointing at its buffer, and an inline
+    /// array would leave that slice pointing into the dead stack copy.
+    writer: std.Io.File.Writer,
+    writer_buf: []u8,
     width: u16,
     height: u16,
     palette: GifPalette,
     frame_delays: std.ArrayList(u16),
 
     pub fn init(allocator: std.mem.Allocator, path: []const u8, width: u16, height: u16, palette: GifPalette) !GifEncoder {
-        const file = try std.fs.cwd().createFile(path, .{ .read = true });
-        defer file.close();
+        const io = tri_io.get();
+        const file = try std.Io.Dir.cwd().createFile(io, path, .{ .read = true });
+        // NOTE (pre-existing, carried over unchanged): this closes the file at
+        // the end of `init`, while `writer` keeps writing to it afterwards.
+        // Migrating it, not fixing it -- removing the close would change
+        // behaviour and leak the handle, since nothing here has a deinit.
+        defer file.close(io);
 
-        const writer = std.io.bufferedWriter(file.writer());
+        const writer_buf = try allocator.alloc(u8, 4096);
+        errdefer allocator.free(writer_buf);
+        const writer = file.writer(io, writer_buf);
 
         var enc = GifEncoder{
             .allocator = allocator,
             .writer = writer,
+            .writer_buf = writer_buf,
             .width = width,
             .height = height,
             .palette = palette,
-            .frame_delays = std.ArrayList(u16).init(allocator),
+            .frame_delays = .empty,
         };
 
         try enc.writeHeader();
@@ -106,7 +121,7 @@ pub const GifEncoder = struct {
     }
 
     fn writeHeader(self: *GifEncoder) !void {
-        const w = self.writer.writer();
+        const w = &self.writer.interface;
 
         // GIF header
         try w.writeAll(GIF_HEADER);
@@ -147,7 +162,7 @@ pub const GifEncoder = struct {
     }
 
     pub fn addFrame(self: *GifEncoder, pixels: []const u8, delay_ms: u16) !void {
-        const w = self.writer.writer();
+        const w = &self.writer.interface;
 
         // Graphics Control Extension
         try w.writeByte(0x21); // Extension introducer
@@ -188,13 +203,13 @@ pub const GifEncoder = struct {
 
         try w.writeByte(0); // Block terminator
 
-        try self.frame_delays.append(delay_ms);
+        try self.frame_delays.append(self.allocator, delay_ms);
     }
 
     pub fn finish(self: *GifEncoder) !void {
-        const w = self.writer.writer();
+        const w = &self.writer.interface;
         try w.writeByte(TRAILER[0]); // GIF trailer
-        try self.writer.flush();
+        try self.writer.interface.flush();
     }
 };
 
@@ -338,7 +353,7 @@ pub fn generateTrinityIdentityGif(allocator: std.mem.Allocator, output_path: []c
     var gif = try GifEncoder.init(allocator, output_path, config.width, config.height, config.palette);
     defer {
         gif.finish() catch {};
-        gif.frame_delays.deinit();
+        gif.frame_delays.deinit(allocator);
     }
 
     const delay_ms = @as(u16, @intCast(100 / config.fps));
@@ -460,7 +475,7 @@ pub fn generateGoldenSpiralGif(allocator: std.mem.Allocator, output_path: []cons
     var gif = try GifEncoder.init(allocator, output_path, config.width, config.height, config.palette);
     defer {
         gif.finish() catch {};
-        gif.frame_delays.deinit();
+        gif.frame_delays.deinit(allocator);
     }
 
     const delay_ms = @as(u16, @intCast(100 / config.fps));
@@ -515,7 +530,7 @@ pub fn generateFibonacciGif(allocator: std.mem.Allocator, output_path: []const u
     var gif = try GifEncoder.init(allocator, output_path, config.width, config.height, config.palette);
     defer {
         gif.finish() catch {};
-        gif.frame_delays.deinit();
+        gif.frame_delays.deinit(allocator);
     }
 
     const delay_ms = @as(u16, @intCast(100 / config.fps));

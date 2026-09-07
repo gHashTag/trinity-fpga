@@ -278,20 +278,19 @@ pub fn runConstantsCommand(allocator: std.mem.Allocator, args: []const []const u
             // Build data JSON with all constants
             var data_json = try std.ArrayList(u8).initCapacity(allocator, 2048);
             defer data_json.deinit(allocator);
-            const data_writer = data_json.writer(allocator);
 
             try data_json.append(allocator, '{');
-            try data_writer.print("\"phi\":{d:.16},", .{parent_mod.PHI});
-            try data_writer.print("\"phi_squared\":{d:.16},", .{parent_mod.PHI_SQUARED});
-            try data_writer.print("\"phi_inverse_squared\":{d:.16},", .{parent_mod.INVERSE_PHI_SQUARED});
-            try data_writer.print("\"trinity\":{d:.1},", .{parent_mod.PHI_SQUARED + parent_mod.INVERSE_PHI_SQUARED});
-            try data_writer.print("\"pi\":{d:.20},", .{std.math.pi});
-            try data_writer.print("\"e\":{d:.20},", .{std.math.e});
-            try data_writer.print("\"gamma\":{d:.20},", .{1.0 / (parent_mod.PHI * parent_mod.PHI * parent_mod.PHI)});
-            try data_writer.print("\"mu\":{d:.4},", .{parent_mod.MU});
-            try data_writer.print("\"chi\":{d:.4},", .{parent_mod.CHI});
-            try data_writer.print("\"sigma\":{d:.3},", .{parent_mod.SIGMA});
-            try data_writer.print("\"epsilon\":{d:.3}", .{parent_mod.EPSILON});
+            try data_json.print(allocator, "\"phi\":{d:.16},", .{parent_mod.PHI});
+            try data_json.print(allocator, "\"phi_squared\":{d:.16},", .{parent_mod.PHI_SQUARED});
+            try data_json.print(allocator, "\"phi_inverse_squared\":{d:.16},", .{parent_mod.INVERSE_PHI_SQUARED});
+            try data_json.print(allocator, "\"trinity\":{d:.1},", .{parent_mod.PHI_SQUARED + parent_mod.INVERSE_PHI_SQUARED});
+            try data_json.print(allocator, "\"pi\":{d:.20},", .{std.math.pi});
+            try data_json.print(allocator, "\"e\":{d:.20},", .{std.math.e});
+            try data_json.print(allocator, "\"gamma\":{d:.20},", .{1.0 / (parent_mod.PHI * parent_mod.PHI * parent_mod.PHI)});
+            try data_json.print(allocator, "\"mu\":{d:.4},", .{parent_mod.MU});
+            try data_json.print(allocator, "\"chi\":{d:.4},", .{parent_mod.CHI});
+            try data_json.print(allocator, "\"sigma\":{d:.3},", .{parent_mod.SIGMA});
+            try data_json.print(allocator, "\"epsilon\":{d:.3}", .{parent_mod.EPSILON});
             try data_json.append(allocator, '}');
 
             output.data_raw = try allocator.dupe(u8, data_json.items);
@@ -435,13 +434,12 @@ pub fn runPhiCommand(allocator: std.mem.Allocator, args: []const []const u8) !vo
     // Build data JSON with phi^n result
     var data_json = try std.ArrayList(u8).initCapacity(allocator, 256);
     defer data_json.deinit(allocator);
-    const data_writer = data_json.writer(allocator);
 
     try data_json.append(allocator, '{');
-    try data_writer.print("\"n\":{d},", .{n});
-    try data_writer.print("\"result\":{d:.16},", .{result});
+    try data_json.print(allocator, "\"n\":{d},", .{n});
+    try data_json.print(allocator, "\"result\":{d:.16},", .{result});
     try data_json.appendSlice(allocator, "\"expression\":\"phi^");
-    try data_writer.print("{d}\"", .{n});
+    try data_json.print(allocator, "{d}\"", .{n});
     try data_json.appendSlice(allocator, ",");
 
     // Add special notes for n = 0, 1, 2
@@ -562,18 +560,16 @@ pub fn runBenchCommand(allocator: std.mem.Allocator, args: []const []const u8) !
     var data_json = try std.ArrayList(u8).initCapacity(allocator, 2048);
     defer data_json.deinit(allocator);
 
-    const data_writer = data_json.writer(allocator);
-
     try data_json.append(allocator, '{');
-    try data_writer.print("\"total_duration_ms\":{d},", .{suite.total_duration_ms});
+    try data_json.print(allocator, "\"total_duration_ms\":{d},", .{suite.total_duration_ms});
     try data_json.appendSlice(allocator, "\"benchmarks\":[");
 
     for (suite.benchmarks, 0..) |bench, i| {
         if (i > 0) try data_json.append(allocator, ',');
         try data_json.append(allocator, '{');
-        try data_writer.print("\"name\":\"{s}\",", .{bench.name});
-        try data_writer.print("\"ops_per_sec\":{d:.2},", .{bench.ops_per_sec});
-        try data_writer.print("\"avg_time_ns\":{d:.2}", .{bench.avg_time_ns});
+        try data_json.print(allocator, "\"name\":\"{s}\",", .{bench.name});
+        try data_json.print(allocator, "\"ops_per_sec\":{d:.2},", .{bench.ops_per_sec});
+        try data_json.print(allocator, "\"avg_time_ns\":{d:.2}", .{bench.avg_time_ns});
         try data_json.append(allocator, '}');
     }
 

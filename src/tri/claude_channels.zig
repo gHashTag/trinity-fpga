@@ -15,6 +15,9 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
+const tri_env = @import("tri_env");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 
 const railway_ssh = @import("railway_ssh.zig");
@@ -83,7 +86,7 @@ pub fn startSession(allocator: Allocator, options: StartOptions) !void {
     std.debug.print("{s}✓ Claude session started in tmux: {s}{s}\n", .{ GREEN, CLAUDE_SESSION, RESET });
 
     // Wait for Claude to initialize
-    std.Thread.sleep(std.time.ns_per_s * 2);
+    tri_time.sleep(std.time.ns_per_s * 2);
 
     // Check version compatibility
     const runtime = @import("claude_runtime.zig");
@@ -142,7 +145,7 @@ pub fn sendPairCommand(allocator: Allocator, code: []const u8, auto_allowlist: b
         std.debug.print("\n{s}🔒 Enabling allowlist for security...{s}\n", .{ GREEN, RESET });
 
         // Wait a moment for pairing to process
-        std.Thread.sleep(std.time.ns_per_ms * 1500);
+        tri_time.sleep(std.time.ns_per_ms * 1500);
 
         // Send allowlist command
         const allowlist_cmd = "/telegram:access policy allowlist";
@@ -257,7 +260,10 @@ pub fn configureTelegramBot(allocator: Allocator, cli_token: ?[]const u8) ![]con
 
     // 1. Try stdin first (most secure for interactive use)
     // In Zig 0.15, check if stdin is a TTY using isatty
-    const is_tty = std.posix.isatty(std.posix.STDIN_FILENO);
+    // 0.16 removed std.posix.isatty; terminal detection is a File method that
+    // takes an Io. Failure means "not a terminal" here, which is the safe
+    // reading for a prompt that should not block a non-interactive run.
+    const is_tty = std.Io.File.stdin().isTty(tri_io.get()) catch false;
     if (is_tty) {
         // Terminal is interactive, can read from stdin if piped
         var stdin_buf: [1024]u8 = undefined;
@@ -276,7 +282,7 @@ pub fn configureTelegramBot(allocator: Allocator, cli_token: ?[]const u8) ![]con
 
     // 2. Try environment variable
     if (token == null) {
-        if (std.posix.getenv("TELEGRAM_BOT_TOKEN")) |env| {
+        if (tri_env.getPosix("TELEGRAM_BOT_TOKEN")) |env| {
             token = env;
             std.debug.print("{s}Token read from TELEGRAM_BOT_TOKEN env{s}\n", .{ CYAN, RESET });
         }
@@ -427,7 +433,7 @@ fn runInitCommand(allocator: Allocator, args: []const []const u8) !void {
     // If --from-env specified, read from that environment variable
     if (env_var_name) |var_name| {
         read_from_env = true;
-        if (std.posix.getenv(var_name)) |value| {
+        if (tri_env.getPosix(var_name)) |value| {
             cli_token = value;
         } else {
             std.debug.print("{s}Error: Environment variable '{s}' not found{s}\n", .{ RED, var_name, RESET });
@@ -464,7 +470,7 @@ fn runStartCommand(allocator: Allocator, args: []const []const u8) !void {
     try startSession(allocator, options);
 
     // Wait and show status
-    std.Thread.sleep(std.time.ns_per_ms * 1000);
+    tri_time.sleep(std.time.ns_per_ms * 1000);
     try runStatusCommand(allocator);
 }
 
@@ -479,7 +485,7 @@ fn runPairCommand(allocator: Allocator, args: []const []const u8) !void {
     try sendPairCommand(allocator, code, true); // P0: auto-allowlist enabled
 
     // Wait and show status
-    std.Thread.sleep(std.time.ns_per_ms * 2000);
+    tri_time.sleep(std.time.ns_per_ms * 2000);
     try runStatusCommand(allocator);
 }
 
@@ -515,7 +521,7 @@ fn runLogsCommand(allocator: Allocator, args: []const []const u8) !void {
     std.debug.print("{s}Claude session logs (last {d} lines):{s}\n", .{ CYAN, lines, RESET });
     std.debug.print("─{s}\n", .{"─" ** 60});
 
-    const output = std.mem.trimRight(u8, logs, "\n\r ");
+    const output = std.mem.trimEnd(u8, logs, "\n\r ");
     std.debug.print("{s}\n", .{output});
 }
 
@@ -532,7 +538,7 @@ fn runRestartCommand(allocator: Allocator, args: []const []const u8) !void {
     try restartSession(allocator, options);
 
     // Wait and show status
-    std.Thread.sleep(std.time.ns_per_ms * 1000);
+    tri_time.sleep(std.time.ns_per_ms * 1000);
     try runStatusCommand(allocator);
 }
 

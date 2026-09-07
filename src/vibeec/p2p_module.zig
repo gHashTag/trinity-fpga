@@ -15,7 +15,7 @@ pub const SwarmManager = struct {
     pub fn init(allocator: std.mem.Allocator) !SwarmManager {
         var self = SwarmManager{
             .allocator = allocator,
-            .nodes = .{},
+            .nodes = .empty,
         };
         // Seed initial 10 representative nodes for simulation
         for (0..10) |i| {

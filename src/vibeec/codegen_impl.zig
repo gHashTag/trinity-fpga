@@ -7,13 +7,12 @@ const std = @import("std");
 const MAX_FIELDS = 32;
 const MAX_IMPL_LINES = 256;
 
-pub fn main() !void {
+pub fn main(init: std.process.Init.Minimal) !void {
     var gpa = std.heap.DebugAllocator(.{}){};
     const allocator = gpa.allocator();
 
-    const args = try std.process.argsAlloc(allocator);
-    defer std.process.argsFree(allocator, args);
-
+    const args = try init.args.toSlice(allocator);
+    defer allocator.free(args);
     if (args.len < 2) {
         std.debug.print("Usage: {s} <spec.tri> [output.zig]\n", .{args[0]});
         return error.Usage;
@@ -181,8 +180,8 @@ pub fn main() !void {
         } else if (in_implementation) {
             const indent = countIndent(line);
             if (indent >= 4) {
-                var code_line = std.mem.trimLeft(u8, line, " \t");
-                code_line = std.mem.trimRight(u8, code_line, " \t");
+                var code_line = std.mem.trimStart(u8, line, " \t");
+                code_line = std.mem.trimEnd(u8, code_line, " \t");
                 if (code_line.len > 0 and impl_line_count < MAX_IMPL_LINES) {
                     impl_lines[impl_line_count] = try allocator.dupe(u8, code_line);
                     impl_line_count += 1;

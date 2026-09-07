@@ -2,6 +2,8 @@
 //! AST check, format check, and build verification
 
 const std = @import("std");
+const tri_proc = @import("tri_proc");
+const tri_time = @import("tri_time");
 const storm = @import("../golden_chain.zig");
 
 pub const astCheckLinkID = 7;
@@ -14,7 +16,7 @@ pub fn executeAstCheck(allocator: std.mem.Allocator, task: []const u8, file: []c
     log.info("🔍 AST Check: {s}", .{file});
 
     const zig_binary = "zig";
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &[_][]const u8{ zig_binary, "ast-check", "-t", file },
     }) catch |err| {
@@ -32,12 +34,12 @@ pub fn executeAstCheck(allocator: std.mem.Allocator, task: []const u8, file: []c
     const stderr = try allocator.dupe(u8, result.stderr.items);
     defer allocator.free(stderr);
 
-    const duration: u64 = @intCast(std.time.nanoTimestamp() - result.start_time);
+    const duration: u64 = @intCast(tri_time.nanoTimestamp() - result.start_time);
 
     // Check exit code (Zig 0.15: term is Term enum)
     const exit_code: u32 = switch (result.term) {
-        .Exited => |code| code,
-        .Signal, .Stopped, .Unknown => 1,
+        .exited => |code| code,
+        .signal, .stopped, .unknown => 1,
     };
 
     if (exit_code != 0) {
@@ -88,7 +90,7 @@ pub fn executeFmtCheck(allocator: std.mem.Allocator, task: []const u8, file: []c
     log.info("✏️️  FMT Check: {s}", .{file});
 
     const zig_binary = "zig";
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &[_][]const u8{ zig_binary, "fmt", "--check", file },
     }) catch |err| {
@@ -106,11 +108,11 @@ pub fn executeFmtCheck(allocator: std.mem.Allocator, task: []const u8, file: []c
     const stderr = try allocator.dupe(u8, result.stderr.items);
     defer allocator.free(stderr);
 
-    const duration: u64 = @intCast(std.time.nanoTimestamp() - result.start_time);
+    const duration: u64 = @intCast(tri_time.nanoTimestamp() - result.start_time);
 
     const exit_code: u32 = switch (result.term) {
-        .Exited => |code| code,
-        .Signal, .Stopped, .Unknown => 1,
+        .exited => |code| code,
+        .signal, .stopped, .unknown => 1,
     };
 
     if (exit_code != 0) {
@@ -140,7 +142,7 @@ pub fn executeBuild(allocator: std.mem.Allocator, task: []const u8, file: []cons
     log.info("🔨 Build: {s}", .{file});
 
     const zig_binary = "zig";
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &[_][]const u8{ zig_binary, "build", file },
     }) catch |err| {
@@ -158,7 +160,7 @@ pub fn executeBuild(allocator: std.mem.Allocator, task: []const u8, file: []cons
     const stderr = try allocator.dupe(u8, result.stderr.items);
     defer allocator.free(stderr);
 
-    const duration: u64 = @intCast(std.time.nanoTimestamp() - result.start_time);
+    const duration: u64 = @intCast(tri_time.nanoTimestamp() - result.start_time);
 
     // Parse build output for errors
     var has_errors = false;
@@ -173,8 +175,8 @@ pub fn executeBuild(allocator: std.mem.Allocator, task: []const u8, file: []cons
     }
 
     const exit_code: u32 = switch (result.term) {
-        .Exited => |code| code,
-        .Signal, .Stopped, .Unknown => 1,
+        .exited => |code| code,
+        .signal, .stopped, .unknown => 1,
     };
 
     if (exit_code != 0 or has_errors) {

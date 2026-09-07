@@ -7,6 +7,8 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
+const tri_proc = @import("tri_proc");
 const Allocator = std.mem.Allocator;
 const mu_proto = @import("mu_error_protocol.zig");
 
@@ -21,7 +23,7 @@ pub const VerifyResult = struct {
 /// Run vibee gen + ast-check on a spec, return error message if it fails.
 fn runPipeline(allocator: Allocator, spec_path: []const u8) !?[]u8 {
     // Run vibee gen
-    const gen_result = std.process.Child.run(.{
+    const gen_result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ "zig-out/bin/vibee", "gen", spec_path },
     }) catch {
@@ -31,7 +33,7 @@ fn runPipeline(allocator: Allocator, spec_path: []const u8) !?[]u8 {
     defer allocator.free(gen_result.stderr);
 
     const gen_exited = switch (gen_result.term) {
-        .Exited => |code| code,
+        .exited => |code| code,
         else => 1,
     };
     if (gen_exited != 0) {
@@ -59,7 +61,12 @@ pub fn runVerification(allocator: Allocator) !VerifyResult {
     };
 
     // Read batch runner latest.json for known failures
-    const batch_data = std.fs.cwd().readFileAlloc(allocator, ".trinity/batch/latest.json", 10 * 1024 * 1024) catch {
+    const batch_data = std.Io.Dir.cwd().readFileAlloc(
+        tri_io.get(),
+        ".trinity/batch/latest.json",
+        allocator,
+        .limited(10 * 1024 * 1024),
+    ) catch {
         std.debug.print("  \x1b[33mNo batch data found. Running fresh verification...\x1b[0m\n", .{});
         return result;
     };
@@ -85,7 +92,7 @@ pub fn runVerification(allocator: Allocator) !VerifyResult {
     // For each failure, run gen + ast-check, capture error, categorize + log
     for (failures.items, 0..) |spec_path, i| {
         // Run vibee gen to get fresh error
-        const gen_result = std.process.Child.run(.{
+        const gen_result = tri_proc.run(.{
             .allocator = allocator,
             .argv = &.{ "zig-out/bin/vibee", "gen", spec_path },
         }) catch {
@@ -99,7 +106,7 @@ pub fn runVerification(allocator: Allocator) !VerifyResult {
         const error_msg = if (gen_result.stderr.len > 0)
             gen_result.stderr
         else if ((switch (gen_result.term) {
-            .Exited => |code| code,
+            .exited => |code| code,
             else => @as(u32, 1),
         }) != 0)
             @as([]const u8, "non-zero exit")
@@ -124,7 +131,7 @@ pub fn runVerification(allocator: Allocator) !VerifyResult {
             const gen_path = std.fmt.allocPrint(allocator, "generated/{s}.zig", .{stem}) catch continue;
             defer allocator.free(gen_path);
 
-            const ast_result = std.process.Child.run(.{
+            const ast_result = tri_proc.run(.{
                 .allocator = allocator,
                 .argv = &.{ "zig", "ast-check", gen_path },
             }) catch {
@@ -134,7 +141,7 @@ pub fn runVerification(allocator: Allocator) !VerifyResult {
             defer allocator.free(ast_result.stderr);
 
             const ast_exit = switch (ast_result.term) {
-                .Exited => |code| code,
+                .exited => |code| code,
                 else => @as(u32, 1),
             };
             if (ast_exit != 0) {

@@ -72,7 +72,7 @@ pub const AstNode = struct {
         return .{
             .kind = kind,
             .token = token,
-            .children = .{},
+            .children = .empty,
             .allocator = allocator,
         };
     }
@@ -1023,7 +1023,7 @@ pub const Parser = struct {
         const saved_col = self.lexer.column;
 
         // Try to collect identifiers
-        var params: std.ArrayListUnmanaged(AstNode) = .{};
+        var params: std.ArrayListUnmanaged(AstNode) = .empty;
         defer params.deinit(self.allocator);
 
         // Empty params: () => expr

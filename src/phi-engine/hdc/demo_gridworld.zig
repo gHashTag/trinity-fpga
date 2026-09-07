@@ -5,6 +5,7 @@
 //! φ² + 1/φ² = 3 | TRINITY
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const hdc = @import("hdc_core.zig");
 const rl = @import("rl_agent.zig");
 const gw = @import("gridworld.zig");
@@ -82,7 +83,7 @@ pub fn runDemo(allocator: std.mem.Allocator, config: DemoConfig) !void {
     var recent_rewards: [100]f64 = [_]f64{0} ** 100;
     var recent_idx: usize = 0;
 
-    const start_time = std.time.milliTimestamp();
+    const start_time = tri_time.milliTimestamp();
 
     for (0..config.num_episodes) |episode| {
         var state = env.reset();
@@ -138,7 +139,7 @@ pub fn runDemo(allocator: std.mem.Allocator, config: DemoConfig) !void {
         }
     }
 
-    const end_time = std.time.milliTimestamp();
+    const end_time = tri_time.milliTimestamp();
     const duration_ms = end_time - start_time;
 
     print("─────────────────────────────────────────────────────────────\n", .{});

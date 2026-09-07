@@ -10,6 +10,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 const dev_commands = @import("dev_commands.zig");
 const dev_state_machine = @import("dev_state_machine.zig");
 const github_integration = @import("github_integration.zig");
@@ -115,7 +116,7 @@ fn cmdStatus(allocator: std.mem.Allocator, args: []const []const u8) !void {
     const test_status = if (session.tests_passed) "passed" else "pending";
     std.debug.print("  Tests: {s}\n", .{test_status});
 
-    const ts = std.time.timestamp();
+    const ts = tri_time.timestamp();
     const uptime = if (session.started_at > 0) ts - session.started_at else 0;
     if (uptime > 0) {
         std.debug.print("  Started: {}s ago\n", .{uptime});
@@ -145,7 +146,7 @@ fn cmdStart(allocator: std.mem.Allocator, args: []const []const u8) !void {
 
     try session.transition(.active);
     session.issue_number = issue_number;
-    session.started_at = std.time.timestamp();
+    session.started_at = tri_time.timestamp();
 
     try session.save();
 
@@ -172,7 +173,7 @@ fn cmdTest(allocator: std.mem.Allocator, args: []const []const u8) !void {
 
     std.debug.print("Running tests...\n", .{});
     session.tests_passed = true;
-    session.last_updated = std.time.timestamp();
+    session.last_updated = tri_time.timestamp();
     try session.save();
 
     std.debug.print("Tests passed\n", .{});
@@ -198,7 +199,7 @@ fn cmdCommit(allocator: std.mem.Allocator, args: []const []const u8) !void {
     std.debug.print("  {s}\n", .{commit_msg});
 
     session.state = .committed;
-    session.last_updated = std.time.timestamp();
+    session.last_updated = tri_time.timestamp();
     try session.save();
 
     std.debug.print("Committed\n", .{});
@@ -219,7 +220,7 @@ fn cmdShip(allocator: std.mem.Allocator, args: []const []const u8) !void {
     std.debug.print("Shipping...\n", .{});
 
     session.state = .shipped;
-    session.last_updated = std.time.timestamp();
+    session.last_updated = tri_time.timestamp();
     try session.save();
 
     std.debug.print("Shipped (simulated)\n", .{});
@@ -241,7 +242,7 @@ fn cmdReset(allocator: std.mem.Allocator, args: []const []const u8) !void {
 
     session.state = .active;
     session.tests_passed = false;
-    session.last_updated = std.time.timestamp();
+    session.last_updated = tri_time.timestamp();
     try session.save();
 
     std.debug.print("Reset complete (simulated)\n", .{});
@@ -262,7 +263,7 @@ fn cmdUnblock(allocator: std.mem.Allocator, args: []const []const u8) !void {
     std.debug.print("Unblocking session...\n", .{});
 
     session.state = .idle;
-    session.last_updated = std.time.timestamp();
+    session.last_updated = tri_time.timestamp();
     try session.save();
 
     std.debug.print("Unblocked\n", .{});

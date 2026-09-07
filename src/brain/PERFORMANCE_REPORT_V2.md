@@ -116,7 +116,7 @@ Significant performance improvements achieved across all brain regions through t
 4. **Performance Counters**
    - Atomic statistics for lock-free reads
 
-**File**: `/Users/playra/trinity-w1/src/brain/basal_ganglia_opt.zig`
+**File**: `/Users/playom/trinity-fpga/src/brain/basal_ganglia_opt.zig`
 
 ---
 
@@ -138,7 +138,7 @@ Significant performance improvements achieved across all brain regions through t
 3. **Batch-capable Poll**
    - Foundation for batch event retrieval
 
-**File**: `/Users/playra/trinity-w1/src/brain/reticular_formation_opt.zig`
+**File**: `/Users/playom/trinity-fpga/src/brain/reticular_formation_opt.zig`
 
 ---
 
@@ -162,7 +162,7 @@ Significant performance improvements achieved across all brain regions through t
    - First 64 backoff values precomputed
    - No repeated math operations
 
-**File**: `/Users/playra/trinity-w1/src/brain/locus_coeruleus_opt.zig`
+**File**: `/Users/playom/trinity-fpga/src/brain/locus_coeruleus_opt.zig`
 
 ---
 

@@ -7,6 +7,8 @@
 
 const std = @import("std");
 
+const tri_io = @import("tri_io");
+const tri_proc = @import("tri_proc");
 /// Result of running a single command
 pub const CommandResult = struct {
     exit_code: u8,
@@ -36,7 +38,7 @@ fn runCommand(
     argv: []const []const u8,
     working_dir: ?[]const u8,
 ) !CommandResult {
-    const result = try std.process.Child.run(.{
+    const result = try tri_proc.run(.{
         .allocator = allocator,
         .argv = argv,
         .cwd = working_dir,
@@ -49,7 +51,7 @@ fn runCommand(
 
     // Determine exit code
     const exit_code: u8 = switch (result.term) {
-        .Exited => |code| @intCast(code),
+        .exited => |code| @intCast(code),
         else => 1,
     };
 
@@ -209,7 +211,7 @@ pub fn checkCompilation(allocator: std.mem.Allocator, file_path: []const u8) !bo
 ///
 /// Returns: true if all Zig idioms are properly followed
 pub fn checkZigIdioms(allocator: std.mem.Allocator, file_path: []const u8) !bool {
-    const content = try std.fs.cwd().readFileAlloc(allocator, file_path, 1024 * 1024);
+    const content = try std.Io.Dir.cwd().readFileAlloc(tri_io.get(), file_path, allocator, .limited(1024 * 1024));
     defer allocator.free(content);
 
     // Check 1: alloc() calls should have Allocator parameter visible
@@ -295,7 +297,7 @@ pub const IdiomCheckResult = struct {
 };
 
 pub fn checkZigIdiomsDetailed(allocator: std.mem.Allocator, file_path: []const u8) !IdiomCheckResult {
-    const content = try std.fs.cwd().readFileAlloc(allocator, file_path, 1024 * 1024);
+    const content = try std.Io.Dir.cwd().readFileAlloc(tri_io.get(), file_path, allocator, .limited(1024 * 1024));
     defer allocator.free(content);
 
     var issues_list = std.array_list.AlignedManaged(IdiomIssue, null).init(allocator);

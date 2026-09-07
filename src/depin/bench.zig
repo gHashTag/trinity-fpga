@@ -4,6 +4,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const network = @import("network.zig");
 
 pub fn main() !void {
@@ -52,13 +53,13 @@ fn benchmarkRewardCalculation(stdout: anytype) !void {
         .last_heartbeat = 0,
     };
 
-    const start = std.time.nanoTimestamp();
+    const start = tri_time.nanoTimestamp();
     var total: f64 = 0;
     var i: usize = 0;
     while (i < iterations) : (i += 1) {
         total += node.calculateReward(0.001);
     }
-    const elapsed_ns = std.time.nanoTimestamp() - start;
+    const elapsed_ns = tri_time.nanoTimestamp() - start;
     const elapsed_ms = @as(f64, @floatFromInt(elapsed_ns)) / 1_000_000.0;
     const throughput = @as(f64, @floatFromInt(iterations)) / (elapsed_ms / 1000.0);
 
@@ -75,14 +76,14 @@ fn benchmarkRewardCalculation(stdout: anytype) !void {
 fn benchmarkTierMultiplier(stdout: anytype) !void {
     const iterations = 100_000_000;
 
-    const start = std.time.nanoTimestamp();
+    const start = tri_time.nanoTimestamp();
     var total: f64 = 0;
     var i: usize = 0;
     while (i < iterations) : (i += 1) {
         const tier: network.NodeTier = @enumFromInt(@as(u8, @intCast(i % 4)));
         total += tier.getMultiplier();
     }
-    const elapsed_ns = std.time.nanoTimestamp() - start;
+    const elapsed_ns = tri_time.nanoTimestamp() - start;
     const elapsed_ms = @as(f64, @floatFromInt(elapsed_ns)) / 1_000_000.0;
     const throughput = @as(f64, @floatFromInt(iterations)) / (elapsed_ms / 1000.0);
 
@@ -100,7 +101,7 @@ fn benchmarkNodeCreation(stdout: anytype) !void {
     const iterations = 1_000_000;
     _ = std.heap.page_allocator; // Available for future allocations
 
-    const start = std.time.nanoTimestamp();
+    const start = tri_time.nanoTimestamp();
     var i: usize = 0;
     while (i < iterations) : (i += 1) {
         var node = network.ClusterNode{
@@ -116,7 +117,7 @@ fn benchmarkNodeCreation(stdout: anytype) !void {
         };
         _ = node.calculateReward(0.001);
     }
-    const elapsed_ns = std.time.nanoTimestamp() - start;
+    const elapsed_ns = tri_time.nanoTimestamp() - start;
     const elapsed_ms = @as(f64, @floatFromInt(elapsed_ns)) / 1_000_000.0;
     const throughput = @as(f64, @floatFromInt(iterations)) / (elapsed_ms / 1000.0);
 
@@ -137,10 +138,10 @@ fn benchmarkJsonSerialization(stdout: anytype) !void {
         .job_id = "job-test-123",
         .payload = "compute-sha256-hash",
         .reward = 0.001,
-        .timestamp = std.time.milliTimestamp(),
+        .timestamp = tri_time.milliTimestamp(),
     };
 
-    const start = std.time.nanoTimestamp();
+    const start = tri_time.nanoTimestamp();
     var total_size: usize = 0;
     var i: usize = 0;
     while (i < iterations) : (i += 1) {
@@ -148,7 +149,7 @@ fn benchmarkJsonSerialization(stdout: anytype) !void {
         defer allocator.free(json);
         total_size += json.len;
     }
-    const elapsed_ns = std.time.nanoTimestamp() - start;
+    const elapsed_ns = tri_time.nanoTimestamp() - start;
     const elapsed_ms = @as(f64, @floatFromInt(elapsed_ns)) / 1_000_000.0;
     const throughput = @as(f64, @floatFromInt(iterations)) / (elapsed_ms / 1000.0);
     const avg_size = @as(f64, @floatFromInt(total_size)) / @as(f64, @floatFromInt(iterations));

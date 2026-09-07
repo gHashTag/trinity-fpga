@@ -6,6 +6,8 @@
 // =============================================================================
 
 const std = @import("std");
+const tri_mutex = @import("tri_mutex");
+const tri_time = @import("tri_time");
 const node_reputation_mod = @import("node_reputation.zig");
 
 // =============================================================================
@@ -72,7 +74,7 @@ pub const TokenStakingEngine = struct {
     total_stakes: u64,
     total_unstakes: u64,
     total_slash_events: u64,
-    mutex: std.Thread.Mutex,
+    mutex: tri_mutex.Mutex,
 
     pub fn init(allocator: std.mem.Allocator) TokenStakingEngine {
         return initWithConfig(allocator, .{});
@@ -123,7 +125,7 @@ pub const TokenStakingEngine = struct {
         self.stakes.put(node_id, .{
             .staked_wei = amount_wei,
             .slashed_wei = 0,
-            .stake_time = std.time.timestamp(),
+            .stake_time = tri_time.timestamp(),
             .pos_failures = 0,
             .corruptions = 0,
             .is_active = true,

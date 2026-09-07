@@ -3,14 +3,14 @@
 
 const std = @import("std");
 
-pub fn main() !void {
+const tri_proc = @import("tri_proc");
+pub fn main(init: std.process.Init.Minimal) !void {
     var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    const args = try std.process.argsAlloc(allocator);
-    defer std.process.argsFree(allocator, args);
-
+    const args = try init.args.toSlice(allocator);
+    defer allocator.free(args);
     if (args.len < 4) {
         std.debug.print("Usage: railway-copy-image <service-id> <image-digest> <token>\n", .{});
         std.debug.print("Example: railway-copy-image 56cd0d31-13be-45de-a6e7-cd7c47cb63d9 sha256:xxx TOKEN\n", .{});
@@ -62,13 +62,13 @@ pub fn main() !void {
 }
 
 fn execCurl(allocator: std.mem.Allocator, args: []const []const u8) ![]const u8 {
-    const result = try std.process.Child.run(.{
+    const result = try tri_proc.run(.{
         .allocator = allocator,
         .argv = args,
     });
     defer allocator.free(result.stderr);
     switch (result.term) {
-        .Exited => |code| {
+        .exited => |code| {
             if (code != 0) return error.CurlFailed;
         },
         else => return error.CurlFailed,

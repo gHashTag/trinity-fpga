@@ -4,14 +4,13 @@
 
 const std = @import("std");
 
-pub fn main() !void {
+pub fn main(init: std.process.Init.Minimal) !void {
     var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    const args = try std.process.argsAlloc(allocator);
-    defer std.process.argsFree(allocator, args);
-
+    const args = try init.args.toSlice(allocator);
+    defer allocator.free(args);
     if (args.len < 2) {
         std.debug.print("Usage: tst <dir_or_file>\n", .{});
         return;
@@ -42,7 +41,7 @@ fn transmuteFile(path: []const u8, allocator: std.mem.Allocator) !void {
 
     std.debug.print("💎 TRANSMUTING SPEC: {s} -> .tri\n", .{path});
 
-    var triads = std.ArrayListUnmanaged(u21){};
+    var triads = @as(std.ArrayListUnmanaged(u21), .empty);
     defer triads.deinit(allocator);
 
     var i: usize = 0;

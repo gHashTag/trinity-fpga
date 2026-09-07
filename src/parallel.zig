@@ -16,7 +16,8 @@
 // φ² + 1/φ² = 3
 
 const std = @import("std");
-const hybrid = vsa;  // one source: the module, not the local vsa_hybrid copy
+const tri_time = @import("tri_time");
+const hybrid = vsa; // one source: the module, not the local vsa_hybrid copy
 const vsa = @import("vsa");
 
 const HybridBigInt = hybrid.HybridBigInt;
@@ -689,7 +690,7 @@ test "benchmark SIMD vs Spawn vs Pool" {
         var b = vsa.randomVector(size, 67890);
 
         // Benchmark SIMD (sequential)
-        var timer = std.time.Timer.start() catch unreachable;
+        var timer = tri_time.Timer.start() catch unreachable;
         for (0..iterations) |_| {
             _ = vsa.bind(&a, &b);
         }

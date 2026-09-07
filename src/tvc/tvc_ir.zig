@@ -1,5 +1,6 @@
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 // TVC MVP - Trinary Virtual Code Intermediate Representation
 // Bridges binary logic to ternary execution
 
@@ -277,7 +278,7 @@ pub const TVCCompiler = struct {
             .target = self.target,
             .instructions_count = 0,
             .code_size = 0,
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
         };
 
         return result;

@@ -10,7 +10,7 @@
 
 ## Instructions
 1. Checkout or create branch: ralph/nexus-src
-2. Review files in /Users/playra/trinity/src/ that need migration
+2. Review files in /Users/playom/trinity/src/ that need migration
 3. Move appropriate files to trinity-nexus module structure
 4. Update imports
 5. Run: zig build test

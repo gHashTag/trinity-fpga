@@ -40,7 +40,7 @@
 ### Command
 
 ```bash
-cd /Users/playra/trinity-w1/fpga/tools
+cd "$(git rev-parse --show-toplevel)/fpga/tools"
 sudo ./fxload -v -t fx2 -d 03fd:0013 -i xusb_xp2.hex
 ```
 
@@ -98,7 +98,7 @@ lsusb > docs/fpga/evidence/lsusb_after_fw.txt
 ### Command
 
 ```bash
-cd /Users/playra/trinity-w1/fpga/openxc7-synth
+cd "$(git rev-parse --show-toplevel)/fpga/openxc7-synth"
 ../tools/jtag_program blink.bit 2>&1 | tee docs/fpga/evidence/blink_flash.log
 ```
 
@@ -236,7 +236,7 @@ FPGA programmed successfully
 ### Git Commit
 
 ```bash
-cd /Users/playra/trinity-w1
+cd "$(git rev-parse --show-toplevel)"
 git log -1 --format="%H %s" > docs/fpga/evidence/git_commit.txt
 git diff HEAD~1 --stat >> docs/fpga/evidence/git_commit.txt
 ```

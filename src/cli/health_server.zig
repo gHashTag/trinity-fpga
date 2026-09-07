@@ -4,6 +4,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 const PORT = 8080;
 
 /// Health response for Railway + future DePIN consumers
@@ -38,7 +39,7 @@ pub fn start(allocator: std.mem.Allocator) !void {
     var server = try address.listen(.{ .reuse_address = true });
     defer server.deinit();
 
-    const start_time = std.time.nanoTimestamp();
+    const start_time = tri_time.nanoTimestamp();
     std.log.info("Health endpoint: http://0.0.0.0:{d}/health", .{PORT});
 
     while (true) {
@@ -67,8 +68,8 @@ pub fn start(allocator: std.mem.Allocator) !void {
         if (std.mem.eql(u8, method, "GET")) {
             if (std.mem.eql(u8, path, "/health")) {
                 const health = HealthResponse{
-                    .uptime_seconds = @intCast(@divTrunc(std.time.nanoTimestamp() - start_time, std.time.ns_per_s)),
-                    .timestamp = @intCast(std.time.nanoTimestamp()),
+                    .uptime_seconds = @intCast(@divTrunc(tri_time.nanoTimestamp() - start_time, std.time.ns_per_s)),
+                    .timestamp = @intCast(tri_time.nanoTimestamp()),
                 };
                 response_body = health.toJson(allocator) catch continue;
                 status_code = "200 OK";

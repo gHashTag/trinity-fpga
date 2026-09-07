@@ -3,6 +3,7 @@
 //! Searches REGRESSION_PATTERNS.md for similar past errors and their solutions.
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const ArrayListManaged = std.array_list.Managed;
 const diagnostic = @import("diagnostic.zig");
 
@@ -43,8 +44,8 @@ pub fn searchRegressionPatterns(
 ) !PatternMatch {
     const patterns_file = ".trinity/ralph/memory/REGRESSION_PATTERNS.md";
 
-    // Try to open the file
-    const file = std.fs.cwd().openFile(patterns_file, .{}) catch |err| {
+    // Try to read the file (max 1MB)
+    const content = std.Io.Dir.cwd().readFileAlloc(tri_io.get(), patterns_file, allocator, .limited(1024 * 1024)) catch |err| {
         if (err == error.FileNotFound) {
             // File doesn't exist yet - return empty match
             return PatternMatch{
@@ -57,9 +58,6 @@ pub fn searchRegressionPatterns(
         }
         return err;
     };
-    defer file.close();
-
-    const content = try file.readToEndAlloc(allocator, 1024 * 1024); // Max 1MB
     defer allocator.free(content);
 
     // Search for pattern entries
@@ -234,17 +232,14 @@ pub fn semanticPatternMatch(
 ) ![]PatternMatch {
     const patterns_file = ".trinity/ralph/memory/REGRESSION_PATTERNS.md";
 
-    // Try to open the file
-    const file = std.fs.cwd().openFile(patterns_file, .{}) catch |err| {
+    // Try to read the file (max 1MB)
+    const content = std.Io.Dir.cwd().readFileAlloc(tri_io.get(), patterns_file, allocator, .limited(1024 * 1024)) catch |err| {
         if (err == error.FileNotFound) {
             // File doesn't exist yet - return empty array
             return &[_]PatternMatch{};
         }
         return err;
     };
-    defer file.close();
-
-    const content = try file.readToEndAlloc(allocator, 1024 * 1024); // Max 1MB
     defer allocator.free(content);
 
     // Collect all candidates with confidence scores

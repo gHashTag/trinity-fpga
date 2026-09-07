@@ -8,6 +8,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const colors = @import("tri_colors.zig");
 const sacred_formula = @import("math/formula.zig");
 
@@ -639,12 +640,12 @@ fn checkModuleFile(filename: []const u8) bool {
     const path = "src/tri/";
     var buf: [128]u8 = undefined;
     const full_path = std.fmt.bufPrintZ(&buf, "{s}{s}", .{ path, filename }) catch return false;
-    _ = std.fs.cwd().access(full_path, .{}) catch return false;
+    _ = std.Io.Dir.cwd().access(tri_io.get(), full_path, .{}) catch return false;
     return true;
 }
 
 fn checkFile(path: []const u8) bool {
-    _ = std.fs.cwd().access(path, .{}) catch return false;
+    _ = std.Io.Dir.cwd().access(tri_io.get(), path, .{}) catch return false;
     return true;
 }
 // ═══════════════════════════════════════════════════════════════════════════════

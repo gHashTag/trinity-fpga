@@ -228,7 +228,7 @@ behaviors:
 
 config:
   session_name: "trinity"
-  ralph_dir: "/Users/playra/trinity/trinity-nexus"
+  ralph_dir: "/Users/playom/trinity/trinity-nexus"
   queue_dir: "ralph/queue"
 
   windows:
@@ -287,8 +287,8 @@ config:
     creds: "ralph/queue/.creds"
 
   external_refs:
-    ralph_status: "/Users/playra/trinity/.ralph/logs/status.json"
-    ralph_fix_plan: "/Users/playra/trinity/.ralph/fix_plan.md"
-    ralph_tech_tree: "/Users/playra/trinity/.ralph/TECH_TREE.md"
+    ralph_status: "/Users/playom/trinity/.ralph/logs/status.json"
+    ralph_fix_plan: "/Users/playom/trinity/.ralph/fix_plan.md"
+    ralph_tech_tree: "/Users/playom/trinity/.ralph/TECH_TREE.md"
     model_status: "/tmp/ralph-model-status.json"
     cache_dir: "/tmp/ralph-tmux-cache"

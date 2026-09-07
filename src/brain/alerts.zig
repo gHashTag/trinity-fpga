@@ -12,6 +12,9 @@
 
 const std = @import("std");
 
+const tri_mutex = @import("tri_mutex");
+const tri_io = @import("tri_io");
+const tri_time = @import("tri_time");
 const ALERTS_LOG = ".trinity/brain_alerts.jsonl";
 
 /// Alert manager errors
@@ -239,7 +242,7 @@ pub const AlertHistory = struct {
     allocator: std.mem.Allocator,
     alerts: std.ArrayList(Alert),
     max_alerts: usize = 1000,
-    mutex: std.Thread.Mutex,
+    mutex: tri_mutex.Mutex,
 
     const Self = @This();
 
@@ -250,7 +253,7 @@ pub const AlertHistory = struct {
             .allocator = allocator,
             .alerts = .empty,
             .max_alerts = max_alerts,
-            .mutex = std.Thread.Mutex{},
+            .mutex = tri_mutex.Mutex{},
         };
     }
 
@@ -299,15 +302,16 @@ pub const AlertHistory = struct {
 
     /// Persist alert to log file
     fn persist(self: *Self, alert: Alert) !void {
-        const file = try std.fs.cwd().createFile(ALERTS_LOG, .{ .read = true });
-        defer file.close();
-
-        try file.seekFromEnd(0);
+        const io = tri_io.get();
+        const file = try std.Io.Dir.cwd().createFile(io, ALERTS_LOG, .{ .read = true });
+        defer file.close(io);
 
         const log_line = try alert.formatLog(self.allocator);
         defer self.allocator.free(log_line);
 
-        try file.writeAll(log_line);
+        // Append at the current end of the file (the old seekFromEnd(0) + writeAll).
+        const end = try file.length(io);
+        try file.writePositionalAll(io, log_line, end);
     }
 
     /// Get recent alerts (last N)
@@ -358,7 +362,7 @@ pub const AlertHistory = struct {
         self.mutex.lock();
         defer self.mutex.unlock();
 
-        const now = std.time.milliTimestamp();
+        const now = tri_time.milliTimestamp();
         const day_ago = now - (24 * 60 * 60 * 1000);
 
         var result: Stats = .{
@@ -397,7 +401,7 @@ pub const AlertManager = struct {
     telegram_enabled: bool,
     telegram_token: []const u8 = "",
     telegram_chat_id: []const u8 = "",
-    mutex: std.Thread.Mutex,
+    mutex: tri_mutex.Mutex,
 
     const Self = @This();
 
@@ -410,7 +414,7 @@ pub const AlertManager = struct {
             .suppression = .{},
             .thresholds = AlertThresholds.init(),
             .telegram_enabled = false,
-            .mutex = std.Thread.Mutex{},
+            .mutex = tri_mutex.Mutex{},
         };
     }
 
@@ -430,7 +434,7 @@ pub const AlertManager = struct {
         self.mutex.lock();
         defer self.mutex.unlock();
 
-        const now = std.time.milliTimestamp();
+        const now = tri_time.milliTimestamp();
 
         // Check health score
         if (health_score < self.thresholds.health_critical) {
@@ -503,7 +507,7 @@ pub const AlertManager = struct {
         self.mutex.lock();
         defer self.mutex.unlock();
 
-        const now = std.time.milliTimestamp();
+        const now = tri_time.milliTimestamp();
         const msg = try std.fmt.allocPrint(self.allocator, "Region unavailable", .{});
         defer self.allocator.free(msg);
         try self.processAlert(.{
@@ -520,7 +524,7 @@ pub const AlertManager = struct {
         self.mutex.lock();
         defer self.mutex.unlock();
 
-        const now = std.time.milliTimestamp();
+        const now = tri_time.milliTimestamp();
         const msg = try std.fmt.allocPrint(self.allocator, "Health declining: {d:.1} -> {d:.1} ({d:.1}/interval)", .{ previous, current, rate });
         defer self.allocator.free(msg);
         try self.processAlert(.{
@@ -534,7 +538,7 @@ pub const AlertManager = struct {
 
     /// Process an alert (check suppression, send notification, record)
     fn processAlert(self: *Self, alert_param: Alert) !void {
-        const now = std.time.milliTimestamp();
+        const now = tri_time.milliTimestamp();
 
         // Check suppression (5 min for warnings, 1 min for critical)
         const min_interval: i64 = switch (alert_param.level) {
@@ -577,7 +581,7 @@ pub const AlertManager = struct {
         var body_buf: [4096]u8 = undefined;
         const body = try std.fmt.bufPrint(&body_buf, "{{\"chat_id\":\"{s}\",\"text\":\"{s}\",\"parse_mode\":\"HTML\"}}", .{ self.telegram_chat_id, message });
 
-        var client = std.http.Client{ .allocator = self.allocator };
+        var client = std.http.Client{ .allocator = self.allocator, .io = tri_io.get() };
         defer client.deinit();
 
         var aw: std.Io.Writer.Allocating = .init(self.allocator);

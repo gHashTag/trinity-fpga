@@ -7,6 +7,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const api = @import("api");
 
 pub const YELLOW = "\x1b[38;2;255;215;0m";
@@ -137,7 +138,7 @@ pub const UnifiedApiServer = struct {
 
     pub fn start(self: *UnifiedApiServer) !void {
         self.status.running = true;
-        self.status.start_time = std.time.milliTimestamp();
+        self.status.start_time = tri_time.milliTimestamp();
 
         // Setup signal handlers for graceful shutdown
         try setupSignalHandlers();
@@ -316,7 +317,7 @@ pub const UnifiedApiServer = struct {
     }
 
     fn healthCheckResponse(self: *const UnifiedApiServer) ![]const u8 {
-        const uptime = std.time.milliTimestamp() - self.status.start_time;
+        const uptime = tri_time.milliTimestamp() - self.status.start_time;
         return std.fmt.allocPrint(self.allocator,
             \\HTTP/1.1 200 OK
             \\Content-Type: application/json
@@ -364,7 +365,7 @@ pub const UnifiedApiServer = struct {
     }
 
     fn statusResponse(self: *const UnifiedApiServer) ![]const u8 {
-        const uptime = std.time.milliTimestamp() - self.status.start_time;
+        const uptime = tri_time.milliTimestamp() - self.status.start_time;
         return std.fmt.allocPrint(self.allocator,
             \\HTTP/1.1 200 OK
             \\Content-Type: application/json
@@ -855,7 +856,7 @@ pub const UnifiedApiServer = struct {
         }
 
         if (std.mem.indexOf(u8, normalized_query, "{status") != null) {
-            const uptime = std.time.milliTimestamp() - self.status.start_time;
+            const uptime = tri_time.milliTimestamp() - self.status.start_time;
             var buffer = std.ArrayList(u8).initCapacity(self.allocator, 256) catch return error.OutOfMemory;
             try buffer.appendSlice(self.allocator, "HTTP/1.1 200 OK\nContent-Type: application/json\nAccess-Control-Allow-Origin: *\n\n");
             try buffer.appendSlice(self.allocator, "{\"data\":{\"status\":{\"healthy\":true,\"connections\":");
@@ -926,7 +927,7 @@ pub const UnifiedApiServer = struct {
             std.posix.close(sock);
             self.server_socket = null;
         }
-        const uptime = std.time.milliTimestamp() - self.status.start_time;
+        const uptime = tri_time.milliTimestamp() - self.status.start_time;
         std.debug.print("\n{s}►{s} Server stopped. Uptime: {d:.1}s{s}\n", .{ CYAN, RESET, @as(f64, @floatFromInt(uptime)) / 1000.0, RESET });
     }
 

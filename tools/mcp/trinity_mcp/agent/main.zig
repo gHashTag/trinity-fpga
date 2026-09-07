@@ -16,6 +16,7 @@
 //   TELEGRAM_CHAT_ID      — Telegram chat ID (optional, enables TG reporting)
 //
 const std = @import("std");
+const tri_env = @import("tri_env");
 const agent_loop = @import("agent_loop.zig");
 const telegram = @import("telegram.zig");
 
@@ -25,30 +26,30 @@ pub fn main() !void {
     const allocator = gpa.allocator();
 
     // Required: GH_TOKEN
-    const gh_token: []const u8 = std.posix.getenv("GH_TOKEN") orelse {
+    const gh_token: []const u8 = tri_env.getPosix("GH_TOKEN") orelse {
         std.debug.print("[ralph-agent] ERROR: GH_TOKEN environment variable not set\n", .{});
         std.process.exit(1);
     };
 
     // Optional config from env — [:0]const u8 coerces to []const u8
-    const owner: []const u8 = std.posix.getenv("GITHUB_OWNER") orelse "gHashTag";
-    const repo: []const u8 = std.posix.getenv("GITHUB_REPO") orelse "trinity";
-    const sleep_s: []const u8 = std.posix.getenv("RALPH_SLEEP_INTERVAL") orelse "1800";
-    const turns_s: []const u8 = std.posix.getenv("RALPH_MAX_TURNS") orelse "50";
-    const wakes_s: []const u8 = std.posix.getenv("RALPH_MAX_WAKES") orelse "0";
+    const owner: []const u8 = tri_env.getPosix("GITHUB_OWNER") orelse "gHashTag";
+    const repo: []const u8 = tri_env.getPosix("GITHUB_REPO") orelse "trinity";
+    const sleep_s: []const u8 = tri_env.getPosix("RALPH_SLEEP_INTERVAL") orelse "1800";
+    const turns_s: []const u8 = tri_env.getPosix("RALPH_MAX_TURNS") orelse "50";
+    const wakes_s: []const u8 = tri_env.getPosix("RALPH_MAX_WAKES") orelse "0";
 
     const sleep_interval = std.fmt.parseInt(u64, sleep_s, 10) catch 1800;
     const max_turns = std.fmt.parseInt(u32, turns_s, 10) catch 50;
     const max_wakes = std.fmt.parseInt(u32, wakes_s, 10) catch 0;
 
     // Telegram reporting (optional)
-    const tg_token: []const u8 = std.posix.getenv("TELEGRAM_BOT_TOKEN") orelse "";
-    const tg_chat_id: []const u8 = std.posix.getenv("TELEGRAM_CHAT_ID") orelse "";
+    const tg_token: []const u8 = tri_env.getPosix("TELEGRAM_BOT_TOKEN") orelse "";
+    const tg_chat_id: []const u8 = tri_env.getPosix("TELEGRAM_CHAT_ID") orelse "";
     const tg_enabled = tg_token.len > 0 and tg_chat_id.len > 0;
 
     // Detect project root
     const project_root = blk: {
-        if (std.posix.getenv("PROJECT_ROOT")) |root| break :blk @as([]const u8, root);
+        if (tri_env.getPosix("PROJECT_ROOT")) |root| break :blk @as([]const u8, root);
         // Fallback: git rev-parse --show-toplevel
         const result = std.process.Child.run(.{
             .allocator = allocator,

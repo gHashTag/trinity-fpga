@@ -147,7 +147,7 @@ pub fn textToGematriaValue(text: []const u8) u32 {
 
 /// Collect all Coptic glyphs from text as GlyphBreakdown array.
 pub fn textToGlyphs(allocator: Allocator, text: []const u8) ![]GlyphBreakdown {
-    var list: std.ArrayListUnmanaged(GlyphBreakdown) = .{};
+    var list: std.ArrayListUnmanaged(GlyphBreakdown) = .empty;
     errdefer list.deinit(allocator);
 
     var i: usize = 0;
@@ -181,7 +181,7 @@ pub fn textToGlyphs(allocator: Allocator, text: []const u8) ![]GlyphBreakdown {
 /// E.g. 137 → Ⲥ(100) + Ⲗ(30) + Ⲍ(7)
 /// Handles values up to 999. For larger values, repeats hundreds.
 pub fn numberToGlyphs(allocator: Allocator, value: u32) ![]GlyphBreakdown {
-    var list: std.ArrayListUnmanaged(GlyphBreakdown) = .{};
+    var list: std.ArrayListUnmanaged(GlyphBreakdown) = .empty;
     errdefer list.deinit(allocator);
 
     if (value == 0) return list.toOwnedSlice(allocator);
@@ -259,33 +259,32 @@ pub fn numberToGlyphs(allocator: Allocator, value: u32) ![]GlyphBreakdown {
 
 /// Serialize gematria result to JSON
 pub fn gematriaToJson(allocator: Allocator, input: []const u8, mode: Mode, glyphs: []const GlyphBreakdown, total: u32) ![]u8 {
-    var buf: std.ArrayListUnmanaged(u8) = .{};
-    const w = buf.writer(allocator);
+    var buf: std.ArrayListUnmanaged(u8) = .empty;
 
     const mode_str = switch (mode) {
         .number_to_glyphs => "number_to_glyphs",
         .text_to_number => "text_to_number",
     };
 
-    w.writeAll("{\"input\":\"") catch return error.OutOfMemory;
+    buf.appendSlice(allocator, "{\"input\":\"") catch return error.OutOfMemory;
     // Escape input for JSON
     for (input) |c| {
         switch (c) {
-            '"' => w.writeAll("\\\"") catch return error.OutOfMemory,
-            '\\' => w.writeAll("\\\\") catch return error.OutOfMemory,
-            else => w.writeByte(c) catch return error.OutOfMemory,
+            '"' => buf.appendSlice(allocator, "\\\"") catch return error.OutOfMemory,
+            '\\' => buf.appendSlice(allocator, "\\\\") catch return error.OutOfMemory,
+            else => buf.append(allocator, c) catch return error.OutOfMemory,
         }
     }
-    std.fmt.format(w, "\",\"mode\":\"{s}\",\"glyphs\":[", .{mode_str}) catch return error.OutOfMemory;
+    buf.print(allocator, "\",\"mode\":\"{s}\",\"glyphs\":[", .{mode_str}) catch return error.OutOfMemory;
 
     for (glyphs, 0..) |g, i| {
-        if (i > 0) w.writeAll(",") catch return error.OutOfMemory;
-        w.writeAll("{\"glyph\":\"") catch return error.OutOfMemory;
-        w.writeAll(g.glyph[0..g.glyph_len]) catch return error.OutOfMemory;
-        std.fmt.format(w, "\",\"index\":{d},\"value\":{d}}}", .{ g.index, g.value }) catch return error.OutOfMemory;
+        if (i > 0) buf.appendSlice(allocator, ",") catch return error.OutOfMemory;
+        buf.appendSlice(allocator, "{\"glyph\":\"") catch return error.OutOfMemory;
+        buf.appendSlice(allocator, g.glyph[0..g.glyph_len]) catch return error.OutOfMemory;
+        buf.print(allocator, "\",\"index\":{d},\"value\":{d}}}", .{ g.index, g.value }) catch return error.OutOfMemory;
     }
 
-    std.fmt.format(w, "],\"total\":{d}}}", .{total}) catch return error.OutOfMemory;
+    buf.print(allocator, "],\"total\":{d}}}", .{total}) catch return error.OutOfMemory;
 
     return buf.toOwnedSlice(allocator);
 }
@@ -305,32 +304,31 @@ pub fn gematriaWithFitToJson(
     computed: f64,
     error_pct: f64,
 ) ![]u8 {
-    var buf: std.ArrayListUnmanaged(u8) = .{};
-    const w = buf.writer(allocator);
+    var buf: std.ArrayListUnmanaged(u8) = .empty;
 
     const mode_str = switch (mode) {
         .number_to_glyphs => "number_to_glyphs",
         .text_to_number => "text_to_number",
     };
 
-    w.writeAll("{\"input\":\"") catch return error.OutOfMemory;
+    buf.appendSlice(allocator, "{\"input\":\"") catch return error.OutOfMemory;
     for (input) |c| {
         switch (c) {
-            '"' => w.writeAll("\\\"") catch return error.OutOfMemory,
-            '\\' => w.writeAll("\\\\") catch return error.OutOfMemory,
-            else => w.writeByte(c) catch return error.OutOfMemory,
+            '"' => buf.appendSlice(allocator, "\\\"") catch return error.OutOfMemory,
+            '\\' => buf.appendSlice(allocator, "\\\\") catch return error.OutOfMemory,
+            else => buf.append(allocator, c) catch return error.OutOfMemory,
         }
     }
-    std.fmt.format(w, "\",\"mode\":\"{s}\",\"glyphs\":[", .{mode_str}) catch return error.OutOfMemory;
+    buf.print(allocator, "\",\"mode\":\"{s}\",\"glyphs\":[", .{mode_str}) catch return error.OutOfMemory;
 
     for (glyphs, 0..) |g, i| {
-        if (i > 0) w.writeAll(",") catch return error.OutOfMemory;
-        w.writeAll("{\"glyph\":\"") catch return error.OutOfMemory;
-        w.writeAll(g.glyph[0..g.glyph_len]) catch return error.OutOfMemory;
-        std.fmt.format(w, "\",\"index\":{d},\"value\":{d}}}", .{ g.index, g.value }) catch return error.OutOfMemory;
+        if (i > 0) buf.appendSlice(allocator, ",") catch return error.OutOfMemory;
+        buf.appendSlice(allocator, "{\"glyph\":\"") catch return error.OutOfMemory;
+        buf.appendSlice(allocator, g.glyph[0..g.glyph_len]) catch return error.OutOfMemory;
+        buf.print(allocator, "\",\"index\":{d},\"value\":{d}}}", .{ g.index, g.value }) catch return error.OutOfMemory;
     }
 
-    std.fmt.format(w,
+    buf.print(allocator,
         \\],"total":{d},"sacred_fit":{{"n":{d},"k":{d},"m":{d},"p":{d},"q":{d}}},"sacred_computed":{d:.6},"sacred_error_pct":{d:.6}}}
     , .{ total, fit_n, fit_k, fit_m, fit_p, fit_q, computed, error_pct }) catch return error.OutOfMemory;
 

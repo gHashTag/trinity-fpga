@@ -7,6 +7,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 // in towith
 pub const PHI: f64 = 1.618033988749895;
 pub const TRINITY: f64 = 3.0;
@@ -582,9 +583,9 @@ test "Benchmark: SIMD vs Lookup table" {
     var total_lookup: u64 = 0;
     var i: u64 = 0;
     while (i < iterations) : (i += 1) {
-        const start = std.time.nanoTimestamp();
+        const start = tri_time.nanoTimestamp();
         _ = bpe_cached.tokenizeV39Fast(text);
-        const end = std.time.nanoTimestamp();
+        const end = tri_time.nanoTimestamp();
         total_lookup += @intCast(end - start);
     }
 
@@ -592,9 +593,9 @@ test "Benchmark: SIMD vs Lookup table" {
     var total_simd: u64 = 0;
     i = 0;
     while (i < iterations) : (i += 1) {
-        const start = std.time.nanoTimestamp();
+        const start = tri_time.nanoTimestamp();
         _ = tokenizeSIMD(text);
-        const end = std.time.nanoTimestamp();
+        const end = tri_time.nanoTimestamp();
         total_simd += @intCast(end - start);
     }
 
@@ -602,9 +603,9 @@ test "Benchmark: SIMD vs Lookup table" {
     var total_bpe: u64 = 0;
     i = 0;
     while (i < iterations) : (i += 1) {
-        const start = std.time.nanoTimestamp();
+        const start = tri_time.nanoTimestamp();
         _ = tokenizeBPEFull(text);
-        const end = std.time.nanoTimestamp();
+        const end = tri_time.nanoTimestamp();
         total_bpe += @intCast(end - start);
     }
 

@@ -196,7 +196,7 @@ struct TriToolsChatPanel: View {
 
         Task {
             do {
-                let triPath = "/Users/playra/trinity-w1/zig-out/bin/tri"
+                let triPath = "/Users/playom/trinity-fpga/zig-out/bin/tri"
                 guard FileManager.default.fileExists(atPath: triPath) else {
                     await MainActor.run {
                         isRunning = false

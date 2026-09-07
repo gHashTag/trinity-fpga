@@ -30,7 +30,7 @@ For cached system state, follow `.claude/skills/_shared/system_snapshot.md`.
 Read recent events to avoid redundant work:
 
 ```bash
-tail -20 /Users/playra/trinity-w1/.trinity/event_log.jsonl 2>/dev/null
+tail -20 "$(git rev-parse --show-toplevel)"/.trinity/event_log.jsonl 2>/dev/null
 ```
 
 Format: `{"ts":EPOCH,"agent":"NAME","action":"VERB","detail":"...","result":"OK|FAIL"}`
@@ -44,7 +44,15 @@ Format: `{"ts":EPOCH,"agent":"NAME","action":"VERB","detail":"...","result":"OK|
 
 Run these checks sequentially:
 
-1. **Build check**: Run `cd /Users/playra/trinity-w1 && zig build 2>&1` — record exit code
+1. **Build check**: Run `cd "$(git rev-parse --show-toplevel)" && zig build tri-compile 2>&1` — record exit code.
+   Use `tri-compile`, not bare `zig build`: it is the tri binary, it is the
+   target that is known green on Zig 0.16, and bare `zig build` builds every
+   target and fills the disk.
+2. **API census**: Run `zig run tools/api_census.zig -lc`. It reports how many
+   Zig 0.15-era call sites remain per axis, resolving namespace aliases (17% of
+   them are invisible to a plain grep), and marks which ones are reachable from
+   the tri binary. A rising IN-TRI number means someone reintroduced a removed
+   API — delegate to tri-doctor.
 2. **Binary existence**: Check that these 6 binaries exist in `zig-out/bin/`:
    - trinity-mcp, ralph-agent, ralph-hook, tri-bot, tri-api, hslm-entrypoint
 3. **CLI responds**: Run `./zig-out/bin/tri-api --help` or equivalent — must not crash
@@ -71,7 +79,7 @@ Assess how well CLI commands are exposed via MCP tools and vice versa.
 
 **Bash 1** — extract CLI commands and MCP tools:
 ```bash
-cd /Users/playra/trinity-w1 && \
+cd "$(git rev-parse --show-toplevel)" && \
 echo "=== CLI ===" && sed -n '/^pub fn parseCommand/,/^}/p' src/tri/tri_utils.zig | grep -oE '"[a-z][a-z0-9_-]*"' | tr -d '"' | sort -u && \
 echo "=== MCP ===" && grep -o '"name":"[^"]*"' tools/mcp/trinity_mcp/server.zig | sed 's/"name":"//;s/"//' | sort -u
 ```
@@ -87,7 +95,7 @@ Detect MCP tools that reimplement CLI logic instead of delegating.
 
 **Bash 1** — find patterns:
 ```bash
-cd /Users/playra/trinity-w1 && \
+cd "$(git rev-parse --show-toplevel)" && \
 echo "=== DELEGATE_CLI ===" && grep -c 'executeTriSimple' tools/mcp/trinity_mcp/server.zig && \
 echo "=== DELEGATE_MODULE ===" && grep -cE 'swarm\.\w+\(|cloud_orch\.\w+|chain_engine|needle\.' tools/mcp/trinity_mcp/server.zig && \
 echo "=== TOTAL_TOOLS ===" && grep -o '"name":"[^"]*"' tools/mcp/trinity_mcp/server.zig | wc -l && \
@@ -106,7 +114,7 @@ Delegate to board-sync skill. Do NOT reimplement gh project queries.
 
 **Step 1** — Issues snapshot (read from cache or refresh):
 ```bash
-cd /Users/playra/trinity-w1 && \
+cd "$(git rev-parse --show-toplevel)" && \
 if [ -f .trinity/issues_snapshot.json ] && [ $(($(date +%s) - $(stat -f %m .trinity/issues_snapshot.json))) -lt 300 ]; then
   echo "CACHED" && cat .trinity/issues_snapshot.json | python3 -c "import sys,json; d=json.load(sys.stdin); print(f'Open: {len(d)}')"
 else
@@ -150,7 +158,7 @@ Produce a standardized report with one of three verdicts:
 
 After outputting report, append event:
 ```bash
-echo '{"ts":'$(date +%s)',"agent":"tri-orchestrator","action":"report","detail":"VERDICT_HERE","result":"OK"}' >> /Users/playra/trinity-w1/.trinity/event_log.jsonl
+echo '{"ts":'$(date +%s)',"agent":"tri-orchestrator","action":"report","detail":"VERDICT_HERE","result":"OK"}' >> "$(git rev-parse --show-toplevel)"/.trinity/event_log.jsonl
 ```
 
 ### Report format:

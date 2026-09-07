@@ -2,9 +2,10 @@
 // φ² + 1/φ² = 3 | TRINITY
 
 const std = @import("std");
+const tri_env = @import("tri_env");
 const Allocator = std.mem.Allocator;
 
-const GITHUB_TOKEN = std.posix.getenv("GITHUB_TOKEN") orelse "";
+const GITHUB_TOKEN = tri_env.getPosix("GITHUB_TOKEN") orelse "";
 const REPO = "gHashTag/trinity";
 const DEFAULT_HEADERS = "Accept: application/vnd.github.v3+json";
 const ISSUE_COMMENT_API = "repos/{s}/issues/{s}/comments";

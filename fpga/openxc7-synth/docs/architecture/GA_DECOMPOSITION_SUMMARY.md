@@ -183,7 +183,7 @@ fpga/tools/jtag_program <bitstream.bit>  # Flash hardware
 
 ## Documentation
 
-**Full Decomposition:** `/Users/playra/trinity-w1/fpga/openxc7-synth/docs/architecture/GA_DECOMPOSITION.md`
+**Full Decomposition:** `/Users/playom/trinity-fpga/fpga/openxc7-synth/docs/architecture/GA_DECOMPOSITION.md`
 
 **Document Size:** 25KB, 979 lines
 

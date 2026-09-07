@@ -17,6 +17,7 @@
 //! ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const swarm_collab = @import("swarm_collaboration.zig");
 
 const Allocator = std.mem.Allocator;
@@ -82,7 +83,7 @@ pub const AgentState = struct {
     created_at: i64,
 
     pub fn init(allocator: Allocator, id: []const u8, agent_type: AgentType) AgentState {
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
         return AgentState{
             .id = allocator.dupe(u8, id) catch id,
             .agent_type = agent_type,
@@ -103,7 +104,7 @@ pub const AgentState = struct {
 
     /// Check if agent is available for new tasks
     pub fn isAvailable(self: *const AgentState) bool {
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
 
         // Check circuit breaker
         if (self.health == .circuit_open) {
@@ -122,7 +123,7 @@ pub const AgentState = struct {
     pub fn recordSuccess(self: *AgentState) void {
         self.completed_tasks += 1;
         self.consecutive_failures = 0;
-        self.last_activity = std.time.timestamp();
+        self.last_activity = tri_time.timestamp();
 
         // Auto-recover from unhealthy state on success
         if (self.health == .recovering) {
@@ -134,12 +135,12 @@ pub const AgentState = struct {
     pub fn recordFailure(self: *AgentState, config: ScalingConfig) bool {
         self.failed_tasks += 1;
         self.consecutive_failures += 1;
-        self.last_activity = std.time.timestamp();
+        self.last_activity = tri_time.timestamp();
 
         // Check circuit breaker threshold
         if (self.consecutive_failures >= config.circuit_breaker_threshold) {
             self.health = .circuit_open;
-            const now = std.time.timestamp();
+            const now = tri_time.timestamp();
             self.circuit_open_until = now + @as(i64, @intCast(config.circuit_breaker_cooldown_ms / 1000));
             return true; // Circuit opened
         }
@@ -156,7 +157,7 @@ pub const AgentState = struct {
     pub fn recover(self: *AgentState) bool {
         if (self.health != .circuit_open) return false;
 
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
         if (now < self.circuit_open_until) return false; // Still in cooldown
 
         self.health = .recovering;
@@ -193,7 +194,7 @@ pub const QueuedTask = struct {
     assigned_agent: ?[]const u8,
 
     pub fn init(allocator: Allocator, id: []const u8, payload: []const u8, priority: TaskPriority, timeout_ms: u64) QueuedTask {
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
         return QueuedTask{
             .id = allocator.dupe(u8, id) catch id,
             .payload = allocator.dupe(u8, payload) catch payload,
@@ -215,7 +216,7 @@ pub const QueuedTask = struct {
 
     /// Check if task has timed out
     pub fn isTimedOut(self: *const QueuedTask) bool {
-        return std.time.timestamp() >= self.timeout_at;
+        return tri_time.timestamp() >= self.timeout_at;
     }
 };
 
@@ -249,7 +250,7 @@ pub const ConsensusSession = struct {
     result: ?bool,
 
     pub fn init(allocator: Allocator, id: []const u8, proposal: []const u8, required_votes: u32, timeout_ms: u64) ConsensusSession {
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
         return ConsensusSession{
             .id = allocator.dupe(u8, id) catch id,
             .proposal = allocator.dupe(u8, proposal) catch proposal,
@@ -278,7 +279,7 @@ pub const ConsensusSession = struct {
         const vote = ConsensusVote{
             .agent_id = agent_id,
             .decision = decision,
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
             .reasoning = reasoning,
         };
 
@@ -320,7 +321,7 @@ pub const ConsensusSession = struct {
 
     /// Check if consensus has timed out
     pub fn isTimedOut(self: *const ConsensusSession) bool {
-        return std.time.timestamp() >= self.timeout_at;
+        return tri_time.timestamp() >= self.timeout_at;
     }
 };
 
@@ -467,7 +468,7 @@ pub const AgentLoadBalancer = struct {
 
         self.metrics.total_agents = @intCast(self.agents.count());
         self.metrics.scaling_events += 1;
-        self.last_scaling_time = std.time.timestamp();
+        self.last_scaling_time = tri_time.timestamp();
     }
 
     /// Remove idle agents (with no active tasks)
@@ -504,14 +505,14 @@ pub const AgentLoadBalancer = struct {
         }
 
         self.metrics.total_agents = @intCast(self.agents.count());
-        self.last_scaling_time = std.time.timestamp();
+        self.last_scaling_time = tri_time.timestamp();
     }
 
     /// Check if scaling is needed based on queue depth
     pub fn checkScaling(self: *Self) !bool {
         if (!self.config.auto_scaling_enabled) return false;
 
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
         const cooldown_passed = (now - self.last_scaling_time) >= (self.config.scaling_cooldown_ms / 1000);
 
         if (!cooldown_passed) return false;
@@ -579,7 +580,7 @@ pub const AgentLoadBalancer = struct {
 
         // Assign task
         best_agent.?.active_tasks += 1;
-        best_agent.?.last_activity = std.time.timestamp();
+        best_agent.?.last_activity = tri_time.timestamp();
         task.assigned_agent = try self.allocator.dupe(u8, best_agent.?.id);
 
         // Move task to active (remove from queue)
@@ -658,7 +659,7 @@ pub const AgentLoadBalancer = struct {
     /// ═══════════════════════════════════════════════════════════════════════════
     /// Start a new consensus session
     pub fn startConsensus(self: *Self, proposal: []const u8) ![]const u8 {
-        const session_id = try std.fmt.allocPrint(self.allocator, "consensus_{d}", .{std.time.timestamp()});
+        const session_id = try std.fmt.allocPrint(self.allocator, "consensus_{d}", .{tri_time.timestamp()});
 
         const required_votes = @min(@as(u32, @intCast(self.agents.count())), 10); // Max 10 votes needed
         const session = ConsensusSession.init(self.allocator, session_id, proposal, required_votes, self.config.consensus_timeout_ms);

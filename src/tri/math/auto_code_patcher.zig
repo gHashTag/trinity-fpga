@@ -15,6 +15,7 @@
 //! - Directory-wide scanning and patching
 
 const std = @import("std");
+const tri_proc = @import("tri_proc");
 const mem = std.mem;
 const fs = std.fs;
 const process = std.process;
@@ -635,7 +636,7 @@ pub fn applyPatchesWithRollback(allocator: mem.Allocator, patches: []AutoCodePat
 
 /// Run tests to validate patches
 fn runTests() bool {
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = std.heap.page_allocator,
         .argv = &[_][]const u8{ "zig", "build", "test" },
     }) catch return false;
@@ -646,7 +647,7 @@ fn runTests() bool {
     }
 
     return (switch (result.term) {
-        .Exited => |code| code,
+        .exited => |code| code,
         else => @as(u32, 1),
     }) == 0;
 }

@@ -1,6 +1,7 @@
 // mu_state.zig — File-based key-value state for MU agent
 // Keys stored as individual files in .trinity/mu/state/
 const std = @import("std");
+const tri_io = @import("tri_io");
 
 pub const State = struct {
     allocator: std.mem.Allocator,
@@ -9,7 +10,7 @@ pub const State = struct {
     pub fn init(allocator: std.mem.Allocator, project_root: []const u8) !State {
         const state_dir = try std.fmt.allocPrint(allocator, "{s}/.trinity/mu/state", .{project_root});
         // Ensure directory exists
-        std.fs.cwd().makePath(state_dir) catch |err| {
+        std.Io.Dir.cwd().createDirPath(tri_io.get(), state_dir) catch |err| {
             std.log.warn("mu_state: failed to create state dir: {}", .{err});
         };
         return .{ .allocator = allocator, .state_dir = state_dir };
@@ -23,16 +24,17 @@ pub const State = struct {
     pub fn read(self: *const State, key: []const u8) ?[]const u8 {
         var path_buf: [512]u8 = undefined;
         const path = std.fmt.bufPrint(&path_buf, "{s}/{s}", .{ self.state_dir, key }) catch return null;
-        return std.fs.cwd().readFileAlloc(self.allocator, path, 4096) catch null;
+        return std.Io.Dir.cwd().readFileAlloc(tri_io.get(), path, self.allocator, .limited(4096)) catch null;
     }
 
     /// Write a state value by key. Creates or overwrites file.
     pub fn write(self: *const State, key: []const u8, value: []const u8) !void {
         var path_buf: [512]u8 = undefined;
         const path = std.fmt.bufPrint(&path_buf, "{s}/{s}", .{ self.state_dir, key }) catch return error.PathTooLong;
-        const file = try std.fs.cwd().createFile(path, .{});
-        defer file.close();
-        try file.writeAll(value);
+        const io = tri_io.get();
+        const file = try std.Io.Dir.cwd().createFile(io, path, .{});
+        defer file.close(io);
+        try file.writeStreamingAll(io, value);
     }
 
     /// Read wake_count as integer, defaulting to 0.

@@ -5,6 +5,7 @@
 //! Golden identity: φ² + 1/φ² = 3
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const AutoHashMap = std.AutoHashMap;
 const StringHashMap = std.StringHashMap;
@@ -308,13 +309,13 @@ pub const Profiler = struct {
     /// Start profiling session
     pub fn start(self: *Profiler) void {
         self.is_active = true;
-        self.start_time_ns = std.time.nanoTimestamp();
+        self.start_time_ns = tri_time.nanoTimestamp();
     }
 
     /// Stop profiling session
     pub fn stop(self: *Profiler) void {
         if (self.is_active) {
-            const end_time = std.time.nanoTimestamp();
+            const end_time = tri_time.nanoTimestamp();
             if (end_time > self.start_time_ns) {
                 self.total_time_ns = @intCast(@as(u128, @bitCast(end_time - self.start_time_ns)));
             }
@@ -327,7 +328,7 @@ pub const Profiler = struct {
         if (!self.is_active) return;
         if (self.call_stack.items.len >= self.config.max_call_depth) return;
 
-        const now = std.time.nanoTimestamp();
+        const now = tri_time.nanoTimestamp();
         const parent_index: ?usize = if (self.call_stack.items.len > 0)
             self.call_stack.items.len - 1
         else
@@ -364,7 +365,7 @@ pub const Profiler = struct {
             return;
         }
 
-        const now = std.time.nanoTimestamp();
+        const now = tri_time.nanoTimestamp();
         const duration: u64 = if (now > frame.start_time_ns)
             @intCast(@as(u128, @bitCast(now - frame.start_time_ns)))
         else
@@ -409,7 +410,7 @@ pub const Profiler = struct {
         try self.allocations.put(address, .{
             .address = address,
             .size = size,
-            .timestamp_ns = std.time.nanoTimestamp(),
+            .timestamp_ns = tri_time.nanoTimestamp(),
             .function_id = current_func,
         });
 

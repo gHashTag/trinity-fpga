@@ -9,6 +9,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const testing = std.testing;
 const bpe = @import("bpe_cached.zig");
 
@@ -149,9 +150,9 @@ pub fn bench(comptime name: []const u8, iterations: u64, comptime func: anytype)
 
     var i: u64 = 0;
     while (i < iterations) : (i += 1) {
-        const start = std.time.nanoTimestamp();
+        const start = tri_time.nanoTimestamp();
         _ = func();
-        const end = std.time.nanoTimestamp();
+        const end = tri_time.nanoTimestamp();
         const elapsed: u64 = @intCast(end - start);
         total += elapsed;
         min_ns = @min(min_ns, elapsed);

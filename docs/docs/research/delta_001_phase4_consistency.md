@@ -397,7 +397,7 @@ The Barbero-Immirzi parameter is NOT φ⁻³. Experimental evidence (black hole 
 **Document Version:** 1.0
 **Last Updated:** 2026-03-07
 **Next Phase:** Final Report (Phase 5)
-**Repository:** `/Users/playra/trinity-w1/docs/research/delta_001_phase4_consistency.md`
+**Repository:** `docs/docs/research/delta_001_phase4_consistency.md`
 
 ---
 

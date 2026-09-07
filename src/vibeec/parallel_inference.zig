@@ -5,6 +5,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const ternary = @import("ternary_weights.zig");
 const flash = @import("flash_attention.zig");
 const simd16 = @import("simd_ternary_matmul.zig");
@@ -631,7 +632,7 @@ test "benchmark_thread_pool_vs_spawn" {
     parallelTernaryMatmul(output, weights, input, rows, cols, 1.0);
 
     // Benchmark with thread pool
-    var timer = std.time.Timer.start() catch unreachable;
+    var timer = tri_time.Timer.start() catch unreachable;
     for (0..iterations) |_| {
         parallelTernaryMatmul(output, weights, input, rows, cols, 1.0);
         std.mem.doNotOptimizeAway(output);

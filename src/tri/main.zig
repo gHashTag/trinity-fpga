@@ -3,6 +3,9 @@
 
 const std = @import("std");
 
+const tri_proc = @import("tri_proc");
+const tri_io = @import("tri_io");
+const tri_time = @import("tri_time");
 // Decomposed modules
 const utils = @import("tri_utils.zig");
 const tri_config = @import("tri_config.zig");
@@ -50,21 +53,40 @@ const tri_sparc = @import("sparc/mod.zig");
 // MAIN
 // ═══════════════════════════════════════════════════════════════════════════════
 
-pub fn main() !void {
+/// Takes std.process.Init.Minimal -- `{ environ, args }`, which std/start.zig
+/// accepts directly. 0.16 removed std.process.argsAlloc and there is no global
+/// argv left in std.os or std.posix, so arguments can only come from the
+/// runtime. Minimal is the smallest form of that: main keeps its own allocator
+/// and builds its own Io below rather than inheriting full Init's arena and gpa.
+pub fn main(init: std.process.Init.Minimal) !void {
     // Use page_allocator to avoid leak-check spam from GGUF reader metadata strings
     const allocator = std.heap.page_allocator;
 
     // P2.10: Initialize structured logging
-    try structured_log.initGlobalLogger(allocator, .info);
+    // Zig 0.16 puts file I/O behind an Io. std.Io.Threaded.init builds one from
+    // an allocator alone, so main's signature does not have to change for this.
+    var threaded: std.Io.Threaded = .init(allocator, .{});
+    defer threaded.deinit();
+    const io = threaded.io();
+
+    // Publish it for the leaves that cannot take an Io parameter without
+    // changing signatures across module boundaries (see src/tri/tri_io.zig).
+    // This must happen before any command dispatch, and it shares this Io
+    // rather than creating a second one -- code that has an `io` in scope
+    // should keep using the parameter.
+    tri_io.install(io);
+
+    try structured_log.initGlobalLogger(io, allocator, .info);
     defer structured_log.deinitGlobalLogger();
 
     // Auto-load .env into process environment (process env wins over .env)
-    env_loader.loadDotEnv(allocator);
+    env_loader.loadDotEnv(io, allocator);
 
-    const args = try std.process.argsAlloc(allocator);
-    defer std.process.argsFree(allocator, args);
+    // argsAlloc/argsFree are gone. These live for the whole process, exactly as
+    // the argsAlloc result did, so page_allocator serves as the arena.
+    const args = try init.args.toSlice(allocator);
 
-    var state = try utils.CLIState.init(allocator);
+    var state = try utils.CLIState.init(io, allocator);
     defer state.deinit();
 
     // No arguments = interactive mode
@@ -137,7 +159,7 @@ pub fn main() !void {
             std.mem.eql(u8, sub, "report"))
         {
             const test_args = if (arg_idx + 1 < args.len) args[arg_idx + 1 ..] else &[_][]const u8{};
-            logAgentCommand(args[arg_idx..]);
+            logAgentCommand(io, init.environ, args[arg_idx..]);
             _ = test_args;
             std.debug.print("Test command not yet implemented. Use 'zig build test' instead.\n", .{});
             return;
@@ -186,7 +208,7 @@ pub fn main() !void {
     // TRI-27 namespace: route `tri tri27 <subcommand>` to tri27 commands
     if (std.mem.eql(u8, args[arg_idx], "tri27")) {
         const tri27_args = if (arg_idx + 1 < args.len) args[arg_idx + 1 ..] else &[_][]const u8{};
-        logAgentCommand(args[arg_idx..]);
+        logAgentCommand(io, init.environ, args[arg_idx..]);
         const tri27_mod = @import("tri27_cli");
         try tri27_mod.runTri27Command(allocator, tri27_args);
         return;
@@ -207,24 +229,24 @@ pub fn main() !void {
                 const agent_args = if (arg_idx + 2 < args.len) args[arg_idx + 2 ..] else &[_][]const u8{};
 
                 if (std.mem.eql(u8, agent_subcmd, "spawn")) {
-                    logAgentCommand(args[arg_idx..]);
+                    logAgentCommand(io, init.environ, args[arg_idx..]);
                     const agent_commands = @import("agent_commands.zig");
-                    try agent_commands.runAgentSpawnCommand(allocator, agent_args);
+                    try agent_commands.runAgentSpawnCommand(io, allocator, agent_args);
                     return;
                 } else if (std.mem.eql(u8, agent_subcmd, "run")) {
-                    logAgentCommand(args[arg_idx..]);
+                    logAgentCommand(io, init.environ, args[arg_idx..]);
                     const tri_agent_run = @import("tri_agent_run.zig");
-                    try tri_agent_run.runAgentRunCommand(allocator, agent_args);
+                    try tri_agent_run.runAgentRunCommand(io, allocator, agent_args);
                     return;
                 } else if (std.mem.eql(u8, agent_subcmd, "stop")) {
-                    logAgentCommand(args[arg_idx..]);
+                    logAgentCommand(io, init.environ, args[arg_idx..]);
                     const agent_commands = @import("agent_commands.zig");
                     try agent_commands.runAgentStopCommand(allocator, agent_args);
                     return;
                 }
             }
             const gh_args = args[arg_idx..];
-            logAgentCommand(gh_args);
+            logAgentCommand(io, init.environ, gh_args);
             try github_commands.runGithubCommand(allocator, gh_args, state.dry_run);
             return;
         }
@@ -235,7 +257,7 @@ pub fn main() !void {
                 return;
             };
             const git_args = if (arg_idx + 2 < args.len) args[arg_idx + 2 ..] else &[_][]const u8{};
-            logAgentCommand(args[arg_idx..]);
+            logAgentCommand(io, init.environ, args[arg_idx..]);
             try commands.runGitCommand(allocator, git_sub, git_args);
             return;
         }
@@ -247,12 +269,12 @@ pub fn main() !void {
         {
             const cell_dispatch = @import("tri_cell_dispatch.zig");
             if (cell_dispatch.executeInternalCommand(first_arg)) {
-                logAgentCommand(args[arg_idx..]);
+                logAgentCommand(io, init.environ, args[arg_idx..]);
                 return;
             }
             const extra_args = if (arg_idx + 1 < args.len) args[arg_idx + 1 ..] else &[_][]const u8{};
             if (cell_dispatch.executeFullCommand(first_arg, allocator, extra_args)) {
-                logAgentCommand(args[arg_idx..]);
+                logAgentCommand(io, init.environ, args[arg_idx..]);
                 return;
             }
         }
@@ -279,7 +301,7 @@ pub fn main() !void {
             const cell_cmd = found orelse cell_dispatch.findCellCommand(allocator, first_arg);
             if (full_cmd) |fc| allocator.free(fc);
             if (cell_cmd) |cc| {
-                logAgentCommand(args[arg_idx..]);
+                logAgentCommand(io, init.environ, args[arg_idx..]);
                 const extra_args = if (found != null and arg_idx + 2 < args.len)
                     args[arg_idx + 2 ..]
                 else if (arg_idx + 1 < args.len)
@@ -294,7 +316,7 @@ pub fn main() !void {
         // SEBO namespace: route `tri sebo [args]` to runSeboCommand
         if (std.mem.eql(u8, first_arg, "sebo")) {
             const sebo_args = if (arg_idx + 1 < args.len) args[arg_idx + 1 ..] else &[_][]const u8{};
-            logAgentCommand(args[arg_idx..]);
+            logAgentCommand(io, init.environ, args[arg_idx..]);
             try commands.runSeboCommand(allocator, sebo_args);
             return;
         }
@@ -302,7 +324,7 @@ pub fn main() !void {
         // Phoenix namespace: route `tri phoenix <subcommand>` to tri_phoenix
         if (std.mem.eql(u8, first_arg, "phoenix")) {
             const phoenix_args = if (arg_idx + 1 < args.len) args[arg_idx + 1 ..] else &[_][]const u8{};
-            logAgentCommand(args[arg_idx..]);
+            logAgentCommand(io, init.environ, args[arg_idx..]);
             const tri_phoenix = @import("tri_phoenix.zig");
             try tri_phoenix.runPhoenixCommand(allocator, phoenix_args);
             return;
@@ -311,7 +333,7 @@ pub fn main() !void {
         if (std.mem.eql(u8, first_arg, "deploy")) {
             const deploy_sub = if (arg_idx + 1 < args.len) args[arg_idx + 1] else "status";
             const deploy_args = if (arg_idx + 2 < args.len) args[arg_idx + 2 ..] else &[_][]const u8{};
-            logAgentCommand(args[arg_idx..]);
+            logAgentCommand(io, init.environ, args[arg_idx..]);
             try commands.runDeployCommand(allocator, deploy_sub, deploy_args);
             return;
         }
@@ -340,7 +362,7 @@ pub fn main() !void {
                 return;
             }
             const railway_args = if (arg_idx + 2 < args.len) args[arg_idx + 2 ..] else &[_][]const u8{};
-            logAgentCommand(args[arg_idx..]);
+            logAgentCommand(io, init.environ, args[arg_idx..]);
 
             // Claude runtime commands
             if (std.mem.eql(u8, railway_sub, "claude")) {
@@ -374,12 +396,12 @@ pub fn main() !void {
             const spec_sub = if (arg_idx + 1 < args.len) args[arg_idx + 1] else "";
             if (std.mem.eql(u8, spec_sub, "create")) {
                 const spec_args = if (arg_idx + 2 < args.len) args[arg_idx + 2 ..] else &[_][]const u8{};
-                logAgentCommand(args[arg_idx..]);
+                logAgentCommand(io, init.environ, args[arg_idx..]);
                 pipeline.runSpecCreateCommand(allocator, spec_args);
                 return;
             }
             // bare `tri spec` → specexec demo (existing behavior)
-            logAgentCommand(args[arg_idx..]);
+            logAgentCommand(io, init.environ, args[arg_idx..]);
             demos.runSpecExecDemo();
             return;
         }
@@ -392,7 +414,7 @@ pub fn main() !void {
                 std.mem.eql(u8, bench_sub, "history"))
             {
                 const bench_args = args[arg_idx + 1 ..];
-                logAgentCommand(args[arg_idx..]);
+                logAgentCommand(io, init.environ, args[arg_idx..]);
                 const perf_benchmark = @import("perf_benchmark.zig");
                 perf_benchmark.runBenchCommand(allocator, bench_args);
                 return;
@@ -438,14 +460,14 @@ pub fn main() !void {
                 std.debug.print("Usage: tri notify [--chat <id>] [--pin] [--edit <msg_id>] \"<message>\"\n", .{});
                 return;
             };
-            logAgentCommand(args[arg_idx..]);
+            logAgentCommand(io, init.environ, args[arg_idx..]);
             try commands.runNotifyCommand(allocator, msg, chat_id_override, pin_after_send, edit_message_id);
             return;
         }
         // Chimera: route `tri chimera <name>` to fused multi-step commands
         if (std.mem.eql(u8, first_arg, "chimera")) {
             const chimera_args = if (arg_idx + 1 < args.len) args[arg_idx + 1 ..] else &[_][]const u8{};
-            logAgentCommand(args[arg_idx..]);
+            logAgentCommand(io, init.environ, args[arg_idx..]);
             const tri_chimera = @import("tri_chimera.zig");
             try tri_chimera.runChimeraCommand(allocator, chimera_args);
             return;
@@ -453,7 +475,7 @@ pub fn main() !void {
         // Queen: autonomous daemon (monitor + alerts + Telegram)
         if (std.mem.eql(u8, first_arg, "queen")) {
             const queen_args = if (arg_idx + 1 < args.len) args[arg_idx + 1 ..] else &[_][]const u8{};
-            logAgentCommand(args[arg_idx..]);
+            logAgentCommand(io, init.environ, args[arg_idx..]);
             const queen = @import("queen.zig");
             try queen.runQueenCommand(allocator, queen_args);
             return;
@@ -461,7 +483,7 @@ pub fn main() !void {
         // Ouroboros: self-evolving recursive improvement loop
         if (std.mem.eql(u8, first_arg, "ouroboros")) {
             const ouro_args = if (arg_idx + 1 < args.len) args[arg_idx + 1 ..] else &[_][]const u8{};
-            logAgentCommand(args[arg_idx..]);
+            logAgentCommand(io, init.environ, args[arg_idx..]);
             const tri_ouroboros = @import("autophagy.zig");
             try tri_ouroboros.runOuroborosCommand(allocator, ouro_args);
             return;
@@ -469,7 +491,7 @@ pub fn main() !void {
         // Patent: route `tri patent <command>` to IP protection
         if (std.mem.eql(u8, first_arg, "patent")) {
             const patent_args = if (arg_idx + 1 < args.len) args[arg_idx + 1 ..] else &[_][]const u8{};
-            logAgentCommand(args[arg_idx..]);
+            logAgentCommand(io, init.environ, args[arg_idx..]);
             const tri_patent = @import("tri_patent.zig");
             try tri_patent.runPatentCommand(allocator, patent_args);
             return;
@@ -477,7 +499,7 @@ pub fn main() !void {
         // DePIN: route `tri depin <command>` to DePIN node protocol
         if (std.mem.eql(u8, first_arg, "depin")) {
             const depin_args = if (arg_idx + 1 < args.len) args[arg_idx + 1 ..] else &[_][]const u8{};
-            logAgentCommand(args[arg_idx..]);
+            logAgentCommand(io, init.environ, args[arg_idx..]);
             const tri_depin = @import("tri_depin.zig");
             try tri_depin.runDepinCommand(allocator, depin_args);
             return;
@@ -485,7 +507,7 @@ pub fn main() !void {
         // Self: route `tri self <test|health|benchmark>` to tri_self
         if (std.mem.eql(u8, first_arg, "self")) {
             const self_args = if (arg_idx + 1 < args.len) args[arg_idx + 1 ..] else &[_][]const u8{};
-            logAgentCommand(args[arg_idx..]);
+            logAgentCommand(io, init.environ, args[arg_idx..]);
             const tri_self = @import("tri_self.zig");
             try tri_self.runSelfCommand(allocator, self_args);
             return;
@@ -493,7 +515,7 @@ pub fn main() !void {
         // Memory: route `tri memory <list|read|write|search|gc|stats>` to tri_memory
         if (std.mem.eql(u8, first_arg, "memory")) {
             const mem_args = if (arg_idx + 1 < args.len) args[arg_idx + 1 ..] else &[_][]const u8{};
-            logAgentCommand(args[arg_idx..]);
+            logAgentCommand(io, init.environ, args[arg_idx..]);
             const tri_memory = @import("hippocampus.zig");
             try tri_memory.runMemoryCommand(allocator, mem_args);
             return;
@@ -501,35 +523,35 @@ pub fn main() !void {
         // Experience: route `tri experience <save|recall|mistakes>` to tri_experience
         if (std.mem.eql(u8, first_arg, "experience")) {
             const exp_args = if (arg_idx + 1 < args.len) args[arg_idx + 1 ..] else &[_][]const u8{};
-            logAgentCommand(args[arg_idx..]);
+            logAgentCommand(io, init.environ, args[arg_idx..]);
             try tri_experience.runExperienceCommand(allocator, exp_args);
             return;
         }
         // Brain: route `tri brain [--show|--json|--region|--quick|--watch]` to metrics dashboard
         if (std.mem.eql(u8, first_arg, "brain")) {
             const brain_args = if (arg_idx + 1 < args.len) args[arg_idx + 1 ..] else &[_][]const u8{};
-            logAgentCommand(args[arg_idx..]);
+            logAgentCommand(io, init.environ, args[arg_idx..]);
             try commands.runBrainDashboardCommand(allocator, brain_args);
             return;
         }
         // Sim: route `tri sim suite` to evolution simulation
         if (std.mem.eql(u8, first_arg, "sim")) {
             const sim_args = if (arg_idx + 1 < args.len) args[arg_idx + 1 ..] else &[_][]const u8{};
-            logAgentCommand(args[arg_idx..]);
+            logAgentCommand(io, init.environ, args[arg_idx..]);
             try commands.runSimCommand(allocator, sim_args);
             return;
         }
         // UI: route `tri ui [build|kill]` to Queen UI launcher
         if (std.mem.eql(u8, first_arg, "ui")) {
             const ui_args = if (arg_idx + 1 < args.len) args[arg_idx + 1 ..] else &[_][]const u8{};
-            logAgentCommand(args[arg_idx..]);
+            logAgentCommand(io, init.environ, args[arg_idx..]);
             try commands.runUiCommand(allocator, ui_args);
             return;
         }
         // Cell: route `tri cell <command>` to Honeycomb module management
         if (std.mem.eql(u8, first_arg, "cell")) {
             const cell_args = if (arg_idx + 1 < args.len) args[arg_idx + 1 ..] else &[_][]const u8{};
-            logAgentCommand(args[arg_idx..]);
+            logAgentCommand(io, init.environ, args[arg_idx..]);
             const tri_cell = @import("cytoplasm.zig");
             try tri_cell.runCellCommand(allocator, cell_args);
             return;
@@ -537,7 +559,7 @@ pub fn main() !void {
         // Plugin: route `tri plugin <command>` to plugin CLI
         if (std.mem.eql(u8, first_arg, "plugin")) {
             const plugin_args = if (arg_idx + 1 < args.len) args[arg_idx + 1 ..] else &[_][]const u8{};
-            logAgentCommand(args[arg_idx..]);
+            logAgentCommand(io, init.environ, args[arg_idx..]);
             const tri_plugin = @import("tri_plugin.zig");
             try tri_plugin.runPluginCommand(allocator, plugin_args);
             return;
@@ -545,7 +567,7 @@ pub fn main() !void {
         // Events: route `tri events [list|emit|status]` to event bus
         if (std.mem.eql(u8, first_arg, "events")) {
             const events_args = if (arg_idx + 1 < args.len) args[arg_idx + 1 ..] else &[_][]const u8{};
-            logAgentCommand(args[arg_idx..]);
+            logAgentCommand(io, init.environ, args[arg_idx..]);
             const tri_events = @import("tri_events.zig");
             try tri_events.runEventsCommand(allocator, events_args);
             return;
@@ -553,7 +575,7 @@ pub fn main() !void {
         // Token: route `tri token [status|rotate|reset|test]` to token rotator
         if (std.mem.eql(u8, first_arg, "token")) {
             const token_args = if (arg_idx + 1 < args.len) args[arg_idx + 1 ..] else &[_][]const u8{};
-            logAgentCommand(args[arg_idx..]);
+            logAgentCommand(io, init.environ, args[arg_idx..]);
             const tri_token = @import("tri_token.zig");
             try tri_token.runTokenCommand(allocator, token_args);
             return;
@@ -561,7 +583,7 @@ pub fn main() !void {
         // Init: route `tri init [--cell <name>]` to scaffolding
         if (std.mem.eql(u8, first_arg, "init")) {
             const init_args = if (arg_idx + 1 < args.len) args[arg_idx + 1 ..] else &[_][]const u8{};
-            logAgentCommand(args[arg_idx..]);
+            logAgentCommand(io, init.environ, args[arg_idx..]);
             const tri_init = @import("tri_init.zig");
             try tri_init.runInitCommand(allocator, init_args);
             return;
@@ -570,7 +592,7 @@ pub fn main() !void {
         // Storm: route `tri storm <run|status|resume|init>` to STORM subcommands
         if (std.mem.eql(u8, first_arg, "storm")) {
             const storm_args = if (arg_idx + 1 < args.len) args[arg_idx + 1 ..] else ([_][]const u8{})[0..];
-            logAgentCommand(args[arg_idx..]);
+            logAgentCommand(io, init.environ, args[arg_idx..]);
             const tri_storm = @import("tri_storm.zig");
             const exit_code = try tri_storm.runStormCommand(allocator, storm_args);
             std.process.exit(exit_code);
@@ -578,7 +600,7 @@ pub fn main() !void {
         // OFC: route `tri ofc verdict --toxic` to Values Chamber
         if (std.mem.eql(u8, first_arg, "ofc")) {
             const ofc_args = if (arg_idx + 1 < args.len) args[arg_idx + 1 ..] else ([_][]const u8{})[0..];
-            logAgentCommand(args[arg_idx..]);
+            logAgentCommand(io, init.environ, args[arg_idx..]);
             const tri_storm = @import("tri_storm.zig");
             const exit_code = try tri_storm.runOFCCommand(allocator, ofc_args);
             std.process.exit(exit_code);
@@ -586,7 +608,7 @@ pub fn main() !void {
         // Habenula: route `tri habenula unfair_detect` to Anti-corruption sensor
         if (std.mem.eql(u8, first_arg, "habenula")) {
             const habenula_args = if (arg_idx + 1 < args.len) args[arg_idx + 1 ..] else ([_][]const u8{})[0..];
-            logAgentCommand(args[arg_idx..]);
+            logAgentCommand(io, init.environ, args[arg_idx..]);
             const tri_storm = @import("tri_storm.zig");
             const exit_code = try tri_storm.runHabenulaCommand(allocator, habenula_args);
             std.process.exit(exit_code);
@@ -594,7 +616,7 @@ pub fn main() !void {
         // Amygdala: route `tri amygdala check_fear` to Error Guardian
         if (std.mem.eql(u8, first_arg, "amygdala")) {
             const amygdala_args = if (arg_idx + 1 < args.len) args[arg_idx + 1 ..] else ([_][]const u8{})[0..];
-            logAgentCommand(args[arg_idx..]);
+            logAgentCommand(io, init.environ, args[arg_idx..]);
             const tri_storm = @import("tri_storm.zig");
             const exit_code = try tri_storm.runAmygdalaCommand(allocator, amygdala_args);
             std.process.exit(exit_code);
@@ -602,14 +624,14 @@ pub fn main() !void {
         // Golden Chain: route `tri golden-chain <run|resume|links>` to 28-link pipeline
         if (std.mem.eql(u8, first_arg, "golden-chain")) {
             const golden_chain_args = if (arg_idx + 1 < args.len) args[arg_idx + 1 ..] else ([_][]const u8{})[0..];
-            logAgentCommand(args[arg_idx..]);
+            logAgentCommand(io, init.environ, args[arg_idx..]);
             const exit_code = try golden_chain.runGoldenChainCommand(allocator, golden_chain_args);
             std.process.exit(exit_code);
         }
         // Experience: route `tri experience consult|blacklist|record` to MNL pattern
         if (std.mem.eql(u8, first_arg, "experience")) {
             const experience_args = if (arg_idx + 1 < args.len) args[arg_idx + 1 ..] else &[_][]const u8{};
-            logAgentCommand(args[arg_idx..]);
+            logAgentCommand(io, init.environ, args[arg_idx..]);
             try tri_experience.runExperienceCommand(allocator, experience_args);
             return;
         }
@@ -630,7 +652,7 @@ pub fn main() !void {
             // Named loop_journal, not tri_loop: line 29 already binds that
             // name to heartbeat.zig at file scope, and Zig forbids shadowing.
             const loop_journal = @import("tri_loop.zig");
-            try loop_journal.runLoopCommand(allocator, journal_args);
+            try loop_journal.runLoopCommand(io, allocator, journal_args);
             return;
         }
         // Autocomplete: `tri autocomplete --print|--install|--uninstall`
@@ -675,7 +697,7 @@ pub fn main() !void {
             // Namespace-specific command dispatch
             const ns_cmd_args = if (arg_idx + 2 < args.len) args[arg_idx + 2 ..] else &[_][]const u8{};
 
-            logAgentCommand(remaining_args);
+            logAgentCommand(io, init.environ, remaining_args);
             try dispatchNamespacedCommand(allocator, &state, ns, cmd_name, ns_cmd_args, is_internal_job_exec);
             return;
         },
@@ -688,7 +710,7 @@ pub fn main() !void {
     const cmd_args = if (arg_idx + 1 < args.len) args[arg_idx + 1 ..] else &[_][]const u8{};
 
     // Log agent command if AGENT_NAME is set (daemon tracing)
-    logAgentCommand(args[arg_idx..]);
+    logAgentCommand(io, init.environ, args[arg_idx..]);
 
     // Handle --help after command (except for serve, which has its own help)
     if (cmd_args.len > 0 and (std.mem.eql(u8, cmd_args[0], "--help") or std.mem.eql(u8, cmd_args[0], "-h"))) {
@@ -723,7 +745,7 @@ pub fn main() !void {
         .doc => utils.runSWECommand(&state, .Document, cmd_args),
         .refactor => utils.runSWECommand(&state, .Refactor, cmd_args),
         .reason => utils.runSWECommand(&state, .Reason, cmd_args),
-        .gen => try commands.runGenCommand(allocator, cmd_args),
+        .gen => try commands.runGenCommand(io, allocator, cmd_args),
         .convert => try commands.runConvertCommand(cmd_args),
         .serve => try commands.runServeCommand(allocator, cmd_args),
         .bench => if (is_internal_job_exec)
@@ -837,7 +859,7 @@ pub fn main() !void {
             } else if (std.mem.eql(u8, subcmd, "fix")) {
                 std.debug.print("\x1b[33mtri mu fix: deprecated — use hippocampus read/write directly\x1b[0m\n", .{});
             } else if (std.mem.eql(u8, subcmd, "start")) {
-                const result = std.process.Child.run(.{
+                const result = tri_proc.run(.{
                     .allocator = allocator,
                     .argv = &.{ "launchctl", "load", "-w", "deploy/com.trinity.mu-agent.plist" },
                 }) catch |err| {
@@ -848,7 +870,7 @@ pub fn main() !void {
                 allocator.free(result.stderr);
                 std.debug.print("Agent TRI started (launchctl load)\n", .{});
             } else if (std.mem.eql(u8, subcmd, "stop")) {
-                const result = std.process.Child.run(.{
+                const result = tri_proc.run(.{
                     .allocator = allocator,
                     .argv = &.{ "launchctl", "unload", "deploy/com.trinity.mu-agent.plist" },
                 }) catch |err| {
@@ -993,7 +1015,7 @@ pub fn main() !void {
         },
         .context_load => {
             const ctx_loader = @import("context_loader.zig");
-            ctx_loader.runContextCommand(allocator, cmd_args);
+            ctx_loader.runContextCommand(io, allocator, cmd_args);
         },
         // Demo/Bench commands (not yet implemented)
         .tvc_demo,
@@ -1174,16 +1196,27 @@ fn runDashboard(allocator: std.mem.Allocator) void {
 }
 
 /// If AGENT_NAME env var is set, append "timestamp agent_name tri args..." to log.
-fn logAgentCommand(cmd_args: []const []const u8) void {
-    const agent_name = std.posix.getenv("AGENT_NAME") orelse return;
+///
+/// `environ` is threaded in rather than read from a global: 0.16 removed
+/// std.posix.getenv, and main already receives the environment as part of its
+/// Init.Minimal, so no libc dependency has to be introduced to reach it.
+fn logAgentCommand(io: std.Io, environ: std.process.Environ, cmd_args: []const []const u8) void {
+    const agent_name = environ.getPosix("AGENT_NAME") orelse return;
     if (agent_name.len == 0) return;
 
     // Build log line: "TIMESTAMP EMOJI tri arg1 arg2..."
     var line_buf: [512]u8 = undefined;
-    var stream = std.io.fixedBufferStream(&line_buf);
-    const w = stream.writer();
+    // 0.16 removed the lowercase std.io namespace along with fixedBufferStream.
+    // Writer.fixed is the same thing: it fills the buffer and, once full, copies
+    // what still fits before reporting the overflow -- so a truncated line is
+    // still recoverable via .buffered(), exactly as getWritten() gave it before.
+    // The only visible change is the error name (WriteFailed, not NoSpaceLeft);
+    // every catch below is untyped, so the arms keep their original meaning:
+    // abandon the line on a truncated header/terminator, stop appending on a
+    // truncated argument.
+    var w: std.Io.Writer = .fixed(&line_buf);
 
-    const ts = std.time.timestamp();
+    const ts = tri_time.timestamp();
     // HH:MM from unix timestamp (rough — offset not critical for log)
     const day_secs: u64 = @intCast(@mod(ts, 86400));
     const hh = day_secs / 3600;
@@ -1206,37 +1239,43 @@ fn logAgentCommand(cmd_args: []const []const u8) void {
     }
     w.print("\n", .{}) catch return;
 
-    const line = stream.getWritten();
+    const line = w.buffered();
 
     // Append to log file
-    const file = std.fs.cwd().openFile(AGENT_CMD_LOG, .{ .mode = .write_only }) catch blk: {
+    const file = std.Io.Dir.cwd().openFile(io, AGENT_CMD_LOG, .{ .mode = .write_only }) catch blk: {
         // Create .trinity/ dir if needed, then create file
-        std.fs.cwd().makePath(".trinity") catch return;
-        break :blk std.fs.cwd().createFile(AGENT_CMD_LOG, .{}) catch return;
+        std.Io.Dir.cwd().createDirPath(io, ".trinity") catch return;
+        break :blk std.Io.Dir.cwd().createFile(io, AGENT_CMD_LOG, .{}) catch return;
     };
-    defer file.close();
-    file.seekFromEnd(0) catch return;
-    file.writeAll(line) catch |err| {
+    defer file.close(io);
+    // 0.16 dropped seek from File, so the append is expressed as a positional
+    // write at the current length instead. Same bytes, same (non-atomic)
+    // read-then-write race the seek version already had.
+    const end = file.length(io) catch return;
+    file.writePositionalAll(io, line, end) catch |err| {
         std.log.debug("main: write history line failed: {}", .{err});
     };
 
     // Fire-and-forget Telegram notification
-    sendAgentTelegram(line);
+    sendAgentTelegram(io, environ, line);
 
     // Rotate if too large (check size, not line count — cheaper)
-    const stat = file.stat() catch return;
+    const stat = file.stat(io) catch return;
     if (stat.size > AGENT_CMD_MAX_LINES * 80) { // ~80 bytes per line estimate
-        rotateAgentLog();
+        rotateAgentLog(io);
     }
 }
 
 /// Send agent command log line to Telegram. Fire-and-forget — never crash.
-fn sendAgentTelegram(line: []const u8) void {
-    const bot_token = std.posix.getenv("TELEGRAM_BOT_TOKEN") orelse return;
-    const chat_id = std.posix.getenv("TELEGRAM_CHAT_ID") orelse return;
+// Takes an Io because 0.16 gave std.http.Client an `io` field. The only
+// caller is logAgentCommand, which already has one, so this stays an
+// explicit parameter rather than reaching for the ambient handle.
+fn sendAgentTelegram(io: std.Io, environ: std.process.Environ, line: []const u8) void {
+    const bot_token = environ.getPosix("TELEGRAM_BOT_TOKEN") orelse return;
+    const chat_id = environ.getPosix("TELEGRAM_CHAT_ID") orelse return;
 
     // Trim trailing newline for cleaner message
-    const msg = std.mem.trimRight(u8, line, "\n\r ");
+    const msg = std.mem.trimEnd(u8, line, "\n\r ");
     if (msg.len == 0) return;
 
     // Build URL
@@ -1292,7 +1331,7 @@ fn sendAgentTelegram(line: []const u8) void {
     const body = body_buf[0..i];
 
     // Fire-and-forget HTTP POST
-    var client = std.http.Client{ .allocator = std.heap.page_allocator };
+    var client = std.http.Client{ .allocator = std.heap.page_allocator, .io = io };
     defer client.deinit();
 
     _ = client.fetch(.{
@@ -1308,8 +1347,10 @@ fn sendAgentTelegram(line: []const u8) void {
 }
 
 /// Keep last AGENT_CMD_KEEP_LINES lines when log exceeds max.
-fn rotateAgentLog() void {
-    const content = std.fs.cwd().readFileAlloc(std.heap.page_allocator, AGENT_CMD_LOG, 256 * 1024) catch return;
+fn rotateAgentLog(io: std.Io) void {
+    // Whole-file reads moved onto the directory in 0.16, and the byte cap is now
+    // an Io.Limit rather than a bare usize.
+    const content = std.Io.Dir.cwd().readFileAlloc(io, AGENT_CMD_LOG, std.heap.page_allocator, .limited(256 * 1024)) catch return;
     defer std.heap.page_allocator.free(content);
 
     // Count lines from the end, find offset to keep last N
@@ -1325,9 +1366,9 @@ fn rotateAgentLog() void {
     if (count < AGENT_CMD_KEEP_LINES) return; // not enough lines to rotate
 
     const trimmed = content[i..];
-    const file = std.fs.cwd().createFile(AGENT_CMD_LOG, .{}) catch return;
-    defer file.close();
-    file.writeAll(trimmed) catch |err| {
+    const file = std.Io.Dir.cwd().createFile(io, AGENT_CMD_LOG, .{}) catch return;
+    defer file.close(io);
+    file.writeStreamingAll(io, trimmed) catch |err| {
         std.log.debug("tri/main: failed to write agent command log: {}", .{err});
     };
 }
@@ -1347,7 +1388,7 @@ fn printVersion(allocator: std.mem.Allocator) void {
 
     // Get git hash at runtime
     var git_hash: []const u8 = "unknown";
-    const git_result = std.process.Child.run(.{
+    const git_result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &[_][]const u8{ "git", "rev-parse", "--short", "HEAD" },
         .max_output_bytes = 64,
@@ -1670,7 +1711,7 @@ fn dispatchCommand(
                 utils.runCodeCommand(state, cmd_args);
             }
         },
-        .gen => commands.runGenCommand(allocator, cmd_args),
+        .gen => commands.runGenCommand(state.io, allocator, cmd_args),
         .convert => commands.runConvertCommand(cmd_args),
         .serve => commands.runServeCommand(allocator, cmd_args),
         .bench => if (is_internal_job_exec)
@@ -1743,7 +1784,7 @@ fn dispatchCommand(
         },
         .context_load => {
             const ctx_loader = @import("context_loader.zig");
-            ctx_loader.runContextCommand(allocator, cmd_args);
+            ctx_loader.runContextCommand(state.io, allocator, cmd_args);
         },
         // S³AI Brain Circuit Commands (v5.1)
         .task_claim => {

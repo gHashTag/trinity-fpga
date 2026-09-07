@@ -9,6 +9,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const needle = @import("mod.zig");
 const zig_parser = needle.zig_parser;
 const vsa = needle.vsa;
@@ -69,7 +70,7 @@ fn benchmarkIndexBuild(allocator: std.mem.Allocator, n_symbols: usize) !void {
     defer graph.deinit();
 
     // Create synthetic symbols
-    const start_time = std.time.nanoTimestamp();
+    const start_time = tri_time.nanoTimestamp();
     for (0..n_symbols) |i| {
         const file_name = try std.fmt.allocPrint(allocator, "file_{d}.zig", .{i});
         var node = zig_parser.ZigNode.init(allocator, .fn_def, "test");
@@ -79,7 +80,7 @@ fn benchmarkIndexBuild(allocator: std.mem.Allocator, n_symbols: usize) !void {
     }
 
     var index = try vsa.buildSemanticIndex(allocator, &graph, vsa.DEFAULT_EMBEDDING_DIM);
-    const build_time = std.time.nanoTimestamp() - start_time;
+    const build_time = tri_time.nanoTimestamp() - start_time;
     defer index.deinit();
 
     const ms = @as(f64, @floatFromInt(build_time)) / 1_000_000.0;
@@ -111,7 +112,7 @@ fn benchmarkSemanticSearch(allocator: std.mem.Allocator, n_symbols: usize) !void
 
     // Benchmark search
     const iterations = 100;
-    const start_time = std.time.nanoTimestamp();
+    const start_time = tri_time.nanoTimestamp();
     for (0..iterations) |_| {
         var results = try index.search(&[_]f32{0.1} ** 384, 10, 0.5);
         defer {
@@ -121,7 +122,7 @@ fn benchmarkSemanticSearch(allocator: std.mem.Allocator, n_symbols: usize) !void
             results.deinit(allocator);
         }
     }
-    const total_time = std.time.nanoTimestamp() - start_time;
+    const total_time = tri_time.nanoTimestamp() - start_time;
     const avg_time = @divTrunc(total_time, iterations);
 
     const ms = @as(f64, @floatFromInt(avg_time)) / 1_000_000.0;
@@ -157,9 +158,9 @@ fn benchmarkSemanticFind(allocator: std.mem.Allocator, n_symbols: usize) !void {
     var found_total: usize = 0;
 
     for (0..iterations) |_| {
-        const start = std.time.nanoTimestamp();
+        const start = tri_time.nanoTimestamp();
         const matches = try vsa.semanticFind(&graph, "parse function", 10, allocator);
-        const elapsed = std.time.nanoTimestamp() - start;
+        const elapsed = tri_time.nanoTimestamp() - start;
         total_time += elapsed;
         found_total += matches.len;
         allocator.free(matches);

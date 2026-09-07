@@ -1720,9 +1720,9 @@ test "EvolutionResult toJson" {
     defer result.deinit(std.testing.allocator);
 
     var buffer: [4096]u8 = undefined;
-    var fbs = std.io.fixedBufferStream(&buffer);
-    try result.toJson(fbs.writer(), std.testing.allocator);
-    const output = fbs.getWritten();
+    var w: std.Io.Writer = .fixed(&buffer);
+    try result.toJson(&w, std.testing.allocator);
+    const output = w.buffered();
 
     try std.testing.expect(std.mem.startsWith(u8, output, "{"));
     try std.testing.expect(std.mem.indexOf(u8, output, "\"scenario\"") != null);
@@ -1734,9 +1734,9 @@ test "EvolutionResult toCsv" {
     defer result.deinit(std.testing.allocator);
 
     var buffer: [4096]u8 = undefined;
-    var fbs = std.io.fixedBufferStream(&buffer);
-    try result.toCsv(fbs.writer());
-    const output = fbs.getWritten();
+    var w: std.Io.Writer = .fixed(&buffer);
+    try result.toCsv(&w);
+    const output = w.buffered();
 
     try std.testing.expect(std.mem.startsWith(u8, output, "step,scenario"));
 }

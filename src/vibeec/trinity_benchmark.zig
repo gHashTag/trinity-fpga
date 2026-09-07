@@ -3,6 +3,7 @@
 // φ² + 1/φ² = 3 = TRINITY
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const trinity_format = @import("trinity_format.zig");
 const prometheus = @import("prometheus_seed.zig");
 const simd = @import("simd_trit_ops.zig");
@@ -232,7 +233,7 @@ pub fn runBenchmark(allocator: std.mem.Allocator, model_path: []const u8) !Bench
     std.debug.print("─────────────────────────────────────────────────────────────────\n", .{});
 
     for (CODING_TASKS) |task| {
-        var timer = try std.time.Timer.start();
+        var timer = try tri_time.Timer.start();
 
         // Generate code
         const output = model.generate(task.prompt, 256) catch |err| {
@@ -327,7 +328,7 @@ pub fn benchmarkInferenceSpeed(allocator: std.mem.Allocator, model_path: []const
 
     // Benchmark
     const iterations: usize = 100;
-    var timer = try std.time.Timer.start();
+    var timer = try tri_time.Timer.start();
 
     for (0..iterations) |_| {
         simd.simdTritMatmul(output, input, trit_buffer, hidden_size, hidden_size);
@@ -361,14 +362,13 @@ pub fn benchmarkInferenceSpeed(allocator: std.mem.Allocator, model_path: []const
     _ = batch_size;
 }
 
-pub fn main() !void {
+pub fn main(init: std.process.Init.Minimal) !void {
     var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    const args = try std.process.argsAlloc(allocator);
-    defer std.process.argsFree(allocator, args);
-
+    const args = try init.args.toSlice(allocator);
+    defer allocator.free(args);
     if (args.len < 2) {
         std.debug.print("Usage: trinity_benchmark <model.tri> [speed]\n", .{});
         std.debug.print("  trinity_benchmark model.tri        - Run coding benchmark\n", .{});

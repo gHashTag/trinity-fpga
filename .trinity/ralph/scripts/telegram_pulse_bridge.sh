@@ -14,15 +14,15 @@ BRIDGE_URL="${TELEGRAM_BRIDGE_URL:-http://localhost:8081}"
 SESSION_ID="${TELEGRAM_SESSION_ID:-}"
 
 # Load config
-if [ -f "/Users/playra/trinity-w1/.ralphrc" ]; then
-    source /Users/playra/trinity-w1/.ralphrc
+if [ -f "/Users/playom/trinity-fpga/.ralphrc" ]; then
+    source /Users/playom/trinity-fpga/.ralphrc
 fi
 
 # Check if bridge is running
 check_bridge() {
     if ! curl -s "$BRIDGE_URL/api/v1/bot/status" > /dev/null 2>&1; then
         echo "Error: telegram-bridge not running on $BRIDGE_URL"
-        echo "Start it with: cd /Users/playra/trinity-w1/telegram-bridge && ./telegram-bridge"
+        echo "Start it with: cd "$(git rev-parse --show-toplevel)/telegram-bridge" && ./telegram-bridge"
         exit 1
     fi
 }
@@ -82,7 +82,7 @@ ralph_pulse() {
     local label=$(pulse_label "$pulse_type")
     local text="${emoji} ${label}: ${message}"
 
-    echo "$(date '+%Y-%m-%d %H:%M:%S') [${label}] ${message}" >> /Users/playra/trinity-w1/.ralph/pulse.log
+    echo "$(date '+%Y-%m-%d %H:%M:%S') [${label}] ${message}" >> /Users/playom/trinity-fpga/.ralph/pulse.log
 
     send_via_bridge "$text"
 }

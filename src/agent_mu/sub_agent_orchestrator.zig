@@ -69,7 +69,7 @@ pub const SubAgentOrchestrator = struct {
             .allocator = allocator,
             .max_agents = max_agents,
             .active_tasks = std.StringHashMap(*SubAgentTask).init(allocator),
-            .completed_results = std.ArrayListUnmanaged(SubAgentResult){},
+            .completed_results = @as(std.ArrayListUnmanaged(SubAgentResult), .empty),
             .nexus = nexus,
         };
     }

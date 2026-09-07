@@ -6,6 +6,8 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
+const tri_time = @import("tri_time");
 const vsa = @import("vsa.zig");
 const vsa_simd = @import("vsa_simd.zig");
 const firebird = @import("firebird.zig");
@@ -125,14 +127,13 @@ const ExecuteOptions = struct {
 // MAIN
 // ═══════════════════════════════════════════════════════════════════════════════
 
-pub fn main() !void {
+pub fn main(init: std.process.Init.Minimal) !void {
     var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    const args = try std.process.argsAlloc(allocator);
-    defer std.process.argsFree(allocator, args);
-
+    const args = try init.args.toSlice(allocator);
+    defer allocator.free(args);
     if (args.len < 2) {
         try printBanner();
         try printHelp();
@@ -201,7 +202,7 @@ fn cmdConvert(allocator: std.mem.Allocator, args: []const []const u8) !void {
     std.debug.print("\n", .{});
 
     // Load WASM file
-    var timer = try std.time.Timer.start();
+    var timer = try tri_time.Timer.start();
     const wasm_data = wasm_parser.loadWasmFile(allocator, opts.input.?) catch |err| {
         std.debug.print("Error loading WASM file: {}\n", .{err});
         return;
@@ -289,7 +290,7 @@ fn cmdExecute(allocator: std.mem.Allocator, args: []const []const u8) !void {
         return;
     }
 
-    const seed = opts.seed orelse @as(u64, @intCast(std.time.timestamp()));
+    const seed = opts.seed orelse @as(u64, @intCast(tri_time.timestamp()));
 
     try printBanner();
     std.debug.print("TVC IR Execution with Virtual Navigation\n", .{});
@@ -301,7 +302,7 @@ fn cmdExecute(allocator: std.mem.Allocator, args: []const []const u8) !void {
     std.debug.print("\n", .{});
 
     // Load TVC file
-    var timer = try std.time.Timer.start();
+    var timer = try tri_time.Timer.start();
     var tvc_module = wasm_parser.loadTVCFile(allocator, opts.ir.?) catch |err| {
         std.debug.print("Error loading TVC file: {}\n", .{err});
         return;
@@ -414,7 +415,7 @@ fn cmdEvolve(allocator: std.mem.Allocator, args: []const []const u8) !void {
     }
 
     // Get seed
-    const seed = opts.seed orelse @as(u64, @intCast(std.time.timestamp()));
+    const seed = opts.seed orelse @as(u64, @intCast(tri_time.timestamp()));
 
     if (!opts.quiet) {
         try printBanner();
@@ -474,7 +475,7 @@ fn cmdEvolve(allocator: std.mem.Allocator, args: []const []const u8) !void {
     defer population.deinit();
 
     // Run evolution with progress
-    var timer = try std.time.Timer.start();
+    var timer = try tri_time.Timer.start();
 
     if (!opts.quiet) {
         std.debug.print("Generation | Fitness | Similarity | Time\n", .{});
@@ -528,17 +529,18 @@ fn cmdEvolve(allocator: std.mem.Allocator, args: []const []const u8) !void {
 
     // Save fingerprint if output specified
     if (opts.output) |out_path| {
-        const file = try std.fs.cwd().createFile(out_path, .{});
-        defer file.close();
+        const io = tri_io.get();
+        const file = try std.Io.Dir.cwd().createFile(io, out_path, .{});
+        defer file.close(io);
 
         // Write fingerprint as binary trit data
-        try file.writeAll("FP01"); // Magic
+        try file.writeStreamingAll(io, "FP01"); // Magic
         var len_bytes: [4]u8 = undefined;
         std.mem.writeInt(u32, &len_bytes, @intCast(best.chromosome.len), .little);
-        try file.writeAll(&len_bytes);
+        try file.writeStreamingAll(io, &len_bytes);
         for (best.chromosome.data) |trit| {
             const byte: [1]u8 = .{@as(u8, @bitCast(trit))};
-            try file.writeAll(&byte);
+            try file.writeStreamingAll(io, &byte);
         }
         std.debug.print("  Saved to:         {s}\n", .{out_path});
     }
@@ -567,7 +569,7 @@ fn cmdB2T(allocator: std.mem.Allocator, args: []const []const u8) !void {
         }
     }
 
-    const seed = opts.seed orelse @as(u64, @intCast(std.time.timestamp()));
+    const seed = opts.seed orelse @as(u64, @intCast(tri_time.timestamp()));
 
     try printBanner();
     std.debug.print("Binary-to-Ternary (B2T) Conversion\n", .{});
@@ -596,7 +598,7 @@ fn cmdB2T(allocator: std.mem.Allocator, args: []const []const u8) !void {
     std.debug.print("  Blocks: {d}\n", .{module.blocks.items.len});
 
     // Encode to ternary
-    var timer = try std.time.Timer.start();
+    var timer = try tri_time.Timer.start();
     var encoded = try b2t.encodeModule(allocator, &module, opts.dim, seed);
     defer encoded.deinit();
     const encode_time = timer.read() / 1000;
@@ -662,7 +664,7 @@ fn cmdBenchmark(allocator: std.mem.Allocator, args: []const []const u8) !void {
     defer b.deinit();
 
     // Benchmark bind
-    var timer = try std.time.Timer.start();
+    var timer = try tri_time.Timer.start();
     for (0..opts.iterations) |_| {
         var r = try vsa_simd.bindSimd(allocator, &a, &b);
         r.deinit();

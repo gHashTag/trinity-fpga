@@ -13,6 +13,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 // ============================================================================
 // CONSTANTS
 // ============================================================================
@@ -709,7 +710,7 @@ pub fn runBenchmark() void {
     const doc2 = "# README\n\nThis is a sample project.\n\n## Features\n\n- Vector search\n- Chunking\n- Source tracking";
     const doc3 = "const std = @import(\"std\");\n\npub const Vector = struct {\n    x: f32,\n    y: f32,\n\n    pub fn dot(self: Vector, other: Vector) f32 {\n        return self.x * other.x + self.y * other.y;\n    }\n};";
 
-    const start_time = std.time.nanoTimestamp();
+    const start_time = tri_time.nanoTimestamp();
 
     _ = engine.indexDocument(doc1, "src/main.zig");
     _ = engine.indexDocument(doc2, "README.md");
@@ -738,7 +739,7 @@ pub fn runBenchmark() void {
         }
     }
 
-    const end_time = std.time.nanoTimestamp();
+    const end_time = tri_time.nanoTimestamp();
     const elapsed_ns: i64 = @intCast(end_time - start_time);
     const elapsed_us: u64 = @intCast(@divFloor(elapsed_ns, 1000));
 

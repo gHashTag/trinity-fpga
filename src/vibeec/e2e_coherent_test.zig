@@ -5,18 +5,18 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const tri_inference = @import("tri_inference.zig");
 const gguf_reader = @import("gguf_reader.zig");
 const gguf_tokenizer = @import("gguf_tokenizer.zig");
 
-pub fn main() !void {
+pub fn main(init: std.process.Init.Minimal) !void {
     var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    const args = try std.process.argsAlloc(allocator);
-    defer std.process.argsFree(allocator, args);
-
+    const args = try init.args.toSlice(allocator);
+    defer allocator.free(args);
     // Default paths - TinyLlama 1.1B (real model!)
     const tri_path = if (args.len > 1) args[1] else "../../data/models/tinyllama-1.1b.tri";
     const gguf_path = if (args.len > 2) args[2] else "../../data/models/tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf";
@@ -87,7 +87,7 @@ pub fn main() !void {
     const temperature: f32 = 0.8;
 
     model.resetKVCache();
-    var timer = try std.time.Timer.start();
+    var timer = try tri_time.Timer.start();
 
     var generated = std.ArrayList(u32).init(allocator);
     defer generated.deinit();
@@ -185,7 +185,7 @@ fn runWithoutTokenizer(allocator: std.mem.Allocator, tri_path: []const u8, promp
     const temperature: f32 = 0.7;
 
     model.resetKVCache();
-    var timer = try std.time.Timer.start();
+    var timer = try tri_time.Timer.start();
 
     var current_token: u32 = 1; // BOS
     var generated: [32]u32 = undefined;

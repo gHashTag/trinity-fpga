@@ -17,6 +17,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 // Direct imports for testing
 const basal_ganglia = @import("basal_ganglia.zig");
 const reticular_formation = @import("reticular_formation.zig");
@@ -208,7 +209,7 @@ test "Security: Buffer overflow - telemetry array bounds" {
     var tel = telemetry.BrainTelemetry.init(std.testing.allocator, 100);
     defer tel.deinit();
 
-    const now = std.time.milliTimestamp();
+    const now = tri_time.milliTimestamp();
 
     // Attempt to write beyond capacity
     var i: usize = 0;
@@ -253,7 +254,7 @@ test "Security: Buffer overflow - alert history trimming" {
     var alert_mgr = try alerts.AlertManager.init(std.testing.allocator);
     defer alert_mgr.deinit();
 
-    const now = std.time.milliTimestamp();
+    const now = tri_time.milliTimestamp();
 
     // Flood with alerts
     var i: usize = 0;
@@ -591,7 +592,7 @@ test "Security: DoS protection - event bus rate limiting" {
     defer bus.deinit();
 
     // Rapid event publication (stress test)
-    const start = std.time.milliTimestamp();
+    const start = tri_time.milliTimestamp();
 
     var i: usize = 0;
     while (i < 10_000) : (i += 1) {
@@ -606,7 +607,7 @@ test "Security: DoS protection - event bus rate limiting" {
         });
     }
 
-    const elapsed = std.time.milliTimestamp() - start;
+    const elapsed = tri_time.milliTimestamp() - start;
 
     // Should complete in reasonable time (< 30 seconds)
     try std.testing.expect(elapsed < 30_000);
@@ -646,7 +647,7 @@ test "Security: DoS protection - alert spam handling" {
     var alert_mgr = try alerts.AlertManager.init(std.testing.allocator);
     defer alert_mgr.deinit();
 
-    const now = std.time.milliTimestamp();
+    const now = tri_time.milliTimestamp();
 
     // Send many identical alerts rapidly
     var i: usize = 0;
@@ -717,7 +718,7 @@ test "Security: Concurrent access - telemetry thread safety" {
     var tel = telemetry.BrainTelemetry.init(std.testing.allocator, 100);
     defer tel.deinit();
 
-    const now = std.time.milliTimestamp();
+    const now = tri_time.milliTimestamp();
 
     // Rapid telemetry recording
     var i: usize = 0;

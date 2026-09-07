@@ -2,7 +2,7 @@
 # TRI COMMANDER Processor — Обрабатывает команды и вызывает Claude
 # Запускается в фоне, следит за incoming.cmd
 
-RALPH_DIR="/Users/playra/trinity"
+RALPH_DIR="/Users/playom/trinity"
 QUEUE_DIR="$RALPH_DIR/.ralph/queue"
 INCOMING="$QUEUE_DIR/incoming.cmd"
 RESPONSE="$QUEUE_DIR/responses/current.resp"

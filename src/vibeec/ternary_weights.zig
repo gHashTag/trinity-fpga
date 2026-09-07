@@ -6,6 +6,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 // ═══════════════════════════════════════════════════════════════════════════════
 // TERNARY WEIGHT REPRESENTATION
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -705,7 +706,7 @@ pub fn benchmarkTernaryMatVec(rows: usize, cols: usize, iterations: usize) void 
     std.debug.print("=" ** 50 ++ "\n", .{});
 
     // Benchmark scalar
-    var timer = std.time.Timer.start() catch return;
+    var timer = tri_time.Timer.start() catch return;
     for (0..iterations) |_| {
         ternaryMatVec(output, weights, input, rows, cols);
     }
@@ -1077,7 +1078,7 @@ test "benchmark_ternary_matmul" {
     for (input, 0..) |*v, i| v.* = @as(f32, @floatFromInt(i % 100)) / 100.0;
 
     // Benchmark SIMD-16 (LUT-based)
-    var timer = std.time.Timer.start() catch unreachable;
+    var timer = tri_time.Timer.start() catch unreachable;
     for (0..iterations) |_| {
         simd16TernaryMatVec(output, weights, input, rows, cols);
         std.mem.doNotOptimizeAway(output);

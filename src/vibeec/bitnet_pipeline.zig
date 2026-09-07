@@ -4,6 +4,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const simd_matmul = @import("simd_ternary_matmul.zig");
 const trinity_format = @import("trinity_format.zig");
 const flash_attn = @import("flash_attention.zig");
@@ -736,7 +737,7 @@ pub const BitNetModel = struct {
         }
 
         // Top-p sampling
-        var prng = std.Random.DefaultPrng.init(@intCast(std.time.milliTimestamp()));
+        var prng = std.Random.DefaultPrng.init(@intCast(tri_time.milliTimestamp()));
         const r = prng.random().float(f32) * top_p;
 
         var cumsum: f32 = 0.0;
@@ -1208,7 +1209,7 @@ pub fn runBenchmark(allocator: std.mem.Allocator) !void {
     }
 
     // Benchmark
-    var timer = try std.time.Timer.start();
+    var timer = try tri_time.Timer.start();
     for (0..bench_iters) |i| {
         kv_caches[0].clear();
         try layers[0].forward(allocator, output, input, &kv_caches[0], &rope, i % config.max_seq_len);

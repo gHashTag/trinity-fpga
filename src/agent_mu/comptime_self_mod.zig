@@ -7,6 +7,8 @@
 //! Generated code is written to a separate file for review before integration.
 
 const std = @import("std");
+const tri_io = @import("tri_io");
+const tri_time = @import("tri_time");
 const diagnostic = @import("diagnostic.zig");
 const FixType = diagnostic.FixType;
 const comptime_embeddings = @import("comptime_embeddings.zig");
@@ -76,7 +78,7 @@ pub const SelfModification = struct {
             .fix_type = fix_type,
             .confidence = confidence,
             .sample_count = sample_count,
-            .created_at = std.time.timestamp(),
+            .created_at = tri_time.timestamp(),
             .embedding = embedding,
         };
 
@@ -104,7 +106,7 @@ pub const SelfModification = struct {
 
         try buffer.appendSlice("// Self-generated patterns learned from runtime\n");
         try buffer.appendSlice("// Generated at: ");
-        try buffer.print("{d}", .{std.time.timestamp()});
+        try buffer.print("{d}", .{tri_time.timestamp()});
         try buffer.appendSlice("\n\n");
 
         try buffer.appendSlice("pub const SELF_GENERATED_PATTERNS = [_]comptime_embeddings.ErrorPattern{\n");
@@ -145,7 +147,7 @@ pub const SelfModification = struct {
         defer self.allocator.free(code);
 
         // Write to output file
-        const file = try std.fs.createFileAbsolute(self.output_path, .{ .read = true });
+        const file = try std.Io.Dir.createFileAbsolute(tri_io.get(), self.output_path, .{ .read = true });
         defer file.close();
 
         try file.writeAll(code);
@@ -197,7 +199,7 @@ pub const SelfModification = struct {
 
     /// Prune old low-confidence patterns
     pub fn pruneLowConfidence(self: *SelfModification, max_age_seconds: i64) !usize {
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
         var pruned: usize = 0;
 
         var i: usize = 0;
@@ -245,7 +247,7 @@ pub const SelfModification = struct {
 
     /// Export patterns for manual review
     pub fn exportForReview(self: *const SelfModification, path: []const u8) !void {
-        const file = try std.fs.createFileAbsolute(path, .{ .read = true });
+        const file = try std.Io.Dir.createFileAbsolute(tri_io.get(), path, .{ .read = true });
         defer file.close();
 
         const writer = file.writer();

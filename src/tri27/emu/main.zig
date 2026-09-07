@@ -11,7 +11,7 @@ const DEFAULT_MEMORY_SIZE: usize = 4096;
 
 /// Command: tri-emu program.tbin
 /// Usage: tri-emu program.tbin
-pub fn main() !void {
+pub fn main(init: std.process.Init.Minimal) !void {
     // Parse command line arguments
     var args = try std.process.argsAlloc(std.heap.page_allocator);
 

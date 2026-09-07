@@ -7,6 +7,11 @@
 // φ² + 1/φ² = 3 | TRINITY
 
 const std = @import("std");
+// Zig 0.16 puts file I/O behind an `Io`. `execute` has no `io` parameter and
+// `CPUState` has no `io` field, and its signature is fixed by every caller of
+// the emulator, so the FILE_* opcodes below take the process-wide handle.
+// See src/tri/tri_io.zig.
+const tri_io = @import("tri_io");
 
 const CPUState = @import("cpu_state.zig").CPUState;
 const Instruction = @import("decoder.zig").Instruction;
@@ -751,15 +756,30 @@ pub fn execute(cpu: *CPUState, inst: Instruction, memory: []align(8) u8) ExecErr
             }
 
             const file_path = path_buf[0..copy_len :0];
+            const io = tri_io.get();
             // Open and read file
-            const file = std.fs.cwd().openFile(file_path, .{}) catch {
+            const file = std.Io.Dir.cwd().openFile(io, file_path, .{}) catch {
                 return ExecError.InvalidMemory;
             };
-            defer file.close();
+            defer file.close(io);
 
             // Read file content (max 1KB for safety)
             var content_buf: [1024]u8 = undefined;
-            const bytes_read = file.readAll(&content_buf) catch {
+            // 0.15's `file.readAll` filled the buffer and returned a short
+            // count only at end of file. 0.16 has no File.readAll, and
+            // `readStreaming` is NOT the equivalent: it is a single attempt
+            // that may return fewer bytes (even 0) without being at EOF, which
+            // would silently truncate a file here. A Reader's `readSliceShort`
+            // keeps the old contract exactly -- it loops until the buffer is
+            // full and returns less only at end of stream. `readSliceAll` is
+            // wrong for the same reason it always was: a file shorter than 1KB
+            // is the normal case here, and readSliceAll treats that as
+            // error.EndOfStream. The reader defaults to positional reads and
+            // falls back to streaming on an unseekable file, so pipes and
+            // regular files both behave as they did under 0.15.
+            var reader_buf: [64]u8 = undefined;
+            var file_reader = file.reader(io, &reader_buf);
+            const bytes_read = file_reader.interface.readSliceShort(&content_buf) catch {
                 return ExecError.InvalidMemory;
             };
 
@@ -825,17 +845,20 @@ pub fn execute(cpu: *CPUState, inst: Instruction, memory: []align(8) u8) ExecErr
             }
 
             const file_path = path_buf[0..copy_len :0];
+            const io = tri_io.get();
             // Open and write file
-            const file = std.fs.cwd().createFile(file_path, .{}) catch {
+            const file = std.Io.Dir.cwd().createFile(io, file_path, .{}) catch {
                 return ExecError.InvalidMemory;
             };
-            defer file.close();
+            defer file.close(io);
 
             // Write data content
             const data_start = data_addr + 2;
             const max_data_len = @min(@as(usize, data_len), memory.len - data_start);
             const data_slice = memory[data_start..@min(data_start + max_data_len, memory.len)];
-            _ = file.writeAll(data_slice) catch {
+            // 0.15 `writeAll` -> 0.16 `writeStreamingAll`: same contract, all
+            // bytes written at the current position or an error.
+            file.writeStreamingAll(io, data_slice) catch {
                 return ExecError.InvalidMemory;
             };
 
@@ -878,7 +901,8 @@ pub fn execute(cpu: *CPUState, inst: Instruction, memory: []align(8) u8) ExecErr
             const file_path = path_buf[0..copy_len :0];
 
             // Check if file exists
-            _ = std.fs.cwd().access(file_path, .{}) catch {
+            const io = tri_io.get();
+            std.Io.Dir.cwd().access(io, file_path, .{}) catch {
                 cpu.flags.Z = true; // File does not exist
                 cpu.flags.N = false;
                 cpu.pc += 1;

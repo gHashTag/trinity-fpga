@@ -11,6 +11,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const Allocator = std.mem.Allocator;
 const print = std.debug.print;
 
@@ -135,7 +136,7 @@ fn executeTasks(allocator: Allocator, tasks: []const FarmTask, dry_run: bool, ma
     }
 
     var remaining = total_to_inject;
-    var errors_list = try std.ArrayList(u8).initCapacity(allocator, 256);
+    var errors_list: std.Io.Writer.Allocating = try .initCapacity(allocator, 256);
 
     for (tasks) |task| {
         if (remaining == 0) break;
@@ -169,7 +170,7 @@ fn executeTasks(allocator: Allocator, tasks: []const FarmTask, dry_run: bool, ma
         const injected = executeTask(allocator, task, count_for_task) catch |err| {
             print("   {s}❌ Failed: {}{s}\n", .{ RED, err, RESET });
             result.tasks_failed += 1;
-            try errors_list.writer().print("#{d}: {} | ", .{ task.issue_number, err });
+            try errors_list.writer.print("#{d}: {} | ", .{ task.issue_number, err });
             continue;
         };
 
@@ -188,8 +189,8 @@ fn executeTasks(allocator: Allocator, tasks: []const FarmTask, dry_run: bool, ma
         try updateTaskStatus(allocator, task.issue_number, "in-progress");
     }
 
-    if (errors_list.items.len > 0) {
-        result.errors = try errors_list.toOwnedSlice(allocator);
+    if (errors_list.written().len > 0) {
+        result.errors = try errors_list.toOwnedSlice();
     }
 
     return result;
@@ -242,14 +243,15 @@ fn executeTask(allocator: Allocator, task: FarmTask, count: u32) !u32 {
 
 /// Update task status in local cache file
 fn updateTaskStatus(allocator: Allocator, issue_number: u32, new_status: []const u8) !void {
+    const io = tri_io.get();
     const filename = try std.fmt.allocPrint(allocator, ".trinity/tasks/farm-{d}.json", .{issue_number});
     defer allocator.free(filename);
 
     // Ensure tasks directory exists
-    try std.fs.cwd().makePath(".trinity/tasks");
+    try std.Io.Dir.cwd().createDirPath(io, ".trinity/tasks");
 
     // Try to open existing file, or create new if it doesn't exist
-    const file = std.fs.cwd().openFile(filename, .{}) catch |err| {
+    const file = std.Io.Dir.cwd().openFile(io, filename, .{}) catch |err| {
         if (err == error.FileNotFound) {
             // File doesn't exist - this is OK for GitHub mode, just skip status update
             // The task status lives on GitHub, not in local cache
@@ -257,13 +259,14 @@ fn updateTaskStatus(allocator: Allocator, issue_number: u32, new_status: []const
         }
         return err;
     };
-    defer file.close();
+    defer file.close(io);
 
-    const stat = try file.stat();
+    const stat = try file.stat(io);
     const content = try allocator.alloc(u8, stat.size);
     defer allocator.free(content);
 
-    _ = try file.readAll(content);
+    // 0.15's readAll: fill the buffer, stopping only at end of file.
+    _ = try file.readPositionalAll(io, content, 0);
 
     var parsed = try std.json.parseFromSlice(FarmTask, allocator, content, .{
         .ignore_unknown_fields = true,
@@ -273,12 +276,12 @@ fn updateTaskStatus(allocator: Allocator, issue_number: u32, new_status: []const
     parsed.value.status = new_status;
 
     // Write back
-    const out_file = try std.fs.cwd().createFile(filename, .{ .truncate = true });
-    defer out_file.close();
+    const out_file = try std.Io.Dir.cwd().createFile(io, filename, .{ .truncate = true });
+    defer out_file.close(io);
 
     const json_str = try std.json.Stringify.valueAlloc(allocator, parsed.value, .{ .whitespace = .indent_2 });
     defer allocator.free(json_str);
-    try out_file.writeAll(json_str);
+    try out_file.writeStreamingAll(io, json_str);
 }
 
 fn printHelp() void {

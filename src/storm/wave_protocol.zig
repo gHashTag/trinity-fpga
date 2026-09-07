@@ -4,6 +4,7 @@
 //! Phoenix preWaveRegen integration
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const gc = @import("golden_chain.zig");
 const pb = @import("phoenix_bridge.zig");
 
@@ -110,7 +111,7 @@ pub const StormWaveProtocol = struct {
 
     /// Run single wave
     fn runWave(self: *StormWaveProtocol, wave: Wave, task: []const u8) !WaveResult {
-        const start_time = std.time.nanoTimestamp();
+        const start_time = tri_time.nanoTimestamp();
 
         std.debug.print("\n🌊 WAVE {d}: {s} ({d} agents, {d} links)\n", .{
             wave.id, wave.name, wave.agent_count, wave.links.len,
@@ -152,7 +153,7 @@ pub const StormWaveProtocol = struct {
             }
         }
 
-        const end_time = std.time.nanoTimestamp();
+        const end_time = tri_time.nanoTimestamp();
         const elapsed_ns = end_time - start_time;
         const duration_ms: u64 = @intCast(@abs(elapsed_ns) / 1_000_000);
         self.total_duration_ms += duration_ms;

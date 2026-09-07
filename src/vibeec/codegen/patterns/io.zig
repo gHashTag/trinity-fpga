@@ -7,6 +7,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const types = @import("../types.zig");
 const builder_mod = @import("../builder.zig");
 
@@ -271,7 +272,7 @@ pub fn match(builder: *CodeBuilder, b: *const Behavior) !bool {
         try builder.writeFmt("pub fn {s}(allocator: std.mem.Allocator, url: []const u8, method: []const u8) ![]const u8 {{\n", .{b.name});
         builder.incIndent();
         try builder.writeLine("// HTTP client with full request/response handling");
-        try builder.writeLine("var client = std.http.Client{ .allocator = allocator };");
+        try builder.writeLine("var client = std.http.Client{ .allocator = allocator, .io = tri_io.get() };");
         try builder.writeLine("defer client.deinit();");
         try builder.writeLine("");
         try builder.writeLine("const uri = try std.Uri.parse(url);");
@@ -293,7 +294,7 @@ pub fn match(builder: *CodeBuilder, b: *const Behavior) !bool {
         try builder.writeFmt("pub fn {s}(allocator: std.mem.Allocator, url: []const u8) !WebSocketClient {{\n", .{b.name});
         builder.incIndent();
         try builder.writeLine("// WebSocket client with handshake and message handling");
-        try builder.writeLine("var client = std.http.Client{ .allocator = allocator };");
+        try builder.writeLine("var client = std.http.Client{ .allocator = allocator, .io = tri_io.get() };");
         try builder.writeLine("defer client.deinit();");
         try builder.writeLine("");
         try builder.writeLine("const uri = try std.Uri.parse(url);");

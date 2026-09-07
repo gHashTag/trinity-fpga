@@ -14,6 +14,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 // ============================================================================
 // CONSTANTS
 // ============================================================================
@@ -272,7 +273,7 @@ pub const FluentMessage = struct {
             .text_len = 0,
             .code_blocks = undefined,
             .code_block_count = 0,
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
             .is_active = true,
         };
 
@@ -1066,7 +1067,7 @@ pub fn runBenchmark() void {
     std.debug.print("\n  Mode: {s}\n", .{coder.context.mode.getName()});
     std.debug.print("  Language: {s}\n", .{coder.context.active_language.getName()});
 
-    const start_time = std.time.nanoTimestamp();
+    const start_time = tri_time.nanoTimestamp();
 
     // Test chat
     std.debug.print("\n  Testing Chat...\n", .{});
@@ -1155,7 +1156,7 @@ pub fn runBenchmark() void {
         });
     }
 
-    const end_time = std.time.nanoTimestamp();
+    const end_time = tri_time.nanoTimestamp();
     const elapsed_ns: i64 = @intCast(end_time - start_time);
     const elapsed_us = @divFloor(elapsed_ns, 1000);
 

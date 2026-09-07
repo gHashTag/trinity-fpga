@@ -5,7 +5,10 @@
 // ============================================================================
 
 const std = @import("std");
-const tri_mutex = @import("mutex.zig");
+const tri_io = @import("tri_io");
+const tri_proc = @import("tri_proc");
+const tri_time = @import("tri_time");
+const tri_mutex = @import("tri_mutex");
 const colors = @import("tri_colors.zig");
 
 const GREEN = colors.GREEN;
@@ -162,7 +165,7 @@ fn parseFilterMode(s: []const u8) FilterMode {
 // ============================================================================
 
 fn runBatch(allocator: std.mem.Allocator, config: BatchConfig) void {
-    const start_ts = std.time.nanoTimestamp();
+    const start_ts = tri_time.nanoTimestamp();
 
     // Header
     std.debug.print("\n{s}BATCH PIPELINE RUNNER{s}\n", .{ GOLDEN, RESET });
@@ -232,28 +235,23 @@ fn runBatch(allocator: std.mem.Allocator, config: BatchConfig) void {
         }) catch continue;
     }
 
-    // Init thread pool + wait group
-    var pool: std.Thread.Pool = undefined;
-    pool.init(.{
-        .allocator = allocator,
-        .n_jobs = config.parallel,
-    }) catch {
-        std.debug.print("{s}  Failed to init thread pool{s}\n", .{ RED, RESET });
-        return;
-    };
-    defer pool.deinit();
-
-    var wg: std.Thread.WaitGroup = .{};
+    // 0.16 replaced std.Thread.Pool + WaitGroup with std.Io.Group. Group needs
+    // no start-up, so the "failed to init thread pool" bail-out is gone, and the
+    // worker count now belongs to the io implementation rather than to
+    // config.parallel.
+    const io = tri_io.get();
+    var group: std.Io.Group = .init;
+    defer group.cancel(io);
 
     // Spawn all workers
     for (contexts.items) |*ctx| {
-        pool.spawnWg(&wg, runSinglePipeline, .{ctx});
+        group.async(io, runSinglePipeline, .{ctx});
     }
 
     // Wait for all workers
-    wg.wait();
+    group.await(io) catch {};
 
-    const end_ts = std.time.nanoTimestamp();
+    const end_ts = tri_time.nanoTimestamp();
     const total_duration_ns = end_ts - start_ts;
 
     // Phase 5: Aggregate results
@@ -305,12 +303,13 @@ fn scanSpecs(allocator: std.mem.Allocator, directory: []const u8) std.ArrayListU
     var paths: std.ArrayListUnmanaged([]const u8) = .empty;
 
     // Open directory
-    var dir = std.fs.cwd().openDir(directory, .{ .iterate = true }) catch return paths;
-    defer dir.close();
+    const io = tri_io.get();
+    var dir = std.Io.Dir.cwd().openDir(io, directory, .{ .iterate = true }) catch return paths;
+    defer dir.close(io);
 
     // Walk entries (non-recursive for specs/tri/ — subdirs handled separately)
     var iter = dir.iterate();
-    while (iter.next() catch |err| {
+    while (iter.next(io) catch |err| {
         std.log.warn("batch_runner: dir iteration error in {s}: {}", .{ directory, err });
         return paths;
     }) |entry| {
@@ -385,7 +384,7 @@ fn filterSpecs(
         },
         .changed_only => {
             // git diff --name-only HEAD~1 -- 'specs/**/*.tri'
-            const git_result = std.process.Child.run(.{
+            const git_result = tri_proc.run(.{
                 .allocator = allocator,
                 .argv = &[_][]const u8{ "git", "diff", "--name-only", "HEAD~1", "--", "specs/" },
                 .max_output_bytes = 64 * 1024,
@@ -415,7 +414,7 @@ fn filterSpecs(
 }
 
 fn runLintCheck(allocator: std.mem.Allocator, spec_path: []const u8) bool {
-    const lint_result = std.process.Child.run(.{
+    const lint_result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &[_][]const u8{ "zig-out/bin/vibee", "validate", spec_path },
         .max_output_bytes = 64 * 1024,
@@ -424,7 +423,7 @@ fn runLintCheck(allocator: std.mem.Allocator, spec_path: []const u8) bool {
     defer allocator.free(lint_result.stderr);
 
     return switch (lint_result.term) {
-        .Exited => |code| code == 0,
+        .exited => |code| code == 0,
         else => false,
     };
 }
@@ -434,7 +433,7 @@ fn runLintCheck(allocator: std.mem.Allocator, spec_path: []const u8) bool {
 // ============================================================================
 
 fn runSinglePipeline(ctx: *WorkerContext) void {
-    const timer_start = std.time.nanoTimestamp();
+    const timer_start = tri_time.nanoTimestamp();
     const allocator = ctx.allocator;
 
     // If filter is lint_pass, we already validated — skip re-lint
@@ -446,7 +445,7 @@ fn runSinglePipeline(ctx: *WorkerContext) void {
                 .spec_path = ctx.spec_path,
                 .success = false,
                 .status = .lint_fail,
-                .duration_ns = std.time.nanoTimestamp() - timer_start,
+                .duration_ns = tri_time.nanoTimestamp() - timer_start,
                 .error_msg = "",
             });
             return;
@@ -462,7 +461,7 @@ fn runSinglePipeline(ctx: *WorkerContext) void {
             .spec_path = ctx.spec_path,
             .success = false,
             .status = .gen_fail,
-            .duration_ns = std.time.nanoTimestamp() - timer_start,
+            .duration_ns = tri_time.nanoTimestamp() - timer_start,
             .error_msg = "",
         });
         return;
@@ -472,7 +471,7 @@ fn runSinglePipeline(ctx: *WorkerContext) void {
     const is_verilog = detectVerilog(ctx.spec_path);
 
     // Link 7: Generate code
-    const gen_result = std.process.Child.run(.{
+    const gen_result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &[_][]const u8{ "zig-out/bin/vibee", "gen", ctx.spec_path, out_path },
         .max_output_bytes = 256 * 1024,
@@ -481,7 +480,7 @@ fn runSinglePipeline(ctx: *WorkerContext) void {
             .spec_path = ctx.spec_path,
             .success = false,
             .status = .gen_fail,
-            .duration_ns = std.time.nanoTimestamp() - timer_start,
+            .duration_ns = tri_time.nanoTimestamp() - timer_start,
             .error_msg = "",
         });
         return;
@@ -490,7 +489,7 @@ fn runSinglePipeline(ctx: *WorkerContext) void {
     allocator.free(gen_result.stderr);
 
     const gen_ok = switch (gen_result.term) {
-        .Exited => |code| code == 0,
+        .exited => |code| code == 0,
         else => false,
     };
 
@@ -499,7 +498,7 @@ fn runSinglePipeline(ctx: *WorkerContext) void {
             .spec_path = ctx.spec_path,
             .success = false,
             .status = .gen_fail,
-            .duration_ns = std.time.nanoTimestamp() - timer_start,
+            .duration_ns = tri_time.nanoTimestamp() - timer_start,
             .error_msg = "",
         });
         return;
@@ -511,14 +510,14 @@ fn runSinglePipeline(ctx: *WorkerContext) void {
             .spec_path = ctx.spec_path,
             .success = true,
             .status = .pass,
-            .duration_ns = std.time.nanoTimestamp() - timer_start,
+            .duration_ns = tri_time.nanoTimestamp() - timer_start,
             .error_msg = "",
         });
         return;
     }
 
     // Link 8: AST check generated .zig
-    const ast_result = std.process.Child.run(.{
+    const ast_result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &[_][]const u8{ "zig", "ast-check", out_path },
         .max_output_bytes = 256 * 1024,
@@ -527,7 +526,7 @@ fn runSinglePipeline(ctx: *WorkerContext) void {
             .spec_path = ctx.spec_path,
             .success = false,
             .status = .ast_fail,
-            .duration_ns = std.time.nanoTimestamp() - timer_start,
+            .duration_ns = tri_time.nanoTimestamp() - timer_start,
             .error_msg = "",
         });
         return;
@@ -541,7 +540,7 @@ fn runSinglePipeline(ctx: *WorkerContext) void {
     allocator.free(ast_result.stderr);
 
     const ast_ok = switch (ast_result.term) {
-        .Exited => |code| code == 0,
+        .exited => |code| code == 0,
         else => false,
     };
 
@@ -549,7 +548,7 @@ fn runSinglePipeline(ctx: *WorkerContext) void {
         .spec_path = ctx.spec_path,
         .success = ast_ok,
         .status = if (ast_ok) .pass else .ast_fail,
-        .duration_ns = std.time.nanoTimestamp() - timer_start,
+        .duration_ns = tri_time.nanoTimestamp() - timer_start,
         .error_msg = stderr_copy,
     });
 }
@@ -567,11 +566,9 @@ fn extractStem(path: []const u8) []const u8 {
 }
 
 fn detectVerilog(spec_path: []const u8) bool {
-    const file = std.fs.cwd().openFile(spec_path, .{}) catch return false;
-    defer file.close();
     var buf: [512]u8 = undefined;
-    const n = file.read(&buf) catch return false;
-    const header = buf[0..n];
+    // Header sniff: whole (small) prefix into a fixed buffer, short read is normal.
+    const header = std.Io.Dir.cwd().readFile(tri_io.get(), spec_path, &buf) catch return false;
     return (std.mem.indexOf(u8, header, "language: varlog") != null or
         std.mem.indexOf(u8, header, "language: verilog") != null);
 }
@@ -643,11 +640,12 @@ fn printReport(report: BatchReport) void {
 
 fn writeProtocolLog(allocator: std.mem.Allocator, report: BatchReport) void {
     // Ensure directory exists
-    std.fs.cwd().makePath(".trinity/batch") catch return;
+    const io = tri_io.get();
+    std.Io.Dir.cwd().createDirPath(io, ".trinity/batch") catch return;
 
     const total = report.passed + report.failed + report.skipped;
     const rate: usize = if (total > 0) (report.passed * 100) / total else 0;
-    const ts = std.time.timestamp();
+    const ts = tri_time.timestamp();
 
     // Append JSONL entry
     const log_name = std.fmt.allocPrint(allocator, ".trinity/batch/{d}.jsonl", .{ts}) catch return;
@@ -670,9 +668,9 @@ fn writeProtocolLog(allocator: std.mem.Allocator, report: BatchReport) void {
     ) catch return;
     defer allocator.free(entry);
 
-    const file = std.fs.cwd().createFile(log_name, .{}) catch return;
-    defer file.close();
-    file.writeAll(entry) catch |err| {
+    const file = std.Io.Dir.cwd().createFile(io, log_name, .{}) catch return;
+    defer file.close(io);
+    file.writeStreamingAll(io, entry) catch |err| {
         std.log.debug("batch_runner: write log entry failed: {}", .{err});
     };
 
@@ -702,7 +700,7 @@ fn writeReportJson(allocator: std.mem.Allocator, report: BatchReport) void {
         \\  "failures": [
         \\
     , .{
-        std.time.timestamp(),
+        tri_time.timestamp(),
         report.total_specs,
         report.filtered_specs,
         report.passed,
@@ -733,9 +731,10 @@ fn writeReportJson(allocator: std.mem.Allocator, report: BatchReport) void {
     };
 
     // Write latest.json
-    const latest = std.fs.cwd().createFile(".trinity/batch/latest.json", .{}) catch return;
-    defer latest.close();
-    latest.writeAll(buf.items) catch |err| {
+    const io = tri_io.get();
+    const latest = std.Io.Dir.cwd().createFile(io, ".trinity/batch/latest.json", .{}) catch return;
+    defer latest.close(io);
+    latest.writeStreamingAll(io, buf.items) catch |err| {
         std.log.debug("batch_runner: write latest.json failed: {}", .{err});
     };
 
@@ -747,7 +746,7 @@ fn writeReportJson(allocator: std.mem.Allocator, report: BatchReport) void {
 // ============================================================================
 
 fn showLastReport(allocator: std.mem.Allocator) void {
-    const content = std.fs.cwd().readFileAlloc(allocator, ".trinity/batch/latest.json", 1024 * 1024) catch {
+    const content = std.Io.Dir.cwd().readFileAlloc(tri_io.get(), ".trinity/batch/latest.json", allocator, .limited(1024 * 1024)) catch {
         std.debug.print("{s}No batch report found. Run: tri pipeline batch{s}\n", .{ RED, RESET });
         return;
     };

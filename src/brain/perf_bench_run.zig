@@ -7,6 +7,7 @@
 //! Direct benchmark of core brain operations.
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const builtin = @import("builtin");
 const basal_ganglia = @import("basal_ganglia.zig");
 const reticular_formation = @import("reticular_formation.zig");
@@ -40,14 +41,14 @@ fn benchmarkClaimThroughput(allocator: std.mem.Allocator, iterations: u64) !void
     var registry = basal_ganglia.Registry.init(allocator);
     defer registry.deinit();
 
-    const start = std.time.nanoTimestamp();
+    const start = tri_time.nanoTimestamp();
     var i: u64 = 0;
     while (i < iterations) : (i += 1) {
         const task_id = try std.fmt.allocPrint(allocator, "task-{d}", .{i});
         defer allocator.free(task_id);
         _ = try registry.claim(allocator, task_id, "agent-001", 300000);
     }
-    const end = std.time.nanoTimestamp();
+    const end = tri_time.nanoTimestamp();
 
     const elapsed_ns = @as(u64, @intCast(end - start));
     const ops_per_sec = @as(f64, @floatFromInt(iterations)) / (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
@@ -64,7 +65,7 @@ fn benchmarkEventPublish(allocator: std.mem.Allocator, iterations: u64) !void {
     var bus = reticular_formation.EventBus.init(allocator);
     defer bus.deinit();
 
-    const start = std.time.nanoTimestamp();
+    const start = tri_time.nanoTimestamp();
     var i: u64 = 0;
     while (i < iterations) : (i += 1) {
         const task_id = try std.fmt.allocPrint(allocator, "task-{d}", .{i});
@@ -78,7 +79,7 @@ fn benchmarkEventPublish(allocator: std.mem.Allocator, iterations: u64) !void {
         };
         try bus.publish(.task_claimed, event_data);
     }
-    const end = std.time.nanoTimestamp();
+    const end = tri_time.nanoTimestamp();
 
     const elapsed_ns = @as(u64, @intCast(end - start));
     const ops_per_sec = @as(f64, @floatFromInt(iterations)) / (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
@@ -95,13 +96,13 @@ fn benchmarkBackoff(allocator: std.mem.Allocator, iterations: u64) !void {
     _ = allocator;
     const policy = locus_coeruleus.BackoffPolicy.init();
 
-    const start = std.time.nanoTimestamp();
+    const start = tri_time.nanoTimestamp();
     var i: u64 = 0;
     while (i < iterations) : (i += 1) {
         const attempt = @as(u32, @intCast(i % 100));
         _ = policy.nextDelay(attempt);
     }
-    const end = std.time.nanoTimestamp();
+    const end = tri_time.nanoTimestamp();
 
     const elapsed_ns = @as(u64, @intCast(end - start));
     const ops_per_sec = @as(f64, @floatFromInt(iterations)) / (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
@@ -115,13 +116,13 @@ fn benchmarkBackoff(allocator: std.mem.Allocator, iterations: u64) !void {
 }
 
 fn benchmarkStringAlloc(allocator: std.mem.Allocator, iterations: u64) !void {
-    const start = std.time.nanoTimestamp();
+    const start = tri_time.nanoTimestamp();
     var i: u64 = 0;
     while (i < iterations) : (i += 1) {
         const s = try std.fmt.allocPrint(allocator, "task-{d}", .{i});
         allocator.free(s);
     }
-    const end = std.time.nanoTimestamp();
+    const end = tri_time.nanoTimestamp();
 
     const elapsed_ns = @as(u64, @intCast(end - start));
     const ops_per_sec = @as(f64, @floatFromInt(iterations)) / (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);

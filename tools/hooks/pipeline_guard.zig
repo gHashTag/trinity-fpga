@@ -9,6 +9,7 @@
 //   "command": "echo $CLAUDE_TOOL_INPUT | \"${CLAUDE_PROJECT_DIR:-.}/zig-out/bin/pipeline-guard\""
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 
 pub fn main() !void {
     // Read tool input JSON from stdin
@@ -98,7 +99,7 @@ fn hasTriSpec(basename: []const u8) bool {
     var path_buf: [512]u8 = undefined;
     const direct_path = std.fmt.bufPrint(&path_buf, "specs/tri/{s}", .{target_name}) catch return false;
 
-    std.fs.cwd().access(direct_path, .{}) catch {
+    std.Io.Dir.cwd().access(tri_io.get(), direct_path, .{}) catch {
         // Not in specs/tri/, try recursive search
         return hasTriSpecRecursive(target_name);
     };
@@ -107,18 +108,20 @@ fn hasTriSpec(basename: []const u8) bool {
 }
 
 fn hasTriSpecRecursive(target_name: []const u8) bool {
-    var dir = std.fs.cwd().openDir("specs", .{ .iterate = true }) catch return false;
-    defer dir.close();
+    const io = tri_io.get();
+    var dir = std.Io.Dir.cwd().openDir(io, "specs", .{ .iterate = true }) catch return false;
+    defer dir.close(io);
 
     return searchDir(dir, target_name);
 }
 
-fn searchDir(dir: std.fs.Dir, target_name: []const u8) bool {
+fn searchDir(dir: std.Io.Dir, target_name: []const u8) bool {
+    const io = tri_io.get();
     var iter = dir.iterate();
-    while (iter.next() catch null) |entry| {
+    while (iter.next(io) catch null) |entry| {
         if (entry.kind == .directory) {
-            var sub = dir.openDir(entry.name, .{ .iterate = true }) catch continue;
-            defer sub.close();
+            var sub = dir.openDir(io, entry.name, .{ .iterate = true }) catch continue;
+            defer sub.close(io);
             if (searchDir(sub, target_name)) return true;
         }
         if (std.mem.eql(u8, entry.name, target_name)) {

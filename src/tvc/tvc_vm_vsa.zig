@@ -3,6 +3,7 @@
 // ⲤⲀⲔⲢⲀ ⲪⲞⲢⲘⲨⲖⲀ: V = n × 3^k × π^m × φ^p × e^q
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const tvc_hybrid = @import("tvc_hybrid.zig");
 const tvc_vsa = @import("tvc_vsa.zig");
 
@@ -523,14 +524,14 @@ pub fn runBenchmarks() void {
 
     vm.loadProgram(&bind_program) catch unreachable;
 
-    const bind_start = std.time.nanoTimestamp();
+    const bind_start = tri_time.nanoTimestamp();
     var i: u64 = 0;
     while (i < iterations) : (i += 1) {
         vm.registers.pc = 2; // Skip random generation
         vm.halted = false;
         vm.run() catch unreachable;
     }
-    const bind_end = std.time.nanoTimestamp();
+    const bind_end = tri_time.nanoTimestamp();
     const bind_ns = @as(u64, @intCast(bind_end - bind_start));
 
     std.debug.print("Bind x {} iterations:\n", .{iterations});
@@ -546,14 +547,14 @@ pub fn runBenchmarks() void {
 
     vm.loadProgram(&sim_program) catch unreachable;
 
-    const sim_start = std.time.nanoTimestamp();
+    const sim_start = tri_time.nanoTimestamp();
     i = 0;
     while (i < iterations) : (i += 1) {
         vm.registers.pc = 2;
         vm.halted = false;
         vm.run() catch unreachable;
     }
-    const sim_end = std.time.nanoTimestamp();
+    const sim_end = tri_time.nanoTimestamp();
     const sim_ns = @as(u64, @intCast(sim_end - sim_start));
 
     std.debug.print("Cosine Similarity x {} iterations:\n", .{iterations});

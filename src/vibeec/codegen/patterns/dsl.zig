@@ -7,6 +7,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const types = @import("../types.zig");
 const builder_mod = @import("../builder.zig");
 
@@ -57,7 +58,7 @@ pub fn match(builder: *CodeBuilder, b: *const Behavior) !bool {
         try builder.writeFmt("pub fn {s}(url: []const u8, allocator: std.mem.Allocator) ![]const u8 {{\n", .{b.name});
         builder.incIndent();
         try builder.writeLine("// HTTP GET request");
-        try builder.writeLine("var client = std.http.Client{ .allocator = allocator };");
+        try builder.writeLine("var client = std.http.Client{ .allocator = allocator, .io = tri_io.get() };");
         try builder.writeLine("defer client.deinit();");
         try builder.writeLine("var req = try client.request(.GET, url, .{ .redirect = .follow });");
         try builder.writeLine("defer req.deinit();");
@@ -75,7 +76,7 @@ pub fn match(builder: *CodeBuilder, b: *const Behavior) !bool {
         try builder.writeFmt("pub fn {s}(url: []const u8, body: []const u8, allocator: std.mem.Allocator) ![]const u8 {{\n", .{b.name});
         builder.incIndent();
         try builder.writeLine("// HTTP POST request");
-        try builder.writeLine("var client = std.http.Client{ .allocator = allocator };");
+        try builder.writeLine("var client = std.http.Client{ .allocator = allocator, .io = tri_io.get() };");
         try builder.writeLine("defer client.deinit();");
         try builder.writeLine("var req = try client.request(.POST, url, .{ .redirect = .follow });");
         try builder.writeLine("defer req.deinit();");

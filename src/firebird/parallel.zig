@@ -6,6 +6,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const vsa = @import("vsa.zig");
 const vsa_simd = @import("vsa_simd.zig");
 const evolution = @import("evolution.zig");
@@ -247,7 +248,7 @@ pub fn benchmarkParallel(
         .target_fitness = 2.0, // Unreachable
     };
 
-    var timer = try std.time.Timer.start();
+    var timer = try tri_time.Timer.start();
     _ = try evolution.evolve(allocator, &pop_seq, &human, &seq_config, seed +% 2);
     const seq_ns = timer.read();
 

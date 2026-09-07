@@ -275,8 +275,8 @@ tri cloud history <issue-number>
 | E0501 | Memory management | Check allocators | [src/vsa/README.md](src/vsa/README.md) |
 | E0502 | Allocator leak | Verify cleanup | [Memory Guide](docs/troubleshooting.md) |
 | E0601 | UART timeout | Check hardware connection | [UART README](fpga/openxc7-synth/UART_README.md) |
-| E0701 | Training config | Verify env vars | [Farm Guide](.claude/projects/-Users-playra-trinity-w1/memory/project_farm_patterns.md) |
-| E0801 | Agent token expired | Refresh PAT | [Cloud Pipeline](.claude/projects/-Users-playra-trinity-w1/memory/project_cloud_dev_pipeline.md) |
+| E0701 | Training config | Verify env vars | [Farm Guide](.claude/projects/-Users-playra-trinity-fpga/memory/project_farm_patterns.md) |
+| E0801 | Agent token expired | Refresh PAT | [Cloud Pipeline](.claude/projects/-Users-playra-trinity-fpga/memory/project_cloud_dev_pipeline.md) |
 
 ---
 

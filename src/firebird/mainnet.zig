@@ -5,6 +5,7 @@
 // ═════════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -100,7 +101,7 @@ pub const MainnetManager = struct {
             return error.AlreadyOnMainnet;
         }
 
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
         self.migration_state.migration_timestamp = now;
         self.migration_state.migration_step = .in_progress;
 

@@ -5,6 +5,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const Allocator = std.mem.Allocator;
 
 pub const CsvRow = struct {
@@ -50,10 +51,7 @@ pub const CsvParser = struct {
     }
 
     pub fn parse(self: *const CsvParser) !struct { rows: []CsvRow, stats: CsvStats } {
-        const file = try std.fs.cwd().openFile(self.path, .{});
-        defer file.close();
-
-        const data = try file.readToEndAlloc(self.allocator, 10 * 1024 * 1024);
+        const data = try std.Io.Dir.cwd().readFileAlloc(tri_io.get(), self.path, self.allocator, .limited(10 * 1024 * 1024));
         defer self.allocator.free(data);
 
         var rows = try std.ArrayList(CsvRow).initCapacity(self.allocator, 0);
@@ -175,10 +173,10 @@ pub const CsvParser = struct {
 
 pub const CsvWriter = struct {
     allocator: Allocator,
-    file: std.fs.File,
+    file: std.Io.File,
 
     pub fn init(allocator: Allocator, path: []const u8) !CsvWriter {
-        const file = try std.fs.cwd().createFile(path, .{});
+        const file = try std.Io.Dir.cwd().createFile(tri_io.get(), path, .{});
         return .{
             .allocator = allocator,
             .file = file,
@@ -186,17 +184,23 @@ pub const CsvWriter = struct {
     }
 
     pub fn deinit(self: *CsvWriter) void {
-        self.file.close();
+        self.file.close(tri_io.get());
     }
 
     pub fn writeHeader(self: *CsvWriter) !void {
-        try self.file.writeAll("id,task,question,answer,difficulty,brain_zone,neural_analog\n");
+        try self.file.writeStreamingAll(tri_io.get(), "id,task,question,answer,difficulty,brain_zone,neural_analog\n");
     }
 
     pub fn writeRow(self: *CsvWriter, row: CsvRow) !void {
-        // Escape fields with commas or quotes
-        const writer = self.file.writer();
+        // 0.16's File.Writer is positional and starts at offset 0, so a
+        // per-call writer would rewrite the head of the file each time.
+        // Format the row in memory and append it with one streaming write,
+        // which is what 0.15's file.writeAll did here.
+        var aw: std.Io.Writer.Allocating = .init(self.allocator);
+        defer aw.deinit();
+        const writer = &aw.writer;
 
+        // Escape fields with commas or quotes
         try writeField(writer, row.id);
         try writer.writeAll(",");
 
@@ -217,6 +221,8 @@ pub const CsvWriter = struct {
 
         try writeField(writer, row.neural_analog);
         try writer.writeAll("\n");
+
+        try self.file.writeStreamingAll(tri_io.get(), aw.written());
     }
 
     fn writeField(writer: anytype, field: []const u8) !void {
@@ -255,11 +261,12 @@ test "parse CSV row" {
     // Write temp file
     const tmp_path = "test_csv_parser_temp.csv";
     {
-        const file = try std.fs.cwd().createFile(tmp_path, .{});
-        defer file.close();
-        try file.writeAll(csv_data);
+        const io = tri_io.get();
+        const file = try std.Io.Dir.cwd().createFile(io, tmp_path, .{});
+        defer file.close(io);
+        try file.writeStreamingAll(io, csv_data);
     }
-    defer std.fs.cwd().deleteFile(tmp_path) catch {};
+    defer std.Io.Dir.cwd().deleteFile(tri_io.get(), tmp_path) catch {};
 
     const parser = CsvParser.init(allocator, tmp_path);
     var result = try parser.parse();

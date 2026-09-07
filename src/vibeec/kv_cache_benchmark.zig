@@ -2,6 +2,7 @@
 // φ² + 1/φ² = 3 = TRINITY
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const mistral = @import("mistral_trinity.zig");
 const kv_cache = @import("kv_cache.zig");
 
@@ -50,7 +51,7 @@ pub fn runBenchmark(allocator: std.mem.Allocator) !void {
 
     // Benchmark WITHOUT KV-cache
     std.debug.print("\nBenchmarking WITHOUT KV-cache...\n", .{});
-    var timer = try std.time.Timer.start();
+    var timer = try tri_time.Timer.start();
 
     for (0..benchmark_iterations) |_| {
         var token: u32 = 1;

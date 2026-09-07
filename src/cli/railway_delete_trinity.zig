@@ -1,14 +1,14 @@
 // Railway: Delete "trinity" base service from farm account
 const std = @import("std");
 
-pub fn main() !void {
+const tri_proc = @import("tri_proc");
+pub fn main(init: std.process.Init.Minimal) !void {
     var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    const args = try std.process.argsAlloc(allocator);
-    defer std.process.argsFree(allocator, args);
-
+    const args = try init.args.toSlice(allocator);
+    defer allocator.free(args);
     if (args.len < 4) {
         std.debug.print("Usage: railway-delete-trinity <account-name> <project-id> <token>\n", .{});
         std.process.exit(1);
@@ -49,7 +49,7 @@ fn findTrinityService(allocator: std.mem.Allocator, token: []const u8, project_i
     const auth_header = try std.fmt.allocPrint(allocator, "Authorization: Bearer {s}", .{token});
     defer allocator.free(auth_header);
 
-    const result = try std.process.Child.run(.{
+    const result = try tri_proc.run(.{
         .allocator = allocator,
         .argv = &[_][]const u8{
             "curl", "-s",        "-X",                                    "POST",
@@ -91,7 +91,7 @@ fn deleteService(allocator: std.mem.Allocator, token: []const u8, service_id: []
     const auth_header = try std.fmt.allocPrint(allocator, "Authorization: Bearer {s}", .{token});
     defer allocator.free(auth_header);
 
-    const result = try std.process.Child.run(.{
+    const result = try tri_proc.run(.{
         .allocator = allocator,
         .argv = &[_][]const u8{
             "curl", "-s",        "-X",                                    "POST",

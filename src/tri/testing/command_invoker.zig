@@ -1,5 +1,7 @@
 const std = @import("std");
 
+const tri_io = @import("tri_io");
+const tri_proc = @import("tri_proc");
 // ============================================================================
 // TRINITY: Command Invoker (Cycle 101)
 // Executes actual tri commands via subprocess and captures output
@@ -61,12 +63,13 @@ pub const CommandInvoker = struct {
         };
 
         // Get current working directory for relative path resolution
-        const cwd = std.fs.cwd();
+        const io = tri_io.get();
+        const cwd = std.Io.Dir.cwd();
 
         for (tri_paths) |path| {
             // Check if file exists and is executable
-            if (cwd.openFile(path, .{})) |file| {
-                file.close();
+            if (cwd.openFile(io, path, .{})) |file| {
+                file.close(io);
                 return .{
                     .allocator = allocator,
                     .tri_binary_path = try allocator.dupe(u8, path),
@@ -79,7 +82,7 @@ pub const CommandInvoker = struct {
         // If not found, try to build it
         std.debug.print("tri binary not found, attempting to build...\n", .{});
 
-        const build_result = try std.process.Child.run(.{
+        const build_result = try tri_proc.run(.{
             .allocator = allocator,
             .argv = &[_][]const u8{ "zig", "build", "tri" },
         });
@@ -89,7 +92,7 @@ pub const CommandInvoker = struct {
         }
 
         if ((switch (build_result.term) {
-            .Exited => |code| code,
+            .exited => |code| code,
             else => @as(u32, 1),
         }) != 0) {
             std.debug.print("Failed to build tri: {s}\n", .{build_result.stderr});
@@ -98,8 +101,8 @@ pub const CommandInvoker = struct {
 
         // After build, check zig-out/bin/tri again
         const tri_path = "zig-out/bin/tri";
-        if (cwd.openFile(tri_path, .{})) |file| {
-            file.close();
+        if (cwd.openFile(io, tri_path, .{})) |file| {
+            file.close(io);
             return .{
                 .allocator = allocator,
                 .tri_binary_path = try allocator.dupe(u8, tri_path),
@@ -135,7 +138,7 @@ pub const CommandInvoker = struct {
         }
 
         // Execute the command
-        const result = try std.process.Child.run(.{
+        const result = try tri_proc.run(.{
             .allocator = self.allocator,
             .argv = full_argv,
             .cwd = ".",
@@ -143,12 +146,12 @@ pub const CommandInvoker = struct {
 
         // Determine exit code
         const exit_code = switch (result.term) {
-            .Exited => |code| @as(u8, @intCast(code)),
-            .Signal => |signal| {
+            .exited => |code| @as(u8, @intCast(code)),
+            .signal => |signal| {
                 std.debug.print("Command killed by signal {}\n", .{signal});
                 return error.CommandKilled;
             },
-            .Stopped => |signal| {
+            .stopped => |signal| {
                 std.debug.print("Command stopped by signal {}\n", .{signal});
                 return error.CommandStopped;
             },
@@ -190,7 +193,7 @@ pub const CommandInvoker = struct {
 
     /// Check if tri binary is available
     pub fn isAvailable(self: *const Self) bool {
-        _ = std.fs.cwd().openFile(self.tri_binary_path, .{}) catch return false;
+        _ = std.Io.Dir.cwd().openFile(tri_io.get(), self.tri_binary_path, .{}) catch return false;
         return true;
     }
 };

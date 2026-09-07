@@ -1,5 +1,6 @@
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 /// Trinity Trainer - Gradient-Free Fine-Tuning
 /// Uses trit-flipping optimization based on corpus analysis
 const Trit = enum(i8) {
@@ -50,7 +51,7 @@ pub fn main() !void {
         std.debug.print("🕊️ Loaded existing weights: {d} (padded to {d})\n", .{ available, num_weights });
     } else {
         // Initialize random weights
-        var prng = std.Random.DefaultPrng.init(@intCast(std.time.timestamp()));
+        var prng = std.Random.DefaultPrng.init(@intCast(tri_time.timestamp()));
         const rand = prng.random();
         for (weights) |*w| {
             const r = rand.intRangeAtMost(i8, -1, 1);

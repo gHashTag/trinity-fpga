@@ -13,6 +13,9 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
+const tri_proc = @import("tri_proc");
+const tri_time = @import("tri_time");
 const needle = @import("needle.zig");
 
 const Violation = needle.Violation;
@@ -122,7 +125,7 @@ pub const NeedleChecker = struct {
         var iter = std.mem.splitScalar(u8, self.source, '\n');
         var line_num: u32 = 1;
         while (iter.next()) |line| {
-            const trimmed = std.mem.trimRight(u8, line, " \t");
+            const trimmed = std.mem.trimEnd(u8, line, " \t");
             if (trimmed.len > 0 and trimmed[trimmed.len - 1] == '}') {
                 // Check if next non-empty line has a semicolon
                 // This is a simplified check
@@ -162,10 +165,10 @@ pub const NeedleChecker = struct {
         }
 
         // Try to parse (not compile to avoid dependency issues)
-        const result = std.process.Child.exec(
-            self.allocator,
-            &.{ "zig", "build", "-n", "--summary", "all", "-Mstandard", "-femit-bin=null", tmp_path },
-        ) catch |err| {
+        const result = tri_proc.run(.{
+            .allocator = self.allocator,
+            .argv = &.{ "zig", "build", "-n", "--summary", "all", "-Mstandard", "-femit-bin=null", tmp_path },
+        }) catch |err| {
             if (err == error.FileNotFound) {
                 // zig not found in PATH
                 return true; // Assume OK if zig not available
@@ -177,7 +180,11 @@ pub const NeedleChecker = struct {
             self.allocator.free(result.stderr);
         }
 
-        return result.term == .Exited and result.exit_code == 0;
+        // RunResult carries the status inside `term`; there is no exit_code field.
+        return switch (result.term) {
+            .exited => |code| code == 0,
+            else => false,
+        };
     }
 };
 
@@ -193,7 +200,7 @@ pub fn checkSource(allocator: std.mem.Allocator, source: []const u8, file_path: 
 
 /// Check file on disk
 pub fn checkFile(allocator: std.mem.Allocator, file_path: []const u8) !needle.EditReport {
-    const source = try std.fs.cwd().readFileAlloc(allocator, file_path, 10_000_000);
+    const source = try std.Io.Dir.cwd().readFileAlloc(tri_io.get(), file_path, allocator, .limited(10_000_000));
     defer allocator.free(source);
 
     return checkSource(allocator, source, file_path);
@@ -366,12 +373,12 @@ pub const TestResult = struct {
 
 /// Run parse check using Zig's AST parser (Phase 1: Production-grade)
 pub fn runParseCheck(allocator: std.mem.Allocator, file_path: []const u8) !ParseResult {
-    const start_time = std.time.nanoTimestamp();
+    const start_time = tri_time.nanoTimestamp();
     var result = ParseResult.init(allocator);
     errdefer result.deinit();
 
     // Read source file with null-terminator for Zig AST parser
-    const source = try std.fs.cwd().readFileAllocOptions(allocator, file_path, 10_000_000, null, .@"1", 0);
+    const source = try std.Io.Dir.cwd().readFileAllocOptions(tri_io.get(), file_path, allocator, .limited(10_000_000), .@"1", 0);
     defer allocator.free(source);
 
     // Use Zig's AST parser for real parse checking
@@ -402,7 +409,7 @@ pub fn runParseCheck(allocator: std.mem.Allocator, file_path: []const u8) !Parse
     }
 
     result.valid = result.ast_valid and result.error_count == 0;
-    const diff_ns = std.time.nanoTimestamp() - start_time;
+    const diff_ns = tri_time.nanoTimestamp() - start_time;
     result.duration_ms = @intCast(@divTrunc(diff_ns, 1_000_000));
 
     return result;
@@ -413,12 +420,12 @@ pub fn runCompileCheck(
     allocator: std.mem.Allocator,
     project_root: []const u8,
 ) !CompileResult {
-    const start_time = std.time.nanoTimestamp();
+    const start_time = tri_time.nanoTimestamp();
     var result = CompileResult.init(allocator);
     errdefer result.deinit();
 
     // Run zig build as subprocess
-    const proc_result = try std.process.Child.run(.{
+    const proc_result = try tri_proc.run(.{
         .allocator = allocator,
         .cwd = project_root,
         .argv = &[_][]const u8{ "zig", "build" },
@@ -433,12 +440,12 @@ pub fn runCompileCheck(
     }
 
     result.exit_code = @intCast(switch (proc_result.term) {
-        .Exited => |code| code,
+        .exited => |code| code,
         else => 255,
     });
 
     result.success = result.exit_code == 0;
-    const compile_diff = std.time.nanoTimestamp() - start_time;
+    const compile_diff = tri_time.nanoTimestamp() - start_time;
     result.compile_time_ms = @intCast(@divTrunc(compile_diff, 1_000_000));
 
     return result;

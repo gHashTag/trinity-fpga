@@ -21,9 +21,9 @@ This approach has **strong theoretical merit** but requires substantial original
 The codebase already implements γ = φ⁻³ = 0.236067977... as a fundamental parameter:
 
 **Files:**
-- `/Users/playra/trinity-w1/src/gravity/quantum_gravity_full.zig` (v22.0)
-- `/Users/playra/trinity-w1/src/gravity/black_hole_information.zig` (v16.0)
-- `/Users/playra/trinity-w1/docs/papers/GRAVITY_PHI.tex`
+- `src/gravity/quantum_gravity_full.zig` (v22.0)
+- `src/gravity/black_hole_information.zig` (v16.0)
+- `docs/papers/GRAVITY_PHI.tex`
 
 **Implementation:**
 ```zig
@@ -292,9 +292,9 @@ For Approach B to move from PROMISING → VIABLE:
 ## References (Internal)
 
 **Codebase files:**
-- `/Users/playra/trinity-w1/src/gravity/quantum_gravity_full.zig` — Full QG with γ corrections
-- `/Users/playra/trinity-w1/src/gravity/black_hole_information.zig` — Page curve, ER=EPR
-- `/Users/playra/trinity-w1/docs/papers/GRAVITY_PHI.tex` — G, Ω from φ
+- `src/gravity/quantum_gravity_full.zig` — Full QG with γ corrections
+- `src/gravity/black_hole_information.zig` — Page curve, ER=EPR
+- `docs/papers/GRAVITY_PHI.tex` — G, Ω from φ
 
 **Key formulas:**
 - Formula 373: S_BH = φA/(4ℓ_P²)

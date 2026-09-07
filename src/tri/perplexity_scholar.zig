@@ -7,6 +7,8 @@
 // ============================================================================
 
 const std = @import("std");
+const tri_env = @import("tri_env");
+const tri_io = @import("tri_io");
 const Allocator = std.mem.Allocator;
 const hippocampus = @import("hippocampus.zig");
 
@@ -75,9 +77,13 @@ pub const PerplexityScholar = struct {
 
     /// Build the JSON request body for Perplexity chat/completions API
     pub fn buildRequestBody(self: *Self, question: []const u8, context: []const u8) ![]const u8 {
-        var body: std.ArrayListUnmanaged(u8) = .{};
-        errdefer body.deinit(self.allocator);
-        const w = body.writer(self.allocator);
+        // 0.16 removed ArrayList.writer(). This one is handed to
+        // writeJsonEscaped, so it has to stay a real writer rather than
+        // becoming list append calls: an Allocating writer owns its buffer and
+        // exposes an Io.Writer.
+        var aw: std.Io.Writer.Allocating = .init(self.allocator);
+        errdefer aw.deinit();
+        const w = &aw.writer;
 
         try w.writeAll("{\"model\":\"");
         try w.writeAll(self.model);
@@ -92,12 +98,12 @@ pub const PerplexityScholar = struct {
         }
         try writeJsonEscaped(w, question);
         try w.writeAll("\"}],\"max_tokens\":");
-        try std.fmt.format(w, "{d}", .{MAX_TOKENS});
+        try w.print("{d}", .{MAX_TOKENS});
         try w.writeAll(",\"temperature\":");
-        try std.fmt.format(w, "{d:.1}", .{TEMPERATURE});
+        try w.print("{d:.1}", .{TEMPERATURE});
         try w.writeAll("}");
 
-        return body.toOwnedSlice(self.allocator);
+        return aw.toOwnedSlice();
     }
 
     /// Call Perplexity chat/completions API
@@ -113,7 +119,7 @@ pub const PerplexityScholar = struct {
             return error.OutOfMemory;
 
         // Use std.http.Client directly (same pattern as http_client.zig)
-        var client = std.http.Client{ .allocator = self.allocator };
+        var client = std.http.Client{ .allocator = self.allocator, .io = tri_io.get() };
         defer client.deinit();
 
         const uri = std.Uri.parse(url) catch return error.InvalidUrl;
@@ -315,15 +321,15 @@ test "agent card valid" {
 
 test "writeJsonEscaped" {
     const allocator = std.testing.allocator;
-    var buf: std.ArrayListUnmanaged(u8) = .{};
-    defer buf.deinit(allocator);
+    var buf: std.Io.Writer.Allocating = .init(allocator);
+    defer buf.deinit();
 
-    try writeJsonEscaped(buf.writer(allocator), "hello \"world\"\nnewline");
-    try std.testing.expectEqualStrings("hello \\\"world\\\"\\nnewline", buf.items);
+    try writeJsonEscaped(&buf.writer, "hello \"world\"\nnewline");
+    try std.testing.expectEqualStrings("hello \\\"world\\\"\\nnewline", buf.written());
 }
 
 test "graceful skip without key" {
     // Verify env-based skip logic works
-    const key = std.posix.getenv("PERPLEXITY_API_KEY_NONEXISTENT");
+    const key = tri_env.getPosix("PERPLEXITY_API_KEY_NONEXISTENT");
     try std.testing.expect(key == null);
 }

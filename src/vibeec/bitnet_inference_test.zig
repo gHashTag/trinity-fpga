@@ -5,6 +5,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const bitnet = @import("bitnet_loader.zig");
 const json = std.json;
 
@@ -145,7 +146,7 @@ pub fn simpleGenerate(
     const hidden_size = model.config.hidden_size;
     const vocab_size = model.config.vocab_size;
 
-    var rng = std.Random.DefaultPrng.init(@intCast(std.time.milliTimestamp()));
+    var rng = std.Random.DefaultPrng.init(@intCast(tri_time.milliTimestamp()));
 
     for (0..max_new_tokens) |_| {
         // Get last token embedding
@@ -280,10 +281,10 @@ pub fn main() !void {
         std.debug.print("\n", .{});
 
         // Generate
-        const start_time = std.time.milliTimestamp();
+        const start_time = tri_time.milliTimestamp();
         const generated = try simpleGenerate(&model, &tokenizer, prompt_tokens, 32, 0.8);
         defer allocator.free(generated);
-        const end_time = std.time.milliTimestamp();
+        const end_time = tri_time.milliTimestamp();
 
         // Decode
         const text = try tokenizer.decode(generated);

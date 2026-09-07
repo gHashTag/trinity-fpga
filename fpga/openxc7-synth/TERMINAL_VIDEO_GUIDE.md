@@ -97,7 +97,7 @@ sudo apt install obs-studio  # Linux
 **Setup**:
 ```bash
 # Navigate to project
-cd /Users/playra/trinity-w1/fpga/openxc7-synth
+cd "$(git rev-parse --show-toplevel)/fpga/openxc7-synth"
 
 # Clear screen for clean start
 clear

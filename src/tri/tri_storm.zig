@@ -1,5 +1,6 @@
 // @origin(spec:tri_storm_integration.tri) @regen(manual-impl)
 const std = @import("std");
+const tri_io = @import("tri_io");
 
 const Allocator = std.mem.Allocator;
 const print = std.debug.print;
@@ -204,16 +205,17 @@ fn cmdStatus(a: Allocator, b: []const []const u8) !u8 {
     print("\n{s}STORM STATUS{s}\n", .{ CYAN, RESET });
     print("{s}----------------------------------{s}\n\n", .{ BOLD, RESET });
 
+    const io = tri_io.get();
     const checkpoint_dir = ".trinity/storm/checkpoints";
-    var dir = std.fs.cwd().openDir(checkpoint_dir, .{ .iterate = true }) catch {
+    var dir = std.Io.Dir.cwd().openDir(io, checkpoint_dir, .{ .iterate = true }) catch {
         print("No checkpoints found. Run 'tri storm init' first.\n\n", .{});
         return 0;
     };
-    defer dir.close();
+    defer dir.close(io);
 
     var count: usize = 0;
     var iter = dir.iterate();
-    while (try iter.next()) |entry| {
+    while (try iter.next(io)) |entry| {
         if (entry.kind == .file and std.mem.endsWith(u8, entry.name, ".json")) {
             count += 1;
             print("Checkpoint: {s}\n", .{entry.name});
@@ -251,6 +253,7 @@ fn cmdResume(a: Allocator, args: []const []const u8) !u8 {
 
 fn cmdInit(a: Allocator) !u8 {
     _ = a;
+    const io = tri_io.get();
     print("\n{s}STORM INIT{s}\n", .{ CYAN, RESET });
     print("{s}----------------------------------{s}\n\n", .{ BOLD, RESET });
 
@@ -264,7 +267,7 @@ fn cmdInit(a: Allocator) !u8 {
     };
 
     for (dirs) |dir_path| {
-        std.fs.cwd().makePath(dir_path) catch {};
+        std.Io.Dir.cwd().createDirPath(io, dir_path) catch {};
     }
 
     print("\n{s}STORM initialized!{s}\n\n", .{ GREEN, RESET });

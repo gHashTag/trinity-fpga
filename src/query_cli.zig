@@ -14,6 +14,7 @@
 // Level 11.25 — Interactive REPL Mode for Trinity Symbolic Reasoning
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const vsa = @import("vsa");
 
 const HybridBigInt = vsa.HybridBigInt;
@@ -161,12 +162,11 @@ fn findRelation(name: []const u8) ?usize {
     return null;
 }
 
-pub fn main() !void {
+pub fn main(init: std.process.Init.Minimal) !void {
     const allocator = std.heap.page_allocator;
 
-    const args = try std.process.argsAlloc(allocator);
-    defer std.process.argsFree(allocator, args);
-
+    const args = try init.args.toSlice(allocator);
+    defer allocator.free(args);
     if (args.len < 2) {
         printUsage();
         std.process.exit(1);
@@ -470,7 +470,12 @@ fn runRepl(
     print("          list | relations | info | help | quit\n", .{});
     print("─────────────────────────────────────────────────\n\n", .{});
 
-    const stdin_file = std.fs.File.stdin();
+    const io = tri_io.get();
+    const stdin_file = std.Io.File.stdin();
+    var stdin_buf: [1024]u8 = undefined;
+    var stdin_reader = stdin_file.readerStreaming(io, &stdin_buf);
+    const stdin_r = &stdin_reader.interface;
+
     var buf: [4096]u8 = undefined;
     var query_count: u32 = 0;
 
@@ -480,13 +485,18 @@ fn runRepl(
         // Read line
         var line_len: usize = 0;
         while (line_len < buf.len - 1) {
-            const read_result = stdin_file.read(buf[line_len .. line_len + 1]) catch break;
-            if (read_result == 0) {
-                // EOF
-                print("\nSession ended. {d} queries executed.\n", .{query_count});
-                return;
-            }
-            if (buf[line_len] == '\n') break;
+            // 0.15 read one byte at a time and treated a 0 return as EOF.
+            // 0.16 signals end-of-stream with an error instead, so the two
+            // outcomes the old code distinguished are split by error name.
+            const byte = stdin_r.takeByte() catch |err| switch (err) {
+                error.EndOfStream => {
+                    print("\nSession ended. {d} queries executed.\n", .{query_count});
+                    return;
+                },
+                error.ReadFailed => break,
+            };
+            if (byte == '\n') break;
+            buf[line_len] = byte;
             line_len += 1;
         }
 

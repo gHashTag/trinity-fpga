@@ -13,6 +13,7 @@
 // =============================================================================
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const rag = @import("igla_rag_engine.zig");
 
 // =============================================================================
@@ -93,7 +94,7 @@ pub const Message = struct {
             .role = role,
             .content = undefined,
             .content_len = @min(content.len, 128),
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
             .conversation_id = conv_id,
         };
         @memcpy(msg.content[0..msg.content_len], content[0..msg.content_len]);
@@ -126,8 +127,8 @@ pub const Conversation = struct {
             .title_len = @min(title.len, 64),
             .messages = std.mem.zeroes([MAX_MESSAGES_PER_CONV]Message),
             .message_count = 0,
-            .created_at = std.time.timestamp(),
-            .updated_at = std.time.timestamp(),
+            .created_at = tri_time.timestamp(),
+            .updated_at = tri_time.timestamp(),
             .is_active = true,
         };
         @memcpy(conv.title[0..conv.title_len], title[0..conv.title_len]);
@@ -138,7 +139,7 @@ pub const Conversation = struct {
         if (self.message_count >= MAX_MESSAGES_PER_CONV) return false;
         self.messages[self.message_count] = Message.init(role, content, self.id);
         self.message_count += 1;
-        self.updated_at = std.time.timestamp();
+        self.updated_at = tri_time.timestamp();
         return true;
     }
 
@@ -172,8 +173,8 @@ pub const LongTermMemory = struct {
             .content_len = @min(content.len, 128),
             .importance = importance,
             .access_count = 0,
-            .created_at = std.time.timestamp(),
-            .last_accessed = std.time.timestamp(),
+            .created_at = tri_time.timestamp(),
+            .last_accessed = tri_time.timestamp(),
             .category = undefined,
             .category_len = @min(category.len, 16),
         };
@@ -184,7 +185,7 @@ pub const LongTermMemory = struct {
 
     pub fn access(self: *LongTermMemory) void {
         self.access_count += 1;
-        self.last_accessed = std.time.timestamp();
+        self.last_accessed = tri_time.timestamp();
     }
 
     pub fn getContent(self: *const LongTermMemory) []const u8 {
@@ -236,7 +237,7 @@ pub const EpisodicEvent = struct {
         var event = EpisodicEvent{
             .description = undefined,
             .description_len = @min(description.len, 64),
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
             .event_type = event_type,
             .importance = importance,
             .conversation_id = conv_id,
@@ -277,7 +278,7 @@ pub const Fact = struct {
             .confidence = confidence,
             .source = undefined,
             .source_len = @min(source.len, 64),
-            .created_at = std.time.timestamp(),
+            .created_at = tri_time.timestamp(),
         };
         @memcpy(fact.subject[0..fact.subject_len], subject[0..fact.subject_len]);
         @memcpy(fact.predicate[0..fact.predicate_len], predicate[0..fact.predicate_len]);
@@ -335,7 +336,7 @@ pub const MemoryStore = struct {
             .active_conversation_id = null,
             .next_conversation_id = 1,
             .version = MEMORY_FILE_VERSION,
-            .created_at = std.time.timestamp(),
+            .created_at = tri_time.timestamp(),
             .last_saved = 0,
         };
     }
@@ -443,7 +444,7 @@ pub const MemoryStore = struct {
         var min_score: f32 = std.math.floatMax(f32);
 
         for (self.long_term[0..self.long_term_count], 0..) |mem, i| {
-            const age_factor = @as(f32, @floatFromInt(std.time.timestamp() - mem.created_at)) / 86400.0;
+            const age_factor = @as(f32, @floatFromInt(tri_time.timestamp() - mem.created_at)) / 86400.0;
             const access_factor = @as(f32, @floatFromInt(mem.access_count)) * 0.1;
             const score = mem.importance + access_factor - age_factor * 0.01;
 
@@ -666,7 +667,7 @@ pub const MemoryPersistence = struct {
 
         if (size == 0) return false;
 
-        store.last_saved = std.time.timestamp();
+        store.last_saved = tri_time.timestamp();
 
         // In real implementation, write to file
         // For now, just validate serialization works
@@ -709,7 +710,7 @@ pub const MemoryEngine = struct {
             .memory_enabled = true,
             .auto_save = true,
             .save_interval = 300, // 5 minutes
-            .last_auto_save = std.time.timestamp(),
+            .last_auto_save = tri_time.timestamp(),
         };
     }
 
@@ -764,7 +765,7 @@ pub const MemoryEngine = struct {
     fn checkAutoSave(self: *MemoryEngine) void {
         if (!self.auto_save) return;
 
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
         if (now - self.last_auto_save >= @as(i64, @intCast(self.save_interval))) {
             _ = self.saveMemory();
             self.last_auto_save = now;
@@ -772,7 +773,7 @@ pub const MemoryEngine = struct {
     }
 
     pub fn process(self: *MemoryEngine, input: []const u8) MemoryResponse {
-        const start = std.time.nanoTimestamp();
+        const start = tri_time.nanoTimestamp();
 
         // Add user message to memory
         _ = self.addUserMessage(input);
@@ -792,7 +793,7 @@ pub const MemoryEngine = struct {
             .memories_recalled = memories.len,
             .facts_recalled = facts.len,
             .conversation_id = self.store.active_conversation_id orelse 0,
-            .execution_time_ns = @intCast(std.time.nanoTimestamp() - start),
+            .execution_time_ns = @intCast(tri_time.nanoTimestamp() - start),
         };
         @memcpy(response.text[0..response.text_len], rag_response.text[0..response.text_len]);
 

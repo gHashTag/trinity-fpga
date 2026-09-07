@@ -7,6 +7,7 @@
 // Maintains backward compatibility with existing 33+1 validators.
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 
 // Import via build.zig module or relative path fallback
@@ -112,9 +113,9 @@ fn validatorInvoke(ctx: *anyopaque, operation: []const u8, input: []const u8) an
     };
 
     // Call the underlying BogatyrPlugin
-    const timer_start = std.time.nanoTimestamp();
+    const timer_start = tri_time.nanoTimestamp();
     const result = try context.bogatyr.validate(&validation_ctx);
-    const duration: i64 = @intCast(std.time.nanoTimestamp() - timer_start);
+    const duration: i64 = @intCast(tri_time.nanoTimestamp() - timer_start);
 
     // Store result for later access
     context.last_result = result;

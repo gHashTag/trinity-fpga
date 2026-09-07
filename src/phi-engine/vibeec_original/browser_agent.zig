@@ -4,6 +4,7 @@
 // φ² + 1/φ² = 3
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const openai = @import("openai_client.zig");
 const browser_mod = @import("browser.zig");
@@ -139,7 +140,7 @@ pub const BrowserAgent = struct {
 
     /// Run a WebArena task
     pub fn runTask(self: *Self, task: *const task_mod.WebArenaTask) BrowserAgentError!BrowserAgentResult {
-        const start_time = std.time.milliTimestamp();
+        const start_time = tri_time.milliTimestamp();
 
         // Clear history
         for (self.history.items) |item| {
@@ -188,7 +189,7 @@ pub const BrowserAgent = struct {
             // 5. Check for final answer
             if (std.mem.eql(u8, parsed.action, "stop") or std.mem.eql(u8, parsed.action, "final_answer")) {
                 const answer = self.allocator.dupe(u8, parsed.action_input) catch return BrowserAgentError.OutOfMemory;
-                const elapsed = @as(u64, @intCast(std.time.milliTimestamp() - start_time));
+                const elapsed = @as(u64, @intCast(tri_time.milliTimestamp() - start_time));
 
                 // Check if answer is correct
                 const success = task.evaluate(parsed.action_input, self.browser.current_url);
@@ -217,7 +218,7 @@ pub const BrowserAgent = struct {
         }
 
         // Max steps reached
-        const elapsed = @as(u64, @intCast(std.time.milliTimestamp() - start_time));
+        const elapsed = @as(u64, @intCast(tri_time.milliTimestamp() - start_time));
         return BrowserAgentResult{
             .task_id = task.task_id,
             .success = false,

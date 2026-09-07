@@ -6,6 +6,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const unified = @import("unified_server.zig");
 
 pub const GRPC_PORT: u16 = 9335;
@@ -86,7 +87,7 @@ pub const TrinityEngine = struct {
             .data = result,
             .error_msg = null,
             .request_id = null,
-            .timestamp = std.time.milliTimestamp(),
+            .timestamp = tri_time.milliTimestamp(),
         };
     }
 };

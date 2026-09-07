@@ -4,6 +4,7 @@
 //!
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const basal_ganglia = @import("basal_ganglia.zig");
 const reticular = @import("reticular_formation.zig");
 const locus = @import("locus_coeruleus.zig");
@@ -26,7 +27,7 @@ pub fn main() !void {
         defer registry.deinit();
 
         const iterations: u64 = 10_000;
-        const start = std.time.nanoTimestamp();
+        const start = tri_time.nanoTimestamp();
 
         var i: u64 = 0;
         while (i < iterations) : (i += 1) {
@@ -37,7 +38,7 @@ pub fn main() !void {
             _ = try registry.claim(allocator, task_id, agent_id, 5000);
         }
 
-        const end = std.time.nanoTimestamp();
+        const end = tri_time.nanoTimestamp();
         const elapsed_ns: u64 = @intCast(end - start);
         const ops_per_sec: f64 = @as(f64, @floatFromInt(iterations)) / @as(f64, @floatFromInt(elapsed_ns)) * 1_000_000.0;
         const avg_ns: f64 = @as(f64, @floatFromInt(elapsed_ns)) / @as(f64, @floatFromInt(iterations));
@@ -56,7 +57,7 @@ pub fn main() !void {
         defer bus.deinit();
 
         const iterations: u64 = 50_000;
-        const start = std.time.nanoTimestamp();
+        const start = tri_time.nanoTimestamp();
 
         var i: u64 = 0;
         while (i < iterations) : (i += 1) {
@@ -67,7 +68,7 @@ pub fn main() !void {
             try bus.publish(.task_claimed, .{ .task_claimed = .{ .task_id = task_id, .agent_id = agent_id } });
         }
 
-        const end = std.time.nanoTimestamp();
+        const end = tri_time.nanoTimestamp();
         const elapsed_ns: u64 = @intCast(end - start);
         const ops_per_sec: f64 = @as(f64, @floatFromInt(iterations)) / @as(f64, @floatFromInt(elapsed_ns)) * 1_000_000.0;
         const avg_ns: f64 = @as(f64, @floatFromInt(elapsed_ns)) / @as(f64, @floatFromInt(iterations));
@@ -84,14 +85,14 @@ pub fn main() !void {
         std.debug.print("[3/4] Locus Coeruleus - Backoff Calculation\n", .{});
         var backoff = locus.BackoffPolicy.init();
         const iterations: u64 = 1_000_000;
-        const start = std.time.nanoTimestamp();
+        const start = tri_time.nanoTimestamp();
 
         var i: u32 = 0;
         while (i < iterations) : (i += 1) {
             _ = backoff.nextDelay(i);
         }
 
-        const end = std.time.nanoTimestamp();
+        const end = tri_time.nanoTimestamp();
         const elapsed_ns: u64 = @intCast(end - start);
         const ops_per_sec: f64 = @as(f64, @floatFromInt(iterations)) / @as(f64, @floatFromInt(elapsed_ns)) * 1_000_000.0;
         const avg_ns: f64 = @as(f64, @floatFromInt(elapsed_ns)) / @as(f64, @floatFromInt(iterations));
@@ -107,7 +108,7 @@ pub fn main() !void {
     {
         std.debug.print("[4/4] Amygdala - Salience Analysis\n", .{});
         const iterations: u64 = 10_000;
-        const start = std.time.nanoTimestamp();
+        const start = tri_time.nanoTimestamp();
 
         var i: u64 = 0;
         while (i < iterations) : (i += 1) {
@@ -116,7 +117,7 @@ pub fn main() !void {
             _ = amygdala.Amygdala.analyzeTask(task, "dukh", "critical");
         }
 
-        const end = std.time.nanoTimestamp();
+        const end = tri_time.nanoTimestamp();
         const elapsed_ns: u64 = @intCast(end - start);
         const ops_per_sec: f64 = @as(f64, @floatFromInt(iterations)) / @as(f64, @floatFromInt(elapsed_ns)) * 1_000_000.0;
         const avg_ns: f64 = @as(f64, @floatFromInt(elapsed_ns)) / @as(f64, @floatFromInt(iterations));

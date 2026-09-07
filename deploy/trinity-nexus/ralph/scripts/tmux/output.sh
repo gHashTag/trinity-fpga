@@ -1,6 +1,6 @@
 #!/bin/bash
 # OUTPUT Monitor — Chat only (simplified, no status bar)
-cd /Users/playra/trinity/trinity-nexus
+cd /Users/playom/trinity/trinity-nexus
 
 RESPONSE="ralph/queue/responses/current.resp"
 CHAT_FILE="ralph/queue/chat_history.txt"

@@ -5,10 +5,11 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const testnet_config = @import("testnet_config.zig");
 
 /// Current unix time in whole seconds. Replaces the removed
-/// std.time.timestamp() -- see testnet_rewards.zig for the same helper and
+/// tri_time.timestamp() -- see testnet_rewards.zig for the same helper and
 /// the verification against `date +%s` that justified it.
 fn nowSeconds(io: std.Io) u64 {
     return @intCast(std.Io.Clock.real.now(io).toSeconds());

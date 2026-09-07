@@ -15,6 +15,7 @@
 // =============================================================================
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const railway_api = @import("railway_api.zig");
 const railway_farm = @import("railway_farm.zig");
@@ -313,10 +314,12 @@ fn cloudFarmCapacity() void {
     const cap = farm.totalCapacity();
 
     var buf: [4096]u8 = undefined;
-    var fbs = std.io.fixedBufferStream(&buf);
-    const w = fbs.writer();
+    // std.io is gone in 0.16; a fixed-buffer writer is Io.Writer.fixed, and
+    // there is no stream handle any more -- the writer itself holds what was
+    // written. Overflow is error.WriteFailed rather than error.NoSpaceLeft.
+    var w: std.Io.Writer = .fixed(&buf);
 
-    std.fmt.format(w, "{{\"total_slots\":{d},\"total_active\":{d},\"total_daily_remaining\":{d},\"accounts\":[", .{
+    w.print("{{\"total_slots\":{d},\"total_active\":{d},\"total_daily_remaining\":{d},\"accounts\":[", .{
         cap.total_slots,
         cap.total_active,
         cap.total_daily_remaining,
@@ -326,7 +329,7 @@ fn cloudFarmCapacity() void {
     for (farm.accounts[0..farm.account_count]) |*acct| {
         if (!first) w.writeAll(",") catch return;
         first = false;
-        std.fmt.format(w, "\n  {{\"id\":{d},\"alias\":\"{s}\",\"active\":{d},\"slots\":{d},\"daily_remaining\":{d}}}", .{
+        w.print("\n  {{\"id\":{d},\"alias\":\"{s}\",\"active\":{d},\"slots\":{d},\"daily_remaining\":{d}}}", .{
             acct.id,
             acct.getAlias(),
             acct.active_services,
@@ -336,7 +339,7 @@ fn cloudFarmCapacity() void {
     }
 
     w.writeAll("\n]}\n") catch return;
-    print("{s}", .{fbs.getWritten()});
+    print("{s}", .{w.buffered()});
 }
 
 /// tri cloud farm rebalance -- Migrate services between accounts
@@ -807,7 +810,8 @@ pub fn cloudTrainBatch(allocator: Allocator) !void {
 
         // Rate limit: 2s between spawns
         if (idx + 1 < experiments.len) {
-            std.posix.nanosleep(2, 0);
+            // std.posix.nanosleep is gone in 0.16; tri_time.sleep takes nanoseconds.
+            tri_time.sleep(2 * std.time.ns_per_s);
         }
     }
 

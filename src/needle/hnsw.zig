@@ -10,6 +10,7 @@
 
 const std = @import("std");
 
+const tri_rand = @import("tri_rand");
 pub const DEFAULT_M: usize = 16;
 pub const DEFAULT_EF_CONSTRUCTION: usize = 200;
 pub const DEFAULT_EF_SEARCH: usize = 50;
@@ -96,7 +97,7 @@ pub const HNSWIndex = struct {
     }
 
     fn getRandomLevel(self: *const HNSWIndex) usize {
-        const level = @as(usize, @intFromFloat(@floor(-@log(std.crypto.random.float(f64)) * self.config.ml)));
+        const level = @as(usize, @intFromFloat(@floor(-@log(tri_rand.random().float(f64)) * self.config.ml)));
         return level;
     }
 

@@ -3,6 +3,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 pub const Benchmark = struct {
     name: []const u8,
     iterations: usize,
@@ -15,12 +16,12 @@ pub const Benchmark = struct {
     }
 
     pub fn run(bm: *const Benchmark, fn_ptr: *const fn () void) u64 {
-        const start = std.time.nanoTimestamp();
+        const start = tri_time.nanoTimestamp();
         var i: usize = 0;
         while (i < bm.iterations) : (i += 1) {
             fn_ptr();
         }
-        const end = std.time.nanoTimestamp();
+        const end = tri_time.nanoTimestamp();
         return @intCast(end - start);
     }
 };

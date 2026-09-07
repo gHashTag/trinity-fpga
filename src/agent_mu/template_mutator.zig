@@ -4,6 +4,7 @@
 //! validates syntax, tests on sample specs.
 
 const std = @import("std");
+const tri_proc = @import("tri_proc");
 const ArrayListManaged = std.array_list.Managed;
 const ast_analyzer = @import("ast_analyzer.zig");
 
@@ -87,7 +88,7 @@ pub const TemplateMutator = struct {
     /// Validate mutated template
     pub fn validateMutation(self: *TemplateMutator, template_path: []const u8) !bool {
         // Try to compile the template
-        const result = std.process.Child.run(.{
+        const result = tri_proc.run(.{
             .allocator = self.allocator,
             .argv = &.{ "zig", "build", "--check", template_path },
         }) catch return false;
@@ -97,7 +98,7 @@ pub const TemplateMutator = struct {
         }
 
         return (switch (result.term) {
-            .Exited => |code| code,
+            .exited => |code| code,
             else => @as(u32, 1),
         }) == 0;
     }

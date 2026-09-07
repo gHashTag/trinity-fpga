@@ -21,7 +21,7 @@ pub const CodeGen = struct {
     pub fn init(allocator: std.mem.Allocator, source: []const u8) CodeGen {
         return .{
             .allocator = allocator,
-            .output = .{},
+            .output = .empty,
             .indent = 0,
             .source = source,
         };
@@ -545,7 +545,7 @@ pub const VerilogGen = struct {
     pub fn init(allocator: std.mem.Allocator, source: []const u8, module_name: []const u8) VerilogGen {
         return .{
             .allocator = allocator,
-            .output = .{},
+            .output = .empty,
             .source = source,
             .module_name = module_name,
         };
@@ -687,7 +687,7 @@ pub const CopticNativeGen = struct {
     pub fn init(allocator: std.mem.Allocator, source: []const u8) CopticNativeGen {
         return .{
             .allocator = allocator,
-            .output = .{},
+            .output = .empty,
             .source = source,
         };
     }

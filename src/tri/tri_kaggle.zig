@@ -24,6 +24,10 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
+const tri_proc = @import("tri_proc");
+const tri_env = @import("tri_env");
+const tri_io = @import("tri_io");
 const Allocator = std.mem.Allocator;
 
 // Import kaggle module (configured in build.zig)
@@ -284,7 +288,7 @@ fn runEvalCommand(allocator: Allocator, args: []const []const u8) !void {
         var evaluator = Evaluator.init(allocator);
 
         // Generate mock responses
-        var responses = std.ArrayList([]const u8){};
+        var responses = @as(std.ArrayList([]const u8), .empty);
         defer {
             for (responses.items) |r| allocator.free(r);
             responses.deinit(allocator);
@@ -332,10 +336,11 @@ fn runExportCommand(allocator: Allocator, args: []const []const u8) !void {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn runAuthCommand(allocator: Allocator) !void {
+    const io = tri_io.get();
     print("\n{s}🔑 KAGGLE AUTHENTICATION CHECK{s}\n", .{ BOLD, RESET });
     print("{s}════════════════════════════════════════════════════════════{s}\n\n", .{ DIM, RESET });
 
-    const home = std.process.getEnvVarOwned(allocator, "HOME") catch {
+    const home = tri_env.getEnvVarOwned(allocator, "HOME") catch {
         print("{s}❌ Cannot determine HOME directory{s}\n", .{ RED, RESET });
         return error.HomeNotFound;
     };
@@ -344,7 +349,7 @@ fn runAuthCommand(allocator: Allocator) !void {
     const kaggle_path = try std.fmt.allocPrint(allocator, "{s}/.kaggle/kaggle.json", .{home});
     defer allocator.free(kaggle_path);
 
-    const file = std.fs.cwd().openFile(kaggle_path, .{}) catch |err| {
+    const file = std.Io.Dir.cwd().openFile(io, kaggle_path, .{}) catch |err| {
         print("{s}❌ Kaggle credentials not found{s}\n", .{ RED, RESET });
         print("   Expected: {s}\n\n", .{kaggle_path});
         print("   To authenticate:\n", .{});
@@ -354,9 +359,11 @@ fn runAuthCommand(allocator: Allocator) !void {
         print("   4. Move to ~/.kaggle/kaggle.json\n\n", .{});
         return err;
     };
-    defer file.close();
+    defer file.close(io);
 
-    const contents = file.readToEndAlloc(allocator, 1024 * 1024) catch |err| {
+    var auth_read_buf: [4096]u8 = undefined;
+    var auth_reader = file.reader(io, &auth_read_buf);
+    const contents = auth_reader.interface.allocRemaining(allocator, .limited(1024 * 1024)) catch |err| {
         print("{s}❌ Failed to read kaggle.json: {}{s}\n", .{ RED, err, RESET });
         return err;
     };
@@ -395,6 +402,7 @@ fn runAuthCommand(allocator: Allocator) !void {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn runMetaCommand(allocator: Allocator, args: []const []const u8) !void {
+    const io = tri_io.get();
     const track_filter = if (args.len > 0) args[0] else "all";
 
     print("\n{s}📝 KERNEL METADATA GENERATION{s}\n", .{ BOLD, RESET });
@@ -422,17 +430,17 @@ fn runMetaCommand(allocator: Allocator, args: []const []const u8) !void {
         print("{s}Track: {s} — {s}{s}\n", .{ CYAN, track.id, track.name, RESET });
 
         // Open track directory
-        var track_dir = std.fs.cwd().openDir(track.path, .{}) catch |err| {
+        var track_dir = std.Io.Dir.cwd().openDir(io, track.path, .{}) catch |err| {
             print("  {s}⚠️  Cannot open directory: {}{s}\n\n", .{ YELLOW, err, RESET });
             continue;
         };
-        defer track_dir.close();
+        defer track_dir.close(io);
 
         // List notebooks - look for .ipynb files in track directory
         var generated: usize = 0;
         var iter = track_dir.iterate();
 
-        while (try iter.next()) |entry| {
+        while (try iter.next(io)) |entry| {
 
             // Skip non-files
             if (entry.kind != .file) continue;
@@ -454,32 +462,34 @@ fn runMetaCommand(allocator: Allocator, args: []const []const u8) !void {
             defer allocator.free(dst_notebook_path);
 
             // Create notebook subdirectory if needed
-            std.fs.cwd().makePath(notebook_dir_path) catch |err| {
+            std.Io.Dir.cwd().createDirPath(io, notebook_dir_path) catch |err| {
                 print("  {s}❌ {s}: cannot create dir: {}{s}\n", .{ RED, notebook_name, err, RESET });
                 continue;
             };
 
             // Copy notebook to subdirectory
             {
-                const src = std.fs.cwd().openFile(src_notebook_path, .{}) catch |err| {
+                const src = std.Io.Dir.cwd().openFile(io, src_notebook_path, .{}) catch |err| {
                     print("  {s}❌ {s}: cannot read notebook: {}{s}\n", .{ RED, notebook_name, err, RESET });
                     continue;
                 };
-                defer src.close();
+                defer src.close(io);
 
-                const contents = src.readToEndAlloc(allocator, 10 * 1024 * 1024) catch |err| {
+                var src_read_buf: [4096]u8 = undefined;
+                var src_reader = src.reader(io, &src_read_buf);
+                const contents = src_reader.interface.allocRemaining(allocator, .limited(10 * 1024 * 1024)) catch |err| {
                     print("  {s}❌ {s}: cannot read notebook: {}{s}\n", .{ RED, notebook_name, err, RESET });
                     continue;
                 };
                 defer allocator.free(contents);
 
-                const dst = std.fs.cwd().createFile(dst_notebook_path, .{}) catch |err| {
+                const dst = std.Io.Dir.cwd().createFile(io, dst_notebook_path, .{}) catch |err| {
                     print("  {s}❌ {s}: cannot write notebook: {}{s}\n", .{ RED, notebook_name, err, RESET });
                     continue;
                 };
-                defer dst.close();
+                defer dst.close(io);
 
-                dst.writeAll(contents) catch |err| {
+                dst.writeStreamingAll(io, contents) catch |err| {
                     print("  {s}❌ {s}: cannot write notebook: {}{s}\n", .{ RED, notebook_name, err, RESET });
                     continue;
                 };
@@ -490,13 +500,13 @@ fn runMetaCommand(allocator: Allocator, args: []const []const u8) !void {
             defer allocator.free(metadata);
 
             // Write metadata file
-            const file = std.fs.cwd().createFile(meta_path, .{}) catch |err| {
+            const file = std.Io.Dir.cwd().createFile(io, meta_path, .{}) catch |err| {
                 print("  {s}❌ {s}: cannot create metadata: {}{s}\n", .{ RED, notebook_name, err, RESET });
                 continue;
             };
-            defer file.close();
+            defer file.close(io);
 
-            file.writeAll(metadata) catch |err| {
+            file.writeStreamingAll(io, metadata) catch |err| {
                 print("  {s}❌ {s}: write error: {}{s}\n", .{ RED, notebook_name, err, RESET });
                 continue;
             };
@@ -529,9 +539,7 @@ fn generateMetadata(allocator: Allocator, track: Track, notebook_name: []const u
     var json_buf = try std.ArrayList(u8).initCapacity(allocator, 512);
     defer json_buf.deinit(allocator);
 
-    const writer = json_buf.writer(allocator);
-
-    try writer.print(
+    try json_buf.print(allocator,
         \\{{"id":"{s}","title":"{s}","code_file":"{s}.ipynb","language":"python","kernel_type":"notebook","is_private":"false","enable_gpu":"false","enable_internet":"true","dataset_sources":["playra/{s}"],"competition_sources":["kaggle-measuring-agi"],"kernel_sources":[],"model_sources":[]}}
     , .{ kernel_id, title, notebook_name, track.dataset });
 
@@ -549,6 +557,7 @@ fn formatNotebookName(name: []const u8) []const u8 {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn runPushCommand(allocator: Allocator, args: []const []const u8) !void {
+    const io = tri_io.get();
     const track_filter = if (args.len > 0) args[0] else "all";
 
     print("\n{s}🚀 PUSHING NOTEBOOKS TO KAGGLE{s}\n", .{ BOLD, RESET });
@@ -577,16 +586,16 @@ fn runPushCommand(allocator: Allocator, args: []const []const u8) !void {
         print("{s}Track: {s} — {s}{s}\n", .{ CYAN, track.id, track.name, RESET });
 
         // Open track directory
-        var track_dir = std.fs.cwd().openDir(track.path, .{}) catch |err| {
+        var track_dir = std.Io.Dir.cwd().openDir(io, track.path, .{}) catch |err| {
             print("  {s}⚠️  Cannot open directory: {}{s}\n\n", .{ YELLOW, err, RESET });
             continue;
         };
-        defer track_dir.close();
+        defer track_dir.close(io);
 
         // List notebook subdirectories
         var pushed: usize = 0;
         var iter = track_dir.iterate();
-        while (try iter.next()) |entry| {
+        while (try iter.next(io)) |entry| {
             // Only process directories (notebook subdirs)
             if (entry.kind != .directory) continue;
 
@@ -598,7 +607,7 @@ fn runPushCommand(allocator: Allocator, args: []const []const u8) !void {
             defer allocator.free(meta_path);
 
             // Skip if no kernel-metadata.json
-            if (std.fs.cwd().openFile(meta_path, .{})) |_| {
+            if (std.Io.Dir.cwd().openFile(io, meta_path, .{})) |_| {
                 // File exists, proceed
             } else |_| {
                 continue; // Skip directories without metadata
@@ -607,7 +616,7 @@ fn runPushCommand(allocator: Allocator, args: []const []const u8) !void {
             print("  Pushing {s}...", .{entry.name});
 
             // Run: kaggle kernels push <subdir_path>
-            const result = std.process.Child.run(.{
+            const result = tri_proc.run(.{
                 .allocator = allocator,
                 .argv = &.{ "kaggle", "kernels", "push", subdir_path },
                 .max_output_bytes = 1024 * 1024,
@@ -620,7 +629,7 @@ fn runPushCommand(allocator: Allocator, args: []const []const u8) !void {
             defer allocator.free(result.stderr);
 
             const exit_code = switch (result.term) {
-                .Exited => |code| code,
+                .exited => |code| code,
                 else => @as(u32, 1),
             };
 
@@ -637,7 +646,7 @@ fn runPushCommand(allocator: Allocator, args: []const []const u8) !void {
             }
 
             // Rate limit delay
-            std.Thread.sleep(500 * std.time.ns_per_ms);
+            tri_time.sleep(500 * std.time.ns_per_ms);
         }
 
         print("  Pushed: {d}/{d}\n\n", .{ pushed, track.notebook_count });
@@ -653,6 +662,7 @@ fn runPushCommand(allocator: Allocator, args: []const []const u8) !void {
 
 fn runStatusCommand(allocator: Allocator) !void {
     _ = allocator;
+    const io = tri_io.get();
     print("\n{s}📊 KAGGLE STATUS{s}\n", .{ BOLD, RESET });
     print("{s}════════════════════════════════════════════════════{s}\n\n", .{ DIM, RESET });
 
@@ -665,13 +675,13 @@ fn runStatusCommand(allocator: Allocator) !void {
     };
 
     for (csv_files) |track| {
-        const file = std.fs.cwd().openFile(track.path, .{}) catch {
+        const file = std.Io.Dir.cwd().openFile(io, track.path, .{}) catch {
             print("  {s}{s} — {s}: {s}File not found{s}\n", .{ CYAN, track.id, track.name, RED, RESET });
             continue;
         };
-        defer file.close();
+        defer file.close(io);
 
-        const stat = try file.stat();
+        const stat = try file.stat(io);
         const size_kb: f64 = @as(f64, @floatFromInt(stat.size)) / 1024;
 
         print("  {s}{s} — {s}{s}\n", .{ CYAN, track.id, track.name, RESET });
@@ -692,7 +702,7 @@ fn runValidateCommand(allocator: Allocator) !void {
     print("{s}════════════════════════════════════════════════════════════{s}\n\n", .{ DIM, RESET });
 
     // Run: python kaggle/eval/validation.py
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ "python3", "kaggle/eval/validation.py" },
         .max_output_bytes = 1024 * 1024,
@@ -709,7 +719,7 @@ fn runValidateCommand(allocator: Allocator) !void {
     }
 
     const exit_code = switch (result.term) {
-        .Exited => |code| code,
+        .exited => |code| code,
         else => @as(u32, 1),
     };
 

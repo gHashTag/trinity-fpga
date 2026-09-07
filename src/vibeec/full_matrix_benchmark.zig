@@ -1,6 +1,7 @@
 // Full Matrix Benchmark - All sizes for GPU comparison baseline
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 pub const SIGN_LUT: [4]f32 = .{ 0.0, 1.0, -1.0, 0.0 };
 pub const Vec8f32 = @Vector(8, f32);
 
@@ -100,7 +101,7 @@ fn runBenchmark(allocator: std.mem.Allocator, rows: usize, cols: usize, iteratio
 
     const flops = rows * cols * 2 * iterations;
 
-    var timer = try std.time.Timer.start();
+    var timer = try tri_time.Timer.start();
     for (0..iterations) |_| {
         batchRowTernaryMatmul(output, weights, input, rows, cols);
     }

@@ -19,7 +19,7 @@ pub const Archon = struct {
     pub fn init(allocator: std.mem.Allocator) Archon {
         return Archon{
             .allocator = allocator,
-            .directives = .{},
+            .directives = .empty,
         };
     }
 

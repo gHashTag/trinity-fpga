@@ -2,6 +2,7 @@
 // Commands: status, create, deploy, list, env
 const std = @import("std");
 
+const tri_proc = @import("tri_proc");
 const Account = struct {
     name: []const u8,
     token_env: []const u8,
@@ -9,14 +10,13 @@ const Account = struct {
     env_id: []const u8,
 };
 
-pub fn main() !void {
+pub fn main(init: std.process.Init.Minimal) !void {
     var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    const args = try std.process.argsAlloc(allocator);
-    defer std.process.argsFree(allocator, args);
-
+    const args = try init.args.toSlice(allocator);
+    defer allocator.free(args);
     if (args.len < 2) {
         printUsage();
         std.process.exit(1);
@@ -225,7 +225,7 @@ const Service = struct {
 };
 
 fn listServices(allocator: std.mem.Allocator, token: []const u8, project_id: []const u8) !std.ArrayListUnmanaged(Service) {
-    var services = std.ArrayListUnmanaged(Service){};
+    var services = @as(std.ArrayListUnmanaged(Service), .empty);
 
     const query_fmt = "{{\"query\":\"{{project(id:\\\"{s}\\\"){{services{{edges{{node{{id name}}}}}}}}}}\"}}";
     const query = try std.fmt.allocPrint(allocator, query_fmt, .{project_id});
@@ -287,7 +287,7 @@ fn execCurl(allocator: std.mem.Allocator, token: []const u8, body: []const u8) !
     const auth_header = try std.fmt.allocPrint(allocator, "Authorization: Bearer {s}", .{token});
     defer allocator.free(auth_header);
 
-    const result = try std.process.Child.run(.{
+    const result = try tri_proc.run(.{
         .allocator = allocator,
         .argv = &[_][]const u8{
             "curl", "-s",        "-X",                                    "POST",
@@ -299,7 +299,7 @@ fn execCurl(allocator: std.mem.Allocator, token: []const u8, body: []const u8) !
         allocator.free(result.stderr);
     }
 
-    if (result.term.Exited != 0) return error.CurlFailed;
+    if (result.term.exited != 0) return error.CurlFailed;
 
     return result.stdout;
 }

@@ -6,6 +6,7 @@
 //
 
 const std = @import("std");
+const tri_proc = @import("tri_proc");
 const Allocator = std.mem.Allocator;
 
 /// GitHub Issue Integration for Dev Workflow
@@ -18,7 +19,7 @@ pub const DevGithub = struct {
 
         const cmd = [_][]const u8{ "gh", "issue", "create", "--title", "Dev Session Started", "--body", "Starting development session", "--label", "status:in-progress" };
 
-        const result = std.process.Child.run(.{
+        const result = tri_proc.run(.{
             .allocator = allocator,
             .argv = &cmd,
         }) catch |err| {
@@ -30,7 +31,7 @@ pub const DevGithub = struct {
             allocator.free(result.stderr);
         }
 
-        if (result.term == .Exited and result.exit_code == 0) {
+        if (result.term == .exited and result.exit_code == 0) {
             std.debug.print("Created issue for dev session #{d}\n", .{issue_number});
             return issue_number;
         }
@@ -54,7 +55,7 @@ pub const DevGithub = struct {
 
         const cmd = [_][]const u8{ "gh", "issue", "comment", issue_str, "--body", body };
 
-        const result = std.process.Child.run(.{
+        const result = tri_proc.run(.{
             .allocator = allocator,
             .argv = &cmd,
         }) catch |err| {
@@ -84,7 +85,7 @@ pub const DevGithub = struct {
 
         const cmd = [_][]const u8{ "gh", "issue", "comment", issue_str, "--body", body };
 
-        const result = std.process.Child.run(.{
+        const result = tri_proc.run(.{
             .allocator = allocator,
             .argv = &cmd,
         }) catch |err| {
@@ -113,7 +114,7 @@ pub const DevGithub = struct {
 
         const cmd = [_][]const u8{ "gh", "issue", "comment", issue_str, "--body", body };
 
-        const result = std.process.Child.run(.{
+        const result = tri_proc.run(.{
             .allocator = allocator,
             .argv = &cmd,
         }) catch |err| {

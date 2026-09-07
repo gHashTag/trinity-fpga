@@ -4,7 +4,7 @@
 
 const std = @import("std");
 
-const tri_mutex = @import("mutex.zig");
+const tri_mutex = @import("tri_mutex");
 /// Async communication channel
 pub fn Channel(comptime T: type) type {
     return struct {

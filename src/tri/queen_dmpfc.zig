@@ -9,6 +9,8 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_env = @import("tri_env");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const qt = @import("queen_types.zig");
 const hippocampus = @import("hippocampus.zig");
@@ -67,8 +69,8 @@ pub const IssueKind = enum {
 fn detectConflicts(allocator: Allocator) bool {
     // Check for basic conflicts without requiring full faculty board
     // Conflict: Telegram token set but chat_id missing (or vice versa)
-    const bot_token = std.posix.getenv("TELEGRAM_BOT_TOKEN");
-    const chat_id = std.posix.getenv("TELEGRAM_CHAT_ID");
+    const bot_token = tri_env.getPosix("TELEGRAM_BOT_TOKEN");
+    const chat_id = tri_env.getPosix("TELEGRAM_CHAT_ID");
     const has_token = bot_token != null and bot_token.?.len > 0;
     const has_chat = chat_id != null and chat_id.?.len > 0;
 
@@ -90,7 +92,7 @@ fn detectConflicts(allocator: Allocator) bool {
 /// Run self-check diagnostics
 pub fn selfCheck(allocator: Allocator) !SelfCheck {
     var check = SelfCheck{
-        .timestamp = std.time.timestamp(),
+        .timestamp = tri_time.timestamp(),
     };
 
     // Check 1: Loop running (check if we can write to hippocampus)
@@ -153,8 +155,8 @@ fn checkLoopRunning(allocator: Allocator) !bool {
 }
 
 fn checkTelegramReachable() bool {
-    const bot_token = std.posix.getenv("TELEGRAM_BOT_TOKEN") orelse return false;
-    const chat_id = std.posix.getenv("TELEGRAM_CHAT_ID") orelse return false;
+    const bot_token = tri_env.getPosix("TELEGRAM_BOT_TOKEN") orelse return false;
+    const chat_id = tri_env.getPosix("TELEGRAM_CHAT_ID") orelse return false;
     return bot_token.len > 0 and chat_id.len > 0;
 }
 
@@ -197,7 +199,7 @@ pub fn health() CellHealth {
     return CellHealth{
         .status = .healthy,
         .cycle = 0,
-        .last_check = std.time.timestamp(),
+        .last_check = tri_time.timestamp(),
     };
 }
 
@@ -493,7 +495,7 @@ test "dmpfc — SelfCheck with all issues" {
         .telegram_reachable = false,
         .thalamus_responding = false,
         .conflict_detected = true,
-        .timestamp = std.time.timestamp(),
+        .timestamp = tri_time.timestamp(),
     };
     check.health_score = 0.0; // All checks failed
 
@@ -559,7 +561,7 @@ test "dmpfc — Issue setDescription unicode" {
 test "dmpfc — SelfCheck issues array" {
     const check = SelfCheck{
         .issues = &.{},
-        .timestamp = std.time.timestamp(),
+        .timestamp = tri_time.timestamp(),
     };
 
     try std.testing.expectEqual(@as(usize, 0), check.issues.len);
@@ -618,7 +620,7 @@ test "dmpfc — health returns populated CellHealth" {
     const cell_health = health();
     try std.testing.expect(cell_health.last_check > 0);
     // Verify timestamp is recent (within last 10 seconds)
-    const now = std.time.timestamp();
+    const now = tri_time.timestamp();
     try std.testing.expect(now - cell_health.last_check >= 0);
     try std.testing.expect(now - cell_health.last_check < 10);
 }
@@ -649,7 +651,7 @@ test "dmpfc — selfCheck returns valid timestamp" {
         std.testing.allocator.free(check.issues);
     }
     // Verify timestamp is recent
-    const now = std.time.timestamp();
+    const now = tri_time.timestamp();
     try std.testing.expect(check.timestamp > 0);
     try std.testing.expect(now - check.timestamp >= 0);
     try std.testing.expect(now - check.timestamp < 5); // Within 5 seconds

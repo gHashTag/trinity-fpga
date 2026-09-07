@@ -7,7 +7,7 @@ argument-hint: [module] (vsa, vm, firebird, all)
 # Trinity Test Runner
 
 ## Last Build Status
-!`cd /Users/playra/trinity-w1 && zig build 2>&1 | tail -5`
+!`cd "$(git rev-parse --show-toplevel)" && zig build 2>&1 | tail -5`
 
 ## Task
 
@@ -16,10 +16,10 @@ Run tests for: $ARGUMENTS
 ### Test Commands by Module
 | Module | Command |
 |--------|---------|
-| All | `cd /Users/playra/trinity-w1 && zig build test` |
-| VSA | `cd /Users/playra/trinity-w1 && zig test src/vsa.zig` |
-| VM | `cd /Users/playra/trinity-w1 && zig test src/vm.zig` |
-| Single file | `cd /Users/playra/trinity-w1 && zig test src/<file>.zig` |
+| All | `cd "$(git rev-parse --show-toplevel)" && zig build test` |
+| VSA | `cd "$(git rev-parse --show-toplevel)" && zig test src/vsa.zig` |
+| VM | `cd "$(git rev-parse --show-toplevel)" && zig test src/vm.zig` |
+| Single file | `cd "$(git rev-parse --show-toplevel)" && zig test src/<file>.zig` |
 
 ### Steps
 1. Run the appropriate test command based on the module argument

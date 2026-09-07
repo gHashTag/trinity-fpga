@@ -2,6 +2,7 @@
 // Maps Tri27Event to Queen Episode format
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 
 pub const Context = @import("observe.zig").Context;
@@ -110,7 +111,7 @@ pub fn fromTri27Event(allocator: Allocator, event: Tri27Event, issue_id: ?u64) !
 
     // Create episode with TRI-27 source
     return Episode{
-        .id = @as(u64, @intCast(std.time.nanoTimestamp())),
+        .id = @as(u64, @intCast(tri_time.nanoTimestamp())),
         .timestamp = timestamp_ns,
         .source = .tri27, // Will add this to Source enum
         .context = context,

@@ -14,6 +14,9 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
+const tri_proc = @import("tri_proc");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const colors = @import("tri_colors.zig");
 const print = std.debug.print;
@@ -121,7 +124,7 @@ pub fn collectCurrent(allocator: Allocator) Baseline {
 
     // Version = today's date
     var date_buf: [16]u8 = undefined;
-    const ts = std.time.timestamp();
+    const ts = tri_time.timestamp();
     const epoch_day = @divTrunc(ts, 86400);
     const date_str = std.fmt.bufPrint(&date_buf, "v{d}", .{epoch_day}) catch "v0";
     baseline.setVersion(date_str);
@@ -147,12 +150,13 @@ pub fn collectCurrent(allocator: Allocator) Baseline {
 
 fn countFiles(allocator: Allocator, dir_path: []const u8, extension: []const u8) u32 {
     _ = allocator;
-    var dir = std.fs.cwd().openDir(dir_path, .{ .iterate = true }) catch return 0;
-    defer dir.close();
+    const io = tri_io.get();
+    var dir = std.Io.Dir.cwd().openDir(io, dir_path, .{ .iterate = true }) catch return 0;
+    defer dir.close(io);
 
     var count: u32 = 0;
     var iter = dir.iterate();
-    while (iter.next() catch null) |entry| {
+    while (iter.next(io) catch null) |entry| {
         if (entry.kind != .file) continue;
         if (extension.len > 0 and !std.mem.endsWith(u8, entry.name, extension)) continue;
         count += 1;
@@ -165,20 +169,17 @@ fn countTestBlocks(allocator: Allocator) u32 {
     var count: u32 = 0;
 
     // Scan src/tri/ for test blocks
-    var dir = std.fs.cwd().openDir("src/tri", .{ .iterate = true }) catch return 0;
-    defer dir.close();
+    const io = tri_io.get();
+    var dir = std.Io.Dir.cwd().openDir(io, "src/tri", .{ .iterate = true }) catch return 0;
+    defer dir.close(io);
 
     var iter = dir.iterate();
-    while (iter.next() catch null) |entry| {
+    while (iter.next(io) catch null) |entry| {
         if (entry.kind != .file) continue;
         if (!std.mem.endsWith(u8, entry.name, ".zig")) continue;
 
-        const file = dir.openFile(entry.name, .{}) catch continue;
-        defer file.close();
-
         var buf: [65536]u8 = undefined;
-        const bytes = file.readAll(&buf) catch continue;
-        const content = buf[0..bytes];
+        const content = dir.readFile(io, entry.name, &buf) catch continue;
 
         // Count test " occurrences
         var pos: usize = 0;
@@ -195,22 +196,19 @@ fn countLoc(allocator: Allocator) u32 {
     _ = allocator;
     var total: u32 = 0;
 
+    const io = tri_io.get();
     const dirs = [_][]const u8{ "src/tri", "src/hslm", "src/cli" };
     for (dirs) |dir_path| {
-        var dir = std.fs.cwd().openDir(dir_path, .{ .iterate = true }) catch continue;
-        defer dir.close();
+        var dir = std.Io.Dir.cwd().openDir(io, dir_path, .{ .iterate = true }) catch continue;
+        defer dir.close(io);
 
         var iter = dir.iterate();
-        while (iter.next() catch null) |entry| {
+        while (iter.next(io) catch null) |entry| {
             if (entry.kind != .file) continue;
             if (!std.mem.endsWith(u8, entry.name, ".zig")) continue;
 
-            const file = dir.openFile(entry.name, .{}) catch continue;
-            defer file.close();
-
             var buf: [131072]u8 = undefined;
-            const bytes = file.readAll(&buf) catch continue;
-            const content = buf[0..bytes];
+            const content = dir.readFile(io, entry.name, &buf) catch continue;
 
             var lines: u32 = 0;
             for (content) |c| {
@@ -223,13 +221,13 @@ fn countLoc(allocator: Allocator) u32 {
 }
 
 fn measureBuildTime(allocator: Allocator) u32 {
-    const start = std.time.milliTimestamp();
-    _ = std.process.Child.run(.{
+    const start = tri_time.milliTimestamp();
+    _ = tri_proc.run(.{
         .allocator = allocator,
         .argv = &[_][]const u8{ "zig", "build" },
         .max_output_bytes = 65536,
     }) catch return 0;
-    const end = std.time.milliTimestamp();
+    const end = tri_time.milliTimestamp();
     return @intCast(@as(u64, @bitCast(end - start)));
 }
 
@@ -280,26 +278,34 @@ pub fn computeDeltas(current: *const Baseline, previous: *const Baseline) DeltaR
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn saveBaseline(baseline: *const Baseline) void {
-    std.fs.cwd().makePath(".trinity") catch {};
-    const file = std.fs.cwd().createFile(".trinity/baselines.json", .{ .truncate = false }) catch {
+    const io = tri_io.get();
+    std.Io.Dir.cwd().createDirPath(io, ".trinity") catch {};
+    const file = std.Io.Dir.cwd().createFile(io, ".trinity/baselines.json", .{ .truncate = false }) catch {
         // Create new file
-        const new_file = std.fs.cwd().createFile(".trinity/baselines.json", .{}) catch return;
-        defer new_file.close();
+        const new_file = std.Io.Dir.cwd().createFile(io, ".trinity/baselines.json", .{}) catch return;
+        defer new_file.close(io);
         writeBaselineJson(new_file, baseline);
         return;
     };
-    defer file.close();
+    defer file.close(io);
 
-    // Append
-    const stat = file.stat() catch return;
-    file.seekTo(stat.size) catch return;
+    // Append. 0.16 has no seek-then-write: each write carries its own offset,
+    // so track where the record starts rather than moving a file cursor.
+    const stat = file.stat(io) catch return;
+    var offset = stat.size;
     if (stat.size > 0) {
-        file.writeAll("\n") catch return;
+        file.writePositionalAll(io, "\n", offset) catch return;
+        offset += 1;
     }
-    writeBaselineJson(file, baseline);
+    writeBaselineJsonAt(file, baseline, offset);
 }
 
-fn writeBaselineJson(file: std.fs.File, baseline: *const Baseline) void {
+fn writeBaselineJson(file: std.Io.File, baseline: *const Baseline) void {
+    writeBaselineJsonAt(file, baseline, 0);
+}
+
+fn writeBaselineJsonAt(file: std.Io.File, baseline: *const Baseline, offset: u64) void {
+    const io = tri_io.get();
     var buf: [512]u8 = undefined;
     const content = std.fmt.bufPrint(&buf, "{{\"version\":\"{s}\",\"date\":\"{s}\",\"specs\":{d},\"tests\":{d},\"loc\":{d},\"binaries\":{d},\"build_ms\":{d},\"timestamp\":{d}}}", .{
         baseline.versionStr(),
@@ -309,21 +315,17 @@ fn writeBaselineJson(file: std.fs.File, baseline: *const Baseline) void {
         baseline.loc,
         baseline.binaries,
         baseline.build_time_ms,
-        std.time.timestamp(),
+        tri_time.timestamp(),
     }) catch return;
-    file.writeAll(content) catch return;
+    file.writePositionalAll(io, content, offset) catch return;
 }
 
 fn loadLastBaseline() ?Baseline {
-    const file = std.fs.cwd().openFile(".trinity/baselines.json", .{}) catch return null;
-    defer file.close();
-
     var buf: [65536]u8 = undefined;
-    const bytes = file.readAll(&buf) catch return null;
-    if (bytes == 0) return null;
+    const content = std.Io.Dir.cwd().readFile(tri_io.get(), ".trinity/baselines.json", &buf) catch return null;
+    if (content.len == 0) return null;
 
     // Find the last JSON object
-    const content = buf[0..bytes];
     const last_brace = std.mem.lastIndexOf(u8, content, "{") orelse return null;
     const end_brace = std.mem.indexOfPos(u8, content, last_brace, "}") orelse return null;
     const json_obj = content[last_brace .. end_brace + 1];
@@ -405,15 +407,11 @@ fn renderHistory() void {
     print("\n{s}BENCHMARK HISTORY{s}\n", .{ GOLDEN, RESET });
     print("{s}════════════════════════════════════════════════════════════{s}\n\n", .{ GRAY, RESET });
 
-    const file = std.fs.cwd().openFile(".trinity/baselines.json", .{}) catch {
+    var buf: [65536]u8 = undefined;
+    const content = std.Io.Dir.cwd().readFile(tri_io.get(), ".trinity/baselines.json", &buf) catch {
         print("  {s}No baselines recorded yet.{s}\n\n", .{ DIM, RESET });
         return;
     };
-    defer file.close();
-
-    var buf: [65536]u8 = undefined;
-    const bytes = file.readAll(&buf) catch return;
-    const content = buf[0..bytes];
 
     print("  {s}Version       Specs  Tests    LOC  Binaries  Build{s}\n", .{ GRAY, RESET });
     print("  {s}────────────  ─────  ─────  ─────  ────────  ─────{s}\n", .{ GRAY, RESET });

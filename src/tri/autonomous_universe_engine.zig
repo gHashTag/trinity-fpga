@@ -13,6 +13,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const math = std.math;
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -636,7 +637,7 @@ pub fn stateSnapshot(bubbles: []AutonomousBubble, config: MultiverseConfig) Univ
         .phi_field_strength = 0.0,
         .convergence_rate = 0.0,
         .auto_update_active = config.auto_tuning_enabled,
-        .last_discovery_time = std.time.timestamp(),
+        .last_discovery_time = tri_time.timestamp(),
     };
 
     var max_gen: usize = 0;

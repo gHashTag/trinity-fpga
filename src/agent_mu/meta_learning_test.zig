@@ -8,6 +8,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 // Import AGENT MU modules
 const mu_tracker = @import("mu_tracker.zig");
 const meta_learner = @import("meta_learner.zig");
@@ -305,7 +306,7 @@ test "META-LEARNING benchmark: 100 fixes intelligence curve" {
     var tracker = try mu_tracker.MuTracker.init(allocator);
     defer tracker.deinit();
 
-    const start_time = std.time.nanoTimestamp();
+    const start_time = tri_time.nanoTimestamp();
 
     // Simulate 100 successful fixes (80% success rate)
     for (0..100) |i| {
@@ -313,7 +314,7 @@ test "META-LEARNING benchmark: 100 fixes intelligence curve" {
         try tracker.recordFix("TYPE_FIX", success, "test", 50, 0.85);
     }
 
-    const end_time = std.time.nanoTimestamp();
+    const end_time = tri_time.nanoTimestamp();
     const elapsed_ms = @as(f64, @floatFromInt(end_time - start_time)) / 1_000_000.0;
 
     const final_mult = tracker.getIntelligenceMultiplier();

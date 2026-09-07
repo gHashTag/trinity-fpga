@@ -5,9 +5,10 @@
 
 const std = @import("std");
 
+const tri_env = @import("tri_env");
 pub fn main() !void {
     // Get port from env or use default
-    const port_str = std.process.getEnvVarOwned(std.heap.page_allocator, "PORT") catch "8080";
+    const port_str = tri_env.getEnvVarOwned(std.heap.page_allocator, "PORT") catch "8080";
     const port = std.fmt.parseInt(u16, port_str, 10) catch 8080;
 
     // Create TCP listener

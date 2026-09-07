@@ -8,6 +8,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_env = @import("tri_env");
 const http = std.http;
 const json = std.json;
 
@@ -188,15 +189,14 @@ pub const VisionVerifier = struct {
 };
 
 // CLI for testing
-pub fn main() !void {
+pub fn main(init: std.process.Init.Minimal) !void {
     const allocator = std.heap.page_allocator;
 
     std.debug.print("👁️  TRINITY VISION VERIFICATION\n", .{});
     std.debug.print("φ² + 1/φ² = 3\n\n", .{});
 
-    const args = try std.process.argsAlloc(allocator);
-    defer std.process.argsFree(allocator, args);
-
+    const args = try init.args.toSlice(allocator);
+    defer allocator.free(args);
     if (args.len < 3) {
         std.debug.print(
             \\Usage: vision_verify <image_path> <expected_state>
@@ -220,7 +220,7 @@ pub fn main() !void {
     const expected_state = args[2];
 
     // Get API key from env
-    const api_key = std.process.getEnvVarOwned(allocator, "ANTHROPIC_API_KEY") catch |err| {
+    const api_key = tri_env.getEnvVarOwned(allocator, "ANTHROPIC_API_KEY") catch |err| {
         std.debug.print("Error getting API key: {}\n", .{err});
         std.debug.print("Set ANTHROPIC_API_KEY environment variable\n", .{});
         return err;

@@ -26,7 +26,7 @@ pub fn runInitCommand(allocator: std.mem.Allocator, args: []const []const u8) !v
             if (i + 1 < args.len) {
                 // Forward to tri cell init with remaining args
                 const cell = @import("cytoplasm.zig");
-                var cell_args = std.ArrayListUnmanaged([]const u8){};
+                var cell_args = @as(std.ArrayListUnmanaged([]const u8), .empty);
                 defer cell_args.deinit(allocator);
                 try cell_args.append(allocator, "init");
                 for (args[i + 1 ..]) |arg| {

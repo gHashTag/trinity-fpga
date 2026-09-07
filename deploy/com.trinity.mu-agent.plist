@@ -8,7 +8,7 @@
 
     <key>ProgramArguments</key>
     <array>
-        <string>/Users/playra/trinity-w1/zig-out/bin/mu-agent</string>
+        <string>/Users/playom/trinity-fpga/zig-out/bin/mu-agent</string>
     </array>
 
     <key>RunAtLoad</key>
@@ -23,18 +23,18 @@
     </dict>
 
     <key>StandardOutPath</key>
-    <string>/Users/playra/.trinity/logs/mu-agent.stdout.log</string>
+    <string>/Users/playom/.trinity/logs/mu-agent.stdout.log</string>
 
     <key>StandardErrorPath</key>
-    <string>/Users/playra/.trinity/logs/mu-agent.stderr.log</string>
+    <string>/Users/playom/.trinity/logs/mu-agent.stderr.log</string>
 
     <key>WorkingDirectory</key>
-    <string>/Users/playra/trinity-w1</string>
+    <string>/Users/playom/trinity-fpga</string>
 
     <key>EnvironmentVariables</key>
     <dict>
         <key>PATH</key>
-        <string>/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/Users/playra/.local/bin</string>
+        <string>/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/Users/playom/.local/bin</string>
         <key>MU_SLEEP_INTERVAL</key>
         <string>300</string>
         <key>AGENT_NAME</key>

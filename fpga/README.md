@@ -188,20 +188,20 @@ ffmpeg -i /tmp/uart_top_led_test.mp4 -vf "select='eq(n\,0)+eq(n\,15)+eq(n\,30)+e
 
 **Step 1: Test led_diagnostic.bit (identifies T23 vs R23)**
 ```bash
-/Users/playra/trinity-w1/fpga/tools/fpgactl flash /Users/playra/trinity-w1/fpga/openxc7-synth/led_diagnostic.bit
+/Users/playom/trinity-fpga/fpga/tools/fpgactl flash /Users/playom/trinity-fpga/fpga/openxc7-synth/led_diagnostic.bit
 ```
 - Look at board: Which LED blinks FAST (~6 Hz)? That's T23
 - Which LED blinks SLOW (~1.5 Hz)? That's R23
 
 **Step 2: Verify temporal_heartbeat still works**
 ```bash
-/Users/playra/trinity-w1/fpga/tools/fpgactl flash /Users/playra/trinity-w1/fpga/openxc7-synth/temporal_heartbeat.bit
+/Users/playom/trinity-fpga/fpga/tools/fpgactl flash /Users/playom/trinity-fpga/fpga/openxc7-synth/temporal_heartbeat.bit
 ```
 
 **Step 3: Compare synthesis**
 ```bash
 # Check quantum_bridge synthesis for warnings
-cd /Users/playra/trinity-w1/fpga/openxc7-synth
+cd "$(git rev-parse --show-toplevel)/fpga/openxc7-synth"
 docker run --rm --platform linux/amd64 -v "$(pwd):/work" -w /work regymm/openxc7 \
     yosys -p "synth_xilinx -flatten -abc9 -nobram -arch xc7 -top quantum_bridge_top; \
              write_json test.json" quantum_bridge_separable.v
@@ -305,28 +305,28 @@ fpga/tools/verify_led.sh <design.bit> <expected_pattern> [duration]
 
 ```bash
 # Control
-/Users/playra/trinity-w1/fpga/tools/fpgactl status          # FPGA status
-/Users/playra/trinity-w1/fpga/tools/fpgactl health         # Health check
-/Users/playra/trinity-w1/fpga/tools/fpgactl info           # Bitstream info
+/Users/playom/trinity-fpga/fpga/tools/fpgactl status          # FPGA status
+/Users/playom/trinity-fpga/fpga/tools/fpgactl health         # Health check
+/Users/playom/trinity-fpga/fpga/tools/fpgactl info           # Bitstream info
 
 # Flashing (no sudo!)
-/Users/playra/trinity-w1/fpga/tools/fpgactl flash violation    # quantum_bridge_violation.bit
-/Users/playra/trinity-w1/fpga/tools/fpgactl flash separable    # quantum_bridge_separable.bit
-/Users/playra/trinity-w1/fpga/tools/fpgactl flash zero         # quantum_bridge_zero.bit
-/Users/playra/trinity-w1/fpga/tools/fpgactl flash negative     # quantum_bridge_negative.bit
-/Users/playra/trinity-w1/fpga/tools/fpgactl flash <file.bit>  # Custom bitstream
+/Users/playom/trinity-fpga/fpga/tools/fpgactl flash violation    # quantum_bridge_violation.bit
+/Users/playom/trinity-fpga/fpga/tools/fpgactl flash separable    # quantum_bridge_separable.bit
+/Users/playom/trinity-fpga/fpga/tools/fpgactl flash zero         # quantum_bridge_zero.bit
+/Users/playom/trinity-fpga/fpga/tools/fpgactl flash negative     # quantum_bridge_negative.bit
+/Users/playom/trinity-fpga/fpga/tools/fpgactl flash <file.bit>  # Custom bitstream
 
 # Daemon (optional)
-/Users/playra/trinity-w1/fpga/tools/fpgactl monitor start    # Start daemon
-/Users/playra/trinity-w1/fpga/tools/fpgactl monitor stop     # Stop
-/Users/playra/trinity-w1/fpga/tools/fpgactl monitor logs     # Logs
+/Users/playom/trinity-fpga/fpga/tools/fpgactl monitor start    # Start daemon
+/Users/playom/trinity-fpga/fpga/tools/fpgactl monitor stop     # Stop
+/Users/playom/trinity-fpga/fpga/tools/fpgactl monitor logs     # Logs
 ```
 
 ### flash_no_sudo.sh — Autonomous Flashing
 
 ```bash
 # First run: will ask for password and save to macOS keychain
-/Users/playra/trinity-w1/fpga/tools/flash_no_sudo.sh /path/to/bitstream.bit
+/Users/playom/trinity-fpga/fpga/tools/flash_no_sudo.sh /path/to/bitstream.bit
 
 # Subsequent runs: password is automatically retrieved from keychain
 ```
@@ -350,7 +350,7 @@ fpga/tools/verify_led.sh <design.bit> <expected_pattern> [duration]
 | `temporal_heartbeat.bit` | Complex 3-phase blink | ✅ **WORKS** |
 | `led_diagnostic.bit` | T23=fast, R23=slow | ❓ **TEST THIS** |
 
-**Location:** `/Users/playra/trinity-w1/fpga/openxc7-synth/`
+**Location:** `/Users/playom/trinity-fpga/fpga/openxc7-synth/`
 
 **Working bitstreams (2026-03-08):**
 | Bitstream | LED Behavior | Status |
@@ -403,7 +403,7 @@ IDCODE:     0x13631093 (XC7A100T) ✓
 python3 -c "import usb.core; dev = usb.core.find(idVendor=0x03fd); print(hex(dev.idProduct))"
 
 # If PID = 0x0013, initialize cable
-/Users/playra/trinity-w1/fpga/tools/flash_no_sudo.sh <bitstream>
+/Users/playom/trinity-fpga/fpga/tools/flash_no_sudo.sh <bitstream>
 ```
 
 **The flash_no_sudo.sh script auto-initializes the cable!**
@@ -415,7 +415,7 @@ python3 -c "import usb.core; dev = usb.core.find(idVendor=0x03fd); print(hex(dev
 ### Build All 4 Quantum Bridge Bitstreams
 
 ```bash
-cd /Users/playra/trinity-w1/fpga/openxc7-synth
+cd "$(git rev-parse --show-toplevel)/fpga/openxc7-synth"
 chmod +x build_all_quantum_states.sh
 ./build_all_quantum_states.sh
 ```
@@ -423,7 +423,7 @@ chmod +x build_all_quantum_states.sh
 ### Build LED Diagnostic
 
 ```bash
-cd /Users/playra/trinity-w1/fpga/openxc7-synth
+cd "$(git rev-parse --show-toplevel)/fpga/openxc7-synth"
 
 # Synthesis
 docker run --rm --platform linux/amd64 -v "$(pwd):/work" -w /work regymm/openxc7 \

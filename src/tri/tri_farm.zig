@@ -16,6 +16,10 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
+const tri_proc = @import("tri_proc");
+const tri_time = @import("tri_time");
+const tri_env = @import("tri_env");
 const Allocator = std.mem.Allocator;
 const railway_api = @import("railway_api.zig");
 const RailwayApi = railway_api.RailwayApi;
@@ -316,7 +320,7 @@ pub fn runFarmRecycle(allocator: Allocator, args: []const []const u8) !void {
         print("{s}⚠️  CI gate skipped (--skip-ci){s}\n", .{ YELLOW, RESET });
     } else {
         print("🔨 Running CI gate (zig build test)...\n", .{});
-        const ci_result = std.process.Child.run(.{
+        const ci_result = tri_proc.run(.{
             .allocator = allocator,
             .argv = &.{ "zig", "build", "test" },
             .max_output_bytes = 512 * 1024,
@@ -329,7 +333,7 @@ pub fn runFarmRecycle(allocator: Allocator, args: []const []const u8) !void {
         defer allocator.free(ci_result.stderr);
 
         const ci_exit = switch (ci_result.term) {
-            .Exited => |code| code,
+            .exited => |code| code,
             else => @as(u32, 1),
         };
         if (ci_exit != 0) {
@@ -837,17 +841,12 @@ fn initHealthCache(allocator: Allocator) !void {
 
     health_cache = std.StringHashMap(AccountHealth).init(allocator);
 
-    const file = std.fs.cwd().openFile(ACCOUNT_HEALTH_FILE, .{}) catch |err| {
+    const contents = std.Io.Dir.cwd().readFileAlloc(tri_io.get(), ACCOUNT_HEALTH_FILE, allocator, .limited(64 * 1024)) catch |err| {
         if (err == error.FileNotFound) {
             // No cache yet — start fresh
             health_cache_initialized = true;
             return;
         }
-        return err;
-    };
-    defer file.close();
-
-    const contents = file.readToEndAlloc(allocator, 64 * 1024) catch |err| {
         if (err == error.IsDir) {
             // Corrupted state — directory instead of file
             health_cache_initialized = true;
@@ -925,26 +924,27 @@ fn saveHealthCache(allocator: Allocator) !void {
             .unknown => "unknown",
         };
 
-        try json_buf.writer(allocator).print(
+        try json_buf.print(allocator,
             \\"{s}":{{"status":"{s}","last_check":{d},"last_error":"{s}"}}
         , .{ acct, status_str, health.last_check, health.last_error });
     }
 
     try json_buf.append(allocator, '}');
 
+    const io = tri_io.get();
     const dir = std.fs.path.dirname(ACCOUNT_HEALTH_FILE) orelse ".";
-    std.fs.cwd().makePath(dir) catch {};
+    std.Io.Dir.cwd().createDirPath(io, dir) catch {};
 
-    const file = try std.fs.cwd().createFile(ACCOUNT_HEALTH_FILE, .{});
-    defer file.close();
-    try file.writeAll(json_buf.items);
+    const file = try std.Io.Dir.cwd().createFile(io, ACCOUNT_HEALTH_FILE, .{});
+    defer file.close(io);
+    try file.writeStreamingAll(io, json_buf.items);
 }
 
 /// Update account health status after API call
 fn updateAccountHealth(allocator: Allocator, acct_name: []const u8, err: anyerror) !void {
     try initHealthCache(allocator);
 
-    const now = std.time.timestamp();
+    const now = tri_time.timestamp();
     const err_name = @errorName(err);
 
     const status: AccountStatus = if (err == error.NotAuthorized or err == error.ConnectionFailed)
@@ -974,7 +974,7 @@ fn updateAccountHealth(allocator: Allocator, acct_name: []const u8, err: anyerro
 fn markAccountAlive(allocator: Allocator, acct_name: []const u8) !void {
     try initHealthCache(allocator);
 
-    const now = std.time.timestamp();
+    const now = tri_time.timestamp();
 
     // Free old value if exists
     if (health_cache.get(acct_name)) |old| {
@@ -1000,7 +1000,7 @@ fn shouldSkipAccount(allocator: Allocator, acct_name: []const u8) bool {
     const health = health_cache.get(acct_name) orelse return false;
     if (health.status != .dead) return false;
 
-    const now = std.time.timestamp();
+    const now = tri_time.timestamp();
     const elapsed = now - health.last_check;
 
     // Retry dead accounts after DEAD_ACCOUNT_RETRY_SEC (30 minutes)
@@ -1013,7 +1013,7 @@ fn getHealthInfo(allocator: Allocator, acct_name: []const u8) struct { status: A
 
     const health = health_cache.get(acct_name) orelse return .{ .status = .unknown, .elapsed = 0 };
 
-    const now = std.time.timestamp();
+    const now = tri_time.timestamp();
     return .{
         .status = health.status,
         .elapsed = now - health.last_check,
@@ -1039,16 +1039,17 @@ fn deinitHealthCache(allocator: Allocator) void {
 
 fn logDaemonEvent(allocator: Allocator, event_type: []const u8, event: []const u8, data: []const u8) !void {
     _ = allocator;
-    const timestamp = std.time.timestamp();
+    const timestamp = tri_time.timestamp();
     var msg_buf: [512]u8 = undefined;
     const msg = try std.fmt.bufPrint(&msg_buf,
         \\{{"type":"{s}","event":"{s}","data":"{s}","timestamp":{d}}}
     , .{ event_type, event, data, timestamp });
 
-    const log_file = try std.fs.cwd().createFile(DAEMON_LOG_FILE, .{ .truncate = false });
-    defer log_file.close();
-    try log_file.seekFromEnd(0);
-    try log_file.writeAll(msg);
+    const io = tri_io.get();
+    const log_file = try std.Io.Dir.cwd().createFile(io, DAEMON_LOG_FILE, .{ .truncate = false });
+    defer log_file.close(io);
+    const end = try log_file.length(io);
+    try log_file.writePositionalAll(io, msg, end);
 }
 
 fn runWatchDaemonCommand(allocator: Allocator, args: []const []const u8) !void {
@@ -1099,11 +1100,12 @@ fn daemonStart(allocator: Allocator) !void {
 
     // Write PID file
     {
-        const new_pid_file = try std.fs.cwd().createFile(DAEMON_PID_FILE, .{});
-        defer new_pid_file.close();
+        const io = tri_io.get();
+        const new_pid_file = try std.Io.Dir.cwd().createFile(io, DAEMON_PID_FILE, .{});
+        defer new_pid_file.close(io);
         const pid_str = try std.fmt.allocPrint(allocator, "{d}\n", .{self_pid});
         defer allocator.free(pid_str);
-        try new_pid_file.writeAll(pid_str);
+        try new_pid_file.writeStreamingAll(io, pid_str);
     }
 
     print("   {s}✅ Daemon started (PID {d}){s}\n", .{ GREEN, self_pid, RESET });
@@ -1117,7 +1119,7 @@ fn daemonStart(allocator: Allocator) !void {
 
     while (true) {
         sweep_count += 1;
-        const sweep_start = std.time.nanoTimestamp();
+        const sweep_start = tri_time.nanoTimestamp();
 
         print("{s}🔄 Sweep #{d}{s}\n", .{ DIM, sweep_count, RESET });
 
@@ -1134,35 +1136,31 @@ fn daemonStart(allocator: Allocator) !void {
             // Continue to next sweep — DON'T crash
         };
 
-        const elapsed_ms = @as(u64, @intCast(@divTrunc(@as(i128, std.time.nanoTimestamp() - sweep_start), 1_000_000)));
+        const elapsed_ms = @as(u64, @intCast(@divTrunc(@as(i128, tri_time.nanoTimestamp() - sweep_start), 1_000_000)));
         print("   {s}Sweep done in {d}ms{s}\n", .{ DIM, elapsed_ms, RESET });
 
         // Log sweep event to JSONL for "brain" integration
         logDaemonEvent(allocator, "sweep", "sweep_completed", std.fmt.allocPrint(allocator, "sweep_{d}_ms_{d}", .{ sweep_count, elapsed_ms }) catch "") catch {};
 
         print("   Sleeping {d}s...\n\n", .{DAEMON_INTERVAL_SEC});
-        std.Thread.sleep(@as(u64, DAEMON_INTERVAL_SEC) * std.time.ns_per_s);
+        tri_time.sleep(@as(u64, DAEMON_INTERVAL_SEC) * std.time.ns_per_s);
     }
 }
 
 fn daemonStop() !void {
-    const pid_file = std.fs.cwd().openFile(DAEMON_PID_FILE, .{}) catch |err| {
+    var pid_buf: [32]u8 = undefined;
+    const pid_str = std.Io.Dir.cwd().readFile(tri_io.get(), DAEMON_PID_FILE, &pid_buf) catch |err| {
         if (err == error.FileNotFound) {
             print("{s}⚠️  Watch daemon not running (no PID file){s}\n", .{ YELLOW, RESET });
             return;
         }
         return err;
     };
-    defer pid_file.close();
-
-    var pid_buf: [32]u8 = undefined;
-    const pid_bytes = try pid_file.readAll(&pid_buf);
-    const pid_str = pid_buf[0..pid_bytes];
     const pid = try std.fmt.parseInt(u32, std.mem.trim(u8, pid_str, &std.ascii.whitespace), 10);
 
     if (!isProcessAlive(pid)) {
         print("{s}⚠️  Daemon PID {d} not alive (stale lock){s}\n", .{ YELLOW, pid, RESET });
-        std.fs.cwd().deleteFile(DAEMON_PID_FILE) catch {};
+        std.Io.Dir.cwd().deleteFile(tri_io.get(), DAEMON_PID_FILE) catch {};
         return;
     }
 
@@ -1174,7 +1172,7 @@ fn daemonStop() !void {
     };
 
     // Wait a bit for graceful shutdown
-    std.Thread.sleep(2 * std.time.ns_per_s);
+    tri_time.sleep(2 * std.time.ns_per_s);
 
     // Force kill if still alive
     if (isProcessAlive(pid)) {
@@ -1182,7 +1180,7 @@ fn daemonStop() !void {
         std.posix.kill(@intCast(pid), std.posix.SIG.KILL) catch {};
     }
 
-    std.fs.cwd().deleteFile(DAEMON_PID_FILE) catch {};
+    std.Io.Dir.cwd().deleteFile(tri_io.get(), DAEMON_PID_FILE) catch {};
     print("{s}✅ Daemon stopped{s}\n", .{ GREEN, RESET });
 }
 
@@ -1202,18 +1200,14 @@ fn daemonStatus() !void {
 }
 
 fn getExistingPid() !u32 {
-    const pid_file = try std.fs.cwd().openFile(DAEMON_PID_FILE, .{});
-    defer pid_file.close();
-
     var pid_buf: [32]u8 = undefined;
-    const pid_bytes = try pid_file.readAll(&pid_buf);
-    const pid_str = pid_buf[0..pid_bytes];
-    return try std.fmt.parseInt(u32, std.mem.trimRight(u8, pid_str, "\n"), 10);
+    const pid_str = try std.Io.Dir.cwd().readFile(tri_io.get(), DAEMON_PID_FILE, &pid_buf);
+    return try std.fmt.parseInt(u32, std.mem.trimEnd(u8, pid_str, "\n"), 10);
 }
 
 fn isProcessAlive(pid: u32) bool {
     // Send signal 0 to check if process exists
-    std.posix.kill(@intCast(pid), 0) catch |err| {
+    std.posix.kill(@intCast(pid), @enumFromInt(0)) catch |err| {
         if (err == error.ProcessNotFound) return false;
         // Other errors might mean process exists
         return true;
@@ -1227,13 +1221,10 @@ fn runFarmStatsCommand(allocator: Allocator, args: []const []const u8) !void {
     _ = args; // Mark as used
     print("{s}=== FARM STATISTICS ==={s}\n\n", .{ BOLD, RESET });
 
-    const file = std.fs.cwd().openFile(".trinity/farm/w7v2_snapshot.json", .{}) catch |err| {
+    const content = std.Io.Dir.cwd().readFileAlloc(tri_io.get(), ".trinity/farm/w7v2_snapshot.json", allocator, .limited(1_000_000)) catch |err| {
         print("{s}Error loading snapshot: {s}\n", .{ RED, @errorName(err) });
         return;
     };
-    defer file.close();
-
-    const content = try file.readToEndAlloc(allocator, 1_000_000);
     defer allocator.free(content);
 
     const parsed = try std.json.parseFromSlice(std.json.Value, allocator, content, .{});
@@ -1273,10 +1264,10 @@ fn sendTelegramAlert(allocator: Allocator, comptime fmt: []const u8, args: anyty
     const msg = std.fmt.allocPrint(allocator, fmt, args) catch return;
     defer allocator.free(msg);
 
-    const token = std.process.getEnvVarOwned(allocator, "TELEGRAM_BOT_TOKEN") catch return;
+    const token = tri_env.getEnvVarOwned(allocator, "TELEGRAM_BOT_TOKEN") catch return;
     defer allocator.free(token);
 
-    const chat_id = std.process.getEnvVarOwned(allocator, "TELEGRAM_CHAT_ID") catch {
+    const chat_id = tri_env.getEnvVarOwned(allocator, "TELEGRAM_CHAT_ID") catch {
         allocator.free(token);
         return;
     };
@@ -1301,9 +1292,12 @@ fn sendTelegramAlert(allocator: Allocator, comptime fmt: []const u8, args: anyty
     defer allocator.free(url_str);
 
     // HTTP client with 3-second connection timeout for Telegram API
+    // NOTE (0.16): `http_connect_timeout` no longer exists on std.http.Client.
+    // A connect timeout is now per-connection (Client.ConnectTcpOptions.timeout)
+    // and is not reachable through `client.request`, so it is dropped here.
     var client = std.http.Client{
         .allocator = allocator,
-        .http_connect_timeout = 3000, // 3 seconds in milliseconds
+        .io = tri_io.get(),
     };
     defer client.deinit();
 

@@ -11,6 +11,7 @@
 //! Brain Region: Corpus Callosum (Aggregation & Analysis)
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const array_list = std.array_list;
 const basal_ganglia = @import("basal_ganglia.zig");
 const reticular_formation = @import("reticular_formation.zig");
@@ -117,16 +118,16 @@ pub const BenchmarkSuite = struct {
         var latencies = try array_list.Managed(u64).initCapacity(allocator, @min(iterations, 100_000));
         defer latencies.deinit();
 
-        const start_total = std.time.nanoTimestamp();
+        const start_total = tri_time.nanoTimestamp();
 
         var i: u64 = 0;
         while (i < iterations) : (i += 1) {
             const task_id = try std.fmt.allocPrint(allocator, "task-{d}", .{i});
             defer allocator.free(task_id);
 
-            const start = std.time.nanoTimestamp();
+            const start = tri_time.nanoTimestamp();
             _ = try registry.claim(allocator, task_id, "agent-001", 300000);
-            const end = std.time.nanoTimestamp();
+            const end = tri_time.nanoTimestamp();
 
             const latency = @as(u64, @intCast(end - start));
             if (latencies.items.len < 100_000) {
@@ -134,7 +135,7 @@ pub const BenchmarkSuite = struct {
             }
         }
 
-        const end_total = std.time.nanoTimestamp();
+        const end_total = tri_time.nanoTimestamp();
         const total_ns = @as(u64, @intCast(end_total - start_total));
 
         const result = try BenchmarkSuite.computeResult(
@@ -165,16 +166,16 @@ pub const BenchmarkSuite = struct {
         var latencies = try array_list.Managed(u64).initCapacity(allocator, @min(num_tasks, 100_000));
         defer latencies.deinit();
 
-        const start_total = std.time.nanoTimestamp();
+        const start_total = tri_time.nanoTimestamp();
 
         i = 0;
         while (i < num_tasks) : (i += 1) {
             const task_id = try std.fmt.allocPrint(allocator, "task-{d}", .{i});
             defer allocator.free(task_id);
 
-            const start = std.time.nanoTimestamp();
+            const start = tri_time.nanoTimestamp();
             _ = registry.complete(task_id, "agent-001");
-            const end = std.time.nanoTimestamp();
+            const end = tri_time.nanoTimestamp();
 
             const latency = @as(u64, @intCast(end - start));
             if (latencies.items.len < 100_000) {
@@ -182,7 +183,7 @@ pub const BenchmarkSuite = struct {
             }
         }
 
-        const end_total = std.time.nanoTimestamp();
+        const end_total = tri_time.nanoTimestamp();
         const total_ns = @as(u64, @intCast(end_total - start_total));
 
         const result = try BenchmarkSuite.computeResult(
@@ -205,7 +206,7 @@ pub const BenchmarkSuite = struct {
         var latencies = try array_list.Managed(u64).initCapacity(allocator, @min(iterations, 100_000));
         defer latencies.deinit();
 
-        const start_total = std.time.nanoTimestamp();
+        const start_total = tri_time.nanoTimestamp();
 
         var i: u64 = 0;
         while (i < iterations) : (i += 1) {
@@ -219,9 +220,9 @@ pub const BenchmarkSuite = struct {
                 },
             };
 
-            const start = std.time.nanoTimestamp();
+            const start = tri_time.nanoTimestamp();
             try bus.publish(.task_claimed, event_data);
-            const end = std.time.nanoTimestamp();
+            const end = tri_time.nanoTimestamp();
 
             const latency = @as(u64, @intCast(end - start));
             if (latencies.items.len < 100_000) {
@@ -229,7 +230,7 @@ pub const BenchmarkSuite = struct {
             }
         }
 
-        const end_total = std.time.nanoTimestamp();
+        const end_total = tri_time.nanoTimestamp();
         const total_ns = @as(u64, @intCast(end_total - start_total));
 
         const result = try BenchmarkSuite.computeResult(
@@ -268,16 +269,16 @@ pub const BenchmarkSuite = struct {
         var latencies = try array_list.Managed(u64).initCapacity(allocator, @min(iterations, 100_000));
         defer latencies.deinit();
 
-        const start_total = std.time.nanoTimestamp();
+        const start_total = tri_time.nanoTimestamp();
 
         i = 0;
         while (i < iterations) : (i += 1) {
-            const start = std.time.nanoTimestamp();
+            const start = tri_time.nanoTimestamp();
             const events = try bus.poll(0, allocator, 100);
             defer {
                 allocator.free(events);
             }
-            const end = std.time.nanoTimestamp();
+            const end = tri_time.nanoTimestamp();
 
             const latency = @as(u64, @intCast(end - start));
             if (latencies.items.len < 100_000) {
@@ -285,7 +286,7 @@ pub const BenchmarkSuite = struct {
             }
         }
 
-        const end_total = std.time.nanoTimestamp();
+        const end_total = tri_time.nanoTimestamp();
         const total_ns = @as(u64, @intCast(end_total - start_total));
 
         const result = try BenchmarkSuite.computeResult(
@@ -306,15 +307,15 @@ pub const BenchmarkSuite = struct {
         var latencies = try array_list.Managed(u64).initCapacity(allocator, @min(iterations, 100_000));
         defer latencies.deinit();
 
-        const start_total = std.time.nanoTimestamp();
+        const start_total = tri_time.nanoTimestamp();
 
         var i: u64 = 0;
         while (i < iterations) : (i += 1) {
             const attempt = @as(u32, @intCast(i % 100));
 
-            const start = std.time.nanoTimestamp();
+            const start = tri_time.nanoTimestamp();
             _ = policy.nextDelay(attempt);
-            const end = std.time.nanoTimestamp();
+            const end = tri_time.nanoTimestamp();
 
             const latency = @as(u64, @intCast(end - start));
             if (latencies.items.len < 100_000) {
@@ -322,7 +323,7 @@ pub const BenchmarkSuite = struct {
             }
         }
 
-        const end_total = std.time.nanoTimestamp();
+        const end_total = tri_time.nanoTimestamp();
         const total_ns = @as(u64, @intCast(end_total - start_total));
 
         const result = try BenchmarkSuite.computeResult(
@@ -349,13 +350,13 @@ pub const BenchmarkSuite = struct {
         var latencies = try array_list.Managed(u64).initCapacity(allocator, @min(iterations, 100_000));
         defer latencies.deinit();
 
-        const start_total = std.time.nanoTimestamp();
+        const start_total = tri_time.nanoTimestamp();
 
         var i: u64 = 0;
         while (i < iterations) : (i += 1) {
-            const start = std.time.nanoTimestamp();
+            const start = tri_time.nanoTimestamp();
             _ = coord.healthCheck();
-            const end = std.time.nanoTimestamp();
+            const end = tri_time.nanoTimestamp();
 
             const latency = @as(u64, @intCast(end - start));
             if (latencies.items.len < 100_000) {
@@ -363,7 +364,7 @@ pub const BenchmarkSuite = struct {
             }
         }
 
-        const end_total = std.time.nanoTimestamp();
+        const end_total = tri_time.nanoTimestamp();
         const total_ns = @as(u64, @intCast(end_total - start_total));
 
         const result = try BenchmarkSuite.computeResult(
@@ -386,21 +387,21 @@ pub const BenchmarkSuite = struct {
         var latencies = try array_list.Managed(u64).initCapacity(allocator, @min(iterations, 100_000));
         defer latencies.deinit();
 
-        const start_total = std.time.nanoTimestamp();
+        const start_total = tri_time.nanoTimestamp();
 
         var i: u64 = 0;
         while (i < iterations) : (i += 1) {
             const point = telemetry.TelemetryPoint{
-                .timestamp = std.time.milliTimestamp(),
+                .timestamp = tri_time.milliTimestamp(),
                 .active_claims = @as(usize, @intCast(i % 100)),
                 .events_published = i * 10,
                 .events_buffered = @as(usize, @intCast(i % 1000)),
                 .health_score = 90.0,
             };
 
-            const start = std.time.nanoTimestamp();
+            const start = tri_time.nanoTimestamp();
             try tel.record(point);
-            const end = std.time.nanoTimestamp();
+            const end = tri_time.nanoTimestamp();
 
             const latency = @as(u64, @intCast(end - start));
             if (latencies.items.len < 100_000) {
@@ -408,7 +409,7 @@ pub const BenchmarkSuite = struct {
             }
         }
 
-        const end_total = std.time.nanoTimestamp();
+        const end_total = tri_time.nanoTimestamp();
         const total_ns = @as(u64, @intCast(end_total - start_total));
 
         const result = try BenchmarkSuite.computeResult(
@@ -445,14 +446,14 @@ pub const BenchmarkSuite = struct {
         var latencies = try array_list.Managed(u64).initCapacity(allocator, @min(iterations, 100_000));
         defer latencies.deinit();
 
-        const start_total = std.time.nanoTimestamp();
+        const start_total = tri_time.nanoTimestamp();
 
         i = 0;
         while (i < iterations) : (i += 1) {
-            const start = std.time.nanoTimestamp();
+            const start = tri_time.nanoTimestamp();
             _ = tel.avgHealth(100);
             _ = tel.trend(100);
-            const end = std.time.nanoTimestamp();
+            const end = tri_time.nanoTimestamp();
 
             const latency = @as(u64, @intCast(end - start));
             if (latencies.items.len < 100_000) {
@@ -460,7 +461,7 @@ pub const BenchmarkSuite = struct {
             }
         }
 
-        const end_total = std.time.nanoTimestamp();
+        const end_total = tri_time.nanoTimestamp();
         const total_ns = @as(u64, @intCast(end_total - start_total));
 
         const result = try BenchmarkSuite.computeResult(
@@ -487,27 +488,27 @@ pub const BenchmarkSuite = struct {
         var latencies = try array_list.Managed(u64).initCapacity(allocator, iterations);
         defer latencies.deinit();
 
-        const start_total = std.time.nanoTimestamp();
+        const start_total = tri_time.nanoTimestamp();
 
         var i: u64 = 0;
         while (i < iterations) : (i += 1) {
             const task_id = try std.fmt.allocPrint(allocator, "coord-task-{d}", .{i});
             defer allocator.free(task_id);
 
-            const start = std.time.nanoTimestamp();
+            const start = tri_time.nanoTimestamp();
 
             // Full coordination cycle: claim -> heartbeat -> complete
             _ = try coord.claimTask(task_id, "agent-coord-bench");
             _ = coord.refreshHeartbeat(task_id, "agent-coord-bench");
             try coord.completeTask(task_id, "agent-coord-bench", 100);
 
-            const end = std.time.nanoTimestamp();
+            const end = tri_time.nanoTimestamp();
 
             const latency = @as(u64, @intCast(end - start));
             try latencies.append(latency);
         }
 
-        const end_total = std.time.nanoTimestamp();
+        const end_total = tri_time.nanoTimestamp();
         const total_ns = @as(u64, @intCast(end_total - start_total));
 
         const result = try BenchmarkSuite.computeResult(
@@ -541,15 +542,15 @@ pub const BenchmarkSuite = struct {
             .{ .task_id = "critical-data-corruption", .realm = "dukh", .priority = "high" },
         };
 
-        const start_total = std.time.nanoTimestamp();
+        const start_total = tri_time.nanoTimestamp();
 
         var i: u64 = 0;
         while (i < iterations) : (i += 1) {
             const test_case = test_cases[i % test_cases.len];
 
-            const start = std.time.nanoTimestamp();
+            const start = tri_time.nanoTimestamp();
             _ = amygdala.Amygdala.analyzeTask(test_case.task_id, test_case.realm, test_case.priority);
-            const end = std.time.nanoTimestamp();
+            const end = tri_time.nanoTimestamp();
 
             const latency = @as(u64, @intCast(end - start));
             if (latencies.items.len < 100_000) {
@@ -557,7 +558,7 @@ pub const BenchmarkSuite = struct {
             }
         }
 
-        const end_total = std.time.nanoTimestamp();
+        const end_total = tri_time.nanoTimestamp();
         const total_ns = @as(u64, @intCast(end_total - start_total));
 
         const result = try BenchmarkSuite.computeResult(
@@ -983,10 +984,10 @@ test "BenchmarkConfig parse" {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 test "benchmark accuracy: nanoTimestamp precision" {
-    // Verify that std.time.nanoTimestamp() provides nanosecond precision
-    const t1 = std.time.nanoTimestamp();
-    std.Thread.sleep(1_000_000); // Sleep 1ms
-    const t2 = std.time.nanoTimestamp();
+    // Verify that tri_time.nanoTimestamp() provides nanosecond precision
+    const t1 = tri_time.nanoTimestamp();
+    tri_time.sleep(1_000_000); // Sleep 1ms
+    const t2 = tri_time.nanoTimestamp();
 
     const elapsed_ns = t2 - t1;
     // Should be at least 1ms (1,000,000 ns) with some tolerance for scheduler
@@ -1151,7 +1152,7 @@ test "benchmark accuracy: telemetry aggregation correctness" {
     var tel = telemetry.BrainTelemetry.init(allocator, 100);
     defer tel.deinit();
 
-    const now = std.time.milliTimestamp();
+    const now = tri_time.milliTimestamp();
 
     // Record known health scores
     try tel.record(.{ .timestamp = now, .active_claims = 10, .events_published = 100, .events_buffered = 5, .health_score = 80.0 });

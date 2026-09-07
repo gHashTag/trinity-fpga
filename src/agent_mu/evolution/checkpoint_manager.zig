@@ -8,6 +8,7 @@
 //! - Metadata tracking for each checkpoint
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const sacred = @import("sacred_constants.zig");
 
 const ArrayList = std.array_list.Managed;
@@ -155,7 +156,7 @@ pub const CheckpointManager = struct {
         message: []const u8,
     ) !u64 {
         const id = self.generateId();
-        const timestamp = std.time.timestamp();
+        const timestamp = tri_time.timestamp();
 
         // Calculate hash using sacred checksum
         var hash: u64 = id;
@@ -214,7 +215,7 @@ pub const CheckpointManager = struct {
         try self.branches.append(.{
             .name = branch_copy,
             .head_id = from_id,
-            .created_at = std.time.timestamp(),
+            .created_at = tri_time.timestamp(),
         });
     }
 
@@ -306,7 +307,7 @@ pub const CheckpointManager = struct {
         const pattern_score = @as(f64, @floatFromInt(ckpt.metadata.pattern_count));
 
         // Newer checkpoints have slight boost
-        const age_score = 1.0 / (1.0 + @as(f64, @floatFromInt(std.time.timestamp() - ckpt.metadata.timestamp)) / 86400.0);
+        const age_score = 1.0 / (1.0 + @as(f64, @floatFromInt(tri_time.timestamp() - ckpt.metadata.timestamp)) / 86400.0);
 
         // φ-weighted combination
         return pattern_score * sacred.PHI + age_score;

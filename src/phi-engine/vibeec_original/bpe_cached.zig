@@ -7,6 +7,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 // Sacred constants
 pub const PHI: f64 = 1.618033988749895;
 pub const TRINITY: f64 = 3.0;
@@ -385,9 +386,9 @@ test "Benchmark: Original vs Fast vs Cached" {
     var total_original: u64 = 0;
     var i: u64 = 0;
     while (i < iterations) : (i += 1) {
-        const start = std.time.nanoTimestamp();
+        const start = tri_time.nanoTimestamp();
         _ = tokenizeV39Original(text);
-        const end = std.time.nanoTimestamp();
+        const end = tri_time.nanoTimestamp();
         total_original += @intCast(end - start);
     }
 
@@ -395,9 +396,9 @@ test "Benchmark: Original vs Fast vs Cached" {
     var total_fast: u64 = 0;
     i = 0;
     while (i < iterations) : (i += 1) {
-        const start = std.time.nanoTimestamp();
+        const start = tri_time.nanoTimestamp();
         _ = tokenizeV39Fast(text);
-        const end = std.time.nanoTimestamp();
+        const end = tri_time.nanoTimestamp();
         total_fast += @intCast(end - start);
     }
 
@@ -408,9 +409,9 @@ test "Benchmark: Original vs Fast vs Cached" {
     var total_cached: u64 = 0;
     i = 0;
     while (i < iterations) : (i += 1) {
-        const start = std.time.nanoTimestamp();
+        const start = tri_time.nanoTimestamp();
         _ = tokenizeV39Cached(text);
-        const end = std.time.nanoTimestamp();
+        const end = tri_time.nanoTimestamp();
         total_cached += @intCast(end - start);
     }
 

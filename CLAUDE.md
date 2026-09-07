@@ -178,13 +178,52 @@ trinity                 ← Orchestrator (links all via build.zig.zon)
 - VSA operations use the trit set `{-1, 0, +1}`. Never mix with binary representations.
 - Ternary VM and sacred-geometry constants derive from `φ² + 1/φ² = 3`.
 
-### Zig 0.15 / 0.16 API Notes
+### Zig 0.16 (the toolchain here) — read before editing any .zig file
 
-- `SplitIterator.first()` / `.next()` return `?[]const u8` in Zig 0.15+. Use `if (it.next()) |slice|` instead of direct slice access.
-- `ArrayList.init()` returns an error union in newer Zig; prefer `ArrayList(T).initCapacity(allocator, capacity)` or explicitly handle the error union.
-- `orelse` requires an optional on the left-hand side.
-- `std.io.Reader.read(buffer)` returns the number of bytes read; use `if (bytes_read > 0)` checks. `readAll()` was removed in Zig 0.15.
-- The installed Zig in this environment is 0.16.0; many files still target 0.15.x APIs, so verify compatibility when editing.
+**Full reference: `.claude/rules/zig-016-migration.md`.** `tri` and seven other
+executables build on 0.16; parts of the wider tree still target 0.15.
+
+**Do not "fix" a build error by restoring a 0.15 API** — that undoes migrated
+work. Nine stdlib families were removed. Six shim modules restore them, and
+they are **build modules, imported by name**, never by relative path:
+
+| use | replaces |
+|---|---|
+| `@import("tri_time")` | `std.time.timestamp/milli/micro/nanoTimestamp`, `Timer`, `std.Thread.sleep` |
+| `@import("tri_env")` | `std.process.getEnvVarOwned/getEnvMap`, `std.posix.getenv` |
+| `@import("tri_proc")` | `std.process.Child.run/.init`, `std.process.spawn` |
+| `@import("tri_mutex")` | `std.Thread.Mutex`, `std.Thread.RwLock` |
+| `@import("tri_rand")` | `std.crypto.random` |
+| `@import("tri_io")` | the process `Io`, only where none is in scope |
+
+File I/O is genuinely migrated rather than shimmed: `std.fs.Dir/File` →
+`std.Io.Dir/File`, every call takes `io` first. **Prefer an `io` parameter
+already in scope over `tri_io.get()`.**
+
+**Always call subprocesses through `tri_proc`.** In 0.16 neither
+`std.process.spawn` nor `std.process.run` resolves a bare program name through
+PATH, so `.{ "zig", "fmt" }` compiles fine and fails at runtime with
+`FileNotFound`. `tri_proc` does the lookup.
+
+Three traps, each of which has cost real time here:
+
+- **`zig ast-check` proves a file PARSES, not that the API exists.** It does
+  not resolve members, so an invented function name passes clean — four
+  non-existent `std.Io.Dir` functions were written this way. Grep the stdlib
+  for `pub fn <name>` before using anything you have not personally seen.
+- **`readAll` has no drop-in replacement.** `readStreaming` is one attempt that
+  may return 0 without being at EOF and signals EOF by error — the inverse of
+  the old contract. Use `Dir.readFile`/`readFileAlloc` for whole files,
+  `readSliceAll` where a short read means corruption.
+- **Namespace aliases hide work.** `const fs = std.fs;` then `fs.cwd()` is
+  invisible to a `std.fs.` grep; 17% of remaining sites are alias-only.
+
+Audit with `zig run tools/api_census.zig -lc` — it resolves aliases, ignores
+comments and string literals, and reports which sites block the `tri` binary
+specifically rather than the whole tree.
+
+Build one target, not all: `zig build tri-compile`. Bare `zig build` builds
+every target and has filled the disk.
 
 ### Testing
 

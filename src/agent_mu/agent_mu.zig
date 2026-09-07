@@ -8,7 +8,9 @@
 //! Phase 2-4: Pattern matching, auto-fixing, and logging.
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 
+const tri_time = @import("tri_time");
 // Import submodules
 const verifier = @import("verifier.zig");
 const diagnostic = @import("diagnostic.zig");
@@ -247,7 +249,7 @@ pub fn verifyOnly(allocator: std.mem.Allocator, generated_file: []const u8) !boo
 
 /// Calculate file hash for version comparison
 fn calculateFileHash(allocator: std.mem.Allocator, file_path: []const u8) ![]const u8 {
-    const content = try std.fs.cwd().readFileAlloc(allocator, file_path, 1024 * 1024);
+    const content = try std.Io.Dir.cwd().readFileAlloc(tri_io.get(), file_path, allocator, .limited(1024 * 1024));
     defer allocator.free(content);
 
     const hash_val = std.hash.Wyhash.hash(0, content);
@@ -261,7 +263,7 @@ pub fn compareVersions(
     file_path: []const u8,
     before_content: []const u8,
 ) !VersionComparison {
-    const after_content = try std.fs.cwd().readFileAlloc(allocator, file_path, 1024 * 1024);
+    const after_content = try std.Io.Dir.cwd().readFileAlloc(tri_io.get(), file_path, allocator, .limited(1024 * 1024));
     defer allocator.free(after_content);
 
     const before_hash = try calculateFileHash(allocator, file_path);
@@ -344,7 +346,7 @@ pub fn logFeedbackToHistory(
         \\- **Priority:** {d}
         \\
     , .{
-        std.time.timestamp(), // Unix timestamp - could format as ISO date if needed
+        tri_time.timestamp(), // Unix timestamp - could format as ISO date if needed
         feedback.template_name,
         feedback.issue_type,
         feedback.suggested_fix,
@@ -353,13 +355,14 @@ pub fn logFeedbackToHistory(
     defer allocator.free(entry);
 
     // Append to history file
-    const file = try std.fs.cwd().openFile(history_file, .{ .mode = .write_only });
-    defer file.close();
+    const io = tri_io.get();
+    const file = try std.Io.Dir.cwd().openFile(io, history_file, .{ .mode = .write_only });
+    defer file.close(io);
 
-    const stat = try file.stat();
-    try file.seekTo(stat.size);
-
-    try file.writeAll(entry);
+    // 0.16 has no seek-then-write; write at the end offset instead. The
+    // length is the same value the old `stat().size` seek used.
+    const end = try file.length(io);
+    try file.writePositionalAll(io, entry, end);
 }
 
 test "AGENT MU: verifyAndFix - successful verification" {

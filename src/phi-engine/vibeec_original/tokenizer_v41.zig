@@ -15,6 +15,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 // in towith
 pub const PHI: f64 = 1.618033988749895;
 pub const TRINITY: f64 = 3.0;
@@ -461,9 +462,9 @@ test "Benchmark: v40 vs v41" {
     var total_v40: u64 = 0;
     var i: u64 = 0;
     while (i < iterations) : (i += 1) {
-        const start = std.time.nanoTimestamp();
+        const start = tri_time.nanoTimestamp();
         _ = simd_bpe.tokenizeSIMD(text);
-        const end = std.time.nanoTimestamp();
+        const end = tri_time.nanoTimestamp();
         total_v40 += @intCast(end - start);
     }
 
@@ -475,9 +476,9 @@ test "Benchmark: v40 vs v41" {
     i = 0;
     while (i < 100) : (i += 1) {
         resetV41();
-        const start = std.time.nanoTimestamp();
+        const start = tri_time.nanoTimestamp();
         _ = tokenizeV41(text);
-        const end = std.time.nanoTimestamp();
+        const end = tri_time.nanoTimestamp();
         total_v41_first += @intCast(end - start);
     }
 
@@ -488,9 +489,9 @@ test "Benchmark: v40 vs v41" {
     var total_v41_cached: u64 = 0;
     i = 0;
     while (i < iterations) : (i += 1) {
-        const start = std.time.nanoTimestamp();
+        const start = tri_time.nanoTimestamp();
         _ = tokenizeV41(text);
-        const end = std.time.nanoTimestamp();
+        const end = tri_time.nanoTimestamp();
         total_v41_cached += @intCast(end - start);
     }
 

@@ -11,6 +11,7 @@
 //!   - Disagreement resolution
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const mem = std.mem;
 
 // Sacred constants
@@ -31,7 +32,7 @@ pub const ConsciousAgent = struct {
     agent_id: []const u8,
     consciousness_level: f64 = 0.0,
     quantum_state: AgentQuantumState = .{},
-    observation_history: std.ArrayListUnmanaged(Observation) = .{},
+    observation_history: std.ArrayListUnmanaged(Observation) = .empty,
 
     /// Initialize conscious agent
     pub fn init(allocator: mem.Allocator, agent_id: []const u8) ConsciousAgent {
@@ -59,7 +60,7 @@ pub const ConsciousAgent = struct {
         const obs = Observation{
             .observer_id = self.agent_id,
             .observed_value = value,
-            .timestamp = std.time.nanoTimestamp(),
+            .timestamp = tri_time.nanoTimestamp(),
             .confidence = confidence,
         };
         try self.observation_history.append(allocator, obs);
@@ -71,7 +72,7 @@ pub const AgentQuantumState = struct {
     wave_function: WaveFunction = .{},
     measurement_count: i64 = 0,
     collapse_probability: f64 = 0.0,
-    entangled_with: std.ArrayListUnmanaged([]const u8) = .{},
+    entangled_with: std.ArrayListUnmanaged([]const u8) = .empty,
 
     /// Deinitialize quantum state
     pub fn deinit(self: *AgentQuantumState, allocator: mem.Allocator) void {
@@ -95,7 +96,7 @@ pub const WaveFunction = struct {
 
         // Collapse probability enhanced by consciousness
         const enhanced_prob = self.collapse_probability * observer_consciousness * PHI;
-        const timestamp = std.time.nanoTimestamp();
+        const timestamp = tri_time.nanoTimestamp();
         const truncated: u64 = @truncate(@as(u128, @bitCast(timestamp)));
         const random_val: f64 = @as(f64, @floatFromInt(truncated % 1000)) / 1000.0;
 
@@ -146,7 +147,7 @@ pub const AgentConsensus = struct {
     participating_agents: []const *ConsciousAgent,
     agreement_probability: f64 = 0.0,
     consensus_result: ConsensusValue = .{},
-    disagreement_cases: std.ArrayListUnmanaged(Disagreement) = .{},
+    disagreement_cases: std.ArrayListUnmanaged(Disagreement) = .empty,
     consensus_method: ConsensusMethod = .wigner_friend,
 
     /// Deinitialize consensus
@@ -206,7 +207,7 @@ pub const DisagreementType = enum {
 pub const MultiAgentSystem = struct {
     allocator: mem.Allocator,
     agents: std.StringHashMap(*ConsciousAgent),
-    consensus_history: std.ArrayListUnmanaged(AgentConsensus) = .{},
+    consensus_history: std.ArrayListUnmanaged(AgentConsensus) = .empty,
     global_consciousness: f64 = 0.0,
     entanglement_network: EntanglementGraph = .{},
 
@@ -268,8 +269,8 @@ pub const MultiAgentSystem = struct {
 /// Entanglement graph
 pub const EntanglementGraph = struct {
     allocator: mem.Allocator,
-    nodes: std.ArrayListUnmanaged([]const u8) = .{},
-    edges: std.ArrayListUnmanaged(EntanglementEdge) = .{},
+    nodes: std.ArrayListUnmanaged([]const u8) = .empty,
+    edges: std.ArrayListUnmanaged(EntanglementEdge) = .empty,
     coherence: f64 = 0.0,
 
     /// Initialize entanglement graph
@@ -363,7 +364,7 @@ pub const ProtocolType = enum {
 pub const ConsensusIteration = struct {
     iteration: i64 = 0,
     current_agreement: f64 = 0.0,
-    agent_states: std.ArrayListUnmanaged(AgentStateSnapshot) = .{},
+    agent_states: std.ArrayListUnmanaged(AgentStateSnapshot) = .empty,
     convergence_delta: f64 = 0.0,
 
     /// Deinitialize iteration
@@ -390,7 +391,7 @@ pub const AgentStateSnapshot = struct {
 
 /// Collective observation
 pub const CollectiveObservation = struct {
-    observing_agents: std.ArrayListUnmanaged([]const u8) = .{},
+    observing_agents: std.ArrayListUnmanaged([]const u8) = .empty,
     target_system: QuantumSystem = .{},
     collective_result: f64 = 0.0,
     variance: f64 = 0.0,
@@ -469,7 +470,7 @@ pub const MultiAgentConsensus = struct {
 
     /// Detect disagreement between agents
     pub fn detectDisagreement(self: *MultiAgentConsensus, agents: []const *ConsciousAgent) !std.ArrayListUnmanaged(Disagreement) {
-        var disagreements = std.ArrayListUnmanaged(Disagreement){};
+        var disagreements = @as(std.ArrayListUnmanaged(Disagreement), .empty);
 
         for (agents, 0..) |agent_a, i| {
             for (agents[i + 1 ..]) |agent_b| {
@@ -537,7 +538,7 @@ pub const MultiAgentConsensus = struct {
         const consensus_value = if (weight_sum > 0) sum / weight_sum else 0.0;
 
         // Build disagreement list for result
-        var result_disagreements = std.ArrayListUnmanaged(Disagreement){};
+        var result_disagreements = @as(std.ArrayListUnmanaged(Disagreement), .empty);
         for (disagreements.items) |*d| {
             const agent_a_copy = try self.allocator.dupe(u8, d.agent_a_id);
             const agent_b_copy = try self.allocator.dupe(u8, d.agent_b_id);
@@ -583,7 +584,7 @@ pub const MultiAgentConsensus = struct {
 
     /// Measure collective state of entangled agents
     pub fn measureCollectiveState(self: *MultiAgentConsensus, target_system_id: []const u8) !CollectiveObservation {
-        var observing_agents = std.ArrayListUnmanaged([]const u8){};
+        var observing_agents = @as(std.ArrayListUnmanaged([]const u8), .empty);
 
         var iter = self.system.agents.iterator();
         while (iter.next()) |entry| {
@@ -635,7 +636,7 @@ pub const MultiAgentConsensus = struct {
 
     /// Run single consensus iteration
     pub fn consensusIteration(self: *MultiAgentConsensus, agents: []const *ConsciousAgent, iteration_num: i64) !ConsensusIteration {
-        var agent_states = std.ArrayListUnmanaged(AgentStateSnapshot){};
+        var agent_states = @as(std.ArrayListUnmanaged(AgentStateSnapshot), .empty);
 
         for (agents) |agent| {
             const obs = if (agent.observation_history.items.len > 0)

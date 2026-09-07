@@ -1,5 +1,5 @@
 #!/bin/bash
-cd /Users/playra/trinity-w1/telegram-bridge
+cd "$(git rev-parse --show-toplevel)/telegram-bridge"
 echo "Building telegram-bridge..."
 go build -o telegram-bridge ./cmd/server
 echo "Done! Binary: telegram-bridge"

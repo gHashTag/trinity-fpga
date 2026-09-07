@@ -15,6 +15,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 /// Salience levels from none to critical
 pub const SalienceLevel = enum(u3) {
     none = 0,
@@ -510,14 +511,14 @@ test "Optimized Amygdala resetStats" {
 // Performance benchmark
 test "perf.benchmark.amygdala" {
     const iterations = 1_000_000;
-    const start = std.time.nanoTimestamp();
+    const start = tri_time.nanoTimestamp();
 
     var i: u64 = 0;
     while (i < iterations) : (i += 1) {
         _ = Amygdala.analyzeTask("task-urgent", "dukh", "critical");
     }
 
-    const elapsed_ns = @as(u64, @intCast(std.time.nanoTimestamp() - start));
+    const elapsed_ns = @as(u64, @intCast(tri_time.nanoTimestamp() - start));
     const ns_per_op = @as(f64, @floatFromInt(elapsed_ns)) / @as(f64, @floatFromInt(iterations));
     _ = std.debug.print("  Optimized Amygdala: {d:.0} OP/s ({d:.2} ns/op)\n", .{
         @as(f64, @floatFromInt(iterations)) / (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0),

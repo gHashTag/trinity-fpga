@@ -23,7 +23,7 @@ pub fn main() !void {
     const bitstream = args[1];
 
     // Resolve helper tools relative to this executable's directory so the
-    // flasher is portable (was hardcoded to /Users/playra/trinity-w1). fxload,
+    // flasher is portable (was hardcoded to /Users/playom/trinity-fpga). fxload,
     // xusb_xp2.hex and jtag_program ship alongside this binary in fpga/tools.
     const exe_dir = try std.fs.selfExeDirPathAlloc(allocator);
     defer allocator.free(exe_dir);

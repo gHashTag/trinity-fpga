@@ -8,6 +8,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 
 pub const PHI: f64 = 1.618033988749895;
@@ -294,20 +295,20 @@ pub fn runBenchmark() void {
 
     // Benchmark scalar sum
     var scalar_sum: i64 = 0;
-    const scalar_start = std.time.nanoTimestamp();
+    const scalar_start = tri_time.nanoTimestamp();
     for (0..RUNS) |_| {
         scalar_sum = 0;
         for (a) |v| scalar_sum += v;
     }
-    const scalar_time = std.time.nanoTimestamp() - scalar_start;
+    const scalar_time = tri_time.nanoTimestamp() - scalar_start;
 
     // Benchmark SIMD sum
     var simd_sum: i64 = 0;
-    const simd_start = std.time.nanoTimestamp();
+    const simd_start = tri_time.nanoTimestamp();
     for (0..RUNS) |_| {
         simd_sum = VectorizedArrayOps.arraySum(&a);
     }
-    const simd_time = std.time.nanoTimestamp() - simd_start;
+    const simd_time = tri_time.nanoTimestamp() - simd_start;
 
     const speedup = @as(f64, @floatFromInt(scalar_time)) / @as(f64, @floatFromInt(simd_time));
 
@@ -317,17 +318,17 @@ pub fn runBenchmark() void {
     stdout.print("  Speedup: {d:.2}x\n\n", .{speedup}) catch {};
 
     // Benchmark array add
-    const add_scalar_start = std.time.nanoTimestamp();
+    const add_scalar_start = tri_time.nanoTimestamp();
     for (0..RUNS) |_| {
         for (0..N) |i| c[i] = a[i] + b[i];
     }
-    const add_scalar_time = std.time.nanoTimestamp() - add_scalar_start;
+    const add_scalar_time = tri_time.nanoTimestamp() - add_scalar_start;
 
-    const add_simd_start = std.time.nanoTimestamp();
+    const add_simd_start = tri_time.nanoTimestamp();
     for (0..RUNS) |_| {
         VectorizedArrayOps.arrayAdd(&a, &b, &c);
     }
-    const add_simd_time = std.time.nanoTimestamp() - add_simd_start;
+    const add_simd_time = tri_time.nanoTimestamp() - add_simd_start;
 
     const add_speedup = @as(f64, @floatFromInt(add_scalar_time)) / @as(f64, @floatFromInt(add_simd_time));
 
@@ -337,20 +338,20 @@ pub fn runBenchmark() void {
     stdout.print("  Speedup: {d:.2}x\n\n", .{add_speedup}) catch {};
 
     // Benchmark dot product
-    const dot_scalar_start = std.time.nanoTimestamp();
+    const dot_scalar_start = tri_time.nanoTimestamp();
     var dot_scalar: i64 = 0;
     for (0..RUNS) |_| {
         dot_scalar = 0;
         for (0..N) |i| dot_scalar += a[i] * b[i];
     }
-    const dot_scalar_time = std.time.nanoTimestamp() - dot_scalar_start;
+    const dot_scalar_time = tri_time.nanoTimestamp() - dot_scalar_start;
 
-    const dot_simd_start = std.time.nanoTimestamp();
+    const dot_simd_start = tri_time.nanoTimestamp();
     var dot_simd: i64 = 0;
     for (0..RUNS) |_| {
         dot_simd = VectorizedArrayOps.dotProduct(&a, &b);
     }
-    const dot_simd_time = std.time.nanoTimestamp() - dot_simd_start;
+    const dot_simd_time = tri_time.nanoTimestamp() - dot_simd_start;
 
     const dot_speedup = @as(f64, @floatFromInt(dot_scalar_time)) / @as(f64, @floatFromInt(dot_simd_time));
 

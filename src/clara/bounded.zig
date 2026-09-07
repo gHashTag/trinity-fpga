@@ -14,6 +14,7 @@
 // φ² + 1/φ² = 3 | TRINITY
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const vsa = @import("vsa");
 const rules_mod = @import("rules.zig");
 pub const Fact = rules_mod.Fact;
@@ -127,7 +128,7 @@ pub const ExecutionState = struct {
     /// Create new execution state
     pub fn init(restraint: Restraint) ExecutionState {
         return ExecutionState{
-            .start_time = std.time.nanoTimestamp(),
+            .start_time = tri_time.nanoTimestamp(),
             .restraint = restraint,
         };
     }
@@ -155,7 +156,7 @@ pub const ExecutionState = struct {
         }
 
         // Check timeout
-        const elapsed_ns = std.time.nanoTimestamp() - self.start_time;
+        const elapsed_ns = tri_time.nanoTimestamp() - self.start_time;
         const elapsed_ms: u64 = @intCast(@divTrunc(elapsed_ns, 1_000_000));
         if (elapsed_ms >= self.restraint.timeout_ms) {
             self.terminated = true;
@@ -174,7 +175,7 @@ pub const ExecutionState = struct {
 
     /// Get elapsed time in milliseconds
     pub fn elapsedMs(self: ExecutionState) u64 {
-        const elapsed_ns = std.time.nanoTimestamp() - self.start_time;
+        const elapsed_ns = tri_time.nanoTimestamp() - self.start_time;
         return @intCast(@divTrunc(elapsed_ns, 1_000_000));
     }
 

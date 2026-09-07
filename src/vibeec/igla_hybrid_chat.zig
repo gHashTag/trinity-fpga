@@ -41,6 +41,8 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
+const tri_time = @import("tri_time");
 const local_chat = @import("igla_chat");
 const model_mod = @import("gguf_model.zig");
 const tokenizer_mod = @import("gguf_tokenizer.zig");
@@ -454,7 +456,7 @@ pub const VSAMemoryManager = struct {
     pub fn search(self: *VSAMemoryManager, query: []const u8) ?[]const u8 {
         var best_score: f32 = 0.0;
         var best_idx: ?usize = null;
-        const now = std.time.timestamp();
+        const now = tri_time.timestamp();
 
         for (0..self.count) |i| {
             if (!self.entries[i].active) continue;
@@ -522,7 +524,7 @@ pub const VSAMemoryManager = struct {
         self.entries[slot].response_text_len = rlen;
         self.entries[slot].confidence = confidence;
         self.entries[slot].usage_count = 1;
-        self.entries[slot].last_accessed = std.time.timestamp();
+        self.entries[slot].last_accessed = tri_time.timestamp();
         self.entries[slot].quality_score = confidence * @as(f32, @floatCast(@log(2.0)));
         self.entries[slot].active = true;
     }
@@ -726,7 +728,7 @@ pub const IglaHybridChat = struct {
     /// Main respond function: Tools → Symbolic → TVC Corpus → Multi-provider LLM
     /// v2.3: Tracks conversation context via sliding window + summarization
     pub fn respond(self: *Self, query: []const u8) !HybridResponse {
-        const start = std.time.microTimestamp();
+        const start = tri_time.microTimestamp();
         self.total_queries += 1;
         self.energy.total_queries += 1;
 
@@ -740,7 +742,7 @@ pub const IglaHybridChat = struct {
             if (detectTool(query)) |tool| {
                 self.energy.tool_hits += 1;
                 const tool_response = executeTool(tool, query);
-                const elapsed = @as(u64, @intCast(std.time.microTimestamp() - start));
+                const elapsed = @as(u64, @intCast(tri_time.microTimestamp() - start));
 
                 // v2.3: Record tool response in context
                 if (self.config.enable_context) {
@@ -769,7 +771,7 @@ pub const IglaHybridChat = struct {
         {
             self.symbolic_hits += 1;
             self.energy.symbolic_hits += 1;
-            const elapsed = @as(u64, @intCast(std.time.microTimestamp() - start));
+            const elapsed = @as(u64, @intCast(tri_time.microTimestamp() - start));
             self.energy.symbolic_latency_sum_us += elapsed;
 
             // v2.3: Record symbolic response in context
@@ -794,7 +796,7 @@ pub const IglaHybridChat = struct {
                 if (kg_maybe) |kg_result| {
                     self.energy.kg_hits += 1;
                     self.last_routing = .RouteKG;
-                    const elapsed = @as(u64, @intCast(std.time.microTimestamp() - start));
+                    const elapsed = @as(u64, @intCast(tri_time.microTimestamp() - start));
 
                     // Return the object value from KG
                     var kg_buf: [512]u8 = undefined;
@@ -821,7 +823,7 @@ pub const IglaHybridChat = struct {
         // ══════ LEVEL 1.5: VSA Persistent Memory (v2.0) ══════
         if (self.memory.search(query)) |memory_response| {
             self.last_routing = .RouteMemory;
-            const elapsed = @as(u64, @intCast(std.time.microTimestamp() - start));
+            const elapsed = @as(u64, @intCast(tri_time.microTimestamp() - start));
             self.energy.tvc_hits += 1; // Count as cache hit
 
             if (self.config.enable_context) {
@@ -846,7 +848,7 @@ pub const IglaHybridChat = struct {
             if (corpus.search(self.allocator, query, self.config.tvc_similarity_threshold)) |tvc_result| {
                 self.last_routing = .RouteTVC;
                 self.energy.tvc_hits += 1;
-                const elapsed = @as(u64, @intCast(std.time.microTimestamp() - start));
+                const elapsed = @as(u64, @intCast(tri_time.microTimestamp() - start));
                 self.energy.tvc_latency_sum_us += elapsed;
 
                 // v2.3: Record TVC response in context
@@ -871,7 +873,7 @@ pub const IglaHybridChat = struct {
         // ══════ LEVEL 3: Multi-Provider LLM Cascade ══════
         self.llm_calls += 1;
         const llm_result = self.llmCascade(query) catch {
-            const elapsed = @as(u64, @intCast(std.time.microTimestamp() - start));
+            const elapsed = @as(u64, @intCast(tri_time.microTimestamp() - start));
             self.error_fallbacks += 1;
             const lang = local_chat.detectLanguage(query);
             const fallback_msg = if (lang == .Russian)
@@ -888,7 +890,7 @@ pub const IglaHybridChat = struct {
             };
         };
 
-        const elapsed = @as(u64, @intCast(std.time.microTimestamp() - start));
+        const elapsed = @as(u64, @intCast(tri_time.microTimestamp() - start));
         self.energy.llm_latency_sum_us += elapsed;
 
         // v2.3: Record LLM response in context
@@ -1090,7 +1092,7 @@ pub const IglaHybridChat = struct {
         }
 
         // Build augmented prompt: base + separator + context + recent messages
-        var buf: std.ArrayListUnmanaged(u8) = .{};
+        var buf: std.ArrayList(u8) = .empty;
 
         buf.appendSlice(self.allocator, self.config.system_prompt) catch return self.config.system_prompt;
         buf.appendSlice(self.allocator, "\n\n--- Context ---\n") catch return self.config.system_prompt;
@@ -1196,9 +1198,9 @@ pub const IglaHybridChat = struct {
         // ── Step 2: Try Groq API (v2.1: health-aware routing) ──
         if (self.config.groq_api_key) |api_key| {
             if (self.groq_health.is_available) {
-                const call_start = std.time.nanoTimestamp();
+                const call_start = tri_time.nanoTimestamp();
                 if (self.tryGroqWithContext(query, api_key, augmented_prompt)) |response| {
-                    const call_end = std.time.nanoTimestamp();
+                    const call_end = tri_time.nanoTimestamp();
                     const latency_us: u64 = @intCast(@divFloor(call_end - call_start, 1000));
                     self.groq_health.recordSuccess(latency_us);
                     self.energy.groq_calls += 1;
@@ -1209,7 +1211,7 @@ pub const IglaHybridChat = struct {
                         .confidence = 0.90,
                     };
                 } else |err| {
-                    self.groq_health.recordFailure(std.time.timestamp());
+                    self.groq_health.recordFailure(tri_time.timestamp());
                     std.debug.print("[Hybrid] Groq failed: {} (health: {d:.0}%)\n", .{ err, self.groq_health.getSuccessRate() * 100 });
                 }
             } else {
@@ -1220,9 +1222,9 @@ pub const IglaHybridChat = struct {
         // ── Step 3: Try Claude API (v2.1: health-aware routing) ──
         if (self.config.claude_api_key) |api_key| {
             if (self.claude_health.is_available) {
-                const call_start = std.time.nanoTimestamp();
+                const call_start = tri_time.nanoTimestamp();
                 if (self.tryClaudeWithContext(query, api_key, augmented_prompt)) |response| {
-                    const call_end = std.time.nanoTimestamp();
+                    const call_end = tri_time.nanoTimestamp();
                     const latency_us: u64 = @intCast(@divFloor(call_end - call_start, 1000));
                     self.claude_health.recordSuccess(latency_us);
                     self.energy.claude_calls += 1;
@@ -1233,7 +1235,7 @@ pub const IglaHybridChat = struct {
                         .confidence = 0.95,
                     };
                 } else |err| {
-                    self.claude_health.recordFailure(std.time.timestamp());
+                    self.claude_health.recordFailure(tri_time.timestamp());
                     std.debug.print("[Hybrid] Claude failed: {} (health: {d:.0}%)\n", .{ err, self.claude_health.getSuccessRate() * 100 });
                 }
             } else {
@@ -1513,8 +1515,12 @@ pub const IglaHybridChat = struct {
         };
 
         // Format: "expression = result"
-        var fbs = std.io.fixedBufferStream(&math_result_buf);
-        const writer = fbs.writer();
+        // A fixed Writer's own buffer IS math_result_buf, so `buffered()` returns
+        // the written prefix of that static buffer -- same aliasing the old
+        // FixedBufferStream.getWritten() had, which the callers rely on. On
+        // overflow it fills what fits and then fails, so a truncated result is
+        // still returned rather than an empty one.
+        var writer = std.Io.Writer.fixed(&math_result_buf);
 
         // Write trimmed expression
         var trimmed = expr;
@@ -1531,7 +1537,7 @@ pub const IglaHybridChat = struct {
             writer.print("{d:.6}", .{result}) catch {};
         }
 
-        return fbs.getWritten();
+        return writer.buffered();
     }
 
     const MathError = error{ DivisionByZero, InvalidExpression, Overflow };
@@ -1651,7 +1657,7 @@ pub const IglaHybridChat = struct {
         return switch (tool) {
             .Math => evaluateMath(query),
             .Time => blk: {
-                const ts = std.time.timestamp();
+                const ts = tri_time.timestamp();
                 const secs_in_day: i64 = @mod(ts, 86400);
                 const hours: i64 = @divFloor(secs_in_day, 3600);
                 const mins: i64 = @divFloor(@mod(secs_in_day, 3600), 60);
@@ -1674,29 +1680,35 @@ pub const IglaHybridChat = struct {
 
     /// Vision chat: read image file, base64 encode, send to Claude/GPT-4o vision API
     pub fn respondWithImage(self: *Self, query: []const u8, image_path: []const u8) !HybridResponse {
-        const start = std.time.microTimestamp();
+        const start = tri_time.microTimestamp();
         self.total_queries += 1;
         self.energy.total_queries += 1;
 
         // 1. Read image file
-        const file = std.fs.cwd().openFile(image_path, .{}) catch {
+        // Public signature, called from other modules, so the Io comes from the
+        // process handle rather than a parameter. Kept as open-then-read (not
+        // Dir.readFileAlloc) so an open failure and a read failure keep their
+        // two distinct error messages.
+        const io = tri_io.get();
+        const file = std.Io.Dir.cwd().openFile(io, image_path, .{}) catch {
             return HybridResponse{
                 .response = "Error: could not open image file",
                 .source = .Error,
                 .language = local_chat.detectLanguage(query),
                 .confidence = 0.0,
-                .latency_us = @intCast(std.time.microTimestamp() - start),
+                .latency_us = @intCast(tri_time.microTimestamp() - start),
             };
         };
-        defer file.close();
+        defer file.close(io);
 
-        const file_data = file.readToEndAlloc(self.allocator, 10 * 1024 * 1024) catch {
+        var file_reader = file.reader(io, &.{});
+        const file_data = file_reader.interface.allocRemaining(self.allocator, .limited(10 * 1024 * 1024)) catch {
             return HybridResponse{
                 .response = "Error: image file too large or read error (max 10MB)",
                 .source = .Error,
                 .language = local_chat.detectLanguage(query),
                 .confidence = 0.0,
-                .latency_us = @intCast(std.time.microTimestamp() - start),
+                .latency_us = @intCast(tri_time.microTimestamp() - start),
             };
         };
         defer self.allocator.free(file_data);
@@ -1709,7 +1721,7 @@ pub const IglaHybridChat = struct {
                 .source = .Error,
                 .language = local_chat.detectLanguage(query),
                 .confidence = 0.0,
-                .latency_us = @intCast(std.time.microTimestamp() - start),
+                .latency_us = @intCast(tri_time.microTimestamp() - start),
             };
         };
         defer self.allocator.free(base64_data);
@@ -1724,7 +1736,7 @@ pub const IglaHybridChat = struct {
             if (client.chatWithVision(query, base64_data)) |*response| {
                 self.energy.claude_calls += 1;
                 self.energy.vision_calls += 1;
-                const elapsed = @as(u64, @intCast(std.time.microTimestamp() - start));
+                const elapsed = @as(u64, @intCast(tri_time.microTimestamp() - start));
 
                 // Save text response to TVC
                 const vision_reflection: ReflectionStatus = if (self.config.enable_reflection)
@@ -1750,7 +1762,7 @@ pub const IglaHybridChat = struct {
 
             if (client.chatWithVision(query, base64_data)) |*response| {
                 self.energy.vision_calls += 1;
-                const elapsed = @as(u64, @intCast(std.time.microTimestamp() - start));
+                const elapsed = @as(u64, @intCast(tri_time.microTimestamp() - start));
 
                 const openai_reflection: ReflectionStatus = if (self.config.enable_reflection)
                     self.saveToTVCFiltered(query, response.content, 0.90)
@@ -1768,7 +1780,7 @@ pub const IglaHybridChat = struct {
             } else |_| {}
         }
 
-        const elapsed = @as(u64, @intCast(std.time.microTimestamp() - start));
+        const elapsed = @as(u64, @intCast(tri_time.microTimestamp() - start));
         return HybridResponse{
             .response = "Error: no vision provider available. Set ANTHROPIC_API_KEY or OPENAI_API_KEY.",
             .source = .Error,
@@ -1784,7 +1796,7 @@ pub const IglaHybridChat = struct {
 
     /// Voice chat: read audio file, send to Whisper API, feed transcript to respond()
     pub fn respondWithAudio(self: *Self, audio_path: []const u8) !HybridResponse {
-        const start = std.time.microTimestamp();
+        const start = tri_time.microTimestamp();
 
         const openai_key = self.config.openai_api_key orelse {
             return HybridResponse{
@@ -1792,29 +1804,33 @@ pub const IglaHybridChat = struct {
                 .source = .Error,
                 .language = .English,
                 .confidence = 0.0,
-                .latency_us = @intCast(std.time.microTimestamp() - start),
+                .latency_us = @intCast(tri_time.microTimestamp() - start),
             };
         };
 
         // 1. Read audio file
-        const file = std.fs.cwd().openFile(audio_path, .{}) catch {
+        // See respondWithImage: process Io, and open/read stay separate so the
+        // two failure messages remain distinguishable.
+        const io = tri_io.get();
+        const file = std.Io.Dir.cwd().openFile(io, audio_path, .{}) catch {
             return HybridResponse{
                 .response = "Error: could not open audio file",
                 .source = .Error,
                 .language = .English,
                 .confidence = 0.0,
-                .latency_us = @intCast(std.time.microTimestamp() - start),
+                .latency_us = @intCast(tri_time.microTimestamp() - start),
             };
         };
-        defer file.close();
+        defer file.close(io);
 
-        const audio_data = file.readToEndAlloc(self.allocator, 25 * 1024 * 1024) catch {
+        var file_reader = file.reader(io, &.{});
+        const audio_data = file_reader.interface.allocRemaining(self.allocator, .limited(25 * 1024 * 1024)) catch {
             return HybridResponse{
                 .response = "Error: audio file too large (max 25MB for Whisper)",
                 .source = .Error,
                 .language = .English,
                 .confidence = 0.0,
-                .latency_us = @intCast(std.time.microTimestamp() - start),
+                .latency_us = @intCast(tri_time.microTimestamp() - start),
             };
         };
         defer self.allocator.free(audio_data);
@@ -1857,7 +1873,7 @@ pub const IglaHybridChat = struct {
                 .source = .Error,
                 .language = .English,
                 .confidence = 0.0,
-                .latency_us = @intCast(std.time.microTimestamp() - start),
+                .latency_us = @intCast(tri_time.microTimestamp() - start),
             };
         };
         defer whisper_response.deinit();
@@ -1868,7 +1884,7 @@ pub const IglaHybridChat = struct {
                 .source = .Error,
                 .language = .English,
                 .confidence = 0.0,
-                .latency_us = @intCast(std.time.microTimestamp() - start),
+                .latency_us = @intCast(tri_time.microTimestamp() - start),
             };
         }
 
@@ -1900,7 +1916,7 @@ pub const IglaHybridChat = struct {
                 .source = .Error,
                 .language = .English,
                 .confidence = 0.0,
-                .latency_us = @intCast(std.time.microTimestamp() - start),
+                .latency_us = @intCast(tri_time.microTimestamp() - start),
             };
         }
 
@@ -1955,7 +1971,7 @@ pub const IglaHybridChat = struct {
         const tokenizer = self.tokenizer orelse return error.TokenizerNotLoaded;
 
         // Format prompt with system message
-        var prompt: std.ArrayListUnmanaged(u8) = .{};
+        var prompt: std.ArrayList(u8) = .empty;
         defer prompt.deinit(self.allocator);
 
         // ChatML format for TinyLlama
@@ -1972,7 +1988,7 @@ pub const IglaHybridChat = struct {
         // Generate
         model.resetKVCache();
 
-        var response: std.ArrayListUnmanaged(u8) = .{};
+        var response: std.ArrayList(u8) = .empty;
         errdefer response.deinit(self.allocator);
 
         const sampling_params = inference.SamplingParams{
@@ -1983,20 +1999,20 @@ pub const IglaHybridChat = struct {
         };
 
         // Token history for repeat penalty (last 64 tokens)
-        var token_history: std.ArrayListUnmanaged(u32) = .{};
+        var token_history: std.ArrayList(u32) = .empty;
         defer token_history.deinit(self.allocator);
 
         // Process prompt tokens (prefill)
         std.debug.print("[LLM] Prefill {d} tokens: ", .{tokens.len});
         var logits: ?[]f32 = null;
-        const prefill_start = std.time.microTimestamp();
+        const prefill_start = tri_time.microTimestamp();
         for (tokens, 0..) |token, pos| {
             if (logits) |l| self.allocator.free(l);
             logits = try model.forward(token, pos);
             // Show progress dot every 5 tokens
             if ((pos + 1) % 5 == 0) std.debug.print(".", .{});
         }
-        const prefill_us = @as(u64, @intCast(std.time.microTimestamp() - prefill_start));
+        const prefill_us = @as(u64, @intCast(tri_time.microTimestamp() - prefill_start));
         const prefill_tps = if (prefill_us > 0) @as(u64, tokens.len) * 1_000_000 / prefill_us else 0;
         std.debug.print(" ok ({d}ms, {d} tok/s)\n[LLM] ", .{ prefill_us / 1000, prefill_tps });
 
@@ -2040,9 +2056,9 @@ pub const IglaHybridChat = struct {
 
                 // Forward next token (must always advance even for filtered tokens)
                 self.allocator.free(l);
-                const fwd_start = std.time.microTimestamp();
+                const fwd_start = tri_time.microTimestamp();
                 logits = try model.forward(next_token, pos);
-                const fwd_us = @as(u64, @intCast(std.time.microTimestamp() - fwd_start));
+                const fwd_us = @as(u64, @intCast(tri_time.microTimestamp() - fwd_start));
                 if (generated < 3) std.debug.print("[{d}ms]", .{fwd_us / 1000});
                 pos += 1;
                 generated += 1;

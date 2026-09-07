@@ -11,6 +11,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 // ═══════════════════════════════════════════════════════════════════════════════
 // BRAIN REGION IMPORTS (provided as module imports in build.zig)
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -320,7 +321,7 @@ pub const AgentCoordination = struct {
         };
 
         // Initialize region health tracking
-        const now = std.time.milliTimestamp();
+        const now = tri_time.milliTimestamp();
         inline for (BRAIN_ATLAS) |region| {
             try coord.region_health.put(region.name, .{
                 .name = region.name,
@@ -356,7 +357,7 @@ pub const AgentCoordination = struct {
 
     /// Check health of all brain regions
     pub fn checkRegionHealth(self: *AgentCoordination) !void {
-        const now = std.time.milliTimestamp();
+        const now = tri_time.milliTimestamp();
 
         // Check Basal Ganglia
         if (self.region_health.getPtr("Basal Ganglia")) |health| {

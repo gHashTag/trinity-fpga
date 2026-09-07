@@ -29,7 +29,7 @@ async def list_model_wrapper(*args, **kwargs):
 litellm.acompletion = list_model_wrapper
 
 # Initialize with config
-config_path = "/Users/playra/vibee-lang/config/eden_config.yaml"
+config_path = "/Users/playom/vibee-lang/config/eden_config.yaml"
 os.environ["LITELLM_CONFIG_PATH"] = config_path
 
 print(f"🚀 Initializing LiteLLM with config: {config_path}")
@@ -39,9 +39,9 @@ asyncio.run(initialize(config=config_path))
 
 if __name__ == "__main__":
     # Load secrets
-    if os.path.exists("/Users/playra/vibee-lang/.env.local"):
+    if os.path.exists("/Users/playom/vibee-lang/.env.local"):
         try:
-            with open("/Users/playra/vibee-lang/.env.local") as f:
+            with open("/Users/playom/vibee-lang/.env.local") as f:
                 for line in f:
                     if "=" in line and not line.strip().startswith("#"):
                         k, v = line.strip().split("=", 1)

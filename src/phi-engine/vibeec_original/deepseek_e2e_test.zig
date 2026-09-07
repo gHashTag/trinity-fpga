@@ -9,9 +9,10 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const testing = std.testing;
 const Allocator = std.mem.Allocator;
-const Timer = std.time.Timer;
+const Timer = tri_time.Timer;
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // SACRED CONSTANTS
@@ -209,7 +210,7 @@ pub const DeepSeekProvider = struct {
             .context_id = context_id,
             .status = TaskStatus{
                 .state = .submitted,
-                .timestamp = std.time.timestamp(),
+                .timestamp = tri_time.timestamp(),
             },
             .history = &[_]Message{message},
         };
@@ -296,9 +297,9 @@ pub fn benchmark(comptime name: []const u8, iterations: u64, func: anytype) Benc
 
     var i: u64 = 0;
     while (i < iterations) : (i += 1) {
-        const start = std.time.nanoTimestamp();
+        const start = tri_time.nanoTimestamp();
         _ = func();
-        const end = std.time.nanoTimestamp();
+        const end = tri_time.nanoTimestamp();
 
         const elapsed: u64 = @intCast(end - start);
         total_ns += elapsed;

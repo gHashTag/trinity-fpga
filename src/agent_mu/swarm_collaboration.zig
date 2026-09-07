@@ -11,6 +11,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 pub const AgentType = enum {
     AGENT_MU,
     PAS,
@@ -113,7 +114,7 @@ pub const SwarmCollaboration = struct {
         task: []const u8,
         priority: u8,
     ) ![]const u8 {
-        const request_id = try std.fmt.allocPrint(self.allocator, "req_{d}", .{std.time.timestamp()});
+        const request_id = try std.fmt.allocPrint(self.allocator, "req_{d}", .{tri_time.timestamp()});
 
         const task_copy = try self.allocator.dupe(u8, task);
 
@@ -123,7 +124,7 @@ pub const SwarmCollaboration = struct {
             .to = to,
             .task = task_copy,
             .priority = @min(priority, 10),
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
             .status = .pending,
             .response = null,
         };
@@ -411,9 +412,9 @@ test "Swarm: Last activity timestamp" {
     var collab = SwarmCollaboration.init(std.testing.allocator);
     defer collab.deinit();
 
-    const before = std.time.timestamp();
+    const before = tri_time.timestamp();
     _ = try collab.requestHelp(.AGENT_MU, .PHI, "Task", 5);
-    const after = std.time.timestamp();
+    const after = tri_time.timestamp();
 
     const status = try collab.generateCollaborationStatus();
 

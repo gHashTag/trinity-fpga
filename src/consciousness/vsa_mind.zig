@@ -21,6 +21,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 // Import from canonical source (ANTI-PATTERN: no inline constants!)
 const sacred_constants = @import("sacred_constants");
 const math = std.math;
@@ -70,7 +71,7 @@ pub const Hypervector = struct {
     /// Initialize random hypervector
     pub fn init(allocator: mem.Allocator, dimension: usize) !Hypervector {
         const data = try allocator.alloc(Trit, dimension);
-        var rng = std.Random.DefaultPrng.init(@intCast(std.time.timestamp()));
+        var rng = std.Random.DefaultPrng.init(@intCast(tri_time.timestamp()));
         const random = rng.random();
 
         for (data) |*trit| {
@@ -218,8 +219,8 @@ pub const CognitiveModel = struct {
     pub fn init(allocator: mem.Allocator, dimension: usize) !CognitiveModel {
         return CognitiveModel{
             .allocator = allocator,
-            .working_memory = .{},
-            .long_term_memory = .{},
+            .working_memory = .empty,
+            .long_term_memory = .empty,
             .attention_vector = null,
             .dimension = dimension,
         };

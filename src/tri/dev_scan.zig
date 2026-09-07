@@ -14,6 +14,9 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
+const tri_proc = @import("tri_proc");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const colors = @import("tri_colors.zig");
 const print = std.debug.print;
@@ -161,7 +164,7 @@ pub const ScanResult = struct {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn scanGithub(allocator: Allocator, result: *ScanResult) void {
-    const gh_result = std.process.Child.run(.{
+    const gh_result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &[_][]const u8{
             "gh",     "issue",               "list", "--state", "open",
@@ -247,7 +250,7 @@ fn scanGithub(allocator: Allocator, result: *ScanResult) void {
         var item = ScanItem{
             .source = .github_issues,
             .priority = priority,
-            .created_at = std.time.timestamp(),
+            .created_at = tri_time.timestamp(),
         };
         const id_str = std.fmt.bufPrint(&item.id, "#{d}", .{num}) catch continue;
         item.id_len = id_str.len;
@@ -265,7 +268,7 @@ fn scanGithub(allocator: Allocator, result: *ScanResult) void {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn scanDirty(allocator: Allocator, result: *ScanResult) void {
-    const git_result = std.process.Child.run(.{
+    const git_result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &[_][]const u8{ "git", "status", "--short" },
         .max_output_bytes = 65536,
@@ -281,7 +284,7 @@ fn scanDirty(allocator: Allocator, result: *ScanResult) void {
     var lines = std.mem.splitScalar(u8, git_result.stdout, '\n');
     while (lines.next()) |line| {
         if (line.len < 4) continue;
-        const path = std.mem.trimLeft(u8, line[2..], " ");
+        const path = std.mem.trimStart(u8, line[2..], " ");
         if (std.mem.endsWith(u8, path, ".zig")) {
             dirty_zig += 1;
         } else if (std.mem.endsWith(u8, path, ".tri")) {
@@ -293,7 +296,7 @@ fn scanDirty(allocator: Allocator, result: *ScanResult) void {
         var item = ScanItem{
             .source = .dirty_files,
             .priority = .high,
-            .created_at = std.time.timestamp(),
+            .created_at = tri_time.timestamp(),
         };
         const id_str = std.fmt.bufPrint(&item.id, "{d} .zig", .{dirty_zig}) catch return;
         item.id_len = id_str.len;
@@ -306,7 +309,7 @@ fn scanDirty(allocator: Allocator, result: *ScanResult) void {
         var item = ScanItem{
             .source = .dirty_files,
             .priority = .medium,
-            .created_at = std.time.timestamp(),
+            .created_at = tri_time.timestamp(),
         };
         const id_str = std.fmt.bufPrint(&item.id, "{d} .tri", .{dirty_spec}) catch return;
         item.id_len = id_str.len;
@@ -321,13 +324,14 @@ fn scanDirty(allocator: Allocator, result: *ScanResult) void {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn scanDoctor(result: *ScanResult) void {
-    const doctor_file = std.fs.cwd().openFile(".doctor/scan_results.json", .{}) catch return;
-    defer doctor_file.close();
+    const io = tri_io.get();
+    const doctor_file = std.Io.Dir.cwd().openFile(io, ".doctor/scan_results.json", .{}) catch return;
+    defer doctor_file.close(io);
 
     var item = ScanItem{
         .source = .doctor_violations,
         .priority = .medium,
-        .created_at = std.time.timestamp(),
+        .created_at = tri_time.timestamp(),
     };
     item.setId("doctor");
     item.setTitle("Doctor violations pending");
@@ -340,12 +344,8 @@ fn scanDoctor(result: *ScanResult) void {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn scanPipeline(result: *ScanResult) void {
-    const loop_file = std.fs.cwd().openFile(".trinity/loop_state.json", .{}) catch return;
-    defer loop_file.close();
-
     var buf: [4096]u8 = undefined;
-    const bytes_read = loop_file.readAll(&buf) catch return;
-    const content = buf[0..bytes_read];
+    const content = std.Io.Dir.cwd().readFile(tri_io.get(), ".trinity/loop_state.json", &buf) catch return;
 
     if (content.len < 5) return;
 
@@ -355,7 +355,7 @@ fn scanPipeline(result: *ScanResult) void {
         var item = ScanItem{
             .source = .pipeline_failures,
             .priority = .high,
-            .created_at = std.time.timestamp(),
+            .created_at = tri_time.timestamp(),
         };
         item.setId("pipeline");
         item.setTitle("Pipeline has failed state — needs investigation");
@@ -376,8 +376,9 @@ fn scanExperience(allocator: Allocator, result: *ScanResult) void {
     defer if (similar_tasks) |s| allocator.free(s);
 
     // Read episode files to count pass/fail per issue
-    var episodes_dir = std.fs.cwd().openDir(".trinity/experience/episodes", .{ .iterate = true }) catch return;
-    defer episodes_dir.close();
+    const io = tri_io.get();
+    var episodes_dir = std.Io.Dir.cwd().openDir(io, ".trinity/experience/episodes", .{ .iterate = true }) catch return;
+    defer episodes_dir.close(io);
 
     // Build per-issue stats from episodes
     const IssueStats = struct { attempts: u32, passes: u32, fails: u32 };
@@ -386,11 +387,11 @@ fn scanExperience(allocator: Allocator, result: *ScanResult) void {
     var stats_count: usize = 0;
 
     var dir_iter = episodes_dir.iterate();
-    while (dir_iter.next() catch null) |entry| {
+    while (dir_iter.next(io) catch null) |entry| {
         if (entry.kind != .file) continue;
         if (!std.mem.endsWith(u8, entry.name, ".json")) continue;
 
-        const contents = episodes_dir.readFileAlloc(allocator, entry.name, 64 * 1024) catch continue;
+        const contents = episodes_dir.readFileAlloc(io, entry.name, allocator, .limited(64 * 1024)) catch continue;
         defer allocator.free(contents);
 
         const issue_id = extractEpisodeU32(contents, "issue") orelse continue;
@@ -452,7 +453,7 @@ fn scanExperience(allocator: Allocator, result: *ScanResult) void {
 }
 
 fn loadSimilarTasks(allocator: Allocator) ?[]const u8 {
-    return std.fs.cwd().readFileAlloc(allocator, ".trinity/experience/similar_tasks.json", 256 * 1024) catch null;
+    return std.Io.Dir.cwd().readFileAlloc(tri_io.get(), ".trinity/experience/similar_tasks.json", allocator, .limited(256 * 1024)) catch null;
 }
 
 fn addSimilarTaskItems(result: *ScanResult, tasks_json: []const u8) void {
@@ -477,7 +478,7 @@ fn addSimilarTaskItems(result: *ScanResult, tasks_json: []const u8) void {
                     .source = .experience_similar,
                     .priority = .low,
                     .has_experience = true,
-                    .created_at = std.time.timestamp(),
+                    .created_at = tri_time.timestamp(),
                 };
                 item.setId(tid);
                 if (extractEpisodeString(obj, "title")) |t| item.setTitle(t);
@@ -562,38 +563,39 @@ fn renderTable(result: *const ScanResult) void {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fn saveResults(result: *const ScanResult) void {
-    std.fs.cwd().makePath(".trinity") catch {};
+    const io = tri_io.get();
+    std.Io.Dir.cwd().createDirPath(io, ".trinity") catch {};
 
-    const file = std.fs.cwd().createFile(".trinity/scan_results.json", .{}) catch return;
-    defer file.close();
+    const file = std.Io.Dir.cwd().createFile(io, ".trinity/scan_results.json", .{}) catch return;
+    defer file.close(io);
 
     var count_buf: [16]u8 = undefined;
 
-    file.writeAll("{\"count\":") catch return;
+    file.writeStreamingAll(io, "{\"count\":") catch return;
     const count_str = std.fmt.bufPrint(&count_buf, "{d}", .{result.count}) catch return;
-    file.writeAll(count_str) catch return;
+    file.writeStreamingAll(io, count_str) catch return;
 
-    file.writeAll(",\"github\":") catch return;
+    file.writeStreamingAll(io, ",\"github\":") catch return;
     const gh_str = std.fmt.bufPrint(&count_buf, "{d}", .{result.total_issues}) catch return;
-    file.writeAll(gh_str) catch return;
+    file.writeStreamingAll(io, gh_str) catch return;
 
-    file.writeAll(",\"dirty\":") catch return;
+    file.writeStreamingAll(io, ",\"dirty\":") catch return;
     const d_str = std.fmt.bufPrint(&count_buf, "{d}", .{result.total_dirty}) catch return;
-    file.writeAll(d_str) catch return;
+    file.writeStreamingAll(io, d_str) catch return;
 
-    file.writeAll(",\"doctor\":") catch return;
+    file.writeStreamingAll(io, ",\"doctor\":") catch return;
     const doc_str = std.fmt.bufPrint(&count_buf, "{d}", .{result.total_doctor}) catch return;
-    file.writeAll(doc_str) catch return;
+    file.writeStreamingAll(io, doc_str) catch return;
 
-    file.writeAll(",\"pipeline\":") catch return;
+    file.writeStreamingAll(io, ",\"pipeline\":") catch return;
     const pl_str = std.fmt.bufPrint(&count_buf, "{d}", .{result.total_pipeline}) catch return;
-    file.writeAll(pl_str) catch return;
+    file.writeStreamingAll(io, pl_str) catch return;
 
-    file.writeAll(",\"timestamp\":") catch return;
-    const ts_str = std.fmt.bufPrint(&count_buf, "{d}", .{std.time.timestamp()}) catch return;
-    file.writeAll(ts_str) catch return;
+    file.writeStreamingAll(io, ",\"timestamp\":") catch return;
+    const ts_str = std.fmt.bufPrint(&count_buf, "{d}", .{tri_time.timestamp()}) catch return;
+    file.writeStreamingAll(io, ts_str) catch return;
 
-    file.writeAll("}\n") catch return;
+    file.writeStreamingAll(io, "}\n") catch return;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

@@ -18,6 +18,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 // ═══════════════════════════════════════════════════════════════════════════════
 // ⲤⲀⲔⲢⲀ ⲔⲞⲚⲤⲦⲀⲚⲦⲤ
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -306,7 +307,7 @@ pub const MultiTierJIT = struct {
 
         // Simulate compilation
         profile.current_tier = request.target_tier;
-        profile.last_compile_time_ns = @intCast(std.time.nanoTimestamp());
+        profile.last_compile_time_ns = @intCast(tri_time.nanoTimestamp());
         self.total_compilations += 1;
     }
 

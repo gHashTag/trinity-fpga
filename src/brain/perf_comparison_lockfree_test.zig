@@ -11,6 +11,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 const Baseline = @import("basal_ganglia.zig").Registry;
 const Optimized = @import("basal_ganglia_opt.zig").Registry;
 const LockFree = @import("basal_ganglia_lockfree.zig").Registry;
@@ -84,13 +85,13 @@ test "perf.comparison.all: baseline vs optimized vs lockfree" {
 fn benchmarkClaim(registry: anytype, iterations: u64, allocator: std.mem.Allocator) u64 {
     var task_buf: [32]u8 = undefined;
 
-    const start = std.time.nanoTimestamp();
+    const start = tri_time.nanoTimestamp();
     var i: u64 = 0;
     while (i < iterations) : (i += 1) {
         const task_id = std.fmt.bufPrintZ(&task_buf, "task-{d}", .{i}) catch unreachable;
         _ = registry.claim(allocator, task_id, "agent-001", 300000) catch {};
     }
-    const elapsed = @as(u64, @intCast(std.time.nanoTimestamp() - start));
+    const elapsed = @as(u64, @intCast(tri_time.nanoTimestamp() - start));
 
     const ops_per_sec = @as(f64, @floatFromInt(iterations)) / @as(f64, @floatFromInt(elapsed));
     std.debug.print("Benchmark: {d:.0} OP/s ({d:.2} ns/op)\n", .{ ops_per_sec * 1_000_000_000.0, @as(f64, @floatFromInt(elapsed)) / @as(f64, @floatFromInt(iterations)) });

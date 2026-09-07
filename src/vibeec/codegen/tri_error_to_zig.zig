@@ -2,6 +2,7 @@
 // φ² + 1/φ² = 3 | TRINITY
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const Allocator = std.mem.Allocator;
 
 const TRI_ERROR_TEMPLATE =
@@ -220,7 +221,7 @@ pub fn writeTriError(allocator: Allocator, path: []const u8) !void {
     const content = try generateTriError(allocator);
     defer allocator.free(content);
 
-    const file = try std.fs.createFileAbsolute(path, .{});
+    const file = try std.Io.Dir.createFileAbsolute(tri_io.get(), path, .{});
     defer file.close();
 
     try file.writeAll(content);

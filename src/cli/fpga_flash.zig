@@ -9,22 +9,22 @@
 //!   fpga-flash full         # Complete procedure
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const fs = std.fs;
 const process = std.process;
 const mem = std.mem;
 
-const FXLOAD_PATH = "/Users/playra/trinity-w1/fpga/tools/fxload";
-const FIRMWARE_PATH = "/Users/playra/trinity-w1/fpga/tools/xusb_xp2.hex";
-const XC3SPROG_PATH = "/Users/playra/trinity-w1/fpga/tools/xc3sprog";
-const BITSTREAM_PATH = "/Users/playra/trinity-w1/fpga/openxc7-synth/uart_bridge_fixed.bit";
-const UART_TEST_PATH = "/Users/playra/trinity-w1/fpga/uart_test.py";
+const FXLOAD_PATH = "/Users/playom/trinity-fpga/fpga/tools/fxload";
+const FIRMWARE_PATH = "/Users/playom/trinity-fpga/fpga/tools/xusb_xp2.hex";
+const XC3SPROG_PATH = "/Users/playom/trinity-fpga/fpga/tools/xc3sprog";
+const BITSTREAM_PATH = "/Users/playom/trinity-fpga/fpga/openxc7-synth/uart_bridge_fixed.bit";
+const UART_TEST_PATH = "/Users/playom/trinity-fpga/fpga/uart_test.py";
 
-pub fn main() !void {
+pub fn main(init: std.process.Init.Minimal) !void {
     const gpa = std.heap.page_allocator;
 
-    const args = try std.process.argsAlloc(gpa);
-    defer std.process.argsFree(gpa, args);
-
+    const args = try init.args.toSlice(gpa);
+    defer gpa.free(args);
     if (args.len < 2) {
         printUsage();
         return error.InvalidArgs;
@@ -240,7 +240,7 @@ fn execCommand(args: []const []const u8) ![]u8 {
         .argv = args,
     });
 
-    if (result.term.Exited != 0 and result.term.Exited != 1) {
+    if (result.term.exited != 0 and result.term.exited != 1) {
         // Exit code 1 might be from grep/find not finding anything
         // Other exit codes are actual errors
         return error.CommandFailed;
@@ -250,7 +250,7 @@ fn execCommand(args: []const []const u8) ![]u8 {
 }
 
 fn getFileSize(path: []const u8) !u64 {
-    const file = try std.fs.openFileAbsolute(path, .{});
+    const file = try std.Io.Dir.openFileAbsolute(tri_io.get(), path, .{});
     defer file.close();
     return try file.getEndPos();
 }

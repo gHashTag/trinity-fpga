@@ -5,6 +5,7 @@
 // ═════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 
 // ═════════════════════════════════════════════════════════════════════════════════════════════════════════
@@ -117,7 +118,7 @@ pub const GovernanceManager = struct {
         appellant: [20]u8,
     ) ![]const u8 {
         const appeal_id = try std.fmt.allocPrint(self.allocator, "appeal_{d}_{x}", .{
-            std.time.timestamp(), std.math.maxInt(u64),
+            tri_time.timestamp(), std.math.maxInt(u64),
         });
 
         var evidence_list = try std.ArrayListUnmanaged([]const u8).initCapacity(self.allocator, evidence_urls.len);
@@ -132,9 +133,9 @@ pub const GovernanceManager = struct {
             .appeal_reason = appeal_reason,
             .evidence_urls = evidence_list,
             .appellant = appellant,
-            .created_at = std.time.timestamp(),
+            .created_at = tri_time.timestamp(),
             .status = .pending,
-            .voting_deadline = std.time.timestamp() + GovernanceConfig.APPEAL_DEADLINE_HOURS * 3600,
+            .voting_deadline = tri_time.timestamp() + GovernanceConfig.APPEAL_DEADLINE_HOURS * 3600,
             .votes_for = 0,
             .votes_against = 0,
             .required_quorum = @intFromFloat(GovernanceConfig.SLASH_APPEAL_QUORUM * 100.0),
@@ -162,7 +163,7 @@ pub const GovernanceManager = struct {
             return error.AppealNotVoting;
         }
 
-        if (std.time.timestamp() > appeal.voting_deadline) {
+        if (tri_time.timestamp() > appeal.voting_deadline) {
             return error.VotingExpired;
         }
 
@@ -170,7 +171,7 @@ pub const GovernanceManager = struct {
             .voter = voter,
             .proposal_id = appeal_id,
             .support = support,
-            .timestamp = std.time.timestamp(),
+            .timestamp = tri_time.timestamp(),
             .stake_weight = stake_weight,
         };
 
@@ -217,7 +218,7 @@ pub const GovernanceManager = struct {
         proposer: [20]u8,
     ) ![]const u8 {
         const proposal_id = try std.fmt.allocPrint(self.allocator, "param_{d}_{x}", .{
-            std.time.timestamp(), std.math.maxInt(u64),
+            tri_time.timestamp(), std.math.maxInt(u64),
         });
 
         const proposal = ParameterChangeProposal{
@@ -226,8 +227,8 @@ pub const GovernanceManager = struct {
             .new_value = new_value,
             .reason = reason,
             .proposer = proposer,
-            .created_at = std.time.timestamp(),
-            .voting_end_at = std.time.timestamp() + GovernanceConfig.VOTING_PERIOD_HOURS * 3600,
+            .created_at = tri_time.timestamp(),
+            .voting_end_at = tri_time.timestamp() + GovernanceConfig.VOTING_PERIOD_HOURS * 3600,
             .status = .active,
         };
 

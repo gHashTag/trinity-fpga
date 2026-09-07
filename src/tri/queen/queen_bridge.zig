@@ -9,6 +9,8 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 
 pub const StepType = enum {
@@ -45,7 +47,8 @@ pub const AgentStep = struct {
 /// Log an agent step to Queen JSONL format (proper JSON with escaping)
 pub fn logStep(allocator: Allocator, step: AgentStep) !void {
     const logs_dir = ".trinity/logs";
-    std.fs.cwd().makePath(logs_dir) catch {};
+    const io = tri_io.get();
+    std.Io.Dir.cwd().createDirPath(io, logs_dir) catch {};
 
     // Build path: .trinity/logs/agent-{name}.jsonl
     var path_buf: [256]u8 = undefined;
@@ -55,7 +58,7 @@ pub fn logStep(allocator: Allocator, step: AgentStep) !void {
     });
 
     // Build episode_id: issue-{N}-{step}-{timestamp}
-    const ts = if (step.timestamp == 0) std.time.timestamp() else step.timestamp;
+    const ts = if (step.timestamp == 0) tri_time.timestamp() else step.timestamp;
     var id_buf: [128]u8 = undefined;
     const episode_id = try std.fmt.bufPrint(&id_buf, "issue-{d}-{s}-{d}", .{
         step.issue_number,
@@ -83,106 +86,106 @@ pub fn logStep(allocator: Allocator, step: AgentStep) !void {
     // Build JSON with proper escaping
     var buf: std.ArrayList(u8) = .empty;
     defer buf.deinit(allocator);
-    const w = buf.writer(allocator);
 
-    try w.writeAll("{");
-    try w.writeAll("\"episode_id\":\"");
-    try w.writeAll(escapeString(allocator, episode_id));
-    try w.writeAll("\",");
-    try w.writeAll("\"agent\":\"");
-    try w.writeAll(escapeString(allocator, step.agent));
-    try w.writeAll("\",");
-    try w.print("\"episode_type\":\"{s}\",", .{episode_type});
-    try w.print("\"timestamp\":{d},", .{ts});
-    try w.writeAll("\"title\":\"");
-    try w.writeAll(escapeString(allocator, title));
-    try w.writeAll("\",");
-    try w.print("\"correlation_id\":{d},", .{step.issue_number});
-    try w.writeAll("\"data\":");
+    try buf.appendSlice(allocator, "{");
+    try buf.appendSlice(allocator, "\"episode_id\":\"");
+    try buf.appendSlice(allocator, escapeString(allocator, episode_id));
+    try buf.appendSlice(allocator, "\",");
+    try buf.appendSlice(allocator, "\"agent\":\"");
+    try buf.appendSlice(allocator, escapeString(allocator, step.agent));
+    try buf.appendSlice(allocator, "\",");
+    try buf.print(allocator, "\"episode_type\":\"{s}\",", .{episode_type});
+    try buf.print(allocator, "\"timestamp\":{d},", .{ts});
+    try buf.appendSlice(allocator, "\"title\":\"");
+    try buf.appendSlice(allocator, escapeString(allocator, title));
+    try buf.appendSlice(allocator, "\",");
+    try buf.print(allocator, "\"correlation_id\":{d},", .{step.issue_number});
+    try buf.appendSlice(allocator, "\"data\":");
 
     // Build data object
-    try w.writeAll("{");
-    try w.print("\"domain\":\"github_issue\"", .{});
+    try buf.appendSlice(allocator, "{");
+    try buf.print(allocator, "\"domain\":\"github_issue\"", .{});
 
     if (step.action) |a| {
-        try w.writeAll(",\"action\":\"");
-        try w.writeAll(escapeString(allocator, a));
-        try w.writeAll("\"");
+        try buf.appendSlice(allocator, ",\"action\":\"");
+        try buf.appendSlice(allocator, escapeString(allocator, a));
+        try buf.appendSlice(allocator, "\"");
     }
     if (step.labels) |labels| {
-        try w.writeAll(",\"labels\":[");
+        try buf.appendSlice(allocator, ",\"labels\":[");
         for (labels, 0..) |label, i| {
-            if (i > 0) try w.writeAll(",");
+            if (i > 0) try buf.appendSlice(allocator, ",");
             const escaped = escapeString(allocator, label);
-            try w.writeAll("\"");
-            try w.writeAll(escaped);
-            try w.writeAll("\"");
+            try buf.appendSlice(allocator, "\"");
+            try buf.appendSlice(allocator, escaped);
+            try buf.appendSlice(allocator, "\"");
         }
-        try w.writeAll("]");
+        try buf.appendSlice(allocator, "]");
     }
     if (step.files) |files| {
-        try w.writeAll(",\"files\":[");
+        try buf.appendSlice(allocator, ",\"files\":[");
         for (files, 0..) |file, i| {
-            if (i > 0) try w.writeAll(",");
+            if (i > 0) try buf.appendSlice(allocator, ",");
             const escaped = escapeString(allocator, file);
-            try w.writeAll("\"");
-            try w.writeAll(escaped);
-            try w.writeAll("\"");
+            try buf.appendSlice(allocator, "\"");
+            try buf.appendSlice(allocator, escaped);
+            try buf.appendSlice(allocator, "\"");
         }
-        try w.writeAll("]");
+        try buf.appendSlice(allocator, "]");
     }
     if (step.metrics) |m| {
-        try w.writeAll(",\"metrics\":{");
+        try buf.appendSlice(allocator, ",\"metrics\":{");
         var need_comma = false;
         if (m.status) |s| {
-            try w.writeAll("\"status\":\"");
-            try w.writeAll(escapeString(allocator, s));
-            try w.writeAll("\"");
+            try buf.appendSlice(allocator, "\"status\":\"");
+            try buf.appendSlice(allocator, escapeString(allocator, s));
+            try buf.appendSlice(allocator, "\"");
             need_comma = true;
         }
         if (m.files_changed) |fc| {
-            if (need_comma) try w.writeAll(",");
-            try w.print("\"files_changed\":{d}", .{fc});
+            if (need_comma) try buf.appendSlice(allocator, ",");
+            try buf.print(allocator, "\"files_changed\":{d}", .{fc});
             need_comma = true;
         }
         if (m.lines_added) |la| {
-            if (need_comma) try w.writeAll(",");
-            try w.print("\"lines_added\":{d}", .{la});
+            if (need_comma) try buf.appendSlice(allocator, ",");
+            try buf.print(allocator, "\"lines_added\":{d}", .{la});
             need_comma = true;
         }
         if (m.files_touched) |ft| {
-            if (need_comma) try w.writeAll(",");
-            try w.print("\"files_touched\":{d}", .{ft});
+            if (need_comma) try buf.appendSlice(allocator, ",");
+            try buf.print(allocator, "\"files_touched\":{d}", .{ft});
         }
-        try w.writeAll("}");
+        try buf.appendSlice(allocator, "}");
     }
     if (step.thought) |t| {
-        try w.writeAll(",\"thought\":\"");
-        try w.writeAll(escapeString(allocator, t));
-        try w.writeAll("\"");
+        try buf.appendSlice(allocator, ",\"thought\":\"");
+        try buf.appendSlice(allocator, escapeString(allocator, t));
+        try buf.appendSlice(allocator, "\"");
     }
     if (step.result) |r| {
-        try w.writeAll(",\"next_step\":\"");
-        try w.writeAll(escapeString(allocator, r));
-        try w.writeAll("\"");
+        try buf.appendSlice(allocator, ",\"next_step\":\"");
+        try buf.appendSlice(allocator, escapeString(allocator, r));
+        try buf.appendSlice(allocator, "\"");
     }
     if (step.error_message) |e| {
-        try w.writeAll(",\"error\":\"");
-        try w.writeAll(escapeString(allocator, e));
-        try w.writeAll("\"");
+        try buf.appendSlice(allocator, ",\"error\":\"");
+        try buf.appendSlice(allocator, escapeString(allocator, e));
+        try buf.appendSlice(allocator, "\"");
     }
 
-    try w.writeAll("}"); // Close data object
-    try w.writeAll("}"); // Close episode object
+    try buf.appendSlice(allocator, "}"); // Close data object
+    try buf.appendSlice(allocator, "}"); // Close episode object
 
     // Open file for append
-    const file = try std.fs.cwd().createFile(path, .{ .truncate = false });
-    defer file.close();
-    try file.seekFromEnd(0);
-
-    // Write JSON with newline
-    try file.writeAll(buf.items);
-    try file.writeAll("\n");
+    const file = try std.Io.Dir.cwd().createFile(io, path, .{ .truncate = false });
+    defer file.close(io);
+    // 0.16 has no seekFromEnd; appending is an explicit positional write at the
+    // current length. The newline joins the payload so one jsonl record is a
+    // single write rather than two.
+    try buf.append(allocator, '\n');
+    const end = try file.length(io);
+    try file.writePositionalAll(io, buf.items, end);
 }
 
 /// Escape JSON string (minimal: quotes, backslashes, newlines)
@@ -190,16 +193,15 @@ pub fn logStep(allocator: Allocator, step: AgentStep) !void {
 fn escapeString(allocator: Allocator, s: []const u8) []const u8 {
     var escaped: std.ArrayList(u8) = .empty;
     defer escaped.deinit(allocator);
-    const w = escaped.writer(allocator);
 
     for (s) |c| {
         switch (c) {
-            '\\' => w.writeAll("\\\\") catch {},
-            '"' => w.writeAll("\\\"") catch {},
-            '\n' => w.writeAll("\\n") catch {},
-            '\r' => w.writeAll("\\r") catch {},
-            '\t' => w.writeAll("\\t") catch {},
-            else => w.writeByte(c) catch {},
+            '\\' => escaped.appendSlice(allocator, "\\\\") catch {},
+            '"' => escaped.appendSlice(allocator, "\\\"") catch {},
+            '\n' => escaped.appendSlice(allocator, "\\n") catch {},
+            '\r' => escaped.appendSlice(allocator, "\\r") catch {},
+            '\t' => escaped.appendSlice(allocator, "\\t") catch {},
+            else => escaped.append(allocator, c) catch {},
         }
     }
 

@@ -16,6 +16,8 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayListUnmanaged;
 const StringHashMap = std.StringHashMapUnmanaged;
@@ -130,7 +132,7 @@ pub const RalphOrchestrator = struct {
     tasks: ArrayList(RalphTask),
 
     pub fn init(allocator: Allocator, config: OrchestratorConfig) !RalphOrchestrator {
-        const current_time: i64 = @intCast(@divTrunc(std.time.nanoTimestamp(), 1_000_000_000));
+        const current_time: i64 = @intCast(@divTrunc(tri_time.nanoTimestamp(), 1_000_000_000));
 
         return RalphOrchestrator{
             .allocator = allocator,
@@ -163,7 +165,7 @@ pub const RalphOrchestrator = struct {
 
     /// Main orchestration loop — call this periodically
     pub fn tick(self: *RalphOrchestrator) !OrchestratorResult {
-        const current_time: i64 = @intCast(@divTrunc(std.time.nanoTimestamp(), 1_000_000_000));
+        const current_time: i64 = @intCast(@divTrunc(tri_time.nanoTimestamp(), 1_000_000_000));
 
         // Check if it's time to wake up
         if (current_time < self.status.wake_time) {
@@ -233,7 +235,7 @@ pub const RalphOrchestrator = struct {
         const status_file = try std.fs.path.join(self.allocator, &.{ self.config.project_root, ".trinity", "ralph", "status_report.json" });
         defer self.allocator.free(status_file);
 
-        const file = std.fs.openFileAbsolute(status_file, .{}) catch |err| {
+        const file = std.Io.Dir.openFileAbsolute(tri_io.get(), status_file, .{}) catch |err| {
             if (err == error.FileNotFound) {
                 // No status file yet, use defaults
                 return;
@@ -254,7 +256,7 @@ pub const RalphOrchestrator = struct {
         const fix_plan_file = try std.fs.path.join(self.allocator, &.{ self.config.project_root, ".trinity", "ralph", "fix_plan.md" });
         defer self.allocator.free(fix_plan_file);
 
-        const file = std.fs.openFileAbsolute(fix_plan_file, .{}) catch |err| {
+        const file = std.Io.Dir.openFileAbsolute(tri_io.get(), fix_plan_file, .{}) catch |err| {
             if (err == error.FileNotFound) return;
             return err;
         };
@@ -284,7 +286,7 @@ pub const RalphOrchestrator = struct {
         self.status.active_task = task;
         task.status = .in_progress;
 
-        const start_time = std.time.nanoTimestamp();
+        const start_time = tri_time.nanoTimestamp();
 
         // Dispatch based on task type
         const success = if (std.mem.indexOf(u8, task.id, "FPGA") != null)
@@ -294,7 +296,7 @@ pub const RalphOrchestrator = struct {
         else
             try self.executeGenericTask(task);
 
-        const duration_ms = @as(u64, @intCast((std.time.nanoTimestamp() - start_time) / 1_000_000));
+        const duration_ms = @as(u64, @intCast((tri_time.nanoTimestamp() - start_time) / 1_000_000));
 
         task.status = if (success) .completed else .failed;
 
@@ -332,7 +334,7 @@ pub const RalphOrchestrator = struct {
                 return false;
             };
 
-            return term.Exited == 0;
+            return term.exited == 0;
         }
 
         // Simulate FPGA task
@@ -354,7 +356,7 @@ pub const RalphOrchestrator = struct {
         child.spawn() catch return false;
         const term = child.wait() catch return false;
 
-        return term.Exited == 0;
+        return term.exited == 0;
     }
 
     /// Execute generic task
@@ -393,7 +395,7 @@ pub const RalphOrchestrator = struct {
 
     /// Schedule next wake time
     fn scheduleNextWake(self: *RalphOrchestrator) !void {
-        const current_time: i64 = @intCast(@divTrunc(std.time.nanoTimestamp(), 1_000_000_000));
+        const current_time: i64 = @intCast(@divTrunc(tri_time.nanoTimestamp(), 1_000_000_000));
 
         // Use fibonacci-based interval scaling
         const fib_n = fibonacci(self.status.total_cycles + 3);

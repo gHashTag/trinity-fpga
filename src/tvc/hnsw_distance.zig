@@ -9,6 +9,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const math = std.math;
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -259,7 +260,7 @@ pub fn sacredBonus(
     bonus += name_factor * 0.1;
 
     // Recency bonus (exponential decay)
-    const age_ms = @as(f32, @floatFromInt(std.time.timestamp() * 1000 - timestamp_ms));
+    const age_ms = @as(f32, @floatFromInt(tri_time.timestamp() * 1000 - timestamp_ms));
     const recency_factor = @exp(-age_ms / (1000.0 * 60.0 * PHI_SQ * 60.0)); // Hours
     bonus += recency_factor * 0.1;
 

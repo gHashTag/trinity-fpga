@@ -3,6 +3,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 /// Import from existing phases
 pub const Episode = @import("episodes.zig").Episode;
 pub const WindowEvaluation = @import("evaluate.zig").WindowEvaluation;
@@ -182,9 +183,9 @@ pub fn runSelfLearningCycle(allocator: std.mem.Allocator, window_size: usize) !S
 
     // 7. Record episode about self-learning cycle
     // Create minimal episode for self-learning
-    const now_ns_i128 = std.time.nanoTimestamp();
+    const now_ns_i128 = tri_time.nanoTimestamp();
     const now_ns: u64 = @as(u64, @intCast(@abs(now_ns_i128)));
-    const now_ms = std.time.milliTimestamp();
+    const now_ms = tri_time.milliTimestamp();
     const timestamp: u64 = @intCast(@divTrunc(now_ms, 1000));
 
     const episode = Episode{

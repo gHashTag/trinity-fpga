@@ -35,8 +35,8 @@ Implement issue: $ARGUMENTS
 
 5. **Build and test**
    ```bash
-   cd /Users/playom/trinity-fpga && zig build
-   cd /Users/playom/trinity-fpga && zig build test
+   cd "$(git rev-parse --show-toplevel)" && zig build
+   cd "$(git rev-parse --show-toplevel)" && zig build test
    ```
 
 6. **Commit**

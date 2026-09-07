@@ -10,6 +10,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_io = @import("tri_io");
 const needle = @import("needle.zig");
 const matcher = @import("matcher.zig");
 const check = @import("check.zig");
@@ -152,26 +153,25 @@ pub const TextEditor = struct {
 
     /// Generate unified diff hunk
     fn generateHunk(self: *TextEditor, old_text: []const u8, new_text: []const u8, start_line: u32) ![]const u8 {
-        var hunk = std.ArrayListAligned(u8, null){
-            .items = &.{},
-            .capacity = 0,
-        };
+        var hunk: std.Io.Writer.Allocating = .init(self.allocator);
+        errdefer hunk.deinit();
+        const hw = &hunk.writer;
 
-        try hunk.writer(self.allocator).print("@@ -{d},0 +{d},0 @@\n", .{ start_line, start_line });
+        try hw.print("@@ -{d},0 +{d},0 @@\n", .{ start_line, start_line });
 
         var old_lines = std.mem.splitScalar(u8, old_text, '\n');
         while (old_lines.next()) |line| {
-            try hunk.writer(self.allocator).print("-{s}\n", .{line});
+            try hw.print("-{s}\n", .{line});
         }
 
         var new_lines = std.mem.splitScalar(u8, new_text, '\n');
         while (new_lines.next()) |line| {
             if (line.len > 0) {
-                try hunk.writer(self.allocator).print("+{s}\n", .{line});
+                try hw.print("+{s}\n", .{line});
             }
         }
 
-        return hunk.toOwnedSlice(self.allocator);
+        return hunk.toOwnedSlice();
     }
 
     /// Preview diff as string
@@ -179,17 +179,10 @@ pub const TextEditor = struct {
         var diff = try self.computeDiff(match_result, replacement);
         defer diff.deinit(self.allocator);
 
-        var output = std.ArrayListAligned(u8, null){
-            .items = &.{},
-            .capacity = 0,
-        };
-        defer {
-            if (output.capacity > 0) {
-                self.allocator.free(output.allocatedSlice());
-            }
-        }
+        var output: std.Io.Writer.Allocating = .init(self.allocator);
+        defer output.deinit();
 
-        try output.writer(self.allocator).print(
+        try output.writer.print(
             \\=== EDIT PREVIEW ===
             \\File: {s}
             \\Lines {d}-{d}
@@ -206,7 +199,7 @@ pub const TextEditor = struct {
             diff.hunk,
         });
 
-        return output.toOwnedSlice(self.allocator);
+        return output.toOwnedSlice();
     }
 };
 
@@ -443,26 +436,25 @@ pub const ASTEditor = struct {
 
     /// Generate unified diff hunk
     fn generateHunk(self: *ASTEditor, old_text: []const u8, new_text: []const u8, start_line: u32) ![]const u8 {
-        var hunk = std.ArrayListAligned(u8, null){
-            .items = &.{},
-            .capacity = 0,
-        };
+        var hunk: std.Io.Writer.Allocating = .init(self.allocator);
+        errdefer hunk.deinit();
+        const hw = &hunk.writer;
 
-        try hunk.writer(self.allocator).print("@@ -{d},0 +{d},0 @@\n", .{ start_line, start_line });
+        try hw.print("@@ -{d},0 +{d},0 @@\n", .{ start_line, start_line });
 
         var old_lines = std.mem.splitScalar(u8, old_text, '\n');
         while (old_lines.next()) |line| {
-            try hunk.writer(self.allocator).print("-{s}\n", .{line});
+            try hw.print("-{s}\n", .{line});
         }
 
         var new_lines = std.mem.splitScalar(u8, new_text, '\n');
         while (new_lines.next()) |line| {
             if (line.len > 0) {
-                try hunk.writer(self.allocator).print("+{s}\n", .{line});
+                try hw.print("+{s}\n", .{line});
             }
         }
 
-        return hunk.toOwnedSlice(self.allocator);
+        return hunk.toOwnedSlice();
     }
 
     /// Preview diff as string
@@ -470,17 +462,10 @@ pub const ASTEditor = struct {
         var diff = try self.computeDiff(match_result, replacement);
         defer diff.deinit(self.allocator);
 
-        var output = std.ArrayListAligned(u8, null){
-            .items = &.{},
-            .capacity = 0,
-        };
-        defer {
-            if (output.capacity > 0) {
-                self.allocator.free(output.allocatedSlice());
-            }
-        }
+        var output: std.Io.Writer.Allocating = .init(self.allocator);
+        defer output.deinit();
 
-        try output.writer(self.allocator).print(
+        try output.writer.print(
             \\=== AST EDIT PREVIEW ===
             \\File: {s}
             \\Lines {d}-{d}
@@ -500,7 +485,7 @@ pub const ASTEditor = struct {
             diff.hunk,
         });
 
-        return output.toOwnedSlice(self.allocator);
+        return output.toOwnedSlice();
     }
 };
 
@@ -519,7 +504,7 @@ pub const EditEngine = struct {
         errdefer report.deinit();
 
         // Read source file
-        const source = try std.fs.cwd().readFileAlloc(allocator, op.file_path, 10_000_000);
+        const source = try std.Io.Dir.cwd().readFileAlloc(tri_io.get(), op.file_path, allocator, .limited(10_000_000));
         defer allocator.free(source);
 
         // Find matches
@@ -592,7 +577,7 @@ pub const EditEngine = struct {
 
         // If checks pass, write file
         if (report.isSuccess()) {
-            try std.fs.cwd().writeFile(.{
+            try std.Io.Dir.cwd().writeFile(tri_io.get(), .{
                 .sub_path = op.file_path,
                 .data = modified,
             });
@@ -638,7 +623,7 @@ pub const EditEngine = struct {
 
         // If checks pass, write file
         if (report.isSuccess()) {
-            try std.fs.cwd().writeFile(.{
+            try std.Io.Dir.cwd().writeFile(tri_io.get(), .{
                 .sub_path = op.file_path,
                 .data = modified,
             });

@@ -8,6 +8,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_proc = @import("tri_proc");
 const types = @import("faculty_types.zig");
 const FacultySnapshot = types.FacultySnapshot;
 
@@ -140,7 +141,7 @@ fn containsAny(haystack: []const u8, needles: []const []const u8) bool {
 /// Fetch issues from `gh issue list` and parse them.
 /// Returns empty IssueSet if gh command fails.
 pub fn fetchIssues(allocator: std.mem.Allocator) IssueSet {
-    const result = std.process.Child.run(.{
+    const result = tri_proc.run(.{
         .allocator = allocator,
         .argv = &.{ "gh", "issue", "list", "--json", "number,title", "--limit", "20" },
         .max_output_bytes = 32 * 1024,

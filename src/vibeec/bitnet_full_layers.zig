@@ -12,6 +12,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const math = std.math;
 
 pub const PHI: f64 = 1.618033988749895;
@@ -584,7 +585,7 @@ pub const BitNetFullModel = struct {
         max_new_tokens: usize,
         temperature: f32,
     ) ![]u32 {
-        var rng = std.Random.DefaultPrng.init(@intCast(std.time.milliTimestamp()));
+        var rng = std.Random.DefaultPrng.init(@intCast(tri_time.milliTimestamp()));
         var generated: std.ArrayList(u32) = .empty;
 
         if (self.kv_cache == null) {
@@ -763,14 +764,13 @@ pub const Tokenizer = @import("sentencepiece_tokenizer.zig").SentencePieceTokeni
 // MAIN - Coherent Generation with Tokenizer
 // ═══════════════════════════════════════════════════════════════════════════════
 
-pub fn main() !void {
+pub fn main(init: std.process.Init.Minimal) !void {
     var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    const args = try std.process.argsAlloc(allocator);
-    defer std.process.argsFree(allocator, args);
-
+    const args = try init.args.toSlice(allocator);
+    defer allocator.free(args);
     const model_path = if (args.len > 1) args[1] else "data/models/bitnet-2b.bin";
     const tokenizer_path = if (args.len > 2) args[2] else "data/models/microsoft-bitnet-2b/tokenizer.json";
 
@@ -840,7 +840,7 @@ pub fn main() !void {
         std.debug.print("\n", .{});
 
         // Generate
-        var timer = try std.time.Timer.start();
+        var timer = try tri_time.Timer.start();
         const generated = model.generate(prompt_tokens, max_tokens, temperature) catch |err| {
             std.debug.print("  Generate error: {}\n", .{err});
             continue;

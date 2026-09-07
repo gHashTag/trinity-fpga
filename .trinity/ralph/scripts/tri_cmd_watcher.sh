@@ -2,7 +2,7 @@
 # TRI COMMANDER Watcher — Instant command detection with fswatch
 # Detects new commands and notifies Claude
 
-RALPH_DIR="/Users/playra/trinity"
+RALPH_DIR="/Users/playom/trinity"
 QUEUE_DIR="$RALPH_DIR/.ralph/queue"
 INCOMING="$QUEUE_DIR/incoming.cmd"
 PENDING="$QUEUE_DIR/.command_pending"

@@ -5,6 +5,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 /// SIMD vector width
 const VECTOR_WIDTH = 16;
 const SimdU8 = @Vector(VECTOR_WIDTH, u8);
@@ -125,21 +126,21 @@ pub fn benchmarkWhitespace(input: []const u8, iterations: usize) struct {
     speedup: f64,
 } {
     // SIMD benchmark
-    const simd_start = std.time.nanoTimestamp();
+    const simd_start = tri_time.nanoTimestamp();
     var simd_result: usize = 0;
     for (0..iterations) |_| {
         simd_result +%= simdSkipWhitespace(input, 0);
     }
-    const simd_end = std.time.nanoTimestamp();
+    const simd_end = tri_time.nanoTimestamp();
     const simd_ns: i64 = @intCast(simd_end - simd_start);
 
     // Scalar benchmark
-    const scalar_start = std.time.nanoTimestamp();
+    const scalar_start = tri_time.nanoTimestamp();
     var scalar_result: usize = 0;
     for (0..iterations) |_| {
         scalar_result +%= scalarSkipWhitespace(input, 0);
     }
-    const scalar_end = std.time.nanoTimestamp();
+    const scalar_end = tri_time.nanoTimestamp();
     const scalar_ns: i64 = @intCast(scalar_end - scalar_start);
 
     // Prevent optimization

@@ -29,91 +29,92 @@ pub const PrometheusExporter = struct {
 
     /// Export a NetworkHealthReport as Prometheus exposition format text
     pub fn exportMetrics(self: *PrometheusExporter, report: network_stats_mod.NetworkHealthReport) ![]u8 {
-        var buf = std.ArrayListUnmanaged(u8){};
+        var buf = @as(std.ArrayListUnmanaged(u8), .empty);
         errdefer buf.deinit(self.allocator);
-        const w = buf.writer(self.allocator);
+        // 0.16 removed ArrayList.writer; the writer never left this function,
+        // so the list is formatted into directly.
 
         const ns = self.namespace;
 
         // Peers
-        try w.print("# HELP {s}_node_count Number of active nodes in the network\n", .{ns});
-        try w.print("# TYPE {s}_node_count gauge\n", .{ns});
-        try w.print("{s}_node_count {d}\n\n", .{ ns, report.node_count });
+        try buf.print(self.allocator, "# HELP {s}_node_count Number of active nodes in the network\n", .{ns});
+        try buf.print(self.allocator, "# TYPE {s}_node_count gauge\n", .{ns});
+        try buf.print(self.allocator, "{s}_node_count {d}\n\n", .{ ns, report.node_count });
 
         // Storage
-        try w.print("# HELP {s}_shards_total Total number of shards stored across all nodes\n", .{ns});
-        try w.print("# TYPE {s}_shards_total gauge\n", .{ns});
-        try w.print("{s}_shards_total {d}\n\n", .{ ns, report.total_shards });
+        try buf.print(self.allocator, "# HELP {s}_shards_total Total number of shards stored across all nodes\n", .{ns});
+        try buf.print(self.allocator, "# TYPE {s}_shards_total gauge\n", .{ns});
+        try buf.print(self.allocator, "{s}_shards_total {d}\n\n", .{ ns, report.total_shards });
 
-        try w.print("# HELP {s}_storage_bytes_used Total bytes used across all nodes\n", .{ns});
-        try w.print("# TYPE {s}_storage_bytes_used gauge\n", .{ns});
-        try w.print("{s}_storage_bytes_used {d}\n\n", .{ ns, report.total_bytes_used });
+        try buf.print(self.allocator, "# HELP {s}_storage_bytes_used Total bytes used across all nodes\n", .{ns});
+        try buf.print(self.allocator, "# TYPE {s}_storage_bytes_used gauge\n", .{ns});
+        try buf.print(self.allocator, "{s}_storage_bytes_used {d}\n\n", .{ ns, report.total_bytes_used });
 
-        try w.print("# HELP {s}_storage_bytes_available Total bytes available across all nodes\n", .{ns});
-        try w.print("# TYPE {s}_storage_bytes_available gauge\n", .{ns});
-        try w.print("{s}_storage_bytes_available {d}\n\n", .{ ns, report.total_bytes_available });
+        try buf.print(self.allocator, "# HELP {s}_storage_bytes_available Total bytes available across all nodes\n", .{ns});
+        try buf.print(self.allocator, "# TYPE {s}_storage_bytes_available gauge\n", .{ns});
+        try buf.print(self.allocator, "{s}_storage_bytes_available {d}\n\n", .{ ns, report.total_bytes_available });
 
         // Replication
-        try w.print("# HELP {s}_shards_tracked Shards tracked by the rebalancer\n", .{ns});
-        try w.print("# TYPE {s}_shards_tracked gauge\n", .{ns});
-        try w.print("{s}_shards_tracked {d}\n\n", .{ ns, report.shards_tracked });
+        try buf.print(self.allocator, "# HELP {s}_shards_tracked Shards tracked by the rebalancer\n", .{ns});
+        try buf.print(self.allocator, "# TYPE {s}_shards_tracked gauge\n", .{ns});
+        try buf.print(self.allocator, "{s}_shards_tracked {d}\n\n", .{ ns, report.shards_tracked });
 
-        try w.print("# HELP {s}_shards_rebalanced_total Total shards rebalanced\n", .{ns});
-        try w.print("# TYPE {s}_shards_rebalanced_total counter\n", .{ns});
-        try w.print("{s}_shards_rebalanced_total {d}\n\n", .{ ns, report.shards_rebalanced });
+        try buf.print(self.allocator, "# HELP {s}_shards_rebalanced_total Total shards rebalanced\n", .{ns});
+        try buf.print(self.allocator, "# TYPE {s}_shards_rebalanced_total counter\n", .{ns});
+        try buf.print(self.allocator, "{s}_shards_rebalanced_total {d}\n\n", .{ ns, report.shards_rebalanced });
 
-        try w.print("# HELP {s}_replication_target Target replication factor\n", .{ns});
-        try w.print("# TYPE {s}_replication_target gauge\n", .{ns});
-        try w.print("{s}_replication_target {d}\n\n", .{ ns, report.target_replication });
+        try buf.print(self.allocator, "# HELP {s}_replication_target Target replication factor\n", .{ns});
+        try buf.print(self.allocator, "# TYPE {s}_replication_target gauge\n", .{ns});
+        try buf.print(self.allocator, "{s}_replication_target {d}\n\n", .{ ns, report.target_replication });
 
         // PoS
-        try w.print("# HELP {s}_pos_challenges_issued_total Total PoS challenges issued\n", .{ns});
-        try w.print("# TYPE {s}_pos_challenges_issued_total counter\n", .{ns});
-        try w.print("{s}_pos_challenges_issued_total {d}\n\n", .{ ns, report.pos_challenges_issued });
+        try buf.print(self.allocator, "# HELP {s}_pos_challenges_issued_total Total PoS challenges issued\n", .{ns});
+        try buf.print(self.allocator, "# TYPE {s}_pos_challenges_issued_total counter\n", .{ns});
+        try buf.print(self.allocator, "{s}_pos_challenges_issued_total {d}\n\n", .{ ns, report.pos_challenges_issued });
 
-        try w.print("# HELP {s}_pos_challenges_passed_total Total PoS challenges passed\n", .{ns});
-        try w.print("# TYPE {s}_pos_challenges_passed_total counter\n", .{ns});
-        try w.print("{s}_pos_challenges_passed_total {d}\n\n", .{ ns, report.pos_challenges_passed });
+        try buf.print(self.allocator, "# HELP {s}_pos_challenges_passed_total Total PoS challenges passed\n", .{ns});
+        try buf.print(self.allocator, "# TYPE {s}_pos_challenges_passed_total counter\n", .{ns});
+        try buf.print(self.allocator, "{s}_pos_challenges_passed_total {d}\n\n", .{ ns, report.pos_challenges_passed });
 
-        try w.print("# HELP {s}_pos_challenges_failed_total Total PoS challenges failed\n", .{ns});
-        try w.print("# TYPE {s}_pos_challenges_failed_total counter\n", .{ns});
-        try w.print("{s}_pos_challenges_failed_total {d}\n\n", .{ ns, report.pos_challenges_failed });
+        try buf.print(self.allocator, "# HELP {s}_pos_challenges_failed_total Total PoS challenges failed\n", .{ns});
+        try buf.print(self.allocator, "# TYPE {s}_pos_challenges_failed_total counter\n", .{ns});
+        try buf.print(self.allocator, "{s}_pos_challenges_failed_total {d}\n\n", .{ ns, report.pos_challenges_failed });
 
         // Bandwidth
-        try w.print("# HELP {s}_bandwidth_upload_bytes_total Total bytes uploaded\n", .{ns});
-        try w.print("# TYPE {s}_bandwidth_upload_bytes_total counter\n", .{ns});
-        try w.print("{s}_bandwidth_upload_bytes_total {d}\n\n", .{ ns, report.total_upload });
+        try buf.print(self.allocator, "# HELP {s}_bandwidth_upload_bytes_total Total bytes uploaded\n", .{ns});
+        try buf.print(self.allocator, "# TYPE {s}_bandwidth_upload_bytes_total counter\n", .{ns});
+        try buf.print(self.allocator, "{s}_bandwidth_upload_bytes_total {d}\n\n", .{ ns, report.total_upload });
 
-        try w.print("# HELP {s}_bandwidth_download_bytes_total Total bytes downloaded\n", .{ns});
-        try w.print("# TYPE {s}_bandwidth_download_bytes_total counter\n", .{ns});
-        try w.print("{s}_bandwidth_download_bytes_total {d}\n\n", .{ ns, report.total_download });
+        try buf.print(self.allocator, "# HELP {s}_bandwidth_download_bytes_total Total bytes downloaded\n", .{ns});
+        try buf.print(self.allocator, "# TYPE {s}_bandwidth_download_bytes_total counter\n", .{ns});
+        try buf.print(self.allocator, "{s}_bandwidth_download_bytes_total {d}\n\n", .{ ns, report.total_download });
 
         // Scrubber
-        try w.print("# HELP {s}_scrub_rounds_total Total scrub rounds completed\n", .{ns});
-        try w.print("# TYPE {s}_scrub_rounds_total counter\n", .{ns});
-        try w.print("{s}_scrub_rounds_total {d}\n\n", .{ ns, report.scrub_total });
+        try buf.print(self.allocator, "# HELP {s}_scrub_rounds_total Total scrub rounds completed\n", .{ns});
+        try buf.print(self.allocator, "# TYPE {s}_scrub_rounds_total counter\n", .{ns});
+        try buf.print(self.allocator, "{s}_scrub_rounds_total {d}\n\n", .{ ns, report.scrub_total });
 
-        try w.print("# HELP {s}_scrub_corruptions_total Total corruptions detected by scrubber\n", .{ns});
-        try w.print("# TYPE {s}_scrub_corruptions_total counter\n", .{ns});
-        try w.print("{s}_scrub_corruptions_total {d}\n\n", .{ ns, report.scrub_corruptions });
+        try buf.print(self.allocator, "# HELP {s}_scrub_corruptions_total Total corruptions detected by scrubber\n", .{ns});
+        try buf.print(self.allocator, "# TYPE {s}_scrub_corruptions_total counter\n", .{ns});
+        try buf.print(self.allocator, "{s}_scrub_corruptions_total {d}\n\n", .{ ns, report.scrub_corruptions });
 
         // Reputation
-        try w.print("# HELP {s}_reputation_avg Average reputation score across all nodes\n", .{ns});
-        try w.print("# TYPE {s}_reputation_avg gauge\n", .{ns});
-        try w.print("{s}_reputation_avg {d:.6}\n\n", .{ ns, report.reputation_avg });
+        try buf.print(self.allocator, "# HELP {s}_reputation_avg Average reputation score across all nodes\n", .{ns});
+        try buf.print(self.allocator, "# TYPE {s}_reputation_avg gauge\n", .{ns});
+        try buf.print(self.allocator, "{s}_reputation_avg {d:.6}\n\n", .{ ns, report.reputation_avg });
 
-        try w.print("# HELP {s}_reputation_min Minimum reputation score\n", .{ns});
-        try w.print("# TYPE {s}_reputation_min gauge\n", .{ns});
-        try w.print("{s}_reputation_min {d:.6}\n\n", .{ ns, report.reputation_min });
+        try buf.print(self.allocator, "# HELP {s}_reputation_min Minimum reputation score\n", .{ns});
+        try buf.print(self.allocator, "# TYPE {s}_reputation_min gauge\n", .{ns});
+        try buf.print(self.allocator, "{s}_reputation_min {d:.6}\n\n", .{ ns, report.reputation_min });
 
-        try w.print("# HELP {s}_reputation_max Maximum reputation score\n", .{ns});
-        try w.print("# TYPE {s}_reputation_max gauge\n", .{ns});
-        try w.print("{s}_reputation_max {d:.6}\n\n", .{ ns, report.reputation_max });
+        try buf.print(self.allocator, "# HELP {s}_reputation_max Maximum reputation score\n", .{ns});
+        try buf.print(self.allocator, "# TYPE {s}_reputation_max gauge\n", .{ns});
+        try buf.print(self.allocator, "{s}_reputation_max {d:.6}\n\n", .{ ns, report.reputation_max });
 
         // Timestamp
-        try w.print("# HELP {s}_report_generated_timestamp_seconds Timestamp when report was generated\n", .{ns});
-        try w.print("# TYPE {s}_report_generated_timestamp_seconds gauge\n", .{ns});
-        try w.print("{s}_report_generated_timestamp_seconds {d}\n", .{ ns, report.generated_at });
+        try buf.print(self.allocator, "# HELP {s}_report_generated_timestamp_seconds Timestamp when report was generated\n", .{ns});
+        try buf.print(self.allocator, "# TYPE {s}_report_generated_timestamp_seconds gauge\n", .{ns});
+        try buf.print(self.allocator, "{s}_report_generated_timestamp_seconds {d}\n", .{ ns, report.generated_at });
 
         return buf.toOwnedSlice(self.allocator);
     }

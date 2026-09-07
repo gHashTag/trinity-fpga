@@ -4,6 +4,7 @@
 // φ² + 1/φ² = 3
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 const http = @import("http_client.zig");
 
@@ -99,7 +100,7 @@ pub const AnthropicClient = struct {
 
     /// Chat with vision (screenshot analysis) - Claude Vision API
     pub fn chatWithVision(self: *Self, prompt: []const u8, image_base64: []const u8) AnthropicError!ChatResponse {
-        const start_time = std.time.nanoTimestamp();
+        const start_time = tri_time.nanoTimestamp();
 
         // Build vision request JSON (Anthropic format with image content)
         const request_body = self.buildVisionRequestJson(prompt, image_base64) catch return AnthropicError.OutOfMemory;
@@ -109,7 +110,7 @@ pub const AnthropicClient = struct {
         var response = self.makeRequest(request_body) catch return AnthropicError.NetworkError;
         defer response.deinit();
 
-        const end_time = std.time.nanoTimestamp();
+        const end_time = tri_time.nanoTimestamp();
 
         // Check status
         if (response.status == 401) return AnthropicError.InvalidApiKey;
@@ -154,7 +155,7 @@ pub const AnthropicClient = struct {
 
     /// Chat with optional system prompt (Anthropic-specific: system is separate field)
     pub fn chatWithSystem(self: *Self, system_prompt: ?[]const u8, user_message: []const u8) AnthropicError!ChatResponse {
-        const start_time = std.time.nanoTimestamp();
+        const start_time = tri_time.nanoTimestamp();
 
         // Build request JSON (Anthropic Messages API format)
         const request_body = self.buildRequestJson(system_prompt, user_message) catch return AnthropicError.OutOfMemory;
@@ -164,7 +165,7 @@ pub const AnthropicClient = struct {
         var response = self.makeRequest(request_body) catch return AnthropicError.NetworkError;
         defer response.deinit();
 
-        const end_time = std.time.nanoTimestamp();
+        const end_time = tri_time.nanoTimestamp();
 
         // Check status
         if (response.status == 401) return AnthropicError.InvalidApiKey;

@@ -11,6 +11,8 @@
 // =============================================================================
 
 const std = @import("std");
+const tri_io = @import("tri_io");
+const tri_time = @import("tri_time");
 const golden_chain = @import("dna_polymerase.zig");
 
 // =============================================================================
@@ -109,7 +111,7 @@ pub const Tracer = struct {
         const trace_id = generateTraceId();
         self.active_trace = .{
             .trace_id = trace_id,
-            .spans = .{},
+            .spans = .empty,
             .service_name = "trinity",
             .service_version = "5.2",
         };
@@ -128,11 +130,11 @@ pub const Tracer = struct {
                 .span_id = span_id,
                 .parent_span_id = parent_id,
                 .name = name,
-                .start_time_ns = std.time.nanoTimestamp(),
+                .start_time_ns = tri_time.nanoTimestamp(),
                 .end_time_ns = 0,
                 .status = .unset,
-                .attributes = .{},
-                .events = .{},
+                .attributes = .empty,
+                .events = .empty,
                 .issue_number = issue_number,
                 .link = link,
             }) catch {};
@@ -165,55 +167,54 @@ pub const Tracer = struct {
     /// Export trace to OTLP-compatible JSON
     pub fn exportTrace(self: *Self) ![]const u8 {
         const trace = self.active_trace orelse return error.NoActiveTrace;
-        var buf: std.ArrayListUnmanaged(u8) = .{};
-        const writer = buf.writer(self.allocator);
+        var buf: std.ArrayListUnmanaged(u8) = .empty;
 
-        try writer.writeAll("{\"resourceSpans\":[{");
-        try writer.print("\"resource\":{{\"attributes\":[", .{});
-        try writer.print("{{\"key\":\"service.name\",\"value\":{{\"stringValue\":\"{s}\"}}}},", .{trace.service_name});
-        try writer.print("{{\"key\":\"service.version\",\"value\":{{\"stringValue\":\"{s}\"}}}}", .{trace.service_version});
-        try writer.writeAll("]}},");
+        try buf.appendSlice(self.allocator, "{\"resourceSpans\":[{");
+        try buf.print(self.allocator, "\"resource\":{{\"attributes\":[", .{});
+        try buf.print(self.allocator, "{{\"key\":\"service.name\",\"value\":{{\"stringValue\":\"{s}\"}}}},", .{trace.service_name});
+        try buf.print(self.allocator, "{{\"key\":\"service.version\",\"value\":{{\"stringValue\":\"{s}\"}}}}", .{trace.service_version});
+        try buf.appendSlice(self.allocator, "]}},");
 
-        try writer.writeAll("\"scopeSpans\":[{\"spans\":[");
+        try buf.appendSlice(self.allocator, "\"scopeSpans\":[{\"spans\":[");
 
         for (trace.spans.items, 0..) |span, i| {
-            if (i > 0) try writer.writeAll(",");
-            try writer.writeAll("{");
-            try writer.print("\"traceId\":\"{d}\",", .{span.trace_id});
-            try writer.print("\"spanId\":\"{d}\",", .{span.span_id});
+            if (i > 0) try buf.appendSlice(self.allocator, ",");
+            try buf.appendSlice(self.allocator, "{");
+            try buf.print(self.allocator, "\"traceId\":\"{d}\",", .{span.trace_id});
+            try buf.print(self.allocator, "\"spanId\":\"{d}\",", .{span.span_id});
             if (span.parent_span_id != 0) {
-                try writer.print("\"parentSpanId\":\"{d}\",", .{span.parent_span_id});
+                try buf.print(self.allocator, "\"parentSpanId\":\"{d}\",", .{span.parent_span_id});
             }
-            try writer.print("\"name\":\"{s}\",", .{span.name});
-            try writer.print("\"startTimeUnixNano\":\"{d}\",", .{@as(u128, @intCast(span.start_time_ns))});
+            try buf.print(self.allocator, "\"name\":\"{s}\",", .{span.name});
+            try buf.print(self.allocator, "\"startTimeUnixNano\":\"{d}\",", .{@as(u128, @intCast(span.start_time_ns))});
             if (span.end_time_ns > 0) {
-                try writer.print("\"endTimeUnixNano\":\"{d}\",", .{@as(u128, @intCast(span.end_time_ns))});
+                try buf.print(self.allocator, "\"endTimeUnixNano\":\"{d}\",", .{@as(u128, @intCast(span.end_time_ns))});
             }
-            try writer.print("\"status\":{{\"code\":\"{s}\"}},", .{span.status.toString()});
-            try writer.print("\"durationMs\":{d}", .{span.durationMs()});
+            try buf.print(self.allocator, "\"status\":{{\"code\":\"{s}\"}},", .{span.status.toString()});
+            try buf.print(self.allocator, "\"durationMs\":{d}", .{span.durationMs()});
 
             // Attributes
             if (span.attributes.items.len > 0) {
-                try writer.writeAll(",\"attributes\":[");
+                try buf.appendSlice(self.allocator, ",\"attributes\":[");
                 for (span.attributes.items, 0..) |attr, j| {
-                    if (j > 0) try writer.writeAll(",");
-                    try writer.writeAll("{");
-                    try writer.print("\"key\":\"{s}\",\"value\":", .{attr.key});
+                    if (j > 0) try buf.appendSlice(self.allocator, ",");
+                    try buf.appendSlice(self.allocator, "{");
+                    try buf.print(self.allocator, "\"key\":\"{s}\",\"value\":", .{attr.key});
                     switch (attr.value) {
-                        .string => |s| try writer.print("{{\"stringValue\":\"{s}\"}}", .{s}),
-                        .int => |n| try writer.print("{{\"intValue\":\"{d}\"}}", .{n}),
-                        .float => |f| try writer.print("{{\"doubleValue\":{d}}}", .{f}),
-                        .boolean => |b| try writer.print("{{\"boolValue\":{}}}", .{b}),
+                        .string => |s| try buf.print(self.allocator, "{{\"stringValue\":\"{s}\"}}", .{s}),
+                        .int => |n| try buf.print(self.allocator, "{{\"intValue\":\"{d}\"}}", .{n}),
+                        .float => |f| try buf.print(self.allocator, "{{\"doubleValue\":{d}}}", .{f}),
+                        .boolean => |b| try buf.print(self.allocator, "{{\"boolValue\":{}}}", .{b}),
                     }
-                    try writer.writeAll("}");
+                    try buf.appendSlice(self.allocator, "}");
                 }
-                try writer.writeAll("]");
+                try buf.appendSlice(self.allocator, "]");
             }
 
-            try writer.writeAll("}");
+            try buf.appendSlice(self.allocator, "}");
         }
 
-        try writer.writeAll("]}]}]}");
+        try buf.appendSlice(self.allocator, "]}]}]}");
         return buf.toOwnedSlice(self.allocator);
     }
 
@@ -229,11 +230,12 @@ pub const Tracer = struct {
         const path = std.fmt.bufPrint(&path_buf, ".trinity/traces/{d}.json", .{trace.trace_id}) catch return error.PathTooLong;
 
         // Ensure directory exists
-        std.fs.cwd().makePath(".trinity/traces") catch {};
+        const io = tri_io.get();
+        std.Io.Dir.cwd().createDirPath(io, ".trinity/traces") catch {};
 
-        var file = std.fs.cwd().createFile(path, .{}) catch return error.FileCreateFailed;
-        defer file.close();
-        file.writeAll(json) catch return error.WriteFailed;
+        var file = std.Io.Dir.cwd().createFile(io, path, .{}) catch return error.FileCreateFailed;
+        defer file.close(io);
+        file.writeStreamingAll(io, json) catch return error.WriteFailed;
     }
 };
 
@@ -263,19 +265,23 @@ pub fn runTraceCommand(allocator: std.mem.Allocator, args: []const []const u8) v
 }
 
 fn showTrace(allocator: std.mem.Allocator, issue_number: u32) void {
+    // This is a CLI leaf reached from runTraceCommand, which has no Io to pass
+    // down, so it takes the process one.
+    const io = tri_io.get();
+
     // Read all trace files, find spans with matching issue
-    var dir = std.fs.cwd().openDir(".trinity/traces", .{ .iterate = true }) catch {
+    var dir = std.Io.Dir.cwd().openDir(io, ".trinity/traces", .{ .iterate = true }) catch {
         std.debug.print("\x1b[33mNo traces found. Run a pipeline first.\x1b[0m\n", .{});
         return;
     };
-    defer dir.close();
+    defer dir.close(io);
 
     var found = false;
     var iter = dir.iterate();
-    while (iter.next() catch null) |entry| {
+    while (iter.next(io) catch null) |entry| {
         if (!std.mem.endsWith(u8, entry.name, ".json")) continue;
 
-        const content = dir.readFileAlloc(allocator, entry.name, 1024 * 1024) catch continue;
+        const content = dir.readFileAlloc(io, entry.name, allocator, .limited(1024 * 1024)) catch continue;
         defer allocator.free(content);
 
         // Simple check: does this trace contain the issue number?
@@ -296,16 +302,17 @@ fn showTrace(allocator: std.mem.Allocator, issue_number: u32) void {
 
 fn listTraces(allocator: std.mem.Allocator) void {
     _ = allocator;
-    var dir = std.fs.cwd().openDir(".trinity/traces", .{ .iterate = true }) catch {
+    const io = tri_io.get();
+    var dir = std.Io.Dir.cwd().openDir(io, ".trinity/traces", .{ .iterate = true }) catch {
         std.debug.print("\x1b[33mNo traces directory. Run a pipeline first.\x1b[0m\n", .{});
         return;
     };
-    defer dir.close();
+    defer dir.close(io);
 
     std.debug.print("\x1b[36m=== Traces ===\x1b[0m\n", .{});
     var count: u32 = 0;
     var iter = dir.iterate();
-    while (iter.next() catch null) |entry| {
+    while (iter.next(io) catch null) |entry| {
         if (std.mem.endsWith(u8, entry.name, ".json")) {
             std.debug.print("  {s}\n", .{entry.name});
             count += 1;
@@ -333,7 +340,7 @@ fn printTraceHelp() void {
 // =============================================================================
 
 fn generateTraceId() u64 {
-    const ts: u64 = @intCast(@as(u128, @intCast(std.time.nanoTimestamp())) & 0xFFFFFFFFFFFFFFFF);
+    const ts: u64 = @intCast(@as(u128, @intCast(tri_time.nanoTimestamp())) & 0xFFFFFFFFFFFFFFFF);
     return ts;
 }
 
@@ -409,8 +416,8 @@ test "Span durationMs" {
         .start_time_ns = 1_000_000_000,
         .end_time_ns = 1_500_000_000,
         .status = .ok,
-        .attributes = .{},
-        .events = .{},
+        .attributes = .empty,
+        .events = .empty,
         .issue_number = 1,
         .link = null,
     };

@@ -10,7 +10,7 @@ argument-hint: <spec.tri or module-name>
 !`git diff --name-only HEAD -- fpga/openxc7-synth/ 2>/dev/null | head -20`
 
 ## Available Bitstreams
-!`ls -la /Users/playra/trinity-w1/fpga/openxc7-synth/*.bit 2>/dev/null`
+!`ls -la /Users/playom/trinity-fpga/fpga/openxc7-synth/*.bit 2>/dev/null`
 
 ## Task
 

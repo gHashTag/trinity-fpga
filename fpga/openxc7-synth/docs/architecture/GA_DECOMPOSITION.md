@@ -86,7 +86,7 @@ Since the `tri decompose` command was not immediately available, this decomposit
 - [x] Catalog 166 benchmark files
 - [x] Document 1,133 Verilog designs
 
-**Location:** `/Users/playra/trinity-w1/src/`
+**Location:** `/Users/playom/trinity-fpga/src/`
 
 **Key Modules:**
 - `vsa/` - Vector Symbolic Architecture

@@ -8,6 +8,7 @@
 //! - WebSocket: /consciousness/stream - Real-time metrics stream
 
 const std = @import("std");
+const tri_time = @import("tri_time");
 const Allocator = std.mem.Allocator;
 
 const SacredFormula = @import("../core/sacred_formula.zig");
@@ -212,7 +213,7 @@ pub const MetricsServer = struct {
         const allocator = self.allocator;
 
         // Get current timestamp
-        const timestamp = std.time.nanoTimestamp();
+        const timestamp = tri_time.nanoTimestamp();
 
         // Compute sacred formula with sample values
         const formula_result = SacredFormula.computeConsciousnessPotency(0.7, 0.6, 0.8, 0.7);
@@ -425,7 +426,7 @@ pub const MetricsServer = struct {
 
 /// Get mock metrics for Dashboard (simulated data)
 pub fn getMockMetrics(allocator: Allocator) !ConsciousnessMetricsResponse {
-    const timestamp = std.time.nanoTimestamp();
+    const timestamp = tri_time.nanoTimestamp();
 
     const formula_result = SacredFormula.computeConsciousnessPotency(0.75, 0.68, 0.82, 0.72);
 

@@ -1,7 +1,7 @@
 #!/bin/bash
 # Pre-flight checks before starting Ralph dashboard
 
-cd /Users/playra/trinity
+cd /Users/playom/trinity
 
 echo "Ralph Dashboard Pre-Flight Test"
 echo "=============================="

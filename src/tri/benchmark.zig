@@ -7,6 +7,7 @@
 
 const std = @import("std");
 
+const tri_time = @import("tri_time");
 pub fn main() !void {
     try runBenchmarks();
 }
@@ -15,7 +16,7 @@ fn runBenchmarks() !void {
     std.debug.print("\n═════════════════════════════════════════════════════════\n", .{});
     std.debug.print("║ TRI MATH v3.6 BENCHMARKS                        ║\n", .{});
     std.debug.print("╠════════════════════════════════════════════╣\n", .{});
-    std.debug.print("║ Date: {d}                                    ║\n", .{std.time.timestamp()});
+    std.debug.print("║ Date: {d}                                    ║\n", .{tri_time.timestamp()});
     std.debug.print("╠══════════════════════════════════════╣\n", .{});
 
     // Formula Discovery Benchmark
@@ -85,7 +86,7 @@ fn printBenchmarkResult(name: []const u8, result: BenchmarkResult) !void {
 const NUM_ITERATIONS = 10_000_000;
 
 fn benchmarkFormulaDiscovery() BenchmarkResult {
-    const start_time = std.time.nanoTimestamp();
+    const start_time = tri_time.nanoTimestamp();
 
     var sum: f64 = 0;
     var i: usize = 0;
@@ -98,7 +99,7 @@ fn benchmarkFormulaDiscovery() BenchmarkResult {
         std.debug.print("", .{});
     }
 
-    const elapsed = std.time.nanoTimestamp() - start_time;
+    const elapsed = tri_time.nanoTimestamp() - start_time;
 
     return BenchmarkResult{
         .operations = NUM_ITERATIONS,
@@ -107,7 +108,7 @@ fn benchmarkFormulaDiscovery() BenchmarkResult {
 }
 
 fn benchmarkSacredEconomy() BenchmarkResult {
-    const start_time = std.time.nanoTimestamp();
+    const start_time = tri_time.nanoTimestamp();
 
     var total_apy: f64 = 0;
     var i: usize = 0;
@@ -124,7 +125,7 @@ fn benchmarkSacredEconomy() BenchmarkResult {
         std.debug.print("", .{});
     }
 
-    const elapsed = std.time.nanoTimestamp() - start_time;
+    const elapsed = tri_time.nanoTimestamp() - start_time;
 
     return BenchmarkResult{
         .operations = NUM_ITERATIONS,
@@ -133,7 +134,7 @@ fn benchmarkSacredEconomy() BenchmarkResult {
 }
 
 fn benchmarkSelfImprover() BenchmarkResult {
-    const start_time = std.time.nanoTimestamp();
+    const start_time = tri_time.nanoTimestamp();
 
     var total_importance: f64 = 0;
     var i: usize = 0;
@@ -149,7 +150,7 @@ fn benchmarkSelfImprover() BenchmarkResult {
         std.debug.print("", .{});
     }
 
-    const elapsed = std.time.nanoTimestamp() - start_time;
+    const elapsed = tri_time.nanoTimestamp() - start_time;
 
     return BenchmarkResult{
         .operations = NUM_ITERATIONS,
