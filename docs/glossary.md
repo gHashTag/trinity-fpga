@@ -181,7 +181,7 @@ FPGA resource for logic. Trinity uses 5.8% LUT on XC7A100T.
 Protocol for tool integration. Trinity has 3 MCP servers: trinity (47 tools), needle (6 tools), zig-docs (4 tools).
 
 ### MEMORY.md
-Auto-memory file at `.claude/projects/-Users-playra-trinity-fpga/memory/MEMORY.md`. Must be <200 lines.
+Auto-memory file at `.claude/projects/-Users-playom-trinity-fpga/memory/MEMORY.md`. Must be <200 lines.
 
 ---
 
