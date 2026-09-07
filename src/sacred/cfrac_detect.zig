@@ -295,7 +295,7 @@ fn detectFibonacciEmbedding(partials: []const u64) DetectionResult {
     const phi_inv = 1.0 / phi;
 
     var fib_count: usize = 0;
-    var total_ratios: usize = @min(50, partials.len - 1);
+    const total_ratios: usize = @min(50, partials.len - 1);
 
     // Check ratios of consecutive partials
     for (0..total_ratios) |i| {
@@ -393,14 +393,11 @@ pub fn generateSummary(detections: [5]DetectionResult) []const u8 {
 
 /// CLI command: tri math cfrac-detect <formula_id> [--type <detector|all>]
 pub fn runDetectCommand(allocator: std.mem.Allocator, args: []const []const u8) !void {
-    _ = allocator;
-
     const GOLD = "\x1b[33m";
     const CYAN = "\x1b[36m";
     const WHITE = "\x1b[97m";
     const GREEN = "\x1b[32m";
     const YELLOW = "\x1b[93m";
-    const RED = "\x1b[31m";
     const MAGENTA = "\x1b[35m";
     const RESET = "\x1b[0m";
 

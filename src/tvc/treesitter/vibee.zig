@@ -200,7 +200,7 @@ pub const Vibeeparser = struct {
         // Note: tree_sitter_vibee() must be linked externally
         // For now, this is a placeholder - actual implementation requires
         // compiling tree-sitter-vibee grammar with tree-sitter cli
-        _ = parser; // Use when VIBEE language is available
+        // (the language is set on `parser` once the grammar is available)
 
         return Vibeeparser{
             .allocator = allocator,
@@ -256,7 +256,7 @@ pub const Vibeeparser = struct {
         }
 
         // Recurse into children
-        var child = node.childCount();
+        const child = node.childCount();
         var i: u32 = 0;
         while (i < child) : (i += 1) {
             const child_node = node.child(i) orelse continue;
@@ -269,7 +269,7 @@ pub const Vibeeparser = struct {
 
         // Extract module name from identifier
         var name: []const u8 = "";
-        var field = node.childCount();
+        const field = node.childCount();
         var i: u32 = 0;
         while (i < field) : (i += 1) {
             const child = node.child(i) orelse continue;
@@ -294,10 +294,8 @@ pub const Vibeeparser = struct {
     }
 
     fn extractTypeDef(self: *Vibeeparser, node: Node, file_path: []const u8, prefix: []const u8, symbols: *std.ArrayList(Symbol)) !void {
-        _ = self;
-
         var name: []const u8 = "";
-        var field_count = node.childCount();
+        const field_count = node.childCount();
         var i: u32 = 0;
         while (i < field_count) : (i += 1) {
             const child = node.child(i) orelse continue;
@@ -327,15 +325,13 @@ pub const Vibeeparser = struct {
     }
 
     fn extractBehavior(self: *Vibeeparser, node: Node, file_path: []const u8, prefix: []const u8, symbols: *std.ArrayList(Symbol)) !void {
-        _ = self;
-
         var name: []const u8 = "";
         var given: []const u8 = "";
         var when: []const u8 = "";
         var then: []const u8 = "";
 
         // Extract fields from behavior
-        var child = node.childCount();
+        const child = node.childCount();
         var i: u32 = 0;
         while (i < child) : (i += 1) {
             const field_node = node.child(i) orelse continue;
@@ -374,10 +370,8 @@ pub const Vibeeparser = struct {
     }
 
     fn extractAlgorithm(self: *Vibeeparser, node: Node, file_path: []const u8, prefix: []const u8, symbols: *std.ArrayList(Symbol)) !void {
-        _ = self;
-
         var name: []const u8 = "";
-        var child_count = node.childCount();
+        const child_count = node.childCount();
         var i: u32 = 0;
         while (i < child_count) : (i += 1) {
             const child = node.child(i) orelse continue;
@@ -407,10 +401,8 @@ pub const Vibeeparser = struct {
     }
 
     fn extractTest(self: *Vibeeparser, node: Node, file_path: []const u8, prefix: []const u8, symbols: *std.ArrayList(Symbol)) !void {
-        _ = self;
-
         var name: []const u8 = "";
-        var child_count = node.childCount();
+        const child_count = node.childCount();
         var i: u32 = 0;
         while (i < child_count) : (i += 1) {
             const child = node.child(i) orelse continue;

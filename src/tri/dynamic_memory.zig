@@ -119,6 +119,7 @@ pub fn init(allocator: std.mem.Allocator) !@This() {
 /// When: storing new memory entry
 /// Then: adds entry with timestamp and calculates importance via Φ
 pub fn store(allocator: std.mem.Allocator, data: []const u8) !void {
+    _ = allocator;
     // Idiomatic Zig: errdefer for error diagnostics
     errdefer |err| {
         std.debug.print("Error in behavior: {}\n", .{err});
@@ -132,6 +133,7 @@ pub fn store(allocator: std.mem.Allocator, data: []const u8) !void {
 /// When: retrieving memory by key or similarity search
 /// Then: returns best matching entry and updates access_count
 pub fn retrieve(allocator: std.mem.Allocator, input: []const u8) error{OutOfMemory}!usize {
+    _ = allocator;
     // Idiomatic Zig: errdefer for error diagnostics
     errdefer |err| {
         std.debug.print("Error in behavior: {}\n", .{err});
@@ -154,6 +156,7 @@ pub fn consolidate(data: []const u8) !void {
 /// When: periodic cleanup needed
 /// Then: reduces importance of old entries by γ decay rate
 pub fn decay(data: []const u8) !void {
+    _ = data;
     // Cleanup: reduces importance of old entries by γ decay rate
     const removed_count: usize = 1;
     _ = removed_count;
@@ -163,6 +166,7 @@ pub fn decay(data: []const u8) !void {
 /// When: consolidation needed
 /// Then: returns entries with consciousness_level > Φ⁻¹
 pub fn get_consolidation_candidates(data: []const u8) !void {
+    _ = data;
     // Query: returns entries with consciousness_level > Φ⁻¹
     const result = @as([]const u8, "query_result");
     _ = result;
@@ -182,6 +186,7 @@ pub fn update_importance() !void {
 /// When: finding similar memories
 /// Then: returns all entries with cosine_similarity > threshold
 pub fn similarity_search(allocator: std.mem.Allocator, input: []const u8) error{OutOfMemory}!f32 {
+    _ = allocator;
     // Idiomatic Zig: errdefer for error diagnostics
     errdefer |err| {
         std.debug.print("Error in behavior: {}\n", .{err});
@@ -204,6 +209,7 @@ pub fn forget(data: []const u8) !void {
 /// When: monitoring memory health
 /// Then: returns statistics (entries, avg_importance, consolidation_count)
 pub fn get_stats(data: []const u8) usize {
+    _ = data;
     // Query: returns statistics (entries, avg_importance, consolidation_count)
     const result = @as([]const u8, "query_result");
     _ = result;
@@ -213,6 +219,7 @@ pub fn get_stats(data: []const u8) usize {
 /// When: cleaning up stale memories
 /// Then: removes entries older than max_age with low importance
 pub fn clear_old(data: []const u8) !void {
+    _ = data;
     // Cleanup: removes entries older than max_age with low importance
     const removed_count: usize = 1;
     _ = removed_count;

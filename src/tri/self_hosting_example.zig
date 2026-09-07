@@ -22,7 +22,7 @@ pub fn main() !void {
     , .{});
 
     // Configure the self-hosting session
-    var config = self_hosting.SelfHostingConfig{
+    const config = self_hosting.SelfHostingConfig{
         .max_patches = 3, // Maximum 3 self-patches per session
         .confidence_threshold = 0.999, // 99.9% confidence required
         .require_human_approval = false, // Auto-approve high-confidence patches

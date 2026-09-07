@@ -72,6 +72,7 @@ pub fn createIssueComment(allocator: Allocator, data: CommentData) !void {
 
 /// Format Lotus Cycle progress comment
 pub fn formatLotusProgressComment(allocator: Allocator, issue_number: u64, title: []const u8, sections: []const []const u8) ![]const u8 {
+    _ = issue_number;
     var comment = try std.ArrayList(u8).init(allocator);
     defer comment.deinit(allocator);
 

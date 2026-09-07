@@ -183,6 +183,7 @@ pub const SignedTransaction = struct {
 
     /// RLP encode the transaction for broadcast
     pub fn rlpEncode(self: *const SignedTransaction, alloc: std.mem.Allocator) ![]u8 {
+        _ = self;
         _ = alloc;
         // TODO: Implement RLP encoding
         return error.NotImplemented;
@@ -237,6 +238,7 @@ pub const AbiEncoder = struct {
 
     /// Generate function selector from function name
     fn functionSelector(self: *AbiEncoder, func_name: []const u8) ![4]u8 {
+        _ = self;
         // Simplified: use first 4 bytes of function name hash
         // In production, use full Keccak256(function_name + "()") signature
         var hash: [32]u8 = undefined;

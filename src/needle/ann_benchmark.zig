@@ -216,7 +216,6 @@ pub fn benchmarkAlgorithm(
         .hnsw => {
             index.hnsw = try HNSWIndex.init(allocator, .{ .dim = config.dim });
             for (vectors, 0..) |vec, i| {
-                _ = i;
                 try index.hnsw.insert(symbol_ids[i], vec);
             }
         },
@@ -280,7 +279,6 @@ pub fn benchmarkAlgorithm(
             .hnsw => {
                 idx.hnsw = try HNSWIndex.init(allocator, .{ .dim = config.dim });
                 for (vectors, 0..) |vec, i| {
-                    _ = i;
                     try idx.hnsw.insert(symbol_ids[i], vec);
                 }
             },

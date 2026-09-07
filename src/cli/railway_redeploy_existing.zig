@@ -36,7 +36,6 @@ pub fn main(init: std.process.Init.Minimal) !void {
         });
         defer allocator.free(result.stderr);
         defer allocator.free(result.stdout);
-        _ = result;
     }
 
     // Now trigger a new deployment (not redeploy - fresh deploy with new config)

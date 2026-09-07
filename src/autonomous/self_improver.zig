@@ -90,8 +90,6 @@ pub const EvolutionCycle = struct {
 
 // CLI for testing
 pub fn main() !void {
-    const allocator = std.heap.page_allocator;
-
     std.debug.print("🤖 TRINITY SELF-IMPROVEMENT AGENT\n", .{});
     std.debug.print("φ² + 1/φ² = 3\n\n", .{});
 

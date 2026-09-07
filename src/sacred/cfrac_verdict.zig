@@ -183,8 +183,6 @@ pub fn computeVerdict(
     expression: []const u8,
     partials: []const u64,
 ) !VerdictResult {
-    _ = allocator;
-
     // Get CF stats from other modules
     const stats = @import("cfrac_stats.zig");
     const detect = @import("cfrac_detect.zig");
@@ -253,8 +251,6 @@ pub fn computeVerdict(
 
 /// CLI command: tri math cfrac-verdict <formula_id>
 pub fn runVerdictCommand(allocator: std.mem.Allocator, args: []const []const u8) !void {
-    _ = allocator;
-
     const GOLD = "\x1b[33m";
     const CYAN = "\x1b[36m";
     const WHITE = "\x1b[97m";

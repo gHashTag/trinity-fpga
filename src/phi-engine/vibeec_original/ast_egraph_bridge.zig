@@ -70,14 +70,14 @@ pub const Bridge = struct {
         const best_enode = try self.graph.extractBest(class_id);
 
         switch (best_enode) {
-            .constant => |_| {
+            .constant => {
                 const node = try self.createDummyNode(.literal_int);
                 // Assuming we can set token lexeme somehow or re-parse,
                 // but for backend compilation we usually need AstNode structure.
                 // This is a simplified reconstruction.
                 return node;
             },
-            .variable => |_| {
+            .variable => {
                 const node = try self.createDummyNode(.identifier);
                 return node;
             },

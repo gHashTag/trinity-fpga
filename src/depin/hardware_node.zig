@@ -54,8 +54,6 @@ pub const NodeCapabilities = struct {
 
 // Detect hardware platform
 pub fn detectPlatform(allocator: Allocator) !Platform {
-    _ = allocator;
-
     // Try Raspberry Pi first
     if (std.fs.path.exists("/proc/cpuinfo")) {
         const cpuinfo = try std.fs.cwd().readFileAlloc(allocator, "/proc/cpuinfo", 4096);

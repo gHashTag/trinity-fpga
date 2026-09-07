@@ -66,12 +66,12 @@ test "BatchNorm forward with running stats" {
     const gamma = [_]f32{ 1.0, 1.0 };
     const beta = [_]f32{ 0.0, 0.0 };
 
-    var state = BatchNormState{
+    const state = BatchNormState{
         .running_mean = running_mean[0..],
         .running_var = running_var[0..],
     };
 
-    var output: [12]f32 = undefined;
+    const output: [12]f32 = undefined;
 
     const config = BatchNormConfig{
         .num_features = num_features,
@@ -112,12 +112,12 @@ test "BatchNorm without affine" {
     const gamma = [_]f32{1.0};
     const beta = [_]f32{0.0};
 
-    var state = BatchNormState{
+    const state = BatchNormState{
         .running_mean = running_mean[0..],
         .running_var = running_var[0..],
     };
 
-    var output: [6]f32 = undefined;
+    const output: [6]f32 = undefined;
 
     const config = BatchNormConfig{
         .num_features = num_features,

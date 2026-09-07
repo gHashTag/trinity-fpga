@@ -164,7 +164,6 @@ pub const ComplianceResult = struct {
 };
 
 test "generateListUnsubscribeHeaders" {
-    const std = @import("std");
     const allocator = std.testing.allocator;
 
     const url = "https://t27.ai/unsubscribe?id=test123";
@@ -177,7 +176,6 @@ test "generateListUnsubscribeHeaders" {
 }
 
 test "getDateTime format" {
-    const std = @import("std");
     const allocator = std.testing.allocator;
 
     const datetime = try getDateTime(allocator);

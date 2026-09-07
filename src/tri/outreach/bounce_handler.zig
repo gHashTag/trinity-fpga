@@ -47,8 +47,6 @@ pub const BounceHandler = struct {
 
     /// Parse SMTP response to detect bounce
     pub fn parseResponse(self: *BounceHandler, response: []const u8, email: []const u8) !?BounceInfo {
-        _ = self;
-
         // Permanent bounce codes
         const permanent_patterns = [_][]const u8{
             "550", // No such user
@@ -243,7 +241,6 @@ fn toLower(allocator: std.mem.Allocator, s: []const u8) ![]const u8 {
 }
 
 test "parseResponse — permanent bounce" {
-    const std = @import("std");
     const allocator = std.testing.allocator;
     var handler = BounceHandler.init(allocator, "/tmp/test_bounce.txt");
 
@@ -256,7 +253,6 @@ test "parseResponse — permanent bounce" {
 }
 
 test "parseResponse — temporary bounce" {
-    const std = @import("std");
     const allocator = std.testing.allocator;
     var handler = BounceHandler.init(allocator, "/tmp/test_bounce.txt");
 
@@ -269,7 +265,6 @@ test "parseResponse — temporary bounce" {
 }
 
 test "parseResponse — spam complaint" {
-    const std = @import("std");
     const allocator = std.testing.allocator;
     var handler = BounceHandler.init(allocator, "/tmp/test_bounce.txt");
 

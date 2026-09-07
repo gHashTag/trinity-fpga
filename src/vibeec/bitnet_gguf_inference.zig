@@ -58,7 +58,7 @@ pub fn dequantizeI2S(data: []const u8, output: []f32, num_elements: usize) void 
         const block_elements = @min(I2S_BLOCK_SIZE, num_elements - elem_idx);
         const packed_bytes = (block_elements + 3) / 4;
 
-        for (0..packed_bytes) |byte_idx| {
+        for (0..packed_bytes) |_| {
             if (data_idx >= data.len) break;
             const byte = data[data_idx];
             data_idx += 1;

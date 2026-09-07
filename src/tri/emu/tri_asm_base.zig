@@ -32,7 +32,8 @@ pub const AssemblerState = struct {
 
 // ════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 // PARSE SINGLE INSTRUCTION (placeholder)
-fn parseInstruction(allocator: Allocator, line: []const u8) !?Instruction {
+fn parseInstruction(allocator: std.mem.Allocator, line: []const u8) !?Instruction {
+    _ = allocator;
     _ = line;
     return null; // TODO: Implement actual parsing
 }

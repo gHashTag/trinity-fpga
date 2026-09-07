@@ -242,7 +242,7 @@ pub const WorkflowValidator = struct {
     substitutor: VariableSubstitutor,
 
     pub fn init(allocator: Allocator) !WorkflowValidator {
-        var sub = try VariableSubstitutor.init(allocator);
+        const sub = try VariableSubstitutor.init(allocator);
         return WorkflowValidator{
             .allocator = allocator,
             .substitutor = sub,
@@ -254,46 +254,46 @@ pub const WorkflowValidator = struct {
     }
 
     /// Validate workflow definition
-    pub fn validateWorkflow(self: *WorkflowValidator, workflow: *const Workflow, context: *const VariableContext) !workflow.ValidationResult {
+    pub fn validateWorkflow(self: *WorkflowValidator, wf: *const Workflow, context: *const VariableContext) !workflow.ValidationResult {
         const allocator = self.allocator;
         var result = workflow.ValidationResult.init(allocator);
 
         // Basic structural validation
-        try self.validateWorkflowStructure(workflow, &result);
+        try self.validateWorkflowStructure(wf, &result);
 
         // Variable validation
-        try self.validateVariables(workflow, context, &result);
+        try self.validateVariables(wf, context, &result);
 
         // Step validation
-        try self.validateSteps(workflow, context, &result);
+        try self.validateSteps(wf, context, &result);
 
         // Sacred validation
-        if (workflow.sacred_validation) {
-            try self.validateSacred(workflow, &result);
+        if (wf.sacred_validation) {
+            try self.validateSacred(wf, &result);
         }
 
         return result;
     }
 
     /// Validate workflow structure
-    fn validateWorkflowStructure(self: *WorkflowValidator, workflow: *const Workflow, result: *workflow.ValidationResult) !void {
+    fn validateWorkflowStructure(self: *WorkflowValidator, wf: *const Workflow, result: *workflow.ValidationResult) !void {
         // Check required fields
-        if (workflow.name.len == 0) {
+        if (wf.name.len == 0) {
             try result.addError("name", "Workflow name is required", .err);
         }
 
         // Check step count limits
-        if (workflow.steps.items.len > workflow.MAX_WORKFLOW_STEPS) {
-            try result.addError("steps", std.fmt.allocPrint(self.allocator, "Maximum step count exceeded: {d} > {d}", .{ workflow.steps.items.len, workflow.MAX_WORKFLOW_STEPS }) catch "Maximum step count exceeded", .err);
+        if (wf.steps.items.len > workflow.MAX_WORKFLOW_STEPS) {
+            try result.addError("steps", std.fmt.allocPrint(self.allocator, "Maximum step count exceeded: {d} > {d}", .{ wf.steps.items.len, workflow.MAX_WORKFLOW_STEPS }) catch "Maximum step count exceeded", .err);
         }
 
         // Check strategy validity
-        if (@as(usize, @intFromEnum(workflow.strategy)) >= 4) {
+        if (@as(usize, @intFromEnum(wf.strategy)) >= 4) {
             try result.addError("strategy", "Invalid workflow strategy", .err);
         }
 
         // Check timeout limits
-        if (workflow.timeout_ms) |timeout| {
+        if (wf.timeout_ms) |timeout| {
             if (timeout > workflow.MAX_WORKFLOW_DURATION_MS) {
                 try result.addError("timeout_ms", std.fmt.allocPrint(self.allocator, "Workflow timeout exceeds maximum: {d} > {d}", .{ timeout, workflow.MAX_WORKFLOW_DURATION_MS }) catch "Workflow timeout exceeds maximum", .err);
             }

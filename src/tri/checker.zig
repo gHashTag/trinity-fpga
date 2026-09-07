@@ -164,7 +164,7 @@ pub const TypeChecker = struct {
             .fn_decl => |*decl| {
                 self.current_function = decl;
                 // Create new scope for function body
-                var scope = self.pushScope();
+                _ = self.pushScope();
                 defer self.popScope();
 
                 // Add parameters to symbol table
@@ -217,9 +217,9 @@ pub const TypeChecker = struct {
     /// Check an expression and return its type
     fn checkExpression(self: *Self, expr: *const Expression) !Type {
         return switch (expr.*) {
-            .literal_trit => |_| Type{ .t_trit = {} },
-            .literal_int => |_| Type{ .t_t27 = {} },
-            .literal_float => |_| Type{ .t_gf16 = {} },
+            .literal_trit => Type{ .t_trit = {} },
+            .literal_int => Type{ .t_t27 = {} },
+            .literal_float => Type{ .t_gf16 = {} },
             .identifier => |name| {
                 if (self.symbol_table.get(name)) |symbol| {
                     return symbol.typ;

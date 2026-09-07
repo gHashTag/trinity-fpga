@@ -82,7 +82,7 @@ pub const ApiServer = struct {
 
     pub fn init(allocator: std.mem.Allocator, cluster_state: *cluster.ClusterState, port: u16) !ApiServer {
         const address = try std.net.Address.parseIp4("127.0.0.1", port);
-        var server = http.Server(*cluster.ClusterState).init(address, cluster_state);
+        const server = http.Server(*cluster.ClusterState).init(address, cluster_state);
 
         return ApiServer{
             .allocator = allocator,

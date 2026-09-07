@@ -153,7 +153,6 @@ pub const Amygdala = struct {
 
     /// Levenshtein distance for fuzzy matching
     pub fn levenshteinDistance(self: *Amygdala, a: []const u8, b: []const u8) !usize {
-        _ = self;
         const m = a.len;
         const n = b.len;
 

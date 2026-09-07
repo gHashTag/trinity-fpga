@@ -145,7 +145,7 @@ fn parse_simple_spec(path: []const u8, allocator: std.mem.Allocator) !SimpleSpec
                 code_lines = std.ArrayList([]const u8).init(allocator);
             }
         } else if (std.mem.startsWith(u8, trimmed, "    code: |")) {
-            if (current_behavior) |*b| {
+            if (current_behavior) |_| {
                 const code_start = std.mem.indexOf(u8, trimmed, "|").? + 1;
                 const first_line = std.mem.trim(u8, trimmed[code_start..], &std.ascii.whitespace);
 
