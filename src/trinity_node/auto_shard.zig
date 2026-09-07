@@ -159,14 +159,22 @@ fn getSystemMemoryMacOS() !SystemMemory {
 
 fn getSystemMemoryLinux() !SystemMemory {
     // Read /proc/meminfo
-    const file = std.Io.Dir.openFileAbsolute(tri_io.get(), "/proc/meminfo", .{}) catch {
+    // This whole function is comptime-dead on macOS, which is why nothing
+    // analysed it until Linux CI did -- the same trap as readLink elsewhere.
+    const io = tri_io.get();
+    const file = std.Io.Dir.openFileAbsolute(io, "/proc/meminfo", .{}) catch {
         // Fallback
         return SystemMemory{ .total_bytes = 8 * 1024 * 1024 * 1024, .available_bytes = 6 * 1024 * 1024 * 1024 };
     };
-    defer file.close();
+    defer file.close(io);
 
     var buf: [4096]u8 = undefined;
-    const n = file.read(&buf) catch return SystemMemory{
+    // 0.16 has no File.read. /proc/meminfo is a whole small file and a short
+    // read is normal, so readSliceShort is the right one of the three: it
+    // returns a short count only at end of stream.
+    var scratch: [512]u8 = undefined;
+    var fr = file.reader(io, &scratch);
+    const n = fr.interface.readSliceShort(&buf) catch return SystemMemory{
         .total_bytes = 8 * 1024 * 1024 * 1024,
         .available_bytes = 6 * 1024 * 1024 * 1024,
     };
