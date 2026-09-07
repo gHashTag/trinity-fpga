@@ -238,11 +238,11 @@ implementation: |
 # 1. PREPARE DEVICES
 #    - Ensure 5+ devices on same network (192.168.1.x)
 #    - Install Zig on each device
-#    - Clone trinity-w1 repo
+#    - Clone trinity-fpga repo
 #
 # 2. BUILD TRI BINARY
 #    # On each device:
-#    cd /path/to/trinity-w1
+#    cd /path/to/trinity-fpga
 #    zig build tri
 #
 # 3. DEPLOY MULTI-NODE CLUSTER

@@ -1,6 +1,6 @@
 #!/bin/bash
 # TRI COMMANDER v4 — Real Claude API Handler
-cd /Users/playra/trinity || exit 1
+cd /Users/playom/trinity || exit 1
 
 INCOMING=".ralph/queue/incoming.cmd"
 RESPONSE=".ralph/queue/responses/current.resp"

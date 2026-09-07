@@ -1,6 +1,6 @@
 #!/bin/bash
 
-CONFIG_DIR="/Users/playra/vibee-lang/config"
+CONFIG_DIR="/Users/playom/vibee-lang/config"
 EDEN_CONFIG="$CONFIG_DIR/eden_config.yaml"
 CLAUDE_SETTINGS="$HOME/.claude/settings.json"
 PROXY_LOG="/tmp/litellm_eden.log"
@@ -9,20 +9,20 @@ case "$1" in
   "eden")
     echo "🚀 Switching to Eden AI (Qwen)..."
     # Load secrets
-    if [ -f "/Users/playra/vibee-lang/.env.local" ]; then
-      set -a; source "/Users/playra/vibee-lang/.env.local"; set +a
+    if [ -f "/Users/playom/vibee-lang/.env.local" ]; then
+      set -a; source "/Users/playom/vibee-lang/.env.local"; set +a
     else
-      echo "❌ Error: /Users/playra/vibee-lang/.env.local not found!"
+      echo "❌ Error: /Users/playom/vibee-lang/.env.local not found!"
       exit 1
     fi
     
     # Kill existing proxies if any
     pkill -f "litellm --config $EDEN_CONFIG" 2>/dev/null
-    pkill -f "python3 /Users/playra/vibee-lang/scripts/token_fixer.py" 2>/dev/null
+    pkill -f "python3 /Users/playom/vibee-lang/scripts/token_fixer.py" 2>/dev/null
     pkill -f "run_litellm_custom.py" 2>/dev/null
     
     # Start Custom LiteLLM Runner on port 4000
-    nohup /opt/homebrew/bin/python3.10 /Users/playra/vibee-lang/scripts/run_litellm_custom.py > "/tmp/litellm_eden.log" 2>&1 &
+    nohup /opt/homebrew/bin/python3.10 /Users/playom/vibee-lang/scripts/run_litellm_custom.py > "/tmp/litellm_eden.log" 2>&1 &
     
     # Wait for proxy to start
     echo "⏳ Waiting for Eden AI proxy to start..."
@@ -35,7 +35,7 @@ case "$1" in
     
   "zai")
     pkill -f "litellm --config $EDEN_CONFIG" 2>/dev/null
-    pkill -f "python3 /Users/playra/vibee-lang/scripts/token_fixer.py" 2>/dev/null
+    pkill -f "python3 /Users/playom/vibee-lang/scripts/token_fixer.py" 2>/dev/null
     
     # Update settings
     sed -i.bak 's|"ANTHROPIC_BASE_URL": ".*"|"ANTHROPIC_BASE_URL": "https://api.z.ai/api/anthropic"|g' "$CLAUDE_SETTINGS"

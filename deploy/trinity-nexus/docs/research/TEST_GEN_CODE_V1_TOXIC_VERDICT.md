@@ -316,7 +316,7 @@
 
 **Testing script:**
 ```bash
-for spec_file in /Users/playra/vibee-lang/specs/tri/core/*.vibee; do
+for spec_file in /Users/playom/vibee-lang/specs/tri/core/*.vibee; do
     name=$(basename "$spec_file" .vibee)
     zig test "$name.zig" > /dev/null 2>&1 && echo "✅" || echo "❌"
 done

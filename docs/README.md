@@ -24,7 +24,7 @@ Static files are generated in `build/`.
 
 **IMPORTANT:** Website and docs share ONE gh-pages branch. ALWAYS deploy BOTH together.
 
-See `/Users/playra/.claude/projects/-Users-playra-trinity-w1/memory/MEMORY.md` for the deployment protocol.
+See `/Users/playom/.claude/projects/-Users-playra-trinity-fpga/memory/MEMORY.md` for the deployment protocol.
 
 ```bash
 # From docs/ directory

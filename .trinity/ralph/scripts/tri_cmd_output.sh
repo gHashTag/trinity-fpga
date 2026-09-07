@@ -2,7 +2,7 @@
 # TRI COMMAND OUTPUT - Live response viewer (displays ABOVE input)
 # Location: .ralph/scripts/tri_cmd_output.sh
 
-RALPH_DIR="/Users/playra/trinity"
+RALPH_DIR="/Users/playom/trinity"
 RESPONSE_FILE="$RALPH_DIR/.ralph/queue/responses/current.resp"
 QUEUE_DIR="$RALPH_DIR/.ralph/queue"
 

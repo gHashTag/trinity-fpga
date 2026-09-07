@@ -7,10 +7,10 @@ Reference this module for common system state queries:
 ### Build Health
 ```bash
 # Build check (exit code + errors)
-cd /Users/playom/trinity-fpga && zig build --summary none 2>&1
+cd "$(git rev-parse --show-toplevel)" && zig build --summary none 2>&1
 
 # Test suite
-cd /Users/playom/trinity-fpga && zig build test 2>&1
+cd "$(git rev-parse --show-toplevel)" && zig build test 2>&1
 ```
 
 ### Git State

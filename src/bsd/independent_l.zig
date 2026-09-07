@@ -517,7 +517,7 @@ pub fn main() !void {
     print("Independent numerical computation vs Cremona values\n\n", .{});
 
     // Load allbsd data for conductor <= 1000
-    const path = "/Users/playra/trinity-w1/data/ecdata/allbsd/allbsd.00000-09999";
+    const path = "/Users/playom/trinity-fpga/data/ecdata/allbsd/allbsd.00000-09999";
     const file = std.fs.cwd().openFile(path, .{}) catch |e| {
         print("Error opening {s}: {}\n", .{ path, e });
         return e;

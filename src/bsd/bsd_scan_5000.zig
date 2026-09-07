@@ -327,7 +327,7 @@ pub fn main() !void {
     print("  Verifying BSD Conjecture for entire database\n", .{});
     print("=============================================================\n\n", .{});
 
-    const base_dir = "/Users/playra/trinity-w1/data/ecdata/allbsd";
+    const base_dir = "/Users/playom/trinity-fpga/data/ecdata/allbsd";
     const max_conductor: u64 = 500000;
 
     var stats = ScanStats{};

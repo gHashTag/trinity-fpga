@@ -8,7 +8,7 @@ allowed-tools: Read, Grep, Glob, Bash
 # VSA Mathematical Verification
 
 ## Current Test Status
-!`cd /Users/playra/trinity-w1 && zig test src/vsa.zig 2>&1 | tail -10`
+!`cd "$(git rev-parse --show-toplevel)" && zig test src/vsa.zig 2>&1 | tail -10`
 
 ## Task
 

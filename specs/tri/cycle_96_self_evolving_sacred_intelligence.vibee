@@ -551,7 +551,7 @@ examples:
     code: |
       const patch = try sacred_intelligence.analyzeAndPatchCode(
           allocator,
-          "/Users/playra/trinity-w1/src/tri/math/sacred_formula.zig",
+          "/Users/playom/trinity-fpga/src/tri/math/sacred_formula.zig",
           null // analyze entire file
       );
 

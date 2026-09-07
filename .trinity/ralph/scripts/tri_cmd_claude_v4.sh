@@ -2,7 +2,7 @@
 # TRI COMMANDER v4 — Handler с progress индикацией и форматированными ответами
 # Uses clean ASCII format (no ANSI in file) for proper tail -f display
 
-RALPH_DIR="/Users/playra/trinity"
+RALPH_DIR="/Users/playom/trinity"
 QUEUE_DIR="$RALPH_DIR/.ralph/queue"
 INCOMING="$QUEUE_DIR/incoming.cmd"
 RESPONSE="$QUEUE_DIR/responses/current.resp"

@@ -2,7 +2,7 @@
 # tmux_status.sh - Output formatted status for Ralph Dashboard panels
 # Usage: ./tmux_status.sh <panel_name|statusline>
 
-RALPH_DIR="/Users/playra/trinity/trinity-nexus"
+RALPH_DIR="/Users/playom/trinity/trinity-nexus"
 cd "$RALPH_DIR" 2>/dev/null || exit 1
 
 # Source cache layer
@@ -25,7 +25,7 @@ BOLD="\033[1m"
 
 panel0_loop_status() {
     # Panel 0: Ralph Loop Status (RAZUM)
-    local status_file="/Users/playra/trinity/.ralph/logs/status.json"
+    local status_file="/Users/playom/trinity/.ralph/logs/status.json"
     local loop="--"
     local api="--/100"
     local cb="CLOSED"
@@ -44,8 +44,8 @@ panel0_loop_status() {
 
     # Check circuit breaker state
     local cb_state="CLOSED"
-    if [ -f "/Users/playra/trinity/.ralph/internal/.circuit_breaker_state" ]; then
-        cb_state=$(jq -r '.state // "CLOSED"' "/Users/playra/trinity/.ralph/internal/.circuit_breaker_state" 2>/dev/null || echo "CLOSED")
+    if [ -f "/Users/playom/trinity/.ralph/internal/.circuit_breaker_state" ]; then
+        cb_state=$(jq -r '.state // "CLOSED"' "/Users/playom/trinity/.ralph/internal/.circuit_breaker_state" 2>/dev/null || echo "CLOSED")
     fi
 
     # Color code status
@@ -67,8 +67,8 @@ panel0_loop_status() {
     echo -e "Next Reset:     ${next_reset}"
 
     # Session info
-    if [ -f "/Users/playra/trinity/.ralph/internal/.ralph_session" ]; then
-        local last_used=$(jq -r '.last_used // "unknown"' "/Users/playra/trinity/.ralph/internal/.ralph_session" 2>/dev/null)
+    if [ -f "/Users/playom/trinity/.ralph/internal/.ralph_session" ]; then
+        local last_used=$(jq -r '.last_used // "unknown"' "/Users/playom/trinity/.ralph/internal/.ralph_session" 2>/dev/null)
         echo -e "Session Last:    ${last_used}"
     fi
 }
@@ -176,21 +176,21 @@ panel3_techtree() {
     echo -e "${BOLD}${GOLD}RAZUM: Tech Tree Progress${RESET}"
     echo -e "${GRAY}━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
 
-    if [ ! -f "/Users/playra/trinity/.ralph/TECH_TREE.md" ]; then
+    if [ ! -f "/Users/playom/trinity/.ralph/TECH_TREE.md" ]; then
         echo -e "${RED}No TECH_TREE.md found${RESET}"
         return
     fi
 
     # Show recently completed nodes (from table)
     echo -e "Recently Completed:"
-    grep -E '\|\s*\*\*[^*]+\*\*' "/Users/playra/trinity/.ralph/TECH_TREE.md" 2>/dev/null | grep -i "COMPLETED\|Done" | head -5 | while read -r line; do
+    grep -E '\|\s*\*\*[^*]+\*\*' "/Users/playom/trinity/.ralph/TECH_TREE.md" 2>/dev/null | grep -i "COMPLETED\|Done" | head -5 | while read -r line; do
         # Extract node ID and name from table row
         echo -e "${GREEN}✓${RESET} ${line}"
     done
 
     echo ""
     echo -e "Available Nodes:"
-    local available=$(grep -c "Available Nodes" "/Users/playra/trinity/.ralph/TECH_TREE.md" 2>/dev/null || echo "0")
+    local available=$(grep -c "Available Nodes" "/Users/playom/trinity/.ralph/TECH_TREE.md" 2>/dev/null || echo "0")
     echo -e "  ${available} nodes available"
 }
 
@@ -201,11 +201,11 @@ panel4_memory() {
 
     # SUCCESS_HISTORY
     local success_count=0
-    if [ -f "/Users/playra/trinity/.ralph/memory/SUCCESS_HISTORY.md" ]; then
-        success_count=$(grep -c "^-" "/Users/playra/trinity/.ralph/memory/SUCCESS_HISTORY.md" 2>/dev/null || echo "0")
+    if [ -f "/Users/playom/trinity/.ralph/memory/SUCCESS_HISTORY.md" ]; then
+        success_count=$(grep -c "^-" "/Users/playom/trinity/.ralph/memory/SUCCESS_HISTORY.md" 2>/dev/null || echo "0")
         echo -e "${GREEN}SUCCESS_HISTORY:${RESET}     ${success_count} entries"
         echo -e "${GRAY}Recent:${RESET}"
-        grep "^-" "/Users/playra/trinity/.ralph/memory/SUCCESS_HISTORY.md" 2>/dev/null | tail -2 | while read -r line; do
+        grep "^-" "/Users/playom/trinity/.ralph/memory/SUCCESS_HISTORY.md" 2>/dev/null | tail -2 | while read -r line; do
             echo -e "  ${GREEN}✓${RESET} ${line}"
         done
     else
@@ -216,11 +216,11 @@ panel4_memory() {
 
     # REGRESSION_PATTERNS
     local regression_count=0
-    if [ -f "/Users/playra/trinity/.ralph/memory/REGRESSION_PATTERNS.md" ]; then
-        regression_count=$(grep -c "^-" "/Users/playra/trinity/.ralph/memory/REGRESSION_PATTERNS.md" 2>/dev/null || echo "0")
+    if [ -f "/Users/playom/trinity/.ralph/memory/REGRESSION_PATTERNS.md" ]; then
+        regression_count=$(grep -c "^-" "/Users/playom/trinity/.ralph/memory/REGRESSION_PATTERNS.md" 2>/dev/null || echo "0")
         echo -e "${RED}REGRESSION_PATTERNS:${RESET}  ${regression_count} patterns"
         echo -e "${GRAY}Recent:${RESET}"
-        grep "^-" "/Users/playra/trinity/.ralph/memory/REGRESSION_PATTERNS.md" 2>/dev/null | tail -2 | while read -r line; do
+        grep "^-" "/Users/playom/trinity/.ralph/memory/REGRESSION_PATTERNS.md" 2>/dev/null | tail -2 | while read -r line; do
             echo -e "  ${RED}✗${RESET} ${line}"
         done
     else
@@ -390,7 +390,7 @@ panel10_logs() {
     echo -e "${BOLD}${PURPLE}DUKH: Live Logs${RESET}"
     echo -e "${GRAY}━━━━━━━━━━━━━━━━━━${RESET}"
 
-    local log_file="/Users/playra/trinity/.ralph/logs/ralph.log"
+    local log_file="/Users/playom/trinity/.ralph/logs/ralph.log"
     if [ ! -f "$log_file" ]; then
         echo -e "${RED}No log file found${RESET}"
         echo -e "${GRAY}Expected: ${log_file}${RESET}"
@@ -553,7 +553,7 @@ panel13_network() {
     echo -e "DNS:        ${dns_lat}"
 
     # Rate limit from status.json
-    local status_file="/Users/playra/trinity/.ralph/logs/status.json"
+    local status_file="/Users/playom/trinity/.ralph/logs/status.json"
     if [ -f "$status_file" ]; then
         local calls=$(jq -r '.calls_made_this_hour // "?"' "$status_file" 2>/dev/null)
         local max=100
@@ -573,7 +573,7 @@ panel14_stats() {
     echo -e "${GRAY}━━━━━━━━━━━━━━━━━━${RESET}"
 
     # Ralph status
-    local sf="/Users/playra/trinity/.ralph/logs/status.json"
+    local sf="/Users/playom/trinity/.ralph/logs/status.json"
     if [ -f "$sf" ]; then
         local loop=$(jq -r '.loop_count // "?"' "$sf" 2>/dev/null)
         local st=$(jq -r '.status // "unknown"' "$sf" 2>/dev/null)
@@ -592,7 +592,7 @@ panel14_stats() {
     fi
 
     # Tasks
-    local fp="/Users/playra/trinity/.ralph/fix_plan.md"
+    local fp="/Users/playom/trinity/.ralph/fix_plan.md"
     if [ -f "$fp" ]; then
         local total=$(grep -c "^- \[ \]" "$fp" 2>/dev/null || echo "0")
         local done=$(grep -c "^- \[x\]" "$fp" 2>/dev/null || echo "0")
@@ -624,17 +624,17 @@ statusline() {
     local changes=0
 
     # Parse status.json - OPTIMIZED: Single jq call with proper fallback
-    if [ -f "/Users/playra/trinity/.ralph/logs/status.json" ]; then
+    if [ -f "/Users/playom/trinity/.ralph/logs/status.json" ]; then
         eval "$(jq -r '
             "loop=\(.loop_count // "#?")",
             "calls=\(.calls_made_this_hour // "#?")"
-        ' /Users/playra/trinity/.ralph/logs/status.json 2>/dev/null)"
+        ' /Users/playom/trinity/.ralph/logs/status.json 2>/dev/null)"
         api="${calls}/100"
     fi
 
     # Parse circuit breaker - OPTIMIZED: Use head -1 instead of jq (faster)
-    if [ -f "/Users/playra/trinity/.ralph/internal/.circuit_breaker_state" ]; then
-        cb=$(grep -o '"state": "[^"]*' "/Users/playra/trinity/.ralph/internal/.circuit_breaker_state" 2>/dev/null | cut -d'"' -f4 || echo "CLOSED")
+    if [ -f "/Users/playom/trinity/.ralph/internal/.circuit_breaker_state" ]; then
+        cb=$(grep -o '"state": "[^"]*' "/Users/playom/trinity/.ralph/internal/.circuit_breaker_state" 2>/dev/null | cut -d'"' -f4 || echo "CLOSED")
     fi
 
     # OPTIMIZED: Use cached fix_plan counts
@@ -650,9 +650,9 @@ statusline() {
 
     # Worker status
     local w1="idle" w2="idle" w3="idle"
-    [ -f "/Users/playra/trinity/.ralph/DONE_W1" ] || w1="act"
-    [ -f "/Users/playra/trinity/.ralph/DONE_W2" ] || w2="act"
-    [ -f "/Users/playra/trinity/.ralph/DONE_W3" ] || w3="act"
+    [ -f "/Users/playom/trinity/.ralph/DONE_W1" ] || w1="act"
+    [ -f "/Users/playom/trinity/.ralph/DONE_W2" ] || w2="act"
+    [ -f "/Users/playom/trinity/.ralph/DONE_W3" ] || w3="act"
 
     # Format: Loop:#15 API:38/100 CB:CLOSED P1:3 P2:1 Tech:93% W1:act W2:idle W3:idle main Changes:5
     echo "Loop:${loop} API:${api} CB:${cb} P1:${p1} P2:${p2} P3:${p3} W1:${w1} W2:${w2} W3:${w3} ${branch} Chg:${changes}"
@@ -673,7 +673,7 @@ panel_welcome() {
   ${RESET}"
 
   # System status from status.json
-  local sf="/Users/playra/trinity/.ralph/logs/status.json"
+  local sf="/Users/playom/trinity/.ralph/logs/status.json"
   if [ -f "$sf" ]; then
     local loop=$(jq -r '.loop_count // "?"' "$sf" 2>/dev/null)
     local st=$(jq -r '.status // "unknown"' "$sf" 2>/dev/null)
@@ -686,7 +686,7 @@ panel_welcome() {
   fi
 
   # Tasks summary
-  local fp="/Users/playra/trinity/.ralph/fix_plan.md"
+  local fp="/Users/playom/trinity/.ralph/fix_plan.md"
   if [ -f "$fp" ]; then
     local total=$(grep -c "^- \[ \]" "$fp" 2>/dev/null || echo "0")
     local done=$(grep -c "^- \[x\]" "$fp" 2>/dev/null || echo "0")
@@ -752,7 +752,7 @@ panel15_search() {
 
   # Search in tasks
   echo -e "${PURPLE}Tasks:${RESET}"
-  local fp="/Users/playra/trinity/.ralph/fix_plan.md"
+  local fp="/Users/playom/trinity/.ralph/fix_plan.md"
   if [ -f "$fp" ]; then
     grep -i --color=never "$query" "$fp" 2>/dev/null | head -5 || echo "  No matches"
   else
@@ -762,7 +762,7 @@ panel15_search() {
   # Search in logs
   echo ""
   echo -e "${PURPLE}Logs:${RESET}"
-  local logf="/Users/playra/trinity/.ralph/logs/ralph.log"
+  local logf="/Users/playom/trinity/.ralph/logs/ralph.log"
   if [ -f "$logf" ]; then
     grep -i --color=never "$query" "$logf" 2>/dev/null | tail -5 || echo "  No matches"
   else

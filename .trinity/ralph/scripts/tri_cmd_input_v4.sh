@@ -2,7 +2,7 @@
 # TRI COMMANDER v4 — INPUT с историей и readline
 # Features: readline (↑/↓), blinking prompt, history file, no technical paths
 
-RALPH_DIR="/Users/playra/trinity"
+RALPH_DIR="/Users/playom/trinity"
 QUEUE_DIR="$RALPH_DIR/.ralph/queue"
 HISTORY_FILE="$QUEUE_DIR/.history"
 mkdir -p "$QUEUE_DIR"

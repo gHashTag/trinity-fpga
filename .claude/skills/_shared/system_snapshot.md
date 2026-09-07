@@ -10,7 +10,7 @@ All skills and agents SHOULD use these cached snapshots to avoid duplicate API c
 **Reader**: All skills and agents
 
 ```bash
-cd /Users/playom/trinity-fpga && \
+cd "$(git rev-parse --show-toplevel)" && \
 if [ -f .trinity/issues_snapshot.json ] && [ $(($(date +%s) - $(stat -f %m .trinity/issues_snapshot.json))) -lt 300 ]; then
   echo "CACHED" && cat .trinity/issues_snapshot.json
 else
@@ -26,7 +26,7 @@ fi
 **Reader**: All skills and agents
 
 ```bash
-cd /Users/playom/trinity-fpga && \
+cd "$(git rev-parse --show-toplevel)" && \
 if [ -f .trinity/board_snapshot.json ] && [ $(($(date +%s) - $(stat -f %m .trinity/board_snapshot.json))) -lt 300 ]; then
   echo "CACHED" && cat .trinity/board_snapshot.json
 else

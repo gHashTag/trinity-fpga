@@ -12,7 +12,7 @@ DATASET_ID = "playra/trinity-cognitive-probes-thlp"
 DATASET_URL = "https://www.kaggle.com/datasets/playra/trinity-cognitive-probes-thlp"
 
 # Benchmark metadata
-BENCHMARK_DIR = "/Users/playra/trinity-w1/kaggle/benchmark_thlp"
+BENCHMARK_DIR = "/Users/playom/trinity-fpga/kaggle/benchmark_thlp"
 os.makedirs(BENCHMARK_DIR, exist_ok=True)
 
 # Create benchmark-metadata.json

@@ -27,7 +27,7 @@ If NOT active, offer to set up:
 
 Run and **display the FULL output to the user as-is**:
 
-!`cd /Users/playom/trinity-fpga && ./zig-out/bin/tri train dashboard 2>&1`
+!`cd "$(git rev-parse --show-toplevel)" && ./zig-out/bin/tri train dashboard 2>&1`
 
 **CRITICAL**: The output of `tri train dashboard` IS the report. Show it COMPLETELY. Do NOT summarize, do NOT rephrase, do NOT hide it. The user wants to SEE the ANSI dashboard output directly.
 
@@ -36,7 +36,7 @@ Run and **display the FULL output to the user as-is**:
 After dashboard, show sacred workers explicitly:
 
 ```bash
-cd /Users/playom/trinity-fpga && ./zig-out/bin/tri train dashboard 2>&1 | grep -E "(hslm-r6|hslm-r33|hslm-r5|hslm-r12|hslm-r13|hslm-r11|hslm-r18|hslm-w7-50)" | head -10
+cd "$(git rev-parse --show-toplevel)" && ./zig-out/bin/tri train dashboard 2>&1 | grep -E "(hslm-r6|hslm-r33|hslm-r5|hslm-r12|hslm-r13|hslm-r11|hslm-r18|hslm-w7-50)" | head -10
 ```
 
 ## Step 2: Wave 9 Status (REQUIRED) — S3 MultiObj

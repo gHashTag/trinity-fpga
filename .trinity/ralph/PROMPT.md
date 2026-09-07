@@ -76,7 +76,7 @@ Ralph now sends **pulse messages** to Telegram @vibee_dev_bot for full transpare
 
 ## Technical Guardrails
 
-Consult **[.ralph/RULES.md](file:///Users/playra/trinity/.ralph/RULES.md)** for full development protocols, commit conventions, and failure procedures.
+Consult **[.ralph/RULES.md](file:///Users/playom/trinity/.ralph/RULES.md)** for full development protocols, commit conventions, and failure procedures.
 
 ---
 

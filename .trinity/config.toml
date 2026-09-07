@@ -60,7 +60,7 @@ deploy = false
 
 [openclaw]
 enabled = true
-path = "/Users/playra/openclaw"
+path = "/Users/playom/openclaw"
 binary = "node openclaw.mjs"
 optional = true
 integration = "telegram-reporting"

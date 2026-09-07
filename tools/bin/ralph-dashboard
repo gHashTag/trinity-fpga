@@ -4,7 +4,7 @@
 
 set -e
 
-RALPH_DIR="/Users/playra/trinity"
+RALPH_DIR="/Users/playom/trinity"
 SESSION_NAME="ralph"
 
 # Check if tmux is installed

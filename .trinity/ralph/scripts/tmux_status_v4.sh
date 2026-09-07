@@ -2,7 +2,7 @@
 # tmux_status_v4.sh — Compact status panel (только 5 метрик)
 # Usage: ./tmux_status_v4.sh compact
 
-RALPH_DIR="/Users/playra/trinity"
+RALPH_DIR="/Users/playom/trinity"
 cd "$RALPH_DIR" 2>/dev/null || exit 1
 
 # Trinity colors

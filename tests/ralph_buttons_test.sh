@@ -68,8 +68,8 @@ fi
 # Test 3: START command (via ralph_loop.sh directly)
 echo ""
 echo "Test 3: START command"
-cd /Users/playra/trinity
-RALPH_LOOP="/Users/playra/.ralph/ralph_loop.sh"
+cd /Users/playom/trinity
+RALPH_LOOP="/Users/playom/.ralph/ralph_loop.sh"
 if [ -f "$RALPH_LOOP" ]; then
     # Start ralph_loop.sh directly (ralph is globally installed)
     "$RALPH_LOOP" --live --calls 100 --timeout 30 > /tmp/ralph_loop_test.log 2>&1 &

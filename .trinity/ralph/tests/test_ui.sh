@@ -1,7 +1,7 @@
 #!/bin/bash
 # UI Tests — verify display works
 
-cd /Users/playra/trinity
+cd /Users/playom/trinity
 
 echo "Testing UI components..."
 

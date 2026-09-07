@@ -1,6 +1,6 @@
 #!/bin/bash
 # TRI COMMANDER — Simple input with quick commands
-cd /Users/playra/trinity/trinity-nexus
+cd /Users/playom/trinity/trinity-nexus
 
 clear  # Hide launch command
 
@@ -57,7 +57,7 @@ show_tasks() {
 }
 
 show_tasks_p1() {
-    local fp="/Users/playra/trinity/.ralph/fix_plan.md"
+    local fp="/Users/playom/trinity/.ralph/fix_plan.md"
     if [ -f "$fp" ]; then
         echo -e "${RED}P1 Tasks:${RESET}"
         grep "^\- \[ \] \[P1\]" "$fp" 2>/dev/null | head -10 || echo "  No P1 tasks"
@@ -111,7 +111,7 @@ run_search() {
 }
 
 filter_error() {
-    local logf="/Users/playra/trinity/.ralph/logs/ralph.log"
+    local logf="/Users/playom/trinity/.ralph/logs/ralph.log"
     if [ -f "$logf" ]; then
         echo -e "${RED}ERROR entries:${RESET}"
         grep -i "error" "$logf" 2>/dev/null | tail -20 || echo "  No errors found"
@@ -122,7 +122,7 @@ filter_error() {
 }
 
 filter_warn() {
-    local logf="/Users/playra/trinity/.ralph/logs/ralph.log"
+    local logf="/Users/playom/trinity/.ralph/logs/ralph.log"
     if [ -f "$logf" ]; then
         echo -e "${ORANGE}WARN entries:${RESET}"
         grep -i "warn" "$logf" 2>/dev/null | tail -20 || echo "  No warnings found"

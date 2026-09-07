@@ -4,9 +4,9 @@
 
 set -uo pipefail
 
-RALPH_LOG="/Users/playra/trinity/.ralph/logs/ralph.log"
-RALPHRC="/Users/playra/trinity/.ralph/.ralphrc"
-REPORT_SCRIPT="/Users/playra/trinity/.ralph/scripts/report.sh"
+RALPH_LOG="/Users/playom/trinity/.ralph/logs/ralph.log"
+RALPHRC="/Users/playom/trinity/.ralph/.ralphrc"
+REPORT_SCRIPT="/Users/playom/trinity/.ralph/scripts/report.sh"
 STATE_FILE="/tmp/ralph_provider_state"
 
 # Current provider from log

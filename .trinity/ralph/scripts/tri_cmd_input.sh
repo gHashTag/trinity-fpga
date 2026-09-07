@@ -2,7 +2,7 @@
 # TRI COMMAND INPUT - Interactive REPL for command entry
 # Fixed: reads from /dev/tty for proper tmux integration
 
-RALPH_DIR="/Users/playra/trinity"
+RALPH_DIR="/Users/playom/trinity"
 QUEUE_SCRIPT="$RALPH_DIR/.ralph/scripts/tri_cmd_queue.sh"
 
 # Trinity colors

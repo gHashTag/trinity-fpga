@@ -2,7 +2,7 @@
 # TRI COMMANDER — Simple version using tmux status bar
 # User types commands, they go to queue, responses show in status bar
 
-RALPH_DIR="/Users/playra/trinity"
+RALPH_DIR="/Users/playom/trinity"
 QUEUE_DIR="$RALPH_DIR/.ralph/queue"
 mkdir -p "$QUEUE_DIR"
 

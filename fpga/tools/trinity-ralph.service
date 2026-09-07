@@ -29,8 +29,8 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-ExecStart=/Users/playra/trinity-w1/fpga/tools/ralph-cron.sh start
-ExecStop=/Users/playra/trinity-w1/fpga/tools/ralph-cron.sh stop
+ExecStart=/Users/playom/trinity-fpga/fpga/tools/ralph-cron.sh start
+ExecStop=/Users/playom/trinity-fpga/fpga/tools/ralph-cron.sh stop
 Restart=always
 RestartSec=60
 
@@ -38,7 +38,7 @@ RestartSec=60
 Environment="PATH=/usr/local/bin:/usr/bin:/bin:/opt/homebrew/bin"
 Environment="RALPH_REPORT_ENABLED=true"
 Environment="ANTHROPIC_API_KEY="  # Set via systemd credential
-WorkingDirectory=/Users/playra/trinity-w1
+WorkingDirectory=/Users/playom/trinity-fpga
 
 # Logging
 StandardOutput=journal

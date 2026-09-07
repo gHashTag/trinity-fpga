@@ -2,7 +2,7 @@
 # tmux_status.sh - Output formatted status for Ralph Dashboard panels
 # Usage: ./tmux_status.sh <panel_name|statusline>
 
-RALPH_DIR="/Users/playra/trinity"
+RALPH_DIR="/Users/playom/trinity"
 cd "$RALPH_DIR" 2>/dev/null || exit 1
 
 # Trinity colors (ANSI)

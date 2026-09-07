@@ -14,11 +14,11 @@ const fs = std.fs;
 const process = std.process;
 const mem = std.mem;
 
-const FXLOAD_PATH = "/Users/playra/trinity-w1/fpga/tools/fxload";
-const FIRMWARE_PATH = "/Users/playra/trinity-w1/fpga/tools/xusb_xp2.hex";
-const XC3SPROG_PATH = "/Users/playra/trinity-w1/fpga/tools/xc3sprog";
-const BITSTREAM_PATH = "/Users/playra/trinity-w1/fpga/openxc7-synth/uart_bridge_fixed.bit";
-const UART_TEST_PATH = "/Users/playra/trinity-w1/fpga/uart_test.py";
+const FXLOAD_PATH = "/Users/playom/trinity-fpga/fpga/tools/fxload";
+const FIRMWARE_PATH = "/Users/playom/trinity-fpga/fpga/tools/xusb_xp2.hex";
+const XC3SPROG_PATH = "/Users/playom/trinity-fpga/fpga/tools/xc3sprog";
+const BITSTREAM_PATH = "/Users/playom/trinity-fpga/fpga/openxc7-synth/uart_bridge_fixed.bit";
+const UART_TEST_PATH = "/Users/playom/trinity-fpga/fpga/uart_test.py";
 
 pub fn main(init: std.process.Init.Minimal) !void {
     const gpa = std.heap.page_allocator;

@@ -75,19 +75,19 @@ Then proceed with normal diagnostic report using fresh data.
 ### Step 1: Extract CLI commands
 
 ```bash
-cd /Users/playom/trinity-fpga && sed -n '/^pub fn parseCommand/,/^}/p' src/tri/tri_utils.zig | grep -oE '"[a-z][a-z0-9_-]*"' | tr -d '"' | sort -u
+cd "$(git rev-parse --show-toplevel)" && sed -n '/^pub fn parseCommand/,/^}/p' src/tri/tri_utils.zig | grep -oE '"[a-z][a-z0-9_-]*"' | tr -d '"' | sort -u
 ```
 
 ### Step 2: Extract MCP tools
 
 ```bash
-cd /Users/playom/trinity-fpga && grep -o '"name":"[^"]*"' tools/mcp/trinity_mcp/server.zig | sed 's/"name":"//;s/"//' | sort -u
+cd "$(git rev-parse --show-toplevel)" && grep -o '"name":"[^"]*"' tools/mcp/trinity_mcp/server.zig | sed 's/"name":"//;s/"//' | sort -u
 ```
 
 ### Step 3: Duplicate detection
 
 ```bash
-cd /Users/playom/trinity-fpga && \
+cd "$(git rev-parse --show-toplevel)" && \
 echo "=== DELEGATE_CLI ===" && grep -c 'executeTriSimple' tools/mcp/trinity_mcp/server.zig && \
 echo "=== DELEGATE_MODULE ===" && grep -cE 'swarm\.\w+\(|cloud_orch\.\w+|chain_engine|needle\.' tools/mcp/trinity_mcp/server.zig && \
 echo "=== TOTAL_TOOLS ===" && grep -o '"name":"[^"]*"' tools/mcp/trinity_mcp/server.zig | wc -l
@@ -96,7 +96,7 @@ echo "=== TOTAL_TOOLS ===" && grep -o '"name":"[^"]*"' tools/mcp/trinity_mcp/ser
 ### Step 4: GitHub board sync status
 
 ```bash
-cd /Users/playom/trinity-fpga && \
+cd "$(git rev-parse --show-toplevel)" && \
 gh issue list -R gHashTag/trinity --state open --limit 20 --json number,title,labels --jq '.[] | select(.labels[].name == "status:in-progress") | "\(.number) \(.title)"' 2>&1 && \
 echo "=== BOARD ===" && gh project item-list 6 --owner gHashTag --format json --limit 50 2>&1
 ```

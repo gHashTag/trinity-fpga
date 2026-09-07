@@ -158,7 +158,7 @@ The TVC VM is now ready for:
 
 ### Files Location
 
-All TVC VM files in `/Users/playra/vibee-lang/src/vibeec/tvc/`:
+All TVC VM files in `/Users/playom/vibee-lang/src/vibeec/tvc/`:
 - `tvc_vm.zig` - VM implementation (17KB)
 - `tvc_vm_demo.zig` - Demo and tests (12KB)
 - `tvc_vm_demo` - Compiled binary (107KB)

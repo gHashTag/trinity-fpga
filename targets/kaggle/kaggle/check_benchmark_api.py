@@ -28,7 +28,7 @@ print("="*60)
 
 # Try to upload a test dataset
 print("\nData file check:")
-data_path = Path("/Users/playra/trinity-w1/kaggle/data/thlp_learning.csv")
+data_path = Path("/Users/playom/trinity-fpga/kaggle/data/thlp_learning.csv")
 print(f"  Path: {data_path}")
 print(f"  Exists: {data_path.exists()}")
 if data_path.exists():

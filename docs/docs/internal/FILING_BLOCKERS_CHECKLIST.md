@@ -21,7 +21,7 @@
 
 ```bash
 # 1. Navigate to tools
-cd /Users/playra/trinity-w1/fpga/tools
+cd "$(git rev-parse --show-toplevel)/fpga/tools"
 
 # 2. Load JTAG firmware
 sudo ./fxload -v -t fx2 -d 03fd:0013 -i xusb_xp2.hex
@@ -127,14 +127,14 @@ grep -n "rx_data" trinity-nexus/output/lang/fpga/uart_top.v
 
 ```bash
 # 1. Navigate to generated file
-cd /Users/playra/trinity-w1/trinity-nexus/output/lang/fpga
+cd "$(git rev-parse --show-toplevel)/trinity-nexus/output/lang/fpga"
 
 # 2. Fix the file
 # MANUAL EDIT required for uart_top.v
 # Use the fixes above
 
 # 3. Test syntax with Yosys
-cd /Users/playra/trinity-w1/fpga/openxc7-synth
+cd "$(git rev-parse --show-toplevel)/fpga/openxc7-synth"
 docker run --rm --platform linux/amd64 \
   -v "$(pwd):/work" -w /work \
   regymm/openxc7 \
@@ -296,7 +296,7 @@ imports:
 ### Run All Checks
 
 ```bash
-cd /Users/playra/trinity-w1
+cd "$(git rev-parse --show-toplevel)"
 
 # 1. Check evidence files
 ls -lh docs/fpga/evidence/blink_*

@@ -4,7 +4,7 @@
 
 ### 1. FPGA Flashing (jtag_program)
 - **Method:** Native macOS, no sudo, no FTDI drivers
-- **Command:** `/Users/playra/trinity-w1/fpga/tools/jtag_program <file.bit>`
+- **Command:** `/Users/playom/trinity-fpga/fpga/tools/jtag_program <file.bit>`
 - **Status:** ✅ Works perfectly
 
 ### 2. Tested All Bitstreams
@@ -82,7 +82,7 @@ FPGA — LED blinks ~3 Hz! ✅
 ## 📁 Created Files
 
 ```
-/Users/playra/trinity-w1/fpga/openxc7-synth/
+/Users/playom/trinity-fpga/fpga/openxc7-synth/
 ├── trinity_core.v           # Minimal RISC-V (362 cells)
 ├── trinity_core.json        # Synthesized netlist (9.8MB)
 ├── trinity_core.fasm        # Place & route result (472KB)
@@ -108,14 +108,14 @@ XC7A100T-1FGG676C:
 
 ### Synthesize and Generate Bitstream:
 ```bash
-cd /Users/playra/trinity-w1/fpga/openxc7-synth
+cd "$(git rev-parse --show-toplevel)/fpga/openxc7-synth"
 
 # 1. Synthesize (Yosys)
 yosys -p "synth_xilinx -flatten -abc9 -nobram -arch xc7 -top trinity_top; \
           write_json trinity_core.json" trinity_core.v
 
 # 2. Place & Route (nextpnr-xilinx)
-/Users/playra/trinity-w1/fpga/nextpnr-xilinx/build/nextpnr-xilinx \
+/Users/playom/trinity-fpga/fpga/nextpnr-xilinx/build/nextpnr-xilinx \
   --chipdb chipdb/xc7a100tfgg676.bin \
   --json trinity_core.json \
   --xdc trinity_core.xdc \
@@ -123,8 +123,8 @@ yosys -p "synth_xilinx -flatten -abc9 -nobram -arch xc7 -top trinity_top; \
   --top trinity_top
 
 # 3. FASM → Frames (prjxray)
-cd /Users/playra/trinity-w1/fpga/prjxray
-PYTHONPATH=/Users/playra/trinity-w1/fpga/prjxray:$PYTHONPATH \
+cd "$(git rev-parse --show-toplevel)/fpga/prjxray"
+PYTHONPATH=/Users/playom/trinity-fpga/fpga/prjxray:$PYTHONPATH \
 python3 utils/fasm2frames.py \
   --db-root database/artix7 \
   --part xc7a100tfgg676-1 \
@@ -132,7 +132,7 @@ python3 utils/fasm2frames.py \
   /tmp/trinity_core.frm
 
 # 4. Frames → Bitstream (xc7frames2bit)
-/Users/playra/trinity-w1/fpga/prjxray/build/tools/xc7frames2bit \
+/Users/playom/trinity-fpga/fpga/prjxray/build/tools/xc7frames2bit \
   --part_name xc7a100tfgg676-1 \
   --part_file database/artix7/xc7a100tfgg676-1/part.yaml \
   --frm_file /tmp/trinity_core.frm \
@@ -140,13 +140,13 @@ python3 utils/fasm2frames.py \
   --architecture Series7
 
 # 5. Flash
-/Users/playra/trinity-w1/fpga/tools/jtag_program trinity_core.bit
+/Users/playom/trinity-fpga/fpga/tools/jtag_program trinity_core.bit
 ```
 
 ### For Quick Test:
 ```bash
 # Flash TRINITY CORE:
-/Users/playra/trinity-w1/fpga/tools/jtag_program trinity_core.bit
+/Users/playom/trinity-fpga/fpga/tools/jtag_program trinity_core.bit
 # LED D5 starts blinking ~3 Hz — RISC-V works!
 ```
 

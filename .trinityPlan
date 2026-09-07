@@ -30,7 +30,7 @@ Railway fails before build stage: "Deployment does not have an associated build"
 gh auth login
 
 # 2. Create repo and push
-cd /Users/playra/trinity-w1/deploy/railway-background-agent
+cd "$(git rev-parse --show-toplevel)/deploy/railway-background-agent"
 gh repo create gHashTag/trinity-railway-agent --public \
   --description "Minimal Railway deployment for Trinity Background Agent API (Zig binary)" \
   --source=. --remote=origin
@@ -122,7 +122,7 @@ d76de9a  fix: Simplify Dockerfile - COPY all files at once
 
 ```bash
 gh auth login
-cd /Users/playra/trinity-w1/deploy/railway-background-agent
+cd "$(git rev-parse --show-toplevel)/deploy/railway-background-agent"
 gh repo create gHashTag/trinity-railway-agent --public \
   --description "Minimal Railway deployment for Trinity Background Agent API (Zig binary)" \
   --source=. --remote=origin

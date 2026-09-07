@@ -27,7 +27,7 @@
 
 **Terminal Command to Display:**
 ```bash
-cd /Users/playra/trinity-w1/fpga/openxc7-synth
+cd "$(git rev-parse --show-toplevel)/fpga/openxc7-synth"
 ./trinity_first_run.sh --dry-run
 ```
 

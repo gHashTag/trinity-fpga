@@ -1,5 +1,5 @@
-# W1 Worker Configuration
-PROJECT_NAME="trinity-w1"
+# Ralph Worker Configuration
+PROJECT_NAME="trinity-fpga"
 PROJECT_TYPE="zig"
 MAX_CALLS_PER_HOUR=100
 CLAUDE_TIMEOUT_MINUTES=30

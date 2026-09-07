@@ -7,7 +7,7 @@
 
 ## Files Modified
 
-### 1. Created: `/Users/playra/trinity-w1/specs/fpga/counter.tri`
+### 1. Created: `/Users/playom/trinity-fpga/specs/fpga/counter.tri`
 **Enhanced specification with:**
 - ✅ 4 LED signals (was 2 in original)
 - ✅ Protocol import documentation
@@ -16,7 +16,7 @@
 - ✅ 5 comprehensive test cases
 - ✅ Enhanced documentation
 
-### 2. Created: `/Users/playra/trinity-w1/specs/fpga/COUNTER_VALIDATION_REPORT.md`
+### 2. Created: `/Users/playom/trinity-fpga/specs/fpga/COUNTER_VALIDATION_REPORT.md`
 **Comprehensive validation report including:**
 - Comparison table (.vibee vs .tri)
 - Signal completeness validation
@@ -26,7 +26,7 @@
 - Protocol compliance check
 - Recommendations for next steps
 
-### 3. Updated: `/Users/playra/trinity-w1/fpga/openxc7-synth/counter.xdc`
+### 3. Updated: `/Users/playom/trinity-fpga/fpga/openxc7-synth/counter.xdc`
 **Added missing LED constraints:**
 - ✅ led2 → R24 (D4)
 - ✅ led3 → P24 (D3)
@@ -131,12 +131,12 @@ endmodule
 
 | File | Path |
 |------|------|
-| **Enhanced Spec** | `/Users/playra/trinity-w1/specs/fpga/counter.tri` |
-| **Original Spec** | `/Users/playra/trinity-w1/specs/fpga/counter.vibee` |
-| **Validation Report** | `/Users/playra/trinity-w1/specs/fpga/COUNTER_VALIDATION_REPORT.md` |
-| **Updated XDC** | `/Users/playra/trinity-w1/fpga/openxc7-synth/counter.xdc` |
-| **Reference Verilog** | `/Users/playra/trinity-w1/fpga/openxc7-synth/counter.v` |
-| **Protocol SSOT** | `/Users/playra/trinity-w1/src/common/protocol.zig` |
+| **Enhanced Spec** | `/Users/playom/trinity-fpga/specs/fpga/counter.tri` |
+| **Original Spec** | `/Users/playom/trinity-fpga/specs/fpga/counter.vibee` |
+| **Validation Report** | `/Users/playom/trinity-fpga/specs/fpga/COUNTER_VALIDATION_REPORT.md` |
+| **Updated XDC** | `/Users/playom/trinity-fpga/fpga/openxc7-synth/counter.xdc` |
+| **Reference Verilog** | `/Users/playom/trinity-fpga/fpga/openxc7-synth/counter.v` |
+| **Protocol SSOT** | `/Users/playom/trinity-fpga/src/common/protocol.zig` |
 
 ---
 

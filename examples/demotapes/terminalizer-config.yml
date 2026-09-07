@@ -1,6 +1,6 @@
 # Terminalizer config for Pellis comparison
-command: /Users/playra/trinity-w1/.zig-cache/o/*/tri math compare --pellis
-output: /Users/playra/trinity-w1/demotapes/pellis_comparison.gif
+command: /Users/playom/trinity-fpga/.zig-cache/o/*/tri math compare --pellis
+output: /Users/playom/trinity-fpga/demotapes/pellis_comparison.gif
 width: 1200
 height: 675
 fps: 30

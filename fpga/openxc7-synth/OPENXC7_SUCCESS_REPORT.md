@@ -21,7 +21,7 @@ After 24+ hours of failed attempts with the FORGE (Zig) toolchain (23 versions, 
 
 ```bash
 docker run --rm --platform linux/amd64 \
-  -v /Users/playra/trinity-w1/fpga/openxc7-synth:/work -w /work \
+  -v /Users/playom/trinity-fpga/fpga/openxc7-synth:/work -w /work \
   regymm/openxc7 <command>
 ```
 
@@ -42,7 +42,7 @@ docker run --rm --platform linux/amd64 \
 
 ```bash
 docker run --rm --platform linux/amd64 \
-  -v /Users/playra/trinity-w1/fpga/openxc7-synth:/work -w /work \
+  -v /Users/playom/trinity-fpga/fpga/openxc7-synth:/work -w /work \
   regymm/openxc7 \
   yosys -p "synth_xilinx -flatten -abc9 -nobram -arch xc7 -top temporal_heartbeat_top; write_json temporal_heartbeat.json" \
   temporal_heartbeat.v
@@ -64,7 +64,7 @@ docker run --rm --platform linux/amd64 \
 
 ```bash
 docker run --rm --platform linux/amd64 \
-  -v /Users/playra/trinity-w1/fpga/openxc7-synth:/work -w /work \
+  -v /Users/playom/trinity-fpga/fpga/openxc7-synth:/work -w /work \
   regymm/openxc7 \
   nextpnr-xilinx \
     --chipdb /work/chipdb/xc7a100tfgg676.bin \
@@ -104,7 +104,7 @@ Total CARRY4: 64 instances (for arithmetic)
 
 ```bash
 docker run --rm --platform linux/amd64 \
-  -v /Users/playra/trinity-w1/fpga/openxc7-synth:/work -w /work \
+  -v /Users/playom/trinity-fpga/fpga/openxc7-synth:/work -w /work \
   regymm/openxc7 \
   bash -c "\
     fasm2frames \
@@ -140,10 +140,10 @@ docker run --rm --platform linux/amd64 \
 The Xilinx Platform Cable USB II boots in bootloader mode (PID 0x0013) and needs firmware loaded:
 
 ```bash
-sudo /Users/playra/trinity-w1/fpga/tools/fxload \
+sudo /Users/playom/trinity-fpga/fpga/tools/fxload \
   -v -t fx2 \
   -d 03fd:0013 \
-  -i /Users/playra/trinity-w1/fpga/tools/xusb_xp2.hex
+  -i /Users/playom/trinity-fpga/fpga/tools/xusb_xp2.hex
 ```
 
 This switches the cable to JTAG mode (PID 0x0008).
@@ -151,8 +151,8 @@ This switches the cable to JTAG mode (PID 0x0008).
 #### 4b. Flash Bitstream via JTAG
 
 ```bash
-sudo /Users/playra/trinity-w1/fpga/tools/jtag_program \
-  /Users/playra/trinity-w1/fpga/openxc7-synth/temporal_heartbeat.bit
+sudo /Users/playom/trinity-fpga/fpga/tools/jtag_program \
+  /Users/playom/trinity-fpga/fpga/openxc7-synth/temporal_heartbeat.bit
 ```
 
 **JTAG Sequence:**

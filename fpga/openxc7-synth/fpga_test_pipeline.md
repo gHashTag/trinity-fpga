@@ -15,7 +15,7 @@ Automated testing pipeline for TRINITY FPGA bitstreams with LED pattern verifica
 ## Flash Command
 
 ```bash
-/Users/playra/trinity-w1/fpga/tools/jtag_program <bitstream>.bit
+/Users/playom/trinity-fpga/fpga/tools/jtag_program <bitstream>.bit
 ```
 
 ## Bitstreams & Expected LED Patterns
@@ -42,7 +42,7 @@ Automated testing pipeline for TRINITY FPGA bitstreams with LED pattern verifica
 
 ```bash
 # 1. Flash bitstream
-/Users/playra/trinity-w1/fpga/tools/jtag_program <name>.bit
+/Users/playom/trinity-fpga/fpga/tools/jtag_program <name>.bit
 
 # 2. Wait for initialization
 sleep 2

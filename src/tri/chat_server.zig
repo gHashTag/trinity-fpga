@@ -762,7 +762,7 @@ pub const ChatServer = struct {
         const home = tri_env.getPosix("HOME") orelse "/tmp";
         var wt_bufs: [4][256]u8 = undefined;
         var worktree_paths: [4][]const u8 = undefined;
-        const suffixes = [_][]const u8{ "/trinity", "/trinity-w1", "/trinity-w2", "/trinity-w3" };
+        const suffixes = [_][]const u8{ "/trinity", "/trinity-fpga", "/trinity-w2", "/trinity-w3" };
         for (suffixes, 0..) |suffix, i| {
             const len = @min(home.len + suffix.len, wt_bufs[i].len);
             @memcpy(wt_bufs[i][0..home.len], home);

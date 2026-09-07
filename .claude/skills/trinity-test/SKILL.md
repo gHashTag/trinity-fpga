@@ -9,7 +9,7 @@ model: haiku
 # Trinity Test Runner
 
 ## Last Build Status
-!`cd /Users/playom/trinity-fpga && zig build 2>&1 | tail -5`
+!`cd "$(git rev-parse --show-toplevel)" && zig build 2>&1 | tail -5`
 
 ## Task
 
@@ -18,10 +18,10 @@ Run tests for: $ARGUMENTS
 ### Test Commands by Module
 | Module | Command |
 |--------|---------|
-| All | `cd /Users/playom/trinity-fpga && zig build test` |
-| VSA | `cd /Users/playom/trinity-fpga && zig test src/vsa.zig` |
-| VM | `cd /Users/playom/trinity-fpga && zig test src/vm.zig` |
-| Single file | `cd /Users/playom/trinity-fpga && zig test src/<file>.zig` |
+| All | `cd "$(git rev-parse --show-toplevel)" && zig build test` |
+| VSA | `cd "$(git rev-parse --show-toplevel)" && zig test src/vsa.zig` |
+| VM | `cd "$(git rev-parse --show-toplevel)" && zig test src/vm.zig` |
+| Single file | `cd "$(git rev-parse --show-toplevel)" && zig test src/<file>.zig` |
 
 ### Steps
 1. Run the appropriate test command based on the module argument

@@ -1,7 +1,7 @@
 #!/bin/bash
 # TRI COMMANDER Claude Handler — Вызывает Claude для обработки команд
 
-RALPH_DIR="/Users/playra/trinity"
+RALPH_DIR="/Users/playom/trinity"
 QUEUE_DIR="$RALPH_DIR/.ralph/queue"
 INCOMING="$QUEUE_DIR/incoming.cmd"
 RESPONSE="$QUEUE_DIR/responses/current.resp"

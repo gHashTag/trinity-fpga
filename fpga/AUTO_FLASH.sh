@@ -11,7 +11,7 @@
 set -e
 
 # Resolve paths relative to this script so the flasher is portable
-# (was hardcoded to /Users/playra/trinity-w1). Override with FPGA_DIR if needed.
+# (was hardcoded to /Users/playom/trinity-fpga). Override with FPGA_DIR if needed.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 FPGA_DIR="${FPGA_DIR:-$SCRIPT_DIR}"
 BITFILE="$FPGA_DIR/openxc7-synth/vsa_uart_top.bit"

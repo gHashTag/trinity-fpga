@@ -18,7 +18,7 @@
 ║  MD5: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx                                 ║
 ║                                                                              ║
 ║  Command:                                                                   ║
-║  cd /Users/playra/trinity-w1/fpga/openxc7-synth                             ║
+║  cd "$(git rev-parse --show-toplevel)/fpga/openxc7-synth"                             ║
 ║  sudo ../tools/jtag_program trinity_v1.bit                                  ║
 ║                                                                              ║
 ║  Result:                                                                    ║

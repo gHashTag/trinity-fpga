@@ -1,5 +1,5 @@
 #!/bin/bash
-QUEUE_DIR="/Users/playra/trinity/.ralph/queue"
+QUEUE_DIR="/Users/playom/trinity/.ralph/queue"
 INCOMING="$QUEUE_DIR/incoming.cmd"
 RESPONSE="$QUEUE_DIR/responses/current.resp"
 

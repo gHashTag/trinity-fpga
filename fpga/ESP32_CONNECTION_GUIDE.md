@@ -151,7 +151,7 @@ Connect ESP32 to these pins.
 ### 1. Synthesize Design
 
 ```bash
-cd /Users/playra/trinity-w1/fpga/openxc7-synth
+cd "$(git rev-parse --show-toplevel)/fpga/openxc7-synth"
 
 # Create simplified XDC (only for uart_bridge)
 cat > uart_bridge.xdc << 'EOF'

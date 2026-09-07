@@ -34,7 +34,7 @@ Author:]andchewithtoaya from:]intoa with]withaboutin andz `.ralph/` in Telegram 
 
 ### 1. :]with-reporter
 ```bash
-/Users/playra/trinity/.ralph/scripts/send_ralph_status.sh
+/Users/playom/trinity/.ralph/scripts/send_ralph_status.sh
 ```
 
 Genotrand:] dina filea:
@@ -43,7 +43,7 @@ Genotrand:] dina filea:
 
 :]withto in:]:
 ```bash
-bash /Users/playra/trinity/.ralph/scripts/send_ralph_status.sh
+bash /Users/playom/trinity/.ralph/scripts/send_ralph_status.sh
 ```
 
 ### 2. Cron Job

@@ -311,7 +311,7 @@ pub const FpgaSearchCommand = struct {
         std.debug.print("╚════════════════════════════════════════════════════════════╝\n\n", .{});
 
         // Load Cremona database
-        const db_path = "/Users/playra/trinity-w1/data/ecdata/allbsd/allbsd.00000-09999";
+        const db_path = "/Users/playom/trinity-fpga/data/ecdata/allbsd/allbsd.00000-09999";
         std.debug.print("Loading database from {s}...\n", .{db_path});
         const db = try cremona.CremonaDatabase.loadFromFile(allocator, db_path);
         defer allocator.free(db.entries);

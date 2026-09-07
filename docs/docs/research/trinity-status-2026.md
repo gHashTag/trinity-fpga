@@ -591,7 +591,7 @@ For rejected hypotheses:
 
 **Document Version:** 1.3
 **Last Updated:** 2026-03-07 (PMNS Complete — 18 results, 13 smoking guns + 1 CKM-sensitive + 4 PMNS ultra-precise)
-**Repository:** `/Users/playra/trinity/docsite/docs/research/trinity-status-2026.md`
+**Repository:** `/Users/playom/trinity/docsite/docs/research/trinity-status-2026.md`
 
 ---
 

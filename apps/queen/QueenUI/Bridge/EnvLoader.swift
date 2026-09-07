@@ -25,7 +25,7 @@ struct EnvLoader {
         return env
     }
 
-    /// Walk up from the app bundle looking for .env, fallback to ~/trinity-w1/.env
+    /// Walk up from the app bundle looking for .env, fallback to ~/trinity-fpga/.env
     static func findEnvFile() -> URL? {
         // Try walking up from bundle location
         var dir = Bundle.main.bundleURL.deletingLastPathComponent()
@@ -40,7 +40,7 @@ struct EnvLoader {
         }
         // Fallback to known project root
         let fallback = FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent("trinity-w1/.env")
+            .appendingPathComponent("trinity-fpga/.env")
         if FileManager.default.fileExists(atPath: fallback.path) {
             return fallback
         }

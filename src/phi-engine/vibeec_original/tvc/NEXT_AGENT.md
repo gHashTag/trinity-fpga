@@ -112,7 +112,7 @@ TVC IR (tvc_ir.zig)
 
 ## Files Location
 
-All TVC files are in `/Users/playra/vibee-lang/src/vibeec/tvc/`:
+All TVC files are in `/Users/playom/vibee-lang/src/vibeec/tvc/`:
 - `tvc_ir.zig` - Core IR
 - `tvc_parser.zig` - Parser
 - `binary_codegen.zig` - Binary codegen
@@ -126,13 +126,13 @@ All TVC files are in `/Users/playra/vibee-lang/src/vibeec/tvc/`:
 
 ### Run Demo
 ```bash
-cd /Users/playra/vibee-lang/src/vibeec/tvc
+cd /Users/playom/vibee-lang/src/vibeec/tvc
 ./tvc_demo
 ```
 
 ### View Documentation
 ```bash
-cat /Users/playra/vibee-lang/src/vibeec/tvc/README.md
+cat /Users/playom/vibee-lang/src/vibeec/tvc/README.md
 ```
 
 ## Key Achievements

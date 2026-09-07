@@ -126,8 +126,8 @@ docker run --rm --platform linux/amd64 \
 ### Flash Command
 
 ```bash
-sudo /Users/playra/trinity-w1/fpga/tools/jtag_program \
-    /Users/playra/trinity-w1/fpga/openxc7-synth/quantum_bridge.bit
+sudo /Users/playom/trinity-fpga/fpga/tools/jtag_program \
+    /Users/playom/trinity-fpga/fpga/openxc7-synth/quantum_bridge.bit
 ```
 
 ---
@@ -221,7 +221,7 @@ Sacred phase: 2π/φ² ≈ 137.5° (golden angle)
 
 ## REFERENCES
 
-- **TernaryQVM:** `/Users/playra/trinity-w1/src/quantum/ternary_qvm.zig`
+- **TernaryQVM:** `/Users/playom/trinity-fpga/src/quantum/ternary_qvm.zig`
 - **CGLMP Paper:** Collins et al. 2002, Phys. Rev. Lett. 88, 040404
 - **OPENXC7 Report:** `OPENXC7_SUCCESS_REPORT.md`
 - **Routing Analysis:** `ROUTING_DEEP_DIVE.md`

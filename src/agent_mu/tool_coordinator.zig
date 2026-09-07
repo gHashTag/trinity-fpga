@@ -274,9 +274,9 @@ fn analyzeCode(allocator: std.mem.Allocator, file_path: []const u8, params: std.
 
 /// Path validation: ensure path is within repository
 fn isValidPath(path: []const u8) bool {
-    // Reject absolute paths outside /Users/playra/trinity
+    // Reject absolute paths outside /Users/playom/trinity
     if (std.mem.startsWith(u8, path, "/") and
-        !std.mem.startsWith(u8, path, "/Users/playra/trinity"))
+        !std.mem.startsWith(u8, path, "/Users/playom/trinity"))
     {
         return false;
     }
@@ -391,7 +391,7 @@ test "ToolType toString" {
 test "isValidPath - valid paths" {
     try std.testing.expect(isValidPath("src/main.zig"));
     try std.testing.expect(isValidPath("CLAUDE.md"));
-    try std.testing.expect(isValidPath("/Users/playra/trinity/src/vsa.zig"));
+    try std.testing.expect(isValidPath("/Users/playom/trinity/src/vsa.zig"));
 }
 
 test "isValidPath - invalid paths" {

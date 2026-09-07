@@ -118,8 +118,8 @@
 4. Replace ArrayList with stack arrays in queen_dlpfc (1.5x)
 
 **Files modified:**
-- `/Users/playra/trinity-w1/src/tri/brain_bench.zig` - Benchmark suite
-- `/Users/playra/trinity-w1/src/tri/basal_ganglia.zig` - Fixed TaskClaimStatus enum export
-- `/Users/playra/trinity-w1/src/tri/brain_benchmark.zig` - Comprehensive benchmark framework
+- `/Users/playom/trinity-fpga/src/tri/brain_bench.zig` - Benchmark suite
+- `/Users/playom/trinity-fpga/src/tri/basal_ganglia.zig` - Fixed TaskClaimStatus enum export
+- `/Users/playom/trinity-fpga/src/tri/brain_benchmark.zig` - Comprehensive benchmark framework
 
 **Tests:** 96/96 passed including brain benchmarks

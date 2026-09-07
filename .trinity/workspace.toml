@@ -26,7 +26,7 @@ tools = ["core", "lang", "symb", "network", "canvas"]
 [external]
 # External workspace references (optional — gracefully skipped if missing)
 [external.openclaw]
-path = "/Users/playra/openclaw"
+path = "/Users/playom/openclaw"
 optional = true
 integration = "telegram-reporting"
 binary = "node openclaw.mjs"

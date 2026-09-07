@@ -93,10 +93,10 @@ cache_get_fix_plan_counts() {
 
     # Parse and cache
     local fix_plan=""
-    if [ -f "/Users/playra/trinity/.ralph/internal/fix_plan.md" ]; then
-        fix_plan="/Users/playra/trinity/.ralph/internal/fix_plan.md"
-    elif [ -f "/Users/playra/trinity/.ralph/fix_plan.md" ]; then
-        fix_plan="/Users/playra/trinity/.ralph/fix_plan.md"
+    if [ -f "/Users/playom/trinity/.ralph/internal/fix_plan.md" ]; then
+        fix_plan="/Users/playom/trinity/.ralph/internal/fix_plan.md"
+    elif [ -f "/Users/playom/trinity/.ralph/fix_plan.md" ]; then
+        fix_plan="/Users/playom/trinity/.ralph/fix_plan.md"
     fi
 
     if [ -n "$fix_plan" ] && [ -f "$fix_plan" ]; then
@@ -139,10 +139,10 @@ cache_get_fix_plan_path() {
 
     # Find and cache
     local fix_plan=""
-    if [ -f "/Users/playra/trinity/.ralph/internal/fix_plan.md" ]; then
-        fix_plan="/Users/playra/trinity/.ralph/internal/fix_plan.md"
-    elif [ -f "/Users/playra/trinity/.ralph/fix_plan.md" ]; then
-        fix_plan="/Users/playra/trinity/.ralph/fix_plan.md"
+    if [ -f "/Users/playom/trinity/.ralph/internal/fix_plan.md" ]; then
+        fix_plan="/Users/playom/trinity/.ralph/internal/fix_plan.md"
+    elif [ -f "/Users/playom/trinity/.ralph/fix_plan.md" ]; then
+        fix_plan="/Users/playom/trinity/.ralph/fix_plan.md"
     fi
     cache_set "fix_plan_path" "$fix_plan"
     echo "$fix_plan"

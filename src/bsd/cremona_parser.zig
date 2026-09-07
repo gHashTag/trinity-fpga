@@ -504,7 +504,7 @@ pub fn testCremonaParser(allocator: std.mem.Allocator) !void {
     std.debug.print("╚════════════════════════════════════════════════════════════╝\n\n", .{});
 
     // Load test file
-    const path = "/Users/playra/trinity-w1/data/ecdata/allbsd/allbsd.00000-09999";
+    const path = "/Users/playom/trinity-fpga/data/ecdata/allbsd/allbsd.00000-09999";
     const db = try CremonaDatabase.loadFromFile(allocator, path);
     defer allocator.free(db.entries);
 

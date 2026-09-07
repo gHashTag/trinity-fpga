@@ -178,7 +178,7 @@ for khandpwith]in with M1 MacBook and $5000 on for]andttoe.
 
 ```bash
 # Tewithty (11/11 :])
-cd /Users/playra/vibee-lang
+cd /Users/playom/vibee-lang
 zig test src/trinity_fpga_mvp.zig
 
 # :]toa and :]withto

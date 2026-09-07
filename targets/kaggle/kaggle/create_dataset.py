@@ -11,7 +11,7 @@ print("="*60)
 print("STEP 1: Initialize Dataset Metadata")
 print("="*60)
 
-dataset_dir = "/Users/playra/trinity-w1/kaggle/dataset_thlp"
+dataset_dir = "/Users/playom/trinity-fpga/kaggle/dataset_thlp"
 os.makedirs(dataset_dir, exist_ok=True)
 
 # Create data subdirectory and copy data file
@@ -19,7 +19,7 @@ import shutil
 data_subdir = f"{dataset_dir}/data"
 os.makedirs(data_subdir, exist_ok=True)
 
-data_src = "/Users/playra/trinity-w1/kaggle/data/thlp_learning.csv"
+data_src = "/Users/playom/trinity-fpga/kaggle/data/thlp_learning.csv"
 data_dst = f"{data_subdir}/thlp_learning.csv"
 shutil.copy(data_src, data_dst)
 print(f"✅ Copied data file to {data_dst}")

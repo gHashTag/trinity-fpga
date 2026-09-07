@@ -297,7 +297,7 @@ python uart_monitor.py /dev/ttyUSB0
 
 ```bash
 # Installation
-cd /Users/playra/trinity-w1/fpga/uart_monitor
+cd "$(git rev-parse --show-toplevel)/fpga/uart_monitor"
 pip install -r requirements.txt
 
 # Find port

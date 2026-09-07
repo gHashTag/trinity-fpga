@@ -366,7 +366,7 @@ This directory contains the complete GA (General Availability) certification pac
 **Document Owner:** Project Lead
 **Update Frequency:** As tasks progress (daily updates to checklists)
 **Review Frequency:** Weekly during GA certification period
-**Archive Location:** `/Users/playra/trinity-w1/fpga/openxc7-synth/docs/architecture/`
+**Archive Location:** `/Users/playom/trinity-fpga/fpga/openxc7-synth/docs/architecture/`
 
 ---
 
@@ -376,41 +376,41 @@ This directory contains the complete GA (General Availability) certification pac
 
 ```bash
 # Main decomposition
-cat /Users/playra/trinity-w1/fpga/openxc7-synth/docs/architecture/GA_DECOMPOSITION.md
+cat /Users/playom/trinity-fpga/fpga/openxc7-synth/docs/architecture/GA_DECOMPOSITION.md
 
 # Executive summary
-cat /Users/playra/trinity-w1/fpga/openxc7-synth/docs/architecture/GA_DECOMPOSITION_SUMMARY.md
+cat /Users/playom/trinity-fpga/fpga/openxc7-synth/docs/architecture/GA_DECOMPOSITION_SUMMARY.md
 
 # Dependencies and timeline
-cat /Users/playra/trinity-w1/fpga/openxc7-synth/docs/architecture/GA_DEPENDENCIES.md
+cat /Users/playom/trinity-fpga/fpga/openxc7-synth/docs/architecture/GA_DEPENDENCIES.md
 
 # Execution plan
-cat /Users/playra/trinity-w1/fpga/openxc7-synth/docs/architecture/GA_EXECUTION_PLAN.md
+cat /Users/playom/trinity-fpga/fpga/openxc7-synth/docs/architecture/GA_EXECUTION_PLAN.md
 
 # Workflows and graphs
-cat /Users/playra/trinity-w1/fpga/openxc7-synth/docs/architecture/GA_EXECUTION_GRAPH.md
+cat /Users/playom/trinity-fpga/fpga/openxc7-synth/docs/architecture/GA_EXECUTION_GRAPH.md
 
 # Checklist (printable)
-cat /Users/playra/trinity-w1/fpga/openxc7-synth/docs/architecture/GA_EXECUTION_CHECKLIST.md
+cat /Users/playom/trinity-fpga/fpga/openxc7-synth/docs/architecture/GA_EXECUTION_CHECKLIST.md
 
 # Certification requirements
-cat /Users/playra/trinity-w1/fpga/openxc7-synth/docs/architecture/GA_CERTIFICATION_v2.2.0.md
+cat /Users/playom/trinity-fpga/fpga/openxc7-synth/docs/architecture/GA_CERTIFICATION_v2.2.0.md
 ```
 
 ### Quick Commands
 
 ```bash
 # View all GA docs
-ls -lh /Users/playra/trinity-w1/fpga/openxc7-synth/docs/architecture/GA_*.md
+ls -lh /Users/playom/trinity-fpga/fpga/openxc7-synth/docs/architecture/GA_*.md
 
 # Count total lines
-wc -l /Users/playra/trinity-w1/fpga/openxc7-synth/docs/architecture/GA_*.md
+wc -l /Users/playom/trinity-fpga/fpga/openxc7-synth/docs/architecture/GA_*.md
 
 # Open main decomposition (macOS)
-open /Users/playra/trinity-w1/fpga/openxc7-synth/docs/architecture/GA_DECOMPOSITION.md
+open /Users/playom/trinity-fpga/fpga/openxc7-synth/docs/architecture/GA_DECOMPOSITION.md
 
 # Print checklist
-lpr /Users/playra/trinity-w1/fpga/openxc7-synth/docs/architecture/GA_EXECUTION_CHECKLIST.md
+lpr /Users/playom/trinity-fpga/fpga/openxc7-synth/docs/architecture/GA_EXECUTION_CHECKLIST.md
 ```
 
 ---

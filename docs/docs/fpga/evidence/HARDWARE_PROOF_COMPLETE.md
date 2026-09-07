@@ -2,7 +2,7 @@
 
 **Date**: 2026-03-08
 **Status**: SUCCESS
-**Evidence**: `/Users/playra/trinity-w1/docs/fpga/evidence/uart_top_flash.log`
+**Evidence**: `/Users/playom/trinity-fpga/docs/fpga/evidence/uart_top_flash.log`
 
 ## Execution Summary
 

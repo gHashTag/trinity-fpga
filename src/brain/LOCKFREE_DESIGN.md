@@ -102,7 +102,7 @@ Target: >10k OP/s through reduced contention.
 
 ## Implementation
 
-**File**: `/Users/playra/trinity-w1/src/brain/basal_ganglia_lockfree.zig`
+**File**: `/Users/playom/trinity-fpga/src/brain/basal_ganglia_lockfree.zig`
 
 ### Core Operations
 
@@ -203,6 +203,6 @@ The sharded HashMap design achieves:
 - ✓ Backward-compatible API
 - ✓ All tests passing (12/12)
 
-**Implementation**: `/Users/playra/trinity-w1/src/brain/basal_ganglia_lockfree.zig`
+**Implementation**: `/Users/playom/trinity-fpga/src/brain/basal_ganglia_lockfree.zig`
 **LOC**: ~400 lines
 **Complexity**: Medium (hash routing + per-shard locks)

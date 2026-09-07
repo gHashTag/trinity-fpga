@@ -13,18 +13,18 @@
 python3 -c "import usb.core; dev = usb.core.find(idVendor=0x03fd); print(f'PID: {hex(dev.idProduct)}' if dev else 'Not found')"
 
 # Step 2: If PID = 0x0013, load firmware
-sudo /Users/playra/trinity-w1/fpga/tools/fxload -v -t fx2 -d 03fd:0013 -i /Users/playra/trinity-w1/fpga/tools/xusb_xp2.hex
+sudo /Users/playom/trinity-fpga/fpga/tools/fxload -v -t fx2 -d 03fd:0013 -i /Users/playom/trinity-fpga/fpga/tools/xusb_xp2.hex
 
 # Step 3: Verify PID changed to 0x0008
 python3 -c "import usb.core; dev = usb.core.find(idVendor=0x03fd); print(f'PID: {hex(dev.idProduct)}' if dev else 'Not found')"
 
 # Step 4: Flash bitstream
-sudo /Users/playra/trinity-w1/fpga/tools/jtag_program /Users/playra/trinity-w1/fpga/openxc7-synth/quantum_bridge_violation.bit
+sudo /Users/playom/trinity-fpga/fpga/tools/jtag_program /Users/playom/trinity-fpga/fpga/openxc7-synth/quantum_bridge_violation.bit
 ```
 
 **Or use the auto-script:**
 ```bash
-sudo /Users/playra/trinity-w1/fpga/tools/flash_quantum.sh /Users/playra/trinity-w1/fpga/openxc7-synth/quantum_bridge_violation.bit
+sudo /Users/playom/trinity-fpga/fpga/tools/flash_quantum.sh /Users/playom/trinity-fpga/fpga/openxc7-synth/quantum_bridge_violation.bit
 ```
 
 ---
@@ -33,7 +33,7 @@ sudo /Users/playra/trinity-w1/fpga/tools/flash_quantum.sh /Users/playra/trinity-
 
 | Symptom | Cause | Solution |
 |---------|--------|----------|
-| `Failed to connect. Is cable at PID 0x0008?` | jtag_program compiled for wrong PID | Recompile: `cd /Users/playra/trinity-w1/fpga/tools && gcc -o jtag_program jtag_program.c xpc.c -I/opt/homebrew/Cellar/libusb/1.0.29/include -L/opt/homebrew/Cellar/libusb/1.0.29/lib -lusb-1.0 -O2 -Wall` |
+| `Failed to connect. Is cable at PID 0x0008?` | jtag_program compiled for wrong PID | Recompile: `cd "$(git rev-parse --show-toplevel)/fpga/tools" && gcc -o jtag_program jtag_program.c xpc.c -I/opt/homebrew/Cellar/libusb/1.0.29/include -L/opt/homebrew/Cellar/libusb/1.0.29/lib -lusb-1.0 -O2 -Wall` |
 | `libusb_open() failed` | Cable in bad state or PID mismatch | Check PID with python, if 0x0013 run fxload first |
 | `No USB probe found` | Wrong PID in xpc.h | xpc.h must have `PRODUCT_ID 0x0008` (cable AFTER fxload) |
 | `system_profiler` shows no PID | macOS USB driver issue | Use python/lsusb to check actual PID |
@@ -73,7 +73,7 @@ sudo /Users/playra/trinity-w1/fpga/tools/flash_quantum.sh /Users/playra/trinity-
 ## ONE-LINER FIX
 
 ```bash
-sudo /Users/playra/trinity-w1/fpga/tools/fxload -t fx2 -d 03fd:0013 -i /Users/playra/trinity-w1/fpga/tools/xusb_xp2.hex && sudo /Users/playra/trinity-w1/fpga/tools/jtag_program /Users/playra/trinity-w1/fpga/openxc7-synth/quantum_bridge_violation.bit
+sudo /Users/playom/trinity-fpga/fpga/tools/fxload -t fx2 -d 03fd:0013 -i /Users/playom/trinity-fpga/fpga/tools/xusb_xp2.hex && sudo /Users/playom/trinity-fpga/fpga/tools/jtag_program /Users/playom/trinity-fpga/fpga/openxc7-synth/quantum_bridge_violation.bit
 ```
 
 ---

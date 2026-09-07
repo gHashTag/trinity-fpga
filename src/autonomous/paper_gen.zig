@@ -272,7 +272,7 @@ pub fn main(init: std.process.Init.Minimal) !void {
         const improvement = try std.fmt.parseFloat(f64, args[2]);
         const metric_name = args[3];
 
-        var publisher = PaperPublisher.init(allocator, "/Users/playra/trinity-w1/docsite", "/Users/playra/trinity-w1");
+        var publisher = PaperPublisher.init(allocator, "/Users/playom/trinity-fpga/docsite", "/Users/playom/trinity-fpga");
 
         const result = BenchmarkResult{
             .baseline_metric = 100.0,

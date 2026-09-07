@@ -754,7 +754,7 @@ fn initRalphAgents() void {
     for (&g_ralph_worktree_paths) |*p| @memset(p, 0);
 
     // Agent 0 = main repo (cwd)
-    const main_path = "/Users/playra/trinity";
+    const main_path = "/Users/playom/trinity";
     const main_len = main_path.len;
     @memcpy(g_ralph_worktree_paths[0][0..main_len], main_path);
     g_ralph_worktree_path_lens[0] = main_len;
@@ -762,14 +762,14 @@ fn initRalphAgents() void {
     // Read main repo branch from .git/HEAD
     var branch_buf: [64]u8 = undefined;
     @memset(&branch_buf, 0);
-    const branch_len = readGitBranch("/Users/playra/trinity/.git/HEAD", &branch_buf);
+    const branch_len = readGitBranch("/Users/playom/trinity/.git/HEAD", &branch_buf);
     const main_branch = if (branch_len > 0) branch_buf[0..branch_len] else "main";
     setAgentIdentity(&g_ralph_agents[0], "trinity", main_branch);
     g_ralph_agents[0].update_timer = 0.0;
     g_ralph_agent_count = 1;
 
     // Discover additional worktrees from .git/worktrees/
-    const wt_dir = std.fs.openDirAbsolute("/Users/playra/trinity/.git/worktrees", .{ .iterate = true }) catch {
+    const wt_dir = std.fs.openDirAbsolute("/Users/playom/trinity/.git/worktrees", .{ .iterate = true }) catch {
         return; // No worktrees dir — single repo mode
     };
     // Need mutable for iteration
@@ -783,7 +783,7 @@ fn initRalphAgents() void {
         const ai = g_ralph_agent_count;
         var gitdir_path_buf: [256]u8 = undefined;
         @memset(&gitdir_path_buf, 0);
-        const gitdir_path = std.fmt.bufPrint(&gitdir_path_buf, "/Users/playra/trinity/.git/worktrees/{s}/gitdir", .{entry.name}) catch continue;
+        const gitdir_path = std.fmt.bufPrint(&gitdir_path_buf, "/Users/playom/trinity/.git/worktrees/{s}/gitdir", .{entry.name}) catch continue;
 
         // Read gitdir to get worktree path (contains "<worktree>/.git\n")
         const gf = std.fs.openFileAbsolute(gitdir_path_buf[0..gitdir_path.len :0], .{}) catch continue;
@@ -805,7 +805,7 @@ fn initRalphAgents() void {
         // Read branch from .git/worktrees/<name>/HEAD
         var head_path_buf: [256]u8 = undefined;
         @memset(&head_path_buf, 0);
-        const head_path = std.fmt.bufPrint(&head_path_buf, "/Users/playra/trinity/.git/worktrees/{s}/HEAD", .{entry.name}) catch continue;
+        const head_path = std.fmt.bufPrint(&head_path_buf, "/Users/playom/trinity/.git/worktrees/{s}/HEAD", .{entry.name}) catch continue;
 
         @memset(&branch_buf, 0);
         const wt_branch_len = readGitBranch(head_path_buf[0..head_path.len :0], &branch_buf);
