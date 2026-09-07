@@ -9,13 +9,18 @@
 # This is that gate. It is deliberately dumb: fetch the pinned toolchain,
 # build, report. A build that fails here has failed for real users.
 #
-# Zig 0.15.2, not 0.16: the tree has ~951 std.fs call sites and ~383
-# std.process ones written against the 0.15 API, and 0.16 moved the filesystem
-# into std.Io with different semantics. Migrating is a real project; pinning
-# the toolchain the code was written for is the honest interim.
+# Zig 0.16.0. This pin used to read 0.16.0, on the grounds that the tree held
+# ~951 std.fs call sites and ~383 std.process ones written against the 0.15
+# API and that migrating was a real project. It was, and it is done: `tri` and
+# seven other executables build on 0.16, and `zig build test` reports
+# 2664/2679 passing across 143/143 steps.
 #
-# Runs on Linux because Zig 0.15.2 cannot link against current macOS SDKs --
-# it fails on its own build runner there, before touching project code.
+# Six shim modules (tri_time, tri_env, tri_proc, tri_mutex, tri_rand, tri_io)
+# restore the removed stdlib surface; see .claude/rules/zig-016-migration.md.
+#
+# Runs on Linux deliberately: everything above was measured on macOS, and the
+# shims call libc directly, so Linux is the platform that can still surprise
+# us.
 #
 # phi^2 + 1/phi^2 = 3 = TRINITY
 
@@ -38,7 +43,7 @@ on:
   workflow_dispatch:
 
 env:
-  ZIG_VERSION: '0.15.2'
+  ZIG_VERSION: '0.16.0'
 
 jobs:
   build:
