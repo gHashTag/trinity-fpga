@@ -455,7 +455,7 @@ pub const ParserV3 = struct {
                     },
                     .code => {
                         if (current_behavior) |*b| {
-                            if (b.implementation.len > 0) allocator.free(b.implementation);
+                            if (b.implementation.len > 0) self.allocator.free(b.implementation);
                             var code_lines = std.ArrayList([]const u8).init(self.allocator);
                             defer code_lines.deinit(self.allocator);
 

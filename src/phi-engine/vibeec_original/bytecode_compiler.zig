@@ -76,11 +76,11 @@ pub const BytecodeCompiler = struct {
     }
 
     pub fn deinit(self: *Self) void {
-        self.emitter.deinit(allocator);
-        self.locals.deinit(allocator);
-        self.params.deinit(allocator);
-        self.upvalues.deinit(allocator);
-        self.loop_end_patches.deinit(allocator);
+        self.emitter.deinit(self.allocator);
+        self.locals.deinit(self.allocator);
+        self.params.deinit(self.allocator);
+        self.upvalues.deinit(self.allocator);
+        self.loop_end_patches.deinit(self.allocator);
     }
 
     pub fn compile(self: *Self, ast: *const AstNode) CompileError!void {
@@ -243,8 +243,8 @@ pub const BytecodeCompiler = struct {
         // Jump over function body (placeholder)
         try self.emitter.emit(.JMP);
         const skip_patch = @as(u32, @intCast(self.emitter.code.items.len));
-        try self.emitter.code.append(allocator, 0);
-        try self.emitter.code.append(allocator, 0);
+        try self.emitter.code.append(self.allocator, 0);
+        try self.emitter.code.append(self.allocator, 0);
 
         // Function entry address (right after JMP)
         const func_addr = @as(u16, @intCast(self.emitter.code.items.len));
@@ -266,7 +266,7 @@ pub const BytecodeCompiler = struct {
                 break;
             }
             const param_name = child.token.lexeme(self.source);
-            try self.params.append(allocator, .{ .name = param_name, .index = param_count });
+            try self.params.append(self.allocator, .{ .name = param_name, .index = param_count });
             param_count += 1;
         }
 
@@ -305,8 +305,8 @@ pub const BytecodeCompiler = struct {
         // Jump over function body (placeholder)
         try self.emitter.emit(.JMP);
         const skip_patch = @as(u32, @intCast(self.emitter.code.items.len));
-        try self.emitter.code.append(allocator, 0);
-        try self.emitter.code.append(allocator, 0);
+        try self.emitter.code.append(self.allocator, 0);
+        try self.emitter.code.append(self.allocator, 0);
 
         // Function entry address (right after JMP)
         const func_addr = @as(u16, @intCast(self.emitter.code.items.len));
@@ -332,7 +332,7 @@ pub const BytecodeCompiler = struct {
                 break;
             }
             const param_name = child.token.lexeme(self.source);
-            try self.params.append(allocator, .{ .name = param_name, .index = param_count });
+            try self.params.append(self.allocator, .{ .name = param_name, .index = param_count });
             param_count += 1;
         }
 
@@ -362,15 +362,15 @@ pub const BytecodeCompiler = struct {
         if (upvalue_count > 0) {
             // Create closure with upvalues
             try self.emitter.emit(.CLOSURE);
-            try self.emitter.code.append(allocator, @intCast(func_addr >> 8));
-            try self.emitter.code.append(allocator, @intCast(func_addr & 0xFF));
-            try self.emitter.code.append(allocator, upvalue_count);
+            try self.emitter.code.append(self.allocator, @intCast(func_addr >> 8));
+            try self.emitter.code.append(self.allocator, @intCast(func_addr & 0xFF));
+            try self.emitter.code.append(self.allocator, upvalue_count);
 
             // Emit upvalue info (which locals to capture)
             // For now simplified - just emit indices
             for (self.upvalues.items[old_upvalues_count..]) |uv| {
-                try self.emitter.code.append(allocator, if (uv.is_local) 1 else 0);
-                try self.emitter.code.append(allocator, uv.index);
+                try self.emitter.code.append(self.allocator, if (uv.is_local) 1 else 0);
+                try self.emitter.code.append(self.allocator, uv.index);
             }
         } else {
             // No upvalues - just push function address
@@ -409,24 +409,24 @@ pub const BytecodeCompiler = struct {
         //  CONSTANTS: T, F, U
         if (std.mem.eql(u8, name, "T")) {
             try self.emitter.emit(.PUSH_TRIT);
-            self.emitter.code.append(allocator, 1) catch return CompileError.OutOfMemory; // T = 1
+            self.emitter.code.append(self.allocator, 1) catch return CompileError.OutOfMemory; // T = 1
             return;
         }
         if (std.mem.eql(u8, name, "F")) {
             try self.emitter.emit(.PUSH_TRIT);
-            self.emitter.code.append(allocator, @bitCast(@as(i8, -1))) catch return CompileError.OutOfMemory; // F = -1
+            self.emitter.code.append(self.allocator, @bitCast(@as(i8, -1))) catch return CompileError.OutOfMemory; // F = -1
             return;
         }
         if (std.mem.eql(u8, name, "U")) {
             try self.emitter.emit(.PUSH_TRIT);
-            self.emitter.code.append(allocator, 0) catch return CompileError.OutOfMemory; // U = 0
+            self.emitter.code.append(self.allocator, 0) catch return CompileError.OutOfMemory; // U = 0
             return;
         }
 
         // Check for function parameter first
         if (self.resolveParam(name)) |idx| {
             try self.emitter.emit(.LOAD_ARG);
-            self.emitter.code.append(allocator, idx) catch return CompileError.OutOfMemory;
+            self.emitter.code.append(self.allocator, idx) catch return CompileError.OutOfMemory;
             return;
         }
 
@@ -449,7 +449,7 @@ pub const BytecodeCompiler = struct {
         // Upvalue (captured from enclosing scope)
         if (try self.resolveUpvalue(name)) |idx| {
             try self.emitter.emit(.GET_UPVALUE);
-            try self.emitter.code.append(allocator, idx);
+            try self.emitter.code.append(self.allocator, idx);
             return;
         }
 
@@ -770,9 +770,9 @@ pub const BytecodeCompiler = struct {
                     // Emit CALL_NATIVE with name index and arity
                     const name_idx = try self.emitter.constants.addString(name);
                     try self.emitter.emit(.CALL_NATIVE);
-                    try self.emitter.code.append(allocator, @intCast(name_idx >> 8));
-                    try self.emitter.code.append(allocator, @intCast(name_idx & 0xFF));
-                    try self.emitter.code.append(allocator, arg_count);
+                    try self.emitter.code.append(self.allocator, @intCast(name_idx >> 8));
+                    try self.emitter.code.append(self.allocator, @intCast(name_idx & 0xFF));
+                    try self.emitter.code.append(self.allocator, arg_count);
                     return;
                 }
             }
@@ -788,7 +788,7 @@ pub const BytecodeCompiler = struct {
 
         // Call with arity
         try self.emitter.emit(.CALL_INDIRECT);
-        self.emitter.code.append(allocator, arg_count) catch return CompileError.OutOfMemory;
+        self.emitter.code.append(self.allocator, arg_count) catch return CompileError.OutOfMemory;
     }
 
     fn compileReturn(self: *Self, node: *const AstNode) CompileError!void {
@@ -850,23 +850,23 @@ pub const BytecodeCompiler = struct {
                 // Emit fused compare+jump
                 try self.emitter.emit(fop);
                 else_patch = @as(u32, @intCast(self.emitter.code.items.len));
-                try self.emitter.code.append(allocator, 0);
-                try self.emitter.code.append(allocator, 0);
+                try self.emitter.code.append(self.allocator, 0);
+                try self.emitter.code.append(self.allocator, 0);
             } else {
                 // Fallback: compile condition normally
                 try self.compileNode(cond);
                 try self.emitter.emit(.JZ);
                 else_patch = @as(u32, @intCast(self.emitter.code.items.len));
-                try self.emitter.code.append(allocator, 0);
-                try self.emitter.code.append(allocator, 0);
+                try self.emitter.code.append(self.allocator, 0);
+                try self.emitter.code.append(self.allocator, 0);
             }
         } else {
             // Compile condition normally
             try self.compileNode(cond);
             try self.emitter.emit(.JZ);
             else_patch = @as(u32, @intCast(self.emitter.code.items.len));
-            try self.emitter.code.append(allocator, 0);
-            try self.emitter.code.append(allocator, 0);
+            try self.emitter.code.append(self.allocator, 0);
+            try self.emitter.code.append(self.allocator, 0);
         }
 
         // Compile then branch
@@ -876,8 +876,8 @@ pub const BytecodeCompiler = struct {
             // Jump over else
             try self.emitter.emit(.JMP);
             const end_patch = @as(u32, @intCast(self.emitter.code.items.len));
-            try self.emitter.code.append(allocator, 0);
-            try self.emitter.code.append(allocator, 0);
+            try self.emitter.code.append(self.allocator, 0);
+            try self.emitter.code.append(self.allocator, 0);
 
             // Patch else jump
             const else_addr = @as(u16, @intCast(self.emitter.code.items.len));
@@ -910,8 +910,8 @@ pub const BytecodeCompiler = struct {
         // JZ to end (placeholder)
         try self.emitter.emit(.JZ);
         const end_patch = @as(u32, @intCast(self.emitter.code.items.len));
-        try self.emitter.code.append(allocator, 0);
-        try self.emitter.code.append(allocator, 0);
+        try self.emitter.code.append(self.allocator, 0);
+        try self.emitter.code.append(self.allocator, 0);
 
         // Body
         try self.compileNode(&node.children.items[1]);
@@ -953,8 +953,8 @@ pub const BytecodeCompiler = struct {
         // JZ to end (placeholder)
         try self.emitter.emit(.JZ);
         const end_patch = @as(u32, @intCast(self.emitter.code.items.len));
-        try self.emitter.code.append(allocator, 0);
-        try self.emitter.code.append(allocator, 0);
+        try self.emitter.code.append(self.allocator, 0);
+        try self.emitter.code.append(self.allocator, 0);
 
         // Body
         try self.compileNode(&node.children.items[2]);
@@ -1001,7 +1001,7 @@ pub const BytecodeCompiler = struct {
         // Create array with N elements
         const count: u8 = @intCast(@min(node.children.items.len, 255));
         try self.emitter.emit(.NEW_ARRAY);
-        self.emitter.code.append(allocator, count) catch return CompileError.OutOfMemory;
+        self.emitter.code.append(self.allocator, count) catch return CompileError.OutOfMemory;
     }
 
     fn compileIndex(self: *Self, node: *const AstNode) CompileError!void {
@@ -1077,8 +1077,11 @@ pub const BytecodeCompiler = struct {
         try self.emitter.emitWithU16(.STORE_LOCAL, subject_idx);
 
         // Collect jump patches for each arm's end (to jump to match end)
-        var end_patches = std.ArrayList(u32).init(allocator);
-        defer end_patches.deinit(allocator);
+        // `.empty` + an allocator per call: std.ArrayList is unmanaged in
+        // 0.16, so `.init(allocator)` no longer exists. The allocator comes
+        // off `self`, as it does everywhere else in this type.
+        var end_patches: std.ArrayList(u32) = .empty;
+        defer end_patches.deinit(self.allocator);
 
         // Process each match arm (children[1..])
         for (node.children.items[1..]) |*arm| {
@@ -1105,15 +1108,15 @@ pub const BytecodeCompiler = struct {
                     try self.compileNode(guard);
                     try self.emitter.emit(.JZ);
                     const skip_patch = @as(u32, @intCast(self.emitter.code.items.len));
-                    try self.emitter.code.append(allocator, 0);
-                    try self.emitter.code.append(allocator, 0);
+                    try self.emitter.code.append(self.allocator, 0);
+                    try self.emitter.code.append(self.allocator, 0);
 
                     try self.compileNode(result);
                     try self.emitter.emit(.JMP);
                     const patch = @as(u32, @intCast(self.emitter.code.items.len));
-                    try self.emitter.code.append(allocator, 0);
-                    try self.emitter.code.append(allocator, 0);
-                    end_patches.append(allocator, patch) catch return CompileError.OutOfMemory;
+                    try self.emitter.code.append(self.allocator, 0);
+                    try self.emitter.code.append(self.allocator, 0);
+                    end_patches.append(self.allocator, patch) catch return CompileError.OutOfMemory;
 
                     const here = @as(u16, @intCast(self.emitter.code.items.len));
                     self.emitter.code.items[skip_patch] = @intCast(here >> 8);
@@ -1122,9 +1125,9 @@ pub const BytecodeCompiler = struct {
                     try self.compileNode(result);
                     try self.emitter.emit(.JMP);
                     const patch = @as(u32, @intCast(self.emitter.code.items.len));
-                    try self.emitter.code.append(allocator, 0);
-                    try self.emitter.code.append(allocator, 0);
-                    end_patches.append(allocator, patch) catch return CompileError.OutOfMemory;
+                    try self.emitter.code.append(self.allocator, 0);
+                    try self.emitter.code.append(self.allocator, 0);
+                    end_patches.append(self.allocator, patch) catch return CompileError.OutOfMemory;
                 }
             } else if (pattern.kind == .identifier) {
                 // Binding pattern - bind value to variable
@@ -1139,15 +1142,15 @@ pub const BytecodeCompiler = struct {
                     try self.compileNode(guard);
                     try self.emitter.emit(.JZ);
                     const skip_patch = @as(u32, @intCast(self.emitter.code.items.len));
-                    try self.emitter.code.append(allocator, 0);
-                    try self.emitter.code.append(allocator, 0);
+                    try self.emitter.code.append(self.allocator, 0);
+                    try self.emitter.code.append(self.allocator, 0);
 
                     try self.compileNode(result);
                     try self.emitter.emit(.JMP);
                     const patch = @as(u32, @intCast(self.emitter.code.items.len));
-                    try self.emitter.code.append(allocator, 0);
-                    try self.emitter.code.append(allocator, 0);
-                    end_patches.append(allocator, patch) catch return CompileError.OutOfMemory;
+                    try self.emitter.code.append(self.allocator, 0);
+                    try self.emitter.code.append(self.allocator, 0);
+                    end_patches.append(self.allocator, patch) catch return CompileError.OutOfMemory;
 
                     const here = @as(u16, @intCast(self.emitter.code.items.len));
                     self.emitter.code.items[skip_patch] = @intCast(here >> 8);
@@ -1156,9 +1159,9 @@ pub const BytecodeCompiler = struct {
                     try self.compileNode(result);
                     try self.emitter.emit(.JMP);
                     const patch = @as(u32, @intCast(self.emitter.code.items.len));
-                    try self.emitter.code.append(allocator, 0);
-                    try self.emitter.code.append(allocator, 0);
-                    end_patches.append(allocator, patch) catch return CompileError.OutOfMemory;
+                    try self.emitter.code.append(self.allocator, 0);
+                    try self.emitter.code.append(self.allocator, 0);
+                    end_patches.append(self.allocator, patch) catch return CompileError.OutOfMemory;
                 }
             } else {
                 // Literal pattern - compare with subject
@@ -1169,8 +1172,8 @@ pub const BytecodeCompiler = struct {
                 // Jump if not equal
                 try self.emitter.emit(.JZ);
                 const skip_patch = @as(u32, @intCast(self.emitter.code.items.len));
-                try self.emitter.code.append(allocator, 0);
-                try self.emitter.code.append(allocator, 0);
+                try self.emitter.code.append(self.allocator, 0);
+                try self.emitter.code.append(self.allocator, 0);
 
                 if (has_guard) {
                     // Also check guard
@@ -1178,15 +1181,15 @@ pub const BytecodeCompiler = struct {
                     try self.compileNode(guard);
                     try self.emitter.emit(.JZ);
                     const guard_skip = @as(u32, @intCast(self.emitter.code.items.len));
-                    try self.emitter.code.append(allocator, 0);
-                    try self.emitter.code.append(allocator, 0);
+                    try self.emitter.code.append(self.allocator, 0);
+                    try self.emitter.code.append(self.allocator, 0);
 
                     try self.compileNode(result);
                     try self.emitter.emit(.JMP);
                     const end_patch = @as(u32, @intCast(self.emitter.code.items.len));
-                    try self.emitter.code.append(allocator, 0);
-                    try self.emitter.code.append(allocator, 0);
-                    end_patches.append(allocator, end_patch) catch return CompileError.OutOfMemory;
+                    try self.emitter.code.append(self.allocator, 0);
+                    try self.emitter.code.append(self.allocator, 0);
+                    end_patches.append(self.allocator, end_patch) catch return CompileError.OutOfMemory;
 
                     const here = @as(u16, @intCast(self.emitter.code.items.len));
                     self.emitter.code.items[skip_patch] = @intCast(here >> 8);
@@ -1197,9 +1200,9 @@ pub const BytecodeCompiler = struct {
                     try self.compileNode(result);
                     try self.emitter.emit(.JMP);
                     const end_patch = @as(u32, @intCast(self.emitter.code.items.len));
-                    try self.emitter.code.append(allocator, 0);
-                    try self.emitter.code.append(allocator, 0);
-                    end_patches.append(allocator, end_patch) catch return CompileError.OutOfMemory;
+                    try self.emitter.code.append(self.allocator, 0);
+                    try self.emitter.code.append(self.allocator, 0);
+                    end_patches.append(self.allocator, end_patch) catch return CompileError.OutOfMemory;
 
                     const here = @as(u16, @intCast(self.emitter.code.items.len));
                     self.emitter.code.items[skip_patch] = @intCast(here >> 8);
@@ -1222,7 +1225,7 @@ pub const BytecodeCompiler = struct {
     fn addLocal(self: *Self, name: []const u8) CompileError!u16 {
         if (self.locals.items.len >= 65535) return CompileError.TooManyLocals;
         const idx: u16 = @intCast(self.locals.items.len);
-        self.locals.append(allocator, .{ .name = name, .depth = self.scope_depth }) catch return CompileError.OutOfMemory;
+        self.locals.append(self.allocator, .{ .name = name, .depth = self.scope_depth }) catch return CompileError.OutOfMemory;
         return idx;
     }
 
@@ -1248,7 +1251,7 @@ pub const BytecodeCompiler = struct {
         if (self.upvalues.items.len >= 255) return CompileError.TooManyLocals;
 
         const idx: u8 = @intCast(self.upvalues.items.len);
-        self.upvalues.append(allocator, .{ .index = index, .is_local = is_local }) catch return CompileError.OutOfMemory;
+        self.upvalues.append(self.allocator, .{ .index = index, .is_local = is_local }) catch return CompileError.OutOfMemory;
         return idx;
     }
 
@@ -1272,6 +1275,7 @@ pub const BytecodeCompiler = struct {
 
 // Tests
 test "compile simple expression" {
+    const allocator = std.testing.allocator;
     const source = "const x = 42";
     var parser = coptic_parser.Parser.init(source, std.testing.allocator);
     var ast = try parser.parseProgram();
@@ -1285,6 +1289,7 @@ test "compile simple expression" {
 }
 
 test "compile arithmetic" {
+    const allocator = std.testing.allocator;
     const source = "const x = 10 + 5";
     var parser = coptic_parser.Parser.init(source, std.testing.allocator);
     var ast = try parser.parseProgram();
@@ -1307,6 +1312,7 @@ test "compile arithmetic" {
 }
 
 test "compile if statement" {
+    const allocator = std.testing.allocator;
     const source = "if true { 42 }";
     var parser = coptic_parser.Parser.init(source, std.testing.allocator);
     var ast = try parser.parseProgram();
@@ -1327,6 +1333,7 @@ test "compile if statement" {
 }
 
 test "compile while loop" {
+    const allocator = std.testing.allocator;
     const source = "while false { 1 }";
     var parser = coptic_parser.Parser.init(source, std.testing.allocator);
     var ast = try parser.parseProgram();
@@ -1347,6 +1354,7 @@ test "compile while loop" {
 }
 
 test "compile phi constant" {
+    const allocator = std.testing.allocator;
     const source = "phi";
     var parser = coptic_parser.Parser.init(source, std.testing.allocator);
     var ast = try parser.parseProgram();
@@ -1367,6 +1375,7 @@ test "compile phi constant" {
 }
 
 test "compile and run arithmetic" {
+    const allocator = std.testing.allocator;
     const vm_runtime = @import("vm_runtime.zig");
 
     const source = "10 + 5";
@@ -1390,6 +1399,7 @@ test "compile and run arithmetic" {
 }
 
 test "compile and run phi" {
+    const allocator = std.testing.allocator;
     const vm_runtime = @import("vm_runtime.zig");
 
     const source = "phi";
@@ -1412,6 +1422,7 @@ test "compile and run phi" {
 }
 
 test "compile and run comparison" {
+    const allocator = std.testing.allocator;
     const vm_runtime = @import("vm_runtime.zig");
 
     const source = "10 > 5";
@@ -1434,6 +1445,7 @@ test "compile and run comparison" {
 }
 
 test "compile function definition" {
+    const allocator = std.testing.allocator;
     const source = "func double(x) { x * 2 }";
     var parser = coptic_parser.Parser.init(source, std.testing.allocator);
     var ast = try parser.parseProgram();
@@ -1454,6 +1466,7 @@ test "compile function definition" {
 }
 
 test "compile and run simple function" {
+    const allocator = std.testing.allocator;
     const vm_runtime = @import("vm_runtime.zig");
 
     const source = "func double(x) { x * 2 }\ndouble(5)";
@@ -1476,6 +1489,7 @@ test "compile and run simple function" {
 }
 
 test "compile and run recursive factorial" {
+    const allocator = std.testing.allocator;
     const vm_runtime = @import("vm_runtime.zig");
 
     const source = "func fact(n) { if n < 2 { 1 } else { n * fact(n - 1) } } fact(5)";
@@ -1498,6 +1512,7 @@ test "compile and run recursive factorial" {
 }
 
 test "compile and run fibonacci" {
+    const allocator = std.testing.allocator;
     const vm_runtime = @import("vm_runtime.zig");
 
     const source = "func fib(n) { if n < 2 { n } else { fib(n - 1) + fib(n - 2) } } fib(10)";
@@ -1520,6 +1535,7 @@ test "compile and run fibonacci" {
 }
 
 test "compile and run nested function calls" {
+    const allocator = std.testing.allocator;
     const vm_runtime = @import("vm_runtime.zig");
 
     const source = "func add(a, b) { a + b } func mul(a, b) { a * b } mul(add(2, 3), add(4, 5))";
@@ -1543,6 +1559,7 @@ test "compile and run nested function calls" {
 }
 
 test "compile and run assignment" {
+    const allocator = std.testing.allocator;
     const vm_runtime = @import("vm_runtime.zig");
 
     const source = "var x = 5; x = 10; x";
