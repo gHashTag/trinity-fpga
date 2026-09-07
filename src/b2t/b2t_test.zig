@@ -244,8 +244,7 @@ const TEST_WASM_LOOP = [_]u8{
     // block $exit
     0x02, 0x40,
     // loop $loop
-    0x03,
-    0x40,
+    0x03, 0x40,
     // if n == 0, exit
     0x20, 0x00, // local.get 0 (n)
     0x45, // i32.eqz
@@ -299,8 +298,7 @@ const TEST_WASM_SUM = [_]u8{
     // block $exit
     0x02, 0x40,
     // loop $loop
-    0x03,
-    0x40,
+    0x03, 0x40,
     // if n == 0, exit
     0x20, 0x00, // local.get 0 (n)
     0x45, // i32.eqz

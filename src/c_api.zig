@@ -8,7 +8,7 @@
 
 const std = @import("std");
 const vsa = @import("vsa");
-const hybrid = vsa;  // one source: the module, not the local vsa_hybrid copy
+const hybrid = vsa; // one source: the module, not the local vsa_hybrid copy
 
 const HybridBigInt = hybrid.HybridBigInt;
 const Trit = hybrid.Trit;
