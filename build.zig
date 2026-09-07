@@ -281,16 +281,20 @@ pub fn build(b: *std.Build) void {
     // an always-failing test added to each returned rc=0 before this. Tests
     // that nothing runs are decoration, which is the same defect as a gate
     // that cannot fail, one level up.
-    const behaviour_test_files = [_][]const u8{
-        "src/tri/token_rotator.zig",
-        "src/tri/tri_proc.zig",
-        "src/tri/io_group_behaviour_test.zig",
-        "src/tri/net_behaviour_test.zig",
+    // Written out one by one rather than looped over a string array: the
+    // `ratchet` gate reads this file AS TEXT, matching literal
+    // `b.path("...")` calls, so a path that only ever exists as an array
+    // element is invisible to it and the file reads as unreachable.
+    const behaviour_test_roots = [_]std.Build.LazyPath{
+        b.path("src/tri/token_rotator.zig"),
+        b.path("src/tri/tri_proc.zig"),
+        b.path("src/tri/io_group_behaviour_test.zig"),
+        b.path("src/tri/net_behaviour_test.zig"),
     };
-    for (behaviour_test_files) |src_file| {
+    for (behaviour_test_roots) |root_path| {
         const t = b.addTest(.{
             .root_module = b.createModule(.{
-                .root_source_file = b.path(src_file),
+                .root_source_file = root_path,
                 .target = target,
                 .optimize = optimize,
                 .link_libc = true,
