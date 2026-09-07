@@ -4276,6 +4276,29 @@ pub fn build(b: *std.Build) void {
     const astcheck_update_step = b.step("astcheck-update", "Re-record the ast-check baseline");
     astcheck_update_step.dependOn(&run_astcheck_update.step);
 
+    // The tool's own tests. It imports named modules, so `zig test` on the
+    // file alone cannot resolve them -- it has to run through here. Carries
+    // the guard against two files mutating the same literal /tmp path, which
+    // is what `zig build` running test binaries in parallel turns into a
+    // flake.
+    const astcheck_tests = b.addTest(.{
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("tools/astcheck_ratchet.zig"),
+            .target = target,
+            .optimize = optimize,
+            .link_libc = true,
+            .imports = &.{
+                .{ .name = "tri_io", .module = tri_io_mod },
+                .{ .name = "tri_proc", .module = tri_proc_mod },
+                .{ .name = "tri_time", .module = tri_time_mod },
+                .{ .name = "tri_env", .module = tri_env_mod },
+                .{ .name = "tri_rand", .module = tri_rand_mod },
+                .{ .name = "tri_mutex", .module = tri_mutex_mod },
+            },
+        }),
+    });
+    test_step.dependOn(&b.addRunArtifact(astcheck_tests).step);
+
     // ═══════════════════════════════════════════════════════════════════════════
     // tri-github-collab — OAuth + webhook backend for the Spec Explorer
     //

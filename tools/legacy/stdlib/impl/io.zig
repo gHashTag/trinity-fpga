@@ -290,7 +290,7 @@ test "path utilities" {
 }
 
 test "file operations" {
-    const test_file = "/tmp/vibee_io_test.txt";
+    const test_file = "/tmp/vibee_io_test_legacy.txt";
     const content = "Hello, VIBEE!";
 
     // Write
@@ -312,7 +312,7 @@ test "file operations" {
 }
 
 test "directory operations" {
-    const test_dir = "/tmp/vibee_dir_test";
+    const test_dir = "/tmp/vibee_dir_test_legacy";
 
     // Create
     createDir(test_dir) catch {};
