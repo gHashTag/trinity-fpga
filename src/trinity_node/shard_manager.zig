@@ -683,14 +683,37 @@ test "shard distribution across peers" {
 test "5-node simulation with disk persistence" {
     const allocator = std.testing.allocator;
 
-    // Create 5 temp directories for 5 nodes
-    const base_dir = "/tmp/trinity_test_5node";
+    // Create 5 temp directories for 5 nodes, under a directory unique to THIS
+    // run.
+    //
+    // This used to be the fixed path `/tmp/trinity_test_5node`, and the test
+    // deleteTree's it both on entry ("clean up from previous run") and on
+    // exit. Two copies of the test running at once -- which happens whenever
+    // two `zig build test` invocations overlap -- means one instance deletes
+    // the other's directories mid-run, and the loser fails with
+    // `failed to persist shard to disk: error.FileNotFound`. Measured at 4
+    // failures in 20 runs while another build was in flight.
+    //
+    // A unique suffix makes the test hermetic: no shared path, so no
+    // collision, and the entry-time deleteTree becomes unnecessary rather
+    // than dangerous.
+    const suffix = tri_rand.random().int(u64);
+    const base_dir = try std.fmt.allocPrint(
+        allocator,
+        "/tmp/trinity_test_5node_{x}",
+        .{suffix},
+    );
+    defer allocator.free(base_dir);
+
+    var dir_bufs: [5][]u8 = undefined;
+    var made: usize = 0;
+    defer for (dir_bufs[0..made]) |d| allocator.free(d);
+    for (0..5) |i| {
+        dir_bufs[i] = try std.fmt.allocPrint(allocator, "{s}/node{d}", .{ base_dir, i });
+        made += 1;
+    }
     const dirs = [_][]const u8{
-        "/tmp/trinity_test_5node/node0",
-        "/tmp/trinity_test_5node/node1",
-        "/tmp/trinity_test_5node/node2",
-        "/tmp/trinity_test_5node/node3",
-        "/tmp/trinity_test_5node/node4",
+        dir_bufs[0], dir_bufs[1], dir_bufs[2], dir_bufs[3], dir_bufs[4],
     };
 
     const io = tri_io.get();
