@@ -28,7 +28,7 @@ pub fn generateRealBody(builder: *CodeBuilder, b: *const Behavior) !void {
 
     // --- Detect/classify behaviors: return enum based on keyword matching ---
     if (mem.startsWith(u8, name, "detect") or mem.startsWith(u8, name, "classify")) {
-        try builder.writeFmt("// Analyze input: {s}\n", .{given});
+        try builder.writeCommentLines("//", "Analyze input: ", given);
         try builder.writeLine("const input = @as([]const u8, \"sample_input\");");
 
         // Generate keyword checks from 'then' description
@@ -67,7 +67,7 @@ pub fn generateRealBody(builder: *CodeBuilder, b: *const Behavior) !void {
             builder.decIndent();
             try builder.writeLine("};");
         } else {
-            try builder.writeFmt("// Classification: {s}\n", .{then});
+            try builder.writeCommentLines("//", "Classification: ", then);
             try builder.writeLine("const result = if (input.len > 0) @as([]const u8, \"detected\") else @as([]const u8, \"unknown\");");
         }
         try builder.writeLine("_ = result;");
@@ -76,7 +76,7 @@ pub fn generateRealBody(builder: *CodeBuilder, b: *const Behavior) !void {
 
     // --- Respond behaviors: return fluent text ---
     if (mem.startsWith(u8, name, "respond") or mem.startsWith(u8, name, "handle")) {
-        try builder.writeFmt("// Response: {s}\n", .{then});
+        try builder.writeCommentLines("//", "Response: ", then);
         if (mem.indexOf(u8, name, "Greeting") != null) {
             try builder.writeLine("const responses = [_][]const u8{");
             builder.incIndent();
@@ -110,7 +110,7 @@ pub fn generateRealBody(builder: *CodeBuilder, b: *const Behavior) !void {
 
     // --- Score/compute/estimate behaviors: return numeric value ---
     if (mem.startsWith(u8, name, "score") or mem.startsWith(u8, name, "compute") or mem.startsWith(u8, name, "estimate")) {
-        try builder.writeFmt("// Compute: {s}\n", .{then});
+        try builder.writeCommentLines("//", "Compute: ", then);
         if (mem.indexOf(u8, name, "Importance") != null) {
             try builder.writeLine("// Importance scoring: base 0.5, +0.2 for questions, +0.1 for emphasis");
             try builder.writeLine("const base_score: f64 = 0.5;");
@@ -157,7 +157,7 @@ pub fn generateRealBody(builder: *CodeBuilder, b: *const Behavior) !void {
 
     // --- Add/insert behaviors: append to collection ---
     if (mem.startsWith(u8, name, "add") or mem.startsWith(u8, name, "insert")) {
-        try builder.writeFmt("// Add: {s}\n", .{then});
+        try builder.writeCommentLines("//", "Add: ", then);
         try builder.writeLine("// Append item to collection, check capacity");
         try builder.writeLine("const capacity: usize = 100;");
         try builder.writeLine("const count: usize = 1;");
@@ -168,7 +168,7 @@ pub fn generateRealBody(builder: *CodeBuilder, b: *const Behavior) !void {
 
     // --- Extract/parse behaviors: analyze input and return structured data ---
     if (mem.startsWith(u8, name, "extract") or mem.startsWith(u8, name, "parse")) {
-        try builder.writeFmt("// Extract: {s}\n", .{then});
+        try builder.writeCommentLines("//", "Extract: ", then);
         try builder.writeLine("const input = @as([]const u8, \"sample input\");");
         try builder.writeLine("var found_count: usize = 0;");
         try builder.writeLine("for (input) |c| {");
@@ -182,7 +182,7 @@ pub fn generateRealBody(builder: *CodeBuilder, b: *const Behavior) !void {
 
     // --- Update/modify behaviors: mutate state ---
     if (mem.startsWith(u8, name, "update") or mem.startsWith(u8, name, "modify") or mem.startsWith(u8, name, "set")) {
-        try builder.writeFmt("// Update: {s}\n", .{then});
+        try builder.writeCommentLines("//", "Update: ", then);
         try builder.writeLine("// Mutate state based on new data");
         try builder.writeLine("const state_changed = true;");
         try builder.writeLine("_ = state_changed;");
@@ -191,7 +191,7 @@ pub fn generateRealBody(builder: *CodeBuilder, b: *const Behavior) !void {
 
     // --- Get/query behaviors: return data ---
     if (mem.startsWith(u8, name, "get") or mem.startsWith(u8, name, "query") or mem.startsWith(u8, name, "list")) {
-        try builder.writeFmt("// Query: {s}\n", .{then});
+        try builder.writeCommentLines("//", "Query: ", then);
         try builder.writeLine("const result = @as([]const u8, \"query_result\");");
         try builder.writeLine("_ = result;");
         // Reference params to suppress unused warnings
@@ -211,7 +211,7 @@ pub fn generateRealBody(builder: *CodeBuilder, b: *const Behavior) !void {
             try builder.writeLine("const epsilon = 1e-9;");
             try builder.writeLine("return @abs(result - TRINITY) < epsilon;");
         } else {
-            try builder.writeFmt("// Validate: {s}\n", .{then});
+            try builder.writeCommentLines("//", "Validate: ", then);
             try builder.writeLine("const is_valid = true;");
             try builder.writeLine("_ = is_valid;");
             // Reference params to suppress unused warnings
@@ -223,9 +223,9 @@ pub fn generateRealBody(builder: *CodeBuilder, b: *const Behavior) !void {
 
     // --- Process/run/execute behaviors: orchestration ---
     if (mem.startsWith(u8, name, "process") or mem.startsWith(u8, name, "run") or mem.startsWith(u8, name, "execute")) {
-        try builder.writeFmt("// Process: {s}\n", .{then});
+        try builder.writeCommentLines("//", "Process: ", then);
         try builder.writeLine("const start_time = tri_time.timestamp();");
-        try builder.writeFmt("// Pipeline: {s}\n", .{then});
+        try builder.writeCommentLines("//", "Pipeline: ", then);
         try builder.writeLine("const elapsed = tri_time.timestamp() - start_time;");
         try builder.writeLine("_ = elapsed;");
         // Reference params to suppress unused warnings - check signature directly
@@ -240,7 +240,7 @@ pub fn generateRealBody(builder: *CodeBuilder, b: *const Behavior) !void {
 
     // --- Dispatch/route/assign behaviors: delegation ---
     if (mem.startsWith(u8, name, "dispatch") or mem.startsWith(u8, name, "route") or mem.startsWith(u8, name, "assign")) {
-        try builder.writeFmt("// Dispatch: {s}\n", .{then});
+        try builder.writeCommentLines("//", "Dispatch: ", then);
         try builder.writeLine("const target = @as([]const u8, \"default_agent\");");
         try builder.writeLine("const confidence: f64 = 0.85;");
         try builder.writeLine("_ = target;");
@@ -250,7 +250,7 @@ pub fn generateRealBody(builder: *CodeBuilder, b: *const Behavior) !void {
 
     // --- Fuse/merge/combine behaviors: aggregation ---
     if (mem.startsWith(u8, name, "fuse") or mem.startsWith(u8, name, "merge") or mem.startsWith(u8, name, "combine") or mem.startsWith(u8, name, "assemble")) {
-        try builder.writeFmt("// Fuse: {s}\n", .{then});
+        try builder.writeCommentLines("//", "Fuse: ", then);
         try builder.writeLine("// Combine multiple inputs into unified output");
         try builder.writeLine("var total_confidence: f64 = 0.0;");
         try builder.writeLine("var count: usize = 0;");
@@ -263,7 +263,7 @@ pub fn generateRealBody(builder: *CodeBuilder, b: *const Behavior) !void {
 
     // --- Compress/decompress behaviors: data transformation ---
     if (mem.startsWith(u8, name, "compress") or mem.startsWith(u8, name, "decompress")) {
-        try builder.writeFmt("// Compression: {s}\n", .{then});
+        try builder.writeCommentLines("//", "Compression: ", then);
         try builder.writeLine("const input_size: usize = 10000;");
         if (mem.startsWith(u8, name, "compress")) {
             try builder.writeLine("const ratio: f64 = 11.0; // TCV5 target");
@@ -279,7 +279,7 @@ pub fn generateRealBody(builder: *CodeBuilder, b: *const Behavior) !void {
 
     // --- Save/load/persist behaviors: I/O ---
     if (mem.startsWith(u8, name, "save") or mem.startsWith(u8, name, "load") or mem.startsWith(u8, name, "persist")) {
-        try builder.writeFmt("// I/O: {s}\n", .{then});
+        try builder.writeCommentLines("//", "I/O: ", then);
         if (mem.startsWith(u8, name, "save")) {
             try builder.writeLine("// Serialize state to persistent storage");
             try builder.writeLine("const data = @as([]const u8, \"serialized_state\");");
@@ -298,7 +298,7 @@ pub fn generateRealBody(builder: *CodeBuilder, b: *const Behavior) !void {
         mem.startsWith(u8, name, "trim") or mem.startsWith(u8, name, "decay") or
         mem.startsWith(u8, name, "reset") or mem.startsWith(u8, name, "disable"))
     {
-        try builder.writeFmt("// Cleanup: {s}\n", .{then});
+        try builder.writeCommentLines("//", "Cleanup: ", then);
         try builder.writeLine("const removed_count: usize = 1;");
         try builder.writeLine("_ = removed_count;");
         return;
@@ -306,7 +306,7 @@ pub fn generateRealBody(builder: *CodeBuilder, b: *const Behavior) !void {
 
     // --- Reinforce/strengthen behaviors: increase weight ---
     if (mem.startsWith(u8, name, "reinforce") or mem.startsWith(u8, name, "strengthen") or mem.startsWith(u8, name, "boost")) {
-        try builder.writeFmt("// Reinforce: {s}\n", .{then});
+        try builder.writeCommentLines("//", "Reinforce: ", then);
         try builder.writeLine("const base_importance: f64 = 0.5;");
         try builder.writeLine("const importance = @min(1.0, base_importance + 0.1);");
         try builder.writeLine("_ = importance;");
@@ -318,7 +318,7 @@ pub fn generateRealBody(builder: *CodeBuilder, b: *const Behavior) !void {
         mem.startsWith(u8, name, "find") or mem.startsWith(u8, name, "select") or
         mem.startsWith(u8, name, "fit"))
     {
-        try builder.writeFmt("// Retrieve: {s}\n", .{then});
+        try builder.writeCommentLines("//", "Retrieve: ", then);
         try builder.writeLine("const query = @as([]const u8, \"search_query\");");
         try builder.writeLine("const relevance: f64 = if (query.len > 0) 0.85 else 0.0;");
         try builder.writeLine("_ = relevance;");
@@ -327,7 +327,7 @@ pub fn generateRealBody(builder: *CodeBuilder, b: *const Behavior) !void {
 
     // --- Summarize behaviors: text compression ---
     if (mem.startsWith(u8, name, "summarize")) {
-        try builder.writeFmt("// Summarize: {s}\n", .{then});
+        try builder.writeCommentLines("//", "Summarize: ", then);
         try builder.writeLine("const input = @as([]const u8, \"long text to summarize\");");
         try builder.writeLine("const max_len: usize = 500;");
         try builder.writeLine("const summary_len = @min(input.len, max_len);");
@@ -337,7 +337,7 @@ pub fn generateRealBody(builder: *CodeBuilder, b: *const Behavior) !void {
 
     // --- Generate behaviors: code/content creation ---
     if (mem.startsWith(u8, name, "generate")) {
-        try builder.writeFmt("// Generate: {s}\n", .{then});
+        try builder.writeCommentLines("//", "Generate: ", then);
         try builder.writeLine("const template = @as([]const u8, \"generated_output\");");
         try builder.writeLine("_ = template;");
         return;
@@ -345,7 +345,7 @@ pub fn generateRealBody(builder: *CodeBuilder, b: *const Behavior) !void {
 
     // --- Coordinate/delegate behaviors: multi-agent ---
     if (mem.startsWith(u8, name, "coordinate") or mem.startsWith(u8, name, "delegate")) {
-        try builder.writeFmt("// Coordinate: {s}\n", .{then});
+        try builder.writeCommentLines("//", "Coordinate: ", then);
         try builder.writeLine("const agent_count: usize = 4;");
         try builder.writeLine("var completed: usize = 0;");
         try builder.writeLine("completed = agent_count; // all agents complete");
@@ -355,7 +355,7 @@ pub fn generateRealBody(builder: *CodeBuilder, b: *const Behavior) !void {
 
     // --- Resolve behaviors: conflict resolution ---
     if (mem.startsWith(u8, name, "resolve")) {
-        try builder.writeFmt("// Resolve: {s}\n", .{then});
+        try builder.writeCommentLines("//", "Resolve: ", then);
         try builder.writeLine("// Pick highest confidence result");
         try builder.writeLine("const confidence_a: f64 = 0.85;");
         try builder.writeLine("const confidence_b: f64 = 0.72;");
@@ -366,7 +366,7 @@ pub fn generateRealBody(builder: *CodeBuilder, b: *const Behavior) !void {
 
     // --- Start/stream behaviors: streaming ---
     if (mem.startsWith(u8, name, "start") or mem.startsWith(u8, name, "stream")) {
-        try builder.writeFmt("// Start: {s}\n", .{then});
+        try builder.writeCommentLines("//", "Start: ", then);
         try builder.writeLine("const is_active = true;");
         try builder.writeLine("_ = is_active;");
         return;
@@ -396,14 +396,14 @@ pub fn generateRealBody(builder: *CodeBuilder, b: *const Behavior) !void {
             try builder.writeLine("_ = allocator; // available for future heap use");
             try builder.writeLine("return .{ .dimension = dimension, .label = input, .magnitude = magnitude };");
         } else {
-            try builder.writeFmt("// Encode: {s}\n", .{then});
+            try builder.writeCommentLines("//", "Encode: ", then);
             try builder.writeLine("_ = input;");
         }
         return;
     }
 
     // --- Fallback: generate real implementation from then description ---
-    try builder.writeFmt("// Implementation: {s}\n", .{then});
+    try builder.writeCommentLines("//", "Implementation: ", then);
 
     // Generate real implementations based on contract patterns
     const sig = signature_mod.inferSignatureFromSpec(b.given, b.then, b.name);
