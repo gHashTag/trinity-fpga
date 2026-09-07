@@ -224,27 +224,23 @@ test "a generated function that promises a value returns one" {
     // The property under test.
     try std.testing.expectEqual(@as(usize, 0), bad);
 
-    // And the reason that number is currently easy to satisfy, stated so it
-    // cannot be mistaken for coverage. Measured: across all 558 combinations
-    // of name prefix and `then` phrase, the emitter writes `() !void` every
-    // single time. signature.zig's return-type inference reaches the BODY
-    // emitter (which uses it to decide which parameters to discard, in
-    // functions that have no parameters) and the TEST generator -- but never
-    // the code that writes the function header, which is hardcoded per
-    // pattern.
+    // Guard the denominator. This assertion used to read
+    // `expectEqual(0, checked)` -- because the emitter hardcoded `() !void`
+    // and signature.zig's return-type inference reached the body emitter and
+    // the test generator but never the function header. The sweep examined
+    // nothing, and said so rather than passing quietly.
     //
-    // So `checked` is 0 today, and this assertion is what makes that visible.
-    // When the inference is wired into the header, this line fails, `checked`
-    // becomes non-zero, and the `bad == 0` check above starts doing the work
-    // it was written for. Change this to `expect(checked > 0)` at that point.
-    try std.testing.expectEqual(@as(usize, 0), checked);
+    // The header now comes from the inference, so the sweep has real work:
+    // 372 of the 558 combinations produce a value-returning signature, and
+    // the `bad == 0` above is what checks each of them has a body to match.
+    try std.testing.expect(checked > 100);
 }
 
-test "signature inference is not consulted for function headers" {
-    // The sharp form of the note above, as a standalone fact rather than a
-    // footnote on another test. This is what made a generated file fail to
-    // compile in CI: tests_gen asked the inference and emitted an assertion
-    // for a bool, while the header the function actually got was `!void`.
+test "the function header comes from the spec's own then clause" {
+    // The sharp form of the note above. This was a characterization test for
+    // the opposite fact -- it asserted `!void`, because the header ignored
+    // the inference entirely, which is what let tests_gen emit a bool
+    // assertion against a function that returned nothing and broke CI.
     const allocator = std.testing.allocator;
 
     var spec = parser_types_align.VibeeSpec.init(allocator);
@@ -264,7 +260,7 @@ test "signature inference is not consulted for function headers" {
     defer allocator.free(out);
 
     const found = bodyOf(out, "computeSimilarity") orelse return error.FunctionNotEmitted;
-    // Not `f32`. If this ever becomes f32, the inference has been wired in --
-    // delete this test and enable the one above.
-    try std.testing.expectEqualStrings("!void", found.ret);
+    try std.testing.expectEqualStrings("f32", found.ret);
+    // And a body that produces one, since the stub computes nothing.
+    try std.testing.expect(std.mem.indexOf(u8, found.body, "return ") != null);
 }

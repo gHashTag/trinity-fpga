@@ -14,6 +14,9 @@ const builder_mod = @import("builder.zig");
 const patterns_mod = @import("patterns.zig");
 const tests_gen_mod = @import("tests_gen.zig");
 const utils = @import("utils.zig");
+// The header now comes from the same inference the body emitter and the test
+// generator use, instead of being hardcoded `!void`.
+const signature_mod = @import("signature.zig");
 
 const CodeBuilder = builder_mod.CodeBuilder;
 const PatternMatcher = patterns_mod.PatternMatcher;
@@ -1019,6 +1022,26 @@ pub const ZigCodeGen = struct {
         try self.builder.newline();
     }
 
+    /// A zero value for a return type the stub bodies do not produce, or null
+    /// when the type needs no return at all.
+    ///
+    /// Deliberately a small closed list rather than a guess: a type not named
+    /// here gets no synthesised return, which fails loudly at build time
+    /// rather than silently returning something wrong. Adding a case is a
+    /// decision about what "no result yet" means for that type.
+    fn defaultReturnFor(ret: []const u8) ?[]const u8 {
+        if (std.mem.eql(u8, ret, "void") or std.mem.eql(u8, ret, "!void")) return null;
+        if (std.mem.eql(u8, ret, "bool")) return "false";
+        if (std.mem.eql(u8, ret, "f32") or std.mem.eql(u8, ret, "f64")) return "0.0";
+        if (std.mem.eql(u8, ret, "i32") or std.mem.eql(u8, ret, "i64") or
+            std.mem.eql(u8, ret, "u32") or std.mem.eql(u8, ret, "u64") or
+            std.mem.eql(u8, ret, "usize")) return "0";
+        if (std.mem.eql(u8, ret, "[]const u8") or std.mem.eql(u8, ret, "[]u8")) return "\"\"";
+        if (std.mem.eql(u8, ret, "[]f32") or std.mem.eql(u8, ret, "[]const f32")) return "&.{}";
+        if (std.mem.eql(u8, ret, "[]const anytype") or std.mem.eql(u8, ret, "[]anytype")) return null;
+        return null;
+    }
+
     /// Does any behaviour in this spec lower to a body that calls tri_time?
     ///
     /// This list must stay in step with the branches in body_emitter.zig that
@@ -1772,9 +1795,37 @@ pub const ZigCodeGen = struct {
             try self.builder.writeFmt("/// When: {s}\n", .{b.when});
             try self.builder.writeFmt("/// Then: {s}\n", .{b.then});
             const safe_fn_name = sanitizeName(self.allocator, b.name);
-            try self.builder.writeFmt("pub fn {s}() !void {{\n", .{safe_fn_name});
+
+            // The return type comes from the inference the body emitter and
+            // the test generator already use. It used to be hardcoded `!void`
+            // here, which is why signature.zig had no effect on any generated
+            // header and why tests_gen could emit an assertion for a bool
+            // against a function that returned nothing.
+            //
+            // Parameters stay out for now: the body branches reference
+            // parameters by convention (`_ = input;`) rather than from the
+            // signature, so emitting them would produce unused-parameter
+            // errors across the corpus. Return type first, parameters when the
+            // bodies are ready for them.
+            const sig = signature_mod.inferSignatureFromSpec(b.given, b.then, b.name);
+            try self.builder.writeFmt("pub fn {s}() {s} {{\n", .{ safe_fn_name, sig.ret });
             self.builder.incIndent();
+
+            const body_start = self.builder.buffer.items.len;
             try self.generateRealBody(b);
+            const body = self.builder.buffer.items[body_start..];
+
+            // A signature that promises a value needs a body that produces
+            // one. The stub bodies do not return, so supply a default -- but
+            // only when the body did not return already, or the result is
+            // unreachable code, which is itself an ast-check error.
+            if (defaultReturnFor(sig.ret)) |lit| {
+                if (std.mem.indexOf(u8, body, "return ") == null) {
+                    try self.builder.writeIndent();
+                    try self.builder.writeFmt("return {s};\n", .{lit});
+                }
+            }
+
             self.builder.decIndent();
             try self.builder.writeLine("}");
         }
