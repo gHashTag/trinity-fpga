@@ -330,6 +330,12 @@ pub fn build(b: *std.Build) void {
         // by the test step at all. This root pulls in codegen/utils.zig, which
         // is where mapType lives.
         b.path("src/vibeec/validate_cmd.zig"),
+        // The spec parser. Its tests pin the parse body that was missing --
+        // `parse` handled indent == 0 and dropped every indented line, so
+        // every spec in the repo yielded 0 types and 0 behaviours. Declared
+        // here for the same reason as the line above: nothing else in the
+        // test step reaches src/vibeec/.
+        b.path("src/vibeec/gen_vibee_parser.zig"),
     };
     for (behaviour_test_roots) |root_path| {
         const t = b.addTest(.{
