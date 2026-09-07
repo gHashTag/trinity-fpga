@@ -259,10 +259,18 @@ test "SpecEditor: updateImplementation" {
 
 test "SpecEditor: cleanOldBackups" {
     const allocator = std.testing.allocator;
-    const backup_dir = "/tmp/trinity_test_backups";
+    // A per-run directory. This test deleteTree's the whole directory both on
+    // entry and on exit, so two overlapping runs have one wiping the other's
+    // tree mid-test -- exactly the defect that made shard_manager's 5-node
+    // test fail 4 times in 20 runs.
+    // Same trick as tri_proc.zig: a stack address is unique per process and
+    // costs no dependency. `std.crypto.random` no longer exists in 0.16.
+    var seed_anchor: u8 = 0;
+    const suffix = @intFromPtr(&seed_anchor);
+    const backup_dir = try std.fmt.allocPrint(allocator, "/tmp/trinity_test_backups_{x}", .{suffix});
+    defer allocator.free(backup_dir);
 
     // Setup: create backup directory with test files
-    std.fs.cwd().deleteTree(backup_dir) catch {};
     try std.fs.cwd().makePath(backup_dir);
     defer std.fs.cwd().deleteTree(backup_dir) catch {};
 

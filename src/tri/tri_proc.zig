@@ -333,8 +333,20 @@ test "resolveProgram skips a directory that merely shares the program's name" {
     // access(X_OK) answers TRUE for a directory -- the execute bit means
     // "traversable" there. Without a kind check this returns a path that
     // cannot be executed, and the spawn fails later with a confusing error.
-    const dir = "/tmp/tri_path_dir_trap";
-    const trap = "/tmp/tri_path_dir_trap/sh";
+    // A per-run directory, not a fixed one. This test deleteTree's the whole
+    // directory on exit, so two overlapping runs have one wiping the other's
+    // tree -- the same defect that made shard_manager's 5-node test fail 4
+    // times in 20 runs and took three sessions to find.
+    // Uniqueness without a new dependency: the address of a stack local
+    // differs per process under ASLR. `std.crypto.random` was removed in
+    // 0.16 and the repo's replacement, tri_rand, is not among this module's
+    // imports -- adding one for a test-only need would be the wrong trade.
+    var seed_anchor: u8 = 0;
+    const suffix = @intFromPtr(&seed_anchor);
+    const dir = try std.fmt.allocPrint(gpa, "/tmp/tri_path_dir_trap_{x}", .{suffix});
+    defer gpa.free(dir);
+    const trap = try std.fmt.allocPrint(gpa, "{s}/sh", .{dir});
+    defer gpa.free(trap);
     try std.Io.Dir.cwd().createDirPath(io, trap);
     defer std.Io.Dir.cwd().deleteTree(io, dir) catch {};
 
