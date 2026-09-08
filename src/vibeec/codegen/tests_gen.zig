@@ -3709,10 +3709,22 @@ pub const TestGenerator = struct {
         }
         // Cycle 76: Real behavior tests for phi_utils functions
         else if (std.mem.eql(u8, name, "compute_phi_power")) {
+            // Only assert on FIELDS when the function actually returns the
+            // struct this assertion assumes. `sacred_math_agent.vibee` infers
+            // `!void` for this behaviour, and `result.value` on an error union
+            // does not compile -- ast-check passed the file, and only the
+            // corpus gate's compile sample caught it, once the sample was
+            // spread across the corpus instead of taking a prefix.
+            const pp = signature_mod.inferSignatureFromSpec(given_clause, then_clause, name);
             try self.builder.writeLine("// Test compute_phi_power: verify φ^1 = φ");
-            try self.builder.writeLine("const result = compute_phi_power(1);");
-            try self.builder.writeLine("try std.testing.expectApproxEqAbs(result.value, PHI, 1e-10);");
-            try self.builder.writeLine("try std.testing.expect(result.is_valid);");
+            if (std.mem.indexOf(u8, pp.ret, "PhiResult") != null) {
+                try self.builder.writeLine("const result = compute_phi_power(1);");
+                try self.builder.writeLine("try std.testing.expectApproxEqAbs(result.value, PHI, 1e-10);");
+                try self.builder.writeLine("try std.testing.expect(result.is_valid);");
+            } else {
+                try self.builder.writeLine("// Returns no value -- the call is the assertion.");
+                try self.builder.writeLine("try compute_phi_power(1);");
+            }
         } else if (std.mem.eql(u8, name, "verify_trinity_identity")) {
             // This assertion assumed a `bool` return and got `!void`, because
             // the signature inference and the body emitter disagree: the

@@ -1896,6 +1896,21 @@ pub const ZigCodeGen = struct {
         var emitted_fns = std.StringHashMap(void).init(self.allocator);
         defer emitted_fns.deinit();
 
+        // A SEPARATE map for emitted Zig names.
+        //
+        // Sharing one map with the spec-name check above is wrong in a way
+        // that looks right: for most behaviours the spec name and the emitted
+        // function name are identical, so scanning an emission finds the entry
+        // the loop just added for that same behaviour and skips it as a
+        // duplicate of itself. Every behaviour in firebird.vibee was dropped
+        // that way.
+        var emitted_zig_names = std.StringHashMap(void).init(self.allocator);
+        defer {
+            var kit = emitted_zig_names.keyIterator();
+            while (kit.next()) |k| self.allocator.free(k.*);
+            emitted_zig_names.deinit();
+        }
+
         for (behaviors) |b| {
             // Skip duplicate behavior names
             if (emitted_fns.contains(b.name)) {
@@ -1904,7 +1919,70 @@ pub const ZigCodeGen = struct {
             }
             emitted_fns.put(b.name, {}) catch {};
 
+            // Dedup on the EMITTED name, not the spec name.
+            //
+            // The check above keys on `b.name`, and two different behaviours
+            // can lower to one Zig function: a pattern emits
+            // `forward(input, output, config)` for `forward_avgpool2d` while
+            // the generic path emits `forward()`, and the container ends up
+            // with two `pub fn forward`. 23 specs failed with
+            // `duplicate struct member name` for exactly this, and none of
+            // them had a duplicate behaviour name for the check above to see.
+            //
+            // So emit first, then read back what was written. If a name is
+            // already taken, rewind the buffer -- surgery after the fact,
+            // because the emitted name is not knowable before the emission
+            // (each pattern chooses its own).
+            const mark = self.builder.buffer.items.len;
             try self.generateBehaviorImplementation(&pattern_matcher, &b);
+            const written = self.builder.buffer.items[mark..];
+
+            // Collect this emission's names SEPARATELY, and only compare
+            // against names from PREVIOUS behaviours.
+            //
+            // Adding them to the shared set while scanning meant a behaviour
+            // that legitimately writes the same `pub fn` twice within its own
+            // emission matched itself, rewound the whole block, and left the
+            // function undeclared for the tests that call it -- four specs
+            // regressed that way, and the gate named every one.
+            var mine: std.ArrayList([]const u8) = .empty;
+            defer {
+                for (mine.items) |m| self.allocator.free(m);
+                mine.deinit(self.allocator);
+            }
+            var dup: ?[]const u8 = null;
+            var scan: usize = 0;
+            while (std.mem.indexOfPos(u8, written, scan, "pub fn ")) |at| {
+                const name_start = at + "pub fn ".len;
+                const paren = std.mem.indexOfScalarPos(u8, written, name_start, '(') orelse break;
+                const fname = written[name_start..paren];
+                scan = paren;
+                if (fname.len == 0 or std.mem.indexOfScalar(u8, fname, ' ') != null) continue;
+                if (emitted_zig_names.contains(fname)) {
+                    dup = fname;
+                    break;
+                }
+                // Store a copy: `written` points into a buffer that moves.
+                const owned = self.allocator.dupe(u8, fname) catch continue;
+                mine.append(self.allocator, owned) catch {
+                    self.allocator.free(owned);
+                };
+            }
+
+            if (dup == null) {
+                for (mine.items) |m| {
+                    emitted_zig_names.put(m, {}) catch {};
+                }
+                mine.clearRetainingCapacity(); // ownership moved to the map
+            }
+
+            if (dup) |name| {
+                self.builder.buffer.items.len = mark;
+                try self.builder.writeFmt(
+                    "// skipped: behavior '{s}' lowers to `{s}`, already emitted\n\n",
+                    .{ b.name, name },
+                );
+            }
         }
     }
 

@@ -27,10 +27,15 @@ const tri_proc = @import("tri_proc");
 
 const baseline_path = "tools/codegen_corpus_baseline.txt";
 const out_dir = ".zig-cache/codegen-corpus";
-/// How many of the clean specs to additionally COMPILE. Compiling is ~3s each,
-/// so this is a deliberate trade: broad ast-check coverage plus a sample that
-/// exercises the checks ast-check cannot perform.
-const compile_sample = 24;
+/// Default number of clean specs to additionally COMPILE. Compiling is ~3s
+/// each, so every-push runs stay near a minute; `--compile N` raises it for a
+/// nightly. `--compile all` takes about 40 minutes.
+///
+/// The sample is not the first N: it is spread evenly across the corpus.
+/// `ternary_mathematics` failed the four-spec gate through five iterations of
+/// a change while a contiguous 24-spec prefix said everything was clean --
+/// a prefix samples one directory, not the corpus.
+const default_compile_sample = 24;
 
 pub fn main(init: std.process.Init.Minimal) !void {
     var gpa_state: std.heap.DebugAllocator(.{}) = .init;
@@ -47,9 +52,20 @@ pub fn main(init: std.process.Init.Minimal) !void {
     defer gpa.free(args);
     var update = false;
     var gen_arg: ?[]const u8 = null;
+    var compile_sample: usize = default_compile_sample;
+    var want_compile_arg = false;
     for (args[1..]) |a| {
-        if (std.mem.eql(u8, a, "--update")) {
+        if (want_compile_arg) {
+            want_compile_arg = false;
+            if (std.mem.eql(u8, a, "all")) {
+                compile_sample = std.math.maxInt(usize);
+            } else {
+                compile_sample = std.fmt.parseInt(usize, a, 10) catch default_compile_sample;
+            }
+        } else if (std.mem.eql(u8, a, "--update")) {
             update = true;
+        } else if (std.mem.eql(u8, a, "--compile")) {
+            want_compile_arg = true;
         } else if (gen_arg == null) {
             gen_arg = a;
         }
@@ -141,7 +157,18 @@ pub fn main(init: std.process.Init.Minimal) !void {
     var compiled: usize = 0;
     var compile_failed: usize = 0;
     const sample = @min(compile_sample, clean.items.len);
-    for (clean.items[0..sample]) |spec| {
+    // Even stride, not a prefix: the clean list is sorted by path, so the
+    // first N are all from one directory.
+    const stride = if (sample == 0) 1 else clean.items.len / sample;
+    var picked: std.ArrayList([]const u8) = .empty;
+    defer picked.deinit(gpa);
+    {
+        var i: usize = 0;
+        while (i < clean.items.len and picked.items.len < sample) : (i += @max(1, stride)) {
+            try picked.append(gpa, clean.items[i]);
+        }
+    }
+    for (picked.items) |spec| {
         const dest = try outPathFor(gpa, spec);
         defer gpa.free(dest);
         if (try zigTestOk(gpa, io, dest)) {
