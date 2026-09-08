@@ -104,6 +104,17 @@ jobs:
           done
           [ "$missing" -eq 0 ] || exit 1
 
+      # The four-spec check below is kept -- it compiles, which is what
+      # ast-check cannot do -- but four specs out of 1137 is not coverage.
+      # This walks every spec: 1033 produce behaviours, 777 generate
+      # ast-check-clean output, and a sample is additionally compiled. It is a
+      # ratchet, so a spec that regresses fails the build by name.
+      #
+      # A regression reached a commit because the failing spec was in neither
+      # the gate's four nor the head -80 slice I was measuring with.
+      - name: Does any spec stop generating clean Zig?
+        run: zig build codegen-corpus
+
       - name: Does codegen produce compiling Zig?
         run: |
           set -e

@@ -80,7 +80,7 @@ pub const TestGenerator = struct {
             } else {
                 // Fallback for known tests without test_cases
                 const safe_name = sanitizeIdent(b.name);
-                try self.generateKnownTestAssertion(safe_name, b.then);
+                try self.generateKnownTestAssertion(safe_name, b.then, b.given);
             }
 
             self.builder.decIndent();
@@ -326,7 +326,12 @@ pub const TestGenerator = struct {
             try self.builder.writeLine("try std.testing.expect(result.is_valid);");
         } else if (std.mem.eql(u8, name, "trinity_identity_holds")) {
             try self.builder.writeLine("// φ² + 1/φ² = 3.0 within ε");
-            try self.builder.writeLine("const result = verify_trinity_identity();");
+            {
+                const cs = signature_mod.inferSignatureFromSpec("", "", "verify_trinity_identity");
+                const ca = try self.placeholderArgsFor(cs.params);
+                defer self.allocator.free(ca);
+                try self.builder.writeFmt("const result = verify_trinity_identity({s});\n", .{ca});
+            }
             try self.builder.writeLine("try std.testing.expect(result);");
             // Default fallback - compile-time check
         } else {
@@ -362,7 +367,12 @@ pub const TestGenerator = struct {
                 }
             }
         } else if (std.mem.eql(u8, func_name, "trinity_identity")) {
-            try self.builder.writeLine("try std.testing.expectApproxEqAbs(verify_trinity(), TRINITY, 1e-10);");
+            {
+                const cs = signature_mod.inferSignatureFromSpec("", "", "verify_trinity");
+                const ca = try self.placeholderArgsFor(cs.params);
+                defer self.allocator.free(ca);
+                try self.builder.writeFmt("try std.testing.expectApproxEqAbs(verify_trinity({s}), TRINITY, 1e-10);\n", .{ca});
+            }
         } else if (std.mem.startsWith(u8, func_name, "phi_spiral")) {
             try self.builder.writeLine("const count = generate_phi_spiral(100, 10.0, 0.0, 0.0);");
             try self.builder.writeLine("try std.testing.expect(count > 0);");
@@ -408,7 +418,12 @@ pub const TestGenerator = struct {
                 }
             }
         } else if (std.mem.startsWith(u8, func_name, "golden_identity") or std.mem.startsWith(u8, func_name, "test_golden_identity")) {
-            try self.builder.writeLine("try std.testing.expectApproxEqAbs(golden_identity(), 3.0, 1e-10);");
+            {
+                const cs = signature_mod.inferSignatureFromSpec("", "", "golden_identity");
+                const ca = try self.placeholderArgsFor(cs.params);
+                defer self.allocator.free(ca);
+                try self.builder.writeFmt("try std.testing.expectApproxEqAbs(golden_identity({s}), 3.0, 1e-10);\n", .{ca});
+            }
         } else if (std.mem.startsWith(u8, func_name, "binomial") or std.mem.startsWith(u8, func_name, "test_binomial")) {
             const n = utils.extractIntParam(input, "n") orelse 0;
             const k = utils.extractIntParam(input, "k") orelse 0;
@@ -438,7 +453,12 @@ pub const TestGenerator = struct {
             try self.builder.writeLine("try std.testing.expectEqual(Trit.trit_not(.zero), .zero);");
             try self.builder.writeLine("try std.testing.expectEqual(Trit.trit_not(.negative), .positive);");
         } else if (std.mem.startsWith(u8, func_name, "verify_trinity") or std.mem.startsWith(u8, func_name, "test_verify_trinity")) {
-            try self.builder.writeLine("try std.testing.expectApproxEqAbs(verify_trinity(), TRINITY, 1e-10);");
+            {
+                const cs = signature_mod.inferSignatureFromSpec("", "", "verify_trinity");
+                const ca = try self.placeholderArgsFor(cs.params);
+                defer self.allocator.free(ca);
+                try self.builder.writeFmt("try std.testing.expectApproxEqAbs(verify_trinity({s}), TRINITY, 1e-10);\n", .{ca});
+            }
         } else {
             // Unknown test - generate comment
             try self.builder.writeFmt("// Test case: input={s}, expected={s}\n", .{ input, expected });
@@ -517,10 +537,64 @@ pub const TestGenerator = struct {
         return result[0..result_len];
     }
 
-    pub fn generateKnownTestAssertion(self: *Self, name: []const u8, then_clause: []const u8) !void {
+    /// A comma-separated argument list matching `params`, for calling a
+    /// generated stub from a generated test.
+    ///
+    /// The generated functions now take the parameters their spec declares, so
+    /// a hardcoded `verify_trinity_identity()` in a generated TEST no longer
+    /// matches the function it calls. ast-check cannot see call arity -- only
+    /// the compile gate catches this -- so the values here only need the right
+    /// shape; an unknown type yields `undefined`, which compiles for any
+    /// parameter and is honest that the call proves linkage and nothing more.
+    /// Caller owns the result.
+    fn placeholderArgsFor(self: *Self, params: []const u8) ![]u8 {
+        var out: std.ArrayListUnmanaged(u8) = .empty;
+        errdefer out.deinit(self.allocator);
+        var first = true;
+        var it = std.mem.splitScalar(u8, params, ',');
+        while (it.next()) |raw| {
+            const decl = std.mem.trim(u8, raw, " \t");
+            if (decl.len == 0) continue;
+            const colon = std.mem.indexOfScalar(u8, decl, ':') orelse continue;
+            const pname = std.mem.trim(u8, decl[0..colon], " \t");
+            // `self` is dropped from generated free functions, so a call must
+            // not pass one either.
+            if (std.mem.eql(u8, pname, "self")) continue;
+            if (!first) try out.appendSlice(self.allocator, ", ");
+            first = false;
+            const ty = std.mem.trim(u8, decl[colon + 1 ..], " \t");
+            if (std.mem.eql(u8, ty, "[]const u8")) {
+                try out.appendSlice(self.allocator, "\"\"");
+            } else if (std.mem.eql(u8, ty, "usize") or std.mem.eql(u8, ty, "u32") or
+                std.mem.eql(u8, ty, "u64") or std.mem.eql(u8, ty, "i32") or
+                std.mem.eql(u8, ty, "i64"))
+            {
+                try out.appendSlice(self.allocator, "0");
+            } else if (std.mem.eql(u8, ty, "f32") or std.mem.eql(u8, ty, "f64")) {
+                try out.appendSlice(self.allocator, "0.0");
+            } else if (std.mem.eql(u8, ty, "bool")) {
+                try out.appendSlice(self.allocator, "false");
+            } else {
+                try out.appendSlice(self.allocator, "undefined");
+            }
+        }
+        return out.toOwnedSlice(self.allocator);
+    }
+
+    /// `given_clause` is needed as well as `then_clause`: signature.zig infers
+    /// PARAMETERS mostly from `given` and the return type from `then`. Passing
+    /// only `then` here produced a call with no arguments against a function
+    /// that had one -- ast-check cannot see arity, so only the compile gate
+    /// caught it.
+    pub fn generateKnownTestAssertion(self: *Self, name: []const u8, then_clause: []const u8, given_clause: []const u8) !void {
         const mem = std.mem;
         if (std.mem.eql(u8, name, "trinity_identity")) {
-            try self.builder.writeLine("try std.testing.expectApproxEqAbs(verify_trinity(), TRINITY, 1e-10);");
+            {
+                const cs = signature_mod.inferSignatureFromSpec(given_clause, then_clause, "verify_trinity");
+                const ca = try self.placeholderArgsFor(cs.params);
+                defer self.allocator.free(ca);
+                try self.builder.writeFmt("try std.testing.expectApproxEqAbs(verify_trinity({s}), TRINITY, 1e-10);\n", .{ca});
+            }
         } else if (std.mem.eql(u8, name, "phi_power_zero")) {
             try self.builder.writeLine("try std.testing.expectApproxEqAbs(phi_power(0), 1.0, 1e-10);");
         } else if (std.mem.eql(u8, name, "phi_power_one")) {
@@ -561,7 +635,12 @@ pub const TestGenerator = struct {
             try self.builder.writeLine("try std.testing.expectEqual(trinity_power(3), 27);");
             try self.builder.writeLine("try std.testing.expectEqual(trinity_power(9), 19683);");
         } else if (std.mem.eql(u8, name, "golden_identity_test") or std.mem.eql(u8, name, "test_golden_identity")) {
-            try self.builder.writeLine("try std.testing.expectApproxEqAbs(golden_identity(), 3.0, 1e-10);");
+            {
+                const cs = signature_mod.inferSignatureFromSpec(given_clause, then_clause, "golden_identity");
+                const ca = try self.placeholderArgsFor(cs.params);
+                defer self.allocator.free(ca);
+                try self.builder.writeFmt("try std.testing.expectApproxEqAbs(golden_identity({s}), 3.0, 1e-10);\n", .{ca});
+            }
         } else if (std.mem.eql(u8, name, "binomial_test") or std.mem.eql(u8, name, "test_binomial")) {
             try self.builder.writeLine("try std.testing.expectEqual(binomial(5, 2), 10);");
             try self.builder.writeLine("try std.testing.expectEqual(binomial(10, 3), 120);");
@@ -3649,11 +3728,21 @@ pub const TestGenerator = struct {
             const sig = signature_mod.inferSignatureFromSpec("", then_clause, name);
             try self.builder.writeLine("// Test verify_trinity_identity: φ² + 1/φ² = 3");
             if (std.mem.indexOf(u8, sig.ret, "bool") != null) {
-                try self.builder.writeLine("const result = verify_trinity_identity();");
+                {
+                    const cs = signature_mod.inferSignatureFromSpec(given_clause, then_clause, "verify_trinity_identity");
+                    const ca = try self.placeholderArgsFor(cs.params);
+                    defer self.allocator.free(ca);
+                    try self.builder.writeFmt("const result = verify_trinity_identity({s});\n", .{ca});
+                }
                 try self.builder.writeLine("try std.testing.expect(result);");
             } else {
                 try self.builder.writeLine("// Body is a stub returning no value -- nothing to assert on yet.");
-                try self.builder.writeLine("try verify_trinity_identity();");
+                {
+                    const cs = signature_mod.inferSignatureFromSpec(given_clause, then_clause, "verify_trinity_identity");
+                    const ca = try self.placeholderArgsFor(cs.params);
+                    defer self.allocator.free(ca);
+                    try self.builder.writeFmt("try verify_trinity_identity({s});\n", .{ca});
+                }
             }
         } else if (std.mem.eql(u8, name, "encode_to_trits")) {
             try self.builder.writeLine("// Test encode_to_trits: verify encoding produces TritVector");
