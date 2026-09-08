@@ -62,13 +62,42 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 The project follows a strict "spec-first" workflow:
 
 ```
-specs/**/*.tri (VIBEE/Tri spec)  ← SINGLE source of truth
+specs/**/*.tri (VIBEE spec, YAML)
     │
-    ├── tools/bin/vibee_gen  → var/trinity/output/*.zig
-    ├── tools/bin/vibee_gen  → *.t27 (TRI-27 assembly)
-    ├── tools/bin/vibee_gen  → *.v (Verilog/FPGA)
-    └── future: Python, Rust, Go targets
+    ├── vibee_gen → *.zig          scaffolding: real signatures, stub bodies
+    └── vibee_gen → *.v            Verilog backend
 ```
+
+**`vibee_gen` does NOT emit `.t27`.** An earlier version of this diagram claimed
+it did; there is no t27 emission anywhere in `src/vibeec/`. Nor is t27
+"TRI-27 assembly" — it is a high-level language with modules, typed signatures
+and `invariant { assert ... }` blocks, compiled by `t27c` (Rust) in a separate
+repository.
+
+### Two different languages share the `.tri` extension
+
+| | VIBEE `.tri` | t27 |
+|---|---|---|
+| syntax | YAML, top-level `name:` | `spec X { }`, `pub fn f(x f32) -> gf16` |
+| compiler | `vibee_gen` (Zig, this repo) | `t27c` (Rust, separate repo) |
+| backends | Zig, Verilog | Zig, Verilog, HIR, SystemVerilog assertions |
+| this repo | 1137 specs | 25 `.t27` files under `specs/numeric/` |
+
+They are not interchangeable, and each compiler used to accept the other's
+files **silently**, producing an empty result and exit 0. `vibee_gen` now
+refuses a t27 spec by name and points at `t27c`. Nothing yet stops `t27c`
+reading a VIBEE spec, where it parses 835 of our 1137 into an empty module.
+
+Measured, so the split is not mistaken for a plan:
+
+  * `vibee_gen` → Zig: **788 of 1033** specs produce ast-check-clean output,
+    with stub bodies
+  * `t27c` → Zig: **0 of 9** of its own specs produce valid Zig -- it emits
+    invariants and tests but not the declarations they use
+  * `t27c` → Verilog: **9 of 9** produce real module structure
+
+So t27's strength today is the hardware path, and VIBEE's is breadth of
+scaffolding. Neither produces working software logic yet.
 
 - `src/vibeec/` is the VIBEE compiler: parser, codegen, type checker, bytecode emitter, VM runtime, JIT, Verilog backend.
 - `.tri` specs define modules with `name`, `version`, `language`, `module`, `types`, and `behaviors` (each behavior has `given`, `when`, `then`).
