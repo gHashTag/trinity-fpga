@@ -15,6 +15,22 @@ const zig_codegen = @import("zig_codegen.zig");
 const verilog_codegen = @import("verilog_codegen.zig");
 const lang_generators = @import("lang_generators.zig");
 
+/// Does this source use t27's block syntax rather than VIBEE's YAML?
+///
+/// Deliberately requires the ABSENCE of a top-level `name:` as well as the
+/// presence of a t27 marker. 42 of our own specs contain `spec ` at the start
+/// of a line while still being YAML, so the marker alone would reject them.
+fn looksLikeT27(source: []const u8) bool {
+    if (std.mem.startsWith(u8, source, "name:")) return false;
+    if (std.mem.indexOf(u8, source, "\nname:") != null) return false;
+
+    const markers = [_][]const u8{ "\nspec ", "\ninvariant ", "\nnumericformat ", "\npub fn " };
+    for (markers) |m| {
+        if (std.mem.indexOf(u8, source, m) != null) return true;
+    }
+    return std.mem.startsWith(u8, source, "spec ");
+}
+
 pub fn main(init: std.process.Init.Minimal) !void {
     const allocator = std.heap.page_allocator;
 
@@ -317,6 +333,36 @@ fn generateCode(allocator: std.mem.Allocator, input_path: []const u8, output_pat
     std.debug.print("  Language: {s}\n", .{spec.language});
     std.debug.print("  Types: {d}\n", .{spec.types.items.len});
     std.debug.print("  Behaviors: {d}\n", .{spec.behaviors.items.len});
+
+    // Refuse a spec written in the OTHER .tri language.
+    //
+    // trinity-fpga and the t27 project both use the `.tri` extension for
+    // completely different languages. VIBEE specs are YAML with a top-level
+    // `name:`; t27 specs are block-structured -- `spec X { ... }`,
+    // `pub fn f(x f32) -> gf16`, `invariant { assert ... }`.
+    //
+    // Pointed at a t27 spec, this generator reported `Types: 0, Behaviors: 0`
+    // and wrote 3945 bytes of boilerplate, silently, exit 0. During a
+    // migration from one language to the other that is the worst possible
+    // behaviour: the wrong tool quietly produces a plausible-looking file.
+    //
+    // The discriminator is `name:`, measured over both corpora: 1066 of our
+    // 1137 specs have it, 0 of t27's do. The 71 without it are checked for
+    // t27 block syntax before rejecting, so a VIBEE spec that merely omits a
+    // header still generates.
+    if (spec.types.items.len == 0 and spec.behaviors.items.len == 0) {
+        if (looksLikeT27(source)) {
+            std.debug.print(
+                \\
+                \\  ERROR: this looks like a t27 spec, not a VIBEE spec.
+                \\  Both languages use the .tri extension; this generator only
+                \\  reads the YAML form with a top-level `name:`.
+                \\  Compile it with t27c instead:  t27c gen {s}
+                \\
+            , .{input_path});
+            return error.NotAVibeeSpec;
+        }
+    }
 
     // The multi-language branch that stood here read `spec.languages`, a field
     // the current VibeeSpec does not have -- the parser rewrite replaced the
