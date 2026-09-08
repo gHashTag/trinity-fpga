@@ -46,11 +46,23 @@ pub fn main(init: std.process.Init.Minimal) !void {
     const args = try init.args.toSlice(gpa);
     defer gpa.free(args);
     var update = false;
+    var gen_arg: ?[]const u8 = null;
     for (args[1..]) |a| {
-        if (std.mem.eql(u8, a, "--update")) update = true;
+        if (std.mem.eql(u8, a, "--update")) {
+            update = true;
+        } else if (gen_arg == null) {
+            gen_arg = a;
+        }
     }
 
-    const gen = try findGenerator(gpa, io);
+    // The build passes the generator's path as an argument
+    // (`addArtifactArg`), which both locates it and makes this step depend on
+    // it being built. Searching `.zig-cache` was the first approach and it
+    // worked only on a machine that had already built the generator: CI runs
+    // this step without building `vibee_gen`, so it failed with
+    // `GeneratorNotBuilt` -- a gate that passed locally and could not pass
+    // anywhere else.
+    const gen = if (gen_arg) |g| try gpa.dupe(u8, g) else try findGenerator(gpa, io);
     defer gpa.free(gen);
 
     std.Io.Dir.cwd().createDirPath(io, out_dir) catch {};

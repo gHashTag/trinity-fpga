@@ -4300,10 +4300,13 @@ pub fn build(b: *std.Build) void {
         }),
     });
     const run_corpus = b.addRunArtifact(corpus);
+    // Passes the built generator's path AND makes this step build it.
+    run_corpus.addArtifactArg(vibee_gen_exe);
     const corpus_step = b.step("codegen-corpus", "Fail if a spec stops generating clean Zig");
     corpus_step.dependOn(&run_corpus.step);
 
     const run_corpus_update = b.addRunArtifact(corpus);
+    run_corpus_update.addArtifactArg(vibee_gen_exe);
     run_corpus_update.addArg("--update");
     const corpus_update_step = b.step("codegen-corpus-update", "Re-record the codegen corpus baseline");
     corpus_update_step.dependOn(&run_corpus_update.step);
