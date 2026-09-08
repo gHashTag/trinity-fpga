@@ -21,14 +21,63 @@ const lang_generators = @import("lang_generators.zig");
 /// presence of a t27 marker. 42 of our own specs contain `spec ` at the start
 /// of a line while still being YAML, so the marker alone would reject them.
 fn looksLikeT27(source: []const u8) bool {
-    if (std.mem.startsWith(u8, source, "name:")) return false;
-    if (std.mem.indexOf(u8, source, "\nname:") != null) return false;
+    if (hasVibeeName(source)) return false;
 
     const markers = [_][]const u8{ "\nspec ", "\ninvariant ", "\nnumericformat ", "\npub fn " };
     for (markers) |m| {
         if (std.mem.indexOf(u8, source, m) != null) return true;
     }
     return std.mem.startsWith(u8, source, "spec ");
+}
+
+fn hasVibeeName(source: []const u8) bool {
+    return std.mem.startsWith(u8, source, "name:") or
+        std.mem.indexOf(u8, source, "\nname:") != null;
+}
+
+/// Which foreign language is this, if any?
+///
+/// `specs/` holds FOUR languages under the `.tri` extension, not two. A census
+/// of all 1137 specs:
+///
+///     YAML VIBEE      `name:` at line start        1065
+///     t27 blocks      `spec X { }`                   14
+///     Markdown        `## headings`                  32
+///     TOML            `[section]`, `key = "value"`   13
+///     comment-led     starts with `//`               10
+///     near-empty      under 3 non-blank lines         3
+///
+/// On every one of the 72 non-YAML specs this generator used to report
+/// `Types: 0, Behaviors: 0` and write boilerplate, silently, exit 0 -- and the
+/// corpus gate cannot object, because it counts 0/0 as a legitimate spec with
+/// no behaviours.
+///
+/// Returns the language's name for the error message, or null when the source
+/// is VIBEE or unrecognised. Unrecognised falls through on purpose: a wrong
+/// refusal breaks a working pipeline, while a miss only preserves today's
+/// behaviour.
+fn foreignDialect(source: []const u8) ?[]const u8 {
+    if (hasVibeeName(source)) return null;
+
+    // Markdown FIRST, because a prose document can embed code in any language.
+    // `specs/storm_main.tri` is Markdown containing a Zig block with
+    // `pub fn executeStormCommand(...)`, and checking t27's markers first
+    // labelled it a t27 spec. The refusal was right and the name was wrong,
+    // which is worse than useless in an error message.
+    //
+    // An ATX heading is required, not a bare `#`: `#` is also VIBEE's comment
+    // character, and a spec opening `# Adagrad` is a comment, not a heading.
+    if (std.mem.startsWith(u8, source, "## ") or std.mem.indexOf(u8, source, "\n## ") != null) {
+        return "Markdown";
+    }
+
+    // TOML: a `[section]` header plus a `key = value` line.
+    if (std.mem.startsWith(u8, source, "[") or std.mem.indexOf(u8, source, "\n[") != null) {
+        if (std.mem.indexOf(u8, source, " = ") != null) return "TOML";
+    }
+
+    if (looksLikeT27(source)) return "t27";
+    return null;
 }
 
 pub fn main(init: std.process.Init.Minimal) !void {
@@ -351,15 +400,16 @@ fn generateCode(allocator: std.mem.Allocator, input_path: []const u8, output_pat
     // t27 block syntax before rejecting, so a VIBEE spec that merely omits a
     // header still generates.
     if (spec.types.items.len == 0 and spec.behaviors.items.len == 0) {
-        if (looksLikeT27(source)) {
+        if (foreignDialect(source)) |dialect| {
             std.debug.print(
                 \\
-                \\  ERROR: this looks like a t27 spec, not a VIBEE spec.
-                \\  Both languages use the .tri extension; this generator only
-                \\  reads the YAML form with a top-level `name:`.
-                \\  Compile it with t27c instead:  t27c gen {s}
+                \\  ERROR: {s} looks like a {s} spec, not a VIBEE spec.
+                \\  Four languages share the .tri extension in this tree; this
+                \\  generator reads only the YAML form with a top-level `name:`.
+                \\  A t27 spec compiles with `t27c gen`; Markdown and TOML have
+                \\  no generator at all and are probably misfiled.
                 \\
-            , .{input_path});
+            , .{ input_path, dialect });
             return error.NotAVibeeSpec;
         }
     }
