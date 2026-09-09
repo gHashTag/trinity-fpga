@@ -9,9 +9,14 @@
 """
 import json, math, os, sys
 from fractions import Fraction
+from pathlib import Path
 import numpy as np
 
-sys.path.insert(0, '/tmp/tfpga/conformance')
+# Resolve the repository from this file rather than from the agent's temporary
+# checkout.  The measurement record promises reproduction from the repository
+# root; an absolute /tmp path silently made that promise false elsewhere.
+REPO_ROOT = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(REPO_ROOT / 'conformance'))
 import tnf_ref as TNF
 import takum_ref as TAK
 

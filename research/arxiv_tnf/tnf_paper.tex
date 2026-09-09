@@ -800,6 +800,16 @@ reason but the window, and the smooth-log fit of $c = 0.75$ understates the true
 step of one bit per doubling for the same reason. Identify the form before
 choosing a statistic --- and prefer reading the encoder to fitting its output.
 \end{corollary}
+\begin{proof}
+Theorem~\ref{thm:posit} changes the effective mantissa at equally spaced
+thresholds, so its finite-difference rate is constant between the stated
+thresholds.  Theorem~\ref{thm:takum} instead changes it when $|e|+1$ crosses
+$1,2,4,\ldots$, whose gaps grow geometrically.  Enlarging a finite fitting
+window therefore changes the fraction of the window occupied by each jump and
+changes its fitted slope, even though the encoder is unchanged.  A smooth
+logarithmic fit consequently averages over jumps rather than representing the
+one-bit discontinuities themselves, which proves the warning.
+\end{proof}
 
 \begin{corollary}[A taxonomy recovered without knowing the encoding]
 The diagnostic separates formats by the \emph{form} of $M(e)$: constant
@@ -5906,6 +5916,15 @@ together --- compiler, simulator, build script. Documents are read only by
 people, so every pair involving one goes unchecked by construction, and that is
 where withdrawn numbers persist.
 \end{theorem}
+\begin{proof}
+Model the delivery chain as a directed graph whose vertices are artefacts and
+whose edges are reads performed by a checker.  A consistency assertion can be
+evaluated only for a pair connected through such reads; otherwise the checker
+has no value against which to compare.  A document absent from the tool's input
+graph therefore contributes no checked edge, even when it repeats a value from
+code.  The assertion follows: a document--artefact pair is guarded only after
+the document is made an explicit input or is checked by a separate audit.
+\end{proof}
 
 Enumerating the pairs is what makes a search for such defects systematic rather
 than accidental. Three earlier gates in this work were each found by tripping
@@ -6459,6 +6478,18 @@ This is a block-scaled, fixed-format method rather than a TNF field-selection
 comparison; it therefore strengthens the warning that representation SQNR alone
 does not settle a downstream claim, rather than establishing an advantage for
 either format.
+Jokar's survey makes the same methodological point from the transform side:
+the useful direction depends jointly on the allocation regime and the number
+format, and optimality for one objective does not transfer to another
+\cite{jokar2026greatinversion}.  We therefore treat the selector's workload,
+format and objective as a single stated contract, not as a property of a format
+in isolation.
+The companion study by Chen sharpens the conformance boundary: a tolerance of
+one bfloat16 spacing can remain blind to several epilogue faults, whereas
+bitwise agreement becomes reproducible only after the scale and requantisation
+contract is stated explicitly \cite{chen2026deterministic}.  We therefore do not
+count tolerance agreement as bit-exact evidence; the TNF vectors specify the
+rounding, reduction order and boundary cases that the check actually covers.
 
 So the general claim --- that Pareto selection over numerical formats is
 unaddressed --- is false, and we withdraw it. What survives is narrower and is the
@@ -7593,10 +7624,13 @@ rather than measurement, is this: the 16-bit codec instantiates a 725-line
 generated leading-zero counter and barrel shifter --- machinery a fixed-field
 format does not need for regime decoding.
 
-\item \textbf{The range is bounded} at $\pm39$ in powers of two, roughly $\pm12$
-decades, where a regime field is unbounded. Fixed fields buy the cheap datapath
-and the uniform mantissa; range is the price, and workloads that need more should
-raise the trit budget or use a tapered format.
+\item \textbf{The range is bounded, and it is not a takum advantage.} The measured
+TNF rungs used here reach about $\pm39$ and $\pm120$ binades for $(E_t,M)=(4,8)$
+and $(5,23)$, respectively, whereas both \texttt{takum16} and \texttt{takum32}
+reach about $\pm599$ binades. Fixed fields therefore buy a simple datapath and a
+uniform mantissa at the cost of range; they do not provide range reserve over
+\texttt{takum}. Workloads outside a rung's measured range require a different rung
+or a tapered format.
 
 \item \textbf{Accuracy above TNF32 requires exact rationals, and now uses them.}
 Once the oracle defect was fixed, TNF32 measures $5.17\mathrm{e}{-9}$, flat
@@ -7900,6 +7934,10 @@ J.~Wang, ``MXAttention: Data-Free Optimal Scaling and Pre-Normalization
 Quantization for MXFP4 Attention,'' arXiv:2607.24377, 2026.
 \url{https://arxiv.org/abs/2607.24377}
 
+\bibitem{jokar2026greatinversion} E.~Jokar, ``Transforms for LLM Quantization:
+The Great Inversion and Format Co-Design,'' arXiv:2608.25188, 25~August 2026.
+\url{https://arxiv.org/abs/2608.25188}
+
 \bibitem{exagemm2026} ``ExaGEMM: Exploration Framework for CPU-Driven ML Inference via Associative In-Register Computing for Low-Bit GEMM,'' arXiv:2607.14622. \url{https://arxiv.org/abs/2607.14622}
 
 \bibitem{fftformats2026} ``New Number Formats for FFT IP Cores in Optical OFDM Transceivers,'' arXiv:2607.17835. \url{https://arxiv.org/abs/2607.17835}
@@ -7923,6 +7961,8 @@ Quantization for MXFP4 Attention,'' arXiv:2607.24377, 2026.
 \bibitem{zhu2026heal} Z.~Zhu, L.~Thai, S.~Yu, Y.~Liu, Y.~Qiao, C.~Wang, H.~Xu and J.~Shu, ``Demystifying Numerical Instability in LLM Inference: Achieving Reproducible Inference for Mission-Critical Tasks with HEAL,'' arXiv:2606.21023. \url{https://arxiv.org/abs/2606.21023}
 
 \bibitem{chen2026integeralibi} T.-R.~Chen, ``The Integer Alibi: Localizing Cross-Kernel Divergence in INT8-Quantized LLM Inference,'' arXiv:2608.13756, 13~August 2026. \url{https://arxiv.org/abs/2608.13756}
+
+\bibitem{chen2026deterministic} T.-R.~Chen, ``Deterministic LLM Inference Across GPU Kernels: Power-of-Two INT8 Quantization Scales and the Limits of Tolerance-Based Conformance,'' arXiv:2609.00363, 25~August 2026. \url{https://arxiv.org/abs/2609.00363}
 
 \bibitem{gao2026cubicquant} X.~Gao, ``CubicQuant: Parametric Non-Uniform Codebooks for High-Throughput LLM Inference with 1--8-Bit Weights,'' arXiv:2608.06763, 7~August 2026. \url{https://arxiv.org/abs/2608.06763}
 
