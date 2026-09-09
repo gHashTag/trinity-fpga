@@ -5153,7 +5153,33 @@ hardware-performance claim; the conclusion drawn from them here is that the two 
 read. The rounded
 $0.180$ against $0.181$ of an earlier version was not the harness figure. An earlier version of
 this paper reported $0.189$ against $0.177$ and called it a $7\%$ lead; that came
-from a single placement run and is withdrawn. \texttt{int8} is excluded from that table even so, and the
+from a single placement run and is withdrawn. A later sweep says the
+withdrawal did not go far enough: the placer and router \emph{configuration}
+moves the ordering, not only the magnitudes. Twenty-one decoder designs were
+routed through three configurations --- \texttt{heap/router1},
+\texttt{heap/router2}, \texttt{sa/router2} --- at five seeds each, and of the
+$210$ design pairs, $25$ do not return the same verdict across the seeds of one
+configuration, with median margins reaching $17.3\%$
+(\texttt{measurements/verdict\allowbreak\_stability\allowbreak\_2026-08-19.json},
+\texttt{measurements/placer\allowbreak\_router\allowbreak\_full\allowbreak\_2026-08-19.json}).
+The flow keeps the first configuration that routes, so a published median is a
+median over seeds \emph{within} whichever configuration happened to succeed. Area
+behaves differently from frequency here: on one cost arm
+(\texttt{tnf\allowbreak\_cost\allowbreak\_e2m11\allowbreak\_add\allowbreak\_top})
+the LUT count is identical at all five seeds --- $467$ --- while $F_{\max}$ spans
+$379.65$ to $422.65$\,MHz, a spread of $10.5\%$, with a nextpnr log per seed and
+its SHA-256 recorded
+(\texttt{measurements/pnr\allowbreak\_seed\allowbreak\_sweep\allowbreak\_2026-08-19.json},
+\texttt{measurements/pnr\allowbreak\_logs/}). These runs target the openXC7
+chipdb \texttt{xc7a200tfbg676-1}: an XC7A200T die in the FGG676 package, which is
+a combination none of our boards carries --- the ALINX AX7203 is an XC7A200T in
+FBG484 at speed grade $-2$ (IDCODE \texttt{0x13636093}) and the QMTech Wukong is
+an XC7A100T in FGG676 (IDCODE \texttt{0x13631093}) --- and the CI sweep routes
+\texttt{xc7a200tfbg484-2}, a different package \emph{and} a different speed
+grade. So these are post-route figures for a fabric model, not measurements of a
+board, and they are not comparable to the CI's. What they do establish is
+methodological and it is enough for the claim made here: no throughput ordering
+in this paper is offered as separating two formats. \texttt{int8} is excluded from that table even so, and the
 reason is structural rather than favourable to us. \texttt{int8} has $e=0$: no exponent field, hence no dynamic
 range inside the word. It functions only with an external per-tensor or
 per-channel scale; without one it is the integers $-128\ldots127$. By
