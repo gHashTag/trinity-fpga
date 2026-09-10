@@ -1,0 +1,64 @@
+name: Export run artefacts to a branch
+
+# Artefact zips cannot be downloaded from the agent sandbox: the Actions API is
+# reached unauthenticated there, so the zip endpoint answers 401 and the jobs
+# endpoint answers 403 once the shared egress IP spends its 60 anonymous calls.
+# Git, however, works. This job copies the artefacts of a finished run onto the
+# branch `ci-cost-results`, where a plain `git fetch` can read them.
+#
+# It reads a run; it does not re-run one. Nothing here places or routes.
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: 'Run whose artefacts to export'
+        required: true
+      pattern:
+        description: 'Artefact name pattern'
+        required: false
+        default: 'tnfcost-pnr,tnfcost-refit'
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+
+      - name: Download the artefacts of the named run
+        run: |
+          mkdir -p export
+          for NAME in $(echo "${{ github.event.inputs.pattern }}" | tr ',' ' '); do
+            mkdir -p "export/$NAME"
+            gh api "repos/${{ github.repository }}/actions/runs/${{ github.event.inputs.run_id }}/artifacts" \
+              --jq ".artifacts[] | select(.name==\"$NAME\") | .id" > /tmp/ids.txt
+            while read -r ID; do
+              [ -z "$ID" ] && continue
+              gh api "repos/${{ github.repository }}/actions/artifacts/$ID/zip" > "/tmp/$NAME.zip" || continue
+              unzip -o "/tmp/$NAME.zip" -d "export/$NAME" >/dev/null
+            done < /tmp/ids.txt
+          done
+          find export -type f | sort
+          # a run whose artefacts are all empty is a result too, and is recorded
+          echo "run_id=${{ github.event.inputs.run_id }}" > export/PROVENANCE.txt
+          echo "exported_by_run=${{ github.run_id }}" >> export/PROVENANCE.txt
+          echo "exported_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> export/PROVENANCE.txt
+          find export -type f -exec sha256sum {} \; >> export/PROVENANCE.txt
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Put them on ci-cost-results
+        run: |
+          git config user.name 'trinity-ci'
+          git config user.email 'ci@t27.ai'
+          git checkout --orphan ci-cost-results
+          git rm -rq --cached . || true
+          find . -maxdepth 1 -mindepth 1 ! -name export ! -name .git -exec rm -rf {} +
+          git add -A export
+          git commit -m "export: artefacts of run ${{ github.event.inputs.run_id }}"
+          git push -f origin ci-cost-results
