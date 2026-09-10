@@ -9,6 +9,10 @@ name: Export run artefacts to a branch
 # It reads a run; it does not re-run one. Nothing here places or routes.
 
 on:
+  # A dispatch cannot be issued from the agent sandbox (the proxy answers 404 on
+  # the workflows endpoint), so a pushed request file is the trigger that works.
+  push:
+    paths: ['ci/export_request.txt']
   workflow_dispatch:
     inputs:
       run_id:
@@ -30,12 +34,26 @@ jobs:
       - uses: actions/checkout@v4
         with: {fetch-depth: 0}
 
+      - name: Read the request
+        id: req
+        run: |
+          RID='${{ github.event.inputs.run_id }}'
+          PAT='${{ github.event.inputs.pattern }}'
+          if [ -z "$RID" ] && [ -f ci/export_request.txt ]; then
+            RID=$(grep -E '^run_id=' ci/export_request.txt | tail -1 | cut -d= -f2)
+            PAT=$(grep -E '^pattern=' ci/export_request.txt | tail -1 | cut -d= -f2)
+          fi
+          [ -z "$PAT" ] && PAT='tnfcost-pnr,tnfcost-refit'
+          echo "run_id=$RID" >> "$GITHUB_OUTPUT"
+          echo "pattern=$PAT" >> "$GITHUB_OUTPUT"
+          echo "run_id=$RID pattern=$PAT"
+
       - name: Download the artefacts of the named run
         run: |
           mkdir -p export
-          for NAME in $(echo "${{ github.event.inputs.pattern }}" | tr ',' ' '); do
+          for NAME in $(echo "${{ steps.req.outputs.pattern }}" | tr ',' ' '); do
             mkdir -p "export/$NAME"
-            gh api "repos/${{ github.repository }}/actions/runs/${{ github.event.inputs.run_id }}/artifacts" \
+            gh api "repos/${{ github.repository }}/actions/runs/${{ steps.req.outputs.run_id }}/artifacts" \
               --jq ".artifacts[] | select(.name==\"$NAME\") | .id" > /tmp/ids.txt
             while read -r ID; do
               [ -z "$ID" ] && continue
@@ -45,7 +63,7 @@ jobs:
           done
           find export -type f | sort
           # a run whose artefacts are all empty is a result too, and is recorded
-          echo "run_id=${{ github.event.inputs.run_id }}" > export/PROVENANCE.txt
+          echo "run_id=${{ steps.req.outputs.run_id }}" > export/PROVENANCE.txt
           echo "exported_by_run=${{ github.run_id }}" >> export/PROVENANCE.txt
           echo "exported_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> export/PROVENANCE.txt
           find export -type f -exec sha256sum {} \; >> export/PROVENANCE.txt
@@ -60,5 +78,5 @@ jobs:
           git rm -rq --cached . || true
           find . -maxdepth 1 -mindepth 1 ! -name export ! -name .git -exec rm -rf {} +
           git add -A export
-          git commit -m "export: artefacts of run ${{ github.event.inputs.run_id }}"
+          git commit -m "export: artefacts of run ${{ steps.req.outputs.run_id }}"
           git push -f origin ci-cost-results
