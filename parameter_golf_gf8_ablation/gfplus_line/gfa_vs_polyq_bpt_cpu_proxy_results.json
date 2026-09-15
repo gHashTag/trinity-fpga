@@ -1,0 +1,43 @@
+{
+  "meta": {
+    "scale": "micro-LM CPU proxy",
+    "NL": 4,
+    "D": 128,
+    "vocab": 256,
+    "steps": 300,
+    "bpt_thresh": 0.0195,
+    "seed": 20260730,
+    "note": "\u043d\u0430\u043f\u0440\u0430\u0432\u043b\u0435\u043d\u0438\u0435/\u043e\u0440\u0442\u043e\u0433\u043e\u043d\u0430\u043b\u044c\u043d\u043e\u0441\u0442\u044c, \u041d\u0415 \u0432\u0435\u043b\u0438\u0447\u0438\u043d\u0430; \u041d\u0415 \u043e\u0431\u043e\u0431\u0449\u0430\u0435\u0442\u0441\u044f \u043d\u0430 29M; PolyQ-proxy \u0431\u0435\u0437 CPU-\u043a\u043e\u043c\u043f\u0438\u043b\u044f\u0442\u043e\u0440\u0430; \u043e\u0432\u0435\u0440\u0445\u0435\u0434 \u0437\u0430\u0433\u043e\u043b\u043e\u0432\u043a\u043e\u0432 \u043d\u0435 \u0432\u044b\u0447\u0442\u0435\u043d"
+  },
+  "fp32": 0.1331038807619182,
+  "4": {
+    "gfa_bpt": 0.13308686885615748,
+    "polyq_bpt": 0.14459164344861303,
+    "dbpt_polyq_minus_gfa": 0.011504774592455552,
+    "eff_bits_gfa": 4.0,
+    "eff_bits_polyq": 4.0,
+    "gfa_vs_fp32": -1.701190576072764e-05,
+    "polyq_vs_fp32": 0.011487762686694825,
+    "distinguishable": false
+  },
+  "6": {
+    "gfa_bpt": 0.13307537463753766,
+    "polyq_bpt": 0.135759229338276,
+    "dbpt_polyq_minus_gfa": 0.0026838547007383418,
+    "eff_bits_gfa": 6.0,
+    "eff_bits_polyq": 6.0,
+    "gfa_vs_fp32": -2.8506124380545117e-05,
+    "polyq_vs_fp32": 0.0026553485763577966,
+    "distinguishable": false
+  },
+  "8": {
+    "gfa_bpt": 0.13311665893851585,
+    "polyq_bpt": 0.13309615376952094,
+    "dbpt_polyq_minus_gfa": -2.05051689949054e-05,
+    "eff_bits_gfa": 8.0,
+    "eff_bits_polyq": 8.0,
+    "gfa_vs_fp32": 1.2778176597644242e-05,
+    "polyq_vs_fp32": -7.726992397261156e-06,
+    "distinguishable": false
+  }
+}
