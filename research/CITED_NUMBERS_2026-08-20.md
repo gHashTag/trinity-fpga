@@ -54,7 +54,7 @@ Source: arXiv e-print, local at `gf_paper/src/main.tex` (latest version).
 |---|------|-------|---------|
 | 1 | 256 | rule reproduces nine realised widths (GF4…GF256), extends to GF128/512/1024 | CONFIRMED |
 | 2 | 264 | accumulator checked at 500-digit precision for n = 1…256 | CONFIRMED |
-| 3 | 265 | GF16 codec 35-of-35 at 323 MHz on Artix-7 XC7A35T | CONFIRMED |
+| 3 | 265 | GF16 codec 35-of-35 at 323 MHz on Artix-7 XC7A35T | ~~CONFIRMED~~ **CITES A WITHDRAWN FIGURE** |
 | 4 | 269 | RTL erratum dated 2026-05-31; corrected generator is the baseline | CONFIRMED |
 
 - **#1** — main.tex 122–125: "The rule reproduces the realised exponent widths of nine
@@ -73,6 +73,16 @@ Source: arXiv e-print, local at `gf_paper/src/main.tex` (latest version).
   appears nowhere in the source). Repo note `gf16_323mhz_withdrawn.md` separately withdrew
   this number, but the source paper itself still asserts it — the citation reports the
   source accurately.
+
+  > **Re-graded 2026-09-22.** The sentence above is still true and is exactly the
+  > problem. What the `CONFIRMED` in the table measured was **citation fidelity** —
+  > does the citing paper quote the source correctly — and the answer is yes. What a
+  > later reader takes from a column of `CONFIRMED` is that the *number* is good. It
+  > is not: 323 MHz was withdrawn 2026-08-08, and this file is where that withdrawal
+  > got lost. **An audit file that grades citation fidelity gets read later as if it
+  > graded truth.** If a row's verdict depends on which of those two questions is
+  > being asked, the verdict must say which. (Note also that this file predates
+  > v4/v5, so the `Line` column no longer matches what arXiv serves.)
 - **#4** — main.tex 140–143: "An RTL-correctness erratum dated 2026-05-31 is reported in
   Section~\ref{sec:hw-erratum}; the fabricated TTSKY26b dies carry the defective
   multiplier portfolio, and the corrected generator is the regeneration baseline."

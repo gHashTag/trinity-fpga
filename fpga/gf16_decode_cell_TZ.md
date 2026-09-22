@@ -6,7 +6,11 @@
 
 ## Format parameters (from the SSOT `formats_catalog.t27`, [Verified])
 - gf16: **bits=16, s=1, e=6, m=9, bias=31** (PHI_BIAS=60), storage=u16, cluster=GoldenFloat.
-- FPGA component artifact: 35/35 @ 323 MHz Artix-7 (Zenodo 10.5281/zenodo.19227877).
+- FPGA component artifact: 35/35 on Artix-7 (Zenodo 10.5281/zenodo.19227877). **No
+  frequency.** This line read "35/35 @ 323 MHz" until 2026-09-22; that figure was
+  withdrawn on 2026-08-08 and has no owner — the gf16 cores are combinational
+  (zero `posedge`), so no clock belongs to them. Note the cell specified below is
+  combinational too: it has a propagation delay, not an Fmax.
 
 ## RTL-spec (gf16_decode.v: gf16 u16 → binary32)
 A combinational decoder, a mirror of the gf16 decode law (the same one the conformance golden-oracle uses):

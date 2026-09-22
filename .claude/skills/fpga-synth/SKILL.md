@@ -1078,9 +1078,25 @@ The synthesis loop exists to **update the publications**. Status:
 - **Board §1.2 is OPEN:** three parts are cited for "the" GF16 result — abstract
   **XC7A35T**, `trinity-gf16.tex` body **XC7A100T (QMTECH FGG676)**, this work
   **XC7A200T (ALINX AX7203, FBG484)**. Paper should name one part + package.
-- **Fmax is an unstated distinction:** paper's **323 MHz** is the bare-core
-  *combinational* max-freq (probe clock `chain[19]`), NOT a routed clocked design.
-  A routed wrapper on 200T is ~27.55 MHz static. Report both, labelled.
+- **Fmax: WITHDRAWN 2026-08-08. Do not resurrect it under a label.** This bullet
+  used to read *"paper's 323 MHz is the bare-core combinational max-freq (probe
+  clock `chain[19]`), NOT a routed clocked design… report both, labelled"*. That
+  is the rationalisation, not the correction, and it is written here in the
+  imperative — so an agent reading this skill would re-emit the number with a
+  respectable new caption. Three facts kill it outright:
+  `grep -c posedge fpga/vivado/gf16_dot4.v gf16_matmul4x4.v` → **0**, so the cores
+  have no clock domain and no Fmax exists to characterise; the synthesis top drives
+  every operand with literals and its second matrix is the identity, so the
+  arithmetic is **constant-folded away** before place and route; and **`chain[19]`
+  is the last inverter of the 20-inverter ring oscillator that is all that
+  survives** — the "probe clock" *was* the oscillator timing itself. Confirming
+  evidence: the only `create_clock` in this whole FPGA tree is
+  `fpga/vivado/matmul_serial_hw.xdc:4`, `-period 83.333` = **12 MHz**; the tool was
+  never asked to close timing higher. And the tell is the coincidence — designs
+  whose sizes differ by **62×** reporting 330/322/323 MHz is a property of the
+  shared oscillator, not of any critical path. **The routed wrapper's ~27.55 MHz on
+  the 200T is a different design with real registers; it is not "a corrected
+  version of 323" and must never be presented as one.**
 - **Prepared correction material** (not a submission — needs author arXiv creds):
   `trinity-fpga/research/XC7A200T_GF16_DATAPOINT_2026-08-05.md` (this row + the
   board table + on-silicon conformance vectors).
@@ -1113,7 +1129,9 @@ arXiv replacement (which only the author can submit):
 4. Apply `ARXIV_ABSTRACTS_READY_TO_PASTE.md` + `ARXIV_BODY_FIXES_READY_TO_PASTE.md`
    (abstract wording, 20 citation defects, `-nodsp` soft-logic subsection).
 5. Reconcile board §1.2 using `research/XC7A200T_GF16_DATAPOINT_2026-08-05.md`:
-   bare-core combinational 323 MHz vs routed-wrapper ~27.55 MHz; part = XC7A200T-FBG484.
+   part = **XC7A200T-FBG484**, named once, package included. **No codec frequency** —
+   see the Fmax bullet above; that file's §2 is struck for this reason and only its
+   §3–§4 (routed wrapper, on-silicon vectors) are usable here.
 
 ## The failure this pipeline keeps producing: the frame path, not the arithmetic
 

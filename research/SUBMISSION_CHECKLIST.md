@@ -71,16 +71,20 @@ Nobody outside the project can settle these. Each has a spec holding the questio
 
 ## 3. Blocked on a toolchain, not on you
 
-- **GF16 FPGA codec, 35/35 at 323 MHz** — `nextpnr-xilinx` is absent here. The same
+- **GF16 FPGA codec, 35/35** ~~at 323 MHz~~ — `nextpnr-xilinx` is absent here. The same
   gap blocks post-route P&R and the paper's own FL-002 experiment. Anyone with
-  openXC7 or Vivado can settle it in an afternoon.
+  openXC7 or Vivado can settle **the 35/35** in an afternoon.
+  **The frequency is not blocked on a toolchain — it was withdrawn 2026-08-08.** No
+  toolchain can measure an Fmax for a core with zero `posedge`, and the synthesis
+  top constant-folds the arithmetic away, so "install openXC7 and it settles in an
+  afternoon" was never true of that half. Claim no frequency for this codec.
 ### The FPGA part number — now located, and only you can settle it
 
 The **same** achieved result is attributed to **two different parts**:
 
 | claim | Paper A | `main_ru.tex` |
 |---|---|---|
-| **achieved** — GF16 codec, 35/35 at 323 MHz | **XC7A35T** | **XC7A100T** |
+| **achieved** — GF16 codec, 35/35 ~~at 323 MHz~~ (frequency withdrawn 2026-08-08; the part question stands for the `35/35` alone) | **XC7A35T** | **XC7A100T** |
 | *planned* — matched-substrate H₄ (Appendix D) | XC7A100T, QMTech Wukong V1 | — |
 | *physical board* — Tier-E track | — | XC7A200T, ALINX AX7203 |
 

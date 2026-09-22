@@ -286,10 +286,19 @@ with the small non-monotone excursions at the narrow end coming from the roundin
 in the rule rather than from anything about $\varphi$. Two artefacts of that work
 are quantitative and are quoted here as they stand there: an integer-backed
 accumulator path checked at 500-digit precision for $n=1,\dots,256$, and a GF16
-codec passing a 35-of-35 testbench at $323$\,MHz --- on an Artix-7 XC7A35T, a
-\emph{different and smaller} part than the XC7A200T every hardware number in the
-present paper was taken on, so the two frequencies are not comparable and are
-not compared. That preprint also carries an RTL-correctness erratum dated
+codec passing a 35-of-35 testbench on an Artix-7 XC7A35T. A maximum frequency of
+$323$\,MHz was also reported for that codec, and it is \emph{withdrawn}; the
+withdrawal is dated 2026-08-08 in that project's repository. Three facts carry
+it. The GF16 combinational cores contain no registers at all, so there is no
+clock domain to characterise. The synthesis top drives every operand with
+literals and its second matrix is the identity, so the arithmetic is folded away
+before place and route and what remains is a ring oscillator, a counter and two
+LEDs. And the only timing constraint anywhere in that FPGA tree asks for
+$12$\,MHz --- the tool was never asked to close timing higher, so no such result
+could have come out of that flow. The figure did not describe the circuit it was
+attributed to. No frequency is claimed for the XC7A35T here, and none is
+compared against the XC7A200T on which every hardware number in the present
+paper was taken. That preprint also carries an RTL-correctness erratum dated
 2026-05-31 whose corrected generator is the baseline used here; the RTL and GDS
 artefacts it mentions carry the pre-erratum multiplier portfolio, were not
 fabricated, and play no part in this paper, whose only hardware is the XC7A200T

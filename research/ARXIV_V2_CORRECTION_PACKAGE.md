@@ -45,12 +45,14 @@ Three passes in a row ended at the same wall. Each is one answer, not a project:
 - **Which GF widths predate the φ-rule?** Until answered, the `9/9` figure cannot be corrected — it is off in *both* directions (§10.2). `open_question WIDTH_PROVENANCE`.
 - **Is "13 families" the catalog's own taxonomy?** Not verified; a module-based grouping gives 15, which would not be a defect. `open_question FAMILY_TAXONOMY`.
 - **Where is the accumulator implementation?** The identity verifies; the *path* the paper claims was not executed (§10.4). `open_question ACCUMULATOR_IMPLEMENTATION`.
-- Plus one smaller one: which board the 323 MHz figure came from (§1.2). *(The P3109 draft version was listed here too, as "not publicly verifiable". It is settled — the Interim Report is public and simply carries no version number, so cite it by retrieval date. See §6.2.)*
+- ~~Plus one smaller one: which board the 323 MHz figure came from (§1.2).~~ **Closed 2026-08-08 — the figure was withdrawn, so the board question is moot. See the banner on §1.2.** *(The P3109 draft version was listed here too, as "not publicly verifiable". It is settled — the Interim Report is public and simply carries no version number, so cite it by retrieval date. See §6.2.)*
 
 ### Blocked on one missing toolchain
 
 `nextpnr-xilinx` (openXC7) is absent. That single gap blocks **three** things at once:
-the GF16 `35/35 @ 323 MHz` check (§10.5), post-route P&R numbers that would close
+the GF16 `35/35` check (§10.5) — **the `@ 323 MHz` half of that line is struck: a
+missing toolchain was never what blocked it, because a core with zero `posedge` has
+no Fmax for any toolchain to measure** — post-route P&R numbers that would close
 `[method not pinned]` in both papers, and **the paper's own pre-registered FL-002
 experiment** (§7.2a). Installing it is the highest-leverage infrastructure action
 available.
@@ -119,6 +121,25 @@ preprint.
 > abstract is the visible surface, not the only occurrence.
 
 ### 1.2 Board-part consistency check (verify, do not assume)
+
+> ## CLOSED 2026-08-08, and not by the answer this section expected
+>
+> This section asks *which board* the 323 MHz came from. The answer is that **it
+> came from no board**: the figure was withdrawn on 2026-08-08. The gf16 cores hold
+> zero `posedge`, so they have no clock domain; the synthesis top drives every
+> operand with literals against an identity matrix, so the arithmetic is folded away
+> before place and route and what remains is a ring oscillator, a counter and two
+> LEDs; `chain[19]` — the "probe clock" — is that oscillator's last inverter; and the
+> only `create_clock` in the tree asks for 12 MHz.
+>
+> **Worth recording, because this section survived four passes:** it treated a number
+> with no owner as a number with a *misattributed* owner, and that framing is why it
+> survived. When a figure is disputed, test whether the thing it describes can have
+> such a figure at all, before deciding which of the candidates it belongs to.
+>
+> The **part**-number question below is still live and still worth fixing — the
+> repository does target XC7A200T (ALINX AX7203) — but it is now about the `35/35`
+> conformance result alone.
 
 The abstract reports the GF16 FPGA codec as *"35-of-35 testbench at 323 MHz on
 Artix-7 (Xilinx **XC7A35T**)"*. All current hardware work in `trinity-fpga`

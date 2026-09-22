@@ -19,7 +19,9 @@ All values = [open hypothesis] (sub-Challengilla, preliminarily):
 - champion **binary32 = 2.1919**
 - fp16 = **2.5501** > gf16 = **2.5725** > bf16 = **2.6135**
 - gf8 = **2.9322** = posit8
-- Only GF16 is actually measured + has FPGA-data (35/35 tb @ 323 MHz Artix-7).
+- Only GF16 is actually measured + has FPGA-data (35/35 tb on Artix-7). **No
+  frequency** — the `@ 323 MHz` this line carried was withdrawn 2026-08-08; the
+  gf16 cores are combinational (zero `posedge`), so no Fmax belongs to them.
 - Honest frame: "the method survives, phi does not (yet)".
 
 ### Cut B — Live matrix-ledger (PR #216, commit fab7d81, run 28643449889, hidden=96, step=3000)

@@ -18,7 +18,19 @@ The paper's own abstract and body disagree; this adds a third, independently
 reproduced part. Recommendation: state the exact part+package once, and separate
 the two *kinds* of frequency below.
 
-## 2. The unstated distinction: bare-core combinational Fmax vs routed-wrapper Fmax
+## 2. ~~The unstated distinction: bare-core combinational Fmax vs routed-wrapper Fmax~~
+
+> **The question this section answers was withdrawn three days after it was written
+> (2026-08-08).** There is no bare-core Fmax to separate from anything: the gf16
+> cores contain zero `posedge`, the synthesis top drives every operand with literals
+> against an identity matrix so the arithmetic is folded away before place and route,
+> and `chain[19]` is the last inverter of the ring oscillator that remains — so the
+> "probe clock" *was* the oscillator, not an instrument pointed at the core. The only
+> `create_clock` anywhere in this FPGA tree asks for 12 MHz. **Do not re-use the
+> "bare-core combinational Fmax (323 MHz, probe clock)" framing below**; re-labelling
+> the number is the defect, not the fix. §3–§4 are unaffected: the XC7A200T routed
+> wrapper (541 LC, ~27.55 MHz on `mclk`) is a *different design* with real registers,
+> and the on-silicon conformance vectors stand.
 
 The paper's headline **323 MHz** is the **combinational** max-frequency of the bare
 `gf16` core, measured against a ripple-counter probe clock (`gHashTag/t27/docs/arxiv-submission/trinity-gf16.tex`:

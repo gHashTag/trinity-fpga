@@ -51,7 +51,7 @@ Stated so no reader mistakes silence for confirmation.
 
 | claim | blocker | who can move it |
 |---|---|---|
-| GF16 FPGA codec, 35/35 at 323 MHz | `nextpnr-xilinx` absent; the same gap blocks post-route P&R and the paper's own FL-002 experiment | anyone with openXC7 or Vivado |
+| GF16 FPGA codec, 35/35 ~~at 323 MHz~~ | **Re-scoped 2026-09-22.** The `35/35` half still needs a tool: `nextpnr-xilinx` is absent, and the same gap blocks post-route P&R and the paper's own FL-002 experiment. The **frequency half was withdrawn 2026-08-08** and is not waiting on anyone — no tool can measure an Fmax for a core with zero `posedge`. Do not list it as pending | `35/35`: anyone with openXC7 or Vivado. Frequency: nobody — it was withdrawn |
 | the `(9/9)` reproduction count | off in **both** directions; needs to know which widths predate the rule | author (`WIDTH_PROVENANCE`) |
 | "83 formats spanning **13 families**" | never checked; a module grouping gives 15, which would not be a defect | author (`FAMILY_TAXONOMY`) |
 | the accumulator **path** (as distinct from the identity) | the identity verifies; the implementation was never executed | author (`ACCUMULATOR_IMPLEMENTATION`) |

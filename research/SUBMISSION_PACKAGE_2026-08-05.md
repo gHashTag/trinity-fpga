@@ -17,8 +17,12 @@
    PR #17 / commit `925bdf6d` in trinity-papers-ru (**unmerged**). Replacement wording
    in `ARXIV_ABSTRACTS_READY_TO_PASTE.md`.
 2. **Reconcile the board §1.2** (abstract XC7A35T / body XC7A100T-FGG676 / hardware
-   XC7A200T-FBG484) + separate bare-core combinational Fmax (323 MHz) from routed
-   Fmax (~27.55 MHz) — `XC7A200T_GF16_DATAPOINT_2026-08-05.md`.
+   XC7A200T-FBG484) + ~~separate bare-core combinational Fmax (323 MHz) from routed
+   Fmax (~27.55 MHz)~~ — `XC7A200T_GF16_DATAPOINT_2026-08-05.md`. **Do not do the
+   second half.** Separating the two Fmax figures presumes the first one exists;
+   323 MHz was withdrawn 2026-08-08 (the gf16 cores have zero `posedge`, the
+   synthesis top constant-folds the arithmetic, and the only `create_clock` in the
+   tree asks for 12 MHz). The part reconciliation stands on its own.
 3. **Add GF-T16** as a new §/table (the head-to-head win above) — `ARXIV_GFT16_SNIPPET.md`.
 4. **GFTERNARY honesty**: it is a 2-bit φ-alphabet on a float mul (2 DSP/1191 LC), not
    ternary compute; the real ternary core is TF3/trinet_mac32 (0 DSP/398 LC) —
@@ -43,5 +47,7 @@
 
 ## Science that HOLDS (recompute-verified, safe to keep)
 φ-rule 17/17 · Lucas identity 256/256 (500-digit) · ml_dtypes cross-val 66,224/0 ·
-83 SHA-256 conformance fingerprints · GF16 @322–323 MHz · GF8/GF16 add+mul bit-exact
+83 SHA-256 conformance fingerprints · ~~GF16 @322–323 MHz~~ (**withdrawn 2026-08-08**;
+it was on this list because the number had been *recomputed*, and recomputing a
+measurement re-tests the pipeline, not the claim) · GF8/GF16 add+mul bit-exact
 on real AX7203 silicon (5/5, 529/529) · GF-T16 add RTL-sim 30/30.

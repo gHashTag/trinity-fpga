@@ -13,6 +13,25 @@
 > the current version. What was deliberately left alone, and why, is in §3 — read
 > it before assuming the abstracts were fully reviewed.
 
+> ## ⚠️ SUPERSEDED — do not paste Paper A's block from this file
+>
+> Two things have moved since 2026-07-31, and this file is the **highest-risk**
+> place for them to be missed, because its whole purpose is to be copied into an
+> arXiv submission box verbatim.
+>
+> 1. **The baseline moved v3 → v5.** Paper A's text below is byte-identical to
+>    **v3**. Pasting it would silently revert two revisions.
+> 2. **The 323 MHz figure in the block below was withdrawn on 2026-08-08.** It is
+>    struck inline where it appears. The gf16 cores contain zero `posedge`, so no
+>    Fmax exists for them; the synthesis top constant-folds the arithmetic against
+>    an identity matrix and leaves a ring oscillator, and the only `create_clock`
+>    in the FPGA tree asks for 12 MHz. **No frequency is claimed for this codec.**
+>
+> The real replacement is the prepared **v6** package (`main.v6.tex` +
+> `goldenfloat_arxiv_2606.05017_v6_source.tar.gz`), which is built against v5 and
+> carries no frequency. **Paper B's block in §2 is unaffected by both points** and
+> is still usable.
+
 ---
 
 ## 1. Paper A — arXiv:2606.05017
@@ -29,7 +48,9 @@ artefacts: (i) an open multi-width RTL generator covering GF4-GF256 with a
 continuous-integration differential sweep against a correctly-rounded reference;
 (ii) an integer-backed Lucas-exact accumulator path verified at 500-digit
 precision for n = 1, ..., 256; and (iii) a GF16 FPGA codec passing a 35-of-35
-testbench at 323 MHz on Artix-7 (Xilinx XC7A35T). A format-conformance oracle
+testbench ~~at 323 MHz~~ [WITHDRAWN 2026-08-08 — no frequency is claimed for this
+codec; see the banner at the top of this file] on Artix-7 (Xilinx XC7A35T). A
+format-conformance oracle
 (Corona) ships in the same repository and is used as the blackbox check in our
 continuous-integration audit.
 
