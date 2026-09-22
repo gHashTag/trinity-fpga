@@ -124,6 +124,33 @@ letter. Notification is 22 January 2027.
   proposed is therefore moot and its own fallback applies: the IEEE footer and
   the ordinary Xplore deposit.
 
+## One question still open, and it blocks the Zenodo deposit
+
+**May the record version be posted publicly while paper 66 is under blind
+review?** The call for papers says reviewing is blind and that authors must keep
+names and affiliations out of *the manuscript and abstract* — which is satisfied
+and was checked. It says nothing about preprints.
+
+The risk is not the manuscript, it is the match. The Zenodo record carries the
+author's name and ORCID, and both of paper 66's headline constants — `4397` and
+`0.648` — appear in it. One search on either number identifies the author of a
+blind submission.
+
+IEEE's own policy would settle this — preprints are explicitly *not* prior
+publication there — but it names arXiv, TechRxiv and not-for-profit servers
+approved by the PSPB, and Zenodo's presence on that list is not established.
+More to the point, **ISQED is produced by the International Society for Quality
+Electronic Design and not by IEEE**, so the IEEE carve-out does not automatically
+reach it. That distinction is the one the 3 September letter to Ali and Paul was
+written to settle, and it was settled only for the copyright question.
+
+Ali has answered every question put to him inside a day. Asking costs one
+sentence; guessing wrong costs the submission. Nothing about the deposit expires
+— notification is 22 January 2027 — so it waits for the answer. Draft
+**22894804** is created, the file uploaded and verified by MD5, the metadata
+written and read back; only `publish` remains, and `publication_date` in
+`zenodo-deposit.json` needs moving to the day it is actually pressed.
+
 ## What this does *not* do
 
 An accepted ISQED paper yields a resolving IEEE Xplore DOI. arXiv's moderators
