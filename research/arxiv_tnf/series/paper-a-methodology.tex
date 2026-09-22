@@ -1,0 +1,81 @@
+% Paper A of the Trinity S3AI series --- the methodology paper.
+%
+% Its central claim is POSITIVE and is not about our own format: here is how an
+% arithmetic-hardware comparison reports success while having failed, each
+% failure given as a procedure a reader can run. The number format that
+% occasioned the work appears only as the worked example.
+%
+% This is the paper that is most likely to survive review, and therefore the
+% paper that produces the resolving DOI arXiv's moderators have asked for
+% (ticket MOD-102933, 1 September 2026) before they will consider an appeal.
+%
+% Build:  pdflatex paper-a-methodology  (twice, for references)
+\documentclass[11pt]{article}
+\usepackage{trinity-series}
+
+\seriesplate{HOW A COMPARISON FAILS}{%
+  Six ways an arithmetic-hardware result reports success while having failed:
+  synthesis deletes the checks whose area is measured, achieved frequency is a
+  proxy for size, and each failure is stated as a procedure the reader can run}
+\date{22 September 2026}
+
+% Where this paper's references go when they leave it.
+\seriescompanion{Ternary Network Floats}
+\seriesrecord{Ternary Network Floats, record version}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Comparing number formats in hardware is harder than measuring them, and the two
+failures are independent: nearly every difficulty encountered in a three-year
+FPGA campaign left the measurement intact and broke the comparison built around
+it. This paper states the regularities, because they generalise past the formats
+that occasioned them and because each is a condition under which a ratio between
+two designs means anything at all.
+
+Two are measured here for the first time. \textbf{Synthesis deletes the checks
+whose area is being measured.} A census over seven on-die wrapper sources finds
+fourteen of twenty-eight assertion clauses folded to constants --- a folded
+clause reads PASS in every build, including the failing ones --- and repairing
+the folding raises the routed design from $452$ to $696$ LUT, so thirty-five per
+cent of the design was absent from the figures published as its area. Two
+previously published verdicts change meaning in consequence: a design reported
+as passing four of four clauses passed one of one actually evaluated, and a
+design reported as failing two of four fails every clause it evaluates. Marking
+the probe register \texttt{(* keep *)} does not fix this; \texttt{keep}
+preserves the cell and the optimiser propagates the constant into the comparison
+regardless.
+
+\textbf{Achieved frequency is a proxy for size.} Across eleven designs spanning
+a $39.6\times$ range of area, five placer seeds each,
+$F_{\max}=4397\cdot\mathrm{LUT}^{-0.648}$ at $R^2=0.920$; the exponent is
+unchanged when the fit is taken over all fifty-five individual seed points
+rather than the medians. A metric of the form ``throughput per unit area''
+therefore divides a quantity by a second that is already a function of it: on
+our own combined harness, ranking by throughput per area reproduced ranking by
+inverse area at a Spearman correlation of $0.961$. With seed-to-seed spread
+reaching $20.5\%$ on a single design, such a ranking resolves only rows
+separated by more than that.
+
+Four further regularities concern what is being compared, the instrument, the
+harness, and the sources. Applied to two external papers read in full, the
+procedure produced no findings against them and caught our own reading of them
+on both occasions; we therefore offer it as an instrument for checking one's own
+work and not for auditing anyone else's. Three of the checks are mechanised as
+continuous-integration gates. Twenty claims of our own were withdrawn under it,
+and the withdrawals are marked in place.
+\end{abstract}
+
+\tableofcontents
+\newpage
+
+% The two measurements the series has claimed since August and never shown.
+\input{paper-a-newsection}
+
+% The transferable regularities, and the accounting of what they cost us.
+\input{paper-a-body}
+
+\input{bibliography}
+
+\end{document}

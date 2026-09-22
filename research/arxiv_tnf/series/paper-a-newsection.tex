@@ -1,0 +1,164 @@
+% ---------------------------------------------------------------------------
+% NEW SECTION, drafted 2026-09-22. This is the material the abstract of
+% tnf_paper.tex has always claimed (lines 122-131) and the body has never
+% carried: the clause-folding census and the frequency-area law. Every number
+% below is read out of the artefact tree and named with its file.
+%
+% TWO DISCREPANCIES AGAINST THE PUBLISHED ABSTRACT ARE MARKED \todo BELOW.
+% They are stated rather than smoothed over; the author must settle which
+% figure is correct before submission.
+% ---------------------------------------------------------------------------
+
+\section{Two measurements that were claimed and never shown}
+\label{sec:themeasurements}
+
+Both results in this section are about the instrument rather than about any
+format. They are stated here because they are the conditions under which the
+area and frequency figures of any comparison in this literature --- ours
+included --- mean what they appear to mean, and because each was found by a
+procedure a reader can run.
+
+\subsection{Synthesis deletes the checks whose area is being measured}
+\label{sec:folding}
+
+On-die assertions are the usual defence against a design that routes and is
+wrong. The defence has a failure mode that leaves every number intact: a clause
+whose operands the optimiser can resolve at compile time is replaced by its
+constant value, and a clause that has become a constant \emph{reads PASS in
+every build, including the failing ones}.
+
+The census in Table~\ref{tab:clauses} was taken with \texttt{tri clauses}, which
+asks of each on-die clause whether it survives synthesis as logic. Across the
+seven wrapper sources, \textbf{fourteen of twenty-eight clauses had folded to
+constants} --- exactly half. One design (\texttt{gft\_signed\_dot4}) kept all
+four; three designs kept only one each.
+
+\begin{table}[htbp]\centering
+\begin{tabular}{lcc}
+\toprule
+wrapper & clauses & folded \\
+\midrule
+\texttt{gft\_signed\_dot4\_jtag.v} & 4 & 0 \\
+\texttt{gft\_signed\_mac\_jtag.v}  & 4 & 1 \\
+\texttt{gft\_smul\_jtag.v}         & 4 & 2 \\
+\texttt{gft\_dup\_jtag.v}          & 4 & 2 \\
+\texttt{gft\_sadd\_jtag.v}         & 4 & 3 \\
+\texttt{gft\_train1\_jtag.v}       & 4 & 3 \\
+\texttt{gft\_xorpercep\_jtag.v}    & 4 & 3 \\
+\midrule
+total & 28 & 14 \\
+\bottomrule
+\end{tabular}
+\caption{Clause census over the seven on-die wrappers, from
+\texttt{measurements/clauses\_w983.json}. Half of the assertions that the
+published verdicts rested on were constants at synthesis time.}
+\label{tab:clauses}
+\end{table}
+
+% \todo THE ABSTRACT SAYS FIFTEEN. The shipped census says fourteen
+% (totals: {wrappers: 7, clauses: 28, folded: 14, real: 14}). The census is
+% named "census_of_todays_sources", so the abstract's figure may predate a
+% repair. Settle this before submission; do not print both.
+
+\paragraph{Three mechanisms, none of which announces itself.} Live counters were
+already placed on the operands so that no clause could be satisfied by a folded
+constant. The \emph{comparison} folds anyway, by three separate routes: a probe
+register that nothing writes collapses to its \texttt{INIT}; two structurally
+identical instances driven by identical operands are merged, so comparing them
+is a tautology; and a clause both of whose operands are constants is evaluated
+at compile time.
+
+\paragraph{The obvious repair does not work.} Marking the probe register and the
+instances \texttt{(* keep *)} is insufficient: \texttt{keep} preserves the cell,
+and the optimiser still propagates the constant into the comparison. What worked
+was making the sources \emph{structurally distinct while carrying equal values}
+--- a second counter with the same seed and step feeding the control instance,
+and a rotating probe register tested for a rotation-invariant property.
+
+\paragraph{The size of the effect, measured directly.} On the repaired wrapper
+\texttt{tri clauses} reports four clauses and none folded, and
+\textbf{the LUT count rises from 452 to 696}. That difference is not an
+overhead: it is the logic the folding had been deleting from every previous
+build. \emph{Thirty-five per cent of the routed design was absent from the
+measurements that were published as its area.}
+
+\paragraph{Two published verdicts change meaning.} \texttt{gft\_sadd} was
+published as ``PASS --- 4 of 4 clauses on the die''; of its four clauses three
+were constants, so the honest reading is one of one measured clause passing.
+\texttt{gft\_smul} was published as ``2 of 4 fail''; two of its four were
+constants, so \emph{every clause that design actually evaluates on silicon is
+false}. Neither verdict was wrong about the bits it reported. Both were wrong
+about how many bits they were reporting.
+
+\subsection{Frequency is a proxy for size, and the exponent survives the harness}
+\label{sec:fmaxlaw}
+
+If achieved frequency is largely determined by design size, then a metric of the
+form ``throughput per unit area'' divides one quantity by a second that is
+already a function of it, and a ranking by that metric restates a ranking by
+size. Section~\ref{sec:selfcheck} reports the correlational form of this:
+ranking by throughput per area reproduced ranking by $1/\text{area}$ at a
+Spearman correlation of $0.961$. This subsection gives the functional form.
+
+Eleven designs were placed and routed on an \texttt{xc7a200tfbg676-1} across
+five placer seeds each, spanning $10$ to $396$ LUT --- a $39.6\times$ range of
+size (Table~\ref{tab:fmaxrows}). Regressing the median achieved frequency on LUT
+count in logarithms gives
+
+\begin{equation}
+F_{\max} \;=\; 4397\cdot \mathrm{LUT}^{-0.648},\qquad R^2 = 0.920,\quad n=11 .
+\label{eq:fmaxlaw}
+\end{equation}
+
+Fitting instead on all fifty-five individual seed points, rather than on the
+eleven medians, moves the exponent to $-0.646$ and $R^2$ to $0.921$: the law is
+not an artefact of the median.
+
+\begin{table}[htbp]\centering
+\begin{tabular}{lrrr}
+\toprule
+design & LUT & $F_{\max}$ median (MHz) & seed spread \\
+\midrule
+\texttt{d\_baseline}  &  10 & 1004.0 &  7.9\% \\
+\texttt{d\_int8}      &  10 &  995.0 &  5.6\% \\
+\texttt{d\_bnf16}     &  12 &  693.0 & 16.9\% \\
+\texttt{d\_gfternary} &  12 &  643.9 & 10.2\% \\
+\texttt{d\_bin32}     &  19 &  985.2 &  5.7\% \\
+\texttt{d\_tnf16}     &  19 &  719.4 & 17.9\% \\
+\texttt{d\_bin16}     &  76 &  265.9 &  5.7\% \\
+\texttt{d\_lns16}     & 132 &  304.9 & 20.5\% \\
+\texttt{d\_posit16}   & 156 &  129.1 &  7.8\% \\
+\texttt{d\_ibmhfp}    & 169 &  156.0 & 11.4\% \\
+\texttt{d\_posit32}   & 396 &   74.2 &  6.2\% \\
+\bottomrule
+\end{tabular}
+\caption{The eleven routed designs behind Equation~\ref{eq:fmaxlaw}, from
+\texttt{measurements/decoder\_seed\_spread\_2026-08-19.json}. Five placer seeds
+per design; the spread column is the seed-to-seed range of achieved frequency,
+which reaches $20.5\%$ on one design.}
+\label{tab:fmaxrows}
+\end{table}
+
+\paragraph{What makes this result stronger than it looks.} The harness behind
+Table~\ref{tab:fmaxrows} observes only \texttt{q[7:0]\^{}q[31:24]}, and its own
+record states that the \emph{absolute} costs are therefore cut, unequally, and
+are not comparable between formats. A law fitted on cut absolute costs would
+normally be worth nothing. But the cut multiplies LUT counts by a per-design
+factor, which in logarithms is an additive per-design offset: it damages the
+coefficient and leaves the exponent alone. That the exponent is recoverable from
+a harness known to distort the absolute numbers is precisely the claim ---
+$F_{\max}$ tracks size, and it does so whether or not the size was measured
+faithfully.
+
+The consequence for the literature is narrow and firm. A design that is smaller
+will tend to clock faster for that reason alone; with a seed-to-seed spread
+reaching $20.5\%$ on a single design, a ranking on frequency resolves only rows
+separated by more than that; and a ratio of throughput to area is not an
+independent figure of merit but a restatement of size. This does not invalidate
+any frequency measurement. It invalidates the ratio built from them.
+
+% \todo THE ABSTRACT PRINTS 3174 AND "a 41x area span". This fit reproduces
+% the abstract's EXPONENT (-0.648) and R^2 (0.92) exactly, but gives 4397 and
+% 39.6x. The published coefficient therefore came from a row set that is not
+% pinned down by the artefacts in this tree. Either locate that set and ship
+% it, or publish the fit above. Do not print 3174 without a file behind it.

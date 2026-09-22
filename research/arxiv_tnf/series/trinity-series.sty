@@ -1,0 +1,116 @@
+% trinity-series.sty --- house style shared by every paper in the Trinity S3AI
+% series. The title plate and the triptych plate live HERE and nowhere else:
+% three papers that each carried their own copy of this preamble would drift,
+% and the drift would be invisible until two of them disagreed in print.
+%
+% Provides:
+%   \seriesplate{TITLE}{SUBTITLE}  -- the common title page (logo + wordmark)
+%   \triptych[width]{file}{caption}{label} -- a three-panel canon plate
+%
+% Figure files are resolved from canon/ relative to the including document.
+
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{trinity-series}[2026/09/22 Trinity S3AI series house style]
+
+\RequirePackage[utf8]{inputenc}
+\RequirePackage[T1]{fontenc}
+\RequirePackage{hyperref}
+\RequirePackage{graphicx}
+% The canon plates are reached through the canon/ symlink; the nine generated
+% plots (tnf_*.pdf) live in the manuscript directory one level up. Without this
+% path, pdflatex substitutes an empty draft box for each missing plot and still
+% exits 0 -- a build that succeeds and prints nine blank rectangles.
+\graphicspath{{./}{../}{canon/}}
+\RequirePackage{float}
+% placeins was in the original preamble and is deliberately NOT here:
+% \FloatBarrier is used zero times in the 7924-line source, so it was a
+% dependency the build could fail on and never use.
+\RequirePackage{booktabs}
+\RequirePackage{amsmath}
+\RequirePackage{amssymb}
+\RequirePackage{url}
+\RequirePackage{geometry}
+\RequirePackage{tabularx}
+\RequirePackage{array}
+\RequirePackage{enumitem}
+\RequirePackage{amsthm}
+
+\geometry{a4paper, margin=1in}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue,
+  urlcolor=blue,
+  citecolor=blue
+}
+
+% --- float placement: let a page carry more plate and less white ---
+\renewcommand{\textfraction}{0.05}
+\renewcommand{\topfraction}{0.96}
+\renewcommand{\bottomfraction}{0.96}
+\renewcommand{\floatpagefraction}{0.55}
+\renewcommand{\dbltopfraction}{0.96}
+\renewcommand{\dblfloatpagefraction}{0.55}
+\setcounter{topnumber}{3}
+\setcounter{bottomnumber}{2}
+\setcounter{totalnumber}{4}
+\setlength{\textfloatsep}{20pt plus 4pt minus 4pt}
+\setlength{\intextsep}{20pt plus 4pt minus 4pt}
+\setlength{\floatsep}{20pt plus 4pt minus 4pt}
+\setlength{\abovecaptionskip}{8pt}
+\setlength{\belowcaptionskip}{4pt}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}{Corollary}
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}
+\newtheorem{observation}[theorem]{Observation}
+\newtheorem{lemma}[theorem]{Lemma}
+
+% --- the author block is identical across the series -------------------------
+\newcommand{\seriesauthor}{%
+  Dmitrii Vasilev\\
+  \small ORCID 0009-0008-4294-6159 \\
+  \small \texttt{admin@t27.ai}}
+
+% --- the common title plate --------------------------------------------------
+% Every paper in the series opens with the same wordmark and the same logo, so
+% that three separate submissions read as one body of work. Only the two
+% arguments differ between papers.
+\newcommand{\seriesplate}[2]{%
+  \title{%
+    \fontsize{26}{30}\selectfont\bfseries Trinity S\textsuperscript{3}AI\\[10pt]
+    \normalfont\includegraphics[width=0.26\textwidth]{canon/trinity-logo.png}\\[12pt]
+    \fontsize{30}{34}\selectfont\bfseries #1\\[10pt]
+    \normalfont\large #2}%
+  \author{\seriesauthor}%
+}
+
+% --- cross-paper pointers ----------------------------------------------------
+% A reference into another paper of the series cannot be a \ref: the target is
+% in a different document and LaTeX has no number to print. Left alone it sets
+% ?? and the build still exits 0, so the split degrades the text silently.
+% Such references are therefore set as NAMED pointers. Each paper declares its
+% two destinations once; the noun phrase is written at the call site, because
+% only the call site knows what is being pointed at.
+\newcommand{\companionname}{the companion paper}
+\newcommand{\recordname}{the record version}
+\newcommand{\seriescompanion}[1]{\renewcommand{\companionname}{the companion paper \emph{#1}}}
+\newcommand{\seriesrecord}[1]{\renewcommand{\recordname}{\emph{#1}}}
+\newcommand{\companion}[1]{#1 of \companionname}
+\newcommand{\record}[1]{#1 of \recordname}
+
+% --- the triptych plate ------------------------------------------------------
+% The canon figures are three-panel engravings sharing one footer. They are
+% always set full width and always captioned "Canon plate", so a reader who
+% meets one in any paper of the series recognises the form immediately.
+\newcommand{\triptych}[4][\textwidth]{%
+  \begin{figure}[htbp]\centering
+  \includegraphics[width=#1]{canon/#2}
+  \caption{Canon plate. #3}
+  \label{#4}
+  \end{figure}%
+}
+
+\endinput

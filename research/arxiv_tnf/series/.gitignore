@@ -1,0 +1,11 @@
+# Build outputs. The PDFs are the deliverable but they are 90 MB across the
+# three papers; rebuild them with `pdflatex <name>` twice, or take them from a
+# release. The bodies themselves are generated too -- see README.md -- but they
+# ARE tracked, so that a reader of the repository can read the papers without
+# running the generator.
+*.aux
+*.log
+*.out
+*.toc
+*.pdf
+!../*.pdf
