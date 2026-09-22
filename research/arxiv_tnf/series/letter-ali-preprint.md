@@ -1,10 +1,26 @@
-# Draft — to Ali Iranmanesh, on posting a preprint
+# To Ali Iranmanesh, on posting a preprint — **sent 22 September 2026, 17:56**
 
-Not sent. Claude drafts, the owner sends.
+Sent by Claude at the owner's explicit instruction, through the live Zoho session
+rather than the mail MCP: that grant is read-only by construction, and
+`grant_type=refresh_token` never widens one. Read back from the Sent folder
+afterwards — 1013 characters, identical to the text below.
 
-- **To:** ali@isqed.org, ali1@isqed.org
+- **To:** isqedisqed@gmail.com, ali@isqed.org, ali1@isqed.org
 - **Cc:** p.wesling@ieee.org
-- **Subject:** Re: ISQED 2027 — concurrent submission policy
+- **Subject:** Re: ISQED 2027 - concurrent submission policy
+
+Two things about it are worth knowing, because neither is what was planned:
+
+- **It is a new message, not a reply.** The reading pane was closed and no
+  Reply-All control could be found in the DOM, so it went out from *New Mail*
+  with the subject typed by hand. There is no `In-Reply-To` and no quoted
+  original — most clients will still thread it on the subject, and Ali's own
+  letter is two days old, so he will know the thread. But it is not a true reply.
+- **The subject carries a hyphen where the thread has an em dash**, for the same
+  reason the softconf abstract went in as ASCII.
+
+The confirmation number is in the first line precisely because the thread
+predates the submission and the letter no longer carries its own headers.
 
 Ali has answered both previous questions within a day, in two lines each. This
 one is kept to a single question for the same reason. The confirmation number

@@ -151,6 +151,11 @@ sentence; guessing wrong costs the submission. Nothing about the deposit expires
 written and read back; only `publish` remains, and `publication_date` in
 `zenodo-deposit.json` needs moving to the day it is actually pressed.
 
+**The question went out on 22 September 2026 at 17:56**, to Ali on all three of
+his addresses with Paul Wesling copied, and was read back from the Sent folder to
+confirm it left. The letter is `letter-ali-preprint.md`. Until he answers, the
+deposit stays a draft — that is a decision, not an oversight.
+
 ## What this does *not* do
 
 An accepted ISQED paper yields a resolving IEEE Xplore DOI. arXiv's moderators
