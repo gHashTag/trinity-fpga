@@ -1,8 +1,19 @@
 # Build outputs. The PDFs are the deliverable but they are 90 MB across the
-# three papers; rebuild them with `pdflatex <name>` twice, or take them from a
+# four papers; rebuild them with `pdflatex <name>` twice, or take them from a
 # release. The bodies themselves are generated too -- see README.md -- but they
 # ARE tracked, so that a reader of the repository can read the papers without
 # running the generator.
+#
+# anon/*.pdf falls under the *.pdf rule below and is NOT tracked. Rebuild with:
+#
+#     python3 make-anon-figures.py
+#
+# Do not skip it. Paper D's \graphicspath lists anon/ first and ../ after, so a
+# missing anonymised figure does not fail the build -- pdflatex silently falls
+# back to the BRANDED plot, exits 0, and produces a ten-page PDF that names the
+# project on page 6 and would be rejected without review. Verified by deleting
+# it: the build stayed green and only `python3 make-series.py` went red. That
+# PDF gate is the thing standing between a clean log and a rejected submission.
 *.aux
 *.log
 *.out

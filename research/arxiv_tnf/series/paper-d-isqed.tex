@@ -1,0 +1,118 @@
+% Paper D --- the ISQED 2027 submission.
+%
+% This is paper A under three constraints that the rest of the series does not
+% have, and each of them changes the document rather than just its length:
+%
+%   1. At most ten IEEE two-column pages (CFP: minimum four, maximum ten,
+%      >= 10pt, IEEE conference template; "Manuscripts exceeding ten pages [...]
+%      will not be reviewed").
+%   2. DOUBLE-BLIND. "Manuscripts identifying author names and/or affiliations
+%      will be rejected without review." So: no \seriesplate, no wordmark, no
+%      logo, no author block, no ORCID, no t27.ai, no repository handle. The
+%      house style trinity-series.sty is deliberately NOT loaded -- its whole
+%      purpose is to put the author's identity on the page. make-series.py
+%      greps the generated body, this file and the anonymised bibliography for
+%      all of it and fails rather than warns.
+%   3. It stands alone. There is no companion to point at, so every reference
+%      that leaves the paper goes to \extended -- "the extended version of this
+%      work" -- which is true, checkable by a reviewer after acceptance, and
+%      says nothing about who wrote it.
+%
+% Build:  pdflatex paper-d-isqed  (twice, for references)
+\documentclass[conference,10pt]{IEEEtran}
+
+\usepackage[T1]{fontenc}
+\usepackage{graphicx}
+% The generated plots live one directory up. Without this, pdflatex substitutes
+% an empty draft box for each missing plot and STILL EXITS 0 -- a build that
+% succeeds and prints blank rectangles. Build with -halt-on-error.
+%
+% anon/ comes FIRST and is why this paper is not simply paper A at ten pages.
+% The house style draws the project wordmark inside every figure, as vector
+% text, so it survives compilation and comes back out of pdftotext: a gate
+% reading the LaTeX sources saw nothing and the shipped PDF named the project
+% on page three. make-anon-figures.py rebuilds the figures this paper uses with
+% that one line suppressed, and make-series.py now greps the rendered PDF.
+\graphicspath{{./anon/}{./}{../}}
+\usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{url}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{amsthm}
+\usepackage{balance}
+\usepackage{adjustbox}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}{Corollary}
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}
+\newtheorem{observation}[theorem]{Observation}
+\newtheorem{lemma}[theorem]{Lemma}
+
+% The one cross-document pointer this paper is allowed to make.
+\newcommand{\extended}[1]{#1 of the extended version of this work}
+
+% IEEEtran sets \paragraph as a run-in heading already; the source uses it
+% heavily and it is the right shape here.
+\interdisplaylinepenalty=2500
+
+% This paper sets one-column material in a 3.5-inch measure, and it cites its
+% own evidence by path -- long \texttt tokens that TeX cannot hyphenate.
+% make-series.py already inserts break points inside them; \emergencystretch is
+% what makes TeX take one instead of setting a line 26pt into the gutter. It
+% only loosens a paragraph that would otherwise overflow, so paragraphs that
+% already fit are untouched. 2em is the smallest value that clears every
+% overfull box in this manuscript: 1em leaves two, and 3em and 4em buy nothing
+% more while making more paragraphs loose than they need to be.
+\emergencystretch=2em
+
+\begin{document}
+
+\title{How an Arithmetic Comparison Fails\\
+       While Every Measurement in It Is Correct}
+
+% Double-blind: no author block. The ISQED submission portal takes the
+% corresponding author's details separately, which is where they belong.
+\author{}
+
+\maketitle
+
+\begin{abstract}
+Two conditions decide whether a published FPGA arithmetic comparison means what
+it appears to mean, and both are usually left unmeasured. First, on-die
+assertions are the standard defence against a design that routes and is wrong,
+and synthesis silently removes them: a census of twenty-eight clauses across
+seven wrappers finds \textbf{fourteen folded to constants}, and a clause that
+has become a constant reads PASS in every build, including the failing ones.
+Repairing one wrapper so that its clauses survive raises it from $452$ to $696$
+LUT --- \textbf{thirty-five per cent of the routed design was absent from the
+area that had been published for it}. Marking cells \texttt{(* keep *)} does not
+fix this; making the operands structurally distinct while carrying equal values
+does. Second, achieved frequency is largely a function of size: over eleven
+designs placed and routed across five seeds each and spanning a $39.6\times$
+range of area, $F_{\max}=4397\cdot\mathrm{LUT}^{-0.648}$ with $R^{2}=0.920$, so
+a throughput-per-area ratio divides a quantity by a second that is already a
+function of it and restates a ranking by size. Neither result invalidates a
+frequency measurement; both invalidate figures built from them. We then give six
+ways an evaluation reports success while having failed, worked through a case in
+which every individual measurement is correct and the comparison is not, and
+state which of our own published claims each one withdraws.
+\end{abstract}
+
+\begin{IEEEkeywords}
+FPGA arithmetic, design evaluation, synthesis optimisation, assertion coverage,
+reproducibility, figure of merit.
+\end{IEEEkeywords}
+
+\input{paper-d-newsection}
+
+\input{paper-d-body}
+
+\balance
+\input{bibliography-anon}
+
+\end{document}

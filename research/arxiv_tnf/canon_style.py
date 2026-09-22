@@ -7,6 +7,7 @@ from data. It changes only ink: every value plotted still comes from the
 generator that computed it.
 """
 import itertools
+import os
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -297,9 +298,16 @@ def _dress(fig):
     for y in (top_rule, top_rule - 0.11 / H):
         fig.add_artist(plt.Line2D([0.02, 0.98], [y, y], transform=fig.transFigure,
                                   color="black", linewidth=0.6, clip_on=False))
-    fig.text(0.5, top_rule + 0.05 / H, BASE_LINE, transform=fig.transFigure, ha="center",
-             va="bottom", fontsize=6.6, style="italic", color="black",
-             fontfamily="serif")
+    # CANON_ANON exists for double-blind submission. The wordmark is drawn INSIDE
+    # the figure, so a gate that greps the LaTeX source sees a clean manuscript
+    # and the shipped PDF still names the project in extractable text -- the
+    # check measures the wrong artefact, which is the defect this paper is about.
+    # The rules stay; only the identifying line goes, so an anonymised figure is
+    # the same figure and not a different one.
+    if not os.environ.get("CANON_ANON"):
+        fig.text(0.5, top_rule + 0.05 / H, BASE_LINE, transform=fig.transFigure, ha="center",
+                 va="bottom", fontsize=6.6, style="italic", color="black",
+                 fontfamily="serif")
     # The Trinity mark is deliberately NOT drawn on plots: it belongs on the
     # engraved plates, not on measurement figures, where it reads as an artefact
     # of the axes.
