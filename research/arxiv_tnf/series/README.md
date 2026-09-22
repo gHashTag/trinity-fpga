@@ -178,23 +178,35 @@ The two self-citations are kept and anonymised rather than deleted: public prior
 work may be cited under double-blind — a non-author would cite it the same way —
 but a personal repository URL is not a citation, it is a signature.
 
-## Two figures the author must settle before anything is deposited
+## Two figures that were unsourced, and are now settled
 
-Both are marked `\todo` in `paper-a-newsection.tex` and in
-`paper-c-record.tex`. They are stated rather than smoothed over.
+Both were marked `\todo`: they appeared in the record version's abstract and
+were derived nowhere in its 7,924-line body. **Settled 2026-09-22 against the
+artefacts**, and the correction landed in the source manuscript, so the whole
+series now prints one pair.
 
-| the abstract says | the artefact says | file |
+| the abstract said | it now says | the file |
 |---|---|---|
 | fifteen of twenty-eight clauses folded | **fourteen** of twenty-eight | `measurements/clauses_w983.json` |
-| `3174·LUT^-0.648` over a 41× span | exponent and R² reproduce exactly; the coefficient is **4397** over **39.6×** | `measurements/decoder_seed_spread_2026-08-19.json` |
+| `3174·LUT^-0.648` over a 41× span | **`4397·LUT^-0.648`** over **39.6×** | `measurements/decoder_seed_spread_2026-08-19.json` |
 
-Neither result was derived anywhere in the 7,924-line body — both existed only
-as assertions in the abstract. Paper A now derives them, with the files named.
+The census carries a per-wrapper breakdown, `0+1+2+2+3+3+3`, which sums to
+fourteen and agrees with its own totals block. Nothing in the tree carries
+fifteen.
 
-**Both renderings of D ship the artefact-correct numbers.** D is a new paper to
-a new reader, so it is the one place where the choice is free of an erratum; if
-the author settles the disagreement the other way, D's abstract must change with
-it — in both files, which is why the two share one generator and one cut.
+The frequency artefact holds twelve designs, eleven of which routed —
+`d_posit8` failed synthesis — and those eleven span `396/10 = 39.6×`, with no
+twelfth routed row to widen it to 41×. Four row sets were fitted looking for
+3174: medians give `4397 / -0.6479 / 0.9203`, all 55 seed points give
+`4343 / -0.6460 / 0.9212`, per-design means `4348`, the slowest seed `4073`.
+The published exponent and R² fall out of the medians **exactly**, which is why
+the coefficient stood unexamined for so long; no set reaches 3174, and the most
+pessimistic one is still 28% above it. Across the repository `3174` occurs
+sixteen times in the measurement files and every one is a digit substring of an
+unrelated float.
+
+Papers A and D already shipped the corrected pair — the correction was to the
+record version, which is the one that had never derived them.
 
 ## Where these go
 

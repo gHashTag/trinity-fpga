@@ -35,19 +35,21 @@
 \input{paper-c-abstract}
 \end{abstract}
 
-% NOTE FOR THE AUTHOR, 2026-09-22. Two figures in the abstract above are not
-% derived anywhere in this body, and the artefacts disagree with both:
+% SETTLED 2026-09-22. Two figures in the abstract above were not derived
+% anywhere in this body and disagreed with the artefacts. Both have been
+% corrected in the source manuscript, which is where this abstract is cut from,
+% so the whole series now prints one pair of numbers:
 %
-%   "fifteen of twenty-eight clauses"  -- measurements/clauses_w983.json
-%                                         reports fourteen of twenty-eight.
-%   "3174 * LUT^-0.648 over a 41x span" -- the exponent and R^2 reproduce
-%                                         exactly from
-%                                         measurements/decoder_seed_spread_2026-08-19.json,
-%                                         but that set gives 4397 and 39.6x.
+%   fifteen -> FOURTEEN of twenty-eight clauses
+%                     -- measurements/clauses_w983.json, per-wrapper breakdown
+%                        0+1+2+2+3+3+3 and its own totals block.
+%   3174 over a 41x span -> 4397 * LUT^-0.648 over 39.6x
+%                     -- measurements/decoder_seed_spread_2026-08-19.json,
+%                        eleven routed designs spanning 396/10 LUT.
 %
-% Both results are derived, with their files named, in the companion
-% methodology paper. Settle the two figures there and here together; do not
-% deposit this record with numbers the tree does not carry.
+% Neither old figure has a file behind it anywhere in the tree; the reasoning
+% and the row sets that were tried are recorded in paper-a-newsection.tex,
+% beside the derivations. Papers A and D already shipped the corrected pair.
 
 \tableofcontents
 \newpage

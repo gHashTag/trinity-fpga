@@ -55,10 +55,13 @@ published verdicts rested on were constants at synthesis time.}
 \label{tab:clauses}
 \end{table}
 
-% \todo THE ABSTRACT SAYS FIFTEEN. The shipped census says fourteen
-% (totals: {wrappers: 7, clauses: 28, folded: 14, real: 14}). The census is
-% named "census_of_todays_sources", so the abstract's figure may predate a
-% repair. Settle this before submission; do not print both.
+% SETTLED 2026-09-22 -- FOURTEEN. The abstract of the record version said
+% fifteen and now says fourteen. clauses_w983.json carries a per-wrapper
+% breakdown, 0+1+2+2+3+3+3, which sums to fourteen and agrees with its own
+% totals block ({wrappers: 7, clauses: 28, folded: 14, real: 14}). Nothing in
+% the tree carries fifteen. Under the standard this paper applies elsewhere --
+% a claim is closed by a command, its inputs, its log and a hash -- fourteen is
+% the only figure with a file behind it.
 
 \paragraph{Three mechanisms, none of which announces itself.} Live counters were
 already placed on the operands so that no clause could be satisfied by a folded
@@ -157,8 +160,17 @@ separated by more than that; and a ratio of throughput to area is not an
 independent figure of merit but a restatement of size. This does not invalidate
 any frequency measurement. It invalidates the ratio built from them.
 
-% \todo THE ABSTRACT PRINTS 3174 AND "a 41x area span". This fit reproduces
-% the abstract's EXPONENT (-0.648) and R^2 (0.92) exactly, but gives 4397 and
-% 39.6x. The published coefficient therefore came from a row set that is not
-% pinned down by the artefacts in this tree. Either locate that set and ship
-% it, or publish the fit above. Do not print 3174 without a file behind it.
+% SETTLED 2026-09-22 -- 4397 AND 39.6x. The abstract of the record version
+% printed 3174 over "a 41x span" and now prints the fit above. The instruction
+% here was to locate the row set behind 3174 or publish this one; the set was
+% looked for and is not in the tree.
+%
+% decoder_seed_spread_2026-08-19.json holds twelve designs, of which eleven
+% routed (d_posit8 failed synthesis). Those eleven span 396/10 = 39.6x, not
+% 41x, and there is no twelfth routed row to widen it. Four row sets were
+% fitted: medians 4397 / -0.6479 / 0.9203, all 55 seed points 4343 / -0.6460 /
+% 0.9212, per-design means 4348, slowest seed 4073. The published exponent and
+% R^2 fall out of the medians exactly; no set reaches 3174, and the most
+% pessimistic one is still 28% above it. Across the whole repository the string
+% "3174" occurs sixteen times in the measurement files and every one of them is
+% a digit substring of an unrelated float (0.8382999897003174 and the like).
