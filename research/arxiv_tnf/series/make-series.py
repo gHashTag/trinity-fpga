@@ -371,32 +371,60 @@ def strip_figures(text):
                         "includegraphics[width=\\columnwidth]")
 
 
-def fit_two_columns(text):
-    """Make one-column material survive a 3.5-inch measure.
+def break_long_paths(text):
+    """Give TeX somewhere to break inside a long artefact path.
 
-    Two things written for a 6.5-inch line run into the gutter at half that
-    width, and neither is an error -- LaTeX sets an overfull box, prints a
-    warning among hundreds and exits 0:
+    This paper cites its evidence by path, and a path in \\texttt has no
+    hyphenation point: cmtt is loaded with \\hyphenchar=-1, so TeX treats
+    `research/frontier/WITHDRAWAL_FMAX_UNSOURCED_2026-08-10.md` as one
+    unbreakable 54-character word. There is nowhere to break it, so it is set
+    into the margin -- 66pt into it, in a 6.5-inch measure -- and that is an
+    overfull box, which is a warning among hundreds and EXITS 0.
 
-      * artefact paths in \\texttt, which contain no hyphenation point, so a
-        44-character filename simply overhangs the column. \\allowbreak after
-        each separator gives TeX somewhere to break, with no hyphen inserted.
-      * tables laid out for the wider measure. IEEE practice is to set them
-        smaller; \\footnotesize is the smallest step that keeps them legible.
-        \\footnotesize alone is not always enough -- a three-column table whose
-        middle column is a phrase still overhangs -- so each tabular is also
-        wrapped in \\adjustbox{max width=\\columnwidth}. "max width" and not
-        \\resizebox: the latter scales every table to the column, enlarging the
-        narrow ones, while this one touches only what would not otherwise fit.
+    This is a property of the text and not of any venue, so it is applied to
+    every rendering. It used to live inside fit_two_columns, which only the
+    ISQED rendering calls, on the theory that a 3.5-inch column was what made
+    the path overhang. It was not: the same path overhangs the wide measure
+    too, and papers A, C and the series rendering of D each shipped it hanging
+    in the gutter while the conference version, alone, set it correctly.
+
+    \\allowbreak after each separator, never a hyphen: a break in a path must
+    not add a character, because a reader who copies the line has to get the
+    path back. Only tokens long enough to be at risk are touched, so short
+    identifiers are not littered with break points that would never be taken.
+
+    Idempotent -- a token that already carries \\allowbreak is left alone, so
+    running this after fit_two_columns cannot double the break points.
     """
     def unwrap(m):
         inner = m.group(1)
+        if "\\allowbreak" in inner:
+            return m.group(0)
         if len(inner) < 24 or ("/" not in inner and "\\_" not in inner):
             return m.group(0)
         broken = inner.replace("/", "/\\allowbreak ").replace("\\_", "\\_\\allowbreak ")
         return "\\texttt{%s}" % broken
 
-    text = re.sub(r"\\texttt\{([^{}]*)\}", unwrap, text)
+    return re.sub(r"\\texttt\{([^{}]*)\}", unwrap, text)
+
+
+def fit_two_columns(text):
+    """Make one-column material survive a 3.5-inch measure.
+
+    Tables laid out for a 6.5-inch line run into the gutter at half that width,
+    and that is not an error -- LaTeX sets an overfull box, prints a warning
+    among hundreds and exits 0. IEEE practice is to set them smaller;
+    \\footnotesize is the smallest step that keeps them legible. \\footnotesize
+    alone is not always enough -- a three-column table whose middle column is a
+    phrase still overhangs -- so each tabular is also wrapped in
+    \\adjustbox{max width=\\columnwidth}. "max width" and not \\resizebox: the
+    latter scales every table to the column, enlarging the narrow ones, while
+    this one touches only what would not otherwise fit.
+
+    Long artefact paths are handled by break_long_paths, which every rendering
+    needs and which is therefore not here.
+    """
+    text = break_long_paths(text)
     text = re.sub(r"\\begin\{tabular\}",
                   "\\\\adjustbox{max width=\\\\columnwidth}{\\\\begin{tabular}", text)
     text = re.sub(r"\\end\{tabular\}", "\\\\end{tabular}}", text)
@@ -626,6 +654,8 @@ def build_body(src, paper, problems):
         if before not in text:
             problems.append(f"{paper}: rewrite did not match: {before[:60]!r}")
         text = text.replace(before, after)
+    # Every rendering, because an unbreakable path overhangs any measure.
+    text = break_long_paths(text)
     if paper in STRIP_FIGURES:
         text = strip_figures(text)
     if paper in STANDALONE:

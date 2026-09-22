@@ -37,6 +37,33 @@
 
 \geometry{a4paper, margin=1in}
 
+% A paragraph TeX cannot break well is set into the margin instead, and an
+% overfull box is a warning among hundreds -- the build exits 0 and the line
+% runs into the gutter. \emergencystretch is extra stretchability TeX may use
+% in a final pass, and ONLY on a paragraph that would otherwise overflow, so
+% paragraphs that already fit are untouched.
+%
+% Long artefact paths are not what this is for: those are broken at their
+% separators by make-series.py (break_long_paths), because a break point costs
+% nothing while a loosened line costs a little. What is left after that is two
+% paragraphs of ordinary prose in the record version, overhanging by 2.70pt and
+% 3.76pt. Swept: 0.1em and 0.25em clear one of the two, 0.5em clears both, and
+% 1em clears no more while making more paragraphs loose than they need to be.
+%
+% \fussy is why this needs a second line. It restores plain TeX's defaults, and
+% one of those defaults is \emergencystretch=0pt -- so a \fussy anywhere in the
+% body silently discards the value set here for everything that follows it. The
+% record version has exactly one, closing a deliberate \sloppy around a wide
+% corollary, and BOTH remaining overfull boxes sit after it. This was measured,
+% not guessed: with \fussy left alone, raising the value below to 20em changed
+% neither the overfull count nor the underfull count. \fussy in this series
+% means "back to the house setting", not "back to plain TeX's".
+\newlength{\seriesemergencystretch}
+\setlength{\seriesemergencystretch}{0.5em}
+\emergencystretch=\seriesemergencystretch
+\let\series@fussy\fussy
+\renewcommand{\fussy}{\series@fussy\emergencystretch=\seriesemergencystretch}
+
 \hypersetup{
   colorlinks=true,
   linkcolor=blue,

@@ -177,7 +177,7 @@ continuous integration; the full statement is in the accompanying note.
 
 Twenty claims were withdrawn during this work, and a withdrawn claim's number
 does not remove itself from a paper. A traceability check
-(\texttt{tools/check\_paper\_numbers.py}) extracts every distinctive numeric
+(\texttt{tools/\allowbreak check\_\allowbreak paper\_\allowbreak numbers.py}) extracts every distinctive numeric
 literal here and asks whether it appears in any file under \texttt{research/},
 \texttt{fpga/} or \texttt{conformance/}. It excludes two classes rather than
 tolerating them: constants stated beside the formula that produces them ($23$ of
@@ -216,13 +216,13 @@ of \record{the full-throughput table} are baselines or formats whose frequency w
 never written down; the six unmarked rows are all ours. The same asymmetry holds in
 \record{the T-Net table}, where all three posit frequencies are unsourced and all three
 TNF frequencies trace to
-\texttt{TNF\_SPEC\_CORRECTION\_2026-08-11.md} or
-\texttt{BROKEN\_IS\_SMALL\_2026-08-11.md}. An ordering by MHz per LUT in which our
+\texttt{TNF\_\allowbreak SPEC\_\allowbreak CORRECTION\_\allowbreak 2026-08-11.md} or
+\texttt{BROKEN\_\allowbreak IS\_\allowbreak SMALL\_\allowbreak 2026-08-11.md}. An ordering by MHz per LUT in which our
 rows have records and the rows they are ranked above do not is not evidence of the
 ordering, and is presented here as illustrative.
 
 Worse, and decisive for the release question: \textbf{no place-and-route log behind
-any frequency quoted in this paper is in the repository tree}. At commit \texttt{a0fb006}, \texttt{git ls-files} finds five \texttt{*.log} files, all under \texttt{measurements/pnr\_logs/} and all five seeds of one design (\texttt{e2m11\_add}) that no frequency here is sourced to; beyond those, the only log in the working tree is the \LaTeX{} log of this document. The note \texttt{research/frontier/WITHDRAWAL\_FMAX\_UNSOURCED\_2026-08-10.md}, which retracts itself in its own heading, states that the ladder frequencies
+any frequency quoted in this paper is in the repository tree}. At commit \texttt{a0fb006}, \texttt{git ls-files} finds five \texttt{*.log} files, all under \texttt{measurements/pnr\_logs/} and all five seeds of one design (\texttt{e2m11\_add}) that no frequency here is sourced to; beyond those, the only log in the working tree is the \LaTeX{} log of this document. The note \texttt{research/\allowbreak frontier/\allowbreak WITHDRAWAL\_\allowbreak FMAX\_\allowbreak UNSOURCED\_\allowbreak 2026-08-10.md}, which retracts itself in its own heading, states that the ladder frequencies
 rest on $298$ \texttt{nextpnr-xilinx} logs under \texttt{fpga/phiscale/}; that
 directory holds $163$ files at the same commit and none of them is a log. So even the twenty-four
 sourced frequencies are sourced to a \emph{document that reports a measurement},

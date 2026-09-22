@@ -82,6 +82,7 @@ drift and the drift would be invisible until two papers disagreed in print.
 - `\companion{…}` / `\record{…}` — the cross-paper pointers above.
 - `\graphicspath` — the nine generated plots live one directory up. Without it
   pdflatex substitutes an empty draft box per missing plot and **still exits 0**.
+- `\seriesemergencystretch` — and a redefined `\fussy`, below.
 
 `placeins` was in the original preamble and is deliberately absent:
 `\FloatBarrier` is used zero times in 7,924 lines, so it was a dependency the
@@ -92,6 +93,37 @@ style choice — the whole purpose of `trinity-series.sty` is to put the author'
 identity on the page, and that rendering is double-blind. `paper-d-series` loads
 it like everything else.
 
+### Fifteen lines were set into the margin, and the build was green
+
+An overfull box is a warning among hundreds and the build **exits 0**, so a line
+can run 66pt into the gutter and nothing goes red. Fifteen did, across A, B, C
+and `paper-d-series` — and **the ISQED rendering was the only one set
+correctly**, because the repair had been written as a venue deformation.
+
+Two causes, two homes:
+
+- **Eleven were artefact paths.** `research/frontier/WITHDRAWAL_FMAX_UNSOURCED_2026-08-10.md`
+  is one unbreakable 54-character word: cmtt is loaded with `\hyphenchar=-1`, so
+  TeX has nowhere to break it and sets it into the margin. `\allowbreak` after
+  each separator gives it somewhere, and adds no character — a reader who copies
+  the line has to get the path back. This lived inside `fit_two_columns`, on the
+  theory that a 3.5-inch column was what made the path overhang. It was not: the
+  same path overhangs the 6.5-inch measure too. It is now `break_long_paths`,
+  applied to **every** rendering, and idempotent so that `fit_two_columns` may
+  still call it.
+- **Four were ordinary prose**, and `\emergencystretch` is the instrument for
+  those. **Setting it in the preamble does nothing on its own.** `\fussy`
+  restores *plain TeX's* defaults, one of which is `\emergencystretch=0pt`, so
+  the single `\fussy` that closes a deliberate `\sloppy` in the record version
+  silently discards the preamble's value for the remaining 4,500 lines — and
+  both of that paper's survivors sit after it. Measured, not guessed: with
+  `\fussy` untouched, raising the value to **20em changed neither count**. The
+  house style therefore owns the parameter and redefines `\fussy` to restore it.
+  Swept: 0.1em and 0.25em clear one of the two, **0.5em clears both**, 1em buys
+  nothing more.
+
+All five papers now build with **0 overfull boxes**, same page counts.
+
 ## The ISQED rendering: three venue constraints, three mechanisms
 
 ISQED 2027 (submission portal `softconf.com/p/isqed2027`) imposes what the rest
@@ -100,7 +132,7 @@ the build rather than by care:
 
 | the rule | the mechanism |
 |---|---|
-| minimum 4 and **maximum 10** pages, IEEE template, ≥10pt | `STRIP_FIGURES` drops the 78 canon plates (not one is `\ref`'d anywhere in 7,924 lines); the shared bibliography is pruned to what D actually cites, **31 of 94** entries; `fit_two_columns` makes one-column material survive a 3.5-inch measure |
+| minimum 4 and **maximum 10** pages, IEEE template, ≥10pt | `STRIP_FIGURES` drops the 78 canon plates (not one is `\ref`'d anywhere in 7,924 lines); the shared bibliography is pruned to what D actually cites, **31 of 94** entries; `fit_two_columns` makes tables written for a 6.5-inch line survive a 3.5-inch measure (`\footnotesize` plus `\adjustbox{max width=\columnwidth}`) |
 | **double-blind** — *"Manuscripts identifying author names and/or affiliations will be rejected without review"* | `IDENTIFYING` is grepped over the body, the wrapper, the bibliography **and the rendered PDF**; a hit is an error, not a warning |
 | it stands alone | `STANDALONE` routes every departing reference to `\extended` — *"the extended version of this work"* — which is true, checkable after acceptance, and says nothing about who wrote it |
 
