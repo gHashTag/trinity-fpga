@@ -1,9 +1,15 @@
 # To Ali Iranmanesh, on posting a preprint — **sent 22 September 2026, 17:56**
 
 Sent by Claude at the owner's explicit instruction, through the live Zoho session
-rather than the mail MCP: that grant is read-only by construction, and
+rather than the mail MCP: at 17:56 that grant held only the three READ scopes, and
 `grant_type=refresh_token` never widens one. Read back from the Sent folder
 afterwards — 1013 characters, identical to the text below.
+
+**That limit is gone as of 18:11 the same day.** A new authorization code was
+minted with `ZohoMail.messages.CREATE` alongside the reads, so `zmail send` and
+`mail_send` now work; the next letter needs no browser. See
+`agent-mail-mcp` commit *Bind the token cache to the grant that filled it* for why
+the widening appeared to do nothing for the first hour.
 
 - **To:** isqedisqed@gmail.com, ali@isqed.org, ali1@isqed.org
 - **Cc:** p.wesling@ieee.org
