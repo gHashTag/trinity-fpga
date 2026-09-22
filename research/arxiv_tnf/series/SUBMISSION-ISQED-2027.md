@@ -1,14 +1,41 @@
-# ISQED 2027 — the submission, ready except for the login
+# ISQED 2027 — submitted, paper 66
 
-Everything the softconf form asks for is written out below, so that the portal
-session is a copy-and-paste job rather than a drafting session. **An agent
-cannot do this step**: the portal is behind a login, and registering an account
-or typing a password is the owner's action, not an agent's.
+**Filed 22 September 2026, three days inside the deadline.** Everything the
+softconf form asks for is written out below; it is kept as the record of what
+was entered, because a revision before the deadline re-enters all of it.
+
+## What was filed
+
+| | |
+|---|---|
+| confirmation number | **66** |
+| passcode | held by the owner, not written down here — it is the credential that revises the submission |
+| title | as below, unchanged |
+| authors, as the portal holds them | Dmitrii Vasilev |
+| subject track | Design, Test and Verification (DTV) |
+| subject topic | Hardware and software formal-, assertion-, and simulation-based design verification techniques |
+| file | `paper-d-isqed.pdf`, **344894 bytes** |
+
+The file was verified **after** upload rather than on the form's own report:
+`getAttachment` returns `application/pdf`, `%PDF-1.7`, 344894 bytes — byte count
+identical to the local artefact. A form that says `ok` and stores nothing is the
+failure this paper is about, and it happened twice to the tooling that filled
+this form, so no field was trusted until it was read back.
+
+The abstract went in as **pure ASCII** — `--` for the em dash, `x` for `×`,
+`^-0.648`, `R^2`. The portal is not UTF-8 clean: its own country list renders
+Réunion as `RÃ©union`, so anything non-ASCII would reach reviewers mangled.
+
+The track is the one revisable choice. It was picked because the headline result
+is that on-die **assertions** are folded away by synthesis and the verdicts then
+read PASS — that is assertion-based design verification, not EDA tooling. EDA
+Tools and Methodologies was the alternative considered.
 
 ## Where
 
-`https://softconf.com/p/isqed2027` — register first if there is no account
-(there is no softconf mail anywhere in the mailbox, so assume there is not).
+`https://softconf.com/p/isqed2027` — the account is `t27_dev`, created
+2026-09-22. Softconf's user database is shared across every conference it hosts,
+which is why the obvious usernames were already taken by strangers.
 
 ## When
 
@@ -18,10 +45,14 @@ or typing a password is the owner's action, not an agent's.
 | Ali Iranmanesh, by mail, 2026-09-20 | *"We will extend the deadline until mid October"* |
 
 The original date was 17 September and it passed unsubmitted. The 25th already
-*is* an extension. **Submit against the 25th.** The mid-October extension is a
-promise from the general chair and is very probably real, but the portal
-enforces whatever date is configured in it, not what is in the mail thread, and
-submitting early costs nothing.
+*is* an extension. **Submitted against the 25th, on the 22nd.** The mid-October
+extension is a promise from the general chair and is very probably real, but the
+portal enforces whatever date is configured in it, not what is in the mail
+thread, and submitting early cost nothing — the submission stays revisable until
+the portal closes.
+
+The submission page banners the conference as **April 14-16, 2027, San
+Francisco** — one day narrower than the 14–17 April in the call for papers.
 
 ## The file
 
@@ -77,6 +108,11 @@ Dmitrii Vasilev · ORCID 0009-0008-4294-6159 · admin@t27.ai
 
 The manuscript itself carries none of this, by design. Put it only in the
 portal fields, which reviewers do not see.
+
+## Correspondence
+
+Questions go to `ali1@isqed.org`, and the confirmation number belongs in every
+letter. Notification is 22 January 2027.
 
 ## Two answers already in hand, so they need not be asked again
 

@@ -220,4 +220,12 @@ requires acceptance **in a peer-reviewed journal**, and a refereed *conference*
 DOI is stronger than Zenodo but is not a literal match. **A Zenodo DOI does not
 satisfy that condition at all.**
 
-Nothing here has been submitted, deposited or sent.
+**`paper-d-isqed` was submitted to ISQED 2027 on 22 September 2026 — paper 66**,
+under Design, Test and Verification, topic *assertion- and simulation-based
+design verification*. The uploaded file was verified by reading it back off the
+portal (344894 bytes, `application/pdf`), not by believing the upload form. The
+submission is revisable until the deadline; the details are in
+`SUBMISSION-ISQED-2027.md`.
+
+Nothing else here has been deposited or sent. Paper C still has no Zenodo DOI,
+and nothing has gone back to arXiv.
