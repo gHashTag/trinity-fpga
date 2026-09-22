@@ -12,13 +12,13 @@ which a ratio between two formats means anything at all.
 \paragraph{On what is being compared.} A ratio is meaningful only if both sides
 were built as their own advocate would build them; seven times here a ratio
 changed sign or magnitude when the other side was rebuilt
-(\record{the scale-applier section}). Systems whose range scales differently with
+(\extended{the scale-applier section}). Systems whose range scales differently with
 width, one exact and one approximate, have no storage-matched ratio at all --- a
 quantity depending on an unstated choice has no limit and cannot converge, which
 is why six successive instrument corrections failed to settle one number. Where
 one system's figure of merit is constant in a parameter and another's varies in
 it, the well-posed comparison is a crossover and not a verdict
-(the taper-delay theorem and \record{the crossover section}), and such a
+(the taper-delay theorem and \extended{the crossover section}), and such a
 crossover is an assertion about the workload rather than about the formats.
 
 \paragraph{On the instrument.} Under placement-seed variation LUT count is
@@ -32,7 +32,7 @@ same way under every successive correction is still moving.
 \paragraph{On the harness.} Three defects appeared in the synthesis harness, none
 visible in any number, each changing a headline by 10 to 50 percent; a second,
 software harness contributed three more of its own, recorded in
-\record{the applicability section}, so the total across both is six. A component shared by every
+\extended{the applicability section}, so the total across both is six. A component shared by every
 candidate is a confound rather than a constant, because it leaves area
 differences intact and delay differences not. A harness observing part of a
 design's output prunes each candidate in proportion to \emph{its own} output
@@ -61,11 +61,9 @@ continuous integration; the full statement is in the accompanying note.
 
 \subsection{Figures whose generating data is not in the repository}
 \label{sec:provenance}
-\triptych{canon-tnf-52-provenance.png}{The substring gate reports 882 of 885 distinctive literals as tracing to the tree; a stricter registry restricted to frequencies finds 16 of 40 with no record file, every one of them marked in place, and five document-to-code pairs still have no gate.}{fig:canon-provenance}
-
 Twenty claims were withdrawn during this work, and a withdrawn claim's number
 does not remove itself from a paper. A traceability check
-(\texttt{tools/check\_paper\_numbers.py}) extracts every distinctive numeric
+(\texttt{tools/\allowbreak check\_\allowbreak paper\_\allowbreak numbers.py}) extracts every distinctive numeric
 literal here and asks whether it appears in any file under \texttt{research/},
 \texttt{fpga/} or \texttt{conformance/}. It excludes two classes rather than
 tolerating them: constants stated beside the formula that produces them ($23$ of
@@ -81,8 +79,8 @@ matches a literal as a \emph{substring} of a data file's text with separators
 stripped, so a short literal is reported as sourced whenever its digits occur
 inside a longer unrelated number. Two figures reading $3.15$ passed on exactly that
 basis and neither had a generating file: a takum32 decode table in Mbit, now
-withdrawn from \record{the zero-path corollary}, and the octave span of
-\record{the barrel-range theorem}. A frequency such as $307.69$ passes because the
+withdrawn from \extended{the zero-path corollary}, and the octave span of
+\extended{the barrel-range theorem}. A frequency such as $307.69$ passes because the
 digits $30769$ appear inside a conformance-vector column. A literal of three or
 four significant characters should be matched on word boundaries; until the gate
 does so, its pass is weak evidence for short literals and no evidence at all for
@@ -100,17 +98,17 @@ record file. Every one of the sixteen is marked $^{\ast}$ where it appears, and
 carries no hardware-performance claim.
 
 The distribution of the sixteen is the part that matters. All fifteen marked rows
-of \record{the full-throughput table} are baselines or formats whose frequency was
+of \extended{the full-throughput table} are baselines or formats whose frequency was
 never written down; the six unmarked rows are all ours. The same asymmetry holds in
-\record{the T-Net table}, where all three posit frequencies are unsourced and all three
+\extended{the T-Net table}, where all three posit frequencies are unsourced and all three
 TNF frequencies trace to
-\texttt{TNF\_SPEC\_CORRECTION\_2026-08-11.md} or
-\texttt{BROKEN\_IS\_SMALL\_2026-08-11.md}. An ordering by MHz per LUT in which our
+\texttt{TNF\_\allowbreak SPEC\_\allowbreak CORRECTION\_\allowbreak 2026-08-11.md} or
+\texttt{BROKEN\_\allowbreak IS\_\allowbreak SMALL\_\allowbreak 2026-08-11.md}. An ordering by MHz per LUT in which our
 rows have records and the rows they are ranked above do not is not evidence of the
 ordering, and is presented here as illustrative.
 
 Worse, and decisive for the release question: \textbf{no place-and-route log behind
-any frequency quoted in this paper is in the repository tree}. At commit \texttt{a0fb006}, \texttt{git ls-files} finds five \texttt{*.log} files, all under \texttt{measurements/pnr\_logs/} and all five seeds of one design (\texttt{e2m11\_add}) that no frequency here is sourced to; beyond those, the only log in the working tree is the \LaTeX{} log of this document. The note \texttt{research/frontier/WITHDRAWAL\_FMAX\_UNSOURCED\_2026-08-10.md}, which retracts itself in its own heading, states that the ladder frequencies
+any frequency quoted in this paper is in the repository tree}. At commit \texttt{a0fb006}, \texttt{git ls-files} finds five \texttt{*.log} files, all under \texttt{measurements/pnr\_logs/} and all five seeds of one design (\texttt{e2m11\_add}) that no frequency here is sourced to; beyond those, the only log in the working tree is the \LaTeX{} log of this document. The note \texttt{research/\allowbreak frontier/\allowbreak WITHDRAWAL\_\allowbreak FMAX\_\allowbreak UNSOURCED\_\allowbreak 2026-08-10.md}, which retracts itself in its own heading, states that the ladder frequencies
 rest on $298$ \texttt{nextpnr-xilinx} logs under \texttt{fpga/phiscale/}; that
 directory holds $163$ files at the same commit and none of them is a log. So even the twenty-four
 sourced frequencies are sourced to a \emph{document that reports a measurement},
@@ -121,7 +119,7 @@ relied upon for any conclusion.
 
 One further disagreement belongs here rather than in a footnote. The same
 twenty-one-point experiment is tabulated twice in this project: as
-\record{the full-throughput table} here, and in \texttt{fpga/tnet/MATRIX.md}, which
+\extended{the full-throughput table} here, and in \texttt{fpga/tnet/MATRIX.md}, which
 describes itself in the same words --- one synthesised datapath, XC7A200T, no DSP,
 one harness. The two disagree row by row. \texttt{binary16} reads $552$ LUT at
 $62.69$ there against $522$ at $63.30$ here; takum16 $817$ at $64.16$ against $789$
@@ -132,17 +130,17 @@ pair Theorem~\ref{thm:doctrace} below predicts will go unguarded, and it is not
 resolved by choosing the more favourable one. Until a run reconciles them, neither
 is the record.
 
-\begin{table}[t]\centering
+\begin{table}[t]\centering\footnotesize 
 \caption{Figures with no record file in the repository, on this revision, from the
-strict registry. Table and theorem names in the middle column refer to
-\recordname, where the full twenty-one-row experiment is tabulated. Each figure
-is retained and marked $^{\ast}$ at every point of use, and
+strict registry. Table and theorem names in the middle column refer to the
+extended version of this work, where the full twenty-one-row experiment is
+tabulated. Each figure is retained and marked $^{\ast}$ at every point of use, and
 none supports a hardware-performance claim. Earlier revisions of this subsection
 reported two or three such figures; that count came from the substring gate and is
 restated here rather than carried forward. The octave span was found by auditing
 the gate's passes and is not a frequency.}
 \label{tab:untraced}
-\begin{tabular}{lll}
+\adjustbox{max width=\columnwidth}{\begin{tabular}{lll}
 \toprule
 figure & where it appears & class \\
 \midrule
@@ -165,7 +163,7 @@ $28.16$\,MHz & posit32, T-Net table and full-throughput table & baseline \\
 \addlinespace
 $3.15$ octaves & 210-layer scale range, barrel-range theorem & not a frequency \\
 \bottomrule
-\end{tabular}
+\end{tabular}}
 \end{table}
 
 Neither check can show a number is right; they find numbers with no source, which
@@ -175,7 +173,7 @@ value survives. Sixteen of the seventeen entries above are achieved frequencies,
 the quantity with the widest seed spread in this paper, and none of them should be
 quoted without a re-measurement whose log is committed. The remaining entry was
 found by the substring audit rather than by either gate, and the two-bit shift
-field that \record{the barrel-range theorem} concludes from it survives any span below
+field that \extended{the barrel-range theorem} concludes from it survives any span below
 four octaves, so that conclusion is more robust than the figure supporting it.
 
 What this subsection therefore does not claim: that the frequency measurements are
@@ -202,12 +200,10 @@ pass, all of them with a document on one side.
 
 
 \subsection{The staircase form prescribes the comparison}
-\triptych{canon-tnf-53-staircasecmp.png}{The staircase form decides whether a comparison needs a line, an exponential crossover or a duty cycle, and for a periodic wobble the honest report is 50/50.}{fig:canon-staircasecmp}
-
 \label{sec:formprescribes}
 
-\companion{The taper-catalogue section} classifies tapers by staircase form to \emph{describe}
-them. Measuring the crossovers of \record{the crossover section} over two fitting
+\extended{The taper-catalogue section} classifies tapers by staircase form to \emph{describe}
+them. Measuring the crossovers of \extended{the crossover section} over two fitting
 windows shows the classification does more than that.
 
 \begin{theorem}[The staircase form decides whether a window is needed]
@@ -250,12 +246,12 @@ $x=2^{p-m}$.  The equation contains no fitting-window endpoints, so the
 closed crossing is determined by the two model parameters alone.
 \end{proof}
 
-\begin{table}[t]\centering
+\begin{table}[t]\centering\footnotesize 
 \caption{Crossovers, computed by the model each taper's form requires. A
 straight-line fit had overstated every geometric taper's reach, because a line
 under-reports how fast a logarithm falls near the origin.}
 \label{tab:crosscorrected}
-\begin{tabular}{llr}
+\adjustbox{max width=\columnwidth}{\begin{tabular}{llr}
 \toprule
 taper & form & crossover, binades \\
 \midrule
@@ -270,7 +266,7 @@ takum-layout ``tekum16'' oracle & geometric & $\mathbf{2.1}$ \\
 takum-layout ``tekum32'' oracle & geometric & $\mathbf{2.4}$ \\
 takum8, takum-layout ``tekum8'' & geometric & TNF everywhere \\
 \bottomrule
-\end{tabular}
+\end{tabular}}
 \end{table}
 
 Six figures previously reported as ranges were computed by the wrong model and
@@ -346,11 +342,6 @@ geometric taper against a constant-form competitor, or any treatment of the
 wobble case. The contribution here is the mapping itself: the form of the answer
 is fixed by the competitor's staircase, and a classification introduced only to
 label formats turns out to settle it.
-\triptych{canon-tnf-72-correctedcrossov.png}{The section replaces six line-fit crossover ranges with form-appropriate values and withdraws an inaccurate characterisation of the published takum comparison.}{fig:canon-b4-72correctedcrossov}
-
-
-
-
 % ---- tnf_paper.tex lines 1225-1288: The comparison at matched physical width ----
 \section{The comparison at matched physical width}\label{sec:matchedwidth}
 
@@ -367,13 +358,13 @@ That the naming sequence $4, 8, 16, 32, 64$ is exactly the IEEE width sequence
 is what makes the error invisible. A row reading ``TNF16 against binary16''
 looks matched and is not.
 
-\begin{table}[t]\centering
+\begin{table}[t]\centering\footnotesize 
 \caption{Every rung against posit at its own \emph{physical} width, computed
 from the committed reference implementations rather than quoted. ``Values'' counts
 distinct non-zero decodings; ``step at $1.0$'' is the local relative gap between
 neighbours, which bounds the rounding error in the working range.}
 \label{tab:matchedwidth}
-\begin{tabular}{llrrr}
+\adjustbox{max width=\columnwidth}{\begin{tabular}{llrrr}
 \toprule
 bits & format & values & binades & step at $1.0$ \\
 \midrule
@@ -390,7 +381,7 @@ bits & format & values & binades & step at $1.0$ \\
 6  & posit6 $es{=}1$  & $\mathbf{62}$ & $16.0$ & $\mathbf{12.5\%}$ \\
 6  & posit6 $es{=}2$  & $\mathbf{62}$ & $\mathbf{32.0}$ & $25.0\%$ \\
 \bottomrule
-\end{tabular}
+\end{tabular}}
 \end{table}
 
 \paragraph{The result is negative, and it is structural.} At every width the
@@ -398,7 +389,7 @@ ladder occupies, posit holds more representable values than TNF and a finer step
 at unity --- by $12\times$ at 19 bits, $4\times$ at 10 and $2\times$ at 6. Worse
 for us, posit with $es{=}2$ \emph{weakly dominates} TNF on both coordinates
 simultaneously at all three: more binades \emph{and} a step no coarser. The
-no-survivors corollary of \companion{the taper-catalogue section} does not survive being
+no-survivors corollary of \extended{the taper-catalogue section} does not survive being
 restated at matched physical width, and is withdrawn to a matched-\emph{name}
 claim.
 
@@ -420,19 +411,13 @@ paper should be read as making.
 % ---- tnf_paper.tex lines 1372-1427: Two width defects, and why they generalise ----
 \section{Two width defects, and why they generalise}\label{sec:width}
 
-\triptych{canon-tnf-12-width.png}{The two width defects of this section: a bus wide enough only for the configuration that was tested, the silent truncation this produced, and the clean sweep once every width is derived from the format's own parameters.}{fig:canon-width}
-
-
-\companion{The hardware section} reports what the datapath costs once every bus is
+\extended{The hardware section} reports what the datapath costs once every bus is
 derived from the format's own parameters. It was not measured that way first.
 The two defects below --- one of area, one of correctness --- are the same
 mistake, a width chosen by hand, and they are reported because that mistake is
 not specific to TNF.
 
 \subsection{Interface width dominated the arithmetic}
-\triptych{canon-tnf-33-widthcost.png}{The bus was three times the width of the value it carried; once every width is derived from the format parameters the same arithmetic costs 219 LUTs and no DSP48 instead of 1,179 LUTs and three.}{fig:canon-widthcost}
-
-
 Our first synthesisable realisation declared every port and the significand
 product 32 bits wide. Nothing in TNF16 is 32 bits: the mantissa field was 9 at
 the time of that build, so $1{+}M$ is 10 and their product is exactly 20; the exponent offset never exceeds
@@ -442,15 +427,12 @@ and a 32-bit comparison tree and charged for it (Figure~\ref{fig:width}):
 match the values they carry. The arithmetic is unchanged.
 
 \begin{figure}[t]\centering
-\includegraphics[width=\textwidth]{tnf_width.pdf}
+\includegraphics[width=\columnwidth]{tnf_width.pdf}
 \caption{The same arithmetic at three interface widths.}
 \label{fig:width}
 \end{figure}
 
 \subsection{The same width decided correctness}
-\triptych{canon-tnf-34-widthcorrect.png}{A 32-bit wire truncated a 52-bit significand product, and the failure was silent: 1,995,730 mismatches of 2,128,964 combinations against a 64-bit reference.}{fig:canon-widthcorrect}
-
-
 At TNF32 the significand product needs 52 bits. The 32-bit wire truncates, and
 the module returns wrong results while appearing to support the rung, since its
 own documentation names TNF32 as a supported configuration. Measured against a
@@ -475,10 +457,10 @@ which could be wrong for an empirical one.
 \paragraph{Three kinds of statement.} The first kind is \emph{analytically
 proved}: it follows from arithmetic, from the irrationality of $\log_2 3$ or
 $\varphi$, or from an algebraic identity, and no measurement can disturb it.
-The economy, no-free-lunch, packing-density and Lucas-trace theorems of
-\companionname, and the $\varphi$-rounding-envelope lemma, the
-$\varphi$-ratio bound and the negative-product proposition of \recordname,
-are of this kind. The second kind is a
+The economy theorem, the no-free-lunch theorem,
+the packing-density theorem, the Lucas-trace theorem,
+the $\varphi$-rounding-envelope lemma, the $\varphi$-ratio bound and
+\extended{the negative-product proposition} are of this kind. The second kind is a
 \emph{proposition about a model}: it is a correct deduction from a cost model,
 error model or workload assumption that is itself an idealisation, so it is exactly
 as reliable as the model it is stated over --- the $\kappa$ statements and the
@@ -496,22 +478,22 @@ conclusions, each with the status it actually has.
 \begin{enumerate}
 \item The $\varphi$ split has a \emph{finite-width} certificate and not only an
 asymptotic one: for $e\geq1$ the deviation of $m/e$ from $\varphi$ is strictly
-below $\varphi^{2}/(2e)$ (\record{the $\varphi$-ratio bound}). The residual can
+below $\varphi^{2}/(2e)$ (\extended{the $\varphi$-ratio bound}). The residual can
 therefore be reported at a given width rather than promised in a limit
 [proved].
 
 \item The exact coefficient $\varphi^{-2}$ never produces an ambiguous rounding at
-any non-zero width (\record{the $\varphi$-rounding-envelope lemma}); every tie-breaking
+any non-zero width (\extended{the $\varphi$-rounding-envelope lemma}); every tie-breaking
 ambiguity in circulation comes from a truncated decimal surrogate for the
 coefficient, and first bites at $N=12{,}239$ [proved].
 
 \item Packing a ternary exponent into bits is not merely lossy: the count of
 unreachable codes is positive and odd at every trit budget, and the utilisation
 visits a dense subset of $(1/2,1)$, so no tail of the ladder is asymptotically
-efficient (\companion{the packing-density theorem}) [proved].
+efficient (\extended{the packing-density theorem}) [proved].
 
 \item Even powers of $\varphi$ admit an integer-only certificate through
-$S_{n+2}=3S_{n+1}-S_n$ (\companion{the Lucas-trace theorem}), which makes a depth-$k$
+$S_{n+2}=3S_{n+1}-S_n$ (\extended{the Lucas-trace theorem}), which makes a depth-$k$
 $\varphi$-stack auditable with no rounding model in the loop. This is a testability
 result, not an accuracy claim [proved].
 
@@ -520,7 +502,7 @@ three and halves the significand cell count. That exchange rate is exact and it 
 the whole content of the static split [proved].
 
 \item Objectives of the form $R^{a}P^{b}$ never select an interior split
-(\record{the negative-product proposition}). The $\varphi$ rule therefore cannot
+(\extended{the negative-product proposition}). The $\varphi$ rule therefore cannot
 honestly be presented as the maximiser of a range-times-precision product, and
 this paper does not present it as one [proved --- negative result].
 
@@ -660,17 +642,14 @@ against that survey rather than as an isolated idea.
 % ---- tnf_paper.tex lines 7500-7631: Limitations ----
 \section{Limitations}\label{sec:limitations-anchor}\label{sec:limits}
 
-\triptych{canon-tnf-32-limits.png}{Limitations: the fabric, the twin oracle, and the price of range.}{fig:canon-limits}
-
-
 \paragraph{The fabric this format is optimal on does not exist to buy.}
-\companion{the no-free-lunch theorem} confines the ternary encoding's benefit to a ternary
+\extended{the no-free-lunch theorem} confines the ternary encoding's benefit to a ternary
 fabric, and no such process is commercially available. Every hardware figure in
 this paper is therefore a post-route estimate for binary FPGA fabric, where the
 ternary exponent neither gains nor loses on the scale-state count --- the
-enumeration in \companion{the enumeration section} shows it ties a binary encoding
+enumeration in \extended{the enumeration section} shows it ties a binary encoding
 exactly at the widths tested. It does lose on a second axis, and this revision
-proves it: \record{the range-per-bit theorem} shows a ternary exponent never buys range
+proves it: \extended{the range-per-bit theorem} shows a ternary exponent never buys range
 per stored bit, with equality only at $t=1$. The two statements are about
 different axes and both hold. The claims that survive on parts you can buy today are the fixed-field
 ones: no regime codec, no exponential to
@@ -710,7 +689,7 @@ monotone on all $6{,}559$ tekum8 codes). The takum oracle carried a defect of
 its own --- negation flips the exponent sign, and every negative code decoded
 wrongly until \#606; it now matches libtakum on $65{,}534$ of $65{,}535$ codes
 --- so every takum ratio measured before that fix is superseded by the
-equal-width tie of \companion{the accuracy section}.
+equal-width tie of \extended{the accuracy section}.
 
 \item \textbf{The head-to-head in hardware now exists, with caveats.} takum's
 published codec RTL is VHDL~\cite{takumrtl} and was not synthesised here, so
@@ -743,7 +722,7 @@ across the workload, which is what 25 mantissa bits should give. TNF64 carries
 52 mantissa bits in the research note --- 56 once the width rule is applied ---
 and 52 is exactly the significand of the IEEE double, so a double-precision
 metric at that rung and above would describe the metric rather than the format.
-\companion{The value-law table} is therefore computed in exact rationals with 1{,}200-bit
+\extended{The value-law table} is therefore computed in exact rationals with 1{,}200-bit
 significands, which is what lets the upper rungs be quoted at all; the hardware
 limit below is separate and unchanged.
 
@@ -751,20 +730,20 @@ limit below is separate and unchanged.
 the device, TNF64 at $7{,}479$ LUTs and $48.20$\,MHz. TNF128 at its reconciled
 $M = 119$ does not
 converge in routing on this part and is not claimed; TNF256 upwards exceed a
-single Artix-7 fabric entirely. \companion{The specification table} is the specification at the
-width rule; \companion{the routed-ladder table} is what was placed and routed. We keep them
+single Artix-7 fabric entirely. \extended{The specification table} is the specification at the
+width rule; \extended{the routed-ladder table} is what was placed and routed. We keep them
 apart on purpose.
 
 \item \textbf{The shipped reference oracle is still on the research-note widths.}
 The published \texttt{tnf\_ref.py} ladder table carries $(E_t,M)$ of
 $(4,9)$, $(5,21)$, $(7,52)$, $(8,115)$ and upward --- the pre-reconciliation
 budgets, seven of which do not satisfy $1+E_t+M=N$ --- an earlier revision of this
-item said three, and the per-rung audit in \record{the ladder-version table} says
-seven. \companion{The specification table} above is
+item said three, and the per-rung audit in \extended{the ladder-version table} says
+seven. \extended{The specification table} above is
 the reconciled specification, not a transcript of that file. Bringing the oracle
 onto the width rule changes its conformance vectors and therefore their SHA-256
 fingerprints, so it is a versioned change and is not folded in silently here.
-\record{The variant-A section} describes how that versioning was carried out: both
+\extended{The variant-A section} describes how that versioning was carried out: both
 ladders now ship as named objects with hash-pinned vector manifests, so the
 research-note configuration stays reproducible instead of being overwritten. Any
 figure in this paper that quotes an oracle result quotes the research-note
@@ -775,14 +754,10 @@ artefact.
 are not a multi-corner characterisation, and an ASIC mapping will differ.
 
 \item \textbf{The ternary-fabric argument is architectural.} No ternary process
-exists to synthesise on. \companion{The hardware section} is a binary-fabric result;
+exists to synthesise on. \extended{The hardware section} is a binary-fabric result;
 the ternary claim is reasoning about regime decode and native exponent addition
 and should be read as such.
 \end{enumerate}
-\triptych{canon-tnf-77-measurementbound.png}{The limitations distinguish the duplicate takum/tekum oracle, the corrected TNF32 sign defect, and the hardware range actually placed on the Artix-7.}{fig:canon-b4-77measurementbound}
-
-
-
 % ---- tnf_paper.tex lines 7632-7659: Reproducibility ----
 \section*{Reproducibility}
 
@@ -791,9 +766,6 @@ commands are public. The toolchain is Yosys 0.65, nextpnr-xilinx 1743d0f,
 Icarus Verilog 13.0 and Python 3.14 --- all open-source, none requiring a
 licence, which is the point: a result nobody can reproduce without buying
 something is not a public result.
-\triptych{canon-tnf-54-opentoolchain.png}{The public oracle, RTL, tests, commands, and open-source toolchain make the reported work reproducible without a licence.}{fig:canon-b4-54opentoolchain}
-
-
 \section*{Disclosure}
 
 An AI coding assistant was used in preparing the software, the measurements'
@@ -801,6 +773,4 @@ tooling and this manuscript. Every figure reported here was produced by running
 the named tools on hardware in the author's possession. Figures from that
 toolchain are reported as post-route estimates, and where a figure is derived rather than observed it is
 labelled.
-
-\triptych{canon-tnf-55-measureddisclosu.png}{The disclosure distinguishes AI-assisted preparation, measurements run on the author's hardware, and figures derived rather than observed.}{fig:canon-b4-55measureddisclosu}
 

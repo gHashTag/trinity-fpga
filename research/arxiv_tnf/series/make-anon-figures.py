@@ -33,9 +33,10 @@ MANUSCRIPT = HERE.parent
 GENERATOR = MANUSCRIPT / "gen_figures.py"
 ANON = HERE / "anon"
 
-# The papers whose figures must be anonymised. Only paper D is double-blind;
-# the rest of the series carries the wordmark on purpose.
-BLIND_BODIES = ["paper-d-body.tex", "paper-d-newsection.tex"]
+# The renderings whose figures must be anonymised. Only the ISQED rendering is
+# double-blind; every other paper in the series -- including the series
+# rendering of the same cut -- carries the wordmark on purpose.
+BLIND_BODIES = ["paper-d-isqed-body.tex", "paper-d-isqed-newsection.tex"]
 
 
 def figures_wanted():

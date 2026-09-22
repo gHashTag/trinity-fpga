@@ -8,7 +8,7 @@
 #
 #     python3 make-anon-figures.py
 #
-# Do not skip it. Paper D's \graphicspath lists anon/ first and ../ after, so a
+# Do not skip it. paper-d-isqed's \graphicspath lists anon/ first and ../ after, so a
 # missing anonymised figure does not fail the build -- pdflatex silently falls
 # back to the BRANDED plot, exits 0, and produces a ten-page PDF that names the
 # project on page 6 and would be rejected without review. Verified by deleting

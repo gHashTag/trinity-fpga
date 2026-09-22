@@ -1,15 +1,34 @@
 # The Trinity S³AI paper series
 
-Four documents cut from one manuscript, `../tnf_paper.tex`.
+Four papers cut from one manuscript, `../tnf_paper.tex`, in five renderings.
 
 | | file | pages | what it claims |
 |---|---|---|---|
 | **A** | `paper-a-methodology.tex` | 33 | **How a comparison fails.** Six ways an arithmetic-hardware result reports success while having failed. The format is the worked example, not the subject. |
 | **B** | `paper-b-format.tex` | 47 | **Ternary Network Floats.** The multiplier is removed rather than cheapened; the algebra is closed and machine-checked; the enumeration singling out φ is exhaustive at degree two. |
 | **C** | `paper-c-record.tex` | 149 | **The record version.** The manuscript entire, cut nowhere. A and B are honest only if what they defer to is obtainable. |
-| **D** | `paper-d-isqed.tex` | 10 | **The ISQED 2027 submission.** A, under the three constraints that venue imposes. |
+| **D** | `paper-d-series.tex` | 27 | **How a comparison fails, while every measurement is correct.** A without its revision notes: the two measurements, the six failure modes, the worked example. |
+| | `paper-d-isqed.tex` | 10 | **The same paper for ISQED 2027.** The same cut under the three constraints that venue imposes. |
 
 Build any of them with `pdflatex <name>` twice.
+
+## One style, because it is one body of work
+
+**Every paper opens with the same title plate, the same logo and the same
+triptych plates.** Three documents that looked like three projects would read as
+three, and the series has one claim to make, not four.
+
+The ISQED rendering is the sole exception and it is a *rendering*, not a
+judgement that the house style was wrong: the venue is double-blind, and the
+whole purpose of a title plate is to say who wrote the thing. `paper-d-series`
+and `paper-d-isqed` are one cut and one rewrite list, generated together, so the
+conference version cannot quietly become a different paper.
+
+A paper id in `make-series.py` therefore names a rendering. `CUT` maps it to its
+line ranges, `WRAPPERS` lists the files it is assembled from — listed and not
+globbed, because `paper-d-*.tex` matches the ISQED rendering's files too, and a
+gate that reads one document while reporting on another is the defect this
+paper is about.
 
 ## One generator, not four hand-cuts
 
@@ -23,9 +42,9 @@ python3 make-series.py          # regenerate the four bodies
 python3 make-series.py --check  # fail if disk differs from generated
 ```
 
-The four `paper-*-body.tex` files, `paper-c-abstract.tex`, `paper-d-newsection.tex`
-and `bibliography-anon.tex` are **generated**. Edit `make-series.py` or the
-source manuscript, never them.
+The five `paper-*-body.tex` files, `paper-c-abstract.tex`,
+`paper-d-isqed-newsection.tex` and `bibliography-anon.tex` are **generated**.
+Edit `make-series.py` or the source manuscript, never them.
 
 ## Why cross-references are a program and not a search-and-replace
 
@@ -52,14 +71,14 @@ over a list.
 
 ## The house style is one file
 
-`trinity-series.sty` holds the shared identity, because four preambles would
+`trinity-series.sty` holds the shared identity, because five preambles would
 drift and the drift would be invisible until two papers disagreed in print.
 
-- `\seriesplate{TITLE}{SUBTITLE}` — the common title page. Papers A, B and C open
-  with the same wordmark, the same logo and the same author block; only the two
-  arguments differ.
+- `\seriesplate{TITLE}{SUBTITLE}` — the common title page. Papers A, B, C and D
+  open with the same wordmark, the same logo and the same author block; only the
+  two arguments differ.
 - `\triptych{file}{caption}{label}` — the canon plates are three-panel
-  engravings sharing one footer. 98 of them across the series, set identically.
+  engravings sharing one footer. 108 of them across the series, set identically.
 - `\companion{…}` / `\record{…}` — the cross-paper pointers above.
 - `\graphicspath` — the nine generated plots live one directory up. Without it
   pdflatex substitutes an empty draft box per missing plot and **still exits 0**.
@@ -68,11 +87,12 @@ drift and the drift would be invisible until two papers disagreed in print.
 `\FloatBarrier` is used zero times in 7,924 lines, so it was a dependency the
 build could fail on and never use.
 
-**Paper D does not load it.** That is not an oversight — the whole purpose of
-`trinity-series.sty` is to put the author's identity on the page, and D is
-double-blind.
+**The ISQED rendering does not load it.** That is not an oversight and not a
+style choice — the whole purpose of `trinity-series.sty` is to put the author's
+identity on the page, and that rendering is double-blind. `paper-d-series` loads
+it like everything else.
 
-## Paper D: three venue constraints, three mechanisms
+## The ISQED rendering: three venue constraints, three mechanisms
 
 ISQED 2027 (submission portal `softconf.com/p/isqed2027`) imposes what the rest
 of the series does not, and each constraint is enforced by something that fails
@@ -111,10 +131,11 @@ gate protects is *about* checks that cannot fail:
    occurs. A name is the same name in any case.
 
 `make-anon-figures.py` fixes the figure at the point the line is drawn
-(`CANON_ANON=1`), and takes the figures **paper D's own body asks for** rather
-than a hardcoded list. It runs the real generator and restores the originals
-afterwards, so the anonymous plot cannot drift from the one in A, B and C, and
-so papers that are *supposed* to carry the wordmark keep it.
+(`CANON_ANON=1`), and takes the figures **the ISQED rendering's own body asks
+for** rather than a hardcoded list. It runs the real generator and restores the
+originals afterwards, so the anonymous plot cannot drift from the one in A, B, C
+and `paper-d-series`, and so the papers that are *supposed* to carry the
+wordmark keep it.
 
 ```bash
 python3 make-anon-figures.py          # write series/anon/*.pdf
@@ -138,15 +159,17 @@ Both are marked `\todo` in `paper-a-newsection.tex` and in
 Neither result was derived anywhere in the 7,924-line body — both existed only
 as assertions in the abstract. Paper A now derives them, with the files named.
 
-**Paper D ships the artefact-correct numbers.** It is a new submission to a new
-venue, so it is the one place where the choice is free of an erratum; if the
-author settles the disagreement the other way, D's abstract must change with it.
+**Both renderings of D ship the artefact-correct numbers.** D is a new paper to
+a new reader, so it is the one place where the choice is free of an erratum; if
+the author settles the disagreement the other way, D's abstract must change with
+it — in both files, which is why the two share one generator and one cut.
 
 ## Where these go
 
-Paper D goes to ISQED 2027. Paper C is the citable record, for Zenodo.
+`paper-d-isqed` goes to ISQED 2027. Paper C is the citable record, for Zenodo.
+`paper-d-series` is how D reads inside the series.
 
-An accepted D produces a resolving IEEE Xplore DOI, which is what arXiv's
+An accepted ISQED paper produces a resolving IEEE Xplore DOI, which is what arXiv's
 moderators asked for before they will consider the appeal on ticket MOD-102933
 (1 September 2026) — with one caveat that should not be glossed: their letter
 requires acceptance **in a peer-reviewed journal**, and a refereed *conference*

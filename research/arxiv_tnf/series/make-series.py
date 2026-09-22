@@ -1,21 +1,27 @@
 #!/usr/bin/env python3
 """Generate the Trinity S3AI paper series from the single source manuscript.
 
-The series is four documents cut from one 7,924-line source:
+The series is four papers cut from one 7,924-line source, in five renderings:
 
   A  paper-a-methodology  How a comparison fails      (the transferable result)
   B  paper-b-format       Ternary Network Floats      (the format result)
   C  paper-c-record       the full record version     (everything, unchanged)
-  D  paper-d-isqed        the ISQED 2027 submission   (A, compressed to 10 pages)
+  D  paper-d-series       How a comparison fails      (the series rendering)
+     paper-d-isqed        the same paper for ISQED    (10 pages, double-blind)
 
-D is not a fourth opinion, it is A under three constraints the venue imposes and
-the others do not: at most ten IEEE two-column pages, double-blind, and standing
-alone. The third is the one with teeth. A and B may say "the hardware section of
-the companion paper" because the companion is part of the same publication; a
-conference submission has no companion, and under double-blind a pointer at an
-unpublished sibling is also a pointer at its author. Every reference that leaves
-D is therefore routed to "the extended version of this work", which is true,
-checkable and anonymous.
+Every paper in the series opens with the same title plate, the same logo and the
+same triptych plates, because it is one body of work and three documents that
+looked like three projects would read as three.
+
+The ISQED rendering is the exception, and it is a rendering and not a fourth
+opinion: the same cut under three constraints the venue imposes and the series
+does not -- at most ten IEEE two-column pages, double-blind, and standing alone.
+The third has the teeth. A and B may say "the hardware section of the companion
+paper" because the companion is part of the same publication; a conference
+submission has no companion, and under double-blind a pointer at an unpublished
+sibling is also a pointer at its author. Every reference that leaves the ISQED
+rendering is therefore routed to "the extended version of this work", which is
+true, checkable and anonymous.
 
 This script is the ONLY place the cut is written down. Line ranges, the canon
 plate conversion, and the cross-paper reference table all live here, so that a
@@ -72,11 +78,12 @@ RANGES = {
 # Paper C is the record: the whole body, cut nowhere.
 RANGES["c"] = [(176, 7660)]
 
-# Paper D is A cut to fit ISQED's ten pages. It keeps the two measurements that
+# Paper D is A without its revision notes. It keeps the two measurements that
 # are the contribution, the six failure modes that are the subject, the worked
 # example, the epistemics, the related work and the limitations -- and drops
-# A's revision notes (6272-6735, 3,984 words), which are addressed to a reader
-# of the previous version and mean nothing to a reviewer meeting the work here.
+# 6272-6735 (3,984 words), which is addressed to a reader of the previous
+# version and means nothing to a reader meeting the work here. That cut is also
+# what brings the ISQED rendering of it inside ten pages.
 RANGES["d"] = [
     (5721, 6082),   # How a comparison fails while every measurement is correct
     (1225, 1289),   # The comparison at matched physical width  (worked example)
@@ -87,14 +94,53 @@ RANGES["d"] = [
     (7632, 7660),   # Reproducibility, Disclosure
 ]
 
-# Papers whose canon plates are dropped rather than set. The 78 plates are
-# ornament -- not one of them is \ref'd anywhere in 7,924 lines -- and eleven
-# full-width engravings inside a ten-page limit would spend the paper on them.
-STRIP_FIGURES = {"d"}
+# --- renderings, not cuts ----------------------------------------------------
+# A paper id names a RENDERING. D exists twice on purpose, and the reason is the
+# whole argument of this file: the series is one body of work and must read like
+# one, so D is set in the house style with the same title plate, the same logo
+# and the same triptychs as A, B and C. ISQED then wants that same paper
+# deformed three ways -- two columns, ten pages, no author -- and that
+# deformation is a rendering of the paper, not a different paper.
+#
+# Both renderings come from ONE line range and ONE rewrite list. A cut that
+# lived in two places would be changed in one of them.
+PAPERS = ("a", "b", "c", "d", "d-isqed")
 
-# Papers that stand alone. A reference leaving one of these cannot name a
+CUT = {"a": "a", "b": "b", "c": "c", "d": "d", "d-isqed": "d"}
+
+# Renderings whose canon plates are dropped rather than set. The plates are the
+# series' own engravings and every paper carries them; only the ten-page limit
+# cannot afford eleven full-width ones, so only the ISQED rendering loses them.
+STRIP_FIGURES = {"d-isqed"}
+
+# Renderings that stand alone. A reference leaving one of these cannot name a
 # sibling document, so every destination collapses to \extended.
-STANDALONE = {"d"}
+STANDALONE = {"d-isqed"}
+
+# Which files each rendering is assembled from. Listed rather than globbed:
+# paper-d-*.tex also matches the ISQED rendering's files, so a glob would hand
+# the double-blind gate one document while it reported on another -- measuring
+# the wrong artefact, which is the defect this paper is about.
+BODY = {
+    "a": "paper-a-body.tex",
+    "b": "paper-b-body.tex",
+    "c": "paper-c-body.tex",
+    "d": "paper-d-body.tex",
+    "d-isqed": "paper-d-isqed-body.tex",
+}
+
+WRAPPERS = {
+    "a": ["paper-a-methodology.tex", "paper-a-newsection.tex"],
+    "b": ["paper-b-format.tex"],
+    "c": ["paper-c-record.tex", "paper-c-abstract.tex"],
+    # The series rendering is one column, so it inputs A's section as written
+    # rather than the copy fitted to a 3.5-inch measure.
+    "d": ["paper-d-series.tex", "paper-a-newsection.tex"],
+    "d-isqed": ["paper-d-isqed.tex", "paper-d-isqed-newsection.tex"],
+}
+
+# The built PDF of a rendering is named after its wrapper.
+PDF = {p: WRAPPERS[p][0].replace(".tex", ".pdf") for p in PAPERS}
 
 # The record version keeps the manuscript's own abstract, which is where the
 # budget convention is declared and labelled. A and B state their own.
@@ -104,12 +150,15 @@ TITLES = {
     "a": "How a Comparison Fails",
     "b": "Ternary Network Floats",
     "c": "Ternary Network Floats (record version)",
-    "d": "How a Comparison Fails (ISQED 2027 submission)",
+    "d": "How a Comparison Fails While Every Measurement Is Correct",
+    "d-isqed": "How a Comparison Fails (ISQED 2027 submission)",
 }
 
-# Which document each paper points at when a reference leaves it. The record
-# version holds every section, so it is the backstop for both.
-COMPANION = {"a": "b", "b": "a", "c": None, "d": None}
+# Which document each rendering points at when a reference leaves it. The record
+# version holds every section, so it is the backstop for all of them. The series
+# rendering of D sits inside the series and may name its siblings; the ISQED one
+# has none to name.
+COMPANION = {"a": "b", "b": "a", "c": None, "d": "b", "d-isqed": None}
 
 # --- cross-paper reference table ---------------------------------------------
 # label -> (destination paper, noun phrase). The phrase is written lowercase;
@@ -198,8 +247,10 @@ BIB_ANONYMISE = [
 # its own named pointer would print the destination six times in four lines.
 # They are rewritten whole, once, here.
 
-REWRITES = {
-    "a": [
+# The methodology cut's rewrites. A and the series rendering of D are the same
+# cut inside the same series, so they share this list rather than hold a copy
+# each: a second copy is a second place to forget.
+METHODOLOGY_REWRITES = [
         # The taxonomy of formal statements: a list mixing labels that stay in
         # this paper with labels that do not.
         (
@@ -221,13 +272,18 @@ REWRITES = {
             "\\recordname, where the full twenty-one-row experiment is tabulated. Each figure\n"
             "is retained and marked $^{\\ast}$ at every point of use, and",
         ),
-    ],
+]
+
+REWRITES = {
+    "a": METHODOLOGY_REWRITES,
     "b": [],
     "c": [],
-    # D carries the same untraced-figures table as A, and the same reason for
-    # naming its destination once in the caption rather than sixteen times in
-    # the cells -- but it must name the destination D actually has.
-    "d": [
+    "d": METHODOLOGY_REWRITES,
+    # The ISQED rendering carries the same untraced-figures table and the same
+    # reason for naming its destination once in the caption rather than sixteen
+    # times in the cells -- but it must name the destination it actually has,
+    # and it has no sibling to name.
+    "d-isqed": [
         (
             "strict registry. Each is retained and marked $^{\\ast}$ at every point of use, and",
             "strict registry. Table and theorem names in the middle column refer to the\n"
@@ -411,7 +467,7 @@ def pdf_gate(paper):
     A missing PDF is reported, not skipped. A gate that goes quiet when its
     input is absent is the clause-folded-to-a-constant defect in Section II.
     """
-    pdf = HERE / f"paper-{paper}-isqed.pdf"
+    pdf = HERE / PDF[paper]
     if not pdf.exists():
         return [f"{paper}: {pdf.name} is not built, so the PDF gate did not run"]
     r = subprocess.run(["pdftotext", str(pdf), "-"],
@@ -564,7 +620,7 @@ def used_labels(text):
 
 
 def build_body(src, paper, problems):
-    text = extract(src, RANGES[paper])
+    text = extract(src, RANGES[CUT[paper]])
     text = to_triptych(text)
     for before, after in REWRITES[paper]:
         if before not in text:
@@ -598,30 +654,33 @@ def main():
         abstract_path.write_text(abstract, encoding="utf-8")
 
     # The section deriving the two headline measurements is shared with paper A,
-    # which is set one-column. D needs the same prose at half the measure, so it
-    # gets a fitted copy rather than a second hand-maintained original.
+    # which is set one-column -- and so is the series rendering of D, which
+    # therefore inputs A's file as written. Only the ISQED rendering needs the
+    # same prose at half the measure, and it gets a fitted copy rather than a
+    # second hand-maintained original.
     newsec = fit_two_columns((HERE / "paper-a-newsection.tex").read_text(encoding="utf-8"))
-    newsec_path = HERE / "paper-d-newsection.tex"
+    newsec_path = HERE / "paper-d-isqed-newsection.tex"
     if check:
         if not newsec_path.exists() or newsec_path.read_text(encoding="utf-8") != newsec:
-            problems.append("d: paper-d-newsection.tex on disk differs from generated")
+            problems.append(f"d-isqed: {newsec_path.name} on disk differs from generated")
     else:
         newsec_path.write_text(newsec, encoding="utf-8")
 
-    for paper in ("a", "b", "c", "d"):
+    for paper in PAPERS:
         body = build_body(src, paper, problems)
         # A label used and not defined here is a reference this script failed to
         # route. The LaTeX build would print it as ?? and still exit 0.
         # The wrapper documents carry labels too (the budget convention is in
         # the abstract), so they are read rather than assumed.
         wrapper = set()
-        for f in HERE.glob(f"paper-{paper}-*.tex"):
-            if f.name != f"paper-{paper}-body.tex":
+        for name in WRAPPERS[paper]:
+            f = HERE / name
+            if f.exists():
                 wrapper |= defined_labels(f.read_text(encoding="utf-8"))
         dangling = used_labels(body) - defined_labels(body) - wrapper
         for label in sorted(dangling):
             problems.append(f"{paper}: unrouted reference \\ref{{{label}}}")
-        path = HERE / f"paper-{paper}-body.tex"
+        path = HERE / BODY[paper]
         if check:
             old = path.read_text(encoding="utf-8") if path.exists() else None
             if old != body:
@@ -634,7 +693,7 @@ def main():
     # can be asked what D actually cites rather than told.
     bodies = {p: body for p, _, body in written}
     cited = set()
-    for text in [bodies["d"], newsec,
+    for text in [bodies["d-isqed"], newsec,
                  (HERE / "paper-d-isqed.tex").read_text(encoding="utf-8")]:
         for group in re.findall(r"\\cite\{([^}]+)\}", text):
             cited |= {k.strip() for k in group.split(",")}
@@ -653,11 +712,12 @@ def main():
 
     # The double-blind gate, over everything a standalone paper actually ships.
     for paper in sorted(STANDALONE):
-        parts = {f"paper-{paper}-body.tex": bodies[paper],
+        parts = {BODY[paper]: bodies[paper],
                  "bibliography-anon.tex": anon_bib}
-        for f in sorted(HERE.glob(f"paper-{paper}-*.tex")):
-            if f.name != f"paper-{paper}-body.tex":
-                parts[f.name] = f.read_text(encoding="utf-8")
+        for name in WRAPPERS[paper]:
+            f = HERE / name
+            if f.exists():
+                parts[name] = f.read_text(encoding="utf-8")
         for name, text in sorted(parts.items()):
             for n, pattern, line in identifying_hits(text):
                 problems.append(f"{paper}: {name}:{n} identifies the author "

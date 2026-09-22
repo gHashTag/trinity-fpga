@@ -1,0 +1,79 @@
+% Paper D of the Trinity S3AI series --- the series rendering.
+%
+% Same cut as the ISQED submission, set as a member of the series: the common
+% title plate, the common logo, the canon triptychs, one column at 11pt. A
+% reader who has A, B or C in hand recognises this as the same body of work
+% before reading a line of it, which is the entire point of having a house
+% style and the reason this rendering exists alongside the conference one.
+%
+% Where it differs from paper A, and only there: A's revision notes are dropped
+% (tnf_paper.tex 6272-6735, 3,984 words), because they are addressed to a reader
+% of the previous version. What remains is the two measurements, the six failure
+% modes, the worked example, the epistemics, the adjacent work and the limits.
+%
+% The conference rendering of this same cut is paper-d-isqed.tex. Neither is
+% edited by hand: make-series.py generates both bodies from one line range.
+%
+% Build:  pdflatex paper-d-series  (twice, for references)
+\documentclass[11pt]{article}
+\usepackage{trinity-series}
+
+\seriesplate{HOW A COMPARISON FAILS}{%
+  While every measurement in it is correct: synthesis deletes the checks whose
+  area is being measured, achieved frequency is a proxy for size, and each
+  failure is stated as a procedure the reader can run}
+\date{22 September 2026}
+
+% Where this paper's references go when they leave it.
+\seriescompanion{Ternary Network Floats}
+\seriesrecord{Ternary Network Floats, record version}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Two conditions decide whether a published FPGA arithmetic comparison means what
+it appears to mean, and both are usually left unmeasured.
+
+First, \textbf{synthesis deletes the checks whose area is being measured.}
+On-die assertions are the standard defence against a design that routes and is
+wrong, and the optimiser silently removes them: a census of twenty-eight clauses
+across seven wrappers finds \textbf{fourteen folded to constants}, and a clause
+that has become a constant reads PASS in every build, including the failing
+ones. Repairing one wrapper so that its clauses survive raises it from $452$ to
+$696$ LUT --- \textbf{thirty-five per cent of the routed design was absent from
+the area published for it}. Two earlier verdicts change meaning in consequence:
+a design reported as passing four of four clauses passed one of one actually
+evaluated, and a design reported as failing two of four fails every clause it
+evaluates. Marking cells \texttt{(* keep *)} does not fix this; making the
+operands structurally distinct while carrying equal values does.
+
+Second, \textbf{achieved frequency is largely a function of size.} Over eleven
+designs placed and routed across five seeds each, spanning a $39.6\times$ range
+of area, $F_{\max}=4397\cdot\mathrm{LUT}^{-0.648}$ with $R^{2}=0.920$; the
+exponent is unchanged when the fit is taken over all fifty-five individual seed
+points rather than the medians. A throughput-per-area ratio therefore divides a
+quantity by a second that is already a function of it, and restates a ranking by
+size --- on our own harness at a Spearman correlation of $0.961$ with ranking by
+inverse area, while seed-to-seed spread reaches $20.5\%$ on a single design.
+
+Neither result invalidates a frequency measurement; both invalidate figures
+built from them. We then give six ways an evaluation reports success while
+having failed, worked through a case in which every individual measurement is
+correct and the comparison is not, and state which of our own published claims
+each one withdraws.
+\end{abstract}
+
+\tableofcontents
+\newpage
+
+% The two measurements the series has claimed since August and never shown.
+% Shared verbatim with paper A: one column, one file, no fitted copy.
+\input{paper-a-newsection}
+
+% The transferable regularities, and the accounting of what they cost us.
+\input{paper-d-body}
+
+\input{bibliography}
+
+\end{document}
