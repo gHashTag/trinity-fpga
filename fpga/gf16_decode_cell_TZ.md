@@ -6,8 +6,14 @@
 
 ## Format parameters (from the SSOT `formats_catalog.t27`, [Verified])
 - gf16: **bits=16, s=1, e=6, m=9, bias=31** (PHI_BIAS=60), storage=u16, cluster=GoldenFloat.
-- FPGA component artifact: 35/35 on Artix-7 (Zenodo 10.5281/zenodo.19227877). **No
-  frequency.** This line read "35/35 @ 323 MHz" until 2026-09-22; that figure was
+- FPGA component artifact: 35/35 on Artix-7. **No frequency, and no DOI.**
+  This line read "35/35 @ 323 MHz Artix-7 (Zenodo 10.5281/zenodo.19227877)" until
+  2026-09-22. Both halves were wrong. The DOI was fetched on 2026-09-22 and
+  resolves to **"Trinity B007: VSA Operations for Ternary Computing v5.0"** — a
+  software-description stub about balanced-ternary hypervectors, which `ZENODO_HUB.md`
+  itself lists as B007/VSA. It says nothing about an FPGA, an Artix-7 or a GF16
+  codec. It is the project's banner DOI, pasted into a position where it reads as
+  a citation supporting the claim. **Do not cite it for hardware.** The figure was
   withdrawn on 2026-08-08 and has no owner — the gf16 cores are combinational
   (zero `posedge`), so no clock belongs to them. Note the cell specified below is
   combinational too: it has a propagation delay, not an Fmax.
