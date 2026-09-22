@@ -80,6 +80,28 @@ def call(method, url, data=None, ctype="application/json"):
         return e.code, e.read()
 
 
+def put_file(url, path):
+    """Upload with curl, not urllib.
+
+    urllib writes the whole body into one send and Zenodo drops the connection
+    partway through a 31 MB PUT -- the failure surfaces as Errno 32 Broken pipe
+    with no HTTP status to read. curl streams it and retries. The token goes in
+    on stdin as a config file, never in argv, so it stays out of ps.
+    """
+    conf = 'header = "Authorization: Bearer %s"\n' % token()
+    argv = ["curl", "-sS", "-K", "-", "--fail-with-body",
+            "--retry", "3", "--retry-connrefused", "--retry-delay", "2",
+            "--max-time", "1800", "--expect100-timeout", "30",
+            "-X", "PUT", "--upload-file", path,
+            "-w", "\n%{http_code}", url]
+    r = subprocess.run(argv, input=conf, capture_output=True, text=True)
+    out = r.stdout.rsplit("\n", 1)
+    body, code = (out[0], out[1]) if len(out) == 2 else (r.stdout, "000")
+    if r.returncode != 0 and code == "000":
+        sys.exit("curl failed (%d): %s" % (r.returncode, r.stderr[:400]))
+    return int(code), body.encode()
+
+
 def parse(status, payload, what):
     try:
         j = json.loads(payload)
@@ -109,22 +131,28 @@ def check():
         print("  ", d.get("id"), d.get("state"), (d.get("title") or "(untitled)")[:60])
 
 
-def draft():
-    meta = json.load(open(META))
+def draft(dep_id=None):
+    if dep_id is None:
+        dep = parse(*call("POST", "/deposit/depositions", {}), what="create")
+        dep_id = dep["id"]
+        print("draft", dep_id, "created")
+    upload(dep_id)
+    describe(dep_id)
+
+
+def upload(dep_id):
     size = os.path.getsize(PDF)
-
-    dep = parse(*call("POST", "/deposit/depositions", {}), what="create")
-    dep_id = dep["id"]
+    dep = parse(*call("GET", "/deposit/depositions/%s" % dep_id), what="read")
     bucket = dep["links"]["bucket"]
-    print("draft", dep_id, "created")
-
-    with open(PDF, "rb") as f:
-        up = parse(*call("PUT", bucket + "/" + FILENAME, f.read(), ctype="application/octet-stream"),
-                   what="upload")
-    print("uploaded", up.get("key"), up.get("size"), "bytes (local", size, "bytes)")
+    print("uploading %.1f MB into draft %s ..." % (size / 1e6, dep_id))
+    up = parse(*put_file(bucket + "/" + FILENAME, PDF), what="upload")
+    print("stored", up.get("key"), up.get("size"), "bytes (local", size, "bytes)")
     if up.get("size") != size:
         sys.exit("size mismatch: the server did not store what was sent")
 
+
+def describe(dep_id):
+    meta = json.load(open(META))
     out = parse(*call("PUT", "/deposit/depositions/%s" % dep_id, meta), what="metadata")
     m = out.get("metadata", {})
     print("title:  ", m.get("title"))
@@ -154,7 +182,11 @@ if __name__ == "__main__":
     if cmd == "check":
         check()
     elif cmd == "draft":
-        draft()
+        draft(sys.argv[2] if len(sys.argv) > 2 else None)
+    elif cmd == "upload":
+        upload(sys.argv[2])
+    elif cmd == "meta":
+        describe(sys.argv[2])
     elif cmd == "show":
         show(sys.argv[2])
     elif cmd == "publish":
